@@ -4,12 +4,12 @@
 
 #include <string.h>
 
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
+#include "application/lib/app/service_provider_impl.h"
+#include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl-sync.h"
 #include "apps/ledger/services/public/ledger.fidl-sync.h"
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
-#include "apps/modular/lib/app/service_provider_impl.h"
-#include "apps/modular/services/application/application_environment.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "lib/ftl/files/scoped_temp_dir.h"

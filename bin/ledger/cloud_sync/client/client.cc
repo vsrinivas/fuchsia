@@ -7,6 +7,7 @@
 #include <iostream>
 #include <unordered_set>
 
+#include "application/lib/app/connect.h"
 #include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
@@ -17,7 +18,6 @@
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/gcs/cloud_storage_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/modular/lib/app/connect.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_view.h"

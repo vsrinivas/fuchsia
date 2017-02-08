@@ -10,13 +10,13 @@ executable("app") {
 
   deps = [
     ":lib",
+    "//application/lib/app",
     "//apps/ledger/services/internal",
     "//apps/ledger/src/configuration:lib",
     "//apps/ledger/src/environment",
     "//apps/ledger/src/network",
     "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
-    "//apps/modular/lib/app",
     "//apps/network/services",
     "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",
@@ -137,9 +137,9 @@ executable("application_tests") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/ledger/services/internal:internal_sync",
     "//apps/ledger/services/public:public_sync",
-    "//apps/modular/lib/app",
     "//lib/fidl/cpp/bindings",
     "//lib/mtl",
     "//third_party/gtest",

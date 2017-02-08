@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "application/lib/app/application_context.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_sync/client/command.h"
 #include "apps/ledger/src/cloud_sync/client/doctor_command.h"
@@ -16,7 +17,6 @@
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/network/network_service_impl.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 
