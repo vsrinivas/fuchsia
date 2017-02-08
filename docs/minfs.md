@@ -35,29 +35,49 @@ accessible from Magenta.
    17K (34, 512-byte blocks) is required at the beginning and end of the disk
    to hold GPT and MBR data. The numbers here assume 512-byte blocks and should
    be adjusted accordingly if your block size is different.
- ```
- > gpt add 34 1048508 myvol /dev/class/block/000
- ```
+```
+> gpt add 34 1048508 myvol /dev/class/block/000
+```
+
+ * Run 'lsblk' again, you should see output similar to the below. Note that 000
+   and 002 actually refer to the same physical device. A duplicate has been
+   created. This seems wrong and will probably be fixed in the future.
+```
+$ lsblk
+ID  DEV      DRV      SIZE TYPE           LABEL
+.
+..
+000 sata0    ahci     512M
+002 sata0 (aligned) align    512M
+003 sata0 (aligned)p0 gpt      511M unknown        myvol
+```
+
  * Within Magenta, format the partition as MinFS. Using 'lsblk' you should see
    a block device which is the whole disk and a slightly smaller device which
-   is the partition.
+   is the partition. In the above output the partition is device 003 and would
+   have the path '/dev/class/block/003'
 ```
 > mkfs <PARTITION_PATH> minfs
 ```
- * Within Magenta, mount the MinFS volume
+
+ * If you want the device to be mounted automatically on reboot, use the GPT
+   tool to set its type. As we did above, **you must** use 'lsblk' **again**
+   to locate the entry for the disk. In the same output above the device path
+   is /dev/class/block/002. We want to edit the type of the zero-th partition.
+   Here we use the keyword 'DATA' to set the type GUID, but if you wanted to
+   use an arbitrary GUID you would supply it where 'DATA' is used.
+```
+> gpt edit 0 type DATA <DEVICE_PATH>
+```
+
+ * On any future boots, the partition will be mounted automatically at /data.
+ 
+ * If you don't want the partition to be mounted automatically, you can simply
+   mount it manually.
 ```
 > mount <PARTITION_PATH> /data
 ```
- * If you want the device to be mounted automatically on reboot, use the GPT
-   tool to set it's type. **You must** use 'lsblk' **again** to locate the
-   entry for the disk. As a result of the GPT changes a duplicate entry for
-   the block device has probably been created. You might see two entries for
-   the disk that look identical, use the device entry with the highest index,
-   for example 002 vs 000.
- ```
- > gpt edit 0 type 08185f0c-892d-428a-a789-dbeec8f55e6a <DEVICE_PATH>
- ```
- * On any future boots, MinFS will be mounted automatically at /data.
+
  * Any files written to "/data" (the mount point for this GUID) will persist
    across boots. To test this, try making a file on the new MinFS volume,
    rebooting, and observing it still exists.
