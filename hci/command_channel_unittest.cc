@@ -48,8 +48,11 @@ constexpr uint8_t kNumHCICommandPackets = 1;
 
 struct TestTransaction final {
   TestTransaction() = default;
-  TestTransaction(common::ByteBuffer* expected,
-                  const std::vector<common::ByteBuffer*>& responses) {
+
+  // TODO(armansito): Introduce ByteBuffer::CopyContents() and change these to
+  // ByteBuffer.
+  TestTransaction(common::MutableByteBuffer* expected,
+                  const std::vector<common::MutableByteBuffer*>& responses) {
     this->expected = common::DynamicByteBuffer(expected->GetSize(),
                                                expected->TransferContents());
     for (auto* buffer : responses) {
@@ -143,7 +146,7 @@ class FakeController final : public ::mtl::MessageLoopHandler {
 
     ASSERT_FALSE(transactions_.empty());
     auto& current = transactions_.front();
-    common::BufferView view(buffer.GetMutableData(), read_size);
+    common::BufferView view(buffer.GetData(), read_size);
     ASSERT_TRUE(ContainersEqual(current.expected, view));
 
     while (!current.responses.empty()) {

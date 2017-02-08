@@ -10,7 +10,7 @@ namespace bluetooth {
 namespace hci {
 
 EventPacket::EventPacket(EventCode event_code,
-                         common::ByteBuffer* buffer,
+                         common::MutableByteBuffer* buffer,
                          size_t payload_size)
     : common::Packet<EventHeader>(buffer, payload_size) {
   FTL_DCHECK(GetPayloadSize() <= kMaxEventPacketPayloadSize);

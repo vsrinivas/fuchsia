@@ -69,17 +69,20 @@ ByteBuffer::const_iterator DynamicByteBuffer::cend() const {
   return buffer_.get() + buffer_size_;
 }
 
-BufferView::BufferView(uint8_t* bytes, size_t size)
+BufferView::BufferView(const uint8_t* bytes, size_t size)
     : size_(size), bytes_(bytes) {
-  FTL_DCHECK(bytes_);
-  FTL_DCHECK(size_);
+  // If |size| non-zero then |bytes| cannot be nullptr.
+  FTL_DCHECK(!size_ || bytes_) << "|bytes_| cannot be nullptr if |size_| > 0";
 }
+
+BufferView::BufferView(const ByteBuffer& buffer) {
+  size_ = buffer.GetSize();
+  bytes_ = buffer.GetData();
+}
+
+BufferView::BufferView() : size_(0u), bytes_(nullptr) {}
 
 const uint8_t* BufferView::GetData() const {
-  return bytes_;
-}
-
-uint8_t* BufferView::GetMutableData() {
   return bytes_;
 }
 
@@ -87,21 +90,55 @@ size_t BufferView::GetSize() const {
   return size_;
 }
 
-void BufferView::SetToZeros() {
-  memset(bytes_, 0, size_);
-}
-
-std::unique_ptr<uint8_t[]> BufferView::TransferContents() {
-  auto buffer = std::make_unique<uint8_t[]>(size_);
-  memcpy(buffer.get(), bytes_, size_);
-  return buffer;
-}
-
 ByteBuffer::const_iterator BufferView::cbegin() const {
   return bytes_;
 }
 
 ByteBuffer::const_iterator BufferView::cend() const {
+  return bytes_ + size_;
+}
+
+MutableBufferView::MutableBufferView(uint8_t* bytes, size_t size)
+    : size_(size), bytes_(bytes) {
+  FTL_DCHECK(bytes_);
+  FTL_DCHECK(size_);
+}
+
+MutableBufferView::MutableBufferView(MutableByteBuffer* buffer) {
+  FTL_DCHECK(buffer);
+  size_ = buffer->GetSize();
+  bytes_ = buffer->GetMutableData();
+}
+
+const uint8_t* MutableBufferView::GetData() const {
+  return bytes_;
+}
+
+uint8_t* MutableBufferView::GetMutableData() {
+  return bytes_;
+}
+
+size_t MutableBufferView::GetSize() const {
+  return size_;
+}
+
+void MutableBufferView::SetToZeros() {
+  memset(bytes_, 0, size_);
+}
+
+std::unique_ptr<uint8_t[]> MutableBufferView::TransferContents() {
+  if (!size_) return nullptr;
+
+  auto buffer = std::make_unique<uint8_t[]>(size_);
+  memcpy(buffer.get(), bytes_, size_);
+  return buffer;
+}
+
+ByteBuffer::const_iterator MutableBufferView::cbegin() const {
+  return bytes_;
+}
+
+ByteBuffer::const_iterator MutableBufferView::cend() const {
   return bytes_ + size_;
 }
 

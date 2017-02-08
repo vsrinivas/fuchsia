@@ -101,9 +101,27 @@ TEST(ByteBufferTest, BufferViewTest) {
   EXPECT_EQ(kBufferSize, buffer.GetSize());
   buffer.SetToZeros();
 
-  BufferView view(buffer.GetMutableData(), buffer.GetSize());
+  BufferView view(buffer);
+  EXPECT_EQ(0x00, buffer.GetData()[0]);
+  EXPECT_EQ(0x00, view.GetData()[0]);
+  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_EQ(kBufferSize, view.GetSize());
+}
+
+TEST(ByteBufferTest, MutableBufferViewTest) {
+  constexpr size_t kBufferSize = 5;
+  DynamicByteBuffer buffer(kBufferSize);
+
+  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  buffer.SetToZeros();
+
+  MutableBufferView view(&buffer);
+
+  // It should be possible to mutate the contents of the underlying buffer.
   view.GetMutableData()[0] = 0xFF;
   EXPECT_EQ(0xFF, buffer.GetData()[0]);
+  view.SetToZeros();
+  EXPECT_EQ(0x00, buffer.GetData()[0]);
 
   // Calling TransferContents() should leave |buffer| untouched.
   auto contents = view.TransferContents();

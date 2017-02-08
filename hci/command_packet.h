@@ -19,7 +19,7 @@ namespace hci {
 class CommandPacket : public ::bluetooth::common::Packet<CommandHeader> {
  public:
   CommandPacket(OpCode opcode,
-                common::ByteBuffer* buffer,
+                common::MutableByteBuffer* buffer,
                 size_t payload_size = 0u);
 
   // Returns the HCI command opcode for this packet.

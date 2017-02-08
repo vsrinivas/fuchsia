@@ -19,7 +19,7 @@ namespace hci {
 class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
  public:
   EventPacket(EventCode event_code,
-              common::ByteBuffer* buffer,
+              common::MutableByteBuffer* buffer,
               size_t payload_size = 0u);
 
   // Returns the HCI event code for this packet.

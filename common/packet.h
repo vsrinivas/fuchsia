@@ -100,7 +100,7 @@ class Packet {
   // Initializes this Packet to operate over |buffer|. |payload_size| is the
   // size of the packet payload not including the packet header. A
   // |payload_size| value of 0 indicates that the packet contains no payload.
-  explicit Packet(ByteBuffer* buffer, size_t payload_size = 0u)
+  explicit Packet(MutableByteBuffer* buffer, size_t payload_size = 0u)
       : buffer_(buffer), size_(sizeof(HeaderType) + payload_size) {
     FTL_DCHECK(buffer_);
     FTL_DCHECK(buffer_->GetSize() >= size_);
@@ -137,7 +137,7 @@ class Packet {
   size_t size() const { return size_; }
 
   // Returns a pointer to the underlying buffer.
-  ByteBuffer* buffer() const { return buffer_; }
+  MutableByteBuffer* buffer() const { return buffer_; }
 
   // Encode and decode the header contents. A subclass implementation is
   // expected to finalize all header fields as required by the protocol and wire
@@ -154,7 +154,7 @@ class Packet {
   }
 
  private:
-  ByteBuffer* buffer_;  // weak
+  MutableByteBuffer* buffer_;  // weak
   size_t size_;
 };
 

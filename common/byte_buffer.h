@@ -23,14 +23,34 @@ class ByteBuffer {
   // Returns a pointer to the beginning of this buffer. May return nullptr if
   // the buffer has size 0.
   virtual const uint8_t* GetData() const = 0;
-  virtual uint8_t* GetMutableData() = 0;
 
   // Returns the number of bytes contained in this packet.
   virtual size_t GetSize() const = 0;
 
+  // TODO(armansito): Add a CopyContents() method
+
+  // Iterator functions.
+  iterator begin() const { return cbegin(); }
+  iterator end() const { return cend(); }
+  virtual const_iterator cbegin() const = 0;
+  virtual const_iterator cend() const = 0;
+};
+
+// Mutable extension to the ByteBuffer interface. This provides methods that
+// allows durect mutable access to the underlying buffer.
+class MutableByteBuffer : public ByteBuffer {
+ public:
+  // Returns a pointer to the beginning of this buffer. May return nullptr if
+  // the buffer has size 0.
+  virtual uint8_t* GetMutableData() = 0;
+
   // Sets the contents of the buffer to 0s.
   virtual void SetToZeros() = 0;
 
+  // TODO(armansito): Remove this function. All this over-engineering around
+  // "maybe moving" contents is too confusing. Replace this with
+  // ByteBuffer::CopyContents().
+  //
   // Returns the contents of this buffer in a dynamic array of bytes the
   // ownership of which now belongs to the caller. An implementation can choose
   // to either:
@@ -41,12 +61,6 @@ class ByteBuffer {
   // If an implementation chooses to move its contents then it needs to make
   // sure that the source instance is left in a consistent state.
   virtual std::unique_ptr<uint8_t[]> TransferContents() = 0;
-
-  // Iterator functions.
-  iterator begin() const { return cbegin(); }
-  iterator end() const { return cend(); }
-  virtual const_iterator cbegin() const = 0;
-  virtual const_iterator cend() const = 0;
 };
 
 // A ByteBuffer with static storage duration. Instances of this class are
@@ -54,7 +68,7 @@ class ByteBuffer {
 // same way as copy semantics, i.e. moving an instance will copy the buffer
 // contents.
 template <size_t BufferSize>
-class StaticByteBuffer : public ByteBuffer {
+class StaticByteBuffer : public MutableByteBuffer {
  public:
   StaticByteBuffer() {
     static_assert(BufferSize, "|BufferSize| must be non-zero");
@@ -111,7 +125,7 @@ StaticByteBuffer<sizeof...(T)> CreateStaticByteBuffer(T... bytes) {
 // TODO(armansito): If our libc malloc implementation proves to be inefficient
 // for data packets, we should allow for more efficient allocation schemes, e.g.
 // by using the trait/mixin pattern.
-class DynamicByteBuffer : public ByteBuffer {
+class DynamicByteBuffer : public MutableByteBuffer {
  public:
   // The default constructor creates an empty buffer with size 0.
   DynamicByteBuffer();
@@ -146,10 +160,32 @@ class DynamicByteBuffer : public ByteBuffer {
 };
 
 // A ByteBuffer that does not own the memory that it points to but rather
-// provides a view over it.
+// provides an immutable view over it.
 class BufferView : public ByteBuffer {
  public:
-  BufferView(uint8_t* bytes, size_t size);
+  explicit BufferView(const ByteBuffer& buffer);
+  BufferView(const uint8_t* bytes, size_t size);
+
+  // The default constructor initializes this to an empty buffer.
+  BufferView();
+
+  // ByteBuffer overrides:
+  const uint8_t* GetData() const override;
+  size_t GetSize() const override;
+  const_iterator cbegin() const override;
+  const_iterator cend() const override;
+
+ private:
+  size_t size_;
+  const uint8_t* bytes_;
+};
+
+// Mutable version of BufferView, which is a light-weight wrapper over a
+// ByteBuffer that provides mutable access to its contents.
+class MutableBufferView : public MutableByteBuffer {
+ public:
+  explicit MutableBufferView(MutableByteBuffer* buffer);
+  MutableBufferView(uint8_t* bytes, size_t size);
 
   // ByteBuffer overrides:
   const uint8_t* GetData() const override;
