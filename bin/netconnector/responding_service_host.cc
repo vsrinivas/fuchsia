@@ -4,7 +4,7 @@
 
 #include "apps/netconnector/src/responding_service_host.h"
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 

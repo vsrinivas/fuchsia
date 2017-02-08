@@ -8,7 +8,7 @@
 
 #include "apps/netconnector/examples/netconnector_example/netconnector_example_params.h"
 #include "apps/netconnector/lib/message_relay.h"
-#include "apps/modular/lib/app/application_context.h"
+#include "application/lib/app/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 

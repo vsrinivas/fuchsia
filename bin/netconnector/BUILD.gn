@@ -17,10 +17,10 @@ executable("netconnector") {
     "main.cc",
     "message_transceiver.cc",
     "message_transceiver.h",
-    "netconnector_params.cc",
-    "netconnector_params.h",
     "netconnector_impl.cc",
     "netconnector_impl.h",
+    "netconnector_params.cc",
+    "netconnector_params.h",
     "requestor_agent.cc",
     "requestor_agent.h",
     "responding_service_host.cc",
@@ -30,8 +30,8 @@ executable("netconnector") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
-    "//apps/modular/services/application",
+    "//application/lib/app",
+    "//application/services",
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
     "//lib/ftl",

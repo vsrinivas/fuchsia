@@ -9,17 +9,17 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/modular/services/application/application_launcher.fidl.h"
-#include "apps/modular/services/application/service_provider.fidl.h"
+#include "application/lib/app/application_context.h"
+#include "application/services/application_launcher.fidl.h"
+#include "application/services/service_provider.fidl.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
 #include "apps/netconnector/services/netconnector_admin.fidl.h"
 #include "apps/netconnector/src/device_service_provider.h"
 #include "apps/netconnector/src/listener.h"
-#include "apps/netconnector/src/requestor_agent.h"
 #include "apps/netconnector/src/netconnector_params.h"
+#include "apps/netconnector/src/requestor_agent.h"
 #include "apps/netconnector/src/responding_service_host.h"
 #include "apps/netconnector/src/service_agent.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 

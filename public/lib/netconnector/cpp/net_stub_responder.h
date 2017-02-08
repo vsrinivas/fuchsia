@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_set>
 
-#include "apps/modular/lib/app/application_context.h"
+#include "application/lib/app/application_context.h"
 #include "apps/netconnector/services/netconnector_admin.fidl.h"
 #include "lib/ftl/macros.h"
 

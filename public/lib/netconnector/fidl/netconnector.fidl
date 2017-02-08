@@ -4,7 +4,7 @@
 
 module netconnector;
 
-import "apps/modular/services/application/service_provider.fidl";
+import "application/services/service_provider.fidl";
 
 // Primary netconnector service definition.
 [ServiceName="netconnector::NetConnector"]

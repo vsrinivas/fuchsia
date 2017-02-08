@@ -6,9 +6,9 @@
 
 #include <unordered_map>
 
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/service_provider_impl.h"
-#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/service_provider_impl.h"
+#include "application/services/application_launcher.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace netconnector {

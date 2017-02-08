@@ -4,8 +4,8 @@
 
 module netconnector;
 
-import "apps/modular/services/application/application_launcher.fidl";
-import "apps/modular/services/application/service_provider.fidl";
+import "application/services/application_launcher.fidl";
+import "application/services/service_provider.fidl";
 
 // Netconnector admin service definition.
 [ServiceName="netconnector::NetConnectorAdmin"]

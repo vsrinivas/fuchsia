@@ -6,7 +6,7 @@
 
 #include <rapidjson/document.h>
 
-#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "application/services/application_launcher.fidl.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"

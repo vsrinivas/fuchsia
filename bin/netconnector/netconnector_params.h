@@ -7,7 +7,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "application/services/application_launcher.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 

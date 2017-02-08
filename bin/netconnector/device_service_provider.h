@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/modular/services/application/service_provider.fidl.h"
+#include "application/services/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 

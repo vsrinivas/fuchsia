@@ -11,6 +11,6 @@ fidl("services") {
   ]
 
   public_deps = [
-    "//apps/modular/services/application",
+    "//application/services",
   ]
 }

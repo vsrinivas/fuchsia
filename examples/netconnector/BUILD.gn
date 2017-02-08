@@ -5,14 +5,14 @@
 executable("netconnector_example") {
   sources = [
     "main.cc",
-    "netconnector_example_params.cc",
-    "netconnector_example_params.h",
     "netconnector_example_impl.cc",
     "netconnector_example_impl.h",
+    "netconnector_example_params.cc",
+    "netconnector_example_params.h",
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
     "//lib/ftl",
