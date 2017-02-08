@@ -10,21 +10,27 @@
 namespace mozart {
 namespace input {
 
-void InputInterpreter::RegisterCallback(OnEventCallback callback) {
-  callbacks_.push_back(callback);
+void InputInterpreter::SetListener(InterpreterListener* listener) {
+  listeners_.push_back(listener);
 }
 
 void InputInterpreter::RegisterDevice(const InputDevice* device) {
   FTL_DCHECK(devices_.count(device) == 0);
   auto on_update = [this](mozart::InputEventPtr event) {
-    for (auto callback : callbacks_) {
-      callback(event.Clone());
+    for (auto listener : listeners_) {
+      listener->OnEvent(event.Clone());
     }
   };
-  devices_.emplace(device, new DeviceState(on_update));
+  for (auto listener : listeners_) {
+    listener->OnDeviceAdded(device);
+  }
+  devices_.emplace(device, new DeviceState(device, on_update));
 }
 
 void InputInterpreter::UnregisterDevice(const InputDevice* device) {
+  for (auto listener : listeners_) {
+    listener->OnDeviceRemoved(device);
+  }
   devices_.erase(device);
 }
 

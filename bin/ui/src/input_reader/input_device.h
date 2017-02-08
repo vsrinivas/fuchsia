@@ -29,13 +29,14 @@ using OnReportCallback = std::function<void(InputReport::ReportType type)>;
 
 class InputDevice {
  public:
-  static std::unique_ptr<InputDevice> Open(int dirfd, std::string filename);
+  static std::unique_ptr<InputDevice> Open(int dirfd, std::string filename, uint32_t id);
   ~InputDevice();
 
   bool Initialize();
   bool Read(const OnReportCallback& callback);
 
   const std::string& name() const { return name_; }
+  uint64_t id() const { return id_; }
   mx_handle_t handle() { return event_.get(); }
 
   bool has_keyboard() const { return has_keyboard_; }
@@ -60,7 +61,7 @@ class InputDevice {
   const TouchReport& touch_report() const { return touch_report_; }
 
  private:
-  InputDevice(std::string name, int fd);
+  InputDevice(std::string name, int fd, uint32_t id);
 
   mx_status_t GetProtocol(int* out_proto);
   mx_status_t GetReportDescriptionLength(size_t* out_report_desc_len);
@@ -75,6 +76,7 @@ class InputDevice {
 
   const int fd_;
   const std::string name_;
+  uint32_t id_;
   mx::event event_;
   std::vector<uint8_t> report_;
   input_report_size_t max_report_len_ = 0;

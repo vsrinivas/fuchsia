@@ -21,8 +21,11 @@ InputReader::~InputReader() {
 void InputReader::Start() {
   device_watcher_ = mtl::DeviceWatcher::Create(
       DEV_INPUT, [this](int dir_fd, std::string filename) {
+        if (device_ids_.count(filename) == 0) {
+          device_ids_[filename] = device_ids_.size() + 1;
+        }
         std::unique_ptr<InputDevice> device =
-            InputDevice::Open(dir_fd, filename);
+            InputDevice::Open(dir_fd, filename, device_ids_[filename]);
         if (device)
           DeviceAdded(std::move(device));
       });

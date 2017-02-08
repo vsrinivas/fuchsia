@@ -43,6 +43,7 @@ class InputReader : mtl::MessageLoopHandler {
       std::pair<std::unique_ptr<InputDevice>, mtl::MessageLoop::HandlerKey>>
       devices_;
   std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
+  std::unordered_map<std::string, uint32_t> device_ids_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputReader);
 };

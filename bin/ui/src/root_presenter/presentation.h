@@ -21,7 +21,8 @@
 
 namespace root_presenter {
 
-class Presentation : public mozart::ViewTreeListener,
+class Presentation : public mozart::input::InterpreterListener,
+                     public mozart::ViewTreeListener,
                      public mozart::ViewListener,
                      public mozart::ViewContainerListener {
  public:
@@ -34,6 +35,11 @@ class Presentation : public mozart::ViewTreeListener,
   void Present(ftl::Closure shutdown_callback);
 
  private:
+  // |InputInterpreterListener|:
+  void OnEvent(mozart::InputEventPtr event) override;
+  void OnDeviceAdded(const mozart::input::InputDevice* device) override;
+  void OnDeviceRemoved(const mozart::input::InputDevice* device) override;
+
   // |ViewTreeListener|:
   void OnRendererDied(const OnRendererDiedCallback& callback) override;
 

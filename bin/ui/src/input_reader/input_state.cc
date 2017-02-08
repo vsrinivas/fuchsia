@@ -4,6 +4,7 @@
 
 #include "apps/mozart/src/input_reader/input_state.h"
 
+#include "apps/mozart/src/input_reader/input_device.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
@@ -24,8 +25,9 @@ constexpr ftl::TimeDelta kKeyRepeatFast = ftl::TimeDelta::FromMilliseconds(75);
 
 #pragma mark - KeyboardState
 
-KeyboardState::KeyboardState(OnEventCallback callback)
-    : callback_(callback),
+KeyboardState::KeyboardState(uint32_t device_id, OnEventCallback callback)
+    : device_id_(device_id),
+      callback_(callback),
       keymap_(qwerty_map),
       weak_ptr_factory_(this),
       task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()) {
@@ -43,6 +45,7 @@ void KeyboardState::SendEvent(mozart::KeyboardEvent::Phase phase,
   auto kb = mozart::KeyboardEvent::New();
   kb->phase = phase;
   kb->event_time = timestamp;
+  kb->device_id = device_id_;
   kb->hid_usage = key;
   kb->code_point = hid_map_key(
       key, modifiers & (mozart::kModifierShift | mozart::kModifierCapsLock),
@@ -179,6 +182,16 @@ void KeyboardState::ScheduleRepeat(uint64_t sequence, ftl::TimeDelta delta) {
 
 #pragma mark - MouseState
 
+void MouseState::OnRegistered() {
+  SendEvent(0, 0, InputEventTimestampNow(), mozart::PointerEvent::Phase::ADD,
+            0);
+}
+
+void MouseState::OnUnregistered() {
+  SendEvent(0, 0, InputEventTimestampNow(), mozart::PointerEvent::Phase::REMOVE,
+            0);
+}
+
 void MouseState::SendEvent(float rel_x,
                            float rel_y,
                            int64_t timestamp,
@@ -187,6 +200,7 @@ void MouseState::SendEvent(float rel_x,
   mozart::InputEventPtr ev = mozart::InputEvent::New();
   mozart::PointerEventPtr pt = mozart::PointerEvent::New();
   pt->event_time = timestamp;
+  pt->device_id = device_id_;
   pt->phase = phase;
   pt->buttons = buttons;
   pt->type = mozart::PointerEvent::Type::MOUSE;
@@ -238,6 +252,7 @@ void StylusState::SendEvent(int64_t timestamp,
                             uint32_t buttons) {
   auto pt = mozart::PointerEvent::New();
   pt->event_time = timestamp;
+  pt->device_id = device_id_;
   pt->pointer_id = 1;
   pt->type = type;
   pt->phase = phase;
@@ -334,6 +349,7 @@ void TouchscreenState::Update(const TouchReport& report,
     auto ev = mozart::InputEvent::New();
     auto pt = mozart::PointerEvent::New();
     pt->event_time = now;
+    pt->device_id = device_id_;
     pt->phase = mozart::PointerEvent::Phase::DOWN;
     for (auto it = old_pointers.begin(); it != old_pointers.end(); ++it) {
       FTL_DCHECK(touch.finger_id >= 0);
@@ -392,6 +408,43 @@ void TouchscreenState::Update(const TouchReport& report,
     pt->event_time = now;
     ev->set_pointer(std::move(pt));
     callback_(std::move(ev));
+  }
+}
+
+#pragma mark - DeviceState
+
+DeviceState::DeviceState(const InputDevice* device, OnEventCallback callback)
+    : keyboard(device->id(), callback),
+      mouse(device->id(), callback),
+      stylus(device->id(), callback),
+      touchscreen(device->id(), callback),
+      device_(device) {
+  if (device_->has_keyboard()) {
+    keyboard.OnRegistered();
+  }
+  if (device_->has_mouse()) {
+    mouse.OnRegistered();
+  }
+  if (device_->has_stylus()) {
+    stylus.OnRegistered();
+  }
+  if (device_->has_touchscreen()) {
+    touchscreen.OnRegistered();
+  }
+}
+
+DeviceState::~DeviceState() {
+  if (device_->has_keyboard()) {
+    keyboard.OnUnregistered();
+  }
+  if (device_->has_mouse()) {
+    mouse.OnUnregistered();
+  }
+  if (device_->has_stylus()) {
+    stylus.OnUnregistered();
+  }
+  if (device_->has_touchscreen()) {
+    touchscreen.OnUnregistered();
   }
 }
 

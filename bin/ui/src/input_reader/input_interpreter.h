@@ -16,18 +16,24 @@
 namespace mozart {
 namespace input {
 
-using OnEventCallback = std::function<void(mozart::InputEventPtr event)>;
+class InterpreterListener {
+public:
+  virtual void OnEvent(mozart::InputEventPtr event) = 0;
+  virtual void OnDeviceAdded(const InputDevice* device) = 0;
+  virtual void OnDeviceRemoved(const InputDevice* device) = 0;
+};
 
 class InputInterpreter {
  public:
-  void RegisterCallback(OnEventCallback callback);
+  void SetListener(InterpreterListener* listener);
+
   void RegisterDisplay(mozart::Size dimension);
   void RegisterDevice(const InputDevice* device);
   void UnregisterDevice(const InputDevice* device);
   void OnReport(const InputDevice* device, InputReport::ReportType type);
 
  private:
-  std::vector<OnEventCallback> callbacks_;
+  std::vector<InterpreterListener*> listeners_;
   std::map<const InputDevice*, std::unique_ptr<DeviceState>> devices_;
   mozart::Size display_size_;
 };

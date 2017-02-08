@@ -24,14 +24,15 @@ namespace mozart {
 namespace input {
 
 std::unique_ptr<InputDevice> InputDevice::Open(int dirfd,
-                                               std::string filename) {
+                                               std::string filename,
+                                               uint32_t id) {
   int fd = openat(dirfd, filename.c_str(), O_RDONLY);
   if (fd < 0) {
     FTL_LOG(ERROR) << "Failed to open device " << filename;
     return nullptr;
   }
 
-  std::unique_ptr<InputDevice> device(new InputDevice(filename, fd));
+  std::unique_ptr<InputDevice> device(new InputDevice(filename, fd, id));
   if (!device->Initialize()) {
     return nullptr;
   }
@@ -39,8 +40,8 @@ std::unique_ptr<InputDevice> InputDevice::Open(int dirfd,
   return device;
 }
 
-InputDevice::InputDevice(std::string name, int fd)
-    : fd_(fd), name_(std::move(name)) {
+InputDevice::InputDevice(std::string name, int fd, uint32_t id)
+    : fd_(fd), name_(std::move(name)), id_(id) {
   memset(acer12_touch_reports_, 0, 2 * sizeof(acer12_touch_t));
 }
 

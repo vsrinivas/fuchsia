@@ -49,6 +49,7 @@ std::ostream& operator<<(std::ostream& os, const PointerEvent& value) {
       os << "UNDEFINED";
   }
 
+  os << ", device_id=" << value.device_id;
   os << ", pointer_id=" << value.pointer_id << ", type=";
   switch (value.type) {
     case mozart::PointerEvent::Type::TOUCH:
@@ -92,8 +93,9 @@ std::ostream& operator<<(std::ostream& os, const KeyboardEvent& value) {
       os << "UNDEFINED";
   }
 
+  os << ", device_id=" << value.device_id;
   if (value.code_point) {
-    os << "character=" << value.code_point;
+    os << ", character=" << value.code_point;
     if (value.modifiers) {
       os << ", modifiers";
       if (value.modifiers & mozart::kModifierCapsLock) {

@@ -85,29 +85,7 @@ void Presentation::Present(ftl::Closure shutdown_callback) {
 
 void Presentation::StartInput() {
   input_interpreter_.RegisterDisplay(*display_info_->size);
-  input_interpreter_.RegisterCallback([this](mozart::InputEventPtr event) {
-    if (event->is_pointer()) {
-      const mozart::PointerEventPtr& pointer = event->get_pointer();
-      if (pointer->type == mozart::PointerEvent::Type::MOUSE) {
-        cursor_position_.x = pointer->x;
-        cursor_position_.y = pointer->y;
-        if (!show_cursor_) {
-          layout_changed_ = true;
-          show_cursor_ = true;
-        }
-        root_view_->Invalidate();
-      } else {
-        if (show_cursor_) {
-          layout_changed_ = true;
-          show_cursor_ = false;
-          root_view_->Invalidate();
-        }
-      }
-    }
-
-    if (input_dispatcher_)
-      input_dispatcher_->DispatchEvent(std::move(event));
-  });
+  input_interpreter_.SetListener(this);
   input_reader_.Start();
 }
 
@@ -274,6 +252,32 @@ void Presentation::UpdateScene() {
   root_scene_->Update(std::move(update));
   root_scene_->Publish(CreateSceneMetadata());
 }
+
+void Presentation::OnEvent(mozart::InputEventPtr event) {
+  if (event->is_pointer()) {
+    const mozart::PointerEventPtr& pointer = event->get_pointer();
+    if (pointer->type == mozart::PointerEvent::Type::MOUSE) {
+      cursor_position_.x = pointer->x;
+      cursor_position_.y = pointer->y;
+      if (!show_cursor_) {
+        layout_changed_ = true;
+        show_cursor_ = true;
+      }
+      root_view_->Invalidate();
+    } else {
+      if (show_cursor_) {
+        layout_changed_ = true;
+        show_cursor_ = false;
+        root_view_->Invalidate();
+      }
+    }
+  }
+
+  if (input_dispatcher_)
+    input_dispatcher_->DispatchEvent(std::move(event));
+}
+void Presentation::OnDeviceAdded(const mozart::input::InputDevice* device) {}
+void Presentation::OnDeviceRemoved(const mozart::input::InputDevice* device) {}
 
 void Presentation::OnLayout() {
   auto properties = mozart::ViewProperties::New();

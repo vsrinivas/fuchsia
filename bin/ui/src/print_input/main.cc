@@ -10,16 +10,52 @@
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+namespace {
+
+std::ostream& operator<<(std::ostream& os,
+                         const mozart::input::InputDevice& value) {
+  os << "{InputDevice#" << value.id() << ":";
+  if (value.has_keyboard()) {
+    os << "KEYBOARD:";
+  }
+  if (value.has_mouse()) {
+    os << "MOUSE:";
+  }
+  if (value.has_stylus()) {
+    os << "STYLUS:";
+  }
+  if (value.has_touchscreen()) {
+    os << "TOUCHSCREEN:";
+  }
+  os << "/dev/class/input/" << value.name() << "}";
+  return os;
+}
+
+class Listener : public mozart::input::InterpreterListener {
+ private:
+  // |InputInterpreterListener|:
+  void OnEvent(mozart::InputEventPtr event) { FTL_LOG(INFO) << *(event.get()); }
+
+  void OnDeviceAdded(const mozart::input::InputDevice* device) {
+    FTL_LOG(INFO) << *device << " Added";
+  }
+
+  void OnDeviceRemoved(const mozart::input::InputDevice* device) {
+    FTL_LOG(INFO) << *device << " Removed";
+  }
+};
+}
+
 int main(int argc, char** argv) {
   mtl::MessageLoop message_loop;
 
+  Listener listener;
   mozart::input::InputInterpreter interpreter;
   mozart::Size size;
   size.width = 1.0;
   size.height = 1.0;
   interpreter.RegisterDisplay(size);
-  interpreter.RegisterCallback(
-      [](mozart::InputEventPtr event) { FTL_LOG(INFO) << *(event.get()); });
+  interpreter.SetListener(&listener);
   mozart::input::InputReader reader(&interpreter);
   reader.Start();
 

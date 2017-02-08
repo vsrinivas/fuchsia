@@ -20,11 +20,19 @@
 namespace mozart {
 namespace input {
 
+class InputDevice;
+
 using OnEventCallback = std::function<void(mozart::InputEventPtr event)>;
 
-class KeyboardState {
+class State {
+public:
+  void OnRegistered() {}
+  void OnUnregistered() {}
+};
+
+class KeyboardState : public State {
  public:
-  KeyboardState(OnEventCallback callback);
+  KeyboardState(uint32_t device_id, OnEventCallback callback);
   void Update(const KeyboardReport& report,
               const KeyboardDescriptor& descriptor);
 
@@ -36,6 +44,7 @@ class KeyboardState {
   void Repeat(uint64_t sequence);
   void ScheduleRepeat(uint64_t sequence, ftl::TimeDelta delta);
 
+  uint32_t device_id_;
   OnEventCallback callback_;
   keychar_t* keymap_;  // assigned to a global static qwerty_map or dvorak_map
   ftl::WeakPtrFactory<KeyboardState> weak_ptr_factory_;
@@ -47,12 +56,14 @@ class KeyboardState {
   uint64_t repeat_sequence_ = 0;
 };
 
-class MouseState {
+class MouseState : public State {
  public:
-  MouseState(OnEventCallback callback) : callback_(callback) {}
+  MouseState(uint32_t device_id, OnEventCallback callback) : device_id_(device_id), callback_(callback) {}
   void Update(const MouseReport& report,
               const MouseDescriptor& descriptor,
               mozart::Size display_size);
+  void OnRegistered();
+  void OnUnregistered();
 
  private:
   void SendEvent(float rel_x,
@@ -61,14 +72,15 @@ class MouseState {
                  mozart::PointerEvent::Phase phase,
                  uint32_t buttons);
 
+  uint32_t device_id_;
   OnEventCallback callback_;
   uint8_t buttons_ = 0;
   mozart::PointF position_;
 };
 
-class StylusState {
+class StylusState : public State {
  public:
-  StylusState(OnEventCallback callback) : callback_(callback) {}
+  StylusState(uint32_t device_id, OnEventCallback callback) : device_id_(device_id), callback_(callback) {}
   void Update(const StylusReport& report,
               const StylusDescriptor& descriptor,
               mozart::Size display_size);
@@ -81,6 +93,7 @@ class StylusState {
                                float y,
                                uint32_t buttons);
 
+  uint32_t device_id_;
   OnEventCallback callback_;
   bool stylus_down_ = false;
   bool stylus_in_range_ = false;
@@ -88,29 +101,32 @@ class StylusState {
   mozart::PointerEvent stylus_;
 };
 
-class TouchscreenState {
+class TouchscreenState : public State {
  public:
-  TouchscreenState(OnEventCallback callback) : callback_(callback) {}
+  TouchscreenState(uint32_t device_id, OnEventCallback callback) : device_id_(device_id), callback_(callback) {}
   void Update(const TouchReport& report,
               const TouchscreenDescriptor& descriptor,
               mozart::Size display_size);
 
  private:
+  uint32_t device_id_;
   OnEventCallback callback_;
   std::vector<mozart::PointerEvent> pointers_;
 };
 
 struct DeviceState {
-  DeviceState(OnEventCallback callback)
-      : keyboard(callback),
-        mouse(callback),
-        stylus(callback),
-        touchscreen(callback) {}
+  DeviceState(const InputDevice* device, OnEventCallback callback);
+  ~DeviceState();
 
   KeyboardState keyboard;
   MouseState mouse;
   StylusState stylus;
   TouchscreenState touchscreen;
+
+private:
+  const InputDevice* device_;
+
+
 };
 
 }  // namespace input

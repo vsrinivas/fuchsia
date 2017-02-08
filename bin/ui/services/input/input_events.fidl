@@ -24,7 +24,7 @@ struct KeyboardEvent {
   // to the uptime of the machine.
   uint64 event_time;
 
-  // TODO(jpoichet) uint32 device_id;
+  uint32 device_id;
 
   enum Phase {
     // When key is pressed down.
@@ -64,7 +64,8 @@ struct PointerEvent {
   // to the uptime of the machine.
   uint64 event_time;
 
-  // TODO(jpoichet) uint32 device_id;
+  uint32 device_id;
+
   uint32 pointer_id;
 
   enum Type {
