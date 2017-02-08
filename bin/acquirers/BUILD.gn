@@ -14,8 +14,8 @@ executable("focus") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/maxwell/services/context",
-    "//apps/modular/lib/app",
     "//apps/modular/services/user",
     "//lib/mtl",
   ]

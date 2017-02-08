@@ -9,7 +9,7 @@ source_set("application_environment_host_impl") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
   ]
 }
 
@@ -19,6 +19,6 @@ source_set("bound_set") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
   ]
 }

@@ -17,9 +17,9 @@ executable("resolver_main") {
   ]
 
   deps = [
+    "//application/lib/app",
+    "//application/services:services_sync",
     "//apps/maxwell/services/resolver",
-    "//apps/modular/lib/app",
-    "//apps/modular/services/application:application_sync",
     "//apps/modular/services/component",
     "//lib/ftl",
     "//lib/mtl",
@@ -33,10 +33,10 @@ executable("resolver_test") {
   ]
 
   deps = [
+    "//application/lib/app",
+    "//application/services:services_sync",
     "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/resolver:resolver_sync",
-    "//apps/modular/lib/app",
-    "//apps/modular/services/application:application_sync",
     "//lib/ftl",
     "//lib/mtl",
   ]

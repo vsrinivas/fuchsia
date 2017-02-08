@@ -4,8 +4,8 @@
 
 #include "apps/maxwell/src/application_environment_host_impl.h"
 
-#include "apps/modular/lib/app/connect.h"
-#include "apps/modular/services/application/application_loader.fidl.h"
+#include "application/lib/app/connect.h"
+#include "application/services/application_loader.fidl.h"
 
 namespace maxwell {
 

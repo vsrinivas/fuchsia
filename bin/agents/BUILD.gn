@@ -19,8 +19,8 @@ dart_app("bandsintown") {
   main_dart = "bandsintown.dart"
 
   deps = [
+    "//application/lib/app/dart",
     "//apps/maxwell/services/context:context_dart",
-    "//apps/modular/lib/app/dart",
   ]
 }
 
@@ -33,9 +33,9 @@ executable("carmen_sandiego") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/acquirers:gps",
-    "//apps/modular/lib/app",
     "//apps/modular/lib/rapidjson",
     "//lib/mtl",
   ]
@@ -51,9 +51,9 @@ executable("ideas") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/app",
     "//apps/modular/lib/rapidjson",
     "//lib/mtl",
   ]
@@ -67,9 +67,9 @@ executable("module_suggester") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/app",
     "//apps/modular/lib/rapidjson",
     "//lib/mtl",
   ]

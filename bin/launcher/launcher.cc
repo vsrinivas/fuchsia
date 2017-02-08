@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/launcher/launcher.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/launcher/agent_launcher.h"
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {

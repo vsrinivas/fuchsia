@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/bound_set.h"
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
@@ -9,11 +10,10 @@
 #include "apps/maxwell/src/suggestion_engine/repo.h"
 #include "apps/maxwell/src/suggestion_engine/timeline_stories_filter.h"
 #include "apps/maxwell/src/suggestion_engine/timeline_stories_watcher.h"
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "apps/modular/services/user/focus.fidl.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace maxwell {
 
@@ -91,8 +91,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                       modular::StoryControllerPtr story_controller;
                       story_provider_->GetController(
                           story_id, story_controller.NewRequest());
-                      FTL_LOG(INFO) << "Creating story with module "
-                                    << module_id;
+                      FTL_LOG(INFO)
+                          << "Creating story with module " << module_id;
 
                       story_controller->GetInfo(ftl::MakeCopyable(
                           // TODO(thatguy): We should not be std::move()ing
@@ -109,8 +109,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
               break;
             }
             default:
-              FTL_LOG(WARNING) << "Unknown action tag "
-                               << (uint32_t)action->which();
+              FTL_LOG(WARNING)
+                  << "Unknown action tag " << (uint32_t)action->which();
           }
         }
       }

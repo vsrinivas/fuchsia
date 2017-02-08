@@ -6,9 +6,9 @@
 
 #include <rapidjson/document.h>
 
+#include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/context/client.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];

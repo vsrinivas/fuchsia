@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/src/context_engine/graph.h"
 #include "apps/maxwell/src/context_engine/repo.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace maxwell {

@@ -4,9 +4,9 @@
 
 #include <unordered_map>
 
+#include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/context/client.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"

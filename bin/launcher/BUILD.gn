@@ -11,10 +11,10 @@ executable("launcher") {
 
   deps = [
     ":agent_launcher",
+    "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/launcher",
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/app",
     "//lib/mtl",
   ]
 }
@@ -26,7 +26,7 @@ source_set("agent_launcher") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/maxwell/src:application_environment_host_impl",
-    "//apps/modular/lib/app",
   ]
 }

@@ -4,9 +4,9 @@
 
 #include "apps/maxwell/services/resolver/resolver.fidl-sync.h"
 
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
-#include "apps/modular/lib/app/service_provider_impl.h"
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
+#include "application/lib/app/service_provider_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"

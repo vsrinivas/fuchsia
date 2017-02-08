@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include "application/services/application_environment.fidl.h"
 #include "apps/maxwell/src/application_environment_host_impl.h"
-#include "apps/modular/services/application/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {

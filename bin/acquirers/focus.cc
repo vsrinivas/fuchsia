@@ -4,13 +4,13 @@
 
 #include "apps/maxwell/src/acquirers/focus.h"
 
+#include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/context/client.fidl.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/services/user/focus.fidl.h"
 
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"

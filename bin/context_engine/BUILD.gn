@@ -12,9 +12,9 @@ executable("context_engine") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src:bound_set",
-    "//apps/modular/lib/app",
     "//lib/mtl",
   ]
 }

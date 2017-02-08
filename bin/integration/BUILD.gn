@@ -23,11 +23,11 @@ source_set("context_engine_test") {
 
   deps = [
     ":common",
+    "//application/lib/app",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/acquirers/mock:gps",
     "//apps/maxwell/src/agents:carmen_sandiego",
-    "//apps/modular/lib/app",
   ]
 }
 
@@ -41,12 +41,12 @@ source_set("suggestion_engine_test") {
   deps = [
     ":common",
     ":test_suggestion_listener",
+    "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src/acquirers/mock:gps",
     "//apps/maxwell/src/agents:carmen_sandiego",
     "//apps/maxwell/src/agents:ideas",
-    "//apps/modular/lib/app",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/testing:story_provider_mock",
   ]
@@ -79,10 +79,10 @@ source_set("common") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src:application_environment_host_impl",
     "//apps/maxwell/src/launcher:agent_launcher",
-    "//apps/modular/lib/app",
     "//lib/mtl",
   ]
 

@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "gtest/gtest.h"
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
 #include "apps/maxwell/src/application_environment_host_impl.h"
 #include "apps/maxwell/src/launcher/agent_launcher.h"
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
+#include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"

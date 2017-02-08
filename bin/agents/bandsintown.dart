@@ -4,7 +4,7 @@
 
 import 'package:apps.maxwell.services.context/client.fidl.dart';
 import 'package:apps.maxwell.services.context/subscriber_link.fidl.dart';
-import 'package:apps.modular.lib.app.dart/app.dart';
+import 'package:application.lib.app.dart/app.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 class ContextSubscriberLinkImpl extends ContextSubscriberLink {
