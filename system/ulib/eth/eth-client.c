@@ -132,7 +132,7 @@ mx_status_t eth_queue_tx(eth_client_t* eth, void* cookie,
     mx_status_t status;
     mx_fifo_state_t state;
 
-    if ((status = mx_fifo_op(eth->tx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+    if ((status = mx_fifo0_op(eth->tx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
         return status;
     }
 
@@ -145,7 +145,7 @@ mx_status_t eth_queue_tx(eth_client_t* eth, void* cookie,
         entry->cookie = cookie;
         IORING_TRACE("tx[%u] c=%p o=%u l=%u f=%u\n",
                      (unsigned)idx, entry->cookie, entry->offset, entry->length, entry->flags);
-        return mx_fifo_op(eth->tx_enqueue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, &state);
+        return mx_fifo0_op(eth->tx_enqueue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, &state);
     } else {
         return ERR_SHOULD_WAIT;
     }
@@ -156,7 +156,7 @@ mx_status_t eth_queue_rx(eth_client_t* eth, void* cookie,
     mx_status_t status;
     mx_fifo_state_t state;
 
-    if ((status = mx_fifo_op(eth->rx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+    if ((status = mx_fifo0_op(eth->rx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
         return status;
     }
 
@@ -169,7 +169,7 @@ mx_status_t eth_queue_rx(eth_client_t* eth, void* cookie,
         entry->cookie = cookie;
         IORING_TRACE("rx[%u] c=%p o=%u l=%u f=%u\n",
                      (unsigned)idx, entry->cookie, entry->offset, entry->length, entry->flags);
-        return mx_fifo_op(eth->rx_enqueue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, &state);
+        return mx_fifo0_op(eth->rx_enqueue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, &state);
     } else {
         return ERR_SHOULD_WAIT;
     }
@@ -180,7 +180,7 @@ mx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
     mx_status_t status;
     mx_fifo_state_t state;
 
-    if ((status = mx_fifo_op(eth->tx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+    if ((status = mx_fifo0_op(eth->tx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
         return status;
     }
 
@@ -194,7 +194,7 @@ mx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
         count++;
     }
 
-    return mx_fifo_op(eth->tx_dequeue_fifo, MX_FIFO_OP_ADVANCE_TAIL, count, NULL);
+    return mx_fifo0_op(eth->tx_dequeue_fifo, MX_FIFO_OP_ADVANCE_TAIL, count, NULL);
 }
 
 
@@ -205,7 +205,7 @@ mx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
     mx_status_t status;
     mx_fifo_state_t state;
 
-    if ((status = mx_fifo_op(eth->rx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+    if ((status = mx_fifo0_op(eth->rx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
         return status;
     }
 
@@ -219,7 +219,7 @@ mx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
         count++;
     }
 
-    return mx_fifo_op(eth->rx_dequeue_fifo, MX_FIFO_OP_ADVANCE_TAIL, count, NULL);
+    return mx_fifo0_op(eth->rx_dequeue_fifo, MX_FIFO_OP_ADVANCE_TAIL, count, NULL);
 }
 
 // Wait for completed rx packets

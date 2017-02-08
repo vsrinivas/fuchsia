@@ -108,7 +108,7 @@ static void eth_handle_rx(ethdev_t* edev, void* data, size_t len) {
     mx_fifo_state_t state;
 
     // look for a pending rx transaction we can complete
-    if ((status = mx_fifo_op(edev->rx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+    if ((status = mx_fifo0_op(edev->rx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
         printf("eth: rx_enqueue_fifo: cannot read: %d\n", status);
         return;
     }
@@ -141,7 +141,7 @@ static void eth_handle_rx(ethdev_t* edev, void* data, size_t len) {
     }
 
     // look for space to write the completed transcation
-    if ((status = mx_fifo_op(edev->rx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+    if ((status = mx_fifo0_op(edev->rx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
         printf("eth: rx_dequeue_fifo: cannot read: %d\n", status);
         return;
     }
@@ -159,10 +159,10 @@ static void eth_handle_rx(ethdev_t* edev, void* data, size_t len) {
     entry->cookie = ecookie;
 
     // advance both fifos
-    if ((status = mx_fifo_op(edev->rx_dequeue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL)) < 0) {
+    if ((status = mx_fifo0_op(edev->rx_dequeue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL)) < 0) {
         printf("eth: rx_dwqueue_fifo: cannot advance head: %d\n", status);
     }
-    if ((status = mx_fifo_op(edev->rx_enqueue_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, NULL)) < 0) {
+    if ((status = mx_fifo0_op(edev->rx_enqueue_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, NULL)) < 0) {
         printf("eth: rx_enqueue_fifo: cannot advance tail: %d\n", status);
     }
 }
@@ -172,7 +172,7 @@ static mx_status_t eth_handle_tx(ethdev_t* edev) {
     mx_fifo_state_t state;
 
     // look for a pending tx transaction we can complete
-    if ((status = mx_fifo_op(edev->tx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+    if ((status = mx_fifo0_op(edev->tx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
         printf("eth: tx_enqueue_fifo: cannot read: %d\n", status);
         return status;
     }
@@ -198,7 +198,7 @@ static mx_status_t eth_handle_tx(ethdev_t* edev) {
     }
 
     // look for space to write the completed transcation
-    if ((status = mx_fifo_op(edev->tx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+    if ((status = mx_fifo0_op(edev->tx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
         printf("eth: tx_dequeue_fifo: cannot read: %d\n", status);
         return status;
     }
@@ -216,11 +216,11 @@ static mx_status_t eth_handle_tx(ethdev_t* edev) {
     entry->cookie = ecookie;
 
     // advance both fifos
-    if ((status = mx_fifo_op(edev->tx_dequeue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL)) < 0) {
+    if ((status = mx_fifo0_op(edev->tx_dequeue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL)) < 0) {
         printf("eth: tx_dequeue_fifo: cannot advance head: %d\n", status);
         return status;
     }
-    if ((status = mx_fifo_op(edev->tx_enqueue_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, NULL)) < 0) {
+    if ((status = mx_fifo0_op(edev->tx_enqueue_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, NULL)) < 0) {
         printf("eth: tx_enqueue_fifo: cannot advance tail: %d\n", status);
         return status;
     }
@@ -523,16 +523,16 @@ static void eth_kill_locked(ethdev_t* edev) {
 
     // try to convince clients to close us
     if (edev->rx_enqueue_fifo) {
-        mx_fifo_op(edev->rx_enqueue_fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 1, NULL);
-        mx_fifo_op(edev->rx_dequeue_fifo, MX_FIFO_OP_PRODUCER_EXCEPTION, 1, NULL);
+        mx_fifo0_op(edev->rx_enqueue_fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 1, NULL);
+        mx_fifo0_op(edev->rx_dequeue_fifo, MX_FIFO_OP_PRODUCER_EXCEPTION, 1, NULL);
         mx_handle_close(edev->rx_enqueue_fifo);
         mx_handle_close(edev->rx_dequeue_fifo);
         edev->rx_enqueue_fifo = MX_HANDLE_INVALID;
         edev->rx_dequeue_fifo = MX_HANDLE_INVALID;
     }
     if (edev->tx_enqueue_fifo) {
-        mx_fifo_op(edev->tx_enqueue_fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 1, NULL);
-        mx_fifo_op(edev->tx_dequeue_fifo, MX_FIFO_OP_PRODUCER_EXCEPTION, 1, NULL);
+        mx_fifo0_op(edev->tx_enqueue_fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 1, NULL);
+        mx_fifo0_op(edev->tx_dequeue_fifo, MX_FIFO_OP_PRODUCER_EXCEPTION, 1, NULL);
         mx_handle_close(edev->tx_enqueue_fifo);
         mx_handle_close(edev->tx_dequeue_fifo);
         edev->tx_enqueue_fifo = MX_HANDLE_INVALID;

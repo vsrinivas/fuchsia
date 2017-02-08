@@ -14,13 +14,13 @@
 
 #include <mxtl/ref_counted.h>
 
-class FifoDispatcher : public Dispatcher {
+class FifoDispatcherV0 : public Dispatcher {
 public:
     static status_t Create(uint64_t count, mxtl::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
-    ~FifoDispatcher() final;
-    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_FIFO; }
+    ~FifoDispatcherV0() final;
+    mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_FIFO0; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
 
     uint64_t count() const { return count_; }
@@ -31,7 +31,7 @@ public:
     status_t SetException(mx_signals_t signal, bool set, mx_fifo_state_t* out);
 
 private:
-    explicit FifoDispatcher(uint64_t count);
+    explicit FifoDispatcherV0(uint64_t count);
 
     // simple RAII class for returning mx_fifo_state_t
     class StateUpdater;

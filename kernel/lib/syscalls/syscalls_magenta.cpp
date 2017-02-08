@@ -27,7 +27,7 @@
 
 #include <magenta/event_dispatcher.h>
 #include <magenta/event_pair_dispatcher.h>
-#include <magenta/fifo_dispatcher.h>
+#include <magenta/fifo0_dispatcher.h>
 #include <magenta/handle_owner.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
@@ -491,7 +491,7 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     return status;
 }
 
-mx_status_t sys_fifo_create(uint64_t count, mx_handle_t* _out) {
+mx_status_t sys_fifo0_create(uint64_t count, mx_handle_t* _out) {
     // Must be a power of 2
     if (!count || (count & (count - 1))) {
         return ERR_INVALID_ARGS;
@@ -499,7 +499,7 @@ mx_status_t sys_fifo_create(uint64_t count, mx_handle_t* _out) {
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    mx_status_t result = FifoDispatcher::Create(count, &dispatcher, &rights);
+    mx_status_t result = FifoDispatcherV0::Create(count, &dispatcher, &rights);
     if (result != NO_ERROR)
         return result;
 
@@ -515,7 +515,7 @@ mx_status_t sys_fifo_create(uint64_t count, mx_handle_t* _out) {
     return NO_ERROR;
 }
 
-mx_status_t sys_fifo_op(mx_handle_t handle, uint32_t op, uint64_t val, mx_fifo_state_t* _out) {
+mx_status_t sys_fifo0_op(mx_handle_t handle, uint32_t op, uint64_t val, mx_fifo_state_t* _out) {
     mx_rights_t rights = MX_RIGHT_READ;
     switch (op) {
     case MX_FIFO_OP_READ_STATE:
@@ -535,7 +535,7 @@ mx_status_t sys_fifo_op(mx_handle_t handle, uint32_t op, uint64_t val, mx_fifo_s
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<FifoDispatcher> fifo;
+    mxtl::RefPtr<FifoDispatcherV0> fifo;
     mx_status_t status = up->GetDispatcherWithRights(handle, rights, &fifo);
     if (status != NO_ERROR)
         return status;

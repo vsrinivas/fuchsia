@@ -65,7 +65,7 @@ static const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_EVENT_PAIR: return "event-pair";
         case MX_OBJ_TYPE_JOB: return "job";
         case MX_OBJ_TYPE_VMAR: return "vmar";
-        case MX_OBJ_TYPE_FIFO: return "fifo";
+        case MX_OBJ_TYPE_FIFO0: return "fifo";
         case MX_OBJ_TYPE_IOPORT2: return "portv2";
         default: return "???";
     }

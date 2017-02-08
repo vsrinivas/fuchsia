@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/fifo.c
+    $(LOCAL_DIR)/fifo0.c
 
 MODULE_NAME := fifo-test
 

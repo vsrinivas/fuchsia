@@ -645,21 +645,21 @@ extern mx_status_t _mx_cprng_add_entropy(
     const void* buffer,
     size_t len) __attribute__((__leaf__));
 
-extern mx_status_t mx_fifo_create(
+extern mx_status_t mx_fifo0_create(
     uint64_t count,
     mx_handle_t out[1]) __attribute__((__leaf__));
 
-extern mx_status_t _mx_fifo_create(
+extern mx_status_t _mx_fifo0_create(
     uint64_t count,
     mx_handle_t out[1]) __attribute__((__leaf__));
 
-extern mx_status_t mx_fifo_op(
+extern mx_status_t mx_fifo0_op(
     mx_handle_t handle,
     uint32_t op,
     uint64_t val,
     mx_fifo_state_t out[1]) __attribute__((__leaf__));
 
-extern mx_status_t _mx_fifo_op(
+extern mx_status_t _mx_fifo0_op(
     mx_handle_t handle,
     uint32_t op,
     uint64_t val,

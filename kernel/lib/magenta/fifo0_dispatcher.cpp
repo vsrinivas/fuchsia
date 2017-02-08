@@ -4,16 +4,16 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/fifo_dispatcher.h>
+#include <magenta/fifo0_dispatcher.h>
 
 #include <new.h>
 #include <kernel/auto_lock.h>
 
 constexpr mx_rights_t kDefaultFifoRights = MX_FIFO_PRODUCER_RIGHTS | MX_FIFO_CONSUMER_RIGHTS;
 
-class FifoDispatcher::StateUpdater {
+class FifoDispatcherV0::StateUpdater {
 public:
-    StateUpdater(const FifoDispatcher* fifo, mx_fifo_state_t* state)
+    StateUpdater(const FifoDispatcherV0* fifo, mx_fifo_state_t* state)
         : fifo_(fifo), state_(state) {}
     ~StateUpdater() {
         if (fifo_ && state_) {
@@ -22,14 +22,14 @@ public:
     }
 
 private:
-    const FifoDispatcher* fifo_;
+    const FifoDispatcherV0* fifo_;
     mx_fifo_state_t* state_;
 };
 
-status_t FifoDispatcher::Create(uint64_t count, mxtl::RefPtr<Dispatcher>* dispatcher,
+status_t FifoDispatcherV0::Create(uint64_t count, mxtl::RefPtr<Dispatcher>* dispatcher,
                                  mx_rights_t* rights) {
     AllocChecker ac;
-    auto disp = new (&ac) FifoDispatcher(count);
+    auto disp = new (&ac) FifoDispatcherV0(count);
     if (!ac.check())
         return ERR_NO_MEMORY;
 
@@ -38,21 +38,21 @@ status_t FifoDispatcher::Create(uint64_t count, mxtl::RefPtr<Dispatcher>* dispat
     return NO_ERROR;
 }
 
-FifoDispatcher::FifoDispatcher(uint64_t count)
+FifoDispatcherV0::FifoDispatcherV0(uint64_t count)
     : count_(count) {
     state_.head = state_.tail = 0;
     state_tracker_.set_initial_signals_state(MX_FIFO_EMPTY|MX_FIFO_NOT_FULL);
 }
 
-FifoDispatcher::~FifoDispatcher() {}
+FifoDispatcherV0::~FifoDispatcherV0() {}
 
-void FifoDispatcher::GetState(mx_fifo_state_t* out) const {
+void FifoDispatcherV0::GetState(mx_fifo_state_t* out) const {
     AutoLock lock(&lock_);
     StateUpdater updater(this, out);
     // nothing else to do, other than update the state (via the StateUpdater)
 }
 
-status_t FifoDispatcher::AdvanceHead(uint64_t count, mx_fifo_state_t* out) {
+status_t FifoDispatcherV0::AdvanceHead(uint64_t count, mx_fifo_state_t* out) {
     AutoLock lock(&lock_);
     StateUpdater updater(this, out);
 
@@ -72,7 +72,7 @@ status_t FifoDispatcher::AdvanceHead(uint64_t count, mx_fifo_state_t* out) {
     return NO_ERROR;
 }
 
-status_t FifoDispatcher::AdvanceTail(uint64_t count, mx_fifo_state_t* out) {
+status_t FifoDispatcherV0::AdvanceTail(uint64_t count, mx_fifo_state_t* out) {
     AutoLock lock(&lock_);
     StateUpdater updater(this, out);
 
@@ -92,7 +92,7 @@ status_t FifoDispatcher::AdvanceTail(uint64_t count, mx_fifo_state_t* out) {
     return NO_ERROR;
 }
 
-status_t FifoDispatcher::SetException(mx_signals_t signal, bool set, mx_fifo_state_t* out) {
+status_t FifoDispatcherV0::SetException(mx_signals_t signal, bool set, mx_fifo_state_t* out) {
     AutoLock lock(&lock_);
     StateUpdater updater(this, out);
 

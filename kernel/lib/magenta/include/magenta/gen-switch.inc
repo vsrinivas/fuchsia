@@ -111,9 +111,9 @@
        break;
     case 59: sfunc = reinterpret_cast<syscall_func>(sys_cprng_add_entropy);
        break;
-    case 60: sfunc = reinterpret_cast<syscall_func>(sys_fifo_create);
+    case 60: sfunc = reinterpret_cast<syscall_func>(sys_fifo0_create);
        break;
-    case 61: sfunc = reinterpret_cast<syscall_func>(sys_fifo_op);
+    case 61: sfunc = reinterpret_cast<syscall_func>(sys_fifo0_op);
        break;
     case 62: sfunc = reinterpret_cast<syscall_func>(sys_log_create);
        break;

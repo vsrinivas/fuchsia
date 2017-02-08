@@ -61,8 +61,8 @@
 #define MX_SYS_vmo_op_range 57
 #define MX_SYS_cprng_draw 58
 #define MX_SYS_cprng_add_entropy 59
-#define MX_SYS_fifo_create 60
-#define MX_SYS_fifo_op 61
+#define MX_SYS_fifo0_create 60
+#define MX_SYS_fifo0_op 61
 #define MX_SYS_log_create 62
 #define MX_SYS_log_write 63
 #define MX_SYS_log_read 64

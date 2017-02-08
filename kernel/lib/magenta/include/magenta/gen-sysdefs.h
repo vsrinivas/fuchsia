@@ -323,11 +323,11 @@ mx_status_t sys_cprng_add_entropy(
     const void* buffer,
     size_t len);
 
-mx_status_t sys_fifo_create(
+mx_status_t sys_fifo0_create(
     uint64_t count,
     mx_handle_t out[1]);
 
-mx_status_t sys_fifo_op(
+mx_status_t sys_fifo0_op(
     mx_handle_t handle,
     uint32_t op,
     uint64_t val,

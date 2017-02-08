@@ -41,10 +41,10 @@ mx_status_t eth_ioring_create(size_t entries, size_t entry_size,
     mx_handle_t fifo1 = 0;
 
     mx_status_t status;
-    if ((status = mx_fifo_create(entries, &fifo0)) < 0) {
+    if ((status = mx_fifo0_create(entries, &fifo0)) < 0) {
         return status;
     }
-    if ((status = mx_fifo_create(entries, &fifo1)) < 0) {
+    if ((status = mx_fifo0_create(entries, &fifo1)) < 0) {
         goto fail;
     }
 

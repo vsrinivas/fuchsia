@@ -56,8 +56,8 @@ m_syscall mx_vmo_set_size 56
 m_syscall mx_vmo_op_range 57
 m_syscall mx_cprng_draw 58
 m_syscall mx_cprng_add_entropy 59
-m_syscall mx_fifo_create 60
-m_syscall mx_fifo_op 61
+m_syscall mx_fifo0_create 60
+m_syscall mx_fifo0_op 61
 m_syscall mx_log_create 62
 m_syscall mx_log_write 63
 m_syscall mx_log_read 64
