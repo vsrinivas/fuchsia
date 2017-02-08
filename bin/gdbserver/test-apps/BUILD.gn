@@ -9,6 +9,7 @@ group("test-apps") {
     ":crash-test",
     ":exit-test",
     ":loop-test",
+    ":thread-test",
   ]
 }
 
@@ -33,5 +34,15 @@ executable("loop-test") {
 
   sources = [
     "loop-test.c",
+  ]
+}
+
+executable("thread-test") {
+  testonly = true
+
+  output_name = "gdbserver-thread-test"
+
+  sources = [
+    "thread-test.c",
   ]
 }
