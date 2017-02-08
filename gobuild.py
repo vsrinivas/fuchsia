@@ -21,6 +21,7 @@ def main():
                         required=True)
     parser.add_argument('--current-cpu', help='Target arch, x64 or arm64.',
                         required=True)
+    parser.add_argument('--binname', help='Output file')
     parser.add_argument('package', help='The package name')
     args = parser.parse_args()
 
@@ -78,7 +79,10 @@ def main():
     if retcode == 0:
         binname = os.path.basename(args.package)
         src = os.path.join(gopath, "bin/fuchsia_"+goarch+"/"+binname)
-        dst = os.path.join(gopath, binname)
+        if args.binname:
+            dst = os.path.join(gopath, args.binname)
+        else:
+            dst = os.path.join(gopath, binname)
         os.rename(src, dst)
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
