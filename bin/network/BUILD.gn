@@ -28,7 +28,7 @@ executable("network") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/network/services",
     "//lib/ftl",
     "//lib/mtl",

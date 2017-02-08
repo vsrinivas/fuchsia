@@ -3,16 +3,14 @@
 # found in the LICENSE file.
 
 executable("wget") {
-  defines = [
-    "USE_ENVIRONMENT_SERVICE=1",
-  ]
+  defines = [ "USE_ENVIRONMENT_SERVICE=1" ]
 
   sources = [
     "wget.cc",
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/network/services",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

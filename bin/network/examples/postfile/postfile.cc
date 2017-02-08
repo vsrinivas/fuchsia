@@ -5,8 +5,8 @@
 #include <cstdio>
 #include <fcntl.h>
 
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/network/services/url_loader.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
@@ -110,8 +110,7 @@ class PostFileApp {
 
     mx::socket consumer;
     mx::socket producer;
-    mx_status_t status =
-        mx::socket::create(0u, &producer, &consumer);
+    mx_status_t status = mx::socket::create(0u, &producer, &consumer);
     if (status != NO_ERROR) {
       printf("cannot create socket\n");
       return;

@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "apps/modular/lib/app/application_context.h"
+#include "application/lib/app/application_context.h"
 #include "apps/network/network_service_impl.h"
 
 namespace network {

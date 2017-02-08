@@ -8,7 +8,7 @@ executable("postfile") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/network/services",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
