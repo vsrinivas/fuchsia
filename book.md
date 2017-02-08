@@ -7,8 +7,8 @@ Sections will be populated over time.
 
 # Magenta Kernel
 
- - Concepts
- - System Calls / VDSO (libmagenta)
+ - [Concepts][magenta-concepts]
+ - [System Calls][magenta-syscalls] / VDSO (libmagenta)
  - Boot Sequence
 
 # Magenta Core
@@ -91,3 +91,8 @@ Sections will be populated over time.
  - Testing
  - Debugging
  - Tracing
+
+
+
+[magenta-concepts]: https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md "Magenta concepts"
+[magenta-syscalls]: https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls.md "Magenta syscalls"
