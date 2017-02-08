@@ -63,7 +63,7 @@ static mx_status_t sys_port_queue2(mx_handle_t handle, const void* _packet) {
         return status;
 
     AllocChecker ac;
-    mxtl::unique_ptr<PortPacket> pp(new (&ac) PortPacket(true));
+    mxtl::unique_ptr<PortPacket> pp(new (&ac) PortPacket(nullptr));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
@@ -117,9 +117,7 @@ mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, void* _packet)
     if (make_user_ptr(_packet).copy_array_to_user(&pp->packet, sizeof(pp->packet)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (pp->from_heap)
-        delete pp;
-
+    pp->Destroy();
     return NO_ERROR;
 }
 

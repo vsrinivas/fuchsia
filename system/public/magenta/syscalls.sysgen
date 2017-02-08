@@ -85,6 +85,11 @@ syscall handle_wait_many
     (items: mx_wait_item_t[count] INOUT, count: uint32_t, timeout: mx_time_t)
     returns (mx_status_t);
 
+syscall handle_wait_async
+    (handle: mx_handle_t, port_handle: mx_handle_t, key: uint64_t,
+        signals: mx_signals_t, options: uint32_t)
+    returns (mx_status_t);
+
 # Generic object operations
 
 syscall object_signal

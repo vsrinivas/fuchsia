@@ -46,6 +46,13 @@ mx_status_t sys_handle_wait_many(
     uint32_t count,
     mx_time_t timeout);
 
+mx_status_t sys_handle_wait_async(
+    mx_handle_t handle,
+    mx_handle_t port_handle,
+    uint64_t key,
+    mx_signals_t signals,
+    uint32_t options);
+
 mx_status_t sys_object_signal(
     mx_handle_t handle,
     uint32_t clear_mask,

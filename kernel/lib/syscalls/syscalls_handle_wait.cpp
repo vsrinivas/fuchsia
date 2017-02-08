@@ -14,12 +14,14 @@
 #include <lib/user_copy/user_ptr.h>
 
 #include <magenta/magenta.h>
+#include <magenta/port_dispatcher_v2.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/wait_event.h>
 #include <magenta/wait_state_observer.h>
 
 #include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -161,4 +163,43 @@ mx_status_t sys_handle_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time
         return ERR_HANDLE_CLOSED;
 
     return result;
+}
+
+static mx_status_t add_port_observer(mx_handle_t handle_value, PortObserver* observer) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    AutoLock lock(up->handle_table_lock());
+    Handle* handle = up->GetHandleLocked(handle_value);
+    if (!handle)
+        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
+    if (!magenta_rights_check(handle, MX_RIGHT_READ))
+        return ERR_ACCESS_DENIED;
+
+    return observer->Begin(handle);
+}
+
+mx_status_t sys_handle_wait_async(mx_handle_t handle_value, mx_handle_t port_handle,
+                                  uint64_t key, mx_signals_t signals, uint32_t options) {
+    LTRACEF("handle %d\n", handle_value);
+    if (options)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<PortDispatcherV2> port;
+    auto status = up->GetDispatcherWithRights(port_handle, MX_RIGHT_WRITE, &port);
+    if (status != NO_ERROR)
+        return status;
+
+    auto observer = port->MakeObserver(key, signals);
+    if (!observer)
+        return ERR_NO_MEMORY;
+
+    status = add_port_observer(handle_value, observer);
+    if (status != NO_ERROR) {
+        port->CancelObserver(observer);
+        return status;
+    }
+
+    return NO_ERROR;
 }
