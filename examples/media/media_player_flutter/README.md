@@ -63,25 +63,24 @@ Here's an example config file:
         ]
       },
       {
-        "uri": "remoteplayer://myacer/only_media_player",
-        "title": "Remote player on myacer",
+        "title": "Control player on myacer",
+        "device": "myacer",
+        "service": "only_media_player",
       },
     ]
 
-The config file must be well-formed JSON specifying an array of objects. The
-following object fields are supported:
+The config file must be well-formed JSON specifying an array of objects. An
+object describes a movie, a song, a playlist of movies and songs or a 'remote'.
+A remote allows the user to control a player that's already running on another
+device.
+
+The following object fields are supported:
 
 ### uri (or url)
 
 Specifies the URI from which to obtain the content. The file scheme is
-supported for files on the device. This field is prohibited for playlists and
-required for all other item types.
-
-To control a remote player that's already running, use a URI of the form
-"remoteplayer://<device>/<service>" where <device> is the name of the device
-on which the remote player is running and <service> is the service name with
-which the player is registered. Currently, all media players are registered
-under the service name "only_media_player".
+supported for files on the device. This field is required for movies and songs
+and prohibited for playlists and remotes.
 
 ### children
 
@@ -97,8 +96,8 @@ of the content.
 ### title
 
 The title of the item. This field is optional. If it's absent, the item will be
-titled "(untitled)" in the content chooser. The app will attempt to get the
-title from the content, if applicable.
+titled "(untitled)" in the content chooser. During playback, the app will
+attempt to get the title from the content, if applicable.
 
 ### artist
 
@@ -106,7 +105,18 @@ The name of the artist who created the content. This field is optional.
 
 ### album
 
-The name of the artist who created the content. This field is optional.
+The name of the album on which the content appears. This field is optional.
+
+### device
+
+Specifies the name of the device (in the NetConnector sense) for a remote. This
+field is required for remotes and prohibited for all other types.
+
+### service
+
+Specifies the name of the service (in the NetConnector sense) for a remote. This
+field is required for remotes and prohibited for all other types. Currently,
+the service name for all media players is "only_media_player".
 
 ## AUDIO SUPPORT
 

@@ -30,32 +30,19 @@ Asset _assetToPlay;
 Asset _leafAssetToPlay;
 int _playlistIndex;
 
-/// Plays the specified asset. Returns false if [asset] is an empty playlist,
-/// true otherwise.
-bool _play(Asset asset) {
+/// Plays the specified asset.
+void _play(Asset asset) {
   assert(asset != null);
 
   _assetToPlay = asset;
   _playlistIndex = 0;
 
   if (_assetToPlay.children != null) {
-    if (_assetToPlay.children.length <= _playlistIndex) {
-      _leafAssetToPlay = null;
-      return false;
-    }
-
-    assert(_assetToPlay.children[_playlistIndex].uri != null);
-    _leafAssetToPlay = _assetToPlay.children[_playlistIndex];
+    assert(_assetToPlay.children.isNotEmpty);
+    _playLeafAsset(_assetToPlay.children[0]);
   } else {
-    assert(_assetToPlay.uri != null);
-    _leafAssetToPlay = _assetToPlay;
+    _playLeafAsset(_assetToPlay);
   }
-
-  _controller.uri = _leafAssetToPlay.uri;
-  if (_leafAssetToPlay.type != AssetType.remote) {
-    _controller.play();
-  }
-  return true;
 }
 
 /// If [_assetToPlay] is a playlist and hasn't been played through, this method
@@ -68,12 +55,25 @@ bool _playNext() {
     return false;
   }
 
-  _leafAssetToPlay = _assetToPlay.children[_playlistIndex];
-  _controller.uri = _leafAssetToPlay.uri;
-  if (_leafAssetToPlay.type != AssetType.remote) {
+  _playLeafAsset(_assetToPlay.children[_playlistIndex]);
+
+  return true;
+}
+
+void _playLeafAsset(Asset asset ) {
+  assert(asset.type != AssetType.playlist);
+
+  _leafAssetToPlay = asset;
+
+  if (_leafAssetToPlay.type == AssetType.remote) {
+    _controller.connectToRemote(
+      device: _leafAssetToPlay.device,
+      service: _leafAssetToPlay.service,
+    );
+  } else {
+    _controller.open(_leafAssetToPlay.uri);
     _controller.play();
   }
-  return true;
 }
 
 /// Screen for asset playback.
@@ -147,7 +147,7 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
       }
 
       _addLabel(text, Colors.white, 20.0, to);
-      _addLabel(_controller.uri.toString(), Colors.grey[800], 15.0, to);
+      _addLabel(_leafAssetToPlay.toString(), Colors.grey[800], 15.0, to);
     }
   }
 
@@ -181,8 +181,7 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
               icon: new Icon(Icons.arrow_back),
               size: 60.0,
               onPressed: () {
-                _controller.pause();
-                _controller.uri = null;
+                _controller.close();
                 Navigator.of(context).pop();
               },
               color: Colors.white,
@@ -244,7 +243,7 @@ class _ChooserScreenState extends State<_ChooserScreen> {
       case AssetType.movie:
         iconData = Icons.movie;
         break;
-      case AssetType.music:
+      case AssetType.song:
         iconData = Icons.music_note;
         break;
       case AssetType.playlist:
@@ -257,9 +256,8 @@ class _ChooserScreenState extends State<_ChooserScreen> {
 
     return new RaisedButton(
       onPressed: () {
-        if (_play(asset)) {
-          Navigator.of(context).pushNamed('/play');
-        }
+        _play(asset);
+        Navigator.of(context).pushNamed('/play');
       },
       color: Colors.black,
       child: new Row(

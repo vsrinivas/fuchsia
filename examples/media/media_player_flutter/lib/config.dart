@@ -39,6 +39,8 @@ Asset _convertAsset(dynamic json) {
   String artist;
   String album;
   List<Asset> children;
+  String device;
+  String service;
 
   json.forEach((String key, dynamic value) {
     switch (key) {
@@ -55,8 +57,8 @@ Asset _convertAsset(dynamic json) {
           case 'movie':
             type = AssetType.movie;
             break;
-          case 'music':
-            type = AssetType.music;
+          case 'song':
+            type = AssetType.song;
             break;
           case 'playlist':
             type = AssetType.playlist;
@@ -82,69 +84,115 @@ Asset _convertAsset(dynamic json) {
       case 'children':
         children = _convertAssetList(value);
         break;
+      case 'device':
+        device = _convertString(value);
+        break;
+      case 'service':
+        service = _convertString(value);
+        break;
     }
   });
 
   if (type == null) {
+    // Try to infer the type.
     if (uri == null) {
-      if (children == null) {
-        throw new FormatException(
-          'Config file is malformed: an asset must have a URI or children'
-        );
+      if (children != null) {
+        type = AssetType.playlist;
+      } else if (device != null || service != null) {
+        type = AssetType.remote;
       }
-
-      type = AssetType.playlist;
-    } else if (children != null) {
-      throw new FormatException(
-        'Config file is malformed: an asset must have a URI or children, not'
-        ' both'
-      );
-    } else if (_isRemoteUri(uri)) {
-      type = AssetType.remote;
     } else if (_isMovieUri(uri)) {
       type = AssetType.movie;
     } else if (_isMusicUri(uri)) {
-      type = AssetType.music;
-    } else {
-      throw new FormatException(
-        'Config file is malformed: asset type was not specified and cannot be'
-        ' inferred'
-      );
-    }
-  } else if (type == AssetType.playlist) {
-    if (children == null) {
-      throw new FormatException(
-        'Config file is malformed: playlists must have children'
-      );
-    }
-
-    if (uri != null) {
-      throw new FormatException(
-        'Config file is malformed: playlists cannot have URIs'
-      );
-    }
-  } else {
-    if (uri == null) {
-      throw new FormatException(
-        'Config file is malformed: non-playlists must have URIs'
-      );
-    }
-
-    if (children != null) {
-      throw new FormatException(
-        'Config file is malformed: non-playlists cannot have children'
-      );
+      type = AssetType.song;
     }
   }
 
-  return new Asset(
-    uri: uri,
-    type: type,
-    title: title,
-    artist: artist,
-    album: album,
-    children: children,
-  );
+  if (type == null) {
+    throw new FormatException(
+      'Config file is malformed: asset type was not specified and cannot be'
+      ' inferred'
+    );
+  }
+
+  switch (type) {
+    case AssetType.movie:
+      _checkNotNull(type, uri, "a URI");
+      _checkNull(type, children, "children");
+      _checkNull(type, device, "device name");
+      _checkNull(type, service, "service name");
+      return new Asset.movie(
+        uri: uri,
+        title: title,
+        artist: artist,
+        album: album,
+      );
+
+    case AssetType.song:
+      _checkNotNull(type, uri, "a URI");
+      _checkNull(type, children, "children");
+      _checkNull(type, device, "device name");
+      _checkNull(type, service, "service name");
+      return new Asset.song(
+        uri: uri,
+        title: title,
+        artist: artist,
+        album: album,
+      );
+
+    case AssetType.playlist:
+      _checkNull(type, uri, "a URI");
+      _checkNotNull(type, children, "children");
+      _checkNull(type, artist, "artist name");
+      _checkNull(type, album, "album name");
+      _checkNull(type, device, "device name");
+      _checkNull(type, service, "service name");
+      if (children.isEmpty) {
+        throw new FormatException(
+          'Config file is malformed: a playlist must have at least one child'
+        );
+      }
+      if (!children.every(
+            (Asset c) => c.type == AssetType.movie || c.type == AssetType.song
+          )) {
+        throw new FormatException(
+          'Config file is malformed: playlist children must be songs or movies'
+        );
+      }
+      return new Asset.playlist(
+        title: title,
+        children: children,
+      );
+
+    case AssetType.remote:
+      _checkNull(type, uri, "a URI");
+      _checkNull(type, children, "children");
+      _checkNull(type, artist, "artist name");
+      _checkNull(type, album, "album name");
+      _checkNotNull(type, device, "device name");
+      _checkNotNull(type, service, "service name");
+      return new Asset.remote(
+        title: title,
+        device: device,
+        service: service,
+      );
+  }
+}
+
+void _checkNotNull(AssetType type, Object value, String name) {
+  if (value == null) {
+    throw new FormatException(
+      'Config file is malformed: a $type must have $name'
+    );
+  }
+}
+
+void _checkNull(AssetType type, Object value, String name) {
+  if (value != null) {
+    throw new FormatException(
+      'Config file is malformed: a $type must not have $name'
+    );
+  }
 }
 
 List<Asset> _convertAssetList(dynamic json) {
@@ -188,10 +236,6 @@ bool _isMusicUri(Uri uri) {
   }
 
   return false;
-}
-
-bool _isRemoteUri(Uri uri) {
-  return uri.scheme == 'remoteplayer';
 }
 
 String _extension(Uri uri) {

@@ -23,13 +23,9 @@ import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-const String _remotePlayerProxyScheme = 'remoteplayer';
-
 /// Controller for MediaPlayer widgets.
 class MediaPlayerController extends ChangeNotifier {
   final MediaServiceProxy _mediaService = new MediaServiceProxy();
-
-  Uri _uri;
 
   mp.MediaPlayerProxy _mediaPlayer;
   ChildViewConnection _videoViewConnection;
@@ -61,26 +57,123 @@ class MediaPlayerController extends ChangeNotifier {
     connectToService(services, _mediaService.ctrl);
   }
 
-  /// Gets the current URI.
-  Uri get uri => _uri;
-
-  /// Sets the current URI.
-  set uri(Uri value) {
-    if (_uri == value) {
-      return;
+  /// Opens a URI for playback.
+  void open(Uri uri) {
+    if (uri == null) {
+      throw new ArgumentError.notNull('uri');
     }
 
-    _uri = value;
+    _close();
+    _active = true;
 
-    if (_uri == null) {
-      // We were playing a URI. Clear the player to shut that down.
-      _deactivate();
-    } else {
-      // Need to play the new URI.
-      _activate();
-    }
+    _createLocalPlayer(uri);
 
+    _handleStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
     notifyListeners();
+  }
+
+  /// Connects to a remote media player.
+  void connectToRemote({
+    @required String device,
+    @required String service
+  }) {
+    if (device == null) {
+      throw new ArgumentError.notNull('device');
+    }
+    if (service == null) {
+      throw new ArgumentError.notNull('service');
+    }
+
+    _close();
+    _active = true;
+
+    _mediaService.createPlayerProxy(
+      device,
+      service,
+      _mediaPlayer.ctrl.request()
+    );
+
+    _handleStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
+    notifyListeners();
+  }
+
+  /// Closes this controller, undoing a previous |open| or |connectToRemote|
+  /// call. Does nothing if the controller is already closed.
+  void close() {
+    _close();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    close();
+    super.dispose();
+  }
+
+  /// Internal version of |close|.
+  void _close() {
+    _active = false;
+
+    _mediaPlayer = new mp.MediaPlayerProxy();
+
+    _audioRenderer = new AudioRendererProxy();
+    _videoRenderer = new VideoRendererProxy();
+    _reader = new InterfacePair<SeekingReader>();
+
+    _videoSize = Size.zero;
+
+    _playing = false;
+    _ended = false;
+    _loading = true;
+    _hasVideo = false;
+
+    _problem = null;
+    _metadata = null;
+
+    _progressBarReady = false;
+    _durationNanoseconds = 0;
+  }
+
+  /// Creates a local player.
+  void _createLocalPlayer(Uri uri) {
+    InterfacePair<MediaRenderer> audioMediaRenderer =
+      new InterfacePair<MediaRenderer>();
+    _mediaService.createAudioRenderer(
+      _audioRenderer.ctrl.request(),
+      audioMediaRenderer.passRequest(),
+    );
+
+    InterfacePair<MediaRenderer> videoMediaRenderer =
+      new InterfacePair<MediaRenderer>();
+    _mediaService.createVideoRenderer(
+      _videoRenderer.ctrl.request(),
+      videoMediaRenderer.passRequest(),
+    );
+
+    InterfacePair<ViewOwner> viewOwnerPair = new InterfacePair<ViewOwner>();
+    _videoRenderer.createView(viewOwnerPair.passRequest());
+
+    _videoViewConnection =
+      new ChildViewConnection(viewOwnerPair.passHandle());
+
+    _videoRenderer.getVideoSize((fidl.Size size) {
+      _videoSize = new Size(size.width.toDouble(), size.height.toDouble());
+      _hasVideo = true;
+      notifyListeners();
+    });
+
+    if (uri.scheme == 'file') {
+      _mediaService.createFileReader(uri.toFilePath(), _reader.passRequest());
+    } else {
+      _mediaService.createNetworkReader(uri.toString(), _reader.passRequest());
+    }
+
+    _mediaService.createPlayer(
+      _reader.passHandle(),
+      audioMediaRenderer.passHandle(),
+      videoMediaRenderer.passHandle(),
+      _mediaPlayer.ctrl.request()
+    );
   }
 
   /// Gets the physical size of the video.
@@ -168,114 +261,6 @@ class MediaPlayerController extends ChangeNotifier {
     if (!_playing) {
       play();
     }
-  }
-
-  @override
-  void dispose() {
-    _deactivate();
-    super.dispose();
-  }
-
-  /// Transitions to inactive state, releasing any underlying resources.
-  void _deactivate() {
-    _active = false;
-
-    _mediaPlayer = new mp.MediaPlayerProxy();
-
-    _audioRenderer = new AudioRendererProxy();
-    _videoRenderer = new VideoRendererProxy();
-    _reader = new InterfacePair<SeekingReader>();
-
-    _videoSize = Size.zero;
-
-    _playing = false;
-    _ended = false;
-    _loading = true;
-    _hasVideo = false;
-
-    _problem = null;
-    _metadata = null;
-
-    _progressBarReady = false;
-    _durationNanoseconds = 0;
-  }
-
-  /// Transitions to active state, constructing the required underlying
-  /// resources. [_uri] must be non-null when this method is called.
-  void _activate() {
-    assert(_uri != null);
-
-    _deactivate();
-
-    _active = true;
-
-    if (_uri.scheme == _remotePlayerProxyScheme) {
-      _createRemotePlayerProxy();
-    } else {
-      _createLocalPlayer();
-    }
-
-    if (_problem == null) {
-      _handleStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
-    }
-  }
-
-  /// Creates a local player.
-  void _createLocalPlayer() {
-    InterfacePair<MediaRenderer> audioMediaRenderer =
-        new InterfacePair<MediaRenderer>();
-    _mediaService.createAudioRenderer(
-      _audioRenderer.ctrl.request(),
-      audioMediaRenderer.passRequest(),
-    );
-
-    InterfacePair<MediaRenderer> videoMediaRenderer =
-        new InterfacePair<MediaRenderer>();
-    _mediaService.createVideoRenderer(
-      _videoRenderer.ctrl.request(),
-      videoMediaRenderer.passRequest(),
-    );
-
-    InterfacePair<ViewOwner> viewOwnerPair = new InterfacePair<ViewOwner>();
-    _videoRenderer.createView(viewOwnerPair.passRequest());
-
-    _videoViewConnection = new ChildViewConnection(viewOwnerPair.passHandle());
-
-    _videoRenderer.getVideoSize((fidl.Size size) {
-      _videoSize = new Size(size.width.toDouble(), size.height.toDouble());
-      _hasVideo = true;
-      notifyListeners();
-    });
-
-    if (_uri.scheme == 'file') {
-      _mediaService.createFileReader(_uri.toFilePath(), _reader.passRequest());
-    } else {
-      _mediaService.createNetworkReader(_uri.toString(), _reader.passRequest());
-    }
-
-    _mediaService.createPlayer(
-      _reader.passHandle(),
-      audioMediaRenderer.passHandle(),
-      videoMediaRenderer.passHandle(),
-      _mediaPlayer.ctrl.request()
-    );
-  }
-
-  /// Creates a proxy to a remote player.
-  void _createRemotePlayerProxy() {
-    if (!_uri.hasAuthority || _uri.pathSegments.length != 1) {
-      // URI must have an authority and one path segment.
-      _problem = new Problem()
-        ..type = Problem.kProblemAssetNotFound
-        ..details = 'Remote player URI ${_uri.toString()} is malformed.';
-      return;
-    }
-
-    _mediaService.createPlayerProxy(
-      _uri.authority,
-      _uri.pathSegments[0],
-      _mediaPlayer.ctrl.request()
-    );
   }
 
   // Handles a status update from the player and requests a new update. Call

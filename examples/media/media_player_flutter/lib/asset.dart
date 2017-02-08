@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:meta/meta.dart';
+
 /// The asset types.
 enum AssetType {
   /// Individual assets containing both audio and video.
   movie,
 
   /// Individual assets containing only audio.
-  music,
+  song,
 
   /// Composite assets that consist of a list of other assets.
   playlist,
@@ -19,8 +21,8 @@ enum AssetType {
 
 /// Describes an asset.
 class Asset {
-  /// Uri of the asset. Must be null for playlists, required for all other
-  /// asset types.
+  /// Uri of the asset. Must be null for playlists and remotes, required for
+  /// all other asset types.
   final Uri uri;
 
   /// Type of the asset.
@@ -38,21 +40,60 @@ class Asset {
   /// Children of the playlist asset. Must be null for other asset types.
   final List<Asset> children;
 
-  /// Constructs an asset.
-  Asset({
-    this.uri,
-    this.type,
+  /// Device on which remote player is running. Required for remotes, must be
+  /// null for other asset types.
+  final String device;
+
+  /// Service number under which remote player is published. Required for
+  /// remotes, must be null for other asset types.
+  final String service;
+
+  /// Constructs an asset describing a movie.
+  Asset.movie({
+    @required this.uri,
     this.title,
     this.artist,
     this.album,
-    this.children,
-  }) {
-    if (type == AssetType.playlist) {
-      assert(uri == null);
-      assert(children != null);
-    } else {
-      assert(uri != null);
-      assert(children == null);
-    }
+  }) : type = AssetType.movie,
+       children = null,
+       device = null,
+       service = null;
+
+  /// Constructs an asset describing a song.
+  Asset.song({
+    @required this.uri,
+    this.title,
+    this.artist,
+    this.album,
+  }) : type = AssetType.song,
+       children = null,
+       device = null,
+       service = null;
+
+  /// Constructs an asset describing a playlist.
+  Asset.playlist({
+    @required this.children,
+    this.title,
+  }) : type = AssetType.playlist,
+       uri = null,
+       artist = null,
+       album = null,
+       device = null,
+       service = null {
+    assert(children.isNotEmpty);
+    assert(children.every(
+      (Asset c) => c.type == AssetType.movie || c.type == AssetType.song
+    ));
   }
+
+  /// Constructs an asset describing a remote player.
+  Asset.remote({
+    @required this.device,
+    @required this.service,
+    this.title,
+  }) : type = AssetType.remote,
+       uri = null,
+       artist = null,
+       album = null,
+       children = null;
 }
