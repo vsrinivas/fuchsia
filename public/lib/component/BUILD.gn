@@ -12,8 +12,8 @@ fidl("component") {
   ]
 
   deps = [
+    "//application/services",
     "//apps/modular/services/agent/agent_controller",
-    "//apps/modular/services/application",
     "//apps/network/services",
   ]
 }

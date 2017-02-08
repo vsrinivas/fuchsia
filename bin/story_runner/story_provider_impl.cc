@@ -8,7 +8,7 @@
 #include <time.h>
 #include <unordered_set>
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -415,9 +415,9 @@ class GetControllerCall : public Operation {
           // otherwise StoryProvider.GetStoryInfo() and
           // StoryController.GetInfo() will return the wrong values.
           if (story_data_->story_info->is_running) {
-            FTL_LOG(INFO)
-              << "GetControllerCall() " << story_data_->story_info->id
-              << " marked running but isn't -- correcting";
+            FTL_LOG(INFO) << "GetControllerCall() "
+                          << story_data_->story_info->id
+                          << " marked running but isn't -- correcting";
             story_data_->story_info->is_running = false;
             story_provider_impl_->WriteStoryData(story_data_->Clone(),
                                                  [this] { Cont(); });
@@ -428,20 +428,19 @@ class GetControllerCall : public Operation {
   }
 
   void Cont() {
-    ledger_->GetPage(
-        story_data_->story_page_id.Clone(), story_page_.NewRequest(),
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR)
-              << "GetControllerCall() " << story_data_->story_info->id
-              << " Ledger.GetPage() " << status;
-          }
-          auto controller =
-            new StoryImpl(std::move(story_data_), story_provider_impl_);
-          controller->Connect(std::move(request_));
-          story_controllers_->emplace(story_id_, controller);
-          Done();
-        });
+    ledger_->GetPage(story_data_->story_page_id.Clone(),
+                     story_page_.NewRequest(), [this](ledger::Status status) {
+                       if (status != ledger::Status::OK) {
+                         FTL_LOG(ERROR) << "GetControllerCall() "
+                                        << story_data_->story_info->id
+                                        << " Ledger.GetPage() " << status;
+                       }
+                       auto controller = new StoryImpl(std::move(story_data_),
+                                                       story_provider_impl_);
+                       controller->Connect(std::move(request_));
+                       story_controllers_->emplace(story_id_, controller);
+                       Done();
+                     });
   }
 
  private:
@@ -493,9 +492,10 @@ class PreviousStoriesCall : public Operation {
               return;
             }
             root_snapshot_->GetEntries(
-                nullptr, nullptr, [this](ledger::Status status,
-                                         fidl::Array<ledger::EntryPtr> entries,
-                                         fidl::Array<uint8_t> next_token) {
+                nullptr, nullptr,
+                [this](ledger::Status status,
+                       fidl::Array<ledger::EntryPtr> entries,
+                       fidl::Array<uint8_t> next_token) {
                   if (status != ledger::Status::OK) {
                     FTL_LOG(ERROR) << "PreviousStoryCall() "
                                    << " PageSnapshot.GetEntries() " << status;
@@ -516,10 +516,11 @@ class PreviousStoriesCall : public Operation {
                     story_data->Deserialize(entry->value->get_bytes().data(),
                                             entry->value->get_bytes().size());
                     story_ids_.push_back(story_data->story_info->id);
-                    FTL_LOG(INFO) << "PreviousStoryCall() "
-                                  << " previous story " << story_data->story_info->id
-                                  << " " << story_data->story_info->url
-                                  << " " << story_data->story_info->is_running;
+                    FTL_LOG(INFO)
+                        << "PreviousStoryCall() "
+                        << " previous story " << story_data->story_info->id
+                        << " " << story_data->story_info->url << " "
+                        << story_data->story_info->is_running;
                   }
 
                   result_(std::move(story_ids_));

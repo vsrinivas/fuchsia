@@ -8,14 +8,14 @@
 
 #include <memory>
 
+#include "application/lib/app/connect.h"
+#include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/services/application/service_provider.fidl.h"
-#include "apps/modular/services/test_runner/test_runner.fidl.h"
 #include "apps/modular/lib/testing/testing.h"
+#include "apps/modular/services/test_runner/test_runner.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"

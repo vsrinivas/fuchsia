@@ -11,9 +11,9 @@
 #include <algorithm>
 #include <iostream>
 
+#include "application/lib/app/connect.h"
+#include "application/lib/app/service_provider_impl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/modular/lib/app/connect.h"
-#include "apps/modular/lib/app/service_provider_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"

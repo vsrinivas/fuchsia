@@ -4,8 +4,8 @@
 
 source_set("component_context_impl") {
   sources = [
+    "component_context_impl.cc",
     "component_context_impl.h",
-    "component_context_impl.cc"
   ]
 
   deps = [
@@ -14,4 +14,3 @@ source_set("component_context_impl") {
     "//lib/ftl",
   ]
 }
-

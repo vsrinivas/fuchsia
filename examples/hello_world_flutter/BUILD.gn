@@ -13,7 +13,7 @@ group("hello_world_flutter") {
 flutter_app("example_flutter_hello_world") {
   main_dart = "lib/main.dart"
   deps = [
-    "//apps/modular/lib/app/dart",
+    "//application/lib/app/dart",
     "//apps/modular/services/story:story_dart",
     "//apps/mozart/services/views:views_dart",
     "//lib/fidl/dart",

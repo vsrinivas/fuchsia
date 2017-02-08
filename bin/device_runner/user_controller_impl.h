@@ -5,10 +5,10 @@
 #ifndef APPS_MODULAR_SRC_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 #define APPS_MODULAR_SRC_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 
+#include "application/lib/app/application_context.h"
+#include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/fidl/scope.h"
-#include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"

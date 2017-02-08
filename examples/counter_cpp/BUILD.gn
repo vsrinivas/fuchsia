@@ -21,7 +21,7 @@ executable("example_module1") {
   deps = [
     ":calculator",
     ":store",
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",
@@ -40,15 +40,15 @@ executable("example_module2") {
 
   deps = [
     ":store",
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-    "//apps/modular/lib/rapidjson",
     "//third_party/skia",
   ]
 }
@@ -63,13 +63,13 @@ executable("example_recipe") {
     "//apps/ledger/services/public",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-    "//apps/modular/lib/rapidjson",
   ]
 }
 
@@ -79,11 +79,13 @@ source_set("store") {
   ]
 
   deps = [
-    "//apps/modular/services/story",
     "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/story",
   ]
 }
 
 fidl("calculator") {
-  sources = ["calculator.fidl"]
+  sources = [
+    "calculator.fidl",
+  ]
 }

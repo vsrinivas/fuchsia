@@ -4,8 +4,8 @@
 
 import 'dart:async';
 
-import 'package:apps.modular.lib.app.dart/app.dart';
-import 'package:apps.modular.services.application/service_provider.fidl.dart';
+import 'package:application.lib.app.dart/app.dart';
+import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.story/module.fidl.dart';
 import 'package:apps.modular.services.story/story.fidl.dart';
@@ -14,8 +14,7 @@ import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/http.dart' as http;
 
-final ApplicationContext _appContext =
-    new ApplicationContext.fromStartupInfo();
+final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 
 ModuleImpl _moduleImpl;
 

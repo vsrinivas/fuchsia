@@ -7,12 +7,12 @@
 
 #include <string>
 
+#include "application/services/application_controller.fidl.h"
+#include "application/services/application_launcher.fidl.h"
+#include "application/services/service_provider.fidl.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
-#include "apps/modular/services/application/application_controller.fidl.h"
-#include "apps/modular/services/application/application_launcher.fidl.h"
-#include "apps/modular/services/application/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 

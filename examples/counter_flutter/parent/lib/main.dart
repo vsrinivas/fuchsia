@@ -4,8 +4,8 @@
 
 import 'dart:convert';
 
-import 'package:apps.modular.lib.app.dart/app.dart';
-import 'package:apps.modular.services.application/service_provider.fidl.dart';
+import 'package:application.lib.app.dart/app.dart';
+import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.story/module.fidl.dart';
 import 'package:apps.modular.services.story/module_controller.fidl.dart';
@@ -137,14 +137,12 @@ class _ParentCounterModule extends Module implements LinkWatcher {
 
 class _AppState {
   _AppState(this._context) {
-    _module = new _ParentCounterModule(_updateValue,
-                                       _updateChildView);
+    _module = new _ParentCounterModule(_updateValue, _updateChildView);
     _context.outgoingServices.addServiceForName(
         (InterfaceRequest<Module> request) {
-          _log('Service request for Module');
-          _module.bind(request);
-        },
-        Module.serviceName);
+      _log('Service request for Module');
+      _module.bind(request);
+    }, Module.serviceName);
   }
 
   // NOTE(mesch): _context is a constructor argument and only used
@@ -169,7 +167,8 @@ class _AppState {
   _ParentCounterModule _module;
 
   void _updateValue(int newValue) => _notify(() => _value = newValue);
-  void _updateChildView(ChildViewConnection v) => _notify(() => _childViewConnection = v);
+  void _updateChildView(ChildViewConnection v) =>
+      _notify(() => _childViewConnection = v);
 
   void _notify(Function change) {
     change();
@@ -188,7 +187,9 @@ class _AppState {
 }
 
 class _HomeScreen extends StatefulWidget {
-  _HomeScreen({Key key, _AppState state}) : super(key: key), _state = state {
+  _HomeScreen({Key key, _AppState state})
+      : super(key: key),
+        _state = state {
     _log("HomeScreen()");
   }
 
@@ -261,7 +262,8 @@ void main() {
   // widget. In that case, the application state would be *shared*
   // between all those widgets, which a widget state instance would not
   // be.
-  final _AppState state = new _AppState(new ApplicationContext.fromStartupInfo());
+  final _AppState state =
+      new _AppState(new ApplicationContext.fromStartupInfo());
 
   runApp(new MaterialApp(
     title: 'Counter Parent',

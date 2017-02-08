@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "apps/modular/lib/app/application_context.h"
+#include "application/lib/app/application_context.h"
 
 namespace modular {
 namespace testing {

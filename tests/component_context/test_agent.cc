@@ -6,8 +6,8 @@
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/agent/agent.fidl.h"
-#include "lib/mtl/tasks/message_loop.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
 
@@ -15,9 +15,7 @@ namespace {
 
 class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
  public:
-  TestAgentApp() {
-    modular::testing::Init(application_context());
-  }
+  TestAgentApp() { modular::testing::Init(application_context()); }
 
   ~TestAgentApp() override = default;
 
@@ -39,7 +37,8 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
   }
 
   // |Agent|
-  void RunTask(const fidl::String& task_id, const fidl::String& params,
+  void RunTask(const fidl::String& task_id,
+               const fidl::String& params,
                const RunTaskCallback& callback) override {}
 
   // |Agent|

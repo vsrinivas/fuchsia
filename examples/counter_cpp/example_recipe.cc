@@ -5,10 +5,10 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the story.
 
+#include "application/lib/app/connect.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/examples/counter_cpp/calculator.fidl.h"
 #include "apps/modular/examples/counter_cpp/store.h"
-#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/story/module.fidl.h"
@@ -414,8 +414,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
           << "Uh oh, Connection to Multiplier closed by the module 1.";
     });
     multiplier_service->Multiply(
-        4, 4, ftl::MakeCopyable([multiplier_service = std::move(
-                                     multiplier_service)](int32_t result) {
+        4, 4,
+        ftl::MakeCopyable([multiplier_service =
+                               std::move(multiplier_service)](int32_t result) {
           FTL_CHECK(result == 16);
           FTL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));

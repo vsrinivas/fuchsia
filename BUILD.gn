@@ -5,9 +5,7 @@
 group("modular") {
   deps = [
     "examples",
-    "lib/app",
     "services",
-    "src/application_manager",
     "src/bootstrap",
     "src/component_manager",
     "src/device_runner:all",

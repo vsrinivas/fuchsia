@@ -37,7 +37,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/modular/lib/app/application_context.h"
+#include "application/lib/app/application_context.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/test_runner/test_runner.fidl.h"
 #include "apps/modular/src/test_runner/test_runner_store_impl.h"
@@ -95,7 +95,7 @@ class TestRunContext {
 class TestRunnerImpl : public testing::TestRunner {
  public:
   TestRunnerImpl(fidl::InterfaceRequest<testing::TestRunner> request,
-                        TestRunContext* test_run_context)
+                 TestRunContext* test_run_context)
       : binding_(this, std::move(request)),
         test_run_context_(test_run_context) {
     binding_.set_connection_error_handler(
@@ -206,7 +206,8 @@ class TestRunnerConnection {
 
     FTL_CHECK(command_parse.size() >= 3)
         << "Not enough args. Must be: `run <test id> <command to run>`";
-    FTL_CHECK(command_parse[0] == "run") << command_parse[0] << " is not a supported command.";
+    FTL_CHECK(command_parse[0] == "run")
+        << command_parse[0] << " is not a supported command.";
 
     FTL_LOG(INFO) << "test_runner: run " << command_parse[1];
 
@@ -250,9 +251,9 @@ TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
             std::make_unique<TestRunnerImpl>(std::move(request), this));
       });
   child_env_scope_->AddService<testing::TestRunnerStore>(
-        [this](fidl::InterfaceRequest<testing::TestRunnerStore> request) {
-          test_runner_store_.AddBinding(std::move(request));
-        });
+      [this](fidl::InterfaceRequest<testing::TestRunnerStore> request) {
+        test_runner_store_.AddBinding(std::move(request));
+      });
 
   // 2. Launch the test command.
   ApplicationLauncherPtr launcher;
@@ -277,18 +278,17 @@ void TestRunContext::Fail(const fidl::String& log_msg) {
   test_runner_connection_->SendMessage(test_id_, "log", msg);
 }
 
-void TestRunContext::StopTrackingClient(TestRunnerImpl* client,
-                                        bool crashed) {
+void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   if (crashed) {
     test_runner_connection_->Teardown(test_id_, false);
     return;
   }
 
-  auto find_it = std::find_if(
-      test_runner_clients_.begin(), test_runner_clients_.end(),
-      [client](const std::unique_ptr<TestRunnerImpl>& client_it) {
-        return client_it.get() == client;
-      });
+  auto find_it =
+      std::find_if(test_runner_clients_.begin(), test_runner_clients_.end(),
+                   [client](const std::unique_ptr<TestRunnerImpl>& client_it) {
+                     return client_it.get() == client;
+                   });
 
   FTL_DCHECK(find_it != test_runner_clients_.end());
   test_runner_clients_.erase(find_it);

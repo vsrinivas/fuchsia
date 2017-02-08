@@ -8,10 +8,10 @@
 #include <memory>
 #include <string>
 
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/service_provider_impl.h"
-#include "apps/modular/services/application/application_environment.fidl.h"
-#include "apps/modular/services/application/application_environment_host.fidl.h"
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/service_provider_impl.h"
+#include "application/services/application_environment.fidl.h"
+#include "application/services/application_environment_host.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 

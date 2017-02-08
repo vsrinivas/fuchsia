@@ -4,7 +4,7 @@
 
 #include "apps/modular/src/agent_runner/agent_runner.h"
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
 
 namespace modular {
@@ -28,8 +28,8 @@ void AgentRunner::ConnectToAgent(
     FTL_DCHECK(inserted);
   }
 
-  found_it->second->NewConnection(
-      requestor_url, std::move(incoming_services), std::move(controller));
+  found_it->second->NewConnection(requestor_url, std::move(incoming_services),
+                                  std::move(controller));
 }
 
 void AgentRunner::RemoveAgent(const std::string& agent_url) {

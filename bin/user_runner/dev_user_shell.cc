@@ -6,10 +6,10 @@
 // root module URL and data for its Link as command line arguments,
 // which can be set using the device_runner --user-shell-args flag.
 
+#include "application/lib/app/connect.h"
+#include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"

@@ -5,12 +5,12 @@
 #include <iostream>
 #include <memory>
 
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
+#include "application/services/application_launcher.fidl.h"
+#include "application/services/service_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
-#include "apps/modular/services/application/application_launcher.fidl.h"
-#include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/device/device_context.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"

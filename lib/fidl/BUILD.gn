@@ -14,15 +14,15 @@ source_set("array_to_string") {
 
 source_set("bottleneck") {
   sources = [
-    "bottleneck.h",
     "bottleneck.cc",
+    "bottleneck.h",
   ]
 }
 
 source_set("operation") {
   sources = [
-    "operation.h",
     "operation.cc",
+    "operation.h",
   ]
 
   deps = [
@@ -36,7 +36,7 @@ source_set("scope") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]
@@ -48,8 +48,8 @@ source_set("single_service_app") {
   ]
 
   public_deps = [
-    "//apps/modular/lib/app",
-    "//apps/modular/services/application",
+    "//application/lib/app",
+    "//application/services",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]
@@ -61,9 +61,9 @@ source_set("single_service_view_app") {
   ]
 
   public_deps = [
-    "//apps/modular/lib/app",
-    "//apps/modular/lib/fidl:single_service_app",
-    "//apps/modular/services/application",
+    ":single_service_app",
+    "//application/lib/app",
+    "//application/services",
     "//apps/mozart/services/views",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
@@ -80,4 +80,3 @@ source_set("strong_binding") {
     "//lib/ftl",
   ]
 }
-

@@ -5,14 +5,14 @@
 #ifndef APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_H_
 #define APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_H_
 
-#include <unordered_map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
+#include "application/services/application_launcher.fidl.h"
+#include "application/services/service_provider.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
-#include "apps/modular/services/application/application_launcher.fidl.h"
-#include "apps/modular/services/application/service_provider.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {

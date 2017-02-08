@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "application/lib/app/connect.h"
 #include "apps/modular/examples/counter_cpp/calculator.fidl.h"
 #include "apps/modular/examples/counter_cpp/store.h"
-#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
@@ -171,12 +171,12 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
     adder_service.set_connection_error_handler([] {
       FTL_CHECK(false) << "Uh oh, Connection to Adder closed by the recipe.";
     });
-    adder_service->Add(
-        4, 4, ftl::MakeCopyable([adder_service =
-                                     std::move(adder_service)](int32_t result) {
-          FTL_CHECK(result == 8);
-          FTL_LOG(INFO) << "Incoming Adder service: 4 + 4 is 8.";
-        }));
+    adder_service->Add(4, 4,
+                       ftl::MakeCopyable([adder_service = std::move(
+                                              adder_service)](int32_t result) {
+                         FTL_CHECK(result == 8);
+                         FTL_LOG(INFO) << "Incoming Adder service: 4 + 4 is 8.";
+                       }));
   }
 
   // |Module|

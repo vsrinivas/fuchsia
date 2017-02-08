@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "application/services/application_launcher.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace bootstrap {

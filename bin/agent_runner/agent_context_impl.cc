@@ -4,7 +4,7 @@
 
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 
 namespace modular {

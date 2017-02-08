@@ -4,8 +4,8 @@
 
 executable("request_components") {
   deps = [
+    "//application/lib/app",
     "//apps/modular/services/component",
-    "//apps/modular/lib/app",
     "//lib/ftl",
     "//lib/mtl",
   ]

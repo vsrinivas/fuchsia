@@ -54,7 +54,7 @@ void StoryConnection::GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
 }
 
 void StoryConnection::GetComponentContext(
-      fidl::InterfaceRequest<ComponentContext> context_request) {
+    fidl::InterfaceRequest<ComponentContext> context_request) {
   component_context_bindings_.AddBinding(&component_context_impl_,
                                          std::move(context_request));
 }

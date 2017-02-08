@@ -4,7 +4,7 @@
 
 module component;
 
-import "apps/modular/services/application/service_provider.fidl";
+import "application/services/service_provider.fidl";
 import "apps/network/services/network_error.fidl";
 
 // Represents the contents of the fuchsia:component facet.

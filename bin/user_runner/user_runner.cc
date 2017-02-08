@@ -6,14 +6,14 @@
 
 #include <memory>
 
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/launcher/launcher.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/story/story_provider.fidl.h"

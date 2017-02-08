@@ -7,7 +7,7 @@
 #include <memory>
 #include <utility>
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 
 namespace modular {

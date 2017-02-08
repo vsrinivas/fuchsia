@@ -11,8 +11,8 @@ source_set("testing") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/modular/services/test_runner",
-    "//apps/modular/lib/app"
   ]
 }
 

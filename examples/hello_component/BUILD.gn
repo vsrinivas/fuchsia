@@ -6,8 +6,8 @@ import("//build/component/component.gni")
 
 executable("hello_program") {
   deps = [
+    "//application/lib/app",
     "//apps/modular/services/component",
-    "//apps/modular/lib/app",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",

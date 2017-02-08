@@ -9,14 +9,14 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
-#include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
+#include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"

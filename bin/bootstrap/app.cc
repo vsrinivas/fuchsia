@@ -4,7 +4,7 @@
 
 #include "apps/modular/src/bootstrap/app.h"
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "apps/modular/src/bootstrap/params.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"

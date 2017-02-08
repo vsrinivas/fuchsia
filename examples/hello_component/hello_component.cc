@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "apps/modular/lib/app/application_context.h"
+#include "application/lib/app/application_context.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

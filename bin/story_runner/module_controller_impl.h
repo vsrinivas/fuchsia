@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "application/services/application_launcher.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/module_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"

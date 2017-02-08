@@ -10,9 +10,9 @@ executable("run_component") {
   ]
 
   deps = [
+    "//application/lib/app",
+    "//application/services",
     "//apps/modular/services/component",
-    "//apps/modular/lib/app",
-    "//apps/modular/services/application",
     "//lib/ftl",
     "//lib/mtl",
   ]

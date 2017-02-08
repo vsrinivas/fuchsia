@@ -4,13 +4,13 @@
 
 #include "apps/modular/src/story_runner/story_impl.h"
 
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
+#include "application/services/application_launcher.fidl.h"
+#include "application/services/service_provider.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/services/application/application_launcher.fidl.h"
-#include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
 #include "apps/modular/src/story_runner/link_impl.h"

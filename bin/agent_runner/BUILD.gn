@@ -8,8 +8,8 @@ source_set("public") {
   ]
 
   deps = [
+    "//application/services",
     "//apps/modular/services/agent/agent_controller",
-    "//apps/modular/services/application",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]
@@ -17,17 +17,17 @@ source_set("public") {
 
 source_set("impl") {
   sources = [
-    "agent_runner.cc",
-    "agent_context_impl.h",
     "agent_context_impl.cc",
+    "agent_context_impl.h",
+    "agent_runner.cc",
   ]
 
   deps = [
     ":public",
-    "//apps/modular/lib/app",
+    "//application/lib/app",
+    "//application/services",
     "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",
-    "//apps/modular/services/application",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]

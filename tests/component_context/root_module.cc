@@ -5,8 +5,8 @@
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
+#include "apps/modular/services/story/module.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
@@ -17,12 +17,9 @@ namespace {
 constexpr int kStopMilliseconds = 2000;
 constexpr char kTestAgent[] = "file:///tmp/tests/component_context_test_agent";
 
-class ParentApp
-  : public modular::SingleServiceApp<modular::Module> {
+class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  ParentApp() {
-    modular::testing::Init(application_context());
-  }
+  ParentApp() { modular::testing::Init(application_context()); }
 
   ~ParentApp() override = default;
 
@@ -44,8 +41,7 @@ class ParentApp
 
     modular::AgentControllerPtr agent_ctrl;
     modular::ServiceProviderPtr agent_services;
-    ctx->ConnectToAgent(kTestAgent,
-                        agent_services.NewRequest(),
+    ctx->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                         agent_ctrl.NewRequest());
 
     // Start a timer to call Story.Done.

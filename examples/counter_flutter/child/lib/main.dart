@@ -8,8 +8,8 @@
 
 import 'dart:convert';
 
-import 'package:apps.modular.lib.app.dart/app.dart';
-import 'package:apps.modular.services.application/service_provider.fidl.dart';
+import 'package:application.lib.app.dart/app.dart';
+import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.story/module.fidl.dart';
 import 'package:apps.modular.services.story/story.fidl.dart';
@@ -87,10 +87,9 @@ class _AppState {
     _module = new _ChildCounterModule(_updateValue);
     _context.outgoingServices.addServiceForName(
         (InterfaceRequest<Module> request) {
-          _log('Service request for Module');
-          _module.bind(request);
-        },
-        Module.serviceName);
+      _log('Service request for Module');
+      _module.bind(request);
+    }, Module.serviceName);
   }
 
   // NOTE(mesch): _context is a constructor argument and only used
@@ -125,7 +124,9 @@ class _AppState {
 }
 
 class _HomeScreen extends StatefulWidget {
-  _HomeScreen({Key key, _AppState state}) : super(key: key), _state = state {
+  _HomeScreen({Key key, _AppState state})
+      : super(key: key),
+        _state = state {
     _log("HomeScreen()");
   }
 
@@ -177,7 +178,8 @@ class _HomeScreenState extends State<_HomeScreen> {
 void main() {
   _log('main()');
 
-  final _AppState state = new _AppState(new ApplicationContext.fromStartupInfo());
+  final _AppState state =
+      new _AppState(new ApplicationContext.fromStartupInfo());
 
   runApp(new MaterialApp(
     title: 'Counter Child',

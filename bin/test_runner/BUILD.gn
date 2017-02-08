@@ -5,14 +5,14 @@
 executable("test_runner") {
   sources = [
     "test_runner.cc",
+    "test_runner_store_impl.cc",
     "test_runner_store_impl.h",
-    "test_runner_store_impl.cc"
   ]
 
   deps = [
-    "//apps/modular/services/test_runner",
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/modular/lib/fidl:scope",
+    "//apps/modular/services/test_runner",
     "//lib/ftl",
     "//lib/mtl",
   ]

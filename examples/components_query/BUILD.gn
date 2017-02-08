@@ -8,7 +8,7 @@ executable("components_query") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/modular/services/component",
     "//lib/ftl",
     "//lib/mtl",
