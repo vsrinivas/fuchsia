@@ -18,9 +18,9 @@ source_set("util") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/media/lib/timeline",
     "//apps/media/services",
-    "//apps/modular/lib/app",
     "//lib/ftl",
     "//lib/mtl",
   ]

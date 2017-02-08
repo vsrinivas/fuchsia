@@ -36,6 +36,7 @@ executable("media_service") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/services",
@@ -48,7 +49,6 @@ executable("media_service") {
     "//apps/media/src/net",
     "//apps/media/src/util",
     "//apps/media/src/video",
-    "//apps/modular/lib/app",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/views",
@@ -75,12 +75,12 @@ executable("apptests") {
 
   deps = [
     ":media_service",
+    "//application/lib/app",
     "//apps/media/lib/timeline",
     "//apps/media/lib/transport",
     "//apps/media/services",
     "//apps/media/src/fidl",
     "//apps/media/src/framework_create",
-    "//apps/modular/lib/app",
     "//lib/mtl",
   ]
 }

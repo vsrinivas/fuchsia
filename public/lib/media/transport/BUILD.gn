@@ -19,11 +19,11 @@ source_set("transport") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/services",
     "//apps/media/services/flog",
-    "//apps/modular/lib/app",
     "//apps/mozart/services/geometry",
     "//lib/ftl",
   ]

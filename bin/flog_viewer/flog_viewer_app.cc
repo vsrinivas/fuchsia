@@ -6,9 +6,9 @@
 #include <limits>
 #include <vector>
 
+#include "application/lib/app/application_context.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "lib/ftl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 

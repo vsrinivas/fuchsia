@@ -8,9 +8,9 @@
 
 #include <iomanip>
 
+#include "application/lib/app/connect.h"
 #include "apps/media/examples/vu_meter/vu_meter_params.h"
 #include "apps/media/services/media_service.fidl.h"
-#include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "lib/ftl/logging.h"

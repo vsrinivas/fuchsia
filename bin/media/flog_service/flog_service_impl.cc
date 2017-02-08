@@ -4,11 +4,11 @@
 
 #include "apps/media/src/flog_service/flog_service_impl.h"
 
+#include "application/lib/app/connect.h"
+#include "application/lib/app/service_provider_impl.h"
 #include "apps/media/src/flog_service/flog_directory.h"
 #include "apps/media/src/flog_service/flog_logger_impl.h"
 #include "apps/media/src/flog_service/flog_reader_impl.h"
-#include "apps/modular/lib/app/connect.h"
-#include "apps/modular/lib/app/service_provider_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace flog {

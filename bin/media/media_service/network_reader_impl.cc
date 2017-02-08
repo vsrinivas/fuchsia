@@ -6,7 +6,7 @@
 
 #include <mx/socket.h>
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/logging.h"
 
@@ -46,9 +46,10 @@ NetworkReaderImpl::NetworkReaderImpl(
         // TODO(dalesat): Handle redirects.
         if (response->error) {
           FTL_LOG(ERROR) << "HEAD response error " << response->error->code
-                         << " " << (response->error->description
-                                        ? response->error->description
-                                        : "<no description>");
+                         << " "
+                         << (response->error->description
+                                 ? response->error->description
+                                 : "<no description>");
           result_ = MediaResult::UNKNOWN_ERROR;
           ready_.Occur();
           return;
@@ -116,8 +117,8 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
         std::move(request), [this, callback](network::URLResponsePtr response) {
           if (response->status_code != kStatusOk &&
               response->status_code != kStatusPartialContent) {
-            FTL_LOG(WARNING) << "GET response status code "
-                             << response->status_code;
+            FTL_LOG(WARNING)
+                << "GET response status code " << response->status_code;
             result_ = MediaResult::UNKNOWN_ERROR;
             callback(result_, mx::socket());
             return;

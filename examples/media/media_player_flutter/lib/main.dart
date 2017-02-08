@@ -9,7 +9,7 @@ import 'package:apps.media.lib.flutter/media_player.dart';
 import 'package:apps.media.lib.flutter/media_player_controller.dart';
 import 'package:apps.media.services/media_metadata.fidl.dart';
 import 'package:apps.media.services/problem.fidl.dart';
-import 'package:apps.modular.lib.app.dart/app.dart';
+import 'package:application.lib.app.dart/app.dart';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +19,7 @@ import 'config.dart';
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 final MediaPlayerController _controller =
-  new MediaPlayerController(_appContext.environmentServices);
+    new MediaPlayerController(_appContext.environmentServices);
 
 const List<String> _configFileNames = const <String>[
   '/data/media_player_flutter.config',
@@ -114,7 +114,8 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
 
     to.add(new Container(
       margin: const EdgeInsets.only(left: 10.0),
-      child: new Text(label,
+      child: new Text(
+        label,
         style: new TextStyle(color: color, fontSize: fontSize),
       ),
     ));
@@ -159,11 +160,11 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
     MediaMetadata metadata = _controller.metadata;
     if (metadata != null) {
       _addLabel(metadata.title ?? _leafAssetToPlay.title ?? '(untitled)',
-        Colors.white, 20.0, blockChildren);
-      _addLabel(metadata.artist ?? _leafAssetToPlay.artist,
-        Colors.grey[600], 15.0, blockChildren);
-      _addLabel(metadata.album ?? _leafAssetToPlay.album,
-        Colors.grey[800], 15.0, blockChildren);
+          Colors.white, 20.0, blockChildren);
+      _addLabel(metadata.artist ?? _leafAssetToPlay.artist, Colors.grey[600],
+          15.0, blockChildren);
+      _addLabel(metadata.album ?? _leafAssetToPlay.album, Colors.grey[800],
+          15.0, blockChildren);
     }
 
     _addProblem(blockChildren);
@@ -263,7 +264,8 @@ class _ChooserScreenState extends State<_ChooserScreen> {
       color: Colors.black,
       child: new Row(
         children: <Widget>[
-          new Icon(iconData,
+          new Icon(
+            iconData,
             size: 60.0,
             color: Colors.grey[200],
           ),
@@ -271,13 +273,16 @@ class _ChooserScreenState extends State<_ChooserScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              new Text(asset.title ?? '(no title)',
+              new Text(
+                asset.title ?? '(no title)',
                 style: new TextStyle(color: Colors.grey[200], fontSize: 18.0),
               ),
-              new Text(asset.artist ?? '',
+              new Text(
+                asset.artist ?? '',
                 style: new TextStyle(color: Colors.grey[600], fontSize: 13.0),
               ),
-              new Text(asset.album ?? '',
+              new Text(
+                asset.album ?? '',
                 style: new TextStyle(color: Colors.grey[800], fontSize: 13.0),
               ),
             ],
@@ -302,7 +307,9 @@ class _ChooserScreenState extends State<_ChooserScreen> {
             child: new IconButton(
               icon: new Icon(Icons.close),
               size: 60.0,
-              onPressed: () { io.exit(0); },
+              onPressed: () {
+                io.exit(0);
+              },
               color: Colors.white,
             ),
           ),

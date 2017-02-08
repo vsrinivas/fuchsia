@@ -7,11 +7,11 @@
 #include <list>
 #include <set>
 
+#include "application/lib/app/application_context.h"
 #include "apps/media/services/audio_renderer.fidl.h"
 #include "apps/media/services/audio_server.fidl.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/mutex.h"

@@ -7,11 +7,11 @@
 #include <memory>
 #include <queue>
 
+#include "application/lib/app/application_context.h"
 #include "apps/media/examples/media_player/media_player_params.h"
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/services/media_player.fidl.h"
 #include "apps/media/services/video_renderer.fidl.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"

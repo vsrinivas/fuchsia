@@ -6,14 +6,14 @@ executable("flog_viewer") {
   sources = [
     "accumulator.cc",
     "accumulator.h",
-    "channel_handler.cc",
-    "channel_handler.h",
     "channel.cc",
     "channel.h",
+    "channel_handler.cc",
+    "channel_handler.h",
     "counted.h",
-    "flog_viewer_app.cc",
     "flog_viewer.cc",
     "flog_viewer.h",
+    "flog_viewer_app.cc",
     "formatting.cc",
     "formatting.h",
     "handlers/default.cc",
@@ -48,9 +48,9 @@ executable("flog_viewer") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/media/services",
     "//apps/media/services/flog",
-    "//apps/modular/lib/app",
     "//lib/ftl",
     "//lib/mtl",
   ]

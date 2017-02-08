@@ -4,10 +4,10 @@
 
 #include "apps/media/src/media_service/media_player_impl.h"
 
+#include "application/lib/app/connect.h"
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/src/fidl/fidl_formatting.h"
 #include "apps/media/src/util/callback_joiner.h"
-#include "apps/modular/lib/app/connect.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 

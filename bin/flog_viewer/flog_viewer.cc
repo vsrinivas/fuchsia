@@ -7,8 +7,8 @@
 #include <iomanip>
 #include <iostream>
 
+#include "application/lib/app/connect.h"
 #include "apps/media/tools/flog_viewer/formatting.h"
-#include "apps/modular/lib/app/connect.h"
 #include "lib/fidl/cpp/bindings/message.h"
 
 namespace flog {

@@ -7,9 +7,9 @@ executable("audio_server") {
     "audio_output.cc",
     "audio_output_manager.cc",
     "audio_pipe.cc",
-    "audio_server_impl.cc",
     "audio_renderer_impl.cc",
     "audio_renderer_to_output_link.cc",
+    "audio_server_impl.cc",
     "gain.cc",
     "main.cc",
     "platform/generic/mixer.cc",
@@ -26,13 +26,13 @@ executable("audio_server") {
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/lib/transport",
     "//apps/media/services",
     "//apps/media/src/audio",
     "//apps/media/src/util",
-    "//apps/modular/lib/app",
     "//lib/ftl",
     "//lib/mtl",
   ]

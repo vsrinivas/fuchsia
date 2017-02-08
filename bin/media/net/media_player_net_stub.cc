@@ -8,8 +8,8 @@
 
 #include <mx/channel.h>
 
+#include "application/lib/app/application_context.h"
 #include "apps/media/lib/timeline/timeline.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
@@ -118,9 +118,9 @@ void MediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
 
   // Request a status update.
   player_->GetStatus(
-      version,
-      [weak_this = std::weak_ptr<MediaPlayerNetStub>(shared_from_this())](
-          uint64_t version, MediaPlayerStatusPtr status) {
+      version, [weak_this =
+                    std::weak_ptr<MediaPlayerNetStub>(shared_from_this())](
+                   uint64_t version, MediaPlayerStatusPtr status) {
         auto shared_this = weak_this.lock();
         if (shared_this) {
           shared_this->HandleStatusUpdates(version, std::move(status));

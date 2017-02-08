@@ -8,8 +8,8 @@
 #include <memory>
 #include <string>
 
+#include "application/lib/app/application_context.h"
 #include "apps/media/services/flog/flog.fidl.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/logging.h"

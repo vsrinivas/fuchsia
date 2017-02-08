@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "application/lib/app/connect.h"
 #include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/services/media_service.fidl.h"
 #include "apps/media/src/fidl/fidl_formatting.h"
 #include "apps/media/src/media_service/test/fake_renderer.h"
 #include "apps/media/src/media_service/test/fake_wav_reader.h"
-#include "apps/modular/lib/app/connect.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

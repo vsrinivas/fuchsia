@@ -13,8 +13,8 @@ import 'package:apps.media.services/media_service.fidl.dart';
 import 'package:apps.media.services/problem.fidl.dart';
 import 'package:apps.media.services/seeking_reader.fidl.dart';
 import 'package:apps.media.services/video_renderer.fidl.dart';
-import 'package:apps.modular.lib.app.dart/app.dart';
-import 'package:apps.modular.services.application/service_provider.fidl.dart';
+import 'package:application.lib.app.dart/app.dart';
+import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:apps.mozart.services.geometry/geometry.fidl.dart' as fidl;
 import 'package:apps.mozart.services.views/view_token.fidl.dart';
@@ -111,7 +111,7 @@ class MediaPlayerController extends ChangeNotifier {
 
   /// Gets the duration of the content.
   Duration get duration =>
-    new Duration(microseconds: _durationNanoseconds ~/ 1000);
+      new Duration(microseconds: _durationNanoseconds ~/ 1000);
 
   /// Gets current playback progress.
   Duration get progress {
@@ -127,7 +127,7 @@ class MediaPlayerController extends ChangeNotifier {
   int get _progressNanoseconds {
     // Estimate FrameInfo::presentationTime.
     int microseconds = (new DateTime.now()).microsecondsSinceEpoch -
-      _progressBarMicrosecondsSinceEpoch;
+        _progressBarMicrosecondsSinceEpoch;
     int referenceNanoseconds = microseconds * 1000 + _progressBarReferenceTime;
     return _timelineFunction(referenceNanoseconds);
   }
@@ -161,7 +161,7 @@ class MediaPlayerController extends ChangeNotifier {
     }
 
     int positionNanoseconds =
-      (position.inMicroseconds * 1000).round().clamp(0, _durationNanoseconds);
+        (position.inMicroseconds * 1000).round().clamp(0, _durationNanoseconds);
 
     _mediaPlayer.seek(positionNanoseconds);
 
@@ -223,14 +223,14 @@ class MediaPlayerController extends ChangeNotifier {
   /// Creates a local player.
   void _createLocalPlayer() {
     InterfacePair<MediaRenderer> audioMediaRenderer =
-      new InterfacePair<MediaRenderer>();
+        new InterfacePair<MediaRenderer>();
     _mediaService.createAudioRenderer(
       _audioRenderer.ctrl.request(),
       audioMediaRenderer.passRequest(),
     );
 
     InterfacePair<MediaRenderer> videoMediaRenderer =
-      new InterfacePair<MediaRenderer>();
+        new InterfacePair<MediaRenderer>();
     _mediaService.createVideoRenderer(
       _videoRenderer.ctrl.request(),
       videoMediaRenderer.passRequest(),
@@ -239,8 +239,7 @@ class MediaPlayerController extends ChangeNotifier {
     InterfacePair<ViewOwner> viewOwnerPair = new InterfacePair<ViewOwner>();
     _videoRenderer.createView(viewOwnerPair.passRequest());
 
-    _videoViewConnection =
-      new ChildViewConnection(viewOwnerPair.passHandle());
+    _videoViewConnection = new ChildViewConnection(viewOwnerPair.passHandle());
 
     _videoRenderer.getVideoSize((fidl.Size size) {
       _videoSize = new Size(size.width.toDouble(), size.height.toDouble());
@@ -289,12 +288,13 @@ class MediaPlayerController extends ChangeNotifier {
     if (status != null) {
       if (status.timelineTransform != null) {
         _timelineFunction =
-          new TimelineFunction.fromTransform(status.timelineTransform);
+            new TimelineFunction.fromTransform(status.timelineTransform);
       }
 
       _ended = status.endOfStream;
-      _playing = !ended && _timelineFunction != null &&
-        _timelineFunction.subjectDelta != 0;
+      _playing = !ended &&
+          _timelineFunction != null &&
+          _timelineFunction.subjectDelta != 0;
 
       _problem = status.problem;
       _metadata = status.metadata;
@@ -343,7 +343,7 @@ class MediaPlayerController extends ChangeNotifier {
     // get will be negative. When that happens, this function should be called
     // again.
     _progressBarMicrosecondsSinceEpoch =
-      (new DateTime.now()).microsecondsSinceEpoch;
+        (new DateTime.now()).microsecondsSinceEpoch;
     _progressBarReferenceTime = _timelineFunction.referenceTime;
     _progressBarReady = true;
   }

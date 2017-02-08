@@ -7,11 +7,11 @@
 #include <memory>
 #include <queue>
 
+#include "application/lib/app/application_context.h"
 #include "apps/media/examples/vu_meter/vu_meter_params.h"
 #include "apps/media/lib/transport/media_packet_consumer_base.h"
 #include "apps/media/services/media_capturer.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
-#include "apps/modular/lib/app/application_context.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
