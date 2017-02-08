@@ -11,64 +11,34 @@
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
-#include "lib/mtl/tasks/message_loop.h"
 
 #include "exception-port.h"
 #include "process.h"
 #include "rsp-cmd-handler.h"
 #include "rsp-io-loop.h"
+#include "server.h"
 #include "thread.h"
 
 namespace debugserver {
 
-// Server implements the main loop and handles commands received over a TCP port
-// (from gdb or lldb).
+// Server for Remote Serial Protocol support.
+// This implements the main loop and handles commands received over a TCP port
+// (from gdb or lldb, or any other debugger that supports RSP really).
 //
 // NOTE: This class is generally not thread safe. Care must be taken when
-// calling methods such as set_current_thread(), SetCurrentThread(), and
-// QueueNotification() which modify the internal state of a Server instance.
-class Server final : public IOLoop::Delegate, public Process::Delegate {
+// calling methods such as set_current_process(), SetCurrentThread(), and
+// QueueNotification() which modify its internal state.
+class RspServer final : public Server {
  public:
   // The default timeout interval used when sending notifications.
   constexpr static int64_t kDefaultTimeoutSeconds = 30;
 
-  explicit Server(uint16_t port);
-  ~Server();
+  explicit RspServer(uint16_t port);
 
   // Starts the main loop. This will first block and wait for an incoming
   // connection. Once there is a connection, this will start an event loop for
   // handling commands.
-  //
-  // Returns when the main loop exits (e.g. due to a closed client connection).
-  // Returns true if the main loop exits cleanly, or false in the case of an
-  // error.
-  // TODO(armansito): More clearly define the error scenario.
-  bool Run();
-
-  // Returns a raw pointer to the current inferior. The instance pointed to by
-  // the returned pointer is owned by this Server instance and should not be
-  // deleted.
-  Process* current_process() const { return current_process_.get(); }
-
-  // Sets the current process. This cleans up the current process (if any) and
-  // takes ownership of |process|.
-  void set_current_process(Process* process) {
-    current_process_.reset(process);
-  }
-
-  // Returns a raw pointer to the current thread.
-  Thread* current_thread() const { return current_thread_.get(); }
-
-  // Assigns the current thread.
-  void SetCurrentThread(Thread* thread);
-
-  // Returns a mutable reference to the main message loop. The returned instance
-  // is owned by this Server instance and should not be deleted.
-  mtl::MessageLoop* message_loop() { return &message_loop_; }
-
-  // Returns a mutable reference to the exception port. The returned instance is
-  // owned by this Server instance and should not be deleted.
-  ExceptionPort* exception_port() { return &exception_port_; }
+  bool Run() override;
 
   // Queue a notification packet and send it out if there are no currently
   // queued notifications. The GDB Remote Protocol defines a specific
@@ -90,12 +60,6 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
       const ftl::TimeDelta& timeout =
           ftl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
 
-  // Call this to schedule termination of gdbserver.
-  // Any outstanding messages will be sent first.
-  // N.B. The Server will exit its main loop asynchronously so any
-  // subsequently posted tasks will be dropped.
-  void PostQuitMessageLoop(bool status);
-
  private:
   // Maximum number of characters in the outbound buffer.
   constexpr static size_t kMaxBufferSize = 4096;
@@ -111,7 +75,7 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
     ftl::TimeDelta timeout;
   };
 
-  Server() = default;
+  RspServer() = default;
 
   // Listens for incoming connections on port |port_|. Once a connection is
   // accepted, returns true and stores the client socket in |client_sock_|,
@@ -147,9 +111,6 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
   // Post a timeout handler for |pending_notification_|.
   void PostNotificationTimeoutHandler();
 
-  // Sets the run status and quits the main message loop.
-  void QuitMessageLoop(bool status);
-
   // IOLoop::Delegate overrides.
   void OnBytesRead(const ftl::StringView& bytes) override;
   void OnDisconnected() override;
@@ -174,10 +135,8 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
   // TCP port number that we will listen on.
   uint16_t port_;
 
-  // File descriptors for the sockets used for listening for incoming
-  // connections (e.g. from gdb or lldb) and for the actual communication.
-  // |client_sock_| is used for GDB Remote Protocol communication.
-  ftl::UniqueFD client_sock_;
+  // File descriptor for the socket used for listening for incoming
+  // connections (e.g. from gdb or lldb).
   ftl::UniqueFD server_sock_;
 
   // Buffer used for writing outgoing bytes.
@@ -187,10 +146,6 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
   // packets and routing them to the correct handler.
   CommandHandler command_handler_;
 
-  // The current thread under debug. We only keep a weak pointer here, since the
-  // instance itself is owned by a Process and may get removed.
-  ftl::WeakPtr<Thread> current_thread_;
-
   // The current queue of notifications that have not been sent out yet.
   std::queue<std::unique_ptr<PendingNotification>> notify_queue_;
 
@@ -198,29 +153,7 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
   // acknowledged by the remote end yet.
   std::unique_ptr<PendingNotification> pending_notification_;
 
-  // The main loop.
-  mtl::MessageLoop message_loop_;
-
-  // The IOLoop used for blocking I/O operations over |client_sock_|.
-  // |message_loop_| and |client_sock_| both MUST outlive |io_loop_|. We take
-  // care to clean it up in the destructor.
-  std::unique_ptr<IOLoop> io_loop_;
-
-  // The ExceptionPort used by inferiors to receive exceptions.
-  // (This is declared after |message_loop_| since that needs to have been
-  // created before this can be initialized).
-  ExceptionPort exception_port_;
-
-  // Strong pointer to the current inferior process that is being debugged.
-  // NOTE: This must be declared after |exception_port_| above, since the
-  // process may do work in its destructor to detach itself.
-  std::unique_ptr<Process> current_process_;
-
-  // Stores the global error state. This is used to determine the return value
-  // for "Run()" when |message_loop_| exits.
-  bool run_status_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(Server);
+  FTL_DISALLOW_COPY_AND_ASSIGN(RspServer);
 };
 
 }  // namespace debugserver

@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 
 #include "stop-reply-packet.h"
@@ -29,27 +28,20 @@ constexpr char kStopAck[] = "vStopped";
 
 }  // namespace
 
-Server::PendingNotification::PendingNotification(const ftl::StringView& name,
-                                                 const ftl::StringView& event,
-                                                 const ftl::TimeDelta& timeout)
-    : name(name.data(), name.size()),
-      event(event.data(), event.size()),
-      timeout(timeout) {}
+RspServer::PendingNotification::PendingNotification(
+    const ftl::StringView& name,
+    const ftl::StringView& event,
+    const ftl::TimeDelta& timeout)
+  : name(name.data(), name.size()),
+    event(event.data(), event.size()),
+    timeout(timeout) {}
 
-Server::Server(uint16_t port)
+RspServer::RspServer(uint16_t port)
     : port_(port),
-      client_sock_(-1),
       server_sock_(-1),
-      command_handler_(this),
-      run_status_(true) {}
+      command_handler_(this) {}
 
-Server::~Server() {
-  // This will invoke the IOLoop destructor which will clean up and join the I/O
-  // threads.
-  io_loop_.reset();
-}
-
-bool Server::Run() {
+bool RspServer::Run() {
   FTL_DCHECK(!io_loop_);
 
   // Listen for an incoming connection.
@@ -64,7 +56,7 @@ bool Server::Run() {
     return false;
   }
 
-  io_loop_ = std::make_unique<IOLoop>(client_sock_.get(), this);
+  io_loop_ = std::make_unique<RspIOLoop>(client_sock_.get(), this);
   io_loop_->Run();
 
   // Start the main loop.
@@ -81,16 +73,9 @@ bool Server::Run() {
   return run_status_;
 }
 
-void Server::SetCurrentThread(Thread* thread) {
-  if (!thread)
-    current_thread_.reset();
-  else
-    current_thread_ = thread->AsWeakPtr();
-}
-
-void Server::QueueNotification(const ftl::StringView& name,
-                               const ftl::StringView& event,
-                               const ftl::TimeDelta& timeout) {
+void RspServer::QueueNotification(const ftl::StringView& name,
+                                  const ftl::StringView& event,
+                                  const ftl::TimeDelta& timeout) {
   // The GDB Remote protocol defines only the "Stop" notification
   FTL_DCHECK(name == kStopNotification);
 
@@ -101,12 +86,12 @@ void Server::QueueNotification(const ftl::StringView& name,
   TryPostNextNotification();
 }
 
-void Server::QueueStopNotification(const ftl::StringView& event,
-                                   const ftl::TimeDelta& timeout) {
+void RspServer::QueueStopNotification(const ftl::StringView& event,
+                                      const ftl::TimeDelta& timeout) {
   QueueNotification(kStopNotification, event, timeout);
 }
 
-bool Server::Listen() {
+bool RspServer::Listen() {
   FTL_DCHECK(!server_sock_.is_valid());
   FTL_DCHECK(!client_sock_.is_valid());
 
@@ -152,7 +137,7 @@ bool Server::Listen() {
   return true;
 }
 
-void Server::SendAck(bool ack) {
+void RspServer::SendAck(bool ack) {
   // TODO(armansito): Don't send anything if we're in no-acknowledgment mode. We
   // currently don't support this mode.
   FTL_DCHECK(io_loop_);
@@ -160,7 +145,7 @@ void Server::SendAck(bool ack) {
   io_loop_->PostWriteTask(ftl::StringView(&payload, 1));
 }
 
-void Server::PostWriteTask(bool notify, const ftl::StringView& data) {
+void RspServer::PostWriteTask(bool notify, const ftl::StringView& data) {
   FTL_DCHECK(io_loop_);
   FTL_DCHECK(data.size() + 4 < kMaxBufferSize);
 
@@ -184,18 +169,18 @@ void Server::PostWriteTask(bool notify, const ftl::StringView& data) {
       });
 }
 
-void Server::PostPacketWriteTask(const ftl::StringView& data) {
+void RspServer::PostPacketWriteTask(const ftl::StringView& data) {
   PostWriteTask(false, data);
 }
 
-void Server::PostPendingNotificationWriteTask() {
+void RspServer::PostPendingNotificationWriteTask() {
   FTL_DCHECK(pending_notification_);
   std::string bytes(pending_notification_->name + ":" +
                     pending_notification_->event);
   PostWriteTask(true, bytes);
 }
 
-bool Server::TryPostNextNotification() {
+bool RspServer::TryPostNextNotification() {
   if (pending_notification_ || notify_queue_.empty())
     return false;
 
@@ -209,7 +194,7 @@ bool Server::TryPostNextNotification() {
   return true;
 }
 
-void Server::PostNotificationTimeoutHandler() {
+void RspServer::PostNotificationTimeoutHandler() {
   // Set up a timeout handler.
   // Continually resend the notification until the remote end acknowledges it,
   // or until the notification is removed (say because the process exits).
@@ -228,17 +213,7 @@ void Server::PostNotificationTimeoutHandler() {
       pending_notification_->timeout);
 }
 
-void Server::QuitMessageLoop(bool status) {
-  run_status_ = status;
-  message_loop_.QuitNow();
-}
-
-void Server::PostQuitMessageLoop(bool status) {
-  run_status_ = status;
-  message_loop_.PostQuitTask();
-}
-
-void Server::OnBytesRead(const ftl::StringView& bytes_read) {
+void RspServer::OnBytesRead(const ftl::StringView& bytes_read) {
   // If this is a packet acknowledgment then ignore it and read again.
   // TODO(armansito): Re-send previous packet if we got "-".
   if (bytes_read == "+")
@@ -301,20 +276,20 @@ void Server::OnBytesRead(const ftl::StringView& bytes_read) {
   callback("");
 }
 
-void Server::OnDisconnected() {
+void RspServer::OnDisconnected() {
   // Exit successfully in the case of a remote disconnect.
   FTL_LOG(INFO) << "Client disconnected";
   QuitMessageLoop(true);
 }
 
-void Server::OnIOError() {
+void RspServer::OnIOError() {
   FTL_LOG(ERROR) << "An I/O error has occurred. Exiting the main loop";
   QuitMessageLoop(false);
 }
 
-void Server::OnThreadStarted(Process* process,
-                             Thread* thread,
-                             const mx_exception_context_t& context) {
+void RspServer::OnThreadStarted(Process* process,
+                                Thread* thread,
+                                const mx_exception_context_t& context) {
   FTL_DCHECK(process);
 
   // TODO(armansito): We send a stop-reply packet for the new thread. This
@@ -342,10 +317,10 @@ void Server::OnThreadStarted(Process* process,
   }
 }
 
-void Server::OnThreadExit(Process* process,
-                          Thread* thread,
-                          const mx_excp_type_t type,
-                          const mx_exception_context_t& context) {
+void RspServer::OnThreadExit(Process* process,
+                             Thread* thread,
+                             const mx_excp_type_t type,
+                             const mx_exception_context_t& context) {
   std::vector<char> packet;
   FTL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
   int exit_code = 0; // TODO(dje)
@@ -356,9 +331,9 @@ void Server::OnThreadExit(Process* process,
   QueueStopNotification(ftl::StringView(packet.data(), packet.size()));
 }
 
-void Server::OnProcessExit(Process* process,
-                           const mx_excp_type_t type,
-                           const mx_exception_context_t& context) {
+void RspServer::OnProcessExit(Process* process,
+                              const mx_excp_type_t type,
+                              const mx_exception_context_t& context) {
   std::vector<char> packet;
   FTL_LOG(INFO) << "Process " << process->GetName() << " exited";
   SetCurrentThread(nullptr);
@@ -369,10 +344,11 @@ void Server::OnProcessExit(Process* process,
   QueueStopNotification(ftl::StringView(packet.data(), packet.size()));
 }
 
-void Server::OnArchitecturalException(Process* process,
-                                      Thread* thread,
-                                      const mx_excp_type_t type,
-                                      const mx_exception_context_t& context) {
+void RspServer::OnArchitecturalException(
+    Process* process,
+    Thread* thread,
+    const mx_excp_type_t type,
+    const mx_exception_context_t& context) {
   FTL_DCHECK(process);
   FTL_DCHECK(thread);
   FTL_VLOG(1) << "Architectural Exception: "

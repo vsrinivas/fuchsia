@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
   // Give this thread an identifiable name for debugging purposes.
   mtl::SetCurrentThreadName("server (main)");
 
-  debugserver::Server server(port);
+  debugserver::RspServer server(port);
 
   std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
                                          cl.positional_args().end());
