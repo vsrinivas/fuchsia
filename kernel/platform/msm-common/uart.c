@@ -145,6 +145,59 @@ int uart_putc(int port, char c) {
     return 1;
 }
 
+/* panic-time getc/putc */
+int uart_pputc(int port, char c)
+{
+    msm_printstr(&c, 1);
+    return 1;
+}
+
+int uart_pgetc(int port)
+{
+    cbuf_t* rxbuf = &uart_rx_buf;
+
+    char c;
+    int count = 0;
+    uint32_t val, rxfs, sr;
+    char* bytes;
+    int i;
+
+    // see if we have chars left from previous read
+    if (cbuf_read_char(rxbuf, &c, false) == 1) {
+        return c;
+    }
+
+    if ((uart_read(UART_DM_SR) & UART_DM_SR_OVERRUN)) {
+        uart_write(UART_DM_CR_CMD_RESET_ERR, UART_DM_CR);
+    }
+
+    do {
+        rxfs = uart_read(UART_DM_RXFS);
+        sr = uart_read(UART_DM_SR);
+        count = UART_DM_RXFS_RX_BUFFER_STATE(rxfs);
+        if (!(sr & UART_DM_SR_RXRDY) && !count) {
+            return -1;
+        }
+    } while (count == 0);
+
+    uart_write(UART_DM_CR_CMD_FORCE_STALE, UART_DM_CR);
+    val = uart_read(UART_DM_RF(0));
+    uart_read(UART_DM_RF(1));
+
+    uart_write(UART_DM_CR_CMD_RESET_STALE_INT, UART_DM_CR);
+    uart_write(0xffffff, UART_DM_DMRX);
+
+    bytes = (char*)&val;
+    c = bytes[0];
+
+    // save remaining chars for next call
+    for (i = 1; i < count; i++) {
+        cbuf_write_char(rxbuf, bytes[i], false);
+    }
+
+    return c;
+}
+
 static enum handler_return uart_irq(void *arg)
 {
     uint32_t misr = uart_read(UART_DM_MISR);

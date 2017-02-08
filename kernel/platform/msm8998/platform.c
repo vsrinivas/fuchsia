@@ -28,8 +28,18 @@
 #include <target.h>
 
 #include <libfdt.h>
+#include <arch/mp.h>
+#include <arch/arm64/mp.h>
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
+
+#include <lib/console.h>
+#if WITH_LIB_DEBUGLOG
+#include <lib/debuglog.h>
+#endif
+#if WITH_PANIC_BACKTRACE
+#include <kernel/thread.h>
+#endif
 
 /* initial memory mappings. parsed by start.S */
 struct mmu_initial_mapping mmu_initial_mappings[] = {
@@ -66,6 +76,40 @@ static pmm_arena_info_t arena = {
     .size = MEMSIZE,
     .flags = PMM_ARENA_FLAG_KMAP,
 };
+
+static volatile int panic_started;
+
+static void halt_other_cpus(void)
+{
+#if WITH_SMP
+    static volatile int halted = 0;
+
+    if (atomic_swap(&halted, 1) == 0) {
+        // stop the other cpus
+        printf("stopping other cpus\n");
+        arch_mp_send_ipi(MP_CPU_ALL_BUT_LOCAL, MP_IPI_HALT);
+
+        // spin for a while
+        // TODO: find a better way to spin at this low level
+        for (volatile int i = 0; i < 100000000; i++) {
+            __asm volatile ("nop");
+        }
+    }
+#endif
+}
+
+void platform_panic_start(void)
+{
+    arch_disable_ints();
+
+    halt_other_cpus();
+
+    if (atomic_swap(&panic_started, 1) == 0) {
+#if WITH_LIB_DEBUGLOG
+        dlog_bluescreen_init();
+#endif
+    }
+}
 
 void platform_init_mmu_mappings(void)
 {
@@ -170,18 +214,20 @@ int platform_dgetc(char *c, bool wait)
     return 0;
 }
 
-/* Default implementation of panic time getc/putc.
- * Just calls through to the underlying dputc/dgetc implementation
- * unless the platform overrides it.
- */
-__WEAK void platform_pputc(char c)
+void platform_pputc(char c)
 {
-    return platform_dputc(c);
+    uart_pputc(DEBUG_UART, c);
 }
 
-__WEAK int platform_pgetc(char *c, bool wait)
+int platform_pgetc(char *c, bool wait)
 {
-    return platform_dgetc(c, wait);
+     int r = uart_pgetc(DEBUG_UART);
+     if (r == -1) {
+         return -1;
+     }
+
+     *c = r;
+     return 0;
 }
 
 /* stub out the hardware rng entropy generator, which doesn't exist on this platform */
@@ -198,6 +244,8 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
 {
     if (suggested_action == HALT_ACTION_REBOOT) {
         psci_system_reset();
+        // Deassert PSHold
+        *REG32(MSM8998_PSHOLD_VIRT) = 0;
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
         // XXX shutdown seem to not work through psci
         // implement shutdown via pmic
@@ -207,8 +255,22 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
         printf("shutdown is unsupported\n");
     }
 
-    // Deassert PSHold
-    *REG32(MSM8998_PSHOLD_VIRT) = 0;
+#if WITH_LIB_DEBUGLOG
+#if WITH_PANIC_BACKTRACE
+    thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
+#endif
+    dlog_bluescreen_halt();
+#endif
+
+#if ENABLE_PANIC_SHELL
+    if (reason == HALT_REASON_SW_PANIC) {
+        dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %u)\n", reason);
+        arch_disable_ints();
+        panic_shell_start();
+    }
+#endif  // ENABLE_PANIC_SHELL
+
+    dprintf(ALWAYS, "HALT: spinning forever... (reason = %u)\n", reason);
 
     // catch all fallthrough cases
     arch_disable_ints();

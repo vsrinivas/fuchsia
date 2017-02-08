@@ -8,8 +8,9 @@
 #pragma once
 
 #include <platform/msm8998.h>
+#include <kernel/mp.h>
 
-#define GIC_IPI_BASE (6) // irq 8-15 reserved
+#define GIC_IPI_BASE (8 - MAX_IPI) // irq 8-15 reserved
 
 #define GICBASE(n)  (MSM8998_GIC_BASE_VIRT)
 #define GICD_OFFSET (0x000000)

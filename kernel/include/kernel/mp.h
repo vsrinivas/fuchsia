@@ -35,6 +35,8 @@ typedef enum {
     MP_IPI_HALT,
 } mp_ipi_t;
 
+#define MAX_IPI (3)
+
 #ifdef WITH_SMP
 void mp_init(void);
 
