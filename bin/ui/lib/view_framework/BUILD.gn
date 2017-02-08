@@ -11,15 +11,15 @@ source_set("view_framework") {
   ]
 
   public_deps = [
-    "//apps/modular/services/application",
-    "//apps/modular/lib/app",
-    "//apps/mozart/services/composition/cpp",
+    "//application/lib/app",
+    "//application/services",
     "//apps/mozart/services/composition",
+    "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/input",
     "//apps/mozart/services/views",
     "//apps/tracing/lib/trace",
-    "//lib/ftl",
     "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
   ]
 }
 

@@ -39,19 +39,18 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/geometry/cpp",
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
     "//apps/tracing/lib/trace:provider",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/fidl/cpp/bindings",
   ]
 }
-
 # mojo_native_application("view_manager_apptests") {
 #   output_name = "view_manager_apptests"
 #

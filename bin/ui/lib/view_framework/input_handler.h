@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_INPUT_HANDLER_H_
 #define APPS_MOZART_LIB_VIEW_FRAMEWORK_INPUT_HANDLER_H_
 
-#include "apps/modular/services/application/service_provider.fidl.h"
+#include "application/services/service_provider.fidl.h"
 #include "apps/mozart/services/input/input_connection.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"

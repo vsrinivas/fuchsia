@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "apps/modular/services/application/service_provider.fidl.h"
+#include "application/services/service_provider.fidl.h"
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
 #include "apps/mozart/services/composition/scenes.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"

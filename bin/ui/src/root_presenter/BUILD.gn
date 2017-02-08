@@ -12,7 +12,7 @@ executable("root_presenter") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/composition",

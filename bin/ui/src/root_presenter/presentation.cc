@@ -6,7 +6,7 @@
 
 #include <mx/vmo.h>
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "apps/mozart/lib/skia/skia_vmo_data.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/services/composition/resources.fidl.h"
@@ -118,8 +118,8 @@ void Presentation::CreateViewTree() {
   // Register the view tree.
   mozart::ViewTreeListenerPtr tree_listener;
   tree_listener_binding_.Bind(tree_listener.NewRequest());
-  view_manager_->CreateViewTree(tree_.NewRequest(),
-                                std::move(tree_listener), "Presentation");
+  view_manager_->CreateViewTree(tree_.NewRequest(), std::move(tree_listener),
+                                "Presentation");
   tree_.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "View tree connection error.";
     Shutdown();
@@ -132,8 +132,7 @@ void Presentation::CreateViewTree() {
     Shutdown();
   });
   mozart::ViewContainerListenerPtr tree_container_listener;
-  tree_container_listener_binding_.Bind(
-      tree_container_listener.NewRequest());
+  tree_container_listener_binding_.Bind(tree_container_listener.NewRequest());
   tree_container_->SetListener(std::move(tree_container_listener));
 
   // Get view tree services.
@@ -165,8 +164,7 @@ void Presentation::CreateViewTree() {
   root_view_->GetContainer(root_container_.NewRequest());
 
   mozart::ViewContainerListenerPtr view_container_listener;
-  view_container_listener_binding_.Bind(
-      view_container_listener.NewRequest());
+  view_container_listener_binding_.Bind(view_container_listener.NewRequest());
   root_container_->SetListener(std::move(view_container_listener));
 
   root_container_->AddChild(kContentViewKey, std::move(view_owner_));

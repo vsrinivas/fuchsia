@@ -7,8 +7,8 @@
 #include <string>
 #include <utility>
 
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"

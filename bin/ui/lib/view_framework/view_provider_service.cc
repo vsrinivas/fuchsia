@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "lib/ftl/logging.h"
 
 namespace mozart {

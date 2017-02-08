@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/ftl/command_line.h"

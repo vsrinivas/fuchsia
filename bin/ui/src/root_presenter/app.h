@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/modular/lib/app/application_context.h"
+#include "application/lib/app/application_context.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"

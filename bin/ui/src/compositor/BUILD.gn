@@ -53,17 +53,17 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/mozart/lib/skia:type_converters",
     "//apps/mozart/lib/skia:vmo",
-    "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition",
+    "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/geometry/cpp",
     "//apps/tracing/lib/trace:provider",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/fidl/cpp/bindings",
     "//third_party/skia",
   ]
 }
@@ -79,7 +79,6 @@ executable("compositor") {
     ":common",
   ]
 }
-
 # TODO(jeffbrown): Reenable these tests once their dependencies are available.
 # executable("apptests") {
 #   output_name = "compositor_apptests"

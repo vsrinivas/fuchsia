@@ -8,7 +8,7 @@ dart_package("flutter") {
   infer_package_name = true
 
   deps = [
-    "//apps/modular/lib/app/dart",
+    "//application/lib/app/dart",
     "//apps/mozart/services/composition:composition_dart",
     "//apps/mozart/services/geometry:geometry_dart",
     "//apps/mozart/services/views:views_dart",

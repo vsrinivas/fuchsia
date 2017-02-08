@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/src/root_presenter/presentation.h"
 #include "apps/tracing/lib/trace/provider.h"
@@ -57,7 +57,8 @@ void App::InitializeServices() {
   }
 
   if (!view_manager_) {
-    application_context_->ConnectToEnvironmentService(view_manager_.NewRequest());
+    application_context_->ConnectToEnvironmentService(
+        view_manager_.NewRequest());
     view_manager_.set_connection_error_handler([this] {
       FTL_LOG(ERROR) << "ViewManager died, destroying view trees.";
       Reset();

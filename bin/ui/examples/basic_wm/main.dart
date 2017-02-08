@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:apps.modular.lib.app.dart/app.dart';
-import 'package:apps.modular.services.application/application_controller.fidl.dart';
-import 'package:apps.modular.services.application/application_environment.fidl.dart';
-import 'package:apps.modular.services.application/application_environment_host.fidl.dart';
-import 'package:apps.modular.services.application/application_launcher.fidl.dart';
-import 'package:apps.modular.services.application/service_provider.fidl.dart';
+import 'package:application.lib.app.dart/app.dart';
+import 'package:application.services/application_controller.fidl.dart';
+import 'package:application.services/application_environment.fidl.dart';
+import 'package:application.services/application_environment_host.fidl.dart';
+import 'package:application.services/application_launcher.fidl.dart';
+import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:apps.mozart.services.presentation/presenter.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
@@ -33,8 +33,7 @@ class ChildApplication {
     return new ChildApplication(
       controller: controller,
       connection: new ChildViewConnection.launch(url, _childLauncher,
-        controller: controller.ctrl.request()
-      ),
+          controller: controller.ctrl.request()),
       title: title,
     );
   }
@@ -61,11 +60,12 @@ final GlobalKey<WindowManagerState> _windowManager =
     new GlobalKey<WindowManagerState>();
 
 void addWindowForChildApplication(ChildApplication application) {
-  _windowManager.currentState.addWindow(new WindowFrame(
-    key: new ObjectKey(application),
-    title: application.title,
-    child: new ChildView(connection: application.connection),
-  ), onClose: () {
+  _windowManager.currentState.addWindow(
+      new WindowFrame(
+        key: new ObjectKey(application),
+        title: application.title,
+        child: new ChildView(connection: application.connection),
+      ), onClose: () {
     application.close();
   });
 }

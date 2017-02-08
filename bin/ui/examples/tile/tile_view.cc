@@ -4,7 +4,7 @@
 
 #include "apps/mozart/examples/tile/tile_view.h"
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/ftl/logging.h"
@@ -96,7 +96,8 @@ void TileView::CreateNestedEnvironment() {
   modular::ApplicationEnvironmentHostPtr env_host;
   env_host_binding_.Bind(env_host.NewRequest());
   application_context_->environment()->CreateNestedEnvironment(
-      std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(), "tile");
+      std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
+      "tile");
   env_->GetApplicationLauncher(env_launcher_.NewRequest());
 
   // Add a binding for the presenter service

@@ -18,18 +18,18 @@ executable("input_manager") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/mozart/lib/view_associate_framework",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/geometry/cpp",
     "//apps/mozart/services/input",
-    "//apps/mozart/services/views/cpp",
     "//apps/mozart/services/views",
+    "//apps/mozart/services/views/cpp",
     "//apps/tracing/lib/trace:provider",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/fidl/cpp/bindings",
   ]
 }

@@ -8,7 +8,7 @@ executable("launch") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
     "//lib/ftl",

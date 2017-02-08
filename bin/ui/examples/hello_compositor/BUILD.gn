@@ -8,15 +8,15 @@ executable("hello_compositor") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
-    "//apps/modular/services/application",
+    "//application/lib/app",
+    "//application/services:services_dart",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/fidl/cpp/bindings",
     "//third_party/skia",
   ]
 }

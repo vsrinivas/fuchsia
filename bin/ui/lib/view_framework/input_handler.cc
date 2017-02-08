@@ -4,7 +4,7 @@
 
 #include "apps/mozart/lib/view_framework/input_handler.h"
 
-#include "apps/modular/lib/app/connect.h"
+#include "application/lib/app/connect.h"
 #include "lib/ftl/logging.h"
 
 namespace mozart {

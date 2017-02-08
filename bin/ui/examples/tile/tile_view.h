@@ -8,8 +8,8 @@
 #include <map>
 #include <memory>
 
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "application/lib/app/application_context.h"
+#include "application/services/application_launcher.fidl.h"
 #include "apps/mozart/examples/tile/tile_params.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
