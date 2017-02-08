@@ -13,6 +13,7 @@ fi
 
 INTERFACE=$1
 SUBNET_PREFIX=${SUBNET_PREFIX:-192.168.3}
+LEASE_FILE=/tmp/fuchsia-dhcp-leases.$INTERFACE
 
 if [[ -z "$INTERFACE" ]]
 then
@@ -49,6 +50,13 @@ then
   sudo kill $DNSMASQ_PID
 fi
 
+if [[ -f "$LEASE_FILE" ]]
+then
+  echo "Removing the old dnsmasq lease file $LEASE_FILE ..."
+  sudo rm $LEASE_FILE
+fi
+
+
 # Look for dnsmasq in the path and then homebrew.
 DNSMASQ_PATH=$(which dnsmasq) || \
   DNSMASQ_PATH=$(brew --prefix)/sbin/dnsmasq && test -x $DNSMASQ_PATH || \
@@ -56,10 +64,11 @@ DNSMASQ_PATH=$(which dnsmasq) || \
     echo dnsmasq not found. Install it from homebrew.
     exit 1
   )
+
 echo Starting dnsmasq...
 sudo $DNSMASQ_PATH --interface=$INTERFACE \
   --dhcp-range=$INTERFACE,${SUBNET_PREFIX}.50,${SUBNET_PREFIX}.150,24h \
-  --dhcp-leasefile=/tmp/fuchsia-dhcp-leases.$INTERFACE \
+  --dhcp-leasefile=$LEASE_FILE \
   --listen-address=${SUBNET_PREFIX}.1
 
 echo "Enable IP forwarding..."
