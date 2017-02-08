@@ -23,6 +23,10 @@
         {
             "binary": "loop-test",
             "bootfs_path": "test/gdbserver/loop-test"
+        },
+        {
+            "binary": "gdbserver-thread-test",
+            "bootfs_path": "test/gdbserver/thread-test"
         }
     ]
 }
