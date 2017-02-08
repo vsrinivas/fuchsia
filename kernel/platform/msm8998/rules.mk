@@ -12,17 +12,14 @@ MODULE := $(LOCAL_DIR)
 
 WITH_SMP := 1
 
-# TODO - change to 8 after we are able to bring up gold CPUs
+# 4 silver and 4 gold cores
 SMP_MAX_CPUS := 8
 
 LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/platform.c \
-	$(LOCAL_DIR)/secondary_boot.S \
 	$(MSM_COMMON)/uart.c \
-
-# $(LOCAL_DIR)/gpio.c \
 
 MEMBASE := 0x80000000
 

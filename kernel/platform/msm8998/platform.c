@@ -31,9 +31,6 @@
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 
-// in secondary_boot.S
-extern void psci_call(ulong arg0, ulong arg1, ulong arg2, ulong arg3);
-
 /* initial memory mappings. parsed by start.S */
 struct mmu_initial_mapping mmu_initial_mappings[] = {
  /* 1GB of sdram space */
@@ -200,14 +197,12 @@ status_t display_get_info(struct display_info *info) {
 void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
 {
     if (suggested_action == HALT_ACTION_REBOOT) {
-        ulong psci_call_num = 0x84000000 + 9; /* SYSTEM_RESET */
-        psci_call(psci_call_num, 0, 0, 0);
+        psci_system_reset();
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
         // XXX shutdown seem to not work through psci
         // implement shutdown via pmic
 #if 0
-        ulong psci_call_num = 0x84000000 + 8; /* SYSTEM_SHUTDOWN */
-        psci_call(psci_call_num, 0, 0, 0);
+        psci_system_off();
 #endif
         printf("shutdown is unsupported\n");
     }
