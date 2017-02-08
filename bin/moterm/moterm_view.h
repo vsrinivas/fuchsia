@@ -5,8 +5,8 @@
 #ifndef APPS_MOTERM_MOTERM_VIEW_H_
 #define APPS_MOTERM_MOTERM_VIEW_H_
 
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/services/application/application_environment.fidl.h"
+#include "application/lib/app/application_context.h"
+#include "application/services/application_environment.fidl.h"
 #include "apps/moterm/command.h"
 #include "apps/moterm/moterm_model.h"
 #include "apps/moterm/moterm_params.h"

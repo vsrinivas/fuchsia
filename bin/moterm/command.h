@@ -13,7 +13,7 @@
 #include <functional>
 #include <vector>
 
-#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "application/services/application_launcher.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/mtl/io/redirection.h"
