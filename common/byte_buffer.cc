@@ -7,6 +7,10 @@
 namespace bluetooth {
 namespace common {
 
+std::string ByteBuffer::AsString() const {
+  return std::string(reinterpret_cast<const char*>(GetData()), GetSize());
+}
+
 DynamicByteBuffer::DynamicByteBuffer() : buffer_size_(0u) {}
 
 DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size)

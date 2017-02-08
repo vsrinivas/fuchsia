@@ -129,6 +129,11 @@ TEST(ByteBufferTest, MutableBufferViewTest) {
   EXPECT_EQ(kBufferSize, view.GetSize());
 }
 
+TEST(ByteBufferTest, AsString) {
+  auto buffer = common::CreateStaticByteBuffer('T', 'e', 's', 't');
+  EXPECT_EQ("Test", buffer.AsString());
+}
+
 }  // namespace
 }  // namespace common
 }  // namespace bluetooth

@@ -7,6 +7,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <string>
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -34,6 +35,9 @@ class ByteBuffer {
   iterator end() const { return cend(); }
   virtual const_iterator cbegin() const = 0;
   virtual const_iterator cend() const = 0;
+
+  // Returns the contents of this buffer as a C++ string.
+  std::string AsString() const;
 };
 
 // Mutable extension to the ByteBuffer interface. This provides methods that

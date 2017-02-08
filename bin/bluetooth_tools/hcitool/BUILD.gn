@@ -12,6 +12,7 @@ executable("hcitool") {
   ]
 
   deps = [
+    "//apps/bluetooth/gap",
     "//apps/bluetooth/hci",
   ]
 }

@@ -6,13 +6,15 @@
 
 #include <endian.h>
 
-#include <iostream>
 #include <cstring>
+#include <iostream>
 
+#include "apps/bluetooth/gap/advertising_data.h"
 #include "apps/bluetooth/hci/advertising_report_parser.h"
 #include "apps/bluetooth/hci/command_channel.h"
 #include "apps/bluetooth/hci/command_packet.h"
 #include "apps/bluetooth/hci/event_packet.h"
+#include "lib/ftl/strings/join_strings.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/ftl/time/time_delta.h"
@@ -54,6 +56,126 @@ void LogCommandComplete(hci::Status status,
 
 constexpr size_t BufferSize(size_t payload_size) {
   return hci::CommandPacket::GetMinBufferSize(payload_size);
+}
+
+// TODO(armansito): Move this to a library header as it will be useful
+// elsewhere.
+std::string AdvEventTypeToString(hci::LEAdvertisingEventType type) {
+  switch (type) {
+    case hci::LEAdvertisingEventType::kAdvInd:
+      return "ADV_IND";
+    case hci::LEAdvertisingEventType::kAdvDirectInd:
+      return "ADV_DIRECT_IND";
+    case hci::LEAdvertisingEventType::kAdvScanInd:
+      return "ADV_SCAN_IND";
+    case hci::LEAdvertisingEventType::kAdvNonConnInd:
+      return "ADV_NONCONN_IND";
+    case hci::LEAdvertisingEventType::kScanRsp:
+      return "SCAN_RSP";
+    default:
+      break;
+  }
+  return "(unknown)";
+}
+
+// TODO(armansito): Move this to a library header as it will be useful
+// elsewhere.
+std::string BdAddrTypeToString(hci::LEAddressType type) {
+  switch (type) {
+    case hci::LEAddressType::kPublic:
+      return "public";
+    case hci::LEAddressType::kRandom:
+      return "random";
+    case hci::LEAddressType::kPublicIdentity:
+      return "public-identity (resolved private)";
+    case hci::LEAddressType::kRandomIdentity:
+      return "random-identity (resolved private)";
+    default:
+      break;
+  }
+  return "(unknown)";
+}
+
+// TODO(armansito): Move this to a library header as it will be useful
+// elsewhere.
+std::vector<std::string> AdvFlagsToStrings(uint8_t flags) {
+  std::vector<std::string> flags_list;
+  if (flags & gap::AdvFlag::kLELimitedDiscoverableMode)
+    flags_list.push_back("limited-discoverable");
+  if (flags & gap::AdvFlag::kLEGeneralDiscoverableMode)
+    flags_list.push_back("general-discoverable");
+  if (flags & gap::AdvFlag::kBREDRNotSupported)
+    flags_list.push_back("bredr-not-supported");
+  if (flags & gap::AdvFlag::kSimultaneousLEAndBREDRController)
+    flags_list.push_back("le-and-bredr-controller");
+  if (flags & gap::AdvFlag::kSimultaneousLEAndBREDRHost)
+    flags_list.push_back("le-and-bredr-host");
+  return flags_list;
+}
+
+void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data,
+                              int8_t rssi,
+                              const std::string& name_filter) {
+  gap::AdvertisingDataReader reader(
+      common::BufferView(data.data, data.length_data));
+
+  // The AD fields that we'll parse out.
+  uint8_t flags = 0;
+  std::string short_name, complete_name;
+  int8_t tx_power_lvl;
+  bool tx_power_present = false;
+
+  gap::DataType type;
+  common::BufferView adv_data_field;
+  while (reader.GetNextField(&type, &adv_data_field)) {
+    switch (type) {
+      case gap::DataType::kFlags:
+        flags = adv_data_field.GetData()[0];
+        break;
+      case gap::DataType::kCompleteLocalName:
+        complete_name = adv_data_field.AsString();
+        break;
+      case gap::DataType::kShortenedLocalName:
+        short_name = adv_data_field.AsString();
+        break;
+      case gap::DataType::kTXPowerLevel:
+        tx_power_present = true;
+        tx_power_lvl = adv_data_field.GetData()[0];
+        break;
+      default:
+        break;
+    }
+  }
+
+  // First check if this report should be filtered out by name.
+  if (!name_filter.empty()) {
+    if (complete_name.compare(0, name_filter.length(), name_filter) != 0 &&
+        short_name.compare(0, name_filter.length(), name_filter) != 0)
+      return;
+  }
+
+  std::cout << "  LE Advertising Report:" << std::endl;
+  std::cout << "    RSSI: " << ftl::NumberToString(rssi) << std::endl;
+  std::cout << "    type: " << AdvEventTypeToString(data.event_type)
+            << std::endl;
+  std::cout << "    address type: " << BdAddrTypeToString(data.address_type)
+            << std::endl;
+  std::cout << "    BD_ADDR: " << data.address.ToString() << std::endl;
+  std::cout << "    Data Length: " << ftl::NumberToString(data.length_data)
+            << " bytes" << std::endl;
+  if (flags) {
+    std::cout << "    Flags: ["
+              << ftl::JoinStrings(AdvFlagsToStrings(flags), ", ") << "]"
+              << std::endl;
+  }
+  if (!short_name.empty())
+    std::cout << "    Shortened Local Name: " << short_name << std::endl;
+  if (!complete_name.empty())
+    std::cout << "    Complete Local Name: " << complete_name << std::endl;
+  if (tx_power_present) {
+    std::cout << "    TX Power Level: " << ftl::NumberToString(tx_power_lvl)
+              << std::endl;
+  }
 }
 
 bool HandleReset(const CommandDispatcher& owner,
@@ -419,7 +541,8 @@ bool HandleSetScanEnable(const CommandDispatcher& owner,
                          const ftl::CommandLine& cmd_line,
                          const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
-    std::cout << "  Usage: set-scan-params [--help|--timeout=<t>|--no-dedup]"
+    std::cout << "  Usage: set-scan-params "
+                 "[--help|--timeout=<t>|--no-dedup|--name-filter]"
               << std::endl;
     return false;
   }
@@ -430,8 +553,10 @@ bool HandleSetScanEnable(const CommandDispatcher& owner,
            "    --help - Display this help message\n"
            "    --timeout=<t> - Duration (in seconds) during which to scan\n"
            "                    (default is 10 seconds)\n"
-           "    --no-dedup - Tell the controller not to filter duplicate "
-           "reports";
+           "    --no-dedup - Tell the controller not to filter duplicate\n"
+           "                 reports\n"
+           "    --name-filter=<prefix> - Filter advertising reports by local\n"
+           "                             name, if present.";
     std::cout << std::endl;
     return false;
   }
@@ -448,6 +573,9 @@ bool HandleSetScanEnable(const CommandDispatcher& owner,
     timeout = ftl::TimeDelta::FromSeconds(time_seconds);
   }
 
+  std::string name_filter;
+  cmd_line.GetOptionValue("name-filter", &name_filter);
+
   hci::GenericEnableParam filter_duplicates = hci::GenericEnableParam::kEnable;
   if (cmd_line.HasOption("no-dedup")) {
     filter_duplicates = hci::GenericEnableParam::kDisable;
@@ -462,62 +590,16 @@ bool HandleSetScanEnable(const CommandDispatcher& owner,
   params->filter_duplicates = filter_duplicates;
 
   // Event handler to log when we receive advertising reports
-  auto le_meta_event_cb = [](const hci::EventPacket& event) {
+  auto le_meta_event_cb = [name_filter](const hci::EventPacket& event) {
     if (event.GetPayload<hci::LEMetaEventParams>()->subevent_code !=
         hci::kLEAdvertisingReportSubeventCode)
       return;
 
     hci::AdvertisingReportParser parser(event);
-
-    // TODO(armansito): Factor the report logging out into a helper function.
-    std::cout << "  LE_Advertising_Report Event" << std::endl;
     hci::LEAdvertisingReportData* data;
     int8_t rssi;
     while (parser.GetNextReport(&data, &rssi)) {
-      std::cout << "  Report:" << std::endl;
-      std::cout << "    RSSI: " << ftl::NumberToString(rssi) << std::endl;
-      std::cout << "    type: ";
-      switch (data->event_type) {
-        case hci::LEAdvertisingEventType::kAdvInd:
-          std::cout << "ADV_IND" << std::endl;
-          break;
-        case hci::LEAdvertisingEventType::kAdvDirectInd:
-          std::cout << "ADV_DIRECT_IND" << std::endl;
-          break;
-        case hci::LEAdvertisingEventType::kAdvScanInd:
-          std::cout << "ADV_SCAN_IND" << std::endl;
-          break;
-        case hci::LEAdvertisingEventType::kAdvNonConnInd:
-          std::cout << "ADV_NONCONN_IND" << std::endl;
-          break;
-        case hci::LEAdvertisingEventType::kScanRsp:
-          std::cout << "SCAN_RSP" << std::endl;
-          break;
-        default:
-          std::cout << "(unknown)" << std::endl;
-          break;
-      }
-      std::cout << "    addres type: ";
-      switch (data->address_type) {
-        case hci::LEAddressType::kPublic:
-          std::cout << "public" << std::endl;
-          break;
-        case hci::LEAddressType::kRandom:
-          std::cout << "random" << std::endl;
-          break;
-        case hci::LEAddressType::kPublicIdentity:
-          std::cout << "public-identity (resolved private)" << std::endl;
-          break;
-        case hci::LEAddressType::kRandomIdentity:
-          std::cout << "random-identity (resolved private)" << std::endl;
-          break;
-        default:
-          std::cout << "(unknown)" << std::endl;
-          break;
-      }
-      std::cout << "    BD_ADDR: " << data->address.ToString() << std::endl;
-      std::cout << "    Data Length: " << ftl::NumberToString(data->length_data)
-                << " bytes" << std::endl;
+      DisplayAdvertisingReport(*data, rssi, name_filter);
     }
   };
   auto event_handler_id = owner.cmd_channel()->AddEventHandler(
