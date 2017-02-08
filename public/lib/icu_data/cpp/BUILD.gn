@@ -29,9 +29,9 @@ source_set("lib") {
   ]
 
   deps = [
-    "//apps/icu_data/services",
-    "//apps/modular/services/application",
-    "//third_party/icu",
     ":generate_icu_constants",
+    "//application/services",
+    "//apps/icu_data/services",
+    "//third_party/icu",
   ]
 }

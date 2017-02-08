@@ -10,10 +10,10 @@ executable("icu_data_provider") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "lib",
+    "services",
+    "//application/lib/app",
     "//lib/ftl",
     "//lib/mtl",
-    "services",
-    "lib",
   ]
 }

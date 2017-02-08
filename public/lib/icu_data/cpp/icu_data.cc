@@ -6,9 +6,9 @@
 
 #include <mx/vmar.h>
 
+#include "application/services/service_provider.fidl.h"
 #include "apps/icu_data/lib/constants.h"
 #include "apps/icu_data/services/icu_data.fidl.h"
-#include "apps/modular/services/application/service_provider.fidl.h"
 #include "third_party/icu/source/common/unicode/udata.h"
 
 namespace icu_data {
@@ -56,9 +56,8 @@ bool Initialize(modular::ServiceProvider* services) {
 
   // Get the data from the ICU data provider.
   icu_data::ICUDataProviderPtr icu_data_provider;
-  services->ConnectToService(
-      icu_data::ICUDataProvider::Name_,
-      fidl::GetProxy(&icu_data_provider).PassChannel());
+  services->ConnectToService(icu_data::ICUDataProvider::Name_,
+                             fidl::GetProxy(&icu_data_provider).PassChannel());
 
   icu_data::ICUDataPtr response;
   icu_data_provider->ICUDataWithSha1(
