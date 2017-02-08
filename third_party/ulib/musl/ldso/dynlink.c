@@ -69,6 +69,7 @@ struct dso {
     int phnum;
     size_t phentsize;
     int refcnt;
+    mx_handle_t vmar; // Closed after relocation.
     Sym* syms;
     uint32_t* hashtab;
     uint32_t* ghashtab;
@@ -451,6 +452,11 @@ static void unmap_library(struct dso* dso) {
     if (dso->map && dso->map_len) {
         munmap(dso->map, dso->map_len);
     }
+    if (dso->vmar != MX_HANDLE_INVALID) {
+        _mx_vmar_destroy(dso->vmar);
+        _mx_handle_close(dso->vmar);
+        dso->vmar = MX_HANDLE_INVALID;
+    }
 }
 
 // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
@@ -494,7 +500,6 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     Ehdr* eh;
     Phdr *ph, *ph0;
     unsigned char *map = MAP_FAILED, *base;
-    mx_handle_t vmar = MX_HANDLE_INVALID;
     size_t dyn = 0;
     size_t tls_image = 0;
     size_t i;
@@ -561,14 +566,16 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     addr_min &= -PAGE_SIZE;
     map_len = addr_max - addr_min;
 
-    // Allocate a VMAR to reserve the whole address range.
+    // Allocate a VMAR to reserve the whole address range.  Stash
+    // the new VMAR's handle until relocation has finished, because
+    // we need it to adjust page protections for RELRO.
     uintptr_t vmar_base;
     status = _mx_vmar_allocate(__magenta_vmar_root_self, 0, map_len,
                                MX_VM_FLAG_CAN_MAP_READ |
                                MX_VM_FLAG_CAN_MAP_WRITE |
                                MX_VM_FLAG_CAN_MAP_EXECUTE |
                                MX_VM_FLAG_CAN_MAP_SPECIFIC,
-                               &vmar, &vmar_base);
+                               &dso->vmar, &vmar_base);
     if (status != NO_ERROR) {
         error("failed to reserve %zu bytes of address space: %d\n",
               map_len, status);
@@ -626,7 +633,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             }
         }
 
-        status = _mx_vmar_map(vmar, mapaddr - vmar_base, map_vmo,
+        status = _mx_vmar_map(dso->vmar, mapaddr - vmar_base, map_vmo,
                               off_start, map_size, mx_flags, &mapaddr);
         if (map_vmo != vmo)
             _mx_handle_close(map_vmo);
@@ -644,7 +651,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
                 if (status != NO_ERROR)
                     goto mx_error;
                 uintptr_t bss_mapaddr = 0;
-                status = _mx_vmar_map(vmar, pgbrk - vmar_base,
+                status = _mx_vmar_map(dso->vmar, pgbrk - vmar_base,
                                       bss_vmo, 0, bss_len, mx_flags,
                                       &bss_mapaddr);
                 _mx_handle_close(bss_vmo);
@@ -654,7 +661,6 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         }
     }
 
-    _mx_handle_close(vmar);
 
     dso->base = base;
     dso->dynv = laddr(dso, dyn);
@@ -665,10 +671,10 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
 noexec:
     errno = ENOEXEC;
 error:
-    if (vmar != MX_HANDLE_INVALID)
-        _mx_handle_close(vmar);
     if (map != MAP_FAILED)
         unmap_library(dso);
+    if (dso->vmar != MX_HANDLE_INVALID)
+        _mx_handle_close(dso->vmar);
     free(allocated_buf);
     return 0;
 }
@@ -972,17 +978,36 @@ static void reloc_all(struct dso* p) {
         do_relocs(p, laddr(p, dyn[DT_REL]), dyn[DT_RELSZ], 2);
         do_relocs(p, laddr(p, dyn[DT_RELA]), dyn[DT_RELASZ], 3);
 
-#if 0
-        // TODO(mcgrathr): No mprotect yet, and ENOSYS stub not safe because
-        // TLS errno here might crash.
-        if (head != &ldso && p->relro_start != p->relro_end &&
-            mprotect(laddr(p, p->relro_start), p->relro_end - p->relro_start, PROT_READ) &&
-            errno != ENOSYS) {
-            error("Error relocating %s: RELRO protection failed: %m", p->name);
-            if (runtime)
-                longjmp(*rtld_fail, 1);
+        if (head != &ldso && p->relro_start != p->relro_end) {
+            mx_status_t status =
+                _mx_vmar_protect(p->vmar,
+                                 (uintptr_t)laddr(p, p->relro_start),
+                                 p->relro_end - p->relro_start,
+                                 MX_VM_FLAG_PERM_READ);
+            if (status == ERR_BAD_HANDLE && p->vmar == MX_HANDLE_INVALID) {
+                // TODO(mcgrathr): This special case is because we don't
+                // have the VMAR for ldso itself and so can't apply its
+                // RELRO.  We need to plumb it through from the creator.
+                // Then this special case can be removed.
+                if (p != &ldso)
+                    debugmsg("XXX skipping '%s' RELRO: no VMAR handle\n",
+                             p->name);
+            } else if (status != NO_ERROR) {
+                error("Error relocating %s: RELRO protection"
+                      " %p+%#zx failed: %s",
+                      p->name,
+                      laddr(p, p->relro_start), p->relro_end - p->relro_start,
+                      _mx_status_get_string(status));
+                if (runtime)
+                    longjmp(*rtld_fail, 1);
+            }
         }
-#endif
+
+        // Hold the VMAR handle only long enough to apply RELRO.
+        // Now it's no longer needed and the mappings cannot be
+        // changed any more (only unmapped).
+        _mx_handle_close(p->vmar);
+        p->vmar = MX_HANDLE_INVALID;
 
         p->relocated = 1;
     }
