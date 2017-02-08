@@ -9,10 +9,10 @@
 
 namespace modular {
 
-AgentContextImpl::AgentContextImpl(ApplicationLauncher* app_launcher,
-                                   AgentRunner* agent_runner,
+AgentContextImpl::AgentContextImpl(ApplicationLauncher* const app_launcher,
+                                   AgentRunner* const agent_runner,
                                    const std::string& url)
-    : url_(url), agent_context_(this) {
+    : url_(url), agent_context_binding_(this) {
   // Start up the agent process.
   auto launch_info = ApplicationLaunchInfo::New();
   launch_info->url = url;
@@ -22,14 +22,14 @@ AgentContextImpl::AgentContextImpl(ApplicationLauncher* app_launcher,
 
   // Initialize the agent service.
   ConnectToService(application_services_.get(), agent_.NewRequest());
-  agent_->Initialize(agent_context_.NewBinding());
+  agent_->Initialize(agent_context_binding_.NewBinding());
 
   // When the agent process dies, we remove it.
   application_controller_.set_connection_error_handler(
       [agent_runner, url] { agent_runner->RemoveAgent(url); });
 
   // When all the |AgentController| bindings go away stop the agent.
-  controller_bindings_.set_on_empty_set_handler([this] {
+  agent_controller_bindings_.set_on_empty_set_handler([this] {
     agent_->Stop([] { });
   });
 }
@@ -38,17 +38,17 @@ AgentContextImpl::~AgentContextImpl() = default;
 
 void AgentContextImpl::NewConnection(
     const std::string& requestor_url,
-    fidl::InterfaceRequest<modular::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<modular::AgentController> controller) {
-  agent_->Connect(requestor_url, std::move(incoming_services));
+    fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+  agent_->Connect(requestor_url, std::move(incoming_services_request));
 
   // Add a binding to the |controller|. When all the bindings go away
   // we can stop the agent.
-  controller_bindings_.AddBinding(this, std::move(controller));
+  agent_controller_bindings_.AddBinding(this, std::move(agent_controller_request));
 }
 
 void AgentContextImpl::GetComponentContext(
-    fidl::InterfaceRequest<modular::ComponentContext> context) {}
+    fidl::InterfaceRequest<ComponentContext> context) {}
 
 void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {}
 

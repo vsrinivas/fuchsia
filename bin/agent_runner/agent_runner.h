@@ -31,8 +31,8 @@ class AgentRunner {
   void ConnectToAgent(
       const std::string& requestor_url,
       const std::string& agent_url,
-      fidl::InterfaceRequest<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::AgentController> controller);
+      fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Removes an agent. Called by AgentContextImpl when it is done.
   void RemoveAgent(const std::string& agent_url);

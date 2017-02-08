@@ -27,15 +27,15 @@ class ComponentContextImpl : public ComponentContext {
  private:
   void ConnectToAgent(
       const fidl::String& url,
-      fidl::InterfaceRequest<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::AgentController> controller) override;
+      fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request) override;
   void ObtainMessageQueue(
       const fidl::String& name,
-      fidl::InterfaceRequest<modular::MessageQueue> queue) override;
+      fidl::InterfaceRequest<MessageQueue> request) override;
   void DeleteMessageQueue(const fidl::String& name) override;
   void GetMessageSender(
       const fidl::String& queue_token,
-      fidl::InterfaceRequest<modular::MessageSender> sender) override;
+      fidl::InterfaceRequest<MessageSender> request) override;
 
   const std::string component_id_;
   AgentRunner* const agent_runner_;

@@ -35,13 +35,13 @@ class AgentContextImpl : public AgentContext, public AgentController {
   // Called by AgentRunner when a component wants to connect to this agent.
   void NewConnection(
       const std::string& requestor_url,
-      fidl::InterfaceRequest<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::AgentController> controller);
+      fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request);
 
  private:
   // |AgentContext|
   void GetComponentContext(
-      fidl::InterfaceRequest<modular::ComponentContext> context) override;
+      fidl::InterfaceRequest<ComponentContext> context) override;
   // |AgentContext|
   void ScheduleTask(TaskInfoPtr task_info) override;
   // |AgentContext|
@@ -53,8 +53,8 @@ class AgentContextImpl : public AgentContext, public AgentController {
   ApplicationControllerPtr application_controller_;
   ServiceProviderPtr application_services_;
   AgentPtr agent_;
-  fidl::Binding<AgentContext> agent_context_;
-  fidl::BindingSet<AgentController> controller_bindings_;
+  fidl::Binding<AgentContext> agent_context_binding_;
+  fidl::BindingSet<AgentController> agent_controller_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
 };

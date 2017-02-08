@@ -10,7 +10,7 @@
 namespace modular {
 
 ComponentContextImpl::ComponentContextImpl(const std::string& component_id,
-                                           AgentRunner* agent_runner)
+                                           AgentRunner* const agent_runner)
     : component_id_(component_id), agent_runner_(agent_runner) {
   FTL_DCHECK(agent_runner);
 }
@@ -19,16 +19,17 @@ ComponentContextImpl::~ComponentContextImpl() = default;
 
 void ComponentContextImpl::ConnectToAgent(
     const fidl::String& url,
-    fidl::InterfaceRequest<modular::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<modular::AgentController> controller) {
+    fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // TODO: Plumb requestor url.
   agent_runner_->ConnectToAgent(
-      component_id_, url, std::move(incoming_services), std::move(controller));
+      component_id_, url, std::move(incoming_services_request),
+      std::move(agent_controller_request));
 }
 
 void ComponentContextImpl::ObtainMessageQueue(
     const fidl::String& name,
-    fidl::InterfaceRequest<modular::MessageQueue> queue) {
+    fidl::InterfaceRequest<MessageQueue> request) {
   // Unimplemented.
   FTL_LOG(INFO) << "ComponentContextImpl::ObtainMessageQueue";
 }
@@ -40,7 +41,7 @@ void ComponentContextImpl::DeleteMessageQueue(const fidl::String& name) {
 
 void ComponentContextImpl::GetMessageSender(
     const fidl::String& queue_token,
-    fidl::InterfaceRequest<modular::MessageSender> sender) {
+    fidl::InterfaceRequest<MessageSender> request) {
   // Unimplemented.
   FTL_LOG(INFO) << "ComponentContextImpl::GetMessageSender";
 }
