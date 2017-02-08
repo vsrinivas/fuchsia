@@ -54,21 +54,8 @@ func main() {
 		log.Fatalf("AddAddress for link-local IPv6: %v", err)
 	}
 
-	// Add default route.
-	stk.SetRouteTable([]tcpip.Route{
-		{
-			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
-			Gateway:     "",
-			NIC:         1,
-		},
-		{
-			Destination: tcpip.Address(strings.Repeat("\x00", 16)),
-			Mask:        tcpip.Address(strings.Repeat("\x00", 16)),
-			Gateway:     "",
-			NIC:         1,
-		},
-	})
+	// Add default route. This will get clobbered later when we get a DHCP response.
+	stk.SetRouteTable(defaultRouteTable(""))
 
 	if err := stk.AddAddress(1, ipv4.ProtocolNumber, "\xff\xff\xff\xff"); err != nil {
 		log.Fatal(err)
@@ -78,7 +65,10 @@ func main() {
 	}
 
 	dhcpClient = dhcp.NewClient(stk.(*stack.Stack), 1, ep.linkAddr)
-	go dhcpClient.Start()
+	go dhcpClient.Start(func(config dhcp.Config) {
+		// Update default route with new gateway.
+		stk.SetRouteTable(defaultRouteTable(config.Gateway))
+	})
 
 	_, err := socketDispatcher(stk)
 	if err != nil {
@@ -108,4 +98,21 @@ func ipv6LinkLocalAddr(linkAddr tcpip.LinkAddress) tcpip.Address {
 		15: linkAddr[5],
 	}
 	return tcpip.Address(lladdrb[:])
+}
+
+func defaultRouteTable(gateway tcpip.Address) []tcpip.Route {
+	return []tcpip.Route{
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
+			Gateway:     gateway,
+			NIC:         1,
+		},
+		{
+			Destination: tcpip.Address(strings.Repeat("\x00", 16)),
+			Mask:        tcpip.Address(strings.Repeat("\x00", 16)),
+			Gateway:     gateway,
+			NIC:         1,
+		},
+	}
 }
