@@ -25,7 +25,7 @@ CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "toolchain",
 DART_TOOL = os.path.join(paths.DART_ROOT, "bin", "dartfmt")
 GN_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "gn")
 
-C_CMD = [CLANG_TOOL, "-style=file", "-fallback-style=Chromium", "-i"]
+C_CMD = [CLANG_TOOL, "-style=file", "-fallback-style=Chromium", "-sort-includes", "-i"]
 DART_CMD = [DART_TOOL, "-w"]
 GN_CMD = [GN_TOOL, "format"]
 
