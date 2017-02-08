@@ -129,7 +129,16 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
         lock(&node.barrier);
     }
 
-    mxr_mutex_lock(m);
+    /* We must leave the mutex in the "locked with waiters" state here.
+     * There are two reasons for that:
+     *  1) If we do the unlock_requeue() below, a condvar waiter will be
+     *     requeued to the mutex's futex.  We need to ensure that it will
+     *     be signaled by mxr_mutex_unlock() in future.
+     *  2) If the current thread was woken via an unlock_requeue() +
+     *     mxr_mutex_unlock(), there *might* be another thread waiting for
+     *     the mutex after us in the queue.  We need to ensure that it
+     *     will be signaled by mxr_mutex_unlock() in future. */
+    mxr_mutex_lock_with_waiter(m);
 
     /* By this point, our part of the waiter list cannot change further.
      * It has been unlinked from the condvar by __private_cond_signal().
@@ -141,18 +150,11 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
      * It is therefore safe now to read node.next and node.prev without
      * holding _c_lock. */
 
-    if (oldstate != WAITING) {
-        // TODO(kulakowski) If mxr_mutex_t grows a waiters count, increment it here.
-        // if (!node.next)
-        //     a_inc(&mutex->_m_waiters);
-
+    if (oldstate != WAITING && node.prev) {
         /* Unlock the barrier that's holding back the next waiter, and
-         * either wake it or requeue it to the mutex. */
-        if (node.prev)
-            unlock_requeue(&node.prev->barrier, &m->futex);
-        // TODO(kulakowski) If mxr_mutex_t grows a waiters count, decrement it here.
-        // else
-        //     a_dec(&mutex->_m_waiters);
+         * requeue it to the mutex so that it will be woken when the
+         * mutex is unlocked. */
+        unlock_requeue(&node.prev->barrier, &m->futex);
     }
 
     switch (e) {
