@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 
+CMDLINE="$@ magenta.soc.msm8998=0 gfxconsole.font=18x32 startup.keep-log-visible=true"
+
 #fastboot doesn't like empty -c, so add trailing space
-fastboot boot -n 4096 -c "$@ " build-msm-trapper/zmagenta.bin-dtb
+fastboot boot -n 4096 -c "$CMDLINE " build-msm-trapper/zmagenta.bin-dtb
