@@ -519,7 +519,7 @@ static void putc_plain(textcon_t* tc, uint8_t c) {
         dataxy(tc, tc->x, tc->y)[0] = make_vc_char(tc, ' ');
         break;
     case 9: // tab / ^I
-        moveto(tc, (tc->x + 7) & (~7), tc->y);
+        moveto(tc, (tc->x + 8) & (~7), tc->y);
         break;
     case 10:         // newline
         putc_cr(tc); // should we imply this?

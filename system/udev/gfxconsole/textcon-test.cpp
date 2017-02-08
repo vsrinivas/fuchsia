@@ -26,17 +26,19 @@ void setparam_callback(void* cookie, int param, uint8_t* arg, size_t arglen) {
 // Helper for initializing a textcon instance for testing.
 class TextconHelper {
 public:
-    TextconHelper() {
+    TextconHelper(uint32_t size_x, uint32_t size_y) : size_x(size_x),
+                                                      size_y(size_y) {
+        textbuf = new vc_char_t[size_x * size_y];
         textcon.invalidate = invalidate_callback;
         textcon.movecursor = movecursor_callback;
         textcon.pushline = pushline_callback;
         textcon.scroll = scroll_callback;
         textcon.setparam = setparam_callback;
-        tc_init(&textcon, kSizeX, kSizeY, textbuf, 0, 0);
+        tc_init(&textcon, size_x, size_y, textbuf, 0, 0);
 
         // Initialize buffer contents, since this is currently done
         // outside of textcon.cpp in vc-device.cpp.
-        for (size_t i = 0; i < kSizeX * kSizeY; ++i)
+        for (size_t i = 0; i < size_x * size_y; ++i)
             textbuf[i] = ' ';
     }
 
@@ -51,25 +53,24 @@ public:
 
     void AssertLineContains(int line_num, const char* str) {
         size_t len = strlen(str);
-        EXPECT_LE(len, kSizeX, "");
+        EXPECT_LE(len, size_x, "");
         for (size_t i = 0; i < len; ++i)
-            EXPECT_EQ(str[i], textbuf[kSizeX * line_num + i], "");
+            EXPECT_EQ(str[i], textbuf[size_x * line_num + i], "");
         // The rest of the line should contain spaces.
-        for (size_t i = len; i < kSizeX; ++i)
-            EXPECT_EQ(' ', textbuf[kSizeX * line_num + i], "");
+        for (size_t i = len; i < size_x; ++i)
+            EXPECT_EQ(' ', textbuf[size_x * line_num + i], "");
     }
 
-    static constexpr int kSizeX = 10;
-    static constexpr int kSizeY = 5;
-
-    vc_char_t* textbuf = new vc_char_t[kSizeX * kSizeY];
+    uint32_t size_x;
+    uint32_t size_y;
+    vc_char_t* textbuf;
     textcon_t textcon = {};
 };
 
 bool test_simple() {
     BEGIN_TEST;
 
-    TextconHelper tc;
+    TextconHelper tc(10, 5);
     tc.PutString("Hello");
     tc.AssertLineContains(0, "Hello");
     tc.AssertLineContains(1, "");
@@ -80,7 +81,7 @@ bool test_simple() {
 bool test_wrapping() {
     BEGIN_TEST;
 
-    TextconHelper tc;
+    TextconHelper tc(10, 5);
     tc.PutString("Hello world! More text here.");
     tc.AssertLineContains(0, "Hello worl");
     tc.AssertLineContains(1, "d! More te");
@@ -89,9 +90,26 @@ bool test_wrapping() {
     END_TEST;
 }
 
+bool test_tabs() {
+    BEGIN_TEST;
+
+    TextconHelper tc(80, 40);
+    tc.PutString("\tA\n");
+    tc.PutString(" \tB\n");
+    tc.PutString("       \tC\n"); // 7 spaces
+    tc.PutString("        \tD\n"); // 8 spaces
+    tc.AssertLineContains(0, "        A");
+    tc.AssertLineContains(1, "        B");
+    tc.AssertLineContains(2, "        C");
+    tc.AssertLineContains(3, "                D");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_wrapping)
+RUN_TEST(test_tabs)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }
