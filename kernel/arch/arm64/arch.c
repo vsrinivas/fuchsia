@@ -71,6 +71,9 @@ static void arm64_cpu_early_init(void)
 
     /* enable user space access to cycle counter */
     ARM64_WRITE_SYSREG(pmuserenr_el0, 1UL);
+
+    /* enable user space access to virtual counter (CNTVCT_EL0) */
+    ARM64_WRITE_SYSREG(cntkctl_el1, 1UL << 1);
 }
 
 void arch_early_init(void)
