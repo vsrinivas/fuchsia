@@ -31,9 +31,7 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
       const fidl::String& requestor_url,
       fidl::InterfaceRequest<modular::ServiceProvider> services) override {
     connected_.Pass();
-    modular::testing::GetStore()->Put("test_agent_connected", "", [] {
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    });
+    modular::testing::GetStore()->Put("test_agent_connected", "", [] { });
   }
 
   // |Agent|
@@ -42,10 +40,15 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
                const RunTaskCallback& callback) override {}
 
   // |Agent|
-  void Stop(const StopCallback& callback) override {}
+  void Stop(const StopCallback& callback) override {
+    stopped_.Pass();
+    callback();
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  }
 
   TestPoint initialized_{"Test agent initialized"};
   TestPoint connected_{"Test agent connected"};
+  TestPoint stopped_{"Test agent stopped"};
 };
 
 }  // namespace

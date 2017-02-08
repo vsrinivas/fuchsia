@@ -39,10 +39,9 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     modular::ComponentContextPtr ctx;
     story_->GetComponentContext(ctx.NewRequest());
 
-    modular::AgentControllerPtr agent_ctrl;
     modular::ServiceProviderPtr agent_services;
     ctx->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
-                        agent_ctrl.NewRequest());
+                        agent_controller_.NewRequest());
 
     // Start a timer to call Story.Done.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
@@ -68,6 +67,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
 
   modular::StoryPtr story_;
   modular::LinkPtr link_;
+  modular::AgentControllerPtr agent_controller_;
 
   TestPoint initialized_{"Root module initialized"};
   TestPoint stopped_{"Root module stopped"};

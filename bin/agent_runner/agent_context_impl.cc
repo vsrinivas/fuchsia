@@ -27,6 +27,11 @@ AgentContextImpl::AgentContextImpl(ApplicationLauncher* app_launcher,
   // When the agent process dies, we remove it.
   application_controller_.set_connection_error_handler(
       [agent_runner, url] { agent_runner->RemoveAgent(url); });
+
+  // When all the |AgentController| bindings go away stop the agent.
+  controller_bindings_.set_on_empty_set_handler([this] {
+    agent_->Stop([] { });
+  });
 }
 
 AgentContextImpl::~AgentContextImpl() = default;
@@ -37,7 +42,9 @@ void AgentContextImpl::NewConnection(
     fidl::InterfaceRequest<modular::AgentController> controller) {
   agent_->Connect(requestor_url, std::move(incoming_services));
 
-  // TODO: |controller| dies here. Implement proper refcounting.
+  // Add a binding to the |controller|. When all the bindings go away
+  // we can stop the agent.
+  controller_bindings_.AddBinding(this, std::move(controller));
 }
 
 void AgentContextImpl::GetComponentContext(

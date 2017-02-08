@@ -14,6 +14,7 @@
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
@@ -24,7 +25,7 @@ class AgentRunner;
 // and instantiates one for every instance of an agent running. All requests for
 // this agent (identified for now by the agent's URL) are routed to this
 // class. This class manages all AgentControllers associated with this agent.
-class AgentContextImpl : public AgentContext {
+class AgentContextImpl : public AgentContext, public AgentController {
  public:
   explicit AgentContextImpl(ApplicationLauncher* app_launcher,
                             AgentRunner* agent_runner,
@@ -53,6 +54,7 @@ class AgentContextImpl : public AgentContext {
   ServiceProviderPtr application_services_;
   AgentPtr agent_;
   fidl::Binding<AgentContext> agent_context_;
+  fidl::BindingSet<AgentController> controller_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
 };
