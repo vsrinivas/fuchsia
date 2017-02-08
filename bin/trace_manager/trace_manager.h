@@ -7,7 +7,7 @@
 
 #include <list>
 
-#include "apps/modular/lib/app/application_context.h"
+#include "application/lib/app/application_context.h"
 #include "apps/tracing/services/trace_controller.fidl.h"
 #include "apps/tracing/services/trace_registry.fidl.h"
 #include "apps/tracing/src/trace_manager/config.h"

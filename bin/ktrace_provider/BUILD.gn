@@ -16,7 +16,7 @@ executable("ktrace_provider") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/tracing/lib/trace:provider",
     "//lib/ftl",
     "//lib/mtl",

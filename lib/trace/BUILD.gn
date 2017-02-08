@@ -9,7 +9,9 @@ source_set("types") {
     "types.h",
   ]
 
-  deps = [ "//lib/ftl" ]
+  deps = [
+    "//lib/ftl",
+  ]
 }
 
 # Declares the trace macros and writer API and offers only a do-nothing stub
@@ -27,8 +29,8 @@ source_set("trace") {
     "event.h",
     "internal/event_helpers.cc",
     "internal/event_helpers.h",
-    "writer_stub.cc",
     "writer.h",
+    "writer_stub.cc",
   ]
 
   deps = [
@@ -68,10 +70,10 @@ source_set("writer") {
 # with the trace writer.
 source_set("provider") {
   sources = [
-    "internal/trace_provider_impl.cc",
-    "internal/trace_provider_impl.h",
     "dump.cc",
     "dump.h",
+    "internal/trace_provider_impl.cc",
+    "internal/trace_provider_impl.h",
     "provider.cc",
     "provider.h",
     "settings.cc",
@@ -79,7 +81,7 @@ source_set("provider") {
   ]
 
   deps = [
-    "//apps/modular/lib/app",
+    "//application/lib/app",
     "//apps/tracing/services",
     "//lib/ftl",
     "//lib/mtl",

@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "apps/modular/services/application/application_controller.fidl.h"
-#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "application/services/application_controller.fidl.h"
+#include "application/services/application_launcher.fidl.h"
 #include "apps/tracing/lib/trace_converters/chromium_exporter.h"
 #include "apps/tracing/src/trace/command.h"
 #include "apps/tracing/src/trace/tracer.h"

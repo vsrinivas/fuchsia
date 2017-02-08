@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_SRC_KTRACE_PROVIDER_APP_H_
 #define APPS_TRACING_SRC_KTRACE_PROVIDER_APP_H_
 
-#include "apps/modular/lib/app/application_context.h"
+#include "application/lib/app/application_context.h"
 #include "apps/tracing/lib/trace/writer.h"
 #include "apps/tracing/src/ktrace_provider/log_importer.h"
 #include "lib/ftl/command_line.h"
