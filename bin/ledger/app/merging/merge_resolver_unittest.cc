@@ -32,9 +32,8 @@ std::function<void(storage::Journal*)> AddKeyValueToJournal(
     const std::string& key,
     const storage::ObjectId& object_id) {
   return [key, object_id](storage::Journal* journal) {
-    EXPECT_EQ(storage::Status::OK,
-              journal->Put(key, MakeObjectId(object_id),
-                           storage::KeyPriority::EAGER));
+    EXPECT_EQ(storage::Status::OK, journal->Put(key, MakeObjectId(object_id),
+                                                storage::KeyPriority::EAGER));
   };
 }
 
@@ -245,6 +244,39 @@ TEST_F(MergeResolverTest, LastOneWins) {
   EXPECT_EQ(MakeObjectId("val2.1"), content_vector[0].object_id);
   EXPECT_EQ("key3", content_vector[1].key);
   EXPECT_EQ(MakeObjectId("val3.0"), content_vector[1].object_id);
+}
+
+TEST_F(MergeResolverTest, None) {
+  // Set up conflict
+  storage::CommitId commit_1 = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+
+  storage::CommitId commit_2 =
+      CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
+
+  storage::CommitId commit_3 =
+      CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
+
+  storage::CommitId commit_4 =
+      CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
+
+  storage::CommitId commit_5 =
+      CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
+
+  std::vector<storage::CommitId> ids;
+  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  EXPECT_EQ(2u, ids.size());
+  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
+  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
+
+  MergeResolver resolver([] {}, page_storage_.get());
+  resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
+
+  EXPECT_TRUE(RunLoopWithTimeout());
+
+  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  EXPECT_EQ(2u, ids.size());
 }
 
 }  // namespace

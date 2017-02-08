@@ -57,7 +57,10 @@ class ConflictResolverImpl : public ConflictResolver {
  public:
   explicit ConflictResolverImpl(
       fidl::InterfaceRequest<ConflictResolver> request)
-      : binding_(this, std::move(request)) {}
+      : binding_(this, std::move(request)) {
+    binding_.set_connection_error_handler(
+        [this] { this->disconnected = true; });
+  }
   ~ConflictResolverImpl() {}
 
   struct ResolveRequest {
@@ -77,6 +80,7 @@ class ConflictResolverImpl : public ConflictResolver {
   };
 
   std::vector<ResolveRequest> requests;
+  bool disconnected = false;
 
  private:
   // ConflictResolver:
@@ -409,17 +413,15 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   EXPECT_EQ("city",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[0]->key));
-  EXPECT_EQ("Paris",
-            convert::ExtendedStringView(resolver_impl->requests[0]
-                                            .change_right->changes[0]
-                                            ->value->get_bytes()));
+  EXPECT_EQ("Paris", convert::ExtendedStringView(resolver_impl->requests[0]
+                                                     .change_right->changes[0]
+                                                     ->value->get_bytes()));
   EXPECT_EQ("name",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[1]->key));
-  EXPECT_EQ("Alice",
-            convert::ExtendedStringView(resolver_impl->requests[0]
-                                            .change_right->changes[1]
-                                            ->value->get_bytes()));
+  EXPECT_EQ("Alice", convert::ExtendedStringView(resolver_impl->requests[0]
+                                                     .change_right->changes[1]
+                                                     ->value->get_bytes()));
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));
@@ -545,6 +547,89 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   fidl::Array<MergedValuePtr> merged_values =
       fidl::Array<MergedValuePtr>::New(0);
   resolver_impl->requests[0].callback(std::move(merged_values));
+  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
+}
+
+TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
+      std::make_unique<TestConflictResolverFactory>(
+          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
+  LedgerPtr ledger_ptr = GetTestLedger();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // We now have a conflict.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  EXPECT_FALSE(resolver_impl->disconnected);
+  EXPECT_EQ(1u, resolver_impl->requests.size());
+
+  // Change the factory.
+  ConflictResolverFactoryPtr resolver_factory_ptr2;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory2 =
+      std::make_unique<TestConflictResolverFactory>(
+          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr2), nullptr);
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr2),
+      [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // The previous resolver should have been disconnected.
+  EXPECT_TRUE(resolver_impl->disconnected);
+  // We should ask again for a resolution.
+  EXPECT_EQ(1u, resolver_factory2->resolvers.size());
+  EXPECT_NE(resolver_factory2->resolvers.end(),
+            resolver_factory2->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl2 =
+      &(resolver_factory2->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  ASSERT_EQ(1u, resolver_impl2->requests.size());
+
+  // Remove all references to a page:
+  page1 = nullptr;
+  page2 = nullptr;
+  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(500)));
+
+  // Resolution should not crash the Ledger
+  fidl::Array<MergedValuePtr> merged_values =
+      fidl::Array<MergedValuePtr>::New(0);
+  resolver_impl2->requests[0].callback(std::move(merged_values));
   EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
 }
 
@@ -691,20 +776,18 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   EXPECT_EQ("name",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_left->changes[1]->key));
-  EXPECT_EQ("Alice",
-            convert::ExtendedStringView(resolver_impl->requests[0]
-                                            .change_left->changes[1]
-                                            ->value->get_bytes()));
+  EXPECT_EQ("Alice", convert::ExtendedStringView(resolver_impl->requests[0]
+                                                     .change_left->changes[1]
+                                                     ->value->get_bytes()));
 
   // Right change comes from |page1|.
   ASSERT_EQ(1u, resolver_impl->requests[0].change_right->changes.size());
   EXPECT_EQ("city",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[0]->key));
-  EXPECT_EQ("Paris",
-            convert::ExtendedStringView(resolver_impl->requests[0]
-                                            .change_right->changes[0]
-                                            ->value->get_bytes()));
+  EXPECT_EQ("Paris", convert::ExtendedStringView(resolver_impl->requests[0]
+                                                     .change_right->changes[0]
+                                                     ->value->get_bytes()));
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));
