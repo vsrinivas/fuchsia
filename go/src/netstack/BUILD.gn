@@ -5,6 +5,8 @@
 declare_args() {
   # if true, lwiperf server will run
   lwiperf = false
+  # if true, use netstack2 for netstack
+  netstack2 = false
 }
 
 group("netstack") {
@@ -12,10 +14,17 @@ group("netstack") {
     ":app",
     "//apps/netstack/apps:netstack_debug",
   ]
+  if (netstack2) {
+    deps += [ ":netstack2" ]
+  }
 }
 
 executable("app") {
-  output_name = "netstack"
+  if (netstack2) {
+    output_name = "netstack1"
+  } else {
+    output_name = "netstack"
+  }
 
   sources = [
     "dispatcher.c",
@@ -67,7 +76,11 @@ executable("app") {
 }
 
 action("netstack2") {
-  out_path = "$root_out_dir/netstack2"
+  if (netstack2) {
+    out_path = "$root_out_dir/netstack"
+  } else {
+    out_path = "$root_out_dir/netstack2"
+  }
 
   outputs = [
     out_path,
@@ -86,8 +99,16 @@ action("netstack2") {
     rebase_path(depfile_path),
     "--current-cpu",
     current_cpu,
-    "apps/netstack/netstack2",
   ]
+
+  if (netstack2) {
+    args += [
+      "--binname",
+      "netstack",
+    ]
+  }
+
+  args += [ "apps/netstack/netstack2" ]
 
   deps = [
     "//third_party/go:go_runtime",
