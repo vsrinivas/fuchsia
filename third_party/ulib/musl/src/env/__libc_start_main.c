@@ -1,6 +1,5 @@
 #include "libc.h"
 #include "pthread_impl.h"
-#include "tls_impl.h"
 #include <elf.h>
 #include <stdatomic.h>
 #include <string.h>
@@ -165,7 +164,6 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
     mxr_thread_t* mxr_thread = __mxr_thread_main(main_thread_handle);
 
     __environ = envp;
-    __init_tls(mxr_thread);
     pthread_t self = __pthread_self();
     self->mxr_thread = mxr_thread;
     self->tsd = __pthread_tsd_main;

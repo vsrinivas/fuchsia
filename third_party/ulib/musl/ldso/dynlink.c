@@ -4,7 +4,6 @@
 #include "malloc_impl.h"
 #include "pthread_impl.h"
 #include "stdio_impl.h"
-#include "tls_impl.h"
 #include <ctype.h>
 #include <dlfcn.h>
 #include <elf.h>
@@ -102,7 +101,6 @@ struct symdef {
     struct dso* dso;
 };
 
-void __init_tp(mx_handle_t, pthread_t);
 pthread_t __copy_tls(unsigned char*);
 
 static struct builtin_tls {
@@ -1090,8 +1088,6 @@ static void dl_debug_state(void) {}
 
 weak_alias(dl_debug_state, _dl_debug_state);
 
-void __init_tls(mxr_thread_t* mxr_thread) {}
-
 __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     pthread_t self = __pthread_self();
 
@@ -1133,6 +1129,13 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     }
     __restore_sigs(&set);
     return mem + v[1] + DTP_OFFSET;
+}
+
+static void __init_tp(mx_handle_t self, pthread_t thread) {
+    thread->self = thread;
+    // TODO(kulakowski): Get and set thread ID
+    mxr_tp_set(self, pthread_to_tp(thread));
+    thread->locale = &libc.global_locale;
 }
 
 static void update_tls_size(void) {
