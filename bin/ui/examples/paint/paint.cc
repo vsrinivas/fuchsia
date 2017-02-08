@@ -62,7 +62,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
     bool handled = false;
     if (event->is_pointer()) {
       const mozart::PointerEventPtr& pointer = event->get_pointer();
-      uint32_t pointer_id = pointer->pointer_id;
+      uint32_t pointer_id = pointer->device_id * 32 + pointer->pointer_id;
       switch (pointer->phase) {
         case mozart::PointerEvent::Phase::DOWN:
         case mozart::PointerEvent::Phase::MOVE:

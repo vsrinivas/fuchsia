@@ -99,8 +99,9 @@ class Presentation : public mozart::input::InterpreterListener,
   bool cursor_resources_uploaded_ = false;
   bool scene_resources_uploaded_ = false;
   bool layout_changed_ = true;
-  bool show_cursor_ = false;
-  mozart::PointF cursor_position_;
+
+  std::map<uint32_t, std::pair<bool, mozart::PointF>> cursors_;
+
   sk_sp<SkImage> cursor_image_;
   mozart::BufferProducer buffer_producer_;
 

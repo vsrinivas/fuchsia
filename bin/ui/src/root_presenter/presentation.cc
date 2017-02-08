@@ -35,7 +35,7 @@ constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr uint32_t kContentNodeId = 1u;
 
 // Node Id: The scene node that draws the mouse pointer.
-constexpr uint32_t kCursorNodeId = 2u;
+constexpr uint32_t kCursorBaseNodeId = 2u;
 
 // Resource Id: The root scene of the presented view.
 constexpr uint32_t kContentSceneResourceId = 1u;
@@ -210,21 +210,28 @@ void Presentation::UpdateScene() {
     layout_changed_ = true;
   }
 
-  if (cursor_image_ && show_cursor_) {
+  if (cursor_image_) {
     mozart::RectF cursor;
     cursor.width = 32.f;
     cursor.height = 32.f;
+    for (std::map<uint32_t, std::pair<bool, mozart::PointF>>::iterator it =
+             cursors_.begin();
+         it != cursors_.end(); ++it) {
+      if (it->second.first) {  // show cursor
+        auto cursor_node = mozart::Node::New();
+        cursor_node->op = mozart::NodeOp::New();
+        cursor_node->op->set_image(mozart::ImageNodeOp::New());
+        cursor_node->op->get_image()->content_rect = cursor.Clone();
+        cursor_node->op->get_image()->image_resource_id =
+            kCursorImageResourceId;
 
-    auto cursor_node = mozart::Node::New();
-    cursor_node->op = mozart::NodeOp::New();
-    cursor_node->op->set_image(mozart::ImageNodeOp::New());
-    cursor_node->op->get_image()->content_rect = cursor.Clone();
-    cursor_node->op->get_image()->image_resource_id = kCursorImageResourceId;
-
-    cursor_node->content_transform = mozart::Transform::New();
-    SetTranslationTransform(cursor_node->content_transform.get(),
-                            cursor_position_.x, cursor_position_.y, 0.f);
-    update->nodes.insert(kCursorNodeId, std::move(cursor_node));
+        cursor_node->content_transform = mozart::Transform::New();
+        SetTranslationTransform(cursor_node->content_transform.get(),
+                                it->second.second.x, it->second.second.y, 0.f);
+        update->nodes.insert(kCursorBaseNodeId + it->first,
+                             std::move(cursor_node));
+      }
+    }
   }
 
   if (layout_changed_) {
@@ -241,8 +248,14 @@ void Presentation::UpdateScene() {
       root_node->child_node_ids.push_back(kContentNodeId);
     }
 
-    if (cursor_image_ && show_cursor_) {
-      root_node->child_node_ids.push_back(kCursorNodeId);
+    if (cursor_image_) {
+      for (std::map<uint32_t, std::pair<bool, mozart::PointF>>::iterator it =
+               cursors_.begin();
+           it != cursors_.end(); ++it) {
+        if (it->second.first) {  // show cursor
+          root_node->child_node_ids.push_back(kCursorBaseNodeId + it->first);
+        }
+      }
     }
 
     update->nodes.insert(kRootNodeId, std::move(root_node));
@@ -257,17 +270,37 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
   if (event->is_pointer()) {
     const mozart::PointerEventPtr& pointer = event->get_pointer();
     if (pointer->type == mozart::PointerEvent::Type::MOUSE) {
-      cursor_position_.x = pointer->x;
-      cursor_position_.y = pointer->y;
-      if (!show_cursor_) {
+      if (cursors_.count(pointer->device_id) == 0) {
+        mozart::PointF position;
+        position.x = 0;
+        position.y = 0;
+        cursors_[pointer->device_id] = std::make_pair(false, position);
+      }
+
+      cursors_[pointer->device_id].second.x = pointer->x;
+      cursors_[pointer->device_id].second.y = pointer->y;
+      // TODO(jpoichet) for now don't show cursor when mouse is added until we
+      // have a timer to hide it. Acer12 sleeve reports 2 mice but only one will
+      // generate events for now.
+      if (!cursors_[pointer->device_id].first &&
+          pointer->phase != mozart::PointerEvent::Phase::ADD &&
+          pointer->phase != mozart::PointerEvent::Phase::REMOVE) {
         layout_changed_ = true;
-        show_cursor_ = true;
+        cursors_[pointer->device_id].first = true;
       }
       root_view_->Invalidate();
     } else {
-      if (show_cursor_) {
-        layout_changed_ = true;
-        show_cursor_ = false;
+      bool invalidate = false;
+      for (std::map<uint32_t, std::pair<bool, mozart::PointF>>::iterator it =
+               cursors_.begin();
+           it != cursors_.end(); ++it) {
+        if (it->second.first) {  // show_cursor
+          layout_changed_ = true;
+          it->second.first = false;
+          invalidate = true;
+        }
+      }
+      if (invalidate) {
         root_view_->Invalidate();
       }
     }
