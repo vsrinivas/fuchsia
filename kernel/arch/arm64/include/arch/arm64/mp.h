@@ -36,6 +36,17 @@ static inline uint arch_max_num_cpus(void)
 
     return arm_num_cpus;
 }
+
+static inline uint arch_cpu_num_to_cluster_id(uint cpu)
+{
+    return (uint)((cpu >> SMP_CPU_ID_BITS) & ((1U << SMP_CPU_CLUSTER_BITS) - 1));
+}
+
+static inline uint arch_cpu_num_to_cpu_id(uint cpu)
+{
+    return (uint)(cpu & ((1U << SMP_CPU_ID_BITS) - 1));
+}
+
 #else
 static inline uint arch_curr_cpu_num(void)
 {
@@ -44,6 +55,14 @@ static inline uint arch_curr_cpu_num(void)
 static inline uint arch_max_num_cpus(void)
 {
     return 1;
+}
+static inline uint arch_cpu_num_to_cluster_id(uint cpu)
+{
+    return 0;
+}
+static inline uint arch_cpu_num_to_cpu_id(uint cpu)
+{
+    return cpu;
 }
 #endif
 

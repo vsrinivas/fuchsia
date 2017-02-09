@@ -187,10 +187,6 @@ void arm_gic_init(void)
 
 status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
 {
-    uint64_t val =
-        ((irq & 0xf) << 24) |
-        (cpu_mask & 0xff);
-
     if (flags != ARM_GIC_SGI_FLAG_NS) {
         return ERR_INVALID_ARGS;
     }
@@ -201,7 +197,26 @@ status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
 
     smp_wmb();
 
-    gic_write_sgi1r(val);
+    uint cpu = 0;
+    uint cluster = 0;
+    uint64_t val = 0;
+    while (cpu_mask && cpu < SMP_MAX_CPUS) {
+        u_int mask = 0;
+        while (arch_cpu_num_to_cluster_id(cpu) == cluster) {
+            if (cpu_mask & (1u << cpu)) {
+                mask |= 1u << arch_cpu_num_to_cpu_id(cpu);
+                cpu_mask &= ~(1u << cpu);
+            }
+            cpu += 1;
+        }
+
+        val = ((irq & 0xf) << 24) |
+              ((cluster & 0xff) << 16) |
+              (mask & 0xff);
+
+        gic_write_sgi1r(val);
+        cluster += 1;
+    }
 
     return NO_ERROR;
 }
