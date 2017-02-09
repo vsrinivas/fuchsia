@@ -60,6 +60,10 @@
             "bootfs_path": "apps/example_todo_headless"
         },
         {
+            "binary": "example_todo_ledger.flx",
+            "bootfs_path": "apps/example_todo_ledger"
+        },
+        {
             "binary": "gen/component_index.json",
             "bootfs_path": "components/index.json"
         },
