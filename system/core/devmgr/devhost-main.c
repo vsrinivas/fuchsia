@@ -26,7 +26,7 @@
 
 #include <dirent.h>
 #include <dlfcn.h>
-#include <pthread.h>
+#include <threads.h>
 
 #define DRIVER_NAME_LEN_MAX 64
 
@@ -214,16 +214,16 @@ static void signal_devmgr_shutdown(void) {
     }
 }
 
-static void* shutdown_async(void* arg) {
+static int shutdown_async(void* arg) {
     signal_devmgr_shutdown();
     devmgr_poweroff();
-    return NULL;
+    return 0;
 }
 
-static void* reboot_async(void* arg) {
+static int reboot_async(void* arg) {
     signal_devmgr_shutdown();
     devmgr_reboot();
-    return NULL;
+    return 0;
 }
 
 mx_status_t devmgr_control(const char* cmd) {
@@ -246,16 +246,20 @@ mx_status_t devmgr_control(const char* cmd) {
     }
     if (!strcmp(cmd, "poweroff")) {
         // TODO(smklein): Relocate poweroff/reboot to a non-devmgr service
-        pthread_t t;
-        if (pthread_create(&t, NULL, shutdown_async, NULL)) {
+        thrd_t t;
+        if (thrd_create(&t, shutdown_async, NULL)) {
             devmgr_poweroff();
+        } else {
+            thrd_detach(t);
         }
         return NO_ERROR;
     }
     if (!strcmp(cmd, "reboot")) {
-        pthread_t t;
-        if (pthread_create(&t, NULL, reboot_async, NULL)) {
+        thrd_t t;
+        if (thrd_create(&t, reboot_async, NULL)) {
             devmgr_reboot();
+        } else {
+            thrd_detach(t);
         }
         return NO_ERROR;
     }
