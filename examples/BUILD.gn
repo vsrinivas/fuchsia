@@ -14,5 +14,6 @@ group("examples") {
     "request_components",
     "swap_cpp",
     "todo_cpp",
+    "todo_ledger",
   ]
 }
