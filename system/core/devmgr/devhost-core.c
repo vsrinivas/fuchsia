@@ -169,13 +169,15 @@ static mx_status_t devhost_device_probe(mx_device_t* dev, mx_driver_t* drv) {
         return ERR_NOT_SUPPORTED;
     }
 
+    void *cookie = NULL;
     DM_UNLOCK();
-    status = drv->ops.bind(drv, dev);
+    status = drv->ops.bind(drv, dev, &cookie);
     DM_LOCK();
     if (status < 0) {
         return status;
     }
     dev->owner = drv;
+    dev->owner_cookie = cookie;
     dev_ref_acquire(dev);
 
     // remove from unbound list if we succeeded
@@ -423,6 +425,15 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
     xprintf("device: %p: devhost->devmgr remove rpc\n", dev);
     devhost_remove(dev);
 
+    // detach from owner, downref on behalf of owner
+    if (dev->owner) {
+        if (dev->owner->ops.unbind) {
+            dev->owner->ops.unbind(dev->owner, dev, dev->owner_cookie);
+        }
+        dev->owner = NULL;
+        dev_ref_release(dev);
+    }
+
     // detach from parent, downref parent
     if (dev->parent) {
         list_delete(&dev->node);
@@ -432,12 +443,6 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
     // remove from list of unbound devices, if on that list
     if (list_in_list(&dev->unode)) {
         list_delete(&dev->unode);
-    }
-
-    // detach from owner, downref on behalf of owner
-    if (dev->owner) {
-        dev->owner = NULL;
-        dev_ref_release(dev);
     }
 
     dev->flags |= DEV_FLAG_VERY_DEAD;

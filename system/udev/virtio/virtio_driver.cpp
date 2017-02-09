@@ -26,7 +26,7 @@
 
 // implement driver object:
 
-extern "C" mx_status_t virtio_bind(mx_driver_t* driver, mx_device_t* device) {
+extern "C" mx_status_t virtio_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
     LTRACEF("driver %p, device %p\n", driver, device);
 
     /* grab the pci device and configuration */

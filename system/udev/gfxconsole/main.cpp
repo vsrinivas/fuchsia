@@ -802,7 +802,7 @@ static void display_flush(uint starty, uint endy)
     g_fb_display_protocol->flush(g_fb_device);
 }
 
-static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     if (g_vc_initialized) {
         // disallow multiple instances
         return ERR_NOT_SUPPORTED;

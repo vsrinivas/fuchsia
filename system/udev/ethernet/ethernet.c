@@ -660,7 +660,7 @@ static mx_protocol_device_t ethdev0_ops = {
 
 #define BAD_FEATURES (ETHMAC_FEATURE_RX_QUEUE | ETHMAC_FEATURE_TX_QUEUE)
 
-static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     ethdev0_t* edev0;
     if ((edev0 = calloc(1, sizeof(ethdev0_t))) == NULL) {
         return ERR_NO_MEMORY;

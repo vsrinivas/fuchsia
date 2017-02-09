@@ -311,7 +311,7 @@ unbind:
     return NO_ERROR;
 }
 
-static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     gpt_bind_info_t* info = malloc(sizeof(gpt_bind_info_t));
     info->drv = drv;
     info->dev = dev;

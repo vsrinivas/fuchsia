@@ -69,7 +69,7 @@ static mx_status_t acpi_get_child_handle_by_hid(acpi_handle_t* h, const char* hi
 
 extern mx_handle_t devhost_get_hacpi(void);
 
-static mx_status_t acpi_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t acpi_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     // Find the battery device.
     // TODO(yky,teisenbe) The battery device is in _SB.PCI0 on the acer. To be replaced by real
     // acpi device publishing code.

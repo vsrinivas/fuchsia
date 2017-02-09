@@ -387,7 +387,7 @@ static mx_protocol_device_t mailbox_device_proto = {
 
 static mx_protocol_device_t vc_device_proto = {};
 
-mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent) {
+mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     uintptr_t page_base;
 
     // Carve out some address space for the device -- it's memory mapped.

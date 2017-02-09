@@ -136,7 +136,7 @@ static mx_protocol_device_t device_ops = {
     .release = eth_release,
 };
 
-static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     ethernet_device_t* edev;
     if ((edev = calloc(1, sizeof(ethernet_device_t))) == NULL) {
         return ERR_NO_MEMORY;

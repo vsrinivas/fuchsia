@@ -309,7 +309,7 @@ static mx_protocol_device_t xhci_device_proto = {
     .release = xhci_release,
 };
 
-static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     mx_handle_t irq_handle = MX_HANDLE_INVALID;
     mx_handle_t mmio_handle = MX_HANDLE_INVALID;
     mx_handle_t cfg_handle = MX_HANDLE_INVALID;

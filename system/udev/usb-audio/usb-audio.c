@@ -33,7 +33,7 @@ typedef struct {
     usb_audio_ac_feature_unit_desc* desc;
 } feature_unit_node_t;
 
-static mx_status_t usb_audio_bind(mx_driver_t* driver, mx_device_t* device) {
+static mx_status_t usb_audio_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t status = usb_desc_iter_init(device, &iter);

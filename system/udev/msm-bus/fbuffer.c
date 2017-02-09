@@ -110,7 +110,7 @@ static mx_display_protocol_t msm_display_proto = {
 
 static mx_protocol_device_t msm_device_proto = {};
 
-mx_status_t fb_bind(mx_driver_t* driver, mx_device_t* parent) {
+mx_status_t fb_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
 
     mx_status_t status;
     char* v = getenv("magenta.fbuffer");

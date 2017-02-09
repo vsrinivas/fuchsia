@@ -421,7 +421,7 @@ static mx_protocol_device_t hci_device_proto = {
     .release = hci_release,
 };
 
-static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
+static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(device, &iter);

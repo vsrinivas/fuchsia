@@ -136,7 +136,7 @@ static hid_bus_ops_t usb_hid_bus_ops = {
     .set_protocol = usb_hid_set_protocol,
 };
 
-static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(dev, &iter);
     if (result < 0) return result;

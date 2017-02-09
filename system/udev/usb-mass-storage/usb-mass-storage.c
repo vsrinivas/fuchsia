@@ -850,7 +850,7 @@ fail:
     return status;
 }
 
-static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
+static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(device, &iter);

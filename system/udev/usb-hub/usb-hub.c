@@ -312,7 +312,7 @@ static int usb_hub_thread(void* arg) {
     return NO_ERROR;
 }
 
-static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
+static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
     // search for the bus device
     mx_device_t* bus_device = device->parent;
     usb_bus_protocol_t* bus_protocol = NULL;

@@ -331,7 +331,7 @@ unbind:
     return -1;
 }
 
-static mx_status_t mbr_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t mbr_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     // Make sure the MBR structs are the right size.
     static_assert(sizeof(mbr_t) == MBR_SIZE, "mbr_t is the wrong size");
     static_assert(sizeof(mbr_partition_entry_t) == MBR_PARTITION_ENTRY_SIZE,

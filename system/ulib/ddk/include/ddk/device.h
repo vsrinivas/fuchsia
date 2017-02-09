@@ -54,6 +54,8 @@ struct mx_device {
     mx_driver_t* owner;
     // driver that is bound to this device, NULL if unbound
 
+    void* owner_cookie;
+
     struct list_node node;
     // for the parent's device_list
 

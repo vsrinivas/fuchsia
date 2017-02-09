@@ -176,7 +176,7 @@ static int i2c_hid_irq_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     printf("i2c_hid_bind\n");
 
     // Read the i2c HID descriptor

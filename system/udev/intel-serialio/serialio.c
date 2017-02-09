@@ -15,7 +15,7 @@
 
 #include <intel-serialio/serialio.h>
 
-static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;

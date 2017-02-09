@@ -638,7 +638,7 @@ fail:
     return status;
 }
 
-static mx_status_t ax88179_bind(mx_driver_t* driver, mx_device_t* device) {
+static mx_status_t ax88179_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
     xprintf("ax88179_bind\n");
     // find our endpoints
     usb_desc_iter_t iter;

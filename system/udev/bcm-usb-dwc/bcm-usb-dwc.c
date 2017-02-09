@@ -1681,7 +1681,7 @@ finish:
 }
 
 // Bind is the entry point for this driver.
-static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     xprintf("usb_dwc_bind drv = %p, dev = %p\n", drv, dev);
 
     dwc_usb_t* usb_dwc = NULL;

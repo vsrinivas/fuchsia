@@ -694,7 +694,7 @@ fail:
     return status;
 }
 
-static mx_status_t lan9514_bind(mx_driver_t* driver, mx_device_t* device) {
+static mx_status_t lan9514_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
     printf("LAN9514 - attempting to bind\n");
 
     // find our endpoints
