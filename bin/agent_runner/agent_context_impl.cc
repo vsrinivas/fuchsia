@@ -12,7 +12,9 @@ namespace modular {
 AgentContextImpl::AgentContextImpl(ApplicationLauncher* const app_launcher,
                                    AgentRunner* const agent_runner,
                                    const std::string& url)
-    : url_(url), agent_context_binding_(this) {
+    : url_(url),
+      agent_context_binding_(this),
+      component_context_impl_(agent_runner, url) {
   // Start up the agent process.
   auto launch_info = ApplicationLaunchInfo::New();
   launch_info->url = url;
@@ -48,7 +50,10 @@ void AgentContextImpl::NewConnection(
 }
 
 void AgentContextImpl::GetComponentContext(
-    fidl::InterfaceRequest<ComponentContext> context) {}
+    fidl::InterfaceRequest<ComponentContext> context) {
+  component_context_bindings_.AddBinding(&component_context_impl_,
+                                         std::move(context));
+}
 
 void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {}
 

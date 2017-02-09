@@ -21,9 +21,21 @@ executable("component_context_test") {
   ]
 }
 
-executable("component_context_test_agent") {
+executable("component_context_test_agent1") {
   sources = [
-    "test_agent.cc",
+    "test_agent1.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/testing",
+    "//apps/modular/services/agent",
+    "//lib/mtl",
+  ]
+}
+
+executable("component_context_test_agent2") {
+  sources = [
+    "test_agent2.cc",
   ]
   deps = [
     "//apps/modular/lib/fidl:single_service_app",

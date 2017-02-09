@@ -28,6 +28,8 @@ source_set("impl") {
     "//application/services",
     "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",
+    "//apps/modular/services/component",
+    "//apps/modular/src/component:component_context_impl",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]

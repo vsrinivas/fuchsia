@@ -16,7 +16,7 @@ namespace {
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
 constexpr int kTimeoutMilliseconds = 5000;
-constexpr char kTestAgent[] = "file:///tmp/tests/component_context_test_agent";
+constexpr char kTest1Agent[] = "file:///tmp/tests/component_context_test_agent1";
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
@@ -43,17 +43,17 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     story_->GetComponentContext(ctx.NewRequest());
 
     modular::ServiceProviderPtr agent_services;
-    ctx->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
+    ctx->ConnectToAgent(kTest1Agent, agent_services.NewRequest(),
                         agent_controller_.NewRequest());
 
     modular::testing::GetStore()->Get(
-        "test_agent_connected", [this](const fidl::String&) {
+        "test_agent1_connected", [this](const fidl::String&) {
           agent_connected_.Pass();
 
           // Closing the agent controller should trigger the agent to stop.
           agent_controller_.reset();
 
-          modular::testing::GetStore()->Get("test_agent_stopped",
+          modular::testing::GetStore()->Get("test_agent1_stopped",
                                             [this](const fidl::String&) {
                                               agent_stopped_.Pass();
                                               story_->Done();
@@ -80,8 +80,8 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
 
   TestPoint initialized_{"Root module initialized"};
   TestPoint stopped_{"Root module stopped"};
-  TestPoint agent_connected_{"Agent accepted connection"};
-  TestPoint agent_stopped_{"Agent stopped"};
+  TestPoint agent_connected_{"Agent1 accepted connection"};
+  TestPoint agent_stopped_{"Agent1 stopped"};
 };
 
 }  // namespace

@@ -13,6 +13,8 @@ using modular::testing::TestPoint;
 
 namespace {
 
+constexpr char kTest2Agent[] = "file:///tmp/tests/component_context_test_agent2";
+
 class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
  public:
   TestAgentApp() { modular::testing::Init(application_context()); }
@@ -25,15 +27,25 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
   // |Agent|
   void Initialize(
       fidl::InterfaceHandle<modular::AgentContext> agent_context) override {
-    initialized_.Pass();
+    agent_context_.Bind(std::move(agent_context));
+
+    modular::ComponentContextPtr ctx;
+    agent_context_->GetComponentContext(ctx.NewRequest());
+
+    // Connecting to the agent should start it up.
+    modular::ServiceProviderPtr agent_services;
+    ctx->ConnectToAgent(kTest2Agent, agent_services.NewRequest(),
+                        agent2_controller_.NewRequest());
+
+    // Killing the agent controller should stop it.
+    agent2_controller_.reset();
   }
 
   // |Agent|
   void Connect(
       const fidl::String& requestor_url,
       fidl::InterfaceRequest<modular::ServiceProvider> services) override {
-    connected_.Pass();
-    modular::testing::GetStore()->Put("test_agent_connected", "", [] {});
+    modular::testing::GetStore()->Put("test_agent1_connected", "", [] {});
   }
 
   // |Agent|
@@ -43,13 +55,19 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
-    modular::testing::GetStore()->Put("test_agent_stopped", "", [] {});
-    callback();
-    delete this;
+    // Before reporting that we stop, we wait until agent2 has connected.
+    modular::testing::GetStore()->Get("test_agent2_connected", [this, callback](const fidl::String&) {
+      agent2_connected_.Pass();
+      modular::testing::GetStore()->Put("test_agent1_stopped", "", [] {});
+      callback();
+      delete this;
+    });
   }
 
-  TestPoint initialized_{"Test agent initialized"};
-  TestPoint connected_{"Test agent received connection"};
+  TestPoint agent2_connected_{"Test agent2 accepted connection"};
+
+  modular::AgentContextPtr agent_context_;
+  modular::AgentControllerPtr agent2_controller_;
 };
 
 }  // namespace
@@ -58,7 +76,7 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
   new TestAgentApp();
   loop.Run();
-  TEST_PASS("Test agent exited");
+  TEST_PASS("Test agent1 exited");
   modular::testing::Done();
   return 0;
 }

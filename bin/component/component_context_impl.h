@@ -20,8 +20,8 @@ class AgentRunner;
 // modules and agents.
 class ComponentContextImpl : public ComponentContext {
  public:
-  explicit ComponentContextImpl(const std::string& component_id,
-                                AgentRunner* agent_runner);
+  explicit ComponentContextImpl(AgentRunner* agent_runner,
+                                const std::string& component_id);
   ~ComponentContextImpl();
 
  private:
@@ -37,8 +37,8 @@ class ComponentContextImpl : public ComponentContext {
       const fidl::String& queue_token,
       fidl::InterfaceRequest<MessageSender> request) override;
 
-  const std::string component_id_;
   AgentRunner* const agent_runner_;
+  const std::string component_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
 };

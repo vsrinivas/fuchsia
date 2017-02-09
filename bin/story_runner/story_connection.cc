@@ -22,7 +22,7 @@ StoryConnection::StoryConnection(
     : story_impl_(story_impl),
       module_url_(module_url),
       module_controller_impl_(module_controller_impl),
-      component_context_impl_(module_url, agent_runner),
+      component_context_impl_(agent_runner, module_url),
       binding_(this, std::move(story)) {}
 
 StoryConnection::~StoryConnection() {}

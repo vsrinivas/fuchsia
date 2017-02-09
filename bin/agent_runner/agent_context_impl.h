@@ -13,6 +13,9 @@
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
+#include "apps/modular/services/component/component_context.fidl.h"
+#include "apps/modular/src/component/component_context_impl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -55,6 +58,9 @@ class AgentContextImpl : public AgentContext, public AgentController {
   AgentPtr agent_;
   fidl::Binding<AgentContext> agent_context_binding_;
   fidl::BindingSet<AgentController> agent_controller_bindings_;
+
+  ComponentContextImpl component_context_impl_;
+  fidl::BindingSet<ComponentContext> component_context_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
 };

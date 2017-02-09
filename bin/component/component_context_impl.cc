@@ -9,9 +9,9 @@
 
 namespace modular {
 
-ComponentContextImpl::ComponentContextImpl(const std::string& component_id,
-                                           AgentRunner* const agent_runner)
-    : component_id_(component_id), agent_runner_(agent_runner) {
+ComponentContextImpl::ComponentContextImpl(AgentRunner* const agent_runner,
+                                           const std::string& component_id)
+    : agent_runner_(agent_runner), component_id_(component_id) {
   FTL_DCHECK(agent_runner);
 }
 
