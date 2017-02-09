@@ -40,7 +40,7 @@ After a successful build of fuchsia, type the following command from the mx
 console to run the device runner with the dev user shell:
 
 ```
-@ bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root-module=example_flutter_hello_world
+@ bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=example_flutter_hello_world
 ```
 
 # Basics
