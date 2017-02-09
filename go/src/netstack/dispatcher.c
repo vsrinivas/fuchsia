@@ -87,12 +87,16 @@ static mx_handle_t devmgr_connect(const char* where) {
     error("netstack: cannot open %s\n", where);
     return -1;
   }
-  mx_handle_t h;
-  if (ioctl_devmgr_mount_fs(fd, &h) != sizeof(h)) {
-    close(fd);
-    error("netstack: failed to attach to %s\n", where);
-    return -1;
-  }
+  mx_handle_t h = MX_HANDLE_INVALID;
+
+  // TODO: ioctl_devmgr_moung_fs() has changed and
+  // this code no longer works.
+  //
+  // if (ioctl_devmgr_mount_fs(fd, &h) != sizeof(h)) {
+  //   close(fd);
+  //   error("netstack: failed to attach to %s\n", where);
+  //   return -1;
+  // }
   close(fd);
   return h;
 }
