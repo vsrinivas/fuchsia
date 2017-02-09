@@ -85,18 +85,17 @@ void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer,
     ASSERT_TRUE(magma::is_page_aligned(buffer->size()));
     uint32_t page_count = buffer->size() / PAGE_SIZE;
 
-    for (unsigned int i = 0; i < page_count; i++) {
-        uint64_t bus_addr;
-        EXPECT_TRUE(buffer->MapPageBus(i, &bus_addr));
+    uint64_t bus_addr[page_count];
+    EXPECT_TRUE(buffer->MapPageRangeBus(0, page_count, bus_addr));
 
+    for (unsigned int i = 0; i < page_count; i++) {
         uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + i];
-        EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr);
+        EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr[i]);
         EXPECT_TRUE(pte & 0x1); // page present
         EXPECT_TRUE(pte & 0x3); // rw
         EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
-
-        EXPECT_TRUE(buffer->UnmapPageBus(i));
     }
+    EXPECT_TRUE(buffer->UnmapPageRangeBus(0, page_count));
 
     uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + page_count];
     EXPECT_EQ(pte & ~(PAGE_SIZE - 1), scratch_bus_addr);
@@ -123,7 +122,7 @@ public:
         EXPECT_TRUE(ret);
 
         uint64_t scratch_bus_addr;
-        ret = TestGtt::scratch_buffer(gtt.get())->MapPageBus(0, &scratch_bus_addr);
+        ret = TestGtt::scratch_buffer(gtt.get())->MapPageRangeBus(0, 1, &scratch_bus_addr);
         EXPECT_TRUE(ret);
 
         auto mmio = platform_device->mmio();
@@ -131,7 +130,7 @@ public:
 
         check_pte_entries_clear(mmio, 0, mmio->size(), scratch_bus_addr);
 
-        ret = TestGtt::scratch_buffer(gtt.get())->UnmapPageBus(0);
+        ret = TestGtt::scratch_buffer(gtt.get())->UnmapPageRangeBus(0, 1);
         EXPECT_TRUE(ret);
     }
 
@@ -154,7 +153,7 @@ public:
         EXPECT_EQ(pat_index_high, 0u);
 
         uint64_t scratch_bus_addr;
-        ret = TestGtt::scratch_buffer(gtt.get())->MapPageBus(0, &scratch_bus_addr);
+        ret = TestGtt::scratch_buffer(gtt.get())->MapPageRangeBus(0, 1, &scratch_bus_addr);
         EXPECT_TRUE(ret);
 
         // create some buffers
@@ -227,7 +226,7 @@ public:
         ret = gtt->Free(addr[1]);
         EXPECT_EQ(ret, true);
 
-        ret = TestGtt::scratch_buffer(gtt.get())->UnmapPageBus(0);
+        ret = TestGtt::scratch_buffer(gtt.get())->UnmapPageRangeBus(0, 1);
         EXPECT_TRUE(ret);
     }
 

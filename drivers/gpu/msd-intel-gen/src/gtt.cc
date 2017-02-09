@@ -93,7 +93,7 @@ bool Gtt::InitScratch()
     if (!scratch_->PinPages(0, 1))
         return DRETF(false, "PinPages failed");
 
-    if (!scratch_->MapPageBus(0, &scratch_gpu_addr_))
+    if (!scratch_->MapPageRangeBus(0, 1, &scratch_gpu_addr_))
         return DRETF(false, "MapPageBus failed");
 
     if (magma::kDebug) {
@@ -167,14 +167,6 @@ bool Gtt::Clear(uint64_t start, uint64_t length)
     return true;
 }
 
-static inline void unmap(std::vector<uint64_t>& array, magma::PlatformBuffer* buffer)
-{
-    for (auto addr : array) {
-        if (!buffer->UnmapPageBus(addr))
-            DLOG("BusUnmap failed");
-    }
-}
-
 bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
                  CachingType caching_type)
 {
@@ -201,16 +193,10 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, 
     uint64_t pte_offset = pte_mmio_offset() + first_entry * sizeof(gen_pte_t);
 
     std::vector<uint64_t> bus_addr_array;
-    bus_addr_array.reserve(num_pages);
+    bus_addr_array.resize(num_pages);
 
-    for (unsigned int i = 0; i < num_pages; i++) {
-        uint64_t bus_addr;
-        if (!buffer->MapPageBus(start_page_index + i, &bus_addr)) {
-            unmap(bus_addr_array, buffer);
-            return DRETF(false, "failed obtaining bus address for page %u", start_page_index + i);
-        }
-        bus_addr_array.push_back(bus_addr);
-    }
+    if (!buffer->MapPageRangeBus(start_page_index, num_pages, bus_addr_array.data()))
+        return DRETF(false, "failed obtaining bus addresses");
 
     for (unsigned int i = 0; i < num_pages; i++) {
         auto pte = gen_pte_encode(bus_addr_array[i], caching_type, true);
