@@ -8,7 +8,7 @@
 #include <type_traits>
 
 #include <mx/channel.h>
-#include <mx/handle.h>
+#include <mx/object.h>
 
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
@@ -101,7 +101,7 @@ T FetchAndReset(T* ptr) {
 
 template <typename T>
 T UnwrapHandle(const WrappedHandle& handle) {
-  return T(mx::handle<void>(handle.value));
+  return T(mx::handle(handle.value));
 }
 
 template <typename T>
@@ -229,11 +229,11 @@ struct WrapperTraits;
 
 template <typename T>
 struct IsHandleType {
-  static constexpr bool value = std::is_base_of<mx::handle<T>, T>::value ||
-                                IsSpecializationOf<mx::handle, T>::value;
+  static constexpr bool value = std::is_base_of<mx::object<T>, T>::value ||
+                                IsSpecializationOf<mx::object, T>::value;
 };
-static_assert(IsHandleType<mx::handle<void>>::value,
-              "mx::handle<void> should be considered a handle");
+static_assert(IsHandleType<mx::handle>::value,
+              "mx::handle should be considered a handle");
 static_assert(IsHandleType<mx::channel>::value,
               "mx::channel should be considered a handle.");
 

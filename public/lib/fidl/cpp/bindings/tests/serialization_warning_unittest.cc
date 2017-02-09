@@ -23,14 +23,14 @@ namespace {
 using fidl::internal::ArrayValidateParams;
 
 // Creates an array of arrays of handles (2 X 3) for testing.
-Array<Array<mx::handle<void>>> CreateTestNestedHandleArray() {
-  auto array = Array<Array<mx::handle<void>>>::New(2);
+Array<Array<mx::handle>> CreateTestNestedHandleArray() {
+  auto array = Array<Array<mx::handle>>::New(2);
   for (size_t i = 0; i < array.size(); ++i) {
-    auto nested_array = Array<mx::handle<void>>::New(3);
+    auto nested_array = Array<mx::handle>::New(3);
     for (size_t j = 0; j < nested_array.size(); ++j) {
       mx::channel handle0, handle1;
       mx::channel::create(0, &handle0, &handle1);
-      nested_array[j] = mx::handle<void>(std::move(handle1));
+      nested_array[j] = mx::handle(std::move(handle1));
     }
     array[i] = std::move(nested_array);
   }
@@ -163,9 +163,9 @@ TEST_F(SerializationWarningTest, StringInStruct) {
 }
 
 TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
-  Array<Array<mx::handle<void>>> test_array = CreateTestNestedHandleArray();
-  test_array[0] = Array<mx::handle<void>>();
-  test_array[1][0] = mx::handle<void>();
+  Array<Array<mx::handle>> test_array = CreateTestNestedHandleArray();
+  test_array[0] = Array<mx::handle>();
+  test_array[1][0] = mx::handle();
 
   ArrayValidateParams validate_params_0(
       0, true, new ArrayValidateParams(0, true, nullptr));
@@ -173,7 +173,7 @@ TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
                    &validate_params_0);
 
   test_array = CreateTestNestedHandleArray();
-  test_array[0] = Array<mx::handle<void>>();
+  test_array[0] = Array<mx::handle>();
   ArrayValidateParams validate_params_1(
       0, false, new ArrayValidateParams(0, true, nullptr));
   TestArrayWarning(std::move(test_array),
@@ -181,7 +181,7 @@ TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
                    &validate_params_1);
 
   test_array = CreateTestNestedHandleArray();
-  test_array[1][0] = mx::handle<void>();
+  test_array[1][0] = mx::handle();
   ArrayValidateParams validate_params_2(
       0, true, new ArrayValidateParams(0, false, nullptr));
   TestArrayWarning(std::move(test_array),

@@ -340,7 +340,7 @@ TEST(ArrayTest, Serialization_ArrayOfString) {
 
 // Tests serializing and deserializing an Array<Handle>.
 TEST(ArrayTest, Serialization_ArrayOfHandle) {
-  auto array = Array<mx::handle<void>>::New(4);
+  auto array = Array<mx::handle>::New(4);
   mx::channel p0_h0, p0_h1;
   mx::channel p1_h0, p1_h1;
   mx::channel::create(0, &p0_h0, &p0_h1);

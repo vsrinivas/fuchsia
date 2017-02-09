@@ -135,7 +135,7 @@ def GetCppArrayArgWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::handle<void>"
+    return "mx::handle"
   if mojom.IsChannelKind(kind):
     return "mx::channel"
   if mojom.IsVMOKind(kind):
@@ -173,7 +173,7 @@ def GetCppResultWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::handle<void>"
+    return "mx::handle"
   if mojom.IsChannelKind(kind):
     return "mx::channel"
   if mojom.IsVMOKind(kind):
@@ -211,7 +211,7 @@ def GetCppWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::handle<void>"
+    return "mx::handle"
   if mojom.IsChannelKind(kind):
     return "mx::channel"
   if mojom.IsVMOKind(kind):
@@ -249,7 +249,7 @@ def GetCppConstWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "const ::fidl::String&"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::handle<void>"
+    return "mx::handle"
   if mojom.IsChannelKind(kind):
     return "mx::channel"
   if mojom.IsVMOKind(kind):

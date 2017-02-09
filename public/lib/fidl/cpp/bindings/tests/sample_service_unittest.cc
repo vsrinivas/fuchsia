@@ -155,7 +155,7 @@ void Print(int depth, const char* name, uint8_t value) {
 template <typename H>
 void Print(int depth,
            const char* name,
-           const mx::handle<H>& value) {
+           const mx::object<H>& value) {
   PrintSpacer(depth);
   std::cout << name << ": 0x" << std::hex << value.get() << std::endl;
 }
