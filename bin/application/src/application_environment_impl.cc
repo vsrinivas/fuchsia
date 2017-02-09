@@ -28,13 +28,13 @@ constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
 constexpr size_t kMaxShebangLength = 2048;
 constexpr char kNumberedLabelFormat[] = "env-%d";
 
-bool HasHandle(const fidl::Map<uint32_t, mx::handle<void>>& startup_handles,
+bool HasHandle(const fidl::Map<uint32_t, mx::handle>& startup_handles,
                uint32_t handle_id) {
   return startup_handles.find(handle_id) != startup_handles.cend();
 }
 
 bool HasReservedHandles(
-    const fidl::Map<uint32_t, mx::handle<void>>& startup_handles) {
+    const fidl::Map<uint32_t, mx::handle>& startup_handles) {
   return HasHandle(startup_handles, MX_HND_TYPE_APPLICATION_ENVIRONMENT) ||
          HasHandle(startup_handles, MX_HND_TYPE_APPLICATION_SERVICES);
 }
@@ -44,7 +44,7 @@ mx::process CreateProcess(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceHandle<ApplicationEnvironment> environment) {
-  fidl::Map<uint32_t, mx::handle<void>> startup_handles =
+  fidl::Map<uint32_t, mx::handle> startup_handles =
       std::move(launch_info->startup_handles);
   startup_handles.insert(MX_HND_TYPE_APPLICATION_ENVIRONMENT,
                          environment.PassHandle());
