@@ -124,7 +124,6 @@ private:
 
     bool WaitIdle();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request);
-    bool ReadGttSize(unsigned int* gtt_size);
 
     uint32_t GetCurrentFrequency();
     void RequestMaxFreq();

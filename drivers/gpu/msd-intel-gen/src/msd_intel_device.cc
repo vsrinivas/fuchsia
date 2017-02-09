@@ -215,20 +215,6 @@ void MsdIntelDevice::StartDeviceThread()
     device_thread_ = std::thread(DeviceThreadEntry, this);
 }
 
-bool MsdIntelDevice::ReadGttSize(unsigned int* gtt_size)
-{
-    DASSERT(platform_device_);
-
-    uint16_t reg;
-    if (!platform_device_->ReadPciConfig16(registers::GmchGraphicsControl::kOffset, &reg))
-        return DRETF(false, "ReadPciConfig16 failed");
-
-    unsigned int size = (reg >> 6) & 0x3;
-    *gtt_size = (size == 0) ? 0 : (1 << size) * 1024 * 1024;
-
-    return true;
-}
-
 void MsdIntelDevice::Dump(DumpState* dump_out)
 {
     dump_out->render_cs.sequence_number =
