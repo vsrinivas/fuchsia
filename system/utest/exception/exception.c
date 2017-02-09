@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// N.B. We can't test the system exception handler here as that would
-// interfere with the global crash logger. A good place to test the
-// system exception handler would be in the "core" tests.
+// N.B. We can't fully test the system exception handler here as that would
+// interfere with the global crash logger.
+// TODO(dbort): A good place to test the system exception handler would be in
+// the "core" tests.
 
 #include <assert.h>
 #include <inttypes.h>
@@ -332,59 +333,75 @@ static int watchdog_thread_func(void* arg)
     exit(5);
 }
 
+// Tests binding and unbinding behavior.
+// |object| must be a valid process or thread handle.
+// |debugger| must only be set if |object| is a process handle. If set,
+// tests the behavior of binding the debugger eport; otherwise, binds
+// the non-debugger exception port.
 // This returns "bool" because it uses ASSERT_*.
-// |object| = 0 -> test process handler (TODO(dje: for now)
-// |object| > 0 -> test thread handler (TODO(dje: for now)
-
-static bool test_set_close_set(const char* kind, mx_handle_t object)
-{
-    if (object == 0)
-        object = mx_process_self();
+static bool test_set_close_set(const char* kind, mx_handle_t object,
+                               bool debugger) {
     unittest_printf("%s exception handler set-close-set test\n", kind);
+    ASSERT_GT(object, 0, "invalid handle");
+    uint32_t options = debugger ? MX_EXCEPTION_PORT_DEBUGGER : 0;
+
+    // Bind an exception port to the object.
     mx_handle_t eport = tu_io_port_create(0);
     mx_status_t status;
-    if (object < 0)
-        status = mx_object_bind_exception_port(0, eport, 0, 0);
-    else
-        status = mx_object_bind_exception_port(object, eport, 0, 0);
+    status = mx_object_bind_exception_port(object, eport, 0, options);
     ASSERT_EQ(status, NO_ERROR, "error setting exception port");
+
+    // Try binding another exception port to the same object, which should fail.
     mx_handle_t eport2 = tu_io_port_create(0);
-    if (object < 0)
-        status = mx_object_bind_exception_port(0, eport, 0, 0);
-    else
-        status = mx_object_bind_exception_port(object, eport, 0, 0);
+    status = mx_object_bind_exception_port(object, eport, 0, options);
     ASSERT_NEQ(status, NO_ERROR, "setting exception port errantly succeeded");
+
+    // Close the ports.
     tu_handle_close(eport2);
     tu_handle_close(eport);
-#if 1 // TODO(dje): wip, close doesn't yet reset the exception port
-    if (object < 0)
-        status = mx_object_bind_exception_port(0, MX_HANDLE_INVALID, 0, 0);
-    else
-        status = mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, 0);
+#if 1
+    // TODO(MG-307): Dropping all handles to a port should unbind it.
+    // Until that works, unbind manually.
+    status =
+        mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
     ASSERT_EQ(status, NO_ERROR, "error resetting exception port");
 #endif
+
+    // Verify the close removed the previous handler by successfully
+    // adding a new one.
     eport = tu_io_port_create(0);
-    // Verify the close removed the previous handler.
-    if (object < 0)
-        status = mx_object_bind_exception_port(0, eport, 0, 0);
-    else
-        status = mx_object_bind_exception_port(object, eport, 0, 0);
+    status = mx_object_bind_exception_port(object, eport, 0, options);
     ASSERT_EQ(status, NO_ERROR, "error setting exception port (#2)");
     tu_handle_close(eport);
-#if 1 // TODO(dje): wip, close doesn't yet reset the exception port
-    if (object < 0)
-        status = mx_object_bind_exception_port(0, MX_HANDLE_INVALID, 0, 0);
-    else
-        status = mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, 0);
-    ASSERT_EQ(status, NO_ERROR, "error resetting exception port");
+#if 1
+    // TODO(MG-307): Dropping all handles to a port should unbind it.
+    // Until that works, unbind manually.
+    status =
+        mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
+    ASSERT_EQ(status, NO_ERROR, "error resetting exception port (#2)");
 #endif
+
+    // Try unbinding from an object without a bound port, which should fail.
+    status =
+        mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
+    ASSERT_NEQ(status, NO_ERROR,
+               "resetting unbound exception port errantly succeeded");
+
     return true;
 }
 
 static bool process_set_close_set_test(void)
 {
     BEGIN_TEST;
-    test_set_close_set("process", 0);
+    test_set_close_set("process", mx_process_self(), /* debugger */ false);
+    END_TEST;
+}
+
+static bool process_debugger_set_close_set_test(void)
+{
+    BEGIN_TEST;
+    test_set_close_set("process-debugger",
+                       mx_process_self(), /* debugger */ true);
     END_TEST;
 }
 
@@ -394,9 +411,10 @@ static bool thread_set_close_set_test(void)
     mx_handle_t our_channel, their_channel;
     tu_channel_create(&our_channel, &their_channel);
     thrd_t thread;
-    tu_thread_create_c11(&thread, thread_func, (void*) (uintptr_t) their_channel, "thread-set-close-set");
+    tu_thread_create_c11(&thread, thread_func, (void*)(uintptr_t)their_channel,
+                         "thread-set-close-set");
     mx_handle_t thread_handle = thrd_get_mx_handle(thread);
-    test_set_close_set("thread", thread_handle);
+    test_set_close_set("thread", thread_handle, /* debugger */ false);
     send_msg(our_channel, MSG_DONE);
     // thrd_join doesn't provide a timeout, but we have the watchdog for that.
     thrd_join(thread, NULL);
@@ -713,6 +731,7 @@ static bool unbind_while_stopped_test(void)
 
 BEGIN_TEST_CASE(exceptions_tests)
 RUN_TEST(process_set_close_set_test);
+RUN_TEST(process_debugger_set_close_set_test);
 RUN_TEST(thread_set_close_set_test);
 RUN_TEST(process_handler_test);
 RUN_TEST(thread_handler_test);

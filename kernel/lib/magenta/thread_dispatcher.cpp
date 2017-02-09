@@ -58,7 +58,7 @@ status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     return thread_->SetExceptionPort(this, eport);
 }
 
-void ThreadDispatcher::ResetExceptionPort(bool quietly) {
+bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
     return thread_->ResetExceptionPort(quietly);
 }
 

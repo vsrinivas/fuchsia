@@ -69,7 +69,8 @@ public:
     uint64_t runtime_ns() const { return thread_runtime(&thread_); }
 
     status_t SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<ExceptionPort> eport);
-    void ResetExceptionPort(bool quietly);
+    // Returns true if a port had been set.
+    bool ResetExceptionPort(bool quietly);
     mxtl::RefPtr<ExceptionPort> exception_port();
 
     // Send a report to the associated exception handler of |eport| and wait

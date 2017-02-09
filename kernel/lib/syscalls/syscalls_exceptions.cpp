@@ -37,8 +37,9 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
         //TODO: handle for system exception
         if (debugger || quietly)
             return ERR_INVALID_ARGS;
-        ResetSystemExceptionPort();
-        return NO_ERROR;
+        return ResetSystemExceptionPort()
+                   ? NO_ERROR
+                   : ERR_BAD_STATE;  // No port was bound.
     }
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -50,16 +51,18 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
-        process->ResetExceptionPort(debugger, quietly);
-        return NO_ERROR;
+        return process->ResetExceptionPort(debugger, quietly)
+                   ? NO_ERROR
+                   : ERR_BAD_STATE;  // No port was bound.
     }
 
     auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (thread) {
         if (debugger)
             return ERR_INVALID_ARGS;
-        thread->ResetExceptionPort(quietly);
-        return NO_ERROR;
+        return thread->ResetExceptionPort(quietly)
+                   ? NO_ERROR
+                   : ERR_BAD_STATE;  // No port was bound.
     }
 
     return ERR_WRONG_TYPE;

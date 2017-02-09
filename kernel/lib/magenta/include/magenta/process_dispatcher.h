@@ -179,7 +179,8 @@ public:
 
     // exception handling support
     status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, bool debugger);
-    void ResetExceptionPort(bool debugger, bool quietly);
+    // Returns true if a port had been set.
+    bool ResetExceptionPort(bool debugger, bool quietly);
     mxtl::RefPtr<ExceptionPort> exception_port();
     mxtl::RefPtr<ExceptionPort> debugger_exception_port();
 

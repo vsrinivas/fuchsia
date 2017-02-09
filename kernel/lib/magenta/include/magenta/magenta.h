@@ -34,7 +34,8 @@ Handle* MapU32ToHandle(uint32_t value);
 
 // Set/get the system exception port.
 mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
-void ResetSystemExceptionPort();
+// Returns true if a port had been set.
+bool ResetSystemExceptionPort();
 mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort();
 
 mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();

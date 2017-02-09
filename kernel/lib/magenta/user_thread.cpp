@@ -339,7 +339,7 @@ status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<Excepti
     return NO_ERROR;
 }
 
-void UserThread::ResetExceptionPort(bool quietly) {
+bool UserThread::ResetExceptionPort(bool quietly) {
     mxtl::RefPtr<ExceptionPort> eport;
 
     // Remove the exception handler first. If the thread resumes execution
@@ -350,8 +350,12 @@ void UserThread::ResetExceptionPort(bool quietly) {
         exception_port_.swap(eport);
     }
 
+    if (eport == nullptr) {
+        return false;
+    }
     if (!quietly)
         OnExceptionPortRemoval(eport);
+    return true;
 }
 
 mxtl::RefPtr<ExceptionPort> UserThread::exception_port() {
