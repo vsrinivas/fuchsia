@@ -7,18 +7,18 @@ import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.story/module.fidl.dart';
 import 'package:apps.modular.services.story/story.fidl.dart';
-import 'package:lib.fidl.dart/bindings.dart';
-
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:lib.fidl.dart/bindings.dart';
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 
 void _log(String msg) {
-  print('[Hello World Module] $msg');
+  print('[Todo Ledger Example] $msg');
 }
 
 /// An implementation of the [Module] interface.
-class ModuleImpl extends Module {
+class TodoModule extends Module {
   final ModuleBinding _binding = new ModuleBinding();
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
@@ -33,7 +33,7 @@ class ModuleImpl extends Module {
       InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
-    _log('ModuleImpl::initialize call');
+    _log('TodoModule::initialize()');
 
     StoryProxy story = new StoryProxy();
     story.ctrl.bind(storyHandle);
@@ -47,7 +47,7 @@ class ModuleImpl extends Module {
   /// Implementation of the Stop() => (); method.
   @override
   void stop(void callback()) {
-    _log('ModuleImpl::stop call');
+    _log('TodoModule::stop()');
 
     // Do some clean up here.
 
@@ -56,18 +56,51 @@ class ModuleImpl extends Module {
   }
 }
 
-/// Entry point for this module.
+class TodoList extends StatefulWidget {
+  TodoList(TodoModule this._module);
+
+  final TodoModule _module;
+
+  @override
+  TodoListState createState() => new TodoListState(_module);
+}
+
+class TodoListState extends State<TodoList> {
+  TodoListState(TodoModule this._module) {
+    _items = ["solve the society", "discover gravity", "bla", "bazinga!"];
+  }
+
+  final TodoModule _module;
+
+  List<String> _items;
+
+  @override
+  Widget build(BuildContext context) {
+    String res = "";
+    for (String item in _items) {
+      res += " - $item\n";
+    }
+    return new Text(res);
+  }
+}
+
 void main() {
   _log('Module started with ApplicationContext: $_appContext');
 
-  /// Add [ModuleImpl] to this application's outgoing ServiceProvider.
+  final module = new TodoModule();
+
   _appContext.outgoingServices.addServiceForName(
     (request) {
       _log('Received binding request for Module');
-      new ModuleImpl().bind(request);
+      module.bind(request);
     },
     Module.serviceName,
   );
 
-  runApp(new Text("Hello, world!"));
+  runApp(new MaterialApp(
+    title: 'Todo (Ledger)',
+    home: new TodoList(module),
+    theme: new ThemeData(primarySwatch: Colors.blue),
+    debugShowCheckedModeBanner: false,
+  ));
 }
