@@ -87,16 +87,20 @@ static mx_handle_t devmgr_connect(const char* where) {
     error("netstack: cannot open %s\n", where);
     return -1;
   }
-  mx_handle_t h = MX_HANDLE_INVALID;
 
-  // TODO: ioctl_devmgr_moung_fs() has changed and
-  // this code no longer works.
-  //
-  // if (ioctl_devmgr_mount_fs(fd, &h) != sizeof(h)) {
-  //   close(fd);
-  //   error("netstack: failed to attach to %s\n", where);
-  //   return -1;
-  // }
+  // Create a channel, and connect one end of that channel to a vnode.
+  mx_handle_t h, vnode_handle;
+  mx_status_t status;
+  if ((status = mx_channel_create(0, &h, &vnode_handle)) != NO_ERROR) {
+    close(fd);
+    return status;
+  } else if ((status = ioctl_devmgr_mount_fs(fd, &vnode_handle)) != NO_ERROR) {
+    mx_handle_close(h);
+    mx_handle_close(vnode_handle);
+    close(fd);
+    error("netstack: failed to attach to %s\n", where);
+    return status;
+  }
   close(fd);
   return h;
 }
