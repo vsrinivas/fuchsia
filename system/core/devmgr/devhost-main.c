@@ -26,6 +26,7 @@
 
 #include <dirent.h>
 #include <dlfcn.h>
+#include <pthread.h>
 
 #define DRIVER_NAME_LEN_MAX 64
 
@@ -198,18 +199,31 @@ void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t prot
     devmgr_launch_devhost(job_handle, procname, argc, argv, hdevice, hrpc);
 }
 
-void signal_devmgr_shutdown(void) {
+static void signal_devmgr_shutdown(void) {
     devhost_msg_t msg;
     memset(&msg, 0, sizeof(msg));
     msg.op = DH_OP_SHUTDOWN;
 
     mx_status_t r;
+    printf("Sending shutdown signal to devmgr...\n");
     if ((r = mx_channel_write(_dmctl_handle, 0, &msg, sizeof(msg), 0, 0)) < 0) {
         printf("Unexpected error signalling shutdown: %d\n", r);
     } else if ((r = mx_handle_wait_one(_dmctl_handle, MX_CHANNEL_PEER_CLOSED,
                                        30000000000, NULL)) < 0) {
         printf("Unexpected error waiting for shutdown: %d\n", r);
     }
+}
+
+static void* shutdown_async(void* arg) {
+    signal_devmgr_shutdown();
+    devmgr_poweroff();
+    return NULL;
+}
+
+static void* reboot_async(void* arg) {
+    signal_devmgr_shutdown();
+    devmgr_reboot();
+    return NULL;
 }
 
 mx_status_t devmgr_control(const char* cmd) {
@@ -231,14 +245,19 @@ mx_status_t devmgr_control(const char* cmd) {
         return NO_ERROR;
     }
     if (!strcmp(cmd, "poweroff")) {
-        signal_devmgr_shutdown();
-        devmgr_poweroff();
-        return ERR_NOT_SUPPORTED;
+        // TODO(smklein): Relocate poweroff/reboot to a non-devmgr service
+        pthread_t t;
+        if (pthread_create(&t, NULL, shutdown_async, NULL)) {
+            devmgr_poweroff();
+        }
+        return NO_ERROR;
     }
     if (!strcmp(cmd, "reboot")) {
-        signal_devmgr_shutdown();
-        devmgr_reboot();
-        return ERR_NOT_SUPPORTED;
+        pthread_t t;
+        if (pthread_create(&t, NULL, reboot_async, NULL)) {
+            devmgr_reboot();
+        }
+        return NO_ERROR;
     }
     const char* prefix = "kerneldebug ";
     if (!strncmp(cmd, prefix, strlen(prefix))) {
