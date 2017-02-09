@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& os,
                          const network::NetworkErrorPtr& value);
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const mx::handle<T>& value) {
+std::ostream& operator<<(std::ostream& os, const mx::object<T>& value) {
   if (value) {
     return os << "<valid>";
   } else {
