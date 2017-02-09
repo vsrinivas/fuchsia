@@ -35,7 +35,8 @@ static void wait_thread_fn(void* arg) {
     mx_handle_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
 }
 
-static bool start_thread(mxr_thread_entry_t entry, void* arg, mxr_thread_t** thread_out) {
+static bool start_thread(mxr_thread_entry_t entry, void* arg,
+                         mxr_thread_t* thread_out) {
     const size_t stack_size = 256u << 10;
     mx_handle_t thread_stack_vmo;
     ASSERT_EQ(mx_vmo_create(stack_size, 0, &thread_stack_vmo), NO_ERROR, "");
@@ -46,36 +47,40 @@ static bool start_thread(mxr_thread_entry_t entry, void* arg, mxr_thread_t** thr
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &stack), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(thread_stack_vmo), NO_ERROR, "");
 
-    ASSERT_EQ(mxr_thread_create("test_thread", thread_out), NO_ERROR, "");
-    ASSERT_EQ(mxr_thread_start(*thread_out, stack, stack_size, entry, arg), NO_ERROR, "");
+    ASSERT_EQ(mxr_thread_create(mx_process_self(), "test_thread", thread_out),
+              NO_ERROR, "");
+    ASSERT_EQ(mxr_thread_start(thread_out, stack, stack_size, entry, arg),
+              NO_ERROR, "");
     return true;
 }
 
 static bool start_and_kill_thread(mxr_thread_entry_t entry, void* arg) {
-    mxr_thread_t* thread = NULL;
+    mxr_thread_t thread;
     ASSERT_TRUE(start_thread(entry, arg, &thread), "");
     mx_nanosleep(MX_MSEC(100));
-    ASSERT_EQ(mx_task_kill(mxr_thread_get_handle(thread)), NO_ERROR, "");
-    ASSERT_EQ(mxr_thread_join(thread), NO_ERROR, "");
+    ASSERT_EQ(mx_task_kill(mxr_thread_get_handle(&thread)), NO_ERROR, "");
+    ASSERT_EQ(mxr_thread_join(&thread), NO_ERROR, "");
     return true;
 }
 
 static bool threads_test(void) {
     BEGIN_TEST;
 
-    mxr_thread_t* thread = NULL;
+    mxr_thread_t thread;
     ASSERT_TRUE(start_thread(test_thread_fn, NULL, &thread), "");
 
-    ASSERT_EQ(mx_handle_wait_one(mxr_thread_get_handle(thread), MX_THREAD_SIGNALED,
-                                 MX_TIME_INFINITE, NULL), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_wait_one(mxr_thread_get_handle(&thread),
+                                 MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
+              NO_ERROR, "");
 
-    mxr_thread_destroy(thread);
+    mxr_thread_destroy(&thread);
 
     // Creating a thread with a super long name should fail.
-    thread = NULL;
-    EXPECT_LT(mxr_thread_create(
-        "01234567890123456789012345678901234567890123456789012345678901234567890123456789",
-        &thread), 0, "Thread creation should have failed (name too long)");
+    EXPECT_NEQ(mxr_thread_create(
+                   mx_process_self(),
+                   "01234567890123456789012345678901234567890123456789012345678901234567890123456789",
+                   &thread),
+               NO_ERROR, "Thread creation should have failed (name too long)");
 
     END_TEST;
 }

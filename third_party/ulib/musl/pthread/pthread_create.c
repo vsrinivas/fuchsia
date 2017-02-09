@@ -45,13 +45,13 @@ static void start_pthread(void* arg) {
     // if (self->unblock_cancel)
     //     __syscall(SYS_rt_sigprocmask, SIG_UNBLOCK,
     //               SIGPT_SET, 0, _NSIG / 8);
-    mxr_tp_set(mxr_thread_get_handle(self->mxr_thread), pthread_to_tp(self));
+    mxr_tp_set(mxr_thread_get_handle(&self->mxr_thread), pthread_to_tp(self));
     pthread_exit(self->start(self->start_arg));
 }
 
 static void start_c11(void* arg) {
     pthread_t self = arg;
-    mxr_tp_set(mxr_thread_get_handle(self->mxr_thread), pthread_to_tp(self));
+    mxr_tp_set(mxr_thread_get_handle(&self->mxr_thread), pthread_to_tp(self));
     int (*start)(void*) = (int (*)(void*))self->start;
     pthread_exit((void*)(intptr_t)start(self->start_arg));
 }
@@ -85,21 +85,14 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     if (attr._a_stackaddr)
         return ENOTSUP;
 
-    const char* name = attr.__name ? attr.__name : "";
-    mxr_thread_t* mxr_thread = NULL;
-    mx_status_t status = mxr_thread_create(name, &mxr_thread);
-    if (status < 0)
-        return EAGAIN;
-
     __acquire_ptc();
 
     size_t guard_size = round_up_to_page(DEFAULT_GUARD_SIZE + attr._a_guardsize);
     size_t size = guard_size + round_up_to_page(DEFAULT_STACK_SIZE + attr._a_stacksize + libc.tls_size + __pthread_tsd_size);
     uintptr_t addr = 0u;
-    status = allocate_stack(size, guard_size, &addr);
-    if (status < 0) {
+    mx_status_t status = allocate_stack(size, guard_size, &addr);
+    if (status != NO_ERROR) {
         __release_ptc();
-        mxr_thread_destroy(mxr_thread);
         return EAGAIN;
     }
     unsigned char* map = (unsigned char*)addr;
@@ -111,6 +104,12 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     struct pthread* self = __pthread_self();
 
     struct pthread* new = __copy_tls(stack);
+
+    const char* name = attr.__name ? attr.__name : "";
+    status = mxr_thread_create(__magenta_process_self, name, &new->mxr_thread);
+    if (status != NO_ERROR)
+        goto fail_after_alloc;
+
     new->map_base = map;
     new->map_size = size;
     new->stack = stack;
@@ -132,10 +131,11 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     // }
     new->unblock_cancel = self->cancel;
     new->CANARY = self->CANARY;
-    new->mxr_thread = mxr_thread;
 
     atomic_fetch_add(&libc.thread_count, 1);
-    status = mxr_thread_start(mxr_thread, (uintptr_t)stack_limit, new->stack_size, start, new);
+    status = mxr_thread_start(&new->mxr_thread,
+                              (uintptr_t)stack_limit, new->stack_size,
+                              start, new);
 
     __release_ptc();
 
@@ -143,14 +143,6 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     // if (do_sched) {
     //     __restore_sigs(new->sigmask);
     // }
-
-    if (status != NO_ERROR) {
-        atomic_fetch_sub(&libc.thread_count, 1);
-        if (map)
-            _mx_vmar_unmap(_mx_vmar_root_self(), (uintptr_t)map, size);
-        mxr_thread_destroy(mxr_thread);
-        return status == ERR_ACCESS_DENIED ? EPERM : EAGAIN;
-    }
 
     // TODO(kulakowski)
     // if (do_sched) {
@@ -162,13 +154,20 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     //         return -ret;
     // }
 
-    *res = new;
-    return 0;
+    if (status == NO_ERROR) {
+        *res = new;
+        return 0;
+    }
+
+    atomic_fetch_sub(&libc.thread_count, 1);
+    mxr_thread_destroy(&new->mxr_thread);
+fail_after_alloc:
+    _mx_vmar_unmap(_mx_vmar_root_self(), addr, size);
+    return status == ERR_ACCESS_DENIED ? EPERM : EAGAIN;
 }
 
 _Noreturn void pthread_exit(void* result) {
     pthread_t self = __pthread_self();
-    mxr_thread_t* mxr_thread = self->mxr_thread;
     // TODO(kulakowski) Signals?
     // sigset_t set;
 
@@ -229,7 +228,7 @@ _Noreturn void pthread_exit(void* result) {
     __do_orphaned_stdio_locks();
     __dl_thread_cleanup();
 
-    mxr_thread_exit(mxr_thread);
+    mxr_thread_exit(&self->mxr_thread);
 }
 
 void __do_cleanup_push(struct __ptcb* cb) {

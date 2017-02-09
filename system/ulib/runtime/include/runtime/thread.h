@@ -6,6 +6,7 @@
 
 #include <magenta/compiler.h>
 #include <magenta/types.h>
+#include <runtime/mutex.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -13,16 +14,31 @@ __BEGIN_CDECLS
 
 typedef void (*mxr_thread_entry_t)(void*);
 
-typedef struct mxr_thread mxr_thread_t;
+typedef struct {
+    mx_handle_t handle;
+    mxr_thread_entry_t entry;
+    void* arg;
+
+    uint64_t magic;
+
+    mxr_mutex_t state_lock;
+    int state;
+} mxr_thread_t;
 
 #pragma GCC visibility push(hidden)
 
 // TODO(kulakowski) Document the possible mx_status_t values from these.
 
-// Create a thread. If successful, a pointer to the thread structure
-// is returned via thread_out, and NO_ERROR is returned. Otherwise a
-// failure status is returned.
-mx_status_t mxr_thread_create(const char* name, mxr_thread_t** thread_out);
+// Create a thread, filling in the given mxr_thread_t to describe it.
+// The return value is that of mx_thread_create.
+// On failure, the mxr_thread_t is clobbered and cannot be passed to
+// any functions except mxr_thread_create or mxr_thread_adopt.
+mx_status_t mxr_thread_create(mx_handle_t proc_self, const char* name,
+                              mxr_thread_t* thread);
+
+// Fill in the given mxr_thread_t to describe a thread given its handle.
+// This takes ownership of the given thread handle.
+mx_status_t mxr_thread_adopt(mx_handle_t handle, mxr_thread_t* thread);
 
 // Start the thread with the given stack, entrypoint, and
 // argument. stack_addr is taken to be the low address of the stack
@@ -50,7 +66,9 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread);
 _Noreturn void mxr_thread_exit(mxr_thread_t* thread);
 
 // Destroy a created but unstarted thread structure.
-void mxr_thread_destroy(mxr_thread_t* thread);
+// This returns failure if the thread's handle was invalid.
+// Regardless, the mxr_thread_t is destroyed.
+mx_status_t mxr_thread_destroy(mxr_thread_t* thread);
 
 // Get the mx_handle_t corresponding to the given thread.
 // WARNING:
@@ -58,9 +76,6 @@ void mxr_thread_destroy(mxr_thread_t* thread);
 // break internal invariants of mxr_thread_t. It is inherently
 // racy. You probably don't need this.
 mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread);
-
-// A private entrypoint into mxruntime initialization.
-mxr_thread_t* __mxr_thread_main(mx_handle_t main_thread_handle);
 
 #pragma GCC visibility pop
 

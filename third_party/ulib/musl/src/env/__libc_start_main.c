@@ -160,13 +160,14 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
         }
     }
 
-    atomic_fetch_add(&libc.thread_count, 1);
-    mxr_thread_t* mxr_thread = __mxr_thread_main(main_thread_handle);
+    atomic_store(&libc.thread_count, 1);
 
     __environ = envp;
     pthread_t self = __pthread_self();
-    self->mxr_thread = mxr_thread;
     self->tsd = __pthread_tsd_main;
+    status = mxr_thread_adopt(main_thread_handle, &self->mxr_thread);
+    if (status != NO_ERROR)
+        __builtin_trap();
 
     // Record the stack bounds for pthread_getattr_np to find.
     if (stack_size != 0) {

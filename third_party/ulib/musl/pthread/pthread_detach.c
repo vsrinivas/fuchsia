@@ -2,7 +2,7 @@
 #include <threads.h>
 
 static int __pthread_detach(pthread_t t) {
-    switch (mxr_thread_detach(t->mxr_thread)) {
+    switch (mxr_thread_detach(&t->mxr_thread)) {
     case NO_ERROR:
         return 0;
     default:

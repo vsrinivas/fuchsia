@@ -19,6 +19,9 @@ struct pthread {
     struct pthread* self;
     void **dtv, *unused1, *unused2;
     uintptr_t canary, canary2;
+
+    mxr_thread_t mxr_thread;
+
     int errno_value;
     int tsd_used;
     volatile int cancel, canceldisable, cancelasync;
@@ -46,7 +49,6 @@ struct pthread {
     void* stdio_locks;
     uintptr_t canary_at_end;
     void** dtv_copy;
-    mxr_thread_t* mxr_thread;
 };
 
 struct __timer {

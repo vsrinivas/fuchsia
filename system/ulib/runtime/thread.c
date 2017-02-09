@@ -4,13 +4,11 @@
 
 #include <runtime/thread.h>
 
-#include <limits.h>
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <runtime/mutex.h>
-#include <runtime/tls.h>
 #include <stddef.h>
-#include <unistd.h>
+#include <stdint.h>
 
 // An mxr_thread_t starts its life JOINABLE.
 // - If someone calls mxr_thread_join on it, it transitions to JOINED.
@@ -24,68 +22,22 @@ enum {
     DONE,
 };
 
-#define MXR_THREAD_MAGIC 0x97c40acdb29ee45dULL
+#define MXR_THREAD_MAGIC_VALID          UINT64_C(0x97c40acdb29ee45d)
+#define MXR_THREAD_MAGIC_DESTROYED      UINT64_C(0x97c0acdb29ee445d)
+#define MXR_THREAD_MAGIC_STILLBORN      UINT64_C(0xc70acdb29e9e445d)
 
-#define CHECK_THREAD(thread)                              \
-    do {                                                  \
-        if (!thread || thread->magic != MXR_THREAD_MAGIC) \
-            __builtin_trap();                             \
+#define CHECK_THREAD(thread)                                           \
+    do {                                                               \
+        if (thread == NULL || thread->magic != MXR_THREAD_MAGIC_VALID) \
+            __builtin_trap();                                          \
     } while (0)
 
-struct mxr_thread {
-    mx_handle_t handle;
-    mxr_thread_entry_t entry;
-    void* arg;
-
-    uint64_t magic;
-
-    mxr_mutex_t state_lock;
-    int state;
-};
-
-static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
-    // TODO(kulakowski) Pull out this allocation function out
-    // somewhere once we have the ability to hint to the vm how and
-    // where to allocate threads, stacks, heap etc.
-
-    const size_t len = sizeof(mxr_thread_t);
-
-    mx_handle_t vmo;
-    mx_status_t status = _mx_vmo_create(len, 0, &vmo);
-    if (status < 0)
-        return status;
-
-    uintptr_t mapping = 0;
-    uint32_t flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
-    status = _mx_vmar_map(_mx_vmar_root_self(), 0, vmo, 0, len, flags, &mapping);
-    _mx_handle_close(vmo);
-    if (status != NO_ERROR)
-        return status;
-    mxr_thread_t* thread = (mxr_thread_t*)mapping;
-    thread->state_lock = MXR_MUTEX_INIT;
-    thread->state = JOINABLE;
-    thread->magic = MXR_THREAD_MAGIC;
-    *thread_out = thread;
-    return NO_ERROR;
-}
-
-static mx_status_t deallocate_thread_page(mxr_thread_t* thread) {
+mx_status_t mxr_thread_destroy(mxr_thread_t* thread) {
     CHECK_THREAD(thread);
-    uintptr_t mapping = (uintptr_t)thread;
-
-    const int page_size = getpagesize();
-    const size_t len = (sizeof(mxr_thread_t) + page_size - 1) &
-            ~(page_size - 1);
-    return _mx_vmar_unmap(_mx_vmar_root_self(), mapping, len);
-}
-
-static mx_status_t thread_cleanup(mxr_thread_t* thread) {
-    CHECK_THREAD(thread);
-    mx_status_t status = _mx_handle_close(thread->handle);
-    thread->handle = 0;
-    if (status != NO_ERROR)
-        return status;
-    return deallocate_thread_page(thread);
+    mx_handle_t handle = thread->handle;
+    thread->handle = MX_HANDLE_INVALID;
+    thread->magic = MXR_THREAD_MAGIC_DESTROYED;
+    return handle == MX_HANDLE_INVALID ? NO_ERROR : _mx_handle_close(handle);
 }
 
 static void thread_trampoline(uintptr_t ctx) {
@@ -109,7 +61,7 @@ _Noreturn void mxr_thread_exit(mxr_thread_t* thread) {
         break;
     case DETACHED:
         mxr_mutex_unlock(&thread->state_lock);
-        thread_cleanup(thread);
+        mxr_thread_destroy(thread);
         break;
     case DONE:
         // Not reached.
@@ -127,26 +79,28 @@ static size_t local_strlen(const char* s) {
     return len;
 }
 
-mx_status_t mxr_thread_create(const char* name, mxr_thread_t** thread_out) {
-    mxr_thread_t* thread = NULL;
-    mx_status_t status = allocate_thread_page(&thread);
-    if (status < 0)
-        return status;
+static void initialize_thread(mxr_thread_t* thread, mx_handle_t handle) {
+    *thread = (mxr_thread_t){
+        .handle = handle,
+        .state_lock = MXR_MUTEX_INIT,
+        .state = JOINABLE,
+        .magic = (handle == MX_HANDLE_INVALID ?
+                  MXR_THREAD_MAGIC_STILLBORN :
+                  MXR_THREAD_MAGIC_VALID),
+    };
+}
 
+mx_status_t mxr_thread_create(mx_handle_t process, const char* name,
+                              mxr_thread_t* thread) {
+    initialize_thread(thread, MX_HANDLE_INVALID);
     if (name == NULL)
         name = "";
     size_t name_length = local_strlen(name) + 1;
-    mx_handle_t handle;
-    status = _mx_thread_create(_mx_process_self(), name, name_length, 0, &handle);
-    if (status < 0) {
-        deallocate_thread_page(thread);
-        return status;
-    }
-
-    thread->handle = handle;
-
-    *thread_out = thread;
-    return NO_ERROR;
+    mx_status_t status = _mx_thread_create(process, name, name_length, 0,
+                                           &thread->handle);
+    if (status == NO_ERROR)
+        thread->magic = MXR_THREAD_MAGIC_VALID;
+    return status;
 }
 
 mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t stack_size, mxr_thread_entry_t entry, void* arg) {
@@ -162,14 +116,10 @@ mx_status_t mxr_thread_start(mxr_thread_t* thread, uintptr_t stack_addr, size_t 
     mx_status_t status = _mx_thread_start(thread->handle,
                                           (uintptr_t)thread_trampoline, sp,
                                           (uintptr_t)thread, 0);
-    if (status < 0) {
-        mx_handle_t handle = thread->handle;
-        deallocate_thread_page(thread);
-        _mx_handle_close(handle);
-        return status;
-    }
 
-    return NO_ERROR;
+    if (status != NO_ERROR)
+        mxr_thread_destroy(thread);
+    return status;
 }
 
 mx_status_t mxr_thread_join(mxr_thread_t* thread) {
@@ -194,7 +144,7 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread) {
         break;
     }
 
-    return thread_cleanup(thread);
+    return mxr_thread_destroy(thread);
 }
 
 mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
@@ -213,17 +163,11 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread) {
         break;
     case DONE:
         mxr_mutex_unlock(&thread->state_lock);
-        status = thread_cleanup(thread);
+        status = mxr_thread_destroy(thread);
         break;
     }
 
     return status;
-}
-
-void mxr_thread_destroy(mxr_thread_t* thread) {
-    CHECK_THREAD(thread);
-    _mx_handle_close(thread->handle);
-    deallocate_thread_page(thread);
 }
 
 mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread) {
@@ -231,9 +175,7 @@ mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread) {
     return thread->handle;
 }
 
-mxr_thread_t* __mxr_thread_main(mx_handle_t main_thread_handle) {
-    mxr_thread_t* thread = NULL;
-    allocate_thread_page(&thread);
-    thread->handle = main_thread_handle;
-    return thread;
+mx_status_t mxr_thread_adopt(mx_handle_t handle, mxr_thread_t* thread) {
+    initialize_thread(thread, handle);
+    return handle == MX_HANDLE_INVALID ? ERR_BAD_HANDLE : NO_ERROR;
 }
