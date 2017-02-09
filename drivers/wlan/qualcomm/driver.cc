@@ -13,7 +13,7 @@
 #define QUALCOMM_VID 0x168c
 #define QCA6174_DID  0x003e
 
-static mx_status_t qca6174_bind(mx_driver_t* drv, mx_device_t* dev) {
+static mx_status_t qca6174_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     std::cout << __func__ << std::endl;
     mx_handle_t regs_handle = 0, config_handle = 0;
     pci_protocol_t* pci;
