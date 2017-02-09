@@ -43,7 +43,7 @@ was greater than *MX_MAX_NAME_LEN*, or *flags* was non-zero.
 
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
-[handle_wait_one](handle_wait_one.md),
-[handle_wait_many](handle_wait_many.md),
+[object_wait_one](object_wait_one.md),
+[object_wait_many](object_wait_many.md),
 [thread_exit](thread_exit.md),
 [thread_start](thread_start.md).

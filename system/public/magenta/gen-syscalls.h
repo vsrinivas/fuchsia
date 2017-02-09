@@ -69,36 +69,36 @@ extern mx_status_t _mx_handle_replace(
     mx_rights_t rights,
     mx_handle_t out[1]) __attribute__((__leaf__));
 
-extern mx_status_t mx_handle_wait_one(
+extern mx_status_t mx_object_wait_one(
     mx_handle_t handle,
     mx_signals_t waitfor,
     mx_time_t timeout,
     mx_signals_t observed[1]) __attribute__((__leaf__));
 
-extern mx_status_t _mx_handle_wait_one(
+extern mx_status_t _mx_object_wait_one(
     mx_handle_t handle,
     mx_signals_t waitfor,
     mx_time_t timeout,
     mx_signals_t observed[1]) __attribute__((__leaf__));
 
-extern mx_status_t mx_handle_wait_many(
+extern mx_status_t mx_object_wait_many(
     mx_wait_item_t items[],
     uint32_t count,
     mx_time_t timeout) __attribute__((__leaf__));
 
-extern mx_status_t _mx_handle_wait_many(
+extern mx_status_t _mx_object_wait_many(
     mx_wait_item_t items[],
     uint32_t count,
     mx_time_t timeout) __attribute__((__leaf__));
 
-extern mx_status_t mx_handle_wait_async(
+extern mx_status_t mx_object_wait_async(
     mx_handle_t handle,
     mx_handle_t port_handle,
     uint64_t key,
     mx_signals_t signals,
     uint32_t options) __attribute__((__leaf__));
 
-extern mx_status_t _mx_handle_wait_async(
+extern mx_status_t _mx_object_wait_async(
     mx_handle_t handle,
     mx_handle_t port_handle,
     uint64_t key,

@@ -78,3 +78,5 @@ _\name:
 .endm
 
 #include "gen-x86-64.S"
+
+#include "syscalls-stubs.S"

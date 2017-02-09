@@ -35,18 +35,18 @@ mx_status_t sys_handle_replace(
     mx_rights_t rights,
     mx_handle_t out[1]);
 
-mx_status_t sys_handle_wait_one(
+mx_status_t sys_object_wait_one(
     mx_handle_t handle,
     mx_signals_t waitfor,
     mx_time_t timeout,
     mx_signals_t observed[1]);
 
-mx_status_t sys_handle_wait_many(
+mx_status_t sys_object_wait_many(
     mx_wait_item_t items[],
     uint32_t count,
     mx_time_t timeout);
 
-mx_status_t sys_handle_wait_async(
+mx_status_t sys_object_wait_async(
     mx_handle_t handle,
     mx_handle_t port_handle,
     uint64_t key,

@@ -1,15 +1,15 @@
-# mx_handle_wait_one
+# mx_object_wait_one
 
 ## NAME
 
-handle_wait_one - wait for signals on a handle
+object_wait_one - wait for signals on an object
 
 ## SYNOPSIS
 
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_handle_wait_one(mx_handle_t handle,
+mx_status_t mx_object_wait_one(mx_handle_t handle,
                                mx_signals_t signals,
                                mx_time timeout,
                                mx_signals_t* observed);
@@ -17,7 +17,7 @@ mx_status_t mx_handle_wait_one(mx_handle_t handle,
 
 ## DESCRIPTION
 
-**handle_wait_one**() is a blocking syscall which causes the caller to
+**object_wait_one**() is a blocking syscall which causes the caller to
 wait until at least one of the specified *signals* has been observed on
 the object *handle* refers to or *timeout* elapses.
 
@@ -34,7 +34,7 @@ ranging from **0** (do not wait at all) to **MX_TIME_INFINITE** (wait forever).
 
 ## RETURN VALUE
 
-**handle_wait_one**() returns **NO_ERROR** if any of *signals* were observed
+**object_wait_one**() returns **NO_ERROR** if any of *signals* were observed
 on the object before *timeout* expires.
 
 In the event of **ERR_TIMED_OUT**, *observed* may reflect state changes

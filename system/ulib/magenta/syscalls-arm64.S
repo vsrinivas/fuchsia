@@ -25,3 +25,5 @@ _\name:
 .endm
 
 #include "gen-arm64.S"
+
+#include "syscalls-stubs.S"

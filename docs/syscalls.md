@@ -4,8 +4,6 @@
 + [handle_close](syscalls/handle_close.md) - close a handle
 + [handle_duplicate](syscalls/handle_duplicate.md) - create a duplicate handle (optionally with reduced rights)
 + [handle_replace](syscalls/handle_replace.md) - create a new handle (optionally with reduced rights) and destroy the old one
-+ [handle_wait_many](syscalls/handle_wait_many.md) - wait for signals on multiple handles
-+ [handle_wait_one](syscalls/handle_wait_one.md) - wait for signals on one handle
 
 ## Objects
 + [object_bind_exception_port](syscalls/object_bind_exception_port.md) - attach an exception port to a task
@@ -15,6 +13,8 @@
 + [object_set_property](syscalls/object_set_property.md) - modify an object property
 + [object_signal](syscalls/object_signal.md) - set or clear the user signals on an object
 + [object_signal_peer](syscalls/object_signal_peer.md) - set or clear the user signals in the opposite end
++ [object_wait_many](syscalls/object_wait_many.md) - wait for signals on multiple objects
++ [object_wait_one](syscalls/object_wait_one.md) - wait for signals on one object
 
 ## Threads
 + [thread_create](syscalls/thread_create.md) - create a new thread within a process

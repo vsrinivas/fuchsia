@@ -11,9 +11,9 @@
 #define MX_SYS_handle_close 7
 #define MX_SYS_handle_duplicate 8
 #define MX_SYS_handle_replace 9
-#define MX_SYS_handle_wait_one 10
-#define MX_SYS_handle_wait_many 11
-#define MX_SYS_handle_wait_async 12
+#define MX_SYS_object_wait_one 10
+#define MX_SYS_object_wait_many 11
+#define MX_SYS_object_wait_async 12
 #define MX_SYS_object_signal 13
 #define MX_SYS_object_signal_peer 14
 #define MX_SYS_object_get_property 15

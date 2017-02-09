@@ -32,7 +32,7 @@ constexpr uint32_t kMaxWaitHandleCount = 1024u;
 // Note: This is used for quite a few InlineArrays (simultaneously) in sys_handle_wait_many.
 constexpr size_t kWaitManyInlineCount = 8u;
 
-mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
+mx_status_t sys_object_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t timeout,
                                 mx_signals_t* _observed) {
@@ -87,7 +87,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     return result;
 }
 
-mx_status_t sys_handle_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time_t timeout) {
+mx_status_t sys_object_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time_t timeout) {
     LTRACEF("count %u\n", count);
 
     if (!count) {
@@ -178,7 +178,7 @@ static mx_status_t add_port_observer(mx_handle_t handle_value, PortObserver* obs
     return observer->Begin(handle);
 }
 
-mx_status_t sys_handle_wait_async(mx_handle_t handle_value, mx_handle_t port_handle,
+mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_handle,
                                   uint64_t key, mx_signals_t signals, uint32_t options) {
     LTRACEF("handle %d\n", handle_value);
     if (options)

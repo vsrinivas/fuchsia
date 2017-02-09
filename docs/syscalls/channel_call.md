@@ -28,7 +28,7 @@ mx_status_t mx_channel_call(mx_handle_t handle, uint32_t flags,
 
 ## DESCRIPTION
 
-**channel_call**() is like a combined **channel_write**(), **handle_wait_one**(),
+**channel_call**() is like a combined **channel_write**(), **object_wait_one**(),
 and **channel_read**(), with the addition of a feature where a transaction id at
 the front of the message payload *bytes* is used to match reply messages with send
 messages, enabling multiple calling threads to share a channel without any additional
@@ -115,7 +115,7 @@ to contain the reply message.
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
 [handle_replace](handle_replace.md),
-[handle_wait_one](handle_wait_one.md),
-[handle_wait_many](handle_wait_many.md),
+[object_wait_one](object_wait_one.md),
+[object_wait_many](object_wait_many.md),
 [channel_create](channel_create.md),
 [channel_read](channel_read.md).

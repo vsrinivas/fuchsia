@@ -19,8 +19,8 @@ void mx_thread_exit(void);
 running and exit.
 
 The signal *MX_THREAD_SIGNALED* will be assserted on the thread
-object upon exit and may be observed via *handle_wait_one*()
-or *handle_wait_many*() on a handle to the thread.
+object upon exit and may be observed via *object_wait_one*()
+or *object_wait_many*() on a handle to the thread.
 
 ## RETURN VALUE
 
@@ -30,7 +30,7 @@ or *handle_wait_many*() on a handle to the thread.
 
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
-[handle_wait_one](handle_wait_one.md),
-[handle_wait_many](handle_wait_many.md),
+[object_wait_one](object_wait_one.md),
+[object_wait_many](object_wait_many.md),
 [thread_create](thread_create.md),
 [thread_start](thread_start.md).

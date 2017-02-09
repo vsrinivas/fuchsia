@@ -11,11 +11,11 @@
        break;
     case 9: sfunc = reinterpret_cast<syscall_func>(sys_handle_replace);
        break;
-    case 10: sfunc = reinterpret_cast<syscall_func>(sys_handle_wait_one);
+    case 10: sfunc = reinterpret_cast<syscall_func>(sys_object_wait_one);
        break;
-    case 11: sfunc = reinterpret_cast<syscall_func>(sys_handle_wait_many);
+    case 11: sfunc = reinterpret_cast<syscall_func>(sys_object_wait_many);
        break;
-    case 12: sfunc = reinterpret_cast<syscall_func>(sys_handle_wait_async);
+    case 12: sfunc = reinterpret_cast<syscall_func>(sys_object_wait_async);
        break;
     case 13: sfunc = reinterpret_cast<syscall_func>(sys_object_signal);
        break;

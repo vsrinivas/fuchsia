@@ -90,7 +90,7 @@ static bool async_wait_channel_test(void) {
     for (int ix = 0; ix != 5; ++ix) {
         mx_port_packet_t out = {};
 
-        status = mx_handle_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, 0u);
+        status = mx_object_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, 0u);
         EXPECT_EQ(status, NO_ERROR, "");
 
         status = mx_port_wait(port, 200000u, &out, 0u);
@@ -117,7 +117,7 @@ static bool async_wait_channel_test(void) {
     status = mx_port_wait(port, 200000u, &out1, 0u);
     EXPECT_EQ(status, ERR_TIMED_OUT, "");
 
-    status = mx_handle_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, 0u);
+    status = mx_object_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, 0u);
     EXPECT_EQ(status, NO_ERROR, "");
 
     status = mx_handle_close(ch[1]);
@@ -154,7 +154,7 @@ static bool async_wait_event_test(void) {
     const uint32_t kNumAwaits = 7;
 
     for (uint32_t ix = 0; ix != kNumAwaits; ++ix) {
-        status = mx_handle_wait_async(ev, port, ix, MX_EVENT_SIGNALED, 0u);
+        status = mx_object_wait_async(ev, port, ix, MX_EVENT_SIGNALED, 0u);
         EXPECT_EQ(status, NO_ERROR, "");
     }
 

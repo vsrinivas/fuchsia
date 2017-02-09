@@ -6,9 +6,9 @@ m_syscall 1 mx_nanosleep 1
 m_syscall 1 mx_handle_close 7
 m_syscall 3 mx_handle_duplicate 8
 m_syscall 3 mx_handle_replace 9
-m_syscall 4 mx_handle_wait_one 10
-m_syscall 3 mx_handle_wait_many 11
-m_syscall 5 mx_handle_wait_async 12
+m_syscall 4 mx_object_wait_one 10
+m_syscall 3 mx_object_wait_many 11
+m_syscall 5 mx_object_wait_async 12
 m_syscall 3 mx_object_signal 13
 m_syscall 3 mx_object_signal_peer 14
 m_syscall 4 mx_object_get_property 15

@@ -32,4 +32,12 @@ static inline mx_handle_t _mx_job_default(void) {
     return __magenta_job_default;
 }
 
+// Compatibility Wrappers for Deprecated Syscalls
+
+mx_status_t _mx_handle_wait_many(mx_wait_item_t* i, uint32_t c, mx_time_t t);
+mx_status_t mx_handle_wait_many(mx_wait_item_t* i, uint32_t c, mx_time_t t);
+
+mx_status_t _mx_handle_wait_one(mx_handle_t h, mx_signals_t s, mx_time_t t, mx_signals_t* o);
+mx_status_t mx_handle_wait_one(mx_handle_t h, mx_signals_t s, mx_time_t t, mx_signals_t* o);
+
 __END_CDECLS

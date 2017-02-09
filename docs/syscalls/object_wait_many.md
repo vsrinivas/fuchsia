@@ -1,15 +1,15 @@
-# mx_handle_wait_many
+# mx_object_wait_many
 
 ## NAME
 
-handle_wait_many - wait for signals on multiple handles
+object_wait_many - wait for signals on multiple objects
 
 ## SYNOPSIS
 
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_handle_wait_many(mx_wait_item_t* items, uint32_t count, mx_time_t timeout);
+mx_status_t mx_object_wait_many(mx_wait_item_t* items, uint32_t count, mx_time_t timeout);
 
 typedef struct {
     mx_handle_t handle;
@@ -20,7 +20,7 @@ typedef struct {
 
 ## DESCRIPTION
 
-**handle_wait_many**() is a blocking syscall which causes the caller to
+**object_wait_many**() is a blocking syscall which causes the caller to
 wait until at least one of the specified signals is pending on one of
 the specified *items* or *timeout* elapses.
 
@@ -40,7 +40,7 @@ once the last message in its queue is read).
 
 ## RETURN VALUE
 
-**handle_wait_many**() returns **NO_ERROR** if any of *waitfor* signals were
+**object_wait_many**() returns **NO_ERROR** if any of *waitfor* signals were
 observed on their respective object before *timeout* expires.
 
 In the event of **ERR_TIMED_OUT**, *items* may reflect state changes
