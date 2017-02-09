@@ -84,11 +84,12 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 	// TODO: recast in terms of c_sockaddr_storage
 	// TODO: split out the not-unsafe parts into socket_conv.go.
 	family := uint16(data[0]) | uint16(data[1])<<8
-	log.Printf("readSockaddrIn: family=%d", family)
+	if debug2 {
+		log.Printf("readSockaddrIn: family=%d", family)
+	}
 	switch family {
 	case AF_INET:
 		if len(data) < int(unsafe.Sizeof(c_sockaddr_in{})) {
-			log.Printf("datalen=%d, not a sockaddr_in", len(data))
 			return nil, mx.ErrInvalidArgs
 		}
 		v := (*c_sockaddr_in)(unsafe.Pointer(&data[0]))
@@ -96,11 +97,12 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 			Port: uint16(data[3]) | uint16(data[2])<<8,
 			Addr: tcpip.Address(v.sin_addr[:]),
 		}
-		log.Printf("readSockaddrIn: addr=%v", addr)
+		if debug2 {
+			log.Printf("readSockaddrIn: addr=%v", addr)
+		}
 		return addr, nil
 	case AF_INET6:
 		if len(data) < int(unsafe.Sizeof(c_sockaddr_in6{})) {
-			log.Printf("datalen=%d, not a sockaddr_in6", len(data))
 			return nil, mx.ErrInvalidArgs
 		}
 		v := (*c_sockaddr_in6)(unsafe.Pointer(&data[0]))
@@ -108,7 +110,9 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 			Port: uint16(data[3]) | uint16(data[2])<<8,
 			Addr: tcpip.Address(v.sin6_addr[:]),
 		}
-		log.Printf("readSockaddrIn: addr=%v", addr)
+		if debug2 {
+			log.Printf("readSockaddrIn: addr=%v", addr)
+		}
 		return addr, nil
 	default:
 		log.Printf("unknown family: %d\n", family)

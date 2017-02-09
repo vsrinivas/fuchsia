@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
@@ -20,15 +21,19 @@ import (
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/network/ipv4"
+	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/transport/tcp"
+	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
 )
 
-const debug = false
+const debug = true
+const debug2 = false
 
 const MX_SOCKET_READABLE = mx.SignalObject0
 const MX_SOCKET_WRITABLE = mx.SignalObject1
 const MX_SOCKET_PEER_CLOSED = mx.SignalObject2
+const MXSIO_SIGNAL_INCOMING = mx.SignalUser0
 const MXSIO_SIGNAL_CONNECTED = mx.SignalUser3
 
 func devmgrConnect() (mx.Handle, error) {
@@ -84,7 +89,7 @@ type cookie int64
 type iostate struct {
 	cookie cookie
 	s      mx.Socket
-	wq     waiter.Queue
+	wq     *waiter.Queue
 	ep     tcpip.Endpoint
 }
 
@@ -153,7 +158,7 @@ func (ios *iostate) listenSocketRead(stk tcpip.Stack) {
 			log.Printf("socket read failed: %v", err) // TODO: communicate this
 			continue
 		}
-		if debug {
+		if debug2 {
 			log.Printf("listenSocketRead: sending packet n=%d, v=%q", n, v[:n])
 		}
 		ios.wq.EventRegister(&waitEntry, waiter.EventOut)
@@ -191,7 +196,7 @@ func (ios *iostate) listenSocketWrite(stk tcpip.Stack) {
 			if err == nil {
 				break
 			} else if err == tcpip.ErrWouldBlock {
-				if debug {
+				if debug2 {
 					log.Printf("listenSocketWrite got tcpip.ErrWouldBlock")
 				}
 				<-notifyCh
@@ -202,7 +207,7 @@ func (ios *iostate) listenSocketWrite(stk tcpip.Stack) {
 			return
 		}
 		ios.wq.EventUnregister(&waitEntry)
-		if debug {
+		if debug2 {
 			log.Printf("listenSocketWrite: got a buffer, len(v)=%d", len(v))
 		}
 
@@ -211,7 +216,7 @@ func (ios *iostate) listenSocketWrite(stk tcpip.Stack) {
 			if err == nil {
 				break
 			} else if err == mx.ErrShouldWait {
-				if debug {
+				if debug2 {
 					log.Printf("listenSocketWrite: gto mx.ErrShouldWait")
 				}
 				obs, err := ios.s.WaitOne(
@@ -286,49 +291,98 @@ type socketServer struct {
 	io   map[cookie]*iostate
 }
 
-func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) mx.Status {
+func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH, peerS mx.Handle, err error) {
 	var domain, typ, protocol int
 	if n, _ := fmt.Sscanf(path, "socket/%d/%d/%d\x00", &domain, &typ, &protocol); n != 3 {
 		if debug {
-			log.Printf("opSocket err: n=%d\n", n)
+			log.Printf("socket: bad path %q (n=%d)", path, n)
 		}
-		return mx.ErrInvalidArgs
+		return 0, 0, mx.ErrInvalidArgs
 	}
 
-	ios, peerH, peerS, err := s.newIostate()
+	var t tcpip.TransportProtocolNumber
+	var n tcpip.NetworkProtocolNumber
+
+	switch domain {
+	case AF_INET:
+		n = ipv4.ProtocolNumber
+	case AF_INET6:
+		n = ipv6.ProtocolNumber
+	default:
+		log.Printf("socket: network protocol: %d", domain)
+		return 0, 0, mx.ErrNotSupported
+	}
+
+	switch typ {
+	case SOCK_STREAM:
+		switch protocol {
+		case IPPROTO_IP, IPPROTO_TCP:
+			t = tcp.ProtocolNumber
+		default:
+			log.Printf("socket: unsupported SOCK_STREAM protocol: %d", protocol)
+			return 0, 0, mx.ErrNotSupported
+		}
+	case SOCK_DGRAM:
+		switch protocol {
+		case IPPROTO_IP, IPPROTO_UDP:
+			t = udp.ProtocolNumber
+		default:
+			log.Printf("socket: unsupported SOCK_DGRAM protocol: %d", protocol)
+			return 0, 0, mx.ErrNotSupported
+		}
+	}
+
+	ios, peerH, peerS, err = s.newIostate()
 	if err != nil {
 		if debug {
-			log.Printf("opSocket newIostate err=%v", err)
+			log.Printf("socket: new iostate: %v", err)
 		}
-		if s, ok := err.(mx.Status); ok {
-			return s
-		}
-		if debug {
-			log.Printf("unexpected error on socket open: %v", err)
-		}
-		return mx.ErrBadState
+		return 0, 0, err
 	}
-	ro := rio.RioObject{
-		RioObjectHeader: rio.RioObjectHeader{
-			Status: mx.ErrOk,
-			Type:   uint32(mxio.ProtocolSocket),
-		},
-		Esize:  0,
-		Hcount: 2,
-	}
-	ro.Handle[0] = peerH
-	ro.Handle[1] = peerS
-	ro.Write(msg.Handle[0], 0)
-	return dispatcher.ErrIndirect
 
-	// TODO: should we set ios.ep here to avoid data races?
+	ios.wq = new(waiter.Queue)
+	ep, err := s.stack.NewEndpoint(t, n, ios.wq)
+	if err != nil {
+		if debug {
+			log.Printf("socket: new endpoint: %v", err)
+		}
+		return 0, 0, err
+	}
+	ios.ep = ep
+
+	return peerH, peerS, nil
 }
 
-func (s *socketServer) opAccept(ios *iostate, msg *rio.Msg, path string) mx.Status {
-	if debug {
-		log.Printf("opAccept")
+func (s *socketServer) opAccept(ios *iostate, msg *rio.Msg, path string) (peerH, peerS mx.Handle, err error) {
+	if ios.ep == nil {
+		if debug {
+			log.Printf("accept: no socket")
+		}
+		return 0, 0, mx.ErrBadState
 	}
-	return mx.ErrNotSupported
+	newep, newwq, err := ios.ep.Accept()
+	if err == tcpip.ErrWouldBlock {
+		return 0, 0, mx.ErrShouldWait
+	}
+	if ios.ep.Readiness(waiter.EventIn) == 0 {
+		// If we just accepted the only queued incoming connection,
+		// clear the signal so the mxio client knows no incoming
+		// connection is available.
+		if err := mx.Handle(ios.s).SignalPeer(MXSIO_SIGNAL_INCOMING, 0); err != nil {
+			log.Printf("accept: clearing MXSIO_SIGNAL_INCOMING: %v", err)
+		}
+	}
+	if err != nil {
+		if debug {
+			log.Printf("accept: %v", err)
+		}
+		return 0, 0, err
+	}
+	newios, peerH, peerS, err := s.newIostate()
+	newios.ep = newep
+	newios.wq = newwq
+	go newios.listenSocketWrite(s.stack)
+	return peerH, peerS, nil
 }
 
 func errStatus(err error) mx.Status {
@@ -345,10 +399,16 @@ func errStatus(err error) mx.Status {
 func (s *socketServer) opSetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 	var val c_mxrio_sockopt_req_reply
 	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
+		if debug {
+			log.Printf("setsockopt: decode argument: %v", err)
+		}
 		return errStatus(err)
 	}
-	if debug {
-		log.Printf("opSetSockOpt: val=%#+v", val)
+	if ios.ep == nil {
+		if debug {
+			log.Printf("setsockopt: no socket")
+		}
+		return mx.ErrBadState
 	}
 	if opt := val.Unpack(); opt != nil {
 		ios.ep.SetSockOpt(opt)
@@ -359,17 +419,30 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 }
 
 func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
-	if debug {
-		log.Printf("opBind TODO")
+	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
+	if err != nil {
+		if debug {
+			log.Printf("bind: bad input: %v", err)
+		}
+		return errStatus(err)
+	}
+	if ios.ep == nil {
+		if debug {
+			log.Printf("bind: no socket")
+		}
+		return mx.ErrBadState
+	}
+	if err := ios.ep.Bind(*addr, nil); err != nil {
+		return errStatus(err)
 	}
 	msg.Datalen = 0
 	msg.SetOff(0)
-	return mx.ErrNotSupported
+	return mx.ErrOk
 }
 
 func (s *socketServer) opIoctl(ios *iostate, msg *rio.Msg) mx.Status {
 	if debug {
-		log.Printf("opIoctl op=0x%x, datalen=%d", msg.Op(), msg.Datalen)
+		log.Printf("opIoctl TODO op=0x%x, datalen=%d", msg.Op(), msg.Datalen)
 	}
 	return mx.ErrInvalidArgs
 }
@@ -396,9 +469,6 @@ func mxioSockAddrReply(a tcpip.FullAddress, msg *rio.Msg) mx.Status {
 }
 
 func (s *socketServer) opGetSockName(ios *iostate, msg *rio.Msg) mx.Status {
-	if debug {
-		log.Printf("opGetSockName")
-	}
 	a, err := ios.ep.GetLocalAddress()
 	if err != nil {
 		return errStatus(err)
@@ -406,9 +476,9 @@ func (s *socketServer) opGetSockName(ios *iostate, msg *rio.Msg) mx.Status {
 	return mxioSockAddrReply(a, msg)
 }
 
-func (s *socketServer) opGetPeerName(ios *iostate, msg *rio.Msg) mx.Status {
-	if debug {
-		log.Printf("opGetPeerName")
+func (s *socketServer) opGetPeerName(ios *iostate, msg *rio.Msg) (status mx.Status) {
+	if ios.ep == nil {
+		return mx.ErrBadState
 	}
 	a, err := ios.ep.GetRemoteAddress()
 	if err != nil {
@@ -417,58 +487,89 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *rio.Msg) mx.Status {
 	return mxioSockAddrReply(a, msg)
 }
 
-func (s *socketServer) opListen(ios *iostate, msg *rio.Msg) mx.Status {
-	if debug {
-		log.Printf("opListen")
+func (s *socketServer) opListen(ios *iostate, msg *rio.Msg) (status mx.Status) {
+	d := msg.Data[:msg.Datalen]
+	if len(d) != 4 {
+		if debug {
+			log.Printf("listen: bad input length %d", len(d))
+		}
+		return mx.ErrInvalidArgs
 	}
+	backlog := binary.LittleEndian.Uint32(d)
+	if ios.ep == nil {
+		if debug {
+			log.Printf("listen: no socket")
+		}
+		return mx.ErrBadState
+	}
+	if err := ios.ep.Listen(int(backlog)); err != nil {
+		if debug {
+			log.Printf("listen: %v", err)
+		}
+		return errStatus(err)
+	}
+	go func() {
+		// When an incoming connection is queued up (that is,
+		// calling accept would return a new connection),
+		// signal the mxio socket that it exists. This allows
+		// the socket API client to implement a blocking accept.
+		inEntry, inCh := waiter.NewChannelEntry(nil)
+		ios.wq.EventRegister(&inEntry, waiter.EventIn)
+		defer ios.wq.EventUnregister(&inEntry)
+		hupEntry, hupCh := waiter.NewChannelEntry(nil)
+		ios.wq.EventRegister(&hupEntry, waiter.EventHUp)
+		defer ios.wq.EventUnregister(&hupEntry)
+		for {
+			select {
+			case <-inCh:
+				if err := mx.Handle(ios.s).SignalPeer(0, MXSIO_SIGNAL_INCOMING); err != nil {
+					log.Printf("socket signal MXSIO_SIGNAL_INCOMING: %v", err)
+				}
+			case <-hupCh:
+				return
+			}
+		}
+	}()
+
 	msg.Datalen = 0
 	msg.SetOff(0)
-	return mx.ErrNotSupported
+	return mx.ErrOk
 }
 
 func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) mx.Status {
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
 	if err != nil {
 		if debug {
-			log.Printf("opConnect readSockaddrIn err: %v", err)
+			log.Printf("connect bad input: %v", err)
 		}
 		return errStatus(err)
 	}
 
-	ep, err := s.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &ios.wq)
-	if err != nil {
+	// TODO remove bind call here
+	if err := ios.ep.Bind(tcpip.FullAddress{0, dhcpClient.Address(), 0}, nil); err != nil {
 		if debug {
-			log.Printf("opConnect NewEndpoint=%v", addr)
+			log.Printf("connect bind failed: ", err)
 		}
-		return errStatus(err)
-	}
-	ios.ep = ep
-
-	if err := ep.Bind(tcpip.FullAddress{0, dhcpClient.Address(), 0}, nil); err != nil {
-		log.Printf("Bind failed: ", err)
 		return errStatus(err)
 	}
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
-	err = ep.Connect(*addr)
+	err = ios.ep.Connect(*addr)
 	if err == tcpip.ErrConnectStarted {
-		log.Printf("opConnect is pending...")
 		<-notifyCh
-		err = ep.GetSockOpt(tcpip.ErrorOption{})
+		err = ios.ep.GetSockOpt(tcpip.ErrorOption{})
 	}
 	ios.wq.EventUnregister(&waitEntry)
 	if err != nil {
-		ios.ep = nil
-		log.Printf("opConnect unable to connect: ", err)
-		return mx.ErrNotSupported // TODO proper error code
+		log.Printf("connect: %v", err)
+		return errStatus(err)
 	}
-	if debug {
-		log.Printf("opConnect: connected")
+	if debug2 {
+		log.Printf("connect: connected")
 	}
-
-	if r := mx.Sys_object_signal_peer(mx.Handle(ios.s), 0, MXSIO_SIGNAL_CONNECTED); r < 0 {
-		log.Printf("opConnect: mx_object_signal_peer failed: %v", r)
+	if err := mx.Handle(ios.s).SignalPeer(0, MXSIO_SIGNAL_CONNECTED); err != nil {
+		log.Printf("connect: signal failed: %v", err)
 	}
 
 	go ios.listenSocketWrite(s.stack)
@@ -528,12 +629,12 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
 	cookie := cookie(cookieVal)
 	op := msg.Op()
-	if debug {
+	if debug2 {
 		log.Printf("socketServer.mxio: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
 	}
 
 	if rh <= 0 {
-		if debug {
+		if debug2 {
 			log.Printf("socketServer.mxio invalid rh (op=%v)", op) // DEBUG
 		}
 		return mx.ErrInvalidArgs
@@ -545,38 +646,41 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 	switch op {
 	case rio.OpOpen:
 		path := string(msg.Data[:msg.Datalen])
-		if debug {
-			log.Printf("opOpen: path=%q", path)
-		}
+		var err error
+		var peerH, peerS mx.Handle
 		switch {
 		case strings.HasPrefix(path, "none"): // MXRIO_SOCKET_DIR_NONE
-			_, peerH, peerS, err := s.newIostate()
-			if err != nil {
-				return err.(mx.Status)
-			}
-			ro := rio.RioObject{
-				RioObjectHeader: rio.RioObjectHeader{
-					Status: mx.ErrOk,
-					Type:   uint32(mxio.ProtocolSocket),
-				},
-				Esize:  0,
-				Hcount: 2,
-			}
-			ro.Handle[0] = peerH
-			ro.Handle[1] = peerS
-			ro.Write(msg.Handle[0], 0)
-			return dispatcher.ErrIndirect
+			_, peerH, peerS, err = s.newIostate()
 		case strings.HasPrefix(path, "socket/"): // MXRIO_SOCKET_DIR_SOCKET
-			return s.opSocket(ios, msg, path) // do_socket
+			peerH, peerS, err = s.opSocket(ios, msg, path)
 		case strings.HasPrefix(path, "accept"): // MXRIO_SOCKET_DIR_ACCEPT
-			return s.opAccept(ios, msg, path) // do_accept
+			peerH, peerS, err = s.opAccept(ios, msg, path)
 		default:
+			if debug {
+				log.Printf("open: unknown path=%q", path)
+			}
 			return mx.ErrNotSupported
 		}
-		return mx.ErrOk
+		ro := rio.RioObject{
+			RioObjectHeader: rio.RioObjectHeader{
+				Status: errStatus(err),
+				Type:   uint32(mxio.ProtocolSocket),
+			},
+			Esize: 0,
+		}
+		if peerH != 0 && peerS != 0 {
+			ro.Handle[0] = peerH
+			ro.Handle[1] = peerS
+			ro.Hcount = 2
+		}
+		ro.Write(msg.Handle[0], 0)
+		msg.Handle[0].Close()
+		return dispatcher.ErrIndirect
+
 	case rio.OpConnect:
 		return s.opConnect(ios, msg) // do_connect
 	case rio.OpClose:
+		// TODO: send an EventHUp to clean up listen goroutine
 		s.mu.Lock()
 		delete(s.io, cookie)
 		s.mu.Unlock()

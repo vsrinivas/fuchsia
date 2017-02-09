@@ -93,7 +93,11 @@ const O_DIRECTORY = 0200000
 const SOCK_STREAM = 1
 const SOCK_DGRAM = 2
 
+const IPPROTO_IP = 0
+const IPPROTO_ICMP = 1
 const IPPROTO_TCP = 6
+const IPPROTO_UDP = 17
+const IPPROTO_ICMPV6 = 58
 
 const AF_INET = 2
 const AF_INET6 = 10
