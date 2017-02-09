@@ -201,7 +201,9 @@ status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
         other = other_;
     }
 
-    other->WriteSelf(mxtl::move(msg));
+    if (other->WriteSelf(mxtl::move(msg)) > 0)
+        thread_preempt(false);
+
     return NO_ERROR;
 }
 
@@ -256,7 +258,7 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
     return status;
 }
 
-void ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
+int ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
     AutoLock lock(&lock_);
     auto size = msg->data_size();
 
@@ -269,9 +271,9 @@ void ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
             // (3C) Deliver message to waiter.
             // Remove waiter from list.
             if (waiter.get_txid() == txid) {
-                waiter.Deliver(mxtl::move(msg));
                 waiters_.erase(waiter);
-                return;
+                // we return how many threads have been woken up, or zero.
+                return waiter.Deliver(mxtl::move(msg));
             }
         }
     }
@@ -280,6 +282,7 @@ void ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
     state_tracker_.UpdateState(0u, MX_CHANNEL_READABLE);
     if (iopc_)
         iopc_->Signal(MX_CHANNEL_READABLE, size, &lock_);
+    return 0;
 }
 
 status_t ChannelDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
