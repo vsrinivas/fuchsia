@@ -25,6 +25,8 @@ class ModelData {
  public:
   // Describes per-model data accessible by shaders.
   struct PerModel {
+    // One uniform descriptor, and one texture descriptor.
+    static constexpr uint32_t kDescriptorCount = 2;
     // layout(set = 0, ...)
     static constexpr uint32_t kDescriptorSetIndex = 0;
     // layout(set = 0, binding = 0) uniform PerModel { ... }
@@ -41,6 +43,8 @@ class ModelData {
 
   // Describes per-object data accessible by shaders.
   struct PerObject {
+    // One uniform descriptor, and one texture descriptor.
+    static constexpr uint32_t kDescriptorCount = 2;
     // layout(set = 1, ...)
     static constexpr uint32_t kDescriptorSetIndex = 1;
     // layout(set = 1, binding = 0) uniform PerObject { ... }

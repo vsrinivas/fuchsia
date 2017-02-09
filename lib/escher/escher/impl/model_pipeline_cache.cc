@@ -7,6 +7,7 @@
 #include "escher/geometry/types.h"
 // TODO: move MeshSpecImpl into its own file, then remove this.
 #include "escher/impl/mesh_impl.h"
+#include "escher/impl/mesh_manager.h"
 #include "escher/impl/model_data.h"
 #include "escher/impl/model_pipeline.h"
 #include "escher/impl/vulkan_utils.h"
@@ -180,9 +181,11 @@ ModelPipelineCache::ModelPipelineCache(vk::Device device,
 ModelPipelineCacheOLD::ModelPipelineCacheOLD(vk::Device device,
                                              vk::RenderPass depth_prepass,
                                              vk::RenderPass lighting_pass,
-                                             ModelData* model_data)
+                                             ModelData* model_data,
+                                             MeshManager* mesh_manager)
     : ModelPipelineCache(device, depth_prepass, lighting_pass),
-      model_data_(model_data) {}
+      model_data_(model_data),
+      mesh_manager_(mesh_manager) {}
 
 ModelPipelineCacheOLD::~ModelPipelineCacheOLD() {
   device_.waitIdle();
@@ -190,14 +193,13 @@ ModelPipelineCacheOLD::~ModelPipelineCacheOLD() {
 }
 
 ModelPipeline* ModelPipelineCacheOLD::GetPipeline(
-    const ModelPipelineSpec& spec,
-    const MeshSpecImpl& mesh_spec_impl) {
-  // TODO: deal with hash collisions
+    const ModelPipelineSpec& spec) {
   auto it = pipelines_.find(spec);
   if (it != pipelines_.end()) {
     return it->second.get();
   }
-  auto new_pipeline = NewPipeline(spec, mesh_spec_impl);
+  auto new_pipeline =
+      NewPipeline(spec, mesh_manager_->GetMeshSpecImpl(spec.mesh_spec));
   auto new_pipeline_ptr = new_pipeline.get();
   pipelines_[spec] = std::move(new_pipeline);
   return new_pipeline_ptr;

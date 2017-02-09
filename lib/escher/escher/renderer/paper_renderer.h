@@ -11,8 +11,8 @@ namespace escher {
 
 class PaperRenderer : public Renderer {
  public:
-  void DrawFrame(Stage& stage,
-                 Model& model,
+  void DrawFrame(const Stage& stage,
+                 const Model& model,
                  const ImagePtr& color_image_out,
                  const SemaphorePtr& frame_done,
                  FrameRetiredCallback frame_retired_callback) override;
@@ -22,6 +22,10 @@ class PaperRenderer : public Renderer {
 
   // Set whether SSDO lighting model is used.
   void set_enable_lighting(bool b) { enable_lighting_ = b; }
+
+  // Set whether objects should be sorted by their pipeline, or rendered in the
+  // order that they are provided by the caller.
+  void set_sort_by_pipeline(bool b) { sort_by_pipeline_ = b; }
 
  private:
   friend class Escher;
@@ -35,8 +39,8 @@ class PaperRenderer : public Renderer {
   // resulting depth buffer is used by DrawSsdoPasses() in order to compute
   // per-pixel occlusion, and by DrawLightingPass().
   void DrawDepthPrePass(const FramebufferPtr& framebuffer,
-                        Stage& stage,
-                        Model& model);
+                        const Stage& stage,
+                        const Model& model);
 
   // Multiple render passes.  The first samples the depth buffer to generate
   // per-pixel occlusion information, and subsequent passes filter this noisy
@@ -44,7 +48,7 @@ class PaperRenderer : public Renderer {
   void DrawSsdoPasses(const TexturePtr& depth_in,
                       const ImagePtr& color_out,
                       const ImagePtr& color_aux,
-                      Stage& stage);
+                      const Stage& stage);
 
   // Render pass that renders the fully-lit/shadowed scene.  Uses the depth
   // buffer from DrawDepthPrePass(), and the illumination texture from
@@ -54,10 +58,11 @@ class PaperRenderer : public Renderer {
   // might save bandwidth at the cost of more per-fragment computation (but
   // the latter might be mitigated by sorting front-to-back, etc.).  Revisit
   // after doing performance profiling.
-  void DrawLightingPass(const FramebufferPtr& framebuffer,
+  void DrawLightingPass(uint32_t sample_count,
+                        const FramebufferPtr& framebuffer,
                         const TexturePtr& illumination_texture,
-                        Stage& stage,
-                        Model& model);
+                        const Stage& stage,
+                        const Model& model);
 
   void DrawDebugOverlays(const ImagePtr& output,
                          const ImagePtr& depth,
@@ -76,6 +81,7 @@ class PaperRenderer : public Renderer {
   std::vector<vk::ClearValue> clear_values_;
   bool show_debug_info_ = false;
   bool enable_lighting_ = true;
+  bool sort_by_pipeline_ = true;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(PaperRenderer);
   FTL_DISALLOW_COPY_AND_ASSIGN(PaperRenderer);

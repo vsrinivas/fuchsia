@@ -36,11 +36,12 @@ uint8_t* UniformBufferPool::UniformBufferInfo::GetMappedPointer() {
   return ptr;
 }
 
-UniformBufferPool::UniformBufferPool(vk::Device device, GpuAllocator* allocator)
+UniformBufferPool::UniformBufferPool(vk::Device device,
+                                     GpuAllocator* allocator,
+                                     vk::MemoryPropertyFlags additional_flags)
     : device_(device),
       allocator_(allocator),
-      flags_(vk::MemoryPropertyFlagBits::eHostVisible |
-             vk::MemoryPropertyFlagBits::eHostCoherent),
+      flags_(additional_flags | vk::MemoryPropertyFlagBits::eHostVisible),
       buffer_size_(kBufferSize) {}
 
 UniformBufferPool::~UniformBufferPool() {

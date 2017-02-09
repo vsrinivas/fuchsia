@@ -18,8 +18,8 @@ typedef std::function<void()> FrameRetiredCallback;
 
 class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
  public:
-  virtual void DrawFrame(Stage& stage,
-                         Model& model,
+  virtual void DrawFrame(const Stage& stage,
+                         const Model& model,
                          const ImagePtr& color_image_out,
                          const SemaphorePtr& frame_done,
                          FrameRetiredCallback frame_retired_callback) = 0;

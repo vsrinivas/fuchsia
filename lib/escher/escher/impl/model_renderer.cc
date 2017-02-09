@@ -12,6 +12,8 @@
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/model_data.h"
+#include "escher/impl/model_display_list.h"
+#include "escher/impl/model_display_list_builder.h"
 #include "escher/impl/model_pipeline.h"
 #include "escher/impl/model_pipeline_cache.h"
 #include "escher/impl/vulkan_utils.h"
@@ -39,7 +41,7 @@ ModelRenderer::ModelRenderer(EscherImpl* escher,
   CreateRenderPasses(pre_pass_color_format, lighting_pass_color_format,
                      depth_format);
   pipeline_cache_ = std::make_unique<impl::ModelPipelineCacheOLD>(
-      device_, depth_prepass_, lighting_pass_, model_data_);
+      device_, depth_prepass_, lighting_pass_, model_data_, mesh_manager_);
 }
 
 ModelRenderer::~ModelRenderer() {
@@ -47,180 +49,137 @@ ModelRenderer::~ModelRenderer() {
   device_.destroyRenderPass(lighting_pass_);
 }
 
-void ModelRenderer::Draw(Stage& stage,
-                         Model& model,
-                         CommandBuffer* command_buffer,
-                         const TexturePtr& illumination_texture) {
+ModelDisplayListPtr ModelRenderer::CreateDisplayList(
+    const Stage& stage,
+    const Model& model,
+    bool sort_by_pipeline,
+    bool use_depth_prepass,
+    bool use_descriptor_set_per_object,
+    uint32_t sample_count,
+    const TexturePtr& illumination_texture,
+    CommandBuffer* command_buffer) {
+  const std::vector<Object>& objects = model.objects();
+
+  // The alternative isn't implemented.
+  FTL_DCHECK(use_descriptor_set_per_object);
+
+  // Used to accumulate indices of objects in render-order.
+  std::vector<uint32_t> opaque_objects;
+  opaque_objects.reserve(objects.size());
+  // TODO: Translucency.  When rendering translucent objects, we will need a
+  // separate bin for all translucent objects, and need to sort the objects in
+  // that bin from back-to-front.  Conceivably, we could relax this ordering
+  // requirement in cases where we can prove that the translucent objects don't
+  // overlap.
+
+  // TODO: We should sort according to more different metrics, and look for
+  // performance differences between them.  At the same time, we should
+  // experiment with strategies for updating/binding descriptor-sets.
+  if (!sort_by_pipeline) {
+    // Simply render objects in the order that they appear in the model.
+    for (uint32_t i = 0; i < objects.size(); ++i) {
+      opaque_objects.push_back(i);
+    }
+  } else {
+    // Sort all objects into bins.  Then, iterate over each bin in arbitrary
+    // order, without additional sorting within the bin.
+    std::unordered_map<ModelPipelineSpec, std::vector<size_t>,
+                       Hash<ModelPipelineSpec>>
+        pipeline_bins;
+    for (size_t i = 0; i < objects.size(); ++i) {
+      ModelPipelineSpec spec;
+      auto& obj = objects[i];
+      spec.mesh_spec = GetMeshForShape(obj.shape())->spec;
+      spec.shape_modifiers = obj.shape().modifiers();
+      pipeline_bins[spec].push_back(i);
+    }
+    for (auto& pair : pipeline_bins) {
+      for (uint32_t object_index : pair.second) {
+        opaque_objects.push_back(object_index);
+      }
+    }
+  }
+  FTL_DCHECK(opaque_objects.size() == objects.size());
+
+  ModelDisplayListBuilder builder(device_, stage, model, !use_depth_prepass,
+                                  white_texture_, illumination_texture,
+                                  model_data_, this, pipeline_cache_.get(),
+                                  sample_count, use_depth_prepass);
+  for (uint32_t object_index : opaque_objects) {
+    builder.AddObject(objects[object_index]);
+  }
+  return builder.Build(command_buffer);
+}
+
+// TODO: stage shouldn't be necessary.
+void ModelRenderer::Draw(const Stage& stage,
+                         const ModelDisplayListPtr& display_list,
+                         CommandBuffer* command_buffer) {
   vk::CommandBuffer vk_command_buffer = command_buffer->get();
 
+  for (const TexturePtr& texture : display_list->textures()) {
+    // TODO: it would be nice if Resource::TakeWaitSemaphore() were virtual
+    // so that we could say texture->TakeWaitSemaphore(), instead of needing
+    // to know that the image is really the thing that we might need to wait
+    // for.  Another approach would be for the Texture constructor to say
+    // SetWaitSemaphore(image->TakeWaitSemaphore()), but this isn't a
+    // bulletproof solution... what if someone else made a Texture with the
+    // same image, and used that one first.  Of course, in general we want
+    // lighter-weight synchronization such as events or barriers... need to
+    // revisit this whole topic.
+    command_buffer->AddWaitSemaphore(
+        texture->image()->TakeWaitSemaphore(),
+        vk::PipelineStageFlagBits::eFragmentShader);
+  }
+
   auto& volume = stage.viewing_volume();
+  // We assume that we are looking down at the stage, so volume.near() equals
+  // the maximum height above the stage.
+  FTL_DCHECK(volume.far() == 0 && volume.near() > 0);
 
   vk::Viewport viewport;
   viewport.width = volume.width();
   viewport.height = volume.height();
-  // TODO: replace these with values from ViewingVolume.  Need to also
-  // consider how this works with hacked Z-value in vertex shader (i.e. unhack
-  // that at the same time).
+  // We normalize all depths to the range [0,1].  If we didn't, then Vulkan
+  // would clip them anyway.  NOTE: this is only true because we are using an
+  // orthonormal projection; otherwise the depth computed by the vertex shader
+  // could be outside [0,1] as long as the perspective division brought it back.
+  // In this case, it might make sense to use different values for viewport
+  // min/max depth.
   viewport.minDepth = 0.f;
   viewport.maxDepth = 1.f;
   vk_command_buffer.setViewport(0, 1, &viewport);
 
-  auto& objects = model.objects();
+  // Retain all display-list resources until the frame is finished rendering.
+  command_buffer->AddUsedResource(display_list);
 
-  ModelUniformWriter writer(objects.size(), model_data_->device(),
-                            model_data_->uniform_buffer_pool(),
-                            model_data_->per_model_descriptor_set_pool(),
-                            model_data_->per_object_descriptor_set_pool());
-
-  // TODO: temporary hack... this is a way to allow objects to be drawn with
-  // color only... if the object's material doesn't have a texture, then this
-  // 1-pixel pure-white texture is used.
-  vk::ImageView default_image_view = white_texture_->image_view();
-  vk::Sampler default_sampler = white_texture_->sampler();
-
-  ModelData::PerModel per_model;
-  per_model.frag_coord_to_uv_multiplier =
-      vec2(1.f / volume.width(), 1.f / volume.height());
-  per_model.time = model.time();
-  if (illumination_texture) {
-    FTL_DCHECK(!hack_use_depth_prepass);
-    writer.WritePerModelData(per_model, illumination_texture->image_view(),
-                             illumination_texture->sampler());
-  } else {
-    FTL_DCHECK(hack_use_depth_prepass);
-    writer.WritePerModelData(per_model, default_image_view, default_sampler);
-  }
-
-  // Write per-object uniforms, and collect a list of bindings that can be
-  // used once the uniforms have been flushed to the GPU.
-  FTL_DCHECK(per_object_bindings_.empty());
-  {
-    const float half_width_recip = 2.f / volume.width();
-    const float half_height_recip = 2.f / volume.height();
-    // Add bias so that objects at height = 0 aren't automatically depth-culled.
-    const float kDepthFudgeFactor = viewport.maxDepth - 0.01f;
-    const float depth_range_recip = kDepthFudgeFactor / volume.depth_range();
-
-    ModelData::PerObject per_object;
-    auto& scale_x = per_object.transform[0][0];
-    auto& scale_y = per_object.transform[1][1];
-    auto& translate_x = per_object.transform[3][0];
-    auto& translate_y = per_object.transform[3][1];
-    auto& translate_z = per_object.transform[3][2];
-    auto& color = per_object.color;
-    auto& value_to_clear1 = per_object.transform[0][1];
-    auto& value_to_clear2 = per_object.transform[1][0];
-    for (const Object& o : objects) {
-      // These two values might have been set by a previous rotation transform
-      // and need to be cleared.
-      value_to_clear1 = value_to_clear2 = 0.f;
-      // Push uniforms for scale/translation and color.
-      scale_x = o.width() * half_width_recip;
-      scale_y = o.height() * half_height_recip;
-      translate_x = o.position().x * half_width_recip - 1.f;
-      translate_y = o.position().y * half_height_recip - 1.f;
-      // Convert "height above the stage" into "distance from the camera",
-      // normalized to the range (0,1).  This is passed unaltered through the
-      // vertex shader.
-      translate_z = kDepthFudgeFactor -
-                    (volume.far() + o.position().z * depth_range_recip);
-
-      if (o.rotation() != 0.f) {
-        float pre_rot_translation_x = -o.rotation_point().x;
-        float pre_rot_translation_y = -o.rotation_point().y;
-
-        per_object.transform = glm::translate(
-            per_object.transform,
-            glm::vec3(-pre_rot_translation_x, -pre_rot_translation_y, 0.f));
-
-        per_object.transform = glm::rotate(per_object.transform, o.rotation(),
-                                           glm::vec3(0.f, 0.f, 1.f));
-
-        per_object.transform = glm::translate(
-            per_object.transform,
-            glm::vec3(pre_rot_translation_x, pre_rot_translation_y, 0.f));
-      }
-
-      color = vec4(o.material()->color(), 1.f);  // always opaque
-
-      // Find the texture to use, either the object's material's texture, or
-      // the default texture if the material doesn't have one.
-      vk::ImageView image_view;
-      vk::Sampler sampler;
-      if (auto& texture = o.material()->texture()) {
-        image_view = o.material()->image_view();
-        sampler = o.material()->sampler();
-        command_buffer->AddUsedResource(texture);
-        // TODO: it would be nice if Resource::TakeWaitSemaphore() were virtual
-        // so that we could say texture->TakeWaitSemaphore(), instead of needing
-        // to know that the image is really the thing that we might need to wait
-        // for.  Another approach would be for the Texture constructor to say
-        // SetWaitSemaphore(image->TakeWaitSemaphore()), but this isn't a
-        // bulletproof solution... what if someone else made a Texture with the
-        // same image, and used that one first.  Of course, in general we want
-        // lighter-weight synchronization such as events or barriers... need to
-        // revisit this whole topic.
-        command_buffer->AddWaitSemaphore(
-            texture->image()->TakeWaitSemaphore(),
-            vk::PipelineStageFlagBits::eFragmentShader);
-      } else {
-        image_view = default_image_view;
-        sampler = default_sampler;
-      }
-
-      if (o.shape().modifiers() | ShapeModifier::kWobble) {
-        auto wobble = o.shape_modifier_data<ModifierWobble>();
-        per_object.wobble = wobble ? *wobble : ModifierWobble();
-      }
-
-      per_object_bindings_.push_back(
-          writer.WritePerObjectData(per_object, image_view, sampler));
-    }
-    writer.Flush(command_buffer);
-  }
-
-  // Do a second pass over the data, so that flushing the uniform writer above
-  // can set a memory barrier before shaders use those uniforms.  This only
-  // sucks a litte bit, because we'll eventually want to sort draw calls by
-  // pipeline/opacity/depth-order/etc.
-  // TODO: sort draw calls.
-  ModelPipelineSpec previous_pipeline_spec;
-  ModelPipeline* pipeline = nullptr;
-  for (size_t i = 0; i < objects.size(); ++i) {
-    const Object& o = objects[i];
-    const MeshPtr& mesh = GetMeshForShape(o.shape());
-    FTL_DCHECK(mesh);
-
-    ModelPipelineSpec pipeline_spec;
-    pipeline_spec.mesh_spec = mesh->spec;
-    pipeline_spec.shape_modifiers = o.shape().modifiers();
-    pipeline_spec.use_depth_prepass = hack_use_depth_prepass;
-    // TODO: more explicit way to indicate sample count.
-    pipeline_spec.sample_count = hack_use_depth_prepass ? 1 : 4;
-
-    // Don't rebind pipeline state if it is already up-to-date.
-    if (previous_pipeline_spec != pipeline_spec) {
-      pipeline = pipeline_cache_->GetPipeline(
-          pipeline_spec, mesh_manager_->GetMeshSpecImpl(mesh->spec));
-
+  vk::Pipeline current_pipeline;
+  vk::PipelineLayout current_pipeline_layout;
+  for (const ModelDisplayList::Item& item : display_list->items()) {
+    // Bind new pipeline and PerModel descriptor set, if necessary.
+    if (current_pipeline != item.pipeline->pipeline()) {
+      current_pipeline = item.pipeline->pipeline();
       vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                                     pipeline->pipeline());
+                                     current_pipeline);
 
-      // TODO: many pipeline will share the same layout so rebinding may not be
-      // necessary.
-      writer.BindPerModelData(pipeline->pipeline_layout(), vk_command_buffer);
-
-      previous_pipeline_spec = pipeline_spec;
+      // Whenever the pipeline changes, it is possible that the pipeline layout
+      // must also change.
+      if (current_pipeline_layout != item.pipeline->pipeline_layout()) {
+        current_pipeline_layout = item.pipeline->pipeline_layout();
+        vk::DescriptorSet ds = display_list->stage_data();
+        vk_command_buffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics, current_pipeline_layout,
+            ModelData::PerModel::kDescriptorSetIndex, 1, &ds, 0, nullptr);
+      }
     }
 
-    // Bind the descriptor set, using the binding obtained in the first pass.
-    writer.BindPerObjectData(per_object_bindings_[i],
-                             pipeline->pipeline_layout(), vk_command_buffer);
+    vk::DescriptorSet ds = item.descriptor_sets[0];
+    vk_command_buffer.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics, current_pipeline_layout,
+        ModelData::PerObject::kDescriptorSetIndex, 1, &ds, 0, nullptr);
 
-    command_buffer->DrawMesh(mesh);
+    command_buffer->DrawMesh(item.mesh);
   }
-
-  per_object_bindings_.clear();
 }
 
 const MeshPtr& ModelRenderer::GetMeshForShape(const Shape& shape) const {

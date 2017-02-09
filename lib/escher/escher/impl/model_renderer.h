@@ -6,7 +6,6 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/impl/model_data.h"
-#include "escher/impl/model_uniform_writer.h"
 #include "escher/renderer/texture.h"
 #include "escher/shape/mesh.h"
 
@@ -24,10 +23,9 @@ class ModelRenderer {
                 vk::Format lighting_pass_color_format,
                 vk::Format depth_format);
   ~ModelRenderer();
-  void Draw(Stage& stage,
-            Model& model,
-            CommandBuffer* command_buffer,
-            const TexturePtr& illumination_texture);
+  void Draw(const Stage& stage,
+            const ModelDisplayListPtr& display_list,
+            CommandBuffer* command_buffer);
 
   // TODO: remove
   bool hack_use_depth_prepass = false;
@@ -38,8 +36,22 @@ class ModelRenderer {
   // Returns a single-pixel white texture.  Do with it what you will.
   const TexturePtr& white_texture() const { return white_texture_; }
 
- private:
+  impl::ModelPipelineCache* pipeline_cache() const {
+    return pipeline_cache_.get();
+  }
+
+  ModelDisplayListPtr CreateDisplayList(const Stage& stage,
+                                        const Model& model,
+                                        bool sort_by_pipeline,
+                                        bool use_depth_prepass,
+                                        bool use_descriptor_set_per_object,
+                                        uint32_t sample_count,
+                                        const TexturePtr& illumination_texture,
+                                        CommandBuffer* command_buffer);
+
   const MeshPtr& GetMeshForShape(const Shape& shape) const;
+
+ private:
   void CreateRenderPasses(vk::Format pre_pass_color_format,
                           vk::Format lighting_pass_color_format,
                           vk::Format depth_format);
@@ -52,9 +64,6 @@ class ModelRenderer {
   ModelData* model_data_;
 
   std::unique_ptr<impl::ModelPipelineCache> pipeline_cache_;
-
-  // Avoid per-frame heap allocations.
-  std::vector<ModelUniformWriter::PerObjectBinding> per_object_bindings_;
 
   MeshPtr CreateRectangle();
   MeshPtr CreateCircle();

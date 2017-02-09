@@ -27,11 +27,8 @@ class ModelPipelineCache {
                      vk::RenderPass lighting_pass);
   virtual ~ModelPipelineCache() {}
 
-  // The MeshSpecImpl is used in case a new pipeline needs to be created.
-  // TODO: passing the MeshSpecImpl is kludgy, especially since the caller may
-  // need to look it up in a cache.
-  virtual ModelPipeline* GetPipeline(const ModelPipelineSpec& spec,
-                                     const MeshSpecImpl& mesh_spec_impl) = 0;
+  // Get cached pipeline, or return a newly-created one.
+  virtual ModelPipeline* GetPipeline(const ModelPipelineSpec& spec) = 0;
 
  protected:
   vk::Device device_;
@@ -52,14 +49,14 @@ class ModelPipelineCacheOLD : public ModelPipelineCache {
   ModelPipelineCacheOLD(vk::Device device,
                         vk::RenderPass depth_prepass,
                         vk::RenderPass lighting_pass,
-                        ModelData* model_data);
+                        ModelData* model_data,
+                        MeshManager* mesh_manager);
   ~ModelPipelineCacheOLD();
 
   // The MeshSpecImpl is used in case a new pipeline needs to be created.
   // TODO: passing the MeshSpecImpl is kludgy, especially since the caller may
   // need to look it up in a cache.
-  ModelPipeline* GetPipeline(const ModelPipelineSpec& spec,
-                             const MeshSpecImpl& mesh_spec_impl) override;
+  ModelPipeline* GetPipeline(const ModelPipelineSpec& spec) override;
 
   GlslToSpirvCompiler* glsl_compiler() { return &compiler_; }
 
@@ -68,7 +65,9 @@ class ModelPipelineCacheOLD : public ModelPipelineCache {
       const ModelPipelineSpec& spec,
       const MeshSpecImpl& mesh_spec_impl);
 
-  ModelData* model_data_;
+  ModelData* const model_data_;
+  MeshManager* const mesh_manager_;
+
   std::unordered_map<ModelPipelineSpec,
                      std::unique_ptr<ModelPipeline>,
                      Hash<ModelPipelineSpec>>

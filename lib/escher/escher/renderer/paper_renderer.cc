@@ -11,6 +11,7 @@
 #include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/model_data.h"
+#include "escher/impl/model_display_list.h"
 #include "escher/impl/model_pipeline_cache.h"
 #include "escher/impl/model_renderer.h"
 #include "escher/impl/ssdo_sampler.h"
@@ -19,6 +20,13 @@
 #include "escher/renderer/image.h"
 
 namespace escher {
+
+namespace {
+constexpr float kMaxDepth = 1.f;
+// Add a small fudge-factor so that we don't clip objects
+// resting on the stage floor.
+constexpr float kDepthClearValue = kMaxDepth + 0.01f;
+}  // namespace
 
 PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
     : Renderer(escher),
@@ -39,7 +47,7 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
           escher->glsl_compiler())),
       clear_values_({vk::ClearColorValue(
                          std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}}),
-                     vk::ClearDepthStencilValue(1.f, 0)}) {}
+                     vk::ClearDepthStencilValue(kDepthClearValue, 0)}) {}
 
 PaperRenderer::~PaperRenderer() {
   escher_->command_buffer_pool()->Cleanup();
@@ -49,22 +57,28 @@ PaperRenderer::~PaperRenderer() {
 }
 
 void PaperRenderer::DrawDepthPrePass(const FramebufferPtr& framebuffer,
-                                     Stage& stage,
-                                     Model& model) {
+                                     const Stage& stage,
+                                     const Model& model) {
   auto command_buffer = current_frame();
   command_buffer->AddUsedResource(framebuffer);
 
-  model_renderer_->hack_use_depth_prepass = true;
+  impl::ModelDisplayListPtr display_list =
+      model_renderer_->CreateDisplayList(stage, model, sort_by_pipeline_, true,
+                                         true, 1, TexturePtr(), command_buffer);
+  command_buffer->AddUsedResource(display_list);
+
   command_buffer->BeginRenderPass(model_renderer_->depth_prepass(), framebuffer,
                                   clear_values_);
-  model_renderer_->Draw(stage, model, command_buffer, TexturePtr());
+
+  model_renderer_->Draw(stage, display_list, command_buffer);
+
   command_buffer->EndRenderPass();
 }
 
 void PaperRenderer::DrawSsdoPasses(const TexturePtr& depth_in,
                                    const ImagePtr& color_out,
                                    const ImagePtr& color_aux,
-                                   Stage& stage) {
+                                   const Stage& stage) {
   FTL_DCHECK(color_out->width() == color_aux->width() &&
              color_out->height() == color_aux->height());
   uint32_t width = color_out->width();
@@ -155,22 +169,28 @@ void PaperRenderer::UpdateModelRenderer(vk::Format pre_pass_color_format,
   }
 }
 
-void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer,
+void PaperRenderer::DrawLightingPass(uint32_t sample_count,
+                                     const FramebufferPtr& framebuffer,
                                      const TexturePtr& illumination_texture,
-                                     Stage& stage,
-                                     Model& model) {
+                                     const Stage& stage,
+                                     const Model& model) {
   auto command_buffer = current_frame();
+  command_buffer->AddUsedResource(framebuffer);
 
-  model_renderer_->hack_use_depth_prepass = false;
+  impl::ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
+      stage, model, sort_by_pipeline_, false, true, sample_count,
+      illumination_texture, command_buffer);
+  command_buffer->AddUsedResource(display_list);
 
   // Update the clear color from the stage
   vec3 clear_color = stage.clear_color();
   clear_values_[0] = vk::ClearColorValue(
       std::array<float, 4>{{clear_color.x, clear_color.y, clear_color.z, 1.f}});
-
   command_buffer->BeginRenderPass(model_renderer_->lighting_pass(), framebuffer,
-                                  clear_values_.data(), clear_values_.size());
-  model_renderer_->Draw(stage, model, command_buffer, illumination_texture);
+                                  clear_values_);
+
+  model_renderer_->Draw(stage, display_list, command_buffer);
+
   command_buffer->EndRenderPass();
 }
 
@@ -210,8 +230,8 @@ void PaperRenderer::DrawDebugOverlays(const ImagePtr& output,
   }
 }
 
-void PaperRenderer::DrawFrame(Stage& stage,
-                              Model& model,
+void PaperRenderer::DrawFrame(const Stage& stage,
+                              const Model& model,
                               const ImagePtr& color_image_out,
                               const SemaphorePtr& frame_done,
                               FrameRetiredCallback frame_retired_callback) {
@@ -249,11 +269,7 @@ void PaperRenderer::DrawFrame(Stage& stage,
 
   // Compute the illumination and store the result in a texture.
   TexturePtr illumination_texture;
-  if (!enable_lighting_) {
-    // If shadowing is disabled, use a single-pixel white texture to light each
-    // pixel 100%.
-    illumination_texture = model_renderer_->white_texture();
-  } else {
+  if (enable_lighting_) {
     TexturePtr depth_texture = ftl::MakeRefCounted<Texture>(
         depth_image, context_.device, vk::Filter::eNearest,
         vk::ImageAspectFlagBits::eDepth);
@@ -287,10 +303,11 @@ void PaperRenderer::DrawFrame(Stage& stage,
 
   // Use multisampling for final lighting pass.
   {
+    constexpr uint32_t kSampleCount = 4;
+
     ImageInfo info;
     info.width = width;
     info.height = height;
-    constexpr uint32_t kSampleCount = 4;
     info.sample_count = kSampleCount;
 
     // TODO: use Srgb, and make corresponding change to pipelines/render-passes.
@@ -312,7 +329,8 @@ void PaperRenderer::DrawFrame(Stage& stage,
 
     current_frame()->AddUsedResource(multisample_fb);
 
-    DrawLightingPass(multisample_fb, illumination_texture, stage, model);
+    DrawLightingPass(kSampleCount, multisample_fb, illumination_texture, stage,
+                     model);
 
     AddTimestamp("finished lighting pass");
 

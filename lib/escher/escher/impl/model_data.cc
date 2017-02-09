@@ -6,7 +6,6 @@
 
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/gpu_allocator.h"
-#include "escher/impl/model_uniform_writer.h"
 #include "escher/impl/vulkan_utils.h"
 
 namespace escher {

@@ -37,6 +37,9 @@ bool g_show_debug_info = false;
 bool g_enable_lighting = true;
 int g_current_scene = 0;
 bool g_profile_one_frame = false;
+// True if the Model objects should be binned by pipeline, false if they should
+// be rendered in their natural order.
+bool g_sort_by_pipeline = true;
 
 std::unique_ptr<Demo> CreateDemo(bool use_fullscreen) {
   Demo::WindowParams window_params;
@@ -74,6 +77,11 @@ int main(int argc, char** argv) {
                        [&]() { g_enable_lighting = !g_enable_lighting; });
   demo->SetKeyCallback("D", [&]() { g_show_debug_info = !g_show_debug_info; });
   demo->SetKeyCallback("P", [&]() { g_profile_one_frame = true; });
+  demo->SetKeyCallback("S", [&]() {
+    g_sort_by_pipeline = !g_sort_by_pipeline;
+    FTL_LOG(INFO) << "Sort object by pipeline: "
+                  << (g_sort_by_pipeline ? "true" : "false");
+  });
   demo->SetKeyCallback("1", [&]() { g_current_scene = 1; });
   demo->SetKeyCallback("2", [&]() { g_current_scene = 2; });
   demo->SetKeyCallback("3", [&]() { g_current_scene = 3; });
@@ -157,6 +165,7 @@ int main(int argc, char** argv) {
 
       renderer->set_show_debug_info(g_show_debug_info);
       renderer->set_enable_lighting(g_enable_lighting);
+      renderer->set_sort_by_pipeline(g_sort_by_pipeline);
       renderer->set_enable_profiling(g_profile_one_frame);
       g_profile_one_frame = false;
 
