@@ -20,7 +20,7 @@ RankedSuggestion* NextChannel::OnAddSuggestion(
       ranked_suggestions_.empty() ? 0 : ranked_suggestions_.back()->rank + 1;
 
   ranked_suggestions_.emplace_back(new RankedSuggestion());
-  auto& new_entry = *ranked_suggestions_.end();
+  auto& new_entry = ranked_suggestions_.back();
   new_entry->prototype = prototype;
   new_entry->rank = next_rank;
 
