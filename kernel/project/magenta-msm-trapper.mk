@@ -17,4 +17,3 @@ EMBED_USER_BOOTFS:=true
 include project/virtual/user.mk
 include project/virtual/test.mk
 include project/target/msm-trapper.mk
-
