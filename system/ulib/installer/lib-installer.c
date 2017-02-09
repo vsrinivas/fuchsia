@@ -201,12 +201,12 @@ void find_available_space(gpt_device_t* device, size_t blocks_req,
     const uint32_t blocks_resrvd = SIZE_RESERVED / block_size;
     result_out->blk_offset = 0;
     result_out->blk_len = 0;
+
     // if the device has no partitions, we can add one after the reserved
     // section at the front
     if (device->partitions[0] == NULL) {
         result_out->blk_len = block_count - blocks_resrvd * 2;
         result_out->blk_offset = blocks_resrvd;
-        printf("No partitions\n");
         return;
     }
 
@@ -265,14 +265,14 @@ void find_available_space(gpt_device_t* device, size_t blocks_req,
         }
     }
 
-    size_t req_disk_size = sorted_parts[count - 1]->last + blocks_resrvd +
-        blocks_req + 1;
-    // check to see if the size of the disk we would require is less than the
-    // actual size of the disk
-    if (req_disk_size <= block_count) {
-        gap = block_count - req_disk_size + blocks_req;
+    if (sorted_parts[count - 1]->last > block_count) {
+        printf("WARNING: last partition extends beyond end of disk.\n");
+    }
+
+    if (sorted_parts[count - 1]->last + blocks_resrvd + 1 >= block_count) {
+        gap = 0;
     } else {
-        gap = blocks_req - (req_disk_size - block_count);
+        gap = block_count - sorted_parts[count - 1]->last - blocks_resrvd - 1;
     }
 
     if (result_out->blk_len < gap) {
