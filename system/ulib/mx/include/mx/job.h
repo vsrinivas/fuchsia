@@ -12,7 +12,7 @@ class job : public task<job> {
 public:
     job() = default;
 
-    explicit job(handle<void>&& h) : task(h.release()) {}
+    explicit job(handle&& h) : task(h.release()) {}
     job(job&& other) : task(other.release()) {}
 
     job& operator=(job&& other) {

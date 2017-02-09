@@ -5,18 +5,19 @@
 #pragma once
 
 #include <mx/handle.h>
+#include <mx/object.h>
 
 namespace mx {
 
-class event : public handle<event> {
+class event : public object<event> {
 public:
     event() = default;
 
-    explicit event(mx_handle_t value) : handle(value) {}
+    explicit event(mx_handle_t value) : object(value) {}
 
-    explicit event(handle<void>&& h) : handle(h.release()) {}
+    explicit event(handle&& h) : object(h.release()) {}
 
-    event(event&& other) : handle(other.release()) {}
+    event(event&& other) : object(other.release()) {}
 
     event& operator=(event&& other) {
         reset(other.release());

@@ -5,24 +5,25 @@
 #pragma once
 
 #include <mx/handle.h>
+#include <mx/object.h>
 
 namespace mx {
 
-template <typename T = void> class task : public handle<T> {
+template <typename T = void> class task : public object<T> {
 public:
     task() = default;
 
-    explicit task(mx_handle_t value) : handle<T>(value) {}
+    explicit task(mx_handle_t value) : object<T>(value) {}
 
-    explicit task(handle<void>&& h) : handle<T>(h.release()) {}
+    explicit task(handle&& h) : object<T>(h.release()) {}
 
-    task(task&& other) : handle<T>(other.release()) {}
+    task(task&& other) : object<T>(other.release()) {}
 
     mx_status_t resume(uint32_t options) const {
-        return mx_task_resume(handle<T>::get(), options);
+        return mx_task_resume(object<T>::get(), options);
     }
 
-    mx_status_t kill() const { return mx_task_kill(handle<T>::get()); }
+    mx_status_t kill() const { return mx_task_kill(object<T>::get()); }
 };
 
 } // namespace mx

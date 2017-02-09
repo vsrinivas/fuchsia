@@ -5,18 +5,19 @@
 #pragma once
 
 #include <mx/handle.h>
+#include <mx/object.h>
 
 namespace mx {
 
-class log : public handle<log> {
+class log : public object<log> {
 public:
     log() = default;
 
-    explicit log(mx_handle_t value) : handle(value) {}
+    explicit log(mx_handle_t value) : object(value) {}
 
-    explicit log(handle<void>&& h) : handle(h.release()) {}
+    explicit log(handle&& h) : object(h.release()) {}
 
-    log(log&& other) : handle(other.release()) {}
+    log(log&& other) : object(other.release()) {}
 
     log& operator=(log&& other) {
         reset(other.release());

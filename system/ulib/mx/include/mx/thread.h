@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <mx/handle.h>
+#include <mx/object.h>
 #include <mx/task.h>
 
 namespace mx {
@@ -16,7 +16,7 @@ public:
 
     explicit thread(mx_handle_t value) : task(value) {}
 
-    explicit thread(handle<void>&& h) : task(h.release()) {}
+    explicit thread(handle&& h) : task(h.release()) {}
 
     thread(thread&& other) : task(other.release()) {}
 

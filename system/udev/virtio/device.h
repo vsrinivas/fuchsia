@@ -61,19 +61,19 @@ protected:
 
     // handles to pci bits
     pci_protocol_t* pci_ = nullptr;
-    mx::handle<void> pci_config_handle_ = {};
+    mx::handle pci_config_handle_ = {};
     const pci_config_t* pci_config_ = nullptr;
-    mx::handle<void> irq_handle_ = {};
+    mx::handle irq_handle_ = {};
 
     // bar0 memory map or PIO
     uint32_t bar0_pio_base_ = 0;
     uint32_t bar0_size_ = 0; // for now, must be set in subclass before Bind()
     volatile void* bar0_mmio_base_ = nullptr;
-    mx::handle<void> bar0_mmio_handle_;
+    mx::handle bar0_mmio_handle_;
 
     // for non-transitional devices, bar4 holds the main config and control registres
     volatile void* bar4_mmio_base_ = nullptr;
-    mx::handle<void> bar4_mmio_handle_;
+    mx::handle bar4_mmio_handle_;
     struct {
         volatile virtio_pci_common_cfg* common_config;
         volatile uint32_t* isr_status;

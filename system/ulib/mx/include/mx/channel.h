@@ -5,18 +5,19 @@
 #pragma once
 
 #include <mx/handle.h>
+#include <mx/object.h>
 
 namespace mx {
 
-class channel : public handle<channel> {
+class channel : public object<channel> {
 public:
     channel() = default;
 
-    explicit channel(mx_handle_t value) : handle(value) {}
+    explicit channel(mx_handle_t value) : object(value) {}
 
-    explicit channel(handle<void>&& h) : handle(h.release()) {}
+    explicit channel(handle&& h) : object(h.release()) {}
 
-    channel(channel&& other) : handle(other.release()) {}
+    channel(channel&& other) : object(other.release()) {}
 
     channel& operator=(channel&& other) {
         reset(other.release());

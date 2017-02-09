@@ -5,18 +5,19 @@
 #pragma once
 
 #include <mx/handle.h>
+#include <mx/object.h>
 
 namespace mx {
 
-class port : public handle<port> {
+class port : public object<port> {
 public:
     port() = default;
 
-    explicit port(mx_handle_t value) : handle(value) {}
+    explicit port(mx_handle_t value) : object(value) {}
 
-    explicit port(handle<void>&& h) : handle(h.release()) {}
+    explicit port(handle&& h) : object(h.release()) {}
 
-    port(port&& other) : handle(other.release()) {}
+    port(port&& other) : object(other.release()) {}
 
     port& operator=(port&& other) {
         reset(other.release());

@@ -5,18 +5,19 @@
 #pragma once
 
 #include <mx/handle.h>
+#include <mx/object.h>
 
 namespace mx {
 
-class vmo : public handle<vmo> {
+class vmo : public object<vmo> {
 public:
     vmo() = default;
 
-    explicit vmo(mx_handle_t value) : handle(value) {}
+    explicit vmo(mx_handle_t value) : object(value) {}
 
-    explicit vmo(handle<void>&& h) : handle(h.release()) {}
+    explicit vmo(handle&& h) : object(h.release()) {}
 
-    vmo(vmo&& other) : handle(other.release()) {}
+    vmo(vmo&& other) : object(other.release()) {}
 
     vmo& operator=(vmo&& other) {
         reset(other.release());

@@ -20,37 +20,37 @@ class waitset;
 // - job
 // - vmar
 // - vmo
-template <typename T> struct handle_traits {
+template <typename T> struct object_traits {
     static const bool supports_duplication = true;
     static const bool supports_user_signal = true;
     static const bool has_peer_handle = false;
 };
 
-template <> struct handle_traits<channel> {
+template <> struct object_traits<channel> {
     static const bool supports_duplication = false;
     static const bool supports_user_signal = true;
     static const bool has_peer_handle = true;
 };
 
-template <> struct handle_traits<eventpair> {
+template <> struct object_traits<eventpair> {
     static const bool supports_duplication = true;
     static const bool supports_user_signal = true;
     static const bool has_peer_handle = true;
 };
 
-template <> struct handle_traits<log> {
+template <> struct object_traits<log> {
     static const bool supports_duplication = true;
     static const bool supports_user_signal = false;
     static const bool has_peer_handle = false;
 };
 
-template <> struct handle_traits<socket> {
+template <> struct object_traits<socket> {
     static const bool supports_duplication = true;
     static const bool supports_user_signal = true;
     static const bool has_peer_handle = true;
 };
 
-template <> struct handle_traits<waitset> {
+template <> struct object_traits<waitset> {
     static const bool supports_duplication = false;
     static const bool supports_user_signal = true;
     static const bool has_peer_handle = false;

@@ -26,7 +26,7 @@ static mx_status_t validate_handle(mx_handle_t handle) {
 
 static bool handle_invalid_test() {
     BEGIN_TEST;
-    mx::handle<void> handle;
+    mx::handle handle;
     // A default constructed handle is invalid.
     ASSERT_EQ(handle.release(), MX_HANDLE_INVALID, "");
     END_TEST;
@@ -38,7 +38,7 @@ static bool handle_close_test() {
     ASSERT_EQ(mx_event_create(0u, &raw_event), NO_ERROR, "");
     ASSERT_EQ(validate_handle(raw_event), NO_ERROR, "");
     {
-        mx::handle<void> handle(raw_event);
+        mx::handle handle(raw_event);
     }
     // Make sure the handle was closed.
     ASSERT_EQ(validate_handle(raw_event), ERR_BAD_HANDLE, "");
@@ -50,7 +50,7 @@ static bool handle_move_test() {
     mx::event event;
     // Check move semantics.
     ASSERT_EQ(mx::event::create(0u, &event), NO_ERROR, "");
-    mx::handle<void> handle(mxtl::move(event));
+    mx::handle handle(mxtl::move(event));
     ASSERT_EQ(event.release(), MX_HANDLE_INVALID, "");
     ASSERT_EQ(validate_handle(handle.get()), NO_ERROR, "");
     END_TEST;
@@ -59,9 +59,9 @@ static bool handle_move_test() {
 static bool handle_duplicate_test() {
     BEGIN_TEST;
     mx_handle_t raw_event;
-    mx::handle<void> dup;
+    mx::handle dup;
     ASSERT_EQ(mx_event_create(0u, &raw_event), NO_ERROR, "");
-    mx::handle<void> handle(raw_event);
+    mx::handle handle(raw_event);
     ASSERT_EQ(handle.duplicate(MX_RIGHT_SAME_RIGHTS, &dup), NO_ERROR, "");
     // The duplicate must be valid as well as the original.
     ASSERT_EQ(validate_handle(dup.get()), NO_ERROR, "");
@@ -72,10 +72,10 @@ static bool handle_duplicate_test() {
 static bool handle_replace_test() {
     BEGIN_TEST;
     mx_handle_t raw_event;
-    mx::handle<void> rep;
+    mx::handle rep;
     ASSERT_EQ(mx_event_create(0u, &raw_event), NO_ERROR, "");
     {
-        mx::handle<void> handle(raw_event);
+        mx::handle handle(raw_event);
         ASSERT_EQ(handle.replace(MX_RIGHT_SAME_RIGHTS, &rep), NO_ERROR, "");
         ASSERT_EQ(handle.release(), MX_HANDLE_INVALID, "");
     }

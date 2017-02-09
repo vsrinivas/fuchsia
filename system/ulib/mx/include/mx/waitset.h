@@ -5,18 +5,19 @@
 #pragma once
 
 #include <mx/handle.h>
+#include <mx/object.h>
 
 namespace mx {
 
-class waitset : public handle<waitset> {
+class waitset : public object<waitset> {
 public:
     waitset() = default;
 
-    explicit waitset(mx_handle_t value) : handle(value) {}
+    explicit waitset(mx_handle_t value) : object(value) {}
 
-    explicit waitset(handle<void>&& h) : handle(h.release()) {}
+    explicit waitset(handle&& h) : object(h.release()) {}
 
-    waitset(waitset&& other) : handle(other.release()) {}
+    waitset(waitset&& other) : object(other.release()) {}
 
     waitset& operator=(waitset&& other) {
         reset(other.release());

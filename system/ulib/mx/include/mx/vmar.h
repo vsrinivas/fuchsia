@@ -4,20 +4,20 @@
 
 #pragma once
 
-#include <mx/handle.h>
+#include <mx/object.h>
 #include <mx/vmo.h>
 
 namespace mx {
 
 // A wrapper for handles to VMARs.  Note that vmar::~vmar() does not execute
 // vmar::destroy(), it just closes the handle.
-class vmar : public handle<vmar> {
+class vmar : public object<vmar> {
 public:
     vmar() = default;
 
-    explicit vmar(mx_handle_t value) : handle(value) {}
+    explicit vmar(mx_handle_t value) : object(value) {}
 
-    explicit vmar(handle<void>&& h) : handle(h.release()) {}
+    explicit vmar(handle&& h) : object(h.release()) {}
 
     vmar(vmar&& other) : vmar(other.release()) {}
 

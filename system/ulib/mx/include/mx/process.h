@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <mx/handle.h>
+#include <mx/object.h>
 #include <mx/task.h>
 #include <mx/vmar.h>
 #include <mx/vmo.h>
@@ -19,7 +19,7 @@ public:
 
     explicit process(mx_handle_t value) : task(value) {}
 
-    explicit process(handle<void>&& h) : task(h.release()) {}
+    explicit process(handle&& h) : task(h.release()) {}
 
     process(process&& other) : task(other.release()) {}
 

@@ -5,18 +5,19 @@
 #pragma once
 
 #include <mx/handle.h>
+#include <mx/object.h>
 
 namespace mx {
 
-class socket : public handle<socket> {
+class socket : public object<socket> {
 public:
     socket() = default;
 
-    explicit socket(mx_handle_t value) : handle(value) {}
+    explicit socket(mx_handle_t value) : object(value) {}
 
-    explicit socket(handle<void>&& h) : handle(h.release()) {}
+    explicit socket(handle&& h) : object(h.release()) {}
 
-    socket(socket&& other) : handle(other.release()) {}
+    socket(socket&& other) : object(other.release()) {}
 
     socket& operator=(socket&& other) {
         reset(other.release());
