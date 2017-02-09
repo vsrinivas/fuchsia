@@ -100,7 +100,7 @@ void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer,
 
     uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + page_count];
     EXPECT_EQ(pte & ~(PAGE_SIZE - 1), scratch_bus_addr);
-    EXPECT_FALSE(pte & 0x1); // page present
+    EXPECT_TRUE(pte & 0x1);  // page present
     EXPECT_TRUE(pte & 0x3);  // rw
     EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
 }
