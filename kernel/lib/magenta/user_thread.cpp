@@ -334,6 +334,18 @@ void UserThread::Kill() {
     SetState(State::DYING);
 }
 
+status_t UserThread::Suspend() {
+    LTRACE_ENTRY_OBJ;
+
+    return thread_suspend(&thread_);
+}
+
+status_t UserThread::Resume() {
+    LTRACE_ENTRY_OBJ;
+
+    return thread_resume(&thread_);
+}
+
 void UserThread::DispatcherClosed() {
     canary_.Assert();
 
@@ -404,14 +416,40 @@ void UserThread::Exiting() {
     LTRACE_EXIT_OBJ;
 }
 
+void UserThread::Suspending() {
+    LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(&state_lock_);
+
+    DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
+    if (state_ == State::RUNNING) {
+        SetState(State::SUSPENDED);
+    }
+
+    LTRACE_EXIT_OBJ;
+}
+
+void UserThread::Resuming() {
+    LTRACE_ENTRY_OBJ;
+
+    AutoLock lock(&state_lock_);
+
+    DEBUG_ASSERT(state_ == State::SUSPENDED || state_ == State::DYING);
+    if (state_ == State::SUSPENDED) {
+        SetState(State::RUNNING);
+    }
+
+    LTRACE_EXIT_OBJ;
+}
+
 // low level LK callback in thread's context just before exiting
 void UserThread::ThreadUserCallback(enum thread_user_state_change new_state, void* arg) {
     UserThread* t = reinterpret_cast<UserThread*>(arg);
 
     switch (new_state) {
         case THREAD_USER_STATE_EXIT: t->Exiting(); return;
-        // TODO(teisenbe): Remove this default in subsequent patch
-        default: break;
+        case THREAD_USER_STATE_SUSPEND: t->Suspending(); return;
+        case THREAD_USER_STATE_RESUME: t->Resuming(); return;
     }
 }
 
@@ -734,6 +772,8 @@ const char* StateToString(UserThread::State state) {
         return "initialized";
     case UserThread::State::RUNNING:
         return "running";
+    case UserThread::State::SUSPENDED:
+        return "suspended";
     case UserThread::State::DYING:
         return "dying";
     case UserThread::State::DEAD:
