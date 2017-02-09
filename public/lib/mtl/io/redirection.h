@@ -5,6 +5,7 @@
 #ifndef LIB_MTL_IO_REDIRECTION_H_
 #define LIB_MTL_IO_REDIRECTION_H_
 
+#include "mx/handle.h"
 #include "mx/socket.h"
 
 namespace mtl {
@@ -15,7 +16,7 @@ struct StartupHandle {
   uint32_t id;
 
   // The startup handle value.
-  mx::handle<void> handle;
+  mx::handle handle;
 };
 
 // Creates a socket and returns one end of it along with a |StartupHandle|
