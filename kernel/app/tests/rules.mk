@@ -21,6 +21,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/tests.c \
     $(LOCAL_DIR)/thread_tests.c \
     $(LOCAL_DIR)/alloc_checker_tests.cpp \
+    $(LOCAL_DIR)/timer_tests.c \
 
 
 MODULE_DEPS += \

@@ -18,6 +18,7 @@ int sleep_tests(void);
 int port_tests(void);
 void printf_tests(void);
 void clock_tests(void);
+void timer_tests(void);
 void benchmarks(void);
 int fibo(int argc, const cmd_args *argv);
 int spinner(int argc, const cmd_args *argv);
