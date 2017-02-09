@@ -22,7 +22,7 @@ struct ViewContext {
   modular::ApplicationContext* application_context;
   ViewManagerPtr view_manager;
   fidl::InterfaceRequest<ViewOwner> view_owner_request;
-  fidl::InterfaceRequest<modular::ServiceProvider> creator_services;
+  fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services;
 };
 
 // A callback to create a view in response to a call to
@@ -44,7 +44,7 @@ class ViewProviderService : public ViewProvider {
   // |ViewProvider|
   void CreateView(fidl::InterfaceRequest<ViewOwner> view_owner_request,
                   fidl::InterfaceRequest<modular::ServiceProvider>
-                      creator_services) override;
+                      view_services) override;
 
  private:
   modular::ApplicationContext* application_context_;
