@@ -93,6 +93,7 @@ void x86_feature_debug(void);
 
 /* add feature bits to test here */
 #define X86_FEATURE_SSE3         X86_CPUID_BIT(0x1, 2, 0)
+#define X86_FEATURE_VMX          X86_CPUID_BIT(0x1, 2, 5)
 #define X86_FEATURE_SSSE3        X86_CPUID_BIT(0x1, 2, 9)
 #define X86_FEATURE_SSE4_1       X86_CPUID_BIT(0x1, 2, 19)
 #define X86_FEATURE_SSE4_2       X86_CPUID_BIT(0x1, 2, 20)
