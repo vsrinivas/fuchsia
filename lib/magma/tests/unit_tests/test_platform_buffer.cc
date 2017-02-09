@@ -66,15 +66,15 @@ public:
         EXPECT_TRUE(buffer->UnpinPages(0, num_pages));
 
         uint64_t bus_addr;
-        EXPECT_TRUE(buffer->MapPageBus(0, &bus_addr));
-        EXPECT_TRUE(buffer->MapPageBus(num_pages - 1, &bus_addr));
+        EXPECT_TRUE(buffer->MapPageRangeBus(0, 1, &bus_addr));
+        EXPECT_TRUE(buffer->MapPageRangeBus(num_pages - 1, 1, &bus_addr));
 
         EXPECT_TRUE(buffer->UnmapPageCpu(0));
-        EXPECT_TRUE(buffer->UnmapPageBus(0));
+        EXPECT_TRUE(buffer->UnmapPageRangeBus(0, 1));
 
         if (size > PAGE_SIZE) {
             EXPECT_TRUE(buffer->UnmapPageCpu(num_pages - 1));
-            EXPECT_TRUE(buffer->UnmapPageBus(num_pages - 1));
+            EXPECT_TRUE(buffer->UnmapPageRangeBus(num_pages - 1, 1));
         }
 
         // unpin last
@@ -140,7 +140,7 @@ public:
 
         for (uint32_t i = 0; i < num_pages; i++) {
             uint64_t phys_addr = 0;
-            EXPECT_FALSE(buffer->MapPageBus(i, &phys_addr));
+            EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
         }
 
         EXPECT_FALSE(buffer->UnpinPages(0, num_pages));
@@ -149,7 +149,7 @@ public:
 
         for (uint32_t i = 0; i < num_pages; i++) {
             uint64_t phys_addr = 0;
-            EXPECT_TRUE(buffer->MapPageBus(i, &phys_addr));
+            EXPECT_TRUE(buffer->MapPageRangeBus(i, 1, &phys_addr));
             EXPECT_NE(phys_addr, 0u);
         }
 
@@ -162,10 +162,10 @@ public:
         for (uint32_t i = 0; i < num_pages; i++) {
             uint64_t phys_addr = 0;
             if (i == 0) {
-                EXPECT_TRUE(buffer->MapPageBus(i, &phys_addr));
-                EXPECT_TRUE(buffer->UnmapPageBus(i));
+                EXPECT_TRUE(buffer->MapPageRangeBus(i, 1, &phys_addr));
+                EXPECT_TRUE(buffer->UnmapPageRangeBus(i, 1));
             } else
-                EXPECT_FALSE(buffer->MapPageBus(i, &phys_addr));
+                EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
         }
 
         EXPECT_FALSE(buffer->UnpinPages(0, num_pages));
@@ -185,10 +185,10 @@ public:
         for (uint32_t i = 0; i < num_pages; i++) {
             uint64_t phys_addr = 0;
             if (i >= range_start && i < range_start + range_pages) {
-                EXPECT_TRUE(buffer->MapPageBus(i, &phys_addr));
-                EXPECT_TRUE(buffer->UnmapPageBus(i));
+                EXPECT_TRUE(buffer->MapPageRangeBus(i, 1, &phys_addr));
+                EXPECT_TRUE(buffer->UnmapPageRangeBus(i, 1));
             } else
-                EXPECT_FALSE(buffer->MapPageBus(i, &phys_addr));
+                EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
         }
 
         // Unpin middle page.
@@ -198,17 +198,17 @@ public:
         for (uint32_t i = 0; i < num_pages; i++) {
             uint64_t phys_addr = 0;
             if (i >= range_start && i < range_start + range_pages) {
-                EXPECT_TRUE(buffer->MapPageBus(i, &phys_addr));
-                EXPECT_TRUE(buffer->UnmapPageBus(i));
+                EXPECT_TRUE(buffer->MapPageRangeBus(i, 1, &phys_addr));
+                EXPECT_TRUE(buffer->UnmapPageRangeBus(i, 1));
             } else
-                EXPECT_FALSE(buffer->MapPageBus(i, &phys_addr));
+                EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
         }
 
         EXPECT_TRUE(buffer->UnpinPages(range_start, range_pages));
 
         for (uint32_t i = 0; i < num_pages; i++) {
             uint64_t phys_addr = 0;
-            EXPECT_FALSE(buffer->MapPageBus(i, &phys_addr));
+            EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
         }
     }
 };

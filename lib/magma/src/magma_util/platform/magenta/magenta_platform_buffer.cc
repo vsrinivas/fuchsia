@@ -167,8 +167,9 @@ public:
     bool MapPageCpu(uint32_t page_index, void** addr_out) override;
     bool UnmapPageCpu(uint32_t page_index) override;
 
-    bool MapPageBus(uint32_t page_index, uint64_t* addr_out) override;
-    bool UnmapPageBus(uint32_t page_index) override;
+    bool MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
+                         uint64_t addr_out[]) override;
+    bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) override;
 
     uint32_t num_pages() { return size_ / PAGE_SIZE; }
 
@@ -350,25 +351,29 @@ bool MagentaPlatformBuffer::UnmapPageCpu(uint32_t page_index)
     return true;
 }
 
-bool MagentaPlatformBuffer::MapPageBus(uint32_t page_index, uint64_t* addr_out)
+bool MagentaPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
+                                            uint64_t addr_out[])
 {
-    if (pin_count_array_->pin_count(page_index) == 0) {
-        DRETF(false, "page_index %u not pinned", page_index);
-        return false;
+    static_assert(sizeof(mx_paddr_t) == sizeof(uint64_t), "unexpected sizeof(mx_paddr_t)");
+
+    for (uint32_t i = start_page_index; i < start_page_index + page_count; i++) {
+        if (pin_count_array_->pin_count(i) == 0)
+            return DRETF(false, "zero pin_count for page %u", i);
     }
 
-    mx_paddr_t paddr[1];
-
     mx_status_t status =
-        vmo_.op_range(MX_VMO_OP_LOOKUP, page_index * PAGE_SIZE, PAGE_SIZE, paddr, sizeof(paddr));
+        vmo_.op_range(MX_VMO_OP_LOOKUP, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
+                      addr_out, page_count * sizeof(addr_out[0]));
     if (status != NO_ERROR)
         return DRETF(false, "failed to lookup vmo");
 
-    *addr_out = paddr[0];
     return true;
 }
 
-bool MagentaPlatformBuffer::UnmapPageBus(uint32_t page_index) { return true; }
+bool MagentaPlatformBuffer::UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count)
+{
+    return true;
+}
 
 bool PlatformBuffer::IdFromHandle(uint32_t handle, uint64_t* id_out)
 {

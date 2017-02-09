@@ -38,8 +38,9 @@ public:
     virtual bool MapPageCpu(uint32_t page_index, void** addr_out) = 0;
     virtual bool UnmapPageCpu(uint32_t page_index) = 0;
 
-    virtual bool MapPageBus(uint32_t page_index, uint64_t* addr_out) = 0;
-    virtual bool UnmapPageBus(uint32_t page_index) = 0;
+    virtual bool MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
+                                 uint64_t addr_out[]) = 0;
+    virtual bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) = 0;
 };
 
 }  // namespace magma
