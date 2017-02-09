@@ -3,16 +3,12 @@
 # found in the LICENSE file.
 
 group("modular") {
+  testonly = true
+
   deps = [
     "examples",
     "services",
-    "src/bootstrap",
-    "src/component_manager",
-    "src/device_runner:all",
-    "src/run_component",
-    "src/story_runner:all",
-    "src/test_runner",
-    "src/user_runner:all",
+    "src",
     "tests",
   ]
 }
