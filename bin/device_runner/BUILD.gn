@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/flatbuffers/flatbuffer.gni")
+
 group("all") {
   deps = [
     ":device_runner",
@@ -45,6 +47,12 @@ source_set("password_hash") {
   ]
 }
 
+flatbuffer("users") {
+  sources = [
+    "users.fbs",
+  ]
+}
+
 executable("dummy_device_shell") {
   sources = [
     "dummy_device_shell.cc",
@@ -52,6 +60,7 @@ executable("dummy_device_shell") {
 
   deps = [
     ":password_hash",
+    ":users",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/device",
