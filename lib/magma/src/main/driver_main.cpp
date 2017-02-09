@@ -183,7 +183,7 @@ static mx_protocol_device_t intel_i915_device_proto = {
 
 // implement driver object:
 
-static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
+static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
 {
     DLOG("intel_i915_bind start mx_device %p", dev);
 
