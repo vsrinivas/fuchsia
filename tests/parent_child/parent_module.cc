@@ -15,8 +15,7 @@ using modular::testing::TestPoint;
 
 namespace {
 
-constexpr int kStopMilliseconds = 500;
-constexpr int kDoneMilliseconds = 500;
+constexpr int kTimeoutMilliseconds = 5000;
 
 constexpr char kChildModule[] = "file:///tmp/tests/child_module";
 
@@ -27,7 +26,9 @@ class ParentApp
     modular::testing::Init(application_context());
   }
 
-  ~ParentApp() override = default;
+  ~ParentApp() override {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  }
 
  private:
   // |Module|
@@ -37,21 +38,29 @@ class ParentApp
       fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
       override {
+    initialized_.Pass();
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
+
     StartModule(kChildModule);
+
+    modular::testing::GetStore()->Get("child_module_init", [this](const fidl::String&){
+      module_->Stop([this] {
+        callback_.Pass();
+        story_->Done();
+      });
+    });
+
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { StopModule(); },
-        ftl::TimeDelta::FromMilliseconds(kStopMilliseconds));
-    initialized_.Pass();
+        [this] { delete this; },
+        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    modular::testing::Teardown();
     done();
+    delete this;
   }
 
   void StartModule(const std::string& module_query) {
@@ -62,12 +71,6 @@ class ParentApp
                         module_.NewRequest(), module_view.NewRequest());
   }
 
-  void StopModule() {
-    module_->Stop([this] { callback_.Pass(); });
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { story_->Done(); },
-        ftl::TimeDelta::FromMilliseconds(kDoneMilliseconds));
-  }
 
   modular::StoryPtr story_;
   modular::LinkPtr link_;
@@ -82,8 +85,9 @@ class ParentApp
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  ParentApp app;
+  new ParentApp();
   loop.Run();
-  TEST_PASS("Parent module exited normally");
+  TEST_PASS("Parent module exited");
+  modular::testing::Teardown();
   return 0;
 }

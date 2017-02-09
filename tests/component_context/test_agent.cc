@@ -17,7 +17,9 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
  public:
   TestAgentApp() { modular::testing::Init(application_context()); }
 
-  ~TestAgentApp() override = default;
+  ~TestAgentApp() override {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  }
 
  private:
   // |Agent|
@@ -31,7 +33,7 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
       const fidl::String& requestor_url,
       fidl::InterfaceRequest<modular::ServiceProvider> services) override {
     connected_.Pass();
-    modular::testing::GetStore()->Put("test_agent_connected", "", [] { });
+    modular::testing::GetStore()->Put("test_agent_connected", "", [] {});
   }
 
   // |Agent|
@@ -41,23 +43,22 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
-    stopped_.Pass();
+    modular::testing::GetStore()->Put("test_agent_stopped", "", [] {});
     callback();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    delete this;
   }
 
   TestPoint initialized_{"Test agent initialized"};
-  TestPoint connected_{"Test agent connected"};
-  TestPoint stopped_{"Test agent stopped"};
+  TestPoint connected_{"Test agent received connection"};
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  TestAgentApp app;
+  new TestAgentApp();
   loop.Run();
-  modular::testing::Teardown();
-  TEST_PASS("Test agent exited normally");
+  TEST_PASS("Test agent exited");
+  modular::testing::Done();
   return 0;
 }

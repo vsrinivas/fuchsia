@@ -23,10 +23,14 @@ class TestRunnerStoreImpl : public TestRunnerStore {
  private:
   // |TestRunnerStore|
   void Get(const fidl::String& key, const GetCallback& cb) override;
+  // |TestRunnerStore|
   void Put(const fidl::String& key, const fidl::String& value,
            const PutCallback& cb) override;
 
-  std::map<fidl::String, fidl::String> store_;
+  void MaybeNotify(const std::string& key);
+
+  std::map<fidl::String, std::queue<GetCallback>> get_queue_;
+  std::map<fidl::String, std::queue<std::string>> store_;
   fidl::BindingSet<TestRunnerStore> binding_set_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerStoreImpl);

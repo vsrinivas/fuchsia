@@ -13,15 +13,18 @@ using modular::testing::TestPoint;
 
 namespace {
 
-// TODO: This timer is high since it might take long to start a process.
-constexpr int kStopMilliseconds = 2000;
+// This is how long we wait for the test to finish before we timeout and tear
+// down our test.
+constexpr int kTimeoutMilliseconds = 5000;
 constexpr char kTestAgent[] = "file:///tmp/tests/component_context_test_agent";
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
   ParentApp() { modular::testing::Init(application_context()); }
 
-  ~ParentApp() override = default;
+  ~ParentApp() override {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  }
 
  private:
   // |Module|
@@ -43,26 +46,32 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     ctx->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                         agent_controller_.NewRequest());
 
-    // Start a timer to call Story.Done.
+    modular::testing::GetStore()->Get(
+        "test_agent_connected", [this](const fidl::String&) {
+          agent_connected_.Pass();
+
+          // Closing the agent controller should trigger the agent to stop.
+          agent_controller_.reset();
+
+          modular::testing::GetStore()->Get("test_agent_stopped",
+                                            [this](const fidl::String&) {
+                                              agent_stopped_.Pass();
+                                              story_->Done();
+                                            });
+        });
+
+    // Start a timer to call Story.Done in case the test agent misbehaves and we
+    // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { story_->Done(); },
-        ftl::TimeDelta::FromMilliseconds(kStopMilliseconds));
+        [this] { delete this; },
+        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-    modular::testing::GetStore()->Get(
-        "test_agent_connected", [done](const fidl::String& val) {
-          if (val.is_null()) {
-            TEST_FAIL("Could not connect to test agent");
-          } else {
-            TEST_PASS("Connected to test agent");
-          }
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
-          modular::testing::Teardown();
-          done();
-        });
+    done();
+    delete this;
   }
 
   modular::StoryPtr story_;
@@ -71,14 +80,17 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
 
   TestPoint initialized_{"Root module initialized"};
   TestPoint stopped_{"Root module stopped"};
+  TestPoint agent_connected_{"Agent accepted connection"};
+  TestPoint agent_stopped_{"Agent stopped"};
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  ParentApp app;
+  new ParentApp();
   loop.Run();
-  TEST_PASS("Root module exited normally");
+  TEST_PASS("Root module exited");
+  modular::testing::Teardown();
   return 0;
 }

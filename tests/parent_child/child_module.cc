@@ -19,7 +19,9 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
     modular::testing::Init(application_context());
   }
 
-  ~ChildApp() override = default;
+  ~ChildApp() override {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  }
 
  private:
   // |Module|
@@ -32,14 +34,15 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
     initialized_.Pass();
+    modular::testing::GetStore()->Put("child_module_init", "", []{});
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
     stopped_.Pass();
-    modular::testing::Done();
+    modular::testing::GetStore()->Put("child_module_stop", "", []{});
     done();
+    delete this;
   }
 
   modular::StoryPtr story_;
@@ -53,11 +56,9 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  ChildApp app;
+  new ChildApp();
   loop.Run();
-  // TODO(vardhan): There is a race between module termination killing this
-  // process, and this process completing itself, so this may not actually
-  // print.
-  TEST_PASS("Child module exited normally");
+  TEST_PASS("Child module exited");
+  modular::testing::Done();
   return 0;
 }

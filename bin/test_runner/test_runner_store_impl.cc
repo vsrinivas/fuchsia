@@ -15,15 +15,29 @@ void TestRunnerStoreImpl::AddBinding(
 }
 
 void TestRunnerStoreImpl::Get(const fidl::String& key, const GetCallback& cb) {
-  auto it = store_.find(key);
-  cb(it == store_.end() ? nullptr : it->second);
+  get_queue_[key].push(cb);
+  MaybeNotify(key);
 }
 
 void TestRunnerStoreImpl::Put(const fidl::String& key,
                               const fidl::String& value,
                               const PutCallback& cb) {
-  store_[key] = value;
+  store_[key].push(value);
+  MaybeNotify(key);
   cb();
+}
+
+void TestRunnerStoreImpl::MaybeNotify(const std::string& key) {
+  auto store_it = store_.find(key);
+  if (store_it == store_.end())
+    return;
+
+  auto get_queue_it = get_queue_.find(key);
+  if (get_queue_it != get_queue_.end()) {
+    get_queue_it->second.front()(store_it->second.front());
+    get_queue_it->second.pop();
+    store_it->second.pop();
+  }
 }
 
 }  // namespace testing
