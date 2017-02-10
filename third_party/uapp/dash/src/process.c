@@ -224,7 +224,7 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
 int process_await_termination(mx_handle_t process, bool blocking) {
     mx_time_t timeout = blocking ? MX_TIME_INFINITE : 0;
     mx_signals_t signals_observed;
-    mx_status_t status = mx_handle_wait_one(process, MX_TASK_TERMINATED, timeout, &signals_observed);
+    mx_status_t status = mx_object_wait_one(process, MX_TASK_TERMINATED, timeout, &signals_observed);
     if (status != NO_ERROR && status != ERR_TIMED_OUT)
         return status;
     if (!blocking && status == ERR_TIMED_OUT && !signals_observed)

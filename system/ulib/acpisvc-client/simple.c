@@ -25,7 +25,7 @@ static mx_status_t wait_for_message(
     mx_handle_t* handles, size_t* num_handles) {
 
     mx_signals_t pending;
-    mx_status_t status = mx_handle_wait_one(h,
+    mx_status_t status = mx_object_wait_one(h,
                                             MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                             MX_TIME_INFINITE,
                                             &pending);

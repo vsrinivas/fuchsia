@@ -478,7 +478,7 @@ static mx_status_t mxrio_reply_channel_call(mxrio_t* rio, mxrio_msg_t* msg,
     }
 
     // Wait
-    mx_handle_wait_one(h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
+    mx_object_wait_one(h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
 
     // Attempt to read the callback response
     memset(info, 0xfe, sizeof(*info));
@@ -759,7 +759,7 @@ static ssize_t mxsio_read_stream(mxio_t* io, void* data, size_t len) {
             return 0;
         } else if (r == ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
-            r = mx_handle_wait_one(rio->h2,
+            r = mx_object_wait_one(rio->h2,
                                    MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
@@ -793,7 +793,7 @@ static ssize_t mxsio_write_stream(mxio_t* io, const void* data, size_t len) {
             // even if the socket is only half-closed for read.
             // TODO: how to detect if the write direction is closed?
             mx_signals_t pending;
-            r = mx_handle_wait_one(rio->h2,
+            r = mx_object_wait_one(rio->h2,
                                    MX_SOCKET_WRITABLE,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
@@ -870,7 +870,7 @@ static void mxsio_wait_begin_stream(mxio_t* io, uint32_t events, mx_handle_t* ha
         // check the connection state
         mx_signals_t observed;
         mx_status_t r;
-        r = mx_handle_wait_one(rio->h2, MXSIO_SIGNAL_CONNECTED, 0u,
+        r = mx_object_wait_one(rio->h2, MXSIO_SIGNAL_CONNECTED, 0u,
                                &observed);
         if (r == NO_ERROR || r == ERR_TIMED_OUT) {
             if (observed & MXSIO_SIGNAL_CONNECTED) {
@@ -976,7 +976,7 @@ static ssize_t mxsio_rx_dgram(mxio_t* io, void* buf, size_t buflen) {
         } else if (r == ERR_SHOULD_WAIT &&
                    !(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
             mx_signals_t pending;
-            r = mx_handle_wait_one(rio->h2,
+            r = mx_object_wait_one(rio->h2,
                                    MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {

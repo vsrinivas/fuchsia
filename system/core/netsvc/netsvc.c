@@ -173,7 +173,7 @@ static int ipc_thread(void* arg) {
 
     printf("netsvc: waiting for ipc signal\n");
     mx_signals_t signals = 0;
-    mx_status_t status = mx_handle_wait_one(ipc_handle, MX_USER_SIGNAL_0, MX_TIME_INFINITE,
+    mx_status_t status = mx_object_wait_one(ipc_handle, MX_USER_SIGNAL_0, MX_TIME_INFINITE,
             &signals);
     if (status != NO_ERROR) {
         printf("netsvc: failed while waiting for ipc ready: %d\n", status);
@@ -191,7 +191,7 @@ static int ipc_thread(void* arg) {
         uint32_t n = sizeof(data);
         if ((status = mx_channel_read(ipc_handle, 0, data, n, &n, NULL, 0, NULL)) < 0) {
             if (status == ERR_SHOULD_WAIT) {
-                mx_handle_wait_one(ipc_handle, MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL);
+                mx_object_wait_one(ipc_handle, MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL);
                 continue;
             }
             printf("netsvc: ipc read failed: %d\n", status);

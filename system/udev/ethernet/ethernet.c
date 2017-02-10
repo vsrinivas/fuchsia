@@ -206,7 +206,7 @@ static int eth_tx_thread(void* arg) {
     for (;;) {
         if ((status = mx_fifo_read(edev->tx_fifo, entries, sizeof(entries), &count)) < 0) {
             if (status == ERR_SHOULD_WAIT) {
-                if ((status = mx_handle_wait_one(edev->tx_fifo,
+                if ((status = mx_object_wait_one(edev->tx_fifo,
                                                  MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
                                                  MX_TIME_INFINITE, NULL)) < 0) {
                     printf("eth: tx_fifo: error waiting: %d\n", status);

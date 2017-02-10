@@ -90,7 +90,7 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
     if (options->wait_until_ready) {
         // Wait until the filesystem is ready to take incoming requests
         mx_signals_t observed;
-        status = mx_handle_wait_one(mountpoint, MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
+        status = mx_object_wait_one(mountpoint, MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
                                     MX_TIME_INFINITE, &observed);
         if ((status != NO_ERROR) || (observed & MX_CHANNEL_PEER_CLOSED)) {
             status = (status != NO_ERROR) ? status : ERR_BAD_STATE;

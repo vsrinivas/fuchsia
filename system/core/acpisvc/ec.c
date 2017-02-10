@@ -32,7 +32,7 @@ static struct {
 
 static int acpi_ec_thread(void* arg) {
     while (1) {
-        mx_status_t mx_status = mx_handle_wait_one(pending_sci_evt,
+        mx_status_t mx_status = mx_object_wait_one(pending_sci_evt,
                                                    MX_EVENT_SIGNALED,
                                                    MX_TIME_INFINITE,
                                                    NULL);

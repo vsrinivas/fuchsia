@@ -37,7 +37,7 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
 mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, char name[MXIO_MAX_FILENAME + 1]) {
     mx_status_t status;
 
-    if ((status = mx_handle_wait_one(watcher->h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+    if ((status = mx_object_wait_one(watcher->h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                      MX_TIME_INFINITE, NULL)) < 0) {
         return status;
     }

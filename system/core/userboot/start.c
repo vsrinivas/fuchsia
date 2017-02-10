@@ -251,9 +251,9 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (o.value[OPTION_SHUTDOWN] != NULL) {
         print(log, "Waiting for ", o.value[OPTION_FILENAME], " to exit...\n",
               NULL);
-        status = mx_handle_wait_one(
+        status = mx_object_wait_one(
             proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
-        check(log, status, "mx_handle_wait_one on process failed\n");
+        check(log, status, "mx_object_wait_one on process failed\n");
         do_shutdown(log, root_resource_handle);
     }
 

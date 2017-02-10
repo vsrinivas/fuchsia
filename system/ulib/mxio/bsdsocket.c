@@ -90,7 +90,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     mx_handle_t h;
     mx_signals_t sigs;
     io->ops->wait_begin(io, events, &h, &sigs);
-    r = mx_handle_wait_one(h, sigs, MX_TIME_INFINITE, &sigs);
+    r = mx_object_wait_one(h, sigs, MX_TIME_INFINITE, &sigs);
     io->ops->wait_end(io, sigs, &events);
     if (!(events & EPOLLOUT)) {
         mxio_release(io);
@@ -164,7 +164,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
             mx_handle_t h;
             mx_signals_t sigs;
             io->ops->wait_begin(io, events, &h, &sigs);
-            r = mx_handle_wait_one(h, sigs, MX_TIME_INFINITE, &sigs);
+            r = mx_object_wait_one(h, sigs, MX_TIME_INFINITE, &sigs);
             io->ops->wait_end(io, sigs, &events);
             if (!(events & EPOLLIN)) {
                 mxio_release(io);

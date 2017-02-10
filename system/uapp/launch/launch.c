@@ -277,8 +277,8 @@ int main(int argc, char** argv) {
     // The launchpad is done.  Clean it up.
     launchpad_destroy(lp);
 
-    status = mx_handle_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
-    check("mx_handle_wait_one", status);
+    status = mx_object_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
+    check("mx_object_wait_one", status);
 
     mx_info_process_t info;
     status = mx_object_get_info(proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL);

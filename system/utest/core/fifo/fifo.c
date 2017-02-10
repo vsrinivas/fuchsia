@@ -14,7 +14,7 @@
 
 static mx_signals_t get_signals(mx_handle_t h) {
     mx_signals_t pending;
-    mx_status_t status = mx_handle_wait_one(h, 0xFFFFFFFF, 0u, &pending);
+    mx_status_t status = mx_object_wait_one(h, 0xFFFFFFFF, 0u, &pending);
     if ((status != NO_ERROR) && (status != ERR_TIMED_OUT)) {
         return 0xFFFFFFFF;
     }

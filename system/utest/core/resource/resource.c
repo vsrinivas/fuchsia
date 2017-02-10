@@ -94,7 +94,7 @@ static bool test_resource_actions(void) {
 
 static mx_status_t check_signals(mx_handle_t h, mx_signals_t expected) {
     mx_signals_t observed;
-    mx_status_t status = mx_handle_wait_one(h, 0u, 0u, &observed);
+    mx_status_t status = mx_object_wait_one(h, 0u, 0u, &observed);
     if (status != ERR_TIMED_OUT) {
         return status;
     }

@@ -208,7 +208,7 @@ static void signal_devmgr_shutdown(void) {
     printf("Sending shutdown signal to devmgr...\n");
     if ((r = mx_channel_write(_dmctl_handle, 0, &msg, sizeof(msg), 0, 0)) < 0) {
         printf("Unexpected error signalling shutdown: %d\n", r);
-    } else if ((r = mx_handle_wait_one(_dmctl_handle, MX_CHANNEL_PEER_CLOSED,
+    } else if ((r = mx_object_wait_one(_dmctl_handle, MX_CHANNEL_PEER_CLOSED,
                                        30000000000, NULL)) < 0) {
         printf("Unexpected error waiting for shutdown: %d\n", r);
     }

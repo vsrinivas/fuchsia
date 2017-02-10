@@ -32,7 +32,7 @@ static void sleep_thread_fn(void* arg) {
 
 static void wait_thread_fn(void* arg) {
     mx_handle_t event = *(mx_handle_t*)arg;
-    mx_handle_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
+    mx_object_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
 }
 
 static bool start_thread(mxr_thread_entry_t entry, void* arg,
@@ -69,7 +69,7 @@ static bool threads_test(void) {
     mxr_thread_t thread;
     ASSERT_TRUE(start_thread(test_thread_fn, NULL, &thread), "");
 
-    ASSERT_EQ(mx_handle_wait_one(mxr_thread_get_handle(&thread),
+    ASSERT_EQ(mx_object_wait_one(mxr_thread_get_handle(&thread),
                                  MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "");
 

@@ -55,7 +55,7 @@ static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t pending;
     mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     int64_t timeout = MX_TIME_INFINITE;
-    mx_status_t status = mx_handle_wait_one(handle, signals, timeout, &pending);
+    mx_status_t status = mx_object_wait_one(handle, signals, timeout, &pending);
     if (status == ERR_HANDLE_CLOSED) {
         *result = WAIT_CANCELLED;
         return true;
@@ -74,7 +74,7 @@ static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t pending;
     mx_signals_t signals = MX_EVENT_SIGNALED;
     int64_t timeout = MX_TIME_INFINITE;
-    mx_status_t status = mx_handle_wait_one(handle, signals, timeout, &pending);
+    mx_status_t status = mx_object_wait_one(handle, signals, timeout, &pending);
     if (status == ERR_HANDLE_CLOSED) {
         *result = WAIT_CANCELLED;
         return true;

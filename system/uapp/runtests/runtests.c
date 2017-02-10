@@ -89,7 +89,7 @@ static void run_tests(const char* dirn) {
             continue;
         }
 
-        status = mx_handle_wait_one(handle, MX_PROCESS_SIGNALED,
+        status = mx_object_wait_one(handle, MX_PROCESS_SIGNALED,
                                     MX_TIME_INFINITE, NULL);
         if (status != NO_ERROR) {
             printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->d_name, status);

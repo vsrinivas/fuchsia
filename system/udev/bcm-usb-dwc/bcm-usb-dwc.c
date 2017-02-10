@@ -840,7 +840,7 @@ static int dwc_irq_thread(void* arg) {
 
         wait_res = mx_interrupt_wait(dwc->irq_handle);
         if (wait_res != NO_ERROR)
-            printf("dwc_irq_thread::mx_handle_wait_one(irq_handle) returned "
+            printf("dwc_irq_thread::mx_object_wait_one(irq_handle) returned "
                    "error code = %d\n",
                    wait_res);
 

@@ -37,7 +37,7 @@ void controller_init() {
     return;
   }
 
-  status = mx_handle_wait_one(ctrl_channel,
+  status = mx_object_wait_one(ctrl_channel,
                               MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                               MX_SEC(5), NULL);
   if (status != NO_ERROR) {

@@ -48,7 +48,7 @@ static mx_status_t vfs_get_remote(vnode_t* vn) {
         return ERR_UNAVAILABLE;
     } else if (!(vn->flags & V_FLAG_MOUNT_READY)) {
         mx_signals_t observed;
-        mx_status_t status = mx_handle_wait_one(vn->remote,
+        mx_status_t status = mx_object_wait_one(vn->remote,
                                                 MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
                                                 0,
                                                 &observed);

@@ -525,7 +525,7 @@ mx_status_t mxio_wait_fd(int fd, uint32_t _events, uint32_t* _pending, mx_time_t
         goto end;
     }
     mx_signals_t pending;
-    if ((r = mx_handle_wait_one(h, signals, timeout, &pending)) < 0) {
+    if ((r = mx_object_wait_one(h, signals, timeout, &pending)) < 0) {
         goto end;
     }
     io->ops->wait_end(io, pending, &events);
@@ -1372,7 +1372,7 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
     int nfds = 0;
     if (r == NO_ERROR && nvalid > 0) {
         mx_time_t tmo = (timeout >= 0) ? MX_MSEC(timeout) : MX_TIME_INFINITE;
-        r = mx_handle_wait_many(items, nvalid, tmo);
+        r = mx_object_wait_many(items, nvalid, tmo);
         // pending signals could be reported on ERR_TIMED_OUT case as well
         if (r == NO_ERROR || r == ERR_TIMED_OUT) {
             nfds_t j = 0; // j counts up on a valid entry
@@ -1461,7 +1461,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
     if (r == NO_ERROR && nvalid > 0) {
         mx_time_t tmo = (tv == NULL) ? MX_TIME_INFINITE :
             MX_SEC(tv->tv_sec) + MX_USEC(tv->tv_usec);
-        r = mx_handle_wait_many(items, nvalid, tmo);
+        r = mx_object_wait_many(items, nvalid, tmo);
         // pending signals could be reported on ERR_TIMED_OUT case as well
         if (r == NO_ERROR || r == ERR_TIMED_OUT) {
             int j = 0; // j counts up on a valid entry

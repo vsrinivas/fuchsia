@@ -92,7 +92,7 @@ static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signa
         items[n].handle = handles[n];
         items[n].waitfor = signals[n];
     }
-    mx_status_t status = mx_handle_wait_many(items, num_handles, deadline);
+    mx_status_t status = mx_object_wait_many(items, num_handles, deadline);
     for (uint32_t n = 0; n < num_handles; n++) {
         pending[n] = items[n].pending;
     }

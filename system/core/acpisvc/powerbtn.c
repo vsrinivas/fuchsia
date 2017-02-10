@@ -63,7 +63,7 @@ static int power_button_thread(void* arg) {
     mx_handle_t event = (mx_handle_t)(uintptr_t)arg;
 
     for (;;) {
-        mx_status_t status = mx_handle_wait_one(event,
+        mx_status_t status = mx_object_wait_one(event,
                                                 MX_EVENT_SIGNALED,
                                                 MX_TIME_INFINITE,
                                                 NULL);

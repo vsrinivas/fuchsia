@@ -149,7 +149,7 @@ typedef struct {
     uint32_t rd_num_handles;
 } mx_channel_call_args_t;
 
-// Structure for mx_handle_wait_many():
+// Structure for mx_object_wait_many():
 typedef struct {
     mx_handle_t handle;
     mx_signals_t waitfor;

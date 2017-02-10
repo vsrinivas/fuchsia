@@ -61,7 +61,7 @@ public:
 
     mx_status_t wait_one(mx_signals_t signals, mx_time_t timeout,
                          mx_signals_t* pending) const {
-        return mx_handle_wait_one(value_, signals, timeout, pending);
+        return mx_object_wait_one(value_, signals, timeout, pending);
     }
 
     // TODO(abarth): Not all of these methods apply to every type of object. We

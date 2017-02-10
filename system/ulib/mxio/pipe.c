@@ -34,7 +34,7 @@ static ssize_t _read(mx_handle_t h, void* data, size_t len, int nonblock) {
         }
         if (r == ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
-            r = mx_handle_wait_one(h, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
+            r = mx_object_wait_one(h, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;
@@ -61,7 +61,7 @@ static ssize_t _write(mx_handle_t h, const void* data, size_t len, int nonblock)
         }
         if (r == ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
-            r = mx_handle_wait_one(h, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
+            r = mx_object_wait_one(h, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;

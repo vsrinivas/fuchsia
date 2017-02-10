@@ -30,7 +30,7 @@ bool kill_process_via_thread_close() {
     EXPECT_EQ(mx_handle_close(thread), NO_ERROR, "");
 
     mx_signals_t signals;
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
     EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
 
@@ -52,7 +52,7 @@ bool kill_process_via_process_close() {
     EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
 
     mx_signals_t signals;
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         thread, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
     EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
 
@@ -74,7 +74,7 @@ bool kill_process_via_thread_kill() {
     EXPECT_EQ(mx_task_kill(thread), NO_ERROR, "");
 
     mx_signals_t signals;
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
     EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
 
@@ -102,7 +102,7 @@ bool kill_process_via_vmar_destroy() {
     EXPECT_EQ(mx_vmar_destroy(vmar), NO_ERROR, "");
 
     mx_signals_t signals;
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
     EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
 
@@ -144,10 +144,10 @@ bool kill_process_handle_cycle() {
     // they are running.
 
     mx_signals_t signals;
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         thread1, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         thread2, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
     EXPECT_EQ(mx_handle_close(thread1), NO_ERROR, "");
@@ -155,7 +155,7 @@ bool kill_process_handle_cycle() {
     // Closing thread1 should cause process 1 to exit which should cause process 2 to
     // exit which we test by waiting on the second process thread handle.
 
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         thread2, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
     EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
 
@@ -215,10 +215,10 @@ bool kill_channel_handle_cycle() {
     // Make (relatively) certain the processes are alive.
 
     mx_signals_t signals;
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         thread1, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         thread2, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
     // At this point the two processes have each other thread/process handles. For example
@@ -227,14 +227,14 @@ bool kill_channel_handle_cycle() {
 
     EXPECT_EQ(mx_handle_close(thread1), NO_ERROR, "");
 
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         thread2, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
     // The only way out of this situation is to use the job handle.
 
     EXPECT_EQ(mx_task_kill(job_child), NO_ERROR, "");
 
-    EXPECT_EQ(mx_handle_wait_one(
+    EXPECT_EQ(mx_object_wait_one(
         thread2, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
     EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
 
@@ -271,7 +271,7 @@ bool info_reflects_process_state() {
     // Start the process and make (relatively) certain it's alive.
     ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event), NO_ERROR, "");
     mx_signals_t signals;
-    ASSERT_EQ(mx_handle_wait_one(
+    ASSERT_EQ(mx_object_wait_one(
         proc, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
     ASSERT_EQ(mx_object_get_info(
@@ -281,7 +281,7 @@ bool info_reflects_process_state() {
 
     // Kill the process and wait for it to terminate.
     ASSERT_EQ(mx_task_kill(proc), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_wait_one(
+    ASSERT_EQ(mx_object_wait_one(
         proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
     ASSERT_EQ(signals, MX_TASK_TERMINATED, "");
 

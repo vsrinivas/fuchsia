@@ -120,9 +120,9 @@ static bool stdio_launchpad_pipe_test(void)
     // Wait for the process to finish
     mx_status_t r;
 
-    r = mx_handle_wait_one(p, MX_PROCESS_SIGNALED,
+    r = mx_object_wait_one(p, MX_PROCESS_SIGNALED,
                            MX_TIME_INFINITE, NULL);
-    ASSERT_EQ(r, NO_ERROR, "mx_handle_wait_one failed");
+    ASSERT_EQ(r, NO_ERROR, "mx_object_wait_one failed");
 
     // read the return code
     mx_info_process_t proc_info;

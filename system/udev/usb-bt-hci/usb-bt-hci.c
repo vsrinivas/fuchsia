@@ -295,10 +295,10 @@ static int hci_read_thread(void* arg) {
     mtx_unlock(&hci->mutex);
 
     while (1) {
-        mx_status_t status = mx_handle_wait_many(
+        mx_status_t status = mx_object_wait_many(
             hci->read_wait_items, hci->read_wait_item_count, MX_TIME_INFINITE);
         if (status < 0) {
-            printf("hci_read_thread: mx_handle_wait_many failed: %s\n",
+            printf("hci_read_thread: mx_object_wait_many failed: %s\n",
                    mx_status_get_string(status));
             mtx_lock(&hci->mutex);
             cmd_channel_cleanup_locked(hci);
