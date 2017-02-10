@@ -164,6 +164,7 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
+    // TODO(dje/teisenbe): Rights checking here
     mxtl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcher(handle, &dispatcher);
     if (status != NO_ERROR)
@@ -181,8 +182,11 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
             estatus = UserThread::ExceptionStatus::RESUME;
         }
         return thread->thread()->MarkExceptionHandled(estatus);
-    }
+    } else {
+        if (options != 0) {
+            return ERR_INVALID_ARGS;
+        }
 
-    //TODO: generic thread suspend/resume
-    return ERR_NOT_SUPPORTED;
+        return thread->Resume();
+    }
 }

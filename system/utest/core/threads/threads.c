@@ -14,13 +14,20 @@
 
 static const char kThreadName[] = "test-thread";
 
-static void test_thread_fn(void* arg) {
+__NO_SAFESTACK static void test_sleep_thread_fn(void* arg) {
     // Note: You shouldn't use C standard library functions from this thread.
-    mx_nanosleep(MX_MSEC(100));
+    mx_time_t time = (mx_time_t)arg;
+    mx_nanosleep(time);
     mx_thread_exit();
 }
 
-static void busy_thread_fn(void* arg) {
+__NO_SAFESTACK static void test_wait_thread_fn(void* arg) {
+    mx_handle_t event = *(mx_handle_t*)arg;
+    mx_object_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
+    mx_thread_exit();
+}
+
+__NO_SAFESTACK static void busy_thread_fn(void* arg) {
     volatile uint64_t i = 0;
     while (true) {
         ++i;
@@ -28,12 +35,12 @@ static void busy_thread_fn(void* arg) {
     __builtin_trap();
 }
 
-static void sleep_thread_fn(void* arg) {
+__NO_SAFESTACK static void sleep_thread_fn(void* arg) {
     mx_nanosleep(MX_TIME_INFINITE);
     __builtin_trap();
 }
 
-static void wait_thread_fn(void* arg) {
+__NO_SAFESTACK static void wait_thread_fn(void* arg) {
     mx_handle_t event = *(mx_handle_t*)arg;
     mx_object_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
     __builtin_trap();
@@ -71,7 +78,7 @@ static bool start_and_kill_thread(mxr_thread_entry_t entry, void* arg) {
 static bool test_basics(void) {
     BEGIN_TEST;
     mxr_thread_t thread;
-    ASSERT_TRUE(start_thread(test_thread_fn, NULL, &thread), "");
+    ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)MX_MSEC(100), &thread), "");
     ASSERT_EQ(mx_object_wait_one(mxr_thread_get_handle(&thread),
                                  MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "");
@@ -176,7 +183,7 @@ static bool test_info_task_stats_fails(void) {
     BEGIN_TEST;
     // Spin up a thread.
     mxr_thread_t thread;
-    ASSERT_TRUE(start_thread(test_thread_fn, NULL, &thread), "");
+    ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)MX_MSEC(100), &thread), "");
     mx_handle_t thandle = mxr_thread_get_handle(&thread);
     ASSERT_EQ(mx_object_wait_one(thandle,
                                  MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
@@ -192,6 +199,227 @@ static bool test_info_task_stats_fails(void) {
 
     // Clean up the thread.
     mxr_thread_destroy(&thread);
+
+    END_TEST;
+}
+
+static bool test_resume_suspended(void) {
+    BEGIN_TEST;
+
+    mx_handle_t event;
+    mxr_thread_t thread;
+
+    ASSERT_EQ(mx_event_create(0, &event), NO_ERROR, "");
+    ASSERT_TRUE(start_thread(test_wait_thread_fn, &event, &thread), "");
+    mx_handle_t thread_h = mxr_thread_get_handle(&thread);
+    ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
+    ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
+
+    // The thread should still be blocked on the event when it wakes up
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, MX_MSEC(100), NULL), ERR_TIMED_OUT, "");
+
+    // Check that signaling the event while suspended results in the expected
+    // behavior
+    ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
+    // TODO: Use an exception port to wait for the suspend to take effect
+    mx_nanosleep(MX_MSEC(10));
+
+    ASSERT_EQ(mx_object_signal(event, 0, MX_USER_SIGNAL_0), NO_ERROR, "");
+    ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, MX_MSEC(100), NULL), NO_ERROR, "");
+    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
+
+    ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
+
+    END_TEST;
+}
+
+static bool test_kill_suspended(void) {
+    BEGIN_TEST;
+
+    mx_handle_t event;
+    mxr_thread_t thread;
+
+    ASSERT_EQ(mx_event_create(0, &event), NO_ERROR, "");
+    ASSERT_TRUE(start_thread(test_wait_thread_fn, &event, &thread), "");
+    mx_handle_t thread_h = mxr_thread_get_handle(&thread);
+    ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
+    mx_nanosleep(MX_MSEC(10));
+    ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
+    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
+
+    ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
+
+    END_TEST;
+}
+
+static bool test_suspend_sleeping(void) {
+    BEGIN_TEST;
+
+    mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+
+    const mx_time_t sleep_time = MX_MSEC(100);
+    mxr_thread_t thread;
+
+    // TODO(teisenbe): This code could be made less racy with a deadline sleep
+    // mode when we get one.
+    ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)sleep_time, &thread), "");
+    mx_handle_t thread_h = mxr_thread_get_handle(&thread);
+
+    mx_nanosleep(sleep_time / 4);
+    ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
+
+    // TODO(teisenbe): Once we wire in exceptions for suspend, check here that
+    // we receive it.
+
+    ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
+
+    // Wait for the sleep to finish
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, 2 * sleep_time, NULL), NO_ERROR, "");
+    mx_time_t elapsed = mx_time_get(MX_CLOCK_MONOTONIC) - now;
+    ASSERT_GE(elapsed, sleep_time, "thread did not sleep long enough");
+
+    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
+
+    END_TEST;
+}
+
+struct channel_call_suspend_test_arg {
+    mx_handle_t channel;
+    mx_status_t call_status;
+    mx_status_t read_status;
+};
+
+__NO_SAFESTACK static void test_channel_call_thread_fn(void* arg_) {
+    struct channel_call_suspend_test_arg* arg = arg_;
+
+    uint8_t send_buf[8] = "abcdefgh";
+    uint8_t recv_buf[8];
+    uint32_t actual_bytes, actual_handles;
+
+    mx_channel_call_args_t call_args = {
+        .wr_bytes = send_buf,
+        .wr_handles = NULL,
+        .rd_bytes = recv_buf,
+        .rd_handles = NULL,
+        .wr_num_bytes = sizeof(send_buf),
+        .wr_num_handles = 0,
+        .rd_num_bytes = sizeof(recv_buf),
+        .rd_num_handles = 0,
+    };
+
+    arg->read_status = NO_ERROR;
+    arg->call_status = mx_channel_call(arg->channel, 0, MX_TIME_INFINITE, &call_args,
+                                       &actual_bytes, &actual_handles, &arg->read_status);
+
+    if (arg->call_status == NO_ERROR) {
+        arg->read_status = NO_ERROR;
+        if (actual_bytes != sizeof(recv_buf) || memcmp(recv_buf, "abcdefgi", sizeof(recv_buf))) {
+            arg->call_status = ERR_BAD_STATE;
+        }
+    }
+
+    mx_handle_close(arg->channel);
+    mx_thread_exit();
+}
+
+static bool test_suspend_channel_call(void) {
+    BEGIN_TEST;
+
+    mxr_thread_t thread;
+
+    mx_handle_t channel;
+    struct channel_call_suspend_test_arg thread_arg;
+    ASSERT_EQ(mx_channel_create(0, &thread_arg.channel, &channel), NO_ERROR, "");
+    thread_arg.call_status = ERR_BAD_STATE;
+
+    ASSERT_TRUE(start_thread(test_channel_call_thread_fn, &thread_arg, &thread), "");
+    mx_handle_t thread_h = mxr_thread_get_handle(&thread);
+
+    // Wait for the thread to send a channel call before suspending it
+    ASSERT_EQ(mx_object_wait_one(channel, MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL),
+              NO_ERROR, "");
+
+    ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
+    // TODO(teisenbe): Once we wire in exceptions for suspend, check here that
+    // we receive it.
+
+    // Read the message
+    uint8_t buf[8];
+    uint32_t actual_bytes;
+    ASSERT_EQ(mx_channel_read(channel, 0, buf, sizeof(buf), &actual_bytes, NULL, 0, NULL),
+              NO_ERROR, "");
+    ASSERT_EQ(actual_bytes, sizeof(buf), "");
+    ASSERT_EQ(memcmp(buf, "abcdefgh", sizeof(buf)), 0, "");
+
+    // Write a reply
+    buf[7] = 'i';
+    ASSERT_EQ(mx_channel_write(channel, 0, buf, sizeof(buf), NULL, 0), NO_ERROR, "");
+
+    // Make sure the remote channel didn't get signaled
+    EXPECT_EQ(mx_object_wait_one(thread_arg.channel, MX_CHANNEL_READABLE, 0, NULL),
+              ERR_TIMED_OUT, "");
+
+    // Make sure we can't read from the remote channel (the message should have
+    // been reserved for the other thread, even though it is suspended).
+    EXPECT_EQ(mx_channel_read(thread_arg.channel, 0, buf, sizeof(buf), &actual_bytes, NULL, 0,
+                              NULL),
+              ERR_SHOULD_WAIT, "");
+
+    // Wake the suspended thread
+    ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
+
+    // Wait for the thread to finish
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
+              NO_ERROR, "");
+    EXPECT_EQ(thread_arg.call_status, NO_ERROR, "");
+    EXPECT_EQ(thread_arg.read_status, NO_ERROR, "");
+
+    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(channel), NO_ERROR, "");
+
+    END_TEST;
+}
+
+struct test_writing_thread_arg {
+    volatile int v;
+};
+
+__NO_SAFESTACK static void test_writing_thread_fn(void* arg_) {
+    struct test_writing_thread_arg* arg = arg_;
+    while (true) {
+        arg->v = 1;
+    }
+    __builtin_trap();
+}
+
+static bool test_suspend_stops_thread(void) {
+    BEGIN_TEST;
+
+    mxr_thread_t thread;
+
+    struct test_writing_thread_arg arg;
+
+    ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread), "");
+    mx_handle_t thread_h = mxr_thread_get_handle(&thread);
+
+    while (arg.v != 1) {
+        mx_nanosleep(0);
+    }
+    ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
+    while (arg.v != 2) {
+        arg.v = 2;
+        // Give the thread a chance to clobber the value
+        mx_nanosleep(MX_MSEC(50));
+    }
+    ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
+    while (arg.v != 1) {
+        mx_nanosleep(0);
+    }
+
+    ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
+    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
+
     END_TEST;
 }
 
@@ -204,6 +432,11 @@ RUN_TEST(test_kill_busy_thread)
 RUN_TEST(test_kill_sleep_thread)
 RUN_TEST(test_kill_wait_thread)
 RUN_TEST(test_info_task_stats_fails)
+RUN_TEST(test_resume_suspended)
+RUN_TEST(test_kill_suspended)
+RUN_TEST(test_suspend_sleeping)
+RUN_TEST(test_suspend_channel_call)
+RUN_TEST(test_suspend_stops_thread)
 END_TEST_CASE(threads_tests)
 
 #ifndef BUILD_COMBINED_TESTS

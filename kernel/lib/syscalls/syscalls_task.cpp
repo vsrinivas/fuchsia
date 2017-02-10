@@ -200,6 +200,21 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
     return status;
 }
 
+mx_status_t sys_task_suspend(mx_handle_t task_handle) {
+    LTRACE_ENTRY;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // TODO(teisenbe): Add support for tasks other than threads
+    mxtl::RefPtr<ThreadDispatcher> thread;
+    mx_status_t status = up->GetDispatcherWithRights(task_handle, MX_RIGHT_WRITE,
+                                                     &thread);
+    if (status != NO_ERROR)
+        return status;
+
+    return thread->Suspend();
+}
+
 mx_status_t sys_process_create(mx_handle_t job_handle,
                                user_ptr<const char> _name, uint32_t name_len,
                                uint32_t options, user_ptr<mx_handle_t> _proc_handle,

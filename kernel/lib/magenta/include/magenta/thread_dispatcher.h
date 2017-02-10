@@ -31,6 +31,9 @@ public:
 
     status_t GetExceptionReport(mx_exception_report_t* report);
 
+    mx_status_t Resume() { return thread_->Resume(); }
+    mx_status_t Suspend() { return thread_->Suspend(); }
+
     StateTracker* get_state_tracker() final;
 
     // TODO(dje): Was private. Needed for exception handling.

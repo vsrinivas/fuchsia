@@ -236,6 +236,10 @@ syscall task_bind_exception_port
     (object: mx_handle_t, eport: mx_handle_t, key: uint64_t, options: uint32_t)
     returns (mx_status_t);
 
+syscall task_suspend
+    (task_handle: mx_handle_t)
+    returns (mx_status_t);
+
 syscall task_resume
     (task_handle: mx_handle_t, options: uint32_t)
     returns (mx_status_t);
