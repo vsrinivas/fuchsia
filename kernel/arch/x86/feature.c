@@ -166,6 +166,7 @@ void x86_feature_debug(void)
         { X86_FEATURE_INVAR_TSC, "invar_tsc" },
         { X86_FEATURE_TSC_DEADLINE, "tsc_deadline" },
         { X86_FEATURE_VMX, "vmx" },
+        { X86_FEATURE_PT, "pt" },
     };
 
     const char *vendor_string;
