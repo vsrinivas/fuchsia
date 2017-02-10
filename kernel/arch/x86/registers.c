@@ -542,6 +542,9 @@ static void xsetbv(uint32_t reg, uint64_t val)
 // See x86_ipt_set_mode_task.
 
 void x86_set_extended_register_pt_state(bool threads) {
+    if (!xsaves_supported || !(xss_component_bitmap & X86_XSAVE_STATE_PT))
+        return;
+
     uint64_t xss = read_msr(IA32_XSS_MSR);
     if (threads)
         xss |= X86_XSAVE_STATE_PT;
