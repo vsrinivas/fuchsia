@@ -88,7 +88,7 @@ void test_directory_max(void) {
     }
 
     // Unlink all those files
-    for (; i >= 0; i--) {
+    for (i -= 1; i >= 0; i--) {
         char path[LARGE_PATH_LENGTH + 1];
         TRY(snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i));
         TRY(unlink(path));
