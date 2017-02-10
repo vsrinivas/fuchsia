@@ -8,6 +8,8 @@ source_set("common") {
     "byte_buffer.h",
     "device_address.cc",
     "device_address.h",
+    "manufacturer_names.cc",
+    "manufacturer_names.h",
     "packet.h",
     "test_helpers.h",
   ]
@@ -24,6 +26,7 @@ executable("tests") {
   sources = [
     "byte_buffer_unittest.cc",
     "device_address_unittest.cc",
+    "manufacturer_names_unittest.cc",
     "packet_unittest.cc",
   ]
 

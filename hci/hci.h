@@ -188,7 +188,7 @@ struct ReadLocalVersionInfoReturnParams {
   Status status;
 
   // HCI version (see enum class HCIVersion in hci_constants.h)
-  uint8_t hci_version;
+  HCIVersion hci_version;
 
   // Revision of the Current HCI in the BR/EDR Controller.
   uint16_t hci_revision;

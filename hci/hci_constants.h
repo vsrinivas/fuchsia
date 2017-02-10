@@ -14,7 +14,7 @@ namespace hci {
 // HCI_Version Assigned Values See the "Assigned Numbers" document for
 // reference.
 // (https://www.bluetooth.com/specifications/assigned-numbers/host-controller-interface)
-enum class HCIVersion {
+enum class HCIVersion : uint8_t {
   // Bluetooth Core Specification 1.0b
   k1_0b = 0,
 

@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 
+#include "apps/bluetooth/common/manufacturer_names.h"
 #include "apps/bluetooth/gap/advertising_data.h"
 #include "apps/bluetooth/hci/advertising_report_parser.h"
 #include "apps/bluetooth/hci/command_channel.h"
@@ -113,6 +114,36 @@ std::vector<std::string> AdvFlagsToStrings(uint8_t flags) {
   return flags_list;
 }
 
+// TODO(armansito): Move this to a library header as it will be useful
+// elsewhere.
+std::string HCIVersionToString(hci::HCIVersion version) {
+  switch (version) {
+    case hci::HCIVersion::k1_0b:
+      return "1.0b";
+    case hci::HCIVersion::k1_1:
+      return "1.1";
+    case hci::HCIVersion::k1_2:
+      return "1.2";
+    case hci::HCIVersion::k2_0_EDR:
+      return "2.0 + EDR";
+    case hci::HCIVersion::k2_1_EDR:
+      return "2.1 + EDR";
+    case hci::HCIVersion::k3_0_HS:
+      return "3.0 + HS";
+    case hci::HCIVersion::k4_0:
+      return "4.0";
+    case hci::HCIVersion::k4_1:
+      return "4.1";
+    case hci::HCIVersion::k4_2:
+      return "4.2";
+    case hci::HCIVersion::k5_0:
+      return "5.0";
+    default:
+      break;
+  }
+  return "(unknown)";
+}
+
 void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data,
                               int8_t rssi,
                               const std::string& name_filter) {
@@ -176,6 +207,45 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data,
     std::cout << "    TX Power Level: " << ftl::NumberToString(tx_power_lvl)
               << std::endl;
   }
+}
+
+bool HandleVersionInfo(const CommandDispatcher& owner,
+                       const ftl::CommandLine& cmd_line,
+                       const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() || cmd_line.options().size()) {
+    std::cout << "  Usage: version-info" << std::endl;
+    return false;
+  }
+
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
+                          const hci::EventPacket& event) {
+    auto params =
+        event.GetReturnParams<hci::ReadLocalVersionInfoReturnParams>();
+    LogCommandComplete(params->status, id);
+    if (params->status != hci::Status::kSuccess) {
+      complete_cb();
+      return;
+    }
+
+    std::cout << "  Version Info:" << std::endl;
+    std::cout << "    HCI Version: Core Spec "
+              << HCIVersionToString(params->hci_version) << std::endl;
+    std::cout << "    Manufacturer Name: "
+              << common::GetManufacturerName(le16toh(params->manufacturer_name))
+              << std::endl;
+
+    complete_cb();
+  };
+
+  common::StaticByteBuffer<BufferSize(0u)> buffer;
+  hci::CommandPacket packet(hci::kReadLocalVersionInfo, &buffer);
+  packet.EncodeHeader();
+
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+
+  std::cout << "  Sent HCI_Read_Local_Version_Information (id=" << id << ")"
+            << std::endl;
+  return true;
 }
 
 bool HandleReset(const CommandDispatcher& owner,
@@ -663,6 +733,9 @@ bool HandleSetScanEnable(const CommandDispatcher& owner,
 void RegisterCommands(CommandDispatcher* handler_map) {
   FTL_DCHECK(handler_map);
 
+  handler_map->RegisterHandler("version-info",
+                               "Send HCI_Read_Local_Version_Information",
+                               HandleVersionInfo);
   handler_map->RegisterHandler("reset", "Send HCI_Reset", HandleReset);
   handler_map->RegisterHandler("read-bdaddr", "Send HCI_Read_BDADDR",
                                HandleReadBDADDR);

@@ -4,7 +4,7 @@
 
 #include "command_dispatcher.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 namespace hcitool {
 
@@ -38,7 +38,7 @@ bool CommandDispatcher::ExecuteCommand(const std::vector<std::string>& argv,
 
 void CommandDispatcher::DescribeAllCommands() {
   for (const auto& iter : handler_map_) {
-    printf("  %-30s %s\n", iter.first.c_str(), iter.second.first.c_str());
+    std::printf("  %-30s %s\n", iter.first.c_str(), iter.second.first.c_str());
   }
 }
 
