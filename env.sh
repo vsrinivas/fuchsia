@@ -96,7 +96,7 @@ fi
 
 function mset-usage() {
   cat >&2 <<END
-Usage: mset x86-64|arm32|arm64
+Usage: mset x86-64|arm64
 Sets magenta build options.
 END
 }
@@ -113,10 +113,6 @@ function mset() {
     x86-64)
       export MAGENTA_PROJECT=magenta-pc-x86-64
       export MAGENTA_ARCH=x86-64
-      ;;
-    arm32)
-      export MAGENTA_PROJECT=magenta-qemu-arm32
-      export MAGENTA_ARCH=arm32
       ;;
     arm64)
       export MAGENTA_PROJECT=magenta-qemu-arm64
