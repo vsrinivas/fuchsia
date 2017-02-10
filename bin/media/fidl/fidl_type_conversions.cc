@@ -323,7 +323,9 @@ bool KnownEncodingsMatch() {
          media::StreamType::kVideoEncodingVp3 ==
              media::MediaType::kVideoEncodingVp3 &&
          media::StreamType::kVideoEncodingVp8 ==
-             media::MediaType::kVideoEncodingVp8;
+             media::MediaType::kVideoEncodingVp8 &&
+         media::StreamType::kVideoEncodingVp9 ==
+             media::MediaType::kVideoEncodingVp9;
 }
 
 }  // namespace

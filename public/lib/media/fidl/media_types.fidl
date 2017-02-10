@@ -24,6 +24,7 @@ struct MediaType {
   const string kVideoEncodingUncompressed = "uncompressed_video";
   const string kVideoEncodingVp3 = "vp3";
   const string kVideoEncodingVp8 = "vp8";
+  const string kVideoEncodingVp9 = "vp9";
 
   // Identifies the type’s medium.
   MediaTypeMedium medium;

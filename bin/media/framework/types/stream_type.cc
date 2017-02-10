@@ -30,6 +30,7 @@ const char* StreamType::kVideoEncodingTheora = "theora";
 const char* StreamType::kVideoEncodingUncompressed = "uncompressed_video";
 const char* StreamType::kVideoEncodingVp3 = "vp3";
 const char* StreamType::kVideoEncodingVp8 = "vp8";
+const char* StreamType::kVideoEncodingVp9 = "vp9";
 
 StreamType::StreamType(Medium medium,
                        const std::string& encoding,

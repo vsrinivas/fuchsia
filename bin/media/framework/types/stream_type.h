@@ -43,6 +43,7 @@ class StreamType {
   static const char* kVideoEncodingUncompressed;
   static const char* kVideoEncodingVp3;
   static const char* kVideoEncodingVp8;
+  static const char* kVideoEncodingVp9;
 
   static std::unique_ptr<StreamType> Create(
       Medium medium,

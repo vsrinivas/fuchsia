@@ -181,6 +181,9 @@ std::unique_ptr<StreamType> StreamTypeFromCompressedVideoCodecContext(
     case AV_CODEC_ID_VP8:
       encoding = StreamType::kVideoEncodingVp8;
       break;
+    case AV_CODEC_ID_VP9:
+      encoding = StreamType::kVideoEncodingVp9;
+      break;
     default:
       FTL_LOG(ERROR) << "unsupported codec_id " << from.codec_id;
       abort();
@@ -308,6 +311,8 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(
     codec_id = AV_CODEC_ID_VP3;
   } else if (stream_type.encoding() == StreamType::kVideoEncodingVp8) {
     codec_id = AV_CODEC_ID_VP8;
+  } else if (stream_type.encoding() == StreamType::kVideoEncodingVp9) {
+    codec_id = AV_CODEC_ID_VP9;
   } else {
     FTL_LOG(ERROR) << "unsupported encoding " << stream_type.encoding();
     abort();
