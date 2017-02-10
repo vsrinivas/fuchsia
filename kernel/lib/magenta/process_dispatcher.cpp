@@ -257,6 +257,12 @@ status_t ProcessDispatcher::AddThread(UserThread* t, bool initial_thread) {
 void ProcessDispatcher::RemoveThread(UserThread* t) {
     LTRACE_ENTRY_OBJ;
 
+    {
+        AutoLock lock(&exception_lock_);
+        if (debugger_exception_port_)
+            debugger_exception_port_->OnThreadExit(t);
+    }
+
     // we're going to check for state and possibly transition below
     AutoLock state_lock(&state_lock_);
 

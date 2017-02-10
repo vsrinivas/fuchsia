@@ -242,8 +242,6 @@ void UserThread::Exiting() {
 
     {
         AutoLock lock(&exception_lock_);
-        if (process_->debugger_exception_port_)
-            process_->debugger_exception_port_->OnThreadExitForDebugger(this);
         if (exception_port_)
             exception_port_->OnThreadExit(this);
     }
