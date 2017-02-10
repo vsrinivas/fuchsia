@@ -260,7 +260,7 @@ void ProcessDispatcher::RemoveThread(UserThread* t) {
     {
         AutoLock lock(&exception_lock_);
         if (debugger_exception_port_)
-            debugger_exception_port_->OnThreadExit(t);
+            debugger_exception_port_->OnThreadExitForDebugger(t);
     }
 
     // we're going to check for state and possibly transition below
