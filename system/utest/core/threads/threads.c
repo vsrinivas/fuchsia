@@ -63,25 +63,30 @@ static bool start_and_kill_thread(mxr_thread_entry_t entry, void* arg) {
     return true;
 }
 
-static bool threads_test(void) {
+static bool test_basics(void) {
     BEGIN_TEST;
-
     mxr_thread_t thread;
     ASSERT_TRUE(start_thread(test_thread_fn, NULL, &thread), "");
-
     ASSERT_EQ(mx_object_wait_one(mxr_thread_get_handle(&thread),
                                  MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "");
-
     mxr_thread_destroy(&thread);
+    END_TEST;
+}
 
-    // Creating a thread with a super long name should fail.
-    EXPECT_NEQ(mxr_thread_create(
-                   mx_process_self(),
-                   "01234567890123456789012345678901234567890123456789012345678901234567890123456789",
-                   &thread),
-               NO_ERROR, "Thread creation should have failed (name too long)");
+static bool test_long_name_succeeds(void) {
+    BEGIN_TEST;
+    // Creating a thread with a super long name should succeed.
+    static const char long_name[] =
+        "0123456789012345678901234567890123456789"
+        "0123456789012345678901234567890123456789";
+    ASSERT_GT(strlen(long_name), (size_t)MX_MAX_NAME_LEN-1,
+              "too short to truncate");
 
+    mxr_thread_t thread;
+    ASSERT_EQ(mxr_thread_create(mx_process_self(), long_name, &thread),
+              NO_ERROR, "");
+    mxr_thread_destroy(&thread);
     END_TEST;
 }
 
@@ -163,7 +168,8 @@ static bool test_kill_wait_thread(void) {
 }
 
 BEGIN_TEST_CASE(threads_tests)
-RUN_TEST(threads_test)
+RUN_TEST(test_basics)
+RUN_TEST(test_long_name_succeeds)
 RUN_TEST(test_thread_start_on_initial_thread)
 RUN_TEST(test_thread_start_with_zero_instruction_pointer)
 RUN_TEST(test_kill_busy_thread)

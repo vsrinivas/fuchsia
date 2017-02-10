@@ -50,16 +50,20 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
                               uint32_t flags, mx_handle_t* _out) {
     LTRACEF("process handle %d, flags %#x\n", process_handle, flags);
 
-    // copy the name to a local buffer
-    char buf[MX_MAX_NAME_LEN];
-    mxtl::StringPiece sp;
-    status_t result = magenta_copy_user_string(_name, name_len, buf, sizeof(buf), &sp);
-    if (result != NO_ERROR)
-        return result;
-
     // currently, the only valid flag value is 0
     if (flags != 0)
         return ERR_INVALID_ARGS;
+
+    // copy out the name
+    char buf[MX_MAX_NAME_LEN];
+    mxtl::StringPiece sp;
+    // Silently truncate the given name.
+    if (name_len > sizeof(buf))
+        name_len = sizeof(buf);
+    status_t result = magenta_copy_user_string(_name, name_len, buf, sizeof(buf), &sp);
+    if (result != NO_ERROR)
+        return result;
+    LTRACEF("name %s\n", buf);
 
     // convert process handle to process dispatcher
     auto up = ProcessDispatcher::GetCurrent();
@@ -125,7 +129,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
                                const char* _name, uint32_t name_len,
                                uint32_t flags, mx_handle_t* _proc_handle,
                                mx_handle_t* _vmar_handle) {
-    LTRACEF("name %p, flags 0x%x\n", _name, flags);
+    LTRACEF("job handle %d, flags %#x\n", job_handle, flags);
 
     // currently, the only valid flag value is 0
     if (flags != 0)
@@ -142,6 +146,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
         return result;
     LTRACEF("name %s\n", buf);
 
+    // convert job handle to job dispatcher
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<JobDispatcher> job;

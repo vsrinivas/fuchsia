@@ -32,6 +32,7 @@ bool c11_thread_test(void) {
 
     unittest_printf("Welcome to thread test!\n");
 
+    memset((void*)threads_done, 0, sizeof(threads_done));
     for (int i = 0; i != 4; ++i) {
         int return_value = 99;
         int ret = thrd_create_with_name(&thread, thread_entry, (void*)(intptr_t)i, "c11 thread test");
@@ -42,13 +43,8 @@ bool c11_thread_test(void) {
         ASSERT_EQ(return_value, i, "Incorrect return from thread");
     }
 
-    unittest_printf("Attempting to create thread with a super long name. This should fail\n");
-    int ret = thrd_create_with_name(&thread, thread_entry, NULL,
-                                    "01234567890123456789012345678901234567890123456789012345678901234567890123456789");
-    ASSERT_NEQ(ret, thrd_success, "thread creation should have thrown error");
-
     unittest_printf("Attempting to create thread with a null name. This should succeed\n");
-    ret = thrd_create_with_name(&thread, thread_entry, (void*)(intptr_t)4, NULL);
+    int ret = thrd_create_with_name(&thread, thread_entry, (void*)(intptr_t)4, NULL);
     ASSERT_EQ(ret, thrd_success, "Error returned from thread creation");
     mx_handle_t handle = thrd_get_mx_handle(thread);
     ASSERT_NEQ(handle, MX_HANDLE_INVALID, "got invalid thread handle");
@@ -76,8 +72,30 @@ bool c11_thread_test(void) {
     END_TEST;
 }
 
+bool long_name_succeeds(void) {
+    BEGIN_TEST;
+
+    // Creating a thread with a super long name should succeed.
+    static const char long_name[] =
+        "0123456789012345678901234567890123456789"
+        "0123456789012345678901234567890123456789";
+    ASSERT_GT(strlen(long_name), (size_t)MX_MAX_NAME_LEN-1,
+              "too short to truncate");
+
+    thrd_t thread;
+    int ret = thrd_create_with_name(
+        &thread, thread_entry, (void*)(intptr_t)0, long_name);
+    ASSERT_EQ(ret, thrd_success, "long name should have succeeded");
+
+    // Clean up.
+    int return_value;
+    EXPECT_EQ(thrd_join(thread, &return_value), thrd_success, "");
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(c11_thread_tests)
 RUN_TEST(c11_thread_test)
+RUN_TEST(long_name_succeeds)
 END_TEST_CASE(c11_thread_tests)
 
 #ifndef BUILD_COMBINED_TESTS
