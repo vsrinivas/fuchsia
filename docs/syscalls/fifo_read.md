@@ -2,7 +2,7 @@
 
 ## NAME
 
-fifo_read - read data to a fifo
+fifo_read - read data from a fifo
 
 ## SYNOPSIS
 
@@ -11,7 +11,7 @@ fifo_read - read data to a fifo
 
 mx_status_t mx_fifo_read(mx_handle_t handle,
                          void* buffer, size_t size,
-                         uint32_t* num_entries_written) {
+                         uint32_t* num_entries_read) {
 ```
 
 ## DESCRIPTION
@@ -29,7 +29,7 @@ elements in the fifo to fulfill the entire request.
 ## RETURN VALUE
 
 **fifo_read**() returns **NO_ERROR** on success, and returns
-the number of elements read (at least one) via *num_entries_written*.
+the number of elements read (at least one) via *num_entries_read*.
 
 ## ERRORS
 
@@ -37,7 +37,7 @@ the number of elements read (at least one) via *num_entries_written*.
 
 **ERR_WRONG_TYPE**  *handle* is not a fifo handle.
 
-**ERR_INVALID_ARGS**  *buffer* is an invalid pointer or *num_entries_written*
+**ERR_INVALID_ARGS**  *buffer* is an invalid pointer or *num_entries_read*
 is an invalid pointer.
 
 **ERR_OUT_OF_RANGE**  *size* was smaller than the size of a single element.
@@ -46,7 +46,7 @@ is an invalid pointer.
 
 **ERR_REMOTE_CLOSED**  The other side of the fifo is closed.
 
-**ERR_SHOULD_WAIT**  The fifo is full.
+**ERR_SHOULD_WAIT**  The fifo is empty.
 
 
 ## SEE ALSO
