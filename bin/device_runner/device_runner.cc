@@ -182,6 +182,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
 
   // |UserProvider|
   void Login(const fidl::String& username,
+             const fidl::String& password,
              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
              fidl::InterfaceRequest<UserController> user_controller) override {
     // Get the LedgerRepository for the user.
@@ -201,6 +202,14 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
         std::move(user_controller),
         [this]() { user_controller_impl_.reset(); }));
   }
+
+  // |UserProvider|
+  void PreviousUsers(const PreviousUsersCallback& callback) override {}
+
+  // |UserProvider|
+  void AddUser(const fidl::String& username,
+               const fidl::String& password,
+               const fidl::String& servername) override {}
 
   const Settings settings_;
 

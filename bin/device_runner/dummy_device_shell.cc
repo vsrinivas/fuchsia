@@ -194,7 +194,7 @@ class DummyDeviceShellApp
   }
 
   void Login(const std::string& user_name) {
-    user_provider_->Login(user_name, std::move(view_owner_request_),
+    user_provider_->Login(user_name, nullptr, std::move(view_owner_request_),
                           user_controller_.NewRequest());
     user_controller_->Watch(user_watcher_binding_.NewBinding());
   }

@@ -15,11 +15,19 @@ import "apps/mozart/services/views/view_token.fidl";
 // it doesn't do this right now) in the same way as StoryProvider
 // provides the user shell with stories to start here.
 interface UserProvider {
+  // Adds authentication information of a Ledger user to this device.
+  // |password| is nullable for ease of development.
+  // |servername| is the remote server used to sync a user's Ledger.
+  AddUser(string username, string? password, string servername);
+
   // Passes in the user authentication information from the lockscreen or shell.
-  // |view_owner| is the view given to the UserShell. To be refined once we get
-  // to it.
-  Login(string username, mozart.ViewOwner& view_owner,
+  // |view_owner| is the view given to the UserShell.
+  // If authentication fails, |user_controller| is closed.
+  Login(string username, string? password, mozart.ViewOwner& view_owner,
         UserController& user_controller);
+
+  // List of all users who have authenticated to this device in the past.
+  PreviousUsers() => (array<string> users);
 };
 
 // Provided by DeviceRunner, provided to DeviceShell. This interface provides
