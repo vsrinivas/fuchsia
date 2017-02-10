@@ -116,6 +116,14 @@
             "bootfs_path": "apps/swap_module1"
         },
         {
+            "binary": "suggest_shell_controller",
+            "bootfs_path": "apps/suggest_shell_controller"
+        },
+        {
+            "binary": "suggest_shell_view.flx",
+            "bootfs_path": "apps/suggest_shell_view"
+        },
+        {
             "binary": "swap_module2",
             "bootfs_path": "apps/swap_module2"
         },
