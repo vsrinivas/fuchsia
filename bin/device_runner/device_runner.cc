@@ -16,7 +16,9 @@
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
+#include "apps/modular/src/device_runner/password_hash.h"
 #include "apps/modular/src/device_runner/user_controller_impl.h"
+#include "apps/modular/src/device_runner/users_generated.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
@@ -28,15 +30,20 @@
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/ftl/command_line.h"
+#include "lib/ftl/files/directory.h"
+#include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/files/path.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace modular {
 namespace {
 
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
+constexpr char kUsersConfigurationFile[] = "/data/modular/device/users.db";
 
 class Settings {
  public:
@@ -125,6 +132,24 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
         app_context_(ApplicationContext::CreateFromStartupInfo()),
         device_context_binding_(this),
         user_provider_binding_(this) {
+    // 0. Get login data for users of the device.
+    // There might not be a file of users persisted. If config file doesn't
+    // exist, move forward with no previous users.
+    if (files::IsFile(kUsersConfigurationFile)) {
+      std::string serialized_users;
+      if (!files::ReadFileToString(kUsersConfigurationFile,
+                                   &serialized_users)) {
+        // Unable to read file. Bailing out.
+        FTL_LOG(ERROR) << "Unable to read user configuration file at: "
+                       << kUsersConfigurationFile;
+        return;
+      }
+
+      if (!Parse(serialized_users)) {
+        return;
+      }
+    }
+
     // 1. Start the ledger.
     ServiceProviderPtr ledger_services;
     auto ledger_launch_info = ApplicationLaunchInfo::New();
@@ -185,6 +210,23 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
              const fidl::String& password,
              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
              fidl::InterfaceRequest<UserController> user_controller) override {
+    // Check username and password before logging in.
+    bool found_user = false;
+    if (users_storage_) {
+      for (const auto* user : *users_storage_->users()) {
+        if (user->username()->str() == username &&
+            CheckPassword(password, user->password_hash()->str())) {
+          found_user = true;
+          break;
+        }
+      }
+    }
+    if (!found_user) {
+      FTL_LOG(INFO) << "Invalid username or password";
+      return;
+    }
+
+    FTL_LOG(INFO) << "Logging in as user: " << username;
     // Get the LedgerRepository for the user.
     fidl::Array<uint8_t> user_id = to_array(username);
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
@@ -204,14 +246,77 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
   }
 
   // |UserProvider|
-  void PreviousUsers(const PreviousUsersCallback& callback) override {}
+  void PreviousUsers(const PreviousUsersCallback& callback) override {
+   fidl::Array<fidl::String> users;
+   for (const auto* user : *(users_storage_->users())) {
+     users.push_back(user->username()->str());
+   }
+   callback(std::move(users));
+  }
 
   // |UserProvider|
   void AddUser(const fidl::String& username,
                const fidl::String& password,
-               const fidl::String& servername) override {}
+               const fidl::String& servername) override {
+    flatbuffers::FlatBufferBuilder builder;
+    std::vector<flatbuffers::Offset<modular::UserStorage>> users;
+
+    // Reserialize existing users.
+    if (users_storage_) {
+      for (const auto* user : *(users_storage_->users())) {
+        users.push_back(modular::CreateUserStorage(
+            builder, builder.CreateString(user->username()),
+            builder.CreateString(user->password_hash()),
+            builder.CreateString(user->server_name())));
+      }
+    }
+
+    // Add the new user.
+    std::string password_hash;
+    if (!modular::HashPassword(password, &password_hash)) {
+      return;
+    }
+    users.push_back(modular::CreateUserStorage(
+        builder, builder.CreateString(std::move(username)),
+        builder.CreateString(std::move(password_hash)),
+        builder.CreateString(std::move(servername))));
+
+    builder.Finish(modular::CreateUsersStorage(
+        builder, builder.CreateVector(std::move(users))));
+    std::string new_serialized_users = std::string(
+        reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
+        builder.GetSize());
+    if (!Parse(new_serialized_users)) {
+      return;
+    }
+
+    // Save users to disk.
+    if (!files::CreateDirectory(
+            files::GetDirectoryName(kUsersConfigurationFile))) {
+      return;
+    }
+    if (!files::WriteFile(kUsersConfigurationFile, new_serialized_users.data(),
+                          new_serialized_users.size())) {
+      return;
+    }
+  }
+
+  bool Parse(const std::string& serialized_users) {
+    flatbuffers::Verifier verifier(
+        reinterpret_cast<const unsigned char*>(serialized_users.data()),
+        serialized_users.size());
+    if (!modular::VerifyUsersStorageBuffer(verifier)) {
+      FTL_LOG(ERROR) << "Unable to verify storage buffer.";
+      return false;
+    }
+    serialized_users_ = std::move(serialized_users);
+    users_storage_ = modular::GetUsersStorage(serialized_users_.data());
+    return true;
+  }
 
   const Settings settings_;
+  std::string serialized_users_;
+  const modular::UsersStorage* users_storage_ = nullptr;
 
   std::shared_ptr<ApplicationContext> app_context_;
   fidl::Binding<DeviceContext> device_context_binding_;

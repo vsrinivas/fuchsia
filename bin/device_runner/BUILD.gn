@@ -11,30 +11,6 @@ group("all") {
   ]
 }
 
-executable("device_runner") {
-  sources = [
-    "device_runner.cc",
-    "user_controller_impl.cc",
-    "user_controller_impl.h",
-  ]
-
-  deps = [
-    "//application/lib/app",
-    "//application/services",
-    "//apps/ledger/services",
-    "//apps/ledger/services/internal",
-    "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:scope",
-    "//apps/modular/lib/fidl:strong_binding",
-    "//apps/modular/services/device",
-    "//apps/modular/services/user:private",
-    "//apps/mozart/services/presentation",
-    "//apps/mozart/services/views",
-    "//lib/ftl",
-    "//lib/mtl",
-  ]
-}
-
 source_set("password_hash") {
   sources = [
     "password_hash.cc",
@@ -53,14 +29,38 @@ flatbuffer("users") {
   ]
 }
 
+executable("device_runner") {
+  sources = [
+    "device_runner.cc",
+    "user_controller_impl.cc",
+    "user_controller_impl.h",
+  ]
+
+  deps = [
+    ":password_hash",
+    ":users",
+    "//application/lib/app",
+    "//application/services",
+    "//apps/ledger/services",
+    "//apps/ledger/services/internal",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:scope",
+    "//apps/modular/lib/fidl:strong_binding",
+    "//apps/modular/services/device",
+    "//apps/modular/services/user:private",
+    "//apps/mozart/services/presentation",
+    "//apps/mozart/services/views",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
 executable("dummy_device_shell") {
   sources = [
     "dummy_device_shell.cc",
   ]
 
   deps = [
-    ":password_hash",
-    ":users",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/device",
