@@ -385,9 +385,6 @@ status_t UserThread::ExceptionHandlerExchange(
     // So the handler can read/write our general registers.
     thread_.exception_context = arch_context;
 
-    // So various bits know we're stopped in an exception.
-    thread_.flags |= THREAD_FLAG_STOPPED_FOR_EXCEPTION;
-
     // For OnExceptionPortRemoval in case the port is unbound.
     DEBUG_ASSERT(exception_wait_port_ == nullptr);
     exception_wait_port_ = eport;
@@ -398,7 +395,6 @@ status_t UserThread::ExceptionHandlerExchange(
     DEBUG_ASSERT(exception_status_ != MX_EXCEPTION_STATUS_WAITING);
 
     exception_wait_port_.reset();
-    thread_.flags &= ~THREAD_FLAG_STOPPED_FOR_EXCEPTION;
     thread_.exception_context = nullptr;
 
     LTRACEF("ExceptionHandlerExchange returning\n");
@@ -440,7 +436,7 @@ status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buff
     AutoLock lock(exception_wait_lock_);
 
     if (thread_.state != THREAD_BLOCKED ||
-        (thread_.flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
+        !thread_stopped_in_exception(&thread_))
         return ERR_BAD_STATE;
 
     switch (state_kind)
@@ -460,7 +456,7 @@ status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_
     AutoLock lock(exception_wait_lock_);
 
     if (thread_.state != THREAD_BLOCKED ||
-        (thread_.flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
+        !thread_stopped_in_exception(&thread_))
         return ERR_BAD_STATE;
 
     switch (state_kind)

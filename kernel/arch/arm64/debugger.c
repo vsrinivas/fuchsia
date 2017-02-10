@@ -28,7 +28,7 @@ static status_t arch_get_general_regs(struct thread *thread, mx_aarch64_general_
     if (provided_buf_size < sizeof(*gr))
         return ERR_BUFFER_TOO_SMALL;
 
-    if ((thread->flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
+    if (!thread_stopped_in_exception(thread))
         return ERR_BAD_STATE;
 
     struct arm64_iframe_long *p = thread->exception_context->frame;
@@ -53,7 +53,7 @@ static status_t arch_set_general_regs(struct thread *thread, const mx_aarch64_ge
     if (buf_size != sizeof(*gr))
         return ERR_INVALID_ARGS;
 
-    if ((thread->flags & THREAD_FLAG_STOPPED_FOR_EXCEPTION) == 0)
+    if (!thread_stopped_in_exception(thread))
         return ERR_BAD_STATE;
 
     struct arm64_iframe_long *p = thread->exception_context->frame;

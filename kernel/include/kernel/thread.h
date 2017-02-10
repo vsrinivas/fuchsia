@@ -56,7 +56,6 @@ enum thread_tls_list {
 #define THREAD_FLAG_REAL_TIME                 (1<<3)
 #define THREAD_FLAG_IDLE                      (1<<4)
 #define THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK  (1<<5)
-#define THREAD_FLAG_STOPPED_FOR_EXCEPTION     (1<<6)
 
 #define THREAD_SIGNAL_KILL                    (1<<0)
 
@@ -191,6 +190,12 @@ status_t thread_set_real_time(thread_t *t);
 
 void thread_owner_name(thread_t *t, char out_name[THREAD_NAME_LENGTH]);
 void thread_print_backtrace(thread_t* t, void* fp);
+
+// Return true if stopped in an exception.
+static inline bool thread_stopped_in_exception(const thread_t* thread)
+{
+    return !!thread->exception_context;
+}
 
 /* wait for at least delay amount of time. interruptable may return early with ERR_INTERRUPTED
  * if thread is signaled for kill.
