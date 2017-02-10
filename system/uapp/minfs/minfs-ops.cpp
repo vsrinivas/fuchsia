@@ -1067,8 +1067,21 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
 
     // mint a new inode and vnode for it
     vnode_t* vn;
-    if ((status = vndir->fs->VnodeNew(&vn, type)) < 0) {
+    if ((status = vndir->fs->VnodeNew(&vn, type)) < 0) { // vn refcount +1
         return status;
+    }
+
+    // If the new node is a directory, fill it with '.' and '..'.
+    if (type == kMinfsTypeDir) {
+        char bdata[DirentSize(1) + DirentSize(2)];
+        minfs_dir_init(bdata, vn->ino, vndir->ino);
+        size_t expected = DirentSize(1) + DirentSize(2);
+        if (_fs_write_exact(vn, bdata, expected, 0) != NO_ERROR) {
+            fs_release(vn); // vn refcount +0
+            return ERR_IO;
+        }
+        vn->inode.dirent_count = 2;
+        minfs_sync_vnode(vn, kMxFsSyncDefault);
     }
 
     // add directory entry for the new child node
@@ -1076,22 +1089,11 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
     args.type = type;
     args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(len)));
     if ((status = vn_dir_for_each(vndir, &args, cb_dir_append)) < 0) {
-        fs_release(vndir);
+        fs_release(vn); // vn refcount +0
         return status;
     }
 
-    if (type == kMinfsTypeDir) {
-        char bdata[DirentSize(1) + DirentSize(2)];
-        minfs_dir_init(bdata, vn->ino, vndir->ino);
-        size_t expected = DirentSize(1) + DirentSize(2);
-        if (_fs_write_exact(vn, bdata, expected, 0) != NO_ERROR) {
-            fs_release(vndir);
-            return ERR_IO;
-        }
-        vn->inode.dirent_count = 2;
-        minfs_sync_vnode(vn, kMxFsSyncDefault);
-    }
-    *out = vn;
+    *out = vn; // vn refcount returned as +1
     return NO_ERROR;
 }
 
