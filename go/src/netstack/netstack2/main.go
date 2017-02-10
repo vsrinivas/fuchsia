@@ -43,7 +43,7 @@ func main() {
 	linkID := stack.RegisterLinkEndpoint(ep)
 	lladdr := ipv6LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
 
-	stk := stack.New([]string{ipv4.ProtocolName, ipv4.PingProtocolName, ipv6.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
+	stk := stack.New([]string{ipv4.ProtocolName, ipv4.PingProtocolName, ipv6.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName}).(*stack.Stack)
 	if err := stk.CreateNIC(1, linkID); err != nil {
 		log.Fatalf("CreateNIC: %v", err)
 	}
@@ -64,10 +64,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	dhcpClient = dhcp.NewClient(stk.(*stack.Stack), 1, ep.linkAddr)
+	dhcpClient = dhcp.NewClient(stk, 1, ep.linkAddr)
 	go dhcpClient.Start(func(config dhcp.Config) {
 		// Update default route with new gateway.
 		stk.SetRouteTable(defaultRouteTable(config.Gateway))
+		stk.RemoveAddress(1, "\xff\xff\xff\xff")
+		stk.RemoveAddress(1, "\x00\x00\x00\x00")
 	})
 
 	_, err := socketDispatcher(stk)
