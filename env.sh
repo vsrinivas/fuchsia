@@ -578,6 +578,32 @@ function fbuild() {
     && fbuild-internal "$@"
 }
 
+function fbuild-sync() {
+  local stamp userfs_path build_path
+
+  stamp="${FUCHSIA_BUILD_DIR}/.build-started"
+  touch $stamp
+
+  fbuild $*
+
+  export stamp
+  echo "Syncing changed user.bootfs files..."
+  while IFS=\= read userfs_path build_path; do
+    if [[ -z "${build_path}" ]]; then
+      continue
+    fi
+
+    if [[ $build_path -nt $stamp ]]; then
+      local device_path=/system/${userfs_path}
+      echo "Updating ${device_path} with ${build_path}"
+      # Can't netcp over a running program - see: MG-521
+      netcp $build_path :${device_path}.tmp
+      netruncmd : cp ${device_path}.tmp ${device_path}
+      netruncmd : rm ${device_path}.tmp
+    fi
+  done < "${FUCHSIA_BUILD_DIR}/gen/packages/gn/user.bootfs.manifest"
+}
+
 ### fboot: run fuchsia bootserver
 
 function fboot-usage() {
