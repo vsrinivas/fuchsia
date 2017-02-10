@@ -248,7 +248,7 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
                   le16toh(event.GetPayload<CommandCompleteEventParams>()
                               ->command_opcode));
         EXPECT_EQ(Status::kHardwareFailure,
-                  event.GetReturnParams<ResetReturnParams>()->status);
+                  event.GetReturnParams<SimpleReturnParams>()->status);
 
         // Quit the message loop to continue the test.
         message_loop()->QuitNow();
@@ -296,7 +296,7 @@ TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
     EXPECT_EQ(callback_id, id);
     EXPECT_EQ(kCommandCompleteEventCode, event.event_code());
     EXPECT_EQ(Status::kSuccess,
-              event.GetReturnParams<ResetReturnParams>()->status);
+              event.GetReturnParams<SimpleReturnParams>()->status);
 
     // Quit the message loop to continue the test.
     message_loop()->QuitNow();

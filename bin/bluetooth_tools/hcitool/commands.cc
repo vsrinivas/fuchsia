@@ -258,7 +258,7 @@ bool HandleReset(const CommandDispatcher& owner,
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
                           const hci::EventPacket& event) {
-    auto status = event.GetReturnParams<hci::ResetReturnParams>()->status;
+    auto status = event.GetReturnParams<hci::SimpleReturnParams>()->status;
     LogCommandComplete(status, id);
     complete_cb();
   };
@@ -347,8 +347,7 @@ bool HandleWriteLocalName(const CommandDispatcher& owner,
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
                           const hci::EventPacket& event) {
-    auto return_params =
-        event.GetReturnParams<hci::WriteLocalNameReturnParams>();
+    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
@@ -390,8 +389,7 @@ bool HandleSetAdvEnable(const CommandDispatcher& owner,
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
                           const hci::EventPacket& event) {
-    auto return_params =
-        event.GetReturnParams<hci::LESetAdvertisingEnableReturnParams>();
+    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
@@ -473,8 +471,7 @@ bool HandleSetAdvParams(const CommandDispatcher& owner,
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
                           const hci::EventPacket& event) {
-    auto return_params =
-        event.GetReturnParams<hci::LESetAdvertisingParametersReturnParams>();
+    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
@@ -533,8 +530,7 @@ bool HandleSetAdvData(const CommandDispatcher& owner,
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
                           const hci::EventPacket& event) {
-    auto return_params =
-        event.GetReturnParams<hci::LESetAdvertisingDataReturnParams>();
+    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
@@ -592,8 +588,7 @@ bool HandleSetScanParams(const CommandDispatcher& owner,
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
                           const hci::EventPacket& event) {
-    auto return_params =
-        event.GetReturnParams<hci::LESetScanParametersReturnParams>();
+    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
   };
@@ -684,8 +679,7 @@ bool HandleSetScanEnable(const CommandDispatcher& owner,
   // The callback invoked after scanning is stopped.
   auto final_cb = [cleanup_cb](hci::CommandChannel::TransactionId id,
                                const hci::EventPacket& event) {
-    auto return_params =
-        event.GetReturnParams<hci::LESetScanEnableReturnParams>();
+    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     cleanup_cb();
   };
@@ -709,8 +703,7 @@ bool HandleSetScanEnable(const CommandDispatcher& owner,
   auto cb = [
     scan_disable_cb, cleanup_cb, timeout, task_runner = owner.task_runner()
   ](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params =
-        event.GetReturnParams<hci::LESetScanEnableReturnParams>();
+    auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     if (return_params->status != hci::Status::kSuccess) {
       cleanup_cb();

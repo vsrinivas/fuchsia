@@ -50,6 +50,14 @@ struct EventHeader {
   uint8_t parameter_total_size;
 } __PACKED;
 
+// Generic return parameter struct for commands that only return a status. This
+// can also be used to check the status of HCI commands with more complex return
+// parameters.
+struct SimpleReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+} __PACKED;
+
 // ============= HCI Command and Event (op)code and payloads =============
 
 // No-Op
@@ -77,11 +85,6 @@ constexpr OpCode ControllerAndBasebandOpCode(const uint16_t ocf) {
 // Reset Command (v1.1)
 constexpr OpCode kReset = ControllerAndBasebandOpCode(0x0003);
 
-struct ResetReturnParams {
-  // See enum Status in hci_constants.h.
-  Status status;
-};
-
 // ========================================
 // Write Local Name Command (v1.1) (BR/EDR)
 constexpr OpCode kWriteLocalName = ControllerAndBasebandOpCode(0x0013);
@@ -93,12 +96,7 @@ struct WriteLocalNameCommandParams {
   // and the following octets (to fill up 248 octets, which is the length of the
   // parameter) do not have valid values.
   uint8_t local_name[0];
-};
-
-struct WriteLocalNameReturnParams {
-  // See enum Status in hci_constants.h.
-  Status status;
-};
+} __PACKED;
 
 // =======================================
 // Read Local Name Command (v1.1) (BR/EDR)
@@ -135,12 +133,7 @@ constexpr OpCode kWriteClassOfDevice = ControllerAndBasebandOpCode(0x0024);
 struct WriteClassOfDeviceCommandParams {
   // Class of Device for the device.
   uint8_t class_of_device[3];
-};
-
-struct WriteClassOfDeviceReturnParams {
-  // See enum Status in hci_constants.h.
-  Status status;
-};
+} __PACKED;
 
 // =========================================================
 // Read Flow Control Mode Command (v3.0 + HS) (BR/EDR & AMP)
@@ -165,12 +158,7 @@ struct WriteFlowControlModeCommandParams {
   // HCI Data flow control mode used by the Controller for ACL Data traffic.
   // See enum class FlowControlMode in hci_constants.h for possible values.
   uint8_t flow_control_mode;
-};
-
-struct WriteFlowControlModeReturnParams {
-  // See enum Status in hci_constants.h.
-  Status status;
-};
+} __PACKED;
 
 // ======= Informational Parameters =======
 // Core Spec v5.0 Vol 2, Part E, Section 7.4
@@ -245,7 +233,7 @@ struct ReadLocalExtendedFeaturesCommandParams {
   //
   // - 0x01-0xFF: Return the corresponding page of features.
   uint8_t page_number;
-};
+} __PACKED;
 
 struct ReadLocalExtendedFeaturesReturnParams {
   // See enum Status in hci_constants.h.
@@ -375,7 +363,7 @@ struct HardwareErrorEventParams {
   // These Hardware_Codes will be implementation-specific, and can be assigned
   // to indicate various hardware problems.
   uint8_t hardware_code;
-};
+} __PACKED;
 
 // ========================================
 // Number Of Completed Packets Event (v1.1)
@@ -632,11 +620,6 @@ struct LESetAdvertisingParametersCommandParams {
   LEAdvFilterPolicy adv_filter_policy;
 } __PACKED;
 
-struct LESetAdvertisingParametersReturnParams {
-  // See enum Status in hci_constants.h
-  Status status;
-};
-
 // ===========================================
 // LE Set Advertising Data Command (v4.0) (LE)
 constexpr OpCode kLESetAdvertisingData = LEControllerCommandOpCode(0x0008);
@@ -649,11 +632,6 @@ struct LESetAdvertisingDataCommandParams {
   // 3, Part C, Section 11.
   uint8_t adv_data[kMaxLEAdvertisingDataLength];
 } __PACKED;
-
-struct LESetAdvertisingDataReturnParams {
-  // See enum Status in hci_constants.h
-  Status status;
-};
 
 // =============================================
 // LE Set Advertising Enable Command (v4.0) (LE)
@@ -671,12 +649,7 @@ struct LESetAdvertisingEnableCommandParams {
   // Advertising is timed out due to high duty cycle Directed Advertising. In
   // these cases, advertising is then disabled.
   GenericEnableParam advertising_enable;
-};
-
-struct LESetAdvertisingEnableReturnParams {
-  // See enum Status in hci_constants.h.
-  Status status;
-};
+} __PACKED;
 
 // ==========================================
 // LE Set Scan Parameters Command (v4.0) (LE)
@@ -709,11 +682,6 @@ struct LESetScanParametersCommandParams {
   LEScanFilterPolicy filter_policy;
 } __PACKED;
 
-struct LESetScanParametersReturnParams {
-  // See enum status in hci_constants.h
-  Status status;
-};
-
 // ======================================
 // LE Set Scan Enable Command (v4.0) (LE)
 constexpr OpCode kLESetScanEnable = LEControllerCommandOpCode(0x000C);
@@ -733,11 +701,6 @@ struct LESetScanEnableCommandParams {
   // (See Core Spec v5.0, Vol 6, Part B, Section 4.4.3.5)
   GenericEnableParam filter_duplicates;
 } __PACKED;
-
-struct LESetScanEnableReturnParams {
-  // See enum status in hci_constants.h
-  Status status;
-};
 
 // ============================================
 // LE Read Supported States Command (v4.0) (LE)
