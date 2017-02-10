@@ -16,8 +16,9 @@ void StateTracker::AddObserver(StateObserver* observer) {
     {
         AutoLock lock(&lock_);
 
-        observers_.push_front(observer);
         awoke_threads = observer->OnInitialize(signals_);
+        if (!observer->remove())
+            observers_.push_front(observer);
     }
     if (awoke_threads)
         thread_preempt(false);
@@ -35,9 +36,8 @@ void StateTracker::Cancel(Handle* handle) {
     {
         AutoLock lock(&lock_);
         for (auto it = observers_.begin(); it != observers_.end();) {
-            bool should_remove = false;
-            awoke_threads = it->OnCancel(handle, &should_remove) || awoke_threads;
-            if (should_remove) {
+            awoke_threads = it->OnCancel(handle) || awoke_threads;
+            if (it->remove()) {
                 auto to_remove = it;
                 ++it;
                 observers_.erase(to_remove);
@@ -65,8 +65,15 @@ void StateTracker::UpdateState(mx_signals_t clear_mask,
         if (previous_signals == signals_)
             return;
 
-        for (auto& observer : observers_) {
-            awoke_threads = observer.OnStateChange(signals_) || awoke_threads;
+        for (auto it = observers_.begin(); it != observers_.end();) {
+            awoke_threads = it->OnStateChange(signals_) || awoke_threads;
+            if (it->remove()) {
+                auto to_remove = it;
+                ++it;
+                observers_.erase(to_remove);
+            } else {
+                ++it;
+            }
         }
     }
 

@@ -77,7 +77,7 @@ bool WaitStateObserver::OnStateChange(mx_signals_t new_state) {
     return false;
 }
 
-bool WaitStateObserver::OnCancel(Handle* handle, bool* should_remove) {
+bool WaitStateObserver::OnCancel(Handle* handle) {
     if (handle == handle_) {
         wakeup_reasons_ |= MX_SIGNAL_HANDLE_CLOSED;
         return event_->Signal() > 0;

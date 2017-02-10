@@ -126,7 +126,7 @@ private:
     // StateObserver overrides.
     bool OnInitialize(mx_signals_t initial_state) final;
     bool OnStateChange(mx_signals_t new_state) final;
-    bool OnCancel(Handle* handle, bool* should_remove) final;
+    bool OnCancel(Handle* handle) final;
 
     bool MaybeQueue(mx_signals_t new_state);
 

@@ -136,17 +136,11 @@ bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_t new_state) {
     return false;
 }
 
-bool WaitSetDispatcher::Entry::OnCancel(Handle* handle,
-                                        bool* should_remove) {
+bool WaitSetDispatcher::Entry::OnCancel(Handle* handle) {
     AutoLock lock(&wait_set_->mutex_);
 
-    if (state_ == State::REMOVED) {
-        // |*should_remove| should be false by default. Observing REMOVED here means that we're
-        // inside RemoveEntry(), just before the call to RemoveObserver() -- so there's no need for
-        // us to remove ourself from the StateTracker's observer list.
-        DEBUG_ASSERT(!*should_remove);
+    if (state_ == State::REMOVED)
         return false;
-    }
 
     DEBUG_ASSERT(state_ == State::ADDED);
 
@@ -156,7 +150,8 @@ bool WaitSetDispatcher::Entry::OnCancel(Handle* handle,
     handle_ = nullptr;
     dispatcher_.reset();
 
-    *should_remove = true;
+    // We'll be removed from the state observer list.
+    remove_ = true;
 
     if (!is_triggered_)
         return TriggerLocked();
@@ -355,7 +350,7 @@ bool WaitSetDispatcher::OnInitialize(mx_signals_t initial_state) { return false;
 
 bool WaitSetDispatcher::OnStateChange(mx_signals_t new_state) { return false; }
 
-bool WaitSetDispatcher::OnCancel(Handle* handle, bool* should_remove) {
+bool WaitSetDispatcher::OnCancel(Handle* handle) {
     AutoLock lock(&mutex_);
     cancelled_ = true;
     return event_signal(&event_, false) > 0;

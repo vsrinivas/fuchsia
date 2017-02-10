@@ -15,7 +15,7 @@ class Handle;
 // Observer base class for state maintained by StateTracker.
 class StateObserver {
 public:
-    explicit StateObserver() { }
+    explicit StateObserver() : remove_(false) { }
 
     // Called when this object is added to a StateTracker, to give it the initial state. Returns
     // true if a thread was awoken.
@@ -34,10 +34,16 @@ public:
     // (by default, |*should_remove| is false), in which case RemoveObserver() should not be called
     // for the callee observer.
     // WARNING: This is called under StateTracker's mutex.
-    virtual bool OnCancel(Handle* handle, bool* should_remove) = 0;
+    virtual bool OnCancel(Handle* handle) = 0;
+
+    // Return true to have the observer removed from the state_observer after calling either
+    // OnInitialize() OnStateChange() or OnCancel().
+    bool remove() const { return remove_; }
 
 protected:
     ~StateObserver() {}
+    // Warning: |remove_| should only be mutated during the OnXXX callbacks.
+    bool remove_ = false;
 
 private:
     friend struct StateObserverListTraits;

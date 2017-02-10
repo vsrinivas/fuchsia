@@ -90,7 +90,7 @@ bool PortObserver::OnStateChange(mx_signals_t new_state) {
     return MaybeQueue(new_state);
 }
 
-bool PortObserver::OnCancel(Handle* handle, bool* should_remove) {
+bool PortObserver::OnCancel(Handle* handle) {
     // This is called with the |handle| state lock being held.
     if (handle_ != handle)
         return false;
