@@ -62,6 +62,10 @@
         {
             "binary": "example_todo_ledger.flx",
             "bootfs_path": "apps/example_todo_ledger"
+	},
+	{
+            "binary": "example_todo_story.flx",
+            "bootfs_path": "apps/example_todo_story"
         },
         {
             "binary": "gen/component_index.json",
