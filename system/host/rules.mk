@@ -4,7 +4,6 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-
 # Export these files for use when building host tools from outside of magenta.
 # Since these files are for use in building host tools, here is as good a
 # place as any to do this for now.
@@ -27,6 +26,7 @@ HOSTAPPS := \
 	$(LOCAL_DIR)/bootserver/rules.mk \
 	$(LOCAL_DIR)/loglistener/rules.mk \
 	$(LOCAL_DIR)/mdi/rules.mk \
+	$(LOCAL_DIR)/merkleroot/rules.mk \
 	$(LOCAL_DIR)/mkbootfs/rules.mk \
 	$(LOCAL_DIR)/netprotocol/rules.mk \
 	$(LOCAL_DIR)/sysgen/rules.mk \
