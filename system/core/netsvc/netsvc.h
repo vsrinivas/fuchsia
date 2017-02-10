@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <limits.h>
 
 #include <inet6/inet6.h>
 
@@ -12,7 +13,10 @@
 
 typedef struct netfile_state_t {
     int      fd;
-    char     filename[1024]; // for debugging
+    // false: Filename is the open file and final destination
+    // true : Filename is final destination; open file has a magic tmp suffix
+    bool     needs_rename;
+    char     filename[PATH_MAX];
     uint32_t blocknum;
     uint32_t cookie;
     uint8_t  data[1024];

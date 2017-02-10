@@ -21,8 +21,11 @@
 
 #include <magenta/netboot.h>
 
+#define TMP_SUFFIX ".netsvc.tmp"
+
 netfile_state netfile = {
     .fd = -1,
+    .needs_rename = false,
 };
 
 static int netfile_mkdir(const char* filename) {
@@ -62,6 +65,8 @@ void netfile_open(const char *filename, uint32_t cookie, uint32_t arg,
         close(netfile.fd);
         netfile.fd = -1;
     }
+    size_t len = strlen(filename);
+    strlcpy(netfile.filename, filename, sizeof(netfile.filename));
     netfile.blocknum = 0;
     netfile.cookie = cookie;
 
@@ -74,10 +79,21 @@ again: // label here to catch filename=/path/to/new/directory/
 
     switch (arg) {
     case O_RDONLY:
+        netfile.needs_rename = false;
         netfile.fd = open(filename, O_RDONLY);
         break;
     case O_WRONLY: {
-        netfile.fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
+        // If we're writing a file, actually write to "filename + TMP_SUFFIX",
+        // and rename to the final destination when we would close. This makes
+        // written files appear to atomically update.
+        if (len + strlen(TMP_SUFFIX) + 1 > PATH_MAX) {
+            errno = ENAMETOOLONG;
+            goto err;
+        }
+        strcat(netfile.filename, TMP_SUFFIX);
+        netfile.needs_rename = true;
+        netfile.fd = open(netfile.filename, O_WRONLY|O_CREAT|O_TRUNC);
+        netfile.filename[len] = '\0';
         if (netfile.fd < 0 && errno == ENOENT) {
             if (netfile_mkdir(filename) == 0) {
                 goto again;
@@ -98,6 +114,7 @@ again: // label here to catch filename=/path/to/new/directory/
     udp6_send(&m, sizeof(m), saddr, sport, dport);
     return;
 err:
+    netfile.filename[0] = '\0';
     m.arg = -errno;
     udp6_send(&m, sizeof(m), saddr, sport, dport);
 }
@@ -204,6 +221,14 @@ void netfile_close(uint32_t cookie,
     if (netfile.fd < 0) {
         printf("netsvc: close, but no open file\n");
     } else {
+        if (netfile.needs_rename) {
+            char src[PATH_MAX];
+            strlcpy(src, netfile.filename, sizeof(netfile.filename));
+            strcat(src, TMP_SUFFIX);
+            if (rename(src, netfile.filename)) {
+                printf("netsvc: failed to rename temporary file: %s\n", strerror(errno));
+            }
+        }
         if (close(netfile.fd)) {
             m.arg = -errno;
             if (m.arg == 0) {
