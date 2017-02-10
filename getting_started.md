@@ -157,4 +157,4 @@ frun -N
 
 * [Fuchsia documentation](https://fuchsia.googlesource.com/docs) hub.
 * [Contributing changes](https://fuchsia.googlesource.com/manifest/+/HEAD/README.md#Submitting-changes).
-* More about the [build commands](https://fuchsia.googlesource.com/fuchsia/+/HEAD/BUILD_NOTES.md) called under-the-hood by `fbuild`.
+* More about the [build commands](https://fuchsia.googlesource.com/docs/+/master/build_system.md) called under-the-hood by `fbuild`.
