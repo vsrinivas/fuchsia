@@ -7,10 +7,9 @@ Dart
 Dart artifacts are not built the same way in Fuchsia as they are on other
 platforms.
 
-Instead of relying on
-[`pub`](https://www.dartlang.org/tools/pub/get-started) to manage dependencies,
-sources of third-party packages we depend on are checked into the tree under
-[`//third_party/dart-pkg`](https://fuchsia.googlesource.com/third_party/dart-pkg/+/master).
+Instead of relying on [`pub`][pub] to manage dependencies, sources of
+third-party packages we depend on are checked into the tree under
+[`//third_party/dart-pkg`][dart-3p].
 This is to ensure we use consistent versions of our dependencies across multiple
 builds.
 
@@ -21,25 +20,20 @@ Likewise, no build output is placed in the source tree as everything goes under
 ## Targets
 
 There are four gn targets for building Dart:
-- [`dart_package`](https://fuchsia.googlesource.com/build/+/master/dart/dart_package.gni)
-  defines a library that can be used by other Dart targets;
-- [`dart_app`](https://fuchsia.googlesource.com/dart_content_handler/+/master/dart_app.gni)
-defines a Dart executable;
-- [`flutter_app`](https://github.com/flutter/engine/blob/master/build/flutter_app.gni)
-  defines a [Flutter](https://flutter.io/) application;
-- [`dart_test`](https://fuchsia.googlesource.com/build/+/master/dart/dart_test.gni)
-defines a group of test.
+- [`dart_package`][target-package] defines a library that can be used by other
+Dart targets;
+- [`dart_app`][target-app] defines a Dart executable;
+- [`flutter_app`][target-flutter] defines a [Flutter][flutter] application;
+- [`dart_test`][target-test] defines a group of test.
 
 See the definitions of each of these targets for how to use them.
 
 
 ## Managing third-party dependencies
 
-[`//third-party/dart-pkg`](https://fuchsia.googlesource.com/third_party/dart-pkg/+/master)
-is kept up-to-date with
-[a script](https://fuchsia.googlesource.com/scripts/+/master/update_dart_packages.py)
-that relies on `pub` to resolve versions and fetch sources for the packages that
-are used in the tree.
+[`//third-party/dart-pkg`][dart-3p] is kept up-to-date with
+[a script][dart-3p-script] that relies on `pub` to resolve versions and fetch
+sources for the packages that are used in the tree.
 This script uses a set of canonical local packages which are assumed to be
 providing the necessary package coverage for the entire tree.
 
@@ -101,8 +95,8 @@ to be analyzed.
 
 ## FIDL
 
-[FIDL](https://fuchsia.googlesource.com/fidl/+/master/fidl.gni) targets generate
-implicit Dart bindings targets. To use the bindings generated for:
+[FIDL][fidl] targets generate implicit Dart bindings targets. To use the
+bindings generated for:
 ```
 //foo/bar/blah
 ```
@@ -154,3 +148,14 @@ their dependencies.
 The current implementation of `dart_package` forces test targets to be defined
 in their own build file. The best location for that file is the test directory
 itself.
+
+
+[pub]: https://www.dartlang.org/tools/pub/get-started "Pub"
+[dart-3p]: https://fuchsia.googlesource.com/third_party/dart-pkg/+/master "Third-party dependencies"
+[dart-3p-script]: https://fuchsia.googlesource.com/scripts/+/master/update_dart_packages.py "Dependencies script"
+[target-package]: https://fuchsia.googlesource.com/build/+/master/dart/dart_package.gni "dart_package target"
+[target-app]: https://fuchsia.googlesource.com/build/+/master/dart/dart_app.gni "dart_app target"
+[target-flutter]: https://github.com/flutter/engine/blob/master/build/flutter_app.gni "flutter_app target"
+[target-test]: https://fuchsia.googlesource.com/build/+/master/dart/dart_test.gni "dart_test target"
+[flutter]: https://flutter.io/ "Flutter"
+[fidl]: https://fuchsia.googlesource.com/fidl/+/master/fidl.gni "FIDL"
