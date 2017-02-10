@@ -385,7 +385,7 @@ static mx_protocol_device_t mailbox_device_proto = {
     .ioctl = mailbox_device_ioctl,
 };
 
-static mx_protocol_device_t vc_device_proto = {};
+static mx_protocol_device_t empty_device_proto = {};
 
 mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     uintptr_t page_base;
@@ -436,7 +436,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
 
     bcm_vc_get_framebuffer(&framebuff_descriptor);
 
-    device_init(&disp_device, driver, "bcm-vc-fbuff", &vc_device_proto);
+    device_init(&disp_device, driver, "bcm-vc-fbuff", &empty_device_proto);
 
     disp_device.protocol_id = MX_PROTOCOL_DISPLAY;
     disp_device.protocol_ops = &vc_display_proto;
@@ -454,6 +454,18 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
     if (status != NO_ERROR) {
         return status;
     }
+
+    bcm_vc_poweron(bcm_dev_sd);
+
+    // Publish this mock device to allow the eMMC device to bind to.
+    mx_device_t* sdmmc_device = malloc(sizeof(*sdmmc_device));
+    device_init(sdmmc_device, driver, "bcm-sdmmc", &empty_device_proto);
+    sdmmc_device->props = calloc(2, sizeof(mx_device_prop_t));
+    sdmmc_device->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
+    sdmmc_device->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_EMMC};
+    sdmmc_device->prop_count = 2;
+    sdmmc_device->protocol_id = MX_PROTOCOL_SOC;
+    status = device_add(sdmmc_device, parent);
 
     bcm_vc_poweron(bcm_dev_usb);
 
