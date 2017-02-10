@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
@@ -12,17 +13,47 @@ void _log(String msg) {
   print('[Todo Story Example] $msg');
 }
 
-class TodoListData extends LinkWatcher {
+/// A single Todo item.
+class TodoItem {
+  final String text;
+  final int position;
+
+  const TodoItem({this.text, this.position});
+}
+
+typedef void LinkConnectorCallback(List<TodoItem> entries);
+
+/// [LinkConnector] maintains an updated view of a list of [TodoItem] objects
+/// from a provided [LinkProxy]. [LinkConnector] can also be used to modify
+/// this list.
+///
+/// The [TodoItem]s are stored inside a link using the following scheme:
+/// {
+///   "items": [
+///     "todo 1",
+///     "todo 2",
+///     "todo 3"
+///   ]
+/// }
+class LinkConnector extends LinkWatcher {
   final LinkWatcherBinding _binding = new LinkWatcherBinding();
   final Future<LinkProxy> _link;
-  Function _callback;
+  List<TodoItem> _items = <TodoItem>[];
 
-  TodoListData(Future<LinkProxy> link) : _link = link {
+  LinkConnectorCallback _callback;
+
+  LinkConnector(this._link) {
     _setup();
   }
 
-  void setCallback(void callback(List<String> entries)) {
+  /// Sets the callback that will be called for each change of the todo list.
+  /// [callback] will be immediately called with the current state of the todo
+  /// list.
+  void setCallback(LinkConnectorCallback callback) {
     this._callback = callback;
+    Timer.run(() {
+      _callCallback();
+    });
   }
 
   Future _setup() async {
@@ -39,27 +70,58 @@ class TodoListData extends LinkWatcher {
     _parse(json);
   }
 
-  void _parse(String json) {
-    if (_callback == null) {
-      return;
-    }
-    final decoded = JSON.decode(json);
+  Future _parse(String json) async {
+    final dynamic decoded = JSON.decode(json);
     if (decoded == null) {
-      _callback(new List<String>());
+      _items = <TodoItem>[];
+      _callCallback();
       return;
     }
-    if (decoded is! Map || decoded["list"] is! List) {
+    if (decoded is! Map || decoded["items"] is! List) {
       _log("decoded is not of the right type");
       return;
     }
-    _callback(decoded["list"]);
+    _items = <TodoItem>[];
+    for (int i = 0; i < decoded["items"].length; i++) {
+      _items.add(new TodoItem(text: decoded["items"][i], position: i));
+    }
+    _callCallback();
   }
 
-  Future setNewList(List<String> items) async {
-    final encoded = JSON.encode(items);
-    _log("Storing " + encoded);
-    // TODO(etiennej): Storing the items as a simple list may not be the best
-    // representation, as any concurrent change will create a conflict.
-    (await _link).set(["list"], encoded);
+  void _callCallback() {
+    if (_callback != null) {
+      _callback(_items);
+    }
+  }
+
+  /// Adds a new todo item with the provided text at the end of the current
+  /// list.
+  Future addItem(String text) async {
+    int position = _items.length;
+    TodoItem item = new TodoItem(text: text, position: position);
+    _items.add(item);
+    _setLink();
+  }
+
+  /// Removes the provided [TodoItem] from the current list.
+  Future removeItem(TodoItem item) async {
+    _log("Deleting item " + item.text);
+    _items.removeAt(item.position);
+    _setLink();
+  }
+
+  /// Places [item] at the [position] index within the todo list.
+  Future reorderItems(TodoItem item, int position) async {
+    _log("Insert " + item.text + " at position " + position.toString());
+    _items.removeAt(item.position);
+    _items.insert(position, new TodoItem(text: item.text, position: position));
+    _setLink();
+  }
+
+  Future _setLink() async {
+    // This implementation can lose data because the Link needs an interface to
+    // reconcile conflicts.
+    (await _link).set(["items"],
+        JSON.encode(_items.map((TodoItem item) => item.text).toList()));
   }
 }

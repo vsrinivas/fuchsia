@@ -15,6 +15,8 @@ import 'package:flutter/widgets.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import "./data.dart";
+import "./generator.dart";
+import "./view.dart";
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 
@@ -26,10 +28,10 @@ void _log(String msg) {
 class TodoModule extends Module {
   final ModuleBinding _binding = new ModuleBinding();
   final Completer<LinkProxy> _linkCompleter = new Completer<LinkProxy>();
-  TodoListData data;
+  LinkConnector linkConnector;
 
   TodoModule() {
-    data = new TodoListData(_linkCompleter.future);
+    linkConnector = new LinkConnector(_linkCompleter.future);
   }
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
@@ -49,8 +51,6 @@ class TodoModule extends Module {
     LinkProxy link = new LinkProxy();
     link.ctrl.bind(linkHandle);
     _linkCompleter.complete(link);
-
-    // Do something with the story and link services.
   }
 
   /// Implementation of the Stop() => (); method.
@@ -62,61 +62,6 @@ class TodoModule extends Module {
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
-  }
-}
-
-class TodoList extends StatefulWidget {
-  TodoList(TodoModule this._module);
-
-  final TodoModule _module;
-
-  @override
-  TodoListState createState() => new TodoListState(_module.data);
-}
-
-class TodoListState extends State<TodoList> {
-  final List<String> _todoItems = [
-    "Save the world",
-    "Write unit tests",
-    "Sleep",
-    "Finish this app"
-  ];
-
-
-  TodoListState(TodoListData this._data) {
-    _data.setCallback((List<String> items) {
-      setState(() {
-        _items.clear();
-        _items.addAll(items);
-      });
-    });
-
-    _timer = new Timer.periodic(const Duration(seconds: 2), (Timer timer) {
-      List<String> newItems = new List.from(_items);
-      if (_random.nextInt(100) > 50) {
-        newItems.add(_todoItems[_random.nextInt(_todoItems.length)]);
-      } else {
-        if (newItems.isNotEmpty) {
-          newItems.removeAt(_random.nextInt(newItems.length));
-        }
-      }
-      _data.setNewList(newItems);
-    });
-  }
-
-  final Random _random = new Random();
-  Timer _timer;
-
-  final List<String> _items = new List<String>();
-  TodoListData _data;
-
-  @override
-  Widget build(BuildContext context) {
-    String res = "";
-    for (String item in _items) {
-      res += " - $item\n";
-    }
-    return new Text(res);
   }
 }
 
@@ -135,7 +80,7 @@ void main() {
 
   runApp(new MaterialApp(
     title: 'Todo (Story)',
-    home: new TodoList(module),
+    home: new TodoListView(module.linkConnector),
     theme: new ThemeData(primarySwatch: Colors.blue),
   ));
 }
