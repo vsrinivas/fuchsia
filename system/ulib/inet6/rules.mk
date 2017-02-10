@@ -11,8 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/inet6.c \
     $(LOCAL_DIR)/netifc.c \
-
-MODULE_STATIC_LIBS := ulib/eth
+    $(LOCAL_DIR)/eth-client.c \
 
 MODULE_LIBS += ulib/mxio ulib/magenta ulib/musl
 

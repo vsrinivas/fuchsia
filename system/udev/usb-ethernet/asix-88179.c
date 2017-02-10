@@ -8,7 +8,6 @@
 #include <ddk/driver.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
-#include <eth/eth-fifo.h>
 #include <hexdump/hexdump.h>
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>

@@ -10,26 +10,17 @@
 
 __BEGIN_CDECLS;
 
-typedef struct eth_client eth_client_t;
-
-typedef struct eth_client_args {
-    // number of rx and tx queue entries
-    // must be powers of two
-    uint32_t rx_entries;
-    uint32_t tx_entries;
-
-    // vmo and local address of an io buffer
-    // all packet data sent and received must
-    // be within this buffer
-    mx_handle_t iobuf_vmo;
+typedef struct eth_client {
+    mx_handle_t tx_fifo;
+    mx_handle_t rx_fifo;
+    uint32_t tx_size;
+    uint32_t rx_size;
     void* iobuf;
-} eth_client_args_t;
+} eth_client_t;
 
-mx_status_t eth_create(int fd, eth_client_args_t* args, eth_client_t** out);
+mx_status_t eth_create(int fd, mx_handle_t io_vmo, void* io_mem, eth_client_t** out);
 
 void eth_destroy(eth_client_t* eth);
-
-
 
 // Enqueue a packet for transmit
 mx_status_t eth_queue_tx(eth_client_t* eth, void* cookie,
@@ -52,8 +43,5 @@ mx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
 // ERR_TIMED_OUT - timeout expired
 // NO_ERROR - completed packets are available
 mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t timeout);
-
-
-
 
 __END_CDECLS;

@@ -13,8 +13,7 @@
 #include <unistd.h>
 #include <threads.h>
 
-#include <eth/eth-fifo.h>
-#include <eth/eth-client.h>
+#include "eth-client.h"
 
 #include <magenta/device/ethernet.h>
 #include <magenta/types.h>
@@ -291,14 +290,7 @@ static mx_status_t netifc_open_cb(int dirfd, const char* fn, void* cookie) {
         }
     }
 
-    eth_client_args_t args = {
-        .rx_entries = NET_BUFFERS * 2,
-        .tx_entries = NET_BUFFERS * 2 ,
-        .iobuf_vmo = iovmo,
-        .iobuf = iobuf,
-    };
-
-    status = eth_create(netfd, &args, &eth);
+    status = eth_create(netfd, iovmo, iobuf, &eth);
     if (status < 0) {
         printf("eth_create() failed: %d\n", status);
         goto fail_close_fd;

@@ -19,7 +19,7 @@ include make/module.mk
 
 MODULE_TYPE := driver
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/eth
+MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
 
