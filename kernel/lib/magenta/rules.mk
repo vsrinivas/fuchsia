@@ -18,7 +18,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/exception.cpp \
     $(LOCAL_DIR)/excp_port.cpp \
     $(LOCAL_DIR)/fifo_dispatcher.cpp \
-    $(LOCAL_DIR)/fifo0_dispatcher.cpp \
     $(LOCAL_DIR)/futex_context.cpp \
     $(LOCAL_DIR)/futex_node.cpp \
     $(LOCAL_DIR)/handle.cpp \

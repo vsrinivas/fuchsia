@@ -43,8 +43,7 @@ typedef enum {
     MX_OBJ_TYPE_JOB                 = 17,
     MX_OBJ_TYPE_VMAR                = 18,
     MX_OBJ_TYPE_FIFO                = 19,
-    MX_OBJ_TYPE_FIFO0               = 20,
-    MX_OBJ_TYPE_IOPORT2             = 21,
+    MX_OBJ_TYPE_IOPORT2             = 20,
     MX_OBJ_TYPE_LAST
 } mx_obj_type_t;
 

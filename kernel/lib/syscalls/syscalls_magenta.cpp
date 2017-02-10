@@ -28,7 +28,6 @@
 #include <magenta/event_dispatcher.h>
 #include <magenta/event_pair_dispatcher.h>
 #include <magenta/fifo_dispatcher.h>
-#include <magenta/fifo0_dispatcher.h>
 #include <magenta/handle_owner.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
@@ -488,83 +487,6 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     // Caller may ignore results if desired.
     if (status == NO_ERROR && _actual)
         status = make_user_ptr(_actual).copy_to_user(nread);
-
-    return status;
-}
-
-mx_status_t sys_fifo0_create(uint64_t count, mx_handle_t* _out) {
-    // Must be a power of 2
-    if (!count || (count & (count - 1))) {
-        return ERR_INVALID_ARGS;
-    }
-
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
-    mx_status_t result = FifoDispatcherV0::Create(count, &dispatcher, &rights);
-    if (result != NO_ERROR)
-        return result;
-
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
-    if (!handle)
-        return ERR_NO_MEMORY;
-
-    auto up = ProcessDispatcher::GetCurrent();
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-    up->AddHandle(mxtl::move(handle));
-
-    return NO_ERROR;
-}
-
-mx_status_t sys_fifo0_op(mx_handle_t handle, uint32_t op, uint64_t val, mx_fifo_state_t* _out) {
-    mx_rights_t rights = MX_RIGHT_READ;
-    switch (op) {
-    case MX_FIFO_OP_READ_STATE:
-        if (!_out) return ERR_INVALID_ARGS;
-        break;
-    case MX_FIFO_OP_ADVANCE_HEAD:
-    case MX_FIFO_OP_PRODUCER_EXCEPTION:
-        rights |= MX_RIGHT_FIFO_PRODUCER;
-        break;
-    case MX_FIFO_OP_ADVANCE_TAIL:
-    case MX_FIFO_OP_CONSUMER_EXCEPTION:
-        rights |= MX_RIGHT_FIFO_CONSUMER;
-        break;
-    default:
-        return ERR_INVALID_ARGS;
-    }
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<FifoDispatcherV0> fifo;
-    mx_status_t status = up->GetDispatcherWithRights(handle, rights, &fifo);
-    if (status != NO_ERROR)
-        return status;
-
-    mx_fifo_state_t state;
-    switch (op) {
-    case MX_FIFO_OP_READ_STATE:
-        fifo->GetState(&state);
-        break;
-    case MX_FIFO_OP_ADVANCE_HEAD:
-        status = fifo->AdvanceHead(val, &state);
-        break;
-    case MX_FIFO_OP_ADVANCE_TAIL:
-        status = fifo->AdvanceTail(val, &state);
-        break;
-    case MX_FIFO_OP_PRODUCER_EXCEPTION:
-        status = fifo->SetException(MX_FIFO_PRODUCER_EXCEPTION, val > 0, &state);
-        break;
-    case MX_FIFO_OP_CONSUMER_EXCEPTION:
-        status = fifo->SetException(MX_FIFO_CONSUMER_EXCEPTION, val > 0, &state);
-        break;
-    }
-
-    if (_out) {
-        if (make_user_ptr(_out).copy_to_user(state) != NO_ERROR) {
-            status = ERR_INVALID_ARGS;
-        }
-    }
 
     return status;
 }
