@@ -1,4 +1,3 @@
-#include "libc.h"
 #include <errno.h>
 #include <sys/auxv.h>
 #include <sys/param.h>
@@ -10,7 +9,7 @@ unsigned long getauxval(unsigned long item) {
 
     switch (item) {
     case AT_SECURE:
-        return libc.secure;
+        return 0ul;
     case AT_PAGESZ:
         return PAGE_SIZE;
     }

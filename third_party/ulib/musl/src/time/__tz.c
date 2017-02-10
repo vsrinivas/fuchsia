@@ -161,14 +161,13 @@ static void do_tzset(void) {
     if (old_tz)
         memcpy(old_tz, s, i + 1);
 
-    /* Non-suid can use an absolute tzfile pathname or a relative
-     * pathame beginning with "."; in secure mode, only the
-     * standard path will be searched. */
+    /* We can use an absolute tzfile pathname or a relative
+     * pathame beginning with ".". */
     if (*s == ':' || ((p = strchr(s, '/')) && !memchr(s, ',', p - s))) {
         if (*s == ':')
             s++;
         if (*s == '/' || *s == '.') {
-            if (!libc.secure || !strcmp(s, "/etc/localtime"))
+            if (!strcmp(s, "/etc/localtime"))
                 map = __map_file(s, &map_size);
         } else {
             size_t l = strlen(s);

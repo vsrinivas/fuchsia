@@ -1,5 +1,4 @@
 #include "atomic.h"
-#include "libc.h"
 #include "locale_impl.h"
 #include <locale.h>
 #include <string.h>
@@ -25,7 +24,7 @@ const struct __locale_map* __get_locale(int cat, const char* val) {
     static void* volatile loc_head;
     const struct __locale_map* p;
     struct __locale_map* new = 0;
-    const char *path = 0, *z;
+    const char *z;
     char buf[256];
     size_t l, n;
 
@@ -59,8 +58,7 @@ const struct __locale_map* __get_locale(int cat, const char* val) {
             return p;
         }
 
-    if (!libc.secure)
-        path = getenv("MUSL_LOCPATH");
+    const char* path = getenv("MUSL_LOCPATH");
     /* FIXME: add a default path? */
 
     if (path)

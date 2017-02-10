@@ -23,7 +23,6 @@ struct tls_module {
 };
 
 struct __libc {
-    int secure;
     atomic_int thread_count;
     struct tls_module* tls_head;
     size_t tls_size, tls_align, tls_cnt;

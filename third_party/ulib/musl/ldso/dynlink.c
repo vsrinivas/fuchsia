@@ -1228,7 +1228,6 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
 static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char** argv) {
     static struct dso app;
     size_t i;
-    char* env_preload = 0;
     char** argv_orig = argv;
 
     if (argc < 1 || argv[0] == NULL) {
@@ -1245,15 +1244,11 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
     libc.tls_align = tls_align;
     __init_tp(thread_self, __copy_tls((void*)builtin_tls));
 
-    /* Only trust user/env if kernel says we're not suid/sgid */
     bool log_libs = false;
-    if (!libc.secure) {
-        env_preload = getenv("LD_PRELOAD");
-
-        const char* debug = getenv("LD_DEBUG");
-        if (debug != NULL && debug[0] != '\0')
-            log_libs = true;
-    }
+    char* ld_preload = getenv("LD_PRELOAD");
+    const char* ld_debug = getenv("LD_DEBUG");
+    if (ld_debug != NULL && ld_debug[0] != '\0')
+        log_libs = true;
 
     if (exec_vmo == MX_HANDLE_INVALID) {
         char* ldname = argv[0];
@@ -1270,11 +1265,11 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
                 ldd_mode = 1;
             } else if (!memcmp(opt, "preload", 7)) {
                 if (opt[7] == '=')
-                    env_preload = opt + 8;
+                    ld_preload = opt + 8;
                 else if (opt[7])
                     *argv = 0;
                 else if (*argv)
-                    env_preload = *argv++;
+                    ld_preload = *argv++;
             } else {
                 argv[0] = 0;
             }
@@ -1338,8 +1333,8 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
 
     /* Load preload/needed libraries, add their symbols to the global
      * namespace, and perform all remaining relocations. */
-    if (env_preload)
-        load_preload(env_preload);
+    if (ld_preload)
+        load_preload(ld_preload);
     load_deps(&app);
     make_global(&app);
 

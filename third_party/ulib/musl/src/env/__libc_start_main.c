@@ -19,20 +19,6 @@ __attribute__((__weak__, __visibility__("hidden"))) extern void (*const __init_a
 static void dummy1(void* p) {}
 weak_alias(dummy1, __init_ssp);
 
-void __init_security(void) {
-// TODO(kulakowski) Re-enable this once we have file descriptors up.
-#if 0
-    if (aux[AT_UID] == aux[AT_EUID] && aux[AT_GID] == aux[AT_EGID] && !aux[AT_SECURE]) return;
-
-    struct pollfd pfd[3] = {{.fd = 0}, {.fd = 1}, {.fd = 2}};
-    poll(pfd, 3, 0);
-    for (i = 0; i < 3; i++)
-        if (pfd[i].revents & POLLNVAL)
-            if (open("/dev/null", O_RDWR) < 0) a_crash();
-    libc.secure = 1;
-#endif
-}
-
 static void libc_start_init(void) {
     _init();
     uintptr_t a = (uintptr_t)&__init_array_start;
@@ -183,7 +169,6 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
     }
     __init_ssp((void*)&entropy);
     entropy = 0;
-    __init_security();
 
     // allow companion libraries a chance to poke at this
     if (&__libc_extensions_init != NULL)
