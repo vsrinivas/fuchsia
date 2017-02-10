@@ -14,6 +14,7 @@ flutter_app("example_todo_ledger") {
   main_dart = "lib/main.dart"
   deps = [
     "//application/lib/app/dart",
+    "//apps/ledger/services/public:public_dart",
     "//apps/modular/services/story:story_dart",
     "//apps/mozart/services/views:views_dart",
     "//lib/fidl/dart",
