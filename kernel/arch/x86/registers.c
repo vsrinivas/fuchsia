@@ -214,11 +214,6 @@ bool x86_extended_register_enable_feature(
         case X86_EXTENDED_REGISTER_SSE: {
             if (unlikely(
                     !x86_feature_test(X86_FEATURE_SSE) ||
-                    !x86_feature_test(X86_FEATURE_SSE2) ||
-                    !x86_feature_test(X86_FEATURE_SSE3) ||
-                    !x86_feature_test(X86_FEATURE_SSSE3) ||
-                    !x86_feature_test(X86_FEATURE_SSE4_1) ||
-                    !x86_feature_test(X86_FEATURE_SSE4_2) ||
                     !x86_feature_test(X86_FEATURE_FXSR))) {
 
                 return false;
