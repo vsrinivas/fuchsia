@@ -26,6 +26,7 @@ static_library("mx") {
     "include/mx/task.h",
     "include/mx/thread.h",
     "include/mx/time.h",
+    "include/mx/vmar.h",
     "include/mx/vmo.h",
     "include/mx/waitset.h",
     "job.cc",
