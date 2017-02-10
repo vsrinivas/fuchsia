@@ -150,11 +150,11 @@ LK_INIT_HOOK_FLAGS(arm_gic_init_percpu, arm_gic_init_percpu, LK_INIT_LEVEL_PLATF
 
 void arm_gic_init(void)
 {
-    uint rev = (GICREG(0, GICD_PIDR2) >> 4) & 0xf;
+    __UNUSED uint rev = (GICREG(0, GICD_PIDR2) >> 4) & 0xf;
     assert(rev == 3 || rev == 4);
 
     uint32_t typer = GICREG(0, GICD_TYPER);
-    uint idbits = (typer >> 19) & 0x1f;
+    __UNUSED uint idbits = (typer >> 19) & 0x1f;
     assert((idbits + 1) * 32 <= MAX_INT);
 
     // disable the distributor
