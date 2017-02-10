@@ -421,6 +421,9 @@ mx_status_t sys_interrupt_complete(
 mx_status_t sys_interrupt_wait(
     mx_handle_t handle);
 
+mx_status_t sys_interrupt_signal(
+    mx_handle_t handle);
+
 mx_status_t sys_mmap_device_io(
     mx_handle_t handle,
     uint32_t io_addr,

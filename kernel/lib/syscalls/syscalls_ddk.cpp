@@ -89,6 +89,18 @@ mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
     return interrupt->WaitForInterrupt();
 }
 
+mx_status_t sys_interrupt_signal(mx_handle_t handle_value) {
+    LTRACEF("handle %d\n", handle_value);
+
+    auto up = ProcessDispatcher::GetCurrent();
+    mxtl::RefPtr<InterruptDispatcher> interrupt;
+    mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
+    if (status != NO_ERROR)
+        return status;
+
+    return interrupt->UserSignal();
+}
+
 mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t len,
                                    mx_cache_policy_t cache_policy,
                                    uintptr_t* _out_vaddr) {

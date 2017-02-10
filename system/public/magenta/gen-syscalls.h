@@ -841,6 +841,12 @@ extern mx_status_t mx_interrupt_wait(
 extern mx_status_t _mx_interrupt_wait(
     mx_handle_t handle) __attribute__((__leaf__));
 
+extern mx_status_t mx_interrupt_signal(
+    mx_handle_t handle) __attribute__((__leaf__));
+
+extern mx_status_t _mx_interrupt_signal(
+    mx_handle_t handle) __attribute__((__leaf__));
+
 extern mx_status_t mx_mmap_device_io(
     mx_handle_t handle,
     uint32_t io_addr,

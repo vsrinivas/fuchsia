@@ -93,4 +93,15 @@ status_t PciInterruptDispatcher::InterruptComplete() {
     return NO_ERROR;
 }
 
+status_t PciInterruptDispatcher::UserSignal() {
+    DEBUG_ASSERT(device_ != nullptr);
+
+    if (maskable_)
+        device_->device()->MaskIrq(irq_id_);
+
+    signal(true);
+
+    return NO_ERROR;
+}
+
 #endif  // if WITH_DEV_PCIE

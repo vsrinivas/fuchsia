@@ -82,6 +82,12 @@ status_t InterruptEventDispatcher::InterruptComplete() {
     return NO_ERROR;
 }
 
+status_t InterruptEventDispatcher::UserSignal() {
+    mask_interrupt(vector_);
+    signal(true);
+    return NO_ERROR;
+}
+
 enum handler_return InterruptEventDispatcher::IrqHandler(void* ctx) {
     InterruptEventDispatcher* thiz = reinterpret_cast<InterruptEventDispatcher*>(ctx);
 

@@ -30,6 +30,9 @@ public:
     // Required before the handle can be waited upon again.
     virtual status_t InterruptComplete() = 0;
 
+    // Signal the IRQ from non-IRQ state in response to a user-land request.
+    virtual status_t UserSignal() = 0;
+
     status_t WaitForInterrupt() {
         return event_wait(&event_);
     }
@@ -43,8 +46,8 @@ protected:
     InterruptDispatcher() {
         event_init(&event_, false, 0);
     }
-    int signal() {
-        return event_signal(&event_, false);
+    int signal(bool resched = false) {
+        return event_signal(&event_, resched);
     }
     void unsignal() {
         event_unsignal(&event_);

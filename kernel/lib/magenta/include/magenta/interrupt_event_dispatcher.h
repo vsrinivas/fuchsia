@@ -23,6 +23,7 @@ public:
 
     ~InterruptEventDispatcher() final;
     status_t InterruptComplete() final;
+    status_t UserSignal() final;
 
     // requred to exist in our collection of allocated vectors.
     uint32_t GetKey() const { return vector_; }

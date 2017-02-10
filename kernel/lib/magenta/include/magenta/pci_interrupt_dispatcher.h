@@ -24,6 +24,7 @@ public:
 
     ~PciInterruptDispatcher() final;
     status_t InterruptComplete() final;
+    status_t UserSignal() final;
 
 private:
     static pcie_irq_handler_retval_t IrqThunk(const PcieDevice& dev,
