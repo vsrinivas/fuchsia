@@ -29,12 +29,22 @@
 #define PSCI64_PSCI_STAT_RESIDENCY          (0xC4000010)
 #define PSCI64_PSCI_STAT_COUNT              (0xC4000011)
 
+/* TODO NOTE: - currently these routines assume cpu topologies that are described only in AFF0 and AFF1.
+            If a system is architected such that AFF2 or AFF3 are non-zero then this code will need
+            to be revisited
+*/
+
 extern uint64_t psci_smc_call(ulong arg0, ulong arg1, ulong arg2, ulong arg3);
 
 #define PSCI_TARGET(cluster,id) \
                 ((cluster & ( (1 << SMP_CPU_CLUSTER_BITS) - 1)) << SMP_CPU_CLUSTER_SHIFT) | \
                 ((id & ( (1 << SMP_CPU_ID_BITS) - 1)) << SMP_CPU_ID_SHIFT)
 
+#define PSCI_INDEX_TO_CLUSTER(idx) \
+                (idx >> (SMP_CPU_ID_BITS + SMP_CPU_ID_SHIFT) & ((1 << SMP_CPU_CLUSTER_BITS) - 1))
+
+#define PSCI_INDEX_TO_ID(idx) \
+                (idx & ( (1 << SMP_CPU_ID_BITS) - 1))
 
 
 static inline uint32_t psci_get_version(void) {

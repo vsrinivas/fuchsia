@@ -174,14 +174,15 @@ void platform_early_init(void)
     pmm_alloc_range(MSM8998_BOOT_HYP_START,
                     (MSM8998_BOOT_APSS2_START - MSM8998_BOOT_HYP_START)/ PAGE_SIZE,
                     &list);
+#if WITH_SMP
 
-    psci_cpu_on(0,1, MEMBASE + KERNEL_LOAD_OFFSET);
-    psci_cpu_on(0,2, MEMBASE + KERNEL_LOAD_OFFSET);
-    psci_cpu_on(0,3, MEMBASE + KERNEL_LOAD_OFFSET);
-    psci_cpu_on(1,0, MEMBASE + KERNEL_LOAD_OFFSET);
-    psci_cpu_on(1,1, MEMBASE + KERNEL_LOAD_OFFSET);
-    psci_cpu_on(1,2, MEMBASE + KERNEL_LOAD_OFFSET);
-    psci_cpu_on(1,3, MEMBASE + KERNEL_LOAD_OFFSET);
+    for (int i = 1; i < SMP_MAX_CPUS; i++) {
+
+        psci_cpu_on( PSCI_INDEX_TO_CLUSTER(i) , PSCI_INDEX_TO_ID(i), MEMBASE + KERNEL_LOAD_OFFSET);
+
+    }
+
+#endif
 }
 
 void platform_init(void)
