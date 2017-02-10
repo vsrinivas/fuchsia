@@ -138,3 +138,11 @@ if (mx_object_get_info(proc, MX_INFO_PROCESS_THREADS, threads,
     }
 }
 ```
+
+
+## SEE ALSO
+
+[handle_close](handle_close.md),
+[handle_duplicate](handle_duplicate.md),
+[handle_replace](handle_replace.md),
+[object_get_child](object_get_child.md).
