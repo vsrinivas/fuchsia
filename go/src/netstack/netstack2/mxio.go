@@ -44,11 +44,18 @@ func devmgrConnect() (mx.Handle, error) {
 	}
 	defer f.Close()
 
-	_, handles, err := syscall.Ioctl(int(f.Fd()), mxio.IoctlDevmgrMountFS, nil)
+	c0, c1, err := mx.NewChannel(0)
 	if err != nil {
+		log.Printf("could not create socket fs channel: %v", err)
+		return 0, err
+	}
+	err = syscall.IoctlSetHandle(int(f.Fd()), mxio.IoctlDevmgrMountFS, c1.Handle)
+	if err != nil {
+		c0.Close()
+		c1.Close()
 		return 0, fmt.Errorf("failed to mount /dev/socket: %v", err)
 	}
-	return handles[0], nil
+	return c0.Handle, nil
 }
 
 func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
