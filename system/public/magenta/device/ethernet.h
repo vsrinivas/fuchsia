@@ -9,6 +9,8 @@
 #include <magenta/device/ioctl-wrapper.h>
 #include <magenta/types.h>
 
+// TODO: GET_DEVICE_INFO ioctl
+
 // Get the 6 byte ethernet device MAC address
 //   in: none
 //   out: uint8_t*
@@ -42,15 +44,19 @@ typedef struct eth_fifos_t {
 #define IOCTL_ETHERNET_SET_IOBUF \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_ETH, 3)
 
-// Start transferring packets
+// Start/Stop transferring packets
 // Start will not succeed (ERR_BAD_STATE) until the fifos have been
 // obtained and an io buffer vmo has been registered.
 #define IOCTL_ETHERNET_START \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 4)
-
-// Stop transferring packets
 #define IOCTL_ETHERNET_STOP \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 5)
+
+// Receive all TX packets on this device looped back on RX path
+#define IOCTL_ETHERNET_TX_LISTEN_START \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 6)
+#define IOCTL_ETHERNET_TX_LISTEN_STOP \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 7)
 
 
 // Operation
@@ -81,6 +87,7 @@ typedef struct eth_fifos_t {
 #define ETH_FIFO_RX_OK   (1u)   // packet received okay
 #define ETH_FIFO_TX_OK   (1u)   // packet transmitted okay
 #define ETH_FIFO_INVALID (2u)   // offset+length not within io_vmo bounds
+#define ETH_FIFO_RX_TX   (4u)   // received our own tx packet (when TX_LISTEN)
 
 typedef struct eth_fifo_entry {
     // offset from start of io_vmo to packet data
@@ -110,3 +117,9 @@ IOCTL_WRAPPER(ioctl_ethernet_start, IOCTL_ETHERNET_START);
 
 // ssize_t ioctl_ethernet_stop(int fd);
 IOCTL_WRAPPER(ioctl_ethernet_stop, IOCTL_ETHERNET_STOP);
+
+// ssize_t ioctl_ethernet_tx_listen_start(int fd);
+IOCTL_WRAPPER(ioctl_ethernet_tx_listen_start, IOCTL_ETHERNET_TX_LISTEN_START);
+
+// ssize_t ioctl_ethernet_tx_listen_stop(int fd);
+IOCTL_WRAPPER(ioctl_ethernet_tx_listen_stop, IOCTL_ETHERNET_TX_LISTEN_STOP);

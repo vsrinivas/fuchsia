@@ -66,6 +66,12 @@ static void eth0_downref(ethdev0_t* edev0) {
 // being destroyed
 #define ETHDEV_DEAD (4u)
 
+// This client should loopback tx packets to rx path
+#define ETHDEV_TX_LOOPBACK (8u)
+
+// This client wants to observe loopback tx packets
+#define ETHDEV_TX_LISTEN (16u)
+
 // ethernet instance device
 typedef struct ethdev {
     list_node_t node;
@@ -96,7 +102,7 @@ typedef struct ethdev {
 #define get_ethdev(d) containerof(d, ethdev_t, dev)
 #define get_ethdev0(d) containerof(d, ethdev0_t, dev)
 
-static void eth_handle_rx(ethdev_t* edev, void* data, size_t len) {
+static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t extra) {
     eth_fifo_entry_t e;
     mx_status_t status;
     uint32_t count;
@@ -118,7 +124,7 @@ static void eth_handle_rx(ethdev_t* edev, void* data, size_t len) {
         // packet fits. deliver it
         memcpy(edev->io_buf + e.offset, data, len);
         e.length = len;
-        e.flags = ETH_FIFO_RX_OK;
+        e.flags = ETH_FIFO_RX_OK | extra;
     }
 
     if ((status = mx_fifo_write(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
@@ -139,7 +145,7 @@ static void eth0_recv(void* cookie, void* data, size_t len, uint32_t flags) {
     ethdev_t* edev;
     mtx_lock(&edev0->lock);
     list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
-        eth_handle_rx(edev, data, len);
+        eth_handle_rx(edev, data, len, 0);
     }
     mtx_unlock(&edev0->lock);
 }
@@ -149,8 +155,50 @@ static ethmac_ifc_t ethmac_ifc = {
     .recv = eth0_recv,
 };
 
+static void eth_tx_echo(ethdev0_t* edev0, const void* data, size_t len) {
+    ethdev_t* edev;
+    mtx_lock(&edev0->lock);
+    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+        if (edev->state & ETHDEV_TX_LISTEN) {
+            eth_handle_rx(edev, data, len, ETH_FIFO_RX_TX);
+        }
+    }
+    mtx_unlock(&edev0->lock);
+}
+
+static mx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
+    ethdev0_t* edev0 = edev->edev0;
+
+    // update our state
+    if (yes) {
+        edev->state |= ETHDEV_TX_LISTEN;
+    } else {
+        edev->state &= (~ETHDEV_TX_LISTEN);
+    }
+
+    // determine global state
+    yes = false;
+    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+        if (edev->state & ETHDEV_TX_LISTEN) {
+            yes = true;
+        }
+    }
+
+    // set everyone's echo flag based on global state
+    list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
+        if (yes) {
+            edev->state |= ETHDEV_TX_LOOPBACK;
+        } else {
+            edev->state &= (~ETHDEV_TX_LOOPBACK);
+        }
+    }
+
+    return NO_ERROR;
+}
+
 static int eth_tx_thread(void* arg) {
     ethdev_t* edev = (ethdev_t*)arg;
+    ethdev0_t* edev0 = edev->edev0;
     eth_fifo_entry_t entries[FIFO_DEPTH / 2];
     mx_status_t status;
     uint32_t count;
@@ -176,8 +224,11 @@ static int eth_tx_thread(void* arg) {
             if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
                 e->flags = ETH_FIFO_INVALID;
             } else {
-                edev->edev0->macops->send(edev->edev0->mac, 0, edev->io_buf + e->offset, e->length);
+                edev0->macops->send(edev0->mac, 0, edev->io_buf + e->offset, e->length);
                 e->flags = ETH_FIFO_TX_OK;
+                if (edev->state & ETHDEV_TX_LOOPBACK) {
+                    eth_tx_echo(edev0, edev->io_buf + e->offset, e->length);
+                }
             }
         }
 
@@ -364,6 +415,12 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
         break;
     case IOCTL_ETHERNET_STOP:
         status = eth_stop_locked(edev);
+        break;
+    case IOCTL_ETHERNET_TX_LISTEN_START:
+        status = eth_tx_listen_locked(edev, true);
+        break;
+    case IOCTL_ETHERNET_TX_LISTEN_STOP:
+        status = eth_tx_listen_locked(edev, false);
         break;
     default:
         status = ERR_NOT_SUPPORTED;
