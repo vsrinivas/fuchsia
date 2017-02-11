@@ -111,7 +111,7 @@ int channel_read(uint32_t num_bytes) {
   mx_status_t status;
   uint32_t bytes_read;
   do {
-    status = mx_handle_wait_one(channel,
+    status = mx_object_wait_one(channel,
                                 MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &signals);
     if (status != NO_ERROR) {
@@ -156,7 +156,7 @@ class ChannelMultiProcess : public benchmark::Fixture {
     if (process < 0) {
       return;
     }
-    mx_status_t status = mx_handle_wait_one(process, MX_PROCESS_SIGNALED,
+    mx_status_t status = mx_object_wait_one(process, MX_PROCESS_SIGNALED,
                                             MX_TIME_INFINITE, nullptr);
     if (status != NO_ERROR) {
       state.SkipWithError("Failed to wait for process termination");
@@ -204,7 +204,7 @@ BENCHMARK_DEFINE_F(ChannelMultiProcess, Read)(benchmark::State& state) {
   uint64_t bytes_processed = 0;
   while (state.KeepRunning()) {
     state.PauseTiming();
-    status = mx_handle_wait_one(channel, MX_CHANNEL_READABLE, MX_TIME_INFINITE,
+    status = mx_object_wait_one(channel, MX_CHANNEL_READABLE, MX_TIME_INFINITE,
                                 nullptr);
     if (status != NO_ERROR) {
       state.SkipWithError("Failed to wait for channel to be readable");
