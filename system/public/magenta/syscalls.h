@@ -34,14 +34,6 @@ static inline mx_handle_t _mx_job_default(void) {
 
 // Compatibility Wrappers for Deprecated Syscalls
 
-mx_status_t _mx_handle_wait_many(mx_wait_item_t* i, uint32_t c, mx_time_t t)
-__attribute__((deprecated("use _mx_object_wait_many() instead.")));
-mx_status_t mx_handle_wait_many(mx_wait_item_t* i, uint32_t c, mx_time_t t)
-__attribute__((deprecated("use mx_object_wait_many() instead.")));
-
-mx_status_t _mx_handle_wait_one(mx_handle_t h, mx_signals_t s, mx_time_t t, mx_signals_t* o)
-__attribute__((deprecated("use _mx_object_wait_one() instead.")));
-mx_status_t mx_handle_wait_one(mx_handle_t h, mx_signals_t s, mx_time_t t, mx_signals_t* o)
-__attribute__((deprecated("use mx_object_wait_one() instead.")));
+// Currently no wrappers!
 
 __END_CDECLS
