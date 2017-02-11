@@ -418,7 +418,7 @@ bool Process::Kill() {
 
   mx_signals_t signals;
   // If something goes wrong we don't want to wait forever.
-  status = mx_handle_wait_one(handle_, MX_TASK_TERMINATED,
+  status = mx_object_wait_one(handle_, MX_TASK_TERMINATED,
                               kill_timeout, &signals);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Error waiting for process to die, ignoring",
