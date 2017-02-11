@@ -14,7 +14,7 @@ void __init_ssp(void* entropy) {
 }
 
 void __stack_chk_fail(void) {
-    a_crash();
+    __builtin_trap();
 }
 
 __attribute__((__visibility__("hidden"))) void __stack_chk_fail_local(void);

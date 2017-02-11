@@ -1310,7 +1310,7 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
         if (!IS_RELATIVE(rel[1], ldso.syms))
             symbolic_rel_cnt++;
     if (symbolic_rel_cnt >= ADDEND_LIMIT)
-        a_crash();
+        __builtin_trap();
     size_t addends[symbolic_rel_cnt + 1];
     saved_addends = addends;
 
@@ -1484,7 +1484,7 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
          * as it did for before. Then check, just to be safe. */
         libc.tls_size = sizeof builtin_tls;
         if (__copy_tls((void*)builtin_tls) != self)
-            a_crash();
+            __builtin_trap();
         libc.tls_size = tmp_tls_size;
     }
     static_tls_cnt = tls_cnt;

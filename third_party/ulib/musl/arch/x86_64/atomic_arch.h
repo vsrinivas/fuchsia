@@ -106,14 +106,6 @@ static inline void a_spin(void) {
                          : "memory");
 }
 
-#define a_crash a_crash
-static inline void a_crash(void) {
-    __asm__ __volatile__("hlt"
-                         :
-                         :
-                         : "memory");
-}
-
 #define a_ctz_64 a_ctz_64
 static inline int a_ctz_64(uint64_t x) {
     __asm__("bsf %1,%0"

@@ -420,7 +420,7 @@ void* realloc(void* p, size_t n) {
         size_t newlen = n + extra;
         /* Crash on realloc of freed chunk */
         if (extra & 1)
-            a_crash();
+            __builtin_trap();
         if (newlen < PAGE_SIZE && (new = malloc(n))) {
             memcpy(new, p, n - OVERHEAD);
             free(p);
@@ -441,7 +441,7 @@ void* realloc(void* p, size_t n) {
 
     /* Crash on corrupted footer (likely from buffer overflow) */
     if (next->psize != self->csize)
-        a_crash();
+        __builtin_trap();
 
     /* Merge adjacent chunks if we need more space. This is not
      * a waste of time even if we fail to get enough space, because our
@@ -490,7 +490,7 @@ void free(void* p) {
         size_t len = CHUNK_SIZE(self) + extra;
         /* Crash on double free */
         if (extra & 1)
-            a_crash();
+            __builtin_trap();
         __munmap(base, len);
         return;
     }
@@ -503,7 +503,7 @@ void free(void* p) {
 
     /* Crash on corrupted footer (likely from buffer overflow) */
     if (next->psize != self->csize)
-        a_crash();
+        __builtin_trap();
 
     for (;;) {
         if (self->psize & next->csize & C_INUSE) {

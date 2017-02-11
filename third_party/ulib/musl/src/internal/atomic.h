@@ -244,13 +244,6 @@ static inline void a_or_l(volatile void* p, long v) {
 }
 #endif
 
-#ifndef a_crash
-#define a_crash a_crash
-static inline void a_crash(void) {
-    *(volatile char*)0 = 0;
-}
-#endif
-
 #ifndef a_ctz_64
 #define a_ctz_64 a_ctz_64
 static inline int a_ctz_64(uint64_t x) {

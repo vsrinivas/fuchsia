@@ -18,7 +18,7 @@ char* __asctime(const struct tm* restrict tm, char* restrict buf) {
          * application developers that they may not be so lucky
          * on other implementations (e.g. stack smashing..).
          */
-        a_crash();
+        __builtin_trap();
     }
     return buf;
 }
