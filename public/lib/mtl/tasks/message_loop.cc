@@ -169,7 +169,7 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   }
 
   const mx_status_t wait_status =
-      mx_handle_wait_many(wait_state_.items.data(), count, timeout);
+      mx_object_wait_many(wait_state_.items.data(), count, timeout);
 
   // Update now after waiting.
   now = ftl::TimePoint::Now();
