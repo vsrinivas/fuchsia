@@ -1,6 +1,7 @@
-#include "syscall.h"
+#include <errno.h>
 #include <sys/file.h>
 
 int flock(int fd, int op) {
-    return syscall(SYS_flock, fd, op);
+    errno = ENOSYS;
+    return -1;
 }

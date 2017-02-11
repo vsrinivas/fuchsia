@@ -2,7 +2,6 @@
 #include "fdop.h"
 #include "libc.h"
 #include "pthread_impl.h"
-#include "syscall.h"
 #include <fcntl.h>
 #include <sched.h>
 #include <signal.h>

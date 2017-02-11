@@ -1,5 +1,4 @@
 #include "pthread_impl.h"
-#include "syscall.h"
 #include <errno.h>
 #include <magenta/syscalls.h>
 #include <pthread.h>

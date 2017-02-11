@@ -1,9 +1,9 @@
 #define _GNU_SOURCE
-#include "syscall.h"
 #include <net/if.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 unsigned if_nametoindex(const char* name) {
     struct ifreq ifr;

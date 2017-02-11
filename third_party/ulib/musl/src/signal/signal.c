@@ -1,5 +1,4 @@
 #include "libc.h"
-#include "syscall.h"
 #include <signal.h>
 
 int __sigaction(int, const struct sigaction*, struct sigaction*);

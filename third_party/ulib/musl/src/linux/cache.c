@@ -1,5 +1,4 @@
 #include "libc.h"
-#include "syscall.h"
 
 #ifdef SYS_cacheflush
 int _flush_cache(void* addr, int len, int op) {

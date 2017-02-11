@@ -3,7 +3,6 @@
 #include "atomic.h"
 #include "libc.h"
 #include "pthread_impl.h"
-#include "syscall.h"
 #include <errno.h>
 #include <signal.h>
 #include <stdint.h>

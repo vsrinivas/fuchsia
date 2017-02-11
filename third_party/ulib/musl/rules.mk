@@ -54,9 +54,7 @@ endif
 LOCAL_CFLAGS += -ffreestanding
 
 LOCAL_SRCS := \
-    $(LOCAL_DIR)/magenta/debug.c \
     $(LOCAL_DIR)/magenta/internal.c \
-    $(LOCAL_DIR)/magenta/linuxisms.c \
     $(LOCAL_DIR)/magenta/thrd_get_mx_handle.c \
     $(LOCAL_DIR)/pthread/pthread_atfork.c \
     $(LOCAL_DIR)/pthread/pthread_attr_destroy.c \
@@ -272,7 +270,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/internal/libc.c \
     $(LOCAL_DIR)/src/internal/procfdname.c \
     $(LOCAL_DIR)/src/internal/shgetc.c \
-    $(LOCAL_DIR)/src/internal/syscall_ret.c \
     $(LOCAL_DIR)/src/ipc/ftok.c \
     $(LOCAL_DIR)/src/ipc/msgctl.c \
     $(LOCAL_DIR)/src/ipc/msgget.c \
@@ -307,8 +304,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/linux/adjtime.c \
     $(LOCAL_DIR)/src/linux/cache.c \
     $(LOCAL_DIR)/src/linux/flock.c \
-    $(LOCAL_DIR)/src/linux/ptrace.c \
-    $(LOCAL_DIR)/src/linux/quotactl.c \
     $(LOCAL_DIR)/src/linux/sethostname.c \
     $(LOCAL_DIR)/src/linux/settimeofday.c \
     $(LOCAL_DIR)/src/linux/stime.c \
@@ -488,7 +483,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/setdomainname.c \
     $(LOCAL_DIR)/src/misc/setpriority.c \
     $(LOCAL_DIR)/src/misc/setrlimit.c \
-    $(LOCAL_DIR)/src/misc/syscall.c \
     $(LOCAL_DIR)/src/misc/syslog.c \
     $(LOCAL_DIR)/src/misc/uname.c \
     $(LOCAL_DIR)/src/misc/wordexp.c \
@@ -640,6 +634,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/process/posix_spawnattr_setsigmask.c \
     $(LOCAL_DIR)/src/process/posix_spawnp.c \
     $(LOCAL_DIR)/src/process/system.c \
+    $(LOCAL_DIR)/src/process/vfork.c \
     $(LOCAL_DIR)/src/process/wait.c \
     $(LOCAL_DIR)/src/process/waitid.c \
     $(LOCAL_DIR)/src/process/waitpid.c \
@@ -1037,7 +1032,6 @@ LOCAL_SRCS := \
 ifeq ($(ARCH),arm64)
 LOCAL_SRCS += \
     $(LOCAL_DIR)/src/fenv/aarch64/fenv.s \
-    $(LOCAL_DIR)/src/internal/syscall.c \
     $(LOCAL_DIR)/src/ldso/aarch64/tlsdesc.s \
     $(LOCAL_DIR)/src/math/aarch64/fabs.s \
     $(LOCAL_DIR)/src/math/aarch64/fabsf.s \
@@ -1057,12 +1051,10 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/math/rintl.c \
     $(LOCAL_DIR)/src/math/sqrtl.c \
     $(LOCAL_DIR)/src/math/truncl.c \
-    $(LOCAL_DIR)/src/process/vfork.c \
     $(LOCAL_DIR)/src/setjmp/aarch64/longjmp.s \
     $(LOCAL_DIR)/src/setjmp/aarch64/setjmp.s \
     $(LOCAL_DIR)/src/signal/aarch64/restore.s \
     $(LOCAL_DIR)/src/signal/aarch64/sigsetjmp.s \
-    $(LOCAL_DIR)/src/thread/aarch64/syscall_cp.s \
     $(LOCAL_DIR)/third_party/math/acosl.c \
     $(LOCAL_DIR)/third_party/math/asinl.c \
     $(LOCAL_DIR)/third_party/math/atan2l.c \
@@ -1109,10 +1101,8 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/math/x86_64/sqrtf.s \
     $(LOCAL_DIR)/src/math/x86_64/sqrtl.s \
     $(LOCAL_DIR)/src/math/x86_64/truncl.s \
-    $(LOCAL_DIR)/src/process/x86_64/vfork.s \
     $(LOCAL_DIR)/src/signal/x86_64/restore.s \
     $(LOCAL_DIR)/src/signal/x86_64/sigsetjmp.s \
-    $(LOCAL_DIR)/src/thread/x86_64/syscall_cp.s \
     $(LOCAL_DIR)/third_party/arch/x86_64/longjmp.s \
     $(LOCAL_DIR)/third_party/arch/x86_64/setjmp.s \
 

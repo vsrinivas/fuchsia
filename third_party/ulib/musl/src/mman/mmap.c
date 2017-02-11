@@ -1,4 +1,3 @@
-#include "syscall.h"
 #include <errno.h>
 #include <limits.h>
 #include <magenta/syscalls.h>
@@ -12,11 +11,8 @@
 static void dummy(void) {}
 weak_alias(dummy, __vm_wait);
 
-#define UNIT SYSCALL_MMAP2_UNIT
-#define OFF_MASK ((-0x2000ULL << (8 * sizeof(long) - 1)) | (UNIT - 1))
-
 void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
-    if (off & OFF_MASK) {
+    if (off & (-PAGE_SIZE)) {
         errno = EINVAL;
         return MAP_FAILED;
     }

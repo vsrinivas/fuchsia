@@ -1,7 +1,9 @@
 #include "ipc.h"
-#include "syscall.h"
+#include <errno.h>
+#include <stdint.h>
 #include <sys/shm.h>
 
 void* shmat(int id, const void* addr, int flag) {
-    return (void*)syscall(SYS_shmat, id, addr, flag);
+    errno = ENOSYS;
+    return (void*)(intptr_t)-1;
 }

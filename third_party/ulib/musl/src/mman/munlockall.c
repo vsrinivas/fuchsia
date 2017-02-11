@@ -1,6 +1,7 @@
-#include "syscall.h"
+#include <errno.h>
 #include <sys/mman.h>
 
 int munlockall(void) {
-    return syscall(SYS_munlockall);
+    errno = ENOSYS;
+    return -1;
 }

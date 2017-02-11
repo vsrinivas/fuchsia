@@ -1,8 +1,8 @@
 #include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "stdio_impl.h"
-#include "syscall.h"
 
 #define MAXTRIES 100
 

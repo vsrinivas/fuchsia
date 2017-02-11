@@ -1,10 +1,12 @@
-#include "syscall.h"
+#include <errno.h>
 #include <sched.h>
 
 int sched_get_priority_max(int policy) {
-    return syscall(SYS_sched_get_priority_max, policy);
+    errno = ENOSYS;
+    return -1;
 }
 
 int sched_get_priority_min(int policy) {
-    return syscall(SYS_sched_get_priority_min, policy);
+    errno = ENOSYS;
+    return -1;
 }

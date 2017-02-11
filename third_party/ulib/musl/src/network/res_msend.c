@@ -1,6 +1,5 @@
 #include "lookup.h"
 #include "stdio_impl.h"
-#include "syscall.h"
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>

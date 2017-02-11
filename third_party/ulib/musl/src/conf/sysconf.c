@@ -1,5 +1,4 @@
 #include "libc.h"
-#include "syscall.h"
 #include <errno.h>
 #include <limits.h>
 #include <runtime/sysinfo.h>

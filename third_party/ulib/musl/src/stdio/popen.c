@@ -1,6 +1,5 @@
 #include "libc.h"
 #include "stdio_impl.h"
-#include "syscall.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <spawn.h>

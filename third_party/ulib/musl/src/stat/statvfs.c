@@ -1,24 +1,18 @@
 #include "libc.h"
-#include "syscall.h"
+#include <errno.h>
 #include <sys/statfs.h>
 #include <sys/statvfs.h>
 
 int __statfs(const char* path, struct statfs* buf) {
     *buf = (struct statfs){};
-#ifdef SYS_statfs64
-    return syscall(SYS_statfs64, path, sizeof *buf, buf);
-#else
-    return syscall(SYS_statfs, path, buf);
-#endif
+    errno = ENOSYS;
+    return -1;
 }
 
 int __fstatfs(int fd, struct statfs* buf) {
     *buf = (struct statfs){};
-#ifdef SYS_fstatfs64
-    return syscall(SYS_fstatfs64, fd, sizeof *buf, buf);
-#else
-    return syscall(SYS_fstatfs, fd, buf);
-#endif
+    errno = ENOSYS;
+    return -1;
 }
 
 weak_alias(__statfs, statfs);

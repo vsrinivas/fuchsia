@@ -1,5 +1,4 @@
 #include "fcntl.h"
-#include "syscall.h"
 #include <sys/time.h>
 
 int __futimesat(int, const char*, const struct timeval[2]);

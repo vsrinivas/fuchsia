@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 #include "libc.h"
 #include "pthread_impl.h"
-#include "syscall.h"
 #include <stdatomic.h>
 #include <string.h>
 
@@ -13,32 +12,31 @@ long __cancel(void) {
     return -ECANCELED;
 }
 
-long __syscall_cp_asm(volatile void*, syscall_arg_t, syscall_arg_t, syscall_arg_t, syscall_arg_t,
-                      syscall_arg_t, syscall_arg_t, syscall_arg_t);
-
 static void _sigaddset(sigset_t* set, int sig) {
     unsigned s = sig - 1;
     set->__bits[s / 8 / sizeof *set->__bits] |= 1UL << (s & 8 * sizeof *set->__bits - 1);
 }
 
-__attribute__((__visibility__("hidden"))) extern const char __cp_begin[1], __cp_end[1],
-    __cp_cancel[1];
-
 static void cancel_handler(int sig, siginfo_t* si, void* ctx) {
     pthread_t self = __pthread_self();
     ucontext_t* uc = ctx;
-    uintptr_t pc = uc->uc_mcontext.MC_PC;
-
     atomic_thread_fence(memory_order_seq_cst);
     if (!self->cancel || self->canceldisable == PTHREAD_CANCEL_DISABLE)
         return;
 
     _sigaddset(&uc->uc_sigmask, SIGCANCEL);
 
-    if (self->cancelasync || pc >= (uintptr_t)__cp_begin && pc < (uintptr_t)__cp_end) {
-        uc->uc_mcontext.MC_PC = (uintptr_t)__cp_cancel;
-        return;
-    }
+    // Upstream on Linux, we'd determine where we were by comparing
+    // the ucontext_t's frame to the symbols __cp_begin and __cp_end
+    // wrapped around certain syscall invocations. Keeping a note of
+    // it around for posterity, in case we ever do move towards a
+    // significantly more complete pthreads emulation.
+
+    // uintptr_t pc = uc->uc_mcontext.MC_PC;
+    // if (self->cancelasync || pc >= (uintptr_t)__cp_begin && pc < (uintptr_t)__cp_end) {
+    //     uc->uc_mcontext.MC_PC = (uintptr_t)__cp_cancel;
+    //     return;
+    // }
 
     // TODO(kulakowski) Actually raise SIGCANCEL on __thread_get_tid().
 }

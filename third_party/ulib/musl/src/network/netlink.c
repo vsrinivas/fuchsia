@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <syscall.h>
+#include <unistd.h>
 
 static int __netlink_enumerate(int fd, unsigned int seq, int type, int af,
                                int (*cb)(void* ctx, struct nlmsghdr* h), void* ctx) {

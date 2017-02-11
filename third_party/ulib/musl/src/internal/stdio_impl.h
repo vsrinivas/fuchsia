@@ -1,7 +1,6 @@
 #pragma once
 
 #include "libc.h"
-#include "syscall.h"
 #include <stdatomic.h>
 #include <stdio.h>
 
