@@ -385,22 +385,15 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
     }
 
     switch (op) {
-    case IOCTL_ETHERNET_GET_MAC_ADDR: {
-        if (out_len < ETH_MAC_SIZE) {
+    case IOCTL_ETHERNET_GET_INFO: {
+        if (out_len < sizeof(eth_info_t)) {
             status = ERR_BUFFER_TOO_SMALL;
         } else {
-            memcpy(out_buf, edev->edev0->info.mac, ETH_MAC_SIZE);
-            status = ETH_MAC_SIZE;
-        }
-        break;
-    }
-    case IOCTL_ETHERNET_GET_MTU: {
-        size_t* mtu = out_buf;
-        if (out_len < sizeof(*mtu)) {
-            status = ERR_BUFFER_TOO_SMALL;
-        } else {
-            *mtu = edev->edev0->info.mtu;
-            status = sizeof(*mtu);
+            eth_info_t* info = out_buf;
+            memset(info, 0, sizeof(*info));
+            memcpy(info->mac, edev->edev0->info.mac, ETH_MAC_SIZE);
+            info->mtu = edev->edev0->info.mtu;
+            status = sizeof(*info);
         }
         break;
     }

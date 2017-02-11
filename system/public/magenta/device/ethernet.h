@@ -13,21 +13,23 @@
 
 // Get the 6 byte ethernet device MAC address
 //   in: none
-//   out: uint8_t*
-#define IOCTL_ETHERNET_GET_MAC_ADDR \
+//   out: eth_info_t*
+#define IOCTL_ETHERNET_GET_INFO \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 0)
 
-// Get ethernet device MTU
-//   in: none
-//   out: size_t
-#define IOCTL_ETHERNET_GET_MTU \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 1)
+typedef struct eth_info_t {
+    uint32_t features;
+    uint32_t mtu;
+    uint8_t mac[6];
+    uint8_t pad[2];
+    uint32_t reserved[12];
+} eth_info_t;
 
 // Get the fifos to submit tx and rx operations
 //   in: none
-//  out: eth_fifos_t
+//  out: eth_fifos_t*
 #define IOCTL_ETHERNET_GET_FIFOS \
-    IOCTL(IOCTL_KIND_GET_TWO_HANDLES, IOCTL_FAMILY_ETH, 2)
+    IOCTL(IOCTL_KIND_GET_TWO_HANDLES, IOCTL_FAMILY_ETH, 1)
 
 typedef struct eth_fifos_t {
     // handles to tx and rx fifos
@@ -42,21 +44,21 @@ typedef struct eth_fifos_t {
 //   in: mx_handle_t (vmo)
 //  out: none
 #define IOCTL_ETHERNET_SET_IOBUF \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_ETH, 3)
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_ETH, 2)
 
 // Start/Stop transferring packets
 // Start will not succeed (ERR_BAD_STATE) until the fifos have been
 // obtained and an io buffer vmo has been registered.
 #define IOCTL_ETHERNET_START \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 4)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 3)
 #define IOCTL_ETHERNET_STOP \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 5)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 4)
 
 // Receive all TX packets on this device looped back on RX path
 #define IOCTL_ETHERNET_TX_LISTEN_START \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 6)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 5)
 #define IOCTL_ETHERNET_TX_LISTEN_STOP \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 7)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 6)
 
 
 // Operation
@@ -100,13 +102,10 @@ typedef struct eth_fifo_entry {
 } eth_fifo_entry_t;
 
 
-// ssize_t ioctl_ethernet_get_mac_addr(int fd, uint8_t* out, size_t out_len);
-IOCTL_WRAPPER_VAROUT(ioctl_ethernet_get_mac_addr, IOCTL_ETHERNET_GET_MAC_ADDR, uint8_t);
+// ssize_t ioctl_ethernet_get_info(int fd, eth_info_t* out);
+IOCTL_WRAPPER_OUT(ioctl_ethernet_get_info, IOCTL_ETHERNET_GET_INFO, eth_info_t);
 
-// ssize_t ioctl_ethernet_get_mtu(int fd, size_t* out);
-IOCTL_WRAPPER_OUT(ioctl_ethernet_get_mtu, IOCTL_ETHERNET_GET_MTU, size_t);
-
-// ssize_t ioctl_ethernet_get_fifos(int fd, eth_fifos_t* fifos);
+// ssize_t ioctl_ethernet_get_fifos(int fd, eth_fifos_t* out);
 IOCTL_WRAPPER_OUT(ioctl_ethernet_get_fifos, IOCTL_ETHERNET_GET_FIFOS, eth_fifos_t);
 
 // ssize_t ioctl_ethernet_set_iobuf(int fd, mx_handle_t_t* entries);

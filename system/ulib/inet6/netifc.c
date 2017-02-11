@@ -241,17 +241,14 @@ static mx_status_t netifc_open_cb(int dirfd, const char* fn, void* cookie) {
         return NO_ERROR;
     }
 
-    if (ioctl_ethernet_get_mac_addr(netfd, netmac, sizeof(netmac)) < 0) {
+    eth_info_t info;
+    if (ioctl_ethernet_get_info(netfd, &info) < 0) {
         close(netfd);
         netfd = -1;
         return NO_ERROR;
     }
-
-    if (ioctl_ethernet_get_mtu(netfd, &netmtu) < 0) {
-        close(netfd);
-        netfd = -1;
-        return NO_ERROR;
-    }
+    memcpy(netmac, info.mac, sizeof(netmac));
+    netmtu = info.mtu;
 
     mtx_lock(&eth_lock);
     mx_status_t status;
