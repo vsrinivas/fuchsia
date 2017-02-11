@@ -547,5 +547,13 @@ typedef struct {
 #define __DEFINED_pthread_barrier_t
 #endif
 
+#if defined(__NEED_sem_t) && !defined(__DEFINED_sem_t)
+typedef struct {
+    volatile int _s_value;
+    volatile int _s_waiters;
+} sem_t;
+#define __DEFINED_sem_t
+#endif
+
 #undef _Int64
 #undef _Reg
