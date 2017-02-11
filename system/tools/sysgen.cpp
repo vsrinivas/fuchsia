@@ -653,19 +653,8 @@ const std::map<string, string> user_attrs = {
     {"*", "__attribute__((__leaf__))"},
 };
 
-enum GenType : uint32_t {
-    UserHeaderC,
-    KernelHeaderCPP,
-    KernelCodeCPP,
-    KernelAsmIntel64,
-    KernelAsmArm64,
-    SyscallNumberHeader,
-    TraceInfo,
-    Max
-};
-
 const GenParams gen_params[] = {
-    // The user header, pure C.  (UserHeaderC)
+    // The user header, pure C.
     {
         generate_legacy_header,
         ".user.h",          // file postfix.
@@ -676,7 +665,7 @@ const GenParams gen_params[] = {
         nullptr,            // switch type (does not apply)
         user_attrs,         // attributes dictionary
     },
-    // The kernel header, C++.  (KernelHeaderCPP)
+    // The kernel header, C++.
     {
         generate_legacy_header,
         ".kernel.h",        // file postfix.
@@ -693,22 +682,21 @@ const GenParams gen_params[] = {
         "sfunc",            // switch var name
         "syscall_func"      // switch var type
     },
-    //  The assembly file for x86-64 (KernelAsmIntel64).
+    //  The assembly file for x86-64.
     {
         generate_legacy_assembly_x64,
         ".x86-64.S",        // file postfix.
         "m_syscall",        // macro name prefix.
         "mx_",              // function name prefix.
     },
-    //  The assembly include file for ARM64 (KernelAsmArm64).
+    //  The assembly include file for ARM64.
     {
         generate_legacy_assembly_arm64,
         ".arm64.S",         // file postfix.
         "m_syscall",        // macro name prefix.
         "mx_",              // function name prefix.
     },
-    // A C header defining MX_SYS_* syscall number macros
-    // (SyscallNumberHeader).
+    // A C header defining MX_SYS_* syscall number macros.
     {
         generate_syscall_numbers_header,
         ".syscall-numbers.h",  // file postfix.
@@ -733,10 +721,19 @@ public:
         return true;
     }
 
-    bool Generate(const GenType type, const char* output_prefix) {
-        auto gp = &gen_params[type];
+    bool Generate(const char* output_prefix) {
+        for (auto& gp : gen_params) {
+            if (!generate_one(gp, output_prefix))
+                return false;
+        }
+        return true;
+    }
 
-        string output_file = string(output_prefix) + gp->file_postfix;
+    bool verbose() const { return verbose_; }
+
+private:
+    bool generate_one(const GenParams& gp, const char* output_prefix) {
+        string output_file = string(output_prefix) + gp.file_postfix;
 
         std::ofstream ofile;
         ofile.open(output_file.c_str(), std::ofstream::out);
@@ -751,11 +748,9 @@ public:
             return false;
         }
 
-        auto generator = gen_params[type].genfn;
-
         int index = 0;
         for (const auto& sc : calls_) {
-            if (!generator(index, *gp, ofile, sc)) {
+            if (!gp.genfn(index, gp, ofile, sc)) {
                 print_error("generation failed", output_file);
                 return false;
             }
@@ -763,12 +758,10 @@ public:
         }
 
         ofile << "\n";
+
         return true;
     }
 
-    bool verbose() const { return verbose_; }
-
-private:
     void print_error(const char* what, const string& file) {
         fprintf(stderr, "error: %s for %s\n", what, file.c_str());
     }
@@ -874,20 +867,5 @@ int main(int argc, char* argv[]) {
             return 1;
     }
 
-    if (!generator.Generate(GenType::UserHeaderC, output_prefix))
-        return 1;
-    if (!generator.Generate(GenType::KernelHeaderCPP, output_prefix))
-        return 1;
-    if (!generator.Generate(GenType::KernelCodeCPP, output_prefix))
-        return 1;
-    if (!generator.Generate(GenType::KernelAsmIntel64, output_prefix))
-        return 1;
-    if (!generator.Generate(GenType::KernelAsmArm64, output_prefix))
-        return 1;
-    if (!generator.Generate(GenType::SyscallNumberHeader, output_prefix))
-        return 1;
-    if (!generator.Generate(GenType::TraceInfo, output_prefix))
-        return 1;
-
-    return 0;
+    return generator.Generate(output_prefix) ? 0 : 1;
 }
