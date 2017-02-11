@@ -25,8 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "atomic.h"
-#define ntz(x) a_ctz_l((x))
+#define ntz(x) __builtin_ctzl(x)
 
 typedef int (*cmpfun)(const void*, const void*);
 

@@ -63,12 +63,3 @@ static inline void* a_cas_p(volatile void* p, void* t, void* s) {
     } while (!a_sc_p(p, s));
     return old;
 }
-
-#define a_ctz_64 a_ctz_64
-static inline int a_ctz_64(uint64_t x) {
-    __asm__("	rbit %0, %1\n"
-            "	clz %0, %0\n"
-            : "=r"(x)
-            : "r"(x));
-    return x;
-}

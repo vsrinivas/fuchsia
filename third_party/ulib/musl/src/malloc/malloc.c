@@ -58,26 +58,7 @@ static inline void unlock_bin(int i) {
 }
 
 static int first_set(uint64_t x) {
-#if 1
-    return a_ctz_64(x);
-#else
-    static const char debruijn64[64] = {
-        0, 1, 2, 53, 3, 7, 54, 27, 4, 38, 41, 8, 34, 55, 48, 28, 62, 5, 39, 46, 44, 42,
-        22, 9, 24, 35, 59, 56, 49, 18, 29, 11, 63, 52, 6, 26, 37, 40, 33, 47, 61, 45, 43, 21,
-        23, 58, 17, 10, 51, 25, 36, 32, 60, 20, 57, 16, 50, 31, 19, 15, 30, 14, 13, 12};
-    static const char debruijn32[32] = {0, 1, 23, 2, 29, 24, 19, 3, 30, 27, 25,
-                                        11, 20, 8, 4, 13, 31, 22, 28, 18, 26, 10,
-                                        7, 12, 21, 17, 9, 6, 16, 5, 15, 14};
-    if (sizeof(long) < 8) {
-        uint32_t y = x;
-        if (!y) {
-            y = x >> 32;
-            return 32 + debruijn32[(y & -y) * 0x076be629 >> 27];
-        }
-        return debruijn32[(y & -y) * 0x076be629 >> 27];
-    }
-    return debruijn64[(x & -x) * 0x022fdd63cc95386dull >> 58];
-#endif
+    return __builtin_ctzll(x);
 }
 
 static int bin_index(size_t x) {
@@ -105,21 +86,21 @@ static int bin_index_up(size_t x) {
 #if 0
 void __dump_heap(int x)
 {
-	struct chunk *c;
-	int i;
-	for (c = (void *)mal.heap; CHUNK_SIZE(c); c = NEXT_CHUNK(c))
-		fprintf(stderr, "base %p size %zu (%d) flags %d/%d\n",
-			c, CHUNK_SIZE(c), bin_index(CHUNK_SIZE(c)),
-			c->csize & 15,
-			NEXT_CHUNK(c)->psize & 15);
-	for (i=0; i<64; i++) {
-		if (mal.bins[i].head != BIN_TO_CHUNK(i) && mal.bins[i].head) {
-			fprintf(stderr, "bin %d: %p\n", i, mal.bins[i].head);
-			if (!(mal.binmap & 1ULL<<i))
-				fprintf(stderr, "missing from binmap!\n");
-		} else if (mal.binmap & 1ULL<<i)
-			fprintf(stderr, "binmap wrongly contains %d!\n", i);
-	}
+    struct chunk *c;
+    int i;
+    for (c = (void *)mal.heap; CHUNK_SIZE(c); c = NEXT_CHUNK(c))
+        fprintf(stderr, "base %p size %zu (%d) flags %d/%d\n",
+            c, CHUNK_SIZE(c), bin_index(CHUNK_SIZE(c)),
+            c->csize & 15,
+            NEXT_CHUNK(c)->psize & 15);
+    for (i=0; i<64; i++) {
+        if (mal.bins[i].head != BIN_TO_CHUNK(i) && mal.bins[i].head) {
+            fprintf(stderr, "bin %d: %p\n", i, mal.bins[i].head);
+            if (!(mal.binmap & 1ULL<<i))
+                fprintf(stderr, "missing from binmap!\n");
+        } else if (mal.binmap & 1ULL<<i)
+            fprintf(stderr, "binmap wrongly contains %d!\n", i);
+    }
 }
 #endif
 
