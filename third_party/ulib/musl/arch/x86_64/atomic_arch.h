@@ -50,14 +50,6 @@ static inline void a_or(volatile int* p, int v) {
                          : "memory");
 }
 
-#define a_and_64 a_and_64
-static inline void a_and_64(volatile uint64_t* p, uint64_t v) {
-    __asm__ __volatile("lock ; and %1, %0"
-                       : "=m"(*p)
-                       : "r"(v)
-                       : "memory");
-}
-
 #define a_or_64 a_or_64
 static inline void a_or_64(volatile uint64_t* p, uint64_t v) {
     __asm__ __volatile__("lock ; or %1, %0"

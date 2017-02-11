@@ -47,6 +47,31 @@ static struct {
 
 /* Synchronization tools */
 
+#if defined(__x86_64__)
+static inline void a_and_64(volatile uint64_t* p, uint64_t v) {
+    __asm__ __volatile("lock ; and %1, %0"
+                       : "=m"(*p)
+                       : "r"(v)
+                       : "memory");
+}
+
+#elif defined(__aarch64__)
+static inline void a_and_64(volatile uint64_t* p, uint64_t v) {
+    union {
+        uint64_t v;
+        uint32_t r[2];
+    } u = {v};
+    if (u.r[0] + 1)
+        a_and((int*)p, u.r[0]);
+    if (u.r[1] + 1)
+        a_and((int*)p + 1, u.r[1]);
+}
+
+#else
+#error what architecture?
+
+#endif
+
 static inline void lock_bin(int i) {
     mtx_lock(&mal.bins[i].lock);
     if (!mal.bins[i].head)

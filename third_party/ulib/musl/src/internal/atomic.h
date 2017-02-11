@@ -97,20 +97,6 @@ static inline void a_store(volatile int* p, int v) {
 #define a_spin() atomic_thread_fence(memory_order_seq_cst)
 #endif
 
-#ifndef a_and_64
-#define a_and_64 a_and_64
-static inline void a_and_64(volatile uint64_t* p, uint64_t v) {
-    union {
-        uint64_t v;
-        uint32_t r[2];
-    } u = {v};
-    if (u.r[0] + 1)
-        a_and((int*)p, u.r[0]);
-    if (u.r[1] + 1)
-        a_and((int*)p + 1, u.r[1]);
-}
-#endif
-
 #ifndef a_or_64
 #define a_or_64 a_or_64
 static inline void a_or_64(volatile uint64_t* p, uint64_t v) {
