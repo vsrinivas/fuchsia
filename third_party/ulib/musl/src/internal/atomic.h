@@ -16,17 +16,6 @@ static inline int a_cas_shim(_Atomic(int)* p, int t, int s) {
 
 #ifdef a_ll
 
-#ifndef a_swap
-#define a_swap a_swap
-static inline int a_swap(volatile int* p, int v) {
-    int old;
-    do
-        old = a_ll(p);
-    while (!a_sc(p, v));
-    return old;
-}
-#endif
-
 #ifndef a_fetch_add
 #define a_fetch_add a_fetch_add
 static inline int a_fetch_add(volatile int* p, int v) {
@@ -73,20 +62,6 @@ static inline void a_and(volatile int* p, int v) {
 #define a_or a_or
 static inline void a_or(volatile int* p, int v) {
     a_fetch_or(p, v);
-}
-#endif
-
-#ifndef a_inc
-#define a_inc a_inc
-static inline void a_inc(volatile int* p) {
-    a_fetch_add(p, 1);
-}
-#endif
-
-#ifndef a_dec
-#define a_dec a_dec
-static inline void a_dec(volatile int* p) {
-    a_fetch_add(p, -1);
 }
 #endif
 
