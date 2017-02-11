@@ -7,19 +7,41 @@
 #include <iostream>
 #include <cstring>
 
+#include "apps/bluetooth/hci/command_channel.h"
 #include "apps/bluetooth/hci/command_packet.h"
-#include "apps/bluetooth/hci/event_packet.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "command_handler_map.h"
+#include "command_dispatcher.h"
 
 using namespace bluetooth;
+
+using std::placeholders::_1;
+using std::placeholders::_2;
 
 namespace hcitool {
 namespace {
 
+void StatusCallback(ftl::Closure complete_cb,
+                    bluetooth::hci::CommandChannel::TransactionId id,
+                    bluetooth::hci::Status status) {
+  std::cout << "  Command Status: " << ftl::StringPrintf("0x%02x", status)
+            << " (id=" << id << ")" << std::endl;
+  if (status != bluetooth::hci::Status::kSuccess)
+    complete_cb();
+}
+
+hci::CommandChannel::TransactionId SendCommand(
+    const CommandDispatcher& owner,
+    const hci::CommandPacket& packet,
+    const hci::CommandChannel::CommandCompleteCallback& cb,
+    const ftl::Closure& complete_cb) {
+  return owner.cmd_channel()->SendCommand(
+      packet, std::bind(&StatusCallback, complete_cb, _1, _2), cb,
+      owner.task_runner());
+}
+
 void LogCommandComplete(uint8_t status, hci::CommandChannel::TransactionId id) {
-  std::cout << "Command Complete - status: "
+  std::cout << "  Command Complete - status: "
             << ftl::StringPrintf("0x%02x", status) << " (id=" << id << ")"
             << std::endl;
 }
@@ -28,48 +50,11 @@ constexpr size_t BufferSize(size_t payload_size) {
   return hci::CommandPacket::GetMinBufferSize(payload_size);
 }
 
-}  // namespace
-
-void RegisterCommands(CommandHandlerMap* handler_map) {
-  FTL_DCHECK(handler_map);
-
-#define REGISTER_HANDLER(handler)                           \
-  handler_map->RegisterHandler(                             \
-      handler::GetCommandName(),                            \
-      std::make_unique<handler>(handler_map->cmd_channel(), \
-                                handler_map->task_runner()))
-
-  REGISTER_HANDLER(ResetHandler);
-  REGISTER_HANDLER(ReadBDADDRHandler);
-  REGISTER_HANDLER(ReadLocalNameHandler);
-  REGISTER_HANDLER(WriteLocalNameHandler);
-
-#undef REGISTER_HANDLER
-}
-
-std::string ResetHandler::GetHelpMessage() const {
-  return "reset                    Send HCI_Reset";
-}
-
-std::string ReadBDADDRHandler::GetHelpMessage() const {
-  return "read-bdaddr              Send HCI_Read_BDADDR";
-}
-
-std::string ReadLocalNameHandler::GetHelpMessage() const {
-  return "read-local-name          Send HCI_Read_Local_Name";
-}
-
-std::string WriteLocalNameHandler::GetHelpMessage() const {
-  return "write-local-name <name>  Send HCI_Write_Local_Name";
-}
-
-bool ResetHandler::HandleCommand(
-    const std::vector<std::string>& positional_args,
-    size_t option_count,
-    const OptionMap& options,
-    const ftl::Closure& complete_cb) {
-  if (positional_args.size() || option_count) {
-    std::cout << "Usage: reset" << std::endl;
+bool HandleReset(const CommandDispatcher& owner,
+                 const ftl::CommandLine& cmd_line,
+                 const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() || cmd_line.options().size()) {
+    std::cout << "  Usage: reset" << std::endl;
     return false;
   }
 
@@ -84,20 +69,17 @@ bool ResetHandler::HandleCommand(
   hci::CommandPacket packet(hci::kReset, &buffer);
   packet.EncodeHeader();
 
-  auto id = cmd_channel()->SendCommand(
-      packet, DefaultStatusCallback(complete_cb), cb, task_runner());
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+  std::cout << "  Sent HCI_Reset (id=" << id << ")" << std::endl;
 
-  std::cout << "Sent HCI_Reset (id=" << id << ")" << std::endl;
   return true;
 }
 
-bool ReadBDADDRHandler::HandleCommand(
-    const std::vector<std::string>& positional_args,
-    size_t option_count,
-    const OptionMap& options,
-    const ftl::Closure& complete_cb) {
-  if (positional_args.size() || option_count) {
-    std::cout << "Usage: read-bdaddr" << std::endl;
+bool HandleReadBDADDR(const CommandDispatcher& owner,
+                      const ftl::CommandLine& cmd_line,
+                      const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() || cmd_line.options().size()) {
+    std::cout << "  Usage: read-bdaddr" << std::endl;
     return false;
   }
 
@@ -110,7 +92,7 @@ bool ReadBDADDRHandler::HandleCommand(
       return;
     }
 
-    std::cout << "BD_ADDR: "
+    std::cout << "  BD_ADDR: "
               << ftl::StringPrintf("%02X", return_params->bd_addr[5]);
     for (int i = 4; i >= 0; --i)
       std::cout << ftl::StringPrintf(":%02X", return_params->bd_addr[i]);
@@ -122,20 +104,17 @@ bool ReadBDADDRHandler::HandleCommand(
   hci::CommandPacket packet(hci::kReadBDADDR, &buffer);
   packet.EncodeHeader();
 
-  auto id = cmd_channel()->SendCommand(
-      packet, DefaultStatusCallback(complete_cb), cb, task_runner());
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+  std::cout << "  Sent HCI_Read_BDADDR (id=" << id << ")" << std::endl;
 
-  std::cout << "Sent HCI_Read_BDADDR (id=" << id << ")" << std::endl;
   return true;
 }
 
-bool ReadLocalNameHandler::HandleCommand(
-    const std::vector<std::string>& positional_args,
-    size_t option_count,
-    const OptionMap& options,
-    const ftl::Closure& complete_cb) {
-  if (positional_args.size() || option_count) {
-    std::cout << "Usage: read-local-name" << std::endl;
+bool HandleReadLocalName(const CommandDispatcher& owner,
+                         const ftl::CommandLine& cmd_line,
+                         const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() || cmd_line.options().size()) {
+    std::cout << "  Usage: read-local-name" << std::endl;
     return false;
   }
 
@@ -149,7 +128,7 @@ bool ReadLocalNameHandler::HandleCommand(
       return;
     }
 
-    std::cout << "Local Name: " << return_params->local_name << std::endl;
+    std::cout << "  Local Name: " << return_params->local_name << std::endl;
 
     complete_cb();
   };
@@ -158,20 +137,17 @@ bool ReadLocalNameHandler::HandleCommand(
   hci::CommandPacket packet(hci::kReadLocalName, &buffer);
   packet.EncodeHeader();
 
-  auto id = cmd_channel()->SendCommand(
-      packet, DefaultStatusCallback(complete_cb), cb, task_runner());
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+  std::cout << "  Sent HCI_Read_Local_Name (id=" << id << ")" << std::endl;
 
-  std::cout << "Sent HCI_Read_Local_Name (id=" << id << ")" << std::endl;
   return true;
 }
 
-bool WriteLocalNameHandler::HandleCommand(
-    const std::vector<std::string>& positional_args,
-    size_t option_count,
-    const OptionMap& options,
-    const ftl::Closure& complete_cb) {
-  if (positional_args.size() != 1 || option_count) {
-    std::cout << "Usage: write-local-name <name>" << std::endl;
+bool HandleWriteLocalName(const CommandDispatcher& owner,
+                          const ftl::CommandLine& cmd_line,
+                          const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
+    std::cout << "  Usage: write-local-name <name>" << std::endl;
     return false;
   }
 
@@ -183,20 +159,33 @@ bool WriteLocalNameHandler::HandleCommand(
     complete_cb();
   };
 
+  const std::string& name = cmd_line.positional_args()[0];
   common::StaticByteBuffer<BufferSize(hci::kMaxLocalNameLength)> buffer;
-  hci::CommandPacket packet(hci::kWriteLocalName, &buffer,
-                            positional_args[0].length() + 1);
-  buffer.GetMutableData()[positional_args[0].length()] = '\0';
+  hci::CommandPacket packet(hci::kWriteLocalName, &buffer, name.length() + 1);
+  buffer.GetMutableData()[name.length()] = '\0';
   std::strcpy(
       (char*)packet.GetPayload<hci::WriteLocalNameCommandParams>()->local_name,
-      positional_args[0].c_str());
+      name.c_str());
   packet.EncodeHeader();
 
-  auto id = cmd_channel()->SendCommand(
-      packet, DefaultStatusCallback(complete_cb), cb, task_runner());
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+  std::cout << "  Sent HCI_Write_Local_Name (id=" << id << ")" << std::endl;
 
-  std::cout << "Sent HCI_Write_Local_Name (id=" << id << ")" << std::endl;
   return true;
+}
+
+}  // namespace
+
+void RegisterCommands(CommandDispatcher* handler_map) {
+  FTL_DCHECK(handler_map);
+
+  handler_map->RegisterHandler("reset", "Send HCI_Reset", HandleReset);
+  handler_map->RegisterHandler("read-bdaddr", "Send HCI_Read_BDADDR",
+                               HandleReadBDADDR);
+  handler_map->RegisterHandler("read-local-name", "Send HCI_Read_Local_Name",
+                               HandleReadLocalName);
+  handler_map->RegisterHandler("write-local-name", "Send HCI_Write_Local_Name",
+                               HandleWriteLocalName);
 }
 
 }  // namespace hcitool

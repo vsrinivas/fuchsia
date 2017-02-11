@@ -4,10 +4,8 @@
 
 executable("hcitool") {
   sources = [
-    "command_handler.cc",
-    "command_handler.h",
-    "command_handler_map.cc",
-    "command_handler_map.h",
+    "command_dispatcher.cc",
+    "command_dispatcher.h",
     "commands.cc",
     "commands.h",
     "main.cc",

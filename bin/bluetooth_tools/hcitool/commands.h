@@ -6,17 +6,10 @@
 
 #include "lib/ftl/macros.h"
 
-#include "command_handler.h"
-
 namespace hcitool {
 
-class CommandHandlerMap;
+class CommandDispatcher;
 
-void RegisterCommands(CommandHandlerMap* handler_map);
-
-HCITOOL_DEFINE_HANDLER(ResetHandler, "reset")
-HCITOOL_DEFINE_HANDLER(ReadBDADDRHandler, "read-bdaddr")
-HCITOOL_DEFINE_HANDLER(ReadLocalNameHandler, "read-local-name")
-HCITOOL_DEFINE_HANDLER(WriteLocalNameHandler, "write-local-name")
+void RegisterCommands(CommandDispatcher* handler_map);
 
 }  // namespace hcitool

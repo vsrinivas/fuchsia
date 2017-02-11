@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "command_handler_map.h"
+#include "command_dispatcher.h"
 
-#include <iostream>
+#include <stdio.h>
 
 namespace hcitool {
 
-CommandHandlerMap::CommandHandlerMap(
+CommandDispatcher::CommandDispatcher(
     bluetooth::hci::CommandChannel* cmd_channel,
     ftl::RefPtr<ftl::TaskRunner> task_runner)
     : cmd_channel_(cmd_channel), task_runner_(task_runner) {
@@ -16,14 +16,7 @@ CommandHandlerMap::CommandHandlerMap(
   FTL_DCHECK(task_runner_.get());
 }
 
-void CommandHandlerMap::RegisterHandler(
-    const std::string& name,
-    std::unique_ptr<CommandHandler> handler) {
-  FTL_DCHECK(!name.empty());
-  handler_map_[name] = std::move(handler);
-}
-
-bool CommandHandlerMap::ExecuteCommand(const std::vector<std::string>& argv,
+bool CommandDispatcher::ExecuteCommand(const std::vector<std::string>& argv,
                                        const ftl::Closure& complete_cb,
                                        bool* out_cmd_found) {
   FTL_DCHECK(out_cmd_found);
@@ -39,13 +32,24 @@ bool CommandHandlerMap::ExecuteCommand(const std::vector<std::string>& argv,
 
   *out_cmd_found = true;
 
-  return iter->second->Run(argv, complete_cb);
+  auto cl = ftl::CommandLineFromIterators(argv.begin(), argv.end());
+  return iter->second.second(*this, cl, complete_cb);
 }
 
-void CommandHandlerMap::DescribeAllCommands() {
+void CommandDispatcher::DescribeAllCommands() {
   for (const auto& iter : handler_map_) {
-    std::cout << "    " << iter.second->GetHelpMessage() << std::endl;
+    printf("  %-30s %s\n", iter.first.c_str(), iter.second.first.c_str());
   }
+}
+
+void CommandDispatcher::RegisterHandler(const std::string& name,
+                                        const std::string& description,
+                                        const CommandHandler& handler) {
+  FTL_DCHECK(!name.empty());
+  FTL_DCHECK(!description.empty());
+  FTL_DCHECK(handler_map_.find(name) == handler_map_.end());
+
+  handler_map_[name] = std::make_pair<>(description, handler);
 }
 
 }  // namespace hcitool

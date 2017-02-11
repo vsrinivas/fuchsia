@@ -19,7 +19,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "commands.h"
-#include "command_handler_map.h"
+#include "command_dispatcher.h"
 
 using namespace bluetooth;
 
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
   hci.Initialize();
   mtl::MessageLoop message_loop;
 
-  hcitool::CommandHandlerMap handler_map(hci.command_channel(),
+  hcitool::CommandDispatcher handler_map(hci.command_channel(),
                                          message_loop.task_runner());
   RegisterCommands(&handler_map);
 
