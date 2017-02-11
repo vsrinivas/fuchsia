@@ -96,4 +96,23 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   return os;
 }
 
+template <typename T>
+struct AsInlineVector {
+  explicit AsInlineVector(const std::vector<T>& value) : value_(value) {}
+  const std::vector<T>& value_;
+};
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, AsInlineVector<T> value) {
+  if (value.value_.size() == 0) {
+    return os << "<empty>";
+  }
+
+  for (T& element : const_cast<std::vector<T>&>(value.value_)) {
+    os << element << ' ';
+  }
+
+  return os;
+}
+
 }  // namespace media

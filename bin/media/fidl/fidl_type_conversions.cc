@@ -371,6 +371,10 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       video_details->height = input->video()->height();
       video_details->coded_width = input->video()->coded_width();
       video_details->coded_height = input->video()->coded_height();
+      video_details->line_stride =
+          fidl::Array<uint32_t>::From(input->video()->line_stride());
+      video_details->plane_offset =
+          fidl::Array<uint32_t>::From(input->video()->plane_offset());
       media::MediaTypeDetailsPtr details = media::MediaTypeDetails::New();
       details->set_video(std::move(video_details));
       media::MediaTypePtr media_type = media::MediaType::New();
@@ -436,7 +440,9 @@ TypeConverter<std::unique_ptr<media::StreamType>, media::MediaTypePtr>::Convert(
           input->details->get_video()->width,
           input->details->get_video()->height,
           input->details->get_video()->coded_width,
-          input->details->get_video()->coded_height);
+          input->details->get_video()->coded_height,
+          input->details->get_video()->line_stride,
+          input->details->get_video()->plane_offset);
     case media::MediaTypeMedium::TEXT:
       return media::TextStreamType::Create(
           input->encoding,

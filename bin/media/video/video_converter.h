@@ -45,7 +45,6 @@ class VideoConverter {
 
   std::unique_ptr<StreamType> stream_type_;
   const VideoStreamType* video_stream_type_ = nullptr;
-  VideoStreamType::FrameLayout layout_;
   std::unique_ptr<uint32_t[]> colorspace_table_;
 };
 

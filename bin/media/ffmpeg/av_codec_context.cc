@@ -18,6 +18,9 @@ namespace media {
 
 namespace {
 
+static const uint32_t kFrameSizeAlignment = 16;
+static const uint32_t kFrameSizePadding = 16;
+
 // Converts an AVSampleFormat into an AudioStreamType::SampleFormat.
 AudioStreamType::SampleFormat Convert(AVSampleFormat av_sample_format) {
   switch (av_sample_format) {
@@ -157,6 +160,37 @@ int FfmpegProfileFromVideoProfile(VideoStreamType::VideoProfile video_profile) {
   }
 }
 
+// Rounds up |value| to the nearest multiple of |alignment|. |alignment| must
+// be a power of 2.
+static inline uint32_t RoundUpToAlign(uint32_t value, uint32_t alignment) {
+  return ((value + (alignment - 1)) & ~(alignment - 1));
+}
+
+VideoStreamType::Extent FfmpegCommonAlignment(
+    const VideoStreamType::PixelFormatInfo& info) {
+  uint32_t max_sample_width = 0;
+  uint32_t max_sample_height = 0;
+  for (uint32_t plane = 0; plane < info.plane_count_; ++plane) {
+    const VideoStreamType::Extent sample_size =
+        info.sample_size_for_plane(plane);
+    max_sample_width = std::max(max_sample_width, sample_size.width());
+    max_sample_height = std::max(max_sample_height, sample_size.height());
+  }
+  return VideoStreamType::Extent(max_sample_width, max_sample_height);
+}
+
+VideoStreamType::Extent FfmpegAlignedSize(
+    const VideoStreamType::Extent& unaligned_size,
+    const VideoStreamType::PixelFormatInfo& info) {
+  const VideoStreamType::Extent alignment = FfmpegCommonAlignment(info);
+  const VideoStreamType::Extent adjusted = VideoStreamType::Extent(
+      RoundUpToAlign(unaligned_size.width(), alignment.width()),
+      RoundUpToAlign(unaligned_size.height(), alignment.height()));
+  FTL_DCHECK((adjusted.width() % alignment.width() == 0) &&
+             (adjusted.height() % alignment.height() == 0));
+  return adjusted;
+}
+
 // Creates a StreamType from an AVCodecContext describing a compressed video
 // type.
 std::unique_ptr<StreamType> StreamTypeFromCompressedVideoCodecContext(
@@ -189,26 +223,44 @@ std::unique_ptr<StreamType> StreamTypeFromCompressedVideoCodecContext(
       abort();
   }
 
+  VideoStreamType::PixelFormat pixel_format =
+      PixelFormatFromAVPixelFormat(from.pix_fmt);
+
+  std::vector<uint32_t> line_stride;
+  std::vector<uint32_t> plane_offset;
+  LayoutFrame(pixel_format,
+              VideoStreamType::Extent(from.coded_width, from.coded_height),
+              &line_stride, &plane_offset);
+
   return VideoStreamType::Create(
       encoding, from.extradata_size == 0
                     ? nullptr
                     : Bytes::Create(from.extradata, from.extradata_size),
-      VideoStreamType::VideoProfile::kNotApplicable,
-      PixelFormatFromAVPixelFormat(from.pix_fmt),
+      VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
       ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range),
-      from.width, from.height, from.coded_width, from.coded_height);
+      from.width, from.height, from.coded_width, from.coded_height, line_stride,
+      plane_offset);
 }
 
 // Creates a StreamType from an AVCodecContext describing an uncompressed video
 // type.
 std::unique_ptr<StreamType> StreamTypeFromUncompressedVideoCodecContext(
     const AVCodecContext& from) {
+  VideoStreamType::PixelFormat pixel_format =
+      PixelFormatFromAVPixelFormat(from.pix_fmt);
+
+  std::vector<uint32_t> line_stride;
+  std::vector<uint32_t> plane_offset;
+  LayoutFrame(pixel_format,
+              VideoStreamType::Extent(from.coded_width, from.coded_height),
+              &line_stride, &plane_offset);
+
   return VideoStreamType::Create(
       StreamType::kVideoEncodingUncompressed, nullptr,
-      VideoStreamType::VideoProfile::kNotApplicable,
-      PixelFormatFromAVPixelFormat(from.pix_fmt),
+      VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
       ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range),
-      from.width, from.height, from.coded_width, from.coded_height);
+      from.width, from.height, from.coded_width, from.coded_height, line_stride,
+      plane_offset);
 }
 
 // Creates a StreamType from an AVCodecContext describing a data type.
@@ -406,6 +458,46 @@ AVPixelFormat AVPixelFormatFromPixelFormat(
     default:
       return AV_PIX_FMT_NONE;
   }
+}
+
+size_t LayoutFrame(VideoStreamType::PixelFormat pixel_format,
+                   const VideoStreamType::Extent& coded_size,
+                   std::vector<uint32_t>* line_stride_out,
+                   std::vector<uint32_t>* plane_offset_out) {
+  FTL_DCHECK(line_stride_out != nullptr);
+  FTL_DCHECK(plane_offset_out != nullptr);
+
+  const VideoStreamType::PixelFormatInfo& info =
+      VideoStreamType::InfoForPixelFormat(pixel_format);
+
+  line_stride_out->resize(info.plane_count_);
+  plane_offset_out->resize(info.plane_count_);
+
+  uint32_t plane_offset = 0;
+  VideoStreamType::Extent aligned_size = FfmpegAlignedSize(coded_size, info);
+
+  for (uint32_t plane = 0; plane < info.plane_count_; ++plane) {
+    // The *2 in alignment for height is because some formats (e.g. h264)
+    // allow interlaced coding, and then the size needs to be a multiple of two
+    // macroblocks (vertically). See avcodec_align_dimensions2.
+    const uint32_t height = RoundUpToAlign(
+        info.RowCount(plane, aligned_size.height()), kFrameSizeAlignment * 2);
+    (*line_stride_out)[plane] = RoundUpToAlign(
+        info.BytesPerRow(plane, aligned_size.width()), kFrameSizeAlignment);
+    (*plane_offset_out)[plane] = plane_offset;
+    plane_offset += height * (*line_stride_out)[plane];
+  }
+
+  // The extra line of UV being allocated is because h264 chroma MC overreads
+  // by one line in some cases, see avcodec_align_dimensions2() and
+  // h264_chromamc.asm:put_h264_chroma_mc4_ssse3().
+  //
+  // This is a bit of a hack and is really only here because of ffmpeg-specific
+  // issues. It works because we happen to know that info.plane_count_ - 1 is
+  // the U plane for the format we currently care about.
+  return static_cast<size_t>(plane_offset +
+                             (*line_stride_out)[info.plane_count_ - 1] +
+                             kFrameSizePadding);
 }
 
 // static

@@ -80,6 +80,27 @@ std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {
 }
 
 template <typename T>
+struct AsInlineArray {
+  explicit AsInlineArray(const fidl::Array<T>& value) : value_(value) {}
+  const fidl::Array<T>& value_;
+};
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, AsInlineArray<T> value) {
+  if (!value.value_) {
+    return os << "<nullptr>";
+  } else if (value.value_.size() == 0) {
+    return os << "<empty>";
+  }
+
+  for (T& element : const_cast<fidl::Array<T>&>(value.value_)) {
+    os << element << ' ';
+  }
+
+  return os;
+}
+
+template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   if (value.empty()) {
     return os << "<empty>" << std::endl;

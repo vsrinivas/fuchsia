@@ -175,6 +175,10 @@ std::ostream& operator<<(std::ostream& os,
   os << begl << "uint32_t height: " << value->height << std::endl;
   os << begl << "uint32_t coded_width: " << value->coded_width << std::endl;
   os << begl << "uint32_t coded_height: " << value->coded_height << std::endl;
+  os << begl << "array<uint32_t> line_stride: "
+     << AsInlineArray<uint32_t>(value->line_stride) << std::endl;
+  os << begl << "array<uint32_t> plane_offset: "
+     << AsInlineArray<uint32_t>(value->plane_offset) << std::endl;
   return os << outdent;
 }
 

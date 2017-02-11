@@ -33,6 +33,12 @@ FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
 
   // Precalculate the PTS rate needed for packets.
   pts_rate_ = TimelineRate(context()->time_base.den, context()->time_base.num);
+
+  // Determine the frame layout we will use.
+  frame_buffer_size_ = LayoutFrame(
+      PixelFormatFromAVPixelFormat(context()->pix_fmt),
+      VideoStreamType::Extent(context()->coded_width, context()->coded_height),
+      &line_stride_, &plane_offset_);
 }
 
 FfmpegVideoDecoder::~FfmpegVideoDecoder() {}
@@ -118,17 +124,12 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
   FTL_DCHECK(av_codec_context->lowres == 0);
   Extent coded_size(
       std::max(visible_size.width(),
-               static_cast<size_t>(av_codec_context->coded_width)),
+               static_cast<uint32_t>(av_codec_context->coded_width)),
       std::max(visible_size.height(),
-               static_cast<size_t>(av_codec_context->coded_height)));
-
-  VideoStreamType::FrameLayout frame_layout;
-
-  frame_layout.Build(PixelFormatFromAVPixelFormat(av_codec_context->pix_fmt),
-                     coded_size);
+               static_cast<uint32_t>(av_codec_context->coded_height)));
 
   uint8_t* buffer = static_cast<uint8_t*>(
-      self->allocator_->AllocatePayloadBuffer(frame_layout.size()));
+      self->allocator_->AllocatePayloadBuffer(self->frame_buffer_size_));
 
   // TODO(dalesat): For investigation purposes only...remove one day.
   if (self->first_frame_) {
@@ -154,16 +155,18 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
 
   if (buffer == nullptr) {
     FTL_LOG(ERROR) << "failed to allocate buffer of size "
-                   << frame_layout.size();
+                   << self->frame_buffer_size_;
     return -1;
   }
 
   // Decoders require a zeroed buffer.
-  std::memset(buffer, 0, frame_layout.size());
+  std::memset(buffer, 0, self->frame_buffer_size_);
 
-  for (size_t plane = 0; plane < frame_layout.plane_count(); ++plane) {
-    av_frame->data[plane] = buffer + frame_layout.plane_offset_for_plane(plane);
-    av_frame->linesize[plane] = frame_layout.line_stride_for_plane(plane);
+  FTL_DCHECK(self->line_stride_.size() == self->plane_offset_.size());
+
+  for (size_t plane = 0; plane < self->plane_offset_.size(); ++plane) {
+    av_frame->data[plane] = buffer + self->plane_offset_[plane];
+    av_frame->linesize[plane] = self->line_stride_[plane];
   }
 
   // TODO(dalesat): Do we need to attach colorspace info to the packet?
@@ -174,7 +177,7 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
   av_frame->reordered_opaque = av_codec_context->reordered_opaque;
 
   FTL_DCHECK(av_frame->data[0] == buffer);
-  av_frame->buf[0] = av_buffer_create(buffer, frame_layout.size(),
+  av_frame->buf[0] = av_buffer_create(buffer, self->frame_buffer_size_,
                                       ReleaseBufferForAvFrame, self->allocator_,
                                       0);  // flags
 

@@ -120,6 +120,8 @@ struct VideoMediaTypeDetails {
   uint32 height;
   uint32 coded_width;
   uint32 coded_height;
+  array<uint32> line_stride;
+  array<uint32> plane_offset;
 };
 
 // Media type set details for the VIDEO medium.

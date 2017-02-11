@@ -42,6 +42,10 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   // Callback used by the ffmpeg decoder to release a buffer.
   static void ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer);
 
+  std::vector<uint32_t> line_stride_;
+  std::vector<uint32_t> plane_offset_;
+  size_t frame_buffer_size_;
+
   // The allocator used by avcodec_decode_audio4 to provide context for
   // AllocateBufferForAvFrame. This is set only during the call to
   // avcodec_decode_audio4.

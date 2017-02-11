@@ -74,8 +74,6 @@ void VideoConverter::SetMediaType(const MediaTypePtr& media_type) {
   FTL_DCHECK(video_stream_type_->pixel_format() ==
              VideoStreamType::PixelFormat::kYv12)
       << "only YV12 video conversion is currently implemented";
-
-  layout_.Build(*video_stream_type_);
 }
 
 mozart::Size VideoConverter::GetSize() {
@@ -112,17 +110,17 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
   // inner and outer loops below are unrolled to deal with the 2x2 logic.
 
   size_t dest_line_stride = view_width;
-  size_t y_line_stride = layout_.line_stride_for_y_plane();
-  size_t u_line_stride = layout_.line_stride_for_u_plane();
-  size_t v_line_stride = layout_.line_stride_for_v_plane();
+  size_t y_line_stride = video_stream_type_->line_stride_for_y_plane();
+  size_t u_line_stride = video_stream_type_->line_stride_for_u_plane();
+  size_t v_line_stride = video_stream_type_->line_stride_for_v_plane();
 
   uint32_t* dest_line = reinterpret_cast<uint32_t*>(rgba_buffer);
-  uint8_t* y_line =
-      reinterpret_cast<uint8_t*>(payload) + layout_.plane_offset_for_y_plane();
-  uint8_t* u_line =
-      reinterpret_cast<uint8_t*>(payload) + layout_.plane_offset_for_u_plane();
-  uint8_t* v_line =
-      reinterpret_cast<uint8_t*>(payload) + layout_.plane_offset_for_v_plane();
+  uint8_t* y_line = reinterpret_cast<uint8_t*>(payload) +
+                    video_stream_type_->plane_offset_for_y_plane();
+  uint8_t* u_line = reinterpret_cast<uint8_t*>(payload) +
+                    video_stream_type_->plane_offset_for_u_plane();
+  uint8_t* v_line = reinterpret_cast<uint8_t*>(payload) +
+                    video_stream_type_->plane_offset_for_v_plane();
 
   for (uint32_t line = 0; line < height; ++line) {
     ConvertLine(dest_line, y_line, u_line, v_line, width);
