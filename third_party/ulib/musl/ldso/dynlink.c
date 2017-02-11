@@ -85,7 +85,7 @@ struct dso {
     size_t relro_start, relro_end;
     void** new_dtv;
     unsigned char* new_tls;
-    volatile int new_dtv_idx, new_tls_idx;
+    atomic_int new_dtv_idx, new_tls_idx;
     struct td_index* td_index;
     struct dso* fini_next;
     struct funcdesc {
@@ -1215,7 +1215,7 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
 
     /* Get new DTV space from new DSO if needed */
     if (v[0] > (size_t)self->head.dtv[0]) {
-        void** newdtv = p->new_dtv + (v[0] + 1) * a_fetch_add(&p->new_dtv_idx, 1);
+        void** newdtv = p->new_dtv + (v[0] + 1) * atomic_fetch_add(&p->new_dtv_idx, 1);
         memcpy(newdtv, self->head.dtv, ((size_t)self->head.dtv[0] + 1) * sizeof(void*));
         newdtv[0] = (void*)v[0];
         self->head.dtv = newdtv;
@@ -1226,7 +1226,7 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     for (p = head;; p = p->next) {
         if (!p->tls_id || self->head.dtv[p->tls_id])
             continue;
-        mem = p->new_tls + (p->tls.size + p->tls.align) * a_fetch_add(&p->new_tls_idx, 1);
+        mem = p->new_tls + (p->tls.size + p->tls.align) * atomic_fetch_add(&p->new_tls_idx, 1);
         mem += ((uintptr_t)p->tls.image - (uintptr_t)mem) & (p->tls.align - 1);
         self->head.dtv[p->tls_id] = mem;
         memcpy(mem, p->tls.image, p->tls.len);

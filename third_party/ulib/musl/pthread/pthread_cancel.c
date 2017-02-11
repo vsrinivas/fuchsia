@@ -2,6 +2,7 @@
 #include "libc.h"
 #include "pthread_impl.h"
 #include "syscall.h"
+#include <stdatomic.h>
 #include <string.h>
 
 long __cancel(void) {
@@ -60,7 +61,7 @@ int pthread_cancel(pthread_t t) {
         init_cancellation();
         init = 1;
     }
-    a_store(&t->cancel, 1);
+    atomic_store(&t->cancel, 1);
     if (t == pthread_self() && !t->cancelasync)
         return 0;
     return pthread_kill(t, SIGCANCEL);

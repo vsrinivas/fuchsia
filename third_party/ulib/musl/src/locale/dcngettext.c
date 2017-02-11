@@ -1,10 +1,10 @@
-#include "atomic.h"
 #include "libc.h"
 #include "locale_impl.h"
 #include <ctype.h>
 #include <errno.h>
 #include <libintl.h>
 #include <limits.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -13,18 +13,18 @@
 struct binding {
     struct binding* next;
     int dirlen;
-    volatile int active;
+    atomic_int active;
     char* domainname;
     char* dirname;
     char buf[];
 };
 
-static void* volatile bindings;
+static _Atomic(struct binding*) bindings;
 
 static char* gettextdir(const char* domainname, size_t* dirlen) {
     struct binding* p;
-    for (p = bindings; p; p = p->next) {
-        if (!strcmp(p->domainname, domainname) && p->active) {
+    for (p = atomic_load(&bindings); p; p = p->next) {
+        if (!strcmp(p->domainname, domainname) && atomic_load(&p->active)) {
             *dirlen = p->dirlen;
             return (char*)p->dirname;
         }
@@ -50,7 +50,7 @@ char* bindtextdomain(const char* domainname, const char* dirname) {
 
     mtx_lock(&lock);
 
-    for (p = bindings; p; p = p->next) {
+    for (p = atomic_load(&bindings); p; p = p->next) {
         if (!strcmp(p->domainname, domainname) && !strcmp(p->dirname, dirname)) {
             break;
         }
@@ -62,20 +62,20 @@ char* bindtextdomain(const char* domainname, const char* dirname) {
             mtx_unlock(&lock);
             return 0;
         }
-        p->next = bindings;
+        p->next = atomic_load(&bindings);
         p->dirlen = dirlen;
         p->domainname = p->buf;
         p->dirname = p->buf + domlen + 1;
         memcpy(p->domainname, domainname, domlen + 1);
         memcpy(p->dirname, dirname, dirlen + 1);
-        a_cas_p(&bindings, bindings, p);
+        atomic_exchange(&bindings, p);
     }
 
-    a_store(&p->active, 1);
+    atomic_store(&p->active, 1);
 
-    for (q = bindings; q; q = q->next) {
+    for (q = atomic_load(&bindings); q; q = q->next) {
         if (!strcmp(p->domainname, domainname) && q != p)
-            a_store(&q->active, 0);
+            atomic_store(&q->active, 0);
     }
 
     mtx_unlock(&lock);
@@ -93,8 +93,8 @@ struct msgcat {
     struct msgcat* next;
     const void* map;
     size_t map_size;
-    void* volatile plural_rule;
-    volatile int nplurals;
+    _Atomic(void*) plural_rule;
+    atomic_int nplurals;
     char name[];
 };
 
@@ -110,7 +110,7 @@ unsigned long __pleval(const char*, unsigned long);
 
 char* dcngettext(const char* domainname, const char* msgid1, const char* msgid2,
                  unsigned long int n, int category) {
-    static struct msgcat* volatile cats;
+    static _Atomic(struct msgcat*) cats;
     struct msgcat* p;
     struct __locale_struct* loc = CURRENT_LOCALE;
     const struct __locale_map* lm;
@@ -165,7 +165,7 @@ char* dcngettext(const char* domainname, const char* msgid1, const char* msgid2,
             break;
 
     if (!p) {
-        void* old_cats;
+        struct msgcat* old_cats;
         size_t map_size;
         const void* map = __map_file(name, &map_size);
         if (!map)
@@ -181,7 +181,7 @@ char* dcngettext(const char* domainname, const char* msgid1, const char* msgid2,
         do {
             old_cats = cats;
             p->next = old_cats;
-        } while (a_cas_p(&cats, old_cats, p) != old_cats);
+        } while (!atomic_compare_exchange_strong(&cats, &old_cats, p));
     }
 
     const char* trans = __mo_lookup(p->map, p->map_size, msgid1);
@@ -220,8 +220,9 @@ char* dcngettext(const char* domainname, const char* msgid1, const char* msgid2,
                     rule = r + 7;
             }
         }
-        a_store(&p->nplurals, np);
-        a_cas_p(&p->plural_rule, 0, (void*)rule);
+        atomic_store(&p->nplurals, np);
+        void* expected = NULL;
+        atomic_compare_exchange_strong(&p->plural_rule, &expected, (void*)rule);
     }
     if (p->nplurals) {
         unsigned long plural = __pleval(p->plural_rule, n);

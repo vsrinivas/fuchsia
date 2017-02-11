@@ -7,6 +7,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +29,7 @@ struct bin {
 };
 
 static struct {
-    volatile uint64_t binmap;
+    _Atomic(uint64_t) binmap;
     struct bin bins[64];
     mtx_t free_lock;
 } mal;
@@ -46,31 +47,6 @@ static struct {
 #define ROUND(addr) ((addr + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
 
 /* Synchronization tools */
-
-#if defined(__x86_64__)
-static inline void a_and_64(volatile uint64_t* p, uint64_t v) {
-    __asm__ __volatile("lock ; and %1, %0"
-                       : "=m"(*p)
-                       : "r"(v)
-                       : "memory");
-}
-
-#elif defined(__aarch64__)
-static inline void a_and_64(volatile uint64_t* p, uint64_t v) {
-    union {
-        uint64_t v;
-        uint32_t r[2];
-    } u = {v};
-    if (u.r[0] + 1)
-        a_and((int*)p, u.r[0]);
-    if (u.r[1] + 1)
-        a_and((int*)p + 1, u.r[1]);
-}
-
-#else
-#error what architecture?
-
-#endif
 
 static inline void lock_bin(int i) {
     mtx_lock(&mal.bins[i].lock);
@@ -121,9 +97,9 @@ void __dump_heap(int x)
     for (i=0; i<64; i++) {
         if (mal.bins[i].head != BIN_TO_CHUNK(i) && mal.bins[i].head) {
             fprintf(stderr, "bin %d: %p\n", i, mal.bins[i].head);
-            if (!(mal.binmap & 1ULL<<i))
+            if (!(atomic_load(&mal.binmap) & 1ULL<<i))
                 fprintf(stderr, "missing from binmap!\n");
-        } else if (mal.binmap & 1ULL<<i)
+        } else if (atomic_load(&mal.binmap) & 1ULL<<i)
             fprintf(stderr, "binmap wrongly contains %d!\n", i);
     }
 }
@@ -248,7 +224,7 @@ static int adjust_size(size_t* n) {
 
 static void unbin(struct chunk* c, int i) {
     if (c->prev == c->next)
-        a_and_64(&mal.binmap, ~(1ULL << i));
+        atomic_fetch_and(&mal.binmap, ~(1ULL << i));
     c->prev->next = c->next;
     c->next->prev = c->prev;
     c->csize |= C_INUSE;
@@ -362,7 +338,7 @@ void* malloc(size_t n) {
 
     i = bin_index_up(n);
     for (;;) {
-        uint64_t mask = mal.binmap & -(1ULL << i);
+        uint64_t mask = atomic_load(&mal.binmap) & -(1ULL << i);
         if (!mask) {
             c = expand_heap(n);
             if (!c)
@@ -541,8 +517,8 @@ void free(void* p) {
         }
     }
 
-    if (!(mal.binmap & 1ULL << i))
-        a_or_64(&mal.binmap, 1ULL << i);
+    if (!(atomic_load(&mal.binmap) & 1ULL << i))
+        atomic_fetch_or(&mal.binmap, 1ULL << i);
 
     self->csize = final_size;
     next->psize = final_size;

@@ -1,4 +1,3 @@
-#include "atomic.h"
 #include <langinfo.h>
 #include <stdio.h>
 #include <time.h>

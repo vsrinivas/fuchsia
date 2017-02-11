@@ -44,7 +44,7 @@ struct pthread {
 
     int errno_value;
     int tsd_used;
-    volatile int cancel, canceldisable, cancelasync;
+    volatile atomic_int cancel, canceldisable, cancelasync;
     int detached;
     unsigned char* map_base;
     size_t map_size;

@@ -1,4 +1,3 @@
-#include "atomic.h"
 #include "locale_impl.h"
 #include <locale.h>
 #include <string.h>

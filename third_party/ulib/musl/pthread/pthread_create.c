@@ -148,7 +148,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     // if (do_sched) {
     //     ret = __syscall(SYS_sched_setscheduler, new->tid,
     //                     attr._a_policy, &attr._a_prio);
-    //     a_store(new->startlock, ret < 0 ? 2 : 0);
+    //     atomic_store(new->startlock, ret < 0 ? 2 : 0);
     //     __wake(new->startlock, 1, 1);
     //     if (ret < 0)
     //         return -ret;

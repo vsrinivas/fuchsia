@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 
-static unsigned long handler_set[_NSIG / (8 * sizeof(long))];
+static _Atomic(unsigned long) handler_set[_NSIG / (8 * sizeof(long))];
 
 void __get_handler_set(sigset_t* set) {
     memcpy(set, handler_set, sizeof handler_set);
@@ -19,8 +19,8 @@ int __libc_sigaction(int sig, const struct sigaction* restrict sa, struct sigact
     struct k_sigaction ksa, ksa_old;
     if (sa) {
         if ((uintptr_t)sa->sa_handler > 1UL) {
-            a_or_l(handler_set + (sig - 1) / (8 * sizeof(long)),
-                   1UL << (sig - 1) % (8 * sizeof(long)));
+            atomic_fetch_or(handler_set + (sig - 1) / (8 * sizeof(long)),
+                            1UL << (sig - 1) % (8 * sizeof(long)));
 
             /* If pthread_create has not yet been called,
              * implementation-internal signals might not
