@@ -2,6 +2,7 @@
 
 #include "libc.h"
 #include "syscall.h"
+#include <stdatomic.h>
 #include <stdio.h>
 
 #define UNGET 8
@@ -39,8 +40,8 @@ struct _IO_FILE {
     short dummy3;
     signed char mode;
     signed char lbf;
-    volatile int lock;
-    volatile int waiters;
+    atomic_int lock;
+    atomic_int waiters;
     void* cookie;
     off_t off;
     char* getln_buf;

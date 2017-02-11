@@ -9,40 +9,40 @@ static int pshared_barrier_wait(pthread_barrier_t* b) {
     if (limit == 1)
         return PTHREAD_BARRIER_SERIAL_THREAD;
 
-    while ((v = a_cas(&b->_b_lock, 0, limit)))
+    while ((v = a_cas_shim(&b->_b_lock, 0, limit)))
         __wait(&b->_b_lock, &b->_b_waiters, v);
 
     /* Wait for <limit> threads to get to the barrier */
-    if (++b->_b_count == limit) {
-        a_store(&b->_b_count, 0);
+    if (atomic_fetch_add(&b->_b_count, 1) + 1 == limit) {
+        atomic_store(&b->_b_count, 0);
         ret = PTHREAD_BARRIER_SERIAL_THREAD;
-        if (b->_b_waiters2)
+        if (atomic_load(&b->_b_waiters2))
             __wake(&b->_b_count, -1);
     } else {
-        a_store(&b->_b_lock, 0);
-        if (b->_b_waiters)
+        atomic_store(&b->_b_lock, 0);
+        if (atomic_load(&b->_b_waiters))
             __wake(&b->_b_lock, 1);
-        while ((v = b->_b_count) > 0)
+        while ((v = atomic_load(&b->_b_count)) > 0)
             __wait(&b->_b_count, &b->_b_waiters2, v);
     }
 
     __vm_lock();
 
     /* Ensure all threads have a vm lock before proceeding */
-    if (a_fetch_add(&b->_b_count, -1) == 1 - limit) {
-        a_store(&b->_b_count, 0);
-        if (b->_b_waiters2)
+    if (atomic_fetch_add(&b->_b_count, -1) == 1 - limit) {
+        atomic_store(&b->_b_count, 0);
+        if (atomic_load(&b->_b_waiters2))
             __wake(&b->_b_count, -1);
     } else {
-        while ((v = b->_b_count))
+        while ((v = atomic_load(&b->_b_count)))
             __wait(&b->_b_count, &b->_b_waiters2, v);
     }
 
     /* Perform a recursive unlock suitable for self-sync'd destruction */
     do {
-        v = b->_b_lock;
-        w = b->_b_waiters;
-    } while (a_cas(&b->_b_lock, v, v == INT_MIN + 1 ? 0 : v - 1) != v);
+        v = atomic_load(&b->_b_lock);
+        w = atomic_load(&b->_b_waiters);
+    } while (a_cas_shim(&b->_b_lock, v, v == INT_MIN + 1 ? 0 : v - 1) != v);
 
     /* Wake a thread waiting to reuse or destroy the barrier */
     if (v == INT_MIN + 1 || (v == 1 && w))
@@ -54,10 +54,10 @@ static int pshared_barrier_wait(pthread_barrier_t* b) {
 }
 
 struct instance {
-    volatile int count;
-    volatile int last;
-    volatile int waiters;
-    mx_futex_t finished;
+    atomic_int count;
+    atomic_int last;
+    atomic_int waiters;
+    atomic_int finished;
 };
 
 int pthread_barrier_wait(pthread_barrier_t* b) {
@@ -73,7 +73,7 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
         return pshared_barrier_wait(b);
 
     /* Otherwise we need a lock on the barrier object */
-    while (a_swap(&b->_b_lock, 1))
+    while (atomic_exchange(&b->_b_lock, 1))
         __wait(&b->_b_lock, &b->_b_waiters, 1);
     inst = b->_b_inst;
 
@@ -82,8 +82,8 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
         struct instance new_inst = {0, 0, 0, ATOMIC_VAR_INIT(0)};
         int spins = 200;
         b->_b_inst = inst = &new_inst;
-        a_store(&b->_b_lock, 0);
-        if (b->_b_waiters)
+        atomic_store(&b->_b_lock, 0);
+        if (atomic_load(&b->_b_waiters))
             __wake(&b->_b_lock, 1);
         while (spins-- && !atomic_load(&inst->finished))
             a_spin();
@@ -94,23 +94,23 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
     }
 
     /* Last thread to enter the barrier wakes all non-instance-owners */
-    if (++inst->count == limit) {
+    if (atomic_fetch_add(&inst->count, 1) + 1 == limit) {
         b->_b_inst = 0;
-        a_store(&b->_b_lock, 0);
-        if (b->_b_waiters)
+        atomic_store(&b->_b_lock, 0);
+        if (atomic_load(&b->_b_waiters))
             __wake(&b->_b_lock, 1);
-        a_store(&inst->last, 1);
+        atomic_store(&inst->last, 1);
         if (inst->waiters)
             __wake(&inst->last, -1);
     } else {
-        a_store(&b->_b_lock, 0);
-        if (b->_b_waiters)
+        atomic_store(&b->_b_lock, 0);
+        if (atomic_load(&b->_b_waiters))
             __wake(&b->_b_lock, 1);
         __wait(&inst->last, &inst->waiters, 0);
     }
 
     /* Last thread to exit the barrier wakes the instance owner */
-    if (a_fetch_add(&inst->count, -1) == 1 && atomic_fetch_add(&inst->finished, 1))
+    if (atomic_fetch_add(&inst->count, -1) == 1 && atomic_fetch_add(&inst->finished, 1))
         __wake(&inst->finished, 1);
 
     return 0;

@@ -2,19 +2,22 @@
 #include "futex_impl.h"
 #include "pthread_impl.h"
 
-static volatile int vmlock[2];
+static struct {
+    atomic_int lock;
+    atomic_int waiters;
+} vmlock;
 
 void __vm_wait(void) {
     int tmp;
-    while ((tmp = vmlock[0]))
-        __wait(vmlock, vmlock + 1, tmp);
+    while ((tmp = atomic_load(&vmlock.lock)))
+        __wait(&vmlock.lock, &vmlock.waiters, tmp);
 }
 
 void __vm_lock(void) {
-    a_inc(vmlock);
+    atomic_fetch_add(&vmlock.lock, 1);
 }
 
 void __vm_unlock(void) {
-    if (a_fetch_add(vmlock, -1) == 1 && vmlock[1])
-        __wake(vmlock, -1);
+    if (atomic_fetch_add(&vmlock.lock, -1) == 1 && atomic_load(&vmlock.waiters))
+        __wake(&vmlock.lock, -1);
 }

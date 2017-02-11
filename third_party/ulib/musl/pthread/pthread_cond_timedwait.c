@@ -28,28 +28,29 @@ int __pthread_setcancelstate(int, int*);
 
 struct waiter {
     struct waiter *prev, *next;
-    volatile int state, barrier;
-    volatile int* notify;
+    atomic_int state;
+    atomic_int barrier;
+    atomic_int* notify;
 };
 
 /* Self-synchronized-destruction-safe lock functions */
 
-static inline void lock(volatile int* l) {
-    if (a_cas(l, 0, 1)) {
-        a_cas(l, 1, 2);
+static inline void lock(atomic_int* l) {
+    if (a_cas_shim(l, 0, 1)) {
+        a_cas_shim(l, 1, 2);
         do
             __wait(l, 0, 2);
-        while (a_cas(l, 0, 2));
+        while (a_cas_shim(l, 0, 2));
     }
 }
 
-static inline void unlock(volatile int* l) {
-    if (a_swap(l, 0) == 2)
+static inline void unlock(atomic_int* l) {
+    if (atomic_exchange(l, 0) == 2)
         __wake(l, 1);
 }
 
-static inline void unlock_requeue(volatile int* l, volatile int* r) {
-    a_store(l, 0);
+static inline void unlock_requeue(atomic_int* l, mx_futex_t* r) {
+    atomic_store(l, 0);
     _mx_futex_requeue((void*)l, /* wake count */ 0, /* l futex value */ 0,
                       (void*)r, /* requeue count */ 1);
 }
@@ -62,9 +63,7 @@ enum {
 
 int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict m,
                            const struct timespec* restrict ts) {
-    struct waiter node = {};
-    int e, seq, clock = c->_c_clock, cs, oldstate, tmp;
-    volatile int* fut;
+    int e, clock = c->_c_clock, cs, oldstate, tmp;
 
     if ((m->_m_type & 15) && (m->_m_lock & INT_MAX) != __thread_get_tid())
         return EPERM;
@@ -76,9 +75,13 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
 
     lock(&c->_c_lock);
 
-    seq = node.barrier = 2;
-    fut = &node.barrier;
-    node.state = WAITING;
+    int seq = 2;
+    struct waiter node = {
+        .barrier = ATOMIC_VAR_INIT(seq),
+        .state = ATOMIC_VAR_INIT(WAITING),
+    };
+    atomic_int* fut = &node.barrier;
+
     /* Add our waiter node onto the condvar's list.  We add the node to the
      * head of the list, but this is logically the end of the queue. */
     node.next = c->_c_head;
@@ -108,7 +111,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
         e = __timedwait_cp(fut, seq, clock, ts);
     while (*fut == seq && !e);
 
-    oldstate = a_cas(&node.state, WAITING, LEAVING);
+    oldstate = a_cas_shim(&node.state, WAITING, LEAVING);
 
     if (oldstate == WAITING) {
         /* The wait timed out.  So far, this thread was not signaled
@@ -148,7 +151,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
          * got a timeout.  However, that presumably has higher overhead
          * (since it contends _c_lock and involves more atomic ops). */
         if (node.notify) {
-            if (a_fetch_add(node.notify, -1) == 1)
+            if (atomic_fetch_add(node.notify, -1) == 1)
                 __wake(node.notify, 1);
         }
     } else {
@@ -184,14 +187,14 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
     /* As an optimization, we only update _m_waiters at the beginning and
      * end of the woken list. */
     if (!node.next)
-        a_inc(&m->_m_waiters);
+        atomic_fetch_add(&m->_m_waiters, 1);
 
     /* Unlock the barrier that's holding back the next waiter, and
      * either wake it or requeue it to the mutex. */
     if (node.prev)
         unlock_requeue(&node.prev->barrier, &m->_m_lock);
     else
-        a_dec(&m->_m_waiters);
+        atomic_fetch_sub(&m->_m_waiters, 1);
 
     /* Since a signal was consumed, cancellation is not permitted. */
     if (e == ECANCELED)
@@ -214,18 +217,18 @@ done:
 void __private_cond_signal(void* condvar, int n) {
     pthread_cond_t* c = condvar;
     struct waiter *p, *first = 0;
-    volatile int ref = 0;
+    atomic_int ref = ATOMIC_VAR_INIT(0);
     int cur;
 
     lock(&c->_c_lock);
     for (p = c->_c_tail; n && p; p = p->prev) {
-        if (a_cas(&p->state, WAITING, SIGNALED) != WAITING) {
+        if (a_cas_shim(&p->state, WAITING, SIGNALED) != WAITING) {
             /* This waiter timed out, and it marked itself as in the
              * LEAVING state.  However, it hasn't yet claimed _c_lock
              * (since we claimed the lock first) and so it hasn't yet
              * removed itself from the list.  We will wait for the waiter
              * to remove itself from the list and to notify us of that. */
-            ref++;
+            atomic_fetch_add(&ref, 1);
             p->notify = &ref;
         } else {
             n--;
@@ -247,7 +250,7 @@ void __private_cond_signal(void* condvar, int n) {
     /* Wait for any waiters in the LEAVING state to remove
      * themselves from the list before returning or allowing
      * signaled threads to proceed. */
-    while ((cur = ref))
+    while ((cur = atomic_load(&ref)))
         __wait(&ref, 0, cur);
 
     /* Allow first signaled waiter, if any, to proceed. */
