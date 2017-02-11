@@ -26,7 +26,7 @@ using namespace bluetooth;
 namespace {
 
 const char kUsageString[] =
-    "Usage: hcitool cmd...\n"
+    "Usage: hcitool [--dev=<bt-hci-dev>] cmd...\n"
     "    e.g. hcitool reset";
 
 const char kDefaultHCIDev[] = "/dev/class/bt-hci/000";
@@ -35,6 +35,11 @@ const char kDefaultHCIDev[] = "/dev/class/bt-hci/000";
 
 int main(int argc, char* argv[]) {
   auto cl = ftl::CommandLineFromArgcArgv(argc, argv);
+
+  if (cl.HasOption("help", nullptr)) {
+    std::cout << kUsageString << std::endl;
+    return EXIT_SUCCESS;
+  }
 
   // By default suppress all log messages below the LOG_ERROR level.
   ftl::LogSettings log_settings;
@@ -46,9 +51,15 @@ int main(int argc, char* argv[]) {
 
   ftl::SetLogSettings(log_settings);
 
+  std::string hci_dev_path = kDefaultHCIDev;
+  if (cl.GetOptionValue("dev", &hci_dev_path) && hci_dev_path.empty()) {
+    std::cout << "Empty device path not allowed" << std::endl;
+    return EXIT_FAILURE;
+  }
+
   // TODO(armansito): Add a command-line option for passing a bt-hci device
   // path.
-  ftl::UniqueFD hci_dev(open(kDefaultHCIDev, O_RDWR));
+  ftl::UniqueFD hci_dev(open(hci_dev_path.c_str(), O_RDWR));
   if (!hci_dev.is_valid()) {
     std::perror("Failed to open HCI device");
     return EXIT_FAILURE;
