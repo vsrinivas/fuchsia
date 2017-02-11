@@ -6,9 +6,12 @@
 
 namespace escher {
 
-// FNV-1a 32-bit Hash
+// FNV-1a 32-bit Hash (http://www.isthe.com/chongo/tech/comp/fnv/index.html)
 //
-// http://www.isthe.com/chongo/tech/comp/fnv/index.html
+// NOTE: if the hashed type is a struct, it must be tightly packed; if there are
+// any padding bytes, their value will be undefined, and therefore the resulting
+// hash value will also be undefined.  All types that are hashed by Hash should
+// be added to hash_unittest.cc
 template <typename T>
 struct Hash {
   std::size_t operator()(const T& hashee) const {

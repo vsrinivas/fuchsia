@@ -10,15 +10,18 @@
 namespace escher {
 namespace impl {
 
-// TODO: For now, there is only 1 material, so the ModelPipelineSpec doesn't
-// bother to mention anything about it.
+// Used to look up cached Vulkan pipelines that are compatible with the params.
+#pragma pack(push, 1)  // As required by escher::Hash<ModelPipelineSpec>
 struct ModelPipelineSpec {
   MeshSpec mesh_spec;
   ShapeModifiers shape_modifiers;
+  // TODO: For now, there is only 1 material, so the ModelPipelineSpec doesn't
+  // bother to mention anything about it.
   uint32_t sample_count = 1;
   // TODO: this is a hack.
   bool use_depth_prepass = true;
 };
+#pragma pack(pop)
 
 // Inline function definitions.
 

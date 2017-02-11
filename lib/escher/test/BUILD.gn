@@ -10,6 +10,7 @@ executable("escher_unittests") {
   sources = [
     "impl/glsl_compiler_unittest.cc",
     "impl/pipeline_cache_unittest.cc",
+    "hash_unittest.cc",
     "run_all_unittests.cc",
   ]
 
@@ -26,6 +27,7 @@ executable("escher_unittests") {
   include_dirs = [
     "//lib",
     "//lib/escher",
+    "//third_party/glm",
   ]
 
   if (is_fuchsia) {
