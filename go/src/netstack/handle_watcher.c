@@ -44,10 +44,10 @@ mx_status_t handle_watcher_stop(void) {
   mx_status_t r;
   uint8_t c;
   mx_signals_t observed;
-  if ((r = mx_handle_wait_one(s_ctrl[1],
+  if ((r = mx_object_wait_one(s_ctrl[1],
                               MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, 0u,
                               &observed)) < 0 && r != ERR_TIMED_OUT) {
-    error("handle_watcher_stop: mx_handle_wait_one failed (r=%d)\n", r);
+    error("handle_watcher_stop: mx_object_wait_one failed (r=%d)\n", r);
     return r;
   }
   if (r == ERR_TIMED_OUT || !(observed & MX_CHANNEL_READABLE)) {
@@ -59,14 +59,14 @@ mx_status_t handle_watcher_stop(void) {
     }
   }
 
-  if ((r = mx_handle_wait_one(s_ctrl[1],
+  if ((r = mx_object_wait_one(s_ctrl[1],
                               MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                               MX_TIME_INFINITE, &observed)) < 0) {
-    error("handle_watcher_stop: mx_handle_wait_one failed (r=%d)\n", r);
+    error("handle_watcher_stop: mx_object_wait_one failed (r=%d)\n", r);
     return r;
   }
   if (!(observed & MX_CHANNEL_READABLE)) {
-    error("handle_watcher_stop: mx_handle_wait_one not readable (r=%d)\n", r);
+    error("handle_watcher_stop: mx_object_wait_one not readable (r=%d)\n", r);
     return ERR_BAD_STATE;
   }
   if ((r = mx_channel_read(s_ctrl[1], 0u, &c, 1u, NULL, NULL, 0u, NULL)) < 0) {
@@ -183,14 +183,14 @@ static int handle_watcher_loop(void* arg) {
   for (;;) {
     // wait for START command (ignore ABORT received in the last round)
     mx_signals_t observed;
-    if ((r = mx_handle_wait_one(s_ctrl[0],
+    if ((r = mx_object_wait_one(s_ctrl[0],
                                 MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &observed)) < 0) {
-      error("handle_watcher_loop: mx_handle_wait_one failed (r=%d)\n", r);
+      error("handle_watcher_loop: mx_object_wait_one failed (r=%d)\n", r);
       return r;
     }
     if (!(observed & MX_CHANNEL_READABLE)) {
-      error("handle_watcher_loop: mx_handle_wait_one not readable (r=%d)\n", r);
+      error("handle_watcher_loop: mx_object_wait_one not readable (r=%d)\n", r);
       return ERR_BAD_STATE;
     }
     uint8_t c;

@@ -312,7 +312,7 @@ static void ethernetif_thread(void *arg) {
     } else if (ethernetif->io_type == IO_TYPE_CHANNEL) {
       mx_status_t r;
       mx_signals_t pending;
-      r = mx_handle_wait_one(ethernetif->io.h,
+      r = mx_object_wait_one(ethernetif->io.h,
                              MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                              MX_TIME_INFINITE, &pending);
       if (r < 0) {
