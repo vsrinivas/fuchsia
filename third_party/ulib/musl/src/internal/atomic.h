@@ -6,17 +6,6 @@
 
 #ifdef a_ll
 
-#ifndef a_cas
-#define a_cas a_cas
-static inline int a_cas(volatile int* p, int t, int s) {
-    int old;
-    do
-        old = a_ll(p);
-    while (old == t && !a_sc(p, s));
-    return old;
-}
-#endif
-
 #ifndef a_swap
 #define a_swap a_swap
 static inline int a_swap(volatile int* p, int v) {
@@ -41,45 +30,8 @@ static inline int a_fetch_add(volatile int* p, int v) {
 
 #endif
 
-#ifdef a_ll_p
-
-#ifndef a_cas_p
-#define a_cas_p a_cas_p
-static inline void* a_cas_p(volatile void* p, void* t, void* s) {
-    void* old;
-    do
-        old = a_ll_p(p);
-    while (old == t && !a_sc_p(p, s));
-    return old;
-}
-#endif
-
-#endif
-
 #ifndef a_cas
 #error missing definition of a_cas
-#endif
-
-#ifndef a_swap
-#define a_swap a_swap
-static inline int a_swap(volatile int* p, int v) {
-    int old;
-    do
-        old = *p;
-    while (a_cas(p, old, v) != old);
-    return old;
-}
-#endif
-
-#ifndef a_fetch_add
-#define a_fetch_add a_fetch_add
-static inline int a_fetch_add(volatile int* p, int v) {
-    int old;
-    do
-        old = *p;
-    while (a_cas(p, old, (unsigned)old + v) != old);
-    return old;
-}
 #endif
 
 #ifndef a_fetch_and
@@ -92,6 +44,7 @@ static inline int a_fetch_and(volatile int* p, int v) {
     return old;
 }
 #endif
+
 #ifndef a_fetch_or
 #define a_fetch_or a_fetch_or
 static inline int a_fetch_or(volatile int* p, int v) {
@@ -169,14 +122,6 @@ static inline void a_or_64(volatile uint64_t* p, uint64_t v) {
         a_or((int*)p, u.r[0]);
     if (u.r[1])
         a_or((int*)p + 1, u.r[1]);
-}
-#endif
-
-#ifndef a_cas_p
-typedef char a_cas_p_undefined_but_pointer_not_32bit[-sizeof(char) == 0xffffffff ? 1 : -1];
-#define a_cas_p a_cas_p
-static inline void* a_cas_p(volatile void* p, void* t, void* s) {
-    return (void*)a_cas((volatile int*)p, (int)t, (int)s);
 }
 #endif
 
