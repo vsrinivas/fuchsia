@@ -32,7 +32,7 @@ typedef void (*FidlAsyncWaitCallback)(mx_status_t result,
 struct FidlAsyncWaiter {
   // Arranges for |callback| to be called on the current thread at some future
   // when |handle| satisfies |signals| or it is known that it will never satisfy
-  // |signals| (with the same behavior as |mx_handle_wait_one()|).
+  // |signals| (with the same behavior as |mx_object_wait_one()|).
   //
   // |callback| will not be called in the nested context of |AsyncWait()|, but
   // only, e.g., from some run loop. |callback| is provided with the |closure|

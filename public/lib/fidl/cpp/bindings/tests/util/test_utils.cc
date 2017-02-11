@@ -34,7 +34,7 @@ bool ReadTextMessage(const mx::channel& handle, std::string* text) {
         FTL_DCHECK(false);  // Looping endlessly!?
         return false;
       }
-      rv = mx_handle_wait_one(handle.get(),
+      rv = mx_object_wait_one(handle.get(),
                               MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                               MX_TIME_INFINITE, nullptr);
       if (rv != NO_ERROR)
