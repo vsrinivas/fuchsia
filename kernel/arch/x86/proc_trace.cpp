@@ -61,6 +61,7 @@
 #define IA32_PLATFORM_INFO 0xce
 
 // Our own copy of what h/w supports, mostly for sanity checking.
+static bool supports_pt = false;
 static bool supports_cr3_filtering = false;
 static bool supports_psb = false;
 static bool supports_ip_filtering = false;
@@ -101,6 +102,8 @@ void x86_processor_trace_init(void)
     if (!x86_get_cpuid_subleaf(X86_CPUID_PT, 0, &leaf)) {
         return;
     }
+
+    supports_pt = true;
 
     // Keep our own copy of these flags, mostly for potential sanity checks.
     supports_cr3_filtering = !!(leaf.b & (1<<0));
@@ -159,6 +162,8 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
     AutoLock al(ipt_lock);
 
+    if (!supports_pt)
+        return ERR_NOT_SUPPORTED;
     if (active)
         return ERR_BAD_STATE;
     if (ipt_cpu_state)
@@ -176,6 +181,8 @@ status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
 status_t x86_ipt_cpu_mode_alloc() {
     AutoLock al(ipt_lock);
 
+    if (!supports_pt)
+        return ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
         return ERR_BAD_STATE;
     if (active)
@@ -199,6 +206,8 @@ status_t x86_ipt_cpu_mode_alloc() {
 status_t x86_ipt_cpu_mode_free() {
     AutoLock al(ipt_lock);
 
+    if (!supports_pt)
+        return ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
         return ERR_BAD_STATE;
     if (active)
@@ -238,6 +247,8 @@ static void x86_ipt_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
 status_t x86_ipt_cpu_mode_start() {
     AutoLock al(ipt_lock);
 
+    if (!supports_pt)
+        return ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
         return ERR_BAD_STATE;
     if (active)
@@ -295,6 +306,8 @@ static void x86_ipt_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 status_t x86_ipt_cpu_mode_stop() {
     AutoLock al(ipt_lock);
 
+    if (!supports_pt)
+        return ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
         return ERR_BAD_STATE;
     if (!ipt_cpu_state)
@@ -311,6 +324,8 @@ status_t x86_ipt_cpu_mode_stop() {
 status_t x86_ipt_stage_cpu_data(uint32_t cpu, const mx_x86_pt_regs_t* regs) {
     AutoLock al(ipt_lock);
 
+    if (!supports_pt)
+        return ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
         return ERR_BAD_STATE;
     if (active)
@@ -335,6 +350,8 @@ status_t x86_ipt_stage_cpu_data(uint32_t cpu, const mx_x86_pt_regs_t* regs) {
 status_t x86_ipt_get_cpu_data(uint32_t cpu, mx_x86_pt_regs_t* regs) {
     AutoLock al(ipt_lock);
 
+    if (!supports_pt)
+        return ERR_NOT_SUPPORTED;
     if (trace_mode == IPT_TRACE_THREADS)
         return ERR_BAD_STATE;
     if (active)
