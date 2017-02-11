@@ -28,7 +28,7 @@ static void cancel_handler(int sig, siginfo_t* si, void* ctx) {
     ucontext_t* uc = ctx;
     uintptr_t pc = uc->uc_mcontext.MC_PC;
 
-    a_barrier();
+    atomic_thread_fence(memory_order_seq_cst);
     if (!self->cancel || self->canceldisable == PTHREAD_CANCEL_DISABLE)
         return;
 

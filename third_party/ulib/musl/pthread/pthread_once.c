@@ -40,7 +40,7 @@ int __pthread_once(pthread_once_t* control, void (*init)(void)) {
     /* Return immediately if init finished before, but ensure that
      * effects of the init routine are visible to the caller. */
     if (*(volatile int*)control == 2) {
-        a_barrier();
+        atomic_thread_fence(memory_order_seq_cst);
         return 0;
     }
     return __pthread_once_full(control, init);

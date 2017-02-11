@@ -1,3 +1,5 @@
+#include <stdatomic.h>
+
 #define a_ll a_ll
 static inline int a_ll(volatile int* p) {
     int v;
@@ -17,21 +19,13 @@ static inline int a_sc(volatile int* p, int v) {
     return !r;
 }
 
-#define a_barrier a_barrier
-static inline void a_barrier(void) {
-    __asm__ __volatile__("dmb ish"
-                         :
-                         :
-                         : "memory");
-}
-
 #define a_cas a_cas
 static inline int a_cas(volatile int* p, int t, int s) {
     int old;
     do {
         old = a_ll(p);
         if (old != t) {
-            a_barrier();
+            atomic_thread_fence(memory_order_seq_cst);
             break;
         }
     } while (!a_sc(p, s));
@@ -63,7 +57,7 @@ static inline void* a_cas_p(volatile void* p, void* t, void* s) {
     do {
         old = a_ll_p(p);
         if (old != t) {
-            a_barrier();
+            atomic_thread_fence(memory_order_seq_cst);
             break;
         }
     } while (!a_sc_p(p, s));

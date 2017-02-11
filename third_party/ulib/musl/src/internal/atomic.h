@@ -176,26 +176,14 @@ static inline void a_dec(volatile int* p) {
 #ifndef a_store
 #define a_store a_store
 static inline void a_store(volatile int* p, int v) {
-#ifdef a_barrier
-    a_barrier();
+    atomic_thread_fence(memory_order_seq_cst);
     *p = v;
-    a_barrier();
-#else
-    a_swap(p, v);
-#endif
-}
-#endif
-
-#ifndef a_barrier
-#define a_barrier a_barrier
-static void a_barrier(void) {
-    volatile int tmp = 0;
-    a_cas(&tmp, 0, 0);
+    atomic_thread_fence(memory_order_seq_cst);
 }
 #endif
 
 #ifndef a_spin
-#define a_spin a_barrier
+#define a_spin() atomic_thread_fence(memory_order_seq_cst)
 #endif
 
 #ifndef a_and_64
