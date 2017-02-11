@@ -16,6 +16,8 @@
 constexpr mx_rights_t kDefaultEventPairRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
+constexpr uint32_t kUserSignalMask = MX_EVENT_SIGNALED | MX_USER_SIGNAL_ALL;
+
 status_t EventPairDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
                                      mxtl::RefPtr<Dispatcher>* dispatcher1,
                                      mx_rights_t* rights) {
@@ -51,7 +53,7 @@ void EventPairDispatcher::on_zero_handles() {
 }
 
 status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
-    if ((set_mask & ~MX_EVENT_SIGNAL_MASK) || (clear_mask & ~MX_EVENT_SIGNAL_MASK))
+    if ((set_mask & ~kUserSignalMask) || (clear_mask & ~kUserSignalMask))
         return ERR_INVALID_ARGS;
 
     if (!peer) {
@@ -62,7 +64,7 @@ status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask
     AutoLock locker(&lock_);
     // object_signal() may race with handle_close() on another thread.
     if (!other_)
-        return ERR_BAD_HANDLE;
+        return ERR_REMOTE_CLOSED;
     other_->state_tracker_.UpdateState(clear_mask, set_mask);
     return NO_ERROR;
 }

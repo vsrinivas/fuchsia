@@ -47,7 +47,9 @@ status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool pe
     if (!state_tracker)
         return ERR_NOT_SUPPORTED;
 
-    if ((set_mask & ~MX_EVENT_SIGNAL_MASK) || (clear_mask & ~MX_EVENT_SIGNAL_MASK))
+    // Generic objects can set all USER_SIGNALs. Particular object
+    // types (events and eventpairs) may be able to set more.
+    if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
         return ERR_INVALID_ARGS;
 
     state_tracker->UpdateState(clear_mask, set_mask);

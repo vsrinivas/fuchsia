@@ -14,6 +14,8 @@
 constexpr mx_rights_t kDefaultEventRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
+constexpr uint32_t kUserSignalMask = MX_EVENT_SIGNALED | MX_USER_SIGNAL_ALL;
+
 status_t EventDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
                                  mx_rights_t* rights) {
     AllocChecker ac;
@@ -35,7 +37,7 @@ status_t EventDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bo
     if (peer)
         return ERR_NOT_SUPPORTED;
 
-    if ((set_mask & ~MX_EVENT_SIGNAL_MASK) || (clear_mask & ~MX_EVENT_SIGNAL_MASK))
+    if ((set_mask & ~kUserSignalMask) || (clear_mask & ~kUserSignalMask))
         return ERR_INVALID_ARGS;
 
     state_tracker_.UpdateState(clear_mask, set_mask);
