@@ -18,6 +18,8 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/block.h>
 
+#include <magenta/threads.h>
+
 #include <gpt/gpt.h>
 
 #define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
@@ -115,7 +117,7 @@ static ssize_t mbr_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         if (device->partition.type == PARTITION_TYPE_DATA) {
             memcpy(guid, data_guid, GPT_GUID_LEN);
             retval = GPT_GUID_LEN;
-        } else if (device->partition.type == PARTITION_TYPE_DATA) {
+        } else if (device->partition.type == PARTITION_TYPE_SYS) {
             memcpy(guid, sys_guid, GPT_GUID_LEN);
             retval = GPT_GUID_LEN;
         }
@@ -346,11 +348,11 @@ static mx_status_t mbr_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
 
     // Read the partition table asyncrhonously.
     thrd_t t;
-    mx_status_t rc = thrd_create_with_name(&t, mbr_bind_thread, info,
-                                           "mbr-init");
-    if (rc != NO_ERROR) {
+    int thrd_rc = thrd_create_with_name(&t, mbr_bind_thread, info,
+                                        "mbr-init");
+    if (thrd_rc != thrd_success) {
         free(info);
-        return rc;
+        return thrd_status_to_mx_status(thrd_rc);
     }
     return NO_ERROR;
 }
