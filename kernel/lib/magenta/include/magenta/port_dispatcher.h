@@ -36,7 +36,7 @@ struct IOP_Packet : public mxtl::DoublyLinkedListable<IOP_Packet*> {
     bool CopyToUser(void* data, size_t* size);
 
     bool is_signal;
-    size_t data_size;
+    const size_t data_size;
 };
 
 struct IOP_Signal : public IOP_Packet {

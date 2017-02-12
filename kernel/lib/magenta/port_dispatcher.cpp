@@ -103,10 +103,8 @@ void PortDispatcher::FreePacketsLocked() {
     }
     while (!at_zero_.is_empty()) {
         auto signal = at_zero_.pop_front();
-        if (signal) {
-            signal->is_signal = false;
-            IOP_Packet::Delete(signal);
-        }
+        signal->is_signal = false;
+        IOP_Packet::Delete(signal);
     }
 }
 
@@ -145,17 +143,24 @@ void* PortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
     int prev_count;
 
     if (!cookie) {
+        DEBUG_ASSERT(signal);
         AllocChecker ac;
         node = new (&ac) IOP_Signal(key, signal);
         if (!ac.check())
             return nullptr;
+
+        DEBUG_ASSERT(node->count == 1);
         prev_count = 0;
     } else {
         node = reinterpret_cast<IOP_Signal*>(cookie);
         prev_count = atomic_add(&node->count, 1);
+        DEBUG_ASSERT(node->is_signal);
         DEBUG_ASSERT(node->payload.signals == signal);
         DEBUG_ASSERT(node->payload.hdr.key == key);
+        DEBUG_ASSERT(node->payload.hdr.type == MX_PORT_PKT_TYPE_IOSN);
     }
+
+    DEBUG_ASSERT(prev_count >= 0);
 
     int wake_count = 0;
     {
@@ -189,6 +194,12 @@ mx_status_t PortDispatcher::Wait(mx_time_t timeout, IOP_Packet** packet) {
                 } else {
                     auto signal = static_cast<IOP_Signal*>(pk);
                     auto prev = atomic_add(&signal->count, -1);
+
+                    // sketchy assert below. Trying to get an early warning
+                    // of unexpected values in the case of MG-520.
+                    DEBUG_ASSERT((prev > 0) && (prev < 1000));
+                    DEBUG_ASSERT(signal->payload.hdr.type == MX_PORT_PKT_TYPE_IOSN);
+
                     if (prev == 1)
                         at_zero_.push_back(signal);
                     else

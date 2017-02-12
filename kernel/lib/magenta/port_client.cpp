@@ -28,11 +28,11 @@ uint32_t signal_to_slot(mx_signals_t signal) {
 }
 
 PortClient::PortClient(mxtl::RefPtr<PortDispatcher> port,
-                           uint64_t key, mx_signals_t signals)
+                       uint64_t key, mx_signals_t signals)
     : key_(key),
       signals_(signals),
       port_(mxtl::move(port)),
-      cookie_{nullptr, nullptr, nullptr, nullptr} {
+      cookie_{} {
 }
 
 PortClient::~PortClient() {}
@@ -54,11 +54,12 @@ bool PortClient::Signal(mx_signals_t signal, size_t count, const Mutex* mutex) {
     DEBUG_ASSERT(slot < countof(cookie_));
     auto c = port_->Signal(cookie_[slot], key_, signal);
 
-    if (!c) {
+    if (c == nullptr) {
         port_.reset();
         return false;
     }
 
+    DEBUG_ASSERT((cookie_[slot] == nullptr) || (c == cookie_[slot]));
     cookie_[slot] = c;
     return true;
 }
