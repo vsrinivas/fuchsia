@@ -171,7 +171,7 @@ void* PortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
     }
 
     if (wake_count)
-        thread_yield();
+        thread_preempt(false);
 
     return node;
 }
