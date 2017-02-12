@@ -103,7 +103,7 @@ static bool async_wait_channel_test(void) {
         EXPECT_EQ(status, NO_ERROR, "");
 
         EXPECT_EQ(out.key, key0, "");
-        EXPECT_EQ(out.type, MX_PKT_TYPE_SIGNAL, "");
+        EXPECT_EQ(out.type, MX_PKT_TYPE_SIGNAL_ONE, "");
         EXPECT_EQ(out.signal.effective, MX_CHANNEL_WRITABLE | MX_CHANNEL_READABLE, "");
         EXPECT_EQ(out.signal.trigger, MX_CHANNEL_READABLE | MX_SIGNAL_HANDLE_CLOSED, "");
 
@@ -127,7 +127,7 @@ static bool async_wait_channel_test(void) {
     EXPECT_EQ(status, NO_ERROR, "");
 
     EXPECT_EQ(out1.key, key0, "");
-    EXPECT_EQ(out1.type, MX_PKT_TYPE_SIGNAL, "");
+    EXPECT_EQ(out1.type, MX_PKT_TYPE_SIGNAL_ONE, "");
     EXPECT_EQ(out1.signal.effective,  MX_SIGNAL_HANDLE_CLOSED, "");
 
     status = mx_handle_close(ch[0]);
@@ -168,7 +168,7 @@ static bool async_wait_event_test(void) {
         status = mx_port_wait(port, MX_TIME_INFINITE, &out, 0u);
         EXPECT_EQ(status, NO_ERROR, "");
         key_sum += out.key;
-        EXPECT_EQ(out.type, MX_PKT_TYPE_SIGNAL, "");
+        EXPECT_EQ(out.type, MX_PKT_TYPE_SIGNAL_ONE, "");
     }
 
     EXPECT_EQ(key_sum, 20u, "");

@@ -72,7 +72,7 @@ static mx_status_t sys_port_queue2(mx_handle_t handle, const void* _packet) {
 
     pp->packet.type = MX_PKT_TYPE_USER;
 
-    return port->Queue(pp.release());
+    return port->Queue(mxtl::move(pp));
 }
 
 mx_status_t sys_port_queue(mx_handle_t handle, const void* _packet, size_t size) {

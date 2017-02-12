@@ -32,13 +32,13 @@
 // 1) Situation after handle_wait_async(port, handle) is issued:
 //
 //
-//  +----------+                    o       +--------+
-//  | object   |               +------------+  Port  |
-//  |          |               |            |        |
-//  +----------+        +------v----+       +-+---+--+
-//  | state    |  w1    | Port      |         ^
+//  +----------+                            +--------+
+//  | object   |                            |  Port  |
+//  |          |                            |        |
+//  +----------+        +-----------+       +-+------+
+//  | state    |  w     | Port      |         ^
 //  | tracker  +------> | Observer  |         |
-//  +----------+        |           |    w2   |
+//  +----------+        |           |    rc   |
 //                      |           +---------+
 //                      +-----------+
 //                      |  Port     |
@@ -46,49 +46,33 @@
 //                      +-----------+
 //
 //   State changes of the object are propagated from the object
-//   to the port via w1 --> observer --> w2 calls.
+//   to the port via |w| --> observer --> |rc| calls.
 //
-// 2) Situation after the packet is queued for non-repeating case:
+// 2) Situation after the packet is queued in the one-shot case on
+//    signal match or the wait is cancelled.
 //
 //  +----------+                            +--------+
 //  | object   |                            |  Port  |
 //  |          |                            |        |
 //  +----------+        +-----------+       +-+---+--+
-//  | state    |  w1    | Port      |             |
-//  | tracker  +------> | Observer  |             |
-//  +----------+        |           |             |
-//                +---> |           |             |
-//                |     +-----------+             |
-//             o  |     |  Port     |      w3     |
+//  | state    |        | Port      |         ^   |
+//  | tracker  |        | Observer  |         |   |
+//  +----------+        |           |    rc   |   |
+//                +---> |           +---------+   |
+//                |     +-----------+             | list
+//             o1 |     |  Port     |      o2     |
 //                +-----|  Packet   | <-----------+
 //                      +-----------+
 //
-//   Note that the Port no longer owns the observer directly. the port
-//   has a pointer w3 to the queued packet and the packet now owns the
-//   observer.
+//   Note that the objet no longer has a |w| to the observer
+//   but the observer still owns the port via |rc|.
 //
-// 3) Situation after the port packet is retrieved, but before
-//    it reaches userspace:
+//   For repeating ports |w| is always valid until the wait is
+//   cancelled.
 //
-//                rc
-//       +-----------------+
-//       |                 |
-//  +----v-----+           |
-//  | object   |           |
-//  |          |           |
-//  +----------+        +--+--------+
-//  | state    |        | Port      |
-//  | tracker  |        | Observer  |
-//  +----------+        |           |
-//                +---> |           |
-//                |     +-----------+
-//             o  |     |  Port     |
-//                +-----|  Packet   |
-//                      +-----------+
-//
-//   The rc pointer is used to remove the Port observer from the
-//   state tracker (w1), then the Port packet can delete the Port
-//   observer and thusly delete itself.
+//   The cycle |o2| --> |o1| --> |rc|  is broken when:
+//   1- the packet is dequeued.
+//   2- the port gets on_zero_handles().
 //
 
 class PortDispatcherV2;
@@ -103,20 +87,18 @@ struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
     void Destroy();
 };
 
+// Observers are weakly contained in state trackers until |remove_| member
+// is false at the end of one of the OnXXXXX callbacks. If the members
+// are only mutated after Begin() in the callbacks then there is no need to
+// have a lock in this class since the state tracker holds its lock during
+// all callback calls.
 class PortObserver final : public StateObserver {
 public:
-    // List traits to belong to the Port list.
-    struct PortListTraits {
-        static mxtl::DoublyLinkedListNodeState<PortObserver*>& node_state(
-            PortObserver& obj) {
-            return obj.dll_port_;
-        }
-    };
+    PortObserver(uint32_t type, mxtl::RefPtr<PortDispatcherV2> port,
+        uint64_t key, mx_signals_t signals);
+    ~PortObserver() = default;
 
-    PortObserver(PortDispatcherV2* port, uint64_t key, mx_signals_t signals);
-    ~PortObserver();
-
-    mx_status_t Begin(Handle* handle);
+    void Begin(Handle* handle);
     void End();
 
 private:
@@ -128,18 +110,22 @@ private:
     bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle) final;
 
-    bool MaybeQueue(mx_signals_t new_state);
+    // The following two methods can only be called from
+    // the above OnXXXXX callbacks/
+    void MaybeQueue(mx_signals_t new_state);
+    void ReapSelf();
 
+    // Called outside the state tracker's lock. That is why
+    // we need to use atomics.
+    void SnapCount();
+
+    const uint32_t type_;
     const uint64_t key_;
     const mx_signals_t trigger_;
 
     PortPacket packet_;
-    PortDispatcherV2* port_;
+    mxtl::RefPtr<PortDispatcherV2> port_;
     Handle* handle_;
-
-    mxtl::RefPtr<Dispatcher> dispatcher_;
-
-    mxtl::DoublyLinkedListNodeState<PortObserver*> dll_port_;
 };
 
 class PortDispatcherV2 final : public Dispatcher {
@@ -153,19 +139,17 @@ public:
 
     void on_zero_handles() final;
 
+    mx_status_t Queue(mxtl::unique_ptr<PortPacket> packet);
     mx_status_t Queue(PortPacket* packet);
     mx_status_t DeQueue(mx_time_t timeout, PortPacket** packet);
 
-    PortObserver* MakeObserver(uint64_t key, mx_signals_t signals);
-    void CancelObserver(PortObserver* observer);
+    PortObserver* MakeObserver(uint32_t options, uint64_t key, mx_signals_t signals);
 
 private:
     PortDispatcherV2(uint32_t options);
 
-    WaitEvent event_;
-
     Mutex lock_;
+    WaitEvent event_;
+    bool zero_handles_ TA_GUARDED(lock_);
     mxtl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(lock_);
-    mxtl::DoublyLinkedList<PortObserver*,
-        PortObserver::PortListTraits> observers_ TA_GUARDED(lock_);
 };

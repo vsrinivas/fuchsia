@@ -43,10 +43,13 @@ typedef struct mx_exception_packet {
 
 // mx_port V2 packet structures.
 
-#define MX_PKT_TYPE_USER            0u
-#define MX_PKT_TYPE_SIGNAL          1u
+#define MX_WAIT_ASYNC_REPEATING     1u
 
-// port_packet_t::type MX_PKT_TYPE_USER
+#define MX_PKT_TYPE_USER            0u
+#define MX_PKT_TYPE_SIGNAL_ONE      1u
+#define MX_PKT_TYPE_SIGNAL_REP      2u
+
+// port_packet_t::type MX_PKT_TYPE_USER.
 typedef union mx_packet_user {
     uint64_t u64[4];
     uint32_t u32[8];
@@ -54,11 +57,11 @@ typedef union mx_packet_user {
     uint8_t   c8[32];
 } mx_packet_user_t;
 
-// port_packet_t::type MX_PKT_TYPE_SIGNAL
+// port_packet_t::type MX_PKT_TYPE_SIGNAL_ONE and MX_PKT_TYPE_SIGNAL_REP.
 typedef struct mx_packet_signal {
     mx_signals_t trigger;
     mx_signals_t effective;
-    uint32_t count;
+    uint64_t count;
 } mx_packet_signal_t;
 
 struct mx_port_packet_t {
