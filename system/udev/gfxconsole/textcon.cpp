@@ -511,12 +511,8 @@ static void putc_plain(textcon_t* tc, uint8_t c) {
     case 7: // bell
         break;
     case 8: // backspace / ^H
-        if (tc->x == 0) {
-            tc->x = tc->w;
-            tc->y = clampy(tc, tc->y - 1);
-        }
-        tc->x--;
-        dataxy(tc, tc->x, tc->y)[0] = make_vc_char(tc, ' ');
+        if (tc->x > 0)
+            tc->x--;
         break;
     case 9: // tab / ^I
         moveto(tc, (tc->x + 8) & (~7), tc->y);

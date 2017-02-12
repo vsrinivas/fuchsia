@@ -106,10 +106,36 @@ bool test_tabs() {
     END_TEST;
 }
 
+bool test_backspace_moves_cursor() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 5);
+    tc.PutString("ABCDEF\b\b\b\bxy");
+    // Backspace only moves the cursor and does not erase, so "EF" is left
+    // in place.
+    tc.AssertLineContains(0, "ABxyEF");
+
+    END_TEST;
+}
+
+bool test_backspace_at_start_of_line() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 5);
+    tc.PutString("Foo\n\bBar");
+    // When the cursor is at the start of a line, backspace has no effect.
+    tc.AssertLineContains(0, "Foo");
+    tc.AssertLineContains(1, "Bar");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_wrapping)
 RUN_TEST(test_tabs)
+RUN_TEST(test_backspace_moves_cursor)
+RUN_TEST(test_backspace_at_start_of_line)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }
