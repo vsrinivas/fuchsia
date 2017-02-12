@@ -29,6 +29,7 @@
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/state_tracker.h>
+#include <magenta/syscalls/debug.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_thread.h>
@@ -44,6 +45,12 @@
 extern "C" {
 uint64_t get_tsc_ticks_per_ms(void);
 };
+
+constexpr uint32_t kMaxThreadStateSize = MX_MAX_THREAD_STATE_SIZE;
+
+constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
+constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
+
 
 mx_status_t sys_thread_create(mx_handle_t process_handle,
                               const char* _name, uint32_t name_len,
@@ -123,6 +130,78 @@ mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
 void sys_thread_exit() {
     LTRACE_ENTRY;
     UserThread::GetCurrent()->Exit();
+}
+
+mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
+                                  void* _buffer,
+                                  uint32_t buffer_len, uint32_t* _actual) {
+    LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // TODO(dje): debug rights
+    mxtl::RefPtr<ThreadDispatcher> thread;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &thread);
+    if (status != NO_ERROR)
+        return status;
+
+    // avoid malloc'ing insane amounts
+    if (buffer_len > kMaxThreadStateSize)
+        return ERR_INVALID_ARGS;
+
+    AllocChecker ac;
+    uint8_t* tmp_buf = new (&ac) uint8_t [buffer_len];
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+    mxtl::Array<uint8_t> bytes(tmp_buf, buffer_len);
+
+    status = thread->thread()->ReadState(state_kind, bytes.get(), &buffer_len);
+
+    // Always set the actual size so the caller can provide larger buffers.
+    // The value is only usable if the status is NO_ERROR or ERR_BUFFER_TOO_SMALL.
+    if (status == NO_ERROR || status == ERR_BUFFER_TOO_SMALL) {
+        if (make_user_ptr(_actual).copy_to_user(buffer_len) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+    }
+
+    if (status != NO_ERROR)
+        return status;
+
+    if (make_user_ptr(_buffer).copy_array_to_user(bytes.get(), buffer_len) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
+}
+
+mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
+                                   const void* _buffer, uint32_t buffer_len) {
+    LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // TODO(dje): debug rights
+    mxtl::RefPtr<ThreadDispatcher> thread;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &thread);
+    if (status != NO_ERROR)
+        return status;
+
+    // avoid malloc'ing insane amounts
+    if (buffer_len > kMaxThreadStateSize)
+        return ERR_INVALID_ARGS;
+
+    AllocChecker ac;
+    uint8_t* tmp_buf = new (&ac) uint8_t [buffer_len];
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+    mxtl::Array<uint8_t> bytes(tmp_buf, buffer_len);
+
+    status = make_user_ptr(_buffer).copy_array_from_user(bytes.get(), buffer_len);
+    if (status != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    // TODO(dje): Setting privileged values in registers.
+    status = thread->thread()->WriteState(state_kind, bytes.get(), buffer_len, false);
+    return status;
 }
 
 mx_status_t sys_process_create(mx_handle_t job_handle,
@@ -252,6 +331,93 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
 void sys_process_exit(int retcode) {
     LTRACEF("retcode %d\n", retcode);
     ProcessDispatcher::GetCurrent()->Exit(retcode);
+}
+
+mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
+                                    void* _buffer,
+                                    size_t len, size_t* _actual) {
+    if (!_buffer)
+        return ERR_INVALID_ARGS;
+    if (len == 0 || len > kMaxDebugReadBlock)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<ProcessDispatcher> process;
+    mx_status_t status = up->GetDispatcherWithRights(proc, MX_RIGHT_READ | MX_RIGHT_WRITE,
+                                                     &process);
+    if (status != NO_ERROR)
+        return status;
+
+    auto aspace = process->aspace();
+    if (!aspace)
+        return ERR_BAD_STATE;
+
+    auto region = aspace->FindRegion(vaddr);
+    if (!region)
+        return ERR_NO_MEMORY;
+
+    auto vm_mapping = region->as_vm_mapping();
+    if (!vm_mapping)
+        return ERR_NO_MEMORY;
+
+    auto vmo = vm_mapping->vmo();
+    if (!vmo)
+        return ERR_NO_MEMORY;
+
+    uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
+    size_t read = 0;
+
+    status_t st = vmo->ReadUser(make_user_ptr(_buffer), offset, len, &read);
+
+    if (st == NO_ERROR) {
+        if (make_user_ptr(_actual).copy_to_user(static_cast<size_t>(read)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+    }
+    return st;
+}
+
+mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
+                                     const void* _buffer,
+                                     size_t len, size_t* _actual) {
+    if (!_buffer)
+        return ERR_INVALID_ARGS;
+    if (len == 0 || len > kMaxDebugWriteBlock)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<ProcessDispatcher> process;
+    mx_status_t status = up->GetDispatcherWithRights(proc, MX_RIGHT_WRITE, &process);
+    if (status != NO_ERROR)
+        return status;
+
+    auto aspace = process->aspace();
+    if (!aspace)
+        return ERR_BAD_STATE;
+
+    auto region = aspace->FindRegion(vaddr);
+    if (!region)
+        return ERR_NO_MEMORY;
+
+    auto vm_mapping = region->as_vm_mapping();
+    if (!vm_mapping)
+        return ERR_NO_MEMORY;
+
+    auto vmo = vm_mapping->vmo();
+    if (!vmo)
+        return ERR_NO_MEMORY;
+
+    uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
+    size_t written = 0;
+
+    status_t st = vmo->WriteUser(make_user_ptr(_buffer), offset, len, &written);
+
+    if (st == NO_ERROR) {
+        if (make_user_ptr(_actual).copy_to_user(static_cast<size_t>(written)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+    }
+    return st;
 }
 
 // helper routine for sys_task_kill
