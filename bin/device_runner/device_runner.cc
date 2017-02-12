@@ -261,9 +261,14 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
     flatbuffers::FlatBufferBuilder builder;
     std::vector<flatbuffers::Offset<modular::UserStorage>> users;
 
-    // Reserialize existing users.
+    // Reserialize existing users. Stop if |username| already exists.
     if (users_storage_) {
       for (const auto* user : *(users_storage_->users())) {
+        if (user->username()->str() == username) {
+          FTL_LOG(INFO) << username << " already exists. Continuing without "
+                        << "creating a new entry.";
+          return;
+        }
         users.push_back(modular::CreateUserStorage(
             builder, builder.CreateString(user->username()),
             builder.CreateString(user->password_hash()),
