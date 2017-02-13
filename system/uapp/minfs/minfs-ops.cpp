@@ -425,6 +425,8 @@ static mx_status_t can_unlink(vnode_t* vn) {
     return NO_ERROR;
 }
 
+// do_unlink is always called with a vn which has been acquired at least once.
+// Before returning, 'vn' MUST be released.
 static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
                              de_off_t* offs) {
     // Coalesce the current dirent with the previous/next dirent, if they
@@ -433,6 +435,7 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
     size_t off = offs->off;
     size_t off_next = off + MinfsReclen(de, off);
     minfs_dirent_t de_prev, de_next;
+    mx_status_t status;
 
     // Read the direntries we're considering merging with.
     // Verify they are free and small enough to merge.
@@ -441,13 +444,12 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
     // back to "de" and "de_prev".
     if (!(de->reclen & kMinfsReclenLast)) {
         size_t len = MINFS_DIRENT_SIZE;
-        mx_status_t status = _fs_read_exact(vndir, &de_next, len, off_next);
-        if (status != NO_ERROR) {
+        if ((status = _fs_read_exact(vndir, &de_next, len, off_next)) != NO_ERROR) {
             error("unlink: Failed to read next dirent\n");
-            return status;
-        } else if (validate_dirent(&de_next, len, off_next) != NO_ERROR) {
+            goto fail;
+        } else if ((status = validate_dirent(&de_next, len, off_next)) != NO_ERROR) {
             error("unlink: Read invalid dirent\n");
-            return ERR_IO;
+            goto fail;
         }
         if (de_next.ino == 0) {
             coalesced_size += MinfsReclen(&de_next, off_next);
@@ -457,13 +459,12 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
     }
     if (off_prev != off) {
         size_t len = MINFS_DIRENT_SIZE;
-        mx_status_t status = _fs_read_exact(vndir, &de_prev, len, off_prev);
-        if (status != NO_ERROR) {
+        if ((status = _fs_read_exact(vndir, &de_prev, len, off_prev)) != NO_ERROR) {
             error("unlink: Failed to read previous dirent\n");
-            return status;
-        } else if (validate_dirent(&de_prev, len, off_prev) != NO_ERROR) {
+            goto fail;
+        } else if ((status = validate_dirent(&de_prev, len, off_prev)) != NO_ERROR) {
             error("unlink: Read invalid dirent\n");
-            return ERR_IO;
+            goto fail;
         }
         if (de_prev.ino == 0) {
             coalesced_size += MinfsReclen(&de_prev, off_prev);
@@ -473,14 +474,14 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
 
     if (!(de->reclen & kMinfsReclenLast) && (coalesced_size >= kMinfsReclenMask)) {
         // Should only be possible if the on-disk record format is corrupted
-        return ERR_IO;
+        status = ERR_IO;
+        goto fail;
     }
     de->ino = 0;
     de->reclen = static_cast<uint32_t>(coalesced_size & kMinfsReclenMask) |
         (de->reclen & kMinfsReclenLast);
-    mx_status_t status = _fs_write_exact(vndir, de, MINFS_DIRENT_SIZE, off);
-    if (status != NO_ERROR) {
-        return status;
+    if ((status = _fs_write_exact(vndir, de, MINFS_DIRENT_SIZE, off)) != NO_ERROR) {
+        goto fail;
     }
 
     if (de->reclen & kMinfsReclenLast) {
@@ -497,6 +498,10 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
     vndir->inode.dirent_count--;
     minfs_sync_vnode(vndir, kMxFsSyncMtime);
     return DIR_CB_SAVE_SYNC;
+
+fail:
+    vn_release(vn);
+    return status;
 }
 
 // caller is expected to prevent unlink of "." or ".."
@@ -509,20 +514,20 @@ static mx_status_t cb_dir_unlink(vnode_t* vndir, minfs_dirent_t* de,
 
     vnode_t* vn;
     mx_status_t status;
-    if ((status = vndir->fs->VnodeGet(&vn, de->ino)) < 0) {
+    if ((status = vndir->fs->VnodeGet(&vn, de->ino)) < 0) { // vn refcount +1
         return status;
     }
 
     // If a directory was requested, then only try unlinking a directory
     if ((args->type == kMinfsTypeDir) && !VNODE_IS_DIR(vn)) {
-        vn_release(vn);
+        vn_release(vn); // vn refcount +0
         return ERR_NOT_DIR;
     }
     if ((status = can_unlink(vn)) < 0) {
-        vn_release(vn);
+        vn_release(vn); // vn refcount +0
         return status;
     }
-    return do_unlink(vndir, vn, de, offs);
+    return do_unlink(vndir, vn, de, offs); // vn refcount +1
 }
 
 // same as unlink, but do not validate vnode
@@ -535,10 +540,10 @@ static mx_status_t cb_dir_force_unlink(vnode_t* vndir, minfs_dirent_t* de,
 
     vnode_t* vn;
     mx_status_t status;
-    if ((status = vndir->fs->VnodeGet(&vn, de->ino)) < 0) {
+    if ((status = vndir->fs->VnodeGet(&vn, de->ino)) < 0) { // vn refcount +1
         return status;
     }
-    return do_unlink(vndir, vn, de, offs);
+    return do_unlink(vndir, vn, de, offs); // vn refcount +1
 }
 
 // Given a (name, inode, type) combination:
