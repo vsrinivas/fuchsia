@@ -10,7 +10,7 @@
 #include "lib/ftl/functional/closure.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace modular {
+namespace app {
 
 ApplicationControllerImpl::ApplicationControllerImpl(
     fidl::InterfaceRequest<ApplicationController> request,
@@ -67,4 +67,4 @@ void ApplicationControllerImpl::RemoveTerminationHandlerIfNeeded() {
   }
 }
 
-}  // namespace modular
+}  // namespace app

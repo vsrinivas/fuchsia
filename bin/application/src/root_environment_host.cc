@@ -8,7 +8,7 @@
 
 #include "application/services/application_environment.fidl.h"
 
-namespace modular {
+namespace app {
 namespace {
 
 constexpr char kRootLabel[] = "root";
@@ -40,4 +40,4 @@ void RootEnvironmentHost::ConnectToService(const fidl::String& interface_name,
   }
 }
 
-}  // namespace modular
+}  // namespace app

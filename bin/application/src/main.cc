@@ -18,8 +18,6 @@
 #include "lib/ftl/log_settings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-using namespace modular;
-
 constexpr char kDefaultConfigPath[] =
     "/system/data/application_manager/applications.config";
 
@@ -33,14 +31,14 @@ int main(int argc, char** argv) {
   if (config_file.empty() && positional_args.empty())
     config_file = kDefaultConfigPath;
 
-  Config config;
+  app::Config config;
   if (!config_file.empty()) {
     config.ReadIfExistsFrom(config_file);
   }
 
   auto initial_apps = config.TakeInitialApps();
   if (!positional_args.empty()) {
-    auto launch_info = ApplicationLaunchInfo::New();
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = positional_args[0];
     for (size_t i = 1; i < positional_args.size(); ++i)
       launch_info->arguments.push_back(positional_args[i]);
@@ -57,7 +55,7 @@ int main(int argc, char** argv) {
 
   mtl::MessageLoop message_loop;
 
-  RootEnvironmentHost root(config.TakePath());
+  app::RootEnvironmentHost root(config.TakePath());
 
   if (!initial_apps.empty()) {
     message_loop.task_runner()->PostTask([&root, &initial_apps] {
@@ -67,12 +65,12 @@ int main(int argc, char** argv) {
     });
   }
 
-  std::unique_ptr<CommandListener> command_listener;
+  std::unique_ptr<app::CommandListener> command_listener;
   mx::channel command_channel(
       mxio_get_startup_handle(MX_HND_TYPE_APPLICATION_LAUNCHER));
   if (command_channel) {
-    command_listener.reset(
-        new CommandListener(root.environment(), std::move(command_channel)));
+    command_listener.reset(new app::CommandListener(
+        root.environment(), std::move(command_channel)));
   }
 
   message_loop.Run();

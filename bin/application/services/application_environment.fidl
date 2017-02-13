@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+module app;
 
 import "application/services/application_launcher.fidl";
 import "application/services/application_environment_controller.fidl";
@@ -13,7 +13,7 @@ import "application/services/service_provider.fidl";
 //
 // Applications run inside environments, which provide ambient services and
 // support for their lifecycle.
-[ServiceName="modular.ApplicationEnvironment"]
+[ServiceName="app.ApplicationEnvironment"]
 interface ApplicationEnvironment {
   // Maximum length for an environment label.
   const uint32 kLabelMaxLength = 32;

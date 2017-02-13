@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+module app;
 
 import "application/services/application_runner.fidl";
 
 // An interface for loading applications.
-[ServiceName="modular.ApplicationLoader"]
+[ServiceName="app.ApplicationLoader"]
 interface ApplicationLoader {
   // Load an application's package.
   LoadApplication(string url) => (ApplicationPackage package);

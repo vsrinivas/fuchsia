@@ -12,7 +12,7 @@
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 
-namespace modular {
+namespace app {
 
 class ApplicationRunnerHolder {
  public:
@@ -33,6 +33,6 @@ class ApplicationRunnerHolder {
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationRunnerHolder);
 };
 
-}  // namespace modular
+}  // namespace app
 
 #endif  // APPLICATION_SRC_APPLICATION_RUNNER_HOLDER_H_

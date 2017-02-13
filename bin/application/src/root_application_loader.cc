@@ -13,7 +13,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/mtl/vmo/file.h"
 
-namespace modular {
+namespace app {
 
 RootApplicationLoader::RootApplicationLoader(std::vector<std::string> path)
     : path_(std::move(path)) {}
@@ -54,4 +54,4 @@ void RootApplicationLoader::LoadApplication(
   callback(ApplicationPackage::New());
 }
 
-}  // namespace modular
+}  // namespace app

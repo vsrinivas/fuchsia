@@ -20,7 +20,7 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/string_printf.h"
 
-namespace modular {
+namespace app {
 namespace {
 
 constexpr char kFuchsiaMagic[] = "#!fuchsia ";
@@ -230,7 +230,7 @@ void ApplicationEnvironmentImpl::Duplicate(
 }
 
 void ApplicationEnvironmentImpl::CreateApplication(
-    modular::ApplicationLaunchInfoPtr launch_info,
+    ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
   if (launch_info->url.get().empty()) {
     FTL_LOG(ERROR) << "Cannot create application because launch_info contains"
@@ -326,4 +326,4 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
   }
 }
 
-}  // namespace modular
+}  // namespace app

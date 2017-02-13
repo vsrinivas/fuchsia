@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 
-namespace modular {
+namespace app {
 
 // Provides access to the application's environment and allows the application
 // to publish outgoing services back to its creator.
@@ -87,6 +87,13 @@ class ApplicationContext {
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationContext);
 };
 
-}  // namespace modular
+}  // namespace app
+
+namespace modular {
+// This is a temporary alias to ease the transition from
+// modular::ApplicationContext to app::ApplicationContext. New code should use
+// the app:: name. TODO(jamesr): Remove once users are transitioned over.
+using app::ApplicationContext;
+}
 
 #endif  // APPLICATION_LIB_APP_APPLICATION_CONTEXT_H_

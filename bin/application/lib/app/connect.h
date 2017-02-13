@@ -10,7 +10,7 @@
 #include "application/services/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 
-namespace modular {
+namespace app {
 
 // Helper for using a |ServiceProvider|'s |ConnectToService()| that creates
 // a new channel and returns a fully-typed interface pointer (and can use
@@ -36,6 +36,13 @@ inline void ConnectToService(
                                      interface_request.PassChannel());
 }
 
-}  // namespace modular
+}  // namespace app
+
+namespace modular {
+// This is a temporary alias to ease the transition from
+// modular::ConnectToService to app::ConnectToService. New code should use the
+// app:: name. TODO(jamesr): Remove once users are transitioned over.
+using app::ConnectToService;
+}
 
 #endif  // APPLICATION_LIB_APP_CONNECT_H_

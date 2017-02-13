@@ -8,7 +8,7 @@
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
 
-namespace modular {
+namespace app {
 
 ApplicationContext::ApplicationContext(
     fidl::InterfaceHandle<ApplicationEnvironment> environment,
@@ -39,4 +39,4 @@ ApplicationContext::CreateFromStartupInfo() {
       fidl::InterfaceRequest<ServiceProvider>(mx::channel(services)));
 }
 
-}  // namespace modular
+}  // namespace app

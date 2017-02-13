@@ -15,7 +15,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 
-namespace modular {
+namespace app {
 
 class RootEnvironmentHost : public ApplicationEnvironmentHost,
                             public ServiceProvider {
@@ -47,6 +47,6 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
   FTL_DISALLOW_COPY_AND_ASSIGN(RootEnvironmentHost);
 };
 
-}  // namespace modular
+}  // namespace app
 
 #endif  // APPLICATION_SRC_ROOT_ENVIRONMENT_HOST_H_

@@ -12,7 +12,7 @@
 
 #include "lib/mtl/vmo/file.h"
 
-namespace modular {
+namespace app {
 
 ApplicationRunnerHolder::ApplicationRunnerHolder(
     ServiceProviderPtr services,
@@ -32,4 +32,4 @@ void ApplicationRunnerHolder::StartApplication(
                             std::move(controller));
 }
 
-}  // namespace modular
+}  // namespace app

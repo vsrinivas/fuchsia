@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 
-namespace modular {
+namespace app {
 class ApplicationEnvironmentImpl;
 
 class ApplicationEnvironmentControllerImpl
@@ -37,6 +37,6 @@ class ApplicationEnvironmentControllerImpl
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentControllerImpl);
 };
 
-}  // namespace modular
+}  // namespace app
 
 #endif  // APPLICATION_SRC_APPLICATION_ENVIRONMENT_CONTROLLER_IMPL_H_

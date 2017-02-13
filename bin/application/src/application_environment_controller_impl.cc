@@ -9,7 +9,7 @@
 #include "application/src/application_environment_impl.h"
 #include "lib/ftl/functional/closure.h"
 
-namespace modular {
+namespace app {
 
 ApplicationEnvironmentControllerImpl::ApplicationEnvironmentControllerImpl(
     fidl::InterfaceRequest<ApplicationEnvironmentController> request,
@@ -40,4 +40,4 @@ void ApplicationEnvironmentControllerImpl::Detach() {
   binding_.set_connection_error_handler(ftl::Closure());
 }
 
-}  // namespace modular
+}  // namespace app

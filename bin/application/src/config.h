@@ -11,7 +11,7 @@
 #include "application/services/application_launcher.fidl.h"
 #include "lib/ftl/macros.h"
 
-namespace modular {
+namespace app {
 
 // The configuration file should be specified as:
 // {
@@ -50,6 +50,6 @@ class Config {
   FTL_DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
-}  // namespace modular
+}  // namespace app
 
 #endif  // APPLICATION_SRC_CONFIG_H_

@@ -12,7 +12,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
-namespace modular {
+namespace app {
 
 // This class listens on the given handle for commands to drive the application
 // manager. For example, mxsh sends commands the user types that begin with
@@ -47,6 +47,6 @@ class CommandListener : mtl::MessageLoopHandler {
   FTL_DISALLOW_COPY_AND_ASSIGN(CommandListener);
 };
 
-}  // namespace modular
+}  // namespace app
 
 #endif  // APPLICATION_SRC_COMMAND_LISTENER_H_

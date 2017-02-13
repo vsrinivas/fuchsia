@@ -19,7 +19,7 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
 
-namespace modular {
+namespace app {
 
 class ApplicationEnvironmentImpl : public ApplicationEnvironment,
                                    public ApplicationLauncher {
@@ -115,6 +115,6 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentImpl);
 };
 
-}  // namespace modular
+}  // namespace app
 
 #endif  // APPLICATION_SRC_APPLICATION_ENVIRONMENT_IMPL_H_

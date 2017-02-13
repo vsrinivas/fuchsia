@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+module app;
 
 import "application/services/application_controller.fidl";
 import "application/services/service_provider.fidl";
@@ -37,7 +37,7 @@ struct ApplicationLaunchInfo {
 // An interface for creating application instances.
 //
 // Typically obtained via |ApplicationEnvironment.GetApplicationLauncher|.
-[ServiceName="modular.ApplicationLauncher"]
+[ServiceName="app.ApplicationLauncher"]
 interface ApplicationLauncher {
   // Creates a new instance of the application described by |launch_info|.
   //

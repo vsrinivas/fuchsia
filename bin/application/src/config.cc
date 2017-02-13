@@ -10,7 +10,7 @@
 #include "lib/ftl/files/file.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace modular {
+namespace app {
 namespace {
 
 constexpr char kInitialApps[] = "initial-apps";
@@ -104,4 +104,4 @@ std::vector<ApplicationLaunchInfoPtr> Config::TakeInitialApps() {
   return std::move(initial_apps_);
 }
 
-}  // namespace modular
+}  // namespace app

@@ -13,7 +13,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
-namespace modular {
+namespace app {
 class ApplicationEnvironmentImpl;
 
 class ApplicationControllerImpl : public ApplicationController,
@@ -47,6 +47,6 @@ class ApplicationControllerImpl : public ApplicationController,
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
 };
 
-}  // namespace modular
+}  // namespace app
 
 #endif  // APPLICATION_SRC_APPLICATION_CONTROLLER_IMPL_H_

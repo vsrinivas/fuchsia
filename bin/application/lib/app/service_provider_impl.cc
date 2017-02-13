@@ -8,7 +8,7 @@
 
 #include "lib/ftl/functional/make_copyable.h"
 
-namespace modular {
+namespace app {
 
 ServiceProviderImpl::ServiceProviderImpl() {}
 
@@ -56,7 +56,7 @@ void ServiceProviderImpl::SetDefaultServiceConnector(
 }
 
 void ServiceProviderImpl::SetDefaultServiceProvider(
-    modular::ServiceProviderPtr provider) {
+    ServiceProviderPtr provider) {
   if (!provider) {
     default_service_connector_ = DefaultServiceConnector();
     return;
@@ -69,4 +69,4 @@ void ServiceProviderImpl::SetDefaultServiceProvider(
       });
 }
 
-}  // namespace modular
+}  // namespace app

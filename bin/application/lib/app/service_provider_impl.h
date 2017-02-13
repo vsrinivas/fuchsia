@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 
-namespace modular {
+namespace app {
 
 // An implementation of |ServiceProvider|, which can be customized appropriately
 // (to select what services it provides).
@@ -114,7 +114,7 @@ class ServiceProviderImpl : public ServiceProvider {
   //
   // Calling this function replaces any value set previously by
   // |SetDefaultServiceConnector| or |SetDefaultServiceProvider|.
-  void SetDefaultServiceProvider(modular::ServiceProviderPtr provider);
+  void SetDefaultServiceProvider(ServiceProviderPtr provider);
 
  private:
   // Overridden from |ServiceProvider|:
@@ -129,6 +129,13 @@ class ServiceProviderImpl : public ServiceProvider {
   FTL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
 };
 
-}  // namespace modular
+}  // namespace app
+
+namespace modular {
+// This is a temporary alias to ease the transition from
+// modular::ServiceProviderImpl to app::ServiceProviderImpl. New code should use
+// the app:: name. TODO(jamesr): Remove once users are transitioned over.
+using app::ServiceProviderImpl;
+}
 
 #endif  // APPLICATION_LIB_APP_SERVICE_PROVIDER_IMPL_H_

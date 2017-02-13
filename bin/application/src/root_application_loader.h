@@ -15,7 +15,7 @@
 #include "application/services/application_loader.fidl.h"
 #include "lib/ftl/macros.h"
 
-namespace modular {
+namespace app {
 
 class RootApplicationLoader : public ApplicationLoader {
  public:
@@ -32,6 +32,6 @@ class RootApplicationLoader : public ApplicationLoader {
   FTL_DISALLOW_COPY_AND_ASSIGN(RootApplicationLoader);
 };
 
-}  // namespace modular
+}  // namespace app
 
 #endif  // APPLICATION_SRC_ROOT_APPLICATION_LOADER_H_

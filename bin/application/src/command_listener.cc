@@ -11,7 +11,7 @@
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_view.h"
 
-namespace modular {
+namespace app {
 
 CommandListener::CommandListener(ApplicationEnvironmentImpl* root_environment,
                                  mx::channel command_channel)
@@ -122,4 +122,4 @@ void CommandListener::Close() {
   }
 }
 
-}  // namespace modular
+}  // namespace app

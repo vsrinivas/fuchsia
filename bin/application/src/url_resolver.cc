@@ -4,7 +4,7 @@
 
 #include "application/src/url_resolver.h"
 
-namespace modular {
+namespace app {
 namespace {
 
 constexpr char kFileUriPrefix[] = "file://";
@@ -28,4 +28,4 @@ std::string GetURLFromPath(const std::string& path) {
   return kFileUriPrefix + path;
 }
 
-}  // namespace modular
+}  // namespace app

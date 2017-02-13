@@ -7,7 +7,7 @@
 
 #include <string>
 
-namespace modular {
+namespace app {
 
 // Canonicalizes a URL, if possible.  Otherwise, returns an empty string/
 std::string CanonicalizeURL(const std::string& url);
@@ -18,6 +18,6 @@ std::string GetPathFromURL(const std::string& url);
 // Returns a file:// URL for the given path.
 std::string GetURLFromPath(const std::string& path);
 
-}  // namespace modular
+}  // namespace app
 
 #endif  // APPLICATION_SRC_URL_RESOLVER_H_
