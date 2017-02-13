@@ -184,7 +184,7 @@ status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
     }
 
     if (other->WriteSelf(mxtl::move(msg)) > 0)
-        thread_preempt(false);
+        thread_reschedule();
 
     return NO_ERROR;
 }

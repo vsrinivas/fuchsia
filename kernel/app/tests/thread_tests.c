@@ -85,7 +85,7 @@ static int mutex_test(void)
 
     for (uint i=0; i < countof(threads); i++) {
         threads[i] = thread_create("mutex tester", &mutex_thread, &m,
-                get_current_thread()->priority, DEFAULT_STACK_SIZE);
+                get_current_thread()->base_priority, DEFAULT_STACK_SIZE);
         thread_resume(threads[i]);
     }
 

@@ -331,7 +331,7 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short *iframe, uint exception_
 
     /* preempt the thread if the interrupt has signaled it */
     if (ret != INT_NO_RESCHEDULE)
-        thread_preempt(true);
+        thread_preempt();
     return 0;
 }
 
@@ -348,7 +348,7 @@ extern "C" void arm64_finish_user_irq(uint32_t exit_flags, struct arm64_iframe_l
 
     /* preempt the thread if the interrupt has signaled it */
     if (exit_flags & ARM64_IRQ_EXIT_RESCHEDULE)
-        thread_preempt(true);
+        thread_preempt();
 }
 
 /* called from assembly */

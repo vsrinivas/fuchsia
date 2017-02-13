@@ -69,7 +69,7 @@ mx_status_t TimerDispatcher::SetOneShot(lk_time_t deadline) {
             // holding the lock. We need to let the callback finish.
             while (active_) {
                 lock_.Release();
-                thread_preempt(false);
+                thread_reschedule();
                 lock_.Acquire();
             }
         }

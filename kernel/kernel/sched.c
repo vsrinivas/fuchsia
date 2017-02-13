@@ -13,11 +13,28 @@
 #include <string.h>
 #include <printf.h>
 #include <err.h>
+#include <lib/ktrace.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 
 /* legacy implementation that just broadcast ipis for every reschedule */
 #define BROADCAST_RESCHEDULE 0
+
+/* disable priority boosting */
+#define NO_BOOST 0
+
+#define MAX_PRIORITY_ADJ 4 /* +/- priority levels from the base priority */
+
+/* ktraces just local to this file */
+#define LOCAL_KTRACE 0
+
+#if LOCAL_KTRACE
+#define LOCAL_KTRACE0(probe) ktrace_probe0(probe)
+#define LOCAL_KTRACE2(probe, x, y) ktrace_probe2(probe, x, y)
+#else
+#define LOCAL_KTRACE0(probe)
+#define LOCAL_KTRACE2(probe, x, y)
+#endif
 
 /* the run queue */
 static struct list_node run_queue[NUM_PRIORITIES];
@@ -25,6 +42,63 @@ static uint32_t run_queue_bitmap;
 
 /* make sure the bitmap is large enough to cover our number of priorities */
 static_assert(NUM_PRIORITIES <= sizeof(run_queue_bitmap) * CHAR_BIT, "");
+
+/* compute the effective priority of a thread */
+static int effec_priority(const thread_t *t)
+{
+    int ep = t->base_priority + t->priority_boost;
+    DEBUG_ASSERT(ep >= LOWEST_PRIORITY && ep <= HIGHEST_PRIORITY);
+    return ep;
+}
+
+/* boost the priority of the thread by +1 */
+static void boost_thread(thread_t *t)
+{
+    if (NO_BOOST)
+        return;
+
+    if (unlikely(thread_is_real_time_or_idle(t)))
+        return;
+
+    if (t->priority_boost < MAX_PRIORITY_ADJ &&
+        likely((t->base_priority + t->priority_boost) < HIGHEST_PRIORITY)) {
+        t->priority_boost++;
+    }
+}
+
+/* deboost the priority of the thread by -1.
+ * If deboosting because the thread is using up all of its time slice,
+ * then allow the boost to go negative, otherwise only deboost to 0.
+ */
+static void deboost_thread(thread_t *t, bool quantum_expiration)
+{
+    if (NO_BOOST)
+        return;
+
+    if (unlikely(thread_is_real_time_or_idle(t)))
+        return;
+
+    int boost_floor;
+    if (quantum_expiration) {
+        /* deboost into negative boost */
+        boost_floor = -MAX_PRIORITY_ADJ;
+
+        /* make sure we dont deboost a thread too far */
+        if (unlikely(t->base_priority + boost_floor < LOWEST_PRIORITY))
+            boost_floor = t->base_priority - LOWEST_PRIORITY;
+
+    } else {
+        /* otherwise only deboost to 0 */
+        boost_floor = 0;
+    }
+
+    /* if we're already bottomed out or below bottomed out, leave it alone */
+    if (t->priority_boost <= boost_floor)
+        return;
+
+    /* drop a level */
+    t->priority_boost--;
+}
 
 /* pick a 'random' cpu */
 static mp_cpu_mask_t rand_cpu(const mp_cpu_mask_t mask)
@@ -100,26 +174,22 @@ static mp_cpu_mask_t find_cpu(thread_t *t)
 /* run queue manipulation */
 static void insert_in_run_queue_head(thread_t *t)
 {
-    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(t->state == THREAD_READY);
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    list_add_head(&run_queue[t->priority], &t->queue_node);
-    run_queue_bitmap |= (1<<t->priority);
+    int ep = effec_priority(t);
+
+    list_add_head(&run_queue[ep], &t->queue_node);
+    run_queue_bitmap |= (1u << ep);
 }
 
 static void insert_in_run_queue_tail(thread_t *t)
 {
-    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(t->state == THREAD_READY);
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    list_add_tail(&run_queue[t->priority], &t->queue_node);
-    run_queue_bitmap |= (1<<t->priority);
+    int ep = effec_priority(t);
+
+    list_add_tail(&run_queue[ep], &t->queue_node);
+    run_queue_bitmap |= (1u << ep);
 }
 
 thread_t *sched_get_top_thread(uint cpu)
@@ -142,6 +212,8 @@ thread_t *sched_get_top_thread(uint cpu)
                 if (list_is_empty(&run_queue[next_queue]))
                     run_queue_bitmap &= ~(1<<next_queue);
 
+                LOCAL_KTRACE2("sched_get_top", newthread->priority_boost, newthread->base_priority);
+
                 return newthread;
             }
         }
@@ -154,59 +226,43 @@ thread_t *sched_get_top_thread(uint cpu)
 
 void sched_block(void)
 {
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
     __UNUSED thread_t *current_thread = get_current_thread();
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
     DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
 
-    // XXX deal with time slice fiddling here
+    LOCAL_KTRACE0("sched_block");
 
     /* we are blocking on something. the blocking code should have already stuck us on a queue */
-    thread_resched();
+    _thread_resched_internal();
 }
 
-void sched_unblock(thread_t *t, bool resched)
+void sched_unblock(thread_t *t)
 {
-    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    /* if we're instructed to reschedule, stick the current thread on the head
-     * of the run queue first, so that the newly awakened thread gets a chance to run
-     * before the current one, but the current one doesn't get unnecessarilly punished.
-     */
-    if (resched) {
-        thread_t *current_thread = get_current_thread();
+    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
-        current_thread->state = THREAD_READY;
-        insert_in_run_queue_head(current_thread);
-    }
+    LOCAL_KTRACE0("sched_unblock");
+
+    /* thread is being woken up, boost its priority */
+    boost_thread(t);
 
     /* stuff the new thread in the run queue */
     t->state = THREAD_READY;
     insert_in_run_queue_head(t);
 
     mp_reschedule(find_cpu(t), 0);
-
-    if (resched)
-        thread_resched();
 }
 
-void sched_unblock_list(struct list_node *list, bool resched)
+void sched_unblock_list(struct list_node *list)
 {
     DEBUG_ASSERT(list);
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    /* if we're instructed to reschedule, stick the current thread on the head
-     * of the run queue first, so that the newly awakened thread gets a chance to run
-     * before the current one, but the current one doesn't get unnecessarilly punished.
-     */
-    if (resched) {
-        thread_t *current_thread = get_current_thread();
-
-        current_thread->state = THREAD_READY;
-        insert_in_run_queue_head(current_thread);
-    }
+    LOCAL_KTRACE0("sched_unblock_list");
 
     /* pop the list of threads and shove into the scheduler */
     thread_t *t;
@@ -214,50 +270,92 @@ void sched_unblock_list(struct list_node *list, bool resched)
         DEBUG_ASSERT(t->magic == THREAD_MAGIC);
         DEBUG_ASSERT(!thread_is_idle(t));
 
+        /* thread is being woken up, boost its priority */
+        boost_thread(t);
+
         /* stuff the new thread in the run queue */
         t->state = THREAD_READY;
         insert_in_run_queue_head(t);
 
         mp_reschedule(find_cpu(t), 0);
     }
-
-    if (resched)
-        thread_resched();
 }
 
 void sched_yield(void)
 {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    /* we are yielding the cpu, so stick ourselves into the tail of the run queue and reschedule */
     thread_t *current_thread = get_current_thread();
+    DEBUG_ASSERT(!thread_is_idle(current_thread));
+
+    LOCAL_KTRACE0("sched_yield");
+
     current_thread->state = THREAD_READY;
+
+    /* consume the rest of the time slice, deboost ourself, and go to the end of the queue */
     current_thread->remaining_time_slice = 0;
-    if (likely(!thread_is_idle(current_thread))) { /* idle thread doesn't go in the run queue */
-        insert_in_run_queue_tail(current_thread);
-    }
-    thread_resched();
+    deboost_thread(current_thread, false);
+    insert_in_run_queue_tail(current_thread);
+
+    _thread_resched_internal();
 }
 
+/* the current thread is being preempted from interrupt context */
 void sched_preempt(void)
 {
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
     thread_t *current_thread = get_current_thread();
 
-    /* we are being preempted, so we get to go back into the front of the run queue if we have quantum left */
+    LOCAL_KTRACE0("sched_preempt");
+
     current_thread->state = THREAD_READY;
-    if (likely(!thread_is_idle(current_thread))) { /* idle thread doesn't go in the run queue */
-        if (current_thread->remaining_time_slice > 0)
+
+    /* idle thread doesn't go in the run queue */
+    if (likely(!thread_is_idle(current_thread))) {
+        if (current_thread->remaining_time_slice > 0) {
             insert_in_run_queue_head(current_thread);
-        else
-            insert_in_run_queue_tail(current_thread); /* if we're out of quantum, go to the tail of the queue */
+        } else {
+            /* if we're out of quantum, deboost the thread and put it at the tail of the queue */
+            deboost_thread(current_thread, true);
+            insert_in_run_queue_tail(current_thread);
+        }
     }
-    sched_block();
+
+    _thread_resched_internal();
+}
+
+/* the current thread is voluntarily reevaluating the scheduler on the current cpu */
+void sched_reschedule(void)
+{
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    thread_t *current_thread = get_current_thread();
+
+    LOCAL_KTRACE0("sched_reschedule");
+
+    current_thread->state = THREAD_READY;
+
+    /* idle thread doesn't go in the run queue */
+    if (likely(!thread_is_idle(current_thread))) {
+
+        /* deboost the current thread */
+        deboost_thread(current_thread, false);
+
+        if (current_thread->remaining_time_slice > 0) {
+            insert_in_run_queue_head(current_thread);
+        } else {
+            insert_in_run_queue_tail(current_thread);
+        }
+    }
+
+    _thread_resched_internal();
 }
 
 void sched_init_early(void)
 {
     /* initialize the run queues */
-    for (int i=0; i < NUM_PRIORITIES; i++)
+    for (unsigned int i=0; i < NUM_PRIORITIES; i++)
         list_initialize(&run_queue[i]);
 }
 

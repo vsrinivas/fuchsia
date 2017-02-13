@@ -196,7 +196,7 @@ status_t UserThread::Initialize(const char* name, size_t len) {
 
     // create an underlying LK thread
     thread_t* lkthread = thread_create_etc(
-        &thread_, thread_name, StartRoutine, this, LOW_PRIORITY,
+        &thread_, thread_name, StartRoutine, this, DEFAULT_PRIORITY,
         reinterpret_cast<void *>(kstack_mapping_->base()),
 #if __has_feature(safe_stack)
         reinterpret_cast<void *>(unsafe_kstack_mapping_->base()),

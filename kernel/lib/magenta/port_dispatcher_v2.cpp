@@ -165,7 +165,7 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* port_packet,
     }
 
     if (wake_count)
-        thread_preempt(false);
+        thread_reschedule();
 
     return NO_ERROR;
 }

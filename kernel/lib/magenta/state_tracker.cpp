@@ -36,7 +36,7 @@ void CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock,
     }
 
     if (awoke_threads)
-        thread_preempt(false);
+        thread_reschedule();
 }
 }  // namespace
 
@@ -53,7 +53,7 @@ void StateTracker::AddObserver(StateObserver* observer, const StateObserver::Cou
             observers_.push_front(observer);
     }
     if (awoke_threads)
-        thread_preempt(false);
+        thread_reschedule();
 }
 
 void StateTracker::RemoveObserver(StateObserver* observer) {
@@ -104,7 +104,7 @@ void StateTracker::UpdateState(mx_signals_t clear_mask,
     }
 
     if (awoke_threads)
-        thread_preempt(false);
+        thread_reschedule();
 }
 
 void StateTracker::StrobeState(mx_signals_t notify_mask) {
@@ -125,7 +125,7 @@ void StateTracker::StrobeState(mx_signals_t notify_mask) {
     }
 
     if (awoke_threads)
-        thread_preempt(false);
+        thread_reschedule();
 }
 
 void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
@@ -158,7 +158,7 @@ void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
     }
 
     if (awoke_threads)
-        thread_preempt(false);
+        thread_reschedule();
 }
 
 mx_status_t StateTracker::SetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t cookie) {
