@@ -21,7 +21,9 @@ constexpr char kChildModule[] = "file:///tmp/tests/child_module";
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  ParentApp() { modular::testing::Init(application_context()); }
+  ParentApp() {
+    modular::testing::Init(application_context(), __FILE__);
+  }
 
   ~ParentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
 

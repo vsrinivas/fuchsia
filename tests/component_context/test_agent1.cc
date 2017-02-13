@@ -18,7 +18,7 @@ constexpr char kTest2Agent[] =
 
 class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
  public:
-  TestAgentApp() { modular::testing::Init(application_context()); }
+  TestAgentApp() { modular::testing::Init(application_context(), __FILE__); }
 
   ~TestAgentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
 

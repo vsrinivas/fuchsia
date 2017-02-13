@@ -68,7 +68,7 @@ class TestRunContext {
                  const std::string& url,
                  const std::vector<std::string>& args);
 
-  // Called from TestRunnerServiceImpl, the actual implemention to |TestRunner|.
+  // Called from TestRunnerImpl, the actual implemention of |TestRunner|.
   void StopTrackingClient(TestRunnerImpl* client, bool crashed);
   void Fail(const fidl::String& log_message);
   void Teardown();
@@ -102,18 +102,24 @@ class TestRunnerImpl : public testing::TestRunner {
         [this]() { test_run_context_->StopTrackingClient(this, true); });
   }
 
+  const std::string& GetTestName() const { return test_name_; }
+
  private:
   // |TestRunner|
-  void Fail(const fidl::String& log_message) {
+  void Identify(const fidl::String& test_name) override { test_name_ = test_name; }
+
+  // |TestRunner|
+  void Fail(const fidl::String& log_message) override {
     test_run_context_->Fail(log_message);
   }
   // |TestRunner|
-  void Done() { test_run_context_->StopTrackingClient(this, false); }
+  void Done() override { test_run_context_->StopTrackingClient(this, false); }
   // |TestRunner|
-  void Teardown() { test_run_context_->Teardown(); }
+  void Teardown() override { test_run_context_->Teardown(); }
 
   fidl::Binding<testing::TestRunner> binding_;
   TestRunContext* test_run_context_;
+  std::string test_name_ = "UNKNOWN";
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerImpl);
 };
@@ -267,8 +273,10 @@ TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
                               child_app_controller_.NewRequest());
 
   // If the child app closes, the test is reported as a failure.
-  child_app_controller_.set_connection_error_handler(
-      [this]() { test_runner_connection_->Teardown(test_id_, false); });
+  child_app_controller_.set_connection_error_handler([this] {
+    FTL_LOG(WARNING) << "Child app connection closed unexpectedly.";
+    test_runner_connection_->Teardown(test_id_, false);
+  });
 }
 
 void TestRunContext::Fail(const fidl::String& log_msg) {
@@ -280,6 +288,8 @@ void TestRunContext::Fail(const fidl::String& log_msg) {
 
 void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   if (crashed) {
+    FTL_LOG(WARNING) << client->GetTestName()
+                     << " finished without calling modular::testing::Done().";
     test_runner_connection_->Teardown(test_id_, false);
     return;
   }

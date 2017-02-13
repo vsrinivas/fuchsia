@@ -131,7 +131,7 @@ class DummyUserShellApp
         story_provider_watcher_binding_(this),
         story_watcher_binding_(this),
         link_watcher_binding_(this) {
-    modular::testing::Init(application_context());
+    modular::testing::Init(application_context(), __FILE__);
   }
   ~DummyUserShellApp() override = default;
 

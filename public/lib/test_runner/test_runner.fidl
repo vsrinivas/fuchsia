@@ -9,6 +9,9 @@ module modular.testing;
 // this service to log failures, signal crashes, and signal completion.
 [ServiceName="modular.testing.TestRunner"]
 interface TestRunner {
+  // Tell the test runner how to identify this test.
+  Identify(string test_name);
+
   // Tells the test runner that a particular test case failed, with the supplied
   // message. May be called multiple times. When |Teardown()| is called, the
   // test ends as a failure.
