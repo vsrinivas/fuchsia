@@ -12,6 +12,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/algorithm_tests.cpp \
+    $(LOCAL_DIR)/atomic_tests.cpp \
     $(LOCAL_DIR)/auto_call_tests.cpp \
     $(LOCAL_DIR)/forward_tests.cpp \
     $(LOCAL_DIR)/inline_array_tests.cpp \
