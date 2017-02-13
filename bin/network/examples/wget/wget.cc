@@ -70,7 +70,7 @@ class WGetApp {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
 #else
-    auto launch_info = modular::ApplicationLaunchInfo::New();
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "file:///system/apps/network";
     launch_info->services = fidl::GetProxy(&network_service_provider_);
     context_->launcher()->CreateApplication(std::move(launch_info),
@@ -110,7 +110,7 @@ class WGetApp {
   std::unique_ptr<modular::ApplicationContext> context_;
 #if !USE_ENVIRONMENT_SERVICE
   modular::ApplicationControllerPtr app_controller_;
-  modular::ServiceProviderPtr network_service_provider_;
+  app::ServiceProviderPtr network_service_provider_;
 #endif
 
   network::NetworkServicePtr network_service_;
