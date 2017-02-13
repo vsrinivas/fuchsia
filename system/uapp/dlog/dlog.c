@@ -23,19 +23,23 @@ int main(int argc, char** argv) {
     char buf[MX_LOG_RECORD_MAX];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
     for (;;) {
-        if (mx_log_read(h, MX_LOG_RECORD_MAX, rec, tail ? MX_LOG_FLAG_WAIT : 0) > 0) {
-            char tmp[64];
-            snprintf(tmp, 64, "[%05d.%03d] %c ",
-                     (int)(rec->timestamp / 1000000000ULL),
-                     (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-                     (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
-            write(1, tmp, strlen(tmp));
-            write(1, rec->data, rec->datalen);
-            if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
-                write(1, "\n", 1);
+        mx_status_t status;
+        if ((status = mx_log_read(h, MX_LOG_RECORD_MAX, rec, 0)) < 0) {
+            if ((status == ERR_SHOULD_WAIT) && tail) {
+                mx_object_wait_one(h, MX_LOG_READABLE, MX_TIME_INFINITE, NULL);
+                continue;
             }
-        } else {
             break;
+        }
+        char tmp[64];
+        snprintf(tmp, 64, "[%05d.%03d] %c ",
+                 (int)(rec->timestamp / 1000000000ULL),
+                 (int)((rec->timestamp / 1000000ULL) % 1000ULL),
+                 (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
+        write(1, tmp, strlen(tmp));
+        write(1, rec->data, rec->datalen);
+        if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
+            write(1, "\n", 1);
         }
     }
     return 0;

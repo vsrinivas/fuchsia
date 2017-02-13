@@ -134,6 +134,10 @@ typedef uint32_t mx_signals_t;
 // Thread
 #define MX_THREAD_SIGNALED          MX_OBJECT_SIGNAL_3
 
+// Log
+#define MX_LOG_READABLE             MX_OBJECT_SIGNAL_0
+#define MX_LOG_WRITABLE             MX_OBJECT_SIGNAL_1
+
 // global kernel object id.
 typedef uint64_t mx_koid_t;
 #define MX_KOID_INVALID ((uint64_t) 0)

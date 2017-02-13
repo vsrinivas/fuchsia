@@ -28,7 +28,8 @@ status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatc
     return NO_ERROR;
 }
 
-LogDispatcher::LogDispatcher(uint32_t flags) : flags_(flags) {
+LogDispatcher::LogDispatcher(uint32_t flags)
+    : flags_(flags), state_tracker_(MX_LOG_WRITABLE) {
 }
 
 LogDispatcher::~LogDispatcher() {
@@ -38,7 +39,8 @@ LogDispatcher::~LogDispatcher() {
 }
 
 void LogDispatcher::Signal() {
-    event_.Signal();
+    AutoLock lock(&lock_);
+    state_tracker_.UpdateState(0, MX_CHANNEL_READABLE);
 }
 
 // static
@@ -55,26 +57,13 @@ status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actu
     if (!(flags_ & MX_LOG_FLAG_READABLE))
         return ERR_BAD_STATE;
 
-    for (;;) {
-        mx_status_t status;
+    AutoLock lock(&lock_);
 
-        {
-            AutoLock lock(&lock_);
-            if ((status = dlog_read(&reader_, 0, ptr, len, actual)) < 0) {
-                if (status == ERR_SHOULD_WAIT) {
-                    event_.Unsignal();
-                }
-            }
-        }
-
-        if ((status == ERR_SHOULD_WAIT) && (flags & MX_LOG_FLAG_WAIT)) {
-            if ((status = event_.Wait(INFINITE_TIME)) < 0) {
-                return status;
-            }
-            continue;
-        }
-
-        return status;
+    mx_status_t status = dlog_read(&reader_, 0, ptr, len, actual);
+    if (status == ERR_SHOULD_WAIT) {
+        state_tracker_.UpdateState(MX_CHANNEL_READABLE, 0);
     }
+
+    return status;
 }
 

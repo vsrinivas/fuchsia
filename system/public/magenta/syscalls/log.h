@@ -30,7 +30,6 @@ typedef struct mx_log_record {
 #define MX_LOG_FLAG_DEVICE    0x0800
 #define MX_LOG_FLAG_MASK      0x0F00
 
-#define MX_LOG_FLAG_WAIT      0x80000000
 #define MX_LOG_FLAG_READABLE  0x40000000
 
 __END_CDECLS

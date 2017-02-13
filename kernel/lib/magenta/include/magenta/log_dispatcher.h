@@ -9,6 +9,7 @@
 #include <lib/debuglog.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/state_tracker.h>
 #include <magenta/wait_event.h>
 
 class LogDispatcher final : public Dispatcher {
@@ -17,6 +18,7 @@ public:
 
     ~LogDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_LOG; }
+    StateTracker* get_state_tracker() final { return &state_tracker_; }
 
     status_t Write(uint32_t flags, const void* ptr, size_t len);
     status_t Read(uint32_t flags, void* ptr, size_t len, size_t* actual);
@@ -31,5 +33,5 @@ private:
     uint32_t flags_;
 
     Mutex lock_;
-    WaitEvent event_;
+    StateTracker state_tracker_;
 };

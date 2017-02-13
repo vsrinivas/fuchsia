@@ -719,12 +719,19 @@ static int vc_log_reader_thread(void* arg) {
 
     char buf[MX_LOG_RECORD_MAX];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
-    while (mx_log_read(h, MX_LOG_RECORD_MAX, rec, MX_LOG_FLAG_WAIT) > 0) {
+    mx_status_t status;
+    for (;;) {
+        if ((status = mx_log_read(h, MX_LOG_RECORD_MAX, rec, 0)) < 0) {
+            if (status == ERR_SHOULD_WAIT) {
+                mx_object_wait_one(h, MX_LOG_READABLE, MX_TIME_INFINITE, NULL);
+                continue;
+            }
+            break;
+        }
         char tmp[64];
         snprintf(tmp, 64, "\033[32m%05d.%03d\033[39m] \033[31m%05" PRIu64 ".\033[36m%05" PRIu64 "\033[39m> ",
                  (int)(rec->timestamp / 1000000000ULL),
                  (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-//                 (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U',
                  rec->pid, rec->tid);
         vc_device_write(dev, tmp, strlen(tmp), 0);
         vc_device_write(dev, rec->data, rec->datalen, 0);
@@ -732,6 +739,10 @@ static int vc_log_reader_thread(void* arg) {
             vc_device_write(dev, "\n", 1, 0);
         }
     }
+
+    const char* oops = "<<LOG ERROR>>\n";
+    vc_device_write(dev, oops, strlen(oops), 0);
+
     return 0;
 }
 
