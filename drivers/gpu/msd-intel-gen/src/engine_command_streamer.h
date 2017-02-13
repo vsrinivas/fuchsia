@@ -36,7 +36,7 @@ public:
     EngineCommandStreamerId id() const { return id_; }
 
     // Initialize backing store for the given context on this engine command streamer.
-    bool InitContext(MsdIntelContext* context) const;
+    bool InitContext(MsdIntelContext* context, PerProcessGtt* ppgtt) const;
 
     // Initialize engine command streamer hardware.
     void InitHardware();
@@ -74,7 +74,8 @@ protected:
 private:
     virtual uint32_t GetContextSize() const { return PAGE_SIZE * 2; }
 
-    bool InitContextBuffer(MsdIntelBuffer* context_buffer, Ringbuffer* ringbuffer) const;
+    bool InitContextBuffer(MsdIntelBuffer* context_buffer, Ringbuffer* ringbuffer,
+                           PerProcessGtt* ppgtt) const;
 
     Owner* owner_;
     EngineCommandStreamerId id_;

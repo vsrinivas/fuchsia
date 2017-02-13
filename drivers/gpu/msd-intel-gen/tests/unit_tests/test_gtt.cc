@@ -42,18 +42,6 @@ private:
     MockMmio* mmio_{};
 };
 
-uint32_t cache_bits(CachingType caching_type)
-{
-    switch (caching_type) {
-    case CACHING_NONE:
-        return (1 << 3) | (1 << 4); // 3
-    case CACHING_WRITE_THROUGH:
-        return (1 << 4); // 3
-    case CACHING_LLC:
-        return 1 << 7; // 4
-    }
-}
-
 void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint64_t size,
                              uint64_t bus_addr)
 {
@@ -70,7 +58,6 @@ void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint6
         EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr);
         EXPECT_FALSE(pte & 0x1); // page should not be present
         EXPECT_TRUE(pte & 0x3); // rw
-        EXPECT_EQ(pte & cache_bits(CACHING_LLC), cache_bits(CACHING_LLC));
     }
 }
 
@@ -93,7 +80,6 @@ void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer,
         EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr[i]);
         EXPECT_TRUE(pte & 0x1); // page present
         EXPECT_TRUE(pte & 0x3); // rw
-        EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
     }
     EXPECT_TRUE(buffer->UnmapPageRangeBus(0, page_count));
 
@@ -101,10 +87,9 @@ void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer,
     EXPECT_EQ(pte & ~(PAGE_SIZE - 1), scratch_bus_addr);
     EXPECT_TRUE(pte & 0x1);  // page present
     EXPECT_TRUE(pte & 0x3);  // rw
-    EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
 }
 
-class TestDevice : public Gtt::Owner {
+class TestDevice {
 public:
     // size_bits: 1 (2MB), 2 (4MB), 3 (8MB)
     void Init(unsigned int size_bits)
@@ -116,7 +101,7 @@ public:
         platform_device =
             std::unique_ptr<MockPlatformDevice>(new MockPlatformDevice(reg_size + gtt_size));
         reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(reg_size)));
-        gtt = std::unique_ptr<Gtt>(new Gtt(this));
+        gtt = std::unique_ptr<Gtt>(new Gtt());
 
         bool ret = gtt->Init(gtt_size, platform_device.get());
         EXPECT_TRUE(ret);
@@ -141,16 +126,10 @@ public:
 
         platform_device = std::shared_ptr<MockPlatformDevice>(new MockPlatformDevice(bar0_size));
         reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(bar0_size)));
-        gtt = std::unique_ptr<Gtt>(new Gtt(this));
+        gtt = std::unique_ptr<Gtt>(new Gtt());
 
         bool ret = gtt->Init(gtt_size, platform_device.get());
         EXPECT_EQ(ret, true);
-
-        uint32_t pat_index_low = reg_io->Read32(registers::PatIndex::kOffsetLow);
-        EXPECT_EQ(pat_index_low, 4u);
-
-        uint32_t pat_index_high = reg_io->Read32(registers::PatIndex::kOffsetHigh);
-        EXPECT_EQ(pat_index_high, 0u);
 
         uint64_t scratch_bus_addr;
         ret = TestGtt::scratch_buffer(gtt.get())->MapPageRangeBus(0, 1, &scratch_bus_addr);
@@ -229,8 +208,6 @@ public:
         ret = TestGtt::scratch_buffer(gtt.get())->UnmapPageRangeBus(0, 1);
         EXPECT_TRUE(ret);
     }
-
-    RegisterIo* register_io() override { return reg_io.get(); }
 
     std::shared_ptr<MockPlatformDevice> platform_device;
     std::unique_ptr<RegisterIo> reg_io;

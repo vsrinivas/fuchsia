@@ -9,6 +9,7 @@
 #include "magma_util/status.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
+#include "ppgtt.h"
 #include "ringbuffer.h"
 #include "types.h"
 #include <map>
@@ -20,6 +21,8 @@ class MsdIntelConnection;
 // Abstract base context.
 class MsdIntelContext {
 public:
+    MsdIntelContext(bool ppgtt_enable) : ppgtt_enable_(ppgtt_enable) {}
+
     virtual ~MsdIntelContext() {}
 
     void SetEngineState(EngineCommandStreamerId id, std::unique_ptr<MsdIntelBuffer> context_buffer,
@@ -56,6 +59,11 @@ public:
 
     std::queue<std::unique_ptr<MappedBatch>>& pending_batch_queue() { return pending_batch_queue_; }
 
+    AddressSpaceId exec_address_space_id()
+    {
+        return ppgtt_enable_ ? ADDRESS_SPACE_PPGTT : ADDRESS_SPACE_GTT;
+    }
+
 private:
     struct PerEngineState {
         std::shared_ptr<MsdIntelBuffer> context_buffer;
@@ -65,6 +73,7 @@ private:
 
     std::map<EngineCommandStreamerId, PerEngineState> state_map_;
     std::queue<std::unique_ptr<MappedBatch>> pending_batch_queue_;
+    bool ppgtt_enable_;
 
     friend class TestContext;
 };
@@ -72,20 +81,20 @@ private:
 class ClientContext : public MsdIntelContext {
 public:
     ClientContext(std::weak_ptr<MsdIntelConnection> connection,
-                  std::shared_ptr<AddressSpace> exec_address_space)
-        : connection_(connection), exec_address_space_(exec_address_space)
+                  std::shared_ptr<PerProcessGtt> ppgtt)
+        : MsdIntelContext(ppgtt ? true : false), connection_(connection), ppgtt_(ppgtt)
     {
     }
 
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
 
-    std::shared_ptr<AddressSpace> exec_address_space() { return exec_address_space_; }
+    std::shared_ptr<PerProcessGtt> per_process_gtt() { return ppgtt_; }
 
     std::weak_ptr<MsdIntelConnection> connection() override { return connection_; }
 
 private:
     std::weak_ptr<MsdIntelConnection> connection_;
-    std::shared_ptr<AddressSpace> exec_address_space_;
+    std::shared_ptr<PerProcessGtt> ppgtt_;
 };
 
 class MsdIntelAbiContext : public msd_context {

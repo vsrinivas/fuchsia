@@ -23,7 +23,6 @@
 #include <thread>
 
 class MsdIntelDevice : public msd_device,
-                       public Gtt::Owner,
                        public EngineCommandStreamer::Owner,
                        public MsdIntelConnection::Owner {
 public:
@@ -78,7 +77,7 @@ private:
     if (x)                                                                                         \
     DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
 
-    // Gtt::Owner, EngineCommandStreamer::Owner
+    // EngineCommandStreamer::Owner
     RegisterIo* register_io() override
     {
         CHECK_THREAD_IS_CURRENT(device_thread_id_);
@@ -140,6 +139,8 @@ private:
 
     std::shared_ptr<AddressSpace> gtt() { return gtt_; }
 
+    std::shared_ptr<magma::PlatformBuffer> scratch_buffer() { return scratch_buffer_; }
+
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
@@ -155,6 +156,7 @@ private:
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
     std::shared_ptr<GlobalContext> global_context_;
     std::unique_ptr<Sequencer> sequencer_;
+    std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
 
     // page flipping
     std::deque<std::shared_ptr<GpuMapping>> display_mappings_;

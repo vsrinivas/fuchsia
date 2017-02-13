@@ -72,7 +72,7 @@ public:
         auto buffer = TestContext::get_context_buffer(context_.get(), engine_cs_->id());
         EXPECT_EQ(buffer, nullptr);
 
-        EXPECT_TRUE(engine_cs_->InitContext(context_.get()));
+        EXPECT_TRUE(engine_cs_->InitContext(context_.get(), nullptr));
 
         buffer = TestContext::get_context_buffer(context_.get(), engine_cs_->id());
         ASSERT_NE(buffer, nullptr);
@@ -114,9 +114,9 @@ public:
         EXPECT_EQ(state[0x1B], 0ul);
         EXPECT_EQ(state[0x1C], 0x21C8ul);
         EXPECT_EQ(state[0x1D], 0ul);
-        EXPECT_EQ(state[0x1E], 0x23A8ul);
-        EXPECT_EQ(state[0x1F], 0ul);
         EXPECT_EQ(state[0x21], 0x11001011ul);
+        EXPECT_EQ(state[0x22], 0x23A8ul);
+        EXPECT_EQ(state[0x23], 0ul);
         EXPECT_EQ(state[0x24], 0x228Cul);
         // TODO(MA-64) - check ppgtt pdp addresses
         // EXPECT_EQ(state[0x25], pdp3_upper);

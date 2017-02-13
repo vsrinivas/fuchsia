@@ -22,11 +22,14 @@ GpuMapping::~GpuMapping()
     buffer_->RemoveExpiredMappings();
 
     std::shared_ptr<AddressSpace> address_space = address_space_.lock();
-    DASSERT(address_space);
+    if (!address_space) {
+        DLOG("Failed to lock address space");
+        return;
+    }
 
-    if (address_space && !address_space->Clear(gpu_addr_))
+    if (!address_space->Clear(gpu_addr_))
         DLOG("failed to clear address");
 
-    if (address_space && !address_space->Free(gpu_addr_))
+    if (!address_space->Free(gpu_addr_))
         DLOG("failed to free address");
 }

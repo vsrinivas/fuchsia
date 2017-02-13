@@ -25,24 +25,5 @@
 #define PAGE_PCD (1 << 4)
 #define PAGE_PAT (1 << 7)
 
-unsigned int gen_ppat_index(CachingType caching_type);
-
-static inline gen_pte_t gen_pte_encode(uint64_t addr, CachingType caching_type, bool valid)
-{
-    gen_pte_t pte = addr | PAGE_RW;
-
-    if (valid)
-        pte |= PAGE_PRESENT;
-
-    unsigned int pat_index = gen_ppat_index(caching_type);
-    if (pat_index & (1 << 0))
-        pte |= PAGE_PWT;
-    if (pat_index & (1 << 1))
-        pte |= PAGE_PCD;
-    if (pat_index & (1 << 2))
-        pte |= PAGE_PAT;
-
-    return pte;
-}
 
 #endif // PAGETABLE_H

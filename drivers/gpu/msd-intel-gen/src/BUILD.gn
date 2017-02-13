@@ -31,6 +31,8 @@ source_set("src") {
     "msd_intel_driver.cc",
     "msd_intel_driver.h",
     "pagetable.h",
+    "ppgtt.h",
+    "ppgtt.cc",
     "register_io.cc",
     "register_io.h",
     "registers.h",

@@ -14,13 +14,7 @@
 
 class Gtt : public AddressSpace {
 public:
-    class Owner {
-    public:
-        virtual RegisterIo* register_io() = 0;
-    };
-
-    Gtt(Gtt::Owner* owner);
-    ~Gtt();
+    Gtt();
 
     uint64_t Size() const override { return size_; }
 
@@ -35,24 +29,20 @@ public:
                 CachingType caching_type) override;
 
 private:
-    RegisterIo* reg_io() { return owner_->register_io(); }
-
     uint64_t pte_mmio_offset() { return mmio_->size() / 2; }
 
     magma::PlatformBuffer* scratch_buffer() { return scratch_.get(); }
 
     bool MapGttMmio(magma::PlatformDevice* platform_device);
-    void InitPrivatePat();
     bool InitScratch();
     bool InitPageTables(uint64_t start);
-    bool Clear(uint64_t addr, uint64_t length);
+    bool Clear(uint64_t start, uint64_t length);
 
 private:
-    Gtt::Owner* owner_;
     std::unique_ptr<magma::PlatformMmio> mmio_;
     std::unique_ptr<magma::PlatformBuffer> scratch_;
     std::unique_ptr<magma::AddressSpaceAllocator> allocator_;
-    uint64_t scratch_gpu_addr_;
+    uint64_t scratch_bus_addr_;
     uint64_t size_;
 
     friend class TestGtt;

@@ -11,6 +11,8 @@
 // GlobalContext, provides the global (per engine) hardware status page for all client contexts.
 class GlobalContext : public MsdIntelContext, public HardwareStatusPage::Owner {
 public:
+    GlobalContext() : MsdIntelContext(false) {}
+
     bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id) override;
     bool Unmap(AddressSpaceId address_space_id, EngineCommandStreamerId id) override;
 

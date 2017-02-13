@@ -105,7 +105,7 @@ void MsdIntelDevice::Destroy()
 
 std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id client_id)
 {
-    return std::unique_ptr<MsdIntelConnection>(new MsdIntelConnection(this));
+    return MsdIntelConnection::Create(this, scratch_buffer_);
 }
 
 bool MsdIntelDevice::Init(void* device_handle)
@@ -154,7 +154,9 @@ bool MsdIntelDevice::Init(void* device_handle)
     // Clear faults
     registers::AllEngineFault::clear(register_io_.get());
 
-    gtt_ = std::unique_ptr<Gtt>(new Gtt(this));
+    PerProcessGtt::InitPrivatePat(register_io_.get());
+
+    gtt_ = std::unique_ptr<Gtt>(new Gtt());
 
     if (!gtt_->Init(gtt_size, platform_device_.get()))
         return DRETF(false, "failed to Init gtt");
@@ -168,7 +170,7 @@ bool MsdIntelDevice::Init(void* device_handle)
     global_context_ = std::shared_ptr<GlobalContext>(new GlobalContext());
 
     // Creates the context backing store.
-    if (!render_engine_cs_->InitContext(global_context_.get()))
+    if (!render_engine_cs_->InitContext(global_context_.get(), nullptr))
         return DRETF(false, "render_engine_cs failed to init global context");
 
     if (!global_context_->Map(gtt_, render_engine_cs_->id()))
@@ -178,6 +180,12 @@ bool MsdIntelDevice::Init(void* device_handle)
         return DRETF(false, "failed to init render engine");
 
     monitor_ = magma::Monitor::CreateShared();
+
+    scratch_buffer_ =
+        std::shared_ptr<magma::PlatformBuffer>(magma::PlatformBuffer::Create(PAGE_SIZE));
+
+    if (!scratch_buffer_->PinPages(0, 1))
+        return DRETF(false, "failed to pin pages scratch buffer");
 
     return true;
 }

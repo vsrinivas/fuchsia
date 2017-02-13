@@ -22,8 +22,8 @@ public:
     std::shared_ptr<AddressSpace> exec_address_space()
     {
         auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
-        if (context->exec_address_space())
-            return context->exec_address_space();
+        if (context->per_process_gtt() && context->exec_address_space_id() == ADDRESS_SPACE_PPGTT)
+            return context->per_process_gtt();
         return device()->gtt();
     }
 
@@ -138,6 +138,7 @@ public:
         ASSERT_TRUE(target_buffer_mapping->buffer()->platform_buffer()->MapCpu(&target_cpu_addr));
 
         gpu_addr_t target_gpu_addr = target_buffer_mapping->gpu_addr();
+        DLOG("target_gpu_addr 0x%lx", target_gpu_addr);
         *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0;
 
         auto batch_buf_index = cmd_buf_->batch_buffer_resource_index();
@@ -149,9 +150,9 @@ public:
         uint32_t* batch_ptr = reinterpret_cast<uint32_t*>(batch_cpu_addr);
 
         static constexpr uint32_t kDwordCount = 4;
-        static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
+        static constexpr bool kUseGlobalGtt = false;
         // store dword
-        *batch_ptr++ = (0x20 << 23) | (kDwordCount - 2) | kAddressSpaceGtt;
+        *batch_ptr++ = (0x20 << 23) | (kDwordCount - 2) | (kUseGlobalGtt ? 1 << 22 : 0);
         *batch_ptr++ = magma::lower_32_bits(target_gpu_addr);
         *batch_ptr++ = magma::upper_32_bits(target_gpu_addr);
         *batch_ptr++ = expected_val;

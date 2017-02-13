@@ -20,7 +20,7 @@ EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamer
     DASSERT(owner);
 }
 
-bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
+bool EngineCommandStreamer::InitContext(MsdIntelContext* context, PerProcessGtt* ppgtt) const
 {
     DASSERT(context);
 
@@ -33,7 +33,7 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
 
     std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(MsdIntelBuffer::Create(32 * PAGE_SIZE)));
 
-    if (!InitContextBuffer(context_buffer.get(), ringbuffer.get()))
+    if (!InitContextBuffer(context_buffer.get(), ringbuffer.get(), ppgtt))
         return DRETF(false, "InitContextBuffer failed");
 
     // Transfer ownership of context_buffer
@@ -192,8 +192,8 @@ public:
     // CS_CTX_TIMESTAMP - CS Context Timestamp Count
     void write_context_timestamp()
     {
-        state_[0x1E] = mmio_base_ + 0x3A8;
-        state_[0x1F] = 0;
+        state_[0x22] = mmio_base_ + 0x3A8;
+        state_[0x23] = 0;
     }
 
     void write_pdp3_upper(uint64_t pdp_bus_addr)
@@ -257,7 +257,8 @@ private:
     uint32_t* state_;
 };
 
-bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer* ringbuffer) const
+bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer* ringbuffer,
+                                              PerProcessGtt* ppgtt) const
 {
     DASSERT(buffer->write_domain() == MEMORY_DOMAIN_CPU);
 
@@ -286,15 +287,25 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
     helper.write_indirect_context_pointer();
     helper.write_indirect_context_offset_pointer();
     helper.write_context_timestamp();
-    // TODO(MA-64) - get ppgtt addresses
-    helper.write_pdp3_upper(0);
-    helper.write_pdp3_lower(0);
-    helper.write_pdp2_upper(0);
-    helper.write_pdp2_lower(0);
-    helper.write_pdp1_upper(0);
-    helper.write_pdp1_lower(0);
-    helper.write_pdp0_upper(0);
-    helper.write_pdp0_lower(0);
+    if (ppgtt) {
+        helper.write_pdp3_upper(ppgtt->get_pdp(3));
+        helper.write_pdp3_lower(ppgtt->get_pdp(3));
+        helper.write_pdp2_upper(ppgtt->get_pdp(2));
+        helper.write_pdp2_lower(ppgtt->get_pdp(2));
+        helper.write_pdp1_upper(ppgtt->get_pdp(1));
+        helper.write_pdp1_lower(ppgtt->get_pdp(1));
+        helper.write_pdp0_upper(ppgtt->get_pdp(0));
+        helper.write_pdp0_lower(ppgtt->get_pdp(0));
+    } else {
+        helper.write_pdp3_upper(0);
+        helper.write_pdp3_lower(0);
+        helper.write_pdp2_upper(0);
+        helper.write_pdp2_lower(0);
+        helper.write_pdp1_upper(0);
+        helper.write_pdp1_lower(0);
+        helper.write_pdp0_upper(0);
+        helper.write_pdp0_lower(0);
+    }
 
     if (id() == RENDER_COMMAND_STREAMER) {
         helper.write_render_power_clock_state();
@@ -348,10 +359,10 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
 
     DLOG("SubmitExeclists context descriptor id 0x%lx", gpu_addr >> 12);
 
-    // Use significant bits of context gpu_addr as globally unique context id
+    // Use most significant bits of context gpu_addr as globally unique context id
     DASSERT(PAGE_SIZE == 4096);
-    uint64_t descriptor0 =
-        registers::ExeclistSubmitPort::context_descriptor(gpu_addr, gpu_addr >> 12, false);
+    uint64_t descriptor0 = registers::ExeclistSubmitPort::context_descriptor(
+        gpu_addr, gpu_addr >> 12, context->exec_address_space_id() == ADDRESS_SPACE_PPGTT);
     uint64_t descriptor1 = 0;
 
     registers::ExeclistSubmitPort::write(register_io(), mmio_base_, descriptor1, descriptor0);
@@ -459,10 +470,10 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
     DASSERT(context);
 
     gpu_addr_t gpu_addr;
-    if (!mapped_batch->GetGpuAddress(ADDRESS_SPACE_GTT, &gpu_addr))
-        return DRETF(false, "coudln't get batch gpu address");
+    if (!mapped_batch->GetGpuAddress(context->exec_address_space_id(), &gpu_addr))
+        return DRETF(false, "couldn't get batch gpu address");
 
-    if (!StartBatchBuffer(context.get(), gpu_addr, ADDRESS_SPACE_GTT))
+    if (!StartBatchBuffer(context.get(), gpu_addr, context->exec_address_space_id()))
         return DRETF(false, "failed to emit batch");
 
     if (!PipeControl(context.get(), mapped_batch->GetPipeControlFlags()))
@@ -614,6 +625,8 @@ bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu
 
     MiBatchBufferStart::write_ringbuffer(ringbuffer, gpu_addr, address_space_id);
     MiNoop::write_ringbuffer(ringbuffer);
+
+    DLOG("started batch buffer 0x%lx address_space_id %d", gpu_addr, address_space_id);
 
     return true;
 }

@@ -69,7 +69,7 @@ bool CommandBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* g
 void CommandBuffer::UnmapResourcesGpu() { exec_resource_mappings_.clear(); }
 
 bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
-                                        std::shared_ptr<AddressSpace> ggtt)
+                                        std::shared_ptr<AddressSpace> global_gtt)
 {
     DASSERT(engine);
 
@@ -77,18 +77,19 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
     if (!locked_context_)
         return DRETF(false, "context has already been deleted, aborting");
 
-    auto address_space = locked_context_->exec_address_space();
-    if (!address_space)
-        address_space = ggtt;
-    DASSERT(address_space);
+    auto ppgtt = locked_context_->per_process_gtt();
 
     if (!locked_context_->IsInitializedForEngine(engine->id())) {
-        if (!engine->InitContext(locked_context_.get()))
-            return DRETF(false, "failed to intialize context");
+        if (!engine->InitContext(locked_context_.get(), ppgtt.get()))
+            return DRETF(false, "failed to initialize context");
     }
 
-    if (!locked_context_->Map(address_space, engine->id()))
+    if (!locked_context_->Map(global_gtt, engine->id()))
         return DRETF(false, "failed to map context");
+
+    std::shared_ptr<AddressSpace> address_space =
+        ppgtt && locked_context_->exec_address_space_id() == ADDRESS_SPACE_PPGTT ? ppgtt
+                                                                                 : global_gtt;
 
     exec_resource_mappings_.clear();
     exec_resource_mappings_.reserve(exec_resources_.size());

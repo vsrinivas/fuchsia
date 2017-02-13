@@ -21,14 +21,18 @@ public:
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
     };
 
-    MsdIntelConnection(Owner* owner) : owner_(owner) {}
+    static std::unique_ptr<MsdIntelConnection>
+    Create(Owner* owner, std::shared_ptr<magma::PlatformBuffer> scratch_buffer);
 
     virtual ~MsdIntelConnection() {}
+
+    std::shared_ptr<PerProcessGtt> per_process_gtt() { return ppgtt_; }
 
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {
         return owner_->SubmitCommandBuffer(std::move(cmd_buf));
     }
+
     void DestroyContext(std::shared_ptr<ClientContext> client_context)
     {
         return owner_->DestroyContext(std::move(client_context));
@@ -39,10 +43,16 @@ public:
     void set_context_killed() { context_killed_ = true; }
 
 private:
+    MsdIntelConnection(Owner* owner, std::shared_ptr<PerProcessGtt> ppgtt)
+        : owner_(owner), ppgtt_(std::move(ppgtt))
+    {
+    }
+
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
-    bool context_killed_ = false;
     Owner* owner_;
+    std::shared_ptr<PerProcessGtt> ppgtt_;
+    bool context_killed_ = false;
 };
 
 class MsdIntelAbiConnection : public msd_connection {

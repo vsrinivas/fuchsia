@@ -8,9 +8,16 @@
 #include "registers.h"
 #include <vector>
 
-Gtt::Gtt(Gtt::Owner* owner) : AddressSpace(ADDRESS_SPACE_GTT), owner_(owner) { DASSERT(owner_); }
+static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, bool valid)
+{
+    gen_pte_t pte = bus_addr | PAGE_RW;
+    if (valid)
+        pte |= PAGE_PRESENT;
 
-Gtt::~Gtt() { DLOG("Gtt dtor"); }
+    return pte;
+}
+
+Gtt::Gtt() : AddressSpace(ADDRESS_SPACE_GTT) {}
 
 bool Gtt::Init(uint64_t gtt_size, magma::PlatformDevice* platform_device)
 {
@@ -18,8 +25,6 @@ bool Gtt::Init(uint64_t gtt_size, magma::PlatformDevice* platform_device)
     size_ = (gtt_size / sizeof(gen_pte_t)) * PAGE_SIZE;
 
     DLOG("Gtt::Init gtt_size (for page tables) 0x%lx size (address space) 0x%lx ", gtt_size, size_);
-
-    InitPrivatePat();
 
     if (!MapGttMmio(platform_device))
         return DRETF(false, "MapGttMmio failed");
@@ -61,31 +66,6 @@ bool Gtt::MapGttMmio(magma::PlatformDevice* platform_device)
     return true;
 }
 
-unsigned int gen_ppat_index(CachingType caching_type)
-{
-    switch (caching_type) {
-    case CACHING_NONE:
-        return 3;
-    case CACHING_WRITE_THROUGH:
-        return 2;
-    case CACHING_LLC:
-        return 4;
-    }
-}
-
-// Initialize the private page attribute registers, used to define the meaning
-// of the pat bits in the page table entries.
-void Gtt::InitPrivatePat()
-{
-    // While command buffers are executed with GGTT, only index 0 is used and so for the 
-    // framebuffer' sake we mark everything as uncacheable.
-    // TODO(MA-71) configure the full set of PPAT indices.
-    uint64_t pat =
-        registers::PatIndex::ppat(0, registers::PatIndex::kLruAgeFromUncore,
-                                  registers::PatIndex::kLlc, registers::PatIndex::kUncacheable);
-    registers::PatIndex::write(reg_io(), pat);
-}
-
 bool Gtt::InitScratch()
 {
     scratch_ = magma::PlatformBuffer::Create(PAGE_SIZE);
@@ -93,7 +73,7 @@ bool Gtt::InitScratch()
     if (!scratch_->PinPages(0, 1))
         return DRETF(false, "PinPages failed");
 
-    if (!scratch_->MapPageRangeBus(0, 1, &scratch_gpu_addr_))
+    if (!scratch_->MapPageRangeBus(0, 1, &scratch_bus_addr_))
         return DRETF(false, "MapPageBus failed");
 
     if (magma::kDebug) {
@@ -154,7 +134,7 @@ bool Gtt::Clear(uint64_t start, uint64_t length)
     if (first_entry + num_entries > max_entries)
         return DRETF(false, "exceeded max_entries");
 
-    gen_pte_t pte = gen_pte_encode(scratch_gpu_addr_, CACHING_LLC, false);
+    gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, false);
 
     uint64_t pte_offset = pte_mmio_offset() + first_entry * sizeof(gen_pte_t);
 
@@ -199,29 +179,23 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, 
         return DRETF(false, "failed obtaining bus addresses");
 
     for (unsigned int i = 0; i < num_pages; i++) {
-        auto pte = gen_pte_encode(bus_addr_array[i], caching_type, true);
+        auto pte = gen_pte_encode(bus_addr_array[i], true);
         mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + i * sizeof(gen_pte_t));
     }
 
     // insert pte for overfetch protection page
-    auto pte = gen_pte_encode(scratch_gpu_addr_, caching_type, true);
+    auto pte = gen_pte_encode(scratch_bus_addr_, true);
     mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + (num_pages) * sizeof(gen_pte_t));
 
     uint64_t readback = mmio_->PostingRead64(pte_offset + (num_pages - 1) * sizeof(gen_pte_t));
 
     if (magma::kDebug) {
-        auto expected = gen_pte_encode(bus_addr_array[num_pages - 1], caching_type, true);
+        auto expected = gen_pte_encode(bus_addr_array[num_pages - 1], true);
         if (readback != expected) {
             DLOG("Mismatch posting read: 0x%0lx != 0x%0lx", readback, expected);
             DASSERT(false);
         }
     }
-
-// TODO(MA-36) - gtt - remove GFX_FLSH_CNTL_GEN6 because not documented for bdw
-#define GFX_FLSH_CNTL_GEN6 0x101008
-#define GFX_FLSH_CNTL_EN (1 << 0)
-    reg_io()->Write32(GFX_FLSH_CNTL_GEN6, GFX_FLSH_CNTL_EN);
-    reg_io()->mmio()->PostingRead32(GFX_FLSH_CNTL_GEN6);
 
     return true;
 }
