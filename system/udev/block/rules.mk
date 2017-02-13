@@ -8,11 +8,13 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/ramdisk.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/block.c \
+    $(LOCAL_DIR)/server.cpp \
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/sync ulib/block-client
+MODULE_STATIC_LIBS := ulib/ddk ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/c ulib/mxcpp ulib/mxtl
+MODULE_LIBS := ulib/c ulib/driver ulib/magenta ulib/mxcpp ulib/mxtl
 
 include make/module.mk
 

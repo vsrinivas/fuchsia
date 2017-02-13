@@ -8,6 +8,7 @@
 #error Internal use only. Do not include.
 #else
 DDK_PROTOCOL_DEF(BLOCK,          'pBLK', "block")
+DDK_PROTOCOL_DEF(BLOCK_CORE,     'pBKC', "block-core")
 DDK_PROTOCOL_DEF(CONSOLE,        'pCON', "console")
 DDK_PROTOCOL_DEF(DEVICE,         'pDEV', "device")
 DDK_PROTOCOL_DEF(DISPLAY,        'pDIS', "display")

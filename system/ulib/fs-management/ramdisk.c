@@ -21,6 +21,7 @@
 #include <fs-management/ramdisk.h>
 
 #define RAMCTL_PATH "/dev/misc/ramctl"
+#define BLOCK_EXTENSION "/block"
 
 int create_ramdisk(const char* ramdisk_name_requested, char* ramdisk_path_out,
                    uint64_t blk_size, uint64_t blk_count) {
@@ -29,7 +30,11 @@ int create_ramdisk(const char* ramdisk_name_requested, char* ramdisk_path_out,
     size_t requested_name_len = strlen(ramdisk_name_requested);
     // '16' = Max hex uint64 value.
     // '1' = Delimeters or NULL.
-    if (ramctl_path_len + 1 + requested_name_len + 1 + 16 + 1 >= PATH_MAX) {
+    if (ramctl_path_len + 1 +        // /dev/misc/ramctl/...
+        requested_name_len + 1 +     //  my-ramdisk-name-...
+        16 +                         //  (Process koid as hex)...
+        strlen(BLOCK_EXTENSION) + 1  //  /block (+ null terminator)
+        >= PATH_MAX) {
         return -1;
     }
 
@@ -48,6 +53,7 @@ int create_ramdisk(const char* ramdisk_name_requested, char* ramdisk_path_out,
     strcpy(ramdisk_path_out, RAMCTL_PATH);
     ramdisk_path_out[ramctl_path_len] = '/';
     strcpy(ramdisk_path_out + ramctl_path_len + 1, ramdisk_name);
+    strcat(ramdisk_path_out, BLOCK_EXTENSION);
 
     int fd = open(RAMCTL_PATH, O_RDWR);
     if (fd < 0) {

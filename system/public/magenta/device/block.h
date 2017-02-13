@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <assert.h>
 #include <limits.h>
 #include <magenta/device/ioctl.h>
 #include <magenta/device/ioctl-wrapper.h>
+#include <magenta/types.h>
 
 #define IOCTL_BLOCK_GET_SIZE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 1)
@@ -20,6 +22,16 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 5)
 #define IOCTL_BLOCK_RR_PART \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 6)
+#define IOCTL_BLOCK_GET_FIFOS \
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BLOCK, 7)
+#define IOCTL_BLOCK_ATTACH_VMO \
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_BLOCK, 8)
+#define IOCTL_BLOCK_ALLOC_TXN \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 9)
+#define IOCTL_BLOCK_FREE_TXN \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 10)
+
+// Block Core ioctls (specific to each block device):
 
 // ssize_t ioctl_block_get_size(int fd, uint64_t* out);
 IOCTL_WRAPPER_OUT(ioctl_block_get_size, IOCTL_BLOCK_GET_SIZE, uint64_t);
@@ -38,3 +50,101 @@ IOCTL_WRAPPER_VAROUT(ioctl_block_get_name, IOCTL_BLOCK_GET_NAME, char);
 
 // ssize_t ioctl_block_rr_part(int fd);
 IOCTL_WRAPPER(ioctl_block_rr_part, IOCTL_BLOCK_RR_PART);
+
+// TODO(smklein): Move these to a separate file
+// Block Device ioctls (shared between all block devices):
+
+// ssize_t ioctl_block_get_fifos(int fd, mx_handle_t* fifo_out);
+IOCTL_WRAPPER_OUT(ioctl_block_get_fifos, IOCTL_BLOCK_GET_FIFOS, mx_handle_t);
+
+typedef uint16_t vmoid_t;
+
+// ssize_t ioctl_block_attach_vmo(int fd, mx_handle_t* in, vmoid_t* out_vmoid);
+IOCTL_WRAPPER_INOUT(ioctl_block_attach_vmo, IOCTL_BLOCK_ATTACH_VMO, mx_handle_t, vmoid_t);
+
+#define MAX_TXN_MESSAGES 16
+#define MAX_TXN_COUNT    256
+
+typedef uint16_t txnid_t;
+
+// ssize_t ioctl_block_alloc_txn(int fd, txnid_t* out_txnid);
+IOCTL_WRAPPER_OUT(ioctl_block_alloc_txn, IOCTL_BLOCK_ALLOC_TXN, txnid_t);
+
+// ssize_t ioctl_block_free_txn(int fd, const size_t* in_txnid);
+IOCTL_WRAPPER_IN(ioctl_block_free_txn, IOCTL_BLOCK_FREE_TXN, txnid_t);
+
+// Multiple Block IO operations may be sent at once before a response is actually sent back.
+// Block IO ops may be sent concurrently to different vmoids, and they also may be sent
+// to different transactions at any point in time. Up to MAX_TXN_COUNT transactions may
+// be allocated at any point in time.
+//
+// "Transactions" are allocated with the "alloc_txn" ioctl. Allocating a transaction allows
+// MAX_TXN_MESSAGES to be buffered at once on a single txn before receiving a response.
+// Once a txn has been allocated, it can be re-used many times. It is recommended that
+// transactions are allocated on a "per-thread" basis, and only freed on thread teardown.
+//
+// The protocol to communicate with a single txn is as follows:
+// 1) SEND [N - 1] messages with an allocated txnid for any value of 1 <= N < MAX_TXN_MESSAGES.
+//    The BLOCKIO_TXN_END flag is not set for this step.
+// 2) SEND a final Nth message with the same txnid, but also the BLOCKIO_TXN_END flag.
+// 3) RECEIVE a single response from the Block IO server after all N requests have completed.
+//    This response is sent once all operations either complete or a single operation fails.
+//    At this point, step (1) may begin again without reallocating the txn.
+//
+// For BLOCKIO_READ and BLOCKIO_WRITE, N may be greater than 1.
+// Otherwise, N == 1 (skipping step (1) in the protocol above).
+//
+// Notes:
+// - txnids may operate on any number of vmoids at once.
+// - If additional requests are sent on the same txnid before step (3) has completed, then
+//   the additional request will not be processed. If BLOCKIO_TXN_END is set, an error will
+//   be returned. Otherwise, the request will be silently dropped.
+// - The only requests that receive responses are ones which have the BLOCKIO_TXN_END flag
+//   set. This is the case for both successful and erroneous requests. This property allows
+//   the Block IO server to send back a response on the FIFO without waiting.
+//
+// For example, the following is a valid sequence of transactions:
+//   -> (txnid = 1, vmoid = 1, OP = Write)
+//   -> (txnid = 1, vmoid = 2, OP = Write)
+//   -> (txnid = 2, vmoid = 3, OP = Write | Want Reply)
+//   <- Response sent to txnid = 2
+//   -> (txnid = 1, vmoid = 1, OP = Read | Want Reply)
+//   <- Response sent to txnid = 1
+//   -> (txnid = 3, vmoid = 1, OP = Write)
+//   -> (txnid = 3, vmoid = 1, OP = Read | Want Reply)
+//   <- Repsonse sent to txnid = 3
+
+#define BLOCKIO_READ      0x0001 // Reads from the Block device into the VMO
+#define BLOCKIO_WRITE     0x0002 // Writes to the Block device from the VMO
+#define BLOCKIO_SYNC      0x0003 // Unimplemented
+#define BLOCKIO_CLOSE_VMO 0x0004 // Detaches the VMO from the block device; closes the handle to it.
+#define BLOCKIO_OP_MASK   0x00FF
+
+#define BLOCKIO_TXN_END   0x0100 // Expects response after request (and all previous) have completed
+#define BLOCKIO_FLAG_MASK 0xFF00
+
+typedef struct {
+    txnid_t txnid;
+    vmoid_t vmoid;
+    uint16_t opcode;
+    uint16_t reserved0;
+    uint64_t length;
+    uint64_t vmo_offset;
+    uint64_t dev_offset;
+} block_fifo_request_t;
+
+typedef struct {
+    txnid_t txnid;
+    uint16_t reserved0;
+    mx_status_t status;
+    uint32_t count;     // The number of messages in the transaction completed by the block server.
+    uint32_t reserved1;
+    uint64_t reserved2;
+    uint64_t reserved3;
+} block_fifo_response_t;
+
+static_assert(sizeof(block_fifo_request_t) == sizeof(block_fifo_response_t),
+              "FIFO messages are the same size in both directions");
+
+#define BLOCK_FIFO_ESIZE (sizeof(block_fifo_request_t))
+#define BLOCK_FIFO_MAX_DEPTH (4096 / BLOCK_FIFO_ESIZE)

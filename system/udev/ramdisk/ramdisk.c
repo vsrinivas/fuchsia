@@ -31,6 +31,7 @@ typedef struct ramdisk_device {
     uint64_t blk_count;
     mx_handle_t vmo;
     uintptr_t mapped_addr;
+    block_callbacks_t* cb;
 } ramdisk_device_t;
 
 typedef struct ramctl_instance {
@@ -43,6 +44,67 @@ typedef struct ramctl_instance {
 static uint64_t sizebytes(ramdisk_device_t* rdev) {
     return rdev->blk_size * rdev->blk_count;
 }
+
+static mx_status_t constrain_args(ramdisk_device_t* ramdev,
+                                  mx_off_t* offset, mx_off_t* length) {
+    // Offset must be aligned
+    if (*offset % ramdev->blk_size != 0) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // Constrain to device capacity
+    *length = MIN(*length, sizebytes(ramdev) - *offset);
+
+    // Length must be aligned
+    if (*length % ramdev->blk_size != 0) {
+        return ERR_INVALID_ARGS;
+    }
+
+    return NO_ERROR;
+}
+
+static void ramdisk_fifo_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
+    ramdisk_device_t* rdev = get_ramdisk(dev);
+    rdev->cb = cb;
+}
+
+static void ramdisk_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
+                              uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    ramdisk_device_t* rdev = get_ramdisk(dev);
+    mx_off_t len = length;
+    mx_status_t status = constrain_args(rdev, &dev_offset, &len);
+    if (status != NO_ERROR) {
+        rdev->cb->complete(cookie, status);
+        return;
+    }
+
+    size_t actual;
+    // Reading from disk --> Write to file VMO
+    status = mx_vmo_write(vmo, (void*)rdev->mapped_addr + dev_offset, vmo_offset, len, &actual);
+    rdev->cb->complete(cookie, status);
+}
+
+static void ramdisk_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
+                               uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    ramdisk_device_t* rdev = get_ramdisk(dev);
+    mx_off_t len = length;
+    mx_status_t status = constrain_args(rdev, &dev_offset, &len);
+    if (status != NO_ERROR) {
+        rdev->cb->complete(cookie, status);
+        return;
+    }
+
+    size_t actual = 0;
+    // Writing to disk --> Read from file VMO
+    status = mx_vmo_read(vmo, (void*)rdev->mapped_addr + dev_offset, vmo_offset, len, &actual);
+    rdev->cb->complete(cookie, status);
+}
+
+static block_ops_t ramdisk_block_ops = {
+    .set_callbacks = ramdisk_fifo_set_callbacks,
+    .read = ramdisk_fifo_read,
+    .write = ramdisk_fifo_write,
+};
 
 // implement device protocol:
 
@@ -83,18 +145,9 @@ static ssize_t ramdisk_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
 static void ramdisk_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     ramdisk_device_t* ramdev = get_ramdisk(dev);
 
-    // Offset must be aligned
-    if (txn->offset % ramdev->blk_size != 0) {
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
-        return;
-    }
-
-    // Constrain to device capacity
-    txn->length = MIN(txn->length, sizebytes(ramdev) - txn->offset);
-
-    // Length must be aligned
-    if (txn->length % ramdev->blk_size != 0) {
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+    mx_status_t status = constrain_args(ramdev, &txn->offset, &txn->length);
+    if (status != NO_ERROR) {
+        txn->ops->complete(txn, status, 0);
         return;
     }
 
@@ -177,7 +230,8 @@ static ssize_t ramctl_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         }
 
         device_init(&ramdev->device, &_driver_ramdisk, config->name, &ramdisk_instance_proto);
-        ramdev->device.protocol_id = MX_PROTOCOL_BLOCK;
+        ramdev->device.protocol_id = MX_PROTOCOL_BLOCK_CORE;
+        ramdev->device.protocol_ops = &ramdisk_block_ops;
         if ((status = device_add(&ramdev->device, ramdisk_ctl_dev)) != NO_ERROR) {
             mx_vmar_unmap(mx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
             mx_handle_close(ramdev->vmo);

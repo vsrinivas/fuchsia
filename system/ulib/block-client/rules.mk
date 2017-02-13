@@ -6,22 +6,20 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/main.c \
-    $(LOCAL_DIR)/ramdisk.cpp \
+    $(LOCAL_DIR)/client.c \
 
-MODULE_NAME := ramdisk-test
-
-MODULE_STATIC_LIBS := ulib/block-client ulib/sync
+MODULE_STATIC_LIBS := \
+    ulib/fs \
+    ulib/sync \
 
 MODULE_LIBS := \
     ulib/c \
     ulib/magenta \
-    ulib/mxcpp \
     ulib/mxio \
-    ulib/mxtl \
-    ulib/unittest \
+
+MODULE_HEADER_DEPS := ulib/ddk
 
 include make/module.mk
