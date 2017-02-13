@@ -490,8 +490,9 @@ bool overmapping_test() {
               NO_ERROR, "");
 
     // Create a mapping, and try to map on top of it
-    ASSERT_EQ(mx_vmar_map(region[0], 0, vmo, 0, 2 * PAGE_SIZE,
-                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &map_addr[0]),
+    ASSERT_EQ(mx_vmar_map(region[0], PAGE_SIZE, vmo, 0, 2 * PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &map_addr[0]),
               NO_ERROR, "");
 
     // Attempt a full overmapping
