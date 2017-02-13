@@ -32,7 +32,7 @@ class App : public modular::Module {
   App(MotermParams params)
       : params_(std::move(params)),
         application_context_(
-            modular::ApplicationContext::CreateFromStartupInfo()),
+            app::ApplicationContext::CreateFromStartupInfo()),
         view_provider_service_(application_context_.get(),
                                [this](mozart::ViewContext view_context) {
                                  return MakeView(std::move(view_context));
@@ -54,8 +54,8 @@ class App : public modular::Module {
   void Initialize(
       fidl::InterfaceHandle<modular::Story> story_handle,
       fidl::InterfaceHandle<modular::Link> link_handle,
-      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
+      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services)
       override {
     fidl::InterfacePtr<modular::Story> story;
     story.Bind(std::move(story_handle));
@@ -88,7 +88,7 @@ class App : public modular::Module {
   }
 
   MotermParams params_;
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   mozart::ViewProviderService view_provider_service_;
   fidl::Binding<modular::Module> module_binding_;
   fidl::InterfaceRequest<ledger::Page> history_page_request_;

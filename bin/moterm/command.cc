@@ -11,7 +11,7 @@
 namespace moterm {
 namespace {
 
-mx_status_t AddRedirectedSocket(modular::ApplicationLaunchInfo* launch_info,
+mx_status_t AddRedirectedSocket(app::ApplicationLaunchInfo* launch_info,
                                 int startup_fd,
                                 mx::socket* out_socket) {
   mtl::StartupHandle startup_handle;
@@ -37,14 +37,14 @@ Command::~Command() {
   }
 }
 
-bool Command::Start(modular::ApplicationLauncher* launcher,
+bool Command::Start(app::ApplicationLauncher* launcher,
                     std::vector<std::string> command,
                     std::vector<mtl::StartupHandle> startup_handles,
                     ReceiveCallback receive_callback,
                     ftl::Closure termination_callback) {
   FTL_DCHECK(!command.empty());
 
-  auto launch_info = modular::ApplicationLaunchInfo::New();
+  auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = command[0];
   for (size_t i = 1; i < command.size(); ++i)
     launch_info->arguments.push_back(command[i]);

@@ -30,7 +30,7 @@ constexpr ftl::TimeDelta kBlinkInterval = ftl::TimeDelta::FromMilliseconds(500);
 MotermView::MotermView(
     mozart::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    modular::ApplicationContext* context,
+    app::ApplicationContext* context,
     History* history,
     const MotermParams& moterm_params)
     : BaseView(std::move(view_manager),

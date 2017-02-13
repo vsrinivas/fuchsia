@@ -31,7 +31,7 @@ class MotermView : public mozart::BaseView,
  public:
   MotermView(mozart::ViewManagerPtr view_manager,
              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-             modular::ApplicationContext* context,
+             app::ApplicationContext* context,
              History* history,
              const MotermParams& moterm_params);
   ~MotermView() override;
@@ -75,7 +75,7 @@ class MotermView : public mozart::BaseView,
   bool force_next_draw_;
 
   mozart::BufferProducer buffer_producer_;
-  modular::ApplicationContext* context_;
+  app::ApplicationContext* context_;
   mozart::SkiaFontLoader font_loader_;
   sk_sp<SkTypeface> regular_typeface_;
 

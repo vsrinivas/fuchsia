@@ -30,7 +30,7 @@ class Command : mtl::MessageLoopHandler {
   Command();
   ~Command();
 
-  bool Start(modular::ApplicationLauncher* launcher,
+  bool Start(app::ApplicationLauncher* launcher,
              std::vector<std::string> command,
              std::vector<mtl::StartupHandle> startup_handles,
              ReceiveCallback receive_callback,
@@ -49,7 +49,7 @@ class Command : mtl::MessageLoopHandler {
 
   mtl::MessageLoop::HandlerKey out_key_;
   mtl::MessageLoop::HandlerKey err_key_;
-  modular::ApplicationControllerPtr application_controller_;
+  app::ApplicationControllerPtr application_controller_;
 };
 
 }  // namespace moterm
