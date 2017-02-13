@@ -39,6 +39,7 @@ void FfmpegAudioDecoder::Flush() {
 int FfmpegAudioDecoder::Decode(const AVPacket& av_packet,
                                const ffmpeg::AvFramePtr& av_frame_ptr,
                                PayloadAllocator* allocator,
+                               const PacketPtr& original_input_packet,
                                bool* frame_decoded_out) {
   FTL_DCHECK(allocator);
   FTL_DCHECK(frame_decoded_out);

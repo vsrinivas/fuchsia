@@ -220,6 +220,7 @@ bool _isMovieUri(Uri uri) {
     case 'vp9':
     case 'mkv':
     case 'mov':
+    case 'webm':
       return true;
   }
 

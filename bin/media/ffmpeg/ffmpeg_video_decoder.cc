@@ -31,8 +31,11 @@ FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
   context()->thread_count = 2;
   context()->thread_type = FF_THREAD_FRAME;
 
-  // Precalculate the PTS rate needed for packets.
-  pts_rate_ = TimelineRate(context()->time_base.den, context()->time_base.num);
+  // Precalculate the PTS rate needed for packets, if possible.
+  if (context()->time_base.num != 0) {
+    pts_rate_ =
+        TimelineRate(context()->time_base.den, context()->time_base.num);
+  }
 
   // Determine the frame layout we will use.
   frame_buffer_size_ = LayoutFrame(
@@ -46,6 +49,7 @@ FfmpegVideoDecoder::~FfmpegVideoDecoder() {}
 int FfmpegVideoDecoder::Decode(const AVPacket& av_packet,
                                const ffmpeg::AvFramePtr& av_frame_ptr,
                                PayloadAllocator* allocator,
+                               const PacketPtr& original_input_packet,
                                bool* frame_decoded_out) {
   FTL_DCHECK(allocator);
   FTL_DCHECK(frame_decoded_out);
@@ -53,6 +57,10 @@ int FfmpegVideoDecoder::Decode(const AVPacket& av_packet,
   FTL_DCHECK(av_frame_ptr);
 
   FTL_DCHECK(av_packet.pts != AV_NOPTS_VALUE);
+
+  if (pts_rate_ == TimelineRate::Zero) {
+    pts_rate_ = original_input_packet->pts_rate();
+  }
 
   // Use the provided allocator (for allocations in AllocateBufferForAvFrame).
   allocator_ = allocator;

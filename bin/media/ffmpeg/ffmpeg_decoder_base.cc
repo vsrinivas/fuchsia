@@ -42,7 +42,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
 
   bool frame_decoded = false;
   int input_bytes_used =
-      Decode(av_packet_, av_frame_ptr_, allocator, &frame_decoded);
+      Decode(av_packet_, av_frame_ptr_, allocator, input, &frame_decoded);
   if (input_bytes_used < 0) {
     // Decode failed.
     return UnprepareInputPacket(input, output);

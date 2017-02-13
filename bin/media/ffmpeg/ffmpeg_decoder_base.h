@@ -72,6 +72,7 @@ class FfmpegDecoderBase : public Decoder {
   virtual int Decode(const AVPacket& av_packet,
                      const ffmpeg::AvFramePtr& av_frame_ptr,
                      PayloadAllocator* allocator,
+                     const PacketPtr& original_input_packet,
                      bool* frame_decoded_out) = 0;
 
   // Creates a Packet from av_frame.
