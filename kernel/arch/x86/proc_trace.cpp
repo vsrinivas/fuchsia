@@ -141,8 +141,10 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
     DEBUG_ASSERT(!active);
 
     // When changing modes make sure all PT MSRs are in the init state.
-    // We don't want a value to appear in the xsave buffer and have xrstor
+    // We don't want a value to appear in the xsave buffer and have xrstors
     // #gp because XCOMP_BV has the PT bit set that's not set in XSS.
+    // We still need to do this, even with MG-892, when transitioning
+    // from IPT_TRACE_CPUS to IPT_TRACE_THREADS.
     write_msr(IA32_RTIT_CTL, 0);
     write_msr(IA32_RTIT_STATUS, 0);
     write_msr(IA32_RTIT_OUTPUT_BASE, 0);
@@ -167,6 +169,18 @@ status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
         return MX_ERR_BAD_STATE;
     if (ipt_cpu_state)
         return MX_ERR_BAD_STATE;
+    // Changing to the same mode is a no-op.
+    // This check is still done after the above checks. E.g., it doesn't make
+    // sense to call this function if tracing is active.
+    if (mode == trace_mode)
+        return MX_OK;
+
+    // MG-892: We don't support changing the mode from IPT_TRACE_THREADS to
+    // IPT_TRACE_CPUS: We can't turn off XSS.PT until we're sure all threads
+    // have no PT state, and that's too tricky to do right now. Instead,
+    // require the developer to reboot (the default is IPT_TRACE_CPUS).
+    if (trace_mode == IPT_TRACE_THREADS && mode == IPT_TRACE_CPUS)
+        return MX_ERR_NOT_SUPPORTED;
 
     mp_sync_exec(MP_CPU_ALL, x86_ipt_set_mode_task,
                  reinterpret_cast<void*>(static_cast<uintptr_t>(mode)));
