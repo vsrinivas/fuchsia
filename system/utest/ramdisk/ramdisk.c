@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include <magenta/device/block.h>
+#include <magenta/device/ramdisk.h>
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
@@ -27,12 +28,12 @@ int get_ramdisk(const char* name, uint64_t blk_size, uint64_t blk_count) {
     config.blk_size = blk_size;
     config.blk_count = blk_count;
     strcpy(config.name, name);
-    ssize_t r = ioctl_block_ramdisk_config(fd, &config);
+    ssize_t r = ioctl_ramdisk_config(fd, &config);
     ASSERT_EQ(r, NO_ERROR, "Failed to create ramdisk");
     ASSERT_EQ(close(fd), 0, "Failed to close ramctl");
 
     // TODO(smklein): This "sleep" prevents a bug from triggering:
-    // - 'ioctl_block_ramdisk_config' --> 'device_add' --> 'open' *should* work, but sometimes
+    // - 'ioctl_ramdisk_config' --> 'device_add' --> 'open' *should* work, but sometimes
     //   fails, as the ramdisk does not exist in the FS heirarchy yet. (MG-468)
     usleep(1000);
 
@@ -47,7 +48,7 @@ int get_ramdisk(const char* name, uint64_t blk_size, uint64_t blk_count) {
 
     // Although we are unlinking the ramdisk, it should still be accessible by the file descriptor
     // we opened earlier. Once that fd is closed, the ramdisk should be released.
-    ASSERT_GE(ioctl_block_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
+    ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     return fd;
 }
 

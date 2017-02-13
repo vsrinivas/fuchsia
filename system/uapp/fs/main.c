@@ -15,6 +15,7 @@
 
 #include <magenta/compiler.h>
 #include <magenta/device/block.h>
+#include <magenta/device/ramdisk.h>
 #include <fs-management/mount.h>
 
 // Path to mounted filesystem currently being tested
@@ -99,7 +100,7 @@ int mount_minfs(void) {
     config.blk_size = 512;
     config.blk_count = (1 << 20);
     strcpy(config.name, RAMDISK_NAME);
-    ssize_t r = ioctl_block_ramdisk_config(fd, &config);
+    ssize_t r = ioctl_ramdisk_config(fd, &config);
     if (r != NO_ERROR) {
         fprintf(stderr, "Could not configure ramdev\n");
         return -1;
@@ -143,7 +144,7 @@ int unmount_minfs(void) {
         fprintf(stderr, "Could not open ramdisk\n");
         return -1;
     }
-    ssize_t r = ioctl_block_ramdisk_unlink(fd);
+    ssize_t r = ioctl_ramdisk_unlink(fd);
     if (r != NO_ERROR) {
         fprintf(stderr, "Could not shut off ramdisk\n");
         return -1;

@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/block.h>
+#include <ddk/protocol/ramdisk.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -49,7 +50,7 @@ static ssize_t ramdisk_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
     ramdisk_device_t* ramdev = get_ramdisk(dev);
 
     switch (op) {
-    case IOCTL_BLOCK_RAMDISK_UNLINK: {
+    case IOCTL_RAMDISK_UNLINK: {
         device_remove(dev);
         return NO_ERROR;
     }
@@ -145,7 +146,7 @@ static mx_protocol_device_t ramdisk_instance_proto = {
 static ssize_t ramctl_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
                             size_t cmdlen, void* reply, size_t max) {
     switch (op) {
-    case IOCTL_BLOCK_RAMDISK_CONFIG: {
+    case IOCTL_RAMDISK_CONFIG: {
         if (cmdlen != sizeof(ramdisk_ioctl_config_t)) {
             return ERR_INVALID_ARGS;
         }

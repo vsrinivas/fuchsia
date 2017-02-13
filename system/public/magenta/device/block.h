@@ -20,10 +20,6 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 5)
 #define IOCTL_BLOCK_RR_PART \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 6)
-#define IOCTL_BLOCK_RAMDISK_CONFIG \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 7)
-#define IOCTL_BLOCK_RAMDISK_UNLINK \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 8)
 
 // ssize_t ioctl_block_get_size(int fd, uint64_t* out);
 IOCTL_WRAPPER_OUT(ioctl_block_get_size, IOCTL_BLOCK_GET_SIZE, uint64_t);
@@ -42,15 +38,3 @@ IOCTL_WRAPPER_VAROUT(ioctl_block_get_name, IOCTL_BLOCK_GET_NAME, char);
 
 // ssize_t ioctl_block_rr_part(int fd);
 IOCTL_WRAPPER(ioctl_block_rr_part, IOCTL_BLOCK_RR_PART);
-
-typedef struct ramdisk_ioctl_config {
-    uint64_t blk_size;
-    uint64_t blk_count;
-    char name[NAME_MAX];
-} ramdisk_ioctl_config_t;
-
-// ssize_t ioctl_block_ramdisk_config(int fd, const ramdisk_ioctl_config_t* in);
-IOCTL_WRAPPER_IN(ioctl_block_ramdisk_config, IOCTL_BLOCK_RAMDISK_CONFIG, ramdisk_ioctl_config_t);
-
-// ssize_t ioctl_block_ramdisk_unlink(int fd);
-IOCTL_WRAPPER(ioctl_block_ramdisk_unlink, IOCTL_BLOCK_RAMDISK_UNLINK);
