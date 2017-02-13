@@ -47,6 +47,8 @@ public:
 
     enum How { NORMAL, FAULT, HANG };
 
+    static constexpr bool kUseGlobalGtt = false;
+
     void SubmitCommandBuffer(How how)
     {
         ASSERT_NE(connection_, nullptr);
@@ -97,14 +99,16 @@ public:
         memset(vaddr, 0, size);
 
         // store dword
-        reinterpret_cast<uint32_t*>(vaddr)[0] = (0x20 << 23) | (4 - 2) | (1 << 22); // gtt
+        reinterpret_cast<uint32_t*>(vaddr)[0] =
+            (0x20 << 23) | (4 - 2) | (kUseGlobalGtt ? 1 << 22 : 0);
         reinterpret_cast<uint32_t*>(vaddr)[1] =
             0x1000000; // gpu address - overwritten by relocation (or not)
         reinterpret_cast<uint32_t*>(vaddr)[2] = 0;
         reinterpret_cast<uint32_t*>(vaddr)[3] = kValue;
 
         // wait for semaphore - proceed if dword at given address > dword given
-        reinterpret_cast<uint32_t*>(vaddr)[4] = (0x1C << 23) | (4 - 2) | (1 << 22); // gtt
+        reinterpret_cast<uint32_t*>(vaddr)[4] =
+            (0x1C << 23) | (4 - 2) | (kUseGlobalGtt ? 1 << 22 : 0);
         reinterpret_cast<uint32_t*>(vaddr)[5] = hang ? ~0 : 0;
         reinterpret_cast<uint32_t*>(vaddr)[6] =
             0x1000000; // gpu address - overwritten by relocation (or not)
