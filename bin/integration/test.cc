@@ -66,7 +66,7 @@ void Sleep() {
 MaxwellTestBase::MaxwellTestBase()
     : test_environment_host_(root_environment),
       test_environment_host_binding_(&test_environment_host_) {
-  fidl::InterfaceHandle<modular::ApplicationEnvironmentHost>
+  fidl::InterfaceHandle<app::ApplicationEnvironmentHost>
       test_environment_host_handle;
   test_environment_host_binding_.Bind(&test_environment_host_handle);
   root_environment->CreateNestedEnvironment(
@@ -77,17 +77,17 @@ MaxwellTestBase::MaxwellTestBase()
       std::make_unique<maxwell::AgentLauncher>(test_environment_.get());
 }
 
-modular::ServiceProviderPtr MaxwellTestBase::StartServiceProvider(
+app::ServiceProviderPtr MaxwellTestBase::StartServiceProvider(
     const std::string& url) {
-  modular::ServiceProviderPtr services;
-  auto launch_info = modular::ApplicationLaunchInfo::New();
+  app::ServiceProviderPtr services;
+  auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
   launch_info->services = services.NewRequest();
   test_launcher_->CreateApplication(std::move(launch_info), NULL);
   return services;
 }
 
-modular::ApplicationEnvironment* root_environment;
+app::ApplicationEnvironment* root_environment;
 
 int main(int argc, char** argv) {
   mtl::MessageLoop loop;

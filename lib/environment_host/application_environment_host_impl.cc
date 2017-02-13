@@ -10,17 +10,17 @@
 namespace maxwell {
 
 ApplicationEnvironmentHostImpl::ApplicationEnvironmentHostImpl(
-    modular::ApplicationEnvironment* parent_env) {
-  AddService<modular::ApplicationLoader>(
-      [parent_env](fidl::InterfaceRequest<modular::ApplicationLoader> request) {
-        modular::ServiceProviderPtr root_services;
+    app::ApplicationEnvironment* parent_env) {
+  AddService<app::ApplicationLoader>(
+      [parent_env](fidl::InterfaceRequest<app::ApplicationLoader> request) {
+        app::ServiceProviderPtr root_services;
         parent_env->GetServices(root_services.NewRequest());
-        modular::ConnectToService(root_services.get(), std::move(request));
+        app::ConnectToService(root_services.get(), std::move(request));
       });
 }
 
 void ApplicationEnvironmentHostImpl::GetApplicationEnvironmentServices(
-    fidl::InterfaceRequest<modular::ServiceProvider> environment_services) {
+    fidl::InterfaceRequest<app::ServiceProvider> environment_services) {
   AddBinding(std::move(environment_services));
 }
 

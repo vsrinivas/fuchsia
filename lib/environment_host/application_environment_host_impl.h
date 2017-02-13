@@ -12,12 +12,12 @@ namespace maxwell {
 
 // Environment surfacing only explicitly given environment services.
 class ApplicationEnvironmentHostImpl
-    : public modular::ApplicationEnvironmentHost,
-      public modular::ServiceProviderImpl {
+    : public app::ApplicationEnvironmentHost,
+      public app::ServiceProviderImpl {
  public:
-  ApplicationEnvironmentHostImpl(modular::ApplicationEnvironment* parent_env);
+  ApplicationEnvironmentHostImpl(app::ApplicationEnvironment* parent_env);
   void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<modular::ServiceProvider> environment_services)
+      fidl::InterfaceRequest<app::ServiceProvider> environment_services)
       override;
 };
 

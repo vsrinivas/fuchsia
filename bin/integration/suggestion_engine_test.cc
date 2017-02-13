@@ -114,7 +114,7 @@ class NProposals : public Proposinator, public maxwell::ContextSubscriberLink {
 class SuggestionEngineTest : public ContextEngineTestBase {
  public:
   SuggestionEngineTest() : story_provider_binding_(&story_provider_) {
-    modular::ServiceProviderPtr suggestion_services =
+    app::ServiceProviderPtr suggestion_services =
         StartServiceProvider("file:///system/apps/suggestion_engine");
     suggestion_engine_ = modular::ConnectToService<maxwell::SuggestionEngine>(
         suggestion_services.get());

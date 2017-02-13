@@ -11,7 +11,7 @@ TEST_F(MaxwellTestBase, Launcher) {
   auto launcher_services =
       StartServiceProvider("file:///system/apps/maxwell_launcher");
   maxwell::LauncherPtr launcher =
-      modular::ConnectToService<maxwell::Launcher>(launcher_services.get());
+      app::ConnectToService<maxwell::Launcher>(launcher_services.get());
   fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
   fidl::InterfaceHandle<modular::FocusController> focus_controller_handle;
 
@@ -26,7 +26,7 @@ TEST_F(MaxwellTestBase, Launcher) {
                        std::move(focus_controller_handle));
 
   maxwell::SuggestionProviderPtr client =
-      modular::ConnectToService<maxwell::SuggestionProvider>(
+      app::ConnectToService<maxwell::SuggestionProvider>(
           launcher_services.get());
   TestSuggestionListener listener;
   fidl::InterfaceHandle<maxwell::SuggestionListener> listener_handle;

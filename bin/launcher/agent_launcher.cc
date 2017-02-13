@@ -13,19 +13,19 @@ constexpr char kEnvironmentLabel[] = "agent";
 
 void AgentLauncher::StartAgent(
     const std::string& url,
-    std::unique_ptr<modular::ApplicationEnvironmentHost> env_host) {
-  fidl::InterfaceHandle<modular::ApplicationEnvironmentHost> agent_host_handle =
+    std::unique_ptr<app::ApplicationEnvironmentHost> env_host) {
+  fidl::InterfaceHandle<app::ApplicationEnvironmentHost> agent_host_handle =
       agent_host_bindings_.AddBinding(std::move(env_host));
 
-  modular::ApplicationEnvironmentPtr agent_env;
+  app::ApplicationEnvironmentPtr agent_env;
   environment_->CreateNestedEnvironment(std::move(agent_host_handle),
                                         agent_env.NewRequest(), NULL,
                                         kEnvironmentLabel);
 
-  modular::ApplicationLauncherPtr agent_launcher;
+  app::ApplicationLauncherPtr agent_launcher;
   agent_env->GetApplicationLauncher(agent_launcher.NewRequest());
 
-  auto launch_info = modular::ApplicationLaunchInfo::New();
+  auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
   agent_launcher->CreateApplication(std::move(launch_info), NULL);
 }

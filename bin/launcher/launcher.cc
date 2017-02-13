@@ -63,9 +63,9 @@ class LauncherApp : public maxwell::Launcher {
   }
 
  private:
-  modular::ServiceProviderPtr StartServiceProvider(const std::string& url) {
-    modular::ServiceProviderPtr services;
-    auto launch_info = modular::ApplicationLaunchInfo::New();
+  app::ServiceProviderPtr StartServiceProvider(const std::string& url) {
+    app::ServiceProviderPtr services;
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = url;
     launch_info->services = services.NewRequest();
     app_context_->launcher()->CreateApplication(std::move(launch_info), NULL);
@@ -105,9 +105,9 @@ class LauncherApp : public maxwell::Launcher {
 
   fidl::BindingSet<maxwell::Launcher> launcher_bindings_;
 
-  modular::ServiceProviderPtr context_services_;
+  app::ServiceProviderPtr context_services_;
   maxwell::ContextEnginePtr context_engine_;
-  modular::ServiceProviderPtr suggestion_services_;
+  app::ServiceProviderPtr suggestion_services_;
   maxwell::SuggestionEnginePtr suggestion_engine_;
 
   maxwell::AgentLauncher agent_launcher_;

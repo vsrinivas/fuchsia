@@ -12,17 +12,17 @@ namespace maxwell {
 
 class AgentLauncher {
  public:
-  AgentLauncher(modular::ApplicationEnvironment* environment)
+  AgentLauncher(app::ApplicationEnvironment* environment)
       : environment_(environment) {}
   void StartAgent(
       const std::string& url,
-      std::unique_ptr<modular::ApplicationEnvironmentHost> env_host);
+      std::unique_ptr<app::ApplicationEnvironmentHost> env_host);
 
  private:
-  modular::ApplicationEnvironment* environment_;
+  app::ApplicationEnvironment* environment_;
 
-  fidl::BindingSet<modular::ApplicationEnvironmentHost,
-                   std::unique_ptr<modular::ApplicationEnvironmentHost>>
+  fidl::BindingSet<app::ApplicationEnvironmentHost,
+                   std::unique_ptr<app::ApplicationEnvironmentHost>>
       agent_host_bindings_;
 };
 

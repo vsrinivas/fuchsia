@@ -91,7 +91,7 @@ constexpr auto kAsyncCheckMax = ftl::TimeDelta::FromSeconds(5);
       (expected) == (actual),      \
       #actual " == " #expected "; last known value: " << (actual))
 
-extern modular::ApplicationEnvironment* root_environment;
+extern app::ApplicationEnvironment* root_environment;
 
 class MaxwellTestBase : public ::testing::Test {
  protected:
@@ -100,23 +100,23 @@ class MaxwellTestBase : public ::testing::Test {
 
   void StartAgent(
       const std::string& url,
-      std::unique_ptr<modular::ApplicationEnvironmentHost> env_host) {
+      std::unique_ptr<app::ApplicationEnvironmentHost> env_host) {
     agent_launcher_->StartAgent(url, std::move(env_host));
   }
 
-  modular::ServiceProviderPtr StartServiceProvider(const std::string& url);
+  app::ServiceProviderPtr StartServiceProvider(const std::string& url);
 
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToService(const std::string& url) {
     auto services = StartServiceProvider(url);
-    return modular::ConnectToService<Interface>(services.get());
+    return app::ConnectToService<Interface>(services.get());
   }
 
  private:
   maxwell::ApplicationEnvironmentHostImpl test_environment_host_;
-  fidl::Binding<modular::ApplicationEnvironmentHost>
+  fidl::Binding<app::ApplicationEnvironmentHost>
       test_environment_host_binding_;
-  modular::ApplicationEnvironmentPtr test_environment_;
-  modular::ApplicationLauncherPtr test_launcher_;
+  app::ApplicationEnvironmentPtr test_environment_;
+  app::ApplicationLauncherPtr test_launcher_;
   std::unique_ptr<maxwell::AgentLauncher> agent_launcher_;
 };

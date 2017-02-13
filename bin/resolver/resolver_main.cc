@@ -22,10 +22,10 @@ using namespace resolver;
 class ResolverApp {
  public:
   ResolverApp()
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     // TODO(azani): Switch to using environment services.
-    auto launch_info = modular::ApplicationLaunchInfo::New();
-    modular::ServiceProviderPtr child_services;
+    auto launch_info = app::ApplicationLaunchInfo::New();
+    app::ServiceProviderPtr child_services;
     component::ComponentIndexPtr component_index;
 
     launch_info->url = "file:///system/apps/component_manager";
@@ -34,7 +34,7 @@ class ResolverApp {
     context_->launcher()->CreateApplication(
         std::move(launch_info), component_index_controller_.NewRequest());
 
-    modular::ConnectToService(child_services.get(),
+    app::ConnectToService(child_services.get(),
                               fidl::GetProxy(&component_index));
 
     std::unique_ptr<ResolverImpl> resolver_impl(
@@ -49,9 +49,9 @@ class ResolverApp {
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   std::unique_ptr<ResolverImpl> resolver_impl_;
-  modular::ApplicationControllerPtr component_index_controller_;
+  app::ApplicationControllerPtr component_index_controller_;
   fidl::BindingSet<Resolver> resolver_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ResolverApp);

@@ -18,20 +18,20 @@ namespace {
 class ResolverTest {
  public:
   ResolverTest()
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {}
+      : context_(app::ApplicationContext::CreateFromStartupInfo()) {}
 
   void RunTests() {
     fidl::SynchronousInterfacePtr<resolver::Resolver> resolver;
-    modular::ServiceProviderPtr child_services;
+    app::ServiceProviderPtr child_services;
 
-    auto launch_info = modular::ApplicationLaunchInfo::New();
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "file:///system/apps/resolver_main";
     launch_info->services = child_services.NewRequest();
 
     context_->launcher()->CreateApplication(std::move(launch_info),
                                             resolver_controller_.NewRequest());
 
-    modular::ConnectToService(child_services.get(),
+    app::ConnectToService(child_services.get(),
                               fidl::GetSynchronousProxy(&resolver));
 
     FTL_CHECK(resolver.is_bound());
@@ -47,8 +47,8 @@ class ResolverTest {
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> context_;
-  modular::ApplicationControllerPtr resolver_controller_;
+  std::unique_ptr<app::ApplicationContext> context_;
+  app::ApplicationControllerPtr resolver_controller_;
 };
 
 }  // namespace
