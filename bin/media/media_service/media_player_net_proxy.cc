@@ -58,7 +58,7 @@ MediaPlayerNetProxy::MediaPlayerNetProxy(
   message_relay_.SetChannel(std::move(local));
 
   // Pass the remote end to NetConnector.
-  modular::ServiceProviderPtr device_service_provider;
+  app::ServiceProviderPtr device_service_provider;
   connector->GetDeviceServiceProvider(device_name,
                                       device_service_provider.NewRequest());
 
