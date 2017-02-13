@@ -8,6 +8,7 @@
 #include <string>
 
 #include "apps/modular/services/component/component_context.fidl.h"
+#include "apps/modular/src/component/message_queue_manager.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/ftl/macros.h"
@@ -18,11 +19,16 @@ class AgentRunner;
 
 // This class implements the ComponentContext interface, which is provided to
 // modules and agents.
+// TODO: Investigate using a ComponentContextFactory that'll help initialize
+// ComponentContextImpls with the AgentRunner and MessageQueueManager.
 class ComponentContextImpl : public ComponentContext {
  public:
-  explicit ComponentContextImpl(AgentRunner* agent_runner,
+  explicit ComponentContextImpl(MessageQueueManager* msg_queue_manager,
+                                AgentRunner* agent_runner,
                                 const std::string& component_id);
   ~ComponentContextImpl();
+
+  const std::string& component_id() { return component_id_; }
 
  private:
   void ConnectToAgent(
@@ -37,6 +43,7 @@ class ComponentContextImpl : public ComponentContext {
   void GetMessageSender(const fidl::String& queue_token,
                         fidl::InterfaceRequest<MessageSender> request) override;
 
+  MessageQueueManager* const msg_queue_manager_;
   AgentRunner* const agent_runner_;
   const std::string component_id_;
 

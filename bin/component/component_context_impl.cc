@@ -9,9 +9,13 @@
 
 namespace modular {
 
-ComponentContextImpl::ComponentContextImpl(AgentRunner* const agent_runner,
-                                           const std::string& component_id)
-    : agent_runner_(agent_runner), component_id_(component_id) {
+ComponentContextImpl::ComponentContextImpl(
+    MessageQueueManager* const msg_queue_manager,
+    AgentRunner* const agent_runner,
+    const std::string& component_id)
+    : msg_queue_manager_(msg_queue_manager),
+      agent_runner_(agent_runner),
+      component_id_(component_id) {
   FTL_DCHECK(agent_runner);
 }
 
@@ -21,7 +25,6 @@ void ComponentContextImpl::ConnectToAgent(
     const fidl::String& url,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
-  // TODO: Plumb requestor url.
   agent_runner_->ConnectToAgent(component_id_, url,
                                 std::move(incoming_services_request),
                                 std::move(agent_controller_request));
@@ -30,20 +33,17 @@ void ComponentContextImpl::ConnectToAgent(
 void ComponentContextImpl::ObtainMessageQueue(
     const fidl::String& name,
     fidl::InterfaceRequest<MessageQueue> request) {
-  // Unimplemented.
-  FTL_LOG(INFO) << "ComponentContextImpl::ObtainMessageQueue";
+  msg_queue_manager_->ObtainMessageQueue(component_id_, name, std::move(request));
 }
 
 void ComponentContextImpl::DeleteMessageQueue(const fidl::String& name) {
-  // Unimplemented.
-  FTL_LOG(INFO) << "ComponentContextImpl::DeleteMessageQueue";
+  msg_queue_manager_->DeleteMessageQueue(component_id_, name);
 }
 
 void ComponentContextImpl::GetMessageSender(
     const fidl::String& queue_token,
     fidl::InterfaceRequest<MessageSender> request) {
-  // Unimplemented.
-  FTL_LOG(INFO) << "ComponentContextImpl::GetMessageSender";
+  msg_queue_manager_->GetMessageSender(queue_token, std::move(request));
 }
 
 }  // namespace modular

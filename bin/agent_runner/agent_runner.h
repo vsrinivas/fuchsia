@@ -18,12 +18,14 @@
 namespace modular {
 
 class AgentContextImpl;
+class MessageQueueManager;
 
 // This class provides a way for components to connect to agents and manages the
 // life time of a running agent.
 class AgentRunner {
  public:
-  explicit AgentRunner(app::ApplicationLauncher* application_launcher);
+  AgentRunner(app::ApplicationLauncher* application_launcher,
+              MessageQueueManager* msg_queue_manager);
   ~AgentRunner();
 
   // Connects to an agent (and starts it up if it doesn't exist). Called via
@@ -43,6 +45,7 @@ class AgentRunner {
       running_agents_;
 
   app::ApplicationLauncher* const application_launcher_;
+  MessageQueueManager* const msg_queue_manager_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
 };

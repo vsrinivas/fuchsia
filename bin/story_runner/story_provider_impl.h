@@ -16,10 +16,11 @@
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
+#include "apps/modular/src/component/message_queue_manager.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/ftl/macros.h"
@@ -37,6 +38,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   StoryProviderImpl(app::ApplicationEnvironmentPtr environment,
                     fidl::InterfaceHandle<ledger::Ledger> ledger,
                     ledger::LedgerRepositoryPtr ledger_repository,
+                    MessageQueueManager* msg_queue_manager,
                     AgentRunner* agent_runner);
 
   ~StoryProviderImpl() override;
@@ -59,6 +61,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   }
 
   app::ApplicationLauncher* launcher() { return launcher_.get(); }
+  MessageQueueManager* message_queue_manager() { return msg_queue_manager_; }
   AgentRunner* agent_runner() { return agent_runner_; }
 
   // Used by StoryImpl.
@@ -149,6 +152,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   std::pair<std::string, DeleteStoryCall*> pending_deletion_;
 
   ledger::LedgerRepositoryPtr ledger_repository_;
+  MessageQueueManager* const msg_queue_manager_;
   AgentRunner* const agent_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);

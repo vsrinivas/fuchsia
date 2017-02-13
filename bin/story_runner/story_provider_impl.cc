@@ -546,11 +546,13 @@ StoryProviderImpl::StoryProviderImpl(
     app::ApplicationEnvironmentPtr environment,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
     ledger::LedgerRepositoryPtr ledger_repository,
+    MessageQueueManager* msg_queue_manager,
     AgentRunner* agent_runner)
     : environment_(std::move(environment)),
       storage_(new Storage),
       page_watcher_binding_(this),
       ledger_repository_(std::move(ledger_repository)),
+      msg_queue_manager_(msg_queue_manager),
       agent_runner_(agent_runner) {
   environment_->GetApplicationLauncher(launcher_.NewRequest());
 

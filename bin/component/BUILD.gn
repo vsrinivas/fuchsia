@@ -6,6 +6,8 @@ source_set("component_context_impl") {
   sources = [
     "component_context_impl.cc",
     "component_context_impl.h",
+    "message_queue_manager.cc",
+    "message_queue_manager.h",
   ]
 
   deps = [

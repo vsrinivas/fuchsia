@@ -30,6 +30,7 @@ class StoryConnection : public Story {
   StoryConnection(StoryImpl* story_impl,
                   const std::string& module_url,
                   ModuleControllerImpl* module_controller_impl,
+                  MessageQueueManager* msg_queue_manager,
                   AgentRunner* agent_runner,
                   fidl::InterfaceRequest<Story> story);
 
