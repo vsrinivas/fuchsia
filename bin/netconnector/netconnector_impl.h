@@ -31,7 +31,7 @@ class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
 
   ~NetConnectorImpl();
 
-  modular::ServiceProvider* responding_services() {
+  app::ServiceProvider* responding_services() {
     return responding_service_host_.services();
   }
 
@@ -46,20 +46,20 @@ class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
 
   // NetConnector implementation.
   void GetDeviceServiceProvider(const fidl::String& device_name,
-                                fidl::InterfaceRequest<modular::ServiceProvider>
+                                fidl::InterfaceRequest<app::ServiceProvider>
                                     service_provider) override;
 
   // NetConnectorAdmin implementation.
   void SetHostName(const fidl::String& host_name) override;
 
   void RegisterService(const fidl::String& name,
-                       modular::ApplicationLaunchInfoPtr launch_info) override;
+                       app::ApplicationLaunchInfoPtr launch_info) override;
 
   void RegisterDevice(const fidl::String& name,
                       const fidl::String& address) override;
 
   void RegisterServiceProvider(const fidl::String& name,
-                               fidl::InterfaceHandle<modular::ServiceProvider>
+                               fidl::InterfaceHandle<app::ServiceProvider>
                                    service_provider) override;
 
  private:
@@ -71,7 +71,7 @@ class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
   void AddServiceAgent(std::unique_ptr<ServiceAgent> service_agent);
 
   NetConnectorParams* params_;
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   fidl::BindingSet<NetConnector> bindings_;
   fidl::BindingSet<NetConnectorAdmin> admin_bindings_;
   Listener listener_;

@@ -16,27 +16,27 @@ namespace netconnector {
 // Provides services based on service registrations.
 class RespondingServiceHost {
  public:
-  RespondingServiceHost(const modular::ApplicationEnvironmentPtr& environment);
+  RespondingServiceHost(const app::ApplicationEnvironmentPtr& environment);
 
   ~RespondingServiceHost();
 
   // Registers a singleton service.
   void RegisterSingleton(const std::string& service_name,
-                         modular::ApplicationLaunchInfoPtr launch_info);
+                         app::ApplicationLaunchInfoPtr launch_info);
 
   // Registers a provider for a singleton service.
   void RegisterProvider(const std::string& service_name,
-                        fidl::InterfaceHandle<modular::ServiceProvider> handle);
+                        fidl::InterfaceHandle<app::ServiceProvider> handle);
 
-  modular::ServiceProvider* services() {
-    return static_cast<modular::ServiceProvider*>(&service_provider_);
+  app::ServiceProvider* services() {
+    return static_cast<app::ServiceProvider*>(&service_provider_);
   }
 
  private:
-  std::unordered_map<std::string, modular::ServiceProviderPtr>
+  std::unordered_map<std::string, app::ServiceProviderPtr>
       service_providers_by_name_;
-  modular::ServiceProviderImpl service_provider_;
-  modular::ApplicationLauncherPtr launcher_;
+  app::ServiceProviderImpl service_provider_;
+  app::ApplicationLauncherPtr launcher_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RespondingServiceHost);
 };

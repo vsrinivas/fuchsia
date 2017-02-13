@@ -14,7 +14,7 @@ namespace netconnector {
 NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     : params_(params),
       application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()),
+          app::ApplicationContext::CreateFromStartupInfo()),
       // TODO(dalesat): Create a new RespondingServiceHost per user.
       // Requestors should provide user credentials allowing a ServiceAgent to
       // obtain a user environment. A RespondingServiceHost should be created
@@ -91,7 +91,7 @@ void NetConnectorImpl::ReleaseServiceAgent(ServiceAgent* service_agent) {
 
 void NetConnectorImpl::GetDeviceServiceProvider(
     const fidl::String& device_name,
-    fidl::InterfaceRequest<modular::ServiceProvider> request) {
+    fidl::InterfaceRequest<app::ServiceProvider> request) {
   auto iter = params_->devices().find(device_name);
   if (iter == params_->devices().end()) {
     FTL_LOG(ERROR) << "Unrecognized device name " << device_name;
@@ -110,7 +110,7 @@ void NetConnectorImpl::SetHostName(const fidl::String& host_name) {
 
 void NetConnectorImpl::RegisterService(
     const fidl::String& name,
-    modular::ApplicationLaunchInfoPtr launch_info) {
+    app::ApplicationLaunchInfoPtr launch_info) {
   FTL_LOG(INFO) << "Service '" << name << "' registered.";
   responding_service_host_.RegisterSingleton(name, std::move(launch_info));
 }
@@ -123,7 +123,7 @@ void NetConnectorImpl::RegisterDevice(const fidl::String& name,
 
 void NetConnectorImpl::RegisterServiceProvider(
     const fidl::String& name,
-    fidl::InterfaceHandle<modular::ServiceProvider> handle) {
+    fidl::InterfaceHandle<app::ServiceProvider> handle) {
   FTL_LOG(INFO) << "Service '" << name << "' provider registered.";
   responding_service_host_.RegisterProvider(name, std::move(handle));
 }

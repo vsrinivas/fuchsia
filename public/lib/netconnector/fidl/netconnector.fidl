@@ -11,5 +11,5 @@ import "application/services/service_provider.fidl";
 interface NetConnector {
   // Gets a provider for services on the specified device.
   GetDeviceServiceProvider(string device_name,
-                           modular.ServiceProvider& service_provider);
+                           app.ServiceProvider& service_provider);
 };

@@ -61,7 +61,7 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
           return;
         }
 
-        auto launch_info = modular::ApplicationLaunchInfo::New();
+        auto launch_info = app::ApplicationLaunchInfo::New();
         launch_info->url = split[1].ToString();
         RegisterService(split[0].ToString(), std::move(launch_info));
       }
@@ -99,7 +99,7 @@ void NetConnectorParams::Usage() {
 
 void NetConnectorParams::RegisterService(
     const std::string& name,
-    modular::ApplicationLaunchInfoPtr launch_info) {
+    app::ApplicationLaunchInfoPtr launch_info) {
   auto result =
       launch_infos_by_service_name_.emplace(name, std::move(launch_info));
 
@@ -153,7 +153,7 @@ bool NetConnectorParams::ParseConfig(const std::string& string) {
         return false;
       }
 
-      auto launch_info = modular::ApplicationLaunchInfo::New();
+      auto launch_info = app::ApplicationLaunchInfo::New();
       if (pair.value.IsString()) {
         launch_info->url = pair.value.GetString();
       } else if (pair.value.IsArray()) {

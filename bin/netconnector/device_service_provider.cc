@@ -17,7 +17,7 @@ std::unique_ptr<DeviceServiceProvider> DeviceServiceProvider::Create(
     const std::string& device_name,
     const std::string& device_address,
     uint16_t port,
-    fidl::InterfaceRequest<modular::ServiceProvider> request,
+    fidl::InterfaceRequest<app::ServiceProvider> request,
     NetConnectorImpl* owner) {
   return std::unique_ptr<DeviceServiceProvider>(new DeviceServiceProvider(
       device_name, device_address, port, std::move(request), owner));
@@ -27,7 +27,7 @@ DeviceServiceProvider::DeviceServiceProvider(
     const std::string& device_name,
     const std::string& device_address,
     uint16_t port,
-    fidl::InterfaceRequest<modular::ServiceProvider> request,
+    fidl::InterfaceRequest<app::ServiceProvider> request,
     NetConnectorImpl* owner)
     : device_name_(device_name),
       device_address_(device_address),

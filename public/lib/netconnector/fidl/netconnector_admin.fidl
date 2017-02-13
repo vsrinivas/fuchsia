@@ -21,7 +21,7 @@ interface NetConnectorAdmin {
   // most cases, responding service will be registered using |netconnector|'s
   // config file.
   RegisterService(string service_name,
-                  modular.ApplicationLaunchInfo launch_info);
+                  app.ApplicationLaunchInfo launch_info);
 
   // Registers a device. |device_name| identifies the device and is the same
   // name used in |RequestConnection|. |address| is the IP address of the
@@ -37,5 +37,5 @@ interface NetConnectorAdmin {
   // running in a user context can register with a |netconnector| running in a
   // device context.
   RegisterServiceProvider(string service_name,
-                          modular.ServiceProvider service_provider);
+                          app.ServiceProvider service_provider);
 };

@@ -38,7 +38,7 @@ class NetStubResponder {
         application_context
             ->ConnectToEnvironmentService<netconnector::NetConnectorAdmin>();
 
-    fidl::InterfaceHandle<modular::ServiceProvider> handle;
+    fidl::InterfaceHandle<app::ServiceProvider> handle;
     application_context->outgoing_services()->AddBinding(handle.NewRequest());
     FTL_DCHECK(handle);
 

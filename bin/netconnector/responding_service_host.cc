@@ -11,7 +11,7 @@
 namespace netconnector {
 
 RespondingServiceHost::RespondingServiceHost(
-    const modular::ApplicationEnvironmentPtr& environment) {
+    const app::ApplicationEnvironmentPtr& environment) {
   FTL_DCHECK(environment);
   environment->GetApplicationLauncher(launcher_.NewRequest());
 }
@@ -20,11 +20,11 @@ RespondingServiceHost::~RespondingServiceHost() {}
 
 void RespondingServiceHost::RegisterSingleton(
     const std::string& service_name,
-    modular::ApplicationLaunchInfoPtr launch_info) {
+    app::ApplicationLaunchInfoPtr launch_info) {
   service_provider_.AddServiceForName(
       ftl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info),
-        controller = modular::ApplicationControllerPtr()
+        controller = app::ApplicationControllerPtr()
       ](mx::channel client_handle) mutable {
         FTL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;
@@ -40,10 +40,10 @@ void RespondingServiceHost::RegisterSingleton(
           // the constructor. Instead, we should be launching it in a new
           // environment that is restricted based on app permissions.
 
-          auto dup_launch_info = modular::ApplicationLaunchInfo::New();
+          auto dup_launch_info = app::ApplicationLaunchInfo::New();
           dup_launch_info->url = launch_info->url;
           dup_launch_info->arguments = launch_info->arguments.Clone();
-          modular::ServiceProviderPtr service_provider;
+          app::ServiceProviderPtr service_provider;
           dup_launch_info->services = service_provider.NewRequest();
 
           launcher_->CreateApplication(std::move(dup_launch_info),
@@ -67,9 +67,9 @@ void RespondingServiceHost::RegisterSingleton(
 
 void RespondingServiceHost::RegisterProvider(
     const std::string& service_name,
-    fidl::InterfaceHandle<modular::ServiceProvider> handle) {
-  modular::ServiceProviderPtr service_provider =
-      modular::ServiceProviderPtr::Create(std::move(handle));
+    fidl::InterfaceHandle<app::ServiceProvider> handle) {
+  app::ServiceProviderPtr service_provider =
+      app::ServiceProviderPtr::Create(std::move(handle));
 
   service_provider.set_connection_error_handler([this, service_name] {
     FTL_LOG(ERROR) << "Singleton " << service_name << " provider died";

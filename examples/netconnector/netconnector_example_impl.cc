@@ -63,7 +63,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
           application_context_
               ->ConnectToEnvironmentService<netconnector::NetConnectorAdmin>();
 
-      fidl::InterfaceHandle<modular::ServiceProvider> handle;
+      fidl::InterfaceHandle<app::ServiceProvider> handle;
       application_context_->outgoing_services()->AddBinding(
           handle.NewRequest());
 
@@ -90,7 +90,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     message_relay_.SetChannel(std::move(local));
 
     // Pass the remote end to NetConnector.
-    modular::ServiceProviderPtr device_service_provider;
+    app::ServiceProviderPtr device_service_provider;
     connector->GetDeviceServiceProvider(params->request_device_name(),
                                         device_service_provider.NewRequest());
 
