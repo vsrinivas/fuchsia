@@ -138,7 +138,7 @@ void TraceManager::LaunchConfiguredProviders() {
     // Also keep track of the provider so we can kill it when the trace
     // manager exits or restart it if needed.
     FTL_VLOG(1) << "Starting configured provider: " << pair.first;
-    auto launch_info = modular::ApplicationLaunchInfo::New();
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = pair.second->url;
     launch_info->arguments = pair.second->arguments.Clone();
     context_->launcher()->CreateApplication(std::move(launch_info), nullptr);

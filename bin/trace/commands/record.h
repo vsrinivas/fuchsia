@@ -30,12 +30,12 @@ class Record : public CommandWithTraceController {
     bool detach = false;
     bool decouple = false;
     uint32_t buffer_size_megabytes_hint = 4;
-    modular::ApplicationLaunchInfoPtr launch_info;
+    app::ApplicationLaunchInfoPtr launch_info;
   };
 
   static Info Describe();
 
-  explicit Record(modular::ApplicationContext* context);
+  explicit Record(app::ApplicationContext* context);
   void Run(const ftl::CommandLine& command_line) override;
 
  private:
@@ -44,7 +44,7 @@ class Record : public CommandWithTraceController {
   void LaunchApp();
   void StartTimer();
 
-  modular::ApplicationControllerPtr application_controller_;
+  app::ApplicationControllerPtr application_controller_;
   std::unique_ptr<ChromiumExporter> exporter_;
   std::unique_ptr<Tracer> tracer_;
   bool tracing_ = false;

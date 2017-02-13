@@ -60,7 +60,7 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   // <command> <args...>
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {
-    launch_info = modular::ApplicationLaunchInfo::New();
+    launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = fidl::String::From(positional_args[0]);
     launch_info->arguments =
         fidl::Array<fidl::String>::From(std::vector<std::string>(
