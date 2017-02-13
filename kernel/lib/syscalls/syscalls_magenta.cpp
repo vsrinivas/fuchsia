@@ -207,7 +207,7 @@ mx_status_t sys_log_create(uint32_t flags, mx_handle_t* out) {
 mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, const void* _ptr, uint32_t flags) {
     LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr);
 
-    if (len > DLOG_MAX_ENTRY)
+    if (len > DLOG_MAX_DATA)
         return ERR_OUT_OF_RANGE;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -217,15 +217,18 @@ mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, const void* _ptr
     if (status != NO_ERROR)
         return status;
 
-    char buf[DLOG_MAX_ENTRY];
+    char buf[DLOG_MAX_RECORD];
     if (magenta_copy_from_user(_ptr, buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    return log->Write(buf, len, flags);
+    return log->Write(flags, buf, len);
 }
 
 mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, void* _ptr, uint32_t flags) {
     LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr);
+
+    if (len < DLOG_MAX_RECORD)
+        return ERR_BUFFER_TOO_SMALL;
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -234,7 +237,15 @@ mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, void* _ptr, uint3
     if (status != NO_ERROR)
         return status;
 
-    return log->ReadFromUser(_ptr, len, flags);
+    char buf[DLOG_MAX_RECORD];
+    size_t actual;
+    if ((status = log->Read(flags, buf, DLOG_MAX_RECORD, &actual)) < 0)
+        return status;
+
+    if (make_user_ptr(_ptr).copy_array_to_user(buf, actual) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return static_cast<mx_status_t>(actual);
 }
 
 mx_status_t sys_cprng_draw(void* _buffer, size_t len, size_t* _actual) {

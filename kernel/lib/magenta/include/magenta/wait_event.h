@@ -40,6 +40,10 @@ public:
         return event_signal_etc(&event_, false, status);
     }
 
+    status_t Unsignal() {
+        return event_unsignal(&event_);
+    }
+
 private:
     event_t event_;
 };

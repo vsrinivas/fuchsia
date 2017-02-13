@@ -19,15 +19,16 @@ status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatc
     auto disp = new (&ac) LogDispatcher(flags);
     if (!ac.check()) return ERR_NO_MEMORY;
 
+    if (flags & MX_LOG_FLAG_READABLE) {
+        dlog_reader_init(&disp->reader_, &LogDispatcher::Notify, disp);
+    }
+
     *rights = kDefaultEventRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
 }
 
 LogDispatcher::LogDispatcher(uint32_t flags) : flags_(flags) {
-    if (flags & MX_LOG_FLAG_READABLE) {
-        dlog_reader_init(&reader_);
-    }
 }
 
 LogDispatcher::~LogDispatcher() {
@@ -36,28 +37,44 @@ LogDispatcher::~LogDispatcher() {
     }
 }
 
-status_t LogDispatcher::Write(const void* ptr, size_t len, uint32_t flags) {
+void LogDispatcher::Signal() {
+    event_.Signal();
+}
+
+// static
+void LogDispatcher::Notify(void* cookie) {
+    LogDispatcher* log = static_cast<LogDispatcher*>(cookie);
+    log->Signal();
+}
+
+status_t LogDispatcher::Write(uint32_t flags, const void* ptr, size_t len) {
     return dlog_write(flags_, ptr, len);
 }
 
-status_t LogDispatcher::Read(void* ptr, size_t len, uint32_t flags) {
-    if (flags_ & MX_LOG_FLAG_READABLE) {
-        return dlog_read(&reader_, 0, ptr, len);
-    } else {
+status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actual) {
+    if (!(flags_ & MX_LOG_FLAG_READABLE))
         return ERR_BAD_STATE;
+
+    for (;;) {
+        mx_status_t status;
+
+        {
+            AutoLock lock(&lock_);
+            if ((status = dlog_read(&reader_, 0, ptr, len, actual)) < 0) {
+                if (status == ERR_SHOULD_WAIT) {
+                    event_.Unsignal();
+                }
+            }
+        }
+
+        if ((status == ERR_SHOULD_WAIT) && (flags & MX_LOG_FLAG_WAIT)) {
+            if ((status = event_.Wait(INFINITE_TIME)) < 0) {
+                return status;
+            }
+            continue;
+        }
+
+        return status;
     }
 }
 
-status_t LogDispatcher::ReadFromUser(void* ptr, size_t len, uint32_t flags) {
-    if (!(flags_ & MX_LOG_FLAG_READABLE)) {
-        return ERR_BAD_STATE;
-    }
-    for (;;) {
-        mx_status_t r = dlog_read_user(&reader_, 0, ptr, len);
-        if ((r == ERR_BAD_STATE) && (flags & MX_LOG_FLAG_WAIT)) {
-            dlog_wait(&reader_);
-            continue;
-        }
-        return r;
-    }
-}

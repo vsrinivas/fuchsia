@@ -8,6 +8,7 @@
 
 #include <err.h>
 #include <dev/udisplay.h>
+#include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <lib/user_copy.h>
 #include <lib/io.h>
@@ -17,185 +18,274 @@
 
 #include "git-version.h"
 
-#define DLOG_SIZE (64 * 1024)
+#define DLOG_SIZE (128u * 1024u)
+#define DLOG_MASK (DLOG_SIZE - 1u)
+
+static_assert((DLOG_SIZE & DLOG_MASK) == 0u, "must be power of two");
+static_assert(DLOG_MAX_RECORD <= DLOG_SIZE, "wat");
+static_assert((DLOG_MAX_RECORD & 3) == 0, "E_DONT_DO_THAT");
 
 static uint8_t DLOG_DATA[DLOG_SIZE];
 
 static dlog_t DLOG = {
-    .lock = MUTEX_INITIAL_VALUE(DLOG.lock),
-    .size = DLOG_SIZE,
+    .lock = SPIN_LOCK_INITIAL_VALUE,
+    .head = 0,
+    .tail = 0,
     .data = DLOG_DATA,
+    .event = EVENT_INITIAL_VALUE(DLOG.event, 0, EVENT_FLAG_AUTOUNSIGNAL),
+
+    .readers_lock = MUTEX_INITIAL_VALUE(DLOG.readers_lock),
     .readers = LIST_INITIAL_VALUE(DLOG.readers),
 };
 
-#define MAX_DATA_SIZE (DLOG_MAX_ENTRY - sizeof(dlog_record_t))
+// The debug log maintains a circular buffer of debug log records,
+// consisting of a common header (dlog_header_t) followed by up
+// to 224 bytes of textual log message.  Records are aligned on
+// uint32_t boundaries, so the header word which indicates the
+// true size of the record and the space it takes in the fifo
+// can always be read with a single uint32_t* read (the header
+// or body may wrap but the initial header word never does).
+//
+// The ring buffer position is maintained by continuously incrementing
+// head and tail pointers (type size_t, so uint64_t on 64bit systems),
+//
+// This allows readers to trivial compute if their local tail
+// pointer has "fallen out" of the fifo (an entire fifo's worth
+// of messages were written since they last tried to read) and then
+// they can snap their tail to the global tail and restart
+//
+//
+// Tail indicates the oldest message in the debug log to read
+// from, Head indicates the next space in the debug log to write
+// a new message to.  They are clipped to the actual buffer by
+// DLOG_MASK.
+//
+//       T                     T
+//  [....XXXX....]  [XX........XX]
+//           H         H
 
-#define ALIGN8(n) (((n) + 7) & (~7))
 
-#define REC(ptr, off) ((dlog_record_t*)((ptr) + (off)))
+#define ALIGN4(n) (((n) + 3) & (~3))
 
-// To avoid complexity with splitting record headers, this is
-// a mostly-circular buffer -- each record has a next index
-// that can be used to advance to the next record, allowing the
-// leftover space not large enough for a full record at the end
-// to be skipped easily.
 status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     dlog_t* log = &DLOG;
 
-    if (arch_ints_disabled() || log->paused) {
-        return ERR_BAD_STATE;
-    }
-
-    if (len > MAX_DATA_SIZE) {
+    if (len > DLOG_MAX_DATA) {
         return ERR_OUT_OF_RANGE;
     }
 
-    // Keep record headers uint64 aligned
-    size_t sz = ALIGN8(len + sizeof(dlog_record_t));
-
-    mutex_acquire(&log->lock);
-
-    // Determine location of new record and next record after it
-    uint32_t dst = log->head;
-    uint32_t end = log->head + sz;
-    uint32_t nxt = end;
-    if ((nxt + DLOG_MAX_ENTRY) > log->size) {
-        nxt = 0;
+    if (log->panic) {
+        return ERR_BAD_STATE;
     }
 
-    // Advance our tail if we write past it.
-    if (log->head != log->tail) {
-        while ((log->tail >= dst) && (log->tail < end)) {
-            log->tail = REC(log->data, log->tail)->next;
-        }
+    // Our size "on the wire" must be a multiple of 4, so we know
+    // that worst case there will be room for a header skipping
+    // the last n bytes when the fifo wraps
+    size_t wiresize = DLOG_MIN_RECORD + ALIGN4(len);
+
+    // Prepare the record header before taking the lock
+    dlog_header_t hdr;
+    hdr.header = DLOG_HDR_SET(wiresize, DLOG_MIN_RECORD + len);
+    hdr.datalen = len;
+    hdr.flags = flags;
+    hdr.timestamp = current_time_hires();
+    thread_t *t = get_current_thread();
+    if (t) {
+        hdr.pid = t->user_pid;
+        hdr.tid = t->user_tid;
+    } else {
+        hdr.pid = 0;
+        hdr.tid = 0;
     }
 
-    // Notify readers and advance their tails if necessary
-    dlog_reader_t* rdr;
-    list_for_every_entry (&log->readers, rdr, dlog_reader_t, node) {
-        if (rdr->tail == log->head) {
-            // Reader view was empty, point reader's tail
-            // at the message we're writing now
-            rdr->tail = dst;
-        } else {
-            // If we're about to overwrite the message at
-            // the reader's tail, advance that tail.
-            // This will never cause the reader view to be "empty".
-            while ((rdr->tail >= dst) && (rdr->tail < end)) {
-                rdr->tail = REC(log->data, rdr->tail)->next;
-            }
-        }
-        event_signal(&rdr->event, false);
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&log->lock, state);
+
+    // Discard records at tail until there is enough
+    // space for the new record.
+    while ((log->head - log->tail) > (DLOG_SIZE - wiresize)) {
+        uint32_t header = *((uint32_t*) (log->data + (log->tail & DLOG_MASK)));
+        log->tail += DLOG_HDR_GET_FIFOLEN(header);
     }
 
-    // Write the new record
-    dlog_record_t* rec = REC(log->data, dst);
-    rec->next = nxt;
-    rec->datalen = len;
-    rec->flags = flags;
-    rec->timestamp = current_time_hires();
-    thread_t* t = get_current_thread();
-    rec->pid = t->user_pid;
-    rec->tid = t->user_tid;
-    memcpy(rec->data, ptr, len);
+    size_t offset = (log->head & DLOG_MASK);
 
-    // Advance the head pointer
-    log->head = nxt;
+    size_t fifospace = DLOG_SIZE - offset;
 
-    mutex_release(&log->lock);
+    if (fifospace >= wiresize) {
+        // everything fits in one write, simple case!
+        memcpy(log->data + offset, &hdr, sizeof(hdr));
+        memcpy(log->data + offset + sizeof(hdr), ptr, len);
+    } else if (fifospace < sizeof(hdr)) {
+        // the wrap happens in the header
+        memcpy(log->data + offset, &hdr, fifospace);
+        memcpy(log->data, ((void*) &hdr) + fifospace, sizeof(hdr) - fifospace);
+        memcpy(log->data + (sizeof(hdr) - fifospace), ptr, len);
+    } else {
+        // the wrap happens in the data
+        memcpy(log->data + offset, &hdr, sizeof(hdr));
+        offset += sizeof(hdr);
+        fifospace -= sizeof(hdr);
+        memcpy(log->data + offset, ptr, fifospace);
+        memcpy(log->data, ptr + fifospace, len - fifospace);
+    }
+    log->head += wiresize;
+
+    event_signal(&log->event, false);
+
+    spin_unlock_irqrestore(&log->lock, state);
+
     return NO_ERROR;
 }
 
 // TODO: support reading multiple messages at a time
 // TODO: filter with flags
-status_t dlog_read_etc(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, bool user) {
-    dlog_t* log = rdr->log;
-    status_t r = ERR_BAD_STATE;
-
-    mutex_acquire(&log->lock);
-    if (rdr->tail != log->head) {
-        dlog_record_t* rec = REC(log->data, rdr->tail);
-        size_t copylen = rec->datalen + sizeof(dlog_record_t);
-        if (copylen > len) {
-            r = ERR_BUFFER_TOO_SMALL;
-        } else {
-            if (user) {
-                r = copy_to_user_unsafe(ptr, rec, copylen);
-                if (r == NO_ERROR) {
-                    r = copylen;
-                }
-            } else {
-                memcpy(ptr, rec, copylen);
-                r = copylen;
-            }
-            rdr->tail = rec->next;
-            if (rdr->tail == log->head) {
-                // Nothing left to read, we're in the "empty" state now.
-                event_unsignal(&rdr->event);
-            }
-        }
+status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* _actual) {
+    // must be room for worst-case read
+    if (len < DLOG_MAX_RECORD) {
+        return ERR_BUFFER_TOO_SMALL;
     }
-    mutex_release(&log->lock);
-    return r;
+
+    dlog_t* log = rdr->log;
+    status_t status = ERR_SHOULD_WAIT;
+
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&log->lock, state);
+
+    size_t rtail = rdr->tail;
+
+    // If the read-tail is not within the range of log-tail..log-head
+    // this reader has been lapped by a writer and we reset our read-tail
+    // to the current log-tail.
+    //
+    if ((log->head - log->tail) < (log->head - rtail)) {
+        rtail = log->tail;
+    }
+
+    if (rtail != log->head) {
+        size_t offset = (rtail & DLOG_MASK);
+        uint32_t header = *((uint32_t*) (log->data + offset));
+
+        size_t actual = DLOG_HDR_GET_READLEN(header);
+        size_t fifospace = DLOG_SIZE - offset;
+
+        if (fifospace >= actual) {
+            memcpy(ptr, log->data + offset, actual);
+        } else {
+            memcpy(ptr, log->data + offset, fifospace);
+            memcpy(ptr + fifospace, log->data, actual - fifospace);
+        }
+
+        *_actual = actual;
+        status = NO_ERROR;
+
+        rtail += DLOG_HDR_GET_FIFOLEN(header);
+    }
+
+    rdr->tail = rtail;
+
+    spin_unlock_irqrestore(&log->lock, state);
+
+    return status;
 }
 
-void dlog_reader_init(dlog_reader_t* rdr) {
+void dlog_reader_init(dlog_reader_t* rdr, void (*notify)(void*), void* cookie) {
     dlog_t* log = &DLOG;
 
     rdr->log = log;
-    event_init(&rdr->event, false, 0);
+    rdr->notify = notify;
+    rdr->cookie = cookie;
 
-    mutex_acquire(&log->lock);
+    mutex_acquire(&log->readers_lock);
     list_add_tail(&log->readers, &rdr->node);
+
+    bool do_notify = false;
+
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&log->lock, state);
     rdr->tail = log->tail;
-    if (log->head != log->tail) {
-        event_signal(&rdr->event, false);
+    do_notify = (log->tail != log->head);
+    spin_unlock_irqrestore(&log->lock, state);
+
+    // simulate notify callback for events that arrived
+    // before we were initialized
+    if(do_notify && notify) {
+        notify(cookie);
     }
-    mutex_release(&log->lock);
+
+    mutex_release(&log->readers_lock);
 }
 
 void dlog_reader_destroy(dlog_reader_t* rdr) {
     dlog_t* log = rdr->log;
 
-    mutex_acquire(&log->lock);
+    mutex_acquire(&log->readers_lock);
     list_delete(&rdr->node);
-    event_destroy(&rdr->event);
-    mutex_release(&log->lock);
+    mutex_release(&log->readers_lock);
 }
 
-void dlog_wait(dlog_reader_t* rdr) {
-    event_wait(&rdr->event);
-}
 
-static void cputs(const char* data, size_t len) {
-    while (len-- > 0) {
-        char c = *data++;
-        if (c != '\n') {
-            platform_dputc(c);
-        }
-    }
-}
+// The debuglog notifier thread observes when the debuglog is
+// written and calls the notify callback on any readers that
+// have one so they can process new log messages.
+static int debuglog_notifier(void* arg) {
+    dlog_t* log = &DLOG;
 
-static int debuglog_reader(void* arg) {
-    uint8_t buffer[DLOG_MAX_ENTRY + 1];
-    char tmp[DLOG_MAX_ENTRY + 64];
-    dlog_record_t* rec = (dlog_record_t*)buffer;
-    dlog_reader_t reader;
-    int n;
-
-    dlog_reader_init(&reader);
     for (;;) {
-        dlog_wait(&reader);
-        while (dlog_read(&reader, 0, rec, DLOG_MAX_ENTRY) > 0) {
-            if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
-                rec->data[rec->datalen - 1] = 0;
-            } else {
-                rec->data[rec->datalen] = 0;
+        event_wait(&log->event);
+
+        // notify readers that new log items were posted
+        mutex_acquire(&log->readers_lock);
+        dlog_reader_t* rdr;
+        list_for_every_entry (&log->readers, rdr, dlog_reader_t, node) {
+            if (rdr->notify) {
+                rdr->notify(rdr->cookie);
             }
+        }
+        mutex_release(&log->readers_lock);
+    }
+    return NO_ERROR;
+}
+
+
+// The debuglog dumper thread creates a reader to observe
+// debuglog writes and dump them to the kernel consoles
+// and kernel serial console.
+static void debuglog_dumper_notify(void* cookie) {
+    event_t* event = cookie;
+    event_signal(event, false);
+}
+
+static int debuglog_dumper(void *arg) {
+    // assembly buffer with room for log text plus header text
+    char tmp[DLOG_MAX_DATA + 128];
+
+    struct {
+        dlog_header_t hdr;
+        char data[DLOG_MAX_DATA + 1];
+    } rec;
+
+    event_t event = EVENT_INITIAL_VALUE(event, 0, EVENT_FLAG_AUTOUNSIGNAL);
+
+    dlog_reader_t reader;
+    dlog_reader_init(&reader, debuglog_dumper_notify, &event);
+
+    for (;;) {
+        event_wait(&event);
+
+        // dump records to kernel console
+        size_t actual;
+        while (dlog_read(&reader, 0, &rec, DLOG_MAX_RECORD, &actual) == NO_ERROR) {
+            if (rec.hdr.datalen && (rec.data[rec.hdr.datalen - 1] == '\n')) {
+                rec.data[rec.hdr.datalen - 1] = 0;
+            } else {
+                rec.data[rec.hdr.datalen] = 0;
+            }
+            int n;
             n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-                         (int) (rec->timestamp / 1000000000ULL),
-                         (int) ((rec->timestamp / 1000000ULL) % 1000ULL),
-                         rec->pid, rec->tid, rec->data);
+                         (int) (rec.hdr.timestamp / 1000000000ULL),
+                         (int) ((rec.hdr.timestamp / 1000000ULL) % 1000ULL),
+                         rec.hdr.pid, rec.hdr.tid, rec.data);
             if (n > (int)sizeof(tmp)) {
                 n = sizeof(tmp);
             }
@@ -203,70 +293,33 @@ static int debuglog_reader(void* arg) {
             __kernel_serial_write(tmp, n);
         }
     }
-    return NO_ERROR;
+
+    return 0;
 }
 
-#define REPLAY_LOG 0
-
-#if REPLAY_LOG
-static status_t dlog_read_unsafe(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len) {
-    dlog_t* log = rdr->log;
-    status_t r = ERR_BAD_STATE;
-
-    if (rdr->tail != log->head) {
-        dlog_record_t* rec = REC(log->data, rdr->tail);
-        size_t copylen = rec->datalen + sizeof(dlog_record_t);
-        if (copylen > len) {
-            r = ERR_BUFFER_TOO_SMALL;
-        } else {
-            memcpy(ptr, rec, copylen);
-            r = copylen;
-            rdr->tail = rec->next;
-        }
-    }
-    return r;
-}
-
-static void dlog_reader_init_unsafe(dlog_reader_t* rdr) {
-    dlog_t* log = &DLOG;
-    memset(rdr, 0, sizeof(dlog_reader_t));
-    rdr->log = log;
-    rdr->tail = log->tail;
-}
-#endif
 
 void dlog_bluescreen_init(void) {
+    // if we're panicing, stop processing log writes
+    // they'll fail over to kernel console and serial
+    DLOG.panic = true;
+
     udisplay_bind_gfxconsole();
 
-    DLOG.paused = true;
+    // replay debug log?
 
-#if REPLAY_LOG
-    uint8_t buffer[DLOG_MAX_ENTRY + 1];
-    dlog_record_t* rec = (dlog_record_t*)buffer;
-    dlog_reader_t reader;
-
-    dlog_reader_init_unsafe(&reader);
-    while (dlog_read_unsafe(&reader, 0, rec, DLOG_MAX_ENTRY) > 0) {
-        rec->data[rec->datalen] = 0;
-        if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
-            rec->data[rec->datalen - 1] = 0;
-        }
-        dprintf(INFO, "[%05d.%03d] %c %s\n",
-                (int) (rec->timestamp / 1000000000ULL),
-                (int) ((rec->timestamp / 1000000ULL) % 1000ULL),
-                (rec->flags & DLOG_FLAG_KERNEL) ? 'K' : 'U',
-                rec->data);
-    }
-#else
     dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\n");
     dprintf(INFO, "GIT REVISION %s\n\n", MAGENTA_GIT_REV);
-#endif
 }
 
 static void dlog_init_hook(uint level) {
-    thread_t* rthread = thread_create("debuglog-reader", debuglog_reader, NULL,
-                                      HIGH_PRIORITY - 1, DEFAULT_STACK_SIZE);
-    if (rthread) {
+    thread_t* rthread;
+
+    if ((rthread = thread_create("debuglog-notifier", debuglog_notifier, NULL,
+                                 HIGH_PRIORITY - 1, DEFAULT_STACK_SIZE)) != NULL) {
+        thread_resume(rthread);
+    }
+    if ((rthread = thread_create("debuglog-dumper", debuglog_dumper, NULL,
+                                 HIGH_PRIORITY - 2, DEFAULT_STACK_SIZE)) != NULL) {
         thread_resume(rthread);
     }
 }
