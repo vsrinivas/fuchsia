@@ -19,7 +19,7 @@ void ViewImpl::GetToken(const mozart::View::GetTokenCallback& callback) {
 }
 
 void ViewImpl::GetServiceProvider(
-    fidl::InterfaceRequest<modular::ServiceProvider> service_provider_request) {
+    fidl::InterfaceRequest<app::ServiceProvider> service_provider_request) {
   service_provider_bindings_.AddBinding(this,
                                         std::move(service_provider_request));
 }

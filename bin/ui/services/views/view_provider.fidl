@@ -24,5 +24,5 @@ interface ViewProvider {
   // The caller may request services from the created view via the |services|
   // service provider.
   CreateView(ViewOwner& view_owner,
-             modular.ServiceProvider&? services);
+             app.ServiceProvider&? services);
 };

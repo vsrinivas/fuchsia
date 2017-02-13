@@ -26,7 +26,7 @@ constexpr uint32_t kViewFallbackDimSceneNodeIdOffset = 4;
 
 TileView::TileView(mozart::ViewManagerPtr view_manager,
                    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-                   modular::ApplicationContext* application_context,
+                   app::ApplicationContext* application_context,
                    const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
       env_host_binding_(this),
@@ -42,7 +42,7 @@ TileView::~TileView() {}
 void TileView::PresentHelper(
     fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
     const std::string& url,
-    modular::ApplicationControllerPtr app_controller) {
+    app::ApplicationControllerPtr app_controller) {
   child_key_++;
   GetViewContainer()->AddChild(child_key_, std::move(child_view_owner));
 
@@ -61,10 +61,10 @@ void TileView::Present(
 // Launches initial list of views, passed as command line parameters.
 void TileView::ConnectViews() {
   for (const auto& url : params_.view_urls) {
-    modular::ServiceProviderPtr services;
-    modular::ApplicationControllerPtr controller;
+    app::ServiceProviderPtr services;
+    app::ApplicationControllerPtr controller;
 
-    auto launch_info = modular::ApplicationLaunchInfo::New();
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = url;
     launch_info->services = services.NewRequest();
 
@@ -74,7 +74,7 @@ void TileView::ConnectViews() {
 
     // Get the view provider back from the launched app.
     auto view_provider =
-        modular::ConnectToService<mozart::ViewProvider>(services.get());
+        app::ConnectToService<mozart::ViewProvider>(services.get());
 
     fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner;
     view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
@@ -86,14 +86,14 @@ void TileView::ConnectViews() {
 
 // Required method for |ApplicationEnvironmentHost|
 void TileView::GetApplicationEnvironmentServices(
-    fidl::InterfaceRequest<modular::ServiceProvider> environment_services) {
+    fidl::InterfaceRequest<app::ServiceProvider> environment_services) {
   env_services_.AddBinding(std::move(environment_services));
 }
 
 // Set up environment with a |Presenter| service. We launch apps with this
 // environment
 void TileView::CreateNestedEnvironment() {
-  modular::ApplicationEnvironmentHostPtr env_host;
+  app::ApplicationEnvironmentHostPtr env_host;
   env_host_binding_.Bind(env_host.NewRequest());
   application_context_->environment()->CreateNestedEnvironment(
       std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
@@ -306,7 +306,7 @@ void TileView::OnDraw() {
 
 TileView::ViewData::ViewData(const std::string& url,
                              uint32_t key,
-                             modular::ApplicationControllerPtr controller)
+                             app::ApplicationControllerPtr controller)
     : url(url), key(key), controller(std::move(controller)) {}
 
 TileView::ViewData::~ViewData() {}

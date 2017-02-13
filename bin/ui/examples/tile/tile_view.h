@@ -20,12 +20,12 @@
 namespace examples {
 
 class TileView : public mozart::BaseView,
-                 public modular::ApplicationEnvironmentHost,
+                 public app::ApplicationEnvironmentHost,
                  public mozart::Presenter {
  public:
   TileView(mozart::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-           modular::ApplicationContext* application_context,
+           app::ApplicationContext* application_context,
            const TileParams& tile_params);
 
   ~TileView() override;
@@ -34,12 +34,12 @@ class TileView : public mozart::BaseView,
   struct ViewData {
     explicit ViewData(const std::string& url,
                       uint32_t key,
-                      modular::ApplicationControllerPtr controller);
+                      app::ApplicationControllerPtr controller);
     ~ViewData();
 
     const std::string url;
     const uint32_t key;
-    modular::ApplicationControllerPtr controller;
+    app::ApplicationControllerPtr controller;
 
     mozart::RectF layout_bounds;
     mozart::ViewPropertiesPtr view_properties;
@@ -62,24 +62,24 @@ class TileView : public mozart::BaseView,
 
   void PresentHelper(::fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
                      const std::string& url,
-                     modular::ApplicationControllerPtr);
+                     app::ApplicationControllerPtr);
 
   // |ApplicationEnvironmentHost|:
   void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<modular::ServiceProvider> environment_services)
+      fidl::InterfaceRequest<app::ServiceProvider> environment_services)
       override;
 
   void CreateNestedEnvironment();
 
   // Nested environment within which the apps started by TileView will run.
-  modular::ApplicationEnvironmentPtr env_;
-  modular::ApplicationEnvironmentControllerPtr env_controller_;
-  fidl::Binding<modular::ApplicationEnvironmentHost> env_host_binding_;
-  modular::ServiceProviderImpl env_services_;
-  modular::ApplicationLauncherPtr env_launcher_;
+  app::ApplicationEnvironmentPtr env_;
+  app::ApplicationEnvironmentControllerPtr env_controller_;
+  fidl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
+  app::ServiceProviderImpl env_services_;
+  app::ApplicationLauncherPtr env_launcher_;
 
   // Context inherited when TileView is launched.
-  modular::ApplicationContext* application_context_;
+  app::ApplicationContext* application_context_;
 
   TileParams params_;
 

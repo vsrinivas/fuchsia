@@ -136,7 +136,7 @@ void Presentation::CreateViewTree() {
   tree_container_->SetListener(std::move(tree_container_listener));
 
   // Get view tree services.
-  modular::ServiceProviderPtr tree_service_provider;
+  app::ServiceProviderPtr tree_service_provider;
   tree_->GetServiceProvider(tree_service_provider.NewRequest());
   input_dispatcher_ = modular::ConnectToService<mozart::InputDispatcher>(
       tree_service_provider.get());

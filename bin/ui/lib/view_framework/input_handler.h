@@ -20,7 +20,7 @@ class InputHandler {
  public:
   // Creates an input connection for the view with the associated
   // service provider.
-  InputHandler(modular::ServiceProvider* service_provider,
+  InputHandler(app::ServiceProvider* service_provider,
                InputListener* listener);
   ~InputHandler();
 

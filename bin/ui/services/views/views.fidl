@@ -91,7 +91,7 @@ import "apps/mozart/services/views/view_token.fidl";
 //
 // GETTING SERVICES
 //
-// The view's |modular::ServiceProvider| offers access to many services which
+// The view's |app::ServiceProvider| offers access to many services which
 // are not directly expressed by the |View| interface itself, such
 // as input, accessiblity, and editing capabilities.
 //
@@ -112,7 +112,7 @@ interface View {
   // shared with anyone else.
   //
   // See |InputConnection|.
-  GetServiceProvider(modular.ServiceProvider& service_provider);
+  GetServiceProvider(app.ServiceProvider& service_provider);
 
   // Creates the view's scene, replacing any previous scene the view
   // might have had.

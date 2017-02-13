@@ -19,7 +19,7 @@ class ViewState;
 class ViewImpl : public mozart::View,
                  public mozart::ViewContainer,
                  public mozart::ViewOwner,
-                 public modular::ServiceProvider {
+                 public app::ServiceProvider {
  public:
   ViewImpl(ViewRegistry* registry, ViewState* state);
   ~ViewImpl() override;
@@ -27,7 +27,7 @@ class ViewImpl : public mozart::View,
  private:
   // |View|:
   void GetToken(const mozart::View::GetTokenCallback& callback) override;
-  void GetServiceProvider(fidl::InterfaceRequest<modular::ServiceProvider>
+  void GetServiceProvider(fidl::InterfaceRequest<app::ServiceProvider>
                               service_provider_request) override;
   void CreateScene(fidl::InterfaceRequest<mozart::Scene> scene) override;
   void GetContainer(fidl::InterfaceRequest<mozart::ViewContainer>
@@ -49,13 +49,13 @@ class ViewImpl : public mozart::View,
       mozart::ViewPropertiesPtr child_view_properties) override;
   void FlushChildren(uint32_t flush_token) override;
 
-  // |modular::ServiceProvider|:
+  // |app::ServiceProvider|:
   void ConnectToService(const fidl::String& service_name,
                         mx::channel client_handle) override;
 
   ViewRegistry* const registry_;
   ViewState* const state_;
-  fidl::BindingSet<modular::ServiceProvider> service_provider_bindings_;
+  fidl::BindingSet<app::ServiceProvider> service_provider_bindings_;
   fidl::BindingSet<mozart::ViewContainer> container_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);

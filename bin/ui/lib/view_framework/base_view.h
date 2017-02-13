@@ -40,7 +40,7 @@ class BaseView : public ViewListener, public ViewContainerListener {
   View* view() { return view_.get(); }
 
   // Gets the service provider for the view.
-  modular::ServiceProvider* GetViewServiceProvider();
+  app::ServiceProvider* GetViewServiceProvider();
 
   // Gets the underlying view container interface.
   ViewContainer* GetViewContainer();
@@ -141,7 +141,7 @@ class BaseView : public ViewListener, public ViewContainerListener {
   fidl::Binding<ViewContainerListener> view_container_listener_binding_;
 
   ViewPtr view_;
-  modular::ServiceProviderPtr view_service_provider_;
+  app::ServiceProviderPtr view_service_provider_;
   ViewContainerPtr view_container_;
   ScenePtr scene_;
   FrameTracker frame_tracker_;

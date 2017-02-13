@@ -29,7 +29,7 @@ ViewProviderService::~ViewProviderService() {
 
 void ViewProviderService::CreateView(
     fidl::InterfaceRequest<ViewOwner> view_owner_request,
-    fidl::InterfaceRequest<modular::ServiceProvider> view_services) {
+    fidl::InterfaceRequest<app::ServiceProvider> view_services) {
   ViewContext view_context;
   view_context.application_context = application_context_;
   view_context.view_manager =

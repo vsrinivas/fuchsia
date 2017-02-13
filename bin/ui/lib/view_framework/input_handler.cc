@@ -9,7 +9,7 @@
 
 namespace mozart {
 
-InputHandler::InputHandler(modular::ServiceProvider* service_provider,
+InputHandler::InputHandler(app::ServiceProvider* service_provider,
                            InputListener* listener)
     : listener_binding_(listener) {
   FTL_DCHECK(service_provider);

@@ -28,7 +28,7 @@ BaseView::BaseView(ViewManagerPtr view_manager,
 
 BaseView::~BaseView() {}
 
-modular::ServiceProvider* BaseView::GetViewServiceProvider() {
+app::ServiceProvider* BaseView::GetViewServiceProvider() {
   if (!view_service_provider_)
     view_->GetServiceProvider(view_service_provider_.NewRequest());
   return view_service_provider_.get();

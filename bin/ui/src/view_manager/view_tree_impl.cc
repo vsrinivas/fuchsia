@@ -19,7 +19,7 @@ void ViewTreeImpl::GetToken(const GetTokenCallback& callback) {
 }
 
 void ViewTreeImpl::GetServiceProvider(
-    fidl::InterfaceRequest<modular::ServiceProvider> service_provider) {
+    fidl::InterfaceRequest<app::ServiceProvider> service_provider) {
   service_provider_bindings_.AddBinding(this, std::move(service_provider));
 }
 

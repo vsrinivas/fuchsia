@@ -25,16 +25,16 @@ int main(int argc, const char** argv) {
 
   mtl::MessageLoop loop;
   auto application_context_ =
-      modular::ApplicationContext::CreateFromStartupInfo();
+      app::ApplicationContext::CreateFromStartupInfo();
 
   // Launch application.
-  modular::ServiceProviderPtr services;
-  auto launch_info = modular::ApplicationLaunchInfo::New();
+  app::ServiceProviderPtr services;
+  auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = positional_args[0];
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info->arguments.push_back(positional_args[i]);
   launch_info->services = services.NewRequest();
-  modular::ApplicationControllerPtr controller;
+  app::ApplicationControllerPtr controller;
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       controller.NewRequest());
   controller.set_connection_error_handler([&loop] {
@@ -44,7 +44,7 @@ int main(int argc, const char** argv) {
 
   // Create the view.
   fidl::InterfacePtr<mozart::ViewProvider> view_provider;
-  modular::ConnectToService(services.get(), view_provider.NewRequest());
+  app::ConnectToService(services.get(), view_provider.NewRequest());
   fidl::InterfaceHandle<mozart::ViewOwner> view_owner;
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
 

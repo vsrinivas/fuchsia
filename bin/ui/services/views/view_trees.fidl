@@ -36,7 +36,7 @@ import "apps/mozart/services/views/view_tree_token.fidl";
 //
 // GETTING SERVICES
 //
-// The view tree's |modular::ServiceProvider| offers access to many services
+// The view tree's |app::ServiceProvider| offers access to many services
 // which are not directly expressed by the |ViewTree| interface itself, such
 // as input, accessiblity, and editing capabilities.
 //
@@ -57,7 +57,7 @@ interface ViewTree {
   // not be shared with anyone else.
   //
   // See |InputDispatcher|.
-  GetServiceProvider(modular.ServiceProvider& service_provider);
+  GetServiceProvider(app.ServiceProvider& service_provider);
 
   // Sets where the view tree's scene graph will be rendered.
   //
