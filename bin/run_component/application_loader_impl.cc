@@ -21,19 +21,19 @@ void ApplicationLoaderImpl::LoadApplication(
         if (error) {
           FTL_LOG(ERROR) << "Failed to load component manifest for " << url;
           FTL_LOG(ERROR) << error->description << "(" << error->code << ")";
-          callback(modular::ApplicationPackage::New());
+          callback(app::ApplicationPackage::New());
           return;
         }
         FTL_CHECK(component_manifest);
 
         if (!component_manifest->application) {
           FTL_LOG(ERROR) << "Component " << url << " not an application";
-          callback(modular::ApplicationPackage::New());
+          callback(app::ApplicationPackage::New());
           return;
         }
         if (!component_manifest->resources) {
           FTL_LOG(ERROR) << "Component " << url << " doesn't have resources";
-          callback(modular::ApplicationPackage::New());
+          callback(app::ApplicationPackage::New());
           return;
         }
         FTL_CHECK(resources_handle);
@@ -45,7 +45,7 @@ void ApplicationLoaderImpl::LoadApplication(
             component_manifest->application->resource, ftl::MakeCopyable([
               url, callback, resources = std::move(resources)
             ](mx::vmo data, network::NetworkErrorPtr error) {
-              auto package = modular::ApplicationPackage::New();
+              auto package = app::ApplicationPackage::New();
               if (error) {
                 FTL_LOG(ERROR)
                     << "Failed to load component package for " << url;

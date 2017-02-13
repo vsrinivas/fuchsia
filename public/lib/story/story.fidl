@@ -45,8 +45,8 @@ interface Story {
   // provide its |outgoing_services|, and the new module may implement
   // |incoming_services|, if an interface request is supplied.
   StartModule(string module_url, Link link,
-              ServiceProvider? outgoing_services,
-              ServiceProvider&? incoming_services,
+              app.ServiceProvider? outgoing_services,
+              app.ServiceProvider&? incoming_services,
               ModuleController& module_controller,
               mozart.ViewOwner& view_owner);
 

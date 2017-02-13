@@ -75,8 +75,8 @@ TodoApp::TodoApp()
 void TodoApp::Initialize(
     fidl::InterfaceHandle<modular::Story> story,
     fidl::InterfaceHandle<modular::Link> link,
-    fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services) {
+    fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
   story_.Bind(std::move(story));
   story_->GetLedger(ledger_.NewRequest(), HandleResponse("GetLedger"));
   ledger_->GetRootPage(page_.NewRequest(), HandleResponse("GetRootPage"));

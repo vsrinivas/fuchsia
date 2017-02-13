@@ -11,7 +11,7 @@
 
 namespace component {
 
-class ApplicationLoaderImpl : public modular::ApplicationLoader {
+class ApplicationLoaderImpl : public app::ApplicationLoader {
  public:
   ApplicationLoaderImpl(ComponentIndexPtr component_index)
       : component_index_(std::move(component_index)) {}

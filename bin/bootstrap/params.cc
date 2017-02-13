@@ -46,7 +46,7 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
         FTL_LOG(ERROR) << "Invalid --reg argument";
         return false;
       }
-      auto launch_info = modular::ApplicationLaunchInfo::New();
+      auto launch_info = app::ApplicationLaunchInfo::New();
       launch_info->url = split[1].ToString();
       services_.emplace(split[0].ToString(), std::move(launch_info));
     }
@@ -65,7 +65,7 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
   }
 
   if (positional_args[0] != "-") {
-    initial_launch_ = modular::ApplicationLaunchInfo::New();
+    initial_launch_ = app::ApplicationLaunchInfo::New();
     initial_launch_->url = positional_args[0];
     for (size_t i = 1; i < positional_args.size(); ++i)
       initial_launch_->arguments.push_back(positional_args[i]);

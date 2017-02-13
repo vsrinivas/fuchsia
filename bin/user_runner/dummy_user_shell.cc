@@ -139,7 +139,7 @@ class DummyUserShellApp
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+      fidl::InterfaceRequest<app::ServiceProvider> services) override {
     view_.reset(new DummyUserShellView(
         application_context()
             ->ConnectToEnvironmentService<mozart::ViewManager>(),

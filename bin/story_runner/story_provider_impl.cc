@@ -543,7 +543,7 @@ class PreviousStoriesCall : public Operation {
 }  // namespace
 
 StoryProviderImpl::StoryProviderImpl(
-    ApplicationEnvironmentPtr environment,
+    app::ApplicationEnvironmentPtr environment,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
     ledger::LedgerRepositoryPtr ledger_repository,
     AgentRunner* agent_runner)

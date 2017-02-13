@@ -15,9 +15,7 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
  public:
   TestAgentApp() { modular::testing::Init(application_context()); }
 
-  ~TestAgentApp() override {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-  }
+  ~TestAgentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
 
  private:
   // |Agent|
@@ -25,9 +23,8 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
       fidl::InterfaceHandle<modular::AgentContext> agent_context) override {}
 
   // |Agent|
-  void Connect(
-      const fidl::String& requestor_url,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+  void Connect(const fidl::String& requestor_url,
+               fidl::InterfaceRequest<app::ServiceProvider> services) override {
     modular::testing::GetStore()->Put("test_agent2_connected", "", [] {});
   }
 

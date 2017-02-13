@@ -20,7 +20,7 @@ namespace component {
 
 class App {
  public:
-  App() : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+  App() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     component_index_ = context_->ConnectToEnvironmentService<ComponentIndex>();
   }
 
@@ -62,8 +62,8 @@ class App {
 
  private:
   std::function<void()> quit_callback_;
-  std::unique_ptr<modular::ApplicationContext> context_;
-  modular::ApplicationControllerPtr component_index_controller_;
+  std::unique_ptr<app::ApplicationContext> context_;
+  app::ApplicationControllerPtr component_index_controller_;
 
   fidl::InterfacePtr<ComponentIndex> component_index_;
 

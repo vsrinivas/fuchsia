@@ -9,7 +9,7 @@
 
 namespace modular {
 
-AgentRunner::AgentRunner(ApplicationLauncher* application_launcher)
+AgentRunner::AgentRunner(app::ApplicationLauncher* application_launcher)
     : application_launcher_(application_launcher) {}
 
 AgentRunner::~AgentRunner() = default;
@@ -17,7 +17,7 @@ AgentRunner::~AgentRunner() = default;
 void AgentRunner::ConnectToAgent(
     const std::string& requestor_url,
     const std::string& agent_url,
-    fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   auto found_it = running_agents_.find(agent_url);
   if (found_it == running_agents_.end()) {
@@ -28,9 +28,9 @@ void AgentRunner::ConnectToAgent(
     FTL_DCHECK(inserted);
   }
 
-  found_it->second->NewConnection(
-      requestor_url, std::move(incoming_services_request),
-      std::move(agent_controller_request));
+  found_it->second->NewConnection(requestor_url,
+                                  std::move(incoming_services_request),
+                                  std::move(agent_controller_request));
 }
 
 void AgentRunner::RemoveAgent(const std::string& agent_url) {

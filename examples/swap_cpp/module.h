@@ -42,15 +42,14 @@ class ModuleApp : public modular::SingleServiceViewApp<modular::Module> {
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override;
+      fidl::InterfaceRequest<app::ServiceProvider> services) override;
 
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::Story> story,
       fidl::InterfaceHandle<modular::Link> link,
-      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
-      override;
+      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
   // |Module|
   void Stop(const StopCallback& done) override;

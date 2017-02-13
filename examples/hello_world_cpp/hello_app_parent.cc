@@ -22,7 +22,7 @@ class HelloAppParent {
  public:
   HelloAppParent(ftl::CommandLine& command_line)
       : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
-    auto launch_info = modular::ApplicationLaunchInfo::New();
+    auto launch_info = app::ApplicationLaunchInfo::New();
     const std::vector<std::string>& args = command_line.positional_args();
     if (args.empty()) {
       launch_info->url = "file:///system/apps/hello_app_child";
@@ -50,8 +50,8 @@ class HelloAppParent {
 
   std::unique_ptr<modular::ApplicationContext> context_;
 
-  modular::ApplicationControllerPtr child_;
-  modular::ServiceProviderPtr child_services_;
+  app::ApplicationControllerPtr child_;
+  app::ServiceProviderPtr child_services_;
   HelloPtr hello_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(HelloAppParent);

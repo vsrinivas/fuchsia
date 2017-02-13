@@ -9,14 +9,14 @@
 
 namespace modular {
 
-AgentContextImpl::AgentContextImpl(ApplicationLauncher* const app_launcher,
+AgentContextImpl::AgentContextImpl(app::ApplicationLauncher* const app_launcher,
                                    AgentRunner* const agent_runner,
                                    const std::string& url)
     : url_(url),
       agent_context_binding_(this),
       component_context_impl_(agent_runner, url) {
   // Start up the agent process.
-  auto launch_info = ApplicationLaunchInfo::New();
+  auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
   launch_info->services = application_services_.NewRequest();
   app_launcher->CreateApplication(std::move(launch_info),
@@ -31,22 +31,22 @@ AgentContextImpl::AgentContextImpl(ApplicationLauncher* const app_launcher,
       [agent_runner, url] { agent_runner->RemoveAgent(url); });
 
   // When all the |AgentController| bindings go away stop the agent.
-  agent_controller_bindings_.set_on_empty_set_handler([this] {
-    agent_->Stop([] { });
-  });
+  agent_controller_bindings_.set_on_empty_set_handler(
+      [this] { agent_->Stop([] {}); });
 }
 
 AgentContextImpl::~AgentContextImpl() = default;
 
 void AgentContextImpl::NewConnection(
     const std::string& requestor_url,
-    fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   agent_->Connect(requestor_url, std::move(incoming_services_request));
 
   // Add a binding to the |controller|. When all the bindings go away
   // we can stop the agent.
-  agent_controller_bindings_.AddBinding(this, std::move(agent_controller_request));
+  agent_controller_bindings_.AddBinding(this,
+                                        std::move(agent_controller_request));
 }
 
 void AgentContextImpl::GetComponentContext(

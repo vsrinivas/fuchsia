@@ -42,7 +42,7 @@ bool Config::Parse(const std::string& string) {
 
       std::string service_name = reg.name.GetString();
 
-      auto launch_info = modular::ApplicationLaunchInfo::New();
+      auto launch_info = app::ApplicationLaunchInfo::New();
       if (reg.value.IsString()) {
         launch_info->url = reg.value.GetString();
       } else if (reg.value.IsArray()) {

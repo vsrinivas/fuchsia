@@ -133,7 +133,7 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+      fidl::InterfaceRequest<app::ServiceProvider> services) override {
     view_.reset(new Module1View(
         &store_,
         application_context()
@@ -145,9 +145,8 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
   void Initialize(
       fidl::InterfaceHandle<modular::Story> story,
       fidl::InterfaceHandle<modular::Link> link,
-      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
-      override {
+      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     FTL_CHECK(incoming_services.is_valid());
     FTL_CHECK(outgoing_services.is_pending());
 
@@ -164,7 +163,7 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
     // This exercises the incoming services we get from the recipe.
     FTL_CHECK(incoming_services.is_valid());
     auto recipe_services =
-        modular::ServiceProviderPtr::Create(std::move(incoming_services));
+        app::ServiceProviderPtr::Create(std::move(incoming_services));
 
     auto adder_service = modular::ConnectToService<modular::examples::Adder>(
         recipe_services.get());
@@ -228,7 +227,7 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
   // demonstrate the use of a service exchange.
   fidl::BindingSet<modular::examples::Multiplier> multiplier_clients_;
   MultiplierImpl multiplier_service_;
-  modular::ServiceProviderImpl outgoing_services_;
+  app::ServiceProviderImpl outgoing_services_;
 
   std::unique_ptr<Module1View> view_;
   modular::StoryPtr story_;

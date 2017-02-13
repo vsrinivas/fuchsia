@@ -110,7 +110,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+      fidl::InterfaceRequest<app::ServiceProvider> services) override {
     view_.reset(
         new RecipeView(application_context()
                            ->ConnectToEnvironmentService<mozart::ViewManager>(),
@@ -122,9 +122,8 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   void Initialize(
       fidl::InterfaceHandle<modular::Story> story,
       fidl::InterfaceHandle<modular::Link> link,
-      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
-      override {
+      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
     story_->CreateLink("module", module_link_.NewRequest());

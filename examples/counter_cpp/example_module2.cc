@@ -113,7 +113,7 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+      fidl::InterfaceRequest<app::ServiceProvider> services) override {
     view_.reset(new Module2View(
         &store_,
         application_context()
@@ -125,9 +125,8 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
   void Initialize(
       fidl::InterfaceHandle<modular::Story> story,
       fidl::InterfaceHandle<modular::Link> link,
-      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
-      override {
+      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     story_.Bind(std::move(story));
     store_.Initialize(std::move(link));
   }

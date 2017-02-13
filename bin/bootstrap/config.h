@@ -20,7 +20,7 @@ namespace bootstrap {
 class Config {
  public:
   using ServiceMap =
-      std::unordered_map<std::string, modular::ApplicationLaunchInfoPtr>;
+      std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>;
 
   Config();
   ~Config();

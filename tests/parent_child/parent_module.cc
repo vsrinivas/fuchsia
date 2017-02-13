@@ -19,37 +19,32 @@ constexpr int kTimeoutMilliseconds = 5000;
 
 constexpr char kChildModule[] = "file:///tmp/tests/child_module";
 
-class ParentApp
-  : public modular::SingleServiceApp<modular::Module> {
+class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  ParentApp() {
-    modular::testing::Init(application_context());
-  }
+  ParentApp() { modular::testing::Init(application_context()); }
 
-  ~ParentApp() override {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-  }
+  ~ParentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
 
  private:
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::Story> story,
       fidl::InterfaceHandle<modular::Link> link,
-      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
-      override {
+      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     initialized_.Pass();
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
 
     StartModule(kChildModule);
 
-    modular::testing::GetStore()->Get("child_module_init", [this](const fidl::String&){
-      module_->Stop([this] {
-        callback_.Pass();
-        story_->Done();
-      });
-    });
+    modular::testing::GetStore()->Get("child_module_init",
+                                      [this](const fidl::String&) {
+                                        module_->Stop([this] {
+                                          callback_.Pass();
+                                          story_->Done();
+                                        });
+                                      });
 
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this] { delete this; },
@@ -70,7 +65,6 @@ class ParentApp
     story_->StartModule(module_query, std::move(child_link), nullptr, nullptr,
                         module_.NewRequest(), module_view.NewRequest());
   }
-
 
   modular::StoryPtr story_;
   modular::LinkPtr link_;

@@ -263,8 +263,8 @@ void StoryImpl::DisposeLink(LinkImpl* const link) {
 void StoryImpl::StartModule(
     const fidl::String& module_url,
     fidl::InterfaceHandle<Link> link,
-    fidl::InterfaceHandle<ServiceProvider> outgoing_services,
-    fidl::InterfaceRequest<ServiceProvider> incoming_services,
+    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   // We currently require a 1:1 relationship between module
@@ -272,15 +272,15 @@ void StoryImpl::StartModule(
   // flutter only allows one ViewOwner per flutter application,
   // and we need one ViewOwner instance per Module instance.
 
-  auto launch_info = ApplicationLaunchInfo::New();
+  auto launch_info = app::ApplicationLaunchInfo::New();
 
-  ServiceProviderPtr app_services;
+  app::ServiceProviderPtr app_services;
   launch_info->services = app_services.NewRequest();
   launch_info->url = module_url;
 
   FTL_LOG(INFO) << "StoryImpl::StartModule() " << module_url;
 
-  ApplicationControllerPtr application_controller;
+  app::ApplicationControllerPtr application_controller;
   story_provider_impl_->launcher()->CreateApplication(
       std::move(launch_info), application_controller.NewRequest());
 

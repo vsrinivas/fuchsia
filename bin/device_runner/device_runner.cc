@@ -32,9 +32,9 @@
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
+#include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/files/path.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
@@ -151,8 +151,8 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
     }
 
     // 1. Start the ledger.
-    ServiceProviderPtr ledger_services;
-    auto ledger_launch_info = ApplicationLaunchInfo::New();
+    app::ServiceProviderPtr ledger_services;
+    auto ledger_launch_info = app::ApplicationLaunchInfo::New();
     ledger_launch_info->url = kLedgerAppUrl;
     ledger_launch_info->arguments = nullptr;
     ledger_launch_info->services = ledger_services.NewRequest();
@@ -164,8 +164,8 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
                      ledger_repository_factory_.NewRequest());
 
     // 2. Start the device shell.
-    ServiceProviderPtr services;
-    auto launch_info = ApplicationLaunchInfo::New();
+    app::ServiceProviderPtr services;
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = settings_.device_shell;
     launch_info->arguments = to_array(settings_.device_shell_args);
     launch_info->services = services.NewRequest();
@@ -247,11 +247,11 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
 
   // |UserProvider|
   void PreviousUsers(const PreviousUsersCallback& callback) override {
-   fidl::Array<fidl::String> users;
-   for (const auto* user : *(users_storage_->users())) {
-     users.push_back(user->username()->str());
-   }
-   callback(std::move(users));
+    fidl::Array<fidl::String> users;
+    for (const auto* user : *(users_storage_->users())) {
+      users.push_back(user->username()->str());
+    }
+    callback(std::move(users));
   }
 
   // |UserProvider|
@@ -327,11 +327,11 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
   fidl::Binding<DeviceContext> device_context_binding_;
   fidl::Binding<UserProvider> user_provider_binding_;
 
-  ApplicationControllerPtr device_shell_controller_;
+  app::ApplicationControllerPtr device_shell_controller_;
   DeviceShellPtr device_shell_;
 
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
-  ApplicationControllerPtr ledger_controller_;
+  app::ApplicationControllerPtr ledger_controller_;
 
   std::unique_ptr<UserControllerImpl> user_controller_impl_;
 

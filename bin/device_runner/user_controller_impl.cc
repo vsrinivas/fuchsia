@@ -34,25 +34,25 @@ UserControllerImpl::UserControllerImpl(
   const std::string label = kUserScopeLabelPrefix + to_hex_string(user_id);
 
   // 1. Create a child environment for the UserRunner.
-  ApplicationEnvironmentPtr env;
+  app::ApplicationEnvironmentPtr env;
   app_context->environment()->Duplicate(env.NewRequest());
   user_runner_scope_ = std::make_unique<Scope>(std::move(env), label);
 
-  ApplicationLauncherPtr launcher;
+  app::ApplicationLauncherPtr launcher;
   user_runner_scope_->environment()->GetApplicationLauncher(
       launcher.NewRequest());
 
   // 2. Launch UserRunner in the new environment.
-  auto launch_info = ApplicationLaunchInfo::New();
+  auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = user_runner;
-  ServiceProviderPtr services;
+  app::ServiceProviderPtr services;
   launch_info->services = services.NewRequest();
   launcher->CreateApplication(std::move(launch_info),
                               user_runner_controller_.NewRequest());
 
   // 3. Initialize the UserRunner service.
   UserRunnerFactoryPtr user_runner_factory;
-  ConnectToService(services.get(), user_runner_factory.NewRequest());
+  app::ConnectToService(services.get(), user_runner_factory.NewRequest());
   user_runner_factory->Create(
       std::move(user_id), user_shell, to_array(user_shell_args),
       std::move(ledger_repository), user_context_binding_.NewBinding(),

@@ -22,13 +22,12 @@ constexpr const char* kViewManagerAssociates[] = {
 }  // namespace
 
 App::App(Params* params)
-    : application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       env_host_binding_(this) {
   FTL_DCHECK(application_context_);
 
   // Set up environment for the programs we will run.
-  modular::ApplicationEnvironmentHostPtr env_host;
+  app::ApplicationEnvironmentHostPtr env_host;
   env_host_binding_.Bind(env_host.NewRequest());
   application_context_->environment()->CreateNestedEnvironment(
       std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
@@ -52,11 +51,11 @@ App::App(Params* params)
 App::~App() {}
 
 void App::RegisterSingleton(std::string service_name,
-                            modular::ApplicationLaunchInfoPtr launch_info) {
+                            app::ApplicationLaunchInfoPtr launch_info) {
   env_services_.AddServiceForName(
       ftl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info),
-        controller = modular::ApplicationControllerPtr()
+        controller = app::ApplicationControllerPtr()
       ](mx::channel client_handle) mutable {
         FTL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;
@@ -64,8 +63,8 @@ void App::RegisterSingleton(std::string service_name,
         if (it == service_providers_.end()) {
           FTL_VLOG(1) << "Starting singleton " << launch_info->url
                       << " for service " << service_name;
-          modular::ServiceProviderPtr service_provider;
-          auto dup_launch_info = modular::ApplicationLaunchInfo::New();
+          app::ServiceProviderPtr service_provider;
+          auto dup_launch_info = app::ApplicationLaunchInfo::New();
           dup_launch_info->url = launch_info->url;
           dup_launch_info->arguments = launch_info->arguments.Clone();
           dup_launch_info->services = service_provider.NewRequest();
@@ -97,12 +96,12 @@ void App::RegisterDefaultServiceConnector() {
 }
 
 void App::RegisterViewManager() {
-  env_services_.AddService<mozart::ViewManager>([this](
-      fidl::InterfaceRequest<mozart::ViewManager> request) {
-    FTL_VLOG(2) << "Servicing view manager service request";
-    InitViewManager();
-    modular::ConnectToService(view_manager_services_.get(), std::move(request));
-  });
+  env_services_.AddService<mozart::ViewManager>(
+      [this](fidl::InterfaceRequest<mozart::ViewManager> request) {
+        FTL_VLOG(2) << "Servicing view manager service request";
+        InitViewManager();
+        app::ConnectToService(view_manager_services_.get(), std::move(request));
+      });
 }
 
 void App::InitViewManager() {
@@ -110,13 +109,13 @@ void App::InitViewManager() {
     return;
 
   FTL_VLOG(1) << "Starting view manager";
-  auto launch_info = modular::ApplicationLaunchInfo::New();
+  auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = kViewManagerUrl;
   launch_info->services = view_manager_services_.NewRequest();
   env_launcher_->CreateApplication(std::move(launch_info),
                                    view_manager_controller_.NewRequest());
-  modular::ConnectToService(view_manager_services_.get(),
-                            view_manager_.NewRequest());
+  app::ConnectToService(view_manager_services_.get(),
+                        view_manager_.NewRequest());
   view_manager_.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "View manager died";
     ResetViewManager();
@@ -125,15 +124,15 @@ void App::InitViewManager() {
   // Launch view associates.
   for (const auto& url : kViewManagerAssociates) {
     FTL_VLOG(1) << "Starting view associate " << url;
-    modular::ServiceProviderPtr services;
-    modular::ApplicationControllerPtr controller;
-    auto launch_info = modular::ApplicationLaunchInfo::New();
+    app::ServiceProviderPtr services;
+    app::ApplicationControllerPtr controller;
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = url;
     launch_info->services = services.NewRequest();
     env_launcher_->CreateApplication(std::move(launch_info),
                                      controller.NewRequest());
     auto view_associate =
-        modular::ConnectToService<mozart::ViewAssociate>(services.get());
+        app::ConnectToService<mozart::ViewAssociate>(services.get());
 
     // Wire up the associate to the ViewManager.
     mozart::ViewAssociateOwnerPtr owner;
@@ -157,7 +156,7 @@ void App::ResetViewManager() {
   view_associate_owners_.clear();
 }
 
-void App::LaunchApplication(modular::ApplicationLaunchInfoPtr launch_info) {
+void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
   FTL_LOG(INFO) << "Bootstrapping application " << launch_info->url;
 
   env_launcher_->CreateApplication(std::move(launch_info),
@@ -169,7 +168,7 @@ void App::LaunchApplication(modular::ApplicationLaunchInfoPtr launch_info) {
 }
 
 void App::GetApplicationEnvironmentServices(
-    fidl::InterfaceRequest<modular::ServiceProvider> environment_services) {
+    fidl::InterfaceRequest<app::ServiceProvider> environment_services) {
   env_services_.AddBinding(std::move(environment_services));
 }
 

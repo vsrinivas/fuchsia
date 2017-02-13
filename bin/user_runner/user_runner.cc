@@ -72,7 +72,7 @@ std::string LedgerStatusToString(ledger::Status status) {
 class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(
-      std::shared_ptr<ApplicationContext> application_context,
+      std::shared_ptr<app::ApplicationContext> application_context,
       fidl::Array<uint8_t> user_id,
       const fidl::String& user_shell,
       fidl::Array<fidl::String> user_shell_args,
@@ -86,7 +86,7 @@ class UserRunnerImpl : public UserRunner {
     binding_.set_connection_error_handler([this] { delete this; });
 
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
-    ApplicationEnvironmentPtr user_runner_env;
+    app::ApplicationEnvironmentPtr user_runner_env;
     application_context_->environment()->Duplicate(
         user_runner_env.NewRequest());
     stories_scope_ = std::make_unique<Scope>(std::move(user_runner_env), label);
@@ -114,7 +114,7 @@ class UserRunnerImpl : public UserRunner {
               << LedgerStatusToString(status);
         });
 
-    ApplicationEnvironmentPtr env;
+    app::ApplicationEnvironmentPtr env;
     stories_scope_->environment()->Duplicate(env.NewRequest());
 
     story_provider_impl_.reset(new StoryProviderImpl(
@@ -166,19 +166,19 @@ class UserRunnerImpl : public UserRunner {
     });
   }
 
-  ServiceProviderPtr GetServiceProvider(
+  app::ServiceProviderPtr GetServiceProvider(
       const fidl::String& url,
       const fidl::Array<fidl::String>* const args) {
-    auto launch_info = ApplicationLaunchInfo::New();
+    auto launch_info = app::ApplicationLaunchInfo::New();
 
-    ServiceProviderPtr services;
+    app::ServiceProviderPtr services;
     launch_info->services = services.NewRequest();
     launch_info->url = url;
     if (args != nullptr) {
       launch_info->arguments = args->Clone();
     }
 
-    ApplicationControllerPtr ctrl;
+    app::ApplicationControllerPtr ctrl;
     application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                         ctrl.NewRequest());
     application_controllers_.emplace_back(std::move(ctrl));
@@ -203,7 +203,7 @@ class UserRunnerImpl : public UserRunner {
     ConnectToService(app_services.get(), user_shell_.NewRequest());
   }
 
-  std::shared_ptr<ApplicationContext> application_context_;
+  std::shared_ptr<app::ApplicationContext> application_context_;
   fidl::Binding<UserRunner> binding_;
   std::unique_ptr<Scope> stories_scope_;
   UserShellPtr user_shell_;
@@ -212,7 +212,7 @@ class UserRunnerImpl : public UserRunner {
 
   // Keep connections to applications started here around so they are
   // killed when this instance is deleted.
-  std::vector<ApplicationControllerPtr> application_controllers_;
+  std::vector<app::ApplicationControllerPtr> application_controllers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };

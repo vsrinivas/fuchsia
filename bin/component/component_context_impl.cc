@@ -19,12 +19,12 @@ ComponentContextImpl::~ComponentContextImpl() = default;
 
 void ComponentContextImpl::ConnectToAgent(
     const fidl::String& url,
-    fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // TODO: Plumb requestor url.
-  agent_runner_->ConnectToAgent(
-      component_id_, url, std::move(incoming_services_request),
-      std::move(agent_controller_request));
+  agent_runner_->ConnectToAgent(component_id_, url,
+                                std::move(incoming_services_request),
+                                std::move(agent_controller_request));
 }
 
 void ComponentContextImpl::ObtainMessageQueue(

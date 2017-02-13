@@ -13,10 +13,10 @@
 
 namespace component {
 
-class RunComponentApp : public modular::ApplicationEnvironmentHost {
+class RunComponentApp : public app::ApplicationEnvironmentHost {
  public:
   RunComponentApp(const ftl::CommandLine& command_line)
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()),
+      : context_(app::ApplicationContext::CreateFromStartupInfo()),
         application_loader_(
             context_->ConnectToEnvironmentService<ComponentIndex>()),
         env_host_binding_(this) {
@@ -29,7 +29,7 @@ class RunComponentApp : public modular::ApplicationEnvironmentHost {
     const std::string& component_id = command_line.positional_args()[0];
 
     // Set up environment for the components we will run.
-    modular::ApplicationEnvironmentHostPtr env_host;
+    app::ApplicationEnvironmentHostPtr env_host;
     env_host_binding_.Bind(env_host.NewRequest());
     context_->environment()->CreateNestedEnvironment(
         std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
@@ -37,8 +37,8 @@ class RunComponentApp : public modular::ApplicationEnvironmentHost {
     env_->GetApplicationLauncher(env_launcher_.NewRequest());
 
     // Make the component application loader available in the new environment.
-    env_services_.AddService<modular::ApplicationLoader>(
-        [this](fidl::InterfaceRequest<modular::ApplicationLoader> request) {
+    env_services_.AddService<app::ApplicationLoader>(
+        [this](fidl::InterfaceRequest<app::ApplicationLoader> request) {
           application_loader_bindings_.AddBinding(&application_loader_,
                                                   std::move(request));
         });
@@ -52,14 +52,14 @@ class RunComponentApp : public modular::ApplicationEnvironmentHost {
 
     FTL_LOG(INFO) << "Running component " << component_id;
 
-    modular::ServiceProviderPtr app_services;
+    app::ServiceProviderPtr app_services;
 
-    auto launch_info = modular::ApplicationLaunchInfo::New();
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = component_id;
     launch_info->services = app_services.NewRequest();
     // TODO(ianloic): support passing arguments to component apps?
 
-    modular::ApplicationControllerPtr controller;
+    app::ApplicationControllerPtr controller;
     env_launcher_->CreateApplication(std::move(launch_info),
                                      controller.NewRequest());
     controller.set_connection_error_handler([] {
@@ -72,7 +72,7 @@ class RunComponentApp : public modular::ApplicationEnvironmentHost {
   }
 
   void GetApplicationEnvironmentServices(
-      ::fidl::InterfaceRequest<modular::ServiceProvider> environment_services)
+      ::fidl::InterfaceRequest<app::ServiceProvider> environment_services)
       override {
     env_services_.AddBinding(std::move(environment_services));
   }
@@ -82,16 +82,16 @@ class RunComponentApp : public modular::ApplicationEnvironmentHost {
     std::cout << "Usage: " << argv0 << " url_of_component_to_run" << std::endl;
   }
 
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   ApplicationLoaderImpl application_loader_;
-  fidl::BindingSet<modular::ApplicationLoader> application_loader_bindings_;
+  fidl::BindingSet<app::ApplicationLoader> application_loader_bindings_;
 
   // Nested environment within which the components will run.
-  modular::ApplicationEnvironmentPtr env_;
-  modular::ApplicationEnvironmentControllerPtr env_controller_;
-  fidl::Binding<modular::ApplicationEnvironmentHost> env_host_binding_;
-  modular::ServiceProviderImpl env_services_;
-  modular::ApplicationLauncherPtr env_launcher_;
+  app::ApplicationEnvironmentPtr env_;
+  app::ApplicationEnvironmentControllerPtr env_controller_;
+  fidl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
+  app::ServiceProviderImpl env_services_;
+  app::ApplicationLauncherPtr env_launcher_;
 };
 
 }  // namespace component

@@ -42,8 +42,8 @@ class StoryConnection : public Story {
   void StartModule(
       const fidl::String& query,
       fidl::InterfaceHandle<Link> link,
-      fidl::InterfaceHandle<ServiceProvider> outgoing_services,
-      fidl::InterfaceRequest<ServiceProvider> incoming_services,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   void GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,

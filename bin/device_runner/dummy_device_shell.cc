@@ -33,14 +33,16 @@ class DummyDeviceShellApp
       public modular::UserWatcher {
  public:
   DummyDeviceShellApp(const Settings& settings)
-      : settings_(settings), device_shell_binding_(this), user_watcher_binding_(this) {}
+      : settings_(settings),
+        device_shell_binding_(this),
+        user_watcher_binding_(this) {}
   ~DummyDeviceShellApp() override = default;
 
  private:
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+      fidl::InterfaceRequest<app::ServiceProvider> services) override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
@@ -73,8 +75,7 @@ class DummyDeviceShellApp
 
   void Connect() {
     if (user_provider_ && view_owner_request_) {
-      user_provider_->AddUser(settings_.user, nullptr,
-                              "ledger.fuchsia.com");
+      user_provider_->AddUser(settings_.user, nullptr, "ledger.fuchsia.com");
       user_provider_->Login(settings_.user, nullptr,
                             std::move(view_owner_request_),
                             user_controller_.NewRequest());

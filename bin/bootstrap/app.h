@@ -30,7 +30,7 @@ class Params;
 //
 // After setting up the nested environment, the bootstrap starts the app
 // specified on the command-line.
-class App : public modular::ApplicationEnvironmentHost {
+class App : public app::ApplicationEnvironmentHost {
  public:
   explicit App(Params* params);
   ~App();
@@ -38,37 +38,36 @@ class App : public modular::ApplicationEnvironmentHost {
  private:
   // |ApplicationEnvironmentHost|:
   void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<modular::ServiceProvider> environment_services)
+      fidl::InterfaceRequest<app::ServiceProvider> environment_services)
       override;
 
   void RegisterSingleton(std::string service_name,
-                         modular::ApplicationLaunchInfoPtr launch_info);
+                         app::ApplicationLaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
-  void LaunchApplication(modular::ApplicationLaunchInfoPtr launch_info);
+  void LaunchApplication(app::ApplicationLaunchInfoPtr launch_info);
 
   void RegisterViewManager();
   void InitViewManager();
   void ResetViewManager();
 
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
 
   // Keep track of all services, indexed by url.
-  std::unordered_map<std::string, modular::ServiceProviderPtr>
-      service_providers_;
+  std::unordered_map<std::string, app::ServiceProviderPtr> service_providers_;
 
   // Nested environment within which the apps started by Bootstrap will run.
-  modular::ApplicationEnvironmentPtr env_;
-  modular::ApplicationEnvironmentControllerPtr env_controller_;
-  fidl::Binding<modular::ApplicationEnvironmentHost> env_host_binding_;
-  modular::ServiceProviderImpl env_services_;
-  modular::ApplicationLauncherPtr env_launcher_;
-  modular::ApplicationControllerPtr app_controller_;
+  app::ApplicationEnvironmentPtr env_;
+  app::ApplicationEnvironmentControllerPtr env_controller_;
+  fidl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
+  app::ServiceProviderImpl env_services_;
+  app::ApplicationLauncherPtr env_launcher_;
+  app::ApplicationControllerPtr app_controller_;
 
   // View manager state.
   mozart::ViewManagerPtr view_manager_;
-  modular::ApplicationControllerPtr view_manager_controller_;
-  modular::ServiceProviderPtr view_manager_services_;
-  std::vector<modular::ApplicationControllerPtr> view_associate_controllers_;
+  app::ApplicationControllerPtr view_manager_controller_;
+  app::ServiceProviderPtr view_manager_services_;
+  std::vector<app::ApplicationControllerPtr> view_associate_controllers_;
   std::vector<mozart::ViewAssociateOwnerPtr> view_associate_owners_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);

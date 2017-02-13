@@ -179,7 +179,7 @@ class DevUserShellApp
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+      fidl::InterfaceRequest<app::ServiceProvider> services) override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }

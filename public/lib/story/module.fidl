@@ -32,8 +32,8 @@ interface Module {
   // instances. It can also be used to signal that this module wants
   // to stop.
   Initialize(Story story, Link link,
-             ServiceProvider? incoming_services,
-             ServiceProvider&? outgoing_services);
+             app.ServiceProvider? incoming_services,
+             app.ServiceProvider&? outgoing_services);
 
   // This method is invoked by the Story instance to notify the module
   // that something in the system has requested it to stop. What can

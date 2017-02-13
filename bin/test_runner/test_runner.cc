@@ -62,7 +62,7 @@ class TestRunnerConnection;
 // anything, we declare the test a failure.
 class TestRunContext {
  public:
-  TestRunContext(std::shared_ptr<ApplicationContext> app_context,
+  TestRunContext(std::shared_ptr<app::ApplicationContext> app_context,
                  TestRunnerConnection* connection,
                  const std::string& test_id,
                  const std::string& url,
@@ -74,7 +74,7 @@ class TestRunContext {
   void Teardown();
 
  private:
-  ApplicationControllerPtr child_app_controller_;
+  app::ApplicationControllerPtr child_app_controller_;
   std::unique_ptr<Scope> child_env_scope_;
 
   TestRunnerConnection* const test_runner_connection_;
@@ -239,7 +239,7 @@ TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
                                const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {
   // 1. Make a child environment to run the command.
-  ApplicationEnvironmentPtr parent_env;
+  app::ApplicationEnvironmentPtr parent_env;
   app_context->environment()->Duplicate(parent_env.NewRequest());
   child_env_scope_ =
       std::make_unique<Scope>(std::move(parent_env), "test_runner_env");
@@ -256,11 +256,11 @@ TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
       });
 
   // 2. Launch the test command.
-  ApplicationLauncherPtr launcher;
+  app::ApplicationLauncherPtr launcher;
   child_env_scope_->environment()->GetApplicationLauncher(
       launcher.NewRequest());
 
-  ApplicationLaunchInfoPtr info = ApplicationLaunchInfo::New();
+  auto info = app::ApplicationLaunchInfo::New();
   info->url = url;
   info->arguments = fidl::Array<fidl::String>::From(args);
   launcher->CreateApplication(std::move(info),

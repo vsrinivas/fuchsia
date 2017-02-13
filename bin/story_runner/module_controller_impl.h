@@ -30,7 +30,7 @@ class ModuleControllerImpl : public ModuleController {
   ModuleControllerImpl(
       StoryImpl* const story_impl,
       const std::string& url,
-      ApplicationControllerPtr module_application,
+      app::ApplicationControllerPtr module_application,
       ModulePtr module,
       fidl::InterfaceRequest<ModuleController> module_controller);
 
@@ -57,7 +57,7 @@ class ModuleControllerImpl : public ModuleController {
 
   StoryImpl* const story_impl_;
   const std::string url_;
-  ApplicationControllerPtr module_application_;
+  app::ApplicationControllerPtr module_application_;
   ModulePtr module_;
   fidl::Binding<ModuleController> binding_;
   fidl::InterfacePtrSet<ModuleWatcher> watchers_;

@@ -16,24 +16,22 @@ namespace {
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
 constexpr int kTimeoutMilliseconds = 5000;
-constexpr char kTest1Agent[] = "file:///tmp/tests/component_context_test_agent1";
+constexpr char kTest1Agent[] =
+    "file:///tmp/tests/component_context_test_agent1";
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
   ParentApp() { modular::testing::Init(application_context()); }
 
-  ~ParentApp() override {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-  }
+  ~ParentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
 
  private:
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::Story> story,
       fidl::InterfaceHandle<modular::Link> link,
-      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
-      override {
+      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
     initialized_.Pass();
@@ -42,7 +40,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     modular::ComponentContextPtr ctx;
     story_->GetComponentContext(ctx.NewRequest());
 
-    modular::ServiceProviderPtr agent_services;
+    app::ServiceProviderPtr agent_services;
     ctx->ConnectToAgent(kTest1Agent, agent_services.NewRequest(),
                         agent_controller_.NewRequest());
 

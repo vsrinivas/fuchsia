@@ -15,7 +15,6 @@
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -30,7 +29,7 @@ class AgentRunner;
 // class. This class manages all AgentControllers associated with this agent.
 class AgentContextImpl : public AgentContext, public AgentController {
  public:
-  explicit AgentContextImpl(ApplicationLauncher* app_launcher,
+  explicit AgentContextImpl(app::ApplicationLauncher* app_launcher,
                             AgentRunner* agent_runner,
                             const std::string& url);
   ~AgentContextImpl() override;
@@ -38,7 +37,7 @@ class AgentContextImpl : public AgentContext, public AgentController {
   // Called by AgentRunner when a component wants to connect to this agent.
   void NewConnection(
       const std::string& requestor_url,
-      fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
  private:
@@ -53,8 +52,8 @@ class AgentContextImpl : public AgentContext, public AgentController {
   void Done() override;
 
   const std::string url_;
-  ApplicationControllerPtr application_controller_;
-  ServiceProviderPtr application_services_;
+  app::ApplicationControllerPtr application_controller_;
+  app::ServiceProviderPtr application_services_;
   AgentPtr agent_;
   fidl::Binding<AgentContext> agent_context_binding_;
   fidl::BindingSet<AgentController> agent_controller_bindings_;

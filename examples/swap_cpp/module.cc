@@ -66,7 +66,7 @@ ModuleApp::ModuleApp(CreateViewCallback create) : create_(create) {}
 
 void ModuleApp::CreateView(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fidl::InterfaceRequest<modular::ServiceProvider> services) {
+    fidl::InterfaceRequest<app::ServiceProvider> services) {
   view_.reset(create_(
       application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
       std::move(view_owner_request)));
@@ -75,8 +75,8 @@ void ModuleApp::CreateView(
 void ModuleApp::Initialize(
     fidl::InterfaceHandle<modular::Story> story,
     fidl::InterfaceHandle<modular::Link> link,
-    fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services) {}
+    fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {}
 
 void ModuleApp::Stop(const StopCallback& done) {
   done();

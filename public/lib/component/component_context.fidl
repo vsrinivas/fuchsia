@@ -13,7 +13,7 @@ import "apps/modular/services/component/message_queue.fidl";
 // gets it in Agent::Initialize().
 interface ComponentContext {
   // Used to start a new agent in the user scope and connect to it.
-  ConnectToAgent(string url, ServiceProvider& incoming_services,
+  ConnectToAgent(string url, app.ServiceProvider& incoming_services,
                  AgentController& controller);
 
   // Used to create / delete a message queue or retrieve an existing queue

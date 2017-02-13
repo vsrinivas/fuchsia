@@ -17,20 +17,20 @@ namespace bootstrap {
 class Params {
  public:
   using ServiceMap =
-      std::unordered_map<std::string, modular::ApplicationLaunchInfoPtr>;
+      std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>;
 
   bool Setup(const ftl::CommandLine& command_line);
 
   std::string label() const { return label_; }
 
   ServiceMap TakeServices() { return std::move(services_); }
-  modular::ApplicationLaunchInfoPtr TakeInitialLaunch() {
+  app::ApplicationLaunchInfoPtr TakeInitialLaunch() {
     return std::move(initial_launch_);
   }
 
  private:
   ServiceMap services_;
-  modular::ApplicationLaunchInfoPtr initial_launch_;
+  app::ApplicationLaunchInfoPtr initial_launch_;
   std::string label_;
 };
 

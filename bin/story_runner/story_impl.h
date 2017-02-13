@@ -31,7 +31,6 @@
 
 namespace modular {
 
-class ApplicationContext;
 class LinkImpl;
 class ModuleControllerImpl;
 class StoryConnection;
@@ -53,12 +52,13 @@ class StoryImpl : public StoryController, ModuleWatcher {
   // Methods called by StoryConnection.
   void CreateLink(const fidl::String& name,
                   fidl::InterfaceRequest<Link> request);
-  void StartModule(const fidl::String& query,
-                   fidl::InterfaceHandle<Link> link,
-                   fidl::InterfaceHandle<ServiceProvider> outgoing_services,
-                   fidl::InterfaceRequest<ServiceProvider> incoming_services,
-                   fidl::InterfaceRequest<ModuleController> module_controller,
-                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
+  void StartModule(
+      const fidl::String& query,
+      fidl::InterfaceHandle<Link> link,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
   void GetLedger(const std::string& module_url,
                  fidl::InterfaceRequest<ledger::Ledger> request,
                  const std::function<void(ledger::Status)>& result);

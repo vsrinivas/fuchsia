@@ -340,7 +340,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+      fidl::InterfaceRequest<app::ServiceProvider> services) override {
     view_.reset(
         new RecipeView(application_context()
                            ->ConnectToEnvironmentService<mozart::ViewManager>(),
@@ -365,9 +365,8 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   void Initialize(
       fidl::InterfaceHandle<modular::Story> story,
       fidl::InterfaceHandle<modular::Link> link,
-      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
-      override {
+      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
 
@@ -390,14 +389,14 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     module2_link_->Dup(module2_link_handle.NewRequest());
 
     // Provide services for Module 1.
-    modular::ServiceProviderPtr services_for_module1;
+    app::ServiceProviderPtr services_for_module1;
     outgoing_services_.AddBinding(services_for_module1.NewRequest());
     outgoing_services_.AddService<modular::examples::Adder>(
         [this](fidl::InterfaceRequest<modular::examples::Adder> req) {
           adder_clients_.AddBinding(&adder_service_, std::move(req));
         });
 
-    modular::ServiceProviderPtr services_from_module1;
+    app::ServiceProviderPtr services_from_module1;
     fidl::InterfaceHandle<mozart::ViewOwner> module1_view;
     story_->StartModule(
         "file:///system/apps/example_module1", std::move(module1_link_handle),
@@ -536,7 +535,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   // demonstrate the use of a service exchange.
   fidl::BindingSet<modular::examples::Adder> adder_clients_;
   AdderImpl adder_service_;
-  modular::ServiceProviderImpl outgoing_services_;
+  app::ServiceProviderImpl outgoing_services_;
 
   // The following ledger interfaces are stored here to make life-time
   // management easier when chaining together lambda callbacks.

@@ -35,8 +35,8 @@ void StoryConnection::CreateLink(const fidl::String& name,
 void StoryConnection::StartModule(
     const fidl::String& query,
     fidl::InterfaceHandle<Link> link,
-    fidl::InterfaceHandle<ServiceProvider> outgoing_services,
-    fidl::InterfaceRequest<ServiceProvider> incoming_services,
+    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_impl_->StartModule(query, std::move(link), std::move(outgoing_services),

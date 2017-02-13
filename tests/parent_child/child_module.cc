@@ -15,32 +15,27 @@ namespace {
 
 class ChildApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  ChildApp() {
-    modular::testing::Init(application_context());
-  }
+  ChildApp() { modular::testing::Init(application_context()); }
 
-  ~ChildApp() override {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-  }
+  ~ChildApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
 
  private:
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::Story> story,
       fidl::InterfaceHandle<modular::Link> link,
-      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
-      override {
+      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
     initialized_.Pass();
-    modular::testing::GetStore()->Put("child_module_init", "", []{});
+    modular::testing::GetStore()->Put("child_module_init", "", [] {});
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-    modular::testing::GetStore()->Put("child_module_stop", "", []{});
+    modular::testing::GetStore()->Put("child_module_stop", "", [] {});
     done();
     delete this;
   }

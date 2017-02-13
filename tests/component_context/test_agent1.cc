@@ -13,15 +13,14 @@ using modular::testing::TestPoint;
 
 namespace {
 
-constexpr char kTest2Agent[] = "file:///tmp/tests/component_context_test_agent2";
+constexpr char kTest2Agent[] =
+    "file:///tmp/tests/component_context_test_agent2";
 
 class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
  public:
   TestAgentApp() { modular::testing::Init(application_context()); }
 
-  ~TestAgentApp() override {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-  }
+  ~TestAgentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
 
  private:
   // |Agent|
@@ -33,7 +32,7 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
     agent_context_->GetComponentContext(ctx.NewRequest());
 
     // Connecting to the agent should start it up.
-    modular::ServiceProviderPtr agent_services;
+    app::ServiceProviderPtr agent_services;
     ctx->ConnectToAgent(kTest2Agent, agent_services.NewRequest(),
                         agent2_controller_.NewRequest());
 
@@ -42,9 +41,8 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
   }
 
   // |Agent|
-  void Connect(
-      const fidl::String& requestor_url,
-      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+  void Connect(const fidl::String& requestor_url,
+               fidl::InterfaceRequest<app::ServiceProvider> services) override {
     modular::testing::GetStore()->Put("test_agent1_connected", "", [] {});
   }
 
@@ -56,12 +54,13 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
   // |Agent|
   void Stop(const StopCallback& callback) override {
     // Before reporting that we stop, we wait until agent2 has connected.
-    modular::testing::GetStore()->Get("test_agent2_connected", [this, callback](const fidl::String&) {
-      agent2_connected_.Pass();
-      modular::testing::GetStore()->Put("test_agent1_stopped", "", [] {});
-      callback();
-      delete this;
-    });
+    modular::testing::GetStore()->Get(
+        "test_agent2_connected", [this, callback](const fidl::String&) {
+          agent2_connected_.Pass();
+          modular::testing::GetStore()->Put("test_agent1_stopped", "", [] {});
+          callback();
+          delete this;
+        });
   }
 
   TestPoint agent2_connected_{"Test agent2 accepted connection"};

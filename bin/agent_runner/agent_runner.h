@@ -23,7 +23,7 @@ class AgentContextImpl;
 // life time of a running agent.
 class AgentRunner {
  public:
-  explicit AgentRunner(ApplicationLauncher* application_launcher);
+  explicit AgentRunner(app::ApplicationLauncher* application_launcher);
   ~AgentRunner();
 
   // Connects to an agent (and starts it up if it doesn't exist). Called via
@@ -31,7 +31,7 @@ class AgentRunner {
   void ConnectToAgent(
       const std::string& requestor_url,
       const std::string& agent_url,
-      fidl::InterfaceRequest<ServiceProvider> incoming_services_request,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Removes an agent. Called by AgentContextImpl when it is done.
@@ -42,7 +42,7 @@ class AgentRunner {
   std::unordered_map<std::string, std::unique_ptr<AgentContextImpl>>
       running_agents_;
 
-  ApplicationLauncher* const application_launcher_;
+  app::ApplicationLauncher* const application_launcher_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
 };

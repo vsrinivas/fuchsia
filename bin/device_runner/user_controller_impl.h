@@ -53,7 +53,7 @@ class UserControllerImpl : public UserController {
   using DoneCallback = ftl::Closure;
 
   UserControllerImpl(
-      std::shared_ptr<ApplicationContext> app_context,
+      std::shared_ptr<app::ApplicationContext> app_context,
       const std::string& user_runner,
       const std::string& user_shell,
       const std::vector<std::string>& user_shell_args,
@@ -72,7 +72,7 @@ class UserControllerImpl : public UserController {
   void Watch(fidl::InterfaceHandle<UserWatcher> watcher) override;
 
   std::unique_ptr<Scope> user_runner_scope_;
-  ApplicationControllerPtr user_runner_controller_;
+  app::ApplicationControllerPtr user_runner_controller_;
   UserRunnerPtr user_runner_;
 
   UserContextImpl user_context_impl_;

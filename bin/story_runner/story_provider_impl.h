@@ -25,7 +25,6 @@
 #include "lib/ftl/macros.h"
 
 namespace modular {
-class ApplicationContext;
 class Resolver;
 class StoryImpl;
 
@@ -35,7 +34,7 @@ class DeleteStoryCall;
 
 class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
  public:
-  StoryProviderImpl(ApplicationEnvironmentPtr environment,
+  StoryProviderImpl(app::ApplicationEnvironmentPtr environment,
                     fidl::InterfaceHandle<ledger::Ledger> ledger,
                     ledger::LedgerRepositoryPtr ledger_repository,
                     AgentRunner* agent_runner);
@@ -59,7 +58,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
     return ledger_repository_.get();
   }
 
-  ApplicationLauncher* launcher() { return launcher_.get(); }
+  app::ApplicationLauncher* launcher() { return launcher_.get(); }
   AgentRunner* agent_runner() { return agent_runner_; }
 
   // Used by StoryImpl.
@@ -103,7 +102,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& callback) override;
 
-  ApplicationEnvironmentPtr environment_;
+  app::ApplicationEnvironmentPtr environment_;
   ledger::LedgerPtr ledger_;
 
   fidl::BindingSet<StoryProvider> bindings_;
@@ -113,7 +112,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   bool ready_{};
   std::vector<fidl::InterfaceRequest<StoryProvider>> requests_;
 
-  ApplicationLauncherPtr launcher_;
+  app::ApplicationLauncherPtr launcher_;
 
   // A list of IDs of *all* stories available on a user's ledger.
   std::unordered_set<std::string> story_ids_;
