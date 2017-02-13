@@ -296,8 +296,8 @@ class _ChooserScreenState extends State<_ChooserScreen> {
       color: Colors.black,
       child: new Stack(
         children: <Widget>[
-          new MaterialList(
-            children: _assets.map(_buildChooseButton),
+          new ListView(
+            children: _assets.map(_buildChooseButton).toList(),
           ),
           new Positioned(
             right: 0.0,
