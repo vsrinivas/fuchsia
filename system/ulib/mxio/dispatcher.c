@@ -48,6 +48,10 @@ static void destroy_handler(mxio_dispatcher_t* md, handler_t* handler, bool need
     free(handler);
 }
 
+// synthetic signal bit for synthetic packet
+// used during teardown.
+#define SIGNAL_NEEDS_CLOSE_CB 1u
+
 static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler, bool need_close_cb) {
     // close handle, so we get no further messages
     mx_handle_close(handler->h);
@@ -55,7 +59,7 @@ static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler, bool n
     // send a synthetic message so we know when it's safe to destroy
     mx_io_packet_t packet;
     packet.hdr.key = (uint64_t)(uintptr_t)handler;
-    packet.signals = need_close_cb ? MX_PORT_SIGNALED : 0;
+    packet.signals = need_close_cb ? SIGNAL_NEEDS_CLOSE_CB : 0;
     mx_port_queue(md->ioport, &packet, sizeof(packet));
 
     // flag so we know to ignore further events
@@ -78,7 +82,7 @@ again:
             // handler is awaiting gc
             // ignore events for it until we get the synthetic "destroy" event
             if (packet.hdr.type == MX_PORT_PKT_TYPE_USER) {
-                destroy_handler(md, handler, packet.signals & MX_PORT_SIGNALED);
+                destroy_handler(md, handler, packet.signals & SIGNAL_NEEDS_CLOSE_CB);
             }
             continue;
         }

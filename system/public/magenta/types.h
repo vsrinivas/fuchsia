@@ -43,34 +43,42 @@ typedef uint64_t mx_time_t;
 typedef uint32_t mx_signals_t;
 
 #define MX_SIGNAL_NONE              ((mx_signals_t)0u)
-#define MX_OBJECT_SIGNAL_ALL        ((mx_signals_t)0x00ffffffu)
 #define MX_USER_SIGNAL_ALL          ((mx_signals_t)0xff000000u)
 
-#define MX_OBJECT_SIGNAL_0          ((mx_signals_t)1u << 0)
-#define MX_OBJECT_SIGNAL_1          ((mx_signals_t)1u << 1)
-#define MX_OBJECT_SIGNAL_2          ((mx_signals_t)1u << 2)
-#define MX_OBJECT_SIGNAL_3          ((mx_signals_t)1u << 3)
-#define MX_OBJECT_SIGNAL_4          ((mx_signals_t)1u << 4)
-#define MX_OBJECT_SIGNAL_5          ((mx_signals_t)1u << 5)
-#define MX_OBJECT_SIGNAL_6          ((mx_signals_t)1u << 6)
-#define MX_OBJECT_SIGNAL_7          ((mx_signals_t)1u << 7)
-#define MX_OBJECT_SIGNAL_8          ((mx_signals_t)1u << 8)
-#define MX_OBJECT_SIGNAL_9          ((mx_signals_t)1u << 9)
-#define MX_OBJECT_SIGNAL_10         ((mx_signals_t)1u << 10)
-#define MX_OBJECT_SIGNAL_11         ((mx_signals_t)1u << 11)
-#define MX_OBJECT_SIGNAL_12         ((mx_signals_t)1u << 12)
-#define MX_OBJECT_SIGNAL_13         ((mx_signals_t)1u << 13)
-#define MX_OBJECT_SIGNAL_14         ((mx_signals_t)1u << 14)
-#define MX_OBJECT_SIGNAL_15         ((mx_signals_t)1u << 15)
-#define MX_OBJECT_SIGNAL_16         ((mx_signals_t)1u << 16)
-#define MX_OBJECT_SIGNAL_17         ((mx_signals_t)1u << 17)
-#define MX_OBJECT_SIGNAL_18         ((mx_signals_t)1u << 18)
-#define MX_OBJECT_SIGNAL_19         ((mx_signals_t)1u << 19)
-#define MX_OBJECT_SIGNAL_20         ((mx_signals_t)1u << 20)
-#define MX_OBJECT_SIGNAL_21         ((mx_signals_t)1u << 21)
-#define MX_OBJECT_SIGNAL_22         ((mx_signals_t)1u << 22)
-#define MX_OBJECT_SIGNAL_23         ((mx_signals_t)1u << 23)
+// Implementation details (__MX_* not intended for public consumption)
+//
+// Signals that have a common meaning where used are named with that
+// meaning.  Signals that do not, or are not yet in use, are named
+// generically.
+#define __MX_OBJECT_SIGNAL_ALL      ((mx_signals_t)0x00ffffffu)
+#define __MX_OBJECT_READABLE        ((mx_signals_t)1u << 0)
+#define __MX_OBJECT_WRITABLE        ((mx_signals_t)1u << 1)
+#define __MX_OBJECT_PEER_CLOSED     ((mx_signals_t)1u << 2)
+#define __MX_OBJECT_SIGNALED        ((mx_signals_t)1u << 3)
+#define __MX_OBJECT_SIGNAL_4        ((mx_signals_t)1u << 4)
+#define __MX_OBJECT_SIGNAL_5        ((mx_signals_t)1u << 5)
+#define __MX_OBJECT_SIGNAL_6        ((mx_signals_t)1u << 6)
+#define __MX_OBJECT_SIGNAL_7        ((mx_signals_t)1u << 7)
+#define __MX_OBJECT_SIGNAL_8        ((mx_signals_t)1u << 8)
+#define __MX_OBJECT_SIGNAL_9        ((mx_signals_t)1u << 9)
+#define __MX_OBJECT_SIGNAL_10       ((mx_signals_t)1u << 10)
+#define __MX_OBJECT_SIGNAL_11       ((mx_signals_t)1u << 11)
+#define __MX_OBJECT_SIGNAL_12       ((mx_signals_t)1u << 12)
+#define __MX_OBJECT_SIGNAL_13       ((mx_signals_t)1u << 13)
+#define __MX_OBJECT_SIGNAL_14       ((mx_signals_t)1u << 14)
+#define __MX_OBJECT_SIGNAL_15       ((mx_signals_t)1u << 15)
+#define __MX_OBJECT_SIGNAL_16       ((mx_signals_t)1u << 16)
+#define __MX_OBJECT_SIGNAL_17       ((mx_signals_t)1u << 17)
+#define __MX_OBJECT_SIGNAL_18       ((mx_signals_t)1u << 18)
+#define __MX_OBJECT_SIGNAL_19       ((mx_signals_t)1u << 19)
+#define __MX_OBJECT_SIGNAL_20       ((mx_signals_t)1u << 20)
+#define __MX_OBJECT_SIGNAL_21       ((mx_signals_t)1u << 21)
+#define __MX_OBJECT_SIGNAL_22       ((mx_signals_t)1u << 22)
+#define __MX_OBJECT_HANDLE_CLOSED   ((mx_signals_t)1u << 23)
 
+
+
+// User Signals (for mx_object_signal() and mx_object_signal_peer())
 #define MX_USER_SIGNAL_0            ((mx_signals_t)1u << 24)
 #define MX_USER_SIGNAL_1            ((mx_signals_t)1u << 25)
 #define MX_USER_SIGNAL_2            ((mx_signals_t)1u << 26)
@@ -80,63 +88,68 @@ typedef uint32_t mx_signals_t;
 #define MX_USER_SIGNAL_6            ((mx_signals_t)1u << 30)
 #define MX_USER_SIGNAL_7            ((mx_signals_t)1u << 31)
 
-#define MX_SIGNAL_HANDLE_CLOSED     MX_OBJECT_SIGNAL_23
+// Cancelation (handle was closed while waiting with it)
+#define MX_SIGNAL_HANDLE_CLOSED     __MX_OBJECT_HANDLE_CLOSED
 
 // Event
-#define MX_EVENT_SIGNALED           MX_OBJECT_SIGNAL_3
-#define MX_EVENT_SIGNAL_MASK        (MX_USER_SIGNAL_ALL | MX_OBJECT_SIGNAL_3)
+#define MX_EVENT_SIGNALED           __MX_OBJECT_SIGNALED
+#define MX_EVENT_SIGNAL_MASK        (MX_USER_SIGNAL_ALL | __MX_OBJECT_SIGNALED)
 
 // EventPair
-#define MX_EPAIR_SIGNALED           MX_OBJECT_SIGNAL_3
-#define MX_EPAIR_PEER_CLOSED        MX_OBJECT_SIGNAL_2
-#define MX_EPAIR_SIGNAL_MASK        (MX_USER_SIGNAL_ALL | MX_OBJECT_SIGNAL_2 | MX_OBJECT_SIGNAL_3)
+#define MX_EPAIR_SIGNALED           __MX_OBJECT_SIGNALED
+#define MX_EPAIR_PEER_CLOSED        __MX_OBJECT_PEER_CLOSED
+#define MX_EPAIR_SIGNAL_MASK        (MX_USER_SIGNAL_ALL | __MX_OBJECT_SIGNALED | __MX_OBJECT_PEER_CLOSED)
 
 // Channel
-#define MX_CHANNEL_READABLE         MX_OBJECT_SIGNAL_0
-#define MX_CHANNEL_WRITABLE         MX_OBJECT_SIGNAL_1
-#define MX_CHANNEL_PEER_CLOSED      MX_OBJECT_SIGNAL_2
+#define MX_CHANNEL_READABLE         __MX_OBJECT_READABLE
+#define MX_CHANNEL_WRITABLE         __MX_OBJECT_WRITABLE
+#define MX_CHANNEL_PEER_CLOSED      __MX_OBJECT_PEER_CLOSED
 
 // Socket
-#define MX_SOCKET_READABLE          MX_OBJECT_SIGNAL_0
-#define MX_SOCKET_WRITABLE          MX_OBJECT_SIGNAL_1
-#define MX_SOCKET_PEER_CLOSED       MX_OBJECT_SIGNAL_2
+#define MX_SOCKET_READABLE          __MX_OBJECT_READABLE
+#define MX_SOCKET_WRITABLE          __MX_OBJECT_WRITABLE
+#define MX_SOCKET_PEER_CLOSED       __MX_OBJECT_PEER_CLOSED
 
 // Port
-#define MX_PORT_READABLE            MX_OBJECT_SIGNAL_0
-#define MX_PORT_PEER_CLOSED         MX_OBJECT_SIGNAL_2
-#define MX_PORT_SIGNALED            MX_OBJECT_SIGNAL_3
+#define MX_PORT_READABLE            __MX_OBJECT_READABLE
 
 // Resource
-#define MX_RESOURCE_READABLE        MX_OBJECT_SIGNAL_0
-#define MX_RESOURCE_WRITABLE        MX_OBJECT_SIGNAL_1
-#define MX_RESOURCE_CHILD_ADDED     MX_OBJECT_SIGNAL_2
+#define MX_RESOURCE_READABLE        __MX_OBJECT_READABLE
+#define MX_RESOURCE_WRITABLE        __MX_OBJECT_WRITABLE
+#define MX_RESOURCE_CHILD_ADDED     __MX_OBJECT_SIGNAL_4
 
 // Fifo
-#define MX_FIFO_READABLE            MX_OBJECT_SIGNAL_0
-#define MX_FIFO_WRITABLE            MX_OBJECT_SIGNAL_1
-#define MX_FIFO_PEER_CLOSED         MX_OBJECT_SIGNAL_2
+#define MX_FIFO_READABLE            __MX_OBJECT_READABLE
+#define MX_FIFO_WRITABLE            __MX_OBJECT_WRITABLE
+#define MX_FIFO_PEER_CLOSED         __MX_OBJECT_PEER_CLOSED
 
 // Waitset
-#define MX_WAITSET_READABLE         MX_OBJECT_SIGNAL_0
-#define MX_WAITSET_PEER_CLOSED      MX_OBJECT_SIGNAL_2
+#define MX_WAITSET_READABLE         __MX_OBJECT_READABLE
+#define MX_WAITSET_PEER_CLOSED      __MX_OBJECT_PEER_CLOSED
 
 // Task signals (process, thread, job)
-#define MX_TASK_TERMINATED          MX_OBJECT_SIGNAL_3
-#define MX_TASK_SIGNAL_MASK         MX_OBJECT_SIGNAL_3
+#define MX_TASK_TERMINATED          __MX_OBJECT_SIGNALED
 
 // Job
-#define MX_JOB_NO_PROCESSES         MX_OBJECT_SIGNAL_3
-#define MX_JOB_NO_JOBS              MX_OBJECT_SIGNAL_4
+#define MX_JOB_NO_PROCESSES         __MX_OBJECT_SIGNALED
+#define MX_JOB_NO_JOBS              __MX_OBJECT_SIGNAL_4
 
 // Process
-#define MX_PROCESS_SIGNALED         MX_OBJECT_SIGNAL_3
+#define MX_PROCESS_TERMINATED       __MX_OBJECT_SIGNALED
 
 // Thread
-#define MX_THREAD_SIGNALED          MX_OBJECT_SIGNAL_3
+#define MX_THREAD_TERMINATED        __MX_OBJECT_SIGNALED
 
 // Log
-#define MX_LOG_READABLE             MX_OBJECT_SIGNAL_0
-#define MX_LOG_WRITABLE             MX_OBJECT_SIGNAL_1
+#define MX_LOG_READABLE             __MX_OBJECT_READABLE
+#define MX_LOG_WRITABLE             __MX_OBJECT_WRITABLE
+
+
+// Compatibility Definitions
+// TODO: remove when safe
+#define MX_PROCESS_SIGNALED         MX_PROCESS_TERMINATED
+#define MX_THREAD_SIGNALED          MX_THREAD_TERMINATED
+
 
 // global kernel object id.
 typedef uint64_t mx_koid_t;
