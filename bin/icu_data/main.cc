@@ -4,8 +4,8 @@
 
 #include <utility>
 
-#include "apps/icu_data/icu_data_provider_impl.h"
 #include "application/lib/app/application_context.h"
+#include "apps/icu_data/icu_data_provider_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

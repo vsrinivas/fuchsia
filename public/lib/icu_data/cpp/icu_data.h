@@ -5,13 +5,13 @@
 #ifndef APPS_ICU_DATA_LIB_ICU_DATA_H_
 #define APPS_ICU_DATA_LIB_ICU_DATA_H_
 
-namespace modular {
+namespace app {
 class ServiceProvider;
 }
 
 namespace icu_data {
 
-bool Initialize(modular::ServiceProvider* services);
+bool Initialize(app::ServiceProvider* services);
 bool Release();
 
 }  // namespace icu_data

@@ -48,7 +48,7 @@ uintptr_t GetDataFromVMO(const mx::vmo& vmo, size_t* size_out) {
 // Then, initializes ICU with the data received.
 //
 // Return value indicates if initialization was successful.
-bool Initialize(modular::ServiceProvider* services) {
+bool Initialize(app::ServiceProvider* services) {
   if (g_icu_data_ptr) {
     // Don't allow calling Initialize twice.
     return false;
