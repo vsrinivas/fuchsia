@@ -23,7 +23,6 @@ type linkEndpoint struct {
 
 	vv    buffer.VectorisedView
 	views [1]buffer.View
-	view  [2048]byte
 }
 
 func (ep *linkEndpoint) MTU() uint32                    { return ep.mtu }
@@ -63,14 +62,14 @@ func (ep *linkEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
 }
 
 func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) error {
-	ep.reset()
-	n, err := ep.read(ep.view[:])
+	v := make([]byte, ep.mtu)
+	n, err := ep.read(v)
 	if err != nil {
 		return err
 	}
-
+	ep.views[0] = buffer.View(v)
+	ep.vv.SetViews(ep.views[:])
 	ep.vv.SetSize(n)
-	v := ep.views[0]
 
 	remoteLinkAddr := tcpip.LinkAddress(v[6:12])
 	p := tcpip.NetworkProtocolNumber(uint16(v[12])<<8 | uint16(v[13]))
@@ -112,16 +111,10 @@ func (ep *linkEndpoint) init() error {
 	return nil
 }
 
-func (ep *linkEndpoint) reset() {
-	ep.views[0] = buffer.View(ep.view[:])
-	ep.vv.SetSize(len(ep.view))
-	ep.vv.SetViews(ep.views[:])
-}
-
 func newLinkEndpoint(ch *mx.Channel) *linkEndpoint {
 	ep := &linkEndpoint{
 		ch:  ch,
-		mtu: 1500,
+		mtu: 2048,
 	}
 	return ep
 }
