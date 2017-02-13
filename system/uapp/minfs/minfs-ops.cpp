@@ -496,7 +496,6 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
 
     // erase dirent (convert to empty entry), decrement dirent count
     vndir->inode.dirent_count--;
-    minfs_sync_vnode(vndir, kMxFsSyncMtime);
     return DIR_CB_SAVE_SYNC;
 
 fail:
