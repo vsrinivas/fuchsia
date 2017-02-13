@@ -18,7 +18,7 @@
 namespace ledger {
 namespace {
 
-modular::ApplicationContext* context_;
+app::ApplicationContext* context_;
 
 bool Equals(const fidl::Array<uint8_t>& a1, const fidl::Array<uint8_t>& a2) {
   if (a1.size() != a2.size())
@@ -42,17 +42,17 @@ class LedgerAppTest : public ::testing::Test {
   // ::testing::Test:
   void SetUp() override {
     ::testing::Test::SetUp();
-    modular::ServiceProviderPtr child_services;
+    app::ServiceProviderPtr child_services;
     fidl::SynchronousInterfacePtr<ledger::LedgerRepositoryFactory>
         ledger_repository_factory;
 
-    auto launch_info = modular::ApplicationLaunchInfo::New();
+    auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "file:///system/apps/ledger";
     launch_info->services = child_services.NewRequest();
     context_->launcher()->CreateApplication(
         std::move(launch_info),
         ledger_repository_factory_controller_.NewRequest());
-    modular::ConnectToService(
+    app::ConnectToService(
         child_services.get(),
         fidl::GetSynchronousProxy(&ledger_repository_factory));
 
@@ -70,7 +70,7 @@ class LedgerAppTest : public ::testing::Test {
 
  private:
   files::ScopedTempDir tmp_dir_;
-  modular::ApplicationControllerPtr ledger_repository_factory_controller_;
+  app::ApplicationControllerPtr ledger_repository_factory_controller_;
 
  protected:
   fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
@@ -98,8 +98,8 @@ TEST_F(LedgerAppTest, PutAndGet) {
 
 int main(int argc, char** argv) {
   mtl::MessageLoop loop;
-  std::unique_ptr<modular::ApplicationContext> context =
-      modular::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<app::ApplicationContext> context =
+      app::ApplicationContext::CreateFromStartupInfo();
   ledger::context_ = context.get();
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
