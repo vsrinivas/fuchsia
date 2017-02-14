@@ -14,7 +14,7 @@ namespace icu_data {
 
 class App {
  public:
-  App() : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+  App() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     if (!icu_data_.LoadData())
       exit(ERR_UNAVAILABLE);
     context_->outgoing_services()->AddService<ICUDataProvider>(
@@ -24,7 +24,7 @@ class App {
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   ICUDataProviderImpl icu_data_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
