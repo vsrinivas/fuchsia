@@ -22,7 +22,7 @@ class ViewProviderApp {
   ~ViewProviderApp();
 
  private:
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   ViewProviderService service_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewProviderApp);

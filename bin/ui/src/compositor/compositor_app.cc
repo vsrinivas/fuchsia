@@ -11,8 +11,7 @@
 namespace compositor {
 
 CompositorApp::CompositorApp()
-    : application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       engine_(new CompositorEngine()) {
   FTL_DCHECK(application_context_);
 

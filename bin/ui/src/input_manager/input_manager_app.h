@@ -21,7 +21,7 @@ class InputManagerApp {
   ~InputManagerApp();
 
  private:
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   fidl::BindingSet<mozart::ViewAssociate, std::unique_ptr<InputAssociate>>
       associate_bindings_;
 

@@ -28,8 +28,7 @@ constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 class HelloApp {
  public:
   HelloApp()
-      : application_context_(
-            modular::ApplicationContext::CreateFromStartupInfo()) {
+      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
     compositor_ =
         application_context_->ConnectToEnvironmentService<mozart::Compositor>();
     compositor_->CreateRenderer(renderer_.NewRequest(),
@@ -121,7 +120,7 @@ class HelloApp {
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
 
   mozart::CompositorPtr compositor_;
   mozart::RendererPtr renderer_;

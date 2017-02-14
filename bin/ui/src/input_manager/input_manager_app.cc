@@ -11,8 +11,7 @@
 namespace input_manager {
 
 InputManagerApp::InputManagerApp()
-    : application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()) {
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   FTL_DCHECK(application_context_);
 
   tracing::InitializeTracer(application_context_.get(), {"input_manager"});

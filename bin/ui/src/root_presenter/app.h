@@ -38,7 +38,7 @@ class App : public mozart::Presenter {
   void InitializeServices();
   void Reset();
 
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   fidl::BindingSet<Presenter> presenter_bindings_;
 
   mozart::CompositorPtr compositor_;

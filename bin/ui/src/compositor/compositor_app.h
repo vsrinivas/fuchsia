@@ -24,7 +24,7 @@ class CompositorApp {
   ~CompositorApp();
 
  private:
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   std::unique_ptr<CompositorEngine> engine_;
   fidl::BindingSet<mozart::Compositor, std::unique_ptr<CompositorImpl>>
       compositor_bindings_;

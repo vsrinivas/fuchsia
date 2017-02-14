@@ -12,7 +12,7 @@
 namespace mozart {
 
 ViewProviderService::ViewProviderService(
-    modular::ApplicationContext* application_context,
+    app::ApplicationContext* application_context,
     ViewFactory view_factory)
     : application_context_(application_context), view_factory_(view_factory) {
   FTL_DCHECK(application_context_);
