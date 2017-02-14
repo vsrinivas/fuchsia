@@ -15,7 +15,7 @@ InputHandler::InputHandler(app::ServiceProvider* service_provider,
   FTL_DCHECK(service_provider);
   FTL_DCHECK(listener);
 
-  modular::ConnectToService(service_provider, connection_.NewRequest());
+  app::ConnectToService(service_provider, connection_.NewRequest());
 
   InputListenerPtr listener_ptr;
   listener_binding_.Bind(listener_ptr.NewRequest());

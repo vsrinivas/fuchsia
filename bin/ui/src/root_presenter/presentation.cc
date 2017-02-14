@@ -138,7 +138,7 @@ void Presentation::CreateViewTree() {
   // Get view tree services.
   app::ServiceProviderPtr tree_service_provider;
   tree_->GetServiceProvider(tree_service_provider.NewRequest());
-  input_dispatcher_ = modular::ConnectToService<mozart::InputDispatcher>(
+  input_dispatcher_ = app::ConnectToService<mozart::InputDispatcher>(
       tree_service_provider.get());
   input_dispatcher_.set_connection_error_handler([this] {
     // This isn't considered a fatal error right now since it is still useful
