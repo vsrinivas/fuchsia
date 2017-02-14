@@ -45,7 +45,8 @@ FUNCTION(arm_reset)
     add     tmp, tmp, #:lo12:boot_args
     stp     x2, x3, [tmp]
     stp     x0, x1, [tmp, #16]
-
+    mrs     x0, CurrentEL
+    str     x0, [tmp, #32]
 
     bl      arm64_elX_to_el1
     bl      arch_invalidate_cache_all
@@ -368,6 +369,11 @@ FUNCTION(arm_reset)
 
     adrp    tmp, boot_args
     add     tmp, tmp, #:lo12:boot_args
+    adrp    x1, arch_boot_el
+    add     x1, x1, #:lo12:arch_boot_el
+
+    ldr     x0, [tmp, #32]
+    str     x0, [x1]
     ldp     x2, x3, [tmp]
     ldp     x0, x1, [tmp, #16]
 
@@ -404,8 +410,9 @@ END(arm_reset)
 .data
 DATA(boot_args)
     .align  6
-    .skip   32
+    .skip   40              /* x0-x3 and EL at boot */
 END(boot_args)
+
 #if WITH_SMP
 DATA(page_tables_not_ready)
     .long       1

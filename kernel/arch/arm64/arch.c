@@ -37,6 +37,13 @@ uint arm_num_cpus = 1;
 static thread_t _init_thread[SMP_MAX_CPUS - 1];
 #endif
 
+uint64_t arch_boot_el = 0;
+
+uint64_t arm64_get_boot_el(void)
+{
+    return arch_boot_el >> 2;
+}
+
 static void arm64_cpu_early_init(void)
 {
     uint64_t mmfr0 = ARM64_READ_SYSREG(ID_AA64MMFR0_EL1);
