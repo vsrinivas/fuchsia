@@ -128,9 +128,8 @@ protected:
 
     Mutex& lock() TA_RET_CAP(lock_) { return lock_; }
 
-    // TODO(teisenbe): Rename these to s/Region/Mapping/
-    void AddRegionLocked(VmMapping* r) TA_REQ(lock_);
-    void RemoveRegionLocked(VmMapping* r) TA_REQ(lock_);
+    void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
+    void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
 
     // magic value
     static const uint32_t MAGIC = 0x564d4f5f; // VMO_

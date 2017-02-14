@@ -400,7 +400,7 @@ status_t VmMapping::DestroyLocked() {
 
     {
         AutoLock al(object_->lock());
-        object_->RemoveRegionLocked(this);
+        object_->RemoveMappingLocked(this);
     }
 
     // detach from any object we have mapped
@@ -530,7 +530,7 @@ void VmMapping::ActivateLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(parent_);
 
     state_ = LifeCycleState::ALIVE;
-    object_->AddRegionLocked(this);
+    object_->AddMappingLocked(this);
     parent_->subregions_.insert(mxtl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
