@@ -24,19 +24,6 @@ ssize_t devmgr_add_systemfs_vmo(mx_handle_t vmo);
 bool secondary_bootfs_ready(void);
 int devmgr_start_system_init(void* arg);
 
-typedef struct devhost_msg devhost_msg_t;
-struct devhost_msg {
-    uint32_t op;
-    int32_t arg;
-    uint32_t protocol_id;
-    char name[MX_DEVICE_NAME_MAX];
-};
-
-#define DH_OP_STATUS 0
-#define DH_OP_ADD 1
-#define DH_OP_REMOVE 2
-#define DH_OP_SHUTDOWN 3
-
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.
 #define LDSO_TRACE_CMDLINE "ldso.trace"

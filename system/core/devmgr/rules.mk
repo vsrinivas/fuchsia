@@ -16,7 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/dnode.c \
     $(LOCAL_DIR)/devmgr.c \
     $(LOCAL_DIR)/devmgr-mxio.c \
-    $(LOCAL_DIR)/devmgr-rpc-server.c \
+    $(LOCAL_DIR)/devmgr-coordinator.c \
     $(LOCAL_DIR)/shared.c \
     $(LOCAL_DIR)/vfs-boot.c \
     $(LOCAL_DIR)/vfs-devmgr.c \

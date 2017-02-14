@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "acpi.h"
+#include "devcoordinator.h"
 #include "devmgr.h"
 #include "devhost.h"
 #include "driver-api.h"
@@ -200,9 +201,9 @@ void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t prot
 }
 
 static void signal_devmgr_shutdown(void) {
-    devhost_msg_t msg;
+    dev_coordinator_msg_t msg;
     memset(&msg, 0, sizeof(msg));
-    msg.op = DH_OP_SHUTDOWN;
+    msg.op = DC_OP_SHUTDOWN;
 
     mx_status_t r;
     printf("Sending shutdown signal to devmgr...\n");

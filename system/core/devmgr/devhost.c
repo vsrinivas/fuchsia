@@ -5,6 +5,7 @@
 #include "acpi.h"
 #include "devmgr.h"
 #include "devhost.h"
+#include "devcoordinator.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,8 +69,8 @@ __EXPORT mx_status_t devhost_add_internal(mx_device_t* parent,
     }
 
     //printf("devhost_add(%p, %p)\n", dev, parent);
-    devhost_msg_t msg;
-    msg.op = DH_OP_ADD;
+    dev_coordinator_msg_t msg;
+    msg.op = DC_OP_ADD;
     msg.arg = 0;
     msg.protocol_id = protocol_id;
     memcpy(msg.name, name, len + 1);
@@ -126,9 +127,9 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child) {
 }
 
 mx_status_t devhost_remove(mx_device_t* dev) {
-    devhost_msg_t msg;
+    dev_coordinator_msg_t msg;
     memset(&msg, 0, sizeof(msg));
-    msg.op = DH_OP_REMOVE;
+    msg.op = DC_OP_REMOVE;
     //printf("devhost_remove(%p:%s) ios=%p\n", dev, dev->name, dev->ios);
 
     // ensure we don't pull the rug out from under devhost_rio_handler()

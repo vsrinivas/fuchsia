@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "devcoordinator.h"
 #include "devmgr.h"
 #include "memfs-private.h"
 
@@ -26,10 +27,19 @@
 #include <string.h>
 #include <sys/stat.h>
 
+// The devmgr coordinator is an rpc service which devhost processes
+// use to inform the devmgr when devices are published or removed.
+//
+// This service makes these published devices visible via the
+// device filesystem visible at /dev in the devmgr's root namespace.
 
 // vnodes for root driver and protocols
 static vnode_t* vnroot;
 static vnode_t* vnclass;
+
+static mxio_dispatcher_t* coordinator_dispatcher;
+
+static mx_handle_t devhost_job_handle;
 
 typedef struct device_ctx {
     mx_handle_t hdevice;
@@ -38,8 +48,6 @@ typedef struct device_ctx {
     char name[MX_DEVICE_NAME_MAX];
 } device_ctx_t;
 
-
-static mx_handle_t devhost_job_handle;
 
 #define PNMAX 16
 static const char* proto_name(uint32_t id, char buf[PNMAX]) {
@@ -66,7 +74,7 @@ static void prepopulate_protocol_dirs(void) {
     }
 }
 
-void devhost_publish(device_ctx_t* parent, device_ctx_t* ctx) {
+static void do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     if (memfs_create_device_at(parent->vnode, &ctx->vnode, ctx->name, ctx->hdevice)) {
         printf("devmgr: could not add '%s' to devfs!\n", ctx->name);
         return;
@@ -94,10 +102,8 @@ void devhost_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     }
 }
 
-mxio_dispatcher_t* devhost_devhost_dispatcher;
-
-static mx_status_t devhost_remote_create(const char* name, uint32_t protocol_id, device_ctx_t** out,
-                                         mx_handle_t* _hdevice, mx_handle_t* _hrpc) {
+static mx_status_t do_remote_create(const char* name, uint32_t protocol_id, device_ctx_t** out,
+                                    mx_handle_t* _hdevice, mx_handle_t* _hrpc) {
     size_t len = strlen(name);
     if (len >= MX_DEVICE_NAME_MAX) {
         return ERR_INVALID_ARGS;
@@ -126,7 +132,7 @@ static mx_status_t devhost_remote_create(const char* name, uint32_t protocol_id,
     ctx->protocol_id = protocol_id;
     ctx->hdevice = hdevice[1];
 
-    if ((status = mxio_dispatcher_add(devhost_devhost_dispatcher, hrpc[1], NULL, ctx)) < 0) {
+    if ((status = mxio_dispatcher_add(coordinator_dispatcher, hrpc[1], NULL, ctx)) < 0) {
         mx_handle_close(hdevice[0]);
         mx_handle_close(hdevice[1]);
         mx_handle_close(hrpc[0]);
@@ -141,8 +147,8 @@ static mx_status_t devhost_remote_create(const char* name, uint32_t protocol_id,
     return NO_ERROR;
 }
 
-static mx_status_t devhost_remote_add(device_ctx_t* parent, const char* name, uint32_t protocol_id,
-                                      mx_handle_t hdevice, mx_handle_t hrpc) {
+static mx_status_t do_remote_add(device_ctx_t* parent, const char* name, uint32_t protocol_id,
+                                 mx_handle_t hdevice, mx_handle_t hrpc) {
 
     size_t len = strlen(name);
     if (len >= MX_DEVICE_NAME_MAX) {
@@ -159,18 +165,18 @@ static mx_status_t devhost_remote_add(device_ctx_t* parent, const char* name, ui
 
     //printf("devmgr: new ctx %p(%s), parent: %p(%s)\n", ctx, ctx->name, parent, parent->name);
     mx_status_t status;
-    if ((status = mxio_dispatcher_add(devhost_devhost_dispatcher, hrpc, NULL, ctx)) < 0) {
+    if ((status = mxio_dispatcher_add(coordinator_dispatcher, hrpc, NULL, ctx)) < 0) {
         mx_handle_close(hdevice);
         mx_handle_close(hrpc);
         free(ctx);
         return status;
     }
 
-    devhost_publish(parent, ctx);
+    do_publish(parent, ctx);
     return NO_ERROR;
 }
 
-static mx_status_t devhost_remote_remove(device_ctx_t* dev, bool clean) {
+static mx_status_t do_remote_remove(device_ctx_t* dev, bool clean) {
     //printf("devmgr: del ctx %p(%s) %s\n", dev, dev->name, clean ? "" : "unexpected!");
     devfs_remove(dev->vnode);
     mx_handle_close(dev->hdevice);
@@ -180,15 +186,15 @@ static mx_status_t devhost_remote_remove(device_ctx_t* dev, bool clean) {
     return NO_ERROR;
 }
 
-// handle devhost_msgs from devhosts
-mx_status_t devhost_handler(mx_handle_t h, void* cb, void* cookie) {
+// handle dev_coordinator_msgs from devhosts
+static mx_status_t coordinator_handler(mx_handle_t h, void* cb, void* cookie) {
     device_ctx_t* dev = cookie;
-    devhost_msg_t msg;
+    dev_coordinator_msg_t msg;
     mx_handle_t handles[2];
     mx_status_t status;
 
     if (h == 0) {
-        devhost_remote_remove(dev, false);
+        do_remote_remove(dev, false);
         return NO_ERROR;
     }
 
@@ -204,20 +210,20 @@ mx_status_t devhost_handler(mx_handle_t h, void* cb, void* cookie) {
         goto fail;
     }
     switch (msg.op) {
-    case DH_OP_ADD:
+    case DC_OP_ADD:
         if (hcount != 2) {
             goto fail;
         }
-        devhost_remote_add(dev, msg.name, msg.protocol_id, handles[0], handles[1]);
+        do_remote_add(dev, msg.name, msg.protocol_id, handles[0], handles[1]);
         return NO_ERROR;
-    case DH_OP_REMOVE:
+    case DC_OP_REMOVE:
         if (hcount != 0) {
             goto fail;
         }
-        devhost_remote_remove(dev, true);
+        do_remote_remove(dev, true);
         // positive return indicates clean shutdown
         return 1;
-    case DH_OP_SHUTDOWN:
+    case DC_OP_SHUTDOWN:
         devmgr_vfs_exit();
         mx_handle_close(h);
         return NO_ERROR;
@@ -226,7 +232,7 @@ mx_status_t devhost_handler(mx_handle_t h, void* cb, void* cookie) {
     }
     return NO_ERROR;
 fail:
-    printf("devhost_handler: error %d\n", status);
+    printf("coordinator_handler: error %d\n", status);
     for (unsigned n = 0; n < hcount; n++) {
         mx_handle_close(handles[n]);
     }
@@ -245,14 +251,14 @@ void devmgr_init(mx_handle_t root_job) {
         printf("unable to create devhost job\n");
     }
 
-    mxio_dispatcher_create(&devhost_devhost_dispatcher, devhost_handler);
+    mxio_dispatcher_create(&coordinator_dispatcher, coordinator_handler);
 }
 
 void devmgr_handle_messages(void) {
     device_ctx_t* root;
     mx_status_t status;
     mx_handle_t hdevice, hrpc;
-    if ((status = devhost_remote_create("root", 0, &root, &hdevice, &hrpc)) < 0) {
+    if ((status = do_remote_create("root", 0, &root, &hdevice, &hrpc)) < 0) {
         printf("devmgr: failed to create root rpc node\n");
         return;
     }
@@ -261,5 +267,5 @@ void devmgr_handle_messages(void) {
     devmgr_launch_devhost(devhost_job_handle, "devhost:root", 2, (char**)args, hdevice, hrpc);
 
     printf("devmgr: root ctx %p\n", root);
-    mxio_dispatcher_run(devhost_devhost_dispatcher);
+    mxio_dispatcher_run(coordinator_dispatcher);
 }
