@@ -95,8 +95,8 @@ void test_directory_max(void) {
     }
 }
 
-void test_directory_coalesce_helper(const int *unlink_order) {
-    const char *files[] = {
+void test_directory_coalesce_helper(const int* unlink_order) {
+    const char* files[] = {
         "::coalesce/aaaaaaaa",
         "::coalesce/bbbbbbbb",
         "::coalesce/cccccccc",
@@ -186,8 +186,8 @@ void test_directory_trailing_slash(void) {
 }
 
 typedef struct expected_dirent {
-    bool          seen; // Flip to true once it has been seen
-    const char*   d_name;
+    bool seen; // Flip to true once it has been seen
+    const char* d_name;
     unsigned char d_type;
 } expected_dirent_t;
 
@@ -197,7 +197,7 @@ void check_contains_all(const char* dirname, expected_dirent_t* edirents, size_t
     size_t seen = 0;
 
     while (seen != len) {
-        struct dirent *de = readdir(dir);
+        struct dirent* de = readdir(dir);
         assert(de != NULL); // Terminated before seeing all the direntries we expected to see
         bool found = false;
         for (size_t i = 0; i < len; i++) {
@@ -231,8 +231,8 @@ void test_directory_readdir(void) {
     EXPECT_FAIL(mkdir("::a", 0755));
 
     expected_dirent_t empty_dir[] = {
-        { false, ".", DT_DIR },
-        { false, "..", DT_DIR },
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
     };
     check_contains_all("::a", empty_dir, countof(empty_dir));
 
@@ -241,22 +241,22 @@ void test_directory_readdir(void) {
     TRY(close(TRY(open("::a/file2", O_RDWR | O_CREAT | O_EXCL, 0644))));
     TRY(mkdir("::a/dir2", 0755));
     expected_dirent_t filled_dir[] = {
-        { false, ".", DT_DIR },
-        { false, "..", DT_DIR },
-        { false, "dir1", DT_DIR },
-        { false, "dir2", DT_DIR },
-        { false, "file1", DT_REG },
-        { false, "file2", DT_REG },
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+        {false, "dir1", DT_DIR},
+        {false, "dir2", DT_DIR},
+        {false, "file1", DT_REG},
+        {false, "file2", DT_REG},
     };
     check_contains_all("::a", filled_dir, countof(filled_dir));
 
     TRY(unlink("::a/dir2"));
     TRY(unlink("::a/file2"));
     expected_dirent_t partial_dir[] = {
-        { false, ".", DT_DIR },
-        { false, "..", DT_DIR },
-        { false, "dir1", DT_DIR },
-        { false, "file1", DT_REG },
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+        {false, "dir1", DT_DIR},
+        {false, "file1", DT_REG},
     };
     check_contains_all("::a", partial_dir, countof(partial_dir));
 
@@ -271,7 +271,7 @@ int test_directory(void) {
     test_directory_large();
     test_directory_trailing_slash();
     test_directory_readdir();
-    // TODO(smklein): Run this when MemFS can execute it without causing an OOM
+// TODO(smklein): Run this when MemFS can execute it without causing an OOM
 #if 0
     test_directory_max();
 #endif

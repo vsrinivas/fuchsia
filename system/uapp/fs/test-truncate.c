@@ -92,7 +92,7 @@ void checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
     assert(st.st_size == new_len);
 
     ssize_t r;
-    uint8_t *readbuf = malloc(BUFSIZE);
+    uint8_t* readbuf = malloc(BUFSIZE);
     assert(readbuf != NULL);
     if (new_len > old_len) { // Expanded the file
         // Verify that the file is unchanged up to old_len
@@ -127,7 +127,7 @@ void checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
 void test_truncate_large(void) {
     printf("Test Truncate (large)\n");
     // Fill a test buffer with data
-    uint64_t *u64 = malloc(BUFSIZE);
+    uint64_t* u64 = malloc(BUFSIZE);
     assert(u64 != NULL);
     rand64_t rdata;
     srand64(&rdata, "truncate_large_test");

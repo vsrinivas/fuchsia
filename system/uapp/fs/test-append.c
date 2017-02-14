@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "misc.h"
 
@@ -19,7 +19,7 @@ int test_append(void) {
     const char* world = "World!\n";
     struct stat st;
 
-    int fd = TRY(open("::alpha", O_RDWR|O_CREAT, 0644));
+    int fd = TRY(open("::alpha", O_RDWR | O_CREAT, 0644));
     // Write "hello"
     assert(strlen(hello) == strlen(world));
     TRY(write(fd, hello, strlen(hello)));
@@ -40,7 +40,7 @@ int test_append(void) {
     TRY(unlink("::alpha"));
     TRY(close(fd));
 
-    fd = TRY(open("::alpha", O_RDWR|O_CREAT|O_APPEND, 0644));
+    fd = TRY(open("::alpha", O_RDWR | O_CREAT | O_APPEND, 0644));
     // Write "hello"
     assert(strlen(hello) == strlen(world));
     TRY(write(fd, hello, strlen(hello)));

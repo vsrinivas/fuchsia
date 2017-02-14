@@ -5,8 +5,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "misc.h"
 
@@ -15,7 +15,7 @@
 // For now, test that 'fsync' and 'fdatasync' don't throw errors for file and
 // directories.
 int test_sync(void) {
-    int fd = TRY(open("::alpha", O_RDWR|O_CREAT|O_EXCL, 0644));
+    int fd = TRY(open("::alpha", O_RDWR | O_CREAT | O_EXCL, 0644));
     TRY(write(fd, "Hello, World!\n", 14));
     TRY(fsync(fd));
     TRY(lseek(fd, 0, SEEK_SET));
@@ -32,4 +32,3 @@ int test_sync(void) {
     TRY(unlink("::dirname"));
     return 0;
 }
-

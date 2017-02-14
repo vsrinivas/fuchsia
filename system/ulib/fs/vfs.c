@@ -258,7 +258,7 @@ mx_status_t vfs_unlink(vnode_t* vndir, const char* path, size_t len) {
 
 mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
                        const char** oldpathout, const char** newpathout) {
-    vnode_t* oldparent, *newparent;
+    vnode_t *oldparent, *newparent;
     mx_status_t r = 0, r_old, r_new;
 
     if ((r_old = vfs_walk(vndir, &oldparent, oldpath, &oldpath)) < 0) {
@@ -365,7 +365,11 @@ void vn_acquire(vnode_t* vn) {
 }
 
 // TODO(orr): figure out x-system panic
-#define panic(fmt...) do { fprintf(stderr, fmt); __builtin_trap(); } while (0)
+#define panic(fmt...)         \
+    do {                      \
+        fprintf(stderr, fmt); \
+        __builtin_trap();     \
+    } while (0)
 
 void vn_release(vnode_t* vn) {
     trace(REFS, "release vn=%p ref=%u\n", vn, vn->refcount);

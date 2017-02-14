@@ -5,8 +5,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "misc.h"
 
@@ -19,7 +19,7 @@ int test_rename(void) {
     EXPECT_FAIL(rename("::alpha", "::alpha"));
 
     // Cannot rename dir to file
-    int fd = TRY(open("::bravo", O_RDWR|O_CREAT|O_EXCL, 0644));
+    int fd = TRY(open("::bravo", O_RDWR | O_CREAT | O_EXCL, 0644));
     close(fd);
     EXPECT_FAIL(rename("::alpha", "::bravo"));
     TRY(unlink("::bravo"));
@@ -31,12 +31,12 @@ int test_rename(void) {
     TRY(rename("::bravo", "::alpha"));
 
     // Rename file (dst does not exist)
-    fd = TRY(open("::alpha/charlie", O_RDWR|O_CREAT|O_EXCL, 0644));
+    fd = TRY(open("::alpha/charlie", O_RDWR | O_CREAT | O_EXCL, 0644));
     TRY(rename("::alpha/charlie", "::alpha/delta"));
     close(fd);
 
     // Rename file (dst does not exist)
-    fd = TRY(open("::alpha/charlie", O_RDWR|O_CREAT|O_EXCL, 0644));
+    fd = TRY(open("::alpha/charlie", O_RDWR | O_CREAT | O_EXCL, 0644));
     TRY(rename("::alpha/delta", "::alpha/charlie"));
     close(fd);
 
@@ -65,4 +65,3 @@ int test_rename(void) {
     TRY(unlink("::alpha"));
     return 0;
 }
-

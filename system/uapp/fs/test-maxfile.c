@@ -12,11 +12,11 @@
 #include "misc.h"
 
 int test_maxfile(void) {
-    int fd = TRY(open("::bigfile", O_CREAT|O_WRONLY, 0644));
+    int fd = TRY(open("::bigfile", O_CREAT | O_WRONLY, 0644));
     if (fd < 0) {
         return -1;
     }
-    char data[128*1024];
+    char data[128 * 1024];
     memset(data, 0xee, sizeof(data));
     ssize_t sz = 0;
     ssize_t r;
@@ -32,10 +32,10 @@ int test_maxfile(void) {
         if (r < (ssize_t)(sizeof(data))) {
             break;
         }
-        fprintf(stderr, "wrote %d bytes\n", (int) sz);
+        fprintf(stderr, "wrote %d bytes\n", (int)sz);
     }
     TRY(close(fd));
     TRY(unlink("::bigfile"));
-    fprintf(stderr, "wrote %d bytes\n", (int) sz);
+    fprintf(stderr, "wrote %d bytes\n", (int)sz);
     return (r < 0) ? -1 : 0;
 }

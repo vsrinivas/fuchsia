@@ -11,8 +11,8 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <threads.h>
 #include <sys/stat.h>
+#include <threads.h>
 
 #include "vfs-internal.h"
 

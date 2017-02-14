@@ -18,13 +18,13 @@
 
 int64_t nstimespec(struct timespec ts) {
     // assumes very small number of seconds in deltas
-    return ts.tv_sec*MX_SEC(1) + ts.tv_nsec;
+    return ts.tv_sec * MX_SEC(1) + ts.tv_nsec;
 }
 
 int test_attr(void) {
     int64_t now = mx_time_get(MX_CLOCK_UTC);
 
-    int fd1 = TRY(open("::file.txt", O_CREAT|O_RDWR, 0644));
+    int fd1 = TRY(open("::file.txt", O_CREAT | O_RDWR, 0644));
 
     struct timespec ts[2];
     ts[0].tv_nsec = UTIME_OMIT;

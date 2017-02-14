@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -13,10 +13,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fs-management/mount.h>
 #include <magenta/compiler.h>
 #include <magenta/device/block.h>
 #include <magenta/device/ramdisk.h>
-#include <fs-management/mount.h>
 
 // Path to mounted filesystem currently being tested
 const char* test_root_path;

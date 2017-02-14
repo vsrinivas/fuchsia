@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/vfs.h>
 #include <fs-management/mount.h>
+#include <fs/vfs.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -32,12 +32,12 @@ static mx_status_t fsck_minfs(const char* devicepath, LaunchCallback cb) {
     }
     n += status;
 
-    const char* argv[] = { "/boot/bin/minfs", "fsck" };
+    const char* argv[] = {"/boot/bin/minfs", "fsck"};
     return cb(countof(argv), argv, hnd, ids, n);
 }
 
 static mx_status_t fsck_fat(const char* devicepath, LaunchCallback cb) {
-    const char* argv[] = { "/boot/bin/fsck-msdosfs", devicepath };
+    const char* argv[] = {"/boot/bin/fsck-msdosfs", devicepath};
     return cb(countof(argv), argv, NULL, NULL, 0);
 }
 

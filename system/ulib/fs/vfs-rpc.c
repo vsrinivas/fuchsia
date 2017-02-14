@@ -14,8 +14,8 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include <threads.h>
 #include <sys/stat.h>
+#include <threads.h>
 
 #include "vfs-internal.h"
 
@@ -107,8 +107,9 @@ done:
 // Consumes rh.
 static void mxrio_reply_channel_status(mx_handle_t rh, mx_status_t status) {
     struct {
-        mx_status_t status; uint32_t type;
-    } reply = { status, 0 };
+        mx_status_t status;
+        uint32_t type;
+    } reply = {status, 0};
     mx_channel_write(rh, 0, &reply, MXRIO_OBJECT_MINSIZE, NULL, 0);
     mx_handle_close(rh);
 }
@@ -359,20 +360,20 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         ssize_t r = vfs_do_ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
         if (r >= 0) {
             switch (IOCTL_KIND(msg->arg2.op)) {
-                case IOCTL_KIND_DEFAULT:
-                    break;
-                case IOCTL_KIND_GET_HANDLE:
-                    msg->hcount = 1;
-                    memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
-                    break;
-                case IOCTL_KIND_GET_TWO_HANDLES:
-                    msg->hcount = 2;
-                    memcpy(msg->handle, msg->data, 2 * sizeof(mx_handle_t));
-                    break;
-                case IOCTL_KIND_GET_THREE_HANDLES:
-                    msg->hcount = 3;
-                    memcpy(msg->handle, msg->data, 3 * sizeof(mx_handle_t));
-                    break;
+            case IOCTL_KIND_DEFAULT:
+                break;
+            case IOCTL_KIND_GET_HANDLE:
+                msg->hcount = 1;
+                memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
+                break;
+            case IOCTL_KIND_GET_TWO_HANDLES:
+                msg->hcount = 2;
+                memcpy(msg->handle, msg->data, 2 * sizeof(mx_handle_t));
+                break;
+            case IOCTL_KIND_GET_THREE_HANDLES:
+                msg->hcount = 3;
+                memcpy(msg->handle, msg->data, 3 * sizeof(mx_handle_t));
+                break;
             }
             msg->arg2.off = 0;
             msg->datalen = r;

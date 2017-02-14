@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/vfs.h>
 #include <fs-management/mount.h>
+#include <fs/vfs.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -141,7 +141,7 @@ static mx_status_t mount_minfs(int devicefd, const char* mountpath, const mount_
     if (options->verbose_mount) {
         printf("fs_mount: Launching Minfs\n");
     }
-    const char* argv[] = { "/boot/bin/minfs", "mount" };
+    const char* argv[] = {"/boot/bin/minfs", "mount"};
     return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, fd, mountpoint);
 }
 

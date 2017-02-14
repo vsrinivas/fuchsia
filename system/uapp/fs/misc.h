@@ -5,8 +5,8 @@
 #pragma once
 
 #include <errno.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 // Test wrappers
@@ -58,9 +58,12 @@ static inline uint64_t fnv1a64(const void* ptr, size_t len) {
 // for bits 0..15
 static inline uint32_t fnv1a_tiny(uint32_t n, uint32_t bits) {
     uint32_t hash = FNV32_OFFSET_BASIS;
-    hash = (hash ^ (n & 0xFF)) * FNV32_PRIME; n >>= 8;
-    hash = (hash ^ (n & 0xFF)) * FNV32_PRIME; n >>= 8;
-    hash = (hash ^ (n & 0xFF)) * FNV32_PRIME; n >>= 8;
+    hash = (hash ^ (n & 0xFF)) * FNV32_PRIME;
+    n >>= 8;
+    hash = (hash ^ (n & 0xFF)) * FNV32_PRIME;
+    n >>= 8;
+    hash = (hash ^ (n & 0xFF)) * FNV32_PRIME;
+    n >>= 8;
     hash = (hash ^ n) * FNV32_PRIME;
     return ((hash >> bits) ^ hash) & ((1 << bits) - 1);
 }
@@ -68,14 +71,15 @@ static inline uint32_t fnv1a_tiny(uint32_t n, uint32_t bits) {
 #define fnv1a32str(str) fnv1a32(str, strlen(str))
 #define fnv1a64str(str) fnv1a64(str, strlen(str))
 
-
 // Xorshift32 and Xorshift64
 //
 // https://www.jstatsoft.org/article/view/v008i14
 // https://en.wikipedia.org/wiki/Xorshift
 
-#define RAND32SEED(n) {(n)}
-#define RAND63SEED(n) {(n)}
+#define RAND32SEED(n) \
+    { (n) }
+#define RAND63SEED(n) \
+    { (n) }
 
 typedef struct {
     uint32_t n;

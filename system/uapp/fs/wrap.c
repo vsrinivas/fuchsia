@@ -8,9 +8,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdio.h>
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -29,23 +29,24 @@ int status_to_errno(mx_status_t status) {
     }
 }
 
-#define FAIL(err) \
-    do { return err ? -1 : 0; } while (0)
+#define FAIL(err)            \
+    do {                     \
+        return err ? -1 : 0; \
+    } while (0)
 #define STATUS(status) \
     FAIL(status_to_errno(status))
-#define PATH_WRAP(path_in, path_out)        \
-    do {                                    \
-        if (wrap_path(path_in, path_out))   \
-            FAIL(EINVAL);                   \
+#define PATH_WRAP(path_in, path_out)      \
+    do {                                  \
+        if (wrap_path(path_in, path_out)) \
+            FAIL(EINVAL);                 \
     } while (0)
-#define DO_REAL(name, args...)                       \
-    do {                                             \
-        int status = __real_##name(args);            \
-        if (status < 0)                              \
-            STATUS(status);                          \
-        return status;                               \
+#define DO_REAL(name, args...)            \
+    do {                                  \
+        int status = __real_##name(args); \
+        if (status < 0)                   \
+            STATUS(status);               \
+        return status;                    \
     } while (0)
-
 
 #define PATH_PREFIX "::"
 #define PREFIX_SIZE 2

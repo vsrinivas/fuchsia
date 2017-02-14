@@ -22,7 +22,7 @@
 
 #define FBUFSIZE 65536
 
-static_assert(FBUFSIZE == ((FBUFSIZE/sizeof(uint64_t)) * sizeof(uint64_t)),
+static_assert(FBUFSIZE == ((FBUFSIZE / sizeof(uint64_t)) * sizeof(uint64_t)),
               "FBUFSIZE not multiple of uint64_t");
 
 typedef struct worker worker_t;
@@ -131,7 +131,6 @@ int worker_writer(worker_t* w) {
     return r;
 }
 
-
 int worker_new(const char* where, const char* fn,
                int (*work)(worker_t* w), uint32_t size, uint32_t flags) {
     worker_t* w;
@@ -188,8 +187,8 @@ int do_all_work(void) {
     }
 }
 
-#define KB(n) ((n) * 1024)
-#define MB(n) ((n) * 1024 * 1024)
+#define KB(n) ((n)*1024)
+#define MB(n) ((n)*1024 * 1024)
 
 struct {
     int (*work)(worker_t*);
@@ -197,14 +196,30 @@ struct {
     uint32_t size;
     uint32_t flags;
 } WORK[] = {
-    { worker_writer, "file0000", KB(512), F_RAND_IOSIZE, },
-    { worker_writer, "file0001", KB(512), F_RAND_IOSIZE, },
-    { worker_writer, "file0002", KB(512), F_RAND_IOSIZE, },
-    { worker_writer, "file0003", KB(512), F_RAND_IOSIZE, },
-    { worker_writer, "file0004", KB(512), 0, },
-    { worker_writer, "file0005", KB(512), 0, },
-    { worker_writer, "file0006", KB(512), 0, },
-    { worker_writer, "file0007", KB(512), 0, },
+    {
+        worker_writer, "file0000", KB(512), F_RAND_IOSIZE,
+    },
+    {
+        worker_writer, "file0001", KB(512), F_RAND_IOSIZE,
+    },
+    {
+        worker_writer, "file0002", KB(512), F_RAND_IOSIZE,
+    },
+    {
+        worker_writer, "file0003", KB(512), F_RAND_IOSIZE,
+    },
+    {
+        worker_writer, "file0004", KB(512), 0,
+    },
+    {
+        worker_writer, "file0005", KB(512), 0,
+    },
+    {
+        worker_writer, "file0006", KB(512), 0,
+    },
+    {
+        worker_writer, "file0007", KB(512), 0,
+    },
 };
 
 int test_rw_workers(void) {
