@@ -23,12 +23,6 @@ public:
     StateTracker(const StateTracker& o) = delete;
     StateTracker& operator=(const StateTracker& o) = delete;
 
-    // Set the initial signals state. This is an alternative to provide the initial signals state to
-    // the constructor. This does no locking and does not notify anything.
-    void set_initial_signals_state(mx_signals_t signals) {
-        signals_ = signals;
-    }
-
     // Add an observer.
     void AddObserver(StateObserver* observer);
 
