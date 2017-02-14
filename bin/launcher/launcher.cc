@@ -16,15 +16,15 @@ namespace {
 class LauncherApp : public maxwell::Launcher {
  public:
   LauncherApp()
-      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         agent_launcher_(app_context_->environment().get()) {
     context_services_ =
         StartServiceProvider("file:///system/apps/context_engine");
-    context_engine_ = modular::ConnectToService<maxwell::ContextEngine>(
-        context_services_.get());
+    context_engine_ =
+        app::ConnectToService<maxwell::ContextEngine>(context_services_.get());
     suggestion_services_ =
         StartServiceProvider("file:///system/apps/suggestion_engine");
-    suggestion_engine_ = modular::ConnectToService<maxwell::SuggestionEngine>(
+    suggestion_engine_ = app::ConnectToService<maxwell::SuggestionEngine>(
         suggestion_services_.get());
 
     auto services = app_context_->outgoing_services();
@@ -34,13 +34,13 @@ class LauncherApp : public maxwell::Launcher {
         });
     services->AddService<maxwell::SuggestionProvider>(
         [this](fidl::InterfaceRequest<maxwell::SuggestionProvider> request) {
-          modular::ConnectToService<maxwell::SuggestionProvider>(
+          app::ConnectToService<maxwell::SuggestionProvider>(
               suggestion_services_.get(), std::move(request));
         });
     services->AddService<maxwell::ContextEngine>(
         [this](fidl::InterfaceRequest<maxwell::ContextEngine> request) {
-          modular::ConnectToService<maxwell::ContextEngine>(
-              context_services_.get(), std::move(request));
+          app::ConnectToService<maxwell::ContextEngine>(context_services_.get(),
+                                                        std::move(request));
         });
   }
 

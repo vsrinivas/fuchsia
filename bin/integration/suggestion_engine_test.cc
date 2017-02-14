@@ -116,11 +116,10 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   SuggestionEngineTest() : story_provider_binding_(&story_provider_) {
     app::ServiceProviderPtr suggestion_services =
         StartServiceProvider("file:///system/apps/suggestion_engine");
-    suggestion_engine_ = modular::ConnectToService<maxwell::SuggestionEngine>(
+    suggestion_engine_ = app::ConnectToService<maxwell::SuggestionEngine>(
         suggestion_services.get());
-    suggestion_provider_ =
-        modular::ConnectToService<maxwell::SuggestionProvider>(
-            suggestion_services.get());
+    suggestion_provider_ = app::ConnectToService<maxwell::SuggestionProvider>(
+        suggestion_services.get());
 
     // Initialize the SuggestionEngine.
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
