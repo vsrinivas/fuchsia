@@ -6,5 +6,11 @@ group("tests") {
   deps = [
     "component_context",
     "parent_child",
+    ":modular_tests.json",
   ]
+}
+
+copy("modular_tests.json") {
+  sources = [ "modular_tests.json" ]
+  outputs = [ "$root_out_dir/modular_tests.json" ]
 }

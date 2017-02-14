@@ -17,3 +17,24 @@ executable("test_runner") {
     "//lib/mtl",
   ]
 }
+
+source_set("test_runner_client") {
+  sources = [
+    "test_runner_client.h",
+    "test_runner_client.cc",
+  ]
+  deps = [
+    "//lib/ftl",
+    "//third_party/rapidjson"
+  ]
+}
+
+executable("run_modular_tests") {
+  sources = [
+    "run_modular_tests.cc",
+  ]
+  deps = [
+    ":test_runner_client",
+    "//lib/ftl",
+  ]
+}
