@@ -221,7 +221,7 @@ class UserRunnerImpl : public UserRunner {
 class UserRunnerApp : public UserRunnerFactory {
  public:
   UserRunnerApp()
-      : application_context_(ApplicationContext::CreateFromStartupInfo()) {
+      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
     application_context_->outgoing_services()->AddService<UserRunnerFactory>(
         [this](fidl::InterfaceRequest<UserRunnerFactory> request) {
           bindings_.AddBinding(this, std::move(request));
@@ -243,7 +243,7 @@ class UserRunnerApp : public UserRunnerFactory {
                        std::move(user_runner_request));
   }
 
-  std::shared_ptr<ApplicationContext> application_context_;
+  std::shared_ptr<app::ApplicationContext> application_context_;
   fidl::BindingSet<UserRunnerFactory> bindings_;
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerApp);
 };

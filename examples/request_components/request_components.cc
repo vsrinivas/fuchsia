@@ -17,7 +17,7 @@ namespace {
 class RequestComponentApp {
  public:
   RequestComponentApp(const std::string& component_id)
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     component_index_ =
         context_->ConnectToEnvironmentService<component::ComponentIndex>();
     component_index_->GetComponent(
@@ -30,7 +30,7 @@ class RequestComponentApp {
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   fidl::InterfacePtr<component::ComponentIndex> component_index_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RequestComponentApp);

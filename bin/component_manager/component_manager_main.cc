@@ -15,7 +15,7 @@ namespace component {
 class App {
  public:
   App()
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()),
+      : context_(app::ApplicationContext::CreateFromStartupInfo()),
         impl_(
             context_->ConnectToEnvironmentService<network::NetworkService>()) {
     context_->outgoing_services()->AddService<ComponentIndex>(
@@ -25,7 +25,7 @@ class App {
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   ComponentIndexImpl impl_;
   fidl::BindingSet<ComponentIndex> bindings_;
 

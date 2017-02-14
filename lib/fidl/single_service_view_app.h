@@ -30,7 +30,7 @@ class SingleServiceViewApp : public SingleServiceApp<Service>,
     // SingleServiceApp<Service>::, results in the error:
     //   use 'template' keyword to treat 'AddService' as a dependent template
     //   name
-    ApplicationContext* application_context = this->application_context();
+    app::ApplicationContext* application_context = this->application_context();
     application_context->outgoing_services()->AddService<mozart::ViewProvider>(
         [this](fidl::InterfaceRequest<mozart::ViewProvider> request) {
           FTL_DCHECK(!view_provider_binding_.is_bound());

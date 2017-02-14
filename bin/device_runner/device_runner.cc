@@ -129,7 +129,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
  public:
   DeviceRunnerApp(const Settings& settings)
       : settings_(settings),
-        app_context_(ApplicationContext::CreateFromStartupInfo()),
+        app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         device_context_binding_(this),
         user_provider_binding_(this) {
     // 0. Get login data for users of the device.
@@ -323,7 +323,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
   std::string serialized_users_;
   const modular::UsersStorage* users_storage_ = nullptr;
 
-  std::shared_ptr<ApplicationContext> app_context_;
+  std::shared_ptr<app::ApplicationContext> app_context_;
   fidl::Binding<DeviceContext> device_context_binding_;
   fidl::Binding<UserProvider> user_provider_binding_;
 

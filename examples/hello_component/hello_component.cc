@@ -14,12 +14,12 @@ namespace {
 class HelloComponentApp {
  public:
   HelloComponentApp()
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     FTL_LOG(INFO) << "HelloComponentApp::OnInitialize()";
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   FTL_DISALLOW_COPY_AND_ASSIGN(HelloComponentApp);
 };
 

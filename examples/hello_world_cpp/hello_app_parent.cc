@@ -21,7 +21,7 @@ namespace {
 class HelloAppParent {
  public:
   HelloAppParent(ftl::CommandLine& command_line)
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     auto launch_info = app::ApplicationLaunchInfo::New();
     const std::vector<std::string>& args = command_line.positional_args();
     if (args.empty()) {
@@ -48,7 +48,7 @@ class HelloAppParent {
     });
   }
 
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
 
   app::ApplicationControllerPtr child_;
   app::ServiceProviderPtr child_services_;

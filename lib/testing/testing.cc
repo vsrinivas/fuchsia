@@ -12,7 +12,7 @@ namespace testing {
 static TestRunnerPtr g_test_runner;
 static TestRunnerStorePtr g_test_runner_store;
 
-void Init(ApplicationContext* app_context, const std::string& identity) {
+void Init(app::ApplicationContext* app_context, const std::string& identity) {
   FTL_DCHECK(app_context);
   FTL_DCHECK(!g_test_runner.is_bound());
   FTL_DCHECK(!g_test_runner_store.is_bound());

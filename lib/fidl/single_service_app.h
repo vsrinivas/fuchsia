@@ -20,7 +20,7 @@ template <class Service>
 class SingleServiceApp : public Service {
  public:
   SingleServiceApp()
-      : application_context_(ApplicationContext::CreateFromStartupInfo()),
+      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         service_binding_(this) {
     application_context_->outgoing_services()->AddService<Service>(
         [this](fidl::InterfaceRequest<Service> request) {
@@ -32,12 +32,12 @@ class SingleServiceApp : public Service {
   ~SingleServiceApp() override = default;
 
  protected:
-  ApplicationContext* application_context() {
+  app::ApplicationContext* application_context() {
     return application_context_.get();
   }
 
  private:
-  std::unique_ptr<ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   fidl::Binding<Service> service_binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SingleServiceApp);

@@ -106,7 +106,9 @@ class TestRunnerImpl : public testing::TestRunner {
 
  private:
   // |TestRunner|
-  void Identify(const fidl::String& test_name) override { test_name_ = test_name; }
+  void Identify(const fidl::String& test_name) override {
+    test_name_ = test_name;
+  }
 
   // |TestRunner|
   void Fail(const fidl::String& log_message) override {
@@ -129,8 +131,8 @@ class TestRunnerImpl : public testing::TestRunner {
 // tests and runs them one at a time using TestRunContext.
 class TestRunnerConnection {
  public:
-  explicit TestRunnerConnection(int socket_fd,
-                                std::shared_ptr<ApplicationContext> app_context)
+  TestRunnerConnection(int socket_fd,
+                       std::shared_ptr<app::ApplicationContext> app_context)
       : app_context_(app_context), socket_(socket_fd) {}
 
   void Start() {
@@ -228,7 +230,7 @@ class TestRunnerConnection {
                                            command_parse[2], args));
   }
 
-  std::shared_ptr<ApplicationContext> app_context_;
+  std::shared_ptr<app::ApplicationContext> app_context_;
   std::unique_ptr<TestRunContext> test_context_;
 
   // Posix fd for the TCP connection.
@@ -238,11 +240,12 @@ class TestRunnerConnection {
   FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerConnection);
 };
 
-TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
-                               TestRunnerConnection* connection,
-                               const std::string& test_id,
-                               const std::string& url,
-                               const std::vector<std::string>& args)
+TestRunContext::TestRunContext(
+    std::shared_ptr<app::ApplicationContext> app_context,
+    TestRunnerConnection* connection,
+    const std::string& test_id,
+    const std::string& url,
+    const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {
   // 1. Make a child environment to run the command.
   app::ApplicationEnvironmentPtr parent_env;
@@ -313,7 +316,7 @@ void TestRunContext::Teardown() {
 class TestRunnerTCPServer {
  public:
   TestRunnerTCPServer(uint16_t port)
-      : app_context_(ApplicationContext::CreateFromStartupInfo()) {
+      : app_context_(app::ApplicationContext::CreateFromStartupInfo()) {
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
@@ -344,7 +347,7 @@ class TestRunnerTCPServer {
 
  private:
   int listener_;
-  std::shared_ptr<ApplicationContext> app_context_;
+  std::shared_ptr<app::ApplicationContext> app_context_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerTCPServer);
 };

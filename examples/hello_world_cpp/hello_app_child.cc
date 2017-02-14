@@ -17,8 +17,7 @@ namespace {
 
 class HelloAppChild : public Hello {
  public:
-  HelloAppChild()
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+  HelloAppChild() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     context_->outgoing_services()->AddService<Hello>(
         [this](fidl::InterfaceRequest<Hello> request) {
           hello_binding_.AddBinding(this, std::move(request));
@@ -33,7 +32,7 @@ class HelloAppChild : public Hello {
     callback((request.get() == "hello") ? "hola!" : "adios!");
   }
 
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   fidl::BindingSet<Hello> hello_binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(HelloAppChild);

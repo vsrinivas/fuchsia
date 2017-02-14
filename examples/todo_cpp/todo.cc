@@ -62,7 +62,7 @@ TodoApp::TodoApp()
       size_distribution_(kMeanListSize, kListSizeStdDev),
       delay_distribution_(kMinDelaySeconds, kMaxDelaySeconds),
       generator_(&rng_),
-      context_(modular::ApplicationContext::CreateFromStartupInfo()),
+      context_(app::ApplicationContext::CreateFromStartupInfo()),
       module_binding_(this),
       page_watcher_binding_(this) {
   context_->outgoing_services()->AddService<modular::Module>(

@@ -52,7 +52,7 @@ class TodoApp : public modular::Module, public ledger::PageWatcher {
   std::normal_distribution<> size_distribution_;
   std::uniform_int_distribution<> delay_distribution_;
   Generator generator_;
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   fidl::Binding<modular::Module> module_binding_;
   fidl::InterfacePtr<modular::Story> story_;
   ledger::LedgerPtr ledger_;

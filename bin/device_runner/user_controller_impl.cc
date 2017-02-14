@@ -18,7 +18,7 @@ constexpr char kUserScopeLabelPrefix[] = "user-";
 }  // namespace
 
 UserControllerImpl::UserControllerImpl(
-    std::shared_ptr<ApplicationContext> app_context,
+    std::shared_ptr<app::ApplicationContext> app_context,
     const std::string& user_runner,
     const std::string& user_shell,
     const std::vector<std::string>& user_shell_args,
