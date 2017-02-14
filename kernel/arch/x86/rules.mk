@@ -73,6 +73,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/feature.c \
 	$(LOCAL_DIR)/gdt.S \
 	$(LOCAL_DIR)/header.S \
+	$(LOCAL_DIR)/hypervisor.cpp \
 	$(LOCAL_DIR)/idt.c \
 	$(LOCAL_DIR)/ioapic.c \
 	$(LOCAL_DIR)/ioport.cpp \
@@ -85,7 +86,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/registers.c \
 	$(LOCAL_DIR)/thread.c \
 	$(LOCAL_DIR)/tsc.c \
-	$(LOCAL_DIR)/user_copy.c \
+	$(LOCAL_DIR)/user_copy.c
 
 ifeq ($(SUBARCH),x86-64)
 MODULE_SRCS += \

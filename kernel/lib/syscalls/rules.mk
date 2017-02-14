@@ -22,6 +22,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls_ddk.cpp \
     $(LOCAL_DIR)/syscalls_ddk_pci.cpp \
     $(LOCAL_DIR)/syscalls_handle_ops.cpp \
+    $(LOCAL_DIR)/syscalls_hypervisor.cpp \
     $(LOCAL_DIR)/syscalls_exceptions.cpp \
     $(LOCAL_DIR)/syscalls_magenta.cpp \
     $(LOCAL_DIR)/syscalls_object.cpp \

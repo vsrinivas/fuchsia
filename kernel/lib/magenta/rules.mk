@@ -22,6 +22,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/futex_node.cpp \
     $(LOCAL_DIR)/handle.cpp \
     $(LOCAL_DIR)/handle_reaper.cpp \
+    $(LOCAL_DIR)/hypervisor_dispatcher.cpp \
     $(LOCAL_DIR)/interrupt_event_dispatcher.cpp \
     $(LOCAL_DIR)/io_mapping_dispatcher.cpp \
     $(LOCAL_DIR)/job_dispatcher.cpp \

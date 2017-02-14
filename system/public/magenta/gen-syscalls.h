@@ -1195,6 +1195,16 @@ extern mx_status_t _mx_resource_accept(
     mx_handle_t handle,
     mx_handle_t channel[1]) __attribute__((__leaf__));
 
+extern mx_status_t mx_hypervisor_create(
+    mx_handle_t handle,
+    uint32_t options,
+    mx_handle_t out[1]) __attribute__((__leaf__));
+
+extern mx_status_t _mx_hypervisor_create(
+    mx_handle_t handle,
+    uint32_t options,
+    mx_handle_t out[1]) __attribute__((__leaf__));
+
 extern int mx_syscall_test_0(void) __attribute__((__leaf__));
 
 extern int _mx_syscall_test_0(void) __attribute__((__leaf__));

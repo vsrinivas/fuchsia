@@ -108,13 +108,14 @@
 #define MX_SYS_resource_do_action 104
 #define MX_SYS_resource_connect 105
 #define MX_SYS_resource_accept 106
-#define MX_SYS_syscall_test_0 107
-#define MX_SYS_syscall_test_1 108
-#define MX_SYS_syscall_test_2 109
-#define MX_SYS_syscall_test_3 110
-#define MX_SYS_syscall_test_4 111
-#define MX_SYS_syscall_test_5 112
-#define MX_SYS_syscall_test_6 113
-#define MX_SYS_syscall_test_7 114
-#define MX_SYS_syscall_test_8 115
+#define MX_SYS_hypervisor_create 107
+#define MX_SYS_syscall_test_0 108
+#define MX_SYS_syscall_test_1 109
+#define MX_SYS_syscall_test_2 110
+#define MX_SYS_syscall_test_3 111
+#define MX_SYS_syscall_test_4 112
+#define MX_SYS_syscall_test_5 113
+#define MX_SYS_syscall_test_6 114
+#define MX_SYS_syscall_test_7 115
+#define MX_SYS_syscall_test_8 116
 

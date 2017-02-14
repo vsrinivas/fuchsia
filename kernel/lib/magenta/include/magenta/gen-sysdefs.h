@@ -583,6 +583,11 @@ mx_status_t sys_resource_accept(
     mx_handle_t handle,
     mx_handle_t channel[1]);
 
+mx_status_t sys_hypervisor_create(
+    mx_handle_t handle,
+    uint32_t options,
+    mx_handle_t out[1]);
+
 int sys_syscall_test_0();
 
 int sys_syscall_test_1(

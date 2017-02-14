@@ -574,6 +574,12 @@ syscall resource_accept
     (handle: mx_handle_t, channel: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
+# Hypervisor
+
+syscall hypervisor_create
+    (handle: mx_handle_t, options: uint32_t, out: mx_handle_t[1] OUT)
+    returns (mx_status_t);
+
 # Test syscalls (keep at the end)
 
 syscall syscall_test_0() returns (int);
