@@ -247,9 +247,11 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
 
   // |UserProvider|
   void PreviousUsers(const PreviousUsersCallback& callback) override {
-    fidl::Array<fidl::String> users;
-    for (const auto* user : *(users_storage_->users())) {
-      users.push_back(user->username()->str());
+    fidl::Array<fidl::String> users = fidl::Array<fidl::String>::New(0);
+    if (users_storage_) {
+      for (const auto* user : *users_storage_->users()) {
+        users.push_back(user->username()->str());
+      }
     }
     callback(std::move(users));
   }

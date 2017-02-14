@@ -8,6 +8,7 @@ group("all") {
   deps = [
     ":device_runner",
     ":dummy_device_shell",
+    "userpicker_device_shell",
   ]
 }
 
