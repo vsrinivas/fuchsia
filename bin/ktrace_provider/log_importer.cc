@@ -35,8 +35,15 @@ void LogImporter::Start() {
     mx_log_record_t* log_record =
         reinterpret_cast<mx_log_record_t*>(log_buffer);
 
-    while (mx_log_read(log_handle.get(), MX_LOG_RECORD_MAX, log_record,
-                       MX_LOG_FLAG_WAIT) > 0) {
+    for (;;) {
+      mx_status_t status = mx_log_read(log_handle.get(), MX_LOG_RECORD_MAX, log_record, 0);
+      if (status == ERR_SHOULD_WAIT) {
+        mx_object_wait_one(log_handle.get(), MX_LOG_READABLE, MX_TIME_INFINITE, nullptr);
+        continue;
+      }
+      if (status != NO_ERROR) {
+        break;
+      }
       if (log_record->timestamp < start_timestamp)
         continue;
       if (log_record->timestamp >=
