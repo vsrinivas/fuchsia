@@ -4,6 +4,22 @@
     ],
     "binaries": [
         {
+            "binary": "child_module",
+            "bootfs_path": "apps/modular_tests/child_module"
+        },
+        {
+            "binary": "component_context_test",
+            "bootfs_path": "apps/modular_tests/component_context_test"
+        },
+        {
+            "binary": "component_context_test_agent1",
+            "bootfs_path": "apps/modular_tests/component_context_test_agent1"
+        },
+        {
+            "binary": "component_context_test_agent2",
+            "bootfs_path": "apps/modular_tests/component_context_test_agent2"
+        },
+        {
             "binary": "component_manager_main",
             "bootfs_path": "apps/component_manager"
         },
@@ -78,6 +94,10 @@
         {
             "binary": "hello_app_parent",
             "bootfs_path": "apps/hello_app_parent"
+        },
+        {
+            "binary": "parent_module",
+            "bootfs_path": "apps/modular_tests/parent_module"
         },
         {
             "binary": "run_component",
