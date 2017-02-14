@@ -21,7 +21,7 @@
 
 static acpi_handle_t acpi_root;
 
-mx_status_t devmgr_launch_acpisvc(mx_handle_t job_handle) {
+mx_status_t devhost_launch_acpisvc(mx_handle_t job_handle) {
     const char* binname = "/boot/bin/acpisvc";
 
     mx_handle_t logger = MX_HANDLE_INVALID;
@@ -55,7 +55,7 @@ mx_status_t devmgr_launch_acpisvc(mx_handle_t job_handle) {
 // TODO(teisenbe): Instead of doing this as a single function, give the kpci
 // driver a handle to the PCIe root complex ACPI node and let it ask for
 // the initialization info.
-mx_status_t devmgr_init_pcie(void) {
+mx_status_t devhost_init_pcie(void) {
     char name[4] = {0};
     {
         acpi_rsp_list_children_t* rsp;
@@ -100,20 +100,20 @@ mx_status_t devmgr_init_pcie(void) {
     return status;
 }
 
-void devmgr_poweroff(void) {
+void devhost_acpi_poweroff(void) {
     acpi_s_state_transition(&acpi_root, ACPI_S_STATE_S5);
     mx_debug_send_command(get_root_resource(), "poweroff", sizeof("poweroff"));
 }
 
-void devmgr_reboot(void) {
+void devhost_acpi_reboot(void) {
     acpi_s_state_transition(&acpi_root, ACPI_S_STATE_REBOOT);
     mx_debug_send_command(get_root_resource(), "reboot", sizeof("reboot"));
 }
 
-void devmgr_acpi_ps0(char* arg) {
+void devhost_acpi_ps0(char* arg) {
     acpi_ps0(&acpi_root, arg, strlen(arg));
 }
 
-mx_handle_t devmgr_acpi_clone(void) {
+mx_handle_t devhost_acpi_clone(void) {
     return acpi_clone_handle(&acpi_root);
 }

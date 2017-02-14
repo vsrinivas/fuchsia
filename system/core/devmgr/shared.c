@@ -65,7 +65,7 @@ void devmgr_launch_devhost(mx_handle_t job,
     }
 #else
     launchpad_clone(lp, LP_CLONE_ENVIRON | LP_CLONE_MXIO_ROOT);
-    if ((h = devmgr_acpi_clone()) > 0) {
+    if ((h = devhost_acpi_clone()) > 0) {
         launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_USER0, ID_HACPI));
     }
 #endif

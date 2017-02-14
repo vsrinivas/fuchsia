@@ -6,10 +6,10 @@
 
 #include <magenta/types.h>
 
-mx_status_t devmgr_launch_acpisvc(mx_handle_t job_handle);
-mx_status_t devmgr_init_pcie(void);
+mx_status_t devhost_launch_acpisvc(mx_handle_t job_handle);
+mx_status_t devhost_init_pcie(void);
 
-void devmgr_reboot(void);
-void devmgr_poweroff(void);
-void devmgr_acpi_ps0(char* arg);
-mx_handle_t devmgr_acpi_clone(void);
+void devhost_acpi_reboot(void);
+void devhost_acpi_poweroff(void);
+void devhost_acpi_ps0(char* arg);
+mx_handle_t devhost_acpi_clone(void);

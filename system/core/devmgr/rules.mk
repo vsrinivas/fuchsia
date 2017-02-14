@@ -70,10 +70,10 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/acpi-device.c \
     $(LOCAL_DIR)/dmctl.c \
     $(LOCAL_DIR)/shared.c \
-    $(LOCAL_DIR)/devhost-main.c \
     $(LOCAL_DIR)/devhost.c \
     $(LOCAL_DIR)/devhost-api.c \
     $(LOCAL_DIR)/devhost-binding.c \
+    $(LOCAL_DIR)/devhost-drivers.c \
     $(LOCAL_DIR)/devhost-core.c \
     $(LOCAL_DIR)/devhost-rpc-server.c \
     $(DRIVER_SRCS) \
