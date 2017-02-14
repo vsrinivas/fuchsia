@@ -97,7 +97,7 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
                                 public maxwell::AskHandler {
  public:
   ModuleSuggesterAgentApp()
-      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         maxwell_context_(
             app_context_
                 ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
@@ -145,7 +145,7 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> app_context_;
+  std::unique_ptr<app::ApplicationContext> app_context_;
 
   maxwell::ContextSubscriberPtr maxwell_context_;
   fidl::Binding<maxwell::ContextSubscriberLink> in_;

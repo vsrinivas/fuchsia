@@ -70,7 +70,7 @@ typedef SubscriberClient<ContextSubscriber> ContextSubscriberImpl;
 class ContextEngineApp : public ContextEngine {
  public:
   ContextEngineApp()
-      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : app_context_(app::ApplicationContext::CreateFromStartupInfo()) {
     app_context_->outgoing_services()->AddService<ContextEngine>(
         [this](fidl::InterfaceRequest<ContextEngine> request) {
           bindings_.AddBinding(this, std::move(request));
@@ -104,7 +104,7 @@ class ContextEngineApp : public ContextEngine {
   using UptrBindingSet =
       fidl::BindingSet<Interface, std::unique_ptr<Interface>>;
 
-  std::unique_ptr<modular::ApplicationContext> app_context_;
+  std::unique_ptr<app::ApplicationContext> app_context_;
 
   Repo repo_;
 

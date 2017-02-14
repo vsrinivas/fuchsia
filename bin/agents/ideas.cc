@@ -19,7 +19,7 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
                       public maxwell::ContextSubscriberLink {
  public:
   IdeasAgentApp()
-      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         maxwell_context_(
             app_context_
                 ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
@@ -76,7 +76,7 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> app_context_;
+  std::unique_ptr<app::ApplicationContext> app_context_;
 
   maxwell::ContextSubscriberPtr maxwell_context_;
   fidl::Binding<maxwell::ContextSubscriberLink> in_;

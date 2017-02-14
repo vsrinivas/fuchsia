@@ -101,7 +101,7 @@ class LauncherApp : public maxwell::Launcher {
     agent_launcher_.StartAgent(url, std::move(agent_host));
   }
 
-  std::unique_ptr<modular::ApplicationContext> app_context_;
+  std::unique_ptr<app::ApplicationContext> app_context_;
 
   fidl::BindingSet<maxwell::Launcher> launcher_bindings_;
 

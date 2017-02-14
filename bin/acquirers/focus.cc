@@ -26,7 +26,7 @@ class FocusAcquirerApp : public modular::FocusListener,
                          public maxwell::ContextPublisherController {
  public:
   FocusAcquirerApp()
-      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()),
+      : app_ctx_(app::ApplicationContext::CreateFromStartupInfo()),
         ctl_(this),
         focus_listener_(this) {
     srand(time(NULL));
@@ -80,7 +80,7 @@ class FocusAcquirerApp : public modular::FocusListener,
     FTL_VLOG(1) << ": " << modular_state;
   }
 
-  std::unique_ptr<modular::ApplicationContext> app_ctx_;
+  std::unique_ptr<app::ApplicationContext> app_ctx_;
 
   fidl::Binding<maxwell::ContextPublisherController> ctl_;
   maxwell::ContextPublisherLinkPtr out_;

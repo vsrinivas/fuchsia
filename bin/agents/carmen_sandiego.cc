@@ -17,7 +17,7 @@ class CarmenSandiegoApp : public maxwell::ContextPublisherController,
                           public maxwell::ContextSubscriberLink {
  public:
   CarmenSandiegoApp()
-      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         maxwell_context_(
             app_context_
                 ->ConnectToEnvironmentService<maxwell::ContextPubSub>()),
@@ -75,7 +75,7 @@ class CarmenSandiegoApp : public maxwell::ContextPublisherController,
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> app_context_;
+  std::unique_ptr<app::ApplicationContext> app_context_;
 
   maxwell::ContextPubSubPtr maxwell_context_;
   fidl::Binding<maxwell::ContextPublisherController> ctl_;

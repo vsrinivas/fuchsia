@@ -20,7 +20,7 @@ namespace maxwell {
 class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
  public:
   SuggestionEngineApp()
-      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : app_context_(app::ApplicationContext::CreateFromStartupInfo()) {
     app_context_->outgoing_services()->AddService<SuggestionEngine>(
         [this](fidl::InterfaceRequest<SuggestionEngine> request) {
           bindings_.AddBinding(this, std::move(request));
@@ -145,7 +145,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   // end SuggestionEngine
 
  private:
-  std::unique_ptr<modular::ApplicationContext> app_context_;
+  std::unique_ptr<app::ApplicationContext> app_context_;
 
   fidl::BindingSet<SuggestionEngine> bindings_;
   fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
