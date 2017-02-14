@@ -17,6 +17,13 @@ mx_koid_t GetKoid(mx_handle_t handle) {
   return status == NO_ERROR ? info.koid : MX_KOID_INVALID;
 }
 
+mx_koid_t GetRelatedKoid(mx_handle_t handle) {
+  mx_info_handle_basic_t info;
+  mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info,
+                                          sizeof(info), nullptr, nullptr);
+  return status == NO_ERROR ? info.related_koid : MX_KOID_INVALID;
+}
+
 mx_obj_type_t GetObjectType(mx_handle_t handle) {
   mx_info_handle_basic_t info;
   mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info,

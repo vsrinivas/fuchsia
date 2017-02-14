@@ -8,6 +8,7 @@
 
 #include <magenta/syscalls/object.h>
 #include <magenta/threads.h>
+#include <mx/channel.h>
 #include <mx/event.h>
 
 #include "gtest/gtest.h"
@@ -36,6 +37,23 @@ TEST(ObjectInfo, GetKoidOfDuplicates) {
 
   EXPECT_NE(MX_KOID_INVALID, GetKoid(event1.get()));
   EXPECT_EQ(GetKoid(event1.get()), GetKoid(event2.get()));
+}
+
+TEST(ObjectInfo, GetRelatedKoidOfChannel) {
+  mx::channel channel1, channel2;
+  ASSERT_EQ(NO_ERROR, mx::channel::create(0u, &channel1, &channel2));
+  EXPECT_NE(MX_KOID_INVALID, GetKoid(channel1.get()));
+  EXPECT_NE(MX_KOID_INVALID, GetKoid(channel2.get()));
+
+  EXPECT_EQ(GetKoid(channel2.get()), GetRelatedKoid(channel1.get()));
+  EXPECT_EQ(GetKoid(channel1.get()), GetRelatedKoid(channel2.get()));
+}
+
+TEST(ObjectInfo, GetRelatedKoidOfEvent) {
+  mx::event event1;
+  ASSERT_EQ(NO_ERROR, mx::event::create(0u, &event1));
+  EXPECT_NE(MX_KOID_INVALID, GetKoid(event1.get()));
+  EXPECT_EQ(MX_KOID_INVALID, GetRelatedKoid(event1.get()));
 }
 
 TEST(ObjectInfo, GetNameOfInvalidHandle) {

@@ -16,6 +16,13 @@ namespace mtl {
 // Returns |MX_KOID_INVALID| if the handle is invalid.
 mx_koid_t GetKoid(mx_handle_t handle);
 
+// Gets the kernel object id (koid) of the objected related to the object
+// associated with the handle. For example, if the object associated with the
+// handle is a channel, this function returns the koid of the channel object at
+// the opposite end. Returns |MX_KOID_INVALID| if the handle is invalid or
+// the object associated with the handle has no related object.
+mx_koid_t GetRelatedKoid(mx_handle_t handle);
+
 // Gets the type of a kernel object.
 mx_obj_type_t GetObjectType(mx_handle_t handle);
 
