@@ -101,7 +101,7 @@ sk_sp<SkImage> MakeSkImage(ImagePtr image,
   sk_sp<SkColorSpace> sk_color_space;
   switch (image->color_space) {
     case Image::ColorSpace::SRGB:
-      sk_color_space = SkColorSpace::MakeSRGB();
+      sk_color_space = SkColorSpace::MakeNamed(SkColorSpace::kSRGB_Named);
       break;
     default:
       FTL_LOG(ERROR) << "Unsupported color space: " << image->color_space;
