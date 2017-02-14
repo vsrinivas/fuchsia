@@ -78,8 +78,8 @@
         {
             "binary": "example_todo_ledger.flx",
             "bootfs_path": "apps/example_todo_ledger"
-	},
-	{
+        },
+        {
             "binary": "example_todo_story.flx",
             "bootfs_path": "apps/example_todo_story"
         },
@@ -130,6 +130,10 @@
         {
             "binary": "user_runner",
             "bootfs_path": "apps/user_runner"
+        },
+        {
+            "binary": "userpicker_device_shell.flx",
+            "bootfs_path": "apps/userpicker_device_shell"
         }
     ],
     "components": [
