@@ -78,18 +78,12 @@ typedef struct vc_device {
     textcon_t textcon;
 
     mx_hid_fifo_t fifo;
-    hid_keys_t key_states[2];
-    int key_idx;
+    // FIFO for storing keyboard input.  Note that this stores characters,
+    // not HID events.
     keychar_t* keymap;
-    // hid event fifo
 
     struct list_node node;
     // for virtual console list
-
-    // for char interface
-    uint32_t modifiers;
-    char chardata[4];
-    uint32_t charcount;
 } vc_device_t;
 
 #define get_vc_device(dev) containerof(dev, vc_device_t, device)

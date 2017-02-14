@@ -57,6 +57,10 @@ static unsigned g_active_vc_index;
 static vc_battery_info_t g_battery_info;
 static mtx_t g_vc_lock = MTX_INIT;
 
+static uint32_t hid_key_to_ansi_code(uint8_t keycode, int modifiers,
+                                     keychar_t* keymap, char* buf,
+                                     size_t buf_size);
+
 static int modifiers_from_keycode(uint8_t keycode) {
     switch (keycode) {
     case HID_USAGE_KEY_LEFT_SHIFT:
@@ -146,12 +150,36 @@ static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
     return false;
 }
 
+static void vc_handle_key_press(uint8_t keycode, int modifiers) {
+    if (vc_handle_control_keys(keycode, modifiers))
+        return;
+
+    // TODO: ensure active vc can't change while this is going on
+    mtx_lock(&g_active_vc->fifo.lock);
+    if (mx_hid_fifo_size(&g_active_vc->fifo) == 0) {
+        g_active_vc->flags |= VC_FLAG_RESETSCROLL;
+    }
+    char output[4];
+    uint32_t length = hid_key_to_ansi_code(
+        keycode, modifiers, g_active_vc->keymap, output, sizeof(output));
+    if (length > 0) {
+        // This writes multi-byte sequences atomically, so that if space
+        // isn't available for the full sequence -- if the program running
+        // on the console is currently not reading input -- then nothing is
+        // written.  This has the nice property that we won't get partial
+        // key code sequences in that case.
+        mx_hid_fifo_write(&g_active_vc->fifo, output, length);
+
+        device_state_set(&g_active_vc->device, DEV_STATE_READABLE);
+    }
+    mtx_unlock(&g_active_vc->fifo.lock);
+}
+
 static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
                                  int* cur_idx, int* prev_idx,
                                  hid_keys_t* key_pressed,
                                  hid_keys_t* key_released, int* modifiers) {
     // process the key
-    bool consumed = false;
     uint8_t keycode;
     hid_keys_t key_delta;
 
@@ -162,9 +190,7 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
     }
     hid_for_every_key(&key_delta, keycode) {
         *modifiers |= modifiers_from_keycode(keycode);
-
-        if (vc_handle_control_keys(keycode, *modifiers))
-            consumed = true;
+        vc_handle_key_press(keycode, *modifiers);
     }
 
     hid_kbd_released_keys(&key_state[*prev_idx], &key_state[*cur_idx], &key_delta);
@@ -173,18 +199,6 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
     }
     hid_for_every_key(&key_delta, keycode) {
         *modifiers &= ~modifiers_from_keycode(keycode);
-    }
-
-    if (!consumed) {
-        // TODO: decouple char device from actual device
-        // TODO: ensure active vc can't change while this is going on
-        mtx_lock(&g_active_vc->fifo.lock);
-        if ((mx_hid_fifo_size(&g_active_vc->fifo) == 0) && (g_active_vc->charcount == 0)) {
-            g_active_vc->flags |= VC_FLAG_RESETSCROLL;
-            device_state_set(&g_active_vc->device, DEV_STATE_READABLE);
-        }
-        mx_hid_fifo_write(&g_active_vc->fifo, report_buf, sizeof(report_buf));
-        mtx_unlock(&g_active_vc->fifo.lock);
     }
 
     // swap key states
@@ -448,7 +462,12 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
 // sequence, for the given modifier key state and keymap.  This writes the
 // result into |buf| and returns the number of bytes that were written.
 static uint32_t hid_key_to_ansi_code(uint8_t keycode, int modifiers,
-                                     keychar_t* keymap, char* buf) {
+                                     keychar_t* keymap, char* buf,
+                                     size_t buf_size) {
+    // Consistency check: Max size of byte sequences we produce below.
+    if (buf_size != 4)
+        return 0;
+
     uint8_t ch = hid_map_key(keycode, modifiers & MOD_SHIFT, keymap);
     if (ch) {
         if (modifiers & MOD_CTRL) {
@@ -533,57 +552,16 @@ static uint32_t hid_key_to_ansi_code(uint8_t keycode, int modifiers,
 static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
 
-    uint8_t report[8];
-    hid_keys_t key_delta;
-    ssize_t r = 0;
     mtx_lock(&vc->fifo.lock);
-    int cur_idx = vc->key_idx;
-    int prev_idx = 1 - cur_idx;
-    while (count > 0) {
-        if (vc->charcount > 0) {
-            if (count > vc->charcount) {
-                count = vc->charcount;
-            }
-            memcpy(buf, vc->chardata, count);
-            vc->charcount -= (uint32_t)count;
-            if (vc->charcount > 0) {
-                memmove(vc->chardata, vc->chardata + count, vc->charcount);
-            }
-            r = count;
-            break;
-        }
-        if (mx_hid_fifo_read(&vc->fifo, report, sizeof(report)) < (ssize_t)sizeof(report)) {
-            // TODO: better error?
-            r = 0;
-            break;
-        }
-
-        uint8_t keycode;
-        hid_kbd_parse_report(report, &vc->key_states[cur_idx]);
-
-        hid_kbd_pressed_keys(&vc->key_states[prev_idx], &vc->key_states[cur_idx], &key_delta);
-        hid_for_every_key(&key_delta, keycode) {
-            vc->modifiers |= modifiers_from_keycode(keycode);
-
-            vc->charcount = hid_key_to_ansi_code(keycode, vc->modifiers, vc->keymap, vc->chardata);
-            assert(vc->charcount <= sizeof(vc->chardata));
-        }
-
-        hid_kbd_released_keys(&vc->key_states[prev_idx], &vc->key_states[cur_idx], &key_delta);
-        hid_for_every_key(&key_delta, keycode) {
-            vc->modifiers &= ~modifiers_from_keycode(keycode);
-        }
-
-        // swap key states
-        cur_idx = 1 - cur_idx;
-        prev_idx = 1 - prev_idx;
-    }
-    if ((mx_hid_fifo_size(&vc->fifo) == 0) && (vc->charcount == 0)) {
+    ssize_t result = mx_hid_fifo_read(&vc->fifo, buf, count);
+    if (mx_hid_fifo_size(&vc->fifo) == 0) {
         device_state_clr(dev, DEV_STATE_READABLE);
     }
-    vc->key_idx = cur_idx;
     mtx_unlock(&vc->fifo.lock);
-    return r ? r : (ssize_t)ERR_SHOULD_WAIT;
+
+    if (result == 0)
+        result = ERR_SHOULD_WAIT;
+    return result;
 }
 
 static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
