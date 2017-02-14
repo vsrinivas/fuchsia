@@ -28,7 +28,7 @@ class App {
   bool SendDevMgrCommand(std::string command);
   void CollectTraces();
 
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   LogImporter log_importer_;
   tracing::writer::TraceHandlerKey trace_handler_key_;
   bool trace_running_ = false;

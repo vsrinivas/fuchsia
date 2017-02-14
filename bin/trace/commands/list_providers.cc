@@ -11,7 +11,7 @@
 namespace tracing {
 
 Command::Info ListProviders::Describe() {
-  return Command::Info{[](modular::ApplicationContext* context) {
+  return Command::Info{[](app::ApplicationContext* context) {
                          return std::make_unique<ListProviders>(context);
                        },
                        "list-providers",
@@ -19,7 +19,7 @@ Command::Info ListProviders::Describe() {
                        {}};
 }
 
-ListProviders::ListProviders(modular::ApplicationContext* context)
+ListProviders::ListProviders(app::ApplicationContext* context)
     : CommandWithTraceController(context) {}
 
 void ListProviders::Run(const ftl::CommandLine& command_line) {

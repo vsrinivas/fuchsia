@@ -17,7 +17,7 @@ TraceProviderImpl* g_tracer = nullptr;
 
 }  // namespace
 
-bool InitializeTracerFromCommandLine(modular::ApplicationContext* app_context,
+bool InitializeTracerFromCommandLine(app::ApplicationContext* app_context,
                                      const ftl::CommandLine& command_line,
                                      const TraceSettings default_settings) {
   TraceSettings settings = default_settings;
@@ -27,7 +27,7 @@ bool InitializeTracerFromCommandLine(modular::ApplicationContext* app_context,
   return true;
 }
 
-void InitializeTracer(modular::ApplicationContext* app_context,
+void InitializeTracer(app::ApplicationContext* app_context,
                       const TraceSettings& settings) {
   auto registry = app_context->ConnectToEnvironmentService<TraceRegistry>();
   InitializeTracer(std::move(registry), settings);

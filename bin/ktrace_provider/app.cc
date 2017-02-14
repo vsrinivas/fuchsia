@@ -28,8 +28,7 @@ constexpr char kKTraceOn[] = "ktraceon";
 }  // namespace
 
 App::App(const ftl::CommandLine& command_line)
-    : application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       weak_ptr_factory_(this) {
   if (!tracing::InitializeTracerFromCommandLine(
           application_context_.get(), command_line, {kDefaultProviderLabel})) {

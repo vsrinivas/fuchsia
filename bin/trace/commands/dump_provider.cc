@@ -21,7 +21,7 @@ constexpr size_t kBufferSize = 16 * 1024;
 }  // namespace
 
 Command::Info DumpProvider::Describe() {
-  return Command::Info{[](modular::ApplicationContext* context) {
+  return Command::Info{[](app::ApplicationContext* context) {
                          return std::make_unique<DumpProvider>(context);
                        },
                        "dump-provider",
@@ -29,7 +29,7 @@ Command::Info DumpProvider::Describe() {
                        {}};
 }
 
-DumpProvider::DumpProvider(modular::ApplicationContext* context)
+DumpProvider::DumpProvider(app::ApplicationContext* context)
     : CommandWithTraceController(context) {}
 
 void DumpProvider::Run(const ftl::CommandLine& command_line) {

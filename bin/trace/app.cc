@@ -14,7 +14,7 @@
 
 namespace tracing {
 
-App::App(modular::ApplicationContext* context) : Command(context) {
+App::App(app::ApplicationContext* context) : Command(context) {
   RegisterCommand(DumpProvider::Describe());
   RegisterCommand(ListCategories::Describe());
   RegisterCommand(ListProviders::Describe());

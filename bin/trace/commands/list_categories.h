@@ -13,7 +13,7 @@ class ListCategories : public CommandWithTraceController {
  public:
   static Info Describe();
 
-  explicit ListCategories(modular::ApplicationContext* context);
+  explicit ListCategories(app::ApplicationContext* context);
   void Run(const ftl::CommandLine& command_line) override;
 };
 

@@ -8,15 +8,15 @@
 
 namespace tracing {
 
-Command::Command(modular::ApplicationContext* context) : context_(context) {}
+Command::Command(app::ApplicationContext* context) : context_(context) {}
 
 Command::~Command() = default;
 
-modular::ApplicationContext* Command::context() {
+app::ApplicationContext* Command::context() {
   return context_;
 }
 
-modular::ApplicationContext* Command::context() const {
+app::ApplicationContext* Command::context() const {
   return context_;
 }
 
@@ -35,7 +35,7 @@ std::ostream& Command::err() {
 }
 
 CommandWithTraceController::CommandWithTraceController(
-    modular::ApplicationContext* context)
+    app::ApplicationContext* context)
     : Command(context),
       trace_controller_(
           context->ConnectToEnvironmentService<TraceController>()) {}

@@ -28,7 +28,7 @@ std::string SanitizeLabel(const fidl::String& label) {
 
 }  // namespace
 
-TraceManager::TraceManager(modular::ApplicationContext* context,
+TraceManager::TraceManager(app::ApplicationContext* context,
                            const Config& config)
     : context_(context), config_(config) {
   // TODO(jeffbrown): We should do this in StartTracing() and take care

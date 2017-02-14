@@ -22,7 +22,7 @@ class Command {
  public:
   struct Info {
     using CommandFactory =
-        std::function<std::unique_ptr<Command>(modular::ApplicationContext*)>;
+        std::function<std::unique_ptr<Command>(app::ApplicationContext*)>;
 
     CommandFactory factory;
     std::string name;
@@ -39,25 +39,25 @@ class Command {
   static std::ostream& out();
   static std::ostream& err();
 
-  explicit Command(modular::ApplicationContext* context);
+  explicit Command(app::ApplicationContext* context);
 
-  modular::ApplicationContext* context();
-  modular::ApplicationContext* context() const;
+  app::ApplicationContext* context();
+  app::ApplicationContext* context() const;
 
  private:
-  modular::ApplicationContext* context_;
+  app::ApplicationContext* context_;
   FTL_DISALLOW_COPY_AND_ASSIGN(Command);
 };
 
 class CommandWithTraceController : public Command {
  protected:
-  explicit CommandWithTraceController(modular::ApplicationContext* context);
+  explicit CommandWithTraceController(app::ApplicationContext* context);
 
   TraceControllerPtr& trace_controller();
   const TraceControllerPtr& trace_controller() const;
 
  private:
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   TraceControllerPtr trace_controller_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CommandWithTraceController);

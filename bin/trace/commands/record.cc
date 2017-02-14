@@ -72,7 +72,7 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
 
 Command::Info Record::Describe() {
   return Command::Info{
-      [](modular::ApplicationContext* context) {
+      [](app::ApplicationContext* context) {
         return std::make_unique<Record>(context);
       },
       "record",
@@ -92,7 +92,7 @@ Command::Info Record::Describe() {
         "tracing ends unless --detach is specified"}}};
 }
 
-Record::Record(modular::ApplicationContext* context)
+Record::Record(app::ApplicationContext* context)
     : CommandWithTraceController(context), weak_ptr_factory_(this) {}
 
 void Record::Run(const ftl::CommandLine& command_line) {

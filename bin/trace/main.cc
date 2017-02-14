@@ -13,7 +13,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   mtl::MessageLoop loop;
-  auto context = modular::ApplicationContext::CreateFromStartupInfo();
+  auto context = app::ApplicationContext::CreateFromStartupInfo();
 
   tracing::App app(context.get());
   app.Run(command_line);
