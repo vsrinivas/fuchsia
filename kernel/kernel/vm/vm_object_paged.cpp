@@ -172,9 +172,8 @@ mxtl::RefPtr<VmObject> VmObjectPaged::CreateFromROData(const void* data, size_t 
     return vmo;
 }
 
-vm_page_t* VmObjectPaged::GetPageLocked(uint64_t offset) {
+vm_page_t* VmObjectPaged::GetPageLocked(uint64_t offset) TA_REQ(lock_) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    DEBUG_ASSERT(lock_.IsHeld());
 
     if (offset >= size_)
         return nullptr;
@@ -182,9 +181,8 @@ vm_page_t* VmObjectPaged::GetPageLocked(uint64_t offset) {
     return page_list_.GetPage(offset);
 }
 
-vm_page_t* VmObjectPaged::FaultPageLocked(uint64_t offset, uint pf_flags) {
+vm_page_t* VmObjectPaged::FaultPageLocked(uint64_t offset, uint pf_flags) TA_REQ(lock_) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    DEBUG_ASSERT(lock_.IsHeld());
 
     LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x\n", this, offset, pf_flags);
 

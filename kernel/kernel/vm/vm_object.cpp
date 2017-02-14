@@ -35,15 +35,11 @@ VmObject::~VmObject() {
     magic_ = 0;
 }
 
-void VmObject::AddMappingLocked(VmMapping* r) {
-    DEBUG_ASSERT(lock_.IsHeld());
-
+void VmObject::AddMappingLocked(VmMapping* r) TA_REQ(lock_) {
     region_list_.push_front(r);
 }
 
-void VmObject::RemoveMappingLocked(VmMapping* r) {
-    DEBUG_ASSERT(lock_.IsHeld());
-
+void VmObject::RemoveMappingLocked(VmMapping* r) TA_REQ(lock_) {
     region_list_.erase(*r);
 }
 
