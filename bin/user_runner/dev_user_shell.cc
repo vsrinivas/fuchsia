@@ -35,10 +35,12 @@ class Settings {
     root_module = command_line.GetOptionValueWithDefault(
         "root_module", "file:///system/apps/example_recipe");
     root_link = command_line.GetOptionValueWithDefault("root_link", "");
+    story_id = command_line.GetOptionValueWithDefault("story_id", "");
   }
 
   std::string root_module;
   std::string root_link;
+  std::string story_id;
 };
 
 struct ViewData {
@@ -217,23 +219,33 @@ class DevUserShellApp
             ->ConnectToEnvironmentService<mozart::ViewManager>(),
         std::move(view_owner_request_)));
 
-    story_provider_->CreateStory(
-        settings_.root_module, [this](const fidl::String& story_id) {
-          story_provider_->GetController(story_id,
-                                         story_controller_.NewRequest());
+    if (settings_.story_id.empty()) {
+      story_provider_->CreateStory(
+          settings_.root_module,
+          [this](const fidl::String& story_id) { StartStoryById(story_id); });
+    } else {
+      StartStoryById(settings_.story_id);
+    }
+  }
 
-          story_controller_->Watch(story_watcher_binding_.NewBinding());
+  void StartStoryById(const fidl::String& story_id) {
+    story_provider_->GetController(story_id, story_controller_.NewRequest());
+    story_controller_.set_connection_error_handler([this, story_id] {
+      FTL_LOG(ERROR) << "Story controller for story " << story_id
+                     << " died. Does this story exist?";
+    });
 
-          fidl::InterfaceHandle<mozart::ViewOwner> root_module_view;
-          story_controller_->Start(root_module_view.NewRequest());
-          view_->SetRootModuleView(std::move(root_module_view));
+    story_controller_->Watch(story_watcher_binding_.NewBinding());
 
-          if (!settings_.root_link.empty()) {
-            modular::LinkPtr root;
-            story_controller_->GetLink(root.NewRequest());
-            root->UpdateObject(nullptr, settings_.root_link);
-          }
-        });
+    fidl::InterfaceHandle<mozart::ViewOwner> root_module_view;
+    story_controller_->Start(root_module_view.NewRequest());
+    view_->SetRootModuleView(std::move(root_module_view));
+
+    if (!settings_.root_link.empty()) {
+      modular::LinkPtr root;
+      story_controller_->GetLink(root.NewRequest());
+      root->UpdateObject(nullptr, settings_.root_link);
+    }
   }
 
   // |StoryWatcher|
