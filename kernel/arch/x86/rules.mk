@@ -152,10 +152,11 @@ KERNEL_COMPILEFLAGS += -falign-jumps=1 -falign-loops=1 -falign-functions=4
 endif
 
 # hard disable floating point in the kernel
-KERNEL_COMPILEFLAGS += -msoft-float -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mno-avx -mno-avx2 -DWITH_NO_FP=1
+KERNEL_COMPILEFLAGS += -msoft-float -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mno-avx -mno-avx2
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -mno-80387 -mno-fp-ret-in-387
 endif
+KERNEL_DEFINES += WITH_NO_FP=1
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 ifndef ARCH_x86_64_CLANG_TARGET

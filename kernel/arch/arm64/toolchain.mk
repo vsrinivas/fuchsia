@@ -20,8 +20,6 @@ endif
 endif
 endif
 
-#ARCH_arm64_COMPILEFLAGS := -mgeneral-regs-only -DWITH_NO_FP=1
-
 endif
 
 # Clang

@@ -111,7 +111,8 @@ endif
 GLOBAL_LDFLAGS += -z max-page-size=4096
 
 # kernel hard disables floating point
-KERNEL_COMPILEFLAGS += -mgeneral-regs-only -DWITH_NO_FP=1
+KERNEL_COMPILEFLAGS += -mgeneral-regs-only
+KERNEL_DEFINES += WITH_NO_FP=1
 
 # See engine.mk.
 KEEP_FRAME_POINTER_COMPILEFLAGS += -mno-omit-leaf-frame-pointer
