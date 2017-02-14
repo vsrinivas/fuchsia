@@ -12,7 +12,7 @@ the same object via different handles. However, a single handle
 can only be either bound to a single process or be bound to
 kernel.
 
-When it is bound to kernel we say its 'in-transit'.
+When it is bound to kernel we say it's 'in-transit'.
 
 In user-mode a handle is simply a specific number returned by
 some syscall. Only handles that are not in-transit are visible
@@ -28,7 +28,7 @@ logical fields:
 
 + A reference to a kernel object
 + The rights to the kernel object
-+ The process it is bound to (or if its bound to kernel)
++ The process it is bound to (or if it's bound to kernel)
 
 The '[rights](rights.md)' specify what operations on the kernel object are
 allowed. It is possible for a single process to have two different
