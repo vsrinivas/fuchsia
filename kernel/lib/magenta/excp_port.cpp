@@ -215,7 +215,7 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
     mx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
     mx_exception_report_t report;
-    BuildReport(&report, MX_EXCP_START, pid, tid);
+    BuildReport(&report, MX_EXCP_THREAD_STARTING, pid, tid);
     arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
@@ -260,7 +260,7 @@ void ExceptionPort::OnThreadExitForDebugger(UserThread* thread) {
     mx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " exited\n", pid, tid);
     mx_exception_report_t report;
-    BuildReport(&report, MX_EXCP_THREAD_EXIT, pid, tid);
+    BuildReport(&report, MX_EXCP_THREAD_EXITING, pid, tid);
     arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.

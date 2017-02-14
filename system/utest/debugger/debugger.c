@@ -140,12 +140,12 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior, mx_handle_t eport)
         mx_exception_packet_t packet;
         if (!read_exception(eport, &packet))
             return false;
-        if (packet.report.header.type == MX_EXCP_START) {
+        if (packet.report.header.type == MX_EXCP_THREAD_STARTING) {
             unittest_printf("wait-inf: inferior started\n");
             if (!resume_inferior(inferior, packet.report.context.tid))
                 return false;
             continue;
-        } else if (packet.report.header.type == MX_EXCP_THREAD_EXIT) {
+        } else if (packet.report.header.type == MX_EXCP_THREAD_EXITING) {
             unittest_printf("wait-inf: thread %" PRId64 " exited\n", packet.report.context.tid);
             // A thread is gone, but we only care about the process.
             if (!resume_inferior(inferior, packet.report.context.tid))
@@ -471,7 +471,7 @@ static bool msg_loop(mx_handle_t channel)
                 tu_thread_create_c11(&thread, extra_thread_func, NULL, "extra-thread");
             }
             // Wait for all threads to be started.
-            // Each will require an MX_EXCP_START exchange with the "debugger".
+            // Each will require an MX_EXCP_STARTING exchange with the "debugger".
             while (atomic_load(&extra_thread_count) < NUM_EXTRA_THREADS)
                 mx_nanosleep(1000);
             send_msg(channel, MSG_EXTRA_THREADS_STARTED);

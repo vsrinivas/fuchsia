@@ -28,24 +28,28 @@ typedef enum {
 
     // Synthetic exceptions.
 
-    // A thread has started.
-    MX_EXCP_START = 100,
+    // A thread is starting.
+    // This exception is sent to debuggers only (MX_EXCEPTION_PORT_DEBUGGER).
+    // The thread is paused until it is resumed by the debugger
+    // with mx_task_resume.
+    MX_EXCP_THREAD_STARTING = 100,
 
-    // A thread or process has exited or otherwise terminated.
-    // At this point thread registers are no longer available.
-    // For process gone notifications this is only sent to the process
-    // exception port (if one is registered). For thread gone notifications
-    // this is only sent to the thread exception port (if one is registered).
-    // N.B. "gone" notifications are not responded to.
-    MX_EXCP_GONE = 101,
-
-    // A thread has cleanly exited.
-    // This exception is (currently) sent to debuggers only
-    // (MX_EXCEPTION_PORT_DEBUGGER).
-    // Register state is still available at this point.
+    // A thread is exiting.
+    // This exception is sent to debuggers only (MX_EXCEPTION_PORT_DEBUGGER).
     // This exception is different from MX_EXCP_GONE in that a debugger can
     // still examine thread state.
-    MX_EXCP_THREAD_EXIT = 102,
+    // The thread is paused until it is resumed by the debugger
+    // with mx_task_resume.
+    MX_EXCP_THREAD_EXITING = 101,
+
+    // A thread or process has exited or otherwise terminated.
+    // At this point thread/process state is no longer available.
+    // Process gone notifications are only sent to the process exception port
+    // (if one is registered).
+    // Thread gone notifications are only sent to the thread exception port
+    // (if one is registered).
+    // N.B. "gone" notifications are not responded to.
+    MX_EXCP_GONE = 102,
 } mx_excp_type_t;
 
 #define MX_EXCP_IS_ARCH(excp) ((excp) <= MX_EXCP_MAX_ARCH)

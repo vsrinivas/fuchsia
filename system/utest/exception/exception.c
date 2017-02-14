@@ -232,10 +232,10 @@ static bool wait_process_exit(mx_handle_t eport, mx_handle_t process) {
         // If we get a process gone report then all threads have exited.
         if (packet.report.header.type == MX_EXCP_GONE)
             break;
-        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXIT,
+        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXITING,
                               false, &tid))
             return false;
-        // MX_EXCP_THREAD_EXIT reports must be responded to.
+        // MX_EXCP_THREAD_EXITING reports must be responded to.
         resume_thread_from_exception(process, tid, 0);
     }
 
@@ -271,16 +271,16 @@ static bool wait_process_exit_from_debugger(mx_handle_t eport, mx_handle_t proce
         // If we get a process gone report then all threads have exited.
         if (packet.report.header.type == MX_EXCP_GONE)
             break;
-        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXIT,
+        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXITING,
                               false, &tid2))
             return false;
         if (tid2 == tid)
             tid_seen = true;
-        // MX_EXCP_THREAD_EXIT reports must be responded to.
+        // MX_EXCP_THREAD_EXITING reports must be responded to.
         resume_thread_from_exception(process, tid2, 0);
     }
 
-    EXPECT_TRUE(tid_seen, "missing MX_EXCP_THREAD_EXIT report");
+    EXPECT_TRUE(tid_seen, "missing MX_EXCP_THREAD_EXITING report");
 
     verify_exception(&packet, "process-gone", process, MX_EXCP_GONE, false, &tid2);
     EXPECT_EQ(tid2, 0u, "non-zero tid in process gone report");
@@ -787,7 +787,7 @@ static bool process_start_test(void)
     // Now we own the child handle, and lp is destroyed.
 
     mx_koid_t tid;
-    read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
+    read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
     send_msg(our_channel, MSG_DONE);
     resume_thread_from_exception(child, tid, 0);
 
@@ -962,16 +962,16 @@ static bool trigger_test(void)
         // Now we own the child handle, and lp is destroyed.
 
         mx_koid_t tid;
-        read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
+        read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
         resume_thread_from_exception(child, tid, 0);
 
         mx_exception_packet_t packet;
         if (read_exception(eport, &packet)) {
-            if (packet.report.header.type != MX_EXCP_THREAD_EXIT) {
+            if (packet.report.header.type != MX_EXCP_THREAD_EXITING) {
                 verify_exception(&packet, excp_name, child, excp_type, false, &tid);
                 resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
                 mx_koid_t tid2;
-                read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXIT, false, &tid2);
+                read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXITING, false, &tid2);
                 ASSERT_EQ(tid2, tid, "exiting tid mismatch");
             }
             resume_thread_from_exception(child, tid, 0);
@@ -1004,7 +1004,7 @@ static bool unbind_while_stopped_test(void)
     child = tu_launch_mxio_fini(lp);
     // Now we own the child handle, and lp is destroyed.
     mx_koid_t tid;
-    read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
+    read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
 
     // Now unbind the exception port and wait for the child to cleanly exit.
     // If this doesn't work the thread will stay blocked, we'll timeout, and
@@ -1041,7 +1041,7 @@ static bool unbind_rebind_while_stopped_test(void)
     // of the test is moot.
     ASSERT_TRUE(read_exception(eport, &start_packet), "error reading start exception");
     ASSERT_TRUE(verify_exception(&start_packet, "process start", child,
-                                 MX_EXCP_START, false, &tid),
+                                 MX_EXCP_THREAD_STARTING, false, &tid),
                 "unexpected exception");
 
     // Unbind the exception port quietly, meaning to leave the thread
