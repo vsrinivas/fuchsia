@@ -105,7 +105,7 @@ void Thread::OnException(const mx_excp_type_t type,
   // If the user wants to try the singlestep again it must be re-requested.
   // If the thread has exited we may not be able to, and there's no point
   // anyway.
-  if (prev_state == State::kStepping && type != MX_EXCP_THREAD_EXIT) {
+  if (prev_state == State::kStepping && type != MX_EXCP_THREAD_EXITING) {
     FTL_DCHECK(breakpoints_.SingleStepBreakpointInserted());
     if (!breakpoints_.RemoveSingleStepBreakpoint()) {
       FTL_LOG(ERROR) << "Unable to clear single-step bkpt";

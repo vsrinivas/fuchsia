@@ -693,7 +693,7 @@ void Process::OnException(const mx_excp_type_t type,
   }
 
   switch (type) {
-    case MX_EXCP_START:
+    case MX_EXCP_THREAD_STARTING:
       FTL_VLOG(1) << "Received MX_EXCP_START exception";
       FTL_DCHECK(thread);
       FTL_DCHECK(thread->state() == Thread::State::kNew);
@@ -711,7 +711,7 @@ void Process::OnException(const mx_excp_type_t type,
         Clear();
       }
       break;
-    case MX_EXCP_THREAD_EXIT:
+    case MX_EXCP_THREAD_EXITING:
       FTL_VLOG(1) << "Received MX_EXCP_THREAD_EXIT exception for thread "
                   << thread->GetName();
       FTL_DCHECK(thread);

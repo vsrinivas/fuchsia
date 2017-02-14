@@ -215,10 +215,10 @@ void PrintException(FILE* out, Process* process, Thread* thread,
     fprintf(out, "PC 0x%" PRIxPTR "\n", context.arch.pc);
   } else {
     switch (type) {
-    case MX_EXCP_START:
+    case MX_EXCP_THREAD_STARTING:
       fprintf(out, "Thread %s started\n", thread->GetDebugName().c_str());
       break;
-    case MX_EXCP_THREAD_EXIT:
+    case MX_EXCP_THREAD_EXITING:
       fprintf(out, "Thread %s exited\n", thread->GetDebugName().c_str());
       break;
     case MX_EXCP_GONE:
