@@ -439,21 +439,22 @@ bool vmo_commit_test() {
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, PAGE_SIZE, size,
                          MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr2);
     EXPECT_EQ(NO_ERROR, status, "map2");
-    EXPECT_NONNULL(ptr, "map address2");
+    EXPECT_NONNULL(ptr2, "map address2");
 
     // third mapping with a totally non-overlapping offset
     ptr3 = 0;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, size * 2, size,
                          MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr3);
     EXPECT_EQ(NO_ERROR, status, "map3");
-    EXPECT_NONNULL(ptr, "map address3");
+    EXPECT_NONNULL(ptr3, "map address3");
 
     // write into it at offset PAGE_SIZE, read it back
-    uint32_t *u32 = (uint32_t *)(ptr + PAGE_SIZE);
+    volatile uint32_t *u32 = (volatile uint32_t *)(ptr + PAGE_SIZE);
     *u32 = 99;
     EXPECT_EQ(99u, (*u32), "written memory");
 
-    uint32_t *u32a = (uint32_t *)(ptr2);
+    // check the alias
+    volatile uint32_t *u32a = (volatile uint32_t *)(ptr2);
     EXPECT_EQ(99u, (*u32a), "written memory");
 
     // decommit page 0

@@ -298,7 +298,8 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
         return ERR_BAD_STATE;
     }
 
-    LTRACEF("region %p '%s', offset %#" PRIx64 ", len %#" PRIx64 "\n", this, name_, offset, len);
+    LTRACEF("region %p '%s' obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
+            this, name_, object_offset_, size_, offset, len);
 
     DEBUG_ASSERT(object_);
     DEBUG_ASSERT(object_->lock().IsHeld());
@@ -317,19 +318,24 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
                       len_new))
         return NO_ERROR;
 
-    DEBUG_ASSERT(len_new <= SIZE_MAX);
+    DEBUG_ASSERT(len_new > 0 && len_new <= SIZE_MAX);
+    DEBUG_ASSERT(offset_new >= object_offset_);
 
     LTRACEF("intersection offset %#" PRIx64 ", len %#" PRIx64 "\n", offset_new, len_new);
 
     // make sure the base + offset is within our address space
     // should be, according to the range stored in base_ + size_
     safeint::CheckedNumeric<vaddr_t> unmap_base = base_;
-    unmap_base += offset_new;
+    unmap_base += offset_new - object_offset_;
+
+    // make sure we're only unmapping within our window
+    DEBUG_ASSERT(unmap_base.ValueOrDie() >= base_ &&
+                (unmap_base.ValueOrDie() + len_new - 1) <= (base_ + size_ - 1));
 
     LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 "\n", unmap_base.ValueOrDie(), len_new);
 
     status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), unmap_base.ValueOrDie(),
-                                     static_cast<size_t>(len_new));
+                                     static_cast<size_t>(len_new) / PAGE_SIZE);
     if (status < 0)
         return status;
 
