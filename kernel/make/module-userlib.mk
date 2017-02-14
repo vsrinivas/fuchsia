@@ -23,7 +23,7 @@ $(MODULE_LIBNAME).a: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 	@$(MKDIR)
 	@echo linking $@
 	@rm -f $@
-	$(NOECHO)$(AR) cr $@ $^
+	$(NOECHO)echo $^ > $@.opts && $(AR) cr $@ @$@.opts
 
 # always build all libraries
 EXTRA_BUILDDEPS += $(MODULE_LIBNAME).a
@@ -38,12 +38,12 @@ MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(not
 $(MODULE_LIBNAME).so: _OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 $(MODULE_LIBNAME).so: _LIBS := $(MODULE_ALIBS) $(MODULE_SOLIBS)
 $(MODULE_LIBNAME).so: _SONAME := lib$(MODULE_SO_NAME).so
-$(MODULE_LIBNAME).so: _LDFLAGS := $(MODULE_LDFLAGS)
+$(MODULE_LIBNAME).so: _LDFLAGS := $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(MODULE_LDFLAGS)
 $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODULE_SOLIBS)
 	@$(MKDIR)
 	@echo linking userlib $@
-	$(NOECHO)$(USER_LD) $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(_LDFLAGS)\
-		-shared -soname $(_SONAME) $(_OBJS) $(_LIBS) $(LIBGCC) -o $@
+	$(NOECHO)echo $(_OBJS) $(_LIBS) $(LIBGCC) > $@.opts && \
+	  $(USER_LD) $(_LDFLAGS) -shared -soname $(_SONAME) @$@.opts -o $@
 
 EXTRA_IDFILES += $(MODULE_LIBNAME).so.id
 
