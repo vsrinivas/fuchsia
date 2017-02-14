@@ -6,5 +6,6 @@ group("cmdutils") {
   deps = [
     "cowsay",
     "time",
+    "uname",
   ]
 }
