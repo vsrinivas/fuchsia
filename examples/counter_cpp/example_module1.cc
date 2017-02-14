@@ -165,8 +165,8 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
     auto recipe_services =
         app::ServiceProviderPtr::Create(std::move(incoming_services));
 
-    auto adder_service = modular::ConnectToService<modular::examples::Adder>(
-        recipe_services.get());
+    auto adder_service =
+        app::ConnectToService<modular::examples::Adder>(recipe_services.get());
     adder_service.set_connection_error_handler([] {
       FTL_CHECK(false) << "Uh oh, Connection to Adder closed by the recipe.";
     });

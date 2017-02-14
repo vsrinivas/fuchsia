@@ -406,7 +406,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
     // Consume services from Module 1.
     auto multiplier_service =
-        modular::ConnectToService<modular::examples::Multiplier>(
+        app::ConnectToService<modular::examples::Multiplier>(
             services_from_module1.get());
     multiplier_service.set_connection_error_handler([] {
       FTL_CHECK(false)

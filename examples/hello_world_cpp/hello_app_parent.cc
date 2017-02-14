@@ -35,7 +35,7 @@ class HelloAppParent {
     context_->launcher()->CreateApplication(std::move(launch_info),
                                             child_.NewRequest());
 
-    modular::ConnectToService(child_services_.get(), hello_.NewRequest());
+    ConnectToService(child_services_.get(), hello_.NewRequest());
 
     DoIt("hello");
     DoIt("goodbye");

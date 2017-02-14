@@ -128,7 +128,7 @@ class UserRunnerImpl : public UserRunner {
         GetServiceProvider("file:///system/apps/maxwell_launcher", nullptr);
 
     auto maxwell_launcher =
-        ConnectToService<maxwell::Launcher>(maxwell_services.get());
+        app::ConnectToService<maxwell::Launcher>(maxwell_services.get());
     fidl::InterfaceHandle<StoryProvider> story_provider_aux;
     story_provider_impl_->AddBinding(story_provider_aux.NewRequest());
 
@@ -139,9 +139,10 @@ class UserRunnerImpl : public UserRunner {
                                  std::move(focus_controller));
 
     auto context_engine =
-        ConnectToService<maxwell::ContextEngine>(maxwell_services.get());
+        app::ConnectToService<maxwell::ContextEngine>(maxwell_services.get());
     auto suggestion_provider =
-        ConnectToService<maxwell::SuggestionProvider>(maxwell_services.get());
+        app::ConnectToService<maxwell::SuggestionProvider>(
+            maxwell_services.get());
 
     // TODO(rosswang): Do proper attribution
     stories_scope_->AddService<maxwell::ContextPublisher>(
