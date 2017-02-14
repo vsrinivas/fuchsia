@@ -17,7 +17,7 @@ namespace {
 
 constexpr int kTimeoutMilliseconds = 5000;
 
-constexpr char kChildModule[] = "file:///tmp/tests/child_module";
+constexpr char kChildModule[] = "file:///system/apps/modular_tests/child_module";
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:

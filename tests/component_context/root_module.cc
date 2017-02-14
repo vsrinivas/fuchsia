@@ -17,7 +17,7 @@ namespace {
 // down our test.
 constexpr int kTimeoutMilliseconds = 5000;
 constexpr char kTest1Agent[] =
-    "file:///tmp/tests/component_context_test_agent1";
+    "file:///system/apps/modular_tests/component_context_test_agent1";
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:

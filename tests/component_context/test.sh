@@ -11,8 +11,8 @@ if [ "${FUCHSIA_BUILD_DIR}" = "" ]; then
   exit -1;
 fi
 
-netcp ${FUCHSIA_BUILD_DIR}/component_context_test :/tmp/tests/component_context_test
-netcp ${FUCHSIA_BUILD_DIR}/component_context_test_agent1 :/tmp/tests/component_context_test_agent1
-netcp ${FUCHSIA_BUILD_DIR}/component_context_test_agent2 :/tmp/tests/component_context_test_agent2
+netcp ${FUCHSIA_BUILD_DIR}/component_context_test :/system/apps/modular_tests/component_context_test
+netcp ${FUCHSIA_BUILD_DIR}/component_context_test_agent1 :/system/apps/modular_tests/component_context_test_agent1
+netcp ${FUCHSIA_BUILD_DIR}/component_context_test_agent2 :/system/apps/modular_tests/component_context_test_agent2
 
-${FUCHSIA_DIR}/apps/modular/src/test_runner/run_test "bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/tmp/tests/component_context_test"
+${FUCHSIA_DIR}/apps/modular/src/test_runner/run_test "bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test"
