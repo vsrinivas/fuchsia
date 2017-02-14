@@ -177,11 +177,15 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
     // TODO: This is conservative.  Not sure if we can even sample textures in
     // tessellation shaders.  If necessary, we could adjust that API so that the
     // caller provides explicit knowledge of which stages to use.
-    dst_stage_mask = vk::PipelineStageFlagBits::eVertexShader |
-                     vk::PipelineStageFlagBits::eTessellationControlShader |
-                     vk::PipelineStageFlagBits::eTessellationEvaluationShader |
-                     vk::PipelineStageFlagBits::eGeometryShader |
-                     vk::PipelineStageFlagBits::eFragmentShader;
+    dst_stage_mask =
+        vk::PipelineStageFlagBits::eVertexShader |
+        // TODO: cache supported stages at startup, otherwise
+        //       validation layers will complain on devices that
+        //       have geometry/tessellation shaders.
+        // vk::PipelineStageFlagBits::eTessellationControlShader |
+        // vk::PipelineStageFlagBits::eTessellationEvaluationShader |
+        // vk::PipelineStageFlagBits::eGeometryShader |
+        vk::PipelineStageFlagBits::eFragmentShader;
     if (old_layout == vk::ImageLayout::eTransferDstOptimal) {
       barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
       src_stage_mask = vk::PipelineStageFlagBits::eTransfer;
@@ -204,11 +208,15 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
     // TODO: This is conservative.  Not sure if we can even sample textures in
     // tessellation shaders.  If necessary, we could adjust that API so that the
     // caller provides explicit knowledge of which stages to use.
-    src_stage_mask = vk::PipelineStageFlagBits::eVertexShader |
-                     vk::PipelineStageFlagBits::eTessellationControlShader |
-                     vk::PipelineStageFlagBits::eTessellationEvaluationShader |
-                     vk::PipelineStageFlagBits::eGeometryShader |
-                     vk::PipelineStageFlagBits::eFragmentShader;
+    src_stage_mask =
+        vk::PipelineStageFlagBits::eVertexShader |
+        // TODO: cache supported stages at startup, otherwise
+        //       validation layers will complain on devices that
+        //       have geometry/tessellation shaders.
+        // vk::PipelineStageFlagBits::eTessellationControlShader |
+        // vk::PipelineStageFlagBits::eTessellationEvaluationShader |
+        // vk::PipelineStageFlagBits::eGeometryShader |
+        vk::PipelineStageFlagBits::eFragmentShader;
     if (new_layout == vk::ImageLayout::eColorAttachmentOptimal) {
       barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
                               vk::AccessFlagBits::eColorAttachmentWrite;
