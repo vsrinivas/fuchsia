@@ -38,7 +38,7 @@ class ClientApp {
 
   ftl::CommandLine command_line_;
   configuration::Configuration configuration_;
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   std::unique_ptr<ledger::NetworkService> network_service_;
   std::unique_ptr<firebase::Firebase> firebase_;
   std::unique_ptr<gcs::CloudStorage> cloud_storage_;

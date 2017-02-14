@@ -32,8 +32,7 @@ namespace ledger {
 class App {
  public:
   App()
-      : application_context_(
-            modular::ApplicationContext::CreateFromStartupInfo()) {
+      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
     FTL_DCHECK(application_context_);
     tracing::InitializeTracer(application_context_.get(), {"ledger"});
   }
@@ -74,7 +73,7 @@ class App {
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   std::unique_ptr<NetworkService> network_service_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;

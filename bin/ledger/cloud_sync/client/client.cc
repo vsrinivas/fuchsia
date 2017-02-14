@@ -35,7 +35,7 @@ std::string RandomString() {
 
 ClientApp::ClientApp(ftl::CommandLine command_line)
     : command_line_(std::move(command_line)),
-      context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      context_(app::ApplicationContext::CreateFromStartupInfo()) {
   if (Initialize()) {
     Start();
   }
