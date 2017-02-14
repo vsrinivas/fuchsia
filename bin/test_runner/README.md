@@ -10,10 +10,11 @@ INSTRUCTIONS
 ============
 
 Prerequisite:
-- An instance of magenta running (qemu or otherwise), configured with network
-  that host (Linux or Mac) can interface over. For example, see
-  [networking configuration doc](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only).
+- An instance of magenta running (on qemu or real device), configured with networking. For
+  example, see [networking configuration
+  doc](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only).
 
+*Testing on a qemu instance:*
 Run a test using `//apps/modular/src/test_runner/run_test`. E.g:
 
 ```sh
@@ -28,6 +29,10 @@ You can also run a series of tests by supplying a JSON file describing the tests
 ```sh
 $ $FUCHSIA_DIR/apps/modular/src/test_runner/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
 ```
+
+*Testing on a real device:*
+You must specify the IP address of the real device, and pass it in using
+`run_test`'s `--server` flag.
 
 Troubleshooting:
 - If `run_test` is having trouble finding your qemu instance, your instance may
