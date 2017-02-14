@@ -73,7 +73,7 @@ class ResponsePrinter {
 class PostFileApp {
  public:
   PostFileApp(const std::vector<std::string>& args)
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
 
@@ -137,7 +137,7 @@ class PostFileApp {
                        });
   }
 
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
 };

@@ -65,7 +65,7 @@ class ResponsePrinter {
 class WGetApp {
  public:
   WGetApp(const std::vector<std::string>& args)
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
 #if USE_ENVIRONMENT_SERVICE
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
@@ -107,7 +107,7 @@ class WGetApp {
                        });
   }
 
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
 #if !USE_ENVIRONMENT_SERVICE
   modular::ApplicationControllerPtr app_controller_;
   app::ServiceProviderPtr network_service_provider_;

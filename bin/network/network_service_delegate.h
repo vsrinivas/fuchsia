@@ -18,7 +18,7 @@ class NetworkServiceDelegate {
   ~NetworkServiceDelegate();
 
  private:
-  std::unique_ptr<modular::ApplicationContext> context_;
+  std::unique_ptr<app::ApplicationContext> context_;
   network::NetworkServiceImpl network_provider_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NetworkServiceDelegate);
