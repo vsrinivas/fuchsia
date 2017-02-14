@@ -53,11 +53,7 @@ void KeyboardState::SendEvent(mozart::EventType type,
   ev->key_data->hid_usage = key;
   ev->key_data->code_point = hid_map_key(
       key, modifiers & (kModifierShift | kModifierCapsLock), keymap_);
-  if (ev->key_data->code_point) {
-    ev->key_data->modifiers = modifiers;
-  } else {
-    ev->key_data->modifiers = 0;
-  }
+  ev->key_data->modifiers = modifiers;
   ev->key_data->is_repeat = is_repeat;
   callback_(std::move(ev));
 }
