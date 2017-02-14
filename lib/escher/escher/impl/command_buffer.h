@@ -95,7 +95,8 @@ class CommandBuffer {
   // to determine when the command buffer has finished executing on the GPU.
   CommandBuffer(vk::Device device,
                 vk::CommandBuffer command_buffer,
-                vk::Fence fence);
+                vk::Fence fence,
+                vk::PipelineStageFlags pipeline_stage_mask);
   vk::Fence fence() const { return fence_; }
 
   // Called by CommandBufferPool when this buffer is obtained from it.
@@ -108,6 +109,7 @@ class CommandBuffer {
   vk::Device device_;
   vk::CommandBuffer command_buffer_;
   vk::Fence fence_;
+  vk::PipelineStageFlags pipeline_stage_mask_;
 
   std::vector<ResourcePtr> used_resources_;
 

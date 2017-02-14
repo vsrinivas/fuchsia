@@ -88,7 +88,6 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
   // Create our background plane
   Object bg_plane(Object::NewRect(vec2(0.f, 0.f),
                                   vec2(screen_width, screen_height), 0.f, bg_));
-
   objects.push_back(bg_plane);
 
   // Create the Model

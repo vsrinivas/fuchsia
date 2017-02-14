@@ -115,7 +115,8 @@ ImagePtr ImageCache::NewColorAttachmentImage(
 ImagePtr ImageCache::NewImageFromPixels(vk::Format format,
                                         uint32_t width,
                                         uint32_t height,
-                                        uint8_t* pixels) {
+                                        uint8_t* pixels,
+                                        vk::ImageUsageFlags additional_flags) {
   size_t bytes_per_pixel = 0;
   switch (format) {
     case vk::Format::eR8G8B8A8Unorm:
@@ -136,8 +137,8 @@ ImagePtr ImageCache::NewImageFromPixels(vk::Format format,
   info.width = width;
   info.height = height;
   info.sample_count = 1;
-  info.usage =
-      vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+  info.usage = additional_flags | vk::ImageUsageFlagBits::eTransferDst |
+               vk::ImageUsageFlagBits::eSampled;
 
   // Create the new image.
   auto image = NewImage(info);
@@ -170,9 +171,12 @@ ImagePtr ImageCache::NewCheckerboardImage(uint32_t width, uint32_t height) {
                             pixels.get());
 }
 
-ImagePtr ImageCache::NewNoiseImage(uint32_t width, uint32_t height) {
+ImagePtr ImageCache::NewNoiseImage(uint32_t width,
+                                   uint32_t height,
+                                   vk::ImageUsageFlags additional_flags) {
   auto pixels = NewNoisePixels(width, height);
-  return NewImageFromPixels(vk::Format::eR8Unorm, width, height, pixels.get());
+  return NewImageFromPixels(vk::Format::eR8Unorm, width, height, pixels.get(),
+                            additional_flags);
 }
 
 ImagePtr ImageCache::FindImage(const ImageInfo& info) {

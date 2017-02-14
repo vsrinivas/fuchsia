@@ -27,6 +27,11 @@ class PaperRenderer : public Renderer {
   // order that they are provided by the caller.
   void set_sort_by_pipeline(bool b) { sort_by_pipeline_ = b; }
 
+  // Cycle through the available SSDO acceleration modes.  This is a temporary
+  // API: eventually there will only be one mode (the best one!), but this is
+  // useful during development.
+  void CycleSsdoAccelerationMode();
+
  private:
   friend class Escher;
   PaperRenderer(impl::EscherImpl* escher);
@@ -38,16 +43,18 @@ class PaperRenderer : public Renderer {
   // Render pass that generates a depth buffer, but no color fragments.  The
   // resulting depth buffer is used by DrawSsdoPasses() in order to compute
   // per-pixel occlusion, and by DrawLightingPass().
-  void DrawDepthPrePass(const FramebufferPtr& framebuffer,
+  void DrawDepthPrePass(const ImagePtr& depth_image,
+                        const ImagePtr& dummy_color_image,
                         const Stage& stage,
                         const Model& model);
 
   // Multiple render passes.  The first samples the depth buffer to generate
   // per-pixel occlusion information, and subsequent passes filter this noisy
   // data.
-  void DrawSsdoPasses(const TexturePtr& depth_in,
+  void DrawSsdoPasses(const ImagePtr& depth_in,
                       const ImagePtr& color_out,
                       const ImagePtr& color_aux,
+                      const TexturePtr& accelerator_texture,
                       const Stage& stage);
 
   // Render pass that renders the fully-lit/shadowed scene.  Uses the depth
@@ -66,7 +73,8 @@ class PaperRenderer : public Renderer {
 
   void DrawDebugOverlays(const ImagePtr& output,
                          const ImagePtr& depth,
-                         const ImagePtr& illumination);
+                         const ImagePtr& illumination,
+                         const TexturePtr& ssdo_acceleration);
 
   // Configure the renderer to use the specified output formats.
   void UpdateModelRenderer(vk::Format pre_pass_color_format,
@@ -78,6 +86,7 @@ class PaperRenderer : public Renderer {
   std::unique_ptr<impl::ModelData> model_data_;
   std::unique_ptr<impl::ModelRenderer> model_renderer_;
   std::unique_ptr<impl::SsdoSampler> ssdo_;
+  std::unique_ptr<impl::SsdoAccelerator> ssdo_accelerator_;
   std::vector<vk::ClearValue> clear_values_;
   bool show_debug_info_ = false;
   bool enable_lighting_ = true;

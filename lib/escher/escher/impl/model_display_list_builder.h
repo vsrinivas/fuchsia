@@ -24,6 +24,7 @@ class ModelDisplayListBuilder {
   ModelDisplayListBuilder(vk::Device device,
                           const Stage& stage,
                           const Model& model,
+                          vec2 scale,
                           bool use_material_textures,
                           const TexturePtr& white_texture,
                           const TexturePtr& illumination_texture,

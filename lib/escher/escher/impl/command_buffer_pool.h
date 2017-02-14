@@ -23,7 +23,8 @@ class CommandBufferPool {
   // The CommandBufferPool does not take ownership of the device and queue.
   CommandBufferPool(vk::Device device,
                     vk::Queue queue,
-                    uint32_t queue_family_index);
+                    uint32_t queue_family_index,
+                    bool supports_graphics_and_compute);
 
   // If there are still any pending buffers, this will block until they are
   // finished.
@@ -43,6 +44,8 @@ class CommandBufferPool {
  private:
   vk::Device device_;
   vk::Queue queue_;
+  // Rule out pipeline stages that are not supported on our queue.
+  vk::PipelineStageFlags pipeline_stage_mask_;
 
   // TODO: access to |command_pool_| needs to be externally synchronized.  This
   // includes implicit uses such as various vkCmd* calls (in other words, two

@@ -10,19 +10,30 @@
 namespace escher {
 
 Texture::Texture(ImagePtr image, vk::Device device, vk::Filter filter)
-    : Resource(nullptr), image_(std::move(image)), device_(device) {
-  Init(filter, vk::ImageAspectFlagBits::eColor);
+    : Resource(nullptr),
+      image_(std::move(image)),
+      device_(device),
+      width_(image_->width()),
+      height_(image_->height()) {
+  Init(filter, vk::ImageAspectFlagBits::eColor, false);
 }
 
 Texture::Texture(ImagePtr image,
                  vk::Device device,
                  vk::Filter filter,
-                 vk::ImageAspectFlags aspect_mask)
-    : Resource(nullptr), image_(std::move(image)), device_(device) {
-  Init(filter, aspect_mask);
+                 vk::ImageAspectFlags aspect_mask,
+                 bool use_unnormalized_coordinates)
+    : Resource(nullptr),
+      image_(std::move(image)),
+      device_(device),
+      width_(image_->width()),
+      height_(image_->height()) {
+  Init(filter, aspect_mask, use_unnormalized_coordinates);
 }
 
-void Texture::Init(vk::Filter filter, vk::ImageAspectFlags aspect_mask) {
+void Texture::Init(vk::Filter filter,
+                   vk::ImageAspectFlags aspect_mask,
+                   bool use_unnormalized_coordinates) {
   vk::ImageViewCreateInfo view_info;
   view_info.viewType = vk::ImageViewType::e2D;
   view_info.subresourceRange.baseMipLevel = 0;
@@ -42,7 +53,7 @@ void Texture::Init(vk::Filter filter, vk::ImageAspectFlags aspect_mask) {
   sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
   sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
   sampler_info.anisotropyEnable = false;
-  sampler_info.unnormalizedCoordinates = false;
+  sampler_info.unnormalizedCoordinates = use_unnormalized_coordinates;
   sampler_info.compareEnable = VK_FALSE;
   sampler_info.compareOp = vk::CompareOp::eAlways;
   sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;

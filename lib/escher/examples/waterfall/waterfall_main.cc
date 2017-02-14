@@ -40,6 +40,8 @@ bool g_profile_one_frame = false;
 // True if the Model objects should be binned by pipeline, false if they should
 // be rendered in their natural order.
 bool g_sort_by_pipeline = true;
+bool g_cycle_ssdo_acceleration = false;
+bool g_stop_time = false;
 
 std::unique_ptr<Demo> CreateDemo(bool use_fullscreen) {
   Demo::WindowParams window_params;
@@ -75,6 +77,7 @@ int main(int argc, char** argv) {
   demo->SetKeyCallback("ESCAPE", [&]() { demo->SetShouldQuit(); });
   demo->SetKeyCallback("SPACE",
                        [&]() { g_enable_lighting = !g_enable_lighting; });
+  demo->SetKeyCallback("A", [&]() { g_cycle_ssdo_acceleration = true; });
   demo->SetKeyCallback("D", [&]() { g_show_debug_info = !g_show_debug_info; });
   demo->SetKeyCallback("P", [&]() { g_profile_one_frame = true; });
   demo->SetKeyCallback("S", [&]() {
@@ -82,16 +85,17 @@ int main(int argc, char** argv) {
     FTL_LOG(INFO) << "Sort object by pipeline: "
                   << (g_sort_by_pipeline ? "true" : "false");
   });
-  demo->SetKeyCallback("1", [&]() { g_current_scene = 1; });
-  demo->SetKeyCallback("2", [&]() { g_current_scene = 2; });
-  demo->SetKeyCallback("3", [&]() { g_current_scene = 3; });
-  demo->SetKeyCallback("4", [&]() { g_current_scene = 4; });
-  demo->SetKeyCallback("5", [&]() { g_current_scene = 5; });
-  demo->SetKeyCallback("6", [&]() { g_current_scene = 6; });
-  demo->SetKeyCallback("7", [&]() { g_current_scene = 7; });
-  demo->SetKeyCallback("8", [&]() { g_current_scene = 8; });
-  demo->SetKeyCallback("9", [&]() { g_current_scene = 9; });
-  demo->SetKeyCallback("0", [&]() { g_current_scene = 10; });
+  demo->SetKeyCallback("T", [&]() { g_stop_time = !g_stop_time; });
+  demo->SetKeyCallback("1", [&]() { g_current_scene = 0; });
+  demo->SetKeyCallback("2", [&]() { g_current_scene = 1; });
+  demo->SetKeyCallback("3", [&]() { g_current_scene = 2; });
+  demo->SetKeyCallback("4", [&]() { g_current_scene = 3; });
+  demo->SetKeyCallback("5", [&]() { g_current_scene = 4; });
+  demo->SetKeyCallback("6", [&]() { g_current_scene = 5; });
+  demo->SetKeyCallback("7", [&]() { g_current_scene = 6; });
+  demo->SetKeyCallback("8", [&]() { g_current_scene = 7; });
+  demo->SetKeyCallback("9", [&]() { g_current_scene = 8; });
+  demo->SetKeyCallback("0", [&]() { g_current_scene = 9; });
 
   escher::GlslangInitializeProcess();
   {
@@ -168,6 +172,15 @@ int main(int argc, char** argv) {
       renderer->set_sort_by_pipeline(g_sort_by_pipeline);
       renderer->set_enable_profiling(g_profile_one_frame);
       g_profile_one_frame = false;
+      if (g_cycle_ssdo_acceleration) {
+        renderer->CycleSsdoAccelerationMode();
+        g_cycle_ssdo_acceleration = false;
+      }
+      if (g_stop_time) {
+        stopwatch.Stop();
+      } else {
+        stopwatch.Start();
+      }
 
       swapchain_helper.DrawFrame(stage, *model);
 

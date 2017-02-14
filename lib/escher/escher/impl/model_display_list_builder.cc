@@ -22,6 +22,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     vk::Device device,
     const Stage& stage,
     const Model& model,
+    vec2 scale,
     bool use_material_textures,
     const TexturePtr& white_texture,
     const TexturePtr& illumination_texture,
@@ -32,7 +33,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     bool use_depth_prepass)
     : device_(device),
       volume_(stage.viewing_volume()),
-      stage_scale_(vec2(2.f / volume_.width(), 2.f / volume_.height())),
+      stage_scale_(scale * vec2(2.f / volume_.width(), 2.f / volume_.height())),
       use_material_textures_(use_material_textures),
       white_texture_(white_texture),
       illumination_texture_(illumination_texture ? illumination_texture

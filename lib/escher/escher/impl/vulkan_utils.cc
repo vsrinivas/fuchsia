@@ -23,7 +23,7 @@ std::vector<vk::Format> GetSupportedDepthFormats(
 
 FormatResult GetSupportedDepthFormat(vk::PhysicalDevice device) {
   auto supported_formats = GetSupportedDepthFormats(
-      device, {vk::Format::eD32SfloatS8Uint, vk::Format::eD32Sfloat,
+      device, {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint,
                vk::Format::eD24UnormS8Uint, vk::Format::eD16UnormS8Uint,
                vk::Format::eD16Unorm});
   if (supported_formats.empty()) {

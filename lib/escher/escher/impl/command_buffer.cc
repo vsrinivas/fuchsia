@@ -16,8 +16,12 @@ namespace impl {
 
 CommandBuffer::CommandBuffer(vk::Device device,
                              vk::CommandBuffer command_buffer,
-                             vk::Fence fence)
-    : device_(device), command_buffer_(command_buffer), fence_(fence) {}
+                             vk::Fence fence,
+                             vk::PipelineStageFlags pipeline_stage_mask)
+    : device_(device),
+      command_buffer_(command_buffer),
+      fence_(fence),
+      pipeline_stage_mask_(pipeline_stage_mask) {}
 
 CommandBuffer::~CommandBuffer() {
   FTL_DCHECK(!is_active_ && !is_submitted_);
@@ -122,9 +126,8 @@ void CommandBuffer::CopyImage(ImagePtr src_image,
 void CommandBuffer::TransitionImageLayout(ImagePtr image,
                                           vk::ImageLayout old_layout,
                                           vk::ImageLayout new_layout) {
-  // TODO: These are conservative values that we should try to improve on below.
-  vk::PipelineStageFlags src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
-  vk::PipelineStageFlags dst_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
+  vk::PipelineStageFlags src_stage_mask;
+  vk::PipelineStageFlags dst_stage_mask;
 
   vk::ImageMemoryBarrier barrier;
   barrier.oldLayout = old_layout;
@@ -150,102 +153,105 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount = 1;
 
-  bool success = true;
-  if (old_layout == vk::ImageLayout::ePreinitialized ||
-      old_layout == vk::ImageLayout::eUndefined) {
-    // If layout was eUndefined, we don't need a srcAccessMask.
-    if (old_layout == vk::ImageLayout::ePreinitialized) {
-      barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-    }
-
-    // Determine appropriate dstAccessMask.
-    if (new_layout == vk::ImageLayout::eTransferSrcOptimal) {
-      barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
-    } else if (new_layout == vk::ImageLayout::eTransferDstOptimal) {
-      barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-    } else if (new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-      barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
+  switch (old_layout) {
+    case vk::ImageLayout::eColorAttachmentOptimal:
+      barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
+                              vk::AccessFlagBits::eColorAttachmentWrite;
+      src_stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+      break;
+    case vk::ImageLayout::eDepthStencilAttachmentOptimal:
+      barrier.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
                               vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-    } else if (new_layout == vk::ImageLayout::eColorAttachmentOptimal) {
-      barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-    } else {
-      // Don't know what to do.
-      success = false;
-    }
-  } else if (new_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-    // TODO: This is conservative.  Not sure if we can even sample textures in
-    // tessellation shaders.  If necessary, we could adjust that API so that the
-    // caller provides explicit knowledge of which stages to use.
-    dst_stage_mask =
-        vk::PipelineStageFlagBits::eVertexShader |
-        // TODO: cache supported stages at startup, otherwise
-        //       validation layers will complain on devices that
-        //       have geometry/tessellation shaders.
-        // vk::PipelineStageFlagBits::eTessellationControlShader |
-        // vk::PipelineStageFlagBits::eTessellationEvaluationShader |
-        // vk::PipelineStageFlagBits::eGeometryShader |
-        vk::PipelineStageFlagBits::eFragmentShader;
-    if (old_layout == vk::ImageLayout::eTransferDstOptimal) {
+      src_stage_mask = vk::PipelineStageFlagBits::eLateFragmentTests;
+      break;
+    case vk::ImageLayout::eGeneral:
+      barrier.srcAccessMask =
+          vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
+      src_stage_mask = vk::PipelineStageFlagBits::eComputeShader;
+      break;
+    case vk::ImageLayout::ePreinitialized:
+      barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+      src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
+      break;
+    case vk::ImageLayout::eShaderReadOnlyOptimal:
+      barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+      // TODO: investigate whether there are performance benefits to providing
+      // a less-conservative mask.
+      src_stage_mask =
+          vk::PipelineStageFlagBits::eVertexShader |
+          vk::PipelineStageFlagBits::eTessellationControlShader |
+          vk::PipelineStageFlagBits::eTessellationEvaluationShader |
+          vk::PipelineStageFlagBits::eGeometryShader |
+          vk::PipelineStageFlagBits::eFragmentShader;
+      break;
+    case vk::ImageLayout::eTransferDstOptimal:
       barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
       src_stage_mask = vk::PipelineStageFlagBits::eTransfer;
-      // This is an exception to the dst_stage_mask chosen above.  Because this
-      // is a transfer operation and the data will be used next on a different
-      // queue, a semaphore is required anyway, so eBottomOfPipe is safe.
-      dst_stage_mask = vk::PipelineStageFlagBits::eBottomOfPipe;
-    } else if (old_layout == vk::ImageLayout::eColorAttachmentOptimal) {
-      barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-      src_stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    } else if (old_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-      barrier.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-      src_stage_mask = vk::PipelineStageFlagBits::eLateFragmentTests;
-    } else {
-      // Don't know what to do.
-      success = false;
-    }
-  } else if (old_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-    barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
-    // TODO: This is conservative.  Not sure if we can even sample textures in
-    // tessellation shaders.  If necessary, we could adjust that API so that the
-    // caller provides explicit knowledge of which stages to use.
-    src_stage_mask =
-        vk::PipelineStageFlagBits::eVertexShader |
-        // TODO: cache supported stages at startup, otherwise
-        //       validation layers will complain on devices that
-        //       have geometry/tessellation shaders.
-        // vk::PipelineStageFlagBits::eTessellationControlShader |
-        // vk::PipelineStageFlagBits::eTessellationEvaluationShader |
-        // vk::PipelineStageFlagBits::eGeometryShader |
-        vk::PipelineStageFlagBits::eFragmentShader;
-    if (new_layout == vk::ImageLayout::eColorAttachmentOptimal) {
+      break;
+    case vk::ImageLayout::eUndefined:
+      // If layout was eUndefined, we don't need a srcAccessMask.
+      src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
+      break;
+    default:
+      FTL_LOG(ERROR)
+          << "CommandBuffer does not know how to transition from layout: "
+          << vk::to_string(old_layout);
+      FTL_DCHECK(false);
+  }
+
+  switch (new_layout) {
+    case vk::ImageLayout::eColorAttachmentOptimal:
       barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
                               vk::AccessFlagBits::eColorAttachmentWrite;
       dst_stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    } else if (new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+      break;
+    case vk::ImageLayout::eDepthStencilAttachmentOptimal:
       barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
                               vk::AccessFlagBits::eDepthStencilAttachmentWrite;
       dst_stage_mask = vk::PipelineStageFlagBits::eEarlyFragmentTests;
-    } else {
-      // Don't know what to do.
-      success = false;
-    }
-  } else if (new_layout == vk::ImageLayout::ePresentSrcKHR &&
-             old_layout == vk::ImageLayout::eColorAttachmentOptimal) {
-    barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-    barrier.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
-    src_stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    dst_stage_mask = vk::PipelineStageFlagBits::eTransfer;
-  } else {
-    // Don't know what to do.
-    success = false;
+      break;
+    case vk::ImageLayout::eGeneral:
+      barrier.dstAccessMask =
+          vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
+      dst_stage_mask = vk::PipelineStageFlagBits::eComputeShader;
+      break;
+    case vk::ImageLayout::ePresentSrcKHR:
+      barrier.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+      dst_stage_mask = vk::PipelineStageFlagBits::eTransfer;
+      break;
+    case vk::ImageLayout::eShaderReadOnlyOptimal:
+      barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+      // TODO: investigate whether there are performance benefits to providing
+      // a less-conservative mask.
+      dst_stage_mask =
+          vk::PipelineStageFlagBits::eVertexShader |
+          vk::PipelineStageFlagBits::eTessellationControlShader |
+          vk::PipelineStageFlagBits::eTessellationEvaluationShader |
+          vk::PipelineStageFlagBits::eGeometryShader |
+          vk::PipelineStageFlagBits::eFragmentShader;
+
+      if ((dst_stage_mask & pipeline_stage_mask_) == vk::PipelineStageFlags()) {
+        // We must be on a queue that doesn't support graphics operations.
+        dst_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
+      }
+      break;
+    case vk::ImageLayout::eTransferDstOptimal:
+      barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+      dst_stage_mask = vk::PipelineStageFlagBits::eTransfer;
+      break;
+    case vk::ImageLayout::eTransferSrcOptimal:
+      barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+      dst_stage_mask = vk::PipelineStageFlagBits::eTransfer;
+      break;
+    default:
+      FTL_LOG(ERROR)
+          << "CommandBuffer does not know how to transition to layout: "
+          << vk::to_string(new_layout);
+      FTL_DCHECK(false);
   }
 
-  if (!success) {
-    FTL_LOG(ERROR) << "Escher: unsupported layout transition from: "
-                   << to_string(old_layout) << " to: " << to_string(new_layout);
-    FTL_DCHECK(false);
-    return;
-  }
+  src_stage_mask = src_stage_mask & pipeline_stage_mask_;
+  dst_stage_mask = dst_stage_mask & pipeline_stage_mask_;
 
   command_buffer_.pipelineBarrier(src_stage_mask, dst_stage_mask,
                                   vk::DependencyFlagBits::eByRegion, 0, nullptr,

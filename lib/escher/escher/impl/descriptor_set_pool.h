@@ -48,7 +48,7 @@ class DescriptorSetPool {
  public:
   DescriptorSetPool(vk::Device device,
                     const vk::DescriptorSetLayoutCreateInfo& layout_info,
-                    uint32_t initial_capacity);
+                    uint32_t initial_capacity = 10);
   ~DescriptorSetPool();
 
   // Allocate the requested number of descriptor sets, returning them in the

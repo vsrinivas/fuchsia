@@ -52,6 +52,7 @@ ModelRenderer::~ModelRenderer() {
 ModelDisplayListPtr ModelRenderer::CreateDisplayList(
     const Stage& stage,
     const Model& model,
+    vec2 scale,
     bool sort_by_pipeline,
     bool use_depth_prepass,
     bool use_descriptor_set_per_object,
@@ -101,10 +102,10 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
   }
   FTL_DCHECK(opaque_objects.size() == objects.size());
 
-  ModelDisplayListBuilder builder(device_, stage, model, !use_depth_prepass,
-                                  white_texture_, illumination_texture,
-                                  model_data_, this, pipeline_cache_.get(),
-                                  sample_count, use_depth_prepass);
+  ModelDisplayListBuilder builder(
+      device_, stage, model, scale, !use_depth_prepass, white_texture_,
+      illumination_texture, model_data_, this, pipeline_cache_.get(),
+      sample_count, use_depth_prepass);
   for (uint32_t object_index : opaque_objects) {
     builder.AddObject(objects[object_index]);
   }

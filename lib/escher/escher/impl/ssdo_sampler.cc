@@ -77,8 +77,12 @@ constexpr char g_sampler_fragment_src[] = R"GLSL(
   // The shader assumes that the depth information in the r channel.
   layout(set = 0, binding = 0) uniform sampler2D depth_map;
 
+  // A table used to accelerate sampling by allowing an early exit for fragments
+  // where no shadows are possible.
+  layout(set = 0, binding = 1) uniform sampler2D accelerator;
+
   // A random texture of size kNoiseSize.
-  layout(set = 0, binding = 1) uniform sampler2D noise;
+  layout(set = 0, binding = 2) uniform sampler2D noise;
 
   const float kPi = 3.14159265359;
 
@@ -95,6 +99,9 @@ constexpr char g_sampler_fragment_src[] = R"GLSL(
   // TODO(abarth): Make the shader less sensitive to this parameter.
   const float kSampleRadius = 16.0;  // screen pixels.
 
+  const float kSsdoAccelDownsampleFactor = 8.0;
+  const float kSsdoAccelPackedDownsampleFactor = kSsdoAccelDownsampleFactor * 4;
+
   float sampleKeyIllumination(vec2 fragment_uv,
                               float fragment_z,
                               float alpha,
@@ -108,8 +115,7 @@ constexpr char g_sampler_fragment_src[] = R"GLSL(
     float tap_depth_uv = texture(depth_map, fragment_uv + tap_delta_uv).r;
     float tap_z = tap_depth_uv * -pushed.viewing_volume.z;
 
-    // TODO: use clamp here, once we can use GLSL standard library.
-    return 1.0 - max(0.0, (tap_z - fragment_z) / radius);
+    return 1.0 - clamp((tap_z - fragment_z) / radius, 0.0, 1.0);
   }
 
   float sampleFillIllumination(vec2 fragment_uv,
@@ -123,10 +129,23 @@ constexpr char g_sampler_fragment_src[] = R"GLSL(
     float tap_depth_uv = texture(depth_map, fragment_uv + tap_delta_uv).r;
     float tap_z = tap_depth_uv * -pushed.viewing_volume.z;
 
-    return 1.0 - max(0.0, (tap_z - fragment_z) / radius);
+    return 1.0 - clamp((tap_z - fragment_z) / radius, 0.0, 1.0);
   }
 
   void main() {
+    // gl_FragCoord.x ranges from 0.5 to (screen_width - 0.5), and similarly for
+    // height, so we adjust them to range from 0.0 to screen_width/height.
+    vec2 accel_coords = (gl_FragCoord.xy - vec2(0.5, 0.5)) / kSsdoAccelPackedDownsampleFactor;
+
+    // Consult the accelerator; exit early if no shadow is possible,
+    vec4 accel = texture(accelerator, accel_coords);
+    uvec2 cell = uvec2(fract(accel_coords) * 4);
+    int cell_val = (int(accel[cell.y] * 255.0) >> (cell.x * 2)) & 3;
+    if (cell_val == 0) {
+      outColor = vec4(1.0, 0.0, 0.0, 1.0);
+      return;
+    }
+
     vec2 seed = texture(noise, fract(gl_FragCoord.xy / float(kNoiseSize))).rg;
 
     float sampled_depth = texture(depth_map, fragment_uv).r;
@@ -141,10 +160,6 @@ constexpr char g_sampler_fragment_src[] = R"GLSL(
       L += fill_light_intensity * sampleFillIllumination(fragment_uv, fragment_z, alpha, seed);
     }
     L = clamp(L / float(kTapCount), 0.0, 1.0);
-
-    // TODO: This ensures that shadows aren't pure-black.  Replace this with
-    // something more principled/controllable.
-    L = L * 0.75 + 0.25;
 
     outColor = vec4(L, sampled_depth, 0.0, 1.0);
   }
@@ -173,12 +188,32 @@ constexpr char g_filter_fragment_src[] = R"GLSL(
   // Texture containing unfiltered illumination data.
   layout(set = 0, binding = 0) uniform sampler2D illumination;
 
+  // A table used to accelerate sampling by allowing an early exit for fragments
+  // where no shadows are possible.
+  layout(set = 0, binding = 1) uniform sampler2D accelerator;
+
   // Related to SsdoSampler::kNoiseSize (== kNoiseSize - 1).
   // We need the reconstruction filter to remove exactly the frequency of the
   // noise, which is why these values need to be coordinated.
   const int kRadius = 4;
 
+  const float kSsdoAccelDownsampleFactor = 8.0;
+  const float kSsdoAccelPackedDownsampleFactor = kSsdoAccelDownsampleFactor * 4;
+
   void main() {
+    // gl_FragCoord.x ranges from 0.5 to (screen_width - 0.5), and similarly for
+    // height, so we adjust them to range from 0.0 to screen_width/height.
+    vec2 accel_coords = (gl_FragCoord.xy - vec2(0.5, 0.5)) / kSsdoAccelPackedDownsampleFactor;
+
+    // Consult the accelerator; exit early if no shadow is possible,
+    vec4 accel = texture(accelerator, accel_coords);
+    uvec2 cell = uvec2(fract(accel_coords) * 4);
+    int cell_val = (int(accel[cell.y] * 255.0) >> (cell.x * 2)) & 3;
+    if (cell_val == 0) {
+      outColor = vec4(1.0, 0.0, 0.0, 1.0);
+      return;
+    }
+
     vec4 center_tap = texture(illumination, fragment_uv);
     float center_key = center_tap.y * pushed.scene_depth;
 
@@ -206,12 +241,119 @@ constexpr char g_filter_fragment_src[] = R"GLSL(
   }
 )GLSL";
 
+// TODO: this is currently EXTREMELY slow: see comment on SampleUsingKernel().
+constexpr char g_sampler_kernel_src[] = R"GLSL(
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+layout(local_size_x = 4, local_size_y = 4) in;
+
+layout (binding = 0) uniform sampler2D depthTexture;
+layout (binding = 1, rgba8) uniform image2D resultImage;
+layout (binding = 2, rgba8) uniform image2D noiseImage;
+
+// Uniform parameters.
+layout(push_constant) uniform SamplerConfig {
+  // A description of the directional key light:
+  //
+  //  * theta, phi: The direction from which the light is received. The first
+  //    coordinate is theta (the the azimuthal angle, in radians) and the second
+  //    coordinate is phi (the polar angle, in radians).
+  //  * dispersion: The angular variance in the light, in radians.
+  //  * intensity: The amount of light emitted.
+  vec4 key_light;
+
+  // The size of the viewing volume in (width, height, depth).
+  vec3 viewing_volume;
+} pushed;
+
+const float kPi = 3.14159265359;
+
+// Must match SsdoSampler::kNoiseSize (C++).
+const int kNoiseSize = 5;
+
+// The number of screen-space samples to use in the computation.
+const int kTapCount = 8;
+
+// These should be relatively primary to each other and to kTapCount;
+// TODO: only kSpirals.x is used... should .y also be used?
+const vec2 kSpirals = vec2(7.0, 5.0);
+
+// TODO(abarth): Make the shader less sensitive to this parameter.
+const float kSampleRadius = 16.0;  // screen pixels.
+
+float sampleKeyIllumination(vec2 pos,
+                            float fragment_z,
+                            float alpha,
+                            vec2 seed) {
+  float key_light_dispersion = pushed.key_light.z;
+  vec2 key_light0 = pushed.key_light.xy - key_light_dispersion / 2.0;
+  float theta = key_light0.x + fract(seed.x + alpha * kSpirals.x) * key_light_dispersion;
+  float radius = alpha * kSampleRadius;
+
+  float raw_depth = texture(depthTexture,
+                            pos + radius * vec2(cos(theta), sin(theta))).r;
+  float tap_z = raw_depth * -pushed.viewing_volume.z;
+
+  // TODO: use clamp here, once we can use GLSL standard library.
+  return 1.0 - max(0.0, (tap_z - fragment_z) / radius);
+}
+
+float sampleFillIllumination(vec2 pos,
+                             float fragment_z,
+                             float alpha,
+                             vec2 seed) {
+  float theta = 2.0 * kPi * (seed.x + alpha * kSpirals.x);
+  float radius = alpha * kSampleRadius;
+
+  float raw_depth = texture(depthTexture,
+                            pos + radius * vec2(cos(theta), sin(theta))).r;
+  float tap_z = raw_depth * -pushed.viewing_volume.z;
+
+  return 1.0 - max(0.0, (tap_z - fragment_z) / radius);
+}
+
+// Size of square region that is computed by each invocation of the kernel.
+const int kSize = 4;
+void main() {
+  uint x = gl_GlobalInvocationID.x * kSize;
+  uint y = gl_GlobalInvocationID.y * kSize;
+
+  for (int xx = 0; xx < kSize; ++xx) {
+    for (int yy = 0; yy < kSize; ++yy) {
+      vec2 pos = vec2(x + xx, y + yy);
+      vec2 seed = imageLoad(noiseImage,
+                            ivec2(fract(pos / float(kNoiseSize)).rg)).rg;
+
+      float sampled_depth = texture(depthTexture, pos).r;
+      float fragment_z = sampled_depth * -pushed.viewing_volume.z;
+      float key_light_intensity = pushed.key_light.w;
+      float fill_light_intensity = 1.0 - key_light_intensity;
+
+      float L = 0.0;
+      for (int i = 0; i < kTapCount; ++i) {
+        float alpha = (float(i) + 0.5) / float(kTapCount);
+        L += key_light_intensity * sampleKeyIllumination(pos, fragment_z, alpha, seed);
+        L += fill_light_intensity * sampleFillIllumination(pos, fragment_z, alpha, seed);
+      }
+      L = clamp(L / float(kTapCount), 0.0, 1.0);
+
+      // TODO: This ensures that shadows aren't pure-black.  Replace this with
+      // something more principled/controllable.
+      L = L * 0.75 + 0.25;
+
+      imageStore(resultImage, ivec2(pos), vec4(L, sampled_depth, 0.0, 1.0));
+    }
+  }
+}
+)GLSL";
+
 // TODO: refactor this into a PipelineBuilder class.
 std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
     vk::Device device,
     vk::RenderPass render_pass,
     const MeshSpecImpl& mesh_spec_impl,
-    vk::DescriptorSetLayout layout,
+    vk::DescriptorSetLayout descriptor_set_layout,
     GlslToSpirvCompiler* compiler) {
   auto vertex_spirv_future =
       compiler->Compile(vk::ShaderStageFlagBits::eVertex, {{g_vertex_src}},
@@ -330,7 +472,7 @@ std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
 
   vk::PipelineLayoutCreateInfo pipeline_layout_info;
   pipeline_layout_info.setLayoutCount = 1;
-  pipeline_layout_info.pSetLayouts = &layout;
+  pipeline_layout_info.pSetLayouts = &descriptor_set_layout;
   pipeline_layout_info.pushConstantRangeCount = 1;
   pipeline_layout_info.pPushConstantRanges = &push_constants;
 
@@ -479,7 +621,13 @@ SsdoSampler::SsdoSampler(vk::Device device,
                                                   vk::Filter::eNearest)),
       // TODO: VulkanProvider should know the swapchain format and we should use
       // it.
-      render_pass_(CreateRenderPass(device)) {
+      render_pass_(CreateRenderPass(device)),
+      sampler_kernel_(device,
+                      {vk::ImageLayout::eShaderReadOnlyOptimal,
+                       vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral},
+                      sizeof(SamplerConfig),
+                      g_sampler_kernel_src,
+                      compiler) {
   FTL_DCHECK(noise_image->width() == kNoiseSize &&
              noise_image->height() == kNoiseSize);
 
@@ -495,13 +643,15 @@ SsdoSampler::~SsdoSampler() {
 
 const vk::DescriptorSetLayoutCreateInfo&
 SsdoSampler::GetDescriptorSetLayoutCreateInfo() {
-  constexpr uint32_t kNumBindings = 2;
+  constexpr uint32_t kNumBindings = 3;
   static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
   static vk::DescriptorSetLayoutCreateInfo info;
   static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
   if (!ptr) {
+    // TODO: should probably use a texture array instead of multiple bindings.
     auto& depth_texture_binding = bindings[0];
-    auto& noise_texture_binding = bindings[1];
+    auto& accelerator_texture_binding = bindings[1];
+    auto& noise_texture_binding = bindings[2];
 
     depth_texture_binding.binding = 0;
     depth_texture_binding.descriptorType =
@@ -509,8 +659,13 @@ SsdoSampler::GetDescriptorSetLayoutCreateInfo() {
     depth_texture_binding.descriptorCount = 1;
     depth_texture_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-    // TODO: should probably use a texture array instead of multiple bindings.
-    noise_texture_binding.binding = 1;
+    accelerator_texture_binding.binding = 1;
+    accelerator_texture_binding.descriptorType =
+        vk::DescriptorType::eCombinedImageSampler;
+    accelerator_texture_binding.descriptorCount = 1;
+    accelerator_texture_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+    noise_texture_binding.binding = 2;
     noise_texture_binding.descriptorType =
         vk::DescriptorType::eCombinedImageSampler;
     noise_texture_binding.descriptorCount = 1;
@@ -526,6 +681,7 @@ SsdoSampler::GetDescriptorSetLayoutCreateInfo() {
 void SsdoSampler::Sample(CommandBuffer* command_buffer,
                          const FramebufferPtr& framebuffer,
                          const TexturePtr& depth_texture,
+                         const TexturePtr& accelerator_texture,
                          const SamplerConfig* push_constants) {
   auto vk_command_buffer = command_buffer->get();
   auto descriptor_set = pool_.Allocate(1, command_buffer)->get(0);
@@ -535,14 +691,15 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
   viewport.height = framebuffer->height();
   vk_command_buffer.setViewport(0, 1, &viewport);
 
-  // Common to both image descriptors.
-  constexpr uint32_t kUpdatedDescriptorCount = 2;
+  constexpr uint32_t kUpdatedDescriptorCount = 3;
   vk::WriteDescriptorSet writes[kUpdatedDescriptorCount];
-  writes[0].dstSet = writes[1].dstSet = descriptor_set;
-  writes[0].dstArrayElement = writes[1].dstArrayElement = 0;
-  writes[0].descriptorType = writes[1].descriptorType =
-      vk::DescriptorType::eCombinedImageSampler;
-  writes[0].descriptorCount = writes[1].descriptorCount = 1;
+  for (uint32_t i = 0; i < kUpdatedDescriptorCount; ++i) {
+    // Common to all image descriptors.
+    writes[i].dstSet = descriptor_set;
+    writes[i].dstArrayElement = 0;
+    writes[i].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    writes[i].descriptorCount = 1;
+  }
 
   // Specific to depth texture.
   vk::DescriptorImageInfo depth_texture_info;
@@ -552,13 +709,22 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
   writes[0].dstBinding = 0;
   writes[0].pImageInfo = &depth_texture_info;
 
+  // Specific to accelerator texture.
+  vk::DescriptorImageInfo accelerator_texture_info;
+  accelerator_texture_info.imageLayout =
+      vk::ImageLayout::eShaderReadOnlyOptimal;
+  accelerator_texture_info.imageView = accelerator_texture->image_view();
+  accelerator_texture_info.sampler = accelerator_texture->sampler();
+  writes[1].dstBinding = 1;
+  writes[1].pImageInfo = &accelerator_texture_info;
+
   // Specific to noise texture.
   vk::DescriptorImageInfo noise_texture_info;
   noise_texture_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
   noise_texture_info.imageView = noise_texture_->image_view();
   noise_texture_info.sampler = noise_texture_->sampler();
-  writes[1].dstBinding = 1;
-  writes[1].pImageInfo = &noise_texture_info;
+  writes[2].dstBinding = 2;
+  writes[2].pImageInfo = &noise_texture_info;
 
   device_.updateDescriptorSets(kUpdatedDescriptorCount, writes, 0, nullptr);
 
@@ -584,9 +750,29 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
   command_buffer->EndRenderPass();
 }
 
+// TODO: this is currently EXTREMELY slow.  We need to dispatch far fewer
+// threads, but dispatching 1/16th as many (as we would if we batched 4x4
+// regions) is still very slow, even without modifying the kernel to do 16x as
+// much work in each invocation!  Something else is wrong, and figuring out what
+// probably needs better tools.  For now, the fragment shader version should be
+// used instead.
+void SsdoSampler::SampleUsingKernel(CommandBuffer* command_buffer,
+                                    const TexturePtr& depth_texture,
+                                    const TexturePtr& output_texture,
+                                    const SamplerConfig* push_constants) {
+  FTL_DCHECK(depth_texture->width() == output_texture->width());
+  FTL_DCHECK(depth_texture->height() == output_texture->height());
+  uint32_t width = depth_texture->width();
+  uint32_t height = depth_texture->width();
+
+  sampler_kernel_.Dispatch({depth_texture, output_texture, noise_texture_},
+                           command_buffer, width, height, 1, push_constants);
+}
+
 void SsdoSampler::Filter(CommandBuffer* command_buffer,
                          const FramebufferPtr& framebuffer,
                          const TexturePtr& unfiltered_illumination,
+                         const TexturePtr& accelerator_texture,
                          const FilterConfig* push_constants) {
   auto vk_command_buffer = command_buffer->get();
   auto descriptor_set = pool_.Allocate(1, command_buffer)->get(0);
@@ -596,34 +782,42 @@ void SsdoSampler::Filter(CommandBuffer* command_buffer,
   viewport.height = framebuffer->height();
   vk_command_buffer.setViewport(0, 1, &viewport);
 
-  // Common to both image descriptors.
-  constexpr uint32_t kUpdatedDescriptorCount = 2;
+  constexpr uint32_t kUpdatedDescriptorCount = 3;
   vk::WriteDescriptorSet writes[kUpdatedDescriptorCount];
-  auto& write_light_tex = writes[0];
-  auto& write_dummy_tex = writes[1];
-  write_light_tex.dstSet = write_dummy_tex.dstSet = descriptor_set;
-  write_light_tex.dstArrayElement = write_dummy_tex.dstArrayElement = 0;
-  write_light_tex.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-  write_dummy_tex.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-  write_light_tex.descriptorCount = write_dummy_tex.descriptorCount = 1;
+  for (uint32_t i = 0; i < kUpdatedDescriptorCount; ++i) {
+    // Common to all image descriptors.
+    writes[i].dstSet = descriptor_set;
+    writes[i].dstArrayElement = 0;
+    writes[i].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    writes[i].descriptorCount = 1;
+  }
 
   // Specific to illumination texture.
   vk::DescriptorImageInfo light_tex_info;
   light_tex_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
   light_tex_info.imageView = unfiltered_illumination->image_view();
   light_tex_info.sampler = unfiltered_illumination->sampler();
-  write_light_tex.dstBinding = 0;
-  write_light_tex.pImageInfo = &light_tex_info;
+  writes[0].dstBinding = 0;
+  writes[0].pImageInfo = &light_tex_info;
+
+  // Specific to accelerator texture.
+  vk::DescriptorImageInfo accelerator_texture_info;
+  accelerator_texture_info.imageLayout =
+      vk::ImageLayout::eShaderReadOnlyOptimal;
+  accelerator_texture_info.imageView = accelerator_texture->image_view();
+  accelerator_texture_info.sampler = accelerator_texture->sampler();
+  writes[1].dstBinding = 1;
+  writes[1].pImageInfo = &accelerator_texture_info;
 
   // Specific to noise texture.
   // TODO: this is unused by the shader, but we set it anyway so that we can
   // use the same pipeline-layout for the sampler and filter pipelines.
-  vk::DescriptorImageInfo dummy_tex_info;
-  dummy_tex_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-  dummy_tex_info.imageView = noise_texture_->image_view();
-  dummy_tex_info.sampler = noise_texture_->sampler();
-  write_dummy_tex.dstBinding = 1;
-  write_dummy_tex.pImageInfo = &dummy_tex_info;
+  vk::DescriptorImageInfo noise_texture_info;
+  noise_texture_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+  noise_texture_info.imageView = noise_texture_->image_view();
+  noise_texture_info.sampler = noise_texture_->sampler();
+  writes[2].dstBinding = 2;
+  writes[2].pImageInfo = &noise_texture_info;
 
   device_.updateDescriptorSets(kUpdatedDescriptorCount, writes, 0, nullptr);
 

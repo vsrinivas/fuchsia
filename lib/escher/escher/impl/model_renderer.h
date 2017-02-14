@@ -42,6 +42,7 @@ class ModelRenderer {
 
   ModelDisplayListPtr CreateDisplayList(const Stage& stage,
                                         const Model& model,
+                                        vec2 scale,
                                         bool sort_by_pipeline,
                                         bool use_depth_prepass,
                                         bool use_descriptor_set_per_object,

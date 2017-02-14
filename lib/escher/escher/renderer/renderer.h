@@ -8,6 +8,7 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/renderer/semaphore_wait.h"
+#include "escher/renderer/timestamper.h"
 #include "escher/vk/vulkan_context.h"
 #include "ftl/macros.h"
 #include "ftl/memory/ref_counted.h"
@@ -16,7 +17,8 @@ namespace escher {
 
 typedef std::function<void()> FrameRetiredCallback;
 
-class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
+class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
+                 public Timestamper {
  public:
   virtual void DrawFrame(const Stage& stage,
                          const Model& model,
@@ -40,7 +42,7 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
 
   // If profiling is enabled, then when the current frame is completed, all
   // timestamps from this frame will be printed out.
-  void AddTimestamp(const char* name);
+  void AddTimestamp(const char* name) override;
 
   impl::CommandBuffer* current_frame() { return current_frame_; }
 

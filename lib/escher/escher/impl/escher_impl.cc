@@ -24,7 +24,7 @@ namespace {
 std::unique_ptr<CommandBufferPool> NewCommandBufferPool(
     const VulkanContext& context) {
   return std::make_unique<CommandBufferPool>(context.device, context.queue,
-                                             context.queue_family_index);
+                                             context.queue_family_index, true);
 }
 
 // Constructor helper.
@@ -35,7 +35,7 @@ std::unique_ptr<CommandBufferPool> NewTransferCommandBufferPool(
   else
     return std::make_unique<CommandBufferPool>(
         context.device, context.transfer_queue,
-        context.transfer_queue_family_index);
+        context.transfer_queue_family_index, false);
 }
 
 // Constructor helper.

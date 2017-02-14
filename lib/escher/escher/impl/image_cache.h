@@ -55,10 +55,12 @@ class ImageCache : public ImageOwner {
   // Return new Image containing the provided pixels.  A new Image might be
   // created, or an existing one reused.  Uses transfer queue to efficiently
   // transfer image data to GPU.
-  ImagePtr NewImageFromPixels(vk::Format format,
-                              uint32_t width,
-                              uint32_t height,
-                              uint8_t* pixels);
+  ImagePtr NewImageFromPixels(
+      vk::Format format,
+      uint32_t width,
+      uint32_t height,
+      uint8_t* pixels,
+      vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
 
   // Return new Image containing the provided pixels.  A new Image might be
   // created, or an existing one reused.  Uses transfer queue to efficiently
@@ -71,7 +73,10 @@ class ImageCache : public ImageOwner {
 
   // Returns single-channel luminance image containing white noise.  A new Image
   // might be created, or an existing one reused.
-  ImagePtr NewNoiseImage(uint32_t width, uint32_t height);
+  ImagePtr NewNoiseImage(
+      uint32_t width,
+      uint32_t height,
+      vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
 
  private:
   // Implement ImageOwner::RecycleImage().  Adds the image to unused_images_.
