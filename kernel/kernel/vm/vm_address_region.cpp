@@ -13,14 +13,13 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <mxtl/auto_call.h>
 #include <mxtl/auto_lock.h>
 #include <new.h>
-#include <pow2.h>
 #include <safeint/safe_math.h>
 #include <trace.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
-
 
 VmAddressRegion::VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags)
     : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags | VMAR_CAN_RWX_FLAGS,
@@ -474,9 +473,6 @@ vaddr_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint a
     LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu\n", this, size,
                   align_pow2);
 
-    if (aspace_->is_aslr_enabled()) {
-        return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
-    }
     return LinearRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
 }
 
@@ -690,105 +686,5 @@ vaddr_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_
     } while (before_iter.IsValid());
 
     // couldn't find anything
-    return -1;
-}
-
-namespace {
-    // Return the width (in bits) of the offset selection range available for ASLR
-    uint NonCompactRandomizedAllocatorSelectWidth(bool is_user, size_t aspace_size,
-                                                  size_t alloc_size) {
-        // For userspace allocations, we will do a super-rough ASLR.  All
-        // allocations will have (N - align_pow2) bits of entropy, where
-        // N = floor(log2(aspace_size - allocation_size).)
-        size_t max_offset = aspace_size - alloc_size;
-        if (max_offset == 0) {
-            return 0;
-        }
-
-        // Calculate floor(log2(max_offset)) to decide the range of values to
-        // generate.  We remove all possible placement offsets greater than 1<<log2
-        // for convenience to keep the distribution uniform.
-        uint log2 = log2_ulong_floor(max_offset);
-
-        if (is_user) {
-            // BUG(MG-528): Cap log2 at 31 bits, since musl assumes 31-bit thread IDs and uses
-            // thread struct addresses for those.
-            log2 = mxtl::min(log2, 31u);
-        }
-
-        return log2;
-    }
-} // namespace
-
-// Perform allocations for VMARs that aren't using the COMPACT policy.  This
-// allocator works by choosing an offset in the VMAR in the
-// range [0, size_ - size), and attempting to place the allocation there.  If
-// the spot is occupied, the allocator retries several times before giving up.
-vaddr_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                                   uint arch_mmu_flags) {
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
-
-    align_pow2 = mxtl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
-    const vaddr_t align = 1UL << align_pow2;
-    const uint aslr_width = NonCompactRandomizedAllocatorSelectWidth(aspace_->is_user(), size_,
-                                                                     size);
-
-    // If our width is 0, the only placement choice we have is the start of the
-    // region (due to the allocation filling the region).
-    if (aslr_width == 0) {
-        vaddr_t spot;
-        if (CheckGapLocked(subregions_.end(), subregions_.begin(), &spot, 0, align, size, 0,
-                           arch_mmu_flags)) {
-            return spot;
-        }
-        return -1;
-    }
-
-    // Generate a random offset from [0, 2^width). We choose a range
-    // that is a power of 2 in size to make maintaining a uniform distribution
-    // easier.
-    const auto choose_offset = [this, align, aslr_width]() -> size_t {
-        size_t chosen_offset;
-        aspace_->AslrDraw(reinterpret_cast<uint8_t*>(&chosen_offset), sizeof(chosen_offset));
-        chosen_offset &= ~(align - 1);
-        chosen_offset &= (1UL << aslr_width) - 1;
-        return chosen_offset;
-    };
-
-    // Generate a random placement, and see if we can fit there.  Return an
-    // allocation failure if we can't find a placement after a number of tries.
-    // TODO(teisenbe): Be more intelligent here.  Instead of searching uniformly
-    // at random through the address space, look into generating uniformly at
-    // random through the valid placements.  This may be tricky without turning
-    // allocation into O(existing regions) or storing another tree of regions.
-    for (size_t tries_remaining = 10; tries_remaining > 0; --tries_remaining) {
-        const size_t offset = choose_offset();
-
-        const vaddr_t chosen_base = base_ + offset;
-        const vaddr_t chosen_end = chosen_base + size;
-        DEBUG_ASSERT(chosen_end - 1 <= base_ + size_ - 1);
-
-        // Attempt to use the generated address
-        auto after_iter = subregions_.upper_bound(chosen_end - 1);
-        auto before_iter = after_iter;
-
-        if (after_iter == subregions_.begin() || subregions_.size() == 0) {
-            before_iter = subregions_.end();
-        } else {
-            --before_iter;
-        }
-
-        if (before_iter != subregions_.end() && !before_iter.IsValid()) {
-            continue;
-        }
-
-        vaddr_t spot;
-        if (CheckGapLocked(before_iter, after_iter, &spot, chosen_base, align, size, 0,
-                           arch_mmu_flags) && spot != static_cast<vaddr_t>(-1)) {
-            return spot;
-        }
-    }
-
-    // failed to find a placement
     return -1;
 }

@@ -274,6 +274,7 @@ private:
 
     // returns true if we can meet the allocation between the given children,
     // and if so populates pva with the base address to use.
+    // TODO(teisenbe): Get rid of this once we implement randomization
     bool CheckGapLocked(const ChildList::iterator& prev, const ChildList::iterator& next,
                         vaddr_t* pva, vaddr_t search_base, vaddr_t align,
                         size_t region_size, size_t min_gap, uint arch_mmu_flags);
@@ -283,8 +284,6 @@ private:
 
     // Allocators
     vaddr_t LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags);
-    vaddr_t NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                      uint arch_mmu_flags);
 
     // list of subregions, indexed by base address
     ChildList subregions_;
