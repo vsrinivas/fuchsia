@@ -25,7 +25,7 @@ class NetConnectorExampleImpl {
 
   void HandleReceivedMessage(std::vector<uint8_t> message);
 
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   netconnector::MessageRelay message_relay_;
   std::vector<std::string>::const_iterator conversation_iter_;
 

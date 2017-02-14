@@ -21,7 +21,7 @@ class NetStubResponder {
   // Constructor. |actual| must outlive this.
   NetStubResponder(TInterface* actual,
                    std::string service_name,
-                   modular::ApplicationContext* application_context)
+                   app::ApplicationContext* application_context)
       : actual_(actual) {
     FTL_DCHECK(actual_);
     FTL_DCHECK(!service_name.empty());

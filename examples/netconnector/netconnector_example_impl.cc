@@ -24,7 +24,7 @@ static const std::vector<std::string> kConversation = {
 NetConnectorExampleImpl::NetConnectorExampleImpl(
     NetConnectorExampleParams* params)
     : application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()) {
+          app::ApplicationContext::CreateFromStartupInfo()) {
   // The MessageRelay makes using the channel easier. Hook up its callbacks.
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
