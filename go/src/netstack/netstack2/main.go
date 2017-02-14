@@ -11,7 +11,9 @@ import (
 	"syscall/mx/mxruntime"
 
 	"github.com/google/netstack/dhcp"
+	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/link/sniffer"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
@@ -43,6 +45,9 @@ func main() {
 	linkID := stack.RegisterLinkEndpoint(ep)
 	lladdr := ipv6LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
 
+	if debug {
+		linkID = sniffer.New(linkID)
+	}
 	stk := stack.New([]string{ipv4.ProtocolName, ipv4.PingProtocolName, ipv6.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName}).(*stack.Stack)
 	if err := stk.CreateNIC(1, linkID); err != nil {
 		log.Fatalf("CreateNIC: %v", err)
@@ -65,6 +70,7 @@ func main() {
 	}
 
 	dhcpClient = dhcp.NewClient(stk, 1, ep.linkAddr)
+
 	go dhcpClient.Start(func(config dhcp.Config) {
 		// Update default route with new gateway.
 		stk.SetRouteTable(defaultRouteTable(config.Gateway))
@@ -72,7 +78,9 @@ func main() {
 		stk.RemoveAddress(1, "\x00\x00\x00\x00")
 	})
 
-	_, err := socketDispatcher(stk)
+	dnsClient := dns.NewClient(stk, 1)
+
+	_, err := socketDispatcher(stk, dnsClient)
 	if err != nil {
 		log.Fatal(err)
 	}

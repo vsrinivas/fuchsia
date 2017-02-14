@@ -18,6 +18,7 @@ import (
 	"syscall/mx/mxio/dispatcher"
 	"syscall/mx/mxio/rio"
 
+	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -60,7 +61,7 @@ func devmgrConnect() (mx.Handle, error) {
 	return c0.Handle, nil
 }
 
-func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
+func socketDispatcher(stk tcpip.Stack, dnsClient *dns.Client) (*socketServer, error) {
 	d, err := dispatcher.New(rio.Handler)
 	if err != nil {
 		return nil, err
@@ -68,6 +69,7 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 	s := &socketServer{
 		dispatcher: d,
 		stack:      stk,
+		dnsClient:  dnsClient,
 		io:         make(map[cookie]*iostate),
 		next:       1,
 	}
@@ -308,6 +310,7 @@ func (s *socketServer) newIostate() (ios *iostate, peerH, peerS mx.Handle, err e
 type socketServer struct {
 	dispatcher *dispatcher.Dispatcher
 	stack      tcpip.Stack
+	dnsClient  *dns.Client
 
 	mu   sync.Mutex
 	next cookie
@@ -596,13 +599,10 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	}
 	node, service, hints := val.Unpack()
 
-	// TODO: actually implement getaddrinfo
-	//
-	// As it stands, all this can do is take an IPv4 IP address
-	// and parrot it back, along with a service port. What's missing:
-	//	DNS resolution
+	// TODO(mpcomplete):
 	//	An /etc/services equivalent
 	//	IPv6 support
+	//      Better handling of hints (e.g. guess proper socktype, etc?)
 	if debug {
 		log.Printf("opGetAddrInfo node=%q, service=%q, hints=%v", node, service, hints)
 	}
@@ -614,13 +614,34 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	} else {
 		log.Printf("opGetAddrInfo service %q is not a port: %v", service, err)
 	}
+
 	var addr c_in_addr
-	fmt.Sscanf(node, "%d.%d.%d.%d", &addr[0], &addr[1], &addr[2], &addr[3])
+	dnsLookupIPs, err := s.dnsClient.LookupIP(node)
+	if err != nil {
+		fmt.Sscanf(node, "%d.%d.%d.%d", &addr[0], &addr[1], &addr[2], &addr[3])
+	} else {
+		for _, ip := range dnsLookupIPs {
+			if ip.IP.To4() != nil {
+				copy(addr[:], ip.IP.To4())
+				break
+			}
+		}
+	}
+
+	if hints.ai_family == 0 {
+		hints.ai_family = AF_INET
+	}
+	if hints.ai_socktype == 0 {
+		hints.ai_socktype = SOCK_STREAM
+	}
+	if hints.ai_protocol == 0 {
+		hints.ai_protocol = IPPROTO_TCP
+	}
 
 	rep := c_mxrio_gai_reply{}
-	rep.res[0].ai.ai_family = AF_INET
-	rep.res[0].ai.ai_socktype = SOCK_STREAM
-	rep.res[0].ai.ai_protocol = IPPROTO_TCP
+	rep.res[0].ai.ai_family = hints.ai_family
+	rep.res[0].ai.ai_socktype = hints.ai_socktype
+	rep.res[0].ai.ai_protocol = hints.ai_protocol
 	rep.res[0].ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
 	// The 0xdeadbeef constant indicates the other side needs to
 	// adjust ai_addr with the value passed below.
