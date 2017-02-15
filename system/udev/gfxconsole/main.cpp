@@ -40,6 +40,8 @@
 #define LOW_REPEAT_KEY_FREQUENCY_MICRO 250000000
 #define HIGH_REPEAT_KEY_FREQUENCY_MICRO 50000000
 
+typedef void (*keypress_handler_t)(uint8_t keycode, int modifiers);
+
 // framebuffer
 static gfx_surface g_hw_gfx;
 static mx_device_t* g_fb_device;
@@ -178,7 +180,8 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
 static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
                                  int* cur_idx, int* prev_idx,
                                  hid_keys_t* key_pressed,
-                                 hid_keys_t* key_released, int* modifiers) {
+                                 hid_keys_t* key_released, int* modifiers,
+                                 keypress_handler_t keypress_handler) {
     // process the key
     uint8_t keycode;
     hid_keys_t key_delta;
@@ -190,7 +193,7 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
     }
     hid_for_every_key(&key_delta, keycode) {
         *modifiers |= modifiers_from_keycode(keycode);
-        vc_handle_key_press(keycode, *modifiers);
+        keypress_handler(keycode, *modifiers);
     }
 
     hid_kbd_released_keys(&key_state[*prev_idx], &key_state[*cur_idx], &key_delta);
@@ -206,8 +209,15 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
     *prev_idx = 1 - *prev_idx;
 }
 
+struct vc_input_thread_args {
+    int fd;
+    keypress_handler_t keypress_handler;
+};
+
 static int vc_input_thread(void* arg) {
-    int fd = (int)(uintptr_t)arg;
+    auto* args_ptr = reinterpret_cast<vc_input_thread_args*>(arg);
+    vc_input_thread_args args = *args_ptr;
+    delete args_ptr;
 
     uint8_t previous_report_buf[8];
     uint8_t report_buf[8];
@@ -226,12 +236,16 @@ static int vc_input_thread(void* arg) {
     }
 
     for (;;) {
-        mx_status_t rc = mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, repeat_interval);
+        mx_status_t rc = mxio_wait_fd(args.fd, MXIO_EVT_READABLE, NULL,
+                                      repeat_interval);
 
         if (rc == ERR_TIMED_OUT) {
             // Times out only when need to repeat.
-            vc_process_kb_report(previous_report_buf, key_state, &cur_idx, &prev_idx, NULL, NULL, &modifiers);
-            vc_process_kb_report(report_buf, key_state, &cur_idx, &prev_idx, NULL, NULL, &modifiers);
+            vc_process_kb_report(previous_report_buf, key_state,
+                                 &cur_idx, &prev_idx, NULL, NULL, &modifiers,
+                                 args.keypress_handler);
+            vc_process_kb_report(report_buf, key_state, &cur_idx, &prev_idx,
+                                 NULL, NULL, &modifiers, args.keypress_handler);
             // Accelerate key repeat until reaching the high frequency
             repeat_interval = repeat_interval * 3 / 4;
             repeat_interval = repeat_interval < HIGH_REPEAT_KEY_FREQUENCY_MICRO ? HIGH_REPEAT_KEY_FREQUENCY_MICRO : repeat_interval;
@@ -239,7 +253,7 @@ static int vc_input_thread(void* arg) {
         }
 
         memcpy(previous_report_buf, report_buf, sizeof(report_buf));
-        ssize_t r = read(fd, report_buf, sizeof(report_buf));
+        ssize_t r = read(args.fd, report_buf, sizeof(report_buf));
         if (r < 0) {
             break; // will be restarted by poll thread if needed
         }
@@ -247,15 +261,11 @@ static int vc_input_thread(void* arg) {
             repeat_interval = MX_TIME_INFINITE;
             continue;
         }
-        // eat the input if there is no active vc
-        if (!g_active_vc) {
-            repeat_interval = MX_TIME_INFINITE;
-            continue;
-        }
 
         hid_keys_t key_pressed, key_released;
         vc_process_kb_report(report_buf, key_state, &cur_idx, &prev_idx,
-                             &key_pressed, &key_released, &modifiers);
+                             &key_pressed, &key_released, &modifiers,
+                             args.keypress_handler);
 
         if (repeat_enabled) {
             // Check if any non modifiers were pressed
@@ -289,6 +299,8 @@ static int vc_input_thread(void* arg) {
 #define DEV_INPUT "/dev/class/input"
 
 static mx_status_t vc_input_device_added(int dirfd, const char* fn, void* cookie) {
+    auto keypress_handler = reinterpret_cast<keypress_handler_t>(cookie);
+
     int fd;
     if ((fd = openat(dirfd, fn, O_RDONLY)) < 0) {
         return NO_ERROR;
@@ -309,10 +321,14 @@ static mx_status_t vc_input_device_added(int dirfd, const char* fn, void* cookie
     char tname[64];
     thrd_t t;
     snprintf(tname, sizeof(tname), "vc-input-%s", fn);
-    int ret = thrd_create_with_name(&t, vc_input_thread, (void*)(uintptr_t)fd, tname);
+    auto* args = new vc_input_thread_args;
+    args->fd = fd;
+    args->keypress_handler = keypress_handler;
+    int ret = thrd_create_with_name(&t, vc_input_thread, args, tname);
     if (ret != thrd_success) {
         xprintf("vc: input thread %s did not start (return value=%d)\n", tname, ret);
         close(fd);
+        delete args;
         // We don't really expect thread creation to fail so it's not clear
         // whether we should return an error here to tell
         // mxio_watch_directory() to stop.
@@ -322,13 +338,18 @@ static mx_status_t vc_input_device_added(int dirfd, const char* fn, void* cookie
     return NO_ERROR;
 }
 
-static int vc_input_devices_poll_thread(void* arg) {
+static void vc_watch_for_keyboard_devices(keypress_handler_t handler) {
     int dirfd;
     if ((dirfd = open(DEV_INPUT, O_DIRECTORY | O_RDONLY)) < 0) {
-        return -1;
+        return;
     }
-    mxio_watch_directory(dirfd, vc_input_device_added, NULL);
+    mxio_watch_directory(dirfd, vc_input_device_added,
+                         reinterpret_cast<void*>(handler));
     close(dirfd);
+}
+
+static int vc_watch_for_keyboard_devices_thread(void* arg) {
+    vc_watch_for_keyboard_devices(vc_handle_key_press);
     return -1;
 }
 
@@ -841,7 +862,9 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     }
 
     // start a thread to listen for new input devices
-    int ret = thrd_create_with_name(&g_input_poll_thread, vc_input_devices_poll_thread, NULL, "vc-inputdev-poll");
+    int ret = thrd_create_with_name(
+        &g_input_poll_thread, vc_watch_for_keyboard_devices_thread, NULL,
+        "vc-inputdev-poll");
     if (ret != thrd_success) {
         xprintf("vc: input polling thread did not start (return value=%d)\n", ret);
     }
