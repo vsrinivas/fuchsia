@@ -45,7 +45,7 @@ func main() {
 	linkID := stack.RegisterLinkEndpoint(ep)
 	lladdr := ipv6LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
 
-	if debug {
+	if debug2 {
 		linkID = sniffer.New(linkID)
 	}
 	stk := stack.New([]string{ipv4.ProtocolName, ipv4.PingProtocolName, ipv6.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName}).(*stack.Stack)
