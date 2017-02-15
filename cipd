@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -eo pipefail; [[ "${TRACE}" ]] && set -x
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+readonly CIPD_CLIENT_VERSION="${CIPD_CLIENT_VERSION:-git_revision:508f70d14492573c37760381060bbb5fc7904bfd}"
+readonly CIPD_CLIENT_URL="${CIPD_CLIENT_URL:-https://chrome-infra-packages.appspot.com}"
+
+declare HOST_PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]')"
+case "${HOST_PLATFORM}" in
+  linux)
+    readonly HOST_PLATFORM="linux"
+    ;;
+  darwin)
+    readonly HOST_PLATFORM="mac"
+    ;;
+  *)
+    echo "Unknown operating system."
+    exit 1
+esac
+
+HOST_ARCH="$(uname -m | tr '[:upper:]' '[:lower:]')"
+case "${HOST_ARCH}" in
+  x86_64|amd64)
+    readonly HOST_ARCH="amd64"
+    ;;
+  arm*)
+    readonly HOST_ARCH="${HOST_ARCH}"
+    ;;
+  *86)
+    readonly HOST_ARCH=386
+    ;;
+  *)
+    echo "Unknown machine architecture."
+    exit 1
+esac
+
+readonly URL="${CIPD_CLIENT_URL}/client?platform=${HOST_PLATFORM}-${HOST_ARCH}&version=${CIPD_CLIENT_VERSION}"
+readonly CLIENT="${SCRIPT_DIR}/.cipd_client"
+
+readonly USER_AGENT="buildtools/$(git -C ${SCRIPT_DIR} rev-parse HEAD 2>/dev/null || echo "???")"
+
+if [[ ! -e "${CLIENT}" ]]; then
+  echo "Bootstrapping cipd client for ${HOST_PLATFORM}-${HOST_ARCH}..."
+  if hash curl 2> /dev/null ; then
+    curl -f --progress-bar "${URL}" -A "${USER_AGENT}"  -L -o "${CLIENT}"
+    chmod +x "${CLIENT}"
+  else
+    echo "The \`curl\` command is missing, download ${URL} as ${CLIENT}, and then re-run this command" 1>&2
+    exit 1
+  fi
+fi
+
+export CIPD_HTTP_USER_AGENT_PREFIX="${USER_AGENT}"
+if ! "${CLIENT}" selfupdate -version "${CIPD_CLIENT_VERSION}" ; then
+  echo -n "[31;1mselfupdate failed:[0;1m " 1>&2
+  echo "run \`CIPD_HTTP_USER_AGENT_PREFIX=${USER_AGENT}/manual ${CLIENT} selfupdate -version '${CIPD_CLIENT_VERSION}'\` to diagnose" 1>&2
+  echo "[0m" 1>&2
+fi
+
+exec "${CLIENT}" "${@}"

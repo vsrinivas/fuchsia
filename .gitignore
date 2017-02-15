@@ -1,3 +1,6 @@
+/.cipd_client
+/.cipd_client_cache
+/.versions
 /cmake
 /linux64/bootserver
 /linux64/bootserver.stamp
