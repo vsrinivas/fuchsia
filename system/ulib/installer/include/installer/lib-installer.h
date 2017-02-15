@@ -2,6 +2,8 @@
 // User of this source code is governed by a BSD-style license that be be found
 // in the LICENSE file.
 
+#pragma once
+
 #include <gpt/gpt.h>
 #include <magenta/syscalls.h>
 
