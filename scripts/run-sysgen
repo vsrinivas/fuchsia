@@ -31,6 +31,8 @@ rsync_options="-c --remove-source-files"
 
 rsync $rsync_options generated.user.h \
     system/public/magenta/gen-syscalls.h
+rsync $rsync_options generated.vdso.h \
+    system/ulib/magenta/gen-syscalls.h
 rsync $rsync_options generated.x86-64.S \
     system/ulib/magenta/gen-x86-64.S
 rsync $rsync_options generated.arm64.S \

@@ -491,6 +491,7 @@ struct GenParams {
     const char* file_postfix;
     const char* entry_prefix;
     const char* name_prefix;
+    const char* name_prefix_2;
     const char* empty_args;
     const char* switch_var;
     const char* switch_type;
@@ -529,16 +530,14 @@ bool generate_legacy_header(
     const GenParams& gp, std::ofstream& os, const Syscall& sc) {
     constexpr uint32_t indent_spaces = 4u;
 
-    auto syscall_name = gp.name_prefix + sc.name;
+    for (auto name_prefix : {gp.name_prefix, gp.name_prefix_2}) {
+        if (!name_prefix)
+            continue;
 
-    // We write each entry one or two times. The second time the syscall name
-    // is prefixed with an underscore.
-    for (int times = 0; times != 2; ++times) {
+        auto syscall_name = name_prefix + sc.name;
 
         if (gp.entry_prefix) {
             os << gp.entry_prefix << " ";
-        } else if (times) {
-            break;
         }
 
         // writes "[return-type] prefix_[syscall-name]("
@@ -679,6 +678,19 @@ const GenParams gen_params[] = {
         ".user.h",          // file postfix.
         "extern",           // function prefix.
         "mx_",              // function name prefix.
+        "_mx_",             // second function name prefix.
+        "void",             // no-args special type
+        nullptr,            // switch var (does not apply)
+        nullptr,            // switch type (does not apply)
+        user_attrs,         // attributes dictionary
+    },
+    // The vDSO-internal header, pure C.  (VDsoHeaderC)
+    {
+        generate_legacy_header,
+        ".vdso.h",          // file postfix.
+        "__attribute__((visibility(\"hidden\"))) extern", // function prefix.
+        "VDSO_mx_",         // function name prefix.
+        nullptr,            // second function name prefix.
         "void",             // no-args special type
         nullptr,            // switch var (does not apply)
         nullptr,            // switch type (does not apply)
@@ -697,6 +709,7 @@ const GenParams gen_params[] = {
         ".kernel.inc",      // file postfix.
         nullptr,            // no function prefix.
         "sys_",             // function name prefix.
+        nullptr,            // second function name prefix.
         nullptr,            // no-args (does not apply)
         "sfunc",            // switch var name
         "syscall_func"      // switch var type
@@ -757,11 +770,6 @@ private:
 
         std::ofstream ofile;
         ofile.open(output_file.c_str(), std::ofstream::out);
-
-        if (!ofile.good()) {
-            print_error("unable to open", output_file);
-            return false;
-        }
 
         if (!generate_file_header(ofile)) {
             print_error("i/o error", output_file);

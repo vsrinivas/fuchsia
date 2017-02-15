@@ -4,6 +4,8 @@
 
 /* define and implement the magenta syscall wrappers for x86-64 */
 
+#include "syscall-entry.h"
+
 .text
 
 .cfi_sections .eh_frame, .debug_frame
@@ -22,9 +24,7 @@
 #define MAGENTA_SYSCALL_MAGIC 0x00ff00ff00000000
 
 .macro m_syscall nargs, name, n
-.globl _\name
-.type _\name,STT_FUNC
-_\name:
+syscall_entry_begin \name
     .cfi_startproc
     .cfi_same_value %r10
     .cfi_same_value %r11
@@ -70,11 +70,7 @@ _\name:
     ret
 .endif
     .cfi_endproc
-.size _\name, . - _\name
-.weak \name
-.type \name,STT_FUNC
-\name = _\name
-.size \name, . - _\name
+syscall_entry_end \name
 .endm
 
 #include "gen-x86-64.S"

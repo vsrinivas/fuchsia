@@ -4,24 +4,20 @@
 
 /* define and implement the magenta syscall wrappers for arm64 */
 
+#include "syscall-entry.h"
+
 .text
 
 .cfi_sections .eh_frame, .debug_frame
 
 .macro m_syscall name, n
-.globl _\name
-.type _\name,STT_FUNC
-_\name:
+syscall_entry_begin \name
     .cfi_startproc
     mov    x16, #\n
     svc    #0xf0f /* magic value to differentiate magenta syscalls */
     ret
     .cfi_endproc
-.size _\name, . - _\name
-.weak \name
-.type \name,STT_FUNC
-\name = _\name
-.size \name, . - _\name
+syscall_entry_end \name
 .endm
 
 #include "gen-arm64.S"
