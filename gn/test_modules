@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/modules/tests"
+    ],
+    "binaries": [
+        {
+            "binary": "test_hello_flutter.flx",
+            "bootfs_path": "apps/test_hello_flutter"
+        }
+    ]
+}
