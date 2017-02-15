@@ -391,11 +391,8 @@ FUNCTION(arm_reset)
     cmp     cpuid, #SMP_MAX_CPUS
     bge     .Lunsupported_cpu_trap
 
-    /* Set up the stack */
-    ldr     tmp, =__stack_end
-    mov     tmp2, #ARCH_DEFAULT_STACK_SIZE
-    mul     tmp2, tmp2, cpuid
-    sub     sp, tmp, tmp2
+    bl      arm64_get_secondary_sp
+    mov     sp, x0
 
     mov     x0, cpuid
     bl      arm64_secondary_entry

@@ -134,3 +134,26 @@ FUNCTION(arm64_elX_to_el1)
     ret
 END(arm64_elX_to_el1)
 
+FUNCTION(arm64_get_secondary_sp)
+    mrs     x9, mpidr_el1
+    and     x9, x9, #0xffff             /* only use id/cluster */
+    mov     x10, #SMP_MAX_CPUS
+
+    adrp    x11, arm64_secondary_sp_list
+    add     x11, x11, #:lo12:arm64_secondary_sp_list
+
+.Lsp_loop:
+    ldr     x12, [x11, #0]
+    cmp     x12, x9
+    beq     .Lsp_found
+    add     x11, x11, #16
+    subs    x10, x10, #1
+    bne     .Lsp_loop
+    mov     x0, xzr
+    ret
+
+.Lsp_found:
+    ldr     x0, [x11, #8]
+    ret
+
+END(arm64_get_secondary_sp)

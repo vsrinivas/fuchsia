@@ -128,8 +128,23 @@ void platform_early_init(void)
     /* reserve the first 64k of ram, which should be holding the fdt */
     struct list_node list = LIST_INITIAL_VALUE(list);
     pmm_alloc_range(MEMBASE, 0x80000 / PAGE_SIZE, &list);
+
+}
+
+void platform_init(void)
+{
+    uart_init();
 #if WITH_SMP
+    /* TODO - number of cpus (and topology) should be parsed from device index or command line */
+
 #if BCM2837
+
+    struct list_node list = LIST_INITIAL_VALUE(list);
+
+    arm64_set_secondary_sp(1, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE , &list, NULL));
+    arm64_set_secondary_sp(2, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE , &list, NULL));
+    arm64_set_secondary_sp(3, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE , &list, NULL));
+
     uintptr_t sec_entry = (uintptr_t)(&arm_reset - KERNEL_ASPACE_BASE);
     unsigned long long *spin_table = (void *)(KERNEL_ASPACE_BASE + 0xd8);
 
@@ -148,11 +163,6 @@ void platform_early_init(void)
     }
 #endif
 #endif
-}
-
-void platform_init(void)
-{
-    uart_init();
 }
 
 void target_init(void)

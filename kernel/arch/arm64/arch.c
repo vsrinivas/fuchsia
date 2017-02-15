@@ -29,12 +29,19 @@ enum {
     PMCR_EL0_LONG_COUNTER_BIT   = 1 << 6,
 };
 
+
+typedef struct {
+    uint64_t    cpu_id;
+    void*       sp;
+} arm64_sp_info_t;
+
 #if WITH_SMP
 /* smp boot lock */
 static spin_lock_t arm_boot_cpu_lock = 1;
 static volatile int secondaries_to_init = 0;
 uint arm_num_cpus = 1;
 static thread_t _init_thread[SMP_MAX_CPUS - 1];
+arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
 #endif
 
 static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
@@ -45,6 +52,22 @@ uint64_t arm64_get_boot_el(void)
 {
     return arch_boot_el >> 2;
 }
+
+#if WITH_SMP
+uint32_t arm64_set_secondary_sp(uint64_t cpu_id, void* ptr) {
+
+    uint32_t i = 0;
+    while (( i< SMP_MAX_CPUS) && (arm64_secondary_sp_list[i].cpu_id !=0)) {
+        i++;
+    }
+    if (i==SMP_MAX_CPUS)
+        return -1;
+    printf("Set cpuid 0x%lx sp to %p\n",cpu_id,ptr);
+    arm64_secondary_sp_list[i].cpu_id = cpu_id;
+    arm64_secondary_sp_list[i].sp = ptr;
+    return 0;
+}
+#endif
 
 static void parse_ccsid(arm64_cache_desc_t* desc, uint32_t ccsid) {
     desc->write_through = BIT(ccsid, 31) > 0;
