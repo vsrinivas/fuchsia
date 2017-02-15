@@ -621,8 +621,8 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 		fmt.Sscanf(node, "%d.%d.%d.%d", &addr[0], &addr[1], &addr[2], &addr[3])
 	} else {
 		for _, ip := range dnsLookupIPs {
-			if ip.IP.To4() != nil {
-				copy(addr[:], ip.IP.To4())
+			if ip.To4() != "" {
+				copy(addr[:], ip.To4())
 				break
 			}
 		}
