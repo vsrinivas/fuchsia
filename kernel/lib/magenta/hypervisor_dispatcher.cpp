@@ -5,12 +5,10 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/hypervisor.h>
-#include <kernel/vm/vm_object.h>
 #include <magenta/hypervisor_dispatcher.h>
 #include <new.h>
 
-constexpr mx_rights_t kDefaultHypervisorRights =
-    MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE;
+constexpr mx_rights_t kDefaultHypervisorRights = MX_RIGHT_EXECUTE;
 
 // static
 mx_status_t HypervisorDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher,

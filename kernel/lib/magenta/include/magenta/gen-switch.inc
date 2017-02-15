@@ -589,34 +589,42 @@
         static_cast<uint32_t>(arg2),
         reinterpret_cast<mx_handle_t*>(arg3)));
         break;
-    case 108: ret = static_cast<uint64_t>(sys_syscall_test_0());
+    case 108: ret = static_cast<uint64_t>(sys_hypervisor_op(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint32_t>(arg2),
+        reinterpret_cast<const void*>(arg3),
+        static_cast<uint32_t>(arg4),
+        reinterpret_cast<void*>(arg5),
+        static_cast<uint32_t>(arg6)));
         break;
-    case 109: ret = static_cast<uint64_t>(sys_syscall_test_1(
+    case 109: ret = static_cast<uint64_t>(sys_syscall_test_0());
+        break;
+    case 110: ret = static_cast<uint64_t>(sys_syscall_test_1(
         static_cast<int>(arg1)));
         break;
-    case 110: ret = static_cast<uint64_t>(sys_syscall_test_2(
+    case 111: ret = static_cast<uint64_t>(sys_syscall_test_2(
         static_cast<int>(arg1),
         static_cast<int>(arg2)));
         break;
-    case 111: ret = static_cast<uint64_t>(sys_syscall_test_3(
+    case 112: ret = static_cast<uint64_t>(sys_syscall_test_3(
         static_cast<int>(arg1),
         static_cast<int>(arg2),
         static_cast<int>(arg3)));
         break;
-    case 112: ret = static_cast<uint64_t>(sys_syscall_test_4(
+    case 113: ret = static_cast<uint64_t>(sys_syscall_test_4(
         static_cast<int>(arg1),
         static_cast<int>(arg2),
         static_cast<int>(arg3),
         static_cast<int>(arg4)));
         break;
-    case 113: ret = static_cast<uint64_t>(sys_syscall_test_5(
+    case 114: ret = static_cast<uint64_t>(sys_syscall_test_5(
         static_cast<int>(arg1),
         static_cast<int>(arg2),
         static_cast<int>(arg3),
         static_cast<int>(arg4),
         static_cast<int>(arg5)));
         break;
-    case 114: ret = static_cast<uint64_t>(sys_syscall_test_6(
+    case 115: ret = static_cast<uint64_t>(sys_syscall_test_6(
         static_cast<int>(arg1),
         static_cast<int>(arg2),
         static_cast<int>(arg3),
@@ -624,7 +632,7 @@
         static_cast<int>(arg5),
         static_cast<int>(arg6)));
         break;
-    case 115: ret = static_cast<uint64_t>(sys_syscall_test_7(
+    case 116: ret = static_cast<uint64_t>(sys_syscall_test_7(
         static_cast<int>(arg1),
         static_cast<int>(arg2),
         static_cast<int>(arg3),
@@ -633,7 +641,7 @@
         static_cast<int>(arg6),
         static_cast<int>(arg7)));
         break;
-    case 116: ret = static_cast<uint64_t>(sys_syscall_test_8(
+    case 117: ret = static_cast<uint64_t>(sys_syscall_test_8(
         static_cast<int>(arg1),
         static_cast<int>(arg2),
         static_cast<int>(arg3),

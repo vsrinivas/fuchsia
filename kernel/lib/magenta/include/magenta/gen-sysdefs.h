@@ -591,6 +591,14 @@ mx_status_t sys_hypervisor_create(
     uint32_t options,
     mx_handle_t out[1]);
 
+mx_status_t sys_hypervisor_op(
+    mx_handle_t handle,
+    uint32_t opcode,
+    const void* args,
+    uint32_t args_len,
+    void* result,
+    uint32_t result_len);
+
 int sys_syscall_test_0();
 
 int sys_syscall_test_1(

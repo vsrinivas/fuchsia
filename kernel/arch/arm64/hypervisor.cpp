@@ -10,3 +10,11 @@
 mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
     return ERR_NOT_SUPPORTED;
 }
+
+mx_status_t arch_guest_create(mxtl::unique_ptr<GuestContext>* context) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t arch_guest_start(GuestContext* context, uintptr_t entry, uintptr_t stack) {
+    return ERR_NOT_SUPPORTED;
+}

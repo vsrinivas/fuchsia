@@ -20,9 +20,19 @@
 
 __BEGIN_CDECLS
 
-/* Create the hypervisor context.
+/* Create a hypervisor context.
  * This setups up the CPUs to allow a hypervisor to be run.
  */
 mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context);
+
+/* Create a guest context.
+ * This creates the structures to allow a guest to be run.
+ */
+mx_status_t arch_guest_create(mxtl::unique_ptr<GuestContext>* context);
+
+/* Start a guest within a guest context.
+ * This launches a guest at the given entry point, within a guest context.
+ */
+mx_status_t arch_guest_start(GuestContext* context, uintptr_t entry, uintptr_t stack);
 
 __END_CDECLS

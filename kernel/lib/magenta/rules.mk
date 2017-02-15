@@ -20,6 +20,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/fifo_dispatcher.cpp \
     $(LOCAL_DIR)/futex_context.cpp \
     $(LOCAL_DIR)/futex_node.cpp \
+    $(LOCAL_DIR)/guest_dispatcher.cpp \
     $(LOCAL_DIR)/handle.cpp \
     $(LOCAL_DIR)/handle_reaper.cpp \
     $(LOCAL_DIR)/hypervisor_dispatcher.cpp \

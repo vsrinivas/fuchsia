@@ -109,13 +109,14 @@ m_syscall 5 mx_resource_do_action 104
 m_syscall 2 mx_resource_connect 105
 m_syscall 2 mx_resource_accept 106
 m_syscall 3 mx_hypervisor_create 107
-m_syscall 0 mx_syscall_test_0 108
-m_syscall 1 mx_syscall_test_1 109
-m_syscall 2 mx_syscall_test_2 110
-m_syscall 3 mx_syscall_test_3 111
-m_syscall 4 mx_syscall_test_4 112
-m_syscall 5 mx_syscall_test_5 113
-m_syscall 6 mx_syscall_test_6 114
-m_syscall 7 mx_syscall_test_7 115
-m_syscall 8 mx_syscall_test_8 116
+m_syscall 6 mx_hypervisor_op 108
+m_syscall 0 mx_syscall_test_0 109
+m_syscall 1 mx_syscall_test_1 110
+m_syscall 2 mx_syscall_test_2 111
+m_syscall 3 mx_syscall_test_3 112
+m_syscall 4 mx_syscall_test_4 113
+m_syscall 5 mx_syscall_test_5 114
+m_syscall 6 mx_syscall_test_6 115
+m_syscall 7 mx_syscall_test_7 116
+m_syscall 8 mx_syscall_test_8 117
 

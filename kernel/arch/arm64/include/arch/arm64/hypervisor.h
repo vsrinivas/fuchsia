@@ -7,3 +7,4 @@
 #pragma once
 
 class HypervisorContext {};
+class GuestContext {};

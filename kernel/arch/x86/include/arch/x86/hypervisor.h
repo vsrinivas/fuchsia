@@ -10,24 +10,52 @@
 #include <mxtl/array.h>
 #include <mxtl/unique_ptr.h>
 
+typedef struct vm_page vm_page_t;
 struct VmxInfo;
-class VmxCpuContext;
+class VmxonCpuContext;
+class VmcsCpuContext;
 
-class VmxContext {
+class VmxPage {
 public:
-    static mx_status_t Create(mxtl::unique_ptr<VmxContext>* context);
+    ~VmxPage();
 
-    ~VmxContext();
-
-    VmxCpuContext* CurrCpuContext();
+    mx_status_t Alloc(const VmxInfo& info);
+    paddr_t PhysicalAddress() { return pa_; }
+    void* VirtualAddress();
 
 private:
-    mxtl::Array<VmxCpuContext> cpu_contexts_;
-
-    explicit VmxContext(mxtl::Array<VmxCpuContext> cpu_contexts);
-
-    mx_status_t AllocCpuContexts(const VmxInfo& info);
-    mx_status_t CpuContextStatus();
+    paddr_t pa_;
+    vm_page_t* page_ = nullptr;
 };
 
-using HypervisorContext = VmxContext;
+class VmxonContext {
+public:
+    static mx_status_t Create(mxtl::unique_ptr<VmxonContext>* context);
+
+    ~VmxonContext();
+
+    VmxonCpuContext* CurrCpuContext();
+
+private:
+    mxtl::Array<VmxonCpuContext> cpu_contexts_;
+
+    explicit VmxonContext(mxtl::Array<VmxonCpuContext> cpu_contexts);
+};
+
+class VmcsContext {
+public:
+    static mx_status_t Create(mxtl::unique_ptr<VmcsContext>* context);
+
+    ~VmcsContext();
+
+    VmcsCpuContext* CurrCpuContext();
+    mx_status_t Start(uintptr_t entry, uintptr_t stack);
+
+private:
+    mxtl::Array<VmcsCpuContext> cpu_contexts_;
+
+    explicit VmcsContext(mxtl::Array<VmcsCpuContext> cpu_contexts);
+};
+
+using HypervisorContext = VmxonContext;
+using GuestContext = VmcsContext;
