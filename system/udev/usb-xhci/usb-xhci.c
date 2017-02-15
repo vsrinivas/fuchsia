@@ -7,9 +7,9 @@
 #include <ddk/driver.h>
 #include <ddk/io-alloc.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
+#include <ddk/protocol/usb.h>
 
 #include <hw/reg.h>
 #include <magenta/syscalls.h>
@@ -17,11 +17,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
-#include "xhci.h"
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
 #include "xhci-util.h"
+#include "xhci.h"
 
 //#define TRACE 1
 #include "xhci-debug.h"
@@ -195,7 +196,7 @@ usb_hci_protocol_t xhci_hci_protocol = {
 };
 
 static void xhci_iotxn_callback(mx_status_t result, void* cookie) {
-    iotxn_t* txn = (iotxn_t *)cookie;
+    iotxn_t* txn = (iotxn_t*)cookie;
     mx_status_t status;
     size_t actual;
 
@@ -219,11 +220,11 @@ static mx_status_t xhci_do_iotxn_queue(xhci_t* xhci, iotxn_t* txn) {
         return xhci_rh_iotxn_queue(xhci, txn, rh_index);
     }
     if (data->device_id > xhci->max_slots) {
-         return ERR_INVALID_ARGS;
-     }
+        return ERR_INVALID_ARGS;
+    }
     uint8_t ep_index = xhci_endpoint_index(data->ep_address);
     if (ep_index >= XHCI_NUM_EPS) {
-         return ERR_INVALID_ARGS;
+        return ERR_INVALID_ARGS;
     }
     mx_paddr_t phys_addr;
     txn->ops->physmap(txn, &phys_addr);
@@ -244,7 +245,7 @@ static mx_status_t xhci_do_iotxn_queue(xhci_t* xhci, iotxn_t* txn) {
         direction = data->ep_address & USB_ENDPOINT_DIR_MASK;
     }
     return xhci_queue_transfer(xhci, data->device_id, setup, phys_addr, txn->length,
-                                 ep_index, direction, data->frame, context, &txn->node);
+                               ep_index, direction, data->frame, context, &txn->node);
 }
 
 void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool closed) {
@@ -344,9 +345,13 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev, void** cook
     int bar = -1;
     void* mmio;
     uint64_t mmio_len;
+    /*
+     * TODO(cja): according to eXtensible Host Controller Interface revision 1.1, section 5, xhci
+     * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
+     */
     for (size_t i = 0; i < PCI_MAX_BAR_COUNT; i++) {
-        mmio_handle = pci_proto->map_mmio(dev, i, MX_CACHE_POLICY_UNCACHED_DEVICE, &mmio, &mmio_len);
-        if (mmio_handle >= 0) {
+        status = pci_proto->map_mmio(dev, i, MX_CACHE_POLICY_UNCACHED_DEVICE, &mmio, &mmio_len, &mmio_handle);
+        if (status == NO_ERROR) {
             bar = i;
             break;
         }
@@ -380,12 +385,11 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev, void** cook
     }
 
     // register for interrupts
-    status = pci_proto->map_interrupt(dev, 0);
-    if (status < 0) {
+    status = pci_proto->map_interrupt(dev, 0, &irq_handle);
+    if (status != NO_ERROR) {
         printf("usb_xhci_bind map_interrupt failed %d\n", status);
         goto error_return;
     }
-    irq_handle = status;
 
     uxhci->io_alloc = io_alloc;
     uxhci->irq_handle = irq_handle;
@@ -431,6 +435,7 @@ mx_driver_t _driver_usb_xhci = {
     },
 };
 
+// clang-format off
 MAGENTA_DRIVER_BEGIN(_driver_usb_xhci, "usb-xhci", "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x0C),

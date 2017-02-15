@@ -33,62 +33,96 @@ static mx_status_t pci_reset_device(mx_device_t* dev) {
     return mx_pci_reset_device(device->handle);
 }
 
-static mx_handle_t pci_map_mmio(mx_device_t* dev,
+static mx_status_t pci_map_mmio(mx_device_t* dev,
                                 uint32_t bar_num,
                                 mx_cache_policy_t cache_policy,
                                 void** vaddr,
-                                uint64_t* size) {
-    kpci_device_t* device = get_kpci_device(dev);
-    assert(device->handle != MX_HANDLE_INVALID);
-    assert(vaddr != NULL);
-    assert(size != NULL);
+                                uint64_t* size,
+                                mx_handle_t* out_handle) {
+    mx_status_t status = NO_ERROR;
+    mx_handle_t mmio_handle = MX_HANDLE_INVALID;
+    kpci_device_t* device = NULL;
+    uintptr_t vaddr_tmp;
 
-    mx_handle_t mmio_handle;
-    mmio_handle = mx_pci_map_mmio(device->handle, bar_num, cache_policy);
-    if (mmio_handle < 0)
-        return mmio_handle;
+    if (!dev || !out_handle || !vaddr || (bar_num > PCI_MAX_BAR_COUNT - 1)) {
+        return ERR_INVALID_ARGS;
+    }
 
-    uintptr_t tmp;
-    mx_status_t status = mx_io_mapping_get_info(mmio_handle, &tmp, size);
+    device = get_kpci_device(dev);
+    if (device->handle == MX_HANDLE_INVALID) {
+        return ERR_BAD_HANDLE;
+    }
+
+    status = mx_pci_map_mmio(device->handle, bar_num, cache_policy, &mmio_handle);
     if (status != NO_ERROR) {
-        assert(status < 0);
+        return status;
+    }
+
+    status = mx_io_mapping_get_info(mmio_handle, &vaddr_tmp, size);
+    if (status != NO_ERROR) {
         mx_handle_close(mmio_handle);
         return status;
     }
 
-    *vaddr = (void*)(tmp);
-    return mmio_handle;
+    *vaddr = (void*)(vaddr_tmp);
+    *out_handle = mmio_handle;
+    return NO_ERROR;
 }
 
-static mx_handle_t pci_map_interrupt(mx_device_t* dev, int which_irq) {
+static mx_status_t pci_map_interrupt(mx_device_t* dev, int which_irq, mx_handle_t* out_handle) {
+    mx_status_t status = NO_ERROR;
+
+    if (!dev || !out_handle) {
+        return ERR_INVALID_ARGS;
+    }
+
     kpci_device_t* device = get_kpci_device(dev);
-    assert(device->handle != MX_HANDLE_INVALID);
-    return mx_pci_map_interrupt(device->handle, which_irq);
-}
+    if (device->handle == MX_HANDLE_INVALID) {
+        return ERR_BAD_HANDLE;
+    }
 
-static mx_handle_t pci_get_config(mx_device_t* dev, const pci_config_t** config) {
-    kpci_device_t* device = get_kpci_device(dev);
-    assert(device->handle != MX_HANDLE_INVALID);
-    assert(config != NULL);
-
-    mx_handle_t cfg_handle;
-    cfg_handle = mx_pci_map_config(device->handle);
-    if (cfg_handle < 0)
-        return cfg_handle;
-
-    uintptr_t vaddr = 0;
-    uint64_t  size;
-
-    mx_status_t status = mx_io_mapping_get_info(cfg_handle, &vaddr, &size);
+    status = mx_pci_map_interrupt(device->handle, which_irq, out_handle);
     if (status != NO_ERROR) {
-        assert(status < 0);
+        *out_handle = MX_HANDLE_INVALID;
+        return status;
+    }
+
+    return NO_ERROR;
+}
+
+static mx_status_t pci_get_config(mx_device_t* dev,
+                                  const pci_config_t** config,
+                                  mx_handle_t* out_handle) {
+    mx_handle_t cfg_handle;
+    mx_status_t status = NO_ERROR;
+    struct kpci_device* device;
+    uintptr_t vaddr = 0;
+    uint64_t size;
+
+    if (!dev || !out_handle || !config) {
+        return ERR_INVALID_ARGS;
+    }
+
+    device = get_kpci_device(dev);
+    if (device->handle == MX_HANDLE_INVALID) {
+        return ERR_BAD_HANDLE;
+    }
+
+    status = mx_pci_map_config(device->handle, &cfg_handle);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    status = mx_io_mapping_get_info(cfg_handle, &vaddr, &size);
+    if (status != NO_ERROR) {
         mx_handle_close(cfg_handle);
         *config = NULL;
         return status;
     }
 
     *config = (const pci_config_t*)vaddr;
-    return cfg_handle;
+    *out_handle = cfg_handle;
+    return NO_ERROR;
 }
 
 static mx_status_t pci_query_irq_mode_caps(mx_device_t* dev,

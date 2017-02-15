@@ -34,6 +34,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
     LTRACE_ENTRY;
 
     mxtl::AutoLock lock(lock_);
+    mx_handle_t tmp_handle;
 
     // save off handles to things
     pci_ = pci;
@@ -48,13 +49,13 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
     // claim the pci device
     mx_status_t r;
     r = pci->claim_device(bus_device_);
-    if (r < 0)
+    if (r != NO_ERROR)
         return r;
 
     // enable bus mastering
-    if ((r = pci->enable_bus_master(bus_device_, true)) < 0) {
+    if ((r = pci->enable_bus_master(bus_device_, true)) != NO_ERROR) {
         VIRTIO_ERROR("cannot enable bus master %d\n", r);
-        return -1;
+        return r;
     }
 
     // try to set up our IRQ mode
@@ -66,11 +67,13 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
             LTRACEF("using legacy irq mode\n");
         }
     }
-    irq_handle_.reset(pci->map_interrupt(bus_device_, 0));
-    if (!irq_handle_) {
-        VIRTIO_ERROR("failed to map irq %d\n", irq_handle_.get());
-        return -1;
+
+    r = pci->map_interrupt(bus_device_, 0, &tmp_handle);
+    if (r != NO_ERROR) {
+        VIRTIO_ERROR("failed to map irq %d\n", r);
+        return r;
     }
+    irq_handle_.reset(tmp_handle);
 
     LTRACEF("irq handle %u\n", irq_handle_.get());
 
@@ -94,13 +97,13 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
             // map in the mmio space
             // XXX this seems to be broken right now
             uint64_t sz;
-            bar0_mmio_handle_.reset(pci->map_mmio(bus_device_, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                                  (void**)&bar0_mmio_base_, &sz));
-            // XXX test against negative until map_mmio api is fixed to not return negative handles on error
-            if (bar0_mmio_handle_.get() < 0) {
-                VIRTIO_ERROR("cannot mmap io %d\n", bar0_mmio_handle_.get());
-                return bar0_mmio_handle_.get();
+            r = pci->map_mmio(bus_device_, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                              (void**)&bar0_mmio_base_, &sz, &tmp_handle);
+            if (r != NO_ERROR) {
+                VIRTIO_ERROR("cannot mmap io %d\n", r);
+                return r;
             }
+            bar0_mmio_handle_.reset(tmp_handle);
 
             LTRACEF("bar0_mmio_base_ %p, sz %#" PRIx64 "\n", bar0_mmio_base_, sz);
         } else {
@@ -116,7 +119,6 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
                 VIRTIO_ERROR("cannot enable PIO %d\n", r);
                 return -1;
             }
-
         }
     } else {
         // non transitional
@@ -144,12 +146,13 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
 
         // map bar 4
         uint64_t sz;
-        bar4_mmio_handle_.reset(pci->map_mmio(bus_device_, 4, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                              (void**)&bar4_mmio_base_, &sz));
-        if (!bar4_mmio_handle_) {
+        r = pci->map_mmio(bus_device_, 4, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                          (void**)&bar4_mmio_base_, &sz, &tmp_handle);
+        if (r != NO_ERROR) {
             VIRTIO_ERROR("cannot map io %d\n", bar4_mmio_handle_.get());
-            return bar4_mmio_handle_.get();
+            return r;
         }
+        bar4_mmio_handle_.reset(tmp_handle);
         LTRACEF("bar4_mmio_base_ %p, sz %#" PRIx64 "\n", bar4_mmio_base_, sz);
 
         // set up the mmio registers

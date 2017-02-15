@@ -28,19 +28,21 @@
 
 extern "C" mx_status_t virtio_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
     LTRACEF("driver %p, device %p\n", driver, device);
+    mx_status_t status;
+    pci_protocol_t* pci;
 
     /* grab the pci device and configuration */
-    pci_protocol_t* pci;
     if (device_get_protocol(device, MX_PROTOCOL_PCI, (void**)&pci)) {
         TRACEF("no pci protocol\n");
         return -1;
     }
 
     const pci_config_t* config;
-    mx_handle_t config_handle = pci->get_config(device, &config);
-    if (config_handle < 0) {
+    mx_handle_t config_handle = MX_HANDLE_INVALID;
+    status = pci->get_config(device, &config, &config_handle);
+    if (status != NO_ERROR) {
         TRACEF("failed to grab config handle\n");
-        return -1;
+        return status;
     }
 
     LTRACEF("pci %p\n", pci);
@@ -63,12 +65,12 @@ extern "C" mx_status_t virtio_bind(mx_driver_t* driver, mx_device_t* device, voi
     }
 
     LTRACEF("calling Bind on driver\n");
-    auto status = vd->Bind(pci, config_handle, config);
-    if (status < 0)
+    status = vd->Bind(pci, config_handle, config);
+    if (status != NO_ERROR)
         return status;
 
     status = vd->Init();
-    if (status < 0)
+    if (status != NO_ERROR)
         return status;
 
     // if we're here, we're successful so drop the unique ptr ref to the object and let it live on

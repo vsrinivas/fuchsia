@@ -502,10 +502,11 @@ mx_status_t sys_pci_enable_pio(
 mx_status_t sys_pci_reset_device(
     mx_handle_t handle);
 
-mx_handle_t sys_pci_map_mmio(
+mx_status_t sys_pci_map_mmio(
     mx_handle_t handle,
     uint32_t bar_num,
-    mx_cache_policy_t cache_policy);
+    mx_cache_policy_t cache_policy,
+    mx_handle_t out_handle[1]);
 
 mx_status_t sys_pci_io_write(
     mx_handle_t handle,
@@ -521,12 +522,14 @@ mx_status_t sys_pci_io_read(
     uint32_t len,
     uint32_t out_value[1]);
 
-mx_handle_t sys_pci_map_interrupt(
+mx_status_t sys_pci_map_interrupt(
     mx_handle_t handle,
-    int32_t which_irq);
+    int32_t which_irq,
+    mx_handle_t out_handle[1]);
 
-mx_handle_t sys_pci_map_config(
-    mx_handle_t handle);
+mx_status_t sys_pci_map_config(
+    mx_handle_t handle,
+    mx_handle_t out_handle[1]);
 
 mx_status_t sys_pci_query_irq_mode_caps(
     mx_handle_t handle,

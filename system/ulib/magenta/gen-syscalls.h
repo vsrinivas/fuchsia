@@ -517,10 +517,11 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_pci_enable_pio(
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_pci_reset_device(
     mx_handle_t handle) __attribute__((__leaf__));
 
-__attribute__((visibility("hidden"))) extern mx_handle_t VDSO_mx_pci_map_mmio(
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_pci_map_mmio(
     mx_handle_t handle,
     uint32_t bar_num,
-    mx_cache_policy_t cache_policy) __attribute__((__leaf__));
+    mx_cache_policy_t cache_policy,
+    mx_handle_t out_handle[1]) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_pci_io_write(
     mx_handle_t handle,
@@ -536,12 +537,14 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_pci_io_read(
     uint32_t len,
     uint32_t out_value[1]) __attribute__((__leaf__));
 
-__attribute__((visibility("hidden"))) extern mx_handle_t VDSO_mx_pci_map_interrupt(
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_pci_map_interrupt(
     mx_handle_t handle,
-    int32_t which_irq) __attribute__((__leaf__));
+    int32_t which_irq,
+    mx_handle_t out_handle[1]) __attribute__((__leaf__));
 
-__attribute__((visibility("hidden"))) extern mx_handle_t VDSO_mx_pci_map_config(
-    mx_handle_t handle) __attribute__((__leaf__));
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_pci_map_config(
+    mx_handle_t handle,
+    mx_handle_t out_handle[1]) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_pci_query_irq_mode_caps(
     mx_handle_t handle,

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/pci.h>
 #include <ddk/protocol/ethernet.h>
+#include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
 #include <magenta/syscalls.h>
@@ -121,7 +121,6 @@ static ethmac_protocol_t ethmac_ops = {
     .send = eth_send,
 };
 
-
 static mx_status_t eth_release(mx_device_t* dev) {
     ethernet_device_t* edev = get_eth_device(dev);
     eth_reset_hw(&edev->eth);
@@ -159,7 +158,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     // Query whether we have MSI or Legacy interrupts.
     uint32_t irq_cnt = 0;
     if ((pci->query_irq_mode_caps(dev, MX_PCIE_IRQ_MODE_MSI, &irq_cnt) == NO_ERROR) &&
-            (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1) == NO_ERROR)) {
+        (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1) == NO_ERROR)) {
         edev->edge_triggered_irq = true;
         printf("eth: using MSI mode\n");
     } else if ((pci->query_irq_mode_caps(dev, MX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == NO_ERROR) &&
@@ -171,7 +170,8 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    if ((edev->irqh = pci->map_interrupt(dev, 0)) < 0) {
+    r = pci->map_interrupt(dev, 0, &edev->irqh);
+    if (r != NO_ERROR) {
         printf("eth: failed to map irq\n");
         goto fail;
     }
@@ -179,12 +179,13 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     // map iomem
     uint64_t sz;
     mx_handle_t h;
-    void *io;
-    if ((h = pci->map_mmio(dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz)) < 0) {
+    void* io;
+    r = pci->map_mmio(dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
+    if (r != NO_ERROR) {
         printf("eth: cannot map io %d\n", h);
         goto fail;
     }
-    edev->eth.iobase = (uintptr_t) io;
+    edev->eth.iobase = (uintptr_t)io;
     edev->ioh = h;
 
     if ((r = pci->enable_bus_master(dev, true)) < 0) {
@@ -236,6 +237,7 @@ mx_driver_t _driver_intel_ethernet = {
     },
 };
 
+// clang-format off
 MAGENTA_DRIVER_BEGIN(_driver_intel_ethernet, "intel-ethernet", "magenta", "0.1", 7)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),

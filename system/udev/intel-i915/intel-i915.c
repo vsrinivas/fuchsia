@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
@@ -145,8 +145,9 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
         return ERR_NO_MEMORY;
 
     const pci_config_t* pci_config;
-    mx_handle_t cfg_handle = pci->get_config(dev, &pci_config);
-    if (cfg_handle >= 0) {
+    mx_handle_t cfg_handle = MX_HANDLE_INVALID;
+    status = pci->get_config(dev, &pci_config, &cfg_handle);
+    if (status == NO_ERROR) {
         if (pci_config->device_id == INTEL_I915_BROADWELL_DID) {
             // TODO: this should be based on the specific target
             device->flags |= FLAGS_BACKLIGHT;
@@ -155,19 +156,18 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
     }
 
     // map register window
-    device->regs_handle = pci->map_mmio(dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                        &device->regs, &device->regs_size);
-    if (device->regs_handle < 0) {
-        status = device->regs_handle;
+    status = pci->map_mmio(dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                           &device->regs, &device->regs_size, &device->regs_handle);
+    if (status != NO_ERROR) {
         goto fail;
     }
 
     // map framebuffer window
-    device->framebuffer_handle = pci->map_mmio(dev, 2, MX_CACHE_POLICY_WRITE_COMBINING,
-                                               &device->framebuffer,
-                                               &device->framebuffer_size);
-    if (device->framebuffer_handle < 0) {
-        status = device->framebuffer_handle;
+    status = pci->map_mmio(dev, 2, MX_CACHE_POLICY_WRITE_COMBINING,
+                           &device->framebuffer,
+                           &device->framebuffer_size,
+                           &device->framebuffer_handle);
+    if (status != NO_ERROR) {
         goto fail;
     }
 
@@ -214,6 +214,7 @@ mx_driver_t _driver_intel_i915 = {
     },
 };
 
+// clang-format off
 MAGENTA_DRIVER_BEGIN(_driver_intel_i915, "intel-i915-display", "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),

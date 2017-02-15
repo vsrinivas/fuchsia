@@ -11,13 +11,13 @@
 #include <hw/pci.h>
 #include <intel-serialio/reg.h>
 #include <intel-serialio/serialio.h>
+#include <magenta/device/i2c.h>
+#include <magenta/listnode.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <magenta/device/i2c.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <magenta/listnode.h>
 #include <threads.h>
 
 #include "controller.h"
@@ -99,15 +99,16 @@ static mx_status_t intel_serialio_i2c_add_slave(
         goto fail2;
 
     const pci_config_t* pci_config;
-    mx_handle_t config_handle = pci->get_config(dev->parent, &pci_config);
+    mx_handle_t config_handle;
+    status = pci->get_config(dev->parent, &pci_config, &config_handle);
 
-    if (config_handle < 0)
+    if (status != NO_ERROR)
         goto fail2;
 
     int count = 0;
-    slave->props[count++] = (mx_device_prop_t){ BIND_PCI_VID, 0, pci_config->vendor_id };
-    slave->props[count++] = (mx_device_prop_t){ BIND_PCI_DID, 0, pci_config->device_id };
-    slave->props[count++] = (mx_device_prop_t){ BIND_I2C_ADDR, 0, address };
+    slave->props[count++] = (mx_device_prop_t){BIND_PCI_VID, 0, pci_config->vendor_id};
+    slave->props[count++] = (mx_device_prop_t){BIND_PCI_DID, 0, pci_config->device_id};
+    slave->props[count++] = (mx_device_prop_t){BIND_I2C_ADDR, 0, address};
     slave->device.props = slave->props;
     slave->device.prop_count = count;
 
@@ -304,14 +305,14 @@ mx_status_t intel_serialio_i2c_reset_controller(
 
     // The register will only return valid values if the ACPI _PS0 has been
     // evaluated.
-    if (*REG32((void *)device->regs + DEVIDLE_CONTROL) != 0xffffffff) {
+    if (*REG32((void*)device->regs + DEVIDLE_CONTROL) != 0xffffffff) {
         // Wake up device if it is in DevIdle state
         RMWREG32((void*)device->regs + DEVIDLE_CONTROL, DEVIDLE_CONTROL_DEVIDLE, 1, 0);
 
         // Wait for wakeup to finish processing
         int retry = 10;
         while (retry-- &&
-                (*REG32((void *)device->regs + DEVIDLE_CONTROL) & (1 << DEVIDLE_CONTROL_CMD_IN_PROGRESS))) {
+               (*REG32((void*)device->regs + DEVIDLE_CONTROL) & (1 << DEVIDLE_CONTROL_CMD_IN_PROGRESS))) {
             usleep(10);
         }
         if (!retry) {
@@ -424,17 +425,16 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     memset(&device->mutex, 0, sizeof(device->mutex));
 
     const pci_config_t* pci_config;
-    mx_handle_t config_handle = pci->get_config(dev, &pci_config);
-    if (config_handle < 0) {
-        status = config_handle;
+    mx_handle_t config_handle;
+    status = pci->get_config(dev, &pci_config, &config_handle);
+    if (status != NO_ERROR) {
         goto fail;
     }
 
-    device->regs_handle = pci->map_mmio(
+    status = pci->map_mmio(
         dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-        (void**)&device->regs, &device->regs_size);
-    if (device->regs_handle < 0) {
-        status = device->regs_handle;
+        (void**)&device->regs, &device->regs_size, &device->regs_handle);
+    if (status != NO_ERROR) {
         goto fail;
     }
 

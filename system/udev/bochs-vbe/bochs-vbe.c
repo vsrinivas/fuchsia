@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
@@ -186,11 +186,13 @@ static mx_protocol_device_t bochs_vbe_device_proto = {
 
 static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
+    mx_status_t status;
+
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
 
-    mx_status_t status = pci->claim_device(dev);
-    if (status < 0)
+    status = pci->claim_device(dev);
+    if (status != NO_ERROR)
         return status;
 
     // map resources and initialize the device
@@ -199,19 +201,19 @@ static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev, void** coo
         return ERR_NO_MEMORY;
 
     // map register window
-    device->regs_handle = pci->map_mmio(dev, 2, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                        &device->regs, &device->regs_size);
-    if (device->regs_handle < 0) {
-        status = device->regs_handle;
+    status = pci->map_mmio(dev, 2, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                           &device->regs, &device->regs_size,
+                           &device->regs_handle);
+    if (status != NO_ERROR) {
         goto fail;
     }
 
     // map framebuffer window
-    device->framebuffer_handle = pci->map_mmio(dev, 0, MX_CACHE_POLICY_WRITE_COMBINING,
-                                               &device->framebuffer,
-                                               &device->framebuffer_size);
-    if (device->framebuffer_handle < 0) {
-        status = device->framebuffer_handle;
+    status = pci->map_mmio(dev, 0, MX_CACHE_POLICY_WRITE_COMBINING,
+                           &device->framebuffer,
+                           &device->framebuffer_size,
+                           &device->framebuffer_handle);
+    if (status != NO_ERROR) {
         goto fail;
     }
 
@@ -244,6 +246,7 @@ mx_driver_t _driver_bochs_vbe = {
     },
 };
 
+// clang-format off
 MAGENTA_DRIVER_BEGIN(_driver_bochs_vbe, "bochs-vbe", "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, QEMU_VGA_VID),

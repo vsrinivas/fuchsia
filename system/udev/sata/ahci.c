@@ -2,28 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/pci.h>
 
+#include <assert.h>
 #include <hexdump/hexdump.h>
+#include <magenta/listnode.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <magenta/listnode.h>
-#include <sys/param.h>
-#include <assert.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/param.h>
 #include <threads.h>
 #include <unistd.h>
 
 #include "ahci.h"
 #include "sata.h"
 
+// clang-format off
 #define INTEL_VID           (0x8086)
 #define LYNX_POINT_AHCI_DID (0x8c02)
 #define WILDCAT_AHCI_DID    (0x9c83)
@@ -59,6 +60,7 @@
 #define AHCI_PORT_FLAG_IMPLEMENTED (1 << 0)
 #define AHCI_PORT_FLAG_PRESENT     (1 << 1)
 #define AHCI_PORT_FLAG_SYNC_PAUSED (1 << 2) // port is paused until pending xfers are done
+//clang-format on
 
 typedef struct ahci_port {
     int nr; // 0-based
@@ -705,17 +707,16 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
     device_init(&device->device, drv, "ahci", &ahci_device_proto);
 
     // map register window
-    device->regs_handle = pci->map_mmio(dev, 5, MX_CACHE_POLICY_UNCACHED_DEVICE, (void*)&device->regs, &device->regs_size);
-    if (device->regs_handle < 0) {
-        status = device->regs_handle;
+    status = pci->map_mmio(dev, 5, MX_CACHE_POLICY_UNCACHED_DEVICE, (void*)&device->regs, &device->regs_size, &device->regs_handle);
+    if (status != NO_ERROR) {
         xprintf("ahci: error %d mapping register window\n", status);
         goto fail;
     }
 
     const pci_config_t* config;
-    mx_handle_t config_handle = pci->get_config(dev, &config);
-    if (config_handle < 0) {
-        status = config_handle;
+    mx_handle_t config_handle;
+    status = pci->get_config(dev, &config, &config_handle);
+    if (status != NO_ERROR) {
         xprintf("ahci: error %d getting pci config\n", status);
         goto fail;
     }
@@ -746,9 +747,8 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
     }
 
     // get irq handle
-    device->irq_handle = pci->map_interrupt(dev, 0);
-    if (device->irq_handle < 0) {
-        status = device->irq_handle;
+    status = pci->map_interrupt(dev, 0, &device->irq_handle);
+    if (status != NO_ERROR) {
         xprintf("ahci: error %d getting irq handle\n", status);
         goto fail;
     }
@@ -796,6 +796,7 @@ mx_driver_t _driver_ahci = {
     },
 };
 
+// clang-format off
 MAGENTA_DRIVER_BEGIN(_driver_ahci, "ahci", "magenta", "0.1", 13)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_GOTO_IF(EQ, BIND_PCI_VID, AMD_AHCI_VID, 1),

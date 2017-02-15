@@ -505,8 +505,8 @@ syscall pci_reset_device
     returns (mx_status_t);
 
 syscall pci_map_mmio
-    (handle: mx_handle_t, bar_num: uint32_t, cache_policy: mx_cache_policy_t)
-    returns (mx_handle_t);
+    (handle: mx_handle_t, bar_num: uint32_t, cache_policy: mx_cache_policy_t, out_handle: mx_handle_t[1] OUT)
+    returns (mx_status_t);
 
 syscall pci_io_write
     (handle: mx_handle_t, bar_num: uint32_t, offset: uint32_t, len: uint32_t, value: uint32_t)
@@ -518,12 +518,12 @@ syscall pci_io_read
     returns (mx_status_t);
 
 syscall pci_map_interrupt
-    (handle: mx_handle_t, which_irq: int32_t)
-    returns (mx_handle_t);
+    (handle: mx_handle_t, which_irq: int32_t, out_handle: mx_handle_t[1] OUT)
+    returns (mx_status_t);
 
 syscall pci_map_config
-    (handle: mx_handle_t)
-    returns (mx_handle_t);
+    (handle: mx_handle_t, out_handle: mx_handle_t[1] OUT)
+    returns (mx_status_t);
 
 syscall pci_query_irq_mode_caps
     (handle: mx_handle_t, mode: uint32_t, out_max_irqs: uint32_t[1] OUT)

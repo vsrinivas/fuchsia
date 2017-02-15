@@ -17,16 +17,22 @@
 
 static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
+    const pci_config_t* pci_config;
+    mx_handle_t config_handle = MX_HANDLE_INVALID;
+    mx_status_t res;
+
+    if (!drv || !dev) {
+        return ERR_INVALID_ARGS;
+    }
+
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
 
-    const pci_config_t* pci_config;
-    mx_handle_t config_handle = pci->get_config(dev, &pci_config);
+    res = pci->get_config(dev, &pci_config, &config_handle);
+    if (res != NO_ERROR) {
+        return res;
+    }
 
-    if (config_handle < 0)
-        return config_handle;
-
-    mx_status_t res;
     switch (pci_config->device_id) {
     case INTEL_WILDCAT_POINT_SERIALIO_DMA_DID:
         res = intel_serialio_bind_dma(drv, dev);
@@ -69,6 +75,7 @@ mx_driver_t _intel_serialio = {
     },
 };
 
+// clang-format off
 MAGENTA_DRIVER_BEGIN(_intel_serialio, "intel-serialio", "magenta", "0.1", 14)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),

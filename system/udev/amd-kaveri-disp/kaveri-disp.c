@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
@@ -91,10 +91,12 @@ static mx_protocol_device_t kaveri_disp_device_proto = {
 
 static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
+    mx_status_t status;
+
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
 
-    mx_status_t status = pci->claim_device(dev);
+    status = pci->claim_device(dev);
     if (status < 0)
         return status;
 
@@ -105,20 +107,19 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
 
     // map register window
     // seems to be bar 5
-    device->regs_handle = pci->map_mmio(dev, 5, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                        &device->regs, &device->regs_size);
-    if (device->regs_handle < 0) {
-        status = device->regs_handle;
+    status = pci->map_mmio(dev, 5, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                           &device->regs, &device->regs_size, &device->regs_handle);
+    if (status != NO_ERROR) {
         goto fail;
     }
 
     // map framebuffer window
     // seems to be bar 0
-    device->framebuffer_handle = pci->map_mmio(dev, 0, MX_CACHE_POLICY_WRITE_COMBINING,
-                                               &device->framebuffer,
-                                               &device->framebuffer_size);
-    if (device->framebuffer_handle < 0) {
-        status = device->framebuffer_handle;
+    status = pci->map_mmio(dev, 0, MX_CACHE_POLICY_WRITE_COMBINING,
+                           &device->framebuffer,
+                           &device->framebuffer_size,
+                           &device->framebuffer_handle);
+    if (status != NO_ERROR) {
         goto fail;
     }
 
@@ -147,9 +148,9 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
     device_add(&device->device, dev);
 
     printf("initialized amd kaveri R7 display driver, reg=%p regsize=0x%" PRIx64 " fb=%p fbsize=0x%" PRIx64 "\n",
-            device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
+           device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
     printf("\twidth %u height %u stride %u format %u\n",
-            device->info.width, device->info.height, device->info.stride, device->info.format);
+           device->info.width, device->info.height, device->info.stride, device->info.format);
 
     return NO_ERROR;
 fail:
@@ -163,6 +164,7 @@ mx_driver_t _driver_kaveri_disp = {
     },
 };
 
+// clang-format off
 MAGENTA_DRIVER_BEGIN(_driver_kaveri_disp, "amd-kaveri-display", "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, AMD_GFX_VID),
