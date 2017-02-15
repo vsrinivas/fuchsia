@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int __putenv(char* s, int a);
+#include "env_impl.h"
 
 int setenv(const char* var, const char* value, int overwrite) {
     char* s;

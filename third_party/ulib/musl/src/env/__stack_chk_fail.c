@@ -1,10 +1,11 @@
+#include "libc.h"
 #include "pthread_impl.h"
 #include <stdint.h>
 #include <string.h>
 
 uintptr_t __stack_chk_guard;
 
-void __init_ssp(void* entropy) {
+void __init_ssp(uintptr_t* entropy) {
     if (entropy)
         memcpy(&__stack_chk_guard, entropy, sizeof(uintptr_t));
     else

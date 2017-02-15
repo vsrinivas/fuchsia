@@ -1,8 +1,9 @@
 #include "libc.h"
 #include "pthread_impl.h"
+#include "tls_impl.h"
 #include <string.h>
 
-void* __copy_tls(unsigned char* mem) {
+pthread_t __copy_tls(unsigned char* mem) {
     pthread_t td;
     struct tls_module* p;
     size_t i;

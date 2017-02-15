@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "libc.h"
+#include "env_impl.h"
 
 char** __env_map;
 

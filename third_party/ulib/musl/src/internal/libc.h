@@ -39,6 +39,11 @@ extern struct __libc __libc ATTR_LIBC_VISIBILITY;
 extern size_t __hwcap ATTR_LIBC_VISIBILITY;
 extern char *__progname, *__progname_full;
 
+void __init_ssp(uintptr_t* entropy);
+_Noreturn void __libc_start_main(int (*main)(int, char**, char**), void* stack_end, void* arg);
+
+void __stack_chk_fail(void);
+
 int __lockfile(FILE*) ATTR_LIBC_VISIBILITY;
 void __unlockfile(FILE*) ATTR_LIBC_VISIBILITY;
 

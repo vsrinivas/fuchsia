@@ -1,7 +1,7 @@
 #include <errno.h>
 #include <stdlib.h>
 
-void* __malloc0(size_t);
+#include "malloc_impl.h"
 
 void* calloc(size_t m, size_t n) {
     if (n && m > (size_t)-1 / n) {

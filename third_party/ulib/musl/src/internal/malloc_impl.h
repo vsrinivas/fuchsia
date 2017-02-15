@@ -24,3 +24,5 @@ struct chunk {
 
 #define C_INUSE ((size_t)1)
 #define IS_MMAPPED(c) !((c)->csize & (C_INUSE))
+
+void* __malloc0(size_t);

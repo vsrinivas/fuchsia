@@ -1,5 +1,6 @@
 #include "libc.h"
 #include "pthread_impl.h"
+#include "tls_impl.h"
 #include <string.h>
 
 void __reset_tls(void) {
