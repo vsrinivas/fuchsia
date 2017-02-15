@@ -142,6 +142,11 @@ static void dump_partitions(const char* dev) {
 }
 
 static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, const char* name) {
+    uint8_t guid[GPT_GUID_LEN];
+    size_t sz;
+    if (mx_cprng_draw(guid, GPT_GUID_LEN, &sz) != NO_ERROR)
+        return;
+
     int fd;
     gpt_device_t* gpt = init(dev, true, &fd);
     if (!gpt) return;
@@ -154,10 +159,7 @@ static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, con
     }
 
     uint8_t type[GPT_GUID_LEN];
-    uint8_t guid[GPT_GUID_LEN];
     memset(type, 0xff, GPT_GUID_LEN);
-    size_t sz;
-    mx_cprng_draw(guid, GPT_GUID_LEN, &sz);
     int rc = gpt_partition_add(gpt, name, type, guid, offset, blocks, 0);
     if (rc == 0) {
         printf("add partition: name=%s offset=0x%" PRIx64 " blocks=0x%" PRIx64 "\n", name, offset, blocks);
