@@ -32,6 +32,8 @@ def main():
     parser.add_argument("--boot-server", dest="bootserver", action="store_true",
                         default=False,
                         help="run the bootserver instead of running via qemu")
+    parser.add_argument("--kernel-cmdline", "-c", dest="kernel_cmdline",
+                        help="kernel command line")
     parser.add_argument("--verbose", dest="verbose", action="store_true",
                         default=False, help="you like spew")
     parser.add_argument("--dry-run", dest="dry_run", action="store_true",
@@ -64,6 +66,8 @@ def main():
             command += ["-x", boot_fs]
         if args.graphical:
             command += ["-g"]
+        if args.kernel_cmdline:
+            command += ["-c", args.kernel_cmdline]
 
     if args.verbose or args.dry_run:
         print "Running: " + " ".join(command)
