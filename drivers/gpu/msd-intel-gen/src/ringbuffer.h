@@ -5,15 +5,18 @@
 #ifndef RINGBUFFER_H
 #define RINGBUFFER_H
 
+#include "instructions.h"
 #include "magma_util/macros.h"
 #include "msd_intel_buffer.h"
 #include <memory>
 
 class AddressSpace;
 
-class Ringbuffer {
+class Ringbuffer : public InstructionWriter {
 public:
     Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer);
+
+    void write_dword(uint32_t dword) override { write_tail(dword); }
 
     uint64_t size() { return size_; }
 

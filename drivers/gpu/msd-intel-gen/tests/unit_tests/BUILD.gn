@@ -25,6 +25,7 @@ source_set("tests_not_requiring_hardware") {
   sources = [
     "modeset/test_displayport.cc",
     "test_buffer.cc",
+    "test_cache_config.cc",
     "test_context.cc",
     "test_engine_command_streamer.cc",
     "test_gtt.cc",

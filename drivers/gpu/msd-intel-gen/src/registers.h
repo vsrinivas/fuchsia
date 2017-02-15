@@ -641,6 +641,38 @@ public:
     }
 };
 
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.764
+class MemoryObjectControlState {
+public:
+    static constexpr uint32_t kGraphicsOffset = 0xC800;
+
+    static constexpr uint32_t kCacheabilityShift = 0;
+    static constexpr uint32_t kCacheShift = 2;
+    static constexpr uint32_t kLruManagementShift = 4;
+
+    enum Cacheability { PAGETABLE = 0, UNCACHED, WRITETHROUGH, WRITEBACK };
+    enum Cache { LLC_ELLC = 2 };
+    enum LruManagement { LRU_0 = 0, LRU_3 = 3 };
+
+    static uint32_t format(Cacheability cacheability, Cache cache, LruManagement lru_management)
+    {
+        return (lru_management << kLruManagementShift) | (cache << kCacheShift) |
+               (cacheability << kCacheabilityShift);
+    }
+};
+
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.1118
+class LncfMemoryObjectControlState {
+public:
+    static constexpr uint32_t kOffset = 0xB020;
+
+    static constexpr uint32_t kCacheabilityShift = 4;
+
+    enum Cacheability { DIRECT = 0, UNCACHED, WRITETHROUGH, WRITEBACK };
+
+    static uint16_t format(Cacheability cacheability) { return cacheability << kCacheabilityShift; }
+};
+
 } // namespace
 
 #endif // REGISTERS_H

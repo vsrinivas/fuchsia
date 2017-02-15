@@ -98,10 +98,13 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
     if (!locked_context_->IsInitializedForEngine(engine->id())) {
         if (!engine->InitContext(locked_context_.get()))
             return DRETF(false, "failed to initialize context");
-    }
 
-    if (!locked_context_->Map(global_gtt, engine->id()))
-        return DRETF(false, "failed to map context");
+        if (!locked_context_->Map(global_gtt, engine->id()))
+            return DRETF(false, "failed to map context");
+
+        if (!engine->InitContextCacheConfig(locked_context_))
+            return DRETF(false, "failed to init cache config");
+    }
 
     exec_resource_mappings_.clear();
     exec_resource_mappings_.reserve(exec_resources_.size());

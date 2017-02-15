@@ -38,6 +38,8 @@ public:
     // Initialize backing store for the given context on this engine command streamer.
     bool InitContext(MsdIntelContext* context) const;
 
+    bool InitContextCacheConfig(std::shared_ptr<MsdIntelContext> context);
+
     // Initialize engine command streamer hardware.
     void InitHardware();
 
@@ -50,6 +52,8 @@ public:
     virtual bool Reset();
 
 protected:
+    virtual bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) = 0;
+
     bool SubmitContext(MsdIntelContext* context, uint32_t tail);
     bool UpdateContext(MsdIntelContext* context, uint32_t tail);
     void SubmitExeclists(MsdIntelContext* context);
@@ -107,7 +111,7 @@ private:
 
     uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 
-    bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch);
+    bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) override;
 
     bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
                           AddressSpaceType address_space_type);

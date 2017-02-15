@@ -10,6 +10,8 @@ source_set("src") {
   sources = [
     "address_space.cc",
     "address_space.h",
+    "cache_config.cc",
+    "cache_config.h",
     "command_buffer.cc",
     "command_buffer.h",
     "engine_command_streamer.cc",

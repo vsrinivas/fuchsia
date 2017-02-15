@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "engine_command_streamer.h"
+#include "cache_config.h"
 #include "device_id.h"
 #include "instructions.h"
 #include "magma_util/macros.h"
@@ -39,6 +40,19 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
 
     // Transfer ownership of context_buffer
     context->SetEngineState(id(), std::move(context_buffer), std::move(ringbuffer));
+
+    return true;
+}
+
+bool EngineCommandStreamer::InitContextCacheConfig(std::shared_ptr<MsdIntelContext> context)
+{
+    auto ringbuffer = context->get_ringbuffer(id());
+
+    if (!ringbuffer->HasSpace(CacheConfig::InstructionBytesRequired()))
+        return DRETF(false, "insufficient ringbuffer space for cache config");
+
+    if (!CacheConfig::InitCacheConfig(ringbuffer, id()))
+        return DRETF(false, "failed to init cache config buffer");
 
     return true;
 }
@@ -643,7 +657,7 @@ bool EngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags
     DLOG("writing sequence number update to 0x%x", sequence_number);
 
     MiPipeControl::write(ringbuffer, sequence_number, gpu_addr, flags);
-    MiNoop::write_ringbuffer(ringbuffer);
+    MiNoop::write(ringbuffer);
 
     *sequence_number_out = sequence_number;
 
@@ -660,8 +674,8 @@ bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu
     if (!ringbuffer->HasSpace(dword_count * sizeof(uint32_t)))
         return DRETF(false, "ringbuffer has insufficient space");
 
-    MiBatchBufferStart::write_ringbuffer(ringbuffer, gpu_addr, address_space_type);
-    MiNoop::write_ringbuffer(ringbuffer);
+    MiBatchBufferStart::write(ringbuffer, gpu_addr, address_space_type);
+    MiNoop::write(ringbuffer);
 
     DLOG("started batch buffer 0x%lx address_space_type %d", gpu_addr, address_space_type);
 

@@ -4,6 +4,7 @@
 
 #include "instructions.h"
 #include "mock/mock_address_space.h"
+#include "ringbuffer.h"
 #include "gtest/gtest.h"
 
 class TestRingbuffer {
@@ -27,7 +28,7 @@ public:
     {
         uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get());
 
-        MiNoop::write_ringbuffer(ringbuffer_.get());
+        MiNoop::write(ringbuffer_.get());
 
         EXPECT_EQ(*vaddr, 0u);
     }
@@ -41,7 +42,7 @@ public:
         uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / 4;
 
         gpu_addr_t gpu_addr = 0xabcd1234cafebeef;
-        MiBatchBufferStart::write_ringbuffer(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_PPGTT);
+        MiBatchBufferStart::write(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_PPGTT);
 
         EXPECT_EQ(ringbuffer_->tail() - tail_start,
                   MiBatchBufferStart::kDwordCount * sizeof(uint32_t));
@@ -52,7 +53,8 @@ public:
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
 
         gpu_addr = 0xaa00bb00cc00dd;
-        MiBatchBufferStart::write_ringbuffer(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_GGTT);
+
+        MiBatchBufferStart::write(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_GGTT);
         EXPECT_EQ(ringbuffer_->tail() - tail_start,
                   2 * MiBatchBufferStart::kDwordCount * sizeof(uint32_t));
         EXPECT_EQ(*vaddr++,
