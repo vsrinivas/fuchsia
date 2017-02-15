@@ -7,21 +7,6 @@ mx_time_t sys_time_get(
 mx_status_t sys_nanosleep(
     mx_time_t nanoseconds);
 
-uint64_t sys_ticks_get();
-
-uint64_t sys_ticks_per_second();
-
-uint32_t sys_num_cpus();
-
-mx_status_t sys_version_get(
-    char version[],
-    uint32_t version_len);
-
-mx_status_t sys_cache_flush(
-    const void* addr,
-    size_t len,
-    uint32_t flags);
-
 mx_status_t sys_handle_close(
     mx_handle_t handle);
 

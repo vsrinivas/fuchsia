@@ -266,9 +266,26 @@ struct TypeSpec {
 struct Syscall {
     FileCtx fc;
     string name;
+    int index = -1;
     std::vector<TypeSpec> ret_spec;
     std::vector<TypeSpec> arg_spec;
     std::vector<string> attributes;
+
+    Syscall(const FileCtx& sc_fc, const string& sc_name)
+        : fc(sc_fc), name(sc_name) {}
+
+    bool has_attribute(const char* attr) const {
+        return std::find(attributes.begin(), attributes.end(),
+                         attr) != attributes.end();
+    }
+
+    bool is_vdso() const {
+        return has_attribute("vdsocall");
+    }
+
+    bool is_noreturn() const {
+        return has_attribute("noreturn");
+    }
 
     bool validate() const {
         if (ret_spec.size() > kMaxReturnArgs) {
@@ -298,6 +315,11 @@ struct Syscall {
             }
         }
         return true;
+    }
+
+    void assign_index(int* next_index) {
+        if (!is_vdso())
+            index = (*next_index)++;
     }
 
     bool valid_array_count(const TypeSpec& ts) const {
@@ -462,7 +484,7 @@ bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
 
 struct GenParams;
 
-using GenFn = bool (*) (int index, const GenParams& gp, std::ofstream& os, const Syscall& sc);
+using GenFn = bool (*)(const GenParams& gp, std::ofstream& os, const Syscall& sc);
 
 struct GenParams {
     GenFn genfn;
@@ -503,18 +525,8 @@ const string add_attribute(const GenParams& gp, const string& attribute) {
     return (ft == gp.attributes.end()) ? string() : ft->second;
 }
 
-bool is_vdso(const Syscall& sc) {
-    return std::find(
-        sc.attributes.begin(), sc.attributes.end(), "vdsocall") != sc.attributes.end();
-}
-
-bool is_noreturn(const Syscall& sc) {
-    return std::find(
-        sc.attributes.begin(), sc.attributes.end(), "noreturn") != sc.attributes.end();
-}
-
 bool generate_legacy_header(
-    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
     constexpr uint32_t indent_spaces = 4u;
 
     auto syscall_name = gp.name_prefix + sc.name;
@@ -534,7 +546,7 @@ bool generate_legacy_header(
         if (sc.ret_spec.empty()) {
             os << override_type(string());
         } else {
-            if (is_noreturn(sc)) {
+            if (sc.is_noreturn()) {
                 fprintf(stderr, "error: unexpected return spec for %s\n", sc.name.c_str());
                 return false;
             }
@@ -598,46 +610,53 @@ bool generate_legacy_header(
     return os.good();
 }
 
-bool generate_legacy_code(int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (is_vdso(sc))
+bool generate_kernel_header(
+    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    return sc.is_vdso() ? true : generate_legacy_header(gp, os, sc);
+}
+
+bool generate_legacy_code(const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
         return true;
-    os << "    case " << index << ": " << gp.switch_var
+    os << "    case " << sc.index << ": " << gp.switch_var
        << " = reinterpret_cast<" << gp.switch_type << ">(" << gp.name_prefix << sc.name <<");\n"
        << "       break;\n";
     return os.good();
 }
 
 bool generate_legacy_assembly_x64(
-    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (is_vdso(sc))
+    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
         return true;
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs64, mx_##name, n
     os << gp.entry_prefix << " " << sc.arg_spec.size() << " "
-       << gp.name_prefix << sc.name << " " << index << "\n";
+       << gp.name_prefix << sc.name << " " << sc.index << "\n";
     return os.good();
 }
 
 bool generate_legacy_assembly_arm64(
-    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (is_vdso(sc))
+    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
         return true;
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall mx_##name, n
-    os << gp.entry_prefix << " " << gp.name_prefix << sc.name << " " << index << "\n";
+    os << gp.entry_prefix << " " << gp.name_prefix << sc.name << " " << sc.index << "\n";
     return os.good();
 }
 
 bool generate_syscall_numbers_header(
-    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    os << gp.entry_prefix << sc.name << " " << index << "\n";
+    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
+        return true;
+    os << gp.entry_prefix << sc.name << " " << sc.index << "\n";
     return os.good();
 }
 
 bool generate_trace_info(
-    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (is_vdso(sc))
+    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
         return true;
     // Can be injected as an array of structs or into a tuple-like C++ container.
-    os << "{" << index << ", " << sc.arg_spec.size() << ", "
+    os << "{" << sc.index << ", " << sc.arg_spec.size() << ", "
        << '"' << sc.name << "\"},\n";
 
     return os.good();
@@ -667,7 +686,7 @@ const GenParams gen_params[] = {
     },
     // The kernel header, C++.
     {
-        generate_legacy_header,
+        generate_kernel_header,
         ".kernel.h",        // file postfix.
         nullptr,            // no function prefix.
         "sys_",             // function name prefix.
@@ -714,9 +733,10 @@ class SygenGenerator {
 public:
     SygenGenerator(bool verbose) : verbose_(verbose) {}
 
-    bool AddSyscall(const Syscall& syscall) {
+    bool AddSyscall(Syscall& syscall) {
         if (!syscall.validate())
             return false;
+        syscall.assign_index(&next_index_);
         calls_.push_back(syscall);
         return true;
     }
@@ -748,13 +768,12 @@ private:
             return false;
         }
 
-        int index = 0;
-        for (const auto& sc : calls_) {
-            if (!gp.genfn(index, gp, ofile, sc)) {
-                print_error("generation failed", output_file);
-                return false;
-            }
-            ++index;
+        if (!std::all_of(calls_.begin(), calls_.end(),
+                         [&gp, &ofile](const Syscall& sc) {
+                             return gp.genfn(gp, ofile, sc);
+                         })) {
+            print_error("generation failed", output_file);
+            return false;
         }
 
         ofile << "\n";
@@ -767,6 +786,7 @@ private:
     }
 
     std::list<Syscall> calls_;
+    int next_index_ = 0;
     const bool verbose_;
 };
 
@@ -782,7 +802,7 @@ bool process_syscall(SygenGenerator* parser, TokenStream& ts) {
     if (!vet_identifier(name, ts.filectx()))
         return false;
 
-    Syscall syscall { ts.filectx(), name };
+    Syscall syscall{ ts.filectx(), name };
 
     // Every entry gets the special catch-all "*" attribute.
     syscall.attributes.push_back("*");
