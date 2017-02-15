@@ -77,8 +77,8 @@ constexpr OpCode ControllerAndBasebandOpCode(const uint16_t ocf) {
 constexpr OpCode kReset = ControllerAndBasebandOpCode(0x0003);
 
 struct ResetReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 };
 
 // ========================================
@@ -95,8 +95,8 @@ struct WriteLocalNameCommandParams {
 };
 
 struct WriteLocalNameReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 };
 
 // =======================================
@@ -104,8 +104,8 @@ struct WriteLocalNameReturnParams {
 constexpr OpCode kReadLocalName = ControllerAndBasebandOpCode(0x0014);
 
 struct ReadLocalNameReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // A UTF-8 encoded User Friendly Descriptive Name for the device. This can
   // contain up to 248 octets. If the name contained in the parameter is shorter
@@ -120,8 +120,8 @@ struct ReadLocalNameReturnParams {
 constexpr OpCode kReadClassOfDevice = ControllerAndBasebandOpCode(0x0023);
 
 struct ReadClassOfDeviceReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // Class of Device for the device.
   uint8_t class_of_device[3];
@@ -137,8 +137,8 @@ struct WriteClassOfDeviceCommandParams {
 };
 
 struct WriteClassOfDeviceReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 };
 
 // =========================================================
@@ -146,8 +146,8 @@ struct WriteClassOfDeviceReturnParams {
 constexpr OpCode kReadFlowControlMode = ControllerAndBasebandOpCode(0x0066);
 
 struct ReadFlowControlModeReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // The Flow_Control_Mode configuration parameter allows the Host to select the
   // HCI Data flow control mode used by the Controller for ACL Data traffic.
@@ -167,8 +167,8 @@ struct WriteFlowControlModeCommandParams {
 };
 
 struct WriteFlowControlModeReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 };
 
 // ======= Informational Parameters =======
@@ -183,8 +183,8 @@ constexpr OpCode InformationalParamsOpCode(const uint16_t ocf) {
 constexpr OpCode kReadLocalVersionInfo = InformationalParamsOpCode(0x0001);
 
 struct ReadLocalVersionInfoReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // HCI version (see enum class HCIVersion in hci_constants.h)
   uint8_t hci_version;
@@ -211,8 +211,8 @@ constexpr OpCode kReadLocalSupportedCommands =
     InformationalParamsOpCode(0x0002);
 
 struct ReadLocalSupportedCommandsReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // 512-bit bitmask for each HCI Command. If a bit is 1, then the Controller
   // supports the corresponding command. See enum class SupportedCommand in
@@ -226,8 +226,8 @@ constexpr OpCode kReadLocalSupportedFeatures =
     InformationalParamsOpCode(0x0003);
 
 struct ReadLocalSupportedFeaturesReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // Bit Mask List of LMP features. For details see Core Spec v4.2, Volume 2,
   // Part C, Link Manager Protocol Specification.
@@ -247,8 +247,8 @@ struct ReadLocalExtendedFeaturesCommandParams {
 };
 
 struct ReadLocalExtendedFeaturesReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // - 0x00: The normal LMP features as returned by
   //   Read_Local_Supported_Features.
@@ -270,8 +270,8 @@ struct ReadLocalExtendedFeaturesReturnParams {
 constexpr OpCode kReadBufferSize = InformationalParamsOpCode(0x0005);
 
 struct ReadBufferSizeReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // Maximum length (in octets) of the data portion of each HCI ACL Data Packet
   // that the Controller is able to accept. This is used to determine the size
@@ -298,8 +298,8 @@ struct ReadBufferSizeReturnParams {
 constexpr OpCode kReadBDADDR = InformationalParamsOpCode(0x0009);
 
 struct ReadBDADDRReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // BD_ADDR of the device.
   uint8_t bd_addr[6];
@@ -310,8 +310,8 @@ struct ReadBDADDRReturnParams {
 constexpr OpCode kReadDataBlockSize = InformationalParamsOpCode(0x000A);
 
 struct ReadDataBlockSizeReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // Maximum length (in octets) of the data portion of an HCI ACL Data Packet
   // that the Controller is able to accept for transmission. For AMP Controllers
@@ -355,8 +355,8 @@ constexpr EventCode kCommandStatusEventCode = 0x0F;
 constexpr uint8_t kCommandStatusPending = 0x00;
 
 struct CommandStatusEventParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // The Number of HCI command packets which are allowed to be sent to the
   // Controller from the Host.
@@ -447,8 +447,8 @@ constexpr OpCode LEControllerCommandOpCode(const uint16_t ocf) {
 constexpr OpCode kLEReadBufferSize = LEControllerCommandOpCode(0x0002);
 
 struct LEReadBufferSizeReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // Used to determine the size of the L2CAP PDU segments contained in ACL Data
   // Packets, which are transferred from the Host to the Controller to be broken
@@ -477,8 +477,8 @@ constexpr OpCode kLEReadLocalSupportedFeatures =
     LEControllerCommandOpCode(0x0003);
 
 struct LEReadLocalSupportedFeaturesReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // Bit Mask List of supported LE features. See enum class LEFeatures in
   // hci_constants.h.
@@ -486,8 +486,8 @@ struct LEReadLocalSupportedFeaturesReturnParams {
 } __PACKED;
 
 struct LEReadMaximumDataLengthReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // Maximum number of payload octets that the local Controller supports for
   // transmission of a single Link Layer Data Channel PDU.
@@ -511,8 +511,8 @@ struct LEReadMaximumDataLengthReturnParams {
 constexpr OpCode kLEReadSupportedStates = LEControllerCommandOpCode(0x001C);
 
 struct LEReadSupportedStatesReturnParams {
-  // See enum class Status in hci_constants.h.
-  uint8_t status;
+  // See enum Status in hci_constants.h.
+  Status status;
 
   // Bit-mask of supported state or state combinations. See Core Spec v4.2,
   // Volume 2, Part E, Section 7.8.27 "LE Read Supported States Command".
