@@ -56,7 +56,7 @@ struct gfx_surface {
 };
 
 struct gfx_font {
-    uint16_t* data;
+    const uint16_t* data;
     unsigned width;
     unsigned height;
 };

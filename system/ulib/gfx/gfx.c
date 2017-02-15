@@ -181,7 +181,7 @@ static void putpixel8(gfx_surface* surface, unsigned x, unsigned y, unsigned col
 #define MKPUTCHAR(FUNC,TYPE) \
 static void FUNC(gfx_surface* surface, const gfx_font* font, unsigned ch, unsigned x, unsigned y, unsigned fg, unsigned bg) { \
     TYPE* dest = &((TYPE*)surface->ptr)[x + y * surface->stride]; \
-    uint16_t* cdata = font->data + ch * font->height; \
+    const uint16_t* cdata = font->data + ch * font->height; \
     unsigned fw = font->width; \
     for (unsigned i = font->height; i > 0; i--) { \
         uint16_t xdata = *cdata++; \
