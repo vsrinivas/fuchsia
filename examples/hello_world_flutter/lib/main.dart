@@ -13,6 +13,9 @@ import 'package:flutter/widgets.dart';
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 
+/// This is used for keeping the reference around.
+ModuleImpl _module;
+
 void _log(String msg) {
   print('[Hello World Module] $msg');
 }
@@ -20,6 +23,9 @@ void _log(String msg) {
 /// An implementation of the [Module] interface.
 class ModuleImpl extends Module {
   final ModuleBinding _binding = new ModuleBinding();
+
+  final StoryProxy _story = new StoryProxy();
+  final LinkProxy _link = new LinkProxy();
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
   void bind(InterfaceRequest<Module> request) {
@@ -35,11 +41,12 @@ class ModuleImpl extends Module {
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('ModuleImpl::initialize call');
 
-    StoryProxy story = new StoryProxy();
-    story.ctrl.bind(storyHandle);
-
-    LinkProxy link = new LinkProxy();
-    link.ctrl.bind(linkHandle);
+    // NOTE: These story / link proxy variables must not be local variables.
+    // When a handle is bound to a proxy and then the proxy variable is garbage
+    // collected before the pipe is properly closed or unbound, the app will
+    // crash due to the leaked handle.
+    _story.ctrl.bind(storyHandle);
+    _link.ctrl.bind(linkHandle);
 
     // Do something with the story and link services.
   }
@@ -50,6 +57,8 @@ class ModuleImpl extends Module {
     _log('ModuleImpl::stop call');
 
     // Do some clean up here.
+    _story.ctrl.close();
+    _link.ctrl.close();
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
@@ -64,7 +73,7 @@ void main() {
   _appContext.outgoingServices.addServiceForName(
     (request) {
       _log('Received binding request for Module');
-      new ModuleImpl().bind(request);
+      _module = new ModuleImpl()..bind(request);
     },
     Module.serviceName,
   );
