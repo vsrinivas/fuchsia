@@ -1,11 +1,9 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
-#define APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
-
-#include <thread>
+#ifndef APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_VULKAN_H_
+#define APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_VULKAN_H_
 
 #include "apps/mozart/src/compositor/backend/output.h"
 #include "lib/ftl/macros.h"
@@ -14,14 +12,23 @@
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
+#include "lib/mtl/threading/thread.h"
+
+namespace mtl {
+class Thread;
+}
+
+namespace vulkan {
+class VulkanWindow;
+}
 
 namespace compositor {
 
-// Renderer backed by a Framebuffer on a new virtual console.
-class FramebufferOutput : public Output {
+// Renderer backed by a Magma surface. Uses Skia Vulkan backend.
+class FramebufferOutputVulkan : public Output {
  public:
-  FramebufferOutput();
-  ~FramebufferOutput() override;
+  FramebufferOutputVulkan();
+  ~FramebufferOutputVulkan() override;
 
   void Initialize(ftl::Closure error_callback);
 
@@ -32,6 +39,10 @@ class FramebufferOutput : public Output {
 
  private:
   class Rasterizer;
+
+  static std::unique_ptr<vulkan::VulkanWindow> InitializeVulkanWindow(
+      int32_t surface_width,
+      int32_t surface_height);
 
   void PostErrorCallback();
   void PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame);
@@ -50,7 +61,7 @@ class FramebufferOutput : public Output {
   ftl::Closure error_callback_;
 
   std::unique_ptr<Rasterizer> rasterizer_;
-  std::thread rasterizer_thread_;
+  std::unique_ptr<mtl::Thread> rasterizer_thread_;
   ftl::RefPtr<ftl::TaskRunner> rasterizer_task_runner_;
 
   FrameCallback scheduled_frame_callback_;
@@ -66,11 +77,11 @@ class FramebufferOutput : public Output {
   mozart::DisplayInfoPtr display_info_;
   std::vector<DisplayCallback> display_callbacks_;
 
-  ftl::WeakPtrFactory<FramebufferOutput> weak_ptr_factory_;
+  ftl::WeakPtrFactory<FramebufferOutputVulkan> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FramebufferOutput);
+  FTL_DISALLOW_COPY_AND_ASSIGN(FramebufferOutputVulkan);
 };
 
 }  // namespace compositor
 
-#endif  // APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_VULKAN_H_

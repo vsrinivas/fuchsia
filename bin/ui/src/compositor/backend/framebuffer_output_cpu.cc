@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/compositor/backend/framebuffer_output.h"
+#include "apps/mozart/src/compositor/backend/framebuffer_output_cpu.h"
 
 #include <algorithm>
 #include <memory>
@@ -38,9 +38,9 @@ constexpr ftl::TimeDelta kFenceTimeout = ftl::TimeDelta::FromMilliseconds(5000);
 
 }  // namespace
 
-class FramebufferOutput::Rasterizer {
+class FramebufferOutputCpu::Rasterizer {
  public:
-  explicit Rasterizer(FramebufferOutput* output);
+  explicit Rasterizer(FramebufferOutputCpu* output);
   ~Rasterizer();
 
   void DrawFrame(ftl::RefPtr<RenderFrame> frame,
@@ -51,18 +51,18 @@ class FramebufferOutput::Rasterizer {
   void VirtualConsoleReady();
   bool OpenFramebuffer();
 
-  FramebufferOutput* const output_;
+  FramebufferOutputCpu* const output_;
 
   std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
   std::unique_ptr<Framebuffer> framebuffer_;
   sk_sp<SkSurface> framebuffer_surface_;
 };
 
-FramebufferOutput::FramebufferOutput()
+FramebufferOutputCpu::FramebufferOutputCpu()
     : compositor_task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       weak_ptr_factory_(this) {}
 
-FramebufferOutput::~FramebufferOutput() {
+FramebufferOutputCpu::~FramebufferOutputCpu() {
   if (rasterizer_) {
     // Safe to post "this" because we wait for this task to complete.
     rasterizer_task_runner_->PostTask([this] {
@@ -73,7 +73,7 @@ FramebufferOutput::~FramebufferOutput() {
   }
 }
 
-void FramebufferOutput::Initialize(ftl::Closure error_callback) {
+void FramebufferOutputCpu::Initialize(ftl::Closure error_callback) {
   FTL_DCHECK(!rasterizer_);
 
   error_callback_ = error_callback;
@@ -90,7 +90,7 @@ void FramebufferOutput::Initialize(ftl::Closure error_callback) {
   wait.Wait();
 }
 
-void FramebufferOutput::GetDisplayInfo(DisplayCallback callback) {
+void FramebufferOutputCpu::GetDisplayInfo(DisplayCallback callback) {
   FTL_DCHECK(rasterizer_);
 
   if (display_info_) {
@@ -102,7 +102,7 @@ void FramebufferOutput::GetDisplayInfo(DisplayCallback callback) {
   display_callbacks_.push_back(std::move(callback));
 }
 
-void FramebufferOutput::ScheduleFrame(FrameCallback callback) {
+void FramebufferOutputCpu::ScheduleFrame(FrameCallback callback) {
   FTL_DCHECK(callback);
   FTL_DCHECK(!scheduled_frame_callback_);
   FTL_DCHECK(rasterizer_);
@@ -113,7 +113,7 @@ void FramebufferOutput::ScheduleFrame(FrameCallback callback) {
     RunScheduledFrameCallback();
 }
 
-void FramebufferOutput::SubmitFrame(ftl::RefPtr<RenderFrame> frame) {
+void FramebufferOutputCpu::SubmitFrame(ftl::RefPtr<RenderFrame> frame) {
   FTL_DCHECK(frame);
   FTL_DCHECK(rasterizer_);
   frame_number_++;
@@ -134,11 +134,12 @@ void FramebufferOutput::SubmitFrame(ftl::RefPtr<RenderFrame> frame) {
   PostFrameToRasterizer(std::move(frame));
 }
 
-void FramebufferOutput::PostErrorCallback() {
+void FramebufferOutputCpu::PostErrorCallback() {
   compositor_task_runner_->PostTask(error_callback_);
 }
 
-void FramebufferOutput::PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame) {
+void FramebufferOutputCpu::PostFrameToRasterizer(
+    ftl::RefPtr<RenderFrame> frame) {
   FTL_DCHECK(frame_in_progress_);
 
   // Safe to post "this" because this task runs on the rasterizer thread
@@ -151,7 +152,7 @@ void FramebufferOutput::PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame) {
   }));
 }
 
-void FramebufferOutput::OnDisplayReady(mozart::DisplayInfoPtr display_info) {
+void FramebufferOutputCpu::OnDisplayReady(mozart::DisplayInfoPtr display_info) {
   FTL_DCHECK(display_info);
   FTL_DCHECK(!display_info_);
   FTL_DCHECK(frame_in_progress_);
@@ -164,10 +165,10 @@ void FramebufferOutput::OnDisplayReady(mozart::DisplayInfoPtr display_info) {
   PrepareNextFrame();
 }
 
-void FramebufferOutput::OnFrameFinished(uint32_t frame_number,
-                                        ftl::TimePoint submit_time,
-                                        ftl::TimePoint start_time,
-                                        ftl::TimePoint finish_time) {
+void FramebufferOutputCpu::OnFrameFinished(uint32_t frame_number,
+                                           ftl::TimePoint submit_time,
+                                           ftl::TimePoint start_time,
+                                           ftl::TimePoint finish_time) {
   // TODO(jeffbrown): Tally these statistics.
   FTL_DCHECK(frame_in_progress_);
 
@@ -181,7 +182,7 @@ void FramebufferOutput::OnFrameFinished(uint32_t frame_number,
   PrepareNextFrame();
 }
 
-void FramebufferOutput::PrepareNextFrame() {
+void FramebufferOutputCpu::PrepareNextFrame() {
   FTL_DCHECK(frame_in_progress_);
 
   if (next_frame_) {
@@ -195,7 +196,7 @@ void FramebufferOutput::PrepareNextFrame() {
   }
 }
 
-void FramebufferOutput::RunScheduledFrameCallback() {
+void FramebufferOutputCpu::RunScheduledFrameCallback() {
   FTL_DCHECK(scheduled_frame_callback_);
   FTL_DCHECK(!frame_in_progress_);
 
@@ -211,13 +212,13 @@ void FramebufferOutput::RunScheduledFrameCallback() {
   callback(timing);
 }
 
-void FramebufferOutput::TracePendingFrames() {
-  TRACE_COUNTER("gfx", "FramebufferOutput/pending",
-                 reinterpret_cast<uintptr_t>(this), "in_progress",
-                 frame_in_progress_ ? 1 : 0, "next", next_frame_ ? 1 : 0);
+void FramebufferOutputCpu::TracePendingFrames() {
+  TRACE_COUNTER("gfx", "FramebufferOutputCpu/pending",
+                reinterpret_cast<uintptr_t>(this), "in_progress",
+                frame_in_progress_ ? 1 : 0, "next", next_frame_ ? 1 : 0);
 }
 
-FramebufferOutput::Rasterizer::Rasterizer(FramebufferOutput* output)
+FramebufferOutputCpu::Rasterizer::Rasterizer(FramebufferOutputCpu* output)
     : output_(output) {
   FTL_DCHECK(output_);
 
@@ -230,9 +231,9 @@ FramebufferOutput::Rasterizer::Rasterizer(FramebufferOutput* output)
       });
 }
 
-FramebufferOutput::Rasterizer::~Rasterizer() {}
+FramebufferOutputCpu::Rasterizer::~Rasterizer() {}
 
-void FramebufferOutput::Rasterizer::VirtualConsoleReady() {
+void FramebufferOutputCpu::Rasterizer::VirtualConsoleReady() {
   if (!OpenFramebuffer()) {
     output_->PostErrorCallback();
     return;
@@ -253,7 +254,7 @@ void FramebufferOutput::Rasterizer::VirtualConsoleReady() {
   }));
 }
 
-bool FramebufferOutput::Rasterizer::OpenFramebuffer() {
+bool FramebufferOutputCpu::Rasterizer::OpenFramebuffer() {
   TRACE_DURATION("gfx", "InitializeRasterizer");
 
   framebuffer_ = Framebuffer::Open();
@@ -291,9 +292,9 @@ bool FramebufferOutput::Rasterizer::OpenFramebuffer() {
   return true;
 }
 
-void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
-                                              uint32_t frame_number,
-                                              ftl::TimePoint submit_time) {
+void FramebufferOutputCpu::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
+                                                 uint32_t frame_number,
+                                                 ftl::TimePoint submit_time) {
   TRACE_ASYNC_BEGIN("gfx", "Rasterize", frame_number);
   FTL_DCHECK(frame);
 

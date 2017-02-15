@@ -11,7 +11,11 @@
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/mozart/lib/skia/type_converters.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
-#include "apps/mozart/src/compositor/backend/framebuffer_output.h"
+#ifdef MOZART_USE_VULKAN
+#include "apps/mozart/src/compositor/backend/framebuffer_output_vulkan.h"
+#else
+#include "apps/mozart/src/compositor/backend/framebuffer_output_cpu.h"
+#endif
 #include "apps/mozart/src/compositor/graph/snapshot.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
 #include "apps/mozart/src/compositor/renderer_impl.h"
@@ -136,7 +140,12 @@ void CompositorEngine::CreateRenderer(
   uint32_t renderer_id = next_renderer_id_++;
   FTL_CHECK(renderer_id);
 
-  // Create the state and bind implementation to it.
+// Create the state and bind implementation to it.
+#ifdef MOZART_USE_VULKAN
+  typedef FramebufferOutputVulkan FramebufferOutput;
+#else
+  typedef FramebufferOutputCpu FramebufferOutput;
+#endif
   RendererState* renderer_state = new RendererState(
       renderer_id, SanitizeLabel(label), std::make_unique<FramebufferOutput>());
   RendererImpl* renderer_impl =
