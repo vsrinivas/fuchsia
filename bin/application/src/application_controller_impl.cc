@@ -25,46 +25,39 @@ ApplicationControllerImpl::ApplicationControllerImpl(
       this, process_.get(), MX_TASK_TERMINATED);
   if (request.is_pending()) {
     binding_.Bind(std::move(request));
-    binding_.set_connection_error_handler([this] {
-      environment_->ExtractApplication(this);
-      // The destructor of the temporary returned by ExtractApplication destroys
-      // |this| at the end of the previous statement.
-    });
+    binding_.set_connection_error_handler([this] { Kill(); });
   }
 }
 
 ApplicationControllerImpl::~ApplicationControllerImpl() {
-  RemoveTerminationHandlerIfNeeded();
-  // NOTE(abdulla): This is a short-term fix until we better understand process,
-  // module, and application life-cycles.
-  process_.kill();
+  mtl::MessageLoop::GetCurrent()->RemoveHandler(termination_handler_);
+  // Two ways we end up here:
+  // 1) OnHandleReady() destroys this object; in which case, process is dead.
+  // 2) Our owner destroys this object; in which case, the process may still be
+  //    alive.
+  if (process_)
+    process_.kill();
 }
 
-void ApplicationControllerImpl::Kill(const KillCallback& callback) {
-  environment_->ExtractApplication(this);
-  // The destructor of the temporary returned by ExtractApplication destroys
-  // |this| at the end of the previous statement.
-  callback();
+void ApplicationControllerImpl::Kill() {
+  process_.kill();
 }
 
 void ApplicationControllerImpl::Detach() {
   binding_.set_connection_error_handler(ftl::Closure());
 }
 
+// Called when process terminates, regardless of if Kill() was invoked.
 void ApplicationControllerImpl::OnHandleReady(mx_handle_t handle,
                                               mx_signals_t pending) {
   FTL_DCHECK(handle == process_.get());
   FTL_DCHECK(pending & MX_TASK_TERMINATED);
+
+  process_.reset();
+  
   environment_->ExtractApplication(this);
   // The destructor of the temporary returned by ExtractApplication destroys
   // |this| at the end of the previous statement.
-}
-
-void ApplicationControllerImpl::RemoveTerminationHandlerIfNeeded() {
-  if (termination_handler_) {
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(termination_handler_);
-    termination_handler_ = 0u;
-  }
 }
 
 }  // namespace app

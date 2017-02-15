@@ -15,9 +15,9 @@ module app;
 interface ApplicationController {
   // Terminates the application.
   //
-  // Depending on how the application is implemented, the application might be
-  // given a chance to shut down gracefully before being forcibly killed.
-  Kill() => ();
+  // This ApplicationController connection is closed when the application has
+  // terminated.
+  Kill();
 
   // Decouples the lifetime of the application from this controller.
   //

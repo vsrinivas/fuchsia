@@ -29,19 +29,18 @@ class ApplicationControllerImpl : public ApplicationController,
   const std::string& path() const { return path_; }
 
   // |ApplicationController| implementation:
-  void Kill(const KillCallback& callback) override;
+  void Kill() override;
   void Detach() override;
 
  private:
   // |mtl::MessageLoopHandler| implementation:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
 
-  void RemoveTerminationHandlerIfNeeded();
-
   fidl::Binding<ApplicationController> binding_;
   ApplicationEnvironmentImpl* environment_;
   mx::process process_;
   std::string path_;
+
   mtl::MessageLoop::HandlerKey termination_handler_ = 0u;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
