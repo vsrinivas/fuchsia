@@ -4,6 +4,8 @@
 
 import("//magma/gnbuild/magma.gni")
 
+use_vulkan_loader = false
+
 executable("vkreadback") {
   sources = [
     "vkreadback.cc",
@@ -11,9 +13,16 @@ executable("vkreadback") {
 
   public_deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/tests/vulkan_shim",
-    "$mesa_build_root:magma_vulkan",
   ]
+
+  if (use_vulkan_loader) {
+    public_deps += [ "$magma_build_root:vulkan" ]
+  } else {
+    public_deps += [
+      "$magma_build_root/tests/vulkan_shim",
+      "$mesa_build_root:magma_vulkan",
+    ]
+  }
 }
 
 executable("mt_create_vkdevice_loop") {
@@ -23,9 +32,16 @@ executable("mt_create_vkdevice_loop") {
 
   public_deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/tests/vulkan_shim",
-    "$mesa_build_root:magma_vulkan",
   ]
+
+  if (use_vulkan_loader) {
+    public_deps += [ "$magma_build_root:vulkan" ]
+  } else {
+    public_deps += [
+      "$magma_build_root/tests/vulkan_shim",
+      "$mesa_build_root:magma_vulkan",
+    ]
+  }
 }
 
 executable("vk_import_export_readback") {
@@ -37,7 +53,14 @@ executable("vk_import_export_readback") {
 
   public_deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/tests/vulkan_shim",
-    "$mesa_build_root:magma_vulkan",
   ]
+
+  if (use_vulkan_loader) {
+    public_deps += [ "$magma_build_root:vulkan" ]
+  } else {
+    public_deps += [
+      "$magma_build_root/tests/vulkan_shim",
+      "$mesa_build_root:magma_vulkan",
+    ]
+  }
 }

@@ -42,7 +42,11 @@ extern "C" {
 #include <chrono>
 #endif
 
+#if defined(MAGMA_USE_SHIM)
 #include "vulkan_shim.h"
+#else
+#include <vulkan/vulkan.h>
+#endif
 
 //#include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
@@ -2968,6 +2972,8 @@ int cube_main(int argc, char **argv) {
 
 int test_vk_cube(int argc, char** argv)
 {
+#if defined(MAGMA_USE_SHIM)
     VulkanShimInit();
+#endif
     return cube_main(argc, argv);
 }

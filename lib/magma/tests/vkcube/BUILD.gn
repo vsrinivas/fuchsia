@@ -18,12 +18,14 @@ executable("vkcube") {
 
   deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/tests/vulkan_shim",
   ]
 
   if (use_vulkan_loader) {
     deps += [ "$magma_build_root:vulkan" ]
   } else {
-    deps += [ "$mesa_build_root:magma_vulkan" ]
+    deps += [
+      "$magma_build_root/tests/vulkan_shim",
+      "$mesa_build_root:magma_vulkan",
+    ]
   }
 }

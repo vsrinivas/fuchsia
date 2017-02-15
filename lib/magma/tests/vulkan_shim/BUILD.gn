@@ -6,6 +6,7 @@ import("//magma/gnbuild/magma.gni")
 
 config("vulkan_shim_config") {
   include_dirs = [ "." ]
+  defines = [ "MAGMA_USE_SHIM" ]
 }
 
 source_set("vulkan_shim") {
