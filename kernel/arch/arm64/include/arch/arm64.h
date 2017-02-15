@@ -39,6 +39,27 @@ void arm64_uspace_entry(uintptr_t arg1, uintptr_t arg2,
                         uintptr_t pc, uintptr_t sp,
                         vaddr_t kstack, uint32_t spsr) __NO_RETURN;
 
+
+typedef struct {
+    uint8_t     ctype;
+    bool        write_through;
+    bool        write_back;
+    bool        read_alloc;
+    bool        write_alloc;
+    uint32_t    num_sets;
+    uint32_t    associativity;
+    uint32_t    line_size;
+} arm64_cache_desc_t;
+
+typedef struct {
+    uint8_t                 inner_boundary;
+    uint8_t                 lou_u;
+    uint8_t                 loc;
+    uint8_t                 lou_is;
+    arm64_cache_desc_t      level_data_type[7];
+    arm64_cache_desc_t      level_inst_type[7];
+} arm64_cache_info_t;
+
 /* exception handling */
 struct arm64_iframe_long {
     uint64_t r[30];
@@ -78,7 +99,8 @@ void arm64_fpu_context_switch(struct thread *oldthread, struct thread *newthread
 /* overridable syscall handler */
 void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint32_t syscall_imm, uint64_t pc);
 uint64_t arm64_get_boot_el(void);
-
+void arm64_get_cache_info(arm64_cache_info_t* info);
+void arm64_dump_cache_info(uint32_t cpu);
 
 /* block size of the dc zva instruction */
 extern uint32_t arm64_zva_shift;

@@ -37,11 +37,91 @@ uint arm_num_cpus = 1;
 static thread_t _init_thread[SMP_MAX_CPUS - 1];
 #endif
 
+static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
+
 uint64_t arch_boot_el = 0;
 
 uint64_t arm64_get_boot_el(void)
 {
     return arch_boot_el >> 2;
+}
+
+static void parse_ccsid(arm64_cache_desc_t* desc, uint32_t ccsid) {
+    desc->write_through = BIT(ccsid, 31) > 0;
+    desc->write_back    = BIT(ccsid, 30) > 0;
+    desc->read_alloc    = BIT(ccsid, 29) > 0;
+    desc->write_alloc   = BIT(ccsid, 28) > 0;
+    desc->num_sets      = BITS_SHIFT(ccsid, 27, 13) + 1;
+    desc->associativity = BITS_SHIFT(ccsid, 12, 3)  + 1;
+    desc->line_size     = 1 << (BITS(ccsid, 2, 0) + 4);
+}
+
+void arm64_get_cache_info(arm64_cache_info_t* info) {
+    uint32_t temp=0;
+
+    uint64_t sysreg = ARM64_READ_SYSREG(clidr_el1);
+    info->inner_boundary    = BITS_SHIFT(sysreg, 32, 30);
+    info->lou_u             = BITS_SHIFT(sysreg, 29, 27);
+    info->loc               = BITS_SHIFT(sysreg, 26, 24);
+    info->lou_is            = BITS_SHIFT(sysreg, 23, 21);
+    for (int i = 0; i < 7; i++) {
+        uint8_t ctype = (sysreg >> (3*i)) & 0x07;
+        if (ctype == 0) {
+            info->level_data_type[i].ctype = 0;
+            info->level_inst_type[i].ctype = 0;
+        } else if (ctype == 4) {                            // Unified
+            ARM64_WRITE_SYSREG(CSSELR_EL1, (i << 1));       // Select cache level
+            temp = ARM64_READ_SYSREG(ccsidr_el1);
+            info->level_data_type[i].ctype = 4;
+            parse_ccsid(&(info->level_data_type[i]),temp);
+        } else {
+            if (ctype & 0x02) {
+                ARM64_WRITE_SYSREG(CSSELR_EL1, (i << 1));
+                temp = ARM64_READ_SYSREG(ccsidr_el1);
+                info->level_data_type[i].ctype = 2;
+                parse_ccsid(&(info->level_data_type[i]),temp);
+            }
+            if (ctype & 0x01) {
+                ARM64_WRITE_SYSREG(CSSELR_EL1, (i << 1) | 0x01);
+                temp = ARM64_READ_SYSREG(ccsidr_el1);
+                info->level_inst_type[i].ctype = 1;
+                parse_ccsid(&(info->level_inst_type[i]),temp);
+            }
+        }
+    }
+}
+
+void arm64_dump_cache_info(uint32_t cpu) {
+
+    arm64_cache_info_t*  info = &(cache_info[cpu]);
+    printf("==== ARM64 CACHE INFO ====\n");
+    printf("Inner Boundary = L%u\n",info->inner_boundary);
+    printf("Level of Unification Uinprocessor = L%u\n", info->lou_u);
+    printf("Level of Coherence = L%u\n", info->loc);
+    printf("Level of Unification Inner Shareable = L%u\n",info->lou_is);
+    for (int i = 0; i < 7; i++) {
+        printf("L%d Details:\n",i+1);
+        if ((info->level_data_type[i].ctype == 0) && (info->level_inst_type[i].ctype == 0)) {
+            printf("\tNot Implemented\n");
+        } else {
+            if (info->level_data_type[i].ctype == 4) {
+                printf("\tUnified Cache, sets=%u, associativity=%u, line size=%u bytes\n", info->level_data_type[i].num_sets,
+                                                                    info->level_data_type[i].associativity,
+                                                                    info->level_data_type[i].line_size);
+            } else {
+                if (info->level_data_type[i].ctype & 0x02) {
+                    printf("\tData Cache, sets=%u, associativity=%u, line size=%u bytes\n", info->level_data_type[i].num_sets,
+                                                                    info->level_data_type[i].associativity,
+                                                                    info->level_data_type[i].line_size);
+                }
+                if (info->level_inst_type[i].ctype & 0x01) {
+                    printf("\tInstruction Cache, sets=%u, associativity=%u, line size=%u bytes\n", info->level_inst_type[i].num_sets,
+                                                                    info->level_inst_type[i].associativity,
+                                                                    info->level_inst_type[i].line_size);
+                }
+            }
+        }
+    }
 }
 
 static void arm64_cpu_early_init(void)
@@ -81,6 +161,9 @@ static void arm64_cpu_early_init(void)
 
     /* enable user space access to virtual counter (CNTVCT_EL0) */
     ARM64_WRITE_SYSREG(cntkctl_el1, 1UL << 1);
+
+    uint32_t cpu = arch_curr_cpu_num();
+    arm64_get_cache_info(&(cache_info[cpu]));
 }
 
 void arch_early_init(void)
