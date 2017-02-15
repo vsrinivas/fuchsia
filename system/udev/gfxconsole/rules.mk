@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/keyboard.cpp \
     $(LOCAL_DIR)/vc-device.cpp \
     $(LOCAL_DIR)/vc-gfx.cpp \
     $(LOCAL_DIR)/textcon.cpp \

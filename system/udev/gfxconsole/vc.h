@@ -134,14 +134,3 @@ static inline uint32_t palette_to_color(vc_device_t* dev, uint8_t color) {
     assert(color <= MAX_COLOR);
     return dev->palette[color];
 }
-
-#define MOD_LSHIFT (1 << 0)
-#define MOD_RSHIFT (1 << 1)
-#define MOD_LALT (1 << 2)
-#define MOD_RALT (1 << 3)
-#define MOD_LCTRL (1 << 4)
-#define MOD_RCTRL (1 << 5)
-
-#define MOD_SHIFT (MOD_LSHIFT | MOD_RSHIFT)
-#define MOD_ALT (MOD_LALT | MOD_RALT)
-#define MOD_CTRL (MOD_LCTRL | MOD_RCTRL)
