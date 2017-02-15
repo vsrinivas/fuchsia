@@ -4,69 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-BOOTSERVER := $(BUILDDIR)/tools/bootserver
-LOGLISTENER := $(BUILDDIR)/tools/loglistener
-NETRUNCMD := $(BUILDDIR)/tools/netruncmd
-NETCP := $(BUILDDIR)/tools/netcp
-SYSGEN := $(BUILDDIR)/tools/sysgen
+LOCAL_DIR := $(GET_LOCAL_DIR)
 
-ALL_TOOLS := $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP) $(SYSGEN)
+SUBDIR_INCLUDES := \
+    $(LOCAL_DIR)/bootserver/build.mk \
+    $(LOCAL_DIR)/loglistener/build.mk \
+    $(LOCAL_DIR)/mkbootfs/build.mk \
+    $(LOCAL_DIR)/netprotocol/build.mk \
+    $(LOCAL_DIR)/sysgen/build.mk \
 
-# LZ4 host lib
-# TODO: set up third_party build rules for system/tools
-LZ4_ROOT := third_party/ulib/lz4
-LZ4_CFLAGS := -O3 -I$(LZ4_ROOT)/include/lz4
-LZ4_SRCS := $(patsubst %,$(LZ4_ROOT)/%, \
-    lz4.c lz4frame.c lz4hc.c xxhash.c)
-LZ4_OBJS := $(patsubst $(LZ4_ROOT)/%.c,$(BUILDDIR)/tools/lz4/%.o,$(LZ4_SRCS))
-LZ4_LIB := $(BUILDDIR)/tools/lz4/liblz4.a
-
-$(BUILDDIR)/tools/lz4/%.o: $(LZ4_ROOT)/%.c
-	@echo compiling $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(LZ4_CFLAGS) -o $@ -c $<
-
-$(LZ4_LIB): $(LZ4_OBJS)
-	@echo archiving $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_AR) rcs $@ $^
-
-# mkbootfs
-MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
-MKBOOTFS_CFLAGS := -I$(LZ4_ROOT)/include/lz4
-MKBOOTFS_LDFLAGS := -L$(BUILDDIR)/tools/lz4 -Bstatic -llz4 -Bdynamic
-
-$(BUILDDIR)/tools/mkbootfs: system/tools/mkbootfs.c $(LZ4_LIB)
-	@echo compiling $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MKBOOTFS_CFLAGS) -o $@ $< $(MKBOOTFS_LDFLAGS)
-
-ALL_TOOLS += $(MKBOOTFS)
-
-# remaining host tools
-$(BUILDDIR)/tools/%: system/tools/%.c
-	@echo compiling $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) -o $@ $<
-
-$(BUILDDIR)/tools/%: system/tools/%.cpp
-	@echo compiling $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_CXX) $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) -o $@ $<
-
-$(BUILDDIR)/tools/netruncmd: system/tools/netruncmd.c system/tools/netprotocol.c
-	@echo compiling $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) -o $@ $^
-
-$(BUILDDIR)/tools/netcp: system/tools/netcp.c system/tools/netprotocol.c
-	@echo compiling $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) -o $@ $^
-
-GENERATED += $(ALL_TOOLS)
-EXTRA_BUILDDEPS += $(ALL_TOOLS)
-
-# phony rule to build just the tools
-.PHONY: tools
-tools: $(ALL_TOOLS)
+include $(SUBDIR_INCLUDES)
