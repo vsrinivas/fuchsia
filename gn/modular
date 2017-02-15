@@ -96,12 +96,20 @@
             "bootfs_path": "apps/hello_app_parent"
         },
         {
+            "binary": "modular_tests.json",
+            "bootfs_path": "apps/modular_tests/modular_tests.json"
+        },
+        {
             "binary": "parent_module",
             "bootfs_path": "apps/modular_tests/parent_module"
         },
         {
             "binary": "run_component",
             "bootfs_path": "apps/run_component"
+        },
+        {
+            "binary": "run_modular_tests",
+            "bootfs_path": "test/run_modular_tests"
         },
         {
             "binary": "swap_module1",
