@@ -69,20 +69,20 @@ void arm64_get_cache_info(arm64_cache_info_t* info) {
         if (ctype == 0) {
             info->level_data_type[i].ctype = 0;
             info->level_inst_type[i].ctype = 0;
-        } else if (ctype == 4) {                            // Unified
-            ARM64_WRITE_SYSREG(CSSELR_EL1, (i << 1));       // Select cache level
+        } else if (ctype == 4) {                                // Unified
+            ARM64_WRITE_SYSREG(CSSELR_EL1, (int64_t)(i << 1));  // Select cache level
             temp = ARM64_READ_SYSREG(ccsidr_el1);
             info->level_data_type[i].ctype = 4;
             parse_ccsid(&(info->level_data_type[i]),temp);
         } else {
             if (ctype & 0x02) {
-                ARM64_WRITE_SYSREG(CSSELR_EL1, (i << 1));
+                ARM64_WRITE_SYSREG(CSSELR_EL1, (int64_t)(i << 1));
                 temp = ARM64_READ_SYSREG(ccsidr_el1);
                 info->level_data_type[i].ctype = 2;
                 parse_ccsid(&(info->level_data_type[i]),temp);
             }
             if (ctype & 0x01) {
-                ARM64_WRITE_SYSREG(CSSELR_EL1, (i << 1) | 0x01);
+                ARM64_WRITE_SYSREG(CSSELR_EL1, (int64_t)(i << 1) | 0x01);
                 temp = ARM64_READ_SYSREG(ccsidr_el1);
                 info->level_inst_type[i].ctype = 1;
                 parse_ccsid(&(info->level_inst_type[i]),temp);
