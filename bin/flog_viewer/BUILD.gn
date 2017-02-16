@@ -6,10 +6,13 @@ executable("flog_viewer") {
   sources = [
     "accumulator.cc",
     "accumulator.h",
+    "binding.cc",
+    "binding.h",
     "channel.cc",
     "channel.h",
     "channel_handler.cc",
     "channel_handler.h",
+    "channel_manager.h",
     "counted.h",
     "flog_viewer.cc",
     "flog_viewer.h",

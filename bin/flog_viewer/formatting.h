@@ -7,6 +7,7 @@
 #include <ostream>
 
 #include "apps/media/services/flog/flog.fidl.h"
+#include "apps/media/tools/flog_viewer/binding.h"
 #include "apps/media/tools/flog_viewer/channel.h"
 
 //
@@ -48,6 +49,13 @@ struct AsAddress {
 
 std::ostream& operator<<(std::ostream& os, AsAddress value);
 
+struct AsKoid {
+  explicit AsKoid(uint64_t koid) : koid_(koid) {}
+  uint64_t koid_;
+};
+
+std::ostream& operator<<(std::ostream& os, AsKoid value);
+
 struct AsNiceDateTime {
   explicit AsNiceDateTime(uint64_t time_us) : time_us_(time_us) {}
   uint64_t time_us_;
@@ -63,6 +71,10 @@ struct AsMicroseconds {
 std::ostream& operator<<(std::ostream& os, AsMicroseconds value);
 
 std::ostream& operator<<(std::ostream& os, const Channel& value);
+
+std::ostream& operator<<(std::ostream& os, const ChildBinding& value);
+
+std::ostream& operator<<(std::ostream& os, const PeerBinding& value);
 
 std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value);
 

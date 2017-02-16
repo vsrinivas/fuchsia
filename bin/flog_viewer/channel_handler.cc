@@ -24,7 +24,8 @@ namespace flog {
 // static
 std::unique_ptr<ChannelHandler> ChannelHandler::Create(
     const std::string& type_name,
-    const std::string& format) {
+    const std::string& format,
+    ChannelManager* manager) {
   ChannelHandler* handler = nullptr;
 
   // When implementing a new handler, add logic here for creating an instance.
@@ -77,6 +78,8 @@ std::unique_ptr<ChannelHandler> ChannelHandler::Create(
     handler = new handlers::Default(format);
   }
 
+  handler->manager_ = manager;
+
   return std::unique_ptr<ChannelHandler>(handler);
 }
 
@@ -84,18 +87,17 @@ ChannelHandler::ChannelHandler() {}
 
 ChannelHandler::~ChannelHandler() {}
 
-void ChannelHandler::HandleMessage(
-    uint32_t entry_index,
-    const FlogEntryPtr& entry,
-    fidl::Message* message,
-    const ChannelLookupCallback& channel_lookup_callback) {
+void ChannelHandler::HandleMessage(std::shared_ptr<Channel> channel,
+                                   uint32_t entry_index,
+                                   const FlogEntryPtr& entry,
+                                   fidl::Message* message) {
+  channel_ = channel;
   entry_index_ = entry_index;
   entry_ = &entry;
-  channel_lookup_callback_ = channel_lookup_callback;
   HandleMessage(message);
+  channel_ = nullptr;
   entry_index_ = 0;
   entry_ = nullptr;
-  channel_lookup_callback_ = nullptr;
 }
 
 std::shared_ptr<Accumulator> ChannelHandler::GetAccumulator() {
@@ -103,11 +105,21 @@ std::shared_ptr<Accumulator> ChannelHandler::GetAccumulator() {
 }
 
 std::shared_ptr<Channel> ChannelHandler::AsChannel(uint64_t subject_address) {
-  if (!channel_lookup_callback_) {
-    return nullptr;
-  }
+  FTL_DCHECK(manager_ != nullptr);
+  return manager_->FindChannelBySubjectAddress(subject_address);
+}
 
-  return channel_lookup_callback_(subject_address);
+void ChannelHandler::BindAs(uint64_t koid) {
+  FTL_DCHECK(manager_ != nullptr);
+  manager_->BindAs(channel_, koid);
+}
+
+void ChannelHandler::SetBindingKoid(Binding* binding, uint64_t koid) {
+  FTL_DCHECK(binding != nullptr);
+  FTL_DCHECK(koid != 0);
+  FTL_DCHECK(manager_ != nullptr);
+
+  manager_->SetBindingKoid(binding, koid);
 }
 
 }  // namespace flog

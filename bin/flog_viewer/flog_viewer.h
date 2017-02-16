@@ -11,13 +11,14 @@
 #include "apps/media/services/flog/flog.fidl.h"
 #include "apps/media/tools/flog_viewer/channel.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
+#include "apps/media/tools/flog_viewer/channel_manager.h"
 
 class Shell;
 
 namespace flog {
 
 // Model class for the flog viewer app.
-class FlogViewer {
+class FlogViewer : public ChannelManager {
  public:
   static const std::string kFormatTerse;
   static const std::string kFormatFull;
@@ -52,6 +53,14 @@ class FlogViewer {
   // Deletes all the existing logs files that aren't currently open.
   void DeleteAllLogs();
 
+  // ChannelManager implementation.
+  std::shared_ptr<Channel> FindChannelBySubjectAddress(
+      uint64_t subject_address) override;
+
+  void SetBindingKoid(Binding* binding, uint64_t koid) override;
+
+  void BindAs(std::shared_ptr<Channel> channel, uint64_t koid) override;
+
  private:
   void ProcessEntries(uint32_t start_index);
 
@@ -82,6 +91,8 @@ class FlogViewer {
   FlogReaderPtr reader_;
   std::map<uint32_t, std::shared_ptr<Channel>> channels_by_channel_id_;
   std::map<uint64_t, std::shared_ptr<Channel>> channels_by_subject_address_;
+  std::map<uint64_t, std::shared_ptr<Channel>> channels_by_binding_koid_;
+  std::map<uint64_t, Binding*> bindings_by_binding_koid_;
 };
 
 }  // namespace flog

@@ -29,8 +29,17 @@ std::ostream& operator<<(std::ostream& os, AsAddress value) {
     return os << "nullptr";
   }
 
-  return os << "0x" << std::hex << std::setw(8) << std::setfill('0')
+  return os << "0x" << std::hex << std::setw(16) << std::setfill('0')
             << value.address_ << std::dec;
+}
+
+std::ostream& operator<<(std::ostream& os, AsKoid value) {
+  if (value.koid_ == 0) {
+    return os << "nullptr";
+  }
+
+  return os << "0x" << std::hex << std::setw(16) << std::setfill('0')
+            << value.koid_ << std::dec;
 }
 
 std::ostream& operator<<(std::ostream& os, AsNiceDateTime value) {
@@ -54,6 +63,36 @@ std::ostream& operator<<(std::ostream& os, const Channel& value) {
 
   return os << "CHANNEL " << value.log_id() << "." << std::setw(2)
             << std::setfill('0') << value.channel_id();
+}
+
+std::ostream& operator<<(std::ostream& os, const ChildBinding& value) {
+  std::shared_ptr<Channel> channel = value.channel();
+
+  if (channel) {
+    os << *channel << " ";
+    channel->PrintAccumulator(os);
+    return os;
+  }
+
+  if (value.koid() == 0) {
+    return os << "<none>" << std::endl;
+  }
+
+  return os << "unresolved binding, koid " << AsKoid(value.koid()) << std::endl;
+}
+
+std::ostream& operator<<(std::ostream& os, const PeerBinding& value) {
+  std::shared_ptr<Channel> channel = value.channel();
+
+  if (channel) {
+    return os << *channel << " " << std::endl;
+  }
+
+  if (value.koid() == 0) {
+    return os << "<none>" << std::endl;
+  }
+
+  return os << "unresolved binding, koid " << AsKoid(value.koid()) << std::endl;
 }
 
 int ostream_entry_second_index() {

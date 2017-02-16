@@ -13,6 +13,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/handles/object_info.h"
 
 namespace flog {
 
@@ -133,6 +134,34 @@ namespace flog {
 #define FLOG_CHANNEL(channel_type, channel_name) \
   FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, 0)
 
+// The following four macros are used to obtain koids that can be used to
+// unify both ends of a channel used in a fidl connection. FLOG_REQUEST_KOID
+// and FLOG_BINDING_KOID are used at the service end of the connection.
+// FLOG_PTR_KOID and FLOG_HANDLE_KOID are used at the client end of the
+// connection. In all cases, the koid returned identifies the server end of
+// the connection. On the client end, the service-end koid is obtained by
+// getting the 'related' koid for the local channel.
+
+// Returns the koid of the local channel associated with a pending
+// InterfaceRequest. This value is identical to the value returned by
+// FLOG_PTR_ID(pointer) where the request was created from pointer.
+#define FLOG_REQUEST_KOID(request) flog::GetInterfaceRequestKoid(&request)
+
+// Returns the koid of the local channel associated with a binding. This value
+// is identical to the value returned by FLOG_PTR_ID(pointer) where pointer is
+// the client end of the binding.
+#define FLOG_BINDING_KOID(binding) mtl::GetKoid(binding.handle())
+
+// Returns the koid of the remote channel associated with a bound InterfacePtr.
+// This value is identical to the value return by FLOG_REQUEST_ID(request)
+// where request was created from the pointer.
+#define FLOG_PTR_KOID(ptr) flog::GetInterfacePtrRelatedKoid(&ptr)
+
+// Returns the koid of the remote channel associated with a bound
+// InterfaceHandle. This value is identical to the value return by
+// FLOG_REQUEST_ID(request) where request was created from the handle.
+#define FLOG_HANDLE_KOID(h) mtl::GetRelatedKoid(h.handle().get())
+
 // Thread-safe logger for all channels in a given process.
 class Flog {
  public:
@@ -202,5 +231,25 @@ class FlogProxy : public T::Proxy_ {
   explicit FlogProxy(uint64_t subject_address)
       : T::Proxy_(new FlogChannel(T::Name_, subject_address)) {}
 };
+
+template <typename T>
+mx_koid_t GetInterfaceRequestKoid(fidl::InterfaceRequest<T>* request) {
+  FTL_DCHECK(request != nullptr);
+  FTL_DCHECK(*request);
+  mx::channel channel = request->PassChannel();
+  mx_koid_t result = mtl::GetKoid(channel.get());
+  request->Bind(std::move(channel));
+  return result;
+}
+
+template <typename T>
+mx_koid_t GetInterfacePtrRelatedKoid(fidl::InterfacePtr<T>* ptr) {
+  FTL_DCHECK(ptr != nullptr);
+  FTL_DCHECK(*ptr);
+  fidl::InterfaceHandle<T> handle = ptr->PassInterfaceHandle();
+  mx_koid_t result = mtl::GetRelatedKoid(handle.handle().get());
+  ptr->Bind(std::move(handle));
+  return result;
+}
 
 }  // namespace flog

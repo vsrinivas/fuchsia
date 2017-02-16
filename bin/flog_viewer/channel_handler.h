@@ -6,6 +6,8 @@
 
 #include "apps/media/services/flog/flog.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
+#include "apps/media/tools/flog_viewer/binding.h"
+#include "apps/media/tools/flog_viewer/channel_manager.h"
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/logging.h"
 
@@ -26,19 +28,17 @@ class Channel;
 // to provide callers access to the accumulator.
 class ChannelHandler {
  public:
-  using ChannelLookupCallback =
-      std::function<std::shared_ptr<Channel>(uint64_t)>;
-
   static std::unique_ptr<ChannelHandler> Create(const std::string& type_name,
-                                                const std::string& format);
+                                                const std::string& format,
+                                                ChannelManager* manager);
 
   virtual ~ChannelHandler();
 
   // Handles a channel message.
-  void HandleMessage(uint32_t entry_index,
+  void HandleMessage(std::shared_ptr<Channel> channel,
+                     uint32_t entry_index,
                      const FlogEntryPtr& entry,
-                     fidl::Message* message,
-                     const ChannelLookupCallback& channel_lookup_callback);
+                     fidl::Message* message);
 
   // Gets the accumulator from the handler, if there is one. The default
   // implementation returns a null pointer.
@@ -66,11 +66,17 @@ class ChannelHandler {
 
   std::shared_ptr<Channel> AsChannel(uint64_t subject_address);
 
+  void BindAs(uint64_t koid);
+
+  void SetBindingKoid(Binding* binding, uint64_t koid);
+
  private:
+  ChannelManager* manager_;
+
   // These fields are only used during calls to HandleMessage().
-  uint32_t entry_index_;
-  const FlogEntryPtr* entry_;
-  ChannelLookupCallback channel_lookup_callback_;
+  std::shared_ptr<Channel> channel_ = nullptr;
+  uint32_t entry_index_ = 0;
+  const FlogEntryPtr* entry_ = nullptr;
 };
 
 }  // namespace flog

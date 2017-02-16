@@ -101,6 +101,41 @@ void FlogViewer::DeleteAllLogs() {
   service_->DeleteAllLogs();
 }
 
+std::shared_ptr<Channel> FlogViewer::FindChannelBySubjectAddress(
+    uint64_t subject_address) {
+  if (subject_address == 0) {
+    return nullptr;
+  }
+
+  auto iter = channels_by_subject_address_.find(subject_address);
+  if (iter != channels_by_subject_address_.end()) {
+    return iter->second;
+  }
+
+  std::shared_ptr<Channel> channel = Channel::CreateUnresolved(subject_address);
+  channels_by_subject_address_.insert(std::make_pair(subject_address, channel));
+  return channel;
+}
+
+void FlogViewer::SetBindingKoid(Binding* binding, uint64_t koid) {
+  binding->SetKoid(koid);
+
+  auto iter = channels_by_binding_koid_.find(koid);
+  if (iter != channels_by_binding_koid_.end()) {
+    binding->SetChannel(iter->second);
+  } else {
+    bindings_by_binding_koid_.insert(std::make_pair(koid, binding));
+  }
+}
+
+void FlogViewer::BindAs(std::shared_ptr<Channel> channel, uint64_t koid) {
+  channels_by_binding_koid_.insert(std::make_pair(koid, channel));
+  auto iter = bindings_by_binding_koid_.find(koid);
+  if (iter != bindings_by_binding_koid_.end()) {
+    iter->second->SetChannel(channel);
+  }
+}
+
 void FlogViewer::ProcessEntries(uint32_t start_index) {
   FTL_DCHECK(reader_);
   reader_->GetEntries(start_index, kGetEntriesMaxCount,
@@ -177,20 +212,22 @@ void FlogViewer::OnChannelCreated(
                 << subject_iter->second << std::endl;
     } else {
       channel = subject_iter->second;
-      channel->Resolve(entry->log_id, entry->channel_id, entry_index,
-                       ChannelHandler::Create(details->type_name, format_));
+      channel->Resolve(
+          entry->log_id, entry->channel_id, entry_index,
+          ChannelHandler::Create(details->type_name, format_, this));
     }
   }
 
   if (!channel) {
     channel = Channel::Create(
         entry->log_id, entry->channel_id, entry_index, details->subject_address,
-        ChannelHandler::Create(details->type_name, format_));
+        ChannelHandler::Create(details->type_name, format_, this));
     if (details->subject_address != 0) {
       channels_by_subject_address_.insert(
           std::make_pair(details->subject_address, channel));
     }
   }
+
   channels_by_channel_id_.insert(std::make_pair(entry->channel_id, channel));
 }
 
@@ -208,23 +245,8 @@ void FlogViewer::OnChannelMessage(
     return;
   }
 
-  iter->second->handler()->HandleMessage(
-      entry_index, entry, &message, [this](uint64_t subject_address) {
-        if (subject_address == 0) {
-          return std::shared_ptr<Channel>();
-        }
-
-        auto iter = channels_by_subject_address_.find(subject_address);
-        if (iter != channels_by_subject_address_.end()) {
-          return iter->second;
-        }
-
-        std::shared_ptr<Channel> channel =
-            Channel::CreateUnresolved(subject_address);
-        channels_by_subject_address_.insert(
-            std::make_pair(subject_address, channel));
-        return channel;
-      });
+  iter->second->handler()->HandleMessage(iter->second, entry_index, entry,
+                                         &message);
 }
 
 void FlogViewer::OnChannelDeleted(
