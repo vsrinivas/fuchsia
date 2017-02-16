@@ -230,7 +230,7 @@ case $ARCH in
         if [ $DO_KVM -ne 0 ]; then
           ARGS+=" -enable-kvm -cpu host"
         else
-          ARGS+=" -cpu Haswell,+smap"
+          ARGS+=" -cpu Haswell,+smap,-check"
         fi
         ;;
     *)
