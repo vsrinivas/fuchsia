@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//lib/fidl/fidl.gni")
+
 group("component_context") {
   deps = [
     ":component_context_test",
@@ -13,6 +15,7 @@ executable("component_context_test") {
     "root_module.cc",
   ]
   deps = [
+    ":test_agent1_interface",
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
     "//apps/modular/services/component",
@@ -26,6 +29,7 @@ executable("component_context_test_agent1") {
     "test_agent1.cc",
   ]
   deps = [
+    ":test_agent1_interface",
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
     "//apps/modular/services/agent",
@@ -43,4 +47,8 @@ executable("component_context_test_agent2") {
     "//apps/modular/services/agent",
     "//lib/mtl",
   ]
+}
+
+fidl("test_agent1_interface") {
+  sources = ["test_agent1_interface.fidl"]
 }

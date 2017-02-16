@@ -35,6 +35,8 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
+    TEST_PASS("Test agent2 exited");
+    modular::testing::Done();
     callback();
     delete this;
   }
@@ -46,7 +48,5 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
   new TestAgentApp();
   loop.Run();
-  TEST_PASS("Test agent2 exited");
-  modular::testing::Done();
   return 0;
 }
