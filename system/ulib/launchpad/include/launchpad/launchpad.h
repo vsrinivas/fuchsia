@@ -191,20 +191,6 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what);
 
 
-// Clone the mxio root handle into the new process.
-// This will allow mxio-based filesystem access to work in the new process.
-// Without a mxio root, open() on absolute paths will not be possible.
-mx_status_t launchpad_clone_mxio_root(launchpad_t* lp);
-
-// Clone the mxio current working directory handle into the new process
-// This will allow mxio-based filesystem access to inherit the cwd from the
-// launching process. If mxio root is cloned but not mxio cwd, mxio root is
-// treated as the cwd.
-// If no cwd is provided, the mxio root will be treated as the cwd.
-// If no root is provided, there will be no cwd and open() calls on relative
-// paths will not be possible.
-mx_status_t launchpad_clone_mxio_cwd(launchpad_t* lp);
-
 // Attempt to duplicate local descriptor fd into target_fd in the
 // new process.  Returns ERR_BAD_HANDLE if fd is not a valid fd, or
 // ERR_NOT_SUPPORTED if it's not possible to transfer this fd.
@@ -220,11 +206,6 @@ mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
 // to exist until launch succeeds (and it is transfered) or fails (and
 // it is destroyed).
 mx_status_t launchpad_transfer_fd(launchpad_t* lp, int fd, int target_fd);
-
-// Convenience function to add all mxio handles to the launchpad.
-// This calls launchpad_clone_mxio_root and then launchpad_clone_fd for each
-// fd in the calling process.
-mx_status_t launchpad_add_all_mxio(launchpad_t* lp);
 
 // Attempt to create a pipe and install one end of that pipe as
 // target_fd in the new process and return the other end (if
@@ -348,17 +329,6 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size);
 
 
 
-// don't warn about this just yet
-#define __LP_DEPRECATED
-//#define __LP_DEPRECATED __attribute((deprecated))
-
-__LP_DEPRECATED
-mx_status_t launchpad_arguments(launchpad_t* lp,
-                                int argc, const char* const* argv);
-
-__LP_DEPRECATED
-mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp);
-
 
 // Start the process running.  If the send_loader_message flag is
 // set and this succeeds in sending the initial bootstrap message,
@@ -373,7 +343,6 @@ mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp);
 // process, so on failure the loader-service handle might or might
 // not have been cleared and the handles to transfer might or might
 // not have been cleared.
-__LP_DEPRECATED
 mx_handle_t launchpad_start(launchpad_t* lp);
 
 // Start a new thread in the process, assuming this was a launchpad
@@ -385,11 +354,45 @@ mx_handle_t launchpad_start(launchpad_t* lp);
 // handle.  The other end of this message pipe must already be
 // present in the target process, with the given handle value in the
 // target process's handle space.
-__LP_DEPRECATED
 mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
                                      mx_handle_t to_child,
                                      uintptr_t bootstrap_handle_in_child);
 
+
+
+
+
+
+#define __LP_DEPRECATED __attribute__((deprecated("use new launchpad api instead.")))
+
+mx_status_t launchpad_arguments(launchpad_t* lp,
+                                int argc, const char* const* argv)
+__attribute__((deprecated("use launchpad_set_args() instead.")));
+
+mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp)
+__attribute__((deprecated("use launchpad_set_environ() instead.")));
+
+// Clone the mxio root handle into the new process.
+// This will allow mxio-based filesystem access to work in the new process.
+// Without a mxio root, open() on absolute paths will not be possible.
+mx_status_t launchpad_clone_mxio_root(launchpad_t* lp)
+__attribute__((deprecated("use launchpad_clone() instead.")));
+
+// Clone the mxio current working directory handle into the new process
+// This will allow mxio-based filesystem access to inherit the cwd from the
+// launching process. If mxio root is cloned but not mxio cwd, mxio root is
+// treated as the cwd.
+// If no cwd is provided, the mxio root will be treated as the cwd.
+// If no root is provided, there will be no cwd and open() calls on relative
+// paths will not be possible.
+mx_status_t launchpad_clone_mxio_cwd(launchpad_t* lp)
+__attribute__((deprecated("use launchpad_clone() instead.")));
+
+// Convenience function to add all mxio handles to the launchpad.
+// This calls launchpad_clone_mxio_root and then launchpad_clone_fd for each
+// fd in the calling process.
+mx_status_t launchpad_add_all_mxio(launchpad_t* lp)
+__attribute__((deprecated("use launchpad_clone() instead.")));;
 
 
 // Convenience interface for launching a process in one call with
@@ -403,22 +406,22 @@ mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
 //
 // Returns the process handle on success, giving ownership to the caller;
 // or an error code on failure.  In all cases, the handles are consumed.
-__LP_DEPRECATED
 mx_handle_t launchpad_launch(const char* name,
                              int argc, const char* const* argv,
                              const char* const* envp,
                              size_t hnds_count, mx_handle_t* handles,
-                             uint32_t* ids);
+                             uint32_t* ids)
+__LP_DEPRECATED;
 
 // Same as launchpad_launch but allows to specify the job to use when
 // creating the process. The job handle is consumed regardless of the result.
-__LP_DEPRECATED
 mx_handle_t launchpad_launch_with_job(mx_status_t job,
                                       const char* name,
                                       int argc, const char* const* argv,
                                       const char* const* envp,
                                       size_t hnds_count, mx_handle_t* handles,
-                                      uint32_t* ids);
+                                      uint32_t* ids)
+__LP_DEPRECATED;
 
 // Convenience interface for launching a process in one call with
 // details inherited from the calling process (environment
@@ -433,30 +436,30 @@ mx_handle_t launchpad_launch_with_job(mx_status_t job,
 //
 // Returns the process handle on success, giving ownership to the caller;
 // or an error code on failure.
-__LP_DEPRECATED
 mx_handle_t launchpad_launch_mxio(const char* name,
-                                  int argc, const char* const* argv);
+                                  int argc, const char* const* argv)
+__LP_DEPRECATED;
 
 // Same as launchpad_launch_mxio, but also passes additional handles
 // like launchpad_launch, and uses envp rather than global environ.
 // In all cases, the handles are consumed.
-__LP_DEPRECATED
 mx_handle_t launchpad_launch_mxio_etc(const char* name,
                                       int argc, const char* const* argv,
                                       const char* const* envp,
                                       size_t hnds_count, mx_handle_t* handles,
-                                      uint32_t* ids);
+                                      uint32_t* ids)
+__LP_DEPRECATED;
 
 // Same as launchpad_launch_mxio_etc, but loads the program from a vmo not the
 // filesystem, and the job to launch the process under. The supplied job handle
 // is not consumed, but is duplicated and transfered to the new child process.
 // In all cases, the vmo and the handles are consumed.
-__LP_DEPRECATED
 mx_handle_t launchpad_launch_mxio_vmo_etc(mx_handle_t job,
                                           const char* name, mx_handle_t vmo,
                                           int argc, const char* const* argv,
                                           const char* const* envp,
                                           size_t hnds_count,
-                                          mx_handle_t* handles, uint32_t* ids);
+                                          mx_handle_t* handles, uint32_t* ids)
+__LP_DEPRECATED;
 
 __END_CDECLS
