@@ -52,6 +52,9 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
         }
         EntryPtr entry_ptr = Entry::New();
         entry_ptr->key = convert::ToArray(entry.key);
+        entry_ptr->priority = entry.priority == storage::KeyPriority::EAGER
+                                  ? Priority::EAGER
+                                  : Priority::LAZY;
         entries->push_back(std::move(entry_ptr));
 
         page_storage_->GetObject(entry.object_id, waiter->NewCallback());

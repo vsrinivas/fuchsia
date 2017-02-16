@@ -78,9 +78,8 @@ class PageImplTest : public test::TestWithMessageLoop {
     storage::Status status;
     std::unique_ptr<const storage::Object> object;
     fake_storage_->GetObject(
-        object_id,
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &object));
+        object_id, ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                   &status, &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     return object;
@@ -412,22 +411,30 @@ TEST_F(PageImplTest, CreateReference) {
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
-  std::string key("some_key");
-  std::string value("a small value");
+  std::string eager_key("a_key");
+  std::string eager_value("an eager value");
+  std::string lazy_key("another_key");
+  std::string lazy_value("a lazy value");
   PageSnapshotPtr snapshot;
 
-  auto callback_put = [this](Status status) {
+  auto callback_statusok = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
+
+  page_ptr_->StartTransaction(callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
+                 callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY,
+                             callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->Commit(callback_statusok);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  auto callback_getsnapshot = [this](Status status) {
-    EXPECT_EQ(Status::OK, status);
-    message_loop_.PostQuitTask();
-  };
-  page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr, callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr, callback_statusok);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   fidl::Array<EntryPtr> actual_entries;
@@ -442,11 +449,16 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(1u, actual_entries.size());
-  EXPECT_EQ(key, convert::ExtendedStringView(actual_entries[0]->key));
-  EXPECT_EQ(value,
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
+  EXPECT_EQ(eager_value,
             convert::ExtendedStringView(actual_entries[0]->value->get_bytes()));
   EXPECT_EQ(Priority::EAGER, actual_entries[0]->priority);
+
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
+  EXPECT_EQ(lazy_value,
+            convert::ExtendedStringView(actual_entries[1]->value->get_bytes()));
+  EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
