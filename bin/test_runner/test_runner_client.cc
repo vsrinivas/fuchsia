@@ -28,8 +28,34 @@ namespace testing {
 constexpr uint16_t kTestRunnerPort = 8342;      // TCP port
 constexpr int kReadTimeoutMillis = 120 * 1000;  // Read timeout in milliseconds
 
-bool TestRunnerClient::RunTest(const std::string& name,
-                               const std::string& command_line) {
+TestRunnerClient::TestRunnerClient(const std::string& json_path) {
+  std::string json;
+  FTL_CHECK(files::ReadFileToString(json_path, &json));
+
+  rapidjson::Document doc;
+  doc.Parse(json);
+  FTL_CHECK(doc.IsObject());
+
+  auto& tests = doc["tests"];
+  FTL_CHECK(tests.IsArray());
+
+  for (auto& test : tests.GetArray()) {
+    FTL_CHECK(test.IsObject());
+    std::string test_name = test["name"].GetString();
+    std::string test_exec = test["exec"].GetString();
+    test_names_.push_back(test_name);
+    test_commands_[test_name] = test_exec;
+  }
+}
+
+bool TestRunnerClient::RunTest(const std::string& name) {
+  auto iter = test_commands_.find(name);
+  if (iter == test_commands_.end()) {
+    FTL_LOG(ERROR) << "No test named '" << name << "' found.";
+    return false;
+  }
+  const std::string& command_line = iter->second;
+
   // Connect to the test_runner on localhost.
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
@@ -103,24 +129,11 @@ bool TestRunnerClient::RunTest(const std::string& name,
   }
 }
 
-bool TestRunnerClient::RunTests(const std::string& json_path) {
-  std::string json;
-  FTL_CHECK(files::ReadFileToString(json_path, &json));
-
-  rapidjson::Document doc;
-  doc.Parse(json);
-  FTL_CHECK(doc.IsObject());
-
-  auto& tests = doc["tests"];
-  FTL_CHECK(tests.IsArray());
-
-  for (auto& test : tests.GetArray()) {
-    FTL_CHECK(test.IsObject());
-    std::string test_name = test["name"].GetString();
-    std::string test_exec = test["exec"].GetString();
+bool TestRunnerClient::RunAllTests() {
+  for (auto& test_name : test_names_) {
     FTL_LOG(INFO) << "Asking test_runner to run test: " << test_name;
     time_t start_time = time(NULL);
-    if (!RunTest(test_name, test_exec)) {
+    if (!RunTest(test_name)) {
       FTL_LOG(ERROR) << "Test " << test_name << " failed in "
                      << (time(NULL) - start_time) << "s.";
       return 1;

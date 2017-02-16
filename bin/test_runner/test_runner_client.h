@@ -5,7 +5,9 @@
 #ifndef APPS_MODULAR_TEST_RUNNER_TEST_RUNNER_CLIENT_H_
 #define APPS_MODULAR_TEST_RUNNER_TEST_RUNNER_CLIENT_H_
 
+#include <map>
 #include <string>
+#include <vector>
 #include "lib/ftl/macros.h"
 
 namespace modular {
@@ -14,16 +16,25 @@ namespace testing {
 class TestRunnerClient {
  public:
   TestRunnerClient() {}
+  TestRunnerClient(const std::string& json_path);
 
-  bool RunTest(const std::string& name, const std::string& command_line);
+  const std::vector<std::string>& test_names() const { return test_names_; }
 
-  bool RunTests(const std::string& json_path);
+  bool HasTestNamed(const std::string& test_name) const {
+    return test_commands_.find(test_name) != test_commands_.end();
+  }
+
+  bool RunTest(const std::string& name);
+  bool RunAllTests();
+
+ private:
+  std::vector<std::string> test_names_;
+  std::map<std::string, std::string> test_commands_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerClient);
 };
 
 }  // namespace testing
 }  // namespace modular
-
 
 #endif  // APPS_MODULAR_TEST_RUNNER_TEST_RUNNER_CLIENT_H_
