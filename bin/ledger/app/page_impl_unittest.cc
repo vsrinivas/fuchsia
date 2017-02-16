@@ -422,16 +422,12 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
     message_loop_.PostQuitTask();
   };
 
-  page_ptr_->StartTransaction(callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
   page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
                  callback_statusok);
   EXPECT_FALSE(RunLoopWithTimeout());
   page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
                              convert::ToArray(lazy_value), Priority::LAZY,
                              callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
-  page_ptr_->Commit(callback_statusok);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr, callback_statusok);

@@ -26,7 +26,7 @@ class FakeJournalDelegate {
     KeyPriority priority;
   };
 
-  FakeJournalDelegate(bool autocommit);
+  FakeJournalDelegate(const CommitId& parent_id, bool autocommit);
   ~FakeJournalDelegate();
 
   const CommitId& GetId() const { return id_; }
@@ -44,6 +44,8 @@ class FakeJournalDelegate {
   Status Rollback();
   bool IsRolledBack() const;
 
+  const CommitId& GetParentId() const { return parent_id_; }
+
   bool IsPendingCommit();
   void ResolvePendingCommit(Status status);
 
@@ -56,6 +58,7 @@ class FakeJournalDelegate {
   bool autocommit_;
 
   const CommitId id_;
+  const CommitId parent_id_;
   std::map<std::string, Entry, convert::StringViewComparator> data_;
 
   bool is_committed_ = false;

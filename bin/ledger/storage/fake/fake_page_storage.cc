@@ -89,7 +89,7 @@ void FakePageStorage::GetCommit(
 Status FakePageStorage::StartCommit(const CommitId& commit_id,
                                     JournalType journal_type,
                                     std::unique_ptr<Journal>* journal) {
-  auto delegate = std::make_unique<FakeJournalDelegate>(autocommit_);
+  auto delegate = std::make_unique<FakeJournalDelegate>(commit_id, autocommit_);
   *journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   return Status::OK;
@@ -146,10 +146,23 @@ void FakePageStorage::GetCommitContents(const Commit& commit,
     on_done(Status::NOT_FOUND);
     return;
   }
-  const std::map<std::string, fake::FakeJournalDelegate::Entry,
-                 convert::StringViewComparator>& data = journal->GetData();
-  for (const auto entry : data) {
-    if (min_key.empty() || min_key <= entry.first) {
+  // Get all entries from this journal and its ancestors.
+  std::map<std::string, fake::FakeJournalDelegate::Entry,
+           convert::StringViewComparator>
+      data;
+  while (journal) {
+    for (const auto entry : journal->GetData()) {
+      if ((min_key.empty() || min_key <= entry.first) &&
+          data.find(entry.first) == data.end()) {
+        data[entry.first] = entry.second;
+      }
+    }
+    // FakeJournal currently only supports simple commits.
+    journal = journals_[journal->GetParentId()].get();
+  }
+
+  for (const auto& entry : data) {
+    if (!entry.second.deleted) {
       if (!on_next(
               Entry{entry.first, entry.second.value, entry.second.priority})) {
         break;

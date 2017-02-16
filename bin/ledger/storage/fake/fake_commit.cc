@@ -26,7 +26,7 @@ const CommitId& FakeCommit::GetId() const {
 }
 
 std::vector<CommitIdView> FakeCommit::GetParentIds() const {
-  return std::vector<CommitIdView>();
+  return {journal_->GetParentId()};
 }
 
 int64_t FakeCommit::GetTimestamp() const {

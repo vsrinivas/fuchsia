@@ -21,8 +21,9 @@ storage::CommitId RandomId() {
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate(bool autocommit)
-    : autocommit_(autocommit), id_(RandomId()) {}
+FakeJournalDelegate::FakeJournalDelegate(const CommitId& parent_id,
+                                         bool autocommit)
+    : autocommit_(autocommit), id_(RandomId()), parent_id_(parent_id) {}
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
