@@ -1,19 +1,19 @@
 #include "atomic.h"
 #include "futex_impl.h"
 
-void __wait(atomic_int* futex, atomic_int* waiters, int current_value) {
+void __wait(volatile int* addr, volatile int* waiters, int val) {
     int spins = 100;
-    while (spins-- && (!waiters || !atomic_load(waiters))) {
-        if (atomic_load(futex) == current_value)
+    while (spins-- && (!waiters || !*waiters)) {
+        if (*addr == val)
             a_spin();
         else
             return;
     }
     if (waiters)
-        atomic_fetch_add(waiters, 1);
-    while (atomic_load(futex) == current_value) {
-        _mx_futex_wait(futex, current_value, MX_TIME_INFINITE);
+        a_inc(waiters);
+    while (*addr == val) {
+        _mx_futex_wait((void*)addr, val, MX_TIME_INFINITE);
     }
     if (waiters)
-        atomic_fetch_sub(waiters, 1);
+        a_dec(waiters);
 }

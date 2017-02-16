@@ -5,7 +5,7 @@
 void __do_orphaned_stdio_locks(void) {
     FILE* f;
     for (f = __pthread_self()->stdio_locks; f; f = f->next_locked)
-        atomic_store(&f->lock, 0x40000000);
+        a_store(&f->lock, 0x40000000);
 }
 
 void __unlist_locked_file(FILE* f) {
@@ -28,9 +28,9 @@ int ftrylockfile(FILE* f) {
         f->lockcount++;
         return 0;
     }
-    if (atomic_load(&f->lock) < 0)
-        atomic_store(&f->lock, 0);
-    if (atomic_load(&f->lock) || a_cas_shim(&f->lock, 0, tid))
+    if (f->lock < 0)
+        f->lock = 0;
+    if (f->lock || a_cas(&f->lock, 0, tid))
         return -1;
     f->lockcount = 1;
     f->prev_locked = 0;

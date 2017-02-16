@@ -2,11 +2,10 @@
 
 #include <limits.h>
 #include <magenta/syscalls.h>
-#include <stdatomic.h>
 
-void __wait(atomic_int* futex, atomic_int* waiters, int current_value);
-static inline void __wake(atomic_int* futex, int cnt) {
+void __wait(volatile int*, volatile int*, int);
+static inline void __wake(volatile void* addr, int cnt) {
     if (cnt < 0)
         cnt = INT_MAX;
-    _mx_futex_wake(futex, cnt);
+    _mx_futex_wake((void*)addr, cnt);
 }

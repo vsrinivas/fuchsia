@@ -11,10 +11,6 @@
 
 #endif
 
-#if defined(__cplusplus)
-#define _Atomic(t) t
-#endif
-
 #if !defined(__clang__) && (defined(__arm__) || defined(__i386__))
 // The arm-eabi and i386-elf GCC target uses 'long' types for these, which is
 // inconsistent with everything else.  Both the arm-linux targets,
@@ -422,7 +418,7 @@ typedef struct __sigset_t { unsigned long __bits[128 / sizeof(long)]; } sigset_t
 #define __DEFINED_sigset_t
 #endif
 #if defined(__NEED_pthread_once_t) && !defined(__DEFINED_pthread_once_t)
-typedef _Atomic(int) pthread_once_t;
+typedef int pthread_once_t;
 #define __DEFINED_pthread_once_t
 #endif
 
@@ -432,7 +428,7 @@ typedef unsigned pthread_key_t;
 #endif
 
 #if defined(__NEED_pthread_spinlock_t) && !defined(__DEFINED_pthread_spinlock_t)
-typedef _Atomic(int) pthread_spinlock_t;
+typedef int pthread_spinlock_t;
 #define __DEFINED_pthread_spinlock_t
 #endif
 
@@ -493,8 +489,8 @@ typedef struct {
 #if defined(__NEED_pthread_mutex_t) && !defined(__DEFINED_pthread_mutex_t)
 typedef struct {
     int _m_type;
-    _Atomic(int) _m_lock;
-    _Atomic(int) _m_waiters;
+    volatile int _m_lock;
+    volatile int _m_waiters;
     int _m_count;
 } pthread_mutex_t;
 #define __DEFINED_pthread_mutex_t
@@ -516,7 +512,7 @@ typedef struct {
     void* _c_head;
     int _c_clock;
     void* _c_tail;
-    _Atomic(int) _c_lock;
+    volatile int _c_lock;
 } pthread_cond_t;
 #define __DEFINED_pthread_cond_t
 #endif
@@ -526,26 +522,26 @@ typedef struct {
     void* _c_head;
     int _c_clock;
     void* _c_tail;
-    _Atomic(int) _c_lock;
+    volatile int _c_lock;
 } cnd_t;
 #define __DEFINED_cnd_t
 #endif
 
 #if defined(__NEED_pthread_rwlock_t) && !defined(__DEFINED_pthread_rwlock_t)
 typedef struct {
-    _Atomic(int) _rw_lock;
-    _Atomic(int) _rw_waiters;
+    volatile int _rw_lock;
+    volatile int _rw_waiters;
 } pthread_rwlock_t;
 #define __DEFINED_pthread_rwlock_t
 #endif
 
 #if defined(__NEED_pthread_barrier_t) && !defined(__DEFINED_pthread_barrier_t)
 typedef struct {
-    _Atomic(int) _b_lock;
-    _Atomic(int) _b_waiters;
+    volatile int _b_lock;
+    volatile int _b_waiters;
     int _b_limit;
-    _Atomic(int) _b_count;
-    _Atomic(int) _b_waiters2;
+    volatile int _b_count;
+    volatile int _b_waiters2;
     void* _b_inst;
 } pthread_barrier_t;
 #define __DEFINED_pthread_barrier_t
@@ -553,8 +549,8 @@ typedef struct {
 
 #if defined(__NEED_sem_t) && !defined(__DEFINED_sem_t)
 typedef struct {
-    _Atomic(int) _s_value;
-    _Atomic(int) _s_waiters;
+    volatile int _s_value;
+    volatile int _s_waiters;
 } sem_t;
 #define __DEFINED_sem_t
 #endif

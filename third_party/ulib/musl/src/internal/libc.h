@@ -1,11 +1,14 @@
 #pragma once
 
 #include <limits.h>
+#include <magenta/types.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include <magenta/types.h>
 
 struct __locale_map;
 

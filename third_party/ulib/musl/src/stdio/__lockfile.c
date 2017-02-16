@@ -4,15 +4,15 @@
 
 int __lockfile(FILE* f) {
     int owner, tid = __thread_get_tid();
-    if (atomic_load(&f->lock) == tid)
+    if (f->lock == tid)
         return 0;
-    while ((owner = a_cas_shim(&f->lock, 0, tid)))
+    while ((owner = a_cas(&f->lock, 0, tid)))
         __wait(&f->lock, &f->waiters, owner);
     return 1;
 }
 
 void __unlockfile(FILE* f) {
-    atomic_store(&f->lock, 0);
+    a_store(&f->lock, 0);
 
     /* The following read is technically invalid under situations
      * of self-synchronized destruction. Another thread may have
@@ -23,6 +23,6 @@ void __unlockfile(FILE* f) {
      * a spurious syscall will be made. If the implementation of
      * malloc changes, this assumption needs revisiting. */
 
-    if (atomic_load(&f->waiters))
+    if (f->waiters)
         __wake(&f->lock, 1);
 }

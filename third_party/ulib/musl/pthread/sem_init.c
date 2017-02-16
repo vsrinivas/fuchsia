@@ -1,7 +1,6 @@
 #include <errno.h>
 #include <limits.h>
 #include <semaphore.h>
-#include <stdatomic.h>
 
 int sem_init(sem_t* sem, int pshared, unsigned value) {
     if (pshared) {
@@ -12,7 +11,7 @@ int sem_init(sem_t* sem, int pshared, unsigned value) {
         errno = EINVAL;
         return -1;
     }
-    atomic_store(&sem->_s_value, value);
-    atomic_store(&sem->_s_waiters, 0);
+    sem->_s_value = value;
+    sem->_s_waiters = 0;
     return 0;
 }

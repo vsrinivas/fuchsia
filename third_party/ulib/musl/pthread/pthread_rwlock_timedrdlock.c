@@ -8,17 +8,17 @@ int pthread_rwlock_timedrdlock(pthread_rwlock_t* restrict rw, const struct times
         return r;
 
     int spins = 100;
-    while (spins-- && atomic_load(&rw->_rw_lock) && !atomic_load(&rw->_rw_waiters))
+    while (spins-- && rw->_rw_lock && !rw->_rw_waiters)
         a_spin();
 
     while ((r = pthread_rwlock_tryrdlock(rw)) == EBUSY) {
-        if (!(r = atomic_load(&rw->_rw_lock)) || (r & 0x7fffffff) != 0x7fffffff)
+        if (!(r = rw->_rw_lock) || (r & 0x7fffffff) != 0x7fffffff)
             continue;
         t = r | 0x80000000;
-        atomic_fetch_add(&rw->_rw_waiters, 1);
-        a_cas_shim(&rw->_rw_lock, r, t);
+        a_inc(&rw->_rw_waiters);
+        a_cas(&rw->_rw_lock, r, t);
         r = __timedwait(&rw->_rw_lock, t, CLOCK_REALTIME, at);
-        atomic_fetch_sub(&rw->_rw_waiters, 1);
+        a_dec(&rw->_rw_waiters);
         if (r)
             return r;
     }

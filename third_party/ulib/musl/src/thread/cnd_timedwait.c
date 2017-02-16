@@ -10,29 +10,28 @@
 
 struct waiter {
     struct waiter *prev, *next;
-    atomic_int state;
-    atomic_int barrier;
-    atomic_int* notify;
+    volatile int state, barrier;
+    volatile int* notify;
 };
 
 /* Self-synchronized-destruction-safe lock functions */
 
-static inline void lock(atomic_int* l) {
-    if (a_cas_shim(l, 0, 1)) {
-        a_cas_shim(l, 1, 2);
+static inline void lock(volatile int* l) {
+    if (a_cas(l, 0, 1)) {
+        a_cas(l, 1, 2);
         do
             __wait(l, 0, 2);
-        while (a_cas_shim(l, 0, 2));
+        while (a_cas(l, 0, 2));
     }
 }
 
-static inline void unlock(atomic_int* l) {
-    if (atomic_exchange(l, 0) == 2)
+static inline void unlock(volatile int* l) {
+    if (a_swap(l, 0) == 2)
         __wake(l, 1);
 }
 
-static inline void unlock_requeue(atomic_int* l, mx_futex_t* r) {
-    atomic_store(l, 0);
+static inline void unlock_requeue(volatile int* l, mx_futex_t* r) {
+    a_store(l, 0);
     _mx_futex_requeue((void*)l, /* wake count */ 0, /* l futex value */ 0,
                       r, /* requeue count */ 1);
 }
@@ -45,19 +44,18 @@ enum {
 int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
                   const struct timespec* restrict ts) {
     mxr_mutex_t* m = (mxr_mutex_t*)mutex;
-    int e, clock = c->_c_clock, oldstate;
+    struct waiter node = {};
+    int e, seq, clock = c->_c_clock, oldstate;
+    volatile int* fut;
 
     if (ts && ts->tv_nsec >= 1000000000UL)
         return thrd_error;
 
     lock(&c->_c_lock);
 
-    int seq = 2;
-    struct waiter node = {
-        .barrier = ATOMIC_VAR_INIT(seq),
-        .state = ATOMIC_VAR_INIT(WAITING),
-    };
-    atomic_int* fut = &node.barrier;
+    seq = node.barrier = 2;
+    fut = &node.barrier;
+    node.state = WAITING;
     /* Add our waiter node onto the condvar's list.  We add the node to the
      * head of the list, but this is logically the end of the queue. */
     node.next = c->_c_head;
@@ -83,7 +81,7 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
         e = __timedwait_cp(fut, seq, clock, ts);
     while (*fut == seq && !e);
 
-    oldstate = a_cas_shim(&node.state, WAITING, LEAVING);
+    oldstate = a_cas(&node.state, WAITING, LEAVING);
 
     if (oldstate == WAITING) {
         /* The wait timed out.  So far, this thread was not signaled by
@@ -123,7 +121,7 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
          * got a timeout.  However, that presumably has higher overhead
          * (since it contends _c_lock and involves more atomic ops). */
         if (node.notify) {
-            if (atomic_fetch_add(node.notify, -1) == 1)
+            if (a_fetch_add(node.notify, -1) == 1)
                 __wake(node.notify, 1);
         }
     } else {
