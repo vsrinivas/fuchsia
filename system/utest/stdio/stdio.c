@@ -61,21 +61,18 @@ static bool stdio_launchpad_pipe_test(void)
     ASSERT_EQ(launchpad_create(job_copy,
                                "launchpad_pipe_stdio_test", &lp),
               NO_ERROR, "launchpad_create failed");
-    ASSERT_EQ(launchpad_arguments(lp, 1, &file),
+    ASSERT_EQ(launchpad_set_args(lp, 1, &file),
               NO_ERROR, "launchpad_arguments failed");
     ASSERT_EQ(launchpad_add_vdso_vmo(lp), NO_ERROR,
               "launchpad_add_vdso_vmo failed");
-    ASSERT_EQ(launchpad_clone_mxio_root(lp), NO_ERROR,
-              "launchpad_clone_mxio_root failed");
+    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_MXIO_CWD), NO_ERROR,
+              "launchpad_clone failed");
 
     ASSERT_EQ(launchpad_elf_load(lp, launchpad_vmo_from_file(file)),
               NO_ERROR, "launchpad_elf_load failed");
 
     ASSERT_EQ(launchpad_load_vdso(lp, MX_HANDLE_INVALID),
               NO_ERROR, "launchpad_load_vdso failed");
-
-    ASSERT_EQ(launchpad_clone_mxio_cwd(lp), NO_ERROR,
-              "launchpad_clone_mxio_cwd failed");
 
     // stdio pipe fds [ours, theirs]
     int stdin_fds[2];

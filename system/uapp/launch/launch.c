@@ -188,15 +188,15 @@ int main(int argc, char** argv) {
     mx_status_t status = launchpad_create(job, program, &lp);
     check("launchpad_create", status);
 
-    status = launchpad_arguments(lp, argc - optind,
-                                 (const char *const*) &argv[optind]);
+    status = launchpad_set_args(lp, argc - optind,
+                                (const char *const*) &argv[optind]);
     check("launchpad_arguments", status);
 
-    status = launchpad_environ(lp, env);
+    status = launchpad_set_environ(lp, env);
     check("launchpad_environ", status);
 
     if (send_root) {
-        status = launchpad_clone_mxio_root(lp);
+        status = launchpad_clone(lp, LP_CLONE_MXIO_ROOT);
         check("launchpad_clone_mxio_root", status);
     }
 

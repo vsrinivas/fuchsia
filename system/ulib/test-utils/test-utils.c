@@ -151,8 +151,8 @@ mx_handle_t tu_launch(const char* name,
     launchpad_t* lp;
     launchpad_create(0u, name, &lp);
     launchpad_load_from_file(lp, argv[0]);
-    launchpad_arguments(lp, argc, argv);
-    launchpad_environ(lp, envp);
+    launchpad_set_args(lp, argc, argv);
+    launchpad_set_environ(lp, envp);
     launchpad_add_handles(lp, num_handles, handles, handle_ids);
 
     mx_status_t status;
@@ -180,8 +180,8 @@ launchpad_t* tu_launch_mxio_init(const char* name,
 
     launchpad_create(0u, name, &lp);
     launchpad_load_from_file(lp, filename);
-    launchpad_arguments(lp, argc, argv);
-    launchpad_environ(lp, envp);
+    launchpad_set_args(lp, argc, argv);
+    launchpad_set_environ(lp, envp);
     launchpad_clone(lp, LP_CLONE_MXIO_ALL);
     launchpad_add_handles(lp, hnds_count, handles, ids);
 

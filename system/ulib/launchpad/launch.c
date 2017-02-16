@@ -29,9 +29,9 @@ mx_handle_t launchpad_launch_with_job(mx_handle_t job,
         if (status == NO_ERROR)
             status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
         if (status == NO_ERROR)
-            status = launchpad_arguments(lp, argc, argv);
+            status = launchpad_set_args(lp, argc, argv);
         if (status == NO_ERROR)
-            status = launchpad_environ(lp, envp);
+            status = launchpad_set_environ(lp, envp);
         if (status == NO_ERROR)
             status = launchpad_add_handles(lp, hnds_count, handles, ids);
     }

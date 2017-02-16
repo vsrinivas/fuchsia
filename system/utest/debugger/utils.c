@@ -291,24 +291,19 @@ mx_status_t create_inferior(const char* name,
     if (name == NULL)
         name = filename;
 
-    mx_status_t status = launchpad_create(0u, name, &lp);
-    if (status == NO_ERROR) {
-        status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
-        if (status == NO_ERROR)
-            status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
-        if (status == NO_ERROR)
-            status = launchpad_add_vdso_vmo(lp);
-        if (status == NO_ERROR)
-            status = launchpad_arguments(lp, argc, argv);
-        if (status == NO_ERROR)
-            status = launchpad_environ(lp, envp);
-        if (status == NO_ERROR)
-            status = launchpad_add_all_mxio(lp);
-        if (status == NO_ERROR)
-            status = launchpad_add_handles(lp, hnds_count, handles, ids);
-    }
+    mx_status_t status;
+    launchpad_create(0u, name, &lp);
+    launchpad_load_from_file(lp, filename);
+    launchpad_set_args(lp, argc, argv);
+    launchpad_set_environ(lp, envp);
+    launchpad_clone(lp, LP_CLONE_MXIO_ALL);
+    status = launchpad_add_handles(lp, hnds_count, handles, ids);
 
-    *out_launchpad = lp;
+    if (status < 0) {
+        launchpad_destroy(lp);
+    } else {
+        *out_launchpad = lp;
+    }
     return status;
 }
 

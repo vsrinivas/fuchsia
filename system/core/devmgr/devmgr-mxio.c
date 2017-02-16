@@ -76,8 +76,8 @@ void devmgr_launch(mx_handle_t job,
     launchpad_t* lp;
     launchpad_create(job_copy, name, &lp);
     launchpad_load_from_file(lp, argv[0]);
-    launchpad_arguments(lp, argc, argv);
-    launchpad_environ(lp, env);
+    launchpad_set_args(lp, argc, argv);
+    launchpad_set_environ(lp, env);
 
     mx_handle_t h = vfs_create_global_root_handle();
     launchpad_add_handle(lp, h, MX_HND_TYPE_MXIO_ROOT);

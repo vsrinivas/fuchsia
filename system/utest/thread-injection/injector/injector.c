@@ -77,7 +77,7 @@ int main(void) {
     char buf[32];
     snprintf(buf, sizeof(buf), "%#" PRIxPTR, (uintptr_t)data.futex_addr);
     const char *argv[] = { HELPER, buf };
-    status = launchpad_arguments(lp, 2, argv);
+    status = launchpad_set_args(lp, 2, argv);
     if (status != NO_ERROR) {
         fprintf(stderr, "launchpad_arguments: %d\n", status);
         return 1;
