@@ -72,74 +72,43 @@ static mx_status_t clone_application_environment(mx_handle_t* application_enviro
     return duplicate_application_environment(application_environment, application_environment_for_child);
 }
 
-static mx_status_t prepare_launch(launchpad_t* lp, const char* filename, int argc,
-                                  const char* const* argv, const char* const* envp,
-                                  int *fds) {
+static void prepare_launch(launchpad_t* lp, const char* filename, int argc,
+                           const char* const* argv, const char* const* envp,
+                           int *fds) {
 
-    mx_status_t status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
-
-    if (status == NO_ERROR)
-        status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
-    if (status == NO_ERROR)
-        status = launchpad_add_vdso_vmo(lp);
-    if (status == NO_ERROR)
-        status = launchpad_arguments(lp, argc, argv);
-    if (status == NO_ERROR)
-        status = launchpad_environ(lp, envp);
-    if (status == NO_ERROR)
-        status = launchpad_clone_mxio_root(lp);
-    if (status == NO_ERROR)
-        status = launchpad_clone_mxio_cwd(lp);
+    launchpad_load_from_file(lp, filename);
+    launchpad_set_args(lp, argc, argv);
+    launchpad_set_environ(lp, envp);
+    launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_MXIO_CWD);
 
     if (fds) {
-        if (status == NO_ERROR)
-            status = launchpad_clone_fd(lp, fds[0], STDIN_FILENO);
-        if (status == NO_ERROR)
-            status = launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
-        if (status == NO_ERROR)
-            status = launchpad_clone_fd(lp, fds[2], STDERR_FILENO);
+        launchpad_clone_fd(lp, fds[0], STDIN_FILENO);
+        launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
+        launchpad_clone_fd(lp, fds[2], STDERR_FILENO);
     } else {
-        if (status == NO_ERROR)
-            status = launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
-        if (status == NO_ERROR)
-            status = launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
-        if (status == NO_ERROR)
-            status = launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+        launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
+        launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
+        launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
     }
 
     mx_handle_t application_environment = MX_HANDLE_INVALID;
-    if (status == NO_ERROR)
-        status = clone_application_environment(&application_environment);
-    if (status == NO_ERROR && application_environment != MX_HANDLE_INVALID)
+    mx_status_t status = clone_application_environment(&application_environment);
+    if ((status == NO_ERROR) && (application_environment != MX_HANDLE_INVALID)) {
         launchpad_add_handle(lp, application_environment,
             MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
-
-    return status;
+    }
 }
 
 static mx_status_t launch(const char* filename, int argc, const char* const* argv,
                           const char* const* envp, mx_handle_t* process) {
     launchpad_t* lp = NULL;
-
-    mx_handle_t job_to_child = MX_HANDLE_INVALID;
-    mx_handle_t job = mx_job_default();
-    if (job != MX_HANDLE_INVALID)
-        mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
-
-    mx_status_t status = launchpad_create(job_to_child, filename, &lp);
-    if (status != NO_ERROR)
-        return status;
-
-    status = prepare_launch(lp, filename, argc, argv, envp, NULL);
-    if (status == NO_ERROR) {
-        mx_handle_t result = launchpad_start(lp);
-        if (result > 0)
-            *process = result;
-        else
-            status = result;
+    launchpad_create(0, filename, &lp);
+    prepare_launch(lp, filename, argc, argv, envp, NULL);
+    const char* errmsg;
+    mx_status_t status;
+    if ((status = launchpad_go(lp, process, &errmsg)) < 0) {
+        //fprintf(stderr, "launch() failed: %d: %s\n", status, errmsg);
     }
-
-    launchpad_destroy(lp);
     return status;
 }
 
@@ -158,32 +127,16 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
     if (status != NO_ERROR)
         return status;
 
-    mx_handle_t job_to_child = MX_HANDLE_INVALID;
-    mx_handle_t job = mx_job_default();
-    if (job != MX_HANDLE_INVALID)
-        mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
-
-    status = launchpad_create(job_to_child, argv[0], &lp);
-    if (status != NO_ERROR)
-        return status;
+    launchpad_create(0, argv[0], &lp);
 
     int argc = 1;
 
-    status = prepare_launch(lp, argv[0], argc, (const char* const*)argv, envp, fds);
-    if (status == NO_ERROR) {
-        status = launchpad_add_handle(lp, ast_vmo, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    prepare_launch(lp, argv[0], argc, (const char* const*)argv, envp, fds);
+    launchpad_add_handle(lp, ast_vmo, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    const char* errmsg;
+    if ((status = launchpad_go(lp, process, &errmsg)) < 0) {
+        //fprintf(stderr, "launch() failed: %d: %s\n", status, errmsg);
     }
-
-    if (status == NO_ERROR) {
-        mx_handle_t result = launchpad_start(lp);
-
-        if (result > 0)
-            *process = result;
-        else
-            status = result;
-    }
-
-    launchpad_destroy(lp);
     return status;
 }
 
