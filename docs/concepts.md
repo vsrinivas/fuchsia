@@ -2,13 +2,13 @@
 
 ## Introduction
 
-The kernel manages a number of different types of entities, which are generically
-referred to here as "Objects."  Interally, these are actual C++ objects descendant
-from the class "Dispatcher" (a name which will likely change in the future -- think
-of it as meaning "Kernel Object").
+The kernel manages a number of different types of Objects.  Those which are accessible
+directly via system calls are actual C++ objects which implement the Dispatcher
+interface.  These are implemented in the kernel's [libmagenta](../kernel/lib/magenta).
+Many are self-contained higher level Objects.  Some wrap lower level lk primitives.
 
 
-## System Calls
+## [System Calls](syscalls.md)
 
 Userspace code interacts with kernel objects via system calls, and almost exclusively
 via Handles.  In userspace, a Handle is represented as 32bit integer
@@ -33,6 +33,10 @@ by the Job in which the calling Process is contained.
 System calls are provided by libmagenta.so, which is a "virtual" shared library (VDSO)
 that the Magenta Kernel provides to userspace.  They are C ELF ABI functions of the
 form *mx_noun_verb()* or *mx_noun_verb_direct-object()*
+
+The system calls are defined by [syscalls.sysgen](../system/public/magenta/syscalls.sysgen)
+and processed by the [sysgen](../system/tools/sysgen/) tool into include files and glue
+code in libmagenta and the kernel's libsyscalls.
 
 
 ## [Handles](handles.md) and [Rights](rights.md)
@@ -108,6 +112,9 @@ and [channel_write](syscalls/channel_write.md).
 Objects may have up to 32 signals (represented by the mx_signals_t type and the MX_*_SIGNAL_*
 defines) which represent a piece of information about their current state.  Channels and Sockets,
 for example, may be READABLE or WRITABLE.  Processes or Threads may be TERMINATED.  And so on.
+
+There are also eight user-defined signals (MX_USER_SIGNAL_0 through MX_USER_SIGNAL_7), which may
+be manipulated with the [object_signal](syscalls/object_signal.md) syscall.
 
 Threads may wait for signals to become active on one or more Objects.
 
