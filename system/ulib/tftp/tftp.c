@@ -1,0 +1,752 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#define _POSIX_C_SOURCE 200809L  // for strnlen
+#include <arpa/inet.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "internal.h"
+
+// TODO
+// 1) How to we tell consumer to move forward when sending with window > 1?
+//    - The tricky part being that tftp_handle_msg will need to be called
+//      multiple times even if nothing is received...
+// 2) How do we get data access or allocated depending on direction?
+
+// RRQ    ->
+//        <- DATA or OACK or ERROR
+// ACK(0) -> (to confirm reception of OACK)
+// ERROR  -> (on OACK with non requested options)
+//        <- DATA(1)
+// ACK(1) ->
+
+// WRQ     ->
+//         <- ACK or OACK or ERROR
+// DATA(1) ->
+// ERROR   -> (on OACK with non requested options)
+//        <- DATA(2)
+// ACK(2) ->
+
+// MODE
+static const char* kNetascii = "NETASCII";
+static const char* kOctet = "OCTET";
+static const char* kMail = "MAIL";
+static const size_t kMaxMode = 9;  // strlen(NETASCII) + 1
+
+// TSIZE
+// Limit transfer to less than 10GB
+static const char* kTsize = "TSIZE";
+static const size_t kMaxTsizeOpt = 17;  // strlen(TSIZE) + 1 + strlen(1000000000) + 1
+
+// BLKSIZE
+// Max size is 65535 (max IP datagram)
+static const char* kBlkSize = "BLKSIZE";
+static const size_t kMaxBlkSizeOpt = 14;  // strlen(BLKSIZE) + 1 + strlen(65535) + 1
+
+// TIMEOUT
+// Max is 255 (RFC 2349)
+static const char* kTimeout = "TIMEOUT";
+static const size_t kMaxTimeoutOpt = 12;  // strlen(TIMEOUT) + 1 + strlen(255) + 1
+
+// WINDOWSIZE
+// Max is 65535 (RFC 7440)
+static const char* kWindowSize = "WINDOWSIZE";
+static const size_t kMaxWindowSizeOpt = 17;  // strlen(WINDOWSIZE) + 1 + strlen(65535) + 1
+
+// Since RRQ and WRQ come before option negotation, they are limited to max TFTP
+// blocksize of 512 (RFC 1350 and 2347).
+static const size_t kMaxRequestSize = 512;
+
+#define DEBUG 0
+
+#if DEBUG
+# define xprintf(args...) fprintf(stderr, args)
+#else
+# define xprintf(args...)
+#endif
+
+#define __ATTR_PRINTF(__fmt, __varargs) \
+    __attribute__((__format__(__printf__, __fmt, __varargs)))
+#define MIN(x,y) ((x) < (y) ? (x) : (y))
+
+static void append_option_name(char** body, size_t* left, const char* name) {
+    size_t offset = strlen(name);
+    memcpy(*body, name, offset);
+    offset++;
+    *body += offset;
+    *left -= offset;
+}
+
+static void __ATTR_PRINTF(4, 5) append_option(char** body, size_t* left, const char* name,
+        const char* fmt, ...) {
+    char* bodyp = *body;
+    size_t leftp = *left;
+
+    size_t offset = strlen(name);
+    memcpy(bodyp, name, offset);
+    offset++;
+    bodyp += offset;
+    leftp -= offset;
+    va_list args;
+    va_start(args, fmt);
+    offset = vsnprintf(bodyp, leftp - 1, fmt, args);
+    va_end(args);
+    offset++;
+    bodyp += offset;
+    leftp -= offset;
+
+    *body = bodyp;
+    *left = leftp;
+}
+
+#define OPCODE(msg, value)                \
+    do {                                  \
+        (msg)->opcode = htons(value);     \
+    } while (0)
+
+#define TRANSMIT_MORE 1
+#define TRANSMIT_WAIT_ON_ACK 2
+
+static size_t next_option(char* buffer, size_t len, char** option, char** value) {
+    size_t left = len;
+    size_t option_len = strnlen(buffer, left);
+    if (option_len == len) {
+        return 0;
+    }
+
+    *option = buffer;
+    xprintf("'%s' %ld\n", *option, option_len);
+    buffer += option_len + 1;
+    left -= option_len + 1;
+    size_t value_len = strnlen(buffer, left);
+    if (value_len == left) {
+        return 0;
+    }
+    *value = buffer;
+    xprintf("'%s' %ld\n", *value, value_len);
+    left -= value_len + 1;
+    return len - left;
+}
+
+static tftp_status send_error(tftp_session* session, uint16_t opcode, tftp_msg* resp,
+                              size_t* resp_len, void* cookie) {
+    OPCODE(resp, opcode);
+    *resp_len = sizeof(*resp);
+    session->send_fn(resp, *resp_len, cookie);
+    session->state = ERROR;
+    return TFTP_ERR_INTERNAL;
+}
+
+tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen) {
+    session->offset = (session->block_number + session->window_index) * session->block_size;
+    *outlen = 0;
+    if (session->offset < session->file_size) {
+        session->window_index++;
+        OPCODE(resp, OPCODE_DATA);
+        resp->block = session->block_number + session->window_index;
+        size_t len = MIN(session->file_size - session->offset, session->block_size);
+        xprintf(" -> Copying block #%d (size:%zu/%d) from %zu/%zu [%d/%d]\n",
+                session->block_number + session->window_index, len, session->block_size,
+                session->offset, session->file_size, session->window_index, session->window_size);
+        memcpy(resp->data, session->data + session->offset, len);
+        *outlen = sizeof(*resp) + len;
+        if (session->window_index < session->window_size) {
+            xprintf(" -> TRANSMIT_MORE(%d < %d)\n", session->window_index, session->window_size);
+            return TRANSMIT_MORE;
+        } else {
+            xprintf(" -> TRANSMIT_WAIT_ON_ACK(%d >= %d)\n", session->window_index,
+                    session->window_size);
+            session->block_number += session->window_size;
+            session->window_index = 0;
+            return TRANSMIT_WAIT_ON_ACK;
+        }
+    } else {
+        xprintf(" -> TRANSMIT_WAIT_ON_ACK(completed)\n");
+        return TRANSMIT_WAIT_ON_ACK;
+    }
+}
+
+int tftp_init(tftp_session** session, void* buffer, size_t size) {
+    if (buffer == NULL) {
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    if (size < sizeof(tftp_session)) {
+        return TFTP_ERR_BUFFER_TOO_SMALL;
+    }
+    *session = buffer;
+    tftp_session* s = *session;
+    memset(s, 0, sizeof(tftp_session));
+
+    // Sensible default values
+    s->file_size = s->options.file_size = DEFAULT_FILESIZE;
+    s->window_size = s->options.window_size = DEFAULT_WINDOWSIZE;
+    s->block_size = s->options.block_size = DEFAULT_BLOCKSIZE;
+    s->timeout = s->options.timeout = DEFAULT_TIMEOUT;
+    s->mode = s->options.mode = DEFAULT_MODE;
+
+    return TFTP_NO_ERROR;
+}
+
+int tftp_session_set_open_cb(tftp_session* session, tftp_open_file cb) {
+    if (session == NULL) {
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    session->open_fn = cb;
+    return TFTP_NO_ERROR;
+}
+
+int tftp_session_set_send_cb(tftp_session* session, tftp_send_message cb) {
+    if (session == NULL) {
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    session->send_fn = cb;
+    return TFTP_NO_ERROR;
+}
+
+tftp_status tftp_generate_write_request(tftp_session* session,
+                                        const char* filename,
+                                        tftp_mode mode,
+                                        void* data,
+                                        size_t datalen,
+                                        size_t block_size,
+                                        uint8_t timeout,
+                                        uint8_t window_size,
+                                        void* outgoing,
+                                        size_t* outlen,
+                                        uint32_t* timeout_ms,
+                                        void* cookie) {
+    if (*outlen < 2) {
+        xprintf("outlen too short: %zd\n", *outlen);
+        return TFTP_ERR_BUFFER_TOO_SMALL;
+    }
+
+    if (!data) {
+        xprintf("data is null\n");
+        return TFTP_ERR_INVALID_ARGS;
+    }
+
+    tftp_msg* ack = outgoing;
+    OPCODE(ack, OPCODE_WRQ);
+    char* body = ack->data;
+    memset(body, 0, *outlen - sizeof(*ack));
+    size_t left = *outlen - sizeof(*ack);
+    if (strlen(filename) + 1 > left - kMaxMode) {
+        xprintf("filename too long %zd > %zd\n", strlen(filename), left - kMaxMode);
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    strncpy(session->options.filename, filename, sizeof(session->options.filename));
+    memcpy(body, filename, strlen(filename));
+    body += strlen(filename) + 1;
+    left -= strlen(filename) + 1;
+    switch (mode) {
+    case MODE_NETASCII:
+        append_option_name(&body, &left, kNetascii);
+        break;
+    case MODE_OCTET:
+        append_option_name(&body, &left, kOctet);
+        break;
+    case MODE_MAIL:
+        append_option_name(&body, &left, kMail);
+        break;
+    default:
+        return TFTP_ERR_INVALID_ARGS;
+    }
+    session->options.mode = mode;
+
+    if (left < kMaxTsizeOpt) {
+        return TFTP_ERR_BUFFER_TOO_SMALL;
+    }
+    append_option(&body, &left, kTsize, "%ld", datalen);
+    session->data = (uint8_t*)data;
+    session->file_size = datalen;
+
+    if (block_size > 0) {
+        if (left < kMaxBlkSizeOpt) {
+            return TFTP_ERR_BUFFER_TOO_SMALL;
+        }
+        append_option(&body, &left, kBlkSize, "%ld", block_size);
+        session->options.block_size = block_size;
+        session->options.requested |= BLOCKSIZE_OPTION;
+    }
+
+    if (timeout > 0) {
+        if (left < kMaxTimeoutOpt) {
+            return TFTP_ERR_BUFFER_TOO_SMALL;
+        }
+        append_option(&body, &left, kTimeout, "%d", timeout);
+        session->options.timeout = timeout;
+        session->options.requested |= TIMEOUT_OPTION;
+    }
+
+    if (window_size > 1) {
+        if (left < kMaxWindowSizeOpt) {
+            return TFTP_ERR_BUFFER_TOO_SMALL;
+        }
+        append_option(&body, &left, kWindowSize, "%d", window_size);
+        session->options.window_size = window_size;
+        session->options.requested |= WINDOWSIZE_OPTION;
+    }
+
+    *outlen = *outlen - left;
+    // Nothing has been negotiated yet so use default
+    *timeout_ms = 1000 * session->timeout;
+
+    tftp_status r = session->send_fn(outgoing, *outlen, cookie);
+    if (r <= 0) {
+        session->state = ERROR;
+        return TFTP_ERR_IO;
+    }
+
+    session->state = WRITE_REQUESTED;
+    return TFTP_NO_ERROR;
+}
+
+tftp_status tftp_handle_rrq(tftp_session* session,
+                            tftp_msg* rrq,
+                            size_t rrq_len,
+                            tftp_msg* resp,
+                            size_t* resp_len,
+                            uint32_t* timeout_ms,
+                            void* cookie) {
+    // TODO(tkilbourn): implement this after refactoring tftp_handle_wrq into
+    // some more common methods for option handling.
+    return TFTP_ERR_NOT_SUPPORTED;
+}
+
+tftp_status tftp_handle_wrq(tftp_session* session,
+                            tftp_msg* wrq,
+                            size_t wrq_len,
+                            tftp_msg* resp,
+                            size_t* resp_len,
+                            uint32_t* timeout_ms,
+                            void* cookie) {
+    if (session->state != NONE) {
+        xprintf("Invalid state transition %d -> %d\n", session->state, WRITE_REQUESTED);
+        send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+        return TFTP_ERR_BAD_STATE;
+    }
+    // opcode, filename, 0, mode, 0, opt1, 0, value1 ... optN, 0, valueN, 0
+    // Max length is 512 no matter
+    if (wrq_len > kMaxRequestSize) {
+        xprintf("Write request is too large\n");
+        return send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+    }
+    // Skip opcode
+    size_t left = wrq_len - sizeof(*resp);
+    char* cur = wrq->data;
+    char *option, *value;
+    // filename, 0, mode, 0 can be interpreted like option, 0, value, 0
+    size_t offset = next_option(cur, left, &option, &value);
+    if (!offset) {
+        xprintf("No options\n");
+        return send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+    }
+    left -= offset;
+
+    xprintf("filename = '%s', mode = '%s'\n", option, value);
+
+    strncpy(session->options.filename, option, sizeof(session->options.filename));
+    char* mode = value;
+    if (!strncmp(mode, kNetascii, strlen(kNetascii))) {
+        session->options.mode = MODE_NETASCII;
+    } else if (!strncmp(mode, kOctet, strlen(kOctet))) {
+        session->options.mode = MODE_OCTET;
+    } else if (!strncmp(mode, kMail, strlen(kMail))) {
+        session->options.mode = MODE_MAIL;
+    } else {
+        xprintf("Unknown write request mode\n");
+        return send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+    }
+
+    // TODO(tkilbourn): refactor option handling code to share with
+    // tftp_handle_oack
+    cur += offset;
+    while (offset > 0 && left > 0) {
+        offset = next_option(cur, left, &option, &value);
+        if (!offset) {
+            xprintf("No more options\n");
+            return send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+        }
+
+        if (!strncmp(option, kBlkSize, strlen(kBlkSize))) { // RFC 2348
+            // Valid values range between "8" and "65464" octets, inclusive
+            long val = atol(value);
+            if (val < 8 || val > 65464) {
+                xprintf("invalid block size\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
+            session->options.block_size = val;
+            session->options.requested |= BLOCKSIZE_OPTION;
+        } else if (!strncmp(option, kTimeout, strlen(kTimeout))) { // RFC 2349
+            // Valid values range between "1" and "255" seconds inclusive.
+            long val = atol(value);
+            if (val < 1 || val > 255) {
+                xprintf("invalid timeout\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            session->options.timeout = val;
+            session->options.requested |= TIMEOUT_OPTION;
+        } else if (!strncmp(option, kTsize, strlen(kTsize))) { // RFC 2349
+            long val = atol(value);
+            if (val < 1) {
+                xprintf("invalid file size\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            session->options.file_size = val;
+            session->options.requested |= FILESIZE_OPTION;
+        } else if (!strncmp(option, kWindowSize, strlen(kWindowSize))) { // RFC 7440
+            // The valid values range MUST be between 1 and 65535 blocks, inclusive.
+            long val = atol(value);
+            if (val < 1 || val > 65535) {
+                xprintf("invalid window size\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            session->options.window_size = val;
+            session->options.requested |= WINDOWSIZE_OPTION;
+        } else {
+            // Options which the server does not support should be omitted from the
+            // OACK; they should not cause an ERROR packet to be generated.
+        }
+
+        cur += offset;
+        left -= offset;
+    }
+
+    char* body = resp->data;
+    memset(body, 0, *resp_len - sizeof(*resp));
+    left = *resp_len - sizeof(*resp);
+
+    OPCODE(resp, OPCODE_OACK);
+    if (session->options.requested & FILESIZE_OPTION) {
+        append_option(&body, &left, kTsize, "%d", session->options.file_size);
+        session->file_size = session->options.file_size;
+    } else {
+        xprintf("No TSIZE option specified\n");
+        send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+        return TFTP_ERR_BAD_STATE;
+    }
+    if (session->options.requested & BLOCKSIZE_OPTION) {
+        // TODO(jpoichet) Make sure this block size is possible. Need API upwards to
+        // request allocation of block size * window size memory
+        append_option(&body, &left, kBlkSize, "%d", session->options.block_size);
+        session->block_size = session->options.block_size;
+    }
+    if (session->options.requested & TIMEOUT_OPTION) {
+        // TODO(jpoichet) Make sure this timeout is possible. Need API upwards to
+        // request allocation of block size * window size memory
+        append_option(&body, &left, kTimeout, "%d", session->options.timeout);
+        session->timeout = session->options.timeout;
+        *timeout_ms = 1000 * session->timeout;
+    }
+    if (session->options.requested & WINDOWSIZE_OPTION) {
+        append_option(&body, &left, kWindowSize, "%d", session->options.window_size);
+        session->window_size = session->options.window_size;
+    }
+    if (!session->open_fn ||
+            session->open_fn(session->options.filename, session->options.file_size,
+                (void**)&session->data, cookie)) {
+        xprintf("Could not allocate buffer on write request\n");
+        send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+        return TFTP_ERR_BAD_STATE;
+    }
+    // TODO notify library client of the size
+    *resp_len = *resp_len - left;
+    if (session->send_fn(resp, *resp_len, cookie) <= 0) {
+        session->state = ERROR;
+        return TFTP_ERR_INTERNAL;
+    }
+    session->state = WRITE_REQUESTED;
+
+    xprintf("Read/Write Request Parsed\n");
+    xprintf("Options requested: %08x\n", session->options.requested);
+    xprintf("    Block Size : %d\n", session->options.block_size);
+    xprintf("    Timeout    : %d\n", session->options.timeout);
+    xprintf("    File Size  : %d\n", session->options.file_size);
+    xprintf("    Window Size: %d\n", session->options.window_size);
+
+    xprintf("Using options\n");
+    xprintf("    Block Size : %d\n", session->block_size);
+    xprintf("    Timeout    : %d\n", session->timeout);
+    xprintf("    File Size  : %zu\n", session->file_size);
+    xprintf("    Window Size: %d\n", session->window_size);
+
+    return TFTP_NO_ERROR;
+}
+
+tftp_status tftp_handle_data(tftp_session* session,
+                             tftp_msg* msg,
+                             size_t msg_len,
+                             tftp_msg* resp,
+                             size_t* resp_len,
+                             uint32_t* timeout_ms,
+                             void* cookie) {
+    switch (session->state) {
+    case WRITE_REQUESTED:
+    case TRANSMITTING:
+        session->state = TRANSMITTING;
+        break;
+    case NONE:
+    case LAST_PACKET:
+    case ERROR:
+    case COMPLETED:
+    default:
+        return send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+    }
+
+    tftp_data_msg* data = (tftp_data_msg*)msg;
+    tftp_data_msg* ack_data = (tftp_data_msg*)resp;
+    xprintf(" <- Block %u (Last = %u, Offset = %d, Size = %ld, Left = %ld)\n", data->block,
+            session->block_number, session->block_number * session->block_size,
+            session->file_size, session->file_size - session->block_number * session->block_size);
+    if (data->block == session->block_number + 1) {
+        xprintf("Advancing normally + 1\n");
+        memcpy(session->data + session->block_number * session->block_size, data->data, msg_len - 4);
+        session->block_number++;
+        session->window_index++;
+
+    } else {
+        // Force sending a ACK with the last block_number we received
+        xprintf("Skipped %d %d\n", data->block, session->block_number);
+        session->window_index = session->window_size;
+    }
+
+    if (session->window_index == session->window_size ||
+            session->block_number * session->block_size >= session->file_size) {
+        xprintf(" -> Ack %d\n", session->block_number);
+        OPCODE(ack_data, OPCODE_ACK);
+        ack_data->block = session->block_number;
+        session->window_index = 0;
+        *resp_len = sizeof(*ack_data);
+        session->send_fn(resp, *resp_len, cookie);
+        if (session->block_number * session->block_size >= session->file_size) {
+            *resp_len = 0;
+            return TFTP_TRANSFER_COMPLETED;
+        }
+    }
+    return TFTP_NO_ERROR;
+}
+
+tftp_status tftp_handle_ack(tftp_session* session,
+                            tftp_msg* ack,
+                            size_t ack_len,
+                            tftp_msg* resp,
+                            size_t* resp_len,
+                            uint32_t* timeout_ms,
+                            void* cookie) {
+    switch (session->state) {
+    case WRITE_REQUESTED:
+    case TRANSMITTING:
+        session->state = TRANSMITTING;
+        break;
+    case NONE:
+    case LAST_PACKET:
+    case ERROR:
+    case COMPLETED:
+    default:
+        return send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+    }
+    // Need to move forward in data and send it
+    tftp_data_msg* ack_data = (void*)ack;
+    tftp_data_msg* resp_data = (void*)resp;
+
+    xprintf(" <- Ack %d\n", ack_data->block);
+    session->block_number = ack_data->block;
+
+    if ((session->block_number + session->window_index) * session->block_size >= session->file_size) {
+        *resp_len = 0;
+        return TFTP_TRANSFER_COMPLETED;
+    }
+
+    tftp_status ret = TRANSMIT_MORE;
+    while (ret == TRANSMIT_MORE) {
+        ret = tx_data(session, resp_data, resp_len);
+        if (*resp_len > 0) {
+            session->send_fn(resp, *resp_len, cookie);
+        }
+    }
+    return TFTP_NO_ERROR;
+}
+
+tftp_status tftp_handle_error(tftp_session* session,
+                              tftp_msg* err,
+                              size_t err_len,
+                              tftp_msg* resp,
+                              size_t* resp_len,
+                              uint32_t* timeout_ms,
+                              void* cookie) {
+    xprintf("Transfer Error\n");
+    session->state = ERROR;
+    return TFTP_ERR_INTERNAL;
+}
+
+tftp_status tftp_handle_oack(tftp_session* session,
+                             tftp_msg* oack,
+                             size_t oack_len,
+                             tftp_msg* resp,
+                             size_t* resp_len,
+                             uint32_t* timeout_ms,
+                             void* cookie) {
+    xprintf("Option Ack\n");
+    switch (session->state) {
+    case WRITE_REQUESTED:
+        session->state = TRANSMITTING;
+        break;
+    case TRANSMITTING:
+    case NONE:
+    case LAST_PACKET:
+    case ERROR:
+    case COMPLETED:
+    default:
+        return send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+    }
+
+    size_t left = oack_len - sizeof(*oack);
+    char* cur = oack->data;
+    size_t offset;
+    char *option, *value;
+
+    session->mode = session->options.mode;
+    if (session->options.requested & BLOCKSIZE_OPTION) {
+        session->block_size = session->options.block_size;
+    }
+    if (session->options.requested & TIMEOUT_OPTION) {
+        session->timeout = session->options.timeout;
+    }
+    if (session->options.requested & WINDOWSIZE_OPTION) {
+        session->window_size = session->options.window_size;
+    }
+    while (left > 0) {
+        offset = next_option(cur, left, &option, &value);
+        if (!offset) {
+            return send_error(session, OPCODE_ERROR, resp, resp_len, cookie);
+        }
+
+        if (!strncmp(option, kBlkSize, strlen(kBlkSize))) { // RFC 2348
+            if (!(session->options.requested & BLOCKSIZE_OPTION)) {
+                xprintf("block size not requested\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            // Valid values range between "8" and "65464" octets, inclusive
+            long val = atol(value);
+            if (val < 8 || val > 65464) {
+                xprintf("invalid block size\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
+            session->block_size = val;
+        } else if (!strncmp(option, kTimeout, strlen(kTimeout))) { // RFC 2349
+            if (!(session->options.requested & TIMEOUT_OPTION)) {
+                xprintf("timeout not requested\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            // Valid values range between "1" and "255" seconds inclusive.
+            long val = atol(value);
+            if (val < 1 || val > 255) {
+                xprintf("invalid timeout\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            session->timeout = val;
+        } else if (!strncmp(option, kWindowSize, strlen(kWindowSize))) { // RFC 7440
+            if (!(session->options.requested & WINDOWSIZE_OPTION)) {
+                xprintf("window size not requested\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            // The valid values range MUST be between 1 and 65535 blocks, inclusive.
+            long val = atol(value);
+            if (val < 1 || val > 65535) {
+                xprintf("invalid window size\n");
+                return send_error(session, OPCODE_OERROR, resp, resp_len, cookie);
+            }
+            session->window_size = val;
+        } else {
+            // Options which the server does not support should be omitted from the
+            // OACK; they should not cause an ERROR packet to be generated.
+        }
+
+        cur += offset;
+        left -= offset;
+    }
+    *timeout_ms = 1000 * session->timeout;
+
+    xprintf("Options negotiated\n");
+    xprintf("    Block Size : %d\n", session->block_size);
+    xprintf("    Timeout    : %d\n", session->timeout);
+    xprintf("    File Size  : %zu\n", session->file_size);
+    xprintf("    Window Size: %d\n", session->window_size);
+
+    tftp_data_msg* resp_data = (void*)resp;
+    session->offset = 0;
+    session->block_number = 0;
+    tftp_status ret = TRANSMIT_MORE;
+    while (ret == TRANSMIT_MORE) {
+        ret = tx_data(session, resp_data, resp_len);
+        if (*resp_len > 0) {
+            session->send_fn(resp, *resp_len, cookie);
+        }
+    }
+    return TFTP_NO_ERROR;
+}
+
+tftp_status tftp_handle_oerror(tftp_session* session,
+                               tftp_msg* oerr,
+                               size_t oerr_len,
+                               tftp_msg* resp,
+                               size_t* resp_len,
+                               uint32_t* timeout_ms,
+                               void* cookie) {
+    xprintf("Option Error\n");
+    session->state = ERROR;
+    return TFTP_ERR_INTERNAL;
+}
+
+tftp_status tftp_handle_msg(tftp_session* session,
+                            void* incoming,
+                            size_t inlen,
+                            void* outgoing,
+                            size_t* outlen,
+                            uint32_t* timeout_ms,
+                            void* cookie) {
+    tftp_msg* msg = incoming;
+    tftp_msg* resp = outgoing;
+
+    // Decode opcode
+    uint16_t opcode = ntohs(*(uint16_t*)incoming);
+
+    // Set default timeout
+    *timeout_ms = 1000 * session->timeout;
+
+    switch (opcode) {
+    case OPCODE_RRQ:
+        return tftp_handle_rrq(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+    case OPCODE_WRQ:
+        return tftp_handle_wrq(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+    case OPCODE_DATA:
+        return tftp_handle_data(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+    case OPCODE_ACK:
+        return tftp_handle_ack(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+    case OPCODE_ERROR:
+        return tftp_handle_error(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+    case OPCODE_OACK:
+        return tftp_handle_oack(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+    case OPCODE_OERROR:
+        return tftp_handle_oerror(session, msg, inlen, resp, outlen, timeout_ms, cookie);
+    default:
+        xprintf("Unknown opcode\n");
+        session->state = ERROR;
+        return TFTP_ERR_INTERNAL;
+    }
+}
+
+tftp_status tftp_timeout(tftp_session* session,
+                         void* outgoing,
+                         size_t* outlen,
+                         uint32_t* timeout_ms,
+                         void* cookie) {
+    session->send_fn(outgoing, *outlen, cookie);
+    return TFTP_NO_ERROR;
+}
