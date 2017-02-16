@@ -33,9 +33,19 @@ int thread_injection_test(void) {
     // into this here process.
     const char* argv[] = { "/boot/bin/thread-injection-injector" };
     uint32_t id = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
-    mx_handle_t proc = launchpad_launch_mxio_etc(argv[0], 1, argv, NULL,
-                                                 1, &channelh[1], &id);
-    snprintf(msg, sizeof(msg), "launchpad_launch_mxio_etc failed: %d", proc);
+
+    launchpad_t* lp;
+    launchpad_create(0, argv[0], &lp);
+    launchpad_load_from_file(lp, argv[0]);
+    launchpad_set_args(lp, 1, argv);
+    launchpad_add_handle(lp, channelh[1], id);
+    launchpad_clone(lp, LP_CLONE_ALL);
+
+
+    mx_handle_t proc;
+    const char* errmsg;
+    status = launchpad_go(lp, &proc, &errmsg);
+    snprintf(msg, sizeof(msg), "launchpad_go failed: %s: %d", errmsg, status);
     ASSERT_GT(proc, 0, msg);
     mx_handle_close(proc);
 
