@@ -50,7 +50,7 @@ void* __expand_heap(size_t* pn) {
     if (heap_vmar == MX_HANDLE_INVALID) {
         status = _mx_vmar_allocate(_mx_vmar_root_self(), 0, HEAP_REGION_SIZE,
                                    MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
-                                   MX_VM_FLAG_CAN_MAP_SPECIFIC,
+                                       MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                    &heap_vmar, &area);
         if (status != NO_ERROR) {
             _mx_handle_close(vmo);
@@ -67,13 +67,13 @@ void* __expand_heap(size_t* pn) {
     }
     next_heap_offset += n;
 
-#else // _LP64
+#else  // _LP64
     /* Allocate a VMAR with space for a GUARD_SIZE guard page on each side */
     mx_handle_t vmar;
     size_t total_alloc = n + 2 * GUARD_SIZE;
     status = _mx_vmar_allocate(_mx_vmar_root_self(), 0, total_alloc,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
-                               MX_VM_FLAG_CAN_MAP_SPECIFIC,
+                                   MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                &vmar, &area);
     if (status != NO_ERROR) {
         _mx_handle_close(vmo);

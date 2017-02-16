@@ -40,7 +40,7 @@ char* realpath(const char* restrict filename, char* restrict resolved) {
 
     close(fd);
     return resolved ? strcpy(resolved, tmp) : strdup(tmp);
- err:
+err:
     close(fd);
     return 0;
 }

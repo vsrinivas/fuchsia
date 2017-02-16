@@ -11,9 +11,9 @@
 #include <signal.h>
 #include <threads.h>
 
+#include <magenta/tls.h>
 #include <runtime/thread.h>
 #include <runtime/tls.h>
-#include <magenta/tls.h>
 
 #define pthread __pthread
 
@@ -24,7 +24,7 @@ typedef struct {
     // The position of this pointer is part of the ABI on x86.
     // It has the same value as the thread pointer itself.
     uintptr_t tp;
-    void **dtv;
+    void** dtv;
 } tcbhead_t;
 
 // The locations of these fields is part of the ABI known to the compiler.

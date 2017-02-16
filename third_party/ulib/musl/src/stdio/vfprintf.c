@@ -539,7 +539,7 @@ static int getint(char** s) {
 }
 
 static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg, int* nl_type) {
-    char *a, *z, *s = (char*)fmt;
+    char *a, *z, *s = (char *)fmt;
     unsigned l10n = 0, fl;
     int w, p;
     union arg arg;

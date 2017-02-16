@@ -575,9 +575,9 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     uintptr_t vmar_base;
     status = _mx_vmar_allocate(__magenta_vmar_root_self, 0, map_len,
                                MX_VM_FLAG_CAN_MAP_READ |
-                               MX_VM_FLAG_CAN_MAP_WRITE |
-                               MX_VM_FLAG_CAN_MAP_EXECUTE |
-                               MX_VM_FLAG_CAN_MAP_SPECIFIC,
+                                   MX_VM_FLAG_CAN_MAP_WRITE |
+                                   MX_VM_FLAG_CAN_MAP_EXECUTE |
+                                   MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                &dso->vmar, &vmar_base);
     if (status != NO_ERROR) {
         error("failed to reserve %zu bytes of address space: %d\n",
@@ -663,7 +663,6 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             }
         }
     }
-
 
     dso->base = base;
     dso->dynv = laddr(dso, dyn);

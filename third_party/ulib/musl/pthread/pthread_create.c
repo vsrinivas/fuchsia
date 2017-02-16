@@ -116,7 +116,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     new->stack_size = stack - stack_limit;
     new->start = entry;
     new->start_arg = arg;
-    new->head.tp = (uintptr_t)new;
+    new->head.tp = (uintptr_t) new;
     new->tsd = (void**)tsd;
     new->locale = &libc.global_locale;
     // TODO (kulakowski) Actually detach via attribute

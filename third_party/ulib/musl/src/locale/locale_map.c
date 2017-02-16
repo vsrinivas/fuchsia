@@ -23,7 +23,7 @@ const struct __locale_map* __get_locale(int cat, const char* val) {
     static void* volatile loc_head;
     const struct __locale_map* p;
     struct __locale_map* new = 0;
-    const char *z;
+    const char* z;
     char buf[256];
     size_t l, n;
 
