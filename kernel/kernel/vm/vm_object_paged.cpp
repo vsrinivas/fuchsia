@@ -222,15 +222,16 @@ status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* com
     AutoLock a(lock_);
 
     // trim the size
-    if (!TrimRange(offset, len, size_))
+    uint64_t new_len;
+    if (!TrimRange(offset, len, size_, &new_len))
         return ERR_OUT_OF_RANGE;
 
     // was in range, just zero length
-    if (len == 0)
+    if (new_len == 0)
         return NO_ERROR;
 
     // compute a page aligned end to do our searches in to make sure we cover all the pages
-    uint64_t end = ROUNDUP_PAGE_SIZE(offset + len);
+    uint64_t end = ROUNDUP_PAGE_SIZE(offset + new_len);
     DEBUG_ASSERT(end > offset);
 
     // make a pass through the list, counting the number of pages we need to allocate
@@ -293,15 +294,16 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
     AutoLock a(lock_);
 
     // trim the size
-    if (!TrimRange(offset, len, size_))
+    uint64_t new_len;
+    if (!TrimRange(offset, len, size_, &new_len))
         return ERR_OUT_OF_RANGE;
 
     // was in range, just zero length
-    if (len == 0)
+    if (new_len == 0)
         return NO_ERROR;
 
     // compute a page aligned end to do our searches in to make sure we cover all the pages
-    uint64_t end = ROUNDUP_PAGE_SIZE(offset + len);
+    uint64_t end = ROUNDUP_PAGE_SIZE(offset + new_len);
     DEBUG_ASSERT(end > offset);
 
     // make a pass through the list, making sure we have an empty run on the object
@@ -311,7 +313,7 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
             count++;
     }
 
-    DEBUG_ASSERT(count == len / PAGE_SIZE);
+    DEBUG_ASSERT(count == new_len / PAGE_SIZE);
 
     // allocate count number of pages
     list_node page_list;
@@ -359,16 +361,17 @@ status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* d
     AutoLock a(lock_);
 
     // trim the size
-    if (!TrimRange(offset, len, size_))
+    uint64_t new_len;
+    if (!TrimRange(offset, len, size_, &new_len))
         return ERR_OUT_OF_RANGE;
 
     // was in range, just zero length
-    if (len == 0)
+    if (new_len == 0)
         return NO_ERROR;
 
     // figure the starting and ending page offset
     uint64_t start = PAGE_ALIGN(offset);
-    uint64_t end = ROUNDUP_PAGE_SIZE(offset + len);
+    uint64_t end = ROUNDUP_PAGE_SIZE(offset + new_len);
     DEBUG_ASSERT(end > offset);
     DEBUG_ASSERT(end > start);
     uint64_t page_aligned_len = end - start;
@@ -445,21 +448,23 @@ status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* b
     AutoLock a(lock_);
 
     // trim the size
-    if (!TrimRange(offset, len, size_))
+    uint64_t new_len;
+    if (!TrimRange(offset, len, size_, &new_len))
         return ERR_OUT_OF_RANGE;
 
     // was in range, just zero length
-    if (len == 0)
+    if (new_len == 0)
         return 0;
 
     // walk the list of pages and do the write
+    uint64_t src_offset = offset;
     size_t dest_offset = 0;
-    while (len > 0) {
-        size_t page_offset = offset % PAGE_SIZE;
-        size_t tocopy = MIN(PAGE_SIZE - page_offset, len);
+    while (new_len > 0) {
+        size_t page_offset = src_offset % PAGE_SIZE;
+        size_t tocopy = MIN(PAGE_SIZE - page_offset, new_len);
 
         // fault in the page
-        vm_page_t* p = FaultPageLocked(offset, write ? VMM_PF_FLAG_WRITE : 0);
+        vm_page_t* p = FaultPageLocked(src_offset, write ? VMM_PF_FLAG_WRITE : 0);
         if (!p)
             return ERR_NO_MEMORY;
 
@@ -472,11 +477,11 @@ status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* b
         if (err < 0)
             return err;
 
-        offset += tocopy;
+        src_offset += tocopy;
         if (bytes_copied)
             *bytes_copied += tocopy;
         dest_offset += tocopy;
-        len -= tocopy;
+        new_len -= tocopy;
     }
 
     return NO_ERROR;

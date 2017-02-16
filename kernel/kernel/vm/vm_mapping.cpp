@@ -314,8 +314,8 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
     // compute the intersection of the passed in vmo range and our mapping
     uint64_t offset_new;
     uint64_t len_new;
-    if (!GetIntersect(object_offset_, static_cast<uint64_t>(size_), offset, len, offset_new,
-                      len_new))
+    if (!GetIntersect(object_offset_, static_cast<uint64_t>(size_), offset, len,
+                      &offset_new, &len_new))
         return NO_ERROR;
 
     DEBUG_ASSERT(len_new > 0 && len_new <= SIZE_MAX);
