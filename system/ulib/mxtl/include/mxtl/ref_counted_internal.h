@@ -6,24 +6,25 @@
 
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
+#include <mxtl/atomic.h>
 
 namespace mxtl {
 namespace internal {
 
 class RefCountedBase {
 protected:
-    constexpr RefCountedBase() {}
+    constexpr RefCountedBase() : ref_count_(1) {}
     ~RefCountedBase() {}
     void AddRef() {
         DEBUG_ASSERT(adopted_);
         // TODO(jamesr): Replace uses of GCC builtins with something safer.
-        __atomic_fetch_add(&ref_count_, 1, __ATOMIC_RELAXED);
+        ref_count_.fetch_add(1, memory_order_relaxed);
     }
     // Returns true if the object should self-delete.
     bool Release() __WARN_UNUSED_RESULT {
         DEBUG_ASSERT(adopted_);
-        if (__atomic_fetch_add(&ref_count_, -1, __ATOMIC_RELEASE) == 1) {
-            __atomic_thread_fence(__ATOMIC_ACQUIRE);
+        if (ref_count_.fetch_sub(1, memory_order_release) == 1) {
+            atomic_thread_fence(memory_order_acquire);
             return true;
         }
         return false;
@@ -38,11 +39,11 @@ protected:
 
     // Current ref count. Only to be used for debugging purposes.
     int ref_count_debug() const {
-        return __atomic_load_n(&ref_count_, __ATOMIC_RELAXED);
+        return ref_count_.load(memory_order_relaxed);
     }
 
 private:
-    int ref_count_ = 1;
+    mxtl::atomic_int ref_count_;
 #if (LK_DEBUGLEVEL > 1)
     bool adopted_ = false;
 #endif
