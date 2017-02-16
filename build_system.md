@@ -1,19 +1,21 @@
-
 # Fuchsia Build Notes
 
-You should probably use the [standard build instructions](https://fuchsia.googlesource.com/fuchsia/+/HEAD/README.md) instead of using the instructions here.
+These are notes on using the `gen.py` script and `ninja` directly for builds,
+and the `scripts/run-magenta-*` scripts to launch QEMU.
 
-These are notes on using the `gen.py` script and `ninja` directly for builds, and the `scripts/run-magenta-*` scripts to launch QEMU. The functions in `env.sh` should cover all the functionality described here and use these commands under-the-hood.
+You can alternatively use the [standard build instructions](getting_started.md)
+using commands defined in `env.sh` instead.
 
 ### Build Magenta and the sysroot
 
-First, you need to [build the Magenta kernel](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/getting_started.md) and the sysroot:
+First, you need to [build the Magenta kernel](magenta) and the sysroot:
 
 ```
 (cd magenta; make -j32 magenta-pc-x86-64)
 ./scripts/build-sysroot.sh
 ```
-### Building Fuchsia
+
+### Build Fuchsia
 
 Build Fuchsia using these commands:
 
@@ -31,8 +33,8 @@ for faster builds:
 ./buildtools/ninja -C out/debug-x86-64
 ```
 
-[Googlers only] If you have goma installed, prefer goma over ccache and use these
-alternative commands for faster builds:
+[Googlers only] If you have goma installed, prefer goma over ccache and use
+these alternative commands for faster builds:
 
 ```
 ./packages/gn/gen.py --goma
@@ -53,13 +55,16 @@ argument. After running `gen.py` once, you can do incremental builds using
 
 ### Running Fuchsia
 
-These commands will create an `out/debug-{arch}/user.bootfs` file. To run the
-system with this filesystem attached in QEMU, pass the user.bootfs path as the
-value of the '-x' parameter in Magenta's start command script, for example:
+The commands above create an `out/debug-{arch}/user.bootfs` file. To run the
+system with this filesystem attached in QEMU, pass the path to user.bootfs as
+the value of the `-x` parameter in Magenta's start command script, for example:
 
 ```
 ./scripts/run-magenta-x86-64 -x out/debug-x86-64/user.bootfs -m 2048
 ./scripts/run-magenta-arm64 -x out/debug-aarch64/user.bootfs -m 2048
 ```
 
-See the [standard build instructions](https://fuchsia.googlesource.com/fuchsia/+/HEAD/README.md) for other flags you can pass to QEMU.
+See the [standard build instructions](getting_started.md) for other flags you
+can pass to QEMU.
+
+[magenta]: https://fuchsia.googlesource.com/magenta/+/HEAD/docs/getting_started.md "Magenta"
