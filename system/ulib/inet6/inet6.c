@@ -372,7 +372,8 @@ void eth_recv(void* _data, size_t len) {
         _udp6_recv(ip, data, len);
         break;
     default:
-        BAD("Unhandled IP6");
+        // do nothing
+        break;
     }
 }
 
