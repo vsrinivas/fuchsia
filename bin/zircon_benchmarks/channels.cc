@@ -94,10 +94,16 @@ static bool Launch(const char* arg, int range, mx_handle_t* channel,
   std::string optarg = std::to_string(range);
   std::vector<const char*> argv = {HELPER_PATH, arg, optarg.c_str()};
   uint32_t handle_id = HELPER_HANDLE_ID;
-  *process = launchpad_launch(argv[0], argv.size(), argv.data(), nullptr, 1,
-                              channel, &handle_id);
+
+  launchpad_t* lp;
+  launchpad_create(0, argv[0], &lp);
+  launchpad_load_from_file(lp, argv[0]);
+  launchpad_set_args(lp, argv.size(), argv.data());
+  launchpad_add_handle(lp, *channel, handle_id);
+  const char* errmsg;
+  auto status = launchpad_go(lp, process, &errmsg);
   *channel = MX_HANDLE_INVALID;
-  return *process >= 0;
+  return status == NO_ERROR;
 }
 
 int channel_read(uint32_t num_bytes) {
