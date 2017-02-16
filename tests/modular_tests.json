@@ -2,15 +2,15 @@
     "tests": [
         {
           "name": "dummy_user_shell",
-          "exec": "bootstrap device_runner --user_shell=dummy_user_shell"
+          "exec": "bootstrap device_runner --ledger_repository_for_testing --user_shell=dummy_user_shell"
         },
         {
           "name": "parent_child",
-          "exec": "bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module"
+          "exec": "bootstrap device_runner --ledger_repository_for_testing --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module"
         },
         {
           "name": "component_context",
-          "exec": "bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test"
+          "exec": "bootstrap device_runner --ledger_repository_for_testing --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test"
         }
     ]
 }

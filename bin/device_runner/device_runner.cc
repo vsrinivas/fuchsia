@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <iostream>
+#include <magenta/syscalls.h>
 #include <memory>
 
 #include "application/lib/app/application_context.h"
@@ -35,6 +36,7 @@
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
@@ -54,6 +56,8 @@ class Settings {
         "user_runner", "file:///system/apps/user_runner");
     user_shell = command_line.GetOptionValueWithDefault(
         "user_shell", "file:///system/apps/armadillo_user_shell");
+    ledger_repository_for_testing =
+        command_line.HasOption("ledger_repository_for_testing");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("device_shell_args", ""),
@@ -71,6 +75,7 @@ class Settings {
       --user_runner=USER_RUNNER
       --user_shell=USER_SHELL
       --user_shell_args=SHELL_ARGS
+      --ledger_repository_for_testing
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to "file:///system/apps/dummy_device_shell".
     USER_RUNNER: URL of the user runner implementation to run.
@@ -86,6 +91,7 @@ class Settings {
   std::string user_runner;
   std::string user_shell;
   std::vector<std::string> user_shell_args;
+  bool ledger_repository_for_testing;
 
  private:
   void ParseShellArgs(const std::string& value,
@@ -230,8 +236,22 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
     // Get the LedgerRepository for the user.
     fidl::Array<uint8_t> user_id = to_array(username);
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
+    std::string ledger_repository_path =
+        kLedgerDataBaseDir + to_hex_string(user_id);
+    if (settings_.ledger_repository_for_testing) {
+      unsigned random_number;
+      size_t random_size;
+      mx_status_t status =
+          mx_cprng_draw(&random_number, sizeof random_number, &random_size);
+      FTL_CHECK(status == NO_ERROR);
+      FTL_CHECK(sizeof random_number == random_size);
+      ledger_repository_path +=
+          ftl::StringPrintf("_for_testing_%X", random_number);
+      FTL_LOG(INFO) << "Using testing ledger repository path: "
+                    << ledger_repository_path;
+    }
     ledger_repository_factory_->GetRepository(
-        kLedgerDataBaseDir + to_hex_string(user_id),
+        ledger_repository_path,
         ledger_repository.NewRequest(), [](ledger::Status status) {
           FTL_DCHECK(status == ledger::Status::OK)
               << "GetRepository failed: " << status;
