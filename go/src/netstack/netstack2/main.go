@@ -29,6 +29,22 @@ func main() {
 	log.SetPrefix("netstack2: ")
 	log.Print("started")
 
+	stk := stack.New([]string{
+		ipv4.ProtocolName,
+		ipv4.PingProtocolName,
+		ipv6.ProtocolName,
+		arp.ProtocolName,
+	}, []string{
+		tcp.ProtocolName,
+		udp.ProtocolName,
+	}).(*stack.Stack)
+	dnsClient := dns.NewClient(stk, 1)
+	s, err := socketDispatcher(stk, dnsClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Print("socket dispatcher started")
+
 	h := mxruntime.GetStartupHandle(mxruntime.HandleInfo{Type: mxruntime.HandleUser0, Arg: 0})
 	if h == 0 {
 		log.Fatal("invalid startup handle")
@@ -48,7 +64,6 @@ func main() {
 	if debug2 {
 		linkID = sniffer.New(linkID)
 	}
-	stk := stack.New([]string{ipv4.ProtocolName, ipv4.PingProtocolName, ipv6.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName}).(*stack.Stack)
 	if err := stk.CreateNIC(1, linkID); err != nil {
 		log.Fatalf("CreateNIC: %v", err)
 	}
@@ -70,21 +85,14 @@ func main() {
 	}
 
 	dhcpClient = dhcp.NewClient(stk, 1, ep.linkAddr)
-
 	go dhcpClient.Start(func(config dhcp.Config) {
 		// Update default route with new gateway.
 		stk.SetRouteTable(defaultRouteTable(config.Gateway))
 		stk.RemoveAddress(1, "\xff\xff\xff\xff")
 		stk.RemoveAddress(1, "\x00\x00\x00\x00")
+		s.setAddr(dhcpClient.Address())
 	})
 
-	dnsClient := dns.NewClient(stk, 1)
-
-	_, err := socketDispatcher(stk, dnsClient)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Print("socket dispatcher started")
 	select {}
 }
 

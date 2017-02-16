@@ -67,6 +67,7 @@ func socketDispatcher(stk tcpip.Stack, dnsClient *dns.Client) (*socketServer, er
 		return nil, err
 	}
 	s := &socketServer{
+		started:    make(chan struct{}),
 		dispatcher: d,
 		stack:      stk,
 		dnsClient:  dnsClient,
@@ -93,6 +94,13 @@ func socketDispatcher(stk tcpip.Stack, dnsClient *dns.Client) (*socketServer, er
 
 	go d.Serve()
 	return s, nil
+}
+
+func (s *socketServer) setAddr(addr tcpip.Address) {
+	s.mu.Lock()
+	close(s.started)
+	s.addr = addr
+	s.mu.Unlock()
 }
 
 type cookie int64
@@ -308,11 +316,13 @@ func (s *socketServer) newIostate() (ios *iostate, peerH, peerS mx.Handle, err e
 }
 
 type socketServer struct {
+	started    chan struct{}
 	dispatcher *dispatcher.Dispatcher
 	stack      tcpip.Stack
 	dnsClient  *dns.Client
 
 	mu   sync.Mutex
+	addr tcpip.Address
 	next cookie
 	io   map[cookie]*iostate
 }
@@ -446,6 +456,12 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 
 func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
+	if addr.Addr == "\x00\x00\x00\x00" {
+		<-s.started
+		s.mu.Lock()
+		addr.Addr = s.addr
+		s.mu.Unlock()
+	}
 	if err != nil {
 		if debug {
 			log.Printf("bind: bad input: %v", err)
