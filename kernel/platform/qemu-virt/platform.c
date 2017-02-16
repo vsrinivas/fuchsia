@@ -176,15 +176,23 @@ void platform_early_init(void)
 
     platform_preserve_ramdisk();
 
-    /* boot the secondary cpus using the Power State Coordintion Interface */
-    for (uint i = 1; i < SMP_MAX_CPUS; i++) {
-        psci_cpu_on(0, i, MEMBASE + KERNEL_LOAD_OFFSET);
-    }
 }
 
 void platform_init(void)
 {
     uart_init();
+    /* TODO - number of cpus (and topology) should be parsed from device index or command line */
+    struct list_node list = LIST_INITIAL_VALUE(list);
+
+    /* boot the secondary cpus using the Power State Coordintion Interface */
+    for (uint i = 1; i < SMP_MAX_CPUS; i++) {
+
+        uint64_t mpid = (PSCI_INDEX_TO_CLUSTER(i) << 8) | PSCI_INDEX_TO_ID(i);
+
+        arm64_set_secondary_sp(mpid, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, &list, NULL));
+
+        psci_cpu_on(0, i, MEMBASE + KERNEL_LOAD_OFFSET);
+    }
 }
 
 void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
