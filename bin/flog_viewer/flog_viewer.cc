@@ -24,7 +24,7 @@ FlogViewer::FlogViewer() {}
 
 FlogViewer::~FlogViewer() {}
 
-void FlogViewer::Initialize(modular::ApplicationContext* application_context,
+void FlogViewer::Initialize(app::ApplicationContext* application_context,
                             const std::function<void()>& terminate_callback) {
   terminate_callback_ = terminate_callback;
   service_ = application_context->ConnectToEnvironmentService<FlogService>();

@@ -17,8 +17,8 @@ namespace flog {
 class FlogViewerApp {
  public:
   FlogViewerApp(int argc, const char** argv) {
-    std::unique_ptr<modular::ApplicationContext> application_context =
-        modular::ApplicationContext::CreateFromStartupInfo();
+    std::unique_ptr<app::ApplicationContext> application_context =
+        app::ApplicationContext::CreateFromStartupInfo();
 
     viewer_.Initialize(application_context.get(), []() {
       mtl::MessageLoop::GetCurrent()->PostQuitTask();

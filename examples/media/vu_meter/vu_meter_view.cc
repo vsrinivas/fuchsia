@@ -32,7 +32,7 @@ constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 VuMeterView::VuMeterView(
     mozart::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    modular::ApplicationContext* application_context,
+    app::ApplicationContext* application_context,
     const VuMeterParams& params)
     : mozart::BaseView(std::move(view_manager),
                        std::move(view_owner_request),

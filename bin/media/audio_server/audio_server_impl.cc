@@ -14,7 +14,7 @@ namespace audio {
 
 AudioServerImpl::AudioServerImpl()
     : application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()),
+          app::ApplicationContext::CreateFromStartupInfo()),
       output_manager_(this),
       cleanup_queue_(new CleanupQueue) {
   FTL_DCHECK(application_context_);

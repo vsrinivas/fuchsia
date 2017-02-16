@@ -67,7 +67,7 @@ class AudioServerImpl : public AudioServer {
   void Shutdown();
   void DoPacketCleanup();
 
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   fidl::BindingSet<AudioServer> bindings_;
 
   // A reference to our message loop's task runner.  Allows us to post events to

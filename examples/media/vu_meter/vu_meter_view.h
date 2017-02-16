@@ -24,7 +24,7 @@ class VuMeterView : public mozart::BaseView, public mozart::InputListener {
  public:
   VuMeterView(mozart::ViewManagerPtr view_manager,
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-              modular::ApplicationContext* application_context,
+              app::ApplicationContext* application_context,
               const VuMeterParams& params);
 
   ~VuMeterView() override;

@@ -15,6 +15,6 @@ FactoryServiceBase::ProductBase::~ProductBase() {}
 
 FactoryServiceBase::FactoryServiceBase()
     : application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()) {}
+          app::ApplicationContext::CreateFromStartupInfo()) {}
 
 FactoryServiceBase::~FactoryServiceBase() {}

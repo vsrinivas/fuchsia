@@ -81,7 +81,7 @@ class FactoryServiceBase {
 
   virtual ~FactoryServiceBase();
 
-  modular::ApplicationContext* application_context() {
+  app::ApplicationContext* application_context() {
     return application_context_.get();
   }
 
@@ -99,7 +99,7 @@ class FactoryServiceBase {
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FactoryServiceBase);

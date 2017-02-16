@@ -165,7 +165,7 @@ namespace flog {
 // Thread-safe logger for all channels in a given process.
 class Flog {
  public:
-  static void Initialize(modular::ApplicationContext* application_context,
+  static void Initialize(app::ApplicationContext* application_context,
                          const std::string& label);
 
   // Deletes the flog logger singleton.

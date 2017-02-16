@@ -35,7 +35,7 @@ class FlogViewer : public ChannelManager {
   void set_format(const std::string& format) { format_ = format; }
 
   // Initializes the viewer.
-  void Initialize(modular::ApplicationContext* application_context,
+  void Initialize(app::ApplicationContext* application_context,
                   const std::function<void()>& terminate_callback);
 
   // Processs log descriptions.

@@ -54,7 +54,7 @@ bool Contains(const mozart::RectF& rect, float x, float y) {
 MediaPlayerView::MediaPlayerView(
     mozart::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    modular::ApplicationContext* application_context,
+    app::ApplicationContext* application_context,
     const MediaPlayerParams& params)
     : mozart::BaseView(std::move(view_manager),
                        std::move(view_owner_request),

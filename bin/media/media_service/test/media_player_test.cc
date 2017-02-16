@@ -18,7 +18,7 @@ class MediaPlayerTester {
  public:
   MediaPlayerTester()
       : application_context_(
-            modular::ApplicationContext::CreateFromStartupInfo()) {
+            app::ApplicationContext::CreateFromStartupInfo()) {
     FTL_LOG(INFO) << "MediaPlayerTest starting";
 
     FTL_LOG(INFO) << "connecting to MediaService";
@@ -88,7 +88,7 @@ class MediaPlayerTester {
         });
   }
 
-  std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   FakeWavReader fake_reader_;
   FakeRenderer fake_renderer_;
   MediaPlayerPtr media_player_;

@@ -9,7 +9,7 @@
 namespace flog {
 
 // static
-void Flog::Initialize(modular::ApplicationContext* application_context,
+void Flog::Initialize(app::ApplicationContext* application_context,
                       const std::string& label) {
   FTL_DCHECK(!logger_);
 
