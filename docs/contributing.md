@@ -34,3 +34,8 @@ verify that they're all passing.
 
 * The #fuchsia channel on the freenode irc network is a good place to ask
 questions.
+
+* [Googlers only] Commit messages may reference issue IDs, which will be
+turned into links in the Gerrit UI. Issues may also be automatically closed
+using the syntax `BUG-123 #done`.  *Note*: Magenta's issue tracker is not open
+to external contributors at this time.
