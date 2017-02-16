@@ -218,10 +218,6 @@ typedef uint32_t mx_rights_t;
 #define MX_VM_FLAG_CAN_MAP_WRITE      (1u << 8)
 #define MX_VM_FLAG_CAN_MAP_EXECUTE    (1u << 9)
 
-// compatibility flag for vmar routines
-// TODO(teisenbe): Move all users of this to using subregions.
-#define MX_VM_FLAG_ALLOC_BASE      (1u << 11)
-
 // clock ids
 #define MX_CLOCK_MONOTONIC        (0u)
 #define MX_CLOCK_UTC              (1u)
