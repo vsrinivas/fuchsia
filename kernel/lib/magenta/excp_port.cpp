@@ -203,7 +203,7 @@ mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
             report->header.type, report->context.pid, report->context.tid);
     if (port_ == nullptr) {
         // The port has been unbound.
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
     }
 
     auto iopk = MakePacket(port_key_, report, sizeof(*report));

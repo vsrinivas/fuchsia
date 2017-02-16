@@ -43,7 +43,7 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
 
     bool requeue = true;
     switch (txn->status) {
-    case ERR_REMOTE_CLOSED:
+    case ERR_PEER_CLOSED:
         requeue = false;
         break;
     case NO_ERROR:

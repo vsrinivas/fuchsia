@@ -154,7 +154,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
     if ((r = mx_channel_read(h, 0, msg, sz, &sz, NULL, 0, NULL)) < 0) {
         // This is the normal error for the other end going away,
         // which happens when the process dies.
-        if (r != ERR_REMOTE_CLOSED)
+        if (r != ERR_PEER_CLOSED)
             fprintf(stderr, "dlsvc: msg read error %d\n", r);
         return r;
     }
@@ -180,7 +180,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
         msg->arg = NO_ERROR;
         break;
     case LOADER_SVC_OP_DONE:
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
     default:
         fprintf(stderr, "dlsvc: invalid opcode 0x%x\n", msg->opcode);
         msg->arg = ERR_INVALID_ARGS;

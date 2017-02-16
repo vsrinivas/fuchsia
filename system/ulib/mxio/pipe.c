@@ -29,7 +29,7 @@ static ssize_t _read(mx_handle_t h, void* data, size_t len, int nonblock) {
         ssize_t r = mx_socket_read(h, 0, data, len, &len);
         if (r == NO_ERROR) {
             return (ssize_t) len;
-        } else if (r == ERR_REMOTE_CLOSED) {
+        } else if (r == ERR_PEER_CLOSED) {
             return 0;
         }
         if (r == ERR_SHOULD_WAIT && !nonblock) {
@@ -70,7 +70,7 @@ static ssize_t _write(mx_handle_t h, const void* data, size_t len, int nonblock)
                 continue;
             }
             if (pending & MX_SOCKET_PEER_CLOSED) {
-                return ERR_REMOTE_CLOSED;
+                return ERR_PEER_CLOSED;
             }
             // impossible
             return ERR_INTERNAL;

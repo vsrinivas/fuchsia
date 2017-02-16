@@ -459,7 +459,7 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         status = _devhost_rio_handler(msg, rh, ios, &should_free_ios);
     } else {
         printf("rpc-device: stale ios %p\n", ios);
-        status = ERR_REMOTE_CLOSED;
+        status = ERR_PEER_CLOSED;
     }
     mtx_unlock(&ios->lock);
     // TODO(swetland): pretty sure we sometimes leak these.

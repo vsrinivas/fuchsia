@@ -170,7 +170,7 @@ void xhci_process_deferred_txns(xhci_t* xhci, xhci_endpoint_t* ep, bool closed) 
 
     if (closed) {
         while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
-            iotxn_complete(txn, ERR_REMOTE_CLOSED, 0);
+            iotxn_complete(txn, ERR_PEER_CLOSED, 0);
         }
         return;
     }

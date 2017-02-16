@@ -56,7 +56,7 @@ static bool socket_basic(void) {
     mx_handle_close(h[1]);
 
     status = mx_socket_write(h[0], 0u, &write_data[1], sizeof(write_data[1]), &count);
-    ASSERT_EQ(status, ERR_REMOTE_CLOSED, "");
+    ASSERT_EQ(status, ERR_PEER_CLOSED, "");
 
     mx_handle_close(h[0]);
     END_TEST;
@@ -175,7 +175,7 @@ static bool socket_half_close(void) {
     ASSERT_EQ(memcmp(rbuf, "12345", 5), 0, "");
 
     status = mx_socket_read(h0, 0u, rbuf, 1u, &count);
-    ASSERT_EQ(status, ERR_REMOTE_CLOSED, "");
+    ASSERT_EQ(status, ERR_PEER_CLOSED, "");
 
     signals0 = get_satisfied_signals(h0);
     ASSERT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED, "");
@@ -229,7 +229,7 @@ static bool socket_bytes_outstanding(void) {
     mx_handle_close(h[1]);
 
     status = mx_socket_write(h[0], 0u, &write_data[1], sizeof(write_data[1]), &count);
-    ASSERT_EQ(status, ERR_REMOTE_CLOSED, "");
+    ASSERT_EQ(status, ERR_PEER_CLOSED, "");
 
     mx_handle_close(h[0]);
 
@@ -289,7 +289,7 @@ static bool socket_bytes_outstanding_half_close(void) {
     ASSERT_EQ(memcmp(rbuf, "12345", 5), 0, "");
 
     status = mx_socket_read(h0, 0u, rbuf, 1u, &count);
-    ASSERT_EQ(status, ERR_REMOTE_CLOSED, "");
+    ASSERT_EQ(status, ERR_PEER_CLOSED, "");
 
     signals0 = get_satisfied_signals(h0);
     ASSERT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED, "");

@@ -43,7 +43,7 @@ is an invalid pointer.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 
-**ERR_REMOTE_CLOSED**  The other side of the fifo is closed.
+**ERR_PEER_CLOSED**  The other side of the fifo is closed.
 
 **ERR_SHOULD_WAIT**  The fifo is full.
 

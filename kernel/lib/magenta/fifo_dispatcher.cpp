@@ -128,7 +128,7 @@ mx_status_t FifoDispatcher::Write(const uint8_t* ptr, size_t len, uint32_t* actu
     {
         AutoLock lock(&lock_);
         if (!other_)
-            return ERR_REMOTE_CLOSED;
+            return ERR_PEER_CLOSED;
         other = other_;
     }
 

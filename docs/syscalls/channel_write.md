@@ -53,7 +53,7 @@ channel being written to).
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
 any of *handles* do not have **MX_RIGHT_TRANSFER**.
 
-**ERR_REMOTE_CLOSED**  The other side of the channel is closed.
+**ERR_PEER_CLOSED**  The other side of the channel is closed.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

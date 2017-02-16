@@ -111,7 +111,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     xhci_endpoint_t* ep = &slot->eps[endpoint];
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
     if (!ep->enabled)
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
 
     xhci_endpoint_context_t* epc = slot->eps[endpoint].epc;
     if (XHCI_GET_BITS32(&epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS) == 2 /* halted */ ) {
@@ -403,7 +403,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             xprintf("ignoring transfer event with cc: %d\n", cc);
             return;
         default:
-            result = ERR_REMOTE_CLOSED;
+            result = ERR_PEER_CLOSED;
             break;
     }
 

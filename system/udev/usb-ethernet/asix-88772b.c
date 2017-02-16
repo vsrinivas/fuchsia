@@ -171,7 +171,7 @@ static void ax88772b_recv(ax88772b_t* eth, iotxn_t* request) {
 static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == ERR_REMOTE_CLOSED) {
+    if (request->status == ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -187,7 +187,7 @@ static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
 static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == ERR_REMOTE_CLOSED) {
+    if (request->status == ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -200,7 +200,7 @@ static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
 static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == ERR_REMOTE_CLOSED) {
+    if (request->status == ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -243,7 +243,7 @@ static mx_status_t _ax88772b_send(mx_device_t* device, const void* buffer, size_
     ax88772b_t* eth = get_ax88772b(device);
 
     if (eth->dead) {
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
     }
 
     mx_status_t status = NO_ERROR;

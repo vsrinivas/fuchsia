@@ -327,7 +327,7 @@ static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
     // complete pending requests
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
-        iotxn_complete(txn, ERR_REMOTE_CLOSED, 0);
+        iotxn_complete(txn, ERR_PEER_CLOSED, 0);
     }
     // and any deferred requests
     xhci_process_deferred_txns(xhci, ep, true);

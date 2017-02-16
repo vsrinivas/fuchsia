@@ -63,7 +63,7 @@ static void update_signals(usb_audio_source_t* source) {
 static void usb_audio_source_read_complete(iotxn_t* txn, void* cookie) {
     usb_audio_source_t* source = (usb_audio_source_t*)cookie;
 
-    if (txn->status == ERR_REMOTE_CLOSED) {
+    if (txn->status == ERR_PEER_CLOSED) {
         iotxn_release(txn);
         return;
     }
@@ -116,7 +116,7 @@ static mx_status_t usb_audio_source_start(usb_audio_source_t* source) {
 
     mtx_lock(&source->start_stop_mutex);
     if (source->dead) {
-        status = ERR_REMOTE_CLOSED;
+        status = ERR_PEER_CLOSED;
         goto out;
     }
     if (source->started) {
@@ -148,7 +148,7 @@ static mx_status_t usb_audio_source_stop(usb_audio_source_t* source) {
 
     mtx_lock(&source->start_stop_mutex);
     if (source->dead) {
-        status = ERR_REMOTE_CLOSED;
+        status = ERR_PEER_CLOSED;
         goto out;
     }
     if (!source->started) {
@@ -196,7 +196,7 @@ static ssize_t usb_audio_source_read(mx_device_t* dev, void* data, size_t length
     usb_audio_source_t* source = get_usb_audio_source(dev);
 
     if (source->dead) {
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
     }
 
     mx_status_t status = 0;

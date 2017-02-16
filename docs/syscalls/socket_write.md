@@ -48,7 +48,7 @@ not 0, or *options* was not 0 or **MX_SOCKET_HALF_CLOSE**.
 **ERR_BAD_STATE**  This side of the socket has been closed by a prior write
 to the other side with **MX_SOCKET_HALF_CLOSE**.
 
-**ERR_REMOTE_CLOSED**  The other side of the socket is closed.
+**ERR_PEER_CLOSED**  The other side of the socket is closed.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

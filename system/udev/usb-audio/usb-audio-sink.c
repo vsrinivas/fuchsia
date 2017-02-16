@@ -80,7 +80,7 @@ static void update_signals(usb_audio_sink_t* sink) {
 }
 
 static void usb_audio_sink_write_complete(iotxn_t* txn, void* cookie) {
-    if (txn->status == ERR_REMOTE_CLOSED) {
+    if (txn->status == ERR_PEER_CLOSED) {
         iotxn_release(txn);
         return;
     }
@@ -130,7 +130,7 @@ static mx_status_t usb_audio_sink_start(usb_audio_sink_t* sink) {
 
     mtx_lock(&sink->start_stop_mutex);
     if (sink->dead) {
-        status = ERR_REMOTE_CLOSED;
+        status = ERR_PEER_CLOSED;
         goto out;
     }
     if (sink->started) {
@@ -154,7 +154,7 @@ static mx_status_t usb_audio_sink_stop(usb_audio_sink_t* sink) {
 
     mtx_lock(&sink->start_stop_mutex);
     if (sink->dead) {
-        status = ERR_REMOTE_CLOSED;
+        status = ERR_PEER_CLOSED;
         goto out;
     }
     if (!sink->started) {
@@ -202,7 +202,7 @@ static ssize_t usb_audio_sink_write(mx_device_t* dev, const void* data, size_t l
     usb_audio_sink_t* sink = get_usb_audio_sink(dev);
 
     if (sink->dead) {
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
     }
 
     mx_status_t status = length;
@@ -229,7 +229,7 @@ static ssize_t usb_audio_sink_write(mx_device_t* dev, const void* data, size_t l
         } else {
             completion_wait(&sink->free_write_completion, MX_TIME_INFINITE);
             if (sink->dead) {
-                return ERR_REMOTE_CLOSED;
+                return ERR_PEER_CLOSED;
             }
             mtx_lock(&sink->mutex);
             list_node_t* node = list_remove_head(&sink->free_write_reqs);

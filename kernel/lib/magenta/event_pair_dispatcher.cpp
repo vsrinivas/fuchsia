@@ -68,7 +68,7 @@ status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask
     AutoLock locker(&lock_);
     // object_signal() may race with handle_close() on another thread.
     if (!other_)
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
     other_->state_tracker_.UpdateState(clear_mask, set_mask);
     return NO_ERROR;
 }

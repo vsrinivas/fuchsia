@@ -64,7 +64,7 @@ count of handles in the reply message are returned via *actual_bytes* and
 
 The special return value **ERR_CALL_FAILED** indicates that the message was
 sent, but an error occured while waiting for a response.  This is necessary
-to disambiguate errors like **ERR_REMOTE_CLOSED** which could have occurred
+to disambiguate errors like **ERR_PEER_CLOSED** which could have occurred
 while attempting the write (in which case the caller would still own any handles
 passed via *handles*) or while waiting (in which case the caller would no longer
 own any of the handles).  The return parameter *read_status* is used to indicate
@@ -90,7 +90,7 @@ or *options* is nonzero.
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
 any of *handles* do not have **MX_RIGHT_TRANSFER**.
 
-**ERR_REMOTE_CLOSED**  The other side of the channel was closed or became
+**ERR_PEER_CLOSED**  The other side of the channel was closed or became
 closed while waiting for the reply.
 
 **ERR_HANDLE_CLOSED**  *handle* was closed while waiting for a reply.

@@ -79,7 +79,7 @@ static mx_status_t wait_for_message(
 
         return NO_ERROR;
     } else if (pending & MX_CHANNEL_PEER_CLOSED) {
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
     } else {
         // Shouldn't happen; if status == NO_ERROR, then one of the signals
         // should be pending.

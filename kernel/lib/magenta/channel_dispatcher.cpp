@@ -132,7 +132,7 @@ void ChannelDispatcher::OnPeerZeroHandles() {
     // Remove waiter from list.
     while (!waiters_.is_empty()) {
         auto waiter = waiters_.pop_front();
-        waiter->Cancel(ERR_REMOTE_CLOSED);
+        waiter->Cancel(ERR_PEER_CLOSED);
     }
 }
 
@@ -148,7 +148,7 @@ status_t ChannelDispatcher::Read(uint32_t* msg_size,
     AutoLock lock(&lock_);
 
     if (messages_.is_empty())
-        return other_ ? ERR_SHOULD_WAIT : ERR_REMOTE_CLOSED;
+        return other_ ? ERR_SHOULD_WAIT : ERR_PEER_CLOSED;
 
     *msg_size = messages_.front().data_size();
     *msg_handle_count = messages_.front().num_handles();
@@ -177,7 +177,7 @@ status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
             // |msg| will be destroyed but we want to keep the handles alive since
             // the caller should put them back into the process table.
             msg->set_owns_handles(false);
-            return ERR_REMOTE_CLOSED;
+            return ERR_PEER_CLOSED;
         }
         other = other_;
     }
@@ -210,7 +210,7 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
             msg->set_owns_handles(false);
             *return_handles = true;
             waiter->EndWait(reply);
-            return ERR_REMOTE_CLOSED;
+            return ERR_PEER_CLOSED;
         }
         other = other_;
 
@@ -327,7 +327,7 @@ status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, 
     {
         AutoLock lock(&lock_);
         if (!other_)
-            return ERR_REMOTE_CLOSED;
+            return ERR_PEER_CLOSED;
         other = other_;
     }
 

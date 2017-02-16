@@ -46,7 +46,7 @@ and count of handles read.
 
 **ERR_SHOULD_WAIT**  The channel contained no messages to read.
 
-**ERR_REMOTE_CLOSED**  The other side of the channel is closed.
+**ERR_PEER_CLOSED**  The other side of the channel is closed.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

@@ -51,7 +51,7 @@ In the event of failure, a negative error value is returned.
 
 **ERR_NOT_SUPPORTED**  **mx_object_signal_peer**() used on an object lacking a peer.
 
-**ERR_REMOTE_CLOSED**  **mx_object_signal_peer**() called on an object with a closed peer.
+**ERR_PEER_CLOSED**  **mx_object_signal_peer**() called on an object with a closed peer.
 
 ## NOTE
 

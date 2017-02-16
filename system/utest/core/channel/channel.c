@@ -174,7 +174,7 @@ static bool channel_read_error_test(void) {
 
     // Read from an empty channel with a closed peer, should yield a channel closed error.
     status = mx_channel_read(channel[0], 0u, NULL, 0, NULL, NULL, 0, NULL);
-    ASSERT_EQ(status, ERR_REMOTE_CLOSED, "read on empty closed channel produced incorrect error");
+    ASSERT_EQ(status, ERR_PEER_CLOSED, "read on empty closed channel produced incorrect error");
 
     END_TEST;
 }
@@ -747,7 +747,7 @@ static bool channel_call2(void) {
     mx_handle_close(cli);
 
     EXPECT_EQ(r, ERR_CALL_FAILED, "");
-    EXPECT_EQ(rs, ERR_REMOTE_CLOSED, "");
+    EXPECT_EQ(rs, ERR_PEER_CLOSED, "");
 
     END_TEST;
 }

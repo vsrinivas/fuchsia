@@ -278,7 +278,7 @@ static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
 static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
-    if (request->status == ERR_REMOTE_CLOSED) {
+    if (request->status == ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -294,7 +294,7 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
 static void ax88179_write_complete(iotxn_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
-    if (request->status == ERR_REMOTE_CLOSED) {
+    if (request->status == ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -305,7 +305,7 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
 }
 
 static void ax88179_interrupt_complete(iotxn_t* request, void* cookie) {
-    if (request->status == ERR_REMOTE_CLOSED) {
+    if (request->status == ERR_PEER_CLOSED) {
         // request will be released in ax88179_release()
         return;
     }

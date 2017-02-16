@@ -196,7 +196,7 @@ static void hci_acl_read_complete(iotxn_t* txn, void* cookie) {
         // The channel handle could be invalid here (e.g. if no process called
         // the ioctl or they closed their endpoint). Instead of explicitly
         // checking we let mx_channel_write fail with ERR_BAD_HANDLE or
-        // ERR_REMOTE_CLOSED.
+        // ERR_PEER_CLOSED.
         mx_status_t status = mx_channel_write(hci->acl_channel, 0, buffer, txn->actual, NULL, 0);
         if (status < 0) {
             printf("hci_acl_read_complete failed to write: %s\n", mx_status_get_string(status));

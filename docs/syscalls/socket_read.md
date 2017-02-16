@@ -45,7 +45,7 @@ or if *options* is nonzero.
 
 **ERR_SHOULD_WAIT**  The socket contained no data to read.
 
-**ERR_REMOTE_CLOSED**  The other side of the socket is closed, or this
+**ERR_PEER_CLOSED**  The other side of the socket is closed, or this
 side of the socket has been previously closed via a write with the
 **MX_SOCKET_HALF_CLOSE** flag.
 

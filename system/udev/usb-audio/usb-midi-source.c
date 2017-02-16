@@ -49,7 +49,7 @@ static void update_signals(usb_midi_source_t* source) {
 static void usb_midi_source_read_complete(iotxn_t* txn, void* cookie) {
     usb_midi_source_t* source = (usb_midi_source_t*)cookie;
 
-    if (txn->status == ERR_REMOTE_CLOSED) {
+    if (txn->status == ERR_PEER_CLOSED) {
         iotxn_release(txn);
         return;
     }
@@ -125,7 +125,7 @@ static ssize_t usb_midi_source_read(mx_device_t* dev, void* data, size_t len, mx
     usb_midi_source_t* source = get_usb_midi_source(dev);
 
     if (source->dead) {
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
     }
 
     mx_status_t status = NO_ERROR;

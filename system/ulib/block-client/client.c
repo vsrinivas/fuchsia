@@ -25,7 +25,7 @@ static mx_status_t do_write(mx_handle_t fifo, block_fifo_request_t* request, siz
                                              MX_TIME_INFINITE, &signals)) != NO_ERROR) {
                 return status;
             } else if (signals & MX_FIFO_PEER_CLOSED) {
-                return ERR_REMOTE_CLOSED;
+                return ERR_PEER_CLOSED;
             }
             // Try writing again...
         } else if (status == NO_ERROR) {
@@ -52,7 +52,7 @@ static mx_status_t do_read(mx_handle_t fifo, block_fifo_response_t* response) {
                                              MX_TIME_INFINITE, &signals)) != NO_ERROR) {
                 return status;
             } else if (signals & MX_FIFO_PEER_CLOSED) {
-                return ERR_REMOTE_CLOSED;
+                return ERR_PEER_CLOSED;
             }
             // Try reading again...
         } else {

@@ -239,7 +239,7 @@ status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, b
     {
         AutoLock lock(&lock_);
         if (!other_)
-            return ERR_REMOTE_CLOSED;
+            return ERR_PEER_CLOSED;
         other = other_;
     }
 
@@ -289,7 +289,7 @@ status_t SocketDispatcher::HalfClose() {
         if (half_closed_[0])
             return NO_ERROR;
         if (!other_)
-            return ERR_REMOTE_CLOSED;
+            return ERR_PEER_CLOSED;
         other = other_;
         half_closed_[0] = true;
         state_tracker_.UpdateState(MX_SOCKET_WRITABLE, 0u);
@@ -314,7 +314,7 @@ mx_status_t SocketDispatcher::Write(const void* src, size_t len,
     {
         AutoLock lock(&lock_);
         if (!other_)
-            return ERR_REMOTE_CLOSED;
+            return ERR_PEER_CLOSED;
         if (half_closed_[0])
             return ERR_BAD_STATE;
         other = other_;
@@ -365,7 +365,7 @@ mx_status_t SocketDispatcher::Read(void* dest, size_t len,
     bool closed = half_closed_[1] || !other_;
 
     if (cbuf_.empty())
-        return closed ? ERR_REMOTE_CLOSED: ERR_SHOULD_WAIT;
+        return closed ? ERR_PEER_CLOSED: ERR_SHOULD_WAIT;
 
     bool was_full = cbuf_.free() == 0u;
 

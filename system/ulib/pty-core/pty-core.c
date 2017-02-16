@@ -67,7 +67,7 @@ static ssize_t pty_client_read(mx_device_t* dev, void* buf, size_t count, mx_off
     if (actual > 0) {
         return actual;
     } else {
-        return (pc->flags & PTY_CLI_PEER_CLOSED) ? ERR_REMOTE_CLOSED : ERR_SHOULD_WAIT;
+        return (pc->flags & PTY_CLI_PEER_CLOSED) ? ERR_PEER_CLOSED : ERR_SHOULD_WAIT;
     }
 }
 
@@ -87,7 +87,7 @@ static ssize_t pty_client_write(mx_device_t* dev, const void* buf, size_t count,
             device_state_clr(&pc->dev, DEV_STATE_WRITABLE);
         }
     } else {
-        r = (pc->flags & PTY_CLI_PEER_CLOSED) ? ERR_REMOTE_CLOSED : ERR_SHOULD_WAIT;
+        r = (pc->flags & PTY_CLI_PEER_CLOSED) ? ERR_PEER_CLOSED : ERR_SHOULD_WAIT;
     }
     mtx_unlock(&ps->lock);
 
@@ -382,7 +382,7 @@ mx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool
         status = NO_ERROR;
     } else {
         *actual = 0;
-        status = ERR_REMOTE_CLOSED;
+        status = ERR_PEER_CLOSED;
     }
     mtx_unlock(&ps->lock);
     return status;
