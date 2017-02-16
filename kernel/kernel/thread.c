@@ -536,6 +536,7 @@ void thread_resched(void)
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
     DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     THREAD_STATS_INC(reschedules);
 

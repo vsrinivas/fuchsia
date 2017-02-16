@@ -38,6 +38,7 @@ void mutex_init(mutex_t *m)
 void mutex_destroy(mutex_t *m)
 {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     THREAD_LOCK(state);
 #if LK_DEBUGLEVEL > 0
@@ -58,6 +59,7 @@ status_t mutex_acquire_internal(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
 {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     if (unlikely(++m->count > 1)) {
         status_t ret = wait_queue_block(&m->wait, INFINITE_TIME);
@@ -101,6 +103,7 @@ void mutex_release_internal(mutex_t *m, bool reschedule) TA_NO_THREAD_SAFETY_ANA
 {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     m->holder = 0;
 
