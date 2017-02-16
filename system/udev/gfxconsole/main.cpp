@@ -313,6 +313,10 @@ static mx_status_t vc_input_device_added(int dirfd, const char* fn, void* cookie
     if (ret != thrd_success) {
         xprintf("vc: input thread %s did not start (return value=%d)\n", tname, ret);
         close(fd);
+        // We don't really expect thread creation to fail so it's not clear
+        // whether we should return an error here to tell
+        // mxio_watch_directory() to stop.
+        return NO_ERROR;
     }
     thrd_detach(t);
     return NO_ERROR;
