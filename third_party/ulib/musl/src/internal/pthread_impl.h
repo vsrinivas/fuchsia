@@ -3,7 +3,8 @@
 #include "atomic.h"
 #include "ksigaction.h"
 #include "libc.h"
-#include "syscall.h"
+#include "pthread_arch.h"
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -12,13 +13,32 @@
 
 #include <runtime/thread.h>
 #include <runtime/tls.h>
+#include <magenta/tls.h>
 
 #define pthread __pthread
 
+// This is what the thread pointer points to directly.  On TLS_ABOVE_TP
+// machines, the size of this is part of the ABI known to the compiler
+// and linker.
+typedef struct {
+    // The position of this pointer is part of the ABI on x86.
+    // It has the same value as the thread pointer itself.
+    uintptr_t tp;
+    void **dtv;
+} tcbhead_t;
+
+// The locations of these fields is part of the ABI known to the compiler.
+typedef struct {
+    uintptr_t stack_guard;
+    uintptr_t unsafe_sp;
+} tp_abi_t;
+
 struct pthread {
-    struct pthread* self;
-    void **dtv, *unused1, *unused2;
-    uintptr_t canary, canary2;
+#ifndef TLS_ABOVE_TP
+    // These must be the very first members.
+    tcbhead_t head;
+    tp_abi_t abi;
+#endif
 
     mxr_thread_t mxr_thread;
 
@@ -47,8 +67,12 @@ struct pthread {
     char* dlerror_buf;
     int dlerror_flag;
     void* stdio_locks;
-    uintptr_t canary_at_end;
-    void** dtv_copy;
+
+#ifdef TLS_ABOVE_TP
+    // These must be the very last members.
+    tp_abi_t abi;
+    tcbhead_t head;
+#endif
 };
 
 struct __timer {
@@ -56,11 +80,41 @@ struct __timer {
     pthread_t thread;
 };
 
-#include "pthread_arch.h"
-
-#ifndef CANARY
-#define CANARY canary
+#ifdef TLS_ABOVE_TP
+#define PTHREAD_TP_OFFSET offsetof(struct pthread, head)
+#else
+#define PTHREAD_TP_OFFSET 0
 #endif
+
+#define TP_OFFSETOF(field) \
+    ((ptrdiff_t)offsetof(struct pthread, field) - PTHREAD_TP_OFFSET)
+
+static_assert(TP_OFFSETOF(head) == 0,
+              "ABI tcbhead_t misplaced in struct pthread");
+
+#ifdef ABI_TCBHEAD_SIZE
+static_assert((sizeof(struct pthread) -
+               offsetof(struct pthread, head)) == ABI_TCBHEAD_SIZE,
+              "ABI tcbhead_t misplaced in struct pthread");
+#endif
+
+#if defined(__x86_64__) || defined(__aarch64__)
+// The tlsdesc.s assembly code assumes this, though it's not part of the ABI.
+static_assert(TP_OFFSETOF(head.dtv) == 8, "dtv misplaced in struct pthread");
+#endif
+
+static_assert(TP_OFFSETOF(abi.stack_guard) == MX_TLS_STACK_GUARD_OFFSET,
+              "stack_guard not at ABI-mandated offset from thread pointer");
+static_assert(TP_OFFSETOF(abi.unsafe_sp) == MX_TLS_UNSAFE_SP_OFFSET,
+              "unsafe_sp not at ABI-mandated offset from thread pointer");
+
+static inline void* pthread_to_tp(struct pthread* thread) {
+    return (void*)((char*)thread + PTHREAD_TP_OFFSET);
+}
+
+static inline struct pthread* tp_to_pthread(void* tp) {
+    return (struct pthread*)((char*)tp - PTHREAD_TP_OFFSET);
+}
 
 #ifndef DTP_OFFSET
 #define DTP_OFFSET 0

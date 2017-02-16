@@ -116,7 +116,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     new->stack_size = stack - stack_limit;
     new->start = entry;
     new->start_arg = arg;
-    new->self = new;
+    new->head.tp = (uintptr_t)new;
     new->tsd = (void**)tsd;
     new->locale = &libc.global_locale;
     // TODO (kulakowski) Actually detach via attribute
@@ -130,7 +130,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     //     __block_app_sigs(new->sigmask);
     // }
     new->unblock_cancel = self->cancel;
-    new->CANARY = self->CANARY;
+    new->abi.stack_guard = self->abi.stack_guard;
 
     atomic_fetch_add(&libc.thread_count, 1);
     status = mxr_thread_start(&new->mxr_thread,

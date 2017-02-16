@@ -1200,9 +1200,9 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     /* Block signals to make accessing new TLS async-signal-safe */
     sigset_t set;
     __block_all_sigs(&set);
-    if (v[0] <= (size_t)self->dtv[0]) {
+    if (v[0] <= (size_t)self->head.dtv[0]) {
         __restore_sigs(&set);
-        return (char*)self->dtv[v[0]] + v[1] + DTP_OFFSET;
+        return (char*)self->head.dtv[v[0]] + v[1] + DTP_OFFSET;
     }
 
     /* This is safe without any locks held because, if the caller
@@ -1214,21 +1214,21 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
         ;
 
     /* Get new DTV space from new DSO if needed */
-    if (v[0] > (size_t)self->dtv[0]) {
+    if (v[0] > (size_t)self->head.dtv[0]) {
         void** newdtv = p->new_dtv + (v[0] + 1) * a_fetch_add(&p->new_dtv_idx, 1);
-        memcpy(newdtv, self->dtv, ((size_t)self->dtv[0] + 1) * sizeof(void*));
+        memcpy(newdtv, self->head.dtv, ((size_t)self->head.dtv[0] + 1) * sizeof(void*));
         newdtv[0] = (void*)v[0];
-        self->dtv = self->dtv_copy = newdtv;
+        self->head.dtv = newdtv;
     }
 
     /* Get new TLS memory from all new DSOs up to the requested one */
     unsigned char* mem;
     for (p = head;; p = p->next) {
-        if (!p->tls_id || self->dtv[p->tls_id])
+        if (!p->tls_id || self->head.dtv[p->tls_id])
             continue;
         mem = p->new_tls + (p->tls.size + p->tls.align) * a_fetch_add(&p->new_tls_idx, 1);
         mem += ((uintptr_t)p->tls.image - (uintptr_t)mem) & (p->tls.align - 1);
-        self->dtv[p->tls_id] = mem;
+        self->head.dtv[p->tls_id] = mem;
         memcpy(mem, p->tls.image, p->tls.len);
         if (p->tls_id == v[0])
             break;
@@ -1238,7 +1238,7 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
 }
 
 static void __init_tp(mx_handle_t self, pthread_t thread) {
-    thread->self = thread;
+    thread->head.tp = (uintptr_t)thread;
     // TODO(kulakowski): Get and set thread ID
     mxr_tp_set(self, pthread_to_tp(thread));
     thread->locale = &libc.global_locale;
