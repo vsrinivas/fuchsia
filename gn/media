@@ -5,6 +5,10 @@
     ],
     "binaries": [
         {
+            "binary": "audio_player",
+            "bootfs_path": "apps/audio_player"
+        },
+        {
             "binary": "audio_server",
             "bootfs_path": "apps/audio_server"
         },
