@@ -1,4 +1,5 @@
-# Fuchsia
+Fuchsia
+============
 
 Pink + Purple == Fuchsia (a new Operating System)
 
@@ -8,8 +9,8 @@ Fuchsia.
 
 ## Getting the source
 Get the Fuchsia source by following these two steps and then return to this document:
-  * [Install prerequisites](https://fuchsia.googlesource.com/manifest/+/HEAD/README.md#Prerequisites) for Jiri, a tool for multi-repo development.
-  * [Create a new checkout](https://fuchsia.googlesource.com/manifest/+/HEAD/README.md#Creating-a-new-checkout) of Fuchsia.
+  * [Install prerequisites](https://fuchsia.googlesource.com/docs/+/HEAD/getting_source.md#Prerequisites) for Jiri, a tool for multi-repo development.
+  * [Create a new checkout](https://fuchsia.googlesource.com/docs/+/HEAD/getting_source.md#Creating-a-new-checkout) of Fuchsia.
 
 ## Prerequisites
 
@@ -169,14 +170,17 @@ frun -N -u $FUCHSIA_SCRIPTS_DIR/start-dhcp-server.sh
 The `-u` flag runs a script that sets up a local DHCP server and NAT to
 configure the IPv4 interface and routing.
 
-### Run Fuchsia on hardware
+### Running Fuchsia on hardware
 
 * [Acer Switch Alpha 12](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/acer12.md)
 * [Intel NUC](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/nuc.md)
 * [Raspberry Pi 3](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/rpi3.md)
 
+## Contributing changes
+* See [contributing.md](https://fuchsia.googlesource.com/docs/+/HEAD/contributing.md).
+
 ## Additional helpful documents
 
 * [Fuchsia documentation](https://fuchsia.googlesource.com/docs) hub.
-* [Contributing changes](https://fuchsia.googlesource.com/manifest/+/HEAD/README.md#Submitting-changes).
+* Building [Fuchsia's toolchain](https://fuchsia.googlesource.com/docs/+/HEAD/building_toolchain.md)
 * More about the [build commands](build_system.md) called under-the-hood by `fbuild`.
