@@ -108,7 +108,7 @@ int mount_minfs(void) {
     close(fd);
 
     // TODO(smklein): Remove once MG-468 is resolved
-    usleep(100);
+    usleep(10000);
 
     mx_status_t status;
     if ((status = mkfs(RAMDISK_PATH, DISK_FORMAT_MINFS, launch_stdio_sync)) != NO_ERROR) {

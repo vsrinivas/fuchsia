@@ -35,7 +35,7 @@ int get_ramdisk(const char* name, uint64_t blk_size, uint64_t blk_count) {
     // TODO(smklein): This "sleep" prevents a bug from triggering:
     // - 'ioctl_ramdisk_config' --> 'device_add' --> 'open' *should* work, but sometimes
     //   fails, as the ramdisk does not exist in the FS heirarchy yet. (MG-468)
-    usleep(1000);
+    usleep(10000);
 
     // At this point, our ramdisk is accessible from filesystem hierarchy
     char ramdisk_path[PATH_MAX];
