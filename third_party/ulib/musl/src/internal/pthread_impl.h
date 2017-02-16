@@ -154,8 +154,8 @@ void __vm_lock(void);
 void __vm_unlock(void);
 
 // These are guaranteed to only return 0, EINVAL, or ETIMEDOUT.
-int __timedwait(volatile int*, int, clockid_t, const struct timespec*);
-int __timedwait_cp(volatile int*, int, clockid_t, const struct timespec*);
+int __timedwait(atomic_int*, int, clockid_t, const struct timespec*);
+int __timedwait_cp(atomic_int*, int, clockid_t, const struct timespec*);
 
 void __acquire_ptc(void);
 void __release_ptc(void);

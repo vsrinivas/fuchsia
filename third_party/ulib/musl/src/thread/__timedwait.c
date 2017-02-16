@@ -10,7 +10,7 @@ int __clock_gettime(clockid_t, struct timespec*);
 
 #define NS_PER_S (1000000000ull)
 
-int __timedwait_cp(volatile int* addr, int val, clockid_t clk, const struct timespec* at) {
+int __timedwait_cp(atomic_int* futex, int val, clockid_t clk, const struct timespec* at) {
     struct timespec to;
     mx_time_t deadline = MX_TIME_INFINITE;
 
@@ -34,7 +34,7 @@ int __timedwait_cp(volatile int* addr, int val, clockid_t clk, const struct time
     // races with this call. But this is indistinguishable from
     // otherwise being woken up just before someone else changes the
     // value. Therefore this functions returns 0 in that case.
-    switch (_mx_futex_wait((void*)addr, val, deadline)) {
+    switch (_mx_futex_wait(futex, val, deadline)) {
     case NO_ERROR:
     case ERR_BAD_STATE:
         return 0;
@@ -46,10 +46,10 @@ int __timedwait_cp(volatile int* addr, int val, clockid_t clk, const struct time
     }
 }
 
-int __timedwait(volatile int* addr, int val, clockid_t clk, const struct timespec* at) {
+int __timedwait(atomic_int* futex, int val, clockid_t clk, const struct timespec* at) {
     int cs, r;
     __pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-    r = __timedwait_cp(addr, val, clk, at);
+    r = __timedwait_cp(futex, val, clk, at);
     __pthread_setcancelstate(cs, 0);
     return r;
 }
