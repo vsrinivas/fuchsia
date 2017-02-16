@@ -5,7 +5,6 @@
 #include "netsvc.h"
 
 #include <inttypes.h>
-#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -165,65 +164,8 @@ void udp6_recv(void* data, size_t len,
     }
 }
 
-mx_handle_t ipc_handle;
-atomic_bool ipc_ready = ATOMIC_VAR_INIT(false);
-
-static int ipc_thread(void* arg) {
-    uint8_t data[2048];
-
-    printf("netsvc: waiting for ipc signal\n");
-    mx_signals_t signals = 0;
-    mx_status_t status = mx_object_wait_one(ipc_handle, MX_USER_SIGNAL_0, MX_TIME_INFINITE,
-            &signals);
-    if (status != NO_ERROR) {
-        printf("netsvc: failed while waiting for ipc ready: %d\n", status);
-        goto finish;
-    }
-    if (!(signals & MX_USER_SIGNAL_0)) {
-        printf("netsvc: expected MX_USER_SIGNAL_0, got %u\n", signals);
-        goto finish;
-    }
-    atomic_store_explicit(&ipc_ready, true, memory_order_release);
-    printf("netsvc: received ipc signal\n");
-
-    for (;;) {
-        mx_status_t status;
-        uint32_t n = sizeof(data);
-        if ((status = mx_channel_read(ipc_handle, 0, data, n, &n, NULL, 0, NULL)) < 0) {
-            if (status == ERR_SHOULD_WAIT) {
-                mx_object_wait_one(ipc_handle, MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL);
-                continue;
-            }
-            printf("netsvc: ipc read failed: %d\n", status);
-            break;
-        }
-#if FILTER_IPV6
-        if ((n >= ETH_HDR_LEN) &&
-            (*((uint16_t*) (data + 12)) == ETH_IP6)) {
-            continue;
-        }
-#endif
-        netifc_send(data, n);
-    }
-finish:
-    mx_handle_close(ipc_handle);
-    ipc_handle = 0;
-    atomic_store_explicit(&ipc_ready, false, memory_order_release);
-    return 0;
-}
-
 void netifc_recv(void* data, size_t len) {
     eth_recv(data, len);
-
-    if (atomic_load_explicit(&ipc_ready, memory_order_acquire)) {
-#if FILTER_IPV6
-        if ((len >= ETH_HDR_LEN) &&
-            (*((uint16_t*) (data + 12)) == ETH_IP6)) {
-            return;
-        }
-#endif
-        mx_channel_write(ipc_handle, 0, data, len, NULL, 0);
-    }
 }
 
 int main(int argc, char** argv) {
@@ -239,36 +181,14 @@ int main(int argc, char** argv) {
 
     printf("netsvc: nodename='%s'\n", nodename);
 
-    ipc_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
-    if (ipc_handle != MX_HANDLE_INVALID) {
-        thrd_t t;
-        if (thrd_create(&t, ipc_thread, NULL) != thrd_success) {
-            mx_handle_close(ipc_handle);
-            ipc_handle = 0;
-            atomic_store_explicit(&ipc_ready, false, memory_order_release);
-        }
-    }
-
     for (;;) {
         if (netifc_open() != 0) {
             printf("netsvc: fatal error initializing network\n");
             return -1;
         }
 
-        bool sent_info = false;
-
         printf("netsvc: start\n");
         for (;;) {
-            // See if the ipc channel is open, and send the mac address/mtu.
-            // Only do this once. Since sent_info is only available to the main
-            // thread, it doesn't need to be atomic.
-            if (!sent_info && atomic_load_explicit(&ipc_ready, memory_order_acquire)) {
-                uint8_t info[8];
-                netifc_get_info(info, (uint16_t*) (info + 6));
-                mx_channel_write(ipc_handle, 0, info, 8, NULL, 0);
-                sent_info = true;
-            }
-
             if (pending == 0) {
                 pkt.magic = 0xaeae1123;
                 pkt.seqno = seqno;
@@ -298,11 +218,6 @@ int main(int argc, char** argv) {
                 break;
         }
         netifc_close();
-
-        if (atomic_load_explicit(&ipc_ready, memory_order_acquire)) {
-            uint8_t info[8] = { 0, };
-            mx_channel_write(ipc_handle, 0, info, 8, NULL, 0);
-        }
     }
 
     return 0;
