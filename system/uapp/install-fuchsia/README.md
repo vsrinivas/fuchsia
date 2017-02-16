@@ -20,7 +20,7 @@ anything that looks like an appealing block device.
 ## Limitations
 
 The installer is substantially limited in flexibility as it is considered a bridge
-solution until a more robust, shipping solution for install and referesh can be
+solution until a more robust, shipping solution for install and refresh can be
 developed. There will be improvements made to the installer before it is
 retired, but the investment budget for this component is limited.
 
@@ -100,37 +100,31 @@ scope of this document. Then run the command to build the installer files
 By default this script assumes you're doing a debug build for x86-64. Use the
 '-h' option to get help customizing the parameters for other architectures, if
 you're doing a release build, or if your source and output directory structure
-is unique. This scripts creates a 'installer.bootfs' which is the secondary
-bootfs the installer needs. You should use this in place of your 'user.bootfs'
-wherever applicable, for example on your USB drive or with the netboot server.
-For this reason, you may wish to copy it over your 'user.bootfs'.
+is unique. This script creates a 'installer.bootfs' which is the secondary
+bootfs the installer needs. We'll replace our original 'user.bootfs' with the
+one for the installer.
+
+```
+> mv out/<ARCH>/installer.bootfs out/<ARCH>/user.bootfs
+```
 
 If you will boot from a USB drive, use the 'build-bootable-usb-gigaboot.sh'
 script to configure a USB drive
 
 ```
 > scripts/build-bootable-usb-gigaboot.sh
-```
-
-If you replaced your 'user.bootfs' with your 'installer.bootfs', you're ready to
-unmount the USB drive and go! If not, mount the first partition of the USB drive
-and copy the 'installer.bootfs' over the 'user.bootfs' on the drive.
-
-```
-> cp out/debug-x86-64/installer.bootfs <USB_DRIVE_PATH>/ramdisk.bin
 > sync
 ```
 
 ## Running the installer
-Boot your device with netboot (you replaced user.bootfs with installer.bootfs,
-right?) or with the USB drive you created above. When running, the installer's
-first preference is to update existing ESP and Fuchsia system partitions as
-described in the previous section. Failing this it will look for available space
-where it can create those partitions. If neither of these is possible the
-installer will ask the user to delete disk partitions to make space available.
-Unfortunately the installer can not resize partitions in a way that will
-preserve the data on them, if you need this, please repartition the disk with
-some other tool.
+Boot your device with netboot or with the USB drive you created above. The
+installer's first preference is to update existing ESP and Fuchsia system
+partitions as described in the previous section. Failing this it will look for
+available space where it can create those partitions. If neither of these is
+possible the installer will ask the user to delete disk partitions to make space
+available. Unfortunately the installer can not resize partitions in a way that
+will preserve the data on them, if you need this, please repartition the disk
+with some other tool.
 
 Start the installer
 
