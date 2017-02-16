@@ -35,11 +35,6 @@ static mx_handle_t svcs_job_handle;
 static mx_handle_t application_launcher_child;
 mx_handle_t application_launcher;
 
-// Sent to netsvc
-static mx_handle_t netsvc_ipc = 0;
-// Sent to init once /system is mounted
-static mx_handle_t netsvc_ipc_child = 0;
-
 mx_handle_t get_root_resource(void) {
     return root_resource_handle;
 }
@@ -199,10 +194,6 @@ void create_application_launcher_handles(void) {
     mx_channel_create(0, &application_launcher, &application_launcher_child);
 }
 
-void create_netsvc_ipc_handles(void) {
-    mx_channel_create(0, &netsvc_ipc, &netsvc_ipc_child);
-}
-
 int devmgr_start_system_init(void* arg) {
     static bool init_started = false;
     static mtx_t lock = MTX_INIT;
@@ -210,21 +201,14 @@ int devmgr_start_system_init(void* arg) {
     struct stat s;
     if (!init_started && stat(argv_init[0], &s) == 0) {
         unsigned int init_hnd_count = 0;
-        mx_handle_t init_hnds[2] = {};
-        uint32_t init_ids[2] = {};
+        mx_handle_t init_hnds[1] = {};
+        uint32_t init_ids[1] = {};
         if (application_launcher_child) {
             assert(init_hnd_count < countof(init_hnds));
             init_hnds[init_hnd_count] = application_launcher_child;
             init_ids[init_hnd_count] = MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0);
             init_hnd_count++;
             application_launcher_child = 0;
-        }
-        if (netsvc_ipc_child) {
-            assert(init_hnd_count < countof(init_hnds));
-            init_hnds[init_hnd_count] = netsvc_ipc_child;
-            init_ids[init_hnd_count] = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
-            init_hnd_count++;
-            netsvc_ipc_child = 0;
         }
         devmgr_launch(svcs_job_handle, "init", countof(argv_init),
                 argv_init, NULL, -1, init_hnds, init_ids, init_hnd_count);
@@ -237,12 +221,10 @@ int devmgr_start_system_init(void* arg) {
 int service_starter(void* arg) {
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
-        uint32_t id = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
         const char* args[] = { "/boot/bin/netsvc", NULL };
         args[1] = getenv("magenta.nodename");
         devmgr_launch(svcs_job_handle, "netsvc",
-                args[1] ? 2 : 1, args, NULL, -1,
-                &netsvc_ipc, &id, netsvc_ipc != MX_HANDLE_INVALID ? 1 : 0);
+                args[1] ? 2 : 1, args, NULL, -1, NULL, NULL, 0);
     }
 
     devmgr_launch(svcs_job_handle, "sh:autorun0", countof(argv_autorun0),
@@ -368,7 +350,6 @@ int main(int argc, char** argv) {
     start_console_shell();
 
     create_application_launcher_handles();
-    create_netsvc_ipc_handles();
 
     if (secondary_bootfs_ready()) {
         devmgr_start_system_init(NULL);
