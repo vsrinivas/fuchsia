@@ -297,6 +297,7 @@ class _ChooserScreenState extends State<_ChooserScreen> {
       child: new Stack(
         children: <Widget>[
           new ListView(
+            itemExtent: 75.0,
             children: _assets.map(_buildChooseButton).toList(),
           ),
           new Positioned(
