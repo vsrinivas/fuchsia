@@ -1,0 +1,20 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("audio_player") {
+  sources = [
+    "audio_player.cc",
+    "audio_player.h",
+    "audio_player_params.cc",
+    "audio_player_params.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/media/lib/timeline",
+    "//apps/media/services",
+    "//lib/mtl",
+  ]
+}
