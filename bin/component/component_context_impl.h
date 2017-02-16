@@ -23,7 +23,7 @@ class AgentRunner;
 // ComponentContextImpls with the AgentRunner and MessageQueueManager.
 class ComponentContextImpl : public ComponentContext {
  public:
-  explicit ComponentContextImpl(MessageQueueManager* msg_queue_manager,
+  explicit ComponentContextImpl(MessageQueueManager* message_queue_manager,
                                 AgentRunner* agent_runner,
                                 const std::string& component_id);
   ~ComponentContextImpl();
@@ -43,7 +43,7 @@ class ComponentContextImpl : public ComponentContext {
   void GetMessageSender(const fidl::String& queue_token,
                         fidl::InterfaceRequest<MessageSender> request) override;
 
-  MessageQueueManager* const msg_queue_manager_;
+  MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;
   const std::string component_id_;
 

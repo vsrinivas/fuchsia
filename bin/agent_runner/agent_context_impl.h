@@ -10,13 +10,12 @@
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
+#include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
-#include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -32,7 +31,7 @@ class AgentRunner;
 class AgentContextImpl : public AgentContext, public AgentController {
  public:
   explicit AgentContextImpl(app::ApplicationLauncher* app_launcher,
-                            MessageQueueManager* msg_queue_manager,
+                            MessageQueueManager* message_queue_manager,
                             AgentRunner* agent_runner,
                             const std::string& url);
   ~AgentContextImpl() override;

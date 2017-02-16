@@ -82,7 +82,8 @@ class UserRunnerImpl : public UserRunner {
       fidl::InterfaceRequest<UserRunner> user_runner_request)
       : application_context_(application_context),
         binding_(this, std::move(user_runner_request)),
-        agent_runner_(application_context->launcher().get(), &msg_queue_manager_) {
+        agent_runner_(application_context->launcher().get(),
+                      &message_queue_manager_) {
     binding_.set_connection_error_handler([this] { delete this; });
 
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
@@ -119,7 +120,7 @@ class UserRunnerImpl : public UserRunner {
 
     story_provider_impl_.reset(new StoryProviderImpl(
         std::move(env), std::move(ledger), std::move(ledger_repository_ptr),
-        &msg_queue_manager_, &agent_runner_));
+        &message_queue_manager_, &agent_runner_));
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
     story_provider_impl_->AddBinding(story_provider.NewRequest());
@@ -209,7 +210,7 @@ class UserRunnerImpl : public UserRunner {
   std::unique_ptr<Scope> stories_scope_;
   UserShellPtr user_shell_;
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
-  MessageQueueManager msg_queue_manager_;
+  MessageQueueManager message_queue_manager_;
   AgentRunner agent_runner_;
 
   // Keep connections to applications started here around so they are

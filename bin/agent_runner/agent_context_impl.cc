@@ -9,13 +9,14 @@
 
 namespace modular {
 
-AgentContextImpl::AgentContextImpl(app::ApplicationLauncher* const app_launcher,
-                                   MessageQueueManager* const msg_queue_manager,
-                                   AgentRunner* const agent_runner,
-                                   const std::string& url)
+AgentContextImpl::AgentContextImpl(
+    app::ApplicationLauncher* const app_launcher,
+    MessageQueueManager* const message_queue_manager,
+    AgentRunner* const agent_runner,
+    const std::string& url)
     : url_(url),
       agent_context_binding_(this),
-      component_context_impl_(msg_queue_manager, agent_runner, url) {
+      component_context_impl_(message_queue_manager, agent_runner, url) {
   // Start up the agent process.
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;

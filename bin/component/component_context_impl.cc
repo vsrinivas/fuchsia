@@ -10,10 +10,10 @@
 namespace modular {
 
 ComponentContextImpl::ComponentContextImpl(
-    MessageQueueManager* const msg_queue_manager,
+    MessageQueueManager* const message_queue_manager,
     AgentRunner* const agent_runner,
     const std::string& component_id)
-    : msg_queue_manager_(msg_queue_manager),
+    : message_queue_manager_(message_queue_manager),
       agent_runner_(agent_runner),
       component_id_(component_id) {
   FTL_DCHECK(agent_runner);
@@ -33,17 +33,18 @@ void ComponentContextImpl::ConnectToAgent(
 void ComponentContextImpl::ObtainMessageQueue(
     const fidl::String& name,
     fidl::InterfaceRequest<MessageQueue> request) {
-  msg_queue_manager_->ObtainMessageQueue(component_id_, name, std::move(request));
+  message_queue_manager_->ObtainMessageQueue(component_id_, name,
+                                             std::move(request));
 }
 
 void ComponentContextImpl::DeleteMessageQueue(const fidl::String& name) {
-  msg_queue_manager_->DeleteMessageQueue(component_id_, name);
+  message_queue_manager_->DeleteMessageQueue(component_id_, name);
 }
 
 void ComponentContextImpl::GetMessageSender(
     const fidl::String& queue_token,
     fidl::InterfaceRequest<MessageSender> request) {
-  msg_queue_manager_->GetMessageSender(queue_token, std::move(request));
+  message_queue_manager_->GetMessageSender(queue_token, std::move(request));
 }
 
 }  // namespace modular

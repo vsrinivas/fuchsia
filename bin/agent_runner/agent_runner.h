@@ -25,7 +25,7 @@ class MessageQueueManager;
 class AgentRunner {
  public:
   AgentRunner(app::ApplicationLauncher* application_launcher,
-              MessageQueueManager* msg_queue_manager);
+              MessageQueueManager* message_queue_manager);
   ~AgentRunner();
 
   // Connects to an agent (and starts it up if it doesn't exist). Called via
@@ -45,7 +45,7 @@ class AgentRunner {
       running_agents_;
 
   app::ApplicationLauncher* const application_launcher_;
-  MessageQueueManager* const msg_queue_manager_;
+  MessageQueueManager* const message_queue_manager_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
 };

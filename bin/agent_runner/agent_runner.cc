@@ -10,9 +10,9 @@
 namespace modular {
 
 AgentRunner::AgentRunner(app::ApplicationLauncher* application_launcher,
-                         MessageQueueManager* msg_queue_manager)
+                         MessageQueueManager* message_queue_manager)
     : application_launcher_(application_launcher),
-      msg_queue_manager_(msg_queue_manager) {}
+      message_queue_manager_(message_queue_manager) {}
 
 AgentRunner::~AgentRunner() = default;
 
@@ -27,7 +27,7 @@ void AgentRunner::ConnectToAgent(
     std::tie(found_it, inserted) = running_agents_.emplace(
         agent_url,
         std::make_unique<AgentContextImpl>(
-            application_launcher_, msg_queue_manager_, this, agent_url));
+            application_launcher_, message_queue_manager_, this, agent_url));
     FTL_DCHECK(inserted);
   }
 
