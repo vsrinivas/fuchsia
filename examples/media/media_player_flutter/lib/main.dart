@@ -153,27 +153,35 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> blockChildren = new List<Widget>();
+    List<Widget> columnChildren = new List<Widget>();
 
-    blockChildren.add(new MediaPlayer(_controller));
+    columnChildren.add(new MediaPlayer(_controller));
 
     MediaMetadata metadata = _controller.metadata;
     if (metadata != null) {
       _addLabel(metadata.title ?? _leafAssetToPlay.title ?? '(untitled)',
-          Colors.white, 20.0, blockChildren);
+          Colors.white, 20.0, columnChildren);
       _addLabel(metadata.artist ?? _leafAssetToPlay.artist, Colors.grey[600],
-          15.0, blockChildren);
+          15.0, columnChildren);
       _addLabel(metadata.album ?? _leafAssetToPlay.album, Colors.grey[800],
-          15.0, blockChildren);
+          15.0, columnChildren);
     }
 
-    _addProblem(blockChildren);
+    _addProblem(columnChildren);
 
     return new Material(
       color: Colors.black,
       child: new Stack(
         children: <Widget>[
-          new Block(children: blockChildren),
+          new Positioned(
+            left: 0.0,
+            right: 0.0,
+            top: 0.0,
+            child: new Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: columnChildren,
+            ),
+          ),
           new Positioned(
             right: 0.0,
             top: 0.0,
