@@ -45,8 +45,8 @@ of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *handles* is an invalid pointer or NULL or
-*flags* is any value other than 0.
+**ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL or *options* is
+any value other than 0.
 
 **ERR_NO_MEMORY**  Failure due to lack of memory.
 
