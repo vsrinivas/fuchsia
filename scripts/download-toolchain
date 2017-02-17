@@ -116,6 +116,7 @@ function downloadClangToolchain() {
     rm -f -- "${tool_path}"
     echo "Downloading ${prebuilt_url}"
     curl --progress-bar -continue-at=- --location --output "${tool_path}" "${prebuilt_url}"
+    rm -rf -- "${tool_name}"
     echo "Unpacking ${tool_path}"
     bzip2 -dc "${tool_path}" | tar -x
     echo "${required_version}" > "${stamp_path}"
