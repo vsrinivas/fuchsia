@@ -4,6 +4,12 @@
 
 #pragma once
 
+// These codes are defined in:
+// "Universal Serial Bus HID Usage Tables"
+// http://www.usb.org/developers/hidpage/Hut1_12v2.pdf
+// (Version 1.12, 10/28/2004)
+// See "Table 12: Keyboard/Keypad Page"
+
 enum {
     HID_USAGE_KEY_ERROR_ROLLOVER = 0x01,
     HID_USAGE_KEY_POST_FAIL = 0x02,
