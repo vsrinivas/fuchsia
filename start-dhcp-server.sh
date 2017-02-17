@@ -118,9 +118,19 @@ then
   sudo ifconfig $INTERFACE inet6 $LINK_LOCAL
 fi
 
+if $DARWIN
+then
+  LOOPBACK=lo0
+else
+  LOOPBACK=lo
+fi
+
 echo Starting dnsmasq...
 # TODO: can we use --dhcp-host instead of --dhcp-range
-sudo $DNSMASQ --interface=$INTERFACE \
+sudo $DNSMASQ \
+  --bind-interfaces \
+  --interface=$INTERFACE \
+  --except-interface=$LOOPBACK \
   --dhcp-range=$INTERFACE,${FUCHSIA_IP},${FUCHSIA_IP},24h \
   --dhcp-leasefile=$LEASE_FILE \
   --pid-file=${PID_FILE} \
