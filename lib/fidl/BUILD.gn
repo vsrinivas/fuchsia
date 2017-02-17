@@ -69,14 +69,3 @@ source_set("single_service_view_app") {
     "//lib/ftl",
   ]
 }
-
-source_set("strong_binding") {
-  sources = [
-    "strong_binding.h",
-  ]
-
-  deps = [
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
-  ]
-}
