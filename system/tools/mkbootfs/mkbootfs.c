@@ -22,6 +22,9 @@
 
 #include <magenta/bootdata.h>
 
+#define MAXBUFFER (1024*1024)
+
+
 int verbose = 0;
 
 char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
@@ -41,22 +44,22 @@ char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
 
 typedef struct fsentry fsentry;
 struct fsentry {
-    fsentry *next;
+    fsentry* next;
 
-    char *name;
+    char* name;
     size_t namelen;
     uint32_t offset;
     uint32_t length;
 
-    char *srcpath;
+    char* srcpath;
 };
 typedef struct fs {
-    fsentry *first;
-    fsentry *last;
+    fsentry* first;
+    fsentry* last;
 } fs;
 
-char *trim(char *str) {
-    char *end;
+char* trim(char* str) {
+    char* end;
     while (isspace(*str)) {
         str++;
     }
@@ -72,8 +75,8 @@ char *trim(char *str) {
     return str;
 }
 
-fsentry *import_manifest_entry(const char *fn, int lineno, const char *dst, const char *src) {
-    fsentry *e;
+fsentry* import_manifest_entry(const char* fn, int lineno, const char* dst, const char* src) {
+    fsentry* e;
     struct stat s;
 
     if (dst[0] == 0) {
@@ -101,8 +104,8 @@ fail:
     return NULL;
 }
 
-fsentry *import_directory_entry(const char *dst, const char *src, struct stat *s) {
-    fsentry *e;
+fsentry* import_directory_entry(const char* dst, const char* src, struct stat* s) {
+    fsentry* e;
 
     if (s->st_size > INT32_MAX) {
         fprintf(stderr, "error: file too large '%s'\n", src);
@@ -121,33 +124,24 @@ fail:
     return NULL;
 }
 
-unsigned add_entry(fs *fs, fsentry *e) {
-    if (!strcmp(e->name, "bin/userboot")) {
-        // userboot must be the first entry
-        e->next = fs->first;
-        fs->first = e;
-        if (!fs->last) {
-            fs->last = e;
-        }
+unsigned add_entry(fs* fs, fsentry* e) {
+    e->next = NULL;
+    if (fs->last) {
+        fs->last->next = e;
     } else {
-        e->next = NULL;
-        if (fs->last) {
-            fs->last->next = e;
-        } else {
-            fs->first = e;
-        }
-        fs->last = e;
+        fs->first = e;
     }
+    fs->last = e;
     return e->namelen + FSENTRYSZ;
 }
 
-int import_manifest(const char *fn, unsigned *hdrsz, fs *fs) {
+int import_manifest(const char* fn, unsigned* hdrsz, fs* fs) {
     unsigned sz = 0;
     int lineno = 0;
-    fsentry *e;
-    char *eq;
+    fsentry* e;
+    char* eq;
     char line[4096];
-    FILE *fp;
+    FILE* fp;
 
     if ((fp = fopen(fn, "r")) == NULL) {
         return -1;
@@ -170,22 +164,22 @@ int import_manifest(const char *fn, unsigned *hdrsz, fs *fs) {
     return 0;
 }
 
-int import_directory(const char *dpath, const char *spath, unsigned *hdrsz, fs *fs) {
+int import_directory(const char* dpath, const char* spath, unsigned* hdrsz, fs* fs) {
 #define MAX_BOOTFS_PATH_LEN 4096
     char dst[MAX_BOOTFS_PATH_LEN];
     char src[MAX_BOOTFS_PATH_LEN];
 #undef MAX_BOOTFS_PATH_LEN
     struct stat s;
     unsigned sz = 0;
-    struct dirent *de;
-    DIR *dir;
+    struct dirent* de;
+    DIR* dir;
 
     if ((dir = opendir(spath)) == NULL) {
         fprintf(stderr, "error: cannot open directory '%s'\n", spath);
         return -1;
     }
     while ((de = readdir(dir)) != NULL) {
-        char *name = de->d_name;
+        char* name = de->d_name;
         if (name[0] == '.') {
             if (name[1] == 0) {
                 continue;
@@ -203,7 +197,7 @@ int import_directory(const char *dpath, const char *spath, unsigned *hdrsz, fs *
             goto fail;
         }
         if (S_ISREG(s.st_mode)) {
-            fsentry *e;
+            fsentry* e;
             if (snprintf(dst, sizeof(dst), "%s%s", dpath, name) > sizeof(dst)) {
                 fprintf(stderr, "error: name '%s%s' is too long\n", dpath, name);
                 goto fail;
@@ -231,45 +225,69 @@ fail:
     return -1;
 }
 
-typedef struct {
-    ssize_t (*copy_setup)(void* dst, void** cookie);
-    ssize_t (*copy_data)(void* dst, const void* src, size_t len, void* cookie);
-    ssize_t (*copy_file)(void* dst, const char* fn, size_t len, void* cookie);
-    ssize_t (*copy_finish)(void* dst, void* cookie);
-} copy_ops;
-
-ssize_t copydata(void* dst, const void* src, size_t len, void* cookie) {
-    memcpy(dst, src, len);
-    return len;
+static int readx(int fd, void* ptr, size_t len) {
+    size_t total = len;
+    while (len > 0) {
+        ssize_t r = read(fd, ptr, len);
+        if (r <= 0) {
+            return -1;
+        }
+        ptr += r;
+        len -= r;
+    }
+    return total;
 }
 
-ssize_t copyfile(void* dst, const char *fn, size_t len, void* cookie) {
-    char buf[4*1024*1024];
+static int writex(int fd, const void* ptr, size_t len) {
+    size_t total = len;
+    while (len > 0) {
+        ssize_t r = write(fd, ptr, len);
+        if (r <= 0) {
+            return -1;
+        }
+        ptr += r;
+        len -= r;
+    }
+    return total;
+}
+
+typedef struct {
+    ssize_t (*copy_setup)(int fd, void** cookie);
+    ssize_t (*copy_data)(int fd, const void* src, size_t len, void* cookie);
+    ssize_t (*copy_file)(int fd, const char* fn, size_t len, void* cookie);
+    ssize_t (*copy_finish)(int fd, void* cookie);
+} copy_ops;
+
+ssize_t copydata(int fd, const void* src, size_t len, void* cookie) {
+    if (writex(fd, src, len) < 0) {
+        return -1;
+    } else {
+        return len;
+    }
+}
+
+ssize_t copyfile(int fd, const char* fn, size_t len, void* cookie) {
+    char buf[MAXBUFFER];
     int r, fdi;
     if ((fdi = open(fn, O_RDONLY)) < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", fn);
         return -1;
     }
-    size_t remaining = len;
-    while (remaining > 0) {
-        r = read(fdi, buf, sizeof(buf));
-        if (r < 0) {
-            fprintf(stderr, "error: failed reading '%s'\n", fn);
-            goto oops;
+
+    r = 0;
+    size_t total = len;
+    while (len > 0) {
+        size_t xfer = (len > sizeof(buf)) ? sizeof(buf) : len;
+        if ((r = readx(fdi, buf, xfer)) < 0) {
+            break;
         }
-        if ((r == 0) || (r > remaining)) {
-            fprintf(stderr, "error: file '%s' changed size!\n", fn);
-            goto oops;
+        if ((r = writex(fd, buf, xfer)) < 0) {
+            break;
         }
-        memcpy(dst, buf, r);
-        dst += r;
-        remaining -= r;
+        len -= xfer;
     }
     close(fdi);
-    return len;
-oops:
-    close(fdi);
-    return -1;
+    return (r < 0) ? r : total;
 }
 
 static const copy_ops copy_passthrough = {
@@ -296,64 +314,82 @@ static bool check_and_log_lz4_error(LZ4F_errorCode_t code, const char* msg) {
     return false;
 }
 
-ssize_t compress_setup(void* dst, void** cookie) {
+ssize_t compress_setup(int fd, void** cookie) {
     LZ4F_compressionContext_t cctx;
     LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&cctx, LZ4F_VERSION);
     if (check_and_log_lz4_error(errc, "could not initialize compression context")) {
         return -1;
     }
-    size_t wrote = LZ4F_compressBegin(cctx, dst, 16, &lz4_prefs);
-    if (check_and_log_lz4_error(wrote, "could not begin compression")) {
-        return wrote;
+    uint8_t buf[128];
+    size_t r = LZ4F_compressBegin(cctx, buf, sizeof(buf), &lz4_prefs);
+    if (check_and_log_lz4_error(r, "could not begin compression")) {
+        return r;
     }
+
     // Note: LZ4F_compressionContext_t is a typedef to a pointer, so this is
     // "safe".
     *cookie = (void*)cctx;
-    return wrote;
+
+    return writex(fd, buf, r);
 }
 
-ssize_t compress_data(void* dst, const void* src, size_t len, void* cookie) {
-    // Since we're compressing to an mmap'd file, we don't have to worry about
-    // the max write size. But LZ4 still requires a valid size, so we just pass
-    // in the size that it's looking for.
-    size_t maxWrite = LZ4F_compressBound(len, &lz4_prefs);
-    size_t wrote = LZ4F_compressUpdate((LZ4F_compressionContext_t)cookie, dst, maxWrite,
-            src, len, NULL);
-    check_and_log_lz4_error(wrote, "could not compress data");
-    return wrote;
+ssize_t compress_data(int fd, const void* src, size_t len, void* cookie) {
+    // max will be, worst case, a bit larger than MAXBUFFER
+    size_t max = LZ4F_compressBound(len, &lz4_prefs);
+    uint8_t buf[max];
+    size_t r = LZ4F_compressUpdate((LZ4F_compressionContext_t)cookie, buf, max, src, len, NULL);
+    if (check_and_log_lz4_error(r, "could not compress data")) {
+        return -1;
+    }
+    return writex(fd, buf, r);
 }
 
-ssize_t compress_file(void* dst, const char* fn, size_t len, void* cookie) {
+ssize_t compress_file(int fd, const char* fn, size_t len, void* cookie) {
     if (len == 0) {
         // Don't bother trying to compress empty files
         return 0;
     }
-    int fdi;
+
+    char buf[MAXBUFFER];
+    int r, fdi;
     if ((fdi = open(fn, O_RDONLY)) < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", fn);
         return -1;
     }
-    void* src = mmap(NULL, len, PROT_READ, MAP_SHARED, fdi, 0);
-    if (src == MAP_FAILED) {
-        fprintf(stderr, "error cannot map '%s'\n", fn);
-        close(fdi);
-        return -1;
+
+    r = 0;
+    size_t total = len;
+    while (len > 0) {
+        size_t xfer = (len > sizeof(buf)) ? sizeof(buf) : len;
+        if ((r = readx(fdi, buf, xfer)) < 0) {
+            break;
+        }
+        if ((r = compress_data(fd, buf, xfer, cookie)) < 0) {
+            break;
+        }
+        len -= xfer;
     }
-    ssize_t ret = compress_data(dst, src, len, cookie);
-    munmap(src, len);
     close(fdi);
-    return ret;
+    return (r < 0) ? -1 : total;
 }
 
-ssize_t compress_finish(void* dst, void* cookie) {
+ssize_t compress_finish(int fd, void* cookie) {
     // Max write is one block (64kB uncompressed) plus 8 bytes of footer.
-    size_t maxWrite = LZ4F_compressBound(65536, &lz4_prefs) + 8;
-    size_t wrote = LZ4F_compressEnd((LZ4F_compressionContext_t)cookie, dst, maxWrite, NULL);
-    check_and_log_lz4_error(wrote, "could not finish compression");
+    size_t max = LZ4F_compressBound(65536, &lz4_prefs) + 8;
+    uint8_t buf[max];
+    size_t r = LZ4F_compressEnd((LZ4F_compressionContext_t)cookie, buf, max, NULL);
+    if (check_and_log_lz4_error(r, "could not finish compression")) {
+        r = -1;
+    } else {
+        r = writex(fd, buf, r);
+    }
 
     LZ4F_errorCode_t errc = LZ4F_freeCompressionContext((LZ4F_compressionContext_t)cookie);
-    check_and_log_lz4_error(errc, "could not free compression context");
-    return wrote;
+    if (check_and_log_lz4_error(errc, "could not free compression context")) {
+        r = -1;
+    }
+
+    return r;
 }
 
 static const copy_ops copy_compress = {
@@ -370,46 +406,36 @@ char fill[4096];
 
 #define CHECK_WRITE(w) if ((w) < 0) goto fail
 
-int export_userfs(const char *fn, fs *fs, unsigned hsz, uint64_t outsize, bool compressed) {
+int export_userfs(const char* fn, fs* fs, unsigned hsz, uint64_t outsize, bool compressed) {
     uint32_t n;
-    fsentry *e;
+    fsentry* e;
     int fd;
     const copy_ops* op = compressed ? &copy_compress : &copy_passthrough;
 
-    fd = open(fn, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    fd = open(fn, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (fd < 0) {
         fprintf(stderr, "error: cannot create '%s'\n", fn);
         return -1;
     }
 
-    size_t dstsize = outsize;
     if (compressed) {
         // Update the LZ4 content size to be original size without the bootdata
         // header which isn't being compressed.
         lz4_prefs.frameInfo.contentSize = outsize - sizeof(bootdata_t);
-        // Get an upperbound on the resulting compressed file size.
-        dstsize = LZ4F_compressBound(outsize, &lz4_prefs);
     }
-    ftruncate(fd, dstsize);
 
-    void* dst_start = mmap(NULL, dstsize, PROT_WRITE, MAP_SHARED, fd, 0);
-    if (dst_start == MAP_FAILED) {
-        fprintf(stderr, "error: cannot map '%s' (err=%d)\n", fn, errno);
-        goto fail2;
-    }
-    uint8_t* dst = dst_start;
     // Increment past the bootdata header which will be filled out later.
-    ssize_t wrote = sizeof(bootdata_t);
-    dst += wrote;
+    if (lseek(fd, sizeof(bootdata_t), SEEK_SET) != sizeof(bootdata_t)) {
+        fprintf(stderr, "error: cannot seek\n");
+        goto fail;
+    }
 
     void* cookie = NULL;
     if (op->copy_setup) {
-        CHECK_WRITE(wrote = op->copy_setup(dst, &cookie));
-        dst += wrote;
+        CHECK_WRITE(op->copy_setup(fd, &cookie));
     }
 
-    CHECK_WRITE(wrote = op->copy_data(dst, FSMAGIC, sizeof(FSMAGIC), cookie));
-    dst += wrote;
+    CHECK_WRITE(op->copy_data(fd, FSMAGIC, sizeof(FSMAGIC), cookie));
 
     fsentry* last_entry = NULL;
     for (e = fs->first; e != NULL; e = e->next) {
@@ -417,60 +443,51 @@ int export_userfs(const char *fn, fs *fs, unsigned hsz, uint64_t outsize, bool c
         hdr[0] = e->namelen;
         hdr[1] = e->length;
         hdr[2] = e->offset;
-        CHECK_WRITE(wrote = op->copy_data(dst, hdr, sizeof(hdr), cookie));
-        dst += wrote;
-        CHECK_WRITE(wrote = op->copy_data(dst, e->name, e->namelen, cookie));
-        dst += wrote;
+        CHECK_WRITE(op->copy_data(fd, hdr, sizeof(hdr), cookie));
+        CHECK_WRITE(op->copy_data(fd, e->name, e->namelen, cookie));
         last_entry = e;
     }
     // Record length of last file
     uint32_t last_length = last_entry ? last_entry->length : 0;
 
     // null terminator record
-    CHECK_WRITE(wrote = op->copy_data(dst, fill, 12, cookie));
-    dst += wrote;
+    CHECK_WRITE(op->copy_data(fd, fill, 12, cookie));
 
-    n = PAGEFILL(hsz);
-    if (n) {
-        CHECK_WRITE(wrote = op->copy_data(dst, fill, n, cookie));
-        dst += wrote;
+    if ((n = PAGEFILL(hsz))) {
+        CHECK_WRITE(op->copy_data(fd, fill, n, cookie));
     }
 
     for (e = fs->first; e != NULL; e = e->next) {
         if (verbose) {
             fprintf(stderr, "%08x %08x %s\n", e->offset, e->length, e->name);
         }
-        CHECK_WRITE(wrote = op->copy_file(dst, e->srcpath, e->length, cookie));
-        dst += wrote;
-        n = PAGEFILL(e->length);
-        if (n) {
-            CHECK_WRITE(wrote = op->copy_data(dst, fill, n, cookie));
-            dst += wrote;
+        CHECK_WRITE(op->copy_file(fd, e->srcpath, e->length, cookie));
+        if ((n = PAGEFILL(e->length))) {
+            CHECK_WRITE(op->copy_data(fd, fill, n, cookie));
         }
     }
     // If the last entry has length zero, add an extra zero page at the end.
     // This prevents the possibility of trying to read/map past the end of the
     // bootfs at runtime.
     if (last_length == 0) {
-        CHECK_WRITE(wrote = op->copy_data(dst, fill, sizeof(fill), cookie));
-        dst += wrote;
+        CHECK_WRITE(op->copy_data(fd, fill, sizeof(fill), cookie));
     }
 
     if (op->copy_finish) {
-        CHECK_WRITE(wrote = op->copy_finish(dst, cookie));
-        dst += wrote;
+        CHECK_WRITE(op->copy_finish(fd, cookie));
     }
 
-    // Find the final output size
-    wrote = dst - (uint8_t*)dst_start;
-    if (wrote > dstsize) {
-        fprintf(stderr, "INTERNAL ERROR!! wrote %zd bytes > %zu bytes!\n",
-                wrote, dstsize);
+    off_t wrote = lseek(fd, 0, SEEK_CUR);
+    if (wrote < 0) {
+        fprintf(stderr, "error: couldn't seek\n");
         goto fail;
     }
 
     // Write the bootheader
-    dst = dst_start;
+    if (lseek(fd, 0, SEEK_SET) != 0) {
+        fprintf(stderr, "error: couldn't seek\n");
+        goto fail;
+    }
     bootdata_t boothdr = {
         .magic = BOOTDATA_MAGIC,
         .type = BOOTDATA_TYPE_BOOTFS,
@@ -478,34 +495,23 @@ int export_userfs(const char *fn, fs *fs, unsigned hsz, uint64_t outsize, bool c
         .outsize = compressed ? outsize : wrote,
         .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
     };
-    // Note: this is a memcpy rather than an op->copy_data, since it's written
-    // outside the area that's potentially compressed.
-    memcpy(dst, &boothdr, sizeof(boothdr));
+    if (writex(fd, &boothdr, sizeof(boothdr)) < 0) {
+        goto fail;
+    }
 
-    // Cleanup and set the output file to the final size.
-    if (munmap(dst_start, dstsize) < 0) {
-        fprintf(stderr, "error: failed to unmap '%s' (err=%d)\n", fn, errno);
-        goto fail2;
-    }
-    if (ftruncate(fd, wrote) < 0) {
-        fprintf(stderr, "error: could not resize '%s' (err=%d)\n", fn, errno);
-        goto fail2;
-    }
     close(fd);
     return 0;
 
 fail:
     fprintf(stderr, "error: failed writing '%s'\n", fn);
-    munmap(dst_start, dstsize);
-fail2:
     close(fd);
     return -1;
 }
 
 int main(int argc, char **argv) {
-    const char *output_file = "user.bootfs";
+    const char* output_file = "user.bootfs";
     fs fs = { 0 };
-    fsentry *e = NULL;
+    fsentry* e = NULL;
     int i;
     unsigned hsz = 0;
     uint64_t off;
@@ -514,7 +520,7 @@ int main(int argc, char **argv) {
     argc--;
     argv++;
     while (argc > 0) {
-        const char *cmd = argv[0];
+        const char* cmd = argv[0];
         if (cmd[0] != '-')
             break;
         if (!strcmp(cmd,"-v")) {
@@ -544,7 +550,7 @@ int main(int argc, char **argv) {
         return -1;
     }
     for (i = 0; i < argc; i++) {
-        char *path = argv[i];
+        char* path = argv[i];
         if (path[0] == '@') {
             path++;
             int len = strlen(path);
