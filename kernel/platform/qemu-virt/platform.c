@@ -107,7 +107,7 @@ void platform_early_init(void)
     /* initialize the interrupt controller */
     arm_gicv2m_init(GICV2M_REG_FRAMES, countof(GICV2M_REG_FRAMES));
 
-    arm_generic_timer_init(ARM_GENERIC_TIMER_PHYSICAL_INT, 0);
+    arm_generic_timer_init(ARM_GENERIC_TIMER_VIRTUAL_INT, 0);
 
     uart_init_early();
 
