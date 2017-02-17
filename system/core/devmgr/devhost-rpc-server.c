@@ -400,8 +400,9 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
 
         if (r == ERR_NOT_SUPPORTED) {
             mx_handle_close(msg->handle[0]);
+        } else if (r >= 0) {
+            msg->datalen = r;
         }
-
         return r;
     }
     case MXRIO_IOCTL: {
