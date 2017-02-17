@@ -49,7 +49,7 @@ returned.
 
 **ERR_BAD_STATE**  *parent_vmar_handle* refers to a destroyed VMAR
 
-**ERR_INVALID_ARG**  *child_vmar* or *child_addr* are not valid, *offset* is
+**ERR_INVALID_ARGS**  *child_vmar* or *child_addr* are not valid, *offset* is
 non-zero when *MX_VM_FLAG_SPECIFIC* is not given, *offset* and *size* describe
 an unsatisfiable allocation due to exceeding the region bounds, *offset*
 or *size* is not page-aligned, or *size* is 0.

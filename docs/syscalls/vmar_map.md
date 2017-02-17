@@ -55,7 +55,7 @@ error value is returned.
 
 **ERR_BAD_STATE**  *parent_vmar_handle* refers to a destroyed VMAR
 
-**ERR_INVALID_ARG** *mapped_addr* or *map_flags* are not valid, *vmar_offset* is
+**ERR_INVALID_ARGS** *mapped_addr* or *map_flags* are not valid, *vmar_offset* is
 non-zero when neither **MX_VM_FLAG_SPECIFIC** nor
 **MX_VM_FLAG_SPECIFIC_OVERWRITE** are given, *vmar_offset* and *len*
 describe an unsatisfiable allocation due to exceeding the region bounds,
