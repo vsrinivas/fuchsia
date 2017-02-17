@@ -607,10 +607,9 @@ void MsdIntelDevice::RequestMaxFreq()
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
-    uint32_t max_freq =
-        registers::RenderPerformanceStateCapability::read_rp0_frequency(register_io());
-    registers::RenderPerformanceNormalFrequencyRequest::write_frequency_request(register_io(),
-                                                                                max_freq);
+    uint32_t mhz = registers::RenderPerformanceStateCapability::read_rp0_frequency(register_io());
+    registers::RenderPerformanceNormalFrequencyRequest::write_frequency_request_gen9(register_io(),
+                                                                                     mhz);
 }
 
 uint32_t MsdIntelDevice::GetCurrentFrequency()

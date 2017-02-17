@@ -412,8 +412,11 @@ class RenderPerformanceNormalFrequencyRequest {
 public:
     static constexpr uint32_t kOffset = 0xA008;
 
-    static void write_frequency_request(RegisterIo* reg_io, uint32_t val)
+    static void write_frequency_request_gen9(RegisterIo* reg_io, uint32_t mhz)
     {
+        // Register in units of 16.66Mhz on skylake
+        uint32_t val = mhz * 3 / 50;
+        DASSERT(val <= 0x1ff);
         return reg_io->Write32(kOffset, val << 23);
     }
 };
@@ -425,7 +428,8 @@ public:
     // Returns frequency in MHz
     static uint32_t read_current_frequency_gen9(RegisterIo* reg_io)
     {
-        return (reg_io->Read32(kOffset) >> 23) * 50;
+        // Register in units of 16.66Mhz on skylake
+        return (reg_io->Read32(kOffset) >> 23) * 50 / 3;
     }
 };
 
@@ -433,9 +437,11 @@ class RenderPerformanceStateCapability {
 public:
     static constexpr uint32_t kOffset = 0x140000 + 0x5998;
 
+    // Returns frequency in Mhz
     static uint32_t read_rp0_frequency(RegisterIo* register_io)
     {
-        return register_io->Read32(kOffset) & 0xff;
+        // Register units are 50Mhz
+        return (register_io->Read32(kOffset) & 0xff) * 50;
     }
 };
 
