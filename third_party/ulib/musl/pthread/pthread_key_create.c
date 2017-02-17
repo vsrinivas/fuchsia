@@ -1,8 +1,5 @@
 #include "pthread_impl.h"
 
-volatile size_t __pthread_tsd_size = sizeof(void*) * PTHREAD_KEYS_MAX;
-void* __pthread_tsd_main[PTHREAD_KEYS_MAX] = {};
-
 typedef void (*key_t)(void*);
 static _Atomic(key_t) keys[PTHREAD_KEYS_MAX];
 

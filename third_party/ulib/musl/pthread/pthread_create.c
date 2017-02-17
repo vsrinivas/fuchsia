@@ -14,15 +14,10 @@
 #include <string.h>
 #include <sys/mman.h>
 
-/* pthread_key_create.c overrides this */
-static volatile size_t dummy = 0;
-weak_alias(dummy, __pthread_tsd_size);
-
 static void dummy_0(void) {}
 weak_alias(dummy_0, __acquire_ptc);
 weak_alias(dummy_0, __dl_thread_cleanup);
 weak_alias(dummy_0, __do_orphaned_stdio_locks);
-weak_alias(dummy_0, __pthread_tsd_run_dtors);
 weak_alias(dummy_0, __release_ptc);
 
 static inline size_t round_up_to_page(size_t sz) {
@@ -86,7 +81,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     __acquire_ptc();
 
     size_t guard_size = round_up_to_page(attr._a_guardsize);
-    size_t size = guard_size + round_up_to_page(attr._a_stacksize + libc.tls_size + __pthread_tsd_size);
+    size_t size = guard_size + round_up_to_page(attr._a_stacksize + libc.tls_size);
     uintptr_t addr = 0u;
     mx_status_t status = allocate_stack(size, guard_size, &addr);
     if (status != NO_ERROR) {
@@ -94,8 +89,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
         return EAGAIN;
     }
     unsigned char* map = (unsigned char*)addr;
-    unsigned char* tsd = map + size - __pthread_tsd_size;
-    unsigned char* stack = tsd - libc.tls_size;
+    unsigned char* stack = map + size - libc.tls_size;
     unsigned char* stack_limit = map + guard_size;
 
     mxr_thread_entry_t start = attr.__c11 ? start_c11 : start_pthread;
@@ -115,7 +109,6 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     new->start = entry;
     new->start_arg = arg;
     new->head.tp = (uintptr_t) new;
-    new->tsd = (void**)tsd;
     new->locale = &libc.global_locale;
     // TODO (kulakowski) Actually detach via attribute
     if (attr._a_detach) {

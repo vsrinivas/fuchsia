@@ -150,7 +150,6 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
 
     __environ = envp;
     pthread_t self = __pthread_self();
-    self->tsd = __pthread_tsd_main;
     status = mxr_thread_adopt(main_thread_handle, &self->mxr_thread);
     if (status != NO_ERROR)
         __builtin_trap();

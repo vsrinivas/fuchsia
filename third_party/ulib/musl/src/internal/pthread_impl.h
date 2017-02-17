@@ -42,8 +42,10 @@ struct pthread {
 
     mxr_thread_t mxr_thread;
 
-    int errno_value;
+    void* tsd[PTHREAD_KEYS_MAX];
     int tsd_used;
+    int errno_value;
+
     volatile atomic_int cancel, canceldisable, cancelasync;
     int detached;
     unsigned char* map_base;
@@ -54,7 +56,6 @@ struct pthread {
     void* (*start)(void*);
     void* result;
     struct __ptcb* cancelbuf;
-    void** tsd;
     pthread_attr_t attr;
     volatile int dead;
     int unblock_cancel;
@@ -164,6 +165,8 @@ void __inhibit_ptc(void);
 void __block_all_sigs(void*);
 void __block_app_sigs(void*);
 void __restore_sigs(void*);
+
+void __pthread_tsd_run_dtors(void);
 
 static inline int __sigaltstack(const stack_t* restrict ss, stack_t* restrict old) {
     return 0;
