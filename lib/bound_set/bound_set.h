@@ -39,8 +39,8 @@ UniqueType Identify(fidl::InterfacePtr<Interface>* ip) {
 // An extensible/derivable InterfacePtrSet/(Strong)BindingSet that contains a
 // collection of objects of type T that contain FidlTypes (e.g. InterfacePtr,
 // Binding, or StrongBinding). Elements are automatically removed from the
-// collection and destroyed when their associated MessagePipe experiences a
-// connection error. When the set is destroyed all of the MessagePipes will be
+// collection and destroyed when their associated Channel experiences a
+// connection error. When the set is destroyed all of the Channels will be
 // closed.
 //
 // Unlike the Fidl library InterfacePtrSet and (Strong)BindingSet, this class
@@ -71,7 +71,7 @@ class BoundSet {
   BoundSet() {}
   virtual ~BoundSet() {}
 
-  // |ptr| must be bound to a message pipe.
+  // |ptr| must be bound to a channel.
   template <typename... _Args>
   T* emplace(_Args&&... __args) {
     elements_.emplace_back(std::forward<_Args>(__args)...);
@@ -89,7 +89,7 @@ class BoundSet {
   // there if open, but it does not call OnConnectionError.
   iterator erase(iterator it) { return elements_.erase(it); }
 
-  // Closes the MessagePipe associated with each of the items in this set and
+  // Closes the Channel associated with each of the items in this set and
   // clears the set. This does not call OnConnectionError for every interface in
   // the set.
   void clear() { elements_.clear(); }
