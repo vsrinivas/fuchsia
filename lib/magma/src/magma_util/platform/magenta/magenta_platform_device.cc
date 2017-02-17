@@ -54,9 +54,11 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
     void* addr;
     uint64_t size;
 
-    mx_handle_t handle = pci->map_mmio(mx_device(), pci_bar,
-                                       static_cast<mx_cache_policy_t>(cache_policy), &addr, &size);
-    if (handle < 0)
+    mx_handle_t handle;
+    status = pci->map_mmio(mx_device(), pci_bar,
+                           static_cast<mx_cache_policy_t>(cache_policy), &addr, &size,
+                           &handle);
+    if (status < 0)
         return DRETP(nullptr, "map_mmio failed");
 
     std::unique_ptr<MagentaPlatformMmio> mmio(new MagentaPlatformMmio(addr, size, handle));
@@ -76,12 +78,15 @@ bool MagentaPlatformDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
 
     auto pci = reinterpret_cast<pci_protocol_t*>(protocol);
     const pci_config_t* pci_config;
-    mx_handle_t cfg_handle = pci->get_config(mx_device(), &pci_config);
-    if (cfg_handle < 0)
+    mx_handle_t cfg_handle;
+    status = pci->get_config(mx_device(), &pci_config, &cfg_handle);
+    if (status < 0)
         return DRETF(false, "pci get_config failed");
 
     *value =
         *reinterpret_cast<const uint16_t*>(reinterpret_cast<const uint8_t*>(pci_config) + addr);
+
+    mx_handle_close(cfg_handle);
     return true;
 }
 

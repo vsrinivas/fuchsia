@@ -200,24 +200,21 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
     if (!device)
         return ERR_NO_MEMORY;
 
-    const pci_config_t* pci_config;
-    mx_handle_t cfg_handle = pci->get_config(dev, &pci_config);
-    if (cfg_handle >= 0) {
-        mx_handle_close(cfg_handle);
-    }
-
     // map framebuffer window
     // in vga mode we are scanning out from the same memory (pci bar 2) that's used by the gpu
     // memory aperture (gtt).
     // for now just redirect to offscreen the framebuffer used by the rest of the system.
     device->framebuffer_handle = MX_HANDLE_INVALID;
     if (!MAGMA_START) {
-        device->framebuffer_handle = pci->map_mmio(dev, 2, MX_CACHE_POLICY_WRITE_COMBINING,
-                                                   &device->framebuffer, &device->framebuffer_size);
-        if (device->framebuffer_handle < 0) {
+        mx_handle_t handle;
+        status = pci->map_mmio(dev, 2, MX_CACHE_POLICY_WRITE_COMBINING,
+                               &device->framebuffer, &device->framebuffer_size,
+                               &handle);
+        if (status < 0) {
             delete device;
             return status;
         }
+        device->framebuffer_handle = handle;
     }
 
     // create and add the display (char) device
