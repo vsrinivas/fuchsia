@@ -25,21 +25,17 @@ static mx_status_t qca6174_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         goto fail;
 
     const pci_config_t* pci_config;
-    config_handle = pci->get_config(dev, &pci_config);
-    if (config_handle < 0) {
-        status = config_handle;
+    status = pci->get_config(dev, &pci_config, &config_handle);
+    if (status < 0)
         goto fail;
-    }
 
     void* regs;
     uint64_t regs_size;
-    regs_handle = pci->map_mmio(
+    status = pci->map_mmio(
         dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-        (void**)&regs, &regs_size);
-    if (regs_handle < 0) {
-        status = regs_handle;
+        (void**)&regs, &regs_size, &regs_handle);
+    if (status < 0)
         goto fail;
-    }
 
     std::cout << __func__ << ": SUCCESS" << std::endl;
     return NO_ERROR;
