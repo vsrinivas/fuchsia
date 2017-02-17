@@ -18,6 +18,7 @@
 #include <kernel/thread.h>
 #include <lk/init.h>
 #include <lk/main.h>
+#include <magenta/errors.h>
 #include <inttypes.h>
 #include <platform.h>
 #include <trace.h>
@@ -54,18 +55,18 @@ uint64_t arm64_get_boot_el(void)
 }
 
 #if WITH_SMP
-uint32_t arm64_set_secondary_sp(uint64_t cpu_id, void* ptr) {
+status_t arm64_set_secondary_sp(uint64_t cpu_id, void* ptr) {
 
     uint32_t i = 0;
     while (( i< SMP_MAX_CPUS) && (arm64_secondary_sp_list[i].cpu_id !=0)) {
         i++;
     }
     if (i==SMP_MAX_CPUS)
-        return -1;
+        return ERR_NO_RESOURCES;
     printf("Set cpuid 0x%lx sp to %p\n",cpu_id,ptr);
     arm64_secondary_sp_list[i].cpu_id = cpu_id;
     arm64_secondary_sp_list[i].sp = ptr;
-    return 0;
+    return NO_ERROR;
 }
 #endif
 

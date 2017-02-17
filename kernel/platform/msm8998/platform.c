@@ -182,13 +182,12 @@ void platform_init(void)
 
 #if WITH_SMP
     /* TODO - number of cpus (and topology) should be parsed from device index or command line */
-    struct list_node list = LIST_INITIAL_VALUE(list);
 
     for (int i = 1; i < SMP_MAX_CPUS; i++) {
 
         uint64_t mpid = (PSCI_INDEX_TO_CLUSTER(i) << 8) | PSCI_INDEX_TO_ID(i);
 
-        arm64_set_secondary_sp(mpid, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, &list, NULL));
+        arm64_set_secondary_sp(mpid, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL));
 
         psci_cpu_on( PSCI_INDEX_TO_CLUSTER(i) , PSCI_INDEX_TO_ID(i), MEMBASE + KERNEL_LOAD_OFFSET);
     }
