@@ -76,17 +76,24 @@ mx::process CreateProcess(
   // print out load addresses so we can understand crashes.
   // TODO(vardhan): The job passed to the child process (which will be
   // duplicated from this |job|) should not be killable.
-  mx_handle_t result = launchpad_launch_mxio_vmo_etc(
-      job.get(), path_arg, data.release(), argv.size(), argv.data(), environ,
-      handles.size(), handles.data(), ids.data());
-  if (result < 0) {
-    auto status = static_cast<mx_status_t>(result);
+  launchpad_t* lp;
+  launchpad_create(job.get(), path_arg, &lp);
+  launchpad_load_from_vmo(lp, data.get());
+  launchpad_set_args(lp, argv.size(), argv.data());
+  launchpad_set_environ(lp, environ);
+  launchpad_clone(lp, LP_CLONE_MXIO_ALL);
+  launchpad_add_handles(lp, handles.size(), handles.data(), ids.data());
+  mx_handle_t proc;
+  const char* errmsg;
+  auto status = launchpad_go(lp, &proc, &errmsg);
+  if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "Cannot run executable " << launch_info->url
                    << " due to error " << status << " ("
-                   << mx_status_get_string(status) << ")";
+                   << mx_status_get_string(status) << "): "
+                   << errmsg;
     return mx::process();
   }
-  return mx::process(result);
+  return mx::process(proc);
 }
 
 bool HasShebang(const mx::vmo& data, std::string* runner) {
