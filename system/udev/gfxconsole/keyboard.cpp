@@ -159,6 +159,7 @@ static int vc_input_thread(void* arg) {
             }
         }
     }
+    close(args.fd);
     return 0;
 }
 
