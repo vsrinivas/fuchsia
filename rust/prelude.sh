@@ -27,7 +27,7 @@ esac
 readonly RUST_TOOLS="${ROOT_DIR}/rust/magenta-rs/tools"
 if [ ! -d "$RUST_TOOLS" ]; then
   echo "Missing Rust tools directory, needs to be added to your Jiri manifest:"
-  echo "    jiri import rust https://fuchsia.googlesource.com/manifest && jiri update"
+  echo "    jiri import runtimes/rust https://fuchsia.googlesource.com/manifest && jiri update"
   exit 1
 fi
 cd $RUST_TOOLS
