@@ -15,3 +15,12 @@ BENCHMARK_F(Syscall, Null)(benchmark::State& state) {
     }
   }
 }
+
+BENCHMARK_F(Syscall, ManyArgs)(benchmark::State& state) {
+   while (state.KeepRunning()) {
+    if (mx_syscall_test_8(1, 2, 3, 4, 5, 6, 7, 8) != 36) {
+      state.SkipWithError("Unexpected value returned from syscall");
+      return;
+    }
+  }
+}
