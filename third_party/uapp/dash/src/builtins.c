@@ -35,7 +35,6 @@ int unsetcmd(int, char **);
 int waitcmd(int, char **);
 int aliascmd(int, char **);
 int testcmd(int, char **);
-int killcmd(int, char **);
 int mxc_ls(int, char **);
 int mxc_cp(int, char **);
 int mxc_mkdir(int, char **);
@@ -71,7 +70,6 @@ const struct builtincmd builtincmd[] = {
 	{ "hash", hashcmd, 0 },
 	{ "jobs", jobscmd, 2 },
 	{ "k", mxc_k, 0 },
-	{ "kill", killcmd, 2 },
 	{ "list", mxc_list, 0 },
 	{ "local", localcmd, 7 },
 	{ "ls", mxc_ls, 0 },

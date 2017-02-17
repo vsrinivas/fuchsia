@@ -87,7 +87,6 @@ aliascmd	-au alias
 ulimitcmd	ulimit
 #endif
 testcmd		test [
-killcmd		-u kill
 
 /* mini-versions of standard unix tools */
 mxc_ls		ls
