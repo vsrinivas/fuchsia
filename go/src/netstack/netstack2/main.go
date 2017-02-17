@@ -5,10 +5,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"strings"
-	"syscall/mx"
-	"syscall/mx/mxruntime"
+	"syscall"
+
+	"apps/netstack/eth"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/dns"
@@ -45,16 +47,36 @@ func main() {
 	}
 	log.Print("socket dispatcher started")
 
-	h := mxruntime.GetStartupHandle(mxruntime.HandleInfo{Type: mxruntime.HandleUser0, Arg: 0})
-	if h == 0 {
-		log.Fatal("invalid startup handle")
-	}
-	log.Print("sending ipc signal")
-	if err := h.SignalPeer(0, mx.SignalUser0); err != nil {
-		log.Fatalf("could not send ipc signal: %v", err)
-	}
+	// Add default route. This will get clobbered later when we get a DHCP response.
+	stk.SetRouteTable(defaultRouteTable(""))
 
-	ep := newLinkEndpoint(&mx.Channel{h})
+	arena, err := eth.NewArena()
+	if err != nil {
+		log.Fatalf("ethernet: %v", err)
+	}
+	const ethdir = "/dev/class/ethernet"
+	w, err := syscall.NewWatcher(ethdir)
+	if err != nil {
+		log.Fatalf("ethernet: %v", err)
+	}
+	log.Printf("watching for ethernet devices")
+	var nicid tcpip.NICID
+	for name := range w.C {
+		nicid++
+		path := ethdir + "/" + name
+		if err := addEth(stk, s, nicid, path, arena); err != nil {
+			log.Printf("failed to add ethernet device %s: %v", path, err)
+		}
+	}
+}
+
+func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, arena *eth.Arena) error {
+	log.Printf("using ethernet device %q as NIC %d", path, nicid)
+	client, err := eth.NewClient(path, arena)
+	if err != nil {
+		return err
+	}
+	ep := newLinkEndpoint(client)
 	if err := ep.init(); err != nil {
 		log.Fatalf("init failed: %v", err)
 	}
@@ -64,36 +86,32 @@ func main() {
 	if debug2 {
 		linkID = sniffer.New(linkID)
 	}
-	if err := stk.CreateNIC(1, linkID); err != nil {
-		log.Fatalf("CreateNIC: %v", err)
+	if err := stk.CreateNIC(nicid, linkID); err != nil {
+		return fmt.Errorf("CreateNIC: %v", err)
 	}
-	if err := stk.AddAddress(1, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
-		log.Fatalf("AddAddress for arp failed: %v", err)
+	if err := stk.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
+		return fmt.Errorf("AddAddress for arp failed: %v", err)
 	}
-	if err := stk.AddAddress(1, ipv6.ProtocolNumber, lladdr); err != nil {
-		log.Fatalf("AddAddress for link-local IPv6: %v", err)
-	}
-
-	// Add default route. This will get clobbered later when we get a DHCP response.
-	stk.SetRouteTable(defaultRouteTable(""))
-
-	if err := stk.AddAddress(1, ipv4.ProtocolNumber, "\xff\xff\xff\xff"); err != nil {
-		log.Fatal(err)
-	}
-	if err := stk.AddAddress(1, ipv4.ProtocolNumber, "\x00\x00\x00\x00"); err != nil {
-		log.Fatal(err)
+	if err := stk.AddAddress(nicid, ipv6.ProtocolNumber, lladdr); err != nil {
+		return fmt.Errorf("AddAddress for link-local IPv6: %v", err)
 	}
 
-	dhcpClient = dhcp.NewClient(stk, 1, ep.linkAddr)
+	if err := stk.AddAddress(nicid, ipv4.ProtocolNumber, "\xff\xff\xff\xff"); err != nil {
+		return err
+	}
+	if err := stk.AddAddress(nicid, ipv4.ProtocolNumber, "\x00\x00\x00\x00"); err != nil {
+		return err
+	}
+
+	dhcpClient = dhcp.NewClient(stk, nicid, ep.linkAddr)
 	go dhcpClient.Start(func(config dhcp.Config) {
 		// Update default route with new gateway.
 		stk.SetRouteTable(defaultRouteTable(config.Gateway))
-		stk.RemoveAddress(1, "\xff\xff\xff\xff")
-		stk.RemoveAddress(1, "\x00\x00\x00\x00")
+		stk.RemoveAddress(nicid, "\xff\xff\xff\xff")
+		stk.RemoveAddress(nicid, "\x00\x00\x00\x00")
 		s.setAddr(dhcpClient.Address())
 	})
-
-	select {}
+	return nil
 }
 
 func ipv6LinkLocalAddr(linkAddr tcpip.LinkAddress) tcpip.Address {
