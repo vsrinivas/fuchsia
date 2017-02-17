@@ -603,7 +603,7 @@ mx_status_t sys_pci_reset_device(mx_handle_t) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_handle_t sys_pci_map_mmio(mx_handle_t, uint32_t, mx_cache_policy_t) {
+mx_status_t sys_pci_map_mmio(mx_handle_t, uint32_t, mx_cache_policy_t, mx_handle_t*) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -615,11 +615,11 @@ mx_status_t sys_pci_io_read(mx_handle_t, uint32_t, uint32_t, uint32_t, uint32_t*
     return ERR_NOT_SUPPORTED;
 }
 
-mx_handle_t sys_pci_map_interrupt(mx_handle_t, int32_t) {
+mx_status_t sys_pci_map_interrupt(mx_handle_t, int32_t, mx_handle_t*) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_handle_t sys_pci_map_config(mx_handle_t) {
+mx_status_t sys_pci_map_config(mx_handle_t, mx_handle_t*) {
     return ERR_NOT_SUPPORTED;
 }
 
