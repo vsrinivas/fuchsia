@@ -24,7 +24,7 @@ MODULE_SRCDEPS += $(userboot-filename).strip
 # where the segment boundaries and entry points are.
 MODULE_SRCDEPS += $(BUILDDIR)/$(LOCAL_DIR)/userboot-code.h
 $(BUILDDIR)/$(LOCAL_DIR)/userboot-code.h: \
-    scripts/gen-rodso-code.sh $(userboot-filename)
+    $(call SCRIPTNAME, scripts/gen-rodso-code.sh) $(userboot-filename)
 	@$(MKDIR)
 	@echo generating $@
 	$(NOECHO)$< '$(NM)' USERBOOT $(userboot-filename) > $@.new

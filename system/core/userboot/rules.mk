@@ -45,7 +45,7 @@ MODULE_HEADER_DEPS := ulib/magenta
 $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h: $(BUILDDIR)/ulib/magenta/libmagenta.so
 	@$(MKDIR)
 	@echo generating $@
-	$(NOECHO)scripts/shlib-symbols -a '$(NM)' $< > $@
+	$(NOECHO)$(call SCRIPTNAME, scripts/shlib-symbols) -a '$(NM)' $< > $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h
 
 # This generated linker script defines symbols for each vDSO entry point
