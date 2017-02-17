@@ -63,7 +63,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // Binds to this MediaPacketConsumer.
   void Bind(fidl::InterfaceHandle<MediaPacketConsumer>* handle);
 
-  // Determines if the consumer is bound to a message pipe.
+  // Determines if the consumer is bound to a channel.
   bool is_bound();
 
   // Sets the PTS rate to apply to all incoming packets. If the PTS rate is
