@@ -32,7 +32,7 @@ void SocketDrainer::Start(mx::socket source) {
 }
 
 void SocketDrainer::ReadData() {
-  char buffer[64 * 1024];
+  char buffer[16 * 1024];
   size_t num_bytes = 0;
   mx_status_t rv = source_.read(0, buffer, sizeof(buffer), &num_bytes);
   if (rv == NO_ERROR) {
