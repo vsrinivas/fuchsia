@@ -305,6 +305,12 @@ void vc_device_render(vc_device_t* dev) {
     vc_gfx_invalidate_all(dev);
 }
 
+void vc_device_invalidate_all_for_testing(vc_device_t* dev) {
+    vc_device_invalidate(dev, 0, 0, dev->columns, dev->rows);
+    // Restore the cursor.
+    vc_tc_movecursor(dev, dev->x, dev->y);
+}
+
 int vc_device_get_scrollback_lines(vc_device_t* dev) {
     return dev->sc_t >= dev->sc_h ? dev->sc_t - dev->sc_h : dev->scrollback_rows - 1;
 }
@@ -345,6 +351,20 @@ void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {
     vc_device_render(dev);
 }
 
+const gfx_font* vc_get_font() {
+    char* fname = getenv("gfxconsole.font");
+    if (fname) {
+        if (!strcmp(fname, "9x16")) {
+            return &font9x16;
+        } else if (!strcmp(fname, "18x32")) {
+            return &font18x32;
+        } else {
+            printf("gfxconsole: no such font '%s'\n", fname);
+        }
+    }
+    return &font9x16;
+}
+
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     vc_device_t* device =
         reinterpret_cast<vc_device_t*>(calloc(1, sizeof(vc_device_t)));
@@ -364,18 +384,7 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
         }
     }
 
-    device->font = &font9x16;
-    char* fname = getenv("gfxconsole.font");
-    if (fname) {
-        if (!strcmp(fname, "9x16")) {
-            device->font = &font9x16;
-        } else if (!strcmp(fname, "18x32")) {
-            device->font = &font18x32;
-        } else {
-            printf("gfxconsole: no such font '%s'\n", fname);
-        }
-    }
-
+    device->font = vc_get_font();
     device->charw = device->font->width;
     device->charh = device->font->height;
 

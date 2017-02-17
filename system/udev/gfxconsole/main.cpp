@@ -301,7 +301,7 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
     return result;
 }
 
-static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
+ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
     mtx_lock(&vc->lock);
     vc->invy0 = vc_device_rows(vc) + 1;

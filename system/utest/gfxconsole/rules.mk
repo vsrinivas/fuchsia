@@ -13,13 +13,18 @@ MODULE_TYPE := usertest
 # executable under system/utest/ but refer back to source files in
 # system/udev/.
 MODULE_SRCS += \
+    system/udev/gfxconsole/keyboard-vt100.cpp \
+    system/udev/gfxconsole/keyboard.cpp \
+    system/udev/gfxconsole/main.cpp \
     system/udev/gfxconsole/textcon-test.cpp \
     system/udev/gfxconsole/textcon.cpp \
+    system/udev/gfxconsole/vc-device.cpp \
+    system/udev/gfxconsole/vc-gfx.cpp \
 
 MODULE_NAME := textcon-test
 
-MODULE_STATIC_LIBS := ulib/mxcpp
+MODULE_STATIC_LIBS := ulib/ddk ulib/gfx ulib/hid ulib/mxcpp ulib/mxtl
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk

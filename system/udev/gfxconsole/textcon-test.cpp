@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gfx/gfx.h>
+#include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 #include "textcon.h"
+#include "vc.h"
 
 namespace {
 
@@ -23,11 +26,22 @@ void scroll_callback(void* cookie, int x, int y0, int y1) {
 void setparam_callback(void* cookie, int param, uint8_t* arg, size_t arglen) {
 }
 
-// Helper for initializing a textcon instance for testing.
+// Helper for initializing and testing console instances.  This actually
+// creates two console instances:
+//
+//  * A textcon_t (non-graphical), for testing character-level output.
+//  * A vc_device_t (graphical), for testing incremental updates to the
+//    gfx_surface.
+//
+// In principle, we could test the character-level output via the textcon_t
+// that the vc_device_t creates internally.  However, using our own
+// separate textcon_t instance helps check that textcon_t can be used on
+// its own, outside of vc_device_t.
 class TextconHelper {
 public:
     TextconHelper(uint32_t size_x, uint32_t size_y) : size_x(size_x),
                                                       size_y(size_y) {
+        // Create a textcon_t.
         textbuf = new vc_char_t[size_x * size_y];
         textcon.invalidate = invalidate_callback;
         textcon.movecursor = movecursor_callback;
@@ -35,20 +49,123 @@ public:
         textcon.scroll = scroll_callback;
         textcon.setparam = setparam_callback;
         tc_init(&textcon, size_x, size_y, textbuf, 0, 0);
-
         // Initialize buffer contents, since this is currently done
         // outside of textcon.cpp in vc-device.cpp.
         for (size_t i = 0; i < size_x * size_y; ++i)
             textbuf[i] = ' ';
+
+        // Create a vc_device_t with the same size in characters.
+        const gfx_font* font = vc_get_font();
+        int pixels_x = font->width * size_x;
+        int pixels_y = font->height * (size_y + 1); // Add 1 for status line.
+        vc_surface = gfx_create_surface(
+            nullptr, pixels_x, pixels_y, /* stride= */ pixels_x,
+            MX_PIXEL_FORMAT_RGB_565, 0);
+        EXPECT_TRUE(vc_surface, "");
+        // This takes ownership of vc_surface.
+        EXPECT_EQ(vc_device_alloc(vc_surface, &vc_dev), NO_ERROR, "");
+        EXPECT_EQ(vc_dev->columns, size_x, "");
+        EXPECT_EQ(vc_device_rows(vc_dev), static_cast<int>(size_y), "");
+        // Mark the console as active so that display updates get
+        // propagated to vc_surface.
+        vc_dev->active = true;
+        // Propagate the initial display contents to vc_surface.
+        vc_gfx_invalidate_all(vc_dev);
     }
 
     ~TextconHelper() {
         delete[] textbuf;
+        vc_device_free(vc_dev);
+    }
+
+    // Takes a snapshot of the vc_device_t's display.
+    class DisplaySnapshot {
+    public:
+        DisplaySnapshot(TextconHelper* helper)
+            : helper_(helper),
+              snapshot_(new uint8_t[helper->vc_surface->len]) {
+            memcpy(snapshot_.get(), helper->vc_surface->ptr,
+                   helper->vc_surface->len);
+        }
+
+        // Returns whether the vc_device_t's display changed since the
+        // snapshot was taken.
+        bool ChangedSinceSnapshot() {
+            return memcmp(snapshot_.get(), helper_->vc_surface->ptr,
+                          helper_->vc_surface->len) != 0;
+        }
+
+        mxtl::unique_ptr<char[]> ComparisonString() {
+            vc_device_t* vc_dev = helper_->vc_dev;
+            gfx_surface* vc_surface = helper_->vc_surface;
+            uint32_t size_in_chars = vc_dev->columns * vc_dev->rows;
+
+            mxtl::unique_ptr<bool[]> diffs(new bool[size_in_chars]);
+            for (uint32_t i = 0; i < size_in_chars; ++i)
+                diffs[i] = false;
+
+            for (uint32_t i = 0; i < vc_surface->len; ++i) {
+                if (static_cast<uint8_t*>(vc_surface->ptr)[i] != snapshot_[i]) {
+                    uint32_t pixel_index = i / vc_surface->pixelsize;
+                    uint32_t x_pixels = pixel_index % vc_surface->stride;
+                    uint32_t y_pixels = pixel_index / vc_surface->stride;
+                    uint32_t x_chars = x_pixels / vc_dev->charw;
+                    uint32_t y_chars = y_pixels / vc_dev->charh;
+                    EXPECT_LT(x_chars, vc_dev->columns, "");
+                    EXPECT_LT(y_chars, vc_dev->rows, "");
+                    diffs[x_chars + y_chars * vc_dev->columns] = true;
+                }
+            }
+
+            // Build a string showing the differences.  If we had
+            // std::string or equivalent, we'd use that here.
+            size_t string_size = (vc_dev->columns + 3) * vc_dev->rows + 1;
+            mxtl::unique_ptr<char[]> string(new char[string_size]);
+            char* ptr = string.get();
+            for (uint32_t y = 0; y < vc_dev->rows; ++y) {
+                *ptr++ = '|';
+                for (uint32_t x = 0; x < vc_dev->columns; ++x) {
+                    bool diff = diffs[x + y * vc_dev->columns];
+                    *ptr++ = diff ? 'D' : '-';
+                }
+                *ptr++ = '|';
+                *ptr++ = '\n';
+            }
+            *ptr++ = 0;
+            EXPECT_EQ(ptr, string.get() + string_size, "");
+            return string;
+        }
+
+        // Prints a representation of which characters in the vc_device_t's
+        // display changed since the snapshot was taken.
+        void PrintComparison() {
+            printf("%s", ComparisonString().get());
+        }
+
+    private:
+        TextconHelper* helper_;
+        mxtl::unique_ptr<uint8_t[]> snapshot_;
+    };
+
+    void InvalidateAllGraphics() {
+        vc_device_invalidate_all_for_testing(vc_dev);
+        vc_gfx_invalidate_all(vc_dev);
     }
 
     void PutString(const char* str) {
-        while (*str)
-            textcon.putc(&textcon, *str++);
+        for (const char* ptr = str; *ptr; ++ptr)
+            textcon.putc(&textcon, *ptr);
+
+        vc_device_write(&vc_dev->device, str, strlen(str), 0);
+        // Test that the incremental update of the display was correct.  We
+        // do that by refreshing the entire display, and checking that
+        // there was no change.
+        DisplaySnapshot copy(this);
+        InvalidateAllGraphics();
+        if (copy.ChangedSinceSnapshot()) {
+            copy.PrintComparison();
+            EXPECT_TRUE(false, "Display contents changed");
+        }
     }
 
     void AssertLineContains(int line_num, const char* str) {
@@ -63,8 +180,12 @@ public:
 
     uint32_t size_x;
     uint32_t size_y;
+
     vc_char_t* textbuf;
     textcon_t textcon = {};
+
+    gfx_surface* vc_surface;
+    vc_device_t* vc_dev;
 };
 
 bool test_simple() {
@@ -74,6 +195,38 @@ bool test_simple() {
     tc.PutString("Hello");
     tc.AssertLineContains(0, "Hello");
     tc.AssertLineContains(1, "");
+
+    END_TEST;
+}
+
+// This tests the DisplaySnapshot test helper above.  If we write directly
+// to vc_dev's text buffer without invalidating the display, the test
+// machinery should detect which characters in the display were not updated
+// properly.
+bool test_display_update_comparison() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 3);
+    // Write some characters directly into the text buffer.
+    auto SetChar = [&](int x, int y, char ch) {
+        tc.vc_dev->text_buf[x + y * tc.size_x] =
+            CHARVAL(ch, tc.textcon.fg, tc.textcon.bg);
+    };
+    SetChar(2, 1, 'x');
+    SetChar(3, 1, 'y');
+    SetChar(6, 1, 'z');
+
+    // Check that these characters in the display are detected as not
+    // properly updated.
+    TextconHelper::DisplaySnapshot snapshot(&tc);
+    tc.InvalidateAllGraphics();
+    EXPECT_TRUE(snapshot.ChangedSinceSnapshot(), "");
+    const char *expected =
+        "|----------|\n"  // Console status line
+        "|D---------|\n"  // Cursor
+        "|--DD--D---|\n"  // Chars set by SetChar() above
+        "|----------|\n";
+    EXPECT_EQ(strcmp(snapshot.ComparisonString().get(), expected), 0, "");
 
     END_TEST;
 }
@@ -132,6 +285,7 @@ bool test_backspace_at_start_of_line() {
 
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
+RUN_TEST(test_display_update_comparison)
 RUN_TEST(test_wrapping)
 RUN_TEST(test_tabs)
 RUN_TEST(test_backspace_moves_cursor)

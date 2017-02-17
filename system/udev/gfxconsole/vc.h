@@ -94,6 +94,7 @@ typedef struct vc_device {
 #define VC_FLAG_RESETSCROLL (1 << 1)
 #define VC_FLAG_FULLSCREEN  (1 << 2)
 
+const gfx_font* vc_get_font();
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev);
 void vc_device_free(vc_device_t* dev);
 
@@ -112,9 +113,13 @@ void vc_get_battery_info(vc_battery_info_t* info);
 
 void vc_device_write_status(vc_device_t* dev);
 void vc_device_render(vc_device_t* dev);
+void vc_device_invalidate_all_for_testing(vc_device_t* dev);
 int vc_device_get_scrollback_lines(vc_device_t* dev);
 void vc_device_scroll_viewport(vc_device_t* dev, int dir);
 void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen);
+
+ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count,
+                        mx_off_t off);
 
 static inline int vc_device_rows(vc_device_t* dev) {
     return dev->flags & VC_FLAG_FULLSCREEN ? dev->rows : dev->rows - 1;
