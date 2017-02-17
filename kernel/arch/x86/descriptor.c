@@ -48,12 +48,6 @@ void x86_initialize_percpu_tss(void)
     x86_tss_assign_ists(percpu, tss);
 
     tss->iomap_base = offsetof(tss_64_t, tss_bitmap);
-
-    // Setup alternate stacks to gurantee stack sanity when handling these
-    // interrupts
-    idt_set_ist_index(&percpu->idt, X86_INT_NMI, NMI_IST_INDEX);
-    idt_set_ist_index(&percpu->idt, X86_INT_MACHINE_CHECK, MCE_IST_INDEX);
-    idt_set_ist_index(&percpu->idt, X86_INT_DOUBLE_FAULT, DBF_IST_INDEX);
 #endif
     // Need to have an extra byte at the end of the bitmap because it will always potentially read two bytes
     tss->tss_bitmap[IO_BITMAP_BYTES] = 0xff;

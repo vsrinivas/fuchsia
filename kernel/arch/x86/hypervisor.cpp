@@ -407,7 +407,7 @@ mx_status_t VmcsCpuContext::Setup() {
     vmwrite(VMCS_XX_HOST_GS_BASE, read_msr(X86_MSR_IA32_GS_BASE));
     vmwrite(VMCS_XX_HOST_TR_BASE, reinterpret_cast<uint64_t>(&percpu->default_tss));
     vmwrite(VMCS_XX_HOST_GDTR_BASE, reinterpret_cast<uint64_t>(_gdt));
-    vmwrite(VMCS_XX_HOST_IDTR_BASE, reinterpret_cast<uint64_t>(&percpu->idt));
+    vmwrite(VMCS_XX_HOST_IDTR_BASE, reinterpret_cast<uint64_t>(_idt));
     vmwrite(VMCS_XX_HOST_CR0, x86_get_cr0());
     vmwrite(VMCS_XX_HOST_CR4, x86_get_cr4());
     vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load));

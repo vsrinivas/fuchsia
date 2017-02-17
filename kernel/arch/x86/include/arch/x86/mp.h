@@ -65,9 +65,6 @@ struct x86_percpu {
 
     /* This CPU's default TSS */
     tss_t __ALIGNED(16) default_tss;
-
-    /* The IDT for this CPU */
-    struct idt idt;
 #ifdef ARCH_X86_64
     /* Reserved space for interrupt stacks */
     uint8_t interrupt_stacks[NUM_ASSIGNED_IST_ENTRIES][PAGE_SIZE];

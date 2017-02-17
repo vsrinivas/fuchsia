@@ -146,7 +146,7 @@ fill_pd:
 
 main_lk:
     /* set up the idt */
-    push $_idt
+    push $_idt_startup
     call idt_setup
     add $4, %esp
     lidt _idtr

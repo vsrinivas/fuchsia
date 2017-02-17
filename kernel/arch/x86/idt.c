@@ -18,8 +18,14 @@
 #define CLAC_SIZE 3
 
 // Early boot shared IDT structure
+struct idt _idt_startup;
+struct idtr _idtr = {
+    .limit = sizeof(_idt_startup) - 1,
+    .address =  (uintptr_t)&_idt_startup
+};
+
+// IDT after early boot
 struct idt _idt;
-struct idtr _idtr = { .limit = sizeof(_idt) - 1, .address =  (uintptr_t)&_idt };
 
 static inline void idt_set_segment_sel(struct idt_entry *entry, uint16_t sel)
 {

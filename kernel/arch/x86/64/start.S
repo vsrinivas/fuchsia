@@ -186,7 +186,7 @@ high_entry:
     lgdt _gdtr
 
     /* set up the idt */
-    mov $_idt, %rdi
+    mov $_idt_startup, %rdi
     call idt_setup
     lidt _idtr
 
