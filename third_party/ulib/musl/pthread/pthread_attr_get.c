@@ -5,7 +5,7 @@ int pthread_attr_getdetachstate(const pthread_attr_t* a, int* state) {
     return 0;
 }
 int pthread_attr_getguardsize(const pthread_attr_t* restrict a, size_t* restrict size) {
-    *size = a->_a_guardsize + DEFAULT_GUARD_SIZE;
+    *size = a->_a_guardsize;
     return 0;
 }
 
@@ -34,13 +34,13 @@ int pthread_attr_getstack(const pthread_attr_t* restrict a, void** restrict addr
                           size_t* restrict size) {
     if (!a->_a_stackaddr)
         return EINVAL;
-    *size = a->_a_stacksize + DEFAULT_STACK_SIZE;
+    *size = a->_a_stacksize;
     *addr = (void*)(a->_a_stackaddr - *size);
     return 0;
 }
 
 int pthread_attr_getstacksize(const pthread_attr_t* restrict a, size_t* restrict size) {
-    *size = a->_a_stacksize + DEFAULT_STACK_SIZE;
+    *size = a->_a_stacksize;
     return 0;
 }
 

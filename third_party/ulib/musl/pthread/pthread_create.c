@@ -77,9 +77,7 @@ static mx_status_t allocate_stack(size_t stack_size, size_t guard_size, uintptr_
 }
 
 int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp, void* (*entry)(void*), void* restrict arg) {
-    pthread_attr_t attr = {};
-    if (attrp)
-        attr = *attrp;
+    pthread_attr_t attr = attrp == NULL ? DEFAULT_PTHREAD_ATTR : *attrp;
 
     // We do not support providing a stack via pthread attributes.
     if (attr._a_stackaddr)
@@ -87,8 +85,8 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
 
     __acquire_ptc();
 
-    size_t guard_size = round_up_to_page(DEFAULT_GUARD_SIZE + attr._a_guardsize);
-    size_t size = guard_size + round_up_to_page(DEFAULT_STACK_SIZE + attr._a_stacksize + libc.tls_size + __pthread_tsd_size);
+    size_t guard_size = round_up_to_page(attr._a_guardsize);
+    size_t size = guard_size + round_up_to_page(attr._a_stacksize + libc.tls_size + __pthread_tsd_size);
     uintptr_t addr = 0u;
     mx_status_t status = allocate_stack(size, guard_size, &addr);
     if (status != NO_ERROR) {

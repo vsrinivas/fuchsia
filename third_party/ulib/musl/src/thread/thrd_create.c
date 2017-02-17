@@ -8,7 +8,7 @@ int thrd_create(thrd_t* thr, thrd_start_t func, void* arg) {
 }
 
 int thrd_create_with_name(thrd_t* thr, thrd_start_t func, void* arg, const char* name) {
-    pthread_attr_t attrs = {};
+    pthread_attr_t attrs = DEFAULT_PTHREAD_ATTR;
     attrs.__name = name;
     attrs.__c11 = 1;
     int ret = pthread_create(thr, &attrs, (void* (*)(void*))func, arg);

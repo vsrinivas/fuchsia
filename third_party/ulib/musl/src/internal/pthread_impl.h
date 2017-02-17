@@ -197,5 +197,8 @@ static inline int __rt_sigqueueinfo(pid_t pid, int sig, siginfo_t* info) {
     return 0;
 }
 
-#define DEFAULT_STACK_SIZE 81920
-#define DEFAULT_GUARD_SIZE PAGE_SIZE
+#define DEFAULT_PTHREAD_ATTR                                                  \
+    ((pthread_attr_t){                                                        \
+        ._a_stacksize = 81920,                                                \
+        ._a_guardsize = PAGE_SIZE,                                            \
+    })
