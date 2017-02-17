@@ -35,6 +35,6 @@
         "toybox",
         "tracing",
         "url",
-        "vim",
+        "vim"
     ]
 }
