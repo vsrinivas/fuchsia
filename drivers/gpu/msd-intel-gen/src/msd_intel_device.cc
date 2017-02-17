@@ -499,6 +499,8 @@ magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer
             return status;
         }
         display_mappings_.push_front(mapping);
+        while (display_mappings_.size() > 3)
+            display_mappings_.pop_back();
     }
 
     uint32_t width, height;
