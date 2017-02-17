@@ -9,64 +9,55 @@ Thinfs currently includes an implementation of:
 ## Download Sources ##
 
 ### Download ThinFS sources ###
+
+Thinfs should be included in the full Fuchsia checkout by default.
+
 ```shell
 jiri import thinfs
 jiri update
-cd $FUCHSIA_ROOT/go/src/fuchsia.googlesource.com/thinfs
-```
-
-### Download Mojo sources ###
-
-NOTE: At the moment, using ThinFS with Mojo is not recommended. Currently,
-ThinFS is only compatible with the Remote IO protocol within Magenta.
-
-```shell
-# This path is customizable, but it MUST be set.
-MOJO_DIR=~/mojo
-
-# This assumes you already have depot_tools in your path.
-cd $MOJO_DIR
-fetch mojo
-cd src
-./build/install-build-deps.sh
-mojo/tools/mojob.py gn
-mojo/tools/mojob.py build --release
-
-# We need to patch the mojom bindings generator.  Find the line that says
-#    self.Write(self.GenerateSource(), os.path.join("go", "src",
-# and remove the "go" and "src" arguments.
-# TODO(https://github.com/domokit/mojo/issues/768).
-$EDITOR $MOJO_DIR/src/mojo/public/tools/bindings/generators/mojom_go_generator.py
 ```
 
 ## Building ##
 
+Thinfs will be built as a part of the Fuchsia build. Follow the instructions
+on the Fuchsia landing pages.
+
+To build Thinfs exclusively, the "--modules" parameter can be provided to gn.
+This is useful if the rest of the build is broken, or if you're trying to
+incrementally rebuild Thinfs alone.
+
 ```shell
-cd $GOPATH/src/fuchsia.googlesource.com/thinfs
-./scripts/build_mojom_bindings.sh
-./scripts/build_apps.sh
+cd $FUCHSIA_ROOT
+./packages/gn/gen.py --modules=thinfs
+./buildtools/ninja -C out/debug-x86-64
 ```
 
 ## Testing ##
 
-### Make a test filesystem ###
+### Running on Fuchsia ###
+
+If you have a partition (either on a hard disk or USB) which is formatted as
+FAT, it will be automatically detected by the Magenta kernel and mounted using
+thinfs under "/volume".
+
+If you want to manually mount a block device, use the following steps:
+
+Use lsblk to determine which block device you'd like to mount.
 ```shell
-cd $MOJO_DIR/
-dd if=/dev/zero of=test.fs bs=4096 count=16384
-mkfs.fat $MOJO_DIR/test.fs
+lsblk
 ```
 
-### Run the file system client application ###
+Let's arbitrarily choose block device '000'. If it is formatted as FAT, you can
+skip to the mounting stage immediately. Otherwise, you'll need to format it as a
+FAT filesystem (which, as a warning, will wipe all data present on the
+partition).
+
+To format the block device:
 ```shell
-cd $MOJO_DIR/src
-mojo/devtools/common/mojo_run --enable-multiprocess --release \
-        --args-for="mojo:blockd -logtostderr -path $MOJO_DIR/test.fs -readonly=true" \
-        --args-for="mojo:fs -logtostderr" --args-for="mojo:fsclient -logtostderr" mojo:fsclient
+mkfs /dev/class/block/000 fat
 ```
 
-If you see output that looks like
+To mount the block device:
+```shell
+mount /dev/class/block/000 /mount/path/of/your/choice
 ```
-# I0603 16:43:45.294634    4996 main.go:78] Entry name=., type=Directory
-# I0603 16:43:45.294969    4996 main.go:78] Entry name=.., type=Directory
-```
-then you know it worked.
