@@ -152,6 +152,13 @@ class UserRunnerImpl : public UserRunner {
           context_engine->RegisterPublisher("unknown", std::move(request));
         }));
 
+    stories_scope_->AddService<maxwell::ProposalPublisher>(
+        ftl::MakeCopyable([maxwell_launcher = std::move(maxwell_launcher)](
+            fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
+          maxwell_launcher->RegisterAnonymousProposalPublisher(
+              std::move(request));
+        }));
+
     user_shell_->Initialize(std::move(user_context), std::move(story_provider),
                             std::move(suggestion_provider),
                             std::move(focus_controller_request));
