@@ -12,8 +12,18 @@
 set -e -u
 
 # construct the path to our directory
+host_type=$(uname -s)
+script_dir=
+if [ "$host_type" = "Darwin" ]; then
+  script_dir=$(cd "$(dirname "$0")"; pwd)
+elif [ "$host_type" = "Linux" ]; then
+  script_dir=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+else
+  echo "Unsupported OS, please use Mac or Linux"
+  exit -1
+fi
+
 script_name=$(basename "$0")
-script_dir=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 expected_path="scripts/installer"
 curr_dir=$(pwd)
 
@@ -203,7 +213,16 @@ dd if=/dev/zero of="$disk_path" bs="$BLOCK_SIZE" count="$blocks_sys"
 
 echo "Creating EFI disk image, this may take some time..."
 dd if=/dev/zero of="$disk_path_efi" bs="$BLOCK_SIZE" count="$blocks_efi"
-mkfs.vfat -F 32 "$disk_path_efi"
+
+if [ "$host_type" = "Darwin" ]; then
+  mount_path=$(hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount "$disk_path_efi")
+  # strip leading and trailing space
+  mount_path="$(echo -e "${mount_path}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  newfs_msdos -F 32 "${mount_path}"
+  hdiutil detach "$mount_path"
+else
+  mkfs.vfat -F 32 "$disk_path_efi"
+fi
 
 "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc" \
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia" \
