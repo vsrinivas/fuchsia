@@ -31,6 +31,7 @@
 
 #define VCDEBUG 1
 
+#include "keyboard-vt100.h"
 #include "keyboard.h"
 #include "vc.h"
 #include "vcdebug.h"
@@ -53,10 +54,6 @@ static vc_device_t* g_active_vc;
 static unsigned g_active_vc_index;
 static vc_battery_info_t g_battery_info;
 static mtx_t g_vc_lock = MTX_INIT;
-
-static uint32_t hid_key_to_ansi_code(uint8_t keycode, int modifiers,
-                                     keychar_t* keymap, char* buf,
-                                     size_t buf_size);
 
 // Process key sequences that affect the console (scrolling, switching
 // console, etc.) without sending input to the current console.  This
@@ -139,7 +136,7 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
         g_active_vc->flags |= VC_FLAG_RESETSCROLL;
     }
     char output[4];
-    uint32_t length = hid_key_to_ansi_code(
+    uint32_t length = hid_key_to_vt100_code(
         keycode, modifiers, g_active_vc->keymap, output, sizeof(output));
     if (length > 0) {
         // This writes multi-byte sequences atomically, so that if space
@@ -287,97 +284,6 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
         vc_device_render(g_active_vc);
     }
     return NO_ERROR;
-}
-
-// Converts the given HID keycode into an equivalent ANSI (VT100) byte
-// sequence, for the given modifier key state and keymap.  This writes the
-// result into |buf| and returns the number of bytes that were written.
-static uint32_t hid_key_to_ansi_code(uint8_t keycode, int modifiers,
-                                     keychar_t* keymap, char* buf,
-                                     size_t buf_size) {
-    // Consistency check: Max size of byte sequences we produce below.
-    if (buf_size != 4)
-        return 0;
-
-    uint8_t ch = hid_map_key(keycode, modifiers & MOD_SHIFT, keymap);
-    if (ch) {
-        if (modifiers & MOD_CTRL) {
-            uint8_t sub = modifiers & MOD_SHIFT ? 'A' : 'a';
-            buf[0] = (char)(ch - sub + 1);
-        } else {
-            buf[0] = ch;
-        }
-        return 1;
-    }
-
-    switch (keycode) {
-    // generate special stuff for a few different keys
-    case HID_USAGE_KEY_ENTER:
-    case HID_USAGE_KEY_KP_ENTER:
-        buf[0] = '\n';
-        return 1;
-    case HID_USAGE_KEY_BACKSPACE:
-        buf[0] = '\b';
-        return 1;
-    case HID_USAGE_KEY_TAB:
-        buf[0] = '\t';
-        return 1;
-    case HID_USAGE_KEY_ESC:
-        buf[0] = 0x1b;
-        return 1;
-
-    // generate vt100 key codes for arrows
-    case HID_USAGE_KEY_UP:
-        buf[0] = 0x1b;
-        buf[1] = '[';
-        buf[2] = 65;
-        return 3;
-    case HID_USAGE_KEY_DOWN:
-        buf[0] = 0x1b;
-        buf[1] = '[';
-        buf[2] = 66;
-        return 3;
-    case HID_USAGE_KEY_RIGHT:
-        buf[0] = 0x1b;
-        buf[1] = '[';
-        buf[2] = 67;
-        return 3;
-    case HID_USAGE_KEY_LEFT:
-        buf[0] = 0x1b;
-        buf[1] = '[';
-        buf[2] = 68;
-        return 3;
-    case HID_USAGE_KEY_HOME:
-        buf[0] = 0x1b;
-        buf[1] = '[';
-        buf[2] = 'H';
-        return 3;
-    case HID_USAGE_KEY_END:
-        buf[0] = 0x1b;
-        buf[1] = '[';
-        buf[2] = 'F';
-        return 3;
-    case HID_USAGE_KEY_DELETE:
-        buf[0] = 0x1b;
-        buf[1] = '[';
-        buf[2] = '3';
-        buf[3] = '~';
-        return 4;
-    case HID_USAGE_KEY_PAGEUP:
-        buf[0] = 0x1b;
-        buf[1] = '[';
-        buf[2] = '5';
-        buf[3] = '~';
-        return 4;
-    case HID_USAGE_KEY_PAGEDOWN:
-        buf[0] = 0x1b;
-        buf[1] = '[';
-        buf[2] = '6';
-        buf[3] = '~';
-        return 4;
-    }
-    // ignore unknown keys; character keys were handled above
-    return 0;
 }
 
 static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
