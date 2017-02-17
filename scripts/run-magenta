@@ -222,7 +222,12 @@ fi
 case $ARCH in
     arm64)
         QEMU=${QEMUDIR}qemu-system-aarch64
-        ARGS+=" -machine virt -cpu cortex-a53 -kernel $BUILDDIR/magenta.elf"
+        ARGS+=" -machine virt -kernel $BUILDDIR/magenta.elf"
+        if [ $DO_KVM -ne 0 ]; then
+          ARGS+=" -enable-kvm -cpu host"
+        else
+          ARGS+=" -cpu cortex-a53"
+        fi
         ;;
     x86-64)
         QEMU=${QEMUDIR}qemu-system-x86_64
