@@ -29,13 +29,16 @@ Image::Image(ImageInfo info,
     case vk::Format::eX8D24UnormPack32:
     case vk::Format::eD32Sfloat:
       has_depth_ = true;
+      break;
     case vk::Format::eS8Uint:
       has_stencil_ = true;
+      break;
     case vk::Format::eD16UnormS8Uint:
     case vk::Format::eD24UnormS8Uint:
     case vk::Format::eD32SfloatS8Uint:
       has_depth_ = true;
       has_stencil_ = true;
+      break;
     default:
       // No depth or stencil component.
       break;
