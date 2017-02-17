@@ -16,7 +16,7 @@
 
 // Watch a directory for changes
 //   in: none
-//   out: handle to msgpipe to get notified on
+//   out: handle to channel to get notified on
 #define IOCTL_DEVICE_WATCH_DIR \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DEVICE, 1)
 
