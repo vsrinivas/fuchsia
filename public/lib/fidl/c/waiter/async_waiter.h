@@ -39,12 +39,12 @@ struct FidlAsyncWaiter {
   // argument as well as the result of the wait. For each call to |AsyncWait()|,
   // |callback| will be called at most once.
   //
-  // |handle| must not be closed or transferred (via |mx_msgpipe_write()|; this
-  // is equivalent to closing the handle) until either the callback has been
-  // executed or the async wait has been cancelled using the returned (nonzero)
-  // |FidlAsyncWaitID| (see |CancelWait()|). Otherwise, an invalid (or, worse,
-  // re-used) handle may be waited on by the implementation of this
-  // |FidlAsyncWaiter|.
+  // |handle| must not be closed or transferred (via |mx_channel_write()| or
+  // |mx_channel_call()|; this is equivalent to closing the handle) until either
+  // the callback has been executed or the async wait has been cancelled using
+  // the returned (nonzero) |FidlAsyncWaitID| (see |CancelWait()|). Otherwise,
+  // an invalid (or, worse, re-used) handle may be waited on by the
+  // implementation of this |FidlAsyncWaiter|.
   //
   // Note that once the callback has been called, the returned |FidlAsyncWaitID|
   // becomes invalid.
