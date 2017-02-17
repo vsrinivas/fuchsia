@@ -62,6 +62,13 @@ class LauncherApp : public maxwell::Launcher {
     StartAgent("file:///system/apps/agents/module_suggester");
   }
 
+  void RegisterAnonymousProposalPublisher(
+      fidl::InterfaceRequest<maxwell::ProposalPublisher>
+          proposal_publisher) override {
+    suggestion_engine_->RegisterPublisher("unknown",
+                                          std::move(proposal_publisher));
+  }
+
  private:
   app::ServiceProviderPtr StartServiceProvider(const std::string& url) {
     app::ServiceProviderPtr services;

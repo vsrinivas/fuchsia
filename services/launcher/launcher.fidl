@@ -6,10 +6,17 @@ module maxwell;
 
 import "apps/modular/services/user/focus.fidl";
 import "apps/modular/services/story/story_provider.fidl";
+import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
 
 [ServiceName="maxwell.Launcher"]
 interface Launcher {
   // Initializes Maxwell services and provides dependencies.
   Initialize(modular.StoryProvider story_provider,
              modular.FocusController focus_controller);
+
+  // HACK(alhaad): To allow modules / agents to publish proposals. These
+  // proposals are a hack to plumb notifications (selecting which might start
+  // a story) through the current implementation. This method must be called
+  // after |Initialize()|.
+  RegisterAnonymousProposalPublisher(ProposalPublisher& proposal_publisher);
 };
