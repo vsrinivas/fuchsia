@@ -11,7 +11,12 @@ static bool hypervisor_create_test(void) {
     BEGIN_TEST;
 
     mx_handle_t handle;
-    ASSERT_EQ(mx_hypervisor_create(MX_HANDLE_INVALID, 0, &handle), NO_ERROR, "");
+    mx_status_t status = mx_hypervisor_create(MX_HANDLE_INVALID, 0, &handle);
+    // The hypervisor isn't supported, so don't run the test.
+    if (status == ERR_NOT_SUPPORTED)
+        return true;
+
+    ASSERT_EQ(status, NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(handle), NO_ERROR, "");
 
     END_TEST;
