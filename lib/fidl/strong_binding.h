@@ -25,7 +25,7 @@ namespace modular {
 // connector also closes the pipe.
 //
 // The strong binding does not actually take ownership of the implementation.
-// If the implementation is not bound to a message pipe or if the message
+// If the implementation is not bound to a channel or if the message
 // pipe is closed locally then no connection error will be produced and the
 // implementation will therefore not be deleted by the strong binding.
 // Keep this in mind to avoid unintentional memory leaks.
@@ -52,7 +52,7 @@ class StrongBinding {
     binding_.set_connection_error_handler([this] { OnConnectionError(); });
   }
 
-  // Constructs a completed binding of message pipe |handle| to implementation
+  // Constructs a completed binding of channel |handle| to implementation
   // |impl|. Does not take ownership of |impl|, which must outlive the binding.
   // See class comment for definition of |waiter|.
   StrongBinding(ImplPtr impl,
@@ -62,7 +62,7 @@ class StrongBinding {
     binding_.Bind(std::move(handle), waiter);
   }
 
-  // Constructs a completed binding of |impl| to a new message pipe, passing the
+  // Constructs a completed binding of |impl| to a new channel, passing the
   // client end to |ptr|, which takes ownership of it. The caller is expected to
   // pass |ptr| on to the client of the service. Does not take ownership of any
   // of the parameters. |impl| must outlive the binding. |ptr| only needs to
@@ -75,7 +75,7 @@ class StrongBinding {
     binding_.Bind(ptr, waiter);
   }
 
-  // Constructs a completed binding of |impl| to the message pipe endpoint in
+  // Constructs a completed binding of |impl| to the channel endpoint in
   // |request|, taking ownership of the endpoint. Does not take ownership of
   // |impl|, which must outlive the binding. See class comment for definition of
   // |waiter|.
@@ -86,7 +86,7 @@ class StrongBinding {
     binding_.Bind(std::move(request), waiter);
   }
 
-  // Tears down the binding, closing the message pipe and leaving the interface
+  // Tears down the binding, closing the channel and leaving the interface
   // implementation unbound.  Does not cause the implementation to be deleted.
   ~StrongBinding() {}
 
@@ -100,7 +100,7 @@ class StrongBinding {
   }
 
   // Completes a binding that was constructed with only an interface
-  // implementation by creating a new message pipe, binding one end of it to the
+  // implementation by creating a new channel, binding one end of it to the
   // previously specified implementation, and passing the other to |ptr|, which
   // takes ownership of it. The caller is expected to pass |ptr| on to the
   // eventual client of the service. Does not take ownership of |ptr|. See
@@ -112,7 +112,7 @@ class StrongBinding {
   }
 
   // Completes a binding that was constructed with only an interface
-  // implementation by removing the message pipe endpoint from |request| and
+  // implementation by removing the channel endpoint from |request| and
   // binding it to the previously specified implementation. See class comment
   // for definition of |waiter|.
   void Bind(fidl::InterfaceRequest<Interface> request,
@@ -122,14 +122,14 @@ class StrongBinding {
   }
 
   // Blocks the calling thread until either a call arrives on the previously
-  // bound message pipe, the deadline is exceeded, or an error occurs. Returns
+  // bound channel, the deadline is exceeded, or an error occurs. Returns
   // true if a method was successfully read and dispatched.
   bool WaitForIncomingMethodCall(
       ftl::TimeDelta timeout = ftl::TimeDelta::Max()) {
     return binding_.WaitForIncomingMethodCall(timeout);
   }
 
-  // Closes the message pipe that was previously bound.  Does not cause the
+  // Closes the channel that was previously bound.  Does not cause the
   // implementation to be deleted.
   void Close() { binding_.Close(); }
 
@@ -140,7 +140,7 @@ class StrongBinding {
   fidl::InterfaceRequest<Interface> Unbind() { return binding_.Unbind(); }
 
   // Sets an error handler that will be called if a connection error occurs on
-  // the bound message pipe.  Note: The error handler must not delete the
+  // the bound channel.  Note: The error handler must not delete the
   // interface implementation since that will happen immediately after the
   // error handler returns.
   void set_connection_error_handler(const ftl::Closure& error_handler) {
