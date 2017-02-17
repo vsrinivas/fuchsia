@@ -43,6 +43,7 @@ union ExpiryCondition {
 
 union Action {
   CreateStory create_story;
+  FocusStory focus_story;
 
   // TODO(thatguy): Add other actions.
 };
@@ -53,4 +54,14 @@ struct CreateStory {
   // If set, calls Link.AddDocuments() on the new Story's Link immediately after
   // the Story creation.
   string? initial_data;
+};
+
+// Brings an existing story into focus.
+// TODO(alhaad): It is not entirely clear to me whether it is the user shell
+// which checks if the story is running when brought into focus. Re-visit this.
+struct FocusStory {
+  string story_id;
+
+  // TODO(alhaad): Add some Link data that could be used to provide information
+  // to the story as to why it was brought into focus.
 };

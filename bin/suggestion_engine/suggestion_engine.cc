@@ -99,13 +99,21 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                           // story_controller *while we're calling it*.
                           [ this, controller = std::move(story_controller) ](
                               modular::StoryInfoPtr story_info) {
-                            FTL_LOG(INFO) << "Focusing!";
+                            FTL_LOG(INFO) << "Requesting focus for story_id "
+                                          << story_info->id;
                             focus_controller_ptr_->FocusStory(story_info->id);
                           }));
                     });
               } else {
                 FTL_LOG(WARNING) << "Unable to add module; no story provider";
               }
+              break;
+            }
+            case Action::Tag::FOCUS_STORY: {
+              const auto& focus_story = action->get_focus_story();
+              FTL_LOG(INFO) << "Requesting focus for story_id " <<
+                            focus_story->story_id;
+              focus_controller_ptr_->FocusStory(focus_story->story_id);
               break;
             }
             default:
