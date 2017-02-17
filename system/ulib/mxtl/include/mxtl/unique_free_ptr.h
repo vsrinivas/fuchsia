@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <mxtl/macros.h>
+#include <mxtl/type_support.h>
 
 namespace mxtl {
 
