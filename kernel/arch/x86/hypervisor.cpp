@@ -62,7 +62,7 @@ struct VmxInfo {
         // number of bytes that software should allocate for the VMXON region
         // and any VMCS region. It is a value greater than 0 and at most 4096
         // (bit 44 is set if and only if bits 43:32 are clear)."
-        DEBUG_ASSERT(region_size < PAGE_SIZE);
+        DEBUG_ASSERT(region_size <= PAGE_SIZE);
         memory_type = static_cast<uint8_t>(BITS_SHIFT(basic_info, 53, 50));
         ins_outs = static_cast<bool>(BIT_SHIFT(basic_info, 54));
         vmx_controls = static_cast<bool>(BIT_SHIFT(basic_info, 55));
