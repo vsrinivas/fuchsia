@@ -42,12 +42,9 @@ const (
 
 func ioctlGetInfo(m mxio.MXIO) (info ethinfo, err error) {
 	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpGetInfo)
-	res, _, err := m.Ioctl(num, nil)
-	if err != nil {
+	res := make([]byte, 64)
+	if _, err := m.Ioctl(num, nil, res); err != nil {
 		return info, fmt.Errorf("IOCTL_ETHERNET_GET_INFO: %v", err)
-	}
-	if len(res) != 64 {
-		return info, fmt.Errorf("IOCTL_ETHERNET_GET_INFO: bad length: %d", len(res))
 	}
 	info.features = binary.LittleEndian.Uint32(res)
 	info.mtu = binary.LittleEndian.Uint32(res[4:])
@@ -57,7 +54,8 @@ func ioctlGetInfo(m mxio.MXIO) (info ethinfo, err error) {
 
 func ioctlGetFifos(m mxio.MXIO) (fifos ethfifos, err error) {
 	num := mxio.IoctlNum(mxio.IoctlKindGetTwoHandles, ioctlFamilyETH, ioctlOpGetFifos)
-	res, h, err := m.Ioctl(num, nil)
+	res := make([]byte, 8)
+	h, err := m.Ioctl(num, nil, res)
 	if err != nil {
 		return fifos, fmt.Errorf("IOCTL_ETHERNET_GET_FIFOS: %v", err)
 	}
@@ -82,7 +80,7 @@ func ioctlSetIobuf(m mxio.MXIO, h mx.Handle) error {
 
 func ioctlStart(m mxio.MXIO) error {
 	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpStart)
-	_, _, err := m.Ioctl(num, nil)
+	_, err := m.Ioctl(num, nil, nil)
 	if err != nil {
 		return fmt.Errorf("IOCTL_ETHERNET_START: %v", err)
 	}
@@ -91,7 +89,7 @@ func ioctlStart(m mxio.MXIO) error {
 
 func ioctlStop(m mxio.MXIO) error {
 	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpStop)
-	_, _, err := m.Ioctl(num, nil)
+	_, err := m.Ioctl(num, nil, nil)
 	if err != nil {
 		return fmt.Errorf("IOCTL_ETHERNET_STOP: %v", err)
 	}
