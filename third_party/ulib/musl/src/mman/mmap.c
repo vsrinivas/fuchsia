@@ -12,7 +12,7 @@ static void dummy(void) {}
 weak_alias(dummy, __vm_wait);
 
 void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
-    if (off & (-PAGE_SIZE)) {
+    if (off & (PAGE_SIZE - 1)) {
         errno = EINVAL;
         return MAP_FAILED;
     }
