@@ -66,8 +66,10 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         }
 
         mx_handle_t vmo;
-        if (_mx_vmo_create(len, 0, &vmo) < 0)
+        if (_mx_vmo_create(len, 0, &vmo) < 0) {
+            errno = ENOMEM;
             return MAP_FAILED;
+        }
 
         uintptr_t ptr = 0;
         mx_status_t status = _mx_vmar_map(_mx_vmar_root_self(), offset, vmo, 0,
@@ -75,12 +77,26 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         _mx_handle_close(vmo);
         // TODO: map this as shared if we ever implement forking
         if (status < 0) {
+            switch(status) {
+            case ERR_ACCESS_DENIED:
+                errno = EACCES;
+                break;
+            case ERR_NO_MEMORY:
+                errno = ENOMEM;
+                break;
+            case ERR_INVALID_ARGS:
+            case ERR_BAD_STATE:
+            default:
+                errno = EINVAL;
+                break;
+            }
             return MAP_FAILED;
         }
 
         return (void*)ptr;
     } else {
         // TODO(kulakowski) mxio file mapping
+        errno = ENODEV;
         return MAP_FAILED;
     }
 }
