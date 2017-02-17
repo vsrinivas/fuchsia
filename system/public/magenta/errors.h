@@ -92,9 +92,9 @@
 // potentially could succeed if the caller waits for a prerequisite
 // to be satisfied, for example waiting for a handle to be readable
 // or writable.
-// Example: Attempting to read from a message pipe that has no
+// Example: Attempting to read from a channel that has no
 // messages waiting but has an open remote will return ERR_SHOULD_WAIT.
-// Attempting to read from a message pipe that has no messages waiting
+// Attempting to read from a channel that has no messages waiting
 // and has a closed remote end will return ERR_REMOTE_CLOSED.
 #define ERR_SHOULD_WAIT (-27)
 

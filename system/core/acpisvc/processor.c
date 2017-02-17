@@ -17,7 +17,7 @@
 #include "pci.h"
 #include "power.h"
 
-// Data associated with each message pipe handle
+// Data associated with each channel handle
 typedef struct {
     // The namespace node associated with this handle.  The
     // handle should be allowed to access ACPI resources further up

@@ -29,7 +29,7 @@ typedef mx_handle_t (*mxio_loader_service_function_t)(void* loader_arg,
                                                       const char* file);
 
 // Start a thread to resolve loader service requests and return a
-// message pipe handle to talk to said service.  If the function passed
+// channel handle to talk to said service.  If the function passed
 // is NULL, a default implementation that reads from the filesystem is
 // used.  Will try to use the system loader service if available.
 mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,

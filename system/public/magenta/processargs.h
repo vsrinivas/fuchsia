@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 // This is a protocol for passing state to a new process
-// via a message in a message pipe.
+// via a message in a channel.
 
 #define MX_PROCARGS_PROTOCOL 0x4150585d // MXPA
 #define MX_PROCARGS_VERSION 0x0001000
@@ -112,7 +112,7 @@ struct mx_proc_args {
 #define MX_HND_TYPE_APPLICATION_ENVIRONMENT 0x102
 #define MX_HND_TYPE_APPLICATION_SERVICES 0x103
 
-// Message pipe for dynamic loader service
+// Channel for dynamic loader service
 #define MX_HND_TYPE_LOADER_SVC 0x200
 
 // VM object handle for the main executable file

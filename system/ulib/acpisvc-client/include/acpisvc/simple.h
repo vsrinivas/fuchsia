@@ -13,7 +13,7 @@
 __BEGIN_CDECLS
 
 // This header provides simple blocking calls to acpisvc.  The functions
-// will discard any extra responses they find on the message pipe, so
+// will discard any extra responses they find on the channel, so
 // these simplified functions should not be mixed with other interfaces.
 
 typedef struct {

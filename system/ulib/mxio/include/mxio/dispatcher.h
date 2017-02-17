@@ -13,17 +13,17 @@ typedef struct mxio_dispatcher mxio_dispatcher_t;
 
 typedef mx_status_t (*mxio_dispatcher_cb_t)(mx_handle_t h, void* cb, void* cookie);
 
-// Create a dispatcher that will process messages from many message pipes.
+// Create a dispatcher that will process messages from many channels.
 //
 // The provided handler will be called when a handle is readable, and passed
 // the cb and cookie pointers that are associated with that handle.
 //
-// If the remote side of the message pipe is closed, the handler will be
+// If the remote side of the channel is closed, the handler will be
 // called and passed a zero handle.
 //
 // A non-zero return will cause the handle to be closed.  If the non-zero
 // return is *negative*, the handler will be called one last time, as if
-// the message pipe had been closed remotely (zero handle).
+// the channel had been closed remotely (zero handle).
 mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t cb);
 
 // create a thread for a dispatcher and start it running

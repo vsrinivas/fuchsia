@@ -349,9 +349,9 @@ mx_handle_t launchpad_start(launchpad_t* lp);
 // created with launchpad_create_with_process and the process has
 // already started.  The new thread runs the launchpad's entry point
 // just like the initial thread does in the launchpad_start case.
-// The given handle is to a message pipe where the bootstrap
+// The given handle is to a channel where the bootstrap
 // messages will be written; the caller retains ownership of this
-// handle.  The other end of this message pipe must already be
+// handle.  The other end of this channel must already be
 // present in the target process, with the given handle value in the
 // target process's handle space.
 mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,

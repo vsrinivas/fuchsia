@@ -60,7 +60,7 @@ static void load_child_process(mx_handle_t log, mx_handle_t vmar_self,
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
 // 3. Create the initial thread and allocate a stack for it.
-// 4. Load up a message pipe with the mx_proc_args_t message for the child.
+// 4. Load up a channel with the mx_proc_args_t message for the child.
 // 5. Start the child process running.
 // 6. Optionally, wait for it to exit and then shut down.
 static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
@@ -81,7 +81,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
                                   &pargs, &handle_info);
     check(log, status, "mxr_processargs_read failed on bootstrap message!\n");
 
-    // All done with the message pipe from the kernel now.  Let it go.
+    // All done with the channel from the kernel now.  Let it go.
     mx_handle_close(bootstrap_pipe);
 
     // Extract the environment (aka kernel command line) strings.
@@ -239,7 +239,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     status = mx_channel_write(to_child, 0, buffer, nbytes, handles, nhandles);
     check(log, status, "mx_channel_write to child failed\n");
     status = mx_handle_close(to_child);
-    check(log, status, "mx_handle_close failed on message pipe handle\n");
+    check(log, status, "mx_handle_close failed on channel handle\n");
 
     // Start the process going.
     status = mx_process_start(proc, thread, entry, sp,

@@ -15,7 +15,7 @@ etc.
 
 ## Notes
 
-The tests here are for "core" functionality (message pipes, etc.), but
+The tests here are for "core" functionality (channels, etc.), but
 not all "core" functionality can go here.  For example, you can't
 start a process in your test with launchpad because core tests are for
 when that functionality isn't working.  Core tests can't use mxio and
