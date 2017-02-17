@@ -37,7 +37,7 @@ interface Compositor {
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
   //
-  // To unregister the scene, simply close the |scene| message pipe.
+  // To unregister the scene, simply close the |scene| channel.
   CreateScene(Scene& scene, string? label) => (SceneToken scene_token);
 
   // Creates a scene graph renderer to a new virtual console.
@@ -46,7 +46,7 @@ interface Compositor {
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
   //
-  // To destroy the renderer, simply close the |renderer| message pipe.
+  // To destroy the renderer, simply close the |renderer| channel.
   CreateRenderer(Renderer& renderer,
                  string? label);
 };

@@ -26,7 +26,7 @@ import "apps/mozart/services/views/view_token.fidl";
 // uses the |View| interface to manage the view's content and implements
 // the |ViewListener| interface to handle events.
 //
-// To destroy a view, simply close the |View| message pipe.
+// To destroy a view, simply close the |View| channel.
 //
 // SCENES
 //
@@ -120,7 +120,7 @@ interface View {
   // The |scene| is used to supply content for the scene.  The scene pipe
   // is private to the scene and should not be shared with anyone else.
   //
-  // To destroy the scene, simply close the |scene| message pipe.
+  // To destroy the scene, simply close the |scene| channel.
   //
   // See also: |Compositor.CreateScene()|.
   CreateScene(Scene& scene);

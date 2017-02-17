@@ -118,7 +118,7 @@ interface ViewContainer {
   //
   // If |transferred_view_owner| is not null, associates it with the
   // previously added child to allow it to be transferred elsewhere or
-  // closes the |transferred_view_owner| message pipe if there was none.
+  // closes the |transferred_view_owner| channel if there was none.
   //
   // It is an error to remove a view whose |child_key| does not appear
   // in the container's list of children; the connection will be closed.

@@ -43,7 +43,7 @@ interface ViewManager {
   // than |kLabelMaxLength|.
   //
   // To destroy the view and cause it to be removed from the view tree,
-  // simply close the |view|, |view_listener|, or |view_owner| message pipes.
+  // simply close the |view|, |view_listener|, or |view_owner| channels.
   CreateView(View& view,
              ViewOwner& view_owner,
              ViewListener view_listener,
@@ -62,7 +62,7 @@ interface ViewManager {
   // than |kLabelMaxLength|.
   //
   // To destroy the view tree simply close the |view_tree| or
-  // |view_tree_listener| message pipes.
+  // |view_tree_listener| channels.
   CreateViewTree(ViewTree& view_tree,
                  ViewTreeListener view_tree_listener,
                  string? label);

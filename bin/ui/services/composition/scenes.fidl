@@ -35,7 +35,7 @@ const uint32 kSceneVersionNone = 0;
 // uses the |Scene| interface to manage the scene's content and implements
 // the |SceneListener| interface to handle events.
 //
-// To destroy a scene, simply close the |Scene| message pipe.
+// To destroy a scene, simply close the |Scene| channel.
 //
 // CONTENT
 //
