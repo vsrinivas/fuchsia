@@ -14,6 +14,8 @@ class MsdIntelDevice;
 
 class DeviceRequest {
 public:
+    virtual ~DeviceRequest() {}
+
     class Reply {
     public:
         Reply() : status_(MAGMA_STATUS_OK), event_(magma::PlatformEvent::Create())
