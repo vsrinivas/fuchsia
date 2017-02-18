@@ -168,8 +168,6 @@ mx_status_t sys_object_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time
 mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_handle,
                                   uint64_t key, mx_signals_t signals, uint32_t options) {
     LTRACEF("handle %d\n", handle_value);
-    if (options)
-        return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -177,10 +175,6 @@ mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_han
     auto status = up->GetDispatcherWithRights(port_handle, MX_RIGHT_WRITE, &port);
     if (status != NO_ERROR)
         return status;
-
-    mxtl::unique_ptr<PortObserver> observer(port->MakeObserver(options, key, signals));
-    if (!observer)
-        return ERR_NO_MEMORY;
 
     {
         AutoLock lock(up->handle_table_lock());
@@ -190,14 +184,6 @@ mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_han
         if (!magenta_rights_check(handle, MX_RIGHT_READ))
             return ERR_ACCESS_DENIED;
 
-        auto dispatcher = handle->dispatcher();
-        auto state_tracker = dispatcher->get_state_tracker();
-        if (!state_tracker)
-            return ERR_NOT_SUPPORTED;
-
-        auto obs = observer.release();
-        obs->Begin(handle);
-        state_tracker->AddObserver(obs);
+        return port->MakeObservers(options, handle, key, signals);
     }
-    return NO_ERROR;
 }

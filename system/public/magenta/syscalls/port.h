@@ -43,8 +43,10 @@ typedef struct mx_exception_packet {
 
 // mx_port V2 packet structures.
 
+#define MX_WAIT_ASYNC_ONCE          0u
 #define MX_WAIT_ASYNC_REPEATING     1u
 
+// packet types.
 #define MX_PKT_TYPE_USER            0u
 #define MX_PKT_TYPE_SIGNAL_ONE      1u
 #define MX_PKT_TYPE_SIGNAL_REP      2u

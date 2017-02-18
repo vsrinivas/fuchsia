@@ -41,9 +41,13 @@ public:
     mx_signals_t GetSignalsState() { return signals_; }
 
 private:
+    using ObserverList = mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
+
+    void RemoveObservers(ObserverList* list);
+
     mx_signals_t signals_;
     Mutex lock_;
 
     // Active observers are elements in |observers_|.
-    mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits> observers_ TA_GUARDED(lock_);
+    ObserverList observers_ TA_GUARDED(lock_);
 };

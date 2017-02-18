@@ -62,17 +62,11 @@ static mx_status_t sys_port_queue2(mx_handle_t handle, const void* _packet) {
     if (status != NO_ERROR)
         return status;
 
-    AllocChecker ac;
-    mxtl::unique_ptr<PortPacket> pp(new (&ac) PortPacket(nullptr));
-    if (!ac.check())
-        return ERR_NO_MEMORY;
-
-    if (make_user_ptr(_packet).copy_array_from_user(&pp->packet, sizeof(pp->packet)) != NO_ERROR)
+    mx_port_packet_t packet;
+    if (make_user_ptr(_packet).copy_array_from_user(&packet, sizeof(packet)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    pp->packet.type = MX_PKT_TYPE_USER;
-
-    return port->Queue(mxtl::move(pp));
+    return port->QueueUser(packet);
 }
 
 mx_status_t sys_port_queue(mx_handle_t handle, const void* _packet, size_t size) {
@@ -109,15 +103,13 @@ mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, void* _packet)
     if (status != NO_ERROR)
         return status;
 
-    PortPacket* pp = nullptr;
+    mx_port_packet_t pp;
     mx_status_t st = port->DeQueue(timeout, &pp);
     if (st != NO_ERROR)
         return st;
 
-    if (make_user_ptr(_packet).copy_array_to_user(&pp->packet, sizeof(pp->packet)) != NO_ERROR)
+    if (make_user_ptr(_packet).copy_array_to_user(&pp, sizeof(pp)) != NO_ERROR)
         return ERR_INVALID_ARGS;
-
-    pp->Destroy();
     return NO_ERROR;
 }
 

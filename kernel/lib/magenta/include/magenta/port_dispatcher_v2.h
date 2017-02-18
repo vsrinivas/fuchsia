@@ -70,36 +70,32 @@
 //   For repeating ports |w| is always valid until the wait is
 //   cancelled.
 //
-//   The cycle |o2| --> |o1| --> |rc|  is broken when:
-//   1- the packet is dequeued.
-//   2- the port gets on_zero_handles().
+//   The |o1| pointer is used to destroy the port observer only
+//   when cancelation happens and the port still owns the packet.
 //
 
 class PortDispatcherV2;
 class PortObserver;
 
 struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
-    PortObserver* observer;
     mx_port_packet_t packet;
+    PortObserver* observer;
 
-    PortPacket() = delete;
-    explicit PortPacket(PortObserver* obs);
-    void Destroy();
+    PortPacket();
+    PortPacket(const PortPacket&) = delete;
+    void operator=(PortPacket) = delete;
+
+    uint32_t type() const { return packet.type; }
 };
 
 // Observers are weakly contained in state trackers until |remove_| member
-// is false at the end of one of the OnXXXXX callbacks. If the members
-// are only mutated after Begin() in the callbacks then there is no need to
-// have a lock in this class since the state tracker holds its lock during
-// all callback calls.
+// is false at the end of one of OnInitialize() OnStateChange() or  OnCancel()
+// callbacks.
 class PortObserver final : public StateObserver {
 public:
-    PortObserver(uint32_t type, mxtl::RefPtr<PortDispatcherV2> port,
-        uint64_t key, mx_signals_t signals);
+    PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcherV2> port,
+                 uint64_t key, mx_signals_t signals);
     ~PortObserver() = default;
-
-    void Begin(Handle* handle);
-    void End();
 
 private:
     PortObserver(const PortObserver&) = delete;
@@ -109,23 +105,19 @@ private:
     bool OnInitialize(mx_signals_t initial_state) final;
     bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle) final;
+    void OnRemoved() final;
 
-    // The following two methods can only be called from
-    // the above OnXXXXX callbacks/
+    // The following method can only be called from
+    // OnInitialize(), OnStateChange() and OnCancel().
     void MaybeQueue(mx_signals_t new_state);
-    void ReapSelf();
-
-    // Called outside the state tracker's lock. That is why
-    // we need to use atomics.
-    void SnapCount();
 
     const uint32_t type_;
     const uint64_t key_;
     const mx_signals_t trigger_;
+    const Handle* const handle_;
+    mxtl::RefPtr<PortDispatcherV2> const port_;
 
     PortPacket packet_;
-    mxtl::RefPtr<PortDispatcherV2> port_;
-    Handle* handle_;
 };
 
 class PortDispatcherV2 final : public Dispatcher {
@@ -139,14 +131,22 @@ public:
 
     void on_zero_handles() final;
 
-    mx_status_t Queue(mxtl::unique_ptr<PortPacket> packet);
     mx_status_t Queue(PortPacket* packet);
-    mx_status_t DeQueue(mx_time_t timeout, PortPacket** packet);
+    mx_status_t QueueUser(const mx_port_packet_t& packet);
+    mx_status_t DeQueue(mx_time_t timeout, mx_port_packet_t* packet);
 
-    PortObserver* MakeObserver(uint32_t options, uint64_t key, mx_signals_t signals);
+    // Decides who is going to destroy the observer. If it returns |true| it
+    // is the duty of the caller. If it is false it is the duty of the port.
+    bool CanReap(PortObserver* observer, PortPacket* port_packet);
+
+    // Called under the handle table lock.
+    mx_status_t MakeObservers(uint32_t options, Handle* handle,
+                              uint64_t key, mx_signals_t signals);
 
 private:
     PortDispatcherV2(uint32_t options);
+    bool HandleSignalsLocked(PortPacket* packet) TA_REQ(lock_);
+    PortObserver* SnapCopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
 
     Mutex lock_;
     WaitEvent event_;

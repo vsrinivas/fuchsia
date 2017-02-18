@@ -10,8 +10,6 @@
 #include <err.h>
 #include <new.h>
 
-#include <arch/ops.h>
-
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/port.h>
 
@@ -20,44 +18,24 @@
 constexpr mx_rights_t kDefaultIOPortRightsV2 =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-PortPacket::PortPacket(PortObserver* obs) : observer(obs), packet{} {
+
+PortPacket::PortPacket() : packet{}, observer(nullptr) {
+    // Note that packet is initialized to zeros.
 }
 
-// Cannot be called within any lock held.
-void PortPacket::Destroy() {
-    // TODO(cpu): need more state to track stack allocated packets.
-    if (!observer) {
-        delete this;
-    } else {
-        observer->End();
-    }
-}
-
-PortObserver::PortObserver(uint32_t type, mxtl::RefPtr<PortDispatcherV2> port,
+PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcherV2> port,
                            uint64_t key, mx_signals_t signals)
     : type_(type),
       key_(key),
-      trigger_(signals|MX_SIGNAL_HANDLE_CLOSED),
-      packet_(this),
-      port_(mxtl::move(port)),
-      handle_(nullptr) {
-}
+      trigger_(signals),
+      handle_(handle),
+      port_(mxtl::move(port)) {
 
-void PortObserver::Begin(Handle* handle) {
-    handle_ = handle;
-}
-
-void PortObserver::End() {
-    if (type_ == MX_PKT_TYPE_SIGNAL_ONE) {
-        delete this;
-    } else {
-        SnapCount();
-        // For repeating observer we need to wait until cancelation since that is
-        // the last time we are going to be called.
-        auto& signal = packet_.packet.signal;
-        if (__atomic_load_n(&signal.effective, __ATOMIC_RELAXED) & MX_SIGNAL_HANDLE_CLOSED)
-            delete this;
-    }
+    auto& packet = packet_.packet;
+    packet.status = NO_ERROR;
+    packet.key = key_;
+    packet.type = type_;
+    packet.signal.trigger = trigger_;
 }
 
 bool PortObserver::OnInitialize(mx_signals_t initial_state) {
@@ -71,11 +49,14 @@ bool PortObserver::OnStateChange(mx_signals_t new_state) {
 }
 
 bool PortObserver::OnCancel(Handle* handle) {
-    // This is called with the |handle| state lock being held.
-    if (handle_ != handle)
-        return false;
-    MaybeQueue(MX_SIGNAL_HANDLE_CLOSED);
+    if (handle_ == handle)
+        remove_ = true;
     return false;
+}
+
+void PortObserver::OnRemoved() {
+    if (port_->CanReap(this, &packet_))
+        delete this;
 }
 
 void PortObserver::MaybeQueue(mx_signals_t new_state) {
@@ -83,42 +64,12 @@ void PortObserver::MaybeQueue(mx_signals_t new_state) {
     if ((trigger_ & new_state) == 0u)
         return;
 
-    if ((type_ == MX_PKT_TYPE_SIGNAL_ONE) || (new_state == MX_SIGNAL_HANDLE_CLOSED))
+    packet_.packet.signal.effective |= new_state;
+
+    auto status = port_->Queue(&packet_);
+
+    if ((type_ == MX_PKT_TYPE_SIGNAL_ONE) || (status < 0))
         remove_ = true;
-
-    auto& packet = packet_.packet;
-
-    // If its a repeating packet, only Queue() it once and
-    // update the effective and count values atomically.
-    if (type_ == MX_PKT_TYPE_SIGNAL_REP) {
-        packet.signal.effective |= new_state;
-        if (atomic_add_u64(&packet.signal.count, 1u) > 0u)
-            return;
-    }
-
-    packet.status = NO_ERROR;
-    packet.key = key_;
-    packet.type = type_;
-    packet.signal.trigger = trigger_;
-    packet.signal.effective = new_state;
-    packet.signal.count = 1u;
-
-    if (port_->Queue(&packet_) < 0)
-        ReapSelf();
-}
-
-void::PortObserver::SnapCount() {
-    // TODO(cpu): this is not fully cooked. The count might be racy and/or
-    // meaninless for multiple signal bits.
-    if (type_ == MX_PKT_TYPE_SIGNAL_REP)
-        atomic_swap_u64(&packet_.packet.signal.count, 0u);
-}
-
-void PortObserver::ReapSelf() {
-    // TODO(cpu): convert |handle_| into a refptr Dispatcher and use that
-    // to syncronize Destroy() with the state_observer during a dpc call.
-    remove_ = true;
-    port_.reset();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -143,23 +94,29 @@ PortDispatcherV2::PortDispatcherV2(uint32_t /*options*/)
 }
 
 PortDispatcherV2::~PortDispatcherV2() {
+    DEBUG_ASSERT(zero_handles_);
 }
 
 void PortDispatcherV2::on_zero_handles() {
-    AutoLock al(&lock_);
-
-    while (!packets_.is_empty()) {
-        auto packet = packets_.pop_front();
-        packet->Destroy();
+    {
+        AutoLock al(&lock_);
+        zero_handles_ = true;
     }
-
-    zero_handles_ = true;
+    while (DeQueue(0ull, nullptr) == NO_ERROR) {}
 }
 
-mx_status_t PortDispatcherV2::Queue(mxtl::unique_ptr<PortPacket> packet) {
-    auto status = Queue(packet.get());
-    if (status == NO_ERROR)
-        packet.release();
+mx_status_t PortDispatcherV2::QueueUser(const mx_port_packet_t& packet) {
+    AllocChecker ac;
+    auto port_packet = new (&ac) PortPacket();
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+
+    port_packet->packet = packet;
+    port_packet->packet.type = MX_PKT_TYPE_USER;
+
+    auto status = Queue(port_packet);
+    if (status < 0)
+        delete port_packet;
     return status;
 }
 
@@ -169,6 +126,10 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* packet) {
         AutoLock al(&lock_);
         if (zero_handles_)
             return ERR_BAD_STATE;
+
+        if (HandleSignalsLocked(packet))
+            return NO_ERROR;
+
         packets_.push_back(packet);
         wake_count = event_.Signal();
     }
@@ -179,16 +140,40 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* packet) {
     return NO_ERROR;
 }
 
-mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, PortPacket** packet) {
+bool PortDispatcherV2::HandleSignalsLocked(PortPacket* port_packet) {
+    if (port_packet->InContainer()) {
+        DEBUG_ASSERT(port_packet->type() == MX_PKT_TYPE_SIGNAL_REP);
+        port_packet->packet.signal.count += 1u;
+        return true;
+    }
+
+    if (port_packet->type() != MX_PKT_TYPE_USER)
+        port_packet->packet.signal.count = 1u;
+
+    return false;
+}
+
+mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, mx_port_packet_t* packet) {
+    PortPacket* port_packet = nullptr;
+    PortObserver* observer = nullptr;
+
     while (true) {
         {
             AutoLock al(&lock_);
-            if (!packets_.is_empty()) {
-                *packet = packets_.pop_front();
-                return NO_ERROR;
-            }
+            if (packets_.is_empty())
+                goto wait;
+
+            port_packet = packets_.pop_front();
+            observer = SnapCopyLocked(port_packet, packet);
         }
 
+        if (observer)
+            delete observer;
+        else if (packet && packet->type == MX_PKT_TYPE_USER)
+            delete port_packet;
+        return NO_ERROR;
+
+wait:
         if (timeout == 0ull)
             return ERR_TIMED_OUT;
 
@@ -200,15 +185,64 @@ mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, PortPacket** packet) {
     return ERR_BAD_STATE;
 }
 
-PortObserver* PortDispatcherV2::MakeObserver(uint32_t options, uint64_t key, mx_signals_t signals) {
+PortObserver* PortDispatcherV2::SnapCopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) {
+    if (packet)
+        *packet = port_packet->packet;
+    if (port_packet->type() == MX_PKT_TYPE_SIGNAL_REP ||
+        port_packet->type() == MX_PKT_TYPE_SIGNAL_ONE) {
+        port_packet->packet.signal.count = 0u;
+        return port_packet->observer;
+    }
+    return nullptr;
+}
+
+bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) {
+    AutoLock al(&lock_);
+    if (!port_packet->InContainer())
+        return true;
+    // The destruction will happen when the packet is dequeued.
+    DEBUG_ASSERT(port_packet->observer == nullptr);
+    port_packet->observer = observer;
+    return false;
+}
+
+mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
+                                            uint64_t key, mx_signals_t signals) {
+    // Called under the handle table lock.
     auto type = (options & MX_WAIT_ASYNC_REPEATING) ?
         MX_PKT_TYPE_SIGNAL_REP : MX_PKT_TYPE_SIGNAL_ONE;
 
+    auto state_tracker = handle->dispatcher()->get_state_tracker();
+    if (!state_tracker)
+        return ERR_NOT_SUPPORTED;
+
+    PortObserver* observers[sizeof(mx_signals_t) * 8u] = {};
+
+    size_t scount = 0;
+
     AllocChecker ac;
-    auto observer = new (&ac) PortObserver(
-        type, mxtl::RefPtr<PortDispatcherV2>(this), key, signals);
-    if (!ac.check())
-        return nullptr;
-    return observer;
+    for (size_t ix = 0; ix != countof(observers); ++ix) {
+        // extract a single signal bit.
+        mx_signals_t one_signal = signals & (0x1u << ix);
+        if (!one_signal)
+            continue;
+
+        observers[scount] = new (&ac) PortObserver(
+            type, handle, mxtl::RefPtr<PortDispatcherV2>(this), key, one_signal);
+        if (!ac.check()) {
+            // Delete the pending observers and exit.
+            for (size_t jx = 0; jx != scount; ++jx) {
+                delete observers[jx];
+            }
+            return ERR_NO_MEMORY;
+        }
+        ++scount;
+    }
+
+    for (size_t ix = 0; ix != scount; ++ix) {
+        state_tracker->AddObserver(observers[ix]);
+    }
+
+    return NO_ERROR;
 }
 

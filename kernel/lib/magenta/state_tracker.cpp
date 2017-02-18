@@ -33,6 +33,8 @@ void StateTracker::RemoveObserver(StateObserver* observer) {
 void StateTracker::Cancel(Handle* handle) {
     bool awoke_threads = false;
 
+    ObserverList obs_to_remove;
+
     {
         AutoLock lock(&lock_);
         for (auto it = observers_.begin(); it != observers_.end();) {
@@ -40,12 +42,14 @@ void StateTracker::Cancel(Handle* handle) {
             if (it->remove()) {
                 auto to_remove = it;
                 ++it;
-                observers_.erase(to_remove);
+                obs_to_remove.push_back(observers_.erase(to_remove));
             } else {
                 ++it;
             }
         }
     }
+
+    RemoveObservers(&obs_to_remove);
 
     if (awoke_threads)
         thread_preempt(false);
@@ -54,6 +58,8 @@ void StateTracker::Cancel(Handle* handle) {
 void StateTracker::UpdateState(mx_signals_t clear_mask,
                                mx_signals_t set_mask) {
     bool awoke_threads = false;
+
+    ObserverList obs_to_remove;
 
     {
         AutoLock lock(&lock_);
@@ -70,14 +76,22 @@ void StateTracker::UpdateState(mx_signals_t clear_mask,
             if (it->remove()) {
                 auto to_remove = it;
                 ++it;
-                observers_.erase(to_remove);
+                obs_to_remove.push_back(observers_.erase(to_remove));
             } else {
                 ++it;
             }
         }
     }
 
+    RemoveObservers(&obs_to_remove);
+
     if (awoke_threads) {
         thread_preempt(false);
+    }
+}
+
+void StateTracker::RemoveObservers(ObserverList* list) {
+    while (!list->is_empty()) {
+        list->pop_front()->OnRemoved();
     }
 }
