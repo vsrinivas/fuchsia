@@ -33,7 +33,7 @@ public:
 
     // Opens a connection to the device. On success |connection_handle_out| will contain the
     // connection handle to be passed to the client
-    static std::unique_ptr<magma::PlatformConnection>
+    static std::shared_ptr<magma::PlatformConnection>
     Open(std::shared_ptr<MagmaSystemDevice>, msd_client_id client_id, uint32_t capabilities);
 
     msd_device* msd_dev() { return msd_dev_.get(); }
@@ -51,7 +51,7 @@ public:
     void Shutdown();
 
     // Called on driver thread
-    void StartConnectionThread(std::unique_ptr<magma::PlatformConnection> platform_connection);
+    void StartConnectionThread(std::shared_ptr<magma::PlatformConnection> platform_connection);
 
     // Called on connection thread
     void ConnectionClosed(std::thread::id thread_id);

@@ -84,7 +84,7 @@ public:
 
     virtual ~PlatformConnection() {}
 
-    static std::unique_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate);
+    static std::shared_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate);
     virtual uint32_t GetHandle() = 0;
 
     // handles a single request, returns false if anything has put it into an illegal state
@@ -93,7 +93,7 @@ public:
 
     std::shared_ptr<magma::PlatformEvent> ShutdownEvent() { return shutdown_event_; }
 
-    static void RunLoop(std::unique_ptr<magma::PlatformConnection> connection)
+    static void RunLoop(std::shared_ptr<magma::PlatformConnection> connection)
     {
         while (connection->HandleRequest())
             ;

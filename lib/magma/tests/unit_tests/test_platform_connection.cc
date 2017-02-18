@@ -90,7 +90,7 @@ public:
     static bool test_complete;
 
 private:
-    static void IpcThreadFunc(std::unique_ptr<magma::PlatformConnection> connection)
+    static void IpcThreadFunc(std::shared_ptr<magma::PlatformConnection> connection)
     {
         while (connection->HandleRequest())
             ;

@@ -89,7 +89,8 @@ struct PageFlipReply {
     magma_status_t error;
 } __attribute__((packed));
 
-class MagentaPlatformConnection : public PlatformConnection {
+class MagentaPlatformConnection : public PlatformConnection,
+                                  public std::enable_shared_from_this<MagentaPlatformConnection> {
 public:
     MagentaPlatformConnection(std::unique_ptr<Delegate> delegate, mx::channel local_endpoint,
                               mx::channel remote_endpoint, mx::waitset waitset,
@@ -200,7 +201,7 @@ public:
 private:
     struct PageFlipData {
         uint64_t buffer_id;
-        MagentaPlatformConnection* connection;
+        std::weak_ptr<MagentaPlatformConnection> connection;
     };
 
     bool ImportBuffer(ImportBufferOp* op, mx_handle_t* handle)
@@ -281,7 +282,7 @@ private:
 
         auto data = new PageFlipData();
         data->buffer_id = op->buffer_id;
-        data->connection = this;
+        data->connection = shared_from_this();
 
         delegate_->PageFlip(op->buffer_id, &PageFlipCallback, data);
         return true;
@@ -316,7 +317,11 @@ private:
     {
         DLOG("MagentaPlatformConnection::PageFlipCallback");
         auto pageflip_data = reinterpret_cast<PageFlipData*>(data);
-        auto connection = pageflip_data->connection;
+        auto connection = pageflip_data->connection.lock();
+        if (!connection) {
+            DLOG("couldn't lock connection");
+            return;
+        }
 
         PageFlipReply reply;
         reply.buffer_id = pageflip_data->buffer_id;
@@ -575,7 +580,7 @@ std::unique_ptr<PlatformIpcConnection> PlatformIpcConnection::Create(uint32_t de
         new MagentaPlatformIpcConnection(mx::channel(device_handle)));
 }
 
-std::unique_ptr<PlatformConnection>
+std::shared_ptr<PlatformConnection>
 PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegate)
 {
     if (!delegate)
@@ -606,7 +611,7 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
     if (status != NO_ERROR)
         return DRETP(nullptr, "mx::waitset::add failed");
 
-    return std::unique_ptr<MagentaPlatformConnection>(new MagentaPlatformConnection(
+    return std::shared_ptr<MagentaPlatformConnection>(new MagentaPlatformConnection(
         std::move(delegate), std::move(local_endpoint), std::move(remote_endpoint),
         std::move(waitset), std::move(shutdown_event)));
 }

@@ -8,7 +8,7 @@
 
 uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(msd_dev()); }
 
-std::unique_ptr<magma::PlatformConnection>
+std::shared_ptr<magma::PlatformConnection>
 MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id client_id,
                         uint32_t capabilities)
 {
@@ -62,7 +62,7 @@ void MagmaSystemDevice::ReleaseBuffer(uint64_t id)
 }
 
 void MagmaSystemDevice::StartConnectionThread(
-    std::unique_ptr<magma::PlatformConnection> platform_connection)
+    std::shared_ptr<magma::PlatformConnection> platform_connection)
 {
     std::unique_lock<std::mutex> lock(connection_list_mutex_);
 
