@@ -36,7 +36,6 @@
 #include <functional>
 #include <string>
 #include <vector>
-
 #include "application/lib/app/application_context.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/test_runner/test_runner.fidl.h"
@@ -44,6 +43,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_view.h"
+#include "lib/ftl/synchronization/sleep.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 // TODO(vardhan): Make listen port command-line configurable.
@@ -323,7 +323,16 @@ class TestRunnerTCPServer {
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     // 1. Make a TCP socket.
-    listener_ = socket(addr.sin_family, SOCK_STREAM, IPPROTO_TCP);
+    // We need to retry because there's a race condition at boot.
+    const auto duration = ftl::TimeDelta::FromMilliseconds(200u);
+
+    for (int i = 0; i < 5 * 10; ++i) {
+      listener_ = socket(addr.sin_family, SOCK_STREAM, IPPROTO_TCP);
+      if (listener_ != -1) {
+        break;
+      }
+      ftl::SleepFor(duration);
+    }
     FTL_CHECK(listener_ != -1);
 
     // 2. Bind it to an address.
