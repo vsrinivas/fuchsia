@@ -20,7 +20,7 @@
  * \param[in] arg can be any kind of arguments needed to dump the values
  */
 static void default_printf(const char* line, int len, void* arg) {
-    printf("%s", line);
+    fputs(line, stdout);
     fflush(stdout);
 }
 
