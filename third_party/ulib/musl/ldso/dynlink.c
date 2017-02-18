@@ -16,6 +16,7 @@
 #include <magenta/status.h>
 #include <pthread.h>
 #include <setjmp.h>
+#include <stdalign.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stddef.h>
@@ -103,12 +104,7 @@ struct symdef {
 
 pthread_t __copy_tls(unsigned char*);
 
-static struct builtin_tls {
-    char c;
-    struct pthread pt;
-    void* space[16];
-} builtin_tls[1];
-#define MIN_TLS_ALIGN offsetof(struct builtin_tls, pt)
+#define MIN_TLS_ALIGN alignof(struct pthread)
 
 #define ADDEND_LIMIT 4096
 static size_t *saved_addends, *apply_addends_to;
@@ -119,7 +115,6 @@ static unsigned long long gencnt;
 static int runtime;
 static int ldd_mode;
 static int ldso_fail;
-static int noload;
 static jmp_buf* rtld_fail;
 static pthread_rwlock_t lock;
 static struct debug debug;
@@ -493,14 +488,19 @@ static mx_status_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
     return NO_ERROR;
 }
 
-static void* map_library(mx_handle_t vmo, struct dso* dso) {
-    Ehdr buf[(896 + sizeof(Ehdr)) / sizeof(Ehdr)];
-    void* allocated_buf = 0;
+static mx_status_t map_library(mx_handle_t vmo, struct dso* dso) {
+    struct {
+        Ehdr ehdr;
+        // A typical ELF file has 7 or 8 phdrs, so in practice
+        // this is always enough.  Life is simpler if there is no
+        // need for dynamic allocation here.
+        Phdr phdrs[16];
+    } buf;
     size_t phsize;
     size_t addr_min = SIZE_MAX, addr_max = 0, map_len;
     size_t this_min, this_max;
     size_t nsegs = 0;
-    Ehdr* eh;
+    const Ehdr* const eh = &buf.ehdr;
     Phdr *ph, *ph0;
     unsigned char *map = MAP_FAILED, *base;
     size_t dyn = 0;
@@ -508,10 +508,9 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     size_t i;
 
     size_t l;
-    mx_status_t status = _mx_vmo_read(vmo, buf, 0, sizeof buf, &l);
-    eh = buf;
+    mx_status_t status = _mx_vmo_read(vmo, &buf, 0, sizeof(buf), &l);
     if (status != NO_ERROR)
-        return 0;
+        return status;
     // We cannot support ET_EXEC in the general case, because its fixed
     // addresses might conflict with where the dynamic linker has already
     // been loaded.  It's also policy in Fuchsia that all executables are
@@ -520,25 +519,17 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     if (l < sizeof *eh || eh->e_type != ET_DYN)
         goto noexec;
     phsize = eh->e_phentsize * eh->e_phnum;
-    if (phsize > sizeof buf - sizeof *eh) {
-        allocated_buf = malloc(phsize);
-        if (!allocated_buf)
-            return 0;
-        status = _mx_vmo_read(vmo, allocated_buf, eh->e_phoff, phsize, &l);
+    if (phsize > sizeof(buf.phdrs))
+        goto noexec;
+    if (eh->e_phoff + phsize > l) {
+        status = _mx_vmo_read(vmo, buf.phdrs, eh->e_phoff, phsize, &l);
         if (status != NO_ERROR)
             goto error;
         if (l != phsize)
             goto noexec;
-        ph = ph0 = allocated_buf;
-    } else if (eh->e_phoff + phsize > l) {
-        status = _mx_vmo_read(vmo, buf + 1, eh->e_phoff, phsize, &l);
-        if (status != NO_ERROR)
-            goto error;
-        if (l != phsize)
-            goto noexec;
-        ph = ph0 = (void*)(buf + 1);
+        ph = ph0 = buf.phdrs;
     } else {
-        ph = ph0 = (void*)((char*)buf + eh->e_phoff);
+        ph = ph0 = (void*)((char*)&buf + eh->e_phoff);
     }
     for (i = eh->e_phnum; i; i--, ph = (void*)((char*)ph + eh->e_phentsize)) {
         if (ph->p_type == PT_DYNAMIC) {
@@ -582,7 +573,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     if (status != NO_ERROR) {
         error("failed to reserve %zu bytes of address space: %d\n",
               map_len, status);
-        goto mx_error;
+        goto error;
     }
 
     dso->map = map = (void*)vmar_base;
@@ -622,17 +613,8 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             if (data_size > 0) {
                 status = get_writable_vmo(vmo, data_size,
                                           &off_start, &map_size, &map_vmo);
-                if (status != NO_ERROR) {
-                mx_error:
-                    // TODO(mcgrathr): Perhaps this should translate the
-                    // kernel error in 'status' into an errno value.  Or
-                    // perhaps it should just assert that the kernel error
-                    // was among an expected set.  Probably all failures of
-                    // these kernel calls should either be totally fatal or
-                    // should translate into ENOMEM.
-                    errno = ENOMEM;
+                if (status != NO_ERROR)
                     goto error;
-                }
             }
         }
 
@@ -641,7 +623,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         if (map_vmo != vmo)
             _mx_handle_close(map_vmo);
         if (status != NO_ERROR)
-            goto mx_error;
+            goto error;
 
         if (ph->p_memsz > ph->p_filesz) {
             size_t brk = (size_t)base + ph->p_vaddr + ph->p_filesz;
@@ -652,14 +634,14 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
                 mx_handle_t bss_vmo;
                 status = _mx_vmo_create(bss_len, 0, &bss_vmo);
                 if (status != NO_ERROR)
-                    goto mx_error;
+                    goto error;
                 uintptr_t bss_mapaddr = 0;
                 status = _mx_vmar_map(dso->vmar, pgbrk - vmar_base,
                                       bss_vmo, 0, bss_len, mx_flags,
                                       &bss_mapaddr);
                 _mx_handle_close(bss_vmo);
                 if (status != NO_ERROR)
-                    goto mx_error;
+                    goto error;
             }
         }
     }
@@ -668,17 +650,16 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     dso->dynv = laddr(dso, dyn);
     if (dso->tls.size)
         dso->tls.image = laddr(dso, tls_image);
-    free(allocated_buf);
-    return map;
+    return NO_ERROR;
 noexec:
-    errno = ENOEXEC;
+    // We overload this to translate into ENOEXEC later.
+    status = ERR_WRONG_TYPE;
 error:
     if (map != MAP_FAILED)
         unmap_library(dso);
     if (dso->vmar != MX_HANDLE_INVALID)
         _mx_handle_close(dso->vmar);
-    free(allocated_buf);
-    return 0;
+    return status;
 }
 
 static void decode_dyn(struct dso* p) {
@@ -892,16 +873,22 @@ static void trace_load(struct dso* p) {
     ++seqno;
 }
 
-static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
-                                    struct dso* needed_by) {
-    unsigned char* map;
+static mx_status_t load_library_vmo(mx_handle_t vmo, const char* name,
+                                    int rtld_mode,
+                                    struct dso* needed_by,
+                                    struct dso** loaded) {
     struct dso *p, temp_dso = {};
     size_t alloc_size;
     int n_th = 0;
 
-    map = noload ? 0 : map_library(vmo, &temp_dso);
-    if (!map)
-        return 0;
+    if (rtld_mode & RTLD_NOLOAD) {
+        *loaded = NULL;
+        return NO_ERROR;
+    }
+
+    mx_status_t status = map_library(vmo, &temp_dso);
+    if (status != NO_ERROR)
+        return status;
 
     decode_dyn(&temp_dso);
     if (temp_dso.soname != NULL) {
@@ -910,7 +897,8 @@ static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
         p = find_library(temp_dso.soname);
         if (p != NULL) {
             unmap_library(&temp_dso);
-            return p;
+            *loaded = p;
+            return NO_ERROR;
         }
     }
 
@@ -920,8 +908,7 @@ static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
         name = temp_dso.soname;
         if (name == NULL) {
             unmap_library(&temp_dso);
-            errno = ENOEXEC;
-            return NULL;
+            return ERR_WRONG_TYPE;
         }
     }
 
@@ -942,7 +929,7 @@ static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
     p = calloc(1, alloc_size);
     if (!p) {
         unmap_library(&temp_dso);
-        return 0;
+        return ERR_NO_MEMORY;
     }
     memcpy(p, &temp_dso, sizeof temp_dso);
     p->refcnt = 1;
@@ -977,26 +964,28 @@ static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
     if (ldd_mode)
         debugmsg("\t%s => %s (%p)\n", p->soname, name, p->base);
 
-    return p;
+    *loaded = p;
+    return NO_ERROR;
 }
 
-static struct dso* load_library(const char* name, struct dso* needed_by) {
-    if (!*name) {
-        errno = EINVAL;
-        return 0;
+static mx_status_t load_library(const char* name, int rtld_mode,
+                                struct dso* needed_by,
+                                struct dso** loaded) {
+    if (!*name)
+        return ERR_INVALID_ARGS;
+
+    *loaded = find_library(name);
+    if (*loaded != NULL)
+        return NO_ERROR;
+
+    mx_handle_t vmo;
+    mx_status_t status = get_library_vmo(name, &vmo);
+    if (status == NO_ERROR) {
+        status = load_library_vmo(vmo, name, rtld_mode, needed_by, loaded);
+        _mx_handle_close(vmo);
     }
 
-    struct dso* p = find_library(name);
-    if (p == NULL) {
-        mx_handle_t vmo;
-        mx_status_t status = get_library_vmo(name, &vmo);
-        if (status == NO_ERROR) {
-            p = load_library_vmo(vmo, name, needed_by);
-            _mx_handle_close(vmo);
-        }
-    }
-
-    return p;
+    return status;
 }
 
 static void load_deps(struct dso* p) {
@@ -1006,10 +995,11 @@ static void load_deps(struct dso* p) {
         for (i = 0; p->dynv[i]; i += 2) {
             if (p->dynv[i] != DT_NEEDED)
                 continue;
-            dep = load_library(p->strings + p->dynv[i + 1], p);
-            if (!dep) {
-                error("Error loading shared library %s: %m (needed by %s)",
-                      p->strings + p->dynv[i + 1], p->name);
+            const char* name = p->strings + p->dynv[i + 1];
+            mx_status_t status = load_library(name, 0, p, &dep);
+            if (status != NO_ERROR) {
+                error("Error loading shared library %s: %s (needed by %s)",
+                      name, _mx_status_get_string(status), p->name);
                 if (runtime)
                     longjmp(*rtld_fail, 1);
                 continue;
@@ -1036,7 +1026,8 @@ static void load_preload(char* s) {
             ;
         tmp = *z;
         *z = 0;
-        load_library(s, 0);
+        struct dso *p;
+        load_library(s, 0, NULL, &p);
         *z = tmp;
     }
 }
@@ -1342,13 +1333,6 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
 
     libc.page_size = PAGE_SIZE;
 
-    /* Setup early thread pointer in builtin_tls for ldso/libc itself to
-     * use during dynamic linking. If possible it will also serve as the
-     * thread pointer at runtime. */
-    libc.tls_size = sizeof builtin_tls;
-    libc.tls_align = tls_align;
-    __init_tp(thread_self, __copy_tls((void*)builtin_tls));
-
     bool log_libs = false;
     char* ld_preload = getenv("LD_PRELOAD");
     const char* ld_debug = getenv("LD_DEBUG");
@@ -1405,10 +1389,11 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
         }
     }
 
-    Ehdr* ehdr = map_library(exec_vmo, &app);
+    mx_status_t status = map_library(exec_vmo, &app);
     _mx_handle_close(exec_vmo);
-    if (!ehdr) {
-        debugmsg("%s: %s: Not a valid dynamic program\n", ldso.name, argv[0]);
+    if (status != NO_ERROR) {
+        debugmsg("%s: %s: Not a valid dynamic program (%s)\n",
+                 ldso.name, argv[0], _mx_status_get_string(status));
         _exit(1);
     }
 
@@ -1467,25 +1452,14 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
 
     update_tls_size();
 
-    if (libc.tls_size > sizeof builtin_tls || tls_align > MIN_TLS_ALIGN) {
-        void* initial_tls = calloc(libc.tls_size, 1);
-        if (!initial_tls) {
-            debugmsg("%s: Error getting %zu bytes thread-local storage: %m\n", argv[0],
-                     libc.tls_size);
-            _exit(127);
-        }
-        __init_tp(thread_self, __copy_tls(initial_tls));
-    } else {
-        size_t tmp_tls_size = libc.tls_size;
-        pthread_t self = __pthread_self();
-        /* Temporarily set the tls size to the full size of
-         * builtin_tls so that __copy_tls will use the same layout
-         * as it did for before. Then check, just to be safe. */
-        libc.tls_size = sizeof builtin_tls;
-        if (__copy_tls((void*)builtin_tls) != self)
-            __builtin_trap();
-        libc.tls_size = tmp_tls_size;
+    void* initial_tls = calloc(libc.tls_size, 1);
+    if (!initial_tls) {
+        debugmsg("%s: Error getting %zu bytes thread-local storage: %m\n", argv[0],
+                 libc.tls_size);
+        _exit(127);
     }
+    __init_tp(thread_self, __copy_tls(initial_tls));
+
     static_tls_cnt = tls_cnt;
 
     if (ldso_fail)
@@ -1537,6 +1511,7 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
 
     errno = 0;
 
+    const Ehdr* ehdr = (void*)app.map;
     return laddr(&app, ehdr->e_entry);
 }
 
@@ -1647,25 +1622,42 @@ dl_start_return_t __dls3(void* start_arg) {
 }
 
 static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
-    struct dso* volatile p, *orig_tail, *next;
-    struct tls_module* orig_tls_tail;
-    size_t orig_tls_cnt, orig_tls_offset, orig_tls_align;
-    size_t i;
     int cs;
-    jmp_buf jb;
-
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     pthread_rwlock_wrlock(&lock);
     __inhibit_ptc();
 
-    p = 0;
-    orig_tls_tail = tls_tail;
-    orig_tls_cnt = tls_cnt;
-    orig_tls_offset = tls_offset;
-    orig_tls_align = tls_align;
-    orig_tail = tail;
-    noload = mode & RTLD_NOLOAD;
+    struct dso* orig_tail = tail;
 
+    struct dso* p;
+    mx_status_t status = (vmo != MX_HANDLE_INVALID ?
+                          load_library_vmo(vmo, file, mode, head, &p) :
+                          load_library(file, mode, head, &p));
+
+    if (status != NO_ERROR) {
+        error("Error loading shared library %s: %s",
+              file, _mx_status_get_string(status));
+    fail:
+        __release_ptc();
+        pthread_rwlock_unlock(&lock);
+        pthread_setcancelstate(cs, 0);
+        return NULL;
+    }
+
+    if (p == NULL) {
+        if (!(mode & RTLD_NOLOAD))
+            __builtin_trap();
+        error("Library %s is not already loaded", file);
+        goto fail;
+    }
+
+    struct tls_module* orig_tls_tail = tls_tail;
+    size_t orig_tls_cnt = tls_cnt;
+    size_t orig_tls_offset = tls_offset;
+    size_t orig_tls_align = tls_align;
+
+    size_t i;
+    jmp_buf jb;
     rtld_fail = &jb;
     if (setjmp(*rtld_fail)) {
         /* Clean up anything new that was (partially) loaded */
@@ -1673,6 +1665,7 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
             for (i = 0; p->deps[i]; i++)
                 if (p->deps[i]->global < 0)
                     p->deps[i]->global = 0;
+        struct dso* next;
         for (p = orig_tail->next; p; p = next) {
             next = p->next;
             while (p->td_index) {
@@ -1692,19 +1685,7 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
         tls_align = orig_tls_align;
         tail = orig_tail;
         tail->next = 0;
-        p = 0;
-        goto end;
-    } else {
-        if (vmo != MX_HANDLE_INVALID)
-            p = load_library_vmo(vmo, file, head);
-        else
-            p = load_library(file, head);
-    }
-
-    if (!p) {
-        error(noload ? "Library %s is not already loaded" : "Error loading shared library %s: %m",
-              file);
-        goto end;
+        goto fail;
     }
 
     /* First load handling */
@@ -1737,14 +1718,23 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     if (trace_maps) {
         trace_load(p);
     }
-    orig_tail = tail;
-end:
+
+    // Allow thread creation, now that the TLS bookkeeping is consistent.
     __release_ptc();
-    if (p)
-        gencnt++;
+
+    // Bump the dl_iterate_phdr dlpi_adds counter.
+    gencnt++;
+
+    // Collect the current new tail before we release the lock.
+    // Another dlopen can come in and advance the tail, but we
+    // alone are responsible for making sure that do_init_fini
+    // starts with the first object we just added.
+    struct dso* new_tail = tail;
+
     pthread_rwlock_unlock(&lock);
-    if (p)
-        do_init_fini(orig_tail);
+
+    do_init_fini(new_tail);
+
     pthread_setcancelstate(cs, 0);
     return p;
 }
