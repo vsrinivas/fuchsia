@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>

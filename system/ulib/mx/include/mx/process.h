@@ -13,6 +13,10 @@ namespace mx {
 class job;
 class thread;
 
+namespace internal {
+extern "C" mx_handle_t __magenta_process_self;
+}
+
 class process : public task<process> {
 public:
     process() = default;
@@ -36,7 +40,7 @@ public:
                               uint32_t flags, process* proc, vmar* root_vmar);
 
     static inline const process& self() {
-        return *reinterpret_cast<process*>(&__magenta_process_self);
+        return *reinterpret_cast<process*>(&internal::__magenta_process_self);
     }
 
     mx_status_t start(const thread& thread_handle, uintptr_t entry,

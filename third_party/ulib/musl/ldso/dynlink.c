@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "dynlink.h"
 #include "libc.h"
+#include "magenta_impl.h"
 #include "pthread_impl.h"
 #include "stdio_impl.h"
 #include <ctype.h>
@@ -11,7 +12,6 @@
 #include <limits.h>
 #include <link.h>
 #include <magenta/dlfcn.h>
-#include <magenta/internal.h>
 #include <magenta/status.h>
 #include <pthread.h>
 #include <setjmp.h>

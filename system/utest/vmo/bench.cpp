@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <magenta/compiler.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 
 #include "bench.h"

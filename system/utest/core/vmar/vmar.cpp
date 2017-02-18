@@ -8,6 +8,7 @@
 #include <stdalign.h>
 #include <unistd.h>
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/syscalls/port.h>

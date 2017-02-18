@@ -16,8 +16,9 @@
 #include "eth-client.h"
 
 #include <magenta/device/ethernet.h>
-#include <magenta/types.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <magenta/types.h>
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>

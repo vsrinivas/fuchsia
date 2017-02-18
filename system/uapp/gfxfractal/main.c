@@ -9,10 +9,11 @@
 #include <errno.h>
 #include <string.h>
 
-#include <magenta/types.h>
 #include <magenta/device/console.h>
 #include <magenta/device/display.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <magenta/types.h>
 
 #include <gfx/gfx.h>
 

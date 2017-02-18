@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <mini-process/mini-process.h>
 #include <unittest/unittest.h>

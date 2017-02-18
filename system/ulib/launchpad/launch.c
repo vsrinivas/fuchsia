@@ -5,6 +5,7 @@
 #include "launch.h"
 #include <launchpad/vmo.h>
 
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 

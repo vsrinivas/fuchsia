@@ -9,6 +9,7 @@
 #include <ddk/protocol/ramdisk.h>
 #include <sync/completion.h>
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <magenta/listnode.h>

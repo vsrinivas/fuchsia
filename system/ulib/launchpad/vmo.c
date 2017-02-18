@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <sys/stat.h>
 #include <unistd.h>

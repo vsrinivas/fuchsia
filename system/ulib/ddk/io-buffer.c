@@ -4,6 +4,7 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/driver.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <limits.h>
 #include <stdio.h>

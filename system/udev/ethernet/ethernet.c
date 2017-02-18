@@ -9,9 +9,10 @@
 
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
-
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

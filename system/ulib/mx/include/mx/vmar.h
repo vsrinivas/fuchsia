@@ -9,6 +9,10 @@
 
 namespace mx {
 
+namespace internal {
+extern "C" mx_handle_t __magenta_vmar_root_self;
+}
+
 // A wrapper for handles to VMARs.  Note that vmar::~vmar() does not execute
 // vmar::destroy(), it just closes the handle.
 class vmar : public object<vmar> {
@@ -27,7 +31,7 @@ public:
     }
 
     static inline const vmar& root_self() {
-        return *reinterpret_cast<vmar*>(&__magenta_vmar_root_self);
+        return *reinterpret_cast<vmar*>(&internal::__magenta_vmar_root_self);
     }
 
     mx_status_t map(size_t vmar_offset, const vmo& vmo_handle, uint64_t vmo_offset,

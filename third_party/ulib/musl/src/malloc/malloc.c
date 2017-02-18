@@ -4,6 +4,7 @@
 #include "malloc_impl.h"
 #include <errno.h>
 #include <limits.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <stdarg.h>

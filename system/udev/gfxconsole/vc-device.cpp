@@ -7,6 +7,8 @@
 #include <string.h>
 #include <sys/param.h>
 
+#include <magenta/process.h>
+
 #define VCDEBUG 0
 
 #include "vc.h"

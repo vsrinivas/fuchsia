@@ -5,6 +5,7 @@
 #include "pthread_impl.h"
 #include "stdio_impl.h"
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <pthread.h>
 #include <runtime/thread.h>
@@ -61,7 +62,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
 
     const char* name = attr.__name ? attr.__name : "";
     mx_status_t status =
-        mxr_thread_create(__magenta_process_self, name, &new->mxr_thread);
+        mxr_thread_create(_mx_process_self(), name, &new->mxr_thread);
     if (status != NO_ERROR)
         goto fail_after_alloc;
 

@@ -5,6 +5,7 @@
 #include <hexdump/hexdump.h>
 
 #include <magenta/device/ethernet.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 
 #include <fcntl.h>

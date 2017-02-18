@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 #include <stdio.h>

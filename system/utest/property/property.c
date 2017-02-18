@@ -8,6 +8,7 @@
 #include <string.h>
 #include <threads.h>
 #include <magenta/compiler.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>

@@ -15,11 +15,12 @@
 #include <hid/acer12.h>
 #include <hid/usages.h>
 
-#include <magenta/types.h>
 #include <magenta/device/console.h>
 #include <magenta/device/display.h>
 #include <magenta/device/input.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <magenta/types.h>
 
 #define DEV_INPUT       "/dev/class/input"
 #define VIRTUAL_CONSOLE "/dev/class/console/vc"

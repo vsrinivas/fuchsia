@@ -1,10 +1,10 @@
 #include "libc.h"
+#include "magenta_impl.h"
 #include "pthread_impl.h"
 #include <elf.h>
 #include <stdatomic.h>
 #include <string.h>
 
-#include <magenta/internal.h>
 #include <magenta/syscalls.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>

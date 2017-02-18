@@ -15,6 +15,7 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>

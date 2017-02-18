@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <unistd.h>
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 #include <runtime/thread.h>

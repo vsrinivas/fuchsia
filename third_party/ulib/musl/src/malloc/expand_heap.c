@@ -1,6 +1,7 @@
 #include "libc.h"
 #include <errno.h>
 #include <limits.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <stdint.h>
 
