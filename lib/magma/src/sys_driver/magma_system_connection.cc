@@ -25,8 +25,14 @@ MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> we
 MagmaSystemConnection::~MagmaSystemConnection()
 {
     auto device = device_.lock();
-    if (device)
+    if (device) {
+        for (auto iter = buffer_map_.begin(); iter != buffer_map_.end();) {
+            auto id = iter->first;
+            iter = buffer_map_.erase(iter);
+            device->ReleaseBuffer(id);
+        }
         device->ConnectionClosed(std::this_thread::get_id());
+    }
 }
 
 uint32_t MagmaSystemConnection::GetDeviceId()
