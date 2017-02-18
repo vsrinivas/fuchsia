@@ -13,12 +13,12 @@
 #include <threads.h>
 
 #include <ddk/binding.h>
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/block.h>
 
 #include <magenta/threads.h>
+#include <sync/completion.h>
 
 #include <gpt/gpt.h>
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/completion.h>
+#include <sync/completion.h>
 
 #include "xhci.h"
 #include "xhci-transfer.h"

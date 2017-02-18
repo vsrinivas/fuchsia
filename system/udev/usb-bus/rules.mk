@@ -14,7 +14,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/usb-interface.c \
     $(LOCAL_DIR)/util.c \
 
-MODULE_STATIC_LIBS := ulib/ddk
+MODULE_STATIC_LIBS := ulib/ddk ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
 

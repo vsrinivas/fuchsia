@@ -17,7 +17,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/xhci-trb.c \
     $(LOCAL_DIR)/xhci-util.c \
 
-MODULE_STATIC_LIBS := ulib/ddk
+MODULE_STATIC_LIBS := ulib/ddk ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
 

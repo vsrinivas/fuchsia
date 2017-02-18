@@ -13,7 +13,7 @@
 #include <string.h>
 #include <threads.h>
 
-#include <ddk/completion.h>
+#include <sync/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/ioctl.h>

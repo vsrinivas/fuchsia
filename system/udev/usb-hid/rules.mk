@@ -10,7 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/usb-hid.c
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
+MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
 

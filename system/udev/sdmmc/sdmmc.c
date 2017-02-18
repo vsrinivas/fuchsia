@@ -12,7 +12,6 @@
 
 // DDK Includes
 #include <ddk/binding.h>
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
 #include <ddk/protocol/block.h>
@@ -20,6 +19,7 @@
 
 // Magenta Includes
 #include <magenta/threads.h>
+#include <sync/completion.h>
 
 // If this bit is set in the Operating Conditions Register, then we know that
 // the card is a SDHC (high capacity) card.

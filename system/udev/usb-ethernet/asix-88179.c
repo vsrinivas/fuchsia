@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/common/usb.h>
@@ -11,6 +10,7 @@
 #include <hexdump/hexdump.h>
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
+#include <sync/completion.h>
 
 #include <inttypes.h>
 #include <stdio.h>

@@ -12,7 +12,6 @@
 // DDK includes
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/protocol/bcm.h>
 #include <ddk/protocol/usb-bus.h>
@@ -22,6 +21,7 @@
 // Magenta USB includes
 #include <magenta/hw/usb-hub.h>
 #include <magenta/hw/usb.h>
+#include <sync/completion.h>
 
 // BCM28xx Specific Includes
 #include "../bcm-common/bcm28xx.h"

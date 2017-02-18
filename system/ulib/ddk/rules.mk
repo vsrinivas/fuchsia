@@ -12,13 +12,12 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/common/hid.c \
     $(LOCAL_DIR)/common/hid-fifo.c \
     $(LOCAL_DIR)/common/usb.c \
-    $(LOCAL_DIR)/completion.c \
     $(LOCAL_DIR)/protocol/input.c \
     $(LOCAL_DIR)/io-alloc.c \
     $(LOCAL_DIR)/io-buffer.c \
     $(LOCAL_DIR)/iotxn.c \
 
-MODULE_STATIC_LIBS := ulib/hexdump
+MODULE_STATIC_LIBS := ulib/hexdump ulib/sync
 
 MODULE_EXPORT := a
 

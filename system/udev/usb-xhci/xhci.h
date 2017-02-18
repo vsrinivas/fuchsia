@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <ddk/completion.h>
 #include <magenta/hw/usb.h>
 #include <magenta/hw/usb-hub.h>
 #include <magenta/types.h>
 #include <magenta/listnode.h>
+#include <sync/completion.h>
 #include <stdbool.h>
 #include <threads.h>
 

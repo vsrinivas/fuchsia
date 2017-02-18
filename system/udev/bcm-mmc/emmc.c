@@ -30,7 +30,6 @@
 
 // DDK Includes
 #include <ddk/binding.h>
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
 #include <ddk/protocol/bcm.h>
@@ -39,6 +38,7 @@
 // Magenta Includes
 #include <mxio/watcher.h>
 #include <magenta/threads.h>
+#include <sync/completion.h>
 
 // BCM28xx Specific Includes
 #include "../bcm-common/bcm28xx.h"

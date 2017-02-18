@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/common/usb.h>
 #include <magenta/device/audio.h>
 #include <magenta/device/usb.h>
 #include <magenta/hw/usb-audio.h>
+#include <sync/completion.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

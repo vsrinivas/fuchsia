@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
 #include <magenta/hw/usb.h>
 #include <magenta/listnode.h>
+#include <sync/completion.h>
 #include <ddk/protocol/block.h>
 
 #include <endian.h>

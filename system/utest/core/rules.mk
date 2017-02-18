@@ -17,7 +17,7 @@ MODULE_SRCS := \
 MODULE_NAME := core-tests
 
 MODULE_STATIC_LIBS := \
-    ulib/runtime ulib/ddk ulib/unittest ulib/hexdump ulib/mini-process
+    ulib/runtime ulib/ddk ulib/unittest ulib/hexdump ulib/mini-process ulib/sync
 
 MODULE_LIBS := ulib/magenta ulib/musl
 

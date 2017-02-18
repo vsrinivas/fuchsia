@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
@@ -14,6 +13,7 @@
 #include <magenta/listnode.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+#include <sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

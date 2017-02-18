@@ -6,13 +6,12 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := driver
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/sdmmc.c
+    $(LOCAL_DIR)/completion.c \
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/sync
-
-MODULE_LIBS := ulib/driver ulib/musl ulib/magenta ulib/mxio
+MODULE_LIBS := \
+    ulib/magenta \
 
 include make/module.mk

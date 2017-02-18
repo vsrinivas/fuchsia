@@ -6,7 +6,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
+MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
 
@@ -19,7 +19,7 @@ include make/module.mk
 
 MODULE_TYPE := driver
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
+MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
 
@@ -31,7 +31,7 @@ include make/module.mk
 
 MODULE_TYPE := driver
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
+MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl ulib/mxio
 

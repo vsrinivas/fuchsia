@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
-#include <ddk/completion.h>
 #include <ddk/common/usb.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb-bus.h>
 #include <magenta/hw/usb-hub.h>
+#include <sync/completion.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>

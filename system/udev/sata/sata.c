@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/completion.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -10,6 +9,7 @@
 
 #include <hexdump/hexdump.h>
 #include <magenta/types.h>
+#include <sync/completion.h>
 #include <sys/param.h>
 #include <assert.h>
 #include <fcntl.h>

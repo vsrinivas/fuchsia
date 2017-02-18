@@ -17,7 +17,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/usb-midi-sink.c \
     $(LOCAL_DIR)/usb-midi-source.c \
 
-MODULE_STATIC_LIBS := ulib/ddk
+MODULE_STATIC_LIBS := ulib/ddk ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
 
