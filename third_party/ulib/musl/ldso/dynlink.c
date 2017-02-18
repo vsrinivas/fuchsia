@@ -4,6 +4,7 @@
 #include "malloc_impl.h"
 #include "pthread_impl.h"
 #include "stdio_impl.h"
+#include "tls_impl.h"
 #include <ctype.h>
 #include <dlfcn.h>
 #include <elf.h>
@@ -101,8 +102,6 @@ struct symdef {
     Sym* sym;
     struct dso* dso;
 };
-
-pthread_t __copy_tls(unsigned char*);
 
 #define MIN_TLS_ALIGN alignof(struct pthread)
 
@@ -1227,11 +1226,32 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     return mem + v[1] + DTP_OFFSET;
 }
 
-static void __init_tp(mx_handle_t self, pthread_t thread) {
-    thread->head.tp = (uintptr_t)thread;
+void __init_main_thread(mx_handle_t thread_self,
+                        void* stack, size_t stack_size) {
+    void* initial_tls = calloc(libc.tls_size, 1);
+    if (!initial_tls) {
+        debugmsg("No memory for %zu bytes thread-local storage\n",
+                 libc.tls_size);
+        _exit(127);
+    }
+
+    pthread_t tcb = __copy_tls(initial_tls);
+
+    mx_status_t status = mxr_thread_adopt(thread_self, &tcb->mxr_thread);
+    if (status != NO_ERROR)
+        __builtin_trap();
+
+    // Record the stack bounds for pthread_getattr_np to find.
+    if (stack_size != 0) {
+        tcb->stack = stack;
+        tcb->stack_size = stack_size;
+    }
+
+    tcb->locale = &libc.global_locale;
+
+    tcb->head.tp = (uintptr_t)pthread_to_tp(tcb);
     // TODO(kulakowski): Get and set thread ID
-    mxr_tp_set(self, pthread_to_tp(thread));
-    thread->locale = &libc.global_locale;
+    mxr_tp_set(thread_self, pthread_to_tp(tcb));
 }
 
 static void update_tls_size(void) {
@@ -1259,7 +1279,7 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
 
     Ehdr* ehdr = (void*)ldso.base;
     ldso.name = (char*)"libc.so";
-    ldso.global = 1;
+    ldso.global = -1;
     ldso.phnum = ehdr->e_phnum;
     ldso.phdr = laddr(&ldso, ehdr->e_phoff);
     ldso.phentsize = ehdr->e_phentsize;
@@ -1273,7 +1293,7 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
 
         vdso.base = vdso_map;
         vdso.name = (char*)"<vDSO>";
-        vdso.global = 1;
+        vdso.global = -1;
 
         Ehdr* ehdr = vdso_map;
         vdso.phnum = ehdr->e_phnum;
@@ -1321,7 +1341,7 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
  * process dependencies and relocations for the main application and
  * transfer control to its entry point. */
 
-static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char** argv) {
+static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     static struct dso app;
     size_t i;
     char** argv_orig = argv;
@@ -1451,15 +1471,6 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
     reloc_all(&app);
 
     update_tls_size();
-
-    void* initial_tls = calloc(libc.tls_size, 1);
-    if (!initial_tls) {
-        debugmsg("%s: Error getting %zu bytes thread-local storage: %m\n", argv[0],
-                 libc.tls_size);
-        _exit(127);
-    }
-    __init_tp(thread_self, __copy_tls(initial_tls));
-
     static_tls_cnt = tls_cnt;
 
     if (ldso_fail)
@@ -1509,8 +1520,6 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
     // into the caller's stack frame.
     app.name = (char*)"";
 
-    errno = 0;
-
     const Ehdr* ehdr = (void*)app.map;
     return laddr(&app, ehdr->e_entry);
 }
@@ -1542,7 +1551,6 @@ dl_start_return_t __dls3(void* start_arg) {
         nbytes = nhandles = 0;
     }
 
-    mx_handle_t thread_self = MX_HANDLE_INVALID;
     mx_handle_t exec_vmo = MX_HANDLE_INVALID;
     for (int i = 0; i < nhandles; ++i) {
         switch (MX_HND_INFO_TYPE(handle_info[i])) {
@@ -1584,9 +1592,6 @@ dl_start_return_t __dls3(void* start_arg) {
         case MX_HND_TYPE_VMAR_ROOT:
             __magenta_vmar_root_self = handles[i];
             break;
-        case MX_HND_TYPE_THREAD_SELF:
-            thread_self = handles[i];
-            break;
         default:
             _mx_handle_close(handles[i]);
             break;
@@ -1597,8 +1602,6 @@ dl_start_return_t __dls3(void* start_arg) {
         error("bootstrap message bad no proc self");
     if (__magenta_vmar_root_self == MX_HANDLE_INVALID)
         error("bootstrap message bad no root vmar");
-    if (thread_self == MX_HANDLE_INVALID)
-        error("bootstrap message bad no thread self");
 
     // Unpack the environment strings so dls3 can use getenv.
     char* argv[procargs->args_num + 1];
@@ -1607,18 +1610,36 @@ dl_start_return_t __dls3(void* start_arg) {
     if (status == NO_ERROR)
         __environ = envp;
 
-    void* entry = dls3(thread_self, exec_vmo, procargs->args_num, argv);
-
-    // We can now close thread_self, after dls3 has used it.
-    if (thread_self != MX_HANDLE_INVALID)
-        _mx_handle_close(thread_self);
+    void* entry = dls3(exec_vmo, procargs->args_num, argv);
 
     // Reset it so there's no dangling pointer to this stack frame.
     // Presumably the parent will send the same strings in the main
     // bootstrap message, but that's for __libc_start_main to see.
     __environ = NULL;
 
-    return DL_START_RETURN(entry, start_arg);
+    if (vdso.global <= 0) {
+        // Nothing linked against the vDSO.  Ideally we would unmap the
+        // vDSO, but there is no way to do it because the unmap system call
+        // would try to return to the vDSO code and crash.
+        if (ldso.global < 0) {
+            // TODO(mcgrathr): We could free all heap data structures, and
+            // with some vDSO assistance unmap ourselves and unwind back to
+            // the user entry point.  Thus a program could link against the
+            // vDSO alone and not use this libc/ldso at all after startup.
+            // We'd need to be sure there are no TLSDESC entries pointing
+            // back to our code, but other than that there should no longer
+            // be a way to enter our code.
+        } else {
+            debugmsg("Dynamic linker %s doesn't link in vDSO %s???\n",
+                     ldso.name, vdso.name);
+            _exit(127);
+        }
+    } else if (ldso.global <= 0) {
+        // This should be impossible.
+        __builtin_trap();
+    }
+
+   return DL_START_RETURN(entry, start_arg);
 }
 
 static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {

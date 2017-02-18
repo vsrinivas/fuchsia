@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <magenta/types.h>
+
 struct __locale_map;
 
 struct __locale_struct {
@@ -39,7 +41,10 @@ extern struct __libc __libc ATTR_LIBC_VISIBILITY;
 extern size_t __hwcap ATTR_LIBC_VISIBILITY;
 extern char *__progname, *__progname_full;
 
-void __init_ssp(uintptr_t* entropy);
+void __init_main_thread(mx_handle_t thread_self,
+                        void* stack, size_t stack_size) ATTR_LIBC_VISIBILITY;
+void __init_ssp(uintptr_t* entropy) ATTR_LIBC_VISIBILITY;
+
 _Noreturn void __libc_start_main(int (*main)(int, char**, char**), void* stack_end, void* arg);
 
 void __stack_chk_fail(void);

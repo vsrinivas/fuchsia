@@ -149,16 +149,9 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
     atomic_store(&libc.thread_count, 1);
 
     __environ = envp;
-    pthread_t self = __pthread_self();
-    status = mxr_thread_adopt(main_thread_handle, &self->mxr_thread);
-    if (status != NO_ERROR)
-        __builtin_trap();
 
-    // Record the stack bounds for pthread_getattr_np to find.
-    if (stack_size != 0) {
-        self->stack = stack_end;
-        self->stack_size = stack_size;
-    }
+    // This consumes the thread handle and sets up the thread pointer.
+    __init_main_thread(main_thread_handle, stack_end, stack_size);
 
     volatile uintptr_t entropy;
     size_t actual;
