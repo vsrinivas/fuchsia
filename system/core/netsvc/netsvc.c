@@ -91,7 +91,7 @@ static void run_server(const char* progname, const char* bin, mx_handle_t h) {
     run_program(progname, 1, &bin, h);
 }
 
-static const char* hostname = "magenta";
+static const char* nodename = "magenta";
 
 void udp6_recv(void* data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
@@ -112,17 +112,17 @@ void udp6_recv(void* data, size_t len,
         switch (msg->cmd) {
         case NB_QUERY:
             if (strcmp((char*)msg->data, "*") &&
-                strcmp((char*)msg->data, hostname)) {
+                strcmp((char*)msg->data, nodename)) {
                 break;
             }
-            size_t dlen = strlen(hostname) + 1;
+            size_t dlen = strlen(nodename) + 1;
             char buf[1024 + sizeof(nbmsg)];
             if ((dlen + sizeof(nbmsg)) > sizeof(buf)) {
                 return;
             }
             msg->cmd = NB_ACK;
             memcpy(buf, msg, sizeof(nbmsg));
-            memcpy(buf + sizeof(nbmsg), hostname, dlen);
+            memcpy(buf + sizeof(nbmsg), nodename, dlen);
             udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport);
             break;
         case NB_SHELL_CMD:
@@ -233,7 +233,11 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    printf("netsvc: main()\n");
+    if ((argc > 1) && (argv[1][0])) {
+        nodename = argv[1];
+    }
+
+    printf("netsvc: nodename='%s'\n", nodename);
 
     ipc_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
     if (ipc_handle != MX_HANDLE_INVALID) {

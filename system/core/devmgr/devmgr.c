@@ -191,7 +191,6 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
     }
 }
 
-static const char* argv_netsvc[] = { "/boot/bin/netsvc" };
 static const char* argv_sh[] = { "/boot/bin/sh" };
 static const char* argv_autorun0[] = { "/boot/bin/sh", "/boot/autorun" };
 static const char* argv_init[] = { "/system/bin/init" };
@@ -239,8 +238,10 @@ int service_starter(void* arg) {
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
         uint32_t id = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
+        const char* args[] = { "/boot/bin/netsvc", NULL };
+        args[1] = getenv("magenta.nodename");
         devmgr_launch(svcs_job_handle, "netsvc",
-                countof(argv_netsvc), argv_netsvc, NULL, -1,
+                args[1] ? 2 : 1, args, NULL, -1,
                 &netsvc_ipc, &id, netsvc_ipc != MX_HANDLE_INVALID ? 1 : 0);
     }
 
