@@ -127,10 +127,7 @@ transmit:
     }
 }
 
-static char advertise_data[] =
-    "version\01.1\0"
-    "serialno\0unknown\0"
-    "board\0unknown\0";
+static char advertise_data[128] = "nodename=magenta";
 
 static void advertise(void) {
     uint8_t buffer[256];
@@ -147,7 +144,10 @@ static void advertise(void) {
 #define FAST_TICK 100
 #define SLOW_TICK 1000
 
-int netboot_init(void) {
+int netboot_init(const char* nodename) {
+    if (nodename) {
+        snprintf(advertise_data, sizeof(advertise_data), "nodename=%s", nodename);
+    }
     if (netifc_open()) {
         printf("netboot: Failed to open network interface\n");
         return -1;

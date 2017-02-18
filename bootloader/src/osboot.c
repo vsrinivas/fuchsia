@@ -350,8 +350,11 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     char defboot[8] = "network";
     cmdline_get(cmdline, "bootloader.default", defboot, sizeof(defboot));
 
+    char nodename[64] = "magenta";
+    cmdline_get(cmdline, "magenta.nodename", nodename, sizeof(nodename));
+
     // See if there's a network interface
-    bool have_network = netboot_init() == 0;
+    bool have_network = netboot_init(nodename) == 0;
 
     // Look for a kernel image on disk
     // TODO: use the filesystem protocol

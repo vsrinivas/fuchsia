@@ -55,7 +55,7 @@ typedef struct nbfile_t {
     size_t offset; // write pointer
 } nbfile;
 
-int netboot_init(void);
+int netboot_init(const char* nodename);
 int netboot_poll(void);
 void netboot_close(void);
 
