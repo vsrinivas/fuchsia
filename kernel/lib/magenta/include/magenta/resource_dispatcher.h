@@ -15,6 +15,7 @@
 #include <magenta/thread_annotations.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/name.h>
 #include <sys/types.h>
 
 class ResourceRecord;
@@ -110,5 +111,7 @@ private:
     CookieJar cookie_jar_;
     mxtl::unique_ptr<PortClient> iopc_ TA_GUARDED(lock_);
 
-    char name_[MX_MAX_NAME_LEN];
+    // The user-friendly resource name. For debug purposes only. That
+    // is, there is no mechanism to mint a handle to a resource via this name.
+    Name name_;
 };

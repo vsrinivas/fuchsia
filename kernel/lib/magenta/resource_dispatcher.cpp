@@ -60,12 +60,8 @@ mx_status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatc
 ResourceDispatcher::ResourceDispatcher(const char* name, uint16_t subtype) :
     parent_(nullptr), num_children_(0), num_records_(0),
     subtype_(subtype), state_(State::Created),
-    state_tracker_(MX_RESOURCE_WRITABLE) {
-    size_t len = strlen(name);
-    if (len >= MX_MAX_NAME_LEN)
-        len = MX_MAX_NAME_LEN - 1;
-    memcpy(name_, name, len);
-    memset(name_ + len, 0, MX_MAX_NAME_LEN - len);
+    state_tracker_(MX_RESOURCE_WRITABLE),
+    name_(name, strlen(name)) {
 }
 
 //TODO: deferred deletion of children
@@ -331,7 +327,7 @@ void ResourceDispatcher::GetSelf(mx_rrec_self_t* self) {
     self->koid = get_koid();
     self->reserved[0] = 0;
     self->reserved[1] = 0;
-    memcpy(self->name, name_, MX_MAX_NAME_LEN);
+    name_.get(self->name);
 
     AutoLock lock(&lock_);
     self->child_count = num_children_;
@@ -364,7 +360,7 @@ mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t m
     rec.self.type = MX_RREC_SELF;
     rec.self.subtype = subtype_;
     rec.self.koid = get_koid();
-    memcpy(rec.self.name, name_, MX_MAX_NAME_LEN);
+    name_.get(rec.self.name);
 
     {
         AutoLock lock(&lock_);

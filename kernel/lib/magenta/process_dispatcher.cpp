@@ -98,7 +98,8 @@ mx_status_t ProcessDispatcher::Create(
 ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,
                                      mxtl::StringPiece name,
                                      uint32_t flags)
-    : job_(mxtl::move(job)), policy_(job_->GetPolicy()), state_tracker_(0u) {
+  : job_(mxtl::move(job)), policy_(job_->GetPolicy()), state_tracker_(0u),
+    name_(name.data(), name.length()) {
     LTRACE_ENTRY_OBJ;
 
     // Generate handle XOR mask with top bit and bottom two bits cleared
@@ -108,9 +109,6 @@ ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,
 
     // Handle values cannot be negative values, so we mask the high bit.
     handle_rand_ = (secret << 2) & INT_MAX;
-
-    if (name.length() > 0 && (name.length() < sizeof(name_)))
-        strlcpy(name_, name.data(), sizeof(name_));
 }
 
 ProcessDispatcher::~ProcessDispatcher() {
@@ -131,18 +129,11 @@ ProcessDispatcher::~ProcessDispatcher() {
 }
 
 void ProcessDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
-    AutoSpinLock lock(name_lock_);
-    memcpy(out_name, name_, MX_MAX_NAME_LEN);
+    name_.get(out_name);
 }
 
 status_t ProcessDispatcher::set_name(const char* name, size_t len) {
-    if (len >= MX_MAX_NAME_LEN)
-        len = MX_MAX_NAME_LEN - 1;
-
-    AutoSpinLock lock(name_lock_);
-    memcpy(name_, name, len);
-    memset(name_ + len, 0, MX_MAX_NAME_LEN - len);
-    return NO_ERROR;
+    return name_.set(name, len);
 }
 
 status_t ProcessDispatcher::Initialize() {

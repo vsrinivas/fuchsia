@@ -24,6 +24,7 @@
 #include <mxtl/array.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/name.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/string_piece.h>
@@ -315,12 +316,9 @@ private:
     // This is a cache of aspace()->vdso_code_address().
     uintptr_t vdso_code_address_ = 0;
 
-    // Used to protect name read/writes
-    mutable SpinLock name_lock_;
-
-    // The user-friendly process name. For debug purposes only.
-    // This includes the trailing NUL.
-    char name_[MX_MAX_NAME_LEN] TA_GUARDED(name_lock_) = {};
+    // The user-friendly process name. For debug purposes only. That
+    // is, there is no mechanism to mint a handle to a process via this name.
+    Name name_;
 };
 
 const char* StateToString(ProcessDispatcher::State state);
