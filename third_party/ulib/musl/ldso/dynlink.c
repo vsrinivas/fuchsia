@@ -95,7 +95,7 @@ struct dso {
         size_t* got;
     } * funcdescs;
     size_t* got;
-    char buf[];
+    struct dso* buf[];
 };
 
 struct symdef {
@@ -911,12 +911,22 @@ static mx_status_t load_library_vmo(mx_handle_t vmo, const char* name,
         }
     }
 
+    // Calculate how many slots are needed for dependencies.
+    size_t ndeps = 0;
+    for (size_t i = 0; temp_dso.dynv[i]; i += 2) {
+        if (temp_dso.dynv[i] == DT_NEEDED)
+            ++ndeps;
+    }
+    if (ndeps > 0)
+        // Account for a NULL terminator.
+        ++ndeps;
+
     /* Allocate storage for the new DSO. When there is TLS, this
      * storage must include a reservation for all pre-existing
      * threads to obtain copies of both the new TLS, and an
      * extended DTV capable of storing an additional slot for
      * the newly-loaded DSO. */
-    alloc_size = sizeof *p + strlen(name) + 1;
+    alloc_size = sizeof *p + ndeps * sizeof(p->deps[0]) + strlen(name) + 1;
     if (runtime && temp_dso.tls.image) {
         size_t per_th = temp_dso.tls.size + temp_dso.tls.align + sizeof(void*) * (tls_cnt + 3);
         n_th = atomic_load(&libc.thread_count);
@@ -930,10 +940,10 @@ static mx_status_t load_library_vmo(mx_handle_t vmo, const char* name,
         unmap_library(&temp_dso);
         return ERR_NO_MEMORY;
     }
-    memcpy(p, &temp_dso, sizeof temp_dso);
+    *p = temp_dso;
     p->refcnt = 1;
     p->needed_by = needed_by;
-    p->name = p->buf;
+    p->name = (void*)&p->buf[ndeps];
     strcpy(p->name, name);
     if (p->tls.image) {
         p->tls_id = ++tls_cnt;
@@ -988,28 +998,23 @@ static mx_status_t load_library(const char* name, int rtld_mode,
 }
 
 static void load_deps(struct dso* p) {
-    size_t i, ndeps = 0;
-    struct dso ***deps = &p->deps, **tmp, *dep;
     for (; p; p = p->next) {
-        for (i = 0; p->dynv[i]; i += 2) {
+        struct dso** deps = NULL;
+        if (runtime && p->deps == NULL)
+            deps = p->deps = p->buf;
+        for (size_t i = 0; p->dynv[i]; i += 2) {
             if (p->dynv[i] != DT_NEEDED)
                 continue;
             const char* name = p->strings + p->dynv[i + 1];
+            struct dso* dep;
             mx_status_t status = load_library(name, 0, p, &dep);
             if (status != NO_ERROR) {
                 error("Error loading shared library %s: %s (needed by %s)",
                       name, _mx_status_get_string(status), p->name);
                 if (runtime)
                     longjmp(*rtld_fail, 1);
-                continue;
-            }
-            if (runtime) {
-                tmp = realloc(*deps, sizeof(*tmp) * (ndeps + 2));
-                if (!tmp)
-                    longjmp(*rtld_fail, 1);
-                tmp[ndeps++] = dep;
-                tmp[ndeps] = 0;
-                *deps = tmp;
+            } else if (deps != NULL) {
+                *deps++ = dep;
             }
         }
     }
@@ -1694,7 +1699,6 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
                 free(p->td_index);
                 p->td_index = tmp;
             }
-            free(p->deps);
             unmap_library(p);
             free(p);
         }
