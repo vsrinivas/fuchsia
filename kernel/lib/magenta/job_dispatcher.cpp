@@ -220,3 +220,19 @@ mxtl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(mx_koid_t koid) {
     }
     return nullptr;
 }
+
+void JobDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
+    AutoSpinLock lock(name_lock_);
+    memcpy(out_name, name_, MX_MAX_NAME_LEN);
+}
+
+status_t JobDispatcher::set_name(const char* name, size_t len) {
+    if (len >= MX_MAX_NAME_LEN)
+        len = MX_MAX_NAME_LEN - 1;
+
+    AutoSpinLock lock(name_lock_);
+    memcpy(name_, name, len);
+    memset(name_ + len, 0, MX_MAX_NAME_LEN - len);
+    return NO_ERROR;
+}
+
