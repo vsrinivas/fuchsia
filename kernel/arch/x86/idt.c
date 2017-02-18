@@ -6,7 +6,12 @@
 
 #include <assert.h>
 #include <magenta/compiler.h>
+#include <magenta/assert.h>
+#include <err.h>
 #include <string.h>
+#include <kernel/mp.h>
+#include <kernel/vm.h>
+#include <arch/ops.h>
 
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
@@ -25,7 +30,9 @@ struct idtr _idtr = {
 };
 
 // IDT after early boot
-struct idt _idt;
+struct idt _idt __ALIGNED(PAGE_SIZE);
+// Read-only remapping of the IDT
+static struct idt *_idt_ro;
 
 static inline void idt_set_segment_sel(struct idt_entry *entry, uint16_t sel)
 {
@@ -122,4 +129,31 @@ void idt_setup(struct idt *idt)
         }
         idt_set_vector(idt, i, sel, offset, dpl, typ);
     }
+}
+
+// Create a read-only remapping of the global IDT.
+// This function is called on arch initialization before additional cpus
+// started. It reloads the main processor IDT to be read-only. Each
+// additional cpu will pick-up the read-only IDT by default.
+// TODO(thgarnie): Move to C++ and non-compact VMAR for KASLR support.
+void idt_setup_readonly(void) {
+    DEBUG_ASSERT(arch_curr_cpu_num() == 0);
+    DEBUG_ASSERT(mp_get_online_mask() == 1);
+    status_t status = vmm_alloc_physical(vmm_get_kernel_aspace(),
+                                         "idt_readonly",
+                                         sizeof(_idt),
+                                         (void **)&_idt_ro,
+                                         PAGE_SIZE_SHIFT,
+                                         0 /* min alloc gap */,
+                                         vaddr_to_paddr(&_idt),
+                                         0 /* vmm flags */,
+                                         ARCH_MMU_FLAG_PERM_READ);
+    ASSERT(status == NO_ERROR);
+    idt_load(_idt_ro);
+}
+
+// Get the read-only IDT
+struct idt * idt_get_readonly(void) {
+    ASSERT(_idt_ro != NULL);
+    return _idt_ro;
 }

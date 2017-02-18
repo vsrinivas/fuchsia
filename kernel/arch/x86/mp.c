@@ -40,7 +40,6 @@ struct x86_percpu bp_percpu = {
 static struct x86_percpu *ap_percpus;
 uint8_t x86_num_cpus = 1;
 
-// IDT after early boot
 extern struct idt _idt;
 
 status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
@@ -125,9 +124,11 @@ void x86_init_percpu(uint8_t cpu_num)
         idt_set_ist_index(&_idt, X86_INT_MACHINE_CHECK, MCE_IST_INDEX);
         idt_set_ist_index(&_idt, X86_INT_DOUBLE_FAULT, DBF_IST_INDEX);
 #endif
+        idt_load(&_idt);
+    } else {
+        // Load the read-only IDT setup on arch initialization.
+        idt_load(idt_get_readonly());
     }
-
-    idt_load(&_idt);
 
     // Apply any timestamp counter adjustment to keep a continuous clock across
     // suspend/resume.

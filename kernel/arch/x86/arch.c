@@ -58,6 +58,8 @@ void arch_init(void)
 
     x86_mmu_init();
 
+    idt_setup_readonly();
+
     x86_processor_trace_init();
 }
 
