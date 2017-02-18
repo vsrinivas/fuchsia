@@ -30,6 +30,8 @@
 #include "apps/netstack/ports/lwip/eth-client.h"
 #include "apps/netstack/ports/lwip/ethernetif.h"
 
+#define FILTER_IPV6 1
+
 struct ethernetif {
   int netfd;
   eth_client_t* eth;
@@ -261,6 +263,13 @@ static err_t ethernetif_output(struct netif* netif, struct pbuf* p) {
     pbuf_copy_partial(p, data, p->tot_len, 0);
     zero_padding(data, p->tot_len, len);
 
+#if FILTER_IPV6
+    if (((uint8_t*)data)[12] == 0x86 && ((uint8_t*)data)[13] == 0xdd) {
+      eth_put_buffer(TX, ethbuf, ETH_BUFFER_CLIENT);
+      return ERR_IF;
+    }
+#endif
+
     check_ethbuf(ethbuf, ETH_BUFFER_CLIENT);
 
     ethbuf->state = ETH_BUFFER_TX;
@@ -278,6 +287,12 @@ static err_t ethernetif_output(struct netif* netif, struct pbuf* p) {
 
 static void ethernetif_input(struct netif* netif, void* data, size_t len) {
   struct pbuf* p;
+
+#if FILTER_IPV6
+  if (((uint8_t*)data)[12] == 0x86 && ((uint8_t*)data)[13] == 0xdd) {
+    return;
+  }
+#endif
 
   p = pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
   if (p != NULL) {
