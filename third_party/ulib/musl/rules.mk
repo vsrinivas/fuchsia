@@ -56,6 +56,7 @@ endif
 LOCAL_CFLAGS += -ffreestanding
 
 LOCAL_SRCS := \
+    $(LOCAL_DIR)/magenta/get_startup_handle.c \
     $(LOCAL_DIR)/magenta/internal.c \
     $(LOCAL_DIR)/magenta/thrd_get_mx_handle.c \
     $(LOCAL_DIR)/pthread/allocate.c \

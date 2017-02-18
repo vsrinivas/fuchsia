@@ -46,6 +46,22 @@ void __libc_start_init(void) ATTR_LIBC_VISIBILITY;
 
 void __dl_thread_cleanup(void) ATTR_LIBC_VISIBILITY;
 
+// Registers the handles that mx_get_startup_handle() will return.
+//
+// This function takes ownership of the data, but not the memory: it assumes
+// that the arrays are valid as long as the process is alive.
+//
+// |handles| and |handle_info| are parallel arrays and must have |nhandles|
+//     entries.
+// |handles| contains the actual handle values, or MX_HANDLE_INVALID if a
+//     handle has already been claimed.
+// |handle_info| contains the MX_HND_INFO value associated with the
+//     corresponding element of |handles|, or zero if the handle has already
+//     been claimed.
+void __libc_startup_handles_init(uint32_t nhandles,
+                                 mx_handle_t handles[],
+                                 uint32_t handle_info[]) ATTR_LIBC_VISIBILITY;
+
 _Noreturn void __libc_start_main(void* arg, int (*main)(int, char**, char**));
 
 extern uintptr_t __stack_chk_guard;

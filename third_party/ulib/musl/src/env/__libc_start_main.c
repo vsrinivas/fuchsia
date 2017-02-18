@@ -10,7 +10,8 @@
 #include <runtime/processargs.h>
 #include <runtime/thread.h>
 
-// hook for extension libraries to init
+// Hook for extension libraries to init. Extensions must zero out
+// handle[i] and handle_info[i] for any handles they claim.
 void __libc_extensions_init(uint32_t handle_count,
                             mx_handle_t handle[],
                             uint32_t handle_info[]) __attribute__((weak));
@@ -28,9 +29,15 @@ struct start_params {
 static _Noreturn void start_main(const struct start_params*)
     __asm__("start_main") __attribute__((used));
 static void start_main(const struct start_params* p) {
-    // Allow companion libraries a chance to poke at this.
+    // Allow companion libraries a chance to claim handles, zeroing out
+    // handles[i] and handle_info[i] for handles they claim.
     if (&__libc_extensions_init != NULL)
         __libc_extensions_init(p->nhandles, p->handles, p->handle_info);
+
+    // Give any unclaimed handles to mx_get_startup_handle(). This function
+    // takes ownership of the data, but not the memory: it assumes that the
+    // arrays are valid as long as the process is alive.
+    __libc_startup_handles_init(p->nhandles, p->handles, p->handle_info);
 
     // Run static constructors et al.
     __libc_start_init();
