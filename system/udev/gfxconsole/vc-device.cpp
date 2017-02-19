@@ -155,10 +155,12 @@ static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
     int delta = ABS(dir);
     if (dir > 0) {
         gfx_copyrect(dev->gfx, 0, (y0 + delta) * dev->charh,
-                     dev->gfx->width, (y1 - y0 - delta) * dev->charh, 0, y0);
+                     dev->gfx->width, (y1 - y0 - delta) * dev->charh,
+                     0, y0 * dev->charh);
         vc_device_invalidate(cookie, 0, y1 - delta, dev->columns, delta);
     } else {
-        gfx_copyrect(dev->gfx, 0, y0, dev->gfx->width, (y1 - y0 - delta) * dev->charh,
+        gfx_copyrect(dev->gfx, 0, y0 * dev->charh,
+                     dev->gfx->width, (y1 - y0 - delta) * dev->charh,
                      0, (y0 + delta) * dev->charh);
         vc_device_invalidate(cookie, 0, y0, dev->columns, delta);
     }
