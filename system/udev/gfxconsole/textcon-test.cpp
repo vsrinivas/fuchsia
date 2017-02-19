@@ -330,6 +330,23 @@ bool test_delete_lines() {
     END_TEST;
 }
 
+bool test_move_cursor_up_and_scroll() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 4);
+    tc.PutString("AAA\nBBB\nCCC\nDDD");
+    tc.PutString("\x1bM" "1"); // Move cursor up; print char
+    tc.PutString("\x1bM" "2"); // Move cursor up; print char
+    tc.PutString("\x1bM" "3"); // Move cursor up; print char
+    tc.PutString("\x1bM" "4"); // Move cursor up; print char
+    tc.AssertLineContains(0, "      4");
+    tc.AssertLineContains(1, "AAA  3");
+    tc.AssertLineContains(2, "BBB 2");
+    tc.AssertLineContains(3, "CCC1");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_display_update_comparison)
@@ -340,6 +357,7 @@ RUN_TEST(test_backspace_at_start_of_line)
 RUN_TEST(test_scroll_up)
 RUN_TEST(test_insert_lines)
 RUN_TEST(test_delete_lines)
+RUN_TEST(test_move_cursor_up_and_scroll)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }
