@@ -283,6 +283,36 @@ bool test_backspace_at_start_of_line() {
     END_TEST;
 }
 
+bool test_scroll_up() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 4);
+    tc.PutString("AAA\nBBB\nCCC\nDDD\n");
+    tc.AssertLineContains(0, "BBB");
+    tc.AssertLineContains(1, "CCC");
+    tc.AssertLineContains(2, "DDD");
+    tc.AssertLineContains(3, "");
+
+    END_TEST;
+}
+
+bool test_insert_lines() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 5);
+    tc.PutString("AAA\nBBB\nCCC\nDDD\nEEE");
+    tc.PutString("\x1b[2A"); // Move the cursor up 2 lines
+    tc.PutString("\x1b[2L"); // Insert 2 lines
+    tc.PutString("Z"); // Output char to show where the cursor ends up
+    tc.AssertLineContains(0, "AAA");
+    tc.AssertLineContains(1, "BBB");
+    tc.AssertLineContains(2, "   Z");
+    tc.AssertLineContains(3, "");
+    tc.AssertLineContains(4, "CCC");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_display_update_comparison)
@@ -290,6 +320,8 @@ RUN_TEST(test_wrapping)
 RUN_TEST(test_tabs)
 RUN_TEST(test_backspace_moves_cursor)
 RUN_TEST(test_backspace_at_start_of_line)
+RUN_TEST(test_scroll_up)
+RUN_TEST(test_insert_lines)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }
