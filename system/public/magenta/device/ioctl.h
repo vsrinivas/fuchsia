@@ -53,6 +53,7 @@
 #define IOCTL_FAMILY_IPT            0x21  // ioctls for Intel PT
 #define IOCTL_FAMILY_RAMDISK        0x22
 #define IOCTL_FAMILY_SDMMC          0x23
+#define IOCTL_FAMILY_WLAN           0x24
 
 // IOCTL constructor
 // --K-FFNN

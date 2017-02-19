@@ -25,6 +25,8 @@ typedef struct eth_info_t {
     uint32_t reserved[12];
 } eth_info_t;
 
+#define ETH_FEATURE_WLAN 1
+
 // Get the fifos to submit tx and rx operations
 //   in: none
 //  out: eth_fifos_t*

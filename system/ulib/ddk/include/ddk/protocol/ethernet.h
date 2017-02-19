@@ -28,9 +28,12 @@ typedef struct ethernet_protocol {
 // TODO: Implement zero-copy interface in the ethernet common
 // middle layer driver.  Currently ethermac drivers that request
 // these will not be loaded.
+//
+// The FEATURE_WLAN flag indicates a device that supports wlan operations.
 
 #define ETHMAC_FEATURE_RX_QUEUE (1u)
 #define ETHMAC_FEATURE_TX_QUEUE (2u)
+#define ETHMAC_FEATURE_WLAN     (4u)
 
 typedef struct ethmac_info {
     uint32_t features;

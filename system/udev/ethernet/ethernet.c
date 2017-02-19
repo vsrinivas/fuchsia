@@ -392,6 +392,7 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
             eth_info_t* info = out_buf;
             memset(info, 0, sizeof(*info));
             memcpy(info->mac, edev->edev0->info.mac, ETH_MAC_SIZE);
+            info->features = edev->edev0->info.features;
             info->mtu = edev->edev0->info.mtu;
             status = sizeof(*info);
         }
@@ -416,7 +417,10 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
         status = eth_tx_listen_locked(edev, false);
         break;
     default:
-        status = ERR_NOT_SUPPORTED;
+        // TODO: consider if we want this under the edev0->lock or not
+        status = edev->edev0->mac->ops->ioctl(edev->edev0->mac, op, in_buf, in_len,
+                    out_buf, out_len);
+        break;
     }
 
 done:
