@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 #include "dynlink.h"
 #include "libc.h"
-#include "malloc_impl.h"
 #include "pthread_impl.h"
 #include "stdio_impl.h"
 #include "tls_impl.h"
@@ -52,11 +51,6 @@ struct debug {
     void* base;
 };
 
-struct td_index {
-    size_t args[2];
-    struct td_index* next;
-};
-
 struct dso {
     // These five fields match struct link_map in <link.h>.
     // TODO(mcgrathr): Use the type here.
@@ -88,7 +82,6 @@ struct dso {
     void** new_dtv;
     unsigned char* new_tls;
     atomic_int new_dtv_idx, new_tls_idx;
-    struct td_index* td_index;
     struct dso* fini_next;
     struct funcdesc {
         void* addr;
@@ -147,6 +140,73 @@ static int dl_strcmp(const char* l, const char* r) {
     return *(unsigned char*)l - *(unsigned char*)r;
 }
 #define strcmp(l, r) dl_strcmp(l, r)
+
+
+// Simple bump allocator for dynamic linker internal data structures.
+// This allocator is single-threaded: it can be used only at startup or
+// while holding the big lock.  These allocations can never be freed
+// once in use.  But it does support a simple checkpoint and rollback
+// mechanism to undo all allocations since the checkpoint, used for the
+// abortive dlopen case.
+
+union allocated_types {
+    struct dso dso;
+    size_t tlsdesc[2];
+};
+#define DL_ALLOC_ALIGN alignof(union allocated_types)
+
+static uintptr_t alloc_base, alloc_limit, alloc_ptr;
+
+__attribute__((malloc)) static void* dl_alloc(size_t size) {
+    // Round the size up so the allocation pointer always stays aligned.
+    size = (size + DL_ALLOC_ALIGN - 1) & -DL_ALLOC_ALIGN;
+
+    // Get more pages if needed.  The remaining partial page, if any,
+    // is wasted unless the system happens to give us the adjacent page.
+    if (alloc_limit - alloc_ptr < size) {
+        size_t chunk_size = (size + PAGE_SIZE - 1) & -PAGE_SIZE;
+        mx_handle_t vmo;
+        mx_status_t status = _mx_vmo_create(chunk_size, 0, &vmo);
+        if (status != NO_ERROR)
+            return NULL;
+        uintptr_t chunk;
+        status = _mx_vmar_map(_mx_vmar_root_self(), 0, vmo, 0, chunk_size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                              &chunk);
+        _mx_handle_close(vmo);
+        if (status != NO_ERROR)
+            return NULL;
+        if (chunk != alloc_limit)
+            alloc_ptr = alloc_base = chunk;
+        alloc_limit = chunk + chunk_size;
+    }
+
+    void* block = (void*)alloc_ptr;
+    alloc_ptr += size;
+
+    return block;
+}
+
+struct dl_alloc_checkpoint {
+    uintptr_t ptr, base;
+};
+
+static void dl_alloc_checkpoint(struct dl_alloc_checkpoint *state) {
+    state->ptr = alloc_ptr;
+    state->base = alloc_base;
+}
+
+static void dl_alloc_rollback(const struct dl_alloc_checkpoint *state) {
+    uintptr_t frontier = alloc_ptr;
+    // If we're still using the same contiguous chunk as the checkpoint
+    // state, we can just restore the old state directly and waste nothing.
+    // If we've allocated new chunks since then, the best we can do is
+    // reset to the beginning of the current chunk, since we haven't kept
+    // track of the past chunks.
+    alloc_ptr = alloc_base == state->base ? state->ptr : alloc_base;
+    memset((void*)alloc_ptr, 0, frontier - alloc_ptr);
+}
+
 
 /* Compute load address for a virtual address in a given dso. */
 #define laddr(p, v) (void*)((p)->base + (v))
@@ -415,16 +475,14 @@ static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stri
             if (stride < 3)
                 addend = reloc_addr[1];
             if (runtime && def.dso->tls_id >= static_tls_cnt) {
-                struct td_index* new = malloc(sizeof *new);
+                size_t* new = dl_alloc(2 * sizeof(size_t));
                 if (!new) {
                     error("Error relocating %s: cannot allocate TLSDESC for %s", dso->name,
                           sym ? name : "(local)");
                     longjmp(*rtld_fail, 1);
                 }
-                new->next = dso->td_index;
-                dso->td_index = new;
-                new->args[0] = def.dso->tls_id;
-                new->args[1] = tls_val + addend;
+                new[0] = def.dso->tls_id;
+                new[1] = tls_val + addend;
                 reloc_addr[0] = (size_t)__tlsdesc_dynamic;
                 reloc_addr[1] = (size_t) new;
             } else {
@@ -935,7 +993,7 @@ static mx_status_t load_library_vmo(mx_handle_t vmo, const char* name,
         else
             alloc_size += n_th * per_th;
     }
-    p = calloc(1, alloc_size);
+    p = dl_alloc(alloc_size);
     if (!p) {
         unmap_library(&temp_dso);
         return ERR_NO_MEMORY;
@@ -1682,6 +1740,9 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     size_t orig_tls_offset = tls_offset;
     size_t orig_tls_align = tls_align;
 
+    struct dl_alloc_checkpoint checkpoint;
+    dl_alloc_checkpoint(&checkpoint);
+
     size_t i;
     jmp_buf jb;
     rtld_fail = &jb;
@@ -1691,17 +1752,8 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
             for (i = 0; p->deps[i]; i++)
                 if (p->deps[i]->global < 0)
                     p->deps[i]->global = 0;
-        struct dso* next;
-        for (p = orig_tail->next; p; p = next) {
-            next = p->next;
-            while (p->td_index) {
-                void* tmp = p->td_index->next;
-                free(p->td_index);
-                p->td_index = tmp;
-            }
+        for (p = orig_tail->next; p; p = p->next)
             unmap_library(p);
-            free(p);
-        }
         if (!orig_tls_tail)
             libc.tls_head = 0;
         tls_tail = orig_tls_tail;
@@ -1710,6 +1762,7 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
         tls_align = orig_tls_align;
         tail = orig_tail;
         tail->next = 0;
+        dl_alloc_rollback(&checkpoint);
         goto fail;
     }
 
