@@ -505,7 +505,8 @@
     case 91: ret = static_cast<uint64_t>(sys_pci_map_mmio(
         static_cast<mx_handle_t>(arg1),
         static_cast<uint32_t>(arg2),
-        static_cast<mx_cache_policy_t>(arg3)));
+        static_cast<mx_cache_policy_t>(arg3),
+        reinterpret_cast<mx_handle_t*>(arg4)));
         break;
     case 92: ret = static_cast<uint64_t>(sys_pci_io_write(
         static_cast<mx_handle_t>(arg1),
@@ -523,10 +524,12 @@
         break;
     case 94: ret = static_cast<uint64_t>(sys_pci_map_interrupt(
         static_cast<mx_handle_t>(arg1),
-        static_cast<int32_t>(arg2)));
+        static_cast<int32_t>(arg2),
+        reinterpret_cast<mx_handle_t*>(arg3)));
         break;
     case 95: ret = static_cast<uint64_t>(sys_pci_map_config(
-        static_cast<mx_handle_t>(arg1)));
+        static_cast<mx_handle_t>(arg1),
+        reinterpret_cast<mx_handle_t*>(arg2)));
         break;
     case 96: ret = static_cast<uint64_t>(sys_pci_query_irq_mode_caps(
         static_cast<mx_handle_t>(arg1),
