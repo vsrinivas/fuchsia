@@ -52,7 +52,7 @@ SECTIONS {
     .hash : {
         *(.hash)
     } :rodata
-    .gnu_hash : { *(.gnu_hash) }
+    .gnu.hash : { *(.gnu.hash) }
     .dynsym : { *(.dynsym) }
     .dynstr : { *(.dynstr) }
 
