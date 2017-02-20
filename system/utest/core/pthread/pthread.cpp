@@ -257,7 +257,9 @@ static bool pthread_getstack_check() {
     uintptr_t high = low + stack_size;
 
     // This is just some arbitrary address known to be on our thread stack.
-    uintptr_t here = reinterpret_cast<uintptr_t>(&attr);
+    // Note this is the "safe stack".  If using -fsanitize=safe-stack,
+    // there is also an "unsafe stack", where e.g. &attr will reside.
+    uintptr_t here = reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
 
     unittest_printf("pthread_attr_getstack reports [%#" PRIxPTR
                     ", %#" PRIxPTR "); SP ~= %#" PRIxPTR "\n",
