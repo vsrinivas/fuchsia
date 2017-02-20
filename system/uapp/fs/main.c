@@ -26,6 +26,7 @@ int test_maxfile(fs_info_t* info);
 int test_overflow(fs_info_t* info);
 int test_persist(fs_info_t* info);
 int test_rw_workers(fs_info_t* info);
+int test_random_op_multithreaded(fs_info_t* info);
 int test_rename(fs_info_t* info);
 int test_sync(fs_info_t* info);
 int test_truncate(fs_info_t* info);
@@ -44,6 +45,7 @@ struct {
     {"overflow", test_overflow},
     {"persist", test_persist},
     {"rw_workers", test_rw_workers},
+    {"random_op_multithreaded", test_random_op_multithreaded},
     {"rename", test_rename},
     {"sync", test_sync},
     {"truncate", test_truncate},
