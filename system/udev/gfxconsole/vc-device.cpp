@@ -182,9 +182,6 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
         if (dev->hide_cursor) {
             dev->hide_cursor = false;
             vc_tc_movecursor(dev, dev->x, dev->y);
-            gfx_fillrect(dev->gfx, dev->x * dev->charw, dev->y * dev->charh, dev->charw, dev->charh,
-                         palette_to_color(dev, dev->front_color));
-            vc_invalidate_lines(dev, dev->y, 1);
         }
         break;
     case TC_HIDE_CURSOR:
