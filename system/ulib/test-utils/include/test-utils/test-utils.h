@@ -123,4 +123,14 @@ void tu_handle_get_basic_info(mx_handle_t handle, mx_info_handle_basic_t* info);
 
 mx_handle_t tu_get_thread(mx_handle_t proc, mx_koid_t tid);
 
+// Run a program and wait for it to exit.
+// Any error in trying to run the program is fatal.
+// The result is the return code of the child process.
+
+int tu_run_program(const char *progname, int argc, const char** argv);
+
+// A wrapper for /bin/sh -c <command>.
+
+int tu_run_command(const char* progname, const char* cmd);
+
 __END_CDECLS

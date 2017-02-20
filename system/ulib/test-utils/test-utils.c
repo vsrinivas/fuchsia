@@ -274,3 +274,36 @@ mx_handle_t tu_get_thread(mx_handle_t proc, mx_koid_t tid)
         tu_fatal(__func__, status);
     return thread;
 }
+
+int tu_run_program(const char *progname, int argc, const char** argv)
+{
+    launchpad_t* lp;
+
+    unittest_printf("%s: running %s\n", __func__, progname);
+
+    launchpad_create(0, progname, &lp);
+    launchpad_clone(lp, LP_CLONE_ALL);
+    launchpad_load_from_file(lp, argv[0]);
+    launchpad_set_args(lp, argc, argv);
+    mx_status_t status;
+    mx_handle_t child;
+    if ((status = launchpad_go(lp, &child, NULL)) < 0) {
+        tu_fatal(__func__, status);
+    }
+
+    int rc = tu_process_wait_exit(child);
+    tu_handle_close(child);
+    unittest_printf("%s: child returned %d\n", __func__, rc);
+    return rc;
+}
+
+int tu_run_command(const char* progname, const char* cmd)
+{
+    const char* argv[] = {
+        "/boot/bin/sh",
+        "-c",
+        cmd
+    };
+
+    return tu_run_program(progname, countof(argv), argv);
+}
