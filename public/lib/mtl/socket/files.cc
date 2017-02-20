@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <limits>
 #include <utility>
+#include <vector>
 
 #include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
@@ -72,12 +73,12 @@ void CopyToFileHandler::SendCallback(bool value) {
 
 void CopyToFileHandler::OnHandleReady(mx_status_t result) {
   if (result == NO_ERROR) {
-    char buffer[64 * 1024];
+    std::vector<char> buffer(64 * 1024);
     size_t size = 0;
-    result = source_.read(0u, buffer, sizeof(buffer), &size);
+    result = source_.read(0u, buffer.data(), buffer.size(), &size);
     if (result == NO_ERROR) {
-      bool write_success = ftl::WriteFileDescriptor(
-          destination_.get(), static_cast<const char*>(buffer), size);
+      bool write_success =
+          ftl::WriteFileDescriptor(destination_.get(), buffer.data(), size);
       if (!write_success) {
         SendCallback(false);
       } else {
@@ -131,7 +132,7 @@ class CopyFromFileHandler {
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::function<void(bool, ftl::UniqueFD)> callback_;
   const FidlAsyncWaiter* waiter_;
-  char buffer_[64 * 1024];
+  std::vector<char> buffer_;
   size_t buffer_offset_;
   size_t buffer_end_;
   FidlAsyncWaitID wait_id_;
@@ -149,6 +150,7 @@ CopyFromFileHandler::CopyFromFileHandler(
       task_runner_(std::move(task_runner)),
       callback_(callback),
       waiter_(fidl::GetDefaultAsyncWaiter()),
+      buffer_(64 * 1024),
       wait_id_(0) {
   task_runner_->PostTask([this]() { FillBuffer(); });
 }
@@ -165,7 +167,7 @@ void CopyFromFileHandler::SendCallback(bool value) {
 
 void CopyFromFileHandler::FillBuffer() {
   ssize_t bytes_read =
-      ftl::ReadFileDescriptor(source_.get(), buffer_, sizeof(buffer_));
+      ftl::ReadFileDescriptor(source_.get(), buffer_.data(), buffer_.size());
   if (bytes_read <= 0) {
     SendCallback(bytes_read == 0);
     return;
@@ -178,7 +180,7 @@ void CopyFromFileHandler::FillBuffer() {
 void CopyFromFileHandler::OnHandleReady(mx_status_t result) {
   if (result == NO_ERROR) {
     size_t bytes_written = 0;
-    result = destination_.write(0u, buffer_ + buffer_offset_,
+    result = destination_.write(0u, buffer_.data() + buffer_offset_,
                                 buffer_end_ - buffer_offset_, &bytes_written);
     if (result == NO_ERROR) {
       buffer_offset_ += bytes_written;

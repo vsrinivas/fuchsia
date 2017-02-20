@@ -5,6 +5,7 @@
 #include "lib/mtl/socket/socket_drainer.h"
 
 #include <utility>
+#include <vector>
 
 #include "lib/ftl/logging.h"
 #include "mx/socket.h"
@@ -32,15 +33,15 @@ void SocketDrainer::Start(mx::socket source) {
 }
 
 void SocketDrainer::ReadData() {
-  char buffer[16 * 1024];
+  std::vector<char> buffer(64 * 1024);
   size_t num_bytes = 0;
-  mx_status_t rv = source_.read(0, buffer, sizeof(buffer), &num_bytes);
+  mx_status_t rv = source_.read(0, buffer.data(), buffer.size(), &num_bytes);
   if (rv == NO_ERROR) {
     // Calling the user callback, and exiting early if this objects is
     // destroyed.
     bool is_destroyed = false;
     destruction_sentinel_ = &is_destroyed;
-    client_->OnDataAvailable(buffer, num_bytes);
+    client_->OnDataAvailable(buffer.data(), num_bytes);
     if (is_destroyed)
       return;
     destruction_sentinel_ = nullptr;

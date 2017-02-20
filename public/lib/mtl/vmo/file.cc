@@ -11,6 +11,8 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
+#include <vector>
+
 #include "lib/ftl/logging.h"
 
 namespace mtl {
@@ -32,17 +34,18 @@ bool VmoFromFd(ftl::UniqueFD fd, mx::vmo* handle_ptr) {
   }
 
   constexpr size_t kBufferSize = 1 << 16;
-  char buffer[kBufferSize];
+  std::vector<char> buffer(kBufferSize);
   size_t offset = 0;
   while (offset < size) {
-    ssize_t bytes_read = read(fd.get(), buffer, kBufferSize);
+    ssize_t bytes_read = read(fd.get(), buffer.data(), buffer.size());
     if (bytes_read < 0) {
       FTL_LOG(WARNING) << "mx::vmo::read failed: " << bytes_read;
       return false;
     }
 
     size_t actual = 0;
-    mx_status_t rv = handle_ptr->write(buffer, offset, bytes_read, &actual);
+    mx_status_t rv =
+        handle_ptr->write(buffer.data(), offset, bytes_read, &actual);
     if (rv < 0 || actual != static_cast<size_t>(bytes_read)) {
       FTL_LOG(WARNING) << "mx::vmo::write wrote " << actual
                        << " bytes instead of " << bytes_read << " bytes.";
