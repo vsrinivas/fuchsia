@@ -18,6 +18,7 @@
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -171,6 +172,7 @@ class DevUserShellView : public mozart::BaseView {
 
 class DevUserShellApp
     : public modular::StoryWatcher,
+      public maxwell::SuggestionListener,
       public modular::SingleServiceViewApp<modular::UserShell> {
  public:
   explicit DevUserShellApp(const Settings& settings)
@@ -195,6 +197,14 @@ class DevUserShellApp
       override {
     user_context_.Bind(std::move(user_context));
     story_provider_.Bind(std::move(story_provider));
+    suggestion_provider_.Bind(std::move(suggestion_provider));
+
+    suggestion_provider_->SubscribeToInterruptions(
+        suggestion_listener_bindings_.AddBinding(this));
+    suggestion_provider_->SubscribeToNext(
+        suggestion_listener_bindings_.AddBinding(this),
+        next_controller_.NewRequest());
+
     Connect();
   }
 
@@ -265,6 +275,24 @@ class DevUserShellApp
     });
   }
 
+  // |SuggestionListener|
+  void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
+    FTL_LOG(INFO) << "DevUserShell::OnAdd()";
+    for (auto& suggestion : suggestions) {
+      FTL_LOG(INFO) << "  " << suggestion->uuid << " " << suggestion->display->headline;
+    }
+  }
+
+  // |SuggestionListener|
+  void OnRemove(const fidl::String& suggestion_id) override {
+    FTL_LOG(INFO) << "DevUserShell::OnRemove() " << suggestion_id;
+  }
+
+  // |SuggestionListener|
+  void OnRemoveAll() override {
+    FTL_LOG(INFO) << "DevUserShell::OnRemoveAll()";
+  }
+
   const Settings settings_;
 
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
@@ -274,6 +302,10 @@ class DevUserShellApp
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
+
+  maxwell::SuggestionProviderPtr suggestion_provider_;
+  maxwell::NextControllerPtr next_controller_;
+  fidl::BindingSet<maxwell::SuggestionListener> suggestion_listener_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);
 };
