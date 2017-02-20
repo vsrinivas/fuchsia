@@ -30,6 +30,7 @@ size_t elf_load_get_stack_size(elf_load_info_t* info);
 
 // Load the file's segments into the process.
 // If this fails, the state of the process address space is unspecified.
+// Regardless of success/failure this does not consume |vmo|.
 mx_status_t elf_load_finish(mx_handle_t vmar, elf_load_info_t* info,
                             mx_handle_t vmo,
                             mx_handle_t* segments_vmar,
