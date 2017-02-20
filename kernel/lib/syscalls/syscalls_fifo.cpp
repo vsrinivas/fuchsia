@@ -27,7 +27,7 @@
 #define LOCAL_TRACE 0
 
 mx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
-                            mx_handle_t* _out0, mx_handle_t* _out1) {
+                            user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
     mxtl::RefPtr<Dispatcher> dispatcher0;
     mxtl::RefPtr<Dispatcher> dispatcher1;
     mx_rights_t rights;
@@ -44,9 +44,9 @@ mx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(handle0)) != NO_ERROR)
+    if (_out0.copy_to_user(up->MapHandleToValue(handle0)) != NO_ERROR)
         return ERR_INVALID_ARGS;
-    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(handle1)) != NO_ERROR)
+    if (_out1.copy_to_user(up->MapHandleToValue(handle1)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle0));
@@ -55,7 +55,8 @@ mx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
     return NO_ERROR;
 }
 
-mx_status_t sys_fifo_write(mx_handle_t handle, const void* entries, size_t len, uint32_t* _actual) {
+mx_status_t sys_fifo_write(mx_handle_t handle, user_ptr<const void> entries,
+        size_t len, user_ptr<uint32_t> _actual) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<FifoDispatcher> fifo;
@@ -64,16 +65,17 @@ mx_status_t sys_fifo_write(mx_handle_t handle, const void* entries, size_t len, 
         return status;
 
     uint32_t actual;
-    if ((status = fifo->Write(reinterpret_cast<const uint8_t*>(entries), len, &actual)) != NO_ERROR)
+    // TODO(andymutton): Change FifoDispatcher to accept user_ptr
+    if ((status = fifo->Write(reinterpret_cast<const uint8_t*>(entries.get()), len, &actual)) != NO_ERROR)
         return status;
 
-    if (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR)
+    if (_actual.copy_to_user(actual) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;
 }
 
-mx_status_t sys_fifo_read(mx_handle_t handle, void* entries, size_t len, uint32_t* _actual) {
+mx_status_t sys_fifo_read(mx_handle_t handle, user_ptr<void> entries, size_t len, user_ptr<uint32_t> _actual) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<FifoDispatcher> fifo;
@@ -82,10 +84,11 @@ mx_status_t sys_fifo_read(mx_handle_t handle, void* entries, size_t len, uint32_
         return status;
 
     uint32_t actual;
-    if ((status = fifo->Read(reinterpret_cast<uint8_t*>(entries), len, &actual)) != NO_ERROR)
+    // TODO(andymutton): Change FifoDispatcher to accept user_ptr
+    if ((status = fifo->Read(reinterpret_cast<uint8_t*>(entries.get()), len, &actual)) != NO_ERROR)
         return status;
 
-    if (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR)
+    if (_actual.copy_to_user(actual) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;

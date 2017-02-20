@@ -115,7 +115,7 @@ mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_
     }
 }
 
-mx_status_t sys_pci_init(mx_handle_t handle, const mx_pci_init_arg_t* _init_buf, uint32_t len) {
+mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _init_buf, uint32_t len) {
     // TODO: finer grained validation
     // TODO(security): Add additional access checks
     mx_status_t status;
@@ -139,7 +139,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, const mx_pci_init_arg_t* _init_buf,
         return ERR_NO_MEMORY;
     }
     {
-        status = make_user_ptr(_init_buf).reinterpret<const void>().copy_array_from_user(
+        status = _init_buf.reinterpret<const void>().copy_array_from_user(
             arg.get(), len);
         if (status != NO_ERROR) {
             return status;
@@ -261,7 +261,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, const mx_pci_init_arg_t* _init_buf,
     return NO_ERROR;
 }
 
-mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, mx_pcie_get_nth_info_t* out_info) {
+mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, user_ptr<mx_pcie_get_nth_info_t> out_info) {
     /**
      * Returns the pci config of a device.
      * @param index Device index
@@ -292,8 +292,9 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, mx_pcie_ge
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t handle_value = up->MapHandleToValue(handle);
 
-    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_info),
-                            &info, sizeof(*out_info)) != NO_ERROR)
+    // TODO(andymutton): Change to use user_ptr copy
+    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_info.get()),
+                            &info, sizeof(*(out_info.get())) != NO_ERROR))
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
@@ -372,7 +373,7 @@ mx_status_t sys_pci_reset_device(mx_handle_t dev_handle) {
 }
 
 mx_status_t sys_pci_map_mmio(mx_handle_t dev_handle, uint32_t bar_num,
-                             mx_cache_policy_t cache_policy, mx_handle_t* out_handle) {
+                             mx_cache_policy_t cache_policy, user_ptr<mx_handle_t> out_handle) {
     /**
      * Performs MMIO mapping for the PCI device associated with the handle.
      * @param handle Handle associated with a PCI device
@@ -406,7 +407,7 @@ mx_status_t sys_pci_map_mmio(mx_handle_t dev_handle, uint32_t bar_num,
     if (!mmio_handle)
         return ERR_NO_MEMORY;
 
-    status = make_user_ptr(out_handle).copy_to_user(up->MapHandleToValue(mmio_handle));
+    status = out_handle.copy_to_user(up->MapHandleToValue(mmio_handle));
     if (status != NO_ERROR) {
         return status;
     }
@@ -429,7 +430,7 @@ mx_status_t sys_pci_io_write(mx_handle_t handle, uint32_t bar_num, uint32_t offs
 }
 
 mx_status_t sys_pci_io_read(mx_handle_t handle, uint32_t bar_num, uint32_t offset, uint32_t len,
-                            uint32_t* out_value_ptr) {
+                            user_ptr<uint32_t> out_value_ptr) {
     /**
      * Performs port I/O read for the PCI device associated with the handle.
      * @param handle Handle associated with a PCI device
@@ -443,7 +444,7 @@ mx_status_t sys_pci_io_read(mx_handle_t handle, uint32_t bar_num, uint32_t offse
 
 mx_status_t sys_pci_map_interrupt(mx_handle_t dev_handle,
                                   int32_t which_irq,
-                                  mx_handle_t* out_handle) {
+                                  user_ptr<mx_handle_t> out_handle) {
     /**
      * Returns a handle that can be waited on.
      * @param handle Handle associated with a PCI device
@@ -474,7 +475,7 @@ mx_status_t sys_pci_map_interrupt(mx_handle_t dev_handle,
     if (!handle)
         return ERR_NO_MEMORY;
 
-    status = make_user_ptr(out_handle).copy_to_user(up->MapHandleToValue(handle));
+    status = out_handle.copy_to_user(up->MapHandleToValue(handle));
     if (status != NO_ERROR) {
         return status;
     }
@@ -483,7 +484,7 @@ mx_status_t sys_pci_map_interrupt(mx_handle_t dev_handle,
     return NO_ERROR;
 }
 
-mx_status_t sys_pci_map_config(mx_handle_t dev_handle, mx_handle_t* out_handle) {
+mx_status_t sys_pci_map_config(mx_handle_t dev_handle, user_ptr<mx_handle_t> out_handle) {
     /**
      * Fetch an I/O Mapping object which maps the PCI device's mmaped config
      * into the caller's address space (read only)
@@ -510,7 +511,7 @@ mx_status_t sys_pci_map_config(mx_handle_t dev_handle, mx_handle_t* out_handle) 
     if (!config_handle)
         return ERR_NO_MEMORY;
 
-    status = make_user_ptr(out_handle).copy_to_user(up->MapHandleToValue(config_handle));
+    status = out_handle.copy_to_user(up->MapHandleToValue(config_handle));
     if (status != NO_ERROR) {
         return status;
     }
@@ -527,7 +528,7 @@ mx_status_t sys_pci_map_config(mx_handle_t dev_handle, mx_handle_t* out_handle) 
  */
 mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t dev_handle,
                                         uint32_t mode,
-                                        uint32_t* out_max_irqs) {
+                                        user_ptr<uint32_t> out_max_irqs) {
     LTRACEF("handle %d\n", dev_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -542,8 +543,9 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t dev_handle,
     if (result != NO_ERROR)
         return result;
 
-    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_max_irqs),
-                            &max_irqs, sizeof(*out_max_irqs)) != NO_ERROR)
+    // TODO(andymutton): Change to use user_ptr copy
+    if (copy_to_user_unsafe(out_max_irqs.reinterpret<uint8_t>().get(),
+                            &max_irqs, sizeof(*(out_max_irqs).get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return result;
@@ -570,7 +572,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t dev_handle,
     return pci_device->SetIrqMode((mx_pci_irq_mode_t)mode, requested_irq_count);
 }
 #else  // WITH_DEV_PCIE
-mx_status_t sys_pci_init(mx_handle_t, const mx_pci_init_arg_t*, uint32_t) {
+mx_status_t sys_pci_init(mx_handle_t, user_ptr<<const>mx_pci_init_arg_t>, uint32_t) {
     shutdown_early_init_console();
     return ERR_NOT_SUPPORTED;
 }
@@ -579,7 +581,7 @@ mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_
     return ERR_NOT_SUPPORTED;
 }
 
-mx_handle_t sys_pci_get_nth_device(mx_handle_t, uint32_t, mx_pcie_get_nth_info_t*) {
+mx_handle_t sys_pci_get_nth_device(mx_handle_t, uint32_t, user_ptr<mx_pcie_get_nth_info_t>) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -599,7 +601,7 @@ mx_status_t sys_pci_reset_device(mx_handle_t) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t sys_pci_map_mmio(mx_handle_t, uint32_t, mx_cache_policy_t, mx_handle_t*) {
+mx_status_t sys_pci_map_mmio(mx_handle_t, uint32_t, mx_cache_policy_t, user_ptr<mx_handle_t>) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -607,19 +609,19 @@ mx_status_t sys_pci_io_write(mx_handle_t, uint32_t, uint32_t, uint32_t, uint32_t
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t sys_pci_io_read(mx_handle_t, uint32_t, uint32_t, uint32_t, uint32_t*) {
+mx_status_t sys_pci_io_read(mx_handle_t, uint32_t, uint32_t, uint32_t, user_ptr<uint32_t>) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t sys_pci_map_interrupt(mx_handle_t, int32_t, mx_handle_t*) {
+mx_status_t sys_pci_map_interrupt(mx_handle_t, int32_t, user_ptr<mx_handle_t>) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t sys_pci_map_config(mx_handle_t, mx_handle_t*) {
+mx_status_t sys_pci_map_config(mx_handle_t, user_ptr<mx_handle_t>) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t, uint32_t, uint32_t*) {
+mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t, uint32_t, user_ptr<uint32_t>) {
     return ERR_NOT_SUPPORTED;
 }
 

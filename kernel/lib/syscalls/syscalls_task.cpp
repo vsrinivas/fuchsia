@@ -48,8 +48,8 @@ constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
 
 mx_status_t sys_thread_create(mx_handle_t process_handle,
-                              const char* _name, uint32_t name_len,
-                              uint32_t options, mx_handle_t* _out) {
+                              user_ptr<const char> _name, uint32_t name_len,
+                              uint32_t options, user_ptr<mx_handle_t> _out) {
     LTRACEF("process handle %d, options %#x\n", process_handle, options);
 
     // currently, the only valid option value is 0
@@ -62,7 +62,8 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     // Silently truncate the given name.
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
-    status_t result = magenta_copy_user_string(_name, name_len, buf, sizeof(buf), &sp);
+    // TODO(andymutton): Change to use a user_ptr copy method.
+    status_t result = magenta_copy_user_string(_name.get(), name_len, buf, sizeof(buf), &sp);
     if (result != NO_ERROR)
         return result;
     LTRACEF("name %s\n", buf);
@@ -97,7 +98,7 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     if (!handle)
         return ERR_NO_MEMORY;
 
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
+    if (_out.copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
@@ -128,8 +129,8 @@ void sys_thread_exit() {
 }
 
 mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
-                                  void* _buffer,
-                                  uint32_t buffer_len, uint32_t* _actual) {
+                                  user_ptr<void> _buffer,
+                                  uint32_t buffer_len, user_ptr<uint32_t> _actual) {
     LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -155,21 +156,21 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     // Always set the actual size so the caller can provide larger buffers.
     // The value is only usable if the status is NO_ERROR or ERR_BUFFER_TOO_SMALL.
     if (status == NO_ERROR || status == ERR_BUFFER_TOO_SMALL) {
-        if (make_user_ptr(_actual).copy_to_user(buffer_len) != NO_ERROR)
+        if (_actual.copy_to_user(buffer_len) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
     if (status != NO_ERROR)
         return status;
 
-    if (make_user_ptr(_buffer).copy_array_to_user(bytes.get(), buffer_len) != NO_ERROR)
+    if (_buffer.copy_array_to_user(bytes.get(), buffer_len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;
 }
 
 mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
-                                   const void* _buffer, uint32_t buffer_len) {
+                                   user_ptr<const void> _buffer, uint32_t buffer_len) {
     LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -190,7 +191,7 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
         return ERR_NO_MEMORY;
     mxtl::Array<uint8_t> bytes(tmp_buf, buffer_len);
 
-    status = make_user_ptr(_buffer).copy_array_from_user(bytes.get(), buffer_len);
+    status = _buffer.copy_array_from_user(bytes.get(), buffer_len);
     if (status != NO_ERROR)
         return ERR_INVALID_ARGS;
 
@@ -200,9 +201,9 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
 }
 
 mx_status_t sys_process_create(mx_handle_t job_handle,
-                               const char* _name, uint32_t name_len,
-                               uint32_t options, mx_handle_t* _proc_handle,
-                               mx_handle_t* _vmar_handle) {
+                               user_ptr<const char> _name, uint32_t name_len,
+                               uint32_t options, user_ptr<mx_handle_t> _proc_handle,
+                               user_ptr<mx_handle_t> _vmar_handle) {
     LTRACEF("job handle %d, options %#x\n", job_handle, options);
 
     // currently, the only valid option value is 0
@@ -215,7 +216,8 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     // Silently truncate the given name.
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
-    status_t result = magenta_copy_user_string(_name, name_len, buf, sizeof(buf), &sp);
+    // TODO(andymutton): Change to use user_ptr copy methods
+    status_t result = magenta_copy_user_string(_name.get(), name_len, buf, sizeof(buf), &sp);
     if (result != NO_ERROR)
         return result;
     LTRACEF("name %s\n", buf);
@@ -259,10 +261,10 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     if (!vmar_h)
         return ERR_NO_MEMORY;
 
-    if (make_user_ptr(_proc_handle).copy_to_user(up->MapHandleToValue(proc_h)) != NO_ERROR)
+    if (_proc_handle.copy_to_user(up->MapHandleToValue(proc_h)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (make_user_ptr(_vmar_handle).copy_to_user(up->MapHandleToValue(vmar_h)) != NO_ERROR)
+    if (_vmar_handle.copy_to_user(up->MapHandleToValue(vmar_h)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(vmar_h));
@@ -329,8 +331,8 @@ void sys_process_exit(int retcode) {
 }
 
 mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
-                                    void* _buffer,
-                                    size_t len, size_t* _actual) {
+                                    user_ptr<void> _buffer,
+                                    size_t len, user_ptr<size_t> _actual) {
     if (!_buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugReadBlock)
@@ -363,18 +365,18 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
     uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
     size_t read = 0;
 
-    status_t st = vmo->ReadUser(make_user_ptr(_buffer), offset, len, &read);
+    status_t st = vmo->ReadUser(_buffer, offset, len, &read);
 
     if (st == NO_ERROR) {
-        if (make_user_ptr(_actual).copy_to_user(static_cast<size_t>(read)) != NO_ERROR)
+        if (_actual.copy_to_user(static_cast<size_t>(read)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     return st;
 }
 
 mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
-                                     const void* _buffer,
-                                     size_t len, size_t* _actual) {
+                                     user_ptr<const void> _buffer,
+                                     size_t len, user_ptr<size_t> _actual) {
     if (!_buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugWriteBlock)
@@ -406,10 +408,10 @@ mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
     uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
     size_t written = 0;
 
-    status_t st = vmo->WriteUser(make_user_ptr(_buffer), offset, len, &written);
+    status_t st = vmo->WriteUser(_buffer, offset, len, &written);
 
     if (st == NO_ERROR) {
-        if (make_user_ptr(_actual).copy_to_user(static_cast<size_t>(written)) != NO_ERROR)
+        if (_actual.copy_to_user(static_cast<size_t>(written)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     return st;
@@ -449,7 +451,7 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
     }
 }
 
-mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t options, mx_handle_t* _out) {
+mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t options, user_ptr<mx_handle_t> _out) {
     LTRACEF("parent: %d\n", parent_job);
 
     if (options != 0u)
@@ -469,7 +471,7 @@ mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t options, mx_handle_t
         return status;
 
     HandleOwner job_handle(MakeHandle(mxtl::move(job), rights));
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(job_handle)) != NO_ERROR)
+    if (_out.copy_to_user(up->MapHandleToValue(job_handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(job_handle));

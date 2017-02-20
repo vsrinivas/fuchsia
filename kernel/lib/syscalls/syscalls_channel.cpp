@@ -31,8 +31,8 @@
 constexpr size_t kChannelReadHandlesChunkCount = 16u;
 constexpr size_t kChannelWriteHandlesInlineCount = 8u;
 
-mx_status_t sys_channel_create(uint32_t options, mx_handle_t* _out0, mx_handle_t* _out1) {
-    LTRACEF("out_handles %p,%p\n", _out0, _out1);
+mx_status_t sys_channel_create(uint32_t options, user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
+    LTRACEF("out_handles %p,%p\n", _out0.get(), _out1.get());
 
     if (options != 0u)
         return ERR_INVALID_ARGS;
@@ -55,9 +55,9 @@ mx_status_t sys_channel_create(uint32_t options, mx_handle_t* _out0, mx_handle_t
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
+    if (_out0.copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
         return ERR_INVALID_ARGS;
-    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1)) != NO_ERROR)
+    if (_out1.copy_to_user(up->MapHandleToValue(h1)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -68,21 +68,20 @@ mx_status_t sys_channel_create(uint32_t options, mx_handle_t* _out0, mx_handle_t
 }
 
 void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
-                     mx_handle_t* _handles, uint32_t num_handles) {
+                     user_ptr<mx_handle_t> _handles, uint32_t num_handles) {
     Handle* const* handle_list = msg->handles();
     msg->set_owns_handles(false);
 
     // Copy the handle values out in chunks.
     mx_handle_t hvs[kChannelReadHandlesChunkCount];
     size_t num_copied = 0;
-    user_ptr<mx_handle_t> handles(_handles);
 
     do {
         size_t this_chunk_size = mxtl::min(num_handles - num_copied,
                                            kChannelReadHandlesChunkCount);
         for (size_t i = 0; i < this_chunk_size; i++)
             hvs[i] = up->MapHandleToValue(handle_list[num_copied + i]);
-        handles.element_offset(num_copied).copy_array_to_user(hvs, this_chunk_size);
+        _handles.element_offset(num_copied).copy_array_to_user(hvs, this_chunk_size);
         num_copied += this_chunk_size;
     } while (num_copied < num_handles);
 
@@ -95,12 +94,12 @@ void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
 }
 
 mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
-                             void* _bytes,
-                             uint32_t num_bytes, uint32_t* _num_bytes,
-                             mx_handle_t* _handles,
-                             uint32_t num_handles, uint32_t* _num_handles) {
+                             user_ptr<void> _bytes,
+                             uint32_t num_bytes, user_ptr<uint32_t> _num_bytes,
+                             user_ptr<mx_handle_t> _handles,
+                             uint32_t num_handles, user_ptr<uint32_t> _num_handles) {
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p",
-            handle_value, _bytes, _num_bytes, _handles, _num_handles);
+            handle_value, _bytes.get(), _num_bytes.get(), _handles.get(), _num_handles.get());
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -122,18 +121,18 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
     // On ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
     // unconsumed, unless |options| has MX_CHANNEL_READ_MAY_DISCARD set).
     if (_num_bytes) {
-        if (make_user_ptr(_num_bytes).copy_to_user(num_bytes) != NO_ERROR)
+        if (_num_bytes.copy_to_user(num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     if (_num_handles) {
-        if (make_user_ptr(_num_handles).copy_to_user(num_handles) != NO_ERROR)
+        if (_num_handles.copy_to_user(num_handles) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     if (result == ERR_BUFFER_TOO_SMALL)
         return result;
 
     if (num_bytes > 0u) {
-        if (make_user_ptr(_bytes).copy_array_to_user(msg->data(), num_bytes) != NO_ERROR)
+        if (_bytes.copy_array_to_user(msg->data(), num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -146,10 +145,10 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
 }
 
 static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx_handle_t* handles,
-                                   const mx_handle_t* _handles, uint32_t num_handles,
+                                   user_ptr<const mx_handle_t> _handles, uint32_t num_handles,
                                    Dispatcher* channel) {
 
-    if (make_user_ptr(_handles).copy_array_from_user(handles, num_handles) != NO_ERROR)
+    if (_handles.copy_array_from_user(handles, num_handles) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     {
@@ -195,10 +194,10 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
 }
 
 mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
-                              const void* _bytes, uint32_t num_bytes,
-                              const mx_handle_t* _handles, uint32_t num_handles) {
+                              user_ptr<const void> _bytes, uint32_t num_bytes,
+                              user_ptr<const mx_handle_t> _handles, uint32_t num_handles) {
     LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n",
-            handle_value, _bytes, num_bytes, _handles, num_handles, options);
+            handle_value, _bytes.get(), num_bytes, _handles.get(), num_handles, options);
 
     if (options)
         return ERR_INVALID_ARGS;
@@ -217,7 +216,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
         return result;
 
     if (num_bytes > 0u) {
-        if (make_user_ptr(_bytes).copy_array_from_user(msg->mutable_data(), num_bytes) != NO_ERROR)
+        if (_bytes.copy_array_from_user(msg->mutable_data(), num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -246,12 +245,12 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
 }
 
 mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
-                             mx_time_t timeout, const mx_channel_call_args_t* _args,
-                             uint32_t* actual_bytes, uint32_t* actual_handles,
-                             mx_status_t* read_status) {
+                             mx_time_t timeout, user_ptr<const mx_channel_call_args_t> _args,
+                             user_ptr<uint32_t> actual_bytes, user_ptr<uint32_t> actual_handles,
+                             user_ptr<mx_status_t> read_status) {
     mx_channel_call_args_t args;
 
-    if (make_user_ptr(_args).copy_from_user(&args) != NO_ERROR)
+    if (_args.copy_from_user(&args) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     if (options)
@@ -284,7 +283,7 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
         return ERR_NO_MEMORY;
     if (num_handles > 0u) {
         result = msg_put_handles(up, msg.get(), handles.get(),
-                                 args.wr_handles, num_handles,
+                                 make_user_ptr<const mx_handle_t>(args.wr_handles), num_handles,
                                  static_cast<Dispatcher*>(channel.get()));
         if (result)
             return result;
@@ -321,11 +320,11 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
         goto read_failed;
     }
 
-    if (make_user_ptr(actual_bytes).copy_to_user(num_bytes) != NO_ERROR) {
+    if (actual_bytes.copy_to_user(num_bytes) != NO_ERROR) {
         result = ERR_INVALID_ARGS;
         goto read_failed;
     }
-    if (make_user_ptr(actual_handles).copy_to_user(num_handles) != NO_ERROR) {
+    if (actual_handles.copy_to_user(num_handles) != NO_ERROR) {
         result = ERR_INVALID_ARGS;
         goto read_failed;
     }
@@ -338,12 +337,12 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
     }
 
     if (num_handles > 0u) {
-        msg_get_handles(up, reply.get(), args.rd_handles, num_handles);
+        msg_get_handles(up, reply.get(), make_user_ptr(args.rd_handles), num_handles);
     }
     return NO_ERROR;
 
 read_failed:
     if (read_status)
-        make_user_ptr(read_status).copy_to_user(result);
+        read_status.copy_to_user(result);
     return ERR_CALL_FAILED;
 }

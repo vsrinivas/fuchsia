@@ -34,7 +34,7 @@ constexpr size_t kWaitManyInlineCount = 8u;
 mx_status_t sys_object_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t timeout,
-                                mx_signals_t* _observed) {
+                                user_ptr<mx_signals_t> _observed) {
     LTRACEF("handle %d\n", handle_value);
 
     WaitEvent event;
@@ -76,7 +76,7 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
 #endif
 
     if (_observed) {
-        if (make_user_ptr(_observed).copy_to_user(signals_state) != NO_ERROR)
+        if (_observed.copy_to_user(signals_state) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -86,7 +86,7 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
     return result;
 }
 
-mx_status_t sys_object_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time_t timeout) {
+mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count, mx_time_t timeout) {
     LTRACEF("count %u\n", count);
 
     if (!count) {
@@ -105,7 +105,7 @@ mx_status_t sys_object_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time
     mxtl::InlineArray<mx_wait_item_t, kWaitManyInlineCount> items(&ac, count);
     if (!ac.check())
         return ERR_NO_MEMORY;
-    if (make_user_ptr(_items).copy_array_from_user(items.get(), count) != NO_ERROR)
+    if (_items.copy_array_from_user(items.get(), count) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     mxtl::InlineArray<WaitStateObserver, kWaitManyInlineCount> wait_state_observers(&ac, count);
@@ -155,7 +155,7 @@ mx_status_t sys_object_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time
         combined |= (items[ix].pending = wait_state_observers[ix].End());
     }
 
-    if (make_user_ptr(_items).copy_array_to_user(items.get(), count) != NO_ERROR)
+    if (_items.copy_array_to_user(items.get(), count) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     if (combined & MX_SIGNAL_HANDLE_CLOSED)

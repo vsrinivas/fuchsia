@@ -107,7 +107,7 @@ mx_status_t sys_interrupt_signal(mx_handle_t handle_value) {
 
 mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t len,
                                    mx_cache_policy_t cache_policy,
-                                   uintptr_t* _out_vaddr) {
+                                   user_ptr<uintptr_t> _out_vaddr) {
 
     LTRACEF("addr %#" PRIxPTR " len %#x\n", paddr, len);
 
@@ -164,7 +164,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
         return status;
     }
 
-    if (make_user_ptr(_out_vaddr).copy_to_user(
+    if (_out_vaddr.copy_to_user(
         reinterpret_cast<uintptr_t>(mapping->base())) != NO_ERROR) {
         mapping->Destroy();
         return ERR_INVALID_ARGS;
@@ -175,7 +175,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
 
 mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
                                       uint32_t alignment_log2,
-                                      mx_handle_t* _out) {
+                                      user_ptr<mx_handle_t> _out) {
     LTRACEF("size 0x%zu\n", size);
 
     if (size == 0) return ERR_INVALID_ARGS;
@@ -223,19 +223,20 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
+    if (_out.copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
     return NO_ERROR;
 }
 
-mx_status_t sys_bootloader_fb_get_info(uint32_t* format, uint32_t* width, uint32_t* height, uint32_t* stride) {
+mx_status_t sys_bootloader_fb_get_info(user_ptr<uint32_t> format, user_ptr<uint32_t> width, user_ptr<uint32_t> height, user_ptr<uint32_t> stride) {
 #if ARCH_X86
-    if (!bootloader.fb_base || copy_to_user_u32_unsafe(format, bootloader.fb_format) ||
-            copy_to_user_u32_unsafe(width, bootloader.fb_width) ||
-            copy_to_user_u32_unsafe(height, bootloader.fb_height) ||
-            copy_to_user_u32_unsafe(stride, bootloader.fb_stride)) {
+    if (!bootloader.fb_base ||
+            format.copy_to_user(bootloader.fb_format) ||
+            width.copy_to_user(bootloader.fb_width) ||
+            height.copy_to_user(bootloader.fb_height) ||
+            stride.copy_to_user(bootloader.fb_stride)) {
         return ERR_INVALID_ARGS;
     } else {
         return NO_ERROR;
@@ -245,14 +246,14 @@ mx_status_t sys_bootloader_fb_get_info(uint32_t* format, uint32_t* width, uint32
 #endif
 }
 
-mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, void* vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
+mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, user_ptr<void> vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
     // TODO: finer grained validation
     mx_status_t status;
     if ((status = validate_resource_handle(hrsrc)) < 0) {
         return status;
     }
 
-    intptr_t paddr = vaddr_to_paddr(vaddr);
+    intptr_t paddr = vaddr_to_paddr(vaddr.get());
     udisplay_set_framebuffer(paddr, len);
 
     struct display_info di;
@@ -303,8 +304,8 @@ mx_status_t sys_set_framebuffer_vmo(mx_handle_t hrsrc, mx_handle_t vmo_handle, u
  * @param out_len Mapped size of the I/O range.
  */
 mx_status_t sys_io_mapping_get_info(mx_handle_t handle,
-                                    uintptr_t* _out_vaddr,
-                                    uint64_t* _out_size) {
+                                    user_ptr<uintptr_t> _out_vaddr,
+                                    user_ptr<uint64_t> _out_size) {
     LTRACEF("handle %d\n", handle);
 
     if (!_out_vaddr || !_out_size)
@@ -326,11 +327,11 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle,
     uintptr_t vaddr = reinterpret_cast<uintptr_t>(io_mapping->vaddr());
     uint64_t  size  = io_mapping->size();
 
-    status = make_user_ptr(_out_vaddr).copy_to_user(vaddr);
+    status = _out_vaddr.copy_to_user(vaddr);
     if (status != NO_ERROR)
         return status;
 
-    return make_user_ptr(_out_size).copy_to_user(size);
+    return _out_size.copy_to_user(size);
 }
 
 #if ARCH_X86

@@ -245,18 +245,6 @@ struct ArraySpec {
     }
 };
 
-const std::map<string, string> c_overrides = {
-    {"", "void"},
-    {"any[]IN", "const void*"},
-    {"any[]OUT", "void*"},
-    {"any[]INOUT", "void*"}
-};
-
-const string override_type(const string& type_name) {
-    auto ft = c_overrides.find(type_name);
-    return (ft == c_overrides.end()) ? type_name : ft->second;
-}
-
 struct TypeSpec {
     string name;
     string type;
@@ -276,40 +264,28 @@ struct TypeSpec {
         return type + (arr_spec ? arr_spec->to_string() : string());
     }
 
-    string as_declaration() const {
-        auto overrided = override_type(to_string());
-        string output_type;
-
-        if (overrided != to_string()) {
-            return overrided + " " + name;
-        } else if (!arr_spec) {
+    string as_cpp_declaration(bool is_wrapped) const {
+        if (!arr_spec) {
             return type + " " + name;
-        } else {
-            string ret;
-            if (arr_spec->kind == ArraySpec::IN)
-                ret += "const ";
-
-            ret += type + " " + name;
-            ret += "[";
-            if (arr_spec->count)
-                ret += std::to_string(arr_spec->count);
-            ret += "]";
-            return ret;
         }
+
+        string modifier = arr_spec->kind == ArraySpec::IN ? "const " : "";
+        string ptr_type = type == "any" ? "void" : type;
+
+        if (is_wrapped) {
+            return "user_ptr<" + modifier + ptr_type + "> " + name;
+        }
+        return modifier + ptr_type + "* " + name;
     }
 
-    string as_cast(string arg) const {
-        auto overrided = override_type(to_string());
-        string output_type = overrided == to_string() ? type : overrided;
-        bool is_ptr = output_type.find("*") != std::string::npos || arr_spec;
-
-        if (is_ptr && output_type == overrided) {
-            return "reinterpret_cast<" + output_type + ">(" + arg + ")";
-        } else if (is_ptr) {
-            string modifier = arr_spec && arr_spec->kind == ArraySpec::IN ? "const " : "";
-            return "reinterpret_cast<" + modifier + output_type + "*>(" + arg + ")";
+    string as_cpp_cast(string arg) const {
+        if (!arr_spec) {
+            return "static_cast<" + type + ">(" + arg + ")";
         }
-        return "static_cast<" + overrided + ">(" + arg + ")";
+
+        string modifier = arr_spec->kind == ArraySpec::IN ? "const " : "";
+        string cast_type = type == "any" ? "void*" : type + "*";
+        return "reinterpret_cast<" + modifier + cast_type + ">(" + arg + ")";
     }
 };
 
@@ -335,6 +311,10 @@ struct Syscall {
 
     bool is_noreturn() const {
         return has_attribute("noreturn");
+    }
+
+    bool is_no_wrap() const {
+        return has_attribute("no_wrap");
     }
 
     bool validate() const {
@@ -409,13 +389,21 @@ struct Syscall {
 
     string return_type() const {
         if (ret_spec.empty()) {
-            return override_type(string());
+            return "void";
         }
-        return override_type(ret_spec[0].to_string());
+        return ret_spec[0].to_string();
     }
 
     bool is_void_return() const {
         return return_type() == "void";
+    }
+
+    bool will_wrap(string type) const {
+        return !is_no_wrap() && type.find("reinterpret_cast") != string::npos;
+    }
+
+    string maybe_wrap(string type) const {
+        return will_wrap(type) ? "make_user_ptr(" + type + ")" : type;
     }
 };
 
@@ -565,7 +553,7 @@ const string add_attribute(std::map<string, string> attributes,
 
 bool generate_legacy_header(std::ofstream& os, const Syscall& sc,
     string function_prefix, std::vector<string> name_prefixes, string no_args_type,
-    std::map<string, string> attributes) {
+    bool allow_pointer_wrapping, std::map<string, string> attributes) {
     constexpr uint32_t indent_spaces = 4u;
 
     for (auto name_prefix : name_prefixes) {
@@ -581,7 +569,8 @@ bool generate_legacy_header(std::ofstream& os, const Syscall& sc,
             if (!os.good())
                 return false;
             os << "\n" << string(indent_spaces, ' ')
-               << arg.as_declaration() << ",";
+               << arg.as_cpp_declaration(
+                        allow_pointer_wrapping && !sc.is_no_wrap() && !sc.is_vdso()) << ",";
         }
 
         if (!sc.arg_spec.empty()) {
@@ -614,7 +603,7 @@ bool generate_kernel_header(std::ofstream& os, const Syscall& sc,
     string name_prefix, std::map<string, string> attributes) {
     return sc.is_vdso()
         ? true
-        : generate_legacy_header(os, sc, "", {name_prefix}, "", attributes);
+        : generate_legacy_header(os, sc, "", {name_prefix}, "", true, attributes);
 }
 
 string invocation(std::ofstream& os, const string out_var, const string out_type,
@@ -646,12 +635,14 @@ bool generate_kernel_code(std::ofstream& os, const Syscall& sc,
     if (sc.is_vdso())
         return true;
 
-    constexpr uint32_t indent_spaces = 8u;
+    string code_sp = string(8u, ' ');
+    string block_sp = string(4u, ' ');
+    string arg_sp = string(16u, ' ');
 
     auto syscall_name = syscall_prefix + sc.name;
 
     // case 0:
-    os << "    case " << sc.index << ": ";
+    os << "    case " << sc.index << ": {\n" << code_sp;
 
     // ret = static_cast<uint64_t>(syscall_whatevs(      )) -closer
     string close_invocation = invocation(os, return_var, return_type, syscall_name, sc);
@@ -660,9 +651,8 @@ bool generate_kernel_code(std::ofstream& os, const Syscall& sc,
     for (int i = 0; i < sc.arg_spec.size(); ++i) {
         if (!os.good())
             return false;
-        os << "\n" << string(indent_spaces, ' ')
-           << sc.arg_spec[i].as_cast(arg_prefix + std::to_string(i + 1));
-
+        os << "\n" << arg_sp
+           << sc.maybe_wrap(sc.arg_spec[i].as_cpp_cast(arg_prefix + std::to_string(i + 1)));
         if (i < sc.arg_spec.size() - 1)
             os << ",";
     }
@@ -670,9 +660,9 @@ bool generate_kernel_code(std::ofstream& os, const Syscall& sc,
     os << close_invocation;
 
     if (sc.is_noreturn()) {
-        os << "; // __noreturn__\n";
+        os << "; // __noreturn__\n" << block_sp << "}\n";
     } else {
-        os << ";\n" << string(indent_spaces, ' ') << "break;\n";
+        os << ";\n" << code_sp << "break;\n" << block_sp << "}\n";
     }
 
     return os.good();
@@ -733,6 +723,7 @@ using gen = std::function<bool(std::ofstream& os, const Syscall& sc)>;
 #define gen1(name, arg1) std::bind(name, std::placeholders::_1, std::placeholders::_2, arg1)
 #define gen2(name, arg1, arg2) std::bind(name, std::placeholders::_1, std::placeholders::_2, arg1, arg2)
 #define gen4(name, arg1, arg2, arg3, arg4) std::bind(name, std::placeholders::_1, std::placeholders::_2, arg1, arg2, arg3, arg4)
+#define gen5(name, arg1, arg2, arg3, arg4, arg5) std::bind(name, std::placeholders::_1, std::placeholders::_2, arg1, arg2, arg3, arg4, arg5)
 
 const std::map<string, string> type_to_default_suffix = {
   {"user-header",   ".user.h"} ,
@@ -749,19 +740,21 @@ const std::map<string, gen> type_to_generator = {
     {
     // The user header, pure C.
         "user-header",
-        gen4(generate_legacy_header,
+        gen5(generate_legacy_header,
             "extern ",                              // function prefix
             std::vector<string>({"mx_", "_mx_"}),   // function name prefixes
             "void",                                 // no-args special type
+            false,
             user_attrs)
     },
     // The vDSO-internal header, pure C.  (VDsoHeaderC)
     {
         "vdso-header",
-        gen4(generate_legacy_header,
+        gen5(generate_legacy_header,
             "__attribute__((visibility(\"hidden\"))) extern ",  // function prefix
             std::vector<string>({"VDSO_mx_"}),                  // function name prefixes
             "void",                                             // no args special type
+            false,
             user_attrs)
     },
     // The kernel header, C++.
@@ -807,9 +800,9 @@ const std::map<string, gen> type_to_generator = {
     },
 };
 
-class SygenGenerator {
+class SysgenGenerator {
 public:
-    SygenGenerator(bool verbose) : verbose_(verbose) {}
+    SysgenGenerator(bool verbose) : verbose_(verbose) {}
 
     bool AddSyscall(Syscall& syscall) {
         if (!syscall.validate())
@@ -840,9 +833,9 @@ private:
         }
 
         if (!std::all_of(calls_.begin(), calls_.end(),
-                         [&generator, &ofile](const Syscall& sc) {
-                             return generator(ofile, sc);
-                         })) {
+                        [&generator, &ofile](const Syscall& sc) {
+                            return generator(ofile, sc);
+                        })) {
             print_error("generation failed", output_file);
             return false;
         }
@@ -861,11 +854,11 @@ private:
     const bool verbose_;
 };
 
-bool process_comment(SygenGenerator* parser, TokenStream& ts) {
+bool process_comment(SysgenGenerator* parser, TokenStream& ts) {
     return true;
 }
 
-bool process_syscall(SygenGenerator* parser, TokenStream& ts) {
+bool process_syscall(SysgenGenerator* parser, TokenStream& ts) {
     auto name = ts.next();
 
     if (!vet_identifier(name, ts.filectx()))
@@ -903,7 +896,7 @@ bool process_syscall(SygenGenerator* parser, TokenStream& ts) {
     return parser->AddSyscall(syscall);
 }
 
-constexpr Dispatch<SygenGenerator> sysgen_table[] = {
+constexpr Dispatch<SysgenGenerator> sysgen_table[] = {
     // comments start with '#' and terminate at the end of line.
     { "#", nullptr, process_comment },
     // sycalls start with 'syscall' and terminate with ';'.
@@ -944,12 +937,15 @@ int main(int argc, char* argv[]) {
             argc--;
             argv++;
         } else if (command == "-h") {
-            fprintf(stderr, "usage: sysgen [-a] [-v] [-o output_prefix] [-<type> filename] file1 ... fileN\n");
+            fprintf(stderr, "usage: sysgen [-a] [-v] [-o output_prefix] "
+                            "[-<type> filename] file1 ... fileN\n");
             const string delimiter = ", ";
-            const string valid_types = std::accumulate(type_to_default_suffix.begin(), type_to_default_suffix.end(), std::string(),
-            [delimiter](const std::string& s, const std::pair<const std::string, std::string>& p) {
-                return s + (s.empty() ? std::string() : delimiter) + p.first;
-            });
+            const string valid_types = std::accumulate(type_to_default_suffix.begin(),
+                type_to_default_suffix.end(), std::string(),
+                [delimiter](const std::string& s,
+                            const std::pair<const std::string, std::string>& p) {
+                    return s + (s.empty() ? std::string() : delimiter) + p.first;
+                });
             fprintf(stderr, "\n       Valid <type>s: %s\n", valid_types.c_str());
             return 0;
         } else {
@@ -973,7 +969,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    SygenGenerator generator(verbose);
+    SysgenGenerator generator(verbose);
 
     for (int ix = 0; ix < argc; ix++) {
         if (!run_parser(&generator, sysgen_table, argv[ix], verbose))

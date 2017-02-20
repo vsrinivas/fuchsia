@@ -30,7 +30,7 @@
 
 mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
                     size_t offset, size_t size, uint32_t map_flags,
-                    mx_handle_t* _child_vmar, uintptr_t* _child_addr) {
+                    user_ptr<mx_handle_t> _child_vmar, user_ptr<uintptr_t> _child_addr) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -63,7 +63,7 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
         new_vmar->Destroy();
     });
 
-    if (make_user_ptr(_child_addr).copy_to_user(new_vmar->vmar()->base()) != NO_ERROR)
+    if (_child_addr.copy_to_user(new_vmar->vmar()->base()) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     // Create a handle and attach the dispatcher to it
@@ -71,7 +71,7 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
     if (!handle)
         return ERR_NO_MEMORY;
 
-    if (make_user_ptr(_child_vmar).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
+    if (_child_vmar.copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
@@ -93,7 +93,7 @@ mx_status_t sys_vmar_destroy(mx_handle_t vmar_handle) {
 
 mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
                     mx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags,
-                    uintptr_t* _mapped_addr) {
+                    user_ptr<uintptr_t> _mapped_addr) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the VMAR dispatcher from handle
@@ -157,7 +157,7 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
         vm_mapping->Destroy();
     });
 
-    if (make_user_ptr(_mapped_addr).copy_to_user(vm_mapping->base()) != NO_ERROR)
+    if (_mapped_addr.copy_to_user(vm_mapping->base()) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     cleanup_handler.cancel();

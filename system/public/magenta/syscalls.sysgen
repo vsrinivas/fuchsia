@@ -261,7 +261,8 @@ syscall futex_requeue
 
 # Wait sets
 
-syscall waitset_create (options: uint32_t, out: mx_handle_t[1] OUT)
+syscall waitset_create
+    (options: uint32_t, out: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
 syscall waitset_add
@@ -420,7 +421,7 @@ syscall ktrace_write
     (handle: mx_handle_t, id: uint32_t, arg0: uint32_t, arg1: uint32_t)
     returns (mx_status_t);
 
-syscall mtrace_control
+syscall mtrace_control no_wrap
     (handle: mx_handle_t,
         kind: uint32_t, action: uint32_t, options: uint32_t,
         ptr: any[size] INOUT, size: uint32_t)
@@ -434,15 +435,15 @@ syscall debug_transfer_handle
 
 # Legacy LK debug syscalls
 
-syscall debug_read
+syscall debug_read no_wrap
     (handle: mx_handle_t, buffer: any[length] OUT, length: uint32_t)
     returns (mx_status_t);
 
-syscall debug_write
+syscall debug_write no_wrap
     (buffer: any[length] IN, length: uint32_t)
     returns (mx_status_t);
 
-syscall debug_send_command
+syscall debug_send_command no_wrap
     (resource_handle: mx_handle_t, buffer: any[length] IN, length: uint32_t)
     returns (mx_status_t);
 

@@ -119,23 +119,24 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
     return dest_hv;
 }
 
-mx_status_t sys_ktrace_read(mx_handle_t handle, void* _data,
+mx_status_t sys_ktrace_read(mx_handle_t handle, user_ptr<void> _data,
                             uint32_t offset, uint32_t len,
-                            uint32_t* _actual) {
+                            user_ptr<uint32_t> _actual) {
     // TODO: finer grained validation
     mx_status_t status;
     if ((status = validate_resource_handle(handle)) < 0) {
         return status;
     }
 
-    int result = ktrace_read_user(_data, offset, len);
+    int result = ktrace_read_user(_data.get(), offset, len);
     if (result < 0)
         return result;
 
-    return make_user_ptr(_actual).copy_to_user(static_cast<uint32_t>(result));
+    return _actual.copy_to_user(static_cast<uint32_t>(result));
 }
 
-mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t options, void* _ptr) {
+mx_status_t sys_ktrace_control(
+        mx_handle_t handle, uint32_t action,uint32_t options, user_ptr<void> _ptr) {
     // TODO: finer grained validation
     mx_status_t status;
     if ((status = validate_resource_handle(handle)) < 0) {
@@ -145,7 +146,7 @@ mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t opt
     switch (action) {
     case KTRACE_ACTION_NEW_PROBE: {
         char name[MX_MAX_NAME_LEN];
-        if (make_user_ptr(_ptr).copy_array_from_user(name, sizeof(name) - 1) != NO_ERROR)
+        if (_ptr.copy_array_from_user(name, sizeof(name) - 1) != NO_ERROR)
             return ERR_INVALID_ARGS;
         name[sizeof(name) - 1] = 0;
         return ktrace_control(action, options, name);

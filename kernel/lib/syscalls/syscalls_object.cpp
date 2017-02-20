@@ -67,6 +67,7 @@ public:
 
 private:
     static constexpr uint32_t kError = 4;
+    // TODO(andymutton): Change to use user_ptr
     mx_koid_t* ptr_;
     size_t count_;
     size_t avail_;
@@ -82,11 +83,10 @@ private:
 // This allows for mx_object_get_info(handle, topic, &info, sizeof(info), NULL, NULL)
 
 mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
-                                void* _buffer, size_t buffer_size,
-                                size_t* _actual, size_t* _avail) {
+                                user_ptr<void> _buffer, size_t buffer_size,
+                                user_ptr<size_t> _actual, user_ptr<size_t> _avail) {
     LTRACEF("handle %d topic %u\n", handle, topic);
 
-    user_ptr<void> buffer(_buffer);
     auto up = ProcessDispatcher::GetCurrent();
 
     switch (topic) {
@@ -117,12 +117,12 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                     .props = waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE,
                 };
 
-                if (buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
+                if (_buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
                     return ERR_INVALID_ARGS;
             }
-            if (_actual && (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR))
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            if (_avail && (make_user_ptr(_avail).copy_to_user(avail) != NO_ERROR))
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             if (actual == 0)
                 return ERR_BUFFER_TOO_SMALL;
@@ -148,12 +148,12 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 if (err != NO_ERROR)
                     return err;
 
-                if (buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
+                if (_buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
                     return ERR_INVALID_ARGS;
             }
-            if (_actual && (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR))
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            if (_avail && (make_user_ptr(_avail).copy_to_user(avail) != NO_ERROR))
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             if (actual == 0)
                 return ERR_BUFFER_TOO_SMALL;
@@ -181,11 +181,11 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             size_t num_space_for = buffer_size / sizeof(mx_koid_t);
             size_t num_to_copy = MIN(num_threads, num_space_for);
 
-            if (buffer.copy_array_to_user(threads.get(), sizeof(mx_koid_t) * num_to_copy) != NO_ERROR)
+            if (_buffer.copy_array_to_user(threads.get(), sizeof(mx_koid_t) * num_to_copy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
-            if (_actual && (make_user_ptr(_actual).copy_to_user(num_to_copy) != NO_ERROR))
+            if (_actual && (_actual.copy_to_user(num_to_copy) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            if (_avail && (make_user_ptr(_avail).copy_to_user(num_threads) != NO_ERROR))
+            if (_avail && (_avail.copy_to_user(num_threads) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -197,7 +197,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 return error;
 
             size_t max = buffer_size / sizeof(mx_koid_t);
-            SimpleJobEnumerator sje(static_cast<mx_koid_t*>(_buffer), max,
+            SimpleJobEnumerator sje(static_cast<mx_koid_t*>(_buffer.get()), max,
                                     (topic == MX_INFO_JOB_CHILDREN));
 
             job->EnumerateChildren(&sje);
@@ -205,9 +205,9 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
 
             if (sje.get_error())
                 return ERR_INVALID_ARGS;
-            if (_actual && (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR))
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            if (_avail && (make_user_ptr(_avail).copy_to_user(sje.get_avail()) != NO_ERROR))
+            if (_avail && (_avail.copy_to_user(sje.get_avail()) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -218,7 +218,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (status < 0)
                 return status;
 
-            auto records = buffer.reinterpret<mx_rrec_t>();
+            auto records = _buffer.reinterpret<mx_rrec_t>();
             size_t count = buffer_size / sizeof(mx_rrec_t);
             size_t avail = 0;
             if (topic == MX_INFO_RESOURCE_CHILDREN) {
@@ -227,9 +227,9 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 status = resource->GetRecords(records, count, &count, &avail);
             }
 
-            if (_actual && (make_user_ptr(_actual).copy_to_user(count) != NO_ERROR))
+            if (_actual && (_actual.copy_to_user(count) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            if (_avail && (make_user_ptr(_avail).copy_to_user(avail) != NO_ERROR))
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             return status;
         }
@@ -253,12 +253,12 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 if (err != NO_ERROR)
                     return err;
 
-                if (buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
+                if (_buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
                     return ERR_INVALID_ARGS;
             }
-            if (_actual && (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR))
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            if (_avail && (make_user_ptr(_avail).copy_to_user(avail) != NO_ERROR))
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             if (actual == 0)
                 return ERR_BUFFER_TOO_SMALL;
@@ -284,12 +284,12 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 if (err != NO_ERROR)
                     return err;
 
-                if (buffer.copy_array_to_user(&report, sizeof(report)) != NO_ERROR)
+                if (_buffer.copy_array_to_user(&report, sizeof(report)) != NO_ERROR)
                     return ERR_INVALID_ARGS;
             }
-            if (_actual && (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR))
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            if (_avail && (make_user_ptr(_avail).copy_to_user(avail) != NO_ERROR))
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             if (actual == 0)
                 return ERR_BUFFER_TOO_SMALL;
@@ -310,14 +310,14 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                     .base = real_vmar->base(),
                     .len = real_vmar->size(),
                 };
-                if (buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
+                if (_buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
                     return ERR_INVALID_ARGS;
 
             }
 
-            if (_actual && (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR))
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            if (_avail && (make_user_ptr(_avail).copy_to_user(avail) != NO_ERROR))
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             if (actual == 0)
                 return ERR_BUFFER_TOO_SMALL;
@@ -329,7 +329,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
 }
 
 mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
-                                    void* _value, size_t size) {
+                                    user_ptr<void> _value, size_t size) {
     if (!_value)
         return ERR_INVALID_ARGS;
 
@@ -347,7 +347,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             if (!process)
                 return ERR_WRONG_TYPE;
             uint32_t value = process->get_bad_handle_policy();
-            if (make_user_ptr(_value).reinterpret<uint32_t>().copy_to_user(value) != NO_ERROR)
+            if (_value.reinterpret<uint32_t>().copy_to_user(value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -358,7 +358,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             if (!thread)
                 return ERR_WRONG_TYPE;
             uint32_t value = thread->thread()->get_num_state_kinds();
-            if (make_user_ptr(_value).reinterpret<uint32_t>().copy_to_user(value) != NO_ERROR)
+            if (_value.reinterpret<uint32_t>().copy_to_user(value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -367,7 +367,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_BUFFER_TOO_SMALL;
             char name[MX_MAX_NAME_LEN];
             dispatcher->get_name(name);
-            if (make_user_ptr(_value).copy_array_to_user(name, MX_MAX_NAME_LEN) != NO_ERROR)
+            if (_value.copy_array_to_user(name, MX_MAX_NAME_LEN) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -378,7 +378,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             if (!process)
                 return ERR_WRONG_TYPE;
             uintptr_t value = process->get_debug_addr();
-            if (make_user_ptr(_value).reinterpret<uintptr_t>().copy_to_user(value) != NO_ERROR)
+            if (_value.reinterpret<uintptr_t>().copy_to_user(value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -399,7 +399,7 @@ static mx_status_t is_current_thread(mxtl::RefPtr<Dispatcher>* dispatcher) {
 }
 
 mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
-                                    const void* _value, size_t size) {
+                                    user_ptr<const void> _value, size_t size) {
     if (!_value)
         return ERR_INVALID_ARGS;
 
@@ -418,7 +418,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (!process)
                 return up->BadHandle(handle_value, ERR_WRONG_TYPE);
             uint32_t value = 0;
-            if (make_user_ptr(_value).reinterpret<const uint32_t>().copy_from_user(&value) != NO_ERROR)
+            if (_value.reinterpret<const uint32_t>().copy_from_user(&value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return process->set_bad_handle_policy(value);
         }
@@ -426,7 +426,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (size >= MX_MAX_NAME_LEN)
                 size = MX_MAX_NAME_LEN - 1;
             char name[MX_MAX_NAME_LEN - 1];
-            if (make_user_ptr(_value).copy_array_from_user(name, size) != NO_ERROR)
+            if (_value.copy_array_from_user(name, size) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return dispatcher->set_name(name, size);
         }
@@ -438,7 +438,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (status != NO_ERROR)
                 return status;
             uintptr_t addr;
-            if (make_user_ptr(_value).reinterpret<const uintptr_t>().copy_from_user(&addr) != NO_ERROR)
+            if (_value.reinterpret<const uintptr_t>().copy_from_user(&addr) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             if (!x86_is_vaddr_canonical(addr))
                 return ERR_INVALID_ARGS;
@@ -453,7 +453,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (!process)
                 return up->BadHandle(handle_value, ERR_WRONG_TYPE);
             uintptr_t value = 0;
-            if (make_user_ptr(_value).reinterpret<const uintptr_t>().copy_from_user(&value) != NO_ERROR)
+            if (_value.reinterpret<const uintptr_t>().copy_from_user(&value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return process->set_debug_addr(value);
         }
@@ -494,7 +494,7 @@ mx_status_t sys_object_signal_peer(mx_handle_t handle_value, uint32_t clear_mask
 // MX_HANDLE_INVALID is currently treated as a "magic" handle used to
 // object a process from "the system".
 mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t rights,
-                                 mx_handle_t* _out) {
+                                 user_ptr<mx_handle_t> _out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     if (handle == MX_HANDLE_INVALID) {
@@ -518,7 +518,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (!process_h)
             return ERR_NO_MEMORY;
 
-        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(process_h)))
+        if (_out.copy_to_user(up->MapHandleToValue(process_h)))
             return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(process_h));
         return NO_ERROR;
@@ -551,7 +551,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (!thread_h)
             return ERR_NO_MEMORY;
 
-        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(thread_h)) != NO_ERROR)
+        if (_out.copy_to_user(up->MapHandleToValue(thread_h)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(thread_h));
         return NO_ERROR;
@@ -565,7 +565,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
             if (!child_h)
                 return ERR_NO_MEMORY;
 
-            if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
+            if (_out.copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             up->AddHandle(mxtl::move(child_h));
             return NO_ERROR;
@@ -576,7 +576,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
             if (!child_h)
                 return ERR_NO_MEMORY;
 
-            if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
+            if (_out.copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             up->AddHandle(mxtl::move(child_h));
             return NO_ERROR;
@@ -596,7 +596,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (!child_h)
             return ERR_NO_MEMORY;
 
-        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
+        if (_out.copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(child_h));
         return NO_ERROR;

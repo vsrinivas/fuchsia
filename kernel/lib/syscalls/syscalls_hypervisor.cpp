@@ -15,7 +15,7 @@
 
 #include "syscalls_priv.h"
 
-mx_status_t sys_hypervisor_create(mx_handle_t opt_handle, uint32_t options, mx_handle_t* out) {
+mx_status_t sys_hypervisor_create(mx_handle_t opt_handle, uint32_t options, user_ptr<mx_handle_t> out) {
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_status_t status = HypervisorDispatcher::Create(&dispatcher, &rights);
@@ -27,7 +27,7 @@ mx_status_t sys_hypervisor_create(mx_handle_t opt_handle, uint32_t options, mx_h
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (make_user_ptr(out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
+    if (out.copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
@@ -76,15 +76,14 @@ static mx_status_t guest_start(mx_handle_t handle) {
     return guest->Start();
 }
 
-mx_status_t sys_hypervisor_op(mx_handle_t handle, uint32_t opcode, const void* args,
-                              uint32_t args_len, void* result, uint32_t result_len) {
+ mx_status_t sys_hypervisor_op(mx_handle_t handle, uint32_t opcode, user_ptr<const void> args,
+                               uint32_t args_len, user_ptr<void> result, uint32_t result_len) {
     switch (opcode) {
     case MX_HYPERVISOR_OP_GUEST_CREATE: {
         mx_handle_t guest_phys_mem;
         if (args_len != sizeof(guest_phys_mem))
             return ERR_INVALID_ARGS;
-        if (make_user_ptr(args).copy_array_from_user(&guest_phys_mem, sizeof(guest_phys_mem)) !=
-            NO_ERROR)
+        if (args.copy_array_from_user(&guest_phys_mem, sizeof(guest_phys_mem)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         mx_handle_t out;
         if (result_len != sizeof(out))
@@ -92,7 +91,7 @@ mx_status_t sys_hypervisor_op(mx_handle_t handle, uint32_t opcode, const void* a
         mx_status_t status = guest_create(handle, guest_phys_mem, &out);
         if (status != NO_ERROR)
             return status;
-        if (make_user_ptr(result).copy_array_to_user(&out, sizeof(out)) != NO_ERROR)
+        if (result.copy_array_to_user(&out, sizeof(out)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         return NO_ERROR;
     }

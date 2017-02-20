@@ -23,7 +23,7 @@
 
 #define LOCAL_TRACE 0
 
-mx_status_t sys_port_create(uint32_t options, mx_handle_t* _out) {
+mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     LTRACEF("options %u\n", options);
 
     // Currently, the only allowed option is to switch on PortsV2.
@@ -50,7 +50,7 @@ mx_status_t sys_port_create(uint32_t options, mx_handle_t* _out) {
 
     mx_handle_t hv = up->MapHandleToValue(handle);
 
-    if (make_user_ptr(_out).copy_to_user(hv) != NO_ERROR)
+    if (_out.copy_to_user(hv) != NO_ERROR)
         return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
@@ -58,7 +58,7 @@ mx_status_t sys_port_create(uint32_t options, mx_handle_t* _out) {
     return NO_ERROR;
 }
 
-static mx_status_t sys_port_queue2(mx_handle_t handle, const void* _packet) {
+static mx_status_t sys_port_queue2(mx_handle_t handle, user_ptr<const void> _packet) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcherV2> port;
@@ -67,13 +67,13 @@ static mx_status_t sys_port_queue2(mx_handle_t handle, const void* _packet) {
         return status;
 
     mx_port_packet_t packet;
-    if (make_user_ptr(_packet).copy_array_from_user(&packet, sizeof(packet)) != NO_ERROR)
+    if (_packet.copy_array_from_user(&packet, sizeof(packet)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return port->QueueUser(packet);
 }
 
-mx_status_t sys_port_queue(mx_handle_t handle, const void* _packet, size_t size) {
+mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> _packet, size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (size > MX_PORT_MAX_PKT_SIZE)
@@ -90,7 +90,8 @@ mx_status_t sys_port_queue(mx_handle_t handle, const void* _packet, size_t size)
     if (size < sizeof(mx_packet_header_t))
         return ERR_INVALID_ARGS;
 
-    auto iopk = IOP_Packet::MakeFromUser(_packet, size);
+    // TODO(andymutton): Change MakeFromUser to accept a user_ptr
+    auto iopk = IOP_Packet::MakeFromUser(_packet.get(), size);
     if (!iopk)
         return ERR_NO_MEMORY;
 
@@ -99,7 +100,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, const void* _packet, size_t size)
     return port->Queue(iopk);
 }
 
-mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, void* _packet) {
+mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, user_ptr<void> _packet) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcherV2> port;
@@ -112,13 +113,13 @@ mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, void* _packet)
     if (st != NO_ERROR)
         return st;
 
-    if (make_user_ptr(_packet).copy_array_to_user(&pp, sizeof(pp)) != NO_ERROR)
+    if (_packet.copy_array_to_user(&pp, sizeof(pp)) != NO_ERROR)
         return ERR_INVALID_ARGS;
     return NO_ERROR;
 }
 
 mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
-                          void* _packet, size_t size) {
+                          user_ptr<void> _packet, size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (!_packet)
@@ -141,7 +142,8 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
     if (status < 0)
         return status;
 
-    if (!iopk->CopyToUser(_packet, &size))
+    // TODO(andymutton): Change CopyToUser to use a user_ptr
+    if (!iopk->CopyToUser(_packet.get(), &size))
         return ERR_INVALID_ARGS;
 
     IOP_Packet::Delete(iopk);

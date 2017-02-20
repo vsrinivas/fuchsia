@@ -26,8 +26,8 @@
 
 #define LOCAL_TRACE 0
 
-mx_status_t sys_socket_create(uint32_t options, mx_handle_t* _out0, mx_handle_t* _out1) {
-    LTRACEF("entry out_handles %p, %p\n", _out0, _out1);
+mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
+    LTRACEF("entry out_handles %p, %p\n", _out0.get(), _out1.get());
 
     if (options != 0u)
         return ERR_INVALID_ARGS;
@@ -48,10 +48,10 @@ mx_status_t sys_socket_create(uint32_t options, mx_handle_t* _out0, mx_handle_t*
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
+    if (_out0.copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1)) != NO_ERROR)
+    if (_out1.copy_to_user(up->MapHandleToValue(h1)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -61,8 +61,8 @@ mx_status_t sys_socket_create(uint32_t options, mx_handle_t* _out0, mx_handle_t*
 }
 
 mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
-                             const void* _buffer, size_t size,
-                             size_t* _actual) {
+                             user_ptr<const void> _buffer, size_t size,
+                             user_ptr<size_t> _actual) {
     LTRACEF("handle %d\n", handle);
 
     if ((size > 0u) && !_buffer)
@@ -78,11 +78,12 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
     switch (options) {
     case 0: {
         size_t nwritten;
-        status = socket->Write(_buffer, size, true, &nwritten);
+        // TODO(andymutton): Change SocketDispatcher to accept a user_ptr?
+        status = socket->Write(_buffer.get(), size, true, &nwritten);
 
         // Caller may ignore results if desired.
         if (status == NO_ERROR && _actual)
-            status = make_user_ptr(_actual).copy_to_user(nwritten);
+            status = _actual.copy_to_user(nwritten);
 
         return status;
     }
@@ -96,8 +97,8 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
 }
 
 mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,
-                            void* _buffer, size_t size,
-                            size_t* _actual) {
+                            user_ptr<void> _buffer, size_t size,
+                            user_ptr<size_t> _actual) {
     LTRACEF("handle %d\n", handle);
 
     if (options)
@@ -114,11 +115,12 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,
         return status;
 
     size_t nread;
-    status = socket->Read(_buffer, size, true, &nread);
+    // TODO(andymutton): Change SocketDispatcher to accept a user_ptr?
+    status = socket->Read(_buffer.get(), size, true, &nread);
 
     // Caller may ignore results if desired.
     if (status == NO_ERROR && _actual)
-        status = make_user_ptr(_actual).copy_to_user(nread);
+        status = _actual.copy_to_user(nread);
 
     return status;
 }
