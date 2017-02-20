@@ -478,7 +478,7 @@ static void putc_escape(textcon_t* tc, uint8_t c) {
         tc->y++;
         if (tc->y >= tc->scroll_y1) {
             tc->y--;
-            scroll_at_pos(tc, 1); // ??
+            scroll_up(tc);
         }
         movecursor(tc, tc->x, tc->y);
         break;

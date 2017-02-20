@@ -347,6 +347,23 @@ bool test_move_cursor_up_and_scroll() {
     END_TEST;
 }
 
+bool test_move_cursor_down_and_scroll() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 4);
+    tc.PutString("1" "\x1b" "D"); // Print char; move cursor down
+    tc.PutString("2" "\x1b" "D"); // Print char; move cursor down
+    tc.PutString("3" "\x1b" "D"); // Print char; move cursor down
+    tc.PutString("4" "\x1b" "D"); // Print char; move cursor down
+    tc.PutString("5");
+    tc.AssertLineContains(0, " 2");
+    tc.AssertLineContains(1, "  3");
+    tc.AssertLineContains(2, "   4");
+    tc.AssertLineContains(3, "    5");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_display_update_comparison)
@@ -358,6 +375,7 @@ RUN_TEST(test_scroll_up)
 RUN_TEST(test_insert_lines)
 RUN_TEST(test_delete_lines)
 RUN_TEST(test_move_cursor_up_and_scroll)
+RUN_TEST(test_move_cursor_down_and_scroll)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }
