@@ -364,6 +364,19 @@ bool test_move_cursor_down_and_scroll() {
     END_TEST;
 }
 
+bool test_cursor_hide_and_show() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 4);
+    ASSERT_FALSE(tc.vc_dev->hide_cursor, "");
+    tc.PutString("\x1b[?25l"); // Hide cursor
+    ASSERT_TRUE(tc.vc_dev->hide_cursor, "");
+    tc.PutString("\x1b[?25h"); // Show cursor
+    ASSERT_FALSE(tc.vc_dev->hide_cursor, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_display_update_comparison)
@@ -376,6 +389,7 @@ RUN_TEST(test_insert_lines)
 RUN_TEST(test_delete_lines)
 RUN_TEST(test_move_cursor_up_and_scroll)
 RUN_TEST(test_move_cursor_down_and_scroll)
+RUN_TEST(test_cursor_hide_and_show)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }
