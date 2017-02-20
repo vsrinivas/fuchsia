@@ -5,7 +5,7 @@
 #include <magenta/compiler.h>
 
 #include "devhost.h"
-#include "driver-api.h"
+#include <driver/driver-api.h>
 
 // These are the API entry-points from drivers
 // They must take the devhost_api_lock before calling devhost_* internals

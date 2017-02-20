@@ -6,7 +6,10 @@
 
 #include <stdint.h>
 #include <magenta/types.h>
-#include <ddk/driver.h>
+
+typedef struct mx_driver mx_driver_t;
+typedef struct mx_device mx_device_t;
+typedef struct mx_protocol_device mx_protocol_device_t;
 
 typedef struct driver_api {
     void (*driver_add)(mx_driver_t* drv);

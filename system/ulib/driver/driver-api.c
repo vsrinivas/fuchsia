@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <magenta/compiler.h>
-#include "driver-api.h"
+#include <driver/driver-api.h>
 
 static driver_api_t* API;
 

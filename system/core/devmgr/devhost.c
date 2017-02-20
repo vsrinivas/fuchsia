@@ -8,7 +8,7 @@
 #include "devmgr.h"
 
 #include "devhost.h"
-#include "driver-api.h"
+#include <driver/driver-api.h>
 
 #include <stdio.h>
 #include <stdlib.h>

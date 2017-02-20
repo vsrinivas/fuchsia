@@ -29,8 +29,10 @@ MODULE_SRCS += \
 # up other shared libraries, so everything else must be linked statically.
 
 # ddk is needed only for ddk/device.h
+MODULE_HEADER_DEPS := \
+	ulib/ddk
+
 MODULE_STATIC_LIBS := \
-    ulib/ddk \
     ulib/gpt \
     ulib/launchpad \
     ulib/elfload \
