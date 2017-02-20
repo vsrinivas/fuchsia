@@ -28,8 +28,8 @@
 /* saved boot arguments from whoever loaded the system */
 ulong lk_boot_args[4];
 
-extern void *__ctor_list;
-extern void *__ctor_end;
+extern void (*const __init_array_start[])(void);
+extern void (*const __init_array_end[])(void);
 extern int __bss_start;
 extern int _end;
 
@@ -43,17 +43,8 @@ extern void kernel_init(void);
 
 static void call_constructors(void)
 {
-    void **ctor;
-
-    ctor = &__ctor_list;
-    while (ctor != &__ctor_end) {
-        void (*func)(void);
-
-        func = (void ( *)(void))*ctor;
-
-        func();
-        ctor++;
-    }
+    for (void (*const *a)(void) = __init_array_start; a != __init_array_end; a++)
+        (*a)();
 }
 
 /* called from arch code */
