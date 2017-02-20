@@ -333,7 +333,7 @@ int main(int argc, const char** argv) {
     argc -= 3;
     argv += 3;
 
-    int fd = open(dev, O_WRONLY);
+    int fd = open(dev, O_RDWR);
     if (fd < 0) {
         printf("Error opening I2C device.\n");
         return 1;
