@@ -176,7 +176,6 @@ static void scroll_at_pos(textcon_t* tc, int dir) {
         count++;
     }
     tc->scroll(tc->cookie, tc->y, tc->scroll_y1, dir);
-    invalidate(tc, 0, tc->y, tc->w, tc->scroll_y1 - tc->y);
 }
 
 void set_scroll(textcon_t* tc, int y0, int y1) {
