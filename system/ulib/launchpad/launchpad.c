@@ -49,6 +49,7 @@ struct launchpad {
     mx_vaddr_t vdso_base;
 
     size_t stack_size;
+    bool set_stack_size;
 
     mx_handle_t special_handles[HND_SPECIAL_COUNT];
     bool loader_message;
@@ -116,7 +117,6 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
         lp = &invalid_launchpad;
     } else {
         lp->errmsg = "no error";
-        lp->stack_size = MAGENTA_DEFAULT_STACK_SIZE;
     }
 
     launchpad_add_handle(lp, proc, MX_HND_TYPE_PROC_SELF);
@@ -508,6 +508,10 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
                 if (status != NO_ERROR) {
                     lp_error(lp, status, "elf_load: elf_load_finish() failed");
                 } else {
+                    // With no PT_INTERP, we obey PT_GNU_STACK.p_memsz for
+                    // the stack size setting.  With PT_INTERP, the dynamic
+                    // linker is responsible for that.
+                    check_elf_stack_size(lp, elf);
                     lp->loader_message = false;
                     launchpad_add_handle(
                         lp, segments_vmar,
@@ -522,8 +526,6 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
                 }
                 free(interp);
             }
-            if (status == NO_ERROR)
-                check_elf_stack_size(lp, elf);
         }
         elf_load_destroy(elf);
     }
@@ -742,11 +744,15 @@ static mx_status_t send_loader_message(launchpad_t* lp,
 
 // TODO(mcgrathr): One day we'll have a gather variant of message_write
 // and then we can send this without copying into a temporary buffer.
-static void* build_message(launchpad_t* lp, size_t *total_size) {
+static void* build_message(launchpad_t* lp, bool stack_vmo,
+                           size_t *total_size) {
     size_t total = sizeof(mx_proc_args_t);
     total += lp->handle_count * sizeof(lp->handles_info[0]);
     total += lp->args_len;
     total += lp->env_len;
+
+    if (stack_vmo)
+        total += sizeof(sizeof(uint32_t));
 
     uint8_t* buffer = malloc(total);
     if (buffer == NULL)
@@ -763,6 +769,10 @@ static void* build_message(launchpad_t* lp, size_t *total_size) {
     header->handle_info_off = p - buffer;
     p = mempcpy(p, lp->handles_info,
                 lp->handle_count * sizeof(lp->handles_info[0]));
+    if (stack_vmo) {
+        *(uint32_t*)p = MX_HND_TYPE_STACK_VMO;
+        p += sizeof(uint32_t);
+    }
 
     if (lp->argc > 0) {
         header->args_num = lp->argc;
@@ -790,8 +800,10 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size) {
         // Round up to page size.
         new_size = (new_size + PAGE_SIZE - 1) & -PAGE_SIZE;
     }
-    if (lp->error == NO_ERROR)
+    if (lp->error == NO_ERROR) {
         lp->stack_size = new_size;
+        lp->set_stack_size = true;
+    }
     return old_size;
 }
 
@@ -800,35 +812,6 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
                                  mx_handle_t* thread, uintptr_t* sp) {
     if (lp->entry == 0)
         return ERR_BAD_STATE;
-
-    *sp = 0;
-    if (lp->stack_size > 0) {
-        // Allocate the initial thread's stack.
-        mx_handle_t stack_vmo;
-        mx_status_t status = mx_vmo_create(lp->stack_size, 0, &stack_vmo);
-        if (status < 0)
-            return lp_error(lp, status, "cannot create stack vmo");
-        mx_vaddr_t stack_base;
-        status = mx_vmar_map(lp_vmar(lp), 0, stack_vmo, 0, lp->stack_size,
-                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-                              &stack_base);
-        if (status == NO_ERROR) {
-            DEBUG_ASSERT(lp->stack_size % PAGE_SIZE == 0);
-            *sp = compute_initial_stack_pointer(stack_base, lp->stack_size);
-            // Pass the stack VMO to the process.  Our protocol with the
-            // new process is that we warrant that this is the VMO from
-            // which the initial stack is mapped and that we've exactly
-            // mapped the entire thing, so vm_object_get_size on this in
-            // concert with the initial SP value tells it the exact bounds
-            // of its stack.
-            status = launchpad_add_handle(lp, stack_vmo,
-                                          MX_HND_TYPE_STACK_VMO);
-        }
-        if (status != NO_ERROR) {
-            mx_handle_close(stack_vmo);
-            return lp_error(lp, status, "cannot map stack vmo");
-        }
-    }
 
     mx_status_t status = mx_thread_create(lp_proc(lp), thread_name,
                                           strlen(thread_name), 0, thread);
@@ -860,22 +843,77 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         }
     }
 
+    bool allocate_stack = !lp->set_stack_size || lp->stack_size > 0;
+
     size_t size;
-    void* msg = build_message(lp, &size);
+    void* msg = build_message(lp, allocate_stack, &size);
     if (msg == NULL) {
         mx_handle_close(*thread);
         return lp_error(lp, ERR_NO_MEMORY, "out of memory assembling procargs message");
     }
 
-    // Assume the process will read the bootstrap message onto its
-    // initial thread's stack.  If it would need more than half its
-    // stack just to read the message, consider that an unreasonably
-    // large size for the message (presumably arguments and
-    // environment strings that are unreasonably large).
-    if (size > lp->stack_size / 2) {
-        free(msg);
-        mx_handle_close(*thread);
-        return lp_error(lp, ERR_BUFFER_TOO_SMALL, "procargs message is too large");
+    // Figure out how big an initial thread to allocate.
+    size_t stack_size;
+    if (lp->loader_message && !lp->set_stack_size) {
+        // The initial stack will be used just for startup work and to
+        // contain the bootstrap messages.  Make it only as big as needed.
+        stack_size = size + PTHREAD_STACK_MIN;
+        stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
+    } else {
+        // Use the requested or default size.
+        stack_size =
+            lp->set_stack_size ? lp->stack_size : MAGENTA_DEFAULT_STACK_SIZE;
+
+        // Assume the process will read the bootstrap message onto its
+        // initial thread's stack.  If it would need more than half its
+        // stack just to read the message, consider that an unreasonably
+        // large size for the message (presumably arguments and
+        // environment strings that are unreasonably large).
+        if (stack_size > 0 && size > stack_size / 2) {
+            free(msg);
+            mx_handle_close(*thread);
+            return lp_error(lp, ERR_BUFFER_TOO_SMALL,
+                            "procargs message is too large");
+        }
+    }
+
+    *sp = 0;
+    if (stack_size > 0) {
+        // Allocate the initial thread's stack.
+        mx_handle_t stack_vmo;
+        mx_status_t status = mx_vmo_create(stack_size, 0, &stack_vmo);
+        if (status != NO_ERROR) {
+            free(msg);
+            mx_handle_close(*thread);
+            return lp_error(lp, status, "cannot create stack vmo");
+        }
+        mx_vaddr_t stack_base;
+        status = mx_vmar_map(lp_vmar(lp), 0, stack_vmo, 0, stack_size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                              &stack_base);
+        if (status == NO_ERROR) {
+            DEBUG_ASSERT(stack_size % PAGE_SIZE == 0);
+            *sp = compute_initial_stack_pointer(stack_base, stack_size);
+            // Pass the stack VMO to the process.  Our protocol with the
+            // new process is that we warrant that this is the VMO from
+            // which the initial stack is mapped and that we've exactly
+            // mapped the entire thing, so vm_object_get_size on this in
+            // concert with the initial SP value tells it the exact bounds
+            // of its stack.
+            //
+            // Note this expands the handle list after we've already
+            // built the bootstrap message.  We shoved an extra info
+            // slot with MX_HND_TYPE_STACK_VMO into the message, so
+            // now this new final handle will correspond to that slot.
+            status = launchpad_add_handle(lp, stack_vmo,
+                                          MX_HND_TYPE_STACK_VMO);
+        }
+        if (status != NO_ERROR) {
+            mx_handle_close(stack_vmo);
+            mx_handle_close(*thread);
+            free(msg);
+            return lp_error(lp, status, "cannot map stack vmo");
+        }
     }
 
     status = mx_channel_write(to_child, 0, msg, size,
