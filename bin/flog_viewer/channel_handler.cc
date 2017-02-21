@@ -6,8 +6,6 @@
 
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/default.h"
-#include "apps/media/tools/flog_viewer/handlers/media_decoder_digest.h"
-#include "apps/media/tools/flog_viewer/handlers/media_decoder_full.h"
 #include "apps/media/tools/flog_viewer/handlers/media_demux_digest.h"
 #include "apps/media/tools/flog_viewer/handlers/media_demux_full.h"
 #include "apps/media/tools/flog_viewer/handlers/media_packet_consumer_digest.h"
@@ -22,6 +20,8 @@
 #include "apps/media/tools/flog_viewer/handlers/media_sink_full.h"
 #include "apps/media/tools/flog_viewer/handlers/media_source_digest.h"
 #include "apps/media/tools/flog_viewer/handlers/media_source_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_type_converter_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_type_converter_full.h"
 
 namespace flog {
 
@@ -40,12 +40,12 @@ std::unique_ptr<ChannelHandler> ChannelHandler::Create(
     } else if (format == FlogViewer::kFormatDigest) {
       handler = new handlers::MediaPlayerDigest(format);
     }
-  } else if (type_name == handlers::MediaDecoderFull::Name_) {
+  } else if (type_name == handlers::MediaTypeConverterFull::Name_) {
     if (format == FlogViewer::kFormatTerse ||
         format == FlogViewer::kFormatFull) {
-      handler = new handlers::MediaDecoderFull(format);
+      handler = new handlers::MediaTypeConverterFull(format);
     } else if (format == FlogViewer::kFormatDigest) {
-      handler = new handlers::MediaDecoderDigest(format);
+      handler = new handlers::MediaTypeConverterDigest(format);
     }
   } else if (type_name == handlers::MediaDemuxFull::Name_) {
     if (format == FlogViewer::kFormatTerse ||

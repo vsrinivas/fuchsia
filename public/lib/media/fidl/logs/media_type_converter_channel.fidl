@@ -6,9 +6,11 @@ module media.logs;
 
 import "apps/media/services/media_types.fidl";
 
-[ServiceName="media::logs::MediaDecoderChannel"]
-interface MediaDecoderChannel {
-  Config(MediaType input_type,
+[ServiceName="media::logs::MediaTypeConverterChannel"]
+interface MediaTypeConverterChannel {
+  BoundAs(uint64 koid, string converter_type);
+  Config(
+      MediaType input_type,
       MediaType output_type,
       uint64 consumer_address,
       uint64 producer_address);

@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "apps/media/lib/flog/flog.h"
-#include "apps/media/services/logs/media_decoder_channel.fidl.h"
+#include "apps/media/services/logs/media_type_converter_channel.fidl.h"
 #include "apps/media/services/media_type_converter.fidl.h"
 #include "apps/media/src/decode/decoder.h"
 #include "apps/media/src/fidl/fidl_packet_consumer.h"
@@ -48,7 +48,7 @@ class MediaDecoderImpl : public MediaServiceImpl::Product<MediaTypeConverter>,
   std::shared_ptr<Decoder> decoder_;
   std::shared_ptr<FidlPacketProducer> producer_;
 
-  FLOG_INSTANCE_CHANNEL(logs::MediaDecoderChannel, log_channel_);
+  FLOG_INSTANCE_CHANNEL(logs::MediaTypeConverterChannel, log_channel_);
 };
 
 }  // namespace media

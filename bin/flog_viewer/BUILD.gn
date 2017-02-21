@@ -21,10 +21,6 @@ executable("flog_viewer") {
     "formatting.h",
     "handlers/default.cc",
     "handlers/default.h",
-    "handlers/media_decoder_digest.cc",
-    "handlers/media_decoder_digest.h",
-    "handlers/media_decoder_full.cc",
-    "handlers/media_decoder_full.h",
     "handlers/media_demux_digest.cc",
     "handlers/media_demux_digest.h",
     "handlers/media_demux_full.cc",
@@ -55,6 +51,10 @@ executable("flog_viewer") {
     "handlers/media_source_digest.h",
     "handlers/media_source_full.cc",
     "handlers/media_source_full.h",
+    "handlers/media_type_converter_digest.cc",
+    "handlers/media_type_converter_digest.h",
+    "handlers/media_type_converter_full.cc",
+    "handlers/media_type_converter_full.h",
     "tracked.h",
   ]
 

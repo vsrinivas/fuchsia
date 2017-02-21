@@ -2,37 +2,43 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/media_decoder_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_type_converter_digest.h"
 
 #include <iostream>
 
-#include "apps/media/services/logs/media_decoder_channel.fidl.h"
+#include "apps/media/services/logs/media_type_converter_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
 namespace flog {
 namespace handlers {
 
-MediaDecoderDigest::MediaDecoderDigest(const std::string& format)
-    : accumulator_(std::make_shared<MediaDecoderAccumulator>()) {
+MediaTypeConverterDigest::MediaTypeConverterDigest(const std::string& format)
+    : accumulator_(std::make_shared<MediaTypeConverterAccumulator>()) {
   FTL_DCHECK(format == FlogViewer::kFormatDigest);
   stub_.set_sink(this);
 }
 
-MediaDecoderDigest::~MediaDecoderDigest() {}
+MediaTypeConverterDigest::~MediaTypeConverterDigest() {}
 
-void MediaDecoderDigest::HandleMessage(fidl::Message* message) {
+void MediaTypeConverterDigest::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-std::shared_ptr<Accumulator> MediaDecoderDigest::GetAccumulator() {
+std::shared_ptr<Accumulator> MediaTypeConverterDigest::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaDecoderDigest::Config(media::MediaTypePtr input_type,
-                                media::MediaTypePtr output_type,
-                                uint64_t consumer_address,
-                                uint64_t producer_address) {
+void MediaTypeConverterDigest::BoundAs(uint64_t koid,
+                                       const fidl::String& converter_type) {
+  BindAs(koid);
+  accumulator_->converter_type_ = converter_type;
+}
+
+void MediaTypeConverterDigest::Config(media::MediaTypePtr input_type,
+                                      media::MediaTypePtr output_type,
+                                      uint64_t consumer_address,
+                                      uint64_t producer_address) {
   FTL_DCHECK(input_type);
   FTL_DCHECK(output_type);
 
@@ -44,13 +50,14 @@ void MediaDecoderDigest::Config(media::MediaTypePtr input_type,
   accumulator_->producer_channel_->SetHasParent();
 }
 
-MediaDecoderAccumulator::MediaDecoderAccumulator() {}
+MediaTypeConverterAccumulator::MediaTypeConverterAccumulator() {}
 
-MediaDecoderAccumulator::~MediaDecoderAccumulator() {}
+MediaTypeConverterAccumulator::~MediaTypeConverterAccumulator() {}
 
-void MediaDecoderAccumulator::Print(std::ostream& os) {
-  os << "MediaDecoder" << std::endl;
+void MediaTypeConverterAccumulator::Print(std::ostream& os) {
+  os << "MediaTypeConverter" << std::endl;
   os << indent;
+  os << begl << "converter_type: " << converter_type_ << std::endl;
   os << begl << "input_type: " << input_type_;
   os << begl << "output_type: " << output_type_;
 

@@ -4,31 +4,33 @@
 
 #pragma once
 
-#include "apps/media/services/logs/media_decoder_channel.fidl.h"
+#include "apps/media/services/logs/media_type_converter_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 
 namespace flog {
 namespace handlers {
 
-// Handler for MediaDecoderChannel messages.
-class MediaDecoderFull : public ChannelHandler,
-                         public media::logs::MediaDecoderChannel {
+// Handler for MediaTypeConverterChannel messages.
+class MediaTypeConverterFull : public ChannelHandler,
+                               public media::logs::MediaTypeConverterChannel {
  public:
-  MediaDecoderFull(const std::string& format);
+  MediaTypeConverterFull(const std::string& format);
 
-  ~MediaDecoderFull() override;
+  ~MediaTypeConverterFull() override;
 
   // ChannelHandler implementation.
   void HandleMessage(fidl::Message* message) override;
 
-  // MediaDecoderChannel implementation.
+  // MediaTypeConverterChannel implementation.
+  void BoundAs(uint64_t koid, const fidl::String& converter_type) override;
+
   void Config(media::MediaTypePtr input_type,
               media::MediaTypePtr output_type,
               uint64_t consumer_address,
               uint64_t producer_address) override;
 
  private:
-  media::logs::MediaDecoderChannelStub stub_;
+  media::logs::MediaTypeConverterChannelStub stub_;
   bool terse_;
 };
 

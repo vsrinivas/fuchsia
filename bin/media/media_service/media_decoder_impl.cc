@@ -29,6 +29,8 @@ MediaDecoderImpl::MediaDecoderImpl(
       producer_(FidlPacketProducer::Create()) {
   FTL_DCHECK(input_media_type);
 
+  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding()), "decoder"));
+
   std::unique_ptr<StreamType> input_stream_type =
       input_media_type.To<std::unique_ptr<StreamType>>();
 

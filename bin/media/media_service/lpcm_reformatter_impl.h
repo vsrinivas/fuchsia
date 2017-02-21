@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include "apps/media/lib/flog/flog.h"
+#include "apps/media/services/logs/media_type_converter_channel.fidl.h"
 #include "apps/media/services/media_type_converter.fidl.h"
 #include "apps/media/src/audio/lpcm_reformatter.h"
 #include "apps/media/src/fidl/fidl_packet_consumer.h"
@@ -48,6 +50,8 @@ class LpcmReformatterImpl
   std::shared_ptr<FidlPacketConsumer> consumer_;
   std::shared_ptr<LpcmReformatter> reformatter_;
   std::shared_ptr<FidlPacketProducer> producer_;
+
+  FLOG_INSTANCE_CHANNEL(logs::MediaTypeConverterChannel, log_channel_);
 };
 
 }  // namespace media

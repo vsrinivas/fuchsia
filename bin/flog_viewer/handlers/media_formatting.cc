@@ -51,7 +51,8 @@ std::ostream& operator<<(std::ostream& os,
   os << begl << "medium: " << StringFromMediaTypeMedium(value->medium)
      << std::endl;
   os << begl << "details: " << value->details;
-  os << begl << "encodings: " << value->encodings;
+  os << begl << "encodings: " << AsInlineArray<fidl::String>(value->encodings)
+     << std::endl;
   return os << outdent;
 }
 
