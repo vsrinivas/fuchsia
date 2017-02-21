@@ -13,6 +13,7 @@
 #include "registers.h"
 #include "render_init_batch.h"
 #include "ringbuffer.h"
+#include "platform_trace.h"
 
 EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id,
                                              uint32_t mmio_base)
@@ -345,9 +346,13 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
 
 bool EngineCommandStreamer::SubmitContext(MsdIntelContext* context, uint32_t tail)
 {
+    TRACE_NONCE_DECLARE(nonce);
+    TRACE_ASYNC_BEGIN("magma", "SubmitContext", nonce);
     if (!UpdateContext(context, tail))
         return DRETF(false, "UpdateContext failed");
     SubmitExeclists(context);
+    TRACE_ASYNC_END("magma", "SubmitContext", nonce);
+
     return true;
 }
 
@@ -376,6 +381,8 @@ bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context, uint32_t tai
 
 void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
 {
+    TRACE_NONCE_DECLARE(nonce);
+    TRACE_ASYNC_BEGIN("magma", "SubmitExeclists", nonce);
     gpu_addr_t gpu_addr;
     if (!context->GetGpuAddress(id(), &gpu_addr)) {
         // Shouldn't happen.
@@ -392,6 +399,7 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
     uint64_t descriptor1 = 0;
 
     registers::ExeclistSubmitPort::write(register_io(), mmio_base_, descriptor1, descriptor0);
+    TRACE_ASYNC_END("magma", "SubmitExeclists", nonce);
 }
 
 uint64_t EngineCommandStreamer::GetActiveHeadPointer()
@@ -492,6 +500,8 @@ bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> co
 
 bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_batch)
 {
+    TRACE_NONCE_DECLARE(nonce);
+    TRACE_ASYNC_BEGIN("magma", "ExecBatch", nonce);
     auto context = mapped_batch->GetContext().lock();
     DASSERT(context);
 
@@ -525,7 +535,10 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
 
     SubmitContext(context.get(), tail);
 
+
     batch_submitted(sequence_number);
+
+    TRACE_ASYNC_END("magma", "ExecBatch", nonce);
 
     return true;
 }
@@ -563,11 +576,13 @@ void RenderEngineCommandStreamer::ScheduleContext()
         // TODO(MA-142) - ExecBatch should not fail.  Scheduler should verify there is
         // sufficient room in the ringbuffer before selecting a context.
         // For now, drop the command buffer and try another context.
-        if (ExecBatch(std::move(mapped_batch)))
+        if (ExecBatch(std::move(mapped_batch))){
             break;
+        }
 
         magma::log(magma::LOG_WARNING, "ExecBatch failed");
     }
+
 }
 
 void RenderEngineCommandStreamer::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)

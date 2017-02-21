@@ -108,6 +108,8 @@ private:
     uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
     // ---------------------------- //
 
+    uint64_t nonce_;
+
     friend class TestCommandBuffer;
 };
 

@@ -71,6 +71,7 @@ source_set("src") {
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:trace",
   ]
 
   defines = []
