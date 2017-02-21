@@ -54,6 +54,7 @@ class UserControllerImpl : public UserController {
 
   UserControllerImpl(
       std::shared_ptr<app::ApplicationContext> app_context,
+      const std::string& device_name,
       const std::string& user_runner,
       const std::string& user_shell,
       const std::vector<std::string>& user_shell_args,

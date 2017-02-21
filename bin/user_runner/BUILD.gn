@@ -25,6 +25,7 @@ executable("user_runner") {
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:scope",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/device:device_context",
     "//apps/modular/services/story",
     "//apps/modular/services/user:private",

@@ -15,6 +15,7 @@ interface UserRunnerFactory {
   // Launches a user runner instance for a user identified by
   // |user_id|.
   Create(array<uint8> user_id,
+         string device_name,
          string user_shell,
          array<string> user_shell_args,
          ledger.LedgerRepository ledger_repository,

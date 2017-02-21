@@ -49,6 +49,8 @@ constexpr char kUsersConfigurationFile[] = "/data/modular/device/users.db";
 class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
+    device_name = command_line.GetOptionValueWithDefault(
+        "device_name", "magenta");
     device_shell = command_line.GetOptionValueWithDefault(
         "device_shell", "file:///system/apps/dummy_device_shell");
     user_runner = command_line.GetOptionValueWithDefault(
@@ -69,12 +71,14 @@ class Settings {
 
   static std::string GetUsage() {
     return R"USAGE(device_runner
+      --device_name=DEVICE_NAME
       --device_shell=DEVICE_SHELL
       --device_shell_args=SHELL_ARGS
       --user_runner=USER_RUNNER
       --user_shell=USER_SHELL
       --user_shell_args=SHELL_ARGS
       --ledger_repository_for_testing
+    DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to "file:///system/apps/dummy_device_shell".
     USER_RUNNER: URL of the user runner implementation to run.
@@ -85,6 +89,7 @@ class Settings {
     SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.)USAGE";
   }
 
+  std::string device_name;
   std::string device_shell;
   std::vector<std::string> device_shell_args;
   std::string user_runner;
@@ -257,7 +262,8 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
         });
 
     user_controller_impl_.reset(new UserControllerImpl(
-        app_context_, settings_.user_runner, settings_.user_shell,
+        app_context_, settings_.device_name,
+        settings_.user_runner, settings_.user_shell,
         settings_.user_shell_args, std::move(user_id),
         std::move(ledger_repository), std::move(view_owner_request),
         std::move(user_controller),

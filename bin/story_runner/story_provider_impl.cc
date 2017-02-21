@@ -10,6 +10,7 @@
 
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -512,6 +513,15 @@ class PreviousStoriesCall : public Operation {
                   // large to return from StoryProvider.
 
                   for (auto& entry : entries) {
+                    // TODO(mesch): Not a good idea to mix keys of
+                    // different kinds in the same page. Once we are
+                    // more comfortable dealing with JSON data, we can
+                    // make a better mapping of a complex data
+                    // structure to a page.
+                    if (to_string(entry->key) == kDeviceMapKey) {
+                      continue;
+                    }
+
                     StoryDataPtr story_data = StoryData::New();
                     story_data->Deserialize(entry->value->get_bytes().data(),
                                             entry->value->get_bytes().size());
@@ -540,14 +550,92 @@ class PreviousStoriesCall : public Operation {
   FTL_DISALLOW_COPY_AND_ASSIGN(PreviousStoriesCall);
 };
 
+class UpdateDeviceNameCall : public Operation {
+ public:
+  UpdateDeviceNameCall(OperationContainer* const container,
+                       ledger::Ledger* const ledger,
+                       const std::string& device_name)
+      : Operation(container), ledger_(ledger), device_name_(device_name) {
+    Ready();
+  }
+
+  void Run() override {
+    ledger_->GetRootPage(
+        root_page_.NewRequest(),
+        [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
+                           << " Ledger.GetRootPage() " << status;
+            Done();
+            return;
+          }
+          root_page_->GetSnapshot(
+              root_snapshot_.NewRequest(), nullptr,
+              [this](ledger::Status status) {
+                if (status != ledger::Status::OK) {
+                  FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
+                                 << " Page.GetSnapshot() " << status;
+                  Done();
+                  return;
+                }
+                root_snapshot_->Get(
+                    to_array(kDeviceMapKey),
+                    [this](ledger::Status status, ledger::ValuePtr value) {
+                      if (status != ledger::Status::OK &&
+                          status != ledger::Status::KEY_NOT_FOUND) {
+                        FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
+                                       << " PageSnapshot.Get() " << status;
+                        Done();
+                        return;
+                      }
+
+                      rapidjson::Document doc;
+                      if (!value.is_null()) {
+                        doc.Parse(to_string(value->get_bytes()));
+                        FTL_DCHECK(doc.IsObject());
+                      } else {
+                        doc.SetObject();
+                      }
+
+                      // NOTE(mesch): Unclear why just device_name_ as
+                      // the key doesn't compile.
+                      doc.AddMember(rapidjson::StringRef(device_name_),
+                                    true, doc.GetAllocator());
+
+                      root_page_->Put(
+                          to_array(kDeviceMapKey),
+                          to_array(JsonValueToString(doc)),
+                          [this](ledger::Status status) {
+                            if (status != ledger::Status::OK) {
+                              FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
+                                             << " Page.Put() " << status;
+                            }
+
+                            Done();
+                          });
+                    });
+              });
+        });
+  }
+
+ private:
+  ledger::Ledger* const ledger_;  // not owned
+  const std::string device_name_;
+  ledger::PagePtr root_page_;
+  ledger::PageSnapshotPtr root_snapshot_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(UpdateDeviceNameCall);
+};
+
 }  // namespace
 
 StoryProviderImpl::StoryProviderImpl(
     app::ApplicationEnvironmentPtr environment,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
     ledger::LedgerRepositoryPtr ledger_repository,
-    MessageQueueManager* message_queue_manager,
-    AgentRunner* agent_runner)
+    const std::string& device_name,
+    MessageQueueManager* const message_queue_manager,
+    AgentRunner* const agent_runner)
     : environment_(std::move(environment)),
       storage_(new Storage),
       page_watcher_binding_(this),
@@ -557,6 +645,9 @@ StoryProviderImpl::StoryProviderImpl(
   environment_->GetApplicationLauncher(launcher_.NewRequest());
 
   ledger_.Bind(std::move(ledger));
+
+  ledger_->SetConflictResolverFactory(conflict_resolver_.AddBinding(),
+                                       [](ledger::Status) {});
 
   ledger::PagePtr root_page;
   ledger_->GetRootPage(root_page.NewRequest(), [this](ledger::Status status) {
@@ -581,6 +672,10 @@ StoryProviderImpl::StoryProviderImpl(
                          << status;
         }
       });
+
+  // Record the device name of the current device in the ledger,
+  // before we handle any requests.
+  new UpdateDeviceNameCall(&operation_queue_, ledger_.get(), device_name);
 
   // We must initialize story_ids_ with the IDs of currently existing
   // stories *before* we can process any calls that might create a new
@@ -710,6 +805,11 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   FTL_DCHECK(!page->changes.is_null());
 
   for (auto& entry : page->changes) {
+    // TODO(mesch): See PreviousStoriesCall().
+    if (to_string(entry->key) == kDeviceMapKey) {
+      continue;
+    }
+
     auto story_data = StoryData::New();
     auto& bytes = entry->value->get_bytes();
     story_data->Deserialize(bytes.data(), bytes.size());

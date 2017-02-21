@@ -17,6 +17,7 @@
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "apps/modular/src/component/message_queue_manager.h"
+#include "apps/modular/src/story_runner/conflict_resolver_impl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -38,6 +39,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   StoryProviderImpl(app::ApplicationEnvironmentPtr environment,
                     fidl::InterfaceHandle<ledger::Ledger> ledger,
                     ledger::LedgerRepositoryPtr ledger_repository,
+                    const std::string& device_name,
                     MessageQueueManager* message_queue_manager,
                     AgentRunner* agent_runner);
 
@@ -109,6 +111,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   app::ApplicationEnvironmentPtr environment_;
   ledger::LedgerPtr ledger_;
+  ConflictResolverImpl conflict_resolver_;
 
   fidl::BindingSet<StoryProvider> bindings_;
 

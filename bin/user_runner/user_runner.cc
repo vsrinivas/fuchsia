@@ -16,6 +16,7 @@
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -36,6 +37,7 @@ namespace modular {
 namespace {
 
 const char kAppId[] = "modular_user_runner";
+
 // This is the prefix for the ApplicationEnvironment under which all
 // stories run for a user.
 const char kStoriesScopeLabelPrefix[] = "stories-";
@@ -69,11 +71,13 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 }  // namespace
 
+
 class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(
       std::shared_ptr<app::ApplicationContext> application_context,
       fidl::Array<uint8_t> user_id,
+      const fidl::String& device_name,
       const fidl::String& user_shell,
       fidl::Array<fidl::String> user_shell_args,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
@@ -120,7 +124,7 @@ class UserRunnerImpl : public UserRunner {
 
     story_provider_impl_.reset(new StoryProviderImpl(
         std::move(env), std::move(ledger), std::move(ledger_repository_ptr),
-        &message_queue_manager_, &agent_runner_));
+        device_name, &message_queue_manager_, &agent_runner_));
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
     story_provider_impl_->AddBinding(story_provider.NewRequest());
@@ -240,13 +244,15 @@ class UserRunnerApp : public UserRunnerFactory {
  private:
   // |UserRunnerFactory|
   void Create(fidl::Array<uint8_t> user_id,
+              const fidl::String& device_name,
               const fidl::String& user_shell,
               fidl::Array<fidl::String> user_shell_args,
               fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
               fidl::InterfaceHandle<UserContext> user_context,
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
               fidl::InterfaceRequest<UserRunner> user_runner_request) override {
-    new UserRunnerImpl(application_context_, std::move(user_id), user_shell,
+    new UserRunnerImpl(application_context_, std::move(user_id), device_name,
+                       user_shell,
                        std::move(user_shell_args), std::move(ledger_repository),
                        std::move(user_context), std::move(view_owner_request),
                        std::move(user_runner_request));
