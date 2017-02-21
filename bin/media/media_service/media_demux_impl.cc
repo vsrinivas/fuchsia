@@ -28,6 +28,8 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
     : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner) {
   FTL_DCHECK(reader);
 
+  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
+
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
   FTL_DCHECK(task_runner_);
 

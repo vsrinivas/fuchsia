@@ -22,6 +22,8 @@ class MediaDemuxFull : public ChannelHandler,
   void HandleMessage(fidl::Message* message) override;
 
   // MediaDemuxChannel implementation.
+  void BoundAs(uint64_t koid) override;
+
   void NewStream(uint32_t index,
                  media::MediaTypePtr type,
                  uint64_t producer_address) override;

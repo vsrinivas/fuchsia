@@ -24,6 +24,13 @@ void MediaDemuxFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
+void MediaDemuxFull::BoundAs(uint64_t koid) {
+  std::cout << entry() << "MediaDemux.BoundAs" << std::endl;
+  std::cout << indent;
+  std::cout << begl << "koid: " << AsKoid(koid) << std::endl;
+  std::cout << outdent;
+}
+
 void MediaDemuxFull::NewStream(uint32_t index,
                                media::MediaTypePtr type,
                                uint64_t producer_address) {

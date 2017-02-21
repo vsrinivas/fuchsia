@@ -16,7 +16,7 @@ namespace handlers {
 std::ostream& operator<<(std::ostream& os,
                          const MediaDemuxAccumulator::Stream& value) {
   if (!value) {
-    return os << begl << "NULL STREAM";
+    return os << begl << "NULL STREAM" << std::endl;
   } else {
     os << std::endl;
   }
@@ -47,6 +47,10 @@ void MediaDemuxDigest::HandleMessage(fidl::Message* message) {
 
 std::shared_ptr<Accumulator> MediaDemuxDigest::GetAccumulator() {
   return accumulator_;
+}
+
+void MediaDemuxDigest::BoundAs(uint64_t koid) {
+  BindAs(koid);
 }
 
 void MediaDemuxDigest::NewStream(uint32_t index,

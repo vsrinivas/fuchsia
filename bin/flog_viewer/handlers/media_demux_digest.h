@@ -31,6 +31,8 @@ class MediaDemuxDigest : public ChannelHandler,
 
  private:
   // MediaDemuxChannel implementation.
+  void BoundAs(uint64_t koid) override;
+
   void NewStream(uint32_t index,
                  media::MediaTypePtr type,
                  uint64_t producer_address) override;

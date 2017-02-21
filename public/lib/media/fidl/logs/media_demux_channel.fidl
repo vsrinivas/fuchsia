@@ -8,5 +8,6 @@ import "apps/media/services/media_types.fidl";
 
 [ServiceName="media::logs::MediaDemuxChannel"]
 interface MediaDemuxChannel {
+  BoundAs(uint64 koid);
   NewStream(uint32 index, MediaType type, uint64 producer_address);
 };
