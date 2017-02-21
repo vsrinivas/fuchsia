@@ -168,7 +168,7 @@ public:
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
     status_t set_name(const char* name, size_t len) final;
 
-    void Exit(int retcode);
+    void Exit(int retcode) __NO_RETURN;
     void Kill();
 
     status_t GetInfo(mx_info_process_t* info);

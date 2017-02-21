@@ -548,6 +548,7 @@ struct GenParams;
 
 using GenFn = bool (*)(const GenParams& gp, std::ofstream& os, const Syscall& sc);
 
+// TODO(andymutton): This is getting clunky. Clean it up.
 struct GenParams {
     GenFn genfn;
     const char* file_postfix;
@@ -557,6 +558,7 @@ struct GenParams {
     const char* empty_args;
     const char* switch_var;
     const char* switch_type;
+    const char* invocation_var_prefix;
     std::map<string, string> attributes;
 };
 
@@ -634,11 +636,18 @@ bool generate_kernel_header(
     return sc.is_vdso() ? true : generate_legacy_header(gp, os, sc);
 }
 
-string invocation(std::ofstream& os, const string out_var, const string out_type, const string syscall_name, const Syscall& sc) {
+string invocation(std::ofstream& os, const string out_var, const string out_type,
+                  const string syscall_name, const Syscall& sc) {
+    if (sc.is_noreturn()) {
+        // no return - no need to set anything. the compiler
+        // should know that we're never going anywhere from here
+        os << syscall_name << "(";
+        return ")";
+    }
+
     os << out_var << " = ";
 
-    bool is_void = sc.is_void_return();
-    if (is_void) {
+    if (sc.is_void_return()) {
         // void function - synthesise an empty return value.
         // case 0: ret = 0; sys_andy(
         os << "0; " << syscall_name << "(";
@@ -662,14 +671,14 @@ bool generate_kernel_code(
     os << "    case " << sc.index << ": ";
 
     // ret = static_cast<uint64_t>(syscall_whatevs(      )) -closer
-    string close_invocation = invocation(os, gp.switch_var, "uint64_t", syscall_name, sc);
+    string close_invocation = invocation(os, gp.switch_var, gp.switch_type, syscall_name, sc);
 
     // Writes all arguments.
     for (int i = 0; i < sc.arg_spec.size(); ++i) {
         if (!os.good())
             return false;
         os << "\n" << string(indent_spaces, ' ')
-           << sc.arg_spec[i].as_cast("arg" + std::to_string(i + 1));
+           << sc.arg_spec[i].as_cast(gp.invocation_var_prefix + std::to_string(i + 1));
 
         if (i < sc.arg_spec.size() - 1)
             os << ",";
@@ -683,7 +692,11 @@ bool generate_kernel_code(
 
     os << close_invocation;
 
-    os << ";\n" << string(indent_spaces, ' ') << "break;\n";
+    if (sc.is_noreturn()) {
+        os << "; // __noreturn__\n";
+    } else {
+        os << ";\n" << string(indent_spaces, ' ') << "break;\n";
+    }
 
     return os.good();
 }
@@ -736,6 +749,10 @@ const std::map<string, string> user_attrs = {
     {"*", "__attribute__((__leaf__))"},
 };
 
+const std::map<string, string> kernel_attrs = {
+    {"noreturn", "__attribute__((__noreturn__))"},
+};
+
 const GenParams gen_params[] = {
     // The user header, pure C.
     {
@@ -747,6 +764,7 @@ const GenParams gen_params[] = {
         "void",             // no-args special type
         nullptr,            // switch var (does not apply)
         nullptr,            // switch type (does not apply)
+        nullptr,
         user_attrs,         // attribute`s dictionary
     },
     // The vDSO-internal header, pure C.  (VDsoHeaderC)
@@ -759,6 +777,7 @@ const GenParams gen_params[] = {
         "void",             // no-args special type
         nullptr,            // switch var (does not apply)
         nullptr,            // switch type (does not apply)
+        nullptr,
         user_attrs,         // attributes dictionary
     },
     // The kernel header, C++.
@@ -771,6 +790,8 @@ const GenParams gen_params[] = {
         nullptr,
         nullptr,
         nullptr,
+        nullptr,
+        kernel_attrs,
     },
     // The kernel C++ code. A switch statement set.
     {
@@ -781,7 +802,8 @@ const GenParams gen_params[] = {
         nullptr,            // second function name prefix.
         nullptr,            // no-args (does not apply)
         "ret",              // switch var name
-        "uint64_t"          // switch var type
+        "uint64_t",         // switch var type
+        "arg",              // invocation arg prefix
     },
     //  The assembly file for x86-64.
     {

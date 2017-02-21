@@ -188,6 +188,8 @@ void ProcessDispatcher::Exit(int retcode) {
     }
 
     UserThread::GetCurrent()->Exit();
+
+    __UNREACHABLE;
 }
 
 void ProcessDispatcher::Kill() {

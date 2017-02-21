@@ -131,8 +131,7 @@
         static_cast<size_t>(arg4),
         reinterpret_cast<size_t*>(arg5)));
         break;
-    case 22: ret = 0; sys_thread_exit();
-        break;
+    case 22: sys_thread_exit(); // __noreturn__
     case 23: ret = static_cast<uint64_t>(sys_thread_create(
         static_cast<mx_handle_t>(arg1),
         reinterpret_cast<const char*>(arg2),
@@ -160,9 +159,8 @@
         reinterpret_cast<const void*>(arg3),
         static_cast<uint32_t>(arg4)));
         break;
-    case 27: ret = 0; sys_process_exit(
-        static_cast<int>(arg1));
-        break;
+    case 27: sys_process_exit(
+        static_cast<int>(arg1)); // __noreturn__
     case 28: ret = static_cast<uint64_t>(sys_process_create(
         static_cast<mx_handle_t>(arg1),
         reinterpret_cast<const char*>(arg2),

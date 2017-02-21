@@ -131,7 +131,7 @@ mx_status_t sys_socket_read(
     size_t size,
     size_t actual[1]);
 
-void sys_thread_exit();
+void sys_thread_exit() __attribute__((__noreturn__));
 
 mx_status_t sys_thread_create(
     mx_handle_t process,
@@ -161,7 +161,7 @@ mx_status_t sys_thread_write_state(
     uint32_t buffer_len);
 
 void sys_process_exit(
-    int retcode);
+    int retcode) __attribute__((__noreturn__));
 
 mx_status_t sys_process_create(
     mx_handle_t job,
