@@ -1,7 +1,7 @@
 # Magenta and LK
 
 LK is a Kernel designed for small systems typically used in embedded
-applications. It is good alternative to commercial offerings like
+applications. It is a good alternative to commercial offerings like
 [FreeRTOS](http://www.freertos.org/) or [ThreadX](http://rtos.com/products/threadx/).
 Such systems often have a very limited amount of ram, a fixed set of peripherals
 and a bounded set of tasks.
