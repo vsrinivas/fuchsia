@@ -196,6 +196,11 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
             if ((r == ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
                 goto try_open;
             }
+            if (r == ERR_NOT_SUPPORTED) {
+                // filesystem may not supporte create (like devfs)
+                // in which case we should still try to open() the file
+                goto try_open;
+            }
             vn_release(vndir);
             return r;
         } else {
@@ -236,8 +241,11 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
         }
         if (flags & O_TRUNC) {
             if ((r = vn->ops->truncate(vn, 0)) < 0) {
-                vn_release(vn);
-                return r;
+                if (r != ERR_NOT_SUPPORTED) {
+                    // devfs does not support this, but we should not fail
+                    vn_release(vn);
+                    return r;
+                }
             }
         }
     }
