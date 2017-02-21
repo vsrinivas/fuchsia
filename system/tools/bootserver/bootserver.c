@@ -412,7 +412,8 @@ void usage(void) {
             "\n"
             "options:\n"
             "  -1  only boot once, then exit\n"
-            "  -a  only boot device with this IPv6 address\n",
+            "  -a  only boot device with this IPv6 address\n"
+            "  -n  only boot device with this nodename\n",
             appname);
     exit(1);
 }
@@ -431,6 +432,7 @@ int main(int argc, char** argv) {
     char tmp[INET6_ADDRSTRLEN];
     char cmdline[4096];
     char* cmdnext = cmdline;
+    char* nodename = NULL;
     int r, s, n = 1;
     const char* kernel_fn = NULL;
     const char* ramdisk_fn = NULL;
@@ -480,6 +482,14 @@ int main(int argc, char** argv) {
             }
             argc--;
             argv++;
+        } else if (!strcmp(argv[1], "-n")) {
+            if (argc <= 1) {
+                fprintf(stderr, "'-n' option requires a valid nodename\n");
+                return -1;
+            }
+            nodename = argv[2];
+            argc--;
+            argv++;
         } else if (!strcmp(argv[1], "--")) {
             while (argc > 2) {
                 size_t len = strlen(argv[2]);
@@ -504,6 +514,12 @@ int main(int argc, char** argv) {
     }
     if (kernel_fn == NULL) {
         usage();
+    }
+    if (!nodename) {
+        nodename = getenv("MAGENTA_NODENAME");
+    }
+    if (nodename) {
+        fprintf(stderr, "%s: Will only boot nodename '%s'\n", appname, nodename);
     }
 
     memset(&addr, 0, sizeof(addr));
@@ -533,7 +549,7 @@ int main(int argc, char** argv) {
         char buf[4096];
         nbmsg* msg = (void*)buf;
         rlen = sizeof(ra);
-        r = recvfrom(s, buf, 4096, 0, (void*)&ra, &rlen);
+        r = recvfrom(s, buf, sizeof(buf) - 1, 0, (void*)&ra, &rlen);
         if (r < 0) {
             fprintf(stderr, "%s: socket read error %d\n", appname, r);
             break;
@@ -564,6 +580,21 @@ int main(int argc, char** argv) {
         fprintf(stderr, "%s: got beacon from [%s]%d\n", appname,
                 inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),
                 ntohs(ra.sin6_port));
+
+        // ensure any payload is null-terminated
+        buf[r] = 0;
+        if (nodename) {
+            if (!strncmp((const char*)msg->data, "nodename=", 9)) {
+                const char* node = (void*)msg->data + 9;
+                if (strcmp(node, nodename)) {
+                    fprintf(stderr, "%s: ignoring nodename %s (expecting %s)\n", appname, node, nodename);
+                    continue;
+                }
+            } else {
+                fprintf(stderr, "%s: ignoring unknown nodename (expecting %s)\n", appname, nodename);
+            }
+        }
+
         if (cmdline[0]) {
             status = xfer(&ra, "(cmdline)", cmdline, false);
         } else {
