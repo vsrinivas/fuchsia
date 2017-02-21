@@ -61,7 +61,7 @@ func devmgrConnect() (mx.Handle, error) {
 	return c0.Handle, nil
 }
 
-func socketDispatcher(stk tcpip.Stack, dnsClient *dns.Client) (*socketServer, error) {
+func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 	d, err := dispatcher.New(rio.Handler)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,6 @@ func socketDispatcher(stk tcpip.Stack, dnsClient *dns.Client) (*socketServer, er
 		started:    make(chan struct{}),
 		dispatcher: d,
 		stack:      stk,
-		dnsClient:  dnsClient,
 		io:         make(map[cookie]*iostate),
 		next:       1,
 	}
@@ -96,10 +95,11 @@ func socketDispatcher(stk tcpip.Stack, dnsClient *dns.Client) (*socketServer, er
 	return s, nil
 }
 
-func (s *socketServer) setAddr(addr tcpip.Address) {
+func (s *socketServer) setAddr(addr tcpip.Address, nicid tcpip.NICID) {
 	s.mu.Lock()
 	close(s.started)
 	s.addr = addr
+	s.dnsClient = dns.NewClient(s.stack, nicid)
 	s.mu.Unlock()
 }
 

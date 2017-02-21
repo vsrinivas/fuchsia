@@ -13,7 +13,6 @@ import (
 	"apps/netstack/eth"
 
 	"github.com/google/netstack/dhcp"
-	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/link/sniffer"
 	"github.com/google/netstack/tcpip/network/arp"
@@ -40,8 +39,7 @@ func main() {
 		tcp.ProtocolName,
 		udp.ProtocolName,
 	}).(*stack.Stack)
-	dnsClient := dns.NewClient(stk, 1)
-	s, err := socketDispatcher(stk, dnsClient)
+	s, err := socketDispatcher(stk)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,7 +107,7 @@ func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, a
 		stk.SetRouteTable(defaultRouteTable(config.Gateway))
 		stk.RemoveAddress(nicid, "\xff\xff\xff\xff")
 		stk.RemoveAddress(nicid, "\x00\x00\x00\x00")
-		s.setAddr(dhcpClient.Address())
+		s.setAddr(dhcpClient.Address(), nicid)
 	})
 	return nil
 }
