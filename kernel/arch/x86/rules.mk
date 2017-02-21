@@ -90,6 +90,7 @@ MODULE_SRCS += \
 
 ifeq ($(SUBARCH),x86-64)
 MODULE_SRCS += \
+	$(SUBARCH_DIR)/hypervisor.S \
 	$(SUBARCH_DIR)/syscall.S \
 	$(SUBARCH_DIR)/user_copy.S \
 	$(SUBARCH_DIR)/uspace_entry.S

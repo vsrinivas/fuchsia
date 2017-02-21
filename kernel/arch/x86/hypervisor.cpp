@@ -41,6 +41,7 @@
 
 /* VMCS fields */
 #define VMCS_16_VPID                                0x0000      /* Virtual processor ID */
+#define VMCS_16_GUEST_CS_SELECTOR                   0x0802      /* Guest CS selector */
 #define VMCS_16_HOST_CS_SELECTOR                    0x0c02      /* Host CS selector */
 #define VMCS_16_HOST_TR_SELECTOR                    0x0c0c      /* Host TR selector */
 #define VMCS_32_PINBASED_CTLS                       0x4000      /* Pin-based controls */
@@ -53,6 +54,12 @@
 #define VMCS_32_EXIT_REASON                         0x4402      /* Exit reason */
 #define VMCS_64_MSR_BITMAPS_ADDRESS                 0x2004      /* MSR bitmaps address */
 #define VMCS_64_LINK_POINTER                        0x2800      /* VMCS link pointer */
+#define VMCS_64_HOST_IA32_PAT                       0x2c00      /* Host PAT */
+#define VMCS_64_HOST_IA32_EFER                      0x2c02      /* Host EFER */
+#define VMCS_XX_GUEST_CR3                           0x6802      /* Guest CR3 */
+#define VMCS_XX_GUEST_GDTR_BASE                     0x6816      /* Guest GDTR base */
+#define VMCS_XX_GUEST_RSP                           0x681c      /* Guest RSP */
+#define VMCS_XX_GUEST_RIP                           0x681e      /* Guest RIP */
 #define VMCS_XX_HOST_CR0                            0x6c00      /* Host CR0 */
 #define VMCS_XX_HOST_CR3                            0x6c02      /* Host CR3 */
 #define VMCS_XX_HOST_CR4                            0x6c04      /* Host CR4 */
@@ -64,28 +71,42 @@
 #define VMCS_XX_HOST_RSP                            0x6c14      /* Host RSP */
 #define VMCS_XX_HOST_RIP                            0x6c16      /* Host RIP */
 
-/* VMCS_32_PROCBASED_CTLS flags */
-#define VMCS_32_PROCBASED_CTLS_MSR_BITMAPS          (1u << 28)
-#define VMCS_32_PROCBASED_CTLS_PROCBASED_CTLS2      (1u << 31)
-
 /* VMCS_32_PROCBASED_CTLS2 flags */
 #define VMCS_32_PROCBASED_CTLS2_EPT                 (1u << 1)
 #define VMCS_32_PROCBASED_CTLS2_RDTSCP              (1u << 3)
 #define VMCS_32_PROCBASED_CTLS2_VPID                (1u << 5)
 #define VMCS_32_PROCBASED_CTLS2_XSAVES_XRSTORS      (1u << 20)
 
+/* VMCS_32_PROCBASED_CTLS flags */
+#define VMCS_32_PROCBASED_CTLS_MSR_BITMAPS          (1u << 28)
+#define VMCS_32_PROCBASED_CTLS_PROCBASED_CTLS2      (1u << 31)
+
+
+/* VMCS_32_PINBASED_CTLS flags */
+#define VMCS_32_PINBASED_CTLS_EXTINT_EXITING        (1u << 0)
+#define VMCS_32_PINBASED_CTLS_NMI_EXITING           (1u << 3)
+
 /* VMCS_32_EXIT_CTLS flags */
 #define VMCS_32_EXIT_CTLS_64BIT_MODE                (1u << 9)
 #define VMCS_32_EXIT_CTLS_ACK_INTERRUPT             (1u << 15)
+#define VMCS_32_EXIT_CTLS_SAVE_IA32_PAT             (1u << 18)
+#define VMCS_32_EXIT_CTLS_LOAD_IA32_PAT             (1u << 19)
+#define VMCS_32_EXIT_CTLS_SAVE_IA32_EFER            (1u << 20)
+#define VMCS_32_EXIT_CTLS_LOAD_IA32_EFER            (1u << 21)
 
 /* VMCS_32_ENTRY_CTLS flags */
 #define VMCS_32_ENTRY_CTLS_IA32E_MODE               (1u << 9)
+#define VMCS_32_ENTRY_CTLS_LOAD_IA32_PAT            (1u << 14)
+#define VMCS_32_ENTRY_CTLS_LOAD_IA32_EFER           (1u << 15)
 
 /* VMCS_32_EXCEPTION_BITMAP values */
 #define VMCS_32_EXCEPTION_BITMAP_ALL_EXCEPTIONS     0xffffffff
 
 /* VMCS_64_LINK_POINTER values */
 #define VMCS_64_LINK_POINTER_INVALIDATE             0xffffffffffffffff
+
+/* VMCS_32_EXIT_REASON values */
+#define VMCS_32_EXIT_REASON_BASIC_MASK              0xffff
 
 extern uint8_t _gdt[];
 extern uint8_t _idt[];
@@ -413,6 +434,14 @@ public:
         // failures (see Section 26.3.1.5).
         vmwrite(VMCS_64_LINK_POINTER, VMCS_64_LINK_POINTER_INVALIDATE);
 
+        // From Volume 3, Section 24.6.3: The exception bitmap is a 32-bit field
+        // that contains one bit for each exception. When an exception occurs,
+        // its vector is used to select a bit in this field. If the bit is 1,
+        // the exception causes a VM exit. If the bit is 0, the exception is
+        // delivered normally through the IDT, using the descriptor
+        // corresponding to the exception’s vector.
+        vmwrite(VMCS_32_EXCEPTION_BITMAP, VMCS_32_EXCEPTION_BITMAP_ALL_EXCEPTIONS);
+
         // We only support full VMX controls.
         if (!info.vmx_controls)
             return ERR_NOT_SUPPORTED;
@@ -428,14 +457,13 @@ public:
         set_vmcs_control(VMCS_32_PINBASED_CTLS,
                          // Pin-based controls.
                          read_msr(X86_MSR_IA32_VMX_TRUE_PINBASED_CTLS),
-                         // Use the defaults.
-                         0);
+                         // External interrupts cause a VM exit.
+                         VMCS_32_PINBASED_CTLS_EXTINT_EXITING |
+                         // Non-maskable interrupts cause a VM exit.
+                         VMCS_32_PINBASED_CTLS_NMI_EXITING);
         set_vmcs_control(VMCS_32_PROCBASED_CTLS,
                          // Primary processor-based controls.
                          read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
-                         // Enable use of MSR bitmaps, which control whether
-                         // RDMSR and WRMSR instructions cause a VM-exit.
-                         VMCS_32_PROCBASED_CTLS_MSR_BITMAPS |
                          // Enable secondary processor-based controls.
                          VMCS_32_PROCBASED_CTLS_PROCBASED_CTLS2);
         set_vmcs_control(VMCS_32_EXIT_CTLS,
@@ -448,7 +476,9 @@ public:
                          // On VM exit due to an external interrupt, make the
                          // logical processor acknowledge the interrupt
                          // controller, acquiring the interrupt’s vector.
-                         VMCS_32_EXIT_CTLS_ACK_INTERRUPT);
+                         VMCS_32_EXIT_CTLS_ACK_INTERRUPT |
+                         VMCS_32_EXIT_CTLS_LOAD_IA32_PAT |
+                         VMCS_32_EXIT_CTLS_LOAD_IA32_EFER);
         set_vmcs_control(VMCS_32_ENTRY_CTLS,
                          // VM-entry controls.
                          read_msr(X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS),
@@ -459,20 +489,15 @@ public:
         // Setup VMCS host state.
         vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
         vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(arch_curr_cpu_num()));
+        vmwrite(VMCS_64_HOST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
+        vmwrite(VMCS_64_HOST_IA32_EFER, read_msr(X86_MSR_EFER));
         vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
-        vmwrite(VMCS_XX_HOST_GS_BASE, read_msr(X86_MSR_IA32_KERNEL_GS_BASE));
+        vmwrite(VMCS_XX_HOST_GS_BASE, read_msr(X86_MSR_IA32_GS_BASE));
         vmwrite(VMCS_XX_HOST_TR_BASE, reinterpret_cast<uint64_t>(&x86_get_percpu()->default_tss));
         vmwrite(VMCS_XX_HOST_GDTR_BASE, reinterpret_cast<uint64_t>(_gdt));
         vmwrite(VMCS_XX_HOST_IDTR_BASE, reinterpret_cast<uint64_t>(_idt));
-        // TODO(abdulla): Setup host RIP and RSP correctly.
-        vmwrite(VMCS_XX_HOST_RIP, 0);
-        vmwrite(VMCS_XX_HOST_RSP, 0);
         vmwrite(VMCS_XX_HOST_CR0, x86_get_cr0());
-        vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
         vmwrite(VMCS_XX_HOST_CR4, x86_get_cr4());
-
-        // Setup MSR bitmaps.
-        vmwrite(VMCS_64_MSR_BITMAPS_ADDRESS, msr_bitmaps_page_.PhysicalAddress());
 
         return NO_ERROR;
     }
@@ -524,11 +549,50 @@ VmcsCpuContext* VmcsContext::CurrCpuContext() {
     return &cpu_contexts_[arch_curr_cpu_num()];
 }
 
+struct VmxHostState {
+    // Callee-save registers.
+    uint64_t rsp;
+    uint64_t rbp;
+    uint64_t rbx;
+    uint64_t r12;
+    uint64_t r13;
+    uint64_t r14;
+    uint64_t r15;
+
+    // Return address.
+    uint64_t rip;
+};
+
+__BEGIN_CDECLS
+/* Save the host state.
+ * This is the VMX equivalent of setjmp. If we return 0 we have saved the host
+ * state, if we return 1 we have loaded the host state.
+ */
+int vmx_host_save(VmxHostState* host_state);
+
+/* Load the host state.
+ * This is the VMX equivalent of longjmp. This is never called directly by the
+ * code, but is executed by VMX on VM exit.
+ */
+void vmx_host_load();
+__END_CDECLS
+
 static int vmcs_launch(void* arg) {
+    VmxHostState host_state;
+    if (vmx_host_save(&host_state)) {
+        uint64_t reason = vmread(VMCS_32_EXIT_REASON);
+        dprintf(SPEW, "vmexit reason: %#" PRIx64 "\n", reason);
+        return NO_ERROR;
+    }
+
+    vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load));
+    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state));
+    vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
+
     mx_status_t status = vmlaunch();
     if (status != NO_ERROR) {
         uint64_t error = vmread(VMCS_32_INSTRUCTION_ERROR);
-        dprintf(SPEW, "vmlaunch failed: %" PRIu64 "\n", error);
+        dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     }
     return status;
 }
