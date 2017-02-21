@@ -3,8 +3,6 @@
         "//dart/pkg/analyzer_cli(//build/toolchain:host_x64)",
         "//dart/runtime/bin:dart",
         "//dart/runtime/bin:dart(//build/toolchain:host_x64)",
-        "//dart/runtime/bin:run_vm_tests",
-        "//dart/runtime/bin:run_vm_tests_fuchsia",
         "//dart:create_sdk",
         "//dart:create_sdk(//build/toolchain:host_x64)"
     ],
@@ -16,14 +14,6 @@
         {
             "binary": "hello_fuchsia.dart",
             "bootfs_path": "apps/hello_fuchsia.dart"
-        },
-        {
-            "binary": "run_vm_tests",
-            "bootfs_path": "bin/dart_vm_tests"
-        },
-        {
-            "binary": "run_vm_tests_fuchsia",
-            "bootfs_path": "bin/run_dart_vm_tests"
         }
     ]
 }
