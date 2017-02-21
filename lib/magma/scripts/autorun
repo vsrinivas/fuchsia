@@ -1,7 +1,7 @@
 msleep 5000
 echo [SYS START=]
 /system/test/magma_sys_unit_tests
-/system/test/magma_system_tests --gtest_filter=-*Stress*
+/system/test/magma_integration_tests --gtest_filter=-*Stress*
 echo [SYS END===]
 echo [==========]
 echo [ABI START=]
@@ -20,4 +20,4 @@ echo [APP START=]
 /system/test/vk_import_export_readback
 echo [APP END===]
 echo [==========]
-echo SKIPPED /system/test/magma_system_tests --gtest_filter=*HangRecovery*Stress*
+echo SKIPPED /system/test/magma_integration_tests --gtest_filter=*HangRecovery*Stress*

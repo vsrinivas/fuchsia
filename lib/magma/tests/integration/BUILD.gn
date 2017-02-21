@@ -4,13 +4,13 @@
 
 import("//magma/gnbuild/magma.gni")
 
-group("system") {
+group("integration") {
   testonly = true
 
-  deps = [ ":magma_system_tests" ]
+  deps = [ ":magma_integration_tests" ]
 }
 
-executable("magma_system_tests") {
+executable("magma_integration_tests") {
   testonly = true
 
   sources = [
