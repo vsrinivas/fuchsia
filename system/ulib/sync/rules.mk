@@ -14,4 +14,6 @@ MODULE_SRCS += \
 MODULE_LIBS := \
     ulib/magenta \
 
+MODULE_EXPORT := a
+
 include make/module.mk
