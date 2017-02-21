@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"syscall/mx"
+	"syscall/mx/mxerror"
 	"syscall/mx/mxio"
 	"syscall/mx/mxio/dispatcher"
 	"syscall/mx/mxio/rio"
@@ -336,9 +336,7 @@ func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH,
 		return 0, 0, mx.ErrInvalidArgs
 	}
 
-	var t tcpip.TransportProtocolNumber
 	var n tcpip.NetworkProtocolNumber
-
 	switch domain {
 	case AF_INET:
 		n = ipv4.ProtocolNumber
@@ -349,23 +347,9 @@ func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH,
 		return 0, 0, mx.ErrNotSupported
 	}
 
-	switch typ {
-	case SOCK_STREAM:
-		switch protocol {
-		case IPPROTO_IP, IPPROTO_TCP:
-			t = tcp.ProtocolNumber
-		default:
-			log.Printf("socket: unsupported SOCK_STREAM protocol: %d", protocol)
-			return 0, 0, mx.ErrNotSupported
-		}
-	case SOCK_DGRAM:
-		switch protocol {
-		case IPPROTO_IP, IPPROTO_UDP:
-			t = udp.ProtocolNumber
-		default:
-			log.Printf("socket: unsupported SOCK_DGRAM protocol: %d", protocol)
-			return 0, 0, mx.ErrNotSupported
-		}
+	t, err := sockProto(typ, protocol)
+	if err != nil {
+		return 0, 0, err
 	}
 
 	ios, peerH, peerS, err = s.newIostate()
@@ -387,6 +371,26 @@ func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH,
 	ios.ep = ep
 
 	return peerH, peerS, nil
+}
+
+func sockProto(typ, protocol int) (t tcpip.TransportProtocolNumber, err error) {
+	switch typ {
+	case SOCK_STREAM:
+		switch protocol {
+		case IPPROTO_IP, IPPROTO_TCP:
+			return tcp.ProtocolNumber, nil
+		default:
+			return 0, mxerror.Errorf(mx.ErrNotSupported, "unsupported SOCK_STREAM protocol: %d", protocol)
+		}
+	case SOCK_DGRAM:
+		switch protocol {
+		case IPPROTO_IP, IPPROTO_UDP:
+			return udp.ProtocolNumber, nil
+		default:
+			return 0, mxerror.Errorf(mx.ErrNotSupported, "unsupported SOCK_DGRAM protocol: %d", protocol)
+		}
+	}
+	return 0, mxerror.Errorf(mx.ErrNotSupported, "unsupported protocol: %d/%d", typ, protocol)
 }
 
 func (s *socketServer) opAccept(ios *iostate, msg *rio.Msg, path string) (peerH, peerS mx.Handle, err error) {
@@ -615,20 +619,28 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	}
 	node, service, hints := val.Unpack()
 
-	// TODO(mpcomplete):
-	//	An /etc/services equivalent
-	//	IPv6 support
-	//      Better handling of hints (e.g. guess proper socktype, etc?)
+	// TODO(mpcomplete): IPv6 support
 	if debug {
 		log.Printf("opGetAddrInfo node=%q, service=%q, hints=%v", node, service, hints)
 	}
 
-	port := uint16(0)
-	servicePort, err := strconv.Atoi(service)
-	if err == nil {
-		port = uint16(servicePort)
-	} else {
-		log.Printf("opGetAddrInfo service %q is not a port: %v", service, err)
+	if hints.ai_family == 0 {
+		hints.ai_family = AF_INET
+	}
+	if hints.ai_socktype == 0 {
+		hints.ai_socktype = SOCK_STREAM
+	}
+	if hints.ai_protocol == 0 {
+		hints.ai_protocol = IPPROTO_TCP
+	}
+	t, err := sockProto(int(hints.ai_socktype), int(hints.ai_protocol))
+	if err != nil {
+		return errStatus(err)
+	}
+	port := serviceLookup(service, t)
+	if port == 0 {
+		log.Printf("service %q is unknown", service)
+		return mx.ErrNotSupported
 	}
 
 	var addr c_in_addr
@@ -642,16 +654,6 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 				break
 			}
 		}
-	}
-
-	if hints.ai_family == 0 {
-		hints.ai_family = AF_INET
-	}
-	if hints.ai_socktype == 0 {
-		hints.ai_socktype = SOCK_STREAM
-	}
-	if hints.ai_protocol == 0 {
-		hints.ai_protocol = IPPROTO_TCP
 	}
 
 	rep := c_mxrio_gai_reply{}
