@@ -841,9 +841,7 @@ static mx_status_t check_data_partition(int device_fd) {
         return ERR_IO;
     }
 
-    int part_count = 0;
-    for (;gpt_edit->partitions[part_count] != NULL; part_count++);
-
+    uint16_t part_count = count_partitions(gpt_edit);
     uint16_t part_idx = 0;
     uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
     mx_status_t rc = find_partition_entries(
@@ -927,8 +925,7 @@ static mx_status_t make_data_part(gpt_device_t* install_dev, int device_fd,
     }
 
     // count the number of partitions we have
-    int part_count = 0;
-    for (;gpt_edit->partitions[part_count] != NULL; part_count++);
+    uint16_t part_count = count_partitions(gpt_edit);
 
     // locate the metadata for the partition just created
     uint16_t part_idx = 0;
