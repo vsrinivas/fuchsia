@@ -9,7 +9,10 @@ import "apps/media/services/timelines.fidl";
 
 [ServiceName="media::logs::MediaPlayerChannel"]
 interface MediaPlayerChannel {
+  BoundAs(uint64 koid);
+  CreatedSource(uint64 related_koid);
   ReceivedSourceDescription(array<MediaType> stream_types);
+  CreatedSink(uint64 stream_index, uint64 related_koid);
   StreamsPrepared();
   Flushed();
   Primed();

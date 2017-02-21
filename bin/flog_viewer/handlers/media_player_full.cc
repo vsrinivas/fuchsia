@@ -24,11 +24,33 @@ void MediaPlayerFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
+void MediaPlayerFull::BoundAs(uint64_t koid) {
+  std::cout << entry() << "MediaPlayer.BoundAs" << std::endl;
+  std::cout << indent;
+  std::cout << begl << "koid: " << AsKoid(koid) << std::endl;
+  std::cout << outdent;
+}
+
+void MediaPlayerFull::CreatedSource(uint64_t related_koid) {
+  std::cout << entry() << "MediaPlayer.CreatedSource" << std::endl;
+  std::cout << indent;
+  std::cout << begl << "related_koid: " << AsKoid(related_koid) << std::endl;
+  std::cout << outdent;
+}
+
 void MediaPlayerFull::ReceivedSourceDescription(
     fidl::Array<media::MediaTypePtr> stream_types) {
   std::cout << entry() << "MediaPlayer.ReceivedSourceDescription" << std::endl;
   std::cout << indent;
   std::cout << begl << "stream_types: " << stream_types;
+  std::cout << outdent;
+}
+
+void MediaPlayerFull::CreatedSink(uint64_t stream_index, uint64_t related_koid) {
+  std::cout << entry() << "MediaPlayer.CreatedSink" << std::endl;
+  std::cout << indent;
+  std::cout << begl << "stream_index: " << stream_index << std::endl;
+  std::cout << begl << "related_koid: " << AsKoid(related_koid) << std::endl;
   std::cout << outdent;
 }
 

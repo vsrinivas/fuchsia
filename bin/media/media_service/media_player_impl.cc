@@ -38,6 +38,8 @@ MediaPlayerImpl::MediaPlayerImpl(
   RCHECK(audio_renderer_handle || video_renderer_handle);
   FTL_DCHECK(owner);
 
+  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
+
   status_publisher_.SetCallbackRunner([this](const GetStatusCallback& callback,
                                              uint64_t version) {
     MediaPlayerStatusPtr status = MediaPlayerStatus::New();
@@ -55,6 +57,7 @@ MediaPlayerImpl::MediaPlayerImpl(
   // Create a source with no type conversions.
   media_service_->CreateSource(std::move(reader_handle), nullptr,
                                source_.NewRequest());
+  FLOG(log_channel_, CreatedSource(FLOG_PTR_KOID(source_)));
   HandleSourceStatusUpdates();
 
   // Create a timeline controller.
@@ -129,6 +132,7 @@ void MediaPlayerImpl::PrepareStream(
   MediaSinkPtr sink;
   media_service_->CreateSink(std::move(renderer_handle),
                              input_media_type.Clone(), sink.NewRequest());
+  FLOG(log_channel_, CreatedSink(index, FLOG_PTR_KOID(sink)));
 
   MediaTimelineControlPointPtr timeline_control_point;
   sink->GetTimelineControlPoint(timeline_control_point.NewRequest());

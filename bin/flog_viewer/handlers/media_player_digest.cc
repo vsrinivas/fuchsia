@@ -55,6 +55,14 @@ std::shared_ptr<Accumulator> MediaPlayerDigest::GetAccumulator() {
   return accumulator_;
 }
 
+void MediaPlayerDigest::BoundAs(uint64_t koid) {
+  BindAs(koid);
+}
+
+void MediaPlayerDigest::CreatedSource(uint64_t related_koid) {
+  SetBindingKoid(&accumulator_->source_, related_koid);
+}
+
 void MediaPlayerDigest::ReceivedSourceDescription(
     fidl::Array<media::MediaTypePtr> stream_types) {
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kInitial) {
@@ -68,6 +76,18 @@ void MediaPlayerDigest::ReceivedSourceDescription(
   }
 
   accumulator_->stream_types_ = std::move(stream_types);
+  accumulator_->sinks_.resize(accumulator_->stream_types_.size());
+}
+
+void MediaPlayerDigest::CreatedSink(uint64_t stream_index, uint64_t related_koid) {
+  if (accumulator_->sinks_.size() <= stream_index) {
+    ReportProblem() << "Stream index (" << stream_index
+                    << ") out of range, stream count "
+                    << accumulator_->sinks_.size();
+    return;
+  }
+
+  SetBindingKoid(&accumulator_->sinks_[stream_index], related_koid);
 }
 
 void MediaPlayerDigest::StreamsPrepared() {
@@ -181,7 +201,9 @@ void MediaPlayerAccumulator::Print(std::ostream& os) {
   os << begl << "state: " << state_ << std::endl;
   os << begl << "target_state: " << target_state_ << std::endl;
   os << begl << "target_position: " << AsTime(target_position_) << std::endl;
+  os << begl << "source: " << source_;
   os << begl << "stream_types: " << stream_types_;
+  os << begl << "sinks: " << sinks_;
   os << begl << "timeline_transform: " << timeline_transform_;
 
   if (state_ != target_state_) {

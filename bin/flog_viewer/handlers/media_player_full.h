@@ -24,8 +24,14 @@ class MediaPlayerFull : public ChannelHandler,
 
  private:
   // MediaPlayerChannel implementation.
+  void BoundAs(uint64_t koid) override;
+
+  void CreatedSource(uint64_t related_koid) override;
+
   void ReceivedSourceDescription(
       fidl::Array<media::MediaTypePtr> stream_types) override;
+
+  void CreatedSink(uint64_t stream_index, uint64_t related_koid) override;
 
   void StreamsPrepared() override;
 

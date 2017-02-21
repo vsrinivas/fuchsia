@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "apps/media/services/logs/media_player_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
@@ -29,8 +31,14 @@ class MediaPlayerDigest : public ChannelHandler,
 
  private:
   // MediaPlayerChannel implementation.
+  void BoundAs(uint64_t koid) override;
+
+  void CreatedSource(uint64_t related_koid) override;
+
   void ReceivedSourceDescription(
       fidl::Array<media::MediaTypePtr> stream_types) override;
+
+  void CreatedSink(uint64_t stream_index, uint64_t related_koid) override;
 
   void StreamsPrepared() override;
 
@@ -87,7 +95,9 @@ class MediaPlayerAccumulator : public Accumulator {
   State state_ = State::kInitial;
   State target_state_ = State::kFlushed;
   int64_t target_position_ = media::kUnspecifiedTime;
+  ChildBinding source_;
   fidl::Array<media::MediaTypePtr> stream_types_;
+  std::vector<ChildBinding> sinks_;
   media::TimelineTransformPtr timeline_transform_;
 
   friend class MediaPlayerDigest;

@@ -49,6 +49,9 @@ class FactoryServiceBase {
       binding_.set_connection_error_handler([this]() { Release(); });
     }
 
+    // Returns the binding established via the request in the constructor.
+    const fidl::Binding<Interface>& binding() { return binding_; }
+
     // Increments the retention count.
     void Retain() { ++retention_count_; }
 
