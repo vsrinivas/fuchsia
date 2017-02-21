@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/google/netstack/tcpip"
@@ -36,10 +37,14 @@ var services = map[serviceKey]uint16{
 	{"https", tcp.ProtocolNumber}:  443,
 }
 
-func serviceLookup(name string, t tcpip.TransportProtocolNumber) (port uint16) {
+func serviceLookup(name string, t tcpip.TransportProtocolNumber) (port uint16, err error) {
 	portNum, err := strconv.Atoi(name)
 	if err == nil {
-		return uint16(portNum)
+		return uint16(portNum), nil
 	}
-	return services[serviceKey{name, t}]
+	port, ok := services[serviceKey{name, t}]
+	if !ok {
+		return 0, fmt.Errorf("unknown service: %q", name)
+	}
+	return port, nil
 }

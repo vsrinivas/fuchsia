@@ -637,10 +637,13 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	if err != nil {
 		return errStatus(err)
 	}
-	port := serviceLookup(service, t)
-	if port == 0 {
-		log.Printf("service %q is unknown", service)
-		return mx.ErrNotSupported
+	var port uint16
+	if service != "" {
+		port, err = serviceLookup(service, t)
+		if err != nil {
+			log.Printf("getAddrInfo: %v", err)
+			return mx.ErrNotSupported
+		}
 	}
 
 	var addr c_in_addr
