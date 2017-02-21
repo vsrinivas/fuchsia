@@ -8,4 +8,3 @@ repository = "https://fuchsia.googlesource.com/magenta-rs/"
 
 [dependencies]
 bitflags = "0.7.0"
-libc = "0.2.20"

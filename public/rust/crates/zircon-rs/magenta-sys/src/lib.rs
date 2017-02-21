@@ -9,8 +9,6 @@ extern crate core;
 #[macro_use]
 extern crate bitflags;
 
-extern crate libc;
-
 pub type mx_handle_t = i32;
 
 pub type mx_status_t = i32;
@@ -212,8 +210,4 @@ extern {
         actual: *mut usize) -> mx_status_t;
     pub fn mx_socket_read(handle: mx_handle_t, options: u32, buffer: *mut u8, len: usize,
         actual: *mut usize) -> mx_status_t;
-
-    // ioctl
-    pub fn mxio_ioctl(fd: libc::c_int, op: libc::c_int, in_buf: * const libc::c_void, in_len: libc::size_t,
-        out_buf: * mut libc::c_void, out_len: libc::size_t) -> isize;
 }
