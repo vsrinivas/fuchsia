@@ -10,55 +10,64 @@
 #include <runtime/processargs.h>
 #include <runtime/thread.h>
 
-static void dummy(void) {}
-weak_alias(dummy, _init);
-
-__attribute__((__weak__, __visibility__("hidden"))) extern void (*const __init_array_start)(void),
-    (*const __init_array_end)(void);
-
-static void dummy_ssp(uintptr_t* p) {}
-weak_alias(dummy_ssp, __init_ssp);
-
-static void libc_start_init(void) {
-    _init();
-    uintptr_t a = (uintptr_t)&__init_array_start;
-    for (; a < (uintptr_t)&__init_array_end; a += sizeof(void (*)(void)))
-        (*(void (**)(void))a)();
-}
-weak_alias(libc_start_init, __libc_start_init);
-
 // hook for extension libraries to init
 void __libc_extensions_init(uint32_t handle_count,
                             mx_handle_t handle[],
                             uint32_t handle_info[]) __attribute__((weak));
 
-// hook to let certain very low level processes muck
-// with arg before things start
-void* __libc_intercept_arg(void*) __attribute__((weak));
+struct start_params {
+    uint32_t argc, nhandles;
+    char** argv;
+    mx_handle_t* handles;
+    uint32_t* handle_info;
+    int (*main)(int, char**, char**);
+};
 
-_Noreturn void __libc_start_main(int (*main)(int, char**, char**),
-                                 void* stack_end, void* arg) {
+// This gets called via inline assembly below, after switching onto
+// the newly-allocated (safe) stack.
+static _Noreturn void start_main(const struct start_params*)
+    __asm__("start_main") __attribute__((used));
+static void start_main(const struct start_params* p) {
+    // Allow companion libraries a chance to poke at this.
+    if (&__libc_extensions_init != NULL)
+        __libc_extensions_init(p->nhandles, p->handles, p->handle_info);
+
+    // Run static constructors et al.
+    __libc_start_init();
+
+    // Pass control to the application.
+    exit((*p->main)(p->argc, p->argv, __environ));
+}
+
+_Noreturn void __libc_start_main(void* arg, int (*main)(int, char**, char**)) {
+    // Initialize stack-protector canary value first thing.
+    size_t actual;
+    mx_status_t status = mx_cprng_draw(&__stack_chk_guard,
+                                       sizeof(__stack_chk_guard), &actual);
+    if (status != NO_ERROR || actual != sizeof(__stack_chk_guard))
+        __builtin_trap();
+
     // extract process startup information from channel in arg
     mx_handle_t bootstrap = (uintptr_t)arg;
 
-    uint32_t nbytes, nhandles;
-    mx_status_t status = mxr_message_size(bootstrap, &nbytes, &nhandles);
+    struct start_params p = { .main = main };
+    uint32_t nbytes;
+    status = mxr_message_size(bootstrap, &nbytes, &p.nhandles);
     if (status != NO_ERROR)
-        nbytes = nhandles = 0;
+        nbytes = p.nhandles = 0;
 
     MXR_PROCESSARGS_BUFFER(buffer, nbytes);
-    mx_handle_t handles[nhandles];
+    mx_handle_t handles[p.nhandles];
+    p.handles = handles;
     mx_proc_args_t* procargs = NULL;
-    uint32_t* handle_info = NULL;
     if (status == NO_ERROR)
         status = mxr_processargs_read(bootstrap, buffer, nbytes,
-                                      handles, nhandles,
-                                      &procargs, &handle_info);
+                                      handles, p.nhandles,
+                                      &procargs, &p.handle_info);
 
-    uint32_t argc = 0;
     uint32_t envc = 0;
     if (status == NO_ERROR) {
-        argc = procargs->args_num;
+        p.argc = procargs->args_num;
         envc = procargs->environ_num;
     }
 
@@ -69,25 +78,23 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
     // (auxv), which is in two-word pairs and terminated by zero
     // words.  Some crufty programs might assume some of that layout,
     // and it costs us nothing to stay consistent with it here.
-    char* args_and_environ[argc + 1 + envc + 1 + 2];
-    char** argv = &args_and_environ[0];
-    char** envp = &args_and_environ[argc + 1];
-    char** dummy_auxv = &args_and_environ[argc + 1 + envc + 1];
+    char* args_and_environ[p.argc + 1 + envc + 1 + 2];
+    p.argv = &args_and_environ[0];
+    __environ = &args_and_environ[p.argc + 1];
+    char** dummy_auxv = &args_and_environ[p.argc + 1 + envc + 1];
     dummy_auxv[0] = dummy_auxv[1] = 0;
 
     if (status == NO_ERROR)
-        status = mxr_processargs_strings(buffer, nbytes, argv, envp);
+        status = mxr_processargs_strings(buffer, nbytes, p.argv, __environ);
     if (status != NO_ERROR) {
-        argc = 0;
-        argv = envp = NULL;
+        p.argc = 0;
+        p.argv = __environ = NULL;
     }
-
-    size_t stack_size = 0;
 
     // Find the handles we're interested in among what we were given.
     mx_handle_t main_thread_handle = MX_HANDLE_INVALID;
-    for (uint32_t i = 0; i < nhandles; ++i) {
-        switch (MX_HND_INFO_TYPE(handle_info[i])) {
+    for (uint32_t i = 0; i < p.nhandles; ++i) {
+        switch (MX_HND_INFO_TYPE(p.handle_info[i])) {
         case MX_HND_TYPE_PROC_SELF:
             // The handle will have been installed already by dynamic
             // linker startup, but now we have another one.  They
@@ -97,7 +104,7 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
                 _mx_handle_close(__magenta_process_self);
             __magenta_process_self = handles[i];
             handles[i] = MX_HANDLE_INVALID;
-            handle_info[i] = 0;
+            p.handle_info[i] = 0;
             break;
 
         case MX_HND_TYPE_JOB:
@@ -109,7 +116,7 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
                 _mx_handle_close(__magenta_job_default);
             __magenta_job_default = handles[i];
             handles[i] = MX_HANDLE_INVALID;
-            handle_info[i] = 0;
+            p.handle_info[i] = 0;
             break;
 
         case MX_HND_TYPE_VMAR_ROOT:
@@ -118,56 +125,45 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
                 _mx_handle_close(__magenta_vmar_root_self);
             __magenta_vmar_root_self = handles[i];
             handles[i] = MX_HANDLE_INVALID;
-            handle_info[i] = 0;
+            p.handle_info[i] = 0;
             break;
 
         case MX_HND_TYPE_THREAD_SELF:
             main_thread_handle = handles[i];
             handles[i] = MX_HANDLE_INVALID;
-            handle_info[i] = 0;
-            break;
-
-        case MX_HND_TYPE_STACK_VMO:;
-            // Assume stack grows down.  The protocol is that our
-            // creator mapped the entire stack VMO and then passed
-            // us the handle.  We know the top of the stack from the
-            // entry point code.  From the VMO we can find the size.
-            // We assume (per protocol) that the whole thing is
-            // mapped.  Thus we know the bounds of our stack.
-            uint64_t stack_vmo_size;
-            status = _mx_vmo_get_size(handles[i], &stack_vmo_size);
-            if (status == NO_ERROR)
-                stack_size = stack_vmo_size;
-            // TODO(mcgrathr): Perhaps we should stash this handle
-            // somewhere, or close it?  For now we don't have anything
-            // else we want it for but maybe there will be something.
-            // So leave it to be collected.
+            p.handle_info[i] = 0;
             break;
         }
     }
 
     atomic_store(&libc.thread_count, 1);
 
-    __environ = envp;
-
     // This consumes the thread handle and sets up the thread pointer.
-    __init_main_thread(main_thread_handle, stack_end, stack_size);
+    pthread_t td = __init_main_thread(main_thread_handle);
 
-    volatile uintptr_t entropy;
-    size_t actual;
-    status = mx_cprng_draw((void*)&entropy, sizeof(entropy), &actual);
-    if (status != NO_ERROR || actual != sizeof(entropy)) {
-        abort();
-    }
-    __init_ssp((void*)&entropy);
-    entropy = 0;
+    // Switch to the allocated stack and call start_main(&p) there.
+    // The original stack stays around just to hold argv et al.
+    // The new stack is whole pages, so it's sufficiently aligned.
 
-    // allow companion libraries a chance to poke at this
-    if (&__libc_extensions_init != NULL)
-        __libc_extensions_init(nhandles, handles, handle_info);
+#ifdef __x86_64__
+    // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
+    // at (%rsp) serves as the return address for the outermost frame.
+    __asm__("lea -8(%[base], %[len], 1), %%rsp\n"
+            "jmp start_main\n"
+            "# Target receives %[arg]" : :
+            [base]"r"(td->safe_stack.iov_base),
+            [len]"r"(td->safe_stack.iov_len),
+            [arg]"D"(&p));
+#elif defined(__aarch64__)
+    __asm__("add sp, %[base], %[len]\n"
+            "mov x0, %[arg]\n"
+            "b start_main" : :
+            [base]"r"(td->safe_stack.iov_base),
+            [len]"r"(td->safe_stack.iov_len),
+            [arg]"r"(&p));
+#else
+#error what architecture?
+#endif
 
-    __libc_start_init();
-
-    // Pass control to the application
-    exit(main(argc, argv, envp));
+    __builtin_unreachable();
 }

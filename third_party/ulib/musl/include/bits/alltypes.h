@@ -481,7 +481,7 @@ typedef struct {
     int __c11;
     size_t _a_stacksize;
     size_t _a_guardsize;
-    size_t _a_stackaddr;
+    void* _a_stackaddr;
     int _a_detach;
     int _a_sched;
     int _a_policy;

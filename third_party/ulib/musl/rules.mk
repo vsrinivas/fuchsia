@@ -56,6 +56,7 @@ LOCAL_CFLAGS += -ffreestanding
 LOCAL_SRCS := \
     $(LOCAL_DIR)/magenta/internal.c \
     $(LOCAL_DIR)/magenta/thrd_get_mx_handle.c \
+    $(LOCAL_DIR)/pthread/allocate.c \
     $(LOCAL_DIR)/pthread/pthread_atfork.c \
     $(LOCAL_DIR)/pthread/pthread_attr_destroy.c \
     $(LOCAL_DIR)/pthread/pthread_attr_get.c \
@@ -240,9 +241,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/dirent/scandir.c \
     $(LOCAL_DIR)/src/dirent/versionsort.c \
     $(LOCAL_DIR)/src/env/__environ.c \
-    $(LOCAL_DIR)/src/env/__init_tls.c \
     $(LOCAL_DIR)/src/env/__libc_start_main.c \
-    $(LOCAL_DIR)/src/env/__reset_tls.c \
     $(LOCAL_DIR)/src/env/__stack_chk_fail.c \
     $(LOCAL_DIR)/src/env/clearenv.c \
     $(LOCAL_DIR)/src/env/getenv.c \

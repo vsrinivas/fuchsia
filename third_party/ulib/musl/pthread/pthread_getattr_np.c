@@ -6,7 +6,7 @@
 int pthread_getattr_np(pthread_t t, pthread_attr_t* a) {
     *a = (pthread_attr_t){};
     a->_a_detach = !!t->detached;
-    a->_a_stackaddr = (uintptr_t)t->stack;
-    a->_a_stacksize = t->stack_size;
+    a->_a_stackaddr = t->safe_stack.iov_base;
+    a->_a_stacksize = t->safe_stack.iov_len;
     return 0;
 }

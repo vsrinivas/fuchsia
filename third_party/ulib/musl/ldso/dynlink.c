@@ -3,7 +3,6 @@
 #include "libc.h"
 #include "pthread_impl.h"
 #include "stdio_impl.h"
-#include "tls_impl.h"
 #include <ctype.h>
 #include <dlfcn.h>
 #include <elf.h>
@@ -1292,32 +1291,23 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     return mem + v[1] + DTP_OFFSET;
 }
 
-void __init_main_thread(mx_handle_t thread_self,
-                        void* stack, size_t stack_size) {
-    void* initial_tls = calloc(libc.tls_size, 1);
-    if (!initial_tls) {
-        debugmsg("No memory for %zu bytes thread-local storage\n",
+struct pthread* __init_main_thread(mx_handle_t thread_self) {
+    pthread_attr_t attr = DEFAULT_PTHREAD_ATTR;
+    attr._a_stacksize = libc.stack_size;
+
+    pthread_t td = __allocate_thread(&attr);
+    if (td == NULL) {
+        debugmsg("No memory for %zu bytes thread-local storage.\n",
                  libc.tls_size);
         _exit(127);
     }
 
-    pthread_t tcb = __copy_tls(initial_tls);
-
-    mx_status_t status = mxr_thread_adopt(thread_self, &tcb->mxr_thread);
+    mx_status_t status = mxr_thread_adopt(thread_self, &td->mxr_thread);
     if (status != NO_ERROR)
         __builtin_trap();
 
-    // Record the stack bounds for pthread_getattr_np to find.
-    if (stack_size != 0) {
-        tcb->stack = stack;
-        tcb->stack_size = stack_size;
-    }
-
-    tcb->locale = &libc.global_locale;
-
-    tcb->head.tp = (uintptr_t)pthread_to_tp(tcb);
-    // TODO(kulakowski): Get and set thread ID
-    mxr_tp_set(thread_self, pthread_to_tp(tcb));
+    mxr_tp_set(thread_self, pthread_to_tp(td));
+    return td;
 }
 
 static void update_tls_size(void) {
@@ -1326,6 +1316,9 @@ static void update_tls_size(void) {
     libc.tls_size =
         ALIGN((1 + tls_cnt) * sizeof(void*) + tls_offset + sizeof(struct pthread) + tls_align * 2,
               tls_align);
+    // TODO(mcgrathr): The TLS block is always allocated in whole pages.
+    // We should keep track of the available slop to the end of the page
+    // and make dlopen use that for new dtv/TLS space when it fits.
 }
 
 /* Stage 1 of the dynamic linker is defined in dlstart.c. It calls the
@@ -1585,6 +1578,17 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     // Reset from the argv[0] value so we don't save a dangling pointer
     // into the caller's stack frame.
     app.name = (char*)"";
+
+    // Check for a PT_GNU_STACK header requesting a main thread stack size.
+    libc.stack_size = DEFAULT_PTHREAD_ATTR._a_stacksize;
+    for (i = 0; i < app.phnum; i++) {
+        if (app.phdr[i].p_type == PT_GNU_STACK) {
+            size_t size = app.phdr[i].p_memsz;
+            if (size > 0)
+                libc.stack_size = size;
+            break;
+        }
+    }
 
     const Ehdr* ehdr = (void*)app.map;
     return laddr(&app, ehdr->e_entry);

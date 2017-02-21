@@ -32,10 +32,10 @@ int pthread_attr_getscope(const pthread_attr_t* restrict a, int* restrict scope)
 
 int pthread_attr_getstack(const pthread_attr_t* restrict a, void** restrict addr,
                           size_t* restrict size) {
-    if (!a->_a_stackaddr)
+    if (a->_a_stackaddr == NULL)
         return EINVAL;
+    *addr = a->_a_stackaddr;
     *size = a->_a_stacksize;
-    *addr = (void*)(a->_a_stackaddr - *size);
     return 0;
 }
 

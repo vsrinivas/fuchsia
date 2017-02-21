@@ -5,15 +5,6 @@
 
 uintptr_t __stack_chk_guard;
 
-void __init_ssp(uintptr_t* entropy) {
-    if (entropy)
-        memcpy(&__stack_chk_guard, entropy, sizeof(uintptr_t));
-    else
-        __stack_chk_guard = (uintptr_t)&__stack_chk_guard * 1103515245;
-
-    __pthread_self()->abi.stack_guard = __stack_chk_guard;
-}
-
 void __stack_chk_fail(void) {
     __builtin_trap();
 }

@@ -14,18 +14,6 @@
 #include <string.h>
 #include <sys/mman.h>
 
-static void dummy_0(void) {}
-weak_alias(dummy_0, __acquire_ptc);
-weak_alias(dummy_0, __dl_thread_cleanup);
-weak_alias(dummy_0, __do_orphaned_stdio_locks);
-weak_alias(dummy_0, __release_ptc);
-
-static inline size_t round_up_to_page(size_t sz) {
-    return (sz + PAGE_SIZE - 1) & -PAGE_SIZE;
-}
-
-void* __copy_tls(unsigned char*);
-
 static void start_pthread(void* arg) {
     pthread_t self = arg;
     // TODO(kulakowski) Signals?
@@ -51,65 +39,38 @@ static void start_c11(void* arg) {
     pthread_exit((void*)(intptr_t)start(self->start_arg));
 }
 
-// Allocate stack_size via a vmo, and place the pointer to it in *stack_out.
-static mx_status_t allocate_stack(size_t stack_size, size_t guard_size, uintptr_t* stack_out) {
-    // TODO(kulakowski) Implement guard pages. For now, bypass all the
-    // guard page arithmetic and just map the entire size. When we can
-    // break up mapped regions and have PROT_NONE, the guard stuff is
-    // easy to reintroduce.
-
-    mx_handle_t thread_stack_vmo;
-    mx_status_t status = _mx_vmo_create(stack_size, 0, &thread_stack_vmo);
-    if (status < 0)
-        return status;
-
-    status = _mx_vmar_map(
-        _mx_vmar_root_self(), 0, thread_stack_vmo, 0, stack_size,
-        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, stack_out);
-    _mx_handle_close(thread_stack_vmo);
-
-    return status;
+static void deallocate_region(const struct iovec* region) {
+    _mx_vmar_unmap(_mx_vmar_root_self(),
+                   (uintptr_t)region->iov_base, region->iov_len);
 }
 
 int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp, void* (*entry)(void*), void* restrict arg) {
     pthread_attr_t attr = attrp == NULL ? DEFAULT_PTHREAD_ATTR : *attrp;
 
     // We do not support providing a stack via pthread attributes.
-    if (attr._a_stackaddr)
+    if (attr._a_stackaddr != NULL)
         return ENOTSUP;
 
     __acquire_ptc();
 
-    size_t guard_size = round_up_to_page(attr._a_guardsize);
-    size_t size = guard_size + round_up_to_page(attr._a_stacksize + libc.tls_size);
-    uintptr_t addr = 0u;
-    mx_status_t status = allocate_stack(size, guard_size, &addr);
-    if (status != NO_ERROR) {
+    pthread_t new = __allocate_thread(&attr);
+    if (new == NULL) {
         __release_ptc();
         return EAGAIN;
     }
-    unsigned char* map = (unsigned char*)addr;
-    unsigned char* stack = map + size - libc.tls_size;
-    unsigned char* stack_limit = map + guard_size;
+
+    const char* name = attr.__name ? attr.__name : "";
+    mx_status_t status =
+        mxr_thread_create(__magenta_process_self, name, &new->mxr_thread);
+    if (status != NO_ERROR)
+        goto fail_after_alloc;
 
     mxr_thread_entry_t start = attr.__c11 ? start_c11 : start_pthread;
     struct pthread* self = __pthread_self();
 
-    struct pthread* new = __copy_tls(stack);
-
-    const char* name = attr.__name ? attr.__name : "";
-    status = mxr_thread_create(__magenta_process_self, name, &new->mxr_thread);
-    if (status != NO_ERROR)
-        goto fail_after_alloc;
-
-    new->map_base = map;
-    new->map_size = size;
-    new->stack = stack;
-    new->stack_size = stack - stack_limit;
     new->start = entry;
     new->start_arg = arg;
-    new->head.tp = (uintptr_t) new;
-    new->locale = &libc.global_locale;
+
     // TODO (kulakowski) Actually detach via attribute
     if (attr._a_detach) {
         new->detached = 1;
@@ -121,12 +82,11 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     //     __block_app_sigs(new->sigmask);
     // }
     new->unblock_cancel = self->cancel;
-    new->abi.stack_guard = self->abi.stack_guard;
 
     atomic_fetch_add(&libc.thread_count, 1);
     status = mxr_thread_start(&new->mxr_thread,
-                              (uintptr_t)stack_limit, new->stack_size,
-                              start, new);
+                              (uintptr_t)new->safe_stack.iov_base,
+                              new->safe_stack.iov_len, start, new);
 
     __release_ptc();
 
@@ -153,7 +113,9 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     atomic_fetch_sub(&libc.thread_count, 1);
     mxr_thread_destroy(&new->mxr_thread);
 fail_after_alloc:
-    _mx_vmar_unmap(_mx_vmar_root_self(), addr, size);
+    deallocate_region(&new->safe_stack_region);
+    deallocate_region(&new->unsafe_stack_region);
+    deallocate_region(&new->tcb_region);
     return status == ERR_ACCESS_DENIED ? EPERM : EAGAIN;
 }
 

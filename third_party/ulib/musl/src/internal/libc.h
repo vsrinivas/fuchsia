@@ -25,6 +25,7 @@ struct __libc {
     atomic_int thread_count;
     struct tls_module* tls_head;
     size_t tls_size, tls_align, tls_cnt;
+    size_t stack_size;
     size_t page_size;
     struct __locale_struct global_locale;
 };
@@ -41,16 +42,18 @@ extern struct __libc __libc ATTR_LIBC_VISIBILITY;
 extern size_t __hwcap ATTR_LIBC_VISIBILITY;
 extern char *__progname, *__progname_full;
 
-void __init_main_thread(mx_handle_t thread_self,
-                        void* stack, size_t stack_size) ATTR_LIBC_VISIBILITY;
-void __init_ssp(uintptr_t* entropy) ATTR_LIBC_VISIBILITY;
+void __libc_start_init(void) ATTR_LIBC_VISIBILITY;
 
-_Noreturn void __libc_start_main(int (*main)(int, char**, char**), void* stack_end, void* arg);
+void __dl_thread_cleanup(void) ATTR_LIBC_VISIBILITY;
 
+_Noreturn void __libc_start_main(void* arg, int (*main)(int, char**, char**));
+
+extern uintptr_t __stack_chk_guard;
 void __stack_chk_fail(void);
 
 int __lockfile(FILE*) ATTR_LIBC_VISIBILITY;
 void __unlockfile(FILE*) ATTR_LIBC_VISIBILITY;
+void __do_orphaned_stdio_locks(void) ATTR_LIBC_VISIBILITY;
 
 extern char** __environ;
 

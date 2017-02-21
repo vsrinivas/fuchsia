@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/uio.h>
 #include <threads.h>
 
 #include <magenta/tls.h>
@@ -42,24 +43,27 @@ struct pthread {
 
     mxr_thread_t mxr_thread;
 
+    // The *_region fields describe whole memory regions reserved,
+    // including guard pages (for deallocation).  safe_stack and
+    // unsafe_stack describe just the actual stack block between the
+    // guards.
+    struct iovec tcb_region;
+    struct iovec safe_stack, safe_stack_region;
+    struct iovec unsafe_stack, unsafe_stack_region;
+
     void* tsd[PTHREAD_KEYS_MAX];
     int tsd_used;
     int errno_value;
 
     volatile atomic_int cancel, canceldisable, cancelasync;
     int detached;
-    unsigned char* map_base;
-    size_t map_size;
-    void* stack;
-    size_t stack_size;
+
     void* start_arg;
     void* (*start)(void*);
     void* result;
     struct __ptcb* cancelbuf;
-    pthread_attr_t attr;
     volatile int dead;
     int unblock_cancel;
-    volatile int timer_id;
     locale_t locale;
     mtx_t killlock;
     mtx_t exitlock;
@@ -74,11 +78,6 @@ struct pthread {
     tp_abi_t abi;
     tcbhead_t head;
 #endif
-};
-
-struct __timer {
-    int timerid;
-    pthread_t thread;
 };
 
 #ifdef TLS_ABOVE_TP
@@ -205,3 +204,8 @@ static inline int __rt_sigqueueinfo(pid_t pid, int sig, siginfo_t* info) {
         ._a_stacksize = 81920,                                                \
         ._a_guardsize = PAGE_SIZE,                                            \
     })
+
+pthread_t __allocate_thread(const pthread_attr_t* attr)
+    __attribute__((nonnull(1))) ATTR_LIBC_VISIBILITY;
+
+pthread_t __init_main_thread(mx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
