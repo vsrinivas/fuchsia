@@ -139,4 +139,28 @@ private:
     mx_handle_t value_;
 };
 
+template <typename T> bool operator==(const object<T>& a, const object<T>& b) {
+    return a.get() == b.get();
+}
+
+template <typename T> bool operator!=(const object<T>& a, const object<T>& b) {
+    return !(a == b);
+}
+
+template <typename T> bool operator==(mx_handle_t a, const object<T>& b) {
+    return a == b.get();
+}
+
+template <typename T> bool operator!=(mx_handle_t a, const object<T>& b) {
+    return !(a == b);
+}
+
+template <typename T> bool operator==(const object<T>& a, mx_handle_t b) {
+    return a.get() == b;
+}
+
+template <typename T> bool operator!=(const object<T>& a, mx_handle_t b) {
+    return !(a == b);
+}
+
 } // namespace mx
