@@ -1057,6 +1057,9 @@ static mx_status_t load_library(const char* name, int rtld_mode,
 
 static void load_deps(struct dso* p) {
     for (; p; p = p->next) {
+        // These don't get space allocated for ->deps.
+        if (p == &ldso || p == &vdso)
+            continue;
         struct dso** deps = NULL;
         if (runtime && p->deps == NULL)
             deps = p->deps = p->buf;
