@@ -38,10 +38,15 @@ enum mailbox_channel {
 };
 
 enum bcm_device {
-    bcm_dev_sd    = 0,
-    bcm_dev_uart0 = 1,
-    bcm_dev_uart1 = 2,
-    bcm_dev_usb   = 3,
+    bcm_dev_sd     = 0,
+    bcm_dev_uart0  = 1,
+    bcm_dev_uart1  = 2,
+    bcm_dev_usb    = 3,
+    bcm_dev_i2c0   = 4,
+    bcm_dev_i2c1   = 5,
+    bcm_dev_i2c2   = 6,
+    bcm_dev_spi    = 7,
+    bcm_dev_ccp2tx = 8,
 };
 
 typedef struct {
@@ -468,6 +473,20 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
     status = device_add(sdmmc_device, parent);
 
     bcm_vc_poweron(bcm_dev_usb);
+
+
+    // Publish this mock device to allow the i2c device to bind to.
+
+    bcm_vc_poweron(bcm_dev_i2c1);
+    mx_device_t* i2c_device = malloc(sizeof(*i2c_device));
+    device_init(i2c_device, driver, "bcm-i2c", &empty_device_proto);
+    i2c_device->props = calloc(2, sizeof(mx_device_prop_t));
+    i2c_device->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
+    i2c_device->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_I2C};
+    i2c_device->prop_count = 2;
+    i2c_device->protocol_id = MX_PROTOCOL_SOC;
+    status = device_add(i2c_device, parent);
+
 
     return NO_ERROR;
 }

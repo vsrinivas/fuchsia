@@ -1,0 +1,292 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/binding.h>
+#include <ddk/protocol/bcm.h>
+
+#include <magenta/syscalls.h>
+#include <magenta/threads.h>
+#include <magenta/device/i2c.h>
+
+#include <bcm/gpio.h>
+#include <bcm/bcm28xx.h>
+
+#include "i2c.h"
+
+#define BCM_MAX_SEGMENTS 20
+#define BCM_FIFO_DEADLINE_MS 100
+
+typedef struct {
+
+    mx_device_t         device;
+    mx_device_t*        parent;
+    mx_driver_t*        driver;
+    bcm_i2c_regs_t*     control_regs;
+    bcm_gpio_ctrl_t*    gpio_regs;
+
+} bcm_i2c_t;
+
+#define dev_to_bcm_i2c(dev) containerof(dev, bcm_i2c_t, device)
+
+/* TODO - improve fifo read/write to be interrupt driven and capable of handling
+            multiple transactions in a buffer at once.
+
+        Right now we limit the transaction size to <= 16 bytes (fifo size)
+        and wait for transaction to complete before exiting.  This allows
+        us to keep transactions easily framed.  This driver is being written
+        to only support the PCM5121 codec at this point, so these limitations
+        are a reasonable tradeoff at this time.
+
+*/
+static mx_status_t bcm_write_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
+
+    if (len > BCM_BSC_FIFO_SIZE)
+        return ERR_INVALID_ARGS;
+
+    ctx->control_regs->dlen = (uint32_t)len;
+    ctx->control_regs->control = BCM_BSC_CONTROL_ENABLE | BCM_BSC_CONTROL_START;
+    for (uint32_t i = 0; i < len; i++)
+        ctx->control_regs->fifo = data[i];
+
+    mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(BCM_FIFO_DEADLINE_MS);
+
+    while( !(ctx->control_regs->status & BCM_BSC_STATUS_DONE) ) {
+        if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline) {
+            printf("FIFO write timed out\n");
+            return ERR_TIMED_OUT;
+        }
+    }
+    ctx->control_regs->status |= BCM_BSC_STATUS_DONE;   //clear the done status
+
+    return NO_ERROR;
+}
+
+static mx_status_t bcm_read_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
+
+    if (len > BCM_BSC_FIFO_SIZE)
+        return ERR_INVALID_ARGS;
+
+    ctx->control_regs->dlen = (uint32_t)len;
+    ctx->control_regs->control = BCM_BSC_CONTROL_ENABLE | BCM_BSC_CONTROL_START |
+                                 BCM_BSC_CONTROL_READ;
+
+    mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(BCM_FIFO_DEADLINE_MS);
+
+    while( !(ctx->control_regs->status & BCM_BSC_STATUS_DONE) ){
+        if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline){
+            printf("FIFO read timed out\n");
+            return ERR_TIMED_OUT;
+        }
+    }
+    ctx->control_regs->status |= BCM_BSC_STATUS_DONE;   //clear the done status
+
+    for (uint32_t i = 0; i < len; i++)
+        data[i] = (uint8_t)ctx->control_regs->fifo;
+    return NO_ERROR;
+}
+
+static ssize_t i2cread(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
+
+    bcm_i2c_t* ctx = dev_to_bcm_i2c(dev);
+    mx_status_t status = bcm_read_fifo(ctx,(uint8_t*)buf,(uint32_t)count);
+    if (status == NO_ERROR) {
+        return count;
+    } else {
+        return -1;
+    }
+}
+
+static ssize_t i2cwrite(mx_device_t* dev, const void* buf, size_t count, mx_off_t off){
+
+    bcm_i2c_t* ctx = dev_to_bcm_i2c(dev);
+
+    mx_status_t status = bcm_write_fifo(ctx,(uint8_t*)buf,(uint32_t)count);
+
+    if (status == NO_ERROR) {
+        return count;
+    } else {
+        return -1;
+    }
+}
+
+static mx_status_t bcm_i2c_set_slave_addr(bcm_i2c_t* ctx, uint16_t address){
+
+    ctx->control_regs->slave_addr = (uint32_t)address;
+
+    return NO_ERROR;
+}
+
+static mx_status_t bcm_i2c_slave_transfer(bcm_i2c_t* ctx, const void* in_buf, size_t in_len,
+    void* out_buf, size_t out_len) {
+
+    mx_status_t status = NO_ERROR;
+    uint32_t num_segments=0;
+
+
+    i2c_slave_ioctl_segment_t* segments = (i2c_slave_ioctl_segment_t*)in_buf;
+
+    // figure out how many segments are in this ioctl trnasfer
+    while ( (!(segments[num_segments].type == I2C_SEGMENT_TYPE_END)) & (num_segments < BCM_MAX_SEGMENTS)) {
+        num_segments++;
+    }
+    if (num_segments >= BCM_MAX_SEGMENTS)
+        return ERR_INVALID_ARGS;
+
+    uint8_t* data =(uint8_t*)&segments[num_segments + 1];   // +1 to skip the end marker
+    uint32_t num_writes = 0;
+    uint32_t num_reads = 0;
+    for (uint32_t i = 0; i < num_segments; i++ ){
+        if (segments[i].type == I2C_SEGMENT_TYPE_WRITE) {
+            status = bcm_write_fifo(ctx, &data[num_writes], segments[i].len);
+            if (status != NO_ERROR)
+                return status;
+            num_writes += segments[i].len;
+        } else if (segments[i].type == I2C_SEGMENT_TYPE_READ) {
+            status = bcm_read_fifo(ctx, &((uint8_t*)out_buf)[num_reads], segments[i].len);
+            if (status != NO_ERROR)
+                return status;
+            num_reads += segments[i].len;
+        }
+    }
+
+    printf("wrote %u bytes, read %u bytes\n",num_writes,num_reads);
+    return NO_ERROR;
+}
+
+static ssize_t bcm_i2c_ioctl(
+    mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
+    void* out_buf, size_t out_len) {
+
+
+    bcm_i2c_t* ctx = dev_to_bcm_i2c(dev);
+    int ret;
+
+    switch (op) {
+    case IOCTL_I2C_BUS_ADD_SLAVE: {
+
+        const i2c_ioctl_add_slave_args_t* args = in_buf;
+        if (in_len < sizeof(*args))
+            return ERR_INVALID_ARGS;
+
+        if (args->chip_address_width == 7) {
+            ret =  bcm_i2c_set_slave_addr(ctx,args->chip_address);
+        } else {
+            return ERR_INVALID_ARGS;
+        }
+        break;
+    }
+    case IOCTL_I2C_BUS_REMOVE_SLAVE: {
+        ret = NO_ERROR;
+        break;
+    }
+    case IOCTL_I2C_SLAVE_TRANSFER: {
+        ret = bcm_i2c_slave_transfer(ctx, in_buf, in_len, out_buf, out_len);
+        break;
+    }
+    case IOCTL_I2C_BUS_SET_FREQUENCY: {
+        ret = NO_ERROR;
+        break;
+    }
+    default:
+        return ERR_INVALID_ARGS;
+    }
+
+    if (ret == NO_ERROR)
+        return in_len;
+    else
+        return ret;
+}
+
+static mx_protocol_device_t i2c_device_proto = {
+    .read = i2cread,
+    .write = i2cwrite,
+    .ioctl = bcm_i2c_ioctl,
+};
+
+static int i2c_bootstrap_thread(void *arg) {
+
+    assert(arg);
+
+    printf("Entering the i2c bootstrap\n");
+
+    bcm_i2c_t* i2c_ctx = (bcm_i2c_t*)arg;
+
+    // Carve out some address space for the device -- it's memory mapped.
+    mx_status_t status = mx_mmap_device_memory(
+        get_root_resource(),
+        GPIO_BASE, 0x1000,
+        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&i2c_ctx->gpio_regs);
+
+    if (status != NO_ERROR)
+        goto i2c_err;
+
+    /* ALT Function 0 is I2C for these pins */
+    set_gpio_function(i2c_ctx->gpio_regs, BCM_SDA1_PIN, FSEL_ALT0);
+    set_gpio_function(i2c_ctx->gpio_regs, BCM_SCL1_PIN, FSEL_ALT0);
+
+    status = mx_mmap_device_memory(
+        get_root_resource(),
+        BSC1_BASE, 0x1000,
+        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&i2c_ctx->control_regs);
+
+    if (status != NO_ERROR)
+        goto i2c_err;
+
+    i2c_ctx->control_regs->control = BCM_BSC_CONTROL_ENABLE | BCM_BSC_CONTROL_FIFO_CLEAR;
+
+    i2c_ctx->control_regs->clk_div = BCM_BSC_CLK_DIV_100K;
+
+    device_init(&i2c_ctx->device, i2c_ctx->driver, "i2c1", &i2c_device_proto);
+    status = device_add(&i2c_ctx->device, i2c_ctx->parent);
+
+    if (status == NO_ERROR) return 0;
+
+i2c_err:
+    if (i2c_ctx)
+        free(i2c_ctx);
+
+    return -1;
+}
+
+static mx_status_t i2c_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+
+    bcm_i2c_t* i2c_ctx = calloc(1, sizeof(*i2c_ctx));
+    if (!i2c_ctx)
+        return ERR_NO_MEMORY;
+
+    i2c_ctx->driver = driver;
+    i2c_ctx->parent = parent;
+
+    thrd_t bootstrap_thrd;
+    int thrd_rc = thrd_create_with_name(&bootstrap_thrd,
+                                        i2c_bootstrap_thread, i2c_ctx,
+                                        "i2c_bootstrap_thread");
+    if (thrd_rc != thrd_success) {
+        free(i2c_ctx);
+        return thrd_status_to_mx_status(thrd_rc);
+    }
+
+    thrd_detach(bootstrap_thrd);
+    return NO_ERROR;
+}
+
+mx_driver_t _driver_bcm_i2c = {
+    .ops = {
+        .bind = i2c_bind,
+    },
+};
+
+MAGENTA_DRIVER_BEGIN(_driver_bcm_i2c, "bcm-i2c", "magenta", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_SOC),
+    BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
+    BI_MATCH_IF(EQ, BIND_SOC_DID, SOC_DID_BROADCOMM_I2C),
+MAGENTA_DRIVER_END(_driver_bcm_i2c)
