@@ -15,8 +15,8 @@
             "bootfs_path": "test/magma_sys_unit_tests"
         },
         {
-            "binary": "magma_system_tests",
-            "bootfs_path": "test/magma_system_tests"
+            "binary": "magma_integration_tests",
+            "bootfs_path": "test/magma_integration_tests"
         },
         {
             "binary": "magma_sys_abi_conformance_tests",
