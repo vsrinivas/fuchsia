@@ -4,6 +4,7 @@
 
 #include "apps/media/src/fidl/fidl_conversion_pipeline_builder.h"
 
+#include "apps/media/lib/flog/flog.h"
 #include "apps/media/services/media_service.fidl.h"
 #include "apps/media/services/media_type_converter.fidl.h"
 #include "apps/media/src/fidl/fidl_type_conversions.h"
@@ -41,7 +42,8 @@ class Builder {
           const std::function<void(bool succeeded,
                                    const ConsumerGetter&,
                                    const ProducerGetter&,
-                                   std::unique_ptr<StreamType>)>& callback)
+                                   std::unique_ptr<StreamType>,
+                                   std::vector<mx_koid_t>)>& callback)
       : media_service_(media_service),
         goal_type_sets_(goal_type_sets),
         producer_getter_(producer_getter),
@@ -106,7 +108,8 @@ class Builder {
   std::function<void(bool succeeded,
                      const ConsumerGetter&,
                      const ProducerGetter&,
-                     std::unique_ptr<StreamType>)>
+                     std::unique_ptr<StreamType>,
+                     std::vector<mx_koid_t>)>
       callback_;
   std::unique_ptr<StreamType> current_type_;
   std::unique_ptr<StreamType>* type_;  // &original_type_ or &current_type_
@@ -395,9 +398,16 @@ void Builder::Succeed() {
         consumer_getter_ = nullptr;
       }
 
-      callback_(true, consumer_getter_, producer_getter_, std::move(*type_));
+      callback_(true, consumer_getter_, producer_getter_, std::move(*type_),
+                std::vector<mx_koid_t>());
       delete this;
       return;
+    }
+
+    std::vector<mx_koid_t> converter_koids;
+    converter_koids.reserve(converters_.size());
+    for (MediaTypeConverterPtr& ptr : converters_) {
+      converter_koids.push_back(FLOG_PTR_KOID(ptr));
     }
 
     if (!producer_getter_ && !consumer_getter_ && converters_.size() == 1) {
@@ -418,7 +428,7 @@ void Builder::Succeed() {
               fidl::InterfaceRequest<MediaPacketProducer> request) {
             (*shared_converter_ptr)->GetPacketProducer(std::move(request));
           },
-          std::move(*type_));
+          std::move(*type_), std::move(converter_koids));
       delete this;
       return;
     }
@@ -446,13 +456,14 @@ void Builder::Succeed() {
     }
 
     callback_(true, consumer_getter_to_return, producer_getter_to_return,
-              std::move(*type_));
+              std::move(*type_), std::move(converter_koids));
     delete this;
   });
 }
 
 void Builder::Fail() {
-  callback_(false, nullptr, nullptr, std::move(original_type_));
+  callback_(false, nullptr, nullptr, std::move(original_type_),
+            std::vector<mx_koid_t>());
   delete this;
 }
 
@@ -467,7 +478,8 @@ void BuildFidlConversionPipeline(
     const std::function<void(bool succeeded,
                              const ConsumerGetter&,
                              const ProducerGetter&,
-                             std::unique_ptr<StreamType>)>& callback) {
+                             std::unique_ptr<StreamType>,
+                             std::vector<mx_koid_t>)>& callback) {
   FTL_DCHECK(media_service);
   FTL_DCHECK(type);
   FTL_DCHECK(callback);

@@ -37,6 +37,7 @@ void BuildFidlConversionPipeline(
     const std::function<void(bool succeeded,
                              const ConsumerGetter&,
                              const ProducerGetter&,
-                             std::unique_ptr<StreamType>)>& callback);
+                             std::unique_ptr<StreamType>,
+                             std::vector<mx_koid_t>)>& callback);
 
 }  // namespace media

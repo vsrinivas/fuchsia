@@ -19,6 +19,7 @@ source_set("fidl") {
   ]
 
   deps = [
+    "//apps/media/lib/flog",
     "//apps/media/lib/transport",
     "//apps/media/services",
     "//apps/media/src/demux",

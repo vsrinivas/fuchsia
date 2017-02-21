@@ -31,8 +31,12 @@ class MediaSinkDigest : public ChannelHandler,
 
  private:
   // MediaSinkChannel implementation.
+  void BoundAs(uint64_t koid) override;
+
   void Config(media::MediaTypePtr input_type,
-              media::MediaTypePtr output_type) override;
+              media::MediaTypePtr output_type,
+              fidl::Array<uint64_t> converter_koids,
+              uint64_t renderer_koid) override;
 
  private:
   media::logs::MediaSinkChannelStub stub_;
@@ -51,6 +55,8 @@ class MediaSinkAccumulator : public Accumulator {
  private:
   media::MediaTypePtr input_type_;
   media::MediaTypePtr output_type_;
+  std::vector<ChildBinding> converters_;
+  ChildBinding renderer_;
 
   friend class MediaSinkDigest;
 };

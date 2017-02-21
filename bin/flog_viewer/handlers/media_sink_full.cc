@@ -24,12 +24,23 @@ void MediaSinkFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
+void MediaSinkFull::BoundAs(uint64_t koid) {
+  std::cout << entry() << "MediaSink.BoundAs" << std::endl;
+  std::cout << indent;
+  std::cout << begl << "koid: " << AsKoid(koid) << std::endl;
+  std::cout << outdent;
+}
+
 void MediaSinkFull::Config(media::MediaTypePtr input_type,
-                           media::MediaTypePtr output_type) {
+                           media::MediaTypePtr output_type,
+                           fidl::Array<uint64_t> converter_koids,
+                           uint64_t renderer_koid) {
   std::cout << entry() << "MediaSink.Config" << std::endl;
   std::cout << indent;
   std::cout << begl << "input_type: " << input_type;
   std::cout << begl << "output_type: " << output_type;
+  std::cout << begl << "converter_koids: " << converter_koids;
+  std::cout << begl << "renderer_koid: " << renderer_koid;
   std::cout << outdent;
 }
 

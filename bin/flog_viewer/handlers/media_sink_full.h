@@ -22,8 +22,12 @@ class MediaSinkFull : public ChannelHandler,
   void HandleMessage(fidl::Message* message) override;
 
   // MediaSinkChannel implementation.
+  void BoundAs(uint64_t koid) override;
+
   void Config(media::MediaTypePtr input_type,
-              media::MediaTypePtr output_type) override;
+              media::MediaTypePtr output_type,
+              fidl::Array<uint64_t> converter_koids,
+              uint64_t renderer_koid) override;
 
  private:
   media::logs::MediaSinkChannelStub stub_;

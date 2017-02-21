@@ -163,7 +163,8 @@ MediaSourceImpl::Stream::Stream(
       std::move(stream_type),
       [this, callback](bool succeeded, const ConsumerGetter& consumer_getter,
                        const ProducerGetter& producer_getter,
-                       std::unique_ptr<StreamType> stream_type) {
+                       std::unique_ptr<StreamType> stream_type,
+                       std::vector<mx_koid_t> converter_koids) {
         FTL_DCHECK(!consumer_getter);
         if (succeeded) {
           FTL_DCHECK(producer_getter);

@@ -34,6 +34,8 @@ MediaSinkImpl::MediaSinkImpl(
   FTL_DCHECK(renderer_);
   FTL_DCHECK(original_media_type_);
 
+  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
+
   media_service_ = owner->ConnectToEnvironmentService<MediaService>();
 
   renderer_->GetSupportedMediaTypes([this](
@@ -51,7 +53,8 @@ MediaSinkImpl::MediaSinkImpl(
         std::move(stream_type_),
         [this](bool succeeded, const ConsumerGetter& consumer_getter,
                const ProducerGetter& producer_getter,
-               std::unique_ptr<StreamType> stream_type) {
+               std::unique_ptr<StreamType> stream_type,
+               std::vector<mx_koid_t> converter_koids) {
           FTL_DCHECK(!producer_getter);
           RCHECK(succeeded);
           FTL_DCHECK(consumer_getter);
@@ -61,8 +64,11 @@ MediaSinkImpl::MediaSinkImpl(
 
           renderer_->SetMediaType(MediaType::From(stream_type_));
 
-          FLOG(log_channel_, Config(std::move(original_media_type_),
-                                    MediaType::From(stream_type_)));
+          FLOG(log_channel_,
+               Config(std::move(original_media_type_),
+                      MediaType::From(stream_type_),
+                      fidl::Array<uint64_t>::From(converter_koids),
+                      FLOG_PTR_KOID(renderer_)));
 
           // Not needed anymore.
           original_media_type_.reset();
