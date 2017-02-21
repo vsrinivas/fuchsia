@@ -86,7 +86,7 @@
 /* The magic number passed by a Multiboot-compliant boot loader. */
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002
 
-.section ".text.boot"
+.section .text.boot, "ax", @progbits
 .code32
 FUNCTION(_protected_start)
     /* attempt to detect if %esi points to a zero page structure */
