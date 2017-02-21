@@ -45,7 +45,11 @@ information, see `docs/getting_started.md`:
         cp ./build-rpi3-test/magenta.bin <path/to/sdcard/mount>/kernel8.img
 
 4. You must also copy `bootcode.bin` and `start.elf` to the boot partition. They
-   can be obtained from [here](https://github.com/raspberrypi/firmware/tree/master/boot)
+   can be obtained from [here](https://github.com/raspberrypi/firmware/tree/master/boot).
+   Because of how command line arguments are passed to the kernel, you will also need
+   to copy the device tree blob in kernel/target/rpi3/bcm2710-rpi-3-b.dtb
+   It is important that the dtb file retain the name bcm2710-rpi-3-b.dtb when copied
+   to the boot partition.
 
 5. Create a file called `config.txt` in the boot partition with the following
    contents:
@@ -69,20 +73,34 @@ information, see `docs/getting_started.md`:
    framebuffer_ignore_alpha=1
    ```
 
-6. At this point your SD Card should be formatted with an MBR partition table
-   and FAT32 boot partition that contains the following four files:
+6. Create a file called `cmdline.txt` in the boot partition with the following
+   contents:
+
+   ```
+   ### cmdline.txt ###
+
+   magenta.soc=00bc:0000 TERM=uart
+
+   ### Note: omit TERM=uart if not using serial console ###
+
+   ```
+
+7. At this point your SD Card should be formatted with an MBR partition table
+   and FAT32 boot partition that contains the following six files:
    + bootcode.bin
    + config.txt
    + kernel8.img
    + start.elf
+   + bcm2710-rpi-3-b.dtb
+   + cmdline.txt
 
-7. If you're using the Serial Console, connect your serial dongle to the RPi3
+8. If you're using the Serial Console, connect your serial dongle to the RPi3
    header as follows:
    1. Pin 6 - GND
    2. Pin 8 - TXD (output from Pi)
    3. Pin 10 - RXD (input to pi)
    4. Baudrate = 115200
 
-8. Insert the SD Card and connect power to boot the Pi
+9. Insert the SD Card and connect power to boot the Pi
 
 

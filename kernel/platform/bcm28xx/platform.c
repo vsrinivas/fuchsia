@@ -12,6 +12,7 @@
 #include <dev/uart.h>
 #include <arch.h>
 #include <lk/init.h>
+#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
 #include <dev/timer/arm_generic.h>
@@ -60,8 +61,6 @@ extern void intc_init(void);
 
 extern void arm_reset(void);
 
-static uint8_t * kernel_args;
-
 static pmm_arena_info_t arena = {
     .name = "sdram",
     .base = SDRAM_BASE,
@@ -73,15 +72,48 @@ void platform_init_mmu_mappings(void)
 {
 }
 
-void platform_early_init(void)
-{
-    atag_t * tag;
+extern ulong lk_boot_args[4];
 
-    tag = atag_find(RPI_ATAG_ATAG_CMDLINE, RPI_ATAGS_ADDRESS);
-    if (tag) {
-        kernel_args = tag->cmdline;
+// find our command line in the device tree (fastboot stuffs it in there)
+static void find_command_line(void) {
+    void* fdt = paddr_to_kvaddr(lk_boot_args[0]);
+    if (!fdt) {
+        printf("Raspberry Pi3: could not find device tree\n");
+        return;
     }
 
+    if (fdt_check_header(fdt) < 0) {
+        printf("Raspberry Pi3: fdt_check_header failed\n");
+        return;
+    }
+
+    int depth = 0;
+    int offset = 0;
+    for (;;) {
+        offset = fdt_next_node(fdt, offset, &depth);
+        if (offset < 0)
+            break;
+
+        const char* name = fdt_get_name(fdt, offset, NULL);
+        if (!name)
+            continue;
+        if (strcmp(name, "chosen") == 0) {
+            int lenp;
+            const char* bootargs = fdt_getprop(fdt, offset, "bootargs", &lenp);
+            if (bootargs) {
+                printf("Raspberry Pi3 command line: %s\n", bootargs);
+                cmdline_init(bootargs);
+                return;
+            }
+        }
+    }
+}
+
+
+void platform_early_init(void)
+{
+
+    find_command_line();
     uart_init_early();
 
     intc_init();
