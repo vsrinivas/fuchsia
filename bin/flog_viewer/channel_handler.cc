@@ -18,6 +18,8 @@
 #include "apps/media/tools/flog_viewer/handlers/media_player_full.h"
 #include "apps/media/tools/flog_viewer/handlers/media_sink_digest.h"
 #include "apps/media/tools/flog_viewer/handlers/media_sink_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_source_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_source_full.h"
 
 namespace flog {
 
@@ -71,6 +73,13 @@ std::unique_ptr<ChannelHandler> ChannelHandler::Create(
       handler = new handlers::MediaSinkFull(format);
     } else if (format == FlogViewer::kFormatDigest) {
       handler = new handlers::MediaSinkDigest(format);
+    }
+  } else if (type_name == handlers::MediaSourceFull::Name_) {
+    if (format == FlogViewer::kFormatTerse ||
+        format == FlogViewer::kFormatFull) {
+      handler = new handlers::MediaSourceFull(format);
+    } else if (format == FlogViewer::kFormatDigest) {
+      handler = new handlers::MediaSourceDigest(format);
     }
   }
 

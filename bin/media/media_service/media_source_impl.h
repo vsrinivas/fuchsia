@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include "apps/media/lib/flog/flog.h"
+#include "apps/media/services/logs/media_source_channel.fidl.h"
 #include "apps/media/services/media_source.fidl.h"
 #include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/src/fidl/fidl_conversion_pipeline_builder.h"
@@ -53,7 +55,9 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
 
   class Stream {
    public:
-    Stream(const MediaServicePtr& media_service,
+    Stream(size_t stream_index,
+           flog::FlogProxy<logs::MediaSourceChannel>* log_channel,
+           const MediaServicePtr& media_service,
            const ProducerGetter& producer_getter,
            std::unique_ptr<StreamType> stream_type,
            const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>&
@@ -89,6 +93,7 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   ProblemPtr problem_;
   FidlPublisher<GetStatusCallback> status_publisher_;
 
+  FLOG_INSTANCE_CHANNEL(logs::MediaSourceChannel, log_channel_);
   FTL_DISALLOW_COPY_AND_ASSIGN(MediaSourceImpl);
 };
 

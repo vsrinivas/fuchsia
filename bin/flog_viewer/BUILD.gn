@@ -47,6 +47,10 @@ executable("flog_viewer") {
     "handlers/media_sink_digest.h",
     "handlers/media_sink_full.cc",
     "handlers/media_sink_full.h",
+    "handlers/media_source_digest.cc",
+    "handlers/media_source_digest.h",
+    "handlers/media_source_full.cc",
+    "handlers/media_source_full.h",
     "tracked.h",
   ]
 

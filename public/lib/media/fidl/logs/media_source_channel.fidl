@@ -1,0 +1,16 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media.logs;
+
+import "apps/media/services/media_types.fidl";
+
+[ServiceName="media::logs::MediaSourceChannel"]
+interface MediaSourceChannel {
+  BoundAs(uint64 koid);
+  CreatedDemux(uint64 related_koid);
+  NewStream(uint32 index,
+            MediaType output_type,
+            array<uint64> converter_koids);
+};
