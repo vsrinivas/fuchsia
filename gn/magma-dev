@@ -11,6 +11,10 @@
             "bootfs_path": "lib/driver/libmsd-intel-gen-test.so"
         },
         {
+            "binary": "msd_intel_gen_nonhardware_tests",
+            "bootfs_path": "test/msd_intel_gen_nonhardware_tests"
+        },
+        {
             "binary": "magma_sys_unit_tests",
             "bootfs_path": "test/magma_sys_unit_tests"
         },
