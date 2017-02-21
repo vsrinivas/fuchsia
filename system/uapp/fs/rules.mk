@@ -11,6 +11,7 @@ MODULE_TYPE := userapp
 MODULE_NAME := fs-tests
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/filesystems.c \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/wrap.c \
     $(LOCAL_DIR)/test-append.c \
@@ -19,6 +20,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-directory.c \
     $(LOCAL_DIR)/test-maxfile.c \
     $(LOCAL_DIR)/test-overflow.c \
+    $(LOCAL_DIR)/test-persist.c \
     $(LOCAL_DIR)/test-rw-workers.c \
     $(LOCAL_DIR)/test-rename.c \
     $(LOCAL_DIR)/test-sync.c \

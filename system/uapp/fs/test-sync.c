@@ -8,13 +8,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
 // TODO(smklein): Create a more complex test, capable of mocking a block device
 // and ensuring that data is actually being flushed to a block device.
 // For now, test that 'fsync' and 'fdatasync' don't throw errors for file and
 // directories.
-int test_sync(void) {
+int test_sync(fs_info_t* info) {
     int fd = TRY(open("::alpha", O_RDWR | O_CREAT | O_EXCL, 0644));
     TRY(write(fd, "Hello, World!\n", 14));
     TRY(fsync(fd));

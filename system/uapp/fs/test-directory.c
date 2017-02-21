@@ -16,6 +16,7 @@
 
 #include <magenta/compiler.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
 void test_directory_filename_max(void) {
@@ -265,7 +266,7 @@ void test_directory_readdir(void) {
     check_contains_all("::a", empty_dir, countof(empty_dir));
 }
 
-int test_directory(void) {
+int test_directory(fs_info_t* info) {
     test_directory_coalesce();
     test_directory_filename_max();
     test_directory_large();

@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
 void check_file_contains(const char* filename, const void* data, ssize_t len) {
@@ -153,7 +154,7 @@ void test_truncate_large(void) {
     TRY(unlink(filename));
 }
 
-int test_truncate(void) {
+int test_truncate(fs_info_t* info) {
     test_truncate_small();
     test_truncate_large();
     return 0;

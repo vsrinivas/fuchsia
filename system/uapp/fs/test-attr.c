@@ -14,6 +14,7 @@
 
 #include <magenta/syscalls.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
 int64_t nstimespec(struct timespec ts) {
@@ -21,7 +22,7 @@ int64_t nstimespec(struct timespec ts) {
     return ts.tv_sec * MX_SEC(1) + ts.tv_nsec;
 }
 
-int test_attr(void) {
+int test_attr(fs_info_t* info) {
     int64_t now = mx_time_get(MX_CLOCK_UTC);
 
     int fd1 = TRY(open("::file.txt", O_CREAT | O_RDWR, 0644));

@@ -14,6 +14,7 @@
 
 #include <magenta/compiler.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
 // Make some files, then unlink them.
@@ -88,7 +89,7 @@ void test_unlink_open_elsewhere(void) {
     EXPECT_FAIL(open(path, O_RDWR, 0644));
 }
 
-int test_unlink(void) {
+int test_unlink(fs_info_t* info) {
     test_unlink_simple();
     test_unlink_use_afterwards();
     test_unlink_open_elsewhere();

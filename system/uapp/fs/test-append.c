@@ -11,9 +11,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
-int test_append(void) {
+int test_append(fs_info_t* info) {
     char buf[4096];
     const char* hello = "Hello, ";
     const char* world = "World!\n";

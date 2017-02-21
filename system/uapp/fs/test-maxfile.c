@@ -9,9 +9,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
-int test_maxfile(void) {
+int test_maxfile(fs_info_t* info) {
     int fd = TRY(open("::bigfile", O_CREAT | O_WRONLY, 0644));
     if (fd < 0) {
         return -1;

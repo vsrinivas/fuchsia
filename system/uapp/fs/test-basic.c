@@ -9,9 +9,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
-int test_basic(void) {
+int test_basic(fs_info_t* info) {
     TRY(mkdir("::alpha", 0755));
     TRY(mkdir("::alpha/bravo", 0755));
     TRY(mkdir("::alpha/bravo/charlie", 0755));

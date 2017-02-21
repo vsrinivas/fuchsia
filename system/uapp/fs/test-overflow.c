@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
 // Given a buffer of size PATH_MAX, make a 'len' byte long filename (not including null) consisting
@@ -139,7 +140,7 @@ void test_overflow_integer(void) {
     TRY(unlink("::file"));
 }
 
-int test_overflow(void) {
+int test_overflow(fs_info_t* info) {
     test_overflow_name();
     test_overflow_path();
     test_overflow_integer();

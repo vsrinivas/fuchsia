@@ -8,9 +8,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
-int test_rename(void) {
+int test_rename(fs_info_t* info) {
     // Cannot rename when src does not exist
     EXPECT_FAIL(rename("::alpha", "::bravo"));
 

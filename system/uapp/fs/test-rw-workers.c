@@ -14,6 +14,7 @@
 
 #include <magenta/compiler.h>
 
+#include "filesystems.h"
 #include "misc.h"
 
 #define FAIL -1
@@ -222,7 +223,7 @@ struct {
     },
 };
 
-int test_rw_workers(void) {
+int test_rw_workers(fs_info_t* info) {
     const char* where = "::";
     for (unsigned n = 0; n < countof(WORK); n++) {
         if (worker_new(where, WORK[n].name, WORK[n].work, WORK[n].size, WORK[n].flags) < 0) {
