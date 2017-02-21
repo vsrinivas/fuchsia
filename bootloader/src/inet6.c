@@ -110,6 +110,10 @@ void ip6_init(void* macaddr) {
     printf("snmaddr: %s\n", ip6toa(tmp, &snm_ip6_addr));
 }
 
+mac_addr eth_addr() {
+    return ll_mac_addr;
+}
+
 static int resolve_ip6(mac_addr* _mac, const ip6_addr* _ip) {
     const uint8_t* ip = _ip->x;
 

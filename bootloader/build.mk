@@ -47,6 +47,7 @@ EFI_SOURCES := \
     $(LOCAL_DIR)/src/inet6.c \
     $(LOCAL_DIR)/src/pci.c \
     $(LOCAL_DIR)/src/framebuffer.c \
+    $(LOCAL_DIR)/src/device_id.c \
 
 # libxefi sources
 EFI_SOURCES += \

@@ -13,7 +13,9 @@
 #include <efi/system-table.h>
 
 #include <cmdline.h>
+#include <device_id.h>
 #include <framebuffer.h>
+#include <inet6.h>
 #include <magenta.h>
 #include <xefi.h>
 
@@ -350,11 +352,18 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     char defboot[8] = "network";
     cmdline_get(cmdline, "bootloader.default", defboot, sizeof(defboot));
 
-    char nodename[64] = "magenta";
+    char nodename[64] = "";
     cmdline_get(cmdline, "magenta.nodename", nodename, sizeof(nodename));
 
     // See if there's a network interface
     bool have_network = netboot_init(nodename) == 0;
+    if (have_network) {
+        if (have_fb) {
+            draw_nodename(netboot_nodename());
+        } else {
+            printf("\nNodename: %s\n", netboot_nodename());
+        }
+    }
 
     // Look for a kernel image on disk
     // TODO: use the filesystem protocol

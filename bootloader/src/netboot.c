@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <device_id.h>
 #include <inet6.h>
 #include <netifc.h>
 
@@ -127,6 +128,7 @@ transmit:
     }
 }
 
+static char advertise_nodename[64] = "";
 static char advertise_data[128] = "nodename=magenta";
 
 static void advertise(void) {
@@ -145,14 +147,24 @@ static void advertise(void) {
 #define SLOW_TICK 1000
 
 int netboot_init(const char* nodename) {
-    if (nodename) {
-        snprintf(advertise_data, sizeof(advertise_data), "nodename=%s", nodename);
-    }
     if (netifc_open()) {
         printf("netboot: Failed to open network interface\n");
         return -1;
     }
+    char buf[DEVICE_ID_MAX];
+    if (!nodename || (nodename[0] == 0)) {
+        device_id(eth_addr(), buf);
+        nodename = buf;
+    }
+    if (nodename) {
+        strncpy(advertise_nodename, nodename, sizeof(advertise_nodename) - 1);
+        snprintf(advertise_data, sizeof(advertise_data), "nodename=%s", nodename);
+    }
     return 0;
+}
+
+const char* netboot_nodename() {
+    return advertise_nodename;
 }
 
 static int nb_fastcount = 0;

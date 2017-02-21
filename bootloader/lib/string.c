@@ -45,3 +45,17 @@ char* strchr(const char* s, int c) {
     if (*s != c) return 0;
     return (char*)s;
 }
+
+char* strcpy(char* dst, const char* src) {
+    while (*src != 0) {
+        *dst++ = *src++;
+    }
+    return dst;
+}
+
+char* strncpy(char* dst, const char* src, size_t len) {
+    while (len-- > 0 && *src != 0) {
+        *dst++ = *src++;
+    }
+    return dst;
+}

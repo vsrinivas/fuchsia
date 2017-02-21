@@ -56,6 +56,7 @@ typedef struct nbfile_t {
 } nbfile;
 
 int netboot_init(const char* nodename);
+const char* netboot_nodename(void);
 int netboot_poll(void);
 void netboot_close(void);
 
