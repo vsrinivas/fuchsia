@@ -57,7 +57,13 @@ MediaSourceImpl::MediaSourceImpl(
     size_t stream_index = 0;
     for (MediaTypePtr& stream_media_type : stream_media_types) {
       streams_.emplace_back(new Stream(
-          stream_index, log_channel_.get(), media_service_,
+          stream_index,
+#ifdef NDEBUG
+          nullptr,
+#else
+          log_channel_.get(),
+#endif
+          media_service_,
           [this,
            stream_index](fidl::InterfaceRequest<MediaPacketProducer> request) {
             demux_->GetPacketProducer(stream_index, std::move(request));
