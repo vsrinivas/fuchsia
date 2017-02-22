@@ -7,6 +7,7 @@ package main
 import (
 	"log"
 	"syscall/mx"
+	"syscall/mx/mxerror"
 
 	"apps/netstack/eth"
 
@@ -73,7 +74,7 @@ func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 		var b eth.Buffer
 		for {
 			b, err = ep.c.Recv()
-			if err != mx.ErrShouldWait {
+			if mxerror.Status(err) != mx.ErrShouldWait {
 				break
 			}
 			ep.c.WaitRecv()

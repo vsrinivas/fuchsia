@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"syscall/mx"
+	"syscall/mx/mxerror"
 	"syscall/mx/mxio/rio"
 	"unsafe"
 
@@ -90,7 +91,7 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 	switch family {
 	case AF_INET:
 		if len(data) < int(unsafe.Sizeof(c_sockaddr_in{})) {
-			return nil, mx.ErrInvalidArgs
+			return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading c_sockaddr_in: len(data)=%d too small", len(data))
 		}
 		v := (*c_sockaddr_in)(unsafe.Pointer(&data[0]))
 		addr := &tcpip.FullAddress{
@@ -103,7 +104,7 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 		return addr, nil
 	case AF_INET6:
 		if len(data) < int(unsafe.Sizeof(c_sockaddr_in6{})) {
-			return nil, mx.ErrInvalidArgs
+			return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading c_sockaddr_in6: len(data)=%d too small", len(data))
 		}
 		v := (*c_sockaddr_in6)(unsafe.Pointer(&data[0]))
 		addr := &tcpip.FullAddress{
@@ -115,7 +116,6 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 		}
 		return addr, nil
 	default:
-		log.Printf("unknown family: %d\n", family)
-		return nil, mx.ErrInvalidArgs
+		return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading c_sockaddr: unknown family: %d", family)
 	}
 }

@@ -187,7 +187,7 @@ func (c *Client) Send(b Buffer) error {
 	copy(c.sendbuf, c.sendbuf[count:])
 	c.sendbuf = c.sendbuf[:len(c.sendbuf)-int(count)]
 	if status != mx.ErrOk && status != mx.ErrShouldWait {
-		return status
+		return mx.Error{Status: status, Text: "eth.Client.Send"}
 	}
 	return nil
 }
@@ -220,7 +220,7 @@ func (c *Client) txCompleteLocked() (bool, error) {
 	}
 	canSend := c.txInFlight < c.txDepth
 	if status != mx.ErrOk && status != mx.ErrShouldWait {
-		return canSend, status
+		return canSend, mx.Error{Status: status, Text: "eth.Client.TX"}
 	}
 	return canSend, nil
 }
@@ -252,7 +252,7 @@ func (c *Client) Recv() (b Buffer, err error) {
 	c.recvbuf = c.recvbuf[:n]
 	c.rxInFlight -= n
 	if status != mx.ErrOk {
-		return nil, status
+		return nil, mx.Error{Status: status, Text: "eth.Client.Recv"}
 	}
 	return c.popRecvLocked(), c.rxCompleteLocked()
 }
@@ -275,7 +275,7 @@ func (c *Client) rxCompleteLocked() error {
 	}
 	c.rxInFlight += int(count)
 	if status != mx.ErrOk {
-		return status
+		return mx.Error{Status: status, Text: "eth.Client.RX"}
 	}
 	return nil
 }
