@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 group("parent_child") {
+  testonly = true
+
   deps = [
     ":child_module",
     ":parent_module",
@@ -10,6 +12,8 @@ group("parent_child") {
 }
 
 executable("child_module") {
+  testonly = true
+
   sources = [
     "child_module.cc",
   ]
@@ -23,6 +27,8 @@ executable("child_module") {
 }
 
 executable("parent_module") {
+  testonly = true
+
   sources = [
     "parent_module.cc",
   ]

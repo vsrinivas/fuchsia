@@ -5,6 +5,8 @@
 import("//lib/fidl/fidl.gni")
 
 group("component_context") {
+  testonly = true
+
   deps = [
     ":component_context_test",
     ":component_context_test_agent1",
@@ -13,6 +15,8 @@ group("component_context") {
 }
 
 executable("component_context_test") {
+  testonly = true
+
   sources = [
     "root_module.cc",
   ]
@@ -27,6 +31,8 @@ executable("component_context_test") {
 }
 
 executable("component_context_test_agent1") {
+  testonly = true
+
   sources = [
     "test_agent1.cc",
   ]
@@ -40,6 +46,8 @@ executable("component_context_test_agent1") {
 }
 
 executable("component_context_test_agent2") {
+  testonly = true
+
   sources = [
     "test_agent2.cc",
   ]
