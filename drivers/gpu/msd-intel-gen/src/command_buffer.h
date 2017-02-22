@@ -46,7 +46,7 @@ public:
 
     void SetSequenceNumber(uint32_t sequence_number) override;
 
-    bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) override;
+    bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override;
 
     uint32_t GetPipeControlFlags() override;
 

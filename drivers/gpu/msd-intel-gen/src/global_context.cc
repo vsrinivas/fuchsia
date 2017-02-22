@@ -29,7 +29,7 @@ bool GlobalContext::Map(std::shared_ptr<AddressSpace> address_space, EngineComma
     return true;
 }
 
-bool GlobalContext::Unmap(AddressSpaceId address_space_id, EngineCommandStreamerId id)
+bool GlobalContext::Unmap(EngineCommandStreamerId id)
 {
     DLOG("Unmap for engine %d", id);
 
@@ -37,7 +37,7 @@ bool GlobalContext::Unmap(AddressSpaceId address_space_id, EngineCommandStreamer
     if (iter == status_page_map_.end())
         return DRETF(false, "not mapped");
 
-    if (!MsdIntelContext::Unmap(address_space_id, id))
+    if (!MsdIntelContext::Unmap(id))
         return DRETF(false, "failed to unmap gpu address");
 
     if (!get_context_buffer(id)->platform_buffer()->UnmapCpu())

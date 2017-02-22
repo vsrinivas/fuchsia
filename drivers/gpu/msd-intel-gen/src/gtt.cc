@@ -17,7 +17,7 @@ static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, bool valid)
     return pte;
 }
 
-Gtt::Gtt() : AddressSpace(ADDRESS_SPACE_GTT) {}
+Gtt::Gtt() : AddressSpace(ADDRESS_SPACE_GGTT) {}
 
 bool Gtt::Init(uint64_t gtt_size, magma::PlatformDevice* platform_device)
 {

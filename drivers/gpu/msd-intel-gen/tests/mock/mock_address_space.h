@@ -12,7 +12,7 @@
 class MockAddressSpace : public AddressSpace {
 public:
     MockAddressSpace(uint64_t base, uint64_t size)
-        : AddressSpace(ADDRESS_SPACE_GTT), size_(size), next_addr_(base)
+        : AddressSpace(ADDRESS_SPACE_GGTT), size_(size), next_addr_(base)
     {
     }
 

@@ -55,7 +55,7 @@ public:
     static void SharedMapping(uint32_t alignment)
     {
         std::shared_ptr<MockAddressSpace> address_space(new MockAddressSpace(0, PAGE_SIZE * 5));
-        ASSERT_EQ(address_space->id(), ADDRESS_SPACE_GTT);
+        ASSERT_EQ(address_space->type(), ADDRESS_SPACE_GGTT);
 
         constexpr uint32_t kBufferSize = PAGE_SIZE;
         std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize));
@@ -68,10 +68,10 @@ public:
         EXPECT_EQ(buffer->shared_mapping_count(), 0u);
 
         std::shared_ptr<GpuMapping> shared_mapping =
-            buffer->FindBufferMapping(ADDRESS_SPACE_PPGTT, 0, kBufferSize, alignment);
+            buffer->FindBufferMapping(address_space, 0, kBufferSize, alignment);
         EXPECT_EQ(shared_mapping, nullptr);
 
-        shared_mapping = buffer->FindBufferMapping(ADDRESS_SPACE_GTT, 0, kBufferSize, alignment);
+        shared_mapping = buffer->FindBufferMapping(address_space, 0, kBufferSize, alignment);
         EXPECT_EQ(shared_mapping, nullptr);
 
         shared_mapping = buffer->ShareBufferMapping(std::move(unique_mapping));
@@ -81,7 +81,7 @@ public:
 
         {
             std::shared_ptr<GpuMapping> copy =
-                buffer->FindBufferMapping(ADDRESS_SPACE_GTT, 0, kBufferSize, alignment);
+                buffer->FindBufferMapping(address_space, 0, kBufferSize, alignment);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
@@ -99,7 +99,7 @@ public:
 
         {
             std::shared_ptr<GpuMapping> copy =
-                buffer->FindBufferMapping(ADDRESS_SPACE_GTT, 0, kBufferSize, alignment);
+                buffer->FindBufferMapping(address_space, 0, kBufferSize, alignment);
             EXPECT_EQ(copy, nullptr);
         }
 
@@ -110,7 +110,7 @@ public:
 
         {
             std::shared_ptr<GpuMapping> copy =
-                buffer->FindBufferMapping(ADDRESS_SPACE_GTT, 0, kBufferSize, alignment);
+                buffer->FindBufferMapping(address_space, 0, kBufferSize, alignment);
             ASSERT_NE(copy, nullptr);
             EXPECT_EQ(copy.get(), shared_mapping.get());
         }
@@ -130,7 +130,7 @@ public:
     static void OverlappedMapping(uint32_t alignment)
     {
         std::shared_ptr<MockAddressSpace> address_space(new MockAddressSpace(0, PAGE_SIZE * 10));
-        ASSERT_EQ(address_space->id(), ADDRESS_SPACE_GTT);
+        ASSERT_EQ(address_space->type(), ADDRESS_SPACE_GGTT);
 
         constexpr uint32_t kBufferSize = PAGE_SIZE * 6;
         std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize));

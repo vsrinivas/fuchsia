@@ -57,11 +57,11 @@ uint32_t CommandBuffer::GetPipeControlFlags()
            MiPipeControl::kCommandStreamerStallEnableBit;
 }
 
-bool CommandBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out)
+bool CommandBuffer::GetGpuAddress(gpu_addr_t* gpu_addr_out)
 {
-    DASSERT(prepared_to_execute_);
-    if (address_space_id != exec_resource_mappings_[batch_buffer_index_]->address_space_id())
-        return DRETF(false, "wrong address space");
+    if (!prepared_to_execute_)
+        return DRETF(false, "not prepared to execute");
+
     *gpu_addr_out = exec_resource_mappings_[batch_buffer_index_]->gpu_addr() + batch_start_offset_;
     return true;
 }
@@ -77,19 +77,15 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
     if (!locked_context_)
         return DRETF(false, "context has already been deleted, aborting");
 
-    auto ppgtt = locked_context_->per_process_gtt();
+    std::shared_ptr<AddressSpace> address_space = locked_context_->exec_address_space();
 
     if (!locked_context_->IsInitializedForEngine(engine->id())) {
-        if (!engine->InitContext(locked_context_.get(), ppgtt.get()))
+        if (!engine->InitContext(locked_context_.get()))
             return DRETF(false, "failed to initialize context");
     }
 
     if (!locked_context_->Map(global_gtt, engine->id()))
         return DRETF(false, "failed to map context");
-
-    std::shared_ptr<AddressSpace> address_space =
-        ppgtt && locked_context_->exec_address_space_id() == ADDRESS_SPACE_PPGTT ? ppgtt
-                                                                                 : global_gtt;
 
     exec_resource_mappings_.clear();
     exec_resource_mappings_.reserve(exec_resources_.size());

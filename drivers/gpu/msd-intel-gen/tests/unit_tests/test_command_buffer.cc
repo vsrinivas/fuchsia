@@ -22,9 +22,7 @@ public:
     std::shared_ptr<AddressSpace> exec_address_space()
     {
         auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
-        if (context->per_process_gtt() && context->exec_address_space_id() == ADDRESS_SPACE_PPGTT)
-            return context->per_process_gtt();
-        return device()->gtt();
+        return context->exec_address_space();
     }
 
     void TestMapUnmapResourcesGpu()
@@ -108,7 +106,7 @@ public:
         ASSERT_NE(ctx, nullptr);
 
         gpu_addr_t gpu_addr;
-        EXPECT_TRUE(cmd_buf_->GetGpuAddress(address_space->id(), &gpu_addr));
+        EXPECT_TRUE(cmd_buf_->GetGpuAddress(&gpu_addr));
         EXPECT_EQ(batch_start_offset, gpu_addr & (PAGE_SIZE - 1));
 
         // Check that context is initialized correctly

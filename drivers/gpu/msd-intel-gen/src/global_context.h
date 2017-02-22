@@ -5,16 +5,20 @@
 #ifndef GLOBAL_CONTEXT_H
 #define GLOBAL_CONTEXT_H
 
+#include "address_space.h"
 #include "hardware_status_page.h"
 #include "msd_intel_context.h"
 
 // GlobalContext, provides the global (per engine) hardware status page for all client contexts.
 class GlobalContext : public MsdIntelContext, public HardwareStatusPage::Owner {
 public:
-    GlobalContext() : MsdIntelContext(false) {}
+    GlobalContext(std::shared_ptr<AddressSpace> address_space)
+        : MsdIntelContext(std::move(address_space))
+    {
+    }
 
     bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id) override;
-    bool Unmap(AddressSpaceId address_space_id, EngineCommandStreamerId id) override;
+    bool Unmap(EngineCommandStreamerId id) override;
 
     HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id)
     {

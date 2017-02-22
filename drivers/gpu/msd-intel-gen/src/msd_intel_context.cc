@@ -31,7 +31,7 @@ bool MsdIntelContext::Map(std::shared_ptr<AddressSpace> address_space, EngineCom
     PerEngineState& state = iter->second;
 
     if (state.context_mapping) {
-        if (state.context_mapping->address_space_id() == address_space->id())
+        if (state.context_mapping->address_space().lock() == address_space)
             return true;
         return DRETF(false, "already mapped to a different address space");
     }
@@ -49,7 +49,7 @@ bool MsdIntelContext::Map(std::shared_ptr<AddressSpace> address_space, EngineCom
     return true;
 }
 
-bool MsdIntelContext::Unmap(AddressSpaceId address_space_id, EngineCommandStreamerId id)
+bool MsdIntelContext::Unmap(EngineCommandStreamerId id)
 {
     auto iter = state_map_.find(id);
     if (iter == state_map_.end())
@@ -59,8 +59,8 @@ bool MsdIntelContext::Unmap(AddressSpaceId address_space_id, EngineCommandStream
 
     PerEngineState& state = iter->second;
 
-    if (!state.context_mapping || state.context_mapping->address_space_id() != address_space_id)
-        return DRETF(false, "context not mapped to given address_space");
+    if (!state.context_mapping)
+        return DRETF(false, "context not mapped");
 
     state.context_mapping.reset();
 
@@ -94,7 +94,7 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
     if (!state.context_mapping)
         return DRETF(false, "context not mapped");
 
-    if (!state.ringbuffer->GetGpuAddress(state.context_mapping->address_space_id(), addr_out))
+    if (!state.ringbuffer->GetGpuAddress(addr_out))
         return DRETF(false, "failed to get gpu address");
 
     return true;

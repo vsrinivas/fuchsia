@@ -4,6 +4,7 @@
 
 #include "device_id.h"
 #include "engine_command_streamer.h"
+#include "gtt.h"
 #include "instructions.h"
 #include "mock/mock_address_space.h"
 #include "mock/mock_mapped_batch.h"
@@ -53,7 +54,8 @@ public:
 
         std::weak_ptr<MsdIntelConnection> connection;
 
-        context_ = std::shared_ptr<MsdIntelContext>(new ClientContext(connection, nullptr));
+        context_ = std::shared_ptr<MsdIntelContext>(
+            new ClientContext(connection, std::make_shared<Gtt>()));
 
         mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
 
@@ -72,7 +74,7 @@ public:
         auto buffer = TestContext::get_context_buffer(context_.get(), engine_cs_->id());
         EXPECT_EQ(buffer, nullptr);
 
-        EXPECT_TRUE(engine_cs_->InitContext(context_.get(), nullptr));
+        EXPECT_TRUE(engine_cs_->InitContext(context_.get()));
 
         buffer = TestContext::get_context_buffer(context_.get(), engine_cs_->id());
         ASSERT_NE(buffer, nullptr);
@@ -194,7 +196,7 @@ public:
         // batch buffer start
         gpu_addr_t init_batch_addr;
         EXPECT_TRUE(render_cs->inflight_command_sequences_.back().mapped_batch()->GetGpuAddress(
-            address_space_->id(), &init_batch_addr));
+            &init_batch_addr));
 
         int i = tail_start / 4;
         EXPECT_EQ(ringbuffer_content[i++], MiBatchBufferStart::kCommandType | (3 - 2));
@@ -218,7 +220,7 @@ public:
                         ->MapCpu(&addr));
 
         gpu_addr_t gpu_addr;
-        EXPECT_TRUE(ringbuffer->GetGpuAddress(address_space_->id(), &gpu_addr));
+        EXPECT_TRUE(ringbuffer->GetGpuAddress(&gpu_addr));
 
         uint32_t* state = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + PAGE_SIZE);
         EXPECT_EQ(state[6], 0x2030ul);
@@ -248,7 +250,7 @@ public:
         }
         EXPECT_EQ(write, submitport_writes.size());
 
-        EXPECT_TRUE(context_->Unmap(address_space_->id(), engine_cs_->id()));
+        EXPECT_TRUE(context_->Unmap(engine_cs_->id()));
     }
 
     void Reset()

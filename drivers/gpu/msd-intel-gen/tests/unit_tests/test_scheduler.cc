@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "magma_util/sleep.h"
+#include "mock/mock_address_space.h"
 #include "mock/mock_mapped_batch.h"
 #include "msd_intel_context.h"
 #include "scheduler.h"
@@ -14,8 +15,9 @@ public:
 
     TestScheduler()
     {
+        auto address_space = std::make_shared<MockAddressSpace>(0, PAGE_SIZE);
         for (uint32_t i = 0; i < kNumContext; i++) {
-            context_[i] = std::make_shared<ClientContext>(connection_, nullptr);
+            context_[i] = std::make_shared<ClientContext>(connection_, address_space);
         }
     }
 

@@ -156,7 +156,7 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     PerProcessGtt::InitPrivatePat(register_io_.get());
 
-    gtt_ = std::unique_ptr<Gtt>(new Gtt());
+    gtt_ = std::make_shared<Gtt>();
 
     if (!gtt_->Init(gtt_size, platform_device_.get()))
         return DRETF(false, "failed to Init gtt");
@@ -167,10 +167,10 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     render_engine_cs_ = RenderEngineCommandStreamer::Create(this);
 
-    global_context_ = std::shared_ptr<GlobalContext>(new GlobalContext());
+    global_context_ = std::shared_ptr<GlobalContext>(new GlobalContext(gtt_));
 
     // Creates the context backing store.
-    if (!render_engine_cs_->InitContext(global_context_.get(), nullptr))
+    if (!render_engine_cs_->InitContext(global_context_.get()))
         return DRETF(false, "render_engine_cs failed to init global context");
 
     if (!global_context_->Map(gtt_, render_engine_cs_->id()))

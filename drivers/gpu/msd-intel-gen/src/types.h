@@ -19,9 +19,9 @@ enum CachingType {
     CACHING_WRITE_THROUGH,
 };
 
-enum AddressSpaceId {
-    ADDRESS_SPACE_GTT,
-    ADDRESS_SPACE_PPGTT,
+enum AddressSpaceType {
+    ADDRESS_SPACE_GGTT,  // Global GTT address space
+    ADDRESS_SPACE_PPGTT, // Per Process GTT address space
 };
 
 enum EngineCommandStreamerId {

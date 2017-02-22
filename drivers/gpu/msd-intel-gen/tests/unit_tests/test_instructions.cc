@@ -49,7 +49,7 @@ public:
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
 
         gpu_addr = 0xaa00bb00cc00dd;
-        MiBatchBufferStart::write_ringbuffer(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_GTT);
+        MiBatchBufferStart::write_ringbuffer(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_GGTT);
         EXPECT_EQ(ringbuffer_->tail() - tail_start,
                   2 * MiBatchBufferStart::kDwordCount * sizeof(uint32_t));
         EXPECT_EQ(*vaddr++, MiBatchBufferStart::kCommandType | (MiBatchBufferStart::kDwordCount - 2));
@@ -68,7 +68,8 @@ public:
         gpu_addr_t gpu_addr = 0xabcd1234cafebeef;
         uint32_t val = ~0;
 
-        MiStoreDataImmediate::write_ringbuffer(ringbuffer_.get(), val, gpu_addr, ADDRESS_SPACE_GTT);
+        MiStoreDataImmediate::write_ringbuffer(ringbuffer_.get(), val, gpu_addr,
+                                               ADDRESS_SPACE_GGTT);
         EXPECT_EQ(ringbuffer_->tail() - tail_start,
                   MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
         EXPECT_EQ(*vaddr++, MiStoreDataImmediate::kCommandType | (MiStoreDataImmediate::kDwordCount - 2) | MiStoreDataImmediate::kAddressSpaceGtt);

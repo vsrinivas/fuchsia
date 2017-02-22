@@ -36,7 +36,7 @@ public:
     EngineCommandStreamerId id() const { return id_; }
 
     // Initialize backing store for the given context on this engine command streamer.
-    bool InitContext(MsdIntelContext* context, PerProcessGtt* ppgtt) const;
+    bool InitContext(MsdIntelContext* context) const;
 
     // Initialize engine command streamer hardware.
     void InitHardware();
@@ -75,7 +75,7 @@ private:
     virtual uint32_t GetContextSize() const { return PAGE_SIZE * 2; }
 
     bool InitContextBuffer(MsdIntelBuffer* context_buffer, Ringbuffer* ringbuffer,
-                           PerProcessGtt* ppgtt) const;
+                           AddressSpace* address_space) const;
 
     Owner* owner_;
     EngineCommandStreamerId id_;
@@ -110,7 +110,7 @@ private:
     bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch);
 
     bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
-                          AddressSpaceId address_space_id);
+                          AddressSpaceType address_space_type);
     bool WriteSequenceNumber(MsdIntelContext* context, uint32_t* sequence_number_out);
     void ScheduleContext();
 

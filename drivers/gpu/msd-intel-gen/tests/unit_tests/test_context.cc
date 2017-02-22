@@ -13,7 +13,9 @@ public:
     void Init()
     {
         std::weak_ptr<MsdIntelConnection> connection;
-        std::unique_ptr<MsdIntelContext> context(new ClientContext(connection, nullptr));
+        auto address_space = std::make_shared<MockAddressSpace>(0, PAGE_SIZE);
+
+        std::unique_ptr<MsdIntelContext> context(new ClientContext(connection, address_space));
 
         EXPECT_EQ(nullptr, get_buffer(context.get(), RENDER_COMMAND_STREAMER));
         EXPECT_EQ(nullptr, get_ringbuffer(context.get(), RENDER_COMMAND_STREAMER));
@@ -38,10 +40,6 @@ public:
 
         std::weak_ptr<MsdIntelConnection> connection;
         std::unique_ptr<MsdIntelContext> context;
-        if (global)
-            context = std::unique_ptr<MsdIntelContext>(new GlobalContext());
-        else
-            context = std::unique_ptr<MsdIntelContext>(new ClientContext(connection, nullptr));
 
         std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE));
         std::unique_ptr<Ringbuffer> ringbuffer(
@@ -50,10 +48,16 @@ public:
         std::shared_ptr<AddressSpace> address_space(
             new MockAddressSpace(base, buffer->platform_buffer()->size() + ringbuffer->size()));
 
+        if (global)
+            context = std::unique_ptr<MsdIntelContext>(new GlobalContext(address_space));
+        else
+            context =
+                std::unique_ptr<MsdIntelContext>(new ClientContext(connection, address_space));
+
         context->SetEngineState(RENDER_COMMAND_STREAMER, std::move(buffer), std::move(ringbuffer));
 
         // Not mapped
-        EXPECT_FALSE(context->Unmap(address_space->id(), RENDER_COMMAND_STREAMER));
+        EXPECT_FALSE(context->Unmap(RENDER_COMMAND_STREAMER));
 
         gpu_addr_t gpu_addr;
         EXPECT_FALSE(context->GetRingbufferGpuAddress(RENDER_COMMAND_STREAMER, &gpu_addr));
@@ -66,10 +70,10 @@ public:
         EXPECT_TRUE(context->Map(address_space, RENDER_COMMAND_STREAMER));
 
         // Unmap
-        EXPECT_TRUE(context->Unmap(address_space->id(), RENDER_COMMAND_STREAMER));
+        EXPECT_TRUE(context->Unmap(RENDER_COMMAND_STREAMER));
 
         // Already unmapped
-        EXPECT_FALSE(context->Unmap(address_space->id(), RENDER_COMMAND_STREAMER));
+        EXPECT_FALSE(context->Unmap(RENDER_COMMAND_STREAMER));
     }
 
 private:

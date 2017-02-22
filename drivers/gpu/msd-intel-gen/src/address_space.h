@@ -12,11 +12,11 @@
 // Base class for various address spaces.
 class AddressSpace {
 public:
-    AddressSpace(AddressSpaceId id) : id_(id) {}
+    AddressSpace(AddressSpaceType type) : type_(type) {}
 
     virtual ~AddressSpace() {}
 
-    AddressSpaceId id() { return id_; }
+    AddressSpaceType type() { return type_; }
 
     virtual uint64_t Size() const = 0;
 
@@ -60,7 +60,7 @@ public:
     }
 
 private:
-    AddressSpaceId id_;
+    AddressSpaceType type_;
 };
 
 #endif // ADDRESS_SPACE_H

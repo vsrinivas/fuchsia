@@ -21,7 +21,10 @@ class MsdIntelConnection;
 // Abstract base context.
 class MsdIntelContext {
 public:
-    MsdIntelContext(bool ppgtt_enable) : ppgtt_enable_(ppgtt_enable) {}
+    MsdIntelContext(std::shared_ptr<AddressSpace> address_space) : address_space_(address_space)
+    {
+        DASSERT(address_space_);
+    }
 
     virtual ~MsdIntelContext() {}
 
@@ -29,7 +32,7 @@ public:
                         std::unique_ptr<Ringbuffer> ringbuffer);
 
     virtual bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id);
-    virtual bool Unmap(AddressSpaceId address_space_id, EngineCommandStreamerId id);
+    virtual bool Unmap(EngineCommandStreamerId id);
 
     virtual std::weak_ptr<MsdIntelConnection> connection()
     {
@@ -59,10 +62,7 @@ public:
 
     std::queue<std::unique_ptr<MappedBatch>>& pending_batch_queue() { return pending_batch_queue_; }
 
-    AddressSpaceId exec_address_space_id()
-    {
-        return ppgtt_enable_ ? ADDRESS_SPACE_PPGTT : ADDRESS_SPACE_GTT;
-    }
+    std::shared_ptr<AddressSpace> exec_address_space() { return address_space_; }
 
 private:
     struct PerEngineState {
@@ -73,7 +73,7 @@ private:
 
     std::map<EngineCommandStreamerId, PerEngineState> state_map_;
     std::queue<std::unique_ptr<MappedBatch>> pending_batch_queue_;
-    bool ppgtt_enable_;
+    std::shared_ptr<AddressSpace> address_space_;
 
     friend class TestContext;
 };
@@ -81,20 +81,17 @@ private:
 class ClientContext : public MsdIntelContext {
 public:
     ClientContext(std::weak_ptr<MsdIntelConnection> connection,
-                  std::shared_ptr<PerProcessGtt> ppgtt)
-        : MsdIntelContext(ppgtt ? true : false), connection_(connection), ppgtt_(ppgtt)
+                  std::shared_ptr<AddressSpace> address_space)
+        : MsdIntelContext(std::move(address_space)), connection_(connection)
     {
     }
 
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
 
-    std::shared_ptr<PerProcessGtt> per_process_gtt() { return ppgtt_; }
-
     std::weak_ptr<MsdIntelConnection> connection() override { return connection_; }
 
 private:
     std::weak_ptr<MsdIntelConnection> connection_;
-    std::shared_ptr<PerProcessGtt> ppgtt_;
 };
 
 class MsdIntelAbiContext : public msd_context {

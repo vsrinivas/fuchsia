@@ -13,10 +13,7 @@ public:
     {
         return std::weak_ptr<MsdIntelContext>();
     }
-    bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) override
-    {
-        return false;
-    }
+    bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override { return false; }
     void SetSequenceNumber(uint32_t sequence_number) override {}
 };
 

@@ -19,12 +19,6 @@ public:
 
     ~GpuMapping();
 
-    AddressSpaceId address_space_id()
-    {
-        DASSERT(!address_space_.expired());
-        return address_space_id_;
-    }
-
     MsdIntelBuffer* buffer() { return buffer_.get(); }
 
     gpu_addr_t gpu_addr()
@@ -32,6 +26,8 @@ public:
         DASSERT(!address_space_.expired());
         return gpu_addr_;
     }
+
+    std::weak_ptr<AddressSpace> address_space() { return address_space_; }
 
     uint64_t offset() { return offset_; }
 
@@ -42,7 +38,6 @@ private:
     std::shared_ptr<MsdIntelBuffer> buffer_;
     uint64_t offset_;
     uint64_t length_;
-    AddressSpaceId address_space_id_;
     gpu_addr_t gpu_addr_;
 };
 

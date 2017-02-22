@@ -24,10 +24,11 @@ public:
     static constexpr uint32_t kAddressSpacePpgtt = 1 << 8;
 
     static void write_ringbuffer(Ringbuffer* ringbuffer, gpu_addr_t gpu_addr,
-                                 AddressSpaceId address_space_id)
+                                 AddressSpaceType address_space_type)
     {
-        ringbuffer->write_tail(kCommandType | (kDwordCount - 2) |
-                               (address_space_id == ADDRESS_SPACE_PPGTT ? kAddressSpacePpgtt : 0));
+        ringbuffer->write_tail(
+            kCommandType | (kDwordCount - 2) |
+            (address_space_type == ADDRESS_SPACE_PPGTT ? kAddressSpacePpgtt : 0));
         ringbuffer->write_tail(magma::lower_32_bits(gpu_addr));
         ringbuffer->write_tail(magma::upper_32_bits(gpu_addr));
     }
@@ -41,10 +42,10 @@ public:
     static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
 
     static void write_ringbuffer(Ringbuffer* ringbuffer, uint32_t dword, gpu_addr_t gpu_addr,
-                                 AddressSpaceId address_space_id)
+                                 AddressSpaceType address_space_type)
     {
         ringbuffer->write_tail(kCommandType | (kDwordCount - 2) |
-                               (address_space_id == ADDRESS_SPACE_GTT ? kAddressSpaceGtt : 0));
+                               (address_space_type == ADDRESS_SPACE_GGTT ? kAddressSpaceGtt : 0));
         ringbuffer->write_tail(magma::lower_32_bits(gpu_addr));
         ringbuffer->write_tail(magma::upper_32_bits(gpu_addr));
         ringbuffer->write_tail(dword);

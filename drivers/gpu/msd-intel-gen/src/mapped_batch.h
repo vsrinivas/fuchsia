@@ -16,7 +16,7 @@ public:
     virtual ~MappedBatch() {}
 
     virtual std::weak_ptr<MsdIntelContext> GetContext() = 0;
-    virtual bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) = 0;
+    virtual bool GetGpuAddress(gpu_addr_t* gpu_addr_out) = 0;
     virtual void SetSequenceNumber(uint32_t sequence_number) = 0;
     virtual uint32_t GetPipeControlFlags() { return 0; }
 
@@ -43,10 +43,8 @@ public:
 
     std::weak_ptr<MsdIntelContext> GetContext() override { return context_; }
 
-    bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) override
+    bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override
     {
-        if (batch_buffer_mapping_->address_space_id() != address_space_id)
-            return DRETF(false, "invalid address_space_id");
         *gpu_addr_out = batch_buffer_mapping_->gpu_addr();
         return true;
     }

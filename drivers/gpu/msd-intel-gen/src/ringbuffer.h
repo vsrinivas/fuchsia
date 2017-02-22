@@ -47,7 +47,7 @@ public:
     bool Map(std::shared_ptr<AddressSpace> address_space);
     bool Unmap();
 
-    bool GetGpuAddress(AddressSpaceId id, gpu_addr_t* addr_out);
+    bool GetGpuAddress(gpu_addr_t* addr_out);
 
 private:
     uint32_t* vaddr() { return vaddr_; }

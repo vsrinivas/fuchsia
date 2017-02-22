@@ -20,7 +20,7 @@ EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamer
     DASSERT(owner);
 }
 
-bool EngineCommandStreamer::InitContext(MsdIntelContext* context, PerProcessGtt* ppgtt) const
+bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
 {
     DASSERT(context);
 
@@ -33,7 +33,8 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context, PerProcessGtt*
 
     std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(MsdIntelBuffer::Create(32 * PAGE_SIZE)));
 
-    if (!InitContextBuffer(context_buffer.get(), ringbuffer.get(), ppgtt))
+    if (!InitContextBuffer(context_buffer.get(), ringbuffer.get(),
+                           context->exec_address_space().get()))
         return DRETF(false, "InitContextBuffer failed");
 
     // Transfer ownership of context_buffer
@@ -258,7 +259,7 @@ private:
 };
 
 bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer* ringbuffer,
-                                              PerProcessGtt* ppgtt) const
+                                              AddressSpace* address_space) const
 {
     DASSERT(buffer->write_domain() == MEMORY_DOMAIN_CPU);
 
@@ -287,7 +288,8 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
     helper.write_indirect_context_pointer();
     helper.write_indirect_context_offset_pointer();
     helper.write_context_timestamp();
-    if (ppgtt) {
+    if (address_space->type() == ADDRESS_SPACE_PPGTT) {
+        auto ppgtt = static_cast<PerProcessGtt*>(address_space);
         helper.write_pdp3_upper(ppgtt->get_pdp(3));
         helper.write_pdp3_lower(ppgtt->get_pdp(3));
         helper.write_pdp2_upper(ppgtt->get_pdp(2));
@@ -362,7 +364,7 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
     // Use most significant bits of context gpu_addr as globally unique context id
     DASSERT(PAGE_SIZE == 4096);
     uint64_t descriptor0 = registers::ExeclistSubmitPort::context_descriptor(
-        gpu_addr, gpu_addr >> 12, context->exec_address_space_id() == ADDRESS_SPACE_PPGTT);
+        gpu_addr, gpu_addr >> 12, context->exec_address_space()->type() == ADDRESS_SPACE_PPGTT);
     uint64_t descriptor1 = 0;
 
     registers::ExeclistSubmitPort::write(register_io(), mmio_base_, descriptor1, descriptor0);
@@ -470,10 +472,10 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
     DASSERT(context);
 
     gpu_addr_t gpu_addr;
-    if (!mapped_batch->GetGpuAddress(context->exec_address_space_id(), &gpu_addr))
+    if (!mapped_batch->GetGpuAddress(&gpu_addr))
         return DRETF(false, "couldn't get batch gpu address");
 
-    if (!StartBatchBuffer(context.get(), gpu_addr, context->exec_address_space_id()))
+    if (!StartBatchBuffer(context.get(), gpu_addr, context->exec_address_space()->type()))
         return DRETF(false, "failed to emit batch");
 
     if (!PipeControl(context.get(), mapped_batch->GetPipeControlFlags()))
@@ -614,7 +616,7 @@ bool EngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags
 }
 
 bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu_addr_t gpu_addr,
-                                                   AddressSpaceId address_space_id)
+                                                   AddressSpaceType address_space_type)
 {
     auto ringbuffer = context->get_ringbuffer(id());
 
@@ -623,10 +625,10 @@ bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu
     if (!ringbuffer->HasSpace(dword_count * sizeof(uint32_t)))
         return DRETF(false, "ringbuffer has insufficient space");
 
-    MiBatchBufferStart::write_ringbuffer(ringbuffer, gpu_addr, address_space_id);
+    MiBatchBufferStart::write_ringbuffer(ringbuffer, gpu_addr, address_space_type);
     MiNoop::write_ringbuffer(ringbuffer);
 
-    DLOG("started batch buffer 0x%lx address_space_id %d", gpu_addr, address_space_id);
+    DLOG("started batch buffer 0x%lx address_space_type %d", gpu_addr, address_space_type);
 
     return true;
 }
@@ -648,7 +650,7 @@ bool RenderEngineCommandStreamer::WriteSequenceNumber(MsdIntelContext* context,
     DLOG("writing sequence number update to 0x%x", sequence_number);
 
     MiStoreDataImmediate::write_ringbuffer(ringbuffer, sequence_number, gpu_addr,
-                                           ADDRESS_SPACE_GTT);
+                                           ADDRESS_SPACE_GGTT);
     MiNoop::write_ringbuffer(ringbuffer);
 
     *sequence_number_out = sequence_number;

@@ -16,6 +16,7 @@
 #include <mutex>
 
 class GpuMapping;
+class AddressSpace;
 
 class MsdIntelBuffer {
 public:
@@ -48,8 +49,9 @@ public:
     std::shared_ptr<GpuMapping> ShareBufferMapping(std::unique_ptr<GpuMapping> mapping);
 
     // Returns exact match mappings only.
-    std::shared_ptr<GpuMapping> FindBufferMapping(AddressSpaceId id, uint64_t offset,
-                                                  uint64_t length, uint32_t alignment);
+    std::shared_ptr<GpuMapping> FindBufferMapping(std::shared_ptr<AddressSpace> address_space,
+                                                  uint64_t offset, uint64_t length,
+                                                  uint32_t alignment);
 
     void RemoveExpiredMappings();
 

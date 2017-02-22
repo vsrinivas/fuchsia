@@ -26,8 +26,6 @@ public:
                                      std::shared_ptr<AddressSpace> address_space);
 
 private:
-    AddressSpaceId address_space_id_;
-
     const uint32_t batch_size_;
     const uint32_t* batch_;
 

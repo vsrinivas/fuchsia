@@ -10,7 +10,7 @@ GpuMapping::GpuMapping(std::shared_ptr<AddressSpace> address_space,
                        std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset, uint64_t length,
                        gpu_addr_t gpu_addr)
     : address_space_(address_space), buffer_(buffer), offset_(offset), length_(length),
-      address_space_id_(address_space->id()), gpu_addr_(gpu_addr)
+      gpu_addr_(gpu_addr)
 {
 }
 

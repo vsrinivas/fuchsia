@@ -64,7 +64,7 @@ AddressSpace::GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
     DASSERT(buffer);
 
     std::shared_ptr<GpuMapping> mapping =
-        buffer->FindBufferMapping(address_space->id(), offset, length, alignment);
+        buffer->FindBufferMapping(address_space, offset, length, alignment);
     if (!mapping) {
         std::unique_ptr<GpuMapping> new_mapping =
             AddressSpace::MapBufferGpu(address_space, buffer, offset, length, alignment);

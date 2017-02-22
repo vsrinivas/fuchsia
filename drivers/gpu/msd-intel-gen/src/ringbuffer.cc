@@ -57,13 +57,10 @@ bool Ringbuffer::Unmap()
     return true;
 }
 
-bool Ringbuffer::GetGpuAddress(AddressSpaceId id, gpu_addr_t* addr_out)
+bool Ringbuffer::GetGpuAddress(gpu_addr_t* addr_out)
 {
     if (!gpu_mapping_)
         return DRETF(false, "not mapped");
-
-    if (gpu_mapping_->address_space_id() != id)
-        return DRETF(false, "invalid address space id");
 
     *addr_out = gpu_mapping_->gpu_addr();
     return true;

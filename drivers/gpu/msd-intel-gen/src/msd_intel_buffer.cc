@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "msd_intel_buffer.h"
+#include "address_space.h"
 #include "gpu_mapping.h"
 #include "msd.h"
 
@@ -43,8 +44,9 @@ std::shared_ptr<GpuMapping> MsdIntelBuffer::ShareBufferMapping(std::unique_ptr<G
     return shared_mapping;
 }
 
-std::shared_ptr<GpuMapping> MsdIntelBuffer::FindBufferMapping(AddressSpaceId id, uint64_t offset,
-                                                              uint64_t length, uint32_t alignment)
+std::shared_ptr<GpuMapping>
+MsdIntelBuffer::FindBufferMapping(std::shared_ptr<AddressSpace> address_space, uint64_t offset,
+                                  uint64_t length, uint32_t alignment)
 {
     for (auto weak_mapping : mapping_list_) {
         std::shared_ptr<GpuMapping> shared_mapping = weak_mapping.lock();
@@ -52,8 +54,8 @@ std::shared_ptr<GpuMapping> MsdIntelBuffer::FindBufferMapping(AddressSpaceId id,
             continue;
 
         gpu_addr_t gpu_addr = shared_mapping->gpu_addr();
-        if (shared_mapping->address_space_id() == id && shared_mapping->offset() == offset &&
-            shared_mapping->length() == length &&
+        if (shared_mapping->address_space().lock() == address_space &&
+            shared_mapping->offset() == offset && shared_mapping->length() == length &&
             (alignment == 0 || magma::round_up(gpu_addr, alignment) == gpu_addr))
             return shared_mapping;
     }
