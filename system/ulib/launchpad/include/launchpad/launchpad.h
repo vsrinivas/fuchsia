@@ -294,7 +294,7 @@ mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc);
 // launchpad_set_vdso_vmo has been called with a valid handle, this
 // just duplicates the handle passed in the last call.  Otherwise,
 // the first time the system vDSO is needed it's fetched with
-// mxio_get_startup_handle.
+// mx_get_startup_handle.
 mx_handle_t launchpad_get_vdso_vmo(void);
 
 // Replace the globally-held VM object handle for the system vDSO.
@@ -302,7 +302,7 @@ mx_handle_t launchpad_get_vdso_vmo(void);
 // handle, of which the caller takes ownership.  It does not check
 // the handle for validity.  If MX_HANDLE_INVALID is passed here,
 // then the next time the system vDSO is needed it will be fetched
-// with mxio_get_startup_handle as if it were the first time.  If
+// with mx_get_startup_handle as if it were the first time.  If
 // the system vDSO has not been needed before this call, then the
 // return value will be MX_HANDLE_INVALID.
 mx_handle_t launchpad_set_vdso_vmo(mx_handle_t vmo);

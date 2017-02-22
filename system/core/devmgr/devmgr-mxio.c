@@ -10,6 +10,7 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 
@@ -139,7 +140,7 @@ static ssize_t setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
 static void setup_bootfs(void) {
     mx_handle_t vmo;
     for (unsigned int n = 0;
-         (vmo = mxio_get_startup_handle(
+         (vmo = mx_get_startup_handle(
              MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, n))) != MX_HANDLE_INVALID;
         ++n) {
         ssize_t count = setup_bootfs_vmo(n, vmo);

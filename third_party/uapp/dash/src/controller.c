@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <mxio/util.h>
 
 #include <linenoise/linenoise.h>
 
@@ -21,7 +21,7 @@ static const char kAddToHistoryPrefix[] = "add_to_history:";
 static const size_t kAddToHistoryPrefixLen = sizeof(kAddToHistoryPrefix) - 1;
 
 void controller_init() {
-  ctrl_channel = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
+  ctrl_channel = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
 
   if (ctrl_channel == MX_HANDLE_INVALID) {
     // Running without a shell controller.

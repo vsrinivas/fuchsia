@@ -32,9 +32,9 @@
  * SUCH DAMAGE.
  */
 
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <mxio/util.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -197,7 +197,7 @@ state4:	/* XXX ??? - why isn't this before the "if" statement */
 STATIC void
 evalifsubshell()
 {
-	mx_handle_t ast_vmo = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+	mx_handle_t ast_vmo = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
 	if (ast_vmo == MX_HANDLE_INVALID)
 		return;
 

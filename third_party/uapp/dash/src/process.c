@@ -4,10 +4,10 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
-#include <mxio/util.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -23,7 +23,7 @@ static mx_handle_t get_application_environment(void) {
     static mx_handle_t application_environment;
     if (!application_environment) {
         application_environment =
-            mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
+            mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
     }
     return application_environment;
 }

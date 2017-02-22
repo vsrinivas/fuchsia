@@ -14,11 +14,11 @@
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/log.h>
 #include <mxio/io.h>
-#include <mxio/util.h>
 #include <launchpad/launchpad.h>
 
 #include <magenta/netboot.h>

@@ -13,10 +13,10 @@
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
-#include <mxio/util.h>
 #include <mxio/vfs.h>
 
 #include <magenta/device/devmgr.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -71,7 +71,7 @@ mx_handle_t vfs_rpc_server(vnode_t* vn) {
         return r;
     }
 
-    mx_handle_t h = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    mx_handle_t h = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
     if (h == MX_HANDLE_INVALID) {
         error("minfs: Could not access startup handle to mount point\n");
         //TODO: proper cleanup when possible

@@ -16,12 +16,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <magenta/compiler.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/port.h>
 #include <magenta/threads.h>
-#include <mxio/util.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
@@ -359,9 +359,9 @@ static int thread_func(void* arg)
 static void __NO_RETURN test_child(void)
 {
     unittest_printf("Test child starting.\n");
-    mx_handle_t channel = mxio_get_startup_handle(MX_HND_TYPE_USER0);
+    mx_handle_t channel = mx_get_startup_handle(MX_HND_TYPE_USER0);
     if (channel == MX_HANDLE_INVALID)
-        tu_fatal("mxio_get_startup_handle", ERR_BAD_HANDLE - 1000);
+        tu_fatal("mx_get_startup_handle", ERR_BAD_HANDLE - 1000);
     msg_loop(channel);
     unittest_printf("Test child exiting.\n");
     exit(0);

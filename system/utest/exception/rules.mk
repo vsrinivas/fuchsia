@@ -16,7 +16,6 @@ MODULE_LIBS := \
     ulib/unittest \
     ulib/test-utils \
     ulib/launchpad \
-    ulib/mxio \
     ulib/magenta \
     ulib/musl
 

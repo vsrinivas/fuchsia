@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
 #include <limits.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
@@ -22,7 +23,6 @@
 #include <magenta/types.h>
 #include <math.h>
 #include <mxio/io.h>
-#include <mxio/util.h>
 #include <mxtl/array.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/unique_ptr.h>
@@ -203,7 +203,7 @@ int GatherReports(const char* test_bin, mxtl::Array<ReportInfo>* reports) {
 
 int TestRunMain(int argc, char** argv) {
     mx_handle_t report_pipe =
-        mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
+        mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
 
     ReportInfo report;
 

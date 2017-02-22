@@ -14,6 +14,6 @@ MODULE_SRCS += \
 MODULE_NAME := thread-injection-injector
 
 MODULE_LIBS := \
-    ulib/launchpad ulib/mxio ulib/magenta ulib/musl
+    ulib/launchpad ulib/magenta ulib/musl
 
 include make/module.mk

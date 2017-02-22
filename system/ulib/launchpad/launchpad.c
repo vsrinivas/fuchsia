@@ -6,12 +6,12 @@
 #include "elf.h"
 
 #include <magenta/assert.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <mxio/loader-service.h>
 #include <mxio/io.h>
-#include <mxio/util.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -545,7 +545,7 @@ static void vdso_unlock(void) {
 }
 static mx_handle_t vdso_get_vmo(void) {
     if (vdso_vmo == MX_HANDLE_INVALID)
-        vdso_vmo = mxio_get_startup_handle(
+        vdso_vmo = mx_get_startup_handle(
             MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0));
     return vdso_vmo;
 }

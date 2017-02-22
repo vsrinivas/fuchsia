@@ -11,10 +11,10 @@
 #include <magenta/device/block.h>
 #include <magenta/device/console.h>
 #include <magenta/device/devmgr.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
-#include <mxio/util.h>
 #include <mxio/watcher.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -304,7 +304,7 @@ int virtcon_starter(void* arg) {
 int main(int argc, char** argv) {
     devmgr_io_init();
 
-    root_resource_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
+    root_resource_handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
     root_job_handle = mx_job_default();
 
     printf("devmgr: main()\n");

@@ -5,9 +5,9 @@
 #include <inttypes.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <mxio/util.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -16,9 +16,9 @@
 #define HELPER "/boot/bin/thread-injection-injected"
 
 int main(void) {
-    mx_handle_t h = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    mx_handle_t h = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
     if (h < 0) {
-        fprintf(stderr, "mxio_get_startup_handle: %d\n", h);
+        fprintf(stderr, "mx_get_startup_handle: %d\n", h);
         return 1;
     }
 
