@@ -61,6 +61,8 @@ void send_msg(mx_handle_t handle, enum message msg)
 
 bool recv_msg(mx_handle_t handle, enum message* msg)
 {
+    BEGIN_HELPER;
+
     uint64_t data;
     uint32_t num_bytes = sizeof(data);
 
@@ -73,7 +75,8 @@ bool recv_msg(mx_handle_t handle, enum message* msg)
 
     *msg = data;
     unittest_printf("received message %d\n", *msg);
-    return true;
+
+    END_HELPER;
 }
 
 typedef struct {
@@ -172,10 +175,10 @@ void dump_arch_regs (mx_handle_t thread_handle, int regset, void* buf)
 
 bool dump_inferior_regs(mx_handle_t thread)
 {
+    BEGIN_HELPER;
+
     mx_status_t status;
-
     uint32_t num_regsets = get_uint32_property(thread, MX_PROP_NUM_STATE_KINDS);
-
     for (unsigned i = 0; i < num_regsets; ++i) {
         uint32_t regset_size = 0;
         status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, NULL, regset_size, &regset_size);
@@ -201,7 +204,7 @@ bool dump_inferior_regs(mx_handle_t thread)
         free(buf);
     }
 
-    return true;
+    END_HELPER;
 }
 
 uint32_t get_inferior_greg_buf_size(mx_handle_t thread)
@@ -309,6 +312,8 @@ mx_status_t create_inferior(const char* name,
 
 bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inferior, mx_handle_t* out_channel)
 {
+    BEGIN_HELPER;
+
     mx_status_t status;
     mx_handle_t channel1, channel2;
     tu_channel_create(&channel1, &channel2);
@@ -344,7 +349,8 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inf
     *out_lp = lp;
     *out_inferior = inferior;
     *out_channel = channel1;
-    return true;
+
+    END_HELPER;
 }
 
 // While this should perhaps take a launchpad_t* argument instead of the
@@ -372,16 +378,21 @@ bool start_inferior(launchpad_t* lp)
 
 bool verify_inferior_running(mx_handle_t channel)
 {
+    BEGIN_HELPER;
+
     enum message msg;
     send_msg(channel, MSG_PING);
     if (!recv_msg(channel, &msg))
         return false;
     EXPECT_EQ(msg, MSG_PONG, "unexpected response from ping");
-    return true;
+
+    END_HELPER;
 }
 
 bool resume_inferior(mx_handle_t inferior, mx_koid_t tid)
 {
+    BEGIN_HELPER;
+
     mx_handle_t thread;
     mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
     ASSERT_EQ(status, NO_ERROR, "mx_object_get_child failed");
@@ -390,11 +401,14 @@ bool resume_inferior(mx_handle_t inferior, mx_koid_t tid)
     status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
     tu_handle_close(thread);
     ASSERT_EQ(status, NO_ERROR, "mx_task_resume failed");
-    return true;
+
+    END_HELPER;
 }
 
 bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior)
 {
+    BEGIN_HELPER;
+
     unittest_printf("Shutting down inferior\n");
 
     send_msg(channel, MSG_DONE);
@@ -409,18 +423,21 @@ bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior)
                                       MX_EXCEPTION_PORT_DEBUGGER);
     EXPECT_EQ(status, NO_ERROR, "error resetting exception port");
 
-    return true;
+    END_HELPER;
 }
 
 // Wait for and receive an exception on |eport|.
 
 bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
 {
+    BEGIN_HELPER;
+
     unittest_printf("Waiting for exception on eport %d\n", eport);
     ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), NO_ERROR, "mx_port_wait failed");
     ASSERT_EQ(packet->hdr.key, 0u, "bad report key");
     unittest_printf("read_exception: got exception %d\n", packet->report.header.type);
-    return true;
+
+    END_HELPER;
 }
 
 bool verify_exception(const mx_exception_packet_t* packet,
@@ -428,6 +445,8 @@ bool verify_exception(const mx_exception_packet_t* packet,
                       mx_excp_type_t expected_type,
                       mx_koid_t* tid)
 {
+    BEGIN_HELPER;
+
     const mx_exception_report_t* report = &packet->report;
 
 #ifdef __x86_64__
@@ -451,7 +470,8 @@ bool verify_exception(const mx_exception_packet_t* packet,
                     PRIu64 ", tid %" PRIu64 "\n",
                     report->context.pid, report->context.tid);
     *tid = report->context.tid;
-    return true;
+
+    END_HELPER;
 }
 
 bool read_and_verify_exception(mx_handle_t eport,

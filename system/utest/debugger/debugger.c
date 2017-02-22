@@ -425,7 +425,7 @@ static int extra_thread_func(void* arg)
 
 static bool msg_loop(mx_handle_t channel)
 {
-    BEGIN_HELPER;
+    BEGIN_HELPER;  // Don't stomp on the main thread's current_test_info.
 
     bool my_done_tests = false;
 
