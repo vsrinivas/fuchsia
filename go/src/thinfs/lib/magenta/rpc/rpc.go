@@ -201,7 +201,7 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 		}
 		ro.Handle[0] = h
 		ro.Write(msg.Handle[0], 0)
-		return dispatcher.ErrIndirect
+		return dispatcher.ErrIndirect.Status
 	case rio.OpClose:
 		err := f.Close()
 		vfs.freeCookie(cookie)
@@ -330,7 +330,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		}
 		ro.Handle[0] = h
 		ro.Write(msg.Handle[0], 0)
-		return dispatcher.ErrIndirect
+		return dispatcher.ErrIndirect.Status
 	case rio.OpClone:
 		d2, err := dir.Dup()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
@@ -351,7 +351,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		}
 		ro.Handle[0] = h
 		ro.Write(msg.Handle[0], 0)
-		return dispatcher.ErrIndirect
+		return dispatcher.ErrIndirect.Status
 	case rio.OpClose:
 		err := dir.Close()
 		vfs.freeCookie(cookie)
