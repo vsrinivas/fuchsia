@@ -30,7 +30,6 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent> {
 
   // |Agent|
   void RunTask(const fidl::String& task_id,
-               const fidl::String& params,
                const RunTaskCallback& callback) override {}
 
   // |Agent|

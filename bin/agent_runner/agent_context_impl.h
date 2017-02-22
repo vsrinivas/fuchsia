@@ -42,6 +42,9 @@ class AgentContextImpl : public AgentContext, public AgentController {
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
+  // Called by AgentRunner when a new task has been scheduled.
+  void NewTask(const std::string& task_id);
+
  private:
   // |AgentContext|
   void GetComponentContext(
@@ -53,6 +56,10 @@ class AgentContextImpl : public AgentContext, public AgentController {
   // |AgentContext|
   void Done() override;
 
+  // Stop this agent when there are no active AgentControllers and there are no
+  // outstanding tasks.
+  void MaybeStopAgent();
+
   const std::string url_;
   app::ApplicationControllerPtr application_controller_;
   app::ServiceProviderPtr application_services_;
@@ -60,8 +67,14 @@ class AgentContextImpl : public AgentContext, public AgentController {
   fidl::Binding<AgentContext> agent_context_binding_;
   fidl::BindingSet<AgentController> agent_controller_bindings_;
 
+  AgentRunner* const agent_runner_;
+
   ComponentContextImpl component_context_impl_;
   fidl::BindingSet<ComponentContext> component_context_bindings_;
+
+  // Number of times Agent.RunTask() was called but we're still waiting on its
+  // completion callback.
+  int incomplete_task_count_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
 };

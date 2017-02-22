@@ -86,6 +86,12 @@ class MessageQueueStorage : public MessageSender {
         receive_callback_queue_.end());
   }
 
+  void RegisterWatcher(const std::function<void()> watcher) {
+    watcher_ = watcher;
+  }
+
+  void DropWatcher() { watcher_ = nullptr; }
+
  private:
   // |MessageSender|
   void Send(const fidl::String& message) override {
@@ -95,10 +101,16 @@ class MessageQueueStorage : public MessageSender {
       receive_item.second(message);
       receive_callback_queue_.pop_front();
     }
+
+    if (watcher_) {
+      watcher_();
+    }
   }
 
   std::string component_instance_id_;
   std::string queue_name_;
+
+  std::function<void()> watcher_;
 
   std::deque<std::string> queue_data_;
 
@@ -141,39 +153,16 @@ MessageQueueManager::MessageQueueManager() {}
 MessageQueueManager::~MessageQueueManager() {}
 
 void MessageQueueManager::ObtainMessageQueue(
-    const std::string& component_instance_id, const std::string& queue_name,
+    const std::string& component_instance_id,
+    const std::string& queue_name,
     fidl::InterfaceRequest<MessageQueue> message_queue) {
-  // Find the message queue storage for this component id, or initialize one if
-  // it doesn't exist.
-  auto component_it = component_to_queues_.find(component_instance_id);
-  if (component_it == component_to_queues_.end()) {
-    bool inserted = false;
-    std::tie(component_it, inserted) = component_to_queues_.emplace(
-        component_instance_id, QueueNameToStorageMap());
-    FTL_DCHECK(inserted);
-  }
-
-  // Find the particular message queue impl, or initialize one if it doesn't
-  // exist.
-  QueueNameToStorageMap& component_queues = component_it->second;
-  auto queue_storage_it = component_queues.find(queue_name);
-  if (queue_storage_it == component_queues.end()) {
-    bool inserted = false;
-    std::tie(queue_storage_it, inserted) = component_queues.emplace(
-        queue_name, std::make_unique<MessageQueueStorage>(component_instance_id,
-                                                          queue_name));
-
-    tokens_to_queues_[queue_storage_it->second->GetToken()] =
-        std::make_pair(component_instance_id, queue_name);
-
-    FTL_DCHECK(inserted);
-  }
-
-  queue_storage_it->second->AddMessageQueueBinding(std::move(message_queue));
+  ObtainMessageQueueStorage(component_instance_id, queue_name)
+      ->AddMessageQueueBinding(std::move(message_queue));
 }
 
 void MessageQueueManager::DeleteMessageQueue(
-    const std::string& component_instance_id, const std::string& queue_name) {
+    const std::string& component_instance_id,
+    const std::string& queue_name) {
   // 1. Delete the token associated with the message queue.
   auto component_it = component_to_queues_.find(component_instance_id);
   FTL_DCHECK(component_it != component_to_queues_.end());
@@ -207,6 +196,73 @@ void MessageQueueManager::GetMessageSender(
   std::tie(instance_id, queue_name) = it->second;
   component_to_queues_[instance_id][queue_name]->AddMessageSenderBinding(
       std::move(sender));
+}
+
+void MessageQueueManager::RegisterWatcher(
+    const std::string& component_instance_id,
+    const std::string& queue_name,
+    const std::function<void()> callback) {
+  ObtainMessageQueueStorage(component_instance_id, queue_name)
+      ->RegisterWatcher(callback);
+}
+
+void MessageQueueManager::DropWatcher(const std::string& component_instance_id,
+                                      const std::string& queue_name) {
+  auto storage = GetMessageQueueStorage(component_instance_id, queue_name);
+  if (storage == nullptr) {
+    // Trying to drop watcher for a queue which does not exist. Do nothing.
+    return;
+  }
+  storage->DropWatcher();
+}
+
+MessageQueueStorage* MessageQueueManager::ObtainMessageQueueStorage(
+    const std::string& component_instance_id,
+    const std::string& queue_name) {
+  // Find the message queue storage for this component id, or initialize one if
+  // it doesn't exist.
+  auto component_it = component_to_queues_.find(component_instance_id);
+  if (component_it == component_to_queues_.end()) {
+    bool inserted = false;
+    std::tie(component_it, inserted) = component_to_queues_.emplace(
+        component_instance_id, QueueNameToStorageMap());
+    FTL_DCHECK(inserted);
+  }
+
+  // Find the particular message queue impl, or initialize one if it doesn't
+  // exist.
+  QueueNameToStorageMap& component_queues = component_it->second;
+  auto queue_storage_it = component_queues.find(queue_name);
+  if (queue_storage_it == component_queues.end()) {
+    bool inserted = false;
+    std::tie(queue_storage_it, inserted) = component_queues.emplace(
+        queue_name, std::make_unique<MessageQueueStorage>(component_instance_id,
+                                                          queue_name));
+
+    tokens_to_queues_[queue_storage_it->second->GetToken()] =
+        std::make_pair(component_instance_id, queue_name);
+
+    FTL_DCHECK(inserted);
+  }
+
+  return queue_storage_it->second.get();
+}
+
+MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
+    const std::string& component_instance_id,
+    const std::string& queue_name) {
+  auto component_it = component_to_queues_.find(component_instance_id);
+  if (component_it != component_to_queues_.end()) {
+    return nullptr;
+  }
+
+  QueueNameToStorageMap& component_queues = component_it->second;
+  auto queue_storage_it = component_queues.find(queue_name);
+  if (queue_storage_it != component_queues.end()) {
+    return nullptr;
+  }
+
+  return queue_storage_it->second.get();
 }
 
 }  // namespace modular

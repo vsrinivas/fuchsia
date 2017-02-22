@@ -16,6 +16,7 @@ AgentContextImpl::AgentContextImpl(
     const std::string& url)
     : url_(url),
       agent_context_binding_(this),
+      agent_runner_(agent_runner),
       component_context_impl_(message_queue_manager, agent_runner, url) {
   // Start up the agent process.
   auto launch_info = app::ApplicationLaunchInfo::New();
@@ -32,9 +33,9 @@ AgentContextImpl::AgentContextImpl(
   application_controller_.set_connection_error_handler(
       [agent_runner, url] { agent_runner->RemoveAgent(url); });
 
-  // When all the |AgentController| bindings go away stop the agent.
+  // When all the |AgentController| bindings go away maybe stop the agent.
   agent_controller_bindings_.set_on_empty_set_handler(
-      [this] { agent_->Stop([] {}); });
+      [this] { MaybeStopAgent(); });
 }
 
 AgentContextImpl::~AgentContextImpl() = default;
@@ -51,16 +52,40 @@ void AgentContextImpl::NewConnection(
                                         std::move(agent_controller_request));
 }
 
+void AgentContextImpl::NewTask(const std::string& task_id) {
+  // Increment the counter for number of incomplete tasks. Decrement it when we
+  // receive its callback;
+  incomplete_task_count_++;
+  agent_->RunTask(task_id, [this] {
+    incomplete_task_count_--;
+    MaybeStopAgent();
+  });
+}
+
 void AgentContextImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> context) {
   component_context_bindings_.AddBinding(&component_context_impl_,
                                          std::move(context));
 }
 
-void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {}
+void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {
+  agent_runner_->ScheduleTask(url_, task_info->task_id,
+                              task_info->trigger_condition->get_queue_name());
+}
 
-void AgentContextImpl::DeleteTask(const fidl::String& task_id) {}
+void AgentContextImpl::DeleteTask(const fidl::String& task_id) {
+  agent_runner_->DeleteTask(url_, task_id);
+}
 
 void AgentContextImpl::Done() {}
+
+void AgentContextImpl::MaybeStopAgent() {
+  if (agent_controller_bindings_.size() == 0 && incomplete_task_count_ == 0) {
+    // TODO(alhaad): This is not enough. We need to close and drain the
+    // AgentContext binding. We also need to RemoveAgent after a timeout if
+    // Stop() does not return.
+    agent_->Stop([this] { agent_runner_->RemoveAgent(url_); });
+  }
+}
 
 }  // namespace modular

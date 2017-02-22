@@ -39,10 +39,30 @@ class AgentRunner {
   // Removes an agent. Called by AgentContextImpl when it is done.
   void RemoveAgent(const std::string& agent_url);
 
+  // Agent at |agent_url| is run (if not already running) and Agent.RunTask() is
+  // called with |task_id| as the agent specified identfier for the task when a
+  // new message is received on |queue_name|.
+  // NOTE(alhaad): The current implementation only allows for a single task
+  // to be associated with a MessageQueue. This method fails if a new task
+  // is scheduled for a queue which already has another task scheduled.
+  void ScheduleTask(const std::string& agent_url,
+                    const std::string& task_id,
+                    const std::string& queue_name);
+
+  // Deletes a task for |agent_url| that is identified by agent provided
+  // |task_id|.
+  void DeleteTask(const std::string& agent_url, const std::string& task_id);
+
  private:
+  AgentContextImpl* MaybeRunAgent(const std::string& agent_url);
+
   // agent URL -> modular.AgentContext
   std::unordered_map<std::string, std::unique_ptr<AgentContextImpl>>
       running_agents_;
+
+  // agent URL -> { task id -> queue name }
+  std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
+      scheduled_tasks_;
 
   app::ApplicationLauncher* const application_launcher_;
   MessageQueueManager* const message_queue_manager_;

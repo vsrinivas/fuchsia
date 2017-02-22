@@ -30,7 +30,10 @@ interface Agent {
   // return callback is called by this Agent when all work related to this task
   // is completed. Note that the framework may call Stop() before RunTask
   // returns.
-  RunTask(string task_id, string params) => ();
+  // TODO(alhaad): The current implementation allows the Agent to run a task
+  // until its callback returns. Instead, we should cap task length with
+  // strategies like budgets.
+  RunTask(string task_id) => ();
 
   // This method is invoked by the framework to notify the Agent that it has
   // to stop. What can cause a request to an Agent to Stop():
