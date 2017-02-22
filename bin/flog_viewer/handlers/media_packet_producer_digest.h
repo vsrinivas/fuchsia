@@ -8,6 +8,7 @@
 
 #include "apps/media/services/logs/media_packet_producer_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
+#include "apps/media/tools/flog_viewer/binding.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 #include "apps/media/tools/flog_viewer/counted.h"
 #include "apps/media/tools/flog_viewer/tracked.h"
@@ -34,6 +35,8 @@ class MediaPacketProducerDigest
 
  private:
   // MediaPacketProducerChannel implementation.
+  void ConnectedTo(uint64_t related_koid) override;
+
   void Connecting() override;
 
   void Resetting() override;
@@ -97,6 +100,7 @@ class MediaPacketProducerAccumulator : public Accumulator {
     uint64_t buffer_;
   };
 
+  PeerBinding consumer_;
   bool connected_ = false;
   Counted flush_requests_;
   media::MediaPacketDemandPtr current_demand_;

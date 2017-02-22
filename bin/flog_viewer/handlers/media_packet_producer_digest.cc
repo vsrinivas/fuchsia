@@ -29,6 +29,10 @@ std::shared_ptr<Accumulator> MediaPacketProducerDigest::GetAccumulator() {
   return accumulator_;
 }
 
+void MediaPacketProducerDigest::ConnectedTo(uint64_t related_koid) {
+  SetBindingKoid(&accumulator_->consumer_, related_koid);
+}
+
 void MediaPacketProducerDigest::Connecting() {
   if (accumulator_->connected_) {
     ReportProblem() << "Connected when already connected";

@@ -8,6 +8,7 @@ import "apps/media/services/media_transport.fidl";
 
 [ServiceName="media::logs::MediaPacketConsumerChannel"]
 interface MediaPacketConsumerChannel {
+  BoundAs(uint64 koid);
   DemandSet(MediaPacketDemand demand);
   Reset();
   Failed();

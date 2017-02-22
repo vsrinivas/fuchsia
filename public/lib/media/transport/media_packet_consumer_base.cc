@@ -63,6 +63,7 @@ void MediaPacketConsumerBase::Bind(
 #endif
   binding_.Bind(std::move(request));
   binding_.set_connection_error_handler([this]() { Reset(); });
+  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding_)));
 }
 
 void MediaPacketConsumerBase::Bind(

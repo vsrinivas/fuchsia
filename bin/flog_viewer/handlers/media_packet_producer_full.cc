@@ -24,6 +24,13 @@ void MediaPacketProducerFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
+void MediaPacketProducerFull::ConnectedTo(uint64_t related_koid) {
+  std::cout << entry() << "MediaPacketProducer.ConnectingTo" << std::endl;
+  std::cout << indent;
+  std::cout << begl << "related_koid: " << AsKoid(related_koid) << std::endl;
+  std::cout << outdent;
+}
+
 void MediaPacketProducerFull::Connecting() {
   std::cout << entry() << "MediaPacketProducer.Connecting" << std::endl;
 }

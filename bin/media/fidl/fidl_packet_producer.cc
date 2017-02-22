@@ -4,6 +4,8 @@
 
 #include "apps/media/src/fidl/fidl_packet_producer.h"
 
+#include "apps/media/lib/flog/flog.h"
+#include "apps/media/services/logs/media_packet_producer_channel.fidl.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -67,6 +69,7 @@ void FidlPacketProducer::Connect(
     fidl::InterfaceHandle<MediaPacketConsumer> consumer,
     const ConnectCallback& callback) {
   FTL_DCHECK(consumer);
+  FLOG(log_channel_, ConnectedTo(FLOG_HANDLE_KOID(consumer)));
   MediaPacketProducerBase::Connect(
       MediaPacketConsumerPtr::Create(std::move(consumer)), callback);
 }

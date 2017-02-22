@@ -34,6 +34,8 @@ class MediaPacketConsumerDigest
 
  private:
   // MediaPacketConsumerChannel implementation.
+  void BoundAs(uint64_t koid) override;
+
   void DemandSet(media::MediaPacketDemandPtr demand) override;
 
   void Reset() override;

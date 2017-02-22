@@ -106,6 +106,7 @@ class MediaPacketProducerBase {
   ftl::ThreadChecker thread_checker_;
 #endif
 
+ protected:
   FLOG_INSTANCE_CHANNEL(logs::MediaPacketProducerChannel, log_channel_);
 };
 

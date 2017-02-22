@@ -29,6 +29,10 @@ std::shared_ptr<Accumulator> MediaPacketConsumerDigest::GetAccumulator() {
   return accumulator_;
 }
 
+void MediaPacketConsumerDigest::BoundAs(uint64_t koid) {
+  BindAs(koid);
+}
+
 void MediaPacketConsumerDigest::DemandSet(media::MediaPacketDemandPtr demand) {
   accumulator_->current_demand_ = std::move(demand);
   if (accumulator_->min_packets_outstanding_highest_ <

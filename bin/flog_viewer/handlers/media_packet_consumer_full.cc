@@ -24,6 +24,13 @@ void MediaPacketConsumerFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
+void MediaPacketConsumerFull::BoundAs(uint64_t koid) {
+  std::cout << entry() << "MediaPacketConsumer.BoundAs" << std::endl;
+  std::cout << indent;
+  std::cout << begl << "koid: " << AsKoid(koid) << std::endl;
+  std::cout << outdent;
+}
+
 void MediaPacketConsumerFull::DemandSet(media::MediaPacketDemandPtr demand) {
   if (terse_) {
     return;
