@@ -36,6 +36,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+
 #include "application/lib/app/application_context.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/test_runner/test_runner.fidl.h"
@@ -323,7 +324,8 @@ class TestRunnerTCPServer {
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     // 1. Make a TCP socket.
-    // We need to retry because there's a race condition at boot.
+    // We need to retry because there's a race condition at boot
+    // between netstack initializing and us calling socket().
     const auto duration = ftl::TimeDelta::FromMilliseconds(200u);
 
     for (int i = 0; i < 5 * 10; ++i) {
