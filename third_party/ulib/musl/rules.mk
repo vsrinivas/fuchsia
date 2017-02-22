@@ -21,7 +21,9 @@ LOCAL_COMPILEFLAGS += -I$(LOCAL_DIR)/arch/$(MUSL_ARCH)
 # can read about the semantics of it and the other feature test macros
 # in |man 7 feature_test_macros| on Linux. musl exposes the minimum
 # set of declarations or macro definitions allowed by those macros
-# fairly carefully, and so also needs to undefine _ALL_SOURCE.
+# fairly carefully, and so also needs to undefine _ALL_SOURCE, so that
+# it can define _BSD_SOURCE, _GNU_SOURCE, or _ALL_SOURCE in only
+# certain source files.
 
 # TODO(kulakowski) Clean up the junkier -Wno flags below.
 LOCAL_CFLAGS := \
