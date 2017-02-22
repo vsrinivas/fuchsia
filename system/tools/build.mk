@@ -9,6 +9,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 SUBDIR_INCLUDES := \
     $(LOCAL_DIR)/bootserver/build.mk \
     $(LOCAL_DIR)/loglistener/build.mk \
+    $(LOCAL_DIR)/mdi/build.mk \
     $(LOCAL_DIR)/mkbootfs/build.mk \
     $(LOCAL_DIR)/netprotocol/build.mk \
     $(LOCAL_DIR)/sysgen/build.mk \
