@@ -5,9 +5,9 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
+#include "platform_object.h"
 #include <ddk/driver.h>
 #include <limits.h>  // PAGE_SIZE
-#include <magenta/syscalls/object.h>
 #include <map>
 #include <mx/vmar.h>
 #include <mx/vmo.h>
@@ -131,7 +131,7 @@ public:
         DASSERT(magma::is_page_aligned(size));
         pin_count_array_ = PinCountSparseArray::Create(size / PAGE_SIZE);
 
-        bool success = PlatformBuffer::IdFromHandle(vmo_.get(), &koid_);
+        bool success = PlatformObject::IdFromHandle(vmo_.get(), &koid_);
         DASSERT(success);
     }
 
@@ -372,18 +372,6 @@ bool MagentaPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t 
 
 bool MagentaPlatformBuffer::UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count)
 {
-    return true;
-}
-
-bool PlatformBuffer::IdFromHandle(uint32_t handle, uint64_t* id_out)
-{
-    mx_info_handle_basic_t info;
-    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info,
-                                            sizeof(info), nullptr, nullptr);
-    if (status != NO_ERROR)
-        return DRETF(false, "mx_object_get_info failed");
-
-    *id_out = info.koid;
     return true;
 }
 

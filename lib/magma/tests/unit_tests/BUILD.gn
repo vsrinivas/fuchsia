@@ -57,13 +57,14 @@ source_set("magma_platform_tests") {
   testonly = true
 
   sources = [
-    "test_platform_interrupt.cc",
     "test_mmio.cc",
     "test_platform_buffer.cc",
     "test_platform_connection.cc",
     "test_platform_device.cc",
     "test_platform_event.cc",
     "test_platform_futex.cc",
+    "test_platform_interrupt.cc",
+    "test_platform_semaphore.cc",
     "test_platform_thread.cc",
   ]
 
@@ -75,6 +76,7 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:futex",
+    "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests/mock:mmio",
@@ -102,11 +104,11 @@ source_set("msd_abi_conformance_tests") {
   testonly = true
 
   sources = [
+    "test_magma_system_multithread.cc",
     "test_msd_buffer.cc",
     "test_msd_context.cc",
     "test_msd_device.cc",
     "test_msd_driver.cc",
-    "test_magma_system_multithread.cc",
   ]
 
   deps = [

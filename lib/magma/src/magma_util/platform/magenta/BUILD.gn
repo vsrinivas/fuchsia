@@ -12,6 +12,7 @@ source_set("buffer") {
   ]
 
   deps = [
+    ":object",
     "$magenta_build_root/system/ulib/mx",
     "$magma_build_root/src/magma_util",
   ]
@@ -95,6 +96,32 @@ source_set("event") {
 
   sources = [
     "magenta_platform_event.cc",
+  ]
+
+  deps = [
+    "$magenta_build_root/system/ulib/mx",
+    "$magma_build_root/src/magma_util",
+  ]
+}
+
+source_set("object") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "magenta_platform_object.cc",
+  ]
+
+  deps = [
+    "$magenta_build_root/system/ulib/mx",
+    "$magma_build_root/src/magma_util",
+  ]
+}
+
+source_set("semaphore") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "magenta_platform_semaphore.cc",
   ]
 
   deps = [

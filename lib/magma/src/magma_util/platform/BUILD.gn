@@ -100,3 +100,24 @@ source_set("event") {
     "magenta:event",
   ]
 }
+
+source_set("object") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_object.h",
+  ]
+}
+
+source_set("semaphore") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_semaphore.h",
+  ]
+
+  deps = [
+    ":object",
+    "magenta:semaphore",
+  ]
+}

@@ -5,6 +5,7 @@
 #include "magma_system_device.h"
 #include "magma_system_connection.h"
 #include "magma_util/macros.h"
+#include "platform_object.h"
 
 uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(msd_dev()); }
 
@@ -35,7 +36,7 @@ void MagmaSystemDevice::PageFlip(std::shared_ptr<MagmaSystemBuffer> buf,
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::GetBufferForHandle(uint32_t handle)
 {
     uint64_t id;
-    if (!magma::PlatformBuffer::IdFromHandle(handle, &id))
+    if (!magma::PlatformObject::IdFromHandle(handle, &id))
         return DRETP(nullptr, "invalid buffer handle");
 
     std::unique_lock<std::mutex> lock(buffer_map_mutex_);
