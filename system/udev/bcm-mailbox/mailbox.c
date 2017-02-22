@@ -16,7 +16,7 @@
 
 #include <magenta/syscalls.h>
 
-#include "../bcm-common/bcm28xx.h"
+#include <bcm/bcm28xx.h>
 
 #define BCM_PROPERTY_TAG_GET_MACADDR        (0x00010003)
 

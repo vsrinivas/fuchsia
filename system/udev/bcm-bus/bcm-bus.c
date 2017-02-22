@@ -9,8 +9,6 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/bcm.h>
 
-#include "../bcm-common/bcm28xx.h"
-
 
 
 void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t protocol_id,

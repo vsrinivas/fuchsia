@@ -6,13 +6,10 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := driver
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/mailbox.c \
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/bcm
-
-MODULE_LIBS := ulib/driver ulib/musl ulib/magenta
+MODULE_NAME := bcm
 
 include make/module.mk

@@ -24,7 +24,7 @@
 #include <sync/completion.h>
 
 // BCM28xx Specific Includes
-#include "../bcm-common/bcm28xx.h"
+#include <bcm/bcm28xx.h>
 #include "bcm28xx/usb_dwc_regs.h"
 
 #define dev_to_usb_dwc(dev) containerof(dev, dwc_usb_t, device)
