@@ -1,0 +1,20 @@
+{
+    "labels": [
+        "//apps/bluetooth",
+        "//apps/bluetooth:tests"
+    ],
+    "binaries": [
+        {
+            "binary": "bluetooth_unittests",
+            "bootfs_path": "test/bluetooth_unittests"
+        },
+        {
+            "binary": "bluetooth_btsnoop",
+            "bootfs_path": "bin/btsnoop"
+        },
+        {
+            "binary": "bluetooth_hcitool",
+            "bootfs_path": "bin/hcitool"
+        }
+    ]
+}
