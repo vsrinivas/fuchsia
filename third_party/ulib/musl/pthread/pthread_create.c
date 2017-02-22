@@ -120,6 +120,18 @@ fail_after_alloc:
     return status == ERR_ACCESS_DENIED ? EPERM : EAGAIN;
 }
 
+static _Noreturn void final_exit(pthread_t self)
+    __asm__("final_exit") __attribute__((used));
+
+static __NO_SAFESTACK void final_exit(pthread_t self) {
+    deallocate_region(&self->safe_stack_region);
+    deallocate_region(&self->unsafe_stack_region);
+
+    // TODO(mcgrathr): Deallocate the TCB region too for the detached case.
+
+    mxr_thread_exit(&self->mxr_thread);
+}
+
 _Noreturn void pthread_exit(void* result) {
     pthread_t self = __pthread_self();
     // TODO(kulakowski) Signals?
@@ -182,7 +194,33 @@ _Noreturn void pthread_exit(void* result) {
     __do_orphaned_stdio_locks();
     __dl_thread_cleanup();
 
-    mxr_thread_exit(&self->mxr_thread);
+    // Switch off the thread's normal stack so it can be freed.  The TCB
+    // region stays alive so the pthread_t is still valid for pthread_join.
+    // The rest of the region is no longer used for TLS, so it can serve
+    // as the small amount of temporary stack needed for the exit calls.
+
+#ifdef __x86_64__
+    // The thread descriptor is at the end of the region, so the space
+    // before it is available as the temporary stack.
+    // The x86-64 ABI requires %rsp % 16 = 8 on entry.
+    __asm__("mov %[self], %%rsp\n"
+            "and $-16, %%rsp\n"
+            "call final_exit\n"
+            "# Target receives %[self]" : :
+            [self]"D"(self));
+#elif defined(__aarch64__)
+    // The thread descriptor is at the start of the region, so the rest of
+    // the space up to the guard page is available as the temporary stack.
+    __asm__("add sp, %[base], %[len]\n"
+            "mov x0, %[self]\n"
+            "bl final_exit" : :
+            [base]"r"(self->tcb_region.iov_base),
+            [len]"r"(self->tcb_region.iov_len - PAGE_SIZE),
+            [self]"r"(self));
+#else
+#error what architecture?
+#endif
+    __builtin_unreachable();
 }
 
 void __do_cleanup_push(struct __ptcb* cb) {

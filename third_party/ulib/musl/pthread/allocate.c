@@ -18,7 +18,7 @@ static ptrdiff_t offset_for_module(const struct tls_module* module) {
 #endif
 }
 
-__NO_SAFESTACK static pthread_t copy_tls(unsigned char* mem) {
+__NO_SAFESTACK static pthread_t copy_tls(unsigned char* mem, size_t alloc) {
     pthread_t td;
     struct tls_module* p;
     size_t i;
@@ -33,7 +33,7 @@ __NO_SAFESTACK static pthread_t copy_tls(unsigned char* mem) {
 #else
     dtv = (void**)mem;
 
-    mem += libc.tls_size - sizeof(struct pthread);
+    mem += alloc - sizeof(struct pthread);
     mem -= (uintptr_t)mem & (libc.tls_align - 1);
     td = (pthread_t)mem;
 #endif
@@ -115,7 +115,7 @@ __NO_SAFESTACK pthread_t __allocate_thread(const pthread_attr_t* attr) {
         return NULL;
     }
 
-    pthread_t td = copy_tls(tcb.iov_base);
+    pthread_t td = copy_tls(tcb.iov_base, tcb.iov_len);
 
     if (map_block(_mx_vmar_root_self(), vmo,
                   tcb_size, stack_size, guard_size, 0,
