@@ -198,6 +198,8 @@ func (c *Client) Send(b Buffer) error {
 //       up the client. This is not an expected use of this library, but
 //       tracking to handle it could be useful for debugging.
 func (c *Client) Free(b Buffer) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.arena.free(b)
 }
 
