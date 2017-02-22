@@ -28,12 +28,19 @@
 mx_status_t memfs_get_node(vnode_t** out, mx_device_t* dev);
 mx_status_t memfs_can_unlink(dnode_t* dn);
 
+
+//TODO: can we collapse vn->memfs_flags into vn->flags to avoid confusion?
+
 static void memfs_release(vnode_t* vn) {
     xprintf("memfs: vn %p destroyed\n", vn);
-
-    if (vn->vmo != MX_HANDLE_INVALID) {
-        mx_handle_close(vn->vmo);
+    if ((vn->vmo != MX_HANDLE_INVALID) &&
+        (!(vn->memfs_flags & MEMFS_FLAG_VMO_REUSE))) {
+        mx_status_t r = mx_handle_close(vn->vmo);
+        if (r < 0) {
+            printf("unexpected error closing vfs vmo handle %d\n", r);
+        }
     }
+    free(vn);
 }
 
 mx_status_t memfs_open(vnode_t** _vn, uint32_t flags) {
@@ -379,21 +386,6 @@ static void dir_release(vnode_t* vn) {
     free(vn);
 }
 
-void vmo_release(vnode_t* vn) {
-    xprintf("memfs: vn %p destroyed\n", vn);
-    if (vn->vmo <= 0) {
-        xprintf("vmofile_release: invalid handle\n");
-    }
-    if ((vn->memfs_flags & MEMFS_FLAG_VMO_REUSE) != 0) {
-        // "reused" vmo's are closed by vmo owner
-        mx_status_t r = mx_handle_close(vn->vmo);
-        if (r < 0) {
-            printf("unexpected error closing vfs vmo handle %d\n", r);
-        }
-    }
-    free(vn);
-}
-
 ssize_t vmo_read(vnode_t* vn, void* data, size_t len, size_t off) {
     if (off > vn->length)
         return 0;
@@ -470,7 +462,7 @@ static vnode_ops_t vn_memfs_ops = {
 };
 
 static vnode_ops_t vn_vmo_ops = {
-    .release = vmo_release,
+    .release = memfs_release,
     .open = memfs_open,
     .close = memfs_close,
     .read = vmo_read,

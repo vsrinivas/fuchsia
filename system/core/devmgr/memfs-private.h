@@ -59,7 +59,6 @@ mx_handle_t vfs_create_root_handle(vnode_t* vn);
 // vmo fs
 ssize_t vmo_read(vnode_t* vn, void* data, size_t len, size_t off);
 mx_status_t vmo_getattr(vnode_t* vn, vnattr_t* attr);
-void vmo_release(vnode_t* vn);
 
 // device fs
 vnode_t* devfs_get_root(void);
