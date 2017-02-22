@@ -21,6 +21,16 @@
 #define FIFO_DEPTH 256
 #define FIFO_ESIZE sizeof(eth_fifo_entry_t)
 
+#define TRACE 0
+
+#if TRACE
+#define xprintf(fmt...) printf(fmt)
+#else
+#define xprintf(fmt...) \
+    do { \
+    } while (0)
+#endif
+
 // ensure that we will not exceed fifo capacity
 static_assert((FIFO_DEPTH * FIFO_ESIZE) <= 4096, "");
 
@@ -437,7 +447,7 @@ static void eth_kill_locked(ethdev_t* edev) {
         return;
     }
 
-    printf("eth: kill: tearing down%s\n",
+    xprintf("eth: kill: tearing down%s\n",
            (edev->state & ETHDEV_TX_THREAD) ? " tx thread" : "");
 
     // make sure any future ioctls or other ops will fail
@@ -462,14 +472,14 @@ static void eth_kill_locked(ethdev_t* edev) {
         edev->state &= (~ETHDEV_TX_THREAD);
         int ret;
         thrd_join(edev->tx_thr, &ret);
-        printf("eth: kill: tx thread exited\n");
+        xprintf("eth: kill: tx thread exited\n");
     }
 
     if (edev->io_buf) {
         mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t) edev->io_buf, 0);
         edev->io_buf = NULL;
     }
-    printf("eth: all resources released\n");
+    xprintf("eth: all resources released\n");
 }
 
 static mx_status_t eth_release(mx_device_t* dev) {
