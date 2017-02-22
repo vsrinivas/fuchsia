@@ -49,5 +49,6 @@ executable("ledger_unittests") {
     "//apps/ledger/src/storage/impl/btree:unittests",
     "//apps/ledger/src/test:main",
     "//apps/ledger/src/test:unittests",
+    "//lib/ftl:ftl_printers",
   ]
 }
