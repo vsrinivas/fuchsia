@@ -47,6 +47,12 @@ void Teardown() {
     g_test_runner_store.reset();
 }
 
+void WillTerminate(double withinSeconds) {
+  if (g_test_runner.is_bound()) {
+    g_test_runner->WillTerminate(withinSeconds);
+  }
+}
+
 TestRunnerStore* GetStore() {
   FTL_DCHECK(g_test_runner_store.is_bound());
   return g_test_runner_store.get();

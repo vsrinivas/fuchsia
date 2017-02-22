@@ -17,9 +17,15 @@ namespace {
 
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
-constexpr int kTimeoutMilliseconds = 5000;
+constexpr ftl::TimeDelta kTimeout = ftl::TimeDelta::FromSeconds(15);
+// This is how long we wait before declare the story to be Done.
+constexpr ftl::TimeDelta kStoryDoneDelay = ftl::TimeDelta::FromSeconds(7);
+
 constexpr char kTest1Agent[] =
     "file:///system/apps/modular_tests/component_context_test_agent1";
+
+constexpr char kUnstoppableAgent[] =
+    "file:///system/apps/modular_tests/component_context_unstoppable_agent";
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
@@ -41,23 +47,37 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     // Exercise ComponentContext.ConnectToAgent()
     story_->GetComponentContext(component_context_.NewRequest());
 
-    app::ServiceProviderPtr agent_services;
-    component_context_->ConnectToAgent(kTest1Agent, agent_services.NewRequest(),
-                                       agent_controller_.NewRequest());
-    ConnectToService(agent_services.get(), agent1_interface_.NewRequest());
+    app::ServiceProviderPtr agent1_services;
+    component_context_->ConnectToAgent(kTest1Agent, agent1_services.NewRequest(),
+                                       agent1_controller.NewRequest());
+    ConnectToService(agent1_services.get(), agent1_interface_.NewRequest());
 
     modular::testing::GetStore()->Get(
         "test_agent1_connected", [this](const fidl::String&) {
           agent_connected_.Pass();
-          TestMessageQueue(
-              [this] { TestAgentController([this] { story_->Done(); }); });
+          TestMessageQueue([this] {
+            TestAgentController([this] {
+              mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+                  [this] { story_->Done(); }, kStoryDoneDelay);
+            });
+          });
         });
+
+    // Start an agent that will not stop of its own accord.
+    app::ServiceProviderPtr unstoppable_agent_services;
+    component_context_->ConnectToAgent(
+        kUnstoppableAgent, unstoppable_agent_services.NewRequest(),
+        unstoppable_agent_controller_.NewRequest());
+
+    // After 500ms close the AgentController for the unstoppable agent.
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this] { unstoppable_agent_controller_.reset(); },
+        ftl::TimeDelta::FromMilliseconds(500));
 
     // Start a timer to call Story.Done in case the test agent misbehaves and we
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { delete this; },
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        [this] { delete this; }, kTimeout);
   }
 
   // Tests message queues. Calls |done_cb| when completed successfully.
@@ -83,7 +103,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   // Tests AgentController. Calls |done_cb| when completed successfully.
   void TestAgentController(std::function<void()> done_cb) {
     // Closing the agent controller should trigger the agent to stop.
-    agent_controller_.reset();
+    agent1_controller.reset();
 
     modular::testing::GetStore()->Get("test_agent1_stopped",
                                       [this, done_cb](const fidl::String&) {
@@ -95,16 +115,19 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
+    modular::testing::Teardown();
     done();
     delete this;
   }
 
   modular::StoryPtr story_;
   modular::LinkPtr link_;
-  modular::AgentControllerPtr agent_controller_;
+  modular::AgentControllerPtr agent1_controller;
   modular::testing::Agent1InterfacePtr agent1_interface_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
+
+  modular::AgentControllerPtr unstoppable_agent_controller_;
 
   TestPoint initialized_{"Root module initialized"};
   TestPoint stopped_{"Root module stopped"};
@@ -120,7 +143,5 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
   new ParentApp();
   loop.Run();
-  TEST_PASS("Root module exited");
-  modular::testing::Teardown();
   return 0;
 }

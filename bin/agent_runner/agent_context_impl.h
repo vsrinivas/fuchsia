@@ -19,6 +19,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/tasks/one_shot_timer.h"
 
 namespace modular {
 
@@ -75,6 +76,8 @@ class AgentContextImpl : public AgentContext, public AgentController {
   // Number of times Agent.RunTask() was called but we're still waiting on its
   // completion callback.
   int incomplete_task_count_ = 0;
+
+  ftl::OneShotTimer kill_timer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
 };

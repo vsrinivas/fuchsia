@@ -32,5 +32,6 @@ source_set("impl") {
     "//apps/modular/src/component:component_context_impl",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
+    "//lib/mtl/tasks:tasks",
   ]
 }

@@ -36,6 +36,7 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
     modular::testing::GetStore()->Put("child_module_stop", "", [] {});
+    modular::testing::Done();
     done();
     delete this;
   }
@@ -53,7 +54,5 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
   new ChildApp();
   loop.Run();
-  TEST_PASS("Child module exited");
-  modular::testing::Done();
   return 0;
 }

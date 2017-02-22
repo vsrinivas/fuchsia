@@ -55,6 +55,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
+    modular::testing::Teardown();
     done();
     delete this;
   }
@@ -82,7 +83,5 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
   new ParentApp();
   loop.Run();
-  TEST_PASS("Parent module exited");
-  modular::testing::Teardown();
   return 0;
 }

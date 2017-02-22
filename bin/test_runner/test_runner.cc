@@ -45,6 +45,7 @@
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_view.h"
 #include "lib/ftl/synchronization/sleep.h"
+#include "lib/ftl/tasks/one_shot_timer.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 // TODO(vardhan): Make listen port command-line configurable.
@@ -72,7 +73,7 @@ class TestRunContext {
   // Called from TestRunnerImpl, the actual implemention of |TestRunner|.
   void StopTrackingClient(TestRunnerImpl* client, bool crashed);
   void Fail(const fidl::String& log_message);
-  void Teardown();
+  void Teardown(TestRunnerImpl* teardown_client);
 
  private:
   app::ApplicationControllerPtr child_app_controller_;
@@ -99,11 +100,29 @@ class TestRunnerImpl : public testing::TestRunner {
                  TestRunContext* test_run_context)
       : binding_(this, std::move(request)),
         test_run_context_(test_run_context) {
-    binding_.set_connection_error_handler(
-        [this]() { test_run_context_->StopTrackingClient(this, true); });
+    binding_.set_connection_error_handler([this]() {
+      if (waiting_for_termination_) {
+        FTL_LOG(INFO) << "Test " << test_name_ << " terminated as expected.";
+        // Client terminated but that was expected.
+        termination_timer_.Stop();
+        if (teardown_after_termination_) {
+          Teardown();
+        } else {
+          test_run_context_->StopTrackingClient(this, false);
+        }
+      } else {
+        test_run_context_->StopTrackingClient(this, true);
+      }
+    });
   }
 
   const std::string& GetTestName() const { return test_name_; }
+
+  bool waiting_for_termination() const { return waiting_for_termination_; }
+
+  void TeardownAfterTermination() {
+    teardown_after_termination_ = true;
+  }
 
  private:
   // |TestRunner|
@@ -118,11 +137,35 @@ class TestRunnerImpl : public testing::TestRunner {
   // |TestRunner|
   void Done() override { test_run_context_->StopTrackingClient(this, false); }
   // |TestRunner|
-  void Teardown() override { test_run_context_->Teardown(); }
+  void Teardown() override { test_run_context_->Teardown(this); }
+  // |TestRunner|
+  void WillTerminate(double withinSeconds) override {
+    if (waiting_for_termination_) {
+      Fail(test_name_ + " called WillTerminate more than once.");
+      return;
+    }
+    waiting_for_termination_ = true;
+    termination_timer_.Start(
+        mtl::MessageLoop::GetCurrent()->task_runner().get(),
+        [this, withinSeconds] {
+          FTL_LOG(ERROR) << test_name_ << " termination timed out after "
+                         << withinSeconds << "s.";
+          binding_.set_connection_error_handler(nullptr);
+          Fail("Termination timed out.");
+          if (teardown_after_termination_) {
+            Teardown();
+          }
+          test_run_context_->StopTrackingClient(this, false);
+        },
+        ftl::TimeDelta::FromSecondsF(withinSeconds));
+  }
 
   fidl::Binding<testing::TestRunner> binding_;
   TestRunContext* test_run_context_;
   std::string test_name_ = "UNKNOWN";
+  bool waiting_for_termination_ = false;
+  ftl::OneShotTimer termination_timer_;
+  bool teardown_after_termination_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerImpl);
 };
@@ -308,8 +351,28 @@ void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   test_runner_clients_.erase(find_it);
 }
 
-void TestRunContext::Teardown() {
-  test_runner_connection_->Teardown(test_id_, success_);
+void TestRunContext::Teardown(TestRunnerImpl* teardown_client) {
+  bool waiting_for_termination = false;
+  for (auto& client : test_runner_clients_) {
+    if (teardown_client == &*client) {
+      continue;
+    }
+    if (client->waiting_for_termination()) {
+      client->TeardownAfterTermination();
+      FTL_LOG(INFO) << "Teardown blocked by test waiting for termination: "
+                    << client->GetTestName();
+      waiting_for_termination = true;
+      continue;
+    }
+    FTL_LOG(ERROR) << "Test " << client->GetTestName()
+                   << " not done before Teardown().";
+    success_ = false;
+  }
+  if (waiting_for_termination) {
+    StopTrackingClient(teardown_client, false);
+  } else {
+    test_runner_connection_->Teardown(test_id_, success_);
+  }
 }
 
 // TestRunnerTCPServer is a TCP server that accepts connections and launches

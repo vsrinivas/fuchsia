@@ -59,6 +59,18 @@ executable("component_context_test_agent2") {
   ]
 }
 
+executable("component_context_unstoppable_agent") {
+  sources = [
+    "unstoppable_agent.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/testing",
+    "//apps/modular/services/agent",
+    "//lib/mtl",
+  ]
+}
+
 fidl("test_agent1_interface") {
   sources = ["test_agent1_interface.fidl"]
 }

@@ -38,6 +38,11 @@ void Done();
 // having passed successfully.
 void Teardown();
 
+// Signals that this process expects to be terminated within the time specified.
+// If it is not killed that is a failure. A test that calls this should not call
+// |Done()| or |Teardown()|.
+void WillTerminate(double withinSeconds);
+
 class TestRunnerStore;
 // This returns the TestRunnerStore interface from the caller's
 // ApplicationEnvironment. Init() must be called before GetStore().

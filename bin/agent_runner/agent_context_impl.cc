@@ -6,8 +6,15 @@
 
 #include "application/lib/app/connect.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
+
+namespace {
+
+constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
+
+}  // namespace
 
 AgentContextImpl::AgentContextImpl(
     app::ApplicationLauncher* const app_launcher,
@@ -81,10 +88,17 @@ void AgentContextImpl::Done() {}
 
 void AgentContextImpl::MaybeStopAgent() {
   if (agent_controller_bindings_.size() == 0 && incomplete_task_count_ == 0) {
-    // TODO(alhaad): This is not enough. We need to close and drain the
-    // AgentContext binding. We also need to RemoveAgent after a timeout if
-    // Stop() does not return.
-    agent_->Stop([this] { agent_runner_->RemoveAgent(url_); });
+    auto kill_agent_once = std::make_shared<std::once_flag>();
+    auto kill_agent = [kill_agent_once, this]() mutable {
+      std::call_once(*kill_agent_once.get(), [this] {
+        // TODO(alhaad): This is not enough. We need to close and drain the
+        // AgentContext binding.
+        agent_runner_->RemoveAgent(url_);
+      });
+    };
+    agent_->Stop(kill_agent);
+    kill_timer_.Start(mtl::MessageLoop::GetCurrent()->task_runner().get(),
+                      kill_agent, kKillTimeout);
   }
 }
 
