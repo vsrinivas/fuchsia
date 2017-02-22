@@ -10,6 +10,7 @@
 #include <launchpad/vmo.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
+#include <mxio/io.h>
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -43,7 +44,7 @@ bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
   if (status != NO_ERROR)
     goto fail;
 
-  status = launchpad_arguments(lp, argv.size(), c_args);
+  status = launchpad_set_args(lp, argv.size(), c_args);
   if (status != NO_ERROR)
     goto fail;
 
@@ -54,9 +55,8 @@ bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
   if (status != NO_ERROR)
     goto fail;
 
-  status = launchpad_add_all_mxio(lp);
-  if (status != NO_ERROR)
-    goto fail;
+  // Clone root, cwd, and stdin/stdout/stderr
+  launchpad_clone(lp, LP_CLONE_MXIO_ALL);
 
   *out_lp = lp;
   return true;
