@@ -102,7 +102,7 @@ func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 func (ep *linkEndpoint) init() error {
 	b := ep.c.MAC[:]
 	ep.linkAddr = tcpip.LinkAddress(b)
-	log.Printf("linkaddr: %x:%x:%x:%x:%x:%x", b[0], b[1], b[2], b[3], b[4], b[5])
+	log.Printf("linkaddr: %02x:%02x:%02x:%02x:%02x:%02x", b[0], b[1], b[2], b[3], b[4], b[5])
 	return nil
 }
 
