@@ -36,6 +36,7 @@
 #include <magenta/user_thread.h>
 #include <magenta/wait_set_dispatcher.h>
 
+#include <mxtl/atomic.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"
@@ -59,14 +60,14 @@ mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
 }
 
 // This must be accessed atomically from any given thread.
-static int64_t utc_offset;
+static mxtl::atomic<int64_t> utc_offset;
 
 uint64_t sys_time_get(uint32_t clock_id) {
     switch (clock_id) {
     case MX_CLOCK_MONOTONIC:
         return current_time_hires();
     case MX_CLOCK_UTC:
-        return current_time_hires() + atomic_load_64(&utc_offset);
+        return current_time_hires() + utc_offset.load();
     case MX_CLOCK_THREAD:
         return UserThread::GetCurrent()->runtime_ns();
     default:
@@ -86,7 +87,7 @@ mx_status_t sys_clock_adjust(mx_handle_t hrsrc, uint32_t clock_id, int64_t offse
     case MX_CLOCK_MONOTONIC:
         return ERR_ACCESS_DENIED;
     case MX_CLOCK_UTC:
-        atomic_store_64(&utc_offset, offset);
+        utc_offset.store(offset);
         return NO_ERROR;
     default:
         return ERR_INVALID_ARGS;
