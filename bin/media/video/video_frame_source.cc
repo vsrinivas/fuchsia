@@ -24,6 +24,10 @@ VideoFrameSource::~VideoFrameSource() {}
 void VideoFrameSource::Bind(
     fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
   media_renderer_binding_.Bind(std::move(media_renderer_request));
+  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(media_renderer_binding_)));
+  FLOG(log_channel_,
+       Config(SupportedMediaTypes(),
+              FLOG_ADDRESS(static_cast<MediaPacketConsumerBase*>(this))));
 }
 
 void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
@@ -68,21 +72,7 @@ void VideoFrameSource::GetVideoSize(
 
 void VideoFrameSource::GetSupportedMediaTypes(
     const GetSupportedMediaTypesCallback& callback) {
-  VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
-  video_details->min_width = 1;
-  video_details->max_width = std::numeric_limits<uint32_t>::max();
-  video_details->min_height = 1;
-  video_details->max_height = std::numeric_limits<uint32_t>::max();
-  MediaTypeSetPtr supported_type = MediaTypeSet::New();
-  supported_type->medium = MediaTypeMedium::VIDEO;
-  supported_type->details = MediaTypeSetDetails::New();
-  supported_type->details->set_video(std::move(video_details));
-  supported_type->encodings = fidl::Array<fidl::String>::New(1);
-  supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
-  fidl::Array<MediaTypeSetPtr> supported_types =
-      fidl::Array<MediaTypeSetPtr>::New(1);
-  supported_types[0] = std::move(supported_type);
-  callback(std::move(supported_types));
+  callback(SupportedMediaTypes());
 }
 
 void VideoFrameSource::SetMediaType(MediaTypePtr media_type) {
@@ -90,6 +80,8 @@ void VideoFrameSource::SetMediaType(MediaTypePtr media_type) {
   FTL_DCHECK(media_type->details);
   const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
   FTL_DCHECK(details);
+
+  FLOG(log_channel_, SetMediaType(media_type.Clone()));
 
   converter_.SetMediaType(media_type);
 
@@ -107,6 +99,24 @@ void VideoFrameSource::GetPacketConsumer(
 void VideoFrameSource::GetTimelineControlPoint(
     fidl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
   control_point_binding_.Bind(std::move(control_point_request));
+}
+
+fidl::Array<MediaTypeSetPtr> VideoFrameSource::SupportedMediaTypes() {
+  VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
+  video_details->min_width = 1;
+  video_details->max_width = std::numeric_limits<uint32_t>::max();
+  video_details->min_height = 1;
+  video_details->max_height = std::numeric_limits<uint32_t>::max();
+  MediaTypeSetPtr supported_type = MediaTypeSet::New();
+  supported_type->medium = MediaTypeMedium::VIDEO;
+  supported_type->details = MediaTypeSetDetails::New();
+  supported_type->details->set_video(std::move(video_details));
+  supported_type->encodings = fidl::Array<fidl::String>::New(1);
+  supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
+  fidl::Array<MediaTypeSetPtr> supported_types =
+      fidl::Array<MediaTypeSetPtr>::New(1);
+  supported_types[0] = std::move(supported_type);
+  return supported_types;
 }
 
 void VideoFrameSource::OnPacketSupplied(

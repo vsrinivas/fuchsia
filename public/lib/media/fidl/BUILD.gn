@@ -13,6 +13,7 @@ fidl("services") {
     "logs/media_packet_consumer_channel.fidl",
     "logs/media_packet_producer_channel.fidl",
     "logs/media_player_channel.fidl",
+    "logs/media_renderer_channel.fidl",
     "logs/media_sink_channel.fidl",
     "logs/media_source_channel.fidl",
     "media_capturer.fidl",

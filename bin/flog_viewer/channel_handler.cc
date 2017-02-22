@@ -16,6 +16,8 @@
 #include "apps/media/tools/flog_viewer/handlers/media_packet_producer_full.h"
 #include "apps/media/tools/flog_viewer/handlers/media_player_digest.h"
 #include "apps/media/tools/flog_viewer/handlers/media_player_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_renderer_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_renderer_full.h"
 #include "apps/media/tools/flog_viewer/handlers/media_sink_digest.h"
 #include "apps/media/tools/flog_viewer/handlers/media_sink_full.h"
 #include "apps/media/tools/flog_viewer/handlers/media_source_digest.h"
@@ -66,6 +68,13 @@ std::unique_ptr<ChannelHandler> ChannelHandler::Create(
       handler = new handlers::MediaPacketConsumerFull(format);
     } else if (format == FlogViewer::kFormatDigest) {
       handler = new handlers::MediaPacketConsumerDigest(format);
+    }
+  } else if (type_name == handlers::MediaRendererFull::Name_) {
+    if (format == FlogViewer::kFormatTerse ||
+        format == FlogViewer::kFormatFull) {
+      handler = new handlers::MediaRendererFull(format);
+    } else if (format == FlogViewer::kFormatDigest) {
+      handler = new handlers::MediaRendererDigest(format);
     }
   } else if (type_name == handlers::MediaSinkFull::Name_) {
     if (format == FlogViewer::kFormatTerse ||

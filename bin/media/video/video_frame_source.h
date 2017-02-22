@@ -8,6 +8,8 @@
 #include <queue>
 #include <unordered_set>
 
+#include "apps/media/lib/flog/flog.h"
+#include "apps/media/services/logs/media_renderer_channel.fidl.h"
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/lib/transport/media_packet_consumer_base.h"
 #include "apps/media/services/media_renderer.fidl.h"
@@ -85,6 +87,9 @@ class VideoFrameSource : public MediaPacketConsumerBase,
       TimelineTransformPtr timeline_transform,
       const SetTimelineTransformCallback& callback) override;
 
+  // Returns the supported media types.
+  fidl::Array<MediaTypeSetPtr> SupportedMediaTypes();
+
   // Discards packets that are older than pts_.
   void DiscardOldPackets();
 
@@ -129,6 +134,11 @@ class VideoFrameSource : public MediaPacketConsumerBase,
   VideoConverter converter_;
   VideoRenderer::GetVideoSizeCallback get_video_size_callback_;
   std::unordered_set<mozart::BaseView*> views_;
+
+  // We don't use FLOG_INSTANCE_CHANNEL, because we don't need to know the
+  // address (this), and the consumer (our base class) will register with that
+  // same address.
+  FLOG_CHANNEL(logs::MediaRendererChannel, log_channel_);
 };
 
 }  // namespace media
