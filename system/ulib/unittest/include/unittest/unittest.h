@@ -156,16 +156,30 @@ int unittest_set_verbosity_level(int new_level);
 #define END_TEST return current_test_info->all_ok
 
 /*
- * BEGIN_HELPER and END_HELPER go in helper programs.
- * For example, if a test needs to start a second helper program, and you want
- * to use the ASSERT_*,EXPECT_* macros in the helper program, then surround the
- * usage with these macros.
+ * BEGIN_HELPER and END_HELPER let helper threads and files use
+ * the ASSERT_*,EXPECT_* macros, which require an in-scope, non-NULL
+ * |test_info* current_test_info|.
+ *
+ * This header file defines a static |current_test_info|, which is unlocked and
+ * should only be touched by the main thread; also, it is not visible to
+ * functions in other compilation units.
+ *
+ * Example usage:
+ *
+ *   bool my_helper_in_another_file_or_thread() {
+ *       BEGIN_HELPER;
+ *       // Use ASSERT_* or EXPECT_*
+ *       END_HELPER;  // Returns false if any EXPECT calls failed.
+ *   }
  */
+// Intentionally shadows the global current_test_info to avoid accidentally
+// leaking dangling stack pointers.
 #define BEGIN_HELPER \
     struct test_info _test_info; \
-    current_test_info = &_test_info; \
+    struct test_info* current_test_info = &_test_info; \
     current_test_info->all_ok = true
-#define END_HELPER return current_test_info->all_ok
+#define END_HELPER \
+    return current_test_info->all_ok
 
 #ifdef __cplusplus
 #define AUTO_TYPE_VAR(type) auto
