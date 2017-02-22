@@ -23,10 +23,13 @@
 
 #include "utils.h"
 
-// 0.5 seconds
-#define WATCHDOG_DURATION_TICK ((int64_t) 500 * 1000 * 1000)
-// 5 seconds
-#define WATCHDOG_DURATION_TICKS 10
+// Sleep interval in the watchdog thread. Make this short so we don't need to
+// wait too long when tearing down in the success case.  This is especially
+// helpful when running "while /boot/test/debugger-test; do true; done".
+#define WATCHDOG_DURATION_TICK ((int64_t) 30 * 1000 * 1000)  // 0.03 seconds
+
+// Number of sleep intervals until the watchdog fires.
+#define WATCHDOG_DURATION_TICKS 100  // 3 seconds
 
 #define TEST_MEMORY_SIZE 8
 #define TEST_DATA_ADJUST 0x10
@@ -212,8 +215,10 @@ static int watchdog_thread_func(void* arg)
         if (atomic_load(&done_tests))
             return 0;
     }
-    unittest_printf("WATCHDOG TIMER FIRED\n");
-    // This should kill the entire process, not just this thread.
+    unittest_printf_critical("\n\n*** WATCHDOG TIMER FIRED ***\n");
+    // This kills the entire process, not just this thread.
+    // TODO(dbort): Figure out why the shell sometimes reports a zero
+    // exit status when we expect to see '5'.
     exit(5);
 }
 
