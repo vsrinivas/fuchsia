@@ -136,6 +136,7 @@ MediaPacketProducerAccumulator::~MediaPacketProducerAccumulator() {}
 void MediaPacketProducerAccumulator::Print(std::ostream& os) {
   os << "MediaPacketProducer" << std::endl;
   os << indent;
+  os << begl << "consumer: " << consumer_;
   os << begl << "connected: " << connected_ << std::endl;
   os << begl << "flushes: " << flush_requests_.count() << std::endl;
 
