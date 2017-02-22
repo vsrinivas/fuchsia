@@ -40,8 +40,11 @@ ssize_t cmdline_get(const char* cmdline, const char* key, char* value, size_t n)
     return len;
 }
 
+/* maximum unsigned 32 bit integer is 4294967295 */
+#define UINT32_MAX_STR_LEN  10
+
 uint32_t cmdline_get_uint32(const char* cmdline, const char* key, uint32_t _default) {
-    char val[11];
+    char val[UINT32_MAX_STR_LEN + 1];
     ssize_t ret = cmdline_get(cmdline, key, val, sizeof(val));
     if (ret < 0) {
         return _default;
