@@ -6,6 +6,7 @@ package eth
 
 import (
 	"fmt"
+	"sync"
 	"syscall/mx"
 	"unsafe"
 )
@@ -29,6 +30,7 @@ type Arena struct {
 	iovmo mx.VMO
 	iobuf uintptr
 
+	mu       sync.Mutex
 	freebufs []int
 	isFree   [numBuffers]bool
 }
@@ -64,6 +66,8 @@ func NewArena() (*Arena, error) {
 }
 
 func (a *Arena) alloc() Buffer {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	if len(a.freebufs) == 0 {
 		return nil
 	}
@@ -73,11 +77,13 @@ func (a *Arena) alloc() Buffer {
 		panic(fmt.Sprintf("eth.Arena: free list buffer %d is not free", i))
 	}
 	a.isFree[i] = false
-	return a.buffer(i)
+	return a.bufferLocked(i)
 }
 
 func (a *Arena) free(b Buffer) {
-	i := a.index(b)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	i := a.indexLocked(b)
 	if a.isFree[i] {
 		panic(fmt.Sprintf("eth.Arena: freeing a free buffer: %d", i))
 	}
@@ -85,7 +91,7 @@ func (a *Arena) free(b Buffer) {
 	a.freebufs = append(a.freebufs, i)
 }
 
-func (a *Arena) index(b Buffer) int {
+func (a *Arena) indexLocked(b Buffer) int {
 	p := uintptr(unsafe.Pointer(&b[:1][0]))
 	i := int((p - a.iobuf) / bufferSize)
 	if i < 0 || i >= numBuffers {
@@ -95,7 +101,9 @@ func (a *Arena) index(b Buffer) int {
 }
 
 func (a *Arena) entry(b Buffer) bufferEntry {
-	i := a.index(b)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	i := a.indexLocked(b)
 	p := uintptr(unsafe.Pointer(&b[:1][0]))
 	return bufferEntry{
 		offset: uint32(p - a.iobuf),
@@ -104,7 +112,7 @@ func (a *Arena) entry(b Buffer) bufferEntry {
 	}
 }
 
-func (a *Arena) buffer(i int) (b Buffer) {
+func (a *Arena) bufferLocked(i int) (b Buffer) {
 	if i < 0 || i >= numBuffers {
 		panic(fmt.Sprintf("eth.Arena: buffer index %d is out of range", i))
 	}
@@ -122,6 +130,8 @@ func (a *Arena) buffer(i int) (b Buffer) {
 }
 
 func (a *Arena) bufferFromEntry(e bufferEntry) Buffer {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	i := int(int32(e.cookie))
 	if e.cookie>>32 != cookieMagic || i < 0 || i >= numBuffers {
 		panic(fmt.Sprintf("eth.Arena: buffer entry has bad cookie: %x", e.cookie))
@@ -130,7 +140,7 @@ func (a *Arena) bufferFromEntry(e bufferEntry) Buffer {
 	if isFree {
 		panic(fmt.Sprintf("eth: buffer entry %d is on free list", i))
 	}
-	b := a.buffer(i)
+	b := a.bufferLocked(i)
 	b = b[:e.length]
 	return b
 }
