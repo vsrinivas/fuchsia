@@ -1,0 +1,17 @@
+uint8               test-uint8              10000
+int32               test-int32              10001
+uint32              test-uint32             10002
+uint64              test-uint64             10003
+boolean             test-boolean-true       10004
+boolean             test-boolean-false      10005
+string              test-string             10006
+
+array[uint8]        test-uint8-array        10010
+array[int32]        test-int32-array        10011
+array[uint32]       test-uint32-array       10012
+array[uint64]       test-uint64-array       10013
+array[boolean]      test-bool-array         10014
+
+list                test-list               10020
+int32               test-list.int           10021
+string              test-list.str           10022
