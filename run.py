@@ -49,6 +49,8 @@ def main():
     magenta_build_dir = os.path.join(paths.FUCHSIA_ROOT, "out", "build-magenta",
             "build-magenta-%s-%s" % ("pc" if args.arch == "x86-64" else "qemu", args.arch))
 
+    qemu_dir = os.path.join(paths.FUCHSIA_ROOT, "buildtools", "qemu", "bin")
+
     boot_fs = (os.path.join(fuchsia_build_dir, "user.bootfs") if args.fuchsia
                   else None)
 
@@ -62,6 +64,7 @@ def main():
         command = [os.path.join(paths.MAGENTA_ROOT, "scripts", "run-magenta")]
         command += ["-a", args.arch]
         command += ["-o", magenta_build_dir]
+        command += ["-q", qemu_dir]
         if boot_fs:
             command += ["-x", boot_fs]
         if args.graphical:
