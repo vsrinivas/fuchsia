@@ -26,10 +26,9 @@ bool IsRootPageId(const fidl::Array<uint8_t>& id) {
   return true;
 }
 
-void MaybeMergeDeviceMap(
-    ledger::PageChange* const change_left,
-    ledger::PageChange* const change_right,
-    fidl::Array<ledger::MergedValuePtr>* ret) {
+void MaybeMergeDeviceMap(ledger::PageChange* const change_left,
+                         ledger::PageChange* const change_right,
+                         fidl::Array<ledger::MergedValuePtr>* ret) {
   if (change_left == nullptr || change_right == nullptr) {
     return;
   }
@@ -100,7 +99,8 @@ ConflictResolverImpl::ConflictResolverImpl() = default;
 
 ConflictResolverImpl::~ConflictResolverImpl() = default;
 
-fidl::InterfaceHandle<ledger::ConflictResolverFactory> ConflictResolverImpl::AddBinding() {
+fidl::InterfaceHandle<ledger::ConflictResolverFactory>
+ConflictResolverImpl::AddBinding() {
   return factory_bindings_.AddBinding(this);
 }
 

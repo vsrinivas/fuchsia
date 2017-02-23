@@ -15,7 +15,8 @@ constexpr size_t kHashIdentifierSize = 6;
 constexpr ftl::StringView kSha256Identifier = "SHA256";
 constexpr uint8_t kSeedSize = 8;
 
-static_assert(kHashIdentifierSize == kSha256Identifier.size(), "Hash identifier size is incorrect");
+static_assert(kHashIdentifierSize == kSha256Identifier.size(),
+              "Hash identifier size is incorrect");
 
 }  // namespace
 

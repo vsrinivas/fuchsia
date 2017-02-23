@@ -39,7 +39,7 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent>,
     // Connecting to the agent should start it up.
     app::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTest2Agent, agent_services.NewRequest(),
-                        agent2_controller_.NewRequest());
+                                       agent2_controller_.NewRequest());
 
     // Killing the agent controller should stop it.
     agent2_controller_.reset();
@@ -76,7 +76,7 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent>,
                           const fidl::String& message_to_send) override {
     modular::MessageSenderPtr message_sender;
     component_context_->GetMessageSender(message_queue_token,
-                                        message_sender.NewRequest());
+                                         message_sender.NewRequest());
 
     message_sender->Send(message_to_send);
   }

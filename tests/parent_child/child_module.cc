@@ -15,9 +15,7 @@ namespace {
 
 class ChildApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  ChildApp() {
-    modular::testing::Init(application_context(), __FILE__);
-  }
+  ChildApp() { modular::testing::Init(application_context(), __FILE__); }
 
   ~ChildApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
 

@@ -279,7 +279,8 @@ class DevUserShellApp
   void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
     FTL_LOG(INFO) << "DevUserShell::OnAdd()";
     for (auto& suggestion : suggestions) {
-      FTL_LOG(INFO) << "  " << suggestion->uuid << " " << suggestion->display->headline;
+      FTL_LOG(INFO) << "  " << suggestion->uuid << " "
+                    << suggestion->display->headline;
     }
   }
 

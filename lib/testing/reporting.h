@@ -7,14 +7,15 @@
 
 #include <iostream>
 
-#include "apps/modular/services/test_runner/test_runner.fidl.h"
 #include "apps/modular/lib/testing/testing.h"
+#include "apps/modular/services/test_runner/test_runner.fidl.h"
 
 #define TEST_PASS(label) std::cerr << "[TEST] PASS: " << (label) << std::endl
-#define TEST_FAIL(label) { \
-  std::cerr << "[TEST] FAIL: " << (label) << std::endl; \
-  modular::testing::Fail(label); \
-}
+#define TEST_FAIL(label)                                  \
+  {                                                       \
+    std::cerr << "[TEST] FAIL: " << (label) << std::endl; \
+    modular::testing::Fail(label);                        \
+  }
 
 namespace modular {
 namespace testing {

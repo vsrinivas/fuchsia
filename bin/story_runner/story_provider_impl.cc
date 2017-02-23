@@ -560,62 +560,59 @@ class UpdateDeviceNameCall : public Operation {
   }
 
   void Run() override {
-    ledger_->GetRootPage(
-        root_page_.NewRequest(),
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
-                           << " Ledger.GetRootPage() " << status;
-            Done();
-            return;
-          }
-          root_page_->GetSnapshot(
-              root_snapshot_.NewRequest(), nullptr,
-              [this](ledger::Status status) {
-                if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
-                                 << " Page.GetSnapshot() " << status;
-                  Done();
-                  return;
-                }
-                root_snapshot_->Get(
-                    to_array(kDeviceMapKey),
-                    [this](ledger::Status status, ledger::ValuePtr value) {
-                      if (status != ledger::Status::OK &&
-                          status != ledger::Status::KEY_NOT_FOUND) {
-                        FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
-                                       << " PageSnapshot.Get() " << status;
+    ledger_->GetRootPage(root_page_.NewRequest(), [this](
+                                                      ledger::Status status) {
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
+                       << " Ledger.GetRootPage() " << status;
+        Done();
+        return;
+      }
+      root_page_->GetSnapshot(
+          root_snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
+                             << " Page.GetSnapshot() " << status;
+              Done();
+              return;
+            }
+            root_snapshot_->Get(
+                to_array(kDeviceMapKey),
+                [this](ledger::Status status, ledger::ValuePtr value) {
+                  if (status != ledger::Status::OK &&
+                      status != ledger::Status::KEY_NOT_FOUND) {
+                    FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
+                                   << " PageSnapshot.Get() " << status;
+                    Done();
+                    return;
+                  }
+
+                  rapidjson::Document doc;
+                  if (!value.is_null()) {
+                    doc.Parse(to_string(value->get_bytes()));
+                    FTL_DCHECK(doc.IsObject());
+                  } else {
+                    doc.SetObject();
+                  }
+
+                  // NOTE(mesch): Unclear why just device_name_ as
+                  // the key doesn't compile.
+                  doc.AddMember(rapidjson::StringRef(device_name_), true,
+                                doc.GetAllocator());
+
+                  root_page_->Put(
+                      to_array(kDeviceMapKey), to_array(JsonValueToString(doc)),
+                      [this](ledger::Status status) {
+                        if (status != ledger::Status::OK) {
+                          FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
+                                         << " Page.Put() " << status;
+                        }
+
                         Done();
-                        return;
-                      }
-
-                      rapidjson::Document doc;
-                      if (!value.is_null()) {
-                        doc.Parse(to_string(value->get_bytes()));
-                        FTL_DCHECK(doc.IsObject());
-                      } else {
-                        doc.SetObject();
-                      }
-
-                      // NOTE(mesch): Unclear why just device_name_ as
-                      // the key doesn't compile.
-                      doc.AddMember(rapidjson::StringRef(device_name_),
-                                    true, doc.GetAllocator());
-
-                      root_page_->Put(
-                          to_array(kDeviceMapKey),
-                          to_array(JsonValueToString(doc)),
-                          [this](ledger::Status status) {
-                            if (status != ledger::Status::OK) {
-                              FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
-                                             << " Page.Put() " << status;
-                            }
-
-                            Done();
-                          });
-                    });
-              });
-        });
+                      });
+                });
+          });
+    });
   }
 
  private:
@@ -647,7 +644,7 @@ StoryProviderImpl::StoryProviderImpl(
   ledger_.Bind(std::move(ledger));
 
   ledger_->SetConflictResolverFactory(conflict_resolver_.AddBinding(),
-                                       [](ledger::Status) {});
+                                      [](ledger::Status) {});
 
   ledger::PagePtr root_page;
   ledger_->GetRootPage(root_page.NewRequest(), [this](ledger::Status status) {

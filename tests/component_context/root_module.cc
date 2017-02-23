@@ -49,11 +49,8 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     modular::testing::GetStore()->Get(
         "test_agent1_connected", [this](const fidl::String&) {
           agent_connected_.Pass();
-          TestMessageQueue([this] {
-            TestAgentController([this] {
-                story_->Done();
-            });
-          });
+          TestMessageQueue(
+              [this] { TestAgentController([this] { story_->Done(); }); });
         });
 
     // Start a timer to call Story.Done in case the test agent misbehaves and we

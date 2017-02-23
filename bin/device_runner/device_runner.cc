@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
 #include <magenta/syscalls.h>
+#include <iostream>
 #include <memory>
 
 #include "application/lib/app/application_context.h"
@@ -49,8 +49,8 @@ constexpr char kUsersConfigurationFile[] = "/data/modular/device/users.db";
 class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
-    device_name = command_line.GetOptionValueWithDefault(
-        "device_name", "magenta");
+    device_name =
+        command_line.GetOptionValueWithDefault("device_name", "magenta");
     device_shell = command_line.GetOptionValueWithDefault(
         "device_shell", "file:///system/apps/dummy_device_shell");
     user_runner = command_line.GetOptionValueWithDefault(
@@ -255,16 +255,15 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
                     << ledger_repository_path;
     }
     ledger_repository_factory_->GetRepository(
-        ledger_repository_path,
-        ledger_repository.NewRequest(), [](ledger::Status status) {
+        ledger_repository_path, ledger_repository.NewRequest(),
+        [](ledger::Status status) {
           FTL_DCHECK(status == ledger::Status::OK)
               << "GetRepository failed: " << status;
         });
 
     user_controller_impl_.reset(new UserControllerImpl(
-        app_context_, settings_.device_name,
-        settings_.user_runner, settings_.user_shell,
-        settings_.user_shell_args, std::move(user_id),
+        app_context_, settings_.device_name, settings_.user_runner,
+        settings_.user_shell, settings_.user_shell_args, std::move(user_id),
         std::move(ledger_repository), std::move(view_owner_request),
         std::move(user_controller),
         [this]() { user_controller_impl_.reset(); }));

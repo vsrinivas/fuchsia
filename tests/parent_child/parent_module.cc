@@ -17,13 +17,12 @@ namespace {
 
 constexpr int kTimeoutMilliseconds = 5000;
 
-constexpr char kChildModule[] = "file:///system/apps/modular_tests/child_module";
+constexpr char kChildModule[] =
+    "file:///system/apps/modular_tests/child_module";
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  ParentApp() {
-    modular::testing::Init(application_context(), __FILE__);
-  }
+  ParentApp() { modular::testing::Init(application_context(), __FILE__); }
 
   ~ParentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
 

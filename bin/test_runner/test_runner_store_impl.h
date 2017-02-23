@@ -24,7 +24,8 @@ class TestRunnerStoreImpl : public TestRunnerStore {
   // |TestRunnerStore|
   void Get(const fidl::String& key, const GetCallback& cb) override;
   // |TestRunnerStore|
-  void Put(const fidl::String& key, const fidl::String& value,
+  void Put(const fidl::String& key,
+           const fidl::String& value,
            const PutCallback& cb) override;
 
   void MaybeNotify(const std::string& key);

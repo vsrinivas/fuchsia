@@ -59,9 +59,11 @@ class MessageQueueManager {
                          std::unique_ptr<MessageQueueStorage>>;
 
   MessageQueueStorage* ObtainMessageQueueStorage(
-      const std::string& component_instance_id, const std::string& queue_name);
+      const std::string& component_instance_id,
+      const std::string& queue_name);
   MessageQueueStorage* GetMessageQueueStorage(
-      const std::string& component_instance_id, const std::string& queue_name);
+      const std::string& component_instance_id,
+      const std::string& queue_name);
 
   std::unordered_map<ComponentInstanceId, QueueNameToStorageMap>
       component_to_queues_;

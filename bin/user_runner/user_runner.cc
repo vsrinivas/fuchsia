@@ -71,7 +71,6 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 }  // namespace
 
-
 class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(
@@ -252,9 +251,9 @@ class UserRunnerApp : public UserRunnerFactory {
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
               fidl::InterfaceRequest<UserRunner> user_runner_request) override {
     new UserRunnerImpl(application_context_, std::move(user_id), device_name,
-                       user_shell,
-                       std::move(user_shell_args), std::move(ledger_repository),
-                       std::move(user_context), std::move(view_owner_request),
+                       user_shell, std::move(user_shell_args),
+                       std::move(ledger_repository), std::move(user_context),
+                       std::move(view_owner_request),
                        std::move(user_runner_request));
   }
 
