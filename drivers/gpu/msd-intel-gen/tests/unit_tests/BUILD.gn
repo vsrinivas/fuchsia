@@ -23,6 +23,7 @@ source_set("tests_not_requiring_hardware") {
   testonly = true
 
   sources = [
+    "modeset/test_displayport.cc",
     "test_buffer.cc",
     "test_context.cc",
     "test_engine_command_streamer.cc",

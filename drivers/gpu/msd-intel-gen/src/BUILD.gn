@@ -20,6 +20,8 @@ source_set("src") {
     "gpu_mapping.h",
     "gtt.cc",
     "gtt.h",
+    "modeset/displayport.cc",
+    "modeset/displayport.h",
     "msd_intel_buffer.cc",
     "msd_intel_buffer.h",
     "msd_intel_connection.cc",

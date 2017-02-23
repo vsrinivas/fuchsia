@@ -8,6 +8,7 @@
 #include "global_context.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "modeset/displayport.h"
 #include "registers.h"
 #include <cstdio>
 #include <string>
@@ -238,6 +239,13 @@ bool MsdIntelDevice::RenderEngineInit()
         return DRETF(false, "render_engine_cs failed RenderInit");
 
     registers::MasterInterruptControl::write(register_io_.get(), true);
+
+    // The modesetting code is only tested on gen 9 (Skylake).
+    if (DeviceId::is_gen9(device_id_)) {
+        // Eventually the modesetting code will be able to bring up a
+        // display.  For now, all it does is fetch the display's EDID data.
+        DisplayPort::FetchAndCheckEdidData(register_io_.get());
+    }
 
     return true;
 }
@@ -551,7 +559,8 @@ magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer
         return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Connection context killed");
 
     if (!command_buffer->PrepareForExecution(render_engine_cs_.get(), gtt()))
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to prepare command buffer for execution");
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
+                        "Failed to prepare command buffer for execution");
 
     render_engine_cs_->SubmitCommandBuffer(std::move(command_buffer));
 

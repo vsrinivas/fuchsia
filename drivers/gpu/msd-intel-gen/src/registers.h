@@ -602,6 +602,30 @@ public:
     }
 };
 
+// DDI_AUX_CTL: Control register for the DisplayPort Aux channel
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
+class DDIAuxControl {
+public:
+    static constexpr uint32_t kOffset = 0x64010;
+
+    static constexpr uint32_t kSendBusyBit = 1 << 31;
+    static constexpr uint32_t kTimeoutBit = 1 << 28;
+    static constexpr uint32_t kMessageSizeShift = 20;
+    static constexpr uint32_t kMessageSizeMask = 0x1f;
+    // Appropriate flags that set the following:
+    //  * bits 4:0: Sync Pulse Count = 0x1f
+    //  * bits 9:5: Fast Wake Sync Pulse Count = 0
+    static constexpr uint32_t kFlags = 0x1f;
+};
+
+// DDI_AUX_DATA: Message contents for DisplayPort Aux messages
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
+class DDIAuxData {
+public:
+    // There are 5 32-bit words at this offset.
+    static constexpr uint32_t kOffset = 0x64014;
+};
+
 } // namespace
 
 #endif // REGISTERS_H
