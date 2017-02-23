@@ -75,6 +75,11 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
 
 static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
+
+    assert(y0 <= static_cast<int>(dev->rows));
+    assert(h >= 0);
+    assert(y0 + h <= static_cast<int>(dev->rows));
+
     for (int y = y0; y < y0 + h; y++) {
         int sc = 0;
         if (y < 0) {
@@ -160,6 +165,8 @@ static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
     // invalidate the cursor before copying
     vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
     int delta = ABS(dir);
+    if (delta > y1 - y0)
+        delta = y1 - y0;
     if (dir > 0) {
         gfx_copyrect(dev->gfx, 0, (y0 + delta) * dev->charh,
                      dev->gfx->width, (y1 - y0 - delta) * dev->charh,

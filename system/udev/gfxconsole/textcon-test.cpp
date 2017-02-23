@@ -339,6 +339,34 @@ bool test_delete_lines() {
     END_TEST;
 }
 
+// Test for a bug where this would cause an out-of-bounds array access.
+bool test_insert_lines_many() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 5);
+    tc.PutString("AAA\nBBB");
+    tc.PutString("\x1b[999L"); // Insert 999 lines
+    tc.PutString("Z"); // Output char to show where the cursor ends up
+    tc.AssertLineContains(0, "AAA");
+    tc.AssertLineContains(1, "   Z");
+
+    END_TEST;
+}
+
+// Test for a bug where this would cause an out-of-bounds array access.
+bool test_delete_lines_many() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 5);
+    tc.PutString("AAA\nBBB");
+    tc.PutString("\x1b[999M"); // Delete 999 lines
+    tc.PutString("Z"); // Output char to show where the cursor ends up
+    tc.AssertLineContains(0, "AAA");
+    tc.AssertLineContains(1, "   Z");
+
+    END_TEST;
+}
+
 bool test_move_cursor_up_and_scroll() {
     BEGIN_TEST;
 
@@ -396,6 +424,8 @@ RUN_TEST(test_backspace_at_start_of_line)
 RUN_TEST(test_scroll_up)
 RUN_TEST(test_insert_lines)
 RUN_TEST(test_delete_lines)
+RUN_TEST(test_insert_lines_many)
+RUN_TEST(test_delete_lines_many)
 RUN_TEST(test_move_cursor_up_and_scroll)
 RUN_TEST(test_move_cursor_down_and_scroll)
 RUN_TEST(test_cursor_hide_and_show)
