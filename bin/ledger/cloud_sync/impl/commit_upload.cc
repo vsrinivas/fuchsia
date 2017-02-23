@@ -49,8 +49,9 @@ void CommitUpload::Start() {
         objects_to_upload_ = object_ids.size();
         for (const auto& id : object_ids) {
           storage_->GetObject(
-              id, [this](storage::Status storage_status,
-                         std::unique_ptr<const storage::Object> object) {
+              id, storage::PageStorage::Location::LOCAL,
+              [this](storage::Status storage_status,
+                     std::unique_ptr<const storage::Object> object) {
                 FTL_DCHECK(storage_status == storage::Status::OK);
                 UploadObject(std::move(object));
               });

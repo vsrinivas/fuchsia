@@ -78,8 +78,9 @@ class PageImplTest : public test::TestWithMessageLoop {
     storage::Status status;
     std::unique_ptr<const storage::Object> object;
     fake_storage_->GetObject(
-        object_id, ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                   &status, &object));
+        object_id, storage::PageStorage::Location::LOCAL,
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     return object;
@@ -435,8 +436,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
 
   fidl::Array<EntryPtr> actual_entries;
   auto callback_getentries = [this, &actual_entries](
-      Status status, fidl::Array<EntryPtr> entries,
-      fidl::Array<uint8_t> next_token) {
+                                 Status status, fidl::Array<EntryPtr> entries,
+                                 fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
     actual_entries = std::move(entries);
@@ -488,8 +489,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
 
   fidl::Array<fidl::Array<uint8_t>> actual_keys;
   auto callback_getkeys = [this, &actual_keys](
-      Status status, fidl::Array<fidl::Array<uint8_t>> keys,
-      fidl::Array<uint8_t> next_token) {
+                              Status status,
+                              fidl::Array<fidl::Array<uint8_t>> keys,
+                              fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
     actual_keys = std::move(keys);
@@ -536,8 +538,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   fidl::Array<fidl::Array<uint8_t>> actual_keys;
   fidl::Array<uint8_t> actual_next_token;
   auto callback_getkeys = [this, &actual_keys, &actual_next_token](
-      Status status, fidl::Array<fidl::Array<uint8_t>> keys,
-      fidl::Array<uint8_t> next_token) {
+                              Status status,
+                              fidl::Array<fidl::Array<uint8_t>> keys,
+                              fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::PARTIAL_RESULT, status);
     EXPECT_FALSE(next_token.is_null());
     actual_keys = std::move(keys);
@@ -549,8 +552,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
 
   // Call GetKeys with the previous token and receive the remaining results.
   auto callback_getkeys2 = [this, key_count, &actual_keys](
-      Status status, fidl::Array<fidl::Array<uint8_t>> keys,
-      fidl::Array<uint8_t> next_token) {
+                               Status status,
+                               fidl::Array<fidl::Array<uint8_t>> keys,
+                               fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
     for (size_t i = 0; i < keys.size(); ++i) {

@@ -60,7 +60,7 @@ StorageTest::~StorageTest(){};
 
   std::unique_ptr<const Object> result;
   GetStorage()->GetObject(
-      object_id,
+      object_id, PageStorage::Location::LOCAL,
       ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                       &result));
   if (RunLoopWithTimeout()) {

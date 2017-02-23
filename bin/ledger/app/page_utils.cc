@@ -34,26 +34,26 @@ void GetReferenceAsStringView(
     storage::PageStorage* storage,
     convert::ExtendedStringView opaque_id,
     std::function<void(Status, ftl::StringView)> callback) {
-  storage->GetObject(
-      opaque_id, [callback](storage::Status status,
-                            std::unique_ptr<const storage::Object> object) {
-        if (status != storage::Status::OK) {
-          callback(
-              PageUtils::ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
-              ftl::StringView());
-          return;
-        }
-        ftl::StringView data;
-        status = object->GetData(&data);
-        if (status != storage::Status::OK) {
-          callback(
-              PageUtils::ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
-              ftl::StringView());
-          return;
-        }
+  storage->GetObject(opaque_id, storage::PageStorage::Location::LOCAL,
+                     [callback](storage::Status status,
+                                std::unique_ptr<const storage::Object> object) {
+                       if (status != storage::Status::OK) {
+                         callback(PageUtils::ConvertStatus(
+                                      status, Status::REFERENCE_NOT_FOUND),
+                                  ftl::StringView());
+                         return;
+                       }
+                       ftl::StringView data;
+                       status = object->GetData(&data);
+                       if (status != storage::Status::OK) {
+                         callback(PageUtils::ConvertStatus(
+                                      status, Status::REFERENCE_NOT_FOUND),
+                                  ftl::StringView());
+                         return;
+                       }
 
-        callback(Status::OK, data);
-      });
+                       callback(Status::OK, data);
+                     });
 }
 
 }  // namespace

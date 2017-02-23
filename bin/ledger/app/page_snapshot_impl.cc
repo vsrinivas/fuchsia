@@ -57,7 +57,9 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
                                   : Priority::LAZY;
         entries->push_back(std::move(entry_ptr));
 
-        page_storage_->GetObject(entry.object_id, waiter->NewCallback());
+        page_storage_->GetObject(entry.object_id,
+                                 storage::PageStorage::Location::LOCAL,
+                                 waiter->NewCallback());
         return true;
       });
 

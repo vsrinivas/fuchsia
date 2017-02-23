@@ -42,7 +42,11 @@ void ComputePageChange(
                           ? Priority::EAGER
                           : Priority::LAZY;
     page_change->changes.push_back(std::move(entry));
-    storage->GetObject(change.entry.object_id, waiter->NewCallback());
+    // TODO(etiennej): What do we do if we don't have the network (e.g. for
+    // lazy objects)?
+    storage->GetObject(change.entry.object_id,
+                       storage::PageStorage::Location::NETWORK,
+                       waiter->NewCallback());
 
     return true;
   };

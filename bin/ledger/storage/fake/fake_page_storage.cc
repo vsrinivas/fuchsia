@@ -120,6 +120,7 @@ void FakePageStorage::AddObjectFromLocal(
 
 void FakePageStorage::GetObject(
     ObjectIdView object_id,
+    Location location,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
   object_requests_.push_back([

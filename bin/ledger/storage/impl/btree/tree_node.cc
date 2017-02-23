@@ -33,7 +33,7 @@ void TreeNode::FromId(
     ObjectIdView id,
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
   std::unique_ptr<const Object> object;
-  page_storage->GetObject(id, [
+  page_storage->GetObject(id, PageStorage::Location::NETWORK, [
     page_storage, callback = std::move(callback)
   ](Status status, std::unique_ptr<const Object> object) {
     if (status != Status::OK) {

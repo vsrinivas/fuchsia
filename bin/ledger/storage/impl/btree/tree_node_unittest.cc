@@ -94,9 +94,8 @@ TEST_F(TreeNodeTest, GetEntryChild) {
   for (int i = 0; i <= size; ++i) {
     Status status;
     std::unique_ptr<const TreeNode> child;
-    node->GetChild(i,
-                   ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                   &status, &child));
+    node->GetChild(i, ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &child));
     EXPECT_FALSE(RunLoopWithTimeout());
     ASSERT_EQ(Status::NO_SUCH_CHILD, status);
     EXPECT_TRUE(node->GetChildId(i).empty());
@@ -374,7 +373,7 @@ TEST_F(TreeNodeTest, Serialization) {
   Status status;
   std::unique_ptr<const Object> object;
   fake_storage_.GetObject(
-      node->GetId(),
+      node->GetId(), PageStorage::Location::LOCAL,
       ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                       &object));
   EXPECT_FALSE(RunLoopWithTimeout());

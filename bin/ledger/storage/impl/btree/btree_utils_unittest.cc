@@ -33,10 +33,11 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
 
   void GetObject(
       ObjectIdView object_id,
+      Location location,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) override {
     object_requests.insert(object_id.ToString());
-    fake::FakePageStorage::GetObject(object_id, callback);
+    fake::FakePageStorage::GetObject(object_id, location, callback);
   }
 
   std::set<ObjectId> object_requests;
@@ -102,10 +103,12 @@ TEST_F(BTreeUtilsTest, GetNodeLevel) {
 
   for (size_t i = 0; i < 1000; ++i) {
     ftl::StringView key(reinterpret_cast<char*>(&i), sizeof(i));
-    level_distribution[btree::GetNodeLevel(key, arraysize(level_distribution))]++;
+    level_distribution[btree::GetNodeLevel(key,
+                                           arraysize(level_distribution))]++;
   }
 
-  EXPECT_TRUE(std::is_sorted(level_distribution, level_distribution + arraysize(level_distribution),
+  EXPECT_TRUE(std::is_sorted(level_distribution,
+                             level_distribution + arraysize(level_distribution),
                              [](int v1, int v2) { return v2 < v1; }));
   EXPECT_NE(0u, level_distribution[1]);
 }

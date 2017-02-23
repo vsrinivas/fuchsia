@@ -80,6 +80,7 @@ class PageStorageImpl : public PageStorage {
       const std::function<void(Status, ObjectId)>& callback) override;
   void GetObject(
       ObjectIdView object_id,
+      Location location,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) override;
   Status SetSyncMetadata(ftl::StringView sync_state) override;

@@ -208,9 +208,8 @@ class PageStorageTest : public StorageTest {
     Status status;
     std::unique_ptr<const Commit> commit;
     storage_->GetCommit(
-        id,
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &commit));
+        id, ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                            &commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     return commit;
@@ -292,11 +291,12 @@ class PageStorageTest : public StorageTest {
 
   std::unique_ptr<const Object> TryGetObject(
       const ObjectId& object_id,
+      PageStorage::Location location,
       Status expected_status = Status::OK) {
     Status status;
     std::unique_ptr<const Object> object;
     storage_->GetObject(
-        object_id,
+        object_id, location,
         ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                         &object));
     EXPECT_FALSE(RunLoopWithTimeout());
@@ -395,7 +395,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   // Add the three objects to FakeSyncDelegate.
   sync.AddObject(lazy_value.object_id, lazy_value.value);
   sync.AddObject(eager_value.object_id, eager_value.value);
-  std::unique_ptr<const Object> root_object = TryGetObject(root_id);
+  std::unique_ptr<const Object> root_object =
+      TryGetObject(root_id, PageStorage::Location::NETWORK);
 
   ftl::StringView root_data;
   ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
@@ -538,9 +539,8 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {
   // It is not an error if a journal is not committed or rolled back.
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK,
-            storage_->StartCommit(GetFirstHead()->GetId(),
-                                  JournalType::EXPLICIT, &journal));
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
+                                              JournalType::EXPLICIT, &journal));
   EXPECT_NE(nullptr, journal);
   EXPECT_EQ(Status::OK,
             journal->Put("key", RandomId(kObjectIdSize), KeyPriority::EAGER));
@@ -656,7 +656,8 @@ TEST_F(PageStorageTest, GetObject) {
   ASSERT_TRUE(files::CreateDirectory(files::GetDirectoryName(file_path)));
   ASSERT_TRUE(files::WriteFile(file_path, data.value.data(), data.size));
 
-  std::unique_ptr<const Object> object = TryGetObject(data.object_id);
+  std::unique_ptr<const Object> object =
+      TryGetObject(data.object_id, PageStorage::Location::LOCAL);
   EXPECT_EQ(data.object_id, object->GetId());
   ftl::StringView object_data;
   ASSERT_EQ(Status::OK, object->GetData(&object_data));
@@ -669,14 +670,18 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
   sync.AddObject(data.object_id, data.value);
   storage_->SetSyncDelegate(&sync);
 
-  std::unique_ptr<const Object> object = TryGetObject(data.object_id);
+  std::unique_ptr<const Object> object =
+      TryGetObject(data.object_id, PageStorage::Location::NETWORK);
   EXPECT_EQ(data.object_id, object->GetId());
   ftl::StringView object_data;
   ASSERT_EQ(Status::OK, object->GetData(&object_data));
   EXPECT_EQ(data.value, convert::ToString(object_data));
 
   storage_->SetSyncDelegate(nullptr);
-  TryGetObject(RandomId(kObjectIdSize), Status::NOT_CONNECTED_ERROR);
+  TryGetObject(RandomId(kObjectIdSize), PageStorage::Location::LOCAL,
+               Status::NOT_FOUND);
+  TryGetObject(RandomId(kObjectIdSize), PageStorage::Location::NETWORK,
+               Status::NOT_CONNECTED_ERROR);
 }
 
 TEST_F(PageStorageTest, UnsyncedObjects) {
@@ -698,9 +703,8 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     EXPECT_EQ(Status::OK,
               storage_->StartCommit(GetFirstHead()->GetId(),
                                     JournalType::IMPLICIT, &journal));
-    EXPECT_EQ(Status::OK,
-              journal->Put(ftl::StringPrintf("key%d", i), data[i].object_id,
-                           KeyPriority::LAZY));
+    EXPECT_EQ(Status::OK, journal->Put(ftl::StringPrintf("key%d", i),
+                                       data[i].object_id, KeyPriority::LAZY));
     TryCommitJournal(&journal, Status::OK);
     commits.push_back(GetFirstHead()->GetId());
   }
@@ -712,9 +716,8 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     Status status;
     std::vector<ObjectId> objects;
     storage_->GetUnsyncedObjectIds(
-        commits[i],
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &objects));
+        commits[i], ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                    &status, &objects));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(static_cast<unsigned>(i + 2), objects.size());
@@ -734,9 +737,8 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
   Status status;
   std::vector<ObjectId> objects;
   storage_->GetUnsyncedObjectIds(
-      commits[2],
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                      &objects));
+      commits[2], ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                  &status, &objects));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(3u, objects.size());
@@ -761,9 +763,8 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
 
   // After adding the object in a commit it should not be untracked any more.
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK,
-            storage_->StartCommit(GetFirstHead()->GetId(),
-                                  JournalType::IMPLICIT, &journal));
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
+                                              JournalType::IMPLICIT, &journal));
   EXPECT_EQ(Status::OK,
             journal->Put("key", data.object_id, KeyPriority::EAGER));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
@@ -783,9 +784,8 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
 
   // Add a first commit containing object_ids[0].
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK,
-            storage_->StartCommit(GetFirstHead()->GetId(),
-                                  JournalType::IMPLICIT, &journal));
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
+                                              JournalType::IMPLICIT, &journal));
   EXPECT_EQ(Status::OK,
             journal->Put("key0", data[0].object_id, KeyPriority::LAZY));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[0].object_id));
@@ -798,9 +798,8 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   // object_ids[1] is no longer part of this commit: it should remain untracked
   // after committing.
   journal.reset();
-  EXPECT_EQ(Status::OK,
-            storage_->StartCommit(GetFirstHead()->GetId(),
-                                  JournalType::IMPLICIT, &journal));
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
+                                              JournalType::IMPLICIT, &journal));
   EXPECT_EQ(Status::OK,
             journal->Put("key1", data[1].object_id, KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
@@ -851,9 +850,8 @@ TEST_F(PageStorageTest, OrderOfCommitWatch) {
   storage_->AddCommitWatcher(&watcher);
 
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK,
-            storage_->StartCommit(GetFirstHead()->GetId(),
-                                  JournalType::EXPLICIT, &journal));
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
+                                              JournalType::EXPLICIT, &journal));
   EXPECT_EQ(Status::OK,
             journal->Put("key1", RandomId(kObjectIdSize), KeyPriority::EAGER));
 
@@ -903,7 +901,8 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
         entries, std::vector<ObjectId>(entries.size() + 1), &node));
     object_ids[i] = node->GetId();
     sync.AddObject(value.object_id, value.value);
-    std::unique_ptr<const Object> root_object = TryGetObject(object_ids[i]);
+    std::unique_ptr<const Object> root_object =
+        TryGetObject(object_ids[i], PageStorage::Location::NETWORK);
     ftl::StringView root_data;
     ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
     sync.AddObject(object_ids[i], root_data.ToString());

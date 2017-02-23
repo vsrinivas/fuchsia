@@ -38,6 +38,9 @@ class PageStorage {
     FTL_DISALLOW_COPY_AND_ASSIGN(CommitIdAndBytes);
   };
 
+  // Location where to search an object. See |GetObject| call for usage.
+  enum Location { LOCAL, NETWORK };
+
   PageStorage() {}
   virtual ~PageStorage() {}
 
@@ -124,9 +127,13 @@ class PageStorage {
       int64_t size,
       const std::function<void(Status, ObjectId)>& callback) = 0;
   // Finds the Object associated with the given |object_id|. The result or an
-  // an error will be returned through the given |callback|.
+  // an error will be returned through the given |callback|. If |location| is
+  // LOCAL, only local storage will be checked. If |location| is NETWORK, then
+  // a network request may be made if the requested object is not present
+  // locally.
   virtual void GetObject(
       ObjectIdView object_id,
+      Location location,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) = 0;
 

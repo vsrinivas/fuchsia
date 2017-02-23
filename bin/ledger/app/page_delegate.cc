@@ -114,11 +114,12 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
   auto tracked_callback = TrackCallback(std::move(callback));
   storage::ObjectIdView object_id(reference->opaque_id);
   storage_->GetObject(
-      object_id, ftl::MakeCopyable([
+      object_id, storage::PageStorage::Location::LOCAL,
+      ftl::MakeCopyable([
         this, key = std::move(key), object_id = object_id.ToString(), priority,
         callback = std::move(tracked_callback)
       ](storage::Status status,
-                 std::unique_ptr<const storage::Object> object) mutable {
+        std::unique_ptr<const storage::Object> object) mutable {
         if (status != storage::Status::OK) {
           callback(
               PageUtils::ConvertStatus(status, Status::REFERENCE_NOT_FOUND));
@@ -294,7 +295,8 @@ void PageDelegate::CommitJournal(
   in_progress_journals_.push_back(std::move(journal));
 
   journal_ptr->Commit([this, callback, journal_ptr](
-      storage::Status status, std::unique_ptr<const storage::Commit> commit) {
+                          storage::Status status,
+                          std::unique_ptr<const storage::Commit> commit) {
     in_progress_journals_.erase(std::remove_if(
         in_progress_journals_.begin(), in_progress_journals_.end(),
         [&journal_ptr](const std::unique_ptr<storage::Journal>& journal) {

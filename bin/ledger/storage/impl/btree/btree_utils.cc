@@ -20,15 +20,15 @@ using HashResultType = decltype(murmurhash(nullptr, 0, 0));
 using HashSliceType = uint8_t;
 
 union Hash {
-    HashResultType hash;
-    HashSliceType slices[sizeof(HashResultType) / sizeof(HashSliceType)];
+  HashResultType hash;
+  HashSliceType slices[sizeof(HashResultType) / sizeof(HashSliceType)];
 };
 
 Hash FastHash(convert::ExtendedStringView value) {
   static_assert(sizeof(Hash::slices) == sizeof(Hash::hash),
                 "Hash size is incorrect.");
 
-  return { .hash =  murmurhash(value.data(), value.size(), kMurmurHashSeed) };
+  return {.hash = murmurhash(value.data(), value.size(), kMurmurHashSeed)};
 }
 
 // Helper functions for btree::ForEach.
@@ -621,7 +621,8 @@ void GetObjectsFromSync(ObjectIdView root_id,
           Status::OK);
   auto on_next = [page_storage, waiter_](EntryAndNodeId e) {
     if (e.entry.priority == KeyPriority::EAGER) {
-      page_storage->GetObject(e.entry.object_id, waiter_->NewCallback());
+      page_storage->GetObject(e.entry.object_id, PageStorage::Location::NETWORK,
+                              waiter_->NewCallback());
     }
     return true;
   };

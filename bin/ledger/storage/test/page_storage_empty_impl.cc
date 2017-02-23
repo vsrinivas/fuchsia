@@ -112,6 +112,7 @@ void PageStorageEmptyImpl::AddObjectFromLocal(
 
 void PageStorageEmptyImpl::GetObject(
     ObjectIdView object_id,
+    Location location,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
   FTL_NOTIMPLEMENTED();

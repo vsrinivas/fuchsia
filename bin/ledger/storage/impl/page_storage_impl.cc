@@ -580,20 +580,26 @@ void PageStorageImpl::AddObjectFromLocal(
     mx::socket data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
-  AddObject(std::move(data), size, [ this, callback = std::move(callback) ](
-                                       Status status, ObjectId object_id) {
-    untracked_objects_.insert(object_id);
-    callback(status, std::move(object_id));
-  });
+  AddObject(std::move(data), size,
+            [ this, callback = std::move(callback) ](Status status,
+                                                     ObjectId object_id) {
+              untracked_objects_.insert(object_id);
+              callback(status, std::move(object_id));
+            });
 }
 
 void PageStorageImpl::GetObject(
     ObjectIdView object_id,
+    Location location,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
   std::string file_path = GetFilePath(object_id);
   if (!files::IsFile(file_path)) {
-    GetObjectFromSync(object_id, callback);
+    if (location == Location::NETWORK) {
+      GetObjectFromSync(object_id, callback);
+    } else {
+      callback(Status::NOT_FOUND, nullptr);
+    }
     return;
   }
   callback(Status::OK, std::make_unique<ObjectImpl>(object_id.ToString(),

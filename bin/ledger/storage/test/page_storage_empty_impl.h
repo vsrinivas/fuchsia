@@ -74,6 +74,7 @@ class PageStorageEmptyImpl : public PageStorage {
 
   void GetObject(
       ObjectIdView object_id,
+      Location location,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) override;
 

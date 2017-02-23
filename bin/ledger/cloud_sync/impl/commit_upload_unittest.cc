@@ -78,6 +78,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
   void GetObject(
       storage::ObjectIdView object_id,
+      Location location,
       const std::function<void(storage::Status,
                                std::unique_ptr<const storage::Object>)>&
           callback) override {
