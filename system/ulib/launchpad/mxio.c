@@ -56,10 +56,6 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
     return launchpad_get_status(lp);
 }
 
-mx_status_t launchpad_clone_mxio_root(launchpad_t* lp) {
-    return launchpad_clone(lp, LP_CLONE_MXIO_ROOT);
-}
-
 mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd) {
     mx_handle_t handles[MXIO_MAX_HANDLES];
     uint32_t types[MXIO_MAX_HANDLES];
