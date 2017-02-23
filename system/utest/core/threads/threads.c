@@ -25,15 +25,18 @@ static void busy_thread_fn(void* arg) {
     while (true) {
         ++i;
     }
+    __builtin_trap();
 }
 
 static void sleep_thread_fn(void* arg) {
     mx_nanosleep(MX_TIME_INFINITE);
+    __builtin_trap();
 }
 
 static void wait_thread_fn(void* arg) {
     mx_handle_t event = *(mx_handle_t*)arg;
     mx_object_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
+    __builtin_trap();
 }
 
 static bool start_thread(mxr_thread_entry_t entry, void* arg,
