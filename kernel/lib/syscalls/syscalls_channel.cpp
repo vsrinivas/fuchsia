@@ -201,6 +201,9 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
     LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u flags 0x%x\n",
             handle_value, _bytes, num_bytes, _handles, num_handles, flags);
 
+    if (flags)
+        return ERR_INVALID_ARGS;
+
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ChannelDispatcher> channel;

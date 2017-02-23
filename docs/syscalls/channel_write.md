@@ -44,7 +44,7 @@ are not a valid handle.
 
 **ERR_INVALID_ARGS**  *bytes* is an invalid pointer, or *handles*
 is an invalid pointer, or if there are duplicates among the handles
-in the *handles* array.
+in the *handles* array, or *flags* is nonzero.
 
 **ERR_NOT_SUPPORTED** *handle* was found in the *handles* array, or
 one of the handles in *handles* was *handle* (the handle to the
