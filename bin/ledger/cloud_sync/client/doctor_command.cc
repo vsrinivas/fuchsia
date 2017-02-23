@@ -184,11 +184,9 @@ void DoctorCommand::CheckObjects() {
         if (status != cloud_provider::Status::OK) {
           error(status);
           hint(ftl::Concatenate(
-              {"It seems that we can't access the Firebase instance. "
-               "Please verify that you can access ",
-               FirebaseUrlFromId(firebase_id_),
-               " on your host machine. If not, refer to the User Guide for the "
-               "recommended Firebase configuration."}));
+              {"It seems that we can't access Firebase Storage / GCS server. "
+               "Please refer to the User Guide for the "
+               "recommended Firebase Storage configuration."}));
           on_done_();
           return;
         }
@@ -247,6 +245,12 @@ void DoctorCommand::CheckCommits() {
                           request_start ](cloud_provider::Status status) {
         if (status != cloud_provider::Status::OK) {
           error(status);
+          hint(ftl::Concatenate(
+              {"It seems that we can't access the Firebase instance. "
+               "Please verify that you can access ",
+               FirebaseUrlFromId(firebase_id_),
+               " on your host machine. If not, refer to the User Guide for the "
+               "recommended Firebase configuration."}));
           on_done_();
           return;
         }
