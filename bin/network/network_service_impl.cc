@@ -4,7 +4,6 @@
 
 #include "network_service_impl.h"
 
-#include <thread>
 #include <utility>
 
 #include "apps/network/net_adapters.h"
@@ -15,7 +14,7 @@
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/mtl/threading/thread.h"
 
 namespace network {
 
@@ -40,7 +39,8 @@ class NetworkServiceImpl::UrlLoaderContainer
 
   void Start() {
     stopped_ = false;
-    thread_ = mtl::CreateThread(&io_task_runner_);
+    thread_.Run();
+    io_task_runner_ = thread_.TaskRunner();
     io_task_runner_->PostTask([this] { StartOnIOThread(); });
   }
 
@@ -90,7 +90,7 @@ class NetworkServiceImpl::UrlLoaderContainer
     if (joined_)
       return;
     joined_ = true;
-    thread_.join();
+    thread_.Join();
     if (on_inactive_)
       on_inactive_();
     if (on_done_)
@@ -125,7 +125,7 @@ class NetworkServiceImpl::UrlLoaderContainer
   URLLoaderImpl::Coordinator* top_coordinator_;
   ftl::Closure on_inactive_;
   ftl::Closure on_done_;
-  std::thread thread_;
+  mtl::Thread thread_;
   bool stopped_ = true;
   bool joined_ = false;
 
