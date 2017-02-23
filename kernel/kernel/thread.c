@@ -791,8 +791,10 @@ status_t thread_sleep_etc(lk_time_t delay, bool interruptable)
         goto out;
     }
 
-    /* set a one shot timer to wake us up and reschedule */
-    timer_set_oneshot(&timer, delay, thread_sleep_handler, (void *)current_thread);
+    if (delay != INFINITE_TIME) {
+        /* set a one shot timer to wake us up and reschedule */
+        timer_set_oneshot(&timer, delay, thread_sleep_handler, (void *)current_thread);
+    }
     current_thread->state = THREAD_SLEEPING;
     current_thread->blocked_status = NO_ERROR;
 
@@ -802,8 +804,10 @@ status_t thread_sleep_etc(lk_time_t delay, bool interruptable)
 
     blocked_status = current_thread->blocked_status;
 
-    /* always cancel the timer, since we may be racing with the timer tick on other cpus */
-    timer_cancel(&timer);
+    if (delay != INFINITE_TIME) {
+        /* always cancel the timer, since we may be racing with the timer tick on other cpus */
+        timer_cancel(&timer);
+    }
 
 out:
     THREAD_UNLOCK(state);
