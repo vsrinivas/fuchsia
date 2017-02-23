@@ -13,6 +13,7 @@
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/configuration/load_configuration.h"
 #include "apps/ledger/src/environment/environment.h"
+#include "apps/ledger/src/glue/system/run_in_thread.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/lib/trace/provider.h"
@@ -85,13 +86,24 @@ class App {
 }  // namespace ledger
 
 int main(int argc, const char** argv) {
-  mtl::MessageLoop loop;
+  int app_result;
+  int thread_result = ledger::RunInThread<int>(
+      []() {
 
-  ledger::App app;
-  if (!app.Start(loop.task_runner())) {
-    return 1;
+        mtl::MessageLoop loop;
+
+        ledger::App app;
+        if (!app.Start(loop.task_runner())) {
+          return 1;
+        }
+
+        loop.Run();
+        return 0;
+      },
+      &app_result);
+
+  if (thread_result != 0) {
+    return thread_result;
   }
-
-  loop.Run();
-  return 0;
+  return app_result;
 }
