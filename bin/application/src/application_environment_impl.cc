@@ -10,7 +10,6 @@
 #include <magenta/status.h>
 #include <magenta/syscalls.h>
 #include <mx/process.h>
-#include <mxio/util.h>
 #include <unistd.h>
 
 #include <utility>

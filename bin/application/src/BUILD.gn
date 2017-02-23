@@ -36,6 +36,5 @@ executable("application_manager") {
 
   libs = [
     "launchpad",
-    "mxio",
   ]
 }

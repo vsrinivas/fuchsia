@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magenta/process.h>
 #include <magenta/processargs.h>
-#include <mxio/util.h>
 #include <stdlib.h>
 
 #include <string>
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 
   std::unique_ptr<app::CommandListener> command_listener;
   mx::channel command_channel(
-      mxio_get_startup_handle(MX_HND_TYPE_APPLICATION_LAUNCHER));
+      mx_get_startup_handle(MX_HND_TYPE_APPLICATION_LAUNCHER));
   if (command_channel) {
     command_listener.reset(new app::CommandListener(
         root.environment(), std::move(command_channel)));

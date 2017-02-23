@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magenta/process.h>
 #include <magenta/processargs.h>
-#include <mxio/util.h>
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
@@ -26,9 +26,9 @@ ApplicationContext::~ApplicationContext() = default;
 std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfo() {
   mx_handle_t environment =
-      mxio_get_startup_handle(MX_HND_TYPE_APPLICATION_ENVIRONMENT);
+      mx_get_startup_handle(MX_HND_TYPE_APPLICATION_ENVIRONMENT);
   mx_handle_t services =
-      mxio_get_startup_handle(MX_HND_TYPE_APPLICATION_SERVICES);
+      mx_get_startup_handle(MX_HND_TYPE_APPLICATION_SERVICES);
 
   FTL_CHECK(environment != MX_HANDLE_INVALID)
       << "Maybe you meant to run with bootstrap (@) ?";
