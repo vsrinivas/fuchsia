@@ -1012,17 +1012,6 @@ mx_status_t launchpad_go(launchpad_t* lp, mx_handle_t* proc, const char** errmsg
     return h;
 }
 
-mx_status_t launchpad_arguments(launchpad_t* lp,
-                                int argc, const char* const* argv) {
-    return launchpad_set_args(lp, argc, argv);
-}
-
-mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp) {
-    return launchpad_set_environ(lp, envp);
-}
-
-
-
 #include <launchpad/vmo.h>
 
 static mx_status_t launchpad_elf_load_with_vdso(launchpad_t* lp, mx_handle_t vmo) {
