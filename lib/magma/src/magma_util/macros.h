@@ -8,8 +8,11 @@
 #include <assert.h>
 #include <limits.h> // PAGE_SIZE
 #include <stdarg.h>
-#include <stdint.h>
 #include <stdio.h>
+
+// Files #including macros.h may assume that it #includes inttypes.h.
+// So, for convenience, they don't need to follow "#include-what-you-use" for that header.
+#include <inttypes.h>
 
 #ifndef MAGMA_DEBUG_INTERNAL_USE_ONLY
 #error MAGMA_DEBUG_INTERNAL_USE_ONLY not defined, your gn foo needs magma_util_config
