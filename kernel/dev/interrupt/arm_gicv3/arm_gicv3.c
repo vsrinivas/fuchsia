@@ -247,20 +247,24 @@ status_t configure_interrupt(unsigned int vector,
                              enum interrupt_trigger_mode tm,
                              enum interrupt_polarity pol)
 {
-    if (vector >= MAX_INT)
+    if (vector <= 15 || vector >= MAX_INT) {
         return ERR_INVALID_ARGS;
-
-    if (tm != IRQ_TRIGGER_MODE_EDGE) {
-        // We don't currently support non-edge triggered interupts via the GIC,
-        // and we pre-initialize everything to edge triggered.
-        // TODO: re-evaluate this.
-        return ERR_NOT_SUPPORTED;
     }
 
     if (pol != IRQ_POLARITY_ACTIVE_HIGH) {
         // TODO: polarity should actually be configure through a GPIO controller
         return ERR_NOT_SUPPORTED;
     }
+
+    uint reg = vector / 16;
+    uint mask = 0x2 << ((vector % 16) * 2);
+    uint32_t val = GICREG(0, GICD_ICFGR(reg));
+    if (tm == IRQ_TRIGGER_MODE_EDGE) {
+        val |= mask;
+    } else {
+        val &= ~mask;
+    }
+    GICREG(0, GICD_ICFGR(reg)) = val;
 
     return NO_ERROR;
 }
