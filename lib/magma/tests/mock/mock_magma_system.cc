@@ -114,3 +114,16 @@ void magma_system_display_page_flip(magma_system_connection* connection, uint64_
 {
     callback(MAGMA_STATUS_OK, data);
 }
+
+magma_status_t magma_system_create_semaphore(magma_system_connection* connection,
+                                             magma_semaphore_t* semaphore_out)
+{
+    return MAGMA_STATUS_OK;
+}
+
+void magma_system_destroy_semaphore(magma_system_connection* connection,
+                                    magma_semaphore_t semaphore)
+{
+}
+
+uint64_t magma_system_get_semaphore_id(magma_semaphore_t semaphore) { return 0; }

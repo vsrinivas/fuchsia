@@ -36,6 +36,8 @@ typedef uint32_t magma_image_tiling_t;
 
 typedef uintptr_t magma_buffer_t;
 
+typedef uintptr_t magma_semaphore_t;
+
 struct magma_system_connection {
     uint32_t magic_;
 };

@@ -41,6 +41,10 @@ struct msd_context {
     int32_t magic_;
 };
 
+struct msd_semaphore {
+    int32_t magic_;
+};
+
 #if defined(__cplusplus)
 }
 #endif

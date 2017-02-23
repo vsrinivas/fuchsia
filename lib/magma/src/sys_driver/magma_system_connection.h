@@ -22,6 +22,13 @@ static inline msd_connection_unique_ptr_t MsdConnectionUniquePtr(msd_connection*
     return msd_connection_unique_ptr_t(conn, &msd_connection_close);
 }
 
+using msd_semaphore_unique_ptr_t = std::unique_ptr<msd_semaphore, decltype(&msd_semaphore_release)>;
+
+static inline msd_semaphore_unique_ptr_t MsdSemaphoreUniquePtr(msd_semaphore* semaphore)
+{
+    return msd_semaphore_unique_ptr_t(semaphore, msd_semaphore_release);
+}
+
 class MagmaSystemDevice;
 
 class MagmaSystemConnection : private MagmaSystemContext::Owner,
@@ -39,6 +46,10 @@ public:
     // other instances remain valid until deleted
     // Returns false if no buffer with the given |id| exists in the map
     bool ReleaseBuffer(uint64_t id) override;
+
+    bool ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override;
+    bool ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type) override;
+
     // Attempts to locate a buffer by |id| in the buffer map and return it.
     // Returns nullptr if the buffer is not found
     std::shared_ptr<MagmaSystemBuffer> LookupBuffer(uint64_t id);
@@ -68,6 +79,8 @@ private:
     msd_connection_unique_ptr_t msd_connection_;
     std::unordered_map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
     std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
+    std::unordered_map<uint64_t, msd_semaphore_unique_ptr_t> semaphore_map_;
+
     bool has_display_capability_;
     bool has_render_capability_;
 };

@@ -18,6 +18,8 @@ namespace magma {
 enum OpCode {
     ImportBuffer,
     ReleaseBuffer,
+    ImportObject,
+    ReleaseObject,
     CreateContext,
     DestroyContext,
     ExecuteCommandBuffer,
@@ -35,6 +37,19 @@ struct ReleaseBufferOp {
     const OpCode opcode = ReleaseBuffer;
     static constexpr uint32_t kNumHandles = 0;
     uint64_t buffer_id;
+} __attribute__((packed));
+
+struct ImportObjectOp {
+    const OpCode opcode = ImportObject;
+    uint32_t object_type;
+    static constexpr uint32_t kNumHandles = 1;
+} __attribute__((packed));
+
+struct ReleaseObjectOp {
+    const OpCode opcode = ReleaseObject;
+    static constexpr uint32_t kNumHandles = 0;
+    uint64_t object_id;
+    uint32_t object_type;
 } __attribute__((packed));
 
 struct CreateContextOp {
@@ -155,6 +170,14 @@ public:
                 success = ReleaseBuffer(
                     OpCast<ReleaseBufferOp>(bytes, actual_bytes, handles, actual_handles));
                 break;
+            case OpCode::ImportObject:
+                success = ImportObject(
+                    OpCast<ImportObjectOp>(bytes, actual_bytes, handles, actual_handles), handles);
+                break;
+            case OpCode::ReleaseObject:
+                success = ReleaseObject(
+                    OpCast<ReleaseObjectOp>(bytes, actual_bytes, handles, actual_handles));
+                break;
             case OpCode::CreateContext:
                 success = CreateContext(
                     OpCast<CreateContextOp>(bytes, actual_bytes, handles, actual_handles));
@@ -221,6 +244,27 @@ private:
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->ReleaseBuffer(op->buffer_id))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+        return true;
+    }
+
+    bool ImportObject(ImportObjectOp* op, mx_handle_t* handle)
+    {
+        DLOG("Operation: ImportObject");
+        if (!op)
+            return DRETF(false, "malformed message");
+        if (!delegate_->ImportObject(*handle, static_cast<PlatformObject::Type>(op->object_type)))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+        return true;
+    }
+
+    bool ReleaseObject(ReleaseObjectOp* op)
+    {
+        DLOG("Operation: ReleaseObject");
+        if (!op)
+            return DRETF(false, "malformed message");
+        if (!delegate_->ReleaseObject(op->object_id,
+                                      static_cast<PlatformObject::Type>(op->object_type)))
             SetError(MAGMA_STATUS_INVALID_ARGS);
         return true;
     }
@@ -373,6 +417,34 @@ public:
     {
         ReleaseBufferOp op;
         op.buffer_id = buffer_id;
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != MAGMA_STATUS_OK)
+            return DRET_MSG(result, "failed to write to channel");
+
+        return MAGMA_STATUS_OK;
+    }
+
+    magma_status_t ImportObject(uint32_t handle, PlatformObject::Type object_type) override
+    {
+        mx_handle_t duplicate_handle_mx = handle;
+
+        ImportObjectOp op;
+        op.object_type = object_type;
+
+        magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_mx, 1);
+        if (result != MAGMA_STATUS_OK) {
+            mx_handle_close(handle);
+            return DRET_MSG(result, "failed to write to channel");
+        }
+
+        return MAGMA_STATUS_OK;
+    }
+
+    magma_status_t ReleaseObject(uint64_t object_id, PlatformObject::Type object_type) override
+    {
+        ReleaseObjectOp op;
+        op.object_id = object_id;
+        op.object_type = object_type;
         magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
         if (result != MAGMA_STATUS_OK)
             return DRET_MSG(result, "failed to write to channel");

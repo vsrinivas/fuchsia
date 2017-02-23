@@ -93,3 +93,10 @@ MsdMockBufferManager* MsdMockBufferManager::ScopedMockBufferManager::get()
 }
 
 MsdMockContext::~MsdMockContext() { connection_->DestroyContext(this); }
+
+magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore** semaphore_out)
+{
+    return MAGMA_STATUS_INVALID_ARGS;
+}
+
+void msd_semaphore_release(msd_semaphore* semaphore) {}

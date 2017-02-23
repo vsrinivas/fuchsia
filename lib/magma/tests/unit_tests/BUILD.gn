@@ -109,6 +109,7 @@ source_set("msd_abi_conformance_tests") {
     "test_msd_context.cc",
     "test_msd_device.cc",
     "test_msd_driver.cc",
+    "test_msd_semaphore.cc",
   ]
 
   deps = [

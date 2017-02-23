@@ -27,5 +27,6 @@ source_set("sys_driver") {
   deps = [
     "$magma_build_root/src/magma_util/platform:connection",
     "$magma_build_root/src/magma_util/platform:device",
+    "$magma_build_root/src/magma_util/platform:semaphore",
   ]
 }

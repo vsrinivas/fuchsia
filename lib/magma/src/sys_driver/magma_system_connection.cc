@@ -160,6 +160,49 @@ bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
     return true;
 }
 
+bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject::Type object_type)
+{
+    auto device = device_.lock();
+    if (!device)
+        return DRETF(false, "failed to lock device");
+
+    switch (object_type) {
+        case magma::PlatformObject::SEMAPHORE: {
+            uint64_t id;
+            if (!magma::PlatformObject::IdFromHandle(handle, &id))
+                return DRETF(false, "failed to get semaphore id for handle");
+
+            auto iter = semaphore_map_.find(id);
+            if (iter != semaphore_map_.end())
+                return true;
+
+            msd_semaphore* abi_semaphore;
+            magma_status_t status = msd_semaphore_import(handle, &abi_semaphore);
+            if (status != MAGMA_STATUS_OK)
+                return DRETF(false, "msd_semaphore_import failed: %d", status);
+
+            semaphore_map_.insert(std::make_pair(id, MsdSemaphoreUniquePtr(abi_semaphore)));
+        } break;
+    }
+
+    return true;
+}
+
+bool MagmaSystemConnection::ReleaseObject(uint64_t object_id,
+                                          magma::PlatformObject::Type object_type)
+{
+    switch (object_type) {
+        case magma::PlatformObject::SEMAPHORE: {
+            auto iter = semaphore_map_.find(object_id);
+            if (iter == semaphore_map_.end())
+                return DRETF(false, "Attempting to free invalid semaphore id 0x%x", object_id);
+
+            semaphore_map_.erase(iter);
+        } break;
+    }
+    return true;
+}
+
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint64_t id)
 {
     auto iter = buffer_map_.find(id);

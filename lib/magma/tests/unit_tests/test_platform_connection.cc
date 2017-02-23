@@ -41,6 +41,27 @@ public:
         EXPECT_EQ(ipc_connection_->GetError(), 0);
     }
 
+    void TestImportObject()
+    {
+        auto semaphore = magma::PlatformSemaphore::Create();
+        test_semaphore_id = semaphore->id();
+        uint32_t handle;
+        EXPECT_TRUE(semaphore->duplicate_handle(&handle));
+        EXPECT_EQ(ipc_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
+        EXPECT_EQ(ipc_connection_->GetError(), 0);
+    }
+    void TestReleaseObject()
+    {
+        auto semaphore = magma::PlatformSemaphore::Create();
+        test_semaphore_id = semaphore->id();
+        uint32_t handle;
+        EXPECT_TRUE(semaphore->duplicate_handle(&handle));
+        EXPECT_EQ(ipc_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
+        EXPECT_EQ(
+            ipc_connection_->ReleaseObject(test_semaphore_id, magma::PlatformObject::SEMAPHORE), 0);
+        EXPECT_EQ(ipc_connection_->GetError(), 0);
+    }
+
     void TestCreateContext()
     {
         uint32_t context_id;
@@ -86,6 +107,7 @@ public:
 
     static uint64_t test_buffer_id;
     static uint32_t test_context_id;
+    static uint64_t test_semaphore_id;
     static magma_status_t test_error;
     static bool test_complete;
 
@@ -101,6 +123,7 @@ private:
 };
 
 uint64_t TestPlatformConnection::test_buffer_id;
+uint64_t TestPlatformConnection::test_semaphore_id;
 uint32_t TestPlatformConnection::test_context_id;
 magma_status_t TestPlatformConnection::test_error;
 bool TestPlatformConnection::test_complete;
@@ -117,6 +140,20 @@ public:
     bool ReleaseBuffer(uint64_t buffer_id) override
     {
         EXPECT_EQ(buffer_id, TestPlatformConnection::test_buffer_id);
+        TestPlatformConnection::test_complete = true;
+        return true;
+    }
+
+    bool ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override
+    {
+        auto semaphore = magma::PlatformSemaphore::Import(handle);
+        EXPECT_EQ(semaphore->id(), TestPlatformConnection::test_semaphore_id);
+        TestPlatformConnection::test_complete = true;
+        return true;
+    }
+    bool ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type) override
+    {
+        EXPECT_EQ(object_id, TestPlatformConnection::test_semaphore_id);
         TestPlatformConnection::test_complete = true;
         return true;
     }
@@ -197,6 +234,20 @@ TEST(PlatformConnection, ReleaseBuffer)
     auto Test = TestPlatformConnection::Create();
     ASSERT_NE(Test, nullptr);
     Test->TestReleaseBuffer();
+}
+
+TEST(PlatformConnection, ImportObject)
+{
+    auto Test = TestPlatformConnection::Create();
+    ASSERT_NE(Test, nullptr);
+    Test->TestImportObject();
+}
+
+TEST(PlatformConnection, ReleaseObject)
+{
+    auto Test = TestPlatformConnection::Create();
+    ASSERT_NE(Test, nullptr);
+    Test->TestReleaseObject();
 }
 
 TEST(PlatformConnection, CreateContext)

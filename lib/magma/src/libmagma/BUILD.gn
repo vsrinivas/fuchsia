@@ -9,6 +9,7 @@ source_set("libmagma") {
     "$magma_build_root/include:sys_abi",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:semaphore",
   ]
 
   sources = [

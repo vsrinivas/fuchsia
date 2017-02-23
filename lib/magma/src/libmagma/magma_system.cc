@@ -6,6 +6,7 @@
 #include "magenta/magenta_platform_ioctl.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
+#include "platform_semaphore.h"
 
 magma_system_connection* magma_system_open(int fd, uint32_t capabilities)
 {
@@ -176,4 +177,38 @@ void magma_system_display_page_flip(magma_system_connection* connection, magma_b
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
     magma::PlatformIpcConnection::cast(connection)->PageFlip(platform_buffer->id(), callback, data);
+}
+
+magma_status_t magma_system_create_semaphore(magma_system_connection* connection,
+                                             magma_semaphore_t* semaphore_out)
+{
+    auto semaphore = magma::PlatformSemaphore::Create();
+    if (!semaphore)
+        return MAGMA_STATUS_MEMORY_ERROR;
+
+    uint32_t handle;
+    if (!semaphore->duplicate_handle(&handle))
+        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
+
+    magma_status_t result = magma::PlatformIpcConnection::cast(connection)
+                                ->ImportObject(handle, magma::PlatformObject::SEMAPHORE);
+    if (result != MAGMA_STATUS_OK)
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to ImportObject");
+
+    *semaphore_out = reinterpret_cast<magma_semaphore_t>(semaphore.release());
+    return MAGMA_STATUS_OK;
+}
+
+void magma_system_destroy_semaphore(magma_system_connection* connection,
+                                    magma_semaphore_t semaphore)
+{
+    auto platform_semaphore = reinterpret_cast<magma::PlatformSemaphore*>(semaphore);
+    magma::PlatformIpcConnection::cast(connection)
+        ->ReleaseObject(platform_semaphore->id(), magma::PlatformObject::SEMAPHORE);
+    delete platform_semaphore;
+}
+
+uint64_t magma_system_get_semaphore_id(magma_semaphore_t semaphore)
+{
+    return reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->id();
 }

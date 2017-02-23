@@ -76,6 +76,12 @@ struct msd_buffer* msd_buffer_import(uint32_t handle);
 // This releases buf's reference to the underlying platform buffer
 void msd_buffer_destroy(struct msd_buffer* buf);
 
+// Imports the given handle as a semaphore.
+magma_status_t msd_semaphore_import(uint32_t handle, struct msd_semaphore** semaphore_out);
+
+// Releases the given semaphore.
+void msd_semaphore_release(struct msd_semaphore* semaphore);
+
 #if defined(__cplusplus)
 }
 #endif

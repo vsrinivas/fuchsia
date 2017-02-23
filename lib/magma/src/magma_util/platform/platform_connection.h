@@ -10,6 +10,8 @@
 #include "magma_util/status.h"
 #include "platform_buffer.h"
 #include "platform_event.h"
+#include "platform_object.h"
+#include "platform_semaphore.h"
 
 #include <memory>
 
@@ -27,6 +29,12 @@ public:
     // Destroys the buffer with |buffer_id| within this connection
     // returns false if |buffer_id| has not been imported
     virtual magma_status_t ReleaseBuffer(uint64_t buffer_id) = 0;
+
+    // Imports an object for use in the system driver
+    virtual magma_status_t ImportObject(uint32_t handle, PlatformObject::Type object_type) = 0;
+
+    // Releases the connection's reference to the given object.
+    virtual magma_status_t ReleaseObject(uint64_t object_id, PlatformObject::Type object_type) = 0;
 
     // Creates a context and returns the context id
     virtual void CreateContext(uint32_t* context_id_out) = 0;
@@ -65,6 +73,9 @@ public:
         virtual ~Delegate() {}
         virtual bool ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) = 0;
         virtual bool ReleaseBuffer(uint64_t buffer_id) = 0;
+
+        virtual bool ImportObject(uint32_t handle, PlatformObject::Type object_type) = 0;
+        virtual bool ReleaseObject(uint64_t object_id, PlatformObject::Type object_type) = 0;
 
         virtual bool CreateContext(uint32_t context_id) = 0;
         virtual bool DestroyContext(uint32_t context_id) = 0;

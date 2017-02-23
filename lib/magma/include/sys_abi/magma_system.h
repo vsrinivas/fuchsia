@@ -73,6 +73,17 @@ void magma_system_display_page_flip(struct magma_system_connection* connection,
                                     magma_buffer_t buffer,
                                     magma_system_pageflip_callback_t callback, void* data);
 
+// Creates a semaphore on the given connection.
+magma_status_t magma_system_create_semaphore(magma_system_connection* connection,
+                                             magma_semaphore_t* semaphore_out);
+
+// Destroys the given semaphore.
+void magma_system_destroy_semaphore(magma_system_connection* connection,
+                                    magma_semaphore_t semaphore);
+
+// Returns the object id for the given semaphore.
+uint64_t magma_system_get_semaphore_id(magma_semaphore_t semaphore);
+
 #if defined(__cplusplus)
 }
 #endif
