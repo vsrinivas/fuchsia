@@ -53,12 +53,14 @@ this makes the database data world-readable and world-writeable)
   "rules": {
     ".read": true,
     ".write": true,
-    "$user": {
-      "$version": {
-        "$app": {
-          "$page": {
-            "commits": {
-              ".indexOn": ["timestamp"]
+    "$prefix": {
+      "$user": {
+        "$version": {
+          "$app": {
+            "$page": {
+              "commits": {
+                ".indexOn": ["timestamp"]
+              }
             }
           }
         }

@@ -13,6 +13,7 @@ namespace cloud_sync {
 namespace {
 constexpr char kGcsSeparator[] = "%2F";
 constexpr char kFirebaseSeparator[] = "/";
+constexpr char kDefaultCloudPrefix[] = "__default__";
 }  // namespace
 
 // Even though this yields a path to be used in GCS, we use Firebase key
@@ -21,13 +22,12 @@ constexpr char kFirebaseSeparator[] = "/";
 std::string GetGcsPrefixForApp(ftl::StringView cloud_prefix,
                                ftl::StringView user_id,
                                ftl::StringView app_id) {
-  return (cloud_prefix.empty()
-              ? ""
-              : ftl::Concatenate(
-                    {firebase::EncodeKey(cloud_prefix), kGcsSeparator})) +
-         ftl::Concatenate({firebase::EncodeKey(user_id), kGcsSeparator,
-                           storage::kSerializationVersion, kGcsSeparator,
-                           firebase::EncodeKey(app_id)});
+  ftl::StringView cloud_prefix_or_default =
+      cloud_prefix.empty() ? kDefaultCloudPrefix : cloud_prefix;
+  return ftl::Concatenate({firebase::EncodeKey(cloud_prefix_or_default),
+                           kGcsSeparator, firebase::EncodeKey(user_id),
+                           kGcsSeparator, storage::kSerializationVersion,
+                           kGcsSeparator, firebase::EncodeKey(app_id)});
 }
 
 std::string GetGcsPrefixForPage(ftl::StringView app_path,
@@ -39,13 +39,12 @@ std::string GetGcsPrefixForPage(ftl::StringView app_path,
 std::string GetFirebasePathForApp(ftl::StringView cloud_prefix,
                                   ftl::StringView user_id,
                                   ftl::StringView app_id) {
-  return (cloud_prefix.empty()
-              ? ""
-              : ftl::Concatenate(
-                    {firebase::EncodeKey(cloud_prefix), kFirebaseSeparator})) +
-         ftl::Concatenate({firebase::EncodeKey(user_id), kFirebaseSeparator,
-                           storage::kSerializationVersion, kFirebaseSeparator,
-                           firebase::EncodeKey(app_id)});
+  ftl::StringView cloud_prefix_or_default =
+      cloud_prefix.empty() ? kDefaultCloudPrefix : cloud_prefix;
+  return ftl::Concatenate({firebase::EncodeKey(cloud_prefix_or_default),
+                           kFirebaseSeparator, firebase::EncodeKey(user_id),
+                           kFirebaseSeparator, storage::kSerializationVersion,
+                           kFirebaseSeparator, firebase::EncodeKey(app_id)});
 }
 
 std::string GetFirebasePathForPage(ftl::StringView app_path,
