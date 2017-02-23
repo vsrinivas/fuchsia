@@ -37,7 +37,7 @@ int create_ramdisk(const char* ramdisk_name, char* ramdisk_path_out) {
     }
     ramdisk_ioctl_config_t config;
     config.blk_size = 512;
-    config.blk_count = (1 << 20);
+    config.blk_count = (1 << 22);
     strcpy(config.name, ramdisk_name);
     ssize_t r = ioctl_ramdisk_config(fd, &config);
     if (r != NO_ERROR) {

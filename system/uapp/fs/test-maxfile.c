@@ -23,14 +23,16 @@ int test_maxfile(fs_info_t* info) {
     ssize_t r;
     for (;;) {
         if ((r = write(fd, data, sizeof(data))) < 0) {
-            // TODO(smklein): ENOSPC? EFBIG?
-            if (errno == ENOMEM || errno == EFBIG) {
+            fprintf(stderr, "bigfile received error: %s\n", strerror(errno));
+            if (errno == EFBIG) {
+                fprintf(stderr, "(This was an expected error)\n");
                 r = 0;
             }
             break;
         }
         sz += r;
         if (r < (ssize_t)(sizeof(data))) {
+            fprintf(stderr, "bigfile write short write of %ld bytes\n", r);
             break;
         }
         fprintf(stderr, "wrote %d bytes\n", (int)sz);
