@@ -91,8 +91,7 @@ public:
             // I2C write
             assert(request->size == 4 + dp_size);
 
-            bool ok = i2c_.I2cWrite(addr, &request->data[4], dp_size);
-            assert(ok);
+            ASSERT_TRUE(i2c_.I2cWrite(addr, &request->data[4], dp_size));
 
             reply->size = 1;
             reply->data[0] = 0; // Header byte: indicates an ack
@@ -103,8 +102,7 @@ public:
             // This is the maximum amount we can read in a single I2C-read-over-DP.
             assert(dp_size <= DpAuxMessage::kMaxBodySize);
 
-            bool ok = i2c_.I2cRead(addr, &reply->data[1], dp_size);
-            assert(ok);
+            ASSERT_TRUE(i2c_.I2cRead(addr, &reply->data[1], dp_size));
             reply->size = 1 + dp_size;
             reply->data[0] = 0; // Header byte: indicates an ack
         } else {
@@ -139,7 +137,7 @@ public:
                                    ~(registers::DDIAuxControl::kSendBusyBit |
                                      (registers::DDIAuxControl::kMessageSizeMask
                                       << registers::DDIAuxControl::kMessageSizeShift));
-            assert(other_flags == registers::DDIAuxControl::kFlags);
+            ASSERT_EQ(other_flags, uint32_t{registers::DDIAuxControl::kFlags});
 
             DpAuxMessage request;
             DpAuxMessage reply;
