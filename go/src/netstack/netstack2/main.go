@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"syscall"
 
 	"apps/netstack/eth"
@@ -24,6 +25,8 @@ import (
 )
 
 var dhcpClient *dhcp.Client
+var routeTables = map[tcpip.NICID][]tcpip.Route{}
+var routeTablesMu sync.Mutex
 
 func main() {
 	log.SetFlags(0)
@@ -44,9 +47,6 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Print("socket dispatcher started")
-
-	// Add default route. This will get clobbered later when we get a DHCP response.
-	stk.SetRouteTable(defaultRouteTable(""))
 
 	arena, err := eth.NewArena()
 	if err != nil {
@@ -101,13 +101,25 @@ func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, a
 		return err
 	}
 
+	// Add default route. This will get clobbered later when we get a DHCP response.
+	routeTablesMu.Lock()
+	routeTables[nicid] = defaultRouteTable(nicid, "")
+	stk.SetRouteTable(flattenRouteTables())
+	routeTablesMu.Unlock()
+
+	s.addNIC(nicid)
+
 	dhcpClient = dhcp.NewClient(stk, nicid, ep.linkAddr)
 	go dhcpClient.Start(func(config dhcp.Config) {
 		// Update default route with new gateway.
-		stk.SetRouteTable(defaultRouteTable(config.Gateway))
+		routeTablesMu.Lock()
+		routeTables[nicid] = defaultRouteTable(nicid, config.Gateway)
+		stk.SetRouteTable(flattenRouteTables())
+		routeTablesMu.Unlock()
+
 		stk.RemoveAddress(nicid, "\xff\xff\xff\xff")
 		stk.RemoveAddress(nicid, "\x00\x00\x00\x00")
-		s.setAddr(dhcpClient.Address(), nicid)
+		s.setAddr(nicid, dhcpClient.Address())
 	})
 	return nil
 }
@@ -134,19 +146,27 @@ func ipv6LinkLocalAddr(linkAddr tcpip.LinkAddress) tcpip.Address {
 	return tcpip.Address(lladdrb[:])
 }
 
-func defaultRouteTable(gateway tcpip.Address) []tcpip.Route {
+func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
 	return []tcpip.Route{
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
 			Mask:        tcpip.Address(strings.Repeat("\x00", 4)),
 			Gateway:     gateway,
-			NIC:         1,
+			NIC:         nicid,
 		},
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 16)),
 			Mask:        tcpip.Address(strings.Repeat("\x00", 16)),
 			Gateway:     gateway,
-			NIC:         1,
+			NIC:         nicid,
 		},
 	}
+}
+
+func flattenRouteTables() []tcpip.Route {
+	routeTable := []tcpip.Route{}
+	for _, table := range routeTables {
+		routeTable = append(routeTable, table...)
+	}
+	return routeTable
 }

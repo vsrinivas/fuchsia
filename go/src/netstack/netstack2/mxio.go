@@ -67,11 +67,11 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 		return nil, err
 	}
 	s := &socketServer{
-		started:    make(chan struct{}),
 		dispatcher: d,
 		stack:      stk,
 		io:         make(map[cookie]*iostate),
 		next:       1,
+		nicData:    make(map[tcpip.NICID]nicData),
 	}
 
 	h, err := devmgrConnect()
@@ -95,11 +95,23 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 	return s, nil
 }
 
-func (s *socketServer) setAddr(addr tcpip.Address, nicid tcpip.NICID) {
+func (s *socketServer) addNIC(nicid tcpip.NICID) {
 	s.mu.Lock()
-	close(s.started)
-	s.addr = addr
-	s.dnsClient = dns.NewClient(s.stack, nicid)
+	s.nicData[nicid] = nicData{
+		started: make(chan struct{}),
+	}
+	if s.dnsClient == nil {
+		// TODO(mpcomplete): Which NIC should we use for DNS requests?
+		s.dnsClient = dns.NewClient(s.stack, nicid)
+	}
+	s.mu.Unlock()
+}
+
+func (s *socketServer) setAddr(nicid tcpip.NICID, addr tcpip.Address) {
+	s.mu.Lock()
+	d := s.nicData[nicid]
+	close(d.started)
+	d.addr = addr
 	s.mu.Unlock()
 }
 
@@ -316,15 +328,19 @@ func (s *socketServer) newIostate() (ios *iostate, peerH, peerS mx.Handle, err e
 }
 
 type socketServer struct {
-	started    chan struct{}
 	dispatcher *dispatcher.Dispatcher
 	stack      tcpip.Stack
 	dnsClient  *dns.Client
 
-	mu   sync.Mutex
-	addr tcpip.Address
-	next cookie
-	io   map[cookie]*iostate
+	mu      sync.Mutex
+	next    cookie
+	nicData map[tcpip.NICID]nicData
+	io      map[cookie]*iostate
+}
+
+type nicData struct {
+	started chan struct{}
+	addr    tcpip.Address
 }
 
 func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH, peerS mx.Handle, err error) {
@@ -456,9 +472,10 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
 	if addr.Addr == "\x00\x00\x00\x00" {
-		<-s.started
+		// TODO(mpcomplete): This is surely wrong.
+		<-s.nicData[addr.NIC].started
 		s.mu.Lock()
-		addr.Addr = s.addr
+		addr.Addr = s.nicData[addr.NIC].addr
 		s.mu.Unlock()
 	}
 	if err != nil {
