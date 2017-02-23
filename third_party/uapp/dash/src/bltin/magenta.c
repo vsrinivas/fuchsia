@@ -225,10 +225,10 @@ int mxc_mv(int argc, char** argv) {
     return 0;
 }
 
-static int mxc_rm_recursive(int atfd, char* path) {
+static int mxc_rm_recursive(int atfd, char* path, bool force) {
     struct stat st;
     if (fstatat(atfd, path, &st, 0)) {
-        return -1;
+        return force ? 0 : -1;
     }
     if (S_ISDIR(st.st_mode)) {
         int dfd = openat(atfd, path, 0, O_DIRECTORY | O_RDWR);
@@ -245,7 +245,7 @@ static int mxc_rm_recursive(int atfd, char* path) {
             if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
                 continue;
             }
-            if (mxc_rm_recursive(dfd, de->d_name) < 0) {
+            if (mxc_rm_recursive(dfd, de->d_name, force) < 0) {
                 closedir(dir);
                 return -1;
             }
@@ -264,26 +264,43 @@ int mxc_rm(int argc, char** argv) {
     argc--;
     argv++;
     bool recursive = false;
-    if (argc > 1) {
-        if (!strcmp(argv[0], "-r")) {
-            recursive = true;
-            argc--;
-            argv++;
+    bool force = false;
+    while (argc >= 1 && argv[0][0] == '-') {
+        char *args = &argv[0][1];
+        if (*args == '\0') {
+            goto usage;
         }
+        do {
+            switch (*args) {
+            case 'r':
+            case 'R':
+                recursive = true;
+                break;
+            case 'f':
+                force = true;
+                break;
+            default:
+                goto usage;
+            }
+            args++;
+        } while (*args != '\0');
+        argc--;
+        argv++;
     }
     if (argc < 1) {
-        fprintf(stderr, "usage: rm [-r] <filename>...\n");
-        return -1;
+        goto usage;
     }
 
     while (argc-- > 0) {
         if (recursive) {
-            if (mxc_rm_recursive(AT_FDCWD, argv[0])) {
+            if (mxc_rm_recursive(AT_FDCWD, argv[0], force)) {
                 goto err;
             }
         } else {
             if (unlink(argv[0])) {
-                goto err;
+                if (errno != ENOENT || !force) {
+                    goto err;
+                }
             }
         }
         argv++;
@@ -292,6 +309,9 @@ int mxc_rm(int argc, char** argv) {
     return 0;
 err:
     fprintf(stderr, "error: failed to delete '%s'\n", argv[0]);
+    return -1;
+usage:
+    fprintf(stderr, "usage: rm [-frR]... <filename>...\n");
     return -1;
 }
 
