@@ -6,6 +6,8 @@ source_set("threading") {
   sources = [
     "create_thread.cc",
     "create_thread.h",
+    "thread.cc",
+    "thread.h",
   ]
 
   deps = [
