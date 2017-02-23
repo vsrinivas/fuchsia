@@ -7,8 +7,8 @@
 
 #include <benchmark/benchmark.h>
 #include <launchpad/launchpad.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
-#include <mxio/util.h>
 
 #include "channels.h"
 
@@ -107,7 +107,7 @@ static bool Launch(const char* arg, int range, mx_handle_t* channel,
 }
 
 int channel_read(uint32_t num_bytes) {
-  mx_handle_t channel = mxio_get_startup_handle(HELPER_HANDLE_ID);
+  mx_handle_t channel = mx_get_startup_handle(HELPER_HANDLE_ID);
   if (channel == MX_HANDLE_INVALID) {
     return -1;
   }
@@ -132,7 +132,7 @@ int channel_read(uint32_t num_bytes) {
 }
 
 int channel_write(uint32_t num_bytes) {
-  mx_handle_t channel = mxio_get_startup_handle(HELPER_HANDLE_ID);
+  mx_handle_t channel = mx_get_startup_handle(HELPER_HANDLE_ID);
   if (channel == MX_HANDLE_INVALID) {
     return -1;
   }
