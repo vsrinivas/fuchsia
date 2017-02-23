@@ -27,11 +27,12 @@ class Thread {
   ftl::RefPtr<ftl::TaskRunner> TaskRunner() const;
 
  private:
-  bool running_;
-  pthread_t thread_;
-  ftl::RefPtr<mtl::internal::IncomingTaskQueue> task_runner_;
-  void Main();
   static void* Entry(void* context);
+  void Main();
+
+  pthread_t thread_;
+  bool running_;
+  ftl::RefPtr<mtl::internal::IncomingTaskQueue> task_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Thread);
 };
