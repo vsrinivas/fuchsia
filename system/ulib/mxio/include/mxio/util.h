@@ -54,13 +54,4 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e);
 // entire log-lines and flush them on newline or buffer full.
 mxio_t* mxio_logger_create(mx_handle_t);
 
-// TODO(MG-228): Remove this once it has no more references.
-#define mxio_get_startup_handle _mxio_get_startup_handle
-static inline
-__attribute__((deprecated("use mx_get_startup_handle() instead.")))
-mx_handle_t _mxio_get_startup_handle(uint32_t id) {
-    extern mx_handle_t mx_get_startup_handle(uint32_t hnd_info);
-    return mx_get_startup_handle(id);
-}
-
 __END_CDECLS
