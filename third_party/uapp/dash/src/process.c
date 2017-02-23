@@ -112,6 +112,20 @@ static mx_status_t launch(const char* filename, int argc, const char* const* arg
     return status;
 }
 
+// Add all function definitions to our nodelist, so we can package them up for a
+// subshell.
+static void
+addfuncdef(struct cmdentry *entry, void *token)
+{
+    if (entry->cmdtype == CMDFUNCTION) {
+        struct nodelist **cmdlist = (struct nodelist **) token;
+        struct nodelist *newnode = ckmalloc(sizeof(struct nodelist));
+        newnode->next = *cmdlist;
+        newnode->n = &entry->u.func->n;
+        *cmdlist = newnode;
+    }
+}
+
 mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t* process, int *fds)
 {
     if (!arg0)
@@ -123,7 +137,16 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
     // TODO(abarth): Handle the redirects properly (i.e., implement
     // redirect(n->nredir.redirect) using launchpad);
     mx_handle_t ast_vmo = MX_HANDLE_INVALID;
-    mx_status_t status = codec_encode(n, &ast_vmo);
+    struct nodelist *nlist = ckmalloc(sizeof(struct nodelist));
+    nlist->n = n;
+    nlist->next = NULL;
+    hashiter(addfuncdef, &nlist);
+    mx_status_t status = codec_encode(nlist, &ast_vmo);
+    while (nlist) {
+        struct nodelist *next = nlist->next;
+        ckfree(nlist);
+        nlist = next;
+    }
     if (status != NO_ERROR)
         return status;
 

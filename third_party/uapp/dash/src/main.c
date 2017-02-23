@@ -213,8 +213,12 @@ evalifsubshell()
 	if (status < 0 || (size_t)num_read != size)
 		exit(status);
 
-	union node *n = codec_decode(buffer, size);
-	evaltreenr(n, EV_EXIT);
+	struct nodelist *nlist = codec_decode(buffer, size);
+	while (nlist->next) {
+		evaltree(nlist->n, 0);
+		nlist = nlist->next;
+	}
+	evaltree(nlist->n, EV_EXIT);
 	/* NOTREACHED */
 }
 

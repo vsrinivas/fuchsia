@@ -178,5 +178,5 @@ struct funcnode {
 
 struct funcnode *copyfunc(union node *);
 void freefunc(struct funcnode *);
-mx_status_t codec_encode(union node *node, mx_handle_t *vmo);
-union node* codec_decode(char *buffer, size_t length);
+mx_status_t codec_encode(struct nodelist *nlist, mx_handle_t *vmo);
+struct nodelist* codec_decode(char *buffer, size_t length);

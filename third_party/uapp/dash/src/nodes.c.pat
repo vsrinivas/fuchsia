@@ -250,17 +250,17 @@ static const size_t kHeaderSize = SHELL_ALIGN(sizeof(funcblocksize));
 //   encountered in a pre-order traversal of the node tree.
 
 mx_status_t
-codec_encode(union node *node, mx_handle_t *vmo)
+codec_encode(struct nodelist *nlist, mx_handle_t *vmo)
 {
 	funcblocksize = 0;
 	funcstringsize = 0;
-	calcsize(node);
+	sizenodelist(nlist);
 	const size_t size = kHeaderSize + funcblocksize + funcstringsize;
 	char buffer[size];
 	memcpy(buffer, &funcblocksize, sizeof(funcblocksize));
 	funcblock = buffer + kHeaderSize;
 	funcstring = buffer + kHeaderSize + funcblocksize;
-	encodenode(node);
+	encodenodelist(nlist);
 	mx_status_t status = mx_vmo_create(size, 0, vmo);
 	if (status != NO_ERROR)
 		return status;
@@ -268,16 +268,18 @@ codec_encode(union node *node, mx_handle_t *vmo)
 	return mx_vmo_write(*vmo, buffer, 0, size, &actual);
 }
 
-union node *codec_decode(char *buffer, size_t length)
+struct nodelist *codec_decode(char *buffer, size_t length)
 {
 	// TODO(abarth): Validate the length.
 	memcpy(&funcblocksize, buffer, sizeof(funcblocksize));
 	funcblock = buffer + kHeaderSize;
 	funcstring = buffer + kHeaderSize + funcblocksize;
-	union node dummy;
-	// We need to use a real union node address to avoid undefined behavior.
-	union node *node = &dummy;
-	decodenode(&node);
-	return node;
+	struct nodelist dummy;
+	// The decodenodelist API is very... unique. It needs the
+	// argument to point to something non-NULL, even though the
+	// argument is otherwise ignored and used as an output parameter.
+	struct nodelist *nlist = &dummy;
+	decodenodelist(&nlist);
+	return nlist;
 }
 

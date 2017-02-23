@@ -252,8 +252,8 @@ output(char *file)
 	fputs("};\n\n\n", hfile);
 	fputs("struct funcnode *copyfunc(union node *);\n", hfile);
 	fputs("void freefunc(struct funcnode *);\n", hfile);
-	fputs("mx_status_t codec_encode(union node *node, mx_handle_t *vmo);\n", hfile);
-	fputs("union node* codec_decode(char *buffer, size_t length);\n", hfile);
+	fputs("mx_status_t codec_encode(struct nodelist *nlist, mx_handle_t *vmo);\n", hfile);
+	fputs("struct nodelist* codec_decode(char *buffer, size_t length);\n", hfile);
 
 	fputs(writer, cfile);
 	while (fgets(line, sizeof line, patfile) != NULL) {

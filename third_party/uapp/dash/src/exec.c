@@ -220,6 +220,20 @@ padvance(const char **path, const char *name)
 
 /*** Command hashing code ***/
 
+void
+hashiter(void (*fn) (struct cmdentry *, void *), void *token)
+{
+	struct tblentry **pp;
+	struct tblentry *cmdp;
+        struct cmdentry entry;
+	for (pp = cmdtable ; pp < &cmdtable[CMDTABLESIZE] ; pp++) {
+		for (cmdp = *pp ; cmdp ; cmdp = cmdp->next) {
+			entry.cmdtype = cmdp->cmdtype;
+			entry.u = cmdp->param;
+			fn(&entry, token);
+		}
+	}
+}
 
 int
 hashcmd(int argc, char **argv)

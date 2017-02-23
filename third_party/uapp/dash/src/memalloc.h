@@ -35,6 +35,7 @@
  */
 
 #include <stddef.h>
+#include <stdlib.h>
 
 struct stackmark {
 	struct stack_block *stackp;
