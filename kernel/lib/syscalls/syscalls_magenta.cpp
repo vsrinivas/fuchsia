@@ -553,7 +553,7 @@ mx_status_t sys_fifo_read(mx_handle_t handle, void* entries, size_t len, uint32_
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<FifoDispatcher> fifo;
-    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &fifo);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &fifo);
     if (status != NO_ERROR)
         return status;
 
