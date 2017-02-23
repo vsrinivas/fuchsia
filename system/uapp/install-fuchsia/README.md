@@ -6,7 +6,7 @@ The goal of the Fuchsia installer is to provide a stop-gap solution to get as
 much of the system operating from internal storage of a device as possible. The
 installer will eventually be superseded by a robust update/refresh mechanism.
 Running Fuchsia from internal storage will make booting faster and reduce memory
-pressure because the seconardy bootfs will no longer be stored in RAM. This also
+pressure because the secondary bootfs will no longer be stored in RAM. This also
 allows you to experience more of the real performance of the system and exercise
 the storage stack.
 
