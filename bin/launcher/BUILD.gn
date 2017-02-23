@@ -15,6 +15,7 @@ executable("launcher") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/launcher",
     "//apps/maxwell/services/suggestion",
+    "//apps/network/services",
     "//lib/mtl",
   ]
 }

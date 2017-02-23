@@ -8,6 +8,7 @@
 #include "apps/maxwell/services/launcher/launcher.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/launcher/agent_launcher.h"
+#include "apps/network/services/network_service.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -60,11 +61,14 @@ class LauncherApp : public maxwell::Launcher {
     StartAgent("file:///system/apps/acquirers/focus");
     StartAgent("file:///system/apps/agents/bandsintown.dartx");
     StartAgent("file:///system/apps/agents/module_suggester");
+    
+    // This will error harmlessly if Kronk is not available.
+    StartAgent("file:///system/apps/agents/kronk");
   }
 
   void RegisterAnonymousProposalPublisher(
-      fidl::InterfaceRequest<maxwell::ProposalPublisher>
-          proposal_publisher) override {
+      fidl::InterfaceRequest<maxwell::ProposalPublisher> proposal_publisher)
+      override {
     suggestion_engine_->RegisterPublisher("unknown",
                                           std::move(proposal_publisher));
   }
@@ -103,6 +107,10 @@ class LauncherApp : public maxwell::Launcher {
     agent_host->AddService<modular::FocusController>(
         [this](fidl::InterfaceRequest<modular::FocusController> request) {
           focus_controller_->Duplicate(std::move(request));
+        });
+    agent_host->AddService<network::NetworkService>(
+        [this](fidl::InterfaceRequest<network::NetworkService> request) {
+          app_context_->ConnectToEnvironmentService(std::move(request));
         });
 
     agent_launcher_.StartAgent(url, std::move(agent_host));
