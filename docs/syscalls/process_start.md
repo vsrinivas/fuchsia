@@ -43,7 +43,7 @@ In the event of failure, a negative error value is returned.
 not a thread handle.
 
 **ERR_ACCESS_DENIED**  The handle *thread* lacks *MX_RIGHT_WRITE* or *thread*
-does not belong to *process*.
+does not belong to *process*, or the handle *process* lacks *MX_RIGHT_WRITE*.
 
 **ERR_INVALID_ARGS**  *arg1* is not a valid handle with *MX_RIGHT_TRANSFER*.
 

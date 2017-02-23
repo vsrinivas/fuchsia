@@ -44,7 +44,7 @@ For any other return value, *observed* is undefined.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *pending* is an invalid pointer.
+**ERR_INVALID_ARGS**  *observed* is an invalid pointer.
 
 **ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
@@ -63,3 +63,8 @@ with) before any of the specified *signals* are observed on
 ## BUGS
 
 Currently *timeout* is rounded down to the nearest millisecond interval.
+
+## SEE ALSO
+
+[object_wait_async](object_wait_async.md),
+[object_wait_many](object_wait_many.md).

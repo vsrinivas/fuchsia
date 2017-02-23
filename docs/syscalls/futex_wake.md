@@ -29,5 +29,5 @@ Waking up zero threads is not an error condition.
 
 ## SEE ALSO
 
-[futex_wait](futex_wait.md)
-[futex_requeue](futex_requeue.md)
+[futex_requeue](futex_requeue.md),
+[futex_wait](futex_wait.md).

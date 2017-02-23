@@ -20,7 +20,7 @@ parent job.
 
 Upon success a handle for the new job is returned.
 
-Job handles may be waited on (TODO: expand this)
+Job handles may be waited on (TODO(cpu): expand this)
 
 ## RETURN VALUE
 
@@ -29,6 +29,15 @@ Job handles may be waited on (TODO: expand this)
 is returned.
 
 ## ERRORS
+
+**ERR_BAD_HANDLE**  *job* is not a valid handle.
+
+**ERR_WRONG_TYPE**  *job* is not a job handle.
+
+**ERR_INVALID_ARGS**  *flags* is nonzero,
+or *out* is an invalid pointer.
+
+**ERR_ACCESS_DENIED**  *job* does not have the **MX_RIGHT_WRITE** right.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

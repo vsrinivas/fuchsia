@@ -23,6 +23,10 @@ They are not guaranteed to continue advancing when the system is asleep.
 
 **mx_ticks_get**() returns the number of high-precision timer ticks since boot.
 
+## ERRORS
+
+**mx_tick_get**() does not report any error conditions.
+
 ## NOTES
 
 The returned value may be highly variable. Factors that can affect it include:
@@ -30,10 +34,6 @@ The returned value may be highly variable. Factors that can affect it include:
 - Migration between processors
 - Reset of the processor cycle counter
 - Reordering of instructions (if required, use a memory barrier)
-
-## BUGS
-
-Only a 32-bit range is supported on ARMv6 and ARMv7.
 
 ## SEE ALSO
 

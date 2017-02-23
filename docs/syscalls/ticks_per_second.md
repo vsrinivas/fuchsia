@@ -25,6 +25,10 @@ time elapsed between two subsequent calls to **mx_ticks_get**().
 **mx_ticks_per_second**() returns the number of high-precision timer ticks in a
 second.
 
+## ERRORS
+
+**mx_ticks_per_second**() does not report any error conditions.
+
 ## EXAMPLES
 
 ```

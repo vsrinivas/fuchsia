@@ -26,7 +26,7 @@ of failure, a negative error value is returned.
 
 **ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *handle* is not a channel handle.
+**ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
 **ERR_INVALID_ARGS**  *size* is an invalid pointer or NULL.
 
@@ -37,4 +37,3 @@ of failure, a negative error value is returned.
 [vmo_write](vmo_write.md),
 [vmo_set_size](vmo_set_size.md),
 [vmo_op_range](vmo_op_range.md).
-

@@ -32,15 +32,14 @@ This requeueing behavior may be used to avoid thundering herds on wake.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *value_ptr* isn't a valid userspace pointer.
-
-**ERR_INVALID_ARGS**  *value_ptr* is the same futex as *requeue_ptr*.
-
-**ERR_INVALID_ARGS**  *value_ptr* or *requeue_ptr* is not aligned.
+**ERR_INVALID_ARGS**  *value_ptr* isn't a valid userspace pointer, or
+*value_ptr* is the same futex as *requeue_ptr*, or
+*value_ptr* or *requeue_ptr* is not aligned, or
+*requeue_ptr* is NULL but *requeue_count* is positive.
 
 **ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
 ## SEE ALSO
 
-[futex_wait](futex_wait.md)
-[futex_wake](futex_wake.md)
+[futex_wait](futex_wait.md),
+[futex_wake](futex_wake.md).

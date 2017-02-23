@@ -37,14 +37,17 @@ If a NULL *actual* is passed in, it will be ignored.
 
 **ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
-**ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL and
-but invalid pointers.
+**ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL
+but invalid pointers, or if *buffer* is NULL but *size* is positive,
+or if *flags* is nonzero.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
 
 **ERR_SHOULD_WAIT**  The socket contained no data to read.
 
-**ERR_REMOTE_CLOSED**  The other side of the socket is closed.
+**ERR_REMOTE_CLOSED**  The other side of the socket is closed, or this
+side of the socket has been previously closed via a write with the
+**MX_SOCKET_HALF_CLOSE** flag.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

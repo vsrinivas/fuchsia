@@ -25,9 +25,8 @@ the thread can also be woken up after the timeout argument expires.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *value_ptr* is not a valid userspace pointer.
-
-**ERR_INVALID_ARGS**  *value_ptr* is not aligned.
+**ERR_INVALID_ARGS**  *value_ptr* is not a valid userspace pointer, or
+*value_ptr* is not aligned.
 
 **ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
@@ -35,5 +34,5 @@ the thread can also be woken up after the timeout argument expires.
 
 ## SEE ALSO
 
-[futex_requeue](futex_requeue.md)
-[futex_wake](futex_wake.md)
+[futex_requeue](futex_requeue.md),
+[futex_wake](futex_wake.md).

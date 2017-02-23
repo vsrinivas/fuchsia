@@ -32,7 +32,7 @@ failure, one of the following values is returned.
 ## ERRORS
 
 **ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
-*flags* is any value other than 0 or *MX_SOCKET_CREATE_REPLY_SOCKET*.
+*flags* is any value other than 0.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

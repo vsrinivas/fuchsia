@@ -94,12 +94,18 @@ record containing:
     - *MX_EXCEPTION_PORT_TYPE_PROCESS*
     - *MX_EXCEPTION_PORT_TYPE_SYSTEM*
 
-**MX_INFO_THREAD_EXCEPTION_REPORT** Requires a Thread handle. If the thread is
+**MX_INFO_THREAD_EXCEPTION_REPORT**  Requires a Thread handle. If the thread is
 currently in an exception and is waiting for an exception response, then
 this returns the exception report as a *mx_exception_report_t*.
 
 **MX_INFO_VMAR**  Requires a VM Address Region handle.  Always returns a single *mx_info_vmar_t*
 record containing the base and length of the region.
+
+**MX_INFO_JOB_CHILDREN**  Requires a Job handle. Returns an array of
+  *mx_koid_t*s corresponding to the direct child Jobs of the given Job.
+
+**MX_INFO_JOB_PROCESSES**  Requires a Job handle. Returns an array of
+  *mx_koid_t*s corresponding to the direct child Processes of the given Job.
 
 
 ## RETURN VALUE

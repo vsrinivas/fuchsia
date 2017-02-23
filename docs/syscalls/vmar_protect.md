@@ -40,8 +40,12 @@ If *len* is not page-aligned, it will be rounded up the next page boundary.
 
 ## ERRORS
 
+**ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+
+**ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+
 **ERR_INVALID_ARGS**  *prot* is an unsupported combination of flags
-(e.g., PROT_WRITE but not PROT_READ), *addr* is not page-aligned,
+(e.g., **PROT_WRITE** but not **PROT_READ**), *addr* is not page-aligned,
 *len* is 0, or some subrange of the requested range is occupied by a subregion.
 
 **ERR_NOT_FOUND**  Some subrange of the requested range is not mapped.
@@ -55,5 +59,7 @@ the requested change.
 
 ## SEE ALSO
 
-[vmar_map](vmar_map.md).
+[vmar_allocate](vmar_allocate.md),
+[vmar_destroy](vmar_destroy.md),
+[vmar_map](vmar_map.md),
 [vmar_unmap](vmar_unmap.md).

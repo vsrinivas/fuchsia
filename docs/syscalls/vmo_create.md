@@ -57,4 +57,4 @@ any value other than 0.
 [vmo_set_size](vmo_set_size.md),
 [vmo_get_size](vmo_get_size.md),
 [vmo_op_range](vmo_op_range.md),
-[process_map_vm](process_map_vm.md).
+[vmar_map](vmar_map.md).

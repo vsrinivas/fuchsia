@@ -25,3 +25,7 @@ reclaimed by the kernel if no other handles to it exist.
 
 **ERR_BAD_HANDLE**  *handle* isn't a valid handle.
 
+## SEE ALSO
+
+[handle_duplicate](handle_duplicate.md),
+[handle_replace](handle_replace.md).

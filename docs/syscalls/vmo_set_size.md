@@ -28,6 +28,8 @@ of failure, a negative error value is returned.
 
 **ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
+**ERR_ACCESS_DENIED**  *handle* does not have the **MX_RIGHT_WRITE** right.
+
 **ERR_OUT_OF_RANGE**  Requested size is too large.
 
 **ERR_NO_MEMORY**  Failure due to lack of system memory.

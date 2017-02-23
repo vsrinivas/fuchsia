@@ -36,12 +36,15 @@ In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_HANDLE** *handle* is not a valid handle.
+**ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
 **ERR_WRONG_TYPE**  *handle* is not that of a thread.
 
+**ERR_ACCESS_DENIED**  *handle* lacks *MX_RIGHT_READ*.
+
 **ERR_INVALID_ARGS**  *kind* is not valid,
-or *buffer* or *actual* are invalid pointers.
+or *buffer* or *actual* are invalid pointers,
+or the provided *buffer_len* is too large.
 
 **ERR_NO_MEMORY**  Temporary out of memory failure.
 

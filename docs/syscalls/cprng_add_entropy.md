@@ -24,9 +24,8 @@ bytes of entropy at a time.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *len* is too large.
-
-**ERR_INVALID_ARGS**  *buffer* is not a valid user space pointer.
+**ERR_INVALID_ARGS** *len* is too large, or *buffer* is not a valid
+user space pointer.
 
 ## BUGS
 

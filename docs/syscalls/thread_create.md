@@ -34,12 +34,18 @@ new thread, which will become a child of that process.
 
 ## RETURN VALUE
 
-On success, **thread_create**() returns NO_ERROR and a handle (via *out*) to
-the new thread.  In the event of failure, a negative error value is returned.
+On success, **thread_create**() returns **NO_ERROR** and a handle (via *out*)
+to the new thread.  In the event of failure, a negative error value is
+returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *name* was an invalid pointer, or *flags* was non-zero.
+**ERR_BAD_HANDLE**  *process* is not a valid handle.
+
+**ERR_WRONG_TYPE**  *process* is not a process handle.
+
+**ERR_INVALID_ARGS**  *name* or *out* was an invalid pointer, or *flags* was
+non-zero.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

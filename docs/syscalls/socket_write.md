@@ -39,11 +39,16 @@ If a NULL *actual* is passed in, it will be ignored.
 
 **ERR_INVALID_ARGS**  *buffer* is an invalid pointer, or
 **MX_SOCKET_HALF_CLOSE** was passed to *flags* but *size* was
-not 0.
+not 0, or *flags* was not 0 or **MX_SOCKET_HALF_CLOSE**.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 
-**ERR_BAD_STATE**  The other side of the socket is closed.
+**ERR_SHOULD_WAIT**  The buffer underlying the socket is full.
+
+**ERR_BAD_STATE**  This side of the socket has been closed by a prior write
+to the other side with **MX_SOCKET_HALF_CLOSE**.
+
+**ERR_REMOTE_CLOSED**  The other side of the socket is closed.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

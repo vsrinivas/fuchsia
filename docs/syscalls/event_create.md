@@ -30,6 +30,8 @@ On failure, an error value is returned.
 
 ## ERRORS
 
+**ERR_INVALID_ARGS**  *out* is an invalid pointer.
+
 **ERR_NO_MEMORY**  Temporary failure due to lack of memory.
 
 ## SEE ALSO

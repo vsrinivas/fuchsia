@@ -27,8 +27,8 @@ invalid.
 
 ## RETURN VALUE
 
-**mx_time_get**() returns zero on error.
+On success, **mx_time_get**() returns the current time according to the given clock ID.
 
 ## ERRORS
 
-## BUGS
+On error, **mx_time_get**() currently returns 0.

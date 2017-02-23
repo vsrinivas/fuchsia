@@ -47,7 +47,7 @@ On success, **NO_ERROR** is returned and a handle to the desired child object is
 
 **ERR_WRONG_TYPE**  *handle* is not a *Process*, *Job*, or *Resource*.
 
-**ERR_ACCESS_DENIED**   *handle* lacks the right **MX_RIGHT_ENUMERATE** or *rights* specify
+**ERR_ACCESS_DENIED**   *handle* lacks the right **MX_RIGHT_ENUMERATE** or *rights* specifies
 rights that are not present on *handle*.
 
 **ERR_NOT_FOUND**  *handle* does not have a child with the kernel object id *koid*.

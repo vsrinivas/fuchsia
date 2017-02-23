@@ -122,6 +122,8 @@ or *eport* is not that of a port and is not **MX_HANDLE_INVALID**.
 
 **ERR_INVALID_ARGS** A bad value has been passed in *options*.
 
+**ERR_NO_MEMORY**  (temporary) out of memory failure.
+
 ## SEE ALSO
 
 [port_create](port_create.md).

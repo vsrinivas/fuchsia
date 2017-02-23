@@ -47,16 +47,20 @@ returned.
 
 ## ERRORS
 
-**ERR_BAD_STATE**  *parent_vmar_handle* refers to a destroyed VMAR
+**ERR_BAD_HANDLE**  *parent_vmar_handle* is not a valid handle.
+
+**ERR_WRONG_TYPE**  *parent_vmar_handle* is not a VMAR handle.
+
+**ERR_BAD_STATE**  *parent_vmar_handle* refers to a destroyed VMAR.
 
 **ERR_INVALID_ARGS**  *child_vmar* or *child_addr* are not valid, *offset* is
 non-zero when *MX_VM_FLAG_SPECIFIC* is not given, *offset* and *size* describe
 an unsatisfiable allocation due to exceeding the region bounds, *offset*
 or *size* is not page-aligned, or *size* is 0.
 
-**ERR_NO_MEMORY**  allocation was not able to be satisfied
+**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_ACCESS_DENIED**  insufficient privileges to make the requested allocation
+**ERR_ACCESS_DENIED**  Insufficient privileges to make the requested allocation.
 
 ## NOTES
 
@@ -71,5 +75,7 @@ to have certain addresses be more correlated.
 
 ## SEE ALSO
 
-[vmar_destroy](vmar_destroy.md).
+[vmar_destroy](vmar_destroy.md),
+[vmar_map](vmar_map.md),
+[vmar_protect](vmar_protect.md),
 [vmar_unmap](vmar_unmap.md).

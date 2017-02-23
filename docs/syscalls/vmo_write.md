@@ -39,6 +39,8 @@ value is returned.
 
 **ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
+**ERR_ACCESS_DENIED**  *handle* does not have the **MX_RIGHT_WRITE** right.
+
 **ERR_INVALID_ARGS**  *actual* or *data* is an invalid pointer or NULL.
 
 **ERR_NO_MEMORY**  Failure to allocate system memory to complete write.

@@ -97,8 +97,6 @@ closed while waiting for the reply.
 while or after waiting for the response.  The specific error is returned via
 *read_status* if it is non-null.
 
-**ERR_BAD_STATE**  The channel is a reply channel.
-
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 **ERR_OUT_OF_RANGE**  *wr_num_bytes* or *wr_num_handles* are larger than the
@@ -118,4 +116,5 @@ to contain the reply message.
 [object_wait_one](object_wait_one.md),
 [object_wait_many](object_wait_many.md),
 [channel_create](channel_create.md),
-[channel_read](channel_read.md).
+[channel_read](channel_read.md),
+[channel_write](channel_write.md).

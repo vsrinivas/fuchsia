@@ -26,11 +26,17 @@ VMAR will remain valid handles, but all VMAR operations on them will fail.
 
 ## ERRORS
 
-**ERR_BAD_STATE**  This region is already destroyed
+**ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+
+**ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+
+**ERR_BAD_STATE**  This region is already destroyed.
 
 ## NOTES
 
 ## SEE ALSO
 
-[vmar_allocate](vmar_allocate.md).
+[vmar_allocate](vmar_allocate.md),
+[vmar_map](vmar_map.md),
+[vmar_protect](vmar_protect.md),
 [vmar_unmap](vmar_unmap.md).

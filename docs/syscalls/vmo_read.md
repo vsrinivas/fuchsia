@@ -39,6 +39,8 @@ value is returned.
 
 **ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
+**ERR_ACCESS_DENIED**  *handle* does not have the **MX_RIGHT_READ** right.
+
 **ERR_INVALID_ARGS**  *actual* or *data* is an invalid pointer or NULL.
 
 **ERR_OUT_OF_RANGE**  *offset* starts at or beyond the end of the VMO.

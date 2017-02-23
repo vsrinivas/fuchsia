@@ -46,7 +46,9 @@ are not a valid handle.
 is an invalid pointer, or if there are duplicates among the handles
 in the *handles* array.
 
-**ERR_NOT_SUPPORTED**  *handle* was found in the *handles* array.
+**ERR_NOT_SUPPORTED** *handle* was found in the *handles* array, or
+one of the handles in *handles* was *handle* (the handle to the
+channel being written to).
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
 any of *handles* do not have **MX_RIGHT_TRANSFER**.
@@ -55,11 +57,8 @@ any of *handles* do not have **MX_RIGHT_TRANSFER**.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ERR_TOO_BIG**  *num_bytes* or *num_handles* are larger than the
+**ERR_OUT_OF_RANGE**  *num_bytes* or *num_handles* are larger than the
 largest allowable size for channel messages.
-
-**ERR_NOT_SUPPORTED**  one of the handles in *handles* was *handle*
-(the handle to the channel being written to).
 
 ## NOTES
 

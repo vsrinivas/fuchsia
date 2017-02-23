@@ -53,7 +53,11 @@ error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_STATE**  *parent_vmar_handle* refers to a destroyed VMAR
+**ERR_BAD_HANDLE**  *vmar* or *vmo* is not a valid handle.
+
+**ERR_WRONG_TYPE**  *vmar* or *vmo* is not a VMAR or VMO handle, respectively.
+
+**ERR_BAD_STATE**  *vmar* refers to a destroyed VMAR.
 
 **ERR_INVALID_ARGS** *mapped_addr* or *map_flags* are not valid, *vmar_offset* is
 non-zero when neither **MX_VM_FLAG_SPECIFIC** nor
@@ -62,9 +66,9 @@ describe an unsatisfiable allocation due to exceeding the region bounds,
 *vmar_offset* or *vmo_offset* are not page-aligned,
 *vmo_offset* + ROUNDUP(*len*, PAGE_SIZE) overflows, or *len* is 0.
 
-**ERR_ACCESS_DENIED**  insufficient privileges to make the requested mapping
+**ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
 
-**ERR_NO_MEMORY**  allocation was not able to be satisfied
+**ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## NOTES
 
@@ -74,6 +78,7 @@ should check for overflow before converting the **uint64_t** size of the VMO to
 
 ## SEE ALSO
 
-[vmar_destroy](vmar_destroy.md).
-[vmar_protect](vmar_protect.md).
+[vmar_allocate](vmar_allocate.md),
+[vmar_destroy](vmar_destroy.md),
+[vmar_protect](vmar_protect.md),
 [vmar_unmap](vmar_unmap.md).

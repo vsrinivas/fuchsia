@@ -30,17 +30,22 @@ If *len* is not page-aligned, it will be rounded up the next page boundary.
 
 ## ERRORS
 
+**ERR_BAD_HANDLE**  *vmar_handle* is not a valid handle.
+
+**ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
+
 **ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0, or the
 requested range partially overlaps a sub-region.
 
-**ERR_BAD_STATE**  *vmar_handle* refers to a destroyed handle
+**ERR_BAD_STATE**  *vmar_handle* refers to a destroyed handle.
 
-**ERR_NOT_FOUND**  could not find the requested mapping
+**ERR_NOT_FOUND**  Could not find the requested mapping.
 
 ## NOTES
 
 ## SEE ALSO
 
-[vmar_destroy](vmar_destroy.md).
-[vmar_map](vmar_map.md).
+[vmar_allocate](vmar_allocate.md),
+[vmar_destroy](vmar_destroy.md),
+[vmar_map](vmar_map.md),
 [vmar_protect](vmar_protect.md).

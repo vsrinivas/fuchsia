@@ -30,6 +30,9 @@ value is returned.
 
 **ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
+**ERR_INVALID_ARGS**  *out* is an invalid pointer,
+or *op* is not a valid operation.
+
 TODO: fill in
 
 ## SEE ALSO

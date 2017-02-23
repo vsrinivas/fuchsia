@@ -74,3 +74,8 @@ be waited one (for example, a Port handle).
 Currently *timeout* is rounded down to the nearest millisecond interval.
 
 *pending* more properly should be called *observed*.
+
+## SEE ALSO
+
+[object_wait_many](object_wait_many.md),
+[object_wait_one](object_wait_one.md).

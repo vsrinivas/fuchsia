@@ -25,9 +25,10 @@ drawn into *buffer* (via *actual) on success.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *len* is too large.
+**ERR_INVALID_ARGS** *len* is too large, or *buffer* or *actual* is
+not a valid user space pointer.
 
-**ERR_INVALID_ARGS**  *buffer* is not a valid user space pointer.
+## NOTES
 
 There are no other error conditions.  If its arguments are valid,
 **mx_cprng_draw**() will succeed.
