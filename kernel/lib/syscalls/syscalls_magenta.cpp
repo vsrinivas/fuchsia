@@ -99,6 +99,9 @@ mx_status_t sys_clock_adjust(mx_handle_t hrsrc, uint32_t clock_id, int64_t offse
 mx_status_t sys_event_create(uint32_t options, mx_handle_t* _out) {
     LTRACEF("options 0x%x\n", options);
 
+    if (options)
+        return ERR_INVALID_ARGS;
+
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 

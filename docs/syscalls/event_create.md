@@ -21,8 +21,6 @@ manipulated using **object_signal**().
 The newly-created handle will have the *MX_RIGHT_TRANSER*, *MX_RIGHT_DUPLICATE*,
 *MX_RIGHT_READ*, and *MX_RIGHT_WRITE* rights.
 
-Note: *options* is currently ignored.
-
 ## RETURN VALUE
 
 **event_create**() returns NO_ERROR and a valid event handle (via *out*) on success.
@@ -30,7 +28,7 @@ On failure, an error value is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *out* is an invalid pointer.
+**ERR_INVALID_ARGS**  *out* is an invalid pointer, or *options* is nonzero.
 
 **ERR_NO_MEMORY**  Temporary failure due to lack of memory.
 
