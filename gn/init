@@ -1,6 +1,6 @@
 {
     "labels": [
-        "//apps/init"
+        "//bin/init"
     ],
     "binaries": [
         {
