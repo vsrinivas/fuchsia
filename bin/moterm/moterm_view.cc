@@ -216,8 +216,8 @@ void MotermView::DrawContent(SkCanvas* canvas,
           // TODO(jpoichet): Use real bold font
           if ((ch.attributes & MotermModel::kAttributesBold))
             flags |= SkPaint::kFakeBoldText_Flag;
-          if ((ch.attributes & MotermModel::kAttributesUnderline))
-            flags |= SkPaint::kUnderlineText_Flag;
+          // TODO(jpoichet): Account for MotermModel::kAttributesUnderline
+          // without using the deprecated flag SkPaint::kUnderlineText_Flag
           fg_paint.setFlags(flags);
           fg_paint.setColor(SkColorSetRGB(ch.foreground_color.red,
                                           ch.foreground_color.green,
