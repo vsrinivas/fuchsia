@@ -9,8 +9,10 @@
 #endif
 
 #define DLOG(...)                                                                                  \
-    if (MAGMA_DLOG_ENABLE) {                                                                       \
-        printf("%s:%d ", __FILE__, __LINE__);                                                      \
-        printf(__VA_ARGS__);                                                                       \
-        printf("\n");                                                                              \
-    }
+    do {                                                                                           \
+        if (MAGMA_DLOG_ENABLE) {                                                                   \
+            printf("%s:%d ", __FILE__, __LINE__);                                                  \
+            printf(__VA_ARGS__);                                                                   \
+            printf("\n");                                                                          \
+        }                                                                                          \
+    } while (0)
