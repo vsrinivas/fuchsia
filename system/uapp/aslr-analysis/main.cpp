@@ -14,6 +14,7 @@
 
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
 #include <limits.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>
@@ -226,18 +227,33 @@ int TestRunMain(int argc, char** argv) {
 
 // This function unconditionally consumes the handle h.
 mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h) {
+    launchpad_t* lp;
+    mx_handle_t proc;
     mx_handle_t hnd[1];
-    uint32_t ids[1];
-    ids[0] = MX_HND_TYPE_USER1;
-    hnd[0] = h;
-    const char* args[] = {bin, "testrun"};
     mx_handle_t job;
+    uint32_t ids[1];
+    const char* args[] = {bin, "testrun"};
+    const char* errmsg;
+
     mx_status_t status = mx_handle_duplicate(mx_job_default(), MX_RIGHT_SAME_RIGHTS, &job);
     if (status != NO_ERROR) {
         return status;
     }
-    return launchpad_launch_with_job(job, bin, countof(args), args, NULL,
-                                     countof(hnd), hnd, ids);
+
+    ids[0] = MX_HND_TYPE_USER1;
+    hnd[0] = h;
+    launchpad_create(job, "testrun", &lp);
+    launchpad_load_from_file(lp, bin);
+    launchpad_set_args(lp, countof(args), args);
+    launchpad_add_handles(lp, countof(hnd), hnd, ids);
+
+    status = launchpad_go(lp, &proc, &errmsg);
+    if (status != NO_ERROR) {
+        printf("launch failed (%d): %s\n", status, errmsg);
+        return status;
+    }
+
+    return proc;
 }
 
 int JoinProcess(mx_handle_t proc) {
