@@ -5,27 +5,14 @@
 /* define and implement the magenta syscall wrappers for x86-64 */
 
 #include "syscall-entry.h"
+#include "magenta-syscall-x86-64.S"
 
 .text
 
 .cfi_sections .eh_frame, .debug_frame
 
-.macro push_reg reg
-    push \reg
-    .cfi_adjust_cfa_offset 8
-    .cfi_rel_offset \reg, 0
-.endm
-.macro pop_reg reg
-    pop \reg
-    .cfi_adjust_cfa_offset -8
-    .cfi_same_value \reg
-.endm
-
-#define MAGENTA_SYSCALL_MAGIC 0x00ff00ff00000000
-
-.macro m_syscall nargs, name, n
+.macro m_syscall nargs, name, num
 syscall_entry_begin \name
-    .cfi_startproc
     .cfi_same_value %r10
     .cfi_same_value %r11
     .cfi_same_value %r12
@@ -34,8 +21,7 @@ syscall_entry_begin \name
     push_reg %r10
     push_reg %r11
     mov      %rcx, %r10
-    movabs   $(MAGENTA_SYSCALL_MAGIC | \n), %rax
-    syscall
+    magenta_syscall \num
     pop_reg  %r11
     pop_reg  %r10
     ret
@@ -46,8 +32,7 @@ syscall_entry_begin \name
     push_reg %r12
     mov      0x20(%rsp), %r12
     mov      %rcx, %r10
-    movabs   $(MAGENTA_SYSCALL_MAGIC | \n), %rax
-    syscall
+    magenta_syscall \num
     pop_reg  %r12
     pop_reg  %r11
     pop_reg  %r10
@@ -61,15 +46,13 @@ syscall_entry_begin \name
     mov      0x28(%rsp), %r12
     mov      0x30(%rsp), %r13
     mov      %rcx, %r10
-    movabs   $(MAGENTA_SYSCALL_MAGIC | \n), %rax
-    syscall
+    magenta_syscall \num
     pop_reg  %r13
     pop_reg  %r12
     pop_reg  %r11
     pop_reg  %r10
     ret
 .endif
-    .cfi_endproc
 syscall_entry_end \name
 .endm
 

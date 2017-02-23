@@ -8,9 +8,11 @@
 .globl _\name
 .type _\name,STT_FUNC
 _\name:
+.cfi_startproc
 .endm
 
 .macro syscall_entry_end name
+.cfi_endproc
 .size _\name, . - _\name
 
 .weak \name

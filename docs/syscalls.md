@@ -103,3 +103,6 @@
 + log_create - create a kernel managed log reader or writer
 + log_write - write log entry to log
 + log_read - read log entries from log
+
+## Multi-function
++ [vmar_unmap_handle_close_thread_exit](syscalls/vmar_unmap_handle_close_thread_exit.md) - three-in-one

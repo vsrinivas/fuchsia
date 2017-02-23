@@ -26,13 +26,13 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/mx_version_get.c \
 
 ifeq ($(ARCH),arm64)
-MODULE_SRCS += $(LOCAL_DIR)/syscalls-arm64.S
+MODULE_SRCS += \
+    $(LOCAL_DIR)/mx_vmar_unmap_handle_close_thread_exit-arm64.S \
+    $(LOCAL_DIR)/syscalls-arm64.S
 else ifeq ($(ARCH),x86)
-    ifeq ($(SUBARCH),x86-64)
-    MODULE_SRCS += $(LOCAL_DIR)/syscalls-x86-64.S
-    else
-    MODULE_SRCS += $(LOCAL_DIR)/syscalls-x86.S
-    endif
+MODULE_SRCS += \
+    $(LOCAL_DIR)/mx_vmar_unmap_handle_close_thread_exit-x86-64.S \
+    $(LOCAL_DIR)/syscalls-x86-64.S
 endif
 
 # This gets an ABI stub installed in sysroots, but the DSO never gets

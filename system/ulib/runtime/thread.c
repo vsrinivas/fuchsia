@@ -63,7 +63,35 @@ _Noreturn void mxr_thread_exit(mxr_thread_t* thread) {
         mxr_mutex_unlock(&thread->state_lock);
         mxr_thread_destroy(thread);
         break;
-    case DONE:
+    default:
+        // Not reached.
+        __builtin_trap();
+    }
+
+    _mx_thread_exit();
+}
+
+_Noreturn void mxr_thread_exit_unmap_if_detached(
+    mxr_thread_t* thread, mx_handle_t vmar, uintptr_t addr, size_t len) {
+    CHECK_THREAD(thread);
+
+    mxr_mutex_lock(&thread->state_lock);
+    switch (thread->state) {
+    case JOINED:
+        mxr_mutex_unlock(&thread->state_lock);
+        break;
+    case JOINABLE:
+        thread->state = DONE;
+        mxr_mutex_unlock(&thread->state_lock);
+        break;
+    case DETACHED:
+        mxr_mutex_unlock(&thread->state_lock);
+        _mx_vmar_unmap_handle_close_thread_exit(vmar, addr, len,
+                                                thread->handle);
+        // If that returned, the unmap operation was invalid.
+        __builtin_trap();
+        break;
+    default:
         // Not reached.
         __builtin_trap();
     }

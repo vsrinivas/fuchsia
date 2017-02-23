@@ -697,6 +697,18 @@ extern mx_status_t _mx_fifo_write(
     size_t len,
     uint32_t num_written[1]) __attribute__((__leaf__));
 
+extern mx_status_t mx_vmar_unmap_handle_close_thread_exit(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len,
+    mx_handle_t handle) __attribute__((__leaf__));
+
+extern mx_status_t _mx_vmar_unmap_handle_close_thread_exit(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len,
+    mx_handle_t handle) __attribute__((__leaf__));
+
 extern mx_status_t mx_log_create(
     uint32_t options,
     mx_handle_t out[1]) __attribute__((__leaf__));

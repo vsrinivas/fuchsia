@@ -65,6 +65,13 @@ mx_status_t mxr_thread_detach(mxr_thread_t* thread);
 // entrypoint.
 _Noreturn void mxr_thread_exit(mxr_thread_t* thread);
 
+// Exit from the thread.  Equivalent to mxr_thread_exit unless the
+// thread has been detached.  If it has been detached, then this does
+// mx_vmar_unmap(vmar, addr, len) first, but in a way that permits
+// unmapping the caller's own stack.
+_Noreturn void mxr_thread_exit_unmap_if_detached(
+    mxr_thread_t* thread, mx_handle_t vmar, uintptr_t addr, size_t len);
+
 // Destroy a created but unstarted thread structure.
 // This returns failure if the thread's handle was invalid.
 // Regardless, the mxr_thread_t is destroyed.

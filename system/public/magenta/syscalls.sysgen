@@ -341,6 +341,12 @@ syscall fifo_write
     (handle: mx_handle_t, data: any[len] IN, len: size_t, num_written: uint32_t[1] OUT)
     returns (mx_status_t);
 
+# Multi-function
+
+syscall vmar_unmap_handle_close_thread_exit vdsocall
+    (vmar_handle: mx_handle_t, addr: uintptr_t, len: size_t, handle: mx_handle_t)
+    returns (mx_status_t);
+
 # ---------------------------------------------------------------------------------------
 # Syscalls past this point are non-public
 # Some currently do not require a handle to restrict access.

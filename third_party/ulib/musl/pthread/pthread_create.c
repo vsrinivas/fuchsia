@@ -127,9 +127,11 @@ static __NO_SAFESTACK void final_exit(pthread_t self) {
     deallocate_region(&self->safe_stack_region);
     deallocate_region(&self->unsafe_stack_region);
 
-    // TODO(mcgrathr): Deallocate the TCB region too for the detached case.
-
-    mxr_thread_exit(&self->mxr_thread);
+    // This deallocates the TCB region too for the detached case.
+    // If not detached, pthread_join will deallocate it.
+    mxr_thread_exit_unmap_if_detached(&self->mxr_thread, _mx_vmar_root_self(),
+                                      (uintptr_t)self->tcb_region.iov_base,
+                                      self->tcb_region.iov_len);
 }
 
 _Noreturn void pthread_exit(void* result) {
