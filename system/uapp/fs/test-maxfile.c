@@ -16,7 +16,7 @@ int test_maxfile(void) {
     if (fd < 0) {
         return -1;
     }
-    char data[128 * 1024];
+    char data[8192];
     memset(data, 0xee, sizeof(data));
     ssize_t sz = 0;
     ssize_t r;
