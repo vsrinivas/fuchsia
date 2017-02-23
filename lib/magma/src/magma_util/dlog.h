@@ -8,15 +8,9 @@
 #define MAGMA_DLOG_ENABLE 0
 #endif
 
-#if MAGMA_DLOG_ENABLE
-
 #define DLOG(...)                                                                                  \
-    do {                                                                                           \
+    if (MAGMA_DLOG_ENABLE) {                                                                       \
         printf("%s:%d ", __FILE__, __LINE__);                                                      \
         printf(__VA_ARGS__);                                                                       \
         printf("\n");                                                                              \
-    } while (0)
-
-#else
-#define DLOG(...)
-#endif
+    }
