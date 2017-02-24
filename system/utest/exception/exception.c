@@ -140,6 +140,7 @@ static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid, uin
     status = mx_task_resume(thread, MX_RESUME_EXCEPTION | flags);
     if (status < 0)
         tu_fatal("mx_mark_exception_handled", status);
+    mx_handle_close(thread);
 }
 
 // Wait for and receive an exception on |eport|.
