@@ -9,7 +9,7 @@ channel_create - create a channel
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_channel_create(uint32_t flags,
+mx_status_t mx_channel_create(uint32_t options,
                               mx_handle_t* out0, mx_handle_t* out1);
 
 ```
@@ -38,7 +38,7 @@ of failure, a negative error value is returned.
 ## ERRORS
 
 **ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
-*flags* is any value other than 0.
+*options* is any value other than 0.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

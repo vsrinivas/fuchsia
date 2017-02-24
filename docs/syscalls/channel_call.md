@@ -20,7 +20,7 @@ typedef struct {
     uint32_t rd_num_handles;
 } mx_channel_call_args_t;
 
-mx_status_t mx_channel_call(mx_handle_t handle, uint32_t flags,
+mx_status_t mx_channel_call(mx_handle_t handle, uint32_t options,
                             mx_time_t timeout, mx_channel_call_args_t* args,
                             uint32_t* actual_bytes, uint32_t* actual_handles,
                             mx_status_t* read_status);
@@ -83,7 +83,8 @@ are not a valid handle.
 **ERR_WRONG_TYPE**  *handle* is not a channel handle.
 
 **ERR_INVALID_ARGS**  any of the provided pointers are invalid or null,
-or there are duplicates among the handles in the *handles* array.
+or there are duplicates among the handles in the *handles* array,
+or *options* is nonzero.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
 any of *handles* do not have **MX_RIGHT_TRANSFER**.

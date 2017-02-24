@@ -11,7 +11,7 @@ process_create - create a new process
 
 mx_status_t mx_process_create(mx_handle_t job,
                               const char* name, uint32_t name_len,
-                              uint32_t flags,
+                              uint32_t options,
                               mx_handle_t* proc_handle, mx_handle_t* vmar_handle);
 
 ```
@@ -50,7 +50,7 @@ On success, **process_create**() returns **NO_ERROR**, a handle to the new proce
 (only when not **MX_HANDLE_INVALID**).
 
 **ERR_INVALID_ARGS**  *name*, *proc_handle*, or *vmar_handle*  was an invalid pointer,
-or *flags* was non-zero.
+or *options* was non-zero.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

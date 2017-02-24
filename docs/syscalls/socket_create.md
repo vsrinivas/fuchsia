@@ -9,7 +9,7 @@ socket_create - create a socket
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_socket_create(uint32_t flags,
+mx_status_t mx_socket_create(uint32_t options,
                              mx_handle_t* out0, mx_handle_t* out1);
 
 ```
@@ -22,7 +22,7 @@ have a maximum capacity.
 
 Data written to one handle may be read from the opposite.
 
-The *flags* must currently be 0.
+The *options* must currently be 0.
 
 ## RETURN VALUE
 
@@ -32,7 +32,7 @@ failure, one of the following values is returned.
 ## ERRORS
 
 **ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
-*flags* is any value other than 0.
+*options* is any value other than 0.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

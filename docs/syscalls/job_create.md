@@ -9,7 +9,7 @@ job_create - create a new job
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_job_create(mx_handle_t job, uint32_t flags, mx_handle_t* out);
+mx_status_t mx_job_create(mx_handle_t job, uint32_t options, mx_handle_t* out);
 
 ```
 
@@ -34,7 +34,7 @@ is returned.
 
 **ERR_WRONG_TYPE**  *job* is not a job handle.
 
-**ERR_INVALID_ARGS**  *flags* is nonzero,
+**ERR_INVALID_ARGS**  *options* is nonzero,
 or *out* is an invalid pointer.
 
 **ERR_ACCESS_DENIED**  *job* does not have the **MX_RIGHT_WRITE** right.

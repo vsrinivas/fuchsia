@@ -10,7 +10,7 @@ vmar_allocate - allocate a new subregion
 #include <magenta/syscalls.h>
 
 mx_status_t mx_vmar_allocate(mx_handle_t parent_vmar_handle,
-                             size_t offset, size_t size, uint32_t flags,
+                             size_t offset, size_t size, uint32_t map_flags,
                              mx_handle_t* child_vmar, uintptr_t* child_addr)
 ```
 
@@ -18,7 +18,7 @@ mx_status_t mx_vmar_allocate(mx_handle_t parent_vmar_handle,
 
 Creates a new VMAR within the one specified by *parent_vmar_handle*.
 
-*flags* is a bit vector of the following flags:
+*map_flags* is a bit vector of the following flags:
 - **MX_VM_FLAG_COMPACT**  A hint to the kernel that allocations and mappings
   within the newly created subregion should be kept close together.   See the
   NOTES section below for discussion.

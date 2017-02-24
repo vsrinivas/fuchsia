@@ -33,15 +33,15 @@
 constexpr size_t kChannelReadHandlesChunkCount = 16u;
 constexpr size_t kChannelWriteHandlesInlineCount = 8u;
 
-mx_status_t sys_channel_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* _out1) {
+mx_status_t sys_channel_create(uint32_t options, mx_handle_t* _out0, mx_handle_t* _out1) {
     LTRACEF("out_handles %p,%p\n", _out0, _out1);
 
-    if (flags != 0u)
+    if (options != 0u)
         return ERR_INVALID_ARGS;
 
     mxtl::RefPtr<Dispatcher> mpd0, mpd1;
     mx_rights_t rights;
-    status_t result = ChannelDispatcher::Create(flags, &mpd0, &mpd1, &rights);
+    status_t result = ChannelDispatcher::Create(options, &mpd0, &mpd1, &rights);
     if (result != NO_ERROR)
         return result;
 
@@ -65,7 +65,7 @@ mx_status_t sys_channel_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* 
     up->AddHandle(mxtl::move(h0));
     up->AddHandle(mxtl::move(h1));
 
-    ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, flags, 0);
+    ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, options, 0);
     return NO_ERROR;
 }
 
@@ -96,7 +96,7 @@ void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
     }
 }
 
-mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
+mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
                              void* _bytes,
                              uint32_t num_bytes, uint32_t* _num_bytes,
                              mx_handle_t* _handles,
@@ -111,17 +111,17 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
     if (result != NO_ERROR)
         return result;
 
-    if (flags & ~MX_CHANNEL_READ_MASK)
+    if (options & ~MX_CHANNEL_READ_MASK)
         return ERR_NOT_SUPPORTED;
 
     mxtl::unique_ptr<MessagePacket> msg;
     result = channel->Read(&num_bytes, &num_handles, &msg,
-                           flags & MX_CHANNEL_READ_MAY_DISCARD);
+                           options & MX_CHANNEL_READ_MAY_DISCARD);
     if (result != NO_ERROR && result != ERR_BUFFER_TOO_SMALL)
         return result;
 
     // On ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
-    // unconsumed, unless |flags| has MX_CHANNEL_READ_MAY_DISCARD set).
+    // unconsumed, unless |options| has MX_CHANNEL_READ_MAY_DISCARD set).
     if (_num_bytes) {
         if (make_user_ptr(_num_bytes).copy_to_user(num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
@@ -195,13 +195,13 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
     return NO_ERROR;
 }
 
-mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
+mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
                               const void* _bytes, uint32_t num_bytes,
                               const mx_handle_t* _handles, uint32_t num_handles) {
-    LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u flags 0x%x\n",
-            handle_value, _bytes, num_bytes, _handles, num_handles, flags);
+    LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n",
+            handle_value, _bytes, num_bytes, _handles, num_handles, options);
 
-    if (flags)
+    if (options)
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -246,7 +246,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
     return result;
 }
 
-mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t flags,
+mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
                              mx_time_t timeout, const mx_channel_call_args_t* _args,
                              uint32_t* actual_bytes, uint32_t* actual_handles,
                              mx_status_t* read_status) {
@@ -255,7 +255,7 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t flags,
     if (make_user_ptr(_args).copy_from_user(&args) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (flags)
+    if (options)
         return ERR_INVALID_ARGS;
 
     uint32_t num_bytes = args.wr_num_bytes;

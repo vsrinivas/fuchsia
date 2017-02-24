@@ -436,7 +436,7 @@ mx_status_t sys_vmar_allocate(
     mx_handle_t parent_vmar_handle,
     size_t offset,
     size_t size,
-    uint32_t flags,
+    uint32_t map_flags,
     mx_handle_t child_vmar[1],
     uintptr_t child_addr[1]);
 
@@ -449,7 +449,7 @@ mx_status_t sys_vmar_map(
     mx_handle_t vmo_handle,
     uint64_t vmo_offset,
     size_t len,
-    uint32_t flags,
+    uint32_t map_flags,
     uintptr_t mapped_addr[1]);
 
 mx_status_t sys_vmar_unmap(
@@ -461,7 +461,7 @@ mx_status_t sys_vmar_protect(
     mx_handle_t vmar_handle,
     uintptr_t addr,
     size_t len,
-    uint32_t prot);
+    uint32_t prot_flags);
 
 mx_status_t sys_bootloader_fb_get_info(
     uint32_t format[1],

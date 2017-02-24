@@ -10,7 +10,7 @@ thread_create - create a thread
 #include <magenta/syscalls.h>
 
 mx_status_t mx_thread_create(mx_handle_t process, const char* name,
-                             uint32_t name_len, uint32_t flags, mx_handle_t* out);
+                             uint32_t name_len, uint32_t options, mx_handle_t* out);
 
 ```
 
@@ -44,7 +44,7 @@ returned.
 
 **ERR_WRONG_TYPE**  *process* is not a process handle.
 
-**ERR_INVALID_ARGS**  *name* or *out* was an invalid pointer, or *flags* was
+**ERR_INVALID_ARGS**  *name* or *out* was an invalid pointer, or *options* was
 non-zero.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.

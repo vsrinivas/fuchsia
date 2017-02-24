@@ -29,18 +29,18 @@
 #define LOCAL_TRACE 0
 
 mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
-                    size_t offset, size_t size, uint32_t flags,
+                    size_t offset, size_t size, uint32_t map_flags,
                     mx_handle_t* _child_vmar, uintptr_t* _child_addr) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
     // Compute needed rights from requested mapping protections.
     mx_rights_t vmar_rights = 0u;
-    if (flags & MX_VM_FLAG_CAN_MAP_READ)
+    if (map_flags & MX_VM_FLAG_CAN_MAP_READ)
         vmar_rights |= MX_RIGHT_READ;
-    if (flags & MX_VM_FLAG_CAN_MAP_WRITE)
+    if (map_flags & MX_VM_FLAG_CAN_MAP_WRITE)
         vmar_rights |= MX_RIGHT_WRITE;
-    if (flags & MX_VM_FLAG_CAN_MAP_EXECUTE)
+    if (map_flags & MX_VM_FLAG_CAN_MAP_EXECUTE)
         vmar_rights |= MX_RIGHT_EXECUTE;
 
     // lookup the dispatcher from handle
@@ -52,7 +52,7 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
     // Create the new VMAR
     mxtl::RefPtr<VmAddressRegionDispatcher> new_vmar;
     mx_rights_t new_rights;
-    status = vmar->Allocate(offset, size, flags, &new_vmar, &new_rights);
+    status = vmar->Allocate(offset, size, map_flags, &new_vmar, &new_rights);
     if (status != NO_ERROR)
         return status;
 
@@ -92,7 +92,7 @@ mx_status_t sys_vmar_destroy(mx_handle_t vmar_handle) {
 }
 
 mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
-                    mx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t flags,
+                    mx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags,
                     uintptr_t* _mapped_addr) {
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -114,13 +114,13 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     if (!(vmo_rights & MX_RIGHT_MAP))
         return ERR_ACCESS_DENIED;
 
-    if (!VmAddressRegionDispatcher::is_valid_mapping_protection(flags))
+    if (!VmAddressRegionDispatcher::is_valid_mapping_protection(map_flags))
         return ERR_INVALID_ARGS;
 
 
     // Usermode is not allowed to specify these flags on mappings, though we may
     // set them below.
-    if (flags & (MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE | MX_VM_FLAG_CAN_MAP_EXECUTE)) {
+    if (map_flags & (MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE | MX_VM_FLAG_CAN_MAP_EXECUTE)) {
         return ERR_INVALID_ARGS;
     }
 
@@ -130,25 +130,25 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     const bool can_exec = (vmo_rights & MX_RIGHT_EXECUTE) && (vmar_rights & MX_RIGHT_EXECUTE);
 
     // test to see if the requested mapping protections are allowed
-    if ((flags & MX_VM_FLAG_PERM_READ) && !can_read)
+    if ((map_flags & MX_VM_FLAG_PERM_READ) && !can_read)
         return ERR_ACCESS_DENIED;
-    if ((flags & MX_VM_FLAG_PERM_WRITE) && !can_write)
+    if ((map_flags & MX_VM_FLAG_PERM_WRITE) && !can_write)
         return ERR_ACCESS_DENIED;
-    if ((flags & MX_VM_FLAG_PERM_EXECUTE) && !can_exec)
+    if ((map_flags & MX_VM_FLAG_PERM_EXECUTE) && !can_exec)
         return ERR_ACCESS_DENIED;
 
     // If a permission is allowed by both the VMO and the VMAR, add it to the
     // flags for the new mapping, so that the VMO's rights as of now can be used
     // to constrain future permission changes via Protect().
     if (can_read)
-        flags |= MX_VM_FLAG_CAN_MAP_READ;
+        map_flags |= MX_VM_FLAG_CAN_MAP_READ;
     if (can_write)
-        flags |= MX_VM_FLAG_CAN_MAP_WRITE;
+        map_flags |= MX_VM_FLAG_CAN_MAP_WRITE;
     if (can_exec)
-        flags |= MX_VM_FLAG_CAN_MAP_EXECUTE;
+        map_flags |= MX_VM_FLAG_CAN_MAP_EXECUTE;
 
     mxtl::RefPtr<VmMapping> vm_mapping;
-    status = vmar->Map(vmar_offset, vmo->vmo(), vmo_offset, len, flags, &vm_mapping);
+    status = vmar->Map(vmar_offset, vmo->vmo(), vmo_offset, len, map_flags, &vm_mapping);
     if (status != NO_ERROR)
         return status;
 

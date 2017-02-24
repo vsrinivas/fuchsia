@@ -42,8 +42,8 @@ static_assert(MX_CACHE_POLICY_UNCACHED_DEVICE == ARCH_MMU_FLAG_UNCACHED_DEVICE,
 static_assert(MX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
               "Cache policy constant mismatch - WRITE_COMBINING");
 
-mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t flags) {
-    LTRACEF("vector %u flags 0x%x\n", vector, flags);
+mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t options) {
+    LTRACEF("vector %u options 0x%x\n", vector, options);
 
     // TODO: finer grained validation
     mx_status_t status;
@@ -53,7 +53,7 @@ mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t fl
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    status_t result = InterruptEventDispatcher::Create(vector, flags, &dispatcher, &rights);
+    status_t result = InterruptEventDispatcher::Create(vector, options, &dispatcher, &rights);
     if (result != NO_ERROR)
         return result;
 

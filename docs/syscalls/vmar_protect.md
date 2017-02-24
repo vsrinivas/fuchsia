@@ -11,14 +11,14 @@ vmar_protect - set protection of virtual memory pages
 
 mx_status_t mx_vmar_protect(mx_handle_t vmar_handle,
                             uintptr_t addr, size_t len,
-                            uint32_t prot);
+                            uint32_t prot_flags);
 ```
 
 ## DESCRIPTION
 
 **vmar_protect**() alters the access protections for the memory mappings
-in the range of *len* bytes starting from *addr*. The *prot* argument should be
-a bitwise-or of one or more of the following:
+in the range of *len* bytes starting from *addr*. The *prot_flags* argument should
+be a bitwise-or of one or more of the following:
 - **MX_VM_FLAG_PERM_READ**  Map as readable.  It is an error if *vmar*
   does not have *MX_VM_FLAG_CAN_MAP_READ* permissions or the *vmar* handle does
   not have the *MX_RIGHT_READ* right.  It is also an error if the VMO handle
@@ -44,7 +44,7 @@ If *len* is not page-aligned, it will be rounded up the next page boundary.
 
 **ERR_WRONG_TYPE**  *vmar_handle* is not a VMAR handle.
 
-**ERR_INVALID_ARGS**  *prot* is an unsupported combination of flags
+**ERR_INVALID_ARGS**  *prot_flags* is an unsupported combination of flags
 (e.g., **PROT_WRITE** but not **PROT_READ**), *addr* is not page-aligned,
 *len* is 0, or some subrange of the requested range is occupied by a subregion.
 

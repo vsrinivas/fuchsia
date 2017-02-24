@@ -9,7 +9,7 @@ channel_write - write a message to a channel
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_channel_write(mx_handle_t handle, uint32_t flags,
+mx_status_t mx_channel_write(mx_handle_t handle, uint32_t options,
                              void* bytes, uint32_t num_bytes,
                              mx_handle_t* handles, uint32_t num_handles);
 ```
@@ -44,7 +44,7 @@ are not a valid handle.
 
 **ERR_INVALID_ARGS**  *bytes* is an invalid pointer, or *handles*
 is an invalid pointer, or if there are duplicates among the handles
-in the *handles* array, or *flags* is nonzero.
+in the *handles* array, or *options* is nonzero.
 
 **ERR_NOT_SUPPORTED** *handle* was found in the *handles* array, or
 one of the handles in *handles* was *handle* (the handle to the

@@ -59,7 +59,7 @@ syscall version_get vdsocall
 # Abstraction of machine operations
 
 syscall cache_flush vdsocall
-    (addr: any[len] IN, len: size_t, flags: uint32_t)
+    (addr: any[len] IN, len: size_t, options: uint32_t)
     returns (mx_status_t);
 
 # Generic handle operations
@@ -449,7 +449,7 @@ syscall vmo_create_contiguous
 # Address space management
 
 syscall vmar_allocate
-    (parent_vmar_handle: mx_handle_t, offset: size_t, size: size_t, flags: uint32_t,
+    (parent_vmar_handle: mx_handle_t, offset: size_t, size: size_t, map_flags: uint32_t,
         child_vmar: mx_handle_t[1] OUT, child_addr: uintptr_t[1] OUT)
      returns (mx_status_t);
 
@@ -460,7 +460,7 @@ syscall vmar_destroy
 syscall vmar_map
     (vmar_handle: mx_handle_t, vmar_offset: size_t,
         vmo_handle: mx_handle_t, vmo_offset: uint64_t,
-        len: size_t, flags: uint32_t, mapped_addr: uintptr_t[1] OUT)
+        len: size_t, map_flags: uint32_t, mapped_addr: uintptr_t[1] OUT)
     returns (mx_status_t);
 
 syscall vmar_unmap
@@ -469,7 +469,7 @@ syscall vmar_unmap
 
 syscall vmar_protect
     (vmar_handle: mx_handle_t, addr: uintptr_t, len: size_t,
-        prot: uint32_t)
+        prot_flags: uint32_t)
     returns (mx_status_t);
 
 # DDK Syscalls: Misc Info

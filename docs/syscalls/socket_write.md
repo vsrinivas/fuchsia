@@ -9,7 +9,7 @@ socket_write - write data to a socket
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_socket_write(mx_handle_t handle, uint32_t flags,
+mx_status_t mx_socket_write(mx_handle_t handle, uint32_t options,
                             const void* buffer, size_t size,
                             size_t* actual) {
 ```
@@ -20,8 +20,8 @@ mx_status_t mx_socket_write(mx_handle_t handle, uint32_t flags,
 specified by *handle*.  The pointer to *bytes* may be NULL if *size*
 is zero.
 
-There is one value (besides 0) that may be passed to *flags*. If
-**MX_SOCKET_HALF_CLOSE** is passed to flags, and *size* is 0, then the
+There is one value (besides 0) that may be passed to *options*. If
+**MX_SOCKET_HALF_CLOSE** is passed to options, and *size* is 0, then the
 socket endpoint at *handle* is closed. Further writes to the other
 endpoint of the socket will fail with **ERR_BAD_STATE**.
 
@@ -38,8 +38,8 @@ If a NULL *actual* is passed in, it will be ignored.
 **ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
 **ERR_INVALID_ARGS**  *buffer* is an invalid pointer, or
-**MX_SOCKET_HALF_CLOSE** was passed to *flags* but *size* was
-not 0, or *flags* was not 0 or **MX_SOCKET_HALF_CLOSE**.
+**MX_SOCKET_HALF_CLOSE** was passed to *options* but *size* was
+not 0, or *options* was not 0 or **MX_SOCKET_HALF_CLOSE**.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 

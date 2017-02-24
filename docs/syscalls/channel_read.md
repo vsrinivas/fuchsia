@@ -9,7 +9,7 @@ channel_read - read a message from a channel
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_channel_read(mx_handle_t handle, uint32_t flags,
+mx_status_t mx_channel_read(mx_handle_t handle, uint32_t options,
                             void* bytes,
                             uint32_t num_bytes, uint32_t* actual_bytes
                             mx_handle_t* handles,
@@ -53,7 +53,7 @@ and count of handles read.
 **ERR_BUFFER_TOO_SMALL**  The provided *bytes* or *handles* buffers
 are too small (in which case, the minimum sizes necessary to receive
 the message will be written to *actual_bytes* and *actual_handles*,
-provided they are non-NULL). If *flags* has **MX_CHANNEL_READ_MAY_DISCARD**
+provided they are non-NULL). If *options* has **MX_CHANNEL_READ_MAY_DISCARD**
 set, then the message is discarded.
 
 ## NOTES

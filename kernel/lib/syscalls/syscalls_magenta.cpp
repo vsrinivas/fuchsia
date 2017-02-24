@@ -122,11 +122,11 @@ mx_status_t sys_event_create(uint32_t options, mx_handle_t* _out) {
     return NO_ERROR;
 }
 
-mx_status_t sys_eventpair_create(uint32_t flags,
+mx_status_t sys_eventpair_create(uint32_t options,
                                  mx_handle_t* _out0, mx_handle_t* _out1) {
     LTRACEF("entry out_handles %p,%p\n", _out0, _out1);
 
-    if (flags != 0u)  // No flags defined/supported yet.
+    if (options != 0u)  // No options defined/supported yet.
         return ERR_NOT_SUPPORTED;
 
     mxtl::RefPtr<Dispatcher> epd0, epd1;
@@ -173,22 +173,22 @@ mx_status_t sys_futex_requeue(mx_futex_t* _wake_ptr, uint32_t wake_count, int cu
         make_user_ptr(_requeue_ptr), requeue_count);
 }
 
-mx_status_t sys_log_create(uint32_t flags, mx_handle_t* out) {
-    LTRACEF("flags 0x%x\n", flags);
+mx_status_t sys_log_create(uint32_t options, mx_handle_t* out) {
+    LTRACEF("options 0x%x\n", options);
 
-    // kernel flag is forbidden to userspace
-    flags &= (~DLOG_FLAG_KERNEL);
+    // kernel option is forbidden to userspace
+    options &= (~DLOG_FLAG_KERNEL);
 
     // create a Log dispatcher
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    mx_status_t result = LogDispatcher::Create(flags, &dispatcher, &rights);
+    mx_status_t result = LogDispatcher::Create(options, &dispatcher, &rights);
     if (result != NO_ERROR)
         return result;
 
     // by default log objects are write-only
     // as readable logs are more expensive
-    if (flags & MX_LOG_FLAG_READABLE) {
+    if (options & MX_LOG_FLAG_READABLE) {
         rights |= MX_RIGHT_READ;
     }
 
@@ -207,7 +207,7 @@ mx_status_t sys_log_create(uint32_t flags, mx_handle_t* out) {
     return NO_ERROR;
 }
 
-mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, const void* _ptr, uint32_t flags) {
+mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, const void* _ptr, uint32_t options) {
     LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr);
 
     if (len > DLOG_MAX_DATA)
@@ -224,10 +224,10 @@ mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, const void* _ptr
     if (magenta_copy_from_user(_ptr, buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    return log->Write(flags, buf, len);
+    return log->Write(options, buf, len);
 }
 
-mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, void* _ptr, uint32_t flags) {
+mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, void* _ptr, uint32_t options) {
     LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr);
 
     if (len < DLOG_MAX_RECORD)
@@ -242,7 +242,7 @@ mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, void* _ptr, uint3
 
     char buf[DLOG_MAX_RECORD];
     size_t actual;
-    if ((status = log->Read(flags, buf, DLOG_MAX_RECORD, &actual)) < 0)
+    if ((status = log->Read(options, buf, DLOG_MAX_RECORD, &actual)) < 0)
         return status;
 
     if (make_user_ptr(_ptr).copy_array_to_user(buf, actual) != NO_ERROR)
@@ -408,15 +408,15 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
     return result;
 }
 
-mx_status_t sys_socket_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* _out1) {
+mx_status_t sys_socket_create(uint32_t options, mx_handle_t* _out0, mx_handle_t* _out1) {
     LTRACEF("entry out_handles %p, %p\n", _out0, _out1);
 
-    if (flags != 0u)
+    if (options != 0u)
         return ERR_INVALID_ARGS;
 
     mxtl::RefPtr<Dispatcher> socket0, socket1;
     mx_rights_t rights;
-    status_t result = SocketDispatcher::Create(flags, &socket0, &socket1, &rights);
+    status_t result = SocketDispatcher::Create(options, &socket0, &socket1, &rights);
     if (result != NO_ERROR)
         return result;
 
@@ -442,7 +442,7 @@ mx_status_t sys_socket_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* _
     return NO_ERROR;
 }
 
-mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
+mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
                              const void* _buffer, size_t size,
                              size_t* _actual) {
     LTRACEF("handle %d\n", handle);
@@ -457,7 +457,7 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
     if (status != NO_ERROR)
         return status;
 
-    switch (flags) {
+    switch (options) {
     case 0: {
         size_t nwritten;
         status = socket->Write(_buffer, size, true, &nwritten);
@@ -477,12 +477,12 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
     }
 }
 
-mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
+mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,
                             void* _buffer, size_t size,
                             size_t* _actual) {
     LTRACEF("handle %d\n", handle);
 
-    if (flags)
+    if (options)
         return ERR_INVALID_ARGS;
 
     if (!_buffer && size > 0)

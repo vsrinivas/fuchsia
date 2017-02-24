@@ -54,11 +54,11 @@ constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
 mx_status_t sys_thread_create(mx_handle_t process_handle,
                               const char* _name, uint32_t name_len,
-                              uint32_t flags, mx_handle_t* _out) {
-    LTRACEF("process handle %d, flags %#x\n", process_handle, flags);
+                              uint32_t options, mx_handle_t* _out) {
+    LTRACEF("process handle %d, options %#x\n", process_handle, options);
 
-    // currently, the only valid flag value is 0
-    if (flags != 0)
+    // currently, the only valid option value is 0
+    if (options != 0)
         return ERR_INVALID_ARGS;
 
     // copy out the name
@@ -82,7 +82,7 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
 
     // create the thread object
     mxtl::RefPtr<UserThread> user_thread;
-    result = process->CreateUserThread(sp.data(), flags, &user_thread);
+    result = process->CreateUserThread(sp.data(), options, &user_thread);
     if (result != NO_ERROR)
         return result;
 
@@ -206,12 +206,12 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
 
 mx_status_t sys_process_create(mx_handle_t job_handle,
                                const char* _name, uint32_t name_len,
-                               uint32_t flags, mx_handle_t* _proc_handle,
+                               uint32_t options, mx_handle_t* _proc_handle,
                                mx_handle_t* _vmar_handle) {
-    LTRACEF("job handle %d, flags %#x\n", job_handle, flags);
+    LTRACEF("job handle %d, options %#x\n", job_handle, options);
 
-    // currently, the only valid flag value is 0
-    if (flags != 0)
+    // currently, the only valid option value is 0
+    if (options != 0)
         return ERR_INVALID_ARGS;
 
     // copy out the name
@@ -241,7 +241,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     mxtl::RefPtr<Dispatcher> proc_dispatcher;
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher;
     mx_rights_t proc_rights, vmar_rights;
-    status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, flags,
+    status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, options,
                                              &proc_dispatcher, &proc_rights,
                                              &vmar_dispatcher, &vmar_rights);
     if (res != NO_ERROR)
@@ -454,10 +454,10 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
     }
 }
 
-mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t flags, mx_handle_t* _out) {
+mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t options, mx_handle_t* _out) {
     LTRACEF("parent: %d\n", parent_job);
 
-    if (flags != 0u)
+    if (options != 0u)
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -469,7 +469,7 @@ mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t flags, mx_handle_t* 
 
     mxtl::RefPtr<Dispatcher> job;
     mx_rights_t rights;
-    status = JobDispatcher::Create(flags, mxtl::move(parent), &job, &rights);
+    status = JobDispatcher::Create(options, mxtl::move(parent), &job, &rights);
     if (status != NO_ERROR)
         return status;
 

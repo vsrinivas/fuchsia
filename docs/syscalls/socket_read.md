@@ -9,7 +9,7 @@ socket_read - read data from a socket
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_socket_read(mx_handle_t handle, uint32_t flags,
+mx_status_t mx_socket_read(mx_handle_t handle, uint32_t options,
                            void* buffer, size_t size,
                            size_t* actual) {
 ```
@@ -39,7 +39,7 @@ If a NULL *actual* is passed in, it will be ignored.
 
 **ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL
 but invalid pointers, or if *buffer* is NULL but *size* is positive,
-or if *flags* is nonzero.
+or if *options* is nonzero.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
 

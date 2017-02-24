@@ -36,12 +36,12 @@ extern mx_status_t _mx_version_get(
 extern mx_status_t mx_cache_flush(
     const void* addr,
     size_t len,
-    uint32_t flags) __attribute__((__leaf__));
+    uint32_t options) __attribute__((__leaf__));
 
 extern mx_status_t _mx_cache_flush(
     const void* addr,
     size_t len,
-    uint32_t flags) __attribute__((__leaf__));
+    uint32_t options) __attribute__((__leaf__));
 
 extern mx_status_t mx_handle_close(
     mx_handle_t handle) __attribute__((__leaf__));
@@ -909,7 +909,7 @@ extern mx_status_t mx_vmar_allocate(
     mx_handle_t parent_vmar_handle,
     size_t offset,
     size_t size,
-    uint32_t flags,
+    uint32_t map_flags,
     mx_handle_t child_vmar[1],
     uintptr_t child_addr[1]) __attribute__((__leaf__));
 
@@ -917,7 +917,7 @@ extern mx_status_t _mx_vmar_allocate(
     mx_handle_t parent_vmar_handle,
     size_t offset,
     size_t size,
-    uint32_t flags,
+    uint32_t map_flags,
     mx_handle_t child_vmar[1],
     uintptr_t child_addr[1]) __attribute__((__leaf__));
 
@@ -933,7 +933,7 @@ extern mx_status_t mx_vmar_map(
     mx_handle_t vmo_handle,
     uint64_t vmo_offset,
     size_t len,
-    uint32_t flags,
+    uint32_t map_flags,
     uintptr_t mapped_addr[1]) __attribute__((__leaf__));
 
 extern mx_status_t _mx_vmar_map(
@@ -942,7 +942,7 @@ extern mx_status_t _mx_vmar_map(
     mx_handle_t vmo_handle,
     uint64_t vmo_offset,
     size_t len,
-    uint32_t flags,
+    uint32_t map_flags,
     uintptr_t mapped_addr[1]) __attribute__((__leaf__));
 
 extern mx_status_t mx_vmar_unmap(
@@ -959,13 +959,13 @@ extern mx_status_t mx_vmar_protect(
     mx_handle_t vmar_handle,
     uintptr_t addr,
     size_t len,
-    uint32_t prot) __attribute__((__leaf__));
+    uint32_t prot_flags) __attribute__((__leaf__));
 
 extern mx_status_t _mx_vmar_protect(
     mx_handle_t vmar_handle,
     uintptr_t addr,
     size_t len,
-    uint32_t prot) __attribute__((__leaf__));
+    uint32_t prot_flags) __attribute__((__leaf__));
 
 extern mx_status_t mx_bootloader_fb_get_info(
     uint32_t format[1],
