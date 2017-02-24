@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//third_party/boringssl:crypto"
+    ],
+    "binaries": [
+        {
+            "binary": "libcrypto.so",
+            "bootfs_path": "lib/libcrypto.so"
+        }
+    ]
+}

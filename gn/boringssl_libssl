@@ -1,0 +1,15 @@
+{
+    "imports": [
+        "boringssl_libcrypto",
+        "netstack"
+    ],
+    "labels": [
+        "//third_party/boringssl:ssl"
+    ],
+    "binaries": [
+        {
+            "binary": "libssl.so",
+            "bootfs_path": "lib/libssl.so"
+        }
+    ]
+}

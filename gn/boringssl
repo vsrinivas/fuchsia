@@ -1,20 +1,13 @@
 {
     "imports": [
-        "netstack"
+        "boringssl_libcrypto",
+        "boringssl_libssl"
     ],
     "labels": [
         "//third_party/boringssl:bssl",
-        "//third_party/boringssl:boringssl_tests"
+        "//third_party/boringssl:unit_tests"
     ],
     "binaries": [
-        {
-            "binary": "libcrypto.so",
-            "bootfs_path": "lib/libcrypto.so"
-        },
-        {
-            "binary": "libssl.so",
-            "bootfs_path": "lib/libssl.so"
-        },
         {
             "binary": "bssl",
             "bootfs_path": "bin/bssl"
