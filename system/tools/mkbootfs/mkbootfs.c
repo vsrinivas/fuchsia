@@ -252,11 +252,11 @@ static int writex(int fd, const void* ptr, size_t len) {
 }
 
 typedef struct {
-    ssize_t (*copy_setup)(int fd, void** cookie);
-    ssize_t (*copy_data)(int fd, const void* src, size_t len, void* cookie);
-    ssize_t (*copy_file)(int fd, const char* fn, size_t len, void* cookie);
-    ssize_t (*copy_finish)(int fd, void* cookie);
-} copy_ops;
+    ssize_t (*setup)(int fd, void** cookie);
+    ssize_t (*write)(int fd, const void* src, size_t len, void* cookie);
+    ssize_t (*write_file)(int fd, const char* fn, size_t len, void* cookie);
+    ssize_t (*finish)(int fd, void* cookie);
+} io_ops;
 
 ssize_t copydata(int fd, const void* src, size_t len, void* cookie) {
     if (writex(fd, src, len) < 0) {
@@ -290,9 +290,9 @@ ssize_t copyfile(int fd, const char* fn, size_t len, void* cookie) {
     return (r < 0) ? r : total;
 }
 
-static const copy_ops copy_passthrough = {
-    .copy_data = copydata,
-    .copy_file = copyfile,
+static const io_ops io_plain = {
+    .write = copydata,
+    .write_file = copyfile,
 };
 
 static LZ4F_preferences_t lz4_prefs = {
@@ -392,11 +392,11 @@ ssize_t compress_finish(int fd, void* cookie) {
     return r;
 }
 
-static const copy_ops copy_compress = {
-    .copy_setup = compress_setup,
-    .copy_data = compress_data,
-    .copy_file = compress_file,
-    .copy_finish = compress_finish,
+static const io_ops io_compressed = {
+    .setup = compress_setup,
+    .write = compress_data,
+    .write_file = compress_file,
+    .finish = compress_finish,
 };
 
 #define PAGEALIGN(n) (((n) + 4095) & (~4095))
@@ -404,13 +404,13 @@ static const copy_ops copy_compress = {
 
 char fill[4096];
 
-#define CHECK_WRITE(w) if ((w) < 0) goto fail
+#define CHECK(w) do { if ((w) < 0) goto fail; } while (0)
 
 int export_userfs(const char* fn, fs* fs, unsigned hsz, uint64_t outsize, bool compressed) {
     uint32_t n;
     fsentry* e;
     int fd;
-    const copy_ops* op = compressed ? &copy_compress : &copy_passthrough;
+    const io_ops* op = compressed ? &io_compressed : &io_plain;
 
     fd = open(fn, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (fd < 0) {
@@ -431,11 +431,11 @@ int export_userfs(const char* fn, fs* fs, unsigned hsz, uint64_t outsize, bool c
     }
 
     void* cookie = NULL;
-    if (op->copy_setup) {
-        CHECK_WRITE(op->copy_setup(fd, &cookie));
+    if (op->setup) {
+        CHECK(op->setup(fd, &cookie));
     }
 
-    CHECK_WRITE(op->copy_data(fd, FSMAGIC, sizeof(FSMAGIC), cookie));
+    CHECK(op->write(fd, FSMAGIC, sizeof(FSMAGIC), cookie));
 
     fsentry* last_entry = NULL;
     for (e = fs->first; e != NULL; e = e->next) {
@@ -443,38 +443,38 @@ int export_userfs(const char* fn, fs* fs, unsigned hsz, uint64_t outsize, bool c
         hdr[0] = e->namelen;
         hdr[1] = e->length;
         hdr[2] = e->offset;
-        CHECK_WRITE(op->copy_data(fd, hdr, sizeof(hdr), cookie));
-        CHECK_WRITE(op->copy_data(fd, e->name, e->namelen, cookie));
+        CHECK(op->write(fd, hdr, sizeof(hdr), cookie));
+        CHECK(op->write(fd, e->name, e->namelen, cookie));
         last_entry = e;
     }
     // Record length of last file
     uint32_t last_length = last_entry ? last_entry->length : 0;
 
     // null terminator record
-    CHECK_WRITE(op->copy_data(fd, fill, 12, cookie));
+    CHECK(op->write(fd, fill, 12, cookie));
 
     if ((n = PAGEFILL(hsz))) {
-        CHECK_WRITE(op->copy_data(fd, fill, n, cookie));
+        CHECK(op->write(fd, fill, n, cookie));
     }
 
     for (e = fs->first; e != NULL; e = e->next) {
         if (verbose) {
             fprintf(stderr, "%08x %08x %s\n", e->offset, e->length, e->name);
         }
-        CHECK_WRITE(op->copy_file(fd, e->srcpath, e->length, cookie));
+        CHECK(op->write_file(fd, e->srcpath, e->length, cookie));
         if ((n = PAGEFILL(e->length))) {
-            CHECK_WRITE(op->copy_data(fd, fill, n, cookie));
+            CHECK(op->write(fd, fill, n, cookie));
         }
     }
     // If the last entry has length zero, add an extra zero page at the end.
     // This prevents the possibility of trying to read/map past the end of the
     // bootfs at runtime.
     if (last_length == 0) {
-        CHECK_WRITE(op->copy_data(fd, fill, sizeof(fill), cookie));
+        CHECK(op->write(fd, fill, sizeof(fill), cookie));
     }
 
-    if (op->copy_finish) {
-        CHECK_WRITE(op->copy_finish(fd, cookie));
+    if (op->finish) {
+        CHECK(op->finish(fd, cookie));
     }
 
     off_t wrote = lseek(fd, 0, SEEK_CUR);
