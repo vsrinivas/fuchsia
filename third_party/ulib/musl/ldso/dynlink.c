@@ -12,6 +12,7 @@
 #include <limits.h>
 #include <link.h>
 #include <magenta/dlfcn.h>
+#include <magenta/process.h>
 #include <magenta/status.h>
 #include <pthread.h>
 #include <setjmp.h>

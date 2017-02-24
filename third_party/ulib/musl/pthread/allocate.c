@@ -1,6 +1,7 @@
 #include "libc.h"
 #include "pthread_impl.h"
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <stddef.h>
 #include <string.h>
