@@ -55,7 +55,7 @@ public:
         std::weak_ptr<MsdIntelConnection> connection;
 
         context_ = std::shared_ptr<MsdIntelContext>(
-            new ClientContext(connection, std::make_shared<Gtt>()));
+            new ClientContext(connection, std::make_shared<Gtt>(GpuMappingCache::Create())));
 
         mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
 

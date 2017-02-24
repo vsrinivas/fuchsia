@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "command_buffer.h"
+#include "gpu_mapping_cache.h"
 #include "helper/command_buffer_helper.h"
 #include "helper/platform_device_helper.h"
 #include "mock/mock_address_space.h"

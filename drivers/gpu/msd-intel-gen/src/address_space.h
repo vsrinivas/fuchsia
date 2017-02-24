@@ -6,13 +6,17 @@
 #define ADDRESS_SPACE_H
 
 #include "gpu_mapping.h"
+#include "gpu_mapping_cache.h"
 #include "msd_intel_buffer.h"
 #include "pagetable.h"
 
 // Base class for various address spaces.
 class AddressSpace {
 public:
-    AddressSpace(AddressSpaceType type) : type_(type) {}
+    AddressSpace(AddressSpaceType type, std::shared_ptr<GpuMappingCache> cache)
+        : type_(type), cache_(cache)
+    {
+    }
 
     virtual ~AddressSpace() {}
 
@@ -63,6 +67,7 @@ public:
 
 private:
     AddressSpaceType type_;
+    std::shared_ptr<GpuMappingCache> cache_;
 };
 
 #endif // ADDRESS_SPACE_H

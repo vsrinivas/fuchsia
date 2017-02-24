@@ -90,7 +90,8 @@ PerProcessGtt::PageDirectory::PageDirectory(std::unique_ptr<magma::PlatformBuffe
 //////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<PerProcessGtt>
-PerProcessGtt::Create(std::shared_ptr<magma::PlatformBuffer> scratch_buffer)
+PerProcessGtt::Create(std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
+                      std::shared_ptr<GpuMappingCache> cache)
 {
     std::vector<std::unique_ptr<PageDirectory>> page_directories(kPageDirectories);
 
@@ -101,13 +102,14 @@ PerProcessGtt::Create(std::shared_ptr<magma::PlatformBuffer> scratch_buffer)
         page_directories[i] = std::move(page_directory);
     }
 
-    return std::unique_ptr<PerProcessGtt>(
-        new PerProcessGtt(std::move(scratch_buffer), std::move(page_directories)));
+    return std::unique_ptr<PerProcessGtt>(new PerProcessGtt(
+        std::move(scratch_buffer), std::move(page_directories), std::move(cache)));
 }
 
 PerProcessGtt::PerProcessGtt(std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
-                             std::vector<std::unique_ptr<PageDirectory>> page_directories)
-    : AddressSpace(ADDRESS_SPACE_PPGTT), scratch_buffer_(std::move(scratch_buffer)),
+                             std::vector<std::unique_ptr<PageDirectory>> page_directories,
+                             std::shared_ptr<GpuMappingCache> cache)
+    : AddressSpace(ADDRESS_SPACE_PPGTT, cache), scratch_buffer_(std::move(scratch_buffer)),
       page_directories_(std::move(page_directories))
 {
 }

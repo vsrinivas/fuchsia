@@ -72,5 +72,6 @@ AddressSpace::GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
             return DRETP(nullptr, "Couldn't map buffer to gtt");
         mapping = buffer->ShareBufferMapping(std::move(new_mapping));
     }
+    address_space->cache_->CacheMapping(mapping);
     return mapping;
 }

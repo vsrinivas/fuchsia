@@ -14,7 +14,7 @@
 
 class Gtt : public AddressSpace {
 public:
-    Gtt();
+    Gtt(std::shared_ptr<GpuMappingCache> cache);
 
     uint64_t Size() const override { return size_; }
 

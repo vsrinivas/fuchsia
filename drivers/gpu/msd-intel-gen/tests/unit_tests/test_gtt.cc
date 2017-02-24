@@ -101,7 +101,7 @@ public:
         platform_device =
             std::unique_ptr<MockPlatformDevice>(new MockPlatformDevice(reg_size + gtt_size));
         reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(reg_size)));
-        gtt = std::unique_ptr<Gtt>(new Gtt());
+        gtt = std::unique_ptr<Gtt>(new Gtt(GpuMappingCache::Create()));
 
         bool ret = gtt->Init(gtt_size, platform_device.get());
         EXPECT_TRUE(ret);
@@ -126,7 +126,7 @@ public:
 
         platform_device = std::shared_ptr<MockPlatformDevice>(new MockPlatformDevice(bar0_size));
         reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(bar0_size)));
-        gtt = std::unique_ptr<Gtt>(new Gtt());
+        gtt = std::unique_ptr<Gtt>(new Gtt(GpuMappingCache::Create()));
 
         bool ret = gtt->Init(gtt_size, platform_device.get());
         EXPECT_EQ(ret, true);

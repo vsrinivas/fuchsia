@@ -19,6 +19,7 @@ public:
     public:
         virtual magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
+        virtual std::shared_ptr<GpuMappingCache> mapping_cache() = 0;
     };
 
     static std::unique_ptr<MsdIntelConnection>

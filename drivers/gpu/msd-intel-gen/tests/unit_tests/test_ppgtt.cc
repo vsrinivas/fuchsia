@@ -97,7 +97,7 @@ public:
     {
         auto scratch_buffer = get_scratch_buffer();
 
-        auto ppgtt = PerProcessGtt::Create(scratch_buffer);
+        auto ppgtt = PerProcessGtt::Create(scratch_buffer, GpuMappingCache::Create());
 
         EXPECT_TRUE(ppgtt->Init());
 
@@ -113,7 +113,7 @@ public:
     {
         auto scratch_buffer = get_scratch_buffer();
 
-        auto ppgtt = PerProcessGtt::Create(scratch_buffer);
+        auto ppgtt = PerProcessGtt::Create(scratch_buffer, GpuMappingCache::Create());
         EXPECT_TRUE(ppgtt->Init());
 
         uint64_t scratch_bus_addr;

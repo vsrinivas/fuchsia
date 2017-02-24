@@ -18,7 +18,8 @@ class PerProcessGtt : public AddressSpace {
 public:
     // Create with the given scratch_buffer, which should be one page that has already been pinned.
     static std::unique_ptr<PerProcessGtt>
-    Create(std::shared_ptr<magma::PlatformBuffer> scratch_buffer);
+    Create(std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
+           std::shared_ptr<GpuMappingCache> cache);
 
     uint64_t Size() const override { return kSize; }
 
@@ -42,7 +43,8 @@ private:
     class PageDirectory; // defined below
 
     PerProcessGtt(std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
-                  std::vector<std::unique_ptr<PageDirectory>> page_directories);
+                  std::vector<std::unique_ptr<PageDirectory>> page_directories,
+                  std::shared_ptr<GpuMappingCache> cache);
 
     // Legacy 32-bit ppgtt = 4 PDP registers; each PD handles 1GB (512 * 512 * 4096) = 4GB total
     static constexpr uint64_t kPageDirectories = 4; // aka page directory pointer entries

@@ -38,6 +38,6 @@ magma_status_t msd_connection_wait_rendering(msd_connection* abi_connection, msd
 std::unique_ptr<MsdIntelConnection>
 MsdIntelConnection::Create(Owner* owner, std::shared_ptr<magma::PlatformBuffer> scratch_buffer)
 {
-    return std::unique_ptr<MsdIntelConnection>(
-        new MsdIntelConnection(owner, PerProcessGtt::Create(std::move(scratch_buffer))));
+    return std::unique_ptr<MsdIntelConnection>(new MsdIntelConnection(
+        owner, PerProcessGtt::Create(std::move(scratch_buffer), owner->mapping_cache())));
 }

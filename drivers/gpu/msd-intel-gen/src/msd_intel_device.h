@@ -104,6 +104,7 @@ private:
     // MsdIntelConnection::Owner
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
     void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
+    std::shared_ptr<GpuMappingCache> mapping_cache() override { return mapping_cache_; }
 
 private:
     MsdIntelDevice();
@@ -165,6 +166,7 @@ private:
     std::unique_ptr<Sequencer> sequencer_;
 	std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
     std::unique_ptr<magma::PlatformInterrupt> interrupt_;
+    std::shared_ptr<GpuMappingCache> mapping_cache_;
 
     // page flipping
     std::deque<std::shared_ptr<GpuMapping>> display_mappings_;

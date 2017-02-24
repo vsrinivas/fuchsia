@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gpu_mapping_cache.h"
 #include "magma_util/sleep.h"
 #include "mock/mock_address_space.h"
 #include "msd_intel_buffer.h"
@@ -50,6 +51,73 @@ public:
 
         EXPECT_FALSE(address_space->is_allocated(gpu_addr));
         EXPECT_TRUE(address_space->is_clear(gpu_addr));
+    }
+
+    static void CachedMapping()
+    {
+
+        const uint64_t kBufferSize = 4 * PAGE_SIZE;
+
+        std::shared_ptr<MockAddressSpace> address_space;
+
+        // Verify Uncached Behavior
+        address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, 0);
+        {
+            std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize));
+            EXPECT_EQ(buffer->shared_mapping_count(), 0u);
+            auto shared_mapping =
+                AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            EXPECT_EQ(buffer->shared_mapping_count(), 1u);
+            EXPECT_EQ(shared_mapping.use_count(), 1u);
+            shared_mapping = nullptr;
+            EXPECT_EQ(buffer->shared_mapping_count(), 0u);
+            shared_mapping = AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            EXPECT_EQ(buffer->shared_mapping_count(), 1u);
+            EXPECT_EQ(shared_mapping.use_count(), 1u);
+        }
+
+        // Basic Caching of a single buffer
+        address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, kBufferSize);
+        {
+            std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize));
+            EXPECT_EQ(buffer->shared_mapping_count(), 0u);
+            auto shared_mapping =
+                AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            EXPECT_EQ(buffer->shared_mapping_count(), 1u);
+            EXPECT_EQ(shared_mapping.use_count(), 2u);
+            shared_mapping = nullptr;
+            EXPECT_EQ(buffer->shared_mapping_count(), 1u);
+            shared_mapping = AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+            EXPECT_EQ(buffer->shared_mapping_count(), 1u);
+            EXPECT_EQ(shared_mapping.use_count(), 2u);
+        }
+
+        // Buffer Eviction
+        address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, kBufferSize);
+        {
+            std::shared_ptr<MsdIntelBuffer> buffer0(MsdIntelBuffer::Create(kBufferSize));
+            std::shared_ptr<MsdIntelBuffer> buffer1(MsdIntelBuffer::Create(kBufferSize));
+            std::shared_ptr<MsdIntelBuffer> buffer2(MsdIntelBuffer::Create(2 * kBufferSize));
+
+            EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
+            EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
+            EXPECT_EQ(buffer2->shared_mapping_count(), 0u);
+            AddressSpace::GetSharedGpuMapping(address_space, buffer0, PAGE_SIZE);
+            EXPECT_EQ(buffer0->shared_mapping_count(), 1u);
+            EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
+            EXPECT_EQ(buffer2->shared_mapping_count(), 0u);
+            AddressSpace::GetSharedGpuMapping(address_space, buffer1, PAGE_SIZE);
+            // buffer1 should fit in the cache and therefore evict buffer0
+            EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
+            EXPECT_EQ(buffer1->shared_mapping_count(), 1u);
+            EXPECT_EQ(buffer2->shared_mapping_count(), 0u);
+
+            AddressSpace::GetSharedGpuMapping(address_space, buffer2, PAGE_SIZE);
+            // buffer2 should not fit in the cache and therefore not evict buffer1
+            EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
+            EXPECT_EQ(buffer1->shared_mapping_count(), 1u);
+            EXPECT_EQ(buffer2->shared_mapping_count(), 0u);
+        }
     }
 
     static void SharedMapping(uint64_t size, uint32_t alignment)
@@ -242,5 +310,7 @@ TEST(MsdIntelBuffer, OverlappedMapping)
     TestMsdIntelBuffer::OverlappedMapping(4096);
     TestMsdIntelBuffer::OverlappedMapping(8192);
 }
+
+TEST(MsdIntelBuffer, CachedMapping) { TestMsdIntelBuffer::CachedMapping(); }
 
 TEST(MsdIntelBuffer, WaitRendering) { TestMsdIntelBuffer::WaitRendering(); }
