@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
 #include <magenta/processargs.h>
+#include <magenta/process.h>
 #include <magenta/status.h>
-#include <magenta/syscalls.h>
 #include <mx/process.h>
 #include <unistd.h>
 
