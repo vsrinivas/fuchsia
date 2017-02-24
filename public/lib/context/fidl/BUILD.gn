@@ -9,7 +9,6 @@ fidl("context") {
     "client.fidl",
     "context_engine.fidl",
     "publisher_link.fidl",
-    "query.fidl",
     "subscriber_link.fidl",
   ]
 }
