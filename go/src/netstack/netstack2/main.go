@@ -70,6 +70,7 @@ func main() {
 
 func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, arena *eth.Arena) error {
 	log.Printf("using ethernet device %q as NIC %d", path, nicid)
+
 	client, err := eth.NewClient(path, arena)
 	if err != nil {
 		return err
@@ -106,8 +107,6 @@ func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, a
 	routeTables[nicid] = defaultRouteTable(nicid, "")
 	stk.SetRouteTable(flattenRouteTables())
 	routeTablesMu.Unlock()
-
-	s.addNIC(nicid)
 
 	dhcpClient = dhcp.NewClient(stk, nicid, ep.linkAddr)
 	go dhcpClient.Start(func(config dhcp.Config) {

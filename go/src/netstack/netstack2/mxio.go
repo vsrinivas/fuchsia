@@ -39,6 +39,8 @@ const MXSIO_SIGNAL_INCOMING = mx.SignalUser0
 const MXSIO_SIGNAL_CONNECTED = mx.SignalUser3
 const MXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
 
+const defaultNIC = 1
+
 func devmgrConnect() (mx.Handle, error) {
 	f, err := os.OpenFile("/dev/socket", O_DIRECTORY|O_RDWR, 0)
 	if err != nil {
@@ -71,7 +73,7 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 		stack:      stk,
 		io:         make(map[cookie]*iostate),
 		next:       1,
-		nicData:    make(map[tcpip.NICID]nicData),
+		nicData:    make(map[tcpip.NICID]*nicData),
 	}
 
 	h, err := devmgrConnect()
@@ -95,24 +97,29 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 	return s, nil
 }
 
-func (s *socketServer) addNIC(nicid tcpip.NICID) {
-	s.mu.Lock()
-	s.nicData[nicid] = nicData{
-		started: make(chan struct{}),
+func (s *socketServer) getNICData(nicid tcpip.NICID) *nicData {
+	if d, ok := s.nicData[nicid]; ok {
+		return d
 	}
-	if s.dnsClient == nil {
-		// TODO(mpcomplete): Which NIC should we use for DNS requests?
-		s.dnsClient = dns.NewClient(s.stack, nicid)
+
+	s.nicData[nicid] = &nicData{
+		ready: make(chan struct{}),
 	}
-	s.mu.Unlock()
+	return s.nicData[nicid]
 }
 
 func (s *socketServer) setAddr(nicid tcpip.NICID, addr tcpip.Address) {
 	s.mu.Lock()
-	d := s.nicData[nicid]
-	close(d.started)
+	defer s.mu.Unlock()
+
+	d := s.getNICData(nicid)
+	close(d.ready)
 	d.addr = addr
-	s.mu.Unlock()
+
+	if s.dnsClient == nil {
+		// TODO(mpcomplete): Which NIC should we use for DNS requests?
+		s.dnsClient = dns.NewClient(s.stack, defaultNIC)
+	}
 }
 
 type cookie int64
@@ -334,13 +341,13 @@ type socketServer struct {
 
 	mu      sync.Mutex
 	next    cookie
-	nicData map[tcpip.NICID]nicData
+	nicData map[tcpip.NICID]*nicData
 	io      map[cookie]*iostate
 }
 
 type nicData struct {
-	started chan struct{}
-	addr    tcpip.Address
+	ready chan struct{}
+	addr  tcpip.Address
 }
 
 func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH, peerS mx.Handle, err error) {
@@ -472,10 +479,19 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
 	if addr.Addr == "\x00\x00\x00\x00" {
-		// TODO(mpcomplete): This is surely wrong.
-		<-s.nicData[addr.NIC].started
+		nicid := addr.NIC
+		if nicid == 0 {
+			nicid = defaultNIC
+		}
+
 		s.mu.Lock()
-		addr.Addr = s.nicData[addr.NIC].addr
+		d := s.getNICData(nicid)
+		s.mu.Unlock()
+
+		<-d.ready
+
+		s.mu.Lock()
+		addr.Addr = d.addr
 		s.mu.Unlock()
 	}
 	if err != nil {
