@@ -187,7 +187,7 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
             top: 0.0,
             child: new IconButton(
               icon: new Icon(Icons.arrow_back),
-              size: 60.0,
+              iconSize: 60.0,
               onPressed: () {
                 _controller.close();
                 Navigator.of(context).pop();
@@ -313,7 +313,7 @@ class _ChooserScreenState extends State<_ChooserScreen> {
             top: 0.0,
             child: new IconButton(
               icon: new Icon(Icons.close),
-              size: 60.0,
+              iconSize: 60.0,
               onPressed: () {
                 io.exit(0);
               },

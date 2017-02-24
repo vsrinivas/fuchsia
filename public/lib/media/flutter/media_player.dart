@@ -184,7 +184,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
                 config.controller.playing ?
                   new Icon(Icons.pause) :
                   new Icon(Icons.play_arrow),
-            size: 60.0,
+            iconSize: 60.0,
             onPressed: () {
               if (config.controller.playing) {
                 config.controller.pause();
