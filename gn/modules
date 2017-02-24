@@ -2,6 +2,12 @@
     "labels": [
         "//apps/modules"
     ],
+    "imports": [
+      "chat",
+      "contacts",
+      "calendar",
+      "email"
+    ],
     "binaries": [
         {
             "binary": "color.flx",
