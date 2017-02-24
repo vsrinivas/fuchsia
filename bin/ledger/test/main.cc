@@ -4,18 +4,7 @@
 
 #include "gtest/gtest.h"
 
-#include "apps/ledger/src/glue/system/run_in_thread.h"
-
 int main(int argc, char** argv) {
-  int test_result;
-  auto result = ledger::RunInThread<int>(
-      [&argc, &argv]() {
-        testing::InitGoogleTest(&argc, argv);
-        return RUN_ALL_TESTS();
-      },
-      &test_result);
-  if (result != 0) {
-    return result;
-  }
-  return test_result;
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

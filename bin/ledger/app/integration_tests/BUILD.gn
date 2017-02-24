@@ -30,4 +30,8 @@ executable("integration_tests") {
     "//lib/mtl",
     "//third_party/gtest",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

@@ -27,7 +27,6 @@ source_set("main") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/glue/system",
     "//third_party/gtest",
   ]
 }

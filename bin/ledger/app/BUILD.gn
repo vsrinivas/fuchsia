@@ -14,7 +14,6 @@ executable("app") {
     "//apps/ledger/services/internal",
     "//apps/ledger/src/configuration:lib",
     "//apps/ledger/src/environment",
-    "//apps/ledger/src/glue/system",
     "//apps/ledger/src/network",
     "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
@@ -23,6 +22,10 @@ executable("app") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }
 
@@ -148,5 +151,9 @@ executable("application_tests") {
 
   data_deps = [
     ":app",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

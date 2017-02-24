@@ -29,6 +29,13 @@ group("tests") {
   ]
 }
 
+config("ledger_config") {
+  ldflags= [
+    # Use a 1M stack.
+    "-Wl,-z,stack-size=0x100000",
+  ]
+}
+
 executable("ledger_unittests") {
   testonly = true
 
@@ -50,5 +57,9 @@ executable("ledger_unittests") {
     "//apps/ledger/src/test:main",
     "//apps/ledger/src/test:unittests",
     "//lib/ftl:ftl_printers",
+  ]
+
+  configs += [
+    ":ledger_config",
   ]
 }

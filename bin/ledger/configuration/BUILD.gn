@@ -36,6 +36,10 @@ executable("configuration_writer") {
     ":lib",
     "//lib/ftl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("unittests") {

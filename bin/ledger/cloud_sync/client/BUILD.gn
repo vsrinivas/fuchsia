@@ -24,4 +24,8 @@ executable("client") {
     "//lib/ftl",
     "//lib/mtl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
