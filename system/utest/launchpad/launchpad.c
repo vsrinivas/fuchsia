@@ -57,7 +57,7 @@ static bool launchpad_test(void)
     ASSERT_GT(dynld_vmo, 0, "launchpad_vmo_from_file");
     elf_load_header_t header;
     uintptr_t phoff;
-    status = elf_load_prepare(dynld_vmo, &header, &phoff);
+    status = elf_load_prepare(dynld_vmo, NULL, 0, &header, &phoff);
     ASSERT_EQ(status, NO_ERROR, "elf_load_prepare");
     unittest_printf("entry %p, base %p, header entry %p\n",
                     (void*) entry, (void*) base, (void*) header.e_entry);

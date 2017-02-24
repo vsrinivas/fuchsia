@@ -261,6 +261,26 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo);
 mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
                                      mx_vaddr_t* base, mx_vaddr_t* entry);
 
+// Load an executable file into memory. If the file is an ELF file, it
+// will be loaded as per launchpad_elf_load. If it is a script (the
+// first two characters are "#!"), the next sequence of non-whitespace
+// characters in the file specify the name of an interpreter that will
+// be loaded instead, using the loader service RPC. Any text that
+// follows the interpreter specification on the first line will be passed
+// as the first argument to the interpreter, followed by all of the
+// original argv arguments (which includes the script name in argv[0]).
+// The length of the first line of an interpreted script may not exceed
+// 127 characters, or ERR_NOT_FOUND will be returned. If an invalid vmo
+// handle is passed, ERR_INVALID_ARGS will be returned.
+mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo);
+
+// The maximum length of the first line of a file that specifies an
+// interpreter, using the #! syntax.
+#define LP_MAX_INTERP_LINE_LEN 127
+
+// The maximum levels of indirection allowed in script execution.
+#define LP_MAX_SCRIPT_NEST_LEVEL 5
+
 // Discover the entry-point address after a successful call to
 // launchpad_elf_load or launchpad_elf_load_basic.  This can be used
 // in mx_process_start directly rather than calling launchpad_start,

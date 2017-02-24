@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <limits.h>
+#include <string.h>
 #include <magenta/syscalls.h>
 
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -32,16 +33,22 @@
 // purely position-independent and uses no writable memory other than
 // its own stack.
 
-mx_status_t elf_load_prepare(mx_handle_t vmo, elf_load_header_t* header,
-                             uintptr_t* phoff) {
+// hdr_buf represents bytes already read from the start of the file.
+mx_status_t elf_load_prepare(mx_handle_t vmo, const void* hdr_buf, size_t buf_sz,
+                             elf_load_header_t* header, uintptr_t* phoff) {
     // Read the file header and validate basic format sanity.
     elf_ehdr_t ehdr;
-    size_t n;
-    mx_status_t status = mx_vmo_read(vmo, &ehdr, 0, sizeof(ehdr), &n);
-    if (status != NO_ERROR)
-        return status;
-    if (n != sizeof(ehdr) ||
-        ehdr.e_ident[EI_MAG0] != ELFMAG0 ||
+    if (buf_sz >= sizeof(ehdr)) {
+        memcpy(&ehdr, hdr_buf, sizeof(ehdr));
+    } else {
+        size_t n;
+        mx_status_t status = mx_vmo_read(vmo, &ehdr, 0, sizeof(ehdr), &n);
+        if (status != NO_ERROR)
+            return status;
+        if (n != sizeof(ehdr))
+            return ERR_ELF_BAD_FORMAT;
+    }
+    if (ehdr.e_ident[EI_MAG0] != ELFMAG0 ||
         ehdr.e_ident[EI_MAG1] != ELFMAG1 ||
         ehdr.e_ident[EI_MAG2] != ELFMAG2 ||
         ehdr.e_ident[EI_MAG3] != ELFMAG3 ||

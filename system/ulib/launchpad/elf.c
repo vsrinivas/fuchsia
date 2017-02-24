@@ -19,10 +19,11 @@ void elf_load_destroy(elf_load_info_t* info) {
     free(info);
 }
 
-mx_status_t elf_load_start(mx_handle_t vmo, elf_load_info_t** infop) {
+mx_status_t elf_load_start(mx_handle_t vmo, const void* hdr_buf, size_t buf_sz,
+                           elf_load_info_t** infop) {
     elf_load_header_t header;
     uintptr_t phoff;
-    mx_status_t status = elf_load_prepare(vmo, &header, &phoff);
+    mx_status_t status = elf_load_prepare(vmo, hdr_buf, buf_sz, &header, &phoff);
     if (status == NO_ERROR) {
         // Now allocate the data structure and read in the phdrs.
         size_t phdrs_size = (size_t)header.e_phnum * sizeof(elf_phdr_t);

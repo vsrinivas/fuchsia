@@ -37,9 +37,10 @@ typedef struct {
 // including wrong machine, wrong endian, etc. as well as a truncated file.
 #define ERR_ELF_BAD_FORMAT ERR_NOT_FOUND
 
-// Validate the ELF headers and fill in basic header information.
-mx_status_t elf_load_prepare(mx_handle_t vmo, elf_load_header_t* header,
-                             uintptr_t* phoff);
+// Validate the ELF headers and fill in basic header information. 'hdr_buf'
+// represents bytes already read from the start of the file.
+mx_status_t elf_load_prepare(mx_handle_t vmo, const void* hdr_buf, size_t buf_sz,
+                             elf_load_header_t* header, uintptr_t* phoff);
 
 // Read the ELF program headers in.
 mx_status_t elf_load_read_phdrs(mx_handle_t vmo, elf_phdr_t* phdrs,

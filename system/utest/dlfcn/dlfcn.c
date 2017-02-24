@@ -7,6 +7,7 @@
 #include <launchpad/vmo.h>
 #include <magenta/device/dmctl.h>
 #include <magenta/dlfcn.h>
+#include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/loader-service.h>
 #include <stdatomic.h>
@@ -44,13 +45,21 @@ bool dlopen_vmo_test(void) {
 static atomic_bool my_loader_service_ok = false;
 static atomic_int my_loader_service_calls = 0;
 
-static mx_handle_t my_loader_service(void* arg, const char* name) {
+static mx_handle_t my_loader_service(void* arg, uint32_t load_op,
+                                     const char* name) {
     ++my_loader_service_calls;
 
     int cmp = strcmp(name, TEST_NAME);
     EXPECT_EQ(cmp, 0, "called with unexpected name");
     if (cmp != 0) {
         unittest_printf("        saw \"%s\", expected \"%s\"", name, TEST_NAME);
+        return MX_HANDLE_INVALID;
+    }
+    EXPECT_EQ(load_op, (uint32_t) LOADER_SVC_OP_LOAD_OBJECT,
+              "called with unexpected load op");
+    if (load_op != (uint32_t) LOADER_SVC_OP_LOAD_OBJECT) {
+        unittest_printf("        saw %" PRIu32 ", expected %" PRIu32, load_op,
+                        LOADER_SVC_OP_LOAD_OBJECT);
         return MX_HANDLE_INVALID;
     }
 

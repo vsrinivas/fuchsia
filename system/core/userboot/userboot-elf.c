@@ -29,7 +29,7 @@ static mx_vaddr_t load(mx_handle_t log, mx_handle_t vmar_self,
                        bool close_vmo, bool return_entry) {
     elf_load_header_t header;
     uintptr_t phoff;
-    mx_status_t status = elf_load_prepare(vmo, &header, &phoff);
+    mx_status_t status = elf_load_prepare(vmo, NULL, 0, &header, &phoff);
     check(log, status, "elf_load_prepare failed\n");
 
     elf_phdr_t phdrs[header.e_phnum];

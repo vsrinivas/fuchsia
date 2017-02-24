@@ -23,10 +23,14 @@ __BEGIN_CDECLS
 //     that is shared by multiple processes.
 
 // Type of the hook for mxio_loader_service.  The first argument is
-// the one passed to mxio_loader_service, and the second is the file
-// name passed to dlopen or found in a DT_NEEDED entry.
-typedef mx_handle_t (*mxio_loader_service_function_t)(void* loader_arg,
-                                                      const char* file);
+// the one passed to mxio_loader_service, and the second specifies
+// which load service was requested (the opcode from
+// mx_loader_svc_msg).  The third argument is the file name passed
+// to dlopen or found in a DT_NEEDED entry.
+typedef mx_handle_t (*mxio_loader_service_function_t)
+                        (void* loader_arg,
+                         uint32_t load_cmd,
+                         const char* file);
 
 // Start a thread to resolve loader service requests and return a
 // channel handle to talk to said service.  If the function passed

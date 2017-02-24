@@ -148,6 +148,10 @@ struct mx_loader_svc_msg {
 #define LOADER_SVC_OP_DEBUG_PRINT 3
 // arg=0, data[] debug text (asciiz)
 
+#define LOADER_SVC_OP_LOAD_SCRIPT_INTERP 4
+// arg=0, data[] object name (asciiz)
+// reply includes vmo handle on success
+
 #ifdef __cplusplus
 }
 #endif

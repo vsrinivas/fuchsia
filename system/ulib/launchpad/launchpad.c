@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
 #include "elf.h"
 
 #include <magenta/assert.h>
@@ -35,6 +36,10 @@ struct launchpad {
     size_t args_len;
     char* env;
     size_t env_len;
+
+    size_t num_script_args;
+    char* script_args;
+    size_t script_args_len;
 
     mx_handle_t* handles;
     uint32_t* handles_info;
@@ -104,6 +109,7 @@ void launchpad_destroy(launchpad_t* lp) {
     close_handles(lp->handles, lp->handle_count);
     free(lp->handles);
     free(lp->handles_info);
+    free(lp->script_args);
     free(lp->args);
     free(lp->env);
     free(lp);
@@ -335,7 +341,7 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
 
     elf_load_info_t* elf;
     mx_status_t status;
-    if ((status = elf_load_start(vmo, &elf)))
+    if ((status = elf_load_start(vmo, NULL, 0, &elf)))
         lp_error(lp, status, "elf_load: elf_load_start() failed");
     mx_handle_t segments_vmar;
     if ((status = elf_load_finish(lp_vmar(lp), elf, vmo,
@@ -366,7 +372,7 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
 
     elf_load_info_t* elf;
     mx_status_t status;
-    if ((status = elf_load_start(vmo, &elf)))
+    if ((status = elf_load_start(vmo, NULL, 0, &elf)))
         lp_error(lp, status, "elf_load_extra: elf_load_start() failed");
     if ((status = elf_load_finish(lp_vmar(lp), elf, vmo, NULL, base, entry)))
         lp_error(lp, status, "elf_load_extra: elf_load_finish() failed");
@@ -461,7 +467,7 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
 
     elf_load_info_t* elf;
     mx_handle_t segments_vmar;
-    status = elf_load_start(interp_vmo, &elf);
+    status = elf_load_start(interp_vmo, NULL, 0, &elf);
     if (status == NO_ERROR) {
         status = elf_load_finish(lp_vmar(lp), elf, interp_vmo,
                                  &segments_vmar, &lp->base, &lp->entry);
@@ -482,17 +488,14 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
     return status;
 }
 
-mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
-    if (vmo < 0)
-        return lp_error(lp, vmo, "elf_load: negative vmo");
-    if (vmo == MX_HANDLE_INVALID)
-        return lp_error(lp, ERR_INVALID_ARGS, "elf_load: invalid vmo");
-    if (lp->error)
-        goto done;
-
+static mx_status_t launchpad_elf_load_body(launchpad_t* lp, const char* hdr_buf,
+                                           size_t buf_sz, mx_handle_t vmo) {
     elf_load_info_t* elf;
     mx_status_t status;
-    if ((status = elf_load_start(vmo, &elf)) != NO_ERROR) {
+
+    if (lp->error)
+        goto done;
+    if ((status = elf_load_start(vmo, hdr_buf, buf_sz, &elf)) != NO_ERROR) {
         lp_error(lp, status, "elf_load: elf_load_start() failed");
     } else {
         char* interp;
@@ -533,6 +536,161 @@ done:
     if (vmo)
         mx_handle_close(vmo);
     return lp->error;
+}
+
+// Find the starting point of the interpreter and the interpreter
+// arguments in a #! script header. Note that the input buffer (line)
+// will be modified to add a NULL after the interpreter name.
+static mx_status_t parse_interp_spec(char *line, char **interp_start,
+                                     size_t *interp_len, char **args_start)
+{
+    *args_start = NULL;
+
+    // Skip the '#!' prefix
+    char* next_char = line + 2;
+
+    // Skip whitespace
+    next_char += strspn(next_char, " \t");
+
+    // No interpreter specified
+    if (*next_char == '\0')
+        return ERR_NOT_FOUND;
+
+    *interp_start = next_char;
+
+    // Skip the interpreter name
+    next_char += strcspn(next_char, " \t");
+    *interp_len = next_char - *interp_start;
+
+    if (*next_char == '\0')
+        return NO_ERROR;
+
+    *next_char++ = '\0';
+
+    // Look for the args
+    next_char += strspn(next_char, " \t");
+
+    if (*next_char == '\0')
+        return NO_ERROR;
+
+    *args_start = next_char;
+    return NO_ERROR;
+}
+
+mx_status_t launchpad_file_load(launchpad_t* lp, mx_handle_t vmo) {
+    if (vmo < 0)
+        return lp_error(lp, vmo, "file_load: negative vmo");
+    if (vmo == MX_HANDLE_INVALID)
+        return lp_error(lp, ERR_INVALID_ARGS, "file_load: invalid vmo");
+
+    if (lp->script_args != NULL) {
+        free(lp->script_args);
+        lp->script_args = NULL;
+    }
+    lp->script_args_len = 0;
+    lp->num_script_args = 0;
+
+    size_t script_nest_level = 0;
+    mx_status_t status;
+    char first_line[LP_MAX_INTERP_LINE_LEN + 1];
+    size_t chars_read;
+
+    while (1) {
+        // Read enough to get the interpreter specification of a script
+        status = mx_vmo_read(vmo, first_line, 0, sizeof(first_line),
+                             &chars_read);
+
+        // This is not a script -- load as an ELF file
+        if ((status == NO_ERROR)
+            && (chars_read < 2 || first_line[0] != '#' || first_line[1] != '!'))
+            break;
+
+        mx_handle_close(vmo);
+
+        if (status != NO_ERROR)
+            return lp_error(lp, status, "file_load: mx_vmo_read() failed");
+
+        script_nest_level++;
+
+        // No point trying to read an interpreter we're not going to consider
+        if (script_nest_level > LP_MAX_SCRIPT_NEST_LEVEL)
+            return lp_error(lp, ERR_NOT_SUPPORTED,
+                            "file_load: too many levels of script indirection");
+
+        // Normalize the line so that it is NULL-terminated
+        char* newline_pos = memchr(first_line, '\n', chars_read);
+        if (newline_pos)
+            *newline_pos = '\0';
+        else if (chars_read == sizeof(first_line))
+            return lp_error(lp, ERR_OUT_OF_RANGE,
+                            "file_load: first line of script too long");
+        else
+            first_line[chars_read] = '\0';
+
+        char* interp_start;
+        size_t interp_len;
+        char* args_start;
+        status = parse_interp_spec(first_line, &interp_start, &interp_len,
+                                   &args_start);
+        if (status != NO_ERROR)
+            return lp_error(lp, status,
+                            "file_load: failed to parse interpreter spec");
+
+        size_t args_len = (args_start == NULL) ? 0 : newline_pos - args_start;
+
+        // Add interpreter and args to start of lp->script_args
+        size_t new_args_len = interp_len + 1;
+        if (args_start != NULL)
+            new_args_len += args_len + 1;
+        char *new_buf = malloc(new_args_len + lp->script_args_len);
+        if (new_buf == NULL)
+            return lp_error(lp, ERR_NO_MEMORY, "file_load: out of memory");
+
+        memcpy(new_buf, interp_start, interp_len + 1);
+        lp->num_script_args++;
+
+        if (args_start != NULL) {
+            memcpy(&new_buf[interp_len + 1], args_start, args_len + 1);
+            lp->num_script_args++;
+        }
+
+        if (lp->script_args != NULL) {
+            memcpy(&new_buf[new_args_len], lp->script_args,
+                   lp->script_args_len);
+            free(lp->script_args);
+        }
+
+        lp->script_args = new_buf;
+        lp->script_args_len += new_args_len;
+
+        // Load the interpreter into memory
+        status = setup_loader_svc(lp);
+        if (status != NO_ERROR)
+            return lp_error(lp, status, "file_load: setup_loader_svc() failed");
+
+        vmo = loader_svc_rpc(lp->special_handles[HND_LOADER_SVC],
+                             LOADER_SVC_OP_LOAD_SCRIPT_INTERP,
+                             interp_start, interp_len);
+        if (vmo < 0)
+            return lp_error(lp, vmo, "file_load: loader_svc_rpc() failed");
+    }
+
+    // Finally, load the interpreter itself
+    status = launchpad_elf_load_body(lp, first_line, chars_read, vmo);
+
+    if (status != NO_ERROR)
+        lp_error(lp, status, "file_load: failed to load ELF file");
+
+    return status;
+}
+
+mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
+    if (vmo < 0)
+        return lp_error(lp, vmo, "elf_load: negative vmo");
+    if (vmo == MX_HANDLE_INVALID)
+        return lp_error(lp, ERR_INVALID_ARGS, "elf_load: invalid vmo");
+
+    return launchpad_elf_load_body(lp, NULL, 0, vmo);
 }
 
 static mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
@@ -626,42 +784,73 @@ mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc) {
     return result;
 }
 
-static mx_status_t send_loader_message(launchpad_t* lp,
-                                       mx_handle_t first_thread,
-                                       mx_handle_t tochannel) {
-    struct loader_msg {
-        mx_proc_args_t header;
-        uint32_t handle_info[HND_SPECIAL_COUNT + HND_LOADER_COUNT];
-        char args_and_env[];
-    };
+// Construct a load message. Fill in the header, args, and environment
+// fields, and leave space for the handles, which should be filled in
+// by the caller.
+// TODO(mcgrathr): One day we'll have a gather variant of message_write
+// and then we can send this without copying into a temporary buffer.
+static mx_status_t build_message(launchpad_t* lp, size_t num_handles,
+                                 void** msg_buf, size_t* buf_size) {
 
-    const size_t msg_size =
-        sizeof(struct loader_msg) + lp->args_len + lp->env_len;
-    struct loader_msg* msg = malloc(msg_size);
+    size_t msg_size = sizeof(mx_proc_args_t);
+    static_assert(sizeof(mx_proc_args_t) % sizeof(uint32_t) == 0,
+                  "handles misaligned in load message");
+    msg_size += sizeof(uint32_t) * num_handles;
+    msg_size += lp->script_args_len;
+    msg_size += lp->args_len;
+    msg_size += lp->env_len;
+    void* msg = malloc(msg_size);
     if (msg == NULL)
         return ERR_NO_MEMORY;
 
-    memset(&msg->header, 0, sizeof(msg->header));
-    msg->header.protocol = MX_PROCARGS_PROTOCOL;
-    msg->header.version = MX_PROCARGS_VERSION;
-    msg->header.handle_info_off = offsetof(struct loader_msg, handle_info);
+    mx_proc_args_t* header = msg;
+
+    memset(header, 0, sizeof(*header));
+    header->protocol = MX_PROCARGS_PROTOCOL;
+    header->version = MX_PROCARGS_VERSION;
+    header->handle_info_off = sizeof(*header);
 
     // Include the argument strings so the dynamic linker can use argv[0]
     // in messages it prints.
-    if (lp->argc > 0) {
-        msg->header.args_off = offsetof(struct loader_msg, args_and_env);
-        msg->header.args_num = lp->argc;
-        memcpy(msg->args_and_env, lp->args, lp->args_len);
+    header->args_off = header->handle_info_off +
+                       sizeof(uint32_t) * num_handles;
+    header->args_num = lp->num_script_args + lp->argc;
+    if (header->args_num > 0) {
+        uint8_t* script_args_start = (uint8_t*)msg + header->args_off;
+        memcpy(script_args_start, lp->script_args, lp->script_args_len);
+        uint8_t* args_start = script_args_start + lp->script_args_len;
+        memcpy(args_start, lp->args, lp->args_len);
     }
+    size_t total_args_len = lp->script_args_len + lp->args_len;
 
     // Include the environment strings so the dynamic linker can
     // see options like LD_DEBUG or whatnot.
     if (lp->envc > 0) {
-        msg->header.environ_off
-            = offsetof(struct loader_msg, args_and_env) + lp->args_len;
-        msg->header.environ_num = lp->envc;
-        memcpy(&msg->args_and_env[lp->args_len], lp->env, lp->env_len);
+        header->environ_off = header->args_off + total_args_len;
+        header->environ_num = lp->envc;
+        uint8_t* env_start = (uint8_t*)msg + header->environ_off;
+        memcpy(env_start, lp->env, lp->env_len);
     }
+
+    *msg_buf = msg;
+    *buf_size = msg_size;
+    return NO_ERROR;
+}
+
+static mx_status_t send_loader_message(launchpad_t* lp,
+                                       mx_handle_t first_thread,
+                                       mx_handle_t tochannel) {
+    void* msg;
+    size_t msg_size;
+    size_t num_handles = HND_SPECIAL_COUNT + HND_LOADER_COUNT;
+
+    mx_status_t status = build_message(lp, num_handles, &msg, &msg_size);
+    if (status != NO_ERROR)
+        return status;
+
+    mx_proc_args_t* header = msg;
+    uint32_t* msg_handle_info;
+    msg_handle_info = (uint32_t*) ((uint8_t*)msg + header->handle_info_off);
 
     // This loop should be completely unrolled.  But using a switch here
     // gives us compiler warnings if we forget to handle any of the special
@@ -675,7 +864,7 @@ static mx_status_t send_loader_message(launchpad_t* lp,
             // Duplicate the handles for the loader so we can send them in the
             // loader message and still have them later.
             mx_handle_t proc;
-            mx_status_t status = mx_handle_duplicate(lp_proc(lp), MX_RIGHT_SAME_RIGHTS, &proc);
+            status = mx_handle_duplicate(lp_proc(lp), MX_RIGHT_SAME_RIGHTS, &proc);
             if (status != NO_ERROR) {
                 free(msg);
                 return status;
@@ -696,11 +885,11 @@ static mx_status_t send_loader_message(launchpad_t* lp,
                 return status;
             }
             handles[nhandles] = proc;
-            msg->handle_info[nhandles] = MX_HND_TYPE_PROC_SELF;
+            msg_handle_info[nhandles] = MX_HND_TYPE_PROC_SELF;
             handles[nhandles + 1] = vmar;
-            msg->handle_info[nhandles + 1] = MX_HND_TYPE_VMAR_ROOT;
+            msg_handle_info[nhandles + 1] = MX_HND_TYPE_VMAR_ROOT;
             handles[nhandles + 2] = thread;
-            msg->handle_info[nhandles + 2] = MX_HND_TYPE_THREAD_SELF;
+            msg_handle_info[nhandles + 2] = MX_HND_TYPE_THREAD_SELF;
             nhandles += HND_LOADER_COUNT;
             continue;
 
@@ -718,13 +907,12 @@ static mx_status_t send_loader_message(launchpad_t* lp,
         }
         if (lp->special_handles[i] != MX_HANDLE_INVALID) {
             handles[nhandles] = lp->special_handles[i];
-            msg->handle_info[nhandles] = id;
+            msg_handle_info[nhandles] = id;
             ++nhandles;
         }
     }
 
-    mx_status_t status = mx_channel_write(tochannel, 0, msg, msg_size,
-                                          handles, nhandles);
+    status = mx_channel_write(tochannel, 0, msg, msg_size, handles, nhandles);
     if (status == NO_ERROR) {
         // message_write consumed all those handles.
         for (enum special_handles i = 0; i < HND_SPECIAL_COUNT; ++i)
@@ -740,54 +928,6 @@ static mx_status_t send_loader_message(launchpad_t* lp,
 
     free(msg);
     return status;
-}
-
-// TODO(mcgrathr): One day we'll have a gather variant of message_write
-// and then we can send this without copying into a temporary buffer.
-static void* build_message(launchpad_t* lp, bool stack_vmo,
-                           size_t *total_size) {
-    size_t total = sizeof(mx_proc_args_t);
-    total += lp->handle_count * sizeof(lp->handles_info[0]);
-    total += lp->args_len;
-    total += lp->env_len;
-
-    if (stack_vmo)
-        total += sizeof(sizeof(uint32_t));
-
-    uint8_t* buffer = malloc(total);
-    if (buffer == NULL)
-        return NULL;
-
-    uint8_t* p = buffer;
-    mx_proc_args_t* header = (void*)p;
-    p += sizeof(*header);
-
-    memset(header, 0, sizeof(*header));
-    header->protocol = MX_PROCARGS_PROTOCOL;
-    header->version = MX_PROCARGS_VERSION;
-
-    header->handle_info_off = p - buffer;
-    p = mempcpy(p, lp->handles_info,
-                lp->handle_count * sizeof(lp->handles_info[0]));
-    if (stack_vmo) {
-        *(uint32_t*)p = MX_HND_TYPE_STACK_VMO;
-        p += sizeof(uint32_t);
-    }
-
-    if (lp->argc > 0) {
-        header->args_num = lp->argc;
-        header->args_off = p - buffer;
-        p = mempcpy(p, lp->args, lp->args_len);
-    }
-
-    if (lp->envc > 0) {
-        header->environ_num = lp->envc;
-        header->environ_off = p - buffer;
-        p = mempcpy(p, lp->env, lp->env_len);
-    }
-
-    *total_size = total;
-    return buffer;
 }
 
 size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size) {
@@ -845,12 +985,20 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
 
     bool allocate_stack = !lp->set_stack_size || lp->stack_size > 0;
 
+    void *msg = NULL;
     size_t size;
-    void* msg = build_message(lp, allocate_stack, &size);
-    if (msg == NULL) {
+
+    if (build_message(lp, lp->handle_count + (allocate_stack ? 1 : 0), &msg, &size) !=
+        NO_ERROR) {
         mx_handle_close(*thread);
         return lp_error(lp, ERR_NO_MEMORY, "out of memory assembling procargs message");
     }
+    mx_proc_args_t* header = msg;
+    uint32_t* next_handle = mempcpy((uint8_t*)msg + header->handle_info_off,
+                                    lp->handles_info,
+                                    lp->handle_count * sizeof(lp->handles_info[0]));
+    if (allocate_stack)
+        *next_handle = MX_HND_TYPE_STACK_VMO;
 
     // Figure out how big an initial thread to allocate.
     size_t stack_size;
@@ -1014,20 +1162,20 @@ mx_status_t launchpad_go(launchpad_t* lp, mx_handle_t* proc, const char** errmsg
 
 #include <launchpad/vmo.h>
 
-static mx_status_t launchpad_elf_load_with_vdso(launchpad_t* lp, mx_handle_t vmo) {
-    launchpad_elf_load(lp, vmo);
+static mx_status_t launchpad_file_load_with_vdso(launchpad_t* lp, mx_handle_t vmo) {
+    launchpad_file_load(lp, vmo);
     launchpad_load_vdso(lp, MX_HANDLE_INVALID);
     return launchpad_add_vdso_vmo(lp);
 }
 
 mx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path) {
-    return launchpad_elf_load_with_vdso(lp, launchpad_vmo_from_file(path));
+    return launchpad_file_load_with_vdso(lp, launchpad_vmo_from_file(path));
 }
 
 mx_status_t launchpad_load_from_fd(launchpad_t* lp, int fd) {
-    return launchpad_elf_load_with_vdso(lp, launchpad_vmo_from_fd(fd));
+    return launchpad_file_load_with_vdso(lp, launchpad_vmo_from_fd(fd));
 }
 
 mx_status_t launchpad_load_from_vmo(launchpad_t* lp, mx_handle_t vmo) {
-    return launchpad_elf_load_with_vdso(lp, vmo);
+    return launchpad_file_load_with_vdso(lp, vmo);
 }

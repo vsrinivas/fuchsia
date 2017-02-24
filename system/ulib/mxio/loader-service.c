@@ -46,28 +46,44 @@ static const char* libpaths[] = {
     "/boot/lib",
 };
 
-static mx_handle_t default_load_object(void* ignored, const char* fn) {
+static mx_handle_t default_load_object(void* ignored,
+                                       uint32_t load_op,
+                                       const char* fn) {
     char buffer[8192];  // 8K is the max io size of the mxio layer right now
     char path[PATH_MAX];
     mx_handle_t vmo = 0;
     mx_status_t err = ERR_IO;
+    const char *resolved_fn;
 
     struct stat s;
     int fd;
 
-    for (unsigned n = 0; n < countof(libpaths); n++) {
-        snprintf(path, PATH_MAX, "%s/%s", libpaths[n], fn);
+    switch (load_op) {
+    case LOADER_SVC_OP_LOAD_OBJECT:
+        // When loading a library object, search in the hard-coded locations.
+        for (unsigned n = 0; n < countof(libpaths); n++) {
+            snprintf(path, PATH_MAX, "%s/%s", libpaths[n], fn);
 
-        if ((fd = open(path, O_RDONLY)) >= 0) {
+            if ((fd = open(path, O_RDONLY)) >= 0) {
+                resolved_fn = path;
+                goto found;
+            }
+        }
+        break;
+    case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
+        // When loading a script interpreter, we expect an absolute path.
+        if (fn && fn[0] == '/' && ((fd = open(fn, O_RDONLY)) >= 0)) {
+            resolved_fn = fn;
             goto found;
         }
+        break;
     }
-    fprintf(stderr, "dlsvc: could not open '%s'\n", path);
+    fprintf(stderr, "dlsvc: could not open '%s'\n", fn);
     return ERR_NOT_FOUND;
 
 found:
     if (fstat(fd, &s) < 0) {
-        fprintf(stderr, "dlsvc: could not stat '%s'\n", path);
+        fprintf(stderr, "dlsvc: could not stat '%s'\n", resolved_fn);
         goto fail;
     }
 
@@ -81,7 +97,7 @@ found:
     while (size > 0) {
         size_t xfer = (size > sizeof(buffer)) ? sizeof(buffer) : size;
         if ((r = read(fd, buffer, xfer)) < 0) {
-            fprintf(stderr, "dlsvc: read error @%zd in '%s'\n", off, path);
+            fprintf(stderr, "dlsvc: read error @%zd in '%s'\n", off, resolved_fn);
             goto fail;
         }
         size_t n;
@@ -135,9 +151,10 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
     mx_handle_t handle = MX_HANDLE_INVALID;
     switch (msg->opcode) {
     case LOADER_SVC_OP_LOAD_OBJECT:
+    case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
         // TODO(MG-491): Use a threadpool for loading, and guard against
         // other starvation attacks.
-        handle = (*loader)(loader_arg, (const char*) msg->data);
+        handle = (*loader)(loader_arg, msg->opcode, (const char*) msg->data);
         msg->arg = handle < 0 ? handle : NO_ERROR;
         break;
     case LOADER_SVC_OP_DEBUG_PRINT:

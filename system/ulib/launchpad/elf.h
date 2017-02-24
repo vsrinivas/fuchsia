@@ -13,7 +13,8 @@ typedef struct elf_load_info elf_load_info_t;
 
 // Validate the ELF headers and set up for further use.
 // The pointer returned must be passed to elf_load_destroy when finished.
-mx_status_t elf_load_start(mx_handle_t vmo, elf_load_info_t** infop);
+mx_status_t elf_load_start(mx_handle_t vmo, const void* buf, size_t buf_sz,
+                           elf_load_info_t** infop);
 
 // Clean up and free the data structure created by elf_load_start.
 void elf_load_destroy(elf_load_info_t* info);
