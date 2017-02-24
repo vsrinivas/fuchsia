@@ -7,7 +7,6 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
-#include <magenta/syscalls/channel.h>
 
 #include <unittest/unittest.h>
 

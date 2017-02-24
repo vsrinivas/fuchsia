@@ -20,8 +20,6 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
 
-#include <magenta/syscalls/channel.h>
-
 #include <mxtl/algorithm.h>
 #include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
@@ -111,7 +109,8 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
     if (result != NO_ERROR)
         return result;
 
-    if (options & ~MX_CHANNEL_READ_MASK)
+    // Currently MAY_DISCARD is the only allowable option.
+    if (options & ~MX_CHANNEL_READ_MAY_DISCARD)
         return ERR_NOT_SUPPORTED;
 
     mxtl::unique_ptr<MessagePacket> msg;

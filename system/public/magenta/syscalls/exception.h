@@ -111,7 +111,7 @@ typedef struct mx_exception_report {
     mx_exception_context_t context;
 } mx_exception_report_t;
 
-// Flags for mx_task_resume()
+// Options for mx_task_resume()
 #define MX_RESUME_EXCEPTION (1)
 // Indicates that we should resume the thread from stopped-in-exception state
 // (default resume does not do so)
@@ -123,7 +123,7 @@ typedef struct mx_exception_report {
 // let the next exception handler in the search order, if any, process the
 // exception. If there are no more then the entire process is killed.
 
-// Flags for mx_task_bind_exception_port.
+// Options for mx_task_bind_exception_port.
 #define MX_EXCEPTION_PORT_DEBUGGER (1)
 // When binding an exception port to a process, set the process's debugger
 // exception port.

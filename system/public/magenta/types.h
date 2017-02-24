@@ -206,7 +206,7 @@ typedef uint32_t mx_rights_t;
 #define MX_VMO_OP_CACHE_CLEAN            8u
 #define MX_VMO_OP_CACHE_CLEAN_INVALIDATE 9u
 
-// flags to vmar routines
+// Mapping flags to vmar routines
 #define MX_VM_FLAG_PERM_READ          (1u << 0)
 #define MX_VM_FLAG_PERM_WRITE         (1u << 1)
 #define MX_VM_FLAG_PERM_EXECUTE       (1u << 2)
@@ -243,7 +243,10 @@ typedef int64_t mx_rel_off_t;
 // interrupt flags
 #define MX_FLAG_REMAP_IRQ  0x1
 
-// Socket flags and limits.
+// Channel options and limits.
+#define MX_CHANNEL_READ_MAY_DISCARD         1u
+
+// Socket options and limits.
 #define MX_SOCKET_HALF_CLOSE                1u
 
 // Flags which can be used to to control cache policy for APIs which map memory.
