@@ -58,6 +58,11 @@ public:
         const gfx_font* font = vc_get_font();
         int pixels_x = font->width * size_x;
         int pixels_y = font->height * (size_y + 1); // Add 1 for status line.
+        // Add margins that aren't large enough to fit a whole column or
+        // row at the right and bottom.  This tests incremental update of
+        // anything that might be displayed in the margins.
+        pixels_x += font->width - 1;
+        pixels_y += font->height - 1;
         vc_surface = gfx_create_surface(
             nullptr, pixels_x, pixels_y, /* stride= */ pixels_x,
             MX_PIXEL_FORMAT_RGB_565, 0);
@@ -98,7 +103,10 @@ public:
         mxtl::unique_ptr<char[]> ComparisonString() {
             vc_device_t* vc_dev = helper_->vc_dev;
             gfx_surface* vc_surface = helper_->vc_surface;
-            uint32_t size_in_chars = vc_dev->columns * vc_dev->rows;
+            // Add 1 to these sizes to account for the margins.
+            uint32_t cmp_size_x = vc_dev->columns + 1;
+            uint32_t cmp_size_y = vc_dev->rows + 1;
+            uint32_t size_in_chars = cmp_size_x * cmp_size_y;
 
             mxtl::unique_ptr<bool[]> diffs(new bool[size_in_chars]);
             for (uint32_t i = 0; i < size_in_chars; ++i)
@@ -111,21 +119,21 @@ public:
                     uint32_t y_pixels = pixel_index / vc_surface->stride;
                     uint32_t x_chars = x_pixels / vc_dev->charw;
                     uint32_t y_chars = y_pixels / vc_dev->charh;
-                    EXPECT_LT(x_chars, vc_dev->columns, "");
-                    EXPECT_LT(y_chars, vc_dev->rows, "");
-                    diffs[x_chars + y_chars * vc_dev->columns] = true;
+                    EXPECT_LT(x_chars, cmp_size_x, "");
+                    EXPECT_LT(y_chars, cmp_size_y, "");
+                    diffs[x_chars + y_chars * cmp_size_x] = true;
                 }
             }
 
             // Build a string showing the differences.  If we had
             // std::string or equivalent, we'd use that here.
-            size_t string_size = (vc_dev->columns + 3) * vc_dev->rows + 1;
+            size_t string_size = (cmp_size_x + 3) * cmp_size_y + 1;
             mxtl::unique_ptr<char[]> string(new char[string_size]);
             char* ptr = string.get();
-            for (uint32_t y = 0; y < vc_dev->rows; ++y) {
+            for (uint32_t y = 0; y < cmp_size_y; ++y) {
                 *ptr++ = '|';
-                for (uint32_t x = 0; x < vc_dev->columns; ++x) {
-                    bool diff = diffs[x + y * vc_dev->columns];
+                for (uint32_t x = 0; x < cmp_size_x; ++x) {
+                    bool diff = diffs[x + y * cmp_size_x];
                     *ptr++ = diff ? 'D' : '-';
                 }
                 *ptr++ = '|';
@@ -222,10 +230,11 @@ bool test_display_update_comparison() {
     tc.InvalidateAllGraphics();
     EXPECT_TRUE(snapshot.ChangedSinceSnapshot(), "");
     const char *expected =
-        "|----------|\n"  // Console status line
-        "|D---------|\n"  // Cursor
-        "|--DD--D---|\n"  // Chars set by SetChar() above
-        "|----------|\n";
+        "|-----------|\n"  // Console status line
+        "|D----------|\n"  // Cursor
+        "|--DD--D----|\n"  // Chars set by SetChar() above
+        "|-----------|\n"
+        "|-----------|\n"; // Bottom margin
     EXPECT_EQ(strcmp(snapshot.ComparisonString().get(), expected), 0, "");
 
     END_TEST;

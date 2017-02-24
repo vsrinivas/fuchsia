@@ -119,11 +119,18 @@ static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h) {
 static void vc_tc_movecursor(void* cookie, int x, int y) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     if (!dev->hide_cursor) {
+        // Clear the cursor from its old position.
         vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
         vc_invalidate_lines(dev, dev->y, 1);
-        gfx_fillrect(dev->gfx, x * dev->charw, y * dev->charh, dev->charw, dev->charh,
-                     palette_to_color(dev, dev->front_color));
-        vc_invalidate_lines(dev, y, 1);
+
+        // Display the cursor in its new position.  Note that it's possible
+        // that x == dev->columns.  In that case, we don't display the
+        // cursor, even if there's a margin.  This matches gnome-terminal.
+        if (x < static_cast<int>(dev->columns)) {
+            gfx_fillrect(dev->gfx, x * dev->charw, y * dev->charh, dev->charw, dev->charh,
+                         palette_to_color(dev, dev->front_color));
+            vc_invalidate_lines(dev, y, 1);
+        }
     }
     dev->x = x;
     dev->y = y;
@@ -194,6 +201,12 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
     }
 }
 
+static void vc_device_clear_gfx(vc_device_t* dev) {
+    // Fill display with background color
+    gfx_fillrect(dev->gfx, 0, 0, dev->gfx->width, dev->gfx->height,
+                 palette_to_color(dev, dev->back_color));
+}
+
 static void vc_device_reset(vc_device_t* dev) {
     // reset the cursor
     dev->x = 0;
@@ -216,8 +229,7 @@ static void vc_device_reset(vc_device_t* dev) {
         *ptr++ = CHARVAL(' ', dev->front_color, dev->back_color);
     }
 
-    // fill screen with back color
-    gfx_fillrect(dev->gfx, 0, 0, dev->gfx->width, dev->gfx->height, palette_to_color(dev, dev->back_color));
+    vc_device_clear_gfx(dev);
     gfx_flush(dev->gfx);
 
     vc_gfx_invalidate_all(dev);
@@ -307,6 +319,7 @@ void vc_device_render(vc_device_t* dev) {
 }
 
 void vc_device_invalidate_all_for_testing(vc_device_t* dev) {
+    vc_device_clear_gfx(dev);
     vc_device_invalidate(dev, 0, 0, dev->columns, dev->rows);
     // Restore the cursor.
     vc_tc_movecursor(dev, dev->x, dev->y);
