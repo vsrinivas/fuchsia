@@ -76,7 +76,7 @@ extern int etext();
 
 STATIC void read_profile(const char *);
 STATIC char *find_dot_file(char *);
-STATIC void evalifsubshell();
+STATIC void evalifsubshell(mx_handle_t);
 static int cmdloop(int);
 int main(int, char **);
 
@@ -146,7 +146,15 @@ main(int argc, char **argv)
 	rootpid = getpid();
 	init();
 	setstackmark(&smark);
-	login = procargs(argc, argv);
+
+	mx_handle_t ast_vmo = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+
+	login = procargs(argc, argv, ast_vmo != MX_HANDLE_INVALID);
+
+        // Fuchsia: recognize if we have been invoked for the purpose of evaluating
+	// an expression (i.e., node) and exiting immediately.
+	evalifsubshell(ast_vmo);
+
 	if (login) {
 		state = 1;
 		read_profile("/etc/profile");
@@ -173,10 +181,6 @@ state3:
 	if (minusc)
 		evalstring(minusc, sflag ? 0 : EV_EXIT);
 
-        // Fuchsia: recognize if we have been invoked for the purpose of evaluating
-	// an expression (i.e., node) and exiting immediately.
-	evalifsubshell();
-
 	if (sflag || minusc == NULL) {
 state4:	/* XXX ??? - why isn't this before the "if" statement */
 		cmdloop(1);
@@ -195,9 +199,8 @@ state4:	/* XXX ??? - why isn't this before the "if" statement */
 }
 
 STATIC void
-evalifsubshell()
+evalifsubshell(mx_handle_t ast_vmo)
 {
-	mx_handle_t ast_vmo = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
 	if (ast_vmo == MX_HANDLE_INVALID)
 		return;
 

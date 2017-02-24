@@ -128,10 +128,9 @@ addfuncdef(struct cmdentry *entry, void *token)
 
 mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t* process, int *fds)
 {
-    if (!arg0)
+    if (!orig_arg0)
         return ERR_NOT_FOUND;
 
-    const char* const* argv = (const char* const*) &arg0;
     launchpad_t* lp = NULL;
 
     // TODO(abarth): Handle the redirects properly (i.e., implement
@@ -150,11 +149,18 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
     if (status != NO_ERROR)
         return status;
 
-    launchpad_create(0, argv[0], &lp);
+    launchpad_create(0, orig_arg0, &lp);
 
-    int argc = 1;
+    // Construct an argv array
+    int argc = 1 + shellparam.nparam;
+    const char *argv[argc];
+    argv[0] = orig_arg0;
+    size_t arg_ndx;
+    for (arg_ndx = 0; arg_ndx < shellparam.nparam; arg_ndx++) {
+        argv[arg_ndx + 1] = shellparam.p[arg_ndx];
+    }
 
-    prepare_launch(lp, argv[0], argc, (const char* const*)argv, envp, fds);
+    prepare_launch(lp, orig_arg0, argc, (const char* const*)argv, envp, fds);
     launchpad_add_handle(lp, ast_vmo, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
     const char* errmsg;
     if ((status = launchpad_go(lp, process, &errmsg)) < 0) {

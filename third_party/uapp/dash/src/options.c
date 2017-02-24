@@ -52,6 +52,7 @@
 #include "mystring.h"
 #include "show.h"
 
+char *orig_arg0;		/* value of argv[0] at startup */
 char *arg0;			/* value of $0 */
 struct shparam shellparam;	/* current positional parameters */
 char **argptr;			/* argument list for builtin commands */
@@ -114,14 +115,19 @@ STATIC int getopts(char *, char *, char **);
  */
 
 int
-procargs(int argc, char **argv)
+procargs(int argc, char **argv, int noparse)
 {
 	int i;
 	const char *xminusc;
 	char **xargv;
-	int login;
+	int login = 0;
 
 	xargv = argv;
+	orig_arg0 = xargv[0];
+
+	// Don't interpret any of the args -- just copy them as-is.
+	if (noparse)
+		goto setarg0;
 	login = xargv[0] && xargv[0][0] == '-';
 	arg0 = xargv[0];
 	if (argc > 0)

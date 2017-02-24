@@ -69,13 +69,14 @@ extern char optlist[NOPTS];
 
 
 extern char *minusc;		/* argument to -c option */
+extern char *orig_arg0;		/* argv[0] at startup */
 extern char *arg0;		/* $0 */
 extern struct shparam shellparam;  /* $@ */
 extern char **argptr;		/* argument list for builtin commands */
 extern char *optionarg;		/* set by nextopt */
 extern char *optptr;		/* used by nextopt */
 
-int procargs(int, char **);
+int procargs(int, char **, int);
 void optschanged(void);
 void setparam(char **);
 void freeparam(volatile struct shparam *);
