@@ -312,8 +312,9 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     gConOut->ClearScreen(gConOut);
 
     uint64_t mmio;
+    char* end_cmdextra = cmdextra;
     if (xefi_find_pci_mmio(gBS, 0x0C, 0x03, 0x30, &mmio) == EFI_SUCCESS) {
-        sprintf(cmdextra, " xdc.mmio=%#" PRIx64 " ", mmio);
+        end_cmdextra += sprintf(cmdextra, " xdc.mmio=%#" PRIx64 " ", mmio);
     } else {
         cmdextra[0] = 0;
     }
@@ -362,6 +363,13 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
             draw_nodename(netboot_nodename());
         } else {
             printf("\nNodename: %s\n", netboot_nodename());
+        }
+        // If nodename was set through cmdline earlier in the code path then
+        // netboot_nodename will return that same value, otherwise it will
+        // return the generated value in which case it needs to be added to
+        // the command line arguments.
+        if (nodename[0] == 0) {
+            end_cmdextra += sprintf(end_cmdextra, " magenta.nodename=%s ", netboot_nodename());
         }
     }
 

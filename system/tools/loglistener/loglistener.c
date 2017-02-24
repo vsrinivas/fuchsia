@@ -17,15 +17,10 @@
 #include <errno.h>
 #include <stdint.h>
 
-#define MAX_LOG_DATA 1280
-
-typedef struct logpacket {
-    uint32_t magic;
-    uint32_t seqno;
-    char data[MAX_LOG_DATA];
-} logpacket_t;
+#include <magenta/netboot.h>
 
 static const char* appname;
+static const char* nodename = "*";
 
 int main(int argc, char** argv) {
     struct sockaddr_in6 addr;
@@ -37,6 +32,15 @@ int main(int argc, char** argv) {
     setvbuf(stdout, NULL, _IOLBF, 0);
 
     appname = argv[0];
+
+    if ((argc > 1) && (argv[1][0])) {
+        nodename = argv[1];
+    } else {
+        char* envname = getenv("MAGENTA_NODENAME");
+        if (envname) {
+            nodename = envname;
+        }
+    }
 
     memset(&addr, 0, sizeof(addr));
     addr.sin6_family = AF_INET6;
@@ -55,9 +59,9 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    fprintf(stderr, "%s: listening on [%s]%d\n", appname,
+    fprintf(stderr, "%s: listening on [%s]%d for device %s\n", appname,
             inet_ntop(AF_INET6, &addr.sin6_addr, tmp, sizeof(tmp)),
-            ntohs(addr.sin6_port));
+            ntohs(addr.sin6_port), nodename);
     for (;;) {
         struct sockaddr_in6 ra;
         socklen_t rlen;
@@ -76,6 +80,8 @@ int main(int argc, char** argv) {
             continue;
         }
         if (pkt->magic != 0xaeae1123)
+            continue;
+        if (strncmp(nodename, "*", 1) && strncmp(pkt->nodename, nodename, sizeof(pkt->nodename)))
             continue;
         if (pkt->seqno != last_seqno) {
             buf[r] = 0;

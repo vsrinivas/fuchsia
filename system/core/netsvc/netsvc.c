@@ -49,14 +49,6 @@ int get_log_line(char* out) {
     }
 }
 
-#define MAX_LOG_DATA 1280
-
-typedef struct logpacket {
-    uint32_t magic;
-    uint32_t seqno;
-    char data[MAX_LOG_DATA];
-} logpacket_t;
-
 static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
@@ -202,6 +194,7 @@ int main(int argc, char** argv) {
             if (pending == 0) {
                 pkt.magic = 0xaeae1123;
                 pkt.seqno = seqno;
+                strncpy(pkt.nodename, nodename, sizeof(pkt.nodename) - 1);
                 len = 0;
                 while (len < (MAX_LOG_DATA - MAX_LOG_LINE)) {
                     int r = get_log_line(pkt.data + len);

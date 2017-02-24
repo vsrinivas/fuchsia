@@ -66,3 +66,13 @@ nbfile* netboot_get_buffer(const char* name, size_t size);
 
 #define DEBUGLOG_PORT         33337
 #define DEBUGLOG_ACK_PORT     33338
+
+#define MAX_LOG_DATA 1216
+#define MAX_NODENAME_LENGTH 64
+
+typedef struct logpacket {
+    uint32_t magic;
+    uint32_t seqno;
+    char nodename[MAX_NODENAME_LENGTH];
+    char data[MAX_LOG_DATA];
+} logpacket_t;
