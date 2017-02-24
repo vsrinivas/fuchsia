@@ -1261,7 +1261,7 @@ static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
     assert(memchr(oldname, '/', oldlen) == NULL);
     assert(newlen <= kMinfsMaxNameSize);
     assert(memchr(newname, '/', newlen) == NULL);
-    // ensure that the vnodes containin oldname and newname are directories
+    // ensure that the vnodes containing oldname and newname are directories
     if (!(VNODE_IS_DIR(olddir) && VNODE_IS_DIR(newdir)))
         return ERR_NOT_SUPPORTED;
 
@@ -1344,7 +1344,44 @@ done:
 }
 
 static mx_status_t fs_link(vnode_t* vndir, const char* name, size_t len, vnode_t* target) {
-    return ERR_NOT_SUPPORTED;
+    trace(MINFS, "minfs_link() vndir=%p(#%u) name='%.*s'\n", vndir, vndir->ino, (int)len, name);
+    assert(len <= kMinfsMaxNameSize);
+    assert(memchr(name, '/', len) == NULL);
+    if (!(VNODE_IS_DIR(vndir)))
+        return ERR_NOT_SUPPORTED;
+
+    // rule out any invalid names
+    if ((len == 1) && (name[0] == '.'))
+        return ERR_BAD_STATE;
+    if ((len == 2) && (name[0] == '.') && (name[1] == '.'))
+        return ERR_BAD_STATE;
+
+    if (VNODE_IS_DIR(target)) {
+        // The target must not be a directory
+        return ERR_NOT_FILE;
+    }
+
+    // The destination should not exist
+    dir_args_t args = dir_args_t();
+    args.name = name;
+    args.len = len;
+    mx_status_t status;
+    if ((status = vn_dir_for_each(vndir, &args, cb_dir_find)) != ERR_NOT_FOUND) {
+        return (status == NO_ERROR) ? ERR_ALREADY_EXISTS : status;
+    }
+
+    args.ino = target->ino;
+    args.type = kMinfsTypeFile; // We can't hard link directories
+    args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(len)));
+    if ((status = vn_dir_for_each(vndir, &args, cb_dir_append)) < 0) {
+        return status;
+    }
+
+    // We have successfully added the vn to a new location. Increment the link count.
+    target->inode.link_count++;
+    minfs_sync_vnode(target, kMxFsSyncDefault);
+
+    return NO_ERROR;
 }
 
 static mx_status_t fs_sync(vnode_t* vn) {
