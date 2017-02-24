@@ -29,6 +29,7 @@ static_assert(((DN_NAME_MAX + 1) & DN_NAME_MAX) == 0,
 
 // 'true' if directory, 'false' if file
 #define DNODE_IS_DIR(dn) (dn->vnode->dnode != NULL)
+#define VNODE_IS_DIR(vn) (vn->dnode != NULL)
 
 struct dnode {
     dnode_t* parent;

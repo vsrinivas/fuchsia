@@ -142,10 +142,39 @@ mx_status_t memfs_truncate(vnode_t* vn, size_t len) {
     return NO_ERROR;
 }
 
+mx_status_t memfs_link(vnode_t* vndir, const char* name, size_t len, vnode_t* target) {
+    if (!VNODE_IS_DIR(vndir))
+        return ERR_BAD_STATE;
+    if ((len == 1) && (name[0] == '.'))
+        return ERR_BAD_STATE;
+    if ((len == 2) && (name[0] == '.') && (name[1] == '.'))
+        return ERR_BAD_STATE;
+
+    dnode_t *targetdn;
+    mx_status_t r;
+
+    if (VNODE_IS_DIR(target)) {
+        // The target must not be a directory
+        return ERR_NOT_FILE;
+    } else if ((r = dn_lookup(vndir->dnode, &targetdn, name, len)) == 0) {
+        // The destination should not exist
+        return ERR_ALREADY_EXISTS;
+    }
+
+    // Make a new dnode for the new name, attach the target vnode to it
+    if ((r = dn_create(&targetdn, name, len, target)) < 0) {
+        return r;
+    }
+    // Attach the new dnode to its parent
+    dn_add_child(vndir->dnode, targetdn);
+
+    return NO_ERROR;
+}
+
 mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
                          const char* newname, size_t newlen, bool src_must_be_dir,
                          bool dst_must_be_dir) {
-    if ((olddir->dnode == NULL) || (newdir->dnode == NULL))
+    if (!VNODE_IS_DIR(olddir) || !VNODE_IS_DIR(newdir))
         return ERR_BAD_STATE;
     if ((oldlen == 1) && (oldname[0] == '.'))
         return ERR_BAD_STATE;
@@ -345,7 +374,7 @@ ssize_t memfs_ioctl_none(vnode_t* vn, uint32_t op,
 }
 
 mx_status_t memfs_can_unlink(dnode_t* dn) {
-    bool is_directory = (dn->vnode->dnode != NULL);
+    bool is_directory = DNODE_IS_DIR(dn);
     if (is_directory && (dn->vnode->refcount > 1)) {
         // Cannot unlink an open directory
         return ERR_BAD_STATE;
@@ -498,7 +527,7 @@ static vnode_ops_t vn_memfs_ops_dir = {
     .unlink = memfs_unlink,
     .truncate = memfs_truncate_none,
     .rename = memfs_rename,
-    .link = memfs_link_none,
+    .link = memfs_link,
     .sync = memfs_sync,
 };
 
