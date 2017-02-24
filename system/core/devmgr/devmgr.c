@@ -88,7 +88,6 @@ static int mount_minfs(int fd, mount_options_t* options) {
     static const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
 
     // initialize our data for this run
-    const char* path = NULL;
     ssize_t read_sz = ioctl_block_get_type_guid(fd, type_guid,
                                                 sizeof(type_guid));
 
@@ -98,23 +97,27 @@ static int mount_minfs(int fd, mount_options_t* options) {
             if (secondary_bootfs_ready()) {
                 return ERR_ALREADY_BOUND;
             }
+
             memfs_create_directory("/system", 0);
-            path = "/system";
+
             options->readonly = true;
+            options->wait_until_ready = true;
+
+            mount(fd, "/system", DISK_FORMAT_MINFS, options, launch_minfs);
+
             devmgr_start_system_init(NULL);
+
+            return NO_ERROR;
         } else if (!memcmp(type_guid, data_guid, GPT_GUID_LEN)) {
             if (data_mounted) {
                 return ERR_ALREADY_BOUND;
             }
             data_mounted = true;
-            path = "/data";
-        }
-    }
 
-    // if the path is set, this partition has a known type GUID
-    if (path != NULL) {
-        mount(fd, path, DISK_FORMAT_MINFS, options, launch_minfs);
-        return NO_ERROR;
+            mount(fd, "/data", DISK_FORMAT_MINFS, options, launch_minfs);
+
+            return NO_ERROR;
+        }
     }
 
     return ERR_INVALID_ARGS;
