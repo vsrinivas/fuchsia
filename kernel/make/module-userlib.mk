@@ -134,27 +134,27 @@ ifeq ($(MODULE_TYPE),userlib)
 ifneq ($(filter so,$(MODULE_EXPORT)),)
 ifneq ($(MODULE_SO_NAME),)
 #$(info EXPORT $(MODULE) shared)
-TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
-$(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so.abi)
-SYSROOT_DEPS += $(TMP)
-GENERATED += $(TMP)
+MODULE_TEMP_NAME := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
+$(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so.abi)
+SYSROOT_DEPS += $(MODULE_TEMP_NAME)
+GENERATED += $(MODULE_TEMP_NAME)
 # Install debug info for exported libraries for debuggers to find.
 # These files live on the development host, not the target.
 # There's no point in saving separate debug info here (at least not yet),
 # we just make a copy of the unstripped file.
-TMP := $(BUILDDIR)/sysroot/debug-info/lib$(MODULE_SO_NAME).so
-$(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so)
-SYSROOT_DEPS += $(TMP)
-GENERATED += $(TMP)
+MODULE_TEMP_NAME := $(BUILDDIR)/sysroot/debug-info/lib$(MODULE_SO_NAME).so
+$(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so)
+SYSROOT_DEPS += $(MODULE_TEMP_NAME)
+GENERATED += $(MODULE_TEMP_NAME)
 endif
 endif
 
 ifneq ($(filter a,$(MODULE_EXPORT)),)
 #$(info EXPORT $(MODULE) static)
-TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_NAME).a
-$(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).a)
-SYSROOT_DEPS += $(TMP)
-GENERATED += $(TMP)
+MODULE_TEMP_NAME := $(BUILDDIR)/sysroot/lib/lib$(MODULE_NAME).a
+$(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).a)
+SYSROOT_DEPS += $(MODULE_TEMP_NAME)
+GENERATED += $(MODULE_TEMP_NAME)
 endif
 
 # only install headers for exported libraries
