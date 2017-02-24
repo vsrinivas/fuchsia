@@ -29,6 +29,13 @@ const ip6_addr_t ip6_ll_all_routers = {
     .u8 = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
 };
 
+
+// If non-zero, this setting causes us to generate our
+// MAC-derived link-local IPv6 address in a way that
+// is different from the spec, so we our link-local traffic
+// is distinct from traffic from Fuchsia's netstack service.
+#define INET6_COEXIST_WITH_NETSTACK 1
+
 // Convert MAC Address to IPv6 Link Local Address
 // aa:bb:cc:dd:ee:ff => FF80::aabb:ccFF:FEdd:eeff
 // bit 2 (U/L) of the mac is inverted
@@ -39,10 +46,24 @@ void ll6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
     ip[0] = 0xFE;
     ip[1] = 0x80;
     memset(ip + 2, 0, 6);
+#if INET6_COEXIST_WITH_NETSTACK
+    // Force the globally-unique bit to false,
+    // Since our coexist variant address is
+    // effectively "locally administered".
+    ip[8] = mac[0] & (~2);
+#else
+    // Flip the globally-unique bit from the MAC
+    // since the sense of this is backwards in
+    // IPv6 Interface Identifiers.
     ip[8] = mac[0] ^ 2;
+#endif
     ip[9] = mac[1];
     ip[10] = mac[2];
+#if INET6_COEXIST_WITH_NETSTACK
+    ip[11] = 'M';
+#else
     ip[11] = 0xFF;
+#endif
     ip[12] = 0xFE;
     ip[13] = mac[3];
     ip[14] = mac[4];
