@@ -30,7 +30,15 @@ group("tests") {
 }
 
 config("ledger_config") {
-  cflags = [
+  safe_stack_flags = [
+    # The coroutine code needs to be correct both with and without safe stack. Keeping this here
+    # to easily check until safe stack is enabled globally on fuchsia.
+    # "-fsanitize=safe-stack",
+  ]
+
+  asmflags = safe_stack_flags
+
+  cflags = safe_stack_flags + [
     # Remove when enabled globally by TO-99.
     "-Wunused-lambda-capture",
 
@@ -38,7 +46,7 @@ config("ledger_config") {
     "-Wuser-defined-warnings",
   ]
 
-  ldflags = [
+  ldflags = safe_stack_flags + [
     # Use a 1M stack.
     "-Wl,-z,stack-size=0x100000",
   ]
@@ -55,6 +63,8 @@ executable("ledger_unittests") {
     "//apps/ledger/src/cloud_sync/impl:unittests",
     "//apps/ledger/src/configuration:unittests",
     "//apps/ledger/src/convert:unittests",
+    "//apps/ledger/src/coroutine:unittests",
+    "//apps/ledger/src/coroutine/context:unittests",
     "//apps/ledger/src/environment:unittests",
     "//apps/ledger/src/firebase:unittests",
     "//apps/ledger/src/gcs:unittests",

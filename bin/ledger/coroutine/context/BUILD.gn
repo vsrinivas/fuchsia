@@ -1,0 +1,43 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("context") {
+  sources = [
+    "context.cc",
+    "context.h",
+    "stack.cc",
+    "stack.h",
+  ]
+
+  deps = [
+    "//apps/ledger/src/coroutine/context/$target_cpu",
+    "//lib/ftl",
+  ]
+
+  public_deps = [
+    "//magenta/system/ulib/mx",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "context_unittest.cc",
+  ]
+
+  deps = [
+    ":context",
+    "//lib/ftl",
+    "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
+}
