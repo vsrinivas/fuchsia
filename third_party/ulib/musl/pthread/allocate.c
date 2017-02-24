@@ -18,7 +18,7 @@ static ptrdiff_t offset_for_module(const struct tls_module* module) {
 #endif
 }
 
-static pthread_t copy_tls(unsigned char* mem) {
+__NO_SAFESTACK static pthread_t copy_tls(unsigned char* mem) {
     pthread_t td;
     struct tls_module* p;
     size_t i;
@@ -48,10 +48,11 @@ static pthread_t copy_tls(unsigned char* mem) {
     return td;
 }
 
-static bool map_block(mx_handle_t parent_vmar,
-                       mx_handle_t vmo, size_t vmo_offset,
-                       size_t size, size_t before, size_t after,
-                       struct iovec* mapping, struct iovec* region) {
+__NO_SAFESTACK static bool map_block(mx_handle_t parent_vmar,
+                                     mx_handle_t vmo, size_t vmo_offset,
+                                     size_t size, size_t before, size_t after,
+                                     struct iovec* mapping,
+                                     struct iovec* region) {
     region->iov_len = before + size + after;
     mx_handle_t vmar;
     uintptr_t addr;
@@ -94,7 +95,7 @@ static bool map_block(mx_handle_t parent_vmar,
 // It initializes the basic thread descriptor fields.
 // Everything else is zero-initialized.
 
-pthread_t __allocate_thread(const pthread_attr_t* attr) {
+__NO_SAFESTACK pthread_t __allocate_thread(const pthread_attr_t* attr) {
     const size_t guard_size =
         attr->_a_guardsize == 0 ? 0 : round_up_to_page(attr->_a_guardsize);
     const size_t stack_size = round_up_to_page(attr->_a_stacksize);

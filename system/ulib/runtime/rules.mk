@@ -23,4 +23,7 @@ MODULE_LIBS += \
 MODULE_HEADER_DEPS += \
     ulib/musl
 
+# This code is used in early startup, where safe-stack setup is not ready yet.
+MODULE_COMPILEFLAGS += $(NO_SAFESTACK)
+
 include make/module.mk

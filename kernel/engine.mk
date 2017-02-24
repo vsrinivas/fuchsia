@@ -35,7 +35,7 @@ USE_LINKER_GC ?= true
 # generate a default based on build options.  Start with no suffix, then add
 # "-clang" if we are building with clang, and "-release" if we are building with
 # DEBUG=0
-ifeq ($(origin BUILDDIR_SUFFIX),undefined) 
+ifeq ($(origin BUILDDIR_SUFFIX),undefined)
 BUILDDIR_SUFFIX :=
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
@@ -151,6 +151,13 @@ USER_ASMFLAGS :=
 USER_DYNAMIC_LDFLAGS := \
     -z combreloc -z relro -z now -z text \
     --hash-style=gnu --eh-frame-hdr --build-id
+
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+USER_COMPILEFLAGS += -fsanitize=safe-stack
+NO_SAFESTACK := -fno-sanitize=safe-stack
+else
+NO_SAFESTACK :=
+endif
 
 USER_CRT1_OBJ := $(BUILDDIR)/ulib/crt1.o
 

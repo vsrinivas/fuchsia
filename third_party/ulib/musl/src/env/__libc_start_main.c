@@ -46,7 +46,8 @@ static void start_main(const struct start_params* p) {
     exit((*p->main)(p->argc, p->argv, __environ));
 }
 
-_Noreturn void __libc_start_main(void* arg, int (*main)(int, char**, char**)) {
+__NO_SAFESTACK _Noreturn void __libc_start_main(
+    void* arg, int (*main)(int, char**, char**)) {
     // Initialize stack-protector canary value first thing.
     size_t actual;
     mx_status_t status = mx_cprng_draw(&__stack_chk_guard,

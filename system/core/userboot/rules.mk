@@ -31,14 +31,31 @@ userboot-string-functions := memcmp memcpy memset strlen strncmp memmove
 MODULE_SRCS += \
     $(userboot-string-functions:%=third_party/ulib/musl/src/string/%.c)
 
-MODULE_SRCS += third_party/ulib/lz4/lz4.c
-MODULE_COMPILEFLAGS += -Ithird_party/ulib/lz4/include/lz4 -DWITH_LZ4_NOALLOC
-
 # Make sure there are never any PLT entries generated.
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
-MODULE_STATIC_LIBS := ulib/elfload ulib/runtime ulib/bootdata
+# We don't have normal setup, so safe-stack is a non-starter.
+MODULE_COMPILEFLAGS += $(NO_SAFESTACK)
+
+# ulib/runtime is compiled without safe-stack.  We can't use any other
+# static libs, because they might be built with safe-stack or other
+# options that can't be supported in the constrained userboot context.
+MODULE_STATIC_LIBS := ulib/runtime
 MODULE_HEADER_DEPS := ulib/magenta
+
+# Fortunately, each of these libraries is just a single source file.
+# So we just use their sources directly rather than getting
+# clever with the build system somehow.
+
+MODULE_HEADER_DEPS += ulib/elfload
+MODULE_SRCS += system/ulib/elfload/elf-load.c
+
+MODULE_HEADER_DEPS += ulib/bootdata
+MODULE_SRCS += system/ulib/bootdata/decompress.c
+
+MODULE_HEADER_DEPS += ulib/lz4
+MODULE_SRCS += third_party/ulib/lz4/lz4.c
+MODULE_COMPILEFLAGS += -Ithird_party/ulib/lz4/include/lz4 -DWITH_LZ4_NOALLOC
 
 # This generated header lists all the ABI symbols in the vDSO with their
 # addresses.  It's used to generate vdso-syms.ld, below.

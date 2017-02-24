@@ -157,7 +157,7 @@ union allocated_types {
 
 static uintptr_t alloc_base, alloc_limit, alloc_ptr;
 
-__attribute__((malloc)) static void* dl_alloc(size_t size) {
+__NO_SAFESTACK __attribute__((malloc)) static void* dl_alloc(size_t size) {
     // Round the size up so the allocation pointer always stays aligned.
     size = (size + DL_ALLOC_ALIGN - 1) & -DL_ALLOC_ALIGN;
 
@@ -191,11 +191,13 @@ struct dl_alloc_checkpoint {
     uintptr_t ptr, base;
 };
 
+__NO_SAFESTACK
 static void dl_alloc_checkpoint(struct dl_alloc_checkpoint *state) {
     state->ptr = alloc_ptr;
     state->base = alloc_base;
 }
 
+__NO_SAFESTACK
 static void dl_alloc_rollback(const struct dl_alloc_checkpoint *state) {
     uintptr_t frontier = alloc_ptr;
     // If we're still using the same contiguous chunk as the checkpoint
@@ -212,7 +214,7 @@ static void dl_alloc_rollback(const struct dl_alloc_checkpoint *state) {
 #define laddr(p, v) (void*)((p)->base + (v))
 #define fpaddr(p, v) ((void (*)(void))laddr(p, v))
 
-static void decode_vec(size_t* v, size_t* a, size_t cnt) {
+__NO_SAFESTACK static void decode_vec(size_t* v, size_t* a, size_t cnt) {
     size_t i;
     for (i = 0; i < cnt; i++)
         a[i] = 0;
@@ -223,7 +225,7 @@ static void decode_vec(size_t* v, size_t* a, size_t cnt) {
         }
 }
 
-static int search_vec(size_t* v, size_t* r, size_t key) {
+__NO_SAFESTACK static int search_vec(size_t* v, size_t* r, size_t key) {
     for (; v[0] != key; v += 2)
         if (!v[0])
             return 0;
@@ -231,7 +233,7 @@ static int search_vec(size_t* v, size_t* r, size_t key) {
     return 1;
 }
 
-static uint32_t sysv_hash(const char* s0) {
+__NO_SAFESTACK static uint32_t sysv_hash(const char* s0) {
     const unsigned char* s = (void*)s0;
     uint_fast32_t h = 0;
     while (*s) {
@@ -241,7 +243,7 @@ static uint32_t sysv_hash(const char* s0) {
     return h & 0xfffffff;
 }
 
-static uint32_t gnu_hash(const char* s0) {
+__NO_SAFESTACK static uint32_t gnu_hash(const char* s0) {
     const unsigned char* s = (void*)s0;
     uint_fast32_t h = 5381;
     for (; *s; s++)
@@ -249,7 +251,8 @@ static uint32_t gnu_hash(const char* s0) {
     return h;
 }
 
-static Sym* sysv_lookup(const char* s, uint32_t h, struct dso* dso) {
+__NO_SAFESTACK static Sym* sysv_lookup(const char* s, uint32_t h,
+                                       struct dso* dso) {
     size_t i;
     Sym* syms = dso->syms;
     uint32_t* hashtab = dso->hashtab;
@@ -261,7 +264,8 @@ static Sym* sysv_lookup(const char* s, uint32_t h, struct dso* dso) {
     return 0;
 }
 
-static Sym* gnu_lookup(uint32_t h1, uint32_t* hashtab, struct dso* dso, const char* s) {
+__NO_SAFESTACK static Sym* gnu_lookup(uint32_t h1, uint32_t* hashtab,
+                                      struct dso* dso, const char* s) {
     uint32_t nbuckets = hashtab[0];
     uint32_t* buckets = hashtab + 4 + hashtab[2] * (sizeof(size_t) / 4);
     uint32_t i = buckets[h1 % nbuckets];
@@ -283,8 +287,9 @@ static Sym* gnu_lookup(uint32_t h1, uint32_t* hashtab, struct dso* dso, const ch
     return 0;
 }
 
-static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab, struct dso* dso, const char* s,
-                                uint32_t fofs, size_t fmask) {
+__NO_SAFESTACK static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab,
+                                               struct dso* dso, const char* s,
+                                               uint32_t fofs, size_t fmask) {
     const size_t* bloomwords = (const void*)(hashtab + 4);
     size_t f = bloomwords[fofs & (hashtab[2] - 1)];
     if (!(f & fmask))
@@ -305,7 +310,8 @@ static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab, struct dso* dso,
 #define ARCH_SYM_REJECT_UND(s) 0
 #endif
 
-static struct symdef find_sym(struct dso* dso, const char* s, int need_def) {
+__NO_SAFESTACK static struct symdef find_sym(struct dso* dso,
+                                             const char* s, int need_def) {
     uint32_t h = 0, gh, gho, *ght;
     size_t ghm = 0;
     struct symdef def = {};
@@ -351,7 +357,8 @@ static struct symdef find_sym(struct dso* dso, const char* s, int need_def) {
 
 __attribute__((__visibility__("hidden"))) ptrdiff_t __tlsdesc_static(void), __tlsdesc_dynamic(void);
 
-static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stride) {
+__NO_SAFESTACK static void do_relocs(struct dso* dso, size_t* rel,
+                                     size_t rel_size, size_t stride) {
     unsigned char* base = dso->base;
     Sym* syms = dso->syms;
     char* strings = dso->strings;
@@ -503,7 +510,7 @@ static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stri
     }
 }
 
-static void unmap_library(struct dso* dso) {
+__NO_SAFESTACK static void unmap_library(struct dso* dso) {
     if (dso->map && dso->map_len) {
         munmap(dso->map, dso->map_len);
     }
@@ -516,9 +523,11 @@ static void unmap_library(struct dso* dso) {
 
 // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
 // This will go away when we have copy-on-write.
-static mx_status_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
-                                    size_t* off_start, size_t* map_size,
-                                    mx_handle_t* writable_vmo) {
+__NO_SAFESTACK static mx_status_t get_writable_vmo(mx_handle_t vmo,
+                                                   size_t data_size,
+                                                   size_t* off_start,
+                                                   size_t* map_size,
+                                                   mx_handle_t* writable_vmo) {
     mx_status_t status = _mx_vmo_create(data_size, 0, writable_vmo);
     if (status != NO_ERROR)
         return status;
@@ -545,7 +554,8 @@ static mx_status_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
     return NO_ERROR;
 }
 
-static mx_status_t map_library(mx_handle_t vmo, struct dso* dso) {
+__NO_SAFESTACK static mx_status_t map_library(mx_handle_t vmo,
+                                              struct dso* dso) {
     struct {
         Ehdr ehdr;
         // A typical ELF file has 7 or 8 phdrs, so in practice
@@ -719,7 +729,7 @@ error:
     return status;
 }
 
-static void decode_dyn(struct dso* p) {
+__NO_SAFESTACK static void decode_dyn(struct dso* p) {
     size_t dyn[DYN_CNT];
     decode_vec(p->dynv, dyn, DYN_CNT);
     p->syms = laddr(p, dyn[DT_SYMTAB]);
@@ -756,7 +766,8 @@ static size_t count_syms(struct dso* p) {
     return nsym;
 }
 
-static struct dso* find_library_in(struct dso* p, const char* name) {
+__NO_SAFESTACK static struct dso* find_library_in(struct dso* p,
+                                                  const char* name) {
     while (p != NULL) {
         if (!strcmp(p->name, name) ||
             (p->soname != NULL && !strcmp(p->soname, name))) {
@@ -768,7 +779,7 @@ static struct dso* find_library_in(struct dso* p, const char* name) {
     return p;
 }
 
-static struct dso* find_library(const char* name) {
+__NO_SAFESTACK static struct dso* find_library(const char* name) {
     int is_self = 0;
 
     /* Catch and block attempts to reload the implementation itself */
@@ -831,7 +842,8 @@ static struct dso* find_library(const char* name) {
 
 #define MAX_BUILDID_SIZE 64
 
-static void read_buildid(struct dso* p, char* buf, size_t buf_size) {
+__NO_SAFESTACK static void read_buildid(struct dso* p,
+                                        char* buf, size_t buf_size) {
     Phdr* ph = p->phdr;
     size_t cnt;
 
@@ -892,7 +904,7 @@ static void read_buildid(struct dso* p, char* buf, size_t buf_size) {
     strcpy(buf, "<none>");
 }
 
-static void trace_load(struct dso* p) {
+__NO_SAFESTACK static void trace_load(struct dso* p) {
     static mx_koid_t pid = MX_KOID_INVALID;
     if (pid == MX_KOID_INVALID) {
         mx_info_handle_basic_t process_info;
@@ -930,10 +942,11 @@ static void trace_load(struct dso* p) {
     ++seqno;
 }
 
-static mx_status_t load_library_vmo(mx_handle_t vmo, const char* name,
-                                    int rtld_mode,
-                                    struct dso* needed_by,
-                                    struct dso** loaded) {
+__NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
+                                                   const char* name,
+                                                   int rtld_mode,
+                                                   struct dso* needed_by,
+                                                   struct dso** loaded) {
     struct dso *p, temp_dso = {};
     size_t alloc_size;
     int n_th = 0;
@@ -1035,9 +1048,9 @@ static mx_status_t load_library_vmo(mx_handle_t vmo, const char* name,
     return NO_ERROR;
 }
 
-static mx_status_t load_library(const char* name, int rtld_mode,
-                                struct dso* needed_by,
-                                struct dso** loaded) {
+__NO_SAFESTACK static mx_status_t load_library(const char* name, int rtld_mode,
+                                               struct dso* needed_by,
+                                               struct dso** loaded) {
     if (!*name)
         return ERR_INVALID_ARGS;
 
@@ -1055,7 +1068,7 @@ static mx_status_t load_library(const char* name, int rtld_mode,
     return status;
 }
 
-static void load_deps(struct dso* p) {
+__NO_SAFESTACK static void load_deps(struct dso* p) {
     for (; p; p = p->next) {
         // These don't get space allocated for ->deps.
         if (p == &ldso || p == &vdso)
@@ -1081,7 +1094,7 @@ static void load_deps(struct dso* p) {
     }
 }
 
-static void load_preload(char* s) {
+__NO_SAFESTACK static void load_preload(char* s) {
     int tmp;
     char* z;
     for (z = s; *z; s = z) {
@@ -1097,12 +1110,12 @@ static void load_preload(char* s) {
     }
 }
 
-static void make_global(struct dso* p) {
+__NO_SAFESTACK static void make_global(struct dso* p) {
     for (; p; p = p->next)
         p->global = 1;
 }
 
-static void do_mips_relocs(struct dso* p, size_t* got) {
+__NO_SAFESTACK static void do_mips_relocs(struct dso* p, size_t* got) {
     size_t i, j, rel[2];
     unsigned char* base = p->base;
     i = 0;
@@ -1125,7 +1138,7 @@ static void do_mips_relocs(struct dso* p, size_t* got) {
     }
 }
 
-static void reloc_all(struct dso* p) {
+__NO_SAFESTACK static void reloc_all(struct dso* p) {
     size_t dyn[DYN_CNT];
     for (; p; p = p->next) {
         if (p->relocated)
@@ -1169,7 +1182,7 @@ static void reloc_all(struct dso* p) {
     }
 }
 
-static void kernel_mapped_dso(struct dso* p) {
+__NO_SAFESTACK static void kernel_mapped_dso(struct dso* p) {
     size_t min_addr = -1, max_addr = 0, cnt;
     Phdr* ph = p->phdr;
     for (cnt = p->phnum; cnt--; ph = (void*)((char*)ph + p->phentsize)) {
@@ -1292,7 +1305,7 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     return mem + v[1] + DTP_OFFSET;
 }
 
-struct pthread* __init_main_thread(mx_handle_t thread_self) {
+__NO_SAFESTACK struct pthread* __init_main_thread(mx_handle_t thread_self) {
     pthread_attr_t attr = DEFAULT_PTHREAD_ATTR;
     attr._a_stacksize = libc.stack_size;
 
@@ -1311,7 +1324,7 @@ struct pthread* __init_main_thread(mx_handle_t thread_self) {
     return td;
 }
 
-static void update_tls_size(void) {
+__NO_SAFESTACK static void update_tls_size(void) {
     libc.tls_cnt = tls_cnt;
     libc.tls_align = tls_align;
     libc.tls_size =
@@ -1333,7 +1346,8 @@ static void update_tls_size(void) {
  * linker itself, but some of the relocations performed may need to be
  * replaced later due to copy relocations in the main program. */
 
-__attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
+__NO_SAFESTACK __attribute__((__visibility__("hidden")))
+dl_start_return_t __dls2(
     void* start_arg, void* vdso_map) {
     ldso.base = (unsigned char*)_BASE;
 
@@ -1401,7 +1415,7 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
  * process dependencies and relocations for the main application and
  * transfer control to its entry point. */
 
-static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
+__NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     static struct dso app;
     size_t i;
     char** argv_orig = argv;
@@ -1595,7 +1609,7 @@ static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     return laddr(&app, ehdr->e_entry);
 }
 
-dl_start_return_t __dls3(void* start_arg) {
+__NO_SAFESTACK dl_start_return_t __dls3(void* start_arg) {
     mx_handle_t bootstrap = (uintptr_t)start_arg;
 
     uint32_t nbytes, nhandles;
@@ -2008,9 +2022,9 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 static bool loader_svc_rpc_in_progress;
 static uint32_t loader_svc_txid;
 
-static mx_status_t loader_svc_rpc(uint32_t opcode,
-                                  const void* data, size_t len,
-                                  mx_handle_t* result) {
+__NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
+                                                 const void* data, size_t len,
+                                                 mx_handle_t* result) {
     mx_status_t status;
     struct {
         mx_loader_svc_msg_t header;
@@ -2084,7 +2098,8 @@ out:
     return status;
 }
 
-static mx_status_t get_library_vmo(const char* name, mx_handle_t* result) {
+__NO_SAFESTACK static mx_status_t get_library_vmo(const char* name,
+                                                  mx_handle_t* result) {
     if (loader_svc == MX_HANDLE_INVALID) {
         error("cannot look up \"%s\" with no loader service", name);
         return ERR_UNAVAILABLE;
@@ -2093,7 +2108,7 @@ static mx_status_t get_library_vmo(const char* name, mx_handle_t* result) {
                           result);
 }
 
-static void log_write(const void* buf, size_t len) {
+__NO_SAFESTACK static void log_write(const void* buf, size_t len) {
     // The loader service prints "header: %s\n" when we send %s,
     // so strip a trailing newline.
     if (((const char*)buf)[len - 1] == '\n')
@@ -2112,7 +2127,8 @@ static void log_write(const void* buf, size_t len) {
         __builtin_trap();
 }
 
-static size_t errormsg_write(FILE* f, const unsigned char* buf, size_t len) {
+__NO_SAFESTACK static size_t errormsg_write(FILE* f, const unsigned char* buf,
+                                            size_t len) {
     if (f != NULL && f->wpos > f->wbase)
         log_write(f->wbase, f->wpos - f->wbase);
 
@@ -2127,7 +2143,8 @@ static size_t errormsg_write(FILE* f, const unsigned char* buf, size_t len) {
     return len;
 }
 
-static int errormsg_vprintf(const char* restrict fmt, va_list ap) {
+__NO_SAFESTACK static int errormsg_vprintf(const char* restrict fmt,
+                                           va_list ap) {
     FILE f = {
         .lbf = EOF,
         .write = errormsg_write,
@@ -2138,14 +2155,14 @@ static int errormsg_vprintf(const char* restrict fmt, va_list ap) {
     return vfprintf(&f, fmt, ap);
 }
 
-static void debugmsg(const char* fmt, ...) {
+__NO_SAFESTACK static void debugmsg(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     errormsg_vprintf(fmt, ap);
     va_end(ap);
 }
 
-static void error(const char* fmt, ...) {
+__NO_SAFESTACK static void error(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     if (!runtime) {

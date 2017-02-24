@@ -18,7 +18,7 @@ static inline void mxr_tp_set(mx_handle_t self, void* tp);
 
 #if defined(__aarch64__)
 
-static inline void* mxr_tp_get(void) {
+__NO_SAFESTACK static inline void* mxr_tp_get(void) {
     // This just emits "mrs %[reg], tpidr_el0", but the compiler
     // knows what exactly it's doing (unlike an asm).  So it can
     // e.g. CSE it with another implicit thread-pointer fetch it
@@ -26,7 +26,7 @@ static inline void* mxr_tp_get(void) {
     return __builtin_thread_pointer();
 }
 
-static inline void mxr_tp_set(mx_handle_t self, void* tp) {
+__NO_SAFESTACK static inline void mxr_tp_set(mx_handle_t self, void* tp) {
     __asm__ volatile("msr tpidr_el0, %0"
                      :
                      : "r"(tp));
@@ -34,7 +34,7 @@ static inline void mxr_tp_set(mx_handle_t self, void* tp) {
 
 #elif defined(__x86_64__)
 
-static inline void* mxr_tp_get(void) {
+__NO_SAFESTACK static inline void* mxr_tp_get(void) {
     // This fetches %fs:0, but the compiler knows what it's doing.
     // LLVM knows that in the Fuchsia ABI %fs:0 always stores the
     // %fs.base address, and its optimizer will see through this
@@ -62,7 +62,7 @@ static inline void* mxr_tp_get(void) {
 # endif
 }
 
-static inline void mxr_tp_set(mx_handle_t self, void* tp) {
+__NO_SAFESTACK static inline void mxr_tp_set(mx_handle_t self, void* tp) {
     mx_status_t status = _mx_object_set_property(
         self, MX_PROP_REGISTER_FS, (uintptr_t*)&tp, sizeof(uintptr_t));
     if (status != NO_ERROR)

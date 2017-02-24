@@ -34,10 +34,12 @@
 #define __OPTIMIZE(x) __attribute__((optimize(x)))
 #define __EXTERNALLY_VISIBLE __attribute__((externally_visible))
 #define __THREAD_ANNOTATION(x)
+#define __NO_SAFESTACK
 #else
 #define __OPTIMIZE(x)
 #define __EXTERNALLY_VISIBLE
 #define __THREAD_ANNOTATION(x) __attribute__((x))
+#define __NO_SAFESTACK __attribute__((no_sanitize("safe-stack")))
 #endif
 
 #define __ALWAYS_INLINE __attribute__((always_inline))
