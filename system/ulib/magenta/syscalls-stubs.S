@@ -9,5 +9,4 @@
 .type oldname,STT_FUNC ;\
 oldname = newname ;\
 
-ALIAS(mx_object_bind_exception_port, mx_task_bind_exception_port)
-ALIAS(_mx_object_bind_exception_port, _mx_task_bind_exception_port)
+// Currently no aliases!
