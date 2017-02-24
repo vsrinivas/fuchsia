@@ -6,6 +6,7 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <limits.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -45,6 +46,15 @@ int main(int argc, const char* const* argv) {
     launchpad_clone_fd(lp, fd, 1);
     launchpad_clone_fd(lp, fd, 2);
     launchpad_set_args(lp, pargc, shell ? pargv : &argv[1]);
+
+    // Forward MX_HND_TYPE_APPLICATION_ENVIRONMENT if we have one.
+    mx_handle_t application_environment = mx_get_startup_handle(
+        MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
+    if (application_environment != MX_HANDLE_INVALID) {
+        launchpad_add_handle(lp, application_environment,
+            MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
+    }
+
     launchpad_load_from_file(lp, shell ? pargv[0] : argv[1]);
 
     mx_status_t status;
