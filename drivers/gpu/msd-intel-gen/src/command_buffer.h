@@ -9,6 +9,7 @@
 #include "mapped_batch.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
+#include "platform_semaphore.h"
 
 #include <memory>
 #include <vector>
@@ -24,11 +25,13 @@ public:
     // holds a shared reference to the buffers backing |abi_cmd_buf| and |exec_buffers| for the
     // lifetime of this object
     static std::unique_ptr<CommandBuffer> Create(msd_buffer* abi_cmd_buf, msd_buffer** exec_buffers,
-                                                 std::weak_ptr<ClientContext> context)
+                                                 std::weak_ptr<ClientContext> context,
+                                                 msd_semaphore** wait_semaphores,
+                                                 msd_semaphore** signal_semaphores)
     {
         auto command_buffer =
             std::unique_ptr<CommandBuffer>(new CommandBuffer(abi_cmd_buf, context));
-        if (!command_buffer->Initialize(exec_buffers))
+        if (!command_buffer->Initialize(exec_buffers, wait_semaphores, signal_semaphores))
             return DRETP(nullptr, "failed to initialize command buffer");
         return command_buffer;
     }
@@ -61,7 +64,8 @@ private:
 
     void UnmapResourcesGpu();
 
-    bool Initialize(msd_buffer** exec_buffers);
+    bool Initialize(msd_buffer** exec_buffers, msd_semaphore** wait_semaphores,
+                    msd_semaphore** signal_semaphores);
 
     // given the virtual addresses of all of the exec_resources_, walks the relocations data
     // structure in
@@ -83,6 +87,8 @@ private:
     magma::PlatformBuffer* platform_buffer() override { return abi_cmd_buf_->platform_buffer(); }
 
     std::vector<ExecResource> exec_resources_;
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores_;
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
     std::vector<std::shared_ptr<GpuMapping>> exec_resource_mappings_;
     std::weak_ptr<ClientContext> context_;
 

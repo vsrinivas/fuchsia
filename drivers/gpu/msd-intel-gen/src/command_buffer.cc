@@ -6,6 +6,7 @@
 #include "engine_command_streamer.h"
 #include "instructions.h"
 #include "msd_intel_context.h"
+#include "msd_intel_semaphore.h"
 
 CommandBuffer::~CommandBuffer()
 {
@@ -17,6 +18,10 @@ CommandBuffer::~CommandBuffer()
         return;
 
     UnmapResourcesGpu();
+
+    for (auto& semaphore : signal_semaphores_) {
+        semaphore->Signal();
+    }
 }
 
 void CommandBuffer::SetSequenceNumber(uint32_t sequence_number)
@@ -30,7 +35,8 @@ CommandBuffer::CommandBuffer(msd_buffer* abi_cmd_buf, std::weak_ptr<ClientContex
     prepared_to_execute_ = false;
 }
 
-bool CommandBuffer::Initialize(msd_buffer** exec_buffers)
+bool CommandBuffer::Initialize(msd_buffer** exec_buffers, msd_semaphore** wait_semaphores,
+                               msd_semaphore** signal_semaphores)
 {
     if (!magma::CommandBuffer::Initialize())
         return DRETF(false, "Failed to intialize command buffer base class");
@@ -40,6 +46,16 @@ bool CommandBuffer::Initialize(msd_buffer** exec_buffers)
         auto buffer = MsdIntelAbiBuffer::cast(exec_buffers[i])->ptr();
         exec_resources_.emplace_back(
             ExecResource{buffer, resource(i).offset(), resource(i).length()});
+    }
+
+    wait_semaphores_.reserve(wait_semaphore_count());
+    for (uint32_t i = 0; i < wait_semaphore_count(); i++) {
+        wait_semaphores_.emplace_back(MsdIntelAbiSemaphore::cast(wait_semaphores[i])->ptr());
+    }
+
+    signal_semaphores_.reserve(signal_semaphore_count());
+    for (uint32_t i = 0; i < signal_semaphore_count(); i++) {
+        signal_semaphores_.emplace_back(MsdIntelAbiSemaphore::cast(signal_semaphores[i])->ptr());
     }
 
     for (auto res : exec_resources_) {
@@ -95,6 +111,10 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
 
     if (!PatchRelocations(exec_resource_mappings_))
         return DRETF(false, "failed to patch relocations");
+
+    for (auto semaphore : signal_semaphores_) {
+        semaphore->Reset();
+    }
 
     batch_buffer_index_ = batch_buffer_resource_index();
     batch_start_offset_ = batch_start_offset();

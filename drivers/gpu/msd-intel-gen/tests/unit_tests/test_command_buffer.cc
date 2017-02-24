@@ -177,9 +177,12 @@ private:
         DLOG("creating helper");
         helper_ = CommandBufferHelper::Create(platform_device);
         DLOG("creating command buffer");
+        // It's important that the CommandBuffer created here match the serialized content
+        // inside the command buffer provided by the helper.
         cmd_buf_ =
             CommandBuffer::Create(helper_->buffer()->msd_buf(), helper_->msd_resources().data(),
-                                  MsdIntelAbiContext::cast(helper_->ctx())->ptr());
+                                  MsdIntelAbiContext::cast(helper_->ctx())->ptr(),
+                                  helper_->msd_wait_semaphores(), helper_->msd_signal_semaphores());
         DLOG("command buffer created");
     }
 

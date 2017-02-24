@@ -364,6 +364,8 @@ magma::Status MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer>
     DLOG("SubmitCommandBuffer");
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
+    // TODO(MA-157) - if there are wait semaphores, pass this to a wait thread instead
+
     auto request = std::make_unique<CommandBufferRequest>(std::move(command_buffer));
     auto reply = request->GetReply();
 

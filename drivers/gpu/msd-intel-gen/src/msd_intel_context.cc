@@ -125,11 +125,13 @@ void msd_context_destroy(msd_context* ctx)
 }
 
 magma_status_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
-                                                  msd_buffer** exec_resources)
+                                                  msd_buffer** exec_resources,
+                                                  msd_semaphore** wait_semaphores,
+                                                  msd_semaphore** signal_semaphores)
 {
     auto context = MsdIntelAbiContext::cast(ctx)->ptr();
 
-    magma::Status status =
-        context->SubmitCommandBuffer(CommandBuffer::Create(cmd_buf, exec_resources, context));
+    magma::Status status = context->SubmitCommandBuffer(CommandBuffer::Create(
+        cmd_buf, exec_resources, context, wait_semaphores, signal_semaphores));
     return status.get();
 }
