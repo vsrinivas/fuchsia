@@ -5,11 +5,25 @@
 
 #pragma once
 
+#define BCM_GPIO0_PIN   (0)
+#define BCM_GPIO1_PIN   (1)
 #define BCM_GPIO2_PIN   (2)
 #define BCM_GPIO3_PIN   (3)
 
+#define BCM_GPIO18_PIN      (18)
+#define BCM_GPIO19_PIN      (19)
+#define BCM_GPIO20_PIN      (20)
+#define BCM_GPIO21_PIN      (21)
+
+#define BCM_SDA0_PIN    BCM_GPIO0_PIN
+#define BCM_SCL0_PIN    BCM_GPIO1_PIN
 #define BCM_SDA1_PIN    BCM_GPIO2_PIN
 #define BCM_SCL1_PIN    BCM_GPIO3_PIN
+
+#define BCM_PCM_CLK_ALT0_PIN    BCM_GPIO18_PIN
+#define BCM_PCM_FS_ALT0_PIN     BCM_GPIO19_PIN
+#define BCM_PCM_DIN_ALT0_PIN    BCM_GPIO20_PIN
+#define BCM_PCM_DOUT_ALT0_PIN   BCM_GPIO21_PIN
 
 #define BCM_GPIO_GPFSEL_MASK    (0x07)
 

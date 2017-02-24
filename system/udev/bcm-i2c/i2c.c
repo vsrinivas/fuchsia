@@ -31,7 +31,7 @@ typedef struct {
     mx_device_t*        parent;
     mx_driver_t*        driver;
     bcm_i2c_regs_t*     control_regs;
-    bcm_gpio_ctrl_t*    gpio_regs;
+    uint32_t            dev_id;
 
 } bcm_i2c_t;
 
@@ -216,26 +216,12 @@ static int i2c_bootstrap_thread(void *arg) {
 
     assert(arg);
 
-    printf("Entering the i2c bootstrap\n");
-
     bcm_i2c_t* i2c_ctx = (bcm_i2c_t*)arg;
+    uintptr_t base_addr = (i2c_ctx->dev_id == 1) ? BSC1_BASE : BSC0_BASE;
 
-    // Carve out some address space for the device -- it's memory mapped.
     mx_status_t status = mx_mmap_device_memory(
         get_root_resource(),
-        GPIO_BASE, 0x1000,
-        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&i2c_ctx->gpio_regs);
-
-    if (status != NO_ERROR)
-        goto i2c_err;
-
-    /* ALT Function 0 is I2C for these pins */
-    set_gpio_function(i2c_ctx->gpio_regs, BCM_SDA1_PIN, FSEL_ALT0);
-    set_gpio_function(i2c_ctx->gpio_regs, BCM_SCL1_PIN, FSEL_ALT0);
-
-    status = mx_mmap_device_memory(
-        get_root_resource(),
-        BSC1_BASE, 0x1000,
+        base_addr, 0x1000,
         MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&i2c_ctx->control_regs);
 
     if (status != NO_ERROR)
@@ -245,7 +231,10 @@ static int i2c_bootstrap_thread(void *arg) {
 
     i2c_ctx->control_regs->clk_div = BCM_BSC_CLK_DIV_100K;
 
-    device_init(&i2c_ctx->device, i2c_ctx->driver, "i2c1", &i2c_device_proto);
+    char id[5];
+    snprintf(id,sizeof(id),"i2c%u",i2c_ctx->dev_id);
+
+    device_init(&i2c_ctx->device, i2c_ctx->driver, id, &i2c_device_proto);
     status = device_add(&i2c_ctx->device, i2c_ctx->parent);
 
     if (status == NO_ERROR) return 0;
@@ -257,26 +246,65 @@ i2c_err:
     return -1;
 }
 
-static mx_status_t i2c_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_status_t bootstrap_i2c(mx_driver_t* driver, mx_device_t* parent, uint32_t dev_id) {
 
     bcm_i2c_t* i2c_ctx = calloc(1, sizeof(*i2c_ctx));
     if (!i2c_ctx)
         return ERR_NO_MEMORY;
 
-    i2c_ctx->driver = driver;
-    i2c_ctx->parent = parent;
+    i2c_ctx->driver     = driver;
+    i2c_ctx->parent     = parent;
+    i2c_ctx->dev_id     = dev_id;
+
+    char tid[30];
+    snprintf(tid,sizeof(tid),"i2c%d_bootstrap_thread",dev_id);
 
     thrd_t bootstrap_thrd;
     int thrd_rc = thrd_create_with_name(&bootstrap_thrd,
-                                        i2c_bootstrap_thread, i2c_ctx,
-                                        "i2c_bootstrap_thread");
+                                        i2c_bootstrap_thread, i2c_ctx, tid);
     if (thrd_rc != thrd_success) {
         free(i2c_ctx);
         return thrd_status_to_mx_status(thrd_rc);
     }
-
     thrd_detach(bootstrap_thrd);
     return NO_ERROR;
+}
+
+
+static mx_status_t i2c_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+
+    mx_status_t ret = NO_ERROR;
+
+    bcm_gpio_ctrl_t* gpio_regs;
+    // Carve out some address space for the device -- it's memory mapped.
+    mx_status_t status = mx_mmap_device_memory(
+        get_root_resource(),
+        GPIO_BASE, 0x1000,
+        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)&gpio_regs);
+
+    if (status != NO_ERROR) return ERR_NO_MEMORY;
+
+    /* ALT Function 0 is I2C for these pins */
+    set_gpio_function(gpio_regs, BCM_SDA1_PIN, FSEL_ALT0);
+    set_gpio_function(gpio_regs, BCM_SCL1_PIN, FSEL_ALT0);
+
+    set_gpio_function(gpio_regs, BCM_SDA0_PIN, FSEL_ALT0);
+    set_gpio_function(gpio_regs, BCM_SCL0_PIN, FSEL_ALT0);
+
+
+    status = bootstrap_i2c(driver,parent,0);
+    if (status != NO_ERROR) {
+        ret = status;
+        printf("Failed to initialize i2c0\n");
+    }
+
+    status = bootstrap_i2c(driver,parent,1);
+    if (status != NO_ERROR) {
+        ret = status;
+        printf("Failed to initialize i2c1\n");
+    }
+
+    return ret;
 }
 
 mx_driver_t _driver_bcm_i2c = {
