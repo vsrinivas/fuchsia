@@ -12,8 +12,10 @@
 namespace bootstrap {
 namespace {
 
-constexpr const char kDefaultConfigFile[] =
+constexpr const char kDefaultServicesConfigFile[] =
     "/system/data/bootstrap/services.config";
+constexpr const char kDefaultAppsConfigFile[] =
+    "/system/data/bootstrap/apps.config";
 constexpr const char kDefaultLabel[] = "boot";
 
 }  // namespace
@@ -22,16 +24,28 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
   // --no-config / --config=<config-file>
   if (!command_line.HasOption("no-config")) {
     std::string config_file;
-    if (!command_line.GetOptionValue("config", &config_file))
-      config_file = kDefaultConfigFile;
+    if (!command_line.GetOptionValue("services", &config_file))
+      config_file = kDefaultServicesConfigFile;
     if (!config_file.empty()) {
-      FTL_LOG(INFO) << "Loading configuration file from " << config_file;
+      FTL_LOG(INFO) << "Loading services from " << config_file;
       Config config;
-      if (!config.ReadFrom(config_file)) {
-        FTL_LOG(ERROR) << "Could not parse config file";
-        return false;
+      if (config.ReadFrom(config_file)) {
+        services_ = config.TakeServices();
+      } else {
+        FTL_LOG(WARNING) << "Could not parse " << config_file;
+    }
+    }
+
+    if (!command_line.GetOptionValue("apps", &config_file))
+      config_file = kDefaultAppsConfigFile;
+    if (!config_file.empty()) {
+      FTL_LOG(INFO) << "Loading apps from " << config_file;
+      Config config;
+      if (config.ReadFrom(config_file)) {
+        apps_ = config.TakeApps();
+      } else {
+        FTL_LOG(WARNING) << "Could not parse " << config_file;
       }
-      services_ = config.TakeServices();
     }
   }
 
@@ -65,10 +79,11 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
   }
 
   if (positional_args[0] != "-") {
-    initial_launch_ = app::ApplicationLaunchInfo::New();
-    initial_launch_->url = positional_args[0];
+    auto app = app::ApplicationLaunchInfo::New();
+    app->url = positional_args[0];
     for (size_t i = 1; i < positional_args.size(); ++i)
-      initial_launch_->arguments.push_back(positional_args[i]);
+      app->arguments.push_back(positional_args[i]);
+    apps_.push_back(std::move(app));
   } else if (positional_args.size() > 1) {
     FTL_LOG(ERROR) << "Found excess arguments after '-'";
     return false;

@@ -80,7 +80,9 @@ Run 'my_app' without any other configured services:
 
 ## CONFIGURATION
 
-The bootstrap configuration is a JSON file consisting of service
+### Services
+
+The bootstrap services configuration is a JSON file consisting of service
 registrations.  Each entry in the "services" map consists of a service
 name and the application URL which provides it.
 
@@ -91,6 +93,19 @@ name and the application URL which provides it.
            "file:///system/apps/app_with_args", "arg1", "arg2", "arg3"
         ]
       }
+    }
+
+### Apps
+
+The bootstrap apps configuration is a JSON file consisting of apps to run at
+startup.  Each entry in the "apps" list consists of either an app URL or a list
+of an app URL and its arguments.
+
+    {
+      "apps": [
+        "file:///system/apps/app_without_args",
+        [ "file:///system/apps/app_with_args", "arg1", "arg2", "arg3" ]
+      ]
     }
 
 ## FUTURE WORK

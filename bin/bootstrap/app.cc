@@ -42,9 +42,8 @@ App::App(Params* params)
   // TODO(jeffbrown): Remove this.
   RegisterViewManager();
 
-  // Launch application specified on command-line.
-  auto launch_info = params->TakeInitialLaunch();
-  if (launch_info)
+  // Launch startup applications.
+  for (auto& launch_info : params->TakeApps())
     LaunchApplication(std::move(launch_info));
 }
 
@@ -161,10 +160,6 @@ void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
 
   env_launcher_->CreateApplication(std::move(launch_info),
                                    app_controller_.NewRequest());
-  app_controller_.set_connection_error_handler([] {
-    FTL_LOG(INFO) << "Bootstrapped application terminated.";
-    exit(0);
-  });
 }
 
 void App::GetApplicationEnvironmentServices(

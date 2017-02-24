@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "application/services/application_launcher.fidl.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/ftl/macros.h"
 
 namespace bootstrap {
@@ -21,16 +22,23 @@ class Config {
  public:
   using ServiceMap =
       std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>;
+  using AppVector = std::vector<app::ApplicationLaunchInfoPtr>;
 
   Config();
   ~Config();
 
   bool ReadFrom(const std::string& config_file);
+
   bool Parse(const std::string& string);
+
   ServiceMap TakeServices() { return std::move(services_); }
+  AppVector TakeApps() { return std::move(apps_); }
 
  private:
+  app::ApplicationLaunchInfoPtr GetLaunchInfo(const modular::JsonValue& value);
+
   ServiceMap services_;
+  AppVector apps_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Config);
 };
