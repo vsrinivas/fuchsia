@@ -9,7 +9,7 @@
 #include <arch/asm_macros.h>
 #include <arch/arm64.h>
 
-.section .text.boot.vectab
+.section .text.boot.vectab,"ax",@progbits
 .align 12
 
 #define lr x30
