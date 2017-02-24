@@ -40,8 +40,6 @@ executable("loop-test") {
 executable("thread-test") {
   testonly = true
 
-  output_name = "gdbserver-thread-test"
-
   sources = [
     "thread-test.c",
   ]
