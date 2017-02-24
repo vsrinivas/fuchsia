@@ -537,8 +537,8 @@ func mxioSockAddrReply(a tcpip.FullAddress, msg *rio.Msg) mx.Status {
 	sockaddr.sin_port.setPort(a.Port)
 	copy(sockaddr.sin_addr[:], a.Addr)
 	rep.len = writeSockaddrStorage4(&rep.addr, &sockaddr)
+	rep.Encode(msg)
 	msg.SetOff(0)
-	msg.Datalen = uint32(c_mxrio_sockaddr_reply_len)
 	return mx.ErrOk
 }
 
