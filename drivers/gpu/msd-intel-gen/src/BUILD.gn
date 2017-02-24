@@ -34,6 +34,7 @@ source_set("src") {
     "msd_intel_device.h",
     "msd_intel_driver.cc",
     "msd_intel_driver.h",
+    "msd_intel_semaphore.cc",
     "pagetable.h",
     "ppgtt.cc",
     "ppgtt.h",
@@ -59,5 +60,6 @@ source_set("src") {
     "$magma_build_root/src/magma_util:thread",
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:event",
+    "$magma_build_root/src/magma_util/platform:semaphore",
   ]
 }

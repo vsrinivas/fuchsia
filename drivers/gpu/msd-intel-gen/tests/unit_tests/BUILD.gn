@@ -34,6 +34,7 @@ source_set("tests_not_requiring_hardware") {
     "test_render_init_batch.cc",
     "test_ringbuffer.cc",
     "test_scheduler.cc",
+    "test_semaphore.cc",
     "test_sequencer.cc",
   ]
 
