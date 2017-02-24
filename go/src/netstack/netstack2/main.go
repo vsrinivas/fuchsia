@@ -15,6 +15,8 @@ import (
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/header"
+	"github.com/google/netstack/tcpip/link/loopback"
 	"github.com/google/netstack/tcpip/link/sniffer"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -57,8 +59,35 @@ func main() {
 	if err != nil {
 		log.Fatalf("ethernet: %v", err)
 	}
+
 	log.Printf("watching for ethernet devices")
-	var nicid tcpip.NICID
+	nicid := tcpip.NICID(1)
+	loopbackID := loopback.New()
+	if debug2 {
+		loopbackID = sniffer.New(loopbackID)
+	}
+	if err := stk.CreateNIC(nicid, loopbackID); err != nil {
+		log.Printf("could not create loopback interface: %v", err)
+	}
+	if err := stk.AddAddress(nicid, ipv4.ProtocolNumber, "\x7f\x00\x00\x01"); err != nil {
+		log.Printf("AddAddress for localhost failed: %v", err)
+	}
+	routeTablesMu.Lock()
+	routeTables[nicid] = []tcpip.Route{
+		{
+			Destination: header.IPv4Loopback,
+			Mask:        tcpip.Address(strings.Repeat("\xff", 4)),
+			NIC:         1,
+		},
+		{
+			Destination: header.IPv6Loopback,
+			Mask:        tcpip.Address(strings.Repeat("\xff", 16)),
+			NIC:         1,
+		},
+	}
+	stk.SetRouteTable(flattenRouteTables())
+	routeTablesMu.Unlock()
+
 	for name := range w.C {
 		nicid++
 		path := ethdir + "/" + name

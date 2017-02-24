@@ -39,7 +39,7 @@ const MXSIO_SIGNAL_INCOMING = mx.SignalUser0
 const MXSIO_SIGNAL_CONNECTED = mx.SignalUser3
 const MXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
 
-const defaultNIC = 1
+const defaultNIC = 2
 
 func devmgrConnect() (mx.Handle, error) {
 	f, err := os.OpenFile("/dev/socket", O_DIRECTORY|O_RDWR, 0)
@@ -506,6 +506,9 @@ func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
 		}
 		return mx.ErrBadState
 	}
+	if debug2 {
+		log.Printf("bind(%s)", *addr)
+	}
 	if err := ios.ep.Bind(*addr, nil); err != nil {
 		return errStatus(err)
 	}
@@ -546,6 +549,9 @@ func (s *socketServer) opGetSockName(ios *iostate, msg *rio.Msg) mx.Status {
 	a, err := ios.ep.GetLocalAddress()
 	if err != nil {
 		return errStatus(err)
+	}
+	if debug2 {
+		log.Printf("getsockname(): %v", a)
 	}
 	return mxioSockAddrReply(a, msg)
 }
@@ -616,6 +622,9 @@ func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) mx.Status {
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
+	if debug2 {
+		log.Printf("connect(%s)", *addr)
+	}
 	err = ios.ep.Connect(*addr)
 	if err == tcpip.ErrConnectStarted {
 		<-notifyCh
@@ -677,7 +686,11 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	var addr c_in_addr
 	dnsLookupIPs, err := s.dnsClient.LookupIP(node)
 	if err != nil {
-		fmt.Sscanf(node, "%d.%d.%d.%d", &addr[0], &addr[1], &addr[2], &addr[3])
+		if node == "localhost" {
+			addr[0], addr[1], addr[2], addr[3] = 127, 0, 0, 1
+		} else {
+			fmt.Sscanf(node, "%d.%d.%d.%d", &addr[0], &addr[1], &addr[2], &addr[3])
+		}
 	} else {
 		for _, ip := range dnsLookupIPs {
 			if ip.To4() != "" {
