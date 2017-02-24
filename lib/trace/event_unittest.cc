@@ -4,6 +4,7 @@
 
 #include "apps/tracing/lib/trace/event.h"
 
+#include <magenta/process.h>
 #include <mx/vmo.h>
 
 #include "gtest/gtest.h"
