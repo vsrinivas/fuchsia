@@ -24,6 +24,10 @@
             "bootfs_path": "apps/modular_tests/component_context_test_agent2"
         },
         {
+            "binary": "component_context_unstoppable_agent",
+            "bootfs_path": "apps/modular_tests/component_context_unstoppable_agent"
+        },
+        {
             "binary": "component_manager_main",
             "bootfs_path": "apps/component_manager"
         },
