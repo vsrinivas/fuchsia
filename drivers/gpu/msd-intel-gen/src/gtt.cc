@@ -161,7 +161,7 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, 
 
     // add an extra page to length to account for the overfetch protection page
     if (length + PAGE_SIZE != allocated_length)
-        return DRETF(false, "allocated length (0x%lx) doesn't match length (0x%x)",
+        return DRETF(false, "allocated length (0x%zx) doesn't match length (0x%" PRIx64 ")",
                      allocated_length, length);
 
     uint32_t start_page_index = offset / PAGE_SIZE;
