@@ -428,12 +428,12 @@ static bool test_set_close_set(const char* kind, mx_handle_t object,
     // Bind an exception port to the object.
     mx_handle_t eport = tu_io_port_create(0);
     mx_status_t status;
-    status = mx_object_bind_exception_port(object, eport, 0, options);
+    status = mx_task_bind_exception_port(object, eport, 0, options);
     ASSERT_EQ(status, NO_ERROR, "error setting exception port");
 
     // Try binding another exception port to the same object, which should fail.
     mx_handle_t eport2 = tu_io_port_create(0);
-    status = mx_object_bind_exception_port(object, eport, 0, options);
+    status = mx_task_bind_exception_port(object, eport, 0, options);
     ASSERT_NEQ(status, NO_ERROR, "setting exception port errantly succeeded");
 
     // Close the ports.
@@ -443,27 +443,27 @@ static bool test_set_close_set(const char* kind, mx_handle_t object,
     // TODO(MG-307): Dropping all handles to a port should unbind it.
     // Until that works, unbind manually.
     status =
-        mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
+        mx_task_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
     ASSERT_EQ(status, NO_ERROR, "error resetting exception port");
 #endif
 
     // Verify the close removed the previous handler by successfully
     // adding a new one.
     eport = tu_io_port_create(0);
-    status = mx_object_bind_exception_port(object, eport, 0, options);
+    status = mx_task_bind_exception_port(object, eport, 0, options);
     ASSERT_EQ(status, NO_ERROR, "error setting exception port (#2)");
     tu_handle_close(eport);
 #if 1
     // TODO(MG-307): Dropping all handles to a port should unbind it.
     // Until that works, unbind manually.
     status =
-        mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
+        mx_task_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
     ASSERT_EQ(status, NO_ERROR, "error resetting exception port (#2)");
 #endif
 
     // Try unbinding from an object without a bound port, which should fail.
     status =
-        mx_object_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
+        mx_task_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
     ASSERT_NEQ(status, NO_ERROR,
                "resetting unbound exception port errantly succeeded");
 

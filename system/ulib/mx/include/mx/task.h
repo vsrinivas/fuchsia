@@ -23,6 +23,8 @@ public:
         return mx_task_resume(object<T>::get(), options);
     }
 
+    // TODO(abarth): mx_task_bind_exception_port
+
     mx_status_t kill() const { return mx_task_kill(object<T>::get()); }
 };
 

@@ -89,7 +89,7 @@ mx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
     if (status != NO_ERROR) {
         goto err;
     }
-    status = mx_object_bind_exception_port(thread, port, 0, 0);
+    status = mx_task_bind_exception_port(thread, port, 0, 0);
     if (status != NO_ERROR) {
         goto err;
     }

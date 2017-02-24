@@ -94,7 +94,6 @@ public:
         result->reset(h);
         return status;
     }
-    // TODO(abarth): mx_object_bind_exception_port
 
     mx_status_t get_property(uint32_t property, void* value,
                              size_t size) const {

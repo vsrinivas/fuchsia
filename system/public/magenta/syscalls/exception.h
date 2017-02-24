@@ -119,7 +119,7 @@ typedef struct mx_exception_report {
 // let the next exception handler in the search order, if any, process the
 // exception. If there are no more then the entire process is killed.
 
-// Flags for mx_object_bind_exception_port.
+// Flags for mx_task_bind_exception_port.
 #define MX_EXCEPTION_PORT_DEBUGGER (1)
 // When binding an exception port to a process, set the process's debugger
 // exception port.

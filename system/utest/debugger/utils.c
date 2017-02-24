@@ -405,7 +405,7 @@ bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior)
 
     // TODO(dje): detach-on-close
     mx_status_t status =
-        mx_object_bind_exception_port(inferior, MX_HANDLE_INVALID, 0,
+        mx_task_bind_exception_port(inferior, MX_HANDLE_INVALID, 0,
                                       MX_EXCEPTION_PORT_DEBUGGER);
     EXPECT_EQ(status, NO_ERROR, "error resetting exception port");
 

@@ -74,18 +74,12 @@
         static_cast<mx_rights_t>(arg3),
         reinterpret_cast<mx_handle_t*>(arg4)));
         break;
-    case 14: ret = static_cast<uint64_t>(sys_object_bind_exception_port(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<mx_handle_t>(arg2),
-        static_cast<uint64_t>(arg3),
-        static_cast<uint32_t>(arg4)));
-        break;
-    case 15: ret = static_cast<uint64_t>(sys_channel_create(
+    case 14: ret = static_cast<uint64_t>(sys_channel_create(
         static_cast<uint32_t>(arg1),
         reinterpret_cast<mx_handle_t*>(arg2),
         reinterpret_cast<mx_handle_t*>(arg3)));
         break;
-    case 16: ret = static_cast<uint64_t>(sys_channel_read(
+    case 15: ret = static_cast<uint64_t>(sys_channel_read(
         static_cast<mx_handle_t>(arg1),
         static_cast<uint32_t>(arg2),
         reinterpret_cast<void*>(arg3),
@@ -95,7 +89,7 @@
         static_cast<uint32_t>(arg7),
         reinterpret_cast<uint32_t*>(arg8)));
         break;
-    case 17: ret = static_cast<uint64_t>(sys_channel_write(
+    case 16: ret = static_cast<uint64_t>(sys_channel_write(
         static_cast<mx_handle_t>(arg1),
         static_cast<uint32_t>(arg2),
         reinterpret_cast<const void*>(arg3),
@@ -103,7 +97,7 @@
         reinterpret_cast<const mx_handle_t*>(arg5),
         static_cast<uint32_t>(arg6)));
         break;
-    case 18: ret = static_cast<uint64_t>(sys_channel_call(
+    case 17: ret = static_cast<uint64_t>(sys_channel_call(
         static_cast<mx_handle_t>(arg1),
         static_cast<uint32_t>(arg2),
         static_cast<mx_time_t>(arg3),
@@ -112,56 +106,56 @@
         reinterpret_cast<uint32_t*>(arg6),
         reinterpret_cast<mx_status_t*>(arg7)));
         break;
-    case 19: ret = static_cast<uint64_t>(sys_socket_create(
+    case 18: ret = static_cast<uint64_t>(sys_socket_create(
         static_cast<uint32_t>(arg1),
         reinterpret_cast<mx_handle_t*>(arg2),
         reinterpret_cast<mx_handle_t*>(arg3)));
         break;
-    case 20: ret = static_cast<uint64_t>(sys_socket_write(
+    case 19: ret = static_cast<uint64_t>(sys_socket_write(
         static_cast<mx_handle_t>(arg1),
         static_cast<uint32_t>(arg2),
         reinterpret_cast<const void*>(arg3),
         static_cast<size_t>(arg4),
         reinterpret_cast<size_t*>(arg5)));
         break;
-    case 21: ret = static_cast<uint64_t>(sys_socket_read(
+    case 20: ret = static_cast<uint64_t>(sys_socket_read(
         static_cast<mx_handle_t>(arg1),
         static_cast<uint32_t>(arg2),
         reinterpret_cast<void*>(arg3),
         static_cast<size_t>(arg4),
         reinterpret_cast<size_t*>(arg5)));
         break;
-    case 22: sys_thread_exit(); // __noreturn__
-    case 23: ret = static_cast<uint64_t>(sys_thread_create(
+    case 21: sys_thread_exit(); // __noreturn__
+    case 22: ret = static_cast<uint64_t>(sys_thread_create(
         static_cast<mx_handle_t>(arg1),
         reinterpret_cast<const char*>(arg2),
         static_cast<uint32_t>(arg3),
         static_cast<uint32_t>(arg4),
         reinterpret_cast<mx_handle_t*>(arg5)));
         break;
-    case 24: ret = static_cast<uint64_t>(sys_thread_start(
+    case 23: ret = static_cast<uint64_t>(sys_thread_start(
         static_cast<mx_handle_t>(arg1),
         static_cast<uintptr_t>(arg2),
         static_cast<uintptr_t>(arg3),
         static_cast<uintptr_t>(arg4),
         static_cast<uintptr_t>(arg5)));
         break;
-    case 25: ret = static_cast<uint64_t>(sys_thread_read_state(
+    case 24: ret = static_cast<uint64_t>(sys_thread_read_state(
         static_cast<mx_handle_t>(arg1),
         static_cast<uint32_t>(arg2),
         reinterpret_cast<void*>(arg3),
         static_cast<uint32_t>(arg4),
         reinterpret_cast<uint32_t*>(arg5)));
         break;
-    case 26: ret = static_cast<uint64_t>(sys_thread_write_state(
+    case 25: ret = static_cast<uint64_t>(sys_thread_write_state(
         static_cast<mx_handle_t>(arg1),
         static_cast<uint32_t>(arg2),
         reinterpret_cast<const void*>(arg3),
         static_cast<uint32_t>(arg4)));
         break;
-    case 27: sys_process_exit(
+    case 26: sys_process_exit(
         static_cast<int>(arg1)); // __noreturn__
-    case 28: ret = static_cast<uint64_t>(sys_process_create(
+    case 27: ret = static_cast<uint64_t>(sys_process_create(
         static_cast<mx_handle_t>(arg1),
         reinterpret_cast<const char*>(arg2),
         static_cast<uint32_t>(arg3),
@@ -169,7 +163,7 @@
         reinterpret_cast<mx_handle_t*>(arg5),
         reinterpret_cast<mx_handle_t*>(arg6)));
         break;
-    case 29: ret = static_cast<uint64_t>(sys_process_start(
+    case 28: ret = static_cast<uint64_t>(sys_process_start(
         static_cast<mx_handle_t>(arg1),
         static_cast<mx_handle_t>(arg2),
         static_cast<uintptr_t>(arg3),
@@ -177,24 +171,30 @@
         static_cast<mx_handle_t>(arg5),
         static_cast<uintptr_t>(arg6)));
         break;
-    case 30: ret = static_cast<uint64_t>(sys_process_read_memory(
+    case 29: ret = static_cast<uint64_t>(sys_process_read_memory(
         static_cast<mx_handle_t>(arg1),
         static_cast<uintptr_t>(arg2),
         reinterpret_cast<void*>(arg3),
         static_cast<size_t>(arg4),
         reinterpret_cast<size_t*>(arg5)));
         break;
-    case 31: ret = static_cast<uint64_t>(sys_process_write_memory(
+    case 30: ret = static_cast<uint64_t>(sys_process_write_memory(
         static_cast<mx_handle_t>(arg1),
         static_cast<uintptr_t>(arg2),
         reinterpret_cast<const void*>(arg3),
         static_cast<size_t>(arg4),
         reinterpret_cast<size_t*>(arg5)));
         break;
-    case 32: ret = static_cast<uint64_t>(sys_job_create(
+    case 31: ret = static_cast<uint64_t>(sys_job_create(
         static_cast<mx_handle_t>(arg1),
         static_cast<uint32_t>(arg2),
         reinterpret_cast<mx_handle_t*>(arg3)));
+        break;
+    case 32: ret = static_cast<uint64_t>(sys_task_bind_exception_port(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<mx_handle_t>(arg2),
+        static_cast<uint64_t>(arg3),
+        static_cast<uint32_t>(arg4)));
         break;
     case 33: ret = static_cast<uint64_t>(sys_task_resume(
         static_cast<mx_handle_t>(arg1),

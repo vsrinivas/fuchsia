@@ -74,12 +74,6 @@ mx_status_t sys_object_get_child(
     mx_rights_t rights,
     mx_handle_t out[1]);
 
-mx_status_t sys_object_bind_exception_port(
-    mx_handle_t object,
-    mx_handle_t eport,
-    uint64_t key,
-    uint32_t options);
-
 mx_status_t sys_channel_create(
     uint32_t options,
     mx_handle_t out0[1],
@@ -197,6 +191,12 @@ mx_status_t sys_job_create(
     mx_handle_t parent_job,
     uint32_t options,
     mx_handle_t out[1]);
+
+mx_status_t sys_task_bind_exception_port(
+    mx_handle_t object,
+    mx_handle_t eport,
+    uint64_t key,
+    uint32_t options);
 
 mx_status_t sys_task_resume(
     mx_handle_t task_handle,

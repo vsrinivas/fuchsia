@@ -89,12 +89,6 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_object_get_chil
     mx_rights_t rights,
     mx_handle_t out[1]) __attribute__((__leaf__));
 
-__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_object_bind_exception_port(
-    mx_handle_t object,
-    mx_handle_t eport,
-    uint64_t key,
-    uint32_t options) __attribute__((__leaf__));
-
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_channel_create(
     uint32_t options,
     mx_handle_t out0[1],
@@ -212,6 +206,12 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_job_create(
     mx_handle_t parent_job,
     uint32_t options,
     mx_handle_t out[1]) __attribute__((__leaf__));
+
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_task_bind_exception_port(
+    mx_handle_t object,
+    mx_handle_t eport,
+    uint64_t key,
+    uint32_t options) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_task_resume(
     mx_handle_t task_handle,

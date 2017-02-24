@@ -317,14 +317,14 @@ Fail:
 // the request.
 
 mx_status_t bind_system_exception_port(mx_handle_t eport) {
-    return mx_object_bind_exception_port(MX_HANDLE_INVALID, eport, kSysExceptionKey, 0);
+    return mx_task_bind_exception_port(MX_HANDLE_INVALID, eport, kSysExceptionKey, 0);
 }
 
 // A small wrapper to provide a useful name to the API call used to effect
 // the request.
 
 mx_status_t unbind_system_exception_port() {
-    return mx_object_bind_exception_port(MX_HANDLE_INVALID, MX_HANDLE_INVALID,
+    return mx_task_bind_exception_port(MX_HANDLE_INVALID, MX_HANDLE_INVALID,
                                          kSysExceptionKey, 0);
 }
 
@@ -476,7 +476,7 @@ int main(int argc, char** argv) {
 
     // Bind this exception handler to the main thread instead of the process
     // so that the crashlogger crash dumper doesn't get its own exceptions.
-    status = mx_object_bind_exception_port(thread_self, self_dump_port,
+    status = mx_task_bind_exception_port(thread_self, self_dump_port,
                                            kSelfExceptionKey, 0);
     if (status < 0) {
         print_mx_error("unable to set self exception port", status);

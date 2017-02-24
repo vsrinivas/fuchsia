@@ -15,7 +15,9 @@ __BEGIN_CDECLS
 #include <magenta/gen-syscalls.h>
 
 // Compatibility Wrappers for Deprecated Syscalls
-
-// Currently no wrappers!
+mx_status_t mx_object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle, uint64_t key, bool debugger)
+__attribute__((deprecated("use mx_task_bind_exception_port() instead.")));
+mx_status_t _mx_object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle, uint64_t key, bool debugger)
+__attribute__((deprecated("use _mx_task_bind_exception_port() instead.")));
 
 __END_CDECLS

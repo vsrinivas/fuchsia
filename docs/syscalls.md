@@ -6,7 +6,6 @@
 + [handle_replace](syscalls/handle_replace.md) - create a new handle (optionally with reduced rights) and destroy the old one
 
 ## Objects
-+ [object_bind_exception_port](syscalls/object_bind_exception_port.md) - attach an exception port to a task
 + [object_get_child](syscalls/object_get_child.md) - find the child of an object by its koid
 + [object_get_info](syscalls/object_get_info.md) - obtain information about an object
 + [object_get_property](syscalls/object_get_property.md) - read an object property
@@ -35,6 +34,7 @@
 
 ## Tasks (Task, Process, or Job)
 + [task_resume](syscalls/task_resume.md) - cause a suspended task to continue running
++ [task_bind_exception_port](syscalls/task_bind_exception_port.md) - attach an exception port to a task
 + [task_kill](syscalls/task_kill.md) - cause a task to stop running
 
 ## Channels

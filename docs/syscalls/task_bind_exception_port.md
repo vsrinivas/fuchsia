@@ -1,8 +1,8 @@
-# mx_object_bind_exception_port
+# mx_task_bind_exception_port
 
 ## NAME
 
-object_bind_exception_port - Bind to, or unbind from, the exception port
+task_bind_exception_port - Bind to, or unbind from, the exception port
 corresponding to a given process or thread or the system exception port.
 
 ## SYNOPSIS
@@ -10,13 +10,13 @@ corresponding to a given process or thread or the system exception port.
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_object_bind_exception_port(mx_handle_t object, mx_handle_t eport,
+mx_status_t mx_task_bind_exception_port(mx_handle_t object, mx_handle_t eport,
                                           uint64_t key, uint32_t options);
 ```
 
 ## DESCRIPTION
 
-**object_bind_exception_port**() is used to bind (or unbind) a port to
+**task_bind_exception_port**() is used to bind (or unbind) a port to
 the exception port of a process or thread, or the system exception port.
 
 To bind to the system exception port pass **MX_HANDLE_INVALID** for *object*.
@@ -105,7 +105,7 @@ in magenta/syscalls/exception.h.
 
 ## RETURN VALUE
 
-**object_bind_exception_port**() returns **NO_ERROR** on success.
+**task_bind_exception_port**() returns **NO_ERROR** on success.
 In the event of failure, a negative error value is returned.
 
 ## ERRORS

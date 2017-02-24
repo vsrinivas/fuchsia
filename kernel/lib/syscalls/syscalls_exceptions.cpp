@@ -67,7 +67,7 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
     return ERR_WRONG_TYPE;
 }
 
-static mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle, uint64_t key, bool debugger) {
+static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle, uint64_t key, bool debugger) {
     //TODO: check rights once appropriate right is determined
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -121,7 +121,7 @@ static mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_
     return ERR_WRONG_TYPE;
 }
 
-mx_status_t sys_object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle,
+mx_status_t sys_task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle,
                                            uint64_t key, uint32_t options) {
     LTRACE_ENTRY;
 
@@ -139,7 +139,7 @@ mx_status_t sys_object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t e
         bool quietly = (options & MX_EXCEPTION_PORT_UNBIND_QUIETLY) != 0;
         return object_unbind_exception_port(obj_handle, debugger, quietly);
     } else {
-        return object_bind_exception_port(obj_handle, eport_handle, key, debugger);
+        return task_bind_exception_port(obj_handle, eport_handle, key, debugger);
     }
 }
 

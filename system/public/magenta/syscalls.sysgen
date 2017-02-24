@@ -118,10 +118,6 @@ syscall object_get_child
     (handle: mx_handle_t, koid: uint64_t, rights: mx_rights_t, out: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
-syscall object_bind_exception_port
-    (object: mx_handle_t, eport: mx_handle_t, key: uint64_t, options: uint32_t)
-    returns (mx_status_t);
-
 # IPC: Channels
 
 syscall channel_create
@@ -220,6 +216,9 @@ syscall job_create
     returns (mx_status_t);
 
 # Shared between process and threads
+syscall task_bind_exception_port
+    (object: mx_handle_t, eport: mx_handle_t, key: uint64_t, options: uint32_t)
+    returns (mx_status_t);
 
 syscall task_resume
     (task_handle: mx_handle_t, options: uint32_t)

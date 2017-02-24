@@ -177,18 +177,6 @@ extern mx_status_t _mx_object_get_child(
     mx_rights_t rights,
     mx_handle_t out[1]) __attribute__((__leaf__));
 
-extern mx_status_t mx_object_bind_exception_port(
-    mx_handle_t object,
-    mx_handle_t eport,
-    uint64_t key,
-    uint32_t options) __attribute__((__leaf__));
-
-extern mx_status_t _mx_object_bind_exception_port(
-    mx_handle_t object,
-    mx_handle_t eport,
-    uint64_t key,
-    uint32_t options) __attribute__((__leaf__));
-
 extern mx_status_t mx_channel_create(
     uint32_t options,
     mx_handle_t out0[1],
@@ -424,6 +412,18 @@ extern mx_status_t _mx_job_create(
     mx_handle_t parent_job,
     uint32_t options,
     mx_handle_t out[1]) __attribute__((__leaf__));
+
+extern mx_status_t mx_task_bind_exception_port(
+    mx_handle_t object,
+    mx_handle_t eport,
+    uint64_t key,
+    uint32_t options) __attribute__((__leaf__));
+
+extern mx_status_t _mx_task_bind_exception_port(
+    mx_handle_t object,
+    mx_handle_t eport,
+    uint64_t key,
+    uint32_t options) __attribute__((__leaf__));
 
 extern mx_status_t mx_task_resume(
     mx_handle_t task_handle,
