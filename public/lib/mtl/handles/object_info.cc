@@ -4,6 +4,7 @@
 
 #include "lib/mtl/handles/object_info.h"
 
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/threads.h>

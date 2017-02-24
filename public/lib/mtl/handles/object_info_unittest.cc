@@ -6,6 +6,7 @@
 
 #include <thread>
 
+#include <magenta/process.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/threads.h>
 #include <mx/channel.h>
