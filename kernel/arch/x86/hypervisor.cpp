@@ -92,6 +92,18 @@ static uint64_t vmread(uint64_t field) {
     return val;
 }
 
+static uint64_t vmread_unchecked(uint64_t field) {
+    uint64_t val = 0;
+
+    __asm__ (
+        "vmread %[val], %[field];"
+        : [val] "=r"(val)
+        : [field] "r"(field)
+        : "cc", "memory");
+
+    return val;
+}
+
 static void vmwrite(uint64_t field, uint64_t val) {
     uint8_t err;
 
@@ -354,7 +366,9 @@ mx_status_t VmcsCpuContext::Setup(const VmxInfo& info) {
                      // logical processor acknowledge the interrupt
                      // controller, acquiring the interrupt’s vector.
                      VMCS_32_EXIT_CTLS_ACK_INTERRUPT |
+                     // Load the IA32_PAT MSR on exit.
                      VMCS_32_EXIT_CTLS_LOAD_IA32_PAT |
+                     // Load the IA32_EFER MSR on exit.
                      VMCS_32_EXIT_CTLS_LOAD_IA32_EFER);
     set_vmcs_control(VMCS_32_ENTRY_CTLS,
                      // VM-entry controls.
@@ -364,17 +378,18 @@ mx_status_t VmcsCpuContext::Setup(const VmxInfo& info) {
                      VMCS_32_ENTRY_CTLS_IA32E_MODE);
 
     // Setup VMCS host state.
+    x86_percpu* percpu = x86_get_percpu();
     vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
-    vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(arch_curr_cpu_num()));
+    vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(percpu->cpu_num));
     vmwrite(VMCS_64_HOST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
     vmwrite(VMCS_64_HOST_IA32_EFER, read_msr(X86_MSR_EFER));
-    vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
     vmwrite(VMCS_XX_HOST_GS_BASE, read_msr(X86_MSR_IA32_GS_BASE));
-    vmwrite(VMCS_XX_HOST_TR_BASE, reinterpret_cast<uint64_t>(&x86_get_percpu()->default_tss));
+    vmwrite(VMCS_XX_HOST_TR_BASE, reinterpret_cast<uint64_t>(&percpu->default_tss));
     vmwrite(VMCS_XX_HOST_GDTR_BASE, reinterpret_cast<uint64_t>(_gdt));
-    vmwrite(VMCS_XX_HOST_IDTR_BASE, reinterpret_cast<uint64_t>(_idt));
+    vmwrite(VMCS_XX_HOST_IDTR_BASE, reinterpret_cast<uint64_t>(&percpu->idt));
     vmwrite(VMCS_XX_HOST_CR0, x86_get_cr0());
     vmwrite(VMCS_XX_HOST_CR4, x86_get_cr4());
+    vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load));
 
     return NO_ERROR;
 }
@@ -425,14 +440,20 @@ VmcsCpuContext* VmcsContext::CurrCpuContext() {
 static int vmcs_launch(void* arg) {
     VmxHostState host_state;
     if (vmx_host_save(&host_state)) {
-        uint64_t reason = vmread(VMCS_32_EXIT_REASON);
+        // We may return from the guest with flags set, due to a vmlaunch
+        // failure, therefore we use an unchecked vmread to get the exit reason
+        // so as not to trigger the CF and ZF flags check.
+        uint64_t reason = vmread_unchecked(VMCS_32_EXIT_REASON) & VMCS_32_EXIT_REASON_BASIC_MASK;
         dprintf(SPEW, "vmexit reason: %#" PRIx64 "\n", reason);
         return NO_ERROR;
     }
 
-    vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load));
-    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state));
+    // FS is used for thread-local storage — save each time.
+    vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
+    // CR3 is used to maintain the virtual address space — save each time.
     vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
+    // RSP is used to store host state – save each time.
+    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state));
 
     mx_status_t status = vmlaunch();
     if (status != NO_ERROR) {
