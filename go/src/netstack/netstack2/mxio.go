@@ -749,7 +749,7 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 		case strings.HasPrefix(path, "accept"): // MXRIO_SOCKET_DIR_ACCEPT
 			peerH, peerS, err = s.opAccept(ios, msg, path)
 		default:
-			if debug {
+			if debug2 {
 				log.Printf("open: unknown path=%q", path)
 			}
 			return mx.ErrNotSupported

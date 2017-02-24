@@ -266,7 +266,7 @@ mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
     r = do_accept(msg, ios, events, MX_SIGNAL_NONE, &peer_rio_h, &peer_data_h,
                   &hcount);
   } else {
-    error("invalid path: %s\n", path);
+    debug("invalid path: %s\n", path);
     r = ERR_INVALID_ARGS;
   }
 
