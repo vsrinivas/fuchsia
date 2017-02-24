@@ -6,7 +6,6 @@ source_set("lib") {
   testonly = true
 
   sources = [
-    "capture.h",
     "test_with_message_loop.cc",
     "test_with_message_loop.h",
   ]
@@ -39,7 +38,6 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "capture_unittest.cc",
     "test_with_message_loop_unittest.cc",
   ]
 

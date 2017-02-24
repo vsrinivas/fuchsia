@@ -57,6 +57,7 @@ source_set("unittests") {
   deps = [
     ":lib",
     ":tree_node_storage",
+    "//apps/ledger/src/callback",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",

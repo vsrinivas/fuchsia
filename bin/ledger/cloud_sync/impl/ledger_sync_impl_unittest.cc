@@ -4,9 +4,9 @@
 
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
@@ -43,7 +43,7 @@ TEST_F(LedgerSyncImplTest, RemoteContainsRequestUrl) {
   RemoteResponse response;
   ledger_sync_.RemoteContains(
       "page_id",
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &response));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &response));
   RunLoopWithTimeout();
   const std::string expected_url = ftl::Concatenate(
       {"https://.firebaseio.com/__default__V/test_userV/",
@@ -57,7 +57,7 @@ TEST_F(LedgerSyncImplTest, RemoteContainsWhenAnswerIsYes) {
   RemoteResponse response;
   ledger_sync_.RemoteContains(
       "page_id",
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &response));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &response));
   RunLoopWithTimeout();
 
   EXPECT_EQ(RemoteResponse::FOUND, response);
@@ -68,7 +68,7 @@ TEST_F(LedgerSyncImplTest, RemoteContainsWhenAnswerIsNo) {
   RemoteResponse response;
   ledger_sync_.RemoteContains(
       "page_id",
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &response));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &response));
   RunLoopWithTimeout();
 
   EXPECT_EQ(RemoteResponse::NOT_FOUND, response);
@@ -79,7 +79,7 @@ TEST_F(LedgerSyncImplTest, RemoteContainsWhenServerReturnsError) {
   RemoteResponse response;
   ledger_sync_.RemoteContains(
       "page_id",
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &response));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &response));
   RunLoopWithTimeout();
 
   EXPECT_EQ(RemoteResponse::SERVER_ERROR, response);

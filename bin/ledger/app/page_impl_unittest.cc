@@ -10,11 +10,11 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/app/page_manager.h"
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -72,8 +72,8 @@ class PageImplTest : public test::TestWithMessageLoop {
     storage::ObjectId object_id;
     fake_storage_->AddObjectFromLocal(
         mtl::WriteStringToSocket(value_string), value_string.size(),
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &object_id));
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                          &object_id));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     return object_id;
@@ -86,8 +86,8 @@ class PageImplTest : public test::TestWithMessageLoop {
     std::unique_ptr<const storage::Object> object;
     fake_storage_->GetObject(
         object_id, storage::PageStorage::Location::LOCAL,
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &object));
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                          &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     return object;

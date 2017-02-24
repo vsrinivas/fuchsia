@@ -10,11 +10,11 @@
 #include <vector>
 
 #include "apps/ledger/src/backoff/backoff.h"
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -735,9 +735,10 @@ TEST_F(PageSyncImplTest, GetObject) {
   storage::Status status;
   uint64_t size;
   mx::socket data;
-  page_sync_.GetObject(storage::ObjectIdView("object_id"),
-                       test::Capture([this] { message_loop_.PostQuitTask(); },
-                                     &status, &size, &data));
+  page_sync_.GetObject(
+      storage::ObjectIdView("object_id"),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(storage::Status::OK, status);
@@ -762,9 +763,10 @@ TEST_F(PageSyncImplTest, RetryGetObject) {
   storage::Status status;
   uint64_t size;
   mx::socket data;
-  page_sync_.GetObject(storage::ObjectIdView("object_id"),
-                       test::Capture([this] { message_loop_.PostQuitTask(); },
-                                     &status, &size, &data));
+  page_sync_.GetObject(
+      storage::ObjectIdView("object_id"),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(6u, cloud_provider_.get_object_calls);

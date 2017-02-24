@@ -11,6 +11,7 @@
 #include <mutex>
 #include <thread>
 
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
@@ -21,7 +22,6 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/test/commit_random_impl.h"
 #include "apps/ledger/src/storage/test/storage_test_utils.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/directory.h"
@@ -208,8 +208,8 @@ class PageStorageTest : public StorageTest {
     Status status;
     std::unique_ptr<const Commit> commit;
     storage_->GetCommit(
-        id, ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                            &commit));
+        id, callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                              &commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     return commit;
@@ -239,8 +239,8 @@ class PageStorageTest : public StorageTest {
       Status expected_status) {
     Status status;
     std::unique_ptr<const Commit> commit;
-    (*journal)->Commit(::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                       &status, &commit));
+    (*journal)->Commit(callback::Capture(
+        [this] { message_loop_.PostQuitTask(); }, &status, &commit));
 
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(expected_status, status);
@@ -297,8 +297,8 @@ class PageStorageTest : public StorageTest {
     std::unique_ptr<const Object> object;
     storage_->GetObject(
         object_id, location,
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &object));
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                          &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(expected_status, status);
     return object;
@@ -313,7 +313,7 @@ class PageStorageTest : public StorageTest {
     };
     storage_->GetCommitContents(
         commit, "", std::move(on_next),
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
     EXPECT_FALSE(RunLoopWithTimeout());
 
     EXPECT_EQ(Status::OK, status);
@@ -323,7 +323,7 @@ class PageStorageTest : public StorageTest {
   std::vector<std::unique_ptr<const Commit>> GetUnsyncedCommits() {
     Status status;
     std::vector<std::unique_ptr<const Commit>> commits;
-    storage_->GetUnsyncedCommits(::test::Capture(
+    storage_->GetUnsyncedCommits(callback::Capture(
         [this] { message_loop_.PostQuitTask(); }, &status, &commits));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
@@ -343,9 +343,10 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   // Search for a commit id that doesn't exist and see the error.
   Status status;
   std::unique_ptr<const Commit> lookup_commit;
-  storage_->GetCommit(RandomId(kCommitIdSize),
-                      ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &status, &lookup_commit));
+  storage_->GetCommit(
+      RandomId(kCommitIdSize),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &lookup_commit));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_FALSE(lookup_commit);
@@ -716,8 +717,8 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     Status status;
     std::vector<ObjectId> objects;
     storage_->GetUnsyncedObjectIds(
-        commits[i], ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                    &status, &objects));
+        commits[i], callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &objects));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(static_cast<unsigned>(i + 2), objects.size());
@@ -737,8 +738,8 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
   Status status;
   std::vector<ObjectId> objects;
   storage_->GetUnsyncedObjectIds(
-      commits[2], ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                  &status, &objects));
+      commits[2], callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                    &status, &objects));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(3u, objects.size());
@@ -857,7 +858,7 @@ TEST_F(PageStorageTest, OrderOfCommitWatch) {
 
   Status status;
   std::unique_ptr<const Commit> commit;
-  journal->Commit(::test::Capture(
+  journal->Commit(callback::Capture(
       [this, &watcher] {
         // We should get the callback before the watchers.
         EXPECT_EQ(0, watcher.commit_count);
@@ -934,7 +935,7 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
   Status status;
   storage_->AddCommitsFromSync(
       std::move(commits_and_bytes),
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
@@ -995,8 +996,8 @@ TEST_F(PageStorageTest, GetEntryFromCommit) {
   Entry entry;
   storage_->GetEntryFromCommit(
       *commit, "key not found",
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                      &entry));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &entry));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::NOT_FOUND, status);
 
@@ -1004,8 +1005,8 @@ TEST_F(PageStorageTest, GetEntryFromCommit) {
     std::string expected_key = ftl::StringPrintf("key%d", i);
     storage_->GetEntryFromCommit(
         *commit, expected_key,
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &entry));
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                          &entry));
     ASSERT_FALSE(RunLoopWithTimeout());
     ASSERT_EQ(Status::OK, status);
     EXPECT_EQ(expected_key, entry.key);

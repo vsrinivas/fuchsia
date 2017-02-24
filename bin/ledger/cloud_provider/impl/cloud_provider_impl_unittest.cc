@@ -9,12 +9,12 @@
 #include <string>
 #include <vector>
 
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/status.h"
 #include "apps/ledger/src/gcs/cloud_storage.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
@@ -163,7 +163,8 @@ TEST_F(CloudProviderImplTest, AddCommit) {
 
   Status status;
   cloud_provider_->AddCommit(
-      commit, test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      commit,
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -351,8 +352,8 @@ TEST_F(CloudProviderImplTest, GetCommits) {
   std::vector<Record> records;
   cloud_provider_->GetCommits(
       ServerTimestampToBytes(42),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                    &records));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   const Commit expected_commit_1(
@@ -382,8 +383,8 @@ TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
   std::vector<Record> records;
   cloud_provider_->GetCommits(
       ServerTimestampToBytes(42),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                    &records));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &records));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -397,7 +398,7 @@ TEST_F(CloudProviderImplTest, AddObject) {
   Status status;
   cloud_provider_->AddObject(
       "object_id", std::move(data),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -420,8 +421,8 @@ TEST_F(CloudProviderImplTest, GetObject) {
   uint64_t size;
   mx::socket data;
   cloud_provider_->GetObject(
-      "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &size, &data));
+      "object_id", callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                     &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -443,8 +444,8 @@ TEST_F(CloudProviderImplTest, GetObjectNotFound) {
   uint64_t size;
   mx::socket data;
   cloud_provider_->GetObject(
-      "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &size, &data));
+      "object_id", callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                     &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NOT_FOUND, status);

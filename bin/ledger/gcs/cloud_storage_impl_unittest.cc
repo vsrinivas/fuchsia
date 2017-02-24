@@ -8,8 +8,8 @@
 #include <string>
 #include <utility>
 
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/network/fake_network_service.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
@@ -86,7 +86,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   Status status;
   gcs_.UploadFile(
       "hello-world", std::move(data),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -126,7 +126,7 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   Status status;
   gcs_.UploadFile(
       "hello-world", std::move(data),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OBJECT_ALREADY_EXISTS, status);
@@ -140,8 +140,8 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   uint64_t size;
   mx::socket data;
   gcs_.DownloadFile("hello-world",
-                    test::Capture([this] { message_loop_.PostQuitTask(); },
-                                  &status, &size, &data));
+                    callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -163,9 +163,9 @@ TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
   Status status;
   uint64_t size;
   mx::socket data;
-  gcs_.DownloadFile(
-      "whoa", test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                            &size, &data));
+  gcs_.DownloadFile("whoa",
+                    callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NOT_FOUND, status);
@@ -184,8 +184,8 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   uint64_t size;
   mx::socket data;
   gcs_.DownloadFile("hello-world",
-                    test::Capture([this] { message_loop_.PostQuitTask(); },
-                                  &status, &size, &data));
+                    callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   std::string downloaded_content;

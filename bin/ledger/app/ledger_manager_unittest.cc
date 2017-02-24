@@ -8,11 +8,11 @@
 #include <vector>
 
 #include "apps/ledger/src/app/constants.h"
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/ledger_storage.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
@@ -237,7 +237,7 @@ TEST_F(LedgerManagerTest, GetPageFromStorageDontAskTheCloud) {
   PagePtr page1;
   ledger->GetPage(
       convert::ToArray(RandomId()), page1.NewRequest(),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(0, sync_ptr->remote_contains_calls);
@@ -247,7 +247,7 @@ TEST_F(LedgerManagerTest, GetPageFromStorageDontAskTheCloud) {
   PagePtr page2;
   ledger->GetPage(
       convert::ToArray(RandomId()), page2.NewRequest(),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(0, sync_ptr->remote_contains_calls);
@@ -262,7 +262,7 @@ TEST_F(LedgerManagerTest, GetPageFromTheCloud) {
   PagePtr page1;
   ledger->GetPage(
       convert::ToArray(RandomId()), page1.NewRequest(),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
   EXPECT_EQ(1, sync_ptr->remote_contains_calls);
@@ -272,7 +272,7 @@ TEST_F(LedgerManagerTest, GetPageFromTheCloud) {
   PagePtr page2;
   ledger->GetPage(
       convert::ToArray(RandomId()), page2.NewRequest(),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   // Gotcha: this returns INTERNAL_ERROR here, because we end up trying to
   // create the local page storage, and FakeLedgerStorage above can't do that
@@ -286,7 +286,7 @@ TEST_F(LedgerManagerTest, GetPageFromTheCloud) {
   PagePtr page3;
   ledger->GetPage(
       convert::ToArray(RandomId()), page3.NewRequest(),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   // Gotcha: this returns INTERNAL_ERROR here, because we end up trying to
   // create the local page storage, and FakeLedgerStorage above can't do that

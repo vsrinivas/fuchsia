@@ -4,12 +4,12 @@
 
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/test/storage_test_utils.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/logging.h"
@@ -66,15 +66,15 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   Status status;
   std::unique_ptr<const TreeNode> found_node;
   TreeNode::FromId(&fake_storage_, node->GetId(),
-                   ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                   &status, &found_node));
+                   callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                     &status, &found_node));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, found_node);
 
   TreeNode::FromId(&fake_storage_, RandomId(kObjectIdSize),
-                   ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                   &status, &found_node));
+                   callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                     &status, &found_node));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::NOT_FOUND, status);
 }
@@ -94,8 +94,9 @@ TEST_F(TreeNodeTest, GetEntryChild) {
   for (int i = 0; i <= size; ++i) {
     Status status;
     std::unique_ptr<const TreeNode> child;
-    node->GetChild(i, ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &status, &child));
+    node->GetChild(
+        i, callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                             &child));
     EXPECT_FALSE(RunLoopWithTimeout());
     ASSERT_EQ(Status::NO_SUCH_CHILD, status);
     EXPECT_TRUE(node->GetChildId(i).empty());
@@ -145,8 +146,8 @@ TEST_F(TreeNodeTest, Serialization) {
   std::unique_ptr<const Object> object;
   fake_storage_.GetObject(
       node->GetId(), PageStorage::Location::LOCAL,
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                      &object));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &object));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> retrieved_node;

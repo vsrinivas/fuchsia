@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_TEST_CAPTURE_H_
-#define APPS_LEDGER_SRC_TEST_CAPTURE_H_
+#ifndef APPS_LEDGER_SRC_CALLBACK_CAPTURE_H_
+#define APPS_LEDGER_SRC_CALLBACK_CAPTURE_H_
 
 #include <functional>
 #include <utility>
 
 #include "lib/ftl/functional/closure.h"
 
-namespace test {
+namespace callback {
 namespace internal {
 
 template <typename... T>
@@ -54,6 +54,6 @@ auto Capture(ftl::Closure callback, T*... ptrs) {
   return internal::CaptureLambda<T...>(std::move(callback), ptrs...);
 }
 
-}  // namespace test
+}  // namespace callback
 
-#endif  // APPS_LEDGER_SRC_TEST_CAPTURE_H_
+#endif  // APPS_LEDGER_SRC_CALLBACK_CAPTURE_H_

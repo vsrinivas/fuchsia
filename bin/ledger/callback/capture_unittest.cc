@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/capture.h"
+#include "apps/ledger/src/callback/capture.h"
 
 #include <memory>
 
 #include "gtest/gtest.h"
 
-namespace test {
+namespace callback {
 namespace {
 
 TEST(Capture, CaptureVariable) {
@@ -42,5 +42,5 @@ TEST(Capture, CaptureConstReference) {
   EXPECT_EQ(2, a2);
 }
 
-}  // namespace test
+}  // namespace callback
 }  // namespace

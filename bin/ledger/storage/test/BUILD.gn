@@ -21,6 +21,7 @@ source_set("test") {
   ]
 
   deps = [
+    "//apps/ledger/src/callback",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/test:lib",

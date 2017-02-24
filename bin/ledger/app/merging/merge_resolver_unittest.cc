@@ -9,11 +9,11 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
 #include "apps/ledger/src/callback/cancellable_helper.h"
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
@@ -69,8 +69,8 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     contents(journal.get());
     storage::Status actual_status;
     std::unique_ptr<const storage::Commit> actual_commit;
-    journal->Commit(test::Capture([this] { message_loop_.PostQuitTask(); },
-                                  &actual_status, &actual_commit));
+    journal->Commit(callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &actual_status, &actual_commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, actual_status);
     return actual_commit->GetId();
@@ -85,7 +85,7 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     };
     page_storage_->GetCommitContents(
         commit, "", std::move(on_next),
-        test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
     EXPECT_FALSE(RunLoopWithTimeout());
 
     EXPECT_EQ(storage::Status::OK, status);
@@ -232,8 +232,8 @@ TEST_F(MergeResolverTest, LastOneWins) {
   storage::Status status;
   std::unique_ptr<const storage::Commit> commit;
   page_storage_->GetCommit(
-      ids[0], ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                              &commit));
+      ids[0], ::callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                  &status, &commit));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(storage::Status::OK, status);
 

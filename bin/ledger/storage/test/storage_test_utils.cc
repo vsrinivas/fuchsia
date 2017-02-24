@@ -8,9 +8,9 @@
 
 #include <numeric>
 
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/test/capture.h"
 #include "lib/ftl/strings/string_printf.h"
 
 namespace storage {
@@ -61,8 +61,8 @@ StorageTest::~StorageTest(){};
   ObjectId object_id;
   GetStorage()->AddObjectFromLocal(
       mtl::WriteStringToSocket(value), value.size(),
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                      &object_id));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &object_id));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "AddObjectFromLocal callback was not executed. value: " << value;
@@ -76,8 +76,8 @@ StorageTest::~StorageTest(){};
   std::unique_ptr<const Object> result;
   GetStorage()->GetObject(
       object_id, PageStorage::Location::LOCAL,
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                      &result));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &result));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "GetObject callback was not executed. value: " << value
@@ -146,9 +146,9 @@ StorageTest::~StorageTest(){};
     ObjectId* empty_node_id) {
   Status status;
   ObjectId id;
-  TreeNode::Empty(
-      GetStorage(),
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &id));
+  TreeNode::Empty(GetStorage(),
+                  callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                    &status, &id));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "TreeNode::Empty callback was not executed.";
@@ -167,8 +167,8 @@ StorageTest::~StorageTest(){};
   Status status;
   std::unique_ptr<const TreeNode> result;
   TreeNode::FromId(GetStorage(), id,
-                   ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                   &status, &result));
+                   callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                     &status, &result));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "TreeNode::FromId callback was not executed.";
@@ -189,7 +189,8 @@ StorageTest::~StorageTest(){};
   ObjectId id;
   TreeNode::FromEntries(
       GetStorage(), 0u, entries, children,
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &id));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &id));
 
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()

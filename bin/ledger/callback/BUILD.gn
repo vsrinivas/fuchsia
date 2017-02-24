@@ -10,6 +10,7 @@ source_set("callback") {
     "cancellable.h",
     "cancellable_helper.cc",
     "cancellable_helper.h",
+    "capture.h",
     "destruction_sentinel.cc",
     "destruction_sentinel.h",
     "trace_callback.h",
@@ -33,6 +34,7 @@ source_set("unittests") {
     "auto_cleanable_unittest.cc",
     "cancellable_helper_unittest.cc",
     "cancellable_unittest.cc",
+    "capture_unittest.cc",
     "destruction_sentinel_unittest.cc",
   ]
 

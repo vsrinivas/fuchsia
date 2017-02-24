@@ -9,13 +9,13 @@
 
 #include <algorithm>
 
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/impl/btree/entry_change_iterator.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/storage/test/storage_test_utils.h"
-#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/arraysize.h"
@@ -86,8 +86,8 @@ class BTreeUtilsTest : public StorageTest {
     ApplyChanges(
         &fake_storage_, root_id,
         std::make_unique<EntryChangeIterator>(entries.begin(), entries.end()),
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &new_root_id, &new_nodes),
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                          &new_root_id, &new_nodes),
         &kTestNodeLevelCalculator);
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
@@ -149,8 +149,8 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   ApplyChanges(
       &fake_storage_, root_id,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                      &new_root_id, &new_nodes),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &new_root_id, &new_nodes),
       &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -179,8 +179,8 @@ TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(golden_entries.begin(),
                                                      golden_entries.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -210,8 +210,8 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(golden_entries.begin(),
                                                      golden_entries.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -238,8 +238,8 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   ApplyChanges(&fake_storage_, new_root_id,
                std::make_unique<EntryChangeIterator>(new_change.begin(),
                                                      new_change.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id2, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id2, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -282,8 +282,8 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(update_changes.begin(),
                                                      update_changes.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -333,8 +333,8 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(update_changes.begin(),
                                                      update_changes.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -382,8 +382,8 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(update_changes.begin(),
                                                      update_changes.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -421,8 +421,8 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(golden_entries.begin(),
                                                      golden_entries.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -455,8 +455,8 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -503,8 +503,8 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -548,8 +548,8 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -588,8 +588,8 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(update_changes.begin(),
                                                      update_changes.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -619,8 +619,8 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   ApplyChanges(&fake_storage_, new_root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &final_node_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &final_node_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -644,8 +644,8 @@ TEST_F(BTreeUtilsTest, DeleteAll) {
   ApplyChanges(&fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &new_root_id, &new_nodes),
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &new_root_id, &new_nodes),
                &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -662,8 +662,8 @@ TEST_F(BTreeUtilsTest, GetObjectIdsFromEmpty) {
   Status status;
   std::set<ObjectId> object_ids;
   GetObjectIds(&fake_storage_, root_id,
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &object_ids));
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, object_ids.size());
@@ -678,8 +678,8 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   Status status;
   std::set<ObjectId> object_ids;
   GetObjectIds(&fake_storage_, root_id,
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &object_ids));
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(6u, object_ids.size());
@@ -697,8 +697,8 @@ TEST_F(BTreeUtilsTest, GetObjectIdsBigTree) {
   Status status;
   std::set<ObjectId> object_ids;
   GetObjectIds(&fake_storage_, root_id,
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &object_ids));
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(99u + 12, object_ids.size());
@@ -722,7 +722,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   // [00, 01, 02]  [04]
   GetObjectsFromSync(
       root_id, &fake_storage_,
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
@@ -736,8 +736,8 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
 
   std::set<ObjectId> object_ids;
   GetObjectIds(&fake_storage_, root_id,
-               ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                               &status, &object_ids));
+               callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(3 + 5u, object_ids.size());
@@ -835,8 +835,8 @@ TEST_F(BTreeUtilsTest, ForEachDiff) {
   ApplyChanges(
       &fake_storage_, base_root_id,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                      &other_root_id, &new_nodes),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &other_root_id, &new_nodes),
       &kTestNodeLevelCalculator);
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -855,7 +855,7 @@ TEST_F(BTreeUtilsTest, ForEachDiff) {
         ++current_change;
         return true;
       },
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(changes.size(), current_change);
