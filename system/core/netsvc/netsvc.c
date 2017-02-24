@@ -8,20 +8,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <threads.h>
+#include <unistd.h>
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
+#include <launchpad/launchpad.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/log.h>
 #include <mxio/io.h>
-#include <launchpad/launchpad.h>
 
 #include <magenta/netboot.h>
+
+#include "device_id.h"
 
 #define FILTER_IPV6 1
 
@@ -171,15 +173,13 @@ void netifc_recv(void* data, size_t len) {
 int main(int argc, char** argv) {
     logpacket_t pkt;
     int len = 0;
+    unsigned char mac[6];
+    uint16_t mtu;
+    char device_id[DEVICE_ID_MAX];
+
     if (mx_log_create(MX_LOG_FLAG_READABLE, &loghandle) < 0) {
         return -1;
     }
-
-    if ((argc > 1) && (argv[1][0])) {
-        nodename = argv[1];
-    }
-
-    printf("netsvc: nodename='%s'\n", nodename);
 
     for (;;) {
         if (netifc_open() != 0) {
@@ -187,6 +187,16 @@ int main(int argc, char** argv) {
             return -1;
         }
 
+        // Use mac address to generate unique nodename unless one was provided.
+        if ((argc > 1) && (argv[1][0])) {
+            nodename = argv[1];
+        } else {
+            netifc_get_info(mac, &mtu);
+            device_id_get(mac, device_id);
+            nodename = device_id;
+        }
+
+        printf("netsvc: nodename='%s'\n", nodename);
         printf("netsvc: start\n");
         for (;;) {
             if (pending == 0) {
