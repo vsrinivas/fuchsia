@@ -29,9 +29,6 @@ extern uint8_t g_paddr_width;
 #define IA32_MTRR_PHYSBASE(x) (0x200 + 2 * (x))
 #define IA32_MTRR_PHYSMASK(x) (0x201 + 2 * (x))
 
-/* PAT MSRs */
-#define IA32_PAT 0x277
-
 /* IA32_MTRRCAP read functions */
 #define MTRRCAP_VCNT(x) ((x) & 0xff)
 #define MTRRCAP_FIX(x) !!((x) & (1 << 8))
@@ -209,7 +206,7 @@ static void x86_pat_sync_task(void *raw_context)
     pat_val |= (uint64_t)X86_PAT_INDEX5 << 40;
     pat_val |= (uint64_t)X86_PAT_INDEX6 << 48;
     pat_val |= (uint64_t)X86_PAT_INDEX7 << 56;
-    write_msr(IA32_PAT, pat_val);
+    write_msr(X86_MSR_IA32_PAT, pat_val);
 
     /* Step 10: Re-enable MTRRs (and set the default type) */
     write_msr(IA32_MTRR_DEF_TYPE, target_mtrrs->mtrr_def);
@@ -250,7 +247,7 @@ static void print_fixed_range_mtrr(uint32_t msr, uint32_t base, uint32_t record_
 
 static void print_pat_entries(void *_ignored)
 {
-    uint64_t pat = read_msr(IA32_PAT);
+    uint64_t pat = read_msr(X86_MSR_IA32_PAT);
     for (int i = 0; i < 8; ++i) {
         printf("  Index %d: %#02x\n", i, (uint8_t)pat);
         pat >>= 8;

@@ -403,7 +403,7 @@ mx_status_t VmcsCpuContext::Setup() {
     vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
     vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(percpu->cpu_num));
     vmwrite(VMCS_64_HOST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
-    vmwrite(VMCS_64_HOST_IA32_EFER, read_msr(X86_MSR_EFER));
+    vmwrite(VMCS_64_HOST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
     vmwrite(VMCS_XX_HOST_GS_BASE, read_msr(X86_MSR_IA32_GS_BASE));
     vmwrite(VMCS_XX_HOST_TR_BASE, reinterpret_cast<uint64_t>(&percpu->default_tss));
     vmwrite(VMCS_XX_HOST_GDTR_BASE, reinterpret_cast<uint64_t>(_gdt));

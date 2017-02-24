@@ -136,7 +136,7 @@ paging_setup:
     mov %eax, %cr4
 
     /* Long Mode Enabled at this point */
-    movl $X86_MSR_EFER, %ecx
+    movl $X86_MSR_IA32_EFER, %ecx
     rdmsr
     orl $X86_EFER_LME,%eax
     wrmsr

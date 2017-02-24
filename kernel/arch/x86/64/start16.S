@@ -63,7 +63,7 @@ FUNCTION(x86_bootstrap16_entry)
     # enable IA-32e mode and indicate support for NX pages.
     # need the latter for once we switch to the real kernel
     # address space.
-    mov $X86_MSR_EFER, %ecx
+    mov $X86_MSR_IA32_EFER, %ecx
     rdmsr
     or $X86_EFER_LME, %eax
     or $X86_EFER_NXE, %eax

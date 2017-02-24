@@ -1301,8 +1301,8 @@ void x86_mmu_percpu_init(void) {
         cr4 |= X86_CR4_SMAP;
     x86_set_cr4(cr4);
 
-    /* Set NXE bit in MSR_EFER*/
-    uint64_t efer_msr = read_msr(X86_MSR_EFER);
+    /* Set NXE bit in X86_MSR_IA32_EFER*/
+    uint64_t efer_msr = read_msr(X86_MSR_IA32_EFER);
     efer_msr |= X86_EFER_NXE;
-    write_msr(X86_MSR_EFER, efer_msr);
+    write_msr(X86_MSR_IA32_EFER, efer_msr);
 }
