@@ -1,4 +1,5 @@
 #include "pthread_impl.h"
+#include <magenta/process.h>
 
 int pthread_join(pthread_t t, void** res) {
     switch (mxr_thread_join(&t->mxr_thread)) {
