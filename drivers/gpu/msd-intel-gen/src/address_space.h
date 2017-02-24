@@ -59,6 +59,8 @@ public:
                                    alignment);
     }
 
+    uint64_t GetMappedSize(uint64_t buffer_size) { return magma::round_up(buffer_size, PAGE_SIZE); }
+
 private:
     AddressSpaceType type_;
 };

@@ -55,7 +55,8 @@ MsdIntelBuffer::FindBufferMapping(std::shared_ptr<AddressSpace> address_space, u
 
         gpu_addr_t gpu_addr = shared_mapping->gpu_addr();
         if (shared_mapping->address_space().lock() == address_space &&
-            shared_mapping->offset() == offset && shared_mapping->length() == length &&
+            shared_mapping->offset() == offset &&
+            shared_mapping->length() == address_space->GetMappedSize(length) &&
             (alignment == 0 || magma::round_up(gpu_addr, alignment) == gpu_addr))
             return shared_mapping;
     }

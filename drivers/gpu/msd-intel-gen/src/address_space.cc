@@ -15,7 +15,7 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
     if (alignment == 0)
         alignment = PAGE_SIZE;
 
-    length = magma::round_up(length, PAGE_SIZE);
+    length = address_space->GetMappedSize(length);
 
     if (!magma::is_page_aligned(offset))
         return DRETP(nullptr, "offset (0x%lx) not page aligned", offset);
