@@ -80,3 +80,21 @@ TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidRelocationTargetOffset)
     }
     EXPECT_FALSE(cmd_buf->Execute());
 }
+
+TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidWaitSemaphore)
+{
+    auto cmd_buf = CommandBufferHelper::Create();
+    for (uint32_t i = 0; i < CommandBufferHelper::kWaitSemaphoreCount; i++) {
+        cmd_buf->abi_wait_semaphore_ids()[i] = 0;
+    }
+    EXPECT_FALSE(cmd_buf->Execute());
+}
+
+TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidSignalSemaphore)
+{
+    auto cmd_buf = CommandBufferHelper::Create();
+    for (uint32_t i = 0; i < CommandBufferHelper::kSignalSemaphoreCount; i++) {
+        cmd_buf->abi_signal_semaphore_ids()[i] = 0;
+    }
+    EXPECT_FALSE(cmd_buf->Execute());
+}

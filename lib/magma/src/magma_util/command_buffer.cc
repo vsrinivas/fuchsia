@@ -11,12 +11,16 @@ bool CommandBuffer::Initialize()
     if (initialized_)
         return true;
 
-    if (!platform_buffer()->MapCpu(&vaddr_))
+    if (!platform_buffer()->MapCpu(reinterpret_cast<void**>(&command_buffer_)))
         return DRETF(false, "Failed to map command buffer");
-    DASSERT(vaddr_);
+    DASSERT(command_buffer_);
 
     size_t max_size = platform_buffer()->size();
     size_t total_size = sizeof(magma_system_command_buffer);
+    if (total_size > max_size)
+        return DRETF(false, "Platform Buffer backing CommandBuffer is not large enough");
+
+    total_size += sizeof(uint64_t) * (wait_semaphore_count() + signal_semaphore_count());
     if (total_size > max_size)
         return DRETF(false, "Platform Buffer backing CommandBuffer is not large enough");
 
@@ -26,14 +30,17 @@ bool CommandBuffer::Initialize()
 
     resources_.reserve(num_resources());
 
-    magma_system_command_buffer* command_buffer_base =
-        reinterpret_cast<magma_system_command_buffer*>(vaddr_);
-    magma_system_exec_resource* resource_base =
-        reinterpret_cast<magma_system_exec_resource*>(command_buffer_base + 1);
+    uint64_t* wait_semaphore_ids = reinterpret_cast<uint64_t*>(command_buffer_ + 1);
+
+    uint64_t* signal_semaphore_ids = wait_semaphore_ids + wait_semaphore_count();
+
+    magma_system_exec_resource* resource_base = reinterpret_cast<magma_system_exec_resource*>(
+        signal_semaphore_ids + signal_semaphore_count());
+
     magma_system_relocation_entry* relocations_base =
         reinterpret_cast<magma_system_relocation_entry*>(resource_base + num_resources());
-    for (uint32_t i = 0; i < num_resources(); i++) {
 
+    for (uint32_t i = 0; i < num_resources(); i++) {
         auto num_relocations = resource_base->num_relocations;
         total_size += sizeof(magma_system_relocation_entry) * num_relocations;
         if (total_size > max_size)

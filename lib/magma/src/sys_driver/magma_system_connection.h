@@ -54,6 +54,9 @@ public:
     // Returns nullptr if the buffer is not found
     std::shared_ptr<MagmaSystemBuffer> LookupBuffer(uint64_t id);
 
+    // Returns the msd_semaphore for the given |id| if present in the semaphore map.
+    msd_semaphore* LookupSemaphore(uint64_t id);
+
     magma::Status ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override;
 
     bool CreateContext(uint32_t context_id) override;
@@ -74,6 +77,7 @@ private:
     {
         return LookupBuffer(id);
     }
+    msd_semaphore* LookupSemaphoreForContext(uint64_t id) override { return LookupSemaphore(id); }
 
     std::weak_ptr<MagmaSystemDevice> device_;
     msd_connection_unique_ptr_t msd_connection_;

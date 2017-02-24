@@ -213,6 +213,14 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint64_t 
     return iter->second;
 }
 
+msd_semaphore* MagmaSystemConnection::LookupSemaphore(uint64_t id)
+{
+    auto iter = semaphore_map_.find(id);
+    if (iter == semaphore_map_.end())
+        return nullptr;
+    return iter->second.get();
+}
+
 void MagmaSystemConnection::PageFlip(uint64_t id, magma_system_pageflip_callback_t callback,
                                      void* data)
 {

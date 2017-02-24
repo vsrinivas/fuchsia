@@ -77,7 +77,9 @@ void msd_buffer_destroy(msd_buffer* buf)
 }
 
 magma_status_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
-                                                  msd_buffer** exec_resources)
+                                                  msd_buffer** exec_resources,
+                                                  msd_semaphore** wait_semaphores,
+                                                  msd_semaphore** signal_semaphores)
 {
     return MsdMockContext::cast(ctx)->ExecuteCommandBuffer(cmd_buf, exec_resources);
 }
@@ -96,7 +98,9 @@ MsdMockContext::~MsdMockContext() { connection_->DestroyContext(this); }
 
 magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore** semaphore_out)
 {
-    return MAGMA_STATUS_INVALID_ARGS;
+    static uint32_t semaphore_count = 0;
+    *semaphore_out = reinterpret_cast<msd_semaphore*>(++semaphore_count);
+    return MAGMA_STATUS_OK;
 }
 
 void msd_semaphore_release(msd_semaphore* semaphore) {}

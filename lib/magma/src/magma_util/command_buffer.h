@@ -12,6 +12,13 @@
 
 namespace magma {
 
+// Dictates the layout of a command buffer structure and associated data:
+//  1) magma_system_command_buffer
+//  2) array of wait semaphore ids
+//  3) array of signal semaphore ids
+//  4) array of exec resources
+//  5) array of relocations (per resource)
+//
 class CommandBuffer {
 public:
     virtual PlatformBuffer* platform_buffer() = 0;
@@ -20,20 +27,27 @@ public:
 
     uint32_t batch_buffer_resource_index() const
     {
-        DASSERT(vaddr_);
-        return reinterpret_cast<magma_system_command_buffer*>(vaddr_)->batch_buffer_resource_index;
+        DASSERT(command_buffer_);
+        return command_buffer_->batch_buffer_resource_index;
     }
 
     uint32_t num_resources() const
     {
-        DASSERT(vaddr_);
-        return reinterpret_cast<magma_system_command_buffer*>(vaddr_)->num_resources;
+        DASSERT(command_buffer_);
+        return command_buffer_->num_resources;
+    }
+
+    uint32_t wait_semaphore_count() const { return command_buffer_->wait_semaphore_count; }
+
+    uint32_t signal_semaphore_count() const
+    {
+        return command_buffer_->signal_semaphore_count;
     }
 
     uint32_t batch_start_offset() const
     {
-        DASSERT(vaddr_);
-        return reinterpret_cast<magma_system_command_buffer*>(vaddr_)->batch_start_offset;
+        DASSERT(command_buffer_);
+        return reinterpret_cast<magma_system_command_buffer*>(command_buffer_)->batch_start_offset;
     }
 
     class ExecResource {
@@ -70,8 +84,25 @@ public:
         return resources_[resource_index];
     }
 
+    uint64_t wait_semaphore_id(uint32_t index) const
+    {
+        DASSERT(initialized_);
+        DASSERT(index < wait_semaphore_count());
+        uint64_t* wait_semaphores = reinterpret_cast<uint64_t*>(command_buffer_ + 1);
+        return wait_semaphores[index];
+    }
+
+    uint64_t signal_semaphore_id(uint32_t index) const
+    {
+        DASSERT(initialized_);
+        DASSERT(index < signal_semaphore_count());
+        uint64_t* signal_semaphores =
+            reinterpret_cast<uint64_t*>(command_buffer_ + 1) + wait_semaphore_count();
+        return signal_semaphores[index];
+    }
+
 private:
-    void* vaddr_ = nullptr;
+    magma_system_command_buffer* command_buffer_ = nullptr;
     bool initialized_ = false;
     std::vector<ExecResource> resources_;
 };

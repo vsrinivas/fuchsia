@@ -133,9 +133,30 @@ MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> comm
         }
     }
 
+    // used to keep semaphores in scope until msd_context_execute_command_buffer returns
+    std::vector<msd_semaphore*> msd_wait_semaphores(cmd_buf->wait_semaphore_count());
+    std::vector<msd_semaphore*> msd_signal_semaphores(cmd_buf->signal_semaphore_count());
+
+    // validate semaphores
+    for (uint32_t i = 0; i < cmd_buf->wait_semaphore_count(); i++) {
+        auto semaphore = owner_->LookupSemaphoreForContext(cmd_buf->wait_semaphore_id(i));
+        if (!semaphore)
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "wait semaphore id not found 0x%" PRIx64,
+                            cmd_buf->wait_semaphore_id(i));
+        msd_wait_semaphores[i] = semaphore;
+    }
+    for (uint32_t i = 0; i < cmd_buf->signal_semaphore_count(); i++) {
+        auto semaphore = owner_->LookupSemaphoreForContext(cmd_buf->signal_semaphore_id(i));
+        if (!semaphore)
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "signal semaphore id not found 0x%" PRIx64,
+                            cmd_buf->signal_semaphore_id(i));
+        msd_signal_semaphores[i] = semaphore;
+    }
+
     // submit command buffer to driver
     magma_status_t result = msd_context_execute_command_buffer(
-        msd_ctx(), cmd_buf->system_buffer()->msd_buf(), msd_resources.data());
+        msd_ctx(), cmd_buf->system_buffer()->msd_buf(), msd_resources.data(),
+        msd_wait_semaphores.data(), msd_signal_semaphores.data());
 
     return DRET_MSG(result, "ExecuteCommandBuffer: msd_context_execute_command_buffer failed: %d",
                     result);

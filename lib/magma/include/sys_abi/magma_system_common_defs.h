@@ -66,6 +66,8 @@ struct magma_system_command_buffer {
     uint32_t batch_buffer_resource_index; // resource index of the batch buffer to execute
     uint32_t batch_start_offset; // relative to the starting offset of the buffer
     uint32_t num_resources;
+    uint32_t wait_semaphore_count;
+    uint32_t signal_semaphore_count;
 };
 
 // callback type for magma_system_pageflip and msd_device_pageflip

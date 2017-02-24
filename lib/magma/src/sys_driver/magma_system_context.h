@@ -24,6 +24,7 @@ public:
     class Owner {
     public:
         virtual std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) = 0;
+        virtual msd_semaphore* LookupSemaphoreForContext(uint64_t id) = 0;
     };
 
     MagmaSystemContext(Owner* owner, msd_context_unique_ptr_t msd_ctx)

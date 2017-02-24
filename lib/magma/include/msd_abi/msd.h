@@ -61,11 +61,16 @@ void msd_context_destroy(struct msd_context* ctx);
 // returns 0 on success
 // |ctx| is the context in which to execute the command buffer
 // |cmd_buf| is the command buffer to be executed
-// |exec_resources| is all of the buffers referenced by the handles in command_buf->exec_resources
+// |exec_resources| are the buffers referenced by the handles in command_buf->exec_resources,
 // in the same order
+// |wait_semaphores| are the semaphores that must be signalled before starting command buffer
+// execution
+// |signal_semaphores| are the semaphores to be signalled upon completion of the command buffer
 magma_status_t msd_context_execute_command_buffer(struct msd_context* ctx,
                                                   struct msd_buffer* cmd_buf,
-                                                  struct msd_buffer** exec_resources);
+                                                  struct msd_buffer** exec_resources,
+                                                  struct msd_semaphore** wait_semaphores,
+                                                  struct msd_semaphore** signal_semaphores);
 
 // Creates a buffer that owns the provided handle
 // The resulting msd_buffer is owned by the caller and must be destroyed
