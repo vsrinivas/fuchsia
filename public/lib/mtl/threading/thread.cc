@@ -34,6 +34,7 @@ bool Thread::Run(size_t stack_size) {
   stack_size = std::max<size_t>(PTHREAD_STACK_MIN, stack_size);
 
   if (pthread_attr_setstacksize(&attr, stack_size) != 0) {
+    pthread_attr_destroy(&attr);
     return false;
   }
 
