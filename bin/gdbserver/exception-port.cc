@@ -115,7 +115,7 @@ ExceptionPort::Key ExceptionPort::Bind(mx_handle_t process_handle,
   }
 
   mx_status_t status =
-      mx_object_bind_exception_port(process_handle, eport_handle_.get(),
+      mx_task_bind_exception_port(process_handle, eport_handle_.get(),
                                     next_key, MX_EXCEPTION_PORT_DEBUGGER);
   if (status < 0) {
     util::LogErrorWithMxStatus("Failed to bind exception port", status);
@@ -143,7 +143,7 @@ bool ExceptionPort::Unbind(const Key key) {
 
   // Unbind the exception port. This is a best effort operation so if it fails,
   // there isn't really anything we can do to recover.
-  mx_object_bind_exception_port(iter->second.process_handle, MX_HANDLE_INVALID,
+  mx_task_bind_exception_port(iter->second.process_handle, MX_HANDLE_INVALID,
                                 key, MX_EXCEPTION_PORT_DEBUGGER);
   callbacks_.erase(iter);
 
