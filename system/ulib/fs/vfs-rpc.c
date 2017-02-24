@@ -39,13 +39,13 @@ static void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
     mxrio_txn_handoff(srv, rh, &msg);
 }
 
-static void txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
-                               const char* oldpath, const char* newpath) {
+static void txn_handoff_two_path_op(mx_handle_t srv, mx_handle_t rh, uint32_t op,
+                                    const char* oldpath, const char* newpath) {
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
     size_t oldlen = strlen(oldpath);
     size_t newlen = strlen(newpath);
-    msg.op = MXRIO_RENAME;
+    msg.op = op;
     memcpy(msg.data, oldpath, oldlen);
     msg.data[oldlen] = '\0';
     memcpy(msg.data + oldlen + 1, newpath, newlen);
@@ -124,10 +124,28 @@ static void vfs_rpc_rename(mxrio_msg_t* msg, mx_handle_t rh, vnode_t* vn,
 
     if (r > 0) {
         // Remote filesystem -- forward the request.
-        txn_handoff_rename(r, rh, oldpath, newpath);
+        txn_handoff_two_path_op(r, rh, MXRIO_RENAME, oldpath, newpath);
         return;
     } else {
         // Local filesystem. Return the result of the completed rename.
+        mxrio_reply_channel_status(rh, r);
+    }
+}
+
+static void vfs_rpc_link(mxrio_msg_t* msg, mx_handle_t rh, vnode_t* vn,
+                         const char* oldpath, const char* newpath) {
+    mx_status_t r;
+
+    mtx_lock(&vfs_lock);
+    r = vfs_link(vn, oldpath, newpath, &oldpath, &newpath);
+    mtx_unlock(&vfs_lock);
+
+    if (r > 0) {
+        // Remote filesystem -- forward the request.
+        txn_handoff_two_path_op(r, rh, MXRIO_LINK, oldpath, newpath);
+        return;
+    } else {
+        // Local filesystem. Return the result of the completed link.
         mxrio_reply_channel_status(rh, r);
     }
 }
@@ -401,6 +419,23 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
             return ERR_DISPATCHER_INDIRECT;
         }
         vfs_rpc_rename(msg, msg->handle[0], vn, oldpath, newpath);
+        return ERR_DISPATCHER_INDIRECT;
+    }
+    case MXRIO_LINK: {
+        if (len < 4) { // At least one byte for src + dst + null terminators
+            mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
+            return ERR_DISPATCHER_INDIRECT;
+        }
+        char* data_end = (char*)(msg->data + len - 1);
+        *data_end = '\0';
+        const char* oldpath = (const char*)msg->data;
+        size_t oldlen = strlen(oldpath);
+        const char* newpath = (const char*)msg->data + (oldlen + 1);
+        if (data_end <= newpath) {
+            mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
+            return ERR_DISPATCHER_INDIRECT;
+        }
+        vfs_rpc_link(msg, msg->handle[0], vn, oldpath, newpath);
         return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_SYNC: {

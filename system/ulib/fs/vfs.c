@@ -264,6 +264,65 @@ mx_status_t vfs_unlink(vnode_t* vndir, const char* path, size_t len) {
     return vndir->ops->unlink(vndir, path, len, must_be_dir);
 }
 
+mx_status_t vfs_link(vnode_t* vndir, const char* oldpath, const char* newpath,
+                     const char** oldpathout, const char** newpathout) {
+    vnode_t *oldparent, *newparent;
+    mx_status_t r = 0, r_old, r_new;
+
+    if ((r_old = vfs_walk(vndir, &oldparent, oldpath, &oldpath)) < 0) {
+        return r_old;
+    }
+    if ((r_new = vfs_walk(vndir, &newparent, newpath, &newpath)) < 0) {
+        vn_release(oldparent);
+        return r_new;
+    }
+
+    if (r_old != r_new) {
+        // Link can only be directed to one filesystem
+        r = ERR_NOT_SUPPORTED;
+        goto done;
+    }
+
+    if (r_old == 0) {
+        // Local filesystem
+        size_t oldlen = strlen(oldpath);
+        size_t newlen = strlen(newpath);
+        bool old_must_be_dir;
+        bool new_must_be_dir;
+        if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
+            goto done;
+        } else if (old_must_be_dir) {
+            r = ERR_NOT_DIR;
+            goto done;
+        }
+
+        if ((r = vfs_name_trim(newpath, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
+            goto done;
+        } else if (new_must_be_dir) {
+            r = ERR_NOT_DIR;
+            goto done;
+        }
+
+        // Look up the target vnode
+        vnode_t* target;
+        if ((r = vndir->ops->lookup(oldparent, &target, oldpath, oldlen)) < 0) { // target: +1
+            goto done;
+        }
+        r = vndir->ops->link(newparent, newpath, newlen, target);
+        vn_release(target); // target: +0
+    } else {
+        // Remote filesystem -- forward the request
+        *oldpathout = oldpath;
+        *newpathout = newpath;
+        r = r_old;
+    }
+
+done:
+    vn_release(oldparent);
+    vn_release(newparent);
+    return r;
+}
+
 mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
                        const char** oldpathout, const char** newpathout) {
     vnode_t *oldparent, *newparent;

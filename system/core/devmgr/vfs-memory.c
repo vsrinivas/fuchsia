@@ -236,6 +236,10 @@ mx_status_t memfs_rename_none(vnode_t* olddir, vnode_t* newdir, const char* oldn
     return ERR_NOT_SUPPORTED;
 }
 
+mx_status_t memfs_link_none(vnode_t* vndir, const char* name, size_t len, vnode_t* target) {
+    return ERR_NOT_SUPPORTED;
+}
+
 mx_status_t memfs_sync(vnode_t* vn) {
     // Since this filesystem is in-memory, all data is already up-to-date in
     // the underlying storage
@@ -458,6 +462,7 @@ static vnode_ops_t vn_memfs_ops = {
     .unlink = memfs_unlink_none,
     .truncate = memfs_truncate,
     .rename = memfs_rename_none,
+    .link = memfs_link_none,
     .sync = memfs_sync,
 };
 
@@ -475,6 +480,7 @@ static vnode_ops_t vn_vmo_ops = {
     .unlink = memfs_unlink_none,
     .truncate = memfs_truncate_none,
     .rename = memfs_rename_none,
+    .link = memfs_link_none,
     .sync = memfs_sync,
 };
 
@@ -492,6 +498,7 @@ static vnode_ops_t vn_memfs_ops_dir = {
     .unlink = memfs_unlink,
     .truncate = memfs_truncate_none,
     .rename = memfs_rename,
+    .link = memfs_link_none,
     .sync = memfs_sync,
 };
 
@@ -510,6 +517,7 @@ static vnode_ops_t vn_device_ops = {
     .unlink = memfs_unlink_none,
     .truncate = memfs_truncate_none,
     .rename = memfs_rename_none,
+    .link = memfs_link_none,
     .sync = memfs_sync,
 };
 

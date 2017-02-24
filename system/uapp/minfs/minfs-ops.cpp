@@ -1343,6 +1343,10 @@ done:
     return status;
 }
 
+static mx_status_t fs_link(vnode_t* vndir, const char* name, size_t len, vnode_t* target) {
+    return ERR_NOT_SUPPORTED;
+}
+
 static mx_status_t fs_sync(vnode_t* vn) {
     return vn->fs->bc->Sync();
 }
@@ -1362,5 +1366,6 @@ vnode_ops_t minfs_ops = {
     .unlink = fs_unlink,
     .truncate = fs_truncate,
     .rename = fs_rename,
+    .link = fs_link,
     .sync = fs_sync,
 };

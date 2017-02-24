@@ -523,15 +523,22 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
         memcpy(msg.data, ptr, len);
     }
 
-    if (op == MXRIO_RENAME) {
-        // Rename is a special snowflake that sends a reply channel, like open and clone.
-        mxrio_object_t info;
-        if ((r = mxrio_reply_channel_call(rio, &msg, &info)) < 0) {
+    switch (op) {
+        // The following are ops that send reply channels, like open and clone.
+        // These operations may need to be forwarded across filesystems to reach
+        // their destination.
+        case MXRIO_RENAME:
+        case MXRIO_LINK: {
+            mxrio_object_t info;
+            if ((r = mxrio_reply_channel_call(rio, &msg, &info)) < 0) {
+                return r;
+            }
+            discard_handles(info.handle, info.hcount);
             return r;
         }
-        discard_handles(info.handle, info.hcount);
-        return r;
-    } else if ((r = mxrio_txn(rio, &msg)) < 0) {
+    }
+
+    if ((r = mxrio_txn(rio, &msg)) < 0) {
         return r;
     }
 

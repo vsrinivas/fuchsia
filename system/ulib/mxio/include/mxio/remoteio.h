@@ -47,7 +47,8 @@ __BEGIN_CDECLS
 #define MXRIO_GETADDRINFO  0x00000017
 #define MXRIO_SETATTR      0x00000018
 #define MXRIO_SYNC         0x00000019
-#define MXRIO_NUM_OPS      26
+#define MXRIO_LINK        (0x0000001a | MXRIO_ONE_HANDLE)
+#define MXRIO_NUM_OPS      27
 
 #define MXRIO_OP(n)        ((n) & 0x3FF) // opcode
 #define MXRIO_HC(n)        (((n) >> 8) & 3) // handle count
@@ -60,7 +61,7 @@ __BEGIN_CDECLS
     "read_at", "write_at", "truncate", "rename", \
     "connect", "bind", "listen", "getsockname", \
     "getpeername", "getsockopt", "setsockopt", "getaddrinfo", \
-    "setattr", "sync" }
+    "setattr", "sync", "link" }
 
 const char* mxio_opname(uint32_t op);
 
@@ -161,6 +162,7 @@ static_assert(MXIO_CHUNK_SIZE >= PATH_MAX, "MXIO_CHUNK_SIZE must be large enough
 // GETADDRINFO maxreply   0        <getaddrinfo>     0           <getaddrinfo>   -
 // SETATTR     0          0        <vnattr>          0           -               -
 // SYNC        0          0        0                 0           -               -
+// LINK        0          0        <name1>0<name2>0  0           -               -
 //
 // proposed:
 //
@@ -170,9 +172,7 @@ static_assert(MXIO_CHUNK_SIZE >= PATH_MAX, "MXIO_CHUNK_SIZE must be large enough
 // READLINK    maxreply   0        -                 0           <path>          -
 // MMAP        flags      offset   <uint64:len>      offset      -               vmohandle
 // FLUSH       0          0        -                 0           -               -
-// LINK*       0          0        <name>            0           -               -
 //
 // on response arg32 is always mx_status, and may be positive for read/write calls
-// * handle[0] used to pass reference to target object
 
 __END_CDECLS

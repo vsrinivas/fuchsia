@@ -888,7 +888,7 @@ int ftruncate(int fd, off_t len) {
      return r;
 }
 
-int rename(const char* oldpath, const char* newpath) {
+static int two_path_op(uint32_t op, const char* oldpath, const char* newpath) {
     char name[MXIO_CHUNK_SIZE];
     size_t oldlen = strlen(oldpath);
     size_t newlen = strlen(newpath);
@@ -898,13 +898,13 @@ int rename(const char* oldpath, const char* newpath) {
 
     mxio_t* io;
     if (oldpath[0] == '/' && newpath[0] == '/') {
-        // Both paths are absolute: Rename relative to mxio_root
+        // Both paths are absolute: Op relative to mxio_root
         mtx_lock(&mxio_lock);
         io = mxio_root_handle;
         mxio_acquire(io);
         mtx_unlock(&mxio_lock);
     } else if (oldpath[0] != '/' && newpath[0] != '/') {
-        // Both paths are relative: Rename relative to mxio_cwd
+        // Both paths are relative: Op relative to mxio_cwd
         mtx_lock(&mxio_lock);
         io = mxio_cwd_handle;
         mxio_acquire(io);
@@ -918,9 +918,17 @@ int rename(const char* oldpath, const char* newpath) {
     name[oldlen] = '\0';
     memcpy(name + oldlen + 1, newpath, newlen);
     name[oldlen + newlen + 1] = '\0';
-    mx_status_t r = io->ops->misc(io, MXRIO_RENAME, 0, 0, (void*)name, oldlen + newlen + 2);
+    mx_status_t r = io->ops->misc(io, op, 0, 0, (void*)name, oldlen + newlen + 2);
     mxio_release(io);
     return STATUS(r);
+}
+
+int rename(const char* oldpath, const char* newpath) {
+    return two_path_op(MXRIO_RENAME, oldpath, newpath);
+}
+
+int link(const char* oldpath, const char* newpath) {
+    return two_path_op(MXRIO_LINK, oldpath, newpath);
 }
 
 int unlink(const char* path) {

@@ -106,6 +106,9 @@ struct vnode_ops {
     // Renames the path at oldname in olddir to the path at newname in newdir.
     // Unlinks any prior newname if it already exists.
 
+    mx_status_t (*link)(vnode_t* vndir, const char* name, size_t len, vnode_t* target);
+    // Creates a hard link to the 'target' vnode with a provided name in vndir
+
     mx_status_t (*sync)(vnode_t* vn);
     // Syncs the vnode with its underlying storage
 };

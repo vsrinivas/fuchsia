@@ -61,10 +61,6 @@ static int checksocket(int fd, int sock_err, int err) {
 }
 
 // not supported by any filesystems yet
-int link(const char* path, const char* newpath) {
-    errno = ENOSYS;
-    return -1;
-}
 int symlink(const char* existing, const char* new) {
     errno = ENOSYS;
     return -1;
