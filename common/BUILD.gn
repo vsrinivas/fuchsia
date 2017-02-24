@@ -4,6 +4,8 @@
 
 source_set("common") {
   sources = [
+    "bt_snoop_logger.cc",
+    "bt_snoop_logger.h",
     "byte_buffer.cc",
     "byte_buffer.h",
     "device_address.cc",
@@ -24,6 +26,7 @@ executable("tests") {
   output_name = "common_unittests"
 
   sources = [
+    "bt_snoop_logger_unittest.cc",
     "byte_buffer_unittest.cc",
     "device_address_unittest.cc",
     "manufacturer_names_unittest.cc",

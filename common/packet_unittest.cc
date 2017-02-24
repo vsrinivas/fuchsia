@@ -85,6 +85,7 @@ TEST(PacketTest, NonEmptyPayload) {
   }};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 }
+
 }  // namespace
 }  // namespace common
 }  // namespace bluetooth
