@@ -17,9 +17,10 @@
 #include "filesystems.h"
 #include "misc.h"
 
+int test_attr(fs_info_t* info);
 int test_append(fs_info_t* info);
 int test_basic(fs_info_t* info);
-int test_attr(fs_info_t* info);
+int test_link(fs_info_t* info);
 int test_directory(fs_info_t* info);
 int test_maxfile(fs_info_t* info);
 int test_overflow(fs_info_t* info);
@@ -34,9 +35,10 @@ struct {
     const char* name;
     int (*test)(fs_info_t* info);
 } FS_TESTS[] = {
+    {"attr", test_attr},
     {"append", test_append},
     {"basic", test_basic},
-    {"attr", test_attr},
+    {"link", test_link},
     {"directory", test_directory},
     {"maxfile", test_maxfile},
     {"overflow", test_overflow},

@@ -120,6 +120,24 @@ int FN(rename)(const char* oldpath, const char* newpath) {
     DO_REAL(rename, real_oldpath, real_newpath);
 }
 
+int FL(link)(const char* oldpath, const char* newpath);
+int FN(link)(const char* oldpath, const char* newpath) {
+    char real_oldpath[WPATH_MAX];
+    char real_newpath[WPATH_MAX];
+    PATH_WRAP(oldpath, real_oldpath);
+    PATH_WRAP(newpath, real_newpath);
+    DO_REAL(link, real_oldpath, real_newpath);
+}
+
+int FL(symlink)(const char* oldpath, const char* newpath);
+int FN(symlink)(const char* oldpath, const char* newpath) {
+    char real_oldpath[WPATH_MAX];
+    char real_newpath[WPATH_MAX];
+    PATH_WRAP(oldpath, real_oldpath);
+    PATH_WRAP(newpath, real_newpath);
+    DO_REAL(symlink, real_oldpath, real_newpath);
+}
+
 int FL(stat)(const char* fn, struct stat* s);
 int FN(stat)(const char* fn, struct stat* s) {
     char real_fn[WPATH_MAX];

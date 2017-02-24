@@ -14,10 +14,11 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/filesystems.c \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/wrap.c \
+    $(LOCAL_DIR)/test-attr.c \
     $(LOCAL_DIR)/test-append.c \
     $(LOCAL_DIR)/test-basic.c \
-    $(LOCAL_DIR)/test-attr.c \
     $(LOCAL_DIR)/test-directory.c \
+    $(LOCAL_DIR)/test-link.c \
     $(LOCAL_DIR)/test-maxfile.c \
     $(LOCAL_DIR)/test-overflow.c \
     $(LOCAL_DIR)/test-persist.c \
@@ -29,7 +30,7 @@ MODULE_SRCS := \
 
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
 MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir
-MODULE_LDFLAGS += --wrap utimes
+MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink
 
 MODULE_LIBS := \
     ulib/fs-management ulib/mxio ulib/launchpad ulib/magenta ulib/musl

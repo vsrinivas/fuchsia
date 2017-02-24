@@ -16,6 +16,7 @@ typedef struct fs_info {
     int (*unmount)(const char* mount_path);
     bool can_be_mounted;
     bool can_mount_sub_filesystems;
+    bool supports_hardlinks;
 } fs_info_t;
 
 // Path to mounted filesystem currently being tested
