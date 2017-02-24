@@ -20,9 +20,7 @@ Sections will be populated over time.
 
 # Framework
 
- - Libraries
-   - ftl
-   - mtl
+ - [Core Libraries](core_libraries.md)
  - Application model
    - Interface description language
    - Services
