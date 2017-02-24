@@ -14,10 +14,8 @@ __BEGIN_CDECLS
 
 #include <magenta/gen-syscalls.h>
 
-__END_CDECLS
-
 // Compatibility Wrappers for Deprecated Syscalls
 
-// For now, much of Fucshia assumes the contents of this header still live here.
-// TODO(kulakowski)(MG-540) Remove this include.
-#include <magenta/process.h>
+// Currently no wrappers!
+
+__END_CDECLS
