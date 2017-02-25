@@ -497,7 +497,11 @@ static int vc_battery_poll_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t vc_misc_device_added(int dirfd, const char* fn, void* cookie) {
+static mx_status_t vc_misc_device_added(int dirfd, int event, const char* fn, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+        return NO_ERROR;
+    }
+
     if (strcmp("acpi-battery", fn)) {
         return NO_ERROR;
     }

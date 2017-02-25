@@ -123,7 +123,12 @@ static int mount_minfs(int fd, mount_options_t* options) {
     return ERR_INVALID_ARGS;
 }
 
-static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
+static mx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+        printf("devmgr: block watch waiting...\n");
+        return NO_ERROR;
+    }
+
     printf("devmgr: new block device: /dev/class/block/%s\n", name);
     int fd;
     if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
@@ -276,7 +281,11 @@ static void start_console_shell(void) {}
 
 static const char* shell_prompt = "PS1=\033[35;1mmagenta\033[39m$ ";
 
-static mx_status_t console_device_added(int dirfd, const char* name, void* cookie) {
+static mx_status_t console_device_added(int dirfd, int event, const char* name, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+        return NO_ERROR;
+    }
+
     if (strcmp(name, "vc")) {
         return NO_ERROR;
     }

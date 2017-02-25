@@ -209,7 +209,11 @@ static const uint32_t normal_interrupts = (
 // Callback used to await the bcm-vc-rpc mailbox device. When the device is
 // added to the watched directory, we return 1 to tell the watcher to stop
 // watching.
-static mx_status_t mailbox_open_cb(int dirfd, const char* fn, void* cookie) {
+static mx_status_t mailbox_open_cb(int dirfd, int event, const char* fn, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+        return NO_ERROR;
+    }
+
     const char bcm_vc_rpc[] = "bcm-vc-rpc";
     if (strncmp(fn, bcm_vc_rpc, sizeof(bcm_vc_rpc)) == 0) {
         return 1; // stop polling.

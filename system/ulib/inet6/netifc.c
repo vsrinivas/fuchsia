@@ -235,7 +235,11 @@ void netifc_get_info(uint8_t* addr, uint16_t* mtu) {
     *mtu = netmtu;
 }
 
-static mx_status_t netifc_open_cb(int dirfd, const char* fn, void* cookie) {
+static mx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+        return NO_ERROR;
+    }
+
     printf("netifc: ? /dev/class/ethernet/%s\n", fn);
 
     if ((netfd = openat(dirfd, fn, O_RDWR)) < 0) {

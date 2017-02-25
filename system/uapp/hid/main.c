@@ -209,7 +209,11 @@ static int hid_input_thread(void* arg) {
     return NO_ERROR;
 }
 
-static mx_status_t hid_input_device_added(int dirfd, const char* fn, void* cookie) {
+static mx_status_t hid_input_device_added(int dirfd, int event, const char* fn, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+        return NO_ERROR;
+    }
+
     int fd = openat(dirfd, fn, O_RDONLY);
     if (fd < 0) {
         return NO_ERROR;

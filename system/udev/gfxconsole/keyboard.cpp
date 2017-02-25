@@ -163,7 +163,11 @@ static int vc_input_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t vc_input_device_added(int dirfd, const char* fn, void* cookie) {
+static mx_status_t vc_input_device_added(int dirfd, int event, const char* fn, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+        return NO_ERROR;
+    }
+
     auto keypress_handler = reinterpret_cast<keypress_handler_t>(cookie);
 
     int fd;

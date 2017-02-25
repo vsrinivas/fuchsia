@@ -16,6 +16,7 @@
 
 struct mxio_watcher {
     mx_handle_t h;
+    bool want_waiting_event;
 };
 
 mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
@@ -30,23 +31,33 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
         return r;
     }
 
+    watcher->want_waiting_event = false;
     *out = watcher;
     return NO_ERROR;
 }
 
 mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, char name[MXIO_MAX_FILENAME + 1]) {
-    mx_status_t status;
-
-    if ((status = mx_object_wait_one(watcher->h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                                     MX_TIME_INFINITE, NULL)) < 0) {
-        return status;
+    for (;;) {
+        mx_status_t status;
+        uint32_t sz = MXIO_MAX_FILENAME;
+        if ((status = mx_channel_read(watcher->h, 0, name, sz, &sz, NULL, 0, NULL)) < 0) {
+            if (status != ERR_SHOULD_WAIT) {
+                return status;
+            }
+            if (watcher->want_waiting_event) {
+                watcher->want_waiting_event = false;
+                return status;
+            }
+            if ((status = mx_object_wait_one(watcher->h, MX_CHANNEL_READABLE |
+                                             MX_CHANNEL_PEER_CLOSED,
+                                             MX_TIME_INFINITE, NULL)) < 0) {
+                return status;
+            }
+            continue;
+        }
+        name[sz] = 0;
+        return NO_ERROR;
     }
-    uint32_t sz = MXIO_MAX_FILENAME;
-    if ((status = mx_channel_read(watcher->h, 0, name, sz, &sz, NULL, 0, NULL)) < 0) {
-        return status;
-    }
-    name[sz] = 0;
-    return NO_ERROR;
 }
 
 void mxio_watcher_destroy(mxio_watcher_t* watcher) {
@@ -72,6 +83,7 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
         closedir(dir);
         return status;
     }
+    watcher->want_waiting_event = true;
 
     struct dirent* de;
     while ((de = readdir(dir)) != NULL) {
@@ -83,19 +95,27 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
                 continue;
             }
         }
-        if (cb(dirfd, de->d_name, cookie) != NO_ERROR) {
+        if (cb(dirfd, WATCH_EVENT_ADD_FILE, de->d_name, cookie) != NO_ERROR) {
             closedir(dir);
             return NO_ERROR;
         }
     }
     closedir(dir);
 
-    while ((status = mxio_watcher_wait(watcher, name)) == NO_ERROR) {
-        if (cb(dirfd, name, cookie) != NO_ERROR) {
+    do {
+        status = mxio_watcher_wait(watcher, name);
+        switch (status) {
+        case NO_ERROR:
+            status = cb(dirfd, WATCH_EVENT_ADD_FILE, name, cookie);
+            break;
+        case ERR_SHOULD_WAIT:
+            status = cb(dirfd, WATCH_EVENT_WAITING, NULL, cookie);
+            break;
+        default:
             break;
         }
-    }
-    mxio_watcher_destroy(watcher);
+    } while (status == NO_ERROR);
 
+    mxio_watcher_destroy(watcher);
     return status;
 }

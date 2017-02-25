@@ -23,7 +23,11 @@
 static int g_argc;
 static const char* const* g_argv;
 
-static mx_status_t console_device_added(int dirfd, const char* name, void* cookie) {
+static mx_status_t console_device_added(int dirfd, int event, const char* name, void* cookie) {
+    if (event != WATCH_EVENT_ADD_FILE) {
+        return NO_ERROR;
+    }
+
     if (strcmp(name, "vc")) {
         return NO_ERROR;
     }
