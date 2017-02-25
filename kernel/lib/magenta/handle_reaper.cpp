@@ -6,7 +6,11 @@
 
 #include <lib/dpc.h>
 #include <kernel/mutex.h>
+#include <magenta/dispatcher.h>
 #include <magenta/handle_reaper.h>
+#include <trace.h>
+
+#define LOCAL_TRACE 0
 
 static void ReaperRoutine(dpc_t* dpc);
 
@@ -19,6 +23,7 @@ static dpc_t reaper_dpc = {
 };
 
 void ReapHandles(mxtl::DoublyLinkedList<Handle*>* handles) {
+    LTRACE_ENTRY;
     AutoLock lock(reaper_mutex);
     reaper_handles.splice(reaper_handles.end(), *handles);
     if (!list_in_list(&reaper_dpc.node))
@@ -26,6 +31,7 @@ void ReapHandles(mxtl::DoublyLinkedList<Handle*>* handles) {
 }
 
 void ReapHandles(Handle** handles, uint32_t num_handles) {
+    LTRACE_ENTRY;
     mxtl::DoublyLinkedList<Handle*> list;
     for (uint32_t i = 0; i < num_handles; i++)
         list.push_back(handles[i]);
@@ -33,12 +39,18 @@ void ReapHandles(Handle** handles, uint32_t num_handles) {
 }
 
 static void ReaperRoutine(dpc_t* dpc) {
+    LTRACE_ENTRY;
     mxtl::DoublyLinkedList<Handle*> list;
     {
         AutoLock lock(reaper_mutex);
         list.swap(reaper_handles);
     }
     Handle* handle;
-    while ((handle = list.pop_front()) != nullptr)
+    while ((handle = list.pop_front()) != nullptr) {
+        LTRACEF("Reaping handle of koid %" PRIu64 " of pid %" PRIu64 "\n",
+                handle->dispatcher()->get_koid(), handle->process_id());
         DeleteHandle(handle);
+    }
+    LTRACE_EXIT;
+;
 }
