@@ -157,9 +157,7 @@ void App::ResetViewManager() {
 
 void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
   FTL_LOG(INFO) << "Bootstrapping application " << launch_info->url;
-
-  env_launcher_->CreateApplication(std::move(launch_info),
-                                   app_controller_.NewRequest());
+  env_launcher_->CreateApplication(std::move(launch_info), nullptr);
 }
 
 void App::GetApplicationEnvironmentServices(
