@@ -56,18 +56,13 @@ struct pthread {
     int errno_value;
 
     volatile atomic_int cancel, canceldisable, cancelasync;
-    int detached;
 
     void* start_arg;
     void* (*start)(void*);
     void* result;
     struct __ptcb* cancelbuf;
-    volatile int dead;
     int unblock_cancel;
     locale_t locale;
-    mtx_t killlock;
-    mtx_t exitlock;
-    mtx_t startlock;
     unsigned long sigmask[_NSIG / 8 / sizeof(long)];
     char* dlerror_buf;
     int dlerror_flag;

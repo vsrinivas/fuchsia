@@ -46,8 +46,13 @@ beforehand because closing the last handle to a thread kills that thread.
 The stack cannot be unmapped beforehand because the thread must have some
 stack space on which to make its final system calls.
 
+This call is used for detached threads, while
+[*futex_wake_handle_close_thread_exit*()](futex_wake_handle_close_thread_exit.md)
+is used for joinable threads.
+
 ## SEE ALSO
 
 [vmar_unmap](vmar_unmap.md),
 [handle_close](handle_close.md),
-[thread_exit](thread_exit.md).
+[thread_exit](thread_exit.md),
+[futex_wake_handle_close_thread_exit](futex_wake_handle_close_thread_exit.md).

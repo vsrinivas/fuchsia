@@ -36,7 +36,7 @@ public:
     status_t FutexWait(user_ptr<int> value_ptr, int current_value, mx_time_t timeout);
 
     // FutexWake will wake up to |count| number of threads blocked on the |value_ptr| futex.
-    status_t FutexWake(user_ptr<int> value_ptr, uint32_t count);
+    status_t FutexWake(user_ptr<const int> value_ptr, uint32_t count);
 
     // FutexWait first verifies that the integer pointed to by |wake_ptr|
     // still equals |current_value|. If the test fails, FutexWait returns FAILED_PRECONDITION.

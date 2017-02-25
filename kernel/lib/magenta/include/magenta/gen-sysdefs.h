@@ -220,7 +220,7 @@ mx_status_t sys_futex_wait(
     mx_time_t timeout);
 
 mx_status_t sys_futex_wake(
-    mx_futex_t value_ptr[1],
+    const mx_futex_t value_ptr[1],
     uint32_t count);
 
 mx_status_t sys_futex_requeue(

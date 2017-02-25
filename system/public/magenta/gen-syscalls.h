@@ -468,11 +468,11 @@ extern mx_status_t _mx_futex_wait(
     mx_time_t timeout) __attribute__((__leaf__));
 
 extern mx_status_t mx_futex_wake(
-    mx_futex_t value_ptr[1],
+    const mx_futex_t value_ptr[1],
     uint32_t count) __attribute__((__leaf__));
 
 extern mx_status_t _mx_futex_wake(
-    mx_futex_t value_ptr[1],
+    const mx_futex_t value_ptr[1],
     uint32_t count) __attribute__((__leaf__));
 
 extern mx_status_t mx_futex_requeue(
@@ -707,6 +707,16 @@ extern mx_status_t _mx_vmar_unmap_handle_close_thread_exit(
     mx_handle_t vmar_handle,
     uintptr_t addr,
     size_t len,
+    mx_handle_t handle) __attribute__((__leaf__));
+
+extern mx_status_t mx_futex_wake_handle_close_thread_exit(
+    const mx_futex_t value_ptr[1],
+    uint32_t count,
+    mx_handle_t handle) __attribute__((__leaf__));
+
+extern mx_status_t _mx_futex_wake_handle_close_thread_exit(
+    const mx_futex_t value_ptr[1],
+    uint32_t count,
     mx_handle_t handle) __attribute__((__leaf__));
 
 extern mx_status_t mx_log_create(

@@ -97,7 +97,8 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     return NO_ERROR;
 }
 
-status_t FutexContext::FutexWake(user_ptr<int> value_ptr, uint32_t count) {
+status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
+                                 uint32_t count) {
     LTRACE_ENTRY;
 
     if (count == 0) return NO_ERROR;

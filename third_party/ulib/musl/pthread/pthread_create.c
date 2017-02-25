@@ -62,7 +62,8 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
 
     const char* name = attr.__name ? attr.__name : "";
     mx_status_t status =
-        mxr_thread_create(_mx_process_self(), name, &new->mxr_thread);
+        mxr_thread_create(_mx_process_self(), name, attr._a_detach,
+                          &new->mxr_thread);
     if (status != NO_ERROR)
         goto fail_after_alloc;
 
@@ -72,10 +73,6 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     new->start = entry;
     new->start_arg = arg;
 
-    // TODO (kulakowski) Actually detach via attribute
-    if (attr._a_detach) {
-        new->detached = 1;
-    }
     // TODO(kulakowski) Signals?
     // int do_sched = 0;
     // if (attr._a_sched) {
@@ -153,25 +150,12 @@ _Noreturn void pthread_exit(void* result) {
 
     __pthread_tsd_run_dtors();
 
-    mtx_lock(&self->exitlock);
-
-    /* Mark this thread dead before decrementing count */
-    mtx_lock(&self->killlock);
-    self->dead = 1;
-
     /* Block all signals before decrementing the live thread count.
      * This is important to ensure that dynamically allocated TLS
      * is not under-allocated/over-committed, and possibly for other
      * reasons as well. */
     // TODO(kulakowski) Signals?
     // __block_all_sigs(&set);
-
-    /* Wait to unlock the kill lock, which governs functions like
-     * pthread_kill which target a thread id, until signals have
-     * been blocked. This precludes observation of the thread id
-     * as a live thread (with application code running in it) after
-     * the thread was reported dead by ESRCH being returned. */
-    mtx_unlock(&self->killlock);
 
     /* It's impossible to determine whether this is "the last thread"
      * until performing the atomic decrement, since multiple threads

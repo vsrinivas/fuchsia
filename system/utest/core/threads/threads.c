@@ -51,7 +51,8 @@ static bool start_thread(mxr_thread_entry_t entry, void* arg,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &stack), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(thread_stack_vmo), NO_ERROR, "");
 
-    ASSERT_EQ(mxr_thread_create(mx_process_self(), "test_thread", thread_out),
+    ASSERT_EQ(mxr_thread_create(mx_process_self(), "test_thread", false,
+                                thread_out),
               NO_ERROR, "");
     ASSERT_EQ(mxr_thread_start(thread_out, stack, stack_size, entry, arg),
               NO_ERROR, "");
@@ -62,7 +63,7 @@ static bool start_and_kill_thread(mxr_thread_entry_t entry, void* arg) {
     mxr_thread_t thread;
     ASSERT_TRUE(start_thread(entry, arg, &thread), "");
     mx_nanosleep(MX_MSEC(100));
-    ASSERT_EQ(mx_task_kill(mxr_thread_get_handle(&thread)), NO_ERROR, "");
+    ASSERT_EQ(mxr_thread_kill(&thread), NO_ERROR, "");
     ASSERT_EQ(mxr_thread_join(&thread), NO_ERROR, "");
     return true;
 }
@@ -88,7 +89,7 @@ static bool test_long_name_succeeds(void) {
               "too short to truncate");
 
     mxr_thread_t thread;
-    ASSERT_EQ(mxr_thread_create(mx_process_self(), long_name, &thread),
+    ASSERT_EQ(mxr_thread_create(mx_process_self(), long_name, false, &thread),
               NO_ERROR, "");
     mxr_thread_destroy(&thread);
     END_TEST;

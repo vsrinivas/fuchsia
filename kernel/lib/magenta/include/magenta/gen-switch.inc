@@ -218,7 +218,7 @@
         static_cast<mx_time_t>(arg3)));
         break;
     case 38: ret = static_cast<uint64_t>(sys_futex_wake(
-        reinterpret_cast<mx_futex_t*>(arg1),
+        reinterpret_cast<const mx_futex_t*>(arg1),
         static_cast<uint32_t>(arg2)));
         break;
     case 39: ret = static_cast<uint64_t>(sys_futex_requeue(

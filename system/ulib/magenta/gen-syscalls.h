@@ -235,7 +235,7 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_futex_wait(
     mx_time_t timeout) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_futex_wake(
-    mx_futex_t value_ptr[1],
+    const mx_futex_t value_ptr[1],
     uint32_t count) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_futex_requeue(
@@ -353,6 +353,11 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_unmap_hand
     mx_handle_t vmar_handle,
     uintptr_t addr,
     size_t len,
+    mx_handle_t handle) __attribute__((__leaf__));
+
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_futex_wake_handle_close_thread_exit(
+    const mx_futex_t value_ptr[1],
+    uint32_t count,
     mx_handle_t handle) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_log_create(

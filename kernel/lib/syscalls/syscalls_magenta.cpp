@@ -161,7 +161,7 @@ mx_status_t sys_futex_wait(mx_futex_t* _value_ptr, int current_value, mx_time_t 
         make_user_ptr(_value_ptr), current_value, timeout);
 }
 
-mx_status_t sys_futex_wake(mx_futex_t* _value_ptr, uint32_t count) {
+mx_status_t sys_futex_wake(const mx_futex_t* _value_ptr, uint32_t count) {
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(
         make_user_ptr(_value_ptr), count);
 }
