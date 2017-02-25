@@ -9,6 +9,7 @@ group("tests") {
     ":modular_tests.json",
     "component_context",
     "parent_child",
+    "suggestion",
     "triggers",
   ]
 }

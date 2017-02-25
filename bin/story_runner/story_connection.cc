@@ -60,6 +60,10 @@ void StoryConnection::GetComponentContext(
                                          std::move(context_request));
 }
 
+void StoryConnection::GetStoryId(const GetStoryIdCallback& callback) {
+  callback(story_impl_->GetStoryId());
+}
+
 void StoryConnection::Ready() {
   if (module_controller_impl_) {
     module_controller_impl_->SetState(ModuleState::RUNNING);

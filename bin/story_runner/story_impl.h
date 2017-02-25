@@ -62,6 +62,8 @@ class StoryImpl : public StoryController, ModuleWatcher {
   void GetLedger(const std::string& module_url,
                  fidl::InterfaceRequest<ledger::Ledger> request,
                  const std::function<void(ledger::Status)>& result);
+  const std::string& GetStoryId();
+
   // Releases ownership of |controller|.
   void ReleaseModule(ModuleControllerImpl* controller);
 

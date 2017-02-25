@@ -51,6 +51,7 @@ class StoryConnection : public Story {
                  const GetLedgerCallback& result) override;
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> context_request) override;
+  void GetStoryId(const GetStoryIdCallback& callback) override;
   void Ready() override;
   void Done() override;
 

@@ -320,6 +320,10 @@ void StoryImpl::GetLedger(const std::string& module_url,
       to_array(module_url), std::move(request), result);
 }
 
+const std::string& StoryImpl::GetStoryId() {
+  return story_data_->story_info->id;
+}
+
 // A variant of Stop() that stops the controller because the story was
 // deleted. It suppresses any further writes of story data, so that
 // the story is not resurrected in the ledger. After this operation

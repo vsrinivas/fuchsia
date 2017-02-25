@@ -59,6 +59,10 @@ interface Story {
   // context is unique to this particular module instance.
   GetComponentContext(ComponentContext& context_request);
 
+  // Get story id for this story which may be used to create a suggestion
+  // proposal to reinflate this story.
+  GetStoryId() => (string story_id);
+
   // The module holding this handle to the Story declares it's ready
   // to run. The story implementation notifies all ModuleWatchers
   // registered on the ModuleController by calling OnStateChange().
