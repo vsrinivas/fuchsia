@@ -31,12 +31,12 @@ int main(int argc, char** argv) {
             }
             break;
         }
-        char tmp[64];
-        snprintf(tmp, 64, "[%05d.%03d] %c ",
-                 (int)(rec->timestamp / 1000000000ULL),
-                 (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-                 (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
-        write(1, tmp, strlen(tmp));
+        char tmp[32];
+        size_t len = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %c ",
+                            (int)(rec->timestamp / 1000000000ULL),
+                            (int)((rec->timestamp / 1000000ULL) % 1000ULL),
+                            (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
+        write(1, tmp, (len > sizeof(tmp) ? sizeof(tmp) : len));
         write(1, rec->data, rec->datalen);
         if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
             write(1, "\n", 1);
