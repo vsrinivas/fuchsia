@@ -266,6 +266,20 @@ void tu_handle_get_basic_info(mx_handle_t handle, mx_info_handle_basic_t* info)
         tu_fatal(__func__, status);
 }
 
+mx_koid_t tu_get_koid(mx_handle_t handle)
+{
+    mx_info_handle_basic_t info;
+    tu_handle_get_basic_info(handle, &info);
+    return info.koid;
+}
+
+mx_koid_t tu_get_related_koid(mx_handle_t handle)
+{
+    mx_info_handle_basic_t info;
+    tu_handle_get_basic_info(handle, &info);
+    return info.related_koid;
+}
+
 mx_handle_t tu_get_thread(mx_handle_t proc, mx_koid_t tid)
 {
     mx_handle_t thread;
