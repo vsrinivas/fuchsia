@@ -44,6 +44,7 @@ mxc_ls ls
 mxc_cp cp
 mxc_mkdir mkdir
 mxc_rm rm
+mxc_mv mv
 
 
 mxc_dump dump
