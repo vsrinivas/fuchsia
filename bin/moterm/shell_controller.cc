@@ -9,7 +9,6 @@
 #include <sstream>
 
 #include <magenta/processargs.h>
-#include <magenta/syscalls/channel.h>
 
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
