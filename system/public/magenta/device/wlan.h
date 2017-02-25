@@ -41,6 +41,19 @@ typedef struct {
     size_t ssid_len;
     // Whether to do an active or a passive scan.
     uint8_t scan_type;
+    // Delay in microseconds before sending a probe request during active
+    // scanning.
+    uint16_t probe_delay;
+    // Minimum time to spend on a channel during scanning, in wlan time-units.
+    uint16_t min_channel_time;
+    // Maximum time to spend on a channel during scanning, in wlan time-units.
+    uint16_t max_channel_time;
+    // Number of channels to scan. Zero means scan all available channels for
+    // the wlan device.
+    uint16_t num_channels;
+    // Channels to scan. If no channels are specified, all available channels
+    // for the wlan device are scanned. Invalid channels are ignored.
+    uint16_t channels[0];
     // etc.
 } wlan_start_scan_args;
 
@@ -49,22 +62,22 @@ typedef struct {
     uint8_t bssid[6];
     // The type of the bss that was found.
     uint32_t bss_type;
-    // Timestamp from the scan
+    // Timestamp from the scan.
     uint64_t timestamp;
-    // The period at which beacons are sent, in wlan time-units
+    // The period at which beacons are sent, in wlan time-units.
     uint16_t beacon_period;
-    // Capabilities of the bss (TODO)
+    // Capabilities of the bss. (TODO)
     uint16_t capabilities;
-    // The ssid name
+    // The ssid name.
     uint8_t ssid[32];
-    // Length of the ssid name
+    // Length of the ssid name.
     size_t ssid_len;
-    // The basic supported rates for the wlan
+    // The basic supported rates for the wlan.
     uint8_t supported_rates[8];
     // etc.
 } wlan_scan_report;
 
-// ssize_t ioctl_wlan_start_scan(int fd, const wlan_start_scan_args* in, mx_handle_t* out);
-IOCTL_WRAPPER_INOUT(ioctl_wlan_start_scan, IOCTL_WLAN_START_SCAN, wlan_start_scan_args, mx_handle_t);
+// ssize_t ioctl_wlan_start_scan(int fd, const wlan_start_scan_args* in, size_t in_len, mx_handle_t* out);
+IOCTL_WRAPPER_VARIN_OUT(ioctl_wlan_start_scan, IOCTL_WLAN_START_SCAN, wlan_start_scan_args, mx_handle_t);
 
 __END_CDECLS
