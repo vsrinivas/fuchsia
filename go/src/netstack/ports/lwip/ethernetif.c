@@ -352,7 +352,12 @@ static int ethernetif_thread(void* arg) {
 #define IFNAME0 'e'
 #define IFNAME1 'n'
 
-static mx_status_t ethernetif_init_cb(int dirfd, const char* fn, void* cookie) {
+static mx_status_t ethernetif_init_cb(int dirfd, int event,
+                                      const char* fn, void* cookie) {
+  if (event != WATCH_EVENT_ADD_FILE) {
+    return NO_ERROR;
+  }
+
   struct netif* netif = (struct netif*)cookie;
 
   int netfd;
