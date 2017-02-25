@@ -25,6 +25,7 @@ Sections will be populated over time.
    - Interface description language
    - Services
    - Environments
+ - [Boot sequence](boot_sequence.md)
  - Device, user, and story runners
  - Components
  - Modules
