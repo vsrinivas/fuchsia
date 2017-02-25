@@ -8,6 +8,7 @@
 #include "lib/mtl/tasks/incoming_task_queue.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+#include "lib/mtl/tasks/incoming_task_queue.h"
 #include "lib/mtl/threading/thread.h"
 
 namespace mtl {
