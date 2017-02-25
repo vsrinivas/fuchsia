@@ -28,9 +28,18 @@ MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id
 
 void MagmaSystemDevice::PageFlip(std::shared_ptr<MagmaSystemBuffer> buf,
                                  magma_system_image_descriptor* image_desc,
-                                 magma_system_pageflip_callback_t callback, void* data)
+                                 uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+                                 std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores)
 {
-    msd_device_page_flip(msd_dev(), buf->msd_buf(), image_desc, callback, data);
+    DASSERT(wait_semaphore_count + signal_semaphore_count == semaphores.size());
+
+    std::vector<msd_semaphore_t*> msd_semaphores(semaphores.size());
+    for (uint32_t i = 0; i < semaphores.size(); i++) {
+        msd_semaphores[i] = semaphores[i]->msd_semaphore();
+    }
+
+    msd_device_page_flip(msd_dev(), buf->msd_buf(), image_desc, wait_semaphore_count,
+                         signal_semaphore_count, msd_semaphores.data());
 }
 
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::GetBufferForHandle(uint32_t handle)

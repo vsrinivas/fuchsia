@@ -7,6 +7,7 @@
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include "platform_semaphore.h"
+#include <vector>
 
 magma_system_connection* magma_system_open(int fd, uint32_t capabilities)
 {
@@ -172,11 +173,25 @@ void magma_system_wait_rendering(magma_system_connection* connection, magma_buff
 }
 
 void magma_system_display_page_flip(magma_system_connection* connection, magma_buffer_t buffer,
-                                    magma_system_pageflip_callback_t callback, void* data)
+                                    uint32_t wait_semaphore_count,
+                                    const magma_semaphore_t* wait_semaphores,
+                                    uint32_t signal_semaphore_count,
+                                    const magma_semaphore_t* signal_semaphores)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
-    magma::PlatformIpcConnection::cast(connection)->PageFlip(platform_buffer->id(), callback, data);
+    std::vector<uint64_t> semaphore_ids(wait_semaphore_count + signal_semaphore_count);
+    uint32_t index = 0;
+    for (uint32_t i = 0; i < wait_semaphore_count; i++) {
+        semaphore_ids[index++] = magma_system_get_semaphore_id(wait_semaphores[i]);
+    }
+    for (uint32_t i = 0; i < signal_semaphore_count; i++) {
+        semaphore_ids[index++] = magma_system_get_semaphore_id(signal_semaphores[i]);
+    }
+
+    magma::PlatformIpcConnection::cast(connection)
+        ->PageFlip(platform_buffer->id(), wait_semaphore_count, signal_semaphore_count,
+                   semaphore_ids.data());
 }
 
 magma_status_t magma_system_create_semaphore(magma_system_connection* connection,
@@ -211,4 +226,17 @@ void magma_system_destroy_semaphore(magma_system_connection* connection,
 uint64_t magma_system_get_semaphore_id(magma_semaphore_t semaphore)
 {
     return reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->id();
+}
+
+void magma_system_signal_semaphore(magma_semaphore_t semaphore)
+{
+    reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->Signal();
+}
+
+magma_status_t magma_system_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout)
+{
+    if (!reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->Wait(timeout))
+        return MAGMA_STATUS_TIMED_OUT;
+
+    return MAGMA_STATUS_OK;
 }

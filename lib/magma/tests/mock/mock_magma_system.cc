@@ -110,9 +110,11 @@ int32_t magma_system_import(magma_system_connection* connection, uint32_t buffer
 }
 
 void magma_system_display_page_flip(magma_system_connection* connection, uint64_t buffer_id,
-                                    magma_system_pageflip_callback_t callback, void* data)
+                                    uint32_t wait_semaphore_count,
+                                    const magma_semaphore_t* wait_semaphores,
+                                    uint32_t signal_semaphore_count,
+                                    const magma_semaphore_t* signal_semaphores)
 {
-    callback(MAGMA_STATUS_OK, data);
 }
 
 magma_status_t magma_system_create_semaphore(magma_system_connection* connection,
@@ -127,3 +129,10 @@ void magma_system_destroy_semaphore(magma_system_connection* connection,
 }
 
 uint64_t magma_system_get_semaphore_id(magma_semaphore_t semaphore) { return 0; }
+
+void magma_system_signal_semaphore(magma_semaphore_t semaphore) {}
+
+magma_status_t magma_system_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout)
+{
+    return MAGMA_STATUS_OK;
+}

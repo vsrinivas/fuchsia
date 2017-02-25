@@ -7,6 +7,7 @@
 #include "magma_system.h"
 #include "platform_buffer.h"
 #include "gtest/gtest.h"
+#include <thread>
 
 class TestBase {
 public:
@@ -130,6 +131,14 @@ public:
         EXPECT_EQ(MAGMA_STATUS_OK, magma_system_create_semaphore(connection_, &semaphore));
 
         EXPECT_NE(0u, magma_system_get_semaphore_id(semaphore));
+
+        std::thread thread([semaphore] {
+            EXPECT_EQ(MAGMA_STATUS_OK, magma_system_wait_semaphore(semaphore, 1000));
+            EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_system_wait_semaphore(semaphore, 100));
+        });
+
+        magma_system_signal_semaphore(semaphore);
+        thread.join();
 
         magma_system_destroy_semaphore(connection_, semaphore);
     }

@@ -35,12 +35,13 @@ void msd_device_dump_status(struct msd_device_t* dev);
 struct msd_connection_t* msd_device_open(struct msd_device_t* dev, msd_client_id client_id);
 
 // Provides a buffer to be scanned out on the next vblank event.
-// |callback| will be called with |data| as its second argument when |buf| is
-// no longer being displayed and is safe to be reused. The first argument to
-// |callback| indicates an error with the page flip, where 0 indicates success
+// The first |wait_semaphore_count| of |semaphores| will be waited upon prior to scanning
+// out the buffer.  The following |signal_semaphore_count| semaphores will be signalled when
+// |buf| is no longer being displayed and is safe to be reused.
 void msd_device_page_flip(struct msd_device_t* dev, struct msd_buffer_t* buf,
                           struct magma_system_image_descriptor* image_desc,
-                          magma_system_pageflip_callback_t callback, void* data);
+                          uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+                          struct msd_semaphore_t** semaphores);
 
 // Closes the given connection to the device.
 void msd_connection_close(struct msd_connection_t* connection);
@@ -63,9 +64,9 @@ void msd_context_destroy(struct msd_context_t* ctx);
 // |cmd_buf| is the command buffer to be executed
 // |exec_resources| are the buffers referenced by the handles in command_buf->exec_resources,
 // in the same order
-// |wait_semaphores| are the semaphores that must be signalled before starting command buffer
+// |wait_semaphores| are the semaphores that must be signaled before starting command buffer
 // execution
-// |signal_semaphores| are the semaphores to be signalled upon completion of the command buffer
+// |signal_semaphores| are the semaphores to be signaled upon completion of the command buffer
 magma_status_t msd_context_execute_command_buffer(struct msd_context_t* ctx,
                                                   struct msd_buffer_t* cmd_buf,
                                                   struct msd_buffer_t** exec_resources,

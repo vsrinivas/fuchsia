@@ -64,25 +64,32 @@ magma_status_t magma_system_import(struct magma_system_connection* connection,
                                    uint32_t buffer_handle, magma_buffer_t* buffer_out);
 
 // Provides a buffer to be scanned out on the next vblank event.
-// |callback| will be called with |data| as its second argument when the buffer
-// referred to by |buffer| is no longer being displayed and is safe to be
-// reused. The first argument to |callback| indicates an error with the page
-// flip, where 0 indicates success
-// This will fail if |connection| was not created with |MAGMA_SYSTEM_CAPABILITY_DISPLAY|
+// |wait_semaphores| will be waited upon prior to scanning out the buffer.
+// |signal_semaphores| will be signaled when |buf| is no longer being displayed and is safe to be
+// reused.
 void magma_system_display_page_flip(struct magma_system_connection* connection,
-                                    magma_buffer_t buffer,
-                                    magma_system_pageflip_callback_t callback, void* data);
+                                    magma_buffer_t buffer, uint32_t wait_semaphore_count,
+                                    const magma_semaphore_t* wait_semaphores,
+                                    uint32_t signal_semaphore_count,
+                                    const magma_semaphore_t* signal_semaphores);
 
-// Creates a semaphore on the given connection.
+// Creates a semaphore on the given connection.  If successful |semaphore_out| will be set.
 magma_status_t magma_system_create_semaphore(magma_system_connection* connection,
                                              magma_semaphore_t* semaphore_out);
 
-// Destroys the given semaphore.
+// Destroys |semaphore|.
 void magma_system_destroy_semaphore(magma_system_connection* connection,
                                     magma_semaphore_t semaphore);
 
 // Returns the object id for the given semaphore.
 uint64_t magma_system_get_semaphore_id(magma_semaphore_t semaphore);
+
+// Signals |semaphore|.
+void magma_system_signal_semaphore(magma_semaphore_t semaphore);
+
+// Waits for |semaphore| to be signaled.  Returns MAGMA_STATUS_TIMED_OUT if the timeout
+// expires first.
+magma_status_t magma_system_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout);
 
 #if defined(__cplusplus)
 }

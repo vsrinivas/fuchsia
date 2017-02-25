@@ -88,15 +88,9 @@ public:
 
     void TestPageFlip()
     {
-        ipc_connection_->PageFlip(test_buffer_id, PageFlipCallback, &test_buffer_id);
-        // TODO(MA-118) eliminate need for this sleep
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-
-    static void PageFlipCallback(magma_status_t error, void* data)
-    {
-        EXPECT_EQ(error, test_error);
-        EXPECT_EQ(*reinterpret_cast<uint64_t*>(data), test_buffer_id);
+        uint64_t semaphore_ids[]{0, 1, 2};
+        ipc_connection_->PageFlip(test_buffer_id, 2, 1, semaphore_ids);
+        EXPECT_EQ(ipc_connection_->GetError(), 0);
     }
 
     void TestGetError()
@@ -185,18 +179,24 @@ public:
         return MAGMA_STATUS_OK;
     }
 
-    void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
-                  void* data) override
+    magma::Status PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,
+                           uint32_t signal_semaphore_count, uint64_t* semaphore_ids) override
     {
         EXPECT_EQ(buffer_id, TestPlatformConnection::test_buffer_id);
+        EXPECT_EQ(2u, wait_semaphore_count);
+        EXPECT_EQ(1u, signal_semaphore_count);
+        for (uint32_t i = 0; i < wait_semaphore_count + signal_semaphore_count; i++) {
+            EXPECT_EQ(i, semaphore_ids[i]);
+        }
         TestPlatformConnection::test_complete = true;
-        callback(TestPlatformConnection::test_error, data);
+        return MAGMA_STATUS_OK;
     }
 };
 
 std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
 {
     test_buffer_id = 0xcafecafecafecafe;
+    test_semaphore_id = ~0u;
     test_context_id = 0xdeadbeef;
     test_error = 0x12345678;
     test_complete = false;

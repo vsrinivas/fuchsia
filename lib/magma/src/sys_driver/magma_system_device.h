@@ -13,6 +13,7 @@
 #include <mutex>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 using msd_device_unique_ptr_t = std::unique_ptr<msd_device_t, decltype(&msd_device_destroy)>;
 
@@ -23,6 +24,7 @@ static inline msd_device_unique_ptr_t MsdDeviceUniquePtr(msd_device_t* msd_dev)
 
 class MagmaSystemBuffer;
 class MagmaSystemConnection;
+class MagmaSystemSemaphore;
 
 class MagmaSystemDevice {
 public:
@@ -42,7 +44,8 @@ public:
     uint32_t GetDeviceId();
 
     void PageFlip(std::shared_ptr<MagmaSystemBuffer> buf, magma_system_image_descriptor* image_desc,
-                  magma_system_pageflip_callback_t callback, void* data);
+                  uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+                  std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores);
 
     std::shared_ptr<MagmaSystemBuffer> GetBufferForHandle(uint32_t handle);
     void ReleaseBuffer(uint64_t id);

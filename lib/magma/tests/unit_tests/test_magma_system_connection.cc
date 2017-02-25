@@ -161,21 +161,6 @@ TEST(MagmaSystemConnection, BufferSharing)
     EXPECT_EQ(buf_0, buf_1);
 }
 
-class TestPageFlip {
-public:
-    TestPageFlip(magma_status_t expected_error) : expected_error_(expected_error) {}
-
-    void Test(magma_status_t error) { EXPECT_EQ(error, expected_error_); }
-private:
-    magma_status_t expected_error_;
-};
-
-void callback(magma_status_t error, void* data)
-{
-    EXPECT_NE(data, nullptr);
-    reinterpret_cast<TestPageFlip*>(data)->Test(error);
-}
-
 TEST(MagmaSystemConnection, PageFlip)
 {
     auto msd_drv = msd_driver_create();
@@ -184,27 +169,40 @@ TEST(MagmaSystemConnection, PageFlip)
 
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection display(dev, MsdConnectionUniquePtr(msd_connection),
-                                  MAGMA_SYSTEM_CAPABILITY_DISPLAY);
-
-    // should be unable to pageflip totally bogus handle
-    auto test_invalid = std::unique_ptr<TestPageFlip>(new TestPageFlip(MAGMA_STATUS_INVALID_ARGS));
-    display.PageFlip(0, &callback, test_invalid.get());
+    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
+                                     MAGMA_SYSTEM_CAPABILITY_DISPLAY);
 
     auto buf = magma::PlatformBuffer::Create(PAGE_SIZE);
-
-    // should still be unable to page flip buffer because it hasnt been exported to display
-    display.PageFlip(buf->id(), &callback, test_invalid.get());
 
     uint64_t imported_id;
     uint32_t handle;
     ASSERT_TRUE(buf->duplicate_handle(&handle));
-    ASSERT_TRUE(display.ImportBuffer(handle, &imported_id));
+    ASSERT_TRUE(connection.ImportBuffer(handle, &imported_id));
     ASSERT_EQ(buf->id(), imported_id);
 
+    // should still be unable to page flip buffer because it hasnt been exported to display
+    auto semaphore = std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
+
+    ASSERT_TRUE(semaphore->duplicate_handle(&handle));
+    ASSERT_TRUE(connection.ImportObject(handle, magma::PlatformObject::SEMAPHORE));
+
+    std::vector<uint64_t> semaphore_ids{semaphore->id()};
+    std::vector<uint64_t> bogus_semaphore_ids{UINT64_MAX};
+
+    // scanout the buffer
+    connection.PageFlip(buf->id(), 0, 1, semaphore_ids.data());
+
+    // should be unable to pageflip totally bogus handle
+    connection.PageFlip(0, 0, 0, nullptr);
+    EXPECT_FALSE(semaphore->Wait(100));
+
+    // should be unable to pageflip unknown semaphore
+    connection.PageFlip(buf->id(), 0, 1, bogus_semaphore_ids.data());
+    EXPECT_FALSE(semaphore->Wait(100));
+
     // should be ok to page flip now
-    auto test_success = std::unique_ptr<TestPageFlip>(new TestPageFlip(0));
-    display.PageFlip(imported_id, &callback, test_success.get());
+    connection.PageFlip(buf->id(), 0, 1, semaphore_ids.data());
+    EXPECT_TRUE(semaphore->Wait(100));
 
     msd_driver_destroy(msd_drv);
 }

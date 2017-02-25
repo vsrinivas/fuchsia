@@ -4,6 +4,8 @@
 
 #include "mock_msd.h"
 #include "msd.h"
+#include "platform_semaphore.h"
+#include <vector>
 
 std::unique_ptr<MsdMockBufferManager> g_bufmgr;
 
@@ -29,10 +31,21 @@ void msd_device_destroy(msd_device_t* dev)
 }
 
 void msd_device_page_flip(msd_device_t* dev, msd_buffer_t* buf,
-                          magma_system_image_descriptor* image_desc,
-                          magma_system_pageflip_callback_t callback, void* data)
+                          magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
+                          uint32_t signal_semaphore_count, msd_semaphore_t** semaphores)
 {
-    callback(0, data);
+    static std::vector<magma::PlatformSemaphore*> last_semaphores;
+
+    for (uint32_t i = 0; i < last_semaphores.size(); i++) {
+        last_semaphores[i]->Signal();
+    }
+
+    last_semaphores.clear();
+
+    for (uint32_t i = wait_semaphore_count; i < wait_semaphore_count + signal_semaphore_count;
+         i++) {
+        last_semaphores.push_back(reinterpret_cast<magma::PlatformSemaphore*>(semaphores[i]));
+    }
 }
 
 msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id client_id)
@@ -98,9 +111,13 @@ MsdMockContext::~MsdMockContext() { connection_->DestroyContext(this); }
 
 magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore_t** semaphore_out)
 {
-    static uint32_t semaphore_count = 0;
-    *semaphore_out = reinterpret_cast<msd_semaphore_t*>(++semaphore_count);
+    *semaphore_out =
+        reinterpret_cast<msd_semaphore_t*>(magma::PlatformSemaphore::Import(handle).release());
+    DASSERT(*semaphore_out);
     return MAGMA_STATUS_OK;
 }
 
-void msd_semaphore_release(msd_semaphore_t* semaphore) {}
+void msd_semaphore_release(msd_semaphore_t* semaphore)
+{
+    delete reinterpret_cast<magma::PlatformSemaphore*>(semaphore);
+}

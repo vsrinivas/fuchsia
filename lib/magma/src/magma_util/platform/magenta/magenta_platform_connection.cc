@@ -7,8 +7,11 @@
 
 #include "mx/channel.h"
 #include "mx/waitset.h"
+#include <list>
 #include <magenta/types.h>
 #include <map>
+#include <mutex>
+#include <thread>
 
 constexpr uint32_t kCookieChannel = 1;
 constexpr uint32_t kCookieShutdown = 2;
@@ -77,10 +80,21 @@ struct WaitRenderingOp {
     uint64_t buffer_id;
 } __attribute__((packed));
 
+// Note PageFlipOp must be overlayed on a memory allocation dynamically sized
+// for the number of semaphores.
 struct PageFlipOp {
     const OpCode opcode = PageFlip;
     static constexpr uint32_t kNumHandles = 0;
     uint64_t buffer_id;
+    uint64_t signal_semaphore_count;
+    uint32_t wait_semaphore_count;
+    uint64_t semaphore_ids[];
+
+    static uint32_t size(uint32_t semaphore_count)
+    {
+        return sizeof(PageFlipOp) + sizeof(uint64_t) * semaphore_count;
+    }
+
 } __attribute__((packed));
 
 struct GetErrorOp {
@@ -99,10 +113,23 @@ T* OpCast(uint8_t* bytes, uint32_t num_bytes, mx_handle_t* handles, uint32_t kNu
     return reinterpret_cast<T*>(bytes);
 }
 
-struct PageFlipReply {
-    uint64_t buffer_id;
-    magma_status_t error;
-} __attribute__((packed));
+template <>
+PageFlipOp* OpCast<PageFlipOp>(uint8_t* bytes, uint32_t num_bytes, mx_handle_t* handles,
+                               uint32_t kNumHandles)
+{
+    if (num_bytes < sizeof(PageFlipOp))
+        return DRETP(nullptr, "too few bytes for a page flip: %u", num_bytes);
+
+    auto page_flip_op = reinterpret_cast<PageFlipOp*>(bytes);
+    const uint32_t expected_size =
+        PageFlipOp::size(page_flip_op->wait_semaphore_count + page_flip_op->signal_semaphore_count);
+    if (num_bytes != expected_size)
+        return DRETP(nullptr, "wrong number of bytes in message, expected %u, got %u",
+                     expected_size, num_bytes);
+    if (kNumHandles != PageFlipOp::kNumHandles)
+        return DRETP(nullptr, "wrong number of handles in message");
+    return reinterpret_cast<PageFlipOp*>(bytes);
+}
 
 class MagentaPlatformConnection : public PlatformConnection,
                                   public std::enable_shared_from_this<MagentaPlatformConnection> {
@@ -224,11 +251,6 @@ public:
     }
 
 private:
-    struct PageFlipData {
-        uint64_t buffer_id;
-        std::weak_ptr<MagentaPlatformConnection> connection;
-    };
-
     bool ImportBuffer(ImportBufferOp* op, mx_handle_t* handle)
     {
         DLOG("Operation: ImportBuffer");
@@ -326,11 +348,10 @@ private:
         if (!op)
             return DRETF(false, "malformed message");
 
-        auto data = new PageFlipData();
-        data->buffer_id = op->buffer_id;
-        data->connection = shared_from_this();
-
-        delegate_->PageFlip(op->buffer_id, &PageFlipCallback, data);
+        magma::Status status = delegate_->PageFlip(op->buffer_id, op->wait_semaphore_count,
+                                                   op->signal_semaphore_count, op->semaphore_ids);
+        if (!status)
+            SetError(status);
         return true;
     }
 
@@ -357,27 +378,6 @@ private:
         DLOG("Writing error %d to channel", error);
         auto status = local_endpoint_.write(0, &error, sizeof(error), nullptr, 0);
         return DRETF(status == NO_ERROR, "failed to write to channel");
-    }
-
-    static void PageFlipCallback(magma_status_t error, void* data)
-    {
-        DLOG("MagentaPlatformConnection::PageFlipCallback");
-        auto pageflip_data = reinterpret_cast<PageFlipData*>(data);
-        auto connection = pageflip_data->connection.lock();
-        if (!connection) {
-            DLOG("couldn't lock connection");
-            return;
-        }
-
-        PageFlipReply reply;
-        reply.buffer_id = pageflip_data->buffer_id;
-        reply.error = error;
-
-        auto status = connection->local_endpoint_.write(0, &reply, sizeof(reply), nullptr, 0);
-        if (status != NO_ERROR)
-            connection->SetError(DRET_MSG(status, "failed to write to channel"));
-
-        delete pageflip_data;
     }
 
     std::unique_ptr<Delegate> delegate_;
@@ -507,56 +507,25 @@ public:
             SetError(error);
     }
 
-    void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
-                  void* data) override
+    void PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,
+                  uint32_t signal_semaphore_count, const uint64_t* semaphore_ids) override
     {
-        auto iter = pageflip_closure_map_.find(buffer_id);
-        if (iter != pageflip_closure_map_.end()) {
-            if (callback)
-                callback(DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
-                                  "attempting to pageflip unavailable buffer"),
-                         data);
-            return;
+        const uint32_t payload_size =
+            PageFlipOp::size(wait_semaphore_count + signal_semaphore_count);
+        std::unique_ptr<uint8_t[]> payload(new uint8_t[payload_size]);
+
+        // placement new on top of the allocation
+        auto op = new (payload.get()) PageFlipOp;
+        op->buffer_id = buffer_id;
+        op->signal_semaphore_count = signal_semaphore_count;
+        op->wait_semaphore_count = wait_semaphore_count;
+        for (uint32_t i = 0; i < wait_semaphore_count + signal_semaphore_count; i++) {
+            op->semaphore_ids[i] = semaphore_ids[i];
         }
 
-        pageflip_closure_map_[buffer_id] = {callback, data};
-
-        PageFlipOp op;
-        op.buffer_id = buffer_id;
-        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
-        if (result != 0) {
-            if (callback)
-                callback(DRET_MSG(result, "could not write to channel"), data);
-            return;
-        }
-
-        // TODO(MA-118) wait for pageflip reply on a separate thread
-        DLOG("waiting on reply");
-        PageFlipReply reply;
-        reply.buffer_id = 0;
-
-        result = WaitMessage(reinterpret_cast<uint8_t*>(&reply), sizeof(reply), !first_frame);
-        if (result != 0) {
-            if (callback)
-                callback(DRET_MSG(result, "failed to wait for pageflip response"), data);
-            return;
-        }
-
-        if (reply.buffer_id) {
-            auto iter = pageflip_closure_map_.find(reply.buffer_id);
-            if (iter == pageflip_closure_map_.end()) {
-                if (callback)
-                    callback(
-                        DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "no closure for buffer id in reply"),
-                        data);
-                return;
-            }
-            auto closure = iter->second;
-            if (closure.callback)
-                closure.callback(reply.error, closure.data);
-            pageflip_closure_map_.erase(iter);
-        }
-        first_frame = false;
+        magma_status_t result = channel_write(payload.get(), payload_size, nullptr, 0);
+        if (result != 0)
+            SetError(result);
     }
 
     magma_status_t GetError() override
@@ -636,16 +605,9 @@ private:
         }
     }
 
-    struct pageflip_closure {
-        magma_system_pageflip_callback_t callback;
-        void* data;
-    };
-
     mx::channel channel_;
-    std::map<uint64_t, pageflip_closure> pageflip_closure_map_;
     uint32_t next_context_id_{};
     magma_status_t error_{};
-    bool first_frame = true;
 };
 
 std::unique_ptr<PlatformIpcConnection> PlatformIpcConnection::Create(uint32_t device_handle)
