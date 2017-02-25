@@ -69,8 +69,7 @@ public:
     TestThread(volatile int* futex_addr,
                mx_time_t timeout_in_us = MX_TIME_INFINITE)
         : futex_addr_(futex_addr),
-          timeout_in_us_(timeout_in_us),
-          state_(STATE_STARTED) {
+          timeout_in_us_(timeout_in_us) {
         auto ret = thrd_create_with_name(&thread_, wakeup_test_thread, this, "wakeup_test_thread");
         EXPECT_EQ(ret, thrd_success, "Error during thread creation");
         while (state_ == STATE_STARTED) {
@@ -90,7 +89,19 @@ public:
     TestThread& operator=(const TestThread &) = delete;
 
     ~TestThread() {
-        EXPECT_EQ(thrd_join(thread_, NULL), thrd_success, "Error during wait");
+        if (handle_ != MX_HANDLE_INVALID) {
+            // kill_thread() was used, so the thrd_t is in undefined state.
+            // Use the kernel handle to ensure the thread has died.
+            EXPECT_EQ(mx_object_wait_one(handle_, MX_THREAD_SIGNALED,
+                                         MX_TIME_INFINITE, NULL), NO_ERROR,
+                      "mx_object_wait_one failed on killed thread");
+            EXPECT_EQ(mx_handle_close(handle_), NO_ERROR,
+                      "mx_handle_close failed on killed thread's handle");
+            // The thrd_t and state associated with it is leaked at this point.
+        } else {
+            EXPECT_EQ(thrd_join(thread_, NULL), thrd_success,
+                      "thrd_join failed");
+        }
     }
 
     void assert_thread_woken() {
@@ -115,8 +126,11 @@ public:
     }
 
     void kill_thread() {
-        EXPECT_EQ(mx_task_kill(thrd_get_mx_handle(thread_)), NO_ERROR,
-                  "mx_task_kill() failed");
+        EXPECT_EQ(handle_, MX_HANDLE_INVALID, "kill_thread called twice??");
+        EXPECT_EQ(mx_handle_duplicate(thrd_get_mx_handle(thread_),
+                                      MX_RIGHT_SAME_RIGHTS, &handle_),
+                  NO_ERROR, "mx_handle_duplicate failed on thread handle");
+        EXPECT_EQ(mx_task_kill(handle_), NO_ERROR, "mx_task_kill() failed");
     }
 
 private:
@@ -138,11 +152,12 @@ private:
     thrd_t thread_;
     volatile int* futex_addr_;
     mx_time_t timeout_in_us_;
+    mx_handle_t handle_ = MX_HANDLE_INVALID;
     volatile enum {
         STATE_STARTED = 100,
         STATE_ABOUT_TO_WAIT = 200,
         STATE_WAIT_RETURNED = 300,
-    } state_;
+    } state_ = STATE_STARTED;
 };
 
 void check_futex_wake(volatile int* futex_addr, int nwake) {
@@ -364,7 +379,8 @@ bool test_futex_requeue_unqueued_on_timeout() {
 bool test_futex_thread_killed() {
     BEGIN_TEST;
     volatile int futex_value = 1;
-    // Note: TestThread's destructor tests joining the thread.
+    // Note: TestThread will ensure the kernel thread died, though
+    // it's not possible to thrd_join after killing the thread.
     TestThread thread(&futex_value);
     thread.kill_thread();
 
