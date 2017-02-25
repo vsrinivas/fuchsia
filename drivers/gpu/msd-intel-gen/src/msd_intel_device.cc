@@ -9,6 +9,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "modeset/displayport.h"
+#include "msd_intel_semaphore.h"
 #include "registers.h"
 #include <cstdio>
 #include <string>
@@ -50,22 +51,31 @@ private:
 class MsdIntelDevice::FlipRequest : public DeviceRequest {
 public:
     FlipRequest(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
-                magma_system_pageflip_callback_t callback, void* data)
-        : buffer_(std::move(buffer)), image_desc_(*image_desc), callback_(callback), data_(data)
+                std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+                std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
+        : buffer_(std::move(buffer)), image_desc_(*image_desc),
+          wait_semaphores_(std::move(wait_semaphores)),
+          signal_semaphores_(std::move(signal_semaphores))
     {
+    }
+
+    // Takes ownership
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> get_wait_semaphores()
+    {
+        return std::move(wait_semaphores_);
     }
 
 protected:
     magma::Status Process(MsdIntelDevice* device) override
     {
-        return device->ProcessFlip(buffer_, image_desc_, callback_, data_);
+        return device->ProcessFlip(buffer_, image_desc_, std::move(signal_semaphores_));
     }
 
 private:
     std::shared_ptr<MsdIntelBuffer> buffer_;
     magma_system_image_descriptor image_desc_;
-    magma_system_pageflip_callback_t callback_;
-    void* data_;
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores_;
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
 };
 
 class MsdIntelDevice::InterruptRequest : public DeviceRequest {
@@ -211,6 +221,8 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     monitor_ = magma::Monitor::CreateShared();
 
+    semaphore_port_ = magma::SemaphorePort::Create();
+
     scratch_buffer_ =
         std::shared_ptr<magma::PlatformBuffer>(magma::PlatformBuffer::Create(PAGE_SIZE));
 
@@ -270,6 +282,12 @@ void MsdIntelDevice::StartDeviceThread()
     // requires the device thread.
     DASSERT(!interrupt_thread_.joinable());
     interrupt_thread_ = std::thread([this] { this->InterruptThreadLoop(); });
+
+    DASSERT(!wait_thread_.joinable());
+    wait_thread_ = std::thread([this] { this->WaitThreadLoop(); });
+
+    // TODO(MG-594): stop the wait thread like other threads
+    wait_thread_.detach();
 }
 
 int MsdIntelDevice::InterruptThreadLoop()
@@ -296,6 +314,16 @@ int MsdIntelDevice::InterruptThreadLoop()
 
     DLOG("Interrupt thread exited");
     return 0;
+}
+
+void MsdIntelDevice::WaitThreadLoop()
+{
+    DLOG("Wait thread started");
+
+    while (semaphore_port_->WaitOne()) {
+    }
+
+    DLOG("Wait thread exited");
 }
 
 void MsdIntelDevice::Dump(DumpState* dump_out)
@@ -361,15 +389,8 @@ magma::Status MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer>
     DLOG("SubmitCommandBuffer");
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
-    // TODO(MA-157) - if there are wait semaphores, pass this to a wait thread instead
-
-    auto request = std::make_unique<CommandBufferRequest>(std::move(command_buffer));
-    auto reply = request->GetReply();
-
-    EnqueueDeviceRequest(std::move(request));
-
-    magma::Status status = reply->Wait();
-    return status;
+    EnqueueDeviceRequest(std::make_unique<CommandBufferRequest>(std::move(command_buffer)));
+    return MAGMA_STATUS_OK;
 }
 
 void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_context)
@@ -382,20 +403,53 @@ void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_contex
 
 void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
                           magma_system_image_descriptor* image_desc,
-                          magma_system_pageflip_callback_t callback, void* data)
+                          std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+                          std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
 {
-    DLOG("Flip");
+    DLOG("Flip buffer 0x%" PRIx64, buffer->platform_buffer()->id());
+
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
     DASSERT(buffer);
 
-    buffer->WaitRendering();
+    auto request = std::make_unique<FlipRequest>(buffer, image_desc, std::move(wait_semaphores),
+                                                 std::move(signal_semaphores));
 
-    auto request = std::make_unique<FlipRequest>(buffer, image_desc, callback, data);
-    auto reply = request->GetReply();
+    std::unique_lock<std::mutex> lock(pageflip_request_mutex_);
+    pageflip_pending_queue_.push(std::move(request));
 
-    EnqueueDeviceRequest(std::move(request));
+    if (pageflip_pending_queue_.size() == 1) {
+        lock.unlock();
+        ProcessPendingFlip();
+    }
+}
 
-    reply->Wait();
+void MsdIntelDevice::ProcessPendingFlip()
+{
+    auto callback = [this](magma::SemaphorePort::WaitSet* wait_set) { this->ProcessPendingFlip(); };
+
+    std::unique_lock<std::mutex> lock(pageflip_request_mutex_);
+
+    while (pageflip_pending_queue_.size()) {
+        DLOG("pageflip_pending_queue_ size %zu", pageflip_pending_queue_.size());
+
+        std::unique_ptr<FlipRequest>& request = pageflip_pending_queue_.front();
+
+        // Takes ownership
+        auto semaphores = request->get_wait_semaphores();
+
+        if (semaphores.size() == 0) {
+            EnqueueDeviceRequest(std::move(request));
+            pageflip_pending_queue_.pop();
+        } else {
+            DLOG("adding waitset with %zu semaphores", semaphores.size());
+            // Invoke the callback when semaphores are satisfied;
+            // the next ProcessPendingFlip will see an empty semaphore array for the front request.
+            bool result = semaphore_port_->AddWaitSet(
+                std::make_unique<magma::SemaphorePort::WaitSet>(callback, std::move(semaphores)));
+            DASSERT(result);
+            break;
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -579,12 +633,14 @@ magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContex
     return MAGMA_STATUS_OK;
 }
 
-magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
-                                          const magma_system_image_descriptor& image_desc,
-                                          magma_system_pageflip_callback_t callback, void* data)
+magma::Status MsdIntelDevice::ProcessFlip(
+    std::shared_ptr<MsdIntelBuffer> buffer, const magma_system_image_descriptor& image_desc,
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     DASSERT(buffer);
+
+    DLOG("ProcessFlip buffer 0x%" PRIx64, buffer->platform_buffer()->id());
 
     // Error indicators are passed to the callback
     magma::Status status(MAGMA_STATUS_OK);
@@ -600,12 +656,9 @@ magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer
 
     if (!mapping) {
         mapping = AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
-        if (!mapping) {
-            DLOG("Couldn't map buffer to gtt");
-            if (callback)
-                (*callback)(MAGMA_STATUS_MEMORY_ERROR, data);
-            return status;
-        }
+        if (!mapping)
+            return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't map buffer to gtt");
+
         display_mappings_.push_front(mapping);
         while (display_mappings_.size() > 3)
             display_mappings_.pop_back();
@@ -675,12 +728,9 @@ magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer
                 break;
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double, std::milli> elapsed = end - start;
-            if (elapsed.count() > kRetryMsMax) {
-                DLOG("Timeout waiting for page flip event");
-                if (callback)
-                    (*callback)(MAGMA_STATUS_INTERNAL_ERROR, data);
-                return status;
-            }
+            if (elapsed.count() > kRetryMsMax)
+                return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Timeout waiting for page flip event");
+
             std::this_thread::yield();
         }
 
@@ -689,13 +739,12 @@ magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer
             registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, false);
     }
 
-    if (flip_callback_) {
-        DLOG("making flip callback now");
-        (*flip_callback_)(0, flip_data_);
+    for (auto& semaphore : signal_semaphores_) {
+        DLOG("signalling flip semaphore 0x%" PRIx64 "\n", semaphore->id());
+        semaphore->Signal();
     }
 
-    flip_callback_ = callback;
-    flip_data_ = data;
+    signal_semaphores_ = std::move(signal_semaphores);
 
     return status;
 }
@@ -762,9 +811,20 @@ void msd_device_dump_status(struct msd_device_t* dev)
 }
 
 void msd_device_page_flip(msd_device_t* dev, msd_buffer_t* buf,
-                          magma_system_image_descriptor* image_desc,
-                          magma_system_pageflip_callback_t callback, void* data)
+                          magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
+                          uint32_t signal_semaphore_count, msd_semaphore_t** semaphores)
 {
-    MsdIntelDevice::cast(dev)->Flip(MsdIntelAbiBuffer::cast(buf)->ptr(), image_desc, callback,
-                                    data);
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores(wait_semaphore_count);
+    uint32_t index = 0;
+    for (uint32_t i = 0; i < wait_semaphore_count; i++) {
+        wait_semaphores[i] = MsdIntelAbiSemaphore::cast(semaphores[index++])->ptr();
+    }
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores(
+        signal_semaphore_count);
+    for (uint32_t i = 0; i < signal_semaphore_count; i++) {
+        signal_semaphores[i] = MsdIntelAbiSemaphore::cast(semaphores[index++])->ptr();
+    }
+
+    MsdIntelDevice::cast(dev)->Flip(MsdIntelAbiBuffer::cast(buf)->ptr(), image_desc,
+                                    std::move(wait_semaphores), std::move(signal_semaphores));
 }

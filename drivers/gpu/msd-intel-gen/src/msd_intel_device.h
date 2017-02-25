@@ -12,6 +12,7 @@
 #include "gtt.h"
 #include "magma_util/macros.h"
 #include "magma_util/monitor.h"
+#include "magma_util/semaphore_port.h"
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
@@ -65,7 +66,8 @@ public:
     void DumpToString(std::string& dump_string);
 
     void Flip(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
-              magma_system_pageflip_callback_t callback, void* data);
+              std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+              std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
 
 private:
 #define CHECK_THREAD_IS_CURRENT(x)                                                                 \
@@ -121,13 +123,16 @@ private:
 
     magma::Status ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
     magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
-    magma::Status ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
-                              const magma_system_image_descriptor& image_desc,
-                              magma_system_pageflip_callback_t callback, void* data);
+    magma::Status
+    ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
+                const magma_system_image_descriptor& image_desc,
+                std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
     magma::Status ProcessInterrupts();
 
-    bool WaitIdle();
+    void ProcessPendingFlip();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request);
+
+    bool WaitIdle();
 
     uint32_t GetCurrentFrequency();
     void RequestMaxFreq();
@@ -137,6 +142,7 @@ private:
 
     int DeviceThreadLoop();
     int InterruptThreadLoop();
+    void WaitThreadLoop();
 
     std::shared_ptr<GlobalContext> global_context() { return global_context_; }
 
@@ -157,6 +163,7 @@ private:
     std::unique_ptr<GpuProgress> progress_;
 
     std::thread interrupt_thread_;
+    std::thread wait_thread_;
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
@@ -164,14 +171,14 @@ private:
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
     std::shared_ptr<GlobalContext> global_context_;
     std::unique_ptr<Sequencer> sequencer_;
-	std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
+    std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
     std::unique_ptr<magma::PlatformInterrupt> interrupt_;
     std::shared_ptr<GpuMappingCache> mapping_cache_;
+    std::unique_ptr<magma::SemaphorePort> semaphore_port_;
 
     // page flipping
     std::deque<std::shared_ptr<GpuMapping>> display_mappings_;
-    magma_system_pageflip_callback_t flip_callback_{};
-    void* flip_data_{};
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
 
     class CommandBufferRequest;
     class FlipRequest;
@@ -181,6 +188,9 @@ private:
     // Thread-shared data members
     std::shared_ptr<magma::Monitor> monitor_;
     std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
+
+    std::mutex pageflip_request_mutex_;
+    std::queue<std::unique_ptr<FlipRequest>> pageflip_pending_queue_;
 
     friend class TestMsdIntelDevice;
     friend class TestCommandBuffer;

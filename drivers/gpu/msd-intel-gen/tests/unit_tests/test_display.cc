@@ -3,20 +3,12 @@
 // found in the LICENSE file.
 
 #include "helper/platform_device_helper.h"
-#include "magma_util/sleep.h"
 #include "msd_intel_device.h"
 #include "msd_intel_driver.h"
 #include "gtest/gtest.h"
 
 class TestDisplay {
 public:
-    static void callback(int32_t result, void* data)
-    {
-        EXPECT_EQ(result, 0);
-        auto test = reinterpret_cast<TestDisplay*>(data);
-        test->num_callback_++;
-    }
-
     void Flip(uint32_t num_buffers, uint32_t num_frames)
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
@@ -50,15 +42,20 @@ public:
 
         magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
 
+        auto signal_semaphore =
+            std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
+
+        std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
+        std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores;
+        signal_semaphores.push_back(signal_semaphore);
+
         for (uint32_t frame = 0; frame < num_frames; frame++) {
             uint32_t buffer_index = frame % buffers.size();
-            device->Flip(buffers[buffer_index], &image_desc, callback, this);
-            EXPECT_EQ(num_callback_, frame);
+            device->Flip(buffers[buffer_index], &image_desc, wait_semaphores, signal_semaphores);
+            if (frame > 0)
+                EXPECT_TRUE(signal_semaphore->Wait(1000));
         }
     }
-
-private:
-    uint32_t num_callback_{};
 };
 
 TEST(Display, DoubleBufferFlip)

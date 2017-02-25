@@ -54,6 +54,12 @@ public:
 
     uint32_t GetPipeControlFlags() override;
 
+    // Takes ownership of the wait semaphores array
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores()
+    {
+        return std::move(wait_semaphores_);
+    }
+
 private:
     CommandBuffer(msd_buffer_t* abi_cmd_buf, std::weak_ptr<ClientContext> context);
 
