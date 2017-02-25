@@ -9,7 +9,7 @@
 namespace maxwell {
 
 struct RankedSuggestion {
-  const SuggestionPrototype* prototype;
+  SuggestionPrototype* prototype;
   float rank;
 };
 

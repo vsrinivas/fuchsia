@@ -27,16 +27,15 @@ interface SuggestionProvider {
   // |listener|, and binds |controller| to a service that offers control over
   // result paging.
   //
-  // Closing the |controller| pipe or the |listener| pipe terminates the
-  // subscription.
+  // Closing the the |listener| pipe terminates the subscription.
   SubscribeToNext(SuggestionListener listener, NextController& controller);
 
   // Should be called when the user initiates an "Ask". Results are sent to
   // |listener|, and changes to user input as well as paging controls are made
   // available through |controller|.
   //
-  // Closing the |listener| pipe or the |controller| pipe signals to the
-  // SuggestionService that the "Ask" has been completed or canceled.
+  // Closing the |listener| pipe signals to the SuggestionService that the "Ask"
+  // has been completed or canceled.
   InitiateAsk(SuggestionListener listener, AskController& controller);
 
   // Notifies the suggestion engine that the user has interacted with the given

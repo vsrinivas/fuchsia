@@ -6,8 +6,8 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
 
 namespace maxwell {
 
@@ -29,8 +29,9 @@ class AskChannel : public SuggestionChannel {
       : repo_(repo),
         subscriber_(this, std::move(listener), std::move(controller)) {}
 
-  RankedSuggestion* OnAddSuggestion(
-      const SuggestionPrototype* prototype) override;
+  ~AskChannel();
+
+  void OnAddSuggestion(SuggestionPrototype* prototype) override;
   void OnChangeSuggestion(RankedSuggestion* ranked_suggestion) override;
   void OnRemoveSuggestion(const RankedSuggestion* ranked_suggestion) override;
   const RankedSuggestions* ranked_suggestions() const override;

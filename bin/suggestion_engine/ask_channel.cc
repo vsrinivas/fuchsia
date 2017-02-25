@@ -52,6 +52,16 @@ void stable_sort(AskChannel::RankedSuggestions* suggestions) {
 
 }  // namespace
 
+AskChannel::~AskChannel() {
+  // clean up all rank_by_channel entries for this channel
+  for (auto& ranked_suggestion : include_) {
+    ranked_suggestion->prototype->ranks_by_channel.erase(this);
+  }
+  for (auto& exclude : exclude_) {
+    exclude.second->prototype->ranks_by_channel.erase(this);
+  }
+}
+
 // Ranks based on substring. More complete substrings are ranked better, with a
 // secondary rank preferring shorter prefixes.
 //
@@ -77,8 +87,7 @@ float AskChannel::Rank(const SuggestionPrototype* prototype) const {
   return rank + static_cast<float>(pos) / text.size();
 }
 
-RankedSuggestion* AskChannel::OnAddSuggestion(
-    const SuggestionPrototype* prototype) {
+void AskChannel::OnAddSuggestion(SuggestionPrototype* prototype) {
   const float rank = Rank(prototype);
   if (rank != kExcludeRank) {
     auto& new_entry = *include_.emplace(find_for_insert(&include_, rank),
@@ -88,7 +97,7 @@ RankedSuggestion* AskChannel::OnAddSuggestion(
 
     subscriber_.OnAddSuggestion(*new_entry);
 
-    return new_entry.get();
+    prototype->ranks_by_channel[this] = new_entry.get();
   } else {
     auto& new_entry =
         exclude_.emplace(prototype->suggestion_id, new RankedSuggestion())
@@ -96,7 +105,7 @@ RankedSuggestion* AskChannel::OnAddSuggestion(
     new_entry->rank = kExcludeRank;
     new_entry->prototype = prototype;
 
-    return new_entry.get();
+    prototype->ranks_by_channel[this] = new_entry.get();
   }
 }
 

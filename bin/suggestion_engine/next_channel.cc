@@ -6,13 +6,12 @@
 
 namespace maxwell {
 
-RankedSuggestion* NextChannel::OnAddSuggestion(
-    const SuggestionPrototype* prototype) {
+void NextChannel::OnAddSuggestion(SuggestionPrototype* prototype) {
   // TODO(rosswang): remove existing if they match filter
   if (filter_ && !filter_(*prototype->proposal)) {
     FTL_LOG(INFO) << "Filtering " << short_proposal_str(*prototype)
                   << " in Next";
-    return nullptr;
+    return;
   }
 
   // TODO(rosswang): rank
@@ -26,7 +25,7 @@ RankedSuggestion* NextChannel::OnAddSuggestion(
 
   DispatchOnAddSuggestion(*new_entry);
 
-  return new_entry.get();
+  prototype->ranks_by_channel[this] = new_entry.get();
 }
 
 void NextChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {

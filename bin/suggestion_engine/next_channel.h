@@ -19,8 +19,7 @@ class NextChannel : public SuggestionChannel {
     subscribers_.emplace(std::move(subscriber));
   }
 
-  RankedSuggestion* OnAddSuggestion(
-      const SuggestionPrototype* prototype) override;
+  void OnAddSuggestion(SuggestionPrototype* prototype) override;
   void OnChangeSuggestion(RankedSuggestion* ranked_suggestion) override;
   void OnRemoveSuggestion(const RankedSuggestion* ranked_suggestion) override;
   const RankedSuggestions* ranked_suggestions() const override;

@@ -181,14 +181,14 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   fidl::Binding<modular::StoryProvider> story_provider_binding_;
 };
 
-class NextTest : public SuggestionEngineTest {
+class NextTest : public virtual SuggestionEngineTest {
  public:
   NextTest() : listener_binding_(&listener_) {
-    fidl::InterfaceHandle<maxwell::SuggestionListener> listener_handle;
-    listener_binding_.Bind(&listener_handle);
-    suggestion_provider()->SubscribeToNext(std::move(listener_handle),
+    suggestion_provider()->SubscribeToNext(listener_binding_.NewBinding(),
                                            ctl_.NewRequest());
   }
+
+  TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   void SetResultCount(int count) { ctl_->SetResultCount(count); }
@@ -433,15 +433,16 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   ASYNC_EQ("foo://bar", story_provider()->last_created_story());
 }
 
-class AskTest : public SuggestionEngineTest {
+class AskTest : public virtual SuggestionEngineTest {
  public:
   AskTest() : binding_(&listener_) {}
 
   void InitiateAsk() {
-    fidl::InterfaceHandle<maxwell::SuggestionListener> handle;
-    binding_.Bind(&handle);
-    suggestion_provider()->InitiateAsk(std::move(handle), ctl_.NewRequest());
+    suggestion_provider()->InitiateAsk(binding_.NewBinding(),
+                                       ctl_.NewRequest());
   }
+
+  void KillListener() { binding_.Close(); }
 
   void SetQuery(const std::string& query) {
     auto input = maxwell::UserInput::New();
@@ -706,6 +707,32 @@ TEST_F(AskTest, ReactiveAsk) {
   p.Commit();
 
   CHECK_RESULT_COUNT(1);
+}
+
+class MultiChannelTest : public AskTest, public NextTest {};
+
+TEST_F(MultiChannelTest, PublishAfterAskEnd) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("E-mail");
+  InitiateAsk();
+  NextTest::SetResultCount(10);
+  AskTest::SetResultCount(10);
+  ASYNC_EQ(1, NextTest::suggestion_count());
+  ASYNC_EQ(1, AskTest::suggestion_count());
+
+  AskTest::KillListener();
+  Sleep();
+
+  p.Propose("E-mail", "E-vite");
+
+  // Historical failure mode: Prior to implementing ranked-suggestion cleanup on
+  // AskChannel destruction, this would seg fault due to trying to add the
+  // proposal to the destroyed channel.
+
+  ASYNC_CHECK(NextTest::listener()->suggestion_count() == 1 &&
+              NextTest::listener()->GetOnlySuggestion()->display->headline ==
+                  "E-vite");
 }
 
 class SuggestionFilteringTest : public NextTest {};

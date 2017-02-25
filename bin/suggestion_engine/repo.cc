@@ -18,13 +18,9 @@ ProposalPublisherImpl* Repo::GetOrCreateSourceClient(
 void Repo::AddSuggestion(SuggestionPrototype* prototype) {
   prototype->suggestion_id = RandomUuid();
   // TODO(rosswang): proper channel routing. For now, add to all channels.
-  auto next_entry = next_channel_.OnAddSuggestion(prototype);
-  if (next_entry) {
-    prototype->ranks_by_channel[&next_channel_] = next_entry;
-  }
+  next_channel_.OnAddSuggestion(prototype);
   for (auto& ask_channel : ask_channels_) {
-    prototype->ranks_by_channel[ask_channel.get()] =
-        ask_channel->OnAddSuggestion(prototype);
+    ask_channel->OnAddSuggestion(prototype);
   }
   suggestions_[prototype->suggestion_id] = prototype;
 }
@@ -36,11 +32,7 @@ void Repo::InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
 
   // Bootstrap with existing next suggestions
   for (auto& ranked_suggestion : *next_channel_.ranked_suggestions()) {
-    // const_cast is okay because Repo owns all prototypes mutably.
-    auto suggestion_prototype =
-        const_cast<SuggestionPrototype*>(ranked_suggestion->prototype);
-    suggestion_prototype->ranks_by_channel[ask.get()] =
-        ask->OnAddSuggestion(suggestion_prototype);
+    ask->OnAddSuggestion(ranked_suggestion->prototype);
   }
 
   ask_channels_.emplace(std::move(ask));

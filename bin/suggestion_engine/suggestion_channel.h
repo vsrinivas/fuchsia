@@ -22,8 +22,7 @@ class SuggestionChannel {
 
   virtual ~SuggestionChannel() = default;
 
-  virtual RankedSuggestion* OnAddSuggestion(
-      const SuggestionPrototype* prototype) = 0;
+  virtual void OnAddSuggestion(SuggestionPrototype* prototype) = 0;
   virtual void OnChangeSuggestion(RankedSuggestion* ranked_suggestion) = 0;
   virtual void OnRemoveSuggestion(
       const RankedSuggestion* ranked_suggestion) = 0;

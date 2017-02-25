@@ -61,7 +61,7 @@ class LauncherApp : public maxwell::Launcher {
     StartAgent("file:///system/apps/acquirers/focus");
     StartAgent("file:///system/apps/agents/bandsintown.dartx");
     StartAgent("file:///system/apps/agents/module_suggester");
-    
+
     // This will error harmlessly if Kronk is not available.
     StartAgent("file:///system/apps/agents/kronk");
   }
