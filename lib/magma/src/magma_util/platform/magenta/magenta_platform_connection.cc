@@ -77,7 +77,7 @@ template <typename T>
 T* OpCast(uint8_t* bytes, uint32_t num_bytes, mx_handle_t* handles, uint32_t kNumHandles)
 {
     if (num_bytes != sizeof(T))
-        return DRETP(nullptr, "wrong number of bytes in message, expected %u, got %u", sizeof(T),
+        return DRETP(nullptr, "wrong number of bytes in message, expected %zu, got %u", sizeof(T),
                      num_bytes);
     if (kNumHandles != T::kNumHandles)
         return DRETP(nullptr, "wrong number of handles in message");

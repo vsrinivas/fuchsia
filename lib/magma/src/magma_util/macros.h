@@ -32,7 +32,8 @@ static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
 
 static constexpr bool kMagmaDretEnable = kDebug;
 
-static inline int dret(const char* file, int line, int ret, const char* msg, ...)
+__attribute__((format(printf, 4, 5))) static inline int dret(const char* file, int line, int ret,
+                                                             const char* msg, ...)
 {
     printf("%s:%d returning error %d", file, line, ret);
     if (msg) {
@@ -54,7 +55,8 @@ static inline int dret(const char* file, int line, int ret, const char* msg, ...
     (magma::kMagmaDretEnable ? (ret == 0 ? 0 : magma::dret(__FILE__, __LINE__, ret, __VA_ARGS__))  \
                              : ret)
 
-static inline bool dret_false(const char* file, int line, const char* msg, ...)
+__attribute__((format(printf, 3, 4))) static inline bool dret_false(const char* file, int line,
+                                                                    const char* msg, ...)
 {
     printf("%s:%d returning false: ", file, line);
     va_list args;
@@ -71,7 +73,8 @@ static inline bool dret_false(const char* file, int line, const char* msg, ...)
          ? (ret == true ? true : magma::dret_false(__FILE__, __LINE__, __VA_ARGS__))               \
          : ret)
 
-static inline void dret_null(const char* file, int line, const char* msg, ...)
+__attribute__((format(printf, 3, 4))) static inline void dret_null(const char* file, int line,
+                                                                   const char* msg, ...)
 {
     printf("%s:%d returning null: ", file, line);
     va_list args;
@@ -89,7 +92,7 @@ static inline void dret_null(const char* file, int line, const char* msg, ...)
 
 enum LogLevel { LOG_WARNING, LOG_INFO };
 
-static inline void log(LogLevel level, const char* msg, ...)
+__attribute__((format(printf, 2, 3))) static inline void log(LogLevel level, const char* msg, ...)
 {
     switch (level) {
     case LOG_WARNING: printf("[WARNING] "); break;
