@@ -274,6 +274,8 @@ static void start_console_shell(void) {
 static void start_console_shell(void) {}
 #endif
 
+static const char* shell_prompt = "PS1=\033[35;1mmagenta\033[39m$ ";
+
 static mx_status_t console_device_added(int dirfd, const char* name, void* cookie) {
     if (strcmp(name, "vc")) {
         return NO_ERROR;
@@ -287,7 +289,19 @@ static mx_status_t console_device_added(int dirfd, const char* name, void* cooki
                 ioctl_console_set_active_vc(fd);
             }
             devmgr_launch(svcs_job_handle, "sh:vc",
-                          countof(argv_sh), argv_sh, NULL, fd, NULL, NULL, 0);
+                          countof(argv_sh), argv_sh, shell_prompt, fd, NULL, NULL, 0);
+            if (i == 0) {
+                // give the higher level system a moment to start
+                mx_nanosleep(MX_SEC(3));
+                struct stat s;
+                if (stat("/system/bin/init", &s) == 0) {
+                    // if there's a higher level init,
+                    // don't start additional vc shells
+                    break;
+                }
+            }
+        } else {
+            printf("devmgr: cannot open vc\n");
         }
     }
 
