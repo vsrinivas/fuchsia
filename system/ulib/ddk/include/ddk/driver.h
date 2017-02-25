@@ -37,8 +37,6 @@ typedef struct mx_driver_ops {
     // Last call before driver is unloaded.
 } mx_driver_ops_t;
 
-#define DRV_FLAG_NO_AUTOBIND 0x00000001
-
 struct mx_driver {
     const char* name;
 
@@ -76,7 +74,6 @@ mx_status_t device_rebind(mx_device_t* device);
 
 // These are only for the use of core platform drivers and may return
 // NULL for non-approved callers.
-
 mx_device_t* driver_get_root_device(void);
 mx_device_t* driver_get_misc_device(void);
 
@@ -84,8 +81,6 @@ mx_device_t* driver_get_misc_device(void);
 // This can be used to prevent a device from being bound by a driver
 void device_set_bindable(mx_device_t* dev, bool bindable);
 
-void driver_add(mx_driver_t* driver);
-void driver_remove(mx_driver_t* driver);
 void driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 
 // temporary accessor for root resource handle

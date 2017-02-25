@@ -13,14 +13,6 @@ __EXPORT void driver_api_init(driver_api_t* api) {
     }
 }
 
-__EXPORT void driver_add(mx_driver_t* drv) {
-    API->driver_add(drv);
-}
-
-__EXPORT void driver_remove(mx_driver_t* drv) {
-    API->driver_remove(drv);
-}
-
 __EXPORT void driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     API->driver_unbind(drv, dev);
 }

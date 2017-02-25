@@ -12,13 +12,13 @@
 //
 // Driver code MUST NOT directly call devhost_* APIs
 
-static void _driver_add(mx_driver_t* drv) {
+void driver_add(mx_driver_t* drv) {
     DM_LOCK();
     devhost_driver_add(drv);
     DM_UNLOCK();
 }
 
-static void _driver_remove(mx_driver_t* drv) {
+void driver_remove(mx_driver_t* drv) {
     DM_LOCK();
     devhost_driver_remove(drv);
     DM_UNLOCK();
@@ -127,8 +127,6 @@ static mx_status_t _load_firmware(mx_driver_t* drv, const char* path, mx_handle_
 }
 
 driver_api_t devhost_api = {
-    .driver_add = _driver_add,
-    .driver_remove = _driver_remove,
     .driver_unbind = _driver_unbind,
     .device_create = _device_create,
     .device_init = _device_init,

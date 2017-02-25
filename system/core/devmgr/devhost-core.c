@@ -155,7 +155,7 @@ void dev_ref_release(mx_device_t* dev) {
     }
 }
 
-static mx_status_t devhost_device_probe(mx_device_t* dev, mx_driver_t* drv) {
+static mx_status_t devhost_device_probe(mx_device_t* dev, mx_driver_t* drv, bool autobind) {
     mx_status_t status;
 
     xprintf("devhost: probe dev=%p(%s) drv=%p(%s)\n",
@@ -167,12 +167,17 @@ static mx_status_t devhost_device_probe(mx_device_t* dev, mx_driver_t* drv) {
     }
 
     // evaluate the driver's binding program against the device's properties
-    if (!devhost_is_bindable_drv(drv, dev)) {
+    if (!devhost_is_bindable_drv(drv, dev, autobind)) {
         return ERR_NOT_SUPPORTED;
     }
 
     void *cookie = NULL;
     DM_UNLOCK();
+    // Load driver if it's not already loaded
+    if ((status = devhost_load_driver(drv)) < 0) {
+        DM_LOCK();
+        return status;
+    }
     status = drv->ops.bind(drv, dev, &cookie);
     DM_LOCK();
     if (status < 0) {
@@ -204,10 +209,7 @@ static void devhost_device_probe_all(mx_device_t* dev, bool autobind) {
 
     mx_driver_t* drv = NULL;
     list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
-        if (autobind && drv->flags & DRV_FLAG_NO_AUTOBIND) {
-            continue;
-        }
-        if (devhost_device_probe(dev, drv) == NO_ERROR) {
+        if (devhost_device_probe(dev, drv, autobind) == NO_ERROR) {
             // if the probe succeeded and we are not a multi-bind
             // device, we can stop looking for further matches now
             if (!(dev->flags & DEV_FLAG_MULTI_BIND)) {
@@ -498,7 +500,7 @@ mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_name) {
             if (strcmp(drv->name, drv_name)) {
                 continue;
             }
-            if (devhost_device_probe(dev, drv) == NO_ERROR) {
+            if (devhost_device_probe(dev, drv, false) == NO_ERROR) {
                 break;
             }
         }
@@ -574,15 +576,6 @@ mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags) {
 mx_status_t devhost_driver_add(mx_driver_t* drv) {
     xprintf("driver add: %p(%s)\n", drv, drv->name);
 
-    if (drv->ops.init) {
-        mx_status_t r;
-        DM_UNLOCK();
-        r = drv->ops.init(drv);
-        DM_LOCK();
-        if (r < 0)
-            return r;
-    }
-
     // add the driver to the driver list
     list_add_tail(&driver_list, &drv->node);
 
@@ -590,7 +583,7 @@ mx_status_t devhost_driver_add(mx_driver_t* drv) {
     mx_device_t* dev = NULL;
     mx_device_t* temp = NULL;
     list_for_every_entry_safe (&unmatched_device_list, dev, temp, mx_device_t, unode) {
-        devhost_device_probe(dev, drv);
+        devhost_device_probe(dev, drv, true);
     }
     return NO_ERROR;
 }

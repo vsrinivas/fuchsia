@@ -363,11 +363,11 @@ mx_driver_t _driver_mbr = {
     },
     // Don't automatically bind this driver, instead let the FS layer select
     // this driver if a block device with an MBR is detected.
-    .flags = DRV_FLAG_NO_AUTOBIND,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(_driver_mbr, "mbr", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(_driver_mbr, "mbr", "magenta", "0.1", 2)
+    BI_ABORT_IF_AUTOBIND,
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK),
 MAGENTA_DRIVER_END(_driver_mbr)
 // clang-format on

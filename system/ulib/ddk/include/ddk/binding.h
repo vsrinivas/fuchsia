@@ -57,10 +57,13 @@ __BEGIN_CDECLS;
 #define BI_SET_IF(c,b,v,f)    BINDINST(COND_##c,OP_SET,f,b,v)
 #define BI_CLEAR_IF(c,b,v,f)  BINDINST(COND_##c,OP_CLEAR,f,b,v)
 
+// for drivers that only want to be bound on user request
+#define BI_ABORT_IF_AUTOBIND  BI_ABORT_IF(NE, BIND_AUTOBIND, 0)
 
 // global binding variables at 0x00XX
 #define BIND_FLAGS            0x0000 // value of the flags register
 #define BIND_PROTOCOL         0x0001 // primary protcol of the device
+#define BIND_AUTOBIND         0x0002 // if this is an automated bind/load
 
 // pci binding variables at 0x01XX
 #define BIND_PCI_VID          0x0100

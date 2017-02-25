@@ -176,9 +176,9 @@ mx_driver_t _driver_align= {
     .ops = {
         .bind = align_bind,
     },
-    .flags = DRV_FLAG_NO_AUTOBIND,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_align, "align", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(_driver_align, "align", "magenta", "0.1", 2)
+    BI_ABORT_IF_AUTOBIND,
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK),
 MAGENTA_DRIVER_END(_driver_align)

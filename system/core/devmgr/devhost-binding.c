@@ -15,6 +15,7 @@ typedef struct {
     uint32_t binding_size;
     const mx_bind_inst_t* binding;
     const char* name;
+    uint32_t autobind;
 } bpctx_t;
 
 static uint32_t dev_get_prop(bpctx_t* ctx, uint32_t id) {
@@ -29,12 +30,15 @@ static uint32_t dev_get_prop(bpctx_t* ctx, uint32_t id) {
     }
 
     // fallback for devices without properties
-    if (id == BIND_PROTOCOL) {
+    switch (id) {
+    case BIND_PROTOCOL:
         return ctx->protocol_id;
+    case BIND_AUTOBIND:
+        return ctx->autobind;
+    default:
+        // TODO: better process for missing properties
+        return 0;
     }
-
-    // TODO: better process for missing properties
-    return 0;
 }
 
 static bool is_bindable(bpctx_t* ctx) {
@@ -132,7 +136,7 @@ next_instruction:
     return false;
 }
 
-bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev) {
+bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev, bool autobind) {
     bpctx_t ctx;
     ctx.props = dev->props;
     ctx.end = dev->props + dev->prop_count;
@@ -140,28 +144,7 @@ bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev) {
     ctx.binding = drv->binding;
     ctx.binding_size = drv->binding_size;
     ctx.name = drv->name;
+    ctx.autobind = autobind ? 1 : 0;
     return is_bindable(&ctx);
 }
 
-bool devhost_is_bindable_di(magenta_driver_info_t* di, mx_device_t* dev) {
-    bpctx_t ctx;
-    ctx.props = dev->props;
-    ctx.end = dev->props + dev->prop_count;
-    ctx.protocol_id = dev->protocol_id;
-    ctx.binding = di->binding;
-    ctx.binding_size = di->binding_size;
-    ctx.name = di->note->name;
-    return is_bindable(&ctx);
-}
-
-bool devhost_is_bindable(magenta_driver_info_t* di, uint32_t protocol_id,
-                         mx_device_prop_t* props, uint32_t prop_count) {
-    bpctx_t ctx;
-    ctx.props = props;
-    ctx.end = props + prop_count;
-    ctx.protocol_id = protocol_id;
-    ctx.binding = di->binding;
-    ctx.binding_size = di->binding_size;
-    ctx.name = di->note->name;
-    return is_bindable(&ctx);
-}

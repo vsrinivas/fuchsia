@@ -32,6 +32,9 @@
 
 // Safe external APIs are in device.h and device_internal.h
 
+void driver_add(mx_driver_t* driver);
+void driver_remove(mx_driver_t* driver);
+
 mx_status_t devhost_driver_add(mx_driver_t* driver);
 mx_status_t devhost_driver_remove(mx_driver_t* driver);
 mx_status_t devhost_driver_unbind(mx_driver_t* driver, mx_device_t* dev);
@@ -50,10 +53,9 @@ mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out,
                                  const char* path, uint32_t flags);
 mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags);
 
-bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev);
-bool devhost_is_bindable_di(magenta_driver_info_t* di, mx_device_t* dev);
-bool devhost_is_bindable(magenta_driver_info_t* di, uint32_t protocol_id,
-                         mx_device_prop_t* props, uint32_t prop_count);
+bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev, bool autobind);
+
+mx_status_t devhost_load_driver(mx_driver_t* drv);
 
 mx_status_t devhost_load_firmware(mx_driver_t* drv, const char* path,
                                   mx_handle_t* fw, size_t* size);

@@ -79,6 +79,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/devhost-drivers.c \
     $(LOCAL_DIR)/devhost-core.c \
     $(LOCAL_DIR)/devhost-rpc-server.c \
+    $(LOCAL_DIR)/driver-info.c \
     $(DRIVER_SRCS) \
 
 MODULE_STATIC_LIBS := ulib/acpisvc-client ulib/ddk ulib/sync

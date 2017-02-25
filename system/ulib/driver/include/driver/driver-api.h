@@ -12,8 +12,6 @@ typedef struct mx_device mx_device_t;
 typedef struct mx_protocol_device mx_protocol_device_t;
 
 typedef struct driver_api {
-    void (*driver_add)(mx_driver_t* drv);
-    void (*driver_remove)(mx_driver_t* drv);
     void (*driver_unbind)(mx_driver_t* drv, mx_device_t* dev);
 
     mx_status_t (*device_create)(mx_device_t** dev, mx_driver_t* drv,
