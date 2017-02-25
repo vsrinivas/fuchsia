@@ -144,6 +144,7 @@ int unittest_set_verbosity_level(int new_level);
         } else {                                                    \
             unittest_printf_critical(" [PASSED] \n");               \
         }                                                           \
+        current_test_info = NULL;                                   \
     }
 
 #define RUN_TEST(test) RUN_NAMED_TEST(#test, test)
