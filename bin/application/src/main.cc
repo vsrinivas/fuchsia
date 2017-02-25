@@ -19,7 +19,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 constexpr char kDefaultConfigPath[] =
-    "/system/data/application_manager/applications.config";
+    "/system/data/application_manager/initial.config";
 
 int main(int argc, char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
