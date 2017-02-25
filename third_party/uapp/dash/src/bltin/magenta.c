@@ -137,44 +137,166 @@ int mxc_list(int argc, char** argv) {
     return 0;
 }
 
-int mxc_cp(int argc, char** argv) {
+static bool file_exists(const char *filename)
+{
+    struct stat statbuf;
+    return stat(filename, &statbuf) == 0;
+}
+
+static bool verify_file(const char *filename)
+{
+    struct stat statbuf;
+
+    if (stat(filename, &statbuf) != 0) {
+        fprintf(stderr, "cp: Unable to stat %s\n", filename);
+        return false;
+    }
+
+    if (S_ISDIR(statbuf.st_mode)) {
+        fprintf(stderr, "cp: Recursive copy not supported\n");
+        return false;
+    }
+
+    return true;
+}
+
+// Copy into the destination location, which is not a directory
+static int cp_here(const char *src_name, const char *dest_name,
+                   bool dest_exists, bool force)
+{
+    if (! verify_file(src_name)) {
+        return -1;
+    }
+
     char data[4096];
     int fdi = -1, fdo = -1;
     int r, wr;
     int count = 0;
-    if (argc != 3) {
-        fprintf(stderr, "usage: cp <srcfile> <dstfile>\n");
-        return -1;
+    if ((fdi = open(src_name, O_RDONLY)) < 0) {
+        fprintf(stderr, "cp: cannot open '%s'\n", src_name);
+        return fdi;
     }
-    if ((fdi = open(argv[1], O_RDONLY)) < 0) {
-        fprintf(stderr, "error: cannot open '%s'\n", argv[1]);
-        return -1;
-    }
-    if ((fdo = open(argv[2], O_WRONLY | O_CREAT)) < 0) {
-        fprintf(stderr, "error: cannot open '%s'\n", argv[2]);
-        r = fdo;
-        goto done;
+    if ((fdo = open(dest_name, O_WRONLY | O_CREAT)) < 0) {
+        if (! force ||
+            unlink(dest_name) != 0 ||
+            (fdo = open(dest_name, O_WRONLY | O_CREAT)) < 0) {
+            fprintf(stderr, "cp: cannot open '%s'\n", dest_name);
+            close(fdi);
+            return fdo;
+        }
     }
     for (;;) {
         if ((r = read(fdi, data, sizeof(data))) < 0) {
-            fprintf(stderr, "error: failed reading from '%s'\n", argv[1]);
+            fprintf(stderr, "cp: failed reading from '%s'\n", src_name);
             break;
         }
         if (r == 0) {
             break;
         }
         if ((wr = write(fdo, data, r)) != r) {
-            fprintf(stderr, "error: failed writing to '%s'\n", argv[2]);
+            fprintf(stderr, "cp: failed writing to '%s'\n", dest_name);
             r = wr;
             break;
         }
         count += r;
     }
-    fprintf(stderr, "[copied %d bytes]\n", count);
 done:
     close(fdi);
     close(fdo);
     return r;
+}
+
+// Copy a source file into the destination location, which is a directory
+static int cp_to_dir(const char *src_name, const char *dest_name, bool force)
+{
+    if (! verify_file(src_name)) {
+        return -1;
+    }
+
+    const char *filename_start = strrchr(src_name, '/');
+    if (filename_start == NULL) {
+        filename_start = src_name;
+    } else {
+        filename_start++;
+        if (*filename_start == '\0') {
+            fprintf(stderr, "cp: Invalid filename \"%s\"\n", src_name);
+            return -1;
+        }
+    }
+
+    size_t path_len = strlen(dest_name);
+    if (path_len == 0) {
+        fprintf(stderr, "cp: Invalid filename \"%s\"\n", dest_name);
+        return -1;
+    }
+    char full_filename[PATH_MAX];
+    if (dest_name[path_len - 1] == '/') {
+        snprintf(full_filename, PATH_MAX, "%s%s", dest_name, filename_start);
+    } else {
+        snprintf(full_filename, PATH_MAX, "%s/%s", dest_name, filename_start);
+    }
+    return cp_here(src_name, full_filename, file_exists(full_filename), force);
+}
+
+int mxc_cp(int argc, char** argv) {
+    int next_arg = 1;
+    bool force = false;
+    while ((next_arg < argc) && argv[next_arg][0] == '-') {
+        char *next_opt_char = &argv[next_arg][1];
+        if (*next_opt_char == '\0') {
+            goto usage;
+        }
+        do {
+            switch (*next_opt_char) {
+            case 'f':
+                force = true;
+                break;
+            default:
+                goto usage;
+            }
+            next_opt_char++;
+        } while (*next_opt_char);
+        next_arg++;
+    }
+
+    // Make sure we have at least 2 non-option arguments
+    int src_count = (argc - 1) - next_arg;
+    if (src_count <= 0) {
+        goto usage;
+    }
+
+    const char *dest_name = argv[argc - 1];
+    bool dest_exists = false;
+    bool dest_isdir = false;
+    struct stat statbuf;
+
+    if (stat(dest_name, &statbuf) == 0) {
+        dest_exists = true;
+        if (S_ISDIR(statbuf.st_mode)) {
+            dest_isdir = true;
+        }
+    }
+
+    if (dest_isdir) {
+        do {
+            int result;
+            result = cp_to_dir(argv[next_arg], dest_name, force);
+            if (result != 0) {
+                return result;
+            }
+            next_arg++;
+        } while (next_arg < argc - 1);
+        return 0;
+    } else if (src_count > 1) {
+        fprintf(stderr, "cp: destination is not a directory\n");
+        return -1;
+    } else {
+        return cp_here(argv[next_arg], dest_name, dest_exists, force);
+    }
+
+usage:
+    fprintf(stderr, "usage: cp [-f] <src>... <dst>\n");
+    return -1;
 }
 
 int mxc_mkdir(int argc, char** argv) {
