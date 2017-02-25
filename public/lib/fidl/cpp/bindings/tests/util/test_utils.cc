@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <magenta/syscalls/channel.h>
+#include <magenta/syscalls.h>
 
 #include "lib/ftl/logging.h"
 
