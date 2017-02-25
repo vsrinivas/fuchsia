@@ -429,6 +429,9 @@ bool CommandHandler::Handle_G(const ftl::StringView& packet,
     FTL_LOG(ERROR) << "G: Failed to write to general registers";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
+  if (!current_thread->registers()->WriteGeneralRegisters()) {
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
 
   return ReplyOK(callback);
 }
