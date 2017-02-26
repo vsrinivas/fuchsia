@@ -20,7 +20,7 @@ public:
     ~VmxPage();
 
     mx_status_t Alloc(const VmxInfo& info);
-    paddr_t PhysicalAddress() { return pa_; }
+    paddr_t PhysicalAddress();
     void* VirtualAddress();
 
 private:

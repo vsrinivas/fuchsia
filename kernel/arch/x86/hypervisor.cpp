@@ -201,7 +201,13 @@ mx_status_t VmxPage::Alloc(const VmxInfo& info) {
     return NO_ERROR;
 }
 
+paddr_t VmxPage::PhysicalAddress() {
+    DEBUG_ASSERT(page_ != nullptr);
+    return pa_;
+}
+
 void* VmxPage::VirtualAddress() {
+    DEBUG_ASSERT(page_ != nullptr);
     return paddr_to_kvaddr(pa_);
 }
 
@@ -305,7 +311,7 @@ static void set_vmcs_control(uint32_t control, uint64_t state, uint32_t set) {
     vmwrite(control, value);
 }
 
-mx_status_t VmcsCpuContext::Setup(const VmxInfo& info) {
+mx_status_t VmcsCpuContext::Setup() {
     // Execute VMCLEAR.
     mx_status_t status = vmclear(page_.PhysicalAddress());
     if (status != NO_ERROR)
@@ -332,6 +338,7 @@ mx_status_t VmcsCpuContext::Setup(const VmxInfo& info) {
     vmwrite(VMCS_32_EXCEPTION_BITMAP, VMCS_32_EXCEPTION_BITMAP_ALL_EXCEPTIONS);
 
     // We only support full VMX controls.
+    VmxInfo info;
     if (!info.vmx_controls)
         return ERR_NOT_SUPPORTED;
 
@@ -397,9 +404,7 @@ mx_status_t VmcsCpuContext::Setup(const VmxInfo& info) {
 static int vmcs_setup(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsCpuContext* cpu_context = context->CurrCpuContext();
-
-    VmxInfo info;
-    return cpu_context->Setup(info);
+    return cpu_context->Setup();
 }
 
 // static
