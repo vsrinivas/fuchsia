@@ -26,8 +26,6 @@
 #include "devmgr.h"
 #include "memfs-private.h"
 
-#define VC_COUNT 3
-
 static mx_handle_t root_resource_handle;
 static mx_handle_t root_job_handle;
 static mx_handle_t svcs_job_handle;
@@ -279,7 +277,10 @@ static void start_console_shell(void) {
 static void start_console_shell(void) {}
 #endif
 
-static const char* shell_prompt = "PS1=\033[35;1mmagenta\033[39m$ ";
+// a more colorful prompt messes up line editing, unfortunately...
+// static const char* shell_prompt = "PS1=\033[35;1mmagenta\033[39m$ ";
+
+static const char* shell_prompt = "PS1=magenta$ ";
 
 static mx_status_t console_device_added(int dirfd, int event, const char* name, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -290,28 +291,16 @@ static mx_status_t console_device_added(int dirfd, int event, const char* name, 
         return NO_ERROR;
     }
 
-    // start some shells on vcs
-    for (unsigned i = 0; i < VC_COUNT; i++) {
-        int fd;
-        if ((fd = openat(dirfd, name, O_RDWR)) >= 0) {
-            if (i == 0 && switch_to_first_vc()) {
-                ioctl_console_set_active_vc(fd);
-            }
-            devmgr_launch(svcs_job_handle, "sh:vc",
-                          countof(argv_sh), argv_sh, shell_prompt, fd, NULL, NULL, 0);
-            if (i == 0) {
-                // give the higher level system a moment to start
-                mx_nanosleep(MX_SEC(3));
-                struct stat s;
-                if (stat("/system/bin/init", &s) == 0) {
-                    // if there's a higher level init,
-                    // don't start additional vc shells
-                    break;
-                }
-            }
-        } else {
-            printf("devmgr: cannot open vc\n");
+    // Start a shell on a virtual console
+    int fd;
+    if ((fd = openat(dirfd, name, O_RDWR)) >= 0) {
+        if (switch_to_first_vc()) {
+            ioctl_console_set_active_vc(fd);
         }
+        devmgr_launch(svcs_job_handle, "sh:vc",
+                      countof(argv_sh), argv_sh, shell_prompt, fd, NULL, NULL, 0);
+    } else {
+        printf("devmgr: cannot open vc\n");
     }
 
     // stop polling
