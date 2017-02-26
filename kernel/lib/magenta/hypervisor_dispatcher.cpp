@@ -4,28 +4,38 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/hypervisor.h>
 #include <magenta/hypervisor_dispatcher.h>
+#include <mxtl/auto_lock.h>
 #include <new.h>
 
 constexpr mx_rights_t kDefaultHypervisorRights = MX_RIGHT_EXECUTE;
 
+Mutex mutex;
+mxtl::RefPtr<HypervisorDispatcher> hypervisor TA_GUARDED(mutex);
+
 // static
 mx_status_t HypervisorDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher,
-                                      mx_rights_t* rights) {
-    // TODO(abdulla): Only allow a single HypervisorContext at a time.
-    mxtl::unique_ptr<HypervisorContext> context;
-    mx_status_t status = arch_hypervisor_create(&context);
-    if (status != NO_ERROR)
-        return status;
+                                         mx_rights_t* rights) {
+    AutoLock lock(mutex);
 
-    AllocChecker ac;
-    auto hypervisor = mxtl::AdoptRef(new (&ac) HypervisorDispatcher(mxtl::move(context)));
-    if (!ac.check())
-        return ERR_NO_MEMORY;
+    if (!hypervisor) {
+        mxtl::unique_ptr<HypervisorContext> context;
+        mx_status_t status = arch_hypervisor_create(&context);
+        if (status != NO_ERROR)
+            return status;
+
+        // TODO(abdulla): We call AdoptRef to create a long-lived singleton.
+        // This works for now, but a better solution would be to fully shutdown
+        // on destruction. Unfortunately, we can't override Release to keep
+        // prevent a race from happening during destruction.
+        AllocChecker ac;
+        hypervisor = mxtl::AdoptRef(new (&ac) HypervisorDispatcher(mxtl::move(context)));
+        if (!ac.check())
+            return ERR_NO_MEMORY;
+    }
 
     *rights = kDefaultHypervisorRights;
-    *dispatcher = mxtl::RefPtr<Dispatcher>(hypervisor.get());
+    *dispatcher = mxtl::RefPtr<Dispatcher>(hypervisor);
     return NO_ERROR;
 }
 
