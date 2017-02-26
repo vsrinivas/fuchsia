@@ -459,39 +459,45 @@ bool exchange_test() {
 }
 
 template <typename T>
-using cas_function = bool (*)(mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-                              mxtl::memory_order success_order, mxtl::memory_order failure_order);
-
-template <typename T>
-cas_function<T> cas_functions[] = {
-    mxtl::atomic_compare_exchange_weak,
-    mxtl::atomic_compare_exchange_strong,
-    [](mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-       mxtl::memory_order success_order, mxtl::memory_order failure_order) {
-        return atomic_ptr->compare_exchange_weak(expected, desired, success_order, failure_order);
-    },
-    [](mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-       mxtl::memory_order success_order, mxtl::memory_order failure_order) {
-        return atomic_ptr->compare_exchange_strong(expected, desired, success_order, failure_order);
-    },
+struct cas_function {
+    bool (*function)(mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+                     mxtl::memory_order success_order, mxtl::memory_order failure_order);
+    bool can_spuriously_fail;
 };
 
 template <typename T>
-using volatile_cas_function = bool (*)(volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-                                       mxtl::memory_order success_order, mxtl::memory_order failure_order);
+cas_function<T> cas_functions[] = {
+    { mxtl::atomic_compare_exchange_weak, true },
+    { mxtl::atomic_compare_exchange_strong, false },
+    { [](mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+         mxtl::memory_order success_order, mxtl::memory_order failure_order) {
+            return atomic_ptr->compare_exchange_weak(expected, desired, success_order, failure_order);
+        }, true },
+    { [](mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+         mxtl::memory_order success_order, mxtl::memory_order failure_order) {
+            return atomic_ptr->compare_exchange_strong(expected, desired, success_order, failure_order);
+        }, false },
+};
+
+template <typename T>
+struct volatile_cas_function {
+    bool (*function)(volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+                     mxtl::memory_order success_order, mxtl::memory_order failure_order);
+    bool can_spuriously_fail;
+};
 
 template <typename T>
 volatile_cas_function<T> volatile_cas_functions[] = {
-    mxtl::atomic_compare_exchange_weak,
-    mxtl::atomic_compare_exchange_strong,
-    [](volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-       mxtl::memory_order success_order, mxtl::memory_order failure_order) {
-        return atomic_ptr->compare_exchange_weak(expected, desired, success_order, failure_order);
-    },
-    [](volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-       mxtl::memory_order success_order, mxtl::memory_order failure_order) {
-        return atomic_ptr->compare_exchange_strong(expected, desired, success_order, failure_order);
-    },
+    { mxtl::atomic_compare_exchange_weak, true },
+    { mxtl::atomic_compare_exchange_strong, false },
+    { [](volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+         mxtl::memory_order success_order, mxtl::memory_order failure_order) {
+            return atomic_ptr->compare_exchange_weak(expected, desired, success_order, failure_order);
+        }, true },
+    { [](volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+         mxtl::memory_order success_order, mxtl::memory_order failure_order) {
+            return atomic_ptr->compare_exchange_strong(expected, desired, success_order, failure_order);
+        }, false }
 };
 
 template <typename T>
@@ -505,8 +511,8 @@ bool compare_exchange_test() {
                     mxtl::atomic<T> atomic_value(actual);
                     T expected = 22;
                     T desired = 24;
-                    EXPECT_FALSE(cas(&atomic_value, &expected, desired,
-                                     success_order, failure_order),
+                    EXPECT_FALSE(cas.function(&atomic_value, &expected, desired,
+                                              success_order, failure_order),
                                  "compare-exchange shouldn't have succeeded!");
                     EXPECT_EQ(expected, actual, "compare-exchange didn't report actual value!");
                 }
@@ -516,9 +522,12 @@ bool compare_exchange_test() {
                     mxtl::atomic<T> atomic_value(actual);
                     T expected = actual;
                     T desired = 24;
-                    EXPECT_TRUE(cas(&atomic_value, &expected, desired,
-                                    success_order, failure_order),
-                                "compare-exchange should've succeeded!");
+                    // Some compare-and-swap functions can spuriously fail.
+                    bool succeeded = cas.function(&atomic_value, &expected, desired,
+                                                  success_order, failure_order);
+                    if (!cas.can_spuriously_fail) {
+                        EXPECT_TRUE(succeeded, "compare-exchange should've succeeded!");
+                    }
                     EXPECT_EQ(expected, actual, "compare-exchange didn't report actual value!");
                 }
             }
@@ -534,8 +543,8 @@ bool compare_exchange_test() {
                     mxtl::atomic<T> atomic_value(actual);
                     T expected = 22;
                     T desired = 24;
-                    EXPECT_FALSE(cas(&atomic_value, &expected, desired,
-                                     success_order, failure_order),
+                    EXPECT_FALSE(cas.function(&atomic_value, &expected, desired,
+                                              success_order, failure_order),
                                  "compare-exchange shouldn't have succeeded!");
                     EXPECT_EQ(expected, actual, "compare-exchange didn't report actual value!");
                 }
@@ -545,9 +554,13 @@ bool compare_exchange_test() {
                     mxtl::atomic<T> atomic_value(actual);
                     T expected = actual;
                     T desired = 24;
-                    EXPECT_TRUE(cas(&atomic_value, &expected, desired,
-                                    success_order, failure_order),
-                                "compare-exchange should've succeeded!");
+                    // Compare-and-swap can spuriously fail.
+                    // Some compare-and-swap functions can spuriously fail.
+                    bool succeeded = cas.function(&atomic_value, &expected, desired,
+                                                  success_order, failure_order);
+                    if (!cas.can_spuriously_fail) {
+                        EXPECT_TRUE(succeeded, "compare-exchange should've succeeded!");
+                    }
                     EXPECT_EQ(expected, actual, "compare-exchange didn't report actual value!");
                 }
             }
