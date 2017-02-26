@@ -13,6 +13,8 @@ Prerequisite:
 - An instance of magenta running (on qemu or real device), configured with networking. For
   example, see [networking configuration
   doc](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only).
+- A build configuration that runs `test_runner` at startup. For example,
+  `./package/gn/gen.py -m boot_test_modular`.
 
 *Testing on a qemu instance:*
 Run a test using `//apps/modular/src/test_runner/run_test`. E.g:
