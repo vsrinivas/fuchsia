@@ -54,9 +54,8 @@ static int reboot_async(void* arg) {
 static mx_status_t devmgr_control(const char* cmd) {
     if (!strcmp(cmd, "help")) {
         printf("dump        - dump device tree\n"
-               "lsof        - list open remoteio files and devices\n"
-               "crash       - crash the device manager\n"
-               "poweroff    - poweroff the system\n"
+               "poweroff    - power off the system\n"
+               "shutdown    - power off the system\n"
                "reboot      - reboot the system\n"
                "kerneldebug - send a command to the kernel\n"
                "ktraceoff   - stop kernel tracing\n"
@@ -65,11 +64,7 @@ static mx_status_t devmgr_control(const char* cmd) {
                );
         return NO_ERROR;
     }
-    if (!strcmp(cmd, "crash")) {
-        *((int*)0x1234) = 42;
-        return NO_ERROR;
-    }
-    if (!strcmp(cmd, "poweroff")) {
+    if (!strcmp(cmd, "poweroff") || !strcmp(cmd, "shutdown")) {
         // TODO(smklein): Relocate poweroff/reboot to a non-devmgr service
         thrd_t t;
         if (thrd_create(&t, shutdown_async, NULL)) {
@@ -112,6 +107,7 @@ static mx_status_t devmgr_control(const char* cmd) {
         return NO_ERROR;
     }
 
+    printf("dmctl: unknown command '%s'\n", cmd);
     return ERR_NOT_SUPPORTED;
 }
 
