@@ -18,6 +18,7 @@
 #include <arch/x86/hypervisor.h>
 #include <arch/x86/hypervisor_host.h>
 #include <arch/x86/idt.h>
+#include <arch/x86/registers.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <magenta/errors.h>
@@ -214,6 +215,12 @@ void* VmxPage::VirtualAddress() {
     return paddr_to_kvaddr(pa_);
 }
 
+static bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr) {
+    uint64_t fixed0 = read_msr(fixed0_msr);
+    uint64_t fixed1 = read_msr(fixed1_msr);
+    return ~(cr_value | ~fixed0) != 0 || ~(~cr_value | fixed1) != 0;
+}
+
 static int vmx_enable(void* arg) {
     VmxonContext* context = static_cast<VmxonContext*>(arg);
     VmxonCpuContext* cpu_context = context->CurrCpuContext();
@@ -236,18 +243,16 @@ static int vmx_enable(void* arg) {
         write_msr(X86_MSR_IA32_FEATURE_CONTROL, feature_control);
     }
 
-    // Check control registers are in a VMX-friendly state.
-    uint64_t cr0_fixed0 = read_msr(X86_MSR_IA32_VMX_CR0_FIXED0);
-    uint64_t cr0_fixed1 = read_msr(X86_MSR_IA32_VMX_CR0_FIXED1);
-    uint64_t cr0 = x86_get_cr0();
-    if (~(cr0 | ~cr0_fixed0) != 0 || ~(~cr0 | cr0_fixed1) != 0)
-        return ERR_BAD_STATE;
 
-    uint64_t cr4_fixed0 = read_msr(X86_MSR_IA32_VMX_CR4_FIXED0);
-    uint64_t cr4_fixed1 = read_msr(X86_MSR_IA32_VMX_CR4_FIXED1);
-    uint64_t cr4 = x86_get_cr4() | X86_CR4_VMXE;
-    if (~(cr4 | ~cr4_fixed0) != 0 || ~(~cr4 | cr4_fixed1) != 0)
+    // Check control registers are in a VMX-friendly state.
+    uint64_t cr0 = x86_get_cr0();
+    if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
         return ERR_BAD_STATE;
+    }
+    uint64_t cr4 = x86_get_cr4() | X86_CR4_VMXE;
+    if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
+        return ERR_BAD_STATE;
+    }
 
     // Enable VMX using the VMXE bit.
     x86_set_cr4(cr4);
@@ -424,13 +429,6 @@ mx_status_t VmcsCpuContext::Setup() {
     if (status != NO_ERROR)
         return status;
 
-    // From Volume 3, Section 24.4.2: If the “VMCS shadowing” VM-execution
-    // control is 1, the VMREAD and VMWRITE instructions access the VMCS
-    // referenced by this pointer (see Section 24.10). Otherwise, software
-    // should set this field to FFFFFFFF_FFFFFFFFH to avoid VM-entry
-    // failures (see Section 26.3.1.5).
-    vmwrite(VMCS_64_LINK_POINTER, VMCS_64_LINK_POINTER_INVALIDATE);
-
     // From Volume 3, Section 24.6.3: The exception bitmap is a 32-bit field
     // that contains one bit for each exception. When an exception occurs,
     // its vector is used to select a bit in this field. If the bit is 1,
@@ -472,6 +470,66 @@ mx_status_t VmcsCpuContext::Setup() {
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_ESP, 0);
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_EIP, 0);
     vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load_entry));
+
+    // Setup VMCS guest state.
+
+    // For now, we're aiming for a basic 64-bit guest that's able to execute a couple of
+    // instructions and exit - we're not there yet.
+
+    uint64_t cr0 = X86_CR0_PE | // Enable protected mode
+                   X86_CR0_PG | // Enable paging
+                   X86_CR0_NE;  // Enable internal x87 exception handling
+    if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
+        return ERR_BAD_STATE;
+    }
+    vmwrite(VMCS_XX_GUEST_CR0, cr0);
+
+    uint64_t cr4 = X86_CR4_PAE |  // Enable PAE paging
+                   X86_CR4_VMXE;  // Enable VMX
+    if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
+        return ERR_BAD_STATE;
+    }
+    vmwrite(VMCS_XX_GUEST_CR4, cr4);
+
+    vmwrite(VMCS_32_GUEST_CS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_64BIT_CS |
+                                            VMCS_GUEST_ACCESS_RIGHTS_SEGMENT_PRESENT |
+                                            VMCS_GUEST_ACCESS_RIGHTS_DPL_00 |
+                                            VMCS_GUEST_ACCESS_RIGHTS_NON_SYSTEM_SEGMENT |
+                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_EXECUTE |
+                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_READ |
+                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_CONFORMING |
+                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_ACCESSED);
+
+    vmwrite(VMCS_32_GUEST_TR_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_SEGMENT_PRESENT |
+                                            VMCS_GUEST_ACCESS_RIGHTS_DPL_00 |
+                                            VMCS_GUEST_ACCESS_RIGHTS_SYSTEM_SEGMENT |
+                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_TSS_64BIT |
+                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_TSS_BUSY);
+
+    // Disable all other segment selectors until we have a guest that uses them.
+    vmwrite(VMCS_32_GUEST_SS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_DS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_ES_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_FS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_GS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_LDTR_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
+
+    vmwrite(VMCS_32_GUEST_GDTR_LIMIT, 0);
+    vmwrite(VMCS_32_GUEST_IDTR_LIMIT, 0);
+
+    // Set all reserved RFLAGS bits to their correct values
+    vmwrite(VMCS_XX_GUEST_RFLAGS, X86_FLAGS_RESERVED_ONES);
+
+    vmwrite(VMCS_32_GUEST_ACTIVITY_STATE, 0);
+    vmwrite(VMCS_32_GUEST_INTERRUPTIBILITY_STATE, 0);
+    vmwrite(VMCS_XX_GUEST_PENDING_DEBUG_EXCEPTIONS, 0);
+
+    // From Volume 3, Section 24.4.2: If the “VMCS shadowing” VM-execution
+    // control is 1, the VMREAD and VMWRITE instructions access the VMCS
+    // referenced by this pointer (see Section 24.10). Otherwise, software
+    // should set this field to FFFFFFFF_FFFFFFFFH to avoid VM-entry
+    // failures (see Section 26.3.1.5).
+    vmwrite(VMCS_64_LINK_POINTER, VMCS_64_LINK_POINTER_INVALIDATE);
 
     return NO_ERROR;
 }

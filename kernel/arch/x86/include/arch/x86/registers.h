@@ -59,6 +59,7 @@
 #define X86_FLAGS_VIF                   (1<<19)
 #define X86_FLAGS_VIP                   (1<<20)
 #define X86_FLAGS_ID                    (1<<21)
+#define X86_FLAGS_RESERVED_ONES 0x2
 #define X86_FLAGS_RESERVED 0xffc0802a
 
 #ifndef ASSEMBLY

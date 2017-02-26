@@ -32,8 +32,10 @@
 /* VMCS fields */
 #define VMCS_16_VPID                                0x0000      /* Virtual processor ID */
 #define VMCS_16_GUEST_CS_SELECTOR                   0x0802      /* Guest CS selector */
+#define VMCS_16_GUEST_TR_SELECTOR                   0x080e      /* Guest TR selector */
 #define VMCS_16_HOST_CS_SELECTOR                    0x0c02      /* Host CS selector */
 #define VMCS_16_HOST_TR_SELECTOR                    0x0c0c      /* Host TR selector */
+
 #define VMCS_32_PINBASED_CTLS                       0x4000      /* Pin-based controls */
 #define VMCS_32_PROCBASED_CTLS                      0x4002      /* Primary processor-based controls */
 #define VMCS_32_EXCEPTION_BITMAP                    0x4004      /* Exception bitmap */
@@ -45,14 +47,33 @@
 #define VMCS_32_INSTRUCTION_ERROR                   0x4400      /* Instruction error */
 #define VMCS_32_EXIT_REASON                         0x4402      /* Exit reason */
 #define VMCS_32_HOST_IA32_SYSENTER_CS               0x4c00      /* Host SYSENTER CS */
+#define VMCS_32_GUEST_GDTR_LIMIT                    0x4810      /* Guest GDTR Limit */
+#define VMCS_32_GUEST_IDTR_LIMIT                    0x4812      /* Guest IDTR Limit */
+#define VMCS_32_GUEST_CS_ACCESS_RIGHTS              0x4816      /* Guest CS Access Rights */
+#define VMCS_32_GUEST_ES_ACCESS_RIGHTS              0x4814      /* Guest ES Access Rights */
+#define VMCS_32_GUEST_SS_ACCESS_RIGHTS              0x4818      /* Guest SS Access Rights */
+#define VMCS_32_GUEST_DS_ACCESS_RIGHTS              0x481a      /* Guest DS Access Rights */
+#define VMCS_32_GUEST_FS_ACCESS_RIGHTS              0x481c      /* Guest FS Access Rights */
+#define VMCS_32_GUEST_GS_ACCESS_RIGHTS              0x481e      /* Guest GS Access Rights */
+#define VMCS_32_GUEST_LDTR_ACCESS_RIGHTS            0x4820      /* Guest LDTR Access Rights */
+#define VMCS_32_GUEST_TR_ACCESS_RIGHTS              0x4822      /* Guest TR Access Rights */
+#define VMCS_32_GUEST_INTERRUPTIBILITY_STATE        0x4824      /* Guest interruptibility state */
+#define VMCS_32_GUEST_ACTIVITY_STATE                0x4826      /* Guest activity state */
+
 #define VMCS_64_MSR_BITMAPS_ADDRESS                 0x2004      /* MSR bitmaps address */
 #define VMCS_64_LINK_POINTER                        0x2800      /* VMCS link pointer */
+#define VMCS_64_GUEST_IA32_PAT                      0x2804      /* Guest PAT */
+#define VMCS_64_GUEST_IA32_EFER                     0x2806      /* Guest EFER */
 #define VMCS_64_HOST_IA32_PAT                       0x2c00      /* Host PAT */
 #define VMCS_64_HOST_IA32_EFER                      0x2c02      /* Host EFER */
+
+#define VMCS_XX_GUEST_CR0                           0x6800      /* Guest CR0 */
 #define VMCS_XX_GUEST_CR3                           0x6802      /* Guest CR3 */
-#define VMCS_XX_GUEST_GDTR_BASE                     0x6816      /* Guest GDTR base */
+#define VMCS_XX_GUEST_CR4                           0x6804      /* Guest CR4 */
 #define VMCS_XX_GUEST_RSP                           0x681c      /* Guest RSP */
 #define VMCS_XX_GUEST_RIP                           0x681e      /* Guest RIP */
+#define VMCS_XX_GUEST_RFLAGS                        0x6820      /* Guest RFLAGS */
+#define VMCS_XX_GUEST_PENDING_DEBUG_EXCEPTIONS      0x6822      /* Guest pending debug exceptions */
 #define VMCS_XX_HOST_CR0                            0x6c00      /* Host CR0 */
 #define VMCS_XX_HOST_CR3                            0x6c02      /* Host CR3 */
 #define VMCS_XX_HOST_CR4                            0x6c04      /* Host CR4 */
@@ -101,6 +122,27 @@
 
 /* VMCS_32_EXIT_REASON values */
 #define VMCS_32_EXIT_REASON_BASIC_MASK              0xffff
+
+/* VMCS_32_GUEST_ACCESS_RIGHTS flags */
+// See Volume 3, Section 24.4.1 for access rights format.
+#define VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE           (1u << 16)
+
+#define VMCS_GUEST_ACCESS_RIGHTS_64BIT_CS           (1u << 13)
+#define VMCS_GUEST_ACCESS_RIGHTS_SEGMENT_PRESENT    (1u << 7)
+#define VMCS_GUEST_ACCESS_RIGHTS_DPL_00             (0u << 5)
+#define VMCS_GUEST_ACCESS_RIGHTS_NON_SYSTEM_SEGMENT (1u << 4)
+#define VMCS_GUEST_ACCESS_RIGHTS_SYSTEM_SEGMENT     (0u << 4)
+
+// See Volume 1, Section 3.4.5.1 for valid non-system selector types.
+#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_ACCESSED   (1u << 8)
+#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_READ       (1u << 9)
+#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_CONFORMING (1u << 10)
+#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_EXECUTE    (1u << 11)
+
+// See Volume 1, Section 3.5 for valid system selectors types.
+#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_TSS_64BIT     (9u << 8)
+#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_TSS_BUSY      (1u << 9)
+
 
 /* Stores VMX info from the VMX basic MSR. */
 struct VmxInfo {
