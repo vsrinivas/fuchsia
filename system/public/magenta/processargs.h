@@ -80,10 +80,6 @@ struct mx_proc_args {
 // this VMO from the (adjusted back up) initial SP value.
 #define MX_HND_TYPE_STACK_VMO 4
 
-// Handle to a VMO containing a bootfs format image.
-// The "arg" field used with this type is a simple ordinal.
-#define MX_HND_TYPE_BOOTFS_VMO 5
-
 // Handle to a Job object which can be used to make child processes. The
 // Job can be the same as the one used to create this process or it can
 // be different.
@@ -105,6 +101,10 @@ struct mx_proc_args {
 
 // Handle types used by the device manager and device hosts
 #define MX_HND_TYPE_RESOURCE 0x20
+
+// Handle types used by kernel & userboot for system startup
+#define MX_HND_TYPE_BOOTDATA_VMO 0x30
+#define MX_HND_TYPE_BOOTFS_VMO 0x31
 
 // Handle types used by the application model
 #define MX_HND_TYPE_APPLICATION_REQUEST 0x100 // deprecated

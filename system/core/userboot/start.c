@@ -10,6 +10,7 @@
 #pragma GCC visibility push(hidden)
 
 #include <bootdata/decompress.h>
+#include <magenta/bootdata.h>
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/log.h>
@@ -108,10 +109,6 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         case MX_HND_TYPE_VDSO_VMO:
             vdso_vmo = handles[i];
             break;
-        case MX_HND_TYPE_BOOTFS_VMO:
-            if (MX_HND_INFO_ARG(handle_info[i]) == 0)
-                bootfs_vmo = handles[i];
-            break;
         case MX_HND_TYPE_PROC_SELF:
             proc_handle_loc = &handles[i];
             break;
@@ -132,8 +129,6 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
             break;
         }
     }
-    if (bootfs_vmo == MX_HANDLE_INVALID)
-        fail(log, ERR_INVALID_ARGS, "no bootfs handle in bootstrap message\n");
     if (vdso_vmo == MX_HANDLE_INVALID)
         fail(log, ERR_INVALID_ARGS, "no vDSO handle in bootstrap message\n");
     if (resource_root == MX_HANDLE_INVALID)
@@ -159,13 +154,33 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // Decompress any bootfs VMOs if necessary
     for (uint32_t i = 0; i < nhandles; ++i) {
-        if (MX_HND_INFO_TYPE(handle_info[i]) == MX_HND_TYPE_BOOTFS_VMO) {
-            handles[i] = decompress_vmo(log, vmar_self, handles[i]);
-            if (MX_HND_INFO_ARG(handle_info[i]) == 0) {
-                bootfs_vmo = handles[i];
+        if (MX_HND_INFO_TYPE(handle_info[i]) == MX_HND_TYPE_BOOTDATA_VMO) {
+            bootdata_t bootdata;
+            size_t actual;
+            status = mx_vmo_read(handles[i], &bootdata, 0, sizeof(bootdata), &actual);
+            if ((status < 0) || (actual != sizeof(bootdata))) {
+                continue;
             }
+
+            mx_handle_t newvmo;
+            const char* errmsg;
+            status = decompress_bootdata(vmar_self, handles[i],
+                                         0, bootdata.insize + sizeof(bootdata),
+                                         &newvmo, &errmsg);
+            if (status < 0) {
+                fail(log, status, errmsg);
+            }
+            if (MX_HND_INFO_ARG(handle_info[i]) == 0) {
+                bootfs_vmo = newvmo;
+            }
+            mx_handle_close(handles[i]);
+            handles[i] = newvmo;
+            handle_info[i] = MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, MX_HND_INFO_ARG(handle_info[i]));
         }
     }
+
+    if (bootfs_vmo == MX_HANDLE_INVALID)
+        fail(log, ERR_INVALID_ARGS, "no bootfs in bootstrap message\n");
 
     // Make the channel for the bootstrap message.
     mx_handle_t to_child;
