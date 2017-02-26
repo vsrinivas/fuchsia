@@ -26,6 +26,10 @@
 mx_status_t sys_port_create(uint32_t options, mx_handle_t* _out) {
     LTRACEF("options %u\n", options);
 
+    // Currently, the only allowed option is to switch on PortsV2.
+    if (options & ~MX_PORT_OPT_V2)
+        return ERR_INVALID_ARGS;
+
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
