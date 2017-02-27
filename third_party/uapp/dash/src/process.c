@@ -136,16 +136,25 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
     // TODO(abarth): Handle the redirects properly (i.e., implement
     // redirect(n->nredir.redirect) using launchpad);
     mx_handle_t ast_vmo = MX_HANDLE_INVALID;
+
+    // Create a node for our expression
     struct nodelist *nlist = ckmalloc(sizeof(struct nodelist));
     nlist->n = n;
     nlist->next = NULL;
+
+    // Create nodes for all function definitions
     hashiter(addfuncdef, &nlist);
+
+    // Encode the node list
     mx_status_t status = codec_encode(nlist, &ast_vmo);
+
+    // Clean up
     while (nlist) {
         struct nodelist *next = nlist->next;
         ckfree(nlist);
         nlist = next;
     }
+
     if (status != NO_ERROR)
         return status;
 

@@ -477,10 +477,7 @@ evalsubshell(union node *n, int flags)
 	INTOFF;
 	jp = makejob(n, 1);
 	mx_handle_t process;
-	// TODO(joshconner): Here we're promoting non-exported variables to
-	// environment variables, which isn't quite correct (any commands
-	// executed in the subshell will inherit these definitions).
-	const char* const* envp = (const char* const*)listvars(0, VUNSET, 0);
+	const char* const* envp = (const char* const*)environment();
 
 	// Run in the foreground (of the subshell running in the background)
 	if (backgnd)
