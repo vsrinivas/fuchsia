@@ -4,28 +4,58 @@ This directory contains Bootstrap, an application which is responsible
 for setting up an environment which provides access to global system
 services.
 
-This application is intended to be run very early in the Fuchsia boot
-process before bringing up the graphical environment.  In a fully
-integrated system you will not have need to run Bootstrap directly
-because it will already be running.
+This application runs quite early in the Fuchsia boot process. See the
+[boot sequence](https://fuchsia.googlesource.com/docs/+/master/boot_sequence.md)
+for more information.
 
 Bootstrap is designed to be fairly robust.  If any of the services
 dies, they will be restarted automatically the next time an
 application attempts to connect to that service.
 
-By default, bootstrap reads a configuration file from
-"/system/data/bootstrap/services.config".
+By default, bootstrap reads configuration files from
+`/system/data/bootstrap/apps.config` and
+`/system/data/bootstrap/services.config`.
 
-## USAGE
+## CONFIGURATION
+
+### Services
+
+The bootstrap services configuration is a JSON file consisting of service
+registrations.  Each entry in the "services" map consists of a service
+name and the application URL which provides it.
+
+    {
+      "services": {
+        "service-name-1": "file:///system/apps/app_without_args",
+        "service-name-2": [
+           "file:///system/apps/app_with_args", "arg1", "arg2", "arg3"
+        ]
+      }
+    }
+
+### Apps
+
+The bootstrap apps configuration is a JSON file consisting of apps to run at
+startup.  Each entry in the "apps" list consists of either an app URL or a list
+of an app URL and its arguments.
+
+    {
+      "apps": [
+        "file:///system/apps/app_without_args",
+        [ "file:///system/apps/app_with_args", "arg1", "arg2", "arg3" ]
+      ]
+    }
+
+## DIRECT USAGE (uncommon)
 
 Bootstrap takes a single application to run within the newly created
 environment.
 
-    @ bootstrap [args...] <app url> <app args...>
+    bootstrap [args...] <app url> <app args...>
 
 Bootstrap can also be run without any initial apps for debugging purposes.
 
-    @ bootstrap -
+    bootstrap -
 
 URLs can be specified in any of the following forms:
 
@@ -60,56 +90,20 @@ Standard logging arguments:
 
 Run 'device_runner':
 
-    @ bootstrap device_runner
+    bootstrap device_runner
 
 Run 'launcher' passing 'noodles_view' as argument to it:
 
-    @ bootstrap launcher noodles_view
+    bootstrap launch noodles_view
 
 Run 'guide' providing two additional services in its environment:
 
-    @ bootstrap --reg=hitchhike::Towel@file:///path/to/towel,hitchhike::HoopyFrood@file:///path/to/ford_prefect guide
+    bootstrap --reg=hitchhike::Towel@file:///path/to/towel,hitchhike::HoopyFrood@file:///path/to/ford_prefect guide
 
 Run 'my_app' with a custom configuration file:
 
-    @ bootstrap --config=my.config my_app
+    bootstrap --config=my.config my_app
 
 Run 'my_app' without any other configured services:
 
-    @ bootstrap --no-config --reg=my::Service@file:///path/to/my_server my_app
-
-## CONFIGURATION
-
-### Services
-
-The bootstrap services configuration is a JSON file consisting of service
-registrations.  Each entry in the "services" map consists of a service
-name and the application URL which provides it.
-
-    {
-      "services": {
-        "service-name-1": "file:///system/apps/app_without_args",
-        "service-name-2": [
-           "file:///system/apps/app_with_args", "arg1", "arg2", "arg3"
-        ]
-      }
-    }
-
-### Apps
-
-The bootstrap apps configuration is a JSON file consisting of apps to run at
-startup.  Each entry in the "apps" list consists of either an app URL or a list
-of an app URL and its arguments.
-
-    {
-      "apps": [
-        "file:///system/apps/app_without_args",
-        [ "file:///system/apps/app_with_args", "arg1", "arg2", "arg3" ]
-      ]
-    }
-
-## FUTURE WORK
-
-Bootstrap only sets up one environment whereas it could perhaps set
-up a tree of environments and launch applications within them according
-to their privilege level and the isolation they require.
+    bootstrap --no-config --reg=my::Service@file:///path/to/my_server my_app

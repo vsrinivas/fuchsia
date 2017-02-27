@@ -1,6 +1,6 @@
 Use `run_component` to launch applications packaged as components:
 ```
-@ bootstrap run_component https://www.example.com/mycomponent
+run_component https://www.example.com/mycomponent
 ```
 
 `run_component` creates a new environment containing all of the services in

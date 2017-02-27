@@ -1,7 +1,7 @@
 ## How to run
 
 ```
-@ bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=suggest_shell_controller
+device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=suggest_shell_controller
 ```
 
 ## What is it

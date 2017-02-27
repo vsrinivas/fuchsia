@@ -16,13 +16,13 @@ in a shared context without the need to call each other's APIs directly.
 On the Fuchsia command line you can start an example application flow like this:
 
 ```sh
-@ bootstrap device_runner --user_shell=dummy_user_shell
+device_runner --user_shell=dummy_user_shell
 ```
 
 A single application can be run using the `dev_user_shell`, for example:
 
 ```sh
-@ bootstrap device_runner --user_shell=dev_user_shell --user_shell_args='--root_module=example_flutter_counter_parent,--root_link={"http://schema.domokit.org/counter":5}'
+device_runner --user_shell=dev_user_shell --user_shell_args='--root_module=example_flutter_counter_parent,--root_link={"http://schema.domokit.org/counter":5}'
 ```
 
 The flags `--user_shell` and `--user_shell_args` are read by `device_runner`.
@@ -36,7 +36,7 @@ JSON representation of the initial data the module is started with.
 The dummy user name used by the dummy user shell can be set with `--user`:
 
 ```sh
-@ bootstrap device_runner --user_shell=dummy_user_shell --user_shell_args=--user=dummy_user
+device_runner --user_shell=dummy_user_shell --user_shell_args=--user=dummy_user
 ```
 
 Applications are generally referenced by URLs. If the application binary is in a
@@ -46,16 +46,14 @@ path, or absolute altogether. For example
 (from [test runner invocation](tests/parent_child/test.sh)):
 
 ```
-@ bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/tmp/tests/parent_child/parent_module
+device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/tmp/tests/parent_child/parent_module
 ```
 
 or even more generally:
 
 ```
-@ bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=file:///tmp/tests/parent_child/parent_module
+device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=file:///tmp/tests/parent_child/parent_module
 ```
-
-See also the [bootstrap](src/bootstrap/README.md) documentation.
 
 ## Testing
 
@@ -63,7 +61,7 @@ Testing support is currently under development.
 Please use our example as an integration test and wait for it to complete.
 
 ```sh
-$ @ bootstrap device_runner --user_shell=dummy_user_shell
+$ device_runner --user_shell=dummy_user_shell
 ...
 ...
 [00091.616] 03539.03566> [INFO:../../apps/modular/src/user_runner/dummy_user_shell.cc(256)] DummyUserShell DELETE STORY DONE

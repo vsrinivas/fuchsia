@@ -5,7 +5,7 @@ Example module that uses Ledger to store internal data.
 To run the module, run:
 
 ```
-@ bootstrap device_runner --user-shell=dev_user_shell --user-shell-args=--root-module=example_todo_headless
+device_runner --user-shell=dev_user_shell --user-shell-args=--root-module=example_todo_headless
 ```
 
 This is a headless module, taking no input and writing the output to stdout.
