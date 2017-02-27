@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <link.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -360,6 +361,59 @@ static bool debugger_thread_list_test(void)
     END_TEST;
 }
 
+static bool property_process_debug_addr_test(void)
+{
+    BEGIN_TEST;
+
+    mx_handle_t self = mx_process_self();
+
+    // We shouldn't be able to set it.
+    uintptr_t debug_addr = 42;
+    mx_status_t status = mx_object_set_property(self, MX_PROP_PROCESS_DEBUG_ADDR,
+                                                &debug_addr, sizeof(debug_addr));
+    ASSERT_EQ(status, ERR_ACCESS_DENIED, "");
+
+    // Some minimal verification that the value is correct.
+
+    status = mx_object_get_property(self, MX_PROP_PROCESS_DEBUG_ADDR,
+                                    &debug_addr, sizeof(debug_addr));
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    // These are all dsos we link with. See rules.mk.
+    const char* launchpad_so = "liblaunchpad.so";
+    bool found_launchpad = false;
+    const char* libc_so = "libc.so";
+    bool found_libc = false;
+    const char* test_utils_so = "libtest-utils.so";
+    bool found_test_utils = false;
+    const char* unittest_so = "libunittest.so";
+    bool found_unittest = false;
+
+    const struct r_debug* r_debug = (struct r_debug*) debug_addr;
+    const struct link_map* lmap = r_debug->r_map;
+
+    EXPECT_EQ((int) r_debug->r_state, RT_CONSISTENT, "");
+
+    while (lmap != NULL) {
+        if (strcmp(lmap->l_name, launchpad_so) == 0)
+            found_launchpad = true;
+        else if (strcmp(lmap->l_name, libc_so) == 0)
+            found_libc = true;
+        else if (strcmp(lmap->l_name, test_utils_so) == 0)
+            found_test_utils = true;
+        else if (strcmp(lmap->l_name, unittest_so) == 0)
+            found_unittest = true;
+        lmap = lmap->l_next;
+    }
+
+    EXPECT_TRUE(found_launchpad, "");
+    EXPECT_TRUE(found_libc, "");
+    EXPECT_TRUE(found_test_utils, "");
+    EXPECT_TRUE(found_unittest, "");
+
+    END_TEST;
+}
+
 // This function is marked as no-inline to avoid duplicate label in case the
 // function call is being inlined.
 __NO_INLINE static bool test_prep_and_segv(void)
@@ -558,6 +612,7 @@ static int __NO_INLINE test_swbreak(void)
 BEGIN_TEST_CASE(debugger_tests)
 RUN_TEST(debugger_test);
 RUN_TEST(debugger_thread_list_test);
+RUN_TEST(property_process_debug_addr_test);
 END_TEST_CASE(debugger_tests)
 
 static void check_verbosity(int argc, char** argv)

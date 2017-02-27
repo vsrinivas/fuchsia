@@ -16,9 +16,6 @@
 #include "dso-list.h"
 #include "utils.h"
 
-extern struct r_debug* _dl_debug_addr;
-
-#define rdebug_vaddr ((uintptr_t) _dl_debug_addr)
 #define rdebug_off_lmap offsetof(struct r_debug, r_map)
 
 #define lmap_off_next offsetof(struct link_map, l_next)
@@ -53,8 +50,14 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
 }
 
 dsoinfo_t* dso_fetch_list(mx_handle_t h, const char* name) {
-    uintptr_t lmap;
-    if (read_mem(h, rdebug_vaddr + rdebug_off_lmap, &lmap, sizeof(lmap))) {
+    uintptr_t lmap, debug_addr;
+    mx_status_t status = mx_object_get_property(h, MX_PROP_PROCESS_DEBUG_ADDR,
+                                                &debug_addr, sizeof(debug_addr));
+    if (status != NO_ERROR) {
+        print_mx_error("mx_object_get_property(MX_PROP_PROCESS_DEBUG_ADDR), unable to fetch dso list", status);
+        return nullptr;
+    }
+    if (read_mem(h, debug_addr + rdebug_off_lmap, &lmap, sizeof(lmap))) {
         return nullptr;
     }
     dsoinfo_t* dsolist = nullptr;

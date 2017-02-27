@@ -118,6 +118,10 @@ static pthread_mutex_t init_fini_lock = {._m_type = PTHREAD_MUTEX_RECURSIVE};
 static mx_handle_t loader_svc = MX_HANDLE_INVALID;
 static mx_handle_t logger = MX_HANDLE_INVALID;
 
+// Various tools use this value to bootstrap their knowledge of the process.
+// E.g., the list of loaded shared libraries is obtained from here.
+// The value is stored in the process's MX_PROPERTY_PROCESS_DEBUG_ADDR so that
+// tools can obtain the value when aslr is enabled.
 struct debug* _dl_debug_addr = &debug;
 
 // If true then dump load map data in a specific format for tracing.
@@ -1562,6 +1566,18 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     debug.head = head;
     debug.base = ldso.base;
     debug.state = 0;
+
+    status = _mx_object_set_property(__magenta_process_self,
+                                     MX_PROP_PROCESS_DEBUG_ADDR,
+                                     &_dl_debug_addr, sizeof(_dl_debug_addr));
+    if (status != NO_ERROR) {
+        // Bummer. Crashlogger backtraces, debugger sessions, etc. will be
+        // problematic, but this isn't fatal.
+        // TODO(dje): Is there a way to detect we're here because of being
+        // an injected process (launchpad_start_injected)? IWBN to print a
+        // warning here but launchpad_start_injected can trigger this.
+    }
+
     _dl_debug_state();
 
     if (log_libs) {
