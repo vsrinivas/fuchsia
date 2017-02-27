@@ -2,9 +2,9 @@
 
 A module that displays a command line interface to the system.
 
-To run Moterm, start the device runner: `@ bootstrap device_runner`, pull down
-from the top and select "Moterm" from the story suggestions. Then, click once
-within the terminal area before typing.
+To run Moterm, start the device runner: `device_runner`, pull down from the top
+and select "Moterm" from the story suggestions. Then, click once within the
+terminal area before typing.
 
 ## Terminal history
 
