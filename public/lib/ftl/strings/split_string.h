@@ -25,7 +25,7 @@ enum SplitResult {
   kSplitWantNonEmpty,
 };
 
-// Split the given string on ANY of the given separators, returning cvopies of
+// Split the given string on ANY of the given separators, returning copies of
 // the result
 std::vector<std::string> SplitStringCopy(StringView input,
                                          StringView separators,
