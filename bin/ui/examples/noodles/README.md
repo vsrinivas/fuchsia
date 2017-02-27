@@ -8,4 +8,4 @@ For the purposes of this example, the content consists of a Lissajous figure.
 
 ## USAGE
 
-  @ bootstrap launch noodles_view
+  launch noodles_view

@@ -5,4 +5,4 @@ some simple shapes to a view.
 
 ## USAGE
 
-  @ bootstrap launch shapes_view
+  launch shapes_view

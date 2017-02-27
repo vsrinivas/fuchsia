@@ -5,4 +5,4 @@ input usage.
 
 ## USAGE
 
-  @ bootstrap launch paint_view
+  launch paint_view

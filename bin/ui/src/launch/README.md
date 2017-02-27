@@ -15,12 +15,7 @@ which will eventually take over this function.
 
 Run an application which offers a ViewProvider service:
 
-    @ bootstrap launch <app url> <app args>
-
-When the environment does not already contain the Presenter service,
-it may be necessary to bootstrap it:
-
-    @ bootstrap launch <app url> <app args>
+    launch <app url> <app args>
 
 ### Arguments
 
@@ -31,4 +26,4 @@ Standard logging arguments:
 
 ### Examples
 
-    @ bootstrap launch noodles_view
+    launch noodles_view

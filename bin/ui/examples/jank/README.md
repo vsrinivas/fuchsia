@@ -6,4 +6,4 @@ various functions such as stalling or crashing the app.
 
 ## USAGE
 
-  @ bootstrap launch jank_view
+  launch jank_view

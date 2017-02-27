@@ -5,4 +5,4 @@ to the framebuffer using only the compositor (not the view manager).
 
 ## USAGE
 
-  @ bootstrap launch hello_compositor
+  launch hello_compositor
