@@ -663,9 +663,10 @@ static hid_bus_ops_t hid_bus_ops = {
     .set_protocol = i8042_set_protocol,
 };
 
-static mx_status_t i8042_dev_init(i8042_device_t* dev) {
+static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name) {
     hid_init_device(&dev->hiddev, &hid_bus_ops, dev->type, true, dev->type);
-    mx_status_t status = hid_add_device(&_driver_i8042, &dev->hiddev, driver_get_misc_device());
+    mx_status_t status = hid_add_device_etc(&_driver_i8042, &dev->hiddev,
+                                            driver_get_misc_device(), name);
     if (status != NO_ERROR) {
         hid_release_device(&dev->hiddev);
         return status;
@@ -694,7 +695,7 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev) {
     }
 
         // create irq thread
-    const char* name = dev->type == INPUT_PROTO_KBD ?
+    name = dev->type == INPUT_PROTO_KBD ?
         "i8042-kbd-irq" : "i8042-mouse-irq";
     int ret = thrd_create_with_name(&dev->irq_thread, i8042_irq_thread, dev, name);
     if (ret != thrd_success) {
@@ -734,7 +735,7 @@ static int i8042_init_thread(void* arg) {
         return ERR_NO_MEMORY;
 
     kbd_device->type = INPUT_PROTO_KBD;
-    status = i8042_dev_init(kbd_device);
+    status = i8042_dev_init(kbd_device, "i8042-keyboard");
     if (status != NO_ERROR) {
         free(kbd_device);
     }
@@ -745,7 +746,7 @@ static int i8042_init_thread(void* arg) {
         mouse_device = calloc(1, sizeof(i8042_device_t));
         if (mouse_device) {
             mouse_device->type = INPUT_PROTO_MOUSE;
-            status = i8042_dev_init(mouse_device);
+            status = i8042_dev_init(mouse_device, "i8042-mouse");
             if (status != NO_ERROR) {
                 free(mouse_device);
             }
