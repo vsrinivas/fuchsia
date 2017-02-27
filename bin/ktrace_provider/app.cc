@@ -20,8 +20,8 @@ namespace {
 
 constexpr char kDefaultProviderLabel[] = "ktrace";
 constexpr char kCategory[] = "kernel";
-constexpr char kDmctlDev[] = "/dev/class/misc/dmctl";
-constexpr char kTraceDev[] = "/dev/class/misc/ktrace";
+constexpr char kDmctlDev[] = "/dev/misc/dmctl";
+constexpr char kTraceDev[] = "/dev/misc/ktrace";
 constexpr char kKTraceOff[] = "ktraceoff";
 constexpr char kKTraceOn[] = "ktraceon";
 
