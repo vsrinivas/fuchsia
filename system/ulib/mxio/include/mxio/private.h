@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 #include <stdint.h>
 
-#pragma once
+__BEGIN_CDECLS;
 
 // WARNING: These interfaces exist to allow integration of mxio file
 // descriptors with handle-centric message loops.  If used incorrectly
@@ -53,3 +56,5 @@ void __mxio_wait_begin(mxio_t* io, uint32_t events,
 // This function is only safe to call on a mxio_t you
 // hold a reference to.
 void __mxio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* events_out);
+
+__END_CDECLS;
