@@ -69,5 +69,5 @@ pub const MX_HND_TYPE_USER2: u32 = 0xFFF2;
 
 #[link(name="mxio")]
 extern {
-    pub fn mxio_get_startup_handle(id: u32) -> mx_handle_t;
+    pub fn mx_get_startup_handle(id: u32) -> mx_handle_t;
 }
