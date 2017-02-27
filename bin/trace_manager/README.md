@@ -6,7 +6,8 @@ chrome://tracing format.
 ## Operational Requirements
 
 Fuchsia tracing library and utilities require access to the `trace_manager`'s
-services in the environment.  This is normally set up by the `bootstrap` utility.
+services in the environment, which is typically set up by the
+[boot sequence](https://fuchsia.googlesource.com/docs/+/master/boot_sequence.md).
 
 ## Capturing Trace Data on Device
 
@@ -32,7 +33,7 @@ Any remaining arguments are interpreted as a program to run.
 An example invocation for tracing to `/tmp/trace.json` for 15 seconds,
 capturing only categories `gfx` and `flutter` looks like:
 ```
-> @ bootstrap trace record --trace-file=/tmp/trace.json --duration=15 --categories=gfx,flutter launch noodles_view
+trace record --trace-file=/tmp/trace.json --duration=15 --categories=gfx,flutter launch noodles_view
 ```
 
 Assuming that networking is configured correctly (see [Getting Started](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md)),
