@@ -243,14 +243,14 @@ impl Default for VmoOpts {
 }
 
 /// A "wait item" containing a handle reference and information about what signals
-/// to wait on, and, on return from `handle_wait_many`, which are pending.
+/// to wait on, and, on return from `object_wait_many`, which are pending.
 #[repr(C)]
 pub struct WaitItem<'a> {
     /// The handle to wait on.
     pub handle: HandleRef<'a>,
     /// A set of signals to wait for.
     pub waitfor: Signals,
-    /// The set of signals pending, on return of `handle_wait_many`.
+    /// The set of signals pending, on return of `object_wait_many`.
     pub pending: Signals,
 }
 
@@ -319,7 +319,7 @@ impl<'a> HandleRef<'a> {
         let handle = self.handle;
         let mut pending = sys::mx_signals_t::empty();
         let status = unsafe {
-            sys::mx_handle_wait_one(handle, signals, timeout, &mut pending)
+            sys::mx_object_wait_one(handle, signals, timeout, &mut pending)
         };
         into_result(status, || pending)
     }
@@ -333,7 +333,7 @@ impl<'a> HandleRef<'a> {
 /// `from_handle` methods to facilitate conversion from and to the interface.
 pub trait HandleBase: Sized {
     /// Get a reference to the handle. One important use of such a reference is
-    /// for `handle_wait_many`.
+    /// for `object_wait_many`.
     fn get_ref(&self) -> HandleRef;
 
     /// Interpret the reference as a raw handle (an integer type). Two distinct
@@ -352,7 +352,7 @@ pub trait HandleBase: Sized {
     }
 
     /// Waits on a handle. Wraps the
-    /// [handle_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_wait_one.md)
+    /// [object_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_one.md)
     /// syscall.
     fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
         self.get_ref().wait(signals, timeout)
@@ -379,13 +379,13 @@ fn handle_drop(handle: sys::mx_handle_t) {
 /// provided handle references was closed during the wait.
 ///
 /// Wraps the
-/// [mx_handle_wait_many](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_wait_many.md)
+/// [mx_object_wait_many](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_many.md)
 /// syscall.
-pub fn handle_wait_many(items: &mut [WaitItem], timeout: Time) -> Result<bool, Status>
+pub fn object_wait_many(items: &mut [WaitItem], timeout: Time) -> Result<bool, Status>
 {
     let len = try!(items.len().value_into().map_err(|_| Status::ErrOutOfRange));
     let items_ptr = items.as_mut_ptr() as *mut sys::mx_wait_item_t;
-    let status = unsafe { sys::mx_handle_wait_many( items_ptr, len, timeout) };
+    let status = unsafe { sys::mx_object_wait_many( items_ptr, len, timeout) };
     if status == sys::ERR_HANDLE_CLOSED {
         return Ok((true))
     }
