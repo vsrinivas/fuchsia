@@ -12,6 +12,7 @@
 #include <sys/uio.h>
 #include <threads.h>
 
+#include <magenta/stack.h>
 #include <magenta/tls.h>
 #include <runtime/thread.h>
 #include <runtime/tls.h>
@@ -196,7 +197,7 @@ static inline int __rt_sigqueueinfo(pid_t pid, int sig, siginfo_t* info) {
 
 #define DEFAULT_PTHREAD_ATTR                                                  \
     ((pthread_attr_t){                                                        \
-        ._a_stacksize = 81920,                                                \
+        ._a_stacksize = MAGENTA_DEFAULT_STACK_SIZE,                           \
         ._a_guardsize = PAGE_SIZE,                                            \
     })
 
