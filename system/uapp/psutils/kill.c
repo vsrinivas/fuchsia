@@ -1,0 +1,37 @@
+// Copyright 2017 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "processes.h"
+
+mx_koid_t task_id;
+
+mx_status_t callback(int depth, mx_handle_t handle, mx_koid_t koid) {
+    if (koid == task_id) {
+        mx_task_kill(handle);
+        // found and killed the task - abort the search
+        return ERR_INTERNAL;
+    }
+    return NO_ERROR;
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "usage: %s <task id>\n", argv[0]);
+        return -1;
+    }
+
+    task_id = atoll(argv[1]);
+
+    mx_status_t status = walk_process_tree(callback, callback);
+    if (status == NO_ERROR) {
+        fprintf(stderr, "no task found\n");
+        return -1;
+    }
+}
