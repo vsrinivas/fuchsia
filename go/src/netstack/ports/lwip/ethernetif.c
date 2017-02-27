@@ -31,7 +31,7 @@
 #include "apps/netstack/ports/lwip/eth-client.h"
 #include "apps/netstack/ports/lwip/ethernetif.h"
 
-#define FILTER_IPV6 1
+#define FILTER_IPV6 0
 
 struct ethernetif {
   int netfd;
