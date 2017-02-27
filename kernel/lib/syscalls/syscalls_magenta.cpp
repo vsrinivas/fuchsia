@@ -153,23 +153,6 @@ mx_status_t sys_eventpair_create(uint32_t options,
     return NO_ERROR;
 }
 
-mx_status_t sys_futex_wait(mx_futex_t* _value_ptr, int current_value, mx_time_t timeout) {
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(
-        make_user_ptr(_value_ptr), current_value, timeout);
-}
-
-mx_status_t sys_futex_wake(const mx_futex_t* _value_ptr, uint32_t count) {
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(
-        make_user_ptr(_value_ptr), count);
-}
-
-mx_status_t sys_futex_requeue(mx_futex_t* _wake_ptr, uint32_t wake_count, int current_value,
-                              mx_futex_t* _requeue_ptr, uint32_t requeue_count) {
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexRequeue(
-        make_user_ptr(_wake_ptr), wake_count, current_value,
-        make_user_ptr(_requeue_ptr), requeue_count);
-}
-
 mx_status_t sys_log_create(uint32_t options, mx_handle_t* out) {
     LTRACEF("options 0x%x\n", options);
 

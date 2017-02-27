@@ -23,6 +23,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls_debug.cpp \
     $(LOCAL_DIR)/syscalls_exceptions.cpp \
     $(LOCAL_DIR)/syscalls_fifo.cpp \
+    $(LOCAL_DIR)/syscalls_futex.cpp \
     $(LOCAL_DIR)/syscalls_handle_ops.cpp \
     $(LOCAL_DIR)/syscalls_hypervisor.cpp \
     $(LOCAL_DIR)/syscalls_magenta.cpp \
