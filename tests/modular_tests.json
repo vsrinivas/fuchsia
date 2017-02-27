@@ -11,6 +11,14 @@
         {
           "name": "component_context",
           "exec": "bootstrap device_runner --ledger_repository_for_testing --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test"
+        },
+        {
+          "name": "suggestion",
+          "exec": "bootstrap device_runner --ledger_repository_for_testing --user_shell=suggestion_test_user_shell"
+        },
+        {
+          "name": "triggers",
+          "exec": "bootstrap device_runner --ledger_repository_for_testing --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test"
         }
     ]
 }
