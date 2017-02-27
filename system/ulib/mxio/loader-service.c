@@ -293,7 +293,7 @@ void mxio_force_local_loader_service(void) {
 
 // Returns a channel to the system loader service.
 static mx_handle_t get_system_loader_service(void) {
-    int fd = open("/dev/class/misc/dmctl", O_RDONLY);
+    int fd = open("/dev/misc/dmctl", O_RDONLY);
     if (fd < 0) {
         return ERR_NOT_FOUND;
     }

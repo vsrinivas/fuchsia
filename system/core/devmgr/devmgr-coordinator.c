@@ -70,6 +70,11 @@ static void prepopulate_protocol_dirs(void) {
     const char** namep = proto_names;
     while (*namep) {
         vnode_t* vnp;
+        if (!strcmp(*namep, "misc") || !strcmp(*namep, "misc-parent")) {
+            // don't publish /dev/class/misc or /dev/class/misc-parent
+            namep++;
+            continue;
+        }
         memfs_create_device_at(vnclass, &vnp, *namep++, 0);
     }
 }
@@ -80,10 +85,13 @@ static void do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
         return;
     }
 
-    if (ctx->protocol_id == MX_PROTOCOL_MISC_PARENT) {
-        // The misc parent device is a singleton, and
-        // misc-parent is not a true protocol (it's disallowed
-        // for any device but the misc-parent to implement)
+    if ((ctx->protocol_id == MX_PROTOCOL_MISC_PARENT) ||
+        (ctx->protocol_id == MX_PROTOCOL_MISC)) {
+        // misc devices are singletons, not a class
+        // in the sense of other device classes.
+        // They do not get aliases in /dev/class/misc/...
+        // instead they exist only under their parent
+        // device.
         return;
     }
 

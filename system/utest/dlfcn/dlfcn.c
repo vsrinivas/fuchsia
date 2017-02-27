@@ -131,7 +131,7 @@ bool loader_service_test(void) {
     END_TEST;
 }
 
-#define DMCTL_PATH "/dev/class/misc/dmctl"
+#define DMCTL_PATH "/dev/misc/dmctl"
 
 bool ioctl_test(void) {
     BEGIN_TEST;

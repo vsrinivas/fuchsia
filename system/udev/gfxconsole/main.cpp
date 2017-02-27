@@ -115,7 +115,7 @@ static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
         if ((modifiers & MOD_CTRL) && (modifiers & MOD_ALT)) {
             int fd;
             // Send the reboot command to devmgr
-            if ((fd = open("/dev/class/misc/dmctl", O_WRONLY)) >= 0) {
+            if ((fd = open("/dev/misc/dmctl", O_WRONLY)) >= 0) {
                 write(fd, "reboot", strlen("reboot"));
                 close(fd);
             }
@@ -464,7 +464,7 @@ static int vc_log_reader_thread(void* arg) {
 static int vc_battery_poll_thread(void* arg) {
     char str[16];
     for (;;) {
-        int fd = open("/dev/class/misc/acpi-battery", O_RDONLY);
+        int fd = open("/dev/misc/acpi-battery", O_RDONLY);
         if (fd < 0) {
             printf("vc: no battery\n");
             return -1;

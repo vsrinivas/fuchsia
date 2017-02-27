@@ -438,7 +438,7 @@ usage:
 }
 
 static int send_dmctl(const char* command, size_t length) {
-    int fd = open("/dev/class/misc/dmctl", O_WRONLY);
+    int fd = open("/dev/misc/dmctl", O_WRONLY);
     if (fd < 0) {
         fprintf(stderr, "error: cannot open dmctl: %d\n", fd);
         return fd;

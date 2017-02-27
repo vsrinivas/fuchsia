@@ -455,7 +455,7 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     // active.
     if (pci_config->vendor_id == INTEL_VID &&
         pci_config->device_id == ACER_I2C_TOUCH) {
-        int dmctlfd = open("/dev/class/misc/dmctl", O_RDWR);
+        int dmctlfd = open("/dev/misc/dmctl", O_RDWR);
         if (dmctlfd < 0) {
             printf("could not open dmctl: %d\n", errno);
         } else {

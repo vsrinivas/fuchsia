@@ -82,7 +82,7 @@ static mx_status_t walk_process_tree_internal(job_callback_t job_callback, proce
 }
 
 mx_status_t walk_process_tree(job_callback_t job_callback, process_callback_t process_callback) {
-    int fd = open("/dev/class/misc/sysinfo", O_RDWR);
+    int fd = open("/dev/misc/sysinfo", O_RDWR);
     if (fd < 0) {
         fprintf(stderr, "ps: cannot open sysinfo: %d\n", errno);
         return ERR_NOT_FOUND;

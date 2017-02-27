@@ -257,7 +257,7 @@ static int console_starter(void* arg) {
 
     for (unsigned n = 0; n < 30; n++) {
         int fd;
-        if ((fd = open("/dev/class/misc/console", O_RDWR)) >= 0) {
+        if ((fd = open("/dev/misc/console", O_RDWR)) >= 0) {
             devmgr_launch(svcs_job_handle, "sh:console",
                           countof(argv_sh), argv_sh, term, fd, NULL, NULL, 0);
             break;

@@ -10,12 +10,12 @@
 
 // 1. Run:            magenta> traceme
 // 2. Stop tracing:   magenta> dm ktraceoff
-// 3. Grab trace:     host> netcp :/dev/class/misc/ktrace test.trace
+// 3. Grab trace:     host> netcp :/dev/misc/ktrace test.trace
 // 4. Examine trace:  host> tracevic test.trace
 
 int main(int argc, char** argv) {
     int fd;
-    if ((fd = open("/dev/class/misc/ktrace", O_RDWR)) < 0) {
+    if ((fd = open("/dev/misc/ktrace", O_RDWR)) < 0) {
         fprintf(stderr, "cannot open trace device\n");
         return -1;
     }
