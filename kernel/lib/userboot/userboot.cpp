@@ -190,7 +190,9 @@ enum bootstrap_handle_index {
 
 struct bootstrap_message {
     mx_proc_args_t header;
-    uint32_t handle_info[BOOTSTRAP_HANDLES];
+    // reserve extra handle for uncompressed bootfs, which is
+    // populated on the userspace side
+    uint32_t handle_info[BOOTSTRAP_HANDLES + 1];
     char cmdline[CMDLINE_MAX];
 };
 
