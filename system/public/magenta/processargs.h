@@ -123,31 +123,6 @@ struct mx_proc_args {
 #define MX_HND_TYPE_USER1 0xFFF1
 #define MX_HND_TYPE_USER2 0xFFF2
 
-#define MX_PROC_INFO_MAGIC 0xd0dabb1e
-#define MX_PROC_INFO_VERSION 0
-
-// In-process parsed process args structure
-typedef struct mx_proc_info mx_proc_info_t;
-struct mx_proc_info {
-    // Identifier and version of the mx_proc_info object.
-    uint32_t magic;   // MX_PROC_INFO_MAGIC
-    uint32_t version; // MX_PROC_INFO_VERSION
-
-    // Next available TLS slot. Increment atomically.
-    uint32_t next_tls_slot;
-
-    mx_proc_args_t* proc_args;
-
-    mx_handle_t* handle;
-    uint32_t* handle_info;
-    int handle_count;
-
-    char** argv;
-    char** envp;
-    int argc;
-    int envc;
-};
-
 // Dynamic Loader Service Messages
 // Used by dynamic loader to obtain objects to link.
 typedef struct mx_loader_svc_msg mx_loader_svc_msg_t;
