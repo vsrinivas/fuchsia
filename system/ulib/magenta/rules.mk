@@ -19,11 +19,11 @@ MODULE_COMPILEFLAGS += -I$(BUILDDIR)
 MODULE_SRCS := \
     $(LOCAL_DIR)/data.c \
     $(LOCAL_DIR)/mx_cache_flush.c \
-    $(LOCAL_DIR)/mx_num_cpus.c \
     $(LOCAL_DIR)/mx_status_get_string.c \
+    $(LOCAL_DIR)/mx_system_get_num_cpus.c \
+    $(LOCAL_DIR)/mx_system_get_version.c \
     $(LOCAL_DIR)/mx_ticks_get.c \
     $(LOCAL_DIR)/mx_ticks_per_second.c \
-    $(LOCAL_DIR)/mx_version_get.c \
 
 ifeq ($(ARCH),arm64)
 MODULE_SRCS += \

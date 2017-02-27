@@ -15,6 +15,14 @@ __BEGIN_CDECLS
 #include <magenta/gen-syscalls.h>
 
 // Compatibility Wrappers for Deprecated Syscalls
-// Currently none!
+
+extern uint32_t _mx_num_cpus(void)
+    __attribute__((deprecated("use _mx_system_get_num_cpus instead")));
+extern uint32_t mx_num_cpus(void)
+    __attribute__((deprecated("use mx_system_get_num_cpus instead")));
+extern mx_status_t _mx_version_get(char version[], uint32_t len)
+    __attribute__((deprecated("use _mx_system_get_version instead")));
+extern mx_status_t mx_version_get(char version[], uint32_t len)
+    __attribute__((deprecated("use mx_system_get_version instead")));
 
 __END_CDECLS

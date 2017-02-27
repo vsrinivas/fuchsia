@@ -685,7 +685,7 @@ static mx_status_t ipt_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t fl
         assert(ipt_dev->per_trace_state);
 
     if (!ipt_dev->per_trace_state) {
-        ipt_dev->num_traces = mx_num_cpus();
+        ipt_dev->num_traces = mx_system_get_num_cpus();
 
         ipt_dev->per_trace_state = calloc(ipt_dev->num_traces, sizeof(ipt_dev->per_trace_state[0]));
         if (!ipt_dev->per_trace_state)

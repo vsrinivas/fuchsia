@@ -48,11 +48,11 @@ syscall ticks_per_second vdsocall const
 
 # Global system information
 
-syscall num_cpus vdsocall const
+syscall system_get_num_cpus vdsocall const
     ()
     returns (uint32_t);
 
-syscall version_get vdsocall
+syscall system_get_version vdsocall
     (version: char[version_len] OUT, version_len: uint32_t)
     returns (mx_status_t);
 
@@ -315,6 +315,32 @@ syscall vmo_op_range
         buffer: any[buffer_size] INOUT, buffer_size: size_t)
     returns (mx_status_t);
 
+# Address space management
+
+syscall vmar_allocate
+    (parent_vmar_handle: mx_handle_t, offset: size_t, size: size_t, map_flags: uint32_t,
+        child_vmar: mx_handle_t[1] OUT, child_addr: uintptr_t[1] OUT)
+     returns (mx_status_t);
+
+syscall vmar_destroy
+    (vmar_handle: mx_handle_t)
+    returns (mx_status_t);
+
+syscall vmar_map
+    (vmar_handle: mx_handle_t, vmar_offset: size_t,
+        vmo_handle: mx_handle_t, vmo_offset: uint64_t,
+        len: size_t, map_flags: uint32_t, mapped_addr: uintptr_t[1] OUT)
+    returns (mx_status_t);
+
+syscall vmar_unmap
+    (vmar_handle: mx_handle_t, addr: uintptr_t, len: size_t)
+    returns (mx_status_t);
+
+syscall vmar_protect
+    (vmar_handle: mx_handle_t, addr: uintptr_t, len: size_t,
+        prot_flags: uint32_t)
+    returns (mx_status_t);
+
 # Random Number generator
 
 syscall cprng_draw
@@ -447,32 +473,6 @@ syscall io_mapping_get_info
 
 syscall vmo_create_contiguous
     (rsrc_handle: mx_handle_t, size: size_t, alignment_log2: uint32_t, out: mx_handle_t[1] OUT)
-    returns (mx_status_t);
-
-# Address space management
-
-syscall vmar_allocate
-    (parent_vmar_handle: mx_handle_t, offset: size_t, size: size_t, map_flags: uint32_t,
-        child_vmar: mx_handle_t[1] OUT, child_addr: uintptr_t[1] OUT)
-     returns (mx_status_t);
-
-syscall vmar_destroy
-    (vmar_handle: mx_handle_t)
-    returns (mx_status_t);
-
-syscall vmar_map
-    (vmar_handle: mx_handle_t, vmar_offset: size_t,
-        vmo_handle: mx_handle_t, vmo_offset: uint64_t,
-        len: size_t, map_flags: uint32_t, mapped_addr: uintptr_t[1] OUT)
-    returns (mx_status_t);
-
-syscall vmar_unmap
-    (vmar_handle: mx_handle_t, addr: uintptr_t, len: size_t)
-    returns (mx_status_t);
-
-syscall vmar_protect
-    (vmar_handle: mx_handle_t, addr: uintptr_t, len: size_t,
-        prot_flags: uint32_t)
     returns (mx_status_t);
 
 # DDK Syscalls: Misc Info

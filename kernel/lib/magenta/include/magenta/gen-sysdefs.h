@@ -306,6 +306,37 @@ mx_status_t sys_vmo_op_range(
     void* buffer,
     size_t buffer_size);
 
+mx_status_t sys_vmar_allocate(
+    mx_handle_t parent_vmar_handle,
+    size_t offset,
+    size_t size,
+    uint32_t map_flags,
+    mx_handle_t child_vmar[1],
+    uintptr_t child_addr[1]);
+
+mx_status_t sys_vmar_destroy(
+    mx_handle_t vmar_handle);
+
+mx_status_t sys_vmar_map(
+    mx_handle_t vmar_handle,
+    size_t vmar_offset,
+    mx_handle_t vmo_handle,
+    uint64_t vmo_offset,
+    size_t len,
+    uint32_t map_flags,
+    uintptr_t mapped_addr[1]);
+
+mx_status_t sys_vmar_unmap(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len);
+
+mx_status_t sys_vmar_protect(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len,
+    uint32_t prot_flags);
+
 mx_status_t sys_cprng_draw(
     void* buffer,
     size_t len,
@@ -431,37 +462,6 @@ mx_status_t sys_vmo_create_contiguous(
     size_t size,
     uint32_t alignment_log2,
     mx_handle_t out[1]);
-
-mx_status_t sys_vmar_allocate(
-    mx_handle_t parent_vmar_handle,
-    size_t offset,
-    size_t size,
-    uint32_t map_flags,
-    mx_handle_t child_vmar[1],
-    uintptr_t child_addr[1]);
-
-mx_status_t sys_vmar_destroy(
-    mx_handle_t vmar_handle);
-
-mx_status_t sys_vmar_map(
-    mx_handle_t vmar_handle,
-    size_t vmar_offset,
-    mx_handle_t vmo_handle,
-    uint64_t vmo_offset,
-    size_t len,
-    uint32_t map_flags,
-    uintptr_t mapped_addr[1]);
-
-mx_status_t sys_vmar_unmap(
-    mx_handle_t vmar_handle,
-    uintptr_t addr,
-    size_t len);
-
-mx_status_t sys_vmar_protect(
-    mx_handle_t vmar_handle,
-    uintptr_t addr,
-    size_t len,
-    uint32_t prot_flags);
 
 mx_status_t sys_bootloader_fb_get_info(
     uint32_t format[1],

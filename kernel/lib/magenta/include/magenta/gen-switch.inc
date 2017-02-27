@@ -304,133 +304,7 @@
         reinterpret_cast<void*>(arg5),
         static_cast<size_t>(arg6)));
         break;
-    case 54: ret = static_cast<uint64_t>(sys_cprng_draw(
-        reinterpret_cast<void*>(arg1),
-        static_cast<size_t>(arg2),
-        reinterpret_cast<size_t*>(arg3)));
-        break;
-    case 55: ret = static_cast<uint64_t>(sys_cprng_add_entropy(
-        reinterpret_cast<const void*>(arg1),
-        static_cast<size_t>(arg2)));
-        break;
-    case 56: ret = static_cast<uint64_t>(sys_fifo_create(
-        static_cast<uint32_t>(arg1),
-        static_cast<uint32_t>(arg2),
-        static_cast<uint32_t>(arg3),
-        reinterpret_cast<mx_handle_t*>(arg4),
-        reinterpret_cast<mx_handle_t*>(arg5)));
-        break;
-    case 57: ret = static_cast<uint64_t>(sys_fifo_read(
-        static_cast<mx_handle_t>(arg1),
-        reinterpret_cast<void*>(arg2),
-        static_cast<size_t>(arg3),
-        reinterpret_cast<uint32_t*>(arg4)));
-        break;
-    case 58: ret = static_cast<uint64_t>(sys_fifo_write(
-        static_cast<mx_handle_t>(arg1),
-        reinterpret_cast<const void*>(arg2),
-        static_cast<size_t>(arg3),
-        reinterpret_cast<uint32_t*>(arg4)));
-        break;
-    case 59: ret = static_cast<uint64_t>(sys_log_create(
-        static_cast<uint32_t>(arg1),
-        reinterpret_cast<mx_handle_t*>(arg2)));
-        break;
-    case 60: ret = static_cast<uint64_t>(sys_log_write(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<uint32_t>(arg2),
-        reinterpret_cast<const void*>(arg3),
-        static_cast<uint32_t>(arg4)));
-        break;
-    case 61: ret = static_cast<uint64_t>(sys_log_read(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<uint32_t>(arg2),
-        reinterpret_cast<void*>(arg3),
-        static_cast<uint32_t>(arg4)));
-        break;
-    case 62: ret = static_cast<uint64_t>(sys_ktrace_read(
-        static_cast<mx_handle_t>(arg1),
-        reinterpret_cast<void*>(arg2),
-        static_cast<uint32_t>(arg3),
-        static_cast<uint32_t>(arg4),
-        reinterpret_cast<uint32_t*>(arg5)));
-        break;
-    case 63: ret = static_cast<uint64_t>(sys_ktrace_control(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<uint32_t>(arg2),
-        static_cast<uint32_t>(arg3),
-        reinterpret_cast<void*>(arg4)));
-        break;
-    case 64: ret = static_cast<uint64_t>(sys_ktrace_write(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<uint32_t>(arg2),
-        static_cast<uint32_t>(arg3),
-        static_cast<uint32_t>(arg4)));
-        break;
-    case 65: ret = static_cast<uint64_t>(sys_mtrace_control(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<uint32_t>(arg2),
-        static_cast<uint32_t>(arg3),
-        static_cast<uint32_t>(arg4),
-        reinterpret_cast<void*>(arg5),
-        static_cast<uint32_t>(arg6)));
-        break;
-    case 66: ret = static_cast<uint64_t>(sys_debug_transfer_handle(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<mx_handle_t>(arg2)));
-        break;
-    case 67: ret = static_cast<uint64_t>(sys_debug_read(
-        static_cast<mx_handle_t>(arg1),
-        reinterpret_cast<void*>(arg2),
-        static_cast<uint32_t>(arg3)));
-        break;
-    case 68: ret = static_cast<uint64_t>(sys_debug_write(
-        reinterpret_cast<const void*>(arg1),
-        static_cast<uint32_t>(arg2)));
-        break;
-    case 69: ret = static_cast<uint64_t>(sys_debug_send_command(
-        static_cast<mx_handle_t>(arg1),
-        reinterpret_cast<const void*>(arg2),
-        static_cast<uint32_t>(arg3)));
-        break;
-    case 70: ret = static_cast<uint64_t>(sys_interrupt_create(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<uint32_t>(arg2),
-        static_cast<uint32_t>(arg3)));
-        break;
-    case 71: ret = static_cast<uint64_t>(sys_interrupt_complete(
-        static_cast<mx_handle_t>(arg1)));
-        break;
-    case 72: ret = static_cast<uint64_t>(sys_interrupt_wait(
-        static_cast<mx_handle_t>(arg1)));
-        break;
-    case 73: ret = static_cast<uint64_t>(sys_interrupt_signal(
-        static_cast<mx_handle_t>(arg1)));
-        break;
-    case 74: ret = static_cast<uint64_t>(sys_mmap_device_io(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<uint32_t>(arg2),
-        static_cast<uint32_t>(arg3)));
-        break;
-    case 75: ret = static_cast<uint64_t>(sys_mmap_device_memory(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<mx_paddr_t>(arg2),
-        static_cast<uint32_t>(arg3),
-        static_cast<mx_cache_policy_t>(arg4),
-        reinterpret_cast<uintptr_t*>(arg5)));
-        break;
-    case 76: ret = static_cast<uint64_t>(sys_io_mapping_get_info(
-        static_cast<mx_handle_t>(arg1),
-        reinterpret_cast<uintptr_t*>(arg2),
-        reinterpret_cast<uint64_t*>(arg3)));
-        break;
-    case 77: ret = static_cast<uint64_t>(sys_vmo_create_contiguous(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<size_t>(arg2),
-        static_cast<uint32_t>(arg3),
-        reinterpret_cast<mx_handle_t*>(arg4)));
-        break;
-    case 78: ret = static_cast<uint64_t>(sys_vmar_allocate(
+    case 54: ret = static_cast<uint64_t>(sys_vmar_allocate(
         static_cast<mx_handle_t>(arg1),
         static_cast<size_t>(arg2),
         static_cast<size_t>(arg3),
@@ -438,10 +312,10 @@
         reinterpret_cast<mx_handle_t*>(arg5),
         reinterpret_cast<uintptr_t*>(arg6)));
         break;
-    case 79: ret = static_cast<uint64_t>(sys_vmar_destroy(
+    case 55: ret = static_cast<uint64_t>(sys_vmar_destroy(
         static_cast<mx_handle_t>(arg1)));
         break;
-    case 80: ret = static_cast<uint64_t>(sys_vmar_map(
+    case 56: ret = static_cast<uint64_t>(sys_vmar_map(
         static_cast<mx_handle_t>(arg1),
         static_cast<size_t>(arg2),
         static_cast<mx_handle_t>(arg3),
@@ -450,16 +324,142 @@
         static_cast<uint32_t>(arg6),
         reinterpret_cast<uintptr_t*>(arg7)));
         break;
-    case 81: ret = static_cast<uint64_t>(sys_vmar_unmap(
+    case 57: ret = static_cast<uint64_t>(sys_vmar_unmap(
         static_cast<mx_handle_t>(arg1),
         static_cast<uintptr_t>(arg2),
         static_cast<size_t>(arg3)));
         break;
-    case 82: ret = static_cast<uint64_t>(sys_vmar_protect(
+    case 58: ret = static_cast<uint64_t>(sys_vmar_protect(
         static_cast<mx_handle_t>(arg1),
         static_cast<uintptr_t>(arg2),
         static_cast<size_t>(arg3),
         static_cast<uint32_t>(arg4)));
+        break;
+    case 59: ret = static_cast<uint64_t>(sys_cprng_draw(
+        reinterpret_cast<void*>(arg1),
+        static_cast<size_t>(arg2),
+        reinterpret_cast<size_t*>(arg3)));
+        break;
+    case 60: ret = static_cast<uint64_t>(sys_cprng_add_entropy(
+        reinterpret_cast<const void*>(arg1),
+        static_cast<size_t>(arg2)));
+        break;
+    case 61: ret = static_cast<uint64_t>(sys_fifo_create(
+        static_cast<uint32_t>(arg1),
+        static_cast<uint32_t>(arg2),
+        static_cast<uint32_t>(arg3),
+        reinterpret_cast<mx_handle_t*>(arg4),
+        reinterpret_cast<mx_handle_t*>(arg5)));
+        break;
+    case 62: ret = static_cast<uint64_t>(sys_fifo_read(
+        static_cast<mx_handle_t>(arg1),
+        reinterpret_cast<void*>(arg2),
+        static_cast<size_t>(arg3),
+        reinterpret_cast<uint32_t*>(arg4)));
+        break;
+    case 63: ret = static_cast<uint64_t>(sys_fifo_write(
+        static_cast<mx_handle_t>(arg1),
+        reinterpret_cast<const void*>(arg2),
+        static_cast<size_t>(arg3),
+        reinterpret_cast<uint32_t*>(arg4)));
+        break;
+    case 64: ret = static_cast<uint64_t>(sys_log_create(
+        static_cast<uint32_t>(arg1),
+        reinterpret_cast<mx_handle_t*>(arg2)));
+        break;
+    case 65: ret = static_cast<uint64_t>(sys_log_write(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint32_t>(arg2),
+        reinterpret_cast<const void*>(arg3),
+        static_cast<uint32_t>(arg4)));
+        break;
+    case 66: ret = static_cast<uint64_t>(sys_log_read(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint32_t>(arg2),
+        reinterpret_cast<void*>(arg3),
+        static_cast<uint32_t>(arg4)));
+        break;
+    case 67: ret = static_cast<uint64_t>(sys_ktrace_read(
+        static_cast<mx_handle_t>(arg1),
+        reinterpret_cast<void*>(arg2),
+        static_cast<uint32_t>(arg3),
+        static_cast<uint32_t>(arg4),
+        reinterpret_cast<uint32_t*>(arg5)));
+        break;
+    case 68: ret = static_cast<uint64_t>(sys_ktrace_control(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint32_t>(arg2),
+        static_cast<uint32_t>(arg3),
+        reinterpret_cast<void*>(arg4)));
+        break;
+    case 69: ret = static_cast<uint64_t>(sys_ktrace_write(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint32_t>(arg2),
+        static_cast<uint32_t>(arg3),
+        static_cast<uint32_t>(arg4)));
+        break;
+    case 70: ret = static_cast<uint64_t>(sys_mtrace_control(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint32_t>(arg2),
+        static_cast<uint32_t>(arg3),
+        static_cast<uint32_t>(arg4),
+        reinterpret_cast<void*>(arg5),
+        static_cast<uint32_t>(arg6)));
+        break;
+    case 71: ret = static_cast<uint64_t>(sys_debug_transfer_handle(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<mx_handle_t>(arg2)));
+        break;
+    case 72: ret = static_cast<uint64_t>(sys_debug_read(
+        static_cast<mx_handle_t>(arg1),
+        reinterpret_cast<void*>(arg2),
+        static_cast<uint32_t>(arg3)));
+        break;
+    case 73: ret = static_cast<uint64_t>(sys_debug_write(
+        reinterpret_cast<const void*>(arg1),
+        static_cast<uint32_t>(arg2)));
+        break;
+    case 74: ret = static_cast<uint64_t>(sys_debug_send_command(
+        static_cast<mx_handle_t>(arg1),
+        reinterpret_cast<const void*>(arg2),
+        static_cast<uint32_t>(arg3)));
+        break;
+    case 75: ret = static_cast<uint64_t>(sys_interrupt_create(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint32_t>(arg2),
+        static_cast<uint32_t>(arg3)));
+        break;
+    case 76: ret = static_cast<uint64_t>(sys_interrupt_complete(
+        static_cast<mx_handle_t>(arg1)));
+        break;
+    case 77: ret = static_cast<uint64_t>(sys_interrupt_wait(
+        static_cast<mx_handle_t>(arg1)));
+        break;
+    case 78: ret = static_cast<uint64_t>(sys_interrupt_signal(
+        static_cast<mx_handle_t>(arg1)));
+        break;
+    case 79: ret = static_cast<uint64_t>(sys_mmap_device_io(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint32_t>(arg2),
+        static_cast<uint32_t>(arg3)));
+        break;
+    case 80: ret = static_cast<uint64_t>(sys_mmap_device_memory(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<mx_paddr_t>(arg2),
+        static_cast<uint32_t>(arg3),
+        static_cast<mx_cache_policy_t>(arg4),
+        reinterpret_cast<uintptr_t*>(arg5)));
+        break;
+    case 81: ret = static_cast<uint64_t>(sys_io_mapping_get_info(
+        static_cast<mx_handle_t>(arg1),
+        reinterpret_cast<uintptr_t*>(arg2),
+        reinterpret_cast<uint64_t*>(arg3)));
+        break;
+    case 82: ret = static_cast<uint64_t>(sys_vmo_create_contiguous(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<size_t>(arg2),
+        static_cast<uint32_t>(arg3),
+        reinterpret_cast<mx_handle_t*>(arg4)));
         break;
     case 83: ret = static_cast<uint64_t>(sys_bootloader_fb_get_info(
         reinterpret_cast<uint32_t*>(arg1),

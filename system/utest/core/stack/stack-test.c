@@ -24,11 +24,11 @@ static bool do_stack_tests(bool one_page_stack) {
     // The compiler sees this pointer escape, so it should know
     // that this belongs on the unsafe stack.
     char unsafe_stack[64];
-    (void)mx_version_get(unsafe_stack, sizeof(unsafe_stack));
+    (void)mx_system_get_version(unsafe_stack, sizeof(unsafe_stack));
 
     // Likewise, the tls_buf is used.
     static thread_local char tls_buf[64];
-    (void)mx_version_get(tls_buf, sizeof(tls_buf));
+    (void)mx_system_get_version(tls_buf, sizeof(tls_buf));
 
     const void* tp = mxr_tp_get();
 

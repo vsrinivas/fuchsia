@@ -6,9 +6,9 @@
 #include <runtime/sysinfo.h>
 
 int mxr_get_nprocs_conf(void) {
-    return _mx_num_cpus();
+    return _mx_system_get_num_cpus();
 }
 
 int mxr_get_nprocs(void) {
-    return _mx_num_cpus();
+    return _mx_system_get_num_cpus();
 }

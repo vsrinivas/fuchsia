@@ -11,9 +11,9 @@ __attribute__((visibility("hidden"))) extern uint64_t VDSO_mx_ticks_get(void) __
 
 __attribute__((visibility("hidden"))) extern uint64_t VDSO_mx_ticks_per_second(void) __attribute__((__leaf__)) __attribute__((const));
 
-__attribute__((visibility("hidden"))) extern uint32_t VDSO_mx_num_cpus(void) __attribute__((__leaf__)) __attribute__((const));
+__attribute__((visibility("hidden"))) extern uint32_t VDSO_mx_system_get_num_cpus(void) __attribute__((__leaf__)) __attribute__((const));
 
-__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_version_get(
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_system_get_version(
     char version[],
     uint32_t version_len) __attribute__((__leaf__));
 
@@ -321,6 +321,37 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmo_op_range(
     void* buffer,
     size_t buffer_size) __attribute__((__leaf__));
 
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_allocate(
+    mx_handle_t parent_vmar_handle,
+    size_t offset,
+    size_t size,
+    uint32_t map_flags,
+    mx_handle_t child_vmar[1],
+    uintptr_t child_addr[1]) __attribute__((__leaf__));
+
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_destroy(
+    mx_handle_t vmar_handle) __attribute__((__leaf__));
+
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_map(
+    mx_handle_t vmar_handle,
+    size_t vmar_offset,
+    mx_handle_t vmo_handle,
+    uint64_t vmo_offset,
+    size_t len,
+    uint32_t map_flags,
+    uintptr_t mapped_addr[1]) __attribute__((__leaf__));
+
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_unmap(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len) __attribute__((__leaf__));
+
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_protect(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len,
+    uint32_t prot_flags) __attribute__((__leaf__));
+
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_cprng_draw(
     void* buffer,
     size_t len,
@@ -457,37 +488,6 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmo_create_cont
     size_t size,
     uint32_t alignment_log2,
     mx_handle_t out[1]) __attribute__((__leaf__));
-
-__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_allocate(
-    mx_handle_t parent_vmar_handle,
-    size_t offset,
-    size_t size,
-    uint32_t map_flags,
-    mx_handle_t child_vmar[1],
-    uintptr_t child_addr[1]) __attribute__((__leaf__));
-
-__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_destroy(
-    mx_handle_t vmar_handle) __attribute__((__leaf__));
-
-__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_map(
-    mx_handle_t vmar_handle,
-    size_t vmar_offset,
-    mx_handle_t vmo_handle,
-    uint64_t vmo_offset,
-    size_t len,
-    uint32_t map_flags,
-    uintptr_t mapped_addr[1]) __attribute__((__leaf__));
-
-__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_unmap(
-    mx_handle_t vmar_handle,
-    uintptr_t addr,
-    size_t len) __attribute__((__leaf__));
-
-__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_vmar_protect(
-    mx_handle_t vmar_handle,
-    uintptr_t addr,
-    size_t len,
-    uint32_t prot_flags) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_bootloader_fb_get_info(
     uint32_t format[1],
