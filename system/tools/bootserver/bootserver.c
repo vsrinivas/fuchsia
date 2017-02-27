@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 
 #include <fcntl.h>
@@ -522,6 +523,25 @@ int main(int argc, char** argv) {
         fprintf(stderr, "%s: Will only boot nodename '%s'\n", appname, nodename);
     }
 
+    // compute the default ramdisk fn to use if
+    // ramdisk is not specified and such a ramdisk
+    // file actually exists
+    char* auto_ramdisk_fn = NULL;
+    if (ramdisk_fn == NULL) {
+        char* bootdata_fn = "bootdata.bin";
+        char *end = strrchr(kernel_fn, '/');
+        if (end == NULL) {
+            auto_ramdisk_fn = bootdata_fn;
+        } else {
+            size_t prefix_len = (end - kernel_fn) + 1;
+            size_t len = prefix_len + strlen(bootdata_fn) + 1;
+            if ((auto_ramdisk_fn = malloc(len)) != NULL) {
+                memcpy(auto_ramdisk_fn, kernel_fn, prefix_len);
+                memcpy(auto_ramdisk_fn + prefix_len, bootdata_fn, strlen(bootdata_fn) + 1);
+            }
+        }
+    }
+
     memset(&addr, 0, sizeof(addr));
     addr.sin6_family = AF_INET6;
     addr.sin6_port = htons(NB_ADVERT_PORT);
@@ -600,10 +620,13 @@ int main(int argc, char** argv) {
         } else {
             status = 0;
         }
-        if ((status == 0) && ramdisk_fn) {
-            status = xfer(&ra, ramdisk_fn, "ramdisk.bin", false);
-        } else {
-            status = 0;
+        if (status == 0) {
+            struct stat s;
+            if (ramdisk_fn) {
+                status = xfer(&ra, ramdisk_fn, "ramdisk.bin", false);
+            } else if (auto_ramdisk_fn && (stat(auto_ramdisk_fn, &s) == 0)) {
+                status = xfer(&ra, auto_ramdisk_fn, "ramdisk.bin", false);
+            }
         }
         if (status == 0) {
             xfer(&ra, kernel_fn, "kernel.bin", true);
