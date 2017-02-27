@@ -215,7 +215,7 @@ public:
         auto processing_complete = std::make_shared<bool>(false);
 
         device->EnqueueDeviceRequest(std::make_unique<TestRequest>(processing_complete));
-        device->ProcessDeviceRequests(nullptr);
+        device->ProcessDeviceRequests();
 
         EXPECT_TRUE(processing_complete);
     }

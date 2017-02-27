@@ -8,7 +8,6 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "sequencer.h"
-#include <chrono>
 
 class GpuProgress {
 public:
@@ -18,11 +17,6 @@ public:
         if (sequence_number != last_submitted_sequence_number_) {
             DLOG("Submitted 0x%x", sequence_number);
             DASSERT(sequence_number > last_submitted_sequence_number_);
-
-            if (last_submitted_sequence_number_ == last_completed_sequence_number_) {
-                hangcheck_time_start_ = std::chrono::high_resolution_clock::now();
-            }
-
             last_submitted_sequence_number_ = sequence_number;
         }
     }
@@ -34,7 +28,6 @@ public:
             DLOG("Completed 0x%x", sequence_number);
             DASSERT(sequence_number > last_completed_sequence_number_);
             last_completed_sequence_number_ = sequence_number;
-            hangcheck_time_start_ = std::chrono::high_resolution_clock::now();
         } else {
             DLOG("completed 0x%x AGAIN\n", sequence_number);
         }
@@ -51,15 +44,9 @@ public:
 
     uint32_t last_submitted_sequence_number() { return last_submitted_sequence_number_; }
 
-    std::chrono::high_resolution_clock::time_point hangcheck_time_start()
-    {
-        return hangcheck_time_start_;
-    }
-
 private:
     uint32_t last_submitted_sequence_number_ = Sequencer::kInvalidSequenceNumber;
     uint32_t last_completed_sequence_number_ = Sequencer::kInvalidSequenceNumber;
-    std::chrono::high_resolution_clock::time_point hangcheck_time_start_{};
 };
 
 #endif // GPU_PROGRESS_H

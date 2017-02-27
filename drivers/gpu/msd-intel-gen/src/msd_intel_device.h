@@ -11,16 +11,17 @@
 #include "gpu_progress.h"
 #include "gtt.h"
 #include "magma_util/macros.h"
-#include "magma_util/monitor.h"
 #include "magma_util/semaphore_port.h"
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
 #include "platform_device.h"
+#include "platform_semaphore.h"
 #include "register_io.h"
 #include "sequencer.h"
 #include <deque>
 #include <list>
+#include <mutex>
 #include <thread>
 
 class MsdIntelDevice : public msd_device_t,
@@ -118,9 +119,9 @@ private:
     bool RenderEngineInit();
     bool RenderEngineReset();
 
-    void ProcessDeviceRequests(magma::Monitor::Lock* lock);
+    void ProcessDeviceRequests();
     void ProcessCompletedCommandBuffers();
-    void HangCheck(uint64_t timeout_ms);
+    void SuspectedGpuHang();
 
     magma::Status ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
     magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
@@ -191,7 +192,8 @@ private:
     class DumpRequest;
 
     // Thread-shared data members
-    std::shared_ptr<magma::Monitor> monitor_;
+    std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
+    std::mutex device_request_mutex_;
     std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
 
     std::mutex pageflip_request_mutex_;

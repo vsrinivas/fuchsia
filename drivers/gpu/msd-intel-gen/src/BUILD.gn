@@ -63,7 +63,6 @@ source_set("src") {
     "$magma_build_root:libmsd",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util:command_buffer",
-    "$magma_build_root/src/magma_util:monitor",
     "$magma_build_root/src/magma_util:semaphore_port",
     "$magma_build_root/src/magma_util:thread",
     "$magma_build_root/src/magma_util/platform:buffer",

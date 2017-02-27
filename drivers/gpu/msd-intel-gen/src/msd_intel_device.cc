@@ -139,8 +139,8 @@ void MsdIntelDevice::Destroy()
 
     device_thread_quit_flag_ = true;
 
-    if (monitor_)
-        monitor_->Signal();
+    if (device_request_semaphore_)
+        device_request_semaphore_->Signal();
 
     if (device_thread_.joinable()) {
         DLOG("joining device thread");
@@ -231,7 +231,7 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!RenderEngineInit())
         return DRETF(false, "failed to init render engine");
 
-    monitor_ = magma::Monitor::CreateShared();
+    device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
     semaphore_port_ = magma::SemaphorePort::Create();
 
@@ -479,16 +479,13 @@ void MsdIntelDevice::ProcessPendingFlip()
 void MsdIntelDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request,
                                           bool enqueue_front)
 {
-    DASSERT(monitor_);
-    magma::Monitor::Lock lock(monitor_);
-    lock.Acquire();
+    std::unique_lock<std::mutex> lock(device_request_mutex_);
     if (enqueue_front) {
         device_request_list_.emplace_front(std::move(request));
     } else {
         device_request_list_.emplace_back(std::move(request));
     }
-    lock.Release();
-    monitor_->Signal();
+    device_request_semaphore_->Signal();
 }
 
 int MsdIntelDevice::DeviceThreadLoop()
@@ -498,33 +495,28 @@ int MsdIntelDevice::DeviceThreadLoop()
 
     DLOG("DeviceThreadLoop starting thread 0x%x", device_thread_id_->id());
 
-    DASSERT(monitor_);
-    magma::Monitor::Lock lock(monitor_);
-    lock.Acquire();
-
     constexpr uint32_t kTimeoutMs = 100;
 
     while (true) {
         if (progress_->work_outstanding()) {
-            std::chrono::high_resolution_clock::time_point time_point =
-                progress_->hangcheck_time_start() + std::chrono::milliseconds(kTimeoutMs + 1);
             DLOG("waiting with timeout");
-            bool timed_out = false;
-            monitor_->WaitUntil(&lock, time_point, &timed_out);
+            // When the semaphore wait returns the semaphore will be reset.
+            // The reset may race with subsequent enqueue/signals on the semaphore,
+            // which is fine because we process everything available in the queue
+            // before returning here to wait.
+            bool timed_out = !device_request_semaphore_->Wait(kTimeoutMs);
+            if (timed_out)
+                SuspectedGpuHang();
         } else {
             DLOG("waiting, no timeout");
-            monitor_->Wait(&lock);
+            device_request_semaphore_->Wait();
         }
 
-        ProcessDeviceRequests(&lock);
+        ProcessDeviceRequests();
 
         if (device_thread_quit_flag_)
             break;
-
-        HangCheck(kTimeoutMs);
     }
-
-    lock.Release();
 
     // Ensure gpu is idle
     render_engine_cs_->Reset();
@@ -544,12 +536,11 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers()
     progress_->Completed(sequence_number);
 }
 
-void MsdIntelDevice::ProcessDeviceRequests(magma::Monitor::Lock* lock)
+void MsdIntelDevice::ProcessDeviceRequests()
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
-    if (lock)
-        DASSERT(lock->acquired(monitor_.get()));
+    std::unique_lock<std::mutex> lock(device_request_mutex_);
 
     while (device_request_list_.size()) {
         DLOG("device_request_list_.size() %zu", device_request_list_.size());
@@ -557,14 +548,12 @@ void MsdIntelDevice::ProcessDeviceRequests(magma::Monitor::Lock* lock)
         auto request = std::move(device_request_list_.front());
         device_request_list_.pop_front();
 
-        if (lock)
-            lock->Release();
+        lock.unlock();
 
         DASSERT(request);
         request->ProcessAndReply(this);
 
-        if (lock)
-            lock->Acquire();
+        lock.lock();
     }
 }
 
@@ -619,23 +608,15 @@ magma::Status MsdIntelDevice::ProcessDumpStatusToLog()
     return MAGMA_STATUS_OK;
 }
 
-void MsdIntelDevice::HangCheck(uint64_t timeout_ms)
+void MsdIntelDevice::SuspectedGpuHang()
 {
-    if (progress_->work_outstanding()) {
-        std::chrono::duration<double, std::milli> elapsed =
-            std::chrono::high_resolution_clock::now() - progress_->hangcheck_time_start();
-        if (elapsed.count() >= timeout_ms) {
-            std::string s;
-            DumpToString(s);
-            uint32_t master_interrupt_control =
-                registers::MasterInterruptControl::read(register_io_.get());
-            magma::log(magma::LOG_WARNING, "Suspected GPU hang: last submitted sequence number "
-                                           "0x%x master_interrupt_control 0x%08x\n%s",
-                       progress_->last_submitted_sequence_number(), master_interrupt_control,
-                       s.c_str());
-            RenderEngineReset();
-        }
-    }
+    std::string s;
+    DumpToString(s);
+    uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
+    magma::log(magma::LOG_WARNING, "Suspected GPU hang: last submitted sequence number "
+                                   "0x%x master_interrupt_control 0x%08x\n%s",
+               progress_->last_submitted_sequence_number(), master_interrupt_control, s.c_str());
+    RenderEngineReset();
 }
 
 magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
