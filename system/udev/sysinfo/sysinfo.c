@@ -42,7 +42,7 @@ static mx_protocol_device_t sysinfo_ops = {
 mx_status_t sysinfo_init(mx_driver_t* driver) {
     mx_device_t* dev;
     if (device_create(&dev, driver, "sysinfo", &sysinfo_ops) == NO_ERROR) {
-        if (device_add(dev, NULL) < 0) {
+        if (device_add(dev, driver_get_misc_device()) < 0) {
             free(dev);
         }
     }

@@ -319,11 +319,8 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent) {
         return status;
     }
     if (parent == NULL) {
-        if (root_dev == NULL) {
-            printf("device_add: cannot add %p(%s) (no root!)\n", dev, dev->name);
-            return ERR_NOT_SUPPORTED;
-        }
-        parent = root_dev;
+        printf("device_add: cannot add %p(%s) to NULL parent\n", dev, dev->name);
+        return ERR_NOT_SUPPORTED;
     }
     if (parent->flags & DEV_FLAG_DEAD) {
         printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
