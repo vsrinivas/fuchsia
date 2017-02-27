@@ -46,8 +46,8 @@ TEST_F(LedgerSyncImplTest, RemoteContainsRequestUrl) {
       test::Capture([this] { message_loop_.PostQuitTask(); }, &response));
   RunLoopWithTimeout();
   const std::string expected_url = ftl::Concatenate(
-      {"https://.firebaseio.com/test_userV/", storage::kSerializationVersion,
-       "/test_idV/page_idV.json?shallow=true"});
+      {"https://.firebaseio.com/__default__V/test_userV/",
+       storage::kSerializationVersion, "/test_idV/page_idV.json?shallow=true"});
   EXPECT_EQ(expected_url, network_service_.GetRequest()->url);
 }
 
