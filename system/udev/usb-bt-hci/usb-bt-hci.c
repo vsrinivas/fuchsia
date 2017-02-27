@@ -39,6 +39,7 @@ typedef struct {
 
     mx_handle_t cmd_channel;
     mx_handle_t acl_channel;
+    mx_handle_t snoop_channel;
 
     mx_wait_item_t read_wait_items[NUM_CHANNELS];
     uint32_t read_wait_item_count;
@@ -89,12 +90,34 @@ static void acl_channel_cleanup_locked(hci_t* hci) {
     hci->acl_channel = MX_HANDLE_INVALID;
 }
 
+static void snoop_channel_cleanup_locked(hci_t* hci) {
+    assert(hci->snoop_channel != MX_HANDLE_INVALID);
+    mx_handle_close(hci->snoop_channel);
+    hci->snoop_channel = MX_HANDLE_INVALID;
+}
+
+static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes, size_t length) {
+    if (hci->snoop_channel == MX_HANDLE_INVALID)
+        return;
+
+    // We tack on a flags byte to the beginning of the payload.
+    uint8_t snoop_buffer[length + 1];
+    snoop_buffer[0] = flags;
+    memcpy(snoop_buffer + 1, bytes, length);
+    mx_status_t status = mx_channel_write(hci->snoop_channel, 0, snoop_buffer, length + 1, NULL, 0);
+    if (status < 0) {
+        printf("usb-bt-hci: failed to write to snoop channel: %s\n", mx_status_get_string(status));
+        snoop_channel_cleanup_locked(hci);
+    }
+}
+
 static void hci_event_complete(iotxn_t* txn, void* cookie) {
     hci_t* hci = (hci_t*)cookie;
     mtx_lock(&hci->mutex);
 
-    // If the command channel is currently closed then ignore the interrupt.
-    if (hci->cmd_channel == MX_HANDLE_INVALID)
+    // Handle the interrupt as long as either the command channel or the snoop
+    // channel is open.
+    if (hci->cmd_channel == MX_HANDLE_INVALID && hci->snoop_channel == MX_HANDLE_INVALID)
         goto out2;
 
     if (txn->status == NO_ERROR) {
@@ -106,10 +129,13 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
         // simple case - packet fits in received data
         if (hci->event_buffer_offset == 0 && length >= 2) {
             if (packet_size == length) {
-                mx_status_t status = mx_channel_write(hci->cmd_channel, 0, buffer, length, NULL, 0);
-                if (status < 0) {
-                    printf("hci_interrupt failed to write: %s\n", mx_status_get_string(status));
+                if (hci->cmd_channel != MX_HANDLE_INVALID) {
+                    mx_status_t status = mx_channel_write(hci->cmd_channel, 0, buffer, length, NULL, 0);
+                    if (status < 0) {
+                        printf("hci_interrupt failed to write: %s\n", mx_status_get_string(status));
+                    }
                 }
+                snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_EVENT, buffer, length);
                 goto out;
             }
         }
@@ -136,6 +162,9 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
             if (status < 0) {
                 printf("hci_interrupt failed to write: %s\n", mx_status_get_string(status));
             }
+
+            snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_EVENT, hci->event_buffer, packet_size);
+
             uint32_t remaining = hci->event_buffer_offset - packet_size;
             memmove(hci->event_buffer, hci->event_buffer + packet_size, remaining);
             hci->event_buffer_offset = 0;
@@ -231,6 +260,10 @@ static bool hci_handle_cmd_read_events(hci_t* hci, mx_wait_item_t* cmd_item) {
             printf("hci_read_thread: usb_control failed: %s\n", mx_status_get_string(status));
             goto fail;
         }
+
+        mtx_lock(&hci->mutex);
+        snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_CMD, buf, length);
+        mtx_unlock(&hci->mutex);
     }
 
     return true;
@@ -362,7 +395,28 @@ static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, s
             goto done;
         }
 
-        assert(remote_end != MX_HANDLE_INVALID);
+        *reply = remote_end;
+        result = sizeof(*reply);
+    } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
+        mx_handle_t* reply = out_buf;
+        if (out_len < sizeof(*reply)) {
+            result = ERR_BUFFER_TOO_SMALL;
+            goto done;
+        }
+
+        if (hci->snoop_channel != MX_HANDLE_INVALID) {
+            result = ERR_ALREADY_BOUND;
+            goto done;
+        }
+
+        mx_handle_t remote_end;
+        mx_status_t status = mx_channel_create(0, &hci->snoop_channel, &remote_end);
+        if (status < 0) {
+            printf("hci_ioctl: Failed to create snoop channel: %s\n",
+                   mx_status_get_string(status));
+            result = ERR_INTERNAL;
+            goto done;
+        }
 
         *reply = remote_end;
         result = sizeof(*reply);
@@ -409,6 +463,9 @@ static mx_status_t hci_release(mx_device_t* device) {
 
     if (hci->acl_channel != MX_HANDLE_INVALID)
         acl_channel_cleanup_locked(hci);
+
+    if (hci->snoop_channel != MX_HANDLE_INVALID)
+        snoop_channel_cleanup_locked(hci);
 
     free(hci);
 
