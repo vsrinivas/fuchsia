@@ -99,6 +99,10 @@
 + [ticks_get](syscalls/ticks_get.md) - read high-precision timer ticks
 + [ticks_per_second](syscalls/ticks_per_second.md) - read the number of high-precision timer ticks in a second
 
+## Global system information
++ [system_get_num_cpus](syscalls/system_get_num_cpus.md) - get number of CPUs
++ [system_get_version](syscalls/system_get_version.md) - get version string
+
 ## Logging
 + log_create - create a kernel managed log reader or writer
 + log_write - write log entry to log
@@ -106,3 +110,4 @@
 
 ## Multi-function
 + [vmar_unmap_handle_close_thread_exit](syscalls/vmar_unmap_handle_close_thread_exit.md) - three-in-one
++ [futex_wake_handle_close_thread_exit](syscalls/futex_wake_handle_close_thread_exit.md) - three-in-one
