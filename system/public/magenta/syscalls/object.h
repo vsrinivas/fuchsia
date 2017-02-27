@@ -107,6 +107,9 @@ typedef struct mx_info_vmar {
 #define MX_PROP_REGISTER_FS                 4u
 #endif
 
+// Argument is the value of ld.so's _dl_debug_addr, a uintptr_t.
+#define MX_PROP_PROCESS_DEBUG_ADDR          5u
+
 // Policies for MX_PROP_BAD_HANDLE_POLICY:
 #define MX_POLICY_BAD_HANDLE_IGNORE         0u
 #define MX_POLICY_BAD_HANDLE_LOG            1u

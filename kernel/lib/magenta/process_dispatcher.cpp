@@ -648,6 +648,22 @@ mx_status_t ProcessDispatcher::set_bad_handle_policy(uint32_t new_policy) {
     return NO_ERROR;
 }
 
+uintptr_t ProcessDispatcher::get_debug_addr() const {
+    AutoLock lock(&state_lock_);
+    return debug_addr_;
+}
+
+mx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
+    if (addr == 0u)
+        return ERR_INVALID_ARGS;
+    AutoLock lock(&state_lock_);
+    // Only allow the value to be set once: Once ld.so has set it that's it.
+    if (debug_addr_ != 0u)
+        return ERR_ACCESS_DENIED;
+    debug_addr_ = addr;
+    return NO_ERROR;
+}
+
 const char* StateToString(ProcessDispatcher::State state) {
     switch (state) {
     case ProcessDispatcher::State::INITIAL:

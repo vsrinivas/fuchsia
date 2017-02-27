@@ -192,6 +192,9 @@ public:
     uint32_t get_bad_handle_policy() const { return bad_handle_policy_; }
     mx_status_t set_bad_handle_policy(uint32_t new_policy);
 
+    uintptr_t get_debug_addr() const;
+    mx_status_t set_debug_addr(uintptr_t addr);
+
 private:
     // The diagnostic code is allow to know about the internals of this code.
     friend void DumpProcessList();
@@ -258,6 +261,10 @@ private:
     Mutex exception_lock_;
 
     uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;
+
+    // This is the value of _dl_debug_addr from ld.so.
+    // See third_party/ulib/musl/ldso/dynlink.c.
+    uintptr_t debug_addr_ TA_GUARDED(state_lock_) = 0;
 
     // Used to protect name read/writes
     mutable SpinLock name_lock_;

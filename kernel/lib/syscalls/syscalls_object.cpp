@@ -371,6 +371,17 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
+        case MX_PROP_PROCESS_DEBUG_ADDR: {
+            if (size < sizeof(uintptr_t))
+                return ERR_BUFFER_TOO_SMALL;
+            auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
+            if (!process)
+                return ERR_WRONG_TYPE;
+            uintptr_t value = process->get_debug_addr();
+            if (make_user_ptr(_value).reinterpret<uintptr_t>().copy_to_user(value) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return NO_ERROR;
+        }
         default:
             return ERR_INVALID_ARGS;
     }
@@ -435,6 +446,17 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             return NO_ERROR;
         }
 #endif
+        case MX_PROP_PROCESS_DEBUG_ADDR: {
+            if (size < sizeof(uintptr_t))
+                return ERR_BUFFER_TOO_SMALL;
+            auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
+            if (!process)
+                return up->BadHandle(handle_value, ERR_WRONG_TYPE);
+            uintptr_t value = 0;
+            if (make_user_ptr(_value).reinterpret<const uintptr_t>().copy_from_user(&value) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return process->set_debug_addr(value);
+        }
     }
 
     return ERR_INVALID_ARGS;
