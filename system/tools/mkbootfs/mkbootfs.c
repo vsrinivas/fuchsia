@@ -135,17 +135,13 @@ unsigned add_entry(fs* fs, fsentry* e) {
     return e->namelen + FSENTRYSZ;
 }
 
-int import_manifest(const char* fn, unsigned* hdrsz, fs* fs) {
+int import_manifest(FILE* fp, const char* fn, unsigned* hdrsz, fs* fs) {
     unsigned sz = 0;
     int lineno = 0;
     fsentry* e;
     char* eq;
     char line[4096];
-    FILE* fp;
 
-    if ((fp = fopen(fn, "r")) == NULL) {
-        return -1;
-    }
     while (fgets(line, sizeof(line), fp) != NULL) {
         lineno++;
         if ((eq = strchr(line, '=')) == NULL) {
@@ -163,6 +159,38 @@ int import_manifest(const char* fn, unsigned* hdrsz, fs* fs) {
     *hdrsz += sz;
     return 0;
 }
+
+int import_file(const char* fn, unsigned* hdrsz, fs* list, fs* bootdata) {
+    FILE* fp;
+    if ((fp = fopen(fn, "r")) == NULL) {
+        return -1;
+    }
+
+    uint64_t magic;
+    if ((fread(&magic, sizeof(magic), 1, fp) != 1) ||
+        (magic != BOOTDATA_MAGIC)) {
+        // not a bootdata file, must be a manifest...
+        rewind(fp);
+        return import_manifest(fp, fn, hdrsz, list);
+    } else {
+        fclose(fp);
+
+        // bootdata file
+        struct stat s;
+        if (stat(fn, &s) != 0) {
+            fprintf(stderr, "error: cannot stat '%s'\n", fn);
+            return -1;
+        }
+
+        fsentry* e;
+        if ((e = import_directory_entry("bootdata", fn, &s)) < 0) {
+            return -1;
+        }
+        add_entry(bootdata, e);
+        return 0;
+    }
+}
+
 
 int import_directory(const char* dpath, const char* spath, unsigned* hdrsz, fs* fs) {
 #define MAX_BOOTFS_PATH_LEN 4096
@@ -406,7 +434,8 @@ char fill[4096];
 
 #define CHECK(w) do { if ((w) < 0) goto fail; } while (0)
 
-int export_userfs(const char* fn, fs* fs, unsigned hsz, uint64_t outsize, bool compressed) {
+int export_userfs(const char* fn, fs* predata, fs* postdata, fs* fs,
+                  unsigned hsz, uint64_t outsize, bool compressed) {
     uint32_t n;
     fsentry* e;
     int fd;
@@ -418,6 +447,18 @@ int export_userfs(const char* fn, fs* fs, unsigned hsz, uint64_t outsize, bool c
         return -1;
     }
 
+    // Write any preceeding bootdata files
+    for (e = predata->first; e != NULL; e = e->next) {
+        CHECK(copyfile(fd, e->srcpath, e->length, NULL));
+    }
+
+    // Make note of where we started
+    off_t start = lseek(fd, 0, SEEK_CUR);
+    if (start < 0) {
+        fprintf(stderr, "error: couldn't seek\n");
+        goto fail;
+    }
+
     if (compressed) {
         // Update the LZ4 content size to be original size without the bootdata
         // header which isn't being compressed.
@@ -425,7 +466,7 @@ int export_userfs(const char* fn, fs* fs, unsigned hsz, uint64_t outsize, bool c
     }
 
     // Increment past the bootdata header which will be filled out later.
-    if (lseek(fd, sizeof(bootdata_t), SEEK_SET) != sizeof(bootdata_t)) {
+    if (lseek(fd, (start + sizeof(bootdata_t)), SEEK_SET) != (start + sizeof(bootdata_t))) {
         fprintf(stderr, "error: cannot seek\n");
         goto fail;
     }
@@ -477,21 +518,29 @@ int export_userfs(const char* fn, fs* fs, unsigned hsz, uint64_t outsize, bool c
         CHECK(op->finish(fd, cookie));
     }
 
-    off_t wrote = lseek(fd, 0, SEEK_CUR);
-    if (wrote < 0) {
+    off_t end = lseek(fd, 0, SEEK_CUR);
+    if (end < 0) {
         fprintf(stderr, "error: couldn't seek\n");
         goto fail;
     }
 
+    // Write any following bootdata files
+    for (e = postdata->first; e != NULL; e = e->next) {
+        CHECK(copyfile(fd, e->srcpath, e->length, NULL));
+    }
+
     // Write the bootheader
-    if (lseek(fd, 0, SEEK_SET) != 0) {
-        fprintf(stderr, "error: couldn't seek\n");
+    if (lseek(fd, start, SEEK_SET) != start) {
+        fprintf(stderr, "error: couldn't seek to bootdata header\n");
         goto fail;
     }
+
+    size_t wrote = (end - start) - sizeof(bootdata_t);
+
     bootdata_t boothdr = {
         .magic = BOOTDATA_MAGIC,
         .type = BOOTDATA_TYPE_BOOTFS,
-        .insize = wrote - sizeof(bootdata_t),
+        .insize = wrote,
         .outsize = compressed ? outsize : wrote,
         .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
     };
@@ -510,7 +559,11 @@ fail:
 
 int main(int argc, char **argv) {
     const char* output_file = "user.bootfs";
+
+    fs predata = { 0 };
+    fs postdata = { 0 };
     fs fs = { 0 };
+
     fsentry* e = NULL;
     int i;
     unsigned hsz = 0;
@@ -561,7 +614,7 @@ int main(int argc, char **argv) {
             if (import_directory("", path, &hsz, &fs) < 0) {
                 return -1;
             }
-        } else if (import_manifest(path, &hsz, &fs) < 0) {
+        } else if (import_file(path, &hsz, &fs, fs.first ? &postdata : &predata) < 0) {
             return -1;
         }
     }
@@ -589,5 +642,5 @@ int main(int argc, char **argv) {
     if (last_entry && last_entry->length == 0) {
         off += sizeof(fill);
     }
-    return export_userfs(output_file, &fs, hsz, off, compressed);
+    return export_userfs(output_file, &predata, &postdata, &fs, hsz, off, compressed);
 }
