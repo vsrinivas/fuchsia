@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         if (header.type != BOOTDATA_TYPE_MDI) {
-            lseek(fd, header.insize, SEEK_CUR);
+            lseek(fd, BOOTDATA_ALIGN(header.insize), SEEK_CUR);
             continue;
         }
     }

@@ -24,7 +24,6 @@
 
 #define MAXBUFFER (1024*1024)
 
-
 int verbose = 0;
 
 char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
@@ -522,6 +521,12 @@ int export_userfs(const char* fn, fs* predata, fs* postdata, fs* fs,
     if (end < 0) {
         fprintf(stderr, "error: couldn't seek\n");
         goto fail;
+    }
+
+    // pad bootdata_t records to 8 byte boundary
+    size_t pad = BOOTDATA_ALIGN(end) - end;
+    if (pad) {
+        write(fd, fill, pad);
     }
 
     // Write any following bootdata files

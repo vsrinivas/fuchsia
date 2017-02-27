@@ -10,6 +10,9 @@
 // "BOOTDATA" in ASCII (little-endian)
 #define BOOTDATA_MAGIC 0x41544144544f4f42ULL
 
+// Align bootdata_t to 8 byte boundary
+#define BOOTDATA_ALIGN(n) (((n) + 7) & (~7))
+
 __BEGIN_CDECLS;
 
 #define BOOTDATA_TYPE_BOOTFS    1

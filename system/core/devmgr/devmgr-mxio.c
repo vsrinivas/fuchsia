@@ -192,7 +192,7 @@ static void setup_bootfs(void) {
                 printf("devmgr: ignoring bootdata type=%08x size=%u\n",
                        bootdata.type, bootdata.insize);
             }
-            off += sizeof(bootdata) + bootdata.insize;
+            off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.insize);
         }
         mx_handle_close(vmo);
     }

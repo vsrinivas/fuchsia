@@ -183,7 +183,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
                 goto found_bootfs;
             }
 
-            off += sizeof(bootdata) + bootdata.insize;
+            off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.insize);
         }
     }
 
