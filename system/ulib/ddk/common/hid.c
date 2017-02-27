@@ -608,6 +608,10 @@ void hid_io_queue(mx_hid_device_t* hid, const uint8_t* buf, size_t len) {
 }
 
 mx_status_t hid_add_device(mx_driver_t* drv, mx_hid_device_t* dev, mx_device_t* parent) {
+    return hid_add_device_etc(drv, dev, parent, NULL);
+}
+
+mx_status_t hid_add_device_etc(mx_driver_t* drv, mx_hid_device_t* dev, mx_device_t* parent, const char* name) {
     mx_status_t status;
     if (dev->boot_device) {
         status = dev->ops->set_protocol(dev, HID_PROTOCOL_BOOT);
@@ -640,9 +644,13 @@ mx_status_t hid_add_device(mx_driver_t* drv, mx_hid_device_t* dev, mx_device_t* 
     hid_dump_hid_report_desc(dev);
 #endif
 
-    char name[15];
-    snprintf(name, sizeof(name), "hid-device-%03d", dev->dev_num);
-    device_init(&dev->dev, drv, name, &hid_device_proto);
+    char _name[sizeof(dev->dev.name)];
+    if (name == NULL) {
+        snprintf(_name, sizeof(_name), "hid-device-%03d", dev->dev_num);
+    } else {
+        snprintf(_name, sizeof(_name), "%s", name);
+    }
+    device_init(&dev->dev, drv, _name, &hid_device_proto);
     dev->dev.protocol_id = MX_PROTOCOL_INPUT;
     status = device_add(&dev->dev, parent);
     if (status != NO_ERROR) {

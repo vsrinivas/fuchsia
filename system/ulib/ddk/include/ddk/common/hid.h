@@ -89,6 +89,7 @@ typedef struct hid_bus_ops {
 void hid_init_device(mx_hid_device_t* dev, hid_bus_ops_t* bus, uint8_t dev_num,
         bool boot_device, uint8_t dev_class);
 mx_status_t hid_add_device(mx_driver_t* drv, mx_hid_device_t* dev, mx_device_t* parent);
+mx_status_t hid_add_device_etc(mx_driver_t* drv, mx_hid_device_t* dev, mx_device_t* parent, const char* name);
 void hid_io_queue(mx_hid_device_t* hid, const uint8_t* buf, size_t len);
 void hid_release_device(mx_hid_device_t* dev);
 
