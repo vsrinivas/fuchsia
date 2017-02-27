@@ -161,10 +161,12 @@ static mx_protocol_device_t hidctl_device_proto = {
     .open = hidctl_open,
 };
 
-static mx_status_t hidctl_init(mx_driver_t* driver) {
+static mx_status_t hidctl_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     if (device_create(&hidctl_dev, driver, "hidctl", &hidctl_device_proto) == NO_ERROR) {
-        if (device_add(hidctl_dev, driver_get_misc_device()) < 0) {
+        mx_status_t status;
+        if ((status = device_add(hidctl_dev, parent)) < 0) {
             free(hidctl_dev);
+            return status;
         }
     }
     return NO_ERROR;
@@ -172,9 +174,10 @@ static mx_status_t hidctl_init(mx_driver_t* driver) {
 
 mx_driver_t _driver_hidctl = {
     .ops = {
-        .init = hidctl_init,
+        .bind = hidctl_bind,
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_hidctl, "hidctl", "magenta", "0.1", 0)
+MAGENTA_DRIVER_BEGIN(_driver_hidctl, "hidctl", "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
 MAGENTA_DRIVER_END(_driver_hidctl)

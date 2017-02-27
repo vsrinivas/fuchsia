@@ -328,8 +328,8 @@ static mx_protocol_device_t intel_rtc_device_proto __UNUSED = {
     .ioctl = intel_rtc_ioctl,
 };
 
-// Implement driver object.
-static mx_status_t intel_rtc_init(mx_driver_t* drv) {
+//TODO: bind against hw, not misc
+static mx_status_t intel_rtc_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
 #if defined(__x86_64__) || defined(__i386__)
     // TODO(teisenbe): This should be probed via the ACPI pseudo bus whenever it
     // exists.
@@ -345,7 +345,7 @@ static mx_status_t intel_rtc_init(mx_driver_t* drv) {
         return status;
     }
 
-    status = device_add(dev, driver_get_misc_device());
+    status = device_add(dev, parent);
     if (status != NO_ERROR) {
         free(dev);
         return status;
@@ -363,9 +363,10 @@ static mx_status_t intel_rtc_init(mx_driver_t* drv) {
 
 mx_driver_t _driver_intel_rtc = {
     .ops = {
-        .init = intel_rtc_init,
+        .bind = intel_rtc_bind,
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_intel_rtc, "intel-rtc", "magenta", "0.1", 0)
+MAGENTA_DRIVER_BEGIN(_driver_intel_rtc, "intel-rtc", "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
 MAGENTA_DRIVER_END(_driver_intel_rtc)

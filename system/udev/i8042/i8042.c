@@ -19,8 +19,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-#define MXDEBUG 0
-#include <mxio/debug.h>
+#define xprintf(fmt...) do {} while (0)
 
 mx_driver_t _driver_i8042;
 
@@ -663,10 +662,9 @@ static hid_bus_ops_t hid_bus_ops = {
     .set_protocol = i8042_set_protocol,
 };
 
-static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name) {
+static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, mx_device_t* parent) {
     hid_init_device(&dev->hiddev, &hid_bus_ops, dev->type, true, dev->type);
-    mx_status_t status = hid_add_device_etc(&_driver_i8042, &dev->hiddev,
-                                            driver_get_misc_device(), name);
+    mx_status_t status = hid_add_device_etc(&_driver_i8042, &dev->hiddev, parent, name);
     if (status != NO_ERROR) {
         hid_release_device(&dev->hiddev);
         return status;
@@ -707,6 +705,7 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name) {
 }
 
 static int i8042_init_thread(void* arg) {
+    mx_device_t* parent = arg;
     uint8_t ctr = 0;
     mx_status_t status = i8042_setup(&ctr);
     if (status != NO_ERROR) {
@@ -735,7 +734,7 @@ static int i8042_init_thread(void* arg) {
         return ERR_NO_MEMORY;
 
     kbd_device->type = INPUT_PROTO_KBD;
-    status = i8042_dev_init(kbd_device, "i8042-keyboard");
+    status = i8042_dev_init(kbd_device, "i8042-keyboard", parent);
     if (status != NO_ERROR) {
         free(kbd_device);
     }
@@ -746,7 +745,7 @@ static int i8042_init_thread(void* arg) {
         mouse_device = calloc(1, sizeof(i8042_device_t));
         if (mouse_device) {
             mouse_device->type = INPUT_PROTO_MOUSE;
-            status = i8042_dev_init(mouse_device, "i8042-mouse");
+            status = i8042_dev_init(mouse_device, "i8042-mouse", parent);
             if (status != NO_ERROR) {
                 free(mouse_device);
             }
@@ -758,17 +757,19 @@ static int i8042_init_thread(void* arg) {
     return NO_ERROR;
 }
 
-static mx_status_t i8042_init(mx_driver_t* driver) {
+static mx_status_t i8042_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     thrd_t t;
-    int rc = thrd_create_with_name(&t, i8042_init_thread, NULL, "i8042-init");
+    int rc = thrd_create_with_name(&t, i8042_init_thread, parent, "i8042-init");
     return rc;
 }
 
 mx_driver_t _driver_i8042 = {
     .ops = {
-        .init = i8042_init,
+        .bind = i8042_bind,
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_i8042, "i8042", "magenta", "0.1", 0)
+//TODO: should bind against PC/ACPI instead of misc
+MAGENTA_DRIVER_BEGIN(_driver_i8042, "i8042", "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
 MAGENTA_DRIVER_END(_driver_i8042)

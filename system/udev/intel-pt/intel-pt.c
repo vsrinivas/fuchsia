@@ -932,7 +932,7 @@ static mx_protocol_device_t ipt_device_proto = {
     .release = ipt_release,
 };
 
-static mx_status_t ipt_init(mx_driver_t* driver) {
+static mx_status_t ipt_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     x86_pt_init();
     if (!ipt_config_supported)
         return ERR_NOT_SUPPORTED;
@@ -944,7 +944,7 @@ static mx_status_t ipt_init(mx_driver_t* driver) {
     device_init(&ipt_dev->device, driver, "intel-pt", &ipt_device_proto);
 
     mx_status_t status;
-    if ((status = device_add(&ipt_dev->device, driver_get_misc_device())) < 0) {
+    if ((status = device_add(&ipt_dev->device, parent)) < 0) {
         free(ipt_dev);
         return status;
     }
@@ -954,9 +954,10 @@ static mx_status_t ipt_init(mx_driver_t* driver) {
 
 mx_driver_t _driver_intel_pt = {
     .ops = {
-        .init = ipt_init,
+        .bind = ipt_bind,
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_intel_pt, "intel-pt", "magenta", "0.1", 0)
+MAGENTA_DRIVER_BEGIN(_driver_intel_pt, "intel-pt", "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
 MAGENTA_DRIVER_END(_driver_intel_pt)

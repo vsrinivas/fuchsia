@@ -134,9 +134,9 @@ static mx_protocol_device_t tpm_device_proto __UNUSED = {
     .ioctl = tpm_device_ioctl,
 };
 
-// implement driver object:
 
-mx_status_t tpm_init(mx_driver_t* driver) {
+//TODO: bind against hw, not misc
+mx_status_t tpm_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
 #if defined(__x86_64__) || defined(__i386__)
     uintptr_t tmp;
     mx_status_t status = mx_mmap_device_memory(
@@ -156,7 +156,7 @@ mx_status_t tpm_init(mx_driver_t* driver) {
     dev->protocol_id = MX_PROTOCOL_TPM;
     dev->protocol_ops = &tpm_proto;
 
-    status = device_add(dev, driver_get_misc_device());
+    status = device_add(dev, parent);
     if (status != NO_ERROR) {
         free(dev);
         return status;
@@ -222,9 +222,10 @@ cleanup_device:
 
 mx_driver_t _driver_tpm = {
     .ops = {
-        .init = tpm_init,
+        .bind = tpm_bind,
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_tpm, "tpm", "magenta", "0.1", 0)
+MAGENTA_DRIVER_BEGIN(_driver_tpm, "tpm", "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
 MAGENTA_DRIVER_END(_driver_tpm)

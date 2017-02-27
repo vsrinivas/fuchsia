@@ -226,10 +226,12 @@ static mx_protocol_device_t ramdisk_ctl_proto = {
     .open = ramctl_open,
 };
 
-static mx_status_t ramdisk_driver_init(mx_driver_t* driver) {
+static mx_status_t ramdisk_driver_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     if (device_create(&ramdisk_ctl_dev, driver, "ramctl", &ramdisk_ctl_proto) == NO_ERROR) {
-        if (device_add(ramdisk_ctl_dev, driver_get_misc_device()) < 0) {
+        mx_status_t status;
+        if ((status = device_add(ramdisk_ctl_dev, parent)) < 0) {
             free(ramdisk_ctl_dev);
+            return status;
         }
     }
     return NO_ERROR;
@@ -237,9 +239,10 @@ static mx_status_t ramdisk_driver_init(mx_driver_t* driver) {
 
 mx_driver_t _driver_ramdisk = {
     .ops = {
-        .init = ramdisk_driver_init,
+        .bind = ramdisk_driver_bind,
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_ramdisk, "ramdisk", "magenta", "0.1", 0)
+MAGENTA_DRIVER_BEGIN(_driver_ramdisk, "ramdisk", "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
 MAGENTA_DRIVER_END(_driver_ramdisk)
