@@ -26,6 +26,7 @@
 
 #include <mxio/debug.h>
 #include <mxio/io.h>
+#include <mxio/private.h>
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 #include <mxio/vfs.h>
@@ -1320,6 +1321,22 @@ int mxio_handle_fd(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_
     }
     return fd;
 }
+
+// from mxio/private.h, to support message-loop integration
+
+void __mxio_wait_begin(mxio_t* io, uint32_t events,
+                       mx_handle_t* handle_out, mx_signals_t* signals_out) {
+    return io->ops->wait_begin(io, events, handle_out, signals_out);
+}
+
+void __mxio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* events_out) {
+    return io->ops->wait_end(io, signals, events_out);
+}
+
+void __mxio_release(mxio_t* io) {
+    mxio_release(io);
+}
+
 
 // TODO: getrlimit(RLIMIT_NOFILE, ...)
 #define MAX_POLL_NFDS 1024
