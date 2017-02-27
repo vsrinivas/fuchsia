@@ -12,7 +12,8 @@
 
 __BEGIN_CDECLS;
 
-#define BOOTDATA_TYPE_BOOTFS 1
+#define BOOTDATA_TYPE_BOOTFS    1
+#define BOOTDATA_TYPE_MDI       0x3149444d // MDI1
 
 // Flag indicating that the bootfs is compressed.
 #define BOOTDATA_BOOTFS_FLAG_COMPRESSED  (1 << 0)

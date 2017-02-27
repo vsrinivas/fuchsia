@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <magenta/bootdata.h>
 #include <magenta/mdi.h>
 
 static void dump_node(int fd, int level);
@@ -157,18 +158,24 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    mdi_header_t header;
-    if (read(fd, &header, sizeof(header)) != sizeof(header)) {
-        fprintf(stderr, "could not read MDI header\n");
-        close(fd);
-        return -1;
+    while (1) {
+        // Search for bootdata entry with type BOOTDATA_TYPE_MDI
+        bootdata_t header;
+        if (read(fd, &header, sizeof(header)) != sizeof(header)) {
+            fprintf(stderr, "could not read MDI header\n");
+            close(fd);
+            return -1;
+        }
+        if (header.magic != BOOTDATA_MAGIC) {
+            fprintf(stderr, "MDI header bad magic 0x%" PRIx64 "\n", header.magic);
+            close(fd);
+            return -1;
+        }
+        if (header.type != BOOTDATA_TYPE_MDI) {
+            lseek(fd, header.insize, SEEK_CUR);
+            continue;
+        }
     }
-    if (header.magic != MDI_MAGIC) {
-        fprintf(stderr, "MDI header bad magic 0x%08X\n", header.magic);
-        close(fd);
-        return -1;
-    }
-
     dump_node(fd, 0);
 
     close(fd);

@@ -10,6 +10,10 @@
 
 __BEGIN_CDECLS;
 
+// an MDI binary file consists of a bootdata_t header (see magenta/bootdata.h)
+// followed by a tree of mdi_node_t nodes.
+// The root node has id set to mdi_root_id.
+
 // MDI Nodes are aligned to 8 byte boundaries
 #define MDI_ALIGNMENT   8
 #define MDI_ALIGN(x)    (((x) + MDI_ALIGNMENT - 1) & ~(MDI_ALIGNMENT - 1))
@@ -44,8 +48,6 @@ typedef uint32_t mdi_id_t;
 #define MDI_MAKE_ID(type, num)  ((type << MDI_TYPE_SHIFT) | num)
 #define MDI_MAKE_ARRAY_ID(type, num) ((MDI_ARRAY << MDI_TYPE_SHIFT) | (type << MDI_ARRAY_TYPE_SHIFT) | num)
 
-#define MDI_MAGIC                   0x2149444D  // "MDI!"
-
 static const mdi_id_t mdi_root_id = MDI_MAKE_ID(MDI_LIST, 0);
 
 // mdi_node_t represents a node in the device index.
@@ -67,15 +69,5 @@ typedef struct {
     } value;
 } mdi_node_t;
 static_assert(sizeof(mdi_node_t) == 16, "");
-
-// MDI header. This goes at the beginning and is immediately followed by root node.
-typedef struct {
-    uint32_t        magic;          // MDI_MAGIC
-    uint32_t        length;         // total length of MDI data, including this header
-    uint16_t        version_major;  // MDI format major version
-    uint16_t        version_minor;  // MDI format minor version
-    uint32_t        reserved;       // set to zero
-} mdi_header_t;
-static_assert(sizeof(mdi_header_t) == 16, "");
 
 __END_CDECLS;

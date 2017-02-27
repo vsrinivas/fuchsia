@@ -13,14 +13,11 @@
 #include <string>
 #include <vector>
 
-//#include <mdi/mdi.h>
+#include <magenta/bootdata.h>
 
 #include "node.h"
 #include "parser.h"
 #include "tokens.h"
-
-#define VERSION_MAJOR   1
-#define VERSION_MINOR   0
 
 static bool run(std::vector<std::string>& in_paths, const char* out_path,
                const char* header_path, const char* header_prefix,
@@ -47,8 +44,8 @@ static bool run(std::vector<std::string>& in_paths, const char* out_path,
 
         root.compute_node_length();
 
-        // write empty header first
-        mdi_header_t header;
+        // write empty bootdata header first
+        bootdata_t header;
         memset(&header, 0, sizeof(header));
         out_file.write((const char *)&header, sizeof(header));
 
@@ -56,10 +53,11 @@ static bool run(std::vector<std::string>& in_paths, const char* out_path,
         root.serialize(out_file);
 
         // back up and fill in the header
-        header.magic = MDI_MAGIC;
-        header.length = out_file.tellp();
-        header.version_major = VERSION_MAJOR;
-        header.version_minor = VERSION_MINOR;
+        header.magic = BOOTDATA_MAGIC;
+        header.type = BOOTDATA_TYPE_MDI;
+        header.insize = out_file.tellp();
+        header.insize -= sizeof(header);
+        header.outsize = header.insize;
         out_file.seekp(0);
         out_file.write((const char *)&header, sizeof(header));
     }

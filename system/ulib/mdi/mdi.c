@@ -7,8 +7,7 @@
 #include <stdio.h>
 
 #include <mdi/mdi.h>
-
-#define VERSION_MAJOR   1
+#include <magenta/bootdata.h>
 
 #define DEBUG   0
 
@@ -26,24 +25,20 @@
 
 // takes pointer to MDI header and returns reference to MDI root node
 mx_status_t mdi_init(const void* mdi_data, size_t length, mdi_node_ref_t* out_ref) {
-    const mdi_header_t* header = (const mdi_header_t *)mdi_data;
-    // length should be at least size of header plus one node, and length should match header length
-    if (length < sizeof(mdi_node_t) + sizeof(mdi_node_t) || length < header->length) {
+    const bootdata_t* header = (const bootdata_t *)mdi_data;
+    // Sanity check the length. Must be big enough to contain bootdata header and at least one node.
+    if (length < sizeof(*header) || length < sizeof(*header) + header->insize
+        || header->insize < sizeof(mdi_node_t)) {
         xprintf("%s: bad length\n", __FUNCTION__);
         return ERR_INVALID_ARGS;
     }
-    if (header->magic != MDI_MAGIC) {
-        xprintf("%s: bad magic 0x%08X\n", __FUNCTION__, header->magic);
-        return ERR_INVALID_ARGS;
-    }
-    if (header->version_major != VERSION_MAJOR) {
-        xprintf("%s: unsupported version %d.%d\n", __FUNCTION__, header->version_major,
-                header->version_minor);
+    if (header->magic != BOOTDATA_MAGIC || header->type != BOOTDATA_TYPE_MDI) {
+        xprintf("%s: not a MDI bootdata header\n", __FUNCTION__);
         return ERR_INVALID_ARGS;
     }
 
-    const mdi_node_t* node = (const mdi_node_t *)((const char *)(header + 1));
-    if (node->length != header->length - sizeof(*header)) {
+    const mdi_node_t* node = (const mdi_node_t *)(header + 1);
+    if (node->length != header->insize) {
         xprintf("%s: bad root node length\n", __FUNCTION__);
         out_ref->node = NULL;
         return ERR_INVALID_ARGS;
