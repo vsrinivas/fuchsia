@@ -142,6 +142,7 @@ static int devhost_cmdline(int argc, char** argv) {
             printf("devhost: cannot create misc device: %d\n", status);
             return -1;
         }
+        the_misc_device->protocol_id = MX_PROTOCOL_MISC_PARENT;
         as_root = true;
     } else if (!strncmp(argv[1], "pci=", 4)) {
         // The pci bus driver launches devhosts for pci devices.

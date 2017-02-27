@@ -130,17 +130,26 @@ mx_status_t devhost_remove(mx_device_t* dev) {
 
 #define DRIVER_NAME_LEN_MAX 64
 
+// device binding program that pure (parentless)
+// misc devices use to get published in the
+// primary devhost
+static struct mx_bind_inst misc_device_binding =
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT);
+
 static void init_driver(mx_driver_t* drv, bool for_root) {
-        if ((drv->binding_size == 0) && (!for_root)) {
-            // only load root-level drivers in the root devhost
-            return;
-        }
+    if ((drv->binding_size == 0) && (!for_root)) {
+        // only load root-level drivers in the root devhost
+        return;
+    }
 #if !ONLY_ONE_DEVHOST
-        if ((drv->binding_size > 0) && (for_root)) {
+    if (for_root && (drv->binding_size > 0)) {
+        if ((drv->binding_size != sizeof(misc_device_binding)) ||
+            memcmp(&misc_device_binding, drv->binding, sizeof(misc_device_binding))) {
             return;
         }
+    }
 #endif
-        driver_add(drv);
+    driver_add(drv);
 }
 
 static bool is_driver_disabled(magenta_driver_info_t* di) {

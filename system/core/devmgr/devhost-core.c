@@ -120,7 +120,9 @@ static mx_status_t default_resume(mx_device_t* dev) {
 static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_device_list);
 static struct list_node driver_list = LIST_INITIAL_VALUE(driver_list);
 
-#define device_is_bound(dev) (!!dev->owner)
+static inline bool device_is_bound(mx_device_t* dev) {
+    return dev->owner != NULL;
+}
 
 void dev_ref_release(mx_device_t* dev) {
     dev->refcount--;
@@ -176,35 +178,47 @@ static mx_status_t devhost_device_probe(mx_device_t* dev, mx_driver_t* drv) {
     if (status < 0) {
         return status;
     }
-    dev->owner = drv;
-    dev->owner_cookie = cookie;
     dev_ref_acquire(dev);
 
-    // remove from unbound list if we succeeded
-    if (list_in_list(&dev->unode)) {
-        list_delete(&dev->unode);
+    // multi-bind devices are not "owned" by a single driver
+    // and they currently are permanent singleton devices (like /dev/misc)
+    // which will never result in child->op->unbind(), so the fact that
+    // we do not track the cookie here is not a problem.
+    if (!(dev->flags & DEV_FLAG_MULTI_BIND)) {
+        dev->owner = drv;
+        dev->owner_cookie = cookie;
+
+        // remove from unbound list if we succeeded
+        if (list_in_list(&dev->unode)) {
+            list_delete(&dev->unode);
+        }
     }
+
     return NO_ERROR;
 }
 
 static void devhost_device_probe_all(mx_device_t* dev, bool autobind) {
-    if ((dev->flags & DEV_FLAG_UNBINDABLE) == 0) {
-        if (!device_is_bound(dev)) {
-            mx_driver_t* drv = NULL;
-            list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
-                if (autobind && drv->flags & DRV_FLAG_NO_AUTOBIND) {
-                    continue;
-                }
-                if (devhost_device_probe(dev, drv) == NO_ERROR) {
-                    break;
-                }
+    if ((dev->flags & DEV_FLAG_UNBINDABLE) || device_is_bound(dev)) {
+        return;
+    }
+
+    mx_driver_t* drv = NULL;
+    list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
+        if (autobind && drv->flags & DRV_FLAG_NO_AUTOBIND) {
+            continue;
+        }
+        if (devhost_device_probe(dev, drv) == NO_ERROR) {
+            // if the probe succeeded and we are not a multi-bind
+            // device, we can stop looking for further matches now
+            if (!(dev->flags & DEV_FLAG_MULTI_BIND)) {
+                break;
             }
         }
+    }
 
-        // if no driver is bound, add the device to the unmatched list
-        if (!device_is_bound(dev)) {
-            list_add_tail(&unmatched_device_list, &dev->unode);
-        }
+    // if no driver is bound, add the device to the unmatched list
+    if (!device_is_bound(dev)) {
+        list_add_tail(&unmatched_device_list, &dev->unode);
     }
 }
 
@@ -270,6 +284,16 @@ static mx_status_t device_validate(mx_device_t* dev) {
     if (dev->ops == NULL) {
         printf("device add: %p(%s): NULL ops\n", dev, dev->name);
         return ERR_INVALID_ARGS;
+    }
+    if (dev->protocol_id == MX_PROTOCOL_MISC_PARENT) {
+        // This protocol is only allowed for the special
+        // singleton misc parent device.
+        if (dev != driver_get_misc_device()) {
+            return ERR_INVALID_ARGS;
+        }
+        // We do not limit binding to a single child
+        // on the misc parent device.
+        dev->flags |= DEV_FLAG_MULTI_BIND;
     }
     // devices which do not declare a primary protocol
     // are implied to be misc devices
@@ -370,6 +394,10 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent) {
     return NO_ERROR;
 }
 
+#define REMOVAL_BAD_FLAGS \
+    (DEV_FLAG_DEAD | DEV_FLAG_BUSY |\
+     DEV_FLAG_INSTANCE | DEV_FLAG_MULTI_BIND)
+
 static const char* removal_problem(uint32_t flags) {
     if (flags & DEV_FLAG_DEAD) {
         return "already dead";
@@ -379,6 +407,9 @@ static const char* removal_problem(uint32_t flags) {
     }
     if (flags & DEV_FLAG_INSTANCE) {
         return "ephemeral device";
+    }
+    if (flags & DEV_FLAG_MULTI_BIND) {
+        return "multi-bind-able device";
     }
     return "?";
 }
@@ -406,7 +437,7 @@ static void devhost_unbind_children(mx_device_t* dev) {
 }
 
 mx_status_t devhost_device_remove(mx_device_t* dev) {
-    if (dev->flags & (DEV_FLAG_DEAD | DEV_FLAG_BUSY | DEV_FLAG_INSTANCE)) {
+    if (dev->flags & REMOVAL_BAD_FLAGS) {
         printf("device: %p(%s): cannot be removed (%s)\n",
                dev, dev->name, removal_problem(dev->flags));
         return ERR_INVALID_ARGS;

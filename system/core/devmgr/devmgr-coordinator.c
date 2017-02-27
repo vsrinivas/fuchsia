@@ -80,6 +80,13 @@ static void do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
         return;
     }
 
+    if (ctx->protocol_id == MX_PROTOCOL_MISC_PARENT) {
+        // The misc parent device is a singleton, and
+        // misc-parent is not a true protocol (it's disallowed
+        // for any device but the misc-parent to implement)
+        return;
+    }
+
     char buf[PNMAX];
     const char* pname = proto_name(ctx->protocol_id, buf);
 
