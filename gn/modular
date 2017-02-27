@@ -4,6 +4,10 @@
     ],
     "binaries": [
         {
+            "binary": "agent_trigger_test",
+            "bootfs_path": "apps/modular_tests/agent_trigger_test"
+        },
+        {
             "binary": "child_module",
             "bootfs_path": "apps/modular_tests/child_module"
         },
@@ -124,12 +128,24 @@
             "bootfs_path": "apps/suggest_shell_view"
         },
         {
+            "binary": "suggestion_proposal_test_module",
+            "bootfs_path": "apps/modular_tests/suggestion_proposal_test_module"
+        },
+        {
+            "binary": "suggestion_test_user_shell",
+            "bootfs_path": "apps/suggestion_test_user_shell"
+        },
+        {
             "binary": "swap_module2",
             "bootfs_path": "apps/swap_module2"
         },
         {
             "binary": "swap_recipe",
             "bootfs_path": "apps/swap_recipe"
+        },
+        {
+            "binary": "trigger_test_agent",
+            "bootfs_path": "apps/modular_tests/trigger_test_agent"
         },
         {
             "binary": "test_runner",
