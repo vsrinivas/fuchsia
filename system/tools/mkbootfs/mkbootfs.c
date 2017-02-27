@@ -491,7 +491,7 @@ int export_userfs(const char* fn, fs* fs, unsigned hsz, uint64_t outsize, bool c
     bootdata_t boothdr = {
         .magic = BOOTDATA_MAGIC,
         .type = BOOTDATA_TYPE_BOOTFS,
-        .insize = wrote,
+        .insize = wrote - sizeof(bootdata_t),
         .outsize = compressed ? outsize : wrote,
         .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
     };

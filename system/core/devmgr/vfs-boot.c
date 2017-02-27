@@ -43,9 +43,7 @@ static mx_status_t _vnb_create(vnode_t* parent, vnode_t** out,
     vnode_t* vnb;
     mx_status_t r = _memfs_create(parent, &vnb, name, namelen, MEMFS_TYPE_VMO|MEMFS_FLAG_VMO_REUSE);
     if (r < 0) {
-        if (mx_handle_close(h) < 0) {
-            printf("memfs_create_from_vmo: unexpected error closing handle\n");
-        }
+        printf("bootfs: memfs_create('%.*s') failed: %d\n", (int)namelen, name, r);
         return r;
     }
     xprintf("vnb_create: vn=%p, parent=%p name='%.*s' datalen=%zd\n",

@@ -38,7 +38,9 @@ MODULE_STATIC_LIBS := \
     ulib/elfload \
     ulib/mxio \
     ulib/fs \
-    ulib/fs-management
+    ulib/fs-management \
+    ulib/bootdata \
+    ulib/lz4
 
 MODULE_LIBS := ulib/magenta ulib/musl
 

@@ -74,7 +74,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // Read the bootstrap message from the kernel.
     MXR_PROCESSARGS_BUFFER(buffer, nbytes);
-    mx_handle_t handles[nhandles];
+    mx_handle_t handles[nhandles + 1];
     mx_proc_args_t* pargs;
     uint32_t* handle_info;
     status = mxr_processargs_read(bootstrap_pipe,
@@ -152,35 +152,47 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (status < 0)
         fail(log, status, "mx_handle_duplicate failed\n");
 
-    // Decompress any bootfs VMOs if necessary
+    // Locate the first bootfs bootdata section and decompress it.
+    // We need it to load devmgr and libc from.
+    // Later bootfs sections will be processed by devmgr.
     for (uint32_t i = 0; i < nhandles; ++i) {
-        if (MX_HND_INFO_TYPE(handle_info[i]) == MX_HND_TYPE_BOOTDATA_VMO) {
+        if (MX_HND_INFO_TYPE(handle_info[i]) != MX_HND_TYPE_BOOTDATA_VMO) {
+            continue;
+        }
+
+        size_t off = 0;
+        for (;;) {
             bootdata_t bootdata;
             size_t actual;
-            status = mx_vmo_read(handles[i], &bootdata, 0, sizeof(bootdata), &actual);
+            status = mx_vmo_read(handles[i], &bootdata, off, sizeof(bootdata), &actual);
             if ((status < 0) || (actual != sizeof(bootdata))) {
-                continue;
+                break;
             }
 
-            mx_handle_t newvmo;
-            const char* errmsg;
-            status = decompress_bootdata(vmar_self, handles[i],
-                                         0, bootdata.insize + sizeof(bootdata),
-                                         &newvmo, &errmsg);
-            if (status < 0) {
-                fail(log, status, errmsg);
+            if (bootdata.magic != BOOTDATA_MAGIC) {
+                break;
             }
-            if (MX_HND_INFO_ARG(handle_info[i]) == 0) {
-                bootfs_vmo = newvmo;
+            if (bootdata.type == BOOTDATA_TYPE_BOOTFS) {
+                const char* errmsg;
+                status = decompress_bootdata(vmar_self, handles[i],
+                                             0, bootdata.insize + sizeof(bootdata),
+                                             &bootfs_vmo, &errmsg);
+                if (status < 0) {
+                    fail(log, status, errmsg);
+                }
+                goto found_bootfs;
             }
-            mx_handle_close(handles[i]);
-            handles[i] = newvmo;
-            handle_info[i] = MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, MX_HND_INFO_ARG(handle_info[i]));
+
+            off += sizeof(bootdata) + bootdata.insize;
         }
     }
 
-    if (bootfs_vmo == MX_HANDLE_INVALID)
-        fail(log, ERR_INVALID_ARGS, "no bootfs in bootstrap message\n");
+    fail(log, ERR_INVALID_ARGS, "no bootfs in bootstrap message\n");
+
+found_bootfs:
+    handles[nhandles] = bootfs_vmo;
+    handle_info[nhandles] = MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, 0);
+    nhandles++;
 
     // Make the channel for the bootstrap message.
     mx_handle_t to_child;
