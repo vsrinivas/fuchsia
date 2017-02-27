@@ -7,13 +7,7 @@ create a media player.
 
 Run the app as follows:
 
-    @ bootstrap -
-    @boot launch media_player_flutter
-
-It's important to use @boot as shown above rather than creating a new
-bootstrap environment for each invocation of media_player_flutter. Each instance
-of the bootstrap environment will create its own instance of audio_server, and
-multiple audio_servers will conflict when trying to access devices.
+    launch media_player_flutter
 
 Flutter apps can't currently process command line parameters, and supporting
 text entry is problematic. For these reasons, media_player_flutter relies on

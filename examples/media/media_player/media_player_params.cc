@@ -43,7 +43,7 @@ MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
 
 void MediaPlayerParams::Usage() {
   FTL_LOG(INFO) << "media_player usage:";
-  FTL_LOG(INFO) << "    @boot launch media_player [ options ]";
+  FTL_LOG(INFO) << "    launch media_player [ options ]";
   FTL_LOG(INFO) << "options:";
   FTL_LOG(INFO) << "    --path=<path>               play content from a file";
   FTL_LOG(INFO)

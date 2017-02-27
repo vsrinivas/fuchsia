@@ -7,8 +7,7 @@ audio input.
 
 Here's an example command line:
 
-    @ bootstrap -
-    @boot launch vu_meter
+    launch vu_meter
 
 Tapping on the screen stops and starts the meter. Once focus is established with
 a tap, the space bar will also start and stop the meter, and the 'q' key quits

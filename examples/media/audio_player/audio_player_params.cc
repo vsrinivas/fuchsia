@@ -25,8 +25,7 @@ AudioPlayerParams::AudioPlayerParams(const ftl::CommandLine& command_line) {
 
 void AudioPlayerParams::Usage() {
   FTL_LOG(INFO) << "audio_player usage:";
-  FTL_LOG(INFO) << "    @ bootstrap -";
-  FTL_LOG(INFO) << "    @boot launch audio_player [ options ]";
+  FTL_LOG(INFO) << "    launch audio_player [ options ]";
   FTL_LOG(INFO) << "options:";
   FTL_LOG(INFO) << "    --path=<path>  play content from a file";
   FTL_LOG(INFO) << "    --url=<url>    play content from a service";
