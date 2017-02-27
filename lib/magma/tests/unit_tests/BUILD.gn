@@ -43,7 +43,6 @@ source_set("magma_util_tests") {
   sources = [
     "test_address_space_allocator.cc",
     "test_macros.cc",
-    "test_monitor.cc",
     "test_semaphore_port.cc",
     "test_sleep.cc",
   ]

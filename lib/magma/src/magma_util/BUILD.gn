@@ -86,17 +86,6 @@ source_set("system") {
   ]
 }
 
-source_set("monitor") {
-  public_configs = [
-    ":magma_util_config",
-    "$magma_build_root:magma_src_include_config",
-  ]
-
-  sources = [
-    "monitor.h",
-  ]
-}
-
 source_set("semaphore_port") {
   public_configs = [
     ":magma_util_config",
