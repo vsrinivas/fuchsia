@@ -478,28 +478,13 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 
 func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
-	if addr.Addr == "\x00\x00\x00\x00" {
-		nicid := addr.NIC
-		if nicid == 0 {
-			nicid = defaultNIC
-		}
-
-		s.mu.Lock()
-		d := s.getNICData(nicid)
-		s.mu.Unlock()
-
-		<-d.ready
-
-		s.mu.Lock()
-		addr.Addr = d.addr
-		s.mu.Unlock()
-	}
 	if err != nil {
 		if debug {
 			log.Printf("bind: bad input: %v", err)
 		}
 		return errStatus(err)
 	}
+
 	if ios.ep == nil {
 		if debug {
 			log.Printf("bind: no socket")
