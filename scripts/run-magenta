@@ -247,6 +247,8 @@ esac
 # ramdisk image
 if [ "$INITRD" != "" ]; then
     ARGS+=" -initrd $INITRD"
+elif [ -f "$BUILDDIR/bootdata.bin" ]; then
+    ARGS+=" -initrd $BUILDDIR/bootdata.bin"
 fi
 
 # Propagate our TERM environment variable as a kernel command line
