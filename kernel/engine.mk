@@ -281,6 +281,9 @@ endif
 USER_BOOTFS := $(BUILDDIR)/bootfs.img
 USER_FS := $(BUILDDIR)/user.fs
 
+# additional bootdata items to be included to bootdata.bin
+ADDITIONAL_BOOTDATA_ITEMS :=
+
 # manifest of files to include in the user bootfs
 USER_MANIFEST := $(BUILDDIR)/bootfs.manifest
 USER_MANIFEST_LINES :=
