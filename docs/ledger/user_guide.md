@@ -32,7 +32,7 @@ ensure that your Fuchsia has Internet access.
 Run `wget` to verify that it worked:
 
 ```
-@ bootstrap /system/test/wget http://example.com
+/system/test/wget http://example.com
 ```
 
 You should see the HTML content of the `example.com` placeholder page.
@@ -108,7 +108,7 @@ identities. This parameter is not mandatory.
 If something seems off with sync, run the following command:
 
 ```
-@ bootstrap cloud_sync doctor
+cloud_sync doctor
 ```
 
 If the provided information is not enough to resolve the problem, please file a
