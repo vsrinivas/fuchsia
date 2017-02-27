@@ -4,6 +4,8 @@
 
 source_set("tasks") {
   sources = [
+    "fd_waiter.cc",
+    "fd_waiter.h",
     "incoming_task_queue.cc",
     "incoming_task_queue.h",
     "message_loop.cc",

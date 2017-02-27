@@ -5,14 +5,17 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include <mx/channel.h>
+#include <mxio/io.h>
 
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
+#include "lib/mtl/tasks/fd_waiter.h"
 
 namespace mtl {
 namespace {
@@ -504,6 +507,37 @@ TEST(MessageLoop, AddHandlerOnError) {
   }
   EXPECT_EQ(1, handler.error_count());
   EXPECT_EQ(ERR_BAD_STATE, handler.last_error_result());
+}
+
+// Tests that waiting on files in a MessageLoop works.
+TEST(MessageLoop, FDWaiter) {
+  // Create an event and an FD that reflects that event. The fd
+  // shares ownership of the event.
+  mx::event fdevent;
+  EXPECT_EQ(mx::event::create(0u, &fdevent), NO_ERROR);
+  ftl::UniqueFD fd(mxio_handle_fd(fdevent.get(), MX_USER_SIGNAL_0, 0, /*shared=*/true));
+  EXPECT_TRUE(fd.is_valid());
+
+  FDWaiter waiter;
+  bool callback_ran = false;
+  {
+    MessageLoop message_loop;
+    std::thread thread([&fdevent]() {
+        // Poke the fdevent, which pokes the fd.
+        EXPECT_EQ(fdevent.signal(0u, MX_USER_SIGNAL_0), NO_ERROR);
+      });
+    auto callback = [&callback_ran, &message_loop](mx_status_t success, uint32_t events) {
+      EXPECT_EQ(success, NO_ERROR);
+      EXPECT_EQ(events, static_cast<uint32_t>(EPOLLIN));
+      callback_ran = true;
+      message_loop.QuitNow();
+    };
+    EXPECT_TRUE(waiter.Wait(callback, fd.get(), EPOLLIN));
+    message_loop.Run();
+    thread.join();
+  }
+
+  EXPECT_TRUE(callback_ran);
 }
 
 }  // namespace
