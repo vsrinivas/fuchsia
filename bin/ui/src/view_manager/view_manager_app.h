@@ -8,7 +8,9 @@
 #include <memory>
 
 #include "application/lib/app/application_context.h"
+#include "application/services/application_environment.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
+#include "apps/mozart/src/view_manager/params.h"
 #include "apps/mozart/src/view_manager/view_registry.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -20,14 +22,20 @@ class ViewManagerImpl;
 // View manager application entry point.
 class ViewManagerApp {
  public:
-  ViewManagerApp();
+  explicit ViewManagerApp(Params* params);
   ~ViewManagerApp();
 
  private:
+   void LaunchAssociates(Params* params);
+
   std::unique_ptr<app::ApplicationContext> application_context_;
+
   std::unique_ptr<ViewRegistry> registry_;
   fidl::BindingSet<mozart::ViewManager, std::unique_ptr<ViewManagerImpl>>
       view_manager_bindings_;
+
+  std::vector<mozart::ViewAssociateOwnerPtr> view_associate_owners_;
+  std::vector<app::ApplicationControllerPtr> view_associate_controllers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);
 };

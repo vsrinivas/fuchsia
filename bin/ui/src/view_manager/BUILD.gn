@@ -16,6 +16,10 @@ executable("view_manager") {
 
 source_set("lib") {
   sources = [
+    "config.cc",
+    "config.h",
+    "params.cc",
+    "params.h",
     "view_associate_table.cc",
     "view_associate_table.h",
     "view_container_state.cc",
@@ -40,6 +44,7 @@ source_set("lib") {
 
   public_deps = [
     "//application/lib/app",
+    "//apps/modular/lib/rapidjson",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/geometry/cpp",
