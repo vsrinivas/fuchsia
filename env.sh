@@ -596,10 +596,7 @@ function fbuild-sync() {
     if [[ $build_path -nt $stamp ]]; then
       local device_path=/system/${userfs_path}
       echo "Updating ${device_path} with ${build_path}"
-      # Can't netcp over a running program - see: MG-521
-      netcp $build_path :${device_path}.tmp
-      netruncmd : cp ${device_path}.tmp ${device_path}
-      netruncmd : rm ${device_path}.tmp
+      netcp $build_path :${device_path}
     fi
   done < "${FUCHSIA_BUILD_DIR}/gen/packages/gn/user.bootfs.manifest"
 }
