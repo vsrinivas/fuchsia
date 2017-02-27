@@ -144,12 +144,21 @@ preadfd(void)
 	int nr;
 	char *buf =  parsefile->buf;
 	parsefile->nextc = buf;
+	const char* prompt;
 
 retry:
 #ifdef USE_LINENOISE
 	if (parsefile->fd == 0 && iflag) {
 		if (pending_line == NULL) {
-			pending_line = linenoise(getprompt(NULL));
+			// linenoise stashs the prompt buffer away for
+			// the duration of its edit cycle. Because
+			// some edit functionality (in particular, tab
+			// completion allocates the parts of PATH from
+			// dash's stack-based allocator), we need to
+			// properly save the string and then free it,
+			// or it will be clobbered.
+			prompt = savestr(getprompt(NULL));
+			pending_line = linenoise(prompt);
 			if (pending_line) {
 				pending_line_index = 0u;
 				pending_line_length = strlen(pending_line);
@@ -167,6 +176,7 @@ retry:
 			pending_line_index += nr;
 			if (pending_line_index == pending_line_length) {
 				linenoiseFree(pending_line);
+				free(prompt);
 				pending_line = NULL;
 				pending_line_index = 0u;
 				pending_line_length = 0u;

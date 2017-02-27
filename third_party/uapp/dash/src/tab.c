@@ -6,17 +6,18 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <linenoise/linenoise.h>
 #include <magenta/assert.h>
 
-// TODO(kulakowski) Use padvance to iterate over pathval() instead.
-static const char* system_paths[] = {
-    "/system/bin",
-    "/boot/bin",
-    NULL,
-};
+#include "shell.h"
+#include "nodes.h"
+
+#include "exec.h"
+#include "memalloc.h"
+#include "var.h"
 
 typedef struct {
     // An index into the tokenized string which points at the first
@@ -132,9 +133,9 @@ void tab_complete(const char* line, linenoiseCompletions* completions) {
     //
     // 2. There is no slash in the only token. An example:
     //        fo
-    //    We are searching the system paths (currently "/system/bin"
-    //    and "/boot/bin") for files matching the prefix "fo". There
-    //    is no line prefix or separator in this case.
+    //    We are searching the PATH environment variable for files
+    //    matching the prefix "fo". There is no line prefix or
+    //    separator in this case.
     //
     // 3. There is a slash in the last token. An example:
     //        foo bar baz/quu
@@ -143,7 +144,7 @@ void tab_complete(const char* line, linenoiseCompletions* completions) {
     //    for files with the prefix "quu", to join with a slash to the
     //    line prefix "foo bar baz".
     completion_state_t completion_state;
-    const char** paths;
+    const char** paths = NULL;
 
     // |paths| for cases 1 and 3 respectively.
     const char* local_paths[] = { ".", NULL };
@@ -169,7 +170,6 @@ void tab_complete(const char* line, linenoiseCompletions* completions) {
             completion_state.line_prefix = "";
             completion_state.line_separator = "";
             completion_state.file_prefix = file_prefix;
-            paths = system_paths;
         }
     } else {
         // Case 3.
@@ -191,13 +191,27 @@ void tab_complete(const char* line, linenoiseCompletions* completions) {
         }
     }
 
-    for (; *paths != NULL; paths++) {
-        DIR* dir = opendir(*paths);
-        if (dir == NULL) {
-            continue;
+    if (paths) {
+        for (; *paths != NULL; paths++) {
+            DIR* dir = opendir(*paths);
+            if (dir == NULL) {
+                continue;
+            }
+            complete_at_dir(dir, &completion_state, completions);
+            closedir(dir);
         }
-        complete_at_dir(dir, &completion_state, completions);
-        closedir(dir);
+    } else {
+        const char* path_env = pathval();
+        char* pathname;
+        while ((pathname = padvance(&path_env, "")) != NULL) {
+            DIR* dir = opendir(pathname);
+            stunalloc(pathname);
+            if (dir == NULL) {
+                continue;
+            }
+            complete_at_dir(dir, &completion_state, completions);
+            closedir(dir);
+        }
     }
 }
 
