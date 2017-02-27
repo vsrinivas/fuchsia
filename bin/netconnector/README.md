@@ -83,8 +83,7 @@ command line device registrations provide device name resolution.
 Provided the listener is registered with `bootstrap` as shown above, the
 listener can be started like this:
 
-    @ bootstrap -
-    @boot netconnector --host=acer
+    netconnector --host=acer
 
 Note that, until mDNS is implemented, the host name isn't used and may be
 omitted.
