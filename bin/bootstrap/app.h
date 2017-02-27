@@ -13,7 +13,6 @@
 #include "application/lib/app/service_provider_impl.h"
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_environment.fidl.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 
@@ -46,10 +45,6 @@ class App : public app::ApplicationEnvironmentHost {
   void RegisterDefaultServiceConnector();
   void LaunchApplication(app::ApplicationLaunchInfoPtr launch_info);
 
-  void RegisterViewManager();
-  void InitViewManager();
-  void ResetViewManager();
-
   std::unique_ptr<app::ApplicationContext> application_context_;
 
   // Keep track of all services, indexed by url.
@@ -61,13 +56,6 @@ class App : public app::ApplicationEnvironmentHost {
   fidl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
   app::ServiceProviderImpl env_services_;
   app::ApplicationLauncherPtr env_launcher_;
-
-  // View manager state.
-  mozart::ViewManagerPtr view_manager_;
-  app::ApplicationControllerPtr view_manager_controller_;
-  app::ServiceProviderPtr view_manager_services_;
-  std::vector<app::ApplicationControllerPtr> view_associate_controllers_;
-  std::vector<mozart::ViewAssociateOwnerPtr> view_associate_owners_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };

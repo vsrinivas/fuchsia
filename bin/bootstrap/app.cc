@@ -10,16 +10,6 @@
 #include "lib/ftl/logging.h"
 
 namespace bootstrap {
-namespace {
-
-// TODO(jeffbrown): Remove special stuff for view manager somehow.
-constexpr const char kViewManagerUrl[] =
-    "file:///system/apps/view_manager_service";
-constexpr const char* kViewManagerAssociates[] = {
-    "file:///system/apps/input_manager_service",
-};
-
-}  // namespace
 
 App::App(Params* params)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -38,9 +28,6 @@ App::App(Params* params)
   for (auto& pair : params->TakeServices())
     RegisterSingleton(pair.first, std::move(pair.second));
   RegisterDefaultServiceConnector();
-
-  // TODO(jeffbrown): Remove this.
-  RegisterViewManager();
 
   // Launch startup applications.
   for (auto& launch_info : params->TakeApps())
@@ -92,67 +79,6 @@ void App::RegisterDefaultServiceConnector() {
         application_context_->environment_services()->ConnectToService(
             service_name, std::move(channel));
       });
-}
-
-void App::RegisterViewManager() {
-  env_services_.AddService<mozart::ViewManager>(
-      [this](fidl::InterfaceRequest<mozart::ViewManager> request) {
-        FTL_VLOG(2) << "Servicing view manager service request";
-        InitViewManager();
-        app::ConnectToService(view_manager_services_.get(), std::move(request));
-      });
-}
-
-void App::InitViewManager() {
-  if (view_manager_)
-    return;
-
-  FTL_VLOG(1) << "Starting view manager";
-  auto launch_info = app::ApplicationLaunchInfo::New();
-  launch_info->url = kViewManagerUrl;
-  launch_info->services = view_manager_services_.NewRequest();
-  env_launcher_->CreateApplication(std::move(launch_info),
-                                   view_manager_controller_.NewRequest());
-  app::ConnectToService(view_manager_services_.get(),
-                        view_manager_.NewRequest());
-  view_manager_.set_connection_error_handler([this] {
-    FTL_LOG(ERROR) << "View manager died";
-    ResetViewManager();
-  });
-
-  // Launch view associates.
-  for (const auto& url : kViewManagerAssociates) {
-    FTL_VLOG(1) << "Starting view associate " << url;
-    app::ServiceProviderPtr services;
-    app::ApplicationControllerPtr controller;
-    auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = url;
-    launch_info->services = services.NewRequest();
-    env_launcher_->CreateApplication(std::move(launch_info),
-                                     controller.NewRequest());
-    auto view_associate =
-        app::ConnectToService<mozart::ViewAssociate>(services.get());
-
-    // Wire up the associate to the ViewManager.
-    mozart::ViewAssociateOwnerPtr owner;
-    view_manager_->RegisterViewAssociate(std::move(view_associate),
-                                         owner.NewRequest(), url);
-    owner.set_connection_error_handler([this, url] {
-      FTL_LOG(ERROR) << "View associate " << url << " died";
-      ResetViewManager();
-    });
-    view_associate_controllers_.push_back(std::move(controller));
-    view_associate_owners_.push_back(std::move(owner));
-  }
-  view_manager_->FinishedRegisteringViewAssociates();
-}
-
-void App::ResetViewManager() {
-  view_manager_controller_.reset();     // kills the view manager application
-  view_associate_controllers_.clear();  // kills the view associates
-  view_manager_.reset();
-  view_manager_services_.reset();
-  view_associate_owners_.clear();
 }
 
 void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
