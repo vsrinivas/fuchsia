@@ -322,8 +322,10 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
             BAD("Bogus NDP Message");
         if (ndp->code != 0)
             BAD("Bogus NDP Code");
+#if !INET6_COEXIST_WITH_NETSTACK
         if (!ip6_addr_eq((ip6_addr_t*) ndp->target, &ll_ip6_addr))
             BAD("NDP Not For Me");
+#endif
 
         msg.hdr.type = ICMP6_NDP_N_ADVERTISE;
         msg.hdr.code = 0;
