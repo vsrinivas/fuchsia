@@ -348,6 +348,9 @@ mx_status_t VmcsCpuContext::Setup() {
                      read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
                      // Enable use of RDTSCP instruction.
                      VMCS_32_PROCBASED_CTLS2_RDTSCP |
+                     // Associate cached translations of linear addresses with a
+                     // virtual processor ID.
+                     VMCS_32_PROCBASED_CTLS2_VPID |
                      // Enable use of XSAVES and XRSTORS instructions.
                      VMCS_32_PROCBASED_CTLS2_XSAVES_XRSTORS);
     set_vmcs_control(VMCS_32_PINBASED_CTLS,
@@ -384,8 +387,19 @@ mx_status_t VmcsCpuContext::Setup() {
                      // On VM entry IA32_EFER.LMA is set to true.
                      VMCS_32_ENTRY_CTLS_IA32E_MODE);
 
-    // Setup VMCS host state.
+    // From Volume 3, Section 28.1: Virtual-processor identifiers (VPIDs)
+    // introduce to VMX operation a facility by which a logical processor may
+    // cache information for multiple linear-address spaces. When VPIDs are
+    // used, VMX transitions may retain cached information and the logical
+    // processor switches to a different linear-address space.
+    //
+    // From Volume 3, Section 26.2.1.1: If the “enable VPID” VM-execution
+    // control is 1, the value of the VPID VM-execution control field must not
+    // be 0000H.
     x86_percpu* percpu = x86_get_percpu();
+    vmwrite(VMCS_16_VPID, percpu->cpu_num + 1);
+
+    // Setup VMCS host state.
     vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
     vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(percpu->cpu_num));
     vmwrite(VMCS_64_HOST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
