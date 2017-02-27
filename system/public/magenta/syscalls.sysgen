@@ -56,6 +56,10 @@ syscall system_get_version vdsocall
     (version: char[version_len] OUT, version_len: uint32_t)
     returns (mx_status_t);
 
+syscall system_get_physmem vdsocall
+    ()
+    returns (uint64_t);
+
 # Abstraction of machine operations
 
 syscall cache_flush vdsocall

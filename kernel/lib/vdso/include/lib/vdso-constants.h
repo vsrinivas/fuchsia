@@ -29,4 +29,7 @@ struct vdso_constants {
 
     // Conversion factor for mx_ticks_get return values to seconds.
     uint64_t ticks_per_second;
+
+    // Total amount of physical memory in the system, in bytes.
+    uint64_t physmem;
 };

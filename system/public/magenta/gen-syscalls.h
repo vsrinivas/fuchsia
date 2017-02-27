@@ -33,6 +33,10 @@ extern mx_status_t _mx_system_get_version(
     char version[],
     uint32_t version_len) __attribute__((__leaf__));
 
+extern uint64_t mx_system_get_physmem(void) __attribute__((__leaf__));
+
+extern uint64_t _mx_system_get_physmem(void) __attribute__((__leaf__));
+
 extern mx_status_t mx_cache_flush(
     const void* addr,
     size_t len,

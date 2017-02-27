@@ -29,3 +29,4 @@ during a run of the system, only at boot time.
 ## NOTES
 
 ## SEE ALSO
+[system_get_physmem](system_get_physmem.md).

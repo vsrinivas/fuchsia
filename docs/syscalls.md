@@ -101,6 +101,7 @@
 
 ## Global system information
 + [system_get_num_cpus](syscalls/system_get_num_cpus.md) - get number of CPUs
++ [system_get_physmem](syscalls/system_get_physmem.md) - get physical memory size
 + [system_get_version](syscalls/system_get_version.md) - get version string
 
 ## Logging

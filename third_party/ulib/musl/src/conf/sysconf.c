@@ -190,6 +190,7 @@ long sysconf(int name) {
     case JT_NPROCESSORS_ONLN & 255:
         return mxr_get_nprocs_conf();
     case JT_PHYS_PAGES & 255:
+        return _mx_system_get_physmem() / PAGE_SIZE;
     case JT_AVPHYS_PAGES & 255:
         // TODO(kulakowski) Ask magenta for physical memory allocation
 

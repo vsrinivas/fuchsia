@@ -30,6 +30,7 @@
 // the main arena list
 static mxtl::DoublyLinkedList<PmmArena*> arena_list;
 static Mutex arena_lock;
+static size_t arena_cumulative_size;
 
 paddr_t vm_page_to_paddr(const vm_page_t* page) {
     for (const auto& a : arena_list) {
@@ -75,6 +76,8 @@ status_t pmm_add_arena(const pmm_arena_info_t* info) {
 done_add:
     // tell the arena to allocate a page array
     arena->BootAllocArray();
+
+    arena_cumulative_size += info->size;
 
     return NO_ERROR;
 }
@@ -314,6 +317,10 @@ size_t pmm_count_free_pages() {
         free += a.free_count();
     }
     return free;
+}
+
+size_t pmm_count_total_bytes() {
+    return arena_cumulative_size;
 }
 
 extern "C"

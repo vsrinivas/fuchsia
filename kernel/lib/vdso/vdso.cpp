@@ -7,6 +7,7 @@
 #include <lib/vdso.h>
 #include <lib/vdso-constants.h>
 
+#include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <platform.h>
@@ -69,5 +70,6 @@ VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {
         arch_max_num_cpus(),
         arch_dcache_line_size(),
         ticks_per_second(),
+        pmm_count_total_bytes(),
     };
 }

@@ -17,6 +17,8 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_system_get_vers
     char version[],
     uint32_t version_len) __attribute__((__leaf__));
 
+__attribute__((visibility("hidden"))) extern uint64_t VDSO_mx_system_get_physmem(void) __attribute__((__leaf__));
+
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_cache_flush(
     const void* addr,
     size_t len,

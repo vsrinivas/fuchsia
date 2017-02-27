@@ -14,4 +14,5 @@ const struct vdso_constants DATA_CONSTANTS = {
     0xdeadbeef,
     0,
     0,
+    0,
 };
