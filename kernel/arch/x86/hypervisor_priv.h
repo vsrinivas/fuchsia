@@ -17,6 +17,7 @@
 #define X86_MSR_IA32_VMX_CR4_FIXED0                 0x0488      /* CR4 bits that must be 0 to enter VMX */
 #define X86_MSR_IA32_VMX_CR4_FIXED1                 0x0489      /* CR4 bits that must be 1 to enter VMX */
 #define X86_MSR_IA32_VMX_PROCBASED_CTLS2            0x048b      /* Secondary processor-based controls */
+#define X86_MSR_IA32_VMX_EPT_VPID_CAP               0x048c      /* VPID and EPT Capabilities */
 #define X86_MSR_IA32_VMX_TRUE_PINBASED_CTLS         0x048d      /* True pin-based controls */
 #define X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS        0x048e      /* True primary processor-based controls */
 #define X86_MSR_IA32_VMX_TRUE_EXIT_CTLS             0x048f      /* True VM-exit controls */
@@ -61,6 +62,7 @@
 #define VMCS_32_GUEST_ACTIVITY_STATE                0x4826      /* Guest activity state */
 
 #define VMCS_64_MSR_BITMAPS_ADDRESS                 0x2004      /* MSR bitmaps address */
+#define VMCS_64_EPT_POINTER                         0x201a      /* EPT pointer */
 #define VMCS_64_LINK_POINTER                        0x2800      /* VMCS link pointer */
 #define VMCS_64_GUEST_IA32_PAT                      0x2804      /* Guest PAT */
 #define VMCS_64_GUEST_IA32_EFER                     0x2806      /* Guest EFER */
@@ -148,11 +150,22 @@
 struct VmxInfo {
     uint32_t revision_id;
     uint16_t region_size;
-    uint8_t memory_type;
-    bool ins_outs;
+    bool write_back;
     bool vmx_controls;
 
     VmxInfo();
+};
+
+struct EptInfo {
+    bool page_walk_4;
+    bool write_back;
+    bool pde_2mb_page;
+    bool pdpe_1gb_page;
+    bool ept_flags;
+    bool exit_info;
+    bool invept;
+
+    EptInfo();
 };
 
 /* VMX region to be used with both VMXON and VMCS. */
@@ -163,7 +176,7 @@ struct VmxRegion {
 /* Base class for CPU contexts. */
 class VmxCpuContext {
 public:
-    virtual mx_status_t Init(const VmxInfo& info);
+    virtual mx_status_t Init(const VmxInfo& vmx_info);
 
 protected:
     VmxPage page_;
@@ -189,9 +202,9 @@ struct AutoVmcsLoad {
 /* Creates a VMCS CPU context to initialize a VM. */
 class VmcsCpuContext : public VmxCpuContext {
 public:
-    mx_status_t Init(const VmxInfo& info) override;
+    mx_status_t Init(const VmxInfo& vmx_info) override;
     mx_status_t Clear();
-    mx_status_t Setup();
+    mx_status_t Setup(paddr_t pml4_address);
     mx_status_t Launch();
 
 private:
@@ -199,10 +212,9 @@ private:
 };
 
 template<typename T>
-mx_status_t InitCpuContexts(mxtl::Array<T>* ctxs) {
-    VmxInfo info;
+mx_status_t InitCpuContexts(const VmxInfo& vmx_info, mxtl::Array<T>* ctxs) {
     for (size_t i = 0; i < ctxs->size(); i++) {
-        mx_status_t status = (*ctxs)[i].Init(info);
+        mx_status_t status = (*ctxs)[i].Init(vmx_info);
         if (status != NO_ERROR)
             return status;
     }

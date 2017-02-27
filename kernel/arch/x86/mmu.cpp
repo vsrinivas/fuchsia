@@ -68,7 +68,7 @@ pt_entry_t pdp[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE);
 static const paddr_t kernel_pt_phys = (vaddr_t)KERNEL_PT - KERNEL_BASE;
 
 /* valid EPT MMU flags */
-static constexpr uint kValidEptFlags =
+static const uint kValidEptFlags =
     ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE;
 
 paddr_t x86_kernel_cr3(void) {
@@ -1195,8 +1195,6 @@ static status_t mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, con
         return ERR_INVALID_ARGS;
     if (!x86_mmu_check_vaddr(vaddr))
         return ERR_INVALID_ARGS;
-    if (!is_valid_vaddr(aspace, vaddr))
-        return ERR_INVALID_ARGS;
     if (count == 0)
         return NO_ERROR;
 
@@ -1225,6 +1223,8 @@ static status_t mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, con
 
 status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const size_t count,
                       uint mmu_flags, size_t* mapped) {
+    if (!is_valid_vaddr(aspace, vaddr))
+        return ERR_INVALID_ARGS;
     return mmu_map<PageTable>(aspace, vaddr, paddr, count, mmu_flags, mapped);
 }
 
@@ -1390,21 +1390,22 @@ status_t guest_mmu_init_paspace(guest_paspace_t* paspace, size_t size) {
     return NO_ERROR;
 }
 
-status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
+template <template <int> class PageTable>
+status_t mmu_destroy_aspace(arch_aspace_t* aspace) {
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
     DEBUG_ASSERT(aspace->active_cpus == 0);
 
 #if LK_DEBUGLEVEL > 1
     pt_entry_t* table = static_cast<pt_entry_t*>(aspace->pt_virt);
-    uint start = PageTableBase<MAX_PAGING_LEVEL>::vaddr_to_index(aspace->base);
-    uint end = PageTableBase<MAX_PAGING_LEVEL>::vaddr_to_index(aspace->base + aspace->size - 1);
+    uint start = PageTable<MAX_PAGING_LEVEL>::vaddr_to_index(aspace->base);
+    uint end = PageTable<MAX_PAGING_LEVEL>::vaddr_to_index(aspace->base + aspace->size - 1);
 
     // Don't check start if that table is shared with another aspace
-    if (!PageTableBase<MAX_PAGING_LEVEL>::page_aligned(aspace->base)) {
+    if (!PageTable<MAX_PAGING_LEVEL>::page_aligned(aspace->base)) {
         start += 1;
     }
     // Do check the end if it fills out the table entry
-    if (PageTableBase<MAX_PAGING_LEVEL>::page_aligned(aspace->base + aspace->size)) {
+    if (PageTable<MAX_PAGING_LEVEL>::page_aligned(aspace->base + aspace->size)) {
         end += 1;
     }
 
@@ -1424,8 +1425,12 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
     return NO_ERROR;
 }
 
+status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
+    return mmu_destroy_aspace<PageTable>(aspace);
+}
+
 status_t guest_mmu_destroy_paspace(guest_paspace_t* paspace) {
-    return arch_mmu_destroy_aspace(paspace);
+    return mmu_destroy_aspace<ExtendedPageTable>(paspace);
 }
 
 void arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* aspace) {

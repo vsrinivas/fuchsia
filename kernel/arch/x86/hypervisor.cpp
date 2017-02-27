@@ -19,6 +19,7 @@
 #include <arch/x86/hypervisor_host.h>
 #include <arch/x86/idt.h>
 #include <arch/x86/registers.h>
+#include <hypervisor/guest_physical_address_space.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <magenta/errors.h>
@@ -150,68 +151,67 @@ static mx_status_t percpu_exec(thread_start_routine entry, void* arg) {
 }
 
 VmxInfo::VmxInfo() {
+    // From Volume 3, Appendix A.1.
     uint64_t basic_info = read_msr(X86_MSR_IA32_VMX_BASIC);
     revision_id = static_cast<uint32_t>(BITS(basic_info, 30, 0));
     region_size = static_cast<uint16_t>(BITS_SHIFT(basic_info, 44, 32));
-    memory_type = static_cast<uint8_t>(BITS_SHIFT(basic_info, 53, 50));
-    ins_outs = static_cast<bool>(BIT_SHIFT(basic_info, 54));
-    vmx_controls = static_cast<bool>(BIT_SHIFT(basic_info, 55));
+    write_back = BITS_SHIFT(basic_info, 53, 50) == VMX_MEMORY_TYPE_WRITE_BACK;
+    vmx_controls = BIT_SHIFT(basic_info, 55);
 }
 
-mx_status_t VmxCpuContext::Init(const VmxInfo& info) {
-    mx_status_t status = page_.Alloc(info);
-    if (status != NO_ERROR)
-        return status;
-
-    VmxRegion* region = static_cast<VmxRegion*>(page_.VirtualAddress());
-    region->revision_id = info.revision_id;
-    return NO_ERROR;
-}
-
-mx_status_t VmxonCpuContext::VmxOn() {
-    mx_status_t status = vmxon(page_.PhysicalAddress());
-    is_on_ = status == NO_ERROR;
-    return status;
-}
-
-mx_status_t VmxonCpuContext::VmxOff() {
-    return is_on_ ? vmxoff() : NO_ERROR;
+EptInfo::EptInfo() {
+    // From Volume 3, Appendix A.10.
+    uint64_t ept_info = read_msr(X86_MSR_IA32_VMX_EPT_VPID_CAP);
+    page_walk_4 = BIT_SHIFT(ept_info, 6);
+    write_back = BIT_SHIFT(ept_info, 14);
+    pde_2mb_page = BIT_SHIFT(ept_info, 16);
+    pdpe_1gb_page = BIT_SHIFT(ept_info, 17);
+    ept_flags = BIT_SHIFT(ept_info, 21);
+    exit_info = BIT_SHIFT(ept_info, 22);
+    invept =
+        // INVEPT instruction is supported.
+        BIT_SHIFT(ept_info, 20) &&
+        // Single-context INVEPT type is supported.
+        BIT_SHIFT(ept_info, 25) &&
+        // All-context INVEPT type is supported.
+        BIT_SHIFT(ept_info, 26);
 }
 
 VmxPage::~VmxPage() {
-    if (page_ != nullptr)
-        pmm_free_page(page_);
+    vm_page_t* page = paddr_to_vm_page(pa_);
+    if (page != nullptr)
+        pmm_free_page(page);
 }
 
-mx_status_t VmxPage::Alloc(const VmxInfo& info) {
+mx_status_t VmxPage::Alloc(const VmxInfo& vmx_info) {
     // From Volume 3, Appendix A.1: Bits 44:32 report the number of bytes that
     // software should allocate for the VMXON region and any VMCS region. It is
     // a value greater than 0 and at most 4096 (bit 44 is set if and only if
     // bits 43:32 are clear).
-    if (info.region_size > PAGE_SIZE)
+    if (vmx_info.region_size > PAGE_SIZE)
         return ERR_NOT_SUPPORTED;
 
-    // Ensure we use write back memory, as recommended.
-    if (info.memory_type != VMX_MEMORY_TYPE_WRITE_BACK)
+    // Check use write-back memory for VMX regions is supported.
+    if (!vmx_info.write_back)
         return ERR_NOT_SUPPORTED;
 
     // The maximum size for a VMXON or VMCS region is 4096, therefore
     // unconditionally allocating a page is adequate.
-    page_ = pmm_alloc_page(0, &pa_);
-    if (page_ == nullptr)
+    if (pmm_alloc_page(0, &pa_) == nullptr)
         return ERR_NO_MEMORY;
 
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(pa_));
     memset(VirtualAddress(), 0, PAGE_SIZE);
     return NO_ERROR;
 }
 
 paddr_t VmxPage::PhysicalAddress() {
-    DEBUG_ASSERT(page_ != nullptr);
+    DEBUG_ASSERT(pa_ != 0);
     return pa_;
 }
 
 void* VmxPage::VirtualAddress() {
-    DEBUG_ASSERT(page_ != nullptr);
+    DEBUG_ASSERT(pa_ != 0);
     return paddr_to_kvaddr(pa_);
 }
 
@@ -225,9 +225,26 @@ static int vmx_enable(void* arg) {
     VmxonContext* context = static_cast<VmxonContext*>(arg);
     VmxonCpuContext* cpu_context = context->CurrCpuContext();
 
-    // Check that full VMX controls are available.
-    VmxInfo info;
-    if (!info.vmx_controls)
+    // Check that full VMX controls are supported.
+    VmxInfo vmx_info;
+    if (!vmx_info.vmx_controls)
+        return ERR_NOT_SUPPORTED;
+
+    // Check that a page-walk length of 4 is supported.
+    EptInfo ept_info;
+    if (!ept_info.page_walk_4)
+        return ERR_NOT_SUPPORTED;
+
+    // Check use write-back memory for EPT is supported.
+    if (!ept_info.write_back)
+        return ERR_NOT_SUPPORTED;
+
+    // Check that accessed and dirty flags for EPT are supported.
+    if (!ept_info.ept_flags)
+        return ERR_NOT_SUPPORTED;
+
+    // Check that the INVEPT instruction is supported.
+    if (!ept_info.invept)
         return ERR_NOT_SUPPORTED;
 
     // Enable VMXON, if required.
@@ -261,6 +278,26 @@ static int vmx_enable(void* arg) {
     return cpu_context->VmxOn();
 }
 
+mx_status_t VmxCpuContext::Init(const VmxInfo& info) {
+    mx_status_t status = page_.Alloc(info);
+    if (status != NO_ERROR)
+        return status;
+
+    VmxRegion* region = page_.VirtualAddress<VmxRegion>();
+    region->revision_id = info.revision_id;
+    return NO_ERROR;
+}
+
+mx_status_t VmxonCpuContext::VmxOn() {
+    mx_status_t status = vmxon(page_.PhysicalAddress());
+    is_on_ = status == NO_ERROR;
+    return status;
+}
+
+mx_status_t VmxonCpuContext::VmxOff() {
+    return is_on_ ? vmxoff() : NO_ERROR;
+}
+
 // static
 mx_status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
     uint num_cpus = arch_max_num_cpus();
@@ -275,7 +312,8 @@ mx_status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    mx_status_t status = InitCpuContexts(&ctx->cpu_contexts_);
+    VmxInfo vmx_info;
+    mx_status_t status = InitCpuContexts(vmx_info, &ctx->cpu_contexts_);
     if (status != NO_ERROR)
         return status;
 
@@ -325,12 +363,12 @@ AutoVmcsLoad::~AutoVmcsLoad() {
     arch_enable_ints();
 }
 
-mx_status_t VmcsCpuContext::Init(const VmxInfo& info) {
-    mx_status_t status = VmxCpuContext::Init(info);
+mx_status_t VmcsCpuContext::Init(const VmxInfo& vmx_info) {
+    mx_status_t status = VmxCpuContext::Init(vmx_info);
     if (status != NO_ERROR)
         return status;
 
-    return msr_bitmaps_page_.Alloc(info);
+    return msr_bitmaps_page_.Alloc(vmx_info);
 }
 
 static mx_status_t set_vmcs_control(uint32_t controls, uint64_t true_msr, uint64_t old_msr,
@@ -356,10 +394,23 @@ static mx_status_t set_vmcs_control(uint32_t controls, uint64_t true_msr, uint64
 }
 
 mx_status_t VmcsCpuContext::Clear() {
-    return vmclear(page_.PhysicalAddress());
+    return page_.IsAllocated() ? vmclear(page_.PhysicalAddress()) : NO_ERROR;
 }
 
-mx_status_t VmcsCpuContext::Setup() {
+static uint64_t ept_pointer(paddr_t pml4_address) {
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(pml4_address));
+    return
+        // Physical address of the PML4 page, page aligned.
+        pml4_address |
+        // Use write back memory.
+        VMX_MEMORY_TYPE_WRITE_BACK << 0 |
+        // Page walk length of 4 (defined as N minus 1).
+        3u << 3 |
+        // Accessed and dirty flags are enabled.
+        1u << 6;
+}
+
+mx_status_t VmcsCpuContext::Setup(paddr_t pml4_address) {
     mx_status_t status = Clear();
     if (status != NO_ERROR)
         return status;
@@ -370,6 +421,8 @@ mx_status_t VmcsCpuContext::Setup() {
     status = set_vmcs_control(VMCS_32_PROCBASED_CTLS2,
                               read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
                               0,
+                              // Enable use of extended page tables.
+                              VMCS_32_PROCBASED_CTLS2_EPT |
                               // Enable use of RDTSCP instruction.
                               VMCS_32_PROCBASED_CTLS2_RDTSCP |
                               // Associate cached translations of linear
@@ -452,10 +505,27 @@ mx_status_t VmcsCpuContext::Setup() {
     // From Volume 3, Section 26.2.1.1: If the “enable VPID” VM-execution
     // control is 1, the value of the VPID VM-execution control field must not
     // be 0000H.
+    //
+    // From Volume 3, Section 28.3.3.3: If EPT is in use, the logical processor
+    // associates all mappings it creates with the value of bits 51:12 of
+    // current EPTP. If a VMM uses different EPTP values for different guests,
+    // it may use the same VPID for those guests.
     x86_percpu* percpu = x86_get_percpu();
     vmwrite(VMCS_16_VPID, percpu->cpu_num + 1);
 
+    // From Volume 3, Section 28.2: The extended page-table mechanism (EPT) is a
+    // feature that can be used to support the virtualization of physical
+    // memory. When EPT is in use, certain addresses that would normally be
+    // treated as physical addresses (and used to access memory) are instead
+    // treated as guest-physical addresses. Guest-physical addresses are
+    // translated by traversing a set of EPT paging structures to produce
+    // physical addresses that are used to access memory.
+    vmwrite(VMCS_64_EPT_POINTER, ept_pointer(pml4_address));
+
     // Setup VMCS host state.
+    //
+    // NOTE: We are pinned to a thread when executing this function, therefore
+    // it is acceptable to use per-CPU state.
     vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
     vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(percpu->cpu_num));
     vmwrite(VMCS_32_HOST_IA32_SYSENTER_CS, 0);
@@ -524,6 +594,11 @@ mx_status_t VmcsCpuContext::Setup() {
     vmwrite(VMCS_32_GUEST_INTERRUPTIBILITY_STATE, 0);
     vmwrite(VMCS_XX_GUEST_PENDING_DEBUG_EXCEPTIONS, 0);
 
+    // We begin execution at the base of guest logical address space. It's up
+    // to the guest to then setup the environment correctly.
+    vmwrite(VMCS_XX_GUEST_RSP, 0);
+    vmwrite(VMCS_XX_GUEST_RIP, 0);
+
     // From Volume 3, Section 24.4.2: If the “VMCS shadowing” VM-execution
     // control is 1, the VMREAD and VMWRITE instructions access the VMCS
     // referenced by this pointer (see Section 24.10). Otherwise, software
@@ -564,11 +639,12 @@ mx_status_t VmcsCpuContext::Launch() {
 static int vmcs_setup(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsCpuContext* cpu_context = context->CurrCpuContext();
-    return cpu_context->Setup();
+    return cpu_context->Setup(context->Pml4Address());
 }
 
 // static
-mx_status_t VmcsContext::Create(mxtl::unique_ptr<VmcsContext>* context) {
+mx_status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                                mxtl::unique_ptr<VmcsContext>* context) {
     uint num_cpus = arch_max_num_cpus();
 
     AllocChecker ac;
@@ -581,7 +657,12 @@ mx_status_t VmcsContext::Create(mxtl::unique_ptr<VmcsContext>* context) {
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    mx_status_t status = InitCpuContexts(&ctx->cpu_contexts_);
+    mx_status_t status = GuestPhysicalAddressSpace::Create(guest_phys_mem, &ctx->gpas_);
+    if (status != NO_ERROR)
+        return status;
+
+    VmxInfo vmx_info;
+    status = InitCpuContexts(vmx_info, &ctx->cpu_contexts_);
     if (status != NO_ERROR)
         return status;
 
@@ -607,6 +688,10 @@ VmcsContext::~VmcsContext() {
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
+paddr_t VmcsContext::Pml4Address() {
+    return gpas_->Pml4Address();
+}
+
 VmcsCpuContext* VmcsContext::CurrCpuContext() {
     return &cpu_contexts_[arch_curr_cpu_num()];
 }
@@ -617,7 +702,7 @@ static int vmcs_launch(void* arg) {
     return cpu_context->Launch();
 }
 
-mx_status_t VmcsContext::Start(uintptr_t entry, uintptr_t stack) {
+mx_status_t VmcsContext::Start() {
     return percpu_exec(vmcs_launch, this);
 }
 
@@ -644,11 +729,11 @@ mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context)
     return VmxonContext::Create(context);
 }
 
-mx_status_t arch_guest_create(mxtl::unique_ptr<GuestContext>* context) {
-    return VmcsContext::Create(context);
+mx_status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                              mxtl::unique_ptr<GuestContext>* context) {
+    return VmcsContext::Create(guest_phys_mem, context);
 }
 
-mx_status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context, uintptr_t entry,
-                             uintptr_t stack) {
-    return context->Start(entry, stack);
+mx_status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context) {
+    return context->Start();
 }

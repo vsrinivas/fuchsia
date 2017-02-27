@@ -4,17 +4,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <kernel/vm/vm_object.h>
 #include <magenta/guest_dispatcher.h>
+#include <magenta/hypervisor_dispatcher.h>
 #include <new.h>
 
 constexpr mx_rights_t kDefaultGuestRights = MX_RIGHT_EXECUTE;
 
 // static
 mx_status_t GuestDispatcher::Create(mxtl::RefPtr<HypervisorDispatcher> hypervisor,
+                                    mxtl::RefPtr<VmObject> guest_phys_mem,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
     mxtl::unique_ptr<GuestContext> context;
-    mx_status_t status = arch_guest_create(&context);
+    mx_status_t status = arch_guest_create(guest_phys_mem, &context);
     if (status != NO_ERROR)
         return status;
 
@@ -34,8 +37,8 @@ GuestDispatcher::GuestDispatcher(mxtl::RefPtr<HypervisorDispatcher> hypervisor,
 
 GuestDispatcher::~GuestDispatcher() {}
 
-mx_status_t GuestDispatcher::Start(uintptr_t entry, uintptr_t stack) {
+mx_status_t GuestDispatcher::Start() {
     canary_.Assert();
 
-    return arch_guest_start(context_, entry, stack);
+    return arch_guest_start(context_);
 }

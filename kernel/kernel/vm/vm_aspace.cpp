@@ -256,14 +256,6 @@ __WEAK vaddr_t arch_mmu_pick_spot(const arch_aspace_t* aspace,
     return ALIGN(base, align);
 }
 
-__WEAK vaddr_t guest_mmu_pick_spot(const arch_aspace_t* aspace,
-                                   vaddr_t base, uint prev_region_mmu_flags,
-                                   vaddr_t end, uint next_region_mmu_flags,
-                                   vaddr_t align, size_t size, uint mmu_flags) {
-    return arch_mmu_pick_spot(aspace, base, prev_region_mmu_flags, end,
-                              next_region_mmu_flags, align, size, mmu_flags);
-}
-
 status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
                              void** ptr, uint8_t align_pow2, size_t min_alloc_gap, uint vmm_flags,
                              uint arch_mmu_flags) {

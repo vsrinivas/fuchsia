@@ -16,7 +16,10 @@
 
 #include <magenta/compiler.h>
 #include <magenta/types.h>
+#include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
+
+class VmObject;
 
 __BEGIN_CDECLS
 
@@ -28,12 +31,11 @@ mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context)
 /* Create a guest context.
  * This creates the structures to allow a guest to be run.
  */
-mx_status_t arch_guest_create(mxtl::unique_ptr<GuestContext>* context);
+mx_status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                              mxtl::unique_ptr<GuestContext>* context);
 
 /* Start a guest within a guest context.
- * This launches a guest at the given entry point, within a guest context.
  */
-mx_status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context, uintptr_t entry,
-                             uintptr_t stack);
+mx_status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context);
 
 __END_CDECLS
