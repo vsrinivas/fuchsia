@@ -47,6 +47,10 @@ static const char test_child_name[] = "test-child";
 static volatile atomic_bool done_tests;
 
 enum message {
+    // Make the type of this enum signed so that we don't get a compile failure
+    // later with things like EXPECT_EQ(msg, MSG_PONG) [unsigned vs signed
+    // comparison mismatch]
+    MSG_ENSURE_SIGNED = -1,
     MSG_DONE,
     MSG_CRASH,
     MSG_PING,
@@ -120,8 +124,7 @@ static bool recv_msg_new_thread_handle(mx_handle_t handle, mx_handle_t* thread)
     ASSERT_EQ(num_handles, 1u, "expected one returned handle");
 
     enum message msg = data;
-    // TODO(dje): WTF
-    ASSERT_EQ((int)msg, (int)MSG_AUX_THREAD_HANDLE, "expected MSG_AUX_THREAD_HANDLE");
+    ASSERT_EQ(msg, MSG_AUX_THREAD_HANDLE, "expected MSG_AUX_THREAD_HANDLE");
 
     unittest_printf("received thread handle %d\n", *thread);
     return true;
@@ -401,6 +404,15 @@ static void start_test_child(const char* arg,
     unittest_printf("Test child started.\n");
 }
 
+static bool ensure_child_running(mx_handle_t channel) {
+    enum message msg;
+    send_msg(channel, MSG_PING);
+    if (!recv_msg(channel, &msg))
+        return false;
+    ASSERT_EQ(msg, MSG_PONG, "unexpected reply");
+    return true;
+}
+
 static int watchdog_thread_func(void* arg)
 {
     for (int i = 0; i < WATCHDOG_DURATION_TICKS; ++i)
@@ -578,6 +590,13 @@ static bool dead_process_unbind_helper(bool debugger, bool bind_while_alive) {
     // Possibly bind an eport to it.
     mx_handle_t eport = MX_HANDLE_INVALID;
     if (bind_while_alive) {
+        // If we're binding to the debugger exception port make sure the
+        // child is running first so that we don't have to process
+        // MX_EXCP_THREAD_STARTING.
+        if (debugger) {
+            if (!ensure_child_running(our_channel))
+                return false;
+        }
         eport = tu_io_port_create(0);
         tu_set_exception_port(child, eport, 0, options);
     }
@@ -766,6 +785,13 @@ static bool debugger_handler_test(void)
 
     mx_handle_t child, our_channel;
     start_test_child(NULL, &child, &our_channel);
+
+    // We're binding to the debugger exception port so make sure the
+    // child is running first so that we don't have to process
+    // MX_EXCP_THREAD_STARTING.
+    if (!ensure_child_running(our_channel))
+        return false;
+
     mx_handle_t eport = tu_io_port_create(0);
     tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
 
