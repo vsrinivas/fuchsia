@@ -220,7 +220,7 @@ void ProcessDispatcher::Kill() {
     }
 }
 
-void ProcessDispatcher::KillAllThreads() {
+void ProcessDispatcher::KillAllThreadsLocked() {
     LTRACE_ENTRY_OBJ;
 
     for (auto& thread : thread_list_) {
@@ -329,7 +329,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
 
     if (s == State::DYING) {
         // send kill to all of our threads
-        KillAllThreads();
+        KillAllThreadsLocked();
     } else if (s == State::DEAD) {
         // clean up the handle table
         LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);

@@ -228,7 +228,7 @@ private:
     void SetStateLocked(State) TA_REQ(state_lock_);
 
     // Kill all threads
-    void KillAllThreads() TA_REQ(state_lock_);
+    void KillAllThreadsLocked() TA_REQ(state_lock_);
 
     // Add a process to the global process list.  Allocate a new process ID from
     // the global pool at the same time, and assign it to the process.
