@@ -16,7 +16,7 @@
 # Fuchsia device, otherwise, for historical reasons it will allocate
 # 192.168.3.53.
 
-set -eo pipefail; [[ "${TRACE}" ]] && set -x
+set -eo pipefail; [[ "$TRACE" ]] && set -x
 
 INTERFACE=$1
 LEASE_FILE=/tmp/fuchsia-dhcp-$INTERFACE.leases
@@ -30,9 +30,9 @@ then
 fi
 
 FUCHSIA_IP=${FUCHSIA_IP:-192.168.3.53} # is this a good default?
-if [[ ! ${FUCHSIA_IP} =~ (^[0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+$ ]]
+if [[ ! $FUCHSIA_IP =~ (^[0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+$ ]]
 then
-  echo "Invalid FUCHSIA_IP '${FUCHSIA_IP}'. Must be a valid IPv4 address."
+  echo "Invalid FUCHSIA_IP '$FUCHSIA_IP'. Must be a valid IPv4 address."
   exit 1
 fi
 
@@ -61,16 +61,16 @@ then
 fi
 
 # Check if dnsmasq is running.
-if [[ -r ${PID_FILE} ]]
+if [[ -r $PID_FILE ]]
 then
   # Read the PID file.
-  DNSMASQ_PID=$(<${PID_FILE})
+  DNSMASQ_PID=$(<$PID_FILE)
 
   # Check that the PID file actually refers to a dnsmasq process.
   if $DARWIN
   then
-    DNSMASQ_PID_NAME=$( (ps -A -o comm ${DNSMASQ_PID} || true) | tail +2)
-    if [[ "${DNSMASQ_PID_NAME}" -ne "${DNSMASQ}" ]]
+    DNSMASQ_PID_NAME=$( (ps -A -o comm $DNSMASQ_PID || true) | tail +2)
+    if [[ "$DNSMASQ_PID_NAME" -ne "$DNSMASQ" ]]
     then
       # There's a PID file but the process name isn't right.
       unset DNSMASQ_PID
@@ -87,7 +87,7 @@ then
   then
     echo "Killing the old dnsmasq (pid: $DNSMASQ_PID)..."
     sudo kill $DNSMASQ_PID || true
-    sudo rm -f ${PID_FILE}
+    sudo rm -f $PID_FILE
   fi
 fi
 
@@ -99,7 +99,7 @@ fi
 
 # Bring up the network.
 echo "Bringing up the network interface: $INTERFACE"
-sudo ifconfig $INTERFACE inet ${HOST_IP}
+sudo ifconfig $INTERFACE inet $HOST_IP
 
 if $DARWIN
 then
@@ -131,11 +131,11 @@ sudo $DNSMASQ \
   --bind-interfaces \
   --interface=$INTERFACE \
   --except-interface=$LOOPBACK \
-  --dhcp-range=$INTERFACE,${FUCHSIA_IP},${FUCHSIA_IP},24h \
+  --dhcp-range=$INTERFACE,$FUCHSIA_IP,$FUCHSIA_IP,24h \
   --dhcp-leasefile=$LEASE_FILE \
-  --pid-file=${PID_FILE} \
-  --log-facility=${LOG_FILE} \
-  --listen-address=${HOST_IP}
+  --pid-file=$PID_FILE \
+  --log-facility=$LOG_FILE \
+  --listen-address=$HOST_IP
 
 if $DARWIN
 then
@@ -152,13 +152,13 @@ else
   then
     sudo sysctl -q net.inet.ip.forwarding=1
     echo "
-    nat on $DEFAULT_INTERFACE from ${FUCHSIA_NETWORK} to any -> ($DEFAULT_INTERFACE)
-    pass out on $DEFAULT_INTERFACE inet from ${FUCHSIA_NETWORK} to any
+    nat on $DEFAULT_INTERFACE from $FUCHSIA_NETWORK to any -> ($DEFAULT_INTERFACE)
+    pass out on $DEFAULT_INTERFACE inet from $FUCHSIA_NETWORK to any
     " | sudo pfctl -q -ef - >& /dev/null || true
   else
     sudo /bin/bash -c "echo 1 > /proc/sys/net/ipv4/ip_forward"
-    sudo iptables -t nat -A POSTROUTING -o ${DEFAULT_INTERFACE} -j MASQUERADE
-    sudo iptables -A FORWARD -i ${DEFAULT_INTERFACE} -o ${INTERFACE} -m state --state RELATED,ESTABLISHED -j ACCEPT
-    sudo iptables -A FORWARD -i ${INTERFACE} -o ${DEFAULT_INTERFACE} -j ACCEPT
+    sudo iptables -t nat -A POSTROUTING -o $DEFAULT_INTERFACE -j MASQUERADE
+    sudo iptables -A FORWARD -i $DEFAULT_INTERFACE -o $INTERFACE -m state --state RELATED,ESTABLISHED -j ACCEPT
+    sudo iptables -A FORWARD -i $INTERFACE -o $DEFAULT_INTERFACE -j ACCEPT
   fi
 fi
