@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_WRITER_H_
-#define APPS_TRACING_LIB_TRACE_INTERNAL_WRITER_H_
+#ifndef APPS_TRACING_LIB_TRACE_WRITER_H_
+#define APPS_TRACING_LIB_TRACE_WRITER_H_
 
 #include <stdint.h>
 
@@ -1027,4 +1027,4 @@ ToArgumentList(Arg&& arg, Args&&... args) {
 }  // namespace writer
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_WRITER_H_
+#endif  // APPS_TRACING_LIB_TRACE_WRITER_H_
