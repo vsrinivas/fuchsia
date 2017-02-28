@@ -11,6 +11,8 @@
 #include <magenta/types.h>
 #include <magenta/compiler.h>
 
+#include <sys/epoll.h>
+
 #define MAX_MXIO_FD 256
 
 // flag on handle args in processargs
@@ -40,10 +42,10 @@
 #define MXIO_MAX_FILENAME NAME_MAX
 
 // events for mxio_wait_fd()
-#define MXIO_EVT_READABLE MX_USER_SIGNAL_0
-#define MXIO_EVT_WRITABLE MX_USER_SIGNAL_1
-#define MXIO_EVT_ERROR MX_USER_SIGNAL_2
-#define MXIO_EVT_ALL (MXIO_EVT_READABLE | MXIO_EVT_WRITABLE | MXIO_EVT_ERROR)
+#define MXIO_EVT_READABLE EPOLLIN
+#define MXIO_EVT_WRITABLE EPOLLOUT
+#define MXIO_EVT_ERROR EPOLLERR
+#define MXIO_EVT_ALL (EPOLLIN | EPOLLOUT | EPOLLERR)
 
 __BEGIN_CDECLS
 
