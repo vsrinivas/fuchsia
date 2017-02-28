@@ -464,12 +464,12 @@ public:
     }
 
     size_t AllocatedRegionCount() const {
-        mxtl::AutoLock alloc_lock(alloc_lock_);
+        mxtl::AutoLock alloc_lock(&alloc_lock_);
         return allocated_regions_by_base_.size();
     }
 
     size_t AvailableRegionCount() const {
-        mxtl::AutoLock alloc_lock(alloc_lock_);
+        mxtl::AutoLock alloc_lock(&alloc_lock_);
         return avail_regions_by_base_.size();
     }
 

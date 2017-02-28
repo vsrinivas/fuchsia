@@ -69,7 +69,7 @@ ResourceDispatcher::~ResourceDispatcher() {
 }
 
 status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
     if (iopc_)
         return ERR_BAD_STATE;
 
@@ -81,7 +81,7 @@ status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client
 }
 
 status_t ResourceDispatcher::MakeRoot() {
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
 
     if (valid_)
         return ERR_BAD_STATE;
@@ -90,7 +90,7 @@ status_t ResourceDispatcher::MakeRoot() {
 }
 
 status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>& child) {
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
 
     if (!valid_)
         return ERR_BAD_STATE;
@@ -159,7 +159,7 @@ static mx_status_t default_do_action(const mx_rrec_t*, uint32_t, uint32_t, uint3
 }
 
 status_t ResourceDispatcher::AddRecord(mxtl::unique_ptr<ResourceRecord> rrec) {
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
 
     if (valid_)
         return ERR_BAD_STATE;
@@ -259,7 +259,7 @@ mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t m
     memcpy(rec.self.name, name_, MX_MAX_NAME_LEN);
 
     {
-        AutoLock lock(lock_);
+        AutoLock lock(&lock_);
 
         // indicate how many we *could* return
         *available = num_records_ + 1;
@@ -295,7 +295,7 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
     mx_status_t status = NO_ERROR;
     rec.self.type = MX_RREC_SELF;
     {
-        AutoLock lock(lock_);
+        AutoLock lock(&lock_);
 
         // indicate how many we *could* return;
         *available = num_children_;
@@ -322,7 +322,7 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
 mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index, uint32_t options,
                                                        mxtl::RefPtr<Dispatcher>* dispatcher,
                                                        mx_rights_t* rights) {
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
 
     ResourceRecord* rec = GetNthRecordLocked(index);
     if (rec == nullptr) {
@@ -334,7 +334,7 @@ mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index, uint32_t 
 
 mx_status_t ResourceDispatcher::RecordDoAction(uint32_t index, uint32_t action,
                                                uint32_t arg0, uint32_t arg1) {
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
 
     ResourceRecord* rec = GetNthRecordLocked(index);
     if (rec == nullptr) {
@@ -345,7 +345,7 @@ mx_status_t ResourceDispatcher::RecordDoAction(uint32_t index, uint32_t action,
 }
 
 mx_status_t ResourceDispatcher::Connect(HandleOwner* handle) {
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
 
     if (inbound_)
         return ERR_SHOULD_WAIT;
@@ -358,7 +358,7 @@ mx_status_t ResourceDispatcher::Connect(HandleOwner* handle) {
 }
 
 mx_status_t ResourceDispatcher::Accept(HandleOwner* handle) {
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
 
     if (!inbound_)
         return ERR_SHOULD_WAIT;

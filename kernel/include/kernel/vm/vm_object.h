@@ -126,7 +126,7 @@ protected:
         return NO_ERROR;
     }
 
-    Mutex& lock() TA_RET_CAP(lock_) { return lock_; }
+    Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
 
     void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
     void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);

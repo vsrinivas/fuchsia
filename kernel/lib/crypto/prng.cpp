@@ -31,7 +31,7 @@ void PRNG::AddEntropy(const void* data, int size) {
     if (likely(is_thread_safe_)) {
         uint64_t total;
         {
-            AutoLock guard(lock_);
+            AutoLock guard(&lock_);
             clPRNG_entropy(&ctx_, data, size);
             total_entropy_added_ += size;
             total = total_entropy_added_;
@@ -47,7 +47,7 @@ void PRNG::AddEntropy(const void* data, int size) {
 
 void PRNG::Draw(void* out, int size) {
     if (likely(is_thread_safe_)) {
-        AutoLock guard(lock_);
+        AutoLock guard(&lock_);
         if (unlikely(total_entropy_added_ < kMinEntropy)) {
             lock_.Release();
             status_t status = event_wait(&ready_);

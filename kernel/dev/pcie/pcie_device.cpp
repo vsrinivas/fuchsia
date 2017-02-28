@@ -100,7 +100,7 @@ mxtl::RefPtr<PcieDevice> PcieDevice::Create(PcieUpstreamNode& upstream, uint dev
 }
 
 status_t PcieDevice::Init(PcieUpstreamNode& upstream) {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     status_t res = InitLocked(upstream);
     if (res == NO_ERROR) {
@@ -158,7 +158,7 @@ mxtl::RefPtr<PcieUpstreamNode> PcieDevice::GetUpstream() {
 }
 
 status_t PcieDevice::Claim() {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     /* Has the device already been claimed? */
     if (claimed_)
@@ -175,7 +175,7 @@ status_t PcieDevice::Claim() {
 }
 
 void PcieDevice::Unclaim() {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     // Nothing to do if we are not claimed.
     if (!claimed_)
@@ -201,7 +201,7 @@ void PcieDevice::Unplug() {
      * operations on it.  We need to be inside the dev lock to do this.  Note:
      * it is assumed that we will not disappear during any of this function,
      * because our caller is holding a reference to us. */
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     /* For now ASSERT that we are not claimed.  Moving forward, we need to
      * inform our owner that we have been suddenly hot-unplugged.
@@ -240,7 +240,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
     // reset timeouts run.  This way, a spontaneous unplug event can occur and
     // not block the whole world because the device unplugged was in the process
     // of a FLR.
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     // Make certain to check to see if the device is still plugged in.
     if (!plugged_in_)
@@ -360,7 +360,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
 }
 
 status_t PcieDevice::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     /* In order to keep internal bookkeeping coherent, and interactions between
      * MSI/MSI-X and Legacy IRQ mode safe, API users may not directly manipulate
@@ -517,7 +517,7 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
 
 
 status_t PcieDevice::AllocateBars() {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
     return AllocateBarsLocked();
 }
 
@@ -670,7 +670,7 @@ status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
 
 void PcieDevice::Disable() {
     DEBUG_ASSERT(!dev_lock_.IsHeld());
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
     DisableLocked();
 }
 

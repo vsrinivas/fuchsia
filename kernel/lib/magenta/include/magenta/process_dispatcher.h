@@ -158,7 +158,7 @@ public:
     mx_status_t BadHandle(mx_handle_t handle_value, mx_status_t error);
 
     // accessors
-    Mutex& handle_table_lock() TA_RET_CAP(handle_table_lock_) { return handle_table_lock_; }
+    Mutex* handle_table_lock() TA_RET_CAP(handle_table_lock_) { return &handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }
     StateTracker* state_tracker() { return &state_tracker_; }
     State state() const;

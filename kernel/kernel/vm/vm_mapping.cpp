@@ -36,7 +36,7 @@ VmMapping::~VmMapping() {
 
 size_t VmMapping::AllocatedPagesLocked() const {
     DEBUG_ASSERT(magic_ == kMagic);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     if (state_ != LifeCycleState::ALIVE) {
         return 0;
@@ -81,7 +81,7 @@ status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) 
 
 
 status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(base) && IS_PAGE_ALIGNED(size));
 
     // Do not allow changing caching
@@ -224,7 +224,7 @@ status_t VmMapping::Unmap(vaddr_t base, size_t size) {
 
 status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     DEBUG_ASSERT(magic_ == kMagic);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(size) && IS_PAGE_ALIGNED(base));
     DEBUG_ASSERT(base >= base_ && base - base_ < size_);
     DEBUG_ASSERT(size_ - (base - base_) >= size);
@@ -302,7 +302,7 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
             this, name_, object_offset_, size_, offset, len);
 
     DEBUG_ASSERT(object_);
-    DEBUG_ASSERT(object_->lock().IsHeld());
+    DEBUG_ASSERT(object_->lock()->IsHeld());
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
@@ -394,7 +394,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
 status_t VmMapping::DestroyLocked() {
     DEBUG_ASSERT(magic_ == kMagic);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     LTRACEF("%p '%s'\n", this, name_);
 
     // Take a reference to ourself, so that we do not get destructed after
@@ -428,7 +428,7 @@ status_t VmMapping::DestroyLocked() {
 
 status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
     DEBUG_ASSERT(magic_ == kMagic);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     DEBUG_ASSERT(va >= base_ && va <= base_ + size_ - 1);
 
@@ -536,8 +536,8 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
 // function.
 void VmMapping::ActivateLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(state_ == LifeCycleState::NOT_READY);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
-    DEBUG_ASSERT(object_->lock().IsHeld());
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(object_->lock()->IsHeld());
     DEBUG_ASSERT(parent_);
 
     state_ = LifeCycleState::ALIVE;

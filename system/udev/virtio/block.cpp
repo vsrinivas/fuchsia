@@ -234,7 +234,7 @@ void BlockDevice::IrqConfigChange() {
 void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     LTRACEF("txn %p\n", txn);
 
-    mxtl::AutoLock lock(lock_);
+    mxtl::AutoLock lock(&lock_);
 
     bool write = (txn->opcode == IOTXN_OP_WRITE);
 

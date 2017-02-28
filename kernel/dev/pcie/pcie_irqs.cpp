@@ -753,7 +753,7 @@ status_t PcieDevice::QueryIrqModeCapabilities(pcie_irq_mode_t mode,
     if (!out_caps)
         return ERR_INVALID_ARGS;
 
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     return (plugged_in_ && !disabled_)
         ? QueryIrqModeCapabilitiesLocked(mode, out_caps)
@@ -764,7 +764,7 @@ status_t PcieDevice::GetIrqMode(pcie_irq_mode_info_t* out_info) const {
     if (!out_info)
         return ERR_INVALID_ARGS;
 
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     return (plugged_in_ && !disabled_)
         ? GetIrqModeLocked(out_info)
@@ -772,7 +772,7 @@ status_t PcieDevice::GetIrqMode(pcie_irq_mode_info_t* out_info) const {
 }
 
 status_t PcieDevice::SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs) {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     return ((mode == PCIE_IRQ_MODE_DISABLED) || (plugged_in_ && !disabled_))
         ? SetIrqModeLocked(mode, requested_irqs)
@@ -780,7 +780,7 @@ status_t PcieDevice::SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs) {
 }
 
 status_t PcieDevice::RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx) {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     return (plugged_in_ && !disabled_)
         ? RegisterIrqHandlerLocked(irq_id, handler, ctx)
@@ -788,7 +788,7 @@ status_t PcieDevice::RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handl
 }
 
 status_t PcieDevice::MaskUnmaskIrq(uint irq_id, bool mask) {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     return (mask || (plugged_in_ && !disabled_))
         ? MaskUnmaskIrqLocked(irq_id, mask)
@@ -936,14 +936,14 @@ status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
 
 void PcieBusDriver::ShutdownIrqs() {
     /* Shut off all of our legacy IRQs and free all of our bookkeeping */
-    AutoLock lock(legacy_irq_list_lock_);
+    AutoLock lock(&legacy_irq_list_lock_);
     legacy_irq_list_.clear();
 }
 
 mxtl::RefPtr<SharedLegacyIrqHandler> PcieBusDriver::FindLegacyIrqHandler(uint irq_id) {
     /* Search to see if we have already created a shared handler for this system
      * level IRQ id already */
-    AutoLock lock(legacy_irq_list_lock_);
+    AutoLock lock(&legacy_irq_list_lock_);
 
     auto iter = legacy_irq_list_.begin();
     while (iter != legacy_irq_list_.end()) {

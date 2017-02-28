@@ -33,7 +33,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
                          mx_handle_t pci_config_handle, const pci_config_t* pci_config) {
     LTRACE_ENTRY;
 
-    mxtl::AutoLock lock(lock_);
+    mxtl::AutoLock lock(&lock_);
     mx_handle_t tmp_handle;
 
     // save off handles to things
@@ -195,7 +195,7 @@ void Device::IrqWorker() {
             continue;
 
         // grab the mutex for the duration of the irq handlers
-        mxtl::AutoLock lock(lock_);
+        mxtl::AutoLock lock(&lock_);
 
         if (irq_status & 0x1) { /* used ring update */
             IrqRingUpdate();

@@ -80,7 +80,7 @@ status_t PcieBusDriver::AddRoot(mxtl::RefPtr<PcieRoot>&& root) {
 
     // Attempt to add it to the collection of roots.
     {
-        AutoLock bus_topology_lock(bus_topology_lock_);
+        AutoLock bus_topology_lock(&bus_topology_lock_);
         if (!roots_.insert_or_find(mxtl::move(root))) {
             TRACEF("Failed to add PCIe root for bus %u, root already exists!\n",
                     root->managed_bus_id());
@@ -97,7 +97,7 @@ status_t PcieBusDriver::RescanDevices() {
         return ERR_BAD_STATE;
     }
 
-    AutoLock lock(bus_rescan_lock_);
+    AutoLock lock(&bus_rescan_lock_);
 
     // Scan each root looking for for devices and other bridges.
     ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
@@ -115,7 +115,7 @@ status_t PcieBusDriver::RescanDevices() {
 }
 
 bool PcieBusDriver::IsNotStarted(bool allow_quirks_phase) const {
-    AutoLock start_lock(start_lock_);
+    AutoLock start_lock(&start_lock_);
 
     if ((state_ != State::NOT_STARTED) &&
         (!allow_quirks_phase || (state_ != State::STARTING_RUNNING_QUIRKS)))
@@ -125,7 +125,7 @@ bool PcieBusDriver::IsNotStarted(bool allow_quirks_phase) const {
 }
 
 bool PcieBusDriver::AdvanceState(State expected, State next) {
-    AutoLock start_lock(start_lock_);
+    AutoLock start_lock(&start_lock_);
 
     if (state_ != expected) {
         TRACEF("Failed to advance PCIe bus driver state to %u.  "
@@ -145,7 +145,7 @@ status_t PcieBusDriver::StartBusDriver() {
         return ERR_BAD_STATE;
 
     {
-        AutoLock lock(bus_rescan_lock_);
+        AutoLock lock(&bus_rescan_lock_);
 
         // Scan each root looking for for devices and other bridges.
         ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
@@ -208,7 +208,7 @@ mxtl::RefPtr<PcieDevice> PcieBusDriver::GetNthDevice(uint32_t index) {
 }
 
 void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upstream) {
-    AutoLock lock(bus_topology_lock_);
+    AutoLock lock(&bus_topology_lock_);
 
     // Have the device hold a reference to its upstream bridge.
     DEBUG_ASSERT(dev.upstream_ == nullptr);
@@ -222,7 +222,7 @@ void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upst
 }
 
 void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {
-    AutoLock lock(bus_topology_lock_);
+    AutoLock lock(&bus_topology_lock_);
 
     if (dev.upstream_ != nullptr) {
         uint ndx = (dev.dev_id() * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id();
@@ -238,14 +238,14 @@ void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {
 }
 
 mxtl::RefPtr<PcieUpstreamNode> PcieBusDriver::GetUpstream(PcieDevice& dev) {
-    AutoLock lock(bus_topology_lock_);
+    AutoLock lock(&bus_topology_lock_);
     auto ret = dev.upstream_;
     return ret;
 }
 
 mxtl::RefPtr<PcieDevice> PcieBusDriver::GetDownstream(PcieUpstreamNode& upstream, uint ndx) {
     DEBUG_ASSERT(ndx <= countof(upstream.downstream_));
-    AutoLock lock(bus_topology_lock_);
+    AutoLock lock(&bus_topology_lock_);
     auto ret = upstream.downstream_[ndx];
     return ret;
 }
@@ -442,7 +442,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
 }
 
 status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
-    AutoLock lock(driver_lock_);
+    AutoLock lock(&driver_lock_);
 
     if (driver_ != nullptr) {
         TRACEF("Failed to initialize PCIe bus driver; driver already initialized\n");
@@ -467,7 +467,7 @@ void PcieBusDriver::ShutdownDriver() {
     mxtl::RefPtr<PcieBusDriver> driver;
 
     {
-        AutoLock lock(driver_lock_);
+        AutoLock lock(&driver_lock_);
         driver = mxtl::move(driver_);
     }
 
@@ -492,7 +492,7 @@ const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
 
     // Find the region which would contain this bus_id, if any.
     // add does not overlap with any already defined regions.
-    AutoLock ecam_region_lock(ecam_region_lock_);
+    AutoLock ecam_region_lock(&ecam_region_lock_);
     auto iter = ecam_regions_.upper_bound(static_cast<uint8_t>(bus_id));
     --iter;
 
@@ -548,7 +548,7 @@ status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
 
     // Grab the ECAM lock and make certain that the region we have been asked to
     // add does not overlap with any already defined regions.
-    AutoLock ecam_region_lock(ecam_region_lock_);
+    AutoLock ecam_region_lock(&ecam_region_lock_);
     auto iter = ecam_regions_.upper_bound(ecam.bus_start);
     --iter;
 

@@ -25,7 +25,7 @@ static dpc_t reaper_dpc = {
 
 void ReapHandles(mxtl::DoublyLinkedList<Handle*>* handles) {
     LTRACE_ENTRY;
-    AutoLock lock(reaper_mutex);
+    AutoLock lock(&reaper_mutex);
     reaper_handles.splice(reaper_handles.end(), *handles);
     if (!list_in_list(&reaper_dpc.node))
         dpc_queue(&reaper_dpc, false);
@@ -43,7 +43,7 @@ static void ReaperRoutine(dpc_t* dpc) {
     LTRACE_ENTRY;
     mxtl::DoublyLinkedList<Handle*> list;
     {
-        AutoLock lock(reaper_mutex);
+        AutoLock lock(&reaper_mutex);
         list.swap(reaper_handles);
     }
     Handle* handle;

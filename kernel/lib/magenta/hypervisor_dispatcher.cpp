@@ -16,7 +16,7 @@ mxtl::RefPtr<HypervisorDispatcher> hypervisor TA_GUARDED(mutex);
 // static
 mx_status_t HypervisorDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher,
                                          mx_rights_t* rights) {
-    AutoLock lock(mutex);
+    AutoLock lock(&mutex);
 
     if (!hypervisor) {
         mxtl::unique_ptr<HypervisorContext> context;

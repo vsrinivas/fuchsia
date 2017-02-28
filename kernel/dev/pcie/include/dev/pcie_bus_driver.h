@@ -150,7 +150,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(PcieBusDriver);
 
     static mxtl::RefPtr<PcieBusDriver> GetDriver() {
-        AutoLock lock(driver_lock_);
+        AutoLock lock(&driver_lock_);
         return driver_;
     }
 

@@ -579,14 +579,14 @@ protected:
     friend class ::mxtl::SlabAllocated<SATraits>;
 
     void* Allocate() {
-        AutoLock alloc_lock(this->alloc_lock_);
+        AutoLock alloc_lock(&this->alloc_lock_);
         return AllocateLocked();
     }
 
     void ReturnToFreeList(void* ptr) {
         FreeListEntry* free_obj = new (ptr) FreeListEntry;
         {
-            AutoLock alloc_lock(alloc_lock_);
+            AutoLock alloc_lock(&alloc_lock_);
             ReturnToFreeListLocked(free_obj);
         }
     }

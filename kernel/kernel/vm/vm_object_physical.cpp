@@ -98,7 +98,7 @@ status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_
     if (unlikely(len == 0))
         return ERR_INVALID_ARGS;
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     // verify that the range is within the object
     if (unlikely(!InRange(offset, len, size_)))

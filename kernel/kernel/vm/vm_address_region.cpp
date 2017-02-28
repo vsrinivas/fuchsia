@@ -236,7 +236,7 @@ status_t VmAddressRegion::OverwriteVmMapping(vaddr_t base, size_t size, uint32_t
                             uint arch_mmu_flags, const char* name,
                             mxtl::RefPtr<VmAddressRegionOrMapping>* out) {
     DEBUG_ASSERT(magic_ == kMagic);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(vmo);
     DEBUG_ASSERT(vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE);
 
@@ -261,7 +261,7 @@ status_t VmAddressRegion::OverwriteVmMapping(vaddr_t base, size_t size, uint32_t
 
 status_t VmAddressRegion::DestroyLocked() {
     DEBUG_ASSERT(magic_ == kMagic);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     LTRACEF("%p '%s'\n", this, name_);
 
     // Take a reference to ourself, so that we do not get destructed after
@@ -318,7 +318,7 @@ mxtl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t
 
 size_t VmAddressRegion::AllocatedPagesLocked() const {
     DEBUG_ASSERT(magic_ == kMagic);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     if (state_ != LifeCycleState::ALIVE) {
         return 0;
@@ -333,7 +333,7 @@ size_t VmAddressRegion::AllocatedPagesLocked() const {
 
 status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags) {
     DEBUG_ASSERT(magic_ == kMagic);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     mxtl::RefPtr<VmAddressRegion> vmar(this);
     while (1) {
@@ -351,7 +351,7 @@ status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags) {
 }
 
 bool VmAddressRegion::IsRangeAvailableLocked(vaddr_t base, size_t size) {
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(size > 0);
 
     // Find the first region with base > *base*.  Since subregions_ has no
@@ -383,7 +383,7 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
                                      const ChildList::iterator& next,
                                      vaddr_t* pva, vaddr_t search_base, vaddr_t align,
                                      size_t region_size, size_t min_gap, uint arch_mmu_flags) {
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     safeint::CheckedNumeric<vaddr_t> gap_beg; // first byte of a gap
     safeint::CheckedNumeric<vaddr_t> gap_end; // last byte of a gap
@@ -469,7 +469,7 @@ not_found:
 vaddr_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == kMagic);
     DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu\n", this, size,
                   align_pow2);
@@ -494,7 +494,7 @@ void VmAddressRegion::Dump(uint depth, bool verbose) const {
 
 void VmAddressRegion::Activate() {
     DEBUG_ASSERT(state_ == LifeCycleState::NOT_READY);
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     state_ = LifeCycleState::ALIVE;
     parent_->subregions_.insert(mxtl::RefPtr<VmAddressRegionOrMapping>(this));
@@ -518,7 +518,7 @@ status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
 }
 
 status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions) {
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     if (!is_in_range(base, size)) {
         return ERR_INVALID_ARGS;
@@ -667,7 +667,7 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
 
 vaddr_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2,
                                                      uint arch_mmu_flags) {
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     const vaddr_t base = 0;
 
@@ -726,7 +726,7 @@ namespace {
 // the spot is occupied, the allocator retries several times before giving up.
 vaddr_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
                                                                    uint arch_mmu_flags) {
-    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     align_pow2 = mxtl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
     const vaddr_t align = 1UL << align_pow2;

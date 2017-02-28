@@ -80,7 +80,7 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
         return;
     }
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     size_t count = 0;
     page_list_.ForEveryPage([&count](const auto p, uint64_t) { count++; });
@@ -103,7 +103,7 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
 
 size_t VmObjectPaged::AllocatedPages() const {
     DEBUG_ASSERT(magic_ == MAGIC);
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
     size_t count = 0;
     page_list_.ForEveryPage([&count](const auto p, uint64_t) { count++; });
     return count;
@@ -115,7 +115,7 @@ status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {
 
     DEBUG_ASSERT(p);
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     if (offset >= size_)
         return ERR_OUT_OF_RANGE;
@@ -219,7 +219,7 @@ status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* com
     if (committed)
         *committed = 0;
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     // trim the size
     uint64_t new_len;
@@ -291,7 +291,7 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
     if (committed)
         *committed = 0;
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     // trim the size
     uint64_t new_len;
@@ -358,7 +358,7 @@ status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* d
     if (decommitted)
         *decommitted = 0;
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     // trim the size
     uint64_t new_len;
@@ -405,7 +405,7 @@ status_t VmObjectPaged::Resize(uint64_t s) {
     if (s > MAX_SIZE)
         return ERR_OUT_OF_RANGE;
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     // see if we're shrinking the vmo
     if (s < size_) {
@@ -445,7 +445,7 @@ status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* b
     if (bytes_copied)
         *bytes_copied = 0;
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     // trim the size
     uint64_t new_len;
@@ -562,7 +562,7 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> 
     if (unlikely(len == 0))
         return ERR_INVALID_ARGS;
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     // verify that the range is within the object
     if (unlikely(!InRange(offset, len, size_)))
@@ -619,7 +619,7 @@ status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t len,
     if (unlikely(len == 0))
         return ERR_INVALID_ARGS;
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     if (unlikely(!InRange(start_offset, len, size_)))
         return ERR_OUT_OF_RANGE;

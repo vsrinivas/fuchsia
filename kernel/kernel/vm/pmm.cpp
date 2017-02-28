@@ -83,7 +83,7 @@ done_add:
 }
 
 vm_page_t* pmm_alloc_page(uint alloc_flags, paddr_t* pa) {
-    AutoLock al(arena_lock);
+    AutoLock al(&arena_lock);
 
     /* walk the arenas in order until we find one with a free page */
     for (auto& a : arena_list) {
@@ -112,7 +112,7 @@ size_t pmm_alloc_pages(size_t count, uint alloc_flags, struct list_node* list) {
     if (count == 0)
         return 0;
 
-    AutoLock al(arena_lock);
+    AutoLock al(&arena_lock);
 
     /* walk the arenas in order, allocating as many pages as we can from each */
     size_t allocated = 0;
@@ -144,7 +144,7 @@ size_t pmm_alloc_range(paddr_t address, size_t count, struct list_node* list) {
 
     address = ROUNDDOWN(address, PAGE_SIZE);
 
-    AutoLock al(arena_lock);
+    AutoLock al(&arena_lock);
 
     /* walk through the arenas, looking to see if the physical page belongs to it */
     for (auto& a : arena_list) {
@@ -176,7 +176,7 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
     if (alignment_log2 < PAGE_SIZE_SHIFT)
         alignment_log2 = PAGE_SIZE_SHIFT;
 
-    AutoLock al(arena_lock);
+    AutoLock al(&arena_lock);
 
     for (auto& a : arena_list) {
         /* skip the arena if it's not KMAP and the KMAP only allocation flag was passed */
@@ -270,7 +270,7 @@ size_t pmm_free(struct list_node* list) {
 
     DEBUG_ASSERT(list);
 
-    AutoLock al(arena_lock);
+    AutoLock al(&arena_lock);
 
     uint count = 0;
     while (!list_is_empty(list)) {
@@ -312,7 +312,7 @@ void pmm_dump_free() {
 
 size_t pmm_count_free_pages() {
     size_t free = 0u;
-    AutoLock al(arena_lock);
+    AutoLock al(&arena_lock);
     for (const auto& a : arena_list) {
         free += a.free_count();
     }

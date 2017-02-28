@@ -159,7 +159,7 @@ status_t ProcessDispatcher::set_name(const char* name, size_t len) {
 status_t ProcessDispatcher::Initialize() {
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(state_lock_);
+    AutoLock lock(&state_lock_);
 
     DEBUG_ASSERT(state_ == State::INITIAL);
 
@@ -179,7 +179,7 @@ void ProcessDispatcher::Exit(int retcode) {
     DEBUG_ASSERT(ProcessDispatcher::GetCurrent() == this);
 
     {
-        AutoLock lock(state_lock_);
+        AutoLock lock(&state_lock_);
 
         DEBUG_ASSERT(state_ == State::RUNNING);
 
@@ -197,7 +197,7 @@ void ProcessDispatcher::Exit(int retcode) {
 void ProcessDispatcher::Kill() {
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(state_lock_);
+    AutoLock lock(&state_lock_);
 
     // we're already dead
     if (state_ == State::DEAD)
@@ -302,7 +302,7 @@ mx_koid_t ProcessDispatcher::get_related_koid() const {
 }
 
 ProcessDispatcher::State ProcessDispatcher::state() const {
-    AutoLock lock(state_lock_);
+    AutoLock lock(&state_lock_);
     return state_;
 }
 
@@ -472,7 +472,7 @@ status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
         break;
     }
     {
-        AutoLock lock(exception_lock_);
+        AutoLock lock(&exception_lock_);
         if (debugger_exception_port_) {  // TODO: Protect with rights if necessary.
             info->debugger_attached = true;
         }

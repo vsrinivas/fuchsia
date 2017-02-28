@@ -160,7 +160,7 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 }
 
 status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
-    AutoLock al(ipt_lock);
+    AutoLock al(&ipt_lock);
 
     if (!supports_pt)
         return ERR_NOT_SUPPORTED;
@@ -179,7 +179,7 @@ status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
 // Allocate all needed state for tracing.
 
 status_t x86_ipt_cpu_mode_alloc() {
-    AutoLock al(ipt_lock);
+    AutoLock al(&ipt_lock);
 
     if (!supports_pt)
         return ERR_NOT_SUPPORTED;
@@ -204,7 +204,7 @@ status_t x86_ipt_cpu_mode_alloc() {
 // from having to care during any cleanup.
 
 status_t x86_ipt_cpu_mode_free() {
-    AutoLock al(ipt_lock);
+    AutoLock al(&ipt_lock);
 
     if (!supports_pt)
         return ERR_NOT_SUPPORTED;
@@ -245,7 +245,7 @@ static void x86_ipt_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
 // Begin the trace.
 
 status_t x86_ipt_cpu_mode_start() {
-    AutoLock al(ipt_lock);
+    AutoLock al(&ipt_lock);
 
     if (!supports_pt)
         return ERR_NOT_SUPPORTED;
@@ -304,7 +304,7 @@ static void x86_ipt_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 // during any cleanup.
 
 status_t x86_ipt_cpu_mode_stop() {
-    AutoLock al(ipt_lock);
+    AutoLock al(&ipt_lock);
 
     if (!supports_pt)
         return ERR_NOT_SUPPORTED;
@@ -322,7 +322,7 @@ status_t x86_ipt_cpu_mode_stop() {
 }
 
 status_t x86_ipt_stage_cpu_data(uint32_t cpu, const mx_x86_pt_regs_t* regs) {
-    AutoLock al(ipt_lock);
+    AutoLock al(&ipt_lock);
 
     if (!supports_pt)
         return ERR_NOT_SUPPORTED;
@@ -348,7 +348,7 @@ status_t x86_ipt_stage_cpu_data(uint32_t cpu, const mx_x86_pt_regs_t* regs) {
 }
 
 status_t x86_ipt_get_cpu_data(uint32_t cpu, mx_x86_pt_regs_t* regs) {
-    AutoLock al(ipt_lock);
+    AutoLock al(&ipt_lock);
 
     if (!supports_pt)
         return ERR_NOT_SUPPORTED;

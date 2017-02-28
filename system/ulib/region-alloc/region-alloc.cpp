@@ -36,7 +36,7 @@ RegionAllocator::~RegionAllocator() {
 }
 
 void RegionAllocator::Reset() {
-    mxtl::AutoLock alloc_lock(alloc_lock_);
+    mxtl::AutoLock alloc_lock(&alloc_lock_);
 
     DEBUG_ASSERT((region_pool_ != nullptr) || avail_regions_by_base_.is_empty());
 
@@ -51,7 +51,7 @@ void RegionAllocator::Reset() {
 }
 
 mx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool) {
-    mxtl::AutoLock alloc_lock(alloc_lock_);
+    mxtl::AutoLock alloc_lock(&alloc_lock_);
 
     if (!allocated_regions_by_base_.is_empty() || !avail_regions_by_base_.is_empty())
         return ERR_BAD_STATE;
@@ -61,7 +61,7 @@ mx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool
 }
 
 mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow_overlap) {
-    mxtl::AutoLock alloc_lock(alloc_lock_);
+    mxtl::AutoLock alloc_lock(&alloc_lock_);
 
     // Start with sanity checks
     mx_status_t ret = AddSubtractSanityCheckLocked(region);
@@ -90,7 +90,7 @@ mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow
 
 mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
                                             bool allow_incomplete) {
-    mxtl::AutoLock alloc_lock(alloc_lock_);
+    mxtl::AutoLock alloc_lock(&alloc_lock_);
 
     // Start with sanity checks
     mx_status_t ret = AddSubtractSanityCheckLocked(to_subtract);
@@ -276,7 +276,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
 mx_status_t RegionAllocator::GetRegion(uint64_t size,
                                        uint64_t alignment,
                                        Region::UPtr& out_region) {
-    mxtl::AutoLock alloc_lock(alloc_lock_);
+    mxtl::AutoLock alloc_lock(&alloc_lock_);
 
     // Check our RegionPool
     if (region_pool_ == nullptr)
@@ -323,7 +323,7 @@ mx_status_t RegionAllocator::GetRegion(uint64_t size,
 
 mx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
                                        Region::UPtr& out_region) {
-    mxtl::AutoLock alloc_lock(alloc_lock_);
+    mxtl::AutoLock alloc_lock(&alloc_lock_);
 
     // Check our RegionPool
     if (region_pool_ == nullptr)
@@ -391,7 +391,7 @@ mx_status_t RegionAllocator::AddSubtractSanityCheckLocked(const ralloc_region_t&
 }
 
 void RegionAllocator::ReleaseRegion(Region* region) {
-    mxtl::AutoLock alloc_lock(alloc_lock_);
+    mxtl::AutoLock alloc_lock(&alloc_lock_);
 
     DEBUG_ASSERT(region != nullptr);
 

@@ -313,7 +313,7 @@ public:
 
     // TODO(johngro) : make these protected.  They are currently only visibile
     // because of debug code.
-    Mutex& dev_lock() { return dev_lock_; }
+    Mutex* dev_lock() { return &dev_lock_; }
 
 protected:
     friend class PcieUpstreamNode;

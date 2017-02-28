@@ -90,7 +90,7 @@ protected:
     friend class VmAddressRegionOrMapping;
     friend class VmAddressRegion;
     friend class VmMapping;
-    mutex_t& lock() { return lock_; }
+    mutex_t* lock() { return &lock_; }
 
     void AslrDraw(uint8_t* buf, size_t len);
 

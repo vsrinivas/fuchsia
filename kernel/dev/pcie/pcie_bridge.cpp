@@ -64,7 +64,7 @@ mxtl::RefPtr<PcieDevice> PcieBridge::Create(PcieUpstreamNode& upstream,
 }
 
 status_t PcieBridge::Init(PcieUpstreamNode& upstream) {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     // Initialize the device portion of ourselves first.
     status_t res = PcieDevice::InitLocked(upstream);
@@ -173,7 +173,7 @@ void PcieBridge::Unplug() {
 }
 
 status_t PcieBridge::AllocateBars() {
-    AutoLock dev_lock(dev_lock_);
+    AutoLock dev_lock(&dev_lock_);
 
     // Start by making sure we can allocate our bridge windows.
     status_t res = AllocateBridgeWindowsLocked();
@@ -252,7 +252,7 @@ void PcieBridge::Disable() {
     // to be outside of the device lock as we disable our downstream devices,
     // but we don't want any new devices to be able to plug into us as we do so.
     {
-        AutoLock dev_lock(dev_lock_);
+        AutoLock dev_lock(&dev_lock_);
         disabled_ = true;
     }
 
@@ -263,7 +263,7 @@ void PcieBridge::Disable() {
 
     // Enter the device lock again and finish shooting ourselves in the head.
     {
-        AutoLock dev_lock(dev_lock_);
+        AutoLock dev_lock(&dev_lock_);
 
         // Disable the device portion of ourselves.
         PcieDevice::DisableLocked();

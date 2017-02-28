@@ -183,7 +183,7 @@ mxtl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
 
     // add it to the global list
     {
-        AutoLock a(aspace_list_lock);
+        AutoLock a(&aspace_list_lock);
         aspaces.push_back(aspace.get());
     }
 
@@ -205,7 +205,7 @@ VmAspace::~VmAspace() {
 
     // pop it out of the global aspace list
     {
-        AutoLock a(aspace_list_lock);
+        AutoLock a(&aspace_list_lock);
         aspaces.erase(*this);
     }
 
@@ -220,7 +220,7 @@ VmAspace::~VmAspace() {
 }
 
 mxtl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
-    AutoLock guard(lock_);
+    AutoLock guard(&lock_);
     mxtl::RefPtr<VmAddressRegion> ref(root_vmar_);
     return mxtl::move(ref);
 }
@@ -229,7 +229,7 @@ status_t VmAspace::Destroy() {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("%p '%s'\n", this, name_);
 
-    AutoLock guard(lock_);
+    AutoLock guard(&lock_);
     // tear down and free all of the regions in our address space
     status_t status = root_vmar_->DestroyLocked();
     if (status != NO_ERROR && status != ERR_BAD_STATE) {
@@ -507,7 +507,7 @@ status_t VmAspace::PageFault(vaddr_t va, uint flags) {
     // for now, hold the aspace lock across the page fault operation,
     // which stops any other operations on the address space from moving
     // the region out from underneath it
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     return root_vmar_->PageFault(va, flags);
 }
@@ -517,14 +517,14 @@ void VmAspace::Dump(bool verbose) const {
     printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx fl %#x ref %d '%s'\n", this,
            base_, base_ + size_ - 1, size_, flags_, ref_count_debug(), name_);
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
 
     if (verbose)
         root_vmar_->Dump(1, verbose);
 }
 
 void DumpAllAspaces(bool verbose) {
-    AutoLock a(aspace_list_lock);
+    AutoLock a(&aspace_list_lock);
 
     for (const auto& a : aspaces)
         a.Dump(verbose);
@@ -533,7 +533,7 @@ void DumpAllAspaces(bool verbose) {
 size_t VmAspace::AllocatedPages() const {
     DEBUG_ASSERT(magic_ == MAGIC);
 
-    AutoLock a(lock_);
+    AutoLock a(&lock_);
     return root_vmar_->AllocatedPagesLocked();
 }
 

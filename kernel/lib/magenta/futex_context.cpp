@@ -69,7 +69,7 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
         return NO_ERROR;
     }
 
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
     // If we got a timeout, we need to remove the thread's node from the
     // wait queue, since FutexWake() didn't do that.
     if (UnqueueNodeLocked(node)) {
@@ -108,7 +108,7 @@ status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
         return ERR_INVALID_ARGS;
 
     {
-        AutoLock lock(lock_);
+        AutoLock lock(&lock_);
 
         FutexNode* node = futex_table_.erase(futex_key);
         if (!node) {
@@ -143,7 +143,7 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
     if ((requeue_ptr.get() == nullptr) && requeue_count)
         return ERR_INVALID_ARGS;
 
-    AutoLock lock(lock_);
+    AutoLock lock(&lock_);
 
     int value;
     status_t result = wake_ptr.copy_from_user(&value);
