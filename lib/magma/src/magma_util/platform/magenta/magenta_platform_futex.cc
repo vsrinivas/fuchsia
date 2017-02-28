@@ -23,17 +23,17 @@ bool PlatformFutex::Wait(uint32_t* value_ptr, int32_t current_value, uint64_t ti
     mx_status_t status =
         mx_futex_wait(reinterpret_cast<mx_futex_t*>(value_ptr), current_value, timeout_ns);
     switch (status) {
-    case NO_ERROR:
-        *result_out = AWOKE;
-        break;
-    case ERR_TIMED_OUT:
-        *result_out = TIMED_OUT;
-        break;
-    case ERR_BAD_STATE:
-        *result_out = RETRY;
-        break;
-    default:
-        return DRETF(false, "mx_futex_wait returned: %d", status);
+        case NO_ERROR:
+            *result_out = AWOKE;
+            break;
+        case ERR_TIMED_OUT:
+            *result_out = TIMED_OUT;
+            break;
+        case ERR_BAD_STATE:
+            *result_out = RETRY;
+            break;
+        default:
+            return DRETF(false, "mx_futex_wait returned: %d", status);
     }
     return true;
 }

@@ -226,7 +226,4 @@ TEST(PlatformBuffer, Basic)
 
 TEST(PlatformBuffer, BufferPassing) { TestPlatformBuffer::BufferPassing(); }
 
-TEST(PlatformBuffer, PinRanges)
-{
-    TestPlatformBuffer::PinRanges(10);
-}
+TEST(PlatformBuffer, PinRanges) { TestPlatformBuffer::PinRanges(10); }

@@ -137,16 +137,16 @@ public:
 
         for (uint32_t i = 0; i < num_results; i++) {
             switch (results[i].cookie) {
-            case kCookieChannel:
-                if (results[i].status != NO_ERROR)
-                    return DRETF(false, "error in waitset result: %d", results[i].status);
-                pending = results[i].observed;
-                break;
+                case kCookieChannel:
+                    if (results[i].status != NO_ERROR)
+                        return DRETF(false, "error in waitset result: %d", results[i].status);
+                    pending = results[i].observed;
+                    break;
 
-            case kCookieShutdown:
-                DASSERT(results[i].status == NO_ERROR);
-                DASSERT(results[i].observed);
-                return false;
+                case kCookieShutdown:
+                    DASSERT(results[i].status == NO_ERROR);
+                    DASSERT(results[i].observed);
+                    return false;
             }
         }
 
@@ -162,48 +162,50 @@ public:
             OpCode* opcode = reinterpret_cast<OpCode*>(bytes);
             bool success = false;
             switch (*opcode) {
-            case OpCode::ImportBuffer:
-                success = ImportBuffer(
-                    OpCast<ImportBufferOp>(bytes, actual_bytes, handles, actual_handles), handles);
-                break;
-            case OpCode::ReleaseBuffer:
-                success = ReleaseBuffer(
-                    OpCast<ReleaseBufferOp>(bytes, actual_bytes, handles, actual_handles));
-                break;
-            case OpCode::ImportObject:
-                success = ImportObject(
-                    OpCast<ImportObjectOp>(bytes, actual_bytes, handles, actual_handles), handles);
-                break;
-            case OpCode::ReleaseObject:
-                success = ReleaseObject(
-                    OpCast<ReleaseObjectOp>(bytes, actual_bytes, handles, actual_handles));
-                break;
-            case OpCode::CreateContext:
-                success = CreateContext(
-                    OpCast<CreateContextOp>(bytes, actual_bytes, handles, actual_handles));
-                break;
-            case OpCode::DestroyContext:
-                success = DestroyContext(
-                    OpCast<DestroyContextOp>(bytes, actual_bytes, handles, actual_handles));
-                break;
-            case OpCode::ExecuteCommandBuffer:
-                success = ExecuteCommandBuffer(
-                    OpCast<ExecuteCommandBufferOp>(bytes, actual_bytes, handles, actual_handles));
-                break;
-            case OpCode::WaitRendering:
-                success = WaitRendering(
-                    OpCast<WaitRenderingOp>(bytes, actual_bytes, handles, actual_handles));
-                break;
-            case OpCode::PageFlip:
-                success =
-                    PageFlip(OpCast<PageFlipOp>(bytes, actual_bytes, handles, actual_handles));
-                break;
-            case OpCode::GetError:
-                success =
-                    GetError(OpCast<GetErrorOp>(bytes, actual_bytes, handles, actual_handles));
-                break;
-            default:
-                break;
+                case OpCode::ImportBuffer:
+                    success = ImportBuffer(
+                        OpCast<ImportBufferOp>(bytes, actual_bytes, handles, actual_handles),
+                        handles);
+                    break;
+                case OpCode::ReleaseBuffer:
+                    success = ReleaseBuffer(
+                        OpCast<ReleaseBufferOp>(bytes, actual_bytes, handles, actual_handles));
+                    break;
+                case OpCode::ImportObject:
+                    success = ImportObject(
+                        OpCast<ImportObjectOp>(bytes, actual_bytes, handles, actual_handles),
+                        handles);
+                    break;
+                case OpCode::ReleaseObject:
+                    success = ReleaseObject(
+                        OpCast<ReleaseObjectOp>(bytes, actual_bytes, handles, actual_handles));
+                    break;
+                case OpCode::CreateContext:
+                    success = CreateContext(
+                        OpCast<CreateContextOp>(bytes, actual_bytes, handles, actual_handles));
+                    break;
+                case OpCode::DestroyContext:
+                    success = DestroyContext(
+                        OpCast<DestroyContextOp>(bytes, actual_bytes, handles, actual_handles));
+                    break;
+                case OpCode::ExecuteCommandBuffer:
+                    success = ExecuteCommandBuffer(OpCast<ExecuteCommandBufferOp>(
+                        bytes, actual_bytes, handles, actual_handles));
+                    break;
+                case OpCode::WaitRendering:
+                    success = WaitRendering(
+                        OpCast<WaitRenderingOp>(bytes, actual_bytes, handles, actual_handles));
+                    break;
+                case OpCode::PageFlip:
+                    success =
+                        PageFlip(OpCast<PageFlipOp>(bytes, actual_bytes, handles, actual_handles));
+                    break;
+                case OpCode::GetError:
+                    success =
+                        GetError(OpCast<GetErrorOp>(bytes, actual_bytes, handles, actual_handles));
+                    break;
+                default:
+                    break;
             }
 
             if (!success)
@@ -625,12 +627,12 @@ private:
     {
         mx_status_t status = channel_.write(0, bytes, num_bytes, handles, num_handles);
         switch (status) {
-        case NO_ERROR:
-            return MAGMA_STATUS_OK;
-        case ERR_REMOTE_CLOSED:
-            return MAGMA_STATUS_CONNECTION_LOST;
-        default:
-            return MAGMA_STATUS_INTERNAL_ERROR;
+            case NO_ERROR:
+                return MAGMA_STATUS_OK;
+            case ERR_REMOTE_CLOSED:
+                return MAGMA_STATUS_CONNECTION_LOST;
+            default:
+                return MAGMA_STATUS_INTERNAL_ERROR;
         }
     }
 

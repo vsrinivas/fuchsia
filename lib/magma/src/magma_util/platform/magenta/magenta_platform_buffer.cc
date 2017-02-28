@@ -7,7 +7,7 @@
 #include "platform_buffer.h"
 #include "platform_object.h"
 #include <ddk/driver.h>
-#include <limits.h>  // PAGE_SIZE
+#include <limits.h> // PAGE_SIZE
 #include <map>
 #include <mx/vmar.h>
 #include <mx/vmo.h>
@@ -213,8 +213,8 @@ bool MagentaPlatformBuffer::UnmapCpu()
         map_count_--;
         if (map_count_ == 0) {
             DLOG("map_count 0 unmapping vmo %p", this);
-            mx_status_t status = mx::vmar::root_self().unmap(
-                    reinterpret_cast<uintptr_t>(virt_addr_), size());
+            mx_status_t status =
+                mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(virt_addr_), size());
             virt_addr_ = nullptr;
             if (status != NO_ERROR)
                 DRETF(false, "failed to unmap vmo: %d", status);
@@ -323,9 +323,9 @@ bool MagentaPlatformBuffer::MapPageCpu(uint32_t page_index, void** addr_out)
     }
 
     uintptr_t ptr;
-    mx_status_t status = mx::vmar::root_self().map(0, vmo_, page_index * PAGE_SIZE, PAGE_SIZE,
-                                                   MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
-                                                   &ptr);
+    mx_status_t status =
+        mx::vmar::root_self().map(0, vmo_, page_index * PAGE_SIZE, PAGE_SIZE,
+                                  MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr);
     if (status != NO_ERROR)
         return DRETF(false, "page map failed");
 

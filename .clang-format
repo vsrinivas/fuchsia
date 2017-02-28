@@ -2,6 +2,7 @@
 Language: Cpp
 ColumnLimit: 100
 UseTab: Never
+IndentCaseLabels: true
 IndentWidth: 4
 BreakBeforeBraces: WebKit
 AccessModifierOffset: -4

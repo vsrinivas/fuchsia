@@ -74,18 +74,18 @@ public:
         magma_system_wait_rendering(connection_, batch_buffer);
 
         switch (how) {
-        case NORMAL:
-            EXPECT_EQ(MAGMA_STATUS_OK, magma_system_get_error(connection_));
-            EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
-            break;
-        case FAULT:
-            EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_system_get_error(connection_));
-            EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
-            break;
-        case HANG:
-            EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_system_get_error(connection_));
-            EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
-            break;
+            case NORMAL:
+                EXPECT_EQ(MAGMA_STATUS_OK, magma_system_get_error(connection_));
+                EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
+                break;
+            case FAULT:
+                EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_system_get_error(connection_));
+                EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
+                break;
+            case HANG:
+                EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_system_get_error(connection_));
+                EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
+                break;
         }
 
         EXPECT_EQ(magma_system_unmap(connection_, batch_buffer), 0);
@@ -214,7 +214,4 @@ TEST(HangRecovery, Test)
     test->SubmitCommandBuffer(TestConnection::NORMAL);
 }
 
-TEST(HangRecovery, Stress)
-{
-    TestConnection::Stress(1000);
-}
+TEST(HangRecovery, Stress) { TestConnection::Stress(1000); }

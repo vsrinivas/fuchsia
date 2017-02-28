@@ -30,7 +30,6 @@ TEST(MagmaSystemConnection, GetDeviceId)
     EXPECT_EQ(device_id, test_id);
 }
 
-
 class MsdMockConnection_ContextManagement : public MsdMockConnection {
 public:
     MsdMockConnection_ContextManagement() {}

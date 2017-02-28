@@ -56,9 +56,8 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
     uint64_t size;
 
     mx_handle_t handle;
-    status = pci->map_mmio(mx_device(), pci_bar,
-                           static_cast<mx_cache_policy_t>(cache_policy), &addr, &size,
-                           &handle);
+    status = pci->map_mmio(mx_device(), pci_bar, static_cast<mx_cache_policy_t>(cache_policy),
+                           &addr, &size, &handle);
     if (status < 0)
         return DRETP(nullptr, "map_mmio failed");
 
