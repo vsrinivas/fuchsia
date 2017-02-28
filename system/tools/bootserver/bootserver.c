@@ -26,13 +26,15 @@
 
 #include <magenta/netboot.h>
 
+#define DEFAULT_US_BETWEEN_PACKETS 20
+
 static uint32_t cookie = 1;
 static char* appname;
 static struct in6_addr allowed_addr;
 static const char spinner[] = {'|', '/', '-', '\\'};
 static const int MAX_READ_RETRIES = 10;
 static const int MAX_SEND_RETRIES = 10000;
-static int64_t us_between_packets = 20;
+static int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
 
 static int io_rcv(int s, nbmsg* msg, nbmsg* ack) {
     for (int i = 0; i < MAX_READ_RETRIES; i++) {
@@ -412,10 +414,12 @@ void usage(void) {
             "usage:   %s [ <option> ]* <kernel> [ <ramdisk> ] [ -- [ <kerneloption> ]* ]\n"
             "\n"
             "options:\n"
-            "  -1  only boot once, then exit\n"
-            "  -a  only boot device with this IPv6 address\n"
-            "  -n  only boot device with this nodename\n",
-            appname);
+            "  -1      only boot once, then exit\n"
+            "  -a      only boot device with this IPv6 address\n"
+            "  -i <NN> number of microseconds between packets\n"
+            "          set between 50-250 to deal with poor bootloader network stacks (default=%d)\n"
+            "  -n      only boot device with this nodename\n",
+            appname, DEFAULT_US_BETWEEN_PACKETS);
     exit(1);
 }
 
