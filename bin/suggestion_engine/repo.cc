@@ -15,12 +15,16 @@ ProposalPublisherImpl* Repo::GetOrCreateSourceClient(
   return source.get();
 }
 
-void Repo::AddSuggestion(SuggestionPrototype* prototype) {
+void Repo::AddSuggestion(SuggestionPrototype* prototype,
+                         SuggestionChannel* channel) {
   prototype->suggestion_id = RandomUuid();
-  // TODO(rosswang): proper channel routing. For now, add to all channels.
-  next_channel_.OnAddSuggestion(prototype);
-  for (auto& ask_channel : ask_channels_) {
-    ask_channel->OnAddSuggestion(prototype);
+  if (channel) {
+    channel->OnAddSuggestion(prototype);
+  } else {
+    next_channel_.OnAddSuggestion(prototype);
+    for (auto& ask_channel : ask_channels_) {
+      ask_channel->OnAddSuggestion(prototype);
+    }
   }
   suggestions_[prototype->suggestion_id] = prototype;
 }

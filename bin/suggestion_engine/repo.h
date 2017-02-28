@@ -9,9 +9,10 @@
 #include "apps/maxwell/src/suggestion_engine/ask_channel.h"
 #include "apps/maxwell/src/suggestion_engine/filter.h"
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
 #include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace maxwell {
 
@@ -27,7 +28,11 @@ class Repo {
   }
 
   // Should only be called from ProposalPublisherImpl
-  void AddSuggestion(SuggestionPrototype* prototype);
+  // If |channel| is null, the suggestion is added to all channels.
+  // TODO(rosswang): Implement derived channels instead if such behavior would
+  // still be reasonable after the upcoming redesign.
+  void AddSuggestion(SuggestionPrototype* prototype,
+                     SuggestionChannel* channel);
   // Should only be called from ProposalPublisherImpl
   void RemoveSuggestion(const std::string& id) { suggestions_.erase(id); }
 
@@ -41,17 +46,19 @@ class Repo {
   void InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
                    fidl::InterfaceRequest<AskController> controller);
 
-  void AddAskHandler(fidl::InterfaceHandle<AskHandler> ask_handler) {
-    ask_handlers_.AddInterfacePtr(
-        AskHandlerPtr::Create(std::move(ask_handler)));
+  void AddAskHandler(fidl::InterfaceHandle<AskHandler> ask_handler,
+                     ftl::WeakPtr<ProposalPublisherImpl> publisher) {
+    ask_handlers_.emplace(std::make_unique<AskPublisher>(
+        AskHandlerPtr::Create(std::move(ask_handler)), publisher));
   }
 
-  void DispatchAsk(UserInputPtr query) {
-    ask_handlers_.ForAllPtrs([&query](AskHandler* handler) {
-      handler->Ask(query.Clone(), [](fidl::Array<ProposalPtr> proposals) {
-        // TODO(rosswang)
-      });
-    });
+  void DispatchAsk(UserInputPtr query, AskChannel* channel) {
+    for (const std::unique_ptr<AskPublisher>& ask : ask_handlers_) {
+      ask->handler->Ask(
+          query.Clone(), [&ask, channel](fidl::Array<ProposalPtr> proposals) {
+            channel->DirectProposal(ask->publisher.get(), std::move(proposals));
+          });
+    }
   }
 
   std::unique_ptr<SuggestionPrototype> Extract(const std::string& id);
@@ -65,7 +72,25 @@ class Repo {
 
   ProposalFilter filter() { return filter_; }
 
+  NextChannel* next_channel() { return &next_channel_; }
+
  private:
+  // This struct allows proper ownership and lifecycle management of proposals
+  // produced during Ask so that they are namespaced by publisher like Next
+  // proposals.
+  struct AskPublisher {
+    AskHandlerPtr handler;
+    ftl::WeakPtr<ProposalPublisherImpl> const publisher;
+
+    AskPublisher(AskHandlerPtr handler,
+                 ftl::WeakPtr<ProposalPublisherImpl> publisher)
+        : handler(std::move(handler)), publisher(publisher) {}
+
+    static AskHandlerPtr* GetHandler(std::unique_ptr<AskPublisher>* ask) {
+      return &(*ask)->handler;
+    }
+  };
+
   std::string RandomUuid() {
     static uint64_t id = 0;
     // TODO(rosswang): real UUIDs
@@ -78,7 +103,10 @@ class Repo {
   std::unordered_map<std::string, SuggestionPrototype*> suggestions_;
   NextChannel next_channel_;
   maxwell::BoundNonMovableSet<AskChannel> ask_channels_;
-  fidl::InterfacePtrSet<AskHandler> ask_handlers_;
+  maxwell::BoundPtrSet<AskHandler,
+                       std::unique_ptr<AskPublisher>,
+                       AskPublisher::GetHandler>
+      ask_handlers_;
 
   ProposalFilter filter_;
 };

@@ -5,10 +5,11 @@
 #pragma once
 
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
+#include "apps/maxwell/src/bound_set.h"
 #include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
 #include "apps/maxwell/src/suggestion_engine/repo.h"
-#include "apps/maxwell/src/bound_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace maxwell {
 
@@ -20,7 +21,10 @@ class Repo;
 class ProposalPublisherImpl : public ProposalPublisher {
  public:
   ProposalPublisherImpl(Repo* repo, const std::string& component_url)
-      : repo_(repo), component_url_(component_url), bindings_(this) {}
+      : repo_(repo),
+        component_url_(component_url),
+        bindings_(this),
+        weak_ptr_factory_(this) {}
 
   void AddBinding(fidl::InterfaceRequest<ProposalPublisher> request) {
     bindings_.emplace(
@@ -30,11 +34,19 @@ class ProposalPublisherImpl : public ProposalPublisher {
   std::string component_url() const { return component_url_; }
 
   void Propose(ProposalPtr proposal) override;
+  void Propose(ProposalPtr proposal, SuggestionChannel* channel);
   void Remove(const fidl::String& proposal_id) override;
+  void Remove(const std::string& proposal_id, SuggestionChannel* channel);
   void GetAll(const GetAllCallback& callback) override;
   void RegisterAskHandler(
       fidl::InterfaceHandle<AskHandler> ask_handler) override;
-  std::unique_ptr<SuggestionPrototype> Extract(const std::string& id);
+  // Returns the extracted suggestion prototype only if it was actually removed
+  // from all channels, or nullptr otherwise. TODO(rosswang): this kind of
+  // overloading is a hack; take care of it after we settle on the new service
+  // API.
+  std::unique_ptr<SuggestionPrototype> Extract(
+      const std::string& id,
+      SuggestionChannel* channel = nullptr);
 
  private:
   class BindingSet : public maxwell::BindingSet<ProposalPublisher> {
@@ -52,7 +64,8 @@ class ProposalPublisherImpl : public ProposalPublisher {
                         SuggestionPrototype* suggestion_prototype);
 
   bool ShouldEraseSelf() const {
-    return proposals_.empty() && bindings_.empty();
+    return proposals_.empty() && bindings_.empty() &&
+           !weak_ptr_factory_.HasWeakPtrs();
   }
   void EraseSelf();
 
@@ -62,6 +75,8 @@ class ProposalPublisherImpl : public ProposalPublisher {
   std::unordered_map<std::string, std::unique_ptr<SuggestionPrototype>>
       proposals_;
   BindingSet bindings_;
+
+  ftl::WeakPtrFactory<ProposalPublisherImpl> weak_ptr_factory_;
 };
 
 }  // namespace maxwell

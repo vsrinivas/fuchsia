@@ -16,6 +16,9 @@ namespace {
 // rank assigned to excluded suggestions, to simplify differentiated logic.
 // Eventually, we will likely use a threshold instead.
 constexpr float kExcludeRank = std::numeric_limits<float>::infinity();
+// rank offset for direct suggestions, which are always ranked before inherited
+// suggestions
+constexpr float kDirectOffset = -10000;
 
 auto find_for_insert(AskChannel::RankedSuggestions* suggestions, float rank) {
   return std::upper_bound(
@@ -38,7 +41,9 @@ auto find(AskChannel::RankedSuggestions* suggestions,
       return it;
     }
   }
-  FTL_LOG(FATAL) << "RankedSuggestion not found";
+  FTL_LOG(FATAL) << "RankedSuggestion with proposal ID "
+                 << suggestion->prototype->proposal->id << " at rank "
+                 << suggestion->rank << " not found";
   return suggestions->end();
 }
 
@@ -67,7 +72,14 @@ AskChannel::~AskChannel() {
 //
 // TODO(rosswang): Allow intersections and more generally edit distance with
 // substring discounting.
-float AskChannel::Rank(const SuggestionPrototype* prototype) const {
+float AskChannel::Rank(const SuggestionPrototype* prototype) {
+  const auto& source_direct_ids = direct_proposal_ids_.find(prototype->source);
+  if (source_direct_ids != direct_proposal_ids_.end() &&
+      source_direct_ids->second.find(prototype->proposal->id) !=
+          source_direct_ids->second.end()) {
+    return next_rank() + kDirectOffset;
+  }
+
   if (query_.empty()) {
     if (repo_->filter() && !repo_->filter()(*prototype->proposal)) {
       return kExcludeRank;
@@ -161,11 +173,33 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
 }
 
 void AskChannel::OnRemoveSuggestion(const RankedSuggestion* ranked_suggestion) {
+  // Note that exlude_/include_.erase invalidates ranked_suggestion, so the
+  // ranks_by_channel.erase must happen first.
   if (ranked_suggestion->rank == kExcludeRank) {
+    ranked_suggestion->prototype->ranks_by_channel.erase(this);
     exclude_.erase(ranked_suggestion->prototype->suggestion_id);
   } else {
     subscriber_.OnRemoveSuggestion(*ranked_suggestion);
+    ranked_suggestion->prototype->ranks_by_channel.erase(this);
     include_.erase(find(&include_, ranked_suggestion));
+  }
+}
+
+void AskChannel::DirectProposal(ProposalPublisherImpl* publisher,
+                                fidl::Array<ProposalPtr> proposals) {
+  std::unordered_set<std::string>& ids_to_include =
+      direct_proposal_ids_[publisher];
+  std::unordered_set<std::string> ids_to_remove;
+  std::swap(ids_to_remove, ids_to_include);
+
+  for (auto& proposal : proposals) {
+    ids_to_remove.erase(proposal->id);
+    ids_to_include.insert(proposal->id);
+    publisher->Propose(std::move(proposal), this);
+  }
+
+  for (const auto& id_to_remove : ids_to_remove) {
+    publisher->Remove(id_to_remove, this);
   }
 }
 
@@ -178,7 +212,7 @@ void AskChannel::SetQuery(std::string query) {
   // don't want to pre-normalize, which is kinda contrary with deduping
   auto user_input = UserInput::New();
   user_input->set_text(query);
-  repo_->DispatchAsk(std::move(user_input));
+  repo_->DispatchAsk(std::move(user_input), this);
 
   // TODO(rosswang): locale/unicode
   std::transform(query.begin(), query.end(), query.begin(), ::tolower);
@@ -222,6 +256,8 @@ void AskChannel::SetQuery(std::string query) {
 
     stable_sort(&include_);
 
+    // TODO(rosswang): Depending on the query/proposal agents, this might be
+    // unnecessarily drastic.
     subscriber_.Invalidate();
   }
 }

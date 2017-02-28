@@ -5,6 +5,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
@@ -34,6 +35,10 @@ class AskChannel : public SuggestionChannel {
   void OnAddSuggestion(SuggestionPrototype* prototype) override;
   void OnChangeSuggestion(RankedSuggestion* ranked_suggestion) override;
   void OnRemoveSuggestion(const RankedSuggestion* ranked_suggestion) override;
+
+  void DirectProposal(ProposalPublisherImpl* publisher,
+                      fidl::Array<ProposalPtr> proposals);
+
   const RankedSuggestions* ranked_suggestions() const override;
 
   void SetQuery(std::string query);
@@ -62,12 +67,11 @@ class AskChannel : public SuggestionChannel {
   // TODO(rosswang): This is not the case yet; these ranks may be ambiguous.
   // Rather than have complex logic to deal with this at all layers, let's
   // revise the interface to side-step this issue.
-  float Rank(const SuggestionPrototype* prototype) const;
+  float Rank(const SuggestionPrototype* prototype);
 
   // TEMPORARY by-insertion-order ranking
-  float next_rank() const {
-    return include_.empty() ? 0 : include_.back()->rank + 1;
-  }
+  float next_rank() { return next_rank_++; }
+  float next_rank_ = 0;
 
   Repo* repo_;
   AskSubscriber subscriber_;
@@ -82,6 +86,8 @@ class AskChannel : public SuggestionChannel {
   // and there's not presently a great way to set-identify unique_ptrs and their
   // pointer counterparts.
   std::unordered_map<std::string, std::unique_ptr<RankedSuggestion>> exclude_;
+  std::unordered_map<ProposalPublisherImpl*, std::unordered_set<std::string>>
+      direct_proposal_ids_;
 };
 
 }  // namespace maxwell

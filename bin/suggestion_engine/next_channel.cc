@@ -45,7 +45,7 @@ void NextChannel::OnRemoveSuggestion(
          const RankedSuggestion& b) { return a->rank < b.rank; });
 
   FTL_CHECK(it->get() == ranked_suggestion);
-
+  (*it)->prototype->ranks_by_channel.erase(this);
   ranked_suggestions_.erase(it);
 }
 

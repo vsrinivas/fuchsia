@@ -101,14 +101,16 @@ class LauncherApp : public maxwell::Launcher {
         [this, url](fidl::InterfaceRequest<maxwell::ContextPubSub> request) {
           context_engine_->RegisterPubSub(url, std::move(request));
         });
-    agent_host->AddService<maxwell::ContextSubscriber>([this, url](
-        fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
-      context_engine_->RegisterSubscriber(url, std::move(request));
-    });
-    agent_host->AddService<maxwell::ProposalPublisher>([this, url](
-        fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
-      suggestion_engine_->RegisterPublisher(url, std::move(request));
-    });
+    agent_host->AddService<maxwell::ContextSubscriber>(
+        [this,
+         url](fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
+          context_engine_->RegisterSubscriber(url, std::move(request));
+        });
+    agent_host->AddService<maxwell::ProposalPublisher>(
+        [this,
+         url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
+          suggestion_engine_->RegisterPublisher(url, std::move(request));
+        });
 
     agent_host->AddService<modular::FocusController>(
         [this](fidl::InterfaceRequest<modular::FocusController> request) {

@@ -35,6 +35,27 @@ class NPublisher {
   maxwell::ContextPublisherLinkPtr pub_;
 };
 
+maxwell::ProposalPtr CreateProposal(const std::string& id,
+                                    const std::string& headline,
+                                    fidl::Array<maxwell::ActionPtr> actions) {
+  auto p = maxwell::Proposal::New();
+  p->id = id;
+  p->on_selected = std::move(actions);
+  auto d = maxwell::SuggestionDisplay::New();
+
+  d->headline = headline;
+  d->subheadline = "";
+  d->details = "";
+  d->color = 0x00aa00aa;  // argb purple
+  d->icon_urls = fidl::Array<fidl::String>::New(1);
+  d->icon_urls[0] = "";
+  d->image_url = "";
+  d->image_type = maxwell::SuggestionImageType::PERSON;
+
+  p->display = std::move(d);
+  return p;
+}
+
 class Proposinator {
  public:
   Proposinator(maxwell::SuggestionEngine* suggestion_engine,
@@ -54,26 +75,12 @@ class Proposinator {
                const std::string& headline,
                fidl::Array<maxwell::ActionPtr> actions =
                    fidl::Array<maxwell::ActionPtr>::New(0)) {
-    auto p = maxwell::Proposal::New();
-    p->id = id;
-    p->on_selected = std::move(actions);
-    auto d = maxwell::SuggestionDisplay::New();
-
-    d->headline = headline;
-    d->subheadline = "";
-    d->details = "";
-    d->color = 0x00aa00aa;  // argb purple
-    d->icon_urls = fidl::Array<fidl::String>::New(1);
-    d->icon_urls[0] = "";
-    d->image_url = "";
-    d->image_type = maxwell::SuggestionImageType::PERSON;
-
-    p->display = std::move(d);
-
-    out_->Propose(std::move(p));
+    out_->Propose(CreateProposal(id, headline, std::move(actions)));
   }
 
   void Remove(const std::string& id) { out_->Remove(id); }
+
+  void KillPublisher() { out_.reset(); }
 
  protected:
   maxwell::ProposalPublisherPtr out_;
@@ -146,14 +153,16 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   void StartSuggestionAgent(const std::string& url) {
     auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
         root_environment);
-    agent_host->AddService<maxwell::ContextSubscriber>([this, url](
-        fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
-      context_engine()->RegisterSubscriber(url, std::move(request));
-    });
-    agent_host->AddService<maxwell::ProposalPublisher>([this, url](
-        fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
-      suggestion_engine_->RegisterPublisher(url, std::move(request));
-    });
+    agent_host->AddService<maxwell::ContextSubscriber>(
+        [this,
+         url](fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
+          context_engine()->RegisterSubscriber(url, std::move(request));
+        });
+    agent_host->AddService<maxwell::ProposalPublisher>(
+        [this,
+         url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
+          suggestion_engine_->RegisterPublisher(url, std::move(request));
+        });
     StartAgent(url, std::move(agent_host));
   }
 
@@ -688,6 +697,19 @@ class AskProposinator : public Proposinator, public maxwell::AskHandler {
 
   fidl::String query() const { return query_ ? query_->get_text() : NULL; }
 
+  void ProposeForAsk(const std::string& id,
+                     fidl::Array<maxwell::ActionPtr> actions =
+                         fidl::Array<maxwell::ActionPtr>::New(0)) {
+    ProposeForAsk(id, id, std::move(actions));
+  }
+
+  void ProposeForAsk(const std::string& id,
+                     const std::string& headline,
+                     fidl::Array<maxwell::ActionPtr> actions =
+                         fidl::Array<maxwell::ActionPtr>::New(0)) {
+    ask_proposals_.push_back(CreateProposal(id, headline, std::move(actions)));
+  }
+
  private:
   fidl::Binding<AskHandler> ask_binding_;
   maxwell::UserInputPtr query_;
@@ -695,6 +717,9 @@ class AskProposinator : public Proposinator, public maxwell::AskHandler {
   AskCallback ask_callback_;
 };
 
+// Ensure that proposals made while handling an Ask query:
+// * are not textwise filtered by the query (unlike Next).
+// * fully replace any proposals made while handling a previous Ask query.
 TEST_F(AskTest, ReactiveAsk) {
   AskProposinator p(suggestion_engine());
 
@@ -703,7 +728,32 @@ TEST_F(AskTest, ReactiveAsk) {
   SetQuery("Hello");
 
   ASYNC_EQ("Hello", p.query());
-  p.Propose("Hello, Ask?");  // TODO(rosswang): Test attributed Ask.
+  p.ProposeForAsk("Hi, how can I help?");
+  p.ProposeForAsk("What can you do?");
+  p.Commit();
+
+  CHECK_RESULT_COUNT(2);
+
+  SetQuery("Stuff happens.");
+  ASYNC_EQ("Stuff happens.", p.query());
+  p.ProposeForAsk("What can you do?");
+  p.Commit();
+
+  CHECK_RESULT_COUNT(1);
+}
+
+// Ensure that Ask continues to work even if the Next publisher has
+// disconnected.
+TEST_F(AskTest, AskWithoutPublisher) {
+  AskProposinator p(suggestion_engine());
+  p.KillPublisher();
+
+  InitiateAsk();
+  SetResultCount(10);
+  SetQuery("I have a pen. I have an apple.");
+
+  ASYNC_EQ("I have a pen. I have an apple.", p.query());
+  p.ProposeForAsk("Apple pen!");
   p.Commit();
 
   CHECK_RESULT_COUNT(1);
