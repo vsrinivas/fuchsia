@@ -375,9 +375,13 @@ extern mx_driver_t _driver_acpi_root;
 
 void devhost_init_drivers(bool as_root) {
     if (as_root) {
-        driver_add(&_driver_dmctl);
-        // FIXME(yky,teisenbe): remove when real acpi bus driver goes in
-        driver_add(&_driver_acpi_root);
+        // dmctl must be loaded first as the dynamic loader
+        // and other core services depend on it
+        _driver_dmctl.ops.init(&_driver_dmctl);
+
+        // acpi must be loaded second until we get the bus
+        // manager startup process rationalized
+        _driver_acpi_root.ops.init(&_driver_acpi_root);
     }
     init_builtin_drivers(as_root);
     find_loadable_drivers("/system/lib/driver");
