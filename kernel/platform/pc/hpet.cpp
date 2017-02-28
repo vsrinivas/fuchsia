@@ -111,7 +111,7 @@ static void hpet_init(uint level)
 
 fail:
     vmm_free_region(kernel_aspace, (vaddr_t)hpet_regs);
-    hpet_regs = NULL;
+    hpet_regs = nullptr;
     num_timers = 0;
 }
 /* Begin running after ACPI tables are up */

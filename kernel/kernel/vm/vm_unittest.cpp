@@ -263,7 +263,7 @@ static bool vmm_tests(void* context) {
 
             for (vaddr_t address : addresses) {
                 if (vaddr_to_aspace(reinterpret_cast<void*>(address)) == aspace) {
-                    err = arch_mmu_query(aaspace, address, &paddr, NULL);
+                    err = arch_mmu_query(aaspace, address, &paddr, nullptr);
                     EXPECT_EQ(ERR_NOT_FOUND, err, "gap occupied");
                 }
             }
@@ -628,4 +628,4 @@ UNITTEST_START_TESTCASE(vm_tests)
 UNITTEST("pmm tests", pmm_tests)
 UNITTEST("vmm tests", vmm_tests)
 UNITTEST("vm object based test", vmm_object_tests)
-UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", NULL, NULL);
+UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", nullptr, nullptr);

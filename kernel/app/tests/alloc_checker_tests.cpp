@@ -111,4 +111,4 @@ UNITTEST("alloc checker basic",         alloc_checker_basic)
 UNITTEST("alloc checker panic",         alloc_checker_panic)
 UNITTEST("alloc checker new",           alloc_checker_new)
 UNITTEST("alloc_checker out of mem",    alloc_checker_oom)
-UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker", NULL, NULL);
+UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker", nullptr, nullptr);

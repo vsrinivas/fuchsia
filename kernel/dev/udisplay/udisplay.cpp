@@ -35,7 +35,7 @@ static void qrcode_print_callback(print_callback_t* cb, const char* str, size_t 
 static print_callback_t qrcode_cb = {
     .entry = {},
     .print = qrcode_print_callback,
-    .context = NULL
+    .context = nullptr
 };
 
 struct udisplay_info {
@@ -130,7 +130,7 @@ status_t udisplay_bind_gfxconsole(void) {
     // bind the display to the gfxconsole
     g_udisplay.info.framebuffer = g_udisplay.framebuffer_virt;
     g_udisplay.info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER | DISPLAY_FLAG_CRASH_FRAMEBUFFER;
-    gfxconsole_bind_display(&g_udisplay.info, NULL);
+    gfxconsole_bind_display(&g_udisplay.info, nullptr);
 
     return NO_ERROR;
 }

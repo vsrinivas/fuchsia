@@ -36,7 +36,7 @@ static void EarlyBootSeed(uint level) {
     // place.  Some aspects of KASLR will help with this, but we may
     // additionally want to remap where this is later.
     alignas(alignof(PRNG))static uint8_t prng_space[sizeof(PRNG)];
-    kGlobalPrng = new (&prng_space) PRNG(NULL, 0, PRNG::NonThreadSafeTag());
+    kGlobalPrng = new (&prng_space) PRNG(nullptr, 0, PRNG::NonThreadSafeTag());
 
     uint8_t buf[32] = {0};
     // TODO(security): Have the PRNG reseed based on usage

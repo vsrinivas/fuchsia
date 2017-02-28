@@ -119,7 +119,7 @@ int ktrace_read_user(void* ptr, uint32_t off, uint32_t len) {
     }
 
     // null read is a query for trace buffer size
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         return max;
     }
 
@@ -170,7 +170,7 @@ status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
             return probe->num;
         }
         probe = (ktrace_probe_info_t*) calloc(sizeof(*probe) + MX_MAX_NAME_LEN, 1);
-        if (probe == NULL) {
+        if (probe == nullptr) {
             mutex_release(&probe_list_lock);
             return ERR_NO_MEMORY;
         }
@@ -264,14 +264,14 @@ void* ktrace_open(uint32_t tag) {
     uint64_t ts = ktrace_timestamp();
     ktrace_state_t* ks = &KTRACE_STATE;
     if (!(tag & atomic_load(&ks->grpmask))) {
-        return NULL;
+        return nullptr;
     }
 
     int off;
     if ((off = atomic_add(&ks->offset, KTRACE_LEN(tag))) >= (int)ks->bufsize) {
         // if we arrive at the end, stop
         atomic_store(&ks->grpmask, 0);
-        return NULL;
+        return nullptr;
     }
 
     ktrace_header_t* hdr = (ktrace_header_t*) (ks->buffer + off);

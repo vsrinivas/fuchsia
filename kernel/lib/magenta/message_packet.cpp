@@ -27,7 +27,7 @@ mx_status_t MessagePacket::Create(uint32_t data_size, uint32_t num_handles,
     char* ptr = static_cast<char*>(malloc(sizeof(MessagePacket) +
                                           num_handles * sizeof(Handle*) +
                                           data_size));
-    if (ptr == NULL)
+    if (ptr == nullptr)
         return ERR_NO_MEMORY;
 
     // The storage space for the Handle*s and bytes is not initialized

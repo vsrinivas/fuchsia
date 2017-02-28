@@ -403,7 +403,7 @@ void x86_tlb_invalidate_page(arch_aspace_t* aspace, vaddr_t vaddr, enum page_tab
      * the write to the page table, so it will see the change.  In the latter
      * case, it will get a spurious request to flush. */
     mp_cpu_mask_t targets;
-    if (global_page || aspace == NULL) {
+    if (global_page || aspace == nullptr) {
         targets = MP_CPU_ALL;
     } else {
         targets = atomic_load(&aspace->active_cpus);
@@ -484,7 +484,7 @@ static status_t x86_mmu_split(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* 
 
     DEBUG_ASSERT(IS_PAGE_PRESENT(*pte) && IS_LARGE_PAGE(*pte));
     pt_entry_t* m = _map_alloc_page();
-    if (m == NULL) {
+    if (m == nullptr) {
         return ERR_NO_MEMORY;
     }
 
@@ -527,7 +527,7 @@ static status_t x86_mmu_split(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* 
  * @brief given a page table entry, return a pointer to the next page table one level down
  */
 static inline pt_entry_t* get_next_table_from_entry(pt_entry_t entry) {
-    if (!IS_PAGE_PRESENT(entry) || IS_LARGE_PAGE(entry)) return NULL;
+    if (!IS_PAGE_PRESENT(entry) || IS_LARGE_PAGE(entry)) return nullptr;
 
     return (pt_entry_t*)X86_PHYS_TO_VIRT(entry & X86_PG_FRAME);
 }
@@ -790,7 +790,7 @@ static status_t x86_mmu_add_mapping(arch_aspace_t* aspace, pt_entry_t* table, ui
             // See if we need to create a new table
             if (!IS_PAGE_PRESENT(*e)) {
                 pt_entry_t* m = _map_alloc_page();
-                if (m == NULL) {
+                if (m == nullptr) {
                     ret = ERR_NO_MEMORY;
                     goto err;
                 }
@@ -1167,19 +1167,19 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
 
 void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace) {
     mp_cpu_mask_t cpu_bit = 1U << arch_curr_cpu_num();
-    if (aspace != NULL) {
+    if (aspace != nullptr) {
         DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
         LTRACEF_LEVEL(3, "switching to aspace %p, pt %#" PRIXPTR "\n", aspace, aspace->pt_phys);
         x86_set_cr3(aspace->pt_phys);
 
-        if (old_aspace != NULL) {
+        if (old_aspace != nullptr) {
             atomic_and(&old_aspace->active_cpus, ~cpu_bit);
         }
         atomic_or(&aspace->active_cpus, cpu_bit);
     } else {
         LTRACEF_LEVEL(3, "switching to kernel aspace, pt %#" PRIxPTR "\n", kernel_pt_phys);
         x86_set_cr3(kernel_pt_phys);
-        if (old_aspace != NULL) {
+        if (old_aspace != nullptr) {
             atomic_and(&old_aspace->active_cpus, ~cpu_bit);
         }
     }

@@ -43,7 +43,7 @@ void PcieDevice::ResetCommonIrqBookkeeping() {
     }
 
     irq_.mode          = PCIE_IRQ_MODE_DISABLED;
-    irq_.handlers      = NULL;
+    irq_.handlers      = nullptr;
     irq_.handler_count = 0;
 }
 
@@ -104,7 +104,7 @@ SharedLegacyIrqHandler::SharedLegacyIrqHandler(uint irq_id)
 SharedLegacyIrqHandler::~SharedLegacyIrqHandler() {
     DEBUG_ASSERT(list_is_empty(&device_handler_list_));
     mask_interrupt(irq_id_);
-    register_int_handler(irq_id_, NULL, NULL);
+    register_int_handler(irq_id_, nullptr, nullptr);
 }
 
 enum handler_return SharedLegacyIrqHandler::Handler() {
@@ -377,7 +377,7 @@ void PcieDevice::FreeMsiBlock() {
         if (bus_drv_.platform().supports_msi_masking()) {
             bus_drv_.platform().MaskUnmaskMsi(b, i, true);
         }
-        bus_drv_.platform().RegisterMsiHandler(b, i, NULL, NULL);
+        bus_drv_.platform().RegisterMsiHandler(b, i, nullptr, nullptr);
     }
 
     /* Give the block of IRQs back to the plaform */

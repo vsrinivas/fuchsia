@@ -49,7 +49,7 @@ vm_page_t* paddr_to_vm_page(paddr_t addr) {
             return a.get_page(index);
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 status_t pmm_add_arena(const pmm_arena_info_t* info) {
@@ -359,7 +359,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
         if (!show_mem) {
             printf("pmm free: issue the same command to stop.\n");
             timer_initialize(&timer);
-            timer_set_periodic(&timer, 1000, &pmm_dump_timer, NULL);
+            timer_set_periodic(&timer, 1000, &pmm_dump_timer, nullptr);
             show_mem = true;
         } else {
             timer_cancel(&timer);
@@ -414,7 +414,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
             goto notenoughargs;
 
         paddr_t pa;
-        void* ptr = pmm_alloc_kpages((uint)argv[2].u, NULL, &pa);
+        void* ptr = pmm_alloc_kpages((uint)argv[2].u, nullptr, &pa);
         printf("pmm_alloc_kpages returns %p pa %#" PRIxPTR "\n", ptr, pa);
     } else if (!strcmp(argv[1].str, "alloc_contig")) {
         if (argc < 4)

@@ -20,7 +20,7 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
     if (device_) {
         // Unregister our handler.
         __UNUSED status_t ret;
-        ret = device_->device()->RegisterIrqHandler(irq_id_, NULL, NULL);
+        ret = device_->device()->RegisterIrqHandler(irq_id_, nullptr, nullptr);
         DEBUG_ASSERT(ret == NO_ERROR);  // This should never fail.
 
         // Release our reference to our device.

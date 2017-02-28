@@ -40,7 +40,7 @@
 // handing off from early/BSOD kernel mode graphics to user mode.
 #include <lib/gfxconsole.h>
 static inline void shutdown_early_init_console() {
-    gfxconsole_bind_display(NULL, NULL);
+    gfxconsole_bind_display(nullptr, nullptr);
 }
 #else
 static inline void shutdown_early_init_console() {}

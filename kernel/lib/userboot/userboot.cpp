@@ -286,13 +286,13 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     Handle** const handles = msg->mutable_handles();
     DEBUG_ASSERT(msg->num_handles() == BOOTSTRAP_HANDLES);
 #if EMBED_USER_BOOTFS
-    mx_status_t status = get_vmo_handle(bootfs_vmo, false, NULL,
+    mx_status_t status = get_vmo_handle(bootfs_vmo, false, nullptr,
                                         &handles[BOOTSTRAP_BOOTFS]);
 #else
     mx_status_t status = 0;
 #endif
     if (status == NO_ERROR)
-        status = get_vmo_handle(rootfs_vmo, false, NULL,
+        status = get_vmo_handle(rootfs_vmo, false, nullptr,
                                 &handles[BOOTSTRAP_RAMDISK]);
     mxtl::RefPtr<VmObjectDispatcher> stack_vmo_dispatcher;
     if (status == NO_ERROR)
