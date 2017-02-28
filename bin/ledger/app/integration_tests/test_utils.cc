@@ -107,16 +107,16 @@ fidl::Array<uint8_t> ToArray(const mx::vmo& vmo) {
   return convert::ToArray(ToString(vmo));
 }
 
-std::string SnapshotGetPartial(PageSnapshotPtr* snapshot,
-                               fidl::Array<uint8_t> key,
-                               int64_t offset,
-                               int64_t max_size) {
+std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot,
+                                 fidl::Array<uint8_t> key,
+                                 int64_t offset,
+                                 int64_t max_size) {
   std::string result;
-  (*snapshot)->GetPartial(std::move(key), offset, max_size,
-                          [&result](Status status, mx::vmo buffer) {
-                            EXPECT_EQ(status, Status::OK);
-                            EXPECT_TRUE(mtl::StringFromVmo(buffer, &result));
-                          });
+  (*snapshot)->FetchPartial(std::move(key), offset, max_size,
+                            [&result](Status status, mx::vmo buffer) {
+                              EXPECT_EQ(status, Status::OK);
+                              EXPECT_TRUE(mtl::StringFromVmo(buffer, &result));
+                            });
   EXPECT_TRUE(snapshot->WaitForIncomingResponse());
   return result;
 }

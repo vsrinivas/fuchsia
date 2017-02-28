@@ -29,10 +29,11 @@ class PageSnapshotImpl : public PageSnapshot {
                fidl::Array<uint8_t> token,
                const GetKeysCallback& callback) override;
   void Get(fidl::Array<uint8_t> key, const GetCallback& callback) override;
-  void GetPartial(fidl::Array<uint8_t> key,
-                  int64_t offset,
-                  int64_t max_size,
-                  const GetPartialCallback& callback) override;
+  void Fetch(fidl::Array<uint8_t> key, const FetchCallback& callback) override;
+  void FetchPartial(fidl::Array<uint8_t> key,
+                    int64_t offset,
+                    int64_t max_size,
+                    const FetchPartialCallback& callback) override;
 
   storage::PageStorage* page_storage_;
   std::unique_ptr<const storage::Commit> commit_;

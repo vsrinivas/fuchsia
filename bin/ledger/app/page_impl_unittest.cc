@@ -543,6 +543,53 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithToken) {
   }
 }
 
+TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
+  std::string eager_key("a_key");
+  std::string eager_value("an eager value");
+  std::string lazy_key("another_key");
+  std::string lazy_value("a lazy value");
+
+  auto callback_statusok = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  };
+
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY,
+                             callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  storage::ObjectId lazy_object_id = fake_storage_->GetObjects().begin()->first;
+
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
+                 callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  fake_storage_->DeleteObjectFromLocal(lazy_object_id);
+
+  PageSnapshotPtr snapshot = GetSnapshot();
+
+  fidl::Array<EntryPtr> actual_entries;
+  auto callback_getentries = [this, &actual_entries](
+                                 Status status, fidl::Array<EntryPtr> entries,
+                                 fidl::Array<uint8_t> next_token) {
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(next_token.is_null());
+    actual_entries = std::move(entries);
+    message_loop_.PostQuitTask();
+  };
+  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
+  EXPECT_EQ(eager_value, ToString(actual_entries[0]->value));
+  EXPECT_EQ(Priority::EAGER, actual_entries[0]->priority);
+
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
+  EXPECT_FALSE(actual_entries[1]->value);
+  EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
+}
+
 TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   std::string key1("some_key");
   std::string value1("a small value");
@@ -632,7 +679,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   }
 }
 
-TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
+TEST_F(PageImplTest, SnapshotGetSmall) {
   std::string key("some_key");
   std::string value("a small value");
 
@@ -656,7 +703,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
   EXPECT_EQ(value, ToString(actual_value));
 }
 
-TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
+TEST_F(PageImplTest, SnapshotGetLarge) {
   std::string value_string(kMaxInlineDataSize + 1, 'a');
   storage::ObjectId object_id = AddObjectToStorage(value_string);
 
@@ -685,7 +732,32 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
   EXPECT_EQ(value_string, ToString(actual_value));
 }
 
-TEST_F(PageImplTest, SnapshotGetPartial) {
+TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
+  std::string key("some_key");
+  std::string value("a small value");
+
+  Status status;
+  auto postquit_callback = [this] { message_loop_.PostQuitTask(); };
+  page_ptr_->PutWithPriority(convert::ToArray(key), convert::ToArray(value),
+                             Priority::LAZY,
+                             ::callback::Capture(postquit_callback, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  storage::ObjectId lazy_object_id = fake_storage_->GetObjects().begin()->first;
+  fake_storage_->DeleteObjectFromLocal(lazy_object_id);
+
+  PageSnapshotPtr snapshot = GetSnapshot();
+
+  mx::vmo actual_value;
+  snapshot->Get(convert::ToArray(key),
+                ::callback::Capture(postquit_callback, &status, &actual_value));
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(Status::NEEDS_FETCH, status);
+}
+
+TEST_F(PageImplTest, SnapshotFetchPartial) {
   std::string key("some_key");
   std::string value("a small value");
 
@@ -699,13 +771,13 @@ TEST_F(PageImplTest, SnapshotGetPartial) {
 
   Status status;
   mx::vmo buffer;
-  snapshot->GetPartial(convert::ToArray(key), 2, 5,
-                       [this, &status, &buffer](Status received_status,
-                                                mx::vmo received_buffer) {
-                         status = received_status;
-                         buffer = std::move(received_buffer);
-                         message_loop_.PostQuitTask();
-                       });
+  snapshot->FetchPartial(convert::ToArray(key), 2, 5,
+                         [this, &status, &buffer](Status received_status,
+                                                  mx::vmo received_buffer) {
+                           status = received_status;
+                           buffer = std::move(received_buffer);
+                           message_loop_.PostQuitTask();
+                         });
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   std::string content;

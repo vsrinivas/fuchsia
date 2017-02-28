@@ -59,6 +59,9 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   GetJournals() const;
   const std::map<ObjectId, std::string, convert::StringViewComparator>&
   GetObjects() const;
+  // Deletes this object from the fake local storage, but keeps it in its
+  // "network" storage.
+  void DeleteObjectFromLocal(const ObjectId& object_id);
 
  private:
   void SendNextObject();

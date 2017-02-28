@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <functional>
+#include <limits>
 #include <queue>
 #include <vector>
 
@@ -105,9 +106,19 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
           return false;
         }
         context->entries.push_back(CreateEntry(entry));
-        page_storage_->GetObject(entry.object_id,
-                                 storage::PageStorage::Location::LOCAL,
-                                 waiter->NewCallback());
+        page_storage_->GetObject(
+            entry.object_id, storage::PageStorage::Location::LOCAL,
+            [
+              priority = entry.priority, waiter_callback = waiter->NewCallback()
+            ](storage::Status status,
+              std::unique_ptr<const storage::Object> object) {
+              if (status == storage::Status::NOT_FOUND &&
+                  priority == storage::KeyPriority::LAZY) {
+                waiter_callback(storage::Status::OK, nullptr);
+              } else {
+                waiter_callback(status, std::move(object));
+              }
+            });
         return true;
       });
 
@@ -133,6 +144,13 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
           FTL_DCHECK(context->entries.size() == results.size());
 
           for (size_t i = 0; i < results.size(); i++) {
+            if (!results[i]) {
+              // We don't have the object locally, but we decided not to abort.
+              // This means this object is a value of a lazy key and the client
+              // should ask to retrieve it over the network if they need it.
+              // Here, we just leave the value part of the entry null.
+              continue;
+            }
             ftl::StringView object_contents;
             storage::Status read_status = results[i]->GetData(&object_contents);
             if (read_status != storage::Status::OK) {
@@ -229,18 +247,39 @@ void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
                mx::vmo());
       return;
     }
-    PageUtils::GetPartialReferenceAsBuffer(page_storage_, entry.object_id, 0u,
-                                           std::numeric_limits<int64_t>::max(),
-                                           std::move(callback));
+    PageUtils::GetPartialReferenceAsBuffer(
+        page_storage_, entry.object_id, 0u, std::numeric_limits<int64_t>::max(),
+        storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
+        std::move(callback));
   });
 }
 
-void PageSnapshotImpl::GetPartial(fidl::Array<uint8_t> key,
-                                  int64_t offset,
-                                  int64_t max_size,
-                                  const GetPartialCallback& callback) {
+void PageSnapshotImpl::Fetch(fidl::Array<uint8_t> key,
+                             const FetchCallback& callback) {
   auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "snapshot", "get_partial");
+      TRACE_CALLBACK(std::move(callback), "snapshot", "fetch");
+
+  page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
+    this, callback = std::move(timed_callback)
+  ](storage::Status status, storage::Entry entry) {
+    if (status != storage::Status::OK) {
+      callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
+               mx::vmo());
+      return;
+    }
+    PageUtils::GetPartialReferenceAsBuffer(
+        page_storage_, entry.object_id, 0u, std::numeric_limits<int64_t>::max(),
+        storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
+        std::move(callback));
+  });
+}
+
+void PageSnapshotImpl::FetchPartial(fidl::Array<uint8_t> key,
+                                    int64_t offset,
+                                    int64_t max_size,
+                                    const FetchPartialCallback& callback) {
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "snapshot", "fetch_partial");
 
   page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
     this, offset, max_size, callback = std::move(timed_callback)
@@ -251,8 +290,10 @@ void PageSnapshotImpl::GetPartial(fidl::Array<uint8_t> key,
       return;
     }
 
-    PageUtils::GetPartialReferenceAsBuffer(page_storage_, entry.object_id,
-                                           offset, max_size, callback);
+    PageUtils::GetPartialReferenceAsBuffer(
+        page_storage_, entry.object_id, offset, max_size,
+        storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
+        callback);
   });
 }
 

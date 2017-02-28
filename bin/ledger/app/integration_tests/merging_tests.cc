@@ -64,16 +64,22 @@ class ConflictResolverImpl : public ConflictResolver {
   ~ConflictResolverImpl() {}
 
   struct ResolveRequest {
+    fidl::InterfaceHandle<PageSnapshot> left_version;
     PageChangePtr change_left;
+    fidl::InterfaceHandle<PageSnapshot> right_version;
     PageChangePtr change_right;
     fidl::InterfaceHandle<PageSnapshot> common_version;
     ResolveCallback callback;
 
-    ResolveRequest(PageChangePtr change_left,
+    ResolveRequest(fidl::InterfaceHandle<PageSnapshot> left_version,
+                   PageChangePtr change_left,
+                   fidl::InterfaceHandle<PageSnapshot> right_version,
                    PageChangePtr change_right,
                    fidl::InterfaceHandle<PageSnapshot> common_version,
                    const ResolveCallback& callback)
-        : change_left(std::move(change_left)),
+        : left_version(std::move(left_version)),
+          change_left(std::move(change_left)),
+          right_version(std::move(right_version)),
           change_right(std::move(change_right)),
           common_version(std::move(common_version)),
           callback(callback) {}
@@ -84,11 +90,14 @@ class ConflictResolverImpl : public ConflictResolver {
 
  private:
   // ConflictResolver:
-  void Resolve(PageChangePtr change_left,
+  void Resolve(fidl::InterfaceHandle<PageSnapshot> left_version,
+               PageChangePtr change_left,
+               fidl::InterfaceHandle<PageSnapshot> right_version,
                PageChangePtr change_right,
                fidl::InterfaceHandle<PageSnapshot> common_version,
                const ResolveCallback& callback) override {
-    requests.emplace_back(std::move(change_left), std::move(change_right),
+    requests.emplace_back(std::move(left_version), std::move(change_left),
+                          std::move(right_version), std::move(change_right),
                           std::move(common_version), callback);
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }

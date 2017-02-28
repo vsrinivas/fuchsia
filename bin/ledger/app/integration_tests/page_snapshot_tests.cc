@@ -51,7 +51,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGet) {
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetPartial) {
+TEST_F(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   PagePtr page = GetTestPage();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
             [](Status status) { EXPECT_EQ(status, Status::OK); });
@@ -59,29 +59,34 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetPartial) {
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   EXPECT_EQ("Alice",
-            SnapshotGetPartial(&snapshot, convert::ToArray("name"), 0, -1));
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 0, -1));
   EXPECT_EQ("e",
-            SnapshotGetPartial(&snapshot, convert::ToArray("name"), 4, -1));
-  EXPECT_EQ("", SnapshotGetPartial(&snapshot, convert::ToArray("name"), 5, -1));
-  EXPECT_EQ("", SnapshotGetPartial(&snapshot, convert::ToArray("name"), 6, -1));
-  EXPECT_EQ("i", SnapshotGetPartial(&snapshot, convert::ToArray("name"), 2, 1));
-  EXPECT_EQ("", SnapshotGetPartial(&snapshot, convert::ToArray("name"), 2, 0));
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 4, -1));
+  EXPECT_EQ("",
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 5, -1));
+  EXPECT_EQ("",
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 6, -1));
+  EXPECT_EQ("i",
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 1));
+  EXPECT_EQ("",
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 0));
 
   // Negative offsets.
   EXPECT_EQ("Alice",
-            SnapshotGetPartial(&snapshot, convert::ToArray("name"), -5, -1));
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, -1));
   EXPECT_EQ("e",
-            SnapshotGetPartial(&snapshot, convert::ToArray("name"), -1, -1));
-  EXPECT_EQ("", SnapshotGetPartial(&snapshot, convert::ToArray("name"), -5, 0));
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -1, -1));
+  EXPECT_EQ("",
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, 0));
   EXPECT_EQ("i",
-            SnapshotGetPartial(&snapshot, convert::ToArray("name"), -3, 1));
+            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -3, 1));
 
   // Attempt to get an entry that is not in the page.
-  snapshot->GetPartial(convert::ToArray("favorite book"), 0, -1,
-                       [](Status status, mx::vmo received_buffer) {
-                         // People don't read much these days.
-                         EXPECT_EQ(Status::KEY_NOT_FOUND, status);
-                       });
+  snapshot->FetchPartial(convert::ToArray("favorite book"), 0, -1,
+                         [](Status status, mx::vmo received_buffer) {
+                           // People don't read much these days.
+                           EXPECT_EQ(Status::KEY_NOT_FOUND, status);
+                         });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
 }
 

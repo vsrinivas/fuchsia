@@ -32,6 +32,8 @@ class PageUtils {
       convert::ExtendedStringView reference_id,
       int64_t offset,
       int64_t max_size,
+      storage::PageStorage::Location location,
+      Status not_found_status,
       std::function<void(Status, mx::vmo)> callback);
 
  private:

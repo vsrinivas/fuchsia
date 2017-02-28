@@ -209,5 +209,9 @@ void FakePageStorage::SendNextObject() {
   closure();
 }
 
+void FakePageStorage::DeleteObjectFromLocal(const ObjectId& object_id) {
+  objects_.erase(object_id);
+}
+
 }  // namespace fake
 }  // namespace storage

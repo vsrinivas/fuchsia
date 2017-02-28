@@ -78,11 +78,21 @@ void ConflictResolverClient::OnChangesReady(
 
   FTL_DCHECK(changes.size() == 2);
 
-  PageSnapshotPtr page_snapshot;
-  manager_->BindPageSnapshot(ancestor_->Clone(), page_snapshot.NewRequest());
+  PageSnapshotPtr page_snapshot_ancestor;
+  manager_->BindPageSnapshot(ancestor_->Clone(),
+                             page_snapshot_ancestor.NewRequest());
+
+  PageSnapshotPtr page_snapshot_left;
+  manager_->BindPageSnapshot(left_->Clone(), page_snapshot_left.NewRequest());
+
+  PageSnapshotPtr page_snapshot_right;
+  manager_->BindPageSnapshot(right_->Clone(), page_snapshot_right.NewRequest());
+
   in_client_request_ = true;
   conflict_resolver_->Resolve(
-      std::move(changes[0]), std::move(changes[1]), std::move(page_snapshot),
+      std::move(page_snapshot_left), std::move(changes[0]),
+      std::move(page_snapshot_right), std::move(changes[1]),
+      std::move(page_snapshot_ancestor),
       [weak_this = weak_factory_.GetWeakPtr()](
           fidl::Array<MergedValuePtr> merged_values) {
         if (!weak_this) {

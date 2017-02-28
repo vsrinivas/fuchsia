@@ -34,7 +34,7 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
 fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
                                          fidl::Array<uint8_t> prefix);
 
-std::string SnapshotGetPartial(PageSnapshotPtr* snapshot,
+std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot,
                                fidl::Array<uint8_t> key,
                                int64_t offset,
                                int64_t max_size);

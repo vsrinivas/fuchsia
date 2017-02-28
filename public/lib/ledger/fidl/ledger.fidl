@@ -19,7 +19,9 @@ enum Status {
   PAGE_NOT_FOUND,
   KEY_NOT_FOUND,
   REFERENCE_NOT_FOUND,
+  NEEDS_FETCH,
   IO_ERROR,
+  NETWORK_ERROR,
   TRANSACTION_ALREADY_IN_PROGRESS,
   NO_TRANSACTION_IN_PROGRESS,
   INTERNAL_ERROR,
@@ -59,8 +61,7 @@ interface Ledger {
       => (Status status);
 };
 
-// A reference to a value. The value can be retrieved using
-// |Page.GetReference()| or |Page.GetPartialReference()|.
+// A reference to a value.
 struct Reference {
   array<uint8> opaque_id;
 };
@@ -157,7 +158,10 @@ enum Priority {
 // A pair of key and value.
 struct Entry {
   array<uint8> key;
-  handle<vmo> value;
+  // |value| is null if the value requested has the LAZY priority and is not
+  // present on the device. Clients must use a Fetch call to retrieve the
+  // contents.
+  handle<vmo>? value;
   Priority priority;
 };
 
@@ -173,6 +177,8 @@ interface PageSnapshot {
   // with the value of |next_token| returned in the previous call. |status| will
   // be |PARTIAL_RESULT| as long as there are more results for the given prefix
   // and |OK| once finished.
+  // Only |EAGER| values are guaranteed to be returned inside |entries|.
+  // Missing |LAZY| values can be retrieved over the network using Fetch().
   // The returned |entries| are sorted by |key|.
   GetEntries(array<uint8>? key_prefix, array<uint8>? token)
       => (Status status, array<Entry>? entries, array<uint8>? next_token);
@@ -190,14 +196,23 @@ interface PageSnapshot {
       => (Status status, array<array<uint8>>? keys, array<uint8>? next_token);
 
   // Returns the value of a given key.
+  // Only |EAGER| values are guaranteed to be returned. Calls when the value is
+  // |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
+  // be retrieved over the network using a Fetch() call.
   Get(array<uint8> key) => (Status status, handle<vmo>? value);
 
-  // Returns a shared handle of a part of the value of a given key, starting at
-  // the position that is specified by |offset|. If |offset| is less than 0,
-  // starts at |-offset| from the end of the value.
+  // Fetches the value of a given key, over the network if not already present
+  // locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
+  // is not available).
+  Fetch(array<uint8> key) => (Status status, handle<vmo>? value);
+
+  // Fetches the value of a given key, over the network if not already present
+  // locally, and returns a shared handle of a part of the value of a given
+  // key, starting at the position that is specified by |offset|. If |offset|
+  // is less than 0, starts at |-offset| from the end of the value.
   // Returns at most |max_size| bytes. If |max_size| is less than 0, returns
   // everything.
-  GetPartial(array<uint8> key, int64 offset, int64 max_size)
+  FetchPartial(array<uint8> key, int64 offset, int64 max_size)
       => (Status status, handle<vmo>? buffer);
 };
 
@@ -304,7 +319,12 @@ interface ConflictResolver {
   // base, that will be used to define the merged commit. Only key/value pairs
   // different from the left version of the page should be sent. Clients can
   // introduce new keys if needed.
+  // Values of |LAZY| keys may not be present on the device. In that case,
+  // |Entry| objects (inside the PageChange objects) will have a null |value|
+  // field. |left| and |right| PageSnapshot handles may be used by clients to
+  // Fetch these values if necessary.
   // TODO(etiennej): handle pagination.
-  Resolve(PageChange change_left, PageChange change_right,
+  Resolve(PageSnapshot left, PageChange change_left,
+          PageSnapshot right, PageChange change_right,
           PageSnapshot? common_version) => (array<MergedValue>? merge_changes);
 };

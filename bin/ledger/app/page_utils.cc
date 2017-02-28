@@ -33,27 +33,29 @@ Status ToBuffer(convert::ExtendedStringView value,
 void GetReferenceAsStringView(
     storage::PageStorage* storage,
     convert::ExtendedStringView opaque_id,
+    storage::PageStorage::Location location,
+    Status not_found_status,
     std::function<void(Status, ftl::StringView)> callback) {
-  storage->GetObject(opaque_id, storage::PageStorage::Location::LOCAL,
-                     [callback](storage::Status status,
-                                std::unique_ptr<const storage::Object> object) {
-                       if (status != storage::Status::OK) {
-                         callback(PageUtils::ConvertStatus(
-                                      status, Status::REFERENCE_NOT_FOUND),
-                                  ftl::StringView());
-                         return;
-                       }
-                       ftl::StringView data;
-                       status = object->GetData(&data);
-                       if (status != storage::Status::OK) {
-                         callback(PageUtils::ConvertStatus(
-                                      status, Status::REFERENCE_NOT_FOUND),
-                                  ftl::StringView());
-                         return;
-                       }
+  storage->GetObject(
+      opaque_id, location,
+      [not_found_status, callback](
+          storage::Status status,
+          std::unique_ptr<const storage::Object> object) {
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status, not_found_status),
+                   ftl::StringView());
+          return;
+        }
+        ftl::StringView data;
+        status = object->GetData(&data);
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status, not_found_status),
+                   ftl::StringView());
+          return;
+        }
 
-                       callback(Status::OK, data);
-                     });
+        callback(Status::OK, data);
+      });
 }
 
 }  // namespace
@@ -68,6 +70,8 @@ Status PageUtils::ConvertStatus(storage::Status status,
     case storage::Status::NOT_FOUND:
       FTL_DCHECK(not_found_status != Status::INTERNAL_ERROR);
       return not_found_status;
+    case storage::Status::NOT_CONNECTED_ERROR:
+      return Status::NETWORK_ERROR;
     default:
       FTL_DCHECK(false);
       return Status::INTERNAL_ERROR;
@@ -79,9 +83,11 @@ void PageUtils::GetPartialReferenceAsBuffer(
     convert::ExtendedStringView reference_id,
     int64_t offset,
     int64_t max_size,
+    storage::PageStorage::Location location,
+    Status not_found_status,
     std::function<void(Status, mx::vmo)> callback) {
   GetReferenceAsStringView(
-      storage, reference_id,
+      storage, reference_id, location, not_found_status,
       [offset, max_size, callback](Status status, ftl::StringView data) {
         if (status != Status::OK) {
           callback(status, mx::vmo());
