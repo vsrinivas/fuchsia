@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <getopt.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -108,7 +109,7 @@ int main(int argc, char* const argv[]) {
 
   /* Network name */
   if (selected_options & DUMP_NODENAME) {
-    char hostname[256];
+    char hostname[HOST_NAME_MAX + 1];
     if (gethostname(hostname, sizeof(hostname) == 0)) {
       hostname[sizeof(hostname) - 1] = '\0';
       print_string(hostname);
@@ -125,8 +126,7 @@ int main(int argc, char* const argv[]) {
   /* Kernel version */
   if (selected_options & DUMP_KERNEL_VERSION) {
     char kernel_version[256];
-    if (mx_version_get(kernel_version, sizeof(kernel_version)) == NO_ERROR) {
-      kernel_version[sizeof(kernel_version) - 1] = '\0';
+    if (mx_system_get_version(kernel_version, sizeof(kernel_version)) == NO_ERROR) {
       print_string(kernel_version);
     } else {
       print_string("unknown");
@@ -152,4 +152,3 @@ int main(int argc, char* const argv[]) {
   putchar('\n');
   return 0;
 }
-
