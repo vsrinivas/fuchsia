@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef APPS_FONTS_FONT_PROVIDER_IMPL_H_
+#define APPS_FONTS_FONT_PROVIDER_IMPL_H_
+
 #include <mx/vmo.h>
 
 #include <unordered_map>
@@ -52,3 +55,5 @@ class FontProviderImpl : public FontProvider {
 };
 
 }  // namespace fonts
+
+#endif  // APPS_FONTS_FONT_PROVIDER_IMPL_H_
