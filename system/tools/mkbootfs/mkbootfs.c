@@ -573,7 +573,7 @@ int main(int argc, char **argv) {
     int i;
     unsigned hsz = 0;
     uint64_t off;
-    bool compressed = false;
+    bool compressed = true;
 
     argc--;
     argv++;
@@ -596,6 +596,8 @@ int main(int argc, char **argv) {
             return 0;
         } else if (!strcmp(cmd,"-c")) {
             compressed = true;
+        } else if (!strcmp(cmd,"--uncompressed")) {
+            compressed = false;
         } else {
             fprintf(stderr, "unknown option: %s\n", cmd);
             return -1;
