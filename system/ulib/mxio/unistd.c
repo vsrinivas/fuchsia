@@ -691,9 +691,16 @@ ssize_t write(int fd, const void* buf, size_t count) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    ssize_t r = STATUS(io->ops->write(io, buf, count));
+    mx_status_t status;
+    for (;;) {
+        status = io->ops->write(io, buf, count);
+        if (status != ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
+            break;
+        }
+        mxio_wait_fd(fd, MXIO_EVT_WRITABLE, NULL, MX_TIME_INFINITE);
+    }
     mxio_release(io);
-    return r;
+    return STATUS(status);
 }
 
 int close(int fd) {
