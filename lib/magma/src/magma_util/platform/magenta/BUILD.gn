@@ -129,3 +129,16 @@ source_set("semaphore") {
     "$magma_build_root/src/magma_util",
   ]
 }
+
+source_set("port") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "magenta_platform_port.cc",
+  ]
+
+  deps = [
+    "$magenta_build_root/system/ulib/mx",
+    "$magma_build_root/src/magma_util",
+  ]
+}

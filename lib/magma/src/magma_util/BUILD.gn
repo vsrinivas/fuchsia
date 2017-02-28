@@ -21,6 +21,7 @@ group("magma_util") {
   public_deps = [
     ":common",
     ":system",
+    "$magma_build_root/include:sys_abi_common",
   ]
 }
 

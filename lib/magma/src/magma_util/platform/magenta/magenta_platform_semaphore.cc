@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "magenta_platform_semaphore.h"
+#include "magenta_platform_port.h"
 #include "magma_util/macros.h"
 #include "platform_object.h"
 
@@ -32,6 +33,17 @@ bool MagentaPlatformSemaphore::Wait(uint64_t timeout_ms)
     Reset();
     return true;
 }
+
+bool MagentaPlatformSemaphore::WaitAsync(PlatformPort* platform_port)
+{
+    auto port = static_cast<MagentaPlatformPort*>(platform_port);
+    mx_status_t status = event_.wait_async(port->mx_port(), id(), mx_signal(), MX_WAIT_ASYNC_ONCE);
+    if (status != NO_ERROR)
+        return DRETF(false, "wait_async failed: %d", status);
+    return true;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<PlatformSemaphore> PlatformSemaphore::Create()
 {

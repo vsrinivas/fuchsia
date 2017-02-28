@@ -11,6 +11,8 @@
 
 namespace magma {
 
+class PlatformPort;
+
 // Semantics of PlatformSemaphore match Vulkan semaphores. From:
 //
 // https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#synchronization-semaphores
@@ -50,6 +52,10 @@ public:
     virtual bool Wait(uint64_t timeout_ms) = 0;
 
     bool Wait() { return Wait(UINT64_MAX); }
+
+    // Registers an async wait delivered on the given port when this semaphore is signalled.
+    // Note that a port wait completion will not autoreset the semaphore.
+    virtual bool WaitAsync(PlatformPort* platform_port) = 0;
 };
 
 } // namespace magma

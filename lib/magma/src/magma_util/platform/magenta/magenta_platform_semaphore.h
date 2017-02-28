@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef MAGENTA_PLATFORM_SEMAPHORE_H
+#define MAGENTA_PLATFORM_SEMAPHORE_H
+
 #include "magma_util/macros.h"
 #include "mx/event.h"
 #include "platform_semaphore.h"
@@ -28,11 +31,17 @@ public:
 
     bool Wait(uint64_t timeout_ms) override;
 
-private:
+    bool WaitAsync(PlatformPort* platform_port) override;
+
+    mx_handle_t mx_handle() { return event_.get(); }
+
     mx_signals_t mx_signal() { return MX_EVENT_SIGNALED; }
 
+private:
     mx::event event_;
     uint64_t koid_;
 };
 
 } // namespace magma
+
+#endif // MAGENTA_PLATFORM_SEMAPHORE_H

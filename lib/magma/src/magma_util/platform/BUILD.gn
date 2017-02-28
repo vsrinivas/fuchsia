@@ -121,3 +121,16 @@ source_set("semaphore") {
     "magenta:semaphore",
   ]
 }
+
+source_set("port") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_port.h",
+  ]
+
+  deps = [
+    ":object",
+    "magenta:port",
+  ]
+}
