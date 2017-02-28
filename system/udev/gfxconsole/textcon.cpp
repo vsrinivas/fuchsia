@@ -148,7 +148,6 @@ static void _scroll_down(textcon_t* tc, int y0, int y1) {
     vc_char_t* end = dataxy(tc, 0, y1 - 1) + tc->w;
 
     if (src < end) {
-        // todo: push topline
         memmove(dst, src, (end - dst) * sizeof(vc_char_t));
         fill(src, make_vc_char(tc, ' '), tc->w);
     }
