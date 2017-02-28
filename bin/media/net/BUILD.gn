@@ -7,6 +7,8 @@ source_set("net") {
     "media_player_net.h",
     "media_player_net_stub.cc",
     "media_player_net_stub.h",
+    "serialization.cc",
+    "serialization.h",
   ]
 
   deps = [
@@ -15,6 +17,23 @@ source_set("net") {
     "//apps/media/services",
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
+  ]
+}
+
+executable("apptests") {
+  output_name = "media_net_apptests"
+
+  testonly = true
+
+  sources = [
+    "test/serialization_test.cc",
+    "test/run_all_tests.cc",
+  ]
+
+  deps = [
+    ":net",
+    "//third_party/gtest",
   ]
 }

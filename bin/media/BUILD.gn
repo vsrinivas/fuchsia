@@ -36,6 +36,7 @@ group("apptests") {
     "//apps/media/src/audio:apptests",
     "//apps/media/src/demux:apptests",
     "//apps/media/src/media_service:apptests",
+    "//apps/media/src/net:apptests",
     "//apps/media/src/util:apptests",
   ]
 }
