@@ -10,6 +10,8 @@
 
 namespace mx {
 
+class port;
+
 template <typename T> class object {
 public:
     object() : value_(MX_HANDLE_INVALID) {}
@@ -62,6 +64,11 @@ public:
     mx_status_t wait_one(mx_signals_t signals, mx_time_t timeout,
                          mx_signals_t* pending) const {
         return mx_object_wait_one(value_, signals, timeout, pending);
+    }
+
+    mx_status_t wait_async(const object<port>& port, uint64_t key,
+                           mx_signals_t signals, uint32_t options) const {
+        return mx_object_wait_async(value_, port.get(), key, signals, options);
     }
 
     // TODO(abarth): Not all of these methods apply to every type of object. We

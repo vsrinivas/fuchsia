@@ -9,6 +9,7 @@
 #include <mx/event.h>
 #include <mx/eventpair.h>
 #include <mx/handle.h>
+#include <mx/port.h>
 #include <mx/socket.h>
 #include <mx/vmar.h>
 
@@ -16,6 +17,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
+#include <magenta/syscalls/port.h>
 
 #include <unistd.h>
 #include <unittest/unittest.h>
@@ -149,6 +151,27 @@ static bool vmar_test() {
     END_TEST;
 }
 
+static bool port_v2_test() {
+    BEGIN_TEST;
+    mx::port port;
+    ASSERT_EQ(mx::port::create(MX_PORT_OPT_V2, &port), NO_ERROR, "");
+    ASSERT_EQ(validate_handle(port.get()), NO_ERROR, "");
+
+    mx::channel channel[2];
+    auto key = 1111ull;
+    ASSERT_EQ(mx::channel::create(0u, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_EQ(channel[0].wait_async(
+        port, key, MX_CHANNEL_READABLE, MX_WAIT_ASYNC_ONCE), NO_ERROR, "");
+    ASSERT_EQ(channel[1].write(0u, "12345", 5, nullptr, 0u), NO_ERROR, "");
+
+    mx_port_packet_t packet = {};
+    ASSERT_EQ(port.wait(0ull, &packet, 0u), NO_ERROR, "");
+    ASSERT_EQ(packet.key, key, "");
+    ASSERT_EQ(packet.type, MX_PKT_TYPE_SIGNAL_ONE, "");
+    ASSERT_EQ(packet.signal.count, 1u, "");
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(libmx_tests)
 RUN_TEST(handle_invalid_test)
 RUN_TEST(handle_close_test)
@@ -161,6 +184,7 @@ RUN_TEST(channel_test)
 RUN_TEST(socket_test)
 RUN_TEST(eventpair_test)
 RUN_TEST(vmar_test)
+RUN_TEST(port_v2_test)
 END_TEST_CASE(libmx_tests)
 
 int main(int argc, char** argv) {
