@@ -8,26 +8,28 @@
 
 function HELP {
     echo "help:"
-    echo "-a <arch>           : arm64, or x86-64"
-    echo "-A                  : use Intel HD Audio"
-    echo "-b                  : build first"
-    echo "-c                  : add item to kernel commandline"
-    echo "-C                  : use Clang build"
-    echo "-d                  : run with emulated disk"
-    echo "-g                  : use graphical console"
-    echo "-I <interface name> : network interface name, default is qemu."
-    echo "-k                  : use KVM"
-    echo "-m <memory in MB>   : memory size, default is ${MEMSIZE_DEFAULT}MB"
-    echo "-n                  : run with emulated nic"
-    echo "-N                  : run with emulated nic via tun/tap"
-    echo "-o <dir>            : build directory"
-    echo "-q <directory>      : location of qemu, defaults to looking on \$PATH"
-    echo "-r                  : run release build"
-    echo "-s <number of cpus> : number of cpus, 1 for uniprocessor, default is 4"
-    echo "-u <path>           : execute qemu startUp script, default is no script"
-    echo "-v                  : use vnc based display"
-    echo "-V                  : try to use virtio devices"
-    echo "-x <bootfs>         : add eXtra bootfs"
+    echo "-a <arch>            : arm64, or x86-64"
+    echo "-b                   : build first"
+    echo "-c                   : add item to kernel commandline"
+    echo "-C                   : use Clang build"
+    echo "-d                   : run with emulated disk"
+    echo "-g                   : use graphical console"
+    echo "-I <interface name>  : network interface name, default is qemu."
+    echo "-k                   : use KVM"
+    echo "-m <memory in MB>    : memory size, default is ${MEMSIZE_DEFAULT}MB"
+    echo "-n                   : run with emulated nic"
+    echo "-N                   : run with emulated nic via tun/tap"
+    echo "-o <dir>             : build directory"
+    echo "-q <directory>       : location of qemu, defaults to looking on \$PATH"
+    echo "-r                   : run release build"
+    echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is 4"
+    echo "-u <path>            : execute qemu startUp script, default is no script"
+    echo "-v                   : use vnc based display"
+    echo "-V                   : try to use virtio devices"
+    echo "-x <bootfs>          : add eXtra bootfs"
+    echo "--audio[=<host_drv>] : use Intel HD Audio"
+    echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
+    echo "--wavfile=<file>     : When audio host_drv == wav, output to the specified WAV file"
     echo "-h for help"
     echo "all arguments after -- are passed to qemu directly"
     exit 1
@@ -36,7 +38,8 @@ function HELP {
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 ARCH=
-AUDIO=0
+AUDIO=
+AUDIO_WAVFILE="/tmp/qemu.wav"
 BUILD=0
 CLANG=0
 DISK=0
@@ -61,10 +64,9 @@ else
   IFNAME="qemu"
 fi
 
-while getopts a:Abc:CdgI:km:nNo:q:rs:u:vVx:h FLAG; do
+while getopts "a:bc:CdgI:km:nNo:q:rs:u:vVx:h-:" FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
-        A) AUDIO=1;;
         b) BUILD=1;;
         c) CMDLINE+="$OPTARG ";;
         C) CLANG=1;;
@@ -87,6 +89,18 @@ while getopts a:Abc:CdgI:km:nNo:q:rs:u:vVx:h FLAG; do
         \?)
             echo unrecognized option
             HELP
+            ;;
+        -)
+            case $OPTARG in
+            audio) AUDIO=none;;
+            audio=*) AUDIO=${OPTARG#*=};;
+            wavfile=*) AUDIO_WAVFILE=${OPTARG#*=};;
+            *)
+                echo unrecognized long option
+                HELP
+                ;;
+            esac
+            ;;
     esac
 done
 shift $((OPTIND-1))
@@ -202,9 +216,25 @@ if [ "$NET" -ne 0 ]; then
     fi
 fi
 
-if [ "$AUDIO" -ne 0 ]; then
+if [ "$AUDIO" != "" ]; then
     ARGS+=" -soundhw hda"
-    export QEMU_AUDIO_DRV=none
+    export QEMU_AUDIO_DRV=$AUDIO
+    export QEMU_AUDIO_DAC_FIXED_FREQ=48000
+    export QEMU_AUDIO_TIMER_PERIOD=20
+
+    case $AUDIO in
+        none) ;;
+        alsa) ;;
+        pa) ;;
+        wav)
+            export QEMU_WAV_FREQUENCY=48000
+            export QEMU_WAV_PATH=${AUDIO_WAVFILE}
+            ;;
+        *)
+            echo unrecognized QEMU host audio driver \"$AUDIO\"
+            exit
+            ;;
+    esac
 fi
 
 if [ "$SMP" -ne 1 ]; then
