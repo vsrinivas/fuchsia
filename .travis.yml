@@ -4,7 +4,8 @@ env:
     # full magenta kernel + user space builds
     - PROJECT=magenta-pc-x86-64
     - PROJECT=magenta-qemu-arm64
-    - PROJECT=rpi3-test
+    - PROJECT=magenta-rpi3-arm64
+    - PROJECT=magenta-msm-trapper
 
     # kernel only, no-magenta builds
     - PROJECT=pc-x86-64-test

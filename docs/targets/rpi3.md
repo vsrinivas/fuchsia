@@ -29,20 +29,20 @@ To build magenta, invoke the following command from the top level Magenta
 directory (ensure that you have checked out the ARM64 toolchains). For more
 information, see `docs/getting_started.md`:
 
-    make rpi3-test
+    make magenta-rpi3-arm64
 
 ## Installing
 1. To install Magenta, ensure that your SD is formatted as follows:
    + Using an MBR partition table
    + With a FAT32 boot partition
 
-2. Invoking `make rpi3-test`  should have created a file called `magenta.bin` in
-   at the following path `./build-rpi3-test/magenta.bin`
+2. Invoking `make magenta-rpi3-arm64`  should have created a file called `magenta.bin` in
+   at the following path `./build-magenta-rpi3-arm64/magenta.bin`
 
 3. Copy the `magenta.bin` file to the SD card's boot partition as `kernel8.img`
    as follows:
 
-        cp ./build-rpi3-test/magenta.bin <path/to/sdcard/mount>/kernel8.img
+        cp ./build-magenta-rpi3-arm64/magenta.bin <path/to/sdcard/mount>/kernel8.img
 
 4. You must also copy `bootcode.bin` and `start.elf` to the boot partition. They
    can be obtained from [here](https://github.com/raspberrypi/firmware/tree/master/boot).
