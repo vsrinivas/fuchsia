@@ -114,6 +114,18 @@ class MediaPlayerController extends ChangeNotifier {
   void _close() {
     _active = false;
 
+    if (_mediaPlayer != null) {
+      _mediaPlayer.ctrl.close();
+    }
+
+    if (_audioRenderer != null) {
+      _audioRenderer.ctrl.close();
+    }
+
+    if (_videoRenderer != null) {
+      _videoRenderer.ctrl.close();
+    }
+
     _mediaPlayer = new mp.MediaPlayerProxy();
 
     _audioRenderer = new AudioRendererProxy();
