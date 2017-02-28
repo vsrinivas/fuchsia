@@ -36,22 +36,27 @@ information, see `docs/getting_started.md`:
    + Using an MBR partition table
    + With a FAT32 boot partition
 
-2. Invoking `make magenta-rpi3-arm64`  should have created a file called `magenta.bin` in
-   at the following path `./build-magenta-rpi3-arm64/magenta.bin`
+2. Invoking `make magenta-rpi3-arm64` should have created files `magenta.bin`
+   and `bootfs.img` the following path `./build-magenta-rpi3-arm64/`
+
 
 3. Copy the `magenta.bin` file to the SD card's boot partition as `kernel8.img`
    as follows:
 
         cp ./build-magenta-rpi3-arm64/magenta.bin <path/to/sdcard/mount>/kernel8.img
 
-4. You must also copy `bootcode.bin` and `start.elf` to the boot partition. They
+4. Copy the `bootfs.img` file to the SD card's boot partition as follows:
+
+        cp ./build-magenta-rpi3-arm64/bootfs.img <path/to/sdcard/mount>/bootfs.img
+
+5. You must also copy `bootcode.bin` and `start.elf` to the boot partition. They
    can be obtained from [here](https://github.com/raspberrypi/firmware/tree/master/boot).
    Because of how command line arguments are passed to the kernel, you will also need
    to copy the device tree blob in kernel/target/rpi3/bcm2710-rpi-3-b.dtb
    It is important that the dtb file retain the name bcm2710-rpi-3-b.dtb when copied
    to the boot partition.
 
-5. Create a file called `config.txt` in the boot partition with the following
+6. Create a file called `config.txt` in the boot partition with the following
    contents:
 
    ```
@@ -59,6 +64,9 @@ information, see `docs/getting_started.md`:
 
    # Tells the Pi's bootloader which file contains the kernel.
    kernel=kernel8.img
+
+   # Tells the Pi's bootloader which file contains the ramdisk.
+   initramfs bootfs.img
 
    # Necessary if you're using a serial dongle to talk to the Pi over the UART
    enable_uart=1

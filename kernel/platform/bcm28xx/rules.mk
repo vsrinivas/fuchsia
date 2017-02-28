@@ -42,7 +42,6 @@ GLOBAL_DEFINES += \
 
 MODULE_DEPS += \
 	lib/cbuf \
-	lib/fdt \
 	dev/timer/arm_generic \
 	dev/interrupt \
 

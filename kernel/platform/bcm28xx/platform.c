@@ -12,7 +12,6 @@
 #include <dev/uart.h>
 #include <arch.h>
 #include <lk/init.h>
-#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
 #include <dev/timer/arm_generic.h>
@@ -20,6 +19,7 @@
 #include <dev/hw_rng.h>
 
 #include <platform.h>
+#include <arch/arm64/platform.h>
 #include <dev/interrupt.h>
 #include <platform/bcm28xx.h>
 #include <platform/videocore.h>
@@ -27,9 +27,11 @@
 
 #include <target.h>
 
-#include <libfdt.h>
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
+
+static void* ramdisk_base;
+static size_t ramdisk_size;
 
 /* initial memory mappings. parsed by start.S */
 struct mmu_initial_mapping mmu_initial_mappings[] = {
@@ -72,87 +74,25 @@ void platform_init_mmu_mappings(void)
 {
 }
 
-extern ulong lk_boot_args[4];
-
-// find our command line in the device tree (fastboot stuffs it in there)
-static void find_command_line(void) {
-    void* fdt = paddr_to_kvaddr(lk_boot_args[0]);
-    if (!fdt) {
-        printf("Raspberry Pi3: could not find device tree\n");
-        return;
-    }
-
-    if (fdt_check_header(fdt) < 0) {
-        printf("Raspberry Pi3: fdt_check_header failed\n");
-        return;
-    }
-
-    int depth = 0;
-    int offset = 0;
-    for (;;) {
-        offset = fdt_next_node(fdt, offset, &depth);
-        if (offset < 0)
-            break;
-
-        const char* name = fdt_get_name(fdt, offset, NULL);
-        if (!name)
-            continue;
-        if (strcmp(name, "chosen") == 0) {
-            int lenp;
-            const char* bootargs = fdt_getprop(fdt, offset, "bootargs", &lenp);
-            if (bootargs) {
-                printf("Raspberry Pi3 command line: %s\n", bootargs);
-                cmdline_init(bootargs);
-                return;
-            }
-        }
+void* platform_get_ramdisk(size_t *size) {
+    if (ramdisk_base) {
+        *size = ramdisk_size;
+        return ramdisk_base;
+    } else {
+        *size = 0;
+        return NULL;
     }
 }
 
-
 void platform_early_init(void)
 {
-
-    find_command_line();
     uart_init_early();
+
+    read_device_tree(&ramdisk_base, &ramdisk_size);
 
     intc_init();
 
     arm_generic_timer_init(INTERRUPT_ARM_LOCAL_CNTPNSIRQ, 0);
-
-   /* look for a flattened device tree just before the kernel */
-    const void *fdt = (void *)KERNEL_BASE;
-    int err = fdt_check_header(fdt);
-    if (err >= 0) {
-        /* walk the nodes, looking for 'memory' */
-        int depth = 0;
-        int offset = 0;
-        for (;;) {
-            offset = fdt_next_node(fdt, offset, &depth);
-            if (offset < 0)
-                break;
-
-            /* get the name */
-            const char *name = fdt_get_name(fdt, offset, NULL);
-            if (!name)
-                continue;
-
-            /* look for the 'memory' property */
-            if (strcmp(name, "memory") == 0) {
-                //printf("Found memory in fdt\n");
-                int lenp;
-                const void *prop_ptr = fdt_getprop(fdt, offset, "reg", &lenp);
-                if (prop_ptr && lenp == 0x10) {
-                    /* we're looking at a memory descriptor */
-                    //uint64_t base = fdt64_to_cpu(*(uint64_t *)prop_ptr);
-                    uint64_t len = fdt64_to_cpu(*((const uint64_t *)prop_ptr + 1));
-
-                    /* set the size in the pmm arena */
-                    arena.size = len;
-                }
-            }
-        }
-    }
 
     /* add the main memory arena */
     pmm_add_arena(&arena);
@@ -161,6 +101,7 @@ void platform_early_init(void)
     struct list_node list = LIST_INITIAL_VALUE(list);
     pmm_alloc_range(MEMBASE, 0x80000 / PAGE_SIZE, &list);
 
+    platform_preserve_ramdisk();
 }
 
 void platform_init(void)
