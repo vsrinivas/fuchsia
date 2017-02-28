@@ -1,10 +1,11 @@
 Modular
 =======
 
-Modular is the application platform of Fuchsia.
-
-It provides a post-API programming model that allows applications to cooperate
-in a shared context without the need to call each other's APIs directly.
+Modular provides a framework for ephemerally downloaded applications which may
+have been implemented in different programming languages to run in a shared
+context and provide a composed experience to the user. The framework is also
+responsible for application lifecycle, resource management, view hierarchy,
+authentication, etc.
 
 ## Prerequisities
 
