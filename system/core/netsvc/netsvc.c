@@ -205,6 +205,8 @@ int main(int argc, char** argv) {
                     }
                 }
                 if (len) {
+                    // include header and nodename in length
+                    len += MAX_NODENAME_LENGTH + sizeof(uint32_t) * 2;
                     pending = 1;
                     goto transmit;
                 }
@@ -212,7 +214,7 @@ int main(int argc, char** argv) {
             if (netifc_timer_expired()) {
             transmit:
                 if (pending) {
-                    udp6_send(&pkt, 8 + len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
+                    udp6_send(&pkt, len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
                 }
             }
             //TODO: wakeup early for log traffic too
