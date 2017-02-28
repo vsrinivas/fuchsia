@@ -20,9 +20,10 @@ static paddr_t ramdisk_start_phys = 0;
 static paddr_t ramdisk_end_phys = 0;
 
 // Reads Linux device tree to initialize command line and return ramdisk location
-void read_device_tree(void** ramdisk_base, size_t* ramdisk_size) {
-    *ramdisk_base = NULL;
-    *ramdisk_size = 0;
+void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* mem_size) {
+    if (ramdisk_base) *ramdisk_base = NULL;
+    if (ramdisk_size) *ramdisk_size = 0;
+    if (mem_size) *mem_size = 0;
 
     void* fdt = paddr_to_kvaddr(lk_boot_args[0]);
     if (!fdt) {
@@ -48,27 +49,45 @@ void read_device_tree(void** ramdisk_base, size_t* ramdisk_size) {
         cmdline_init(bootargs);
     }
 
-    const void* ptr = fdt_getprop(fdt, offset, "linux,initrd-start", &length);
-    if (ptr) {
-        if (length == 4) {
-            ramdisk_start_phys = fdt32_to_cpu(*(uint32_t *)ptr);
-        } else if (length == 8) {
-            ramdisk_start_phys = fdt64_to_cpu(*(uint64_t *)ptr);
+    if (ramdisk_base && ramdisk_size) {
+        const void* ptr = fdt_getprop(fdt, offset, "linux,initrd-start", &length);
+        if (ptr) {
+            if (length == 4) {
+                ramdisk_start_phys = fdt32_to_cpu(*(uint32_t *)ptr);
+            } else if (length == 8) {
+                ramdisk_start_phys = fdt64_to_cpu(*(uint64_t *)ptr);
+            }
         }
-    }
-    ptr = fdt_getprop(fdt, offset, "linux,initrd-end", &length);
-    if (ptr) {
-        if (length == 4) {
-            ramdisk_end_phys = fdt32_to_cpu(*(uint32_t *)ptr);
-        } else if (length == 8) {
-            ramdisk_end_phys = fdt64_to_cpu(*(uint64_t *)ptr);
+        ptr = fdt_getprop(fdt, offset, "linux,initrd-end", &length);
+        if (ptr) {
+            if (length == 4) {
+                ramdisk_end_phys = fdt32_to_cpu(*(uint32_t *)ptr);
+            } else if (length == 8) {
+                ramdisk_end_phys = fdt64_to_cpu(*(uint64_t *)ptr);
+            }
+        }
+
+        if (ramdisk_start_phys && ramdisk_end_phys) {
+            *ramdisk_base = paddr_to_kvaddr(ramdisk_start_phys);
+            size_t length = ramdisk_end_phys - ramdisk_start_phys;
+            *ramdisk_size = (length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
         }
     }
 
-    if (ramdisk_start_phys && ramdisk_end_phys) {
-        *ramdisk_base = paddr_to_kvaddr(ramdisk_start_phys);
-        size_t length = ramdisk_end_phys - ramdisk_start_phys;
-        *ramdisk_size = (length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    // look for memory size. currently only used for qemu build
+    if (mem_size) {
+        offset = fdt_path_offset(fdt, "/memory");
+        if (offset < 0) {
+            printf("%s: fdt_path_offset(/memory) failed\n", __FUNCTION__);
+            return;
+        }
+        int lenp;
+        const void *prop_ptr = fdt_getprop(fdt, offset, "reg", &lenp);
+        if (prop_ptr && lenp == 0x10) {
+            /* we're looking at a memory descriptor */
+            //uint64_t base = fdt64_to_cpu(*(uint64_t *)prop_ptr);
+            *mem_size = fdt64_to_cpu(*((const uint64_t *)prop_ptr + 1));
+        }
     }
 }
 

@@ -16,7 +16,6 @@
 #include <dev/uart.h>
 #include <lk/init.h>
 #include <lib/console.h>
-#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
@@ -24,11 +23,14 @@
 #include <platform/gic.h>
 #include <dev/psci.h>
 #include <dev/interrupt.h>
+#include <arch/arm64/platform.h>
 #include <platform/qemu-virt.h>
-#include <libfdt.h>
 #include "platform_p.h"
 
 #define DEFAULT_MEMORY_SIZE (MEMSIZE) /* try to fetch from the emulator via the fdt */
+
+static void* ramdisk_base;
+static size_t ramdisk_size;
 
 static const paddr_t GICV2M_REG_FRAMES[] = { GICV2M_FRAME_PHYS };
 
@@ -63,35 +65,6 @@ static pmm_arena_info_t arena = {
     .flags = PMM_ARENA_FLAG_KMAP,
 };
 
-static uint32_t bootloader_ramdisk_base;
-static uint32_t bootloader_ramdisk_size;
-static void* ramdisk_base;
-static size_t ramdisk_size;
-
-static void platform_preserve_ramdisk(void) {
-    if (bootloader_ramdisk_size == 0) {
-        return;
-    }
-    if (bootloader_ramdisk_base == 0) {
-        return;
-    }
-    struct list_node list = LIST_INITIAL_VALUE(list);
-    size_t pages = (bootloader_ramdisk_size + PAGE_SIZE - 1) / PAGE_SIZE;
-    size_t actual = pmm_alloc_range(bootloader_ramdisk_base, pages, &list);
-    if (actual != pages) {
-        panic("unable to reserve ramdisk memory range\n");
-    }
-
-    // mark all of the pages we allocated as WIRED
-    vm_page_t *p;
-    list_for_every_entry(&list, p, vm_page_t, free.node) {
-        p->state = VM_PAGE_STATE_WIRED;
-    }
-
-    ramdisk_base = paddr_to_kvaddr(bootloader_ramdisk_base);
-    ramdisk_size = pages * PAGE_SIZE;
-}
-
 void* platform_get_ramdisk(size_t *size) {
     if (ramdisk_base) {
         *size = ramdisk_size;
@@ -102,6 +75,8 @@ void* platform_get_ramdisk(size_t *size) {
     }
 }
 
+extern ulong lk_boot_args[4];
+
 void platform_early_init(void)
 {
     /* initialize the interrupt controller */
@@ -111,62 +86,12 @@ void platform_early_init(void)
 
     uart_init_early();
 
-    /* look for a flattened device tree just before the kernel */
-    const void *fdt = (void *)KERNEL_BASE;
-    int err = fdt_check_header(fdt);
-    if (err >= 0) {
-        /* walk the nodes, looking for 'memory' and 'chosen' */
-        int depth = 0;
-        int offset = 0;
-        for (;;) {
-            offset = fdt_next_node(fdt, offset, &depth);
-            if (offset < 0)
-                break;
 
-            /* get the name */
-            const char *name = fdt_get_name(fdt, offset, NULL);
-            if (!name)
-                continue;
+    // qemu does not put device tree pointer in lk_boot_args,
+    // so set it up here before calling read_device_tree
+    lk_boot_args[0] = MEMORY_BASE_PHYS;
 
-            /* look for the properties we care about */
-            if (strcmp(name, "memory") == 0) {
-                int lenp;
-                const void *prop_ptr = fdt_getprop(fdt, offset, "reg", &lenp);
-                if (prop_ptr && lenp == 0x10) {
-                    /* we're looking at a memory descriptor */
-                    //uint64_t base = fdt64_to_cpu(*(uint64_t *)prop_ptr);
-                    uint64_t len = fdt64_to_cpu(*((const uint64_t *)prop_ptr + 1));
-
-                    /* set the size in the pmm arena */
-                    arena.size = len;
-                }
-            } else if (strcmp(name, "chosen") == 0) {
-                int lenp;
-                const void *prop_ptr = fdt_getprop(fdt, offset, "bootargs", &lenp);
-                if (prop_ptr) {
-                    cmdline_init(prop_ptr);
-                }
-
-                prop_ptr = fdt_getprop(fdt, offset, "linux,initrd-start", &lenp);
-                if (prop_ptr && lenp == 4) {
-                    bootloader_ramdisk_base = fdt32_to_cpu(*(const uint32_t*)prop_ptr);
-                }
-
-                uint32_t initrd_end = 0;
-                prop_ptr = fdt_getprop(fdt, offset, "linux,initrd-end", &lenp);
-                if (prop_ptr && lenp == 4) {
-                    initrd_end = fdt32_to_cpu(*(const uint32_t*)prop_ptr);
-                }
-
-                if (bootloader_ramdisk_base && initrd_end <= bootloader_ramdisk_base) {
-                    printf("invalid initrd args: 0x%08x < 0x%08x\n", initrd_end, bootloader_ramdisk_base);
-                    bootloader_ramdisk_base = 0;
-                } else {
-                    bootloader_ramdisk_size = initrd_end - bootloader_ramdisk_base;
-                }
-            }
-        }
-    }
+    read_device_tree(&ramdisk_base, &ramdisk_size, &arena.size);
 
     /* add the main memory arena */
     pmm_add_arena(&arena);
@@ -175,7 +100,6 @@ void platform_early_init(void)
     pmm_alloc_range(MEMBASE, 0x10000 / PAGE_SIZE, NULL);
 
     platform_preserve_ramdisk();
-
 }
 
 void platform_init(void)

@@ -31,7 +31,6 @@ KERNEL_LOAD_OFFSET := 0x10000 # 64k
 
 MODULE_DEPS += \
     lib/cbuf \
-    lib/fdt \
     dev/pcie \
     dev/timer/arm_generic \
     dev/interrupt/arm_gicv2m \

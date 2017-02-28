@@ -130,7 +130,7 @@ void platform_early_init(void)
 {
     uart_init_early();
 
-    read_device_tree(&ramdisk_base, &ramdisk_size);
+    read_device_tree(&ramdisk_base, &ramdisk_size, NULL);
 
     /* initialize the interrupt controller and timers */
     arm_gic_init();
