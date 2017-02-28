@@ -216,8 +216,6 @@ void NetworkServiceImpl::CreateHostResolver(mx::channel host_resolver) {
 
 void NetworkServiceImpl::RequestNetworkSlot(
     std::function<void(ftl::Closure)> slot_request) {
-  FTL_DCHECK(available_slots_ >= 0);
-
   if (available_slots_ == 0) {
     slot_requests_.push(std::move(slot_request));
     return;
