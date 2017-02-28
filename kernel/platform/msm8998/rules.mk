@@ -45,7 +45,6 @@ KERNEL_DEFINES += \
 
 MODULE_DEPS += \
 	lib/cbuf \
-	lib/fdt \
 	dev/timer/arm_generic \
 	dev/interrupt/arm_gicv3 \
 	dev/psci \

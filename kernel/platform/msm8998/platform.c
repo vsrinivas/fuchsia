@@ -4,6 +4,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+
 #include <reg.h>
 #include <err.h>
 #include <debug.h>
@@ -12,7 +13,6 @@
 #include <dev/uart.h>
 #include <arch.h>
 #include <lk/init.h>
-#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
 #include <dev/timer/arm_generic.h>
@@ -21,13 +21,13 @@
 #include <dev/psci.h>
 
 #include <platform.h>
+#include <arch/arm64/platform.h>
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic.h>
 #include <platform/msm8998.h>
 
 #include <target.h>
 
-#include <libfdt.h>
 #include <arch/mp.h>
 #include <arch/arm64/mp.h>
 #include <arch/arm64.h>
@@ -40,6 +40,9 @@
 #if WITH_PANIC_BACKTRACE
 #include <kernel/thread.h>
 #endif
+
+static void* ramdisk_base;
+static size_t ramdisk_size;
 
 /* initial memory mappings. parsed by start.S */
 struct mmu_initial_mapping mmu_initial_mappings[] = {
@@ -113,35 +116,6 @@ void platform_init_mmu_mappings(void)
 {
 }
 
-static uint64_t bootloader_ramdisk_base;
-static uint64_t bootloader_ramdisk_size;
-static void* ramdisk_base;
-static size_t ramdisk_size;
-
-static void platform_preserve_ramdisk(void) {
-    if (bootloader_ramdisk_size == 0) {
-        return;
-    }
-    if (bootloader_ramdisk_base == 0) {
-        return;
-    }
-    struct list_node list = LIST_INITIAL_VALUE(list);
-    size_t pages = (bootloader_ramdisk_size + PAGE_SIZE - 1) / PAGE_SIZE;
-    size_t actual = pmm_alloc_range(bootloader_ramdisk_base, pages, &list);
-    if (actual != pages) {
-        panic("unable to reserve ramdisk memory range\n");
-    }
-
-    // mark all of the pages we allocated as WIRED
-    vm_page_t *p;
-    list_for_every_entry(&list, p, vm_page_t, free.node) {
-        p->state = VM_PAGE_STATE_WIRED;
-    }
-
-    ramdisk_base = paddr_to_kvaddr(bootloader_ramdisk_base);
-    ramdisk_size = pages * PAGE_SIZE;
-}
-
 void* platform_get_ramdisk(size_t *size) {
     if (ramdisk_base) {
         *size = ramdisk_size;
@@ -152,46 +126,11 @@ void* platform_get_ramdisk(size_t *size) {
     }
 }
 
-extern ulong lk_boot_args[4];
-
-// find our command line and ramdisk in the device tree
-static void read_device_tree(void) {
-    void* fdt = paddr_to_kvaddr(lk_boot_args[0]);
-    if (!fdt) {
-        printf("msm8998: could not find device tree\n");
-        return;
-    }
-
-    if (fdt_check_header(fdt) < 0) {
-        printf("msm8998: fdt_check_header failed\n");
-        return;
-    }
-
-    int offset = fdt_path_offset(fdt, "/chosen");
-    if (offset < 0) {
-        printf("msm8998: fdt_path_offset(/chosen) failed\n");
-        return;
-    }
-
-    int length;
-    const char* bootargs = fdt_getprop(fdt, offset, "bootargs", &length);
-    if (bootargs) {
-        cmdline_init(bootargs);
-    }
-
-    const uint64_t* ramdisk_start_ptr = fdt_getprop(fdt, offset, "linux,initrd-start", &length);
-    const uint64_t* ramdisk_end_ptr = fdt_getprop(fdt, offset, "linux,initrd-end", &length);
-    if (ramdisk_start_ptr && ramdisk_end_ptr) {
-        bootloader_ramdisk_base = fdt64_to_cpu(*ramdisk_start_ptr);
-        bootloader_ramdisk_size = fdt64_to_cpu(*ramdisk_end_ptr) - bootloader_ramdisk_base;
-    }
-}
-
 void platform_early_init(void)
 {
-    read_device_tree();
-
     uart_init_early();
+
+    read_device_tree(&ramdisk_base, &ramdisk_size);
 
     /* initialize the interrupt controller and timers */
     arm_gic_init();

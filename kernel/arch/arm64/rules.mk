@@ -26,12 +26,16 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/fpu.c \
 	$(LOCAL_DIR)/hypervisor.cpp \
 	$(LOCAL_DIR)/mmu.c \
+	$(LOCAL_DIR)/platform.c \
 	$(LOCAL_DIR)/spinlock.S \
 	$(LOCAL_DIR)/start.S \
 	$(LOCAL_DIR)/thread.c \
 	$(LOCAL_DIR)/user_copy.S \
 	$(LOCAL_DIR)/user_copy_c.c \
 	$(LOCAL_DIR)/uspace_entry.S
+
+MODULE_DEPS += \
+	lib/fdt \
 
 KERNEL_DEFINES += \
 	ARM64_CPU_$(ARM_CPU)=1 \
