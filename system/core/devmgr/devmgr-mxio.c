@@ -51,29 +51,23 @@ static void callback(void* arg, const char* path, size_t off, size_t len) {
 }
 
 #define USER_MAX_HANDLES 4
+#define MAX_ENVP 16
 
-void devmgr_launch(mx_handle_t job,
-                   const char* name, int argc, const char** argv,
-                   const char* extra_env, int stdiofd,
+void devmgr_launch(mx_handle_t job, const char* name,
+                   int argc, const char** argv,
+                   const char** _envp, int stdiofd,
                    mx_handle_t* handles, uint32_t* types, size_t hcount) {
-    const char* env[] = {
-#if !(defined(__x86_64__) || defined(__aarch64__))
-        // make debugging less painful
-        "LD_DEBUG=1",
-#endif
-        extra_env,
-        NULL, // placeholder for LDSO_TRACE_ENV
-        NULL
-    };
+
+    const char* envp[MAX_ENVP + 1];
+    unsigned envn = 0;
 
     if (getenv(LDSO_TRACE_CMDLINE)) {
-        unsigned int i;
-        for (i = 0; i < countof(env) - 1; ++i) {
-            if (env[i] == NULL)
-                break;
-        }
-        env[i] = LDSO_TRACE_ENV;
+        envp[envn++] = LDSO_TRACE_ENV;
     }
+    while ((_envp && _envp[0]) && (envn < MAX_ENVP)) {
+        envp[envn++] = *_envp++;
+    }
+    envp[envn++] = NULL;
 
     mx_handle_t job_copy = MX_HANDLE_INVALID;;
     mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_copy);
@@ -82,7 +76,7 @@ void devmgr_launch(mx_handle_t job,
     launchpad_create(job_copy, name, &lp);
     launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, argv);
-    launchpad_set_environ(lp, env);
+    launchpad_set_environ(lp, envp);
 
     mx_handle_t h = vfs_create_global_root_handle();
     launchpad_add_handle(lp, h, MX_HND_TYPE_MXIO_ROOT);

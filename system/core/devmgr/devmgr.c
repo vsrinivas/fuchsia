@@ -216,8 +216,8 @@ int devmgr_start_system_init(void* arg) {
             init_hnd_count++;
             application_launcher_child = 0;
         }
-        devmgr_launch(svcs_job_handle, "init", countof(argv_init),
-                argv_init, NULL, -1, init_hnds, init_ids, init_hnd_count);
+        devmgr_launch(svcs_job_handle, "init", countof(argv_init), argv_init,
+                      NULL, -1, init_hnds, init_ids, init_hnd_count);
         init_started = true;
     }
     mtx_unlock(&lock);
@@ -229,12 +229,13 @@ int service_starter(void* arg) {
         // launch the network service
         const char* args[] = { "/boot/bin/netsvc", NULL };
         args[1] = getenv("magenta.nodename");
-        devmgr_launch(svcs_job_handle, "netsvc",
-                args[1] ? 2 : 1, args, NULL, -1, NULL, NULL, 0);
+        devmgr_launch(svcs_job_handle, "netsvc", args[1] ? 2 : 1, args,
+                      NULL, -1, NULL, NULL, 0);
     }
 
-    devmgr_launch(svcs_job_handle, "sh:autorun0", countof(argv_autorun0),
-                  argv_autorun0, NULL, -1, NULL, NULL, 0);
+    devmgr_launch(svcs_job_handle, "sh:autorun0",
+                  countof(argv_autorun0), argv_autorun0,
+                  NULL, -1, NULL, NULL, 0);
 
     int dirfd;
     if ((dirfd = open("/dev/class/block", O_DIRECTORY|O_RDONLY)) >= 0) {
@@ -255,11 +256,12 @@ static int console_starter(void* arg) {
     if (term != NULL)
         term -= sizeof("TERM=") - 1;
 
+    const char* envp[] = { "PS1=magenta$ ", term ? term : NULL, NULL, };
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open("/dev/misc/console", O_RDWR)) >= 0) {
             devmgr_launch(svcs_job_handle, "sh:console",
-                          countof(argv_sh), argv_sh, term, fd, NULL, NULL, 0);
+                          countof(argv_sh), argv_sh, envp, fd, NULL, NULL, 0);
             break;
         }
         mx_nanosleep(MX_MSEC(100));
@@ -278,9 +280,9 @@ static void start_console_shell(void) {}
 #endif
 
 // a more colorful prompt messes up line editing, unfortunately...
-// static const char* shell_prompt = "PS1=\033[35;1mmagenta\033[39m$ ";
+// "PS1=\033[35;1mmagenta\033[39m$ ";
 
-static const char* shell_prompt = "PS1=magenta$ ";
+static const char* envp_sh[] = { "PS1=magenta$ ", NULL, };
 
 static mx_status_t console_device_added(int dirfd, int event, const char* name, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -298,7 +300,7 @@ static mx_status_t console_device_added(int dirfd, int event, const char* name, 
             ioctl_console_set_active_vc(fd);
         }
         devmgr_launch(svcs_job_handle, "sh:vc",
-                      countof(argv_sh), argv_sh, shell_prompt, fd, NULL, NULL, 0);
+                      countof(argv_sh), argv_sh, envp_sh, fd, NULL, NULL, 0);
     } else {
         printf("devmgr: cannot open vc\n");
     }
@@ -350,17 +352,11 @@ int main(int argc, char** argv) {
         // It has its own check.
     }
 
-#if defined(__x86_64__) || defined(__aarch64__)
     if (!getenv("crashlogger.disable")) {
         static const char* argv_crashlogger[] = { "/boot/bin/crashlogger" };
         devmgr_launch(svcs_job_handle, "crashlogger",
                       1, argv_crashlogger, NULL, -1, NULL, NULL, 0);
     }
-#else
-    // Until crashlogging exists, ensure we see load info
-    // from the linker in the log
-    putenv(strdup("LD_DEBUG=1"));
-#endif
 
     start_console_shell();
 
