@@ -690,7 +690,8 @@ mx_status_t ProcessDispatcher::BadHandle(mx_handle_t handle_value,
 
 mx_koid_t ProcessDispatcher::GetKoidForHandle(mx_handle_t handle_value) {
     mxtl::RefPtr<Dispatcher> dispatcher;
-    if (!GetDispatcherInternal(handle_value, &dispatcher, nullptr))
+    auto status = GetDispatcherInternal(handle_value, &dispatcher, nullptr);
+    if (status != NO_ERROR)
         return 0ull;
     return dispatcher->get_koid();
 }
