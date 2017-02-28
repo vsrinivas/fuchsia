@@ -23,4 +23,4 @@ bool EqualsCaseInsensitiveASCII(ftl::StringView v1, ftl::StringView v2);
 
 }  // namespace ftl
 
-#endif  // LIB_FTL_STRINGS_STRING_UTIL_H_
+#endif  // LIB_FTL_STRINGS_ASCII_H_

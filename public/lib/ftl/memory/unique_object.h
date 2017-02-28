@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FTL_UNIQUE_OBJECT_H_
-#define LIB_FTL_UNIQUE_OBJECT_H_
+#ifndef LIB_FTL_MEMORY_UNIQUE_OBJECT_H_
+#define LIB_FTL_MEMORY_UNIQUE_OBJECT_H_
 
 #include <utility>
 
@@ -134,4 +134,4 @@ bool operator!=(const T& value, const UniqueObject<T, Traits>& object) {
 
 }  // namespace ftl
 
-#endif  // LIB_FTL_UNIQUE_OBJECT_H_
+#endif  // LIB_FTL_MEMORY_UNIQUE_OBJECT_H_

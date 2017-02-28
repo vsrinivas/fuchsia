@@ -13,4 +13,4 @@ char (&ArraySizeHelper(T (&array)[N]))[N];
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
 #endif
 
-#endif  // FTL_ARRAYSIZE_H_
+#endif  // LIB_FTL_ARRAYSIZE_H_

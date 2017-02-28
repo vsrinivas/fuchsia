@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FTL_STRINGS_UTF_CODEC_H_
-#define LIB_FTL_STRINGS_UTF_CODEC_H_
+#ifndef LIB_FTL_STRINGS_UTF_CODECS_H_
+#define LIB_FTL_STRINGS_UTF_CODECS_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -55,4 +55,4 @@ size_t WriteUnicodeCharacter(uint32_t code_point, std::string* output);
 
 }  // namespace ftl
 
-#endif  // LIB_FTL_STRINGS_UTF_CODEC_H_
+#endif  // LIB_FTL_STRINGS_UTF_CODECS_H_

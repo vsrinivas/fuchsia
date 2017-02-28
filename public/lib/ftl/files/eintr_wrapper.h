@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FTL_EINTR_WRAPPER_H_
-#define LIB_FTL_EINTR_WRAPPER_H_
+#ifndef LIB_FTL_FILES_EINTR_WRAPPER_H_
+#define LIB_FTL_FILES_EINTR_WRAPPER_H_
 
 #include <errno.h>
 
@@ -45,4 +45,4 @@
     eintr_wrapper_result;                                 \
   })
 
-#endif  // LIB_FTL_EINTR_WRAPPER_H_
+#endif  // LIB_FTL_FILES_EINTR_WRAPPER_H_

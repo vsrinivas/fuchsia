@@ -4,8 +4,8 @@
 
 // Provides a smart pointer class for intrusively reference-counted objects.
 
-#ifndef LIB_FTL_MEMORY__REF_PTR_H_
-#define LIB_FTL_MEMORY__REF_PTR_H_
+#ifndef LIB_FTL_MEMORY_REF_PTR_H_
+#define LIB_FTL_MEMORY_REF_PTR_H_
 
 #include <cstddef>
 
@@ -248,4 +248,4 @@ struct hash<ftl::RefPtr<T>> {
 };
 }  // namespace std
 
-#endif  // LIB_FTL_MEMORY__REF_PTR_H_
+#endif  // LIB_FTL_MEMORY_REF_PTR_H_

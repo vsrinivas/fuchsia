@@ -4,8 +4,8 @@
 
 // A simple "stopwatch" for measuring elapsed time.
 
-#ifndef LIB_FTL_TIME_STOP_WATCH_H_
-#define LIB_FTL_TIME_STOP_WATCH_H_
+#ifndef LIB_FTL_TIME_STOPWATCH_H_
+#define LIB_FTL_TIME_STOPWATCH_H_
 
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
@@ -32,4 +32,4 @@ class Stopwatch final {
 
 }  // namespace ftl
 
-#endif  // LIB_FTL_TIME_STOP_WATCH_H_
+#endif  // LIB_FTL_TIME_STOPWATCH_H_
