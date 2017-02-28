@@ -31,7 +31,7 @@ ApplicationContext::CreateFromStartupInfo() {
       mx_get_startup_handle(MX_HND_TYPE_APPLICATION_SERVICES);
 
   FTL_CHECK(environment != MX_HANDLE_INVALID)
-      << "Maybe you meant to run with bootstrap (@) ?";
+      << "Did you run this program outside the Fuchsia environment?";
 
   return std::make_unique<ApplicationContext>(
       fidl::InterfaceHandle<ApplicationEnvironment>(mx::channel(environment),
