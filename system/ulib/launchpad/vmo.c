@@ -30,12 +30,6 @@ mx_handle_t launchpad_vmo_from_mem(const void* data, size_t len) {
     return vmo;
 }
 
-static ssize_t my_pread (int fd, void* buf, size_t nbytes, off_t offset) {
-    if (lseek(fd, offset, SEEK_SET) != offset)
-        return -1;
-    return read(fd, buf, nbytes);
-}
-
 #define MIN_WINDOW (PAGE_SIZE * 4)
 #define MAX_WINDOW ((size_t)64 << 20)
 
@@ -60,7 +54,7 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
             // than fiddling with the page tables.
             char buffer[PAGE_SIZE];
             size_t xfer = size < sizeof(buffer) ? size : sizeof(buffer);
-            ssize_t nread = my_pread(fd, buffer, xfer, offset);
+            ssize_t nread = pread(fd, buffer, xfer, offset);
             if (nread < 0) {
                 mx_handle_close(vmo);
                 return ERR_IO;
@@ -98,7 +92,7 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
             }
             uint8_t* buffer = (void*)start;
             while (chunk > 0) {
-                ssize_t nread = my_pread(fd, buffer, chunk, offset);
+                ssize_t nread = pread(fd, buffer, chunk, offset);
                 if (nread < 0) {
                     mx_vmar_unmap(current_vmar_handle, start, window);
                     mx_handle_close(vmo);
