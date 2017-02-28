@@ -14,8 +14,6 @@
 /* to bring in definition of arch_aspace */
 #include <arch/aspace.h>
 
-__BEGIN_CDECLS
-
 #define ARCH_MMU_FLAG_CACHED            (0<<0)
 #define ARCH_MMU_FLAG_UNCACHED          (1<<0)
 #define ARCH_MMU_FLAG_UNCACHED_DEVICE   (2<<0) /* only exists on some arches, otherwise UNCACHED */
@@ -55,6 +53,4 @@ vaddr_t arch_mmu_pick_spot(const arch_aspace_t *aspace,
 void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace);
 
 void arch_disable_mmu(void);
-
-__END_CDECLS
 

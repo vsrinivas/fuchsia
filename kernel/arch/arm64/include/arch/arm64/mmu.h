@@ -41,6 +41,8 @@
 #define MMU_IDENT_SIZE_SHIFT 42 /* Max size supported by block mappings */
 #endif
 
+#define MMU_MAX_PAGE_SIZE_SHIFT 48
+
 #define MMU_KERNEL_PAGE_SIZE_SHIFT      (PAGE_SIZE_SHIFT)
 #define MMU_USER_PAGE_SIZE_SHIFT        (USER_PAGE_SIZE_SHIFT)
 
@@ -334,14 +336,6 @@ __BEGIN_CDECLS
 
 #define MMU_ARM64_GLOBAL_ASID (~0U)
 #define MMU_ARM64_USER_ASID (0U)
-int arm64_mmu_map(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
-                  vaddr_t vaddr_base, uint top_size_shift,
-                  uint top_index_shift, uint page_size_shift,
-                  pte_t *top_page_table, uint asid);
-int arm64_mmu_unmap(vaddr_t vaddr, size_t size,
-                    vaddr_t vaddr_base, uint top_size_shift,
-                    uint top_index_shift, uint page_size_shift,
-                    pte_t *top_page_table, uint asid);
 
 #define MMU_ARM64_ASID_BITS     (16U)
 
