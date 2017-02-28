@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MTL_THREAD_H_
-#define LIB_MTL_THREAD_H_
+#ifndef LIB_MTL_THREADING_THREAD_H_
+#define LIB_MTL_THREADING_THREAD_H_
 
 #include <pthread.h>
 
@@ -43,4 +43,4 @@ class Thread {
 
 }  // namespace mtl
 
-#endif  // LIB_MTL_THREAD_H_
+#endif  // LIB_MTL_THREADING_THREAD_H_

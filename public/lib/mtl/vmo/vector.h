@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MTL_SHARED_BUFFER_VECTOR_H_
-#define LIB_MTL_SHARED_BUFFER_VECTOR_H_
+#ifndef LIB_MTL_VMO_VECTOR_H_
+#define LIB_MTL_VMO_VECTOR_H_
 
 #include <vector>
 
@@ -29,4 +29,4 @@ bool VectorFromVmo(const mx::vmo& shared_buffer,
 
 }  // namespace mtl
 
-#endif  // LIB_MTL_SHARED_BUFFER_VECTOR_H_
+#endif  // LIB_MTL_VMO_VECTOR_H_

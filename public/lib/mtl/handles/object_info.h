@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MTL_OBJECT_INFO_H_
-#define LIB_MTL_OBJECT_INFO_H_
+#ifndef LIB_MTL_HANDLES_OBJECT_INFO_H_
+#define LIB_MTL_HANDLES_OBJECT_INFO_H_
 
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
@@ -51,4 +51,4 @@ mx_status_t SetCurrentThreadName(const std::string& name);
 
 }  // namespace mtl
 
-#endif  // LIB_MTL_OBJECT_INFO_H_
+#endif  // LIB_MTL_HANDLES_OBJECT_INFO_H_
