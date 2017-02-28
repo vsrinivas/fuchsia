@@ -17,7 +17,6 @@ MODULE_DEPS := \
 
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/cond.c \
 	$(LOCAL_DIR)/debug.c \
 	$(LOCAL_DIR)/event.c \
 	$(LOCAL_DIR)/init.c \

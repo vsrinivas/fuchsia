@@ -75,7 +75,7 @@ UserThread::~UserThread() {
         DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n", StateToString(state_), this);
     }
 
-    cond_destroy(&exception_wait_cond_);
+    event_destroy(&exception_event_);
 }
 
 // complete initialization of the thread object outside of the constructor
@@ -390,44 +390,48 @@ mxtl::RefPtr<ExceptionPort> UserThread::exception_port() {
     return exception_port_;
 }
 
-// Thread safety analysis disabled as the analysis doesn't understand that
-// |exception_wait_lock_.GetInternal()| is an alias for the same mutex_t as
-// |exception_wait_lock_.mutex_|.
 status_t UserThread::ExceptionHandlerExchange(
         mxtl::RefPtr<ExceptionPort> eport,
         const mx_exception_report_t* report,
         const arch_exception_context_t* arch_context,
-        ExceptionStatus *out_estatus) TA_NO_THREAD_SAFETY_ANALYSIS {
+        ExceptionStatus *out_estatus) {
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(&exception_wait_lock_);
 
-    // Send message, wait for reply.
-    // Note that there is a "race" that we need handle: We need to send the
-    // exception report before going to sleep, but what if the receiver of the
-    // report gets it and processes it before we are asleep? This is handled by
-    // locking exception_wait_lock_ in places where the handler can see/modify
-    // thread state.
+    {
+        AutoLock lock(&exception_wait_lock_);
 
-    status_t status = eport->SendReport(report);
-    if (status != NO_ERROR) {
-        LTRACEF("SendReport returned %d\n", status);
-        // Treat the exception as unhandled.
-        *out_estatus = ExceptionStatus::TRY_NEXT;
-        return NO_ERROR;
+        // Send message, wait for reply.
+        // Note that there is a "race" that we need handle: We need to send the
+        // exception report before going to sleep, but what if the receiver of the
+        // report gets it and processes it before we are asleep? This is handled by
+        // locking exception_wait_lock_ in places where the handler can see/modify
+        // thread state.
+
+        status_t status = eport->SendReport(report);
+        if (status != NO_ERROR) {
+            LTRACEF("SendReport returned %d\n", status);
+            // Treat the exception as unhandled.
+            *out_estatus = ExceptionStatus::TRY_NEXT;
+            return NO_ERROR;
+        }
+
+        // So the handler can read/write our general registers.
+        thread_.exception_context = arch_context;
+
+        // For GetExceptionReport.
+        exception_report_ = report;
+
+        // For OnExceptionPortRemoval in case the port is unbound.
+        DEBUG_ASSERT(exception_wait_port_ == nullptr);
+        exception_wait_port_ = eport;
+
+        exception_status_ = ExceptionStatus::UNPROCESSED;
     }
 
-    // So the handler can read/write our general registers.
-    thread_.exception_context = arch_context;
+    auto status = event_wait_timeout(&exception_event_, INFINITE_TIME, true);
 
-    // For GetExceptionReport.
-    exception_report_ = report;
+    AutoLock lock(&exception_wait_lock_);
 
-    // For OnExceptionPortRemoval in case the port is unbound.
-    DEBUG_ASSERT(exception_wait_port_ == nullptr);
-    exception_wait_port_ = eport;
-
-    exception_status_ = ExceptionStatus::UNPROCESSED;
-    status = cond_wait_timeout(&exception_wait_cond_, exception_wait_lock_.GetInternal(), INFINITE_TIME, true);
     // Note: If |status| != NO_ERROR, then |exception_status_| is still
     // ExceptionStatus::UNPROCESSED.
     switch (status) {
@@ -460,7 +464,9 @@ status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
         return ERR_BAD_STATE;
     if (exception_status_ == ExceptionStatus::UNPROCESSED)
         exception_status_ = estatus;
-    cond_signal(&exception_wait_cond_);
+
+    event_signal(&exception_event_, true);
+
     return NO_ERROR;
 }
 
@@ -472,7 +478,8 @@ void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport
     if (exception_wait_port_ == eport) {
         if (exception_status_ == ExceptionStatus::UNPROCESSED)
             exception_status_ = ExceptionStatus::TRY_NEXT;
-        cond_signal(&exception_wait_cond_);
+
+        event_signal(&exception_event_, true);
     }
 }
 

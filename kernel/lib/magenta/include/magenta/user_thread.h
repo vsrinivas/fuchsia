@@ -6,10 +6,9 @@
 
 #pragma once
 
-#include <kernel/cond.h>
+#include <kernel/event.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
-#include <kernel/wait.h>
 #include <lib/dpc.h>
 
 #include <magenta/dispatcher.h>
@@ -193,12 +192,13 @@ private:
     Mutex exception_lock_;
 
     // Support for sending an exception to an exception handler and then waiting for a response.
-    ExceptionStatus exception_status_ = ExceptionStatus::UNPROCESSED;
+    ExceptionStatus exception_status_ TA_GUARDED(exception_wait_lock_)
+        = ExceptionStatus::UNPROCESSED;
     // The exception port of the handler the thread is waiting for a response from.
     mxtl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(exception_wait_lock_);
     const mx_exception_report_t* exception_report_ TA_GUARDED(exception_wait_lock_);
-    cond_t exception_wait_cond_ = COND_INITIAL_VALUE(exception_wait_cond_);
     Mutex exception_wait_lock_;
+    event_t exception_event_ = EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 
     // cleanup dpc structure
     dpc_t cleanup_dpc_ = {};
