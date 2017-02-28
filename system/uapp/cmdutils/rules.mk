@@ -39,3 +39,15 @@ MODULE_NAME := false
 MODULE_LIBS := ulib/magenta ulib/musl
 
 include make/module.mk
+
+MODULE := env
+
+MODULE_TYPE := userapp
+
+MODULE_SRCS += $(LOCAL_DIR)/env.c
+
+MODULE_NAME := env
+
+MODULE_LIBS := ulib/magenta ulib/musl ulib/launchpad
+
+include make/module.mk
