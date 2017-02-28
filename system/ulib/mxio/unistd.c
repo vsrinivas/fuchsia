@@ -703,6 +703,90 @@ ssize_t write(int fd, const void* buf, size_t count) {
     return STATUS(status);
 }
 
+ssize_t preadv(int fd, const struct iovec* iov, int count, off_t ofs) {
+    ssize_t iov_count = 0;
+    ssize_t r;
+    while (count > 0) {
+        if (iov->iov_len != 0) {
+            r = pread(fd, iov->iov_base, iov->iov_len, ofs);
+            if (r < 0) {
+                return iov_count ? iov_count : r;
+            }
+            if ((size_t)r < iov->iov_len) {
+                return iov_count + r;
+            }
+            iov_count += r;
+            ofs += r;
+        }
+        iov++;
+        count--;
+    }
+    return iov_count;
+}
+
+ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
+    if (buf == NULL) {
+        return ERRNO(EINVAL);
+    }
+
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    mx_status_t status;
+    for (;;) {
+        status = io->ops->read_at(io, buf, size, ofs);
+        if (status != ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
+            break;
+        }
+        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+    }
+    mxio_release(io);
+    return STATUS(status);
+}
+
+ssize_t pwritev(int fd, const struct iovec* iov, int count, off_t ofs) {
+    ssize_t iov_count = 0;
+    ssize_t r;
+    while (count > 0) {
+        if (iov->iov_len != 0) {
+            r = pwrite(fd, iov->iov_base, iov->iov_len, ofs);
+            if (r < 0) {
+                return iov_count ? iov_count : r;
+            }
+            if ((size_t)r < iov->iov_len) {
+                return iov_count + r;
+            }
+            iov_count += r;
+            ofs += r;
+        }
+        iov++;
+        count--;
+    }
+    return iov_count;
+}
+
+ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
+    if (buf == NULL) {
+        return ERRNO(EINVAL);
+    }
+
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    mx_status_t status;
+    for (;;) {
+        status = io->ops->write_at(io, buf, size, ofs);
+        if (status != ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
+            break;
+        }
+        mxio_wait_fd(fd, MXIO_EVT_WRITABLE, NULL, MX_TIME_INFINITE);
+    }
+    mxio_release(io);
+    return STATUS(status);
+}
+
 int close(int fd) {
     mtx_lock(&mxio_lock);
     if ((fd < 0) || (fd >= MAX_MXIO_FD) || (mxio_fdtab[fd] == NULL)) {
