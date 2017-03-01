@@ -327,6 +327,10 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
     de->name[1] = '.';
 }
 
+#ifdef __Fuchsia__
+static const unsigned kPoolSize = 4;
+#endif
+
 mx_status_t Minfs::Create(Minfs** out, Bcache* bc, minfs_info_t* info) {
     uint32_t blocks = bc->Maxblk();
     uint32_t inodes = info->inode_count;
@@ -341,7 +345,23 @@ mx_status_t Minfs::Create(Minfs** out, Bcache* bc, minfs_info_t* info) {
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
+#ifdef __Fuchsia__
+    mxtl::unique_ptr<fs::VfsDispatcher> dispatcher(new (&ac) fs::VfsDispatcher());
+    if (!ac.check()) {
+        return ERR_NO_MEMORY;
+    }
 
+    status = dispatcher->Create(mxrio_handler, kPoolSize);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    status = dispatcher->Start("Minfs Dispatcher");
+    if (status != NO_ERROR) {
+        return status;
+    }
+    fs->dispatcher_.swap(dispatcher);
+#endif
     // determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
     fs->abmblks_ = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;
@@ -431,8 +451,18 @@ mx_status_t minfs_mount(VnodeMinfs** out, Bcache* bc) {
 }
 
 mx_status_t Minfs::Unmount() {
+#ifdef __Fuchsia__
+    dispatcher_ = nullptr;
+#endif
     return bc_->Close();
 }
+
+#ifdef __Fuchsia__
+mx_status_t VnodeMinfs::AddDispatcher(mx_handle_t h, void* cookie) {
+    // create a dispatcher for this handle
+    return fs_->dispatcher_->Add(h, (void *)vfs_handler, cookie);
+}
+#endif
 
 int minfs_mkfs(Bcache* bc) {
     uint32_t blocks = bc->Maxblk();

@@ -11,6 +11,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <magenta/processargs.h>
+#include <magenta/process.h>
+
 #include "blobstore-private.h"
 #include "fs/vfs.h"
 
@@ -23,7 +26,12 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
     if (blobstore::blobstore_mount(&vn, fd) < 0) {
         return -1;
     }
-    vfs_rpc_server(vn);
+    mx_handle_t h = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    if (h == MX_HANDLE_INVALID) {
+        error("blobstore: Could not access startup handle to mount point\n");
+        return h;
+    }
+    vfs_rpc_server(h, vn);
     return 0;
 }
 

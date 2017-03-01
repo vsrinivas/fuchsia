@@ -14,6 +14,8 @@
 #include <unistd.h>
 
 #include <magenta/compiler.h>
+#include <magenta/process.h>
+#include <magenta/processargs.h>
 
 #include "minfs-private.h"
 #ifndef __Fuchsia__
@@ -44,7 +46,14 @@ int do_minfs_mount(minfs::Bcache* bc, int argc, char** argv) {
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
     }
-    vfs_rpc_server(vn);
+
+    mx_handle_t h = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    if (h == MX_HANDLE_INVALID) {
+        error("minfs: Could not access startup handle to mount point\n");
+        return ERR_BAD_STATE;
+    }
+
+    vfs_rpc_server(h, vn);
     return 0;
 }
 #else

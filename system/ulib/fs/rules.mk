@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-mount.cpp \
     $(LOCAL_DIR)/vfs-unmount.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp \
+    $(LOCAL_DIR)/vfs-dispatcher.cpp \
 
 MODULE_LIBS := \
     system/ulib/c \

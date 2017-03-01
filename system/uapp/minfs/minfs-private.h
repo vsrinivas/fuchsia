@@ -8,11 +8,13 @@
 #include <mxtl/intrusive_hash_table.h>
 #include <mxtl/intrusive_single_list.h>
 #include <mxtl/macros.h>
-#include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
 #include <fs/mapped-vmo.h>
+#ifdef __Fuchsia__
+#include <fs/vfs-dispatcher.h>
+#endif
 #include <fs/vfs.h>
 
 #include "minfs.h"
@@ -80,6 +82,9 @@ public:
     Bcache* bc_;
     RawBitmap block_map_;
     minfs_info_t info_;
+#ifdef __Fuchsia__
+    mxtl::unique_ptr<fs::VfsDispatcher> dispatcher_;
+#endif
 
 private:
     // Fsck can introspect Minfs
@@ -198,6 +203,8 @@ private:
                                                   DirectoryOffset*));
 
 #ifdef __Fuchsia__
+    mx_status_t AddDispatcher(mx_handle_t h, void* cookie) final;
+
     // The following functionality interacts with handles directly, and are not applicable outside
     // Fuchsia (since there is no "handle-equivalent" in host-side tools).
     mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,

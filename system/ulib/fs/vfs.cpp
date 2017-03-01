@@ -19,6 +19,8 @@
 
 uint32_t __trace_bits;
 
+mxio_dispatcher_t* vfs_dispatcher;
+
 namespace fs {
 namespace {
 
@@ -267,6 +269,14 @@ mx_status_t Vfs::Close(Vnode* vn) {
     mx_status_t r = vn->Close();
     return r;
 }
+
+#ifdef __Fuchsia__
+mx_status_t Vnode::AddDispatcher(mx_handle_t h, void* cookie) {
+    // default implementation adds this object to the mxio single
+    // threaded dispatcher
+    return mxio_dispatcher_add(vfs_dispatcher, h, (void*)vfs_handler, cookie);
+}
+#endif
 
 void Vnode::RefAcquire() {
     trace(REFS, "acquire vn=%p ref=%u\n", this, refcount_);

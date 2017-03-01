@@ -30,8 +30,6 @@
 
 mtx_t vfs_lock = MTX_INIT;
 
-mxio_dispatcher_t* vfs_dispatcher;
-
 namespace memfs {
 
 static VnodeMemfs* global_vfs_root;

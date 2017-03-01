@@ -22,11 +22,22 @@
 
 #define MXDEBUG 0
 
+typedef struct vfs_iostate {
+    Vnode* vn;
+    // Handle to event which allows client to refer to open vnodes in multi-patt
+    // operations (see: link, rename). Defaults to MX_HANDLE_INVALID.
+    // Validated on the server side using cookies.
+    mx_handle_t token;
+    vdircookie_t dircookie;
+    size_t io_off;
+    uint32_t io_flags;
+} vfs_iostate_t;
+
 namespace fs {
 namespace {
 
-void txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
-                      const char* path, uint32_t flags, uint32_t mode) {
+static void txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
+                             const char* path, uint32_t flags, uint32_t mode) {
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
     size_t len = strlen(path);
@@ -124,7 +135,7 @@ mx_status_t Vnode::Serve(uint32_t flags, mx_handle_t* out, uint32_t* type) {
         free(ios);
         return r;
     }
-    if ((r = mxio_dispatcher_add(vfs_dispatcher, h[0], (void*) vfs_handler, ios)) < 0) {
+    if ((r = AddDispatcher(h[0], ios)) < 0) {
         mx_handle_close(h[0]);
         mx_handle_close(h[1]);
         free(ios);
@@ -166,9 +177,7 @@ static mx_status_t iostate_get_token(uint64_t vnode_cookie, vfs_iostate* ios, mx
     return sizeof(mx_handle_t);
 }
 
-mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
-    vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
-    Vnode* vn = ios->vn;
+mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iostate* ios) {
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
@@ -484,4 +493,51 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         return ERR_NOT_SUPPORTED;
     }
+}
+
+// TODO(orr): temporary; prevent multithread weirdness while we
+// make locking more fine grained
+static mtx_t vfs_big_lock = MTX_INIT;
+
+mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
+    vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
+
+    mtx_lock(&vfs_big_lock);
+    Vnode* vn = ios->vn;
+
+    mx_status_t status = vfs_handler_vn(msg, rh, vn, ios);
+
+    mtx_unlock(&vfs_big_lock);
+
+    return status;
+}
+
+mx_handle_t vfs_rpc_server(mx_handle_t h, Vnode* vn) {
+    vfs_iostate_t* ios;
+    mx_status_t r;
+
+    if ((ios = (vfs_iostate_t*)calloc(1, sizeof(vfs_iostate_t))) == NULL)
+        return ERR_NO_MEMORY;
+    ios->vn = vn;  // reference passed in by caller
+    ios->io_flags = 0;
+
+    if ((r = mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler)) < 0) {
+        free(ios);
+        return r;
+    }
+
+    // Tell the calling process that we've mounted
+    if ((r = mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0)) != NO_ERROR) {
+        free(ios);
+        return r;
+    }
+
+    if ((r = mxio_dispatcher_add(vfs_dispatcher, h, (void*) vfs_handler, ios)) < 0) {
+        free(ios);
+        return r;
+    }
+
+    // calling thread blocks
+    mxio_dispatcher_run(vfs_dispatcher);
+    return NO_ERROR;
 }

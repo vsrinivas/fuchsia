@@ -19,8 +19,8 @@
 #include <magenta/compiler.h>
 #include <magenta/types.h>
 
-#include <mxio/vfs.h>
 #include <mxio/dispatcher.h>
+#include <mxio/vfs.h>
 
 // VFS Helpers (vfs.c)
 #define V_FLAG_DEVICE                 1
@@ -174,6 +174,10 @@ public:
     // The vnode is "open elsewhere".
     bool IsBusy() const { return refcount_ > 1; }
 
+#ifdef __Fuchsia__
+    virtual mx_status_t AddDispatcher(mx_handle_t h, void* cookie);
+#endif
+
     mx_handle_t DetachRemote() {
         mx_handle_t h = remote_;
         remote_ = MX_HANDLE_INVALID;
@@ -252,17 +256,6 @@ extern mxio_dispatcher_t* vfs_dispatcher;
 // Handle incoming mxrio messages.
 mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
-typedef struct vfs_iostate {
-    Vnode* vn;
-    // Handle to event which allows client to refer to open vnodes in multi-path
-    // operations (see: link, rename). Defaults to MX_HANDLE_INVALID.
-    // Validated on the server side using cookies.
-    mx_handle_t token;
-    vdircookie_t dircookie;
-    size_t io_off;
-    uint32_t io_flags;
-} vfs_iostate_t;
-
 // Send an unmount signal on a handle to a filesystem and await a response.
 mx_status_t vfs_unmount_handle(mx_handle_t h, mx_time_t timeout);
 
@@ -272,5 +265,8 @@ mx_status_t vfs_uninstall_all(mx_time_t timeout);
 
 // Generic implementation of vfs_handler, which dispatches messages to fs operations.
 mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
+
+// vfs dispatch  (NOTE: only used for mounted roots)
+mx_handle_t vfs_rpc_server(mx_handle_t h, Vnode* vn);
 
 __END_CDECLS
