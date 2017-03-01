@@ -28,9 +28,7 @@ static uint32_t cookie = 0x12345678;
 int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_out) {
     if ((hostname == NULL) || (hostname[0] == 0)) {
         char* envname = getenv("MAGENTA_NODENAME");
-        if (envname) {
-            hostname = envname ? envname : "*";
-        }
+        hostname = envname && envname[0] != 0 ? envname : "*";
     }
     size_t hostname_len = strlen(hostname) + 1;
     if (hostname_len > MAXSIZE) {
