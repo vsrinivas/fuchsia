@@ -10,7 +10,7 @@
 #include <mx/channel.h>
 
 #include "apps/media/services/media_player.fidl.h"
-#include "apps/media/src/net/media_player_net.h"
+#include "apps/media/src/net/media_player_messages.h"
 #include "apps/netconnector/lib/message_relay.h"
 #include "apps/netconnector/lib/net_stub_responder.h"
 #include "lib/ftl/macros.h"
@@ -19,8 +19,7 @@ namespace media {
 
 // Controls a media player on behalf of a remote party.
 class MediaPlayerNetStub
-    : public MediaPlayerNet,
-      public std::enable_shared_from_this<MediaPlayerNetStub> {
+    : public std::enable_shared_from_this<MediaPlayerNetStub> {
  public:
   MediaPlayerNetStub(
       MediaPlayer* player,
@@ -31,20 +30,6 @@ class MediaPlayerNetStub
   ~MediaPlayerNetStub();
 
  private:
-  template <typename T>
-  T* MessageCast(std::vector<uint8_t>* message) {
-    if (message->size() != sizeof(T)) {
-      FTL_LOG(ERROR) << "Expected message size " << sizeof(T) << ", got size "
-                     << message->size();
-      message_relay_.CloseChannel();
-      return nullptr;
-    }
-
-    T* result = reinterpret_cast<T*>(message->data());
-    result->NetToHost();
-    return result;
-  }
-
   // Handles a message received via the relay.
   void HandleReceivedMessage(std::vector<uint8_t> message);
 

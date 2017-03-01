@@ -8,7 +8,7 @@
 #include <string>
 
 #include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/src/net/media_player_net.h"
+#include "apps/media/src/net/media_player_messages.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/util/fidl_publisher.h"
 #include "apps/netconnector/lib/message_relay.h"
@@ -17,8 +17,7 @@ namespace media {
 
 // Proxy that allows a client to control a remote player.
 class MediaPlayerNetProxy : public MediaServiceImpl::Product<MediaPlayer>,
-                            public MediaPlayer,
-                            public MediaPlayerNet {
+                            public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerNetProxy> Create(
       std::string device_name,
@@ -64,7 +63,7 @@ class MediaPlayerNetProxy : public MediaServiceImpl::Product<MediaPlayer>,
 
   netconnector::MessageRelay message_relay_;
   FidlPublisher<GetStatusCallback> status_publisher_;
-  MediaPlayerStatus status_;
+  MediaPlayerStatusPtr status_;
   TimelineFunction remote_to_local_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerNetProxy);

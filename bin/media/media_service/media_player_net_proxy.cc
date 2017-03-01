@@ -29,7 +29,8 @@ MediaPlayerNetProxy::MediaPlayerNetProxy(
     std::string service_name,
     fidl::InterfaceRequest<MediaPlayer> request,
     MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner) {
+    : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner),
+      status_(MediaPlayerStatus::New()) {
   FTL_DCHECK(owner);
 
   status_publisher_.SetCallbackRunner(
@@ -70,25 +71,18 @@ MediaPlayerNetProxy::MediaPlayerNetProxy(
 MediaPlayerNetProxy::~MediaPlayerNetProxy() {}
 
 void MediaPlayerNetProxy::Play() {
-  std::vector<uint8_t> message;
-  NewMessage<PlayMessage>(&message);
-  message_relay_.SendMessage(message);
+  message_relay_.SendMessage(
+      Serializer::Serialize(MediaPlayerInMessage::Play()));
 }
 
 void MediaPlayerNetProxy::Pause() {
-  std::vector<uint8_t> message;
-  NewMessage<PauseMessage>(&message);
-  message_relay_.SendMessage(message);
+  message_relay_.SendMessage(
+      Serializer::Serialize(MediaPlayerInMessage::Pause()));
 }
 
 void MediaPlayerNetProxy::Seek(int64_t position) {
-  std::vector<uint8_t> message;
-  SeekMessage* seek_message = NewMessage<SeekMessage>(&message);
-
-  seek_message->position_ = position;
-
-  seek_message->HostToNet();
-  message_relay_.SendMessage(message);
+  message_relay_.SendMessage(
+      Serializer::Serialize(MediaPlayerInMessage::Seek(position)));
 }
 
 void MediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
@@ -97,90 +91,56 @@ void MediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
 }
 
 void MediaPlayerNetProxy::SendTimeCheckMessage() {
-  std::vector<uint8_t> message;
-  TimeCheckMessage* time_check_message = NewMessage<TimeCheckMessage>(&message);
-
-  time_check_message->sender_time_ = Timeline::local_now();
-  time_check_message->receiver_time_ = 0;
-
-  time_check_message->HostToNet();
-  message_relay_.SendMessage(message);
+  message_relay_.SendMessage(Serializer::Serialize(
+      MediaPlayerInMessage::TimeCheckRequest(Timeline::local_now())));
 }
 
-void MediaPlayerNetProxy::HandleReceivedMessage(std::vector<uint8_t> message) {
-  if (message.size() == 0) {
-    FTL_LOG(ERROR) << "Zero-sized message received";
+void MediaPlayerNetProxy::HandleReceivedMessage(
+    std::vector<uint8_t> serial_message) {
+  std::unique_ptr<MediaPlayerOutMessage> message;
+  Deserializer deserializer(serial_message);
+  deserializer >> message;
+
+  if (!deserializer.complete()) {
+    FTL_LOG(ERROR) << "Malformed message received";
     message_relay_.CloseChannel();
     return;
   }
 
-  switch (static_cast<MessageType>(message.data()[0])) {
-    case MessageType::kTimeCheck: {
-      TimeCheckMessage* time_check_message =
-          MessageCast<TimeCheckMessage>(&message);
-      if (time_check_message != nullptr) {
-        // Assume the sender's time was sampled halfway between the time we
-        // sent the original TimeCheckMessage and the time this response
-        // arrived (that is, that the transit times there and back are equal).
-        // Also endeavor not to overflow.
-        int64_t local_then =
-            time_check_message->receiver_time_ +
-            (Timeline::local_now() - time_check_message->receiver_time_) / 2;
+  FTL_DCHECK(message);
 
-        // Assume our clocks run at the same rate.
-        remote_to_local_ = TimelineFunction(time_check_message->sender_time_,
-                                            local_then, 1, 1);
-      }
+  switch (message->type_) {
+    case MediaPlayerOutMessageType::kTimeCheckResponse: {
+      FTL_DCHECK(message->time_check_response_);
+      // Estimate the local system system time when the responder's clock was
+      // samples on the remote machine. Assume the clock was sampled halfway
+      // between the time we sent the original TimeCheckRequestMessage and the
+      // time this TimeCheckResponseMessage arrived. In other words, assume that
+      // the transit times there and back are equal. Normally, one would
+      // calculate the average of two values with (a + b) / 2. We use
+      // a + (b - a) / 2, because it's less likely to overflow.
+      int64_t local_then = message->time_check_response_->requestor_time_ +
+                           (Timeline::local_now() -
+                            message->time_check_response_->requestor_time_) /
+                               2;
+
+      // Create a function that translates remote system time to local system
+      // time. We assume that both clocks run at the same rate (hence 1, 1).
+      remote_to_local_ = TimelineFunction(
+          message->time_check_response_->responder_time_, local_then, 1, 1);
     } break;
 
-    case MessageType::kStatus: {
-      StatusMessage* status_message = MessageCast<StatusMessage>(&message);
-      if (status_message != nullptr) {
-        if (remote_to_local_.subject_delta() == 0) {
-          FTL_LOG(ERROR) << "Received status message before time check message";
-          message_relay_.CloseChannel();
-          return;
-        }
-
-        if (status_message->reference_time_ == kUnspecifiedTime) {
-          // No transform was supplied.
-          status_.timeline_transform.reset();
-        } else {
-          // Transform was supplied.
-          if (!status_.timeline_transform) {
-            status_.timeline_transform = TimelineTransform::New();
-          }
-
-          status_.timeline_transform->reference_time =
-              remote_to_local_(status_message->reference_time_);
-          status_.timeline_transform->subject_time =
-              status_message->subject_time_;
-          status_.timeline_transform->reference_delta =
-              status_message->reference_delta_;
-          status_.timeline_transform->subject_delta =
-              status_message->subject_delta_;
-        }
-
-        status_.end_of_stream = status_message->end_of_stream_;
-
-        if (status_message->duration_ == 0) {
-          status_.metadata.reset();
-        } else {
-          if (!status_.metadata) {
-            status_.metadata = MediaMetadata::New();
-          }
-
-          status_.metadata->duration = status_message->duration_;
-        }
-
-        status_publisher_.SendUpdates();
+    case MediaPlayerOutMessageType::kStatus:
+      FTL_DCHECK(message->status_);
+      status_ = std::move(message->status_->status_);
+      if (status_->timeline_transform) {
+        // Use the remote-to-local conversion established after the time check
+        // transaction to translate reference time into local system time.
+        status_->timeline_transform->reference_time =
+            remote_to_local_(status_->timeline_transform->reference_time);
       }
-    } break;
-
-    default:
-      FTL_LOG(ERROR) << "Unrecognized packet type " << message.data()[0];
-      message_relay_.CloseChannel();
-      return;
+      status_publisher_.SendUpdates();
+      break;
   }
 }
 

@@ -33,94 +33,60 @@ MediaPlayerNetStub::MediaPlayerNetStub(
 
 MediaPlayerNetStub::~MediaPlayerNetStub() {}
 
-void MediaPlayerNetStub::HandleReceivedMessage(std::vector<uint8_t> message) {
-  if (message.size() == 0) {
-    FTL_LOG(ERROR) << "Zero-sized message received";
+void MediaPlayerNetStub::HandleReceivedMessage(
+    std::vector<uint8_t> serial_message) {
+  std::unique_ptr<MediaPlayerInMessage> message;
+  Deserializer deserializer(serial_message);
+  deserializer >> message;
+
+  if (!deserializer.complete()) {
+    FTL_LOG(ERROR) << "Malformed message received";
     message_relay_.CloseChannel();
     return;
   }
 
-  switch (static_cast<MessageType>(message.data()[0])) {
-    case MessageType::kTimeCheck: {
-      TimeCheckMessage* time_check_message =
-          MessageCast<TimeCheckMessage>(&message);
-      if (time_check_message != nullptr) {
-        time_check_message->receiver_time_ = time_check_message->sender_time_;
-        time_check_message->sender_time_ = Timeline::local_now();
+  FTL_DCHECK(message);
 
-        time_check_message->HostToNet();
-        message_relay_.SendMessage(message);
+  switch (message->type_) {
+    case MediaPlayerInMessageType::kTimeCheckRequest:
+      FTL_DCHECK(message->time_check_request_);
+      message_relay_.SendMessage(
+          Serializer::Serialize(MediaPlayerOutMessage::TimeCheckResponse(
+              message->time_check_request_->requestor_time_,
+              Timeline::local_now())));
 
-        // Do this here so we never send a status message before we respond
-        // to the initial time check message.
-        HandleStatusUpdates();
-      }
-    } break;
-
-    case MessageType::kPlay:
-      if (MessageCast<PlayMessage>(&message) != nullptr) {
-        player_->Play();
-      }
+      // Do this here so we never send a status message before we respond
+      // to the initial time check message.
+      HandleStatusUpdates();
       break;
 
-    case MessageType::kPause:
-      if (MessageCast<PauseMessage>(&message) != nullptr) {
-        player_->Pause();
-      }
+    case MediaPlayerInMessageType::kPlay:
+      player_->Play();
       break;
 
-    case MessageType::kSeek: {
-      SeekMessage* seek_message = MessageCast<SeekMessage>(&message);
-      if (seek_message != nullptr) {
-        player_->Seek(seek_message->position_);
-      }
-    } break;
+    case MediaPlayerInMessageType::kPause:
+      player_->Pause();
+      break;
 
-    default:
-      FTL_LOG(ERROR) << "Unrecognized packet type " << message.data()[0];
-      message_relay_.CloseChannel();
-      return;
+    case MediaPlayerInMessageType::kSeek:
+      FTL_DCHECK(message->seek_);
+      player_->Seek(message->seek_->position_);
+      break;
   }
 }
 
 void MediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
                                              MediaPlayerStatusPtr status) {
   if (status) {
-    std::vector<uint8_t> message;
-    StatusMessage* status_message = NewMessage<StatusMessage>(&message);
-
-    if (!status->timeline_transform) {
-      status_message->reference_time_ = kUnspecifiedTime;
-      status_message->subject_time_ = kUnspecifiedTime;
-      status_message->reference_delta_ = 0;
-      status_message->subject_delta_ = 0;
-    } else {
-      status_message->reference_time_ =
-          status->timeline_transform->reference_time;
-      status_message->subject_time_ = status->timeline_transform->subject_time;
-      status_message->reference_delta_ =
-          status->timeline_transform->reference_delta;
-      status_message->subject_delta_ =
-          status->timeline_transform->subject_delta;
-    }
-
-    status_message->end_of_stream_ = status->end_of_stream;
-
-    if (status->metadata) {
-      status_message->duration_ = status->metadata->duration;
-    } else {
-      status_message->duration_ = 0;
-    }
-
-    status_message->HostToNet();
-    message_relay_.SendMessage(message);
+    message_relay_.SendMessage(Serializer::Serialize(
+        MediaPlayerOutMessage::Status(std::move(status))));
   }
 
   // Request a status update.
   player_->GetStatus(
-      version, [weak_this =
-                    std::weak_ptr<MediaPlayerNetStub>(shared_from_this())](
-                   uint64_t version, MediaPlayerStatusPtr status) {
+      version,
+      [weak_this = std::weak_ptr<MediaPlayerNetStub>(shared_from_this())](
+          uint64_t version, MediaPlayerStatusPtr status) {
         auto shared_this = weak_this.lock();
         if (shared_this) {
           shared_this->HandleStatusUpdates(version, std::move(status));

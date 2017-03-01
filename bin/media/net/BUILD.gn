@@ -6,7 +6,6 @@ source_set("net") {
   sources = [
     "media_player_messages.cc",
     "media_player_messages.h",
-    "media_player_net.h",
     "media_player_net_stub.cc",
     "media_player_net_stub.h",
     "serialization.cc",
