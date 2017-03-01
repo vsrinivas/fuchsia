@@ -301,6 +301,7 @@ bool test_scroll_up() {
     tc.AssertLineContains(1, "CCC");
     tc.AssertLineContains(2, "DDD");
     tc.AssertLineContains(3, "");
+    EXPECT_EQ(vc_device_get_scrollback_lines(tc.vc_dev), 1, "");
 
     END_TEST;
 }
@@ -318,6 +319,7 @@ bool test_insert_lines() {
     tc.AssertLineContains(2, "   Z");
     tc.AssertLineContains(3, "");
     tc.AssertLineContains(4, "CCC");
+    EXPECT_EQ(vc_device_get_scrollback_lines(tc.vc_dev), 0, "");
 
     END_TEST;
 }
@@ -335,6 +337,10 @@ bool test_delete_lines() {
     tc.AssertLineContains(2, "EEEZ");
     tc.AssertLineContains(3, "");
     tc.AssertLineContains(4, "");
+    // TODO(mseaborn): We probably don't want to be adding the deleted
+    // lines to the scrollback in this case, because they are not from the
+    // top of the console.
+    EXPECT_EQ(vc_device_get_scrollback_lines(tc.vc_dev), 2, "");
 
     END_TEST;
 }
