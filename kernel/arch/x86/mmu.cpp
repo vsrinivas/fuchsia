@@ -91,7 +91,8 @@ bool x86_is_vaddr_canonical(vaddr_t vaddr) {
     min_vaddr_hihalf = ~max_vaddr_lohalf;
 
     /* Check to see if the address in a canonical address */
-    if ((vaddr > max_vaddr_lohalf) && (vaddr < min_vaddr_hihalf)) return false;
+    if ((vaddr > max_vaddr_lohalf) && (vaddr < min_vaddr_hihalf))
+        return false;
 #endif
 
     return true;
@@ -102,7 +103,8 @@ bool x86_is_vaddr_canonical(vaddr_t vaddr) {
  */
 static bool x86_mmu_check_vaddr(vaddr_t vaddr) {
     /* Check to see if the address is PAGE aligned */
-    if (!IS_ALIGNED(vaddr, PAGE_SIZE)) return false;
+    if (!IS_ALIGNED(vaddr, PAGE_SIZE))
+        return false;
 
     return x86_is_vaddr_canonical(vaddr);
 }
@@ -114,7 +116,8 @@ static bool x86_mmu_check_paddr(paddr_t paddr) {
     uint64_t max_paddr;
 
     /* Check to see if the address is PAGE aligned */
-    if (!IS_ALIGNED(paddr, PAGE_SIZE)) return false;
+    if (!IS_ALIGNED(paddr, PAGE_SIZE))
+        return false;
 
     max_paddr = ((uint64_t)1ull << g_paddr_width) - 1;
 
@@ -130,7 +133,8 @@ template <int Level>
 static arch_flags_t x86_arch_flags(arch_aspace_t* aspace, uint flags) {
     arch_flags_t arch_flags = 0;
 
-    if (flags & ARCH_MMU_FLAG_PERM_WRITE) arch_flags |= X86_MMU_PG_RW;
+    if (flags & ARCH_MMU_FLAG_PERM_WRITE)
+        arch_flags |= X86_MMU_PG_RW;
 
     if (flags & ARCH_MMU_FLAG_PERM_USER) {
         arch_flags |= X86_MMU_PG_U;
@@ -142,50 +146,51 @@ static arch_flags_t x86_arch_flags(arch_aspace_t* aspace, uint flags) {
     }
 
 #if defined(PAE_MODE_ENABLED) || ARCH_X86_64
-    if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE)) arch_flags |= X86_MMU_PG_NX;
+    if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE))
+        arch_flags |= X86_MMU_PG_NX;
 
     if (Level > 0) {
         switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
-            case ARCH_MMU_FLAG_CACHED:
-                arch_flags |= X86_MMU_LARGE_PAT_WRITEBACK;
-                break;
-            case ARCH_MMU_FLAG_UNCACHED_DEVICE:
-            case ARCH_MMU_FLAG_UNCACHED:
-                arch_flags |= X86_MMU_LARGE_PAT_UNCACHABLE;
-                break;
-            case ARCH_MMU_FLAG_WRITE_COMBINING:
-                arch_flags |= X86_MMU_LARGE_PAT_WRITE_COMBINING;
-                break;
-            default:
-                PANIC_UNIMPLEMENTED;
+        case ARCH_MMU_FLAG_CACHED:
+            arch_flags |= X86_MMU_LARGE_PAT_WRITEBACK;
+            break;
+        case ARCH_MMU_FLAG_UNCACHED_DEVICE:
+        case ARCH_MMU_FLAG_UNCACHED:
+            arch_flags |= X86_MMU_LARGE_PAT_UNCACHABLE;
+            break;
+        case ARCH_MMU_FLAG_WRITE_COMBINING:
+            arch_flags |= X86_MMU_LARGE_PAT_WRITE_COMBINING;
+            break;
+        default:
+            PANIC_UNIMPLEMENTED;
         }
     } else {
         switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
-            case ARCH_MMU_FLAG_CACHED:
-                arch_flags |= X86_MMU_PTE_PAT_WRITEBACK;
-                break;
-            case ARCH_MMU_FLAG_UNCACHED_DEVICE:
-            case ARCH_MMU_FLAG_UNCACHED:
-                arch_flags |= X86_MMU_PTE_PAT_UNCACHABLE;
-                break;
-            case ARCH_MMU_FLAG_WRITE_COMBINING:
-                arch_flags |= X86_MMU_PTE_PAT_WRITE_COMBINING;
-                break;
-            default:
-                PANIC_UNIMPLEMENTED;
+        case ARCH_MMU_FLAG_CACHED:
+            arch_flags |= X86_MMU_PTE_PAT_WRITEBACK;
+            break;
+        case ARCH_MMU_FLAG_UNCACHED_DEVICE:
+        case ARCH_MMU_FLAG_UNCACHED:
+            arch_flags |= X86_MMU_PTE_PAT_UNCACHABLE;
+            break;
+        case ARCH_MMU_FLAG_WRITE_COMBINING:
+            arch_flags |= X86_MMU_PTE_PAT_WRITE_COMBINING;
+            break;
+        default:
+            PANIC_UNIMPLEMENTED;
         }
     }
 #else
     switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
-        case ARCH_MMU_FLAG_CACHED:
-            break;
-        case ARCH_MMU_FLAG_WRITE_COMBINING:
-        case ARCH_MMU_FLAG_UNCACHED_DEVICE:
-        case ARCH_MMU_FLAG_UNCACHED:
-            arch_flags |= X86_MMU_PG_CD | X86_MMU_PG_WT;
-            break;
-        default:
-            PANIC_UNIMPLEMENTED;
+    case ARCH_MMU_FLAG_CACHED:
+        break;
+    case ARCH_MMU_FLAG_WRITE_COMBINING:
+    case ARCH_MMU_FLAG_UNCACHED_DEVICE:
+    case ARCH_MMU_FLAG_UNCACHED:
+        arch_flags |= X86_MMU_PG_CD | X86_MMU_PG_WT;
+        break;
+    default:
+        PANIC_UNIMPLEMENTED;
     }
 #endif
     return arch_flags;
@@ -205,40 +210,43 @@ static arch_flags_t get_x86_intermediate_arch_flags() {
 static uint arch_mmu_flags(arch_flags_t flags, enum page_table_levels level) {
     uint mmu_flags = ARCH_MMU_FLAG_PERM_READ;
 
-    if (flags & X86_MMU_PG_RW) mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
+    if (flags & X86_MMU_PG_RW)
+        mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
 
-    if (flags & X86_MMU_PG_U) mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
+    if (flags & X86_MMU_PG_U)
+        mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
 
 #if defined(PAE_MODE_ENABLED) || ARCH_X86_64
-    if (!(flags & X86_MMU_PG_NX)) mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    if (!(flags & X86_MMU_PG_NX))
+        mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
 
     if (level > 0) {
         switch (flags & X86_MMU_LARGE_PAT_MASK) {
-            case X86_MMU_LARGE_PAT_WRITEBACK:
-                mmu_flags |= ARCH_MMU_FLAG_CACHED;
-                break;
-            case X86_MMU_LARGE_PAT_UNCACHABLE:
-                mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
-                break;
-            case X86_MMU_LARGE_PAT_WRITE_COMBINING:
-                mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
-                break;
-            default:
-                PANIC_UNIMPLEMENTED;
+        case X86_MMU_LARGE_PAT_WRITEBACK:
+            mmu_flags |= ARCH_MMU_FLAG_CACHED;
+            break;
+        case X86_MMU_LARGE_PAT_UNCACHABLE:
+            mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
+            break;
+        case X86_MMU_LARGE_PAT_WRITE_COMBINING:
+            mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
+            break;
+        default:
+            PANIC_UNIMPLEMENTED;
         }
     } else {
         switch (flags & X86_MMU_PTE_PAT_MASK) {
-            case X86_MMU_PTE_PAT_WRITEBACK:
-                mmu_flags |= ARCH_MMU_FLAG_CACHED;
-                break;
-            case X86_MMU_PTE_PAT_UNCACHABLE:
-                mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
-                break;
-            case X86_MMU_PTE_PAT_WRITE_COMBINING:
-                mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
-                break;
-            default:
-                PANIC_UNIMPLEMENTED;
+        case X86_MMU_PTE_PAT_WRITEBACK:
+            mmu_flags |= ARCH_MMU_FLAG_CACHED;
+            break;
+        case X86_MMU_PTE_PAT_UNCACHABLE:
+            mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
+            break;
+        case X86_MMU_PTE_PAT_WRITE_COMBINING:
+            mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
+            break;
+        default:
+            PANIC_UNIMPLEMENTED;
         }
     }
 #else
@@ -258,19 +266,19 @@ static inline uint vaddr_to_index(vaddr_t vaddr) {
 
     switch (Level) {
 #if X86_PAGING_LEVELS > 3
-        case PML4_L:
-            return VADDR_TO_PML4_INDEX(vaddr);
+    case PML4_L:
+        return VADDR_TO_PML4_INDEX(vaddr);
 #endif
 #if X86_PAGING_LEVELS > 2
-        case PDP_L:
-            return VADDR_TO_PDP_INDEX(vaddr);
+    case PDP_L:
+        return VADDR_TO_PDP_INDEX(vaddr);
 #endif
-        case PD_L:
-            return VADDR_TO_PD_INDEX(vaddr);
-        case PT_L:
-            return VADDR_TO_PT_INDEX(vaddr);
-        default:
-            panic("vaddr_to_index: invalid level\n");
+    case PD_L:
+        return VADDR_TO_PD_INDEX(vaddr);
+    case PT_L:
+        return VADDR_TO_PT_INDEX(vaddr);
+    default:
+        panic("vaddr_to_index: invalid level\n");
     }
 }
 
@@ -287,18 +295,18 @@ static paddr_t paddr_from_pte(pt_entry_t pte) {
     paddr_t pa;
     switch (Level) {
 #if X86_PAGING_LEVELS > 2
-        case PDP_L:
-            pa = (pte & X86_HUGE_PAGE_FRAME);
-            break;
+    case PDP_L:
+        pa = (pte & X86_HUGE_PAGE_FRAME);
+        break;
 #endif
-        case PD_L:
-            pa = (pte & X86_LARGE_PAGE_FRAME);
-            break;
-        case PT_L:
-            pa = (pte & X86_PG_FRAME);
-            break;
-        default:
-            panic("paddr_from_pte at unhandled level %d\n", Level);
+    case PD_L:
+        pa = (pte & X86_LARGE_PAGE_FRAME);
+        break;
+    case PT_L:
+        pa = (pte & X86_PG_FRAME);
+        break;
+    default:
+        panic("paddr_from_pte at unhandled level %d\n", Level);
     }
 
     LTRACEF_LEVEL(2, "pte 0x%" PRIxPTE " , level %d, paddr %#" PRIxPTR "\n", pte, Level, pa);
@@ -311,20 +319,20 @@ static inline size_t page_size() {
     static_assert(Level >= 0, "level too low");
     static_assert(Level < X86_PAGING_LEVELS, "level too high");
     switch (Level) {
-        case PT_L:
-            return 1ULL << PT_SHIFT;
-        case PD_L:
-            return 1ULL << PD_SHIFT;
+    case PT_L:
+        return 1ULL << PT_SHIFT;
+    case PD_L:
+        return 1ULL << PD_SHIFT;
 #if X86_PAGING_LEVELS > 2
-        case PDP_L:
-            return 1ULL << PDP_SHIFT;
+    case PDP_L:
+        return 1ULL << PDP_SHIFT;
 #if X86_PAGING_LEVELS > 3
-        case PML4_L:
-            return 1ULL << PML4_SHIFT;
+    case PML4_L:
+        return 1ULL << PML4_SHIFT;
 #endif
 #endif
-        default:
-            panic("page_size: invalid level\n");
+    default:
+        panic("page_size: invalid level\n");
     }
 }
 
@@ -363,17 +371,17 @@ static void tlb_invalidate_page_task(void* raw_context) {
 
     switch (context->level) {
 #if X86_PAGING_LEVELS > 3
-        case PML4_L:
-            tlb_global_invalidate();
-            break;
+    case PML4_L:
+        tlb_global_invalidate();
+        break;
 #endif
 #if X86_PAGING_LEVELS > 2
-        case PDP_L:
+    case PDP_L:
 #endif
-        case PD_L:
-        case PT_L:
-            __asm__ volatile("invlpg %0" ::"m"(*(uint8_t*)context->vaddr));
-            break;
+    case PD_L:
+    case PT_L:
+        __asm__ volatile("invlpg %0" ::"m"(*(uint8_t*)context->vaddr));
+        break;
     }
 }
 
@@ -456,7 +464,7 @@ static void unmap_entry(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* pte, b
  * @brief Allocating a new page table
  */
 static pt_entry_t* _map_alloc_page(void) {
-    vm_page_t *p;
+    vm_page_t* p;
 
     pt_entry_t* page_ptr = static_cast<pt_entry_t*>(pmm_alloc_kpage(nullptr, &p));
     DEBUG_ASSERT(page_ptr);
@@ -527,7 +535,8 @@ static status_t x86_mmu_split(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* 
  * @brief given a page table entry, return a pointer to the next page table one level down
  */
 static inline pt_entry_t* get_next_table_from_entry(pt_entry_t entry) {
-    if (!IS_PAGE_PRESENT(entry) || IS_LARGE_PAGE(entry)) return nullptr;
+    if (!IS_PAGE_PRESENT(entry) || IS_LARGE_PAGE(entry))
+        return nullptr;
 
     return (pt_entry_t*)X86_PHYS_TO_VIRT(entry & X86_PG_FRAME);
 }
@@ -535,18 +544,18 @@ static inline pt_entry_t* get_next_table_from_entry(pt_entry_t entry) {
 static bool level_supports_ps(page_table_levels level) {
     DEBUG_ASSERT(level != 0);
     switch (level) {
-        case PD_L:
-            return true;
+    case PD_L:
+        return true;
 #if X86_PAGING_LEVELS > 2
-        case PDP_L:
-            return supports_huge_pages;
+    case PDP_L:
+        return supports_huge_pages;
 #if X86_PAGING_LEVELS > 3
-        case PML4_L:
-            return false;
+    case PML4_L:
+        return false;
 #endif
 #endif
-        default:
-            panic("Unreachable case in level_supports_ps");
+    default:
+        panic("Unreachable case in level_supports_ps");
     }
 }
 
@@ -573,7 +582,8 @@ static status_t x86_mmu_get_mapping(pt_entry_t* table, vaddr_t vaddr,
 
     uint index = vaddr_to_index<Level>(vaddr);
     pt_entry_t* e = table + index;
-    if (!IS_PAGE_PRESENT(*e)) return ERR_NOT_FOUND;
+    if (!IS_PAGE_PRESENT(*e))
+        return ERR_NOT_FOUND;
 
     /* if this is a large page, stop here */
     if (IS_LARGE_PAGE(*e)) {
@@ -593,7 +603,8 @@ status_t x86_mmu_get_mapping<PT_L>(pt_entry_t* table, vaddr_t vaddr,
     /* do the final page table lookup */
     uint index = vaddr_to_index<PT_L>(vaddr);
     pt_entry_t* e = table + index;
-    if (!IS_PAGE_PRESENT(*e)) return ERR_NOT_FOUND;
+    if (!IS_PAGE_PRESENT(*e))
+        return ERR_NOT_FOUND;
 
     *mapping = e;
     *ret_level = PT_L;
@@ -671,14 +682,14 @@ static bool x86_mmu_remove_mapping(arch_aspace_t* aspace, pt_entry_t* table, con
         MappingCursor cursor;
         pt_entry_t* next_table = get_next_table_from_entry(*e);
         bool lower_unmapped = x86_mmu_remove_mapping<Level - 1>(
-                aspace, next_table, *new_cursor, &cursor);
+            aspace, next_table, *new_cursor, &cursor);
 
         // If we were requesting to unmap everything in the lower page table,
         // we know we can unmap the lower level page table.  Otherwise, if
         // we unmapped anything in the lower level, check to see if that
         // level is now empty.
         bool unmap_page_table =
-                page_aligned<Level>(new_cursor->vaddr) && new_cursor->size >= ps;
+            page_aligned<Level>(new_cursor->vaddr) && new_cursor->size >= ps;
         if (!unmap_page_table && lower_unmapped) {
             uint lower_idx;
             for (lower_idx = 0; lower_idx < NO_OF_PT_ENTRIES; ++lower_idx) {
@@ -967,15 +978,18 @@ status_t x86_mmu_update_mapping<PT_L>(arch_aspace_t* aspace, pt_entry_t* table, 
     return NO_ERROR;
 }
 
-status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count, size_t *unmapped) {
+status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count, size_t* unmapped) {
     LTRACEF("aspace %p, vaddr %#" PRIxPTR ", count %#zx\n", aspace, vaddr, count);
 
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 
-    if (!x86_mmu_check_vaddr(vaddr)) return ERR_INVALID_ARGS;
-    if (!is_valid_vaddr(aspace, vaddr)) return ERR_INVALID_ARGS;
-    if (count == 0) return NO_ERROR;
+    if (!x86_mmu_check_vaddr(vaddr))
+        return ERR_INVALID_ARGS;
+    if (!is_valid_vaddr(aspace, vaddr))
+        return ERR_INVALID_ARGS;
+    if (count == 0)
+        return NO_ERROR;
 
     DEBUG_ASSERT(aspace->pt_virt);
 
@@ -994,17 +1008,21 @@ status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count
 }
 
 status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr,
-        const size_t count, uint flags, size_t *mapped) {
+                      const size_t count, uint flags, size_t* mapped) {
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %#zx flags 0x%x\n", aspace, vaddr, paddr,
             count, flags);
 
-    if ((!x86_mmu_check_paddr(paddr))) return ERR_INVALID_ARGS;
-    if (!x86_mmu_check_vaddr(vaddr)) return ERR_INVALID_ARGS;
-    if (!is_valid_vaddr(aspace, vaddr)) return ERR_INVALID_ARGS;
-    if (count == 0) return NO_ERROR;
+    if ((!x86_mmu_check_paddr(paddr)))
+        return ERR_INVALID_ARGS;
+    if (!x86_mmu_check_vaddr(vaddr))
+        return ERR_INVALID_ARGS;
+    if (!is_valid_vaddr(aspace, vaddr))
+        return ERR_INVALID_ARGS;
+    if (count == 0)
+        return NO_ERROR;
 
     if (!(flags & ARCH_MMU_FLAG_PERM_READ))
         return ERR_INVALID_ARGS;
@@ -1035,9 +1053,12 @@ status_t arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, ui
 
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx flags 0x%x\n", aspace, vaddr, count, flags);
 
-    if (!x86_mmu_check_vaddr(vaddr)) return ERR_INVALID_ARGS;
-    if (!is_valid_vaddr(aspace, vaddr)) return ERR_INVALID_ARGS;
-    if (count == 0) return NO_ERROR;
+    if (!x86_mmu_check_vaddr(vaddr))
+        return ERR_INVALID_ARGS;
+    if (!is_valid_vaddr(aspace, vaddr))
+        return ERR_INVALID_ARGS;
+    if (count == 0)
+        return NO_ERROR;
 
     if (!(flags & ARCH_MMU_FLAG_PERM_READ))
         return ERR_INVALID_ARGS;
@@ -1081,8 +1102,10 @@ void x86_mmu_early_init() {
     /* if we got something meaningful, override the defaults.
      * some combinations of cpu on certain emulators seems to return
      * nonsense paddr widths (1), so trim it. */
-    if (paddr_width > g_paddr_width) g_paddr_width = paddr_width;
-    if (vaddr_width > g_vaddr_width) g_vaddr_width = vaddr_width;
+    if (paddr_width > g_paddr_width)
+        g_paddr_width = paddr_width;
+    if (vaddr_width > g_vaddr_width)
+        g_vaddr_width = vaddr_width;
 
     LTRACEF("paddr_width %u vaddr_width %u\n", g_paddr_width, g_vaddr_width);
 }
@@ -1113,7 +1136,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
 #else
         /* allocate a top level page table for the new address space */
         paddr_t pa;
-        vm_page_t *p;
+        vm_page_t* p;
         aspace->pt_virt = (pt_entry_t*)pmm_alloc_kpage(&pa, &p);
         if (!aspace->pt_virt) {
             TRACEF("error allocating top level page directory\n");
@@ -1145,7 +1168,7 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
     DEBUG_ASSERT(aspace->active_cpus == 0);
 
 #if LK_DEBUGLEVEL > 1
-    pt_entry_t *table = static_cast<pt_entry_t *>(aspace->pt_virt);
+    pt_entry_t* table = static_cast<pt_entry_t*>(aspace->pt_virt);
     uint start = vaddr_to_index<MAX_PAGING_LEVEL>(aspace->base);
     uint end = vaddr_to_index<MAX_PAGING_LEVEL>(aspace->base + aspace->size - 1);
 
@@ -1174,7 +1197,7 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
     return NO_ERROR;
 }
 
-void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace) {
+void arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* aspace) {
     mp_cpu_mask_t cpu_bit = 1U << arch_curr_cpu_num();
     if (aspace != nullptr) {
         DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
@@ -1217,12 +1240,14 @@ status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, ui
 
     DEBUG_ASSERT(aspace);
 
-    if (!is_valid_vaddr(aspace, vaddr)) return ERR_INVALID_ARGS;
+    if (!is_valid_vaddr(aspace, vaddr))
+        return ERR_INVALID_ARGS;
 
     pt_entry_t* last_valid_entry;
     status_t stat = x86_mmu_get_mapping<MAX_PAGING_LEVEL>(aspace->pt_virt, vaddr, &ret_level,
                                                           &last_valid_entry);
-    if (stat != NO_ERROR) return stat;
+    if (stat != NO_ERROR)
+        return stat;
 
     DEBUG_ASSERT(last_valid_entry);
     LTRACEF("last_valid_entry (%p) 0x%" PRIxPTE ", level %d\n", last_valid_entry, *last_valid_entry,
@@ -1232,21 +1257,21 @@ status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, ui
     if (paddr) {
         switch (ret_level) {
 #if X86_PAGING_LEVELS > 2
-            case PDP_L: /* 1GB page */
-                *paddr = paddr_from_pte<PDP_L>(*last_valid_entry);
-                *paddr |= vaddr & PAGE_OFFSET_MASK_HUGE;
-                break;
+        case PDP_L: /* 1GB page */
+            *paddr = paddr_from_pte<PDP_L>(*last_valid_entry);
+            *paddr |= vaddr & PAGE_OFFSET_MASK_HUGE;
+            break;
 #endif
-            case PD_L: /* 2MB page */
-                *paddr = paddr_from_pte<PD_L>(*last_valid_entry);
-                *paddr |= vaddr & PAGE_OFFSET_MASK_LARGE;
-                break;
-            case PT_L: /* 4K page */
-                *paddr = paddr_from_pte<PT_L>(*last_valid_entry);
-                *paddr |= vaddr & PAGE_OFFSET_MASK_4KB;
-                break;
-            default:
-                panic("arch_mmu_query: unhandled frame level\n");
+        case PD_L: /* 2MB page */
+            *paddr = paddr_from_pte<PD_L>(*last_valid_entry);
+            *paddr |= vaddr & PAGE_OFFSET_MASK_LARGE;
+            break;
+        case PT_L: /* 4K page */
+            *paddr = paddr_from_pte<PT_L>(*last_valid_entry);
+            *paddr |= vaddr & PAGE_OFFSET_MASK_4KB;
+            break;
+        default:
+            panic("arch_mmu_query: unhandled frame level\n");
         }
 
         LTRACEF("paddr %#" PRIxPTR "\n", *paddr);
@@ -1270,8 +1295,10 @@ void x86_mmu_percpu_init(void) {
 
     /* Setting the SMEP & SMAP bit in CR4 */
     ulong cr4 = x86_get_cr4();
-    if (x86_feature_test(X86_FEATURE_SMEP)) cr4 |= X86_CR4_SMEP;
-    if (x86_feature_test(X86_FEATURE_SMAP)) cr4 |= X86_CR4_SMAP;
+    if (x86_feature_test(X86_FEATURE_SMEP))
+        cr4 |= X86_CR4_SMEP;
+    if (x86_feature_test(X86_FEATURE_SMAP))
+        cr4 |= X86_CR4_SMAP;
     x86_set_cr4(cr4);
 
     /* Set NXE bit in MSR_EFER*/
