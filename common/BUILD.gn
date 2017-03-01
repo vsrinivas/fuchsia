@@ -21,9 +21,8 @@ source_set("common") {
   ]
 }
 
-executable("tests") {
+source_set("tests") {
   testonly = true
-  output_name = "common_unittests"
 
   sources = [
     "bt_snoop_logger_unittest.cc",
@@ -35,7 +34,6 @@ executable("tests") {
 
   deps = [
     ":common",
-    "//apps/bluetooth/test:test_main",
     "//lib/ftl",
     "//third_party/gtest",
   ]

@@ -14,8 +14,6 @@ group("bluetooth") {
 group("tests") {
   testonly = true
   deps = [
-    "//apps/bluetooth/common:tests",
-    "//apps/bluetooth/gap:tests",
-    "//apps/bluetooth/hci:tests",
+    "//apps/bluetooth/test:bluetooth_unittests",
   ]
 }

@@ -23,9 +23,8 @@ static_library("hci") {
   ]
 }
 
-executable("tests") {
+source_set("tests") {
   testonly = true
-  output_name = "hci_unittests"
 
   sources = [
     "advertising_report_parser_unittest.cc",
@@ -35,7 +34,6 @@ executable("tests") {
 
   deps = [
     ":hci",
-    "//apps/bluetooth/test:test_main",
     "//third_party/gtest",
   ]
 }

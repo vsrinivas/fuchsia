@@ -15,9 +15,8 @@ static_library("gap") {
   ]
 }
 
-executable("tests") {
+source_set("tests") {
   testonly = true
-  output_name = "gap_unittests"
 
   sources = [
     "advertising_data_unittest.cc",
@@ -25,7 +24,6 @@ executable("tests") {
 
   deps = [
     ":gap",
-    "//apps/bluetooth/test:test_main",
     "//third_party/gtest",
   ]
 }

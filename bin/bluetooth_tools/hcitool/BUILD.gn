@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 executable("hcitool") {
+  output_name = "bluetooth_hcitool"
+
   sources = [
     "command_dispatcher.cc",
     "command_dispatcher.h",

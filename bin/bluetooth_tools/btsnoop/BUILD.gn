@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 executable("btsnoop") {
+  output_name = "bluetooth_btsnoop"
+
   sources = [
     "sniffer.cc",
     "sniffer.h",
