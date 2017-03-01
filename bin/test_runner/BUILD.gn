@@ -2,14 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("test_runner") {
+group("test_runner") {
+  deps = [
+    ":run_modular_tests",
+    ":test_runner_server",
+  ]
+}
+
+source_set("common") {
   sources = [
     "test_runner.cc",
+    "test_runner.h",
     "test_runner_store_impl.cc",
     "test_runner_store_impl.h",
   ]
-
-  deps = [
+  public_deps = [
     "//application/lib/app",
     "//apps/modular/lib/fidl:scope",
     "//apps/modular/services/test_runner",
@@ -18,23 +25,24 @@ executable("test_runner") {
   ]
 }
 
-source_set("test_runner_client") {
+executable("test_runner_server") {
+  output_name = "test_runner"
   sources = [
-    "test_runner_client.h",
-    "test_runner_client.cc",
+    "test_runner_server.cc",
   ]
   deps = [
-    "//lib/ftl",
-    "//third_party/rapidjson"
+    ":common",
   ]
 }
 
 executable("run_modular_tests") {
   sources = [
     "run_modular_tests.cc",
+    "test_runner_config.cc",
+    "test_runner_config.h",
   ]
   deps = [
-    ":test_runner_client",
-    "//lib/ftl",
+    ":common",
+    "//third_party/rapidjson",
   ]
 }
