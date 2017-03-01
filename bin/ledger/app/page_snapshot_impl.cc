@@ -17,11 +17,23 @@
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace ledger {
 namespace {
 
 const size_t kFidlArrayHeaderSize = sizeof(fidl::internal::Array_Data<char>);
+const size_t kFidlPointerSize = sizeof(uint64_t);
+const size_t kFidlPrioritySize = sizeof(int32_t);
+const size_t kFidlHandleSize = sizeof(int32_t);
+
+fidl::Array<EntryPtr> CopyArrayUntil(fidl::Array<EntryPtr> array, size_t end) {
+  fidl::Array<EntryPtr> result;
+  for (size_t i = 0; i < end; ++i) {
+    result.push_back(std::move(array[i]));
+  }
+  return result;
+}
 
 }  // namespace
 
@@ -35,6 +47,12 @@ PageSnapshotImpl::~PageSnapshotImpl() {}
 void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
                                   fidl::Array<uint8_t> token,
                                   const GetEntriesCallback& callback) {
+  // Get all entries with the given prefix from the storage, but only send in
+  // the callback the first ones that fit in kMaxInlineDataSize. If all entries
+  // don't fit in a single message, next_token in the callback will be the first
+  // key to be returned.
+  // TODO(nellyv): Improve this by estimating objects size and stopping early
+  // when iteration over the entries. See LE-154.
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "snapshot", "get_entries");
 
@@ -42,8 +60,7 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
       Waiter<storage::Status, std::unique_ptr<const storage::Object>>::Create(
           storage::Status::OK);
   auto entries = std::make_unique<fidl::Array<EntryPtr>>();
-  std::string prefix =
-      key_prefix.is_null() ? "" : convert::ToString(key_prefix);
+  std::string prefix = convert::ToString(key_prefix);
   auto on_next = ftl::MakeCopyable(
       [ this, prefix, entries = entries.get(), waiter ](storage::Entry entry) {
         if (convert::ExtendedStringView(entry.key).substr(0, prefix.size()) !=
@@ -67,7 +84,7 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
     waiter, entries = std::move(entries), callback = std::move(timed_callback)
   ](storage::Status status) mutable {
     if (status != storage::Status::OK) {
-      FTL_LOG(ERROR) << "PageSnapshotImpl::GetEntries error while reading.";
+      FTL_LOG(ERROR) << "Error while reading.";
       callback(Status::IO_ERROR, nullptr, nullptr);
       return;
     }
@@ -78,31 +95,63 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
         ](storage::Status status,
           std::vector<std::unique_ptr<const storage::Object>> results) mutable {
           if (status != storage::Status::OK) {
-            FTL_LOG(ERROR)
-                << "PageSnapshotImpl::GetEntries error while reading.";
+            FTL_LOG(ERROR) << "Error while reading.";
             callback(Status::IO_ERROR, nullptr, nullptr);
             return;
           }
+          FTL_DCHECK(entries->size() == results.size());
 
+          size_t size = kFidlArrayHeaderSize;
           for (size_t i = 0; i < results.size(); i++) {
             ftl::StringView object_contents;
-
             storage::Status read_status = results[i]->GetData(&object_contents);
             if (read_status != storage::Status::OK) {
               callback(Status::IO_ERROR, nullptr, nullptr);
               return;
             }
 
+            size_t key_size = (*entries)[i]->key.size() + kFidlArrayHeaderSize;
+            size_t object_size = object_contents.size() + kFidlArrayHeaderSize;
+            size +=
+                kFidlPointerSize + key_size + object_size + kFidlPrioritySize;
+            bool value_as_bytes = true;
+            if (size > kMaxInlineDataSize) {
+              // Make sure there is at least one element in the result.
+              if (i > 0) {
+                fidl::Array<uint8_t> next_token = std::move((*entries)[i]->key);
+                callback(Status::PARTIAL_RESULT,
+                         CopyArrayUntil(std::move(*entries), i),
+                         std::move(next_token));
+                return;
+              }
+              // Use a handle<vmo> for the value, instead of the object bytes.
+              size = size - object_size + kFidlHandleSize;
+              value_as_bytes = false;
+            }
             (*entries)[i]->value = Value::New();
-            (*entries)[i]->value->set_bytes(convert::ToArray(object_contents));
+            if (value_as_bytes) {
+              (*entries)[i]->value->set_bytes(
+                  convert::ToArray(object_contents));
+            } else {
+              mx::vmo buffer;
+              bool vmo_success = mtl::VmoFromString(object_contents, &buffer);
+              if (!vmo_success) {
+                callback(Status::INTERNAL_ERROR, nullptr, nullptr);
+                return;
+              }
+              (*entries)[i]->value->set_buffer(std::move(buffer));
+            }
           }
           callback(Status::OK, std::move(*entries), nullptr);
         });
     waiter->Finalize(result_callback);
   });
-
-  page_storage_->GetCommitContents(*commit_, prefix, std::move(on_next),
-                                   std::move(on_done));
+  // Use |prefix| for the stopping condition, but use |token| for the first key.
+  if (token) {
+    prefix = convert::ToString(token);
+  }
+  page_storage_->GetCommitContents(*commit_, std::move(prefix),
+                                   std::move(on_next), std::move(on_done));
 }
 
 void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
