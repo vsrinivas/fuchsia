@@ -5,16 +5,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 #include <arch/arm64/mmu.h>
-#include <rand.h>
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/vm.h>
 #include <kernel/mutex.h>
+#include <kernel/vm.h>
 #include <lib/heap.h>
+#include <rand.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -28,14 +27,13 @@ static_assert(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT <= 48, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT >= 25, "");
 
-static uint64_t asid_pool[  (1 << MMU_ARM64_ASID_BITS) / 64 ];
+static uint64_t asid_pool[(1 << MMU_ARM64_ASID_BITS) / 64];
 static mutex_t asid_lock = MUTEX_INITIAL_VALUE(asid_lock);
 
 uint32_t arm64_zva_shift;
 
 /* the main translation table */
-pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP]
-    __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8)
+pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP] __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8)
     __SECTION(".bss.prebss.translation_table");
 
 static status_t arm64_mmu_alloc_asid(uint16_t* asid) {
@@ -73,46 +71,44 @@ static status_t arm64_mmu_free_asid(uint16_t asid) {
     return NO_ERROR;
 }
 
-static inline bool is_valid_vaddr(arch_aspace_t *aspace, vaddr_t vaddr)
-{
+static inline bool is_valid_vaddr(arch_aspace_t* aspace, vaddr_t vaddr) {
     return (vaddr >= aspace->base && vaddr <= aspace->base + aspace->size - 1);
 }
 
 /* convert user level mmu flags to flags that go in L1 descriptors */
-static pte_t mmu_flags_to_pte_attr(uint flags)
-{
+static pte_t mmu_flags_to_pte_attr(uint flags) {
     pte_t attr = MMU_PTE_ATTR_AF;
 
     switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
-        case ARCH_MMU_FLAG_CACHED:
-            attr |= MMU_PTE_ATTR_NORMAL_MEMORY | MMU_PTE_ATTR_SH_INNER_SHAREABLE;
-            break;
-        case ARCH_MMU_FLAG_WRITE_COMBINING:
-        case ARCH_MMU_FLAG_UNCACHED:
-            attr |= MMU_PTE_ATTR_STRONGLY_ORDERED;
-            break;
-        case ARCH_MMU_FLAG_UNCACHED_DEVICE:
-            attr |= MMU_PTE_ATTR_DEVICE;
-            break;
-        default:
-            /* invalid user-supplied flag */
-            DEBUG_ASSERT(1);
-            return ERR_INVALID_ARGS;
+    case ARCH_MMU_FLAG_CACHED:
+        attr |= MMU_PTE_ATTR_NORMAL_MEMORY | MMU_PTE_ATTR_SH_INNER_SHAREABLE;
+        break;
+    case ARCH_MMU_FLAG_WRITE_COMBINING:
+    case ARCH_MMU_FLAG_UNCACHED:
+        attr |= MMU_PTE_ATTR_STRONGLY_ORDERED;
+        break;
+    case ARCH_MMU_FLAG_UNCACHED_DEVICE:
+        attr |= MMU_PTE_ATTR_DEVICE;
+        break;
+    default:
+        /* invalid user-supplied flag */
+        DEBUG_ASSERT(1);
+        return ERR_INVALID_ARGS;
     }
 
     switch (flags & (ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE)) {
-        case 0:
-            attr |= MMU_PTE_ATTR_AP_P_RO_U_NA;
-            break;
-        case ARCH_MMU_FLAG_PERM_WRITE:
-            attr |= MMU_PTE_ATTR_AP_P_RW_U_NA;
-            break;
-        case ARCH_MMU_FLAG_PERM_USER:
-            attr |= MMU_PTE_ATTR_AP_P_RO_U_RO;
-            break;
-        case ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE:
-            attr |= MMU_PTE_ATTR_AP_P_RW_U_RW;
-            break;
+    case 0:
+        attr |= MMU_PTE_ATTR_AP_P_RO_U_NA;
+        break;
+    case ARCH_MMU_FLAG_PERM_WRITE:
+        attr |= MMU_PTE_ATTR_AP_P_RW_U_NA;
+        break;
+    case ARCH_MMU_FLAG_PERM_USER:
+        attr |= MMU_PTE_ATTR_AP_P_RO_U_RO;
+        break;
+    case ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE:
+        attr |= MMU_PTE_ATTR_AP_P_RW_U_RW;
+        break;
     }
 
     if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
@@ -126,15 +122,14 @@ static pte_t mmu_flags_to_pte_attr(uint flags)
     return attr;
 }
 
-status_t arch_mmu_query(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t *paddr, uint *flags)
-{
+status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, uint* flags) {
     ulong index;
     uint index_shift;
     uint page_size_shift;
     pte_t pte;
     pte_t pte_addr;
     uint descriptor_type;
-    pte_t *page_table;
+    pte_t* page_table;
     vaddr_t vaddr_rem;
 
     LTRACEF("aspace %p, vaddr 0x%lx\n", aspace, vaddr);
@@ -182,18 +177,16 @@ status_t arch_mmu_query(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t *paddr, ui
         if (descriptor_type == MMU_PTE_DESCRIPTOR_INVALID)
             return ERR_NOT_FOUND;
 
-        if (descriptor_type == ((index_shift > page_size_shift) ?
-                                MMU_PTE_L012_DESCRIPTOR_BLOCK :
-                                MMU_PTE_L3_DESCRIPTOR_PAGE)) {
+        if (descriptor_type == ((index_shift > page_size_shift) ? MMU_PTE_L012_DESCRIPTOR_BLOCK : MMU_PTE_L3_DESCRIPTOR_PAGE)) {
             break;
         }
 
         if (index_shift <= page_size_shift ||
-                descriptor_type != MMU_PTE_L012_DESCRIPTOR_TABLE) {
+            descriptor_type != MMU_PTE_L012_DESCRIPTOR_TABLE) {
             PANIC_UNIMPLEMENTED;
         }
 
-        page_table = static_cast<pte_t *>(paddr_to_kvaddr(pte_addr));
+        page_table = static_cast<pte_t*>(paddr_to_kvaddr(pte_addr));
         index_shift -= page_size_shift - 3;
     }
 
@@ -204,30 +197,30 @@ status_t arch_mmu_query(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t *paddr, ui
         if (pte & MMU_PTE_ATTR_NON_SECURE)
             *flags |= ARCH_MMU_FLAG_NS;
         switch (pte & MMU_PTE_ATTR_ATTR_INDEX_MASK) {
-            case MMU_PTE_ATTR_STRONGLY_ORDERED:
-                *flags |= ARCH_MMU_FLAG_UNCACHED;
-                break;
-            case MMU_PTE_ATTR_DEVICE:
-                *flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
-                break;
-            case MMU_PTE_ATTR_NORMAL_MEMORY:
-                break;
-            default:
-                PANIC_UNIMPLEMENTED;
+        case MMU_PTE_ATTR_STRONGLY_ORDERED:
+            *flags |= ARCH_MMU_FLAG_UNCACHED;
+            break;
+        case MMU_PTE_ATTR_DEVICE:
+            *flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
+            break;
+        case MMU_PTE_ATTR_NORMAL_MEMORY:
+            break;
+        default:
+            PANIC_UNIMPLEMENTED;
         }
         *flags |= ARCH_MMU_FLAG_PERM_READ;
         switch (pte & MMU_PTE_ATTR_AP_MASK) {
-            case MMU_PTE_ATTR_AP_P_RW_U_NA:
-                *flags |= ARCH_MMU_FLAG_PERM_WRITE;
-                break;
-            case MMU_PTE_ATTR_AP_P_RW_U_RW:
-                *flags |= ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE;
-                break;
-            case MMU_PTE_ATTR_AP_P_RO_U_NA:
-                break;
-            case MMU_PTE_ATTR_AP_P_RO_U_RO:
-                *flags |= ARCH_MMU_FLAG_PERM_USER;
-                break;
+        case MMU_PTE_ATTR_AP_P_RW_U_NA:
+            *flags |= ARCH_MMU_FLAG_PERM_WRITE;
+            break;
+        case MMU_PTE_ATTR_AP_P_RW_U_RW:
+            *flags |= ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE;
+            break;
+        case MMU_PTE_ATTR_AP_P_RO_U_NA:
+            break;
+        case MMU_PTE_ATTR_AP_P_RO_U_RO:
+            *flags |= ARCH_MMU_FLAG_PERM_USER;
+            break;
         }
         if (!((pte & MMU_PTE_ATTR_UXN) && (pte & MMU_PTE_ATTR_PXN))) {
             *flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
@@ -238,8 +231,7 @@ status_t arch_mmu_query(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t *paddr, ui
     return 0;
 }
 
-static status_t alloc_page_table(paddr_t *paddrp, uint page_size_shift)
-{
+static status_t alloc_page_table(paddr_t* paddrp, uint page_size_shift) {
     size_t size = 1UL << page_size_shift;
 
     DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
@@ -249,15 +241,15 @@ static status_t alloc_page_table(paddr_t *paddrp, uint page_size_shift)
     if (size >= PAGE_SIZE) {
         size_t count = size / PAGE_SIZE;
         size_t ret = pmm_alloc_contiguous(count, PMM_ALLOC_FLAG_KMAP,
-                static_cast<uint8_t>(page_size_shift), paddrp, NULL);
+                                          static_cast<uint8_t>(page_size_shift), paddrp, NULL);
         if (ret != count)
             return ERR_NO_MEMORY;
     } else if (size == PAGE_SIZE) {
-        void *vaddr = pmm_alloc_kpage(paddrp, NULL);
+        void* vaddr = pmm_alloc_kpage(paddrp, NULL);
         if (!vaddr)
             return ERR_NO_MEMORY;
     } else {
-        void *vaddr = memalign(size, size);
+        void* vaddr = memalign(size, size);
         if (!vaddr)
             return ERR_NO_MEMORY;
         *paddrp = vaddr_to_paddr(vaddr);
@@ -271,14 +263,13 @@ static status_t alloc_page_table(paddr_t *paddrp, uint page_size_shift)
     return 0;
 }
 
-static void free_page_table(void *vaddr, paddr_t paddr, uint page_size_shift)
-{
+static void free_page_table(void* vaddr, paddr_t paddr, uint page_size_shift) {
     DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
 
     LTRACEF("vaddr %p paddr 0x%lx page_size_shift %u\n", vaddr, paddr, page_size_shift);
 
     size_t size = 1U << page_size_shift;
-    vm_page_t *page;
+    vm_page_t* page;
 
     if (size >= PAGE_SIZE) {
         page = paddr_to_vm_page(paddr);
@@ -290,50 +281,49 @@ static void free_page_table(void *vaddr, paddr_t paddr, uint page_size_shift)
     }
 }
 
-static pte_t *arm64_mmu_get_page_table(vaddr_t index, uint page_size_shift, pte_t *page_table)
-{
+static pte_t* arm64_mmu_get_page_table(vaddr_t index, uint page_size_shift, pte_t* page_table) {
     pte_t pte;
     paddr_t paddr;
-    void *vaddr;
+    void* vaddr;
 
     DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
 
     pte = page_table[index];
     switch (pte & MMU_PTE_DESCRIPTOR_MASK) {
-        case MMU_PTE_DESCRIPTOR_INVALID: {
-            status_t ret = alloc_page_table(&paddr, page_size_shift);
-            if (ret) {
-                TRACEF("failed to allocate page table\n");
-                return NULL;
-            }
-            vaddr = paddr_to_kvaddr(paddr);
-
-            LTRACEF("allocated page table, vaddr %p, paddr 0x%lx\n", vaddr, paddr);
-            memset(vaddr, MMU_PTE_DESCRIPTOR_INVALID, 1U << page_size_shift);
-
-            __asm__ volatile("dmb ishst" ::: "memory");
-
-            pte = paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
-            page_table[index] = pte;
-            LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n",
-                    page_table, index, pte);
-            return static_cast<pte_t*>(vaddr);
-        }
-        case MMU_PTE_L012_DESCRIPTOR_TABLE:
-            paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-            LTRACEF("found page table %#" PRIxPTR "\n", paddr);
-            return static_cast<pte_t*>(paddr_to_kvaddr(paddr));
-
-        case MMU_PTE_L012_DESCRIPTOR_BLOCK:
+    case MMU_PTE_DESCRIPTOR_INVALID: {
+        status_t ret = alloc_page_table(&paddr, page_size_shift);
+        if (ret) {
+            TRACEF("failed to allocate page table\n");
             return NULL;
+        }
+        vaddr = paddr_to_kvaddr(paddr);
 
-        default:
-            PANIC_UNIMPLEMENTED;
+        LTRACEF("allocated page table, vaddr %p, paddr 0x%lx\n", vaddr, paddr);
+        memset(vaddr, MMU_PTE_DESCRIPTOR_INVALID, 1U << page_size_shift);
+
+        __asm__ volatile("dmb ishst" ::
+                             : "memory");
+
+        pte = paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
+        page_table[index] = pte;
+        LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n",
+                page_table, index, pte);
+        return static_cast<pte_t*>(vaddr);
+    }
+    case MMU_PTE_L012_DESCRIPTOR_TABLE:
+        paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+        LTRACEF("found page table %#" PRIxPTR "\n", paddr);
+        return static_cast<pte_t*>(paddr_to_kvaddr(paddr));
+
+    case MMU_PTE_L012_DESCRIPTOR_BLOCK:
+        return NULL;
+
+    default:
+        PANIC_UNIMPLEMENTED;
     }
 }
 
-static bool page_table_is_clear(pte_t *page_table, uint page_size_shift)
-{
+static bool page_table_is_clear(pte_t* page_table, uint page_size_shift) {
     int i;
     int count = 1U << (page_size_shift - 3);
     pte_t pte;
@@ -341,8 +331,7 @@ static bool page_table_is_clear(pte_t *page_table, uint page_size_shift)
     for (i = 0; i < count; i++) {
         pte = page_table[i];
         if (pte != MMU_PTE_DESCRIPTOR_INVALID) {
-            LTRACEF("page_table at %p still in use, index %d is %#"
-                    PRIx64 "\n",
+            LTRACEF("page_table at %p still in use, index %d is %#" PRIx64 "\n",
                     page_table, i, pte);
             return false;
         }
@@ -353,11 +342,10 @@ static bool page_table_is_clear(pte_t *page_table, uint page_size_shift)
 }
 
 static ssize_t arm64_mmu_unmap_pt(vaddr_t vaddr, vaddr_t vaddr_rel,
-                               size_t size,
-                               uint index_shift, uint page_size_shift,
-                               pte_t *page_table, uint asid)
-{
-    pte_t *next_page_table;
+                                  size_t size,
+                                  uint index_shift, uint page_size_shift,
+                                  pte_t* page_table, uint asid) {
+    pte_t* next_page_table;
     vaddr_t index;
     size_t chunk_size;
     vaddr_t vaddr_rem;
@@ -381,7 +369,7 @@ static ssize_t arm64_mmu_unmap_pt(vaddr_t vaddr, vaddr_t vaddr_rel,
         pte = page_table[index];
 
         if (index_shift > page_size_shift &&
-                (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
+            (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
             page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
             next_page_table = static_cast<pte_t*>(paddr_to_kvaddr(page_table_paddr));
             arm64_mmu_unmap_pt(vaddr, vaddr_rem, chunk_size,
@@ -389,10 +377,11 @@ static ssize_t arm64_mmu_unmap_pt(vaddr_t vaddr, vaddr_t vaddr_rel,
                                page_size_shift,
                                next_page_table, asid);
             if (chunk_size == block_size ||
-                    page_table_is_clear(next_page_table, page_size_shift)) {
+                page_table_is_clear(next_page_table, page_size_shift)) {
                 LTRACEF("pte %p[0x%lx] = 0 (was page table)\n", page_table, index);
                 page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
-                __asm__ volatile("dmb ishst" ::: "memory");
+                __asm__ volatile("dmb ishst" ::
+                                     : "memory");
                 free_page_table(next_page_table, page_table_paddr, page_size_shift);
             }
         } else if (pte) {
@@ -416,13 +405,12 @@ static ssize_t arm64_mmu_unmap_pt(vaddr_t vaddr, vaddr_t vaddr_rel,
 }
 
 static ssize_t arm64_mmu_map_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
-                            paddr_t paddr_in,
-                            size_t size_in, pte_t attrs,
-                            uint index_shift, uint page_size_shift,
-                            pte_t *page_table, uint asid)
-{
+                                paddr_t paddr_in,
+                                size_t size_in, pte_t attrs,
+                                uint index_shift, uint page_size_shift,
+                                pte_t* page_table, uint asid) {
     ssize_t ret;
-    pte_t *next_page_table;
+    pte_t* next_page_table;
     vaddr_t index;
     vaddr_t vaddr = vaddr_in;
     vaddr_t vaddr_rel = vaddr_rel_in;
@@ -455,10 +443,10 @@ static ssize_t arm64_mmu_map_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
         index = vaddr_rel >> index_shift;
 
         if (((vaddr_rel | paddr) & block_mask) ||
-                (chunk_size != block_size) ||
-                (index_shift > MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT)) {
+            (chunk_size != block_size) ||
+            (index_shift > MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT)) {
             next_page_table = arm64_mmu_get_page_table(index, page_size_shift,
-                              page_table);
+                                                       page_table);
             if (!next_page_table)
                 goto err;
 
@@ -470,8 +458,7 @@ static ssize_t arm64_mmu_map_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
         } else {
             pte = page_table[index];
             if (pte) {
-                TRACEF("page table entry already in use, index %#"
-                       PRIxPTR ", %#" PRIx64 "\n",
+                TRACEF("page table entry already in use, index %#" PRIxPTR ", %#" PRIx64 "\n",
                        index, pte);
                 goto err;
             }
@@ -503,12 +490,11 @@ err:
 }
 
 static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
-                            size_t size_in, pte_t attrs,
-                            uint index_shift, uint page_size_shift,
-                            pte_t *page_table, uint asid)
-{
+                                size_t size_in, pte_t attrs,
+                                uint index_shift, uint page_size_shift,
+                                pte_t* page_table, uint asid) {
     int ret;
-    pte_t *next_page_table;
+    pte_t* next_page_table;
     vaddr_t index;
     vaddr_t vaddr = vaddr_in;
     vaddr_t vaddr_rel = vaddr_rel_in;
@@ -540,14 +526,14 @@ static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
         pte = page_table[index];
 
         if (index_shift > page_size_shift &&
-                (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
+            (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
             page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
             next_page_table = static_cast<pte_t*>(paddr_to_kvaddr(page_table_paddr));
             ret = arm64_mmu_protect_pt(vaddr, vaddr_rem, chunk_size,
-                               attrs,
-                               index_shift - (page_size_shift - 3),
-                               page_size_shift,
-                               next_page_table, asid);
+                                       attrs,
+                                       index_shift - (page_size_shift - 3),
+                                       page_size_shift,
+                                       next_page_table, asid);
             if (ret != 0) {
                 goto err;
             }
@@ -565,7 +551,8 @@ static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
             }
         } else {
             LTRACEF("page table entry does not exist, index %#" PRIxPTR
-                    ", %#" PRIx64 "\n", index, pte);
+                    ", %#" PRIx64 "\n",
+                    index, pte);
         }
         vaddr += chunk_size;
         vaddr_rel += chunk_size;
@@ -584,10 +571,9 @@ err:
 }
 
 static ssize_t arm64_mmu_map(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
-                  vaddr_t vaddr_base, uint top_size_shift,
-                  uint top_index_shift, uint page_size_shift,
-                  pte_t *top_page_table, uint asid)
-{
+                             vaddr_t vaddr_base, uint top_size_shift,
+                             uint top_index_shift, uint page_size_shift,
+                             pte_t* top_page_table, uint asid) {
     vaddr_t vaddr_rel = vaddr - vaddr_base;
     vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
@@ -596,8 +582,7 @@ static ssize_t arm64_mmu_map(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t at
             vaddr, paddr, size, attrs, asid);
 
     if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
-        TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#"
-               PRIxPTR ", size %#" PRIxPTR "\n",
+        TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#" PRIxPTR ", size %#" PRIxPTR "\n",
                vaddr, size, vaddr_base, vaddr_rel_max);
         return ERR_INVALID_ARGS;
     }
@@ -614,10 +599,9 @@ static ssize_t arm64_mmu_map(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t at
 }
 
 static ssize_t arm64_mmu_unmap(vaddr_t vaddr, size_t size,
-                    vaddr_t vaddr_base, uint top_size_shift,
-                    uint top_index_shift, uint page_size_shift,
-                    pte_t *top_page_table, uint asid)
-{
+                               vaddr_t vaddr_base, uint top_size_shift,
+                               uint top_index_shift, uint page_size_shift,
+                               pte_t* top_page_table, uint asid) {
     vaddr_t vaddr_rel = vaddr - vaddr_base;
     vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
@@ -641,19 +625,18 @@ static ssize_t arm64_mmu_unmap(vaddr_t vaddr, size_t size,
 }
 
 static int arm64_mmu_protect(vaddr_t vaddr, size_t size, pte_t attrs,
-                  vaddr_t vaddr_base, uint top_size_shift,
-                  uint top_index_shift, uint page_size_shift,
-                  pte_t *top_page_table, uint asid)
-{
+                             vaddr_t vaddr_base, uint top_size_shift,
+                             uint top_index_shift, uint page_size_shift,
+                             pte_t* top_page_table, uint asid) {
     vaddr_t vaddr_rel = vaddr - vaddr_base;
     vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
     LTRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR ", attrs %#" PRIx64
-            ", asid %#x\n", vaddr, size, attrs, asid);
+            ", asid %#x\n",
+            vaddr, size, attrs, asid);
 
     if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
-        TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#"
-               PRIxPTR ", size %#" PRIxPTR "\n",
+        TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#" PRIxPTR ", size %#" PRIxPTR "\n",
                vaddr, size, vaddr_base, vaddr_rel_max);
         return ERR_INVALID_ARGS;
     }
@@ -669,8 +652,7 @@ static int arm64_mmu_protect(vaddr_t vaddr, size_t size, pte_t attrs,
     return ret;
 }
 
-int arch_mmu_map(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t paddr, size_t count, uint flags)
-{
+int arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, size_t count, uint flags) {
     LTRACEF("vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %zu flags %#x\n",
             vaddr, paddr, count, flags);
 
@@ -697,24 +679,23 @@ int arch_mmu_map(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t paddr, size_t cou
     ssize_t ret;
     if (aspace->flags & ARCH_ASPACE_FLAG_KERNEL) {
         ret = arm64_mmu_map(vaddr, paddr, count * PAGE_SIZE,
-                         mmu_flags_to_pte_attr(flags),
-                         ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
-                         MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT,
-                         aspace->tt_virt, MMU_ARM64_GLOBAL_ASID);
+                            mmu_flags_to_pte_attr(flags),
+                            ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
+                            MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT,
+                            aspace->tt_virt, MMU_ARM64_GLOBAL_ASID);
     } else {
         ret = arm64_mmu_map(vaddr, paddr, count * PAGE_SIZE,
-                         mmu_flags_to_pte_attr(flags),
-                         0, MMU_USER_SIZE_SHIFT,
-                         MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT,
-                         aspace->tt_virt, aspace->asid);
+                            mmu_flags_to_pte_attr(flags),
+                            0, MMU_USER_SIZE_SHIFT,
+                            MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT,
+                            aspace->tt_virt, aspace->asid);
     }
 
     // TODO: fix return to handle full size
     return (ret < 0) ? (int)ret : (int)(ret / PAGE_SIZE);
 }
 
-int arch_mmu_unmap(arch_aspace_t *aspace, vaddr_t vaddr, size_t count)
-{
+int arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, size_t count) {
     LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
 
     DEBUG_ASSERT(aspace);
@@ -733,23 +714,22 @@ int arch_mmu_unmap(arch_aspace_t *aspace, vaddr_t vaddr, size_t count)
     ssize_t ret;
     if (aspace->flags & ARCH_ASPACE_FLAG_KERNEL) {
         ret = arm64_mmu_unmap(vaddr, count * PAGE_SIZE,
-                           ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
-                           MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT,
-                           aspace->tt_virt,
-                           MMU_ARM64_GLOBAL_ASID);
+                              ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
+                              MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT,
+                              aspace->tt_virt,
+                              MMU_ARM64_GLOBAL_ASID);
     } else {
         ret = arm64_mmu_unmap(vaddr, count * PAGE_SIZE,
-                           0, MMU_USER_SIZE_SHIFT,
-                           MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT,
-                           aspace->tt_virt,
-                           aspace->asid);
+                              0, MMU_USER_SIZE_SHIFT,
+                              MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT,
+                              aspace->tt_virt,
+                              aspace->asid);
     }
 
     return (ret < 0) ? (int)ret : (int)(ret / PAGE_SIZE);
 }
 
-int arch_mmu_protect(arch_aspace_t *aspace, vaddr_t vaddr, size_t count, uint flags)
-{
+int arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint flags) {
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 
@@ -782,8 +762,7 @@ int arch_mmu_protect(arch_aspace_t *aspace, vaddr_t vaddr, size_t count, uint fl
     return ret;
 }
 
-status_t arch_mmu_init_aspace(arch_aspace_t *aspace, vaddr_t base, size_t size, uint flags)
-{
+status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, uint flags) {
     LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n",
             aspace, base, size, flags);
 
@@ -810,14 +789,14 @@ status_t arch_mmu_init_aspace(arch_aspace_t *aspace, vaddr_t base, size_t size, 
         //DEBUG_ASSERT(base >= 0);
         DEBUG_ASSERT(base + size <= 1UL << MMU_USER_SIZE_SHIFT);
 
-        if ( arm64_mmu_alloc_asid( &aspace->asid ) != NO_ERROR)
+        if (arm64_mmu_alloc_asid(&aspace->asid) != NO_ERROR)
             return ERR_NO_MEMORY;
 
         aspace->base = base;
         aspace->size = size;
 
         paddr_t pa;
-        pte_t *va = static_cast<pte_t*>(pmm_alloc_kpage(&pa, NULL));
+        pte_t* va = static_cast<pte_t*>(pmm_alloc_kpage(&pa, NULL));
         if (!va)
             return ERR_NO_MEMORY;
 
@@ -835,8 +814,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t *aspace, vaddr_t base, size_t size, 
     return NO_ERROR;
 }
 
-status_t arch_mmu_destroy_aspace(arch_aspace_t *aspace)
-{
+status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
     LTRACEF("aspace %p\n", aspace);
 
     DEBUG_ASSERT(aspace);
@@ -845,11 +823,11 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t *aspace)
 
     // XXX make sure it's not mapped
 
-    vm_page_t *page = paddr_to_vm_page(aspace->tt_phys);
+    vm_page_t* page = paddr_to_vm_page(aspace->tt_phys);
     DEBUG_ASSERT(page);
     pmm_free_page(page);
 
-    ARM64_TLBI(ASIDE1IS,aspace->asid);
+    ARM64_TLBI(ASIDE1IS, aspace->asid);
 
     arm64_mmu_free_asid(aspace->asid);
     aspace->asid = 0;
@@ -859,8 +837,7 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t *aspace)
     return NO_ERROR;
 }
 
-void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace)
-{
+void arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* aspace) {
     if (TRACE_CONTEXT_SWITCH)
         TRACEF("aspace %p\n", aspace);
 
@@ -887,15 +864,14 @@ void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace)
     ARM64_WRITE_SYSREG(tcr_el1, tcr);
 }
 
-void arch_zero_page(void *_ptr)
-{
-    uint8_t *ptr = (uint8_t *)_ptr;
+void arch_zero_page(void* _ptr) {
+    uint8_t* ptr = (uint8_t*)_ptr;
 
     uint zva_size = 1u << arm64_zva_shift;
 
-    uint8_t *end_ptr = ptr + PAGE_SIZE;
+    uint8_t* end_ptr = ptr + PAGE_SIZE;
     do {
-        __asm volatile("dc zva, %0" :: "r"(ptr));
+        __asm volatile("dc zva, %0" ::"r"(ptr));
         ptr += zva_size;
     } while (ptr != end_ptr);
 }
