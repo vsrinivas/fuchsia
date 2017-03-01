@@ -287,9 +287,9 @@ void RspServer::OnIOError() {
   QuitMessageLoop(false);
 }
 
-void RspServer::OnThreadStarted(Process* process,
-                                Thread* thread,
-                                const mx_exception_context_t& context) {
+void RspServer::OnThreadStarting(Process* process,
+                                 Thread* thread,
+                                 const mx_exception_context_t& context) {
   FTL_DCHECK(process);
 
   // TODO(armansito): We send a stop-reply packet for the new thread. This
@@ -317,10 +317,10 @@ void RspServer::OnThreadStarted(Process* process,
   }
 }
 
-void RspServer::OnThreadExit(Process* process,
-                             Thread* thread,
-                             const mx_excp_type_t type,
-                             const mx_exception_context_t& context) {
+void RspServer::OnThreadExiting(Process* process,
+                                Thread* thread,
+                                const mx_excp_type_t type,
+                                const mx_exception_context_t& context) {
   std::vector<char> packet;
   FTL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
   int exit_code = 0; // TODO(dje)

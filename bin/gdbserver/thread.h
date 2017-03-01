@@ -71,7 +71,7 @@ class Thread final {
   // success, false on failure. The thread state on return is kRunning.
   bool Resume();
 
-  // Resumes the thread from an MX_EXCP_THREAD_EXIT exception.
+  // Resumes the thread from an MX_EXCP_THREAD_EXITING exception.
   // The thread state on entry must one of kNew, kStopped, kExiting.
   // The thread state on return is kGone.
   void ResumeForExit();

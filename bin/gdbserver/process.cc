@@ -694,11 +694,11 @@ void Process::OnException(const mx_excp_type_t type,
 
   switch (type) {
     case MX_EXCP_THREAD_STARTING:
-      FTL_VLOG(1) << "Received MX_EXCP_START exception";
+      FTL_VLOG(1) << "Received MX_EXCP_THREAD_STARTING exception";
       FTL_DCHECK(thread);
       FTL_DCHECK(thread->state() == Thread::State::kNew);
       thread->OnException(type, context);
-      delegate_->OnThreadStarted(this, thread, context);
+      delegate_->OnThreadStarting(this, thread, context);
       break;
     case MX_EXCP_GONE:
       FTL_VLOG(1) << "Received MX_EXCP_GONE exception for process "
@@ -712,11 +712,11 @@ void Process::OnException(const mx_excp_type_t type,
       }
       break;
     case MX_EXCP_THREAD_EXITING:
-      FTL_VLOG(1) << "Received MX_EXCP_THREAD_EXIT exception for thread "
+      FTL_VLOG(1) << "Received MX_EXCP_THREAD_EXITING exception for thread "
                   << thread->GetName();
       FTL_DCHECK(thread);
       thread->OnException(type, context);
-      delegate_->OnThreadExit(this, thread, type, context);
+      delegate_->OnThreadExiting(this, thread, type, context);
       break;
     default:
       FTL_LOG(ERROR) << "Ignoring unrecognized synthetic exception: " << type;

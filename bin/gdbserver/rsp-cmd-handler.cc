@@ -235,7 +235,8 @@ bool CommandHandler::Handle_c(const ftl::StringView& packet,
   // There is no current thread. This means that the process hasn't been started
   // yet. We start it and set the current thread to the first one the kernel
   // gives us.
-  // TODO(armansito): Remove this logic now that we handle MX_EXCP_START?
+  // TODO(armansito): Remove this logic now that we handle
+  // MX_EXCP_THREAD_STARTING?
   FTL_DCHECK(!current_process->IsLive());
   if (!current_process->Start()) {
     FTL_LOG(ERROR) << "c: Failed to start the current inferior";
@@ -1221,7 +1222,7 @@ bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
   FTL_DCHECK(current_process->IsLive());
 
   // We defer sending a stop-reply packet. Server will send it out when it
-  // receives an OnThreadStarted() event from |current_process|.
+  // receives an OnThreadStarting() event from |current_process|.
 
   return true;
 }

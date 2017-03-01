@@ -117,13 +117,13 @@ class RspServer final : public Server {
   void OnIOError() override;
 
   // Process::Delegate overrides.
-  void OnThreadStarted(Process* process,
+  void OnThreadStarting(Process* process,
                        Thread* thread,
                        const mx_exception_context_t& context) override;
-  void OnThreadExit(Process* process,
-                    Thread* thread,
-                    const mx_excp_type_t type,
-                    const mx_exception_context_t& context) override;
+  void OnThreadExiting(Process* process,
+                       Thread* thread,
+                       const mx_excp_type_t type,
+                       const mx_exception_context_t& context) override;
   void OnProcessExit(Process* process,
                      const mx_excp_type_t type,
                      const mx_exception_context_t& context) override;

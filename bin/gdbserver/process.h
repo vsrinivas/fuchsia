@@ -39,12 +39,12 @@ class Process final {
     virtual ~Delegate() = default;
 
     // Called when a new that is part of this process has been started.
-    virtual void OnThreadStarted(Process* process,
-                                 Thread* thread,
-                                 const mx_exception_context_t& context) = 0;
+    virtual void OnThreadStarting(Process* process,
+                                  Thread* thread,
+                                  const mx_exception_context_t& context) = 0;
 
-    // Called when |thread| has exited (MX_EXCP_THREAD_EXIT).
-    virtual void OnThreadExit(
+    // Called when |thread| has exited (MX_EXCP_THREAD_EXITING).
+    virtual void OnThreadExiting(
         Process* process,
         Thread* thread,
         const mx_excp_type_t type,
