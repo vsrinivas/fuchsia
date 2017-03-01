@@ -113,6 +113,53 @@ status_t PciDeviceDispatcher::EnablePio(bool enable) {
     return NO_ERROR;
 }
 
+status_t PciDeviceDispatcher::EnableMmio(bool enable) {
+    canary_.Assert();
+
+    AutoLock lock(&lock_);
+    DEBUG_ASSERT(device_ && device_->device());
+
+    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+
+    device_->device()->EnableMmio(enable);
+
+    return NO_ERROR;
+}
+
+const pcie_bar_info_t* PciDeviceDispatcher::GetBar(uint32_t bar_num) {
+    AutoLock lock(&lock_);
+    DEBUG_ASSERT(device_ && device_->device());
+
+    if (!device_->claimed()) return nullptr;  // Are we not claimed yet?
+
+    return device_->device()->GetBarInfo(bar_num);
+}
+
+status_t PciDeviceDispatcher::GetConfig(pci_config_info_t* out) {
+    AutoLock lock(&lock_);
+    DEBUG_ASSERT(device_ && device_->device());
+
+    if (!device_->claimed()) {
+        return ERR_BAD_STATE;
+    }
+
+    if (!out) {
+        return ERR_INVALID_ARGS;
+    }
+
+    auto dev = device_->device();
+    auto cfg = dev->config();
+    out->size = (dev->is_pcie()) ? PCIE_EXTENDED_CONFIG_SIZE : PCIE_BASE_CONFIG_SIZE;
+    out->base_addr = cfg->base();
+    out->is_mmio = (cfg->addr_space() == PciAddrSpace::MMIO);
+
+    if (out->is_mmio) {
+        out->vmo = dev->config_vmo();
+    }
+
+    return NO_ERROR;
+}
+
 status_t PciDeviceDispatcher::ResetDevice() {
     canary_.Assert();
 

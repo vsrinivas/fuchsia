@@ -512,6 +512,8 @@ const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
                     (static_cast<size_t>(dev_id)  << 15) |
                     (static_cast<size_t>(func_id) << 12);
 
+    // TODO(cja) The remainder of this method will need to be refactored
+    // with PIO space in mind in a later commit.
     if (out_cfg_phys)
         *out_cfg_phys = iter->ecam().phys_base + offset;
 

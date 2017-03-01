@@ -16,6 +16,8 @@
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
+#include <kernel/vm/vm_object.h>
+#include <kernel/vm/vm_object_physical.h>
 #include <list.h>
 #include <lk/init.h>
 #include <mxtl/limits.h>
@@ -150,6 +152,18 @@ status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
     res = InitLegacyIrqStateLocked(upstream);
     if (res != NO_ERROR)
         return res;
+
+    // Map a VMO to the config if it's mappable via MMIO.
+    if (cfg_->addr_space() == PciAddrSpace::MMIO) {
+        cfg_vmo_ = VmObjectPhysical::Create(cfg_phys_, PAGE_SIZE);
+        if (cfg_vmo_ == nullptr) {
+            TRACEF("Failed to allocate VMO for config of device %02x:%02x:%01x!\n", bus_id_, dev_id_, func_id_);
+            return ERR_NO_MEMORY;
+        }
+
+        // Unlike BARs, this should always be treated like device memory
+        cfg_vmo_->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED_DEVICE);
+    }
 
     return NO_ERROR;
 }
@@ -531,6 +545,21 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
     /* Restore the command register to its previous value */
     cfg_->Write(PciConfig::kCommand, backup);
 
+    // Create a VMO mapping for this MMIO bar to hand out to clients. In
+    // the event of PIO bars, the mx_pci_get_bar syscall will sort out
+    // the PIO details from the info structure.
+    if (bar_info.size > 0 && bar_info.is_mmio) {
+        auto vmo = VmObjectPhysical::Create(bar_info.bus_addr,
+                mxtl::max<uint64_t>(bar_info.size, PAGE_SIZE));
+        if (vmo == nullptr) {
+            TRACEF("Failed to allocate VMO for bar %u of device %02x:%02x:%01x!\n",
+                    bar_id, bus_id_, dev_id_, func_id_);
+            return ERR_NO_MEMORY;
+        }
+
+        // No cache policy is configured here so drivers may set it themselves
+        bar_info.vmo = mxtl::move(vmo);
+    }
     /* Success */
     return NO_ERROR;
 }

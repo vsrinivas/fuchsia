@@ -68,9 +68,14 @@ public:
 
     void ReleaseDevice();
 
+    // TODO(cja): revisit Enable____ methods to be automatic when vmos are handed
+    // out so there is less of a dispatcher surface to worry about.
     status_t ClaimDevice();
     status_t EnableBusMaster(bool enable);
+    status_t EnableMmio(bool enable);
     status_t EnablePio(bool enable);
+    const pcie_bar_info_t* GetBar(uint32_t bar_num);
+    status_t GetConfig(pci_config_info_t* out);
     status_t ResetDevice();
     status_t MapConfig(mxtl::RefPtr<Dispatcher>* out_mapping,
                        mx_rights_t* out_rights);

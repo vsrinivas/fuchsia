@@ -357,6 +357,10 @@ static void dump_pcie_bars(const PcieDevice& dev,
                 info->is_mmio ? (info->is_64bit ? " 64-bit" : " 32-bit") : "",
                 info->is_mmio ? "MMIO" : "PIO",
                 info->allocation == nullptr ? "" : " (allocated)");
+        if (info->vmo) {
+            LSPCI_PRINTF("                               :: ");
+            info->vmo->Dump(0, false);
+        }
     }
 }
 
@@ -492,11 +496,11 @@ static void dump_pcie_capabilities(mxtl::RefPtr<PcieDevice> dev, void *ctx)
         LSPCI_PRINTF("Std Capabilities  :");
         for (const auto& cap : dev->capabilities()) {
             if (is_first) {
-                printf(" %s (%#02x)\n ", get_cap_str(cap.id()), cap.id());
+                printf(" %s (%#02x)\n", get_cap_str(cap.id()), cap.id());
                 is_first = false;
-                params->indent_level += 9;
+                params->indent_level += 10;
             } else {
-                LSPCI_PRINTF(" %s (%#02x)\n ", get_cap_str(cap.id()), cap.id());
+                LSPCI_PRINTF("%s (%#02x)\n", get_cap_str(cap.id()), cap.id());
             }
         }
     }
@@ -543,6 +547,11 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
      * filter */
     if (params->verbose) {
         params->indent_level += 2;
+
+        if (dev->config_vmo()) {
+            LSPCI_PRINTF("Config VMO        : ");
+            dev->config_vmo()->Dump(0, false);
+        }
 
         dump_pcie_common(*dev, params);
         dump_pcie_bars(*dev, params);

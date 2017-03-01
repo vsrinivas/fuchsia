@@ -21,6 +21,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/pci.h>
 #include <magenta/user_copy.h>
+#include <magenta/vm_object_dispatcher.h>
 #include <mxalloc/new.h>
 #include <mxtl/limits.h>
 #include <mxtl/ref_ptr.h>
@@ -419,6 +420,147 @@ mx_status_t sys_pci_map_mmio(mx_handle_t dev_handle, uint32_t bar_num,
     return NO_ERROR;
 }
 
+mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<mx_pci_resource_t> out_bar) {
+    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    HandleOwner mmio_handle;
+    mx_pci_resource_t bar;
+    mx_status_t status;
+
+    LTRACEF("handle %d\n", dev_handle);
+    if (!dev_handle || !out_bar || bar_num >= PCIE_MAX_BAR_REGS) {
+        return ERR_INVALID_ARGS;
+    }
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // Grab the PCI device object
+    status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_READ | MX_RIGHT_WRITE, &pci_device);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    // Get bar info from the device via the dispatcher and make sure it makes sense
+    const pcie_bar_info_t* info = pci_device->GetBar(bar_num);
+    if (info == nullptr || info->size == 0 || info->vmo == nullptr) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // A bar can be MMIO, PIO, or unused. In the MMIO case it can be passed
+    // back to the caller as a VMO.
+    memset(&bar, 0, sizeof(bar));
+    bar.size = info->size;
+    bar.type = (info->is_mmio) ? PCI_RESOURCE_TYPE_MMIO : PCI_RESOURCE_TYPE_PIO;
+    if (info->size == 0) {
+        bar.type = PCI_RESOURCE_TYPE_UNUSED;
+    } else if (info->is_mmio) {
+        DEBUG_ASSERT(info->vmo != nullptr);
+
+        // We have a VMO, time to prep a handle to it for the caller
+        mx_rights_t rights;
+        status = VmObjectDispatcher::Create(info->vmo, &dispatcher, &rights);
+        if (status != NO_ERROR) {
+            return status;
+        }
+
+        mmio_handle = HandleOwner(MakeHandle(mxtl::move(dispatcher), rights));
+        if (!mmio_handle) {
+            return ERR_NO_MEMORY;
+        }
+
+        bar.mmio_handle = up->MapHandleToValue(mmio_handle);
+    } else {
+        DEBUG_ASSERT(info->bus_addr != 0);
+        bar.pio_addr = info->bus_addr;
+    }
+
+    /* Success so far, copy everything back to usersapce */
+    if (out_bar.copy_to_user(bar) != NO_ERROR) {
+        return ERR_INVALID_ARGS;
+    }
+
+    /* If the bar is an mmio the VMO handle still needs to be accounted for */
+    if (info->is_mmio) {
+        pci_device->EnableMmio(true);
+        up->AddHandle(mxtl::move(mmio_handle));
+    } else {
+        pci_device->EnablePio(true);
+    }
+
+    return NO_ERROR;
+}
+
+mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_t> out_config) {
+    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    pci_config_info_t pci_config;
+    mx_pci_resource_t config;
+    HandleOwner mmio_handle;
+    mx_status_t status;
+
+    if (!out_config) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // Get the process context and device dispatcher from the caller device handle
+    auto up = ProcessDispatcher::GetCurrent();
+    status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_READ|MX_RIGHT_WRITE, &pci_device);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    // Get the config metadata from the device dispatcher. This contains either
+    // a size/addr tuple for pio, or a size and vmo for mmio.
+    status = pci_device->GetConfig(&pci_config);
+    if (status != NO_ERROR) {
+        printf("failed to get config\n");
+        return status;
+    }
+
+    memset(&config, 0, sizeof(config));
+    config.type = (pci_config.is_mmio) ? PCI_RESOURCE_TYPE_MMIO : PCI_RESOURCE_TYPE_PIO;
+    config.size = pci_config.size;
+
+    // VMO vs PIO
+    if (pci_config.is_mmio) {
+        DEBUG_ASSERT(pci_config.vmo);
+
+        // Create a handle to the VMO to give back to the caller, but strip off the write
+        // permission. PCI config space is only writable by the bus driver.
+        // TODO(cja): Rethink this for dealing with gap registers in capability space
+        // later. It might make sense to keep a mapping of gaps in the space to allow
+        // writes and provide a syscall to do so.
+        mx_rights_t rights;
+        status = VmObjectDispatcher::Create(pci_config.vmo, &dispatcher, &rights);
+        if (status != NO_ERROR) {
+            return status;
+        }
+
+        rights &= ~MX_RIGHT_WRITE;
+        mmio_handle = HandleOwner(MakeHandle(mxtl::move(dispatcher), rights));
+        if (!mmio_handle) {
+            return ERR_NO_MEMORY;
+        }
+
+        config.mmio_handle = up->MapHandleToValue(mmio_handle);
+    } else {
+        DEBUG_ASSERT(pci_config.base_addr != 0);
+        config.pio_addr = pci_config.base_addr;
+    }
+
+    // Success so far, copy everything back to the usersapce out_config pointer.
+    if (out_config.copy_to_user(config) != NO_ERROR) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // If we created an MMIO handle it needs to be held by the process
+    if (pci_config.is_mmio) {
+        up->AddHandle(mxtl::move(mmio_handle));
+    }
+
+    return NO_ERROR;
+}
+
 mx_status_t sys_pci_io_write(mx_handle_t handle, uint32_t bar_num, uint32_t offset, uint32_t len,
                              uint32_t value) {
     /**
@@ -575,7 +717,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t dev_handle,
     return pci_device->SetIrqMode((mx_pci_irq_mode_t)mode, requested_irq_count);
 }
 #else  // WITH_DEV_PCIE
-mx_status_t sys_pci_init(mx_handle_t, user_ptr<<const>mx_pci_init_arg_t>, uint32_t) {
+mx_status_t sys_pci_init(mx_handle_t, user_ptr<const mx_pci_init_arg_t>, uint32_t) {
     shutdown_early_init_console();
     return ERR_NOT_SUPPORTED;
 }
@@ -605,6 +747,14 @@ mx_status_t sys_pci_reset_device(mx_handle_t) {
 }
 
 mx_status_t sys_pci_map_mmio(mx_handle_t, uint32_t, mx_cache_policy_t, user_ptr<mx_handle_t>) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t sys_pci_get_bar(mx_handle_t, uint32_t, pci_resource_t**) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t sys_pci_get_config(mx_handle_t dev_handle, mx_pci_resource_t* out_config) {
     return ERR_NOT_SUPPORTED;
 }
 

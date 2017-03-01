@@ -163,7 +163,7 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     });
 
     if (do_map_range) {
-        status = vm_mapping->MapRange(0, len, false);
+        status = vm_mapping->MapRange(vmo_offset, len, false);
         if (status != NO_ERROR) {
             return status;
         }
