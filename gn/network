@@ -11,11 +11,11 @@
         },
         {
             "binary": "postfile",
-            "bootfs_path": "test/postfile"
+            "bootfs_path": "bin/postfile"
         },
         {
             "binary": "wget",
-            "bootfs_path": "test/wget"
+            "bootfs_path": "bin/wget"
         }
     ]
 }
