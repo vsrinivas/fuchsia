@@ -9,6 +9,7 @@ source_set("public") {
 
   deps = [
     "//application/services",
+    "//apps/ledger/services/internal",
     "//apps/modular/services/agent/agent_controller",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

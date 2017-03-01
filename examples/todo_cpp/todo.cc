@@ -78,7 +78,9 @@ void TodoApp::Initialize(
     fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
   story_.Bind(std::move(story));
-  story_->GetLedger(ledger_.NewRequest(), HandleResponse("GetLedger"));
+  story_->GetComponentContext(component_context_.NewRequest());
+  component_context_->GetLedger(ledger_.NewRequest(),
+                                HandleResponse("GetLedger"));
   ledger_->GetRootPage(page_.NewRequest(), HandleResponse("GetRootPage"));
 
   ledger::PageSnapshotPtr snapshot;

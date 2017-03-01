@@ -10,9 +10,11 @@
 namespace modular {
 
 AgentRunner::AgentRunner(app::ApplicationLauncher* application_launcher,
-                         MessageQueueManager* message_queue_manager)
+                         MessageQueueManager* message_queue_manager,
+                         ledger::LedgerRepository* ledger_repository)
     : application_launcher_(application_launcher),
-      message_queue_manager_(message_queue_manager) {}
+      message_queue_manager_(message_queue_manager),
+      ledger_repository_(ledger_repository) {}
 
 AgentRunner::~AgentRunner() = default;
 
@@ -74,9 +76,9 @@ AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
   if (found_it == running_agents_.end()) {
     bool inserted = false;
     std::tie(found_it, inserted) = running_agents_.emplace(
-        agent_url,
-        std::make_unique<AgentContextImpl>(
-            application_launcher_, message_queue_manager_, this, agent_url));
+        agent_url, std::make_unique<AgentContextImpl>(
+                       application_launcher_, message_queue_manager_, this,
+                       ledger_repository_, agent_url));
     FTL_DCHECK(inserted);
   }
 

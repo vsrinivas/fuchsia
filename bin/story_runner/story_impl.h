@@ -14,7 +14,6 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
@@ -59,9 +58,6 @@ class StoryImpl : public StoryController, ModuleWatcher {
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
-  void GetLedger(const std::string& module_url,
-                 fidl::InterfaceRequest<ledger::Ledger> request,
-                 const std::function<void(ledger::Status)>& result);
   const std::string& GetStoryId();
 
   // Releases ownership of |controller|.

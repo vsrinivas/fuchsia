@@ -18,7 +18,6 @@ fidl("story") {
 
   deps = [
     "//application/services:service_provider",
-    "//apps/ledger/services/public",
     "//apps/modular/services/component",
     "//apps/mozart/services/views",
   ]

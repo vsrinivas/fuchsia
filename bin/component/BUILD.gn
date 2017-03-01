@@ -11,6 +11,8 @@ source_set("component_context_impl") {
   ]
 
   deps = [
+    "//apps/ledger/services/internal",
+    "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/services/component",
     "//apps/modular/src/agent_runner:public",
     "//lib/ftl",

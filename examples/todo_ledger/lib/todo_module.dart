@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.ledger.services.public/ledger.fidl.dart';
+import 'package:apps.modular.services.component/component_context.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.story/module.fidl.dart';
 import 'package:apps.modular.services.story/story.fidl.dart';
@@ -39,6 +40,8 @@ class TodoModule extends Module implements PageWatcher {
 
   final StoryProxy _story = new StoryProxy();
 
+  final ComponentContextProxy _componentContext = new ComponentContextProxy();
+
   /// Watchers to be notified of changes in the list of items.
   final List<ItemsChangedCallback> _callbacks = <ItemsChangedCallback>[];
 
@@ -56,7 +59,9 @@ class TodoModule extends Module implements PageWatcher {
 
     _story.ctrl.bind(storyHandle);
 
-    _story.getLedger(_ledger.ctrl.request(), _handleResponse("getLedger"));
+    _story.getComponentContext(_componentContext.ctrl.request());
+    _componentContext.getLedger(
+        _ledger.ctrl.request(), _handleResponse("getLedger"));
     _ledger.getRootPage(_page.ctrl.request(), _handleResponse("getRootPage"));
 
     PageSnapshotProxy snapshot = new PageSnapshotProxy();

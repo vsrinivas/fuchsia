@@ -10,12 +10,12 @@
 #include <unordered_set>
 
 #include "application/services/application_environment.fidl.h"
-#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
+#include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
 #include "apps/modular/src/story_runner/conflict_resolver_impl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
@@ -38,10 +38,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
  public:
   StoryProviderImpl(app::ApplicationEnvironmentPtr environment,
                     fidl::InterfaceHandle<ledger::Ledger> ledger,
-                    ledger::LedgerRepositoryPtr ledger_repository,
                     const std::string& device_name,
-                    MessageQueueManager* message_queue_manager,
-                    AgentRunner* agent_runner);
+                    const ComponentContextInfo& component_context_info);
 
   ~StoryProviderImpl() override;
 
@@ -58,15 +56,11 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // Used by CreateStory() to write story meta-data to the ledger.
   void WriteStoryData(StoryDataPtr story_data, std::function<void()> done);
 
-  ledger::LedgerRepository* ledger_repository() {
-    return ledger_repository_.get();
-  }
-
   app::ApplicationLauncher* launcher() { return launcher_.get(); }
-  MessageQueueManager* message_queue_manager() {
-    return message_queue_manager_;
+
+  const ComponentContextInfo& component_context_info() {
+    return component_context_info_;
   }
-  AgentRunner* agent_runner() { return agent_runner_; }
 
   // Used by StoryImpl.
   using Storage = StoryStorageImpl::Storage;
@@ -156,9 +150,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // trigger a new delete operation.
   std::pair<std::string, DeleteStoryCall*> pending_deletion_;
 
-  ledger::LedgerRepositoryPtr ledger_repository_;
-  MessageQueueManager* const message_queue_manager_;
-  AgentRunner* const agent_runner_;
+  ComponentContextInfo component_context_info_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

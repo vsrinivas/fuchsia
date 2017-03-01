@@ -5,6 +5,7 @@
 module modular;
 
 import "application/services/service_provider.fidl";
+import "apps/ledger/services/public/ledger.fidl";
 import "apps/modular/services/agent/agent_controller/agent_controller.fidl";
 import "apps/modular/services/component/message_queue.fidl";
 
@@ -12,6 +13,10 @@ import "apps/modular/services/component/message_queue.fidl";
 // framework. For example, a Module gets it in Module::Initialize() and an Agent
 // gets it in Agent::Initialize().
 interface ComponentContext {
+  // Gets the Ledger associated with this component. This ledger instance
+  // is unique to this component under this user.
+  GetLedger(ledger.Ledger& module_ledger) => (ledger.Status status);
+
   // Used to start a new agent in the user scope and connect to it.
   ConnectToAgent(string url, app.ServiceProvider& incoming_services,
                  AgentController& controller);

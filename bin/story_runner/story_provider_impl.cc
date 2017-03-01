@@ -629,16 +629,12 @@ class UpdateDeviceNameCall : public Operation {
 StoryProviderImpl::StoryProviderImpl(
     app::ApplicationEnvironmentPtr environment,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
-    ledger::LedgerRepositoryPtr ledger_repository,
     const std::string& device_name,
-    MessageQueueManager* const message_queue_manager,
-    AgentRunner* const agent_runner)
+    const ComponentContextInfo& component_context_info)
     : environment_(std::move(environment)),
       storage_(new Storage),
       page_watcher_binding_(this),
-      ledger_repository_(std::move(ledger_repository)),
-      message_queue_manager_(message_queue_manager),
-      agent_runner_(agent_runner) {
+      component_context_info_(component_context_info) {
   environment_->GetApplicationLauncher(launcher_.NewRequest());
 
   ledger_.Bind(std::move(ledger));

@@ -10,6 +10,7 @@
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/examples/todo_cpp/generator.h"
+#include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -55,6 +56,7 @@ class TodoApp : public modular::Module, public ledger::PageWatcher {
   std::unique_ptr<app::ApplicationContext> context_;
   fidl::Binding<modular::Module> module_binding_;
   fidl::InterfacePtr<modular::Story> story_;
+  modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr ledger_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   ledger::PagePtr page_;

@@ -65,6 +65,7 @@ executable("example_recipe") {
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/lib/fidl:view_host",
     "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/component",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",

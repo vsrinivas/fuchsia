@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -17,20 +18,27 @@ namespace modular {
 
 class AgentRunner;
 
+// This contains the part of component context that does not vary from instance
+// to instance.
+struct ComponentContextInfo {
+  MessageQueueManager* const message_queue_manager;
+  AgentRunner* const agent_runner;
+  ledger::LedgerRepository* const ledger_repository;
+};
+
 // This class implements the ComponentContext interface, which is provided to
 // modules and agents.
-// TODO: Investigate using a ComponentContextFactory that'll help initialize
-// ComponentContextImpls with the AgentRunner and MessageQueueManager.
 class ComponentContextImpl : public ComponentContext {
  public:
-  explicit ComponentContextImpl(MessageQueueManager* message_queue_manager,
-                                AgentRunner* agent_runner,
+  explicit ComponentContextImpl(const ComponentContextInfo& info,
                                 const std::string& component_id);
   ~ComponentContextImpl();
 
   const std::string& component_id() { return component_id_; }
 
  private:
+  void GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
+                 const GetLedgerCallback& result) override;
   void ConnectToAgent(
       const fidl::String& url,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
@@ -45,6 +53,7 @@ class ComponentContextImpl : public ComponentContext {
 
   MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;
+  ledger::LedgerRepository* const ledger_repository_;
   const std::string component_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);

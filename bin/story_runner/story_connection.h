@@ -7,7 +7,6 @@
 
 #include <string>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
@@ -30,8 +29,7 @@ class StoryConnection : public Story {
   StoryConnection(StoryImpl* story_impl,
                   const std::string& module_url,
                   ModuleControllerImpl* module_controller_impl,
-                  MessageQueueManager* message_queue_manager,
-                  AgentRunner* agent_runner,
+                  const ComponentContextInfo& component_context_info,
                   fidl::InterfaceRequest<Story> story);
 
   ~StoryConnection() override;
@@ -47,8 +45,6 @@ class StoryConnection : public Story {
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
-  void GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
-                 const GetLedgerCallback& result) override;
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> context_request) override;
   void GetStoryId(const GetStoryIdCallback& callback) override;

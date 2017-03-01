@@ -12,6 +12,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
+#include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -279,8 +280,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     // This snippet of code demonstrates using the module's Ledger. Each time
     // this module is initialized, it updates a counter in the root page.
     // 1. Get the module's ledger.
-    story_->GetLedger(module_ledger_.NewRequest(), [this](
-                                                       ledger::Status status) {
+    story_->GetComponentContext(component_context_.NewRequest());
+    component_context_->GetLedger(module_ledger_.NewRequest(),
+                                  [this](ledger::Status status) {
       FTL_CHECK(status == ledger::Status::OK);
       // 2. Get the root page of the ledger.
       module_ledger_->GetRootPage(
@@ -355,6 +357,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
   // The following ledger interfaces are stored here to make life-time
   // management easier when chaining together lambda callbacks.
+  modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr module_ledger_;
   ledger::PagePtr module_root_page_;
   ledger::PageSnapshotPtr page_snapshot_;

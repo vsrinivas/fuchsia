@@ -34,6 +34,7 @@ class AgentContextImpl : public AgentContext, public AgentController {
   explicit AgentContextImpl(app::ApplicationLauncher* app_launcher,
                             MessageQueueManager* message_queue_manager,
                             AgentRunner* agent_runner,
+                            ledger::LedgerRepository* ledger_repository,
                             const std::string& url);
   ~AgentContextImpl() override;
 

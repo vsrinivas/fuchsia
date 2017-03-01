@@ -8,8 +8,6 @@
 #include "application/lib/app/connect.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
-#include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
@@ -306,18 +304,9 @@ void StoryImpl::StartModule(
 
   connection.story_connection.reset(new StoryConnection(
       this, module_url, connection.module_controller_impl.get(),
-      story_provider_impl_->message_queue_manager(),
-      story_provider_impl_->agent_runner(), std::move(self_request)));
+      story_provider_impl_->component_context_info(), std::move(self_request)));
 
   connections_.emplace_back(std::move(connection));
-}
-
-void StoryImpl::GetLedger(const std::string& module_url,
-                          fidl::InterfaceRequest<ledger::Ledger> request,
-                          const std::function<void(ledger::Status)>& result) {
-  FTL_DCHECK(!module_url.empty());
-  story_provider_impl_->ledger_repository()->GetLedger(
-      to_array(module_url), std::move(request), result);
 }
 
 const std::string& StoryImpl::GetStoryId() {

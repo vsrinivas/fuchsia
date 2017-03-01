@@ -6,7 +6,6 @@
 
 #include <string>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/src/story_runner/module_controller_impl.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -17,13 +16,12 @@ StoryConnection::StoryConnection(
     StoryImpl* const story_impl,
     const std::string& module_url,
     ModuleControllerImpl* const module_controller_impl,
-    MessageQueueManager* message_queue_manager,
-    AgentRunner* agent_runner,
+    const ComponentContextInfo& component_context_info,
     fidl::InterfaceRequest<Story> story)
     : story_impl_(story_impl),
       module_url_(module_url),
       module_controller_impl_(module_controller_impl),
-      component_context_impl_(message_queue_manager, agent_runner, module_url),
+      component_context_impl_(component_context_info, module_url),
       binding_(this, std::move(story)) {}
 
 StoryConnection::~StoryConnection() {}
@@ -43,15 +41,6 @@ void StoryConnection::StartModule(
   story_impl_->StartModule(query, std::move(link), std::move(outgoing_services),
                            std::move(incoming_services),
                            std::move(module_controller), std::move(view_owner));
-}
-
-void StoryConnection::GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
-                                const GetLedgerCallback& result) {
-  if (!module_url_.empty()) {
-    story_impl_->GetLedger(module_url_, std::move(request), result);
-  } else {
-    result(ledger::Status::UNKNOWN_ERROR);
-  }
 }
 
 void StoryConnection::GetComponentContext(

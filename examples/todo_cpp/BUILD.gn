@@ -9,6 +9,7 @@ executable("todo_cpp") {
     "//application/lib/app",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
+    "//apps/modular/services/component",
     "//apps/modular/services/story",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

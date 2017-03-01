@@ -85,8 +85,11 @@ class UserRunnerImpl : public UserRunner {
       fidl::InterfaceRequest<UserRunner> user_runner_request)
       : application_context_(application_context),
         binding_(this, std::move(user_runner_request)),
+        ledger_repository_(
+            ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
         agent_runner_(application_context->launcher().get(),
-                      &message_queue_manager_) {
+                      &message_queue_manager_,
+                      ledger_repository_.get()) {
     binding_.set_connection_error_handler([this] { delete this; });
 
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
@@ -108,10 +111,8 @@ class UserRunnerImpl : public UserRunner {
 
     RunUserShell(user_shell, user_shell_args, std::move(view_owner_request));
 
-    auto ledger_repository_ptr =
-        ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository));
     ledger::LedgerPtr ledger;
-    ledger_repository_ptr->GetLedger(
+    ledger_repository_->GetLedger(
         to_array(kAppId), ledger.NewRequest(), [](ledger::Status status) {
           FTL_CHECK(status == ledger::Status::OK)
               << "LedgerRepository.GetLedger() failed: "
@@ -122,8 +123,8 @@ class UserRunnerImpl : public UserRunner {
     stories_scope_->environment()->Duplicate(env.NewRequest());
 
     story_provider_impl_.reset(new StoryProviderImpl(
-        std::move(env), std::move(ledger), std::move(ledger_repository_ptr),
-        device_name, &message_queue_manager_, &agent_runner_));
+        std::move(env), std::move(ledger), device_name,
+        {&message_queue_manager_, &agent_runner_, ledger_repository_.get()}));
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
     story_provider_impl_->AddBinding(story_provider.NewRequest());
@@ -217,6 +218,7 @@ class UserRunnerImpl : public UserRunner {
 
   std::shared_ptr<app::ApplicationContext> application_context_;
   fidl::Binding<UserRunner> binding_;
+  ledger::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<Scope> stories_scope_;
   UserShellPtr user_shell_;
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;

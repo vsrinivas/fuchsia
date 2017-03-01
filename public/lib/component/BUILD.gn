@@ -13,6 +13,7 @@ fidl("component") {
 
   deps = [
     "//application/services",
+    "//apps/ledger/services/public",
     "//apps/modular/services/agent/agent_controller",
     "//apps/network/services",
   ]
