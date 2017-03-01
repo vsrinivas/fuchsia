@@ -51,50 +51,19 @@ information, see `docs/getting_started.md`:
 
 5. You must also copy `bootcode.bin` and `start.elf` to the boot partition. They
    can be obtained from [here](https://github.com/raspberrypi/firmware/tree/master/boot).
-   Because of how command line arguments are passed to the kernel, you will also need
-   to copy the device tree blob in kernel/target/rpi3/bcm2710-rpi-3-b.dtb
-   It is important that the dtb file retain the name bcm2710-rpi-3-b.dtb when copied
-   to the boot partition.
 
-6. Create a file called `config.txt` in the boot partition with the following
-   contents:
+6. Copy `config.txt` `cmdline.txt` and `bcm2710-rpi-3-b.dtb` from
+   `./kernel/target/rpi3/` to the boot partition:
 
-   ```
-   ### config.txt ###
+         cp ./kernel/target/rpi3/config.txt <path/to/sdcard/mount>/config.txt
+         cp ./kernel/target/rpi3/cmdline.txt <path/to/sdcard/mount>/cmdline.txt
+         cp ./kernel/target/rpi3/bcm2710-rpi-3-b.dtb <path/to/sdcard/mount>/bcm2710-rpi-3-b.dtb
 
-   # Tells the Pi's bootloader which file contains the kernel.
-   kernel=kernel8.img
-
-   # Tells the Pi's bootloader which file contains the ramdisk.
-   initramfs bootfs.img
-
-   # Necessary if you're using a serial dongle to talk to the Pi over the UART
-   enable_uart=1
-
-   # Used to configure HDMI, you may need to tweak these settings dependong on
-   # the monitor you're using.
-   hdmi_cvt=800 480 60 6
-   hdmi_group=2
-   hdmi_mode=87
-   hdmi_drive=2
-   framebuffer_depth=32
-   framebuffer_ignore_alpha=1
-   ```
-
-6. Create a file called `cmdline.txt` in the boot partition with the following
-   contents:
-
-   ```
-   ### cmdline.txt ###
-
-   magenta.soc=00bc:0000 TERM=uart
-
-   ### Note: omit TERM=uart if not using serial console ###
-
-   ```
+   It is imperative that these files are named exactly as listed when copied to
+   the SD card.
 
 7. At this point your SD Card should be formatted with an MBR partition table
-   and FAT32 boot partition that contains the following six files:
+   and FAT32 boot partition that contains the following 6 files:
    + bootcode.bin
    + config.txt
    + kernel8.img
