@@ -42,6 +42,13 @@ typedef struct thread_data {
     mx_handle_t channel;
 } thread_data_t;
 
+typedef struct wait_data {
+    mx_handle_t handle;
+    mx_handle_t signals;
+    uint64_t timeout;
+    mx_status_t status;
+} wait_data_t;
+
 // [0] is used by main thread
 // [1] is used by worker thread
 static mx_handle_t thread1_channel[2];
@@ -56,7 +63,7 @@ static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     int64_t timeout = MX_TIME_INFINITE;
     mx_status_t status = mx_object_wait_one(handle, signals, timeout, &pending);
-    if (status == ERR_HANDLE_CLOSED) {
+    if (status == ERR_CANCELED) {
         *result = WAIT_CANCELLED;
         return true;
     }
@@ -75,7 +82,7 @@ static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t signals = MX_EVENT_SIGNALED;
     int64_t timeout = MX_TIME_INFINITE;
     mx_status_t status = mx_object_wait_one(handle, signals, timeout, &pending);
-    if (status == ERR_HANDLE_CLOSED) {
+    if (status == ERR_CANCELED) {
         *result = WAIT_CANCELLED;
         return true;
     }
@@ -172,6 +179,14 @@ static int worker_thread_func(void* arg) {
     return 0;
 }
 
+
+static int wait_thread_func(void* arg) {
+    wait_data_t* data = arg;
+    mx_signals_t observed;
+    data->status = mx_object_wait_one(data->handle, data->signals, data->timeout, &observed);
+    return 0;
+}
+
 bool handle_wait_test(void) {
     BEGIN_TEST;
 
@@ -227,8 +242,28 @@ bool handle_wait_test(void) {
     END_TEST;
 }
 
+bool wait_cancel_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t event_handle;
+    ASSERT_EQ(mx_event_create(0u, &event_handle), 0, "");
+
+    thrd_t thread1;
+    wait_data_t wait_data = {event_handle, MX_EVENT_SIGNALED, MX_MSEC(400), 0u};
+    ASSERT_EQ(thrd_create(&thread1, wait_thread_func, &wait_data), thrd_success, "");
+    mx_nanosleep(MX_MSEC(20));
+    ASSERT_EQ(mx_object_wait_cancel(MX_CANCEL_ANY, event_handle, 0u), 0, "");
+
+    EXPECT_EQ(thrd_join(thread1, NULL), thrd_success, "");
+    EXPECT_EQ(wait_data.status, ERR_CANCELED, "");
+
+    EXPECT_EQ(mx_handle_close(event_handle), NO_ERROR, "");
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(handle_wait_tests)
 RUN_TEST(handle_wait_test);
+RUN_TEST(wait_cancel_test);
 END_TEST_CASE(handle_wait_tests)
 
 #ifndef BUILD_COMBINED_TESTS

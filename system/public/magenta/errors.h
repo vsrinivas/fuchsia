@@ -74,8 +74,12 @@
 // the operation completed.
 #define ERR_TIMED_OUT (-23)
 
-// ERR_HANDLE_CLOSED: a handle being waited on was closed
+// deprecated: ERR_HANDLE_CLOSED: a handle being waited on was closed
+// bug MG-585 tracks the cleanup.
 #define ERR_HANDLE_CLOSED (-24)
+// ERR_CANCELED: The in-progress operation (e.g. a wait) has been
+// canceled.
+#define ERR_CANCELED (-24)
 
 // ERR_REMOTE_CLOSED: The operation failed because the remote end
 // of the subject of the operation was closed.

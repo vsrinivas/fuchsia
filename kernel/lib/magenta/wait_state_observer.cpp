@@ -80,7 +80,7 @@ bool WaitStateObserver::OnStateChange(mx_signals_t new_state) {
 bool WaitStateObserver::OnCancel(Handle* handle) {
     if (handle == handle_) {
         wakeup_reasons_ |= MX_SIGNAL_HANDLE_CLOSED;
-        return event_->Signal() > 0;
+        return event_->Signal(ERR_CANCELED) > 0;
     } else {
         return false;
     }

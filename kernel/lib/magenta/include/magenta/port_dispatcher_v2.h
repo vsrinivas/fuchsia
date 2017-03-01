@@ -105,6 +105,7 @@ private:
     bool OnInitialize(mx_signals_t initial_state) final;
     bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle) final;
+    bool OnCancelByKey(Handle* handle, uint64_t key) final;
     void OnRemoved() final;
 
     // The following method can only be called from

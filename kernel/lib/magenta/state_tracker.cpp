@@ -9,6 +9,37 @@
 #include <kernel/auto_lock.h>
 #include <magenta/wait_event.h>
 
+namespace {
+
+template <typename Func>
+void CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock, Func f) {
+    bool awoke_threads = false;
+
+    StateTracker::ObserverList obs_to_remove;
+
+    {
+        AutoLock lock(observer_lock);
+        for (auto it = observers->begin(); it != observers->end();) {
+            awoke_threads = f(it.CopyPointer()) || awoke_threads;
+            if (it->remove()) {
+                auto to_remove = it;
+                ++it;
+                obs_to_remove.push_back(observers->erase(to_remove));
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    while (!obs_to_remove.is_empty()) {
+        obs_to_remove.pop_front()->OnRemoved();
+    }
+
+    if (awoke_threads)
+        thread_preempt(false);
+}
+}  // namespace
+
 void StateTracker::AddObserver(StateObserver* observer) {
     DEBUG_ASSERT(observer != nullptr);
 
@@ -31,28 +62,15 @@ void StateTracker::RemoveObserver(StateObserver* observer) {
 }
 
 void StateTracker::Cancel(Handle* handle) {
-    bool awoke_threads = false;
+    CancelWithFunc(&observers_, &lock_, [handle](StateObserver* obs) {
+        return obs->OnCancel(handle);
+    });
+}
 
-    ObserverList obs_to_remove;
-
-    {
-        AutoLock lock(&lock_);
-        for (auto it = observers_.begin(); it != observers_.end();) {
-            awoke_threads = it->OnCancel(handle) || awoke_threads;
-            if (it->remove()) {
-                auto to_remove = it;
-                ++it;
-                obs_to_remove.push_back(observers_.erase(to_remove));
-            } else {
-                ++it;
-            }
-        }
-    }
-
-    RemoveObservers(&obs_to_remove);
-
-    if (awoke_threads)
-        thread_preempt(false);
+void StateTracker::CancelByKey(Handle* handle, uint64_t key) {
+    CancelWithFunc(&observers_, &lock_, [handle, key](StateObserver* obs) {
+        return obs->OnCancelByKey(handle, key);
+    });
 }
 
 void StateTracker::UpdateState(mx_signals_t clear_mask,
@@ -83,15 +101,11 @@ void StateTracker::UpdateState(mx_signals_t clear_mask,
         }
     }
 
-    RemoveObservers(&obs_to_remove);
+    while (!obs_to_remove.is_empty()) {
+        obs_to_remove.pop_front()->OnRemoved();
+    }
 
     if (awoke_threads) {
         thread_preempt(false);
-    }
-}
-
-void StateTracker::RemoveObservers(ObserverList* list) {
-    while (!list->is_empty()) {
-        list->pop_front()->OnRemoved();
     }
 }

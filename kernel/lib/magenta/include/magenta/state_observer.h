@@ -33,6 +33,11 @@ public:
     // WARNING: This is called under StateTracker's mutex.
     virtual bool OnCancel(Handle* handle) = 0;
 
+    // Called when the client wants to cancel an outstanding object_wait_aysnc(..key..). In this
+    // case the object might not be destroyed. Returns true if a thread was awoken.
+    // WARNING: This is called under StateTracker's mutex.
+    virtual bool OnCancelByKey(Handle* handle, uint64_t key) { return false; }
+
     // Called after this observer has been removed from the state tracker list. In this callback
     // is safe to delete the observer.
     virtual void OnRemoved() {}

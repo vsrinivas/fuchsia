@@ -31,8 +31,11 @@ public:
 
     // Called when observers of the handle's state (e.g., waits on the handle) should be
     // "cancelled", i.e., when a handle (for the object that owns this StateTracker) is being
-    // destroyed or transferred.
+    // destroyed or transferred. Or via mx_object_wait_cancel(MX_CANCEL_ANY..).
     void Cancel(Handle* handle);
+
+    // Like Cancel() but issued via mx_object_wait_cancel(MX_CANCEL_KEY.. ).
+    void CancelByKey(Handle* handle, uint64_t key);
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
@@ -40,11 +43,9 @@ public:
 
     mx_signals_t GetSignalsState() { return signals_; }
 
-private:
     using ObserverList = mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
 
-    void RemoveObservers(ObserverList* list);
-
+private:
     mx_signals_t signals_;
     Mutex lock_;
 

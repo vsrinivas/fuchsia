@@ -218,7 +218,7 @@ static bool wait_signals_test(void) {
     ASSERT_EQ(ret, thrd_success, "Error during thread creation");
 
     status = mx_object_wait_one(events[1], MX_EVENT_SIGNALED, MX_TIME_INFINITE, NULL);
-    ASSERT_EQ(status, ERR_HANDLE_CLOSED, "Error during wait");
+    ASSERT_EQ(status, ERR_CANCELED, "Error during wait");
 
     ASSERT_EQ(thrd_join(thread, NULL), thrd_success, "Error during thread close");
 

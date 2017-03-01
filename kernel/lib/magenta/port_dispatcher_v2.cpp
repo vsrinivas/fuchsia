@@ -54,6 +54,12 @@ bool PortObserver::OnCancel(Handle* handle) {
     return false;
 }
 
+bool PortObserver::OnCancelByKey(Handle* handle, uint64_t key) {
+    if ((key_ == key) && (handle_ == handle))
+        remove_ = true;
+    return false;
+}
+
 void PortObserver::OnRemoved() {
     if (port_->CanReap(this, &packet_))
         delete this;
@@ -245,4 +251,3 @@ mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
 
     return NO_ERROR;
 }
-
