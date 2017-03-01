@@ -20,7 +20,7 @@ int devhost_cmdline(int argc, char** argv);
 int devhost_start(void);
 }
 
-bool launch(uint32_t argc, const char** argv);
+#include "launch.h"
 
 #include <magenta/types.h>
 #include <thread>
