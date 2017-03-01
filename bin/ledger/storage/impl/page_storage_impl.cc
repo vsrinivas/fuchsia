@@ -340,18 +340,20 @@ Status PageStorageImpl::Init() {
   }
   for (JournalId& id : journal_ids) {
     std::unique_ptr<Journal> journal;
-    db_.GetImplicitJournal(id, &journal);
-    bool async_test = false;
-    journal->Commit(
-        [&s, &async_test](Status status, std::unique_ptr<const Commit>) {
-          s = status;
-          async_test = true;
-        });
-    FTL_DCHECK(async_test);
+    s = db_.GetImplicitJournal(id, &journal);
     if (s != Status::OK) {
-      journal->Rollback();
+      FTL_LOG(ERROR) << "Failed to get implicit journal with status " << s
+                     << ". journal id: " << id;
       return s;
     }
+    journal->Commit([](Status status, std::unique_ptr<const Commit>) {
+      // TODO(nellyv): We should commit implicit journals before returning. See
+      // LE-151.
+      if (status != Status::OK) {
+        FTL_LOG(ERROR) << "Failed to commit implicit journal created in "
+                          "previous Ledger execution.";
+      }
+    });
   }
 
   return Status::OK;
