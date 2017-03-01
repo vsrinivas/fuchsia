@@ -72,19 +72,16 @@ class ResponsePrinter {
 
 class PostFileApp {
  public:
-  PostFileApp(const std::vector<std::string>& args)
+  PostFileApp()
       : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
-
-    Start(args);
   }
 
- private:
-  void Start(const std::vector<std::string>& args) {
+  bool Start(const std::vector<std::string>& args) {
     if (args.size() < 3) {
       printf("usage: %s url upload_file\n", args[0].c_str());
-      return;
+      return false;
     }
     std::string url(args[1]);
     std::string upload_file(args[2]);
@@ -95,7 +92,7 @@ class PostFileApp {
     ftl::UniqueFD fd(open(upload_file.c_str(), O_RDONLY));
     if (!fd.is_valid()) {
       printf("cannot open %s\n", upload_file.c_str());
-      return;
+      return false;
     }
 
     network::URLRequestPtr request(network::URLRequest::New());
@@ -113,7 +110,7 @@ class PostFileApp {
     mx_status_t status = mx::socket::create(0u, &producer, &consumer);
     if (status != NO_ERROR) {
       printf("cannot create socket\n");
-      return;
+      return false;
     }
 
     request->body = network::URLBody::New();
@@ -135,8 +132,10 @@ class PostFileApp {
                          ResponsePrinter printer;
                          printer.Run(std::move(response));
                        });
+    return true;
   }
 
+ private:
   std::unique_ptr<app::ApplicationContext> context_;
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
@@ -148,8 +147,9 @@ int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
   mtl::MessageLoop loop;
 
-  examples::PostFileApp postfile_app(args);
+  examples::PostFileApp postfile_app;
+  if (postfile_app.Start(args))
+    loop.Run();
 
-  loop.Run();
   return 0;
 }
