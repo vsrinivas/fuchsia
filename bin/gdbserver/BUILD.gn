@@ -39,6 +39,8 @@ if (current_cpu == "x64") {
     "registers-amd64.cc",
     "x86-cpuid.cc",
     "x86-cpuid.h",
+    "x86-pt.cc",
+    "x86-pt.h",
   ]
 } else if (current_cpu == "arm64") {
   arch_sources = [
@@ -54,7 +56,17 @@ if (current_cpu == "x64") {
   ]
 }
 
-executable("gdbserver") {
+# To avoid breaking anything this follows convention and uses the name
+# gdbserver, the name of this directory.
+# TODO(dje): Later the directory name is expected to change.
+group("gdbserver") {
+  deps = [
+    ":debugserver",
+    ":ipt",
+  ]
+}
+
+executable("debugserver") {
   # This is called debugserver and not gdbserver because it is not intended
   # to be gdb specific. E.g., The GDB Remote Serial Protocol is used by other
   # debuggers, e.g., lldb.
@@ -77,6 +89,40 @@ executable("gdbserver") {
     "thread-action-list.cc",
     "thread-action-list.h",
   ]
+
+  deps = [
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magenta/system/ulib/mx",
+  ]
+
+  libs = [
+    "launchpad",
+    "magenta",
+  ]
+}
+
+# There's no way to specify in packages/gn/gdbserver that the ipt only exists
+# for x64, so we build it even for arm64, but it's just a stub.
+
+executable("ipt") {
+  output_name = "ipt"
+
+  if (current_cpu == "x64") {
+    sources = common_sources
+    sources += arch_sources
+    sources += [
+      "ipt-ctrl.cc",
+      "ipt-ctrl.h",
+      "ipt-main.cc",
+      "ipt-server.cc",
+      "ipt-server.h",
+    ]
+  } else {
+    sources = [
+      "ipt-main.cc",
+    ]
+  }
 
   deps = [
     "//lib/ftl",

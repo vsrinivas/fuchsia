@@ -80,6 +80,12 @@ class Thread final {
   // success, false on failure.
   bool Step();
 
+#ifdef __x86_64__
+  // Intel PT buffer access
+  int32_t ipt_buffer() const { return ipt_buffer_; }
+  void set_ipt_buffer(int32_t ipt_buffer) { ipt_buffer_ = ipt_buffer; }
+#endif
+
  private:
   friend class Process;
 
@@ -104,6 +110,12 @@ class Thread final {
 
   // The current state of the this thread.
   State state_;
+
+#ifdef __x86_64__
+  // The Intel Processor Trace buffer descriptor attached to this thread,
+  // or -1 if none.
+  int32_t ipt_buffer_;
+#endif
 
   // The collection of breakpoints that belong to this thread.
   arch::ThreadBreakpointSet breakpoints_;
