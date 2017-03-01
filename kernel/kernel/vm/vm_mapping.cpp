@@ -245,7 +245,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
 
     // Check if unmapping from one of the ends
     if (base_ == base || base + size == base_ + size_) {
-        status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), base, size / PAGE_SIZE);
+        status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), base, size / PAGE_SIZE, nullptr);
         if (status < 0) {
             return status;
         }
@@ -279,7 +279,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     }
 
     // Unmap the middle segment
-    status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), base, size / PAGE_SIZE);
+    status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), base, size / PAGE_SIZE, nullptr);
     if (status < 0) {
         return status;
     }
@@ -335,7 +335,7 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
     LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 "\n", unmap_base.ValueOrDie(), len_new);
 
     status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), unmap_base.ValueOrDie(),
-                                     static_cast<size_t>(len_new) / PAGE_SIZE);
+                                     static_cast<size_t>(len_new) / PAGE_SIZE, nullptr);
     if (status < 0)
         return status;
 
@@ -380,10 +380,13 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
         vaddr_t va = base_ + o;
         LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", pa, va);
 
-        auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, pa, 1, arch_mmu_flags_);
+        size_t mapped;
+        auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, pa, 1, arch_mmu_flags_, &mapped);
         if (ret < 0) {
             TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR "\n", ret, va, pa);
         }
+
+        DEBUG_ASSERT(mapped == 1);
     }
 
     return NO_ERROR;
@@ -506,11 +509,13 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
     } else {
         // nothing was mapped there before, map it now
         LTRACEF("mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", new_pa, va);
-        auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, arch_mmu_flags_);
+        size_t mapped;
+        auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, arch_mmu_flags_, &mapped);
         if (ret < 0) {
             TRACEF("failed to map page\n");
             return ERR_NO_MEMORY;
         }
+        DEBUG_ASSERT(mapped == 1);
     }
 
 // TODO: figure out what to do with this

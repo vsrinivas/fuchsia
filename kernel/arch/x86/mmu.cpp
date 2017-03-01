@@ -967,7 +967,7 @@ status_t x86_mmu_update_mapping<PT_L>(arch_aspace_t* aspace, pt_entry_t* table, 
     return NO_ERROR;
 }
 
-int arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, size_t count) {
+status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count, size_t *unmapped) {
     LTRACEF("aspace %p, vaddr %#" PRIxPTR ", count %#zx\n", aspace, vaddr, count);
 
     DEBUG_ASSERT(aspace);
@@ -986,10 +986,15 @@ int arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, size_t count) {
     MappingCursor result;
     x86_mmu_remove_mapping<MAX_PAGING_LEVEL>(aspace, aspace->pt_virt, start, &result);
     DEBUG_ASSERT(result.size == 0);
+
+    if (unmapped)
+        *unmapped = count;
+
     return NO_ERROR;
 }
 
-int arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, size_t count, uint flags) {
+status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr,
+        const size_t count, uint flags, size_t *mapped) {
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 
@@ -1017,10 +1022,14 @@ int arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, size_t cou
         return status;
     }
     DEBUG_ASSERT(result.size == 0);
+
+    if (mapped)
+        *mapped = count;
+
     return NO_ERROR;
 }
 
-int arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint flags) {
+status_t arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint flags) {
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 

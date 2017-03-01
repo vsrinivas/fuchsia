@@ -300,9 +300,10 @@ static int cmd_vm(int argc, const cmd_args* argv) {
 
         VmAspace* aspace = vmm_aspace_to_obj(_aspace);
 
-        int err =
-            arch_mmu_map(&aspace->arch_aspace(), argv[3].u, argv[2].u, (uint)argv[4].u, (uint)argv[5].u);
-        printf("arch_mmu_map returns %d\n", err);
+        size_t mapped;
+        auto err =
+            arch_mmu_map(&aspace->arch_aspace(), argv[3].u, argv[2].u, (uint)argv[4].u, (uint)argv[5].u, &mapped);
+        printf("arch_mmu_map returns %d, mapped %zu\n", err, mapped);
     } else if (!strcmp(argv[1].str, "unmap")) {
         if (argc < 4)
             goto notenoughargs;
@@ -315,8 +316,9 @@ static int cmd_vm(int argc, const cmd_args* argv) {
 
         VmAspace* aspace = vmm_aspace_to_obj(_aspace);
 
-        int err = arch_mmu_unmap(&aspace->arch_aspace(), argv[2].u, (uint)argv[3].u);
-        printf("arch_mmu_unmap returns %d\n", err);
+        size_t unmapped;
+        auto err = arch_mmu_unmap(&aspace->arch_aspace(), argv[2].u, (uint)argv[3].u, &unmapped);
+        printf("arch_mmu_unmap returns %d, unmapped %zu\n", err, unmapped);
     } else {
         printf("unknown command\n");
         goto usage;

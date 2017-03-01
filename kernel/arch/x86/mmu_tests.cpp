@@ -31,12 +31,15 @@ static bool mmu_tests(void* context) {
 
         // Map a single page to force the lower PDP of the target region
         // to be created
-        err = arch_mmu_map(&aspace, va - 3 * PAGE_SIZE, 0, 1, arch_rw_flags);
+        size_t mapped;
+        err = arch_mmu_map(&aspace, va - 3 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, NO_ERROR, "map single page");
+        EXPECT_EQ(mapped, 1u, "map single page");
 
         // Map the last page of the region
-        err = arch_mmu_map(&aspace, va + alloc_size - PAGE_SIZE, 0, 1, arch_rw_flags);
+        err = arch_mmu_map(&aspace, va + alloc_size - PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, NO_ERROR, "map last page");
+        EXPECT_EQ(mapped, 1u, "map single page");
 
         paddr_t pa;
         uint flags;
@@ -45,15 +48,18 @@ static bool mmu_tests(void* context) {
 
         // Attempt to unmap the target region (analogous to unmapping a demand
         // paged region that has only had its last page touched)
-        err = arch_mmu_unmap(&aspace, va, alloc_size / PAGE_SIZE);
+        size_t unmapped;
+        err = arch_mmu_unmap(&aspace, va, alloc_size / PAGE_SIZE, &unmapped);
         EXPECT_EQ(err, NO_ERROR, "unmap unallocated region");
+        EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
 
         err = arch_mmu_query(&aspace, va + alloc_size - PAGE_SIZE, &pa, &flags);
         EXPECT_EQ(err, ERR_NOT_FOUND, "last entry is not mapped anymore");
 
         // Unmap the single page from earlier
-        err = arch_mmu_unmap(&aspace, va - 3 * PAGE_SIZE, 1);
+        err = arch_mmu_unmap(&aspace, va - 3 * PAGE_SIZE, 1, &unmapped);
         EXPECT_EQ(err, NO_ERROR, "unmap single page");
+        EXPECT_EQ(unmapped, 1u, "unmap unallocated region");
 
         err = arch_mmu_destroy_aspace(&aspace);
         EXPECT_EQ(err, NO_ERROR, "destroy aspace");
@@ -78,17 +84,22 @@ static bool mmu_tests(void* context) {
 
         // Map a single page to force the lower PDP of the target region
         // to be created
-        err = arch_mmu_map(&aspace, va - 2 * PAGE_SIZE, 0, 1, arch_rw_flags);
+        size_t mapped;
+        err = arch_mmu_map(&aspace, va - 2 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, NO_ERROR, "map single page");
+        EXPECT_EQ(mapped, 1u, "map single page");
 
         // Attempt to unmap the target region (analogous to unmapping a demand
         // paged region that has not been touched)
-        err = arch_mmu_unmap(&aspace, va, alloc_size / PAGE_SIZE);
+        size_t unmapped;
+        err = arch_mmu_unmap(&aspace, va, alloc_size / PAGE_SIZE, &unmapped);
         EXPECT_EQ(err, NO_ERROR, "unmap unallocated region");
+        EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
 
         // Unmap the single page from earlier
-        err = arch_mmu_unmap(&aspace, va - 2 * PAGE_SIZE, 1);
+        err = arch_mmu_unmap(&aspace, va - 2 * PAGE_SIZE, 1, &unmapped);
         EXPECT_EQ(err, NO_ERROR, "unmap single page");
+        EXPECT_EQ(unmapped, 1u, "unmap single page");
 
         err = arch_mmu_destroy_aspace(&aspace);
         EXPECT_EQ(err, NO_ERROR, "destroy aspace");

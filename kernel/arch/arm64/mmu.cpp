@@ -624,7 +624,7 @@ static ssize_t arm64_mmu_unmap(vaddr_t vaddr, size_t size,
     return ret;
 }
 
-static int arm64_mmu_protect(vaddr_t vaddr, size_t size, pte_t attrs,
+static status_t arm64_mmu_protect(vaddr_t vaddr, size_t size, pte_t attrs,
                              vaddr_t vaddr_base, uint top_size_shift,
                              uint top_index_shift, uint page_size_shift,
                              pte_t* top_page_table, uint asid) {
@@ -652,7 +652,7 @@ static int arm64_mmu_protect(vaddr_t vaddr, size_t size, pte_t attrs,
     return ret;
 }
 
-int arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, size_t count, uint flags) {
+status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const size_t count, uint flags, size_t* mapped) {
     LTRACEF("vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %zu flags %#x\n",
             vaddr, paddr, count, flags);
 
@@ -691,11 +691,15 @@ int arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, size_t cou
                             aspace->tt_virt, aspace->asid);
     }
 
-    // TODO: fix return to handle full size
-    return (ret < 0) ? (int)ret : (int)(ret / PAGE_SIZE);
+    if (mapped) {
+        *mapped = (ret > 0) ? (ret / PAGE_SIZE) : 0u;
+        DEBUG_ASSERT(*mapped <= count);
+    }
+
+    return (ret < 0) ? (status_t)ret : NO_ERROR;
 }
 
-int arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, size_t count) {
+status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count, size_t* unmapped) {
     LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
 
     DEBUG_ASSERT(aspace);
@@ -726,10 +730,15 @@ int arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, size_t count) {
                               aspace->asid);
     }
 
-    return (ret < 0) ? (int)ret : (int)(ret / PAGE_SIZE);
+    if (unmapped) {
+        *unmapped = (ret > 0) ? (ret / PAGE_SIZE) : 0u;
+        DEBUG_ASSERT(*unmapped <= count);
+    }
+
+    return (ret < 0) ? (status_t)ret : 0;
 }
 
-int arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint flags) {
+status_t arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint flags) {
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 
