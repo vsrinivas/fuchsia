@@ -7,18 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern "C" {
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
-
-int devhost_init(void);
-int devhost_cmdline(int argc, char** argv);
-int devhost_start(void);
-}
 
 #include "launch.h"
 
@@ -27,7 +21,6 @@ int devhost_start(void);
 
 #include "magma_util/dlog.h"
 #include "magma_util/platform/magenta/magenta_platform_ioctl.h"
-#include "magma_util/sleep.h"
 #include "sys_driver/magma_driver.h"
 
 #define MAGMA_START 1
@@ -37,9 +30,6 @@ void magma_indriver_test(mx_device_t* device);
 #endif
 
 #define INTEL_I915_VID (0x8086)
-
-#define INTEL_I915_REG_WINDOW_SIZE (0x1000000u)
-#define INTEL_I915_FB_WINDOW_SIZE (0x10000000u)
 
 struct intel_i915_device_t {
     mx_device_t device;
