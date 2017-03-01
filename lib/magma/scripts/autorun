@@ -1,4 +1,3 @@
-msleep 5000
 echo [SYS START=]
 /system/test/magma_sys_unit_tests
 /system/test/magma_integration_tests --gtest_filter=-*Stress*

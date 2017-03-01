@@ -28,6 +28,7 @@ source_set("test_driver") {
 
   sources = [
     "driver_main.cpp",
+    "launch.cc",
   ]
 
   deps = [
@@ -50,6 +51,8 @@ source_set("test_driver") {
   libs = [
     "driver",
     "ddk",
+    "launchpad",
     "magenta",
+    "mxio",
   ]
 }

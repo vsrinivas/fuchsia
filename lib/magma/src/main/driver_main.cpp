@@ -20,6 +20,8 @@ int devhost_cmdline(int argc, char** argv);
 int devhost_start(void);
 }
 
+bool launch(uint32_t argc, const char** argv);
+
 #include <magenta/types.h>
 #include <thread>
 
@@ -271,6 +273,9 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
 #if MAGMA_INDRIVER_TEST
         DLOG("running magma indriver test");
         magma_indriver_test(device->parent_device);
+        constexpr uint32_t kArgc = 2;
+        const char* argv[kArgc]{"/boot/bin/sh", "/system/autorun"};
+        launch(kArgc, argv);
 #endif
 
         magma_start(device);
