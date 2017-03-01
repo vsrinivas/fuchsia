@@ -28,7 +28,9 @@ Sections will be populated over time.
  - [Boot sequence](boot_sequence.md)
  - Device, user, and story runners
  - Components
- - Modules
+ - [Story][framework-story]
+ - [Module][framework-module]
+ - [Agent][framework-agent]
  - Links
 
 # Storage
@@ -95,3 +97,6 @@ Sections will be populated over time.
 
 [magenta-concepts]: https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md "Magenta concepts"
 [magenta-syscalls]: https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls.md "Magenta syscalls"
+[framework-story]: https://fuchsia.googlesource.com/modular/+/master/docs/story.md "Framework story"
+[framework-module]: https://fuchsia.googlesource.com/modular/+/master/docs/module.md "Framework module"
+[framework-agent]: https://fuchsia.googlesource.com/modular/+/master/docs/agent.md "Framework agent"
