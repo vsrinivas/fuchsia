@@ -64,7 +64,7 @@ class ResponsePrinter {
 
 class WGetApp {
  public:
-  WGetApp(const std::vector<std::string>& args)
+  WGetApp()
       : context_(app::ApplicationContext::CreateFromStartupInfo()) {
 #if USE_ENVIRONMENT_SERVICE
     network_service_ =
@@ -80,15 +80,12 @@ class WGetApp {
                               fidl::GetProxy(&network_service_));
 #endif
     FTL_DCHECK(network_service_);
-
-    Start(args);
   }
 
- private:
-  void Start(const std::vector<std::string>& args) {
+  bool Start(const std::vector<std::string>& args) {
     if (args.size() == 1) {
-      printf("needs an url argument\n");
-      return;
+      printf("usage: %s url\n", args[0].c_str());
+      return false;
     }
     std::string url(args[1]);
     printf("Loading: %s\n", url.c_str());
@@ -105,8 +102,10 @@ class WGetApp {
                          ResponsePrinter printer;
                          printer.Run(std::move(response));
                        });
+    return true;
   }
 
+ private:
   std::unique_ptr<app::ApplicationContext> context_;
 #if !USE_ENVIRONMENT_SERVICE
   modular::ApplicationControllerPtr app_controller_;
@@ -123,8 +122,9 @@ int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
   mtl::MessageLoop loop;
 
-  examples::WGetApp app(args);
+  examples::WGetApp app;
+  if (app.Start(args))
+    loop.Run();
 
-  loop.Run();
   return 0;
 }
