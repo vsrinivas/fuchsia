@@ -173,7 +173,7 @@ static void setup_bootfs(void) {
                     mx_handle_t bootfs_vmo;
                     printf("devmgr: decompressing bootfs #%u\n", idx);
                     status = decompress_bootdata(mx_vmar_root_self(), vmo,
-                                                 0, bootdata.insize + sizeof(bootdata),
+                                                 off, bootdata.insize + sizeof(bootdata),
                                                  &bootfs_vmo, &errmsg);
                     if (status < 0) {
                         printf("devmgr: failed to decompress bootdata\n");

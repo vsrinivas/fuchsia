@@ -4,6 +4,7 @@
 
 #include <bootdata/decompress.h>
 
+#include <limits.h>
 #include <string.h>
 
 #include <magenta/bootdata.h>
@@ -198,11 +199,15 @@ mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
     }
 
     uintptr_t addr = 0;
-    mx_status_t status = mx_vmar_map(vmar, 0, vmo, offset, length, MX_VM_FLAG_PERM_READ, &addr);
+    size_t aligned_offset = offset & ~(PAGE_SIZE - 1);
+    size_t align_shift = offset - aligned_offset;
+    length += align_shift;
+    mx_status_t status = mx_vmar_map(vmar, 0, vmo, aligned_offset, length, MX_VM_FLAG_PERM_READ, &addr);
     if (status < 0) {
         *err = "mx_vmar_map failed on bootfs vmo";
         return status;
     }
+    addr += align_shift;
 
     const bootdata_t* hdr = (bootdata_t*)addr;
     if (hdr->magic != BOOTDATA_MAGIC) {
