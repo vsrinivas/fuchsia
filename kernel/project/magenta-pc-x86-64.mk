@@ -11,9 +11,6 @@
 SUBARCH := x86-64
 MODULES +=
 
-# we're going to need to put the user cpio archive in the kernel binary directly
-EMBED_USER_BOOTFS:=true
-
 include project/virtual/test.mk
 include project/virtual/user.mk
 include project/target/pc-x86.mk

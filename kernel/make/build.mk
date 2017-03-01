@@ -119,18 +119,18 @@ USER_MANIFEST_DEPS := $(foreach x,$(USER_MANIFEST_LINES),$(lastword $(subst =,$(
 
 $(info MKBOOTFS $(MKBOOTFS))
 
-$(USER_BOOTFS): $(MKBOOTFS) $(USER_MANIFEST) $(USER_MANIFEST_DEPS) $(ADDITIONAL_BOOTDATA_ITEMS)
+$(USER_BOOTDATA): $(MKBOOTFS) $(USER_MANIFEST) $(USER_MANIFEST_DEPS) $(ADDITIONAL_BOOTDATA_ITEMS)
 	@echo generating $@
 	@$(MKDIR)
-	$(NOECHO)$(MKBOOTFS) -c -o $(USER_BOOTFS) $(USER_MANIFEST) $(ADDITIONAL_BOOTDATA_ITEMS)
+	$(NOECHO)$(MKBOOTFS) -c -o $(USER_BOOTDATA) $(USER_MANIFEST) $(ADDITIONAL_BOOTDATA_ITEMS)
 
-GENERATED += $(USER_BOOTFS)
+GENERATED += $(USER_BOOTDATA)
 
 # build userspace filesystem image
-$(USER_FS): $(USER_BOOTFS)
+$(USER_FS): $(USER_BOOTDATA)
 	@echo generating $@
 	$(NOECHO)dd if=/dev/zero of=$@ bs=1048576 count=16
-	$(NOECHO)dd if=$(USER_BOOTFS) of=$@ conv=notrunc
+	$(NOECHO)dd if=$(USER_BOOTDATA) of=$@ conv=notrunc
 
 # add the fs image to the clean list
 GENERATED += $(USER_FS)

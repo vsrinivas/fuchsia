@@ -7,7 +7,7 @@ kernel=kernel8.img
 enable_uart=1
 
 # Tells the Pi's bootloader which file contains the ramdisk.
-initramfs bootfs.img
+initramfs bootdata.bin
 
 # Used to configure HDMI, you may need to tweak these settings dependong on
 # the monitor you're using.

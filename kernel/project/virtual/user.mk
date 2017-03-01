@@ -31,10 +31,5 @@ MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/ulib/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/utest/*/rules.mk))
 MODULES := $(patsubst third_party/%,%,$(MODULES))
 
-# if we're not embedding the bootfs, build a standalone image
-ifneq ($(EMBED_USER_BOOTFS),true)
-EXTRA_BUILDDEPS += $(USER_FS)
-endif
-
-EXTRA_BUILDDEPS += $(USER_BOOTFS)
+EXTRA_BUILDDEPS += $(USER_BOOTDATA)
 

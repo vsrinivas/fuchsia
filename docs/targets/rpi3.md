@@ -37,7 +37,7 @@ information, see `docs/getting_started.md`:
    + With a FAT32 boot partition
 
 2. Invoking `make magenta-rpi3-arm64` should have created files `magenta.bin`
-   and `bootfs.img` the following path `./build-magenta-rpi3-arm64/`
+   and `bootdata.bin` the following path `./build-magenta-rpi3-arm64/`
 
 
 3. Copy the `magenta.bin` file to the SD card's boot partition as `kernel8.img`
@@ -45,9 +45,9 @@ information, see `docs/getting_started.md`:
 
         cp ./build-magenta-rpi3-arm64/magenta.bin <path/to/sdcard/mount>/kernel8.img
 
-4. Copy the `bootfs.img` file to the SD card's boot partition as follows:
+4. Copy the `bootdata.bin` file to the SD card's boot partition as follows:
 
-        cp ./build-magenta-rpi3-arm64/bootfs.img <path/to/sdcard/mount>/bootfs.img
+        cp ./build-magenta-rpi3-arm64/bootdata.bin <path/to/sdcard/mount>/bootdata.bin
 
 5. You must also copy `bootcode.bin` and `start.elf` to the boot partition. They
    can be obtained from [here](https://github.com/raspberrypi/firmware/tree/master/boot).

@@ -26,7 +26,7 @@ function HELP {
     echo "-u <path>            : execute qemu startUp script, default is no script"
     echo "-v                   : use vnc based display"
     echo "-V                   : try to use virtio devices"
-    echo "-x <bootfs>          : add eXtra bootfs"
+    echo "-x <bootdata>        : use specified bootdata"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
     echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
     echo "--wavfile=<file>     : When audio host_drv == wav, output to the specified WAV file"
