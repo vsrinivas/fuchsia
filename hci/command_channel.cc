@@ -24,13 +24,11 @@ std::atomic_size_t CommandChannel::next_transaction_id_(0u);
 // static
 std::atomic_size_t CommandChannel::next_event_handler_id_(0u);
 
-CommandChannel::QueuedCommand::QueuedCommand(
-    TransactionId id,
-    const CommandPacket& command_packet,
-    const CommandStatusCallback& status_callback,
-    const CommandCompleteCallback& complete_callback,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const EventCode complete_event_code) {
+CommandChannel::QueuedCommand::QueuedCommand(TransactionId id, const CommandPacket& command_packet,
+                                             const CommandStatusCallback& status_callback,
+                                             const CommandCompleteCallback& complete_callback,
+                                             ftl::RefPtr<ftl::TaskRunner> task_runner,
+                                             const EventCode complete_event_code) {
   transaction_data.id = id;
   transaction_data.opcode = command_packet.opcode();
   transaction_data.complete_event_code = complete_event_code;
@@ -38,8 +36,8 @@ CommandChannel::QueuedCommand::QueuedCommand(
   transaction_data.complete_callback = complete_callback;
   transaction_data.task_runner = task_runner;
 
-  packet_data = common::DynamicByteBuffer(
-      command_packet.size(), command_packet.buffer()->TransferContents());
+  packet_data =
+      common::DynamicByteBuffer(command_packet.size(), command_packet.buffer()->TransferContents());
 }
 
 CommandChannel::CommandChannel(mx::channel hci_command_channel)
@@ -51,8 +49,7 @@ CommandChannel::CommandChannel(mx::channel hci_command_channel)
 }
 
 CommandChannel::~CommandChannel() {
-  if (is_running_)
-    ShutDown();
+  if (is_running_) ShutDown();
 }
 
 void CommandChannel::Initialize() {
@@ -82,8 +79,7 @@ void CommandChannel::ShutDown() {
     mtl::MessageLoop::GetCurrent()->QuitNow();
   });
 
-  if (io_thread_.joinable())
-    io_thread_.join();
+  if (io_thread_.joinable()) io_thread_.join();
 
   SetPendingCommand(nullptr);
 
@@ -97,29 +93,25 @@ void CommandChannel::ShutDown() {
 }
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
-    const CommandPacket& command_packet,
-    const CommandStatusCallback& status_callback,
-    const CommandCompleteCallback& complete_callback,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    const CommandPacket& command_packet, const CommandStatusCallback& status_callback,
+    const CommandCompleteCallback& complete_callback, ftl::RefPtr<ftl::TaskRunner> task_runner,
     const EventCode complete_event_code) {
   // We simply make the counter overflow and do not worry about re-assigning an
   // ID that is currently in use.
   // TODO(armansito): Make this more robust.
   TransactionId id = next_transaction_id_++;
-  QueuedCommand cmd(id, command_packet, status_callback, complete_callback,
-                    task_runner, complete_event_code);
+  QueuedCommand cmd(id, command_packet, status_callback, complete_callback, task_runner,
+                    complete_event_code);
 
   std::lock_guard<std::mutex> lock(send_queue_mutex_);
   send_queue_.push(std::move(cmd));
-  io_task_runner_->PostTask(
-      std::bind(&CommandChannel::TrySendNextQueuedCommand, this));
+  io_task_runner_->PostTask(std::bind(&CommandChannel::TrySendNextQueuedCommand, this));
 
   return id;
 }
 
 CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
-    EventCode event_code,
-    const EventCallback& event_callback,
+    EventCode event_code, const EventCallback& event_callback,
     ftl::RefPtr<ftl::TaskRunner> task_runner) {
   FTL_DCHECK(event_code != 0);
   FTL_DCHECK(event_code != kCommandStatusEventCode);
@@ -151,34 +143,29 @@ void CommandChannel::RemoveEventHandler(const EventHandlerId id) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
   auto iter = event_handler_id_map_.find(id);
-  if (iter == event_handler_id_map_.end())
-    return;
+  if (iter == event_handler_id_map_.end()) return;
 
-  if (iter->second.event_code != 0)
-    event_code_handlers_.erase(iter->second.event_code);
+  if (iter->second.event_code != 0) event_code_handlers_.erase(iter->second.event_code);
   event_handler_id_map_.erase(iter);
 }
 
 void CommandChannel::TrySendNextQueuedCommand() {
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() ==
-             io_task_runner_.get());
+  FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() == io_task_runner_.get());
 
   // If a command is currently pending, then we have nothing to do.
-  if (GetPendingCommand())
-    return;
+  if (GetPendingCommand()) return;
 
   QueuedCommand cmd;
   {
     std::lock_guard<std::mutex> lock(send_queue_mutex_);
-    if (send_queue_.empty())
-      return;
+    if (send_queue_.empty()) return;
 
     cmd = std::move(send_queue_.front());
     send_queue_.pop();
   }
 
-  mx_status_t status = channel_.write(0, cmd.packet_data.GetData(),
-                                      cmd.packet_data.GetSize(), nullptr, 0);
+  mx_status_t status =
+      channel_.write(0, cmd.packet_data.GetData(), cmd.packet_data.GetSize(), nullptr, 0);
   if (status < 0) {
     // TODO(armansito): We should notify the |status_callback| of the pending
     // command with a special error code in this case.
@@ -216,8 +203,7 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
 
   pending_command->task_runner->PostTask(ftl::MakeCopyable([
     buffer = std::move(buffer), payload_size = event.GetPayloadSize(),
-    complete_callback = pending_command->complete_callback,
-    transaction_id = pending_command->id
+    complete_callback = pending_command->complete_callback, transaction_id = pending_command->id
   ]() mutable {
     EventPacket event(buffer.GetData()[0], &buffer, payload_size);
     complete_callback(transaction_id, event);
@@ -242,13 +228,11 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
 
   pending_command->task_runner->PostTask(
       std::bind(pending_command->status_callback, pending_command->id,
-                static_cast<Status>(
-                    event.GetPayload<CommandStatusEventParams>()->status)));
+                static_cast<Status>(event.GetPayload<CommandStatusEventParams>()->status)));
 
   // Success in this case means that the command will be completed later when we
   // receive an event that matches |pending_command->complete_event_code|.
-  if (event.GetPayload<CommandStatusEventParams>()->status == Status::kSuccess)
-    return;
+  if (event.GetPayload<CommandStatusEventParams>()->status == Status::kSuccess) return;
 
   // A CommandStatus event with an error status usually means that the command
   // that was in progress could not be executed. Complete the transaction and
@@ -258,8 +242,7 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
 }
 
 CommandChannel::PendingTransactionData* CommandChannel::GetPendingCommand() {
-  if (is_command_pending_)
-    return &pending_command_;
+  if (is_command_pending_) return &pending_command_;
   return nullptr;
 }
 
@@ -279,9 +262,8 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
   if (event.event_code() == kCommandCompleteEventCode ||
       event.event_code() == kCommandStatusEventCode) {
     FTL_LOG(ERROR) << "hci: Muting unhandled "
-                   << (event.event_code() == kCommandCompleteEventCode
-                           ? "HCI_CommandComplete"
-                           : "HCI_CommandStatus")
+                   << (event.event_code() == kCommandCompleteEventCode ? "HCI_CommandComplete"
+                                                                       : "HCI_CommandStatus")
                    << " event";
     return;
   }
@@ -317,9 +299,8 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   FTL_DCHECK(pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED));
 
   uint32_t read_size;
-  mx_status_t status = channel_.read(0u, event_buffer_.GetMutableData(),
-                                     kMaxEventPacketPayloadSize, &read_size,
-                                     nullptr, 0, nullptr);
+  mx_status_t status = channel_.read(0u, event_buffer_.GetMutableData(), kMaxEventPacketPayloadSize,
+                                     &read_size, nullptr, 0, nullptr);
   if (status < 0) {
     FTL_LOG(ERROR) << "hci: CommandChannel: Failed to read event bytes: "
                    << mx_status_get_string(status);
@@ -336,14 +317,11 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
     return;
   }
 
-  EventPacket event(event_buffer_.GetData()[0], &event_buffer_,
-                    read_size - sizeof(EventHeader));
+  EventPacket event(event_buffer_.GetData()[0], &event_buffer_, read_size - sizeof(EventHeader));
   if (event.GetPayloadSize() != event.GetHeader().parameter_total_size) {
     FTL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
-                   << "payload size from header ("
-                   << event.GetHeader().parameter_total_size << ") "
-                   << " does not match received payload size: "
-                   << event.GetPayloadSize();
+                   << "payload size from header (" << event.GetHeader().parameter_total_size << ") "
+                   << " does not match received payload size: " << event.GetPayloadSize();
     return;
   }
 
@@ -371,8 +349,7 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 void CommandChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
   FTL_DCHECK(handle == channel_.get());
 
-  FTL_LOG(ERROR) << "hci: CommandChannel: channel error: "
-                 << mx_status_get_string(error);
+  FTL_LOG(ERROR) << "hci: CommandChannel: channel error: " << mx_status_get_string(error);
 
   // TODO(armansito): Notify the upper layers via a callback and unregister the
   // handler.

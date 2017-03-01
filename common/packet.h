@@ -115,8 +115,7 @@ class Packet {
   // Returns a pointer to the beginning of the packet payload, immediately
   // following the header. Returns nullptr if the payload is empty.
   uint8_t* GetPayloadData() const {
-    if (!GetPayloadSize())
-      return nullptr;
+    if (!GetPayloadSize()) return nullptr;
     return buffer_->GetMutableData() + sizeof(HeaderType);
   }
 

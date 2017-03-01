@@ -4,8 +4,8 @@
 
 #include "transport.h"
 
-#include <magenta/types.h>
 #include <magenta/device/bt-hci.h>
+#include <magenta/types.h>
 #include <mx/channel.h>
 
 #include "lib/ftl/logging.h"
@@ -15,8 +15,7 @@
 namespace bluetooth {
 namespace hci {
 
-Transport::Transport(ftl::UniqueFD device_fd)
-    : device_fd_(std::move(device_fd)) {}
+Transport::Transport(ftl::UniqueFD device_fd) : device_fd_(std::move(device_fd)) {}
 
 Transport::~Transport() {
   ShutDown();
@@ -25,8 +24,7 @@ Transport::~Transport() {
 bool Transport::Initialize() {
   // Obtain command channel handle.
   mx_handle_t handle = MX_HANDLE_INVALID;
-  ssize_t ioctl_status =
-      ioctl_bt_hci_get_command_channel(device_fd_.get(), &handle);
+  ssize_t ioctl_status = ioctl_bt_hci_get_command_channel(device_fd_.get(), &handle);
   if (ioctl_status < 0) {
     FTL_LOG(ERROR) << "hci: Failed to obtain command channel handle: "
                    << mx_status_get_string(ioctl_status);
@@ -43,8 +41,7 @@ bool Transport::Initialize() {
 }
 
 void Transport::ShutDown() {
-  if (command_channel_)
-    command_channel_->ShutDown();
+  if (command_channel_) command_channel_->ShutDown();
   command_channel_.reset();
 }
 

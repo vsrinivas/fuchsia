@@ -13,13 +13,13 @@
 #include "apps/bluetooth/hci/hci.h"
 #include "apps/bluetooth/hci/transport.h"
 #include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
 #include "lib/ftl/files/unique_fd.h"
+#include "lib/ftl/log_settings.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "commands.h"
 #include "command_dispatcher.h"
+#include "commands.h"
 
 using namespace bluetooth;
 
@@ -69,8 +69,7 @@ int main(int argc, char* argv[]) {
   hci.Initialize();
   mtl::MessageLoop message_loop;
 
-  hcitool::CommandDispatcher handler_map(hci.command_channel(),
-                                         message_loop.task_runner());
+  hcitool::CommandDispatcher handler_map(hci.command_channel(), message_loop.task_runner());
   RegisterCommands(&handler_map);
 
   if (cl.positional_args().empty() || cl.positional_args()[0] == "help") {
@@ -81,10 +80,8 @@ int main(int argc, char* argv[]) {
   auto complete_cb = [&message_loop] { message_loop.PostQuitTask(); };
 
   bool cmd_found;
-  if (!handler_map.ExecuteCommand(cl.positional_args(), complete_cb,
-                                  &cmd_found)) {
-    if (!cmd_found)
-      std::cout << "Unknown command: " << cl.positional_args()[0] << std::endl;
+  if (!handler_map.ExecuteCommand(cl.positional_args(), complete_cb, &cmd_found)) {
+    if (!cmd_found) std::cout << "Unknown command: " << cl.positional_args()[0] << std::endl;
     return EXIT_FAILURE;
   }
 

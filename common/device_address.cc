@@ -20,9 +20,8 @@ DeviceAddress::DeviceAddress(std::initializer_list<uint8_t> bytes) {
 }
 
 std::string DeviceAddress::ToString() const {
-  return ftl::StringPrintf("%02X:%02X:%02X:%02X:%02X:%02X", bytes_[5],
-                           bytes_[4], bytes_[3], bytes_[2], bytes_[1],
-                           bytes_[0]);
+  return ftl::StringPrintf("%02X:%02X:%02X:%02X:%02X:%02X", bytes_[5], bytes_[4], bytes_[3],
+                           bytes_[2], bytes_[1], bytes_[0]);
 }
 
 void DeviceAddress::SetToZero() {

@@ -31,13 +31,9 @@ class DeviceAddress {
   void SetToZero();
 
   // Comparison operators.
-  inline bool operator==(const DeviceAddress& other) const {
-    return bytes_ == other.bytes_;
-  }
+  inline bool operator==(const DeviceAddress& other) const { return bytes_ == other.bytes_; }
 
-  inline bool operator!=(const DeviceAddress& other) const {
-    return !(*this == other);
-  }
+  inline bool operator!=(const DeviceAddress& other) const { return !(*this == other); }
 
  private:
   // The raw bytes of the BD_ADDR stored in little-endian byte order.

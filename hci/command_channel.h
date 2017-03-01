@@ -60,8 +60,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
       std::function<void(TransactionId id, const EventPacket& event_packet)>;
 
   // Callback invoked to report the status of a pending HCI command.
-  using CommandStatusCallback =
-      std::function<void(TransactionId id, Status status)>;
+  using CommandStatusCallback = std::function<void(TransactionId id, Status status)>;
 
   // Queues the given |command_packet| to be sent to the controller and returns
   // a transaction ID. The given callbacks will be posted on |task_runner| to be
@@ -86,12 +85,11 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   //
   // See Bluetooth Core Spec v5.0, Volume 2, Part E, Section 4.4 "Command Flow
   // Control" for more information about the HCI command flow control.
-  TransactionId SendCommand(
-      const CommandPacket& command_packet,
-      const CommandStatusCallback& status_callback,
-      const CommandCompleteCallback& complete_callback,
-      ftl::RefPtr<ftl::TaskRunner> task_runner,
-      const EventCode complete_event_code = kCommandCompleteEventCode);
+  TransactionId SendCommand(const CommandPacket& command_packet,
+                            const CommandStatusCallback& status_callback,
+                            const CommandCompleteCallback& complete_callback,
+                            ftl::RefPtr<ftl::TaskRunner> task_runner,
+                            const EventCode complete_event_code = kCommandCompleteEventCode);
 
   // Used to identify an individual HCI event handler that was registered with
   // this CommandChannel.
@@ -119,8 +117,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // Only one handler can be registered for a given |event_code| at a time. If a
   // handler was previously registered for the given |event_code|, this method
   // returns zero.
-  EventHandlerId AddEventHandler(EventCode event_code,
-                                 const EventCallback& event_callback,
+  EventHandlerId AddEventHandler(EventCode event_code, const EventCallback& event_callback,
                                  ftl::RefPtr<ftl::TaskRunner> task_runner);
 
   // Removes a previously registered event handler. Does nothing if an event
@@ -146,12 +143,10 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
 
   // Represents a queued command packet.
   struct QueuedCommand {
-    QueuedCommand(TransactionId id,
-                  const CommandPacket& command_packet,
+    QueuedCommand(TransactionId id, const CommandPacket& command_packet,
                   const CommandStatusCallback& status_callback,
                   const CommandCompleteCallback& complete_callback,
-                  ftl::RefPtr<ftl::TaskRunner> task_runner,
-                  EventCode complete_event_code);
+                  ftl::RefPtr<ftl::TaskRunner> task_runner, EventCode complete_event_code);
     QueuedCommand() = default;
 
     QueuedCommand(QueuedCommand&& other) = default;
@@ -231,9 +226,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   bool is_command_pending_;
 
   // Buffer where we queue incoming HCI event packets.
-  common::StaticByteBuffer<EventPacket::GetMinBufferSize(
-      kMaxEventPacketPayloadSize)>
-      event_buffer_;
+  common::StaticByteBuffer<EventPacket::GetMinBufferSize(kMaxEventPacketPayloadSize)> event_buffer_;
 
   // Mapping from event handler IDs to handler data.
   std::unordered_map<EventHandlerId, EventHandlerData> event_handler_id_map_;

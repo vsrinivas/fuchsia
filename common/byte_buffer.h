@@ -74,9 +74,7 @@ class MutableByteBuffer : public ByteBuffer {
 template <size_t BufferSize>
 class StaticByteBuffer : public MutableByteBuffer {
  public:
-  StaticByteBuffer() {
-    static_assert(BufferSize, "|BufferSize| must be non-zero");
-  }
+  StaticByteBuffer() { static_assert(BufferSize, "|BufferSize| must be non-zero"); }
 
   // Variadic template constructor to initialize a StaticByteBuffer using an
   // initializer_list e.g.:
@@ -87,8 +85,7 @@ class StaticByteBuffer : public MutableByteBuffer {
   template <typename... T>
   StaticByteBuffer(T... bytes) : buffer_{{static_cast<uint8_t>(bytes)...}} {
     static_assert(BufferSize, "|BufferSize| must be non-zero");
-    static_assert(BufferSize == sizeof...(T),
-                  "|BufferSize| must match initializer list count");
+    static_assert(BufferSize == sizeof...(T), "|BufferSize| must match initializer list count");
   }
 
   // ByteBuffer overrides

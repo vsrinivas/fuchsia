@@ -20,8 +20,7 @@ TEST(ByteBufferTest, StaticByteBuffer) {
   buffer.SetToZeros();
   buffer.GetMutableData()[3] = 3;
 
-  constexpr std::array<uint8_t, kBufferSize> kExpected{
-      {0x00, 0x00, 0x00, 0x03, 0x00}};
+  constexpr std::array<uint8_t, kBufferSize> kExpected{{0x00, 0x00, 0x00, 0x03, 0x00}};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 
   // Moving will result in a copy.
@@ -61,8 +60,7 @@ TEST(ByteBufferTest, DynamicByteBuffer) {
   buffer.SetToZeros();
   buffer.GetMutableData()[3] = 3;
 
-  constexpr std::array<uint8_t, kBufferSize> kExpected{
-      {0x00, 0x00, 0x00, 0x03, 0x00}};
+  constexpr std::array<uint8_t, kBufferSize> kExpected{{0x00, 0x00, 0x00, 0x03, 0x00}};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 
   // Moving will invalidate the source buffer.

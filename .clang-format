@@ -1,1 +1,3 @@
-BasedOnStyle: Chromium
+AllowShortFunctionsOnASingleLine: Inline
+BasedOnStyle: Google
+ColumnLimit: 100

@@ -71,8 +71,7 @@ TEST_F(BTSnoopLoggerTest, WritePacketAndReset) {
 
   // Write a packet consisting of 4 bytes.
   auto buffer = CreateStaticByteBuffer('T', 'e', 's', 't');
-  EXPECT_TRUE(logger->WritePacket(buffer, false /* is_received */,
-                                  false /* is_data */));
+  EXPECT_TRUE(logger->WritePacket(buffer, false /* is_received */, false /* is_data */));
 
   // The record should contain 28 bytes = header (24) + packet (4). With the
   // file header there should be 28 + 16 = 44 bytes.
@@ -94,15 +93,13 @@ TEST_F(BTSnoopLoggerTest, WritePacketAndReset) {
       );
   std::vector<uint8_t> file_contents;
   ASSERT_TRUE(files::ReadFileToVector(kTestLogFilePath, &file_contents));
-  EXPECT_TRUE(ContainersEqual(expected.begin(), expected.end(),
-                              file_contents.begin(),
+  EXPECT_TRUE(ContainersEqual(expected.begin(), expected.end(), file_contents.begin(),
                               file_contents.begin() + expected.GetSize()));
 
   // Skip the timestamp and read the packet contents. The timestamp is a 64-bit
   // signed integer and thus 8 bytes long.
   EXPECT_TRUE(ContainersEqual(buffer.begin(), buffer.end(),
-                              file_contents.begin() + expected.GetSize() + 8,
-                              file_contents.end()));
+                              file_contents.begin() + expected.GetSize() + 8, file_contents.end()));
 
   // Close the file and re-initialize the logger without truncating. The
   // file contents should be preserved.

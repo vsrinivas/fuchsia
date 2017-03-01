@@ -18,9 +18,7 @@ namespace hci {
 // Represents a HCI command packet.
 class CommandPacket : public ::bluetooth::common::Packet<CommandHeader> {
  public:
-  CommandPacket(OpCode opcode,
-                common::MutableByteBuffer* buffer,
-                size_t payload_size = 0u);
+  CommandPacket(OpCode opcode, common::MutableByteBuffer* buffer, size_t payload_size = 0u);
 
   // Returns the HCI command opcode for this packet.
   OpCode opcode() const { return opcode_; }

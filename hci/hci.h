@@ -25,11 +25,15 @@ using EventCode = uint8_t;
 
 // Returns the OGF (OpCode Group Field) which occupies the upper 6-bits of the
 // opcode.
-inline uint8_t GetOGF(const OpCode opcode) { return opcode >> 10; }
+inline uint8_t GetOGF(const OpCode opcode) {
+  return opcode >> 10;
+}
 
 // Returns the OCF (OpCode Command Field) which occupies the lower 10-bits of
 // the opcode.
-inline uint16_t GetOCF(const OpCode opcode) { return opcode & 0x3FF; }
+inline uint16_t GetOCF(const OpCode opcode) {
+  return opcode & 0x3FF;
+}
 
 // Returns the opcode based on the given OGF and OCF fields.
 constexpr OpCode DefineOpCode(const uint8_t ogf, const uint16_t ocf) {
@@ -196,8 +200,7 @@ struct ReadLocalVersionInfoReturnParams {
 
 // ============================================
 // Read Local Supported Commands Command (v1.2)
-constexpr OpCode kReadLocalSupportedCommands =
-    InformationalParamsOpCode(0x0002);
+constexpr OpCode kReadLocalSupportedCommands = InformationalParamsOpCode(0x0002);
 
 struct ReadLocalSupportedCommandsReturnParams {
   // See enum Status in hci_constants.h.
@@ -211,8 +214,7 @@ struct ReadLocalSupportedCommandsReturnParams {
 
 // ============================================
 // Read Local Supported Features Command (v1.1)
-constexpr OpCode kReadLocalSupportedFeatures =
-    InformationalParamsOpCode(0x0003);
+constexpr OpCode kReadLocalSupportedFeatures = InformationalParamsOpCode(0x0003);
 
 struct ReadLocalSupportedFeaturesReturnParams {
   // See enum Status in hci_constants.h.
@@ -517,8 +519,7 @@ struct LEReadBufferSizeReturnParams {
 
 // ====================================================
 // LE Read Local Supported Features Command (v4.0) (LE)
-constexpr OpCode kLEReadLocalSupportedFeatures =
-    LEControllerCommandOpCode(0x0003);
+constexpr OpCode kLEReadLocalSupportedFeatures = LEControllerCommandOpCode(0x0003);
 
 struct LEReadLocalSupportedFeaturesReturnParams {
   // See enum Status in hci_constants.h.
@@ -552,8 +553,7 @@ struct LEReadMaximumDataLengthReturnParams {
 
 // =================================================
 // LE Set Advertising Parameters Command (v4.0) (LE)
-constexpr OpCode kLESetAdvertisingParameters =
-    LEControllerCommandOpCode(0x0006);
+constexpr OpCode kLESetAdvertisingParameters = LEControllerCommandOpCode(0x0006);
 
 struct LESetAdvertisingParametersCommandParams {
   // Minimum advertising interval for undirected and low duty cycle directed

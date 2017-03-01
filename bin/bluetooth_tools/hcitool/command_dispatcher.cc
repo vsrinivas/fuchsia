@@ -8,27 +8,23 @@
 
 namespace hcitool {
 
-CommandDispatcher::CommandDispatcher(
-    bluetooth::hci::CommandChannel* cmd_channel,
-    ftl::RefPtr<ftl::TaskRunner> task_runner)
+CommandDispatcher::CommandDispatcher(bluetooth::hci::CommandChannel* cmd_channel,
+                                     ftl::RefPtr<ftl::TaskRunner> task_runner)
     : cmd_channel_(cmd_channel), task_runner_(task_runner) {
   FTL_DCHECK(cmd_channel_);
   FTL_DCHECK(task_runner_.get());
 }
 
 bool CommandDispatcher::ExecuteCommand(const std::vector<std::string>& argv,
-                                       const ftl::Closure& complete_cb,
-                                       bool* out_cmd_found) {
+                                       const ftl::Closure& complete_cb, bool* out_cmd_found) {
   FTL_DCHECK(out_cmd_found);
 
   *out_cmd_found = false;
 
-  if (argv.empty())
-    return false;
+  if (argv.empty()) return false;
 
   const auto& iter = handler_map_.find(argv[0]);
-  if (iter == handler_map_.end())
-    return false;
+  if (iter == handler_map_.end()) return false;
 
   *out_cmd_found = true;
 
@@ -42,8 +38,7 @@ void CommandDispatcher::DescribeAllCommands() {
   }
 }
 
-void CommandDispatcher::RegisterHandler(const std::string& name,
-                                        const std::string& description,
+void CommandDispatcher::RegisterHandler(const std::string& name, const std::string& description,
                                         const CommandHandler& handler) {
   FTL_DCHECK(!name.empty());
   FTL_DCHECK(!description.empty());

@@ -64,8 +64,7 @@ TEST(AdvertisingDataTest, ReaderParseFields) {
   EXPECT_TRUE(reader.GetNextField(&type, &data));
   EXPECT_EQ(DataType::kFlags, type);
   EXPECT_EQ(1u, data.GetSize());
-  EXPECT_TRUE(
-      common::ContainersEqual(common::CreateStaticByteBuffer(0x00), data));
+  EXPECT_TRUE(common::ContainersEqual(common::CreateStaticByteBuffer(0x00), data));
 
   EXPECT_TRUE(reader.HasMoreData());
   EXPECT_TRUE(reader.GetNextField(&type, &data));

@@ -72,8 +72,7 @@ TEST(HCIPacketTest, EventPacket) {
 }
 
 TEST(HCIPacketTest, EventPacketGetReturnParams) {
-  constexpr size_t kPayloadSize =
-      sizeof(TestPayload) + sizeof(CommandCompleteEventParams);
+  constexpr size_t kPayloadSize = sizeof(TestPayload) + sizeof(CommandCompleteEventParams);
   constexpr size_t kBufferSize = CommandPacket::GetMinBufferSize(kPayloadSize);
   StaticByteBuffer<kBufferSize> buffer;
 
@@ -90,8 +89,7 @@ TEST(HCIPacketTest, EventPacketGetReturnParams) {
   // Packet is good
   EventPacket packet2(kCommandCompleteEventCode, &buffer, kPayloadSize);
   packet2.GetPayload<CommandCompleteEventParams>()->num_hci_command_packets = 1;
-  packet2.GetPayload<CommandCompleteEventParams>()->command_opcode =
-      htole16(kTestOpCode);
+  packet2.GetPayload<CommandCompleteEventParams>()->command_opcode = htole16(kTestOpCode);
   packet2.GetReturnParams<TestPayload>()->foo = 127;
   packet2.EncodeHeader();
 

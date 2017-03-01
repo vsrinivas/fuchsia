@@ -29,8 +29,7 @@ class CommandDispatcher final {
  public:
   CommandDispatcher(bluetooth::hci::CommandChannel* cmd_channel,
                     ftl::RefPtr<ftl::TaskRunner> task_runner);
-  bool ExecuteCommand(const std::vector<std::string>& argv,
-                      const ftl::Closure& complete_cb,
+  bool ExecuteCommand(const std::vector<std::string>& argv, const ftl::Closure& complete_cb,
                       bool* out_cmd_found);
   void DescribeAllCommands();
 
@@ -44,13 +43,12 @@ class CommandDispatcher final {
   //                transaction is complete.
   //
   // Must return true if the command was handled successfully. False otherwise.
-  using CommandHandler = std::function<bool(const CommandDispatcher& owner,
-                                            const ftl::CommandLine& cmd_line,
-                                            const ftl::Closure& complete_cb)>;
+  using CommandHandler =
+      std::function<bool(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+                         const ftl::Closure& complete_cb)>;
 
   // Registers a command handler for the given command name.
-  void RegisterHandler(const std::string& command_name,
-                       const std::string& description,
+  void RegisterHandler(const std::string& command_name, const std::string& description,
                        const CommandHandler& handler);
 
   bluetooth::hci::CommandChannel* cmd_channel() const { return cmd_channel_; }

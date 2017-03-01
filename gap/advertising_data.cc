@@ -35,8 +35,7 @@ AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
   }
 }
 
-bool AdvertisingDataReader::GetNextField(DataType* out_type,
-                                         common::BufferView* out_data) {
+bool AdvertisingDataReader::GetNextField(DataType* out_type, common::BufferView* out_data) {
   FTL_DCHECK(out_type);
   FTL_DCHECK(out_data);
 

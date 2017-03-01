@@ -18,9 +18,7 @@ namespace hci {
 // Represents a HCI command packet.
 class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
  public:
-  EventPacket(EventCode event_code,
-              common::MutableByteBuffer* buffer,
-              size_t payload_size = 0u);
+  EventPacket(EventCode event_code, common::MutableByteBuffer* buffer, size_t payload_size = 0u);
 
   // Returns the HCI event code for this packet.
   EventCode event_code() const { return GetHeader().event_code; }
@@ -41,8 +39,7 @@ class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
   template <typename ReturnParams>
   ReturnParams* GetReturnParams() const {
     if (event_code() != kCommandCompleteEventCode ||
-        sizeof(ReturnParams) >
-            GetPayloadSize() - sizeof(CommandCompleteEventParams))
+        sizeof(ReturnParams) > GetPayloadSize() - sizeof(CommandCompleteEventParams))
       return nullptr;
     return reinterpret_cast<ReturnParams*>(
         GetPayload<CommandCompleteEventParams>()->return_parameters);
