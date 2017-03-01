@@ -13,6 +13,7 @@ function HELP {
     echo "-c                   : add item to kernel commandline"
     echo "-C                   : use Clang build"
     echo "-d                   : run with emulated disk"
+    echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
     echo "-g                   : use graphical console"
     echo "-I <interface name>  : network interface name, default is qemu."
     echo "-k                   : use KVM"
@@ -43,6 +44,7 @@ AUDIO_WAVFILE="/tmp/qemu.wav"
 BUILD=0
 CLANG=0
 DISK=0
+DISKFILE="blk.bin"
 BUILDDIR=
 GRAPHICS=0
 DO_KVM=0
@@ -64,13 +66,14 @@ else
   IFNAME="qemu"
 fi
 
-while getopts "a:bc:CdgI:km:nNo:q:rs:u:vVx:h-:" FLAG; do
+while getopts "a:bc:CdD:gI:km:nNo:q:rs:u:vVx:h-:" FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         b) BUILD=1;;
         c) CMDLINE+="$OPTARG ";;
         C) CLANG=1;;
         d) DISK=1;;
+        D) DISKFILE=$OPTARG;;
         g) GRAPHICS=1;;
         I) IFNAME=$OPTARG;;
         k) DO_KVM=1;;
@@ -164,7 +167,7 @@ else
 fi
 
 if [ "$DISK" -eq 1 ]; then
-    ARGS+=" -drive file=blk.bin,format=raw,if=none,id=mydisk"
+    ARGS+=" -drive file=${DISKFILE},format=raw,if=none,id=mydisk"
     if [ "$ARCH" == "x86-64" ] && [ "$VIRTIO" -eq 0 ]; then
         # ahci
         ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
