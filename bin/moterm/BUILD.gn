@@ -27,6 +27,7 @@ executable("moterm") {
     "//application/lib/app",
     "//apps/fonts/services",
     "//apps/ledger/services/public",
+    "//apps/modular/services/component",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:fonts",
     "//apps/mozart/lib/skia:vmo",

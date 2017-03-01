@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/moterm/history.h"
 #include "apps/moterm/ledger_helpers.h"
@@ -60,9 +61,13 @@ class App : public modular::Module {
     fidl::InterfacePtr<modular::Story> story;
     story.Bind(std::move(story_handle));
 
-    ledger::LedgerPtr ledger;
+    modular::ComponentContextPtr component_context;
     modular::Story* story_ptr = story.get();
-    story_ptr->GetLedger(
+    story_ptr->GetComponentContext(component_context.NewRequest());
+    modular::ComponentContext* component_context_ptr = component_context.get();
+
+    ledger::LedgerPtr ledger;
+    component_context_ptr->GetLedger(
         ledger.NewRequest(),
         ftl::MakeCopyable([story = std::move(story)](ledger::Status status) {
           LogLedgerError(status, "GetLedger");
