@@ -36,6 +36,7 @@ import sys
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 PREBUILTS_BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(SCRIPT_DIR), "prebuilt",
                                                   "downloads"))
+DEFAULT_STACK_SIZE = 256*1024
 
 name_to_full_path = {}
 
@@ -169,13 +170,17 @@ def main():
     arch = "x86_64"
     name_to_buildid = {}
     processed_lines = []
+    prev_sp = None
+    prev_frame_num = None
+    frame_sizes = []
+    total_stack_size = 0
 
     # Regex for parsing
     # Either nothing, or something like "[00007.268] 00304.00325> "
     full_prefix = "^(|\[\d+\.\d+\] \d+\.\d+> )"
     btre = re.compile(full_prefix + "bt#(\d+):")
     bt_with_offset_re = re.compile(full_prefix +
-        "bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
+        "bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \((\S+),(0x[0-9a-f]+)\)$")
     bt_end_re = re.compile(full_prefix + "bt#(\d+): end")
     magenta_end_re = re.compile("^Halted$");
     arch_re = re.compile(full_prefix + "arch: ([\\S]+)$")
@@ -206,8 +211,21 @@ def main():
                 writeline("\nstart of symbolized stack:\n")
                 writelines(processed_lines)
                 writeline("end of symbolized stack\n")
+
+                if total_stack_size > DEFAULT_STACK_SIZE - 8*1024:
+                    if total_stack_size >= DEFAULT_STACK_SIZE:
+                        writeline("WARNING: Overflowed default stack size (total %d)\n" % (total_stack_size,))
+                    else:
+                        writeline("WARNING: Potentially overflowed default stack size (total %d)\n" % (total_stack_size,))
+                    for frame, size in frame_sizes:
+                        writeline("#%s: %d bytes\n" % (frame, size))
+                # Since we don't have the last stack frame, leave some leeway
+                # when warning about stackoverflow
                 processed_lines = []
+                frames_sizes = []
                 name_to_buildid = {}
+                total_stack_size = 0
+                prev_sp = None
             if end_of_file:
                 break
         m = arch_re.match(line)
@@ -226,8 +244,16 @@ def main():
             frame_num = m.group(2)
             m = bt_with_offset_re.match(line)
             if m:
-                dso = m.group(3)
-                off = m.group(4)
+                sp = int(m.group(3), 16)
+                if prev_sp is not None:
+                    frame_size = sp - prev_sp
+                    total_stack_size += frame_size
+                    frame_sizes.append((prev_frame_num, frame_size))
+                prev_sp = sp
+                prev_frame_num = frame_num
+
+                dso = m.group(4)
+                off = m.group(5)
                 dso_full_path = find_dso_full_path(
                     dso, args.app, name_to_buildid, build_dirs)
                 if dso_full_path:
@@ -256,7 +282,7 @@ def main():
                     continue
 
             # fallthru print if we don't recognize the format of the backtrace entry
-            processed_lines.append("#%s: (unknown)\n" % frame_num)
+            processed_lines.append("#%s: (unknown)\n" % (frame_num,))
 
         # Magenta Specific Handling
         if magenta_crash_re.search(line):
