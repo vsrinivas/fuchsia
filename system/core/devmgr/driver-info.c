@@ -64,12 +64,8 @@ static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
                                  void* cookie) {
     elfphdr ph[64];
     elfhdr eh;
-    if ((lseek(fd, 0, SEEK_SET) != 0)) {
-        printf("for_each_note: seek(0) failed\n");
-        return ERR_IO;
-    }
-    if (read(fd, &eh, sizeof(eh)) != sizeof(eh)) {
-        printf("for_each_note: read(eh) failed\n");
+    if (pread(fd, &eh, sizeof(eh), 0) != sizeof(eh)) {
+        printf("for_each_note: pread(eh) failed\n");
         return ERR_IO;
     }
     if (memcmp(&eh, ELFMAG, 4) ||
@@ -83,9 +79,8 @@ static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
         printf("for_each_note: too many phdrs\n");
         return ERR_INTERNAL;
     }
-    if ((lseek(fd, eh.e_phoff, SEEK_SET) != (off_t)eh.e_phoff) ||
-        (read(fd, ph, sz) != (ssize_t)sz)){
-        printf("for_each_note: seek(eh.e_phoff) failed\n");
+    if ((pread(fd, ph, sz, eh.e_phoff) != (ssize_t)sz)) {
+        printf("for_each_note: pread(sz,eh.e_phoff) failed\n");
         return ERR_IO;
     }
     for (int i = 0; i < eh.e_phnum; i++) {
@@ -93,9 +88,8 @@ static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
             (ph[i].p_filesz > dsize)) {
             continue;
         }
-        if ((lseek(fd, ph[i].p_offset, SEEK_SET) != (off_t)ph[i].p_offset) ||
-            (read(fd, data, ph[i].p_filesz) != (ssize_t)ph[i].p_filesz)) {
-            printf("for_each_note: read() failed\n");
+        if ((pread(fd, data, ph[i].p_filesz, ph[i].p_offset) != (ssize_t)ph[i].p_filesz)) {
+            printf("for_each_note: pread(ph[i]) failed\n");
             return ERR_IO;
         }
         int r = find_note(name, type, data, ph[i].p_filesz, func, cookie);
