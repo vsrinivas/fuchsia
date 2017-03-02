@@ -36,6 +36,9 @@ struct MediaPlayerStatus {
   // (presentation time to local time) is only valid when media is playing.
   TimelineTransform? timeline_transform;
 
+  // Whether the current media has a video stream.
+  bool has_video;
+
   // Indicates whether presentation has reached end-of-stream.
   bool end_of_stream;
 

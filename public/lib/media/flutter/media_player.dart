@@ -233,7 +233,8 @@ class _MediaPlayerState extends State<MediaPlayer> {
         children: <Widget>[
           new GestureDetector(
             onTap: _brieflyShowControlOverlay,
-            child: new ChildView(connection: config.controller.videoViewConnection),
+            child:
+              new ChildView(connection: config.controller.videoViewConnection),
           ),
           new Offstage(
             offstage: !_shouldShowControlOverlay(),

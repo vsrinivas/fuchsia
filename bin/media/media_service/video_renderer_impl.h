@@ -30,7 +30,8 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
   ~VideoRendererImpl() override;
 
   // VideoRenderer implementation.
-  void GetVideoSize(const GetVideoSizeCallback& callback) override;
+  void GetStatus(uint64_t version_last_seen,
+                 const GetStatusCallback& callback) override;
 
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;

@@ -9,9 +9,22 @@ import "apps/mozart/services/views/view_token.fidl";
 
 // Video-specific renderer.
 interface VideoRenderer {
-  // Gets the size of the video.
-  GetVideoSize() => (mozart.Size size);
+  // Special value for GetStatus version_last_seen parameter to get the current
+  // status immediately.
+  const uint64 kInitialStatus = 0;
+
+  // Gets the status. To get the status immediately, call
+  // GetStatus(kInitialStatus). To get updates thereafter, pass the version
+  // sent in the previous callback.
+  GetStatus(uint64 version_last_seen)
+      => (uint64 version, VideoRendererStatus status);
 
   // Creates a video view.
   CreateView(mozart.ViewOwner& view_owner);
+};
+
+// VideoRenderer status information.
+struct VideoRendererStatus {
+  // Size of the video currently being displayed.
+  mozart.Size video_size;
 };

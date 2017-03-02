@@ -16,7 +16,6 @@ import 'package:apps.media.services/video_renderer.fidl.dart';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
-import 'package:apps.mozart.services.geometry/geometry.fidl.dart' as fidl;
 import 'package:apps.mozart.services.views/view_token.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
@@ -36,18 +35,18 @@ class MediaPlayerController extends ChangeNotifier {
   VideoRendererProxy _videoRenderer;
   InterfacePair<SeekingReader> _reader;
 
-  bool _active;
-  bool _loading;
-  bool _playing;
-  bool _ended;
-  bool _hasVideo;
+  bool _active = false;
+  bool _loading = false;
+  bool _playing = false;
+  bool _ended = false;
+  bool _hasVideo = false;
 
   Size _videoSize;
   TimelineFunction _timelineFunction;
   Problem _problem;
   MediaMetadata _metadata;
 
-  bool _progressBarReady;
+  bool _progressBarReady = false;
   int _progressBarMicrosecondsSinceEpoch;
   int _progressBarReferenceTime;
   int _durationNanoseconds;
@@ -68,7 +67,7 @@ class MediaPlayerController extends ChangeNotifier {
 
     _createLocalPlayer(uri);
 
-    _handleStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
+    _handlePlayerStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
     notifyListeners();
   }
 
@@ -93,7 +92,7 @@ class MediaPlayerController extends ChangeNotifier {
       _mediaPlayer.ctrl.request()
     );
 
-    _handleStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
+    _handlePlayerStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
     notifyListeners();
   }
 
@@ -132,8 +131,6 @@ class MediaPlayerController extends ChangeNotifier {
     _videoRenderer = new VideoRendererProxy();
     _reader = new InterfacePair<SeekingReader>();
 
-    _videoSize = Size.zero;
-
     _playing = false;
     _ended = false;
     _loading = true;
@@ -168,11 +165,10 @@ class MediaPlayerController extends ChangeNotifier {
     _videoViewConnection =
       new ChildViewConnection(viewOwnerPair.passHandle());
 
-    _videoRenderer.getVideoSize((fidl.Size size) {
-      _videoSize = new Size(size.width.toDouble(), size.height.toDouble());
-      _hasVideo = true;
-      notifyListeners();
-    });
+    _handleVideoRendererStatusUpdates(
+      VideoRenderer.kInitialStatus,
+      null
+    );
 
     if (uri.scheme == 'file') {
       _mediaService.createFileReader(uri.toFilePath(), _reader.passRequest());
@@ -189,7 +185,7 @@ class MediaPlayerController extends ChangeNotifier {
   }
 
   /// Gets the physical size of the video.
-  Size get videoPhysicalSize => _videoSize;
+  Size get videoPhysicalSize => _hasVideo ? _videoSize : Size.zero;
 
   /// Gets the video view connection.
   ChildViewConnection get videoViewConnection => _videoViewConnection;
@@ -277,7 +273,7 @@ class MediaPlayerController extends ChangeNotifier {
 
   // Handles a status update from the player and requests a new update. Call
   // with kInitialStatus, null to initiate status updates.
-  void _handleStatusUpdates(int version, mp.MediaPlayerStatus status) {
+  void _handlePlayerStatusUpdates(int version, mp.MediaPlayerStatus status) {
     if (!_active) {
       return;
     }
@@ -288,6 +284,7 @@ class MediaPlayerController extends ChangeNotifier {
             new TimelineFunction.fromTransform(status.timelineTransform);
       }
 
+      _hasVideo = status.hasVideo;
       _ended = status.endOfStream;
       _playing = !ended &&
           _timelineFunction != null &&
@@ -321,7 +318,31 @@ class MediaPlayerController extends ChangeNotifier {
       });
     }
 
-    _mediaPlayer.getStatus(version, _handleStatusUpdates);
+    _mediaPlayer.getStatus(version, _handlePlayerStatusUpdates);
+  }
+
+  // Handles a status update from the video renderer and requests a new update.
+  // Call with kInitialStatus, null to initiate status updates.
+  void _handleVideoRendererStatusUpdates(
+    int version,
+    VideoRendererStatus status
+  ) {
+    if (!_active) {
+      return;
+    }
+
+    if (status != null) {
+      _videoSize = new Size(
+        status.videoSize.width.toDouble(),
+        status.videoSize.height.toDouble()
+      );
+
+      scheduleMicrotask(() {
+        notifyListeners();
+      });
+    }
+
+    _videoRenderer.getStatus(version, _handleVideoRendererStatusUpdates);
   }
 
   /// Captures information required to implement the progress bar.
