@@ -289,7 +289,7 @@ static int vmx_disable(void* arg) {
 }
 
 VmxonContext::~VmxonContext() {
-    mx_status_t status = percpu_exec(vmx_disable, this);
+    __UNUSED mx_status_t status = percpu_exec(vmx_disable, this);
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
@@ -460,7 +460,7 @@ static int vmcs_clear(void* arg) {
 }
 
 VmcsContext::~VmcsContext() {
-    mx_status_t status = percpu_exec(vmcs_clear, this);
+    __UNUSED mx_status_t status = percpu_exec(vmcs_clear, this);
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
