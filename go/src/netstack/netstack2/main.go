@@ -109,7 +109,8 @@ func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, a
 		log.Fatalf("init failed: %v", err)
 	}
 	linkID := stack.RegisterLinkEndpoint(ep)
-	lladdr := ipv6LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
+	lladdr := ipv6.LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
+	log.Printf("ipv6addr: %v", lladdr)
 
 	if debug2 {
 		linkID = sniffer.New(linkID)
@@ -122,6 +123,10 @@ func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, a
 	}
 	if err := stk.AddAddress(nicid, ipv6.ProtocolNumber, lladdr); err != nil {
 		return fmt.Errorf("AddAddress for link-local IPv6: %v", err)
+	}
+	snaddr := ipv6.SolicitedNodeAddr(lladdr)
+	if err := stk.AddAddress(nicid, ipv6.ProtocolNumber, snaddr); err != nil {
+		return fmt.Errorf("AddAddress for solicited-node IPv6: %v", err)
 	}
 
 	if err := stk.AddAddress(nicid, ipv4.ProtocolNumber, "\xff\xff\xff\xff"); err != nil {
@@ -152,28 +157,6 @@ func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, a
 	return nil
 }
 
-func ipv6LinkLocalAddr(linkAddr tcpip.LinkAddress) tcpip.Address {
-	// Convert a 48-bit MAC to an EUI-64 and then prepend the
-	// link-local header, FE80::.
-	//
-	// The conversion is very nearly:
-	//	aa:bb:cc:dd:ee:ff => FE80::Aabb:ccFF:FEdd:eeff
-	// Note the capital A. The conversion aa->Aa involves a bit flip.
-	lladdrb := [16]byte{
-		0:  0xFE,
-		1:  0x80,
-		8:  linkAddr[0] ^ 2,
-		9:  linkAddr[1],
-		10: linkAddr[2],
-		11: 0xFF,
-		12: 0xFE,
-		13: linkAddr[3],
-		14: linkAddr[4],
-		15: linkAddr[5],
-	}
-	return tcpip.Address(lladdrb[:])
-}
-
 func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
 	return []tcpip.Route{
 		{
@@ -185,7 +168,6 @@ func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", 16)),
 			Mask:        tcpip.Address(strings.Repeat("\x00", 16)),
-			Gateway:     gateway,
 			NIC:         nicid,
 		},
 	}
