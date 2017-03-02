@@ -89,9 +89,10 @@ public:
         return mx_object_signal_peer(get(), clear_mask, set_mask);
     }
 
-    mx_status_t get_info(uint32_t topic, uint16_t topic_size, void* buffer,
-                         size_t buffer_size, size_t* return_size) const {
-        return mx_object_get_info(get(), topic, topic_size, buffer, buffer_size, return_size);
+    mx_status_t get_info(uint32_t topic, void* buffer,
+                         size_t buffer_size,
+                         size_t* actual_count, size_t* avail_count) const {
+        return mx_object_get_info(get(), topic, buffer, buffer_size, actual_count, avail_count);
     }
 
     mx_status_t get_child(uint64_t koid, mx_rights_t rights,
