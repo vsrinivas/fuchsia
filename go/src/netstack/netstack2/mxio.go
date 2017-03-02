@@ -515,16 +515,20 @@ func mxioSockAddrReply(a tcpip.FullAddress, msg *rio.Msg) mx.Status {
 		return mx.ErrInternal
 	}
 	rep := c_mxrio_sockaddr_reply{}
-	sockaddr := c_sockaddr_in{
-		sin_family: AF_INET,
-	}
-	if len(a.Addr) != 4 {
-		log.Printf("TODO IPv6")
+	switch len(a.Addr) {
+	case 4:
+		sockaddr := c_sockaddr_in{sin_family: AF_INET}
+		sockaddr.sin_port.setPort(a.Port)
+		copy(sockaddr.sin_addr[:], a.Addr)
+		rep.len = writeSockaddrStorage4(&rep.addr, &sockaddr)
+	case 16:
+		sockaddr := c_sockaddr_in6{sin6_family: AF_INET6}
+		sockaddr.sin6_port.setPort(a.Port)
+		copy(sockaddr.sin6_addr[:], a.Addr)
+		rep.len = writeSockaddrStorage6(&rep.addr, &sockaddr)
+	default:
 		return mx.ErrInvalidArgs
 	}
-	sockaddr.sin_port.setPort(a.Port)
-	copy(sockaddr.sin_addr[:], a.Addr)
-	rep.len = writeSockaddrStorage4(&rep.addr, &sockaddr)
 	rep.Encode(msg)
 	msg.SetOff(0)
 	return mx.ErrOk
@@ -641,14 +645,10 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	}
 	node, service, hints := val.Unpack()
 
-	// TODO(mpcomplete): IPv6 support
 	if debug {
-		log.Printf("opGetAddrInfo node=%q, service=%q, hints=%v", node, service, hints)
+		log.Printf("getaddrinfo node=%q, service=%q", node, service)
 	}
 
-	if hints.ai_family == 0 {
-		hints.ai_family = AF_INET
-	}
 	if hints.ai_socktype == 0 {
 		hints.ai_socktype = SOCK_STREAM
 	}
@@ -668,37 +668,58 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 		}
 	}
 
-	var addr c_in_addr
+	var addr tcpip.Address
 	dnsLookupIPs, err := s.dnsClient.LookupIP(node)
 	if err != nil {
 		if node == "localhost" {
-			addr[0], addr[1], addr[2], addr[3] = 127, 0, 0, 1
+			addr = "\x7f\x00\x00\x01"
 		} else {
-			fmt.Sscanf(node, "%d.%d.%d.%d", &addr[0], &addr[1], &addr[2], &addr[3])
+			addr = tcpip.Parse(node)
 		}
 	} else {
 		for _, ip := range dnsLookupIPs {
-			if ip.To4() != "" {
-				copy(addr[:], ip.To4())
-				break
+			if ip4 := ip.To4(); ip4 != "" {
+				addr = ip4
+			} else {
+				addr = ip
 			}
+			break
 		}
 	}
+	if debug2 {
+		log.Printf("getaddrinfo: addr=%v", addr)
+	}
+
+	// TODO: error if hints.ai_family does not match address size
 
 	rep := c_mxrio_gai_reply{}
-	rep.res[0].ai.ai_family = hints.ai_family
 	rep.res[0].ai.ai_socktype = hints.ai_socktype
 	rep.res[0].ai.ai_protocol = hints.ai_protocol
-	rep.res[0].ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
 	// The 0xdeadbeef constant indicates the other side needs to
 	// adjust ai_addr with the value passed below.
 	rep.res[0].ai.ai_addr = 0xdeadbeef
-	sockaddr := c_sockaddr_in{
-		sin_family: AF_INET,
+	switch len(addr) {
+	case 0, 4:
+		rep.res[0].ai.ai_family = AF_INET
+		rep.res[0].ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
+		sockaddr := c_sockaddr_in{sin_family: AF_INET}
+		sockaddr.sin_port.setPort(port)
+		copy(sockaddr.sin_addr[:], addr)
+		writeSockaddrStorage4(&rep.res[0].addr, &sockaddr)
+	case 16:
+		rep.res[0].ai.ai_family = AF_INET6
+		rep.res[0].ai.ai_addrlen = c_socklen(c_sockaddr_in6_len)
+		sockaddr := c_sockaddr_in6{sin6_family: AF_INET6}
+		sockaddr.sin6_port.setPort(port)
+		copy(sockaddr.sin6_addr[:], addr)
+		writeSockaddrStorage6(&rep.res[0].addr, &sockaddr)
+	default:
+		if debug {
+			log.Printf("getaddrinfo: len(addr)=%d, wrong size", len(addr))
+		}
+		// TODO: failing to resolve is a valid reply. fill out retval
+		return mx.ErrBadState
 	}
-	sockaddr.sin_port.setPort(port)
-	sockaddr.sin_addr = addr
-	writeSockaddrStorage4(&rep.res[0].addr, &sockaddr)
 	rep.nres = 1
 	rep.Encode(msg)
 	return mx.ErrOk

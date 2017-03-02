@@ -65,8 +65,13 @@ func (v *c_mxrio_sockaddr_reply) Encode(msg *rio.Msg) {
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
 }
 
-// TODO: make this a method on c_sockaddr_storage
+// TODO: make these methods on c_sockaddr_storage
 func writeSockaddrStorage4(dst *c_sockaddr_storage, src *c_sockaddr_in) c_socklen {
+	srcb := (*[unsafe.Sizeof(*src)]byte)(unsafe.Pointer(src))[:]
+	dstb := (*[unsafe.Sizeof(*dst)]byte)(unsafe.Pointer(dst))[:]
+	return c_socklen(copy(dstb, srcb))
+}
+func writeSockaddrStorage6(dst *c_sockaddr_storage, src *c_sockaddr_in6) c_socklen {
 	srcb := (*[unsafe.Sizeof(*src)]byte)(unsafe.Pointer(src))[:]
 	dstb := (*[unsafe.Sizeof(*dst)]byte)(unsafe.Pointer(dst))[:]
 	return c_socklen(copy(dstb, srcb))
