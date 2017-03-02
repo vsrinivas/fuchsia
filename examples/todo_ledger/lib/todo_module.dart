@@ -101,21 +101,43 @@ class TodoModule extends Module implements PageWatcher {
   void watch(ItemsChangedCallback callback) => _callbacks.add(callback);
 
   void _readItems(PageSnapshotProxy snapshot) {
-    snapshot.getEntries(null, null,
-        (Status status, List<Entry> entries, List<int> token) {
+    _getEntries(snapshot, (Status status, Map<List<int>, String> items) {
       if (status != Status.ok) {
         _log("getEntries: $status");
-      }
-
-      Map<List<int>, String> items = <List<int>, String>{};
-      if (entries != null) {
-        for (var entry in entries) {
-          items[entry.key] = UTF8.decode(entry.value.bytes);
-        }
+        return;
       }
 
       _callbacks.forEach((callback) => callback(items));
       snapshot.ctrl.close();
+    });
+  }
+
+  void _getEntries(PageSnapshotProxy snapshot,
+      void callback(Status status, Map<List<int>, String> items)) {
+    _getEntriesRecursive(snapshot, <List<int>, String>{}, null, callback);
+  }
+
+  void _getEntriesRecursive(
+      PageSnapshotProxy snapshot,
+      Map<List<int>, String> items,
+      List<int> token,
+      void callback(Status status, Map<List<int>, String> items)) {
+    snapshot.getEntries(null, token,
+        (Status status, List<Entry> entries, List<int> nextToken) {
+      if (status != Status.ok && status != Status.partialResult) {
+        callback(status, []);
+        return;
+      }
+      if (entries != null) {
+        for (final entry in entries) {
+          items[entry.key] = UTF8.decode(entry.value.bytes);
+        }
+      }
+      if (status == Status.ok) {
+        callback(Status.ok, items);
+        return;
+      }
+      _getEntriesRecursive(snapshot, items, nextToken, callback);
     });
   }
 

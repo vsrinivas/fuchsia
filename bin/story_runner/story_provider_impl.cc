@@ -49,6 +49,40 @@ std::string MakeStoryId(std::unordered_set<std::string>* story_ids,
   return id;
 }
 
+void GetEntries(ledger::PageSnapshotPtr* snapshot,
+                std::vector<ledger::EntryPtr> entries,
+                fidl::Array<uint8_t> token,
+                std::function<void(ledger::Status,
+                                   std::vector<ledger::EntryPtr>)> callback) {
+  (*snapshot)->GetEntries(
+      nullptr, std::move(token), ftl::MakeCopyable([
+        snapshot, entries = std::move(entries), callback = std::move(callback)
+      ](ledger::Status status, auto new_entries, auto next_token) mutable {
+        if (status != ledger::Status::OK &&
+            status != ledger::Status::PARTIAL_RESULT) {
+          callback(status, {});
+          return;
+        }
+        for (auto& entry : new_entries) {
+          entries.push_back(std::move(entry));
+        }
+        if (status == ledger::Status::OK) {
+          callback(ledger::Status::OK, std::move(entries));
+          return;
+        }
+        GetEntries(snapshot, std::move(entries), std::move(next_token),
+                   std::move(callback));
+      }));
+}
+
+// Retrieves all entries from the given snapshot and calls the given callback
+// with the returned status and entry vector.
+void GetEntries(ledger::PageSnapshotPtr* snapshot,
+                std::function<void(ledger::Status,
+                                   std::vector<ledger::EntryPtr>)> callback) {
+  GetEntries(snapshot, {}, nullptr, std::move(callback));
+}
+
 // Below are helper classes that encapsulate a chain of asynchronous
 // operations on the Ledger. Because the operations all return
 // something, the handles on which they are invoked need to be kept
@@ -492,11 +526,9 @@ class PreviousStoriesCall : public Operation {
               Done();
               return;
             }
-            root_snapshot_->GetEntries(
-                nullptr, nullptr,
-                [this](ledger::Status status,
-                       fidl::Array<ledger::EntryPtr> entries,
-                       fidl::Array<uint8_t> next_token) {
+            GetEntries(
+                &root_snapshot_, [this](ledger::Status status,
+                                        std::vector<ledger::EntryPtr> entries) {
                   if (status != ledger::Status::OK) {
                     FTL_LOG(ERROR) << "PreviousStoryCall() "
                                    << " PageSnapshot.GetEntries() " << status;
@@ -505,12 +537,9 @@ class PreviousStoriesCall : public Operation {
                     return;
                   }
 
-                  // TODO(mesch): Account for possible
-                  // continuation here. That's not just a matter
-                  // of repeatedly calling, but it needs to be
-                  // wired up to the API, because a list that is
-                  // too large to return from Ledger is also too
-                  // large to return from StoryProvider.
+                  // TODO(mesch): Pagination might be needed here. If the list
+                  // of entries returned from the Ledger is too large, it might
+                  // also be too large to return from StoryProvider.
 
                   for (auto& entry : entries) {
                     // TODO(mesch): Not a good idea to mix keys of

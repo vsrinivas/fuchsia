@@ -55,6 +55,40 @@ std::function<void(ledger::Status)> HandleResponse(std::string description) {
   };
 }
 
+void GetEntries(ledger::PageSnapshotPtr snapshot,
+                std::vector<ledger::EntryPtr> entries,
+                fidl::Array<uint8_t> token,
+                std::function<void(ledger::Status,
+                                   std::vector<ledger::EntryPtr>)> callback) {
+  ledger::PageSnapshot* snapshot_ptr = snapshot.get();
+  snapshot_ptr->GetEntries(
+      nullptr, std::move(token), ftl::MakeCopyable([
+        snapshot = std::move(snapshot), entries = std::move(entries),
+        callback = std::move(callback)
+      ](ledger::Status status, auto new_entries, auto next_token) mutable {
+        if (status != ledger::Status::OK &&
+            status != ledger::Status::PARTIAL_RESULT) {
+          callback(status, {});
+          return;
+        }
+        for (auto& entry : new_entries) {
+          entries.push_back(std::move(entry));
+        }
+        if (status == ledger::Status::OK) {
+          callback(ledger::Status::OK, std::move(entries));
+          return;
+        }
+        GetEntries(std::move(snapshot), std::move(entries),
+                   std::move(next_token), std::move(callback));
+      }));
+}
+
+void GetEntries(ledger::PageSnapshotPtr snapshot,
+                std::function<void(ledger::Status,
+                                   std::vector<ledger::EntryPtr>)> callback) {
+  GetEntries(std::move(snapshot), {}, nullptr, std::move(callback));
+}
+
 }  // namespace
 
 TodoApp::TodoApp()
@@ -103,24 +137,19 @@ void TodoApp::OnChange(ledger::PageChangePtr page_change,
 }
 
 void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
-  ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetEntries(
-      nullptr, nullptr,
-      ftl::MakeCopyable([snapshot = std::move(snapshot)](
-          ledger::Status status, auto entries, auto next_token) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "GetEntries failed";
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
-          return;
-        }
-        FTL_DCHECK(!next_token);
+  GetEntries(std::move(snapshot), [](ledger::Status status, auto entries) {
+    if (status != ledger::Status::OK) {
+      FTL_LOG(ERROR) << "GetEntries failed";
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      return;
+    }
 
-        std::cout << "--- To Do ---" << std::endl;
-        for (auto& entry : entries) {
-          std::cout << ToString(entry->value->get_bytes()) << std::endl;
-        }
-        std::cout << "---" << std::endl;
-      }));
+    std::cout << "--- To Do ---" << std::endl;
+    for (auto& entry : entries) {
+      std::cout << ToString(entry->value->get_bytes()) << std::endl;
+    }
+    std::cout << "---" << std::endl;
+  });
 }
 
 void TodoApp::GetKeys(std::function<void(fidl::Array<Key>)> callback) {
