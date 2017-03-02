@@ -2045,6 +2045,11 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
     msg.header.opcode = opcode;
     memcpy(msg.data, data, len);
     msg.data[len] = 0;
+    if (result != NULL) {
+      // Don't return an uninitialized value if the channel call
+      // succeeds but doesn't provide any handles.
+      *result = MX_HANDLE_INVALID;
+    }
 
     mx_channel_call_args_t call = {
         .wr_bytes = &msg,
@@ -2084,7 +2089,9 @@ __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
         goto out;
     }
     if (msg.header.arg != NO_ERROR) {
-        if (*result != MX_HANDLE_INVALID) {
+        // |result| is non-null if |handle_count| > 0, because
+        // |handle_count| <= |rd_num_handles|.
+        if (handle_count > 0 && *result != MX_HANDLE_INVALID) {
             error("loader service error %d reply contains handle %#x",
                   msg.header.arg, *result);
             status = ERR_INVALID_ARGS;
