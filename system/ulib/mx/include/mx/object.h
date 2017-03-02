@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <magenta/assert.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <mx/object_traits.h>
@@ -118,22 +117,6 @@ public:
     explicit operator bool() const { return is_valid(); }
 
     mx_handle_t get() const { return value_; }
-
-    // Get the address of the underling internal handle storage.
-    //
-    // Note: The intended purpose is to facilitate interactions with C APIs
-    // which expect to be provided a pointer to a handle used as an out
-    // parameter.  Because of this, the expectation is that the C-API is going
-    // to overwrite the contents of value_, and if value_ was a valid handle,
-    // the handle would have been leaked.
-    //
-    // Because of this, we ASSERT that the internal handle is invalid before
-    // providing the address to the caller.  Do not call this method on an
-    // object<> instance which is currently valid.
-    mx_handle_t* get_address() {
-        DEBUG_ASSERT(!is_valid());
-        return &value_;
-    }
 
     __attribute__((warn_unused_result)) mx_handle_t release() {
         mx_handle_t result = value_;
