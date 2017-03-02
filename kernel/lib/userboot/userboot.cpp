@@ -175,9 +175,6 @@ static mx_handle_t make_bootstrap_channel(
 
 enum bootstrap_handle_index {
     BOOTSTRAP_VDSO,
-#if EMBED_USER_BOOTFS
-    BOOTSTRAP_BOOTFS,
-#endif
     BOOTSTRAP_RAMDISK,
     BOOTSTRAP_RESOURCE_ROOT,
     BOOTSTRAP_STACK,
@@ -220,18 +217,9 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
         case BOOTSTRAP_VDSO:
             info = MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0);
             break;
-#if EMBED_USER_BOOTFS
-        case BOOTSTRAP_BOOTFS:
-            info = MX_HND_INFO(MX_HND_TYPE_BOOTDATA_VMO, 0);
-            break;
-        case BOOTSTRAP_RAMDISK:
-            info = MX_HND_INFO(MX_HND_TYPE_BOOTDATA_VMO, 1);
-            break;
-#else
         case BOOTSTRAP_RAMDISK:
             info = MX_HND_INFO(MX_HND_TYPE_BOOTDATA_VMO, 0);
             break;
-#endif
         case BOOTSTRAP_RESOURCE_ROOT:
             info = MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0);
             break;
@@ -260,20 +248,13 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     return packet;
 }
 
-static int attempt_userboot(const void* bootfs, size_t bfslen) {
-#if EMBED_USER_BOOTFS
-    dprintf(INFO, "userboot: bootfs %16zu @ %p\n", bfslen, bootfs);
-#endif
-
+static int attempt_userboot() {
     size_t rsize;
     void* rbase = platform_get_ramdisk(&rsize);
     if (rbase)
         dprintf(INFO, "userboot: ramdisk %15zu @ %p\n", rsize, rbase);
 
     auto stack_vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size);
-#if EMBED_USER_BOOTFS
-    auto bootfs_vmo = VmObjectPaged::CreateFromROData(bootfs, bfslen);
-#endif
     auto rootfs_vmo = VmObjectPaged::CreateFromROData(rbase, rsize);
 
     // Prepare the bootstrap message packet.  This puts its data (the
@@ -285,15 +266,8 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
 
     Handle** const handles = msg->mutable_handles();
     DEBUG_ASSERT(msg->num_handles() == BOOTSTRAP_HANDLES);
-#if EMBED_USER_BOOTFS
-    mx_status_t status = get_vmo_handle(bootfs_vmo, false, nullptr,
-                                        &handles[BOOTSTRAP_BOOTFS]);
-#else
-    mx_status_t status = 0;
-#endif
-    if (status == NO_ERROR)
-        status = get_vmo_handle(rootfs_vmo, false, nullptr,
-                                &handles[BOOTSTRAP_RAMDISK]);
+    mx_status_t status = get_vmo_handle(rootfs_vmo, false, nullptr,
+                                        &handles[BOOTSTRAP_RAMDISK]);
     mxtl::RefPtr<VmObjectDispatcher> stack_vmo_dispatcher;
     if (status == NO_ERROR)
         status = get_vmo_handle(stack_vmo, false, &stack_vmo_dispatcher,
@@ -379,21 +353,13 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     return NO_ERROR;
 }
 
-#if EMBED_USER_BOOTFS
-extern "C" const uint8_t user_bootfs[];
-extern "C" const uint32_t user_bootfs_len;
-#else
-#define user_bootfs nullptr
-#define user_bootfs_len 0
-#endif
-
 void userboot_init(uint level) {
 #if !WITH_APP_SHELL
     dprintf(INFO, "userboot: console init\n");
     console_init();
 #endif
 
-    attempt_userboot(user_bootfs, user_bootfs_len);
+    attempt_userboot();
 }
 
 LK_INIT_HOOK(userboot, userboot_init, LK_INIT_LEVEL_APPS - 1);
