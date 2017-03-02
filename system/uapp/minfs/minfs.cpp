@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <bitmap/raw-bitmap.h>
+#include <magenta/new.h>
 #include <mxtl/unique_ptr.h>
 
 #include "minfs-private.h"
@@ -357,8 +358,9 @@ mx_status_t Minfs::Create(Minfs** out, Bcache* bc, minfs_info_t* info) {
         return status;
     }
 
-    mxtl::unique_ptr<Minfs> fs(new Minfs(bc, info));
-    if (fs == nullptr) {
+    AllocChecker ac;
+    mxtl::unique_ptr<Minfs> fs(new (&ac) Minfs(bc, info));
+    if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
 

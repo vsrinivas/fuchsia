@@ -9,6 +9,7 @@
 
 #include <fs/trace.h>
 
+#include <magenta/new.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
@@ -159,8 +160,9 @@ int Bcache::Sync() {
 
 mx_status_t Bcache::Create(Bcache** out, int fd, uint32_t blockmax, uint32_t blocksize,
                            uint32_t num) {
-    mxtl::unique_ptr<Bcache> bc(new Bcache(fd, blockmax, blocksize));
-    if (bc == nullptr) {
+    AllocChecker ac;
+    mxtl::unique_ptr<Bcache> bc(new (&ac) Bcache(fd, blockmax, blocksize));
+    if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
     while (num > 0) {
@@ -225,8 +227,9 @@ BcacheLists::LinkedList* BcacheLists::GetList(uint32_t block_type) {
 }
 
 mx_status_t BlockNode::Create(Bcache* bc) {
-    mxtl::RefPtr<BlockNode> blk = mxtl::AdoptRef(new BlockNode());
-    if (blk == nullptr) {
+    AllocChecker ac;
+    mxtl::RefPtr<BlockNode> blk = mxtl::AdoptRef(new (&ac) BlockNode());
+    if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
     blk->data_.reset(static_cast<char*>(malloc(bc->blocksize_)));
