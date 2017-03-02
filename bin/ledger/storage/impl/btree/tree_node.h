@@ -21,6 +21,86 @@ class TreeNode {
  public:
   ~TreeNode();
 
+  // A TreeNode builder, based on an initial node and allowing to apply a set of
+  // changes to it. Mutation calls should be sorted in a strictly increasing
+  // order based on the corresponding key of the change with one exception: to
+  // update the child id before a key K, and update the value of the same key,
+  // two calls using the same key should be made. In this case, the
+  // UpdateChildId call should precede the UpdateEntry one:
+  //
+  // node.StartMutation()
+  //     .UpdateChildId(K, child_id)
+  //     .UpdateEntry(Entry{K, V', priority})
+  //     .Finish();
+  class Mutation {
+   public:
+    using Updater = std::function<void(Mutation*)>;
+
+    explicit Mutation(const TreeNode& node);
+    Mutation(Mutation&&);
+    ~Mutation();
+
+    // Adds a new entry with the given ids as its left and right children. The
+    // corresponding child nodes are expected to be the result of spliting the
+    // the previous child node in that entry's position.
+    Mutation& AddEntry(const Entry& entry,
+                       ObjectIdView left_id,
+                       ObjectIdView right_id);
+
+    // Updates the value and/or priority of an existing key.
+    Mutation& UpdateEntry(const Entry& entry);
+
+    // Removes the entry with the given |key| from this node and updates the id
+    // of the child in that position. The new |child_id| is expected to be the
+    // result of the merge of the left and right children of the deleted entry.
+    Mutation& RemoveEntry(const std::string& key, ObjectIdView child_id);
+
+    // Updates the id of a child on the left of the entry with the given key.
+    Mutation& UpdateChildId(const std::string& key_after,
+                            ObjectIdView child_id);
+
+    // Creates the new TreeNode as a result of the given updates. |on_done| will
+    // be called with the status and, if successfull, the new node's id. After
+    // calling this method, this Mutation object is no longer valid and calling
+    // any methods on it will fail.
+    void Finish(std::function<void(Status, ObjectId)> on_done);
+
+    // Creates as many tree nodes as necessary given the |max_size| of entries a
+    // node can have. If this mutation corresponds to a root node, |on_done|
+    // will be called with the new root id and a null Updater. Otherwise,
+    // |on_done| will be called with an empty object id and if there some
+    // changes to be done on the parent node, the Updater will have a non-null
+    // value. After calling this method, this Mutation object is no longer valid
+    // and calling any methods on it will fail.
+    // TODO(nellyv): This method should not be necessary after updating the
+    // B-Tree node implementation.
+    void Finish(size_t max_size,
+                bool is_root,
+                const std::string& max_key,
+                std::unordered_set<ObjectId>* new_nodes,
+                std::function<void(Status, ObjectId, std::unique_ptr<Updater>)>
+                    on_done);
+
+   private:
+    // Copies the entries from the |node_| starting at |node_index_| and until
+    // that entry's key is equal to or greater than the given |key|. If |key| is
+    // empty, all entries until the end of the vector are copied.
+    void CopyUntil(std::string key);
+
+    void FinalizeEntriesChildren();
+
+    const TreeNode& node_;
+    // The index of the next entry of the node to be added in the entries of
+    // this mutation.
+    int node_index_ = 0;
+
+    std::vector<Entry> entries_;
+    std::vector<ObjectId> children_;
+    bool finished = false;
+
+    FTL_DISALLOW_COPY_AND_ASSIGN(Mutation);
+  };
+
   // Creates a |TreeNode| object for an existing node and calls the given
   // |callback| with the returned status and node.
   static void FromId(
@@ -33,7 +113,6 @@ class TreeNode {
   // index. The |callback| will be called with the success or error status and
   // the id of the new node. It is expected that |children| = |entries| + 1.
   static void FromEntries(PageStorage* page_storage,
-                          uint8_t level,
                           const std::vector<Entry>& entries,
                           const std::vector<ObjectId>& children,
                           std::function<void(Status, ObjectId)> callback);
@@ -42,6 +121,34 @@ class TreeNode {
   // at index 0 and calls the callback with the result.
   static void Empty(PageStorage* page_storage,
                     std::function<void(Status, ObjectId)> callback);
+
+  // Creates a new tree node by merging |left| and |right|. |merged_child_id|
+  // should contain the id of the new child node stored between the last entry
+  // of |left| and the first entry of |right| in the merged node. |on_done| will
+  // be called with the status and the new merged node's id.
+  // Typical usage of this method would be to merge nodes bottom-up, each time
+  // using the id of the newly merged node as the |merged_child_id| of the next
+  // merge call.
+  static void Merge(PageStorage* page_storage,
+                    std::unique_ptr<const TreeNode> left,
+                    std::unique_ptr<const TreeNode> right,
+                    ObjectIdView merged_child_id,
+                    std::function<void(Status, ObjectId)> on_done);
+
+  // Starts a new mutation based on this node. See also |TreeNode::Mutation|.
+  Mutation StartMutation() const;
+
+  // Creates two new tree nodes by splitting this one. The left one will store
+  // entries in [0, index) and the right one those in [index, GetKeyCount()).
+  // The rightmost child of |left| will be set to |left_rightmost_child| and the
+  // leftmost child of |right| will be set to |right_leftmost_child|. Both
+  // |left_rightmost_child| and |right_leftmost_child| can be empty, if there is
+  // no child in the given position. |on_done| will be called with the status
+  // and if successfull with the ids of new left and right nodes.
+  void Split(int index,
+             ObjectIdView left_rightmost_child,
+             ObjectIdView right_leftmost_child,
+             std::function<void(Status, ObjectId, ObjectId)> on_done) const;
 
   // Returns the number of entries stored in this tree node.
   int GetKeyCount() const;
@@ -71,16 +178,9 @@ class TreeNode {
 
   const ObjectId& GetId() const;
 
-  uint8_t level() const { return level_; }
-
-  const std::vector<Entry>& entries() const { return entries_; }
-
-  const std::vector<ObjectId>& children_ids() const { return children_; }
-
  private:
   TreeNode(PageStorage* page_storage,
            std::string id,
-           uint8_t level,
            std::vector<Entry> entries,
            std::vector<ObjectId> children);
 
@@ -92,7 +192,6 @@ class TreeNode {
 
   PageStorage* page_storage_;
   ObjectId id_;
-  const uint8_t level_;
   const std::vector<Entry> entries_;
   const std::vector<ObjectId> children_;
 };

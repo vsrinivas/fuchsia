@@ -22,7 +22,6 @@ struct ChildStorage {
 table TreeNodeStorage {
   entries: [EntryStorage];
   children: [ChildStorage];
-  level: ubyte;
 }
 
 root_type TreeNodeStorage;

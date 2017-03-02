@@ -54,34 +54,18 @@ class StorageTest : public ::test::TestWithMessageLoop {
                                        std::unique_ptr<const Object>* object);
 
   // Creates a vector of entries, each of which has a key from "key00" to
-  // "keyXX" where XX is |size-1|. A new value is created for each entry and the
-  // corresponding object_id is set on the entry. |entries| vector will be
-  // swapped with the result.
-  ::testing::AssertionResult CreateEntries(size_t size,
-                                           std::vector<Entry>* entries);
-
-  // Creates a vector of entries, each of which has a key "keyXX", were "XX" is
-  // taken from the |values| vector. A new value is created for each entry and
-  // the corresponding object_id is set on the entry. |entries| vector will be
-  // swapped with the result.
-  ::testing::AssertionResult CreateEntries(std::vector<size_t> values,
+  // "key01". A new value is created for each entry and the corresponding
+  // object_id is set on the entry. |entries| vector will be swapped with the
+  // result.
+  ::testing::AssertionResult CreateEntries(int size,
                                            std::vector<Entry>* entries);
 
   // Creates a vector of entry changes adding or updating the given number of
   // entries. See |CreateEntries| for information on the created entries.
   // |changes| vector will be swapped with the result.
   ::testing::AssertionResult CreateEntryChanges(
-      size_t size,
+      int size,
       std::vector<EntryChange>* changes);
-
-  // Creates a vector of entry changes adding or updating the given number of
-  // entries. See |CreateEntries| for information on the created entries.
-  // |changes| vector will be swapped with the result. If |deletion| is true,
-  // the changes will be deletions, otherwise the changes will be updates.
-  ::testing::AssertionResult CreateEntryChanges(
-      std::vector<size_t> values,
-      std::vector<EntryChange>* changes,
-      bool deletion = false);
 
   // Creates an empty tree node and updates |empty_node_id| with the result.
   ::testing::AssertionResult GetEmptyNodeId(ObjectId* empty_node_id);

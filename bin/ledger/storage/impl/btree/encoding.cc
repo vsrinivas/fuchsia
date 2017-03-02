@@ -79,8 +79,7 @@ bool CheckValidTreeNodeSerialization(ftl::StringView data) {
   return true;
 }
 
-std::string EncodeNode(uint8_t level,
-                       const std::vector<Entry>& entries,
+std::string EncodeNode(const std::vector<Entry>& entries,
                        const std::vector<ObjectId>& children) {
   flatbuffers::FlatBufferBuilder builder;
 
@@ -116,14 +115,13 @@ std::string EncodeNode(uint8_t level,
           }));
 
   builder.Finish(
-      CreateTreeNodeStorage(builder, entries_offsets, children_offsets, level));
+      CreateTreeNodeStorage(builder, entries_offsets, children_offsets));
 
   return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
                      builder.GetSize());
 }
 
 bool DecodeNode(ftl::StringView data,
-                uint8_t* level,
                 std::vector<Entry>* res_entries,
                 std::vector<ObjectId>* res_children) {
   FTL_DCHECK(CheckValidTreeNodeSerialization(data));
@@ -131,7 +129,6 @@ bool DecodeNode(ftl::StringView data,
   const TreeNodeStorage* tree_node =
       GetTreeNodeStorage(reinterpret_cast<const unsigned char*>(data.data()));
 
-  *level = tree_node->level();
   res_entries->clear();
   res_entries->reserve(tree_node->entries()->size());
   for (const auto* entry_storage : *(tree_node->entries())) {

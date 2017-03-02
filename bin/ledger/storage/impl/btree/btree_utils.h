@@ -21,14 +21,10 @@ struct EntryAndNodeId {
   const ObjectId& node_id;
 };
 
-struct NodeLevelCalculator {
-  //  Return the level in the tree where a node containing |key| must be
-  //  located. The leaves are located on level 0.
-  uint8_t (*GetNodeLevel)(convert::ExtendedStringView key);
-};
-
-// Default algorithm to compute the node level.
-const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
+// Return the level in the tree where a node containing |key| must be located.
+// The leaves are located on level 0.
+uint8_t GetNodeLevel(convert::ExtendedStringView key,
+                     uint8_t max_level = std::numeric_limits<uint8_t>::max());
 
 // Applies changes provided by |changes| to the BTree starting at |root_id|.
 // |changes| must provide |EntryChange| objects sorted by their key. The
@@ -37,11 +33,10 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 void ApplyChanges(
     PageStorage* page_storage,
     ObjectIdView root_id,
+    size_t node_size,
     std::unique_ptr<Iterator<const EntryChange>> changes,
     std::function<void(Status, ObjectId, std::unordered_set<ObjectId>)>
-        callback,
-    const NodeLevelCalculator* node_level_calculator =
-        GetDefaultNodeLevelCalculator());
+        callback);
 
 // Retrieves the ids of all objects in the BTree, i.e tree nodes and values of
 // entries in the tree. After a successfull call, |callback| will be called

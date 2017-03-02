@@ -24,29 +24,12 @@ union Hash {
   HashSliceType slices[sizeof(HashResultType) / sizeof(HashSliceType)];
 };
 
-static_assert(sizeof(Hash::slices) == sizeof(Hash::hash),
-              "Hash size is incorrect.");
-static_assert(sizeof(HashSliceType) < std::numeric_limits<uint8_t>::max(),
-              "Hash size is too big.");
-
 Hash FastHash(convert::ExtendedStringView value) {
+  static_assert(sizeof(Hash::slices) == sizeof(Hash::hash),
+                "Hash size is incorrect.");
+
   return {.hash = murmurhash(value.data(), value.size(), kMurmurHashSeed)};
 }
-
-uint8_t GetNodeLevel(convert::ExtendedStringView key) {
-  // Compute the level of a key by computing the hash of the key.
-  // A key is at level k if the first k bytes of the hash of |key| are 0s. This
-  // constructs a tree with an expected node size of |255|.
-  Hash hash = FastHash(key);
-  for (size_t l = 0; l < sizeof(Hash); ++l) {
-    if (hash.slices[l]) {
-      return l;
-    }
-  }
-  return std::numeric_limits<uint8_t>::max();
-}
-
-constexpr NodeLevelCalculator kDefaultNodeLevelCalculator = {&GetNodeLevel};
 
 // Helper functions for btree::ForEach.
 void ForEachEntryInSubtree(PageStorage* page_storage,
@@ -176,6 +159,331 @@ void ForEachEntryInSubtree(PageStorage* page_storage,
                            std::move(on_done));
 }
 
+void RemoveNodeId(const ObjectId& id, std::unordered_set<ObjectId>* nodes) {
+  auto it = nodes->find(id);
+  if (it != nodes->end()) {
+    nodes->erase(it);
+  }
+}
+
+// Helper functions for btree::ApplyChanges.
+
+void ApplyChangesIn(
+    PageStorage* page_storage,
+    Iterator<const EntryChange>* changes,
+    std::unique_ptr<const TreeNode> node,
+    bool is_root,
+    std::string max_key,
+    size_t node_size,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::function<void(Status,
+                       ObjectId,
+                       std::unique_ptr<TreeNode::Mutation::Updater>)> on_done);
+
+// Returns the child node at the given index or nullptr if the child is empty.
+// |callback| will be called with an |OK| status on success, including the case
+// of an empty child, or the error status on failure.
+void GetChild(
+    const TreeNode& node,
+    int index,
+    std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
+  if (node.GetChildId(index).empty()) {
+    callback(Status::OK, nullptr);
+  } else {
+    node.GetChild(index, std::move(callback));
+  }
+}
+
+// Recursively merge |left| and |right| nodes. |new_id| will contain the ID of
+// the new, merged node. Returns OK on success or the error code otherwise.
+void Merge(PageStorage* page_storage,
+           std::unique_ptr<const TreeNode> left,
+           std::unique_ptr<const TreeNode> right,
+           std::unordered_set<ObjectId>* new_nodes,
+           std::function<void(Status, ObjectId)> on_done) {
+  if (left == nullptr) {
+    if (right == nullptr) {
+      on_done(Status::OK, "");
+      return;
+    }
+    on_done(Status::OK, right->GetId());
+    return;
+  }
+  if (right == nullptr) {
+    on_done(Status::OK, left->GetId());
+    return;
+  }
+
+  auto waiter =
+      callback::Waiter<Status, std::unique_ptr<const TreeNode>>::Create(
+          Status::OK);
+  // The rightmost child of left.
+  GetChild(*left, left->GetKeyCount(), waiter->NewCallback());
+  // The leftmost child of right.
+  GetChild(*right, 0, waiter->NewCallback());
+
+  waiter->Finalize(ftl::MakeCopyable([
+    page_storage, new_nodes, left = std::move(left), right = std::move(right),
+    on_done = std::move(on_done)
+  ](Status s, std::vector<std::unique_ptr<const TreeNode>> children) mutable {
+    // Merge the children before merging left and right.
+    Merge(page_storage, std::move(children[0]), std::move(children[1]),
+          new_nodes, ftl::MakeCopyable([
+            page_storage, left = std::move(left), right = std::move(right),
+            new_nodes, on_done = std::move(on_done)
+          ](Status s, ObjectId child_id) mutable {
+            if (s != Status::OK) {
+              on_done(s, "");
+              return;
+            }
+            RemoveNodeId(left->GetId(), new_nodes);
+            RemoveNodeId(right->GetId(), new_nodes);
+
+            TreeNode::Merge(page_storage, std::move(left), std::move(right),
+                            child_id,
+                            [ new_nodes, on_done = std::move(on_done) ](
+                                Status s, ObjectId merged_id) {
+                              if (s == Status::OK) {
+                                new_nodes->insert(merged_id);
+                              }
+                              on_done(s, merged_id);
+                            });
+          }));
+  }));
+}
+
+// Applies the change to the given node. If the change is a deletion, it also
+// triggers the merging of the corresponding children. |new_nodes| will be
+// updated by adding all newly created nodes and removing the previous ones. The
+// pointed object of |new_nodes| should outlive the call to the |on_done|
+// callback.
+void ApplyChangeOnNode(
+    PageStorage* page_storage,
+    const EntryChange* change,
+    const TreeNode* node,
+    int change_index,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::function<void(Status, std::unique_ptr<TreeNode::Mutation::Updater>)>
+        on_done) {
+  if (!change->deleted) {
+    // Update the entry's value.
+    on_done(
+        Status::OK,
+        std::make_unique<TreeNode::Mutation::Updater>([entry = change->entry](
+            TreeNode::Mutation * mutation) { mutation->UpdateEntry(entry); }));
+    return;
+  }
+
+  auto waiter =
+      callback::Waiter<Status, std::unique_ptr<const TreeNode>>::Create(
+          Status::OK);
+  // Get the left and right children.
+  GetChild(*node, change_index, waiter->NewCallback());
+  GetChild(*node, change_index + 1, waiter->NewCallback());
+
+  waiter->Finalize(ftl::MakeCopyable([
+    page_storage, new_nodes, key = change->entry.key,
+    on_done = std::move(on_done)
+  ](Status s, std::vector<std::unique_ptr<const TreeNode>> children) mutable {
+    if (s != Status::OK) {
+      on_done(s, nullptr);
+      return;
+    }
+    // Remove the entry after merging the children.
+    Merge(
+        page_storage, std::move(children[0]), std::move(children[1]), new_nodes,
+        [ key = std::move(key), on_done = std::move(on_done) ](
+            Status s, ObjectId child_id) mutable {
+          if (s != Status::OK) {
+            on_done(s, nullptr);
+            return;
+          }
+          on_done(Status::OK, std::make_unique<TreeNode::Mutation::Updater>([
+                    key = std::move(key), child_id = std::move(child_id)
+                  ](TreeNode::Mutation * mutation) {
+                    mutation->RemoveEntry(std::move(key), std::move(child_id));
+                  }));
+        });
+  }));
+}
+
+// Retrieves the child node in the given |child_index| and, if present,
+// recursively calls ApplyChangesIn to apply all necessary changes to the
+// subtree with that child as root. When |on_done| is called, the |changes|
+// iterator will already be advanced to the first change that has not been
+// applied, or to the end of the iterator if there is no such element.
+void ApplyChangeOnKeyNotFound(
+    PageStorage* page_storage,
+    Iterator<const EntryChange>* changes,
+    const TreeNode* node,
+    int child_index,
+    int node_size,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::function<void(Status, std::unique_ptr<TreeNode::Mutation::Updater>)>
+        on_done) {
+  std::string next_key;
+  if (child_index == node->GetKeyCount()) {
+    next_key = "";
+  } else {
+    Entry entry;
+    node->GetEntry(child_index, &entry);
+    next_key = entry.key;
+  }
+
+  node->GetChild(child_index, [
+    next_key = std::move(next_key), page_storage, changes, node_size, new_nodes,
+    on_done = std::move(on_done)
+  ](Status s, std::unique_ptr<const TreeNode> child) mutable {
+    if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
+      changes->Next();
+      on_done(s, nullptr);
+      return;
+    }
+    if (s == Status::NO_SUCH_CHILD) {
+      if ((*changes)->deleted) {
+        // We try to remove an entry that is not in the tree. This is
+        // expected, as journals collate all operations on a key in a single
+        // change: if one does a put then a delete on a key, then we will only
+        // see here the delete operation.
+        FTL_VLOG(1) << "Failed to delete key " << (*changes)->entry.key
+                    << ": No such entry.";
+        changes->Next();
+        on_done(Status::OK, nullptr);
+        return;
+      }
+      // Add the entry here. Since there is no child, both the new left and
+      // right children are empty.
+      Entry entry = std::move((*changes)->entry);
+      changes->Next();
+      on_done(Status::OK,
+              std::make_unique<TreeNode::Mutation::Updater>([entry = std::move(
+                                                                 entry)](
+                  TreeNode::Mutation * mutation) {
+                mutation->AddEntry(entry, "", "");
+              }));
+      return;
+    }
+    // Recursively search for the key in the child and then update the child
+    // id in this node in the corresponding index.
+    ApplyChangesIn(page_storage, changes, std::move(child), false,
+                   std::move(next_key), node_size, new_nodes,
+                   [on_done = std::move(on_done)](
+                       Status s, ObjectId new_child_id,
+                       std::unique_ptr<TreeNode::Mutation::Updater>
+                           parent_updater) mutable {
+                     // No need to call Next on the iterator here, it has
+                     // already advanced in the ApplyChangesIn loop.
+                     on_done(s, std::move(parent_updater));
+                   });
+  });
+}
+
+// Helper function for |ApplyChangesIn|. Allows to iterate over |changes|
+// recursively.
+void ApplyChangesInRecursive(
+    PageStorage* page_storage,
+    Iterator<const EntryChange>* changes,
+    const TreeNode* node,
+    std::string max_key,
+    size_t node_size,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::vector<std::unique_ptr<TreeNode::Mutation::Updater>>* updaters,
+    std::function<void(Status)> on_done) {
+  // Apply all changes in the correct range: until the max_key. Wait for all
+  // changes to be detected for this node before applying them in this node's
+  // mutation, so as to guarantee they are applied in the right order.
+
+  if (!changes->Valid() ||
+      (!max_key.empty() && (*changes)->entry.key >= max_key)) {
+    on_done(Status::OK);
+    return;
+  }
+
+  auto callback = callback::MakeAsynchronous([
+    page_storage, changes, node, max_key = std::move(max_key), node_size,
+    new_nodes, updaters, on_done = std::move(on_done)
+  ](Status status,
+    std::unique_ptr<TreeNode::Mutation::Updater> updater) mutable {
+    if (status != Status::OK) {
+      on_done(status);
+      return;
+    }
+    updaters->push_back(std::move(updater));
+    ApplyChangesInRecursive(page_storage, changes, node, max_key, node_size,
+                            new_nodes, updaters, std::move(on_done));
+  });
+
+  int index;
+  Status s = node->FindKeyOrChild((*changes)->entry.key, &index);
+  const EntryChange& change = **changes;
+
+  if (s == Status::OK) {
+    // The key was found. Apply the change to this node.
+    ApplyChangeOnNode(
+        page_storage, &change, node, index, new_nodes,
+        [ changes, callback = std::move(callback) ](
+            Status status,
+            std::unique_ptr<TreeNode::Mutation::Updater> updater) mutable {
+          changes->Next();
+          callback(status, std::move(updater));
+        });
+  } else if (s == Status::NOT_FOUND) {
+    // The key was not found here. Search in the corresponding child.
+    ApplyChangeOnKeyNotFound(page_storage, changes, node, index, node_size,
+                             new_nodes, std::move(callback));
+  } else {
+    // Error in FindKeyOrChild.
+    on_done(s);
+  }
+}
+
+// Applies all given changes in the subtree having |node| as a root.
+// |changes| should be sorted by the changes' entry key.
+// |max_key| is the maximal value (exclusive) this code could have as a key.
+// E.g. a child node placed between keys "A" and "B", has "B" as it's |max_key|.
+// It should be an empty string for the root node.
+// |node_size| is the maximal size of a tree node as defined in this B-Tree.
+// |new_nodes| is the set of all nodes added during the recursion.
+// |on_done| is called once, with the returned status and, when successfull, the
+// id of the new root and the TreeNode::Mutation::Updater for the parent node's
+// mutation.
+void ApplyChangesIn(
+    PageStorage* page_storage,
+    Iterator<const EntryChange>* changes,
+    std::unique_ptr<const TreeNode> node,
+    bool is_root,
+    std::string max_key,
+    size_t node_size,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::function<void(Status,
+                       ObjectId,
+                       std::unique_ptr<TreeNode::Mutation::Updater>)> on_done) {
+  auto updates = std::make_unique<
+      std::vector<std::unique_ptr<TreeNode::Mutation::Updater>>>();
+  auto updates_ptr = updates.get();
+  auto node_ptr = node.get();
+
+  ApplyChangesInRecursive(
+      page_storage, changes, node_ptr, max_key, node_size, new_nodes,
+      updates_ptr, ftl::MakeCopyable([
+        node = std::move(node), is_root, max_key, node_size, new_nodes,
+        updates = std::move(updates), on_done = std::move(on_done)
+      ](Status s) mutable {
+        if (s != Status::OK) {
+          on_done(s, "", nullptr);
+          return;
+        }
+        TreeNode::Mutation mutation = node->StartMutation();
+        for (const auto& update : *updates) {
+          if (update) {
+            (*update)(&mutation);
+          }
+        }
+        mutation.Finish(node_size, is_root, max_key, new_nodes,
+                        ftl::MakeCopyable(std::move(on_done)));
+      }));
+}
+
 // Returns a vector with all the tree's entries, sorted by key.
 void GetEntriesVector(
     PageStorage* page_storage,
@@ -198,978 +506,85 @@ void GetEntriesVector(
       }));
 }
 
-// A ref-counted vector. This allows to share entries and/or children between
-// mutliple node builders.
-template <typename A>
-class RefVector : public ftl::RefCountedThreadSafe<RefVector<A>> {
- public:
-  static ftl::RefPtr<RefVector<A>> Create(std::vector<A> vector = {}) {
-    return AdoptRef(new RefVector<A>(std::move(vector)));
-  }
-
-  static ftl::RefPtr<RefVector<A>> Create(
-      typename std::vector<A>::const_iterator begin,
-      typename std::vector<A>::const_iterator end) {
-    return Create(std::vector<A>(std::move(begin), std::move(end)));
-  }
-
-  bool empty() const { return vector_.empty(); }
-
-  size_t size() const { return vector_.size(); }
-
-  auto begin() const { return vector_.begin(); }
-
-  auto end() const { return vector_.end(); }
-
-  auto front() const { return vector_.front(); }
-
-  auto back() const { return vector_.back(); }
-
-  const A& Get(size_t index) const { return vector_[index]; }
-
-  // Returns a copy of this vector truncated at |end|.
-  ftl::RefPtr<RefVector<A>> CopyUntil(
-      typename std::vector<A>::const_iterator end) const {
-    return Create(begin(), end);
-  }
-
-  void push_back(A value) { vector_.push_back(std::move(value)); }
-
-  // Append elements between |begin| and |end| to this vector.
-  void Append(typename std::vector<A>::const_iterator begin,
-              typename std::vector<A>::const_iterator end) {
-    vector_.insert(vector_.end(), std::move(begin), std::move(end));
-  }
-
- private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(RefVector<A>);
-
-  explicit RefVector(std::vector<A> vector) : vector_(std::move(vector)) {}
-  ~RefVector() {}
-
-  std::vector<A> vector_;
-};
-
-// Base class for tree nodes during construction. To apply mutations on a tree
-// node, once start by creating an instance of ExistingNodeBuilder from the id
-// of an existing tree node, then applies mutation on it, getting a new
-// NodeBuilder in a callback each time. Once all mutations are applies, a call
-// to Build with build a TreeNode in the storage.
-// TODO(qsr): LE-150 It should be possible to mutate Builder as a builder will
-//            not be used anymore once it is mutated.
-class NodeBuilder : public ftl::RefCountedThreadSafe<const NodeBuilder> {
- public:
-  // Static version of |Build| that handles null nodes.
-  static void Build(
-      ftl::RefPtr<const NodeBuilder> node_builder,
-      PageStorage* page_storage,
-      std::function<void(Status,
-                         std::pair<ObjectId, std::unordered_set<ObjectId>>)>
-          callback) {
-    if (!node_builder) {
-      callback(Status::OK, {});
-      return;
-    }
-
-    node_builder->Build(page_storage, std::move(callback));
-  }
-
-  // Static version of |Apply| that handles null nodes.
-  static void Apply(
-      ftl::RefPtr<const NodeBuilder> node_builder,
-      const NodeLevelCalculator* node_level_calculator,
-      PageStorage* page_storage,
-      EntryChange change,
-      std::function<void(Status, ftl::RefPtr<const NodeBuilder>)> callback);
-
- protected:
-  FRIEND_REF_COUNTED_THREAD_SAFE(const NodeBuilder);
-
-  virtual ~NodeBuilder() {}
-  NodeBuilder(uint8_t level) : level_(level) {}
-
-  // Build the tree node represented by the builder |node_builder| in the
-  // storage.
-  virtual void Build(
-      PageStorage* page_storage,
-      std::function<void(Status,
-                         std::pair<ObjectId, std::unordered_set<ObjectId>>)>
-          callback) const = 0;
-
-  // Returns the entries and children of this builder.
-  virtual void GetContent(
-      PageStorage* page_storage,
-      std::function<void(
-          Status,
-          const ftl::RefPtr<const RefVector<Entry>>&,
-          const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&)>
-          callback) const = 0;
-
-  uint8_t level_;
-
- private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(NodeBuilder);
-
-  // Apply the given mutation on |node_builder|.
-  void Apply(const NodeLevelCalculator* node_level_calculator,
-             PageStorage* page_storage,
-             EntryChange change,
-             std::function<void(Status, ftl::RefPtr<const NodeBuilder>)>
-                 callback) const;
-
-  // Delete the value with the given |key| from the builder. |key_level| must be
-  // greater or equal then the node level.
-  void Delete(PageStorage* page_storage,
-              uint8_t key_level,
-              std::string key,
-              std::function<void(Status, ftl::RefPtr<const NodeBuilder>)>
-                  callback) const;
-
-  // Update the tree by adding |entry| (or modifying the value associated to
-  // |entry.key| with |entry.value| if |key| is already in the tree.
-  // |change_level| must be greater or equal then the node level.
-  void Update(PageStorage* page_storage,
-              uint8_t change_level,
-              Entry entry,
-              std::function<void(Status, ftl::RefPtr<const NodeBuilder>)>
-                  callback) const;
-
-  // Split the current tree in 2 according to |key|. This method expects that
-  // |key| is not in the tree.
-  void Split(
-      PageStorage* page_storage,
-      std::string key,
-      std::function<void(Status,
-                         ftl::RefPtr<const NodeBuilder>,
-                         ftl::RefPtr<const NodeBuilder>)> callback) const;
-
-  // Merge this tree with |other|. This expects all elements of |other| to be
-  // greather than elements in |this|.
-  void Merge(PageStorage* page_storage,
-             ftl::RefPtr<const NodeBuilder> other,
-             std::function<void(Status, ftl::RefPtr<const NodeBuilder>)>
-                 callback) const;
-
-  // Add needed parent to this tree to produce a new tree of level
-  // |target_level|.
-  ftl::RefPtr<const NodeBuilder> ToLevel(uint8_t target_level) const;
-
-  // Static version of |Split| that handles null nodes.
-  static void Split(
-      ftl::RefPtr<const NodeBuilder> node_builder,
-      PageStorage* page_storage,
-      std::string key,
-      std::function<void(Status,
-                         ftl::RefPtr<const NodeBuilder>,
-                         ftl::RefPtr<const NodeBuilder>)> callback) {
-    if (!node_builder) {
-      callback(Status::OK, nullptr, nullptr);
-      return;
-    }
-    node_builder->Split(page_storage, std::move(key), std::move(callback));
-  }
-
-  // Static version of |Merge| that handles null nodes.
-  static void Merge(
-      PageStorage* page_storage,
-      ftl::RefPtr<const NodeBuilder> n1,
-      ftl::RefPtr<const NodeBuilder> n2,
-      std::function<void(Status, ftl::RefPtr<const NodeBuilder>)> callback) {
-    if (!n1) {
-      callback(Status::OK, std::move(n2));
-      return;
-    }
-    n1->Merge(page_storage, n2, std::move(callback));
-  }
-
-  // Static version of |ToLevel| that handles null nodes.
-  static ftl::RefPtr<const NodeBuilder> ToLevel(
-      ftl::RefPtr<const NodeBuilder> node_builder,
-      uint8_t target_level) {
-    if (node_builder) {
-      return node_builder->ToLevel(target_level);
-    }
-    return nullptr;
-  }
-};
-
-// A NodeBuilder that represents an already existing node.
-class ExistingNodeBuilder : public NodeBuilder {
- public:
-  static ftl::RefPtr<const NodeBuilder> Create(uint8_t level,
-                                               ObjectId object_id) {
-    if (object_id.empty()) {
-      return nullptr;
-    }
-    return AdoptRef(new ExistingNodeBuilder(level, std::move(object_id)));
-  }
-
-  // Build an |ExistingNodeBuilder| from |object_id|.
-  static void FromId(
-      PageStorage* page_storage,
-      ObjectIdView object_id,
-      std::function<void(Status, ftl::RefPtr<const NodeBuilder>)> callback);
-
- private:
-  // Extract the entries and children from a TreeNode.
-  static void ExtractContent(
-      const TreeNode& node,
-      ftl::RefPtr<const RefVector<Entry>>* entries,
-      ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>* children);
-
-  ExistingNodeBuilder(
-      uint8_t level,
-      ObjectId object_id,
-      ftl::RefPtr<const RefVector<Entry>> entries,
-      ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>> children)
-      : NodeBuilder(level),
-        object_id_(std::move(object_id)),
-        entries_(std::move(entries)),
-        children_(std::move(children)) {}
-
-  ExistingNodeBuilder(uint8_t level, ObjectId object_id)
-      : ExistingNodeBuilder(level, std::move(object_id), {}, {}) {}
-
-  // NodeBuilder:
-  void Build(
-      PageStorage* page_storage,
-      std::function<void(Status,
-                         std::pair<ObjectId, std::unordered_set<ObjectId>>)>
-          callback) const override;
-  void GetContent(
-      PageStorage* page_storage,
-      std::function<void(
-          Status,
-          const ftl::RefPtr<const RefVector<Entry>>&,
-          const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&)>
-          callback) const override;
-
-  // The |ObjectId| of the existing node.
-  ObjectId object_id_;
-
-  // Cached values for the entries and children of the existing nodes.
-  mutable ftl::RefPtr<const RefVector<Entry>> entries_;
-  mutable ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>
-      children_;
-};
-
-// A NodeBuilder that represents a new node that needs to be built.
-class NewNodeBuilder : public NodeBuilder {
- public:
-  static ftl::RefPtr<const NodeBuilder> Create(
-      uint8_t level,
-      ftl::RefPtr<const RefVector<Entry>> entries,
-      ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>> children) {
-    FTL_DCHECK(entries->size() + 1 == children->size());
-    if (entries->empty() && !children->Get(0)) {
-      return nullptr;
-    }
-    return AdoptRef(
-        new NewNodeBuilder(level, std::move(entries), std::move(children)));
-  }
-
-  static ftl::RefPtr<const NodeBuilder> Create(
-      uint8_t level,
-      std::vector<Entry> entries,
-      std::vector<ftl::RefPtr<const NodeBuilder>> children) {
-    return Create(
-        level, RefVector<Entry>::Create(std::move(entries)),
-        RefVector<ftl::RefPtr<const NodeBuilder>>::Create(std::move(children)));
-  }
-
- private:
-  NewNodeBuilder(
-      uint8_t level,
-      ftl::RefPtr<const RefVector<Entry>> entries,
-      ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>> children)
-      : NodeBuilder(level),
-        entries_(std::move(entries)),
-        children_(std::move(children)) {
-    FTL_DCHECK(!entries_->empty() || children_->Get(0));
-  }
-
-  // NodeBuilder:
-  void Build(
-      PageStorage* page_storage,
-      std::function<void(Status,
-                         std::pair<ObjectId, std::unordered_set<ObjectId>>)>
-          callback) const override;
-  void GetContent(
-      PageStorage* page_storage,
-      std::function<void(
-          Status,
-          const ftl::RefPtr<const RefVector<Entry>>&,
-          const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&)>
-          callback) const override;
-
-  // The entries and children of the new node.
-  ftl::RefPtr<const RefVector<Entry>> entries_;
-  ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>> children_;
-};
-
-// Returns the index of |entries| that contains |key|, or the first entry that
-// has key greather than |key|. In the second case, the key, if present, will be
-// found in the children at the returned index.
-size_t GetEntryOrChildIndex(const ftl::RefPtr<const RefVector<Entry>>& entries,
-                            const std::string& key) {
-  auto lower = std::lower_bound(entries->begin(), entries->end(), key,
-                                [](const Entry& entry, const std::string& key) {
-                                  return entry.key < key;
-                                });
-  return lower - entries->begin();
-}
-
-void NodeBuilder::Apply(
-    ftl::RefPtr<const NodeBuilder> node_builder,
-    const NodeLevelCalculator* node_level_calculator,
-    PageStorage* page_storage,
-    EntryChange change,
-    std::function<void(Status, ftl::RefPtr<const NodeBuilder>)> callback) {
-  if (node_builder) {
-    node_builder->Apply(node_level_calculator, page_storage, std::move(change),
-                        std::move(callback));
+// If the |node_id| is empty, creates an empty node and calls the callback with
+// that node's id. Otherwise, calls the callback with the given |node_id|.
+void GetOrCreateEmptyNode(PageStorage* page_storage,
+                          ObjectIdView node_id,
+                          std::function<void(Status, ObjectId)> callback) {
+  if (!node_id.empty()) {
+    callback(Status::OK, node_id.ToString());
     return;
   }
-
-  // If the change is a deletion, and the tree is null, the result is still
-  // null.
-  if (change.deleted) {
-    callback(Status::OK, nullptr);
-    return;
-  }
-
-  // Otherwise, create a node of the right level that contains only entry.
-  uint8_t level = node_level_calculator->GetNodeLevel(change.entry.key);
-  callback(Status::OK, NewNodeBuilder::Create(level, {std::move(change.entry)},
-                                              {nullptr, nullptr}));
-}
-
-void NodeBuilder::Apply(
-    const NodeLevelCalculator* node_level_calculator,
-    PageStorage* page_storage,
-    EntryChange change,
-    std::function<void(Status, ftl::RefPtr<const NodeBuilder>)> callback)
-    const {
-  uint8_t change_level = node_level_calculator->GetNodeLevel(change.entry.key);
-
-  if (change_level < level_) {
-    // The change is at a lower level than the current node. Find the children
-    // to apply the change, transform it and reconstruct the new node.
-    GetContent(
-        page_storage,
-        [
-          ref_this = ftl::RefPtr<const NodeBuilder>(this),
-          node_level_calculator, page_storage, change = std::move(change),
-          callback = std::move(callback)
-        ](Status status, const ftl::RefPtr<const RefVector<Entry>>& entries,
-          const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&
-              children) {
-          if (status != Status::OK) {
-            callback(status, nullptr);
-            return;
-          }
-          size_t index = GetEntryOrChildIndex(entries, change.entry.key);
-          FTL_DCHECK(index == entries->size() ||
-                     entries->Get(index).key != change.entry.key);
-
-          ftl::RefPtr<const NodeBuilder> child = children->Get(index);
-
-          // Apply the change recursively.
-          Apply(child, node_level_calculator, page_storage, std::move(change), [
-            ref_this, entries, children, index, child,
-            callback = std::move(callback)
-          ](Status status, ftl::RefPtr<const NodeBuilder> new_child) {
-            if (status != Status::OK) {
-              callback(status, nullptr);
-              return;
-            }
-
-            // If the change is a no-op, just returns the original node.
-            if (new_child == child) {
-              callback(Status::OK, ref_this);
-              return;
-            }
-
-            // Rebuild the list of children by replacing the child that the
-            // change was applied on by the result of the change.
-            auto lower = children->begin() + index;
-            ftl::RefPtr<RefVector<ftl::RefPtr<const NodeBuilder>>>
-                new_children = children->CopyUntil(lower);
-            new_children->push_back(std::move(new_child));
-            if (lower != children->end()) {
-              new_children->Append(lower + 1, children->end());
-            }
-            callback(Status::OK, NewNodeBuilder::Create(
-                                     ref_this->level_, std::move(entries),
-                                     std::move(new_children)));
-          });
-
-        });
-    return;
-  }
-
-  // Makes the callback asynchronous to not overflow the stack.
-  auto asynchronous_callback = callback::MakeAsynchronous(std::move(callback));
-
-  if (change.deleted) {
-    Delete(page_storage, change_level, std::move(change.entry.key),
-           std::move(asynchronous_callback));
-    return;
-  }
-
-  Update(page_storage, change_level, std::move(change.entry),
-         std::move(asynchronous_callback));
-}
-
-void NodeBuilder::Delete(
-    PageStorage* page_storage,
-    uint8_t key_level,
-    std::string key,
-    std::function<void(Status, ftl::RefPtr<const NodeBuilder>)> callback)
-    const {
-  FTL_DCHECK(key_level >= level_);
-
-  auto ref_this = ftl::RefPtr<const NodeBuilder>(this);
-
-  // If the change is at a higher level than this node, then it is a no-op.
-  if (key_level > level_) {
-    callback(Status::OK, std::move(ref_this));
-    return;
-  }
-
-  GetContent(
-      page_storage,
-      [
-        ref_this = std::move(ref_this), page_storage, key_level,
-        key = std::move(key), callback = std::move(callback)
-      ](Status status, const ftl::RefPtr<const RefVector<Entry>>& entries,
-        const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&
-            children) {
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-
-        size_t index = GetEntryOrChildIndex(entries, key);
-
-        // The key must be in the current node if it is in the tree.
-        if (index == entries->size() || entries->Get(index).key != key) {
-          // The key is not found. Return the current node.
-          callback(status, std::move(ref_this));
-          return;
-        }
-
-        // Element at |index| must be removed.
-        Merge(page_storage, children->Get(index), children->Get(index + 1), [
-          level = ref_this->level_, entries, children, index,
-          callback = std::move(callback)
-        ](Status status, ftl::RefPtr<const NodeBuilder> merged_child) {
-          if (status != Status::OK) {
-            callback(status, nullptr);
-            return;
-          }
-
-          auto entries_split = entries->begin() + index;
-          ftl::RefPtr<RefVector<Entry>> new_entries =
-              entries->CopyUntil(entries_split);
-          // Skip the deleted entry.
-          ++entries_split;
-          new_entries->Append(entries_split, entries->end());
-
-          auto children_split = children->begin() + index;
-          ftl::RefPtr<RefVector<ftl::RefPtr<const NodeBuilder>>> new_children =
-              children->CopyUntil(children_split);
-          new_children->push_back(merged_child);
-          // Skip 2 children.
-          children_split += 2;
-          new_children->Append(children_split, children->end());
-
-          callback(Status::OK,
-                   NewNodeBuilder::Create(level, std::move(new_entries),
-                                          std::move(new_children)));
-        });
-      });
-}
-
-void NodeBuilder::Update(
-    PageStorage* page_storage,
-    uint8_t change_level,
-    Entry entry,
-    std::function<void(Status, ftl::RefPtr<const NodeBuilder>)> callback)
-    const {
-  FTL_DCHECK(change_level >= level_);
-
-  // If the change is at a greater level than the node level, the current node
-  // must be splitted in 2, and the new root is composed of the new entry and
-  // the 2 children.
-  if (change_level > level_) {
-    Split(
-        page_storage, entry.key,
-        [
-          refcounted_this = ftl::RefPtr<const NodeBuilder>(this), change_level,
-          entry = std::move(entry), callback = std::move(callback)
-        ](Status status, ftl::RefPtr<const NodeBuilder> left,
-          ftl::RefPtr<const NodeBuilder> right) {
-          if (status != Status::OK) {
-            callback(status, nullptr);
-            return;
-          }
-
-          callback(Status::OK,
-                   NewNodeBuilder::Create(change_level, {std::move(entry)},
-                                          {ToLevel(left, change_level - 1),
-                                           ToLevel(right, change_level - 1)}));
-        });
-    return;
-  }
-
-  GetContent(
-      page_storage,
-      [
-        ref_this = ftl::RefPtr<const NodeBuilder>(this), page_storage,
-        entry = std::move(entry), callback = std::move(callback)
-      ](Status status, const ftl::RefPtr<const RefVector<Entry>>& entries,
-        const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&
-            children) {
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-
-        // The change is at the current level. The entries must be splitted
-        // according to the key of the change.
-        size_t split_index = GetEntryOrChildIndex(entries, entry.key);
-
-        if (split_index < entries->size() &&
-            entries->Get(split_index).key == entry.key) {
-          // The key is already present in the current entries of the node. The
-          // value must be replaced.
-
-          // Values is identical, the change is a no-op.
-          if (entries->Get(split_index).object_id == entry.object_id) {
-            callback(Status::OK, ref_this);
-            return;
-          }
-
-          auto split_entry = entries->begin() + split_index;
-          auto new_entries = entries->CopyUntil(split_entry);
-          new_entries->push_back(std::move(entry));
-          ++split_entry;
-          new_entries->Append(split_entry, entries->end());
-          callback(Status::OK, NewNodeBuilder::Create(ref_this->level_,
-                                                      std::move(new_entries),
-                                                      std::move(children)));
-          return;
-        }
-
-        // Split the child that encompass |entry.key|.
-        Split(children->Get(split_index), page_storage, entry.key,
-              [
-                level = ref_this->level_, entry = std::move(entry), entries,
-                children, split_index, callback = std::move(callback)
-              ](Status status, ftl::RefPtr<const NodeBuilder> left,
-                ftl::RefPtr<const NodeBuilder> right) {
-                if (status != Status::OK) {
-                  callback(status, nullptr);
-                  return;
-                }
-
-                // Add |entry| to the list of entries of the result node.
-                auto split_entry = entries->begin() + split_index;
-                auto new_entries = entries->CopyUntil(split_entry);
-                new_entries->push_back(std::move(entry));
-                new_entries->Append(split_entry, entries->end());
-
-                auto split_child = children->begin() + split_index;
-                auto new_children = children->CopyUntil(split_child);
-                // Replace the child by the result of the split.
-                new_children->push_back(left);
-                new_children->push_back(right);
-                ++split_child;
-                new_children->Append(split_child, children->end());
-
-                callback(Status::OK,
-                         NewNodeBuilder::Create(level, std::move(new_entries),
-                                                std::move(new_children)));
-              });
-
-      });
-}
-
-void NodeBuilder::Split(
-    PageStorage* page_storage,
-    std::string key,
-    std::function<void(Status,
-                       ftl::RefPtr<const NodeBuilder>,
-                       ftl::RefPtr<const NodeBuilder>)> callback) const {
-  GetContent(
-      page_storage,
-      [
-        ref_this = ftl::RefPtr<const NodeBuilder>(this), page_storage,
-        key = std::move(key), callback = std::move(callback)
-      ](Status status, const ftl::RefPtr<const RefVector<Entry>>& entries,
-        const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&
-            children) {
-        if (status != Status::OK) {
-          callback(status, nullptr, nullptr);
-          return;
-        }
-
-        // Find the index at which to split.
-        size_t split_index = GetEntryOrChildIndex(entries, key);
-
-        // Ensure that |key| is not part of the entries.
-        FTL_DCHECK(split_index == entries->size() ||
-                   entries->Get(split_index).key != key);
-
-        auto child_to_split = children->Get(split_index);
-
-        if (split_index == 0 && !child_to_split) {
-          callback(Status::OK, nullptr, ref_this);
-          return;
-        }
-
-        if (split_index == entries->size() && !child_to_split) {
-          callback(Status::OK, ref_this, nullptr);
-          return;
-        }
-
-        // Recursively call |Split| on the child.
-        Split(child_to_split, page_storage, std::move(key),
-              [
-                ref_this, entries, children, split_index,
-                callback = std::move(callback)
-              ](Status status, ftl::RefPtr<const NodeBuilder> left,
-                ftl::RefPtr<const NodeBuilder> right) {
-                if (status != Status::OK) {
-                  callback(status, nullptr, nullptr);
-                  return;
-                }
-
-                auto entry_split = entries->begin() + split_index;
-                auto children_split = children->begin() + split_index;
-
-                ftl::RefPtr<RefVector<Entry>> left_entries =
-                    entries->CopyUntil(entry_split);
-                ftl::RefPtr<RefVector<Entry>> right_entries =
-                    RefVector<Entry>::Create(entry_split, entries->end());
-
-                ftl::RefPtr<RefVector<ftl::RefPtr<const NodeBuilder>>>
-                    left_children = children->CopyUntil(children_split);
-                left_children->push_back(left);
-                // skip the splitted child.
-                ++children_split;
-                ftl::RefPtr<RefVector<ftl::RefPtr<const NodeBuilder>>>
-                    right_children =
-                        RefVector<ftl::RefPtr<const NodeBuilder>>::Create();
-                right_children->push_back(right);
-                right_children->Append(children_split, children->end());
-
-                callback(Status::OK,
-                         NewNodeBuilder::Create(ref_this->level_,
-                                                std::move(left_entries),
-                                                std::move(left_children)),
-                         NewNodeBuilder::Create(ref_this->level_,
-                                                std::move(right_entries),
-                                                std::move(right_children)));
-              });
-      });
-}
-
-void NodeBuilder::Merge(
-    PageStorage* page_storage,
-    ftl::RefPtr<const NodeBuilder> other,
-    std::function<void(Status, ftl::RefPtr<const NodeBuilder>)> callback)
-    const {
-  FTL_DCHECK(level_ == other->level_);
-
-  GetContent(
-      page_storage,
-      [ level = level_, page_storage, other, callback = std::move(callback) ](
-          Status status,
-          const ftl::RefPtr<const RefVector<Entry>>& left_entries,
-          const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&
-              left_children) {
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-
-        other->GetContent(
-            page_storage,
-            [
-              level, page_storage, left_entries, left_children,
-              callback = std::move(callback)
-            ](Status status,
-              const ftl::RefPtr<const RefVector<Entry>>& right_entries,
-              const ftl::RefPtr<const RefVector<
-                  ftl::RefPtr<const NodeBuilder>>>& right_children) {
-              if (status != Status::OK) {
-                callback(status, nullptr);
-                return;
-              }
-
-              // Merge the right-most child from |left| with the left-most child
-              // from |right|.
-              Merge(page_storage, left_children->back(),
-                    right_children->front(),
-                    [
-                      level, left_entries, left_children, right_entries,
-                      right_children, callback = std::move(callback)
-                    ](Status status,
-                      ftl::RefPtr<const NodeBuilder> merged_child) {
-                      if (status != Status::OK) {
-                        callback(status, nullptr);
-                        return;
-                      }
-
-                      // Concatenate entries.
-                      auto new_entries =
-                          left_entries->CopyUntil(left_entries->end());
-                      new_entries->Append(right_entries->begin(),
-                                          right_entries->end());
-
-                      // Concatenate children replacing the  right-most child
-                      // from |left| and the  left-most child from |right| with
-                      // the merged child.
-                      auto new_children =
-                          left_children->CopyUntil(left_children->end() - 1);
-                      new_children->push_back(merged_child);
-                      new_children->Append(right_children->begin() + 1,
-                                           right_children->end());
-
-                      callback(Status::OK, NewNodeBuilder::Create(
-                                               level, std::move(new_entries),
-                                               std::move(new_children)));
-                    });
-            });
-      });
-}
-
-ftl::RefPtr<const NodeBuilder> NodeBuilder::ToLevel(
-    uint8_t target_level) const {
-  FTL_DCHECK(target_level >= level_);
-
-  ftl::RefPtr<const NodeBuilder> result(this);
-  size_t current_level = level_;
-  while (current_level < target_level) {
-    ++current_level;
-    result =
-        NewNodeBuilder::Create(current_level, std::vector<Entry>(), {result});
-  }
-  return result;
-}
-
-void ExistingNodeBuilder::FromId(
-    PageStorage* page_storage,
-    ObjectIdView object_id,
-    std::function<void(Status, ftl::RefPtr<const NodeBuilder>)> callback) {
-  TreeNode::FromId(page_storage, object_id, [
-    object_id = object_id.ToString(), callback = std::move(callback)
-  ](Status status, std::unique_ptr<const TreeNode> node) {
-    if (status != Status::OK) {
-      callback(status, nullptr);
-      return;
-    }
-
-    FTL_DCHECK(node);
-
-    ftl::RefPtr<const RefVector<Entry>> entries;
-    ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>> children;
-    ExtractContent(*node, &entries, &children);
-    callback(Status::OK, ftl::AdoptRef(new ExistingNodeBuilder(
-                             node->level(), std::move(object_id),
-                             std::move(entries), std::move(children))));
-  });
-}
-
-void ExistingNodeBuilder::Build(
-    PageStorage* page_storage,
-    std::function<void(Status,
-                       std::pair<ObjectId, std::unordered_set<ObjectId>>)>
-        callback) const {
-  callback(Status::OK, std::make_pair(std::move(object_id_),
-                                      std::unordered_set<ObjectId>()));
-}
-
-void ExistingNodeBuilder::GetContent(
-    PageStorage* page_storage,
-    std::function<void(
-        Status,
-        const ftl::RefPtr<const RefVector<Entry>>&,
-        const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&)>
-        callback) const {
-  FTL_DCHECK(object_id_ != "");
-  if (children_) {
-    callback(Status::OK, entries_, children_);
-    return;
-  }
-  TreeNode::FromId(page_storage, object_id_, [
-    ref_this = ftl::RefPtr<const ExistingNodeBuilder>(this),
-    callback = std::move(callback)
-  ](Status status, std::unique_ptr<const TreeNode> node) {
-    if (status != Status::OK) {
-      callback(status, {}, {});
-      return;
-    }
-    FTL_DCHECK(node);
-
-    ExtractContent(*node, &ref_this->entries_, &ref_this->children_);
-    callback(Status::OK, ref_this->entries_, ref_this->children_);
-  });
-}
-
-void NewNodeBuilder::Build(
-    PageStorage* page_storage,
-    std::function<void(Status,
-                       std::pair<ObjectId, std::unordered_set<ObjectId>>)>
-        callback) const {
-  auto asynchronous_callback = callback::MakeAsynchronous(std::move(callback));
-
-  // Build all children.
-  auto waiter = callback::
-      Waiter<Status, std::pair<ObjectId, std::unordered_set<ObjectId>>>::Create(
-          Status::OK);
-  for (auto& child : *children_) {
-    NodeBuilder::Build(child, page_storage, waiter->NewCallback());
-  }
-
-  waiter->Finalize([
-    ref_this = ftl::RefPtr<const NewNodeBuilder>(this), page_storage,
-    callback = std::move(asynchronous_callback)
-  ](Status status,
-    std::vector<std::pair<ObjectId, std::unordered_set<ObjectId>>>
-        children) mutable {
-    if (status != Status::OK) {
-      callback(status, std::pair<ObjectId, std::unordered_set<ObjectId>>());
-      return;
-    }
-
-    std::vector<ObjectId> children_ids;
-    std::unordered_set<ObjectId> new_ids;
-    for (auto& pair : children) {
-      children_ids.push_back(std::move(pair.first));
-      new_ids.insert(pair.second.begin(), pair.second.end());
-    }
-    TreeNode::FromEntries(
-        page_storage, ref_this->level_,
-        std::vector<Entry>(ref_this->entries_->begin(),
-                           ref_this->entries_->end()),
-        children_ids,
-        [ new_ids = std::move(new_ids), callback = std::move(callback) ](
-            Status status, ObjectId object_id) mutable {
-          new_ids.insert(object_id);
-          callback(status,
-                   std::make_pair(std::move(object_id), std::move(new_ids)));
-        });
-  });
-}
-
-void NewNodeBuilder::GetContent(
-    PageStorage* page_storage,
-    std::function<void(
-        Status,
-        const ftl::RefPtr<const RefVector<Entry>>&,
-        const ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>&)>
-        callback) const {
-  callback(Status::OK, entries_, children_);
-}
-
-void ExistingNodeBuilder::ExtractContent(
-    const TreeNode& node,
-    ftl::RefPtr<const RefVector<Entry>>* entries,
-    ftl::RefPtr<const RefVector<ftl::RefPtr<const NodeBuilder>>>* children) {
-  FTL_DCHECK(entries);
-  FTL_DCHECK(children);
-  *entries =
-      RefVector<Entry>::Create(node.entries().begin(), node.entries().end());
-  auto mutable_children = RefVector<ftl::RefPtr<const NodeBuilder>>::Create();
-  for (const auto& child_id : node.children_ids()) {
-    mutable_children->push_back(
-        ExistingNodeBuilder::Create(node.level() - 1, child_id));
-  }
-  *children = mutable_children;
-}
-
-// Apply |changes| on |root|. This is called recursively until |changes| is not
-// valid anymore. At this point, build is called on |root|.
-void ApplyChangesOnRoot(
-    const NodeLevelCalculator* node_level_calculator,
-    PageStorage* page_storage,
-    ftl::RefPtr<const NodeBuilder> root,
-    std::unique_ptr<Iterator<const EntryChange>> changes,
-    std::function<void(Status, ObjectId, std::unordered_set<ObjectId>)>
-        callback) {
-  if (!changes->Valid()) {
-    if (changes->GetStatus() != Status::OK) {
-      callback(changes->GetStatus(), "", {});
-      return;
-    }
-
-    NodeBuilder::Build(
-        root, page_storage,
-        [callback = std::move(callback)](
-            Status status,
-            std::pair<ObjectId, std::unordered_set<ObjectId>> result) {
-          callback(status, std::move(result.first), std::move(result.second));
-        });
-    return;
-  }
-  EntryChange change = std::move(**changes);
-  changes->Next();
-  NodeBuilder::Apply(
-      root, node_level_calculator, page_storage, std::move(change),
-      ftl::MakeCopyable([
-        node_level_calculator, page_storage, changes = std::move(changes),
-        callback = std::move(callback)
-      ](Status status, ftl::RefPtr<const NodeBuilder> new_root) mutable {
-        if (status != Status::OK) {
-          callback(status, "", {});
-          return;
-        }
-        ApplyChangesOnRoot(node_level_calculator, page_storage, new_root,
-                           std::move(changes), std::move(callback));
-      }));
+  TreeNode::Empty(page_storage, ftl::MakeCopyable(std::move(callback)));
 }
 
 }  // namespace
 
-const NodeLevelCalculator* GetDefaultNodeLevelCalculator() {
-  return &kDefaultNodeLevelCalculator;
+uint8_t GetNodeLevel(convert::ExtendedStringView key, uint8_t max_level) {
+  // Compute the level of a key by computing the hash of the key.
+  // A key is at level k if the first k bytes of the hash of |key| are 0s. This
+  // constructs a tree with an expected node size of |255|.
+  if (max_level == 0) {
+    return 0;
+  }
+  Hash hash = FastHash(key);
+  for (size_t l = 0; l < std::min<uint8_t>(max_level, sizeof(Hash)); ++l) {
+    if (hash.slices[l]) {
+      return l;
+    }
+  }
+  return max_level;
 }
 
 void ApplyChanges(
     PageStorage* page_storage,
     ObjectIdView root_id,
+    size_t node_size,
     std::unique_ptr<Iterator<const EntryChange>> changes,
     std::function<void(Status, ObjectId, std::unordered_set<ObjectId>)>
-        callback,
-    const NodeLevelCalculator* node_level_calculator) {
-  ExistingNodeBuilder::FromId(
-      page_storage, root_id.ToString(), ftl::MakeCopyable([
-        node_level_calculator, page_storage, changes = std::move(changes),
+        callback) {
+  // Get or create the root.
+  GetOrCreateEmptyNode(
+      page_storage, root_id, ftl::MakeCopyable([
+        page_storage, node_size, changes = std::move(changes),
         callback = std::move(callback)
-      ](Status status, ftl::RefPtr<const NodeBuilder> root) mutable {
-        if (status != Status::OK) {
-          callback(status, "", {});
+      ](Status s, ObjectId root_id) mutable {
+        if (s != Status::OK) {
+          callback(s, "", {});
           return;
         }
-        ApplyChangesOnRoot(
-            node_level_calculator, page_storage, root, std::move(changes),
-            [ page_storage, callback = std::move(callback) ](
-                Status status, ObjectId object_id,
-                std::unordered_set<ObjectId> new_ids) {
-              if (status != Status::OK || !object_id.empty()) {
-                callback(status, std::move(object_id), std::move(new_ids));
+        TreeNode::FromId(
+            page_storage, root_id, ftl::MakeCopyable([
+              page_storage, node_size, changes = std::move(changes),
+              callback = std::move(callback)
+            ](Status s, std::unique_ptr<const TreeNode> root) mutable {
+              if (s != Status::OK) {
+                callback(s, "", {});
                 return;
               }
-              TreeNode::Empty(
-                  page_storage, [callback = std::move(callback)](
-                                    Status status, ObjectId object_id) {
-                    std::unordered_set<ObjectId> new_ids({object_id});
-                    callback(status, std::move(object_id), std::move(new_ids));
-                  });
-            });
+              // |new_nodes| will be populated with all nodes created after this
+              // set of changes.
+              auto new_nodes = std::make_unique<std::unordered_set<ObjectId>>();
+              std::unordered_set<ObjectId>* new_nodes_ptr = new_nodes.get();
+              auto changes_ptr = changes.get();
+              ApplyChangesIn(
+                  page_storage, changes_ptr, std::move(root), true, "",
+                  node_size, new_nodes_ptr,
+                  ftl::MakeCopyable([
+                    new_nodes = std::move(new_nodes),
+                    callback = std::move(callback), changes = std::move(changes)
+                  ](Status s, ObjectId new_id,
+                    std::unique_ptr<TreeNode::Mutation::Updater>
+                        parent_updater) mutable {
+                    FTL_DCHECK(parent_updater == nullptr);
+                    if (s != Status::OK) {
+                      callback(s, "", {});
+                      return;
+                    }
+                    callback(Status::OK, std::move(new_id),
+                             std::move(*new_nodes));
+                  }));
+            }));
       }));
 }
 

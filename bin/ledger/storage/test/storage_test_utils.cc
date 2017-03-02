@@ -4,27 +4,12 @@
 
 #include "apps/ledger/src/storage/test/storage_test_utils.h"
 
-#include <inttypes.h>
-
-#include <numeric>
-
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/test/capture.h"
 #include "lib/ftl/strings/string_printf.h"
 
 namespace storage {
-
-namespace {
-std::vector<size_t> GetEnumeration(size_t size) {
-  FTL_CHECK(size <= 100);
-
-  std::vector<size_t> values(size);
-  std::iota(values.begin(), values.end(), 0u);
-
-  return values;
-}
-}  // namespace
 
 std::string RandomId(size_t size) {
   std::string result;
@@ -93,50 +78,36 @@ StorageTest::~StorageTest(){};
 }
 
 ::testing::AssertionResult StorageTest::CreateEntries(
-    size_t size,
+    int size,
     std::vector<Entry>* entries) {
-  return CreateEntries(GetEnumeration(size), entries);
-}
-
-::testing::AssertionResult StorageTest::CreateEntries(
-    std::vector<size_t> values,
-    std::vector<Entry>* entries) {
+  FTL_CHECK(size >= 0 && size <= 100);
   std::vector<Entry> result;
-  for (auto i : values) {
-    FTL_DCHECK(i < 100);
+  for (int i = 0; i < size; ++i) {
     std::unique_ptr<const Object> object;
     ::testing::AssertionResult assertion_result =
-        AddObject(ftl::StringPrintf("object%02" PRIuMAX, i), &object);
+        AddObject(ftl::StringPrintf("object%02d", i), &object);
     if (!assertion_result) {
       return assertion_result;
     }
-    result.push_back(Entry{ftl::StringPrintf("key%02" PRIuMAX, i),
-                           object->GetId(), KeyPriority::EAGER});
+    result.push_back(Entry{ftl::StringPrintf("key%02d", i), object->GetId(),
+                           KeyPriority::EAGER});
   }
   entries->swap(result);
   return ::testing::AssertionSuccess();
 }
 
 ::testing::AssertionResult StorageTest::CreateEntryChanges(
-    size_t size,
+    int size,
     std::vector<EntryChange>* changes) {
-  return CreateEntryChanges(GetEnumeration(size), changes, false);
-}
-
-::testing::AssertionResult StorageTest::CreateEntryChanges(
-    std::vector<size_t> entries_values,
-    std::vector<EntryChange>* changes,
-    bool deletion) {
   std::vector<Entry> entries;
-  ::testing::AssertionResult assertion_result =
-      CreateEntries(std::move(entries_values), &entries);
+  ::testing::AssertionResult assertion_result = CreateEntries(size, &entries);
   if (!assertion_result) {
     return assertion_result;
   }
   std::vector<EntryChange> result;
 
-  for (size_t i = 0; i < entries.size(); ++i) {
-    result.push_back(EntryChange{std::move(entries[i]), deletion});
+  for (int i = 0; i < size; ++i) {
+    result.push_back(EntryChange{std::move(entries[i]), false});
   }
   changes->swap(result);
   return ::testing::AssertionSuccess();
@@ -188,7 +159,7 @@ StorageTest::~StorageTest(){};
   Status status;
   ObjectId id;
   TreeNode::FromEntries(
-      GetStorage(), 0u, entries, children,
+      GetStorage(), entries, children,
       ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &id));
 
   if (RunLoopWithTimeout()) {

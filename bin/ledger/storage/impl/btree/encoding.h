@@ -14,12 +14,10 @@ namespace storage {
 
 bool CheckValidTreeNodeSerialization(ftl::StringView data);
 
-std::string EncodeNode(uint8_t level,
-                       const std::vector<Entry>& entries,
+std::string EncodeNode(const std::vector<Entry>& entries,
                        const std::vector<ObjectId>& children);
 
 bool DecodeNode(ftl::StringView data,
-                uint8_t* level,
                 std::vector<Entry>* entries,
                 std::vector<ObjectId>* children);
 

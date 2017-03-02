@@ -19,41 +19,34 @@ std::string operator"" _s(const char* str, size_t size) {
 }
 
 TEST(EncodingTest, EmptyData) {
-  uint8_t level = 0u;
   std::vector<Entry> entries;
   std::vector<ObjectId> children{""};
 
-  std::string bytes = EncodeNode(level, entries, children);
+  std::string bytes = EncodeNode(entries, children);
 
-  uint8_t res_level;
   std::vector<Entry> res_entries;
   std::vector<ObjectId> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
+  EXPECT_TRUE(DecodeNode(bytes, &res_entries, &res_children));
   EXPECT_EQ(entries, res_entries);
   EXPECT_EQ(children, res_children);
 }
 
 TEST(EncodingTest, SingleEntry) {
-  uint8_t level = 1u;
   std::vector<Entry> entries = {
       {"key", MakeObjectId("object_id"), KeyPriority::EAGER}};
   std::vector<ObjectId> children = {MakeObjectId("child_1"),
                                     MakeObjectId("child_2")};
 
-  std::string bytes = EncodeNode(level, entries, children);
+  std::string bytes = EncodeNode(entries, children);
 
-  uint8_t res_level;
   std::vector<Entry> res_entries;
   std::vector<ObjectId> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
+  EXPECT_TRUE(DecodeNode(bytes, &res_entries, &res_children));
   EXPECT_EQ(entries, res_entries);
   EXPECT_EQ(children, res_children);
 }
 
 TEST(EncodingTest, MoreEntries) {
-  uint8_t level = 5;
   std::vector<Entry> entries = {
       {"key1", MakeObjectId("abc"), KeyPriority::EAGER},
       {"key2", MakeObjectId("def"), KeyPriority::LAZY},
@@ -63,32 +56,26 @@ TEST(EncodingTest, MoreEntries) {
       MakeObjectId("child_1"), MakeObjectId("child_2"), MakeObjectId("child_3"),
       MakeObjectId("child_4"), MakeObjectId("child_5")};
 
-  std::string bytes = EncodeNode(level, entries, children);
+  std::string bytes = EncodeNode(entries, children);
 
-  uint8_t res_level;
   std::vector<Entry> res_entries;
   std::vector<ObjectId> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
-  EXPECT_EQ(level, res_level);
+  EXPECT_TRUE(DecodeNode(bytes, &res_entries, &res_children));
   EXPECT_EQ(entries, res_entries);
   EXPECT_EQ(children, res_children);
 }
 
 TEST(EncodingTest, ZeroByte) {
-  uint8_t level = 13;
   std::vector<Entry> entries = {
       {"k\0ey"_s, MakeObjectId("\0a\0\0"_s), KeyPriority::EAGER}};
   std::vector<ObjectId> children = {MakeObjectId("ch\0ld_1"_s),
                                     MakeObjectId("child_\0"_s)};
 
-  std::string bytes = EncodeNode(level, entries, children);
+  std::string bytes = EncodeNode(entries, children);
 
-  uint8_t res_level;
   std::vector<Entry> res_entries;
   std::vector<ObjectId> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(level, res_level);
+  EXPECT_TRUE(DecodeNode(bytes, &res_entries, &res_children));
   EXPECT_EQ(entries, res_entries);
   EXPECT_EQ(children, res_children);
 }
