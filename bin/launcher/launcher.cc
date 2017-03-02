@@ -9,9 +9,12 @@
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/launcher/agent_launcher.h"
 #include "apps/network/services/network_service.fidl.h"
+#include "lib/ftl/files/file.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
+
+constexpr char kKronkPath[] = "/system/apps/agents/kronk";
 
 // TODO(rosswang): determine if lifecycle controls are needed
 class LauncherApp : public maxwell::Launcher {
@@ -62,8 +65,10 @@ class LauncherApp : public maxwell::Launcher {
     StartAgent("file:///system/apps/agents/bandsintown.dartx");
     StartAgent("file:///system/apps/agents/module_suggester");
 
-    // This will error harmlessly if Kronk is not available.
-    StartAgent("file:///system/apps/agents/kronk");
+    // Only start Kronk if it exists.
+    if (files::IsFile(kKronkPath)) {
+      StartAgent(kKronkPath);
+    }
   }
 
   void RegisterAnonymousProposalPublisher(
