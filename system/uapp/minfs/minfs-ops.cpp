@@ -58,25 +58,25 @@ mxtl::RefPtr<BlockNode> Minfs::BitmapBlockGet(const mxtl::RefPtr<BlockNode>& blk
                                               uint32_t n) {
     uint32_t bitblock = n / kMinfsBlockBits; // Relative to bitmap
     if (blk) {
-        uint32_t bitblock_old = blk->GetKey() - info.abm_block;
+        uint32_t bitblock_old = blk->GetKey() - info_.abm_block;
         if (bitblock_old == bitblock) {
             // same block as before, nothing to do
             return blk;
         }
         // write previous block to disk
-        const void* src = GetBlock(block_map, bitblock_old);
+        const void* src = GetBlock(block_map_, bitblock_old);
         memcpy(blk->data(), src, kMinfsBlockSize);
-        bc->Put(blk, kBlockDirty);
+        bc_->Put(blk, kBlockDirty);
     }
-    return mxtl::RefPtr<BlockNode>(bc->Get(info.abm_block + bitblock));
+    return mxtl::RefPtr<BlockNode>(bc_->Get(info_.abm_block + bitblock));
 }
 
 void Minfs::BitmapBlockPut(const mxtl::RefPtr<BlockNode>& blk) {
     if (blk) {
-        uint32_t bitblock = blk->GetKey() - info.abm_block;
-        const void* src = GetBlock(block_map, bitblock);
+        uint32_t bitblock = blk->GetKey() - info_.abm_block;
+        const void* src = GetBlock(block_map_, bitblock);
         memcpy(blk->data(), src, kMinfsBlockSize);
-        bc->Put(blk, kBlockDirty);
+        bc_->Put(blk, kBlockDirty);
     }
 }
 
@@ -106,7 +106,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
             return ERR_IO;
         }
 
-        vn->fs->block_map.Clear(vn->inode.dnum[bno], vn->inode.dnum[bno] + 1);
+        vn->fs->block_map_.Clear(vn->inode.dnum[bno], vn->inode.dnum[bno] + 1);
         vn->inode.dnum[bno] = 0;
         vn->inode.block_count--;
         minfs_sync_vnode(vn, kMxFsSyncDefault);
@@ -124,7 +124,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
             continue;
         }
         mxtl::RefPtr<BlockNode> blk = nullptr;
-        if ((blk = vn->fs->bc->Get(vn->inode.inum[indirect])) == nullptr) {
+        if ((blk = vn->fs->bc_->Get(vn->inode.inum[indirect])) == nullptr) {
             vn->fs->BitmapBlockPut(bitmap_blk);
             return ERR_IO;
         }
@@ -146,10 +146,10 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
             }
 
             if ((bitmap_blk = vn->fs->BitmapBlockGet(bitmap_blk, entry[direct])) == nullptr) {
-                vn->fs->bc->Put(blk, iflags);
+                vn->fs->bc_->Put(blk, iflags);
                 return ERR_IO;
             }
-            vn->fs->block_map.Clear(entry[direct], entry[direct] + 1);
+            vn->fs->block_map_.Clear(entry[direct], entry[direct] + 1);
             entry[direct] = 0;
             iflags = kBlockDirty;
             vn->inode.block_count--;
@@ -158,7 +158,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
         if (iflags & kBlockDirty) {
             minfs_sync_vnode(vn, kMxFsSyncDefault);
         }
-        vn->fs->bc->Put(blk, iflags);
+        vn->fs->bc_->Put(blk, iflags);
 
         if (delete_indirect)  {
             // release the direct block itself
@@ -166,7 +166,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
             if (bitmap_blk == nullptr) {
                 return ERR_IO;
             }
-            vn->fs->block_map.Clear(vn->inode.inum[indirect], vn->inode.inum[indirect] + 1);
+            vn->fs->block_map_.Clear(vn->inode.inum[indirect], vn->inode.inum[indirect] + 1);
             vn->inode.inum[indirect] = 0;
             vn->inode.block_count--;
             minfs_sync_vnode(vn, kMxFsSyncDefault);
@@ -183,7 +183,7 @@ static mx_status_t vn_fill_block(vnode_t* vn, uint32_t n, uint32_t bno) {
     // TODO(smklein): read directly from block device into vmo; no need to copy
     // into an intermediate buffer.
     char bdata[kMinfsBlockSize];
-    if (vn->fs->bc->Readblk(bno, bdata)) {
+    if (vn->fs->bc_->Readblk(bno, bdata)) {
         return ERR_IO;
     }
     mx_status_t status = vmo_write_exact(vn->vmo, bdata, n * kMinfsBlockSize, kMinfsBlockSize);
@@ -228,7 +228,7 @@ static mx_status_t vn_init_vmo(vnode_t* vn) {
         mxtl::RefPtr<BlockNode> iblk;
         if ((ibno = vn->inode.inum[i]) != 0) {
             // TODO(smklein): Should there be a separate vmo for indirect blocks?
-            if ((iblk = vn->fs->bc->Get(ibno)) == nullptr) {
+            if ((iblk = vn->fs->bc_->Get(ibno)) == nullptr) {
                 return ERR_IO;
             }
             uint32_t* ientry = static_cast<uint32_t*>(iblk->data());
@@ -238,12 +238,12 @@ static mx_status_t vn_init_vmo(vnode_t* vn) {
                 if ((bno = ientry[j]) != 0) {
                     uint32_t n = kMinfsDirect + i * direct_per_indirect + j;
                     if ((status = vn_fill_block(vn, n, bno)) != NO_ERROR) {
-                        vn->fs->bc->Put(iblk, 0);
+                        vn->fs->bc_->Put(iblk, 0);
                         return status;
                     }
                 }
             }
-            vn->fs->bc->Put(iblk, 0);
+            vn->fs->bc_->Put(iblk, 0);
         }
     }
 
@@ -300,7 +300,7 @@ static mx_status_t vn_get_bno(vnode_t* vn, uint32_t n, uint32_t* bno, bool alloc
         vn->inode.inum[i] = ibno;
         iflags = kBlockDirty;
     } else {
-        if ((iblk = vn->fs->bc->Get(ibno)) == nullptr) {
+        if ((iblk = vn->fs->bc_->Get(ibno)) == nullptr) {
             return ERR_IO;
         }
     }
@@ -310,7 +310,7 @@ static mx_status_t vn_get_bno(vnode_t* vn, uint32_t n, uint32_t* bno, bool alloc
         // allocate a new block
         mx_status_t status = vn->fs->BlockNew(hint, bno, nullptr);
         if (status != NO_ERROR) {
-            vn->fs->bc->Put(iblk, iflags);
+            vn->fs->bc_->Put(iblk, iflags);
             return status;
         }
         vn->inode.block_count++;
@@ -320,7 +320,7 @@ static mx_status_t vn_get_bno(vnode_t* vn, uint32_t n, uint32_t* bno, bool alloc
 
     // release indirect block, updating if necessary
     // and update the inode as well if we changed it
-    vn->fs->bc->Put(iblk, iflags);
+    vn->fs->bc_->Put(iblk, iflags);
     if (iflags & kBlockDirty) {
         minfs_sync_vnode(vn, kMxFsSyncDefault);
     }
@@ -781,7 +781,7 @@ static mx_status_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off, siz
         }
         if (bno != 0) {
             char bdata[kMinfsBlockSize];
-            if (vn->fs->bc->Readblk(bno, bdata)) {
+            if (vn->fs->bc_->Readblk(bno, bdata)) {
                 return ERR_IO;
             }
             memcpy(data, bdata + adjust, xfer);
@@ -874,7 +874,7 @@ static mx_status_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t o
             return status;
         }
         assert(bno != 0);
-        if (vn->fs->bc->Writeblk(bno, wdata)) {
+        if (vn->fs->bc_->Writeblk(bno, wdata)) {
             return ERR_IO;
         }
 #else
@@ -884,11 +884,11 @@ static mx_status_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t o
         }
         assert(bno != 0);
         char wdata[kMinfsBlockSize];
-        if (vn->fs->bc->Readblk(bno, wdata)) {
+        if (vn->fs->bc_->Readblk(bno, wdata)) {
             return ERR_IO;
         }
         memcpy(wdata + adjust, data, xfer);
-        if (vn->fs->bc->Writeblk(bno, wdata)) {
+        if (vn->fs->bc_->Writeblk(bno, wdata)) {
             return ERR_IO;
         }
 #endif
@@ -1193,13 +1193,13 @@ static mx_status_t _fs_truncate(vnode_t* vn, size_t len) {
                     return ERR_IO;
                 }
 #else
-                if (vn->fs->bc->Readblk(bno, bdata)) {
+                if (vn->fs->bc_->Readblk(bno, bdata)) {
                     return ERR_IO;
                 }
                 memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
 #endif
 
-                if (vn->fs->bc->Writeblk(bno, bdata)) {
+                if (vn->fs->bc_->Writeblk(bno, bdata)) {
                     return ERR_IO;
                 }
             }
@@ -1385,7 +1385,7 @@ static mx_status_t fs_link(vnode_t* vndir, const char* name, size_t len, vnode_t
 }
 
 static mx_status_t fs_sync(vnode_t* vn) {
-    return vn->fs->bc->Sync();
+    return vn->fs->bc_->Sync();
 }
 
 vnode_ops_t minfs_ops = {

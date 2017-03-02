@@ -62,9 +62,9 @@ public:
     mxtl::RefPtr<BlockNode> BitmapBlockGet(const mxtl::RefPtr<BlockNode>& blk, uint32_t n);
     void BitmapBlockPut(const mxtl::RefPtr<BlockNode>& blk);
 
-    Bcache* bc;
-    RawBitmap block_map;
-    minfs_info_t info;
+    Bcache* bc_;
+    RawBitmap block_map_;
+    minfs_info_t info_;
 private:
     Minfs(Bcache* bc_, minfs_info_t* info_);
 

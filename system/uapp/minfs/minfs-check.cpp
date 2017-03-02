@@ -13,15 +13,15 @@
 #define VERBOSE 1
 
 static mx_status_t get_inode(const Minfs* fs, minfs_inode_t* inode, uint32_t ino) {
-    if (ino >= fs->info.inode_count) {
+    if (ino >= fs->info_.inode_count) {
         error("check: ino %u out of range (>=%u)\n",
-              ino, fs->info.inode_count);
+              ino, fs->info_.inode_count);
         return ERR_OUT_OF_RANGE;
     }
     mx_status_t status;
-    uint32_t bno_of_ino = fs->info.ino_block + ino / kMinfsInodesPerBlock;
+    uint32_t bno_of_ino = fs->info_.ino_block + ino / kMinfsInodesPerBlock;
     uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
-    if ((status = fs->bc->Read(bno_of_ino, inode, off_of_ino, kMinfsInodeSize)) < 0) {
+    if ((status = fs->bc_->Read(bno_of_ino, inode, off_of_ino, kMinfsInodeSize)) < 0) {
         return status;
     }
     if ((inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
@@ -54,12 +54,12 @@ static mx_status_t get_inode_nth_bno(const Minfs* fs, minfs_inode_t* inode, uint
         return NO_ERROR;
     }
     mxtl::RefPtr<BlockNode> iblk;
-    if ((iblk = fs->bc->Get(ibno)) == nullptr) {
+    if ((iblk = fs->bc_->Get(ibno)) == nullptr) {
         return ERR_NOT_FOUND;
     }
     uint32_t* ientry = static_cast<uint32_t*>(iblk->data());
     *bno_out = ientry[j];
-    fs->bc->Put(mxtl::move(iblk), 0);
+    fs->bc_->Put(mxtl::move(iblk), 0);
     return NO_ERROR;
 }
 
@@ -92,7 +92,7 @@ static mx_status_t file_read(const Minfs* fs, minfs_inode_t* inode, void* data,
             return status;
         }
 
-        if ((status = fs->bc->Read(bno, data, adjust, xfer)) != NO_ERROR) {
+        if ((status = fs->bc_->Read(bno, data, adjust, xfer)) != NO_ERROR) {
             return status;
         }
 
@@ -188,13 +188,13 @@ static mx_status_t check_directory(CheckMaps* chk, const Minfs* fs, minfs_inode_
 }
 
 const char* check_data_block(CheckMaps* chk, const Minfs* fs, uint32_t bno) {
-    if (bno < fs->info.dat_block) {
+    if (bno < fs->info_.dat_block) {
         return "in metadata area";
     }
-    if (bno >= fs->info.block_count) {
+    if (bno >= fs->info_.block_count) {
         return "out of range";
     }
-    if (!fs->block_map.Get(bno, bno + 1)) {
+    if (!fs->block_map_.Get(bno, bno + 1)) {
         return "not allocated";
     }
     if (chk->checked_blocks.Get(bno, bno + 1)) {
@@ -339,7 +339,7 @@ mx_status_t minfs_check(Bcache* bc) {
 
     unsigned missing = 0;
     for (unsigned n = info.dat_block; n < info.block_count; n++) {
-        if (fs->block_map.Get(n, n + 1)) {
+        if (fs->block_map_.Get(n, n + 1)) {
             if (!chk.checked_blocks.Get(n, n + 1)) {
                 missing++;
             }
