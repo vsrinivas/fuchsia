@@ -8,6 +8,10 @@ set -e
 
 # Builds various tools needed for Rust support.
 
+# Note: if you have an existing Rust compiler, you might want to remove it
+# by doing this first:
+# rm -rf ${FUCHSIA_DIR}/third_party/rust/build/
+
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly ROOT_DIR="$(dirname $(dirname "${SCRIPT_DIR}"))"
 
@@ -57,7 +61,8 @@ if [ ! -d "$RUST_DIR" ]; then
   git clone https://github.com/rust-lang/rust.git $RUST_DIR
 fi
 cd $RUST_DIR
-readonly RUST_HEAD="373efe8794defedc8ce41e258910560423d0c0b7"
+git fetch
+readonly RUST_HEAD="c0b7112ba246d96f253ba845d91f36c0b7398e42"
 if [ `git rev-parse HEAD` != "$RUST_HEAD" ]; then
   git checkout $RUST_HEAD
 fi
@@ -86,7 +91,7 @@ echo -e "\xE2\x9C\x93 Rust config file"
 cd $RUST_DIR
 if [[ ! -d "build" || -z `find build -name rustc` ]]; then
   export PATH="${ROOT_DIR}/buildtools/cmake/bin/:${PATH}"
-  ./configure --enable-rustbuild --target=x86_64-unknown-fuchsia
+  ./configure --target=x86_64-unknown-fuchsia
   ./x.py build --stage 1
 fi
 echo -e "\xE2\x9C\x93 rustc"
