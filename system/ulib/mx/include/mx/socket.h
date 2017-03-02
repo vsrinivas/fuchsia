@@ -11,6 +11,8 @@ namespace mx {
 
 class socket : public object<socket> {
 public:
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_SOCKET;
+
     socket() = default;
 
     explicit socket(mx_handle_t value) : object(value) {}

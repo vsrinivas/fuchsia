@@ -11,6 +11,8 @@ namespace mx {
 
 class channel : public object<channel> {
 public:
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_CHANNEL;
+
     channel() = default;
 
     explicit channel(mx_handle_t value) : object(value) {}

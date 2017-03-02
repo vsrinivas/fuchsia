@@ -11,6 +11,8 @@ namespace mx {
 
 class log : public object<log> {
 public:
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_LOG;
+
     log() = default;
 
     explicit log(mx_handle_t value) : object(value) {}

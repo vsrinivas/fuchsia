@@ -11,6 +11,8 @@ namespace mx {
 
 class waitset : public object<waitset> {
 public:
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_WAIT_SET;
+
     waitset() = default;
 
     explicit waitset(mx_handle_t value) : object(value) {}

@@ -17,6 +17,8 @@ extern "C" mx_handle_t __magenta_vmar_root_self;
 // vmar::destroy(), it just closes the handle.
 class vmar : public object<vmar> {
 public:
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_VMAR;
+
     vmar() = default;
 
     explicit vmar(mx_handle_t value) : object(value) {}

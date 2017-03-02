@@ -10,6 +10,8 @@ namespace mx {
 
 class job : public task<job> {
 public:
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_JOB;
+
     job() = default;
 
     explicit job(handle&& h) : task(h.release()) {}

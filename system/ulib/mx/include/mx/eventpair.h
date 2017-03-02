@@ -11,6 +11,8 @@ namespace mx {
 
 class eventpair : public object<eventpair> {
 public:
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_EVENT_PAIR;
+
     eventpair() = default;
 
     explicit eventpair(mx_handle_t value) : object(value) {}

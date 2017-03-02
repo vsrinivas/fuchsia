@@ -19,6 +19,8 @@ extern "C" mx_handle_t __magenta_process_self;
 
 class process : public task<process> {
 public:
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_PROCESS;
+
     process() = default;
 
     explicit process(mx_handle_t value) : task(value) {}

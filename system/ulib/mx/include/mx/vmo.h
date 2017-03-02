@@ -11,6 +11,8 @@ namespace mx {
 
 class vmo : public object<vmo> {
 public:
+    static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_VMEM;
+
     vmo() = default;
 
     explicit vmo(mx_handle_t value) : object(value) {}
