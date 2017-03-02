@@ -12,6 +12,7 @@
 #include <string>
 #include <unordered_set>
 
+#include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/db.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/commit.h"
@@ -26,18 +27,22 @@ class JournalDBImpl : public Journal {
   ~JournalDBImpl() override;
 
   // Creates a new Journal for a simple commit.
-  static std::unique_ptr<Journal> Simple(JournalType type,
-                                         PageStorageImpl* page_storage,
-                                         DB* db,
-                                         const JournalId& id,
-                                         const CommitId& base);
+  static std::unique_ptr<Journal> Simple(
+      JournalType type,
+      coroutine::CoroutineService* coroutine_service,
+      PageStorageImpl* page_storage,
+      DB* db,
+      const JournalId& id,
+      const CommitId& base);
 
   // Creates a new Journal for a merge commit.
-  static std::unique_ptr<Journal> Merge(PageStorageImpl* page_storage,
-                                        DB* db,
-                                        const JournalId& id,
-                                        const CommitId& base,
-                                        const CommitId& other);
+  static std::unique_ptr<Journal> Merge(
+      coroutine::CoroutineService* coroutine_service,
+      PageStorageImpl* page_storage,
+      DB* db,
+      const JournalId& id,
+      const CommitId& base,
+      const CommitId& other);
 
   // Returns the id of this journal.
   const JournalId& GetId() const;
@@ -54,6 +59,7 @@ class JournalDBImpl : public Journal {
 
  private:
   JournalDBImpl(JournalType type,
+                coroutine::CoroutineService* coroutine_service,
                 PageStorageImpl* page_storage,
                 DB* db,
                 const JournalId& id,
@@ -70,6 +76,7 @@ class JournalDBImpl : public Journal {
   Status ClearCommittedJournal(std::unordered_set<ObjectId> new_nodes);
 
   const JournalType type_;
+  coroutine::CoroutineService* const coroutine_service_;
   PageStorageImpl* const page_storage_;
   DB* const db_;
   const JournalId id_;

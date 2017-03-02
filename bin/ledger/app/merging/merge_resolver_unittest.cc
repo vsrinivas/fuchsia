@@ -10,6 +10,7 @@
 #include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "apps/ledger/src/callback/capture.h"
+#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
@@ -54,7 +55,7 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     ::testing::Test::SetUp();
     page_storage_.reset(new storage::PageStorageImpl(
         message_loop_.task_runner(), message_loop_.task_runner(),
-        tmp_dir_.path(), kRootPageId.ToString()));
+        &coroutine_service_, tmp_dir_.path(), kRootPageId.ToString()));
     EXPECT_EQ(storage::Status::OK, page_storage_->Init());
   }
 
@@ -92,6 +93,7 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     return result;
   }
 
+  coroutine::CoroutineServiceImpl coroutine_service_;
   std::unique_ptr<storage::PageStorageImpl> page_storage_;
 
  private:

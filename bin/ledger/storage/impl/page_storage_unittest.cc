@@ -12,6 +12,7 @@
 #include <thread>
 
 #include "apps/ledger/src/callback/capture.h"
+#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
@@ -124,27 +125,30 @@ class FakeSyncDelegate : public PageSyncDelegate {
 // fails with a |NOT_IMPLEMENTED| error in all other cases.
 class FakeDbImpl : public DbEmptyImpl {
  public:
-  FakeDbImpl(PageStorageImpl* page_storage) : page_storage_(page_storage) {}
+  FakeDbImpl(coroutine::CoroutineService* coroutine_service,
+             PageStorageImpl* page_storage)
+      : coroutine_service_(coroutine_service), page_storage_(page_storage) {}
 
   Status Init() override { return Status::OK; }
   Status CreateJournal(JournalType journal_type,
                        const CommitId& base,
                        std::unique_ptr<Journal>* journal) override {
     JournalId id = RandomId(10);
-    *journal =
-        JournalDBImpl::Simple(journal_type, page_storage_, this, id, base);
+    *journal = JournalDBImpl::Simple(journal_type, coroutine_service_,
+                                     page_storage_, this, id, base);
     return Status::OK;
   }
 
   Status CreateMergeJournal(const CommitId& base,
                             const CommitId& other,
                             std::unique_ptr<Journal>* journal) override {
-    *journal =
-        JournalDBImpl::Merge(page_storage_, this, RandomId(10), base, other);
+    *journal = JournalDBImpl::Merge(coroutine_service_, page_storage_, this,
+                                    RandomId(10), base, other);
     return Status::OK;
   }
 
  private:
+  coroutine::CoroutineService* coroutine_service_;
   PageStorageImpl* page_storage_;
 };
 
@@ -173,7 +177,8 @@ class PageStorageTest : public StorageTest {
 
     PageId id = RandomId(16);
     storage_ = std::make_unique<PageStorageImpl>(
-        message_loop_.task_runner(), io_runner_, tmp_dir_.path(), id);
+        message_loop_.task_runner(), io_runner_, &coroutine_service_,
+        tmp_dir_.path(), id);
 
     EXPECT_EQ(Status::OK, storage_->Init());
     EXPECT_EQ(id, storage_->GetId());
@@ -330,6 +335,7 @@ class PageStorageTest : public StorageTest {
     return commits;
   }
 
+  coroutine::CoroutineServiceImpl coroutine_service_;
   std::thread io_thread_;
   ftl::RefPtr<ftl::TaskRunner> io_runner_;
   files::ScopedTempDir tmp_dir_;
@@ -505,7 +511,7 @@ TEST_F(PageStorageTest, CreateJournals) {
 }
 
 TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
-  FakeDbImpl db(storage_.get());
+  FakeDbImpl db(&coroutine_service_, storage_.get());
 
   std::unique_ptr<Journal> journal;
   // Explicit journals.

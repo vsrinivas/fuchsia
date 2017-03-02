@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
@@ -19,6 +20,7 @@ class LedgerStorageTest : public ::testing::Test {
   LedgerStorageTest()
       : storage_(message_loop_.task_runner(),
                  message_loop_.task_runner(),
+                 &coroutine_service_,
                  tmp_dir_.path(),
                  "test_app") {}
 
@@ -26,6 +28,7 @@ class LedgerStorageTest : public ::testing::Test {
 
  private:
   files::ScopedTempDir tmp_dir_;
+  coroutine::CoroutineServiceImpl coroutine_service_;
 
  protected:
   mtl::MessageLoop message_loop_;

@@ -43,7 +43,8 @@ void LedgerRepositoryImpl::GetLedger(
     std::unique_ptr<storage::LedgerStorage> ledger_storage =
         std::make_unique<storage::LedgerStorageImpl>(
             environment_->main_runner(), environment_->GetIORunner(),
-            base_storage_dir_, name_as_string);
+            environment_->coroutine_service(), base_storage_dir_,
+            name_as_string);
     std::unique_ptr<cloud_sync::LedgerSync> ledger_sync;
     if (environment_->configuration().use_sync) {
       ledger_sync = std::make_unique<cloud_sync::LedgerSyncImpl>(

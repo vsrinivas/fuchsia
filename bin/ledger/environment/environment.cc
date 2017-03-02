@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/environment/environment.h"
 
+#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
@@ -18,6 +19,7 @@ Environment::Environment(configuration::Configuration configuration,
     : configuration_(std::move(configuration)),
       main_runner_(std::move(main_runner)),
       network_service_(network_service),
+      coroutine_service_(std::make_unique<coroutine::CoroutineServiceImpl>()),
       io_runner_(std::move(io_runner)) {}
 
 Environment::~Environment() {

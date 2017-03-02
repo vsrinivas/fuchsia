@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/db_impl.h"
@@ -40,9 +41,10 @@ class DBTest : public ::testing::Test {
   DBTest()
       : page_storage_(message_loop_.task_runner(),
                       message_loop_.task_runner(),
+                      &coroutine_service_,
                       tmp_dir_.path(),
                       "page_id"),
-        db_(&page_storage_, tmp_dir_.path()) {}
+        db_(&coroutine_service_, &page_storage_, tmp_dir_.path()) {}
 
   ~DBTest() override {}
 
@@ -55,6 +57,7 @@ class DBTest : public ::testing::Test {
  protected:
   mtl::MessageLoop message_loop_;
   files::ScopedTempDir tmp_dir_;
+  coroutine::CoroutineServiceImpl coroutine_service_;
   PageStorageImpl page_storage_;
   DbImpl db_;
 

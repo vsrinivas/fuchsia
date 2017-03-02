@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "apps/ledger/src/callback/capture.h"
+#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/impl/btree/entry_change_iterator.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
@@ -84,7 +85,7 @@ class BTreeUtilsTest : public StorageTest {
     ObjectId new_root_id;
     std::unordered_set<ObjectId> new_nodes;
     ApplyChanges(
-        &fake_storage_, root_id,
+        &coroutine_service_, &fake_storage_, root_id,
         std::make_unique<EntryChangeIterator>(entries.begin(), entries.end()),
         callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                           &new_root_id, &new_nodes),
@@ -110,6 +111,7 @@ class BTreeUtilsTest : public StorageTest {
     return entries;
   }
 
+  coroutine::CoroutineServiceImpl coroutine_service_;
   TrackGetObjectFakePageStorage fake_storage_;
 
  private:
@@ -147,7 +149,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   // Expected layout (X is key "keyX"):
   // [00, 01, 02]
   ApplyChanges(
-      &fake_storage_, root_id,
+      &coroutine_service_, &fake_storage_, root_id,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                         &new_root_id, &new_nodes),
@@ -176,7 +178,7 @@ TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
   // Expected layout (XX is key "keyXX"):
   // [03]
 
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(golden_entries.begin(),
                                                      golden_entries.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -207,7 +209,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10]
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(golden_entries.begin(),
                                                      golden_entries.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -235,7 +237,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
-  ApplyChanges(&fake_storage_, new_root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, new_root_id,
                std::make_unique<EntryChangeIterator>(new_change.begin(),
                                                      new_change.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -279,7 +281,7 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(update_changes.begin(),
                                                      update_changes.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -330,7 +332,7 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(update_changes.begin(),
                                                      update_changes.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -379,7 +381,7 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(update_changes.begin(),
                                                      update_changes.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -418,7 +420,7 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(golden_entries.begin(),
                                                      golden_entries.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -452,7 +454,7 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -500,7 +502,7 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -545,7 +547,7 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -585,7 +587,7 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(update_changes.begin(),
                                                      update_changes.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -616,7 +618,7 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
       CreateEntryChanges(std::vector<size_t>({75}), &delete_changes, true));
 
   ObjectId final_node_id;
-  ApplyChanges(&fake_storage_, new_root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, new_root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -641,7 +643,7 @@ TEST_F(BTreeUtilsTest, DeleteAll) {
   Status status;
   ObjectId new_root_id;
   std::unordered_set<ObjectId> new_nodes;
-  ApplyChanges(&fake_storage_, root_id,
+  ApplyChanges(&coroutine_service_, &fake_storage_, root_id,
                std::make_unique<EntryChangeIterator>(delete_changes.begin(),
                                                      delete_changes.end()),
                callback::Capture([this] { message_loop_.PostQuitTask(); },
@@ -833,7 +835,7 @@ TEST_F(BTreeUtilsTest, ForEachDiff) {
   ObjectId other_root_id;
   std::unordered_set<ObjectId> new_nodes;
   ApplyChanges(
-      &fake_storage_, base_root_id,
+      &coroutine_service_, &fake_storage_, base_root_id,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                         &other_root_id, &new_nodes),

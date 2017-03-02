@@ -285,13 +285,14 @@ class PageStorageImpl::FileWriter {
 
 PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                  ftl::RefPtr<ftl::TaskRunner> io_runner,
+                                 coroutine::CoroutineService* coroutine_service,
                                  std::string page_dir,
                                  PageId page_id)
     : main_runner_(task_runner),
       io_runner_(io_runner),
       page_dir_(page_dir),
       page_id_(std::move(page_id)),
-      db_(this, page_dir_ + kLevelDbDir),
+      db_(coroutine_service, this, page_dir_ + kLevelDbDir),
       objects_dir_(page_dir_ + kObjectDir),
       staging_dir_(page_dir_ + kStagingDir),
       page_sync_(nullptr) {}

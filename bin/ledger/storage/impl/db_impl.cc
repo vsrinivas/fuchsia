@@ -198,8 +198,12 @@ class BatchImpl : public DB::Batch {
 
 }  // namespace
 
-DbImpl::DbImpl(PageStorageImpl* page_storage, std::string db_path)
-    : page_storage_(page_storage), db_path_(db_path) {
+DbImpl::DbImpl(coroutine::CoroutineService* coroutine_service,
+               PageStorageImpl* page_storage,
+               std::string db_path)
+    : coroutine_service_(coroutine_service),
+      page_storage_(page_storage),
+      db_path_(db_path) {
   FTL_DCHECK(page_storage);
 }
 
@@ -277,7 +281,8 @@ Status DbImpl::CreateJournal(JournalType journal_type,
                              const CommitId& base,
                              std::unique_ptr<Journal>* journal) {
   JournalId id = NewJournalId(journal_type);
-  *journal = JournalDBImpl::Simple(journal_type, page_storage_, this, id, base);
+  *journal = JournalDBImpl::Simple(journal_type, coroutine_service_,
+                                   page_storage_, this, id, base);
   if (journal_type == JournalType::IMPLICIT) {
     return Put(GetImplicitJournalMetaKeyFor(id), base);
   }
@@ -287,8 +292,9 @@ Status DbImpl::CreateJournal(JournalType journal_type,
 Status DbImpl::CreateMergeJournal(const CommitId& base,
                                   const CommitId& other,
                                   std::unique_ptr<Journal>* journal) {
-  *journal = JournalDBImpl::Merge(
-      page_storage_, this, NewJournalId(JournalType::EXPLICIT), base, other);
+  *journal =
+      JournalDBImpl::Merge(coroutine_service_, page_storage_, this,
+                           NewJournalId(JournalType::EXPLICIT), base, other);
   return Status::OK;
 }
 
@@ -303,8 +309,8 @@ Status DbImpl::GetImplicitJournal(const JournalId& journal_id,
   CommitId base;
   Status s = Get(GetImplicitJournalMetaKeyFor(journal_id), &base);
   if (s == Status::OK) {
-    *journal = JournalDBImpl::Simple(JournalType::IMPLICIT, page_storage_, this,
-                                     journal_id, base);
+    *journal = JournalDBImpl::Simple(JournalType::IMPLICIT, coroutine_service_,
+                                     page_storage_, this, journal_id, base);
   }
   return s;
 }

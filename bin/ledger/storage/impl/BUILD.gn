@@ -52,6 +52,7 @@ source_set("lib") {
 
   public_deps = [
     "//apps/ledger/src/convert",
+    "//apps/ledger/src/coroutine",
     "//third_party/leveldb",
   ]
 

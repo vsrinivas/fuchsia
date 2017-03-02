@@ -8,6 +8,7 @@
 #include <memory>
 #include <unordered_set>
 
+#include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/iterator.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -35,6 +36,7 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 // callback will provide the status of the operation, the id of the new root
 // and the list of ids of all new nodes created after the changes.
 void ApplyChanges(
+    coroutine::CoroutineService* coroutine_service,
     PageStorage* page_storage,
     ObjectIdView root_id,
     std::unique_ptr<Iterator<const EntryChange>> changes,

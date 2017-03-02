@@ -10,6 +10,7 @@
 #include <set>
 
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/db_impl.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/ftl/memory/ref_ptr.h"
@@ -22,6 +23,7 @@ class PageStorageImpl : public PageStorage {
  public:
   PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> main_runner,
                   ftl::RefPtr<ftl::TaskRunner> io_runner,
+                  coroutine::CoroutineService* coroutine_service,
                   std::string page_dir,
                   PageId page_id);
   ~PageStorageImpl() override;

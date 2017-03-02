@@ -17,11 +17,13 @@
 namespace storage {
 
 JournalDBImpl::JournalDBImpl(JournalType type,
+                             coroutine::CoroutineService* coroutine_service,
                              PageStorageImpl* page_storage,
                              DB* db,
                              const JournalId& id,
                              const CommitId& base)
     : type_(type),
+      coroutine_service_(coroutine_service),
       page_storage_(page_storage),
       db_(db),
       id_(id),
@@ -36,22 +38,26 @@ JournalDBImpl::~JournalDBImpl() {
   }
 }
 
-std::unique_ptr<Journal> JournalDBImpl::Simple(JournalType type,
-                                               PageStorageImpl* page_storage,
-                                               DB* db,
-                                               const JournalId& id,
-                                               const CommitId& base) {
+std::unique_ptr<Journal> JournalDBImpl::Simple(
+    JournalType type,
+    coroutine::CoroutineService* coroutine_service,
+    PageStorageImpl* page_storage,
+    DB* db,
+    const JournalId& id,
+    const CommitId& base) {
   return std::unique_ptr<Journal>(
-      new JournalDBImpl(type, page_storage, db, id, base));
+      new JournalDBImpl(type, coroutine_service, page_storage, db, id, base));
 }
 
-std::unique_ptr<Journal> JournalDBImpl::Merge(PageStorageImpl* page_storage,
-                                              DB* db,
-                                              const JournalId& id,
-                                              const CommitId& base,
-                                              const CommitId& other) {
-  JournalDBImpl* db_journal =
-      new JournalDBImpl(JournalType::EXPLICIT, page_storage, db, id, base);
+std::unique_ptr<Journal> JournalDBImpl::Merge(
+    coroutine::CoroutineService* coroutine_service,
+    PageStorageImpl* page_storage,
+    DB* db,
+    const JournalId& id,
+    const CommitId& base,
+    const CommitId& other) {
+  JournalDBImpl* db_journal = new JournalDBImpl(
+      JournalType::EXPLICIT, coroutine_service, page_storage, db, id, base);
   db_journal->other_ = std::make_unique<CommitId>(other);
   std::unique_ptr<Journal> journal(db_journal);
   return journal;
@@ -190,7 +196,8 @@ void JournalDBImpl::Commit(
       return;
     }
     btree::ApplyChanges(
-        page_storage_, parents[0]->GetRootId(), std::move(entries),
+        coroutine_service_, page_storage_, parents[0]->GetRootId(),
+        std::move(entries),
         ftl::MakeCopyable([
           this, parents = std::move(parents), callback = std::move(callback)
         ](Status status, ObjectId object_id,

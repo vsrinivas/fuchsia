@@ -5,10 +5,10 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
 
-#include "apps/ledger/src/storage/public/ledger_storage.h"
-
 #include <string>
 
+#include "apps/ledger/src/coroutine/coroutine.h"
+#include "apps/ledger/src/storage/public/ledger_storage.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace storage {
@@ -17,6 +17,7 @@ class LedgerStorageImpl : public LedgerStorage {
  public:
   LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> main_runner,
                     ftl::RefPtr<ftl::TaskRunner> io_runner,
+                    coroutine::CoroutineService* coroutine_service,
                     const std::string& base_storage_dir,
                     const std::string& ledger_name);
   ~LedgerStorageImpl() override;
@@ -36,6 +37,7 @@ class LedgerStorageImpl : public LedgerStorage {
 
   ftl::RefPtr<ftl::TaskRunner> main_runner_;
   ftl::RefPtr<ftl::TaskRunner> io_runner_;
+  coroutine::CoroutineService* const coroutine_service_;
   std::string storage_dir_;
 };
 

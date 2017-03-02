@@ -7,6 +7,7 @@
 
 #include <utility>
 
+#include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/db.h"
 
 #include "leveldb/db.h"
@@ -18,7 +19,9 @@ class PageStorageImpl;
 
 class DbImpl : public DB {
  public:
-  DbImpl(PageStorageImpl* page_storage, std::string db_path);
+  DbImpl(coroutine::CoroutineService* coroutine_service,
+         PageStorageImpl* page_storage,
+         std::string db_path);
   ~DbImpl() override;
 
   Status Init() override;
@@ -86,6 +89,7 @@ class DbImpl : public DB {
   Status Put(convert::ExtendedStringView key, ftl::StringView value);
   Status Delete(convert::ExtendedStringView key);
 
+  coroutine::CoroutineService* const coroutine_service_;
   PageStorageImpl* const page_storage_;
   const std::string db_path_;
   std::unique_ptr<leveldb::DB> db_;

@@ -32,6 +32,10 @@ source_set("lib") {
     "tree_node.h",
   ]
 
+  public_deps = [
+    "//apps/ledger/src/coroutine",
+  ]
+
   deps = [
     ":tree_node_storage",
     "//apps/ledger/src/callback",
