@@ -10,4 +10,4 @@ magenta_build_dir=$fuchsia_root/out/build-magenta/build-magenta-pc-x86-64
 netcp=$magenta_build_dir/tools/netcp
 netruncmd=$magenta_build_dir/tools/netruncmd
 
-$netruncmd magenta 'dm reboot'
+$netruncmd : 'dm reboot'
