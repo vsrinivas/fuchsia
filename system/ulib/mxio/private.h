@@ -27,9 +27,9 @@ typedef struct mxio mxio_t;
 
 typedef struct mxio_ops {
     ssize_t (*read)(mxio_t* io, void* data, size_t len);
-    ssize_t (*read_at)(mxio_t* io, void* data, size_t len, off_t offset);
+    ssize_t (*read_at)(mxio_t* io, void* data, size_t len, mx_off_t offset);
     ssize_t (*write)(mxio_t* io, const void* data, size_t len);
-    ssize_t (*write_at)(mxio_t* io, const void* data, size_t len, off_t offset);
+    ssize_t (*write_at)(mxio_t* io, const void* data, size_t len, mx_off_t offset);
     ssize_t (*recvmsg)(mxio_t* io, struct msghdr* msg, int flags);
     ssize_t (*sendmsg)(mxio_t* io, const struct msghdr* msg, int flags);
     off_t (*seek)(mxio_t* io, off_t offset, int whence);

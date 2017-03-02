@@ -47,6 +47,34 @@ static ssize_t vmofile_read(mxio_t* io, void* data, size_t len) {
     }
 }
 
+static ssize_t vmofile_read_at(mxio_t* io, void* data, size_t len, mx_off_t at) {
+    vmofile_t* vf = (vmofile_t*)io;
+
+    // make sure we're within the file's bounds
+    if (at > (vf->end - vf->off)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // adjust to vmo offset
+    at += vf->off;
+
+    // clip length to file bounds
+    if (len > (vf->end - at)) {
+        len = vf->end - at;
+    }
+
+    mx_status_t status = mx_vmo_read(vf->vmo, data, at, len, &len);
+    if (status < 0) {
+        return status;
+    } else {
+        return len;
+    }
+}
+
+static ssize_t vmofile_write_at(mxio_t* io, const void* data, size_t len, mx_off_t at) {
+    return ERR_NOT_SUPPORTED;
+}
+
 static off_t vmofile_seek(mxio_t* io, off_t offset, int whence) {
     vmofile_t* vf = (vmofile_t*)io;
     mtx_lock(&vf->lock);
@@ -109,7 +137,9 @@ static mx_status_t vmofile_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t m
 
 static mxio_ops_t vmofile_ops = {
     .read = vmofile_read,
+    .read_at = vmofile_read_at,
     .write = mxio_default_write,
+    .write_at = vmofile_write_at,
     .recvmsg = mxio_default_recvmsg,
     .sendmsg = mxio_default_sendmsg,
     .seek = vmofile_seek,

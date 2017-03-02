@@ -365,7 +365,7 @@ static ssize_t mxrio_write(mxio_t* io, const void* _data, size_t len) {
     return write_common(MXRIO_WRITE, io, _data, len, 0);
 }
 
-static ssize_t mxrio_write_at(mxio_t* io, const void* _data, size_t len, off_t offset) {
+static ssize_t mxrio_write_at(mxio_t* io, const void* _data, size_t len, mx_off_t offset) {
     return write_common(MXRIO_WRITE_AT, io, _data, len, offset);
 }
 
@@ -414,7 +414,7 @@ static ssize_t mxrio_read(mxio_t* io, void* _data, size_t len) {
     return read_common(MXRIO_READ, io, _data, len, 0);
 }
 
-static ssize_t mxrio_read_at(mxio_t* io, void* _data, size_t len, off_t offset) {
+static ssize_t mxrio_read_at(mxio_t* io, void* _data, size_t len, mx_off_t offset) {
     return read_common(MXRIO_READ_AT, io, _data, len, offset);
 }
 
