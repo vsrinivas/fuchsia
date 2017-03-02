@@ -39,6 +39,12 @@ static vc_char_t* dataxy(textcon_t* tc, int x, int y) {
     return tc->data + y * tc->w + x;
 }
 
+static vc_char_t* get_start_of_line(textcon_t* tc, int y) {
+    assert(y >= 0);
+    assert(y <= tc->h);
+    return tc->data + y * tc->w;
+}
+
 static int clampx(textcon_t* tc, int x) {
     return x < 0 ? 0 : x >= tc->w ? tc->w - 1 : x;
 }
@@ -130,32 +136,42 @@ static void erase_chars(textcon_t* tc, int arg) {
     invalidate(tc, tc->x, tc->y, tc->w - tc->x, 1);
 }
 
-static void _scroll_up(textcon_t* tc, int y0, int y1) {
-    vc_char_t* dst = dataxy(tc, 0, y0);
-    vc_char_t* src = dataxy(tc, 0, y0) + tc->w;
-    vc_char_t* end = dataxy(tc, 0, y1 - 1) + tc->w;
-
-    if (src < end) {
-        pushline(tc, y0);
-        memmove(dst, src, (end - src) * sizeof(vc_char_t));
-        fill(end - tc->w, make_vc_char(tc, ' '), tc->w);
-    }
+static void copy_lines(textcon_t* tc, int y_dest, int y_src, int line_count) {
+    vc_char_t* dest = get_start_of_line(tc, y_dest);
+    vc_char_t* src = get_start_of_line(tc, y_src);
+    memmove(dest, src, line_count * tc->w * sizeof(vc_char_t));
 }
 
-static void _scroll_down(textcon_t* tc, int y0, int y1) {
-    vc_char_t* src = dataxy(tc, 0, y0);
-    vc_char_t* dst = dataxy(tc, 0, y0) + tc->w;
-    vc_char_t* end = dataxy(tc, 0, y1 - 1) + tc->w;
+static void clear_lines(textcon_t* tc, int y, int line_count) {
+    fill(get_start_of_line(tc, y), make_vc_char(tc, ' '), line_count * tc->w);
+}
 
-    if (src < end) {
-        memmove(dst, src, (end - dst) * sizeof(vc_char_t));
-        fill(src, make_vc_char(tc, ' '), tc->w);
+// Scroll the region between line |y0| (inclusive) and |y1| (exclusive).
+// Scroll by |diff| lines, which may be positive (for moving lines up) or
+// negative (for moving lines down).
+static void scroll_lines(textcon_t* tc, int y0, int y1, int diff) {
+    int delta = diff > 0 ? diff : -diff;
+    if (delta > y1 - y0)
+        delta = y1 - y0;
+    int copy_count = y1 - y0 - delta;
+    if (diff > 0) {
+        // Scroll up.
+        for (int i = 0; i < delta; ++i) {
+            pushline(tc, y0 + i);
+        }
+        copy_lines(tc, y0, y0 + delta, copy_count);
+        clear_lines(tc, y0 + copy_count, delta);
+        tc->scroll(tc->cookie, y0, y1, delta);
+    } else {
+        // Scroll down.
+        copy_lines(tc, y0 + delta, y0, copy_count);
+        clear_lines(tc, y0, delta);
+        tc->scroll(tc->cookie, y0, y1, -delta);
     }
 }
 
 static void scroll_up(textcon_t* tc) {
-    _scroll_up(tc, tc->scroll_y0, tc->scroll_y1);
-    tc->scroll(tc->cookie, tc->scroll_y0, tc->scroll_y1, 1);
+    scroll_lines(tc, tc->scroll_y0, tc->scroll_y1, 1);
 }
 
 // positive = up, negative = down
@@ -165,16 +181,7 @@ static void scroll_at_pos(textcon_t* tc, int dir) {
     if (tc->y >= tc->scroll_y1)
         return;
 
-    int count = dir;
-    while (count > 0) {
-        _scroll_up(tc, tc->y, tc->scroll_y1);
-        count--;
-    }
-    while (count < 0) {
-        _scroll_down(tc, tc->y, tc->scroll_y1);
-        count++;
-    }
-    tc->scroll(tc->cookie, tc->y, tc->scroll_y1, dir);
+    scroll_lines(tc, tc->y, tc->scroll_y1, dir);
 }
 
 void set_scroll(textcon_t* tc, int y0, int y1) {

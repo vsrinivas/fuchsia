@@ -373,6 +373,39 @@ bool test_delete_lines_many() {
     END_TEST;
 }
 
+
+// Check that passing a huge parameter via "insert lines" completes in a
+// reasonable amount of time.  (We don't check the time here but we assume
+// that someone will notice if this takes a long time.)
+bool test_insert_lines_huge() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 5);
+    tc.PutString("AAA\nBBB");
+    tc.PutString("\x1b[2000000000L"); // Insert lines
+    tc.PutString("Z"); // Output char to show where the cursor ends up
+    tc.AssertLineContains(0, "AAA");
+    tc.AssertLineContains(1, "   Z");
+
+    END_TEST;
+}
+
+// Check that passing a huge parameter via "delete lines" completes in a
+// reasonable amount of time.  (We don't check the time here but we assume
+// that someone will notice if this takes a long time.)
+bool test_delete_lines_huge() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 5);
+    tc.PutString("AAA\nBBB");
+    tc.PutString("\x1b[200000000M"); // Delete lines
+    tc.PutString("Z"); // Output char to show where the cursor ends up
+    tc.AssertLineContains(0, "AAA");
+    tc.AssertLineContains(1, "   Z");
+
+    END_TEST;
+}
+
 bool test_move_cursor_up_and_scroll() {
     BEGIN_TEST;
 
@@ -432,6 +465,8 @@ RUN_TEST(test_insert_lines)
 RUN_TEST(test_delete_lines)
 RUN_TEST(test_insert_lines_many)
 RUN_TEST(test_delete_lines_many)
+RUN_TEST(test_insert_lines_huge)
+RUN_TEST(test_delete_lines_huge)
 RUN_TEST(test_move_cursor_up_and_scroll)
 RUN_TEST(test_move_cursor_down_and_scroll)
 RUN_TEST(test_cursor_hide_and_show)
