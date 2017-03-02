@@ -16,14 +16,14 @@ public:
     TestForceWake(registers::ForceWake::Domain domain) : domain_(domain)
     {
         switch (domain) {
-        case registers::ForceWake::GEN8:
-            offset_ = registers::ForceWake::kOffset;
-            status_offset_ = registers::ForceWake::kStatusOffset;
-            break;
-        case registers::ForceWake::GEN9_RENDER:
-            offset_ = registers::ForceWake::kRenderOffset;
-            status_offset_ = registers::ForceWake::kRenderStatusOffset;
-            break;
+            case registers::ForceWake::GEN8:
+                offset_ = registers::ForceWake::kOffset;
+                status_offset_ = registers::ForceWake::kStatusOffset;
+                break;
+            case registers::ForceWake::GEN9_RENDER:
+                offset_ = registers::ForceWake::kRenderOffset;
+                status_offset_ = registers::ForceWake::kRenderStatusOffset;
+                break;
         }
 
         register_io_ =

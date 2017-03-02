@@ -262,21 +262,21 @@ public:
             void Write32(uint32_t offset, uint32_t val) override
             {
                 switch (offset) {
-                case EngineCommandStreamer::kRenderEngineMmioBase +
-                    registers::ResetControl::kOffset:
-                    // set ready for reset bit
-                    if (val & 0x00010001) {
-                        val = register_io_->mmio()->Read32(offset) | 0x2;
-                        register_io_->mmio()->Write32(val, offset);
-                    }
-                    break;
-                case registers::GraphicsDeviceResetControl::kOffset:
-                    // clear the render reset bit
-                    if (val & 0x2) {
-                        val = register_io_->mmio()->Read32(offset) & ~0x2;
-                        register_io_->mmio()->Write32(val, offset);
-                    }
-                    break;
+                    case EngineCommandStreamer::kRenderEngineMmioBase +
+                        registers::ResetControl::kOffset:
+                        // set ready for reset bit
+                        if (val & 0x00010001) {
+                            val = register_io_->mmio()->Read32(offset) | 0x2;
+                            register_io_->mmio()->Write32(val, offset);
+                        }
+                        break;
+                    case registers::GraphicsDeviceResetControl::kOffset:
+                        // clear the render reset bit
+                        if (val & 0x2) {
+                            val = register_io_->mmio()->Read32(offset) & ~0x2;
+                            register_io_->mmio()->Write32(val, offset);
+                        }
+                        break;
                 }
             }
 
@@ -293,10 +293,7 @@ public:
     }
 
 private:
-    RegisterIo* register_io() override
-    {
-        return register_io_.get();
-    }
+    RegisterIo* register_io() override { return register_io_.get(); }
 
     Sequencer* sequencer() override { return sequencer_.get(); }
 

@@ -13,12 +13,12 @@ public:
     static uint32_t cache_bits(CachingType caching_type)
     {
         switch (caching_type) {
-        case CACHING_NONE:
-            return (1 << 3) | (1 << 4); // 3
-        case CACHING_WRITE_THROUGH:
-            return (1 << 4); // 3
-        case CACHING_LLC:
-            return 1 << 7; // 4
+            case CACHING_NONE:
+                return (1 << 3) | (1 << 4); // 3
+            case CACHING_WRITE_THROUGH:
+                return (1 << 4); // 3
+            case CACHING_LLC:
+                return 1 << 7; // 4
         }
     }
 

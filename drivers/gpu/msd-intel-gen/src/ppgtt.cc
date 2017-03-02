@@ -11,12 +11,12 @@
 static unsigned int gen_ppat_index(CachingType caching_type)
 {
     switch (caching_type) {
-    case CACHING_NONE:
-        return 3;
-    case CACHING_WRITE_THROUGH:
-        return 2;
-    case CACHING_LLC:
-        return 4;
+        case CACHING_NONE:
+            return 3;
+        case CACHING_WRITE_THROUGH:
+            return 2;
+        case CACHING_LLC:
+            return 4;
     }
 }
 

@@ -241,7 +241,6 @@ public:
 
         EXPECT_GE(freq, current_freq);
     }
-
 };
 
 TEST(MsdIntelDevice, CreateAndDestroy)

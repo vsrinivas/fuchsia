@@ -57,7 +57,7 @@ void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint6
         uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + i];
         EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr);
         EXPECT_FALSE(pte & 0x1); // page should not be present
-        EXPECT_TRUE(pte & 0x3); // rw
+        EXPECT_TRUE(pte & 0x3);  // rw
     }
 }
 
@@ -85,8 +85,8 @@ void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer,
 
     uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + page_count];
     EXPECT_EQ(pte & ~(PAGE_SIZE - 1), scratch_bus_addr);
-    EXPECT_TRUE(pte & 0x1);  // page present
-    EXPECT_TRUE(pte & 0x3);  // rw
+    EXPECT_TRUE(pte & 0x1); // page present
+    EXPECT_TRUE(pte & 0x3); // rw
 }
 
 class TestDevice {

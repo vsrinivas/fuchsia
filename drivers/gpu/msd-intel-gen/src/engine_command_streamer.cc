@@ -82,11 +82,11 @@ public:
     void write_load_register_immediate_headers()
     {
         switch (id_) {
-        case RENDER_COMMAND_STREAMER:
-            state_[1] = 0x1100101B;
-            state_[0x21] = 0x11001011;
-            state_[0x41] = 0x11000001;
-            break;
+            case RENDER_COMMAND_STREAMER:
+                state_[1] = 0x1100101B;
+                state_[0x21] = 0x11001011;
+                state_[0x41] = 0x11000001;
+                break;
         }
     }
 
@@ -390,11 +390,11 @@ bool EngineCommandStreamer::Reset()
     registers::GraphicsDeviceResetControl::Engine engine;
 
     switch (id()) {
-    case RENDER_COMMAND_STREAMER:
-        engine = registers::GraphicsDeviceResetControl::RENDER_ENGINE;
-        break;
-    default:
-        return DRETF(false, "Reset for engine id %d not implemented", id());
+        case RENDER_COMMAND_STREAMER:
+            engine = registers::GraphicsDeviceResetControl::RENDER_ENGINE;
+            break;
+        default:
+            return DRETF(false, "Reset for engine id %d not implemented", id());
     }
 
     registers::ResetControl::request(register_io(), mmio_base());

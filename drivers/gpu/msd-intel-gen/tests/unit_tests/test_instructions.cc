@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mock/mock_address_space.h"
 #include "instructions.h"
+#include "mock/mock_address_space.h"
 #include "gtest/gtest.h"
 
 class TestRingbuffer {
@@ -15,7 +15,8 @@ class TestInstructions {
 public:
     TestInstructions()
     {
-        ringbuffer_ = std::unique_ptr<Ringbuffer>(new Ringbuffer(MsdIntelBuffer::Create(PAGE_SIZE)));
+        ringbuffer_ =
+            std::unique_ptr<Ringbuffer>(new Ringbuffer(MsdIntelBuffer::Create(PAGE_SIZE)));
         address_space_ =
             std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0x10000, ringbuffer_->size()));
 
@@ -25,14 +26,14 @@ public:
     void Noop()
     {
         uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get());
-        
+
         MiNoop::write_ringbuffer(ringbuffer_.get());
 
         EXPECT_EQ(*vaddr, 0u);
     }
 
     void BatchBufferStart()
-    {          
+    {
         ASSERT_EQ((int)MiBatchBufferStart::kDwordCount, 3);
 
         uint32_t tail_start = ringbuffer_->tail();
@@ -44,7 +45,9 @@ public:
 
         EXPECT_EQ(ringbuffer_->tail() - tail_start,
                   MiBatchBufferStart::kDwordCount * sizeof(uint32_t));
-        EXPECT_EQ(*vaddr++, MiBatchBufferStart::kCommandType | (MiBatchBufferStart::kDwordCount - 2) | MiBatchBufferStart::kAddressSpacePpgtt);
+        EXPECT_EQ(*vaddr++, MiBatchBufferStart::kCommandType |
+                                (MiBatchBufferStart::kDwordCount - 2) |
+                                MiBatchBufferStart::kAddressSpacePpgtt);
         EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
 
@@ -52,7 +55,8 @@ public:
         MiBatchBufferStart::write_ringbuffer(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_GGTT);
         EXPECT_EQ(ringbuffer_->tail() - tail_start,
                   2 * MiBatchBufferStart::kDwordCount * sizeof(uint32_t));
-        EXPECT_EQ(*vaddr++, MiBatchBufferStart::kCommandType | (MiBatchBufferStart::kDwordCount - 2));
+        EXPECT_EQ(*vaddr++,
+                  MiBatchBufferStart::kCommandType | (MiBatchBufferStart::kDwordCount - 2));
         EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
     }
@@ -72,7 +76,9 @@ public:
                                                ADDRESS_SPACE_GGTT);
         EXPECT_EQ(ringbuffer_->tail() - tail_start,
                   MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
-        EXPECT_EQ(*vaddr++, MiStoreDataImmediate::kCommandType | (MiStoreDataImmediate::kDwordCount - 2) | MiStoreDataImmediate::kAddressSpaceGtt);
+        EXPECT_EQ(*vaddr++, MiStoreDataImmediate::kCommandType |
+                                (MiStoreDataImmediate::kDwordCount - 2) |
+                                MiStoreDataImmediate::kAddressSpaceGtt);
         EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
         EXPECT_EQ(*vaddr++, val);
@@ -84,10 +90,11 @@ public:
                                                ADDRESS_SPACE_PPGTT);
         EXPECT_EQ(ringbuffer_->tail() - tail_start,
                   2 * MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
-        EXPECT_EQ(*vaddr++, MiStoreDataImmediate::kCommandType | (MiStoreDataImmediate::kDwordCount - 2));
+        EXPECT_EQ(*vaddr++,
+                  MiStoreDataImmediate::kCommandType | (MiStoreDataImmediate::kDwordCount - 2));
         EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
-        EXPECT_EQ(*vaddr++, val);        
+        EXPECT_EQ(*vaddr++, val);
     }
 
 private:
@@ -99,17 +106,17 @@ private:
 TEST(Instructions, Noop)
 {
     TestInstructions test;
-    test.Noop();    
+    test.Noop();
 }
 
 TEST(Instructions, BatchBufferStart)
 {
     TestInstructions test;
-    test.BatchBufferStart();   
+    test.BatchBufferStart();
 }
 
 TEST(Instructions, StoreDataImmediate)
 {
     TestInstructions test;
-    test.StoreDataImmediate();   
+    test.StoreDataImmediate();
 }

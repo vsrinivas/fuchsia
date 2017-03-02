@@ -89,8 +89,7 @@ void MsdIntelBuffer::DecrementInflightCounter()
                     wait_rendering_event_->Signal();
                 break;
             }
-        }
-        else if (inflight_counter_.compare_exchange_strong(counter, counter - 1))
+        } else if (inflight_counter_.compare_exchange_strong(counter, counter - 1))
             break;
     }
 }

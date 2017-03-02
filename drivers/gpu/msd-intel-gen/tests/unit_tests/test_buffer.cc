@@ -276,10 +276,7 @@ public:
     }
 };
 
-TEST(MsdIntelBuffer, CreateAndDestroy)
-{
-    TestMsdIntelBuffer::CreateAndDestroy();
-}
+TEST(MsdIntelBuffer, CreateAndDestroy) { TestMsdIntelBuffer::CreateAndDestroy(); }
 
 TEST(MsdIntelBuffer, MapGpu)
 {
