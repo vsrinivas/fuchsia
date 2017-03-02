@@ -25,6 +25,7 @@
 #include <magenta/types.h>
 
 #include <mxio/debug.h>
+#include <mxio/io.h>
 #include <mxio/vfs.h>
 
 #define MXDEBUG 0

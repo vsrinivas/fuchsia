@@ -6,7 +6,8 @@
 
 #include <magenta/compiler.h>
 #include <magenta/types.h>
-#include <mxio/io.h>
+
+#include <mxio/limits.h>
 
 #include <assert.h>
 #include <limits.h>

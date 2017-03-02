@@ -6,12 +6,13 @@
 
 #include <limits.h>
 #include <stdbool.h>
+#include <sys/epoll.h>
 #include <unistd.h> // for ssize_t
 
 #include <magenta/types.h>
 #include <magenta/compiler.h>
 
-#define MAX_MXIO_FD 256
+#include <mxio/limits.h>
 
 // flag on handle args in processargs
 // instructing that this fd should be dup'd to 0/1/2
@@ -26,33 +27,11 @@
 #define MXIO_PROTOCOL_VMOFILE 3
 #define MXIO_PROTOCOL_SOCKET 4
 
-// maximum handles used in open/clone/create
-#define MXIO_MAX_HANDLES 3
-
-// mxio_ops_t's read/write are able to do io of
-// at least this size
-#define MXIO_CHUNK_SIZE 8192
-
-// Maxium size for an ioctl input
-#define MXIO_IOCTL_MAX_INPUT 1024
-
-// Maxium length of a filename
-#define MXIO_MAX_FILENAME NAME_MAX
-
 // events for mxio_wait_fd()
-#ifndef __Fuchsia__
-// This shouldn't be included from host code
-#define MXIO_EVT_READABLE 1
-#define MXIO_EVT_WRITABLE 4
-#define MXIO_EVT_ERROR 8
-#define MXIO_EVT_ALL (1 | 4 | 8)
-#else
-#include <sys/epoll.h>
 #define MXIO_EVT_READABLE EPOLLIN
 #define MXIO_EVT_WRITABLE EPOLLOUT
 #define MXIO_EVT_ERROR EPOLLERR
 #define MXIO_EVT_ALL (EPOLLIN | EPOLLOUT | EPOLLERR)
-#endif
 
 __BEGIN_CDECLS
 

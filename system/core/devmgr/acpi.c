@@ -14,6 +14,7 @@
 #include <acpisvc/simple.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <mxio/io.h>
 #include <mxio/util.h>
 
 #include "devmgr.h"
