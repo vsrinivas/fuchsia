@@ -138,6 +138,8 @@ found [here](https://fuchsia.googlesource.com/modular/+/HEAD/src/bootstrap/).
 
 #### Enabling Graphics
 
+Note: Graphics mode can only be run in a GUI with a terminal.
+
 To enable graphics, add the `-g` flag to `frun`:
 
 ```
