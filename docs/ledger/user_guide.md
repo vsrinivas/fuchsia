@@ -32,7 +32,7 @@ ensure that your Fuchsia has Internet access.
 Run `wget` to verify that it worked:
 
 ```
-/system/test/wget http://example.com
+wget http://example.com
 ```
 
 You should see the HTML content of the `example.com` placeholder page.
