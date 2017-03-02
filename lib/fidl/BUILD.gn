@@ -27,6 +27,7 @@ source_set("operation") {
 
   deps = [
     "//lib/ftl",
+    "//lib/mtl",
   ]
 }
 

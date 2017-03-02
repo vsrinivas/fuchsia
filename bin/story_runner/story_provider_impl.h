@@ -119,22 +119,40 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // A list of IDs of *all* stories available on a user's ledger.
   std::unordered_set<std::string> story_ids_;
 
-  // This is a container of all operations that are currently enqueued to run in
-  // a FIFO manner. All operations exposed via |StoryProvider| interface are
-  // queued here.
+  // This is a container of all operations that are currently enqueued
+  // to run in a FIFO manner. All operations exposed via
+  // |StoryProvider| interface are queued here.
   //
-  // The advantage of doing this is that if an operation consists of multiple
-  // asynchronous calls then no state needs to be maintained for incomplete /
-  // pending operations.
+  // The advantage of doing this is that if an operation consists of
+  // multiple asynchronous calls then no state needs to be maintained
+  // for incomplete / pending operations.
+  //
+  // TODO(mesch,alhaad): At some point we might want to increase
+  // concurrency and have one operation queue per story for those
+  // operations that only affect one story.
+  //
+  // TODO(mesch): No story provider operation can invoke a story
+  // controller operation that would cause the story controller
+  // updating its story info state, because that would be a nested
+  // operation and it would deadlock. There are no such operations
+  // right now, but we need to establish a pattern that makes it
+  // simply and obvious how to not introduce deadlocks.
   OperationQueue operation_queue_;
 
-  // This is a container of all Operations that can be run concurrently.
-  // TODO(alhaad): Instead of separating OperationQueue and OperationCollection
-  // it would be better for understanding and performance to simply have a
-  // OperationQueue per story_id.
-  OperationCollection operation_collection_;
-
   std::shared_ptr<Storage> storage_;
+
+  // The root page that we read from.
+  ledger::PagePtr root_page_;
+
+  // The current snapshot of the root page we read from, as obtained
+  // from the watcher on the root page. It is held by a shared
+  // pointer, because we may update it while Operation instances that
+  // read from it are still in progress, and they need to hold on to
+  // the same snapshot they started with, lest the methods called on
+  // that snapshot never return. PageSnaphotPtr cannot be duplicated,
+  // because it doesn't have a duplicate method.
+  std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot_;
+
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;

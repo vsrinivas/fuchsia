@@ -5,6 +5,7 @@
 #include "apps/modular/lib/fidl/operation.h"
 
 #include "lib/ftl/logging.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
 
@@ -45,6 +46,14 @@ void Operation::Ready() {
 
 void Operation::Done() {
   container_->Drop(this);
+}
+
+std::function<void()> Operation::SubResult(const std::function<void()>& done) {
+  return [done] { SubResultCall(done); };
+}
+
+void Operation::SubResultCall(const std::function<void()>& done) {
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(done);
 }
 
 }  // namespace modular

@@ -95,21 +95,30 @@ class Operation {
   virtual void Run() = 0;
 
  protected:
-  // Derived classes need to pass the OperationContainer here. The
-  // constructor adds the instance to the container.
+  // Derived classes need to pass the OperationContainer here. The constructor
+  // adds the instance to the container.
   Operation(OperationContainer* const container);
 
   // Derived classes call this when they are ready for |Run()| to be called.
   void Ready();
 
-  // Derived classes call this when they are prepared to be removed
-  // from the container. Must be the last the instance does, as it
-  // results in destructor invocation.
+  // Derived classes call this when they are prepared to be removed from the
+  // container. Must be the last the instance does, as it results in destructor
+  // invocation.
   void Done();
 
+  // Returns a function that can be used as the result callback of a sub
+  // Operation. It ensures that the done call is invoked only *after* the done
+  // callback from the sub Operation returns, lest the sub Operation will call
+  // Done() after its own operation queue, and thus itself, gets destroyed.
+  static std::function<void()> SubResult(const std::function<void()>& done);
+
+  // Analog, but schedules the done call directly.
+  static void SubResultCall(const std::function<void()>& done);
+
  private:
-  // Used by the implementation of Done() to remove this instance from
-  // the container.
+  // Used by the implementation of Done() to remove this instance from the
+  // container.
   OperationContainer* const container_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Operation);
