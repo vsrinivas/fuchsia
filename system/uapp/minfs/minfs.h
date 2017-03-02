@@ -5,6 +5,7 @@
 #pragma once
 
 #include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_hash_table.h>
 #include <mxtl/macros.h>
@@ -20,6 +21,12 @@
 #include <stdbool.h>
 
 #include "misc.h"
+
+#ifdef __Fuchsia__
+using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
+#else
+using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
+#endif
 
 // clang-format off
 
@@ -271,5 +278,5 @@ private:
     uint32_t blocksize_;
 };
 
-void* GetBlock(const bitmap::RawBitmap& bitmap, uint32_t blkno);
-void* GetBitBlock(const bitmap::RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);
+void* GetBlock(const RawBitmap& bitmap, uint32_t blkno);
+void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);

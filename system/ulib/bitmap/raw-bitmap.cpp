@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 #include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 
 #include <limits.h>
 #include <stddef.h>
 
-#include <magenta/assert.h>
 #include <magenta/types.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/macros.h>
-#include <mxtl/unique_ptr.h>
 
 namespace {
 
@@ -69,27 +68,29 @@ size_t CountZeros(size_t idx, size_t value) {
 
 namespace bitmap {
 
-RawBitmap::RawBitmap() : size_(0), bits_(nullptr) {}
+template <typename Storage>
+RawBitmapGeneric<Storage>::RawBitmapGeneric() : size_(0), data_(nullptr) {}
 
 // Resets the bitmap; clearing and resizing it.
-mx_status_t RawBitmap::Reset(size_t size) {
+template <typename Storage>
+mx_status_t RawBitmapGeneric<Storage>::Reset(size_t size) {
     size_ = size;
     if (size_ == 0) {
-        bits_.reset(nullptr);
+        data_ = nullptr;
         return NO_ERROR;
     }
     size_t last_idx = LastIdx(size);
-    auto arr = new size_t[last_idx + 1];
-    if (arr == nullptr) {
-        return ERR_NO_MEMORY;
+    mx_status_t status = bits_.Allocate(sizeof(size_t) * (last_idx + 1));
+    if (status != NO_ERROR) {
+        return status;
     }
-    bits_.reset(mxtl::move(arr));
+    data_ = static_cast<size_t*>(bits_.GetData());
     ClearAll();
-
     return NO_ERROR;
 }
 
-mx_status_t RawBitmap::Shrink(size_t size) {
+template <typename Storage>
+mx_status_t RawBitmapGeneric<Storage>::Shrink(size_t size) {
     if (size > size_) {
         return ERR_NO_MEMORY;
     }
@@ -97,7 +98,8 @@ mx_status_t RawBitmap::Shrink(size_t size) {
     return NO_ERROR;
 }
 
-size_t RawBitmap::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
+template <typename Storage>
+size_t RawBitmapGeneric<Storage>::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
     bitmax = mxtl::min(bitmax, size_);
     if (bitoff >= bitmax) {
         return bitmax;
@@ -111,11 +113,11 @@ size_t RawBitmap::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
         if (is_set) {
             // If is_set=true, invert the mask, OR it with the value, and invert
             // it again to hopefully get all zeros.
-            value = ~(~value | bits_[i]);
+            value = ~(~value | data_[i]);
         } else {
             // If is_set=false, just AND the mask with the value to hopefully
             // get all zeros.
-            value &= bits_[i];
+            value &= data_[i];
         }
         if (value != 0) {
             break;
@@ -124,8 +126,9 @@ size_t RawBitmap::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
     return mxtl::min(bitmax, CountZeros(i, value));
 }
 
-mx_status_t RawBitmap::Find(bool is_set, size_t bitoff, size_t bitmax,
-                            size_t run_len, size_t* out) const {
+template <typename Storage>
+mx_status_t RawBitmapGeneric<Storage>::Find(bool is_set, size_t bitoff, size_t bitmax,
+                                                size_t run_len, size_t* out) const {
     if (!out || bitmax <= bitoff) {
         return ERR_INVALID_ARGS;
     }
@@ -142,7 +145,8 @@ mx_status_t RawBitmap::Find(bool is_set, size_t bitoff, size_t bitmax,
     return NO_ERROR;
 }
 
-bool RawBitmap::Get(size_t bitoff, size_t bitmax, size_t* first) const {
+template <typename Storage>
+bool RawBitmapGeneric<Storage>::Get(size_t bitoff, size_t bitmax, size_t* first) const {
     bitmax = mxtl::min(bitmax, size_);
     size_t result = Scan(bitoff, bitmax, true);
     if (first) {
@@ -151,7 +155,8 @@ bool RawBitmap::Get(size_t bitoff, size_t bitmax, size_t* first) const {
     return result == bitmax;
 }
 
-mx_status_t RawBitmap::Set(size_t bitoff, size_t bitmax) {
+template <typename Storage>
+mx_status_t RawBitmapGeneric<Storage>::Set(size_t bitoff, size_t bitmax) {
     if (bitoff > bitmax || bitmax > size_) {
         return ERR_INVALID_ARGS;
     }
@@ -161,12 +166,14 @@ mx_status_t RawBitmap::Set(size_t bitoff, size_t bitmax) {
     size_t first_idx = FirstIdx(bitoff);
     size_t last_idx = LastIdx(bitmax);
     for (size_t i = first_idx; i <= last_idx; ++i) {
-        bits_[i] |= GetMask(i == first_idx, i == last_idx, bitoff, bitmax);
+        data_[i] |=
+                GetMask(i == first_idx, i == last_idx, bitoff, bitmax);
     }
     return NO_ERROR;
 }
 
-mx_status_t RawBitmap::Clear(size_t bitoff, size_t bitmax) {
+template <typename Storage>
+mx_status_t RawBitmapGeneric<Storage>::Clear(size_t bitoff, size_t bitmax) {
     if (bitoff > bitmax || bitmax > size_) {
         return ERR_INVALID_ARGS;
     }
@@ -176,19 +183,26 @@ mx_status_t RawBitmap::Clear(size_t bitoff, size_t bitmax) {
     size_t first_idx = FirstIdx(bitoff);
     size_t last_idx = LastIdx(bitmax);
     for (size_t i = first_idx; i <= last_idx; ++i) {
-        bits_[i] &= ~(GetMask(i == first_idx, i == last_idx, bitoff, bitmax));
+        data_[i] &=
+                ~(GetMask(i == first_idx, i == last_idx, bitoff, bitmax));
     }
     return NO_ERROR;
 }
 
-void RawBitmap::ClearAll() {
+template <typename Storage>
+void RawBitmapGeneric<Storage>::ClearAll() {
     if (size_ == 0) {
         return;
     }
     size_t last_idx = LastIdx(size_);
     for (size_t i = 0; i <= last_idx; ++i) {
-        bits_[i] = 0;
+        data_[i] = 0;
     }
 }
+
+#ifdef __Fuchsia__
+template class RawBitmapGeneric<VmoStorage>;
+#endif
+template class RawBitmapGeneric<DefaultStorage>;
 
 } // namespace bitmap

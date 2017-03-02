@@ -6,23 +6,29 @@
 
 #include <bitmap/bitmap.h>
 
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <magenta/types.h>
 #include <mxtl/macros.h>
-#include <mxtl/unique_ptr.h>
 
 namespace bitmap {
 
-// A simple bitmap backed by an array.
-class RawBitmap final : public Bitmap {
+// A simple bitmap backed by generic storage.
+// Storage must implement:
+//   - mx_status_t Allocate(size_t size)
+//      To allocate |size| bytes of storage.
+//   - void* GetData()
+//      To access the underlying storage.
+template <typename Storage>
+class RawBitmapGeneric final : public Bitmap {
 public:
-    RawBitmap();
-    virtual ~RawBitmap() = default;
-    RawBitmap(RawBitmap&& rhs) = default;
-    RawBitmap& operator=(RawBitmap&& rhs) = default;
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(RawBitmap);
+    RawBitmapGeneric();
+    virtual ~RawBitmapGeneric() = default;
+    RawBitmapGeneric(RawBitmapGeneric&& rhs) = default;
+    RawBitmapGeneric& operator=(RawBitmapGeneric&& rhs) = default;
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(RawBitmapGeneric);
 
     // Returns the size of this bitmap.
     size_t size(void) const { return size_; }
@@ -43,12 +49,11 @@ public:
     // match *is_set* starting from *bitoff*.
     size_t Scan(size_t bitoff, size_t bitmax, bool is_set) const;
 
-    // Find a run of *run_len* *set* bits, between bitoff and bitmax.
-    // Returns the start of the run in *bitoff_start*, or bitmax if it is
+    // Find a run of *run_len* *is_set* bits, between bitoff and bitmax.
+    // Returns the start of the run in *out*, or bitmax if it is
     // not found in the provided range.
     // If the run is not found, "ERR_NO_RESOURCES" is returned.
-    mx_status_t Find(bool set, size_t bitoff, size_t bitmax, size_t run_len,
-                     size_t* bitoff_start) const;
+    mx_status_t Find(bool is_set, size_t bitoff, size_t bitmax, size_t run_len, size_t* out) const;
 
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set. Afterwards,
     // *first_unset* will be set to the lesser of bitmax and the index of the
@@ -70,14 +75,16 @@ public:
     // This function allows access to underlying data, but is dangerous: It
     // leaks the pointer to bits_. Reset and the bitmap destructor should not
     // be called on the bitmap while the pointer returned from data() is alive.
-    const void* data_unsafe() const { return bits_.get(); }
+    const Storage* StorageUnsafe() const { return &bits_; }
 
 private:
     // The size of this bitmap, in bits.
     size_t size_;
 
-    // The array backing this bitmap.
-    mxtl::unique_ptr<size_t[]> bits_;
+    // The storage backing this bitmap.
+    Storage bits_;
+    // Owned by bits_, cached
+    size_t* data_;
 };
 
 } // namespace bitmap

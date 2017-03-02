@@ -16,12 +16,14 @@
 
 #include "minfs-private.h"
 
-void* GetBlock(const bitmap::RawBitmap& bitmap, uint32_t blkno) {
-    assert(blkno * kMinfsBlockSize <= bitmap.size());
-    return (void*)((uintptr_t)(bitmap.data_unsafe()) + (uintptr_t)(kMinfsBlockSize * blkno));
+void* GetBlock(const RawBitmap& bitmap, uint32_t blkno) {
+    assert(blkno * kMinfsBlockSize < bitmap.size()); // Accessing beyond end of bitmap
+    assert(kMinfsBlockSize <= (blkno + 1) * kMinfsBlockSize); // Avoid overflow
+    return (void*)((uintptr_t)(bitmap.StorageUnsafe()->GetData()) +
+                   (uintptr_t)(kMinfsBlockSize * blkno));
 }
 
-void* GetBitBlock(const bitmap::RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno) {
+void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno) {
     assert(bitno <= bitmap.size());
     *blkno_out = (bitno / kMinfsBlockBits);
     return GetBlock(bitmap, *blkno_out);
@@ -410,26 +412,24 @@ mx_status_t Minfs::LoadBitmaps() {
 
 mx_status_t minfs_mount(vnode_t** out, Bcache* bc) {
     minfs_info_t info;
+    mx_status_t status;
 
-    if (bc->Read(0, &info, 0, sizeof(info)) < 0) {
+    if ((status = bc->Read(0, &info, 0, sizeof(info))) != NO_ERROR) {
         error("minfs: could not read info block\n");
-        return -1;
-    }
-    if (minfs_check_info(&info, bc->Maxblk())) {
-        return -1;
+        return status;
     }
 
     Minfs* fs;
-    if (Minfs::Create(&fs, bc, &info)) {
+    if ((status = Minfs::Create(&fs, bc, &info)) != NO_ERROR) {
         error("minfs: mount failed\n");
-        return -1;
+        return status;
     }
 
     vnode_t* vn;
-    if (fs->VnodeGet(&vn, kMinfsRootIno)) {
+    if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != NO_ERROR) {
         error("minfs: cannot find root inode\n");
         delete fs;
-        return -1;
+        return status;
     }
 
     *out = vn;
@@ -466,13 +466,27 @@ int minfs_mkfs(Bcache* bc) {
     info.dat_block = info.ino_block + inoblks;
     minfs_dump_info(&info);
 
-    bitmap::RawBitmap abm;
-    bitmap::RawBitmap ibm;
-    if (abm.Reset(info.block_count)) {
-        return -1;
+    RawBitmap abm;
+    RawBitmap ibm;
+
+    mx_status_t status;
+    if ((status = abm.Reset(info.abm_block * kMinfsBlockBits)) < 0) {
+        error("mkfs: Failed to allocate block bitmap\n");
+        return status;
     }
-    if (ibm.Reset(info.inode_count)) {
-        return -1;
+    if ((status = ibm.Reset(info.ibm_block * kMinfsBlockBits)) < 0) {
+        error("mkfs: Failed to allocate inode bitmap\n");
+        return status;
+    }
+    // this keeps the underlying storage a block multiple but ensures we
+    // can't allocate beyond the last real block or inode
+    if ((status = abm.Shrink(info.block_count)) < 0) {
+        error("mkfs: Failed to shrink block bitmap\n");
+        return status;
+    }
+    if ((status = ibm.Shrink(info.inode_count)) < 0) {
+        error("mkfs: Failed to shrink inode bitmap\n");
+        return status;
     }
 
     // write rootdir
@@ -514,7 +528,6 @@ int minfs_mkfs(Bcache* bc) {
         blk = bc->GetZero(info.ino_block + n);
         bc->Put(blk, kBlockDirty);
     }
-
 
     // setup root inode
     blk = bc->Get(info.ino_block);

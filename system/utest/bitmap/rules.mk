@@ -16,6 +16,7 @@ MODULE_SRCS += \
 MODULE_NAME := bitmap-test
 
 MODULE_LIBS := \
+    ulib/magenta \
     ulib/musl \
     ulib/mxcpp \
     ulib/mxio \

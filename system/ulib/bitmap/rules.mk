@@ -15,6 +15,7 @@ MODULE_SRCS += \
 MODULE_SO_NAME := bitmap
 
 MODULE_LIBS := \
+    ulib/magenta \
     ulib/musl \
     ulib/mxcpp \
     ulib/mxtl \

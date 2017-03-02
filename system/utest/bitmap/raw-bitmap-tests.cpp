@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 
 #include <magenta/new.h>
 #include <mxtl/algorithm.h>
@@ -11,6 +12,7 @@
 namespace bitmap {
 namespace tests {
 
+template <typename RawBitmap>
 static bool InitializedEmpty(void) {
     BEGIN_TEST;
 
@@ -30,6 +32,7 @@ static bool InitializedEmpty(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool SingleBit(void) {
     BEGIN_TEST;
 
@@ -48,6 +51,7 @@ static bool SingleBit(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool SetTwice(void) {
     BEGIN_TEST;
 
@@ -64,6 +68,7 @@ static bool SetTwice(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool ClearTwice(void) {
     BEGIN_TEST;
 
@@ -82,6 +87,7 @@ static bool ClearTwice(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool GetReturnArg(void) {
     BEGIN_TEST;
 
@@ -109,6 +115,7 @@ static bool GetReturnArg(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool SetRange(void) {
     BEGIN_TEST;
 
@@ -147,6 +154,7 @@ static bool SetRange(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool FindSimple(void) {
     BEGIN_TEST;
 
@@ -237,6 +245,7 @@ static bool FindSimple(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool ClearAll(void) {
     BEGIN_TEST;
 
@@ -259,6 +268,7 @@ static bool ClearAll(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool ClearSubrange(void) {
     BEGIN_TEST;
 
@@ -286,6 +296,7 @@ static bool ClearSubrange(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool BoundaryArguments(void) {
     BEGIN_TEST;
 
@@ -308,6 +319,7 @@ static bool BoundaryArguments(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
 static bool SetOutOfOrder(void) {
     BEGIN_TEST;
 
@@ -323,18 +335,23 @@ static bool SetOutOfOrder(void) {
     END_TEST;
 }
 
+#define RUN_TEMPLATIZED_TEST(test, specialization) RUN_TEST(test<specialization>)
+#define ALL_TESTS(specialization)                           \
+    RUN_TEMPLATIZED_TEST(InitializedEmpty, specialization)  \
+    RUN_TEMPLATIZED_TEST(SingleBit, specialization)         \
+    RUN_TEMPLATIZED_TEST(SetTwice, specialization)          \
+    RUN_TEMPLATIZED_TEST(ClearTwice, specialization)        \
+    RUN_TEMPLATIZED_TEST(GetReturnArg, specialization)      \
+    RUN_TEMPLATIZED_TEST(SetRange, specialization)          \
+    RUN_TEMPLATIZED_TEST(FindSimple, specialization)        \
+    RUN_TEMPLATIZED_TEST(ClearSubrange, specialization)     \
+    RUN_TEMPLATIZED_TEST(BoundaryArguments, specialization) \
+    RUN_TEMPLATIZED_TEST(ClearAll, specialization)          \
+    RUN_TEMPLATIZED_TEST(SetOutOfOrder, specialization)
+
 BEGIN_TEST_CASE(raw_bitmap_tests)
-RUN_TEST(InitializedEmpty)
-RUN_TEST(SingleBit)
-RUN_TEST(SetTwice)
-RUN_TEST(ClearTwice)
-RUN_TEST(GetReturnArg)
-RUN_TEST(SetRange)
-RUN_TEST(FindSimple)
-RUN_TEST(ClearSubrange)
-RUN_TEST(BoundaryArguments)
-RUN_TEST(ClearAll)
-RUN_TEST(SetOutOfOrder)
+ALL_TESTS(RawBitmapGeneric<DefaultStorage>)
+ALL_TESTS(RawBitmapGeneric<VmoStorage>)
 END_TEST_CASE(raw_bitmap_tests);
 
 } // namespace tests
