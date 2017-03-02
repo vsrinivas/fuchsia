@@ -195,7 +195,8 @@ bool MagmaSystemConnection::ReleaseObject(uint64_t object_id,
         case magma::PlatformObject::SEMAPHORE: {
             auto iter = semaphore_map_.find(object_id);
             if (iter == semaphore_map_.end())
-                return DRETF(false, "Attempting to free invalid semaphore id 0x%x", object_id);
+                return DRETF(false, "Attempting to free invalid semaphore id 0x%" PRIx64,
+                             object_id);
 
             semaphore_map_.erase(iter);
         } break;
