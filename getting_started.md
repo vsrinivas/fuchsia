@@ -179,7 +179,7 @@ configure the IPv4 interface and routing.
 * [Raspberry Pi 3](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/rpi3.md)
 
 ## Contributing changes
-* See [contributing.md](https://fuchsia.googlesource.com/docs/+/HEAD/contributing.md).
+* See [CONTRIBUTING.md](https://fuchsia.googlesource.com/docs/+/HEAD/CONTRIBUTING.md).
 
 ## Additional helpful documents
 
