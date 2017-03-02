@@ -33,6 +33,7 @@ mx_status_t arch_guest_create(mxtl::unique_ptr<GuestContext>* context);
 /* Start a guest within a guest context.
  * This launches a guest at the given entry point, within a guest context.
  */
-mx_status_t arch_guest_start(GuestContext* context, uintptr_t entry, uintptr_t stack);
+mx_status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context, uintptr_t entry,
+                             uintptr_t stack);
 
 __END_CDECLS

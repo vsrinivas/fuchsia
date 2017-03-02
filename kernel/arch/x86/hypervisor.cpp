@@ -29,7 +29,7 @@ extern uint8_t _gdt[];
 static mx_status_t vmxon(paddr_t pa) {
     uint8_t err;
 
-    __asm__ (
+    __asm__ volatile (
         "vmxon %[pa];"
         "setna %[err];"     // Check CF and ZF for error.
         : [err] "=r"(err)
@@ -42,7 +42,7 @@ static mx_status_t vmxon(paddr_t pa) {
 static mx_status_t vmxoff() {
     uint8_t err;
 
-    __asm__ (
+    __asm__ volatile (
         "vmxoff;"
         "setna %[err];"     // Check CF and ZF for error.
         : [err] "=r"(err)
@@ -55,7 +55,7 @@ static mx_status_t vmxoff() {
 static mx_status_t vmptrld(paddr_t pa) {
     uint8_t err;
 
-    __asm__ (
+    __asm__ volatile (
         "vmptrld %[pa];"
         "setna %[err];"     // Check CF and ZF for error.
         : [err] "=r"(err)
@@ -68,7 +68,7 @@ static mx_status_t vmptrld(paddr_t pa) {
 static mx_status_t vmclear(paddr_t pa) {
     uint8_t err;
 
-    __asm__ (
+    __asm__ volatile (
         "vmclear %[pa];"
         "setna %[err];"     // Check CF and ZF for error.
         : [err] "=r"(err)
@@ -82,7 +82,7 @@ static uint64_t vmread(uint64_t field) {
     uint8_t err;
     uint64_t val = 0;
 
-    __asm__ (
+    __asm__ volatile (
         "vmread %[val], %[field];"
         "setna %[err];"     // Check CF and ZF for error.
         : [err] "=r"(err), [val] "=r"(val)
@@ -96,7 +96,7 @@ static uint64_t vmread(uint64_t field) {
 static uint64_t vmread_unchecked(uint64_t field) {
     uint64_t val = 0;
 
-    __asm__ (
+    __asm__ volatile (
         "vmread %[val], %[field];"
         : [val] "=r"(val)
         : [field] "r"(field)
@@ -108,7 +108,7 @@ static uint64_t vmread_unchecked(uint64_t field) {
 static void vmwrite(uint64_t field, uint64_t val) {
     uint8_t err;
 
-    __asm__ (
+    __asm__ volatile (
         "vmwrite %[val], %[field];"
         "setna %[err];"     // Check CF and ZF for error.
         : [err] "=r"(err)
@@ -121,7 +121,7 @@ static void vmwrite(uint64_t field, uint64_t val) {
 static mx_status_t vmlaunch() {
     uint8_t err;
 
-    __asm__ (
+    __asm__ volatile (
         "vmlaunch;"
         "setna %[err];"     // Check CF and ZF for error.
         : [err] "=r"(err)
@@ -186,7 +186,7 @@ mx_status_t VmxPage::Alloc(const VmxInfo& info) {
     // a value greater than 0 and at most 4096 (bit 44 is set if and only if
     // bits 43:32 are clear).
     if (info.region_size > PAGE_SIZE)
-        return ERR_NO_MEMORY;
+        return ERR_NOT_SUPPORTED;
 
     // Ensure we use write back memory, as recommended.
     if (info.memory_type != VMX_MEMORY_TYPE_WRITE_BACK)
@@ -216,6 +216,11 @@ static int vmx_enable(void* arg) {
     VmxonContext* context = static_cast<VmxonContext*>(arg);
     VmxonCpuContext* cpu_context = context->CurrCpuContext();
 
+    // Check that full VMX controls are available.
+    VmxInfo info;
+    if (!info.vmx_controls)
+        return ERR_NOT_SUPPORTED;
+
     // Enable VMXON, if required.
     uint64_t feature_control = read_msr(X86_MSR_IA32_FEATURE_CONTROL);
     if (!(feature_control & X86_MSR_IA32_FEATURE_CONTROL_LOCK) ||
@@ -229,18 +234,21 @@ static int vmx_enable(void* arg) {
         write_msr(X86_MSR_IA32_FEATURE_CONTROL, feature_control);
     }
 
-    // Setup control registers for VMX.
-    uint64_t cr0_mask = read_msr(X86_MSR_IA32_VMX_CR0_FIXED0) |
-                        read_msr(X86_MSR_IA32_VMX_CR0_FIXED1);
+    // Check control registers are in a VMX-friendly state.
+    uint64_t cr0_fixed0 = read_msr(X86_MSR_IA32_VMX_CR0_FIXED0);
+    uint64_t cr0_fixed1 = read_msr(X86_MSR_IA32_VMX_CR0_FIXED1);
     uint64_t cr0 = x86_get_cr0();
-    DEBUG_ASSERT(cr0 == (cr0 & cr0_mask));
-    x86_set_cr0(cr0 & cr0_mask);
+    if (~(cr0 | ~cr0_fixed0) != 0 || ~(~cr0 | cr0_fixed1) != 0)
+        return ERR_BAD_STATE;
 
-    uint64_t cr4_mask = read_msr(X86_MSR_IA32_VMX_CR4_FIXED0) |
-                        read_msr(X86_MSR_IA32_VMX_CR4_FIXED1);
-    uint64_t cr4 = x86_get_cr4();
-    DEBUG_ASSERT(cr4 == (cr4 & cr4_mask));
-    x86_set_cr4((cr4 & cr4_mask) | X86_CR4_VMXE);
+    uint64_t cr4_fixed0 = read_msr(X86_MSR_IA32_VMX_CR4_FIXED0);
+    uint64_t cr4_fixed1 = read_msr(X86_MSR_IA32_VMX_CR4_FIXED1);
+    uint64_t cr4 = x86_get_cr4() | X86_CR4_VMXE;
+    if (~(cr4 | ~cr4_fixed0) != 0 || ~(~cr4 | cr4_fixed1) != 0)
+        return ERR_BAD_STATE;
+
+    // Enable VMX using the VMXE bit.
+    x86_set_cr4(cr4);
 
     // Execute VMXON.
     return cpu_context->VmxOn();
@@ -306,11 +314,26 @@ mx_status_t VmcsCpuContext::Init(const VmxInfo& info) {
     return msr_bitmaps_page_.Alloc(info);
 }
 
-static void set_vmcs_control(uint32_t control, uint64_t state, uint32_t set) {
-    uint32_t allowed_0 = static_cast<uint32_t>(BITS(state, 31, 0));
-    uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(state, 63, 31));
-    uint32_t value = allowed_0 | (allowed_1 & set);
-    vmwrite(control, value);
+static mx_status_t set_vmcs_control(uint32_t controls, uint64_t true_msr, uint64_t old_msr,
+                                    uint32_t set) {
+    uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
+    uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
+    if ((allowed_1 & set) != set) {
+        dprintf(SPEW, "can not set vmcs controls %#" PRIx32 "\n", controls);
+        return ERR_NOT_SUPPORTED;
+    }
+
+    // Reference Volume 3, Section 31.5.1, Algorithm 3, Part C. If the control
+    // can be either 0 or 1 (flexible), and the control is unknown, then refer
+    // to the old MSR to find the default value.
+    //
+    // NOTE: We do not explicitly clear any controls, otherwise unknown would be
+    // defined as the complement of the union of what is set and cleared.
+    uint32_t flexible = allowed_0 ^ allowed_1;
+    uint32_t unknown = flexible & ~set;
+    uint32_t defaults = unknown & BITS(old_msr, 31, 0);
+    vmwrite(controls, allowed_0 | defaults | set);
+    return NO_ERROR;
 }
 
 mx_status_t VmcsCpuContext::Setup() {
@@ -319,6 +342,69 @@ mx_status_t VmcsCpuContext::Setup() {
         return status;
 
     status = vmptrld(page_.PhysicalAddress());
+    if (status != NO_ERROR)
+        return status;
+
+    // Setup secondary processor-based VMCS controls.
+    status = set_vmcs_control(VMCS_32_PROCBASED_CTLS2,
+                              read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
+                              0,
+                              // Enable use of RDTSCP instruction.
+                              VMCS_32_PROCBASED_CTLS2_RDTSCP |
+                              // Associate cached translations of linear
+                              // addresses with a virtual processor ID.
+                              VMCS_32_PROCBASED_CTLS2_VPID |
+                              // Enable use of XSAVES and XRSTORS instructions.
+                              VMCS_32_PROCBASED_CTLS2_XSAVES_XRSTORS);
+    if (status != NO_ERROR)
+        return status;
+
+    // Setup pin-based VMCS controls.
+    status = set_vmcs_control(VMCS_32_PINBASED_CTLS,
+                              read_msr(X86_MSR_IA32_VMX_TRUE_PINBASED_CTLS),
+                              read_msr(X86_MSR_IA32_VMX_PINBASED_CTLS),
+                              // External interrupts cause a VM exit.
+                              VMCS_32_PINBASED_CTLS_EXTINT_EXITING |
+                              // Non-maskable interrupts cause a VM exit.
+                              VMCS_32_PINBASED_CTLS_NMI_EXITING);
+    if (status != NO_ERROR)
+        return status;
+
+    // Setup primary processor-based VMCS controls.
+    status = set_vmcs_control(VMCS_32_PROCBASED_CTLS,
+                              read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
+                              read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS),
+                              // Enable secondary processor-based controls.
+                              VMCS_32_PROCBASED_CTLS_PROCBASED_CTLS2);
+    if (status != NO_ERROR)
+        return status;
+
+    // Setup VM-exit VMCS controls.
+    status = set_vmcs_control(VMCS_32_EXIT_CTLS,
+                              read_msr(X86_MSR_IA32_VMX_TRUE_EXIT_CTLS),
+                              read_msr(X86_MSR_IA32_VMX_EXIT_CTLS),
+                              // Logical processor is in 64-bit mode after VM
+                              // exit. On VM exit CS.L, IA32_EFER.LME, and
+                              // IA32_EFER.LMA is set to true.
+                              VMCS_32_EXIT_CTLS_64BIT_MODE |
+                              // On VM exit due to an external interrupt, make
+                              // the logical processor acknowledge the interrupt
+                              // controller, acquiring the interrupt’s vector.
+                              VMCS_32_EXIT_CTLS_ACK_INTERRUPT |
+                              // Load the IA32_PAT MSR on exit.
+                              VMCS_32_EXIT_CTLS_LOAD_IA32_PAT |
+                              // Load the IA32_EFER MSR on exit.
+                              VMCS_32_EXIT_CTLS_LOAD_IA32_EFER);
+    if (status != NO_ERROR)
+        return status;
+
+    // Setup VM-entry VMCS controls.
+    status = set_vmcs_control(VMCS_32_ENTRY_CTLS,
+                              read_msr(X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS),
+                              read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS),
+                              // After VM entry, logical processor is in IA-32e
+                              // mode and IA32_EFER.LMA is set to true.
+                              VMCS_32_ENTRY_CTLS_IA32E_MODE);
     if (status != NO_ERROR)
         return status;
 
@@ -342,56 +428,6 @@ mx_status_t VmcsCpuContext::Setup() {
     vmwrite(VMCS_32_EXCEPTION_BITMAP, VMCS_32_EXCEPTION_BITMAP_ALL_EXCEPTIONS);
     vmwrite(VMCS_32_PAGEFAULT_ERRORCODE_MASK, 0);
     vmwrite(VMCS_32_PAGEFAULT_ERRORCODE_MATCH, 0);
-
-    // We only support full VMX controls.
-    VmxInfo info;
-    if (!info.vmx_controls)
-        return ERR_NOT_SUPPORTED;
-
-    // Setup VMCS controls.
-    set_vmcs_control(VMCS_32_PROCBASED_CTLS2,
-                     // Secondary processor-based controls.
-                     read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
-                     // Enable use of RDTSCP instruction.
-                     VMCS_32_PROCBASED_CTLS2_RDTSCP |
-                     // Associate cached translations of linear addresses with a
-                     // virtual processor ID.
-                     VMCS_32_PROCBASED_CTLS2_VPID |
-                     // Enable use of XSAVES and XRSTORS instructions.
-                     VMCS_32_PROCBASED_CTLS2_XSAVES_XRSTORS);
-    set_vmcs_control(VMCS_32_PINBASED_CTLS,
-                     // Pin-based controls.
-                     read_msr(X86_MSR_IA32_VMX_TRUE_PINBASED_CTLS),
-                     // External interrupts cause a VM exit.
-                     VMCS_32_PINBASED_CTLS_EXTINT_EXITING |
-                     // Non-maskable interrupts cause a VM exit.
-                     VMCS_32_PINBASED_CTLS_NMI_EXITING);
-    set_vmcs_control(VMCS_32_PROCBASED_CTLS,
-                     // Primary processor-based controls.
-                     read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
-                     // Enable secondary processor-based controls.
-                     VMCS_32_PROCBASED_CTLS_PROCBASED_CTLS2);
-    set_vmcs_control(VMCS_32_EXIT_CTLS,
-                     // VM-exit controls.
-                     read_msr(X86_MSR_IA32_VMX_TRUE_EXIT_CTLS),
-                     // Logical processor is in 64-bit mode after VM exit.
-                     // On VM exit CS.L, IA32_EFER.LME, and IA32_EFER.LMA is
-                     // set to true.
-                     VMCS_32_EXIT_CTLS_64BIT_MODE |
-                     // On VM exit due to an external interrupt, make the
-                     // logical processor acknowledge the interrupt
-                     // controller, acquiring the interrupt’s vector.
-                     VMCS_32_EXIT_CTLS_ACK_INTERRUPT |
-                     // Load the IA32_PAT MSR on exit.
-                     VMCS_32_EXIT_CTLS_LOAD_IA32_PAT |
-                     // Load the IA32_EFER MSR on exit.
-                     VMCS_32_EXIT_CTLS_LOAD_IA32_EFER);
-    set_vmcs_control(VMCS_32_ENTRY_CTLS,
-                     // VM-entry controls.
-                     read_msr(X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS),
-                     // Logical processor is in IA-32e mode after VM entry.
-                     // On VM entry IA32_EFER.LMA is set to true.
-                     VMCS_32_ENTRY_CTLS_IA32E_MODE);
 
     // From Volume 3, Section 28.1: Virtual-processor identifiers (VPIDs)
     // introduce to VMX operation a facility by which a logical processor may
@@ -520,6 +556,7 @@ mx_status_t arch_guest_create(mxtl::unique_ptr<GuestContext>* context) {
     return VmcsContext::Create(context);
 }
 
-mx_status_t arch_guest_start(GuestContext* context, uintptr_t entry, uintptr_t stack) {
+mx_status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context, uintptr_t entry,
+                             uintptr_t stack) {
     return context->Start(entry, stack);
 }

@@ -8,15 +8,19 @@
 
 #define X86_MSR_IA32_FEATURE_CONTROL                0x003a      /* Feature control */
 #define X86_MSR_IA32_VMX_BASIC                      0x0480      /* Basic info */
+#define X86_MSR_IA32_VMX_PINBASED_CTLS              0x0481      /* Pin-based controls */
+#define X86_MSR_IA32_VMX_PROCBASED_CTLS             0x0482      /* Primary processor-based controls */
+#define X86_MSR_IA32_VMX_EXIT_CTLS                  0x0483      /* VM-exit controls */
+#define X86_MSR_IA32_VMX_ENTRY_CTLS                 0x0484      /* VM-entry controls */
 #define X86_MSR_IA32_VMX_CR0_FIXED0                 0x0486      /* CR0 bits that must be 0 to enter VMX */
 #define X86_MSR_IA32_VMX_CR0_FIXED1                 0x0487      /* CR0 bits that must be 1 to enter VMX */
 #define X86_MSR_IA32_VMX_CR4_FIXED0                 0x0488      /* CR4 bits that must be 0 to enter VMX */
 #define X86_MSR_IA32_VMX_CR4_FIXED1                 0x0489      /* CR4 bits that must be 1 to enter VMX */
 #define X86_MSR_IA32_VMX_PROCBASED_CTLS2            0x048b      /* Secondary processor-based controls */
-#define X86_MSR_IA32_VMX_TRUE_PINBASED_CTLS         0x048d      /* Pin-based controls */
-#define X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS        0x048e      /* Primary processor-based controls */
-#define X86_MSR_IA32_VMX_TRUE_EXIT_CTLS             0x048f      /* VM-exit controls */
-#define X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS            0x0490      /* VM-entry controls */
+#define X86_MSR_IA32_VMX_TRUE_PINBASED_CTLS         0x048d      /* True pin-based controls */
+#define X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS        0x048e      /* True primary processor-based controls */
+#define X86_MSR_IA32_VMX_TRUE_EXIT_CTLS             0x048f      /* True VM-exit controls */
+#define X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS            0x0490      /* True VM-entry controls */
 
 /* VMX basic info */
 #define VMX_MEMORY_TYPE_WRITE_BACK                  0x06        /* Write back */

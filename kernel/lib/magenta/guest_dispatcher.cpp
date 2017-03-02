@@ -35,5 +35,5 @@ GuestDispatcher::GuestDispatcher(mxtl::RefPtr<HypervisorDispatcher> hypervisor,
 GuestDispatcher::~GuestDispatcher() {}
 
 mx_status_t GuestDispatcher::Start(uintptr_t entry, uintptr_t stack) {
-    return arch_guest_start(context_.get(), entry, stack);
+    return arch_guest_start(context_, entry, stack);
 }
