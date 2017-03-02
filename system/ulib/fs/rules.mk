@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/mapped-vmo.cpp \
     $(LOCAL_DIR)/vfs.cpp \
     $(LOCAL_DIR)/vfs-mount.cpp \
     $(LOCAL_DIR)/vfs-unmount.cpp \

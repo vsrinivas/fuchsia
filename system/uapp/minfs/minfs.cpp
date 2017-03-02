@@ -64,6 +64,24 @@ mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
     return 0;
 }
 
+mx_status_t Minfs::InodeSync(uint32_t ino, const minfs_inode_t* inode) {
+    // Obtain the offset of the inode within its containing block
+    uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
+#ifdef __Fuchsia__
+    void* inodata = (void*)((uintptr_t)(inode_table_->GetData()) +
+                            (uintptr_t)((ino / kMinfsInodesPerBlock) * kMinfsBlockSize));
+#else
+    uint8_t inodata[kMinfsBlockSize];
+    bc_->Readblk(info_.ino_block + (ino / kMinfsInodesPerBlock), inodata);
+#endif
+    memcpy((void*)((uintptr_t)inodata + off_of_ino), inode, kMinfsInodeSize);
+
+    // commit blocks to disk
+    uint32_t bno_of_ino = info_.ino_block + (ino / kMinfsInodesPerBlock);
+    bc_->Writeblk(bno_of_ino, inodata);
+    return NO_ERROR;
+}
+
 Minfs::Minfs(Bcache* bc, minfs_info_t* info) : bc_(bc) {
     memcpy(&info_, info, sizeof(minfs_info_t));
 }
@@ -71,14 +89,14 @@ Minfs::Minfs(Bcache* bc, minfs_info_t* info) : bc_(bc) {
 mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
     // locate data and block offset of bitmap
     void *bmdata;
-    uint32_t bmbno;
-    if ((bmdata = GetBitBlock(inode_map_, &bmbno, ino)) == nullptr) {
+    uint32_t ibm_relative_bno;
+    if ((bmdata = GetBitBlock(inode_map_, &ibm_relative_bno, ino)) == nullptr) {
         panic("inode not in bitmap");
     }
 
     // obtain the block of the inode bitmap we need
     mxtl::RefPtr<BlockNode> block_ibm;
-    if ((block_ibm = bc_->Get(info_.ibm_block + bmbno)) == nullptr) {
+    if ((block_ibm = bc_->Get(info_.ibm_block + ibm_relative_bno)) == nullptr) {
         return ERR_IO;
     }
 
@@ -146,38 +164,31 @@ mx_status_t Minfs::InoNew(const minfs_inode_t* inode, uint32_t* ino_out) {
 
     // locate data and block offset of bitmap
     void *bmdata;
-    uint32_t bmbno;
-    if ((bmdata = GetBitBlock(inode_map_, &bmbno, ino)) == nullptr) {
+    uint32_t ibm_relative_bno;
+    if ((bmdata = GetBitBlock(inode_map_, &ibm_relative_bno, ino)) == nullptr) {
         panic("inode not in bitmap");
     }
 
     // obtain the block of the inode bitmap we need
     mxtl::RefPtr<BlockNode> block_ibm;
-    if ((block_ibm = bc_->Get(info_.ibm_block + bmbno)) == nullptr) {
+    if ((block_ibm = bc_->Get(info_.ibm_block + ibm_relative_bno)) == nullptr) {
         inode_map_.Clear(ino, ino + 1);
         return ERR_IO;
     }
 
-    uint32_t bno_of_ino = info_.ino_block + (ino / kMinfsInodesPerBlock);
-    uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
+    // TODO(smklein): optional sanity check of both blocks
 
-    // obtain the block of the inode table we need
-    mxtl::RefPtr<BlockNode> block_ino;
-    if ((block_ino = bc_->Get(bno_of_ino)) == nullptr) {
-        inode_map_.Clear(ino, ino + 1);
+    // Write the inode back first
+    if ((status = InodeSync(ino, inode)) != NO_ERROR) {
         bc_->Put(block_ibm, 0);
-        return ERR_IO;
+        inode_map_.Clear(ino, ino + 1);
+        return status;
     }
 
-    //TODO: optional sanity check of both blocks
-
-    // write data to blocks in memory
+    // write data to the bitmap in memory
     memcpy(block_ibm->data(), bmdata, kMinfsBlockSize);
-    memcpy((void*)((uintptr_t)block_ino->data() + off_of_ino), inode, kMinfsInodeSize);
-
     // commit blocks to disk
     bc_->Put(block_ibm, kBlockDirty);
-    bc_->Put(block_ino, kBlockDirty);
 
     *ino_out = ino;
     return NO_ERROR;
@@ -229,11 +240,19 @@ mx_status_t Minfs::VnodeGet(VnodeMinfs** out, uint32_t ino) {
     if ((status = VnodeMinfs::AllocateHollow(this, &vn)) != NO_ERROR) {
         return ERR_NO_MEMORY;
     }
-    uint32_t ino_per_blk = info_.block_size / kMinfsInodeSize;
-    if ((status = bc_->Read(info_.ino_block + ino / ino_per_blk, &vn->inode_,
-                            kMinfsInodeSize * (ino % ino_per_blk), kMinfsInodeSize)) < 0) {
-        return status;
-    }
+
+    // obtain the block of the inode table we need
+    uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
+#ifdef __Fuchsia__
+    void* inodata = (void*)((uintptr_t)(inode_table_->GetData()) +
+                            (uintptr_t)((ino / kMinfsInodesPerBlock) * kMinfsBlockSize));
+#else
+    uint8_t inodata[kMinfsBlockSize];
+    bc_->Readblk(info_.ino_block + (ino / kMinfsInodesPerBlock), inodata);
+#endif
+    memcpy(&vn->inode_, (void*)((uintptr_t)inodata + off_of_ino), kMinfsInodeSize);
+
+    vn->fs_ = this;
     vn->ino_ = ino;
     vnode_hash_.insert(vn);
 
@@ -325,7 +344,6 @@ mx_status_t Minfs::Create(Minfs** out, Bcache* bc, minfs_info_t* info) {
 
     // determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
-    //uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
     fs->abmblks_ = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;
     fs->ibmblks_ = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
 
@@ -347,6 +365,25 @@ mx_status_t Minfs::Create(Minfs** out, Bcache* bc, minfs_info_t* info) {
     if ((status = fs->LoadBitmaps()) < 0) {
         return status;
     }
+
+#ifdef __Fuchsia__
+    // Create the inode table.
+    // TODO(smklein): Don't bother reading the ENTIRE thing into memory when we
+    // can page in parts of it on-demand.
+    uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+    if ((status = MappedVmo::Create(inoblks * kMinfsBlockSize, &fs->inode_table_)) != NO_ERROR) {
+        return status;
+    }
+
+    for (uint32_t n = 0; n < inoblks; n++) {
+        void* bmdata = (void*)((uintptr_t)(fs->inode_table_->GetData()) +
+                               (uintptr_t)(kMinfsBlockSize * n));
+        if (fs->bc_->Readblk(fs->info_.ino_block + n, bmdata)) {
+            error("minfs: failed reading inode table\n");
+        }
+    }
+#endif
+
     *out = fs.release();
     return NO_ERROR;
 }
@@ -354,13 +391,13 @@ mx_status_t Minfs::Create(Minfs** out, Bcache* bc, minfs_info_t* info) {
 mx_status_t Minfs::LoadBitmaps() {
     for (uint32_t n = 0; n < abmblks_; n++) {
         void* bmdata = GetBlock(block_map_, n);
-        if (bc_->Read(info_.abm_block + n, bmdata, 0, kMinfsBlockSize)) {
+        if (bc_->Readblk(info_.abm_block + n, bmdata)) {
             error("minfs: failed reading alloc bitmap\n");
         }
     }
     for (uint32_t n = 0; n < ibmblks_; n++) {
         void* bmdata = GetBlock(inode_map_, n);
-        if (bc_->Read(info_.ibm_block + n, bmdata, 0, kMinfsBlockSize)) {
+        if (bc_->Readblk(info_.ibm_block + n, bmdata)) {
             error("minfs: failed reading inode bitmap\n");
         }
     }

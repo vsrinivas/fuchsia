@@ -4,17 +4,19 @@
 
 #pragma once
 
-#include "minfs.h"
-#include "misc.h"
-
 #include <mxtl/algorithm.h>
 #include <mxtl/intrusive_hash_table.h>
 #include <mxtl/intrusive_single_list.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
 
+#include <fs/mapped-vmo.h>
 #include <fs/vfs.h>
+
+#include "minfs.h"
+#include "misc.h"
 
 #define panic(fmt...) do { fprintf(stderr, fmt); __builtin_trap(); } while (0)
 
@@ -60,6 +62,10 @@ public:
     // free ino in inode bitmap, release all blocks held by inode
     mx_status_t InoFree(const minfs_inode_t& inode, uint32_t ino);
 
+    // Writes back an inode into the inode table on persistent storage.
+    // Does not modify inode bitmap.
+    mx_status_t InodeSync(uint32_t ino, const minfs_inode_t* inode);
+
     // When modifying bit 'n' in the bitmap, the following pattern may be used:
     //   blk = nullptr;
     //   blk = BitmapBlockGet(blk, n);
@@ -80,12 +86,16 @@ private:
     friend mx_status_t check_inode(CheckMaps*, const Minfs*, uint32_t, uint32_t);
     friend mx_status_t minfs_check(Bcache*);
     Minfs(Bcache* bc_, minfs_info_t* info_);
+    // Find a free inode, allocate it in the inode bitmap, and write it back to disk
     mx_status_t InoNew(const minfs_inode_t* inode, uint32_t* ino_out);
     mx_status_t LoadBitmaps();
 
     uint32_t abmblks_;
     uint32_t ibmblks_;
     RawBitmap inode_map_;
+#ifdef __Fuchsia__
+    mxtl::unique_ptr<MappedVmo> inode_table_;
+#endif
     using HashTable = mxtl::HashTable<uint32_t, VnodeMinfs*>;
     HashTable vnode_hash_;
 };

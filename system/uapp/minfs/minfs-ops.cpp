@@ -120,16 +120,7 @@ void VnodeMinfs::InodeSync(uint32_t flags) {
         }
     }
 
-    uint32_t bno_of_ino = fs_->info_.ino_block + (ino_ / kMinfsInodesPerBlock);
-    uint32_t off_of_ino = (ino_ % kMinfsInodesPerBlock) * kMinfsInodeSize;
-
-    mxtl::RefPtr<BlockNode> blk;
-    if ((blk = fs_->bc_->Get(bno_of_ino)) == nullptr) {
-        panic("failed sync vnode %p(#%u)", this, ino_);
-    }
-
-    memcpy((void*)((uintptr_t)blk->data() + off_of_ino), &inode_, kMinfsInodeSize);
-    fs_->bc_->Put(blk, kBlockDirty);
+    fs_->InodeSync(ino_, &inode_);
 }
 
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
