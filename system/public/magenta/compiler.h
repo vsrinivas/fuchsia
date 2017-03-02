@@ -59,6 +59,8 @@
 #define __TA_CAPABILITY(x) __THREAD_ANNOTATION(capability(x))
 #define __TA_GUARDED(x) __THREAD_ANNOTATION(guarded_by(x))
 #define __TA_ACQUIRE(...) __THREAD_ANNOTATION(acquire_capability(__VA_ARGS__))
+#define __TA_ACQUIRED_BEFORE(...) __THREAD_ANNOTATION(acquired_before(__VA_ARGS__))
+#define __TA_ACQUIRED_AFTER(...) __THREAD_ANNOTATION(acquired_after(__VA_ARGS__))
 #define __TA_RELEASE(...) __THREAD_ANNOTATION(release_capability(__VA_ARGS__))
 #define __TA_REQUIRES(...) __THREAD_ANNOTATION(requires_capability(__VA_ARGS__))
 #define __TA_EXCLUDES(...) __THREAD_ANNOTATION(locks_excluded(__VA_ARGS__))
