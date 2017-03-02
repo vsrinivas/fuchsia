@@ -132,6 +132,7 @@ class VmcsCpuContext : public VmxCpuContext {
 public:
     mx_status_t Init(const VmxInfo& info) override;
     mx_status_t Setup();
+    mx_status_t Clear();
 
 private:
     VmxPage msr_bitmaps_page_;

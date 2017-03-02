@@ -289,7 +289,8 @@ static int vmx_disable(void* arg) {
 }
 
 VmxonContext::~VmxonContext() {
-    DEBUG_ASSERT(percpu_exec(vmx_disable, this) == NO_ERROR);
+    mx_status_t status = percpu_exec(vmx_disable, this);
+    DEBUG_ASSERT(status == NO_ERROR);
 }
 
 VmxonCpuContext* VmxonContext::CurrCpuContext() {
@@ -312,12 +313,10 @@ static void set_vmcs_control(uint32_t control, uint64_t state, uint32_t set) {
 }
 
 mx_status_t VmcsCpuContext::Setup() {
-    // Execute VMCLEAR.
-    mx_status_t status = vmclear(page_.PhysicalAddress());
+    mx_status_t status = Clear();
     if (status != NO_ERROR)
         return status;
 
-    // Execute VMPTRLD.
     status = vmptrld(page_.PhysicalAddress());
     if (status != NO_ERROR)
         return status;
@@ -415,6 +414,10 @@ mx_status_t VmcsCpuContext::Setup() {
     return NO_ERROR;
 }
 
+mx_status_t VmcsCpuContext::Clear() {
+    return vmclear(page_.PhysicalAddress());
+}
+
 static int vmcs_setup(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsCpuContext* cpu_context = context->CurrCpuContext();
@@ -450,7 +453,16 @@ mx_status_t VmcsContext::Create(mxtl::unique_ptr<VmcsContext>* context) {
 VmcsContext::VmcsContext(mxtl::Array<VmcsCpuContext> cpu_contexts)
     : cpu_contexts_(mxtl::move(cpu_contexts)) {}
 
-VmcsContext::~VmcsContext() {}
+static int vmcs_clear(void* arg) {
+    VmcsContext* context = static_cast<VmcsContext*>(arg);
+    VmcsCpuContext* cpu_context = context->CurrCpuContext();
+    return cpu_context->Clear();
+}
+
+VmcsContext::~VmcsContext() {
+    mx_status_t status = percpu_exec(vmcs_clear, this);
+    DEBUG_ASSERT(status == NO_ERROR);
+}
 
 VmcsCpuContext* VmcsContext::CurrCpuContext() {
     return &cpu_contexts_[arch_curr_cpu_num()];
