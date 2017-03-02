@@ -92,6 +92,7 @@ action("netstack2") {
   script = rebase_path("//.") + "/build/gobuild.py"
   depfile_path = "${out_path}.d"
   depfile = depfile_path
+  console = true # only run one gobuild.py at once
 
   args = [
     "--fuchsia-root",
