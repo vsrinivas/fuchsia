@@ -39,9 +39,9 @@ mx_status_t sys_object_wait_async(
     uint32_t options);
 
 mx_status_t sys_object_wait_cancel(
-    uint32_t options,
     mx_handle_t handle,
-    uint64_t key);
+    uint64_t key,
+    uint32_t options);
 
 mx_status_t sys_object_signal(
     mx_handle_t handle,

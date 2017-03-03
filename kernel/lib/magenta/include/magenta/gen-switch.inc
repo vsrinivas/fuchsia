@@ -39,9 +39,9 @@
         static_cast<uint32_t>(arg5)));
         break;
     case 8: ret = static_cast<uint64_t>(sys_object_wait_cancel(
-        static_cast<uint32_t>(arg1),
-        static_cast<mx_handle_t>(arg2),
-        static_cast<uint64_t>(arg3)));
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint64_t>(arg2),
+        static_cast<uint32_t>(arg3)));
         break;
     case 9: ret = static_cast<uint64_t>(sys_object_signal(
         static_cast<mx_handle_t>(arg1),

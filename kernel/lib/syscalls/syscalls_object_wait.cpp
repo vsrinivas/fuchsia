@@ -188,7 +188,7 @@ mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_han
     }
 }
 
-mx_status_t sys_object_wait_cancel(uint32_t options, mx_handle_t handle_value, uint64_t key) {
+mx_status_t sys_object_wait_cancel(mx_handle_t handle_value, uint64_t key, uint32_t options) {
     if (options & ~MX_CANCEL_KEY)
         return ERR_INVALID_ARGS;
 
@@ -199,7 +199,7 @@ mx_status_t sys_object_wait_cancel(uint32_t options, mx_handle_t handle_value, u
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
             return up->BadHandle(handle_value, ERR_BAD_HANDLE);
-        if (!magenta_rights_check(handle, MX_RIGHT_READ))
+        if (!magenta_rights_check(handle, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
 
         auto state_tracker = handle->dispatcher()->get_state_tracker();

@@ -97,7 +97,7 @@ syscall object_wait_async
     returns (mx_status_t);
 
 syscall object_wait_cancel
-    (options: uint32_t, handle: mx_handle_t, key: uint64_t)
+    (handle: mx_handle_t, key: uint64_t, options: uint32_t)
     returns (mx_status_t);
 
 syscall object_signal

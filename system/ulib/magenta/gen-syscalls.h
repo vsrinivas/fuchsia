@@ -56,9 +56,9 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_object_wait_asy
     uint32_t options) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_object_wait_cancel(
-    uint32_t options,
     mx_handle_t handle,
-    uint64_t key) __attribute__((__leaf__));
+    uint64_t key,
+    uint32_t options) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_object_signal(
     mx_handle_t handle,

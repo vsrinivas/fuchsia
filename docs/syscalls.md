@@ -14,6 +14,8 @@
 + [object_signal_peer](syscalls/object_signal.md) - set or clear the user signals in the opposite end
 + [object_wait_many](syscalls/object_wait_many.md) - wait for signals on multiple objects
 + [object_wait_one](syscalls/object_wait_one.md) - wait for signals on one object
++ [object_wait_async](syscalls/object_wait_async.md) - asynchronous notifications on signal change
++ [object_wait_cancel](syscalls/object_wait_cancel.md) - cancel waits and async waits
 
 ## Threads
 + [thread_create](syscalls/thread_create.md) - create a new thread within a process
