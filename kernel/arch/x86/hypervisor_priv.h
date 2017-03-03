@@ -33,11 +33,14 @@
 #define VMCS_32_PINBASED_CTLS                       0x4000      /* Pin-based controls */
 #define VMCS_32_PROCBASED_CTLS                      0x4002      /* Primary processor-based controls */
 #define VMCS_32_EXCEPTION_BITMAP                    0x4004      /* Exception bitmap */
+#define VMCS_32_PAGEFAULT_ERRORCODE_MASK            0x4006      /* Page-fault error-code mask */
+#define VMCS_32_PAGEFAULT_ERRORCODE_MATCH           0x4008      /* Page-fault error-code match */
 #define VMCS_32_EXIT_CTLS                           0x400c      /* VM-exit controls */
 #define VMCS_32_ENTRY_CTLS                          0x4012      /* VM-entry controls */
 #define VMCS_32_PROCBASED_CTLS2                     0x401e      /* Secondary processor-based controls */
 #define VMCS_32_INSTRUCTION_ERROR                   0x4400      /* Instruction error */
 #define VMCS_32_EXIT_REASON                         0x4402      /* Exit reason */
+#define VMCS_32_HOST_IA32_SYSENTER_CS               0x4c00      /* Host SYSENTER CS */
 #define VMCS_64_MSR_BITMAPS_ADDRESS                 0x2004      /* MSR bitmaps address */
 #define VMCS_64_LINK_POINTER                        0x2800      /* VMCS link pointer */
 #define VMCS_64_HOST_IA32_PAT                       0x2c00      /* Host PAT */
@@ -54,6 +57,8 @@
 #define VMCS_XX_HOST_TR_BASE                        0x6c0a      /* Host TR base */
 #define VMCS_XX_HOST_GDTR_BASE                      0x6c0c      /* Host GDTR base */
 #define VMCS_XX_HOST_IDTR_BASE                      0x6c0e      /* Host IDTR base */
+#define VMCS_XX_HOST_IA32_SYSENTER_ESP              0x6c10      /* Host SYSENTER ESP */
+#define VMCS_XX_HOST_IA32_SYSENTER_EIP              0x6c12      /* Host SYSENTER EIP */
 #define VMCS_XX_HOST_RSP                            0x6c14      /* Host RSP */
 #define VMCS_XX_HOST_RIP                            0x6c16      /* Host RIP */
 

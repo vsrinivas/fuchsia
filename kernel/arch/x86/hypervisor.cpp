@@ -334,7 +334,13 @@ mx_status_t VmcsCpuContext::Setup() {
     // the exception causes a VM exit. If the bit is 0, the exception is
     // delivered normally through the IDT, using the descriptor
     // corresponding to the exception’s vector.
+    //
+    // From Volume 3, Section 25.2: If software desires VM exits on all page
+    // faults, it can set bit 14 in the exception bitmap to 1 and set the
+    // page-fault error-code mask and match fields each to 00000000H.
     vmwrite(VMCS_32_EXCEPTION_BITMAP, VMCS_32_EXCEPTION_BITMAP_ALL_EXCEPTIONS);
+    vmwrite(VMCS_32_PAGEFAULT_ERRORCODE_MASK, 0);
+    vmwrite(VMCS_32_PAGEFAULT_ERRORCODE_MATCH, 0);
 
     // We only support full VMX controls.
     VmxInfo info;
@@ -401,14 +407,17 @@ mx_status_t VmcsCpuContext::Setup() {
     // Setup VMCS host state.
     vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
     vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(percpu->cpu_num));
+    vmwrite(VMCS_32_HOST_IA32_SYSENTER_CS, 0);
     vmwrite(VMCS_64_HOST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
     vmwrite(VMCS_64_HOST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
+    vmwrite(VMCS_XX_HOST_CR0, x86_get_cr0());
+    vmwrite(VMCS_XX_HOST_CR4, x86_get_cr4());
     vmwrite(VMCS_XX_HOST_GS_BASE, read_msr(X86_MSR_IA32_GS_BASE));
     vmwrite(VMCS_XX_HOST_TR_BASE, reinterpret_cast<uint64_t>(&percpu->default_tss));
     vmwrite(VMCS_XX_HOST_GDTR_BASE, reinterpret_cast<uint64_t>(_gdt));
     vmwrite(VMCS_XX_HOST_IDTR_BASE, reinterpret_cast<uint64_t>(idt_get_readonly()));
-    vmwrite(VMCS_XX_HOST_CR0, x86_get_cr0());
-    vmwrite(VMCS_XX_HOST_CR4, x86_get_cr4());
+    vmwrite(VMCS_XX_HOST_IA32_SYSENTER_ESP, 0);
+    vmwrite(VMCS_XX_HOST_IA32_SYSENTER_EIP, 0);
     vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load));
 
     return NO_ERROR;
