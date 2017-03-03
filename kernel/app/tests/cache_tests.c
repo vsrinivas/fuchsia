@@ -50,7 +50,7 @@ static void bench_cache(size_t bufsize, uint8_t *buf)
     printf("took %" PRIu64 " nsecs to clean %zu bytes (hot)\n", t, bufsize);
 }
 
-static int cache_tests(int argc, const cmd_args *argv)
+static int cache_tests(int argc, const cmd_args *argv, uint32_t flags)
 {
     uint8_t *buf;
     buf = (uint8_t *)((argc > 1) ? argv[1].u : 0UL);

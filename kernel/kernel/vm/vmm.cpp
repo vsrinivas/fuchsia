@@ -198,7 +198,7 @@ arch_aspace_t* vmm_get_arch_aspace(vmm_aspace_t* aspace) {
     return &real_aspace->arch_aspace();
 }
 
-static int cmd_vmm(int argc, const cmd_args* argv) {
+static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
     notenoughargs:
         printf("not enough arguments\n");

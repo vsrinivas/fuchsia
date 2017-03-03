@@ -158,7 +158,7 @@ fail:
 }
 #endif
 
-static int cmd_cpu(int argc, const cmd_args *argv)
+static int cmd_cpu(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 2) {
 notenoughargs:

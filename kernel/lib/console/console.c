@@ -70,17 +70,15 @@ static cmd_block *command_list = NULL;
 extern cmd_block __start_commands[] __WEAK;
 extern cmd_block __stop_commands[] __WEAK;
 
-static int cmd_help(int argc, const cmd_args *argv);
-static int cmd_help_panic(int argc, const cmd_args *argv);
-static int cmd_echo(int argc, const cmd_args *argv);
-static int cmd_test(int argc, const cmd_args *argv);
+static int cmd_help(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_echo(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_test(int argc, const cmd_args *argv, uint32_t flags);
 #if CONSOLE_ENABLE_HISTORY
-static int cmd_history(int argc, const cmd_args *argv);
+static int cmd_history(int argc, const cmd_args *argv, uint32_t flags);
 #endif
 
 STATIC_COMMAND_START
-STATIC_COMMAND("help", "this list", &cmd_help)
-STATIC_COMMAND_MASKED("help", "this list", &cmd_help_panic, CMD_AVAIL_PANIC)
+STATIC_COMMAND_MASKED("help", "this list", &cmd_help, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND("echo", NULL, &cmd_echo)
 #if LK_DEBUGLEVEL > 1
 STATIC_COMMAND("test", "test the command processor", &cmd_test)
@@ -111,7 +109,7 @@ int console_init(void)
 }
 
 #if CONSOLE_ENABLE_HISTORY
-static int cmd_history(int argc, const cmd_args *argv)
+static int cmd_history(int argc, const cmd_args *argv, uint32_t flags)
 {
     dump_history();
     return 0;
@@ -629,7 +627,7 @@ static status_t command_loop(int (*get_line)(const char **, void *), void *get_l
             mutex_acquire(command_lock);
 
         abort_script = false;
-        lastresult = command->cmd_callback(argc, args);
+        lastresult = command->cmd_callback(argc, args, 0);
 
 #if WITH_LIB_ENV
         bool report_result;
@@ -771,12 +769,15 @@ void console_register_commands(cmd_block *block)
 }
 
 
-static int cmd_help_impl(uint8_t availability_mask)
+static int cmd_help(int argc, const cmd_args *argv, uint32_t flags)
 {
     printf("command list:\n");
 
     cmd_block *block;
     size_t i;
+
+    /* filter out commands based on if we're called at normal or panic time */
+    uint8_t availability_mask = (flags & CMD_FLAG_PANIC) ? CMD_AVAIL_PANIC : CMD_AVAIL_NORMAL;
 
     for (block = command_list; block != NULL; block = block->next) {
         const cmd *curr_cmd = block->list;
@@ -793,17 +794,7 @@ static int cmd_help_impl(uint8_t availability_mask)
     return 0;
 }
 
-static int cmd_help(int argc, const cmd_args *argv)
-{
-    return cmd_help_impl(CMD_AVAIL_NORMAL);
-}
-
-static int cmd_help_panic(int argc, const cmd_args *argv)
-{
-    return cmd_help_impl(CMD_AVAIL_PANIC);
-}
-
-static int cmd_echo(int argc, const cmd_args *argv)
+static int cmd_echo(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc > 1)
         echo = argv[1].b;
@@ -901,12 +892,12 @@ void panic_shell_start(void)
             continue;
         }
 
-        command->cmd_callback(argc, args);
+        command->cmd_callback(argc, args, CMD_FLAG_PANIC);
     }
 }
 
 #if LK_DEBUGLEVEL > 1
-static int cmd_test(int argc, const cmd_args *argv)
+static int cmd_test(int argc, const cmd_args *argv, uint32_t flags)
 {
     int i;
 

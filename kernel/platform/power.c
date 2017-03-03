@@ -47,13 +47,13 @@ __WEAK void platform_halt_cpu(void)
 
 #include <lib/console.h>
 
-static int cmd_reboot(int argc, const cmd_args *argv)
+static int cmd_reboot(int argc, const cmd_args *argv, uint32_t flags)
 {
     platform_halt(HALT_ACTION_REBOOT, HALT_REASON_SW_RESET);
     return 0;
 }
 
-static int cmd_poweroff(int argc, const cmd_args *argv)
+static int cmd_poweroff(int argc, const cmd_args *argv, uint32_t flags)
 {
     platform_halt(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
     return 0;

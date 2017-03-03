@@ -250,7 +250,7 @@ vmm_aspace_t* vaddr_to_aspace(const void* ptr) {
     }
 }
 
-static int cmd_vm(int argc, const cmd_args* argv) {
+static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
     notenoughargs:
         printf("not enough arguments\n");

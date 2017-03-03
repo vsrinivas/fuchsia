@@ -188,7 +188,7 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
     return passed == testcase->test_cnt;
 }
 
-static int run_unittests(int argc, const cmd_args* argv)
+static int run_unittests(int argc, const cmd_args* argv, uint32_t flags)
 {
     if (argc != 2) {
         usage(argv[0].str);

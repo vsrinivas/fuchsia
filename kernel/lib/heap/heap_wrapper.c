@@ -351,13 +351,13 @@ static void heap_test(void)
 
 #include <lib/console.h>
 
-static int cmd_heap(int argc, const cmd_args *argv);
+static int cmd_heap(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
-STATIC_COMMAND("heap", "heap debug commands", &cmd_heap)
+STATIC_COMMAND_MASKED("heap", "heap debug commands", &cmd_heap, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_END(heap);
 
-static int cmd_heap(int argc, const cmd_args *argv)
+static int cmd_heap(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 2) {
 notenoughargs:
@@ -365,34 +365,36 @@ notenoughargs:
 usage:
         printf("usage:\n");
         printf("\t%s info\n", argv[0].str);
-        printf("\t%s trace\n", argv[0].str);
-        printf("\t%s trim\n", argv[0].str);
-        printf("\t%s alloc <size> [alignment]\n", argv[0].str);
-        printf("\t%s realloc <ptr> <size>\n", argv[0].str);
-        printf("\t%s free <address>\n", argv[0].str);
+        if (!(flags & CMD_FLAG_PANIC)) {
+            printf("\t%s trace\n", argv[0].str);
+            printf("\t%s trim\n", argv[0].str);
+            printf("\t%s alloc <size> [alignment]\n", argv[0].str);
+            printf("\t%s realloc <ptr> <size>\n", argv[0].str);
+            printf("\t%s free <address>\n", argv[0].str);
+        }
         return -1;
     }
 
     if (strcmp(argv[1].str, "info") == 0) {
         heap_dump();
-    } else if (strcmp(argv[1].str, "test") == 0) {
+    } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "test") == 0) {
         heap_test();
-    } else if (strcmp(argv[1].str, "trace") == 0) {
+    } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "trace") == 0) {
         heap_trace = !heap_trace;
         printf("heap trace is now %s\n", heap_trace ? "on" : "off");
-    } else if (strcmp(argv[1].str, "trim") == 0) {
+    } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "trim") == 0) {
         heap_trim();
-    } else if (strcmp(argv[1].str, "alloc") == 0) {
+    } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "alloc") == 0) {
         if (argc < 3) goto notenoughargs;
 
         void *ptr = memalign((argc >= 4) ? argv[3].u : 0, argv[2].u);
         printf("memalign returns %p\n", ptr);
-    } else if (strcmp(argv[1].str, "realloc") == 0) {
+    } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "realloc") == 0) {
         if (argc < 4) goto notenoughargs;
 
         void *ptr = realloc(argv[2].p, argv[3].u);
         printf("realloc returns %p\n", ptr);
-    } else if (strcmp(argv[1].str, "free") == 0) {
+    } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "free") == 0) {
         if (argc < 2) goto notenoughargs;
 
         free(argv[2].p);

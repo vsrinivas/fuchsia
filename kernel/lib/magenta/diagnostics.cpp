@@ -273,7 +273,7 @@ static int mwd_thread(void* arg) {
     }
 }
 
-static int cmd_diagnostics(int argc, const cmd_args* argv) {
+static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
     int rc = 0;
 
     if (argc < 2) {

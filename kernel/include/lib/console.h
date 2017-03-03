@@ -24,11 +24,14 @@ typedef struct {
     bool b;
 } cmd_args;
 
-typedef int (*console_cmd)(int argc, const cmd_args *argv);
+typedef int (*console_cmd)(int argc, const cmd_args *argv, uint32_t flags);
 
 #define CMD_AVAIL_NORMAL (0x1 << 0)
 #define CMD_AVAIL_PANIC  (0x1 << 1)
 #define CMD_AVAIL_ALWAYS (CMD_AVAIL_NORMAL | CMD_AVAIL_PANIC)
+
+/* command is happening at crash time */
+#define CMD_FLAG_PANIC   (0x1 << 0)
 
 /* a block of commands to register */
 typedef struct {

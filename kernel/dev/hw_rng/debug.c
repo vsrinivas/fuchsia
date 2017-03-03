@@ -12,14 +12,14 @@
 #include <lib/console.h>
 #include <stdlib.h>
 
-static int cmd_rng32(int argc, const cmd_args *argv)
+static int cmd_rng32(int argc, const cmd_args *argv, uint32_t flags)
 {
     uint32_t val = hw_rng_get_u32();
     printf("Random val = %u (0x%08x)\n", val, val);
     return NO_ERROR;
 }
 
-static int cmd_rng(int argc, const cmd_args *argv)
+static int cmd_rng(int argc, const cmd_args *argv, uint32_t flags)
 {
     if ((argc < 2) || (argc > 3)) {
         printf("Invalid argument count\n\n"

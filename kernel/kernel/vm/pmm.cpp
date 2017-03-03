@@ -329,20 +329,22 @@ enum handler_return pmm_dump_timer(struct timer *t, lk_time_t, void *) {
     return INT_NO_RESCHEDULE;
 }
 
-static int cmd_pmm(int argc, const cmd_args* argv) {
+static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
     notenoughargs:
         printf("not enough arguments\n");
     usage:
         printf("usage:\n");
         printf("%s arenas\n", argv[0].str);
-        printf("%s alloc <count>\n", argv[0].str);
-        printf("%s alloc_range <address> <count>\n", argv[0].str);
-        printf("%s alloc_kpages <count>\n", argv[0].str);
-        printf("%s alloc_contig <count> <alignment>\n", argv[0].str);
-        printf("%s dump_alloced\n", argv[0].str);
-        printf("%s free_alloced\n", argv[0].str);
-        printf("%s free\n", argv[0].str);
+        if (!(flags & CMD_FLAG_PANIC)) {
+            printf("%s alloc <count>\n", argv[0].str);
+            printf("%s alloc_range <address> <count>\n", argv[0].str);
+            printf("%s alloc_kpages <count>\n", argv[0].str);
+            printf("%s alloc_contig <count> <alignment>\n", argv[0].str);
+            printf("%s dump_alloced\n", argv[0].str);
+            printf("%s free_alloced\n", argv[0].str);
+            printf("%s free\n", argv[0].str);
+        }
         return ERR_INTERNAL;
     }
 
@@ -352,7 +354,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
         for (auto& a : arena_list) {
             a.Dump(false);
         }
-    } else if (!strcmp(argv[1].str, "free")) {
+    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "free")) {
         static bool show_mem = false;
         static timer_t timer;
 
@@ -365,7 +367,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
             timer_cancel(&timer);
             show_mem = false;
         }
-    } else if (!strcmp(argv[1].str, "alloc")) {
+    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "alloc")) {
         if (argc < 3)
             goto notenoughargs;
 
@@ -385,11 +387,11 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
         while ((node = list_remove_head(&list))) {
             list_add_tail(&allocated, node);
         }
-    } else if (!strcmp(argv[1].str, "dump_alloced")) {
+    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "dump_alloced")) {
         vm_page_t* page;
 
         list_for_every_entry (&allocated, page, vm_page_t, free.node) { dump_page(page); }
-    } else if (!strcmp(argv[1].str, "alloc_range")) {
+    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "alloc_range")) {
         if (argc < 4)
             goto notenoughargs;
 
@@ -409,14 +411,14 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
         while ((node = list_remove_head(&list))) {
             list_add_tail(&allocated, node);
         }
-    } else if (!strcmp(argv[1].str, "alloc_kpages")) {
+    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "alloc_kpages")) {
         if (argc < 3)
             goto notenoughargs;
 
         paddr_t pa;
         void* ptr = pmm_alloc_kpages((uint)argv[2].u, nullptr, &pa);
         printf("pmm_alloc_kpages returns %p pa %#" PRIxPTR "\n", ptr, pa);
-    } else if (!strcmp(argv[1].str, "alloc_contig")) {
+    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "alloc_contig")) {
         if (argc < 4)
             goto notenoughargs;
 
@@ -433,7 +435,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
         while ((node = list_remove_head(&list))) {
             list_add_tail(&allocated, node);
         }
-    } else if (!strcmp(argv[1].str, "free_alloced")) {
+    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "free_alloced")) {
         size_t err = pmm_free(&allocated);
         printf("pmm_free returns %zu\n", err);
     } else {

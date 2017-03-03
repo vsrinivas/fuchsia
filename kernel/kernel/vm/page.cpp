@@ -37,7 +37,7 @@ void dump_page(const vm_page_t* page) {
            page_state_to_string(page->state), page->flags);
 }
 
-static int cmd_vm_page(int argc, const cmd_args* argv) {
+static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
     notenoughargs:
         printf("not enough arguments\n");

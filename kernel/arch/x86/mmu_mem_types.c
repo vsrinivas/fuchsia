@@ -254,7 +254,7 @@ static void print_pat_entries(void *_ignored)
     }
 }
 
-static int cmd_memtype(int argc, const cmd_args *argv)
+static int cmd_memtype(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 2) {
 notenoughargs:

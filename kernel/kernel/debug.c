@@ -29,10 +29,10 @@
 #if WITH_LIB_CONSOLE
 #include <lib/console.h>
 
-static int cmd_thread(int argc, const cmd_args *argv);
-static int cmd_threadstats(int argc, const cmd_args *argv);
-static int cmd_threadload(int argc, const cmd_args *argv);
-static int cmd_kill(int argc, const cmd_args *argv);
+static int cmd_thread(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_kill(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 1
@@ -44,7 +44,7 @@ STATIC_COMMAND("kill", "kill a thread", &cmd_kill)
 STATIC_COMMAND_END(kernel);
 
 #if LK_DEBUGLEVEL > 1
-static int cmd_thread(int argc, const cmd_args *argv)
+static int cmd_thread(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 2) {
         printf("not enough arguments\n");
@@ -69,7 +69,7 @@ usage:
 }
 #endif
 
-static int cmd_threadstats(int argc, const cmd_args *argv)
+static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags)
 {
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         if (!mp_is_cpu_active(i))
@@ -160,7 +160,7 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
     return INT_NO_RESCHEDULE;
 }
 
-static int cmd_threadload(int argc, const cmd_args *argv)
+static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags)
 {
     static bool showthreadload = false;
     static timer_t tltimer;
@@ -178,7 +178,7 @@ static int cmd_threadload(int argc, const cmd_args *argv)
     return 0;
 }
 
-static int cmd_kill(int argc, const cmd_args *argv)
+static int cmd_kill(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 2) {
         printf("not enough arguments\n");

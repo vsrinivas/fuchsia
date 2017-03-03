@@ -45,7 +45,7 @@ void print_version(void)
 #include <debug.h>
 #include <lib/console.h>
 
-static int cmd_version(int argc, const cmd_args *argv)
+static int cmd_version(int argc, const cmd_args *argv, uint32_t flags)
 {
     print_version();
     return 0;

@@ -774,7 +774,7 @@ static void gfx_draw_pattern_white(void)
 #if LK_DEBUGLEVEL > 1
 #include <lib/console.h>
 
-static int cmd_gfx(int argc, const cmd_args *argv);
+static int cmd_gfx(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND("gfx", "gfx commands", &cmd_gfx)
@@ -808,7 +808,7 @@ static int gfx_draw_rgb_bars(gfx_surface *surface)
     return 0;
 }
 
-static int cmd_gfx(int argc, const cmd_args *argv)
+static int cmd_gfx(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 2) {
         printf("not enough arguments:\n");

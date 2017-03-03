@@ -22,10 +22,10 @@ static constexpr unsigned int kPciDumpRowLen = 0x10u;
 
 class PcieDebugConsole {
 public:
-    static int CmdLsPci(int argc, const cmd_args *argv);
-    static int CmdPciUnplug(int argc, const cmd_args *argv);
-    static int CmdPciReset(int argc, const cmd_args *argv);
-    static int CmdPciRescan(int argc, const cmd_args *argv);
+    static int CmdLsPci(int argc, const cmd_args *argv, uint32_t flags);
+    static int CmdPciUnplug(int argc, const cmd_args *argv, uint32_t flags);
+    static int CmdPciReset(int argc, const cmd_args *argv, uint32_t flags);
+    static int CmdPciRescan(int argc, const cmd_args *argv, uint32_t flags);
 };
 
 /* Class code/Subclass code definitions taken from
@@ -580,7 +580,7 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
     return true;
 }
 
-int PcieDebugConsole::CmdLsPci(int argc, const cmd_args *argv) {
+int PcieDebugConsole::CmdLsPci(int argc, const cmd_args *argv, uint32_t flags) {
     lspci_params_t params;
     uint filter_ndx = 0;
 
@@ -691,7 +691,7 @@ int PcieDebugConsole::CmdLsPci(int argc, const cmd_args *argv) {
     return NO_ERROR;
 }
 
-int PcieDebugConsole::CmdPciUnplug(int argc, const cmd_args *argv) {
+int PcieDebugConsole::CmdPciUnplug(int argc, const cmd_args *argv, uint32_t flags) {
     bool confused = false;
     uint bus_id, dev_id, func_id;
 
@@ -732,7 +732,7 @@ int PcieDebugConsole::CmdPciUnplug(int argc, const cmd_args *argv) {
     return NO_ERROR;
 }
 
-int PcieDebugConsole::CmdPciReset(int argc, const cmd_args *argv) {
+int PcieDebugConsole::CmdPciReset(int argc, const cmd_args *argv, uint32_t flags) {
     bool confused = false;
     uint bus_id, dev_id, func_id;
 
@@ -775,7 +775,7 @@ int PcieDebugConsole::CmdPciReset(int argc, const cmd_args *argv) {
     return NO_ERROR;
 }
 
-int PcieDebugConsole::CmdPciRescan(int argc, const cmd_args *argv) {
+int PcieDebugConsole::CmdPciRescan(int argc, const cmd_args *argv, uint32_t flags) {
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;

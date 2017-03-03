@@ -23,17 +23,17 @@
 #include <lib/console.h>
 
 
-static int cmd_display_mem(int argc, const cmd_args *argv);
-static int cmd_modify_mem(int argc, const cmd_args *argv);
-static int cmd_fill_mem(int argc, const cmd_args *argv);
-static int cmd_reset(int argc, const cmd_args *argv);
-static int cmd_memtest(int argc, const cmd_args *argv);
-static int cmd_copy_mem(int argc, const cmd_args *argv);
-static int cmd_chain(int argc, const cmd_args *argv);
-static int cmd_sleep(int argc, const cmd_args *argv);
-static int cmd_crash(int argc, const cmd_args *argv);
-static int cmd_stackstomp(int argc, const cmd_args *argv);
-static int cmd_cmdline(int argc, const cmd_args *argv);
+static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_reset(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_chain(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 0
@@ -59,7 +59,7 @@ STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
 STATIC_COMMAND_END(mem);
 
-static int cmd_display_mem(int argc, const cmd_args *argv)
+static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags)
 {
     /* save the last address and len so we can continue where we left off */
     static unsigned long address;
@@ -147,7 +147,7 @@ static int cmd_display_mem(int argc, const cmd_args *argv)
     return 0;
 }
 
-static int cmd_modify_mem(int argc, const cmd_args *argv)
+static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags)
 {
     int size;
 
@@ -188,7 +188,7 @@ static int cmd_modify_mem(int argc, const cmd_args *argv)
     return 0;
 }
 
-static int cmd_fill_mem(int argc, const cmd_args *argv)
+static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags)
 {
     int size;
 
@@ -233,7 +233,7 @@ static int cmd_fill_mem(int argc, const cmd_args *argv)
     return 0;
 }
 
-static int cmd_copy_mem(int argc, const cmd_args *argv)
+static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 4) {
         printf("not enough arguments\n");
@@ -250,7 +250,7 @@ static int cmd_copy_mem(int argc, const cmd_args *argv)
     return 0;
 }
 
-static int cmd_memtest(int argc, const cmd_args *argv)
+static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 3) {
         printf("not enough arguments\n");
@@ -283,7 +283,7 @@ static int cmd_memtest(int argc, const cmd_args *argv)
     return 0;
 }
 
-static int cmd_chain(int argc, const cmd_args *argv)
+static int cmd_chain(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 2) {
         printf("not enough arguments\n");
@@ -296,7 +296,7 @@ static int cmd_chain(int argc, const cmd_args *argv)
     return 0;
 }
 
-static int cmd_sleep(int argc, const cmd_args *argv)
+static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags)
 {
     lk_time_t t = 1000; /* default to 1 second */
 
@@ -320,7 +320,7 @@ static int crash_thread(void *arg)
     return 0;
 }
 
-static int cmd_crash(int argc, const cmd_args *argv)
+static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc > 1) {
         if (!strcmp(argv[1].str, "thread")) {
@@ -342,7 +342,7 @@ static int cmd_crash(int argc, const cmd_args *argv)
     return 0;
 }
 
-static int cmd_stackstomp(int argc, const cmd_args *argv)
+static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags)
 {
     for (size_t i = 0; i < DEFAULT_STACK_SIZE * 2; i++) {
         uint8_t death[i];
@@ -357,7 +357,7 @@ static int cmd_stackstomp(int argc, const cmd_args *argv)
 }
 
 #define DEBUG_CMDLINE_MAX 1024
-static int cmd_cmdline(int argc, const cmd_args *argv)
+static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc == 1) {
         char cmdline_buf[DEBUG_CMDLINE_MAX];

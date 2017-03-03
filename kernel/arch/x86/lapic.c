@@ -346,7 +346,7 @@ enum handler_return apic_error_interrupt_handler(void) {
     panic("APIC error detected: %u\n", *ERROR_STATUS_ADDR);
 }
 
-static int cmd_apic(int argc, const cmd_args *argv)
+static int cmd_apic(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 2) {
 notenoughargs:

@@ -43,7 +43,7 @@ void VmObject::RemoveMappingLocked(VmMapping* r) TA_REQ(lock_) {
     region_list_.erase(*r);
 }
 
-static int cmd_vm_object(int argc, const cmd_args* argv) {
+static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
     notenoughargs:
         printf("not enough arguments\n");
