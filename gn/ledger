@@ -17,6 +17,10 @@
             "bootfs_path": "apps/ledger_apptests"
         },
         {
+            "binary": "ledger_benchmark_put",
+            "bootfs_path": "apps/ledger_benchmark_put"
+        },
+        {
             "binary": "configure_ledger",
             "bootfs_path": "bin/configure_ledger"
         },
