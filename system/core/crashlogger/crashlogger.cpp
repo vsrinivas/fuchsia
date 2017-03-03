@@ -300,6 +300,9 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
     printf("arch: %s\n", arch);
     backtrace(process, thread, pc, sp, fp, use_libunwind);
 
+    // TODO(dje): Print a backtrace of all other threads in the process.
+    // Need to be able to suspend/resume threads first. MG-588
+
 Fail:
     debugf(1, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
 
