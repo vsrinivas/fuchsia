@@ -30,7 +30,14 @@ group("tests") {
 }
 
 config("ledger_config") {
-  ldflags= [
+  cflags = [
+    # Remove when enabled globally by TO-99.
+    "-Wunused-lambda-capture",
+    # Remove when enabled globally by TO-100.
+    "-Wuser-defined-warnings",
+  ]
+
+  ldflags = [
     # Use a 1M stack.
     "-Wl,-z,stack-size=0x100000",
   ]

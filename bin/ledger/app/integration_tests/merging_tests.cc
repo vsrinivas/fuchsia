@@ -656,7 +656,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   // Watch for changes.
   PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
-                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                  []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot2;
   page1->GetSnapshot(snapshot2.NewRequest(), std::move(watcher_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -808,7 +808,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   // Watch for the change.
   PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
-                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                  []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot2;
   page1->GetSnapshot(snapshot2.NewRequest(), std::move(watcher_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });

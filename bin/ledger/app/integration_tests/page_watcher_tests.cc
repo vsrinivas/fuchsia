@@ -335,7 +335,7 @@ class WaitingWatcher : public PageWatcher {
 TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
-  WaitingWatcher watcher(watcher_ptr.NewRequest(), [this]() {
+  WaitingWatcher watcher(watcher_ptr.NewRequest(), []() {
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 
