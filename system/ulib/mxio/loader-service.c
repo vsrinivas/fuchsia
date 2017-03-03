@@ -7,6 +7,7 @@
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -83,33 +84,50 @@ static mx_handle_t default_load_object(void* ignored,
 
 found:
     if (fstat(fd, &s) < 0) {
-        fprintf(stderr, "dlsvc: could not stat '%s'\n", resolved_fn);
+        fprintf(stderr, "dlsvc: could not stat '%s': %d\n", resolved_fn, errno);
+        err = ERR_IO;
         goto fail;
     }
 
     if ((err = mx_vmo_create(s.st_size, 0, &vmo)) < 0) {
+        fprintf(stderr, "dlsvc: could not create %lld-byte vmo for '%s': %d\n",
+                (long long int)s.st_size, resolved_fn, err);
         goto fail;
     }
 
     size_t off = 0;
     size_t size = s.st_size;
-    ssize_t r;
     while (size > 0) {
-        size_t xfer = (size > sizeof(buffer)) ? sizeof(buffer) : size;
-        if ((r = read(fd, buffer, xfer)) < 0) {
-            fprintf(stderr, "dlsvc: read error @%zd in '%s'\n", off, resolved_fn);
-            goto fail;
-        }
-        size_t n;
-        if ((err = mx_vmo_write(vmo, buffer, off, xfer, &n)) < 0) {
-            goto fail;
-        }
-        if (n != xfer) {
+        const size_t xfer = (size > sizeof(buffer)) ? sizeof(buffer) : size;
+        ssize_t nread;
+        if ((nread = read(fd, buffer, xfer)) <= 0) {
+            if (nread < 0) {
+                fprintf(stderr, "dlsvc: read error %d @%zd in '%s'\n",
+                        errno, off, resolved_fn);
+            } else {
+                fprintf(stderr, "dlsvc: early EOF during read: "
+                        "expected %zd more bytes @%zd in '%s'\n",
+                        size, off, resolved_fn);
+            }
             err = ERR_IO;
             goto fail;
         }
-        off += xfer;
-        size -= xfer;
+        size_t nwrite;
+        if ((err = mx_vmo_write(vmo, buffer, off, nread, &nwrite)) < 0) {
+            fprintf(stderr, "dlsvc: write error %d, handle %d @%zd in '%s'\n",
+                    err, vmo, off, resolved_fn);
+            goto fail;
+        }
+        if (nwrite != (size_t)nread) {
+            fprintf(stderr,
+                    "dlsvc: mx_vmo_write size mismatch (%zd != %zd) "
+                    "handle %d @%zd in '%s'\n",
+                    nwrite, nread, vmo, off, resolved_fn);
+            err = ERR_IO;
+            goto fail;
+        }
+        off += nwrite;
+        size -= nwrite;
     }
     close(fd);
     return vmo;
