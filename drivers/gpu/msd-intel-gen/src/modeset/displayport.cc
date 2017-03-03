@@ -72,30 +72,30 @@ bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
     // Write the outgoing message to the hardware.
     DASSERT(request->size <= DpAuxMessage::kMaxTotalSize);
     for (uint32_t offset = 0; offset < request->size; offset += 4) {
-        reg_io_->Write32(registers::DDIAuxData::kOffset + offset, request->GetPackedWord(offset));
+        reg_io_->Write32(registers::DdiAuxData::kOffset + offset, request->GetPackedWord(offset));
     }
 
     // Set kSendBusyBit to initiate the transaction.
-    reg_io_->Write32(registers::DDIAuxControl::kOffset,
-                     registers::DDIAuxControl::kSendBusyBit | registers::DDIAuxControl::kFlags |
-                         (request->size << registers::DDIAuxControl::kMessageSizeShift));
+    reg_io_->Write32(registers::DdiAuxControl::kOffset,
+                     registers::DdiAuxControl::kSendBusyBit | registers::DdiAuxControl::kFlags |
+                         (request->size << registers::DdiAuxControl::kMessageSizeShift));
 
     // Poll for the reply message.
     const int kNumTries = 10000;
     for (int tries = 0; tries < kNumTries; ++tries) {
-        uint32_t status = reg_io_->Read32(registers::DDIAuxControl::kOffset);
-        if ((status & registers::DDIAuxControl::kSendBusyBit) == 0) {
+        uint32_t status = reg_io_->Read32(registers::DdiAuxControl::kOffset);
+        if ((status & registers::DdiAuxControl::kSendBusyBit) == 0) {
             // TODO(MA-150): Test for handling of timeout errors
-            if (status & registers::DDIAuxControl::kTimeoutBit)
+            if (status & registers::DdiAuxControl::kTimeoutBit)
                 return DRETF(false, "DP aux: Got timeout error\n");
-            reply->size = (status >> registers::DDIAuxControl::kMessageSizeShift) &
-                          registers::DDIAuxControl::kMessageSizeMask;
+            reply->size = (status >> registers::DdiAuxControl::kMessageSizeShift) &
+                          registers::DdiAuxControl::kMessageSizeMask;
             if (reply->size > DpAuxMessage::kMaxTotalSize)
                 return DRETF(false, "DP aux: Invalid reply size\n");
             // Read the reply message from the hardware.
             for (uint32_t offset = 0; offset < reply->size; offset += 4) {
                 reply->SetFromPackedWord(offset,
-                                         reg_io_->Read32(registers::DDIAuxData::kOffset + offset));
+                                         reg_io_->Read32(registers::DdiAuxData::kOffset + offset));
             }
             return true;
         }

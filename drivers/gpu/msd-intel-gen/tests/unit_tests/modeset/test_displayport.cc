@@ -131,24 +131,24 @@ public:
 
     void Write32(uint32_t offset, uint32_t value)
     {
-        if (offset == registers::DDIAuxControl::kOffset &&
-            (value & registers::DDIAuxControl::kSendBusyBit)) {
+        if (offset == registers::DdiAuxControl::kOffset &&
+            (value & registers::DdiAuxControl::kSendBusyBit)) {
             uint32_t other_flags = value &
-                                   ~(registers::DDIAuxControl::kSendBusyBit |
-                                     (registers::DDIAuxControl::kMessageSizeMask
-                                      << registers::DDIAuxControl::kMessageSizeShift));
-            ASSERT_EQ(other_flags, uint32_t{registers::DDIAuxControl::kFlags});
+                                   ~(registers::DdiAuxControl::kSendBusyBit |
+                                     (registers::DdiAuxControl::kMessageSizeMask
+                                      << registers::DdiAuxControl::kMessageSizeShift));
+            ASSERT_EQ(other_flags, uint32_t{registers::DdiAuxControl::kFlags});
 
             DpAuxMessage request;
             DpAuxMessage reply;
 
             // Read the request message from registers.
-            request.size = (value >> registers::DDIAuxControl::kMessageSizeShift) &
-                           registers::DDIAuxControl::kMessageSizeMask;
+            request.size = (value >> registers::DdiAuxControl::kMessageSizeShift) &
+                           registers::DdiAuxControl::kMessageSizeMask;
             assert(request.size <= DpAuxMessage::kMaxTotalSize);
             for (uint32_t offset = 0; offset < request.size; offset += 4) {
                 request.SetFromPackedWord(offset,
-                                          mmio_->Read32(registers::DDIAuxData::kOffset + offset));
+                                          mmio_->Read32(registers::DdiAuxData::kOffset + offset));
             }
             dp_aux_.SendDpAuxMsg(&request, &reply);
 
@@ -156,15 +156,15 @@ public:
             assert(reply.size <= DpAuxMessage::kMaxTotalSize);
             for (uint32_t offset = 0; offset < reply.size; offset += 4) {
                 mmio_->Write32(reply.GetPackedWord(offset),
-                               registers::DDIAuxData::kOffset + offset);
+                               registers::DdiAuxData::kOffset + offset);
             }
 
             // Update the register to mark the transaction as completed.
             // (Note that since we do this immediately, we are not
             // exercising the polling logic in the software-under-test.)
-            value &= ~registers::DDIAuxControl::kSendBusyBit;
-            value = SetBits(value, registers::DDIAuxControl::kMessageSizeShift,
-                            registers::DDIAuxControl::kMessageSizeMask, reply.size);
+            value &= ~registers::DdiAuxControl::kSendBusyBit;
+            value = SetBits(value, registers::DdiAuxControl::kMessageSizeShift,
+                            registers::DdiAuxControl::kMessageSizeMask, reply.size);
             mmio_->Write32(value, offset);
         }
     }

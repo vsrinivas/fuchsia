@@ -604,7 +604,7 @@ public:
 
 // DDI_AUX_CTL: Control register for the DisplayPort Aux channel
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
-class DDIAuxControl {
+class DdiAuxControl {
 public:
     static constexpr uint32_t kOffset = 0x64010;
 
@@ -620,7 +620,7 @@ public:
 
 // DDI_AUX_DATA: Message contents for DisplayPort Aux messages
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
-class DDIAuxData {
+class DdiAuxData {
 public:
     // There are 5 32-bit words at this offset.
     static constexpr uint32_t kOffset = 0x64014;
