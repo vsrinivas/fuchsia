@@ -28,7 +28,7 @@ ScopedTempDir::ScopedTempDir(ftl::StringView parent_path) {
     parent_path = ftl::StringView(env_var ? env_var : "/tmp");
   }
   // mkdtemp replaces "XXXXXX" so that the resulting directory path is unique.
-  directory_path_ = parent_path.ToString() + "/ledger_XXXXXX";
+  directory_path_ = parent_path.ToString() + "/temp_dir_XXXXXX";
   if (!CreateDirectory(directory_path_) || !mkdtemp(&directory_path_[0])) {
     directory_path_ = "";
   }
