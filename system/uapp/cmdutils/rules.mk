@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := cat
+MODULE := $(LOCAL_DIR)-cat
 
 MODULE_TYPE := userapp
 
@@ -16,7 +16,7 @@ MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
 
-MODULE := true
+MODULE := $(LOCAL_DIR)-true
 
 MODULE_TYPE := userapp
 
@@ -28,7 +28,7 @@ MODULE_LIBS := ulib/magenta ulib/musl
 
 include make/module.mk
 
-MODULE := false
+MODULE := $(LOCAL_DIR)-false
 
 MODULE_TYPE := userapp
 
@@ -40,7 +40,7 @@ MODULE_LIBS := ulib/magenta ulib/musl
 
 include make/module.mk
 
-MODULE := env
+MODULE := $(LOCAL_DIR)-env
 
 MODULE_TYPE := userapp
 

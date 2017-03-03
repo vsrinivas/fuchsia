@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := ps
+MODULE := $(LOCAL_DIR)-ps
 
 MODULE_TYPE := userapp
 
@@ -16,7 +16,7 @@ MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
 
-MODULE := kill
+MODULE := $(LOCAL_DIR)-kill
 
 MODULE_TYPE := userapp
 
@@ -28,7 +28,7 @@ MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
 
-MODULE := killall
+MODULE := $(LOCAL_DIR)-killall
 
 MODULE_TYPE := userapp
 
