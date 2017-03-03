@@ -5,13 +5,10 @@
 #ifndef LIB_MTL_THREADING_THREAD_H_
 #define LIB_MTL_THREADING_THREAD_H_
 
-#include <pthread.h>
-
-#include <functional>
-
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
+#include "lib/ftl/threading/thread.h"
 
 namespace mtl {
 
@@ -31,11 +28,9 @@ class Thread {
   ftl::RefPtr<ftl::TaskRunner> TaskRunner() const;
 
  private:
-  static void* Entry(void* context);
   void Main();
 
-  pthread_t thread_;
-  bool running_;
+  ftl::Thread thread_;
   ftl::RefPtr<mtl::internal::IncomingTaskQueue> task_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Thread);
