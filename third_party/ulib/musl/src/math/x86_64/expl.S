@@ -18,11 +18,11 @@ expl:
 	test %ax, %ax
 	fld1
 	js 1f
-		# if |x|>=0x1p14 or nan return 2^trunc(x)
+		## if |x|>=0x1p14 or nan return 2^trunc(x)
 	fscale
 	fstp %st(1)
 	ret
-		# if |x|<0x1p-32 return 1+x
+		## if |x|<0x1p-32 return 1+x
 1:	faddp
 	ret
 
@@ -38,7 +38,7 @@ expl:
 	fstpt 16(%rsp)
 	fstpt 32(%rsp)
 	call exp2l@PLT
-		# if 2^hi == inf return 2^hi
+		## if 2^hi == inf return 2^hi
 	fld %st(0)
 	fstpt (%rsp)
 	cmpw $0x7fff, 8(%rsp)

@@ -1036,12 +1036,12 @@ LOCAL_SRCS := \
 
 ifeq ($(ARCH),arm64)
 LOCAL_SRCS += \
-    $(LOCAL_DIR)/src/fenv/aarch64/fenv.s \
-    $(LOCAL_DIR)/src/ldso/aarch64/tlsdesc.s \
-    $(LOCAL_DIR)/src/math/aarch64/fabs.s \
-    $(LOCAL_DIR)/src/math/aarch64/fabsf.s \
-    $(LOCAL_DIR)/src/math/aarch64/sqrt.s \
-    $(LOCAL_DIR)/src/math/aarch64/sqrtf.s \
+    $(LOCAL_DIR)/src/fenv/aarch64/fenv.S \
+    $(LOCAL_DIR)/src/ldso/aarch64/tlsdesc.S \
+    $(LOCAL_DIR)/src/math/aarch64/fabs.S \
+    $(LOCAL_DIR)/src/math/aarch64/fabsf.S \
+    $(LOCAL_DIR)/src/math/aarch64/sqrt.S \
+    $(LOCAL_DIR)/src/math/aarch64/sqrtf.S \
     $(LOCAL_DIR)/src/math/ceill.c \
     $(LOCAL_DIR)/src/math/fabsl.c \
     $(LOCAL_DIR)/src/math/floorl.c \
@@ -1056,10 +1056,10 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/math/rintl.c \
     $(LOCAL_DIR)/src/math/sqrtl.c \
     $(LOCAL_DIR)/src/math/truncl.c \
-    $(LOCAL_DIR)/src/setjmp/aarch64/longjmp.s \
-    $(LOCAL_DIR)/src/setjmp/aarch64/setjmp.s \
-    $(LOCAL_DIR)/src/signal/aarch64/restore.s \
-    $(LOCAL_DIR)/src/signal/aarch64/sigsetjmp.s \
+    $(LOCAL_DIR)/src/setjmp/aarch64/longjmp.S \
+    $(LOCAL_DIR)/src/setjmp/aarch64/setjmp.S \
+    $(LOCAL_DIR)/src/signal/aarch64/restore.S \
+    $(LOCAL_DIR)/src/signal/aarch64/sigsetjmp.S \
     $(LOCAL_DIR)/third_party/math/acosl.c \
     $(LOCAL_DIR)/third_party/math/asinl.c \
     $(LOCAL_DIR)/third_party/math/atan2l.c \
@@ -1074,42 +1074,42 @@ LOCAL_SRCS += \
 
 else ifeq ($(SUBARCH),x86-64)
 LOCAL_SRCS += \
-    $(LOCAL_DIR)/src/fenv/x86_64/fenv.s \
-    $(LOCAL_DIR)/src/ldso/x86_64/tlsdesc.s \
-    $(LOCAL_DIR)/src/math/x86_64/__invtrigl.s \
-    $(LOCAL_DIR)/src/math/x86_64/acosl.s \
-    $(LOCAL_DIR)/src/math/x86_64/asinl.s \
-    $(LOCAL_DIR)/src/math/x86_64/atan2l.s \
-    $(LOCAL_DIR)/src/math/x86_64/atanl.s \
-    $(LOCAL_DIR)/src/math/x86_64/ceill.s \
-    $(LOCAL_DIR)/src/math/x86_64/exp2l.s \
-    $(LOCAL_DIR)/src/math/x86_64/expl.s \
-    $(LOCAL_DIR)/src/math/x86_64/expm1l.s \
-    $(LOCAL_DIR)/src/math/x86_64/fabs.s \
-    $(LOCAL_DIR)/src/math/x86_64/fabsf.s \
-    $(LOCAL_DIR)/src/math/x86_64/fabsl.s \
-    $(LOCAL_DIR)/src/math/x86_64/floorl.s \
-    $(LOCAL_DIR)/src/math/x86_64/fmodl.s \
-    $(LOCAL_DIR)/src/math/x86_64/llrint.s \
-    $(LOCAL_DIR)/src/math/x86_64/llrintf.s \
-    $(LOCAL_DIR)/src/math/x86_64/llrintl.s \
-    $(LOCAL_DIR)/src/math/x86_64/log10l.s \
-    $(LOCAL_DIR)/src/math/x86_64/log1pl.s \
-    $(LOCAL_DIR)/src/math/x86_64/log2l.s \
-    $(LOCAL_DIR)/src/math/x86_64/logl.s \
-    $(LOCAL_DIR)/src/math/x86_64/lrint.s \
-    $(LOCAL_DIR)/src/math/x86_64/lrintf.s \
-    $(LOCAL_DIR)/src/math/x86_64/lrintl.s \
-    $(LOCAL_DIR)/src/math/x86_64/remainderl.s \
-    $(LOCAL_DIR)/src/math/x86_64/rintl.s \
-    $(LOCAL_DIR)/src/math/x86_64/sqrt.s \
-    $(LOCAL_DIR)/src/math/x86_64/sqrtf.s \
-    $(LOCAL_DIR)/src/math/x86_64/sqrtl.s \
-    $(LOCAL_DIR)/src/math/x86_64/truncl.s \
-    $(LOCAL_DIR)/src/signal/x86_64/restore.s \
-    $(LOCAL_DIR)/src/signal/x86_64/sigsetjmp.s \
-    $(LOCAL_DIR)/third_party/arch/x86_64/longjmp.s \
-    $(LOCAL_DIR)/third_party/arch/x86_64/setjmp.s \
+    $(LOCAL_DIR)/src/fenv/x86_64/fenv.S \
+    $(LOCAL_DIR)/src/ldso/x86_64/tlsdesc.S \
+    $(LOCAL_DIR)/src/math/x86_64/__invtrigl.S \
+    $(LOCAL_DIR)/src/math/x86_64/acosl.S \
+    $(LOCAL_DIR)/src/math/x86_64/asinl.S \
+    $(LOCAL_DIR)/src/math/x86_64/atan2l.S \
+    $(LOCAL_DIR)/src/math/x86_64/atanl.S \
+    $(LOCAL_DIR)/src/math/x86_64/ceill.S \
+    $(LOCAL_DIR)/src/math/x86_64/exp2l.S \
+    $(LOCAL_DIR)/src/math/x86_64/expl.S \
+    $(LOCAL_DIR)/src/math/x86_64/expm1l.S \
+    $(LOCAL_DIR)/src/math/x86_64/fabs.S \
+    $(LOCAL_DIR)/src/math/x86_64/fabsf.S \
+    $(LOCAL_DIR)/src/math/x86_64/fabsl.S \
+    $(LOCAL_DIR)/src/math/x86_64/floorl.S \
+    $(LOCAL_DIR)/src/math/x86_64/fmodl.S \
+    $(LOCAL_DIR)/src/math/x86_64/llrint.S \
+    $(LOCAL_DIR)/src/math/x86_64/llrintf.S \
+    $(LOCAL_DIR)/src/math/x86_64/llrintl.S \
+    $(LOCAL_DIR)/src/math/x86_64/log10l.S \
+    $(LOCAL_DIR)/src/math/x86_64/log1pl.S \
+    $(LOCAL_DIR)/src/math/x86_64/log2l.S \
+    $(LOCAL_DIR)/src/math/x86_64/logl.S \
+    $(LOCAL_DIR)/src/math/x86_64/lrint.S \
+    $(LOCAL_DIR)/src/math/x86_64/lrintf.S \
+    $(LOCAL_DIR)/src/math/x86_64/lrintl.S \
+    $(LOCAL_DIR)/src/math/x86_64/remainderl.S \
+    $(LOCAL_DIR)/src/math/x86_64/rintl.S \
+    $(LOCAL_DIR)/src/math/x86_64/sqrt.S \
+    $(LOCAL_DIR)/src/math/x86_64/sqrtf.S \
+    $(LOCAL_DIR)/src/math/x86_64/sqrtl.S \
+    $(LOCAL_DIR)/src/math/x86_64/truncl.S \
+    $(LOCAL_DIR)/src/signal/x86_64/restore.S \
+    $(LOCAL_DIR)/src/signal/x86_64/sigsetjmp.S \
+    $(LOCAL_DIR)/third_party/arch/x86_64/longjmp.S \
+    $(LOCAL_DIR)/third_party/arch/x86_64/setjmp.S \
 
 else
 error Unsupported architecture for musl build!

@@ -78,9 +78,9 @@ LOCAL_SRCS += \
 
 else ifeq ($(SUBARCH),x86-64)
 LOCAL_SRCS += \
-    $(GET_LOCAL_DIR)/x86_64/memcpy.s \
-    $(GET_LOCAL_DIR)/x86_64/memmove.s \
-    $(GET_LOCAL_DIR)/x86_64/memset.s \
+    $(GET_LOCAL_DIR)/x86_64/memcpy.S \
+    $(GET_LOCAL_DIR)/x86_64/memmove.S \
+    $(GET_LOCAL_DIR)/x86_64/memset.S \
 
 else
 error Unsupported architecture for musl build!
