@@ -8,11 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/hexdump.c \
+MODULE_SRCS += $(LOCAL_DIR)/hexdump.c
 
-MODULE_LIBS += \
-    ulib/musl \
-    ulib/magenta
+MODULE_LIBS += ulib/musl
 
 include make/module.mk
