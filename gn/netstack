@@ -8,18 +8,6 @@
     ],
     "binaries": [
         {
-            "binary": "async_client",
-            "bootfs_path": "test/netstack/async_client"
-        },
-        {
-            "binary": "async_https",
-            "bootfs_path": "test/netstack/async_https"
-        },
-        {
-            "binary": "epolltest",
-            "bootfs_path": "test/netstack/epolltest"
-        },
-        {
             "binary": "nc",
             "bootfs_path": "bin/nc"
         },
@@ -30,18 +18,6 @@
         {
             "binary": "netstack_debug",
             "bootfs_path": "bin/netstack_debug"
-        },
-        {
-            "binary": "polltest",
-            "bootfs_path": "test/netstack/polltest"
-        },
-        {
-            "binary": "selecttest",
-            "bootfs_path": "test/netstack/selecttest"
-        },
-        {
-            "binary": "sockettest",
-            "bootfs_path": "test/netstack/sockettest"
         }
     ]
 }
