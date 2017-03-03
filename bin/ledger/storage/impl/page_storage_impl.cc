@@ -15,6 +15,7 @@
 #include <iterator>
 #include <map>
 
+#include "apps/ledger/src/callback/asynchronous_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/btree/btree_utils.h"
