@@ -196,8 +196,12 @@ PortObserver* PortDispatcherV2::SnapCopyLocked(PortPacket* port_packet, mx_port_
         *packet = port_packet->packet;
     if (port_packet->type() == MX_PKT_TYPE_SIGNAL_REP ||
         port_packet->type() == MX_PKT_TYPE_SIGNAL_ONE) {
-        port_packet->packet.signal.count = 0u;
-        return port_packet->observer;
+        if (packet)
+            packet->signal.count = 1u;
+        // Requeue the port_packet until the count reaches zero, then it is safe to delete it.
+        if (--port_packet->packet.signal.count == 0u)
+            return port_packet->observer;
+        packets_.push_back(port_packet);
     }
     return nullptr;
 }

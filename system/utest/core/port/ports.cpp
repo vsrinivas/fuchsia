@@ -288,6 +288,7 @@ static bool async_wait_event_test_repeat(void) {
             count[3] += 1;
         } else {
             ASSERT_EQ(out.type, MX_PKT_TYPE_SIGNAL_REP, "");
+            ASSERT_EQ(out.signal.count, 1u, "");
             switch (out.signal.trigger) {
             case MX_EVENT_SIGNALED: count[0] += out.signal.count; break;
             case MX_USER_SIGNAL_2: count[1] += out.signal.count; break;
