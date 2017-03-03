@@ -4,11 +4,21 @@
 
 group("tracing") {
   deps = [
+    "//apps/tracing/lib/measure",
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace_converters",
     "//apps/tracing/services",
     "//apps/tracing/src/ktrace_provider",
     "//apps/tracing/src/trace",
     "//apps/tracing/src/trace_manager",
+  ]
+}
+
+executable("trace_tests") {
+  testonly = true
+
+  deps = [
+    "//apps/tracing/lib/measure:unittests",
+    "//apps/tracing/lib/trace:unittests",
   ]
 }

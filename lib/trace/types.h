@@ -122,6 +122,12 @@ struct ProcessThread {
   bool operator!=(const ProcessThread& other) const {
     return !(*this == other);
   }
+  bool operator<(const ProcessThread& other) const {
+    if (process_koid != other.process_koid) {
+      return process_koid < other.process_koid;
+    }
+    return thread_koid < other.thread_koid;
+  }
 
   mx_koid_t process_koid;
   mx_koid_t thread_koid;

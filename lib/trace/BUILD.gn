@@ -120,7 +120,7 @@ source_set("internal_fields") {
   ]
 }
 
-executable("trace_tests") {
+source_set("unittests") {
   testonly = true
 
   sources = [
