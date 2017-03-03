@@ -10,12 +10,11 @@
 
 /* used to call into PSCI firmware (Power State Coordination Firmware) */
 FUNCTION(psci_smc_call)
-#if PSCI_USE_HVC
-    hvc     #0
-#else
     smc     #0
-#endif
+    ret
+
+FUNCTION(psci_hvc_call)
+    hvc     #0
     ret
 
 .ltorg
-

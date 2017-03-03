@@ -8,3 +8,7 @@ list    cpu-map                                 2
 list    cpu-map.clusters                        100
 string  cpu-map.clusters.name                   102
 uint8   cpu-map.clusters.cpu-count              103
+
+list    kernel-drivers.arm-psci                 1000
+boolean kernel-drivers.arm-psci.use-smc         1001
+boolean kernel-drivers.arm-psci.use-hvc         1002

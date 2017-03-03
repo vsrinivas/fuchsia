@@ -14,4 +14,7 @@ cpu-map = {
 }
 
 kernel-drivers = {
+    arm-psci = {
+        use-smc = true
+    }
 }

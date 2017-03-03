@@ -34,35 +34,37 @@
             to be revisited
 */
 
-extern uint64_t psci_smc_call(ulong arg0, ulong arg1, ulong arg2, ulong arg3);
+typedef uint64_t (*psci_call_proc)(ulong arg0, ulong arg1, ulong arg2, ulong arg3);
+
+extern psci_call_proc do_psci_call;
 
 static inline uint32_t psci_get_version(void) {
 
-    return (uint32_t)psci_smc_call(PSCI64_PSCI_VERSION,0,0,0);
+    return (uint32_t)do_psci_call(PSCI64_PSCI_VERSION,0,0,0);
 }
 
 /* powers down the calling cpu - only returns if call fails */
 static inline uint32_t psci_cpu_off(void) {
 
-    return (uint32_t)psci_smc_call(PSCI64_CPU_OFF,0,0,0);
+    return (uint32_t)do_psci_call(PSCI64_CPU_OFF,0,0,0);
 }
 
 static inline uint32_t psci_cpu_on(uint64_t cluster, uint64_t cpuid, paddr_t entry) {
 
-    return (uint32_t)psci_smc_call(PSCI64_CPU_ON, ARM64_MPID(cluster, cpuid), entry, 0);
+    return (uint32_t)do_psci_call(PSCI64_CPU_ON, ARM64_MPID(cluster, cpuid), entry, 0);
 }
 
 static inline uint32_t psci_get_affinity_info(uint64_t cluster, uint64_t cpuid) {
 
-    return (uint32_t)psci_smc_call(PSCI64_AFFINITY_INFO, ARM64_MPID(cluster, cpuid), 0, 0);
+    return (uint32_t)do_psci_call(PSCI64_AFFINITY_INFO, ARM64_MPID(cluster, cpuid), 0, 0);
 }
 
 static inline void psci_system_off(void) {
 
-    psci_smc_call(PSCI64_SYSTEM_OFF, 0, 0, 0);
+    do_psci_call(PSCI64_SYSTEM_OFF, 0, 0, 0);
 }
 
 static inline void psci_system_reset(void) {
 
-    psci_smc_call(PSCI64_SYSTEM_RESET, 0, 0, 0);
+    do_psci_call(PSCI64_SYSTEM_RESET, 0, 0, 0);
 }
