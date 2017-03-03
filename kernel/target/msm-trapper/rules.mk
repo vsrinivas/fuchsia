@@ -6,7 +6,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-PLATFORM := msm8998
+PLATFORM := generic-arm
 
 DEVICE_TREE := $(GET_LOCAL_DIR)/device-tree.dtb
 
