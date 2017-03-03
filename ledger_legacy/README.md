@@ -21,6 +21,7 @@ For development workflow, see [Developer Workflow](docs/workflow.md).
 
 ## Contents
 
+ - [benchmark](benchmark) - benchmarks
  - [docs](docs) - documentation
  - [services](services) - fidl API
  - [src](src) - implementation

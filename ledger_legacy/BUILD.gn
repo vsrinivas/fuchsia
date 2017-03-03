@@ -4,6 +4,7 @@
 
 group("ledger") {
   deps = [
+    "//apps/ledger/benchmark",
     "//apps/ledger/services",
     "//apps/ledger/src",
   ]

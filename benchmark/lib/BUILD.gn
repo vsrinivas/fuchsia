@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("lib") {
+  sources = [
+    "convert.cc",
+    "convert.h",
+    "get_ledger.cc",
+    "get_ledger.h",
+    "logging.cc",
+    "logging.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/services/public",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/ledger/services/internal",
+    "//lib/mtl/",
+  ]
+}
