@@ -9,6 +9,6 @@ receive services to / from other applications, send / receive messages and give
 suggestions to the user.
 
 ## See also:
-[Agent](https://fuchsia.googlesource.com/modular/+/master/services/agent/agent.fidl)
-[AgentContext](https://fuchsia.googlesource.com/modular/+/master/services/agent/agent_context.fidl)
-[AgentController](https://fuchsia.googlesource.com/modular/+/master/services/agent/agent_controller/agent_controller.fidl)
+[Agent](../services/agent/agent.fidl)
+[AgentContext](../services/agent/agent_context.fidl)
+[AgentController](../services/agent/agent_controller/agent_controller.fidl)

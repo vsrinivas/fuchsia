@@ -11,8 +11,8 @@ decides to terminate itself. A module can start other modules, create,
 send / receive messages and call FIDL interfaces.
 
 ## See also:
-[Module](https://fuchsia.googlesource.com/modular/+/master/services/story/module.fidl)
-[Story](https://fuchsia.googlesource.com/modular/+/master/services/story/story.fidl)
-[ModuleController](https://fuchsia.googlesource.com/modular/+/master/services/story/module_controller.fidl)
-[Link](https://fuchsia.googlesource.com/modular/+/master/services/story/link.fidl)
-[MessageQueue](https://fuchsia.googlesource.com/modular/+/master/services/component/message_queue.fidl)
+[Module](../services/story/module.fidl)
+[Story](../services/story/story.fidl)
+[ModuleController](../services/story/module_controller.fidl)
+[Link](../services/story/link.fidl)
+[MessageQueue](../services/component/message_queue.fidl)
