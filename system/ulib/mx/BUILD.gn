@@ -9,9 +9,9 @@ config("mx_config") {
 static_library("mx") {
   # Don't forget to update rules.mk as well for the Magenta build.
   sources = [
-    "channel.cc",
-    "event.cc",
-    "eventpair.cc",
+    "channel.cpp",
+    "event.cpp",
+    "eventpair.cpp",
     "include/mx/channel.h",
     "include/mx/event.h",
     "include/mx/eventpair.h",
@@ -29,14 +29,14 @@ static_library("mx") {
     "include/mx/vmar.h",
     "include/mx/vmo.h",
     "include/mx/waitset.h",
-    "job.cc",
-    "log.cc",
-    "port.cc",
-    "process.cc",
-    "socket.cc",
-    "thread.cc",
-    "vmo.cc",
-    "waitset.cc",
+    "job.cpp",
+    "log.cpp",
+    "port.cpp",
+    "process.cpp",
+    "socket.cpp",
+    "thread.cpp",
+    "vmo.cpp",
+    "waitset.cpp",
   ]
 
   public_configs = [ ":mx_config" ]

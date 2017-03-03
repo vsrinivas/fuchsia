@@ -10,18 +10,18 @@ MODULE_TYPE := userlib
 
 # Don't forget to update BUILD.gn as well for the Fuchsia build.
 MODULE_SRCS += \
-    $(LOCAL_DIR)/channel.cc \
-    $(LOCAL_DIR)/event.cc \
-    $(LOCAL_DIR)/eventpair.cc \
-    $(LOCAL_DIR)/job.cc \
-    $(LOCAL_DIR)/log.cc \
-    $(LOCAL_DIR)/port.cc \
-    $(LOCAL_DIR)/process.cc \
-    $(LOCAL_DIR)/socket.cc \
-    $(LOCAL_DIR)/thread.cc \
-    $(LOCAL_DIR)/vmar.cc \
-    $(LOCAL_DIR)/vmo.cc \
-    $(LOCAL_DIR)/waitset.cc \
+    $(LOCAL_DIR)/channel.cpp \
+    $(LOCAL_DIR)/event.cpp \
+    $(LOCAL_DIR)/eventpair.cpp \
+    $(LOCAL_DIR)/job.cpp \
+    $(LOCAL_DIR)/log.cpp \
+    $(LOCAL_DIR)/port.cpp \
+    $(LOCAL_DIR)/process.cpp \
+    $(LOCAL_DIR)/socket.cpp \
+    $(LOCAL_DIR)/thread.cpp \
+    $(LOCAL_DIR)/vmar.cpp \
+    $(LOCAL_DIR)/vmo.cpp \
+    $(LOCAL_DIR)/waitset.cpp \
 
 MODULE_SO_NAME := libmx
 
