@@ -9,12 +9,13 @@
 
 #include <arch/ops.h>
 #include <lib/ktrace.h>
+#include <mxtl/atomic.h>
 
 // The first 1K koids are reserved.
-static mx_koid_t global_koid = 1024ULL;
+static mxtl::atomic<mx_koid_t> global_koid(1024ULL);
 
 mx_koid_t Dispatcher::GenerateKernelObjectId() {
-    return atomic_add_u64(&global_koid, 1ULL);
+    return global_koid.fetch_add(1ULL);
 }
 
 Dispatcher::Dispatcher()
@@ -29,12 +30,12 @@ Dispatcher::~Dispatcher() {
 }
 
 void Dispatcher::add_handle() {
-    atomic_add_relaxed(&handle_count_, 1);
+    handle_count_.fetch_add(1, mxtl::memory_order_relaxed);
 }
 
 void Dispatcher::remove_handle() {
-    if (atomic_add_release(&handle_count_, -1) == 1) {
-        atomic_fence_acquire();
+    if (handle_count_.fetch_sub(1, mxtl::memory_order_release) == 1) {
+        mxtl::atomic_thread_fence(mxtl::memory_order_acquire);
         on_zero_handles();
     }
 }

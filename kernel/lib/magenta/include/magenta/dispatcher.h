@@ -15,6 +15,7 @@
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
 
+#include <mxtl/atomic.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
@@ -90,7 +91,7 @@ protected:
 
 private:
     const mx_koid_t koid_;
-    int handle_count_;
+    mxtl::atomic<int> handle_count_;
 };
 
 // Checks if a RefPtr<Dispatcher> points to a dispatcher of a given dispatcher subclass T and, if
