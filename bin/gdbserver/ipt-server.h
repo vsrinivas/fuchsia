@@ -34,7 +34,7 @@ constexpr uint64_t kDefaultCtlConfig = (
 struct PerfConfig {
   PerfConfig()
     : mode(kDefaultMode),
-      num_cpus(mx_num_cpus()),
+      num_cpus(mx_system_get_num_cpus()),
       max_threads(kDefaultMaxThreads),
       num_buffers(kDefaultNumBuffers),
       buffer_order(kDefaultBufferOrder),
@@ -43,7 +43,7 @@ struct PerfConfig {
     { }
   // One of IPT_MODE_CPUS, IPT_MODE_THREADS.
   uint32_t mode;
-  // The number of cpus on this system, as reported by mx_num_cpus().
+  // The number of cpus on this system, as reported by mx_system_get_num_cpus().
   uint32_t num_cpus;
   // When tracing threads, the max number of threads we can trace.
   uint32_t max_threads;
