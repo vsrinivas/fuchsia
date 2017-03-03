@@ -16,7 +16,7 @@ ifneq (,$(EXTRA_BUILDRULES))
 endif
 
 # enable/disable the size output based on the ENABLE_BUILD_LISTFILES switch
-ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
+ifeq ($(ENABLE_BUILD_LISTFILES),true)
 SIZECMD:=$(SIZE)
 else
 SIZECMD:=true

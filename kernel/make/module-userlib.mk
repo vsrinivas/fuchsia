@@ -51,7 +51,7 @@ $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODU
 EXTRA_IDFILES += $(MODULE_LIBNAME).so.id
 
 # build list and debugging files if asked to
-ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
+ifeq ($(ENABLE_BUILD_LISTFILES),true)
 EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so.lst
 EXTRA_BUILDDEPS += $(MODULE_LIBNAME).so.sym
 endif
@@ -138,6 +138,8 @@ MODULE_TEMP_NAME := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so.abi)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
+$(call sysroot-file,$(MODULE_TEMP_NAME),[$(MODULE)])
+
 # Install debug info for exported libraries for debuggers to find.
 # These files live on the development host, not the target.
 # There's no point in saving separate debug info here (at least not yet),
@@ -146,6 +148,7 @@ MODULE_TEMP_NAME := $(BUILDDIR)/sysroot/debug-info/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
+$(call sysroot-file,$(MODULE_TEMP_NAME),[$(MODULE)])
 endif
 endif
 
@@ -155,6 +158,7 @@ MODULE_TEMP_NAME := $(BUILDDIR)/sysroot/lib/lib$(MODULE_NAME).a
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).a)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
+$(call sysroot-file,$(MODULE_TEMP_NAME),[$(MODULE)])
 endif
 
 # only install headers for exported libraries
@@ -165,18 +169,26 @@ ifneq ($(MODULE_EXPORT),)
 MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include
 
 # locate headers from module source public include dir
-MODULE_PUBLIC_HEADERS := $(shell test -d $(MODULE_SRCDIR)/include && find $(MODULE_SRCDIR)/include -name \*\.h -o -name \*\.inc)
-MODULE_PUBLIC_HEADERS := $(patsubst $(MODULE_SRCDIR)/include/%,%,$(MODULE_PUBLIC_HEADERS))
+MODULE_PUBLIC_HEADERS :=\
+$(shell test -d $(MODULE_SRCDIR)/include &&\
+  find $(MODULE_SRCDIR)/include -name \*\.h -o -name \*\.inc)
 
-# translate them to the final destination
-MODULE_PUBLIC_HEADERS := $(patsubst %,$(MODULE_INSTALL_HEADERS)/%,$(MODULE_PUBLIC_HEADERS))
+# translate them to the destination in sysroot
+MODULE_SYSROOT_HEADERS :=\
+$(patsubst $(MODULE_SRCDIR)/include/%,$(MODULE_INSTALL_HEADERS)/%,$(MODULE_PUBLIC_HEADERS))
 
 # generate rules to copy them
 $(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.h,$(MODULE_SRCDIR)/include/%.h)
 $(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.inc,$(MODULE_SRCDIR)/include/%.inc)
 
-SYSROOT_DEPS += $(MODULE_PUBLIC_HEADERS)
-GENERATED += $(MODULE_PUBLIC_HEADERS)
+ifeq ($(ENABLE_BUILD_SYSDEPS),true)
+$(call sysroot-module,$(MODULE))
+$(foreach hdr,$(MODULE_PUBLIC_HEADERS),\
+	$(call sysroot-file,$(patsubst $(MODULE_SRCDIR)/include/%,$(MODULE_INSTALL_HEADERS)/%,$(hdr)),$(hdr)))
+endif
+
+SYSROOT_DEPS += $(MODULE_SYSROOT_HEADERS)
+GENERATED += $(MODULE_SYSROOT_HEADERS)
 endif
 
 endif # if MODULE_TYPE == userlib

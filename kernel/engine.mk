@@ -20,6 +20,10 @@ BUILDROOT ?= .
 DEBUG ?= 2
 ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
+ENABLE_BUILD_SYSDEPS ?= false
+ENABLE_BUILD_LISTFILES := $(call TOBOOL,$(ENABLE_BUILD_LISTFILES))
+ENABLE_BUILD_SYSROOT := $(call TOBOOL,$(ENABLE_BUILD_SYSROOT))
+ENABLE_BUILD_SYSDEPS := $(call TOBOOL,$(ENABLE_BUILD_SYSDEPS))
 USE_CLANG ?= false
 USE_LLD ?= false
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
@@ -122,6 +126,25 @@ GLOBAL_ASMFLAGS := -DASSEMBLY
 GLOBAL_LDFLAGS := -nostdlib $(addprefix -L,$(LKINC))
 GLOBAL_MODULE_LDFLAGS :=
 
+# Mechanism to generate exported dependency info for sysroot
+# $(call sysroot-module,MODULE-IN-SYSROOT)
+# $(call sysroot-file,FILE-IN-SYSROOT,DEPS)
+# $(call sysroot-header,PATTERN-IN-SYSROOT,PATTERN-IN-SOURCE)
+#
+SYSROOT_MODULES :=
+SYSROOT_EXPORTS :=
+ifeq ($(ENABLE_BUILD_SYSDEPS),true)
+sysroot-module = $(eval SYSROOT_MODULES += $(1))
+sysroot-file = $(eval SYSROOT_EXPORTS += $(1))$(eval SYSROOT_$(strip $(1))_DEPS := $(2))
+sysroot-module-odeps = $(eval MODULE_$(strip $(1))_ODEPS := $(sort $(2)))
+sysroot-module-mdeps = $(eval MODULE_$(strip $(1))_MDEPS := $(sort $(2)))
+else
+sysroot-module =
+sysroot-file =
+sysroot-module-odeps =
+sysroot-module-mdeps =
+endif
+
 # Kernel compile flags
 KERNEL_INCLUDES := $(BUILDDIR) $(addsuffix /include,$(LKINC))
 KERNEL_COMPILEFLAGS := -fno-pic -ffreestanding -include $(KERNEL_CONFIG_HEADER)
@@ -202,7 +225,7 @@ HOST_ASMFLAGS :=
 # top level rule
 all:: $(OUTLKBIN) $(OUTLKELF)-gdb.py
 
-ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
+ifeq ($(ENABLE_BUILD_LISTFILES),true)
 all:: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
 endif
 
@@ -345,17 +368,22 @@ EXTRA_BUILDDEPS += $(BUILDDIR)/ids.txt
 GENERATED += $(BUILDDIR)/ids.txt
 endif
 
-ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
+ifeq ($(ENABLE_BUILD_SYSROOT),true)
 # identify global headers to copy to the sysroot
 GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc)
-GLOBAL_HEADERS := $(patsubst system/public/%,$(BUILDDIR)/sysroot/include/%,$(GLOBAL_HEADERS))
+SYSROOT_HEADERS := $(patsubst system/public/%,$(BUILDDIR)/sysroot/include/%,$(GLOBAL_HEADERS))
 
 # generate rule to copy them
 $(call copy-dst-src,$(BUILDDIR)/sysroot/include/%.h,system/public/%.h)
 $(call copy-dst-src,$(BUILDDIR)/sysroot/include/%.inc,system/public/%.inc)
 
-SYSROOT_DEPS += $(GLOBAL_HEADERS)
-GENERATED += $(GLOBAL_HEADERS)
+ifeq ($(ENABLE_BUILD_SYSDEPS),true)
+$(foreach hdr,$(GLOBAL_HEADERS),\
+	$(call sysroot-file,$(patsubst system/public/%,$(BUILDDIR)/sysroot/include/%,$(hdr)),$(hdr)))
+endif
+
+SYSROOT_DEPS += $(SYSROOT_HEADERS)
+GENERATED += $(SYSROOT_HEADERS)
 
 # copy crt*.o files to the sysroot
 # crt1.o is temporary as we'll stop supporting fully static linking
@@ -365,6 +393,9 @@ SYSROOT_SCRT1 := $(BUILDDIR)/sysroot/lib/Scrt1.o
 $(call copy-dst-src,$(SYSROOT_SCRT1),$(USER_CRT1_OBJ))
 SYSROOT_DEPS += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
 GENERATED += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
+
+$(call sysroot-file,$(SYSROOT_CRT1),[third_party/ulib/musl])
+$(call sysroot-file,$(SYSROOT_SCRT1),[third_party/ulib/musl])
 
 # generate empty compatibility libs
 $(BUILDDIR)/sysroot/lib/libm.so: third_party/ulib/musl/lib.ld
@@ -377,6 +408,10 @@ $(BUILDDIR)/sysroot/lib/libpthread.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
 	$(NOECHO)cp $< $@
 
+$(call sysroot-file,$(BUILDDIR)/sysroot/lib/libm.so,[third_party/ulib/musl])
+$(call sysroot-file,$(BUILDDIR)/sysroot/lib/libdl.so,[third_party/ulib/musl])
+$(call sysroot-file,$(BUILDDIR)/sysroot/lib/libpthread.so,[third_party/ulib/musl])
+
 SYSROOT_DEPS += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
 GENERATED += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
 
@@ -385,6 +420,9 @@ $(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP): FORCE
 	@$(MKDIR)
 	$(NOECHO)rm -f $@
 	$(NOECHO)ln -s libc.so $@
+
+$(call sysroot-file,$(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP),[third_party/ulib/musl])
+
 SYSROOT_DEPS += $(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP)
 GENERATED += $(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP)
 endif
@@ -555,6 +593,33 @@ USER_DEFINES += USER_ASMFLAGS=\"$(subst $(SPACE),_,$(USER_ASMFLAGS))\"
 # This needs to be after CC et al are set above.
 ifeq ($(ARCH),x86)
 include bootloader/build.mk
+endif
+
+# Generate sysroot exported dependencies
+ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSDEPS)),true)
+#$(info SYSROOT_MODULES $(SYSROOT_MODULES))
+
+# recursively expand deps
+sys-expand = $(m) $(foreach m,$(1),$(call sys-expand,$(MODULE_$(m)_MDEPS)))
+SYSROOT_MODULES += $(foreach m,$(SYSROOT_MODULES),$(call sys-expand,$(m)))
+
+# filter out duplicates
+SYSROOT_MODULES := $(sort $(SYSROOT_MODULES))
+
+gen-sys-mdep = \n[$(1)]: $(foreach m,$(MODULE_$(m)_MDEPS),[$(m)]) $(patsubst ./%,%,$(MODULE_$(m)_ODEPS))
+gen-sys-mdeps = $(foreach m,$(SYSROOT_MODULES),$(call gen-sys-mdep,$(m)))
+
+gen-sys-edep = \n$(patsubst ./%,%,$(e)): $(SYSROOT_$(e)_DEPS)
+gen-sys-edeps = $(foreach e,$(SYSROOT_EXPORTS),$(call gen-sys-edep,$(e)))
+
+$(BUILDDIR)/deps.sysroot: FORCE
+	@$(MKDIR)
+	@echo generating $@
+	@printf "$(call gen-sys-edeps)" > $@
+	@printf "$(call gen-sys-mdeps)" >> $@
+
+EXTRA_BUILDDEPS += $(BUILDDIR)/deps.sysroot
+GENERATED += $(BUILDDIR)/deps.sysroot
 endif
 
 # Regenerate this every time, but if it comes out identical then

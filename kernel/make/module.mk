@@ -129,6 +129,9 @@ endif
 # MODULE_OBJS is passed back from compile.mk
 #$(info MODULE_OBJS = $(MODULE_OBJS))
 
+# record the module-level dependencies of this module
+$(call sysroot-module-mdeps,$(MODULE),$(_MODULE_DEPS))
+
 # build a ld -r style combined object
 MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
 $(MODULE_OBJECT): $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
