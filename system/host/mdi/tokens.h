@@ -64,12 +64,12 @@ public:
     void print_err(const char* fmt, ...);
 
 private:
-    char get_char();
-    char next_char();
-    char peek_char();
+    int get_char();
+    int next_char();
+    int peek_char();
     void eat_whitespace();
-    bool parse_identifier(Token& token, char ch);
-    bool parse_integer(Token& token, char ch);
+    bool parse_identifier(Token& token, int ch);
+    bool parse_integer(Token& token, int ch);
     bool parse_string(Token& token);
 
     std::ifstream in_file;
@@ -77,5 +77,5 @@ private:
     std::string current_line;
     int line_number;
     unsigned line_offset;
-    char peek[2];
+    int peek[2];
 };

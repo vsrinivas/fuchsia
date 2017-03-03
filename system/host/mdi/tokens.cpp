@@ -167,7 +167,7 @@ bool Tokenizer::open_file(Tokenizer* container, const char* path) {
     return true;
 }
 
-char Tokenizer::get_char() {
+int Tokenizer::get_char() {
     if (line_offset < current_line.length()) {
         return current_line[line_offset++];
     } else if (in_file.eof()) {
@@ -180,9 +180,9 @@ char Tokenizer::get_char() {
     }
 }
 
-char Tokenizer::next_char() {
+int Tokenizer::next_char() {
     if (peek[0]) {
-        char ch = peek[0];
+        int ch = peek[0];
         peek[0] = peek[1];
         peek[1] = 0;
         return ch;
@@ -191,7 +191,7 @@ char Tokenizer::next_char() {
     }
 }
 
-char Tokenizer::peek_char() {
+int Tokenizer::peek_char() {
     if (!peek[0]) {
         peek[0] = next_char();
     }
@@ -207,7 +207,7 @@ void Tokenizer::eat_whitespace() {
         if (peek_char() == '/') {
             // consume the '/'
             next_char();
-            char ch = peek_char();
+            int ch = peek_char();
             if (ch == '/') {
                 // read until end of line
                 while ((ch = next_char()) != EOF && ch != '\n' && ch != '\r') {}
@@ -242,7 +242,7 @@ void Tokenizer::eat_whitespace() {
     }
 }
 
-bool Tokenizer::parse_identifier(Token& token, char ch) {
+bool Tokenizer::parse_identifier(Token& token, int ch) {
     std::string string;
     string.append(1, ch);
 
@@ -264,7 +264,7 @@ bool Tokenizer::parse_identifier(Token& token, char ch) {
     return true;
 }
 
-bool Tokenizer::parse_integer(Token& token, char ch) {
+bool Tokenizer::parse_integer(Token& token, int ch) {
     bool negative = false;
     bool hexadecimal = false;
     uint64_t value = 0;
@@ -336,7 +336,7 @@ bool Tokenizer::parse_integer(Token& token, char ch) {
 
 bool Tokenizer::parse_string(Token& token) {
     std::string string;
-    char ch = next_char();
+    int ch = next_char();
 
     while (ch != EOF) {
         if (ch == '\\') {
@@ -399,7 +399,7 @@ bool Tokenizer::parse_string(Token& token) {
     // EOF is not considered an error
 bool Tokenizer::next_token(Token& token) {
     eat_whitespace();
-    char ch = next_char();
+    int ch = next_char();
     bool result = true;
 
     if (isalpha(ch)) {
