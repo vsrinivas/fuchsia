@@ -82,6 +82,7 @@ MODULE_DEFINES += MODULE_TYPE=\"$(subst $(SPACE),_,$(MODULE_TYPE))\"
 
 # Introduce local, libc and dependency include paths
 ifneq ($(MODULE_TYPE),)
+ifneq ($(MODULE_TYPE),hostapp)
 # user module
 MODULE_SRCDEPS += $(USER_CONFIG_HEADER)
 MODULE_COMPILEFLAGS += -Iglobal/include
@@ -90,6 +91,9 @@ MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/include
 MODULE_COMPILEFLAGS += $(foreach DEP,$(MODULE_HEADER_DEPS),-I$(DEP)/include)
 MODULE_DEFINES += MODULE_LIBS=\"$(subst $(SPACE),_,$(MODULE_LIBS))\"
 MODULE_DEFINES += MODULE_STATIC_LIBS=\"$(subst $(SPACE),_,$(MODULE_STATIC_LIBS))\"
+endif
+#TODO: is this right?
+MODULE_SRCDEPS += $(USER_CONFIG_HEADER)
 else
 # kernel module
 # add a local include dir to the global include path for kernel code
@@ -117,27 +121,23 @@ MODULE_COMPILEFLAGS += --include $(MODULE_CONFIG)
 
 MODULE_SRCDEPS += $(MODULE_CONFIG)
 
-# include the rules to compile the module's object files
+# include compile rules appropriate to module type
+# typeless modules are kernel modules
 ifeq ($(MODULE_TYPE),)
-# for kernel code
 include make/compile.mk
 else
-# for userspace code
+ifeq ($(MODULE_TYPE),hostapp)
+include make/hcompile.mk
+else
 include make/ucompile.mk
 endif
+endif
 
-# MODULE_OBJS is passed back from compile.mk
+# MODULE_OBJS is passed back from *compile.mk
 #$(info MODULE_OBJS = $(MODULE_OBJS))
 
 # record the module-level dependencies of this module
 $(call sysroot-module-mdeps,$(MODULE),$(_MODULE_DEPS))
-
-# build a ld -r style combined object
-MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
-$(MODULE_OBJECT): $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
-	@$(MKDIR)
-	@echo linking $@
-	$(NOECHO)$(LD) $(GLOBAL_MODULE_LDFLAGS) -r $^ -o $@
 
 # track all of the source files compiled
 ALLSRCS += $(MODULE_SRCS)
@@ -145,8 +145,18 @@ ALLSRCS += $(MODULE_SRCS)
 # track all the objects built
 ALLOBJS += $(MODULE_OBJS)
 
+# build a ld -r style combined object
+# for all kernel and user modules
+ifneq ($(MODULE_TYPE),hostapp)
+MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
+$(MODULE_OBJECT): $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
+	@$(MKDIR)
+	@echo linking $@
+	$(NOECHO)$(LD) $(GLOBAL_MODULE_LDFLAGS) -r $^ -o $@
+
 # track the module object for make clean
 GENERATED += $(MODULE_OBJECT)
+endif
 
 ifeq ($(MODULE_TYPE),)
 # modules with no type are kernel modules
@@ -156,9 +166,12 @@ endif
 # make the rest of the build depend on our output
 ALLMODULE_OBJS := $(ALLMODULE_OBJS) $(MODULE_OBJECT)
 else
-# otherwise they are some flavor of user module
+# otherwise they are some named module flavor
 include make/module-$(patsubst %-static,%,$(MODULE_TYPE)).mk
 endif
+
+
+
 
 # empty out any vars set here
 MODULE :=
@@ -188,3 +201,4 @@ MODULE_STATIC_LIBS :=
 MODULE_SO_NAME :=
 MODULE_INSTALL_PATH :=
 MODULE_SO_INSTALL_NAME :=
+MODULE_HOST_LIBS :=

@@ -217,8 +217,8 @@ ARCH_CPPFLAGS :=
 ARCH_ASMFLAGS :=
 
 # Host compile flags
-HOST_COMPILEFLAGS := -Wall -g
-HOST_CFLAGS := -std=c11 -Isystem/public -Isystem/private
+HOST_COMPILEFLAGS := -Wall -g -O2 -Isystem/public -Isystem/private
+HOST_CFLAGS := -std=c11
 HOST_CPPFLAGS := -std=c++11 -fno-exceptions -fno-rtti
 HOST_ASMFLAGS :=
 
@@ -289,6 +289,9 @@ ALLUSER_MODULES :=
 
 # userspace lib modules
 ALLUSER_LIBS :=
+
+# host apps to build
+ALLHOST_APPS :=
 
 # sysroot (exported libraries and headers)
 SYSROOT_DEPS :=
@@ -433,6 +436,9 @@ EXTRA_BUILDDEPS += $(SYSROOT_DEPS)
 # make the build depend on all of the user apps
 all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
 
+# and all host tools
+all:: $(ALLHOST_APPS)
+
 # add some automatic configuration defines
 KERNEL_DEFINES += \
 	PROJECT_$(PROJECT)=1 \
@@ -555,9 +561,12 @@ HOST_CFLAGS += --sysroot=$(HOST_SYSROOT)
 HOST_CPPFLAGS += --sysroot=$(HOST_SYSROOT)
 endif
 
+# tool locations
+MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
+MDIGEN := $(BUILDDIR)/tools/mdigen
+
+#TODO: convert to host tools module
 include system/uapp/minfs/build.mk
-# host tools
-include system/host/build.mk
 
 # the logic to compile and link stuff is in here
 include make/build.mk
