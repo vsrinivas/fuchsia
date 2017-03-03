@@ -11,8 +11,8 @@ namespace bluetooth {
 namespace common {
 
 // Returns a manufacturer name as a string for the given company identifier. If
-// |manufacturer_id| does not match a known company then a placholder string
-// "(unknown)" will be returned.
+// |manufacturer_id| does not match a known company then an empty string will be
+// returned.
 std::string GetManufacturerName(uint16_t manufacturer_id);
 
 }  // namespace common

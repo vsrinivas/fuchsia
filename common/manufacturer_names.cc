@@ -6,6 +6,8 @@
 
 #include <map>
 
+#include "lib/ftl/arraysize.h"
+
 namespace bluetooth {
 namespace common {
 namespace {
@@ -1043,6 +1045,7 @@ const char* kManufacturers[] = {
     /* 0x03FE */ "Littelfuse",
     /* 0x03FF */ "Withings",
     /* 0x0400 */ "i-developer IT Beratung UG",
+    /* 0x0401 */ "(unassigned)",
     /* 0x0402 */ "Sears Holdings Corporation",
     /* 0x0403 */ "Gantner Electronic GmbH",
     /* 0x0404 */ "Authomate Inc",
@@ -1182,12 +1185,29 @@ const char* kManufacturers[] = {
     /* 0x048A */ "Taelek Oy",
     /* 0x048B */ "CP Electronics Limited",
     /* 0x048C */ "Vectronix AG",
+    /* 0x048D */ "S-Labs Sp. z o.o.",
+    /* 0x048E */ "Companion Medical, Inc.",
+    /* 0x048F */ "BlueKitchen GmbH",
+    /* 0x0490 */ "Matting AB",
+    /* 0x0491 */ "SOREX - Wireless Solutions GmbH",
+    /* 0x0492 */ "ADC Technology, Inc.",
+    /* 0x0493 */ "Lynxemi Pte Ltd",
+    /* 0x0494 */ "SENNHEISER electronic GmbH & Co. KG",
+    /* 0x0495 */ "LMT Mercer Group, Inc",
+    /* 0x0496 */ "Polymorphic Labs LLC",
+    /* 0x0497 */ "Cochlear Limited",
+    /* 0x0498 */ "METER Group, Inc. USA",
+    /* 0x0499 */ "Ruuvi Innovations Ltd.",
+    /* 0x049A */ "Situne AS",
+    /* 0x049B */ "nVisti, LLC",
+    /* 0x049C */ "DyOcean",
+    /* 0x049D */ "Uhlmann & Zacher GmbH",
 };
 
 }  // namespace
 
 std::string GetManufacturerName(uint16_t manufacturer_id) {
-  if (manufacturer_id >= sizeof(kManufacturers)) return "(unknown)";
+  if (manufacturer_id >= arraysize(kManufacturers)) return "";
   return kManufacturers[manufacturer_id];
 }
 
