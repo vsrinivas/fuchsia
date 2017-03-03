@@ -1,0 +1,12 @@
+{
+  "app": "ledger_benchmark_put",
+  "args": ["--entry-count=10", "--value-size=100"],
+  "categories": ["benchmark"],
+  "measure": [
+    {
+      "type": "duration",
+      "event_name": "put",
+      "event_category": "benchmark"
+    }
+  ]
+}
