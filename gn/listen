@@ -1,0 +1,12 @@
+{
+    "labels": [
+        "//bin/listen"
+    ],
+    "binaries": [
+        {
+            "binary": "listen",
+            "bootfs_path": "bin/listen"
+        }
+    ]
+}
+
