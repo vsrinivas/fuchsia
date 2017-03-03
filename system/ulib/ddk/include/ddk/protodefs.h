@@ -35,5 +35,7 @@ DDK_PROTOCOL_DEF(AUDIO2_INPUT,   'pA2I', "audio2-input")
 DDK_PROTOCOL_DEF(AUDIO2_OUTPUT,  'pA2O', "audio2-output")
 DDK_PROTOCOL_DEF(BATTERY,        'pBAT', "battery")
 DDK_PROTOCOL_DEF(PTY,            'pPTY', "pty")
+DDK_PROTOCOL_DEF(IHDA,           'pHDA', "intel-hda")
+DDK_PROTOCOL_DEF(IHDA_CODEC,     'pIHC', "intel-hda-codec")
 #undef DDK_PROTOCOL_DEF
 #endif

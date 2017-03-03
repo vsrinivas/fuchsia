@@ -103,6 +103,14 @@ __BEGIN_CDECLS;
 #define BIND_ACPI_HID_0_3      0x0400 // char 0-3
 #define BIND_ACPI_HID_4_7      0x0401 // char 4-7
 
+// Intel HDA Codec binding variables at 0x05XX
+#define BIND_IHDA_CODEC_VID         0x0500
+#define BIND_IHDA_CODEC_DID         0x0501
+#define BIND_IHDA_CODEC_MAJOR_REV   0x0502
+#define BIND_IHDA_CODEC_MINOR_REV   0x0503
+#define BIND_IHDA_CODEC_VENDOR_REV  0x0504
+#define BIND_IHDA_CODEC_VENDOR_STEP 0x0505
+
 // TEMPORARY binding variables at 0xfXX
 // I2C_ADDR is a temporary way to bind the i2c touchscreen on the Acer12. This
 // binding will eventually be made via some sort of ACPI device enumeration.
