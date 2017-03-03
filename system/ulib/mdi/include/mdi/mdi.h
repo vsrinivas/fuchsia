@@ -56,4 +56,4 @@ uint32_t mdi_child_count(const mdi_node_ref_t* ref);
 mx_status_t mdi_find_node(const mdi_node_ref_t* ref, mdi_id_t id, mdi_node_ref_t* out_ref);
 
 #define mdi_each_child(parent, child) \
-    for (mdi_first_child(&parent, &child); mdi_valid(&child); mdi_next_child(&child, &child))
+    for (mdi_first_child(parent, child); mdi_valid(child); mdi_next_child(child, child))

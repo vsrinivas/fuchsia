@@ -199,7 +199,7 @@ bool anonymous_list_tests(void) {
               "MDI_TEST_LIST not found");
 
     int i = 0;
-    mdi_each_child(node, child) {
+    mdi_each_child(&node, &child) {
         mdi_node_ref_t grand_child;
         EXPECT_EQ(mdi_first_child(&child, &grand_child), 0, "mdi_first_child failed");
         EXPECT_EQ(mdi_node_type(&grand_child), (uint32_t)MDI_INT32, "expected type MDI_INT32");
