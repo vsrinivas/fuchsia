@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/crashlogger.cpp \
     $(LOCAL_DIR)/backtrace.cpp \
     $(LOCAL_DIR)/dso-list.cpp \
+    $(LOCAL_DIR)/dump-pt.cpp \
     $(LOCAL_DIR)/utils.cpp \
 
 MODULE_NAME := crashlogger

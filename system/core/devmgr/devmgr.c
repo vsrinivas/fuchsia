@@ -353,9 +353,21 @@ int main(int argc, char** argv) {
     }
 
     if (!getenv("crashlogger.disable")) {
-        static const char* argv_crashlogger[] = { "/boot/bin/crashlogger" };
+        static const char* argv_crashlogger[] = {
+            "/boot/bin/crashlogger",
+            NULL,  // room for -pton
+        };
+        const char* crashlogger_pt = getenv("crashlogger.pt");
+        int argc_crashlogger = 1;
+        if (crashlogger_pt && strcmp(crashlogger_pt, "true") == 0) {
+            // /dev/misc/intel-pt may not be available yet, so we can't
+            // actually turn on PT here. Just tell crashlogger to dump the
+            // trace buffers if they're available.
+            argv_crashlogger[argc_crashlogger++] = "-pton";
+        }
         devmgr_launch(svcs_job_handle, "crashlogger",
-                      1, argv_crashlogger, NULL, -1, NULL, NULL, 0);
+                      argc_crashlogger, argv_crashlogger,
+                      NULL, -1, NULL, NULL, 0);
     }
 
     start_console_shell();

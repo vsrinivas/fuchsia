@@ -24,6 +24,7 @@
 
 #include "backtrace.h"
 #include "dso-list.h"
+#include "dump-pt.h"
 #include "utils.h"
 
 #if defined(__x86_64__)
@@ -39,6 +40,12 @@ using gregs_type = int; // unsupported arch
 // TODO: The default is on for now for development purposes.
 // Ultimately will want to switch this to off.
 static bool swbreak_backtrace_enabled = true;
+
+#ifdef __x86_64__
+// If true then an attempt is made to dump processor trace data.
+// Requires processor tracing turned on in the kernel.
+static bool pt_dump_enabled = false;
+#endif
 
 // Return true if the thread is to be resumed "successfully" (meaning the o/s
 // won't kill it, and thus the kill process).
@@ -303,6 +310,12 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
     // TODO(dje): Print a backtrace of all other threads in the process.
     // Need to be able to suspend/resume threads first. MG-588
 
+#ifdef __x86_64__
+    if (pt_dump_enabled) {
+        try_dump_pt_data();
+    }
+#endif
+
 Fail:
     debugf(1, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
 
@@ -388,6 +401,10 @@ void usage() {
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -v[n] = set verbosity level to N\n");
     fprintf(stderr, "  -f = force replacement of existing crashlogger\n");
+#ifdef __x86_64__
+    fprintf(stderr, "  -pt[on|off] = enable processor trace dumps,\n");
+    fprintf(stderr, "      requires PT turned on in the kernel\n");
+#endif
     fprintf(stderr, "  -n = do not use libunwind\n");
     fprintf(stderr, "  -s[on|off] = enable s/w breakpoints to trigger\n");
     fprintf(stderr, "      a backtrace without terminating the process\n");
@@ -411,6 +428,17 @@ int main(int argc, char** argv) {
             }
         } else if (strcmp(arg, "-f") == 0) {
             force = true;
+#ifdef __x86_64__
+        } else if (strncmp(arg, "-pt", 2) == 0) {
+            if (arg[2] == '\0' || strcmp(arg, "-pton") == 0) {
+                pt_dump_enabled = true;
+            } else if (strcmp(arg, "-ptoff") == 0) {
+                pt_dump_enabled = false;
+            } else {
+                usage();
+                return 1;
+            }
+#endif
         } else if (strcmp(arg, "-n") == 0) {
             use_libunwind = false;
         } else if (strncmp(arg, "-s", 2) == 0) {

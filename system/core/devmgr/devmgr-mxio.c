@@ -54,7 +54,7 @@ static void callback(void* arg, const char* path, size_t off, size_t len) {
 #define MAX_ENVP 16
 
 void devmgr_launch(mx_handle_t job, const char* name,
-                   int argc, const char** argv,
+                   int argc, const char* const* argv,
                    const char** _envp, int stdiofd,
                    mx_handle_t* handles, uint32_t* types, size_t hcount) {
 

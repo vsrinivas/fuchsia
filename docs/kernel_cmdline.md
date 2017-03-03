@@ -23,6 +23,23 @@ Randomization.
 If this option is set, the crashlogger is not started. You should leave this
 option off unless you suspect the crashlogger is causing problems.
 
+## crashlogger.pt=true
+
+If this option is set, the crashlogger will attempt to generate a
+"processor trace" dump along with the crash report. The dump files
+are written as /tmp/crash-pt.*. This option requires processor tracing
+to be enabled in the kernel. This can be done by running "ipt" program after
+the system has booted. E.g., add this to /system/autorun
+
+```
+ipt --circular --control init start
+```
+
+After the files are written, copy them to the host and print them
+with the "ipt-dump" program. See its docs for more info.
+
+This option is only supported on Intel x86 platforms.
+
 ## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the
