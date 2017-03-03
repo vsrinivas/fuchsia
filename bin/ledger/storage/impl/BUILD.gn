@@ -20,6 +20,10 @@ flatbuffer("commit_storage") {
   deps = [
     "//apps/ledger/src/convert:byte_storage",
   ]
+
+  extra_configs = [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("lib") {
@@ -53,6 +57,10 @@ source_set("lib") {
     "//apps/ledger/src/convert",
     "//third_party/leveldb",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("unittests") {
@@ -80,5 +88,9 @@ source_set("unittests") {
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

@@ -13,4 +13,8 @@ source_set("unittests") {
     "//apps/ledger/src/glue/socket",
     "//third_party/gtest",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

@@ -16,6 +16,10 @@ source_set("lib") {
     "//lib/mtl",
     "//third_party/gtest",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 # Contains the standard gtest main that runs all tests included in the binary.
@@ -29,6 +33,10 @@ source_set("main") {
   public_deps = [
     "//third_party/gtest",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("unittests") {
@@ -41,5 +49,9 @@ source_set("unittests") {
 
   deps = [
     ":lib",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

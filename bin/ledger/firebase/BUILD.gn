@@ -29,6 +29,10 @@ source_set("firebase") {
     "//lib/ftl",
     "//lib/mtl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("unittests") {
@@ -49,5 +53,9 @@ source_set("unittests") {
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

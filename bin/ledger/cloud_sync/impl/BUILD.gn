@@ -29,6 +29,10 @@ source_set("impl") {
   deps = [
     "//lib/mtl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("unittests") {
@@ -51,5 +55,9 @@ source_set("unittests") {
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

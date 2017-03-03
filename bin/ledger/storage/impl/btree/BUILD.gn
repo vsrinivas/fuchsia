@@ -19,6 +19,10 @@ flatbuffer("tree_node_storage") {
   deps = [
     "//apps/ledger/src/convert:byte_storage",
   ]
+
+  extra_configs = [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("lib") {
@@ -38,6 +42,10 @@ source_set("lib") {
     "//apps/ledger/src/storage/public",
     "//lib/ftl",
     "//third_party/murmurhash",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }
 
@@ -62,5 +70,9 @@ source_set("unittests") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

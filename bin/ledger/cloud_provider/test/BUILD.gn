@@ -18,4 +18,8 @@ source_set("test") {
     "//lib/ftl",
     "//magenta/system/ulib/mx",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

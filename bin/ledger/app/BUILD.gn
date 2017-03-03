@@ -92,6 +92,10 @@ source_set("lib") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 group("tests") {
@@ -128,6 +132,10 @@ source_set("unittests") {
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }
 

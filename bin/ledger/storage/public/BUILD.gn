@@ -24,4 +24,8 @@ source_set("public") {
     "//lib/ftl",
     "//lib/mtl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

@@ -16,6 +16,10 @@ source_set("network") {
     "//lib/ftl",
     "//magenta/system/ulib/mx",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("fake") {
@@ -34,6 +38,10 @@ source_set("fake") {
   deps = [
     "//lib/mtl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("unittests") {
@@ -49,5 +57,9 @@ source_set("unittests") {
     "//lib/mtl",
     "//lib/mtl/waiter",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

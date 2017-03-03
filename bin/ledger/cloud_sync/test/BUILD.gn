@@ -17,4 +17,8 @@ source_set("test") {
   deps = [
     "//lib/ftl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

@@ -21,6 +21,10 @@ source_set("callback") {
     "//lib/ftl",
     "//lib/mtl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("unittests") {
@@ -38,5 +42,9 @@ source_set("unittests") {
     ":callback",
     "//apps/ledger/src/test:lib",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

@@ -22,6 +22,10 @@ source_set("gcs") {
     "//lib/ftl",
     "//magenta/system/ulib/mx",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("unittests") {
@@ -38,5 +42,9 @@ source_set("unittests") {
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

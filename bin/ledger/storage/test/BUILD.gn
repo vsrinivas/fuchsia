@@ -26,4 +26,8 @@ source_set("test") {
     "//apps/ledger/src/test:lib",
     "//lib/ftl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

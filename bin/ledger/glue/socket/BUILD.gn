@@ -17,4 +17,8 @@ source_set("socket") {
     "//lib/mtl",
     "//magenta/system/ulib/mx",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

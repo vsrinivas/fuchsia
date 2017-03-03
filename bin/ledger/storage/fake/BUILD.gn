@@ -35,4 +35,8 @@ source_set("lib") {
     "//lib/fidl/cpp/bindings",
     "//lib/mtl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

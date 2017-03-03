@@ -23,6 +23,10 @@ source_set("lib") {
     "//lib/ftl",
     "//third_party/rapidjson",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 executable("configuration_writer") {
@@ -53,5 +57,9 @@ source_set("unittests") {
     ":lib",
     "//lib/ftl",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

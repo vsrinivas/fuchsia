@@ -16,4 +16,8 @@ source_set("crypto") {
     "//lib/ftl",
     "//third_party/boringssl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

@@ -20,11 +20,19 @@ source_set("convert") {
     "//magenta/system/ulib/mx",
     "//third_party/leveldb",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 flatbuffer("byte_storage") {
   sources = [
     "bytes.fbs",
+  ]
+
+  extra_configs = [
+    "//apps/ledger/src:ledger_config",
   ]
 }
 
@@ -38,5 +46,9 @@ source_set("unittests") {
   deps = [
     ":convert",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }

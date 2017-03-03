@@ -16,4 +16,8 @@ source_set("public") {
     "//apps/ledger/src/storage/public",
     "//lib/ftl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }

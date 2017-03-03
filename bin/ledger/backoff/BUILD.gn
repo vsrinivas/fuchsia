@@ -13,6 +13,10 @@ source_set("backoff") {
     "//apps/ledger/src/glue/crypto",
     "//lib/ftl",
   ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
+  ]
 }
 
 source_set("unittests") {
@@ -25,5 +29,9 @@ source_set("unittests") {
   deps = [
     ":backoff",
     "//third_party/gtest",
+  ]
+
+  configs += [
+    "//apps/ledger/src:ledger_config",
   ]
 }
