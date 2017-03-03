@@ -4,6 +4,10 @@
 
 #include <stdio.h>
 
+// Files #including dlog.h may assume that it #includes inttypes.h.
+// So, for convenience, they don't need to follow "#include-what-you-use" for that header.
+#include <inttypes.h>
+
 #ifndef MAGMA_DLOG_ENABLE
 #define MAGMA_DLOG_ENABLE 0
 #endif
