@@ -153,32 +153,3 @@ mx_status_t InitCpuContexts(mxtl::Array<T>* ctxs) {
     }
     return NO_ERROR;
 }
-
-/* Holds the register state used to restore a host. */
-struct VmxHostState {
-    // Callee-save registers.
-    uint64_t rsp;
-    uint64_t rbp;
-    uint64_t rbx;
-    uint64_t r12;
-    uint64_t r13;
-    uint64_t r14;
-    uint64_t r15;
-
-    // Return address.
-    uint64_t rip;
-};
-
-__BEGIN_CDECLS
-/* Save the host state.
- * This is the VMX equivalent of setjmp. If we return 0 we have saved the host
- * state, if we return 1 we have loaded the host state.
- */
-int vmx_host_save(VmxHostState* host_state);
-
-/* Load the host state.
- * This is the VMX equivalent of longjmp. This is never called directly by the
- * code, but is executed by VMX on VM exit.
- */
-void vmx_host_load();
-__END_CDECLS

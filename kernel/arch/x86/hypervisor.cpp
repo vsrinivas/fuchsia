@@ -16,6 +16,7 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/hypervisor.h>
+#include <arch/x86/hypervisor_host.h>
 #include <arch/x86/idt.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
