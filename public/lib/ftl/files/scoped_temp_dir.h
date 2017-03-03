@@ -7,11 +7,14 @@
 
 #include <string>
 
+#include "lib/ftl/strings/string_view.h"
+
 namespace files {
 
 class ScopedTempDir {
  public:
   ScopedTempDir();
+  explicit ScopedTempDir(ftl::StringView parent_path);
   ~ScopedTempDir();
 
   const std::string& path();

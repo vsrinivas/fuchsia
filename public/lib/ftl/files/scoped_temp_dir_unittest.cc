@@ -32,5 +32,21 @@ TEST(ScopedTempDir, NewTempFile) {
   EXPECT_FALSE(path.empty());
 }
 
+TEST(ScopedTempDir, CustomParent) {
+  ScopedTempDir root_dir;
+  std::string parent = root_dir.path() + "/a/b/c";
+  std::string path;
+  {
+    ScopedTempDir dir(parent);
+    path = dir.path();
+    EXPECT_TRUE(IsDirectory(path));
+    EXPECT_EQ(path.substr(0, parent.size()), parent);
+  }
+
+  // Verify that the tmp directory itself was deleted, but not the parent.
+  EXPECT_FALSE(IsDirectory(path));
+  EXPECT_TRUE(IsDirectory(parent));
+}
+
 }  // namespace
 }  // namespace files
