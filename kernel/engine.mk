@@ -347,6 +347,7 @@ $(info PROJECT = $(PROJECT))
 $(info PLATFORM = $(PLATFORM))
 $(info TARGET = $(TARGET))
 
+include host/rules.mk
 include arch/$(ARCH)/rules.mk
 include top/rules.mk
 
@@ -556,7 +557,7 @@ endif
 
 include system/uapp/minfs/build.mk
 # host tools
-include system/tools/build.mk
+include system/host/build.mk
 
 # the logic to compile and link stuff is in here
 include make/build.mk
