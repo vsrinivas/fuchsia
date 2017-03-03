@@ -99,13 +99,15 @@ static void unlock(void) TA_REL(theheap.lock)
 
 static void dump_free(header_t *header)
 {
-    dprintf(INFO, "\t\tbase %p, end %#" PRIxPTR ", len %#zx\n",
-            header, (vaddr_t)header + header->size, header->size);
+    dprintf(INFO, "\t\tbase %p, end %#" PRIxPTR ", len %#zx (%zu)\n",
+            header, (vaddr_t)header + header->size, header->size, header->size);
 }
 
-void cmpct_dump(void)
+void cmpct_dump(bool panic_time) TA_NO_THREAD_SAFETY_ANALYSIS
 {
-    lock();
+    if (!panic_time)
+        lock();
+
     dprintf(INFO, "Heap dump (using cmpctmalloc):\n");
     dprintf(INFO, "\tsize %lu, remaining %lu\n",
             (unsigned long)theheap.size,
@@ -124,7 +126,9 @@ void cmpct_dump(void)
             dump_free(&free_area->header);
         }
     }
-    unlock();
+
+    if (!panic_time)
+        unlock();
 }
 
 // Operates in sizes that don't include the allocation header.
@@ -564,7 +568,7 @@ void cmpct_test(void)
     cmpct_test_get_back_newly_freed();
     cmpct_test_return_to_os();
     cmpct_test_trim();
-    cmpct_dump();
+    cmpct_dump(false);
     void *ptr[16];
 
     ptr[0] = cmpct_alloc(8);
@@ -582,9 +586,9 @@ void cmpct_test(void)
     cmpct_free(ptr[4]);
     cmpct_free(ptr[2]);
 
-    cmpct_dump();
+    cmpct_dump(false);
     cmpct_trim();
-    cmpct_dump();
+    cmpct_dump(false);
 
     int i;
     for (i=0; i < 16; i++)
@@ -607,7 +611,7 @@ void cmpct_test(void)
 //      printf("ptr[0x%x] = %p, align 0x%x\n", index, ptr[index], align);
 
         DEBUG_ASSERT(((addr_t)ptr[index] % align) == 0);
-//      cmpct_dump();
+//      cmpct_dump(false);
     }
 
     for (i=0; i < 16; i++) {
@@ -615,7 +619,7 @@ void cmpct_test(void)
             cmpct_free(ptr[i]);
     }
 
-    cmpct_dump();
+    cmpct_dump(false);
 }
 
 static void *large_alloc(size_t size)

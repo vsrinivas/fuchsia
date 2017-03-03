@@ -17,7 +17,7 @@ void cmpct_free(void *);
 void *cmpct_memalign(size_t size, size_t alignment);
 
 void cmpct_init(void);
-void cmpct_dump(void);
+void cmpct_dump(bool panic_time);
 void cmpct_test(void);
 void cmpct_trim(void);
 

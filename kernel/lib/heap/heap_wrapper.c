@@ -90,42 +90,6 @@ static inline void *HEAP_CALLOC(size_t n, size_t s)
 }
 
 /* end cmpctmalloc implementation */
-#elif WITH_LIB_HEAP_DLMALLOC
-/* dlmalloc implementation */
-#include <lib/dlmalloc.h>
-
-#define HEAP_MALLOC(s) dlmalloc(s)
-#define HEAP_CALLOC(n, s) dlcalloc(n, s)
-#define HEAP_MEMALIGN(b, s) dlmemalign(b, s)
-#define HEAP_REALLOC(p, s) dlrealloc(p, s)
-#define HEAP_FREE(p) dlfree(p)
-static inline void HEAP_INIT(void) {}
-
-static void dump_callback(void *start, void *end, size_t used_bytes, void *arg) {
-    printf("\t\tstart %p end %p used_bytes %zu\n", start, end, used_bytes);
-}
-
-static inline void HEAP_DUMP(void)
-{
-    struct mallinfo minfo = dlmallinfo();
-
-    printf("\tmallinfo (dlmalloc):\n");
-    printf("\t\tarena space 0x%zx\n", minfo.arena);
-    printf("\t\tfree chunks 0x%zx\n", minfo.ordblks);
-    printf("\t\tspace in mapped regions 0x%zx\n", minfo.hblkhd);
-    printf("\t\tmax total allocated 0x%zx\n", minfo.usmblks);
-    printf("\t\ttotal allocated 0x%zx\n", minfo.uordblks);
-    printf("\t\tfree 0x%zx\n", minfo.fordblks);
-    printf("\t\treleasable space 0x%zx\n", minfo.keepcost);
-
-    printf("\theap block list:\n");
-
-    dlmalloc_inspect_all(&dump_callback, NULL);
-}
-
-static inline void HEAP_TRIM(void) { dlmalloc_trim(0); }
-
-/* end dlmalloc implementation */
 #else
 #error need to select valid heap implementation or provide wrapper
 #endif
@@ -275,18 +239,24 @@ void heap_delayed_free(void *ptr)
     spin_unlock_irqrestore(&delayed_free_lock, state);
 }
 
-static void heap_dump(void)
+static void heap_dump(bool panic_time)
 {
-    HEAP_DUMP();
+    HEAP_DUMP(panic_time);
 
     printf("\tdelayed free list:\n");
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&delayed_free_lock, state);
+
+    spin_lock_saved_state_t state = 0;
+
+    if (!panic_time)
+        spin_lock_irqsave(&delayed_free_lock, state);
+
     struct list_node *node;
     list_for_every(&delayed_free_list, node) {
         printf("\t\tnode %p\n", node);
     }
-    spin_unlock_irqrestore(&delayed_free_lock, state);
+
+    if (!panic_time)
+        spin_unlock_irqrestore(&delayed_free_lock, state);
 }
 
 static void heap_test(void)
@@ -310,7 +280,7 @@ static void heap_test(void)
     HEAP_FREE(ptr[4]);
     HEAP_FREE(ptr[2]);
 
-    HEAP_DUMP();
+    HEAP_DUMP(false);
 
     int i;
     for (i=0; i < 16; i++)
@@ -341,7 +311,7 @@ static void heap_test(void)
             HEAP_FREE(ptr[i]);
     }
 
-    HEAP_DUMP();
+    HEAP_DUMP(false);
 #endif
 }
 
@@ -376,7 +346,7 @@ usage:
     }
 
     if (strcmp(argv[1].str, "info") == 0) {
-        heap_dump();
+        heap_dump(flags & CMD_FLAG_PANIC);
     } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "test") == 0) {
         heap_test();
     } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "trace") == 0) {
