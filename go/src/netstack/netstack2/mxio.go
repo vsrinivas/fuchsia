@@ -211,22 +211,15 @@ func (ios *iostate) listenSocketRead(stk tcpip.Stack) {
 
 func (ios *iostate) listenSocketWrite(stk tcpip.Stack) {
 	// Warm up.
-	obs, err := ios.s.WaitOne(MX_SOCKET_WRITABLE|MX_SOCKET_PEER_CLOSED|MXSIO_SIGNAL_HALFCLOSED, mx.TimensecInfinite)
+	obs, err := ios.s.WaitOne(MX_SOCKET_WRITABLE|MX_SOCKET_PEER_CLOSED, mx.TimensecInfinite)
 	if err != nil {
-		log.Printf("listenSocketWrite: warmup failed: %v", err)
+		if debug {
+			log.Printf("listenSocketWrite: warmup failed: %v", err)
+		}
 		return
 	}
 	switch {
 	case obs&MX_SOCKET_PEER_CLOSED != 0:
-		return
-	case obs&MXSIO_SIGNAL_HALFCLOSED != 0:
-		if err := ios.ep.Shutdown(tcpip.ShutdownRead | tcpip.ShutdownWrite); err != nil {
-			// TODO: consider communicating this error. (There is
-			// no handling of the error in mxio_socket_shutdown.)
-			if debug {
-				log.Printf("shutdown failed: %v", err)
-			}
-		}
 		return
 	}
 
@@ -270,7 +263,7 @@ func (ios *iostate) listenSocketWrite(stk tcpip.Stack) {
 					log.Printf("listenSocketWrite: gto mx.ErrShouldWait")
 				}
 				obs, err := ios.s.WaitOne(
-					MX_SOCKET_WRITABLE|MX_SOCKET_PEER_CLOSED|MXSIO_SIGNAL_HALFCLOSED,
+					MX_SOCKET_WRITABLE|MX_SOCKET_PEER_CLOSED,
 					mx.TimensecInfinite,
 				)
 				if err != nil {
@@ -279,9 +272,6 @@ func (ios *iostate) listenSocketWrite(stk tcpip.Stack) {
 				}
 				switch {
 				case obs&MX_SOCKET_PEER_CLOSED != 0:
-					log.Printf("listenSocketWrite: got MX_SOCKET_PEER_CLOSED: %x", obs)
-					return
-				case obs&MXSIO_SIGNAL_HALFCLOSED != 0:
 					return
 				case obs&MX_SOCKET_WRITABLE != 0:
 					continue
@@ -292,6 +282,23 @@ func (ios *iostate) listenSocketWrite(stk tcpip.Stack) {
 			}
 			log.Printf("socket write failed: %v", err) // TODO: communicate this
 			break
+		}
+	}
+}
+
+func (ios *iostate) listenShutdown() {
+	obs, err := ios.s.WaitOne(MX_SOCKET_PEER_CLOSED|MXSIO_SIGNAL_HALFCLOSED, mx.TimensecInfinite)
+	if err != nil {
+		return
+	}
+	switch {
+	case obs&MX_SOCKET_PEER_CLOSED != 0:
+		ios.ep.Close()
+	case obs&MXSIO_SIGNAL_HALFCLOSED != 0:
+		if err := ios.ep.Shutdown(tcpip.ShutdownRead | tcpip.ShutdownWrite); err != nil {
+			if debug {
+				log.Printf("shutdown failed: %v", err)
+			}
 		}
 	}
 }
@@ -439,6 +446,7 @@ func (s *socketServer) opAccept(ios *iostate, msg *rio.Msg, path string) (peerH,
 	newios, peerH, peerS, err := s.newIostate()
 	newios.ep = newep
 	newios.wq = newwq
+	go newios.listenShutdown()
 	go newios.listenSocketWrite(s.stack)
 	return peerH, peerS, nil
 }
@@ -627,6 +635,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) mx.Status {
 		log.Printf("connect: signal failed: %v", err)
 	}
 
+	go ios.listenShutdown()
 	go ios.listenSocketWrite(s.stack)
 
 	msg.SetOff(0)
