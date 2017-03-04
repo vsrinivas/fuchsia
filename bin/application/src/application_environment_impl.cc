@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
-#include <magenta/processargs.h>
 #include <magenta/process.h>
+#include <magenta/processargs.h>
 #include <magenta/status.h>
 #include <mx/process.h>
 #include <unistd.h>
@@ -89,8 +89,7 @@ mx::process CreateProcess(
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "Cannot run executable " << launch_info->url
                    << " due to error " << status << " ("
-                   << mx_status_get_string(status) << "): "
-                   << errmsg;
+                   << mx_status_get_string(status) << "): " << errmsg;
     return mx::process();
   }
   return mx::process(proc);
@@ -267,18 +266,19 @@ void ApplicationEnvironmentImpl::CreateApplication(
                              this, launch_info = std::move(launch_info),
                              controller = std::move(controller)
                            ](ApplicationPackagePtr package) mutable {
-                             std::string runner;
-                             if (HasShebang(package->data, &runner)) {
-                               CreateApplicationWithRunner(
-                                   std::move(package), std::move(launch_info),
-                                   runner, std::move(controller));
-                             } else {
-                               CreateApplicationWithProcess(
-                                   std::move(package), std::move(launch_info),
-                                   environment_bindings_.AddBinding(this),
-                                   std::move(controller));
+                             if (package) {
+                               std::string runner;
+                               if (HasShebang(package->data, &runner)) {
+                                 CreateApplicationWithRunner(
+                                     std::move(package), std::move(launch_info),
+                                     runner, std::move(controller));
+                               } else {
+                                 CreateApplicationWithProcess(
+                                     std::move(package), std::move(launch_info),
+                                     environment_bindings_.AddBinding(this),
+                                     std::move(controller));
+                               }
                              }
-
                            }));
 }
 

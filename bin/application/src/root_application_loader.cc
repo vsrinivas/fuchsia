@@ -51,7 +51,7 @@ void RootApplicationLoader::LoadApplication(
     FTL_LOG(ERROR) << "Could not load url: " << url;
   }
 
-  callback(ApplicationPackage::New());
+  callback(nullptr);
 }
 
 }  // namespace app
