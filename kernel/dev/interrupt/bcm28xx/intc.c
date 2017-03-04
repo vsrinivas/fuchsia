@@ -256,3 +256,18 @@ void intc_init(void) {
     *REG32(INTC_DISABLE3) = 0xffffffff;
 
 }
+
+status_t interrupt_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
+    /* filter out targets outside of the range of cpus we care about */
+    target &= ((1UL << SMP_MAX_CPUS) - 1);
+    if (target != 0) {
+        bcm28xx_send_ipi(ipi, target);
+    }
+
+    return NO_ERROR;
+}
+
+void interrupt_init_percpu(void) {
+    mp_set_curr_cpu_online(true);
+    unmask_interrupt(INTERRUPT_ARM_LOCAL_MAILBOX0);
+}

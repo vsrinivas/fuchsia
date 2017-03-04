@@ -29,6 +29,10 @@ static spin_lock_t gicd_lock;
 
 #include <arch/arch_ops.h>
 
+#ifndef GIC_IPI_BASE
+#define GIC_IPI_BASE (16 - MAX_IPI)
+#endif
+
 struct int_handler_struct {
     int_handler handler;
     void* arg;
@@ -326,4 +330,48 @@ enum handler_return platform_irq(struct iframe* frame) {
 
 enum handler_return platform_fiq(struct iframe* frame) {
     PANIC_UNIMPLEMENTED;
+}
+
+status_t interrupt_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
+    uint gic_ipi_num = ipi + GIC_IPI_BASE;
+
+    /* filter out targets outside of the range of cpus we care about */
+    target &= ((1UL << SMP_MAX_CPUS) - 1);
+    if (target != 0) {
+        LTRACEF("target 0x%x, gic_ipi %u\n", target, gic_ipi_num);
+        arm_gic_sgi(gic_ipi_num, ARM_GIC_SGI_FLAG_NS, target);
+    }
+
+    return NO_ERROR;
+}
+
+static enum handler_return arm_ipi_generic_handler(void *arg) {
+    LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
+
+    return mp_mbx_generic_irq();
+}
+
+static enum handler_return arm_ipi_reschedule_handler(void *arg) {
+    LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
+
+    return mp_mbx_reschedule_irq();
+}
+
+static enum handler_return arm_ipi_halt_handler(void *arg) {
+    LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
+
+    arch_disable_ints();
+    for(;;);
+
+    return INT_NO_RESCHEDULE;
+}
+
+void interrupt_init_percpu(void) {
+    register_int_handler(MP_IPI_GENERIC + GIC_IPI_BASE, &arm_ipi_generic_handler, 0);
+    register_int_handler(MP_IPI_RESCHEDULE + GIC_IPI_BASE, &arm_ipi_reschedule_handler, 0);
+    register_int_handler(MP_IPI_HALT + GIC_IPI_BASE, &arm_ipi_halt_handler, 0);
+    mp_set_curr_cpu_online(true);
+    unmask_interrupt(MP_IPI_GENERIC + GIC_IPI_BASE);
+    unmask_interrupt(MP_IPI_RESCHEDULE + GIC_IPI_BASE);
+    unmask_interrupt(MP_IPI_HALT + GIC_IPI_BASE);
 }

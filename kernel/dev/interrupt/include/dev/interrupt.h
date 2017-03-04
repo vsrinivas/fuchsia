@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <kernel/mp.h>
 #include <magenta/compiler.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -42,5 +43,11 @@ void register_int_handler(unsigned int vector, int_handler handler, void* arg);
 bool is_valid_interrupt(unsigned int vector, uint32_t flags);
 
 unsigned int remap_interrupt(unsigned int vector);
+
+/* sends an inter-processor interrupt */
+status_t interrupt_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi);
+
+/* performs per-cpu initialization for the interrupt controller */
+void interrupt_init_percpu(void);
 
 __END_CDECLS
