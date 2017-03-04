@@ -221,7 +221,7 @@ bool MagentaPlatformBuffer::UnmapCpu()
         }
         return true;
     }
-    return DRETF(false, "attempting to unmap buffer that isnt mapped\n");
+    return DRETF(false, "attempting to unmap buffer that isnt mapped");
 }
 
 bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_count)

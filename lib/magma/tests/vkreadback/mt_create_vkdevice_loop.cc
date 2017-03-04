@@ -383,7 +383,7 @@ int main(void)
     VkReadbackTest app;
 
     if (!app.Initialize())
-        return DRET_MSG(-1, "could not initialize app\n");
+        return DRET_MSG(-1, "could not initialize app");
 
     if (!app.Exec())
         return DRET_MSG(-1, "Exec failed");
