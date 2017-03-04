@@ -47,7 +47,7 @@ Run `envhelp` to see other useful shell functions, and `envhelp <function>` for
 specific usage information.
 
 Optionally, you might find it useful to add a shell function `fuchsia` as a
-shortcut to setup the build environment. For that, add this your shell startup
+shortcut to setup the build environment. For that, add this to your shell startup
 script (e.g. `~/.bashrc`):
 
 ```
