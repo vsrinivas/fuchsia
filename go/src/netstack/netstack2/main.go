@@ -69,8 +69,11 @@ func main() {
 	if err := stk.CreateNIC(nicid, loopbackID); err != nil {
 		log.Printf("could not create loopback interface: %v", err)
 	}
-	if err := stk.AddAddress(nicid, ipv4.ProtocolNumber, "\x7f\x00\x00\x01"); err != nil {
+	if err := stk.AddAddress(nicid, ipv4.ProtocolNumber, header.IPv4Loopback); err != nil {
 		log.Printf("AddAddress for localhost failed: %v", err)
+	}
+	if err := stk.AddAddress(nicid, ipv6.ProtocolNumber, header.IPv6Loopback); err != nil {
+		log.Printf("AddAddress for localhost ipv6 failed: %v", err)
 	}
 	routeTablesMu.Lock()
 	routeTables[nicid] = []tcpip.Route{
