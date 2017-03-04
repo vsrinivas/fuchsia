@@ -4,6 +4,7 @@
 
 #include "apps/mozart/src/input_manager/input_connection_impl.h"
 
+#include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/src/input_manager/input_associate.h"
 
 namespace input_manager {
@@ -23,24 +24,37 @@ InputConnectionImpl::InputConnectionImpl(
 
 InputConnectionImpl::~InputConnectionImpl() {}
 
-void InputConnectionImpl::DeliverEvent(mozart::InputEventPtr event) {
-  // TODO(jeffbrown): Pass the result back up the stack and handle errors.
-  if (!listener_) {
-    FTL_VLOG(1) << "DeliverEvent: dropped because there was no listener";
+void InputConnectionImpl::DeliverEvent(mozart::InputEventPtr event,
+                                       OnEventDelivered callback) {
+  if (!event_listener_) {
+    FTL_VLOG(1) << "DeliverEvent: " << *view_token_
+                << " dropped because there was no listener";
+    callback(false);
     return;
   }
-
-  listener_->OnEvent(std::move(event),
-                     [this](bool handled) { OnEventFinished(handled); });
+  event_listener_->OnEvent(std::move(event), callback);
 }
 
-void InputConnectionImpl::OnEventFinished(bool handled) {
-  // TODO: this code doesn't really belong here
+void InputConnectionImpl::HitTest(
+    mozart::PointFPtr point,
+    const mozart::ViewHitTester::HitTestCallback& callback) {
+  if (!view_hit_listener_) {
+    FTL_VLOG(1) << "ViewHitTest: " << *view_token_
+                << " dropped because there was no listener";
+    callback(true, nullptr);
+    return;
+  }
+  view_hit_listener_->HitTest(std::move(point), callback);
 }
 
-void InputConnectionImpl::SetListener(
+void InputConnectionImpl::SetEventListener(
     fidl::InterfaceHandle<mozart::InputListener> listener) {
-  listener_ = mozart::InputListenerPtr::Create(std::move(listener));
+  event_listener_ = mozart::InputListenerPtr::Create(std::move(listener));
+}
+
+void InputConnectionImpl::SetViewHitTester(
+    fidl::InterfaceHandle<mozart::ViewHitTester> listener) {
+  view_hit_listener_ = mozart::ViewHitTesterPtr::Create(std::move(listener));
 }
 
 }  // namespace input_manager

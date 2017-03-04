@@ -15,6 +15,8 @@ namespace input_manager {
 
 class InputAssociate;
 
+using OnEventDelivered = std::function<void(bool handled)>;
+
 // InputConnection implementation.
 // Binds incoming requests to the relevant view token.
 class InputConnectionImpl : public mozart::InputConnection {
@@ -27,18 +29,22 @@ class InputConnectionImpl : public mozart::InputConnection {
   const mozart::ViewToken* view_token() const { return view_token_.get(); }
 
   // Delivers an event to a view.
-  void DeliverEvent(mozart::InputEventPtr event);
+  void DeliverEvent(mozart::InputEventPtr event, OnEventDelivered callback);
+  // Hit test a view.
+  void HitTest(mozart::PointFPtr point,
+               const mozart::ViewHitTester::HitTestCallback& callback);
 
   // |mozart::InputConnection|
-  void SetListener(
+  void SetEventListener(
       fidl::InterfaceHandle<mozart::InputListener> listener) override;
+  void SetViewHitTester(
+      fidl::InterfaceHandle<mozart::ViewHitTester> listener) override;
 
  private:
-  void OnEventFinished(bool handled);
-
   InputAssociate* const associate_;
   mozart::ViewTokenPtr view_token_;
-  mozart::InputListenerPtr listener_;
+  mozart::InputListenerPtr event_listener_;
+  mozart::ViewHitTesterPtr view_hit_listener_;
 
   fidl::Binding<mozart::InputConnection> binding_;
 

@@ -16,8 +16,6 @@
 
 namespace input_manager {
 
-class ViewTreeHitTester;
-
 // InputManager's ViewAssociate interface implementation.
 class InputAssociate : public mozart::ViewAssociate {
  public:
@@ -40,8 +38,12 @@ class InputAssociate : public mozart::ViewAssociate {
 
   // Delivers an event to a view.
   void DeliverEvent(const mozart::ViewToken* view_token,
-                    mozart::InputEventPtr event);
-
+                    mozart::InputEventPtr event,
+                    OnEventDelivered callback);
+  // Query view for hit test
+  void ViewHitTest(const mozart::ViewToken* view_token,
+                   mozart::PointFPtr point,
+                   const mozart::ViewHitTester::HitTestCallback& callback);
   // Callbacks.
   void OnInputConnectionDied(InputConnectionImpl* connection);
   void OnInputDispatcherDied(InputDispatcherImpl* dispatcher);

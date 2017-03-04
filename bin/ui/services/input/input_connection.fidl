@@ -6,6 +6,7 @@ module mozart;
 
 // TODO(jeffbrown): Redesign input event representation later.
 import "apps/mozart/services/input/input_events.fidl";
+import "apps/mozart/services/views/view_token.fidl";
 
 // The input connection service allows a view to receive input events
 // such as key presses and pointer movements.
@@ -19,7 +20,12 @@ interface InputConnection {
   // Sets the listener for receiving input events.
   //
   // If |listener| is null, then the previously set listener is removed.
-  SetListener(InputListener? listener);
+  SetEventListener(InputListener? listener);
+
+  // Sets the listener to for receiving hit testing queries.
+  //
+  // If |listener| is null, then the previously set listener is removed.
+  SetViewHitTester(ViewHitTester? listener);
 };
 
 // An interface applications may implement to receive events from an
@@ -31,4 +37,16 @@ interface InputListener {
   // consumed by the connection.  If |consumed| is false, the system may
   // apply default behavior of its own in response to the event.
   OnEvent(InputEvent event) => (bool consumed);
+};
+
+// An interface applications may implement to handle hit testing queries
+interface ViewHitTester {
+  // Called to hit test the current view.
+  //
+  // |point| is expressed in the view's local coordinate system.
+  //
+  // The |was_hit| result should indicate whether the view was hit or not.
+  // The |subviews| result should list subviews of the current view that
+  // were also hit during the test.
+  HitTest(PointF point) => (bool was_hit, array<ViewToken> subviews);
 };

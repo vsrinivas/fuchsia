@@ -11,6 +11,7 @@
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "apps/mozart/services/input/input_dispatcher.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
+#include "apps/mozart/src/input_manager/view_hit_resolver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
@@ -39,7 +40,12 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
  private:
   void ProcessNextEvent();
   void DeliverEvent(mozart::InputEventPtr event);
-  void OnHitTestResult(std::unique_ptr<mozart::ResolvedHits> resolved_hits);
+  void DeliverEvent(uint64_t event_path_propagation_id,
+                    const EventPath* chain,
+                    mozart::InputEventPtr event);
+
+  void OnHitTestResult(mozart::PointFPtr point,
+                       std::unique_ptr<mozart::ResolvedHits> resolved_hits);
 
   InputAssociate* const associate_;
   mozart::ViewTreeTokenPtr view_tree_token_;
@@ -48,9 +54,9 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   // TODO(jeffbrown): Replace this with a proper pipeline.
   std::queue<mozart::InputEventPtr> pending_events_;
 
-  // TODO(jeffbrown): This hack is just for scaffolding.  Redesign later.
-  mozart::ViewTokenPtr focused_view_token_;
-  mozart::TransformPtr focused_view_transform_;
+  std::unique_ptr<EventPath> event_path_;
+  std::unique_ptr<ViewHitResolver> view_hit_resolver_;
+  uint64_t event_path_propagation_id_ = 0;
 
   fidl::Binding<mozart::InputDispatcher> binding_;
 

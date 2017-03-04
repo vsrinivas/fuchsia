@@ -40,7 +40,6 @@ ViewManagerApp::~ViewManagerApp() {}
 void ViewManagerApp::LaunchAssociates(Params* params) {
   for (auto& launch_info : params->TakeAssociates()) {
     auto url = launch_info->url;
-    FTL_LOG(INFO) << "Starting view associate " << url;
     app::ServiceProviderPtr services;
     app::ApplicationControllerPtr controller;
 

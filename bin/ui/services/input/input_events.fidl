@@ -142,7 +142,17 @@ struct PointerEvent {
   uint32 buttons;
 };
 
+struct FocusEvent {
+  // Time the event was delivered. The time is in nanoseconds and corresponds
+  // to the uptime of the machine.
+  uint64 event_time;
+
+  // Whether the view has gained input focused or not.
+  bool focused;
+};
+
 union InputEvent {
   PointerEvent pointer;
   KeyboardEvent keyboard;
+  FocusEvent focus;
 };

@@ -24,7 +24,6 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
     if (!command_line.GetOptionValue("associates", &config_file))
       config_file = kDefaultAssociatesConfigFile;
     if (!config_file.empty()) {
-      FTL_LOG(INFO) << "Loading associates from " << config_file;
       Config config;
       if (config.ReadFrom(config_file)) {
         associates_ = config.TakeAssociates();

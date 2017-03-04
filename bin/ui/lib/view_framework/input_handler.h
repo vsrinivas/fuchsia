@@ -21,14 +21,18 @@ class InputHandler {
   // Creates an input connection for the view with the associated
   // service provider.
   InputHandler(app::ServiceProvider* service_provider,
-               InputListener* listener);
+               InputListener* listener,
+               ViewHitTester* tester);
+  InputHandler(app::ServiceProvider* service_provider, InputListener* listener);
+
   ~InputHandler();
 
   // Gets the input connection.
   InputConnection* connection() { return connection_.get(); }
 
  private:
-  fidl::Binding<InputListener> listener_binding_;
+  fidl::Binding<InputListener> event_listener_binding_;
+  fidl::Binding<ViewHitTester> view_hit_tester_binding_;
   InputConnectionPtr connection_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputHandler);

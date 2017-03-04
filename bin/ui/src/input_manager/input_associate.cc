@@ -110,7 +110,8 @@ void InputAssociate::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
 }
 
 void InputAssociate::DeliverEvent(const mozart::ViewToken* view_token,
-                                  mozart::InputEventPtr event) {
+                                  mozart::InputEventPtr event,
+                                  OnEventDelivered callback) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(event);
   FTL_VLOG(1) << "DeliverEvent: view_token=" << *view_token
@@ -123,7 +124,30 @@ void InputAssociate::DeliverEvent(const mozart::ViewToken* view_token,
     return;
   }
 
-  it->second->DeliverEvent(std::move(event));
+  it->second->DeliverEvent(std::move(event), [callback](bool handled) {
+    if (callback)
+      callback(handled);
+  });
+}
+
+void InputAssociate::ViewHitTest(
+    const mozart::ViewToken* view_token,
+    mozart::PointFPtr point,
+    const mozart::ViewHitTester::HitTestCallback& callback) {
+  FTL_DCHECK(view_token);
+  FTL_DCHECK(point);
+  FTL_VLOG(1) << "ViewHitTest: view_token=" << *view_token
+              << ", event=" << *point;
+
+  auto it = input_connections_by_view_token_.find(view_token->value);
+  if (it == input_connections_by_view_token_.end()) {
+    FTL_VLOG(1) << "ViewHitTest: dropped because there was no input connection "
+                << *view_token;
+    callback(true, nullptr);
+    return;
+  }
+
+  it->second->HitTest(std::move(point), callback);
 }
 
 }  // namespace input_manager
