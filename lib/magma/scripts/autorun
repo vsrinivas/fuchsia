@@ -8,6 +8,7 @@ echo [ABI START=]
 echo [ABI END===]
 echo [==========]
 echo [MESA START]
+/system/test/mesa_unit_tests
 /system/test/test_wsi_magma
 /system/test/state_pool
 /system/test/state_pool_free_list_only
