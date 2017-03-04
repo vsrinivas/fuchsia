@@ -57,6 +57,14 @@
             "bootfs_path": "test/media_util_tests"
         },
         {
+            "binary": "net_media_service",
+            "bootfs_path": "apps/net_media_service"
+        },
+        {
+            "binary": "net_media_service_tests",
+            "bootfs_path": "test/net_media_service_tests"
+        },
+        {
             "binary": "vu_meter",
             "bootfs_path": "apps/vu_meter"
         }
