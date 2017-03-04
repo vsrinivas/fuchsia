@@ -20,3 +20,6 @@ $(MODULE_HOSTAPP_BIN): $(MODULE_OBJS)
 ALLHOST_APPS += $(MODULE_HOSTAPP_BIN)
 
 GENERATED += $(MODULE_HOSTAPP_BIN)
+
+$(call sysroot-module,$(MODULE))
+$(call sysroot-file,$(MODULE_HOSTAPP_BIN),[$(MODULE)])
