@@ -1,10 +1,6 @@
 #include "pthread_impl.h"
 
 int pthread_mutex_consistent(pthread_mutex_t* m) {
-    if (!(m->_m_type & 8))
-        return EINVAL;
-    if ((atomic_load(&m->_m_lock) & 0x7fffffff) != __thread_get_tid())
-        return EPERM;
-    m->_m_type &= ~8U;
-    return 0;
+    // We do not support robust pthread_mutex_ts.
+    return EINVAL;
 }

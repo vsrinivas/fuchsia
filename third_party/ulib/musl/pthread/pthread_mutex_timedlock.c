@@ -1,7 +1,8 @@
 #include "pthread_impl.h"
 
 int pthread_mutex_timedlock(pthread_mutex_t* restrict m, const struct timespec* restrict at) {
-    if ((m->_m_type & 15) == PTHREAD_MUTEX_NORMAL && !a_cas_shim(&m->_m_lock, 0, EBUSY))
+    if ((m->_m_type & PTHREAD_MUTEX_MASK) == PTHREAD_MUTEX_NORMAL &&
+        !a_cas_shim(&m->_m_lock, 0, EBUSY))
         return 0;
 
     int r, t;
@@ -15,9 +16,9 @@ int pthread_mutex_timedlock(pthread_mutex_t* restrict m, const struct timespec* 
         a_spin();
 
     while ((r = pthread_mutex_trylock(m)) == EBUSY) {
-        if (!(r = atomic_load(&m->_m_lock)) || ((r & 0x40000000) && (m->_m_type & 4)))
+        if (!(r = atomic_load(&m->_m_lock)))
             continue;
-        if ((m->_m_type & 3) == PTHREAD_MUTEX_ERRORCHECK &&
+        if ((m->_m_type & PTHREAD_MUTEX_MASK) == PTHREAD_MUTEX_ERRORCHECK &&
             (r & 0x7fffffff) == __thread_get_tid())
             return EDEADLK;
 

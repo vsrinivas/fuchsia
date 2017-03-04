@@ -205,3 +205,5 @@ pthread_t __allocate_thread(const pthread_attr_t* attr)
     __attribute__((nonnull(1))) ATTR_LIBC_VISIBILITY;
 
 pthread_t __init_main_thread(mx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
+
+#define PTHREAD_MUTEX_MASK (PTHREAD_MUTEX_RECURSIVE | PTHREAD_MUTEX_ERRORCHECK)

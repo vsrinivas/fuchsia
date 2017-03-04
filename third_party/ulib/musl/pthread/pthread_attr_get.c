@@ -60,6 +60,6 @@ int pthread_mutexattr_getrobust(const pthread_mutexattr_t* restrict a, int* rest
 }
 
 int pthread_mutexattr_gettype(const pthread_mutexattr_t* restrict a, int* restrict type) {
-    *type = a->__attr & 3;
+    *type = a->__attr & PTHREAD_MUTEX_MASK;
     return 0;
 }
