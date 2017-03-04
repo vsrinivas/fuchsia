@@ -510,13 +510,9 @@ func (s *socketServer) opIoctl(ios *iostate, msg *rio.Msg) mx.Status {
 }
 
 func mxioSockAddrReply(a tcpip.FullAddress, msg *rio.Msg) mx.Status {
-	if a.Addr == "" {
-		log.Printf("bad sock addr FullAddress: %v", a)
-		return mx.ErrInternal
-	}
 	rep := c_mxrio_sockaddr_reply{}
 	switch len(a.Addr) {
-	case 4:
+	case 0, 4:
 		sockaddr := c_sockaddr_in{sin_family: AF_INET}
 		sockaddr.sin_port.setPort(a.Port)
 		copy(sockaddr.sin_addr[:], a.Addr)
