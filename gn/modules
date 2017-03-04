@@ -30,6 +30,10 @@
             "bootfs_path": "apps/email_service"
         },
         {
+            "binary": "email_content_provider.dartx",
+            "bootfs_path": "apps/email_content_provider"
+        },
+        {
             "binary": "email_session_app.flx",
             "bootfs_path": "apps/email_session"
         },
@@ -76,6 +80,12 @@
         {
             "binary": "youtube_video.flx",
             "bootfs_path": "apps/youtube_video"
+        }
+  ],
+  "resources": [
+        {
+            "bootfs_path": "data/email/config.json",
+            "file": "apps/modules/email/config.json"
         }
   ],
   "components": [
