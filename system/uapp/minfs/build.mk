@@ -22,20 +22,6 @@ endif
 
 MINFS_LDFLAGS :=
 
-FUSE_CFLAGS := -D_FILE_OFFSET_BITS=64
-ifeq ($(call TOBOOL,$(ENABLE_MINFS_FUSE_DEBUG)),true)
-FUSE_CFLAGS += -DDEBUG
-endif
-
-FUSE_LDFLAGS :=
-
-ifeq ($(HOST_PLATFORM),darwin)
-FUSE_CFLAGS += -D_DARWIN_USE_64_BIT_INODE -I/usr/local/include/osxfuse
-FUSE_LDFLAGS += -L/usr/local/lib -losxfuse
-else
-FUSE_LDFLAGS += -lfuse
-endif
-
 SRCS += main.cpp test.cpp
 LIBMINFS_SRCS += host.cpp bcache.cpp
 LIBMINFS_SRCS += minfs.cpp minfs-ops.cpp minfs-check.cpp
@@ -54,10 +40,6 @@ LIBMXCPP_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/mxcpp/%.cpp.d,$(L
 LIBBITMAP_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/bitmap/%.cpp.o,$(LIBBITMAP_SRCS))
 LIBBITMAP_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/bitmap/%.cpp.d,$(LIBBITMAP_SRCS))
 MINFS_TOOLS := $(BUILDDIR)/tools/minfs
-
-ifeq ($(call TOBOOL,$(ENABLE_BUILD_MINFS_FUSE)),true)
-MINFS_TOOLS += $(BUILDDIR)/tools/fuse-minfs
-endif
 
 .PHONY: minfs
 minfs: $(MINFS_TOOLS)
@@ -87,16 +69,6 @@ $(BUILDDIR)/tools/minfs: $(OBJS) $(LIBMINFS_OBJS) $(LIBBITMAP_OBJS) $(LIBFS_OBJS
 	@echo linking $@
 	@$(MKDIR)
 	$(NOECHO)$(HOST_CC) $(MINFS_LDFLAGS) -o $@ $^
-
-$(BUILDDIR)/host/system/uapp/minfs/fuse.cpp.o: system/uapp/minfs/fuse.cpp
-	@echo compiling $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) $(FUSE_CFLAGS) -c -o $@ $<
-
-$(BUILDDIR)/tools/fuse-minfs: $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(BUILDDIR)/host/system/uapp/minfs/fuse.cpp.o
-	@echo linking $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(MINFS_LDFLAGS) $(FUSE_LDFLAGS) -o $@ $^
 
 GENERATED += $(OBJS) $(LIBMINFS_OBJS) $(LIBBITMAP_OBJS) $(LIBMXCPP_OBJS) $(LIBFS_OBJS)
 GENERATED += $(MINFS_TOOLS)
