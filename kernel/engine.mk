@@ -440,6 +440,8 @@ all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
 # and all host tools
 all:: $(ALLHOST_APPS)
 
+tools:: $(ALLHOST_APPS)
+
 # add some automatic configuration defines
 KERNEL_DEFINES += \
 	PROJECT_$(PROJECT)=1 \
