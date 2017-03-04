@@ -95,7 +95,12 @@ status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>& ch
     if (!valid_)
         return ERR_BAD_STATE;
 
-    status_t status = child->ValidateLocked();
+    // Note that this acquires the child lock under the parent
+    // lock. This is safe, as this is only ever called from
+    // sys_resource_create on a freshly created child. Thus the
+    // parent-child relationship is strictly hierarchical.
+    DEBUG_ASSERT(child.get() != this);
+    status_t status = child->Validate();
     if (status != NO_ERROR)
         return status;
 
@@ -226,12 +231,31 @@ status_t ResourceDispatcher::AddRecords(user_ptr<const mx_rrec_t> records, size_
     return NO_ERROR;
 }
 
-status_t ResourceDispatcher::ValidateLocked(void) {
+mx_status_t ResourceDispatcher::Validate() {
+    AutoLock lock(&lock_);
+    return ValidateLocked();
+}
+
+mx_status_t ResourceDispatcher::ValidateLocked() {
     if (valid_)
         return ERR_BAD_STATE;
 
     valid_ = true;
     return NO_ERROR;
+}
+
+mx_rrec_self_t ResourceDispatcher::GetSelf() {
+    mx_rrec_self_t self;
+
+    memcpy(self.name, name_, MX_MAX_NAME_LEN);
+    self.subtype = subtype_;
+    self.koid = get_koid();
+
+    AutoLock lock(&lock_);
+    self.child_count = num_children_;
+    self.record_count = num_records_;
+
+    return self;
 }
 
 ResourceRecord* ResourceDispatcher::GetNthRecordLocked(uint32_t index) {
@@ -303,11 +327,10 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
         for (auto& child: children_) {
             if (n == max)
                 break;
-            memcpy(rec.self.name, child.name_, MX_MAX_NAME_LEN);
-            rec.self.subtype = child.subtype_;
-            rec.self.child_count = child.num_children_;
-            rec.self.record_count = child.num_records_;
-            rec.self.koid = child.get_koid();
+            // This acquires the child lock. Doing so is safe because
+            // the parent-child relationship is strictly hierarchical.
+            rec.self = child.GetSelf();
+
             if (records.copy_array_to_user(&rec, 1, n) != NO_ERROR) {
                 status = ERR_INVALID_ARGS;
                 break;

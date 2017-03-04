@@ -11,6 +11,7 @@
 #include <magenta/dispatcher.h>
 #include <magenta/handle_owner.h>
 #include <magenta/syscalls/resource.h>
+#include <magenta/thread_annotations.h>
 #include <mxtl/intrusive_double_list.h>
 #include <sys/types.h>
 
@@ -19,29 +20,29 @@ class ResourceRecord;
 class ResourceDispatcher final : public Dispatcher,
     public mxtl::DoublyLinkedListable<mxtl::RefPtr<ResourceDispatcher>> {
 public:
-    static status_t Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher,
+    static mx_status_t Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher,
                            mx_rights_t* rights, const char* name, uint16_t subtype);
 
     virtual ~ResourceDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_RESOURCE; }
     StateTracker* get_state_tracker()  final { return &state_tracker_; }
-    status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
+    mx_status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // MakeRoot() validates the resource as the parent of a tree.
     // If successful children may be added to it, but it may never
     // be added as a child to another Resource.
-    status_t MakeRoot();
+    mx_status_t MakeRoot();
 
     // AddChild() requires that the Resource being added have not yet
     // been validated and that the Resource the child is being added
     // to has been validated.
-    status_t AddChild(const mxtl::RefPtr<ResourceDispatcher>& child);
+    mx_status_t AddChild(const mxtl::RefPtr<ResourceDispatcher>& child);
 
     // Records may be added until MakeRoot() or AddChild() are called,
     // at which point the Resource is validated, and if valid, sealed
     // against further modifications.
-    status_t AddRecords(user_ptr<const mx_rrec_t> records, size_t count);
-    status_t AddRecord(mx_rrec_t* record);
+    mx_status_t AddRecords(user_ptr<const mx_rrec_t> records, size_t count);
+    mx_status_t AddRecord(mx_rrec_t* record);
 
     // Create a Dispatcher for the indicated Record
     mx_status_t RecordCreateDispatcher(uint32_t index, uint32_t options,
@@ -67,24 +68,25 @@ public:
 
 private:
     ResourceDispatcher(const char* name, uint16_t subtype_);
-    mx_status_t ValidateLocked();
-    ResourceRecord* GetNthRecordLocked(uint32_t index);
-    status_t AddRecord(mxtl::unique_ptr<ResourceRecord> rec);
+    mx_status_t Validate();
+    mx_status_t ValidateLocked() TA_REQ(lock_);
+    ResourceRecord* GetNthRecordLocked(uint32_t index) TA_REQ(lock_);
+    mx_status_t AddRecord(mxtl::unique_ptr<ResourceRecord> rec);
+    mx_rrec_self_t GetSelf();
 
     Mutex lock_;
 
-    mxtl::DoublyLinkedList<mxtl::RefPtr<ResourceDispatcher>> children_;
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<ResourceRecord>> records_;
+    mxtl::DoublyLinkedList<mxtl::RefPtr<ResourceDispatcher>> children_ TA_GUARDED(lock_);
+    mxtl::DoublyLinkedList<mxtl::unique_ptr<ResourceRecord>> records_ TA_GUARDED(lock_);
 
-    uint32_t num_children_;
-    uint16_t num_records_;
+    uint32_t num_children_ TA_GUARDED(lock_);
+    uint16_t num_records_ TA_GUARDED(lock_);
     const uint16_t subtype_;
-    bool valid_;
+    bool valid_ TA_GUARDED(lock_);
 
-    HandleOwner inbound_;
+    HandleOwner inbound_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
-    mxtl::unique_ptr<PortClient> iopc_;
+    mxtl::unique_ptr<PortClient> iopc_ TA_GUARDED(lock_);
 
     char name_[MX_MAX_NAME_LEN];
 };
-
