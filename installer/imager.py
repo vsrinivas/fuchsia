@@ -9,6 +9,8 @@ import argparse
 import subprocess
 import sys
 
+import manifest
+
 # This script is concerned with creating a new user.bootfs which contains
 # whatever the contents of the user.bootfs are according to the supplied
 # file_manifest argument PLUS an additional file which is a compressed disk
@@ -194,67 +196,11 @@ bootloader_remote_path = "%s/BOOT%s.EFI" % (DIR_EFI_BOOT, arch)
 
 print "Copying files to disk image."
 working_dir = os.getcwd()
-minfs_cmd = [minfs_bin, disk_path, "cp", None, None]
 
-# parse the manifest file and find the files to copy
-file_count = 0
-created_dirs = set()
-with open(primary_manifest, "r") as manifest_file:
-  for line in manifest_file:
-    if "=" in line:
-      if line.count("=") != 1:
-        raise Exception("Unexpected format, too many equal signs: %d" %
-                        line.count("="))
-      parts = line.split("=")
-      parts[0] = parts[0].strip()
-      parts[1] = parts[1].strip()
-
-      # first figure out if we need to make a directory for this file
-      # This should split file name off the past
-      dir_path = os.path.split(parts[0])[0]
-
-      # track the directories we need to make for this file
-      dirs_to_make = []
-
-      # see if the directory for this file has been created
-      while dir_path != "" and dir_path not in created_dirs:
-        dir_path, new_dir = os.path.split(dir_path)
-        dirs_to_make.append(new_dir)
-
-      # now create the directory path
-      while len(dirs_to_make) > 0:
-        dir_path = os.path.join(dir_path, dirs_to_make.pop())
-
-        mkdir_cmd = [minfs_bin, disk_path, "mkdir", "::%s" % dir_path]
-        try:
-          subprocess.check_call(mkdir_cmd)
-        except (subprocess.CalledProcessError):
-          print "Error creating directory '%s'" % dir_path
-          sys.exit(-1)
-        except (OSError):
-          print "Unable to execute minfs"
-          sys.exit(-1)
-
-        # record that we've created this directory
-        created_dirs.add(dir_path)
-
-      targ_path = "::%s" % parts[0]
-      minfs_cmd[3] = parts[1]
-      minfs_cmd[4] = targ_path
-
-      try:
-        subprocess.check_call(minfs_cmd)
-      except (subprocess.CalledProcessError):
-        print "Error copying file %s" % parts[1]
-        sys.exit(-1)
-      except (OSError):
-        print "Unable to execute minfs"
-        sys.exit(-1)
-
-      file_count += 1
-      # some status output
-      sys.stdout.write("%s\r" % (" " * 100))
-      sys.stdout.write("Copying '%s' \r" % parts[0])
+# Take the file referenced by primary_manifest and write them into the
+# minfs image at disk_path using the minfs binary pointed to by minfs_bin.
+file_count = manifest.build_minfs_image(primary_manifest, \
+                                        disk_path, minfs_bin)
 
 print "\nCopied %i files" % file_count
 
