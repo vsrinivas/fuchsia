@@ -51,6 +51,11 @@ int main(int argc, char** argv) {
     if ((s = netboot_open(hostname, NB_SERVER_PORT, NULL)) < 0) {
         if (errno == ETIMEDOUT) {
             fprintf(stderr, "%s: lookup timed out\n", appname);
+            // TODO(jimbe): Remove this transitional code after May 1, 2017.
+            if (!strcmp(hostname, "magenta")) {
+                fprintf(stderr, "WARNING: The \"magenta\" hostname is obsolete. "
+                    "Use \":\" or see loglistener.\n");
+            }
         }
         return -1;
     }
