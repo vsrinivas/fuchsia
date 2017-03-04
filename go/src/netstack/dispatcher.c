@@ -36,6 +36,7 @@ static mxrio_msg_t* msg_dup(mxrio_msg_t* msg) {
       MXRIO_HDR_SZ + (((int)msg->datalen > msg->arg) ? msg->datalen : msg->arg);
   mxrio_msg_t* msg_copy = calloc(1, len);
   debug_alloc("msg_dup %p\n", msg_copy);
+  assert(msg_copy);
   return memcpy(msg_copy, msg, len);
 }
 
