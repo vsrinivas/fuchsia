@@ -565,9 +565,6 @@ endif
 MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
 MDIGEN := $(BUILDDIR)/tools/mdigen
 
-#TODO: convert to host tools module
-include system/uapp/minfs/build.mk
-
 # the logic to compile and link stuff is in here
 include make/build.mk
 
