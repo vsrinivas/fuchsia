@@ -103,7 +103,7 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 			Port: uint16(data[3]) | uint16(data[2])<<8,
 		}
 		// INADDR_ANY is represented as tcpip.Address("").
-		if v.sin_addr[0] != 0 || v.sin_addr[1] != 0 || v.sin_addr[2] != 0 || v.sin_addr[3] != 0 {
+		if !isZeros(v.sin_addr[:]) {
 			addr.Addr = tcpip.Address(v.sin_addr[:])
 		}
 		if debug2 {
@@ -117,7 +117,9 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 		v := (*c_sockaddr_in6)(unsafe.Pointer(&data[0]))
 		addr := &tcpip.FullAddress{
 			Port: uint16(data[3]) | uint16(data[2])<<8,
-			Addr: tcpip.Address(v.sin6_addr[:]),
+		}
+		if !isZeros(v.sin6_addr[:]) {
+			addr.Addr = tcpip.Address(v.sin6_addr[:])
 		}
 		if debug2 {
 			log.Printf("readSockaddrIn: addr=%v", addr)

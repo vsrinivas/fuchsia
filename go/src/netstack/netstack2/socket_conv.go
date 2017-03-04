@@ -34,6 +34,15 @@ func (v *c_mxrio_gai_req) Unpack() (node, service string, hints *c_addrinfo) {
 	return node, service, hints
 }
 
+func isZeros(buf []byte) bool {
+	for i := 0; i < len(buf); i++ {
+		if buf[i] != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // TODO: create a tcpip.Option type
 func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 	switch v.level {
