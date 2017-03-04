@@ -41,7 +41,7 @@ StoryImpl::StoryImpl(StoryDataPtr story_data,
       story_data_->story_info->id));
 }
 
-StoryImpl::~StoryImpl() {}
+StoryImpl::~StoryImpl() = default;
 
 void StoryImpl::Connect(fidl::InterfaceRequest<StoryController> request) {
   bindings_.AddBinding(this, std::move(request));

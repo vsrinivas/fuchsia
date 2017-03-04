@@ -13,15 +13,13 @@ namespace modular {
 
 namespace {
 
-class ReadLinkDataCall : public Operation {
+class ReadLinkDataCall : public Operation<fidl::String> {
  public:
-  using Result = StoryStorageImpl::DataCallback;
-
   ReadLinkDataCall(OperationContainer* const container,
                    ledger::Page* const page,
                    const fidl::String& link_id,
-                   Result result)
-      : Operation(container), page_(page), link_id_(link_id), result_(result) {
+                   ResultCall result_call)
+      : Operation(container, std::move(result_call)), page_(page), link_id_(link_id) {
     Ready();
   }
 
@@ -36,8 +34,7 @@ class ReadLinkDataCall : public Operation {
                   data_->Deserialize(value->get_bytes().data(),
                                      value->get_bytes().size());
                 }
-                result_(data_->json);
-                Done();
+                Done(std::move(data_->json));
               });
         });
   }
@@ -47,21 +44,18 @@ class ReadLinkDataCall : public Operation {
   ledger::PageSnapshotPtr page_snapshot_;
   const fidl::String link_id_;
   LinkDataPtr data_;
-  Result result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
 
-class WriteLinkDataCall : public Operation {
+class WriteLinkDataCall : public Operation<void> {
  public:
-  using Result = StoryStorageImpl::SyncCallback;
-
   WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
                     const fidl::String& link_id,
                     const fidl::String& data,
-                    Result result)
-      : Operation(container), page_(page), link_id_(link_id), result_(result) {
+                    ResultCall result_call)
+      : Operation(container, std::move(result_call)), page_(page), link_id_(link_id) {
     data_ = LinkData::New();
     data_->json = data;
     Ready();
@@ -74,7 +68,6 @@ class WriteLinkDataCall : public Operation {
 
     page_->Put(to_array(link_id_), std::move(bytes),
                [this](ledger::Status status) {
-                 result_();
                  Done();
                });
   }
@@ -84,28 +77,22 @@ class WriteLinkDataCall : public Operation {
   ledger::PageSnapshotPtr page_snapshot_;
   const fidl::String link_id_;
   LinkDataPtr data_;
-  Result result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
 
-class SyncCall : public Operation {
+class SyncCall : public Operation<void> {
  public:
-  using Result = StoryStorageImpl::SyncCallback;
-
-  SyncCall(OperationContainer* const container, Result result)
-      : Operation(container), result_(result) {
+  SyncCall(OperationContainer* const container, ResultCall result_call)
+      : Operation(container, std::move(result_call)) {
     Ready();
   }
 
   void Run() override {
-    result_();
     Done();
   }
 
  private:
-  Result result_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(SyncCall);
 };
 
