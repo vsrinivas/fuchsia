@@ -96,3 +96,18 @@ source_set("monitor") {
     "monitor.h",
   ]
 }
+
+source_set("semaphore_port") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "semaphore_port.h",
+  ]
+
+  deps = [
+    "platform:port"
+  ]
+}

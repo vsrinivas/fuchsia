@@ -44,11 +44,13 @@ source_set("magma_util_tests") {
     "test_address_space_allocator.cc",
     "test_macros.cc",
     "test_monitor.cc",
+    "test_semaphore_port.cc",
     "test_sleep.cc",
   ]
 
   deps = [
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:port",
     "//third_party/gtest",
   ]
 }
