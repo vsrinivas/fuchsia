@@ -32,9 +32,12 @@
 
 #define LOCAL_TRACE 0
 
+// The number of possible handles in the arena.
 constexpr size_t kMaxHandleCount = 256 * 1024u;
 
-constexpr size_t kHighHandleCount = (kMaxHandleCount * 8) / 7;
+// Warning level: high_handle_count() is called when
+// there are this many outstanding handles.
+constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 
 // The handle arena and its mutex.
 mutex_t handle_mutex = MUTEX_INITIAL_VALUE(handle_mutex);
@@ -54,6 +57,8 @@ void magenta_init(uint level) {
 }
 
 static void high_handle_count(size_t count) {
+    // TODO: Avoid calling this for every handle after kHighHandleCount;
+    // printfs are slow and |handle_mutex| is held by our caller.
     printf("warning!! high handle count: %zu handles\n", outstanding_handles);
 }
 
