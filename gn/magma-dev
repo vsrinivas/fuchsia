@@ -27,6 +27,10 @@
             "bootfs_path": "test/magma_sys_abi_conformance_tests"
         },
         {
+            "binary": "mesa_unit_tests",
+            "bootfs_path": "test/mesa_unit_tests"
+        },
+        {
             "binary": "vkcube",
             "bootfs_path": "apps/vkcube"
         },
