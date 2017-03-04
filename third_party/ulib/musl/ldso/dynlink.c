@@ -56,7 +56,7 @@ struct dso {
     // TODO(mcgrathr): Use the type here.
     unsigned char* base;
     char* name;
-    size_t* dynv;
+    ElfW(Dyn)* dynv;
     struct dso *next, *prev;
 
     const char* soname;
@@ -218,22 +218,22 @@ static void dl_alloc_rollback(const struct dl_alloc_checkpoint *state) {
 #define laddr(p, v) (void*)((p)->base + (v))
 #define fpaddr(p, v) ((void (*)(void))laddr(p, v))
 
-__NO_SAFESTACK static void decode_vec(size_t* v, size_t* a, size_t cnt) {
+__NO_SAFESTACK static void decode_vec(ElfW(Dyn)* v, size_t* a, size_t cnt) {
     size_t i;
     for (i = 0; i < cnt; i++)
         a[i] = 0;
-    for (; v[0]; v += 2)
-        if (v[0] - 1 < cnt - 1) {
-            a[0] |= 1UL << v[0];
-            a[v[0]] = v[1];
+    for (; v->d_tag; v++)
+        if (v->d_tag - 1 < cnt - 1) {
+            a[0] |= 1UL << v->d_tag;
+            a[v->d_tag] = v->d_un.d_val;
         }
 }
 
-__NO_SAFESTACK static int search_vec(size_t* v, size_t* r, size_t key) {
-    for (; v[0] != key; v += 2)
-        if (!v[0])
+__NO_SAFESTACK static int search_vec(ElfW(Dyn)* v, size_t* r, size_t key) {
+    for (; v->d_tag != key; v++)
+        if (!v->d_tag)
             return 0;
-    *r = v[1];
+    *r = v->d_un.d_val;
     return 1;
 }
 
@@ -988,8 +988,8 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
 
     // Calculate how many slots are needed for dependencies.
     size_t ndeps = 0;
-    for (size_t i = 0; temp_dso.dynv[i]; i += 2) {
-        if (temp_dso.dynv[i] == DT_NEEDED)
+    for (size_t i = 0; temp_dso.dynv[i].d_tag; i++) {
+        if (temp_dso.dynv[i].d_tag == DT_NEEDED)
             ++ndeps;
     }
     if (ndeps > 0)
@@ -1080,10 +1080,10 @@ __NO_SAFESTACK static void load_deps(struct dso* p) {
         struct dso** deps = NULL;
         if (runtime && p->deps == NULL)
             deps = p->deps = p->buf;
-        for (size_t i = 0; p->dynv[i]; i += 2) {
-            if (p->dynv[i] != DT_NEEDED)
+        for (size_t i = 0; p->dynv[i].d_tag; i++) {
+            if (p->dynv[i].d_tag != DT_NEEDED)
                 continue;
-            const char* name = p->strings + p->dynv[i + 1];
+            const char* name = p->strings + p->dynv[i].d_un.d_val;
             struct dso* dep;
             mx_status_t status = load_library(name, 0, p, &dep);
             if (status != NO_ERROR) {
@@ -1534,11 +1534,11 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     load_deps(&app);
     make_global(&app);
 
-    for (i = 0; app.dynv[i]; i += 2) {
-        if (!DT_DEBUG_INDIRECT && app.dynv[i] == DT_DEBUG)
-            app.dynv[i + 1] = (size_t)&debug;
-        if (DT_DEBUG_INDIRECT && app.dynv[i] == DT_DEBUG_INDIRECT) {
-            size_t* ptr = (size_t*)app.dynv[i + 1];
+    for (i = 0; app.dynv[i].d_tag; i++) {
+        if (!DT_DEBUG_INDIRECT && app.dynv[i].d_tag == DT_DEBUG)
+            app.dynv[i].d_un.d_ptr = (size_t)&debug;
+        if (DT_DEBUG_INDIRECT && app.dynv[i].d_tag == DT_DEBUG_INDIRECT) {
+            size_t* ptr = (size_t*)app.dynv[i].d_un.d_ptr;
             *ptr = (size_t)&debug;
         }
     }

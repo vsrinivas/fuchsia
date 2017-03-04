@@ -2,6 +2,7 @@
 
 #include <elf.h>
 #include <features.h>
+#include <link.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -55,7 +56,6 @@ enum {
 #define DT_DEBUG_INDIRECT 0
 #endif
 
-#define AUX_CNT 32
 #define DYN_CNT 32
 
 // This is the return value of the dynamic linker startup functions.
@@ -80,4 +80,4 @@ typedef dl_start_return_t stage3_func(void* start_arg);
 // _BASE is defined by base.ld to 0, i.e. the lowest address in the DSO image.
 // _DYNAMIC is defined automagically by the linker.
 extern const char _BASE[] __attribute__((visibility("hidden")));
-extern size_t _DYNAMIC[] __attribute__((visibility("hidden")));
+extern ElfW(Dyn) _DYNAMIC[] __attribute__((visibility("hidden")));
