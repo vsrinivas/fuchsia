@@ -18,6 +18,7 @@
 #include "application/src/url_resolver.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/mtl/handles/object_info.h"
 
 namespace app {
 namespace {
@@ -138,6 +139,8 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
     label_ = ftl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
   else
     label_ = label.get().substr(0, ApplicationEnvironment::kLabelMaxLength);
+
+  mtl::SetObjectName(job_.get(), label_);
 }
 
 ApplicationEnvironmentImpl::~ApplicationEnvironmentImpl() {
