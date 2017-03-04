@@ -221,6 +221,7 @@ HOST_COMPILEFLAGS := -Wall -g -O2 -Isystem/public -Isystem/private
 HOST_CFLAGS := -std=c11
 HOST_CPPFLAGS := -std=c++11 -fno-exceptions -fno-rtti
 HOST_ASMFLAGS :=
+HOST_PLATFORM := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 
 # top level rule
 all:: $(OUTLKBIN) $(OUTLKELF)-gdb.py
@@ -522,7 +523,6 @@ export GCC_COLORS ?= 1
 FOUND_HOST_GCC ?= $(shell which $(HOST_TOOLCHAIN_PREFIX)gcc)
 HOST_TOOLCHAIN_PREFIX ?= $(CLANG_TOOLCHAIN_PREFIX)
 HOST_USE_CLANG ?= $(shell which $(HOST_TOOLCHAIN_PREFIX)clang)
-HOST_PLATFORM := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ifneq ($(HOST_USE_CLANG),)
 HOST_CC      := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)clang
 HOST_CXX     := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)clang++
