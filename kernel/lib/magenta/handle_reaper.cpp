@@ -15,7 +15,7 @@
 
 static void ReaperRoutine(dpc_t* dpc);
 
-static mutex_t reaper_mutex = MUTEX_INITIAL_VALUE(reaper_mutex);
+static Mutex reaper_mutex;
 static mxtl::DoublyLinkedList<Handle*> reaper_handles TA_GUARDED(reaper_mutex);
 static dpc_t reaper_dpc = {
     .node = LIST_INITIAL_CLEARED_VALUE,

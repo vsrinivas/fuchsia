@@ -40,9 +40,9 @@ constexpr size_t kMaxHandleCount = 256 * 1024u;
 constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 
 // The handle arena and its mutex.
-mutex_t handle_mutex = MUTEX_INITIAL_VALUE(handle_mutex);
-mxtl::TypedArena<Handle> handle_arena;
-size_t outstanding_handles = 0u;
+static Mutex handle_mutex;
+static mxtl::TypedArena<Handle> TA_GUARDED(handle_mutex) handle_arena;
+static size_t outstanding_handles TA_GUARDED(handle_mutex) = 0u;
 
 // The system exception port.
 static mxtl::RefPtr<ExceptionPort> system_exception_port;
@@ -51,7 +51,7 @@ static mutex_t system_exception_mutex = MUTEX_INITIAL_VALUE(system_exception_mut
 // All jobs and processes are rooted at the |root_job|.
 static mxtl::RefPtr<JobDispatcher> root_job;
 
-void magenta_init(uint level) {
+void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     handle_arena.Init("handles", kMaxHandleCount);
     root_job = JobDispatcher::CreateRootJob();
 }
@@ -59,7 +59,7 @@ void magenta_init(uint level) {
 static void high_handle_count(size_t count) {
     // TODO: Avoid calling this for every handle after kHighHandleCount;
     // printfs are slow and |handle_mutex| is held by our caller.
-    printf("warning!! high handle count: %zu handles\n", outstanding_handles);
+    printf("warning!! high handle count: %zu handles\n", count);
 }
 
 Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
@@ -113,12 +113,12 @@ bool HandleInRange(void* addr) {
     return handle_arena.in_range(addr);
 }
 
-uint32_t MapHandleToU32(const Handle* handle) {
+uint32_t MapHandleToU32(const Handle* handle) TA_NO_THREAD_SAFETY_ANALYSIS {
     auto va = handle - reinterpret_cast<Handle*>(handle_arena.start());
     return static_cast<uint32_t>(va);
 }
 
-Handle* MapU32ToHandle(uint32_t value) {
+Handle* MapU32ToHandle(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
     auto va = &reinterpret_cast<Handle*>(handle_arena.start())[value];
     if (!HandleInRange(va))
         return nullptr;

@@ -10,7 +10,7 @@
 
 constexpr mx_rights_t kDefaultHypervisorRights = MX_RIGHT_EXECUTE;
 
-Mutex mutex;
+static Mutex mutex;
 mxtl::RefPtr<HypervisorDispatcher> hypervisor TA_GUARDED(mutex);
 
 // static
