@@ -1,4 +1,4 @@
-# Job Object
+# Job
 
 ## NAME
 
@@ -23,7 +23,16 @@ A job is an object consisting of the following:
 Jobs control "applications" that are composed of more than one process to be
 controlled as a single entity.
 
-## SEE ALSO
+## SYSCALLS
 
-[job_create](../syscalls/job_create.md),
-[process_create](../syscalls/process_create.md)
++ [job_create](../syscalls/job_create.md) - create a new job within a job
+
+<br>
+
++ [process_create](../syscalls/process_create.md) - create a new process within a job
+
+<br>
+
++ [task_resume](../syscalls/task_resume.md) - cause a suspended task to continue running
++ [task_bind_exception_port](../syscalls/task_bind_exception_port.md) - attach an exception port to a task
++ [task_kill](../syscalls/task_kill.md) - cause a task to stop running

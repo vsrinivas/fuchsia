@@ -1,4 +1,4 @@
-# Waitset Object
+# Waitset
 
 ## NAME
 
@@ -15,9 +15,9 @@ TODO
 
 TODO
 
-## SEE ALSO
+## SYSCALLS
 
-[waitset_create](../syscalls/waitset_create.md)
-[waitset_add](../syscalls/waitset_add.md)
-[waitset_remove](../syscalls/waitset_remove.md)
-[waitset_wait](../syscalls/waitset_wait.md)
++ [waitset_create](../syscalls/waitset_create.md) - create a new waitset
++ [waitset_add](../syscalls/waitset_add.md) - add an entry to a waitset
++ [waitset_remove](../syscalls/waitset_remove.md) - remove an entry from a waitset
++ [waitset_wait](../syscalls/waitset_wait.md) - wait for one or more entries to be signalled

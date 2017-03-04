@@ -1,4 +1,5 @@
 * [Magenta](/README.md)
 * [Concepts](/docs/concepts.md)
+* [Objects](/docs/objects.md)
 * [Syscalls](/docs/syscalls.md)
 * [Getting Started](/docs/getting_started.md)

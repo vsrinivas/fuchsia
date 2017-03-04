@@ -74,9 +74,9 @@
 + [port_cancel](syscalls/port_cancel.md) - cancel notificaitons from async_wait
 
 ## Futexes
-+ [futex_wait](syscalls/futex_wait.md)
-+ [futex_wake](syscalls/futex_wake.md)
-+ [futex_requeue](syscalls/futex_requeue.md)
++ [futex_wait](syscalls/futex_wait.md) - wait on a futex
++ [futex_wake](syscalls/futex_wake.md) - wake waiters on a futex
++ [futex_requeue](syscalls/futex_requeue.md) - wake some waiters and requeue other waiters
 
 ## Virtual Memory Objects (VMOs)
 + [vmo_create](syscalls/vmo_create.md) - create a new vmo

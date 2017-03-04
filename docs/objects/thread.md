@@ -1,4 +1,4 @@
-# Thread Object
+# Thread
 
 ## NAME
 
@@ -24,8 +24,16 @@ the previously loaded binary. Or it can be created by calling
 A thread terminates when it `return`s from executing the routine specified as
 the entrypoint or by calling `sys_thread_exit()`.
 
-## SEE ALSO
+## SYSCALLS
 
-[thread_create](../syscalls/thread_create.md)
-[thread_start](../syscalls/thread_start.md)
-[thread_exit](../syscalls/thread_exit.md)
++ [thread_create](../syscalls/thread_create.md) - create a new thread within a process
++ [thread_exit](../syscalls/thread_exit.md) - exit the current thread
++ [thread_read_state](../syscalls/thread_read_state.md) - read register state from a thread
++ [thread_start](../syscalls/thread_start.md) - cause a new thread to start executing
++ [thread_write_state](../syscalls/thread_write_state.md) - modify register state of a thread
+
+<br>
+
++ [task_resume](../syscalls/task_resume.md) - cause a suspended task to continue running
++ [task_bind_exception_port](../syscalls/task_bind_exception_port.md) - attach an exception port to a task
++ [task_kill](../syscalls/task_kill.md) - cause a task to stop running

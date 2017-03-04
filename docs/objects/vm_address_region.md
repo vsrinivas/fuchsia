@@ -84,9 +84,12 @@ mx_status_t map_with_guard(mx_handle_t vmar, size_t before, size_t after,
 
 ## SEE ALSO
 
-[vm_object](vm_object.md),
-[vmar_allocate](../syscalls/vmar_allocate.md),
-[vmar_destroy](../syscalls/vmar_destroy.md),
-[vmar_map](../syscalls/vmar_map.md),
-[vmar_protect](../syscalls/vmar_protect.md),
-[vmar_unmap](../syscalls/vmar_unmap.md),
++ [vm_object](vm_object.md) - Virtual Memory Objects
+
+## SYSCALLS
+
++ [vmar_allocate](../syscalls/vmar_allocate.md) - create a new child VMAR
++ [vmar_map](../syscalls/vmar_map.md) - map a VMO into a process
++ [vmar_unmap](../syscalls/vmar_unmap.md) - unmap a memory region from a process
++ [vmar_protect](../syscalls/vmar_protect.md) - adjust memory access permissions
++ [vmar_destroy](../syscalls/vmar_destroy.md) - destroy a VMAR and all of its children

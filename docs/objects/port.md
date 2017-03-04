@@ -1,20 +1,23 @@
-# Port Object
+# Port
 
 ## NAME
 
-port - Signalling and mailbox primitive
+port - Signaling and mailbox primitive
 
 ## SYNOPSIS
 
-TODO
+Ports allow threads to wait for packets to be delivered from various
+events. These events include explicit queueing on the port,
+asynchronous waits on other handles bound to the port, and
+asynchronous message delivery from IPC transports.
 
 ## DESCRIPTION
 
 TODO
 
-## SEE ALSO
+## SYSCALLS
 
-[port_create](../syscalls/port_create.md)
-[port_bind](../syscalls/port_bind.md)
-[port_queue](../syscalls/port_queue.md)
-[port_wait](../syscalls/port_wait.md)
++ [port_create](../syscalls/port_create.md) - create a port
++ [port_queue](../syscalls/port_queue.md) - send a packet to a port
++ [port_wait](../syscalls/port_wait.md) - wait for packets to arrive on a port
++ [port_bind](../syscalls/port_bind.md) - bind an object to a port

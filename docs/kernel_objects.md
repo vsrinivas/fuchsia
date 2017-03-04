@@ -16,19 +16,30 @@ Magenta actively manages the following resources:
 
 ## Kernel objects for applications
 
++ [Channel](objects/channel.md)
++ [Socket](objects/socket.md)
++ [FIFO](objects/fifo.md)
+
 + [Process](objects/process.md)
 + [Thread](objects/thread.md)
++ [Job](objects/job.md)
++ [Task](objects/task.md)
+
 + [Event](objects/event.md)
-+ [Channel](objects/channel.md)
-+ [VMObject](objects/vm_object.md)
-+ [Virtual Memory Address Region](objects/vm_address_region.md)
-+ [Port](objects/port.md)
++ [Event Pair](objects/eventpair.md)
 + [Futex](objects/futex.md)
+
++ [Virtual Memory Object](objects/vm_object.md)
++ [Virtual Memory Address Region](objects/vm_address_region.md)
+
++ [Port](objects/port.md)
 + [Waitset](objects/waitset.md)
 
 ## Kernel objects for drivers
 
 + [Interrupt request](objects/interrupt_request.md)
++ [Resource](objects/resource.md)
++ [Log](objects/log.md)
 
 ## Kernel Object and LK
 Some kernel objects wrap one or more LK-level constructs. For example the

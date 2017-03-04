@@ -1,6 +1,10 @@
-# Futexes
+# Futex
 
-## What is a futex?
+## NAME
+
+futex - A primitive for creating userspace synchronization tools.
+
+## SYNOPSIS
 
 A **futex** is a Fast Userspace muTEX. It is a low level
 synchronization primitive which is a building block for higher level
@@ -9,7 +13,7 @@ APIs such as `pthread_mutex_t` and `pthread_cond_t`.
 Futexes are designed to not enter the kernel or allocate kernel
 resources in the uncontested case.
 
-## API
+## DESCRIPTION
 
 The magenta futex implementation currently supports three operations:
 
@@ -34,7 +38,7 @@ See the [futex_wait](../syscalls/futex_wait.md),
 [futex_wake](../syscalls/futex_wake.md), and
 [futex_requeue](../syscalls/futex_requeue.md) man pages for more details.
 
-## Differences from Linux futexes
+### Differences from Linux futexes
 
 Note that all of the magenta futex operations key off of the virtual
 address of an userspace pointer. This differs from the Linux
@@ -47,7 +51,7 @@ futex unmodified from the kernel. Other potential operations, such as
 Linux's `FUTEX_WAKE_OP`, requires atomic manipulation of the value
 from the kernel, which our current implementation does not require.
 
-## Papers about futexes
+### Papers about futexes
 
 - [Fuss, Futexes and Furwocks: Fast Userlevel Locking in Linux](https://www.kernel.org/doc/ols/2002/ols2002-pages-479-495.pdf), Hubertus Franke and Rusty Russell
 
@@ -74,3 +78,9 @@ from the kernel, which our current implementation does not require.
     benchmarks and analysis. Contains a detailed explanation of the "parking
     lot" concept, which allows very compact representation of user-space
     mutexes.
+
+## SYSCALLS
+
++ [futex_wait](../syscalls/futex_wait.md)
++ [futex_wake](../syscalls/futex_wake.md)
++ [futex_requeue](../syscalls/futex_requeue.md)
