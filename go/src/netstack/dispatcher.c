@@ -31,9 +31,15 @@ static mxio_dispatcher_t* remoteio_dispatcher;
 
 static mxrio_msg_t* msg_dup(mxrio_msg_t* msg) {
   // msg->datalen : the data size in the request
-  // msg->arg : the max data size in the reply
+  // msg->arg : the max data size in the reply (except for OPEN/SEEK)
+  int32_t arg = msg->arg;
+  switch (MXRIO_OP(msg->op)) {
+  case MXRIO_OPEN: // arg is flags
+  case MXRIO_SEEK: // arg is whence
+    arg = 0;
+  }
   size_t len =
-      MXRIO_HDR_SZ + (((int)msg->datalen > msg->arg) ? msg->datalen : msg->arg);
+      MXRIO_HDR_SZ + (((int)msg->datalen > arg) ? msg->datalen : arg);
   mxrio_msg_t* msg_copy = calloc(1, len);
   debug_alloc("msg_dup %p\n", msg_copy);
   assert(msg_copy);
@@ -85,7 +91,7 @@ mx_status_t dispatcher_add(mx_handle_t h, iostate_t* ios) {
 static mx_handle_t devmgr_connect(const char* where) {
   int fd;
   if ((fd = open(where, O_DIRECTORY | O_RDWR)) < 0) {
-    error("netstack: cannot open %s\n", where);
+    error("cannot open %s\n", where);
     return -1;
   }
 
@@ -99,7 +105,7 @@ static mx_handle_t devmgr_connect(const char* where) {
     mx_handle_close(h);
     mx_handle_close(vnode_handle);
     close(fd);
-    error("netstack: failed to attach to %s\n", where);
+    error("failed to attach to %s\n", where);
     return status;
   }
   close(fd);
@@ -123,7 +129,7 @@ mx_status_t dispatcher(void) {
       0) {
     return r;
   }
-  debug("netstack: run remoteio_dispatcher\n");
+  debug("run remoteio_dispatcher\n");
   mxio_dispatcher_run(remoteio_dispatcher);  // never return
 
   // TODO: destroy dispatcher
