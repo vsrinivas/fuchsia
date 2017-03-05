@@ -40,7 +40,15 @@ int socket(int domain, int type, int protocol) {
         return ERRNO(EINVAL);
     }
 
-    if ((r = __mxio_open(&io, path, 0, 0)) < 0) {
+    // Wait for the the network stack to publish the socket device
+    // if necessary.
+    // TODO: move to a better mechanism when available.
+    unsigned retry = 0;
+    while ((r = __mxio_open(&io, path, 0, 0)) == ERR_NOT_FOUND) {
+        retry++;
+        mx_nanosleep((retry < 8) ? MX_MSEC(250) : MX_MSEC(500));
+    }
+    if (r < 0) {
         return ERROR(r);
     }
     if (type & SOCK_STREAM) {
@@ -220,8 +228,16 @@ int getaddrinfo(const char* __restrict node,
         errno = EINVAL;
         return EAI_SYSTEM;
     }
-    if ((r = __mxio_open(&io, MXRIO_SOCKET_ROOT "/" MXRIO_SOCKET_DIR_NONE,
-                         0, 0)) < 0) {
+    // Wait for the the network stack to publish the socket device
+    // if necessary.
+    // TODO: move to a better mechanism when available.
+    unsigned retry = 0;
+    while ((r = __mxio_open(&io, MXRIO_SOCKET_ROOT "/" MXRIO_SOCKET_DIR_NONE,
+                            0, 0)) == ERR_NOT_FOUND) {
+        retry++;
+        mx_nanosleep((retry < 8) ? MX_MSEC(250) : MX_MSEC(500));
+    }
+    if (r < 0) {
         errno = mxio_status_to_errno(r);
         return EAI_SYSTEM;
     }
