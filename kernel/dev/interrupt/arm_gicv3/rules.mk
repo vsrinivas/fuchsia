@@ -13,6 +13,9 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/arm_gicv3.c
 
 MODULE_DEPS += \
-	dev/interrupt
+	dev/interrupt \
+	dev/pdev \
+	dev/pdev/interrupt \
+	lib/mdi \
 
 include make/module.mk

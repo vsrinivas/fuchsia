@@ -14,6 +14,13 @@ cpu-map = {
 }
 
 kernel-drivers = {
+    arm-gic-v3 = {
+        base-phys = 0x17a00000
+        gicd-offset = 0x000000
+        gicr-offset = 0x100000
+        gicr-stride = 0x20000
+        ipi-base = 5
+    }
     arm-psci = {
         use-smc = true
     }

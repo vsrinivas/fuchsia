@@ -22,8 +22,6 @@
 
 #include <platform.h>
 #include <arch/arm64/platform.h>
-#include <dev/interrupt.h>
-#include <dev/interrupt/arm_gic.h>
 #include <platform/msm8998.h>
 
 #include <target.h>
@@ -236,7 +234,6 @@ void platform_early_init(void)
     platform_mdi_init();
 
     /* initialize the interrupt controller and timers */
-    arm_gic_init();
     arm_generic_timer_init(ARM_GENERIC_TIMER_PHYSICAL_VIRT, 0);
 
     /* add the main memory arena */

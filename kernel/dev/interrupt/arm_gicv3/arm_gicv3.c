@@ -10,79 +10,43 @@
 #include <inttypes.h>
 #include <string.h>
 #include <dev/interrupt/arm_gic.h>
-#include <dev/interrupt/arm_gicv3_regs.h>
 #include <kernel/thread.h>
+#include <kernel/vm.h>
 #include <lk/init.h>
 #include <dev/interrupt.h>
 #include <trace.h>
 #include <lib/ktrace.h>
 
+#include <mdi/mdi.h>
+#include <mdi/mdi-defs.h>
+#include <pdev/driver.h>
+#include <pdev/interrupt.h>
+
 #define LOCAL_TRACE 0
 
 #include <arch/arm64.h>
-#define iframe arm64_iframe_short
 #define IFRAME_PC(frame) ((frame)->elr)
-
-static spin_lock_t gicd_lock;
-#define GICD_LOCK_FLAGS SPIN_LOCK_FLAG_INTERRUPTS
-#define GIC_MAX_PER_CPU_INT 32
 
 #include <arch/arch_ops.h>
 
-#ifndef GIC_IPI_BASE
-#define GIC_IPI_BASE (16 - MAX_IPI)
-#endif
+// values read from MDI
+static uint64_t arm_gicv3_gic_base = 0;
+static uint64_t arm_gicv3_gicd_offset = 0;
+static uint64_t arm_gicv3_gicr_offset = 0;
+static uint64_t arm_gicv3_gicr_stride = 0;
+static uint32_t ipi_base = 0;
 
-struct int_handler_struct {
-    int_handler handler;
-    void* arg;
-};
+// this header uses the arm_gicv3_gic_* variables above
+#include <dev/interrupt/arm_gicv3_regs.h>
 
-static bool arm_gic_interrupt_change_allowed(int irq)
+static uint gic_max_int;
+
+static bool gic_is_valid_interrupt(unsigned int vector, uint32_t flags)
 {
-    return true;
+    return (vector < gic_max_int);
 }
 
-static struct int_handler_struct int_handler_table_per_cpu[GIC_MAX_PER_CPU_INT][SMP_MAX_CPUS];
-static struct int_handler_struct int_handler_table_shared[MAX_INT-GIC_MAX_PER_CPU_INT];
-
-static struct int_handler_struct* get_int_handler(unsigned int vector, uint cpu)
-{
-    if (vector < GIC_MAX_PER_CPU_INT) {
-        return &int_handler_table_per_cpu[vector][cpu];
-    } else {
-        return &int_handler_table_shared[vector - GIC_MAX_PER_CPU_INT];
-    }
-}
-
-void register_int_handler(unsigned int vector, int_handler handler, void* arg)
-{
-    struct int_handler_struct *h;
-    uint cpu = arch_curr_cpu_num();
-
-    spin_lock_saved_state_t state;
-
-    if (vector >= MAX_INT) {
-        panic("register_int_handler: vector out of range %u\n", vector);
-    }
-
-    spin_lock_save(&gicd_lock, &state, GICD_LOCK_FLAGS);
-
-    if (arm_gic_interrupt_change_allowed(vector)) {
-        h = get_int_handler(vector, cpu);
-        h->handler = handler;
-        h->arg = arg;
-    }
-
-    spin_unlock_restore(&gicd_lock, state, GICD_LOCK_FLAGS);
-}
-
-bool is_valid_interrupt(unsigned int vector, uint32_t flags)
-{
-    return (vector < MAX_INT);
-}
-
-static void gic_wait_for_rwp(uint32_t reg)
+static void gic_wait_for_rwp(uint64_t reg)
 {
     int count = 1000000;
     while (GICREG(0, reg) & (1 << 31)) {
@@ -118,8 +82,8 @@ static void gic_set_enable(uint vector, bool enable)
     }
 }
 
-static void arm_gic_init_percpu(uint level)
-{
+static void gic_init_percpu_early(void)
+{   
     uint cpu = arch_curr_cpu_num();
 
     // configure sgi/ppi as non-secure group 1
@@ -150,16 +114,15 @@ static void arm_gic_init_percpu(uint level)
     gic_write_igrpen(1);
 }
 
-LK_INIT_HOOK_FLAGS(arm_gic_init_percpu, arm_gic_init_percpu, LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_FLAG_SECONDARY_CPUS);
-
-void arm_gic_init(void)
+static void gic_init(void)
 {
     __UNUSED uint rev = (GICREG(0, GICD_PIDR2) >> 4) & 0xf;
     assert(rev == 3 || rev == 4);
 
     uint32_t typer = GICREG(0, GICD_TYPER);
     __UNUSED uint idbits = (typer >> 19) & 0x1f;
-    assert((idbits + 1) * 32 <= MAX_INT);
+    gic_max_int = (idbits + 1) * 32;
+    printf("gic_init max_irqs: %u\n", gic_max_int);
 
     // disable the distributor
     GICREG(0, GICD_CTLR) = 0;
@@ -167,8 +130,8 @@ void arm_gic_init(void)
     ISB;
 
     // mask and clear spi
-    int i;
-    for (i = 32; i < MAX_INT; i += 32) {
+    uint i;
+    for (i = 32; i < gic_max_int; i += 32) {
         GICREG(0, GICD_ICENABLER(i / 32)) = ~0;
         GICREG(0, GICD_ICPENDR(i / 32)) = ~0;
     }
@@ -181,12 +144,12 @@ void arm_gic_init(void)
     // set spi to target cpu 0. must do this after ARE enable
     uint max_cpu = (typer >> 5) & 0x7;
     if (max_cpu > 0) {
-        for (i = 32; i < MAX_INT; i++) {
+        for (i = 32; i < gic_max_int; i++) {
             GICREG64(0, GICD_IROUTER(i)) = 0;
         }
     }
 
-    arm_gic_init_percpu(0);
+    gic_init_percpu_early();
 }
 
 status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
@@ -225,33 +188,31 @@ status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
     return NO_ERROR;
 }
 
-status_t mask_interrupt(unsigned int vector)
+static status_t gic_mask_interrupt(unsigned int vector)
 {
-    if (vector >= MAX_INT)
+    if (vector >= gic_max_int)
         return ERR_INVALID_ARGS;
 
-    if (arm_gic_interrupt_change_allowed(vector))
-        gic_set_enable(vector, false);
+    gic_set_enable(vector, false);
 
     return NO_ERROR;
 }
 
-status_t unmask_interrupt(unsigned int vector)
+static status_t gic_unmask_interrupt(unsigned int vector)
 {
-    if (vector >= MAX_INT)
+    if (vector >= gic_max_int)
         return ERR_INVALID_ARGS;
 
-    if (arm_gic_interrupt_change_allowed(vector))
-        gic_set_enable(vector, true);
+    gic_set_enable(vector, true);
 
     return NO_ERROR;
 }
 
-status_t configure_interrupt(unsigned int vector,
+static status_t gic_configure_interrupt(unsigned int vector,
                              enum interrupt_trigger_mode tm,
                              enum interrupt_polarity pol)
 {
-    if (vector <= 15 || vector >= MAX_INT) {
+    if (vector <= 15 || vector >= gic_max_int) {
         return ERR_INVALID_ARGS;
     }
 
@@ -273,11 +234,11 @@ status_t configure_interrupt(unsigned int vector,
     return NO_ERROR;
 }
 
-status_t get_interrupt_config(unsigned int vector,
+static status_t gic_get_interrupt_config(unsigned int vector,
                               enum interrupt_trigger_mode* tm,
                               enum interrupt_polarity* pol)
 {
-    if (vector >= MAX_INT)
+    if (vector >= gic_max_int)
         return ERR_INVALID_ARGS;
 
     if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
@@ -286,12 +247,12 @@ status_t get_interrupt_config(unsigned int vector,
     return NO_ERROR;
 }
 
-unsigned int remap_interrupt(unsigned int vector) {
+static unsigned int gic_remap_interrupt(unsigned int vector) {
     return vector;
 }
 
 // called from assembly
-enum handler_return platform_irq(struct iframe* frame) {
+static enum handler_return gic_handle_irq(iframe* frame) {
     // get the current vector
     uint32_t iar = gic_read_iar();
     unsigned vector = iar & 0x3ff;
@@ -314,7 +275,7 @@ enum handler_return platform_irq(struct iframe* frame) {
 
     // deliver the interrupt
     enum handler_return ret = INT_NO_RESCHEDULE;
-    struct int_handler_struct* handler = get_int_handler(vector, cpu);
+    struct int_handler_struct* handler = pdev_get_int_handler(vector, cpu);
     if (handler->handler) {
         ret = handler->handler(handler->arg);
     }
@@ -328,12 +289,12 @@ enum handler_return platform_irq(struct iframe* frame) {
     return ret;
 }
 
-enum handler_return platform_fiq(struct iframe* frame) {
+static enum handler_return gic_handle_fiq(iframe* frame) {
     PANIC_UNIMPLEMENTED;
 }
 
-status_t interrupt_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
-    uint gic_ipi_num = ipi + GIC_IPI_BASE;
+static status_t gic_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
+    uint gic_ipi_num = ipi + ipi_base;
 
     /* filter out targets outside of the range of cpus we care about */
     target &= ((1UL << SMP_MAX_CPUS) - 1);
@@ -366,12 +327,88 @@ static enum handler_return arm_ipi_halt_handler(void *arg) {
     return INT_NO_RESCHEDULE;
 }
 
-void interrupt_init_percpu(void) {
-    register_int_handler(MP_IPI_GENERIC + GIC_IPI_BASE, &arm_ipi_generic_handler, 0);
-    register_int_handler(MP_IPI_RESCHEDULE + GIC_IPI_BASE, &arm_ipi_reschedule_handler, 0);
-    register_int_handler(MP_IPI_HALT + GIC_IPI_BASE, &arm_ipi_halt_handler, 0);
+static void gic_init_percpu(void) {
+    register_int_handler(MP_IPI_GENERIC + ipi_base, &arm_ipi_generic_handler, 0);
+    register_int_handler(MP_IPI_RESCHEDULE + ipi_base, &arm_ipi_reschedule_handler, 0);
+    register_int_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
     mp_set_curr_cpu_online(true);
-    unmask_interrupt(MP_IPI_GENERIC + GIC_IPI_BASE);
-    unmask_interrupt(MP_IPI_RESCHEDULE + GIC_IPI_BASE);
-    unmask_interrupt(MP_IPI_HALT + GIC_IPI_BASE);
+    unmask_interrupt(MP_IPI_GENERIC + ipi_base);
+    unmask_interrupt(MP_IPI_RESCHEDULE + ipi_base);
+    unmask_interrupt(MP_IPI_HALT + ipi_base);
 }
+
+static const struct pdev_interrupt_ops gic_ops = {
+    .mask = gic_mask_interrupt,
+    .unmask = gic_unmask_interrupt,
+    .configure = gic_configure_interrupt,
+    .get_config = gic_get_interrupt_config,
+    .is_valid = gic_is_valid_interrupt,
+    .remap = gic_remap_interrupt,
+    .send_ipi = gic_send_ipi,
+    .init_percpu_early = gic_init_percpu_early,
+    .init_percpu = gic_init_percpu,
+    .handle_irq = gic_handle_irq,
+    .handle_fiq = gic_handle_fiq,
+};
+
+static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
+    printf("arm_gic_v3_init %x\n", level);
+
+    uint64_t gic_base_phys = 0;
+
+    bool got_gic_base_phys = false;
+    bool got_gicd_offset = false;
+    bool got_gicr_offset = false;
+    bool got_gicr_stride = false;
+    bool got_ipi_base = false;
+
+    mdi_node_ref_t child;
+    mdi_each_child(node, &child) {
+        switch (mdi_id(&child)) {
+        case MDI_KERNEL_DRIVERS_ARM_GIC_V3_BASE_PHYS:
+            got_gic_base_phys = !mdi_node_uint64(&child, &gic_base_phys);
+            break;
+        case MDI_KERNEL_DRIVERS_ARM_GIC_V3_GICD_OFFSET:
+            got_gicd_offset = !mdi_node_uint64(&child, &arm_gicv3_gicd_offset);
+            break;
+        case MDI_KERNEL_DRIVERS_ARM_GIC_V3_GICR_OFFSET:
+            got_gicr_offset = !mdi_node_uint64(&child, &arm_gicv3_gicr_offset);
+            break;
+        case MDI_KERNEL_DRIVERS_ARM_GIC_V3_GICR_STRIDE:
+            got_gicr_stride = !mdi_node_uint64(&child, &arm_gicv3_gicr_stride);
+            break;
+        case MDI_KERNEL_DRIVERS_ARM_GIC_V3_IPI_BASE:
+            got_ipi_base = !mdi_node_uint32(&child, &ipi_base);
+            break;
+        }
+    }
+
+
+    if (!got_gic_base_phys) {
+        printf("arm-gic-v3: gic_base_phys not defined\n");
+        return;
+    }
+    if (!got_gicd_offset) {
+        printf("arm-gic-v3: gicd_offset not defined\n");
+        return;
+    }
+    if (!got_gicr_offset) {
+        printf("arm-gic-v3: gicr_offset not defined\n");
+        return;
+    }
+    if (!got_gicr_stride) {
+        printf("arm-gic-v3: gicr_stride not defined\n");
+        return;
+    }
+    if (!got_ipi_base) {
+        printf("arm-gic-v3: ipi_base not defined\n");
+        return;
+    }
+
+    arm_gicv3_gic_base = (uint64_t)paddr_to_kvaddr(gic_base_phys);
+
+    gic_init();
+    pdev_register_interrupts(&gic_ops);
+}
+
+LK_PDEV_INIT(arm_gic_v3_init, MDI_KERNEL_DRIVERS_ARM_GIC_V3, arm_gic_v3_init, LK_INIT_LEVEL_PLATFORM_EARLY);
