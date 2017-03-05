@@ -35,7 +35,7 @@ that the Magenta Kernel provides to userspace.  They are C ELF ABI functions of 
 form *mx_noun_verb()* or *mx_noun_verb_direct-object()*
 
 The system calls are defined by [syscalls.sysgen](../system/public/magenta/syscalls.sysgen)
-and processed by the [sysgen](../system/tools/sysgen/) tool into include files and glue
+and processed by the [sysgen](../system/host/sysgen/) tool into include files and glue
 code in libmagenta and the kernel's libsyscalls.
 
 
@@ -136,10 +136,11 @@ and [eventpair_create](syscalls/eventpair_create.md).
 
 ## Waiting: Wait One, Wait Many, and Ports
 
-A Thread may use [*mx_wait_one*](syscalls/wait_one.md) to wait for a signal to be active
-on a single handle or [*mx_wait_many*](syscalls/wait_many.md) to wait for signals on
-multiple handles.  Both calls allow for a timeout after which they'll return even if
-no signals are pending.
+A Thread may use [*mx_object_wait_one*](syscalls/object_wait_one.md)
+to wait for a signal to be active on a single handle or
+[*mx_object_wait_many*](syscalls/object_wait_many.md) to wait for
+signals on multiple handles.  Both calls allow for a timeout after
+which they'll return even if no signals are pending.
 
 If a Thread is going to wait on a large set of handles, it is more efficient to use
 a Port, which is an Object that other Objects may be bound to such that when signals
