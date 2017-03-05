@@ -15,7 +15,6 @@
 #include <lk/init.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
-#include <dev/timer/arm_generic.h>
 #include <dev/display.h>
 #include <dev/hw_rng.h>
 #include <dev/psci.h>
@@ -230,9 +229,6 @@ void platform_early_init(void)
     }
 
     platform_mdi_init();
-
-    /* initialize the interrupt controller and timers */
-    arm_generic_timer_init(ARM_GENERIC_TIMER_PHYSICAL_VIRT, 0);
 
     /* add the main memory arena */
     pmm_add_arena(&arena);

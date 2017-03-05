@@ -25,3 +25,10 @@ uint32  kernel-drivers.arm-gic-v3.ipi-base      1015
 list    kernel-drivers.msm-uart                 1020
 uint64  kernel-drivers.msm-uart.base-phys       1021
 uint32  kernel-drivers.msm-uart.irq             1022
+
+// ARM generic timer driver
+list    kernel-drivers.arm-generic-timer                1030
+uint32  kernel-drivers.arm-generic-timer.irq-phys       1031 // for using physical timer
+uint32  kernel-drivers.arm-generic-timer.irq-virt       1032 // for using virtual timer
+uint32  kernel-drivers.arm-generic-timer.irq-sphys      1033 // for using secure physical timer
+uint32  kernel-drivers.arm-generic-timer.freq-override  1034 // optional

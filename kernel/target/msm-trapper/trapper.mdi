@@ -29,4 +29,7 @@ kernel-drivers = {
     arm-psci = {
         use-smc = true
     }
+    arm-generic-timer = {
+        irq-virt = 19
+    }
 }
