@@ -12,7 +12,10 @@
 #include <dev/interrupt.h>
 #include <dev/uart.h>
 #include <lib/cbuf.h>
-#include <platform/uart.h>
+#include <mdi/mdi.h>
+#include <mdi/mdi-defs.h>
+#include <pdev/driver.h>
+#include <pdev/uart.h>
 
 #define UART_MR1                            0x0000
 #define UART_MR1_RX_RDY_CTL                 (1 << 7)
@@ -96,14 +99,19 @@
 
 #define RXBUF_SIZE 128
 
+// values read from MDI
+static uint64_t msm_uart_base = 0;
+static uint32_t msm_uart_irq = 0;
+
 static cbuf_t uart_rx_buf;
+static bool initialized = false;
 
 static inline uint32_t uart_read(int offset) {
-    return readl(UART_BASE + offset);
+    return readl(msm_uart_base + offset);
 }
 
 static inline void uart_write(uint32_t val, int offset) {
-    writel(val, UART_BASE + offset);
+    writel(val, msm_uart_base + offset);
 }
 
 static inline void yield(void)
@@ -112,6 +120,8 @@ static inline void yield(void)
 }
 
 static void msm_printstr(const char* str, size_t count) {
+    if (!initialized) return;
+
     char buffer[4];
     uint32_t* bufptr = (uint32_t *)buffer;
     size_t i, j;
@@ -140,19 +150,19 @@ static void msm_printstr(const char* str, size_t count) {
     }
 }
 
-int uart_putc(char c) {
+static int msm_putc(char c) {
     msm_printstr(&c, 1);
     return 1;
 }
 
 /* panic-time getc/putc */
-int uart_pputc(char c)
+static int msm_pputc(char c)
 {
     msm_printstr(&c, 1);
     return 1;
 }
 
-int uart_pgetc()
+static int msm_pgetc(void)
 {
     cbuf_t* rxbuf = &uart_rx_buf;
 
@@ -238,7 +248,7 @@ static enum handler_return uart_irq(void *arg)
     return (reschedule ? INT_RESCHEDULE : INT_NO_RESCHEDULE);
 }
 
-void uart_init(void) {
+static void msm_uart_init(mdi_node_ref_t* node, uint level) {
     uint32_t temp;
 
     // disable interrupts
@@ -265,15 +275,53 @@ void uart_init(void) {
     // enable RX interrupt
     uart_write(UART_IRQ_RXSTALE, UART_DM_IMR);
 
-    register_int_handler(UART_INT, &uart_irq, NULL);
-    unmask_interrupt(UART_INT);
+    register_int_handler(msm_uart_irq, &uart_irq, NULL);
+    unmask_interrupt(msm_uart_irq);
 }
 
-void uart_init_early(void) {
-}
-
-int uart_getc(bool wait) {
+static int msm_getc(bool wait) {
     char ch;
     size_t count = cbuf_read_char(&uart_rx_buf, &ch, wait);
     return (count == 1 ? ch : -1);
 }
+
+static const struct pdev_uart_ops uart_ops = {
+    .putc = msm_putc,
+    .getc = msm_getc,
+    .pputc = msm_pputc,
+    .pgetc = msm_pgetc,
+};
+
+static void msm_uart_init_early(mdi_node_ref_t* node, uint level) {
+    uint64_t msm_uart_base_phys = 0;
+    bool got_msm_uart_base_phys = false;
+    bool got_msm_uart_irq = false;
+
+    mdi_node_ref_t child;
+    mdi_each_child(node, &child) {
+        switch (mdi_id(&child)) {
+        case MDI_KERNEL_DRIVERS_MSM_UART_BASE_PHYS:
+            got_msm_uart_base_phys = !mdi_node_uint64(&child, &msm_uart_base_phys);
+            break;
+        case MDI_KERNEL_DRIVERS_MSM_UART_IRQ:
+            got_msm_uart_irq = !mdi_node_uint32(&child, &msm_uart_irq);
+            break;
+        }
+    }
+
+    if (!got_msm_uart_base_phys) {
+        panic("msm uart: msm_uart_base_phys not defined\n");
+        return;
+    }
+    if (!got_msm_uart_irq) {
+        panic("msm uart: msm_uart_irq not defined\n");
+        return;
+    }
+
+    msm_uart_base = (uint64_t)paddr_to_kvaddr(msm_uart_base_phys);
+    initialized = true;
+    pdev_register_uart(&uart_ops);
+}
+
+LK_PDEV_INIT(msm_uart_init_early, MDI_KERNEL_DRIVERS_MSM_UART, msm_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(msm_uart_init, MDI_KERNEL_DRIVERS_MSM_UART, msm_uart_init, LK_INIT_LEVEL_PLATFORM);

@@ -39,20 +39,20 @@ void uart_init_early(void) {
 }
 
 int uart_putc(char c) {
-    return uart_ops->putc(port, c);
+    return uart_ops->putc(c);
 }
 
 int uart_getc(bool wait)
 {
-    return uart_ops->getc(port, wait);
+    return uart_ops->getc(wait);
 }
 
 int uart_pputc(char c) {
-    return uart_ops->pputc(port, c);
+    return uart_ops->pputc(c);
 }
 
 int uart_pgetc(void) {
-    return uart_ops->pgetc(port);
+    return uart_ops->pgetc();
 }
 
 void pdev_register_uart(const struct pdev_uart_ops* ops) {

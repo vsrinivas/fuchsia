@@ -223,8 +223,6 @@ static void platform_mdi_init(void) {
 
 void platform_early_init(void)
 {
-    uart_init_early();
-
     read_device_tree(&ramdisk_base, &ramdisk_size, NULL);
 
     if (!ramdisk_base || !ramdisk_size) {
@@ -250,8 +248,6 @@ void platform_early_init(void)
 
 void platform_init(void)
 {
-    uart_init();
-
 #if WITH_SMP
     platform_cpu_init();
 #endif

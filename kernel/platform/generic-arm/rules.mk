@@ -6,8 +6,6 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MSM_COMMON := $(LOCAL_DIR)/../msm-common
-
 MODULE := $(LOCAL_DIR)
 
 WITH_SMP := 1
@@ -19,7 +17,6 @@ LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/platform.c \
-	$(MSM_COMMON)/uart.c \
 
 MEMBASE := 0x80000000
 
@@ -50,6 +47,7 @@ MODULE_DEPS += \
 	dev/timer/arm_generic \
 	dev/interrupt/arm_gicv3 \
 	dev/psci \
+	dev/uart/msm \
 
 include make/module.mk
 

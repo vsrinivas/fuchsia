@@ -14,6 +14,11 @@ cpu-map = {
 }
 
 kernel-drivers = {
+    // Keep msm-uart at top so it is initialized first
+    msm-uart = {
+        base-phys = 0xc1b0000
+        irq = 146
+    }
     arm-gic-v3 = {
         base-phys = 0x17a00000
         gicd-offset = 0x000000
