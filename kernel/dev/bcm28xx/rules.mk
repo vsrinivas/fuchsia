@@ -6,15 +6,14 @@
 # https://opensource.org/licenses/MIT
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
-
 MODULE := $(LOCAL_DIR)
 
-MODULE_SRCS += \
-	$(LOCAL_DIR)/intc.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/empty.c \
 
-MODULE_DEPS += \
-	dev/interrupt \
-	dev/pdev \
-	dev/pdev/interrupt \
+# these files aren't actually being used
+#MODULE_SRCS := \
+#    $(LOCAL_DIR)/gpio.c \
+#    $(LOCAL_DIR)/videocore.c \
 
 include make/module.mk

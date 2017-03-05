@@ -5,19 +5,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-// TODO(gkalsi): Unify the two UART codepaths and use the port parameter to
-// select between the real uart and the miniuart.
-
 #include <assert.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
 #include <kernel/thread.h>
 #include <lib/cbuf.h>
-#include <platform/bcm28xx.h>
+#include <dev/bcm28xx.h>
 #include <platform/debug.h>
 #include <reg.h>
 #include <stdio.h>
 #include <trace.h>
+#include <mdi/mdi.h>
+#include <mdi/mdi-defs.h>
+#include <pdev/driver.h>
+#include <pdev/uart.h>
 
 #define RXBUF_SIZE 16
 
@@ -80,9 +81,7 @@ static enum handler_return aux_irq(void* arg) {
     return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
-int uart_putc(char c) {
-    // There's only one UART for now.
-    // TODO(gkalsi): Unify the two UART code paths using the port.
+static int bcm28xx_putc(char c) {
     struct bcm283x_mu_regs* regs = (struct bcm283x_mu_regs*)MINIUART_BASE;
 
     /* Wait until there is space in the FIFO */
@@ -95,7 +94,7 @@ int uart_putc(char c) {
     return 1;
 }
 
-void uart_init(void) {
+static void bcm28xx_uart_init(mdi_node_ref_t* node, uint level) {
     volatile struct bcm283x_mu_regs* mu_regs =
         (struct bcm283x_mu_regs*)MINIUART_BASE;
     volatile struct bcm283x_aux_regs* aux_regs =
@@ -122,10 +121,7 @@ void uart_init(void) {
     writel(MU_IIR_EN_RX_IRQ, &mu_regs->ier);
 }
 
-void uart_init_early(void) {
-}
-
-int uart_getc(bool wait) {
+static int bcm28xx_getc(bool wait) {
     cbuf_t* rxbuf = &uart_rx_buf;
 
     char c;
@@ -134,3 +130,28 @@ int uart_getc(bool wait) {
 
     return -1;
 }
+
+static int bcm28xx_pputc(char c)
+{
+    // not implemented
+    return 0;
+}
+
+static int bcm28xx_pgetc(void) {
+    // not implemented
+    return -1;
+}
+
+static const struct pdev_uart_ops uart_ops = {
+    .putc = bcm28xx_putc,
+    .getc = bcm28xx_getc,
+    .pputc = bcm28xx_pputc,
+    .pgetc = bcm28xx_pgetc,
+};
+
+static void bcm28xx_uart_init_early(mdi_node_ref_t* node, uint level) {
+    pdev_register_uart(&uart_ops);
+}
+
+LK_PDEV_INIT(bcm28xx_uart_init_early, MDI_KERNEL_DRIVERS_BCM28XX_UART, bcm28xx_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(bcm28xx_uart_init, MDI_KERNEL_DRIVERS_BCM28XX_UART, bcm28xx_uart_init, LK_INIT_LEVEL_PLATFORM);

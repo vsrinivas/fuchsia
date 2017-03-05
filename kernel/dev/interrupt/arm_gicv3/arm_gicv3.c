@@ -64,7 +64,7 @@ static void gic_set_enable(uint vector, bool enable)
     uint32_t mask = 1ULL << (vector % 32);
 
     if (vector < 32) {
-        for (int i = 0; i < SMP_MAX_CPUS; i++) {
+        for (uint i = 0; i < arch_max_num_cpus(); i++) {
             if (enable) {
                 GICREG(0, GICR_ISENABLER0(i)) = mask;
             } else {
@@ -167,7 +167,7 @@ status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
     uint cpu = 0;
     uint cluster = 0;
     uint64_t val = 0;
-    while (cpu_mask && cpu < SMP_MAX_CPUS) {
+    while (cpu_mask && cpu < arch_max_num_cpus()) {
         u_int mask = 0;
         while (arch_cpu_num_to_cluster_id(cpu) == cluster) {
             if (cpu_mask & (1u << cpu)) {
@@ -297,7 +297,7 @@ static status_t gic_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
     uint gic_ipi_num = ipi + ipi_base;
 
     /* filter out targets outside of the range of cpus we care about */
-    target &= ((1UL << SMP_MAX_CPUS) - 1);
+    target &= ((1UL << arch_max_num_cpus()) - 1);
     if (target != 0) {
         LTRACEF("target 0x%x, gic_ipi %u\n", target, gic_ipi_num);
         arm_gic_sgi(gic_ipi_num, ARM_GIC_SGI_FLAG_NS, target);

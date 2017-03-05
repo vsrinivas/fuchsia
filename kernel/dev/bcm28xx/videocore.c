@@ -8,8 +8,8 @@
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 #include <arch/ops.h>
-#include <platform/bcm28xx.h>
-#include <platform/videocore.h>
+#include <dev/bcm28xx.h>
+#include <dev/videocore.h>
 
 #define VC_MBOX_BUFF_SIZE 1024
 

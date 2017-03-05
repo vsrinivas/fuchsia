@@ -40,7 +40,6 @@ typedef struct {
 /* smp boot lock */
 static spin_lock_t arm_boot_cpu_lock = 1;
 static volatile int secondaries_to_init = 0;
-uint arm_num_cpus = 1;
 static thread_t _init_thread[SMP_MAX_CPUS - 1];
 arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
 #endif
@@ -287,11 +286,6 @@ void arm64_secondary_entry(void)
     arch_mp_init_percpu();
 
     LTRACEF("cpu num %u\n", cpu);
-
-    /* we're done, tell the main cpu we're up */
-    atomic_add(&secondaries_to_init, -1);
-    atomic_add((int *)&arm_num_cpus, 1);
-    __asm__ volatile("sev");
 
     lk_secondary_cpu_entry();
 }

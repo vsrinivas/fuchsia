@@ -19,11 +19,13 @@
 uint arm64_cpu_map[SMP_CPU_MAX_CLUSTERS][SMP_CPU_MAX_CLUSTER_CPUS] = { { 0 } };
 uint arm64_cpu_cluster_ids[SMP_MAX_CPUS] = { 0 };
 uint arm64_cpu_cpu_ids[SMP_MAX_CPUS] = { 0 };
+uint arm_num_cpus = 1;
 
-// initializes cpu_map
+// initializes cpu_map and arm_num_cpus
 void arch_init_cpu_map(uint cluster_count, uint* cluster_cpus) {
     ASSERT(cluster_count <= SMP_CPU_MAX_CLUSTERS);
 
+    // assign cpu_ids sequentially
     uint cpu_id = 0;
     for (uint cluster = 0; cluster < cluster_count; cluster++) {
         uint cpus = *cluster_cpus++;
@@ -35,6 +37,7 @@ void arch_init_cpu_map(uint cluster_count, uint* cluster_cpus) {
             cpu_id++;
         }
     }
+    arm_num_cpus = cpu_id;
 }
 
 status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)

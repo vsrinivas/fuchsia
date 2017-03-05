@@ -21,7 +21,7 @@
 
 #include <platform.h>
 #include <arch/arm64/platform.h>
-#include <platform/msm8998.h>
+#include <dev/bcm28xx.h>
 
 #include <target.h>
 
@@ -53,7 +53,7 @@ static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 struct mmu_initial_mapping mmu_initial_mappings[] = {
  /* 1GB of sdram space */
  {
-     .phys = SDRAM_BASE,
+     .phys = MEMBASE,
      .virt = KERNEL_BASE,
      .size = MEMORY_APERTURE_SIZE,
      .flags = 0,
@@ -62,11 +62,11 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
 
  /* peripherals */
  {
-     .phys = MSM8998_PERIPH_BASE_PHYS,
-     .virt = MSM8998_PERIPH_BASE_VIRT,
-     .size = MSM8998_PERIPH_SIZE,
+     .phys = PERIPH_BASE_PHYS,
+     .virt = PERIPH_BASE_VIRT,
+     .size = PERIPH_SIZE,
      .flags = MMU_INITIAL_MAPPING_FLAG_DEVICE,
-     .name = "msm peripherals"
+     .name = "peripherals"
  },
  /* null entry to terminate the list */
  {}
@@ -76,7 +76,7 @@ extern void arm_reset(void);
 
 static pmm_arena_info_t arena = {
     .name = "sdram",
-    .base = SDRAM_BASE,
+    .base = MEMBASE,
     .size = MEMSIZE,
     .flags = PMM_ARENA_FLAG_KMAP,
 };
@@ -162,18 +162,32 @@ static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
     arch_init_cpu_map(cpu_cluster_count, cpu_cluster_cpus);
 }
 
+static void platform_start_cpu(uint cluster, uint cpu) {
+#if BCM2837
+    uintptr_t sec_entry = (uintptr_t)(&arm_reset - KERNEL_ASPACE_BASE);
+    unsigned long long *spin_table = (void *)(KERNEL_ASPACE_BASE + 0xd8);
+
+    spin_table[cpu] = sec_entry;
+    __asm__ __volatile__ ("" : : : "memory");
+    arch_clean_cache_range(0xffff000000000000,256);     // clean out all the VC bootstrap area
+    __asm__ __volatile__("sev");                        //  where the entry vectors live.
+#else
+    psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
+#endif
+}
+
 static void platform_cpu_init(void) {
     for (uint cluster = 0; cluster < cpu_cluster_count; cluster++) {
         for (uint cpu = 0; cpu < cpu_cluster_cpus[cluster]; cpu++) {
             if (cluster != 0 || cpu != 0) {
                 arm64_set_secondary_sp(cluster, cpu,
                         pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL));
-                psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
+                platform_start_cpu(cluster, cpu);
             }
         }
     }
 }
-#endif
+#endif // WITH_SMP
 
 static void platform_mdi_init(void) {
     mdi_node_ref_t  root;
@@ -233,11 +247,11 @@ void platform_early_init(void)
     /* add the main memory arena */
     pmm_add_arena(&arena);
 
+#ifdef BOOTLOADER_RESERVE_START
     /* Allocate memory regions reserved by bootloaders for other functions */
     struct list_node list = LIST_INITIAL_VALUE(list);
-    pmm_alloc_range(MSM8998_BOOT_HYP_START,
-                    (MSM8998_BOOT_APSS2_START - MSM8998_BOOT_HYP_START)/ PAGE_SIZE,
-                    &list);
+    pmm_alloc_range(BOOTLOADER_RESERVE_START, BOOTLOADER_RESERVE_SIZE / PAGE_SIZE, &list);
+#endif
 
     platform_preserve_ramdisk();
 }
@@ -304,8 +318,10 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
 {
     if (suggested_action == HALT_ACTION_REBOOT) {
         psci_system_reset();
+#ifdef MSM8998_PSHOLD_PHYS
         // Deassert PSHold
-        *REG32(MSM8998_PSHOLD_VIRT) = 0;
+        *REG32(paddr_to_kvaddr(MSM8998_PSHOLD_PHYS)) = 0;
+#endif
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
         // XXX shutdown seem to not work through psci
         // implement shutdown via pmic

@@ -32,3 +32,7 @@ uint32  kernel-drivers.arm-generic-timer.irq-phys       1031 // for using physic
 uint32  kernel-drivers.arm-generic-timer.irq-virt       1032 // for using virtual timer
 uint32  kernel-drivers.arm-generic-timer.irq-sphys      1033 // for using secure physical timer
 uint32  kernel-drivers.arm-generic-timer.freq-override  1034 // optional
+
+// bcm28xx drivers
+list    kernel-drivers.bcm28xx-interrupt        1040
+list    kernel-drivers.bcm28xx-uart             1041

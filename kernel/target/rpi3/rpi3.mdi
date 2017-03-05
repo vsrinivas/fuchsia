@@ -1,0 +1,17 @@
+include "kernel/include/mdi/kernel-defs.mdi"
+
+cpu-map = {
+    clusters = {
+        {
+            cpu-count = 4
+        }
+    }
+}
+
+kernel-drivers = {
+    bcm28xx-uart = {}
+    bcm28xx-interrupt = {}
+    arm-generic-timer = {
+        irq-phys = 97 // INTERRUPT_ARM_LOCAL_CNTPNSIRQ
+    }
+}

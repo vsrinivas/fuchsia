@@ -7,27 +7,24 @@
 #include <assert.h>
 #include <bits.h>
 #include <dev/interrupt.h>
-#include <dev/interrupt/bcm28xx-intc.h>
 #include <err.h>
 #include <kernel/mp.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
-#include <platform/bcm28xx.h>
+#include <dev/bcm28xx.h>
 #include <trace.h>
 #include <arch/arm64.h>
 
+#include <mdi/mdi.h>
+#include <mdi/mdi-defs.h>
+#include <pdev/driver.h>
+#include <pdev/interrupt.h>
+
 #define LOCAL_TRACE 0
-
-struct int_handler_struct {
-    int_handler handler;
-    void* arg;
-};
-
-static struct int_handler_struct int_handler_table[MAX_INT];
 
 static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
 
-status_t mask_interrupt(unsigned int vector) {
+static status_t bcm28xx_mask_interrupt(unsigned int vector) {
     LTRACEF("vector %u\n", vector);
 
     spin_lock_saved_state_t state;
@@ -64,7 +61,7 @@ status_t mask_interrupt(unsigned int vector) {
     return NO_ERROR;
 }
 
-status_t unmask_interrupt(unsigned int vector) {
+static status_t bcm28xx_unmask_interrupt(unsigned int vector) {
     LTRACEF("vector %u\n", vector);
 
     spin_lock_saved_state_t state;
@@ -104,20 +101,20 @@ status_t unmask_interrupt(unsigned int vector) {
     return NO_ERROR;
 }
 
-bool is_valid_interrupt(unsigned int vector, uint32_t flags) {
+static bool bcm28xx_is_valid_interrupt(unsigned int vector, uint32_t flags) {
     return (vector < MAX_INT);
 }
 
-unsigned int remap_interrupt(unsigned int vector) {
+static unsigned int bcm28xx_remap_interrupt(unsigned int vector) {
     return vector;
 }
 
 /*
  *  TODO(hollande) - Implement!
  */
-status_t configure_interrupt(unsigned int vector,
-                             enum interrupt_trigger_mode tm,
-                             enum interrupt_polarity pol)
+static status_t bcm28xx_configure_interrupt(unsigned int vector,
+                                            enum interrupt_trigger_mode tm,
+                                            enum interrupt_polarity pol)
 {
     return NO_ERROR;
 }
@@ -125,29 +122,16 @@ status_t configure_interrupt(unsigned int vector,
 /*
  *  TODO(hollande) - Implement!
  */
-status_t get_interrupt_config(unsigned int vector,
-                              enum interrupt_trigger_mode* tm,
-                              enum interrupt_polarity* pol)
+static status_t bcm28xx_get_interrupt_config(unsigned int vector,
+                                             enum interrupt_trigger_mode* tm,
+                                             enum interrupt_polarity* pol)
 {
     if (tm)  *tm  = IRQ_TRIGGER_MODE_EDGE;
     if (pol) *pol = IRQ_POLARITY_ACTIVE_HIGH;
     return NO_ERROR;
 }
 
-void register_int_handler(unsigned int vector, int_handler handler, void* arg) {
-    if (vector >= MAX_INT)
-        panic("register_int_handler: vector out of range %u\n", vector);
-
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&lock, state);
-
-    int_handler_table[vector].handler = handler;
-    int_handler_table[vector].arg = arg;
-
-    spin_unlock_irqrestore(&lock, state);
-}
-
-enum handler_return platform_irq(struct arm64_iframe_short* frame) {
+static enum handler_return bcm28xx_handle_irq(struct arm64_iframe_short* frame) {
     uint vector;
     uint cpu = arch_curr_cpu_num();
 
@@ -220,54 +204,74 @@ decoded:
 #endif // WITH_SMP
     if (vector == 0xffffffff) {
         ret = INT_NO_RESCHEDULE;
-    } else if (int_handler_table[vector].handler) {
-        if (vector < ARM_IRQ_LOCAL_BASE)
-            THREAD_STATS_INC(interrupts);
-        ret = int_handler_table[vector].handler(int_handler_table[vector].arg);
     } else {
-        panic("irq %u fired on cpu %u but no handler set!\n", vector, cpu);
+        struct int_handler_struct* handler = pdev_get_int_handler(vector, cpu);
+        if (handler) {
+            if (vector < ARM_IRQ_LOCAL_BASE) {
+                THREAD_STATS_INC(interrupts);
+            }
+            ret = handler->handler(handler->arg);
+        } else {
+            panic("irq %u fired on cpu %u but no handler set!\n", vector, cpu);
+        }
     }
 
     return ret;
 }
 
-enum handler_return platform_fiq(struct arm64_iframe_short* frame) {
+static enum handler_return bcm28xx_handle_fiq(struct arm64_iframe_short* frame) {
     PANIC_UNIMPLEMENTED;
 }
 
-/* called from arm64 code. TODO: put in shared header */
-void bcm28xx_send_ipi(uint irq, uint cpu_mask);
 
-void bcm28xx_send_ipi(uint irq, uint cpu_mask) {
-    LTRACEF("irq %u, cpu_mask 0x%x\n", irq, cpu_mask);
-
-    for (uint i = 0; i < 4; i++) {
-        if (cpu_mask & (1 << i)) {
-            LTRACEF("sending to cpu %u\n", i);
-            *REG32(INTC_LOCAL_MAILBOX0_SET0 + 0x10 * i) = (1 << irq);
-        }
-    }
-}
-
-void intc_init(void) {
-    // mask everything
-    *REG32(INTC_DISABLE1) = 0xffffffff;
-    *REG32(INTC_DISABLE2) = 0xffffffff;
-    *REG32(INTC_DISABLE3) = 0xffffffff;
-
-}
-
-status_t interrupt_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
+static status_t bcm28xx_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
     /* filter out targets outside of the range of cpus we care about */
     target &= ((1UL << SMP_MAX_CPUS) - 1);
     if (target != 0) {
-        bcm28xx_send_ipi(ipi, target);
+        LTRACEF("ipi %u, target 0x%x\n", ipi, target);
+
+        for (uint i = 0; i < 4; i++) {
+            if (target & (1 << i)) {
+                LTRACEF("sending to cpu %u\n", i);
+                *REG32(INTC_LOCAL_MAILBOX0_SET0 + 0x10 * i) = (1 << ipi);
+            }
+        }
     }
 
     return NO_ERROR;
 }
 
-void interrupt_init_percpu(void) {
-    mp_set_curr_cpu_online(true);
-    unmask_interrupt(INTERRUPT_ARM_LOCAL_MAILBOX0);
+static void bcm28xx_init_percpu_early(void) {
 }
+
+static void bcm28xx_init_percpu(void) {
+    mp_set_curr_cpu_online(true);
+    bcm28xx_unmask_interrupt(INTERRUPT_ARM_LOCAL_MAILBOX0);
+}
+
+static const struct pdev_interrupt_ops intc_ops = {
+    .mask = bcm28xx_mask_interrupt,
+    .unmask = bcm28xx_unmask_interrupt,
+    .configure = bcm28xx_configure_interrupt,
+    .get_config = bcm28xx_get_interrupt_config,
+    .is_valid = bcm28xx_is_valid_interrupt,
+    .remap = bcm28xx_remap_interrupt,
+    .send_ipi = bcm28xx_send_ipi,
+    .init_percpu_early = bcm28xx_init_percpu_early,
+    .init_percpu = bcm28xx_init_percpu,
+    .handle_irq = bcm28xx_handle_irq,
+    .handle_fiq = bcm28xx_handle_fiq,
+};
+
+static void bcm28xx_intc_init(mdi_node_ref_t* node, uint level) {
+    // nothing to read from MDI, so arguments are ignored
+
+    // mask everything
+    *REG32(INTC_DISABLE1) = 0xffffffff;
+    *REG32(INTC_DISABLE2) = 0xffffffff;
+    *REG32(INTC_DISABLE3) = 0xffffffff;
+
+    pdev_register_interrupts(&intc_ops);
+}
+
+LK_PDEV_INIT(bcm28xx_intc_init, MDI_KERNEL_DRIVERS_BCM28XX_INTERRUPT, bcm28xx_intc_init, LK_INIT_LEVEL_PLATFORM_EARLY);
