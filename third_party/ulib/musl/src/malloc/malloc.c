@@ -19,9 +19,44 @@
 #define inline inline __attribute__((always_inline))
 #endif
 
-void* __mmap(void*, size_t, int, int, int, off_t);
-int __munmap(void*, size_t);
-int __madvise(void*, size_t, int);
+static char* vmo_allocate(size_t len) {
+    mx_handle_t vmo;
+    if (_mx_vmo_create(len, 0, &vmo) != NO_ERROR) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    uintptr_t ptr = 0;
+    mx_status_t status =
+        _mx_vmar_map(_mx_vmar_root_self(), 0, vmo, 0, len,
+                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr);
+    _mx_handle_close(vmo);
+
+    switch(status) {
+    case NO_ERROR:
+        break;
+    case ERR_ACCESS_DENIED:
+        errno = EACCES;
+    case ERR_NO_MEMORY:
+        errno = ENOMEM;
+    case ERR_INVALID_ARGS:
+    case ERR_BAD_STATE:
+    default:
+        errno = EINVAL;
+    }
+
+    return (char*)ptr;
+}
+
+static int vmo_deallocate(char* start, size_t len) {
+    uintptr_t ptr = (uintptr_t)start;
+    mx_status_t status = _mx_vmar_unmap(_mx_vmar_root_self(), ptr, len);
+    if (status < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    return 0;
+}
 
 struct bin {
     mtx_t lock;
@@ -328,9 +363,9 @@ void* malloc(size_t n) {
 
     if (n > MMAP_THRESHOLD) {
         size_t len = n + OVERHEAD + PAGE_SIZE - 1 & -PAGE_SIZE;
-        char* base = __mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (base == (void*)-1)
-            return 0;
+        char* base = vmo_allocate(len);
+        if (base == NULL)
+            return NULL;
         c = (void*)(base + SIZE_ALIGN - OVERHEAD);
         c->csize = len - (SIZE_ALIGN - OVERHEAD);
         c->psize = SIZE_ALIGN - OVERHEAD;
@@ -474,7 +509,7 @@ void free(void* p) {
         /* Crash on double free */
         if (extra & 1)
             __builtin_trap();
-        __munmap(base, len);
+        vmo_deallocate(base, len);
         return;
     }
 
@@ -532,14 +567,10 @@ void free(void* p) {
 
     /* Replace middle of large chunks with fresh zero pages */
     if (reclaim) {
-        uintptr_t a = (uintptr_t)self + SIZE_ALIGN + PAGE_SIZE - 1 & -PAGE_SIZE;
-        uintptr_t b = (uintptr_t)next - SIZE_ALIGN & -PAGE_SIZE;
-#if 1
-        __madvise((void*)a, b - a, MADV_DONTNEED);
-#else
-        __mmap((void*)a, b - a, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1,
-               0);
-#endif
+        // TODO(kulakowski) Use a magenta-native madvise-alike:
+        // uintptr_t a = (uintptr_t)self + SIZE_ALIGN + PAGE_SIZE - 1 & -PAGE_SIZE;
+        // uintptr_t b = (uintptr_t)next - SIZE_ALIGN & -PAGE_SIZE;
+        // madvise((void*)a, b - a, MADV_DONTNEED);
     }
 
     unlock_bin(i);
