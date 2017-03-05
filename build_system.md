@@ -8,7 +8,9 @@ using commands defined in `env.sh` instead.
 
 ### Build Magenta and the sysroot
 
-First, you need to [build the Magenta kernel](magenta) and the sysroot:
+First, you need to
+[build the Magenta kernel](https://fuchsia.googlesource.com/magenta/+/master/README.md)
+and the sysroot:
 
 ```
 (cd magenta; make -j32 magenta-pc-x86-64)

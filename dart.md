@@ -154,7 +154,7 @@ itself.
 [dart-3p]: https://fuchsia.googlesource.com/third_party/dart-pkg/+/master "Third-party dependencies"
 [dart-3p-script]: https://fuchsia.googlesource.com/scripts/+/master/update_dart_packages.py "Dependencies script"
 [target-package]: https://fuchsia.googlesource.com/build/+/master/dart/dart_package.gni "dart_package target"
-[target-app]: https://fuchsia.googlesource.com/build/+/master/dart/dart_app.gni "dart_app target"
+[target-app]: https://fuchsia.googlesource.com/dart_content_handler/+/master/dart_app.gni "dart_package app"
 [target-flutter]: https://github.com/flutter/engine/blob/master/build/flutter_app.gni "flutter_app target"
 [target-test]: https://fuchsia.googlesource.com/build/+/master/dart/dart_test.gni "dart_test target"
 [flutter]: https://flutter.io/ "Flutter"

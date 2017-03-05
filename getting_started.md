@@ -33,9 +33,11 @@ Ensure `goma` is installed on your machine for faster builds.
 
 ### Setup Build Environment
 
-Source the [`env.sh`](scripts/env.sh) script, which provides helpful shell
-functions for Fuchsia development. The following command also changes the
-command prompt and sets up for a x86-64 build.
+Source the
+[`env.sh`](https://fuchsia.googlesource.com/scripts/+/master/env.sh)
+script, which provides helpful shell functions for Fuchsia
+development. The following command also changes the command prompt and
+sets up for a x86-64 build.
 
 ```
 source scripts/env.sh && envprompt && fset x86-64
