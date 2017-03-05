@@ -36,8 +36,6 @@ import sys
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 PREBUILTS_BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(SCRIPT_DIR), "prebuilt",
                                                   "downloads"))
-DEFAULT_STACK_SIZE = 256*1024
-
 name_to_full_path = {}
 
 
@@ -153,6 +151,9 @@ def main():
                         help="List of additional build directories to search")
     parser.add_argument("--disassemble", "-d", action="store_true",
                         help="Show disassembly of each function")
+    parser.add_argument("--stack_size", "-s", type=int,
+                        default=256*1024,
+                        help="Change the assumed size of the stack (e.g. use 1048576 for ftl or mtl default thread size")
     parser.add_argument("app", nargs="?", help="Name of primary application")
     args = parser.parse_args()
 
@@ -212,11 +213,12 @@ def main():
                 writelines(processed_lines)
                 writeline("end of symbolized stack\n")
 
-                if total_stack_size > DEFAULT_STACK_SIZE - 8*1024:
-                    if total_stack_size >= DEFAULT_STACK_SIZE:
-                        writeline("WARNING: Overflowed default stack size (total %d)\n" % (total_stack_size,))
+                if total_stack_size > args.stack_size - 8*1024:
+                    if total_stack_size >= args.stack_size:
+                        message = "Overflowed stack"
                     else:
-                        writeline("WARNING: Potentially overflowed default stack size (total %d)\n" % (total_stack_size,))
+                        message = "Potentially overflowed stack"
+                    writeline("WARNING: %s (total usage: %d, stack size: %d)\n" % (warning, total_stack_size, args.stack_size))
                     for frame, size in frame_sizes:
                         writeline("#%s: %d bytes\n" % (frame, size))
                 # Since we don't have the last stack frame, leave some leeway
