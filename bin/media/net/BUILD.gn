@@ -23,8 +23,8 @@ source_set("net") {
   ]
 }
 
-executable("apptests") {
-  output_name = "media_net_apptests"
+executable("tests") {
+  output_name = "media_net_tests"
 
   testonly = true
 

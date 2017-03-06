@@ -27,16 +27,16 @@ group("examples") {
   ]
 }
 
-group("apptests") {
+group("tests") {
   testonly = true
 
   deps = [
     "//apps/media/lib/timeline:tests",
     "//apps/media/lib/transport:tests",
-    "//apps/media/src/audio:apptests",
-    "//apps/media/src/demux:apptests",
-    "//apps/media/src/media_service:apptests",
-    "//apps/media/src/net:apptests",
-    "//apps/media/src/util:apptests",
+    "//apps/media/src/audio:tests",
+    "//apps/media/src/demux:tests",
+    "//apps/media/src/media_service:tests",
+    "//apps/media/src/net:tests",
+    "//apps/media/src/util:tests",
   ]
 }

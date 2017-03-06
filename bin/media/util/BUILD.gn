@@ -26,8 +26,8 @@ source_set("util") {
   ]
 }
 
-executable("apptests") {
-  output_name = "media_util_apptests"
+executable("tests") {
+  output_name = "media_util_tests"
 
   testonly = true
 

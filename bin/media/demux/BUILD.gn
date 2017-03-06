@@ -19,8 +19,8 @@ source_set("demux") {
   ]
 }
 
-executable("apptests") {
-  output_name = "media_demux_apptests"
+executable("tests") {
+  output_name = "media_demux_tests"
 
   testonly = true
 

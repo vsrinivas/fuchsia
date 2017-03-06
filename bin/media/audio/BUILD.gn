@@ -31,8 +31,8 @@ source_set("audio") {
   ]
 }
 
-executable("apptests") {
-  output_name = "media_audio_apptests"
+executable("tests") {
+  output_name = "media_audio_tests"
 
   testonly = true
 
