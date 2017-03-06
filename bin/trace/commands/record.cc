@@ -6,15 +6,83 @@
 #include <iostream>
 
 #include "apps/tracing/src/trace/commands/record.h"
+#include "apps/tracing/src/trace/spec.h"
+#include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {
+namespace {
+
+std::ostream& operator<<(std::ostream& os, measure::DurationSpec spec) {
+  return os << "duration of " << spec.event;
+}
+
+std::ostream& operator<<(std::ostream& os, measure::TimeBetweenSpec spec) {
+  return os << "time between " << spec.first_event << "and "
+            << spec.second_event;
+}
+
+// This just prints the results out verbatim as ticks. TODO(ppi): calculate
+// useful human-readable statistics.
+template <typename Spec>
+void PrintResults(
+    std::ostream& out,
+    const Spec& spec,
+    const std::unordered_map<uint64_t, std::vector<Ticks>>& results) {
+  out << spec << " : ";
+  if (!results.count(spec.id)) {
+    out << " no results" << std::endl;
+    return;
+  }
+
+  const std::vector<Ticks>& ticks = results.at(spec.id);
+  out << "[";
+  for (size_t i = 0u; i < ticks.size(); i++) {
+    if (i != 0) {
+      out << ", ";
+    }
+    out << ticks[i];
+  }
+  out << "]";
+  out << std::endl;
+}
+
+}  // namespace
 
 bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   size_t index = 0;
+  // Read the spec file first. Arguments passed on the command line override the
+  // spec.
+  // --spec-file=<file>
+  if (command_line.HasOption("spec-file", &index)) {
+    std::string spec_file_path = command_line.options()[index].value;
+    if (!files::IsFile(spec_file_path)) {
+      err() << spec_file_path << " is not a file" << std::endl;
+      return false;
+    }
+
+    std::string content;
+    if (!files::ReadFileToString(spec_file_path, &content)) {
+      err() << "Can't read " << spec_file_path << std::endl;
+      return false;
+    }
+
+    Spec spec;
+    if (!DecodeSpec(content, &spec)) {
+      err() << "Can't decode " << spec_file_path << std::endl;
+      return false;
+    }
+    app = std::move(spec.app);
+    args = std::move(spec.args);
+    categories = std::move(spec.categories);
+    duration = std::move(spec.duration);
+    measure_duration_specs = std::move(spec.duration_specs);
+    measure_time_between_specs = std::move(spec.time_between_specs);
+  }
+
   // --categories=<cat1>,<cat2>,...
   if (command_line.HasOption("categories", &index)) {
     categories =
@@ -60,11 +128,13 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   // <command> <args...>
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {
-    launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = fidl::String::From(positional_args[0]);
-    launch_info->arguments =
-        fidl::Array<fidl::String>::From(std::vector<std::string>(
-            positional_args.begin() + 1, positional_args.end()));
+    if (!app.empty() || !args.empty()) {
+      FTL_LOG(WARNING) << "The app and args passed on the command line"
+                       << "override those from the tspec file.";
+    }
+    app = positional_args[0];
+    args = std::vector<std::string>(positional_args.begin() + 1,
+                                    positional_args.end());
   }
 
   return true;
@@ -77,7 +147,8 @@ Command::Info Record::Describe() {
       },
       "record",
       "starts tracing and records data",
-      {{"output-file=[/tmp/trace.json]", "Trace data is stored in this file"},
+      {{"spec-file=[none]", "Tracing specification file"},
+       {"output-file=[/tmp/trace.json]", "Trace data is stored in this file"},
        {"duration=[10s]",
         "Trace will be active for this long after the session has been "
         "started"},
@@ -111,6 +182,16 @@ void Record::Run(const ftl::CommandLine& command_line) {
 
   exporter_.reset(new ChromiumExporter(std::move(out_file)));
   tracer_.reset(new Tracer(trace_controller().get()));
+  if (!options_.measure_duration_specs.empty()) {
+    aggregate_events_ = true;
+    measure_duration_.reset(
+        new measure::MeasureDuration(options_.measure_duration_specs));
+  }
+  if (!options_.measure_time_between_specs.empty()) {
+    aggregate_events_ = true;
+    measure_time_between_.reset(
+        new measure::MeasureTimeBetween(options_.measure_time_between_specs));
+  }
 
   tracing_ = true;
 
@@ -122,10 +203,16 @@ void Record::Run(const ftl::CommandLine& command_line) {
 
   tracer_->Start(
       std::move(trace_options),
-      [this](const reader::Record& record) { exporter_->ExportRecord(record); },
+      [this](const reader::Record& record) {
+        exporter_->ExportRecord(record);
+
+        if (aggregate_events_ && record.type() == RecordType::kEvent) {
+          events_.push_back(record.GetEvent());
+        }
+      },
       [](std::string error) { err() << error; },
       [this] {
-        if (options_.launch_info)
+        if (!options_.app.empty())
           LaunchApp();
         StartTimer();
       },
@@ -145,12 +232,42 @@ void Record::DoneTrace() {
   exporter_.reset();
 
   out() << "Trace file written to " << options_.output_file_name << std::endl;
+
+  if (!events_.empty()) {
+    std::sort(
+        std::begin(events_), std::end(events_),
+        [](const reader::Record::Event& e1, const reader::Record::Event& e2) {
+          return e1.timestamp < e2.timestamp;
+        });
+  }
+
+  for (const auto& event : events_) {
+    if (measure_duration_) {
+      measure_duration_->Process(event);
+    }
+    if (measure_time_between_) {
+      measure_time_between_->Process(event);
+    }
+  }
+
+  for (auto& spec : options_.measure_duration_specs) {
+    PrintResults(out(), spec, measure_duration_->results());
+  }
+
+  for (auto& spec : options_.measure_time_between_specs) {
+    PrintResults(out(), spec, measure_time_between_->results());
+  }
+
   mtl::MessageLoop::GetCurrent()->QuitNow();
 }
 
 void Record::LaunchApp() {
-  out() << "Launching " << options_.launch_info->url;
-  context()->launcher()->CreateApplication(std::move(options_.launch_info),
+  auto launch_info = app::ApplicationLaunchInfo::New();
+  launch_info->url = fidl::String::From(options_.app);
+  launch_info->arguments = fidl::Array<fidl::String>::From(options_.args);
+
+  out() << "Launching " << launch_info->url;
+  context()->launcher()->CreateApplication(std::move(launch_info),
                                            GetProxy(&application_controller_));
   application_controller_.set_connection_error_handler([this] {
     out() << "Application terminated";

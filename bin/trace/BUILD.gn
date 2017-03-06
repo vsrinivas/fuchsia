@@ -26,17 +26,38 @@ source_set("trace_app") {
     "commands/list_providers.h",
     "commands/record.cc",
     "commands/record.h",
+    "spec.cc",
+    "spec.h",
     "tracer.cc",
     "tracer.h",
   ]
 
   public_deps = [
     "//application/lib/app",
+    "//apps/tracing/lib/measure",
     "//apps/tracing/lib/trace:internal_fields",
     "//apps/tracing/lib/trace:reader",
     "//apps/tracing/lib/trace_converters:chromium",
     "//apps/tracing/services",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+
+  deps = [
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "spec_unittest.cc",
+  ]
+
+  deps = [
+    ":trace_app",
+    "//lib/ftl",
+    "//third_party/gtest",
   ]
 }

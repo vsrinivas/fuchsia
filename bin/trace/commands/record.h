@@ -11,6 +11,8 @@
 
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_launcher.fidl.h"
+#include "apps/tracing/lib/measure/duration.h"
+#include "apps/tracing/lib/measure/time_between.h"
 #include "apps/tracing/lib/trace_converters/chromium_exporter.h"
 #include "apps/tracing/src/trace/command.h"
 #include "apps/tracing/src/trace/tracer.h"
@@ -24,13 +26,16 @@ class Record : public CommandWithTraceController {
   struct Options {
     bool Setup(const ftl::CommandLine&);
 
-    std::string output_file_name = "/tmp/trace.json";
-    ftl::TimeDelta duration = ftl::TimeDelta::FromSeconds(10);
+    std::string app;
+    std::vector<std::string> args;
     std::vector<std::string> categories = {};
+    ftl::TimeDelta duration = ftl::TimeDelta::FromSeconds(10);
     bool detach = false;
     bool decouple = false;
     uint32_t buffer_size_megabytes_hint = 4;
-    app::ApplicationLaunchInfoPtr launch_info;
+    std::vector<measure::DurationSpec> measure_duration_specs;
+    std::vector<measure::TimeBetweenSpec> measure_time_between_specs;
+    std::string output_file_name = "/tmp/trace.json";
   };
 
   static Info Describe();
@@ -47,6 +52,12 @@ class Record : public CommandWithTraceController {
   app::ApplicationControllerPtr application_controller_;
   std::unique_ptr<ChromiumExporter> exporter_;
   std::unique_ptr<Tracer> tracer_;
+  // Aggregate events if there are any measurements to be performed, so that we
+  // can sort them by timestamp and process in order.
+  bool aggregate_events_ = false;
+  std::vector<reader::Record::Event> events_;
+  std::unique_ptr<measure::MeasureDuration> measure_duration_;
+  std::unique_ptr<measure::MeasureTimeBetween> measure_time_between_;
   bool tracing_ = false;
   Options options_;
 

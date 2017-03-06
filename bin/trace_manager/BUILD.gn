@@ -20,5 +20,6 @@ executable("trace_tests") {
   deps = [
     "//apps/tracing/lib/measure:unittests",
     "//apps/tracing/lib/trace:unittests",
+    "//apps/tracing/src/trace:unittests",
   ]
 }
