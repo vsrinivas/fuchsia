@@ -32,6 +32,7 @@ ftl::WeakPtr<OperationContainer> OperationCollection::Drop(OperationBase* const 
 
 void OperationCollection::Cont() {
   // Never happens, because Drop() always returns nullptr.
+  FTL_NOTREACHED() << "Drop() should have returned nullptr.";
 }
 
 OperationQueue::OperationQueue() : weak_ptr_factory_(this) {}

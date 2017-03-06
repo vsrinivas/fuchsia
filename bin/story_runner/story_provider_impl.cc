@@ -569,7 +569,6 @@ StoryProviderImpl::StoryProviderImpl(
     const ComponentContextInfo& component_context_info)
     : environment_(std::move(environment)),
       storage_(new Storage),
-      root_snapshot_(new ledger::PageSnapshotPtr),
       page_watcher_binding_(this),
       component_context_info_(component_context_info) {
   environment_->GetApplicationLauncher(launcher_.NewRequest());
@@ -593,10 +592,10 @@ StoryProviderImpl::StoryProviderImpl(
   });
 
   root_page_->GetSnapshot(
-      (*root_snapshot_).NewRequest(), page_watcher_binding_.NewBinding(),
+      ResetRootSnapshot(), page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "StoryProviderImpl() failed call to Ledger.Watch() "
+          FTL_LOG(ERROR) << "StoryProviderImpl() failed call to Ledger.GetSnapshot() "
                          << status;
         }
       });
@@ -773,12 +772,21 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   }
 
   // Every time we receive an OnChange notification, we update the
-  // root page snapshot so we see the current state. Not that pending
+  // root page snapshot so we see the current state. Note that pending
   // Operation instances hold on to the previous value until they
   // finish. New Operation instances created after the update receive
   // the new snapshot.
+  callback(ResetRootSnapshot());
+}
+
+fidl::InterfaceRequest<ledger::PageSnapshot> StoryProviderImpl::ResetRootSnapshot() {
   root_snapshot_.reset(new ledger::PageSnapshotPtr);
-  callback((*root_snapshot_).NewRequest());
+  auto ret = (*root_snapshot_).NewRequest();
+  (*root_snapshot_).set_connection_error_handler([this] {
+    FTL_LOG(ERROR)
+        << "StoryProviderImpl: PageSnapshot connection unexpectedly closed.";
+  });
+  return ret;
 }
 
 }  // namespace modular

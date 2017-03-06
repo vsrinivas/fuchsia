@@ -50,11 +50,30 @@ class StoryStorageImpl : public ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& callback) override;
 
+  // Every time we receive an OnChange notification, we update the
+  // story page snapshot so we see the current state. Just in case, we
+  // also install a connection error handler on the snapshot
+  // connection, so we can log when the connection unexepctedly closes
+  // (although we cannot do anything else about it).
+  fidl::InterfaceRequest<ledger::PageSnapshot> ResetStorySnapshot();
+
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   std::vector<std::pair<fidl::String, DataCallback>> watchers_;
   const std::string key_;
   std::shared_ptr<Storage> storage_;
+
+  // The page we store the story data in.
   ledger::PagePtr story_page_;
+
+  // The current snapshot of the page we read from, as obtained from
+  // the watcher on the story page. It is held by a shared pointer,
+  // because we may update it while Operation instances that read from
+  // it are still in progress, and they need to hold on to the same
+  // snapshot they started with, lest the methods called on that
+  // snapshot never return. PageSnaphotPtr cannot be duplicated,
+  // because it doesn't have a duplicate method.
+  std::shared_ptr<ledger::PageSnapshotPtr> story_snapshot_;
+
   OperationQueue operation_queue_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);

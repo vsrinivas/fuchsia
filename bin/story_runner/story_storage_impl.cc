@@ -4,6 +4,8 @@
 
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 
+#include <memory>
+
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/operation.h"
@@ -16,32 +18,36 @@ namespace {
 class ReadLinkDataCall : public Operation<fidl::String> {
  public:
   ReadLinkDataCall(OperationContainer* const container,
-                   ledger::Page* const page,
+                   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot,
                    const fidl::String& link_id,
                    ResultCall result_call)
-      : Operation(container, std::move(result_call)), page_(page), link_id_(link_id) {
+      : Operation(container, std::move(result_call)),
+        page_snapshot_(std::move(page_snapshot)), link_id_(link_id) {
     Ready();
   }
 
   void Run() override {
-    page_->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
-          page_snapshot_->Get(
-              to_array(link_id_),
-              [this](ledger::Status status, ledger::ValuePtr value) {
-                data_ = LinkData::New();
-                if (value) {
-                  data_->Deserialize(value->get_bytes().data(),
-                                     value->get_bytes().size());
-                }
-                Done(std::move(data_->json));
-              });
+    (*page_snapshot_)->Get(
+        to_array(link_id_),
+        [this](ledger::Status status, ledger::ValuePtr value) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
+                           << " PageSnapshot.Get() " << status;
+            Done(fidl::String());
+            return;
+          }
+
+          data_ = LinkData::New();
+          if (value) {
+            data_->Deserialize(value->get_bytes().data(),
+                               value->get_bytes().size());
+          }
+          Done(std::move(data_->json));
         });
   }
 
  private:
-  ledger::Page* const page_;  // not owned
-  ledger::PageSnapshotPtr page_snapshot_;
+  std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
   const fidl::String link_id_;
   LinkDataPtr data_;
 
@@ -68,13 +74,16 @@ class WriteLinkDataCall : public Operation<void> {
 
     page_->Put(to_array(link_id_), std::move(bytes),
                [this](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR) << "WriteLinkDataCall() " << link_id_
+                                  << " Page.Put() " << status;
+                 }
                  Done();
                });
   }
 
  private:
   ledger::Page* const page_;  // not owned
-  ledger::PageSnapshotPtr page_snapshot_;
   const fidl::String link_id_;
   LinkDataPtr data_;
 
@@ -107,23 +116,21 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
       // Comment out this initializer in order to switch to in-memory storage.
       story_page_(std::move(story_page)) {
   if (story_page_.is_bound()) {
-    // TODO(mesch): We get the initial state from a different query. This
-    // leaves the possibility that the next OnChange is against a
-    // different base state. We should get the initial state from this page
-    // snapshot instead.
-    ledger::PageSnapshotPtr snapshot_unused;
-    story_page_->GetSnapshot(snapshot_unused.NewRequest(),
-                             page_watcher_binding_.NewBinding(),
-                             [](ledger::Status status) {});
+    story_page_->GetSnapshot(
+        ResetStorySnapshot(), page_watcher_binding_.NewBinding(),
+        [](ledger::Status status) {
+          FTL_LOG(ERROR) << "StoryStorageImpl() failed call to Ledger.GetSnapshot() "
+                         << status;
+        });
   }
 }
 
-StoryStorageImpl::~StoryStorageImpl() {}
+StoryStorageImpl::~StoryStorageImpl() = default;
 
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
                                     const DataCallback& callback) {
   if (story_page_.is_bound()) {
-    new ReadLinkDataCall(&operation_queue_, story_page_.get(), link_id,
+    new ReadLinkDataCall(&operation_queue_, story_snapshot_, link_id,
                          callback);
 
   } else {
@@ -175,7 +182,24 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
       }
     }
   }
-  callback(nullptr);
+
+
+  // Every time we receive an OnChange notification, we update the
+  // story page snapshot so we see the current state. Note that
+  // pending Operation instances hold on to the previous value until
+  // they finish. New Operation instances created after the update
+  // receive the new snapshot.
+  callback(ResetStorySnapshot());
+}
+
+fidl::InterfaceRequest<ledger::PageSnapshot> StoryStorageImpl::ResetStorySnapshot() {
+  story_snapshot_.reset(new ledger::PageSnapshotPtr);
+  auto ret = (*story_snapshot_).NewRequest();
+  (*story_snapshot_).set_connection_error_handler([this] {
+    FTL_LOG(ERROR)
+        << "StoryStorageImpl: PageSnapshot connection unexpectedly closed.";
+  });
+  return ret;
 }
 
 }  // namespace modular

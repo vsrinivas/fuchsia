@@ -103,6 +103,13 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& callback) override;
 
+  // Every time we receive an OnChange notification, we update the
+  // root page snapshot so we see the current state. Just in case, we
+  // also install a connection error handler on the snapshot
+  // connection, so we can log when the connection unexepctedly closes
+  // (although we cannot do anything else about it).
+  fidl::InterfaceRequest<ledger::PageSnapshot> ResetRootSnapshot();
+
   app::ApplicationEnvironmentPtr environment_;
   ledger::LedgerPtr ledger_;
   ConflictResolverImpl conflict_resolver_;
