@@ -394,7 +394,7 @@ bool EngineCommandStreamer::Reset()
         engine = registers::GraphicsDeviceResetControl::RENDER_ENGINE;
         break;
     default:
-        return DRETF(false, "Reset for engine id %d not implemented\n", id());
+        return DRETF(false, "Reset for engine id %d not implemented", id());
     }
 
     registers::ResetControl::request(register_io(), mmio_base());

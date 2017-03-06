@@ -87,11 +87,11 @@ bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
         if ((status & registers::DdiAuxControl::kSendBusyBit) == 0) {
             // TODO(MA-150): Test for handling of timeout errors
             if (status & registers::DdiAuxControl::kTimeoutBit)
-                return DRETF(false, "DP aux: Got timeout error\n");
+                return DRETF(false, "DP aux: Got timeout error");
             reply->size = (status >> registers::DdiAuxControl::kMessageSizeShift) &
                           registers::DdiAuxControl::kMessageSizeMask;
             if (reply->size > DpAuxMessage::kMaxTotalSize)
-                return DRETF(false, "DP aux: Invalid reply size\n");
+                return DRETF(false, "DP aux: Invalid reply size");
             // Read the reply message from the hardware.
             for (uint32_t offset = 0; offset < reply->size; offset += 4) {
                 reply->SetFromPackedWord(offset,
@@ -101,7 +101,7 @@ bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
         }
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
-    return DRETF(false, "DP aux: No reply after %d tries\n", kNumTries);
+    return DRETF(false, "DP aux: No reply after %d tries", kNumTries);
 }
 
 bool I2cOverDpAux::I2cRead(uint32_t addr, uint8_t* buf, uint32_t size)
@@ -190,13 +190,13 @@ void DisplayPort::FetchAndCheckEdidData(RegisterIo* reg_io)
     // Read enough just to test that we got the correct header.
     uint8_t buf[32];
     if (!FetchEdidData(reg_io, buf, sizeof(buf))) {
-        magma::log(magma::LOG_WARNING, "edid: FetchEdidData() failed\n");
+        magma::log(magma::LOG_WARNING, "edid: FetchEdidData() failed");
         return;
     }
     static const uint8_t kEdidHeader[8] = {0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0};
     if (memcmp(buf, kEdidHeader, sizeof(kEdidHeader)) != 0) {
-        magma::log(magma::LOG_WARNING, "edid: got bad header\n");
+        magma::log(magma::LOG_WARNING, "edid: got bad header");
         return;
     }
-    magma::log(magma::LOG_INFO, "edid: read EDID data successfully, with correct header\n");
+    magma::log(magma::LOG_INFO, "edid: read EDID data successfully, with correct header");
 }
