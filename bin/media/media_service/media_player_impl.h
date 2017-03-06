@@ -114,6 +114,9 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   // called |Play| or |Pause| or because we've hit end-of-stream.
   State target_state_ = State::kFlushed;
 
+  // Whether the current media contains a video stream.
+  bool has_video_ = false;
+
   // Whether we're currently at end-of-stream.
   bool end_of_stream_ = false;
 

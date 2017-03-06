@@ -17,6 +17,13 @@ VideoFrameSource::VideoFrameSource()
       timeline_consumer_binding_(this) {
   // Make sure the PTS rate for all packets is nanoseconds.
   SetPtsRate(TimelineRate::NsPerSecond);
+
+  status_publisher_.SetCallbackRunner([this](
+      const VideoRenderer::GetStatusCallback& callback, uint64_t version) {
+    VideoRendererStatusPtr status = VideoRendererStatus::New();
+    status->video_size = converter_.GetSize().Clone();
+    callback(version, std::move(status));
+  });
 }
 
 VideoFrameSource::~VideoFrameSource() {}
@@ -53,21 +60,10 @@ void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
   }
 }
 
-void VideoFrameSource::GetVideoSize(
-    const VideoRenderer::GetVideoSizeCallback& callback) {
-  mozart::Size video_size = converter_.GetSize();
-  if (video_size.width != 0) {
-    callback(video_size.Clone());
-    return;
-  }
-
-  if (get_video_size_callback_) {
-    // We got another GetVideoSize call when one was already pending. That's
-    // not really supported, so we return the zero size for the old call.
-    get_video_size_callback_(video_size.Clone());
-  }
-
-  get_video_size_callback_ = callback;
+void VideoFrameSource::GetStatus(
+    uint64_t version_last_seen,
+    const VideoRenderer::GetStatusCallback& callback) {
+  status_publisher_.Get(version_last_seen, callback);
 }
 
 void VideoFrameSource::GetSupportedMediaTypes(
@@ -85,10 +81,7 @@ void VideoFrameSource::SetMediaType(MediaTypePtr media_type) {
 
   converter_.SetMediaType(media_type);
 
-  if (get_video_size_callback_) {
-    get_video_size_callback_(converter_.GetSize().Clone());
-    get_video_size_callback_ = nullptr;
-  }
+  status_publisher_.SendUpdates();
 }
 
 void VideoFrameSource::GetPacketConsumer(
