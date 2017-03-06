@@ -19,10 +19,8 @@ BaseView::BaseView(ViewManagerPtr view_manager,
   FTL_DCHECK(view_manager_);
   FTL_DCHECK(view_owner_request);
 
-  ViewListenerPtr view_listener;
-  view_listener_binding_.Bind(view_listener.NewRequest());
   view_manager_->CreateView(view_.NewRequest(), std::move(view_owner_request),
-                            std::move(view_listener), label);
+                            view_listener_binding_.NewBinding(), label);
   view_->CreateScene(scene_.NewRequest());
 }
 
@@ -37,9 +35,7 @@ app::ServiceProvider* BaseView::GetViewServiceProvider() {
 ViewContainer* BaseView::GetViewContainer() {
   if (!view_container_) {
     view_->GetContainer(view_container_.NewRequest());
-    ViewContainerListenerPtr view_container_listener;
-    view_container_listener_binding_.Bind(view_container_listener.NewRequest());
-    view_container_->SetListener(std::move(view_container_listener));
+    view_container_->SetListener(view_container_listener_binding_.NewBinding());
   }
   return view_container_.get();
 }
