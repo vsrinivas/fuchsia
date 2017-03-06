@@ -16,7 +16,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/intc.c \
 	$(LOCAL_DIR)/platform.c \
 	$(LOCAL_DIR)/miniuart.c \
-	$(LOCAL_DIR)/atag.c
 
 MEMBASE := 0x00000000
 

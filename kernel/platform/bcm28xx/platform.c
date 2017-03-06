@@ -23,7 +23,6 @@
 #include <dev/interrupt.h>
 #include <platform/bcm28xx.h>
 #include <platform/videocore.h>
-#include <platform/atag.h>
 
 #include <target.h>
 
