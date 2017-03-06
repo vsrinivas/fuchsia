@@ -36,10 +36,9 @@ int waitcmd(int, char **);
 int aliascmd(int, char **);
 int testcmd(int, char **);
 int mxc_ls(int, char **);
-int mxc_cp(int, char **);
+int mxc_mv_or_cp(int, char **);
 int mxc_mkdir(int, char **);
 int mxc_rm(int, char **);
-int mxc_mv(int, char **);
 int mxc_dump(int, char **);
 int mxc_list(int, char **);
 int mxc_msleep(int, char **);
@@ -58,7 +57,7 @@ const struct builtincmd builtincmd[] = {
 	{ "chdir", cdcmd, 0 },
 	{ "command", commandcmd, 2 },
 	{ "continue", breakcmd, 3 },
-	{ "cp", mxc_cp, 0 },
+	{ "cp", mxc_mv_or_cp, 0 },
 	{ "dm", mxc_dm, 0 },
 	{ "dump", mxc_dump, 0 },
 	{ "echo", echocmd, 0 },
@@ -76,7 +75,7 @@ const struct builtincmd builtincmd[] = {
 	{ "ls", mxc_ls, 0 },
 	{ "mkdir", mxc_mkdir, 0 },
 	{ "msleep", mxc_msleep, 0 },
-	{ "mv", mxc_mv, 0 },
+	{ "mv", mxc_mv_or_cp, 0 },
 	{ "printf", printfcmd, 0 },
 	{ "pwd", pwdcmd, 0 },
 	{ "read", readcmd, 2 },

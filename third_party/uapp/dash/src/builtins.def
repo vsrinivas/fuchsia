@@ -41,10 +41,9 @@ testcmd test [
 
 
 mxc_ls ls
-mxc_cp cp
+mxc_mv_or_cp cp mv
 mxc_mkdir mkdir
 mxc_rm rm
-mxc_mv mv
 
 
 mxc_dump dump

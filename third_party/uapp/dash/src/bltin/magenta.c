@@ -206,8 +206,28 @@ done:
     return r;
 }
 
+// Move into the destination location, which is not a directory
+static int mv_here(const char *src_name, const char *dest_name,
+                   bool dest_exists, bool force)
+{
+    if (! verify_file(src_name)) {
+        return -1;
+    }
+
+    if (rename(src_name, dest_name)) {
+        if (! force ||
+            unlink(dest_name) != 0 ||
+            rename(src_name, dest_name)) {
+            fprintf(stderr, "mv: failed to create '%s'\n", dest_name);
+            return -1;
+        }
+  }
+  return 0;
+}
+
 // Copy a source file into the destination location, which is a directory
-static int cp_to_dir(const char *src_name, const char *dest_name, bool force)
+static int mv_or_cp_to_dir(bool is_mv, const char *src_name,
+                           const char *dest_name, bool force)
 {
     if (! verify_file(src_name)) {
         return -1;
@@ -219,14 +239,16 @@ static int cp_to_dir(const char *src_name, const char *dest_name, bool force)
     } else {
         filename_start++;
         if (*filename_start == '\0') {
-            fprintf(stderr, "cp: Invalid filename \"%s\"\n", src_name);
+            fprintf(stderr, "%s: Invalid filename \"%s\"\n",
+                    is_mv ? "mv" : "cp", src_name);
             return -1;
         }
     }
 
     size_t path_len = strlen(dest_name);
     if (path_len == 0) {
-        fprintf(stderr, "cp: Invalid filename \"%s\"\n", dest_name);
+        fprintf(stderr, "%s: Invalid filename \"%s\"\n", is_mv ? "mv" : "cp",
+                dest_name);
         return -1;
     }
     char full_filename[PATH_MAX];
@@ -235,10 +257,17 @@ static int cp_to_dir(const char *src_name, const char *dest_name, bool force)
     } else {
         snprintf(full_filename, PATH_MAX, "%s/%s", dest_name, filename_start);
     }
-    return cp_here(src_name, full_filename, file_exists(full_filename), force);
+    if (is_mv) {
+        return mv_here(src_name, full_filename, file_exists(full_filename),
+                       force);
+    } else {
+        return cp_here(src_name, full_filename, file_exists(full_filename),
+                       force);
+    }
 }
 
-int mxc_cp(int argc, char** argv) {
+int mxc_mv_or_cp(int argc, char** argv) {
+    bool is_mv = !strcmp(argv[0], "mv");
     int next_arg = 1;
     bool force = false;
     while ((next_arg < argc) && argv[next_arg][0] == '-') {
@@ -279,8 +308,8 @@ int mxc_cp(int argc, char** argv) {
 
     if (dest_isdir) {
         do {
-            int result;
-            result = cp_to_dir(argv[next_arg], dest_name, force);
+            int result = mv_or_cp_to_dir(is_mv, argv[next_arg], dest_name,
+                                         force);
             if (result != 0) {
                 return result;
             }
@@ -288,14 +317,16 @@ int mxc_cp(int argc, char** argv) {
         } while (next_arg < argc - 1);
         return 0;
     } else if (src_count > 1) {
-        fprintf(stderr, "cp: destination is not a directory\n");
+        fprintf(stderr, "%s: destination is not a directory\n", argv[0]);
         return -1;
+    } else if (is_mv) {
+        return mv_here(argv[next_arg], dest_name, dest_exists, force);
     } else {
         return cp_here(argv[next_arg], dest_name, dest_exists, force);
     }
 
 usage:
-    fprintf(stderr, "usage: cp [-f] <src>... <dst>\n");
+    fprintf(stderr, "usage: %s [-f] <src>... <dst>\n", argv[0]);
     return -1;
 }
 
@@ -332,17 +363,6 @@ int mxc_mkdir(int argc, char** argv) {
         }
         argc--;
         argv++;
-    }
-    return 0;
-}
-
-int mxc_mv(int argc, char** argv) {
-    if (argc != 3) {
-        fprintf(stderr, "usage: mv <old path> <new path>\n");
-        return -1;
-    }
-    if (rename(argv[1], argv[2])) {
-        fprintf(stderr, "error: failed to rename '%s' to '%s'\n", argv[1], argv[2]);
     }
     return 0;
 }

@@ -89,11 +89,10 @@ ulimitcmd	ulimit
 testcmd		test [
 
 /* mini-versions of standard unix tools */
-mxc_ls		ls
-mxc_cp		cp
-mxc_mkdir	mkdir
-mxc_rm		rm
-mxc_mv		mv
+mxc_ls			ls
+mxc_mv_or_cp		cp mv
+mxc_mkdir		mkdir
+mxc_rm			rm
 
 /* not-so-standard tools */
 mxc_dump	dump
