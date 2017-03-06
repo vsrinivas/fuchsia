@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <bits.h>
 #include <dev/interrupt.h>
+#include <dev/interrupt/bcm28xx-intc.h>
 #include <err.h>
 #include <kernel/mp.h>
 #include <kernel/spinlock.h>
@@ -14,8 +15,6 @@
 #include <platform/bcm28xx.h>
 #include <trace.h>
 #include <arch/arm64.h>
-
-#include "platform_p.h"
 
 #define LOCAL_TRACE 0
 

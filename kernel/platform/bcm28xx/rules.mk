@@ -13,7 +13,6 @@ LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/gpio.c \
-	$(LOCAL_DIR)/intc.c \
 	$(LOCAL_DIR)/platform.c \
 	$(LOCAL_DIR)/miniuart.c \
 
@@ -40,7 +39,7 @@ KERNEL_DEFINES += \
 MODULE_DEPS += \
 	lib/cbuf \
 	dev/timer/arm_generic \
-	dev/interrupt \
+	dev/interrupt/bcm28xx \
 
 include make/module.mk
 

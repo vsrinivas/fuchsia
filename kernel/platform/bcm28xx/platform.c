@@ -20,7 +20,7 @@
 
 #include <platform.h>
 #include <arch/arm64/platform.h>
-#include <dev/interrupt.h>
+#include <dev/interrupt/bcm28xx-intc.h>
 #include <platform/bcm28xx.h>
 #include <platform/videocore.h>
 
@@ -57,8 +57,6 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
 };
 
 #define DEBUG_UART 1
-
-extern void intc_init(void);
 
 extern void arm_reset(void);
 
