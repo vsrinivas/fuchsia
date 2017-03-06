@@ -55,6 +55,12 @@ static unsigned g_active_vc_index;
 static vc_battery_info_t g_battery_info;
 static mtx_t g_vc_lock = MTX_INIT;
 
+static void vc_device_toggle_framebuffer(void)
+{
+    if (g_fb_display_protocol->acquire_or_release_display)
+        g_fb_display_protocol->acquire_or_release_display(g_fb_device);
+}
+
 // Process key sequences that affect the console (scrolling, switching
 // console, etc.) without sending input to the current console.  This
 // returns whether this key press was handled.
@@ -119,6 +125,13 @@ static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
                 write(fd, "reboot", strlen("reboot"));
                 close(fd);
             }
+            return true;
+        }
+        break;
+
+    case HID_USAGE_KEY_ESC:
+        if (modifiers & MOD_ALT) {
+            vc_device_toggle_framebuffer();
             return true;
         }
         break;
