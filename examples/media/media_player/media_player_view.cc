@@ -65,11 +65,6 @@ MediaPlayerView::MediaPlayerView(
   media::MediaServicePtr media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
 
-  // We start with a non-zero size so we get a progress bar regardless of
-  // whether we get video.
-  video_size_.width = 640u;
-  video_size_.height = 100u;
-
   if (params.device_name().empty()) {
     // Get an audio renderer.
     media::AudioRendererPtr audio_renderer;
@@ -85,6 +80,17 @@ MediaPlayerView::MediaPlayerView(
     mozart::ViewOwnerPtr video_view_owner;
     video_renderer_->CreateView(video_view_owner.NewRequest());
     GetViewContainer()->AddChild(kVideoChildKey, std::move(video_view_owner));
+
+    // We start with a non-zero size so we get a progress bar regardless of
+    // whether we get video.
+    video_size_.width = 640u;
+    video_size_.height = 100u;
+    video_renderer_->GetVideoSize([this](mozart::SizePtr video_size) {
+      FTL_LOG(INFO) << "video_size " << video_size->width << "x"
+                    << video_size->height;
+      video_size_ = *video_size;
+      Invalidate();
+    });
 
     // Get a reader.
     media::SeekingReaderPtr reader;
@@ -104,6 +110,10 @@ MediaPlayerView::MediaPlayerView(
     media_service->CreatePlayerProxy(params.device_name(),
                                      params.service_name(),
                                      media_player_.NewRequest());
+
+    // Use a non-zero size so we get a progress bar.
+    video_size_.width = 640u;
+    video_size_.height = 100u;
   }
 
   // Get the first frames queued up so we can show something.
@@ -113,8 +123,7 @@ MediaPlayerView::MediaPlayerView(
   frame_time_ = media::Timeline::local_now();
   prev_frame_time_ = frame_time_;
 
-  HandlePlayerStatusUpdates();
-  HandleVideoRendererStatusUpdates();
+  HandleStatusUpdates();
 }
 
 MediaPlayerView::~MediaPlayerView() {}
@@ -379,9 +388,8 @@ void MediaPlayerView::DrawControls(SkCanvas* canvas, const SkISize& size) {
   }
 }
 
-void MediaPlayerView::HandlePlayerStatusUpdates(
-    uint64_t version,
-    media::MediaPlayerStatusPtr status) {
+void MediaPlayerView::HandleStatusUpdates(uint64_t version,
+                                          media::MediaPlayerStatusPtr status) {
   if (status) {
     // Process status received from the player.
     if (status->timeline_transform) {
@@ -440,33 +448,7 @@ void MediaPlayerView::HandlePlayerStatusUpdates(
   // Request a status update.
   media_player_->GetStatus(
       version, [this](uint64_t version, media::MediaPlayerStatusPtr status) {
-        HandlePlayerStatusUpdates(version, std::move(status));
-      });
-}
-
-void MediaPlayerView::HandleVideoRendererStatusUpdates(
-    uint64_t version,
-    media::VideoRendererStatusPtr status) {
-  if (status) {
-    // Process status received from the video renderer.
-    FTL_LOG(INFO) << "video_size " << status->video_size->width << "x"
-                  << status->video_size->height;
-
-    video_size_ = *status->video_size;
-
-    if (video_size_.width == 0 || video_size_.height == 0) {
-      // Use a non-zero size so we get a progress bar.
-      video_size_.width = 640u;
-      video_size_.height = 100u;
-    }
-
-    Invalidate();
-  }
-
-  // Request a status update.
-  video_renderer_->GetStatus(
-      version, [this](uint64_t version, media::VideoRendererStatusPtr status) {
-        HandleVideoRendererStatusUpdates(version, std::move(status));
+        HandleStatusUpdates(version, std::move(status));
       });
 }
 

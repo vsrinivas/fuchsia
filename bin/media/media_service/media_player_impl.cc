@@ -44,7 +44,6 @@ MediaPlayerImpl::MediaPlayerImpl(
                                              uint64_t version) {
     MediaPlayerStatusPtr status = MediaPlayerStatus::New();
     status->timeline_transform = TimelineTransform::From(timeline_function_);
-    status->has_video = has_video_;
     status->end_of_stream = end_of_stream_;
     status->metadata = metadata_.Clone();
     status->problem = problem_.Clone();
@@ -100,7 +99,6 @@ void MediaPlayerImpl::CreateSinks(
         if (video_renderer_handle) {
           PrepareStream(std::move(video_renderer_handle), stream_index,
                         stream_type, callback_joiner->NewCallback());
-          has_video_ = true;
         }
         break;
 
@@ -145,7 +143,7 @@ void MediaPlayerImpl::PrepareStream(
   sink->GetPacketConsumer(consumer.NewRequest());
   sinks_.push_back(std::move(sink));
 
-  // Capture producer so it survives through the callback.
+  // Capture sink so it survives through the callback.
   producer->Connect(std::move(consumer), ftl::MakeCopyable([
                       this, callback, producer = std::move(producer)
                     ]() { callback(); }));

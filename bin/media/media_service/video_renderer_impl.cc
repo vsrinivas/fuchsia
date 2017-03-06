@@ -38,9 +38,8 @@ VideoRendererImpl::VideoRendererImpl(
 
 VideoRendererImpl::~VideoRendererImpl() {}
 
-void VideoRendererImpl::GetStatus(uint64_t version_last_seen,
-                                  const GetStatusCallback& callback) {
-  video_frame_source_->GetStatus(version_last_seen, callback);
+void VideoRendererImpl::GetVideoSize(const GetVideoSizeCallback& callback) {
+  video_frame_source_->GetVideoSize(callback);
 }
 
 void VideoRendererImpl::CreateView(

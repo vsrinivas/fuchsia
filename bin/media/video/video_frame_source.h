@@ -15,7 +15,6 @@
 #include "apps/media/services/media_renderer.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/services/video_renderer.fidl.h"
-#include "apps/media/src/util/fidl_publisher.h"
 #include "apps/media/src/video/video_converter.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/geometry.fidl.h"
@@ -46,8 +45,7 @@ class VideoFrameSource : public MediaPacketConsumerBase,
            pending_timeline_function_.subject_delta() != 0;
   }
 
-  void GetStatus(uint64_t version_last_seen,
-                 const VideoRenderer::GetStatusCallback& callback);
+  void GetVideoSize(const VideoRenderer::GetVideoSizeCallback& callback);
 
   // Gets an RGBA video frame corresponding to the specified reference time.
   void GetRgbaFrame(uint8_t* rgba_buffer,
@@ -134,8 +132,8 @@ class VideoFrameSource : public MediaPacketConsumerBase,
   uint64_t status_version_ = 1u;
   std::vector<GetStatusCallback> pending_status_callbacks_;
   VideoConverter converter_;
+  VideoRenderer::GetVideoSizeCallback get_video_size_callback_;
   std::unordered_set<mozart::BaseView*> views_;
-  FidlPublisher<VideoRenderer::GetStatusCallback> status_publisher_;
 
   // We don't use FLOG_INSTANCE_CHANNEL, because we don't need to know the
   // address (this), and the consumer (our base class) will register with that
