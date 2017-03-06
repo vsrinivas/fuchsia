@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/modular/services/component/component_context.fidl.h"
-#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/moterm/history.h"
 #include "apps/moterm/ledger_helpers.h"
@@ -51,22 +51,22 @@ class App : public modular::Module {
 
   // modular::Module:
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story_handle,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context_handle,
       fidl::InterfaceHandle<modular::Link> link_handle,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    fidl::InterfacePtr<modular::Story> story;
-    story.Bind(std::move(story_handle));
+    fidl::InterfacePtr<modular::ModuleContext> module_context;
+    module_context.Bind(std::move(module_context_handle));
 
     modular::ComponentContextPtr component_context;
-    modular::Story* story_ptr = story.get();
-    story_ptr->GetComponentContext(component_context.NewRequest());
+    modular::ModuleContext* module_context_ptr = module_context.get();
+    module_context_ptr->GetComponentContext(component_context.NewRequest());
     modular::ComponentContext* component_context_ptr = component_context.get();
 
     ledger::LedgerPtr ledger;
     component_context_ptr->GetLedger(
         ledger.NewRequest(),
-        ftl::MakeCopyable([story = std::move(story)](ledger::Status status) {
+        ftl::MakeCopyable([module_context = std::move(module_context)](ledger::Status status) {
           LogLedgerError(status, "GetLedger");
         }));
 
