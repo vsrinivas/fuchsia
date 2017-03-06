@@ -5,8 +5,8 @@
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
-import 'package:apps.modular.services.story/module.fidl.dart';
-import 'package:apps.modular.services.story/story.fidl.dart';
+import 'package:apps.modular.services.module/module.fidl.dart';
+import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import 'package:flutter/widgets.dart';
@@ -24,7 +24,7 @@ void _log(String msg) {
 class ModuleImpl extends Module {
   final ModuleBinding _binding = new ModuleBinding();
 
-  final StoryProxy _story = new StoryProxy();
+  final ModuleContextProxy _moduleContext = new ModuleContextProxy();
   final LinkProxy _link = new LinkProxy();
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
@@ -32,10 +32,10 @@ class ModuleImpl extends Module {
     _binding.bind(this, request);
   }
 
-  /// Implementation of the Initialize(Story story, Link link) method.
+  /// Implementation of the Initialize(ModuleContext story, Link link) method.
   @override
   void initialize(
-      InterfaceHandle<Story> storyHandle,
+      InterfaceHandle<ModuleContext> moduleContextHandle,
       InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
@@ -45,7 +45,7 @@ class ModuleImpl extends Module {
     // When a handle is bound to a proxy and then the proxy variable is garbage
     // collected before the pipe is properly closed or unbound, the app will
     // crash due to the leaked handle.
-    _story.ctrl.bind(storyHandle);
+    _moduleContext.ctrl.bind(moduleContextHandle);
     _link.ctrl.bind(linkHandle);
 
     // Do something with the story and link services.
@@ -57,7 +57,7 @@ class ModuleImpl extends Module {
     _log('ModuleImpl::stop call');
 
     // Do some clean up here.
-    _story.ctrl.close();
+    _moduleContext.ctrl.close();
     _link.ctrl.close();
 
     // Invoke the callback to signal that the clean-up process is done.

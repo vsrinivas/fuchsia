@@ -22,6 +22,7 @@ executable("suggestion_proposal_test_module") {
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
     "//apps/modular/services/component",
+    "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//lib/mtl",
   ]
@@ -38,6 +39,7 @@ executable("suggestion_test_user_shell") {
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
     "//apps/modular/services/component",
+    "//apps/modular/services/module",
     "//apps/modular/services/user",
     "//lib/mtl",
   ]

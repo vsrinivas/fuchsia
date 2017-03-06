@@ -13,8 +13,8 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/services/component/component_context.fidl.h"
-#include "apps/modular/services/story/module.fidl.h"
-#include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
+#include "apps/modular/services/module/module_context.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -113,21 +113,21 @@ class LinkConnection : public modular::LinkWatcher {
 class ModuleMonitor : public modular::ModuleWatcher {
  public:
   ModuleMonitor(modular::ModuleController* const module_client,
-                modular::Story* const story)
-      : binding_(this), story_(story) {
+                modular::ModuleContext* const module_context)
+      : binding_(this), module_context_(module_context) {
     module_client->Watch(binding_.NewBinding());
   }
 
   void OnStateChange(modular::ModuleState new_state) override {
     if (new_state == modular::ModuleState::DONE) {
       FTL_LOG(INFO) << "RecipeImpl DONE";
-      story_->Done();
+      module_context_->Done();
     }
   }
 
  private:
   fidl::Binding<modular::ModuleWatcher> binding_;
-  modular::Story* const story_;
+  modular::ModuleContext* const module_context_;
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
@@ -180,11 +180,11 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    story_.Bind(std::move(story));
+    module_context_.Bind(std::move(module_context));
     link_.Bind(std::move(link));
 
     // Read initial Link data. We expect the shell to tell us what it
@@ -193,8 +193,8 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
       FTL_LOG(INFO) << "example_recipe link: " << json;
     });
 
-    story_->CreateLink("module1", module1_link_.NewRequest());
-    story_->CreateLink("module2", module2_link_.NewRequest());
+    module_context_->CreateLink("module1", module1_link_.NewRequest());
+    module_context_->CreateLink("module2", module2_link_.NewRequest());
 
     module1_link_->SetSchema(kJsonSchema);
     module2_link_->SetSchema(kJsonSchema);
@@ -215,7 +215,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
     app::ServiceProviderPtr services_from_module1;
     fidl::InterfaceHandle<mozart::ViewOwner> module1_view;
-    story_->StartModule(
+    module_context_->StartModule(
         "file:///system/apps/example_module1", std::move(module1_link_handle),
         std::move(services_for_module1), services_from_module1.NewRequest(),
         module1_.NewRequest(), module1_view.NewRequest());
@@ -238,7 +238,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         }));
 
     fidl::InterfaceHandle<mozart::ViewOwner> module2_view;
-    story_->StartModule("file:///system/apps/example_module2",
+    module_context_->StartModule("file:///system/apps/example_module2",
                         std::move(module2_link_handle), nullptr, nullptr,
                         module2_.NewRequest(), module2_view.NewRequest());
     ConnectView(std::move(module2_view));
@@ -256,9 +256,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         new LinkConnection(module2_link_.get(), link_.get()));
 
     module_monitors_.emplace_back(
-        new ModuleMonitor(module1_.get(), story_.get()));
+        new ModuleMonitor(module1_.get(), module_context_.get()));
     module_monitors_.emplace_back(
-        new ModuleMonitor(module2_.get(), story_.get()));
+        new ModuleMonitor(module2_.get(), module_context_.get()));
 
     // TODO(mesch): Good illustration of the remaining issue to
     // restart a story: Here is how does this code look like when
@@ -280,7 +280,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     // This snippet of code demonstrates using the module's Ledger. Each time
     // this module is initialized, it updates a counter in the root page.
     // 1. Get the module's ledger.
-    story_->GetComponentContext(component_context_.NewRequest());
+    module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetLedger(module_ledger_.NewRequest(),
                                   [this](ledger::Status status) {
       FTL_CHECK(status == ledger::Status::OK);
@@ -347,7 +347,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   std::vector<fidl::InterfaceHandle<mozart::ViewOwner>> child_views_;
 
   modular::LinkPtr link_;
-  modular::StoryPtr story_;
+  modular::ModuleContextPtr module_context_;
 
   // This is a ServiceProvider we expose to one of our child modules, to
   // demonstrate the use of a service exchange.

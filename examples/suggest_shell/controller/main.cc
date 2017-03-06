@@ -8,8 +8,8 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/services/story/module.fidl.h"
-#include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
+#include "apps/modular/services/module/module_context.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"
@@ -57,21 +57,21 @@ class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
 
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    story_.Bind(std::move(story));
+    module_context_.Bind(std::move(module_context));
     link_.Bind(std::move(link));
 
-    story_->CreateLink("view", view_link_.NewRequest());
+    module_context_->CreateLink("view", view_link_.NewRequest());
     view_link_->Watch(link_watcher_binding_.NewBinding());
 
     fidl::InterfaceHandle<modular::Link> view_link;
     view_link_->Dup(view_link.NewRequest());
 
     fidl::InterfaceHandle<mozart::ViewOwner> view;
-    story_->StartModule("file:///system/apps/suggest_shell_view",
+    module_context_->StartModule("file:///system/apps/suggest_shell_view",
                         std::move(view_link), nullptr, nullptr,
                         view_module_.NewRequest(), view.NewRequest());
 
@@ -135,7 +135,7 @@ class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
   std::vector<fidl::InterfaceHandle<mozart::ViewOwner>> child_views_;
 
   modular::LinkPtr link_;
-  modular::StoryPtr story_;
+  modular::ModuleContextPtr module_context_;
 
   modular::ModuleControllerPtr view_module_;
   modular::LinkPtr view_link_;

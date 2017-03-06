@@ -126,18 +126,18 @@ at `//third_party/dart-pkg/pub/<package_name>`.
 To use any FIDL generated dart bindings, you need to first look at the
 `BUILD.gn` defining the `fidl` target that contains the desired `.fidl` file.
 For example, let's say we want to import and use the `module.fidl` file (located
-in `<fuchsia_root>/apps/modular/services/story`) in our dart code. We should
+in `<fuchsia_root>/apps/modular/services/module`) in our dart code. We should
 first look at the `BUILD.gn` file in the same directory. In this file we can see
-that the `module.fidl` file is included in the `fidl("story")` target.
+that the `module.fidl` file is included in the `fidl("module")` target.
 
 ```
 # For consumption outside modular.
-fidl("story") {
+fidl("module") {
   sources = [
     "link.fidl",
     "module.fidl",   # This is the fidl we want to use for now.
     "module_controller.fidl",
-    "story.fidl",
+    "module_context.fidl",
   ]
 }
 ```
@@ -167,8 +167,8 @@ import statements in `main.dart` of the hello_world example.
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
-import 'package:apps.modular.services.story/module.fidl.dart';
-import 'package:apps.modular.services.story/story.fidl.dart';
+import 'package:apps.modular.services.module/module.fidl.dart';
+import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import 'package:flutter/widgets.dart';

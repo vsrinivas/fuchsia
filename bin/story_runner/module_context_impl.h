@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -21,18 +21,18 @@ namespace modular {
 class ModuleControllerImpl;
 class StoryImpl;
 
-// StoryConnection keeps a single connection from a module instance in
+// ModuleContextImpl keeps a single connection from a module instance in
 // the story to a StoryImpl. This way, requests that the module makes
 // on its Story handle can be associated with the Module instance.
-class StoryConnection : public Story {
+class ModuleContextImpl : public ModuleContext {
  public:
-  StoryConnection(StoryImpl* story_impl,
+  ModuleContextImpl(StoryImpl* story_impl,
                   const std::string& module_url,
                   ModuleControllerImpl* module_controller_impl,
                   const ComponentContextInfo& component_context_info,
-                  fidl::InterfaceRequest<Story> story);
+                  fidl::InterfaceRequest<ModuleContext> module_context);
 
-  ~StoryConnection() override;
+  ~ModuleContextImpl() override;
 
  private:
   // |Story|
@@ -51,7 +51,7 @@ class StoryConnection : public Story {
   void Ready() override;
   void Done() override;
 
-  // Not owned. The StoryImpl instance this StoryConnection instance
+  // Not owned. The StoryImpl instance this ModuleContextImpl instance
   // connects to.
   StoryImpl* const story_impl_;
 
@@ -65,10 +65,10 @@ class StoryConnection : public Story {
   fidl::BindingSet<ComponentContext> component_context_bindings_;
 
   // The one connection to the StoryImpl instance that this
-  // StoryConnection instance represents.
-  fidl::Binding<Story> binding_;
+  // ModuleContextImpl instance represents.
+  fidl::Binding<ModuleContext> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryConnection);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleContextImpl);
 };
 
 }  // namespace modular

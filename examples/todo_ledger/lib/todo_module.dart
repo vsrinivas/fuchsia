@@ -8,8 +8,8 @@ import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.ledger.services.public/ledger.fidl.dart';
 import 'package:apps.modular.services.component/component_context.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
-import 'package:apps.modular.services.story/module.fidl.dart';
-import 'package:apps.modular.services.story/story.fidl.dart';
+import 'package:apps.modular.services.module/module.fidl.dart';
+import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import 'generator.dart';
@@ -51,13 +51,13 @@ class TodoModule extends Module implements PageWatcher {
   /// Implementation of Module.initialize().
   @override
   void initialize(
-      InterfaceHandle<Story> storyHandle,
+      InterfaceHandle<ModuleContext> moduleContextHandle,
       InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('TodoModule::initialize()');
 
-    _story.ctrl.bind(storyHandle);
+    _story.ctrl.bind(moduleContextHandle);
 
     _story.getComponentContext(_componentContext.ctrl.request());
     _componentContext.getLedger(

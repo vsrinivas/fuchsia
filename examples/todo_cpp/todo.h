@@ -11,8 +11,8 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/examples/todo_cpp/generator.h"
 #include "apps/modular/services/component/component_context.fidl.h"
-#include "apps/modular/services/story/module.fidl.h"
-#include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
+#include "apps/modular/services/module/module_context.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
@@ -27,7 +27,7 @@ class TodoApp : public modular::Module, public ledger::PageWatcher {
 
   // modular::Module:
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
@@ -55,7 +55,7 @@ class TodoApp : public modular::Module, public ledger::PageWatcher {
   Generator generator_;
   std::unique_ptr<app::ApplicationContext> context_;
   fidl::Binding<modular::Module> module_binding_;
-  fidl::InterfacePtr<modular::Story> story_;
+  fidl::InterfacePtr<modular::ModuleContext> module_context_;
   modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr ledger_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;

@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "application/services/application_launcher.fidl.h"
-#include "apps/modular/services/story/module.fidl.h"
-#include "apps/modular/services/story/module_controller.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
+#include "apps/modular/services/module/module_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -24,7 +24,7 @@ class StoryImpl;
 // Implements the ModuleController interface, which is given to the
 // client that called Story.StartModule(). Exactly one
 // ModuleControllerImpl instance is associated with each
-// StoryConnection instance.
+// ModuleContextImpl instance.
 class ModuleControllerImpl : public ModuleController {
  public:
   ModuleControllerImpl(
@@ -43,7 +43,7 @@ class ModuleControllerImpl : public ModuleController {
   // Calls Stop() on the module, closes the module handle, notifies
   // watchers, then DisposeModule()s the connection and finally calls
   // done(). Thus, done must not reference anything in
-  // ModuleController or the related StoryConnection.
+  // ModuleController or the related ModuleContextImpl.
   void TearDown(std::function<void()> done);
 
  private:

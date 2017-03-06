@@ -13,6 +13,7 @@ fidl("user") {
   ]
 
   public_deps = [
+    "//apps/modular/services/module",
     "//apps/modular/services/story",
   ]
 

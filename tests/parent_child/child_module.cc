@@ -5,7 +5,7 @@
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -22,11 +22,11 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
  private:
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    story_.Bind(std::move(story));
+    module_context_.Bind(std::move(module_context));
     link_.Bind(std::move(link));
     initialized_.Pass();
     modular::testing::GetStore()->Put("child_module_init", "", [] {});
@@ -41,7 +41,7 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
     delete this;
   }
 
-  modular::StoryPtr story_;
+  modular::ModuleContextPtr module_context_;
   modular::LinkPtr link_;
 
   TestPoint initialized_{"Child module initialized"};

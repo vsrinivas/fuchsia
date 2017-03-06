@@ -4,8 +4,8 @@
 
 #include "apps/modular/examples/counter_cpp/store.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/services/story/module.fidl.h"
-#include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
+#include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
@@ -123,18 +123,18 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
 
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    story_.Bind(std::move(story));
+    module_context_.Bind(std::move(module_context));
     store_.Initialize(std::move(link));
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
     store_.Stop();
-    story_.reset();
+    module_context_.reset();
     done();
   }
 
@@ -171,7 +171,7 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
   }
 
   std::unique_ptr<Module2View> view_;
-  fidl::InterfacePtr<modular::Story> story_;
+  fidl::InterfacePtr<modular::ModuleContext> module_context_;
   modular_example::Store store_;
 
   // Note: This should remain the last member so it'll be destroyed and

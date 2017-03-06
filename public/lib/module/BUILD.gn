@@ -1,0 +1,21 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//lib/fidl/fidl.gni")
+
+# For consumption outside modular.
+fidl("module") {
+  sources = [
+    "module.fidl",
+    "module_controller.fidl",
+    "module_context.fidl"
+  ]
+
+  deps = [
+    "//application/services:service_provider",
+    "//apps/modular/services/component",
+    "//apps/modular/services/story",
+    "//apps/mozart/services/views",
+  ]
+}

@@ -20,6 +20,7 @@ executable("child_module") {
   deps = [
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
+    "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
     "//lib/mtl",
@@ -35,6 +36,7 @@ executable("parent_module") {
   deps = [
     "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
+    "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
     "//lib/mtl",

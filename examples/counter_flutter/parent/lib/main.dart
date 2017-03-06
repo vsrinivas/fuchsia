@@ -7,9 +7,9 @@ import 'dart:convert';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
-import 'package:apps.modular.services.story/module.fidl.dart';
-import 'package:apps.modular.services.story/module_controller.fidl.dart';
-import 'package:apps.modular.services.story/story.fidl.dart';
+import 'package:apps.modular.services.module/module.fidl.dart';
+import 'package:apps.modular.services.module/module_controller.fidl.dart';
+import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:apps.mozart.services.views/view_token.fidl.dart';
 import 'package:flutter/material.dart';
@@ -64,14 +64,14 @@ class _ParentCounterModule extends Module implements LinkWatcher {
   /// |Module|
   @override
   void initialize(
-      InterfaceHandle<Story> storyHandle,
+      InterfaceHandle<ModuleContext> moduleContextHandle,
       InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('Module.initialize()');
 
-    // A module is initialized with a Story and a Link.
-    _story.ctrl.bind(storyHandle);
+    // A module is initialized with a ModuleContext and a Link.
+    _story.ctrl.bind(moduleContextHandle);
     _link.ctrl.bind(linkHandle);
 
     // On the link, we can declare that values stored in the link adhere

@@ -27,6 +27,7 @@ executable("user_runner") {
     "//apps/modular/lib/fidl:scope",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/device:device_context",
+    "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/modular/services/user:private",
     "//apps/modular/src/agent_runner:impl",

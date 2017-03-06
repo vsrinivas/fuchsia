@@ -21,6 +21,7 @@ executable("suggest_shell_controller") {
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/lib/fidl:view_host",
     "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//lib/ftl",
     "//lib/mtl",

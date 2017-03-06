@@ -16,6 +16,7 @@ flutter_app("example_todo_ledger") {
     "//application/lib/app/dart",
     "//apps/ledger/services/public:public_dart",
     "//apps/modular/services/component:component_dart",
+    "//apps/modular/services/module:module_dart",
     "//apps/modular/services/story:story_dart",
     "//apps/mozart/services/views:views_dart",
     "//lib/fidl/dart",

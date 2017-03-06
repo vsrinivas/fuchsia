@@ -8,7 +8,7 @@
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
@@ -30,18 +30,18 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
  private:
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    story_.Bind(std::move(story));
+    module_context_.Bind(std::move(module_context));
     link_.Bind(std::move(link));
     initialized_.Pass();
 
     application_context()->ConnectToEnvironmentService(
         proposal_publisher_.NewRequest());
 
-    story_->GetStoryId([this] (const fidl::String& story_id) {
+    module_context_->GetStoryId([this] (const fidl::String& story_id) {
       received_story_id_.Pass();
 
       auto focus_story = maxwell::FocusStory::New();
@@ -69,7 +69,7 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
 
       modular::testing::GetStore()->Get(
           "suggestion_proposal_received",  [this](const fidl::String&) {
-        story_->Done();
+        module_context_->Done();
       });
     });
 
@@ -88,7 +88,7 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
     delete this;
   }
 
-  modular::StoryPtr story_;
+  modular::ModuleContextPtr module_context_;
   modular::LinkPtr link_;
   maxwell::ProposalPublisherPtr proposal_publisher_;
 

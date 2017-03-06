@@ -7,7 +7,7 @@
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/component/component_context.fidl.h"
-#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/tests/component_context/test_agent1_interface.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -36,16 +36,16 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
  private:
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    story_.Bind(std::move(story));
+    module_context_.Bind(std::move(module_context));
     link_.Bind(std::move(link));
     initialized_.Pass();
 
     // Exercise ComponentContext.ConnectToAgent()
-    story_->GetComponentContext(component_context_.NewRequest());
+    module_context_->GetComponentContext(component_context_.NewRequest());
 
     app::ServiceProviderPtr agent1_services;
     component_context_->ConnectToAgent(kTest1Agent, agent1_services.NewRequest(),
@@ -58,7 +58,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
           TestMessageQueue([this] {
             TestAgentController([this] {
               mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-                  [this] { story_->Done(); }, kStoryDoneDelay);
+                  [this] { module_context_->Done(); }, kStoryDoneDelay);
             });
           });
         });
@@ -120,7 +120,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     delete this;
   }
 
-  modular::StoryPtr story_;
+  modular::ModuleContextPtr module_context_;
   modular::LinkPtr link_;
   modular::AgentControllerPtr agent1_controller;
   modular::testing::Agent1InterfacePtr agent1_interface_;

@@ -10,10 +10,10 @@
 #include "application/services/service_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/module_controller_impl.h"
-#include "apps/modular/src/story_runner/story_connection.h"
+#include "apps/modular/src/story_runner/module_context_impl.h"
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -289,8 +289,8 @@ void StoryImpl::StartModule(
   ModulePtr module;
   ConnectToService(app_services.get(), module.NewRequest());
 
-  fidl::InterfaceHandle<Story> self;
-  fidl::InterfaceRequest<Story> self_request = self.NewRequest();
+  fidl::InterfaceHandle<ModuleContext> self;
+  fidl::InterfaceRequest<ModuleContext> self_request = self.NewRequest();
 
   module->Initialize(std::move(self), std::move(link),
                      std::move(outgoing_services),
@@ -302,7 +302,7 @@ void StoryImpl::StartModule(
       this, module_url, std::move(application_controller), std::move(module),
       std::move(module_controller_request)));
 
-  connection.story_connection.reset(new StoryConnection(
+  connection.module_context_impl.reset(new ModuleContextImpl(
       this, module_url, connection.module_controller_impl.get(),
       story_provider_impl_->component_context_info(), std::move(self_request)));
 

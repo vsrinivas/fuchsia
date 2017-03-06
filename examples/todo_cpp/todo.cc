@@ -106,13 +106,14 @@ TodoApp::TodoApp()
       });
 }
 
+//TODO: rename "story" variable to "module_context"
 void TodoApp::Initialize(
-    fidl::InterfaceHandle<modular::Story> story,
+    fidl::InterfaceHandle<modular::ModuleContext> module_context,
     fidl::InterfaceHandle<modular::Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
-  story_.Bind(std::move(story));
-  story_->GetComponentContext(component_context_.NewRequest());
+  module_context_.Bind(std::move(module_context));
+  module_context_->GetComponentContext(component_context_.NewRequest());
   component_context_->GetLedger(ledger_.NewRequest(),
                                 HandleResponse("GetLedger"));
   ledger_->GetRootPage(page_.NewRequest(), HandleResponse("GetRootPage"));

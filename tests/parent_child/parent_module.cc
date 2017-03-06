@@ -7,7 +7,7 @@
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -29,12 +29,12 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
  private:
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     initialized_.Pass();
-    story_.Bind(std::move(story));
+    module_context_.Bind(std::move(module_context));
     link_.Bind(std::move(link));
 
     StartModule(kChildModule);
@@ -43,7 +43,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
                                       [this](const fidl::String&) {
                                         module_->Stop([this] {
                                           callback_.Pass();
-                                          story_->Done();
+                                          module_context_->Done();
                                         });
                                       });
 
@@ -62,13 +62,13 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
 
   void StartModule(const std::string& module_query) {
     modular::LinkPtr child_link;
-    story_->CreateLink("child", child_link.NewRequest());
+    module_context_->CreateLink("child", child_link.NewRequest());
     fidl::InterfaceHandle<mozart::ViewOwner> module_view;
-    story_->StartModule(module_query, std::move(child_link), nullptr, nullptr,
+    module_context_->StartModule(module_query, std::move(child_link), nullptr, nullptr,
                         module_.NewRequest(), module_view.NewRequest());
   }
 
-  modular::StoryPtr story_;
+  modular::ModuleContextPtr module_context_;
   modular::LinkPtr link_;
   modular::ModuleControllerPtr module_;
 

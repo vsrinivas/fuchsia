@@ -7,12 +7,12 @@ module modular;
 import "application/services/service_provider.fidl";
 import "apps/modular/services/component/component_context.fidl";
 import "apps/modular/services/story/link.fidl";
-import "apps/modular/services/story/module_controller.fidl";
+import "apps/modular/services/module/module_controller.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to
 // create Link instances and run Module instances.
-interface Story {
+interface ModuleContext {
   // Creates a new Link instance. The Link instance can be shared with
   // a newly created Module by passing it to StartModule(). In order
   // to also retain a reference to the same Link instance, a duplicate
@@ -57,14 +57,14 @@ interface Story {
   // proposal to reinflate this story.
   GetStoryId() => (string story_id);
 
-  // The module holding this handle to the Story declares it's ready
-  // to run. The story implementation notifies all ModuleWatchers
+  // The module holding this handle to the ModuleContext declares it's ready
+  // to run. The module context implementation notifies all ModuleWatchers
   // registered on the ModuleController by calling OnStateChange().
   // See ModuleState for all states and transitions.
   Ready();
 
-  // The module holding this handle to the Story declares it's done
-  // and wants to be torn down. The story implementation notifies all
+  // The module holding this handle to the ModuleContext declares it's done
+  // and wants to be torn down. The module context implementation notifies all
   // ModuleWatchers registered on the ModuleController by calling
   // OnStateChange(). The receiver is free to decide whether it's
   // appropriate to Stop() the module. (It might be appropriate for

@@ -5,7 +5,7 @@
 #include <array>
 
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -120,13 +120,13 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
-    story_.Bind(std::move(story));
+    module_context_.Bind(std::move(module_context));
     link_.Bind(std::move(link));
-    story_->CreateLink("module", module_link_.NewRequest());
+    module_context_->CreateLink("module", module_link_.NewRequest());
     SwapModule();
   }
 
@@ -151,7 +151,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     }
     fidl::InterfaceHandle<modular::Link> module_link_handle;
     module_link_->Dup(module_link_handle.NewRequest());
-    story_->StartModule(module_query, std::move(module_link_handle), nullptr,
+    module_context_->StartModule(module_query, std::move(module_link_handle), nullptr,
                         nullptr, module_.NewRequest(),
                         module_view_.NewRequest());
     SetChild();
@@ -163,7 +163,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     }
   }
 
-  modular::StoryPtr story_;
+  modular::ModuleContextPtr module_context_;
   modular::LinkPtr link_;
   modular::LinkPtr module_link_;
   modular::ModuleControllerPtr module_;

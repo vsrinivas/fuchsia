@@ -5,12 +5,12 @@
 module modular;
 
 import "apps/modular/services/story/link.fidl";
-import "apps/modular/services/story/story.fidl";
+import "apps/modular/services/module/module_context.fidl";
 
 // This service is implemented by an application that is meant to be
-// run in a Story.
+// run in a ModuleContext (aka story).
 //
-// When Story.StartModule() is invoked, the Module instance is
+// When ModuleContext.StartModule() is invoked, the Module instance is
 // requested from its application and its dependent services and
 // parameters are passed to it by Initialize().
 //
@@ -18,28 +18,28 @@ import "apps/modular/services/story/story.fidl";
 // parameters as arguments, like we do elsewhere.
 [ServiceName="modular.Module"]  // Created by each module app.
 interface Module {
-  // The arguments to Initialize() are the Story instance that created
+  // The arguments to Initialize() are the ModuleContext instance that created
   // the Module instance and a Link instance provided by the caller of
-  // Story.StartModule().
+  // ModuleContext.StartModule().
   //
   // The Link instance can be used to exchange data with the calling
   // module. Additionally, this module may provide its services to the calling
   // module by implementing its |outgoing_services|, and consume the calling
   // module's |incoming_services|.
   //
-  // The Story instance can be used to start more Module instances,
+  // The ModuleContext instance can be used to start more Module instances,
   // and to create Link instances to share data with those Module
   // instances. It can also be used to signal that this module wants
   // to stop.
-  Initialize(Story story, Link link,
+  Initialize(ModuleContext module_context, Link link,
              app.ServiceProvider? incoming_services,
              app.ServiceProvider&? outgoing_services);
 
-  // This method is invoked by the Story instance to notify the module
+  // This method is invoked by the ModuleContext instance to notify the module
   // that something in the system has requested it to stop. What can
   // cause a request to a module to Stop():
   //
-  // (1) StoryController.Stop() is called to stop the whole Story. A
+  // (1) StoryController.Stop() is called to stop the whole ModuleContext. A
   //     plausible occasion for this to happen is that the root module
   //     has signalled that it's Done().
   //
@@ -51,7 +51,7 @@ interface Module {
   // closes its own connection. But obviously in that case, Stop() can
   // no longer be invoked on it.
   //
-  // The Story implementation will wait to actually close its
+  // The ModuleContext implementation will wait to actually close its
   // connection to the Module instance until after Stop() returns, or
   // after a timeout of 1 second (TBD), whichever occurs earlier.
   //

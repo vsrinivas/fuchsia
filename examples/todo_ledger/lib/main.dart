@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:application.lib.app.dart/app.dart';
-import 'package:apps.modular.services.story/module.fidl.dart';
+import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:flutter/material.dart';
 
 import 'todo_list_view.dart';

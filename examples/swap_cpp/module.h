@@ -6,7 +6,7 @@
 #define APPS_MODULAR_EXAMPLES_SWAP_CPP_MODULE_H_
 
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "third_party/skia/include/core/SkColor.h"
@@ -46,7 +46,7 @@ class ModuleApp : public modular::SingleServiceViewApp<modular::Module> {
 
   // |Module|
   void Initialize(
-      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::ModuleContext> moduleContext,
       fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;

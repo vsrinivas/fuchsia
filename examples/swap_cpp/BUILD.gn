@@ -38,6 +38,7 @@ source_set("module") {
   ]
   deps = [
     "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
@@ -51,6 +52,7 @@ executable("swap_recipe") {
   ]
   deps = [
     "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/lib/view_framework",
     "//lib/mtl",

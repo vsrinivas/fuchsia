@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "apps/modular/services/component/component_context.fidl.h"
-#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
@@ -32,7 +32,7 @@ namespace modular {
 
 class LinkImpl;
 class ModuleControllerImpl;
-class StoryConnection;
+class ModuleContextImpl;
 class StoryImpl;
 class StoryPage;
 class StoryProviderImpl;
@@ -48,7 +48,7 @@ class StoryImpl : public StoryController, ModuleWatcher {
 
   ~StoryImpl() override;
 
-  // Methods called by StoryConnection.
+  // Methods called by ModuleContextImpl.
   void CreateLink(const fidl::String& name,
                   fidl::InterfaceRequest<Link> request);
   void StartModule(
@@ -120,7 +120,7 @@ class StoryImpl : public StoryController, ModuleWatcher {
   // The ingredient parts of a story: Modules and Links. For each
   // Module, there is one Connection to it.
   struct Connection {
-    std::unique_ptr<StoryConnection> story_connection;
+    std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };
   std::vector<Connection> connections_;
