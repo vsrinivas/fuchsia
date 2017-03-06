@@ -131,9 +131,11 @@ void MediaPlayerImpl::PrepareStream(
   MediaPacketProducerPtr producer;
   source_->GetPacketProducer(index, producer.NewRequest());
 
+  MediaPacketConsumerPtr consumer;
   MediaSinkPtr sink;
   media_service_->CreateSink(std::move(renderer_handle),
-                             input_media_type.Clone(), sink.NewRequest());
+                             input_media_type.Clone(), sink.NewRequest(),
+                             consumer.NewRequest());
   FLOG(log_channel_, CreatedSink(index, FLOG_PTR_KOID(sink)));
 
   MediaTimelineControlPointPtr timeline_control_point;
@@ -141,8 +143,6 @@ void MediaPlayerImpl::PrepareStream(
 
   timeline_controller_->AddControlPoint(std::move(timeline_control_point));
 
-  MediaPacketConsumerPtr consumer;
-  sink->GetPacketConsumer(consumer.NewRequest());
   sinks_.push_back(std::move(sink));
 
   // Capture producer so it survives through the callback.

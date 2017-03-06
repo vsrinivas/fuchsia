@@ -51,11 +51,14 @@ void MediaServiceImpl::CreateSource(
                                      std::move(source), this));
 }
 
-void MediaServiceImpl::CreateSink(fidl::InterfaceHandle<MediaRenderer> renderer,
-                                  MediaTypePtr media_type,
-                                  fidl::InterfaceRequest<MediaSink> sink) {
+void MediaServiceImpl::CreateSink(
+    fidl::InterfaceHandle<MediaRenderer> renderer,
+    MediaTypePtr media_type,
+    fidl::InterfaceRequest<MediaSink> sink_request,
+    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
   AddProduct(MediaSinkImpl::Create(std::move(renderer), std::move(media_type),
-                                   std::move(sink), this));
+                                   std::move(sink_request),
+                                   std::move(packet_consumer_request), this));
 }
 
 void MediaServiceImpl::CreateDemux(fidl::InterfaceHandle<SeekingReader> reader,

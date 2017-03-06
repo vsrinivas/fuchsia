@@ -12,7 +12,6 @@
 #include "apps/media/services/timeline_controller.fidl.h"
 #include "apps/media/src/fidl/fidl_conversion_pipeline_builder.h"
 #include "apps/media/src/media_service/media_service_impl.h"
-#include "apps/media/src/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {
@@ -25,32 +24,38 @@ class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
   static std::shared_ptr<MediaSinkImpl> Create(
       fidl::InterfaceHandle<MediaRenderer> renderer_handle,
       MediaTypePtr media_type,
-      fidl::InterfaceRequest<MediaSink> request,
+      fidl::InterfaceRequest<MediaSink> sink_request,
+      fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
       MediaServiceImpl* owner);
 
   ~MediaSinkImpl() override;
 
   // MediaSink implementation.
-  void GetPacketConsumer(
-      fidl::InterfaceRequest<MediaPacketConsumer> consumer) override;
-
   void GetTimelineControlPoint(
       fidl::InterfaceRequest<MediaTimelineControlPoint> req) override;
 
- private:
-  MediaSinkImpl(fidl::InterfaceHandle<MediaRenderer> renderer_handle,
-                MediaTypePtr media_type,
-                fidl::InterfaceRequest<MediaSink> request,
-                MediaServiceImpl* owner);
+  void ChangeMediaType(MediaTypePtr media_type,
+                       fidl::InterfaceRequest<MediaPacketConsumer>
+                           packet_consumer_request) override;
 
+ private:
+  MediaSinkImpl(
+      fidl::InterfaceHandle<MediaRenderer> renderer_handle,
+      MediaTypePtr media_type,
+      fidl::InterfaceRequest<MediaSink> sink_request,
+      fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
+      MediaServiceImpl* owner);
+
+  // Builds the conversion pipeline.
+  void BuildConversionPipeline();
+
+  MediaServicePtr media_service_;
   MediaRendererPtr renderer_;
+  fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request_;
   MediaTypePtr original_media_type_;
   std::unique_ptr<StreamType> stream_type_;
   std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>
       supported_stream_types_;
-  MediaServicePtr media_service_;
-  Incident ready_;
-  ConsumerGetter consumer_getter_;
 
   FLOG_INSTANCE_CHANNEL(logs::MediaSinkChannel, log_channel_);
 };

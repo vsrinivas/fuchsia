@@ -38,7 +38,8 @@ interface MediaService {
   // convert a media type supported by the renderer.
   CreateSink(MediaRenderer? renderer,
              MediaType media_type,
-             MediaSink& sink);
+             MediaSink& sink,
+             MediaPacketConsumer& packet_consumer);
 
   // Creates a demux.
   CreateDemux(SeekingReader reader, MediaSource& demux);
