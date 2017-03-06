@@ -38,6 +38,14 @@ int main(int argc, char** argv) {
   trace_init();
   set_trace_level(trace_facil, trace_level);
 
+  // TODO: we call devmgr_connect() early so that we can gracefully exit
+  // if anybody is already attached to the same location. It will prevent
+  // multiple instances of netstack from running accidentally.
+  mx_handle_t devmgr_h = devmgr_connect();
+  if (devmgr_h < 0) {
+    return -1;
+  }
+
   if (net_init() < 0) {
     return -1;
   }
@@ -51,7 +59,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  dispatcher();
+  dispatcher(devmgr_h);
 
   thrd_join(multiplexer_thread, NULL);
   return 0;

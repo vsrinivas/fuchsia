@@ -88,8 +88,10 @@ mx_status_t dispatcher_add(mx_handle_t h, iostate_t* ios) {
   return mxio_dispatcher_add(remoteio_dispatcher, h, rio_handler, ios);
 }
 
-static mx_handle_t devmgr_connect(const char* where) {
+mx_handle_t devmgr_connect(void) {
   int fd;
+  const char* where = MXRIO_SOCKET_ROOT;
+
   if ((fd = open(where, O_DIRECTORY | O_RDWR)) < 0) {
     error("cannot open %s\n", where);
     return -1;
@@ -112,20 +114,16 @@ static mx_handle_t devmgr_connect(const char* where) {
   return h;
 }
 
-mx_status_t dispatcher(void) {
+mx_status_t dispatcher(mx_handle_t devmgr_h) {
   mx_status_t r;
   if ((r = mxio_dispatcher_create(&remoteio_dispatcher, mxrio_handler)) < 0) {
     return r;
   }
-  mx_handle_t h;
-  if ((h = devmgr_connect(MXRIO_SOCKET_ROOT)) < 0) {
-    return h;
-  }
   // Inform upstream that we are ready to serve.
-  if ((r = mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0)) != NO_ERROR) {
+  if ((r = mx_object_signal_peer(devmgr_h, 0, MX_USER_SIGNAL_0)) != NO_ERROR) {
     return r;
   }
-  if ((r = mxio_dispatcher_add(remoteio_dispatcher, h, rio_handler, NULL)) <
+  if ((r = mxio_dispatcher_add(remoteio_dispatcher, devmgr_h, rio_handler, NULL)) <
       0) {
     return r;
   }

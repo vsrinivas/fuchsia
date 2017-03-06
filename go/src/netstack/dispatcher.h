@@ -9,8 +9,10 @@
 
 #include "apps/netstack/iostate.h"
 
+mx_handle_t devmgr_connect(void);
+
 mx_status_t dispatcher_add(mx_handle_t h, iostate_t* ios);
 
-mx_handle_t dispatcher(void);
+mx_handle_t dispatcher(mx_handle_t devmgr_h);
 
 #endif  // APPS_NETSTACK_DISPATCHER_H_
