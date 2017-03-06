@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "apps/tracing/src/trace/commands/record.h"
+#include "apps/tracing/src/trace/results_output.h"
 #include "apps/tracing/src/trace/spec.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
@@ -14,43 +15,6 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {
-namespace {
-
-std::ostream& operator<<(std::ostream& os, measure::DurationSpec spec) {
-  return os << "duration of " << spec.event;
-}
-
-std::ostream& operator<<(std::ostream& os, measure::TimeBetweenSpec spec) {
-  return os << "time between " << spec.first_event << "and "
-            << spec.second_event;
-}
-
-// This just prints the results out verbatim as ticks. TODO(ppi): calculate
-// useful human-readable statistics.
-template <typename Spec>
-void PrintResults(
-    std::ostream& out,
-    const Spec& spec,
-    const std::unordered_map<uint64_t, std::vector<Ticks>>& results) {
-  out << spec << " : ";
-  if (!results.count(spec.id)) {
-    out << " no results" << std::endl;
-    return;
-  }
-
-  const std::vector<Ticks>& ticks = results.at(spec.id);
-  out << "[";
-  for (size_t i = 0u; i < ticks.size(); i++) {
-    if (i != 0) {
-      out << ", ";
-    }
-    out << ticks[i];
-  }
-  out << "]";
-  out << std::endl;
-}
-
-}  // namespace
 
 bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   size_t index = 0;
@@ -250,13 +214,9 @@ void Record::DoneTrace() {
     }
   }
 
-  for (auto& spec : options_.measure_duration_specs) {
-    PrintResults(out(), spec, measure_duration_->results());
-  }
-
-  for (auto& spec : options_.measure_time_between_specs) {
-    PrintResults(out(), spec, measure_time_between_->results());
-  }
+  OutputResults(out(), options_.measure_duration_specs,
+                options_.measure_time_between_specs,
+                measure_duration_->results(), measure_time_between_->results());
 
   mtl::MessageLoop::GetCurrent()->QuitNow();
 }
