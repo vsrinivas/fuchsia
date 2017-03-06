@@ -89,9 +89,8 @@ TEST_F(DBTest, Commits) {
   EXPECT_EQ(Status::NOT_FOUND,
             db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
 
-  EXPECT_EQ(
-      Status::OK,
-      db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes()));
+  EXPECT_EQ(Status::OK, db_.AddCommitStorageBytes(commit->GetId(),
+                                                  commit->GetStorageBytes()));
   EXPECT_EQ(Status::OK,
             db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
   EXPECT_EQ(storage_bytes, commit->GetStorageBytes());
@@ -106,12 +105,10 @@ TEST_F(DBTest, Journals) {
 
   std::unique_ptr<Journal> implicit_journal;
   std::unique_ptr<Journal> explicit_journal;
-  EXPECT_EQ(
-      Status::OK,
-      db_.CreateJournal(JournalType::IMPLICIT, commit_id, &implicit_journal));
-  EXPECT_EQ(
-      Status::OK,
-      db_.CreateJournal(JournalType::EXPLICIT, commit_id, &explicit_journal));
+  EXPECT_EQ(Status::OK, db_.CreateJournal(JournalType::IMPLICIT, commit_id,
+                                          &implicit_journal));
+  EXPECT_EQ(Status::OK, db_.CreateJournal(JournalType::EXPLICIT, commit_id,
+                                          &explicit_journal));
 
   EXPECT_EQ(Status::OK, db_.RemoveExplicitJournals());
 
@@ -137,9 +134,8 @@ TEST_F(DBTest, JournalEntries) {
   CommitId commit_id = RandomId(kCommitIdSize);
 
   std::unique_ptr<Journal> implicit_journal;
-  EXPECT_EQ(
-      Status::OK,
-      db_.CreateJournal(JournalType::IMPLICIT, commit_id, &implicit_journal));
+  EXPECT_EQ(Status::OK, db_.CreateJournal(JournalType::IMPLICIT, commit_id,
+                                          &implicit_journal));
   EXPECT_EQ(Status::OK,
             implicit_journal->Put("add-key-1", "value1", KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
@@ -242,15 +238,6 @@ TEST_F(DBTest, Batch) {
   EXPECT_EQ(Status::OK, db_.GetUnsyncedObjectIds(&object_ids));
   EXPECT_EQ(1u, object_ids.size());
   EXPECT_EQ(object_id, object_ids[0]);
-}
-
-TEST_F(DBTest, NodeSize) {
-  size_t node_size;
-  EXPECT_EQ(Status::NOT_FOUND, db_.GetNodeSize(&node_size));
-
-  EXPECT_EQ(Status::OK, db_.SetNodeSize(1024));
-  EXPECT_EQ(Status::OK, db_.GetNodeSize(&node_size));
-  EXPECT_EQ(1024u, node_size);
 }
 
 TEST_F(DBTest, SyncMetadata) {

@@ -173,14 +173,6 @@ class DB {
   // Checks if the object with the given |object_id| is synced.
   virtual Status IsObjectSynced(ObjectIdView object_id, bool* is_synced) = 0;
 
-  // Tree node size.
-  // Sets the node size of this page.
-  virtual Status SetNodeSize(size_t node_size) = 0;
-
-  // Finds the defined node size for this page and returns |OK| on success or
-  // |NOT_FOUND| if the node_size is not defined, yet.
-  virtual Status GetNodeSize(size_t* node_size) = 0;
-
   // Sets the opaque sync metadata associated with this page.
   virtual Status SetSyncMetadata(ftl::StringView sync_state) = 0;
 

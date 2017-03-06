@@ -72,8 +72,6 @@ class DbImpl : public DB {
   Status MarkObjectIdSynced(ObjectIdView object_id) override;
   Status MarkObjectIdUnsynced(ObjectIdView object_id) override;
   Status IsObjectSynced(ObjectIdView object_id, bool* is_synced) override;
-  Status SetNodeSize(size_t node_size) override;
-  Status GetNodeSize(size_t* node_size) override;
   Status SetSyncMetadata(ftl::StringView sync_state) override;
   Status GetSyncMetadata(std::string* sync_state) override;
 

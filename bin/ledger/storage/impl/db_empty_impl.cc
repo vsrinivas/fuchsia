@@ -118,12 +118,6 @@ Status DbEmptyImpl::MarkObjectIdUnsynced(ObjectIdView object_id) {
 Status DbEmptyImpl::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::SetNodeSize(size_t node_size) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status DbEmptyImpl::GetNodeSize(size_t* node_size) {
-  return Status::NOT_IMPLEMENTED;
-}
 Status DbEmptyImpl::SetSyncMetadata(ftl::StringView sync_state) {
   return Status::NOT_IMPLEMENTED;
 }
