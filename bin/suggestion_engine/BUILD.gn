@@ -32,6 +32,7 @@ executable("suggestion_engine") {
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src:bound_set",
     "//apps/modular/services/story",
+    "//apps/modular/services/module",
     "//apps/modular/services/user",
     "//lib/mtl",
   ]
@@ -58,6 +59,7 @@ source_set("timeline_stories_watcher") {
 
   deps = [
     "//apps/modular/services/story",
+    "//apps/modular/services/module",
     "//lib/ftl",
   ]
 }
