@@ -276,12 +276,6 @@ static void init_driver(mx_driver_t* drv, bool for_root) {
         if (!for_root) {
             return;
         }
-    } else {
-        // all other drivers are only loaded in non-root
-        // devhosts
-        if (for_root) {
-            return;
-        }
     }
 
     // Built-in drivers need their init hook called
