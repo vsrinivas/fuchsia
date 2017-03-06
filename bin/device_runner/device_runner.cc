@@ -160,6 +160,15 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
       }
     }
 
+    if (!app_context_->launcher()) {
+      FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
+      exit(1);
+    }
+    if (!app_context_->environment_services()) {
+      FTL_LOG(ERROR) << "Services handle not set. Please use @boot.";
+      exit(1);
+    }
+
     // 1. Start the ledger.
     app::ServiceProviderPtr ledger_services;
     auto ledger_launch_info = app::ApplicationLaunchInfo::New();
