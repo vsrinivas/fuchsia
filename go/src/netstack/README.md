@@ -10,7 +10,7 @@ Netstack serves as a back-end for mxio socket API.
             |                    |
     +-------v--------------+     |
     | FIDL network service |     |
-    | (//apps/netstack)    |     |
+    |   (//apps/network)   |     |
     +-------+--------------+     |
             |                    |
       +-----v--------------------v-----+
@@ -25,5 +25,5 @@ Netstack serves as a back-end for mxio socket API.
                       |
      +----------------v-----------------+
      |         Ethernet driver          |
-     | (//magenta/system/ude^/ethernet) |
+     | (//magenta/system/udev/ethernet) |
      +----------------------------------+
