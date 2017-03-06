@@ -32,5 +32,11 @@
             "binary": "ledger_unittests",
             "bootfs_path": "test/ledger_unittests"
         }
+    ],
+    "resources": [
+        {
+            "file": "apps/ledger/benchmark/put/put.tspec",
+            "bootfs_path": "data/ledger/benchmark/put.tspec"
+        }
     ]
 }
