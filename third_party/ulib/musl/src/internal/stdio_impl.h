@@ -61,6 +61,9 @@ size_t __string_read(FILE*, unsigned char*, size_t) ATTR_LIBC_VISIBILITY;
 int __toread(FILE*) ATTR_LIBC_VISIBILITY;
 int __towrite(FILE*) ATTR_LIBC_VISIBILITY;
 
+mx_status_t _mmap_file(size_t offset, size_t len, uint32_t mx_flags, int flags, int fd,
+                       off_t fd_off, uintptr_t* out);
+
 #if defined(__PIC__) && (100 * __GNUC__ + __GNUC_MINOR__ >= 303)
 __attribute__((visibility("protected")))
 #endif

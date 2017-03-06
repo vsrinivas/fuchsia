@@ -49,7 +49,8 @@ __BEGIN_CDECLS
 #define MXRIO_SETATTR      0x00000018
 #define MXRIO_SYNC         0x00000019
 #define MXRIO_LINK        (0x0000001a | MXRIO_ONE_HANDLE)
-#define MXRIO_NUM_OPS      27
+#define MXRIO_MMAP         0x0000001b
+#define MXRIO_NUM_OPS      28
 
 #define MXRIO_OP(n)        ((n) & 0x3FF) // opcode
 #define MXRIO_HC(n)        (((n) >> 8) & 3) // handle count
@@ -62,7 +63,7 @@ __BEGIN_CDECLS
     "read_at", "write_at", "truncate", "rename", \
     "connect", "bind", "listen", "getsockname", \
     "getpeername", "getsockopt", "setsockopt", "getaddrinfo", \
-    "setattr", "sync", "link" }
+    "setattr", "sync", "link", "mmap" }
 
 const char* mxio_opname(uint32_t op);
 
@@ -140,6 +141,21 @@ struct mxrio_msg {
     uint8_t data[MXIO_CHUNK_SIZE];     // payload
 };
 
+#define MXIO_MMAP_FLAG_READ    (1u << 0)
+#define MXIO_MMAP_FLAG_WRITE   (1u << 1)
+#define MXIO_MMAP_FLAG_EXEC    (1u << 2)
+#define MXIO_MMAP_FLAG_PRIVATE (1u << 10)
+
+static_assert(MXIO_MMAP_FLAG_READ == MX_VM_FLAG_PERM_READ, "Vmar / Mmap flags should be aligned");
+static_assert(MXIO_MMAP_FLAG_WRITE == MX_VM_FLAG_PERM_WRITE, "Vmar / Mmap flags should be aligned");
+static_assert(MXIO_MMAP_FLAG_EXEC == MX_VM_FLAG_PERM_EXECUTE, "Vmar / Mmap flags should be aligned");
+
+typedef struct mxrio_mmap_data {
+    size_t offset;
+    uint64_t length;
+    int32_t flags;
+} mxrio_mmap_data_t;
+
 static_assert(MXIO_CHUNK_SIZE >= PATH_MAX, "MXIO_CHUNK_SIZE must be large enough to contain paths");
 
 #define READDIR_CMD_NONE  0
@@ -182,6 +198,7 @@ static_assert(MXIO_CHUNK_SIZE >= PATH_MAX, "MXIO_CHUNK_SIZE must be large enough
 // SETATTR     0          0        <vnattr>          0           -               -
 // SYNC        0          0        0                 0           -               -
 // LINK        0          0        <name1>0<name2>0  0           -               -
+// MMAP        maxreply   0        mmap_data_msg     0           mmap_data_msg   vmohandle
 //
 // proposed:
 //
@@ -189,7 +206,6 @@ static_assert(MXIO_CHUNK_SIZE >= PATH_MAX, "MXIO_CHUNK_SIZE must be large enough
 // MKDIR       0          0        <name>            0           -               -
 // SYMLINK     namelen    0        <name><path>      0           -               -
 // READLINK    maxreply   0        -                 0           <path>          -
-// MMAP        flags      offset   <uint64:len>      offset      -               vmohandle
 // FLUSH       0          0        -                 0           -               -
 //
 // on response arg32 is always mx_status, and may be positive for read/write calls

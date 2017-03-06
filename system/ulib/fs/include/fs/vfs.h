@@ -200,6 +200,16 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
+    // Acquire a vmo from a vnode.
+    //
+    // At the moment, mmap can only map files from read-only filesystems,
+    // since (without paging) there is no mechanism to update either
+    // 1) The file by writing to the mapping, or
+    // 2) The mapping by writing to the underlying file.
+    virtual mx_status_t Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) {
+        return ERR_NOT_SUPPORTED;
+    }
+
     // Syncs the vnode with its underlying storage
     virtual mx_status_t Sync() {
         return ERR_NOT_SUPPORTED;

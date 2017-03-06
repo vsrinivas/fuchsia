@@ -621,12 +621,26 @@ mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
         return r;
     }
 
-    discard_handles(msg.handle, msg.hcount);
-    if (msg.datalen > maxreply) {
-        return ERR_IO;
-    }
-    if (ptr && msg.datalen > 0) {
+    switch (op) {
+    case MXRIO_MMAP: {
+        // Ops which receive single handles:
+        if ((msg.hcount != 1) || (msg.datalen > maxreply)) {
+            discard_handles(msg.handle, msg.hcount);
+            return ERR_IO;
+        }
+        r = msg.handle[0];
         memcpy(ptr, msg.data, msg.datalen);
+        break;
+    }
+    default:
+        // Ops which don't receive handles:
+        discard_handles(msg.handle, msg.hcount);
+        if (msg.datalen > maxreply) {
+            return ERR_IO;
+        }
+        if (ptr && msg.datalen > 0) {
+            memcpy(ptr, msg.data, msg.datalen);
+        }
     }
     return r;
 }

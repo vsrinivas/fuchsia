@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #include "libc.h"
+#include "stdio_impl.h"
 
 static ssize_t stub_read(int fd, void* buf, size_t count) {
     errno = ENOSYS;
@@ -21,6 +22,12 @@ static ssize_t stub_write(int fd, const void* buf, size_t count) {
     return -1;
 }
 weak_alias(stub_write, write);
+
+static mx_status_t stub_mmap_file(size_t offset, size_t len, uint32_t mx_flags, int flags, int fd,
+                                  off_t fd_off, uintptr_t* out) {
+    return ERR_NOT_SUPPORTED;
+}
+weak_alias(stub_mmap_file, _mmap_file);
 
 static int stub_close(int fd) {
     errno = ENOSYS;

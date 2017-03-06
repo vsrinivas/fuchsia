@@ -481,6 +481,19 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode>
         }
         assert(false);
     }
+    case MXRIO_MMAP: {
+        if (len != sizeof(mxrio_mmap_data_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        mxrio_mmap_data_t* data = reinterpret_cast<mxrio_mmap_data_t*>(msg->data);
+
+        mx_status_t status = vn->Mmap(data->flags, data->length, &data->offset,
+                                      &msg->handle[0]);
+        if (status == NO_ERROR) {
+            msg->hcount = 1;
+        }
+        return status;
+    }
     case MXRIO_SYNC: {
         return vn->Sync();
     }

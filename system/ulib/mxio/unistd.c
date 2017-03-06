@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
@@ -23,6 +24,7 @@
 
 #include <magenta/compiler.h>
 #include <magenta/device/devmgr.h>
+#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 
@@ -789,6 +791,48 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
         num--;
     }
     return count;
+}
+
+mx_status_t _mmap_file(size_t offset, size_t len, uint32_t mx_flags, int flags, int fd,
+                       off_t fd_off, uintptr_t* out) {
+    // Mapping is backed by a file
+    if (flags & MAP_PRIVATE) {
+        // TODO(smklein): Implement by creating a private
+        // COW clone of the underlying vmo before mapping it.
+        return ERR_INVALID_ARGS;
+    }
+    mxio_t* io;
+    if ((io = fd_to_io(fd)) == NULL) {
+        return ERR_BAD_HANDLE;
+    }
+
+    // At the moment, these parameters are sent to filesystem servers purely
+    // for validation, since there is no mechanism to create a "subset vmo"
+    // from the original VMO.
+    // TODO(smklein): Once (if?) we can create 'subset' vmos, remove the
+    // fd_off argument to mx_vmar_map below.
+    mxrio_mmap_data_t data;
+    data.offset = fd_off;
+    data.length = len;
+    data.flags = mx_flags;
+
+    mx_status_t r = io->ops->misc(io, MXRIO_MMAP, 0, sizeof(data), &data, sizeof(data));
+    mxio_release(io);
+    if (r < 0) {
+        return r;
+    }
+    mx_handle_t vmo = r;
+
+    uintptr_t ptr = 0;
+    r = mx_vmar_map(mx_vmar_root_self(), offset, vmo, data.offset, data.length, mx_flags, &ptr);
+    mx_handle_close(vmo);
+    // TODO: map this as shared if we ever implement forking
+    if (r < 0) {
+        return r;
+    }
+
+    *out = ptr;
+    return NO_ERROR;
 }
 
 int unlinkat(int dirfd, const char* path, int flags) {
