@@ -1,7 +1,7 @@
 {
     "labels": [
         "//apps/media",
-        "//apps/media:apptests"
+        "//apps/media:tests"
     ],
     "binaries": [
         {
@@ -21,24 +21,24 @@
             "bootfs_path": "apps/flog_viewer"
         },
         {
-            "binary": "media_audio_apptests",
-            "bootfs_path": "apps/media_audio_apptests"
+            "binary": "media_audio_tests",
+            "bootfs_path": "test/media_audio_tests"
         },
         {
-            "binary": "media_demux_apptests",
-            "bootfs_path": "apps/media_demux_apptests"
+            "binary": "media_demux_tests",
+            "bootfs_path": "test/media_demux_tests"
         },
         {
             "binary": "media_lib_timeline_tests",
-            "bootfs_path": "apps/media_lib_timeline_tests"
+            "bootfs_path": "test/media_lib_timeline_tests"
         },
         {
             "binary": "media_lib_transport_tests",
-            "bootfs_path": "apps/media_lib_transport_tests"
+            "bootfs_path": "test/media_lib_transport_tests"
         },
         {
-            "binary": "media_net_apptests",
-            "bootfs_path": "apps/media_net_apptests"
+            "binary": "media_net_tests",
+            "bootfs_path": "test/media_net_tests"
         },
         {
             "binary": "media_player",
@@ -53,12 +53,12 @@
             "bootfs_path": "apps/media_service"
         },
         {
-            "binary": "media_service_apptests",
-            "bootfs_path": "apps/media_service_apptests"
+            "binary": "media_service_tests",
+            "bootfs_path": "test/media_service_tests"
         },
         {
-            "binary": "media_util_apptests",
-            "bootfs_path": "apps/media_util_apptests"
+            "binary": "media_util_tests",
+            "bootfs_path": "test/media_util_tests"
         },
         {
             "binary": "vu_meter",
