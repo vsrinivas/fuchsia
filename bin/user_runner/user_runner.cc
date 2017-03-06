@@ -17,6 +17,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -67,6 +68,20 @@ std::string LedgerStatusToString(ledger::Status status) {
     default:
       return "(unknown error)";
   }
+};
+
+class StoryMarkerImpl : private StoryMarker {
+ public:
+  StoryMarkerImpl() = default;
+  ~StoryMarkerImpl() override = default;
+
+  void AddBinding(fidl::InterfaceRequest<StoryMarker> request) {
+    bindings_.AddBinding(this, std::move(request));
+  }
+
+ private:
+  fidl::BindingSet<StoryMarker> bindings_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
 };
 
 }  // namespace
@@ -163,6 +178,15 @@ class UserRunnerImpl : public UserRunner {
               std::move(request));
         }));
 
+    // A dummy service that allows applications that can run both as
+    // modules in a story and standalone from the shell to determine
+    // whether they are in a story. See story_marker.fidl for more
+    // details.
+    stories_scope_->AddService<StoryMarker>(
+        [this](fidl::InterfaceRequest<StoryMarker> request) {
+          story_marker_impl_.AddBinding(std::move(request));
+        });
+
     user_shell_->Initialize(std::move(user_context), std::move(story_provider),
                             std::move(suggestion_provider),
                             std::move(focus_controller_request));
@@ -224,6 +248,7 @@ class UserRunnerImpl : public UserRunner {
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
   MessageQueueManager message_queue_manager_;
   AgentRunner agent_runner_;
+  StoryMarkerImpl story_marker_impl_;
 
   // Keep connections to applications started here around so they are
   // killed when this instance is deleted.

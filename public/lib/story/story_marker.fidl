@@ -1,0 +1,16 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// A dummy service that allows applications that can run both as
+// modules in a story and standalone from the shell to determine
+// whether they are in a story.
+//
+// Such applications are expected to request this service from their
+// environment and continue as plain applications in the connection
+// error handler of that request, and as module in the Module factory
+// of their own outgoing service provider.
+[ServiceName="modular.StoryMarker"]  // Available through the environment
+interface StoryMarker {};
