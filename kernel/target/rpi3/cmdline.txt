@@ -1,5 +1,3 @@
-### cmdline.txt ###
-
 magenta.soc=00bc:0000 TERM=uart
 
 ### Note: omit TERM=uart if not using serial console ###
