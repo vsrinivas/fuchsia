@@ -97,6 +97,8 @@ static_library("ftl") {
     "tasks/task_runner.h",
     "third_party/icu/icu_utf.cc",
     "third_party/icu/icu_utf.h",
+    "threading/thread.cc",
+    "threading/thread.h",
     "time/stopwatch.cc",
     "time/stopwatch.h",
     "time/time_delta.h",
