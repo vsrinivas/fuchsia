@@ -48,12 +48,11 @@ PutBenchmark::PutBenchmark(int entry_count, int value_size)
 void PutBenchmark::Run() {
   ledger::LedgerPtr ledger = benchmark::GetLedger(
       application_context_.get(), &ledger_controller_, "put", tmp_dir_.path());
-  ledger->GetRootPage(page_.NewRequest(),
-                      benchmark::QuitOnErrorCallback("GetRootPage"));
-
-  // Request the id to make sure that the page instance is initialized before we
-  // start writes.
-  page_->GetId([this](fidl::Array<uint8_t> id) { RunSingle(0, entry_count_); });
+  benchmark::GetRootPageEnsureInitialized(ledger.get(),
+                                          [this](ledger::PagePtr page) {
+                                            page_ = std::move(page);
+                                            RunSingle(0, entry_count_);
+                                          });
 }
 
 void PutBenchmark::RunSingle(int i, int count) {

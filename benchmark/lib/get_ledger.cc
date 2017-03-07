@@ -10,6 +10,7 @@
 #include "apps/ledger/benchmark/lib/convert.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 namespace benchmark {
 
@@ -35,6 +36,18 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
   repository->GetLedger(ToArray(ledger_name), ledger.NewRequest(),
                         QuitOnErrorCallback("GetLedger"));
   return ledger;
+}
+
+void GetRootPageEnsureInitialized(
+    ledger::Ledger* ledger,
+    std::function<void(ledger::PagePtr page)> callback) {
+  ledger::PagePtr page;
+  ledger->GetRootPage(page.NewRequest(),
+                      benchmark::QuitOnErrorCallback("GetRootPage"));
+
+  ledger::Page* page_ptr = page.get();
+  page_ptr->GetId(ftl::MakeCopyable([ page = std::move(page), callback = std::move(callback) ](
+      auto unused_id) mutable { callback(std::move(page)); }));
 }
 
 }  // namespace benchmark
