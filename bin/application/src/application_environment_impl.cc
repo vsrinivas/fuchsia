@@ -78,7 +78,7 @@ mx::process CreateProcess(
   // duplicated from this |job|) should not be killable.
   launchpad_t* lp;
   launchpad_create(job.get(), path_arg, &lp);
-  launchpad_load_from_vmo(lp, data.get());
+  launchpad_load_from_vmo(lp, data.release());
   launchpad_set_args(lp, argv.size(), argv.data());
   launchpad_set_environ(lp, environ);
   launchpad_clone(lp, LP_CLONE_MXIO_ALL);
