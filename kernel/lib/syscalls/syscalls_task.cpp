@@ -6,7 +6,6 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <new.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -30,6 +29,7 @@
 #include <magenta/user_thread.h>
 #include <magenta/vm_address_region_dispatcher.h>
 
+#include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/string_piece.h>
 
@@ -41,6 +41,11 @@ extern "C" {
 uint64_t get_tsc_ticks_per_ms(void);
 };
 
+// For reading general purpose integer registers, we can allocate in
+// an inline array and save the malloc. Assume 64 registers as a
+// conservative estimate for an architecture with 32 general purpose
+// integer registers.
+constexpr uint32_t kInlineThreadStateSize = sizeof(void*) * 64;
 constexpr uint32_t kMaxThreadStateSize = MX_MAX_THREAD_STATE_SIZE;
 
 constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
@@ -146,10 +151,9 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
         return ERR_INVALID_ARGS;
 
     AllocChecker ac;
-    uint8_t* tmp_buf = new (&ac) uint8_t [buffer_len];
+    mxtl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
     if (!ac.check())
         return ERR_NO_MEMORY;
-    mxtl::Array<uint8_t> bytes(tmp_buf, buffer_len);
 
     status = thread->thread()->ReadState(state_kind, bytes.get(), &buffer_len);
 
@@ -186,10 +190,9 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
         return ERR_INVALID_ARGS;
 
     AllocChecker ac;
-    uint8_t* tmp_buf = new (&ac) uint8_t [buffer_len];
+    mxtl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
     if (!ac.check())
         return ERR_NO_MEMORY;
-    mxtl::Array<uint8_t> bytes(tmp_buf, buffer_len);
 
     status = _buffer.copy_array_from_user(bytes.get(), buffer_len);
     if (status != NO_ERROR)
