@@ -31,8 +31,8 @@ constexpr uint64_t kDefaultCtlConfig = (
 
 // The parameters controlling data collection.
 
-struct PerfConfig {
-  PerfConfig()
+struct IptConfig {
+  IptConfig()
     : mode(kDefaultMode),
       num_cpus(mx_system_get_num_cpus()),
       max_threads(kDefaultMaxThreads),
@@ -61,7 +61,7 @@ struct PerfConfig {
 // calling methods which modify the internal state of a IptServer instance.
 class IptServer final : public Server {
  public:
-  IptServer(const PerfConfig& config);
+  IptServer(const IptConfig& config);
 
   bool Run() override;
 
@@ -90,7 +90,7 @@ class IptServer final : public Server {
                                 const mx_excp_type_t type,
                                 const mx_exception_context_t& context) override;
 
-  PerfConfig config_;
+  IptConfig config_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IptServer);
 };

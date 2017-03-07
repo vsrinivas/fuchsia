@@ -94,7 +94,7 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
   return true;
 }
 
-bool SetPerfMode(const PerfConfig& config) {
+bool SetPerfMode(const IptConfig& config) {
   FTL_LOG(INFO) << "SetPerfMode called";
 
   ftl::UniqueFD ipt_fd;
@@ -114,7 +114,7 @@ bool SetPerfMode(const PerfConfig& config) {
   return false;
 }
 
-bool InitCpuPerf(const PerfConfig& config) {
+bool InitCpuPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "InitCpuPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_CPUS);
 
@@ -153,7 +153,7 @@ bool InitCpuPerf(const PerfConfig& config) {
   return false;
 }
 
-bool InitThreadPerf(Thread* thread, const PerfConfig& config) {
+bool InitThreadPerf(Thread* thread, const IptConfig& config) {
   FTL_LOG(INFO) << "InitThreadPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -185,7 +185,7 @@ bool InitThreadPerf(Thread* thread, const PerfConfig& config) {
 // This must be called before a process is started so we emit a ktrace
 // process start record for it.
 
-bool InitPerfPreProcess(const PerfConfig& config) {
+bool InitPerfPreProcess(const IptConfig& config) {
   FTL_LOG(INFO) << "InitPerfPreProcess called";
 
   mx::handle ktrace_handle;
@@ -225,7 +225,7 @@ bool InitPerfPreProcess(const PerfConfig& config) {
   return false;
 }
 
-bool StartCpuPerf(const PerfConfig& config) {
+bool StartCpuPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "StartCpuPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_CPUS);
 
@@ -246,7 +246,7 @@ bool StartCpuPerf(const PerfConfig& config) {
   return false;
 }
 
-bool StartThreadPerf(Thread* thread, const PerfConfig& config) {
+bool StartThreadPerf(Thread* thread, const IptConfig& config) {
   FTL_LOG(INFO) << "StartThreadPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -284,7 +284,7 @@ bool StartThreadPerf(Thread* thread, const PerfConfig& config) {
   return false;
 }
 
-void StopCpuPerf(const PerfConfig& config) {
+void StopCpuPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "StopCpuPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_CPUS);
 
@@ -299,7 +299,7 @@ void StopCpuPerf(const PerfConfig& config) {
   }
 }
 
-void StopThreadPerf(Thread* thread, const PerfConfig& config) {
+void StopThreadPerf(Thread* thread, const IptConfig& config) {
   FTL_LOG(INFO) << "StopThreadPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -334,7 +334,7 @@ void StopThreadPerf(Thread* thread, const PerfConfig& config) {
   ; // nothing to do
 }
 
-void StopPerf(const PerfConfig& config) {
+void StopPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "StopPerf called";
 
   mx::handle ktrace_handle;
@@ -352,7 +352,7 @@ void StopPerf(const PerfConfig& config) {
 // Write the contents of buffer |descriptor| to a file.
 // The file's name is output_prefix.buffer.pt.
 
-static mx_status_t WriteBufferData(const PerfConfig& config,
+static mx_status_t WriteBufferData(const IptConfig& config,
                                    const ftl::UniqueFD& ipt_fd,
                                    uint32_t descriptor,
                                    const char* output_prefix) {
@@ -464,7 +464,7 @@ static mx_status_t WriteBufferData(const PerfConfig& config,
 // Write all output files.
 // This assumes tracing has already been stopped.
 
-void DumpCpuPerf(const PerfConfig& config) {
+void DumpCpuPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "DumpCpuPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_CPUS);
 
@@ -485,7 +485,7 @@ void DumpCpuPerf(const PerfConfig& config) {
 // Write the buffer contents for |thread|.
 // This assumes the thread is stopped.
 
-void DumpThreadPerf(Thread* thread, const PerfConfig& config) {
+void DumpThreadPerf(Thread* thread, const IptConfig& config) {
   FTL_LOG(INFO) << "DumpThreadPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -509,7 +509,7 @@ void DumpThreadPerf(Thread* thread, const PerfConfig& config) {
   }
 }
 
-void DumpPerf(const PerfConfig& config) {
+void DumpPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "DumpPerf called";
 
   {
@@ -555,7 +555,7 @@ void DumpPerf(const PerfConfig& config) {
 // This means freeing all PT resources.
 // This assumes tracing has already been stopped.
 
-void ResetCpuPerf(const PerfConfig& config) {
+void ResetCpuPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "ResetCpuPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_CPUS);
 
@@ -569,7 +569,7 @@ void ResetCpuPerf(const PerfConfig& config) {
   }
 }
 
-void ResetThreadPerf(Thread* thread, const PerfConfig& config) {
+void ResetThreadPerf(Thread* thread, const IptConfig& config) {
   FTL_LOG(INFO) << "ResetThreadPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -598,7 +598,7 @@ void ResetThreadPerf(Thread* thread, const PerfConfig& config) {
 // This means restoring ktrace to its original state.
 // This assumes tracing has already been stopped.
 
-void ResetPerf(const PerfConfig& config) {
+void ResetPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "ResetPerf called";
 
   ftl::UniqueFD ipt_fd;

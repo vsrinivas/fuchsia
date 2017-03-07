@@ -26,7 +26,7 @@ static constexpr char ldso_trace_output_path[] = "/tmp/ptout.ldso";
 
 namespace debugserver {
 
-IptServer::IptServer(const PerfConfig& config)
+IptServer::IptServer(const IptConfig& config)
   : config_(config) {
 }
 

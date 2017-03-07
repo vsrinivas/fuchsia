@@ -10,34 +10,34 @@
 
 namespace debugserver {
 
-bool SetPerfMode(const PerfConfig& config);
+bool SetPerfMode(const IptConfig& config);
 
-bool InitCpuPerf(const PerfConfig& config);
+bool InitCpuPerf(const IptConfig& config);
 
-bool InitThreadPerf(Thread* thread, const PerfConfig& config);
+bool InitThreadPerf(Thread* thread, const IptConfig& config);
 
-bool InitPerfPreProcess(const PerfConfig& config);
+bool InitPerfPreProcess(const IptConfig& config);
 
-bool StartCpuPerf(const PerfConfig& config);
+bool StartCpuPerf(const IptConfig& config);
 
-bool StartThreadPerf(Thread* thread, const PerfConfig& config);
+bool StartThreadPerf(Thread* thread, const IptConfig& config);
 
-void StopCpuPerf(const PerfConfig& config);
+void StopCpuPerf(const IptConfig& config);
 
-void StopThreadPerf(Thread* thread, const PerfConfig& config);
+void StopThreadPerf(Thread* thread, const IptConfig& config);
 
-void StopPerf(const PerfConfig& config);
+void StopPerf(const IptConfig& config);
 
-void DumpCpuPerf(const PerfConfig& config);
+void DumpCpuPerf(const IptConfig& config);
 
-void DumpThreadPerf(Thread* thread, const PerfConfig& config);
+void DumpThreadPerf(Thread* thread, const IptConfig& config);
 
-void DumpPerf(const PerfConfig& config);
+void DumpPerf(const IptConfig& config);
 
-void ResetCpuPerf(const PerfConfig& config);
+void ResetCpuPerf(const IptConfig& config);
 
-void ResetThreadPerf(Thread* thread, const PerfConfig& config);
+void ResetThreadPerf(Thread* thread, const IptConfig& config);
 
-void ResetPerf(const PerfConfig& config);
+void ResetPerf(const IptConfig& config);
 
 } // debugserver namespace
