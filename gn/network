@@ -1,6 +1,7 @@
 {
     "labels": [
         "//apps/network",
+        "//apps/network/application_loader",
         "//apps/network/examples/postfile",
         "//apps/network/examples/wget"
     ],
@@ -8,6 +9,10 @@
         {
             "binary": "network",
             "bootfs_path": "apps/network"
+        },
+        {
+            "binary": "network_application_loader",
+            "bootfs_path": "apps/network_application_loader"
         },
         {
             "binary": "postfile",
