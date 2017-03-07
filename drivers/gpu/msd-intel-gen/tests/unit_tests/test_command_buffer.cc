@@ -162,7 +162,7 @@ public:
         device()->StartDeviceThread();
 
         cmd_buf_.reset();
-        EXPECT_TRUE(helper_->Execute());
+        EXPECT_TRUE(helper_->ExecuteAndWait());
 
         uint32_t target_val = *reinterpret_cast<uint32_t*>(target_cpu_addr);
         EXPECT_EQ(target_val, expected_val);
