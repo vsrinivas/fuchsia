@@ -31,13 +31,11 @@ uint64_t Average(const std::vector<Ticks>& samples) {
 }
 
 double StdDev(const std::vector<Ticks>& samples, uint64_t average) {
-  std::vector<uint64_t> delta(samples.size());
-  std::transform(std::cbegin(samples), std::cend(samples), std::begin(delta),
-
-                 [average](Ticks sample) { return sample - average; });
-  double sum_of_squares = std::inner_product(
-      std::cbegin(delta), std::cend(delta), std::cbegin(delta), 0);
-  return std::sqrt(sum_of_squares / samples.size());
+  double sum_of_squared_deltas = 0.0;
+  for (double sample : samples) {
+    sum_of_squared_deltas += (sample - average) * (sample - average);
+  }
+  return std::sqrt(sum_of_squared_deltas / samples.size());
 }
 
 template <typename Spec>
