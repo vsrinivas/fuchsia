@@ -25,14 +25,15 @@ std::ostream& operator<<(std::ostream& os, measure::TimeBetweenSpec spec) {
             << " (" << spec.second_event.category;
 }
 
-uint64_t Average(const std::vector<Ticks>& samples) {
-  uint64_t sum = std::accumulate(std::cbegin(samples), std::cend(samples), 0);
-  return sum / samples.size();
+double Average(const std::vector<Ticks>& samples) {
+  uint64_t sum =
+      std::accumulate(std::cbegin(samples), std::cend(samples), 0uLL);
+  return static_cast<double>(sum) / samples.size();
 }
 
-double StdDev(const std::vector<Ticks>& samples, uint64_t average) {
+double StdDev(const std::vector<Ticks>& samples, double average) {
   double sum_of_squared_deltas = 0.0;
-  for (double sample : samples) {
+  for (auto sample : samples) {
     sum_of_squared_deltas += (sample - average) * (sample - average);
   }
   return std::sqrt(sum_of_squared_deltas / samples.size());
@@ -52,7 +53,7 @@ void OutputSingle(
     return;
   }
 
-  uint64_t average = Average(results.at(spec.id));
+  double average = Average(results.at(spec.id));
   double std_dev = StdDev(results.at(spec.id), average);
 
   out << "avg " << average * ticks_to_ms_scale << "ms out of "
