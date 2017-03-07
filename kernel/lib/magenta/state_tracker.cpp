@@ -40,14 +40,14 @@ void CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock,
 }
 }  // namespace
 
-void StateTracker::AddObserver(StateObserver* observer) {
+void StateTracker::AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
     DEBUG_ASSERT(observer != nullptr);
 
     bool awoke_threads = false;
     {
         AutoLock lock(&lock_);
 
-        awoke_threads = observer->OnInitialize(signals_);
+        awoke_threads = observer->OnInitialize(signals_, cinfo);
         if (!observer->remove())
             observers_.push_front(observer);
     }

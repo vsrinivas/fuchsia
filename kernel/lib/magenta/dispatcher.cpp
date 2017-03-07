@@ -40,6 +40,14 @@ void Dispatcher::remove_handle() {
     }
 }
 
+status_t Dispatcher::add_observer(StateObserver* observer) {
+    auto state_tracker = get_state_tracker();
+    if (!state_tracker)
+        return ERR_NOT_SUPPORTED;
+    state_tracker->AddObserver(observer, nullptr);
+    return NO_ERROR;
+}
+
 status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     if (peer)
         return ERR_NOT_SUPPORTED;

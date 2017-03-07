@@ -24,7 +24,7 @@ public:
     StateTracker& operator=(const StateTracker& o) = delete;
 
     // Add an observer.
-    void AddObserver(StateObserver* observer);
+    void AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo);
 
     // Remove an observer (which must have been added).
     void RemoveObserver(StateObserver* observer);

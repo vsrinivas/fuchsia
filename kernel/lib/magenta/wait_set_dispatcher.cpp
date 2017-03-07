@@ -90,7 +90,8 @@ mx_signals_t WaitSetDispatcher::Entry::GetSignalsStateLocked() const {
 WaitSetDispatcher::Entry::Entry(mx_signals_t watched_signals, uint64_t cookie)
     : StateObserver(), watched_signals_(watched_signals), cookie_(cookie) {}
 
-bool WaitSetDispatcher::Entry::OnInitialize(mx_signals_t initial_state) {
+bool WaitSetDispatcher::Entry::OnInitialize(mx_signals_t initial_state,
+                                            const StateObserver::CountInfo* cinfo) {
     AutoLock lock(&wait_set_->mutex_);
 
     DEBUG_ASSERT(state_ == State::ADD_PENDING);
@@ -224,8 +225,7 @@ WaitSetDispatcher::~WaitSetDispatcher() {
 }
 
 status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* handle) {
-    auto state_tracker = handle->dispatcher()->get_state_tracker();
-    if (!state_tracker)
+    if (!handle->dispatcher()->get_state_tracker())
         return ERR_NOT_SUPPORTED;
 
     auto e = entry.get();
@@ -243,11 +243,12 @@ status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* hand
     // set its state to REMOVE_REQUESTED).
 
     // We need to call this outside the lock.
-    state_tracker->AddObserver(e);
+    auto status = handle->dispatcher()->add_observer(e);
+    DEBUG_ASSERT(status == NO_ERROR);
 
-    // AddObserver() calls e->OnInitialize(), which sets |e|'s state to ADDED. WARNING:
+    // add_observer() calls e->OnInitialize(), which sets |e|'s state to ADDED. WARNING:
     // That state change means that RemoveEntry() may actually call RemoveObserver(), so we must not
-    // do any work after calling AddObserver()!
+    // do any work after calling add_observer()!
     return NO_ERROR;
 }
 
@@ -343,10 +344,11 @@ WaitSetDispatcher::WaitSetDispatcher()
     event_init(&event_, false, 0);
 
     // This is just so we can observe our own handle's cancellation.
-    state_tracker_.AddObserver(this);
+    state_tracker_.AddObserver(this, nullptr);
 }
 
-bool WaitSetDispatcher::OnInitialize(mx_signals_t initial_state) { return false; }
+bool WaitSetDispatcher::OnInitialize(mx_signals_t initial_state,
+                                     const StateObserver::CountInfo* cinfo) { return false; }
 
 bool WaitSetDispatcher::OnStateChange(mx_signals_t new_state) { return false; }
 

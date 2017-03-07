@@ -94,7 +94,7 @@ struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
 class PortObserver final : public StateObserver {
 public:
     PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcherV2> port,
-                 uint64_t key, mx_signals_t signals);
+                 uint64_t key, mx_signals_t signal);
     ~PortObserver() = default;
 
 private:
@@ -102,7 +102,7 @@ private:
     PortObserver& operator=(const PortObserver&) = delete;
 
     // StateObserver overrides.
-    bool OnInitialize(mx_signals_t initial_state) final;
+    bool OnInitialize(mx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
     bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle) final;
     bool OnCancelByKey(Handle* handle, uint64_t key) final;
@@ -110,7 +110,7 @@ private:
 
     // The following method can only be called from
     // OnInitialize(), OnStateChange() and OnCancel().
-    void MaybeQueue(mx_signals_t new_state);
+    void MaybeQueue(mx_signals_t new_state, uint64_t count);
 
     const uint32_t type_;
     const uint64_t key_;
@@ -132,7 +132,7 @@ public:
 
     void on_zero_handles() final;
 
-    mx_status_t Queue(PortPacket* packet);
+    mx_status_t Queue(PortPacket* packet, uint64_t count);
     mx_status_t QueueUser(const mx_port_packet_t& packet);
     mx_status_t DeQueue(mx_time_t timeout, mx_port_packet_t* packet);
 
@@ -146,7 +146,7 @@ public:
 
 private:
     PortDispatcherV2(uint32_t options);
-    bool HandleSignalsLocked(PortPacket* packet) TA_REQ(lock_);
+    bool HandleSignalsLocked(PortPacket* packet, uint64_t count) TA_REQ(lock_);
     PortObserver* SnapCopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
 
     Mutex lock_;

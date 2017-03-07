@@ -28,13 +28,11 @@ mx_status_t WaitStateObserver::Begin(WaitEvent* event,
     dispatcher_ = handle->dispatcher();
     wakeup_reasons_ = 0u;
 
-    auto state_tracker = dispatcher_->get_state_tracker();
-    if (state_tracker == nullptr) {
+    auto status = dispatcher_->add_observer(this);
+    if (status != NO_ERROR) {
         dispatcher_.reset();
-        return ERR_NOT_SUPPORTED;
+        return status;
     }
-
-    state_tracker->AddObserver(this);
     return NO_ERROR;
 }
 
@@ -52,7 +50,8 @@ mx_signals_t WaitStateObserver::End() {
     return wakeup_reasons_;
 }
 
-bool WaitStateObserver::OnInitialize(mx_signals_t initial_state) {
+bool WaitStateObserver::OnInitialize(mx_signals_t initial_state,
+                                     const StateObserver::CountInfo* cinfo) {
     // Record the initial state of the state tracker as our wakeup reason.  If
     // we are going to become immediately signaled, the reason is contained
     // somewhere in this initial state.

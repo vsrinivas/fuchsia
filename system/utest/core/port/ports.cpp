@@ -315,6 +315,67 @@ static bool async_wait_event_test_repeat(void) {
     END_TEST;
 }
 
+static bool pre_writes_channel_test(uint32_t mode) {
+    BEGIN_TEST;
+    mx_status_t status;
+
+    const uint64_t key0 = 65667ull;
+
+    mx_handle_t ch[2];
+    status = mx_channel_create(0u, &ch[0], &ch[1]);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    for (int ix = 0; ix != 5; ++ix) {
+        EXPECT_EQ(mx_channel_write(ch[0], 0u, "123456", 6, nullptr, 0u), NO_ERROR, "");
+    }
+
+    mx_handle_t port;
+    status = mx_port_create(MX_PORT_OPT_V2, &port);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    status = mx_object_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, mode);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    mx_port_packet_t out = {};
+    int wait_count = 0;
+    uint64_t signal_count = 0u;
+
+    while (true) {
+        status = mx_port_wait(port, 0ull, &out, 0u);
+        if (status != NO_ERROR)
+            break;
+        wait_count++;
+        signal_count += out.signal.count;
+        EXPECT_NEQ(out.signal.count, 0u, "");
+        EXPECT_EQ(out.signal.trigger, MX_CHANNEL_READABLE, "");
+    }
+
+    if (mode == MX_WAIT_ASYNC_ONCE)
+        EXPECT_EQ(wait_count, 1u, "");
+    else
+        EXPECT_EQ(wait_count, 5u, "");
+
+    EXPECT_EQ(signal_count, 5u, "");
+
+    status = mx_handle_close(port);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    status = mx_handle_close(ch[1]);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    status = mx_handle_close(ch[0]);
+    EXPECT_EQ(status, NO_ERROR, "");
+
+    END_TEST;
+}
+
+static bool channel_pre_writes_once() {
+    return pre_writes_channel_test(MX_WAIT_ASYNC_ONCE);
+}
+
+static bool channel_pre_writes_repeat() {
+    return pre_writes_channel_test(MX_WAIT_ASYNC_REPEATING);
+}
 
 BEGIN_TEST_CASE(port_tests)
 RUN_TEST(basic_test)
@@ -328,6 +389,8 @@ RUN_TEST(async_wait_close_order_3);
 RUN_TEST(async_wait_close_order_4);
 RUN_TEST(async_wait_close_order_5);
 RUN_TEST(async_wait_close_order_6);
+RUN_TEST(channel_pre_writes_once);
+RUN_TEST(channel_pre_writes_repeat);
 END_TEST_CASE(port_tests)
 
 #ifndef BUILD_COMBINED_TESTS

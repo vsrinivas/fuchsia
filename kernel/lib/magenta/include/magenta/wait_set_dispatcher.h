@@ -87,7 +87,8 @@ public:
         Entry(const Entry&) = delete;
         Entry& operator=(const Entry&) = delete;
 
-        bool OnInitialize(mx_signals_t initial_state) final;
+        bool OnInitialize(mx_signals_t initial_state,
+                          const StateObserver::CountInfo* cinfo) final;
         bool OnStateChange(mx_signals_t new_state) final;
         bool OnCancel(Handle* handle) final;
 
@@ -145,7 +146,7 @@ private:
     WaitSetDispatcher& operator=(const WaitSetDispatcher&) = delete;
 
     // StateObserver implementation:
-    bool OnInitialize(mx_signals_t initial_state) final;
+    bool OnInitialize(mx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
     bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle) final;
 

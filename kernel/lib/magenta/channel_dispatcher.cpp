@@ -117,6 +117,14 @@ ChannelDispatcher::~ChannelDispatcher() {
     messages_.clear();
 }
 
+mx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
+    AutoLock lock(&lock_);
+    StateObserver::CountInfo cinfo =
+        {{{messages_.size_slow(), MX_CHANNEL_READABLE}, {0u, 0u}}};
+    state_tracker_.AddObserver(observer, &cinfo);
+    return NO_ERROR;
+}
+
 // Thread safety analysis disabled as this accesses guarded member variables without holding
 // |lock_| after it knows there are no other references from other threads. See comment on last
 // statement.

@@ -52,6 +52,7 @@ DECLARE_DISPTAG(GuestDispatcher, MX_OBJ_TYPE_GUEST)
 #undef DECLARE_DISPTAG
 
 class StateTracker;
+class StateObserver;
 
 class Dispatcher : public mxtl::RefCounted<Dispatcher> {
 public:
@@ -69,6 +70,8 @@ public:
     virtual mx_obj_type_t get_type() const = 0;
 
     virtual StateTracker* get_state_tracker() { return nullptr; }
+
+    virtual status_t add_observer(StateObserver* observer);
 
     virtual status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer);
 
