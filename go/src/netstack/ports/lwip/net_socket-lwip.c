@@ -268,6 +268,32 @@ static void convert_optname_to_lwip(int level, int optname, int* lwip_level,
         break;
       }
       break;
+    case SOL_IP:
+      *lwip_level = level;
+      switch (optname) {
+        case IP_TOS:
+          *lwip_optname = LWIP_IP_TOS;
+          break;
+        case IP_TTL:
+          *lwip_optname = LWIP_IP_TTL;
+          break;
+        case IP_ADD_MEMBERSHIP:
+          *lwip_optname = LWIP_IP_ADD_MEMBERSHIP;
+          break;
+        case IP_DROP_MEMBERSHIP:
+          *lwip_optname = LWIP_IP_DROP_MEMBERSHIP;
+          break;
+        case IP_MULTICAST_TTL:
+          *lwip_optname = LWIP_IP_MULTICAST_TTL;
+          break;
+        case IP_MULTICAST_IF:
+          *lwip_optname = LWIP_IP_MULTICAST_IF;
+          break;
+        case IP_MULTICAST_LOOP:
+          *lwip_optname = LWIP_IP_MULTICAST_LOOP;
+          break;
+      }
+      break;
     case SOL_TCP:
       *lwip_level = level;
       switch (optname) {

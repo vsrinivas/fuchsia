@@ -31,6 +31,15 @@
 #define LWIP_SO_CONTIMEO    0x1009
 #define LWIP_SO_NO_CHECK    0x100a
 
+// options for IP level
+#define LWIP_IP_TOS 1
+#define LWIP_IP_TTL 2
+#define LWIP_IP_ADD_MEMBERSHIP 3
+#define LWIP_IP_DROP_MEMBERSHIP 4
+#define LWIP_IP_MULTICAST_TTL 5
+#define LWIP_IP_MULTICAST_IF 6
+#define LWIP_IP_MULTICAST_LOOP 7
+
 // options for TCP level
 #define LWIP_TCP_NODELAY    0x01
 
