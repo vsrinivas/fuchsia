@@ -38,7 +38,7 @@ class TodoModule extends Module implements PageWatcher {
 
   final PageProxy _page = new PageProxy();
 
-  final StoryProxy _story = new StoryProxy();
+  final ModuleContextProxy _moduleContext = new ModuleContextProxy();
 
   final ComponentContextProxy _componentContext = new ComponentContextProxy();
 
@@ -57,9 +57,9 @@ class TodoModule extends Module implements PageWatcher {
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('TodoModule::initialize()');
 
-    _story.ctrl.bind(moduleContextHandle);
+    _moduleContext.ctrl.bind(moduleContextHandle);
 
-    _story.getComponentContext(_componentContext.ctrl.request());
+    _moduleContext.getComponentContext(_componentContext.ctrl.request());
     _componentContext.getLedger(
         _ledger.ctrl.request(), _handleResponse("getLedger"));
     _ledger.getRootPage(_page.ctrl.request(), _handleResponse("getRootPage"));
@@ -78,7 +78,7 @@ class TodoModule extends Module implements PageWatcher {
     _log('TodoModule::stop()');
     _ledger.ctrl.close();
     _page.ctrl.close();
-    _story.ctrl.close();
+    _moduleContext.ctrl.close();
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();

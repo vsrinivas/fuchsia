@@ -52,7 +52,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
   final ModuleBinding _moduleBinding = new ModuleBinding();
   final LinkWatcherBinding _linkWatcherBinding = new LinkWatcherBinding();
 
-  final StoryProxy _story = new StoryProxy();
+  final ModuleContextProxy _moduleContext = new ModuleContextProxy();
   final LinkProxy _link = new LinkProxy();
 
   final List<String> _jsonPath = <String>[_kCounterValueKey];
@@ -71,7 +71,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
     _log('Module.initialize()');
 
     // A module is initialized with a ModuleContext and a Link.
-    _story.ctrl.bind(moduleContextHandle);
+    _moduleContext.ctrl.bind(moduleContextHandle);
     _link.ctrl.bind(linkHandle);
 
     // On the link, we can declare that values stored in the link adhere
@@ -93,7 +93,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
     InterfacePair<ViewOwner> viewOwnerPair = new InterfacePair<ViewOwner>();
 
     // Start the child module.
-    _story.startModule(
+    _moduleContext.startModule(
         'file:///system/apps/example_flutter_counter_child',
         linkForChild.ctrl.unbind(),
         null,
@@ -112,7 +112,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
     // Do some clean up here.
     _linkWatcherBinding.close();
     _link.ctrl.close();
-    _story.ctrl.close();
+    _moduleContext.ctrl.close();
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
@@ -131,7 +131,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
 
   // API below is exposed to _AppState. In addition, _AppState uses the
   // constructor arguments to get notifications.
-  void done() => _story.done();
+  void done() => _moduleContext.done();
   void setValue(int newValue) => _link.set(_jsonPath, JSON.encode(newValue));
 }
 
