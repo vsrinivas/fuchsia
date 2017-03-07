@@ -699,26 +699,33 @@ static void demo_draw(struct demo *demo) {
     vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
     vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
 
-    // Get the index of the next available swapchain image:
-    err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
-                                      demo->image_acquired_semaphores[demo->frame_index], demo->fences[demo->frame_index],
-                                      &demo->current_buffer);
+    while (true) {
+        // Get the index of the next available swapchain image:
+        err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, 5000,
+                                          demo->image_acquired_semaphores[demo->frame_index], demo->fences[demo->frame_index],
+                                          &demo->current_buffer);
 
-    if (err == VK_ERROR_OUT_OF_DATE_KHR) {
-        // demo->swapchain is out of date (e.g. the window was resized) and
-        // must be recreated:
-        demo->frame_index += 1;
-        demo->frame_index %= FRAME_LAG;
+        if (err == VK_ERROR_OUT_OF_DATE_KHR) {
+            // demo->swapchain is out of date (e.g. the window was resized) and
+            // must be recreated:
+            demo->frame_index += 1;
+            demo->frame_index %= FRAME_LAG;
 
-        demo_resize(demo);
-        demo_draw(demo);
-        return;
-    } else if (err == VK_SUBOPTIMAL_KHR) {
-        // demo->swapchain is not as optimal as it could be, but the platform's
-        // presentation engine will still present the image correctly.
-    } else {
-        assert(!err);
+            demo_resize(demo);
+            demo_draw(demo);
+            return;
+        } else if (err == VK_SUBOPTIMAL_KHR) {
+            // demo->swapchain is not as optimal as it could be, but the platform's
+            // presentation engine will still present the image correctly.
+        } else if (err == VK_TIMEOUT) {
+            printf("timed out waiting for swapchain image acquire, retrying\n");
+            continue;
+        } else {
+            assert(!err);
+            break;
+        }
     }
+
     // Wait for the image acquired semaphore to be signaled to ensure
     // that the image won't be rendered to until the presentation
     // engine has fully released ownership to the application, and it is
