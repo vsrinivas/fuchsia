@@ -26,6 +26,7 @@ EFI_DISK_IMG_PATH = "installer/efi_fs.lz4"
 DIR_EFI = "EFI"
 DIR_EFI_BOOT = "EFI/BOOT"
 FILE_KERNEL = "magenta.bin"
+FILE_KERNEL_RD = "ramdisk.bin"
 
 def compress_file(lz4_path, source, dest, working_dir):
   lz4_cmd = [lz4_path, "-4", "-B4", source, dest]
@@ -107,43 +108,51 @@ parser.add_argument('--kernel', action='store', required=False,
                     be assumed to be relative to --build_dir""")
 parser.add_argument('--efi_loader', action='store', required=False,
                     help="""Location of the kernel bootloader loaded by EFI
-                    (usually boot{arch}.efi). If not supplied this be assumed
+                    (usually boot{arch}.efi). If not supplied this is assumed
                     to be relative to --build_dir""")
 parser.add_argument('--efi_disk', action='store', required=True,
                     help="Location of file to use to create the ESP disk image")
 parser.add_argument('--arch', action='store', required=False,
                     help="""The CPU architecture of the device, if not supplied
                     x86-64 is assumed""")
+parser.add_argument('--bootdata', action='store', required=False,
+                    help="""The kernel RAM disk file, if not supplied this is
+                    assumed to be relative to --build_dir""")
 
 args = parser.parse_args()
 disk_path_efi = args.efi_disk
 bootloader = args.efi_loader
 kernel = args.kernel
 build_dir_magenta = args.build_dir_magenta
+bootdata = args.bootdata
 
-# it should be the case that the user provides either bootloader and kernel
-# path OR provides neither of them and instead provides a magenta build
-# directory. The final option is that none of the three args are provided and
-# instead we rely on the fuchsia build directory
-if ((bootloader is None or kernel is None) and
-    (bootloader is not None or kernel is not None)):
-  print """Please supply both kernel and EFI loader or supply none, and supply
-  build_dir_magenta instead"""
-  sys.exit(-1)
-elif (bootloader is not None and build_dir_magenta is not None):
-  print """If providing build_dir_magenta, please do not provide EFI loader and
-  kernel arguments"""
-  sys.exit(-1)
-elif (bootloader is None and build_dir_magenta is None):
-  print """You must supply the magenta build dir or paths to kernel and EFI
-  loader binaries"""
-  sys.exit(-1)
-
-# if the bootloader path is null, so is the kernel based on our conditional
-# check just above
+# if bootloader was not supplied, find it relative to the magenta build dir
 if bootloader is None:
-  bootloader = os.path.join(build_dir_magenta, "bootloader", "bootx64.efi")
-  kernel = os.path.join(build_dir_magenta, "magenta.bin")
+  if build_dir_magenta is not None:
+    bootloader = os.path.join(build_dir_magenta, "bootloader", "bootx64.efi")
+  else:
+    print """You must supply either the magenta build dir or the path to
+    the EFI bootloader"""
+    sys.exit(-1)
+
+# if the kernel was not supplied, find it relative to the magenta build dir
+if kernel is None:
+  if build_dir_magenta is not None:
+    kernel = os.path.join(build_dir_magenta, "magenta.bin")
+  else:
+    print """You must supply either the magenta build dir or the path to
+    the kernel"""
+    sys.exit(-1)
+
+# if the kernel ram disk was not supplied, find it relative to the magenta build
+# dir
+if bootdata is None:
+  if build_dir_magenta is not None:
+    bootdata = os.path.join(build_dir_magenta, "bootdata.bin")
+  else:
+    print """You must supply either the magenta build dir or the path
+    to the bootdata.bin"""
+    sys.exit(-1)
 
 if not os.path.exists(bootloader):
   print """EFI loader does not exist at path %s, please check the path and try
@@ -216,7 +225,9 @@ if not (mkdir_fat(mmd_path, disk_path_efi, DIR_EFI, working_dir) and
 
 if not (cp_fat(mcopy_path, disk_path_efi, bootloader, bootloader_remote_path,
                working_dir) and
-        cp_fat(mcopy_path, disk_path_efi, kernel, FILE_KERNEL, working_dir)):
+        cp_fat(mcopy_path, disk_path_efi, kernel, FILE_KERNEL, working_dir) and
+        cp_fat(mcopy_path, disk_path_efi, bootdata, FILE_KERNEL_RD,
+               working_dir)):
   sys.exit(-1)
 
 compressed_disk_efi = "%s.lz4" % disk_path_efi
@@ -230,7 +241,8 @@ with open(aux_manifest, "w+") as manifest_file:
   manifest_file.write("%s=%s\n" % (FUCHSIA_DISK_IMG_PATH, compressed_disk))
   manifest_file.write("%s=%s\n" % (EFI_DISK_IMG_PATH, compressed_disk_efi))
 
-mkfs_cmd = [mkbootfs_path, "-c", "-o", out_file, aux_manifest, primary_manifest]
+mkfs_cmd = [mkbootfs_path, "-c", "-o", out_file, bootdata, aux_manifest,
+            primary_manifest]
 
 print "Creating installer bootfs"
 try:
