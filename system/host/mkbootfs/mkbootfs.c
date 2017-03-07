@@ -591,7 +591,7 @@ int main(int argc, char **argv) {
             output_file = argv[1];
             argc--;
             argv++;
-        } else if (!strcmp(cmd,"-h")) {
+        } else if (!strcmp(cmd,"-h") || !strcmp(cmd, "--help")) {
             fprintf(stderr, "usage: mkbootfs [-v] [-o <fsimage>] <manifests>...\n");
             return 0;
         } else if (!strcmp(cmd,"-c")) {
@@ -619,9 +619,11 @@ int main(int argc, char **argv) {
                 path[len - 1] = 0;
             }
             if (import_directory("", path, &hsz, &fs) < 0) {
+                fprintf(stderr, "failed to import directory %s\n", path);
                 return -1;
             }
         } else if (import_file(path, &hsz, &fs, fs.first ? &postdata : &predata) < 0) {
+            fprintf(stderr, "failed to import file %s\n", path);
             return -1;
         }
     }
