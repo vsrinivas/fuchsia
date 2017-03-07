@@ -13,8 +13,12 @@ namespace moterm {
 // Ledger-backed store for terminal history.
 class History {
  public:
-  History(ledger::PagePtr page);
+  History();
   ~History();
+
+  // TODO(ppi): drop this once FW-97 is fixed, at which point the PagePtr can be
+  // just passed in the constructor.
+  void Initialize(ledger::PagePtr page);
 
   // Retrieves the list of history commands, ordered from oldest to newest.
   void ReadEntries(std::function<void(std::vector<std::string>)> callback);
@@ -23,11 +27,16 @@ class History {
   void AddEntry(const std::string& entry);
 
  private:
+  void DoReadEntries(std::function<void(std::vector<std::string>)> callback);
+
   // Ensures that the number of commands in terminal history does not exceed the
   // maximum size by removing the oldest entries.
   void Trim();
 
+  bool initialized_ = false;
   ledger::PagePtr page_;
+  std::vector<std::function<void(std::vector<std::string>)>>
+      pending_read_entries_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(History);
 };

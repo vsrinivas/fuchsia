@@ -86,12 +86,39 @@ void GetEntries(ledger::PageSnapshotPtr snapshot,
 
 }  // namespace
 
-History::History(ledger::PagePtr page) : page_(std::move(page)) {}
-
+History::History() {}
 History::~History() {}
+
+void History::Initialize(ledger::PagePtr page) {
+  FTL_DCHECK(!initialized_);
+  initialized_ = true;
+  page_ = std::move(page);
+
+  for (auto& pending_callback : pending_read_entries_) {
+    DoReadEntries(std::move(pending_callback));
+  }
+  pending_read_entries_.clear();
+}
 
 void History::ReadEntries(
     std::function<void(std::vector<std::string>)> callback) {
+  if (!initialized_) {
+    pending_read_entries_.push_back(std::move(callback));
+    return;
+  }
+
+  DoReadEntries(std::move(callback));
+}
+
+void History::DoReadEntries(
+    std::function<void(std::vector<std::string>)> callback) {
+  if (!page_) {
+    FTL_LOG(WARNING)
+        << "Ignoring a call to retrieve history. (running outside of story?)";
+    callback({});
+    return;
+  }
+
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), nullptr,
                      LogLedgerErrorCallback("GetSnapshot"));
@@ -113,6 +140,10 @@ void History::ReadEntries(
 }
 
 void History::AddEntry(const std::string& entry) {
+  if (!page_) {
+    return;
+  }
+
   page_->Put(MakeKey(), ToArray(entry), LogLedgerErrorCallback("Put"));
   Trim();
 }

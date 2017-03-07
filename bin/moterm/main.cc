@@ -4,6 +4,7 @@
 
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/moterm/history.h"
 #include "apps/moterm/ledger_helpers.h"
 #include "apps/moterm/moterm_params.h"
@@ -18,28 +19,16 @@
 
 namespace moterm {
 
-namespace {
-ledger::PagePtr GetPageProxyForRequest(
-    fidl::InterfaceRequest<ledger::Page>* request) {
-  ledger::PagePtr page;
-  *request = page.NewRequest();
-  return page;
-}
-
-}  // namespace
-
 class App : public modular::Module {
  public:
   App(MotermParams params)
       : params_(std::move(params)),
-        application_context_(
-            app::ApplicationContext::CreateFromStartupInfo()),
+        application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         view_provider_service_(application_context_.get(),
                                [this](mozart::ViewContext view_context) {
                                  return MakeView(std::move(view_context));
                                }),
-        module_binding_(this),
-        history_(GetPageProxyForRequest(&history_page_request_)) {
+        module_binding_(this) {
     tracing::InitializeTracer(application_context_.get(), {});
 
     application_context_->outgoing_services()->AddService<modular::Module>(
@@ -47,6 +36,15 @@ class App : public modular::Module {
           FTL_DCHECK(!module_binding_.is_bound());
           module_binding_.Bind(std::move(request));
         });
+
+    // TODO(ppi): drop this once FW-97 is fixed or moterm no longer supports
+    // view provider service.
+    story_marker_ = application_context_
+                        ->ConnectToEnvironmentService<modular::StoryMarker>();
+    story_marker_.set_connection_error_handler([this] {
+      history_.Initialize(nullptr);
+      story_marker_.reset();
+    });
   }
 
   ~App() {}
@@ -56,8 +54,7 @@ class App : public modular::Module {
       fidl::InterfaceHandle<modular::Story> story_handle,
       fidl::InterfaceHandle<modular::Link> link_handle,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services)
-      override {
+      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     fidl::InterfacePtr<modular::Story> story;
     story.Bind(std::move(story_handle));
 
@@ -73,12 +70,16 @@ class App : public modular::Module {
           LogLedgerError(status, "GetLedger");
         }));
 
+    ledger::PagePtr history_page;
     ledger::Ledger* ledger_ptr = ledger.get();
     ledger_ptr->GetRootPage(
-        std::move(history_page_request_),
+        history_page.NewRequest(),
         ftl::MakeCopyable([ledger = std::move(ledger)](ledger::Status status) {
           LogLedgerError(status, "GetRootPage");
         }));
+
+    story_marker_.reset();
+    history_.Initialize(std::move(history_page));
   }
 
   void Stop(const StopCallback& done) override { done(); }
@@ -94,9 +95,9 @@ class App : public modular::Module {
 
   MotermParams params_;
   std::unique_ptr<app::ApplicationContext> application_context_;
+  modular::StoryMarkerPtr story_marker_;
   mozart::ViewProviderService view_provider_service_;
   fidl::Binding<modular::Module> module_binding_;
-  fidl::InterfaceRequest<ledger::Page> history_page_request_;
   // Ledger-backed store for terminal history.
   History history_;
 
