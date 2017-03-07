@@ -12,7 +12,6 @@
 #include <string.h>
 #include <trace.h>
 
-#include <kernel/auto_lock.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_address_region.h>
 

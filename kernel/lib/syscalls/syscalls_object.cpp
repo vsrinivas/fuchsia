@@ -8,8 +8,6 @@
 #include <inttypes.h>
 #include <trace.h>
 
-#include <kernel/auto_lock.h>
-
 #include <magenta/handle_owner.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>

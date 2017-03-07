@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>

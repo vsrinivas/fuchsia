@@ -16,7 +16,6 @@
 
 #include <arch/arch_ops.h>
 
-#include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 
