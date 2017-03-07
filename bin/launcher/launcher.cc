@@ -14,8 +14,6 @@
 
 namespace {
 
-constexpr char kKronkPath[] = "/system/apps/agents/kronk";
-
 // TODO(rosswang): determine if lifecycle controls are needed
 class LauncherApp : public maxwell::Launcher {
  public:
@@ -68,10 +66,7 @@ class LauncherApp : public maxwell::Launcher {
     StartAgent("file:///system/apps/agents/module_suggester.dartx");
     StartAgent("file:///system/apps/agents/music_brainz.dartx");
 
-    // Only start Kronk if it exists.
-    if (files::IsFile(kKronkPath)) {
-      StartAgent(kKronkPath);
-    }
+    StartAgent("https://storage.googleapis.com/maxwell-agents/kronk");
   }
 
   void RegisterAnonymousProposalPublisher(
