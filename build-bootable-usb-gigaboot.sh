@@ -19,6 +19,15 @@ if [[ $OSTYPE != "linux-gnu" ]]; then
   exit 1
 fi
 
+FUCHSIA_CONFIG="debug"
+
+while getopts "r" opt; do
+    case "${opt}" in
+        r) FUCHSIA_CONFIG="release" ;;
+        *) usage ;;
+    esac
+done
+
 SCRIPT_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)
 FUCHSIA_DIR="$SCRIPT_DIR/.."
 
@@ -118,15 +127,17 @@ MOUNT_PATH=`mktemp -d`
 sudo mount "$EFI_PARTITION_PATH" "$MOUNT_PATH"
 trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted succesfully\"" INT TERM EXIT
 
+USER_BOOTFS_PATH="${FUCHSIA_DIR}/out/${FUCHSIA_CONFIG}-x86-64/user.bootfs"
+
 sudo mkdir -p "${MOUNT_PATH}/EFI/BOOT"
 echo -n "Copying Bootloader..."
-sudo cp "$FUCHSIA_DIR/magenta/bootloader/out/osboot.efi" "${MOUNT_PATH}/EFI/BOOT/BOOTX64.EFI"
+sudo cp "$FUCHSIA_DIR/out/build-magenta/build-magenta-pc-x86-64/bootloader/bootx64.efi" "${MOUNT_PATH}/EFI/BOOT/BOOTX64.EFI"
 echo " SUCCESS"
 echo -n "Copying magenta.bin..."
 sudo cp "$FUCHSIA_DIR/magenta/build-magenta-pc-x86-64/magenta.bin" "${MOUNT_PATH}/magenta.bin"
 echo " SUCCESS"
 echo -n "Copying user.bootfs..."
-sudo cp "$FUCHSIA_DIR/out/debug-x86-64/user.bootfs" "${MOUNT_PATH}/ramdisk.bin"
+sudo cp "${USER_BOOTFS_PATH}" "${MOUNT_PATH}/ramdisk.bin"
 echo " SUCCESS"
 echo -n "Syncing EFI partition (this may take a minute)..."
 pushd "$MOUNT_PATH" > /dev/null
