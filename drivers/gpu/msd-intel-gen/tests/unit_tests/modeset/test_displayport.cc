@@ -86,6 +86,13 @@ public:
             ((request->data[0] & 0xf) << 16) | (request->data[1] << 8) | request->data[2];
         uint32_t dp_size = request->data[3] + 1;
 
+        if (ShouldSendDefer()) {
+            // Send an AUX_DEFER reply to exercise handling of them.
+            reply->size = 1;
+            reply->data[0] = DisplayPort::DP_REPLY_AUX_DEFER << 4;
+            return;
+        }
+
         if (dp_cmd == 0) {
             // I2C write
             assert(request->size == 4 + dp_size);
@@ -112,7 +119,24 @@ public:
     ExampleEdidData* get_edid_data() { return i2c_.get_edid_data(); }
 
 private:
+    // Number of AUX DEFER replies we should send before we send a real
+    // non-defer reply.
+    static constexpr unsigned kDefersToSend = 7;
+
+    bool ShouldSendDefer()
+    {
+        if (defer_count_ == kDefersToSend) {
+            defer_count_ = 0;
+            return false;
+        }
+        ++defer_count_;
+        return true;
+    }
+
     DdcI2cBus i2c_;
+    // Number of AUX DEFER replies sent since the last non-defer reply (or
+    // since the start).
+    unsigned defer_count_ = 0;
 };
 
 uint32_t SetBits(uint32_t reg_value, uint32_t shift, uint32_t mask, uint32_t field_value)

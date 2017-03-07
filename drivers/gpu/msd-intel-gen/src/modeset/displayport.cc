@@ -63,6 +63,10 @@ private:
     // Send a DisplayPort Aux message and receive the synchronous reply
     // message.
     bool SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply);
+    // This is like SendDpAuxMsg(), but it also checks the header field in
+    // the reply for whether the request was successful, and it retries the
+    // request if the sink device returns an AUX_DEFER reply.
+    bool SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessage* reply);
     // Read a single chunk, upto the DisplayPort Aux message size limit.
     bool I2cReadChunk(uint32_t addr, uint8_t* buf, uint32_t size_in, uint32_t* size_out);
 
@@ -109,6 +113,63 @@ bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
     return DRETF(false, "DP aux: No reply after %d tries", kNumTries);
 }
 
+bool I2cOverDpAux::SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessage* reply)
+{
+    // If the DisplayPort sink device isn't ready to handle an Aux message,
+    // it can return an AUX_DEFER reply, which means we should retry the
+    // request.  The spec says "A DP Source device is required to retry at
+    // least seven times upon receiving AUX_DEFER before giving up the AUX
+    // transaction", from section 2.7.7.1.5.6.1 in v1.3.  (AUX_DEFER
+    // replies were in earlier versions, but v1.3 clarified the number of
+    // retries required.)
+    const int kNumTries = 8;
+
+    for (int tries = 0; tries < kNumTries; ++tries) {
+        if (!SendDpAuxMsg(request, reply)) {
+            // We do not retry if sending the raw message fails with a
+            // reason such as a timeout.
+            return false;
+        }
+
+        // Read the header byte.  This contains a 4-bit status field and 4
+        // bits of zero padding.  The status field is in the upper bits
+        // because it is sent across the wire first and because DP Aux uses
+        // big endian bit ordering.
+        if (reply->size < 1)
+            return DRETF(false, "DP aux: Unexpected zero-size reply (header byte missing)");
+        uint8_t header_byte = reply->data[0];
+        uint8_t padding = header_byte & 0xf;
+        uint8_t status = header_byte >> 4;
+        // Sanity check: The padding should be zero.  If it's not, we
+        // shouldn't return an error, in case this space gets used for some
+        // later extension to the protocol.  But report it, in case this
+        // indicates some problem.
+        if (padding)
+            magma::log(magma::LOG_WARNING,
+                       "DP aux: Reply header padding is non-zero (header byte: 0x%x)", header_byte);
+
+        switch (status) {
+            case DisplayPort::DP_REPLY_AUX_ACK:
+                // The AUX_ACK implies that we got an I2C ACK too.
+                return true;
+            case DisplayPort::DP_REPLY_AUX_DEFER:
+                // Go around the loop again to retry.
+                continue;
+            case DisplayPort::DP_REPLY_AUX_NACK:
+                return DRETF(false, "DP aux: Reply was not an ack (got AUX_NACK)");
+            case DisplayPort::DP_REPLY_I2C_NACK:
+                return DRETF(false, "DP aux: Reply was not an ack (got I2C_NACK)");
+            case DisplayPort::DP_REPLY_I2C_DEFER:
+                // TODO(MA-150): Implement handling of I2C_DEFER.
+                return DRETF(false, "DP aux: Received I2C_DEFER (not implemented)");
+            default:
+                // We got a reply that is not defined by the DisplayPort spec.
+                return DRETF(false, "DP aux: Unrecognized reply (header byte: 0x%x)", header_byte);
+        }
+    }
+    return DRETF(false, "DP aux: Received too many AUX DEFERs (%d)", kNumTries);
+}
+
 bool I2cOverDpAux::I2cRead(uint32_t addr, uint8_t* buf, uint32_t size)
 {
     while (size > 0) {
@@ -133,13 +194,10 @@ bool I2cOverDpAux::I2cReadChunk(uint32_t addr, uint8_t* buf, uint32_t size_in, u
 {
     DpAuxMessage msg;
     DpAuxMessage reply;
-    if (!SetDpAuxHeader(&msg, addr, /* is_read= */ true, size_in) || !SendDpAuxMsg(&msg, &reply)) {
+    if (!SetDpAuxHeader(&msg, addr, /* is_read= */ true, size_in) ||
+        !SendDpAuxMsgWithRetry(&msg, &reply)) {
         return false;
     }
-    if (reply.size == 0)
-        return DRETF(false, "DP aux read: Reply should contain 1 header byte");
-    if (reply.data[0] != 0)
-        return DRETF(false, "DP aux read: Reply was not an ack");
     uint32_t bytes_read = reply.size - 1;
     if (bytes_read > size_in)
         return DRETF(false, "DP aux read: Reply was larger than requested");
@@ -159,14 +217,12 @@ bool I2cOverDpAux::I2cWrite(uint32_t addr, const uint8_t* buf, uint32_t size)
         return false;
     memcpy(&msg.data[4], buf, size);
     msg.size = size + 4;
-    if (!SendDpAuxMsg(&msg, &reply))
+    if (!SendDpAuxMsgWithRetry(&msg, &reply))
         return false;
     // TODO(MA-150): Handle the case where the hardware did a short write,
     // for which we could send the remaining bytes.
     if (reply.size != 1)
         return DRETF(false, "DP aux write: Unexpected reply size");
-    if (reply.data[0] != 0)
-        return DRETF(false, "DP aux write: Reply was not an ack");
     return true;
 }
 

@@ -50,6 +50,15 @@ public:
     // This is the I2C address for DDC, for fetching EDID data.
     static constexpr int kDdcI2cAddress = 0x50;
 
+    // 4-bit statuses in Aux channel reply messages.
+    enum {
+        DP_REPLY_AUX_ACK = 0,
+        DP_REPLY_AUX_NACK = 1,
+        DP_REPLY_AUX_DEFER = 2,
+        DP_REPLY_I2C_NACK = 4,
+        DP_REPLY_I2C_DEFER = 8,
+    };
+
     static bool FetchEdidData(RegisterIo* dev, uint32_t ddi_number, uint8_t* buf, uint32_t size);
     static void FetchAndCheckEdidData(RegisterIo* reg_io);
 };
