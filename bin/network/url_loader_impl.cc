@@ -87,6 +87,9 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
     }
   }
 
+  buffer_response_ =
+      request->response_body_mode == URLRequest::ResponseBodyMode::BUFFER;
+
   asio::io_service io_service;
   bool redirect = false;
 

@@ -10,8 +10,7 @@
 
 namespace network {
 
-SocketUploadElementReader::SocketUploadElementReader(
-    mx::socket socket)
+SocketUploadElementReader::SocketUploadElementReader(mx::socket socket)
     : socket_(std::move(socket)) {}
 
 SocketUploadElementReader::~SocketUploadElementReader() {}
@@ -24,7 +23,7 @@ mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
     result = socket_.read(0u, buf_.data(), num_bytes, &num_bytes);
     if (result == ERR_SHOULD_WAIT) {
       result = socket_.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
-                              MX_TIME_INFINITE, nullptr);
+                                MX_TIME_INFINITE, nullptr);
       if (result == NO_ERROR)
         continue;  // retry now that the socket is ready
     }
@@ -36,7 +35,7 @@ mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
         result = NO_ERROR;
         break;
       }
-      FTL_LOG(ERROR) << "SocketUploadELementReader: result=" << result;
+      FTL_LOG(ERROR) << "SocketUploadElementReader: result=" << result;
       break;
     }
 

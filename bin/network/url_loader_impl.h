@@ -43,6 +43,7 @@ class URLLoaderImpl : public URLLoader {
 
   Coordinator* coordinator_;
   Callback callback_;
+  bool buffer_response_;
   // bool auto_follow_redirects_;
   url::GURL current_url_;
   URLLoaderStatusPtr last_status_;

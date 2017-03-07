@@ -48,6 +48,8 @@ class URLLoaderImpl::HTTPClient {
   void Start(const std::string& server, const std::string& port);
 
  private:
+  using TransferBuffer = char[64 * 1024];
+
   void OnResolve(const asio::error_code& err,
                  tcp::resolver::iterator endpoint_iterator);
   bool OnVerifyCertificate(bool preverified, asio::ssl::verify_context& ctx);
@@ -55,12 +57,14 @@ class URLLoaderImpl::HTTPClient {
   void OnHandShake(const asio::error_code& err);
   void OnWriteRequest(const asio::error_code& err, std::size_t transferred);
   void OnReadStatusLine(const asio::error_code& err);
-  mx_status_t SendBody();
+  mx_status_t SendStreamedBody();
+  mx_status_t SendBufferedBody();
   void ParseHeaderField(const std::string& header,
                         std::string* name,
                         std::string* value);
   void OnReadHeaders(const asio::error_code& err);
-  void OnReadBody(const asio::error_code& err);
+  void OnStreamBody(const asio::error_code& err);
+  void OnBufferBody(const asio::error_code& err);
 
   void SendResponse(URLResponsePtr response);
   void SendError(int error_code);
@@ -82,7 +86,8 @@ class URLLoaderImpl::HTTPClient {
   std::string http_version_;
   std::string status_message_;
 
-  mx::socket response_body_stream_;
+  URLResponsePtr response_;          // used for buffered responses
+  mx::socket response_body_stream_;  // used for streamed responses (default)
 };
 
 template <typename T>
@@ -225,7 +230,7 @@ bool URLLoaderImpl::HTTPClient<T>::OnVerifyCertificate(
   char subject_name[256];
   X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
   X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-  // FTL_LOG(INFO) << "Verifying " << subject_name;
+// FTL_LOG(INFO) << "Verifying " << subject_name;
 
 #ifdef NETWORK_SERVICE_HTTPS_CERT_HACK
   preverified = true;
@@ -333,14 +338,14 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(
 }
 
 template <typename T>
-mx_status_t URLLoaderImpl::HTTPClient<T>::SendBody() {
+mx_status_t URLLoaderImpl::HTTPClient<T>::SendStreamedBody() {
   size_t size = response_buf_.size();
 
   if (size > 0) {
     std::istream response_stream(&response_buf_);
     size_t done = 0;
     do {
-      char buffer[64 * 1024];
+      TransferBuffer buffer;
       size_t todo = std::min(sizeof(buffer), size - done);
       FTL_DCHECK(todo > 0);
       response_stream.read(buffer, todo);
@@ -358,11 +363,54 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendBody() {
         // If the other end closes the socket, ERR_REMOTE_CLOSED
         // can happen.
         if (result != ERR_REMOTE_CLOSED)
-          FTL_LOG(ERROR) << "SendBody: result=" << result;
+          FTL_LOG(ERROR) << "SendStreamedBody: result=" << result;
         return result;
       }
       done += written;
     } while (done < size);
+  }
+  return NO_ERROR;
+}
+
+template <typename T>
+mx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
+  size_t size = response_buf_.size();
+
+  if (size > 0) {
+    // TODO(rosswang): For now, wait until we have the entire body to begin
+    // writing to the VMO so that we know the size. Eventually to support larger
+    // VMOs without burdening the memory unduly, perhaps we'll want to create
+    // the VMO earlier and resize it as we buffer more to take advantage of
+    // VMO virtualization.
+    mx::vmo vmo;
+    mx_status_t result = mx::vmo::create(size, 0u, &vmo);
+    if (result != NO_ERROR) {
+      FTL_LOG(ERROR) << "SendBufferedBody: Unable to create vmo: " << result;
+      return result;
+    }
+
+    std::istream response_stream(&response_buf_);
+    size_t done = 0;
+    do {
+      TransferBuffer buffer;
+      size_t todo = std::min(sizeof(buffer), size - done);
+      FTL_DCHECK(todo > 0);
+      response_stream.read(buffer, todo);
+      size_t written;
+      result = vmo.write(buffer, done, todo, &written);
+      if (result != NO_ERROR) {
+        FTL_LOG(ERROR) << "SendBufferedBody: result=" << result;
+        return result;
+      }
+      if (written < todo) {
+        FTL_LOG(WARNING) << "mx::vmo::write wrote " << written
+                         << " bytes instead of " << todo << " bytes.";
+      }
+
+      done += written;
+    } while (done < size);
+
+    response_->body->set_buffer(std::move(vmo));
   }
   return NO_ERROR;
 }
@@ -416,29 +464,37 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
         response->headers.push_back(std::move(hdr));
       }
 
-      mx::socket consumer;
-      mx::socket producer;
-      mx_status_t status =
-          mx::socket::create(0u, &producer, &consumer);
-      if (status != NO_ERROR) {
-        FTL_LOG(ERROR) << "Unable to create socket:"
-                       << mx_status_get_string(status);
-        return;
-      }
-      response_body_stream_ = std::move(producer);
       response->body = network::URLBody::New();
-      response->body->set_stream(std::move(consumer));
 
-      loader_->SendResponse(std::move(response));
+      if (loader_->buffer_response_) {
+        response_ = std::move(response);
 
-      if (SendBody() != NO_ERROR) {
-        response_body_stream_.reset();
-        return;
+        asio::async_read(socket_, response_buf_,
+                         std::bind(&HTTPClient<T>::OnBufferBody, this,
+                                   std::placeholders::_1));
+      } else {
+        mx::socket consumer;
+        mx::socket producer;
+        mx_status_t status = mx::socket::create(0u, &producer, &consumer);
+        if (status != NO_ERROR) {
+          FTL_LOG(ERROR) << "Unable to create socket:"
+                         << mx_status_get_string(status);
+          return;
+        }
+        response_body_stream_ = std::move(producer);
+        response->body->set_stream(std::move(consumer));
+
+        loader_->SendResponse(std::move(response));
+
+        if (SendStreamedBody() != NO_ERROR) {
+          response_body_stream_.reset();
+          return;
+        }
+
+        asio::async_read(socket_, response_buf_, asio::transfer_at_least(1),
+                         std::bind(&HTTPClient<T>::OnStreamBody, this,
+                                   std::placeholders::_1));
       }
-
-      asio::async_read(
-          socket_, response_buf_, asio::transfer_at_least(1),
-          std::bind(&HTTPClient<T>::OnReadBody, this, std::placeholders::_1));
     }
   } else {
     FTL_LOG(ERROR) << "ReadHeaders: " << err.message();
@@ -446,15 +502,26 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
 }
 
 template <typename T>
-void URLLoaderImpl::HTTPClient<T>::OnReadBody(const asio::error_code& err) {
-  if (!err && SendBody() == NO_ERROR) {
+void URLLoaderImpl::HTTPClient<T>::OnBufferBody(const asio::error_code& err) {
+  if (err) {
+    FTL_LOG(ERROR) << "OnBufferBody: " << err.message();
+  }
+
+  SendBufferedBody();
+
+  loader_->SendResponse(std::move(response_));
+}
+
+template <typename T>
+void URLLoaderImpl::HTTPClient<T>::OnStreamBody(const asio::error_code& err) {
+  if (!err && SendStreamedBody() == NO_ERROR) {
     asio::async_read(
         socket_, response_buf_, asio::transfer_at_least(1),
-        std::bind(&HTTPClient<T>::OnReadBody, this, std::placeholders::_1));
+        std::bind(&HTTPClient<T>::OnStreamBody, this, std::placeholders::_1));
   } else {
     // EOF is handled here.
     // TODO(toshik): print the error code if it is unexpected.
-    // FTL_LOG(INFO) << "OnReadBody: " << err.message();
+    // FTL_LOG(INFO) << "OnStreamBody: " << err.message();
     response_body_stream_.reset();
   }
 }
