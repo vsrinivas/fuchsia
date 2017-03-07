@@ -2,15 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "application/lib/app/application_context.h"
+#include "application/lib/app/connect.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/tests/mock_view_associate.h"
-#include "apps/mozart/src/view_manager/tests/view_manager_test_base.h"
-#include "lib/fidl/cpp/application/connect.h"
+#include "apps/mozart/src/view_manager/tests/test_with_message_loop.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+
+mozart::ViewManagerPtr view_manager_;
 
 namespace view_manager {
 namespace test {
+
+class ViewManagerEnvironment : public ::testing::Environment {
+ public:
+  virtual void SetUp() override {
+    mtl::MessageLoop message_loop;
+    auto application_context = app::ApplicationContext::CreateFromStartupInfo();
+
+    // Connect to view manager
+    auto view_manager =
+        application_context->ConnectToEnvironmentService<mozart::ViewManager>();
+    view_manager_ = mozart::ViewManagerPtr::Create(std::move(view_manager));
+  }
+};
 
 class MockViewListener : public mozart::ViewListener {
  public:
@@ -23,31 +39,11 @@ class MockViewListener : public mozart::ViewListener {
   }
 };
 
-class ViewManagerTest : public ViewManagerTestBase {
- public:
-  ViewManagerTest() {}
-  ~ViewManagerTest() override {}
-
-  void SetUp() override {
-    ViewManagerTestBase::SetUp();
-
-    // Connect to view manager
-    fidl::ConnectToService(shell(), "mojo:view_manager_service",
-                           view_manager_.NewRequest());
-  }
-
- protected:
-  mozart::ViewManagerPtr view_manager_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ViewManagerTest);
-};
-
-TEST_F(ViewManagerTest, CreateAViewManager) {
+TEST_F(TestWithMessageLoop, CreateAViewManager) {
   ASSERT_TRUE(view_manager_.is_bound());
 }
 
-TEST_F(ViewManagerTest, CreateAView) {
+TEST_F(TestWithMessageLoop, CreateAView) {
   // Create and bind a mock view listener
   mozart::ViewListenerPtr view_listener;
   MockViewListener mock_view_listener;
@@ -68,12 +64,12 @@ TEST_F(ViewManagerTest, CreateAView) {
   EXPECT_EQ(0, view_token_callback_invokecount);
   view->GetToken(view_token_callback);
 
-  KICK_MESSAGE_LOOP_WHILE(view_token_callback_invokecount != 1);
+  RUN_MESSAGE_LOOP_WHILE(view_token_callback_invokecount != 1);
 
   EXPECT_EQ(1, view_token_callback_invokecount);
 }
 
-TEST_F(ViewManagerTest, CreateAChildView) {
+TEST_F(TestWithMessageLoop, CreateAChildView) {
   // Create and bind a mock view listener for a parent view
   mozart::ViewListenerPtr parent_view_listener;
   MockViewListener parent_mock_view_listener;
@@ -121,12 +117,12 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   EXPECT_EQ(0, view_token_callback_invokecount);
   child_view->GetToken(view_token_callback);
 
-  KICK_MESSAGE_LOOP_WHILE(view_token_callback_invokecount != 1);
+  RUN_MESSAGE_LOOP_WHILE(view_token_callback_invokecount != 1);
 
   EXPECT_EQ(1, view_token_callback_invokecount);
 }
 
-TEST_F(ViewManagerTest, ConnectAMockViewAssociate) {
+TEST_F(TestWithMessageLoop, ConnectAMockViewAssociate) {
   // Create and bind a MockViewAssociate
   fidl::InterfaceHandle<mozart::ViewAssociate> associate;
   MockViewAssociate mock_view_associate;
@@ -141,12 +137,12 @@ TEST_F(ViewManagerTest, ConnectAMockViewAssociate) {
                                        view_associate_owner.NewRequest(),
                                        "test_view_associate");
 
-  KICK_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
+  RUN_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
 
   EXPECT_EQ(1, mock_view_associate.connect_invokecount);
 }
 
-TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
+TEST_F(TestWithMessageLoop, DisconnectAMockViewAssociate) {
   mozart::ViewAssociateOwnerPtr view_associate_owner;
   int owner_connection_error_callback_invokecount = 0;
 
@@ -172,7 +168,7 @@ TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
           owner_connection_error_callback_invokecount++;
         });
 
-    KICK_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
+    RUN_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
 
     EXPECT_EQ(1, mock_view_associate.connect_invokecount);
 
@@ -181,12 +177,12 @@ TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
 
   // mock_view_associate is out of scope, should be destroyed
   // we expect to get a connection error from the owner
-  KICK_MESSAGE_LOOP_WHILE(owner_connection_error_callback_invokecount != 1)
+  RUN_MESSAGE_LOOP_WHILE(owner_connection_error_callback_invokecount != 1);
 
   EXPECT_EQ(1, owner_connection_error_callback_invokecount);
 }
 
-TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
+TEST_F(TestWithMessageLoop, DisconnectAViewAssociateOwner) {
   // Create and bind a MockViewAssociate
   fidl::InterfaceHandle<mozart::ViewAssociate> associate;
   MockViewAssociate mock_view_associate;
@@ -212,7 +208,7 @@ TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
                                          view_associate_owner.NewRequest(),
                                          "test_view_associate_xyz");
 
-    KICK_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
+    RUN_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
 
     EXPECT_EQ(1, mock_view_associate.connect_invokecount);
 
@@ -221,10 +217,17 @@ TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
 
   // view_associate_owner is out of scope, should be destroyed
   // we expect to get a connection error from the view associate
-  KICK_MESSAGE_LOOP_WHILE(connection_error_callback_invokecount != 1)
+  RUN_MESSAGE_LOOP_WHILE(connection_error_callback_invokecount != 1);
 
   EXPECT_EQ(1, connection_error_callback_invokecount);
 }
 
 }  // namespace test
 }  // namespace view_manager
+
+int main(int argc, char** argv) {
+  testing::InitGoogleTest(&argc, argv);
+  view_manager::test::ViewManagerEnvironment env;
+  testing::AddGlobalTestEnvironment(&env);
+  return RUN_ALL_TESTS();
+}

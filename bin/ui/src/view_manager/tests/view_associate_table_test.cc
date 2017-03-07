@@ -4,24 +4,24 @@
 
 #include "apps/mozart/src/view_manager/view_associate_table.h"
 
-#include "apps/mozart/lib/view_framework/associates/mock_view_inspector.h"
+#include "apps/mozart/lib/view_associate_framework/mock_view_inspector.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/tests/mock_view_associate.h"
-#include "apps/mozart/src/view_manager/tests/view_manager_test_base.h"
+#include "apps/mozart/src/view_manager/tests/test_with_message_loop.h"
 
 namespace view_manager {
 namespace test {
 
-class ViewAssociateTableTest : public ViewManagerTestBase {
+class ViewAssociateTableTest : public TestWithMessageLoop {
  public:
   ViewAssociateTableTest() {}
   ~ViewAssociateTableTest() override {}
 
-  void SetUp() override { ViewManagerTestBase::SetUp(); }
+  void SetUp() override {}
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(ViewAssociateTableTest);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewAssociateTableTest);
 };
 
 TEST_F(ViewAssociateTableTest, RegisterViewAssociateThenCloseIt) {
@@ -45,13 +45,13 @@ TEST_F(ViewAssociateTableTest, RegisterViewAssociateThenCloseIt) {
     view_associate_table.RegisterViewAssociate(
         &mock_view_inspector, std::move(associate),
         view_associate_owner.NewRequest(), "test_view_associate");
-    KICK_MESSAGE_LOOP_WHILE(view_associate_table.associate_count() != 1);
+    RUN_MESSAGE_LOOP_WHILE(view_associate_table.associate_count() != 1);
     EXPECT_EQ((size_t)1, view_associate_table.associate_count());
   }
 
   // ViewAssociate has been destroyed (since it's out of scope now)
   // Make sure it's been removed
-  KICK_MESSAGE_LOOP_WHILE(view_associate_table.associate_count() != 0);
+  RUN_MESSAGE_LOOP_WHILE(view_associate_table.associate_count() != 0);
   EXPECT_EQ((size_t)0, view_associate_table.associate_count());
 }
 
