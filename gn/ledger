@@ -21,6 +21,10 @@
             "bootfs_path": "apps/ledger_benchmark_put"
         },
         {
+            "binary": "ledger_benchmark_sync",
+            "bootfs_path": "apps/ledger_benchmark_sync"
+        },
+        {
             "binary": "configure_ledger",
             "bootfs_path": "bin/configure_ledger"
         },
@@ -37,6 +41,10 @@
         {
             "file": "apps/ledger/benchmark/put/put.tspec",
             "bootfs_path": "data/ledger/benchmark/put.tspec"
+        },
+        {
+            "file": "apps/ledger/benchmark/sync/sync.tspec",
+            "bootfs_path": "data/ledger/benchmark/sync.tspec"
         }
     ]
 }
