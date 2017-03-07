@@ -2,7 +2,20 @@
 
 # Copyright 2016 The Fuchsia Authors
 
-if [ ! -e build-magenta-pc-x86-64/tools/sysgen ]; then
+PROJECTS=$(ls ./kernel/project)
+SYSGEN_PATH=""
+
+for PROJECT in $PROJECTS
+do
+    BASENAME=$(basename "$PROJECT")
+
+    # If there are multiple build directories, any one of them will do
+    if [ -e "build-${BASENAME%.*}/tools/sysgen" ]; then
+        SYSGEN_PATH="build-${BASENAME%.*}/tools/sysgen"
+    fi
+done
+
+if [ -z $SYSGEN_PATH ]; then
     echo "sysgen binary not found. did you build magenta tools?"
     echo "(ie., 'make tools')"
     exit $?
@@ -20,7 +33,7 @@ rm -f generated.trace.inc
 
 # generate again
 
-if ! ./build-magenta-pc-x86-64/tools/sysgen system/public/magenta/syscalls.sysgen; then
+if ! "./$SYSGEN_PATH" system/public/magenta/syscalls.sysgen; then
     echo $0 "failed"
     exit $?
 fi
