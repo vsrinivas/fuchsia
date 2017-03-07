@@ -37,6 +37,8 @@ class MediaPlayerNetProxy : public MediaServiceImpl::Product<MediaPlayer>,
 
   void Seek(int64_t position) override;
 
+  void SetReader(fidl::InterfaceHandle<SeekingReader> reader) override;
+
  private:
   MediaPlayerNetProxy(std::string device_name,
                       std::string service_name,

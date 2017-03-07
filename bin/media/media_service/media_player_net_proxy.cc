@@ -85,6 +85,11 @@ void MediaPlayerNetProxy::Seek(int64_t position) {
       Serializer::Serialize(MediaPlayerInMessage::Seek(position)));
 }
 
+void MediaPlayerNetProxy::SetReader(
+    fidl::InterfaceHandle<SeekingReader> reader) {
+  FTL_LOG(ERROR) << "Unsuppored method SetReader called";
+}
+
 void MediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
                                     const GetStatusCallback& callback) {
   status_publisher_.Get(version_last_seen, callback);

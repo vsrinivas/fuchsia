@@ -6,6 +6,7 @@ module media;
 
 import "apps/media/services/media_metadata.fidl";
 import "apps/media/services/problem.fidl";
+import "apps/media/services/seeking_reader.fidl";
 import "apps/media/services/timelines.fidl";
 
 // Plays media.
@@ -28,6 +29,9 @@ interface MediaPlayer {
   // sent in the previous callback.
   GetStatus(uint64 version_last_seen)
       => (uint64 version, MediaPlayerStatus status);
+
+  // Sets the reader.
+  SetReader(SeekingReader? reader);
 };
 
 // MediaPlayer status information.

@@ -20,7 +20,7 @@ import "apps/media/services/video_renderer.fidl";
 [ServiceName="media::MediaService"]
 interface MediaService {
   // Creates a player.
-  CreatePlayer(SeekingReader reader,
+  CreatePlayer(SeekingReader? reader,
                MediaRenderer? audio_renderer,
                MediaRenderer? video_renderer,
                MediaPlayer& player);

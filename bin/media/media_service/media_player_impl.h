@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <vector>
+#include <unordered_map>
 
 #include "apps/media/lib/flog/flog.h"
 #include "apps/media/lib/timeline/timeline.h"
@@ -24,7 +24,7 @@
 
 namespace media {
 
-// Fidl agent that renders streams from an origin specified by URL.
+// Fidl agent that renders streams derived from a SeekingReader.
 class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
                         public MediaPlayer {
  public:
@@ -47,15 +47,27 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
 
   void Seek(int64_t position) override;
 
+  void SetReader(fidl::InterfaceHandle<SeekingReader> reader_handle) override;
+
  private:
   static constexpr int64_t kMinimumLeadTime = Timeline::ns_from_ms(30);
 
   // Internal state.
   enum class State {
-    kWaiting,  // Waiting for some work to complete.
-    kFlushed,  // Paused with no data in the pipeline.
-    kPrimed,   // Paused with data in the pipeline.
-    kPlaying,  // Time is progressing.
+    kInactive,  // Waiting for a reader to be supplied.
+    kWaiting,   // Waiting for some work to complete.
+    kFlushed,   // Paused with no data in the pipeline.
+    kPrimed,    // Paused with data in the pipeline.
+    kPlaying,   // Time is progressing.
+  };
+
+  // Holds per-stream info. |renderer_handle_| remains set until the renderer is
+  // needed, at which point |renderer_handle_| is cleared and |sink_| is set.
+  // Media for which no renderer was supplied are not represented in
+  // |streams_by_medium_|.
+  struct Stream {
+    fidl::InterfaceHandle<MediaRenderer> renderer_handle_;
+    MediaSinkPtr sink_;
   };
 
   MediaPlayerImpl(fidl::InterfaceHandle<SeekingReader> reader_handle,
@@ -64,13 +76,15 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
                   fidl::InterfaceRequest<MediaPlayer> request,
                   MediaServiceImpl* owner);
 
-  // Creates sinks for enabled streams.
-  void CreateSinks(fidl::Array<MediaTypePtr> stream_types,
-                   fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
-                   fidl::InterfaceHandle<MediaRenderer> video_renderer_handle);
+  // If |reader_handle_| is set, creates the source and call |ConnectSinks|,
+  // otherwise does nothing.
+  void MaybeCreateSource();
+
+  // Creates sinks as needed and connects enabled streams.
+  void ConnectSinks(fidl::Array<MediaTypePtr> stream_types);
 
   // Prepares a stream.
-  void PrepareStream(fidl::InterfaceHandle<MediaRenderer> renderer_handle,
+  void PrepareStream(Stream* stream,
                      size_t index,
                      const MediaTypePtr& input_media_type,
                      const std::function<void()>& callback);
@@ -100,12 +114,14 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
       MediaTimelineControlPointStatusPtr status = nullptr);
 
   MediaServicePtr media_service_;
+  fidl::InterfaceHandle<SeekingReader> reader_handle_;
   MediaSourcePtr source_;
+  std::unordered_map<MediaTypeMedium, Stream> streams_by_medium_;
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;
   TimelineConsumerPtr timeline_consumer_;
-  std::vector<MediaSinkPtr> sinks_;
   netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub> responder_;
+  bool reader_transition_pending_ = false;
 
   // The state we're currently in.
   State state_ = State::kWaiting;
