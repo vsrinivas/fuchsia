@@ -6,7 +6,6 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <new.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
