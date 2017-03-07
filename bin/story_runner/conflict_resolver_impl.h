@@ -41,7 +41,9 @@ class ConflictResolverImpl : public ledger::ConflictResolverFactory,
       fidl::InterfaceRequest<ConflictResolver> request) override;
 
   // |ConflictResolver|
-  void Resolve(ledger::PageChangePtr change_left,
+  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
+               ledger::PageChangePtr change_left,
+               fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
                ledger::PageChangePtr change_right,
                fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
                const ResolveCallback& callback) override;
