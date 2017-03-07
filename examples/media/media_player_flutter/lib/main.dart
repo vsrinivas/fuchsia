@@ -189,7 +189,7 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
               icon: new Icon(Icons.arrow_back),
               iconSize: 60.0,
               onPressed: () {
-                _controller.close();
+                _controller.pause();
                 Navigator.of(context).pop();
               },
               color: Colors.white,

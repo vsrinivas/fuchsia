@@ -36,6 +36,7 @@ class MediaPlayerController extends ChangeNotifier {
   InterfacePair<SeekingReader> _reader;
 
   bool _active = false;
+  bool _remote = false;
   bool _loading = false;
   bool _playing = false;
   bool _ended = false;
@@ -62,12 +63,18 @@ class MediaPlayerController extends ChangeNotifier {
       throw new ArgumentError.notNull('uri');
     }
 
-    _close();
-    _active = true;
+    if (_active && !_remote) {
+      _updateLocalPlayer(uri);
+    } else {
+      _close();
+      _active = true;
+      _remote = false;
 
-    _createLocalPlayer(uri);
+      _createLocalPlayer(uri);
 
-    _handlePlayerStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
+      _handlePlayerStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
+    }
+
     notifyListeners();
   }
 
@@ -85,6 +92,7 @@ class MediaPlayerController extends ChangeNotifier {
 
     _close();
     _active = true;
+    _remote = true;
 
     _mediaService.createPlayerProxy(
       device,
@@ -112,6 +120,7 @@ class MediaPlayerController extends ChangeNotifier {
   /// Internal version of |close|.
   void _close() {
     _active = false;
+    _remote = false;
 
     if (_mediaPlayer != null) {
       _mediaPlayer.ctrl.close();
@@ -182,6 +191,22 @@ class MediaPlayerController extends ChangeNotifier {
       videoMediaRenderer.passHandle(),
       _mediaPlayer.ctrl.request()
     );
+  }
+
+  /// Changes the URI on a local player
+  void _updateLocalPlayer(Uri uri) {
+    _reader = new InterfacePair<SeekingReader>();
+
+    if (uri.scheme == 'file') {
+      _mediaService.createFileReader(uri.toFilePath(), _reader.passRequest());
+    } else {
+      _mediaService.createNetworkReader(uri.toString(), _reader.passRequest());
+    }
+
+    _mediaPlayer.setReader(_reader.passHandle());
+
+    _hasVideo = false;
+    _timelineFunction = null;
   }
 
   /// Gets the physical size of the video.
