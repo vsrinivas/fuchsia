@@ -31,12 +31,6 @@ FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
   context()->thread_count = 2;
   context()->thread_type = FF_THREAD_FRAME;
 
-  // Precalculate the PTS rate needed for packets, if possible.
-  if (context()->time_base.num != 0) {
-    pts_rate_ =
-        TimelineRate(context()->time_base.den, context()->time_base.num);
-  }
-
   // Determine the frame layout we will use.
   frame_buffer_size_ = LayoutFrame(
       PixelFormatFromAVPixelFormat(context()->pix_fmt),
