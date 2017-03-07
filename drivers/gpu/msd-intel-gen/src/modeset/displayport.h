@@ -50,7 +50,7 @@ public:
     // This is the I2C address for DDC, for fetching EDID data.
     static constexpr int kDdcI2cAddress = 0x50;
 
-    static bool FetchEdidData(RegisterIo* dev, uint8_t* buf, uint32_t size);
+    static bool FetchEdidData(RegisterIo* dev, uint32_t ddi_number, uint8_t* buf, uint32_t size);
     static void FetchAndCheckEdidData(RegisterIo* reg_io);
 };
 

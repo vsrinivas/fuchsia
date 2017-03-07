@@ -49,7 +49,9 @@ bool SetDpAuxHeader(DpAuxMessage* msg, uint32_t addr, bool is_read, uint32_t bod
 // This implements sending I2C read and write requests over DisplayPort.
 class I2cOverDpAux {
 public:
-    I2cOverDpAux(RegisterIo* reg_io) : reg_io_(reg_io) {}
+    I2cOverDpAux(RegisterIo* reg_io, uint32_t ddi_number) : reg_io_(reg_io), ddi_number_(ddi_number)
+    {
+    }
 
     // Send an I2C read request.  If this fails to read the full
     // |size| bytes into |buf|, it returns false for failure.
@@ -65,25 +67,29 @@ private:
     bool I2cReadChunk(uint32_t addr, uint8_t* buf, uint32_t size_in, uint32_t* size_out);
 
     RegisterIo* reg_io_;
+    uint32_t ddi_number_;
 };
 
 bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply)
 {
+    uint32_t control_reg = registers::DdiAuxControl::GetOffset(ddi_number_);
+    uint32_t data_reg = registers::DdiAuxData::GetOffset(ddi_number_);
+
     // Write the outgoing message to the hardware.
     DASSERT(request->size <= DpAuxMessage::kMaxTotalSize);
     for (uint32_t offset = 0; offset < request->size; offset += 4) {
-        reg_io_->Write32(registers::DdiAuxData::kOffset + offset, request->GetPackedWord(offset));
+        reg_io_->Write32(data_reg + offset, request->GetPackedWord(offset));
     }
 
     // Set kSendBusyBit to initiate the transaction.
-    reg_io_->Write32(registers::DdiAuxControl::kOffset,
+    reg_io_->Write32(control_reg,
                      registers::DdiAuxControl::kSendBusyBit | registers::DdiAuxControl::kFlags |
                          (request->size << registers::DdiAuxControl::kMessageSizeShift));
 
     // Poll for the reply message.
     const int kNumTries = 10000;
     for (int tries = 0; tries < kNumTries; ++tries) {
-        uint32_t status = reg_io_->Read32(registers::DdiAuxControl::kOffset);
+        uint32_t status = reg_io_->Read32(control_reg);
         if ((status & registers::DdiAuxControl::kSendBusyBit) == 0) {
             // TODO(MA-150): Test for handling of timeout errors
             if (status & registers::DdiAuxControl::kTimeoutBit)
@@ -94,8 +100,7 @@ bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
                 return DRETF(false, "DP aux: Invalid reply size");
             // Read the reply message from the hardware.
             for (uint32_t offset = 0; offset < reply->size; offset += 4) {
-                reply->SetFromPackedWord(offset,
-                                         reg_io_->Read32(registers::DdiAuxData::kOffset + offset));
+                reply->SetFromPackedWord(offset, reg_io_->Read32(data_reg + offset));
             }
             return true;
         }
@@ -167,9 +172,10 @@ bool I2cOverDpAux::I2cWrite(uint32_t addr, const uint8_t* buf, uint32_t size)
 
 } // namespace
 
-bool DisplayPort::FetchEdidData(RegisterIo* reg_io, uint8_t* buf, uint32_t size)
+bool DisplayPort::FetchEdidData(RegisterIo* reg_io, uint32_t ddi_number, uint8_t* buf,
+                                uint32_t size)
 {
-    I2cOverDpAux i2c(reg_io);
+    I2cOverDpAux i2c(reg_io, ddi_number);
 
     // Seek to the start of the EDID data, in case the current seek
     // position is non-zero.
@@ -187,16 +193,26 @@ bool DisplayPort::FetchEdidData(RegisterIo* reg_io, uint8_t* buf, uint32_t size)
 // function as it is now.
 void DisplayPort::FetchAndCheckEdidData(RegisterIo* reg_io)
 {
-    // Read enough just to test that we got the correct header.
-    uint8_t buf[32];
-    if (!FetchEdidData(reg_io, buf, sizeof(buf))) {
-        magma::log(magma::LOG_WARNING, "edid: FetchEdidData() failed");
-        return;
+    uint32_t logged_count = 0;
+
+    for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {
+        // Read enough just to test that we got the correct header.
+        uint8_t buf[32];
+        if (!FetchEdidData(reg_io, ddi_number, buf, sizeof(buf)))
+            continue;
+
+        static const uint8_t kEdidHeader[8] = {0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0};
+        if (memcmp(buf, kEdidHeader, sizeof(kEdidHeader)) != 0) {
+            magma::log(magma::LOG_WARNING, "DDI %d: EDID: Read EDID data, but got bad header",
+                       ddi_number);
+        } else {
+            magma::log(magma::LOG_INFO,
+                       "DDI %d: EDID: Read EDID data successfully, with correct header",
+                       ddi_number);
+        }
+        ++logged_count;
     }
-    static const uint8_t kEdidHeader[8] = {0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0};
-    if (memcmp(buf, kEdidHeader, sizeof(kEdidHeader)) != 0) {
-        magma::log(magma::LOG_WARNING, "edid: got bad header");
-        return;
-    }
-    magma::log(magma::LOG_INFO, "edid: read EDID data successfully, with correct header");
+
+    if (logged_count == 0)
+        magma::log(magma::LOG_INFO, "EDID: Read EDID data for 0 DDIs");
 }

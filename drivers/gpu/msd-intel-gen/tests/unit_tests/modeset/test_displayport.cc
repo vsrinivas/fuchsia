@@ -53,6 +53,8 @@ public:
         return false;
     }
 
+    ExampleEdidData* get_edid_data() { return &edid_data_; }
+
 private:
     uint8_t ReadByte()
     {
@@ -107,6 +109,8 @@ public:
         }
     }
 
+    ExampleEdidData* get_edid_data() { return i2c_.get_edid_data(); }
+
 private:
     DdcI2cBus i2c_;
 };
@@ -126,10 +130,9 @@ class TestDevice : public RegisterIo::Hook {
 public:
     TestDevice(magma::PlatformMmio* mmio) : mmio_(mmio) {}
 
-    void Write32(uint32_t offset, uint32_t value)
+    void WriteDdiAuxControl(uint32_t ddi_number, uint32_t value)
     {
-        if (offset == registers::DdiAuxControl::kOffset &&
-            (value & registers::DdiAuxControl::kSendBusyBit)) {
+        if (value & registers::DdiAuxControl::kSendBusyBit) {
             uint32_t other_flags = value &
                                    ~(registers::DdiAuxControl::kSendBusyBit |
                                      (registers::DdiAuxControl::kMessageSizeMask
@@ -139,21 +142,22 @@ public:
             DpAuxMessage request;
             DpAuxMessage reply;
 
+            uint32_t control_reg = registers::DdiAuxControl::GetOffset(ddi_number);
+            uint32_t data_reg = registers::DdiAuxData::GetOffset(ddi_number);
+
             // Read the request message from registers.
             request.size = (value >> registers::DdiAuxControl::kMessageSizeShift) &
                            registers::DdiAuxControl::kMessageSizeMask;
             assert(request.size <= DpAuxMessage::kMaxTotalSize);
             for (uint32_t offset = 0; offset < request.size; offset += 4) {
-                request.SetFromPackedWord(offset,
-                                          mmio_->Read32(registers::DdiAuxData::kOffset + offset));
+                request.SetFromPackedWord(offset, mmio_->Read32(data_reg + offset));
             }
-            dp_aux_.SendDpAuxMsg(&request, &reply);
+            dp_aux_[ddi_number].SendDpAuxMsg(&request, &reply);
 
             // Write the reply message into registers.
             assert(reply.size <= DpAuxMessage::kMaxTotalSize);
             for (uint32_t offset = 0; offset < reply.size; offset += 4) {
-                mmio_->Write32(reply.GetPackedWord(offset),
-                               registers::DdiAuxData::kOffset + offset);
+                mmio_->Write32(reply.GetPackedWord(offset), data_reg + offset);
             }
 
             // Update the register to mark the transaction as completed.
@@ -162,7 +166,16 @@ public:
             value &= ~registers::DdiAuxControl::kSendBusyBit;
             value = SetBits(value, registers::DdiAuxControl::kMessageSizeShift,
                             registers::DdiAuxControl::kMessageSizeMask, reply.size);
-            mmio_->Write32(value, offset);
+            mmio_->Write32(value, control_reg);
+        }
+    }
+
+    void Write32(uint32_t offset, uint32_t value)
+    {
+        for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {
+            if (offset == registers::DdiAuxControl::GetOffset(ddi_number)) {
+                WriteDdiAuxControl(ddi_number, value);
+            }
         }
     }
 
@@ -170,8 +183,13 @@ public:
 
     void Read64(uint32_t offset, uint64_t val) {}
 
+    ExampleEdidData* get_edid_data(uint32_t ddi_number)
+    {
+        return dp_aux_[ddi_number].get_edid_data();
+    }
+
 private:
-    DpAux dp_aux_;
+    DpAux dp_aux_[registers::Ddi::kDdiCount];
     magma::PlatformMmio* mmio_;
 };
 
@@ -196,12 +214,11 @@ TEST(DisplayPort, DpAuxWordPacking)
     ASSERT_EQ(0, memcmp(msg2.data, msg.data, msg.size));
 }
 
-void ReadbackTest(RegisterIo* reg_io)
+void ReadbackTest(RegisterIo* reg_io, uint32_t ddi_number, ExampleEdidData* expected_data)
 {
-    ExampleEdidData expected_data;
-    uint8_t buf[sizeof(expected_data.data)];
-    ASSERT_TRUE(DisplayPort::FetchEdidData(reg_io, buf, sizeof(buf)));
-    ASSERT_EQ(0, memcmp(buf, expected_data.data, sizeof(buf)));
+    uint8_t buf[sizeof(expected_data->data)];
+    ASSERT_TRUE(DisplayPort::FetchEdidData(reg_io, ddi_number, buf, sizeof(buf)));
+    ASSERT_EQ(0, memcmp(buf, expected_data->data, sizeof(buf)));
 }
 
 TEST(DisplayPort, ReadbackTest)
@@ -209,9 +226,24 @@ TEST(DisplayPort, ReadbackTest)
     RegisterIo reg_io(MockMmio::Create(0x100000));
     reg_io.InstallHook(std::make_unique<TestDevice>(reg_io.mmio()));
 
-    ReadbackTest(&reg_io);
+    ExampleEdidData expected_data;
+    ReadbackTest(&reg_io, 0, &expected_data);
     // Running this test a second time checks that the seek position is reset.
-    ReadbackTest(&reg_io);
+    ReadbackTest(&reg_io, 0, &expected_data);
+}
+
+TEST(DisplayPort, ReadbackTestMultipleDdis)
+{
+    RegisterIo reg_io(MockMmio::Create(0x100000));
+    TestDevice* test_device = new TestDevice(reg_io.mmio());
+    reg_io.InstallHook(std::unique_ptr<TestDevice>(test_device));
+
+    // Make the EDID data different for the two DDIs.
+    test_device->get_edid_data(0)->data[6] = 0x88;
+    test_device->get_edid_data(1)->data[6] = 0x99;
+
+    ReadbackTest(&reg_io, 0, test_device->get_edid_data(0));
+    ReadbackTest(&reg_io, 1, test_device->get_edid_data(1));
 }
 
 } // namespace

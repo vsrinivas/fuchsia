@@ -5,6 +5,7 @@
 #ifndef REGISTERS_H
 #define REGISTERS_H
 
+#include "magma_util/macros.h"
 #include "register_io.h"
 #include "types.h"
 
@@ -602,12 +603,16 @@ public:
     }
 };
 
+class Ddi {
+public:
+    // Number of DDIs that the hardware provides.
+    static constexpr uint32_t kDdiCount = 5;
+};
+
 // DDI_AUX_CTL: Control register for the DisplayPort Aux channel
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
 class DdiAuxControl {
 public:
-    static constexpr uint32_t kOffset = 0x64010;
-
     static constexpr uint32_t kSendBusyBit = 1 << 31;
     static constexpr uint32_t kTimeoutBit = 1 << 28;
     static constexpr uint32_t kMessageSizeShift = 20;
@@ -616,6 +621,12 @@ public:
     //  * bits 4:0: Sync Pulse Count = 0x1f
     //  * bits 9:5: Fast Wake Sync Pulse Count = 0
     static constexpr uint32_t kFlags = 0x1f;
+
+    static uint32_t GetOffset(uint32_t ddi_number)
+    {
+        DASSERT(ddi_number < Ddi::kDdiCount);
+        return 0x64010 + 0x100 * ddi_number;
+    }
 };
 
 // DDI_AUX_DATA: Message contents for DisplayPort Aux messages
@@ -623,7 +634,11 @@ public:
 class DdiAuxData {
 public:
     // There are 5 32-bit words at this offset.
-    static constexpr uint32_t kOffset = 0x64014;
+    static uint32_t GetOffset(uint32_t ddi_number)
+    {
+        DASSERT(ddi_number < Ddi::kDdiCount);
+        return 0x64014 + 0x100 * ddi_number;
+    }
 };
 
 } // namespace
