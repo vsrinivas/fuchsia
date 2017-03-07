@@ -39,12 +39,12 @@ FUNCTION(_isr_\@)
     jmp interrupt_common
 .endif
 .popsection
-.pushsection .data
+.pushsection .rodata
 .quad _isr_\@
 .popsection
 .endm
 
-.pushsection .data
+.pushsection .rodata
 /* build a table of isr entry points */
 DATA(_isr_table)
 .popsection

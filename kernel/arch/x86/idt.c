@@ -97,8 +97,7 @@ void idt_set_ist_index(struct idt *idt, uint8_t vec, uint8_t ist_idx)
 
 void idt_setup(struct idt *idt)
 {
-    extern uintptr_t _isr_table;
-    uintptr_t *isrs = &_isr_table;
+    extern uintptr_t const _isr_table[];
 
     // If SMAP is not available, we need to skip past the CLAC instruction
     // at the beginning of the ISR stubs.
@@ -117,7 +116,7 @@ void idt_setup(struct idt *idt)
     typ = IDT_INTERRUPT_GATE32;
 #endif
     for (unsigned int i = 0; i < countof(idt->entries); ++i) {
-        uintptr_t offset = isrs[i] + clac_shift;
+        uintptr_t offset = _isr_table[i] + clac_shift;
         enum idt_dpl dpl;
         switch (i) {
         case X86_INT_BREAKPOINT:
