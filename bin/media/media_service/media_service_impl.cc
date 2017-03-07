@@ -11,7 +11,6 @@
 #include "apps/media/src/media_service/media_decoder_impl.h"
 #include "apps/media/src/media_service/media_demux_impl.h"
 #include "apps/media/src/media_service/media_player_impl.h"
-#include "apps/media/src/media_service/media_player_net_proxy.h"
 #include "apps/media/src/media_service/media_sink_impl.h"
 #include "apps/media/src/media_service/media_source_impl.h"
 #include "apps/media/src/media_service/media_timeline_controller_impl.h"
@@ -120,14 +119,6 @@ void MediaServiceImpl::CreateLpcmReformatter(
   AddProduct(LpcmReformatterImpl::Create(std::move(input_media_type),
                                          output_sample_format,
                                          std::move(lpcm_reformatter), this));
-}
-
-void MediaServiceImpl::CreatePlayerProxy(
-    const fidl::String& device_name,
-    const fidl::String& service_name,
-    fidl::InterfaceRequest<MediaPlayer> player) {
-  AddProduct(MediaPlayerNetProxy::Create(device_name, service_name,
-                                         std::move(player), this));
 }
 
 }  // namespace media

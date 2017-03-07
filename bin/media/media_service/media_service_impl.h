@@ -67,10 +67,6 @@ class MediaServiceImpl : public FactoryServiceBase, public MediaService {
       AudioSampleFormat output_sample_format,
       fidl::InterfaceRequest<MediaTypeConverter> lpcm_reformatter) override;
 
-  void CreatePlayerProxy(const fidl::String& device_name,
-                         const fidl::String& service_name,
-                         fidl::InterfaceRequest<MediaPlayer> player) override;
-
  private:
   fidl::BindingSet<MediaService> bindings_;
 

@@ -101,9 +101,7 @@ MediaPlayerView::MediaPlayerView(
         std::move(video_media_renderer), media_player_.NewRequest());
   } else {
     // Create a player proxy.
-    media_service->CreatePlayerProxy(params.device_name(),
-                                     params.service_name(),
-                                     media_player_.NewRequest());
+    FTL_CHECK(false) << "Remote control is temporarily disabled";
   }
 
   // Get the first frames queued up so we can show something.

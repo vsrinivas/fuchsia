@@ -94,11 +94,8 @@ class MediaPlayerController extends ChangeNotifier {
     _active = true;
     _remote = true;
 
-    _mediaService.createPlayerProxy(
-      device,
-      service,
-      _mediaPlayer.ctrl.request()
-    );
+    // Remote control temporarily disabled.
+    assert(false);
 
     _handlePlayerStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
     notifyListeners();

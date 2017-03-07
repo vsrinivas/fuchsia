@@ -9,7 +9,6 @@
 #include "apps/media/lib/flog/flog.h"
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/src/net/media_player_net_stub.h"
 #include "apps/media/services/logs/media_player_channel.fidl.h"
 #include "apps/media/services/media_service.fidl.h"
 #include "apps/media/services/media_source.fidl.h"
@@ -19,7 +18,6 @@
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/util/callback_joiner.h"
 #include "apps/media/src/util/fidl_publisher.h"
-#include "apps/netconnector/lib/net_stub_responder.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {
@@ -120,7 +118,6 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;
   TimelineConsumerPtr timeline_consumer_;
-  netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub> responder_;
   bool reader_transition_pending_ = false;
 
   // The state we're currently in.

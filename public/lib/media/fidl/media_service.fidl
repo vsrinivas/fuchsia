@@ -71,10 +71,4 @@ interface MediaService {
   CreateLpcmReformatter(MediaType input_media_type,
                         AudioSampleFormat output_sample_format,
                         MediaTypeConverter& lpcm_reformatter);
-
-  // Creates a player proxy.
-  CreatePlayerProxy(string device_name,
-                    string service_name,
-                    MediaPlayer& player);
-
 };

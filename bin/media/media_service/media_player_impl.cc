@@ -32,9 +32,7 @@ MediaPlayerImpl::MediaPlayerImpl(
     fidl::InterfaceRequest<MediaPlayer> request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner),
-      reader_handle_(std::move(reader_handle)),
-      // TODO(dalesat): Add explicit request to publish this player.
-      responder_(this, "only_media_player", owner->application_context()) {
+      reader_handle_(std::move(reader_handle)) {
   RCHECK(audio_renderer_handle || video_renderer_handle);
   FTL_DCHECK(owner);
 
