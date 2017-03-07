@@ -14,14 +14,10 @@
 #include <string.h>
 #include <trace.h>
 
-#include <arch/ops.h>
-
 #include <kernel/auto_lock.h>
-#include <kernel/mp.h>
 #include <kernel/thread.h>
 
 #include <lib/crypto/global_prng.h>
-#include <lib/ktrace.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 

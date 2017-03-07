@@ -5,22 +5,13 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-
 #include <lib/ktrace.h>
-#include <lib/user_copy.h>
-
-#include <magenta/magenta.h>
-#include <magenta/state_tracker.h>
-#include <magenta/user_copy.h>
-#include <magenta/user_thread.h>
+#include <kernel/thread.h>
+#include <platform.h>
+#include <trace.h>
 
 #include <inttypes.h>
-#include <platform.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <trace.h>
 
 #include "syscalls_priv.h"
 

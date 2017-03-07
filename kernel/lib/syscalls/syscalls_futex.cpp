@@ -6,8 +6,6 @@
 
 #include <trace.h>
 
-#include <lib/ktrace.h>
-
 #include <magenta/process_dispatcher.h>
 
 #include "syscalls_priv.h"

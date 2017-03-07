@@ -11,9 +11,6 @@
 #include <stdlib.h>
 #include <trace.h>
 
-#include <arch/ops.h>
-
-#include <lib/ktrace.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 

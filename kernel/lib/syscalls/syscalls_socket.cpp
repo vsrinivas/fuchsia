@@ -13,7 +13,6 @@
 #include <string.h>
 #include <trace.h>
 
-#include <lib/ktrace.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 

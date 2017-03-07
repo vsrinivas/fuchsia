@@ -21,7 +21,6 @@
 
 #include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
 
 #include "syscalls_priv.h"
 

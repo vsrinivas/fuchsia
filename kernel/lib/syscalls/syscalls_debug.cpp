@@ -12,16 +12,12 @@
 #include <string.h>
 #include <trace.h>
 
-#include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_address_region.h>
-
 #include <lib/console.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/ktrace.h>
 #include <lib/mtrace.h>
 
-#include <lk/init.h>
 #include <platform/debug.h>
 
 #include <magenta/handle_owner.h>
@@ -29,15 +25,9 @@
 #include <magenta/syscalls/debug.h>
 #include <magenta/user_copy.h>
 
-#include <mxtl/array.h>
-
 #include "syscalls_priv.h"
 
 #define LOCAL_TRACE 0
-
-#if WITH_LIB_DEBUGLOG
-#include <lib/debuglog.h>
-#endif
 
 constexpr uint32_t kMaxDebugWriteSize = 256u;
 

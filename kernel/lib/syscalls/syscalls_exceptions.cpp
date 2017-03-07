@@ -5,24 +5,18 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <kernel/thread.h>
-#include <lib/console.h>
-#include <lib/user_copy.h>
-#include <list.h>
-
-#include <magenta/port_dispatcher.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
-#include <magenta/thread_dispatcher.h>
-#include <magenta/user_copy.h>
-#include <magenta/user_thread.h>
-
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+
+#include <magenta/port_dispatcher.h>
+#include <magenta/magenta.h>
+#include <magenta/process_dispatcher.h>
+#include <magenta/thread_dispatcher.h>
+#include <magenta/user_thread.h>
 
 #include "syscalls_priv.h"
 

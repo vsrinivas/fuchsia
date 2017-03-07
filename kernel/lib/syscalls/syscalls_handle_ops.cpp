@@ -14,8 +14,6 @@
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 
-#include <mxtl/ref_ptr.h>
-
 #include "syscalls_priv.h"
 
 #define LOCAL_TRACE 0
