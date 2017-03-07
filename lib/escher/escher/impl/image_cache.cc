@@ -13,33 +13,19 @@
 namespace escher {
 namespace impl {
 
-ImageCache::ImageCache(vk::Device device,
-                       vk::PhysicalDevice physical_device,
+ImageCache::ImageCache(const VulkanContext& context,
                        CommandBufferPool* pool,
                        GpuAllocator* allocator,
                        GpuUploader* uploader)
-    : device_(device),
-      physical_device_(physical_device),
+    : ImageOwner(context),
       queue_(pool->queue()),
       allocator_(allocator),
       uploader_(uploader) {}
 
-ImageCache::~ImageCache() {
-  FTL_CHECK(outstanding_image_count_ == 0);
-
-  // Destroy all of the unused images.
-  for (auto& pair : unused_images_) {
-    auto& queue = pair.second;
-    while (!queue.empty()) {
-      device_.destroyImage(queue.front().image);
-      queue.pop();
-    }
-  }
-}
+ImageCache::~ImageCache() {}
 
 ImagePtr ImageCache::NewImage(const ImageInfo& info) {
   if (ImagePtr result = FindImage(info)) {
-    outstanding_image_count_++;
     return result;
   }
 
@@ -70,17 +56,17 @@ ImagePtr ImageCache::NewImage(const ImageInfo& info) {
   create_info.usage = info.usage;
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;
-  vk::Image image = ESCHER_CHECKED_VK_RESULT(device_.createImage(create_info));
+  vk::Image image = ESCHER_CHECKED_VK_RESULT(device().createImage(create_info));
 
   // Allocate memory and bind it to the image.
-  vk::MemoryRequirements reqs = device_.getImageMemoryRequirements(image);
+  vk::MemoryRequirements reqs = device().getImageMemoryRequirements(image);
   GpuMemPtr memory = allocator_->Allocate(reqs, info.memory_flags);
   vk::Result result =
-      device_.bindImageMemory(image, memory->base(), memory->offset());
+      device().bindImageMemory(image, memory->base(), memory->offset());
   FTL_CHECK(result == vk::Result::eSuccess);
 
-  outstanding_image_count_++;
-  return CreateImage(info, image, std::move(memory));
+  return CreateImage(
+      std::make_unique<ImageCore>(this, info, image, std::move(memory)));
 }
 
 ImagePtr ImageCache::NewDepthImage(vk::Format format,
@@ -153,7 +139,7 @@ ImagePtr ImageCache::NewImageFromPixels(vk::Format format,
   region.imageExtent.depth = 1;
   region.bufferOffset = 0;
 
-  writer.WriteImage(image, region, Semaphore::New(device_));
+  writer.WriteImage(image, region, Semaphore::New(device()));
   writer.Submit();
 
   return image;
@@ -184,19 +170,17 @@ ImagePtr ImageCache::FindImage(const ImageInfo& info) {
   if (queue.empty()) {
     return ImagePtr();
   } else {
-    ImagePtr result =
-        CreateImage(info, queue.front().image, std::move(queue.front().mem));
+    ImagePtr result = CreateImage(std::move(queue.front()));
     queue.pop();
     return result;
   }
 }
 
-void ImageCache::RecycleImage(const ImageInfo& info,
-                              vk::Image image,
-                              impl::GpuMemPtr mem) {
-  auto& queue = unused_images_[info];
-  queue.push(UnusedImage{image, std::move(mem)});
-  outstanding_image_count_--;
+void ImageCache::ReceiveResourceCore(std::unique_ptr<ResourceCore> core) {
+  std::unique_ptr<ImageCore> image_core(
+      static_cast<ImageCore*>(core.release()));
+  auto& queue = unused_images_[image_core->info()];
+  queue.push(std::move(image_core));
 }
 
 }  // namespace impl

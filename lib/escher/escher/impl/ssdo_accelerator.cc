@@ -8,6 +8,7 @@
 #include "escher/impl/command_buffer.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/texture.h"
+#include "escher/resources/resource_life_preserver.h"
 
 namespace escher {
 namespace impl {
@@ -471,30 +472,33 @@ void main() {
 
 }  // namespace
 
-SsdoAccelerator::SsdoAccelerator(vk::Device device,
-                                 GlslToSpirvCompiler* compiler)
-    : device_(device), compiler_(compiler) {}
+SsdoAccelerator::SsdoAccelerator(GlslToSpirvCompiler* compiler,
+                                 ImageCache* image_cache,
+                                 ResourceLifePreserver* life_preserver)
+    : device_(life_preserver->vulkan_context().device),
+      compiler_(compiler),
+      image_cache_(image_cache),
+      life_preserver_(life_preserver) {}
 
 SsdoAccelerator::~SsdoAccelerator() {}
 
 TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
                                                 const TexturePtr& depth_texture,
                                                 vk::ImageUsageFlags image_flags,
-                                                ImageCache* image_cache,
                                                 Timestamper* timestamper) {
   switch (mode_) {
     case 0:
       return GenerateNullLookupTable(command_buffer, depth_texture, image_flags,
-                                     image_cache, timestamper);
+                                     timestamper);
     case 1:
       return GenerateSampleLookupTable(command_buffer, depth_texture,
-                                       image_flags, image_cache, timestamper);
+                                       image_flags, timestamper);
     // There are "parallel" and "sequential" variations of the high/low table
     // generation kernel.
     case 2:
     case 3:
       return GenerateHighLowLookupTable(command_buffer, depth_texture,
-                                        image_flags, image_cache, timestamper);
+                                        image_flags, timestamper);
     default:
       FTL_CHECK(false);
       return TexturePtr();
@@ -505,7 +509,6 @@ TexturePtr SsdoAccelerator::GenerateSampleLookupTable(
     CommandBuffer* command_buffer,
     const TexturePtr& depth_texture,
     vk::ImageUsageFlags image_flags,
-    ImageCache* image_cache,
     Timestamper* timestamper) {
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();
@@ -521,12 +524,12 @@ TexturePtr SsdoAccelerator::GenerateSampleLookupTable(
   uint32_t packed_width = width / 4 + (width % kSize > 0 ? 1 : 0);
   uint32_t packed_height = height / 4 + (height % kSize > 0 ? 1 : 0);
 
-  ImagePtr tmp_image = image_cache->NewImage(
+  ImagePtr tmp_image = image_cache_->NewImage(
       {vk::Format::eR8G8B8A8Unorm, packed_width, packed_height, 1,
        image_flags | vk::ImageUsageFlagBits::eStorage});
-  TexturePtr tmp_texture =
-      ftl::MakeRefCounted<Texture>(tmp_image, device_, vk::Filter::eNearest,
-                                   vk::ImageAspectFlagBits::eColor, true);
+  TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
+      life_preserver_, tmp_image, vk::Filter::eNearest,
+      vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
 
@@ -552,7 +555,6 @@ TexturePtr SsdoAccelerator::GenerateHighLowLookupTable(
     CommandBuffer* command_buffer,
     const TexturePtr& depth_texture,
     vk::ImageUsageFlags image_flags,
-    ImageCache* image_cache,
     Timestamper* timestamper) {
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();
@@ -614,12 +616,12 @@ TexturePtr SsdoAccelerator::GenerateHighLowLookupTable(
     FTL_CHECK(false);  // unexpected mode_
   }
 
-  ImagePtr tmp_image = image_cache->NewImage(
+  ImagePtr tmp_image = image_cache_->NewImage(
       {vk::Format::eR8G8B8A8Unorm, packed_width, packed_height, 1,
        image_flags | vk::ImageUsageFlagBits::eStorage});
-  TexturePtr tmp_texture =
-      ftl::MakeRefCounted<Texture>(tmp_image, device_, vk::Filter::eNearest,
-                                   vk::ImageAspectFlagBits::eColor, true);
+  TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
+      life_preserver_, tmp_image, vk::Filter::eNearest,
+      vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
 
@@ -642,7 +644,6 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
     CommandBuffer* command_buffer,
     const TexturePtr& depth_texture,
     vk::ImageUsageFlags image_flags,
-    ImageCache* image_cache,
     Timestamper* timestamper) {
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();
@@ -658,12 +659,12 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
   uint32_t packed_width = width / 4 + (width % kSize > 0 ? 1 : 0);
   uint32_t packed_height = height / 4 + (height % kSize > 0 ? 1 : 0);
 
-  ImagePtr tmp_image = image_cache->NewImage(
+  ImagePtr tmp_image = image_cache_->NewImage(
       {vk::Format::eR8G8B8A8Unorm, packed_width, packed_height, 1,
        image_flags | vk::ImageUsageFlagBits::eStorage});
-  TexturePtr tmp_texture =
-      ftl::MakeRefCounted<Texture>(tmp_image, device_, vk::Filter::eNearest,
-                                   vk::ImageAspectFlagBits::eColor, true);
+  TexturePtr tmp_texture = ftl::MakeRefCounted<Texture>(
+      life_preserver_, tmp_image, vk::Filter::eNearest,
+      vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
 
@@ -688,7 +689,6 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
     const TexturePtr& packed_lookup_table,
     uint32_t width,
     uint32_t height,
-    ImageCache* image_cache,
     Timestamper* timestamper) {
   constexpr uint32_t kSize = 8;
   FTL_DCHECK(width <= packed_lookup_table->width() * 4);
@@ -697,14 +697,14 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
   FTL_DCHECK(height + kSize > packed_lookup_table->height() * 4);
 
   ImagePtr result_image =
-      image_cache->NewImage({vk::Format::eR8G8B8A8Unorm, width, height, 1,
-                             vk::ImageUsageFlagBits::eStorage |
-                                 vk::ImageUsageFlagBits::eTransferSrc});
+      image_cache_->NewImage({vk::Format::eR8G8B8A8Unorm, width, height, 1,
+                              vk::ImageUsageFlagBits::eStorage |
+                                  vk::ImageUsageFlagBits::eTransferSrc});
   command_buffer->TransitionImageLayout(
       result_image, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
-  TexturePtr result_texture =
-      ftl::MakeRefCounted<Texture>(result_image, device_, vk::Filter::eNearest,
-                                   vk::ImageAspectFlagBits::eColor);
+  TexturePtr result_texture = ftl::MakeRefCounted<Texture>(
+      life_preserver_, result_image, vk::Filter::eNearest,
+      vk::ImageAspectFlagBits::eColor);
 
   uint32_t work_groups_x = width / kSize + (width % kSize > 0 ? 1 : 0);
   uint32_t work_groups_y = height / kSize + (height % kSize > 0 ? 1 : 0);

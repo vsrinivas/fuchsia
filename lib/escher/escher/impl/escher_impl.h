@@ -11,6 +11,7 @@
 
 namespace escher {
 namespace impl {
+class CommandBufferSequencer;
 class CommandBufferPool;
 class GlslToSpirvCompiler;
 class GpuAllocator;
@@ -35,6 +36,7 @@ class EscherImpl {
   ImageCache* image_cache();
   MeshManager* mesh_manager();
   GlslToSpirvCompiler* glsl_compiler();
+  ResourceLifePreserver* resource_life_preserver();
 
   bool supports_timer_queries() const { return supports_timer_queries_; }
   float timestamp_period() const { return timestamp_period_; }
@@ -45,8 +47,12 @@ class EscherImpl {
   void IncrementResourceCount() { ++resource_count_; }
   void DecrementResourceCount() { --resource_count_; }
 
+  // Do periodic housekeeping.
+  void Cleanup();
+
  private:
   VulkanContext vulkan_context_;
+  std::unique_ptr<CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<CommandBufferPool> command_buffer_pool_;
   std::unique_ptr<CommandBufferPool> transfer_command_buffer_pool_;
   std::unique_ptr<GpuAllocator> gpu_allocator_;
@@ -55,6 +61,7 @@ class EscherImpl {
   std::unique_ptr<ImageCache> image_cache_;
   std::unique_ptr<MeshManager> mesh_manager_;
   std::unique_ptr<GlslToSpirvCompiler> glsl_compiler_;
+  std::unique_ptr<ResourceLifePreserver> resource_life_preserver_;
 
   std::atomic<uint32_t> renderer_count_;
   std::atomic<uint32_t> resource_count_;

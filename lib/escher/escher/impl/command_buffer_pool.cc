@@ -4,6 +4,7 @@
 
 #include "escher/impl/command_buffer_pool.h"
 
+#include "escher/impl/command_buffer_sequencer.h"
 #include "escher/impl/vulkan_utils.h"
 
 namespace escher {
@@ -12,8 +13,9 @@ namespace impl {
 CommandBufferPool::CommandBufferPool(vk::Device device,
                                      vk::Queue queue,
                                      uint32_t queue_family_index,
+                                     CommandBufferSequencer* sequencer,
                                      bool supports_graphics_and_compute)
-    : device_(device), queue_(queue) {
+    : device_(device), queue_(queue), sequencer_(sequencer) {
   FTL_DCHECK(device);
   FTL_DCHECK(queue);
   vk::CommandPoolCreateInfo info;
@@ -97,7 +99,7 @@ CommandBuffer* CommandBufferPool::GetCommandBuffer() {
     pending_buffers_.push(std::move(free_buffers_.front()));
     free_buffers_.pop();
   }
-  buffer->Begin();
+  buffer->Begin(sequencer_->GetNextCommandBufferSequenceNumber());
   return buffer;
 }
 
@@ -108,6 +110,7 @@ void CommandBufferPool::Cleanup() {
   while (!pending_buffers_.empty()) {
     auto& buffer = pending_buffers_.front();
     if (buffer->Retire()) {
+      sequencer_->CommandBufferFinished(buffer->sequence_number());
       free_buffers_.push(std::move(pending_buffers_.front()));
       pending_buffers_.pop();
     } else {

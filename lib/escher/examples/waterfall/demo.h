@@ -14,7 +14,7 @@
 #include "keyboard_handler.h"
 #include "vulkan_proc_addrs.h"
 
-class Demo : public escher::ImageOwner {
+class Demo {
  public:
   struct WindowParams {
     uint32_t width = 1024;
@@ -67,10 +67,17 @@ class Demo : public escher::ImageOwner {
   void PollEvents();
 
  private:
-  // Implement ImageOwner::RecycleImage().
-  void RecycleImage(const escher::ImageInfo& info,
-                    vk::Image image,
-                    escher::impl::GpuMemPtr mem) override;
+  // For wrapping swapchain images in VkImage.
+  // TODO: Find a nicer solution.
+  class SwapchainImageOwner : public escher::ImageOwner {
+   public:
+    explicit SwapchainImageOwner(const escher::VulkanContext& context);
+    using escher::ImageOwner::CreateImage;
+
+   private:
+    void ReceiveResourceCore(
+        std::unique_ptr<escher::ResourceCore> core) override;
+  };
 
   vk::Instance instance_;
   vk::SurfaceKHR surface_;
@@ -88,6 +95,7 @@ class Demo : public escher::ImageOwner {
   InstanceProcAddrs instance_procs_;
   DeviceProcAddrs device_procs_;
 
+  std::unique_ptr<SwapchainImageOwner> swapchain_image_owner_;
   uint32_t swapchain_image_count_ = 0;
 
   void InitWindowSystem();

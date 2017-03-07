@@ -4,19 +4,39 @@
 
 #pragma once
 
+#include <vulkan/vulkan.hpp>
+
 #include "escher/forward_declarations.h"
-#include "escher/impl/resource.h"
+#include "escher/resources/resource.h"
 
 namespace escher {
 
-class Framebuffer : public impl::Resource {
+class FramebufferCore : public ResourceCore {
+ public:
+  FramebufferCore(ResourceLifePreserver* life_preserver,
+                  uint32_t width,
+                  uint32_t height,
+                  const std::vector<ImagePtr>& images,
+                  vk::RenderPass render_pass);
+  ~FramebufferCore() override;
+
+  vk::Framebuffer get() const { return framebuffer_; }
+
+ private:
+  vk::Framebuffer framebuffer_;
+  std::vector<vk::ImageView> image_views_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(FramebufferCore);
+};
+
+class Framebuffer : public Resource2 {
  public:
   Framebuffer(impl::EscherImpl* escher,
               uint32_t width,
               uint32_t height,
               std::vector<ImagePtr> images,
               vk::RenderPass render_pass);
-  ~Framebuffer();
+  ~Framebuffer() override;
 
   // TODO: make private... client shouldn't need access to this.
   vk::Framebuffer get() { return framebuffer_; }
@@ -26,7 +46,13 @@ class Framebuffer : public impl::Resource {
 
   const ImagePtr& get_image(uint32_t index) const { return images_.at(index); }
 
+  const FramebufferCore* core() const {
+    return static_cast<const FramebufferCore*>(Resource2::core());
+  }
+
  private:
+  void KeepDependenciesAlive(impl::CommandBuffer* command_buffer) override;
+
   vk::Framebuffer framebuffer_;
 
   uint32_t width_;
@@ -35,7 +61,6 @@ class Framebuffer : public impl::Resource {
   // These images are not used directly; they just ensure that the images are
   // not destroyed before the Framebuffer is.
   std::vector<ImagePtr> images_;
-  std::vector<vk::ImageView> image_views_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Framebuffer);
 };

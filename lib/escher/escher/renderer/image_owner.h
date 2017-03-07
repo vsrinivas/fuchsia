@@ -5,6 +5,7 @@
 #pragma once
 
 #include "escher/renderer/image.h"
+#include "escher/resources/resource_core.h"
 
 namespace escher {
 
@@ -12,20 +13,20 @@ namespace escher {
 // Image is destroyed, it is notified and given the opportunity to recycle or
 // destroy the Image's underlying resources.  The ImageOwner must outlive all of
 // its owned Images.
-class ImageOwner {
+//
+// TODO: consider getting rid of this class... now that it inherits from
+// ResourceCoreManager, it doesn't do too much.
+class ImageOwner : public ResourceCoreManager {
  public:
-  virtual void RecycleImage(const ImageInfo& info,
-                            vk::Image image,
-                            impl::GpuMemPtr mem) = 0;
+  explicit ImageOwner(const VulkanContext& context)
+      : ResourceCoreManager(context) {}
 
  protected:
   // Subclasses use this method to create Images.  |image| must be a valid
   // vk::Image.  |mem| may be null in rare cases.  For example, it is not
   // possible to obtain access to the memory associated with images in a Vulkan
   // swapchain.
-  ImagePtr CreateImage(const ImageInfo& info,
-                       vk::Image image,
-                       impl::GpuMemPtr mem);
+  ImagePtr CreateImage(std::unique_ptr<ImageCore> core);
 };
 
 }  // namespace escher

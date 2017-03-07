@@ -4,36 +4,21 @@
 
 #include "escher/renderer/texture.h"
 
+#include "escher/impl/command_buffer.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/image.h"
+#include "escher/resources/resource_life_preserver.h"
 
 namespace escher {
 
-Texture::Texture(ImagePtr image, vk::Device device, vk::Filter filter)
-    : Resource(nullptr),
-      image_(std::move(image)),
-      device_(device),
-      width_(image_->width()),
-      height_(image_->height()) {
-  Init(filter, vk::ImageAspectFlagBits::eColor, false);
-}
+TextureCore::TextureCore(ResourceLifePreserver* life_preserver,
+                         const ImagePtr& image,
+                         vk::Filter filter,
+                         vk::ImageAspectFlags aspect_mask,
+                         bool use_unnormalized_coordinates)
+    : ResourceCore(life_preserver) {
+  vk::Device device = vulkan_context().device;
 
-Texture::Texture(ImagePtr image,
-                 vk::Device device,
-                 vk::Filter filter,
-                 vk::ImageAspectFlags aspect_mask,
-                 bool use_unnormalized_coordinates)
-    : Resource(nullptr),
-      image_(std::move(image)),
-      device_(device),
-      width_(image_->width()),
-      height_(image_->height()) {
-  Init(filter, aspect_mask, use_unnormalized_coordinates);
-}
-
-void Texture::Init(vk::Filter filter,
-                   vk::ImageAspectFlags aspect_mask,
-                   bool use_unnormalized_coordinates) {
   vk::ImageViewCreateInfo view_info;
   view_info.viewType = vk::ImageViewType::e2D;
   view_info.subresourceRange.baseMipLevel = 0;
@@ -41,9 +26,9 @@ void Texture::Init(vk::Filter filter,
   view_info.subresourceRange.baseArrayLayer = 0;
   view_info.subresourceRange.layerCount = 1;
   view_info.subresourceRange.aspectMask = aspect_mask;
-  view_info.format = image_->format();
-  view_info.image = image_->get();
-  image_view_ = ESCHER_CHECKED_VK_RESULT(device_.createImageView(view_info));
+  view_info.format = image->format();
+  view_info.image = image->get();
+  image_view_ = ESCHER_CHECKED_VK_RESULT(device.createImageView(view_info));
 
   vk::SamplerCreateInfo sampler_info = {};
   sampler_info.magFilter = filter;
@@ -60,12 +45,35 @@ void Texture::Init(vk::Filter filter,
   sampler_info.mipLodBias = 0.0f;
   sampler_info.minLod = 0.0f;
   sampler_info.maxLod = 0.0f;
-  sampler_ = ESCHER_CHECKED_VK_RESULT(device_.createSampler(sampler_info));
+  sampler_ = ESCHER_CHECKED_VK_RESULT(device.createSampler(sampler_info));
 }
 
-Texture::~Texture() {
-  device_.destroySampler(sampler_);
-  device_.destroyImageView(image_view_);
+TextureCore::~TextureCore() {
+  vk::Device device = vulkan_context().device;
+  device.destroySampler(sampler_);
+  device.destroyImageView(image_view_);
 }
+
+Texture::Texture(ResourceLifePreserver* life_preserver,
+                 ImagePtr image,
+                 vk::Filter filter,
+                 vk::ImageAspectFlags aspect_mask,
+                 bool use_unnormalized_coordinates)
+    : Resource2(std::make_unique<TextureCore>(life_preserver,
+                                              image,
+                                              filter,
+                                              aspect_mask,
+                                              use_unnormalized_coordinates)),
+      image_(std::move(image)),
+      image_view_(core()->image_view()),
+      sampler_(core()->sampler()),
+      width_(image_->width()),
+      height_(image_->height()) {}
+
+void Texture::KeepDependenciesAlive(impl::CommandBuffer* command_buffer) {
+  image_->KeepAlive(command_buffer);
+}
+
+Texture::~Texture() {}
 
 }  // namespace escher

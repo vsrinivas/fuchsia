@@ -20,6 +20,7 @@ using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
+using escher::TexturePtr;
 
 const float kRectYPos = 40.f;
 
@@ -64,9 +65,8 @@ void WobblyRingsScene::Init(escher::Stage* stage) {
       vec2(0.f, 0.f), 18.f, 0.f);
 
   // Create materials.
-  auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
-      escher()->NewCheckerboardImage(16, 16), vulkan_context()->device,
-      vk::Filter::eNearest);
+  TexturePtr checkerboard = escher()->NewTexture(
+      escher()->NewCheckerboardImage(16, 16), vk::Filter::eNearest);
   auto checkerboard_color = checkerboard_material_->color();
   checkerboard_material_ = ftl::MakeRefCounted<escher::Material>(checkerboard);
   checkerboard_material_->set_color(checkerboard_color);

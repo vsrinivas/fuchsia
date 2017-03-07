@@ -5,11 +5,13 @@
 #pragma once
 
 #include "escher/forward_declarations.h"
-#include "escher/impl/resource.h"
+#include "escher/renderer/semaphore_wait.h"
+#include "escher/resources/resource.h"
 
 namespace escher {
 
 // Full description of the size and layout of an Image.
+#pragma pack(push, 1)  // As required by escher::Hash<ImageInfo>
 struct ImageInfo {
   vk::Format format = vk::Format::eUndefined;
   uint32_t width = 0;
@@ -25,45 +27,84 @@ struct ImageInfo {
            usage == other.usage && memory_flags == other.memory_flags;
   }
 };
+#pragma pack(pop)
 
 // Every Image has an owner, who is responsible for cleaning up the Image's
 // underlying resources when it is destroyed.  The ImageOwner must outlive all
 // of its owned Images.
 class ImageOwner;
 
-// Encapsulates a vk::Image.  Lifecycle is managed by an ImageOwner.
-class Image : public impl::Resource {
+class ImageCore : public ResourceCore {
  public:
-  // Returns image_ and mem_ to the owner.
-  ~Image() override;
+  ImageCore(ImageOwner* image_owner,
+            ImageInfo info,
+            vk::Image,
+            impl::GpuMemPtr mem);
+  ~ImageCore() override;
 
-  vk::Image get() const { return image_; }
+  const ImageInfo& info() const { return info_; }
+  vk::Image image() const { return image_; }
   vk::Format format() const { return info_.format; }
   uint32_t width() const { return info_.width; }
   uint32_t height() const { return info_.height; }
-
   bool has_depth() const { return has_depth_; }
   bool has_stencil() const { return has_stencil_; }
 
  private:
-  // Only subclasses of ImageOwner are allowed to instantiate new Images.
-  friend class ImageOwner;
-  Image(ImageInfo info,
-        vk::Image image,
-        impl::GpuMemPtr mem,
-        ImageOwner* owner);
-
   const ImageInfo info_;
   const vk::Image image_;
   impl::GpuMemPtr mem_;
-  ImageOwner* const owner_;
-
   bool has_depth_;
   bool has_stencil_;
+};
+
+// Encapsulates a vk::Image.  Lifecycle is managed by an ImageOwner.
+class Image : public Resource2 {
+ public:
+  // Returns image_ and mem_ to the owner.
+  ~Image() override;
+
+  vk::Image get() const { return core()->image(); }
+  vk::Format format() const { return core()->format(); }
+  uint32_t width() const { return core()->width(); }
+  uint32_t height() const { return core()->height(); }
+
+  bool has_depth() const { return core()->has_depth(); }
+  bool has_stencil() const { return core()->has_stencil(); }
+
+  const ImageCore* core() const {
+    return static_cast<const ImageCore*>(Resource2::core());
+  }
+
+  // TODO: eventually make these private, callable only by friends.
+  void SetWaitSemaphore(SemaphorePtr semaphore);
+  SemaphorePtr TakeWaitSemaphore();
+
+ private:
+  void KeepDependenciesAlive(impl::CommandBuffer* command_buffer) override {}
+
+  // Only subclasses of ImageOwner are allowed to instantiate new Images.
+  friend class ImageOwner;
+  Image(std::unique_ptr<ImageCore> core);
+
+  SemaphorePtr wait_semaphore_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Image);
 };
 
 typedef ftl::RefPtr<Image> ImagePtr;
+
+// Inline function definitions.
+
+inline void Image::SetWaitSemaphore(SemaphorePtr semaphore) {
+  // This is not necessarily an error, but the consequences will depend on the
+  // specific usage-pattern that first triggers it; we'll deal with it then.
+  FTL_CHECK(!wait_semaphore_);
+  wait_semaphore_ = std::move(semaphore);
+}
+
+inline SemaphorePtr Image::TakeWaitSemaphore() {
+  return std::move(wait_semaphore_);
+}
 
 }  // namespace escher

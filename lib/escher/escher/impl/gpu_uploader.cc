@@ -86,7 +86,6 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
                                      SemaphorePtr semaphore) {
   has_writes_ = true;
   region.bufferOffset += offset_;
-  RememberTarget(target, std::move(semaphore));
 
   command_buffer_->TransitionImageLayout(target, vk::ImageLayout::eUndefined,
                                          vk::ImageLayout::eTransferDstOptimal);
@@ -96,6 +95,12 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
   command_buffer_->TransitionImageLayout(
       target, vk::ImageLayout::eTransferDstOptimal,
       vk::ImageLayout::eShaderReadOnlyOptimal);
+
+  if (semaphore) {
+    target->SetWaitSemaphore(semaphore);
+    command_buffer_->AddSignalSemaphore(std::move(semaphore));
+  }
+  target->KeepAlive(command_buffer_);
 }
 
 void GpuUploader::Writer::RememberTarget(ResourcePtr target,

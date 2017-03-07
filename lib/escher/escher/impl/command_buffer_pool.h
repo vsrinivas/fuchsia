@@ -14,6 +14,7 @@ namespace escher {
 namespace impl {
 
 class CommandBuffer;
+class CommandBufferSequencer;
 
 // Manages the lifecycle of CommandBuffers.
 //
@@ -24,6 +25,7 @@ class CommandBufferPool {
   CommandBufferPool(vk::Device device,
                     vk::Queue queue,
                     uint32_t queue_family_index,
+                    CommandBufferSequencer* sequencer,
                     bool supports_graphics_and_compute);
 
   // If there are still any pending buffers, this will block until they are
@@ -42,10 +44,12 @@ class CommandBufferPool {
   vk::Queue queue() const { return queue_; }
 
  private:
-  vk::Device device_;
-  vk::Queue queue_;
+  const vk::Device device_;
+  const vk::Queue queue_;
   // Rule out pipeline stages that are not supported on our queue.
   vk::PipelineStageFlags pipeline_stage_mask_;
+
+  CommandBufferSequencer* const sequencer_;
 
   // TODO: access to |command_pool_| needs to be externally synchronized.  This
   // includes implicit uses such as various vkCmd* calls (in other words, two

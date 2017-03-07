@@ -14,6 +14,7 @@
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/texture.h"
+#include "escher/resources/resource_life_preserver.h"
 #include "escher/shape/mesh.h"
 
 namespace escher {
@@ -609,20 +610,20 @@ vk::RenderPass CreateRenderPass(vk::Device device) {
 
 }  // namespace
 
-SsdoSampler::SsdoSampler(vk::Device device,
+SsdoSampler::SsdoSampler(ResourceLifePreserver* life_preserver,
                          MeshPtr full_screen,
                          ImagePtr noise_image,
                          GlslToSpirvCompiler* compiler)
-    : device_(device),
-      pool_(device, GetDescriptorSetLayoutCreateInfo(), 6),
+    : device_(life_preserver->vulkan_context().device),
+      pool_(device_, GetDescriptorSetLayoutCreateInfo(), 6),
       full_screen_(full_screen),
-      noise_texture_(ftl::MakeRefCounted<Texture>(noise_image,
-                                                  device,
+      noise_texture_(ftl::MakeRefCounted<Texture>(life_preserver,
+                                                  noise_image,
                                                   vk::Filter::eNearest)),
       // TODO: VulkanProvider should know the swapchain format and we should use
       // it.
-      render_pass_(CreateRenderPass(device)),
-      sampler_kernel_(device,
+      render_pass_(CreateRenderPass(device_)),
+      sampler_kernel_(device_,
                       {vk::ImageLayout::eShaderReadOnlyOptimal,
                        vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral},
                       sizeof(SamplerConfig),
@@ -631,8 +632,9 @@ SsdoSampler::SsdoSampler(vk::Device device,
   FTL_DCHECK(noise_image->width() == kNoiseSize &&
              noise_image->height() == kNoiseSize);
 
-  auto pipelines = CreatePipelines(
-      device, render_pass_, full_screen->spec_impl(), pool_.layout(), compiler);
+  auto pipelines =
+      CreatePipelines(device_, render_pass_, full_screen->spec_impl(),
+                      pool_.layout(), compiler);
   sampler_pipeline_ = pipelines.first;
   filter_pipeline_ = pipelines.second;
 }

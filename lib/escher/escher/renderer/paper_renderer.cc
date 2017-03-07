@@ -55,16 +55,17 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
       model_data_(std::make_unique<impl::ModelData>(context_.device,
                                                     escher->gpu_allocator())),
       ssdo_(std::make_unique<impl::SsdoSampler>(
-          context_.device,
+          escher->resource_life_preserver(),
           full_screen_,
           escher->image_cache()->NewNoiseImage(
               impl::SsdoSampler::kNoiseSize,
               impl::SsdoSampler::kNoiseSize,
               vk::ImageUsageFlagBits::eStorage),
           escher->glsl_compiler())),
-      ssdo_accelerator_(
-          std::make_unique<impl::SsdoAccelerator>(context_.device,
-                                                  escher->glsl_compiler())),
+      ssdo_accelerator_(std::make_unique<impl::SsdoAccelerator>(
+          escher->glsl_compiler(),
+          image_cache_,
+          escher->resource_life_preserver())),
       clear_values_({vk::ClearColorValue(
                          std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}}),
                      vk::ClearDepthStencilValue(kDepthClearValue, 0)}) {}
@@ -95,7 +96,7 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
       stage, model, vec2(scale_x, scale_y), sort_by_pipeline_, true, true, 1,
       TexturePtr(), command_buffer);
 
-  command_buffer->AddUsedResource(framebuffer);
+  framebuffer->KeepAlive(command_buffer);
   command_buffer->AddUsedResource(display_list);
   command_buffer->BeginRenderPass(model_renderer_->depth_prepass(), framebuffer,
                                   clear_values_);
@@ -123,17 +124,17 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
       escher_, width, height, std::vector<ImagePtr>{color_aux},
       ssdo_->render_pass());
 
-  command_buffer->AddUsedResource(fb_out);
-  command_buffer->AddUsedResource(fb_aux);
-  command_buffer->AddUsedResource(accelerator_texture);
+  fb_out->KeepAlive(command_buffer);
+  fb_aux->KeepAlive(command_buffer);
+  accelerator_texture->KeepAlive(command_buffer);
 
 #if SSDO_SAMPLING_USES_KERNEL
   TexturePtr depth_texture = ftl::MakeRefCounted<Texture>(
-      depth_in, context_.device, vk::Filter::eNearest,
+      escher_->resource_life_preserver(), depth_in, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eDepth);
 
   TexturePtr output_texture = ftl::MakeRefCounted<Texture>(
-      color_out, context_.device, vk::Filter::eNearest,
+      escher_->resource_life_preserver() color_out, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eColor);
 
   command_buffer->AddUsedResource(depth_texture);
@@ -157,10 +158,9 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
 
 #else
   TexturePtr depth_texture = ftl::MakeRefCounted<Texture>(
-      depth_in, context_.device, vk::Filter::eNearest,
+      escher_->resource_life_preserver(), depth_in, vk::Filter::eNearest,
       vk::ImageAspectFlagBits::eDepth);
-
-  command_buffer->AddUsedResource(depth_texture);
+  depth_texture->KeepAlive(command_buffer);
 
   // Prepare to sample from the depth buffer.
   command_buffer->TransitionImageLayout(
@@ -188,8 +188,8 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
   if (!kSkipFiltering) {
     {
       auto color_out_tex = ftl::MakeRefCounted<Texture>(
-          color_out, context_.device, vk::Filter::eNearest);
-      command_buffer->AddUsedResource(color_out_tex);
+          escher_->resource_life_preserver(), color_out, vk::Filter::eNearest);
+      color_out_tex->KeepAlive(command_buffer);
 
       impl::SsdoSampler::FilterConfig filter_config;
       filter_config.stride = vec2(1.f / stage.viewing_volume().width(), 0.f);
@@ -211,8 +211,8 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
     }
     {
       auto color_aux_tex = ftl::MakeRefCounted<Texture>(
-          color_aux, context_.device, vk::Filter::eNearest);
-      command_buffer->AddUsedResource(color_aux_tex);
+          escher_->resource_life_preserver(), color_aux, vk::Filter::eNearest);
+      color_aux_tex->KeepAlive(command_buffer);
 
       impl::SsdoSampler::FilterConfig filter_config;
       filter_config.stride = vec2(0.f, 1.f / stage.viewing_volume().height());
@@ -249,7 +249,7 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
                                      const Stage& stage,
                                      const Model& model) {
   auto command_buffer = current_frame();
-  command_buffer->AddUsedResource(framebuffer);
+  framebuffer->KeepAlive(command_buffer);
 
   impl::ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
       stage, model, vec2(1.f, 1.f), sort_by_pipeline_, false, true,
@@ -305,8 +305,7 @@ void PaperRenderer::DrawDebugOverlays(const ImagePtr& output,
     src_height = depth->height() / kSsdoAccelDownsampleFactor;
     TexturePtr unpacked_ssdo_acceleration =
         ssdo_accelerator_->UnpackLookupTable(current_frame(), ssdo_acceleration,
-                                             src_width, src_height,
-                                             image_cache_, this);
+                                             src_width, src_height, this);
     FTL_DCHECK(unpacked_ssdo_acceleration->width() ==
                static_cast<uint32_t>(src_width));
     FTL_DCHECK(unpacked_ssdo_acceleration->height() ==
@@ -348,8 +347,8 @@ void PaperRenderer::DrawFrame(const Stage& stage,
       depth_format_, ssdo_accel_width, ssdo_accel_height,
       vk::ImageUsageFlagBits::eSampled);
   TexturePtr ssdo_accel_depth_texture = ftl::MakeRefCounted<Texture>(
-      ssdo_accel_depth_image, context_.device, vk::Filter::eNearest,
-      vk::ImageAspectFlagBits::eDepth,
+      escher_->resource_life_preserver(), ssdo_accel_depth_image,
+      vk::Filter::eNearest, vk::ImageAspectFlagBits::eDepth,
       // TODO: use a more descriptive enum than true.
       true);
   {
@@ -371,7 +370,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
   TexturePtr ssdo_accelerator_texture = ssdo_accelerator_->GenerateLookupTable(
       current_frame(), ssdo_accel_depth_texture,
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc,
-      image_cache_, this);
+      this);
   SubmitPartialFrame();
 
   // Depth-only pre-pass.
@@ -409,12 +408,12 @@ void PaperRenderer::DrawFrame(const Stage& stage,
                    stage);
     SubmitPartialFrame();
 
-    illumination_texture = ftl::MakeRefCounted<Texture>(illum1, context_.device,
-                                                        vk::Filter::eNearest);
+    illumination_texture = ftl::MakeRefCounted<Texture>(
+        escher_->resource_life_preserver(), illum1, vk::Filter::eNearest);
 
     // Done after previous SubmitPartialFrame(), because this is needed by the
     // final lighting pass.
-    current_frame()->AddUsedResource(illumination_texture);
+    illumination_texture->KeepAlive(current_frame());
   }
 
   // Use multisampling for final lighting pass.
@@ -441,7 +440,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
                                                       depth_image_multisampled},
         model_renderer_->lighting_pass());
 
-    current_frame()->AddUsedResource(multisample_fb);
+    multisample_fb->KeepAlive(current_frame());
 
     DrawLightingPass(kSampleCount, multisample_fb, illumination_texture, stage,
                      model);

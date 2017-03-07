@@ -77,6 +77,8 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
     current_frame_->Submit(context_.queue, std::move(frame_retired_callback));
   }
   current_frame_ = nullptr;
+
+  escher_->Cleanup();
 }
 
 void Renderer::AddTimestamp(const char* name) {

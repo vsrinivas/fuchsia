@@ -26,6 +26,8 @@ class ComputeShader {
   // Update descriptors and push-constants, then dispatch x * y * z workgroups.
   // |push_constants| must point to data of the size passed to the ComputeShader
   // constructor, or nullptr if that size was 0.
+  //
+  // TODO: avoid reffing/unreffing textures
   void Dispatch(std::vector<TexturePtr> textures,
                 CommandBuffer* command_buffer,
                 uint32_t x,

@@ -45,8 +45,11 @@ class CommandBuffer {
 
   // For convenience, calls TakeWaitSemaphore() on the resource, and passes the
   // result to AddWaitSemaphore().
-  void TakeWaitSemaphore(const ResourcePtr& resource,
-                         vk::PipelineStageFlags stage);
+  template <typename ResourcePtrT>
+  void TakeWaitSemaphore(const ResourcePtrT& resource,
+                         vk::PipelineStageFlags stage) {
+    AddWaitSemaphore(resource->TakeWaitSemaphore(), stage);
+  }
 
   // During Submit(), these semaphores will be added to the vk::SubmitInfo.
   // No-op if semaphore is null.
@@ -62,15 +65,15 @@ class CommandBuffer {
 
   // Copy pixels from one image to another.  No image barriers or other
   // synchronization is used.  Retain both images in used_resources.
-  void CopyImage(ImagePtr src_image,
-                 ImagePtr dst_image,
+  void CopyImage(const ImagePtr& src_image,
+                 const ImagePtr& dst_image,
                  vk::ImageLayout src_layout,
                  vk::ImageLayout dst_layout,
                  vk::ImageCopy* region);
 
   // Transition the image between the two layouts; see section 11.4 of the
   // Vulkan spec.  Retain image in used_resources.
-  void TransitionImageLayout(ImagePtr image,
+  void TransitionImageLayout(const ImagePtr& image,
                              vk::ImageLayout old_layout,
                              vk::ImageLayout new_layout);
 
@@ -87,6 +90,11 @@ class CommandBuffer {
   // Simple wrapper around endRenderPass().
   void EndRenderPass() { command_buffer_.endRenderPass(); }
 
+  // Each CommandBuffer that is obtained from a CommandBufferPool is given a
+  // monotonically-increasing sequence number.  This number is globally unique
+  // (per Escher instance), even across multiple CommandBufferPools.
+  uint64_t sequence_number() const { return sequence_number_; }
+
  private:
   friend class CommandBufferPool;
 
@@ -100,16 +108,16 @@ class CommandBuffer {
   vk::Fence fence() const { return fence_; }
 
   // Called by CommandBufferPool when this buffer is obtained from it.
-  void Begin();
+  void Begin(uint64_t sequence_number);
 
   // Called by CommandBufferPool, to attempt to reset the buffer for reuse.
   // Return false and do nothing if the buffer's submission fence is not ready.
   bool Retire();
 
-  vk::Device device_;
-  vk::CommandBuffer command_buffer_;
-  vk::Fence fence_;
-  vk::PipelineStageFlags pipeline_stage_mask_;
+  const vk::Device device_;
+  const vk::CommandBuffer command_buffer_;
+  const vk::Fence fence_;
+  const vk::PipelineStageFlags pipeline_stage_mask_;
 
   std::vector<ResourcePtr> used_resources_;
 
@@ -122,6 +130,8 @@ class CommandBuffer {
 
   bool is_active_ = false;
   bool is_submitted_ = false;
+
+  uint64_t sequence_number_ = 0;
 
   CommandBufferFinishedCallback callback_;
 

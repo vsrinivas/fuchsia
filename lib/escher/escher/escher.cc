@@ -9,6 +9,7 @@
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/renderer/paper_renderer.h"
+#include "escher/renderer/texture.h"
 #include "escher/util/cplusplus.h"
 
 namespace escher {
@@ -40,6 +41,15 @@ ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
 PaperRendererPtr Escher::NewPaperRenderer() {
   auto renderer = new PaperRenderer(impl_.get());
   return ftl::AdoptRef(renderer);
+}
+
+TexturePtr Escher::NewTexture(ImagePtr image,
+                              vk::Filter filter,
+                              vk::ImageAspectFlags aspect_mask,
+                              bool use_unnormalized_coordinates) {
+  return ftl::MakeRefCounted<Texture>(impl_->resource_life_preserver(), image,
+                                      filter, aspect_mask,
+                                      use_unnormalized_coordinates);
 }
 
 uint64_t Escher::GetNumGpuBytesAllocated() {

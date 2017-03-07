@@ -21,6 +21,7 @@ using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
+using escher::TexturePtr;
 
 WobblyOceanScene::WobblyOceanScene(escher::VulkanContext* vulkan_context,
                                    escher::Escher* escher)
@@ -39,9 +40,8 @@ void WobblyOceanScene::Init(escher::Stage* stage) {
   color3_->set_color(escher::SrgbToLinear(vec3(0.913f, 0.384f, 0.352f)));
   color4_->set_color(escher::SrgbToLinear(vec3(0.286f, 0.545f, 0.607f)));
 
-  auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
-      escher()->NewCheckerboardImage(14, 4), vulkan_context()->device,
-      vk::Filter::eNearest);
+  TexturePtr checkerboard = escher()->NewTexture(
+      escher()->NewCheckerboardImage(14, 4), vk::Filter::eNearest);
   checkerboard_material_ = ftl::MakeRefCounted<escher::Material>(checkerboard);
 
   checkerboard_material_->set_color(

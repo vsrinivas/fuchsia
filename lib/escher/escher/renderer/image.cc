@@ -9,28 +9,24 @@
 
 namespace escher {
 
-Image::Image(ImageInfo info,
-             vk::Image image,
-             impl::GpuMemPtr mem,
-             ImageOwner* owner)
-    : impl::Resource(nullptr),
+ImageCore::ImageCore(ImageOwner* image_owner,
+                     ImageInfo info,
+                     vk::Image image,
+                     impl::GpuMemPtr mem)
+    : ResourceCore(image_owner),
       info_(info),
       image_(image),
-      mem_(std::move(mem)),
-      owner_(owner),
-      has_depth_(false),
-      has_stencil_(false) {
-  FTL_CHECK(image);
-  FTL_CHECK(owner);
-
+      mem_(std::move(mem)) {
   // TODO: How do we future-proof this in case more formats are added?
-  switch (info_.format) {
+  switch (info.format) {
     case vk::Format::eD16Unorm:
     case vk::Format::eX8D24UnormPack32:
     case vk::Format::eD32Sfloat:
       has_depth_ = true;
+      has_stencil_ = false;
       break;
     case vk::Format::eS8Uint:
+      has_depth_ = false;
       has_stencil_ = true;
       break;
     case vk::Format::eD16UnormS8Uint:
@@ -41,13 +37,24 @@ Image::Image(ImageInfo info,
       break;
     default:
       // No depth or stencil component.
+      has_depth_ = false;
+      has_stencil_ = false;
       break;
   }
 }
 
-Image::~Image() {
-  // Return underlying resources to the manager.
-  owner_->RecycleImage(info_, image_, std::move(mem_));
+ImageCore::~ImageCore() {
+  if (!mem_) {
+    // Probably a swapchain image.  We don't own the image or the memory.
+    FTL_LOG(INFO) << "Destroying ImageCore with unowned VkImage (perhaps a "
+                     "swapchain image?)";
+  } else {
+    vulkan_context().device.destroyImage(image_);
+  }
 }
+
+Image::Image(std::unique_ptr<ImageCore> core) : Resource2(std::move(core)) {}
+
+Image::~Image() {}
 
 }  // namespace escher

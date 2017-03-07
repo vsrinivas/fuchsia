@@ -8,10 +8,8 @@
 
 namespace escher {
 
-ImagePtr ImageOwner::CreateImage(const ImageInfo& info,
-                                 vk::Image image,
-                                 impl::GpuMemPtr mem) {
-  return ftl::AdoptRef(new Image(info, image, std::move(mem), this));
+ImagePtr ImageOwner::CreateImage(std::unique_ptr<ImageCore> core) {
+  return ftl::AdoptRef(new Image(std::move(core)));
 }
 
 }  // namespace escher

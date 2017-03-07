@@ -28,8 +28,7 @@ class ImageCache : public ImageOwner {
  public:
   // The allocator is used to allocate memory for newly-created images.  The
   // queue and CommandBufferPool are used to schedule image layout transitions.
-  ImageCache(vk::Device device,
-             vk::PhysicalDevice physical_device,
+  ImageCache(const VulkanContext& context,
              CommandBufferPool* pool,
              GpuAllocator* allocator,
              GpuUploader* uploader);
@@ -79,24 +78,17 @@ class ImageCache : public ImageOwner {
       vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
 
  private:
-  // Implement ImageOwner::RecycleImage().  Adds the image to unused_images_.
-  void RecycleImage(const ImageInfo& info,
-                    vk::Image image,
-                    impl::GpuMemPtr mem) override;
+  // Implement ResourceCoreManager::ReceiveResourceCore().  Adds the image to
+  // unused_images_.
+  void ReceiveResourceCore(std::unique_ptr<ResourceCore> core) override;
 
   // Try to find an unused image that meets the required specs.  If successful,
   // remove and return it.  Otherwise, return nullptr.
   ImagePtr FindImage(const ImageInfo& info);
 
-  vk::Device device_;
-  vk::PhysicalDevice physical_device_;
   vk::Queue queue_;
   GpuAllocator* allocator_;
   GpuUploader* uploader_;
-
-  // Keep track of the number of images that must be returned before this cache
-  // can be safely destroyed.
-  uint32_t outstanding_image_count_ = 0;
 
   // Keep track of all images that are available for reuse.
   // TODO: need some method of trimming the cache, to free images that haven't
@@ -107,11 +99,9 @@ class ImageCache : public ImageOwner {
   // GPU stall.  The right approach is probably to trim the cache in the most
   // straightforward way, and profile to determine whether GPU stalls are a real
   // concern.
-  struct UnusedImage {
-    vk::Image image;
-    GpuMemPtr mem;
-  };
-  std::unordered_map<ImageInfo, std::queue<UnusedImage>, Hash<ImageInfo>>
+  std::unordered_map<ImageInfo,
+                     std::queue<std::unique_ptr<ImageCore>>,
+                     Hash<ImageInfo>>
       unused_images_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ImageCache);

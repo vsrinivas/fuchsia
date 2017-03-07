@@ -5,17 +5,38 @@
 #pragma once
 
 #include "escher/forward_declarations.h"
-#include "escher/impl/resource.h"
+#include "escher/resources/resource.h"
 
 namespace escher {
 
-class Texture : public impl::Resource {
+class TextureCore : public ResourceCore {
  public:
-  Texture(ImagePtr image, vk::Device device, vk::Filter filter);
-  Texture(ImagePtr image,
-          vk::Device device,
+  TextureCore(ResourceLifePreserver* life_preserver,
+              const ImagePtr& image,
+              vk::Filter filter,
+              vk::ImageAspectFlags aspect_mask,
+              bool use_unnormalized_coordinates);
+  ~TextureCore() override;
+
+  vk::ImageView image_view() const { return image_view_; }
+  vk::Sampler sampler() const { return sampler_; }
+
+ private:
+  vk::ImageView image_view_;
+  vk::Sampler sampler_;
+};
+
+class Texture : public Resource2 {
+ public:
+  // Construct a new Texture, which encapsulates a newly-created VkImageView and
+  // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
+  // and |use_unnormalized_coordinates| are used to create the VkSampler.
+  // |life_preserver| guarantees that the underlying Vulkan resources are not
+  // destroyed while still referenced by a pending command buffer.
+  Texture(ResourceLifePreserver* life_preserver,
+          ImagePtr image,
           vk::Filter filter,
-          vk::ImageAspectFlags aspect_mask,
+          vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,
           bool use_unnormalized_coordinates = false);
   ~Texture() override;
 
@@ -25,10 +46,12 @@ class Texture : public impl::Resource {
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
 
+  const TextureCore* core() const {
+    return static_cast<const TextureCore*>(Resource2::core());
+  }
+
  private:
-  void Init(vk::Filter filter,
-            vk::ImageAspectFlags aspect_mask,
-            bool use_unnormalized_coordinates);
+  void KeepDependenciesAlive(impl::CommandBuffer* command_buffer) override;
 
   ImagePtr image_;
   vk::Device device_;

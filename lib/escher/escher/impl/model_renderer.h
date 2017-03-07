@@ -61,6 +61,7 @@ class ModelRenderer {
   vk::RenderPass depth_prepass_;
   vk::RenderPass lighting_pass_;
 
+  ResourceLifePreserver* life_preserver;
   MeshManager* mesh_manager_;
   ModelData* model_data_;
 

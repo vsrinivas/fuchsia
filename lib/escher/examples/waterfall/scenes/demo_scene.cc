@@ -20,15 +20,15 @@ using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
+using escher::TexturePtr;
 
 DemoScene::DemoScene(escher::VulkanContext* vulkan_context,
                      escher::Escher* escher)
     : Scene(vulkan_context, escher) {}
 
 void DemoScene::Init(escher::Stage* stage) {
-  auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
-      escher()->NewCheckerboardImage(16, 16), vulkan_context()->device,
-      vk::Filter::eNearest);
+  TexturePtr checkerboard = escher()->NewTexture(
+      escher()->NewCheckerboardImage(16, 16), vk::Filter::eNearest);
 
   purple_ = ftl::MakeRefCounted<escher::Material>(checkerboard);
   purple_->set_color(vec3(0.588f, 0.239f, 0.729f));

@@ -233,6 +233,9 @@ void Demo::CreateDeviceAndQueue() {
 void Demo::CreateSwapchain(const WindowParams& window_params) {
   FTL_CHECK(!swapchain_.swapchain);
   FTL_CHECK(swapchain_.images.empty());
+  FTL_CHECK(!swapchain_image_owner_);
+  swapchain_image_owner_ =
+      std::make_unique<SwapchainImageOwner>(GetVulkanContext());
 
   vk::SurfaceCapabilitiesKHR surface_caps;
   {
@@ -372,7 +375,9 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
       image_info.width = swapchain_extent.width;
       image_info.height = swapchain_extent.height;
       image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
-      escher_images.push_back(CreateImage(image_info, im, nullptr));
+      escher_images.push_back(swapchain_image_owner_->CreateImage(
+          std::make_unique<escher::ImageCore>(swapchain_image_owner_.get(),
+                                              image_info, im, nullptr)));
     }
     swapchain_ = escher::VulkanSwapchain(
         swapchain, escher_images, swapchain_extent.width,
@@ -386,15 +391,6 @@ void Demo::DestroySwapchain() {
   FTL_CHECK(swapchain_.swapchain);
   device_.destroySwapchainKHR(swapchain_.swapchain);
   swapchain_.swapchain = nullptr;
-}
-
-void Demo::RecycleImage(const escher::ImageInfo& info,
-                        vk::Image image,
-                        escher::impl::GpuMemPtr mem) {
-  // There is nothing to do here.  These images belong to the swapchain, and
-  // will be destroyed at the same time as the swapchain.  Similarly, there is
-  // no memory bound to the images that we are responsible for releasing.
-  FTL_DCHECK(!mem);
 }
 
 void Demo::DestroyDevice() {
@@ -459,4 +455,13 @@ escher::VulkanContext Demo::GetVulkanContext() {
 
 void Demo::SetKeyCallback(std::string key, std::function<void()> func) {
   keyboard_handler_.SetCallback(std::move(key), std::move(func));
+}
+
+Demo::SwapchainImageOwner::SwapchainImageOwner(
+    const escher::VulkanContext& context)
+    : escher::ImageOwner(context) {}
+
+void Demo::SwapchainImageOwner::ReceiveResourceCore(
+    std::unique_ptr<escher::ResourceCore> core) {
+  FTL_LOG(INFO) << "Destroying ImageCore for swapchain image";
 }

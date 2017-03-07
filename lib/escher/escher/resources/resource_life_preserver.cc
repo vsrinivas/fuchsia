@@ -1,0 +1,42 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "escher/resources/resource_life_preserver.h"
+
+namespace escher {
+
+ResourceLifePreserver::ResourceLifePreserver(const VulkanContext& context)
+    : ResourceCoreManager(context) {}
+
+ResourceLifePreserver::~ResourceLifePreserver() {
+  FTL_DCHECK(unused_resources_.empty());
+}
+
+void ResourceLifePreserver::ReceiveResourceCore(
+    std::unique_ptr<ResourceCore> core) {
+  if (core->sequence_number() <= last_finished_sequence_number_) {
+    // Destroy immediately.
+  } else {
+    // Defer destruction.
+    unused_resources_.insert(std::move(core));
+  }
+}
+
+void ResourceLifePreserver::CommandBufferFinished(uint64_t sequence_number) {
+  FTL_DCHECK(sequence_number > last_finished_sequence_number_);
+  last_finished_sequence_number_ = sequence_number;
+
+  // The sequence number allows us to find all unused resources that are no
+  // longer referenced by a pending command-buffer; destroy these.
+  auto it = unused_resources_.begin();
+  while (it != unused_resources_.end()) {
+    if ((*it)->sequence_number() <= last_finished_sequence_number_) {
+      it = unused_resources_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+}  // namespace escher

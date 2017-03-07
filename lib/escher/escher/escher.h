@@ -7,8 +7,9 @@
 #include <memory>
 
 #include "escher/forward_declarations.h"
-#include "escher/status.h"
 #include "escher/shape/mesh_builder_factory.h"
+#include "escher/status.h"
+#include "escher/vk/vulkan_context.h"
 #include "ftl/macros.h"
 #include "ftl/memory/ref_ptr.h"
 
@@ -39,6 +40,15 @@ class Escher : public MeshBuilderFactory {
   ImagePtr NewNoiseImage(uint32_t width, uint32_t height);
 
   PaperRendererPtr NewPaperRenderer();
+
+  // Construct a new Texture, which encapsulates a newly-created VkImageView and
+  // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
+  // and |use_unnormalized_coordinates| are used to create the VkSampler.
+  TexturePtr NewTexture(
+      ImagePtr image,
+      vk::Filter filter,
+      vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,
+      bool use_unnormalized_coordinates = false);
 
   uint64_t GetNumGpuBytesAllocated();
 

@@ -28,9 +28,11 @@ CommandBuffer::~CommandBuffer() {
   // Owner is responsible for destroying command buffer and fence.
 }
 
-void CommandBuffer::Begin() {
+void CommandBuffer::Begin(uint64_t sequence_number) {
   FTL_DCHECK(!is_active_ && !is_submitted_);
+  FTL_DCHECK(sequence_number > sequence_number_);
   is_active_ = true;
+  sequence_number_ = sequence_number;
   auto result = command_buffer_.begin(vk::CommandBufferBeginInfo());
   FTL_DCHECK(result == vk::Result::eSuccess);
 }
@@ -75,11 +77,6 @@ void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore,
   }
 }
 
-void CommandBuffer::TakeWaitSemaphore(const ResourcePtr& resource,
-                                      vk::PipelineStageFlags stage) {
-  AddWaitSemaphore(resource->TakeWaitSemaphore(), stage);
-}
-
 void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
   FTL_DCHECK(is_active_);
   if (semaphore) {
@@ -112,18 +109,18 @@ void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
   command_buffer_.drawIndexed(mesh_impl->num_indices, 1, 0, 0, 0);
 }
 
-void CommandBuffer::CopyImage(ImagePtr src_image,
-                              ImagePtr dst_image,
+void CommandBuffer::CopyImage(const ImagePtr& src_image,
+                              const ImagePtr& dst_image,
                               vk::ImageLayout src_layout,
                               vk::ImageLayout dst_layout,
                               vk::ImageCopy* region) {
   command_buffer_.copyImage(src_image->get(), src_layout, dst_image->get(),
                             dst_layout, 1, region);
-  AddUsedResource(std::move(src_image));
-  AddUsedResource(std::move(dst_image));
+  src_image->KeepAlive(this);
+  dst_image->KeepAlive(this);
 }
 
-void CommandBuffer::TransitionImageLayout(ImagePtr image,
+void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
                                           vk::ImageLayout old_layout,
                                           vk::ImageLayout new_layout) {
   vk::PipelineStageFlags src_stage_mask;
@@ -257,7 +254,7 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
                                   vk::DependencyFlagBits::eByRegion, 0, nullptr,
                                   0, nullptr, 1, &barrier);
 
-  AddUsedResource(std::move(image));
+  image->KeepAlive(this);
 }
 
 void CommandBuffer::BeginRenderPass(

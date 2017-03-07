@@ -4,27 +4,25 @@
 
 #include "escher/renderer/framebuffer.h"
 
+#include "escher/impl/command_buffer.h"
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/image.h"
+#include "escher/resources/resource_life_preserver.h"
 
 namespace escher {
 
-Framebuffer::Framebuffer(impl::EscherImpl* escher,
-                         uint32_t width,
-                         uint32_t height,
-                         std::vector<ImagePtr> images,
-                         vk::RenderPass render_pass)
-    : impl::Resource(escher),
-      width_(width),
-      height_(height),
-      images_(std::move(images)) {
-  FTL_DCHECK(escher);
-  vk::Device device = escher->vulkan_context().device;
+FramebufferCore::FramebufferCore(ResourceLifePreserver* life_preserver,
+                                 uint32_t width,
+                                 uint32_t height,
+                                 const std::vector<ImagePtr>& images,
+                                 vk::RenderPass render_pass)
+    : ResourceCore(life_preserver) {
+  vk::Device device = vulkan_context().device;
 
   // For each image, construct a corresponding view.
-  image_views_.reserve(images_.size());
-  for (auto& im : images_) {
+  image_views_.reserve(images.size());
+  for (auto& im : images) {
     FTL_DCHECK(width == im->width());
     FTL_DCHECK(height == im->height());
 
@@ -58,14 +56,36 @@ Framebuffer::Framebuffer(impl::EscherImpl* escher,
   framebuffer_ = ESCHER_CHECKED_VK_RESULT(device.createFramebuffer(info));
 }
 
-Framebuffer::~Framebuffer() {
-  vk::Device device = escher()->vulkan_context().device;
+FramebufferCore::~FramebufferCore() {
+  vk::Device device = vulkan_context().device;
   for (auto& image_view : image_views_) {
     device.destroyImageView(image_view);
   }
-  image_views_.clear();
-  images_.clear();
   device.destroyFramebuffer(framebuffer_);
+}
+
+Framebuffer::Framebuffer(impl::EscherImpl* escher,
+                         uint32_t width,
+                         uint32_t height,
+                         std::vector<ImagePtr> images,
+                         vk::RenderPass render_pass)
+    : Resource2(
+          std::make_unique<FramebufferCore>(escher->resource_life_preserver(),
+                                            width,
+                                            height,
+                                            images,
+                                            render_pass)),
+      framebuffer_(core()->get()),
+      width_(width),
+      height_(height),
+      images_(std::move(images)) {}
+
+Framebuffer::~Framebuffer() {}
+
+void Framebuffer::KeepDependenciesAlive(impl::CommandBuffer* command_buffer) {
+  for (auto& im : images_) {
+    im->KeepAlive(command_buffer);
+  }
 }
 
 }  // namespace escher
