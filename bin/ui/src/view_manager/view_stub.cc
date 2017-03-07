@@ -142,12 +142,15 @@ void ViewStub::SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree) {
   }
 }
 
+// Called when the ViewOwner returns a token (using GetToken), or when the
+// ViewOwner is disconnected.
 void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
-  if (transfer_view_owner_when_view_resolved()) {
+  if (view_token && transfer_view_owner_when_view_resolved()) {
+    // While we were waiting for GetToken(), the view was transferred to a new
+    // ViewOwner). Now that we got the GetToken() call, transfer the ownership
+    // correctly internally.
     FTL_DCHECK(!container());  // Make sure we're removed from the view tree
     FTL_DCHECK(pending_view_owner_transfer_->view_stub_ != nullptr);
-    // TODO(mikejurka): any other way to check that
-    // transferred_view_owner_request_ is not null?
     FTL_DCHECK(pending_view_owner_transfer_->transferred_view_owner_request_
                    .is_pending());
     FTL_DCHECK(owner_);
@@ -166,6 +169,9 @@ void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
     // that reference anymore, which should release us immediately.
     pending_view_owner_transfer_.reset();
   } else {
+    // 1. We got the ViewOwner GetToken() callback as expected.
+    // 2. Or, the ViewOwner was closed before the GetToken() callback (in
+    // which case view_token is null).
     FTL_DCHECK(owner_);
     owner_.reset();
     registry_->OnViewResolved(this, std::move(view_token));
