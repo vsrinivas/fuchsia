@@ -3,9 +3,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import argparse
 import os
 import shutil
-import argparse
 import subprocess
 import sys
 
@@ -27,6 +27,7 @@ DIR_EFI = "EFI"
 DIR_EFI_BOOT = "EFI/BOOT"
 FILE_KERNEL = "magenta.bin"
 FILE_KERNEL_RD = "ramdisk.bin"
+FILE_KERNEL_CMDLINE = "cmdline"
 
 def compress_file(lz4_path, source, dest, working_dir):
   lz4_cmd = [lz4_path, "-4", "-B4", source, dest]
@@ -118,6 +119,8 @@ parser.add_argument('--arch', action='store', required=False,
 parser.add_argument('--bootdata', action='store', required=False,
                     help="""The kernel RAM disk file, if not supplied this is
                     assumed to be relative to --build_dir""")
+parser.add_argument('--kernel_cmdline', action='store', required=False,
+                    help="""Path to a file with kernel command line options""")
 
 args = parser.parse_args()
 disk_path_efi = args.efi_disk
@@ -125,6 +128,7 @@ bootloader = args.efi_loader
 kernel = args.kernel
 build_dir_magenta = args.build_dir_magenta
 bootdata = args.bootdata
+kernel_cmdline = args.kernel_cmdline
 
 # if bootloader was not supplied, find it relative to the magenta build dir
 if bootloader is None:
@@ -146,7 +150,7 @@ if kernel is None:
 
 # if the kernel ram disk was not supplied, find it relative to the magenta build
 # dir
-if bootdata is None:
+if not bootdata:
   if build_dir_magenta is not None:
     bootdata = os.path.join(build_dir_magenta, "bootdata.bin")
   else:
@@ -229,6 +233,13 @@ if not (cp_fat(mcopy_path, disk_path_efi, bootloader, bootloader_remote_path,
         cp_fat(mcopy_path, disk_path_efi, bootdata, FILE_KERNEL_RD,
                working_dir)):
   sys.exit(-1)
+
+if kernel_cmdline:
+    if not cp_fat(mcopy_path, disk_path_efi, kernel_cmdline, FILE_KERNEL_CMDLINE, working_dir):
+        print "Could not copy kernel cmdline"
+        sys.exit(-1)
+    print "Copied command line \"%s\"" % kernel_cmdline
+
 
 compressed_disk_efi = "%s.lz4" % disk_path_efi
 print "Compressing ESP disk image to %s" % compressed_disk_efi

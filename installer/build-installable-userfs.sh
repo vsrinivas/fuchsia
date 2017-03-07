@@ -48,9 +48,10 @@ build_dir_fuchsia=""
 minfs_path=""
 build_dir_magenta=""
 device_type="pc"
+kernel_cmdline=""
+bootdata=""
 
-
-while getopts ":u:hrdp:b:m:e:a:t:" opt; do
+while getopts ":u:hrdp:b:m:e:a:t:c:x:" opt; do
   case $opt in
     u)
       blocks_sys=$(($OPTARG * 1024 * 1024))
@@ -70,6 +71,8 @@ while getopts ":u:hrdp:b:m:e:a:t:" opt; do
         "to place on the EFI partition. If not supplied, this will be assumed" \
         "relative to fuchsia build directory."
       echo "-t: the device type, for example 'qemu', 'rpi', 'pc', etc"
+      echo "-c: kernel command line options"
+      echo "-x: bootdata location"
       exit 0
       ;;
     r)
@@ -95,6 +98,12 @@ while getopts ":u:hrdp:b:m:e:a:t:" opt; do
       ;;
     t)
       device_type=$OPTARG
+      ;;
+    c)
+      kernel_cmdline=$OPTARG
+      ;;
+    x)
+      bootdata=$OPTARG
       ;;
     \?)
       echo "Unknown option -$OPTARG"
@@ -227,4 +236,5 @@ fi
 "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc" \
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia" \
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch" \
-  --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta"
+  --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta" \
+  --kernel_cmdline="$kernel_cmdline" --bootdata="$bootdata"
