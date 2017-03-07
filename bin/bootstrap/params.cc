@@ -14,9 +14,34 @@ namespace {
 
 constexpr const char kDefaultServicesConfigFile[] =
     "/system/data/bootstrap/services.config";
+constexpr const char kDefaultLoadersConfigFile[] =
+    "/system/data/bootstrap/loaders.config";
 constexpr const char kDefaultAppsConfigFile[] =
     "/system/data/bootstrap/apps.config";
 constexpr const char kDefaultLabel[] = "boot";
+
+// --<option>=<key>@<app url>,...
+bool BuildServiceMap(const ftl::CommandLine& command_line,
+                     const std::string& option,
+                     Params::ServiceMap* service_map) {
+  std::string values;
+  if (command_line.GetOptionValue(option, &values)) {
+    for (auto value : ftl::SplitString(values, ",", ftl::kTrimWhitespace,
+                                       ftl::kSplitWantNonEmpty)) {
+      auto split = ftl::SplitString(value, "@", ftl::kTrimWhitespace,
+                                    ftl::kSplitWantNonEmpty);
+      if (split.size() != 2) {
+        FTL_LOG(ERROR) << "Invalid --" << option << " argument";
+        return false;
+      }
+      auto launch_info = app::ApplicationLaunchInfo::New();
+      launch_info->url = split[1].ToString();
+      service_map->emplace(split[0].ToString(), std::move(launch_info));
+    }
+  }
+
+  return true;
+}
 
 }  // namespace
 
@@ -36,6 +61,18 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
       }
     }
 
+    if (!command_line.GetOptionValue("loaders", &config_file))
+      config_file = kDefaultLoadersConfigFile;
+    if (!config_file.empty()) {
+      FTL_LOG(INFO) << "Loading application loaders from " << config_file;
+      Config config;
+      if (config.ReadFrom(config_file)) {
+        app_loaders_ = config.TakeAppLoaders();
+      } else {
+        FTL_LOG(WARNING) << "Could not parse " << config_file;
+      }
+    }
+
     if (!command_line.GetOptionValue("apps", &config_file))
       config_file = kDefaultAppsConfigFile;
     if (!config_file.empty()) {
@@ -50,21 +87,12 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
   }
 
   // --reg=<service name>@<app url>,...
-  std::string option;
-  if (command_line.GetOptionValue("reg", &option)) {
-    for (auto reg : ftl::SplitString(option, ",", ftl::kTrimWhitespace,
-                                     ftl::kSplitWantNonEmpty)) {
-      auto split = ftl::SplitString(reg, "@", ftl::kTrimWhitespace,
-                                    ftl::kSplitWantNonEmpty);
-      if (split.size() != 2) {
-        FTL_LOG(ERROR) << "Invalid --reg argument";
-        return false;
-      }
-      auto launch_info = app::ApplicationLaunchInfo::New();
-      launch_info->url = split[1].ToString();
-      services_.emplace(split[0].ToString(), std::move(launch_info));
-    }
-  }
+  if (!BuildServiceMap(command_line, "reg", &services_))
+    return false;
+
+  // --ldr=<scheme>@<loader url>,...
+  if (!BuildServiceMap(command_line, "ldr", &app_loaders_))
+    return false;
 
   // --label=<name>
   if (!command_line.GetOptionValue("label", &label_) || label_.empty()) {

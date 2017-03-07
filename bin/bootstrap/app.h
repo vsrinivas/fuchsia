@@ -13,6 +13,7 @@
 #include "application/lib/app/service_provider_impl.h"
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_environment.fidl.h"
+#include "apps/modular/src/bootstrap/delegating_application_loader.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 
@@ -43,6 +44,7 @@ class App : public app::ApplicationEnvironmentHost {
   void RegisterSingleton(std::string service_name,
                          app::ApplicationLaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
+  void RegisterAppLoaders(Params::ServiceMap app_loaders);
   void LaunchApplication(app::ApplicationLaunchInfoPtr launch_info);
 
   std::unique_ptr<app::ApplicationContext> application_context_;
@@ -56,6 +58,9 @@ class App : public app::ApplicationEnvironmentHost {
   fidl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
   app::ServiceProviderImpl env_services_;
   app::ApplicationLauncherPtr env_launcher_;
+
+  std::unique_ptr<DelegatingApplicationLoader> app_loader_;
+  fidl::BindingSet<app::ApplicationLoader> app_loader_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };

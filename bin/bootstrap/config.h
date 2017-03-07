@@ -32,12 +32,12 @@ class Config {
   bool Parse(const std::string& string);
 
   ServiceMap TakeServices() { return std::move(services_); }
+  ServiceMap TakeAppLoaders() { return std::move(app_loaders_); }
   AppVector TakeApps() { return std::move(apps_); }
 
  private:
-  app::ApplicationLaunchInfoPtr GetLaunchInfo(const modular::JsonValue& value);
-
   ServiceMap services_;
+  ServiceMap app_loaders_;
   AppVector apps_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Config);

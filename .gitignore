@@ -14,5 +14,6 @@
 .pub
 .pydevproject
 packages
+.packages
 **/.atom/
 **/.idea/

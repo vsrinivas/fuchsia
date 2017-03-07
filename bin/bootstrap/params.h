@@ -26,10 +26,12 @@ class Params {
   std::string label() const { return label_; }
 
   ServiceMap TakeServices() { return std::move(services_); }
+  ServiceMap TakeAppLoaders() { return std::move(app_loaders_); }
   AppVector TakeApps() { return std::move(apps_); }
 
  private:
   ServiceMap services_;
+  ServiceMap app_loaders_;
   AppVector apps_;
   std::string label_;
 };

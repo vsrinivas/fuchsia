@@ -8,6 +8,8 @@ executable("bootstrap") {
     "app.h",
     "config.cc",
     "config.h",
+    "delegating_application_loader.cc",
+    "delegating_application_loader.h",
     "main.cc",
     "params.cc",
     "params.h",
@@ -20,5 +22,6 @@ executable("bootstrap") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
+    "//lib/url",
   ]
 }
