@@ -17,13 +17,6 @@
 
 #include "lib/ftl/files/directory.h"
 
-#ifdef __Fuchsia__
-// TODO(qsr): lstat doesn't exist yet on fuchsia
-#define LSTAT stat
-#else
-#define LSTAT lstat
-#endif
-
 namespace files {
 namespace {
 
@@ -186,7 +179,7 @@ std::string GetDirectoryName(std::string path) {
 
 bool DeletePath(const std::string& path, bool recursive) {
   struct stat stat_buffer;
-  if (LSTAT(path.c_str(), &stat_buffer) != 0)
+  if (lstat(path.c_str(), &stat_buffer) != 0)
     return (errno == ENOENT || errno == ENOTDIR);
   if (!S_ISDIR(stat_buffer.st_mode)) return (unlink(path.c_str()) == 0);
   if (!recursive) return (rmdir(path.c_str()) == 0);
