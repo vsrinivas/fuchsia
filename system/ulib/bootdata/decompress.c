@@ -216,7 +216,8 @@ mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
     }
 
     switch (hdr->type) {
-    case BOOTDATA_TYPE_BOOTFS:
+    case BOOTDATA_TYPE_BOOTFS_BOOT:
+    case BOOTDATA_TYPE_BOOTFS_SYSTEM:
         if (hdr->flags & BOOTDATA_BOOTFS_FLAG_COMPRESSED) {
             status = decompress_bootfs_vmo(vmar, (const uint8_t*)addr, out, err);
         }

@@ -434,7 +434,7 @@ char fill[4096];
 #define CHECK(w) do { if ((w) < 0) goto fail; } while (0)
 
 int export_userfs(const char* fn, fs* predata, fs* postdata, fs* fs,
-                  unsigned hsz, uint64_t outsize, bool compressed) {
+                  unsigned hsz, uint64_t outsize, bool compressed, bool system) {
     uint32_t n;
     fsentry* e;
     int fd;
@@ -544,7 +544,7 @@ int export_userfs(const char* fn, fs* predata, fs* postdata, fs* fs,
 
     bootdata_t boothdr = {
         .magic = BOOTDATA_MAGIC,
-        .type = BOOTDATA_TYPE_BOOTFS,
+        .type = system ? BOOTDATA_TYPE_BOOTFS_SYSTEM : BOOTDATA_TYPE_BOOTFS_BOOT,
         .insize = wrote,
         .outsize = compressed ? outsize : wrote,
         .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
@@ -562,6 +562,33 @@ fail:
     return -1;
 }
 
+void usage(void) {
+    fprintf(stderr,
+    "usage: mkbootfs <option-or-input>*\n"
+    "\n"
+    "       mkbootfs creates a bootdata image consisting of a bootfs\n"
+    "       containing the specified inputs, as well as (optionally)\n"
+    "       other bootdata images included before of after them.\n"
+    "\n"
+    "options: -o <filename>    output bootdata file name\n"
+    "         -c               compress bootfs image (default)\n"
+    "         -v               verbose output\n"
+    "         --uncompressed   don't compress bootfs image (debug only)\n"
+    "         --target=system  bootfs to be unpacked at /system\n"
+    "         --target=boot    bootfs to be unpacked at /boot\n"
+    "\n"
+    "inputs:  <filename>       file containing bootdata (binary)\n"
+    "                          or a manifest (target=srcpath lines)\n"
+    "         @<directory>     directory to recursively import\n"
+    "\n"
+    "notes:   bootdata input files listed before the first manifest\n"
+    "         file or directory are copied *before* the bootfs created\n"
+    "         from those inputs.  bootdata input files listed after\n"
+    "         the first manifest file or directory are copied *after*\n"
+    "         the bootfs created from those inputs.\n"
+    );
+}
+
 int main(int argc, char **argv) {
     const char* output_file = "user.bootfs";
 
@@ -570,17 +597,21 @@ int main(int argc, char **argv) {
     fs fs = { 0 };
 
     fsentry* e = NULL;
-    int i;
     unsigned hsz = 0;
     uint64_t off;
     bool compressed = true;
+    unsigned incount = 0;
+
+    if (argc == 1) {
+        usage();
+        return -1;
+    }
+    bool system = true;
 
     argc--;
     argv++;
     while (argc > 0) {
         const char* cmd = argv[0];
-        if (cmd[0] != '-')
-            break;
         if (!strcmp(cmd,"-v")) {
             verbose = 1;
         } else if (!strcmp(cmd,"-o")) {
@@ -592,40 +623,46 @@ int main(int argc, char **argv) {
             argc--;
             argv++;
         } else if (!strcmp(cmd,"-h") || !strcmp(cmd, "--help")) {
+            usage();
             fprintf(stderr, "usage: mkbootfs [-v] [-o <fsimage>] <manifests>...\n");
             return 0;
         } else if (!strcmp(cmd,"-c")) {
             compressed = true;
         } else if (!strcmp(cmd,"--uncompressed")) {
             compressed = false;
-        } else {
+        } else if (!strcmp(cmd,"--target=system")) {
+            system = true;
+        } else if (!strcmp(cmd,"--target=boot")) {
+            system = false;
+        } else if (cmd[0] == '-') {
             fprintf(stderr, "unknown option: %s\n", cmd);
             return -1;
+        } else {
+            // input file
+            incount++;
+            char* path = argv[0];
+            if (path[0] == '@') {
+                path++;
+                int len = strlen(path);
+                if (path[len - 1] == '/') {
+                    // remove trailing slash
+                    path[len - 1] = 0;
+                }
+                if (import_directory("", path, &hsz, &fs) < 0) {
+                    fprintf(stderr, "error: failed to import directory %s\n", path);
+                    return -1;
+                }
+            } else if (import_file(path, &hsz, &fs, fs.first ? &postdata : &predata) < 0) {
+                fprintf(stderr, "error: failed to import file %s\n", path);
+                return -1;
+            }
         }
         argc--;
         argv++;
     }
-    if (argc < 1) {
-        fprintf(stderr, "no manifest files given\n");
+    if (incount == 0) {
+        fprintf(stderr, "error: no input files given\n");
         return -1;
-    }
-    for (i = 0; i < argc; i++) {
-        char* path = argv[i];
-        if (path[0] == '@') {
-            path++;
-            int len = strlen(path);
-            if (path[len - 1] == '/') {
-                // remove trailing slash
-                path[len - 1] = 0;
-            }
-            if (import_directory("", path, &hsz, &fs) < 0) {
-                fprintf(stderr, "failed to import directory %s\n", path);
-                return -1;
-            }
-        } else if (import_file(path, &hsz, &fs, fs.first ? &postdata : &predata) < 0) {
-            fprintf(stderr, "failed to import file %s\n", path);
-            return -1;
-        }
     }
 
     // account for bootdata
@@ -651,5 +688,5 @@ int main(int argc, char **argv) {
     if (last_entry && last_entry->length == 0) {
         off += sizeof(fill);
     }
-    return export_userfs(output_file, &predata, &postdata, &fs, hsz, off, compressed);
+    return export_userfs(output_file, &predata, &postdata, &fs, hsz, off, compressed, system);
 }

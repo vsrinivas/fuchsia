@@ -172,7 +172,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
             if (bootdata.magic != BOOTDATA_MAGIC) {
                 break;
             }
-            if (bootdata.type == BOOTDATA_TYPE_BOOTFS) {
+            if (bootdata.type == BOOTDATA_TYPE_BOOTFS_BOOT) {
                 const char* errmsg;
                 status = decompress_bootdata(vmar_self, handles[i],
                                              0, bootdata.insize + sizeof(bootdata),
@@ -180,6 +180,11 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
                 if (status < 0) {
                     fail(log, status, errmsg);
                 }
+
+                // signal that we've already processed this one
+                bootdata.type = BOOTDATA_TYPE_BOOTFS_DISCARD;
+                mx_vmo_write(handles[i], &bootdata, off, sizeof(bootdata), &actual);
+
                 goto found_bootfs;
             }
 
@@ -187,7 +192,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         }
     }
 
-    fail(log, ERR_INVALID_ARGS, "no bootfs in bootstrap message\n");
+    fail(log, ERR_INVALID_ARGS, "no '/boot' bootfs in bootstrap message\n");
 
 found_bootfs:
     handles[nhandles] = bootfs_vmo;

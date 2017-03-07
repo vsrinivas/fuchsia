@@ -57,7 +57,7 @@ static struct bootfs_file bootfs_search(mx_handle_t log,
     struct bootfs_magic* magic = (struct bootfs_magic*)fs->contents;
     if (magic->boothdr.magic != BOOTDATA_MAGIC)
         fail(log, ERR_INVALID_ARGS, "bootdata has bad magic number!\n");
-    if (magic->boothdr.type != BOOTDATA_TYPE_BOOTFS)
+    if (magic->boothdr.type != BOOTDATA_TYPE_BOOTFS_BOOT)
         fail(log, ERR_INVALID_ARGS, "bootdata is not a bootfs!\n");
     // This field is obsolete, so we can skip it if it doesn't exist.
     if (!memcmp(magic->fsmagic, FSMAGIC, sizeof(FSMAGIC))) {
