@@ -76,6 +76,6 @@ private:
     std::string current_file;
     std::string current_line;
     int line_number;
-    int line_offset;
+    unsigned line_offset;
     char peek[2];
 };

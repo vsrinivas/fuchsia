@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "tokens.h"
 
@@ -325,7 +326,7 @@ bool Tokenizer::parse_integer(Token& token, char ch) {
     }
 
     token.type = (negative ? TOKEN_NEG_INT_LITERAL : TOKEN_INT_LITERAL);
-    if (negative && value > -INT64_MIN) {
+    if (negative && value > (uint64_t) -INT64_MIN) {
         print_err("integer value too small\n");
         return false;
     }
