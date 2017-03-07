@@ -41,8 +41,6 @@ def main():
     parser.add_argument(
         '--build-id-map', help='Place to put mapping from build id to paths')
     parser.add_argument('--manifest', help='Location of manifest')
-    parser.add_argument('--compress', dest='compress', action='store_true',
-        help='Compress bootfs images')
     parser.add_argument('--pre-binaries', help='bootdata binaries to include before bootfs')
     parser.add_argument('--post-binaries', help='bootdata binaries to include after bootfs')
     args = parser.parse_args()
@@ -80,9 +78,7 @@ def main():
     with open(args.build_id_map, 'w') as build_id_file:
         build_id_file.writelines(buildids)
 
-    mkbootfs_cmd = [paths.MKBOOTFS_PATH]
-    if args.compress:
-        mkbootfs_cmd += ['-c']
+    mkbootfs_cmd = [paths.MKBOOTFS_PATH, '-c']
     mkbootfs_cmd += ['-o', args.output_file]
     if args.pre_binaries:
         mkbootfs_cmd += [args.pre_binaries]

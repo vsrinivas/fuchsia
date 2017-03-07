@@ -7,8 +7,6 @@ declare_args() {
   modules = "default"
   # list of files omitted from user.bootfs
   omit_files = ""
-  # if true, mkbootfs will compress the user.bootfs
-  compress_bootfs = true
 }
 
 group("default") {
@@ -75,8 +73,4 @@ action("mkbootfs") {
     "--pre-binaries",
     rebase_path(magenta_bootdata),
   ]
-
-  if (compress_bootfs) {
-    args += [ "--compress" ]
-  }
 }
