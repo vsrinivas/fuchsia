@@ -114,13 +114,17 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
       key_(key),
       storage_(storage),
       // Comment out this initializer in order to switch to in-memory storage.
-      story_page_(std::move(story_page)) {
+      story_page_(std::move(story_page)),
+      story_snapshot_("StoryStorageImpl") {
   if (story_page_.is_bound()) {
     story_page_->GetSnapshot(
-        ResetStorySnapshot(), page_watcher_binding_.NewBinding(),
+        story_snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
         [](ledger::Status status) {
-          FTL_LOG(ERROR) << "StoryStorageImpl() failed call to Ledger.GetSnapshot() "
-                         << status;
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR)
+                << "StoryStorageImpl() failed call to Ledger.GetSnapshot() "
+                << status;
+          }
         });
   }
 }
@@ -130,7 +134,7 @@ StoryStorageImpl::~StoryStorageImpl() = default;
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
                                     const DataCallback& callback) {
   if (story_page_.is_bound()) {
-    new ReadLinkDataCall(&operation_queue_, story_snapshot_, link_id,
+    new ReadLinkDataCall(&operation_queue_, story_snapshot_.shared_ptr(), link_id,
                          callback);
 
   } else {
@@ -183,23 +187,12 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
     }
   }
 
-
   // Every time we receive an OnChange notification, we update the
   // story page snapshot so we see the current state. Note that
   // pending Operation instances hold on to the previous value until
   // they finish. New Operation instances created after the update
   // receive the new snapshot.
-  callback(ResetStorySnapshot());
-}
-
-fidl::InterfaceRequest<ledger::PageSnapshot> StoryStorageImpl::ResetStorySnapshot() {
-  story_snapshot_.reset(new ledger::PageSnapshotPtr);
-  auto ret = (*story_snapshot_).NewRequest();
-  (*story_snapshot_).set_connection_error_handler([this] {
-    FTL_LOG(ERROR)
-        << "StoryStorageImpl: PageSnapshot connection unexpectedly closed.";
-  });
-  return ret;
+  callback(story_snapshot_.NewRequest());
 }
 
 }  // namespace modular

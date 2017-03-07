@@ -18,6 +18,7 @@
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
 #include "apps/modular/src/story_runner/conflict_resolver_impl.h"
+#include "apps/modular/src/story_runner/page_snapshot.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -103,13 +104,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& callback) override;
 
-  // Every time we receive an OnChange notification, we update the
-  // root page snapshot so we see the current state. Just in case, we
-  // also install a connection error handler on the snapshot
-  // connection, so we can log when the connection unexepctedly closes
-  // (although we cannot do anything else about it).
-  fidl::InterfaceRequest<ledger::PageSnapshot> ResetRootSnapshot();
-
   app::ApplicationEnvironmentPtr environment_;
   ledger::LedgerPtr ledger_;
   ConflictResolverImpl conflict_resolver_;
@@ -151,14 +145,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // The root page that we read from.
   ledger::PagePtr root_page_;
 
-  // The current snapshot of the root page we read from, as obtained
-  // from the watcher on the root page. It is held by a shared
-  // pointer, because we may update it while Operation instances that
-  // read from it are still in progress, and they need to hold on to
-  // the same snapshot they started with, lest the methods called on
-  // that snapshot never return. PageSnaphotPtr cannot be duplicated,
-  // because it doesn't have a duplicate method.
-  std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot_;
+  // The last snapshot received from the root page.
+  PageSnapshot root_snapshot_;
 
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 

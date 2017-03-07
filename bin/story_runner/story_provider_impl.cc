@@ -569,6 +569,7 @@ StoryProviderImpl::StoryProviderImpl(
     const ComponentContextInfo& component_context_info)
     : environment_(std::move(environment)),
       storage_(new Storage),
+      root_snapshot_("StoryProviderImpl"),
       page_watcher_binding_(this),
       component_context_info_(component_context_info) {
   environment_->GetApplicationLauncher(launcher_.NewRequest());
@@ -592,7 +593,7 @@ StoryProviderImpl::StoryProviderImpl(
   });
 
   root_page_->GetSnapshot(
-      ResetRootSnapshot(), page_watcher_binding_.NewBinding(),
+      root_snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "StoryProviderImpl() failed call to Ledger.GetSnapshot() "
@@ -602,7 +603,8 @@ StoryProviderImpl::StoryProviderImpl(
 
   // Record the device name of the current device in the ledger,
   // before we handle any requests.
-  new UpdateDeviceNameCall(&operation_queue_, root_page_.get(), root_snapshot_,
+  new UpdateDeviceNameCall(&operation_queue_, root_page_.get(),
+                           root_snapshot_.shared_ptr(),
                            device_name);
 
   // We must initialize story_ids_ with the IDs of currently existing
@@ -610,7 +612,7 @@ StoryProviderImpl::StoryProviderImpl(
   // story. Hence we bind the interface request only after this call
   // completes.
   new PreviousStoriesCall(
-      &operation_queue_, root_snapshot_,
+      &operation_queue_, root_snapshot_.shared_ptr(),
       [this](fidl::Array<fidl::String> stories) {
         for (auto& story_id : stories) {
           story_ids_.insert(story_id.get());
@@ -651,7 +653,8 @@ void StoryProviderImpl::Watch(
 void StoryProviderImpl::GetStoryData(
     const fidl::String& story_id,
     const std::function<void(StoryDataPtr)>& result) {
-  new GetStoryDataCall(&operation_queue_, root_snapshot_, story_id, result);
+  new GetStoryDataCall(&operation_queue_, root_snapshot_.shared_ptr(),
+                       story_id, result);
 }
 
 ledger::PagePtr StoryProviderImpl::GetStoryPage(
@@ -706,7 +709,7 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 // |StoryProvider|
 void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
                                      const GetStoryInfoCallback& callback) {
-  new GetStoryDataCall(&operation_queue_, root_snapshot_, story_id,
+  new GetStoryDataCall(&operation_queue_, root_snapshot_.shared_ptr(), story_id,
                        [this, callback](StoryDataPtr story_data) {
                          callback(story_data.is_null()
                                       ? nullptr
@@ -719,14 +722,14 @@ void StoryProviderImpl::GetController(
     const fidl::String& story_id,
     fidl::InterfaceRequest<StoryController> request) {
   new GetControllerCall(&operation_queue_, ledger_.get(), root_page_.get(),
-                        root_snapshot_, this, &story_controllers_, story_id,
+                        root_snapshot_.shared_ptr(), this, &story_controllers_, story_id,
                         std::move(request));
 }
 
 // |StoryProvider|
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
-  new PreviousStoriesCall(&operation_queue_, root_snapshot_, callback);
+  new PreviousStoriesCall(&operation_queue_, root_snapshot_.shared_ptr(), callback);
 }
 
 // |PageWatcher|
@@ -776,17 +779,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   // Operation instances hold on to the previous value until they
   // finish. New Operation instances created after the update receive
   // the new snapshot.
-  callback(ResetRootSnapshot());
-}
-
-fidl::InterfaceRequest<ledger::PageSnapshot> StoryProviderImpl::ResetRootSnapshot() {
-  root_snapshot_.reset(new ledger::PageSnapshotPtr);
-  auto ret = (*root_snapshot_).NewRequest();
-  (*root_snapshot_).set_connection_error_handler([this] {
-    FTL_LOG(ERROR)
-        << "StoryProviderImpl: PageSnapshot connection unexpectedly closed.";
-  });
-  return ret;
+  callback(root_snapshot_.NewRequest());
 }
 
 }  // namespace modular
