@@ -935,7 +935,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/unistd/tcgetpgrp.c \
     $(LOCAL_DIR)/src/unistd/tcsetpgrp.c \
     $(LOCAL_DIR)/src/unistd/ttyname.c \
-    $(LOCAL_DIR)/src/unistd/ttyname_r.c \
     $(LOCAL_DIR)/src/unistd/ualarm.c \
     $(LOCAL_DIR)/src/unistd/usleep.c \
     $(LOCAL_DIR)/stubs/idstubs.c \

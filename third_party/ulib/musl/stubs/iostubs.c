@@ -433,3 +433,9 @@ static int stub_posix_fallocate(int fd, off_t base, off_t len) {
     return -1;
 }
 weak_alias(stub_posix_fallocate, posix_fallocate);
+
+static int stub_ttyname_r(int fd, char* name, size_t size) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_ttyname_r, ttyname_r);

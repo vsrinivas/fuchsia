@@ -116,6 +116,15 @@ int rmdir(const char* path) {
     return unlink(path);
 }
 
+// tty stubbing.
+int ttyname_r(int fd, char* name, size_t size) {
+    if (!isatty(fd)) {
+        return ENOTTY;
+    }
+
+    return checkfd(fd, ENOSYS);
+}
+
 // Socket stubbing.
 
 int socketpair(int domain, int type, int protocol, int fd[2]) {
