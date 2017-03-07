@@ -144,7 +144,7 @@ preadfd(void)
 	int nr;
 	char *buf =  parsefile->buf;
 	parsefile->nextc = buf;
-	const char* prompt;
+	const char* prompt = NULL;
 
 retry:
 #ifdef USE_LINENOISE
