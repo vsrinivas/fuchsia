@@ -16,6 +16,8 @@ This repository contains documentation for Fuchsia.
 
 + [How do I use the build system?][build_system]
 
++ [How do I configure continuous integration?][ci_guide]
+
 + How do I boot on my...
   + [Acer Switch Alpha 12?][acer_12]
   + [Intel NUC?][intel_nuc]
@@ -31,3 +33,4 @@ This repository contains documentation for Fuchsia.
 [intel_nuc]: https://fuchsia.googlesource.com/magenta/+/master/docs/targets/nuc.md "Intel NUC"
 [rpi3]: https://fuchsia.googlesource.com/magenta/+/master/docs/targets/rpi3.md "Rasperry Pi 3"
 [flutter_module]: https://fuchsia.googlesource.com/modular/+/master/examples/HOWTO_FLUTTER.md "Flutter modules"
+[ci_guide]: https://fuchsia.googlesource.com/infra/infra/+/master/docs/guide "Continuous integration guide"
