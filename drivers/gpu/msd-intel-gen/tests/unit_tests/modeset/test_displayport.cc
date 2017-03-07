@@ -14,8 +14,7 @@
 
 namespace {
 
-class ExampleEdidData {
-public:
+struct ExampleEdidData {
     ExampleEdidData()
     {
         // Fill out some dummy EDID data.
@@ -55,9 +54,6 @@ public:
     }
 
 private:
-    ExampleEdidData edid_data_;
-    uint32_t seek_pos_ = 0;
-
     uint8_t ReadByte()
     {
         if (seek_pos_ < sizeof(edid_data_))
@@ -68,13 +64,14 @@ private:
         // request.)
         return 0;
     }
+
+    ExampleEdidData edid_data_;
+    uint32_t seek_pos_ = 0;
 };
 
 // This represents a DisplayPort Aux channel.  This implements sending I2C
 // messages over the Aux channel.
 class DpAux {
-    DdcI2cBus i2c_;
-
 public:
     void SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply)
     {
@@ -109,6 +106,9 @@ public:
             assert(0);
         }
     }
+
+private:
+    DdcI2cBus i2c_;
 };
 
 uint32_t SetBits(uint32_t reg_value, uint32_t shift, uint32_t mask, uint32_t field_value)
@@ -123,9 +123,6 @@ uint32_t SetBits(uint32_t reg_value, uint32_t shift, uint32_t mask, uint32_t fie
 // represents the subset of registers used for sending messages over the
 // DisplayPort Aux channel.
 class TestDevice : public RegisterIo::Hook {
-    DpAux dp_aux_;
-    magma::PlatformMmio* mmio_;
-
 public:
     TestDevice(magma::PlatformMmio* mmio) : mmio_(mmio) {}
 
@@ -172,6 +169,10 @@ public:
     void Read32(uint32_t offset, uint32_t val) {}
 
     void Read64(uint32_t offset, uint64_t val) {}
+
+private:
+    DpAux dp_aux_;
+    magma::PlatformMmio* mmio_;
 };
 
 class TestDisplayPort {
