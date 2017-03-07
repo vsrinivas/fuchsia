@@ -93,8 +93,17 @@ public:
     {
         if (!ctx_->ExecuteCommandBuffer(buffer_))
             return false;
-        if (msd_connection_wait_rendering(connection_->msd_connection(), msd_resources_[0]) != 0)
+        for (uint32_t i = 0; i < wait_semaphores_.size(); i++) {
+            wait_semaphores_[i]->Signal();
+        }
+        return true;
+    }
+
+    bool ExecuteAndWait()
+    {
+        if (!Execute())
             return false;
+
         for (uint32_t i = 0; i < signal_semaphores_.size(); i++) {
             if (!signal_semaphores_[i]->Wait(5000))
                 return DRETF(false, "timed out waiting for signal semaphore %d", i);
@@ -195,6 +204,7 @@ private:
             uint32_t duplicate_handle;
             success = semaphore->duplicate_handle(&duplicate_handle);
             DASSERT(success);
+            wait_semaphores_.push_back(semaphore);
             success = connection_->ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE);
             DASSERT(success);
             abi_wait_semaphore_ids()[i] = semaphore->id();
@@ -209,6 +219,7 @@ private:
             uint32_t duplicate_handle;
             success = semaphore->duplicate_handle(&duplicate_handle);
             DASSERT(success);
+            signal_semaphores_.push_back(semaphore);
             success = connection_->ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE);
             DASSERT(success);
             abi_signal_semaphore_ids()[i] = semaphore->id();
