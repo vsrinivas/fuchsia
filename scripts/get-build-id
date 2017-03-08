@@ -21,4 +21,4 @@ fi
 READELF=${READELF:-readelf}
 FILE="$1"
 
-LC_ALL=C $READELF -n $FILE | grep 'Build ID:' | sed 's/.*: //g'
+LC_ALL=C $READELF -n $FILE | grep -a 'Build ID:' | sed 's/.*: //g'

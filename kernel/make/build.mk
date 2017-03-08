@@ -90,7 +90,7 @@ $(BUILDDIR)/%.size: $(BUILDDIR)/%
 	$(NOECHO)$(NM) -S --size-sort $< > $@
 
 $(BUILDDIR)/%.id: $(BUILDDIR)/%
-	$(NOECHO)env READELF=$(READELF) $(call SCRIPTNAME, scripts/get-build-id) $< > $@
+	$(NOECHO)env READELF="$(READELF)" $(call SCRIPTNAME, scripts/get-build-id) $< > $@
 
 ifneq ($(USER_AUTORUN),)
 USER_MANIFEST_LINES += autorun=$(USER_AUTORUN)
