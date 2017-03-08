@@ -7,6 +7,8 @@ declare_args() {
   modules = "default"
   # list of files omitted from user.bootfs
   omit_files = ""
+  # path to autorun script
+  autorun = ""
 }
 
 group("default") {
@@ -32,6 +34,8 @@ action("mkbootfs") {
                                modules,
                                "--omit-files",
                                omit_files,
+                               "--autorun",
+                               autorun,
                                "--build-root",
                                rebase_path(root_build_dir),
                                "--depfile",

@@ -81,6 +81,7 @@ def main():
     parser.add_argument("--manifest", help="path to manifest file to generate")
     parser.add_argument("--modules", help="list of modules", default="default")
     parser.add_argument("--omit-files", help="list of files omitted from user.bootfs", default="")
+    parser.add_argument("--autorun", help="path to autorun script", default="")
     parser.add_argument("--build-root", help="path to root of build directory")
     parser.add_argument("--depfile", help="path to depfile to generate")
     parser.add_argument("--component-index", help="path to component index to generate")
@@ -110,6 +111,8 @@ def main():
             manifest.write("lib/%s=%s\n" % (lib, os.path.join(lib_root, lib)))
         for file in amalgamation.files:
             manifest.write("%s=%s\n" % (file["bootfs_path"], file["file"]))
+        if args.autorun != "":
+            manifest.write("autorun=%s" % args.autorun)
     if args.depfile != "":
         with open(args.depfile, "w") as f:
             f.write("user.bootfs: ")

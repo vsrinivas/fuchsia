@@ -31,6 +31,7 @@ def main():
                         action="store_true")
     parser.add_argument("--flutter-enable-vulkan", help="enable vulkan in flutter content handler",
                         action="store_true", default=False)
+    parser.add_argument("--autorun", help="path to autorun script")
     (args, passthrough) = parser.parse_known_args()
     if args.release:
         args.outdir = "out/release"
@@ -66,6 +67,8 @@ def main():
             gn_args += " goma_dir=\"" + path + "\""
     if args.ccache:
         gn_args += " use_ccache=true"
+    if args.autorun:
+        gn_args += " autorun=\"%s\"" % args.autorun
     if args.gn_args:
         gn_args += " " + " ".join(args.gn_args)
 
