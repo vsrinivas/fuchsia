@@ -29,9 +29,6 @@ const char kDebugDirectory[] = "/boot/debug";
 const char kDebugSuffix[] = ".debug";
 
 static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base) {
-    if (!strcmp(name, "libc.so")) {
-        name = "libmusl.so";
-    }
     size_t len = strlen(name);
     auto dso = reinterpret_cast<dsoinfo_t*> (calloc(1, sizeof(dsoinfo_t) + len + 1));
     if (dso == nullptr) {

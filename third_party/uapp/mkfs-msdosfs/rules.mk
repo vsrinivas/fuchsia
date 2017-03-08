@@ -14,6 +14,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := mkfs-msdosfs
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

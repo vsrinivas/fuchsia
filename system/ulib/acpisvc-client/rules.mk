@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_LIBS := \
 	ulib/magenta \
-	ulib/musl
+	ulib/c
 
 include make/module.mk

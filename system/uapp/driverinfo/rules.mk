@@ -12,6 +12,6 @@ MODULE_SRCS += $(LOCAL_DIR)/driverinfo.c
 
 MODULE_STATIC_LIBS := ulib/ddk
 
-MODULE_LIBS := ulib/mxio ulib/musl
+MODULE_LIBS := ulib/mxio ulib/c
 
 include make/module.mk

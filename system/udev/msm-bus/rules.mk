@@ -14,6 +14,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := ulib/ddk
 
-MODULE_LIBS := ulib/driver ulib/musl ulib/magenta
+MODULE_LIBS := ulib/driver ulib/c ulib/magenta
 
 include make/module.mk

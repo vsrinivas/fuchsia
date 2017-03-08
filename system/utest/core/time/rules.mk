@@ -14,7 +14,7 @@ MODULE_SRCS += \
 MODULE_NAME := time-test
 
 MODULE_LIBS := \
-    ulib/unittest ulib/mxio ulib/magenta ulib/musl
+    ulib/unittest ulib/mxio ulib/magenta ulib/c
 MODULE_STATIC_LIBS := ulib/runtime
 
 include make/module.mk

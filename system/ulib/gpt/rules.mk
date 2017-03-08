@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := ulib/cksum
 
-MODULE_LIBS := ulib/musl
+MODULE_LIBS := ulib/c
 
 include make/module.mk

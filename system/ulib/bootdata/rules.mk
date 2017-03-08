@@ -13,6 +13,6 @@ MODULE_SRCS += $(LOCAL_DIR)/decompress.c
 MODULE_LIBS := \
     ulib/lz4 \
     ulib/magenta \
-    ulib/musl
+    ulib/c
 
 include make/module.mk

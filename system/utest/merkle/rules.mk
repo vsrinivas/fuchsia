@@ -19,7 +19,7 @@ MODULE_LIBS := \
     ulib/unittest \
     ulib/merkle \
     ulib/magenta \
-    ulib/musl \
+    ulib/c \
     ulib/mxcpp \
     ulib/mxtl \
     ulib/mxio \

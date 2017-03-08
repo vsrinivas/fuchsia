@@ -14,7 +14,7 @@ MODULE_SRCS := $(LOCAL_DIR)/intel-rtc.c
 
 MODULE_STATIC_LIBS := ulib/ddk
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
 include make/module.mk
 

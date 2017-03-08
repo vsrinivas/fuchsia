@@ -18,6 +18,6 @@ MODULE_LIBS := \
     ulib/fs-management \
     ulib/magenta \
     ulib/mxio \
-    ulib/musl
+    ulib/c
 
 include make/module.mk

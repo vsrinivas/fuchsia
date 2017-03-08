@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := ulib/gpt ulib/cksum
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

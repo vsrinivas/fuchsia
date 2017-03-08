@@ -14,7 +14,7 @@ MODULE_SRCS += \
 MODULE_NAME := stack-test
 
 MODULE_LIBS := \
-    ulib/unittest ulib/mxio ulib/magenta ulib/musl
+    ulib/unittest ulib/mxio ulib/magenta ulib/c
 
 MODULE_HEADER_DEPS := ulib/runtime
 

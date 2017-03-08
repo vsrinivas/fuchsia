@@ -192,6 +192,6 @@ MODULE_STATIC_LIBS := \
     ulib/magenta
 
 MODULE_LIBS := \
-    ulib/musl
+    ulib/c
 
 include make/module.mk

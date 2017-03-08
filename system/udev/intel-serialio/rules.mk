@@ -23,7 +23,7 @@ MODULE_COMPILEFLAGS += -I $(LOCAL_DIR)/intel-serialio-include/
 
 MODULE_STATIC_LIBS := ulib/ddk
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
 include make/module.mk
 

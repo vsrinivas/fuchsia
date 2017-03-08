@@ -17,7 +17,7 @@ MODULE_NAME := bitmap-test
 
 MODULE_LIBS := \
     ulib/magenta \
-    ulib/musl \
+    ulib/c \
     ulib/mxcpp \
     ulib/mxio \
     ulib/mxtl \

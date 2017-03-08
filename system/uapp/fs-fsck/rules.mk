@@ -17,7 +17,7 @@ MODULE_SRCS := \
 MODULE_LIBS := \
     ulib/fs-management \
     ulib/magenta \
-    ulib/musl \
+    ulib/c \
     ulib/mxio \
 
 include make/module.mk

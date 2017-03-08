@@ -16,7 +16,7 @@ MODULE_SO_NAME := bitmap
 
 MODULE_LIBS := \
     ulib/magenta \
-    ulib/musl \
+    ulib/c \
     ulib/mxcpp \
     ulib/mxtl \
 

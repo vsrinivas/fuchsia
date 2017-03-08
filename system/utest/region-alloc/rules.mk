@@ -19,7 +19,7 @@ MODULE_STATIC_LIBS := \
     ulib/region-alloc \
 
 MODULE_LIBS := \
-    ulib/musl \
+    ulib/c \
     ulib/mxcpp \
     ulib/mxtl \
     ulib/mxio \

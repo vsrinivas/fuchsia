@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := c11-mutex-test
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

@@ -12,7 +12,7 @@ MODULE_TYPE := userlib
 
 MODULE_LIBS := \
     ulib/magenta \
-    ulib/musl \
+    ulib/c \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/gfx.c \

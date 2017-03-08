@@ -12,6 +12,6 @@ MODULE_SRCS := $(LOCAL_DIR)/ahci.c $(LOCAL_DIR)/sata.c
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
 include make/module.mk

@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := thread-injection-injected
 
-MODULE_LIBS := ulib/magenta ulib/musl
+MODULE_LIBS := ulib/magenta ulib/c
 
 include make/module.mk

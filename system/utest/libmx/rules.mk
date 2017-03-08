@@ -14,6 +14,6 @@ MODULE_SRCS += \
 MODULE_NAME := libmx-test
 
 MODULE_LIBS := \
-    ulib/mxio ulib/magenta ulib/unittest ulib/musl ulib/mxtl ulib/mx
+    ulib/mxio ulib/magenta ulib/unittest ulib/c ulib/mxtl ulib/mx
 
 include make/module.mk

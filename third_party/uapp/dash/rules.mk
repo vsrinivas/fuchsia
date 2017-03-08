@@ -48,7 +48,7 @@ MODULE_SRCS += \
 MODULE_NAME := sh
 
 MODULE_STATIC_LIBS := ulib/hexdump ulib/linenoise
-MODULE_LIBS := ulib/magenta ulib/launchpad ulib/musl
+MODULE_LIBS := ulib/magenta ulib/launchpad ulib/c
 MODULE_LIBS += ulib/mxio  # Needed by ulib/linenoise
 
 MODULE_CFLAGS := -D_GNU_SOURCE -DBSD -DIFS_BROKEN -DJOBS=0 -DSHELL \

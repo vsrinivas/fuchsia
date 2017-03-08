@@ -14,6 +14,6 @@ MODULE_SRCS += \
 MODULE_NAME := process-test
 
 MODULE_LIBS := \
-    ulib/unittest ulib/mxio ulib/magenta ulib/musl ulib/mini-process
+    ulib/unittest ulib/mxio ulib/magenta ulib/c ulib/mini-process
 
 include make/module.mk

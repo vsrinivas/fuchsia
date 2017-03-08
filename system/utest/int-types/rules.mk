@@ -14,6 +14,6 @@ MODULE_NAME := int-types-test
 
 MODULE_STATIC_LIBS := ulib/mxtl
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/musl
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/c
 
 include make/module.mk

@@ -13,7 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/tree.cpp
 
 MODULE_SO_NAME := merkle
-MODULE_LIBS := ulib/mxcpp ulib/mxtl ulib/musl
+MODULE_LIBS := ulib/mxcpp ulib/mxtl ulib/c
 
 # TODO(aarongreen): cryptolib is FAR too slow for general purpose use.  We'll
 # need to use it to bootstrap and verify libcrypto.so before switching to

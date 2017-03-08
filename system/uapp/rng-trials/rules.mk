@@ -14,6 +14,6 @@ MODULE_SRCS += \
 MODULE_NAME := rng-trials
 
 MODULE_LIBS := \
-    ulib/mxio ulib/magenta ulib/musl
+    ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

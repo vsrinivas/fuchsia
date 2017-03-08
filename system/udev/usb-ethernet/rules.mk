@@ -8,7 +8,7 @@ MODULE_TYPE := driver
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
 MODULE := $(LOCAL_DIR)-ax88772b
 
@@ -21,7 +21,7 @@ MODULE_TYPE := driver
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
 MODULE := $(LOCAL_DIR)-ax88179
 
@@ -33,7 +33,7 @@ MODULE_TYPE := driver
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl ulib/mxio
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c ulib/mxio
 
 MODULE := $(LOCAL_DIR)-lan9514
 

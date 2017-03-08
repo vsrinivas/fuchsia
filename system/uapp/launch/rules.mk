@@ -16,6 +16,6 @@ MODULE_LIBS := \
     ulib/launchpad \
     ulib/mxio \
     ulib/magenta \
-    ulib/musl
+    ulib/c
 
 include make/module.mk

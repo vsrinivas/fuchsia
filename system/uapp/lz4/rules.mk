@@ -16,6 +16,6 @@ MODULE_STATIC_LIBS := ulib/lz4
 MODULE_LIBS := \
     ulib/magenta \
     ulib/mxio \
-    ulib/musl
+    ulib/c
 
 include make/module.mk

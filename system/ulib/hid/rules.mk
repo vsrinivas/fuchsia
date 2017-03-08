@@ -18,6 +18,6 @@ MODULE_SO_NAME := hid
 
 MODULE_LIBS := \
     ulib/magenta \
-    ulib/musl
+    ulib/c
 
 include make/module.mk

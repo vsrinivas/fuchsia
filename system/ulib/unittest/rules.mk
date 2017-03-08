@@ -15,7 +15,7 @@ MODULE_SRCS += \
 MODULE_SO_NAME := unittest
 
 # N.B. mxio, and thus launchpad, cannot appear here. See ./README.md.
-MODULE_LIBS := ulib/musl
+MODULE_LIBS := ulib/c
 
 MODULE_STATIC_LIBS := ulib/hexdump
 

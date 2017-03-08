@@ -15,6 +15,6 @@ MODULE_LIBS := \
     ulib/hid \
     ulib/magenta \
     ulib/mxio \
-    ulib/musl
+    ulib/c
 
 include make/module.mk

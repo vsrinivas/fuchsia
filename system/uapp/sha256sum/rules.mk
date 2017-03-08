@@ -15,6 +15,6 @@ MODULE_NAME := sha256sum
 
 MODULE_STATIC_LIBS := ulib/cryptolib
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

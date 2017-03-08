@@ -1120,7 +1120,7 @@ include $(LOCAL_DIR)/src/string/rules.mk
 
 
 # shared library (which is also the dynamic linker)
-MODULE := $(LOCAL_DIR)
+MODULE := system/ulib/c
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
@@ -1152,7 +1152,7 @@ include make/module.mk
 
 # build a fake library to build crt1.o separately
 
-MODULE := $(LOCAL_DIR)-crt
+MODULE := system/ulib/c-crt
 MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
@@ -1160,7 +1160,7 @@ MODULE_CFLAGS := $(LOCAL_CFLAGS)
 MODULE_SRCS := $(LOCAL_DIR)/arch/$(MUSL_ARCH)/crt1.S
 
 # where our object files will end up
-LOCAL_OUT := $(BUILDDIR)/ulib/musl-crt/$(LOCAL_DIR)
+LOCAL_OUT := $(BUILDDIR)/ulib/c-crt/$(LOCAL_DIR)
 LOCAL_CRT1_OBJ := $(LOCAL_OUT)/arch/$(MUSL_ARCH)/crt1.S.o
 
 # install it globally

@@ -16,7 +16,7 @@ MODULE_NAME := fs-management-test
 MODULE_LIBS := \
     ulib/fs-management \
     ulib/magenta \
-    ulib/musl \
+    ulib/c \
     ulib/mxio \
     ulib/unittest \
 

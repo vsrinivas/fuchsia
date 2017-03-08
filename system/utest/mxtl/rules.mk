@@ -34,7 +34,7 @@ MODULE_SRCS += \
 MODULE_NAME := mxtl-test
 
 MODULE_LIBS := \
-    ulib/musl \
+    ulib/c \
     ulib/mxcpp \
     ulib/mxio \
     ulib/unittest \

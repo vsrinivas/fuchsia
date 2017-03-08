@@ -21,7 +21,7 @@ MODULE_LIBS += \
 
 # for stdint.h
 MODULE_HEADER_DEPS += \
-    ulib/musl
+    ulib/c
 
 # This code is used in early startup, where safe-stack setup is not ready yet.
 MODULE_COMPILEFLAGS += $(NO_SAFESTACK)

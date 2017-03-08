@@ -13,6 +13,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/netifc.c \
     $(LOCAL_DIR)/eth-client.c \
 
-MODULE_LIBS += ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS += ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := ulib/hexdump
 
-MODULE_LIBS := ulib/mxio ulib/musl
+MODULE_LIBS := ulib/mxio ulib/c
 
 include make/module.mk

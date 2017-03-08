@@ -10,6 +10,6 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += $(LOCAL_DIR)/watch.c
 
-MODULE_LIBS := ulib/mxio ulib/musl
+MODULE_LIBS := ulib/mxio ulib/c
 
 include make/module.mk

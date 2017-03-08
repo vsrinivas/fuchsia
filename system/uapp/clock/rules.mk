@@ -12,6 +12,6 @@ MODULE_SRCS += $(LOCAL_DIR)/clock.c
 
 MODULE_NAME := clock
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

@@ -22,7 +22,7 @@ MODULE_LIBS := \
     ulib/unittest \
     ulib/launchpad \
     ulib/mxio \
-    ulib/musl \
+    ulib/c \
     ulib/magenta
 
 include make/module.mk

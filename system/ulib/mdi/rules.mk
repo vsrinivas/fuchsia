@@ -15,6 +15,6 @@ MODULE_SRCS := \
 
 MODULE_SO_NAME := mdi
 
-MODULE_LIBS := ulib/mxio ulib/musl
+MODULE_LIBS := ulib/mxio ulib/c
 
 include make/module.mk

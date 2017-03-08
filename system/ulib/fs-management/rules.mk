@@ -20,7 +20,7 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     ulib/launchpad \
     ulib/magenta \
-    ulib/musl \
+    ulib/c \
     ulib/mxio \
 
 MODULE_EXPORT := so

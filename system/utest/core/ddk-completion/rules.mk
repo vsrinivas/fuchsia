@@ -14,6 +14,6 @@ MODULE_SRCS += \
 MODULE_NAME := ddk-completion-test
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/sync
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

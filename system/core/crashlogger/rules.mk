@@ -26,7 +26,7 @@ MODULE_LIBS := \
     ulib/mxtl \
     ulib/mxio \
     ulib/magenta \
-    ulib/musl
+    ulib/c
 
 # Compile this with frame pointers so that if we crash
 # the simplistic unwinder will work.

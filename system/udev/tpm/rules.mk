@@ -14,7 +14,7 @@ MODULE_SRCS := $(LOCAL_DIR)/tpm.c $(LOCAL_DIR)/tpm-commands.c $(LOCAL_DIR)/tpm-p
 
 MODULE_STATIC_LIBS := ulib/ddk
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
 include make/module.mk
 

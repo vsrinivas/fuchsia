@@ -34,7 +34,7 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     ulib/magenta \
-    ulib/musl \
+    ulib/c \
     ulib/mxio \
 
 include make/module.mk

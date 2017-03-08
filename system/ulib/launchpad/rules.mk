@@ -18,6 +18,6 @@ MODULE_EXPORT := so
 
 MODULE_SO_NAME := launchpad
 MODULE_STATIC_LIBS := ulib/elfload
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

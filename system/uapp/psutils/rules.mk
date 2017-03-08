@@ -12,7 +12,7 @@ MODULE_SRCS += $(LOCAL_DIR)/ps.c $(LOCAL_DIR)/processes.c
 
 MODULE_NAME := ps
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk
 
@@ -24,7 +24,7 @@ MODULE_SRCS += $(LOCAL_DIR)/kill.c $(LOCAL_DIR)/processes.c
 
 MODULE_NAME := kill
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk
 
@@ -36,7 +36,7 @@ MODULE_SRCS += $(LOCAL_DIR)/killall.c $(LOCAL_DIR)/processes.c
 
 MODULE_NAME := killall
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk
 

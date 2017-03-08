@@ -14,7 +14,7 @@ MODULE_SRCS := $(LOCAL_DIR)/i8042.c
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/hid
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
 include make/module.mk
 

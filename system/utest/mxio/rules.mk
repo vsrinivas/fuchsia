@@ -15,7 +15,7 @@ MODULE_NAME := mxio-test
 
 MODULE_LIBS := \
     ulib/magenta \
-    ulib/musl \
+    ulib/c \
     ulib/mxio \
     ulib/unittest \
 

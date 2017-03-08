@@ -17,6 +17,6 @@ MODULE_NAME := dlfcn-test
 # We don't want it to already be there when we call dlopen, but
 # we use launchpad_vmo_from_file to load it!  So link it statically.
 MODULE_STATIC_LIBS := ulib/launchpad ulib/elfload
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

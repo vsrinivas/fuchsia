@@ -24,7 +24,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-memory.c \
     $(LOCAL_DIR)/vfs-rpc.c
 
-# userboot supports loading via the dynamic linker, so libc (ulib/musl)
+# userboot supports loading via the dynamic linker, so libc (ulib/c)
 # can be linked dynamically.  But it doesn't support any means to look
 # up other shared libraries, so everything else must be linked statically.
 
@@ -42,7 +42,7 @@ MODULE_STATIC_LIBS := \
     ulib/bootdata \
     ulib/lz4
 
-MODULE_LIBS := ulib/magenta ulib/musl
+MODULE_LIBS := ulib/magenta ulib/c
 
 MODULE_CFLAGS += -DDEVMGR=1
 
@@ -84,7 +84,7 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := ulib/acpisvc-client ulib/ddk ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/mxio ulib/launchpad ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/mxio ulib/launchpad ulib/magenta ulib/c
 
 include make/module.mk
 

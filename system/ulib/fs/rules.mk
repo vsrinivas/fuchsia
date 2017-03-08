@@ -17,6 +17,6 @@ MODULE_SRCS += \
 MODULE_LIBS := \
     ulib/mxio \
     ulib/magenta \
-    ulib/musl
+    ulib/c
 
 include make/module.mk

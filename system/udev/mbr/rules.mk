@@ -12,6 +12,6 @@ MODULE_SRCS := $(LOCAL_DIR)/mbr.c
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/gpt ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
 include make/module.mk

@@ -12,7 +12,7 @@ MODULE_SRCS := $(LOCAL_DIR)/ramdisk.c
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
 include make/module.mk
 

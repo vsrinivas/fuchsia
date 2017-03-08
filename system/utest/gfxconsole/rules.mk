@@ -25,6 +25,6 @@ MODULE_NAME := textcon-test
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/gfx ulib/hid ulib/mxcpp ulib/mxtl
 
-MODULE_LIBS := ulib/driver ulib/unittest ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/unittest ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk

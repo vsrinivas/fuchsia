@@ -11,6 +11,6 @@ MODULE_SRCS = $(LOCAL_DIR)/new.cpp \
 
 MODULE_SO_NAME := mxcpp
 
-MODULE_LIBS += ulib/musl
+MODULE_LIBS += ulib/c
 
 include make/module.mk

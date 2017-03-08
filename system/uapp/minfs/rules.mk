@@ -30,7 +30,7 @@ MODULE_LIBS := \
     ulib/bitmap \
     ulib/magenta \
     ulib/mxio \
-    ulib/musl \
+    ulib/c \
     ulib/mxcpp \
     ulib/mxio \
     ulib/mxtl \

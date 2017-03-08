@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := fpu-test
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/musl
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/c
 
 include make/module.mk

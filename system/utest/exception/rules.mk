@@ -17,6 +17,6 @@ MODULE_LIBS := \
     ulib/test-utils \
     ulib/launchpad \
     ulib/magenta \
-    ulib/musl
+    ulib/c
 
 include make/module.mk
