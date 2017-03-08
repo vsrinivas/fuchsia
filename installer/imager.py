@@ -252,8 +252,8 @@ with open(aux_manifest, "w+") as manifest_file:
   manifest_file.write("%s=%s\n" % (FUCHSIA_DISK_IMG_PATH, compressed_disk))
   manifest_file.write("%s=%s\n" % (EFI_DISK_IMG_PATH, compressed_disk_efi))
 
-mkfs_cmd = [mkbootfs_path, "-c", "-o", out_file, bootdata, aux_manifest,
-            primary_manifest]
+mkfs_cmd = [mkbootfs_path, "-c", "--target=system", "-o", out_file, bootdata,
+            aux_manifest, primary_manifest]
 
 print "Creating installer bootfs"
 try:
