@@ -12,6 +12,15 @@
 
 __BEGIN_CDECLS
 
+// bits for mpidr register
+#define MPIDR_AFF0_MASK     0xFFULL
+#define MPIDR_AFF0_SHIFT    0
+#define MPIDR_AFF1_MASK     0xFF00ULL
+#define MPIDR_AFF1_SHIFT    8
+
+#define ARM64_MPID(cluster, cpu) (((cluster << MPIDR_AFF1_SHIFT) & MPIDR_AFF1_MASK) | \
+                                  ((cpu << MPIDR_AFF0_SHIFT) & MPIDR_AFF0_MASK))
+
 /* use the cpu local thread context pointer to store current_thread */
 static inline struct thread *get_current_thread(void)
 {
@@ -24,10 +33,18 @@ static inline void set_current_thread(struct thread *t)
 }
 
 #if WITH_SMP
+
+void arch_init_cpu_map(uint cluster_count, uint* cluster_cpus);
+
 static inline uint arch_curr_cpu_num(void)
 {
-    uint64_t mpidr =  ARM64_READ_SYSREG(mpidr_el1);
-    return (uint)   (   ((mpidr & ((1U << (SMP_CPU_CLUSTER_BITS + SMP_CPU_CLUSTER_SHIFT)) - 1)  ) >> 8) << SMP_CPU_ID_BITS) | ((uint)mpidr & 0xff);
+    extern uint arm64_cpu_map[SMP_CPU_MAX_CLUSTERS][SMP_CPU_MAX_CLUSTER_CPUS];
+
+    uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
+    uint cluster = (mpidr & MPIDR_AFF1_MASK) >> MPIDR_AFF1_SHIFT;
+    uint cpu = (mpidr & MPIDR_AFF0_MASK) >> MPIDR_AFF0_SHIFT;
+
+    return arm64_cpu_map[cluster][cpu];
 }
 
 static inline uint arch_max_num_cpus(void)
@@ -39,14 +56,17 @@ static inline uint arch_max_num_cpus(void)
 
 static inline uint arch_cpu_num_to_cluster_id(uint cpu)
 {
-    return (uint)((cpu >> SMP_CPU_ID_BITS) & ((1U << SMP_CPU_CLUSTER_BITS) - 1));
+    extern uint arm64_cpu_cluster_ids[SMP_MAX_CPUS];
+
+    return arm64_cpu_cluster_ids[cpu];
 }
 
 static inline uint arch_cpu_num_to_cpu_id(uint cpu)
 {
-    return (uint)(cpu & ((1U << SMP_CPU_ID_BITS) - 1));
-}
+    extern uint arm64_cpu_cpu_ids[SMP_MAX_CPUS];
 
+    return arm64_cpu_cpu_ids[cpu];
+}
 #else
 static inline uint arch_curr_cpu_num(void)
 {

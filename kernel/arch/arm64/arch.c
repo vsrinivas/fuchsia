@@ -32,7 +32,7 @@ enum {
 
 
 typedef struct {
-    uint64_t    cpu_id;
+    uint64_t    mpid;
     void*       sp;
 } arm64_sp_info_t;
 
@@ -55,16 +55,17 @@ uint64_t arm64_get_boot_el(void)
 }
 
 #if WITH_SMP
-status_t arm64_set_secondary_sp(uint64_t cpu_id, void* ptr) {
+status_t arm64_set_secondary_sp(uint cluster, uint cpu, void* ptr) {
+    uint64_t mpid = ARM64_MPID(cluster, cpu);
 
     uint32_t i = 0;
-    while (( i< SMP_MAX_CPUS) && (arm64_secondary_sp_list[i].cpu_id !=0)) {
+    while ((i < SMP_MAX_CPUS) && (arm64_secondary_sp_list[i].mpid != 0)) {
         i++;
     }
     if (i==SMP_MAX_CPUS)
         return ERR_NO_RESOURCES;
-    printf("Set cpuid 0x%lx sp to %p\n",cpu_id,ptr);
-    arm64_secondary_sp_list[i].cpu_id = cpu_id;
+    printf("Set mpid 0x%lx sp to %p\n", mpid, ptr);
+    arm64_secondary_sp_list[i].mpid = mpid;
     arm64_secondary_sp_list[i].sp = ptr;
     return NO_ERROR;
 }
@@ -268,13 +269,11 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
 
 #if WITH_SMP
 /* called from assembly */
-void arm64_secondary_entry(ulong asm_cpu_num);
+void arm64_secondary_entry(void);
 
-void arm64_secondary_entry(ulong asm_cpu_num)
+void arm64_secondary_entry(void)
 {
     uint cpu = arch_curr_cpu_num();
-    if (cpu != asm_cpu_num)
-        return;
 
     arm64_cpu_early_init();
 

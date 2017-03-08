@@ -152,16 +152,21 @@ void platform_init(void)
 
 #if WITH_SMP
     /* TODO - number of cpus (and topology) should be parsed from device index or command line */
+#define CLUSTER_COUNT   2
+#define CLUSTER_CPUS    4
 
-    for (int i = 1; i < SMP_MAX_CPUS; i++) {
+    uint cluster_cpus[] = { CLUSTER_CPUS, CLUSTER_CPUS };
+    arch_init_cpu_map(countof(cluster_cpus), cluster_cpus);
 
-        uint64_t mpid = (PSCI_INDEX_TO_CLUSTER(i) << 8) | PSCI_INDEX_TO_ID(i);
-
-        arm64_set_secondary_sp(mpid, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL));
-
-        psci_cpu_on( PSCI_INDEX_TO_CLUSTER(i) , PSCI_INDEX_TO_ID(i), MEMBASE + KERNEL_LOAD_OFFSET);
+    for (uint cluster = 0; cluster < CLUSTER_COUNT; cluster++) {
+        for (uint cpu = 0; cpu < CLUSTER_CPUS; cpu++) {
+            if (cluster != 0 || cpu != 0) {
+                arm64_set_secondary_sp(cluster, cpu,
+                        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL));
+                psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
+            }
+        }
     }
-
 #endif
 }
 

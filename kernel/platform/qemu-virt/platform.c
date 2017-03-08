@@ -107,13 +107,13 @@ void platform_init(void)
     uart_init();
     /* TODO - number of cpus (and topology) should be parsed from device index or command line */
 
+    // 1 cluster with SMP_MAX_CPUS cpus
+    uint cluster_cpus[] = { SMP_MAX_CPUS };
+    arch_init_cpu_map(countof(cluster_cpus), cluster_cpus);
+
     /* boot the secondary cpus using the Power State Coordintion Interface */
     for (uint i = 1; i < SMP_MAX_CPUS; i++) {
-
-        uint64_t mpid = (PSCI_INDEX_TO_CLUSTER(i) << 8) | PSCI_INDEX_TO_ID(i);
-
-        arm64_set_secondary_sp(mpid, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL));
-
+        arm64_set_secondary_sp(0, i, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL));
         psci_cpu_on(0, i, MEMBASE + KERNEL_LOAD_OFFSET);
     }
 }

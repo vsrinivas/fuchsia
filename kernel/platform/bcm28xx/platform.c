@@ -110,9 +110,13 @@ void platform_init(void)
     uintptr_t sec_entry = (uintptr_t)(&arm_reset - KERNEL_ASPACE_BASE);
     unsigned long long *spin_table = (void *)(KERNEL_ASPACE_BASE + 0xd8);
 
-    for (uint i = 1; i <= 3; i++) {
+    // 1 cluster with SMP_MAX_CPUS cpus
+    uint cluster_cpus[] = { SMP_MAX_CPUS };
+    arch_init_cpu_map(countof(cluster_cpus), cluster_cpus);
 
-        arm64_set_secondary_sp(i, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE , NULL, NULL));
+    for (uint i = 1; i < SMP_MAX_CPUS; i++) {
+
+        arm64_set_secondary_sp(0, i, pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE , NULL, NULL));
 
         spin_table[i] = sec_entry;
         __asm__ __volatile__ ("" : : : "memory");
@@ -123,7 +127,7 @@ void platform_init(void)
     /* start the other cpus */
     uintptr_t sec_entry = (uintptr_t)&arm_reset;
     sec_entry -= (KERNEL_BASE - MEMBASE);
-    for (uint i = 1; i <= 3; i++) {
+    for (uint i = 1; i <= SMP_MAX_CPUS; i++) {
         *REG32(ARM_LOCAL_BASE + 0x8c + 0x10 * i) = sec_entry;
     }
 #endif

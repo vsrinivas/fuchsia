@@ -8,7 +8,7 @@
 #pragma once
 
 #include <arch.h>
-
+#include <arch/arm64/mp.h>
 
 #define PSCI64_PSCI_VERSION                 (0x84000000)
 #define PSCI64_CPU_SUSPEND                  (0xC4000001)
@@ -36,17 +36,6 @@
 
 extern uint64_t psci_smc_call(ulong arg0, ulong arg1, ulong arg2, ulong arg3);
 
-#define PSCI_TARGET(cluster,id) \
-                ((cluster & ( (1 << SMP_CPU_CLUSTER_BITS) - 1)) << SMP_CPU_CLUSTER_SHIFT) | \
-                ((id & ( (1 << SMP_CPU_ID_BITS) - 1)) << SMP_CPU_ID_SHIFT)
-
-#define PSCI_INDEX_TO_CLUSTER(idx) \
-                (idx >> (SMP_CPU_ID_BITS + SMP_CPU_ID_SHIFT) & ((1 << SMP_CPU_CLUSTER_BITS) - 1))
-
-#define PSCI_INDEX_TO_ID(idx) \
-                (idx & ( (1 << SMP_CPU_ID_BITS) - 1))
-
-
 static inline uint32_t psci_get_version(void) {
 
     return (uint32_t)psci_smc_call(PSCI64_PSCI_VERSION,0,0,0);
@@ -60,12 +49,12 @@ static inline uint32_t psci_cpu_off(void) {
 
 static inline uint32_t psci_cpu_on(uint64_t cluster, uint64_t cpuid, paddr_t entry) {
 
-    return (uint32_t)psci_smc_call(PSCI64_CPU_ON, PSCI_TARGET(cluster,cpuid),entry,0);
+    return (uint32_t)psci_smc_call(PSCI64_CPU_ON, ARM64_MPID(cluster, cpuid), entry, 0);
 }
 
 static inline uint32_t psci_get_affinity_info(uint64_t cluster, uint64_t cpuid) {
 
-    return (uint32_t)psci_smc_call(PSCI64_AFFINITY_INFO, PSCI_TARGET(cluster,cpuid),0,0);
+    return (uint32_t)psci_smc_call(PSCI64_AFFINITY_INFO, ARM64_MPID(cluster, cpuid), 0, 0);
 }
 
 static inline void psci_system_off(void) {

@@ -26,6 +26,7 @@ LINKER_SCRIPT += \
 
 ARCH := arm64
 ARM_CPU := cortex-a53
+SMP_MAX_CPUS := 4
 
 KERNEL_LOAD_OFFSET := 0x00080000
 MEMSIZE ?= 0x20000000 # Limit to 512MB for now (GPU uses 1/2 of the 1GB total)

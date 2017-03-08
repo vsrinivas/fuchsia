@@ -70,7 +70,7 @@ FUNCTION(arm_reset)
 
 #if WITH_SMP
     mrs     cpuid, mpidr_el1
-    ubfx    cpuid, cpuid, #0, #(SMP_CPU_CLUSTER_BITS + SMP_CPU_CLUSTER_SHIFT)
+    ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
     cbnz    cpuid, .Lmmu_enable_secondary
 #endif
 
@@ -382,19 +382,11 @@ FUNCTION(arm_reset)
 
 #if WITH_SMP
 .Lsecondary_boot:
-    and     tmp, cpuid, #0xff
-    cmp     tmp, #(1 << SMP_CPU_ID_BITS)
-    bge     .Lunsupported_cpu_trap
-    bic     cpuid, cpuid, #0xff
-    orr     cpuid, tmp, cpuid, LSR #(SMP_CPU_CLUSTER_SHIFT - SMP_CPU_ID_BITS)
-
-    cmp     cpuid, #SMP_MAX_CPUS
-    bge     .Lunsupported_cpu_trap
-
     bl      arm64_get_secondary_sp
+    cmp     x0, #0
+    beq     .Lunsupported_cpu_trap
     mov     sp, x0
 
-    mov     x0, cpuid
     bl      arm64_secondary_entry
 
 .Lunsupported_cpu_trap:

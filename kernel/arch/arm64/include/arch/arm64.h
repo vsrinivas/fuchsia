@@ -101,7 +101,7 @@ void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint32_t sys
 uint64_t arm64_get_boot_el(void);
 void arm64_get_cache_info(arm64_cache_info_t* info);
 void arm64_dump_cache_info(uint32_t cpu);
-status_t arm64_set_secondary_sp(uint64_t cpu_id, void* ptr);
+status_t arm64_set_secondary_sp(uint cluster, uint cpu, void* ptr);
 
 /* block size of the dc zva instruction */
 extern uint32_t arm64_zva_shift;
