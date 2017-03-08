@@ -27,10 +27,10 @@ class StoryImpl;
 class ModuleContextImpl : public ModuleContext {
  public:
   ModuleContextImpl(StoryImpl* story_impl,
-                  const std::string& module_url,
-                  ModuleControllerImpl* module_controller_impl,
-                  const ComponentContextInfo& component_context_info,
-                  fidl::InterfaceRequest<ModuleContext> module_context);
+                    const std::string& module_url,
+                    ModuleControllerImpl* module_controller_impl,
+                    const ComponentContextInfo& component_context_info,
+                    fidl::InterfaceRequest<ModuleContext> module_context);
 
   ~ModuleContextImpl() override;
 

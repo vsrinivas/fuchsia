@@ -157,11 +157,10 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> services) override {
-    view_.reset(
-        new modular::ViewHost(
-            application_context()
+    view_.reset(new modular::ViewHost(
+        application_context()
             ->ConnectToEnvironmentService<mozart::ViewManager>(),
-            std::move(view_owner_request)));
+        std::move(view_owner_request)));
 
     for (auto& view_owner : child_views_) {
       view_->ConnectView(std::move(view_owner));
@@ -238,9 +237,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         }));
 
     fidl::InterfaceHandle<mozart::ViewOwner> module2_view;
-    module_context_->StartModule("file:///system/apps/example_module2",
-                        std::move(module2_link_handle), nullptr, nullptr,
-                        module2_.NewRequest(), module2_view.NewRequest());
+    module_context_->StartModule(
+        "file:///system/apps/example_module2", std::move(module2_link_handle),
+        nullptr, nullptr, module2_.NewRequest(), module2_view.NewRequest());
     ConnectView(std::move(module2_view));
 
     connections_.emplace_back(
@@ -281,55 +280,56 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     // this module is initialized, it updates a counter in the root page.
     // 1. Get the module's ledger.
     module_context_->GetComponentContext(component_context_.NewRequest());
-    component_context_->GetLedger(module_ledger_.NewRequest(),
-                                  [this](ledger::Status status) {
-      FTL_CHECK(status == ledger::Status::OK);
-      // 2. Get the root page of the ledger.
-      module_ledger_->GetRootPage(
-          module_root_page_.NewRequest(), [this](ledger::Status status) {
-            FTL_CHECK(status == ledger::Status::OK);
-            // 3. Get a snapshot of the root page.
-            module_root_page_->GetSnapshot(
-                page_snapshot_.NewRequest(), nullptr,
-                [this](ledger::Status status) {
-                  FTL_CHECK(status == ledger::Status::OK);
-                  // 4. Read the counter from the root page.
-                  page_snapshot_->Get(
-                      to_array(kLedgerCounterKey),
-                      [this](ledger::Status status, ledger::ValuePtr value) {
-                        // 5. If counter doesn't exist, initialize. Otherwise,
-                        // increment.
-                        if (status == ledger::Status::KEY_NOT_FOUND) {
-                          FTL_LOG(INFO)
-                              << "No counter in root page. Initializing to 1.";
-                          fidl::Array<uint8_t> data;
-                          data.push_back(1);
-                          module_root_page_->Put(
-                              to_array(kLedgerCounterKey), std::move(data),
-                              [](ledger::Status status) {
-                                FTL_CHECK(status == ledger::Status::OK);
-                              });
-                        } else {
-                          FTL_CHECK(status == ledger::Status::OK);
-                          FTL_CHECK(value->is_bytes());
-                          fidl::Array<uint8_t> counter_data =
-                              value->get_bytes().Clone();
-                          FTL_LOG(INFO)
-                              << "Retrieved counter from root page: "
-                              << static_cast<uint32_t>(counter_data[0])
-                              << ". Incrementing.";
-                          counter_data[0]++;
-                          module_root_page_->Put(
-                              to_array(kLedgerCounterKey),
-                              std::move(counter_data),
-                              [](ledger::Status status) {
-                                FTL_CHECK(status == ledger::Status::OK);
-                              });
-                        }
-                      });
-                });
-          });
-    });
+    component_context_->GetLedger(
+        module_ledger_.NewRequest(), [this](ledger::Status status) {
+          FTL_CHECK(status == ledger::Status::OK);
+          // 2. Get the root page of the ledger.
+          module_ledger_->GetRootPage(
+              module_root_page_.NewRequest(), [this](ledger::Status status) {
+                FTL_CHECK(status == ledger::Status::OK);
+                // 3. Get a snapshot of the root page.
+                module_root_page_->GetSnapshot(
+                    page_snapshot_.NewRequest(), nullptr,
+                    [this](ledger::Status status) {
+                      FTL_CHECK(status == ledger::Status::OK);
+                      // 4. Read the counter from the root page.
+                      page_snapshot_->Get(
+                          to_array(kLedgerCounterKey),
+                          [this](ledger::Status status,
+                                 ledger::ValuePtr value) {
+                            // 5. If counter doesn't exist, initialize.
+                            // Otherwise, increment.
+                            if (status == ledger::Status::KEY_NOT_FOUND) {
+                              FTL_LOG(INFO) << "No counter in root page. "
+                                               "Initializing to 1.";
+                              fidl::Array<uint8_t> data;
+                              data.push_back(1);
+                              module_root_page_->Put(
+                                  to_array(kLedgerCounterKey), std::move(data),
+                                  [](ledger::Status status) {
+                                    FTL_CHECK(status == ledger::Status::OK);
+                                  });
+                            } else {
+                              FTL_CHECK(status == ledger::Status::OK);
+                              FTL_CHECK(value->is_bytes());
+                              fidl::Array<uint8_t> counter_data =
+                                  value->get_bytes().Clone();
+                              FTL_LOG(INFO)
+                                  << "Retrieved counter from root page: "
+                                  << static_cast<uint32_t>(counter_data[0])
+                                  << ". Incrementing.";
+                              counter_data[0]++;
+                              module_root_page_->Put(
+                                  to_array(kLedgerCounterKey),
+                                  std::move(counter_data),
+                                  [](ledger::Status status) {
+                                    FTL_CHECK(status == ledger::Status::OK);
+                                  });
+                            }
+                          });
+                    });
+              });
+        });
   }
 
   // |Module|

@@ -177,8 +177,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
     app::ServiceProviderPtr device_shell_services;
     auto device_shell_launch_info = app::ApplicationLaunchInfo::New();
     device_shell_launch_info->url = settings_.device_shell;
-    device_shell_launch_info->arguments =
-        to_array(settings_.device_shell_args);
+    device_shell_launch_info->arguments = to_array(settings_.device_shell_args);
     device_shell_launch_info->services = device_shell_services.NewRequest();
 
     app_context_->launcher()->CreateApplication(
@@ -220,10 +219,11 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
   }
 
   // |UserProvider|
-  void Login(const fidl::String& username,
-             const fidl::String& password,
-             fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-             fidl::InterfaceRequest<UserController> user_controller_request) override {
+  void Login(
+      const fidl::String& username,
+      const fidl::String& password,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<UserController> user_controller_request) override {
     // Check username and password before logging in.
     bool found_user = false;
     if (users_storage_) {

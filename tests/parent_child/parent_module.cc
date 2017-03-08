@@ -64,8 +64,9 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     modular::LinkPtr child_link;
     module_context_->CreateLink("child", child_link.NewRequest());
     fidl::InterfaceHandle<mozart::ViewOwner> module_view;
-    module_context_->StartModule(module_query, std::move(child_link), nullptr, nullptr,
-                        module_.NewRequest(), module_view.NewRequest());
+    module_context_->StartModule(module_query, std::move(child_link), nullptr,
+                                 nullptr, module_.NewRequest(),
+                                 module_view.NewRequest());
   }
 
   modular::ModuleContextPtr module_context_;

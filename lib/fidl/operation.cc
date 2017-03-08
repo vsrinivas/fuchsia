@@ -21,7 +21,8 @@ void OperationCollection::Hold(OperationBase* const o) {
   o->Run();
 }
 
-ftl::WeakPtr<OperationContainer> OperationCollection::Drop(OperationBase* const o) {
+ftl::WeakPtr<OperationContainer> OperationCollection::Drop(
+    OperationBase* const o) {
   auto it = std::remove_if(
       operations_.begin(), operations_.end(),
       [o](const std::unique_ptr<OperationBase>& p) { return p.get() == o; });

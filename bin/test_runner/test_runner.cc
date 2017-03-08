@@ -68,7 +68,9 @@ TestRunnerImpl::TestRunnerImpl(
   });
 }
 
-const std::string& TestRunnerImpl::test_name() const { return test_name_; }
+const std::string& TestRunnerImpl::test_name() const {
+  return test_name_;
+}
 
 bool TestRunnerImpl::waiting_for_termination() const {
   return waiting_for_termination_;
@@ -90,7 +92,9 @@ void TestRunnerImpl::Done() {
   test_run_context_->StopTrackingClient(this, false);
 }
 
-void TestRunnerImpl::Teardown() { test_run_context_->Teardown(this); }
+void TestRunnerImpl::Teardown() {
+  test_run_context_->Teardown(this);
+}
 
 void TestRunnerImpl::WillTerminate(const double withinSeconds) {
   if (waiting_for_termination_) {
@@ -115,8 +119,10 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
 
 TestRunContext::TestRunContext(
     std::shared_ptr<app::ApplicationContext> app_context,
-    TestRunObserver* connection, const std::string& test_id,
-    const std::string& url, const std::vector<std::string>& args)
+    TestRunObserver* connection,
+    const std::string& test_id,
+    const std::string& url,
+    const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {
   // 1. Make a child environment to run the command.
   app::ApplicationEnvironmentPtr parent_env;

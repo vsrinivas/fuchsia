@@ -156,7 +156,8 @@ class DevUserShellApp
 
   // |SuggestionListener|
   void OnRemove(const fidl::String& suggestion_id) override {
-    FTL_LOG(INFO) << "DevUserShell/SuggestionListener::OnRemove() " << suggestion_id;
+    FTL_LOG(INFO) << "DevUserShell/SuggestionListener::OnRemove() "
+                  << suggestion_id;
   }
 
   // |SuggestionListener|

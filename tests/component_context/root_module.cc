@@ -48,7 +48,8 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     module_context_->GetComponentContext(component_context_.NewRequest());
 
     app::ServiceProviderPtr agent1_services;
-    component_context_->ConnectToAgent(kTest1Agent, agent1_services.NewRequest(),
+    component_context_->ConnectToAgent(kTest1Agent,
+                                       agent1_services.NewRequest(),
                                        agent1_controller.NewRequest());
     ConnectToService(agent1_services.get(), agent1_interface_.NewRequest());
 

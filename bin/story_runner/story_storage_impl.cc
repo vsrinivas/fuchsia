@@ -22,33 +22,34 @@ class ReadLinkDataCall : public Operation<fidl::String> {
                    const fidl::String& link_id,
                    ResultCall result_call)
       : Operation(container, std::move(result_call)),
-        page_snapshot_(std::move(page_snapshot)), link_id_(link_id) {
+        page_snapshot_(std::move(page_snapshot)),
+        link_id_(link_id) {
     Ready();
   }
 
   void Run() override {
-    (*page_snapshot_)->Get(
-        to_array(link_id_),
-        [this](ledger::Status status, ledger::ValuePtr value) {
-          if (status != ledger::Status::OK) {
-            if (status != ledger::Status::KEY_NOT_FOUND) {
-              // It's expected that the key is not found when the link
-              // is accessed for the first time. Don't log an error
-              // then.
-              FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
-                             << " PageSnapshot.Get() " << status;
-            }
-            Done(fidl::String());
-            return;
-          }
+    (*page_snapshot_)
+        ->Get(to_array(link_id_),
+              [this](ledger::Status status, ledger::ValuePtr value) {
+                if (status != ledger::Status::OK) {
+                  if (status != ledger::Status::KEY_NOT_FOUND) {
+                    // It's expected that the key is not found when the link
+                    // is accessed for the first time. Don't log an error
+                    // then.
+                    FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
+                                   << " PageSnapshot.Get() " << status;
+                  }
+                  Done(fidl::String());
+                  return;
+                }
 
-          data_ = LinkData::New();
-          if (value) {
-            data_->Deserialize(value->get_bytes().data(),
-                               value->get_bytes().size());
-          }
-          Done(std::move(data_->json));
-        });
+                data_ = LinkData::New();
+                if (value) {
+                  data_->Deserialize(value->get_bytes().data(),
+                                     value->get_bytes().size());
+                }
+                Done(std::move(data_->json));
+              });
   }
 
  private:
@@ -66,7 +67,9 @@ class WriteLinkDataCall : public Operation<void> {
                     const fidl::String& link_id,
                     const fidl::String& data,
                     ResultCall result_call)
-      : Operation(container, std::move(result_call)), page_(page), link_id_(link_id) {
+      : Operation(container, std::move(result_call)),
+        page_(page),
+        link_id_(link_id) {
     data_ = LinkData::New();
     data_->json = data;
     Ready();
@@ -102,9 +105,7 @@ class SyncCall : public Operation<void> {
     Ready();
   }
 
-  void Run() override {
-    Done();
-  }
+  void Run() override { Done(); }
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(SyncCall);
@@ -139,8 +140,8 @@ StoryStorageImpl::~StoryStorageImpl() = default;
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
                                     const DataCallback& callback) {
   if (story_page_.is_bound()) {
-    new ReadLinkDataCall(&operation_queue_, story_snapshot_.shared_ptr(), link_id,
-                         callback);
+    new ReadLinkDataCall(&operation_queue_, story_snapshot_.shared_ptr(),
+                         link_id, callback);
 
   } else {
     auto& story_data = (*storage_)[key_];

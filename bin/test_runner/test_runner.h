@@ -73,8 +73,10 @@ class TestRunnerImpl : public testing::TestRunner {
 class TestRunContext {
  public:
   TestRunContext(std::shared_ptr<app::ApplicationContext> app_context,
-                 TestRunObserver* connection, const std::string& test_id,
-                 const std::string& url, const std::vector<std::string>& args);
+                 TestRunObserver* connection,
+                 const std::string& test_id,
+                 const std::string& url,
+                 const std::vector<std::string>& args);
 
   // Called from TestRunnerImpl, the actual implemention of |TestRunner|.
   void StopTrackingClient(TestRunnerImpl* client, bool crashed);

@@ -72,8 +72,8 @@ class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
 
     fidl::InterfaceHandle<mozart::ViewOwner> view;
     module_context_->StartModule("file:///system/apps/suggest_shell_view",
-                        std::move(view_link), nullptr, nullptr,
-                        view_module_.NewRequest(), view.NewRequest());
+                                 std::move(view_link), nullptr, nullptr,
+                                 view_module_.NewRequest(), view.NewRequest());
 
     ConnectView(std::move(view));
 

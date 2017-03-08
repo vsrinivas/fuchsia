@@ -41,7 +41,7 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
     application_context()->ConnectToEnvironmentService(
         proposal_publisher_.NewRequest());
 
-    module_context_->GetStoryId([this] (const fidl::String& story_id) {
+    module_context_->GetStoryId([this](const fidl::String& story_id) {
       received_story_id_.Pass();
 
       auto focus_story = maxwell::FocusStory::New();
@@ -68,9 +68,8 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
       proposal_publisher_->Propose(std::move(proposal));
 
       modular::testing::GetStore()->Get(
-          "suggestion_proposal_received",  [this](const fidl::String&) {
-        module_context_->Done();
-      });
+          "suggestion_proposal_received",
+          [this](const fidl::String&) { module_context_->Done(); });
     });
 
     // Start a timer to call Story.Done in case the test agent misbehaves and we

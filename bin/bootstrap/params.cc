@@ -33,7 +33,7 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
         services_ = config.TakeServices();
       } else {
         FTL_LOG(WARNING) << "Could not parse " << config_file;
-    }
+      }
     }
 
     if (!command_line.GetOptionValue("apps", &config_file))

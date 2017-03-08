@@ -6,10 +6,10 @@
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
-#include "apps/modular/services/user/user_context.fidl.h"
-#include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
+#include "apps/modular/services/user/user_context.fidl.h"
+#include "apps/modular/services/user/user_shell.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/command_line.h"
@@ -46,11 +46,11 @@ class SuggestionTestUserShellApp
     suggestion_provider_->SubscribeToNext(
         suggestion_listener_bindings_.AddBinding(this),
         next_controller_.NewRequest());
-    next_controller_->SetResultCount(20  /* arbitrarily chosen */);
+    next_controller_->SetResultCount(20 /* arbitrarily chosen */);
 
     story_provider_->CreateStory(
-          "file:///system/apps/modular_tests/suggestion_proposal_test_module",
-          [this](const fidl::String& story_id) { StartStoryById(story_id); });
+        "file:///system/apps/modular_tests/suggestion_proposal_test_module",
+        [this](const fidl::String& story_id) { StartStoryById(story_id); });
     initialized_.Pass();
   }
 
@@ -93,8 +93,8 @@ class SuggestionTestUserShellApp
       auto& display = suggestion->display;
       if (display->headline == "foo" && display->subheadline == "bar" &&
           display->details == "baz") {
-        modular::testing::GetStore()->Put(
-            "suggestion_proposal_received", "", [] {});
+        modular::testing::GetStore()->Put("suggestion_proposal_received", "",
+                                          [] {});
         received_suggestion_.Pass();
         break;
       }

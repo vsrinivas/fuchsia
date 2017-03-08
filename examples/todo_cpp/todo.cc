@@ -106,7 +106,7 @@ TodoApp::TodoApp()
       });
 }
 
-//TODO: rename "story" variable to "module_context"
+// TODO: rename "story" variable to "module_context"
 void TodoApp::Initialize(
     fidl::InterfaceHandle<modular::ModuleContext> module_context,
     fidl::InterfaceHandle<modular::Link> link,

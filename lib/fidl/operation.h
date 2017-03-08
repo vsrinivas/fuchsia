@@ -130,7 +130,7 @@ class OperationBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(OperationBase);
 };
 
-template<typename T>
+template <typename T>
 class Operation : public OperationBase {
  public:
   ~Operation() override = default;
@@ -138,8 +138,8 @@ class Operation : public OperationBase {
   using ResultCall = std::function<void(T)>;
 
  protected:
-  Operation(OperationContainer* const container, ResultCall result_call) :
-      OperationBase(container), result_call_(std::move(result_call)) {}
+  Operation(OperationContainer* const container, ResultCall result_call)
+      : OperationBase(container), result_call_(std::move(result_call)) {}
 
   // Derived classes call this when they are prepared to be removed from the
   // container. Must be the last the instance does, as it results in destructor
@@ -158,7 +158,7 @@ class Operation : public OperationBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(Operation);
 };
 
-template<>
+template <>
 class Operation<void> : public OperationBase {
  public:
   ~Operation() override = default;
@@ -166,8 +166,8 @@ class Operation<void> : public OperationBase {
   using ResultCall = std::function<void()>;
 
  protected:
-  Operation(OperationContainer* const container, ResultCall result_call) :
-      OperationBase(container), result_call_(std::move(result_call)) {}
+  Operation(OperationContainer* const container, ResultCall result_call)
+      : OperationBase(container), result_call_(std::move(result_call)) {}
 
   void Done() {
     ResultCall result_call = std::move(result_call_);

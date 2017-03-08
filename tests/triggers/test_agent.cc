@@ -39,11 +39,12 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent>,
     task_info->trigger_condition = std::move(trigger_condition);
     agent_context_->ScheduleTask(std::move(task_info));
 
-    agent_services_.AddService<modular::testing::TriggerAgentInterface>([this](
-        fidl::InterfaceRequest<modular::testing::TriggerAgentInterface>
-            interface_request) {
-      trigger_agent_interface_.AddBinding(this, std::move(interface_request));
-    });
+    agent_services_.AddService<modular::testing::TriggerAgentInterface>(
+        [this](fidl::InterfaceRequest<modular::testing::TriggerAgentInterface>
+                   interface_request) {
+          trigger_agent_interface_.AddBinding(this,
+                                              std::move(interface_request));
+        });
 
     initialized_.Pass();
   }

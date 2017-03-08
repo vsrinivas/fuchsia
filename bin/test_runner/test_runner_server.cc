@@ -69,7 +69,8 @@ class TestRunnerConnection : public TestRunObserver {
     ReadAndRunCommand();
   }
 
-  void SendMessage(const std::string& test_id, const std::string& operation,
+  void SendMessage(const std::string& test_id,
+                   const std::string& operation,
                    const std::string& msg) override {
     std::stringstream stream;
     stream << test_id << " " << operation << " " << msg << "\n";

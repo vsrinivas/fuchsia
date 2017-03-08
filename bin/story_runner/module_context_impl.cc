@@ -27,7 +27,7 @@ ModuleContextImpl::ModuleContextImpl(
 ModuleContextImpl::~ModuleContextImpl() {}
 
 void ModuleContextImpl::CreateLink(const fidl::String& name,
-                                 fidl::InterfaceRequest<Link> link) {
+                                   fidl::InterfaceRequest<Link> link) {
   story_impl_->CreateLink(name, std::move(link));
 }
 

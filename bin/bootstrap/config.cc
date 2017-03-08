@@ -63,7 +63,8 @@ bool Config::Parse(const std::string& string) {
   return true;
 }
 
-app::ApplicationLaunchInfoPtr Config::GetLaunchInfo(const modular::JsonValue& value) {
+app::ApplicationLaunchInfoPtr Config::GetLaunchInfo(
+    const modular::JsonValue& value) {
   auto launch_info = app::ApplicationLaunchInfo::New();
   if (value.IsString()) {
     launch_info->url = value.GetString();
@@ -82,6 +83,5 @@ app::ApplicationLaunchInfoPtr Config::GetLaunchInfo(const modular::JsonValue& va
   }
   return launch_info;
 }
-
 
 }  // namespace bootstrap
