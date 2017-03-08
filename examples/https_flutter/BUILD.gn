@@ -21,5 +21,6 @@ flutter_app("example_flutter_https") {
     "//apps/mozart/services/views:views_dart",
     "//lib/fidl/dart",
     "//lib/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/http",
   ]
 }

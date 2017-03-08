@@ -12,7 +12,7 @@ import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/http.dart' as http;
+import 'package:http/http.dart' as http;
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 
