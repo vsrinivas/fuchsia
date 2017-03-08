@@ -35,7 +35,7 @@
 #define X86_EPT_D               (1u << 9)       /* D    Dirty       */
 
 /* From Volume 3, Section 28.2.6: EPT and Memory Typing */
-#define X86_EPT_WB              (6u << 3)       /* WB   Write-back memory type */
+#define X86_EPT_WB              (6u << 3)       /* WB   Write-back memory type  */
 
 /* Page Attribute Table memory types, defined in Table 11-10 of Intel 3A */
 #define X86_PAT_UC              0x00 /* Uncached */

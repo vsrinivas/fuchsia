@@ -249,11 +249,19 @@ status_t VmAspace::Destroy() {
 //  Arch can override this to impose it's own restrictions.
 
 __WEAK vaddr_t arch_mmu_pick_spot(const arch_aspace_t* aspace,
-                                  vaddr_t base, uint prev_region_arch_mmu_flags,
-                                  vaddr_t end, uint next_region_arch_mmu_flags, vaddr_t align, size_t size,
-                                  uint arch_mmu_flags) {
+                                  vaddr_t base, uint prev_region_mmu_flags,
+                                  vaddr_t end, uint next_region_mmu_flags,
+                                  vaddr_t align, size_t size, uint mmu_flags) {
     // just align it by default
     return ALIGN(base, align);
+}
+
+__WEAK vaddr_t guest_mmu_pick_spot(const arch_aspace_t* aspace,
+                                   vaddr_t base, uint prev_region_mmu_flags,
+                                   vaddr_t end, uint next_region_mmu_flags,
+                                   vaddr_t align, size_t size, uint mmu_flags) {
+    return arch_mmu_pick_spot(aspace, base, prev_region_mmu_flags, end,
+                              next_region_mmu_flags, align, size, mmu_flags);
 }
 
 status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
