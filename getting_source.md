@@ -34,14 +34,11 @@ jiri update
 ### Working without altering your PATH
 
 If you don't like having to mangle your environment variables, and you want
-`jiri` to "just work" depending on your current working directory, there's a
-shim for that.
+`jiri` to "just work" depending on your current working directory, just copy
+`jiri` into your PATH.  However, **you must have write access** (without `sudo`)
+to the **directory** into which you copy `jiri`.  If you don't, then `jiri`
+will not be able to keep itself up-to-date.
 
 ```
-sudo cp .jiri_root/bin/jiri /usr/local/bin
-sudo chmod 755 /usr/local/bin/jiri
+cp .jiri_root/bin/jiri ~/bin
 ```
-
-That script is just a wrapper around the real `jiri`.  It crawls your parent
-directory structure until it finds a `.jiri_root` directory, then executes the
-`jiri` it finds there.
