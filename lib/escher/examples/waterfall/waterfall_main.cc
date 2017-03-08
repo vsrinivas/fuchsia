@@ -182,7 +182,9 @@ int main(int argc, char** argv) {
         auto microseconds = stopwatch.GetElapsedMicroseconds();
         double fps = (frame_count - 2) * 1000000.0 /
                      (microseconds - first_frame_microseconds);
-        FTL_LOG(INFO) << "Average frame rate: " << fps;
+        FTL_LOG(INFO) << "---- Average frame rate: " << fps;
+        FTL_LOG(INFO) << "---- Total GPU memory: "
+                      << (escher.GetNumGpuBytesAllocated() / 1024) << "kB";
       }
 
       demo->PollEvents();

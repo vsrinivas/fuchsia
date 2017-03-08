@@ -4,6 +4,7 @@
 
 #include "escher/escher.h"
 #include "escher/impl/escher_impl.h"
+#include "escher/impl/gpu_allocator.h"
 #include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/mesh_impl.h"
@@ -39,6 +40,10 @@ ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
 PaperRendererPtr Escher::NewPaperRenderer() {
   auto renderer = new PaperRenderer(impl_.get());
   return ftl::AdoptRef(renderer);
+}
+
+uint64_t Escher::GetNumGpuBytesAllocated() {
+  return impl_->gpu_allocator()->GetNumBytesAllocated();
 }
 
 }  // namespace escher

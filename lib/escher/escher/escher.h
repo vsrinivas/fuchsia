@@ -40,6 +40,8 @@ class Escher : public MeshBuilderFactory {
 
   PaperRendererPtr NewPaperRenderer();
 
+  uint64_t GetNumGpuBytesAllocated();
+
  private:
   std::unique_ptr<impl::EscherImpl> impl_;
 

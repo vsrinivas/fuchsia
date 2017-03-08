@@ -62,7 +62,7 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
       FTL_LOG(INFO) << "------------------------------------------------------";
 
       FTL_LOG(INFO) << "Timestamps for frame #" << frame_number;
-      FTL_LOG(INFO) << "total\t|\tsince previous (all times in microseconds)";
+      FTL_LOG(INFO) << "total\t | \tsince previous (all times in microseconds)";
       FTL_LOG(INFO) << "------------------------------------------------------";
       auto timestamps = profiler->GetQueryResults();
       uint64_t previous_time = timestamps[0].elapsed;
