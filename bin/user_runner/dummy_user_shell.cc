@@ -189,6 +189,7 @@ class DummyUserShellApp
 
   // |UserShell|
   void Terminate(const TerminateCallback& done) override {
+    FTL_LOG(INFO) << "UserShell::Terminate()";
     // Notify the test runner harness that we can be torn down.
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     modular::testing::Teardown();

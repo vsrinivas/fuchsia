@@ -63,13 +63,14 @@ class DummyDeviceShellApp
 
   // |DeviceShell|
   void Terminate(const TerminateCallback& done) override {
+    FTL_LOG(INFO) << "DeviceShell::Terminate()";
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     done();
   }
 
   // |UserWatcher|
   void OnLogout() override {
-    FTL_LOG(INFO) << "User logged out. Starting shutdown.";
+    FTL_LOG(INFO) << "UserWatcher::OnLogout()";
     device_context_->Shutdown();
   }
 

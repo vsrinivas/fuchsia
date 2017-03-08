@@ -196,10 +196,12 @@ class UserRunnerImpl : public UserRunner {
   // |UserRunner|
   void Terminate(const TerminateCallback& done) override {
     FTL_DCHECK(user_shell_.is_bound());
-    FTL_LOG(INFO) << "UserRunner::Terminate: Terminating UserRunner.";
-    user_shell_->Terminate([done] {
+    FTL_LOG(INFO) << "UserRunner::Terminate()";
+    user_shell_->Terminate([this, done] {
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
       done();
+      delete this;
+      FTL_LOG(INFO) << "UserRunner::Terminate(): deleted";
     });
   }
 
@@ -277,6 +279,7 @@ class UserRunnerApp : public UserRunnerFactory {
               fidl::InterfaceHandle<UserContext> user_context,
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
               fidl::InterfaceRequest<UserRunner> user_runner_request) override {
+    // Deleted in UserRunnerImpl::Terminate().
     new UserRunnerImpl(application_context_, std::move(user_id), device_name,
                        user_shell, std::move(user_shell_args),
                        std::move(ledger_repository), std::move(user_context),

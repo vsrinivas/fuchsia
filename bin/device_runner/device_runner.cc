@@ -174,23 +174,27 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
                      ledger_repository_factory_.NewRequest());
 
     // 2. Start the device shell.
-    app::ServiceProviderPtr services;
-    auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = settings_.device_shell;
-    launch_info->arguments = to_array(settings_.device_shell_args);
-    launch_info->services = services.NewRequest();
+    app::ServiceProviderPtr device_shell_services;
+    auto device_shell_launch_info = app::ApplicationLaunchInfo::New();
+    device_shell_launch_info->url = settings_.device_shell;
+    device_shell_launch_info->arguments =
+        to_array(settings_.device_shell_args);
+    device_shell_launch_info->services = device_shell_services.NewRequest();
 
     app_context_->launcher()->CreateApplication(
-        std::move(launch_info), device_shell_controller_.NewRequest());
+        std::move(device_shell_launch_info),
+        device_shell_controller_.NewRequest());
 
-    mozart::ViewProviderPtr view_provider;
-    ConnectToService(services.get(), view_provider.NewRequest());
+    mozart::ViewProviderPtr device_shell_view_provider;
+    ConnectToService(device_shell_services.get(),
+                     device_shell_view_provider.NewRequest());
 
     DeviceShellFactoryPtr device_shell_factory;
-    ConnectToService(services.get(), device_shell_factory.NewRequest());
+    ConnectToService(device_shell_services.get(),
+                     device_shell_factory.NewRequest());
 
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
-    view_provider->CreateView(root_view.NewRequest(), nullptr);
+    device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
@@ -203,7 +207,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
   // |DeviceContext|
   // TODO(vardhan): Signal the ledger application to tear down.
   void Shutdown() override {
-    FTL_LOG(INFO) << "Shutting down DeviceRunner..";
+    FTL_LOG(INFO) << "DeviceContext::Shutdown()";
     auto cont = [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); };
     if ((bool)user_controller_impl_) {
       // This will tear down the user runner altogether, and call us back to
@@ -219,7 +223,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
   void Login(const fidl::String& username,
              const fidl::String& password,
              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-             fidl::InterfaceRequest<UserController> user_controller) override {
+             fidl::InterfaceRequest<UserController> user_controller_request) override {
     // Check username and password before logging in.
     bool found_user = false;
     if (users_storage_) {
@@ -236,12 +240,13 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
       return;
     }
 
-    FTL_LOG(INFO) << "Logging in as user: " << username;
+    FTL_LOG(INFO) << "UserProvider::Login() user: " << username;
+
     // Get the LedgerRepository for the user.
     fidl::Array<uint8_t> user_id = to_array(username);
-    fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
     std::string ledger_repository_path =
         kLedgerDataBaseDir + to_hex_string(user_id);
+
     if (settings_.ledger_repository_for_testing) {
       unsigned random_number;
       size_t random_size;
@@ -254,6 +259,8 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
       FTL_LOG(INFO) << "Using testing ledger repository path: "
                     << ledger_repository_path;
     }
+
+    fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
     ledger_repository_factory_->GetRepository(
         ledger_repository_path, ledger_repository.NewRequest(),
         [](ledger::Status status) {
@@ -265,8 +272,8 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
         app_context_, settings_.device_name, settings_.user_runner,
         settings_.user_shell, settings_.user_shell_args, std::move(user_id),
         std::move(ledger_repository), std::move(view_owner_request),
-        std::move(user_controller),
-        [this]() { user_controller_impl_.reset(); }));
+        std::move(user_controller_request),
+        [this] { user_controller_impl_.reset(); }));
   }
 
   // |UserProvider|

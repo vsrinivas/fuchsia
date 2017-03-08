@@ -48,7 +48,7 @@ void ViewHost::ConnectView(
 void ViewHost::OnChildAttached(uint32_t child_key,
                                mozart::ViewInfoPtr child_view_info) {
   auto it = views_.find(child_key);
-  FTL_DCHECK(it != views_.end()) << "Invalid child_key.";
+  FTL_DCHECK(it != views_.end()) << "Invalid child_key: " << child_key;
   auto view_data = it->second.get();
   view_data->view_info = std::move(child_view_info);
   Invalidate();
@@ -56,8 +56,7 @@ void ViewHost::OnChildAttached(uint32_t child_key,
 
 void ViewHost::OnChildUnavailable(uint32_t child_key) {
   auto it = views_.find(child_key);
-  FTL_DCHECK(it != views_.end()) << "Invalid child_key.";
-  FTL_LOG(ERROR) << "View died unexpectedly: child_key=" << child_key;
+  FTL_DCHECK(it != views_.end()) << "Invalid child_key: " << child_key;
   std::unique_ptr<ViewData> view_data = std::move(it->second);
   views_.erase(it);
   GetViewContainer()->RemoveChild(child_key, nullptr);

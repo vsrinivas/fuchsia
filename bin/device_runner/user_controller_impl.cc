@@ -26,11 +26,11 @@ UserControllerImpl::UserControllerImpl(
     fidl::Array<uint8_t> user_id,
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fidl::InterfaceRequest<UserController> user_controller,
+    fidl::InterfaceRequest<UserController> user_controller_request,
     DoneCallback done)
     : user_context_impl_(this),
       user_context_binding_(&user_context_impl_),
-      user_controller_binding_(this, std::move(user_controller)),
+      user_controller_binding_(this, std::move(user_controller_request)),
       done_(done) {
   const std::string label = kUserScopeLabelPrefix + to_hex_string(user_id);
 
@@ -62,6 +62,7 @@ UserControllerImpl::UserControllerImpl(
 
 // |UserController|
 void UserControllerImpl::Logout(const LogoutCallback& done) {
+  FTL_LOG(INFO) << "UserController::Logout()";
   logout_response_callbacks_.push_back(done);
   if (logout_response_callbacks_.size() > 1) {
     return;
@@ -71,9 +72,9 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
   user_controller_binding_.Unbind();
   user_context_binding_.Unbind();
 
-  user_runner_->Terminate([this, done] {
-    for (const auto& done_cb : logout_response_callbacks_) {
-      done_cb();
+  user_runner_->Terminate([this] {
+    for (const auto& done : logout_response_callbacks_) {
+      done();
     }
     // We announce |OnLogout| only at point just before deleting ourselves,
     // so we can avoid any race conditions that may be triggered by |Shutdown|
@@ -91,6 +92,7 @@ void UserControllerImpl::Watch(fidl::InterfaceHandle<UserWatcher> watcher) {
 
 // |UserContext|
 void UserContextImpl::Logout() {
+  FTL_LOG(INFO) << "UserContext::Logout()";
   controller_->Logout([] {});
 }
 

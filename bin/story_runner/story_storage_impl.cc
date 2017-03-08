@@ -31,8 +31,13 @@ class ReadLinkDataCall : public Operation<fidl::String> {
         to_array(link_id_),
         [this](ledger::Status status, ledger::ValuePtr value) {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
-                           << " PageSnapshot.Get() " << status;
+            if (status != ledger::Status::KEY_NOT_FOUND) {
+              // It's expected that the key is not found when the link
+              // is accessed for the first time. Don't log an error
+              // then.
+              FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
+                             << " PageSnapshot.Get() " << status;
+            }
             Done(fidl::String());
             return;
           }
