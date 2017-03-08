@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unordered_set>
+#include <vector>
 
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
@@ -17,6 +18,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/vector.h"
 
 namespace modular {
 namespace {
@@ -481,8 +483,16 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
             }
 
             StoryDataPtr story_data = StoryData::New();
-            story_data->Deserialize(entry->value->get_bytes().data(),
-                                    entry->value->get_bytes().size());
+            if (entry->value->is_bytes()) {
+              story_data->Deserialize(entry->value->get_bytes().data(),
+                                      entry->value->get_bytes().size());
+            } else {
+              // If the value is big, Ledger may return a vmo.
+              std::vector<char> value;
+              mtl::VectorFromVmo(entry->value->get_buffer(), &value);
+              story_data->Deserialize(static_cast<void*>(value.data()),
+                value.size());
+            }
             story_ids_.push_back(story_data->story_info->id);
             FTL_LOG(INFO) << "PreviousStoryCall() "
                           << " previous story " << story_data->story_info->id
