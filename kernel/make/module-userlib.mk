@@ -168,6 +168,12 @@ ifneq ($(MODULE_EXPORT),)
 # TODO: ddk, etc should be packaged separately
 MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include
 
+# Hack to work around libc/libmusl aliasing
+# TODO(swetland): a long-term fix
+ifeq ($(MODULE_SRCDIR),system/ulib/c)
+MODULE_SRCDIR := third_party/ulib/musl
+endif
+
 # locate headers from module source public include dir
 MODULE_PUBLIC_HEADERS :=\
 $(shell test -d $(MODULE_SRCDIR)/include &&\
