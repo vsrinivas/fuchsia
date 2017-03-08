@@ -4,6 +4,8 @@
 
 static_library("hci") {
   sources = [
+    "acl_data_packet.cc",
+    "acl_data_packet.h",
     "advertising_report_parser.cc",
     "advertising_report_parser.h",
     "command_channel.cc",

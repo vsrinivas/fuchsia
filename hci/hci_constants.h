@@ -714,6 +714,9 @@ enum class LEScanFilterPolicy : uint8_t {
 
 // The maximum length of advertising data that can get passed to the
 // HCI_LE_Set_Advertising_Data command.
+//
+// This constant should be used on pre-5.0 controllers. On controllers that support 5.0+ the host
+// should use the HCI_LE_Read_Maximum_Advertising_Data_Length command to obtain this information.
 constexpr size_t kMaxLEAdvertisingDataLength = 0x1F;  // (31)
 
 // Invalid RSSI value.
@@ -739,6 +742,26 @@ enum class FlowControlMode : uint8_t {
   // Data block based flow control mode (default for an AMP Controller)
   kDataBlockBased = 0x01
 };
+
+// The Packet Boundary Flag is contained in bits 4 and 5 in the second octet of a HCI ACL Data
+// packet.
+enum class ACLPacketBoundaryFlag : uint8_t {
+  kFirstNonFlushable  = 0x00,
+  kContinuingFragment = 0x01,
+  kFirstFlushable     = 0x02,
+  kCompletePDU        = 0x03,
+};
+
+// The Broadcast Flag is contained in bits 6 and 7 in the second octet of a HCI ACL Data packet.
+enum class ACLBroadcastFlag : uint8_t {
+  kPointToPoint         = 0x00,
+  kActiveSlaveBroadcast = 0x01,
+};
+
+// "Hosts and Controllers shall be able to accept HCI ACL Data Packets with up to 27 bytes of data
+// excluding the HCI ACL Data Packet header on Connection_Handles associated with an LE-U logical
+// link." (See Core Spec v5.0, Volume 2, Part E, Section 5.4.2)
+constexpr size_t kMinLEACLDataBufferLength = 27;
 
 }  // namespace hci
 }  // namespace bluetooth

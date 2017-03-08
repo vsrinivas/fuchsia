@@ -146,6 +146,10 @@ class Packet {
   // Returns a pointer to the underlying buffer.
   ByteBuffer* buffer() const { return buffer_; }
 
+  // Returns the raw bytes of the packet in a ByteBuffer. The returned buffer is a view over the
+  // portion of the underlying buffer that is used by this packet.
+  const BufferView GetBytes() const { return BufferView(buffer_->GetData(), size_); }
+
  private:
   ByteBuffer* buffer_;  // weak
   size_t size_;

@@ -23,6 +23,9 @@ using OpCode = uint16_t;
 // HCI event code as used in event packets.
 using EventCode = uint8_t;
 
+// Data Connection Handle used for ACL and SCO logical link connections.
+using ConnectionHandle = uint16_t;
+
 // Returns the OGF (OpCode Group Field) which occupies the upper 6-bits of the
 // opcode.
 inline uint8_t GetOGF(const OpCode opcode) {
@@ -52,6 +55,17 @@ struct CommandHeader {
 struct EventHeader {
   uint8_t event_code;
   uint8_t parameter_total_size;
+} __PACKED;
+
+struct ACLDataHeader {
+  // The first 16-bits contain the following fields, in order:
+  //   - 12-bits: Connection Handle
+  //   - 2-bits: Packet Boundary Flags
+  //   - 2-bits: Broadcast Flags
+  uint16_t handle_and_flags;
+
+  // Length of data following the header.
+  uint16_t data_total_length;
 } __PACKED;
 
 // Generic return parameter struct for commands that only return a status. This

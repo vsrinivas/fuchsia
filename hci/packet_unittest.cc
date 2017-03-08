@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/bluetooth/hci/acl_data_packet.h"
 #include "apps/bluetooth/hci/command_packet.h"
 #include "apps/bluetooth/hci/event_packet.h"
 
@@ -103,6 +104,72 @@ TEST(HCIPacketTest, EventPacketGetReturnParams) {
   EventPacket valid0(&cmd_complete_valid_bytes);
   EXPECT_NE(nullptr, valid0.GetReturnParams<TestPayload>());
   EXPECT_EQ(127, valid0.GetReturnParams<TestPayload>()->foo);
+}
+
+TEST(HCIPacketTest, ACLDataTxPacket) {
+  constexpr size_t kMaxDataLength = 10;
+  constexpr size_t kDataLength = 1;
+  constexpr size_t kBufferSize = ACLDataTxPacket::GetMinBufferSize(kMaxDataLength);
+  common::StaticByteBuffer<kBufferSize> buffer;
+  buffer.SetToZeros();
+
+  ACLDataTxPacket packet(0x007F, ACLPacketBoundaryFlag::kContinuingFragment,
+                         ACLBroadcastFlag::kActiveSlaveBroadcast, kDataLength, &buffer);
+  packet.EncodeHeader();
+
+  // First 12-bits: 0x07F
+  // Upper 4-bits: 0b0101
+  EXPECT_TRUE(
+      ContainersEqual(packet.GetBytes(), std::array<uint8_t, 5>{{0x7F, 0x50, 0x01, 0x00, 0x00}}));
+
+  packet = ACLDataTxPacket(0x0FFF, ACLPacketBoundaryFlag::kCompletePDU,
+                           ACLBroadcastFlag::kActiveSlaveBroadcast, kDataLength, &buffer);
+  packet.EncodeHeader();
+
+  // First 12-bits: 0xFFF
+  // Upper 4-bits: 0b0111
+  EXPECT_TRUE(
+      ContainersEqual(packet.GetBytes(), std::array<uint8_t, 5>{{0xFF, 0x7F, 0x01, 0x00, 0x00}}));
+
+  packet = ACLDataTxPacket(0x0FFF, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                           ACLBroadcastFlag::kPointToPoint, kMaxDataLength, &buffer);
+  packet.EncodeHeader();
+
+  // First 12-bits: 0xFFF
+  // Upper 4-bits: 0b0000
+  EXPECT_TRUE(ContainersEqual(
+      packet.GetBytes(), std::array<uint8_t, 14>{{0xFF, 0x0F, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                                  0x00, 0x00, 0x00, 0x00, 0x00}}));
+}
+
+TEST(HCIPacketTest, ACLDataRxPacket) {
+  // The same test cases as ACLDataTxPacket test above but in the opposite direction.
+  auto bytes = common::CreateStaticByteBuffer(0x7F, 0x50, 0x01, 0x00, 0x00);
+  ACLDataRxPacket packet(&bytes);
+  EXPECT_EQ(0x007F, packet.GetConnectionHandle());
+  EXPECT_EQ(ACLPacketBoundaryFlag::kContinuingFragment, packet.GetPacketBoundaryFlag());
+  EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet.GetBroadcastFlag());
+  EXPECT_EQ(1u, packet.GetPayloadSize());
+
+  bytes = common::CreateStaticByteBuffer(0xFF, 0x7F, 0x01, 0x00, 0x00);
+  packet = ACLDataRxPacket(&bytes);
+  EXPECT_EQ(0x0FFF, packet.GetConnectionHandle());
+  EXPECT_EQ(ACLPacketBoundaryFlag::kCompletePDU, packet.GetPacketBoundaryFlag());
+  EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet.GetBroadcastFlag());
+  EXPECT_EQ(1u, packet.GetPayloadSize());
+
+  // 256 + 4
+  auto large_bytes = common::StaticByteBuffer<260>();
+  large_bytes.SetToZeros();
+  large_bytes.GetMutableData()[0] = 0xFF;
+  large_bytes.GetMutableData()[1] = 0x0F;
+  large_bytes.GetMutableData()[2] = 0x00;
+  large_bytes.GetMutableData()[3] = 0x01;
+  packet = ACLDataRxPacket(&large_bytes);
+  EXPECT_EQ(0x0FFF, packet.GetConnectionHandle());
+  EXPECT_EQ(ACLPacketBoundaryFlag::kFirstNonFlushable, packet.GetPacketBoundaryFlag());
+  EXPECT_EQ(ACLBroadcastFlag::kPointToPoint, packet.GetBroadcastFlag());
+  EXPECT_EQ(256u, packet.GetPayloadSize());
 }
 
 }  // namespace
