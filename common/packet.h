@@ -15,7 +15,8 @@ namespace common {
 
 // Base class-template for generic packets that contain a header and a payload.
 // A Packet is a light-weight object that operates over a previously allocated
-// ByteBuffer without taking ownership of it.
+// ByteBuffer without taking ownership of it. The Packet class-template provides a read-only view
+// over the underlying buffer while MutablePacket allows modification of the underlying buffer.
 //
 // Example usage:
 //
@@ -41,13 +42,13 @@ namespace common {
 //     uint8_t array_field[];
 //   } __PACKED;
 //
-//   Packet<MyHeaderType> packet(&buffer, sizeof(MyPayloadType) + 2);
-//   packet.GetPayload<MyPayloadType>().byte_field = 0xFF;
-//   packet.GetPayload<MyPayloadType>().uint16_field = 0xFFFF;
-//   packet.GetPayload<MyPayloadType>().array_field[0] = 0x00;
-//   packet.GetPayload<MyPayloadType>().array_field[1] = 0x01;
+//   MutablePacket<MyHeaderType> packet(&buffer, sizeof(MyPayloadType) + 2);
+//   packet.GetMutablePayload<MyPayloadType>().byte_field = 0xFF;
+//   packet.GetMutablePayload<MyPayloadType>().uint16_field = 0xFFFF;
+//   packet.GetMutablePayload<MyPayloadType>().array_field[0] = 0x00;
+//   packet.GetMutablePayload<MyPayloadType>().array_field[1] = 0x01;
 //
-// The Packet class does not expose a mutable getter for the header. Packet
+// The MutablePacket class does not expose a mutable getter for the header. Packet
 // header contents are intended to be encoded by special subclasses that
 // understand how to encode a particular packet type:
 //
@@ -56,7 +57,7 @@ namespace common {
 //     uint16_t payload_size;
 //   } __PACKED;
 //
-//   class MyPacket : Packet<MyHeader> {
+//   class MyPacket : MutablePacket<MyHeader> {
 //    public:
 //     MyPacket(uint8_t opcode, ByteBuffer* buffer, size_t payload_size)
 //         : Packet<MyHeader>(buffer, payload_size) {
@@ -70,7 +71,7 @@ namespace common {
 //     // MyHeader contains a two-byte |payload_size| which needs to be properly
 //     // encoded and decoded:
 //
-//     void EncodeHeader() override {
+//     void EncodeHeader() {
 //       // Our example protocol expects the header fields to be encoded in
 //       // little-endian and we don't want to assume host order:
 //       size_t payload_size = GetPayloadSize();
@@ -86,7 +87,7 @@ namespace common {
 //
 //   // Transmit data:
 //   MyPacket packet(my_opcode, &buffer, sizeof(MyPayload));
-//   packet.GetPayload<MyPayload>().stuff = foo;
+//   packet.GetMutablePayload<MyPayload>().stuff = foo;
 //   packet.EncodeHeader();
 //   foo::SendPacketOverTheWire(&packet);
 //
@@ -100,7 +101,7 @@ class Packet {
   // Initializes this Packet to operate over |buffer|. |payload_size| is the
   // size of the packet payload not including the packet header. A
   // |payload_size| value of 0 indicates that the packet contains no payload.
-  explicit Packet(MutableByteBuffer* buffer, size_t payload_size = 0u)
+  explicit Packet(ByteBuffer* buffer, size_t payload_size = 0u)
       : buffer_(buffer), size_(sizeof(HeaderType) + payload_size) {
     FTL_DCHECK(buffer_);
     FTL_DCHECK(buffer_->GetSize() >= size_);
@@ -114,47 +115,74 @@ class Packet {
 
   // Returns a pointer to the beginning of the packet payload, immediately
   // following the header. Returns nullptr if the payload is empty.
-  uint8_t* GetPayloadData() const {
+  const uint8_t* GetPayloadData() const {
     if (!GetPayloadSize()) return nullptr;
-    return buffer_->GetMutableData() + sizeof(HeaderType);
+    return buffer_->GetData() + sizeof(HeaderType);
   }
 
   // Returns the size of the packet payload, not including the header.
   size_t GetPayloadSize() const { return size_ - sizeof(HeaderType); }
+
+  // Sets the size of the packet payload to the provided |payload_size|. This simply sets the value
+  // stored in the Packet structure without modifying the underlying buffer.
+  void SetPayloadSize(size_t payload_size) {
+    size_ = sizeof(HeaderType) + payload_size;
+    FTL_DCHECK(buffer_->GetSize() >= size_);
+  }
 
   // Convenience getter that returns a pointer to the beginning of the packet
   // payload, immediately following the header, after casting it to a pointer of
   // the specified type. This is commonly used with packet protocol parameter
   // structures.
   template <typename PayloadType>
-  PayloadType* GetPayload() const {
+  const PayloadType* GetPayload() const {
     FTL_DCHECK(sizeof(PayloadType) <= GetPayloadSize());
-    return reinterpret_cast<PayloadType*>(GetPayloadData());
+    return reinterpret_cast<const PayloadType*>(GetPayloadData());
   }
 
   // Returns the packet size.
   size_t size() const { return size_; }
 
   // Returns a pointer to the underlying buffer.
-  MutableByteBuffer* buffer() const { return buffer_; }
+  ByteBuffer* buffer() const { return buffer_; }
 
-  // Encode and decode the header contents. A subclass implementation is
-  // expected to finalize all header fields as required by the protocol and wire
-  // format.
-  virtual void EncodeHeader() {}
-  virtual void DecodeHeader() {}
+ private:
+  ByteBuffer* buffer_;  // weak
+  size_t size_;
+};
+
+template <typename HeaderType>
+class MutablePacket : public Packet<HeaderType> {
+ public:
+  explicit MutablePacket(MutableByteBuffer* buffer, size_t payload_size = 0u)
+      : Packet<HeaderType>(buffer, payload_size) {}
+
+  // Returns a pointer to the beginning of the packet payload, immediately
+  // following the header. Returns nullptr if the payload is empty.
+  uint8_t* GetMutablePayloadData() const {
+    if (!this->GetPayloadSize()) return nullptr;
+    return mutable_buffer()->GetMutableData() + sizeof(HeaderType);
+  }
+
+  // Convenience getter that returns a pointer to the beginning of the packet
+  // payload, immediately following the header, after casting it to a pointer of
+  // the specified type. This is commonly used with packet protocol parameter
+  // structures.
+  template <typename PayloadType>
+  PayloadType* GetMutablePayload() const {
+    FTL_DCHECK(sizeof(PayloadType) <= this->GetPayloadSize());
+    return reinterpret_cast<PayloadType*>(GetMutablePayloadData());
+  }
+
+  MutableByteBuffer* mutable_buffer() const {
+    return static_cast<MutableByteBuffer*>(this->buffer());
+  }
 
  protected:
   // Returns a pointer to the header that can be used to modify header contents.
-  // Reserved for use by subclasses. We do this to encapsulate access to the
-  // packet header contents.
   HeaderType* GetMutableHeader() const {
-    return reinterpret_cast<HeaderType*>(buffer_->GetMutableData());
+    return reinterpret_cast<HeaderType*>(mutable_buffer()->GetMutableData());
   }
-
- private:
-  MutableByteBuffer* buffer_;  // weak
-  size_t size_;
 };
 
 }  // namespace common

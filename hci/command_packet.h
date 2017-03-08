@@ -10,21 +10,22 @@
 namespace bluetooth {
 
 namespace common {
-class ByteBuffer;
+class MutableByteBuffer;
 }  // namespace common
 
 namespace hci {
 
 // Represents a HCI command packet.
-class CommandPacket : public ::bluetooth::common::Packet<CommandHeader> {
+class CommandPacket : public ::bluetooth::common::MutablePacket<CommandHeader> {
  public:
   CommandPacket(OpCode opcode, common::MutableByteBuffer* buffer, size_t payload_size = 0u);
 
   // Returns the HCI command opcode for this packet.
   OpCode opcode() const { return opcode_; }
 
-  // common::Packet overrides
-  void EncodeHeader() override;
+  // Encodes the command packet header contents. This method must be called before this packet can
+  // be sent to the controller.
+  void EncodeHeader();
 
   // Returns the minimum number of bytes needed for a CommandPacket with the
   // given |payload_size|.

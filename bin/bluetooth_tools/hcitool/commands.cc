@@ -327,7 +327,7 @@ bool HandleWriteLocalName(const CommandDispatcher& owner, const ftl::CommandLine
   common::StaticByteBuffer<BufferSize(hci::kMaxLocalNameLength)> buffer;
   hci::CommandPacket packet(hci::kWriteLocalName, &buffer, name.length() + 1);
   buffer.GetMutableData()[name.length()] = '\0';
-  std::strcpy((char*)packet.GetPayload<hci::WriteLocalNameCommandParams>()->local_name,
+  std::strcpy((char*)packet.GetMutablePayload<hci::WriteLocalNameCommandParams>()->local_name,
               name.c_str());
   packet.EncodeHeader();
 
@@ -367,7 +367,7 @@ bool HandleSetAdvEnable(const CommandDispatcher& owner, const ftl::CommandLine& 
 
   common::StaticByteBuffer<kBufferSize> buffer;
   hci::CommandPacket packet(hci::kLESetAdvertisingEnable, &buffer, kPayloadSize);
-  packet.GetPayload<hci::LESetAdvertisingEnableCommandParams>()->advertising_enable = value;
+  packet.GetMutablePayload<hci::LESetAdvertisingEnableCommandParams>()->advertising_enable = value;
   packet.EncodeHeader();
 
   auto id = SendCommand(owner, packet, cb, complete_cb);
@@ -418,7 +418,7 @@ bool HandleSetAdvParams(const CommandDispatcher& owner, const ftl::CommandLine& 
   constexpr size_t kPayloadSize = sizeof(hci::LESetAdvertisingParametersCommandParams);
   common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
   hci::CommandPacket packet(hci::kLESetAdvertisingParameters, &buffer, kPayloadSize);
-  auto params = packet.GetPayload<hci::LESetAdvertisingParametersCommandParams>();
+  auto params = packet.GetMutablePayload<hci::LESetAdvertisingParametersCommandParams>();
   params->adv_interval_min = htole16(hci::kLEAdvertisingIntervalDefault);
   params->adv_interval_max = htole16(hci::kLEAdvertisingIntervalDefault);
   params->adv_type = adv_type;
@@ -472,13 +472,13 @@ bool HandleSetAdvData(const CommandDispatcher& owner, const ftl::CommandLine& cm
       return false;
     }
 
-    auto params = packet.GetPayload<hci::LESetAdvertisingDataCommandParams>();
+    auto params = packet.GetMutablePayload<hci::LESetAdvertisingDataCommandParams>();
     params->adv_data_length = adv_data_len;
     params->adv_data[0] = adv_data_len - 1;
     params->adv_data[1] = 0x09;  // Complete Local Name
     std::strncpy((char*)params->adv_data + 2, name.c_str(), name.length());
   } else {
-    packet.GetPayload<hci::LESetAdvertisingDataCommandParams>()->adv_data_length = 0;
+    packet.GetMutablePayload<hci::LESetAdvertisingDataCommandParams>()->adv_data_length = 0;
   }
 
   auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
@@ -529,7 +529,7 @@ bool HandleSetScanParams(const CommandDispatcher& owner, const ftl::CommandLine&
   common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
   hci::CommandPacket packet(hci::kLESetScanParameters, &buffer, kPayloadSize);
 
-  auto params = packet.GetPayload<hci::LESetScanParametersCommandParams>();
+  auto params = packet.GetMutablePayload<hci::LESetScanParametersCommandParams>();
   params->scan_type = scan_type;
   params->scan_interval = htole16(hci::kLEScanIntervalDefault);
   params->scan_window = htole16(hci::kLEScanIntervalDefault);
@@ -596,7 +596,7 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
   common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
   hci::CommandPacket packet(hci::kLESetScanEnable, &buffer, kPayloadSize);
 
-  auto params = packet.GetPayload<hci::LESetScanEnableCommandParams>();
+  auto params = packet.GetMutablePayload<hci::LESetScanEnableCommandParams>();
   params->scanning_enabled = hci::GenericEnableParam::kEnable;
   params->filter_duplicates = filter_duplicates;
 
@@ -607,7 +607,7 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
       return;
 
     hci::AdvertisingReportParser parser(event);
-    hci::LEAdvertisingReportData* data;
+    const hci::LEAdvertisingReportData* data;
     int8_t rssi;
     while (parser.GetNextReport(&data, &rssi)) {
       DisplayAdvertisingReport(*data, rssi, name_filter);
@@ -634,7 +634,7 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
     common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
     hci::CommandPacket packet(hci::kLESetScanEnable, &buffer, kPayloadSize);
 
-    auto params = packet.GetPayload<hci::LESetScanEnableCommandParams>();
+    auto params = packet.GetMutablePayload<hci::LESetScanEnableCommandParams>();
     params->scanning_enabled = hci::GenericEnableParam::kDisable;
     params->filter_duplicates = hci::GenericEnableParam::kDisable;
 

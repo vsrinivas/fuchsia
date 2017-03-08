@@ -62,12 +62,12 @@ TEST(PacketTest, NonEmptyPayload) {
   StaticByteBuffer<kBufferSize> buffer;
   buffer.SetToZeros();
 
-  Packet<TestHeader> packet(&buffer, kPayloadSize);
+  MutablePacket<TestHeader> packet(&buffer, kPayloadSize);
   EXPECT_EQ(kBufferSize, packet.size());
   EXPECT_EQ(kPayloadSize, packet.GetPayloadSize());
   EXPECT_NE(nullptr, packet.GetPayloadData());
 
-  auto payload = packet.GetPayload<TestPayload>();
+  auto payload = packet.GetMutablePayload<TestPayload>();
   EXPECT_NE(nullptr, payload);
 
   // Modify the payload.

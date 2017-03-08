@@ -15,16 +15,13 @@ class ByteBuffer;
 
 namespace hci {
 
-// Represents a HCI command packet.
+// Represents a HCI event packet.
 class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
  public:
-  EventPacket(EventCode event_code, common::MutableByteBuffer* buffer, size_t payload_size = 0u);
+  explicit EventPacket(common::ByteBuffer* buffer);
 
   // Returns the HCI event code for this packet.
   EventCode event_code() const { return GetHeader().event_code; }
-
-  // common::Packet overrides
-  void EncodeHeader() override;
 
   // Returns the minimum number of bytes needed for an EventPacket with the
   // given |payload_size|.
@@ -37,11 +34,11 @@ class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
   // would exceed the bounds of the packet or if this packet does not represent
   // a CommandComplete event, this method returns nullptr.
   template <typename ReturnParams>
-  ReturnParams* GetReturnParams() const {
+  const ReturnParams* GetReturnParams() const {
     if (event_code() != kCommandCompleteEventCode ||
         sizeof(ReturnParams) > GetPayloadSize() - sizeof(CommandCompleteEventParams))
       return nullptr;
-    return reinterpret_cast<ReturnParams*>(
+    return reinterpret_cast<const ReturnParams*>(
         GetPayload<CommandCompleteEventParams>()->return_parameters);
   }
 };

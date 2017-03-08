@@ -36,8 +36,8 @@ CommandChannel::QueuedCommand::QueuedCommand(TransactionId id, const CommandPack
   transaction_data.complete_callback = complete_callback;
   transaction_data.task_runner = task_runner;
 
-  packet_data =
-      common::DynamicByteBuffer(command_packet.size(), command_packet.buffer()->TransferContents());
+  packet_data = common::DynamicByteBuffer(command_packet.size(),
+                                          command_packet.mutable_buffer()->TransferContents());
 }
 
 CommandChannel::CommandChannel(mx::channel hci_command_channel)
@@ -202,10 +202,10 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
   memcpy(buffer.GetMutableData(), event.buffer()->GetData(), event.size());
 
   pending_command->task_runner->PostTask(ftl::MakeCopyable([
-    buffer = std::move(buffer), payload_size = event.GetPayloadSize(),
-    complete_callback = pending_command->complete_callback, transaction_id = pending_command->id
+    buffer = std::move(buffer), complete_callback = pending_command->complete_callback,
+    transaction_id = pending_command->id
   ]() mutable {
-    EventPacket event(buffer.GetData()[0], &buffer, payload_size);
+    EventPacket event(&buffer);
     complete_callback(transaction_id, event);
   }));
 
@@ -285,13 +285,11 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
   common::DynamicByteBuffer buffer(event.size());
   memcpy(buffer.GetMutableData(), event.buffer()->GetData(), event.size());
 
-  handler.task_runner->PostTask(ftl::MakeCopyable([
-    buffer = std::move(buffer), payload_size = event.GetPayloadSize(),
-    event_callback = handler.event_callback
-  ]() mutable {
-    EventPacket event(buffer.GetData()[0], &buffer, payload_size);
-    event_callback(event);
-  }));
+  handler.task_runner->PostTask(ftl::MakeCopyable(
+      [ buffer = std::move(buffer), event_callback = handler.event_callback ]() mutable {
+        EventPacket event(&buffer);
+        event_callback(event);
+      }));
 }
 
 void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
@@ -317,11 +315,12 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
     return;
   }
 
-  EventPacket event(event_buffer_.GetData()[0], &event_buffer_, read_size - sizeof(EventHeader));
-  if (event.GetPayloadSize() != event.GetHeader().parameter_total_size) {
+  const size_t rx_payload_size = read_size - sizeof(EventHeader);
+  EventPacket event(&event_buffer_);
+  if (event.GetPayloadSize() != rx_payload_size) {
     FTL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
-                   << "payload size from header (" << event.GetHeader().parameter_total_size << ") "
-                   << " does not match received payload size: " << event.GetPayloadSize();
+                   << "payload size from header (" << event.GetPayloadSize() << ")"
+                   << " does not match received payload size: " << rx_payload_size;
     return;
   }
 

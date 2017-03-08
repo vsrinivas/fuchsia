@@ -16,12 +16,12 @@ namespace {
 TEST(AdvertisingReportParserTest, EmptyReport) {
   auto bytes = common::CreateStaticByteBuffer(0x3E, 0x02, 0x02, 0x00);
 
-  EventPacket event(bytes.GetData()[0], &bytes, bytes.GetData()[1]);
+  EventPacket event(&bytes);
 
   AdvertisingReportParser parser(event);
   EXPECT_FALSE(parser.HasMoreReports());
 
-  LEAdvertisingReportData* data;
+  const LEAdvertisingReportData* data;
   int8_t rssi;
   EXPECT_FALSE(parser.GetNextReport(&data, &rssi));
 }
@@ -34,13 +34,13 @@ TEST(AdvertisingReportParserTest, SingleReportMalformed) {
       0x00                                 // |length_data|. RSSI is missing
       );
 
-  EventPacket event(bytes.GetData()[0], &bytes, bytes.GetData()[1]);
+  EventPacket event(&bytes);
 
   AdvertisingReportParser parser(event);
   EXPECT_TRUE(parser.HasMoreReports());
   EXPECT_FALSE(parser.encountered_error());
 
-  LEAdvertisingReportData* data;
+  const LEAdvertisingReportData* data;
   int8_t rssi;
   EXPECT_FALSE(parser.GetNextReport(&data, &rssi));
   EXPECT_TRUE(parser.encountered_error());
@@ -54,12 +54,12 @@ TEST(AdvertisingReportParserTest, SingleReportNoData) {
       0x00, 0x7F                           // |length_data|, RSSI
       );
 
-  EventPacket event(bytes.GetData()[0], &bytes, bytes.GetData()[1]);
+  EventPacket event(&bytes);
 
   AdvertisingReportParser parser(event);
   EXPECT_TRUE(parser.HasMoreReports());
 
-  LEAdvertisingReportData* data;
+  const LEAdvertisingReportData* data;
   int8_t rssi;
   EXPECT_TRUE(parser.GetNextReport(&data, &rssi));
   EXPECT_EQ(LEAdvertisingEventType::kAdvNonConnInd, data->event_type);
@@ -86,13 +86,13 @@ TEST(AdvertisingReportParserTest, ReportsValidInvalid) {
       0x0A, 0x7F                           // malformed |length_data|, RSSI
       );
 
-  EventPacket event(bytes.GetData()[0], &bytes, bytes.GetData()[1]);
+  EventPacket event(&bytes);
 
   AdvertisingReportParser parser(event);
   EXPECT_TRUE(parser.HasMoreReports());
   EXPECT_FALSE(parser.encountered_error());
 
-  LEAdvertisingReportData* data;
+  const LEAdvertisingReportData* data;
   int8_t rssi;
   EXPECT_TRUE(parser.GetNextReport(&data, &rssi));
   EXPECT_EQ(LEAdvertisingEventType::kAdvNonConnInd, data->event_type);
@@ -127,12 +127,12 @@ TEST(AdvertisingReportParserTest, ReportsAllValid) {
       0x01                                 // RSSI
       );
 
-  EventPacket event(bytes.GetData()[0], &bytes, bytes.GetData()[1]);
+  EventPacket event(&bytes);
 
   AdvertisingReportParser parser(event);
   EXPECT_TRUE(parser.HasMoreReports());
 
-  LEAdvertisingReportData* data;
+  const LEAdvertisingReportData* data;
   int8_t rssi;
   EXPECT_TRUE(parser.GetNextReport(&data, &rssi));
   EXPECT_EQ(LEAdvertisingEventType::kAdvNonConnInd, data->event_type);
@@ -188,13 +188,13 @@ TEST(AdvertisingReportParserTest, ReportCountLessThanPayloadSize) {
       0x01                                 // RSSI
       );
 
-  EventPacket event(bytes.GetData()[0], &bytes, bytes.GetData()[1]);
+  EventPacket event(&bytes);
 
   AdvertisingReportParser parser(event);
   EXPECT_TRUE(parser.HasMoreReports());
   EXPECT_FALSE(parser.encountered_error());
 
-  LEAdvertisingReportData* data;
+  const LEAdvertisingReportData* data;
   int8_t rssi;
   EXPECT_TRUE(parser.GetNextReport(&data, &rssi));
   EXPECT_EQ(LEAdvertisingEventType::kAdvNonConnInd, data->event_type);
@@ -222,12 +222,12 @@ TEST(AdvertisingReportParserTest, ReportCountGreaterThanPayloadSize) {
       0x00, 0x7F                           // |length_data|, RSSI
       );
 
-  EventPacket event(bytes.GetData()[0], &bytes, bytes.GetData()[1]);
+  EventPacket event(&bytes);
 
   AdvertisingReportParser parser(event);
   EXPECT_TRUE(parser.HasMoreReports());
 
-  LEAdvertisingReportData* data;
+  const LEAdvertisingReportData* data;
   int8_t rssi;
   EXPECT_TRUE(parser.GetNextReport(&data, &rssi));
   EXPECT_EQ(LEAdvertisingEventType::kAdvNonConnInd, data->event_type);

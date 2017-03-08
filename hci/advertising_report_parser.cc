@@ -15,8 +15,8 @@ AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
   auto params = event.GetPayload<LEMetaEventParams>();
   FTL_DCHECK(params->subevent_code == kLEAdvertisingReportSubeventCode);
 
-  LEAdvertisingReportSubeventParams* subevent_params =
-      reinterpret_cast<LEAdvertisingReportSubeventParams*>(params->subevent_parameters);
+  const LEAdvertisingReportSubeventParams* subevent_params =
+      reinterpret_cast<const LEAdvertisingReportSubeventParams*>(params->subevent_parameters);
 
   remaining_reports_ = subevent_params->num_reports;
   remaining_bytes_ = event.GetPayloadSize() - sizeof(LEMetaEventParams) -
@@ -24,13 +24,14 @@ AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
   ptr_ = subevent_params->reports;
 }
 
-bool AdvertisingReportParser::GetNextReport(LEAdvertisingReportData** out_data, int8_t* out_rssi) {
+bool AdvertisingReportParser::GetNextReport(const LEAdvertisingReportData** out_data,
+                                            int8_t* out_rssi) {
   FTL_DCHECK(out_data);
   FTL_DCHECK(out_rssi);
 
   if (encountered_error_ || !HasMoreReports()) return false;
 
-  LEAdvertisingReportData* data = reinterpret_cast<LEAdvertisingReportData*>(ptr_);
+  const LEAdvertisingReportData* data = reinterpret_cast<const LEAdvertisingReportData*>(ptr_);
 
   // Each report contains the all the report data, followed by the advertising
   // payload, followed by a single octet for the RSSI.

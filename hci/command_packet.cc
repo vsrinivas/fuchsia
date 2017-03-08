@@ -12,7 +12,7 @@ namespace bluetooth {
 namespace hci {
 
 CommandPacket::CommandPacket(OpCode opcode, common::MutableByteBuffer* buffer, size_t payload_size)
-    : common::Packet<CommandHeader>(buffer, payload_size), opcode_(opcode) {
+    : common::MutablePacket<CommandHeader>(buffer, payload_size), opcode_(opcode) {
   FTL_DCHECK(GetPayloadSize() <= kMaxCommandPacketPayloadSize);
 }
 
