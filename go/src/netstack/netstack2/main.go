@@ -132,31 +132,31 @@ func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, a
 		return fmt.Errorf("AddAddress for solicited-node IPv6: %v", err)
 	}
 
-	if err := stk.AddAddress(nicid, ipv4.ProtocolNumber, "\xff\xff\xff\xff"); err != nil {
-		return err
-	}
-	if err := stk.AddAddress(nicid, ipv4.ProtocolNumber, "\x00\x00\x00\x00"); err != nil {
-		return err
-	}
-
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	routeTablesMu.Lock()
 	routeTables[nicid] = defaultRouteTable(nicid, "")
 	stk.SetRouteTable(flattenRouteTables())
 	routeTablesMu.Unlock()
 
-	dhcpClient = dhcp.NewClient(stk, nicid, ep.linkAddr)
-	go dhcpClient.Start(func(config dhcp.Config) {
+	dhcpAcquired := func(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
+		if oldAddr != "" && oldAddr != newAddr {
+			log.Printf("DHCP IP %s expired", oldAddr)
+		}
+		log.Printf("DHCP acquired IP %s on NIC %d for %s", newAddr, nicid, config.LeaseLength)
+
 		// Update default route with new gateway.
 		routeTablesMu.Lock()
 		routeTables[nicid] = defaultRouteTable(nicid, config.Gateway)
 		stk.SetRouteTable(flattenRouteTables())
 		routeTablesMu.Unlock()
 
-		stk.RemoveAddress(nicid, "\xff\xff\xff\xff")
-		stk.RemoveAddress(nicid, "\x00\x00\x00\x00")
-		s.setAddr(nicid, dhcpClient.Address())
-	})
+		if newAddr != "" {
+			s.setAddr(nicid, newAddr)
+		}
+	}
+	dhcpClient = dhcp.NewClient(stk, nicid, ep.linkAddr, dhcpAcquired)
+	go dhcpClient.Start()
+
 	return nil
 }
 
