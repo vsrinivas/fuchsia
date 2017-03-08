@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <hexdump/hexdump.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
@@ -501,6 +502,82 @@ bool vmo_commit_test() {
     END_TEST;
 }
 
+bool vmo_zero_page_test() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    mx_status_t status;
+    uintptr_t ptr[3];
+
+    // create a vmo
+    const size_t size = PAGE_SIZE * 4;
+
+    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+
+    // make a few mappings of the vmo
+    for (auto &p: ptr) {
+        EXPECT_EQ(NO_ERROR,
+                mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &p),
+                "map");
+        EXPECT_NONNULL(ptr, "map address");
+    }
+
+    volatile uint32_t *val = (volatile uint32_t *)ptr[0];
+    volatile uint32_t *val2 = (volatile uint32_t *)ptr[1];
+    volatile uint32_t *val3 = (volatile uint32_t *)ptr[2];
+
+    // read fault in the first mapping
+    EXPECT_EQ(0, *val, "read zero");
+
+    // write fault the second mapping
+    *val2 = 99;
+    EXPECT_EQ(99, *val2, "read back 99");
+
+    // expect the third mapping to read fault in the new page
+    EXPECT_EQ(99, *val3, "read 99");
+
+    // expect the first mapping to have gotten updated with the new mapping
+    // and no longer be mapping the zero page
+    EXPECT_EQ(99, *val, "read 99 from former zero page");
+
+    // read fault in zeros on the second page
+    val = (volatile uint32_t *)(ptr[0] + PAGE_SIZE);
+    EXPECT_EQ(0, *val, "read zero");
+
+    // write to the page via a vmo_write call
+    uint32_t v = 100;
+    size_t written;
+    status = mx_vmo_write(vmo, &v, PAGE_SIZE, sizeof(v), &written);
+    EXPECT_EQ(NO_ERROR, status, "writing to vmo");
+
+    // expect it to read back the new value
+    EXPECT_EQ(100, *val, "read 100 from former zero page");
+
+    // read fault in zeros on the third page
+    val = (volatile uint32_t *)(ptr[0] + PAGE_SIZE * 2);
+    EXPECT_EQ(0, *val, "read zero");
+
+    // commit this range of the vmo via a commit call
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_COMMIT, PAGE_SIZE * 2, PAGE_SIZE, nullptr, 0);
+    EXPECT_EQ(NO_ERROR, status, "committing memory");
+
+    // write to the third page
+    status = mx_vmo_write(vmo, &v, PAGE_SIZE * 2, sizeof(v), &written);
+    EXPECT_EQ(NO_ERROR, status, "writing to vmo");
+
+    // expect it to read back the new value
+    EXPECT_EQ(100, *val, "read 100 from former zero page");
+
+    // unmap
+    for (auto p: ptr)
+        EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), p, size), "unmap");
+
+    // close the handle
+    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(vmo_tests)
 RUN_TEST(vmo_create_test);
 RUN_TEST(vmo_read_write_test);
@@ -510,11 +587,10 @@ RUN_TEST(vmo_resize_test);
 RUN_TEST(vmo_rights_test);
 RUN_TEST(vmo_lookup_test);
 RUN_TEST(vmo_commit_test);
+RUN_TEST(vmo_zero_page_test);
 END_TEST_CASE(vmo_tests)
 
 int main(int argc, char** argv) {
-    printf("argc %d\n", argc);
-
     bool run_bench = false;
     if (argc > 1) {
         if (!strcmp(argv[1], "bench")) {

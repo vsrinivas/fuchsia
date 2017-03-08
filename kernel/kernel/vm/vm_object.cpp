@@ -29,18 +29,18 @@ VmObject::VmObject() {
 
 VmObject::~VmObject() {
     LTRACEF("%p\n", this);
-    DEBUG_ASSERT(region_list_.is_empty());
+    DEBUG_ASSERT(mapping_list_.is_empty());
 
     // clear our magic value
     magic_ = 0;
 }
 
 void VmObject::AddMappingLocked(VmMapping* r) TA_REQ(lock_) {
-    region_list_.push_front(r);
+    mapping_list_.push_front(r);
 }
 
 void VmObject::RemoveMappingLocked(VmMapping* r) TA_REQ(lock_) {
-    region_list_.erase(*r);
+    mapping_list_.erase(*r);
 }
 
 static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {

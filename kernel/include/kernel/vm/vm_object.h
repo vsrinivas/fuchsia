@@ -117,7 +117,7 @@ protected:
 
     // members
     mutable Mutex lock_;
-    mxtl::DoublyLinkedList<VmMapping*> region_list_ TA_GUARDED(lock_);
+    mxtl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
 };
 
 // the main VM object type, holding a list of pages

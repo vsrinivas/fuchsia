@@ -393,7 +393,7 @@ protected:
     friend class VmObjectPaged;
 
     // unmap any pages that map the passed in vmo range. May not intersect with this range
-    status_t UnmapVmoRangeLocked(uint64_t start, uint64_t size);
+    status_t UnmapVmoRangeLocked(uint64_t start, uint64_t size) const;
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmMapping);
@@ -433,4 +433,7 @@ private:
 
     // cached mapping flags (read/write/user/etc)
     uint arch_mmu_flags_;
+
+    // used to detect recursions through the vmo fault path
+    bool currently_faulting_ = false;
 };

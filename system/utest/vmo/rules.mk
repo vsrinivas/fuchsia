@@ -14,6 +14,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := vmo-test
 
+MODULE_STATIC_LIBS := ulib/hexdump
 MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/c ulib/mxtl
 
 include make/module.mk

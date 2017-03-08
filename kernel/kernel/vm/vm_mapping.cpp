@@ -27,11 +27,13 @@ VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_
     : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags, parent.aspace_.get(), &parent, name),
       object_(mxtl::move(vmo)), object_offset_(vmo_offset), arch_mmu_flags_(arch_mmu_flags) {
 
-    LTRACEF("%p '%s'\n", this, name_);
+    LTRACEF("%p '%s' aspace %p base %#" PRIxPTR " size %#zx offset %#" PRIx64 "\n",
+            this, name_, aspace_.get(), base_, size_, vmo_offset);
 }
 
 VmMapping::~VmMapping() {
     DEBUG_ASSERT(magic_ == kMagic);
+    LTRACEF("%p '%s' aspace %p base %#" PRIxPTR " size %#zx\n", this, name_, aspace_.get(), base_, size_);
 }
 
 size_t VmMapping::AllocatedPagesLocked() const {
@@ -292,16 +294,20 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     return NO_ERROR;
 }
 
-status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
+status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
     DEBUG_ASSERT(magic_ == kMagic);
-
-    AutoLock guard(aspace_->lock());
-    if (state_ != LifeCycleState::ALIVE) {
-        return ERR_BAD_STATE;
-    }
 
     LTRACEF("region %p '%s' obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
             this, name_, object_offset_, size_, offset, len);
+
+    // NOTE: must be acquired with the vmo lock held, but doesn't need to take
+    // the address space lock, since it will not manipulate its location in the
+    // vmar tree. However, it must be held in the ALIVE state across this call.
+    //
+    // Avoids a race with DestroyLocked() since it removes ourself from the VMO's
+    // mapping list with the VMO lock held before dropping this state to DEAD. The
+    // VMO cant call back to us once we're out of their list.
+    DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
 
     DEBUG_ASSERT(object_);
     DEBUG_ASSERT(object_->lock()->IsHeld());
@@ -309,6 +315,16 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
     DEBUG_ASSERT(len > 0);
+
+    // If we're currently faulting and are responsible for the vmo code to be calling
+    // back to us, detect the recursion and abort here.
+    // The specific path we're avoiding is if the VMO calls back into us during vmo->GetPageLocked()
+    // via UnmapVmoRangeLocked(). If we set this flag we're short circuiting the unmap operation
+    // so that we don't do extra work.
+    if (likely(currently_faulting_)) {
+        LTRACEF("recursing to ourself, abort\n");
+        return NO_ERROR;
+    }
 
     if (len == 0)
         return NO_ERROR;
@@ -334,7 +350,8 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
     DEBUG_ASSERT(unmap_base.ValueOrDie() >= base_ &&
                 (unmap_base.ValueOrDie() + len_new - 1) <= (base_ + size_ - 1));
 
-    LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 "\n", unmap_base.ValueOrDie(), len_new);
+    LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 " aspace %p\n",
+            unmap_base.ValueOrDie(), len_new, aspace_.get());
 
     status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), unmap_base.ValueOrDie(),
                                      static_cast<size_t>(len_new) / PAGE_SIZE, nullptr);
@@ -366,6 +383,11 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
     // grab the lock for the vmo
     AutoLock al(object_->lock());
+
+    // set the currently faulting flag for any recursive calls the vmo may make back into us.
+    DEBUG_ASSERT(!currently_faulting_);
+    currently_faulting_ = true;
+    auto ac = mxtl::MakeAutoCall([&]() { currently_faulting_ = false; });
 
     // iterate through the range, grabbing a page from the underlying object and
     // mapping it in
@@ -406,11 +428,16 @@ status_t VmMapping::DestroyLocked() {
     // subregions_.erase below).
     mxtl::RefPtr<VmMapping> self(this);
 
+    // unmap our entire range
     status_t status = UnmapLocked(base_, size_);
     if (status != NO_ERROR) {
         return status;
     }
 
+    // Unmap should have reset our size to 0
+    DEBUG_ASSERT(size_ == 0);
+
+    // grab the object lock and remove ourself from its list
     {
         AutoLock al(object_->lock());
         object_->RemoveMappingLocked(this);
@@ -425,6 +452,7 @@ status_t VmMapping::DestroyLocked() {
         parent_->RemoveSubregion(this);
     }
 
+    // mark ourself as dead
     parent_ = nullptr;
     state_ = LifeCycleState::DEAD;
     return NO_ERROR;
@@ -440,7 +468,8 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
     uint64_t vmo_offset = va - base_ + object_offset_;
 
     __UNUSED char pf_string[5];
-    LTRACEF("%p '%s', vmo_offset %#" PRIx64 ", pf_flags %#x (%s)\n", this, name_, vmo_offset, pf_flags,
+    LTRACEF("%p '%s', va %#" PRIxPTR " vmo_offset %#" PRIx64 ", pf_flags %#x (%s)\n",
+           this, name_, va, vmo_offset, pf_flags,
            vmm_pf_flags_to_string(pf_flags, pf_string));
 
     // make sure we have permission to continue
@@ -471,6 +500,14 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
 
     // grab the lock for the vmo
     AutoLock al(object_->lock());
+
+    // set the currently faulting flag for any recursive calls the vmo may make back into us
+    // The specific path we're avoiding is if the VMO calls back into us during vmo->GetPageLocked()
+    // via UnmapVmoRangeLocked(). Since we're responsible for that page, signal to ourself to skip
+    // the unmap operation.
+    DEBUG_ASSERT(!currently_faulting_);
+    currently_faulting_ = true;
+    auto ac = mxtl::MakeAutoCall([&]() { currently_faulting_ = false; });
 
     // fault in or grab an existing page
     paddr_t new_pa;
@@ -530,7 +567,8 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
         }
     } else {
         // nothing was mapped there before, map it now
-        LTRACEF("mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", new_pa, va);
+        LTRACEF("mapping pa %#" PRIxPTR " to va %#" PRIxPTR " is zero page %d\n",
+                new_pa, va, (new_pa == vm_get_zero_page_paddr()));
 
         // if we read faulted, make sure we map the page without any write permissions
         // this ensures we will fault again if a write is attempted so we can potentially

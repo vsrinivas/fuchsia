@@ -222,6 +222,11 @@ status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t*
 
     LTRACEF("faulted in page %p, pa %#" PRIxPTR "\n", p, pa);
 
+    // other mappings may have covered this offset into the vmo, so unmap those ranges
+    for (auto& m : mapping_list_) {
+        m.UnmapVmoRangeLocked(offset, PAGE_SIZE);
+    }
+
     if (page_out)
         *page_out = p;
     if (pa_out)
@@ -270,6 +275,12 @@ status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* com
         LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", count, allocated);
         pmm_free(&page_list);
         return ERR_NO_MEMORY;
+    }
+
+    // unmap all of the pages in this range on all the mapping regions
+    for (auto& m : mapping_list_) {
+        // unmap any pages the region may have mapped that intersect this range
+        m.UnmapVmoRangeLocked(offset, end - offset);
     }
 
     // add them to the appropriate range of the object
@@ -346,6 +357,12 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
 
     DEBUG_ASSERT(list_length(&page_list) == allocated);
 
+    // unmap all of the pages in this range on all the mapping regions
+    for (auto& m : mapping_list_) {
+        // unmap any pages the region may have mapped that intersect this range
+        m.UnmapVmoRangeLocked(offset, end - offset);
+    }
+
     // add them to the appropriate range of the object
     for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
         vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, free.node);
@@ -398,9 +415,9 @@ status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* d
             page_aligned_len);
 
     // unmap all of the pages in this range on all the mapping regions
-    for (auto& r : region_list_) {
+    for (auto& m : mapping_list_) {
         // unmap any pages the region may have mapped that intersect this range
-        r.UnmapVmoRangeLocked(start, page_aligned_len);
+        m.UnmapVmoRangeLocked(start, page_aligned_len);
     }
 
     // iterate through the pages, freeing them
@@ -435,9 +452,9 @@ status_t VmObjectPaged::Resize(uint64_t s) {
         // we're only worried about whole pages to be removed
         if (page_aligned_len > 0) {
             // unmap all of the pages in this range on all the mapping regions
-            for (auto& r : region_list_) {
+            for (auto& m : mapping_list_) {
                 // unmap any pages the region may have mapped that intersect this range
-                r.UnmapVmoRangeLocked(start, page_aligned_len);
+                m.UnmapVmoRangeLocked(start, page_aligned_len);
             }
 
             // iterate through the pages, freeing them
