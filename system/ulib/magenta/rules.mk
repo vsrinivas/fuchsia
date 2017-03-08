@@ -47,7 +47,6 @@ MODULE_SO_INSTALL_NAME := -
 # All the code this DSO is pure read-only/reentrant code that
 # does not need any writable data (except its caller's stack).
 # Make it use a simplified, hardened memory layout.
-MODULE_LDFLAGS := -T $(BUILDDIR)/rodso.ld
-MODULE_EXTRA_OBJS := $(BUILDDIR)/rodso-stamp
+MODULE_LDFLAGS := -T scripts/rodso.ld
 
 include make/module.mk

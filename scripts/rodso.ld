@@ -64,14 +64,6 @@ SECTIONS {
         *(.rodata .rodata.* .gnu.linkonce.r.*)
     } :rodata
     .rodata1 : { *(.rodata1) }
-#ifdef __arm__
-    .ARM.exidx : {
-        *(.ARM.exidx*)
-    } :rodata :exidx
-    .ARM.extab : {
-        *(.ARM.extab*)
-    } :rodata
-#else
     .eh_frame_hdr : {
         *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*)
     } :rodata :eh_frame_hdr
@@ -79,7 +71,6 @@ SECTIONS {
         KEEP(*(.eh_frame))
         *(.eh_frame.*)
     } :rodata
-#endif
     .gcc_except_table : { *(.gcc_except_table*) }
     .gnu_extab : { *(.gnu_extab*) }
 
@@ -133,24 +124,10 @@ SECTIONS {
     } :code
 }
 
-/*
- * The linker doesn't understand the symbolic names for the
- * processor-specific p_type values.  So use explicit numbers.
- *
- * This is normally written (PT_LOPROC + 1), and that works in
- * BFD ld (i.e. cpp-expanded to (0x70000000 + 1)).  But gold only
- * supports a simple integer literal, not an arithmetic expression.
- */
-#define PT_ARM_EXIDX 0x70000001
-
 PHDRS {
     rodata PT_LOAD FLAGS(4) FILEHDR PHDRS;
     code PT_LOAD FLAGS(5);
     dynamic PT_DYNAMIC FLAGS(4);
     note PT_NOTE;
-#ifdef __arm__
-    exidx PT_ARM_EXIDX;
-#else
     eh_frame_hdr PT_GNU_EH_FRAME;
-#endif
 }
