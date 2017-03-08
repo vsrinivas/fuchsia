@@ -12,7 +12,7 @@ static bool elapsed_time_using_ticks(void) {
     BEGIN_TEST;
 
     uint64_t per_second = mx_ticks_per_second();
-    ASSERT_GE(per_second, 0u, "Invalid ticks per second");
+    ASSERT_GT(per_second, 0u, "Invalid ticks per second");
     unittest_printf("Ticks per second: %" PRIu64 "\n", per_second);
 
     uint64_t x = mx_ticks_get();

@@ -109,6 +109,7 @@ VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {
                   "gen-rodso-code.sh is suspect");
     KernelVmoWindow<vdso_constants> constants_window(
         "vDSO constants", vmo()->vmo(), VDSO_DATA_CONSTANTS);
+    uint64_t per_second = ticks_per_second();
 
     // Initialize the constants that should be visible to the vDSO.
     // Rather than assigning each member individually, do this with
@@ -117,11 +118,13 @@ VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {
     *constants_window.data() = (vdso_constants) {
         arch_max_num_cpus(),
         arch_dcache_line_size(),
-        ticks_per_second(),
+        per_second,
         pmm_count_total_bytes(),
     };
 
-    if (cmdline_get_bool("vdso.soft_ticks", false)) {
+    // If ticks_per_second has not been calibrated, it will return 0. In this
+    // case, use soft_ticks instead.
+    if (per_second == 0 || cmdline_get_bool("vdso.soft_ticks", false)) {
         // Make mx_ticks_per_second return nanoseconds per second.
         constants_window.data()->ticks_per_second = MX_SEC(1);
 
