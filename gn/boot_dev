@@ -4,8 +4,8 @@
     ],
     "resources": [
         {
-            "bootfs_path": "data/application_manager/startup.config",
-            "file": "apps/modular/src/device_runner/startup.config"
+            "bootfs_path": "data/bootstrap/apps.config",
+            "file": "apps/modular/src/bootstrap/boot_dev.config"
         }
     ]
 }
