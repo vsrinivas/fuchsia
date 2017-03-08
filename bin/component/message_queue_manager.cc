@@ -95,11 +95,12 @@ class MessageQueueStorage : public MessageSender {
  private:
   // |MessageSender|
   void Send(const fidl::String& message) override {
-    queue_data_.push_back(message);
     if (!receive_callback_queue_.empty()) {
       auto& receive_item = receive_callback_queue_.front();
       receive_item.second(message);
       receive_callback_queue_.pop_front();
+    } else {
+      queue_data_.push_back(message);
     }
 
     if (watcher_) {
