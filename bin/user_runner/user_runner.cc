@@ -109,7 +109,9 @@ class UserRunnerImpl : public UserRunner {
         binding_(this, std::move(user_runner_request)),
         ledger_repository_(
             ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
-        token_provider_impl_(auth_token) {
+        message_queue_manager_(ledger_repository_.get()),
+        token_provider_impl_(auth_token)
+  {
     binding_.set_connection_error_handler([this] { delete this; });
 
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);

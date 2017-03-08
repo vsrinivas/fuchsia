@@ -16,5 +16,6 @@ source_set("component_context_impl") {
     "//apps/modular/services/component",
     "//apps/modular/src/agent_runner:public",
     "//lib/ftl",
+    "//lib/mtl/vmo",
   ]
 }

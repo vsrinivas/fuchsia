@@ -5,12 +5,16 @@
 #ifndef APPS_MODULAR_SRC_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
 #define APPS_MODULAR_SRC_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
 
+#include <functional>
 #include <memory>
+#include <queue>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/services/component/message_queue.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/ftl/macros.h"
@@ -25,7 +29,7 @@ class MessageQueueStorage;
 // deleting the message queues it has created, otherwise they are persisted.
 class MessageQueueManager {
  public:
-  MessageQueueManager();
+  MessageQueueManager(ledger::LedgerRepository* ledger_repository);
   ~MessageQueueManager();
 
   void ObtainMessageQueue(const std::string& component_instance_id,
@@ -50,26 +54,68 @@ class MessageQueueManager {
                    const std::string& queue_name);
 
  private:
-  using ComponentInstanceId = std::string;
-  using MessageQueueToken = std::string;
-  using MessageQueueName = std::string;
+  // Generates a random string to use as a queue token.
+  std::string GenerateQueueToken() const;
 
-  using QueueNameToStorageMap =
-      std::unordered_map<MessageQueueName,
-                         std::unique_ptr<MessageQueueStorage>>;
+  // Gets the component instance id and queue name from the ledger for the given
+  // queue token.
+  void GetComponentInstanceQueueName(
+      const std::string& queue_token,
+      std::function<void(ledger::Status status, bool found,
+                         const std::string& component_instance_id,
+                         const std::string& queue_name)>
+          callback);
 
-  MessageQueueStorage* ObtainMessageQueueStorage(
-      const std::string& component_instance_id,
-      const std::string& queue_name);
-  MessageQueueStorage* GetMessageQueueStorage(
-      const std::string& component_instance_id,
-      const std::string& queue_name);
+  // Gets the queue token from the ledger for the given component instance id
+  // and queue name.
+  void GetQueueToken(const std::string& component_instance_id,
+                     const std::string& queue_name,
+                     std::function<void(ledger::Status status, bool found,
+                                        const std::string& queue_token)>
+                         callback);
 
-  std::unordered_map<ComponentInstanceId, QueueNameToStorageMap>
-      component_to_queues_;
-  std::unordered_map<MessageQueueToken,
-                     std::pair<ComponentInstanceId, MessageQueueName>>
-      tokens_to_queues_;
+  // If a |MessageQueueStorage| exists for the queue_token returns it, otherwise
+  // creates one.
+  MessageQueueStorage* GetOrMakeMessageQueueStorage(
+      const std::string& component_instance_id, const std::string& queue_name,
+      const std::string& queue_token);
+
+  // Returns an existing message queue or create one.
+  void GetOrMakeMessageQueue(
+      const std::string& component_instance_id, const std::string& queue_name,
+      std::function<void(ledger::Status status, MessageQueueStorage* storage)>
+          callback);
+
+  ledger::LedgerPtr ledger_;
+  ledger::PagePtr page_;
+
+  // A map of queue_token to |MessageStorageQueue|.
+  std::unordered_map<std::string, std::unique_ptr<MessageQueueStorage>>
+      message_queues_;
+
+  // A hasher for pairs of strings. Not great.
+  class PairHash {
+   public:
+    std::size_t operator()(std::pair<std::string, std::string> const& p) const {
+      std::string s;
+      s.append(p.first);
+      s.push_back('\0');
+      s.append(p.second);
+      return std::hash<std::string>{}(s);
+    }
+  };
+
+  // A map of component instance id and queue name to queue tokens. Entries will
+  // only be here while a |MessageQueueStorage| exists.
+  std::unordered_map<std::pair<std::string, std::string>, std::string, PairHash>
+      message_queue_tokens_;
+
+  // A map of component instance id and queue name to watcher callbacks. If a
+  // watcher is registered before a |MessageQueueStorage| exists then it is
+  // stashed here until a |MessageQueueStorage| is available.
+  std::unordered_map<std::pair<std::string, std::string>, ftl::Closure,
+                     PairHash>
+      pending_watcher_callbacks_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MessageQueueManager);
 };
