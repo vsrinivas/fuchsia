@@ -34,7 +34,7 @@ class _Module extends Module implements LinkWatcher {
   final ModuleBinding _moduleBinding = new ModuleBinding();
   final LinkWatcherBinding _linkWatcherBinding = new LinkWatcherBinding();
 
-  final StoryProxy _story = new StoryProxy();
+  final ModuleContextProxy _moduleContext = new ModuleContextProxy();
   final LinkProxy _link = new LinkProxy();
 
   final List<String> _jsonPath = <String>[_kValue];

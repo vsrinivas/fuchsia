@@ -204,6 +204,7 @@ class DevUserShellApp
     suggestion_provider_->SubscribeToNext(
         suggestion_listener_bindings_.AddBinding(this),
         next_controller_.NewRequest());
+    next_controller_->SetResultCount(3);
 
     Connect();
   }
@@ -277,7 +278,7 @@ class DevUserShellApp
 
   // |SuggestionListener|
   void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
-    FTL_LOG(INFO) << "DevUserShell::OnAdd()";
+    FTL_LOG(INFO) << "DevUserShell/SuggestionListener::OnAdd()";
     for (auto& suggestion : suggestions) {
       FTL_LOG(INFO) << "  " << suggestion->uuid << " "
                     << suggestion->display->headline;
@@ -286,12 +287,12 @@ class DevUserShellApp
 
   // |SuggestionListener|
   void OnRemove(const fidl::String& suggestion_id) override {
-    FTL_LOG(INFO) << "DevUserShell::OnRemove() " << suggestion_id;
+    FTL_LOG(INFO) << "DevUserShell/SuggestionListener::OnRemove() " << suggestion_id;
   }
 
   // |SuggestionListener|
   void OnRemoveAll() override {
-    FTL_LOG(INFO) << "DevUserShell::OnRemoveAll()";
+    FTL_LOG(INFO) << "DevUserShell/SuggestionListener::OnRemoveAll()";
   }
 
   const Settings settings_;
