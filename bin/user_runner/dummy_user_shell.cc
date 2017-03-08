@@ -13,6 +13,7 @@
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/test_runner/test_runner.fidl.h"
@@ -31,9 +32,6 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
-
-constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
-constexpr uint32_t kViewResourceIdBase = 100;
 
 constexpr char kUserShell[] =
     "https://fuchsia.googlesource.com/modular/"
@@ -57,69 +55,6 @@ class Settings {
   std::string second_module;
 };
 
-class DummyUserShellView : public mozart::BaseView {
- public:
-  explicit DummyUserShellView(
-      mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(std::move(view_manager),
-                 std::move(view_owner_request),
-                 "DummyUserShellView") {}
-
-  ~DummyUserShellView() override = default;
-
-  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
-    GetViewContainer()->AddChild(++child_view_key_, std::move(view_owner));
-  }
-
- private:
-  // |mozart::BaseView|
-  void OnChildAttached(uint32_t child_key,
-                       mozart::ViewInfoPtr child_view_info) override {
-    view_info_ = std::move(child_view_info);
-    auto view_properties = mozart::ViewProperties::New();
-    GetViewContainer()->SetChildProperties(child_view_key_, 0 /* scene_token */,
-                                           std::move(view_properties));
-    Invalidate();
-  }
-
-  // |mozart::BaseView|
-  void OnChildUnavailable(uint32_t child_key) override {
-    view_info_.reset();
-    GetViewContainer()->RemoveChild(child_key, nullptr);
-    Invalidate();
-  }
-
-  // |mozart::BaseView|
-  void OnDraw() override {
-    FTL_DCHECK(properties());
-
-    auto update = mozart::SceneUpdate::New();
-    auto root_node = mozart::Node::New();
-
-    if (view_info_) {
-      const uint32_t scene_resource_id = kViewResourceIdBase + child_view_key_;
-      auto scene_resource = mozart::Resource::New();
-      scene_resource->set_scene(mozart::SceneResource::New());
-      scene_resource->get_scene()->scene_token =
-          view_info_->scene_token.Clone();
-      update->resources.insert(scene_resource_id, std::move(scene_resource));
-      root_node->op = mozart::NodeOp::New();
-      root_node->op->set_scene(mozart::SceneNodeOp::New());
-      root_node->op->get_scene()->scene_resource_id = scene_resource_id;
-    }
-
-    update->nodes.insert(kRootNodeId, std::move(root_node));
-    scene()->Update(std::move(update));
-    scene()->Publish(CreateSceneMetadata());
-  }
-
-  mozart::ViewInfoPtr view_info_;
-  uint32_t child_view_key_{};
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellView);
-};
-
 class DummyUserShellApp
     : public modular::StoryWatcher,
       public modular::StoryProviderWatcher,
@@ -140,7 +75,7 @@ class DummyUserShellApp
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> services) override {
-    view_.reset(new DummyUserShellView(
+    view_.reset(new modular::ViewHost(
         application_context()
             ->ConnectToEnvironmentService<mozart::ViewManager>(),
         std::move(view_owner_request)));
@@ -297,10 +232,8 @@ class DummyUserShellApp
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
-    // Show the new story, if we have a view.
-    if (view_) {
-      view_->ConnectView(std::move(story_view));
-    }
+    // Show the new story.
+    view_->ConnectView(std::move(story_view));
   }
 
   // Every five counter increments, we dehydrate and rehydrate the story.
@@ -343,7 +276,7 @@ class DummyUserShellApp
   fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
-  std::unique_ptr<DummyUserShellView> view_;
+  std::unique_ptr<modular::ViewHost> view_;
   modular::UserContextPtr user_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
