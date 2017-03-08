@@ -33,7 +33,6 @@ class _ChildCounterModule extends Module implements LinkWatcher {
   final ModuleBinding _moduleBinding = new ModuleBinding();
   final LinkWatcherBinding _linkWatcherBinding = new LinkWatcherBinding();
 
-  final StoryProxy _story = new StoryProxy();
   final LinkProxy _link = new LinkProxy();
 
   final List<String> _jsonPath = <String>[_kCounterValueKey];
