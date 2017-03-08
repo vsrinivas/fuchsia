@@ -7,6 +7,7 @@
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -31,7 +32,19 @@ std::ostream& operator<<(std::ostream& os,
   return os;
 }
 
-class Listener : public mozart::input::InterpreterListener {
+class PrintInput : public mozart::input::InterpreterListener {
+ public:
+  PrintInput() : weak_ptr_factory_(this) {
+    mozart::Size size;
+    size.width = 1.0;
+    size.height = 1.0;
+    interpreter_.RegisterDisplay(size);
+    interpreter_.SetListener(weak_ptr_factory_.GetWeakPtr());
+    reader_ = std::make_unique<mozart::input::InputReader>(&interpreter_);
+    reader_->Start();
+  }
+  ~PrintInput() {}
+
  private:
   // |InputInterpreterListener|:
   void OnEvent(mozart::InputEventPtr event) { FTL_LOG(INFO) << *(event.get()); }
@@ -43,22 +56,19 @@ class Listener : public mozart::input::InterpreterListener {
   void OnDeviceRemoved(const mozart::input::InputDevice* device) {
     FTL_LOG(INFO) << *device << " Removed";
   }
+
+  mozart::input::InputInterpreter interpreter_;
+  std::unique_ptr<mozart::input::InputReader> reader_;
+  ftl::WeakPtrFactory<PrintInput> weak_ptr_factory_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(PrintInput);
 };
-}
+
+}  // namespace
 
 int main(int argc, char** argv) {
   mtl::MessageLoop message_loop;
-
-  Listener listener;
-  mozart::input::InputInterpreter interpreter;
-  mozart::Size size;
-  size.width = 1.0;
-  size.height = 1.0;
-  interpreter.RegisterDisplay(size);
-  interpreter.SetListener(&listener);
-  mozart::input::InputReader reader(&interpreter);
-  reader.Start();
-
+  PrintInput app;
   message_loop.Run();
   return 0;
 }

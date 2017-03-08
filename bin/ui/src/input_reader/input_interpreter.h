@@ -12,6 +12,7 @@
 #include "apps/mozart/src/input_reader/input_device.h"
 #include "apps/mozart/src/input_reader/input_report.h"
 #include "apps/mozart/src/input_reader/input_state.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace mozart {
 namespace input {
@@ -25,7 +26,7 @@ public:
 
 class InputInterpreter {
  public:
-  void SetListener(InterpreterListener* listener);
+  void SetListener(const ftl::WeakPtr<InterpreterListener>& listener);
 
   void RegisterDisplay(mozart::Size dimension);
   void RegisterDevice(const InputDevice* device);
@@ -33,7 +34,7 @@ class InputInterpreter {
   void OnReport(const InputDevice* device, InputReport::ReportType type);
 
  private:
-  std::vector<InterpreterListener*> listeners_;
+  std::vector<ftl::WeakPtr<InterpreterListener>> listeners_;
   std::map<const InputDevice*, std::unique_ptr<DeviceState>> devices_;
   mozart::Size display_size_;
 };

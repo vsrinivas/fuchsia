@@ -17,6 +17,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "third_party/skia/include/core/SkImage.h"
 
 namespace root_presenter {
@@ -104,6 +105,8 @@ class Presentation : public mozart::input::InterpreterListener,
 
   sk_sp<SkImage> cursor_image_;
   mozart::BufferProducer buffer_producer_;
+
+  ftl::WeakPtrFactory<Presentation> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Presentation);
 };

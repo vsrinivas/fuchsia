@@ -117,6 +117,8 @@ class TouchscreenState : public State {
 struct DeviceState {
   DeviceState(const InputDevice* device, OnEventCallback callback);
   ~DeviceState();
+  void OnRegister();
+  void OnUnregister();
 
   KeyboardState keyboard;
   MouseState mouse;

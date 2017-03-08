@@ -58,7 +58,8 @@ Presentation::Presentation(mozart::Compositor* compositor,
       tree_listener_binding_(this),
       tree_container_listener_binding_(this),
       view_container_listener_binding_(this),
-      view_listener_binding_(this) {
+      view_listener_binding_(this),
+      weak_ptr_factory_(this) {
   FTL_DCHECK(compositor_);
   FTL_DCHECK(view_manager_);
   FTL_DCHECK(view_owner_);
@@ -85,7 +86,7 @@ void Presentation::Present(ftl::Closure shutdown_callback) {
 
 void Presentation::StartInput() {
   input_interpreter_.RegisterDisplay(*display_info_->size);
-  input_interpreter_.SetListener(this);
+  input_interpreter_.SetListener(weak_ptr_factory_.GetWeakPtr());
   input_reader_.Start();
 }
 

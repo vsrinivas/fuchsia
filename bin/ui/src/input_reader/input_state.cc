@@ -418,7 +418,11 @@ DeviceState::DeviceState(const InputDevice* device, OnEventCallback callback)
       mouse(device->id(), callback),
       stylus(device->id(), callback),
       touchscreen(device->id(), callback),
-      device_(device) {
+      device_(device) {}
+
+DeviceState::~DeviceState() {}
+
+void DeviceState::OnRegister() {
   if (device_->has_keyboard()) {
     keyboard.OnRegistered();
   }
@@ -433,7 +437,7 @@ DeviceState::DeviceState(const InputDevice* device, OnEventCallback callback)
   }
 }
 
-DeviceState::~DeviceState() {
+void DeviceState::OnUnregister() {
   if (device_->has_keyboard()) {
     keyboard.OnUnregistered();
   }
