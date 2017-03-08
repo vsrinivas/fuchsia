@@ -61,40 +61,31 @@ public:
         EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
     }
 
-    void StoreDataImmediate()
+    void PipeControl()
     {
-        ASSERT_EQ((int)MiStoreDataImmediate::kDwordCount, 4);
+        ASSERT_EQ((int)MiPipeControl::kDwordCount, 6);
 
         uint32_t tail_start = ringbuffer_->tail();
 
         uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / 4;
 
         gpu_addr_t gpu_addr = 0xabcd1234cafebeef;
-        uint32_t val = ~0;
 
-        MiStoreDataImmediate::write_ringbuffer(ringbuffer_.get(), val, gpu_addr,
-                                               ADDRESS_SPACE_GGTT);
-        EXPECT_EQ(ringbuffer_->tail() - tail_start,
-                  MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
-        EXPECT_EQ(*vaddr++, MiStoreDataImmediate::kCommandType |
-                                (MiStoreDataImmediate::kDwordCount - 2) |
-                                MiStoreDataImmediate::kAddressSpaceGtt);
-        EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
-        EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
-        EXPECT_EQ(*vaddr++, val);
+        uint32_t sequence_number = 0xdeadbeef;
+        uint32_t flags = MiPipeControl::kCommandStreamerStallEnableBit |
+                         MiPipeControl::kIndirectStatePointersDisableBit;
 
-        gpu_addr = 0xaa00bb00cc00dd;
-        val = 0xdadacdcd;
+        MiPipeControl::write(ringbuffer_.get(), sequence_number, gpu_addr, flags);
 
-        MiStoreDataImmediate::write_ringbuffer(ringbuffer_.get(), val, gpu_addr,
-                                               ADDRESS_SPACE_PPGTT);
-        EXPECT_EQ(ringbuffer_->tail() - tail_start,
-                  2 * MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
-        EXPECT_EQ(*vaddr++,
-                  MiStoreDataImmediate::kCommandType | (MiStoreDataImmediate::kDwordCount - 2));
-        EXPECT_EQ(*vaddr++, magma::lower_32_bits(gpu_addr));
-        EXPECT_EQ(*vaddr++, magma::upper_32_bits(gpu_addr));
-        EXPECT_EQ(*vaddr++, val);
+        EXPECT_EQ(ringbuffer_->tail() - tail_start, MiPipeControl::kDwordCount * sizeof(uint32_t));
+        EXPECT_EQ(0x7A000000u | (MiPipeControl::kDwordCount - 2), *vaddr++);
+        EXPECT_EQ(flags | MiPipeControl::kPostSyncWriteImmediateBit |
+                      MiPipeControl::kAddressSpaceGlobalGttBit,
+                  *vaddr++);
+        EXPECT_EQ(magma::lower_32_bits(gpu_addr), *vaddr++);
+        EXPECT_EQ(magma::upper_32_bits(gpu_addr), *vaddr++);
+        EXPECT_EQ(sequence_number, *vaddr++);
+        EXPECT_EQ(0u, *vaddr++);
     }
 
 private:
@@ -115,8 +106,8 @@ TEST(Instructions, BatchBufferStart)
     test.BatchBufferStart();
 }
 
-TEST(Instructions, StoreDataImmediate)
+TEST(Instructions, PipeControl)
 {
     TestInstructions test;
-    test.StoreDataImmediate();
+    test.PipeControl();
 }

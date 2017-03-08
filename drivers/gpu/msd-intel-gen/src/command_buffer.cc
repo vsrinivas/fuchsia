@@ -69,7 +69,7 @@ std::weak_ptr<MsdIntelContext> CommandBuffer::GetContext() { return context_; }
 
 uint32_t CommandBuffer::GetPipeControlFlags()
 {
-    return MiPipeControl::kIndirectStatePointersDisable |
+    return MiPipeControl::kIndirectStatePointersDisableBit |
            MiPipeControl::kCommandStreamerStallEnableBit;
 }
 

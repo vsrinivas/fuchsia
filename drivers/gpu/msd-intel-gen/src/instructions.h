@@ -34,24 +34,6 @@ public:
     }
 };
 
-// from intel-gfx-prm-osrc-bdw-vol02a-commandreference-instructions_2.pdf pp.918
-class MiStoreDataImmediate {
-public:
-    static constexpr uint32_t kDwordCount = 4;
-    static constexpr uint32_t kCommandType = 0x20 << 23;
-    static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
-
-    static void write_ringbuffer(Ringbuffer* ringbuffer, uint32_t dword, gpu_addr_t gpu_addr,
-                                 AddressSpaceType address_space_type)
-    {
-        ringbuffer->write_tail(kCommandType | (kDwordCount - 2) |
-                               (address_space_type == ADDRESS_SPACE_GGTT ? kAddressSpaceGtt : 0));
-        ringbuffer->write_tail(magma::lower_32_bits(gpu_addr));
-        ringbuffer->write_tail(magma::upper_32_bits(gpu_addr));
-        ringbuffer->write_tail(dword);
-    }
-};
-
 // intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf pp.1057
 class MiPipeControl {
 public:
@@ -60,18 +42,23 @@ public:
     static constexpr uint32_t kCommandSubType = 0x3 << 27;
     static constexpr uint32_t k3dCommandOpcode = 0x2 << 24;
     static constexpr uint32_t k3dCommandSubOpcode = 0 << 16;
-    static constexpr uint32_t kCommandStreamerStallEnableBit = 1 << 20;
-    static constexpr uint32_t kIndirectStatePointersDisable = 1 << 9;
 
-    static void write(Ringbuffer* ringbuffer, uint32_t flags)
+    static constexpr uint32_t kIndirectStatePointersDisableBit = 1 << 9;
+    static constexpr uint32_t kPostSyncWriteImmediateBit = 1 << 14;
+    static constexpr uint32_t kCommandStreamerStallEnableBit = 1 << 20;
+    static constexpr uint32_t kAddressSpaceGlobalGttBit = 1 << 24;
+
+    static void write(Ringbuffer* ringbuffer, uint32_t sequence_number, uint64_t gpu_addr,
+                      uint32_t flags)
     {
-        DASSERT((flags & ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisable)) == 0);
+        DASSERT((flags & ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisableBit)) ==
+                0);
         ringbuffer->write_tail(kCommandType | kCommandSubType | k3dCommandOpcode |
                                k3dCommandSubOpcode | (kDwordCount - 2));
-        ringbuffer->write_tail(flags);
-        ringbuffer->write_tail(0);
-        ringbuffer->write_tail(0);
-        ringbuffer->write_tail(0);
+        ringbuffer->write_tail(flags | kPostSyncWriteImmediateBit | kAddressSpaceGlobalGttBit);
+        ringbuffer->write_tail(magma::lower_32_bits(gpu_addr));
+        ringbuffer->write_tail(magma::upper_32_bits(gpu_addr));
+        ringbuffer->write_tail(sequence_number);
         ringbuffer->write_tail(0);
     }
 };

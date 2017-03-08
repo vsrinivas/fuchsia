@@ -488,12 +488,9 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
     if (!StartBatchBuffer(context.get(), gpu_addr, context->exec_address_space()->type()))
         return DRETF(false, "failed to emit batch");
 
-    if (!PipeControl(context.get(), mapped_batch->GetPipeControlFlags()))
-        return DRETF(false, "FlushInvalidate failed");
-
     uint32_t sequence_number;
-    if (!WriteSequenceNumber(context.get(), &sequence_number))
-        return DRETF(false, "failed to finish batch buffer");
+    if (!PipeControl(context.get(), mapped_batch->GetPipeControlFlags(), &sequence_number))
+        return DRETF(false, "PipeControl failed");
 
     auto ringbuffer = context->get_ringbuffer(id());
 
@@ -620,16 +617,26 @@ void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(uint32_t last_c
         ScheduleContext();
 }
 
-bool EngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags)
+bool EngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags,
+                                        uint32_t* sequence_number_out)
 {
-    if (flags) {
-        auto ringbuffer = context->get_ringbuffer(id());
+    auto ringbuffer = context->get_ringbuffer(id());
 
-        if (!ringbuffer->HasSpace(MiPipeControl::kDwordCount * sizeof(uint32_t)))
-            return DRETF(false, "ringbuffer has insufficient space");
+    uint32_t dword_count = MiPipeControl::kDwordCount + MiNoop::kDwordCount;
 
-        MiPipeControl::write(ringbuffer, flags);
-    }
+    if (!ringbuffer->HasSpace(dword_count * sizeof(uint32_t)))
+        return DRETF(false, "ringbuffer has insufficient space");
+
+    gpu_addr_t gpu_addr =
+        hardware_status_page(id())->gpu_addr() + HardwareStatusPage::kSequenceNumberOffset;
+
+    uint32_t sequence_number = sequencer()->next_sequence_number();
+    DLOG("writing sequence number update to 0x%x", sequence_number);
+
+    MiPipeControl::write(ringbuffer, sequence_number, gpu_addr, flags);
+    MiNoop::write_ringbuffer(ringbuffer);
+
+    *sequence_number_out = sequence_number;
 
     return true;
 }
@@ -648,31 +655,6 @@ bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu
     MiNoop::write_ringbuffer(ringbuffer);
 
     DLOG("started batch buffer 0x%lx address_space_type %d", gpu_addr, address_space_type);
-
-    return true;
-}
-
-bool RenderEngineCommandStreamer::WriteSequenceNumber(MsdIntelContext* context,
-                                                      uint32_t* sequence_number_out)
-{
-    auto ringbuffer = context->get_ringbuffer(id());
-
-    uint32_t dword_count = MiStoreDataImmediate::kDwordCount + MiNoop::kDwordCount;
-
-    if (!ringbuffer->HasSpace(dword_count * sizeof(uint32_t)))
-        return DRETF(false, "ringbuffer has insufficient space");
-
-    gpu_addr_t gpu_addr =
-        hardware_status_page(id())->gpu_addr() + HardwareStatusPage::kSequenceNumberOffset;
-
-    uint32_t sequence_number = sequencer()->next_sequence_number();
-    DLOG("writing sequence number update to 0x%x", sequence_number);
-
-    MiStoreDataImmediate::write_ringbuffer(ringbuffer, sequence_number, gpu_addr,
-                                           ADDRESS_SPACE_GGTT);
-    MiNoop::write_ringbuffer(ringbuffer);
-
-    *sequence_number_out = sequence_number;
 
     return true;
 }

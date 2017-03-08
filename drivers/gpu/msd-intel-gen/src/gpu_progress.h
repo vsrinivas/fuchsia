@@ -35,6 +35,8 @@ public:
             DASSERT(sequence_number > last_completed_sequence_number_);
             last_completed_sequence_number_ = sequence_number;
             hangcheck_time_start_ = std::chrono::high_resolution_clock::now();
+        } else {
+            DLOG("completed 0x%x AGAIN\n", sequence_number);
         }
 
         // Handle initial condition - init batch isn't submitted as a command buffer.

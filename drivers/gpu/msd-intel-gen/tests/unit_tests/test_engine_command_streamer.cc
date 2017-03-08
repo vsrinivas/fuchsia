@@ -189,7 +189,11 @@ public:
 
         EXPECT_TRUE(render_cs->RenderInit(context_, std::move(init_batch), address_space_));
 
-        EXPECT_EQ(ringbuffer->tail() - tail_start, 10u * 4);
+        uint32_t expected_dwords = MiBatchBufferStart::kDwordCount + MiNoop::kDwordCount +
+                                   MiPipeControl::kDwordCount + MiNoop::kDwordCount +
+                                   MiUserInterrupt::kDwordCount;
+
+        EXPECT_EQ(expected_dwords * 4, ringbuffer->tail() - tail_start);
 
         auto ringbuffer_content = TestRingbuffer::vaddr(ringbuffer);
 
@@ -205,11 +209,14 @@ public:
 
         EXPECT_EQ(ringbuffer_content[i++], (uint32_t)MiNoop::kCommandType);
 
-        // store sequence number
+        // pipe control
         gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page(engine_cs_->id())->gpu_addr() +
                                     HardwareStatusPage::kSequenceNumberOffset;
 
-        EXPECT_EQ(ringbuffer_content[i++], 0x10400000u | (4 - 2));
+        EXPECT_EQ(0x7A000000u | (MiPipeControl::kDwordCount - 2), ringbuffer_content[i++]);
+        uint32_t expected_flags =
+            MiPipeControl::kPostSyncWriteImmediateBit | MiPipeControl::kAddressSpaceGlobalGttBit;
+        EXPECT_EQ(expected_flags, ringbuffer_content[i++]);
         EXPECT_EQ(ringbuffer_content[i++], magma::lower_32_bits(seqno_gpu_addr));
         EXPECT_EQ(ringbuffer_content[i++], magma::upper_32_bits(seqno_gpu_addr));
         EXPECT_EQ(ringbuffer_content[i++], (uint32_t)kFirstSequenceNumber);
