@@ -4,9 +4,11 @@
 
 #include "apps/ledger/src/app/diff_utils.h"
 
+#include <limits>
 #include <memory>
 #include <vector>
 
+#include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/public/object.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -15,14 +17,11 @@
 namespace ledger {
 namespace diff_utils {
 
-void ComputePageChange(
-    storage::PageStorage* storage,
-    const storage::Commit& base,
-    const storage::Commit& other,
-    std::function<void(storage::Status, PageChangePtr)> callback) {
-  auto waiter = callback::
-      Waiter<storage::Status, std::unique_ptr<const storage::Object>>::Create(
-          storage::Status::OK);
+void ComputePageChange(storage::PageStorage* storage,
+                       const storage::Commit& base,
+                       const storage::Commit& other,
+                       std::function<void(Status, PageChangePtr)> callback) {
+  auto waiter = callback::Waiter<Status, mx::vmo>::Create(Status::OK);
 
   PageChangePtr page_change = PageChange::New();
   page_change->timestamp = other.GetTimestamp();
@@ -43,12 +42,11 @@ void ComputePageChange(
                           ? Priority::EAGER
                           : Priority::LAZY;
     page_change->changes.push_back(std::move(entry));
-    // TODO(etiennej): What do we do if we don't have the network (e.g. for
-    // lazy objects)?
-    storage->GetObject(change.entry.object_id,
-                       storage::PageStorage::Location::NETWORK,
-                       waiter->NewCallback());
-
+    PageUtils::GetPartialReferenceAsBuffer(
+        storage, change.entry.object_id, 0u,
+        std::numeric_limits<int64_t>::max(),
+        storage::PageStorage::Location::LOCAL, Status::OK,
+        waiter->NewCallback());
     return true;
   };
 
@@ -59,12 +57,12 @@ void ComputePageChange(
   ](storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FTL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
-      callback(status, nullptr);
+      callback(PageUtils::ConvertStatus(status), nullptr);
       return;
     }
     if (page_change->changes.size() == 0 &&
         page_change->deleted_keys.size() == 0) {
-      callback(status, nullptr);
+      callback(PageUtils::ConvertStatus(status), nullptr);
       return;
     }
 
@@ -73,9 +71,8 @@ void ComputePageChange(
     // asynchronous calls and |result_callback| processes them.
     auto result_callback = ftl::MakeCopyable([
       page_change = std::move(page_change), callback = std::move(callback)
-    ](storage::Status status,
-      std::vector<std::unique_ptr<const storage::Object>> results) mutable {
-      if (status != storage::Status::OK) {
+    ](Status status, std::vector<mx::vmo> results) mutable {
+      if (status != Status::OK) {
         FTL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
             << status;
@@ -84,26 +81,13 @@ void ComputePageChange(
       }
       FTL_DCHECK(results.size() == page_change->changes.size());
       for (size_t i = 0; i < results.size(); i++) {
-        ftl::StringView object_contents;
-
-        storage::Status read_status = results[i]->GetData(&object_contents);
-        if (read_status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Error while reading changed value for key "
-                         << convert::ExtendedStringView(
-                                page_change->changes[i]->key)
-                         << " when computing PageChange: " << read_status;
-          callback(read_status, nullptr);
-          return;
+        if (!results[i]) {
+          continue;
         }
-
         // TODO(etiennej): LE-75 implement pagination on OnChange.
-        if (!mtl::VmoFromString(object_contents,
-                                &(page_change->changes[i]->value))) {
-          callback(storage::Status::IO_ERROR, nullptr);
-          return;
-        }
+        page_change->changes[i]->value = std::move(results[i]);
       }
-      callback(storage::Status::OK, std::move(page_change));
+      callback(Status::OK, std::move(page_change));
     });
     waiter->Finalize(result_callback);
   });

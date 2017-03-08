@@ -88,8 +88,8 @@ class BranchTracker::PageWatcherContainer {
     diff_utils::ComputePageChange(
         storage_, *last_commit_, *current_commit_,
         ftl::MakeCopyable([ this, new_commit = std::move(current_commit_) ](
-            storage::Status status, PageChangePtr page_change_ptr) mutable {
-          if (status != storage::Status::OK) {
+            Status status, PageChangePtr page_change_ptr) mutable {
+          if (status != Status::OK) {
             // This change notification is abandonned. At the next commit,
             // we will try again (but not before). The next notification
             // will cover both this change and the next.

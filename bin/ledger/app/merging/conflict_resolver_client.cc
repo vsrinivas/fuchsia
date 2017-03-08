@@ -43,9 +43,8 @@ ConflictResolverClient::~ConflictResolverClient() {
 }
 
 void ConflictResolverClient::Start() {
-  ftl::RefPtr<callback::Waiter<storage::Status, PageChangePtr>> waiter =
-      callback::Waiter<storage::Status, PageChangePtr>::Create(
-          storage::Status::OK);
+  ftl::RefPtr<callback::Waiter<Status, PageChangePtr>> waiter =
+      callback::Waiter<Status, PageChangePtr>::Create(Status::OK);
 
   diff_utils::ComputePageChange(storage_, *ancestor_, *left_,
                                 waiter->NewCallback());
@@ -53,7 +52,7 @@ void ConflictResolverClient::Start() {
                                 waiter->NewCallback());
 
   waiter->Finalize([weak_this = weak_factory_.GetWeakPtr()](
-      storage::Status status, std::vector<PageChangePtr> page_changes) mutable {
+      Status status, std::vector<PageChangePtr> page_changes) mutable {
     if (!weak_this) {
       return;
     }
@@ -62,14 +61,14 @@ void ConflictResolverClient::Start() {
 }
 
 void ConflictResolverClient::OnChangesReady(
-    storage::Status status,
+    Status status,
     std::vector<PageChangePtr> changes) {
   if (cancelled_) {
     Done();
     return;
   }
 
-  if (status != storage::Status::OK) {
+  if (status != Status::OK) {
     FTL_LOG(ERROR) << "Unable to compute diff due to error " << status
                    << ", aborting.";
     Done();

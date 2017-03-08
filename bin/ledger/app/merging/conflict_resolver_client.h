@@ -36,8 +36,7 @@ class ConflictResolverClient {
   void Done();
 
  private:
-  void OnChangesReady(storage::Status status,
-                      std::vector<PageChangePtr> changes);
+  void OnChangesReady(Status status, std::vector<PageChangePtr> changes);
   void OnMergeDone(fidl::Array<MergedValuePtr> merged_values);
 
   storage::PageStorage* const storage_;

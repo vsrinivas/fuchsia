@@ -15,11 +15,10 @@ namespace ledger {
 namespace diff_utils {
 // Asynchronously creates a PageChange representing the diff of the two provided
 // commits. The result, or an error, will be provided in |callback|.
-void ComputePageChange(
-    storage::PageStorage* storage,
-    const storage::Commit& base,
-    const storage::Commit& other,
-    std::function<void(storage::Status, PageChangePtr)> callback);
+void ComputePageChange(storage::PageStorage* storage,
+                       const storage::Commit& base,
+                       const storage::Commit& other,
+                       std::function<void(Status, PageChangePtr)> callback);
 
 }  // namespace diff_utils
 }  // namespace ledger
