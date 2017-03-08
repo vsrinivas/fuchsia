@@ -53,7 +53,11 @@ SECTIONS {
         *(.hash)
     } :rodata
     .gnu.hash : { *(.gnu.hash) }
-    .dynsym : { *(.dynsym) }
+    .dynsym : {
+        HIDDEN(DATA_START_dynsym = .);
+        *(.dynsym)
+        HIDDEN(DATA_END_dynsym = .);
+    }
     .dynstr : { *(.dynstr) }
 
     .rodata : {

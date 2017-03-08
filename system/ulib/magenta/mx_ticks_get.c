@@ -4,7 +4,9 @@
 
 #include <magenta/syscalls.h>
 
-uint64_t _mx_ticks_get() {
+#include "private.h"
+
+uint64_t _mx_ticks_get(void) {
 #if __aarch64__
     uint64_t ticks;
     __asm__ volatile("mrs %0, pmccntr_el0" : "=r" (ticks));
@@ -25,3 +27,9 @@ uint64_t _mx_ticks_get() {
 
 __typeof(mx_ticks_get) mx_ticks_get
     __attribute__((weak, alias("_mx_ticks_get")));
+
+// At boot time the kernel can decide to redirect the {_,}mx_ticks_get
+// dynamic symbol table entries to point to this instead.  See VDso::VDso.
+__attribute__((visibility("hidden"))) uint64_t CODE_soft_ticks_get(void) {
+    return VDSO_mx_time_get(MX_CLOCK_MONOTONIC);
+}

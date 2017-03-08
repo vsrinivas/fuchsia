@@ -7,9 +7,11 @@
 #include <lib/vdso.h>
 #include <lib/vdso-constants.h>
 
+#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <mxtl/type_support.h>
 #include <platform.h>
 
 #include "vdso-code.h"
@@ -26,6 +28,9 @@ namespace {
 template<typename T>
 class KernelVmoWindow {
 public:
+    static_assert(mxtl::is_pod<T>::value,
+                  "this is for C-compatible types only!");
+
     KernelVmoWindow(const char* name,
                     mxtl::RefPtr<VmObject> vmo, uint64_t offset)
         : mapping_(0) {
@@ -55,10 +60,53 @@ private:
     T* data_;
 };
 
+// The .dynsym section of the vDSO, an array of ELF symbol table entries.
+struct VDsoDynSym {
+    struct {
+        uintptr_t info, value, size;
+    } table[VDSO_DYNSYM_COUNT];
+};
+
+#define PASTE(a, b, c) PASTE_1(a, b, c)
+#define PASTE_1(a, b, c) a##b##c
+
+class VDsoDynSymWindow {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VDsoDynSymWindow);
+
+    static_assert(sizeof(VDsoDynSym) ==
+                  VDSO_DATA_END_dynsym - VDSO_DATA_START_dynsym,
+                  "either VDsoDynsym or gen-rodso-code.sh is suspect");
+
+    explicit VDsoDynSymWindow(mxtl::RefPtr<VmObject> vmo) :
+        window_("vDSO .dynsym", mxtl::move(vmo), VDSO_DATA_START_dynsym) {}
+
+    void set_symbol_entry(size_t i, uintptr_t value, uintptr_t size) {
+        window_.data()->table[i].value = value;
+        window_.data()->table[i].size = size;
+    }
+
+#define set_symbol(symbol, target)                      \
+    set_symbol_entry(PASTE(VDSO_DYNSYM_, symbol,),      \
+                     PASTE(VDSO_CODE_, target,),        \
+                     PASTE(VDSO_CODE_, target, _SIZE))
+
+private:
+    KernelVmoWindow<VDsoDynSym> window_;
+};
+
+#define REDIRECT_SYSCALL(dynsym_window, symbol, target)         \
+    do {                                                        \
+        dynsym_window.set_symbol(symbol, target);               \
+        dynsym_window.set_symbol(_ ## symbol, target);          \
+    } while (0)
+
 }; // anonymous namespace
 
 VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {
     // Map a window into the VMO to write the vdso_constants struct.
+    static_assert(sizeof(vdso_constants) == VDSO_DATA_CONSTANTS_SIZE,
+                  "gen-rodso-code.sh is suspect");
     KernelVmoWindow<vdso_constants> constants_window(
         "vDSO constants", vmo()->vmo(), VDSO_DATA_CONSTANTS);
 
@@ -72,4 +120,13 @@ VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {
         ticks_per_second(),
         pmm_count_total_bytes(),
     };
+
+    if (cmdline_get_bool("vdso.soft_ticks", false)) {
+        // Make mx_ticks_per_second return nanoseconds per second.
+        constants_window.data()->ticks_per_second = MX_SEC(1);
+
+        // Adjust the mx_ticks_get entry point to be soft_ticks_get.
+        VDsoDynSymWindow dynsym_window(vmo()->vmo());
+        REDIRECT_SYSCALL(dynsym_window, mx_ticks_get, soft_ticks_get);
+    }
 }

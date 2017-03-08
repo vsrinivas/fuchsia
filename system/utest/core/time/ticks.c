@@ -5,6 +5,7 @@
 
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
+#include <inttypes.h>
 
 // Calculation of elapsed time using ticks.
 static bool elapsed_time_using_ticks(void) {
@@ -12,6 +13,7 @@ static bool elapsed_time_using_ticks(void) {
 
     uint64_t per_second = mx_ticks_per_second();
     ASSERT_GE(per_second, 0u, "Invalid ticks per second");
+    unittest_printf("Ticks per second: %" PRIu64 "\n", per_second);
 
     uint64_t x = mx_ticks_get();
     uint64_t y = mx_ticks_get();

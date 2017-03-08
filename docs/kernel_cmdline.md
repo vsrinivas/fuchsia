@@ -66,6 +66,12 @@ This option caps the number of CPUs to initialize.  It cannot be greater than
 This option can be used to disable the initialization of hyperthread logical
 CPUs.  Defaults to true.
 
+## startup.keep-log-visible=\<bool>
+
+If this option is set, devmgr will not activate the first interactive
+console. It is useful for scenarios in which user input handling (and
+the ability to switch vcs) is not available. Defaults to false.
+
 ## timer.wallclock=\<name>
 
 This option can be used to force the selection of a particular wall clock.  It
@@ -93,11 +99,11 @@ Example: `userboot=bin/core-tests`
 If this option is set, userboot will attempt to power off the machine
 when the process it launches exits.
 
-## startup.keep-log-visible=\<bool>
+## vdso.soft_ticks=\<bool>
 
-If this option is set, devmgr will not activate the first interactive
-console. It is useful for scenarios in which user input handling (and
-the ability to switch vcs) is not available. Defaults to false.
+If this option is set, the `mx_ticks_get` and `mx_ticks_per_second` system
+calls will use `mx_time_get(MX_CLOCK_MONOTONIC)` in nanoseconds rather than
+hardware cycle counters in a hardware-based time unit.  Defaults to false.
 
 # Additional Gigaboot Commandline Options
 
