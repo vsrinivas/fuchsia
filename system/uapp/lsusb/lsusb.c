@@ -248,7 +248,9 @@ static int list_devices(bool verbose) {
     }
 
     while ((de = readdir(dir)) != NULL) {
-        list_device(de->d_name, -1, verbose);
+        if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..")) {
+            list_device(de->d_name, -1, verbose);
+        }
     }
 
     closedir(dir);
