@@ -5,7 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/http.dart' as http;
+import 'package:http/http.dart' as http;
 
 const _retryCount = 5;
 const _retryDelay = 1;

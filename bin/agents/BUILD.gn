@@ -24,7 +24,7 @@ dart_app("bandsintown") {
     "//application/lib/app/dart",
     "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",
-    "//lib/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/http",
   ]
 }
 
@@ -37,7 +37,7 @@ dart_app("music_brainz") {
     "//application/lib/app/dart",
     "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",
-    "//lib/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/http",
   ]
 }
 
