@@ -9,12 +9,13 @@
 
 #include <algorithm>
 #include <ctime>
+#include <fstream>
+#include <functional>
 #include <list>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
-#include <fstream>
 
 using std::string;
 
@@ -544,24 +545,6 @@ bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
     return true;
 }
 
-struct GenParams;
-
-using GenFn = bool (*)(const GenParams& gp, std::ofstream& os, const Syscall& sc);
-
-// TODO(andymutton): This is getting clunky. Clean it up.
-struct GenParams {
-    GenFn genfn;
-    const char* file_postfix;
-    const char* entry_prefix;
-    const char* name_prefix;
-    const char* name_prefix_2;
-    const char* empty_args;
-    const char* switch_var;
-    const char* switch_type;
-    const char* invocation_var_prefix;
-    std::map<string, string> attributes;
-};
-
 bool generate_file_header(std::ofstream& os) {
     auto t = std::time(nullptr);
     auto ltime = std::localtime(&t);
@@ -573,24 +556,21 @@ bool generate_file_header(std::ofstream& os) {
     return os.good();
 }
 
-const string add_attribute(const GenParams& gp, const string& attribute) {
-    auto ft = gp.attributes.find(attribute);
-    return (ft == gp.attributes.end()) ? string() : ft->second;
+const string add_attribute(std::map<string, string> attributes,
+    const string& attribute) {
+    auto ft = attributes.find(attribute);
+    return (ft == attributes.end()) ? string() : ft->second;
 }
 
-bool generate_legacy_header(
-    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+bool generate_legacy_header(std::ofstream& os, const Syscall& sc,
+    string function_prefix, std::vector<string> name_prefixes, string no_args_type,
+    std::map<string, string> attributes) {
     constexpr uint32_t indent_spaces = 4u;
 
-    for (auto name_prefix : {gp.name_prefix, gp.name_prefix_2}) {
-        if (!name_prefix)
-            continue;
-
+    for (auto name_prefix : name_prefixes) {
         auto syscall_name = name_prefix + sc.name;
 
-        if (gp.entry_prefix) {
-            os << gp.entry_prefix << " ";
-        }
+        os << function_prefix;
 
         // writes "[return-type] prefix_[syscall-name]("
         os << sc.return_type() << " " << syscall_name << "(";
@@ -607,16 +587,14 @@ bool generate_legacy_header(
             // remove the comma.
             os.seekp(-1, std::ios_base::end);
         } else {
-            // empty args might have a special type.
-            if (gp.empty_args)
-                os << gp.empty_args;
+            os << no_args_type;
         }
 
         os << ") ";
 
         // Writes attributes after arguments.
         for (const auto& attr : sc.attributes) {
-            auto a = add_attribute(gp, attr);
+            auto a = add_attribute(attributes, attr);
             if (!a.empty())
                 os << a << " ";
         }
@@ -631,9 +609,11 @@ bool generate_legacy_header(
     return os.good();
 }
 
-bool generate_kernel_header(
-    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    return sc.is_vdso() ? true : generate_legacy_header(gp, os, sc);
+bool generate_kernel_header(std::ofstream& os, const Syscall& sc,
+    string name_prefix, std::map<string, string> attributes) {
+    return sc.is_vdso()
+        ? true
+        : generate_legacy_header(os, sc, "", {name_prefix}, "", attributes);
 }
 
 string invocation(std::ofstream& os, const string out_var, const string out_type,
@@ -658,36 +638,32 @@ string invocation(std::ofstream& os, const string out_var, const string out_type
     return "))";
 }
 
-bool generate_kernel_code(
-    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+bool generate_kernel_code(std::ofstream& os, const Syscall& sc,
+    const string syscall_prefix, const string return_var, const string return_type,
+    const string arg_prefix) {
+
     if (sc.is_vdso())
         return true;
 
     constexpr uint32_t indent_spaces = 8u;
 
-    auto syscall_name = gp.name_prefix + sc.name;
+    auto syscall_name = syscall_prefix + sc.name;
 
     // case 0:
     os << "    case " << sc.index << ": ";
 
     // ret = static_cast<uint64_t>(syscall_whatevs(      )) -closer
-    string close_invocation = invocation(os, gp.switch_var, gp.switch_type, syscall_name, sc);
+    string close_invocation = invocation(os, return_var, return_type, syscall_name, sc);
 
     // Writes all arguments.
     for (int i = 0; i < sc.arg_spec.size(); ++i) {
         if (!os.good())
             return false;
         os << "\n" << string(indent_spaces, ' ')
-           << sc.arg_spec[i].as_cast(gp.invocation_var_prefix + std::to_string(i + 1));
+           << sc.arg_spec[i].as_cast(arg_prefix + std::to_string(i + 1));
 
         if (i < sc.arg_spec.size() - 1)
             os << ",";
-    }
-
-    if (sc.arg_spec.empty()) {
-        // empty args might have a special type.
-        if (gp.empty_args)
-            os << gp.empty_args;
     }
 
     os << close_invocation;
@@ -702,34 +678,33 @@ bool generate_kernel_code(
 }
 
 bool generate_legacy_assembly_x64(
-    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    std::ofstream& os, const Syscall& sc, const string syscall_macro, const string name_prefix) {
     if (sc.is_vdso())
         return true;
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs64, mx_##name, n
-    os << gp.entry_prefix << " " << sc.arg_spec.size() << " "
-       << gp.name_prefix << sc.name << " " << sc.index << "\n";
+    os << syscall_macro << " " << sc.arg_spec.size() << " "
+       << name_prefix << sc.name << " " << sc.index << "\n";
     return os.good();
 }
 
 bool generate_legacy_assembly_arm64(
-    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    std::ofstream& os, const Syscall& sc, const string syscall_macro, const string name_prefix) {
     if (sc.is_vdso())
         return true;
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall mx_##name, n
-    os << gp.entry_prefix << " " << gp.name_prefix << sc.name << " " << sc.index << "\n";
+    os << syscall_macro << " " << name_prefix << sc.name << " " << sc.index << "\n";
     return os.good();
 }
 
 bool generate_syscall_numbers_header(
-    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    std::ofstream& os, const Syscall& sc, const string define_prefix) {
     if (sc.is_vdso())
         return true;
-    os << gp.entry_prefix << sc.name << " " << sc.index << "\n";
+    os << define_prefix << sc.name << " " << sc.index << "\n";
     return os.good();
 }
 
-bool generate_trace_info(
-    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+bool generate_trace_info(std::ofstream& os, const Syscall& sc) {
     if (sc.is_vdso())
         return true;
     // Can be injected as an array of structs or into a tuple-like C++ container.
@@ -753,84 +728,71 @@ const std::map<string, string> kernel_attrs = {
     {"noreturn", "__attribute__((__noreturn__))"},
 };
 
-const GenParams gen_params[] = {
-    // The user header, pure C.
+using gen = std::function<bool(std::ofstream& os, const Syscall& sc)>;
+#define gen1(name, arg1) std::bind(name, std::placeholders::_1, std::placeholders::_2, arg1)
+#define gen2(name, arg1, arg2) std::bind(name, std::placeholders::_1, std::placeholders::_2, arg1, arg2)
+#define gen4(name, arg1, arg2, arg3, arg4) std::bind(name, std::placeholders::_1, std::placeholders::_2, arg1, arg2, arg3, arg4)
+
+const std::map<string, gen> generators = {
     {
-        generate_legacy_header,
-        ".user.h",          // file postfix.
-        "extern",           // function prefix.
-        "mx_",              // function name prefix.
-        "_mx_",             // second function name prefix.
-        "void",             // no-args special type
-        nullptr,            // switch var (does not apply)
-        nullptr,            // switch type (does not apply)
-        nullptr,
-        user_attrs,         // attribute`s dictionary
+    // The user header, pure C.
+        ".user.h",
+        gen4(generate_legacy_header,
+            "extern ",                              // function prefix
+            std::vector<string>({"mx_", "_mx_"}),   // function name prefixes
+            "void",                                 // no-args special type
+            user_attrs)
     },
     // The vDSO-internal header, pure C.  (VDsoHeaderC)
     {
-        generate_legacy_header,
-        ".vdso.h",          // file postfix.
-        "__attribute__((visibility(\"hidden\"))) extern", // function prefix.
-        "VDSO_mx_",         // function name prefix.
-        nullptr,            // second function name prefix.
-        "void",             // no-args special type
-        nullptr,            // switch var (does not apply)
-        nullptr,            // switch type (does not apply)
-        nullptr,
-        user_attrs,         // attributes dictionary
+        ".vdso.h",
+        gen4(generate_legacy_header,
+            "__attribute__((visibility(\"hidden\"))) extern ",  // function prefix
+            std::vector<string>({"VDSO_mx_"}),                  // function name prefixes
+            "void",                                             // no args special type
+            user_attrs)
     },
     // The kernel header, C++.
     {
-        generate_kernel_header,
-        ".kernel.h",        // file postfix.
-        nullptr,            // no function prefix.
-        "sys_",             // function name prefix.
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        kernel_attrs,
+        ".kernel.h",
+        gen2(generate_kernel_header,
+            "sys_",                     // function prefix
+            kernel_attrs)
     },
     // The kernel C++ code. A switch statement set.
     {
-        generate_kernel_code,
-        ".kernel.inc",      // file postfix.
-        nullptr,            // no function prefix.
-        "sys_",             // function name prefix.
-        nullptr,            // second function name prefix.
-        nullptr,            // no-args (does not apply)
-        "ret",              // switch var name
-        "uint64_t",         // switch var type
-        "arg",              // invocation arg prefix
+        ".kernel.inc",
+        gen4(generate_kernel_code,
+            "sys_",                     // function prefix
+            "ret",                      // variable to assign invocation result to
+            "uint64_t",                 // type of result variable
+            "arg")                      // prefix for syscall arguments
     },
     //  The assembly file for x86-64.
     {
-        generate_legacy_assembly_x64,
-        ".x86-64.S",        // file postfix.
-        "m_syscall",        // macro name prefix.
-        "mx_",              // function name prefix.
+        ".x86-64.S",
+        gen2(generate_legacy_assembly_x64,
+            "m_syscall",                // syscall macro name
+            "mx_")                      // syscall name prefix
     },
     //  The assembly include file for ARM64.
     {
-        generate_legacy_assembly_arm64,
-        ".arm64.S",         // file postfix.
-        "m_syscall",        // macro name prefix.
-        "mx_",              // function name prefix.
+        ".arm64.S",
+        gen2(generate_legacy_assembly_arm64,
+            "m_syscall",                // syscall macro name
+            "mx_")                      // syscall name prefix
     },
     // A C header defining MX_SYS_* syscall number macros.
     {
-        generate_syscall_numbers_header,
-        ".syscall-numbers.h",  // file postfix.
-        "#define MX_SYS_",     // macro prefix.
+        ".syscall-numbers.h",
+        gen1(generate_syscall_numbers_header,
+            "#define MX_SYS_")          // prefix for each syscall row
     },
-    // The trace subsystem data, to be interpreted as an
-    // array of structs.
+    // The trace subsystem data, to be interpreted as an array of structs.
     {
-        generate_trace_info,
         ".trace.inc",
-    }
+        gen(generate_trace_info)
+    },
 };
 
 class SygenGenerator {
@@ -846,8 +808,8 @@ public:
     }
 
     bool Generate(const char* output_prefix) {
-        for (auto& gp : gen_params) {
-            if (!generate_one(gp, output_prefix))
+        for (auto& generator : generators) {
+            if (!generate_one(generator.first, generator.second, output_prefix))
                 return false;
         }
         return true;
@@ -856,8 +818,9 @@ public:
     bool verbose() const { return verbose_; }
 
 private:
-    bool generate_one(const GenParams& gp, const char* output_prefix) {
-        string output_file = string(output_prefix) + gp.file_postfix;
+    bool generate_one(string file_postfix, gen generator, const char* output_prefix) {
+
+        string output_file = string(output_prefix) + file_postfix;
 
         std::ofstream ofile;
         ofile.open(output_file.c_str(), std::ofstream::out);
@@ -868,8 +831,8 @@ private:
         }
 
         if (!std::all_of(calls_.begin(), calls_.end(),
-                         [&gp, &ofile](const Syscall& sc) {
-                             return gp.genfn(gp, ofile, sc);
+                         [&generator, &ofile](const Syscall& sc) {
+                             return generator(ofile, sc);
                          })) {
             print_error("generation failed", output_file);
             return false;
