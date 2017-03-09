@@ -7,6 +7,8 @@
 #include <array>
 #include <initializer_list>
 
+#include <magenta/compiler.h>
+
 namespace bluetooth {
 namespace common {
 
@@ -38,7 +40,7 @@ class DeviceAddress {
  private:
   // The raw bytes of the BD_ADDR stored in little-endian byte order.
   std::array<uint8_t, 6> bytes_;
-};
+} __PACKED;
 
 }  // namespace common
 }  // namespace bluetooth
