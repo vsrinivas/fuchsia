@@ -6,12 +6,12 @@
 #include "magma_util/dlog.h"
 #include "ppgtt.h"
 
-void msd_connection_close(msd_connection* connection)
+void msd_connection_close(msd_connection_t* connection)
 {
     delete MsdIntelAbiConnection::cast(connection);
 }
 
-msd_context* msd_connection_create_context(msd_connection* abi_connection)
+msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection)
 {
     auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
 
@@ -20,7 +20,7 @@ msd_context* msd_connection_create_context(msd_connection* abi_connection)
         std::make_unique<ClientContext>(connection, connection->per_process_gtt()));
 }
 
-magma_status_t msd_connection_wait_rendering(msd_connection* abi_connection, msd_buffer* buffer)
+magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, msd_buffer_t* buffer)
 {
     auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
 

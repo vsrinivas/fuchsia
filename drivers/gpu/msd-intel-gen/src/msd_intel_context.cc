@@ -111,7 +111,7 @@ magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> 
 
 //////////////////////////////////////////////////////////////////////////////
 
-void msd_context_destroy(msd_context* ctx)
+void msd_context_destroy(msd_context_t* ctx)
 {
     auto abi_context = MsdIntelAbiContext::cast(ctx);
     // get a copy of the shared ptr
@@ -124,10 +124,10 @@ void msd_context_destroy(msd_context* ctx)
     connection->DestroyContext(std::move(client_context));
 }
 
-magma_status_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
-                                                  msd_buffer** exec_resources,
-                                                  msd_semaphore** wait_semaphores,
-                                                  msd_semaphore** signal_semaphores)
+magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer_t* cmd_buf,
+                                                  msd_buffer_t** exec_resources,
+                                                  msd_semaphore_t** wait_semaphores,
+                                                  msd_semaphore_t** signal_semaphores)
 {
     auto context = MsdIntelAbiContext::cast(ctx)->ptr();
 

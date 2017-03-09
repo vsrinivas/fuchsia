@@ -94,14 +94,14 @@ private:
     std::weak_ptr<MsdIntelConnection> connection_;
 };
 
-class MsdIntelAbiContext : public msd_context {
+class MsdIntelAbiContext : public msd_context_t {
 public:
     MsdIntelAbiContext(std::shared_ptr<ClientContext> ptr) : ptr_(std::move(ptr))
     {
         magic_ = kMagic;
     }
 
-    static MsdIntelAbiContext* cast(msd_context* context)
+    static MsdIntelAbiContext* cast(msd_context_t* context)
     {
         DASSERT(context);
         DASSERT(context->magic_ == kMagic);

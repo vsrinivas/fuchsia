@@ -29,14 +29,14 @@ void CommandBuffer::SetSequenceNumber(uint32_t sequence_number)
     sequence_number_ = sequence_number;
 }
 
-CommandBuffer::CommandBuffer(msd_buffer* abi_cmd_buf, std::weak_ptr<ClientContext> context)
+CommandBuffer::CommandBuffer(msd_buffer_t* abi_cmd_buf, std::weak_ptr<ClientContext> context)
     : abi_cmd_buf_(MsdIntelAbiBuffer::cast(abi_cmd_buf)->ptr()), context_(context)
 {
     prepared_to_execute_ = false;
 }
 
-bool CommandBuffer::Initialize(msd_buffer** exec_buffers, msd_semaphore** wait_semaphores,
-                               msd_semaphore** signal_semaphores)
+bool CommandBuffer::Initialize(msd_buffer_t** exec_buffers, msd_semaphore_t** wait_semaphores,
+                               msd_semaphore_t** signal_semaphores)
 {
     if (!magma::CommandBuffer::Initialize())
         return DRETF(false, "Failed to intialize command buffer base class");

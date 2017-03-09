@@ -74,14 +74,14 @@ private:
     std::list<std::weak_ptr<GpuMapping>> mapping_list_;
 };
 
-class MsdIntelAbiBuffer : public msd_buffer {
+class MsdIntelAbiBuffer : public msd_buffer_t {
 public:
     MsdIntelAbiBuffer(std::shared_ptr<MsdIntelBuffer> ptr) : ptr_(std::move(ptr))
     {
         magic_ = kMagic;
     }
 
-    static MsdIntelAbiBuffer* cast(msd_buffer* buf)
+    static MsdIntelAbiBuffer* cast(msd_buffer_t* buf)
     {
         DASSERT(buf);
         DASSERT(buf->magic_ == kMagic);

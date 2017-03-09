@@ -22,7 +22,7 @@
 #include <list>
 #include <thread>
 
-class MsdIntelDevice : public msd_device,
+class MsdIntelDevice : public msd_device_t,
                        public EngineCommandStreamer::Owner,
                        public MsdIntelConnection::Owner {
 public:
@@ -39,7 +39,7 @@ public:
 
     uint32_t device_id() { return device_id_; }
 
-    static MsdIntelDevice* cast(msd_device* dev)
+    static MsdIntelDevice* cast(msd_device_t* dev)
     {
         DASSERT(dev);
         DASSERT(dev->magic_ == kMagic);

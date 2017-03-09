@@ -9,14 +9,14 @@
 #include "msd_defs.h"
 #include "platform_semaphore.h"
 
-class MsdIntelAbiSemaphore : public msd_semaphore {
+class MsdIntelAbiSemaphore : public msd_semaphore_t {
 public:
     MsdIntelAbiSemaphore(std::shared_ptr<magma::PlatformSemaphore> ptr) : ptr_(std::move(ptr))
     {
         magic_ = kMagic;
     }
 
-    static MsdIntelAbiSemaphore* cast(msd_semaphore* semaphore)
+    static MsdIntelAbiSemaphore* cast(msd_semaphore_t* semaphore)
     {
         DASSERT(semaphore);
         DASSERT(semaphore->magic_ == kMagic);

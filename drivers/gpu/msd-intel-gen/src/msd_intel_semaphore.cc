@@ -6,7 +6,7 @@
 #include "magma_util/macros.h"
 #include "msd_intel_semaphore.h"
 
-magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore** semaphore_out)
+magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore_t** semaphore_out)
 {
     auto semaphore = magma::PlatformSemaphore::Import(handle);
     if (!semaphore)
@@ -18,7 +18,7 @@ magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore** semaphore_o
     return MAGMA_STATUS_OK;
 }
 
-void msd_semaphore_release(msd_semaphore* semaphore)
+void msd_semaphore_release(msd_semaphore_t* semaphore)
 {
     delete MsdIntelAbiSemaphore::cast(semaphore);
 }

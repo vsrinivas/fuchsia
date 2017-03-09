@@ -56,14 +56,14 @@ private:
     bool context_killed_ = false;
 };
 
-class MsdIntelAbiConnection : public msd_connection {
+class MsdIntelAbiConnection : public msd_connection_t {
 public:
     MsdIntelAbiConnection(std::shared_ptr<MsdIntelConnection> ptr) : ptr_(std::move(ptr))
     {
         magic_ = kMagic;
     }
 
-    static MsdIntelAbiConnection* cast(msd_connection* connection)
+    static MsdIntelAbiConnection* cast(msd_connection_t* connection)
     {
         DASSERT(connection);
         DASSERT(connection->magic_ == kMagic);

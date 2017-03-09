@@ -742,7 +742,7 @@ HardwareStatusPage* MsdIntelDevice::hardware_status_page(EngineCommandStreamerId
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
+msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id client_id)
 {
     auto connection = MsdIntelDevice::cast(dev)->Open(client_id);
     if (!connection)
@@ -750,18 +750,18 @@ msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
     return new MsdIntelAbiConnection(std::move(connection));
 }
 
-void msd_device_destroy(msd_device* dev) { delete MsdIntelDevice::cast(dev); }
+void msd_device_destroy(msd_device_t* dev) { delete MsdIntelDevice::cast(dev); }
 
-uint32_t msd_device_get_id(msd_device* dev) { return MsdIntelDevice::cast(dev)->device_id(); }
+uint32_t msd_device_get_id(msd_device_t* dev) { return MsdIntelDevice::cast(dev)->device_id(); }
 
-void msd_device_dump_status(struct msd_device* dev)
+void msd_device_dump_status(struct msd_device_t* dev)
 {
     std::string dump;
     MsdIntelDevice::cast(dev)->DumpToString(dump);
     printf("--------------------\n%s\n--------------------\n", dump.c_str());
 }
 
-void msd_device_page_flip(msd_device* dev, msd_buffer* buf,
+void msd_device_page_flip(msd_device_t* dev, msd_buffer_t* buf,
                           magma_system_image_descriptor* image_desc,
                           magma_system_pageflip_callback_t callback, void* data)
 {

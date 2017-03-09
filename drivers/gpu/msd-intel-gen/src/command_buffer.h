@@ -24,10 +24,11 @@ public:
     // Takes a weak reference on the context which it locks for the duration of its execution
     // holds a shared reference to the buffers backing |abi_cmd_buf| and |exec_buffers| for the
     // lifetime of this object
-    static std::unique_ptr<CommandBuffer> Create(msd_buffer* abi_cmd_buf, msd_buffer** exec_buffers,
+    static std::unique_ptr<CommandBuffer> Create(msd_buffer_t* abi_cmd_buf,
+                                                 msd_buffer_t** exec_buffers,
                                                  std::weak_ptr<ClientContext> context,
-                                                 msd_semaphore** wait_semaphores,
-                                                 msd_semaphore** signal_semaphores)
+                                                 msd_semaphore_t** wait_semaphores,
+                                                 msd_semaphore_t** signal_semaphores)
     {
         auto command_buffer =
             std::unique_ptr<CommandBuffer>(new CommandBuffer(abi_cmd_buf, context));
@@ -54,7 +55,7 @@ public:
     uint32_t GetPipeControlFlags() override;
 
 private:
-    CommandBuffer(msd_buffer* abi_cmd_buf, std::weak_ptr<ClientContext> context);
+    CommandBuffer(msd_buffer_t* abi_cmd_buf, std::weak_ptr<ClientContext> context);
 
     // maps all execution resources into the given |address_space|.
     // fills |resource_gpu_addresses_out| with the mapped addresses of every object in
@@ -64,8 +65,8 @@ private:
 
     void UnmapResourcesGpu();
 
-    bool Initialize(msd_buffer** exec_buffers, msd_semaphore** wait_semaphores,
-                    msd_semaphore** signal_semaphores);
+    bool Initialize(msd_buffer_t** exec_buffers, msd_semaphore_t** wait_semaphores,
+                    msd_semaphore_t** signal_semaphores);
 
     // given the virtual addresses of all of the exec_resources_, walks the relocations data
     // structure in

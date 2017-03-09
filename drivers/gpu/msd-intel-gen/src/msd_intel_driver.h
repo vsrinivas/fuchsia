@@ -9,14 +9,14 @@
 #include "msd.h"
 #include <memory>
 
-class MsdIntelDriver : public msd_driver {
+class MsdIntelDriver : public msd_driver_t {
 public:
     virtual ~MsdIntelDriver() {}
 
     static std::unique_ptr<MsdIntelDriver> Create();
     static void Destroy(MsdIntelDriver* drv);
 
-    static MsdIntelDriver* cast(msd_driver* drv)
+    static MsdIntelDriver* cast(msd_driver_t* drv)
     {
         DASSERT(drv);
         DASSERT(drv->magic_ == kMagic);

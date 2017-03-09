@@ -119,7 +119,7 @@ void MsdIntelBuffer::WaitRendering()
 
 //////////////////////////////////////////////////////////////////////////////
 
-msd_buffer* msd_buffer_import(uint32_t handle)
+msd_buffer_t* msd_buffer_import(uint32_t handle)
 {
     auto buffer = MsdIntelBuffer::Import(handle);
     if (!buffer)
@@ -127,4 +127,4 @@ msd_buffer* msd_buffer_import(uint32_t handle)
     return new MsdIntelAbiBuffer(std::move(buffer));
 }
 
-void msd_buffer_destroy(msd_buffer* buf) { delete MsdIntelAbiBuffer::cast(buf); }
+void msd_buffer_destroy(msd_buffer_t* buf) { delete MsdIntelAbiBuffer::cast(buf); }
