@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <thread>
 
+#include "helper/platform_device_helper.h"
 #include "magenta/magenta_platform_ioctl.h"
 #include "magma_system.h"
 #include "magma_util/macros.h"
@@ -74,7 +75,7 @@ public:
 
     bool InitBatchBuffer(magma_buffer_t buffer, uint64_t size)
     {
-        if ((magma_system_get_device_id(fd()) >> 8) != 0x19)
+        if (!TestPlatformDevice::is_intel_gen(magma_system_get_device_id(fd())))
             return DRETF(false, "not an intel gen9 device");
 
         void* vaddr;

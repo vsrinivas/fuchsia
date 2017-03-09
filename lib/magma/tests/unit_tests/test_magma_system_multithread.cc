@@ -121,7 +121,7 @@ public:
 
     bool InitBatchBuffer(magma::PlatformBuffer* buffer)
     {
-        if ((device_->GetDeviceId() >> 8) != 0x19)
+        if (!TestPlatformDevice::is_intel_gen(device_->GetDeviceId()))
             return DRETF(false, "not an intel gen9 device");
 
         void* vaddr;
