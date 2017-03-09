@@ -6,5 +6,6 @@ group("benchmark") {
   deps = [
     "//apps/ledger/benchmark/lib",
     "//apps/ledger/benchmark/put",
+    "//apps/ledger/benchmark/sync",
   ]
 }

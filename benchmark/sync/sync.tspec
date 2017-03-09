@@ -1,0 +1,13 @@
+{
+  "app": "ledger_benchmark_sync",
+  "args": ["--entry-count=10", "--value-size=100"],
+  "categories": ["benchmark"],
+  "duration": 60,
+  "measure": [
+    {
+      "type": "duration",
+      "event_name": "sync latency",
+      "event_category": "benchmark"
+    }
+  ]
+}
