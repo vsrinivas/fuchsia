@@ -377,7 +377,7 @@ void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size) {
      * any piece of bookkeeping memory off the allocated_blocks list and use
      * that instead. */
     p2ra_block_t* block;
-#if LK_DEBUGLEVEL > 1
+#if DEBUG_ASSERT_IMPLEMENTED
     block = list_peek_head_type(&state->allocated_blocks, p2ra_block_t, node);
     while (block) {
         if ((block->start == range_start) && (block->bucket == bucket)) {
@@ -388,7 +388,6 @@ void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size) {
     }
     ASSERT(block);
 #else
-    DEBUG_ASSERT(!list_is_empty(&state->allocated_bocks));
     block         = list_remove_head_type(&state->allocated_blocks, p2ra_block_t, node);
     ASSERT(block);
     block->start  = range_start;

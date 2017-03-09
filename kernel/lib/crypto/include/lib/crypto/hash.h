@@ -9,6 +9,7 @@
 #include <debug.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include <lib/crypto/cryptolib.h>
 
@@ -44,7 +45,7 @@ private:
 
     clSHA256_CTX ctx_;
     const uint8_t* digest_;
-#if LK_DEBUGLEVEL > 0
+#if DEBUG_ASSERT_IMPLEMENTED
     bool finalized_;
 #endif
 };

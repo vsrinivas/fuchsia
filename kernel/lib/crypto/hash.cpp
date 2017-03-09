@@ -14,7 +14,7 @@ namespace crypto {
 
 Hash256::Hash256()
     : digest_(0) {
-#if LK_DEBUGLEVEL > 0
+#if DEBUG_ASSERT_IMPLEMENTED
     finalized_ = false;
 #endif
     clSHA256_init(&ctx_);
@@ -29,12 +29,12 @@ Hash256::Hash256(const void* data, int len)
 Hash256::~Hash256() {}
 
 void Hash256::Update(const void* data, int len) {
-    DEBUG_ASSERT(!finalized_);
+    DEBUG_ASSERT_COND(!finalized_);
     clHASH_update(&ctx_, data, len);
 }
 
 void Hash256::Final() {
-#if LK_DEBUGLEVEL > 0
+#if DEBUG_ASSERT_IMPLEMENTED
     DEBUG_ASSERT(!finalized_);
     finalized_ = true;
 #endif

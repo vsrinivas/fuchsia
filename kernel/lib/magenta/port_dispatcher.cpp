@@ -235,14 +235,14 @@ mx_status_t PortDispatcher::Wait(mx_time_t timeout, IOP_Packet** packet) {
 
 void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
     AutoLock al(&lock_);
-    DEBUG_ASSERT(eport->PortMatches(this, /* allow_null */ false));
+    DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ false));
     DEBUG_ASSERT(!eport->InContainer());
     eports_.push_back(mxtl::move(AdoptRef(eport)));
 }
 
 void PortDispatcher::UnlinkExceptionPort(ExceptionPort* eport) {
     AutoLock al(&lock_);
-    DEBUG_ASSERT(eport->PortMatches(this, /* allow_null */ true));
+    DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ true));
     if (eport->InContainer()) {
         eports_.erase(*eport);
     }

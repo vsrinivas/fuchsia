@@ -60,14 +60,14 @@ private:
     // Called by |port_| when it reaches zero handles.
     void OnPortZeroHandles();
 
-#if (LK_DEBUGLEVEL > 1)
+#if DEBUG_ASSERT_IMPLEMENTED
     // Lets PortDispatcher assert that this eport is associated
     // with the right instance.
     bool PortMatches(const PortDispatcher *port, bool allow_null) {
         AutoLock lock(&lock_);
         return (allow_null && port_ == nullptr) || port_.get() == port;
     }
-#endif  // if (LK_DEBUGLEVEL > 1)
+#endif  // if DEBUG_ASSERT_IMPLEMENTED
 
     // Returns true if the ExceptionPort is currently bound to a target.
     bool IsBoundLocked() TA_REQ(lock_) {
