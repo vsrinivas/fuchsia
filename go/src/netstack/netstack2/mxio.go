@@ -654,6 +654,22 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 		log.Printf("getaddrinfo node=%q, service=%q", node, service)
 	}
 
+	// TODO(mpcomplete): Which NIC should we use for DNS requests?
+	s.mu.Lock()
+	nicData := s.getNICData(defaultNIC)
+	select {
+	case <-nicData.ready:
+	default:
+		s.mu.Unlock()
+
+		const EAI_FAIL = -4
+		rep := c_mxrio_gai_reply{retval: EAI_FAIL}
+		rep.Encode(msg)
+		return mx.ErrOk
+	}
+	dnsClient := s.dnsClient
+	s.mu.Unlock()
+
 	if hints.ai_socktype == 0 {
 		hints.ai_socktype = SOCK_STREAM
 	}
@@ -674,7 +690,7 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	}
 
 	var addr tcpip.Address
-	dnsLookupIPs, err := s.dnsClient.LookupIP(node)
+	dnsLookupIPs, err := dnsClient.LookupIP(node)
 	if err != nil {
 		if node == "localhost" {
 			addr = "\x7f\x00\x00\x01"
