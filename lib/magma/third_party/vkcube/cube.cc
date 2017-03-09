@@ -2211,7 +2211,8 @@ static void demo_create_xcb_window(struct demo *demo) {
 #if defined(VK_USE_PLATFORM_MAGMA_KHR)
 static void demo_run_magma(struct demo *demo) 
 {
-    constexpr uint32_t kNumFrames = 60;
+    uint32_t num_frames = 60;
+    uint32_t elapsed_frames = 0;
     static const float kMsPerSec =
         std::chrono::milliseconds(std::chrono::seconds(1)).count();
 
@@ -2226,14 +2227,19 @@ static void demo_run_magma(struct demo *demo)
         total_ms += elapsed.count();
         t0 = t1;
 
-        if (demo->curFrame && (demo->curFrame % kNumFrames) == 0) {
-            printf("Framerate average for last %u frames: %f frames per second\n", kNumFrames,
-                   kNumFrames / (total_ms / kMsPerSec));
+        if (elapsed_frames && (elapsed_frames % num_frames) == 0) {
+            float fps = num_frames / (total_ms / kMsPerSec);
+            printf("Framerate average for last %u frames: %f frames per second\n", num_frames,
+                   fps);
             total_ms = 0;
+            //attempt to log once per second
+            num_frames = fps;
+            elapsed_frames = 0;
         }
 
         demo_draw(demo);
         demo->curFrame++;
+        elapsed_frames++;
         if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
             demo->quit = true;
     }
