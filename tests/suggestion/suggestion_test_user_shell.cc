@@ -58,7 +58,7 @@ class SuggestionTestUserShellApp
   void Terminate(const TerminateCallback& done) override {
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     TEST_PASS("Suggestion test user shell terminated");
-    modular::testing::Done();
+    modular::testing::Teardown();
     done();
   };
 

@@ -72,19 +72,17 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
           [this](const fidl::String&) { module_context_->Done(); });
     });
 
-    // Start a timer to call Story.Done in case the test agent misbehaves and we
-    // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { delete this; },
+        [this] { mtl::MessageLoop::GetCurrent()->QuitNow(); },
         ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-    modular::testing::Teardown();
     done();
-    delete this;
+    modular::testing::Done();
+    mtl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   modular::ModuleContextPtr module_context_;
@@ -100,7 +98,7 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  new SuggestionApp();
+  SuggestionApp app;
   loop.Run();
   return 0;
 }
