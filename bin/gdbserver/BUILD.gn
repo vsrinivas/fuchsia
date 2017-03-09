@@ -84,6 +84,8 @@ executable("debugserver") {
     "rsp-main.cc",
     "rsp-server.cc",
     "rsp-server.h",
+    "rsp-util.cc",
+    "rsp-util.h",
     "stop-reply-packet.cc",
     "stop-reply-packet.h",
     "thread-action-list.cc",
@@ -149,6 +151,9 @@ executable("gdbserver-unittests") {
   testonly = true
 
   sources = [
+    "rsp-util.cc",
+    "rsp-util.h",
+    "rsp-util-unittest.cc",
     "stop-reply-packet.cc",
     "stop-reply-packet.h",
     "stop-reply-packet-unittest.cc",

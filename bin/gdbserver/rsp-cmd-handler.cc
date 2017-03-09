@@ -16,6 +16,7 @@
 
 #include "registers.h"
 #include "rsp-server.h"
+#include "rsp-util.h"
 #include "thread.h"
 #include "thread-action-list.h"
 #include "util.h"

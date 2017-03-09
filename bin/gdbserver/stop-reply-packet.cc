@@ -6,6 +6,7 @@
 
 #include "lib/ftl/logging.h"
 
+#include "rsp-util.h"
 #include "util.h"
 
 namespace debugserver {
