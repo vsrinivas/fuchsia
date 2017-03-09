@@ -86,7 +86,8 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
     // reset endpoint if it is halted
     xhci_endpoint_context_t* epc = slot->epcs[endpoint];
     if (XHCI_GET_BITS32(&epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS) == 2 /* halted */ ) {
-        xhci_reset_endpoint(xhci, slot_id, endpoint);
+        mx_status_t status = xhci_reset_endpoint(xhci, slot_id, endpoint);
+        if (status != NO_ERROR) return status;
     }
 
     uint32_t interruptor_target = 0;
