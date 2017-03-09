@@ -20,7 +20,9 @@ void movecursor_callback(void* cookie, int x, int y) {
 void pushline_callback(void* cookie, int y) {
 }
 
-void scroll_callback(void* cookie, int x, int y0, int y1) {
+void copy_lines_callback(void* cookie, int y_dest, int y_src, int line_count) {
+    auto* tc = reinterpret_cast<textcon_t*>(cookie);
+    tc_copy_lines(tc, y_dest, y_src, line_count);
 }
 
 void setparam_callback(void* cookie, int param, uint8_t* arg, size_t arglen) {
@@ -43,10 +45,11 @@ public:
                                                       size_y(size_y) {
         // Create a textcon_t.
         textbuf = new vc_char_t[size_x * size_y];
+        textcon.cookie = &textcon;
         textcon.invalidate = invalidate_callback;
         textcon.movecursor = movecursor_callback;
         textcon.pushline = pushline_callback;
-        textcon.scroll = scroll_callback;
+        textcon.copy_lines = copy_lines_callback;
         textcon.setparam = setparam_callback;
         tc_init(&textcon, size_x, size_y, textbuf, 0, 0);
         // Initialize buffer contents, since this is currently done
@@ -477,6 +480,20 @@ bool test_cursor_hide_and_show() {
     END_TEST;
 }
 
+// This tests for a bug: If the cursor was positioned over a character when
+// we scroll up, that character would get erased.
+bool test_cursor_scroll_bug() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 3);
+    // Move the cursor to the bottom line.
+    tc.PutString("\n\n\n");
+    // Scroll down when the cursor is over "C".
+    tc.PutString("ABCDE\b\b\b\n");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_display_update_comparison)
@@ -495,6 +512,7 @@ RUN_TEST(test_delete_lines_huge)
 RUN_TEST(test_move_cursor_up_and_scroll)
 RUN_TEST(test_move_cursor_down_and_scroll)
 RUN_TEST(test_cursor_hide_and_show)
+RUN_TEST(test_cursor_scroll_bug)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }

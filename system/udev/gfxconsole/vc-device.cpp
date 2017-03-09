@@ -156,27 +156,24 @@ static void vc_tc_pushline(void* cookie, int y) {
     }
 }
 
-// positive = up, negative = down
-// textbuf must be updated before calling scroll
-static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
+static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
+                             int line_count) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     if (dev->vpy < 0)
         return;
-    // invalidate the cursor before copying
+
+    // Remove the cursor from the display before copying the lines on
+    // screen, otherwise we might be copying a rendering of the cursor to a
+    // position where the cursor isn't.  This must be done before the
+    // tc_copy_lines() call, otherwise we might render the wrong character.
     vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
-    int delta = ABS(dir);
-    assert(delta <= y1 - y0);
-    if (dir > 0) {
-        gfx_copyrect(dev->gfx, 0, (y0 + delta) * dev->charh,
-                     dev->gfx->width, (y1 - y0 - delta) * dev->charh,
-                     0, y0 * dev->charh);
-        vc_device_invalidate(cookie, 0, y1 - delta, dev->columns, delta);
-    } else {
-        gfx_copyrect(dev->gfx, 0, y0 * dev->charh,
-                     dev->gfx->width, (y1 - y0 - delta) * dev->charh,
-                     0, (y0 + delta) * dev->charh);
-        vc_device_invalidate(cookie, 0, y0, dev->columns, delta);
-    }
+
+    // The next two calls can be done in any order.
+    tc_copy_lines(&dev->textcon, y_dest, y_src, line_count);
+    gfx_copyrect(dev->gfx, 0, y_src * dev->charh,
+                 dev->gfx->width, line_count * dev->charh,
+                 0, y_dest * dev->charh);
+
     vc_device_write_status(dev);
     vc_gfx_invalidate_status(dev);
     vc_invalidate_lines(dev, 0, vc_device_rows(dev));
@@ -225,7 +222,7 @@ static void vc_device_reset(vc_device_t* dev) {
     dev->textcon.invalidate = vc_tc_invalidate;
     dev->textcon.movecursor = vc_tc_movecursor;
     dev->textcon.pushline = vc_tc_pushline;
-    dev->textcon.scroll = vc_tc_scroll;
+    dev->textcon.copy_lines = vc_tc_copy_lines;
     dev->textcon.setparam = vc_tc_setparam;
 
     // fill textbuffer with blank characters

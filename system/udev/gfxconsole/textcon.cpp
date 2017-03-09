@@ -136,7 +136,7 @@ static void erase_chars(textcon_t* tc, int arg) {
     invalidate(tc, tc->x, tc->y, tc->w - tc->x, 1);
 }
 
-static void copy_lines(textcon_t* tc, int y_dest, int y_src, int line_count) {
+void tc_copy_lines(textcon_t* tc, int y_dest, int y_src, int line_count) {
     vc_char_t* dest = get_start_of_line(tc, y_dest);
     vc_char_t* src = get_start_of_line(tc, y_src);
     memmove(dest, src, line_count * tc->w * sizeof(vc_char_t));
@@ -144,6 +144,7 @@ static void copy_lines(textcon_t* tc, int y_dest, int y_src, int line_count) {
 
 static void clear_lines(textcon_t* tc, int y, int line_count) {
     fill(get_start_of_line(tc, y), make_vc_char(tc, ' '), line_count * tc->w);
+    invalidate(tc, 0, y, tc->w, line_count);
 }
 
 // Scroll the region between line |y0| (inclusive) and |y1| (exclusive).
@@ -159,14 +160,12 @@ static void scroll_lines(textcon_t* tc, int y0, int y1, int diff) {
         for (int i = 0; i < delta; ++i) {
             pushline(tc, y0 + i);
         }
-        copy_lines(tc, y0, y0 + delta, copy_count);
+        tc->copy_lines(tc->cookie, y0, y0 + delta, copy_count);
         clear_lines(tc, y0 + copy_count, delta);
-        tc->scroll(tc->cookie, y0, y1, delta);
     } else {
         // Scroll down.
-        copy_lines(tc, y0 + delta, y0, copy_count);
+        tc->copy_lines(tc->cookie, y0 + delta, y0, copy_count);
         clear_lines(tc, y0, delta);
-        tc->scroll(tc->cookie, y0, y1, -delta);
     }
 }
 

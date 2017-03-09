@@ -38,7 +38,7 @@ struct textcon {
     void (*invalidate)(void* cookie, int x, int y, int w, int h);
     void (*movecursor)(void* cookie, int x, int y);
     void (*pushline)(void* cookie, int y);
-    void (*scroll)(void* cookie, int x, int y0, int y1);
+    void (*copy_lines)(void* cookie, int y_dest, int y_src, int count);
     void (*setparam)(void* cookie, int param, uint8_t* arg, size_t arglen);
     void* cookie;
 
@@ -65,6 +65,8 @@ struct textcon {
 
 void tc_init(textcon_t* tc, int w, int h, vc_char_t* data,
              uint8_t fg, uint8_t bg);
+
+void tc_copy_lines(textcon_t* tc, int y_dest, int y_src, int line_count);
 
 static inline void tc_putc(textcon_t* tc, uint8_t c) {
     tc->putc(tc, c);
