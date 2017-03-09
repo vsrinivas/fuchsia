@@ -68,34 +68,4 @@ private:
     mxtl::RefPtr<VmObject> vmo_;
 };
 
-template <typename T>
-class TypedArena {
-public:
-    status_t Init(const char* name, size_t max_count) {
-        return arena_.Init(name, sizeof(T), max_count);
-    }
-
-    template <typename... Args>
-    T* New(Args&&... args) {
-        void* addr = arena_.Alloc();
-        return addr ? new (addr) T(mxtl::forward<Args>(args)...) : nullptr;
-    };
-
-    void Delete(T* obj) {
-        obj->~T();
-        arena_.Free(obj);
-    }
-
-    void RawFree(void* mem) {
-        arena_.Free(mem);
-    }
-
-    bool in_range(void* obj) const { return arena_.in_range(obj); }
-
-    void* start() const { return arena_.start(); }
-    void* end() const { return arena_.end(); }
-
-private:
-    Arena arena_;
-};
 }

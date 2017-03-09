@@ -9,23 +9,15 @@
 
 #include <mxtl/arena.h>
 
-static int arena_dtor_count;
-
 struct ArenaFoo {
-  char ff;
-  int xx, yy, zz;
-
-  ArenaFoo(int x, int y, int z) : ff(0), xx(x), yy(y), zz(z) {}
-  ~ArenaFoo() { ++arena_dtor_count; }
+    int xx, yy, zz;
 };
 
-
-static bool arena_test(void* context)
-{
-    arena_dtor_count = 0;
+static bool arena_test(void* context) {
     BEGIN_TEST;
-    mxtl::TypedArena<ArenaFoo> arena;
-    arena.Init("arena_tests", 1000);
+    mxtl::Arena arena;
+    status_t s = arena.Init("arena_tests", sizeof(ArenaFoo), 1000);
+    REQUIRE_EQ(NO_ERROR, s, "arena.Init()");
 
     const int count = 30;
 
@@ -33,33 +25,36 @@ static bool arena_test(void* context)
         ArenaFoo* afp[count] = {0};
 
         for (int ix = 0; ix != count; ++ix) {
-            afp[ix] = arena.New(17, 5, ix + 100);
-            EXPECT_TRUE(afp[ix] != nullptr, "");
+            afp[ix] = reinterpret_cast<ArenaFoo*>(arena.Alloc());
+            REQUIRE_NONNULL(afp[ix], "arena.Alloc()");
+            *afp[ix] = {17, 5, ix + 100};
         }
 
-        arena.Delete(afp[3]);
-        arena.Delete(afp[4]);
-        arena.Delete(afp[5]);
+        arena.Free(afp[3]);
+        arena.Free(afp[4]);
+        arena.Free(afp[5]);
         afp[3] = afp[4] = afp[5] = nullptr;
 
-        afp[4] = arena.New(17, 5, 104);
+        afp[4] = reinterpret_cast<ArenaFoo*>(arena.Alloc());
+        REQUIRE_NONNULL(afp[4], "arena.Alloc()");
+        *afp[4] = {17, 5, 104};
 
         for (int ix = 0; ix != count; ++ix) {
-            if (!afp[ix]) continue;
+            if (!afp[ix])
+                continue;
 
             EXPECT_EQ(17, afp[ix]->xx, "");
             EXPECT_EQ(5, afp[ix]->yy, "");
             EXPECT_EQ(ix + 100, afp[ix]->zz, "");
 
-            arena.Delete(afp[ix]);
+            arena.Free(afp[ix]);
         }
-
-        EXPECT_EQ((count + 1) * (times + 1), arena_dtor_count, "");
 
         // Leak a few objects.
         for (int ix = 0; ix != 7; ++ix) {
-          auto leak = arena.New(2121, 77, 55);
-          EXPECT_TRUE(leak != nullptr, "");
+            ArenaFoo* leak = reinterpret_cast<ArenaFoo*>(arena.Alloc());
+            REQUIRE_NONNULL(leak, "arena.Alloc()");
+            *leak = {2121, 77, 55};
         }
     }
     END_TEST;
