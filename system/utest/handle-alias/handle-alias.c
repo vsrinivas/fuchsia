@@ -110,10 +110,10 @@ static bool handle_value_alias_test(void) {
         "    Converged at %zd (largest window_size with no aliases)\n",
         window_size);
 
-    // It is currently very easy to see a handle alias; most close + new
-    // operations will recycle the closed handle value.
-    // TODO(MG-64): Raise min_window_size when handles are not aliased as often.
-    const size_t min_window_size = 1;
+    // The handle table as of 13 Mar 2017 should let us re-use a handle
+    // slot 4096 times before producing an alias. Use half that as our
+    // target to bias the test away from false failures.
+    const size_t min_window_size = 2048;
     EXPECT_GE(window_size, min_window_size, "");
     END_TEST;
 }

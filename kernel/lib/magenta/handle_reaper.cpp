@@ -10,6 +10,7 @@
 #include <kernel/mutex.h>
 #include <magenta/dispatcher.h>
 #include <magenta/handle_reaper.h>
+#include <magenta/magenta.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0

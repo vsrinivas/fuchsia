@@ -26,10 +26,10 @@ Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
 // Duplicate a handle created by MakeHandle().
 Handle* DupHandle(Handle* source, mx_rights_t rights);
 
-// Maps a handle created by MakeHandle() to the 0 to 2^32 range.
-uint32_t MapHandleToU32(const Handle* handle);
+// Deletes a handle created by MakeHandle() or DupHandle().
+void DeleteHandle(Handle* handle);
 
-// Maps an integer obtained by MapHandleToU32() back to a Handle.
+// Maps an integer obtained by Handle->base_value() back to a Handle.
 Handle* MapU32ToHandle(uint32_t value);
 
 // Set/get the system exception port.

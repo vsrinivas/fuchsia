@@ -78,8 +78,8 @@ public:
     // If this fails, then the object is invalid and should be deleted
     status_t Initialize();
 
-    // Map a |handle| to an integer which can be given to usermode as a
-    // handle value. Uses MapHandleToU32() plus additional mixing.
+    // Maps a |handle| to an integer which can be given to usermode as a
+    // handle value. Uses Handle->base_value() plus additional mixing.
     mx_handle_t MapHandleToValue(const Handle* handle) const;
     mx_handle_t MapHandleToValue(const HandleOwner& handle) const;
 

@@ -6,6 +6,7 @@
 
 #include <magenta/magenta.h>
 
+#include <pow2.h>
 #include <trace.h>
 
 #include <kernel/auto_lock.h>
@@ -41,7 +42,7 @@ constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 
 // The handle arena and its mutex.
 static Mutex handle_mutex;
-static mxtl::TypedArena<Handle> TA_GUARDED(handle_mutex) handle_arena;
+static mxtl::Arena TA_GUARDED(handle_mutex) handle_arena;
 static size_t outstanding_handles TA_GUARDED(handle_mutex) = 0u;
 
 // The system exception port.
@@ -52,8 +53,83 @@ static mxtl::RefPtr<ExceptionPort> system_exception_port TA_GUARDED(system_excep
 static mxtl::RefPtr<JobDispatcher> root_job;
 
 void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
-    handle_arena.Init("handles", kMaxHandleCount);
+    handle_arena.Init("handles", sizeof(Handle), kMaxHandleCount);
     root_job = JobDispatcher::CreateRootJob();
+}
+
+// Masks for building a Handle's base_value, which ProcessDispatcher
+// uses to create mx_handle_t values.
+//
+// base_value bit fields:
+//   [31..30]: Must be zero
+//   [29..kHandleGenerationShift]: Generation number
+//                                 Masked by kHandleGenerationMask
+//   [kHandleGenerationShift-1..0]: Index into handle_arena
+//                                  Masked by kHandleIndexMask
+static constexpr uint32_t kHandleIndexMask = kMaxHandleCount - 1;
+static_assert((kHandleIndexMask & kMaxHandleCount) == 0,
+              "kMaxHandleCount must be a power of 2");
+static constexpr uint32_t kHandleGenerationMask =
+    ~kHandleIndexMask & ~(3 << 30);
+static constexpr uint32_t kHandleGenerationShift =
+    log2_uint_floor(kMaxHandleCount);
+static_assert(((3 << (kHandleGenerationShift - 1)) & kHandleGenerationMask) ==
+                  1 << kHandleGenerationShift,
+              "Shift is wrong");
+static_assert((kHandleGenerationMask >> kHandleGenerationShift) >= 255,
+              "Not enough room for a useful generation count");
+static_assert(((3 << 30) ^ kHandleGenerationMask ^ kHandleIndexMask) ==
+                  0xffffffffu,
+              "Masks do not agree");
+
+// Returns a new |base_value| based on the value stored in the free
+// |handle_arena| slot pointed to by |addr|. The new value will be different
+// from the last |base_value| used by this slot.
+static uint32_t GetNewHandleBaseValue(void* addr) TA_REQ(handle_mutex) {
+    // Get the index of this slot within handle_arena.
+    auto va = reinterpret_cast<Handle*>(addr) -
+              reinterpret_cast<Handle*>(handle_arena.start());
+    uint32_t handle_index = static_cast<uint32_t>(va);
+    DEBUG_ASSERT((handle_index & ~kHandleIndexMask) == 0);
+
+    // Check the free memory for a stashed base_value.
+    uint32_t v = *reinterpret_cast<uint32_t*>(addr);
+    uint32_t old_gen;
+    if (v == 0) {
+        // First time this slot has been allocated.
+        old_gen = 0;
+    } else {
+        // This slot has been used before.
+        DEBUG_ASSERT((v & kHandleIndexMask) == handle_index);
+        old_gen = (v & kHandleGenerationMask) >> kHandleGenerationShift;
+    }
+    return (((old_gen + 1) << kHandleGenerationShift) & kHandleGenerationMask) | handle_index;
+}
+
+// Destroys, but does not free, the Handle, and fixes up its memory to protect
+// against stale pointers to it. Also stashes the Handle's base_value for reuse
+// the next time this slot is allocated.
+void internal::TearDownHandle(Handle *handle) TA_EXCL(handle_mutex) {
+    uint32_t base_value = handle->base_value();
+
+    // Calling the handle dtor can cause many things to happen, so it is
+    // important to call it outside the lock.
+    handle->~Handle();
+
+    // There may be stale pointers to this slot. Zero out most of its fields
+    // to ensure that the Handle does not appear to belong to any process
+    // or point to any Dispatcher.
+    memset(handle, 0, sizeof(Handle));
+
+    // Hold onto the base_value for the next user of this slot, stashing
+    // it at the beginning of the free slot.
+    *reinterpret_cast<uint32_t*>(handle) = base_value;
+
+    // Double-check that the process_id field is zero, ensuring that
+    // no process can refer to this slot while it's free. This isn't
+    // completely legal since |handle| points to unconstructed memory,
+    // but it should be safe enough for an assertion.
+    DEBUG_ASSERT(handle->process_id_ == 0);
 }
 
 static void high_handle_count(size_t count) {
@@ -66,14 +142,22 @@ Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
     AutoLock lock(&handle_mutex);
     if (++outstanding_handles > kHighHandleCount)
         high_handle_count(outstanding_handles);
-    return handle_arena.New(mxtl::move(dispatcher), rights);
+    void* addr = handle_arena.Alloc();
+    if (addr == nullptr)
+        return nullptr;
+    uint32_t base_value = GetNewHandleBaseValue(addr);
+    return new (addr) Handle(mxtl::move(dispatcher), rights, base_value);
 }
 
 Handle* DupHandle(Handle* source, mx_rights_t rights) {
     AutoLock lock(&handle_mutex);
     if (++outstanding_handles > kHighHandleCount)
         high_handle_count(outstanding_handles);
-    return handle_arena.New(source, rights);
+    void* addr = handle_arena.Alloc();
+    if (addr == nullptr)
+        return nullptr;
+    uint32_t base_value = GetNewHandleBaseValue(addr);
+    return new (addr) Handle(source, rights, base_value);
 }
 
 void DeleteHandle(Handle* handle) {
@@ -96,16 +180,15 @@ void DeleteHandle(Handle* handle) {
                 // This is fine. See for example the LogDispatcher.
         };
     }
-    // Calling the handle dtor can cause many things to happen, so it is important
-    // to call it outside the lock.
-    handle->~Handle();
-    // Setting the memory to zero is critical for the safe operation of the handle
-    // table lookup.
-    memset(handle, 0, sizeof(Handle));
+
+    // Destroys, but does not free, the Handle, and fixes up its memory
+    // to protect against stale pointers to it. Also stashes the Handle's
+    // base_value for reuse the next time this slot is allocated.
+    internal::TearDownHandle(handle);
 
     AutoLock lock(&handle_mutex);
     --outstanding_handles;
-    handle_arena.RawFree(handle);
+    handle_arena.Free(handle);
 }
 
 bool HandleInRange(void* addr) {
@@ -113,16 +196,13 @@ bool HandleInRange(void* addr) {
     return handle_arena.in_range(addr);
 }
 
-uint32_t MapHandleToU32(const Handle* handle) TA_NO_THREAD_SAFETY_ANALYSIS {
-    auto va = handle - reinterpret_cast<Handle*>(handle_arena.start());
-    return static_cast<uint32_t>(va);
-}
-
 Handle* MapU32ToHandle(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
-    auto va = &reinterpret_cast<Handle*>(handle_arena.start())[value];
+    auto index = value & kHandleIndexMask;
+    auto va = &reinterpret_cast<Handle*>(handle_arena.start())[index];
     if (!HandleInRange(va))
         return nullptr;
-    return reinterpret_cast<Handle*>(va);
+    Handle *handle = reinterpret_cast<Handle*>(va);
+    return handle->base_value() == value ? handle : nullptr;
 }
 
 mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
