@@ -28,6 +28,9 @@ The *options* argument can be **MX_WAIT_ASYNC_ONCE** do deliver a single
 packet or **MX_WAIT_ASYNC_REPEATING** to deliver a packet every time the
 object state transitions from some other state to the *signals* state again.
 
+See [port_wait](port_wait.md) for more information about each type
+of packet and their semantics.
+
 To stop packet delivery, close *handle* or use **object_wait_cancel**().
 
 ## RETURN VALUE

@@ -329,41 +329,45 @@ static bool pre_writes_channel_test(uint32_t mode) {
         EXPECT_EQ(mx_channel_write(ch[0], 0u, "123456", 6, nullptr, 0u), NO_ERROR, "");
     }
 
+    status = mx_handle_close(ch[0]);
+    EXPECT_EQ(status, NO_ERROR, "");
+
     mx_handle_t port;
     status = mx_port_create(MX_PORT_OPT_V2, &port);
     EXPECT_EQ(status, NO_ERROR, "");
 
-    status = mx_object_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, mode);
+    status = mx_object_wait_async(ch[1], port, key0,
+        MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, mode);
     EXPECT_EQ(status, NO_ERROR, "");
 
     mx_port_packet_t out = {};
     int wait_count = 0;
-    uint64_t signal_count = 0u;
+    uint64_t read_count = 0u;
 
     while (true) {
         status = mx_port_wait(port, 0ull, &out, 0u);
         if (status != NO_ERROR)
             break;
         wait_count++;
-        signal_count += out.signal.count;
+        if (out.signal.trigger != MX_CHANNEL_PEER_CLOSED)
+            read_count += out.signal.count;
         EXPECT_NEQ(out.signal.count, 0u, "");
-        EXPECT_EQ(out.signal.trigger, MX_CHANNEL_READABLE, "");
     }
 
-    if (mode == MX_WAIT_ASYNC_ONCE)
+    if (mode == MX_WAIT_ASYNC_ONCE) {
         EXPECT_EQ(wait_count, 1u, "");
-    else
-        EXPECT_EQ(wait_count, 5u, "");
+        EXPECT_EQ(out.signal.trigger, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, "");
+    } else {
+        // repeating gets 5 read packets and one closed packet.
+        EXPECT_EQ(wait_count, 6u, "");
+    }
 
-    EXPECT_EQ(signal_count, 5u, "");
+    EXPECT_EQ(read_count, 5u, "");
 
     status = mx_handle_close(port);
     EXPECT_EQ(status, NO_ERROR, "");
 
     status = mx_handle_close(ch[1]);
-    EXPECT_EQ(status, NO_ERROR, "");
-
-    status = mx_handle_close(ch[0]);
     EXPECT_EQ(status, NO_ERROR, "");
 
     END_TEST;

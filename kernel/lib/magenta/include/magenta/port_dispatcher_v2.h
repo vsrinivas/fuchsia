@@ -94,7 +94,7 @@ struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
 class PortObserver final : public StateObserver {
 public:
     PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcherV2> port,
-                 uint64_t key, mx_signals_t signal);
+                 uint64_t key, mx_signals_t signals);
     ~PortObserver() = default;
 
 private:

@@ -26,15 +26,17 @@ PortPacket::PortPacket() : packet{}, observer(nullptr) {
 }
 
 PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcherV2> port,
-                           uint64_t key, mx_signals_t signal)
+                           uint64_t key, mx_signals_t signals)
     : type_(type),
       key_(key),
-      trigger_(signal),
+      trigger_(signals),
       handle_(handle),
       port_(mxtl::move(port)) {
 
-    // only one signal bit supported as a trigger.
-    DEBUG_ASSERT(ispow2(trigger_));
+    if (type_ == MX_PKT_TYPE_SIGNAL_REP) {
+        // only one signal bit supported as a trigger.
+        DEBUG_ASSERT(ispow2(trigger_));
+    }
 
     auto& packet = packet_.packet;
     packet.status = NO_ERROR;
@@ -49,7 +51,7 @@ bool PortObserver::OnInitialize(mx_signals_t initial_state,
 
     if (cinfo) {
         for (const auto& entry : cinfo->entry) {
-            if (entry.signal == trigger_) {
+            if ((entry.signal & trigger_) && (entry.count > 0u)) {
                 count = entry.count;
                 break;
             }
@@ -238,39 +240,46 @@ bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) 
 mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
                                             uint64_t key, mx_signals_t signals) {
     // Called under the handle table lock.
-    auto type = (options & MX_WAIT_ASYNC_REPEATING) ?
-        MX_PKT_TYPE_SIGNAL_REP : MX_PKT_TYPE_SIGNAL_ONE;
 
     auto dispatcher = handle->dispatcher();
     if (!dispatcher->get_state_tracker())
         return ERR_NOT_SUPPORTED;
 
-    PortObserver* observers[sizeof(mx_signals_t) * 8u] = {};
-
-    size_t scount = 0;
-
     AllocChecker ac;
-    for (size_t ix = 0; ix != countof(observers); ++ix) {
-        // extract a single signal bit.
-        mx_signals_t one_signal = signals & (0x1u << ix);
-        if (!one_signal)
-            continue;
 
-        observers[scount] = new (&ac) PortObserver(
-            type, handle, mxtl::RefPtr<PortDispatcherV2>(this), key, one_signal);
-        if (!ac.check()) {
-            // Delete the pending observers and exit.
-            for (size_t jx = 0; jx != scount; ++jx) {
-                delete observers[jx];
-            }
+    if (options == MX_WAIT_ASYNC_ONCE) {
+        auto observer = new (&ac) PortObserver(MX_PKT_TYPE_SIGNAL_ONE,
+            handle, mxtl::RefPtr<PortDispatcherV2>(this), key, signals);
+        if (!ac.check())
             return ERR_NO_MEMORY;
-        }
-        ++scount;
-    }
+        dispatcher->add_observer(observer);
+    } else {
+        // In repeating mode we add an observer per signal bit.
+        PortObserver* observers[sizeof(mx_signals_t) * 8u] = {};
+        size_t scount = 0;
 
-    for (size_t ix = 0; ix != scount; ++ix) {
-        __UNUSED auto status = dispatcher->add_observer(observers[ix]);
-        DEBUG_ASSERT(status == NO_ERROR);
+        for (size_t ix = 0; ix != countof(observers); ++ix) {
+            // extract a single signal bit.
+            mx_signals_t one_signal = signals & (0x1u << ix);
+            if (!one_signal)
+                continue;
+
+            observers[scount] = new (&ac) PortObserver(MX_PKT_TYPE_SIGNAL_REP,
+                handle, mxtl::RefPtr<PortDispatcherV2>(this), key, one_signal);
+            if (!ac.check()) {
+                // Delete the pending observers and exit.
+                for (size_t jx = 0; jx != scount; ++jx) {
+                    delete observers[jx];
+                }
+                return ERR_NO_MEMORY;
+            }
+            ++scount;
+        }
+
+        for (size_t ix = 0; ix != scount; ++ix) {
+            __UNUSED auto status = dispatcher->add_observer(observers[ix]);
+            DEBUG_ASSERT(status == NO_ERROR);
+        }
     }
 
     return NO_ERROR;
