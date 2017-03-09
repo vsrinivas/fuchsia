@@ -329,7 +329,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   pipeline_info.layout = pipeline_layout;
   pipeline_info.renderPass = render_pass;
   pipeline_info.subpass = 0;
-  pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
+  pipeline_info.basePipelineHandle = vk::Pipeline();
 
   vk::Pipeline pipeline = ESCHER_CHECKED_VK_RESULT(
       device.createGraphicsPipeline(nullptr, pipeline_info));

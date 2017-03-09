@@ -352,7 +352,7 @@ std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
   pipeline_info.layout = pipeline_layout->get();
   pipeline_info.renderPass = render_pass;
   pipeline_info.subpass = 0;
-  pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
+  pipeline_info.basePipelineHandle = vk::Pipeline();
 
   // Pipeline configuration specific to the SSDO sampler pass.
   vk::ShaderModule sampler_fragment_module;
