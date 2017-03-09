@@ -276,6 +276,12 @@ static int stub_fchmod(int fd, mode_t mode) {
 }
 weak_alias(stub_fchmod, fchmod);
 
+static int stub_fchmodat(int fd, const char* path, mode_t mode, int flag) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_fchmodat, fchmodat);
+
 static int stub_chown(const char* path, uid_t owner, gid_t group) {
     errno = ENOSYS;
     return -1;

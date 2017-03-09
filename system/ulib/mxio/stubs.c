@@ -10,12 +10,24 @@
 
 #include "unistd.h"
 
-// checkfile and checkfd let us error out if the object
-// doesn't exist, which allows the stubs to be a little
-// more 'real'
+// checkfile, checkfileat, and checkfd let us error out if the object
+// doesn't exist, which allows the stubs to be a little more 'real'
 static int checkfile(const char* path, int err) {
     struct stat s;
     if (stat(path, &s)) {
+        return -1;
+    }
+    if (err) {
+        errno = err;
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+static int checkfileat(int fd, const char* path, int flags, int err) {
+    struct stat s;
+    if (fstatat(fd, path, &s, flags)) {
         return -1;
     }
     if (err) {
@@ -97,6 +109,14 @@ int chmod(const char *path, mode_t mode) {
 }
 int fchmod(int fd, mode_t mode) {
     return checkfd(fd, (mode & (~0777)) ? ENOSYS : 0);
+}
+int fchmodat(int fd, const char* path, mode_t mode, int flags) {
+    if (flags & ~AT_SYMLINK_NOFOLLOW) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    return checkfileat(fd, path, flags, (mode & (~0777)) ? ENOSYS : 0);
 }
 
 int access(const char* path, int mode) {
