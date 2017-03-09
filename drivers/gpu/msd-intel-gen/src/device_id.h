@@ -10,7 +10,16 @@
 class DeviceId {
 public:
     static bool is_gen8(uint32_t device_id) { return device_id == 0x1616; }
-    static bool is_gen9(uint32_t device_id) { return device_id == 0x1916; }
+
+    static bool is_gen9(uint32_t device_id)
+    {
+        switch (device_id) {
+            case 0x1916: // Skylake NUC
+            case 0x5916: // Kaby Lake NUC
+                return true;
+        }
+        return false;
+    }
 };
 
 #endif // DEVICE_ID_H
