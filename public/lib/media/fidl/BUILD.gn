@@ -27,6 +27,8 @@ fidl("services") {
     "media_transport.fidl",
     "media_type_converter.fidl",
     "media_types.fidl",
+    "net_media_player.fidl",
+    "net_media_service.fidl",
     "problem.fidl",
     "seeking_reader.fidl",
     "timeline_controller.fidl",

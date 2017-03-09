@@ -6,97 +6,114 @@
 
 #include <memory>
 
-#include "apps/media/services/media_player.fidl.h"
-#include "apps/media/src/net/serialization.h"
+#include "apps/media/services/net_media_player.fidl.h"
+#include "apps/media/src/net_media_service/serialization.h"
 
 namespace media {
 
 // The definitions below are for messages that are serialized and exchanged
-// between a media player and a control point. The 'player proxy' resides at
-// the control point and the 'player stub' is adjacent to the media player.
+// between a net media player and a control point. The proxy resides at the
+// control point and the stub is adjacent to the net media player.
 
-// Types of messages sent by the player proxy and handled by the player stub.
-enum class MediaPlayerInMessageType : uint8_t {
+// Types of messages sent by the proxy and handled by the stub.
+enum class NetMediaPlayerInMessageType : uint8_t {
   kTimeCheckRequest,
-  kPlay,
-  kPause,
-  kSeek
+  kSetUrlRequest,
+  kPlayRequest,
+  kPauseRequest,
+  kSeekRequest
 };
 
-// Types of messages sent by the player stub and handled by the player proxy.
-enum class MediaPlayerOutMessageType : uint8_t { kTimeCheckResponse, kStatus };
+// Types of messages sent by the stub and handled by the proxy.
+enum class NetMediaPlayerOutMessageType : uint8_t {
+  kTimeCheckResponse,
+  kStatusNotification
+};
 
-// Sent by the player proxy to establish a correlation between system times on
+// Sent by the proxy to establish a correlation between system times on
 // the two systems.
-struct MediaPlayerTimeCheckRequest {
+struct NetMediaPlayerTimeCheckRequest {
   int64_t requestor_time_;  // System time when this message was sent.
 };
 
-// Sent by the player stub in response to |MediaPlayerTimeCheckRequest| to
+// Sent by the stub in response to |NetMediaPlayerTimeCheckRequest| to
 // establish a correlation between system times on the two systems.
-struct MediaPlayerTimeCheckResponse {
+struct NetMediaPlayerTimeCheckResponse {
   int64_t requestor_time_;  // From the request
   int64_t responder_time_;  // System time when this message was sent.
 };
 
-// Play and Pause have no parameters, so there is no MediaPlayerPlayRequest or
-// MediaPlayerPauseRequest.
+// Sent by the proxy to request a url change.
+struct NetMediaPlayerSetUrlRequest {
+  fidl::String url_;
+};
 
-// Sent by the player proxy to request a seek.
-struct MediaPlayerSeekRequest {
+// Play and Pause have no parameters, so there is no NetMediaPlayerPlayRequest
+// or NetMediaPlayerPauseRequest.
+
+// Sent by the proxy to request a seek.
+struct NetMediaPlayerSeekRequest {
   int64_t position_;
 };
 
-// Sent by the player stub to notify the proxy of a change in status.
-struct MediaPlayerStatusNotification {
+// Sent by the stub to notify the proxy of a change in status.
+struct NetMediaPlayerStatusNotification {
   MediaPlayerStatusPtr status_;
 };
 
-// Union-like of all possible messages sent by the player proxy and handled
-// by the player stub.
-struct MediaPlayerInMessage {
-  static std::unique_ptr<MediaPlayerInMessage> TimeCheckRequest(
+// Union-like of all possible messages sent by the proxy and handled
+// by the stub.
+struct NetMediaPlayerInMessage {
+  static std::unique_ptr<NetMediaPlayerInMessage> TimeCheckRequest(
       int64_t requestor_time);
-  static std::unique_ptr<MediaPlayerInMessage> Play();
-  static std::unique_ptr<MediaPlayerInMessage> Pause();
-  static std::unique_ptr<MediaPlayerInMessage> Seek(int64_t position);
+  static std::unique_ptr<NetMediaPlayerInMessage> SetUrlRequest(
+      const fidl::String& url);
+  static std::unique_ptr<NetMediaPlayerInMessage> PlayRequest();
+  static std::unique_ptr<NetMediaPlayerInMessage> PauseRequest();
+  static std::unique_ptr<NetMediaPlayerInMessage> SeekRequest(int64_t position);
 
-  MediaPlayerInMessageType type_;
-  std::unique_ptr<MediaPlayerTimeCheckRequest> time_check_request_;
+  NetMediaPlayerInMessageType type_;
+  std::unique_ptr<NetMediaPlayerTimeCheckRequest> time_check_request_;
+  std::unique_ptr<NetMediaPlayerSetUrlRequest> set_url_request_;
   // Play has no parameters.
   // Pause has no parameters.
-  std::unique_ptr<MediaPlayerSeekRequest> seek_;
+  std::unique_ptr<NetMediaPlayerSeekRequest> seek_request_;
 };
 
-// Union-like of all possible messages sent by the player stub and handled
-// by the player proxy.
-struct MediaPlayerOutMessage {
-  static std::unique_ptr<MediaPlayerOutMessage> TimeCheckResponse(
+// Union-like of all possible messages sent by the stub and handled
+// by the proxy.
+struct NetMediaPlayerOutMessage {
+  static std::unique_ptr<NetMediaPlayerOutMessage> TimeCheckResponse(
       int64_t requestor_time,
       int64_t responder_time);
-  static std::unique_ptr<MediaPlayerOutMessage> Status(
+  static std::unique_ptr<NetMediaPlayerOutMessage> StatusNotification(
       MediaPlayerStatusPtr status);
 
-  MediaPlayerOutMessageType type_;
-  std::unique_ptr<MediaPlayerTimeCheckResponse> time_check_response_;
-  std::unique_ptr<MediaPlayerStatusNotification> status_;
+  NetMediaPlayerOutMessageType type_;
+  std::unique_ptr<NetMediaPlayerTimeCheckResponse> time_check_response_;
+  std::unique_ptr<NetMediaPlayerStatusNotification> status_notification_;
 };
 
 // Serialization overrides.
 Serializer& operator<<(Serializer& serializer, const fidl::String& value);
-Serializer& operator<<(Serializer& serializer, MediaPlayerInMessageType value);
-Serializer& operator<<(Serializer& serializer, MediaPlayerOutMessageType value);
-Serializer& operator<<(
-    Serializer& serializer,
-    const std::unique_ptr<MediaPlayerTimeCheckRequest>& value);
-Serializer& operator<<(
-    Serializer& serializer,
-    const std::unique_ptr<MediaPlayerTimeCheckResponse>& value);
 Serializer& operator<<(Serializer& serializer,
-                       const std::unique_ptr<MediaPlayerSeekRequest>& value);
+                       NetMediaPlayerInMessageType value);
+Serializer& operator<<(Serializer& serializer,
+                       NetMediaPlayerOutMessageType value);
 Serializer& operator<<(
     Serializer& serializer,
-    const std::unique_ptr<MediaPlayerStatusNotification>& value);
+    const std::unique_ptr<NetMediaPlayerTimeCheckRequest>& value);
+Serializer& operator<<(
+    Serializer& serializer,
+    const std::unique_ptr<NetMediaPlayerTimeCheckResponse>& value);
+Serializer& operator<<(
+    Serializer& serializer,
+    const std::unique_ptr<NetMediaPlayerSetUrlRequest>& value);
+Serializer& operator<<(Serializer& serializer,
+                       const std::unique_ptr<NetMediaPlayerSeekRequest>& value);
+Serializer& operator<<(
+    Serializer& serializer,
+    const std::unique_ptr<NetMediaPlayerStatusNotification>& value);
 Serializer& operator<<(Serializer& serializer,
                        const MediaPlayerStatusPtr& value);
 Serializer& operator<<(Serializer& serializer,
@@ -104,24 +121,29 @@ Serializer& operator<<(Serializer& serializer,
 Serializer& operator<<(Serializer& serializer, const MediaMetadataPtr& value);
 Serializer& operator<<(Serializer& serializer, const ProblemPtr& value);
 Serializer& operator<<(Serializer& serializer,
-                       const std::unique_ptr<MediaPlayerInMessage>& value);
+                       const std::unique_ptr<NetMediaPlayerInMessage>& value);
 Serializer& operator<<(Serializer& serializer,
-                       const std::unique_ptr<MediaPlayerOutMessage>& value);
+                       const std::unique_ptr<NetMediaPlayerOutMessage>& value);
 
 // Deserialization overrides.
 Deserializer& operator>>(Deserializer& deserializer, fidl::String& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         MediaPlayerInMessageType& value);
+                         NetMediaPlayerInMessageType& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         MediaPlayerOutMessageType& value);
+                         NetMediaPlayerOutMessageType& value);
+Deserializer& operator>>(
+    Deserializer& deserializer,
+    std::unique_ptr<NetMediaPlayerTimeCheckRequest>& value);
+Deserializer& operator>>(
+    Deserializer& deserializer,
+    std::unique_ptr<NetMediaPlayerTimeCheckResponse>& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerTimeCheckRequest>& value);
+                         std::unique_ptr<NetMediaPlayerSetUrlRequest>& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerTimeCheckResponse>& value);
-Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerSeekRequest>& value);
-Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerStatusNotification>& value);
+                         std::unique_ptr<NetMediaPlayerSeekRequest>& value);
+Deserializer& operator>>(
+    Deserializer& deserializer,
+    std::unique_ptr<NetMediaPlayerStatusNotification>& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          MediaPlayerStatusPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
@@ -129,8 +151,8 @@ Deserializer& operator>>(Deserializer& deserializer,
 Deserializer& operator>>(Deserializer& deserializer, MediaMetadataPtr& value);
 Deserializer& operator>>(Deserializer& deserializer, ProblemPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerInMessage>& value);
+                         std::unique_ptr<NetMediaPlayerInMessage>& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerOutMessage>& value);
+                         std::unique_ptr<NetMediaPlayerOutMessage>& value);
 
 }  // namespace media

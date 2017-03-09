@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/media_player_net_proxy.h"
+#include "apps/media/src/net_media_service/net_media_player_net_proxy.h"
 
 #include <vector>
 
@@ -15,21 +15,23 @@
 namespace media {
 
 // static
-std::shared_ptr<MediaPlayerNetProxy> MediaPlayerNetProxy::Create(
-    std::string device_name,
-    std::string service_name,
-    fidl::InterfaceRequest<MediaPlayer> request,
-    MediaServiceImpl* owner) {
-  return std::shared_ptr<MediaPlayerNetProxy>(new MediaPlayerNetProxy(
+std::shared_ptr<NetMediaPlayerNetProxy> NetMediaPlayerNetProxy::Create(
+    const fidl::String& device_name,
+    const fidl::String& service_name,
+    fidl::InterfaceRequest<NetMediaPlayer> request,
+    NetMediaServiceImpl* owner) {
+  return std::shared_ptr<NetMediaPlayerNetProxy>(new NetMediaPlayerNetProxy(
       device_name, service_name, std::move(request), owner));
 }
 
-MediaPlayerNetProxy::MediaPlayerNetProxy(
-    std::string device_name,
-    std::string service_name,
-    fidl::InterfaceRequest<MediaPlayer> request,
-    MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner),
+NetMediaPlayerNetProxy::NetMediaPlayerNetProxy(
+    const fidl::String& device_name,
+    const fidl::String& service_name,
+    fidl::InterfaceRequest<NetMediaPlayer> request,
+    NetMediaServiceImpl* owner)
+    : NetMediaServiceImpl::Product<NetMediaPlayer>(this,
+                                                   std::move(request),
+                                                   owner),
       status_(MediaPlayerStatus::New()) {
   FTL_DCHECK(owner);
 
@@ -68,41 +70,41 @@ MediaPlayerNetProxy::MediaPlayerNetProxy(
   SendTimeCheckMessage();
 }
 
-MediaPlayerNetProxy::~MediaPlayerNetProxy() {}
+NetMediaPlayerNetProxy::~NetMediaPlayerNetProxy() {}
 
-void MediaPlayerNetProxy::Play() {
+void NetMediaPlayerNetProxy::SetUrl(const fidl::String& url) {
   message_relay_.SendMessage(
-      Serializer::Serialize(MediaPlayerInMessage::Play()));
+      Serializer::Serialize(NetMediaPlayerInMessage::SetUrlRequest(url)));
 }
 
-void MediaPlayerNetProxy::Pause() {
+void NetMediaPlayerNetProxy::Play() {
   message_relay_.SendMessage(
-      Serializer::Serialize(MediaPlayerInMessage::Pause()));
+      Serializer::Serialize(NetMediaPlayerInMessage::PlayRequest()));
 }
 
-void MediaPlayerNetProxy::Seek(int64_t position) {
+void NetMediaPlayerNetProxy::Pause() {
   message_relay_.SendMessage(
-      Serializer::Serialize(MediaPlayerInMessage::Seek(position)));
+      Serializer::Serialize(NetMediaPlayerInMessage::PauseRequest()));
 }
 
-void MediaPlayerNetProxy::SetReader(
-    fidl::InterfaceHandle<SeekingReader> reader) {
-  FTL_LOG(ERROR) << "Unsuppored method SetReader called";
+void NetMediaPlayerNetProxy::Seek(int64_t position) {
+  message_relay_.SendMessage(
+      Serializer::Serialize(NetMediaPlayerInMessage::SeekRequest(position)));
 }
 
-void MediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
-                                    const GetStatusCallback& callback) {
+void NetMediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
+                                       const GetStatusCallback& callback) {
   status_publisher_.Get(version_last_seen, callback);
 }
 
-void MediaPlayerNetProxy::SendTimeCheckMessage() {
+void NetMediaPlayerNetProxy::SendTimeCheckMessage() {
   message_relay_.SendMessage(Serializer::Serialize(
-      MediaPlayerInMessage::TimeCheckRequest(Timeline::local_now())));
+      NetMediaPlayerInMessage::TimeCheckRequest(Timeline::local_now())));
 }
 
-void MediaPlayerNetProxy::HandleReceivedMessage(
+void NetMediaPlayerNetProxy::HandleReceivedMessage(
     std::vector<uint8_t> serial_message) {
-  std::unique_ptr<MediaPlayerOutMessage> message;
+  std::unique_ptr<NetMediaPlayerOutMessage> message;
   Deserializer deserializer(serial_message);
   deserializer >> message;
 
@@ -115,7 +117,7 @@ void MediaPlayerNetProxy::HandleReceivedMessage(
   FTL_DCHECK(message);
 
   switch (message->type_) {
-    case MediaPlayerOutMessageType::kTimeCheckResponse: {
+    case NetMediaPlayerOutMessageType::kTimeCheckResponse: {
       FTL_DCHECK(message->time_check_response_);
       // Estimate the local system system time when the responder's clock was
       // samples on the remote machine. Assume the clock was sampled halfway
@@ -135,9 +137,9 @@ void MediaPlayerNetProxy::HandleReceivedMessage(
           message->time_check_response_->responder_time_, local_then, 1, 1);
     } break;
 
-    case MediaPlayerOutMessageType::kStatus:
-      FTL_DCHECK(message->status_);
-      status_ = std::move(message->status_->status_);
+    case NetMediaPlayerOutMessageType::kStatusNotification:
+      FTL_DCHECK(message->status_notification_);
+      status_ = std::move(message->status_notification_->status_);
       if (status_->timeline_transform) {
         // Use the remote-to-local conversion established after the time check
         // transaction to translate reference time into local system time.

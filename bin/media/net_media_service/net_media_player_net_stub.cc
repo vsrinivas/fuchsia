@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/net/media_player_net_stub.h"
+#include "apps/media/src/net_media_service/net_media_player_net_stub.h"
 
 #include <vector>
 
@@ -14,10 +14,11 @@
 
 namespace media {
 
-MediaPlayerNetStub::MediaPlayerNetStub(
-    MediaPlayer* player,
+NetMediaPlayerNetStub::NetMediaPlayerNetStub(
+    NetMediaPlayer* player,
     mx::channel channel,
-    netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub>* responder)
+    netconnector::NetStubResponder<NetMediaPlayer, NetMediaPlayerNetStub>*
+        responder)
     : player_(player), responder_(responder) {
   FTL_DCHECK(player_);
   FTL_DCHECK(responder_);
@@ -31,11 +32,11 @@ MediaPlayerNetStub::MediaPlayerNetStub(
   message_relay_.SetChannel(std::move(channel));
 }
 
-MediaPlayerNetStub::~MediaPlayerNetStub() {}
+NetMediaPlayerNetStub::~NetMediaPlayerNetStub() {}
 
-void MediaPlayerNetStub::HandleReceivedMessage(
+void NetMediaPlayerNetStub::HandleReceivedMessage(
     std::vector<uint8_t> serial_message) {
-  std::unique_ptr<MediaPlayerInMessage> message;
+  std::unique_ptr<NetMediaPlayerInMessage> message;
   Deserializer deserializer(serial_message);
   deserializer >> message;
 
@@ -48,10 +49,10 @@ void MediaPlayerNetStub::HandleReceivedMessage(
   FTL_DCHECK(message);
 
   switch (message->type_) {
-    case MediaPlayerInMessageType::kTimeCheckRequest:
+    case NetMediaPlayerInMessageType::kTimeCheckRequest:
       FTL_DCHECK(message->time_check_request_);
       message_relay_.SendMessage(
-          Serializer::Serialize(MediaPlayerOutMessage::TimeCheckResponse(
+          Serializer::Serialize(NetMediaPlayerOutMessage::TimeCheckResponse(
               message->time_check_request_->requestor_time_,
               Timeline::local_now())));
 
@@ -60,32 +61,37 @@ void MediaPlayerNetStub::HandleReceivedMessage(
       HandleStatusUpdates();
       break;
 
-    case MediaPlayerInMessageType::kPlay:
+    case NetMediaPlayerInMessageType::kSetUrlRequest:
+      FTL_DCHECK(message->set_url_request_);
+      player_->SetUrl(message->set_url_request_->url_);
+      break;
+
+    case NetMediaPlayerInMessageType::kPlayRequest:
       player_->Play();
       break;
 
-    case MediaPlayerInMessageType::kPause:
+    case NetMediaPlayerInMessageType::kPauseRequest:
       player_->Pause();
       break;
 
-    case MediaPlayerInMessageType::kSeek:
-      FTL_DCHECK(message->seek_);
-      player_->Seek(message->seek_->position_);
+    case NetMediaPlayerInMessageType::kSeekRequest:
+      FTL_DCHECK(message->seek_request_);
+      player_->Seek(message->seek_request_->position_);
       break;
   }
 }
 
-void MediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
+void NetMediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
                                              MediaPlayerStatusPtr status) {
   if (status) {
     message_relay_.SendMessage(Serializer::Serialize(
-        MediaPlayerOutMessage::Status(std::move(status))));
+        NetMediaPlayerOutMessage::StatusNotification(std::move(status))));
   }
 
   // Request a status update.
   player_->GetStatus(
       version,
-      [weak_this = std::weak_ptr<MediaPlayerNetStub>(shared_from_this())](
+      [weak_this = std::weak_ptr<NetMediaPlayerNetStub>(shared_from_this())](
           uint64_t version, MediaPlayerStatusPtr status) {
         auto shared_this = weak_this.lock();
         if (shared_this) {

@@ -1,0 +1,33 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+import "apps/media/services/media_player.fidl";
+
+// Plays media.
+interface NetMediaPlayer {
+  // Special value for GetStatus version_last_seen parameter to get the current
+  // status immediately.
+  const uint64 kInitialStatus = 0;
+
+  // Sets the content url. Passing a null string closes the current content
+  // source.
+  SetUrl(string? url);
+
+  // Starts playback.
+  Play();
+
+  // Pauses playback.
+  Pause();
+
+  // Seeks to the specified position, specified in nanoseconds.
+  Seek(int64 position);
+
+  // Gets the status. To get the status immediately, call
+  // GetStatus(kInitialStatus). To get updates thereafter, pass the version
+  // sent in the previous callback.
+  GetStatus(uint64 version_last_seen)
+      => (uint64 version, MediaPlayerStatus status);
+};

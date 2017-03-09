@@ -14,6 +14,7 @@ group("services") {
     "//apps/media/src/audio_server:audio_server",
     "//apps/media/src/flog_service:flog_service",
     "//apps/media/src/media_service:media_service",
+    "//apps/media/src/net_media_service:net_media_service",
     "//apps/media/tools/flog_viewer:flog_viewer",
   ]
 }
@@ -36,6 +37,7 @@ group("tests") {
     "//apps/media/src/audio:tests",
     "//apps/media/src/demux:tests",
     "//apps/media/src/media_service:tests",
+    "//apps/media/src/net_media_service:tests",
     "//apps/media/src/util:tests",
   ]
 }

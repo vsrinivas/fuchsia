@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/net/serialization.h"
+#include "apps/media/src/net_media_service/serialization.h"
 
 #include <endian.h>
 

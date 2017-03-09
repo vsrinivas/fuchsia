@@ -2,73 +2,87 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/net/media_player_messages.h"
+#include "apps/media/src/net_media_service/net_media_player_messages.h"
 
 #include "lib/ftl/logging.h"
 
 namespace media {
 
 // static
-std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::TimeCheckRequest(
-    int64_t requestor_time) {
-  std::unique_ptr<MediaPlayerInMessage> message =
-      std::make_unique<MediaPlayerInMessage>();
-  message->type_ = MediaPlayerInMessageType::kTimeCheckRequest;
+std::unique_ptr<NetMediaPlayerInMessage>
+NetMediaPlayerInMessage::TimeCheckRequest(int64_t requestor_time) {
+  std::unique_ptr<NetMediaPlayerInMessage> message =
+      std::make_unique<NetMediaPlayerInMessage>();
+  message->type_ = NetMediaPlayerInMessageType::kTimeCheckRequest;
   message->time_check_request_ =
-      std::make_unique<MediaPlayerTimeCheckRequest>();
+      std::make_unique<NetMediaPlayerTimeCheckRequest>();
   message->time_check_request_->requestor_time_ = requestor_time;
   return message;
 }
 
 // static
-std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::Play() {
-  std::unique_ptr<MediaPlayerInMessage> message =
-      std::make_unique<MediaPlayerInMessage>();
-  message->type_ = MediaPlayerInMessageType::kPlay;
+std::unique_ptr<NetMediaPlayerInMessage> NetMediaPlayerInMessage::SetUrlRequest(
+    const fidl::String& url) {
+  std::unique_ptr<NetMediaPlayerInMessage> message =
+      std::make_unique<NetMediaPlayerInMessage>();
+  message->type_ = NetMediaPlayerInMessageType::kSetUrlRequest;
+  message->set_url_request_ = std::make_unique<NetMediaPlayerSetUrlRequest>();
+  message->set_url_request_->url_ = url;
   return message;
 }
 
 // static
-std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::Pause() {
-  std::unique_ptr<MediaPlayerInMessage> message =
-      std::make_unique<MediaPlayerInMessage>();
-  message->type_ = MediaPlayerInMessageType::kPause;
+std::unique_ptr<NetMediaPlayerInMessage>
+NetMediaPlayerInMessage::PlayRequest() {
+  std::unique_ptr<NetMediaPlayerInMessage> message =
+      std::make_unique<NetMediaPlayerInMessage>();
+  message->type_ = NetMediaPlayerInMessageType::kPlayRequest;
   return message;
 }
 
 // static
-std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::Seek(
+std::unique_ptr<NetMediaPlayerInMessage>
+NetMediaPlayerInMessage::PauseRequest() {
+  std::unique_ptr<NetMediaPlayerInMessage> message =
+      std::make_unique<NetMediaPlayerInMessage>();
+  message->type_ = NetMediaPlayerInMessageType::kPauseRequest;
+  return message;
+}
+
+// static
+std::unique_ptr<NetMediaPlayerInMessage> NetMediaPlayerInMessage::SeekRequest(
     int64_t position) {
-  std::unique_ptr<MediaPlayerInMessage> message =
-      std::make_unique<MediaPlayerInMessage>();
-  message->type_ = MediaPlayerInMessageType::kSeek;
-  message->seek_ = std::make_unique<MediaPlayerSeekRequest>();
-  message->seek_->position_ = position;
+  std::unique_ptr<NetMediaPlayerInMessage> message =
+      std::make_unique<NetMediaPlayerInMessage>();
+  message->type_ = NetMediaPlayerInMessageType::kSeekRequest;
+  message->seek_request_ = std::make_unique<NetMediaPlayerSeekRequest>();
+  message->seek_request_->position_ = position;
   return message;
 }
 
 // static
-std::unique_ptr<MediaPlayerOutMessage> MediaPlayerOutMessage::TimeCheckResponse(
-    int64_t requestor_time,
-    int64_t responder_time) {
-  std::unique_ptr<MediaPlayerOutMessage> message =
-      std::make_unique<MediaPlayerOutMessage>();
-  message->type_ = MediaPlayerOutMessageType::kTimeCheckResponse;
+std::unique_ptr<NetMediaPlayerOutMessage>
+NetMediaPlayerOutMessage::TimeCheckResponse(int64_t requestor_time,
+                                            int64_t responder_time) {
+  std::unique_ptr<NetMediaPlayerOutMessage> message =
+      std::make_unique<NetMediaPlayerOutMessage>();
+  message->type_ = NetMediaPlayerOutMessageType::kTimeCheckResponse;
   message->time_check_response_ =
-      std::make_unique<MediaPlayerTimeCheckResponse>();
+      std::make_unique<NetMediaPlayerTimeCheckResponse>();
   message->time_check_response_->requestor_time_ = requestor_time;
   message->time_check_response_->responder_time_ = responder_time;
   return message;
 }
 
 // static
-std::unique_ptr<MediaPlayerOutMessage> MediaPlayerOutMessage::Status(
-    MediaPlayerStatusPtr status) {
-  std::unique_ptr<MediaPlayerOutMessage> message =
-      std::make_unique<MediaPlayerOutMessage>();
-  message->type_ = MediaPlayerOutMessageType::kStatus;
-  message->status_ = std::make_unique<MediaPlayerStatusNotification>();
-  message->status_->status_ = std::move(status);
+std::unique_ptr<NetMediaPlayerOutMessage>
+NetMediaPlayerOutMessage::StatusNotification(MediaPlayerStatusPtr status) {
+  std::unique_ptr<NetMediaPlayerOutMessage> message =
+      std::make_unique<NetMediaPlayerOutMessage>();
+  message->type_ = NetMediaPlayerOutMessageType::kStatusNotification;
+  message->status_notification_ =
+      std::make_unique<NetMediaPlayerStatusNotification>();
+  message->status_notification_->status_ = std::move(status);
   return message;
 }
 
@@ -78,38 +92,47 @@ Serializer& operator<<(Serializer& serializer, const fidl::String& value) {
   return serializer;
 }
 
-Serializer& operator<<(Serializer& serializer, MediaPlayerInMessageType value) {
+Serializer& operator<<(Serializer& serializer,
+                       NetMediaPlayerInMessageType value) {
   return serializer << static_cast<uint8_t>(value);
 }
 
 Serializer& operator<<(Serializer& serializer,
-                       MediaPlayerOutMessageType value) {
+                       NetMediaPlayerOutMessageType value) {
   return serializer << static_cast<uint8_t>(value);
 }
 
 Serializer& operator<<(
     Serializer& serializer,
-    const std::unique_ptr<MediaPlayerTimeCheckRequest>& value) {
+    const std::unique_ptr<NetMediaPlayerTimeCheckRequest>& value) {
   FTL_DCHECK(value);
   return serializer << value->requestor_time_;
 }
 
 Serializer& operator<<(
     Serializer& serializer,
-    const std::unique_ptr<MediaPlayerTimeCheckResponse>& value) {
+    const std::unique_ptr<NetMediaPlayerTimeCheckResponse>& value) {
   FTL_DCHECK(value);
   return serializer << value->requestor_time_ << value->responder_time_;
 }
 
-Serializer& operator<<(Serializer& serializer,
-                       const std::unique_ptr<MediaPlayerSeekRequest>& value) {
+Serializer& operator<<(
+    Serializer& serializer,
+    const std::unique_ptr<NetMediaPlayerSetUrlRequest>& value) {
+  FTL_DCHECK(value);
+  return serializer << value->url_;
+}
+
+Serializer& operator<<(
+    Serializer& serializer,
+    const std::unique_ptr<NetMediaPlayerSeekRequest>& value) {
   FTL_DCHECK(value);
   return serializer << value->position_;
 }
 
 Serializer& operator<<(
     Serializer& serializer,
-    const std::unique_ptr<MediaPlayerStatusNotification>& value) {
+    const std::unique_ptr<NetMediaPlayerStatusNotification>& value) {
   FTL_DCHECK(value);
   return serializer << value->status_;
 }
@@ -143,19 +166,22 @@ Serializer& operator<<(Serializer& serializer, const ProblemPtr& value) {
 }
 
 Serializer& operator<<(Serializer& serializer,
-                       const std::unique_ptr<MediaPlayerInMessage>& value) {
+                       const std::unique_ptr<NetMediaPlayerInMessage>& value) {
   FTL_DCHECK(value);
   serializer << value->type_;
   switch (value->type_) {
-    case MediaPlayerInMessageType::kTimeCheckRequest:
+    case NetMediaPlayerInMessageType::kTimeCheckRequest:
       serializer << value->time_check_request_;
       break;
-    case MediaPlayerInMessageType::kPlay:
-    case MediaPlayerInMessageType::kPause:
+    case NetMediaPlayerInMessageType::kSetUrlRequest:
+      serializer << value->set_url_request_;
+      break;
+    case NetMediaPlayerInMessageType::kPlayRequest:
+    case NetMediaPlayerInMessageType::kPauseRequest:
       // These two have no parameters.
       break;
-    case MediaPlayerInMessageType::kSeek:
-      serializer << value->seek_;
+    case NetMediaPlayerInMessageType::kSeekRequest:
+      serializer << value->seek_request_;
       break;
   }
 
@@ -163,15 +189,15 @@ Serializer& operator<<(Serializer& serializer,
 }
 
 Serializer& operator<<(Serializer& serializer,
-                       const std::unique_ptr<MediaPlayerOutMessage>& value) {
+                       const std::unique_ptr<NetMediaPlayerOutMessage>& value) {
   FTL_DCHECK(value);
   serializer << value->type_;
   switch (value->type_) {
-    case MediaPlayerOutMessageType::kTimeCheckResponse:
+    case NetMediaPlayerOutMessageType::kTimeCheckResponse:
       serializer << value->time_check_response_;
       break;
-    case MediaPlayerOutMessageType::kStatus:
-      serializer << value->status_;
+    case NetMediaPlayerOutMessageType::kStatusNotification:
+      serializer << value->status_notification_;
       break;
   }
 
@@ -192,20 +218,21 @@ Deserializer& operator>>(Deserializer& deserializer, fidl::String& value) {
 }
 
 Deserializer& operator>>(Deserializer& deserializer,
-                         MediaPlayerInMessageType& value) {
+                         NetMediaPlayerInMessageType& value) {
   deserializer.GetBytes(sizeof(value), &value);
   return deserializer;
 }
 
 Deserializer& operator>>(Deserializer& deserializer,
-                         MediaPlayerOutMessageType& value) {
+                         NetMediaPlayerOutMessageType& value) {
   deserializer.GetBytes(sizeof(value), &value);
   return deserializer;
 }
 
-Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerTimeCheckRequest>& value) {
-  value = std::make_unique<MediaPlayerTimeCheckRequest>();
+Deserializer& operator>>(
+    Deserializer& deserializer,
+    std::unique_ptr<NetMediaPlayerTimeCheckRequest>& value) {
+  value = std::make_unique<NetMediaPlayerTimeCheckRequest>();
   deserializer >> value->requestor_time_;
   if (!deserializer.healthy()) {
     value.reset();
@@ -213,9 +240,10 @@ Deserializer& operator>>(Deserializer& deserializer,
   return deserializer;
 }
 
-Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerTimeCheckResponse>& value) {
-  value = std::make_unique<MediaPlayerTimeCheckResponse>();
+Deserializer& operator>>(
+    Deserializer& deserializer,
+    std::unique_ptr<NetMediaPlayerTimeCheckResponse>& value) {
+  value = std::make_unique<NetMediaPlayerTimeCheckResponse>();
   deserializer >> value->requestor_time_ >> value->responder_time_;
   if (!deserializer.healthy()) {
     value.reset();
@@ -224,8 +252,18 @@ Deserializer& operator>>(Deserializer& deserializer,
 }
 
 Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerSeekRequest>& value) {
-  value = std::make_unique<MediaPlayerSeekRequest>();
+                         std::unique_ptr<NetMediaPlayerSetUrlRequest>& value) {
+  value = std::make_unique<NetMediaPlayerSetUrlRequest>();
+  deserializer >> value->url_;
+  if (!deserializer.healthy()) {
+    value.reset();
+  }
+  return deserializer;
+}
+
+Deserializer& operator>>(Deserializer& deserializer,
+                         std::unique_ptr<NetMediaPlayerSeekRequest>& value) {
+  value = std::make_unique<NetMediaPlayerSeekRequest>();
   deserializer >> value->position_;
   if (!deserializer.healthy()) {
     value.reset();
@@ -235,8 +273,8 @@ Deserializer& operator>>(Deserializer& deserializer,
 
 Deserializer& operator>>(
     Deserializer& deserializer,
-    std::unique_ptr<MediaPlayerStatusNotification>& value) {
-  value = std::make_unique<MediaPlayerStatusNotification>();
+    std::unique_ptr<NetMediaPlayerStatusNotification>& value) {
+  value = std::make_unique<NetMediaPlayerStatusNotification>();
   deserializer >> value->status_;
   if (!deserializer.healthy()) {
     value.reset();
@@ -288,20 +326,23 @@ Deserializer& operator>>(Deserializer& deserializer, ProblemPtr& value) {
 }
 
 Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerInMessage>& value) {
-  value = std::make_unique<MediaPlayerInMessage>();
+                         std::unique_ptr<NetMediaPlayerInMessage>& value) {
+  value = std::make_unique<NetMediaPlayerInMessage>();
   deserializer >> value->type_;
 
   switch (value->type_) {
-    case MediaPlayerInMessageType::kTimeCheckRequest:
+    case NetMediaPlayerInMessageType::kTimeCheckRequest:
       deserializer >> value->time_check_request_;
       break;
-    case MediaPlayerInMessageType::kPlay:
-    case MediaPlayerInMessageType::kPause:
+    case NetMediaPlayerInMessageType::kSetUrlRequest:
+      deserializer >> value->set_url_request_;
+      break;
+    case NetMediaPlayerInMessageType::kPlayRequest:
+    case NetMediaPlayerInMessageType::kPauseRequest:
       // These two have no parameters.
       break;
-    case MediaPlayerInMessageType::kSeek:
-      deserializer >> value->seek_;
+    case NetMediaPlayerInMessageType::kSeekRequest:
+      deserializer >> value->seek_request_;
       break;
     default:
       FTL_LOG(ERROR) << "Unsupported media player in-message type "
@@ -317,16 +358,16 @@ Deserializer& operator>>(Deserializer& deserializer,
 }
 
 Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerOutMessage>& value) {
-  value = std::make_unique<MediaPlayerOutMessage>();
+                         std::unique_ptr<NetMediaPlayerOutMessage>& value) {
+  value = std::make_unique<NetMediaPlayerOutMessage>();
   deserializer >> value->type_;
 
   switch (value->type_) {
-    case MediaPlayerOutMessageType::kTimeCheckResponse:
+    case NetMediaPlayerOutMessageType::kTimeCheckResponse:
       deserializer >> value->time_check_response_;
       break;
-    case MediaPlayerOutMessageType::kStatus:
-      deserializer >> value->status_;
+    case NetMediaPlayerOutMessageType::kStatusNotification:
+      deserializer >> value->status_notification_;
       break;
     default:
       FTL_LOG(ERROR) << "Unsupported media player out-message type "

@@ -8,28 +8,28 @@
 #include <string>
 
 #include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/src/net/media_player_messages.h"
-#include "apps/media/src/media_service/media_service_impl.h"
+#include "apps/media/src/net_media_service/net_media_player_messages.h"
+#include "apps/media/src/net_media_service/net_media_service_impl.h"
 #include "apps/media/src/util/fidl_publisher.h"
 #include "apps/netconnector/lib/message_relay.h"
 
 namespace media {
 
-// Proxy that allows a client to control a remote player.
-class MediaPlayerNetProxy : public MediaServiceImpl::Product<MediaPlayer>,
-                            public MediaPlayer {
+// Proxy that allows a client to control a remote net media player.
+class NetMediaPlayerNetProxy
+    : public NetMediaServiceImpl::Product<NetMediaPlayer>,
+      public NetMediaPlayer {
  public:
-  static std::shared_ptr<MediaPlayerNetProxy> Create(
-      std::string device_name,
-      std::string service_name,
-      fidl::InterfaceRequest<MediaPlayer> request,
-      MediaServiceImpl* owner);
+  static std::shared_ptr<NetMediaPlayerNetProxy> Create(
+      const fidl::String& device_name,
+      const fidl::String& service_name,
+      fidl::InterfaceRequest<NetMediaPlayer> request,
+      NetMediaServiceImpl* owner);
 
-  ~MediaPlayerNetProxy() override;
+  ~NetMediaPlayerNetProxy() override;
 
-  // MediaPlayer implementation.
-  void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+  // NetMediaPlayer implementation.
+  void SetUrl(const fidl::String& url) override;
 
   void Play() override;
 
@@ -37,38 +37,25 @@ class MediaPlayerNetProxy : public MediaServiceImpl::Product<MediaPlayer>,
 
   void Seek(int64_t position) override;
 
-  void SetReader(fidl::InterfaceHandle<SeekingReader> reader) override;
+  void GetStatus(uint64_t version_last_seen,
+                 const GetStatusCallback& callback) override;
 
  private:
-  MediaPlayerNetProxy(std::string device_name,
-                      std::string service_name,
-                      fidl::InterfaceRequest<MediaPlayer> request,
-                      MediaServiceImpl* owner);
+  NetMediaPlayerNetProxy(const fidl::String& device_name,
+                         const fidl::String& service_name,
+                         fidl::InterfaceRequest<NetMediaPlayer> request,
+                         NetMediaServiceImpl* owner);
 
   void SendTimeCheckMessage();
 
   void HandleReceivedMessage(std::vector<uint8_t> message);
-
-  template <typename T>
-  T* MessageCast(std::vector<uint8_t>* message) {
-    if (message->size() != sizeof(T)) {
-      FTL_LOG(ERROR) << "Expected message size " << sizeof(T) << ", got size "
-                     << message->size();
-      message_relay_.CloseChannel();
-      return nullptr;
-    }
-
-    T* result = reinterpret_cast<T*>(message->data());
-    result->NetToHost();
-    return result;
-  }
 
   netconnector::MessageRelay message_relay_;
   FidlPublisher<GetStatusCallback> status_publisher_;
   MediaPlayerStatusPtr status_;
   TimelineFunction remote_to_local_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerNetProxy);
+  FTL_DISALLOW_COPY_AND_ASSIGN(NetMediaPlayerNetProxy);
 };
 
 }  // namespace media

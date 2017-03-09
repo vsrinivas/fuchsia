@@ -9,8 +9,8 @@
 #include <endian.h>
 #include <mx/channel.h>
 
-#include "apps/media/services/media_player.fidl.h"
-#include "apps/media/src/net/media_player_messages.h"
+#include "apps/media/services/net_media_player.fidl.h"
+#include "apps/media/src/net_media_service/net_media_player_messages.h"
 #include "apps/netconnector/lib/message_relay.h"
 #include "apps/netconnector/lib/net_stub_responder.h"
 #include "lib/ftl/macros.h"
@@ -18,16 +18,16 @@
 namespace media {
 
 // Controls a media player on behalf of a remote party.
-class MediaPlayerNetStub
-    : public std::enable_shared_from_this<MediaPlayerNetStub> {
+class NetMediaPlayerNetStub
+    : public std::enable_shared_from_this<NetMediaPlayerNetStub> {
  public:
-  MediaPlayerNetStub(
-      MediaPlayer* player,
+  NetMediaPlayerNetStub(
+      NetMediaPlayer* player,
       mx::channel channel,
-      netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub>*
+      netconnector::NetStubResponder<NetMediaPlayer, NetMediaPlayerNetStub>*
           responder);
 
-  ~MediaPlayerNetStub();
+  ~NetMediaPlayerNetStub();
 
  private:
   // Handles a message received via the relay.
@@ -35,14 +35,15 @@ class MediaPlayerNetStub
 
   // Handles a status update from the player. When called with the default
   // argument values, initiates status updates.
-  void HandleStatusUpdates(uint64_t version = MediaPlayer::kInitialStatus,
+  void HandleStatusUpdates(uint64_t version = NetMediaPlayer::kInitialStatus,
                            MediaPlayerStatusPtr status = nullptr);
 
-  MediaPlayer* player_;
+  NetMediaPlayer* player_;
   netconnector::MessageRelay message_relay_;
-  netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub>* responder_;
+  netconnector::NetStubResponder<NetMediaPlayer, NetMediaPlayerNetStub>*
+      responder_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerNetStub);
+  FTL_DISALLOW_COPY_AND_ASSIGN(NetMediaPlayerNetStub);
 };
 
 }  // namespace media

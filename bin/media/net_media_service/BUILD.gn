@@ -1,0 +1,62 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("net_media_service") {
+  sources = [
+    "main.cc",
+    "net_media_player_impl.cc",
+    "net_media_player_impl.h",
+    "net_media_player_messages.cc",
+    "net_media_player_messages.h",
+    "net_media_player_net_proxy.cc",
+    "net_media_player_net_proxy.h",
+    "net_media_player_net_stub.cc",
+    "net_media_player_net_stub.h",
+    "net_media_service_impl.cc",
+    "net_media_service_impl.h",
+  ]
+
+  deps = [
+    ":serialization",
+    "//application/lib/app",
+    "//apps/media/lib/timeline",
+    "//apps/media/services",
+    "//apps/media/src/media_service",
+    "//apps/media/src/util",
+    "//apps/netconnector/lib",
+    "//apps/netconnector/services",
+    "//apps/network/services",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//lib/url",
+  ]
+}
+
+source_set("serialization") {
+  sources = [
+    "serialization.cc",
+    "serialization.h",
+  ]
+
+  deps = [
+    "//lib/ftl",
+  ]
+}
+
+executable("tests") {
+  output_name = "net_media_service_tests"
+
+  testonly = true
+
+  sources = [
+    "test/serialization_test.cc",
+    "test/run_all_tests.cc",
+  ]
+
+  deps = [
+    ":serialization",
+    "//third_party/gtest",
+  ]
+}
