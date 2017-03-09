@@ -64,7 +64,8 @@
     "resources": [
         {
             "file": "apps/media/examples/media_player_flutter/media_player_flutter.config",
-            "bootfs_path": "data/media_player_flutter/media_player_flutter.config"
+            "bootfs_path": "data/media_player_flutter/media_player_flutter.config",
+            "default": "true"
         }
     ]
 }

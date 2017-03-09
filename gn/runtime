@@ -24,7 +24,8 @@
         },
         {
             "file": "apps/modular/src/bootstrap/apps.config",
-            "bootfs_path": "data/bootstrap/apps.config"
+            "bootfs_path": "data/bootstrap/apps.config",
+            "default": "true"
         }
     ]
 }

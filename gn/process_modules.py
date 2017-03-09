@@ -21,6 +21,19 @@ class Amalgamation:
         self.component_urls = []
         self.build_root = ""
         self.omit_files = []
+        self.bootfs_paths = {}
+
+    def add_file(self, file):
+        bootfs_path = file["bootfs_path"]
+        if self.bootfs_paths.has_key(bootfs_path):
+            old_entry = self.bootfs_paths[bootfs_path]
+            if file["default"] and not old_entry["default"]:
+                return  # we don't override a non-default with a default value
+            if not old_entry["default"]:
+                raise Exception('Duplicate bootfs path %s' % bootfs_path)
+        self.bootfs_paths[bootfs_path] = file
+        self.files.append(file)
+
 
     def add_config(self, config, config_path):
         self.config_paths.append(config_path)
@@ -32,22 +45,25 @@ class Amalgamation:
             file = {}
             file["file"] = os.path.join(self.build_root, b["binary"])
             file["bootfs_path"] = b["bootfs_path"]
-            self.files.append(file)
+            file["default"] = b.has_key("default")
+            self.add_file(file)
         for r in config.get("resources", []):
             if r["file"] in self.omit_files:
                 continue
             file = {}
             file["file"] = os.path.join(paths.FUCHSIA_ROOT, r["file"])
             file["bootfs_path"] = r["bootfs_path"]
-            self.files.append(file)
+            file["default"] = r.has_key("default")
+            self.add_file(file)
         for c in config.get("components", []):
             # See https://fuchsia.googlesource.com/modular/src/component_manager/ for what a component is.
             manifest = component_manifest.ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
             self.component_urls.append(manifest.url)
             for component_file in manifest.files().values():
-                self.files.append({
+                self.add_file({
                     'file': os.path.join(self.build_root, 'components', component_file.url_as_path),
-                    'bootfs_path': os.path.join('components', component_file.url_as_path)
+                    'bootfs_path': os.path.join('components', component_file.url_as_path),
+                    'default': False
                 })
 
 
