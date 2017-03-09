@@ -491,8 +491,7 @@ enum class SupportedCommand : uint8_t {
 
 // Bitmask values for the 8-octet LE Supported Features bit-field. See Core Spec
 // v5.0, Volume 6, Part B, Section 4.6 "Feature Support".
-enum class LESupportedFeature : uint8_t {
-  // Octet 0
+enum class LESupportedFeature : uint64_t {
   kLEEncryption                         = (1 << 0),
   kConnectionParametersRequestProcedure = (1 << 1),
   kExtendedRejectIndication             = (1 << 2),
@@ -503,17 +502,40 @@ enum class LESupportedFeature : uint8_t {
   kExtendedScannerFilterPolicies        = (1 << 7),
 
   // Added in 5.0
-  // Octet 1
-  kStableModulationIndexTransmitter     = (1 << 0),
-  kStableModulationIndexReceiver        = (1 << 1),
-  kLECodedPHY                           = (1 << 2),
-  kLEExtendedAdvertising                = (1 << 3),
-  kLEPeriodicAdvertising                = (1 << 4),
-  kChannelSelectionAlgorithm2           = (1 << 5),
-  kLEPowerClass1                        = (1 << 6),
-  kMinimumNumberOfUsedChannelsProcedure = (1 << 7),
+  kStableModulationIndexTransmitter     = (1 << 8),
+  kStableModulationIndexReceiver        = (1 << 9),
+  kLECodedPHY                           = (1 << 10),
+  kLEExtendedAdvertising                = (1 << 11),
+  kLEPeriodicAdvertising                = (1 << 12),
+  kChannelSelectionAlgorithm2           = (1 << 13),
+  kLEPowerClass1                        = (1 << 14),
+  kMinimumNumberOfUsedChannelsProcedure = (1 << 15),
 
   // The rest is reserved for future use.
+};
+
+// Bitmask values for the 8-octet HCI_LE_Set_Event_Mask command parameter.
+enum class LEEventMask : uint64_t {
+  kLEConnectionComplete                 = (1 << 0),
+  kLEAdvertisingReport                  = (1 << 1),
+  kLEConnectionUpdateComplete           = (1 << 2),
+  kLEReadRemoteFeaturesComplete         = (1 << 3),
+  kLELongTermKeyRequest                 = (1 << 4),
+  kLERemoteConnectionParameterRequest   = (1 << 5),
+  kLEDataLengthChange                   = (1 << 6),
+  kLEReadLocalP256PublicKeyComplete     = (1 << 7),
+  kLEGenerateDHKeyComplete              = (1 << 8),
+  kLEEnhancedConnectionComplete         = (1 << 9),
+  kLEDirectedAdvertisingReport          = (1 << 10),
+  kLEPHYUpdateComplete                  = (1 << 11),
+  kLEExtendedAdvertisingReport          = (1 << 12),
+  kLEPeriodicAdvertisingSyncEstablished = (1 << 13),
+  kLEPeriodicAdvertisingReport          = (1 << 14),
+  kLEPeriodicAdvertisingSyncLost        = (1 << 15),
+  kLEExtendedScanTimeout                = (1 << 16),
+  kLEExtendedAdvertisingSetTerminated   = (1 << 17),
+  kLEScanRequestReceived                = (1 << 18),
+  kLEChannelSelectionAlgorithm          = (1 << 19),
 };
 
 // Binary values that can be generically passed to HCI commands that expect a
@@ -541,6 +563,33 @@ constexpr uint16_t kLEScanIntervalMax = 0x4000;
 // The default LE scan interval parameter value, corresponding to 10
 // milliseconds (see Core Spec v5.0, Vol 2, Part E, Section 7.8.10).
 constexpr uint16_t kLEScanIntervalDefault = 0x0010;
+
+// The minimum and maximum range values for the LE connection interval parameters.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.12)
+constexpr uint16_t kLEConnectionIntervalMin = 0x0006;
+constexpr uint16_t kLEConnectionIntervalMax = 0x0C80;
+
+// The maximum value that can be used for the |conn_latency| parameter in a HCI_LE_Create_Connection
+// command (see Core Spec v5.0, Vol 2, Part E, Section 7.8.12).
+constexpr uint16_t kLEConnectionLatencyMax = 0x01F3;
+
+// The minimum and maximum range values for LE connection supervision timeout parameters.
+constexpr uint16_t kLEConnectionSupervisionTimeoutMin = 0x000A;
+constexpr uint16_t kLEConnectionSupervisionTimeoutMax = 0x0C80;
+
+// The minimum and maximum range values for LE link layer tx PDU used on connections.
+constexpr uint16_t kLEMaxTxOctetsMin = 0x001B;
+constexpr uint16_t kLEMaxTxOctetsMax = 0x00FB;
+
+// The minimum and maximum range values for LE link layer tx maximum packet transmission time used
+// on connections.
+constexpr uint16_t kLEMaxTxTimeMin = 0x0148;
+constexpr uint16_t kLEMaxTxTimeMax = 0x4290;
+
+// Minimum, maximum, default values for the Resolvable Private Address timeout parameter.
+constexpr uint16_t kLERPATimeoutMin = 0x0001;      // 1 second
+constexpr uint16_t kLERPATimeoutMax = 0xA1B8;      // Approx. 11.5 hours
+constexpr uint16_t kLERPATimeoutDefault = 0x0384;  // 900 seconds or 15 minutes.
 
 // LE advertising types (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5).
 enum class LEAdvertisingType : uint8_t {
@@ -634,7 +683,10 @@ enum class LEPeerAddressType : uint8_t {
   // Random Device Address or Random (static) Identity Address
   kRandom = 0x01,
 
-  // The rest is reserved for future use
+  // This is a special value that should only be used with the HCI_LE_Add_Device_To_White_List and
+  // HCI_LE_Remove_Device_From_White_List commands for peer devices sending anonymous
+  // advertisements.
+  kAnonymous = 0xFF,
 };
 
 // Possible values that can be used for the |adv_channel_map| bitfield in a
@@ -759,9 +811,12 @@ enum class ACLBroadcastFlag : uint8_t {
 };
 
 // "Hosts and Controllers shall be able to accept HCI ACL Data Packets with up to 27 bytes of data
-// excluding the HCI ACL Data Packet header on Connection_Handles associated with an LE-U logical
+// excluding the HCI ACL Data Packet header on Connection Handles associated with an LE-U logical
 // link." (See Core Spec v5.0, Volume 2, Part E, Section 5.4.2)
 constexpr size_t kMinLEACLDataBufferLength = 27;
+
+// The maximum value that can be used for a 12-bit connection handle.
+constexpr uint16_t kConnectionHandleMax = 0x0EFF;
 
 }  // namespace hci
 }  // namespace bluetooth

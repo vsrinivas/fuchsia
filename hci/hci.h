@@ -9,10 +9,13 @@
 #include <magenta/compiler.h>
 
 #include "apps/bluetooth/common/device_address.h"
+#include "apps/bluetooth/common/uint128.h"
 #include "apps/bluetooth/hci/hci_constants.h"
 
 // This file contains general opcode/number and static packet definitions for
-// the Bluetooth Host-Controller Interface.
+// the Bluetooth Host-Controller Interface. Each packet payload structure contains parameter
+// descriptions based on their respective documentation in the Bluetooth Core Specification version
+// 5.0
 
 namespace bluetooth {
 namespace hci {
@@ -140,7 +143,6 @@ struct ReadClassOfDeviceReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // Class of Device for the device.
   uint8_t class_of_device[3];
 } __PACKED;
 
@@ -149,7 +151,6 @@ struct ReadClassOfDeviceReturnParams {
 constexpr OpCode kWriteClassOfDevice = ControllerAndBasebandOpCode(0x0024);
 
 struct WriteClassOfDeviceCommandParams {
-  // Class of Device for the device.
   uint8_t class_of_device[3];
 } __PACKED;
 
@@ -161,8 +162,6 @@ struct ReadFlowControlModeReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // The Flow_Control_Mode configuration parameter allows the Host to select the
-  // HCI Data flow control mode used by the Controller for ACL Data traffic.
   // See enum class FlowControlMode in hci_constants.h for possible values.
   uint8_t flow_control_mode;
 } __PACKED;
@@ -172,8 +171,6 @@ struct ReadFlowControlModeReturnParams {
 constexpr OpCode kWriteFlowControlMode = ControllerAndBasebandOpCode(0x0067);
 
 struct WriteFlowControlModeCommandParams {
-  // The Flow_Control_Mode configuration parameter allows the Host to select the
-  // HCI Data flow control mode used by the Controller for ACL Data traffic.
   // See enum class FlowControlMode in hci_constants.h for possible values.
   uint8_t flow_control_mode;
 } __PACKED;
@@ -196,19 +193,9 @@ struct ReadLocalVersionInfoReturnParams {
   // HCI version (see enum class HCIVersion in hci_constants.h)
   HCIVersion hci_version;
 
-  // Revision of the Current HCI in the BR/EDR Controller.
   uint16_t hci_revision;
-
-  // Version of the Current LMP or PAL in the Controller (see the Bluetooth
-  // Assigned Numbers document).
   uint8_t lmp_pal_version;
-
-  // Manufacturer Name of the BR/EDR Controller (see the Bluetooth Assigned
-  // Numbers document).
   uint16_t manufacturer_name;
-
-  // Subversion of the Current LMP or PAL in the Controller. This value is
-  // implementation dependent.
   uint16_t lmp_pal_subversion;
 } __PACKED;
 
@@ -220,9 +207,7 @@ struct ReadLocalSupportedCommandsReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // 512-bit bitmask for each HCI Command. If a bit is 1, then the Controller
-  // supports the corresponding command. See enum class SupportedCommand in
-  // hci_constants.h for how to interpret this bitfield.
+  // See enum class SupportedCommand in hci_constants.h for how to interpret this bitfield.
   uint8_t supported_commands[64];
 } __PACKED;
 
@@ -236,7 +221,7 @@ struct ReadLocalSupportedFeaturesReturnParams {
 
   // Bit Mask List of LMP features. For details see Core Spec v4.2, Volume 2,
   // Part C, Link Manager Protocol Specification.
-  uint8_t lmp_features[8];
+  uint64_t lmp_features;
 } __PACKED;
 
 // ====================================================
@@ -254,20 +239,9 @@ struct ReadLocalExtendedFeaturesCommandParams {
 struct ReadLocalExtendedFeaturesReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
-
-  // - 0x00: The normal LMP features as returned by
-  //   Read_Local_Supported_Features.
-  //
-  // - 0x01-0xFF: The page number of the features returned.
   uint8_t page_number;
-
-  // The highest features page number which contains non-zero bits for the local
-  // device.
   uint8_t maximum_page_number;
-
-  // Bit map of requested page of LMP features. See LMP specification for
-  // details.
-  uint8_t extended_lmp_features[8];
+  uint64_t extended_lmp_features;
 } __PACKED;
 
 // ===============================
@@ -278,23 +252,9 @@ struct ReadBufferSizeReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // Maximum length (in octets) of the data portion of each HCI ACL Data Packet
-  // that the Controller is able to accept. This is used to determine the size
-  // of the L2CAP segments contained in ACL Data Packets. This excludes the
-  // length of the HCI Data packet header.
   uint16_t hc_acl_data_packet_length;
-
-  // Maximum length (in octets) of the data portion of each HCI Synchronous
-  // Data Packet that the Controller is able to accept. This excludes the length
-  // of the HCI Data packet header.
   uint8_t hc_synchronous_data_packet_length;
-
-  // Total number of HCI ACL Data Packets that can be stored in the data buffers
-  // of the Controller.
   uint16_t hc_total_num_acl_data_packets;
-
-  // Total number of HCI Synchronous Data Packets that can be stored in the data
-  // buffers of the Controller.
   uint16_t hc_total_num_synchronous_data_packets;
 } __PACKED;
 
@@ -306,7 +266,6 @@ struct ReadBDADDRReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // BD_ADDR of the device.
   common::DeviceAddress bd_addr;
 } __PACKED;
 
@@ -318,17 +277,8 @@ struct ReadDataBlockSizeReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // Maximum length (in octets) of the data portion of an HCI ACL Data Packet
-  // that the Controller is able to accept for transmission. For AMP Controllers
-  // this always equals to Max_PDU_Size.
   uint16_t max_acl_data_packet_length;
-
-  // Maximum length (in octets) of the data portion of each HCI ACL Data Packet
-  // that the Controller is able to hold in each of its data block buffers.
   uint16_t data_block_length;
-
-  // Total number of data block buffers available in the Controller for the
-  // storage of data packets scheduled for transmission.
   uint16_t total_num_data_blocks;
 } __PACKED;
 
@@ -391,13 +341,7 @@ struct NumberOfCompletedPacketsEventData {
 } __PACKED;
 
 struct NumberOfCompletedPacketsEventParams {
-  // The number of Connection_Handles and Num_HCI_Data_Packets parameters pairs
-  // contained in this event.
   uint8_t number_of_handles;
-
-  // Connection handles and the number of HCI Data Packets that have been
-  // completed (transmitted or flushed) for the associated connection handle
-  // since the previous time the event was returned.
   NumberOfCompletedPacketsEventData data[0];
 } __PACKED;
 
@@ -461,37 +405,16 @@ struct LEAdvertisingReportSubeventParams {
 constexpr EventCode kNumberOfCompletedDataBlocksEventCode = 0x48;
 
 struct NumberOfCompletedDataBlocksEventData {
-  // Handle (Connection_Handle for a BR/EDR Controller or a Logical_Link_Handle
+  // Handle (Connection Handle for a BR/EDR Controller or a Logical_Link_Handle
   // for an AMP Controller).
   uint16_t handle;
-
-  // The number of HCI ACL Data Packets that have been completed (transmitted or
-  // flushed) for the associated Handle since the previous time that a Number Of
-  // Completed Data Blocks event provided information about this Handle.
   uint16_t num_of_completed_packets;
-
-  // The number of data blocks that have been freed for the associated Handle
-  // since the previous time that a Number Of Completed Data Blocks event
-  // provided information about this Handle.
   uint16_t num_of_completed_blocks;
 } __PACKED;
 
 struct NumberOfCompletedDataBlocksEventParams {
-  // This parameter has the following meanings based on its value:
-  // - 0x0000: The size of the buffer pool may have changed. The Host is
-  //   requested to issue a Read Data Block Size command in order to determine
-  //   the new value of Total_Num_Data_Blocks.
-  //
-  // - 0xXXXX: Total number of data block buffers available in the Controller
-  //   for the storage of data packets scheduled for transmission. This
-  //   indicates the existing value is unchanged, or increased, or reduced by up
-  //   to the sum of the Num_Of_Completed_Blocks values in this command.
   uint16_t total_num_data_blocks;
-
-  // The number of Handles and Num_Of_Completed_Packets and
-  // Num_Of_Completed_Blocks parameter triples contained in this event.
   uint8_t number_of_handles;
-
   NumberOfCompletedDataBlocksEventData data[0];
 } __PACKED;
 
@@ -502,6 +425,15 @@ constexpr OpCode LEControllerCommandOpCode(const uint16_t ocf) {
   return DefineOpCode(kLEControllerCommandsOGF, ocf);
 }
 
+// =====================================
+// LE Set Event Mask Command (v4.0) (LE)
+constexpr OpCode kLESetEventMask = LEControllerCommandOpCode(0x0001);
+
+struct LESetEventMaskCommandParams {
+  // See enum LEEventMask in hci_constants.h for possible values.
+  uint64_t le_event_mask;
+} __PACKED;
+
 // =======================================
 // LE Read Buffer Size Command (v4.0) (LE)
 constexpr OpCode kLEReadBufferSize = LEControllerCommandOpCode(0x0002);
@@ -510,24 +442,7 @@ struct LEReadBufferSizeReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // Used to determine the size of the L2CAP PDU segments contained in ACL Data
-  // Packets, which are transferred from the Host to the Controller to be broken
-  // up into packets by the Link Layer. The value of this parameter shall be
-  // interpreted as follows:
-  //
-  // - 0x0000: No dedicated LE Buffer - use Read_Buffer_Size command.
-  // - 0x0001-0xFFFF: Maximum length (in octets) of the data portion of each HCI
-  //   ACL Data Packet that the Controller is able to accept.
   uint16_t hc_le_acl_data_packet_length;
-
-  // Contains the total number of HCI ACL Data Packets that can be stored in the
-  // data buffers of the Controller. The Host determines how the buffers are to
-  // be divided between different Connection Handles. The value of this
-  // parameter shall be interpreted as follows:
-  //
-  // - 0x00: No dedicated LE Buffer - use Read_Buffer_Size command.
-  // - 0x01-0xFF: Total number of HCI ACL Data Packets that can be stored in the
-  //   data buffers of the Controller.
   uint8_t hc_total_num_le_acl_data_packets;
 } __PACKED;
 
@@ -541,28 +456,15 @@ struct LEReadLocalSupportedFeaturesReturnParams {
 
   // Bit Mask List of supported LE features. See enum class LEFeatures in
   // hci_constants.h.
-  uint8_t le_features[8];
+  uint64_t le_features;
 } __PACKED;
 
-struct LEReadMaximumDataLengthReturnParams {
-  // See enum Status in hci_constants.h.
-  Status status;
+// =========================================
+// LE Set Random Address Command (v4.0) (LE)
+constexpr OpCode kLESetRandomAddress = LEControllerCommandOpCode(0x0005);
 
-  // Maximum number of payload octets that the local Controller supports for
-  // transmission of a single Link Layer Data Channel PDU.
-  uint16_t supported_max_tx_octets;
-
-  // Maximum time, in microseconds, that the local Controller supports for
-  // transmission of a single Link Layer Data Channel PDU.
-  uint16_t supported_max_tx_time;
-
-  // Maximum number of payload octets that the local Controller supports for
-  // reception of a single Link Layer Data Channel PDU.
-  uint16_t supported_max_rx_octets;
-
-  // Maximum time, in microseconds, that the local Controller supports for
-  // reception of a single Link Layer Data Channel PDU.
-  uint16_t supported_max_rx_time;
+struct LESetRandomAddressCommandParams {
+  common::DeviceAddress random_address;
 } __PACKED;
 
 // =================================================
@@ -570,52 +472,22 @@ struct LEReadMaximumDataLengthReturnParams {
 constexpr OpCode kLESetAdvertisingParameters = LEControllerCommandOpCode(0x0006);
 
 struct LESetAdvertisingParametersCommandParams {
-  // Minimum advertising interval for undirected and low duty cycle directed
-  // advertising. This value shall be less than or equal to |adv_interval_max|.
-  // |adv_interval_min| and |adv_interval_max| should not be the same value to
-  // enable the controller to determine the best advertising interval given
-  // other activities.
-  //
-  //   Range: see kLEAdvertisingInterval[Min|Max] in hci_constants.h
-  //   Default: N = kLEAdvertisingIntervalDefault (see hci_constants.h)
-  //   Time: N * 0.625 ms
-  //   Time Range: 20 ms to 10.24 s
+  // Range: see kLEAdvertisingInterval[Min|Max] in hci_constants.h
+  // Default: N = kLEAdvertisingIntervalDefault (see hci_constants.h)
+  // Time: N * 0.625 ms
+  // Time Range: 20 ms to 10.24 s
   uint16_t adv_interval_min;
 
-  // Maximum advertising interval for undirected and low duty cycle directed
-  // advertising. This value shall be greater than or equal to
-  // |adv_interval_max|. |adv_interval_min| and |adv_interval_max| should not be
-  // the same value to enable the controller to determine the best advertising
-  // interval given other activities.
-  //
-  //   Range: see kLEAdvertisingInterval[Min|Max] in hci_constants.h
-  //   Default: N = kLEAdvertisingIntervalDefault (see hci_constants.h)
-  //   Time: N * 0.625 ms
-  //   Time Range: 20 ms to 10.24 s
+  // Range: see kLEAdvertisingInterval[Min|Max] in hci_constants.h
+  // Default: N = kLEAdvertisingIntervalDefault (see hci_constants.h)
+  // Time: N * 0.625 ms
+  // Time Range: 20 ms to 10.24 s
   uint16_t adv_interval_max;
 
   // Used to determine the packet type that is used for advertising when
   // advertising is enabled (see hci_constants.h)
   LEAdvertisingType adv_type;
 
-  // Indicates the type of address being used in the advertising packets.
-  //
-  // If |own_address_type| equals 0x02 or 0x03, the |peer_address| parameter
-  // contains the peer’s Identity Address and the |peer_address_type| parameter
-  // contains the Peer’s Identity Type (i.e. 0x00 or 0x01). These parameters are
-  // used to locate the corresponding local IRK in the resolving list; this IRK
-  // is used to generate the own address used in the advertisement.
-  //
-  // If directed advertising is performed, i.e. when Advertising_Type is set to
-  // 0x01 (ADV_DIRECT_IND, high duty cycle) or 0x04 (ADV_DIRECT_IND, low duty
-  // cycle mode), then the |peer_address_type| and |peer_address| shall be
-  // valid.
-  //
-  // If |own_address_type| equals 0x02 or 0x03, the Controller generates the
-  // peer’s Resolvable Private Address using the peer’s IRK corresponding to the
-  // peer’s Identity Address contained in the |peer_address| parameter and
-  // peer’s Identity Address Type (i.e. 0x00 or 0x01) contained in the
-  // |peer_address_type| parameter.
   LEOwnAddressType own_address_type;
   LEPeerAddressType peer_address_type;
 
@@ -623,15 +495,28 @@ struct LESetAdvertisingParametersCommandParams {
   // Random (static) Identity Address of the device to be connected.
   common::DeviceAddress peer_address;
 
-  // Bit field that indicates the advertising channels that shall be used when
-  // transmitting advertising packets. At least one channel bit shall be set in
-  // the |adv_channel_map| parameter (see the constants kLEAdvertisingChannel*
-  // in hci_constants.h for possible values).
+  // (See the constants kLEAdvertisingChannel* in hci_constants.h for possible values).
   uint8_t adv_channel_map;
 
   // This parameter shall be ignored when directed advertising is enabled (see
   // hci_constants.h for possible values).
   LEAdvFilterPolicy adv_filter_policy;
+} __PACKED;
+
+// ========================================================
+// LE Read Advertising Channel Tx Power Command (v4.0) (LE)
+constexpr OpCode kLEReadAdvertisingChannelTxPower = LEControllerCommandOpCode(0x0007);
+
+struct LEReadAdvertisingChannelTxPowerReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // The transmit power level used for LE advertising channel packets.
+  //
+  //   Range: -20 <= N <= +10
+  //   Units: dBm
+  //   Accuracy: +/- 4 dB
+  int8_t tx_power;
 } __PACKED;
 
 // ===========================================
@@ -644,7 +529,24 @@ struct LESetAdvertisingDataCommandParams {
 
   // 31 octets of advertising data formatted as defined in Core Spec v5.0, Vol
   // 3, Part C, Section 11.
+  //
+  // Default: All octets zero.
   uint8_t adv_data[kMaxLEAdvertisingDataLength];
+} __PACKED;
+
+// =============================================
+// LE Set Scan Response Data Command (v4.0) (LE)
+constexpr OpCode kLESetScanResponseData = LEControllerCommandOpCode(0x0009);
+
+struct LESetScanResponseDataCommandParams {
+  // The number of significant octets in |scan_rsp_data|.
+  uint8_t scan_rsp_data_length;
+
+  // 31 octets of Scan Response Data formatted as defined in Core Spec v5.0, Vol 3, Part C, Section
+  // 11.
+  //
+  // Default: All octets zero.
+  uint8_t scan_rsp_data[kMaxLEAdvertisingDataLength];
 } __PACKED;
 
 // =============================================
@@ -652,16 +554,6 @@ struct LESetAdvertisingDataCommandParams {
 constexpr OpCode kLESetAdvertisingEnable = LEControllerCommandOpCode(0x000A);
 
 struct LESetAdvertisingEnableCommandParams {
-  // The LE_Set_Advertising_Enable command is used to request the Controller to
-  // start or stop advertising. The Controller manages the timing of
-  // advertisements as per the advertising parameters given in the
-  // LE_Set_Advertising_Parameters command.
-  //
-  // The Controller shall continue advertising until the Host issues an
-  // LE_Set_Advertising_Enable command with Advertising_Enable set to 0x00
-  // (Advertising is disabled) or until a connection is created or until the
-  // Advertising is timed out due to high duty cycle Directed Advertising. In
-  // these cases, advertising is then disabled.
   GenericEnableParam advertising_enable;
 } __PACKED;
 
@@ -673,26 +565,14 @@ struct LESetScanParametersCommandParams {
   // Controls the type of scan to perform.
   LEScanType scan_type;
 
-  // The LE_Scan_Interval and LE_Scan_Window parameters are recommendations from
-  // the Host on how long (LE_Scan_Window) and how frequently (LE_Scan_Interval)
-  // the Controller should scan (See Core Spec v5.0, Vol 6, Part B, Section
-  // 4.5.3). The LE_Scan_Window parameter shall always be set to a value smaller
-  // or equal to the value set for the LE_Scan_Interval parameter. If they are
-  // set to the same value scanning should be run continuously.
-  //
-  //   Range: see kLEScanInterval[Min|Max] in hci_constants.h
-  //   Default: N = kLEScanIntervalDefault (see hci_constants.h)
-  //   Time: N * 0.625 ms
-  //   Time Range: 2.5 ms to 10.24 s
+  // Range: see kLEScanInterval[Min|Max] in hci_constants.h
+  // Default: N = kLEScanIntervalDefault (see hci_constants.h)
+  // Time: N * 0.625 ms
+  // Time Range: 2.5 ms to 10.24 s
   uint16_t scan_interval;
   uint16_t scan_window;
 
-  // Indicates the type of address being used in the scan request packets (for
-  // active scanning).
   LEOwnAddressType own_address_type;
-
-  // The LE white-list and privacy filter policy that should be used while
-  // scanning for directed and undirected advertisements.
   LEScanFilterPolicy filter_policy;
 } __PACKED;
 
@@ -701,19 +581,303 @@ struct LESetScanParametersCommandParams {
 constexpr OpCode kLESetScanEnable = LEControllerCommandOpCode(0x000C);
 
 struct LESetScanEnableCommandParams {
-  // The LE_Set_Scan_Enable command is used to start scanning. Scanning is used
-  // to discover advertising devices nearby.
-  //
-  // If the LE_Scan_Enable parameter is set to 0x01 and scanning is already
-  // enabled, any change to the Filter_Duplicates setting shall take effect.
-  // Note: Disabling scanning when it is disabled has no effect.
   GenericEnableParam scanning_enabled;
 
-  // Controls whether the Link Layer should filter out duplicate advertising
-  // reports (Filtering_Enabled) to the Host, or if the Link Layer should
-  // generate advertising reports for each packet received (Filtering_Disabled).
   // (See Core Spec v5.0, Vol 6, Part B, Section 4.4.3.5)
   GenericEnableParam filter_duplicates;
+} __PACKED;
+
+// ========================================
+// LE Create Connection Command (v4.0) (LE)
+constexpr OpCode kLECreateConnection = LEControllerCommandOpCode(0x000D);
+
+struct LECreateConnectionCommandParams {
+  // Range: see kLEScanInterval[Min|Max] in hci_constants.h
+  // Time: N * 0.625 ms
+  // Time Range: 2.5 ms to 10.24 s
+  uint16_t scan_interval;
+
+  // Range: see kLEScanInterval[Min|Max] in hci_constants.h
+  // Time: N * 0.625 ms
+  // Time Range: 2.5 ms to 10.24 s
+  uint16_t scan_window;
+
+  GenericEnableParam initiator_filter_policy;
+  LEAddressType peer_address_type;
+  common::DeviceAddress peer_address;
+  LEOwnAddressType own_address_type;
+
+  // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
+  // Time: N * 1.25 ms
+  // Time Range: 7.5 ms to 4 s.
+  uint16_t conn_interval_min;
+  uint16_t conn_interval_max;
+
+  // Range: 0x0000 to kLEConnectionLatencyMax in hci_constants.h
+  uint16_t conn_latency;
+
+  // Range: see kLEConnectionSupervisionTimeout[Min|Max] in hci_constants.h
+  // Time: N * 10 ms
+  // Time Range: 100 ms to 32 s
+  uint16_t supervision_timeout;
+
+  // Range: 0x0000 - 0xFFFF
+  // Time: N * 0x625 ms
+  uint16_t minimum_ce_length;
+  uint16_t maximum_ce_length;
+} __PACKED;
+
+// NOTE on ReturnParams: No Command Complete event is sent by the Controller to indicate that this
+// command has been completed. Instead, the LE Connection Complete or LE Enhanced Connection
+// Complete event indicates that this command has been completed.
+
+// ===============================================
+// LE Create Connection Cancel Command (v4.0) (LE)
+constexpr OpCode kLECreateConnectionCancel = LEControllerCommandOpCode(0x000E);
+
+// ===========================================
+// LE Read White List Size Command (v4.0) (LE)
+constexpr OpCode kLEReadWhiteListSize = LEControllerCommandOpCode(0x000F);
+
+struct LEReadWhiteListSizeReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+  uint8_t white_list_size;
+} __PACKED;
+
+// =======================================
+// LE Clear White List Command (v4.0) (LE)
+constexpr OpCode kLEClearWhiteList = LEControllerCommandOpCode(0x0010);
+
+// ===============================================
+// LE Add Device To White List Command (v4.0) (LE)
+constexpr OpCode kLEAddDeviceToWhiteList = LEControllerCommandOpCode(0x0011);
+
+struct LEAddDeviceToWhiteListCommandParams {
+  // The address type of the peer. The |address| parameter will be ignored if |address_type| is set
+  // to LEPeerAddressType::kAnonymous.
+  LEPeerAddressType address_type;
+
+  // Public Device Address or Random Device Address of the device to be added to the White List.
+  common::DeviceAddress address;
+} __PACKED;
+
+// ====================================================
+// LE Remove Device From White List Command (v4.0) (LE)
+constexpr OpCode kLERemoveDeviceFromWhiteList = LEControllerCommandOpCode(0x0012);
+
+struct LERemoveDeviceFromWhiteListCommandParams {
+  // The address type of the peer. The |address| parameter will be ignored if |address_type| is set
+  // to LEPeerAddressType::kAnonymous.
+  LEPeerAddressType address_type;
+
+  // Public Device Address or Random Device Address of the device to be removed from the White List.
+  common::DeviceAddress address;
+} __PACKED;
+
+// ========================================
+// LE Connection Update Command (v4.0) (LE)
+constexpr OpCode kLEConnectionUpdate = LEControllerCommandOpCode(0x0013);
+
+struct LEConnectionUpdateCommandParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
+  // Time: N * 1.25 ms
+  // Time Range: 7.5 ms to 4 s.
+  uint16_t conn_interval_min;
+  uint16_t conn_interval_max;
+
+  // Range: 0x0000 to kLEConnectionLatencyMax in hci_constants.h
+  uint16_t conn_latency;
+
+  // Range: see kLEConnectionSupervisionTimeout[Min|Max] in hci_constants.h
+  // Time: N * 10 ms
+  // Time Range: 100 ms to 32 s
+  uint16_t supervision_timeout;
+
+  // Range: 0x0000 - 0xFFFF
+  // Time: N * 0x625 ms
+  uint16_t minimum_ce_length;
+  uint16_t maximum_ce_length;
+} __PACKED;
+
+// NOTE on Return Params: A Command Complete event is not sent by the Controller to indicate that
+// this command has been completed. Instead, the LE Connection Update Complete event indicates that
+// this command has been completed.
+
+// ======================================================
+// LE Set Host Channel Classification Command (v4.0) (LE)
+constexpr OpCode kLESetHostChannelClassification = LEControllerCommandOpCode(0x0014);
+
+struct LESetHostChannelClassificationCommandParams {
+  // This parameter contains 37 1-bit fields (only the lower 37-bits of the 5-octet value are
+  // meaningful).
+  //
+  // The nth such field (in the range 0 to 36) contains the value for the link layer channel index
+  // n.
+  //
+  // Channel n is bad = 0. Channel n is unknown = 1.
+  //
+  // The most significant bits are reserved and shall be set to 0 for future use.
+  //
+  // At least one channel shall be marked as unknown.
+  uint8_t channel_map[5];
+} __PACKED;
+
+// =======================================
+// LE Read Channel Map Command (v4.0) (LE)
+constexpr OpCode kLEReadChannelMap = LEControllerCommandOpCode(0x0015);
+
+struct LEReadChannelMapCommandParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+} __PACKED;
+
+struct LEReadChannelMapReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // This parameter contains 37 1-bit fields (only the lower 37-bits of the 5-octet value are
+  // meaningful).
+  //
+  // The nth such field (in the range 0 to 36) contains the value for the link layer channel index
+  // n.
+  //
+  // Channel n is bad = 0. Channel n is unknown = 1.
+  //
+  // The most significant bits are reserved and shall be set to 0 for future use.
+  //
+  // At least one channel shall be marked as unknown.
+  uint8_t channel_map[5];
+} __PACKED;
+
+// ===========================================
+// LE Read Remote Features Command (v4.0) (LE)
+constexpr OpCode kLEReadRemoteFeatures = LEControllerCommandOpCode(0x0016);
+
+struct LEReadRemoteFeaturesCommandParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+} __PACKED;
+
+// Note on ReturnParams: A Command Complete event is not sent by the Controller to indicate that
+// this command has been completed. Instead, the LE Read Remote Features Complete event indicates
+// that this command has been completed.
+
+// ==============================
+// LE Encrypt Command (v4.0) (LE)
+constexpr OpCode kLEEncrypt = LEControllerCommandOpCode(0x0017);
+
+struct LEEncryptCommandParams {
+  // 128 bit key for the encryption of the data given in the command.
+  common::UInt128 key;
+
+  // 128 bit data block that is requested to be encrypted.
+  uint8_t plaintext_data[16];
+} __PACKED;
+
+struct LEEncryptReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // 128 bit encrypted data block.
+  uint8_t encrypted_data[16];
+} __PACKED;
+
+// ===========================
+// LE Rand Command (v4.0) (LE)
+constexpr OpCode kLERand = LEControllerCommandOpCode(0x0018);
+
+struct LERandReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Random Number
+  uint64_t random_number;
+} __PACKED;
+
+// =======================================
+// LE Start Encryption Command (v4.0) (LE)
+constexpr OpCode kLEStartEncryption = LEControllerCommandOpCode(0x0019);
+
+// The parameters below are as defined in Core Spec v5.0, Vol 3, Part H, Section 2.4.4 "Encrypted
+// Session Setup".
+struct LEStartEncryptionCommandParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // 64-bit random number.
+  uint64_t random_number;
+
+  // 16-bit encrypted diversifier.
+  uint16_t encrypted_diversifier;
+
+  // 128-bit long-term key (LTK).
+  common::UInt128 long_term_key;
+} __PACKED;
+
+// NOTE on Return Params: A Command Complete event is not sent by the Controller to indicate that
+// this command has been completed. Instead, the Encryption Change or Encryption Key Refresh
+// Complete events indicate that this command has been completed.
+
+// ==================================================
+// LE Long Term Key Request Reply Command (v4.0) (LE)
+constexpr OpCode kLELongTermKeyRequestReply = LEControllerCommandOpCode(0x001A);
+
+struct LELongTermKeyRequestReplyCommandParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // 128-bit long term key for the current connection.
+  common::UInt128 long_term_key;
+} __PACKED;
+
+struct LELongTermKeyRequestReplyReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+} __PACKED;
+
+// ===========================================================
+// LE Long Term Key Request Negative Reply Command (v4.0) (LE)
+constexpr OpCode kLELongTermKeyRequestNegativeReply = LEControllerCommandOpCode(0x001B);
+
+struct LELongTermKeyRequestNegativeReplyCommandParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+} __PACKED;
+
+struct LELongTermKeyRequestNegativeReplyReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
 } __PACKED;
 
 // ============================================
@@ -726,7 +890,320 @@ struct LEReadSupportedStatesReturnParams {
 
   // Bit-mask of supported state or state combinations. See Core Spec v4.2,
   // Volume 2, Part E, Section 7.8.27 "LE Read Supported States Command".
-  uint8_t le_states[8];
+  uint64_t le_states;
+} __PACKED;
+
+// ====================================
+// LE Receiver Test Command (v4.0) (LE)
+constexpr OpCode kLEReceiverTest = LEControllerCommandOpCode(0x001D);
+
+struct LEReceiverTestCommandParams {
+  // N = (F - 2402) / 2
+  // Range: 0x00 - 0x27. Frequency Range : 2402 MHz to 2480 MHz.
+  uint8_t rx_channel;
+} __PACKED;
+
+// ======================================
+// LE Transmitter Test Comand (v4.0) (LE)
+constexpr OpCode kLETransmitterTest = LEControllerCommandOpCode(0x001E);
+
+struct LETransmitterTestCommandParams {
+  // N = (F - 2402) / 2
+  // Range: 0x00 - 0x27. Frequency Range : 2402 MHz to 2480 MHz.
+  uint8_t tx_channel;
+
+  // Length in bytes of payload data in each packet
+  uint8_t length_of_test_data;
+
+  // The packet payload sequence. See Core Spec 5.0, Vol 2, Part E, Section 7.8.29 for a description
+  // of possible values.
+  uint8_t packet_payload;
+} __PACKED;
+
+// ===============================
+// LE Test End Command (v4.0) (LE)
+constexpr OpCode kLETestEnd = LEControllerCommandOpCode(0x001F);
+
+struct LETestEndReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Number of packets received
+  uint16_t number_of_packets;
+} __PACKED;
+
+// ================================================================
+// LE Remote Connection Parameter Request Reply Command (v4.1) (LE)
+constexpr OpCode kLERemoteConnectionParameterRequestReply = LEControllerCommandOpCode(0x0020);
+
+struct LERemoteConnectionParameterRequestReplyCommandParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
+  // Time: N * 1.25 ms
+  // Time Range: 7.5 ms to 4 s.
+  uint16_t conn_interval_min;
+  uint16_t conn_interval_max;
+
+  // Range: 0x0000 to kLEConnectionLatencyMax in hci_constants.h
+  uint16_t conn_latency;
+
+  // Range: see kLEConnectionSupervisionTimeout[Min|Max] in hci_constants.h
+  // Time: N * 10 ms
+  // Time Range: 100 ms to 32 s
+  uint16_t supervision_timeout;
+
+  // Range: 0x0000 - 0xFFFF
+  // Time: N * 0x625 ms
+  uint16_t minimum_ce_length;
+  uint16_t maximum_ce_length;
+} __PACKED;
+
+struct LERemoteConnectionParameterRequestReplyReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+} __PACKED;
+
+// =========================================================================
+// LE Remote Connection Parameter Request Negative Reply Command (v4.1) (LE)
+constexpr OpCode kLERemoteConnectionParameterRequestNegativeReply =
+    LEControllerCommandOpCode(0x0021);
+
+struct LERemoteConnectionParamReqNegativeReplyCommandParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Reason that the connection parameter request was rejected.
+  Status reason;
+} __PACKED;
+
+struct LERemoteConnectionParamReqNegativeReplyReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+} __PACKED;
+
+// ======================================
+// LE Set Data Length Command (v4.2) (LE)
+constexpr OpCode kLESetDataLength = LEControllerCommandOpCode(0x0022);
+
+struct LESetDataLengthCommandParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Range: see kLEMaxTxOctets[Min|Max] in hci_constants.h
+  uint16_t tx_octets;
+
+  // Range: see kLEMaxTxTime[Min|Max] in hci_constants.h
+  uint16_t tx_time;
+} __PACKED;
+
+struct LESetDataLengthReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+} __PACKED;
+
+// =========================================================
+// LE Read Suggested Default Data Length Command (v4.2) (LE)
+constexpr OpCode kLEReadSuggestedDefaultDataLength = LEControllerCommandOpCode(0x0023);
+
+struct LEReadSuggestedDefaultDataLengthReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Range: see kLEMaxTxOctets[Min|Max] in hci_constants.h
+  uint16_t suggested_max_tx_octets;
+
+  // Range: see kLEMaxTxTime[Min|Max] in hci_constants.h
+  uint16_t suggested_max_tx_time;
+} __PACKED;
+
+// ==========================================================
+// LE Write Suggested Default Data Length Command (v4.2) (LE)
+constexpr OpCode kLEWriteSuggestedDefaultDataLength = LEControllerCommandOpCode(0x0024);
+
+struct LEWriteSuggestedDefaultDataLengthCommandParams {
+  // Range: see kLEMaxTxOctets[Min|Max] in hci_constants.h
+  uint16_t suggested_max_tx_octets;
+
+  // Range: see kLEMaxTxTime[Min|Max] in hci_constants.h
+  uint16_t suggested_max_tx_time;
+} __PACKED;
+
+// ==================================================
+// LE Read Local P-256 Public Key Command (v4.2) (LE)
+constexpr OpCode kLEReadLocalP256PublicKey = LEControllerCommandOpCode(0x0025);
+
+// NOTE on ReturnParams: When the Controller receives the LE_Read_Local_P-256_Public_Key command,
+// the Controller shall send the Command Status event to the Host. When the local P-256 public key
+// generation finishes, an LE Read Local P-256 Public Key Complete event shall be generated.
+//
+// No Command Complete event is sent by the Controller to indicate that this command has been
+// completed.
+
+// ======================================
+// LE Generate DH Key Command (v4.2) (LE)
+constexpr OpCode kLEGenerateDHKey = LEControllerCommandOpCode(0x0026);
+
+struct LEGenerateDHKeyCommandParams {
+  // The remote P-256 public key:
+  //   X, Y format
+  //   Octets 31-0: X co-ordinate
+  //   Octets 63-32: Y co-ordinate Little Endian Format
+  uint8_t remote_p256_public_key[64];
+} __PACKED;
+
+// NOTE on ReturnParams: When the Controller receives the LE_Generate_DHKey command, the Controller
+// shall send the Command Status event to the Host. When the DHKey generation finishes, an LE DHKey
+// Generation Complete event shall be generated.
+//
+// No Command Complete event is sent by the Controller to indicate that this command has been
+// completed.
+
+// ===================================================
+// LE Add Device To Resolving List Command (v4.2) (LE)
+constexpr OpCode kLEAddDeviceToResolvingList = LEControllerCommandOpCode(0x0027);
+
+struct LEAddDeviceToResolvingListCommandParams {
+  // The peer device's identity address type.
+  LEPeerAddressType peer_identity_address_type;
+
+  // Public or Random (static) Identity address of the peer device
+  common::DeviceAddress peer_identity_address;
+
+  // IRK (Identity Resolving Key) of the peer device
+  common::UInt128 peer_irk;
+
+  // IRK (Identity Resolving Key) of the local device
+  common::UInt128 local_irk;
+} __PACKED;
+
+// ========================================================
+// LE Remove Device From Resolving List Command (v4.2) (LE)
+constexpr OpCode kLERemoveDeviceFromResolvingList = LEControllerCommandOpCode(0x0028);
+
+struct LERemoveDeviceFromResolvingListCommandParams {
+  // The peer device's identity address type.
+  LEPeerAddressType peer_identity_address_type;
+
+  // Public or Random (static) Identity address of the peer device
+  common::DeviceAddress peer_identity_address;
+} __PACKED;
+
+// ===========================================
+// LE Clear Resolving List Command (v4.2) (LE)
+constexpr OpCode kLEClearResolvingList = LEControllerCommandOpCode(0x0029);
+
+// ===============================================
+// LE Read Resolving List Size Command (v4.2) (LE)
+constexpr OpCode kLEReadResolvingListSize = LEControllerCommandOpCode(0x002A);
+
+struct LEReadResolvingListReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Number of address translation entries in the resolving list.
+  uint8_t resolving_list_size;
+} __PACKED;
+
+// ===================================================
+// LE Read Peer Resolvable Address Command (v4.2) (LE)
+constexpr OpCode kLEReadPeerResolvableAddress = LEControllerCommandOpCode(0x002B);
+
+struct LEReadPeerResolvableAddressCommandParams {
+  // The peer device's identity address type.
+  LEPeerAddressType peer_identity_address_type;
+
+  // Public or Random (static) Identity address of the peer device.
+  common::DeviceAddress peer_identity_address;
+} __PACKED;
+
+struct LEReadPeerResolvableAddressReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Resolvable Private Address being used by the peer device.
+  common::DeviceAddress peer_resolvable_address;
+} __PACKED;
+
+// ====================================================
+// LE Read Local Resolvable Address Command (v4.2) (LE)
+constexpr OpCode kLEReadLocalResolvableAddress = LEControllerCommandOpCode(0x002C);
+
+struct LEReadLocalResolvableAddressCommandParams {
+  // The peer device's identity address type.
+  LEPeerAddressType peer_identity_address_type;
+
+  // Public or Random (static) Identity address of the peer device
+  common::DeviceAddress peer_identity_address;
+} __PACKED;
+
+struct LEReadLocalResolvableAddressReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Resolvable Private Address being used by the local device.
+  common::DeviceAddress local_resolvable_address;
+} __PACKED;
+
+// ====================================================
+// LE Set Address Resolution Enable Command (v4.2) (LE)
+constexpr OpCode kLESetAddressResolutionEnable = LEControllerCommandOpCode(0x002D);
+
+struct LESetAddressResolutionEnableCommandParams {
+  GenericEnableParam address_resolution_enable;
+} __PACKED;
+
+// =============================================================
+// LE Set Resolvable Private Address Timeout Command (v4.2) (LE)
+constexpr OpCode kLESetResolvablePrivateAddressTimeout = LEControllerCommandOpCode(0x002E);
+
+struct LESetResolvablePrivateAddressTimeoutCommandParams {
+  // Range: See kLERPATimeout[Min|Max] in hci_constants.h
+  // Default: See kLERPATimeoutDefault in hci_constants.h
+  uint16_t rpa_timeout;
+} __PACKED;
+
+// ===============================================
+// LE Read Maximum Data Length Command (v4.2) (LE)
+constexpr OpCode kLEReadMaximumDataLength = LEControllerCommandOpCode(0x002F);
+
+struct LEReadMaximumDataLengthReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Range: see kLEMaxTxOctets[Min|Max] in hci_constants.h
+  uint16_t supported_max_tx_octets;
+
+  // Range: see kLEMaxTxTime[Min|Max] in hci_constants.h
+  uint16_t supported_max_tx_time;
+
+  // Range: see kLEMaxTxOctets[Min|Max] in hci_constants.h
+  uint16_t supported_max_rx_octets;
+
+  // Range: see kLEMaxTxTime[Min|Max] in hci_constants.h
+  uint16_t supported_max_rx_time;
 } __PACKED;
 
 }  // namespace hci
