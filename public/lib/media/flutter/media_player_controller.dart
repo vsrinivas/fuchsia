@@ -252,6 +252,10 @@ class MediaPlayerController extends ChangeNotifier {
 
   int get _progressNanoseconds {
     // Estimate FrameInfo::presentationTime.
+    if (_timelineFunction == null) {
+      return 0;
+    }
+
     int microseconds = (new DateTime.now()).microsecondsSinceEpoch -
         _progressBarMicrosecondsSinceEpoch;
     int referenceNanoseconds = microseconds * 1000 + _progressBarReferenceTime;
