@@ -70,7 +70,6 @@ static int mxio_dispatcher_thread(void* _md) {
     mxio_dispatcher_t* md = _md;
     mx_status_t r;
 
-again:
     for (;;) {
         mx_io_packet_t packet;
         if ((r = mx_port_wait(md->ioport, MX_TIME_INFINITE, &packet, sizeof(packet))) < 0) {
