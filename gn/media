@@ -37,10 +37,6 @@
             "bootfs_path": "test/media_lib_transport_tests"
         },
         {
-            "binary": "media_net_tests",
-            "bootfs_path": "test/media_net_tests"
-        },
-        {
             "binary": "media_player",
             "bootfs_path": "apps/media_player"
         },
