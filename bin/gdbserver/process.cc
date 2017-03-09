@@ -15,7 +15,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "rsp-server.h"
+#include "server.h"
 #include "util.h"
 
 // This is a global variable that exists in the dynamic linker, and thus in

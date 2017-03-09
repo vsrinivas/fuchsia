@@ -2,21 +2,51 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# These sources could live in one or more generally available libraries.
-# They are common to all apps in this directory.
-common_sources = [
-    "arch.h",
-    "breakpoint.cc",
-    "breakpoint.h",
+# A collection of utilities useful to debuggers and similar programs.
+# This library is "public" in the sense that it's available to be used
+# by anyone outside of this directory.
+# TODO(dje): Living in bin/foo is suboptimal.
+static_library("debugger-utils") {
+  sources = [
     "dso-list.cc",
     "dso-list.h",
     "elf-reader.cc",
     "elf-reader.h",
+    "memory.h",
+    "util.cc",
+    "util.h",
+  ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "x86-cpuid.cc",
+      "x86-cpuid.h",
+      "x86-pt.cc",
+      "x86-pt.h",
+    ]
+  }
+
+  deps = [
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magenta/system/ulib/mx",
+  ]
+}
+
+# A framework for running subprocesses ("inferiors") under debugger-like
+# control.
+# This library is "public" in the sense that it's available to be used
+# by anyone outside of this directory.
+# TODO(dje): Living in bin/foo is suboptimal.
+static_library("inferior-control") {
+  sources = [
+    "arch.h",
+    "breakpoint.cc",
+    "breakpoint.h",
     "exception-port.cc",
     "exception-port.h",
     "io-loop.cc",
     "io-loop.h",
-    "memory.h",
     "memory-process.cc",
     "memory-process.h",
     "process.cc",
@@ -27,32 +57,34 @@ common_sources = [
     "server.h",
     "thread.cc",
     "thread.h",
-    "util.cc",
-    "util.h",
-]
+  ]
 
-if (current_cpu == "x64") {
-  arch_sources = [
-    "arch-amd64.cc",
-    "arch-x86.h",
-    "breakpoint-amd64.cc",
-    "registers-amd64.cc",
-    "x86-cpuid.cc",
-    "x86-cpuid.h",
-    "x86-pt.cc",
-    "x86-pt.h",
-  ]
-} else if (current_cpu == "arm64") {
-  arch_sources = [
-    "arch-arm64.cc",
-    "breakpoint-arm64.cc",
-    "registers-arm64.cc",
-  ]
-} else {
-  arch_sources = [
-    "arch-default.cc",
-    "breakpoint-default.cc",
-    "registers-default.cc",
+  if (current_cpu == "x64") {
+    sources += [
+      "arch-amd64.cc",
+      "arch-x86.h",
+      "breakpoint-amd64.cc",
+      "registers-amd64.cc",
+    ]
+  } else if (current_cpu == "arm64") {
+    sources += [
+      "arch-arm64.cc",
+      "breakpoint-arm64.cc",
+      "registers-arm64.cc",
+    ]
+  } else {
+    sources += [
+      "arch-default.cc",
+      "breakpoint-default.cc",
+      "registers-default.cc",
+    ]
+  }
+
+  deps = [
+    ":debugger-utils",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magenta/system/ulib/mx",
   ]
 }
 
@@ -73,10 +105,7 @@ executable("debugserver") {
   # TODO(dje): Rename directory and reorganize when things settle a bit.
   output_name = "debugserver"
 
-  sources = common_sources
-  sources += arch_sources
-
-  sources += [
+  sources = [
     "rsp-cmd-handler.cc",
     "rsp-cmd-handler.h",
     "rsp-io-loop.cc",
@@ -93,6 +122,8 @@ executable("debugserver") {
   ]
 
   deps = [
+    ":debugger-utils",
+    ":inferior-control",
     "//lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
@@ -111,9 +142,7 @@ executable("ipt") {
   output_name = "ipt"
 
   if (current_cpu == "x64") {
-    sources = common_sources
-    sources += arch_sources
-    sources += [
+    sources = [
       "ipt-ctrl.cc",
       "ipt-ctrl.h",
       "ipt-main.cc",
@@ -127,6 +156,8 @@ executable("ipt") {
   }
 
   deps = [
+    ":debugger-utils",
+    ":inferior-control",
     "//lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
