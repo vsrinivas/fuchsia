@@ -1162,16 +1162,18 @@ RUN_TEST(CorruptedBlob)
 RUN_TEST(CorruptedDigest)
 RUN_TEST(EdgeAllocation)
 RUN_TEST(CreateUmountRemountSmall)
-RUN_TEST(CreateUmountRemountLarge)
-// TODO(smklein): Fix this test
-//RUN_TEST(CreateUmountRemountLargeMultithreaded)
-RUN_TEST(NoSpace)
 RUN_TEST(EarlyRead)
 RUN_TEST(WaitForRead)
 RUN_TEST(WriteSeekIgnored)
 RUN_TEST(UnlinkTiming)
 RUN_TEST(InvalidOps)
 RUN_TEST(RootDirectory)
+// TODO(smklein): The following tests take a significant amount of
+// time to run. Until Magenta is aware of "small / medium / large" tests,
+// they are disabled (but should be run locally when testing the Blobstore).
+//RUN_TEST(CreateUmountRemountLargeMultithreaded)
+//RUN_TEST(CreateUmountRemountLarge)
+//RUN_TEST(NoSpace)
 END_TEST_CASE(blobstore_tests)
 
 int main(int argc, char** argv) {
