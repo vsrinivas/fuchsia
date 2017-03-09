@@ -269,7 +269,7 @@ mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
     }
 
     for (size_t ix = 0; ix != scount; ++ix) {
-        auto status = dispatcher->add_observer(observers[ix]);
+        __UNUSED auto status = dispatcher->add_observer(observers[ix]);
         DEBUG_ASSERT(status == NO_ERROR);
     }
 
