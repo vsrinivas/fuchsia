@@ -312,6 +312,24 @@ bool test_scroll_up() {
     END_TEST;
 }
 
+// Same as scroll_up(), but using ESC E (NEL) instead of "\n".
+bool test_scroll_up_nel() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 4);
+    tc.PutString("AAA" "\x1b" "E"
+                 "BBB" "\x1b" "E"
+                 "CCC" "\x1b" "E"
+                 "DDD" "\x1b" "E");
+    tc.AssertLineContains(0, "BBB");
+    tc.AssertLineContains(1, "CCC");
+    tc.AssertLineContains(2, "DDD");
+    tc.AssertLineContains(3, "");
+    EXPECT_EQ(vc_device_get_scrollback_lines(tc.vc_dev), 1, "");
+
+    END_TEST;
+}
+
 bool test_insert_lines() {
     BEGIN_TEST;
 
@@ -467,6 +485,7 @@ RUN_TEST(test_tabs)
 RUN_TEST(test_backspace_moves_cursor)
 RUN_TEST(test_backspace_at_start_of_line)
 RUN_TEST(test_scroll_up)
+RUN_TEST(test_scroll_up_nel)
 RUN_TEST(test_insert_lines)
 RUN_TEST(test_delete_lines)
 RUN_TEST(test_insert_lines_many)
