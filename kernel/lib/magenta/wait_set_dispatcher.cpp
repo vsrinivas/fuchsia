@@ -243,7 +243,7 @@ status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* hand
     // set its state to REMOVE_REQUESTED).
 
     // We need to call this outside the lock.
-    auto status = handle->dispatcher()->add_observer(e);
+    __UNUSED auto status = handle->dispatcher()->add_observer(e);
     DEBUG_ASSERT(status == NO_ERROR);
 
     // add_observer() calls e->OnInitialize(), which sets |e|'s state to ADDED. WARNING:
