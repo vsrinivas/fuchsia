@@ -126,9 +126,9 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, mx_handle_t vmo) {
     }
     struct callback_data cd = {
         .vmo = vmo,
-        .add_file = (type == BOOTDATA_TYPE_BOOTFS_SYSTEM) ? systemfs_add_file : bootfs_add_file,
+        .add_file = (type == BOOTDATA_BOOTFS_SYSTEM) ? systemfs_add_file : bootfs_add_file,
     };
-    if ((type == BOOTDATA_TYPE_BOOTFS_SYSTEM) && !has_secondary_bootfs) {
+    if ((type == BOOTDATA_BOOTFS_SYSTEM) && !has_secondary_bootfs) {
         has_secondary_bootfs = true;
         memfs_mount(vfs_create_global_root(), systemfs_get_root());
     }
@@ -146,7 +146,7 @@ static void setup_bootfs(void) {
     unsigned idx = 0;
 
     if ((vmo = mx_get_startup_handle(HND_BOOTFS(0)))) {
-        setup_bootfs_vmo(idx++, BOOTDATA_TYPE_BOOTFS_BOOT, vmo);
+        setup_bootfs_vmo(idx++, BOOTDATA_BOOTFS_BOOT, vmo);
     } else {
         printf("devmgr: missing primary bootfs?!\n");
     }
@@ -160,20 +160,26 @@ static void setup_bootfs(void) {
             if ((status < 0) || (actual != sizeof(bootdata))) {
                 break;
             }
-            if (bootdata.magic != BOOTDATA_MAGIC) {
-                break;
-            }
             switch (bootdata.type) {
-            case BOOTDATA_TYPE_BOOTFS_DISCARD:
+            case BOOTDATA_CONTAINER:
+                if (off == 0) {
+                    // quietly skip a container header at start
+                    bootdata.length = 0;
+                } else {
+                    printf("devmgr: unexpected bootdata container header\n");
+                    goto done;
+                }
+                break;
+            case BOOTDATA_BOOTFS_DISCARD:
                 // this was already unpacked for us by userboot
                 break;
-            case BOOTDATA_TYPE_BOOTFS_BOOT:
-            case BOOTDATA_TYPE_BOOTFS_SYSTEM: {
+            case BOOTDATA_BOOTFS_BOOT:
+            case BOOTDATA_BOOTFS_SYSTEM: {
                 const char* errmsg;
                 mx_handle_t bootfs_vmo;
                 printf("devmgr: decompressing bootfs #%u\n", idx);
                 status = decompress_bootdata(mx_vmar_root_self(), vmo,
-                                             off, bootdata.insize + sizeof(bootdata),
+                                             off, bootdata.length + sizeof(bootdata),
                                              &bootfs_vmo, &errmsg);
                 if (status < 0) {
                     printf("devmgr: failed to decompress bootdata\n");
@@ -183,18 +189,21 @@ static void setup_bootfs(void) {
                 }
                 break;
             }
+            case 0:
+                break;
             default:
                 printf("devmgr: ignoring bootdata type=%08x size=%u\n",
-                       bootdata.type, bootdata.insize);
+                       bootdata.type, bootdata.length);
             }
-            off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.insize);
+            off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);
         }
+done:
         mx_handle_close(vmo);
     }
 }
 
 ssize_t devmgr_add_systemfs_vmo(mx_handle_t vmo) {
-    ssize_t added = setup_bootfs_vmo(100, BOOTDATA_TYPE_BOOTFS_SYSTEM, vmo);
+    ssize_t added = setup_bootfs_vmo(100, BOOTDATA_BOOTFS_SYSTEM, vmo);
     if (added > 0) {
         start_system_init();
     }

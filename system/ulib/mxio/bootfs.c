@@ -13,11 +13,10 @@
 
 #define BOOTFS_MAX_NAME_LEN 256
 
-static const char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
 
 // BOOTFS is a trivial "filesystem" format
 //
-// It has a 16 byte magic/version value (FSMAGIC)
+// It has a bootdata item header
 // Followed by a series of records of:
 //   namelength (32bit le)
 //   filesize   (32bit le)
@@ -30,33 +29,21 @@ static const char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
 #define FSIZ 1
 #define FOFF 2
 
-struct bootfs_magic {
-    bootdata_t boothdr;
-    char fsmagic[16];
-};
-
 void bootfs_parse(mx_handle_t vmo, size_t len,
                   void (*cb)(void*, const char* fn, size_t off, size_t len),
                   void* cb_arg) {
     size_t rlen;
-    mx_off_t off = 0;
-    struct bootfs_magic boot_data;
-    mx_status_t r = mx_vmo_read(vmo, &boot_data, off, sizeof(boot_data), &rlen);
-    if (r < 0 || rlen < sizeof(boot_data)) {
+    bootdata_t hdr;
+    size_t off = 0;
+    mx_status_t r = mx_vmo_read(vmo, &hdr, off, sizeof(hdr), &rlen);
+    if (r < 0 || rlen < sizeof(hdr)) {
         printf("bootfs_parse: couldn't read boot_data - %#zx\n", rlen);
         return;
     }
 
-    if (boot_data.boothdr.magic != BOOTDATA_MAGIC) {
-        printf("parse_boot: bad boot magic\n");
+    if ((hdr.type & BOOTDATA_BOOTFS_MASK) != BOOTDATA_BOOTFS_TYPE) {
+        printf("bootfs_parse: incorrect bootdata header: %08x\n", hdr.type);
         return;
-    }
-
-    // This field is obsolete, so skip if it doesn't match
-    if (!memcmp(boot_data.fsmagic, FSMAGIC, sizeof(FSMAGIC))) {
-        off += sizeof(boot_data);
-    } else {
-        off += sizeof(boot_data.boothdr);
     }
 
     uint8_t _buffer[4096];
@@ -66,6 +53,7 @@ void bootfs_parse(mx_handle_t vmo, size_t len,
     char name[BOOTFS_MAX_NAME_LEN];
     uint32_t header[3];
 
+    off += sizeof(hdr);
     for (;;) {
         if ((end - data) < (int)sizeof(header)) {
             // read in another xxx headers
@@ -80,15 +68,7 @@ void bootfs_parse(mx_handle_t vmo, size_t len,
                 break;
             }
         }
-
         memcpy(header, data, sizeof(header));
-        if (data + sizeof(header) + header[NLEN] > end) {
-            // read only part of the last file name:
-            // back up end and induce a fresh, new read
-            end = data;
-            continue;
-        }
-        data += sizeof(header);
 
         // check for end marker
         if (header[NLEN] == 0)
@@ -96,14 +76,24 @@ void bootfs_parse(mx_handle_t vmo, size_t len,
 
         // require reasonable filename size
         if ((header[NLEN] < 2) || (header[NLEN] > BOOTFS_MAX_NAME_LEN)) {
+            printf("bootfs_parse: bogus filename\n");
             break;
         }
 
         // require correct alignment
         if (header[FOFF] & 4095) {
+            printf("bootfs_parse: unaligned item\n");
             break;
         }
 
+
+        if (data + sizeof(header) + header[NLEN] > end) {
+            // read only part of the last file name:
+            // back up end and induce a fresh, new read
+            end = data;
+            continue;
+        }
+        data += sizeof(header);
         if ((end - data) < (off_t)header[NLEN]) {
             break;
         }

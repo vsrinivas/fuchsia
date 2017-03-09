@@ -158,21 +158,28 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    bootdata_t header;
+    if (read(fd, &header, sizeof(header)) != sizeof(header)) {
+        fprintf(stderr, "could not read bootdata header\n");
+        close(fd);
+        return -1;
+    }
+    if ((header.type != BOOTDATA_CONTAINER) ||
+        (header.extra != BOOTDATA_MAGIC)) {
+        fprintf(stderr, "not a bootdata file\n");
+        close(fd);
+        return -1;
+    }
+
     while (1) {
         // Search for bootdata entry with type BOOTDATA_TYPE_MDI
-        bootdata_t header;
         if (read(fd, &header, sizeof(header)) != sizeof(header)) {
-            fprintf(stderr, "could not read MDI header\n");
+            fprintf(stderr, "could not read bootdata header\n");
             close(fd);
             return -1;
         }
-        if (header.magic != BOOTDATA_MAGIC) {
-            fprintf(stderr, "MDI header bad magic 0x%" PRIx64 "\n", header.magic);
-            close(fd);
-            return -1;
-        }
-        if (header.type != BOOTDATA_TYPE_MDI) {
-            lseek(fd, BOOTDATA_ALIGN(header.insize), SEEK_CUR);
+        if (header.type != BOOTDATA_MDI) {
+            lseek(fd, BOOTDATA_ALIGN(header.length), SEEK_CUR);
             continue;
         }
     }

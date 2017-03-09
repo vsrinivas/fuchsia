@@ -55,9 +55,7 @@ static struct bootfs_file bootfs_search(mx_handle_t log,
     if (fs->len < sizeof(struct bootfs_magic))
         fail(log, ERR_INVALID_ARGS, "bootfs image too small!\n");
     struct bootfs_magic* magic = (struct bootfs_magic*)fs->contents;
-    if (magic->boothdr.magic != BOOTDATA_MAGIC)
-        fail(log, ERR_INVALID_ARGS, "bootdata has bad magic number!\n");
-    if (magic->boothdr.type != BOOTDATA_TYPE_BOOTFS_BOOT)
+    if (magic->boothdr.type != BOOTDATA_BOOTFS_BOOT)
         fail(log, ERR_INVALID_ARGS, "bootdata is not a bootfs!\n");
     // This field is obsolete, so we can skip it if it doesn't exist.
     if (!memcmp(magic->fsmagic, FSMAGIC, sizeof(FSMAGIC))) {

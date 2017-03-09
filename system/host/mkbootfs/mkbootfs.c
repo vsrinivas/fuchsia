@@ -26,11 +26,9 @@
 
 int verbose = 0;
 
-char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
-
 // BOOTFS is a trivial "filesystem" format
 //
-// It has a 16 byte magic/version value (FSMAGIC)
+// It has a bootdata section header
 // Followed by a series of records of:
 //   namelength (32bit le)
 //   filesize   (32bit le)
@@ -165,9 +163,11 @@ int import_file(const char* fn, unsigned* hdrsz, fs* list, fs* bootdata) {
         return -1;
     }
 
-    uint64_t magic;
-    if ((fread(&magic, sizeof(magic), 1, fp) != 1) ||
-        (magic != BOOTDATA_MAGIC)) {
+    bootdata_t hdr;
+    if ((fread(&hdr, sizeof(hdr), 1, fp) != 1) ||
+        (hdr.type != BOOTDATA_CONTAINER) ||
+        (hdr.extra != BOOTDATA_MAGIC) ||
+        (hdr.flags != 0)) {
         // not a bootdata file, must be a manifest...
         rewind(fp);
         return import_manifest(fp, fn, hdrsz, list);
@@ -180,6 +180,21 @@ int import_file(const char* fn, unsigned* hdrsz, fs* list, fs* bootdata) {
             fprintf(stderr, "error: cannot stat '%s'\n", fn);
             return -1;
         }
+        if (s.st_size < sizeof(hdr)) {
+            fprintf(stderr, "error: bootdata file too small '%s'\n", fn);
+            return -1;
+        }
+        if (s.st_size & 7) {
+            fprintf(stderr, "error: bootdata file misaligned '%s'\n", fn);
+            return -1;
+        }
+        if (s.st_size != (hdr.length + sizeof(hdr))) {
+            fprintf(stderr, "error: bootdata header size mismatch '%s'\n", fn);
+            return -1;
+        }
+
+        // The header itself is not copied
+        s.st_size -= sizeof(hdr);
 
         fsentry* e;
         if ((e = import_directory_entry("bootdata", fn, &s)) < 0) {
@@ -426,6 +441,50 @@ static const io_ops io_compressed = {
     .finish = compress_finish,
 };
 
+ssize_t copybootdatafile(int fd, const char* fn, size_t len, void* cookie) {
+    char buf[MAXBUFFER];
+    int r, fdi;
+    if ((fdi = open(fn, O_RDONLY)) < 0) {
+        fprintf(stderr, "error: cannot open '%s'\n", fn);
+        return -1;
+    }
+
+    bootdata_t hdr;
+    if ((r = readx(fdi, &hdr, sizeof(hdr))) < 0) {
+        fprintf(stderr, "error: '%s' cannot read file header\n", fn);
+        goto fail;
+    }
+    if ((hdr.type != BOOTDATA_CONTAINER) ||
+        (hdr.extra != BOOTDATA_MAGIC) ||
+        (hdr.flags != 0)) {
+        fprintf(stderr, "error: '%s' is not a bootdata file\n", fn);
+        goto fail;
+    }
+    if ((hdr.length != len)) {
+        fprintf(stderr, "error: '%s' header length (%u) != %zd\n", fn, hdr.length, len);
+        goto fail;
+    }
+
+    r = 0;
+    size_t total = len;
+    while (len > 0) {
+        size_t xfer = (len > sizeof(buf)) ? sizeof(buf) : len;
+        if ((r = readx(fdi, buf, xfer)) < 0) {
+            break;
+        }
+        if ((r = writex(fd, buf, xfer)) < 0) {
+            break;
+        }
+        len -= xfer;
+    }
+    close(fdi);
+    return (r < 0) ? r : total;
+
+fail:
+    close(fdi);
+    return -1;
+}
+
 #define PAGEALIGN(n) (((n) + 4095) & (~4095))
 #define PAGEFILL(n) (PAGEALIGN(n) - (n))
 
@@ -446,110 +505,140 @@ int export_userfs(const char* fn, fs* predata, fs* postdata, fs* fs,
         return -1;
     }
 
-    // Write any preceeding bootdata files
-    for (e = predata->first; e != NULL; e = e->next) {
-        CHECK(copyfile(fd, e->srcpath, e->length, NULL));
-    }
-
-    // Make note of where we started
-    off_t start = lseek(fd, 0, SEEK_CUR);
-    if (start < 0) {
-        fprintf(stderr, "error: couldn't seek\n");
-        goto fail;
-    }
-
-    if (compressed) {
-        // Update the LZ4 content size to be original size without the bootdata
-        // header which isn't being compressed.
-        lz4_prefs.frameInfo.contentSize = outsize - sizeof(bootdata_t);
-    }
-
-    // Increment past the bootdata header which will be filled out later.
-    if (lseek(fd, (start + sizeof(bootdata_t)), SEEK_SET) != (start + sizeof(bootdata_t))) {
+    // Leave room for file header
+    if (lseek(fd, sizeof(bootdata_t), SEEK_SET) != sizeof(bootdata_t)) {
         fprintf(stderr, "error: cannot seek\n");
         goto fail;
     }
 
-    void* cookie = NULL;
-    if (op->setup) {
-        CHECK(op->setup(fd, &cookie));
+    // Write any preceeding bootdata files
+    for (e = predata->first; e != NULL; e = e->next) {
+        CHECK(copybootdatafile(fd, e->srcpath, e->length, NULL));
     }
 
-    CHECK(op->write(fd, FSMAGIC, sizeof(FSMAGIC), cookie));
+    // Make note of where we started
+    off_t start = lseek(fd, 0, SEEK_CUR);
+    off_t end = start;
 
-    fsentry* last_entry = NULL;
-    for (e = fs->first; e != NULL; e = e->next) {
-        uint32_t hdr[3];
-        hdr[0] = e->namelen;
-        hdr[1] = e->length;
-        hdr[2] = e->offset;
-        CHECK(op->write(fd, hdr, sizeof(hdr), cookie));
-        CHECK(op->write(fd, e->name, e->namelen, cookie));
-        last_entry = e;
-    }
-    // Record length of last file
-    uint32_t last_length = last_entry ? last_entry->length : 0;
-
-    // null terminator record
-    CHECK(op->write(fd, fill, 12, cookie));
-
-    if ((n = PAGEFILL(hsz))) {
-        CHECK(op->write(fd, fill, n, cookie));
-    }
-
-    for (e = fs->first; e != NULL; e = e->next) {
-        if (verbose) {
-            fprintf(stderr, "%08x %08x %s\n", e->offset, e->length, e->name);
+    if (fs->first) {
+        if (start < 0) {
+            fprintf(stderr, "error: couldn't seek\n");
+            goto fail;
         }
-        CHECK(op->write_file(fd, e->srcpath, e->length, cookie));
-        if ((n = PAGEFILL(e->length))) {
+
+        if (compressed) {
+            // Update the LZ4 content size to be original size without the bootdata
+            // header which isn't being compressed.
+            lz4_prefs.frameInfo.contentSize = outsize - sizeof(bootdata_t);
+        }
+
+        // Increment past the bootdata header which will be filled out later.
+        if (lseek(fd, (start + sizeof(bootdata_t)), SEEK_SET) != (start + sizeof(bootdata_t))) {
+            fprintf(stderr, "error: cannot seek\n");
+            goto fail;
+        }
+
+        void* cookie = NULL;
+        if (op->setup) {
+            CHECK(op->setup(fd, &cookie));
+        }
+
+        fsentry* last_entry = NULL;
+        for (e = fs->first; e != NULL; e = e->next) {
+            uint32_t hdr[3];
+            hdr[0] = e->namelen;
+            hdr[1] = e->length;
+            hdr[2] = e->offset;
+            CHECK(op->write(fd, hdr, sizeof(hdr), cookie));
+            CHECK(op->write(fd, e->name, e->namelen, cookie));
+            last_entry = e;
+        }
+        // Record length of last file
+        uint32_t last_length = last_entry ? last_entry->length : 0;
+
+        // null terminator record
+        CHECK(op->write(fd, fill, 12, cookie));
+
+        if ((n = PAGEFILL(hsz))) {
             CHECK(op->write(fd, fill, n, cookie));
         }
-    }
-    // If the last entry has length zero, add an extra zero page at the end.
-    // This prevents the possibility of trying to read/map past the end of the
-    // bootfs at runtime.
-    if (last_length == 0) {
-        CHECK(op->write(fd, fill, sizeof(fill), cookie));
-    }
 
-    if (op->finish) {
-        CHECK(op->finish(fd, cookie));
-    }
+        for (e = fs->first; e != NULL; e = e->next) {
+            if (verbose) {
+                fprintf(stderr, "%08x %08x %s\n", e->offset, e->length, e->name);
+            }
+            CHECK(op->write_file(fd, e->srcpath, e->length, cookie));
+            if ((n = PAGEFILL(e->length))) {
+                CHECK(op->write(fd, fill, n, cookie));
+            }
+        }
+        // If the last entry has length zero, add an extra zero page at the end.
+        // This prevents the possibility of trying to read/map past the end of the
+        // bootfs at runtime.
+        if (last_length == 0) {
+            CHECK(op->write(fd, fill, sizeof(fill), cookie));
+        }
 
-    off_t end = lseek(fd, 0, SEEK_CUR);
-    if (end < 0) {
-        fprintf(stderr, "error: couldn't seek\n");
-        goto fail;
-    }
+        if (op->finish) {
+            CHECK(op->finish(fd, cookie));
+        }
 
-    // pad bootdata_t records to 8 byte boundary
-    size_t pad = BOOTDATA_ALIGN(end) - end;
-    if (pad) {
-        write(fd, fill, pad);
+        if ((end = lseek(fd, 0, SEEK_CUR)) < 0) {
+            fprintf(stderr, "error: couldn't seek\n");
+            goto fail;
+        }
+
+        // pad bootdata_t records to 8 byte boundary
+        size_t pad = BOOTDATA_ALIGN(end) - end;
+        if (pad) {
+            write(fd, fill, pad);
+        }
     }
 
     // Write any following bootdata files
     for (e = postdata->first; e != NULL; e = e->next) {
-        CHECK(copyfile(fd, e->srcpath, e->length, NULL));
+        CHECK(copybootdatafile(fd, e->srcpath, e->length, NULL));
     }
 
-    // Write the bootheader
-    if (lseek(fd, start, SEEK_SET) != start) {
-        fprintf(stderr, "error: couldn't seek to bootdata header\n");
+    off_t file_end = lseek(fd, 0, SEEK_CUR);
+    if (file_end < 0) {
+        fprintf(stderr, "error: couldn't seek\n");
         goto fail;
     }
 
-    size_t wrote = (end - start) - sizeof(bootdata_t);
+    if (fs->first) {
+        // Write the bootheader
+        if (lseek(fd, start, SEEK_SET) != start) {
+            fprintf(stderr, "error: couldn't seek to bootdata header\n");
+            goto fail;
+        }
 
-    bootdata_t boothdr = {
-        .magic = BOOTDATA_MAGIC,
-        .type = system ? BOOTDATA_TYPE_BOOTFS_SYSTEM : BOOTDATA_TYPE_BOOTFS_BOOT,
-        .insize = wrote,
-        .outsize = compressed ? outsize : wrote,
-        .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
+        size_t wrote = (end - start) - sizeof(bootdata_t);
+
+        bootdata_t boothdr = {
+            .type = system ? BOOTDATA_BOOTFS_SYSTEM : BOOTDATA_BOOTFS_BOOT,
+            .length = wrote,
+            .extra = compressed ? outsize : wrote,
+            .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
+        };
+        if (writex(fd, &boothdr, sizeof(boothdr)) < 0) {
+            goto fail;
+        }
+    }
+
+    // Write the file header
+    if (lseek(fd, 0, SEEK_SET) != 0) {
+        fprintf(stderr, "error: couldn't seek to bootdata file header\n");
+        goto fail;
+    }
+
+    bootdata_t filehdr = {
+        .type = BOOTDATA_CONTAINER,
+        .length = file_end - sizeof(bootdata_t),
+        .extra = BOOTDATA_MAGIC,
+        .flags = 0,
     };
-    if (writex(fd, &boothdr, sizeof(boothdr)) < 0) {
+    if (writex(fd, &filehdr, sizeof(filehdr)) < 0) {
         goto fail;
     }
 
@@ -667,9 +756,6 @@ int main(int argc, char **argv) {
 
     // account for bootdata
     hsz += sizeof(bootdata_t);
-
-    // account for the magic
-    hsz += sizeof(FSMAGIC);
 
     // account for the end-of-records record
     hsz += 12;

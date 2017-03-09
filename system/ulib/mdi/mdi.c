@@ -27,18 +27,18 @@
 mx_status_t mdi_init(const void* mdi_data, size_t length, mdi_node_ref_t* out_ref) {
     const bootdata_t* header = (const bootdata_t *)mdi_data;
     // Sanity check the length. Must be big enough to contain bootdata header and at least one node.
-    if (length < sizeof(*header) || length < sizeof(*header) + header->insize
-        || header->insize < sizeof(mdi_node_t)) {
+    if (length < sizeof(*header) || length < sizeof(*header) + header->length
+        || header->length < sizeof(mdi_node_t)) {
         xprintf("%s: bad length\n", __FUNCTION__);
         return ERR_INVALID_ARGS;
     }
-    if (header->magic != BOOTDATA_MAGIC || header->type != BOOTDATA_TYPE_MDI) {
+    if (header->type != BOOTDATA_MDI) {
         xprintf("%s: not a MDI bootdata header\n", __FUNCTION__);
         return ERR_INVALID_ARGS;
     }
 
     const mdi_node_t* node = (const mdi_node_t *)(header + 1);
-    if (node->length != header->insize) {
+    if (node->length != header->length) {
         xprintf("%s: bad root node length\n", __FUNCTION__);
         out_ref->node = NULL;
         return ERR_INVALID_ARGS;

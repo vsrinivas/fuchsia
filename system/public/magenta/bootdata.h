@@ -7,40 +7,58 @@
 #include <magenta/compiler.h>
 #include <stdint.h>
 
-// "BOOTDATA" in ASCII (little-endian)
-#define BOOTDATA_MAGIC 0x41544144544f4f42ULL
+// lsw of sha256("bootdata")
+#define BOOTDATA_MAGIC (0x868cf7e6u)
 
 // Align bootdata_t to 8 byte boundary
 #define BOOTDATA_ALIGN(n) (((n) + 7) & (~7))
 
 __BEGIN_CDECLS;
 
-#define BOOTDATA_TYPE_BOOTFS_BOOT    0x42534642 // BFSB
-#define BOOTDATA_TYPE_BOOTFS_SYSTEM  0x53534642 // BFSS
-#define BOOTDATA_TYPE_BOOTFS_DISCARD 0x58534642 // BFSX
-#define BOOTDATA_TYPE_MDI            0x3149444d // MDI1
+// Containers are used to wrap a set of bootdata items
+// written to a file or partition.  The "length" is the
+// length of the set of following bootdata items.  The
+// "extra" is the value BOOTDATA_MAGIC and "flags" is
+// set to 0.
+#define BOOTDATA_CONTAINER        (0x544f4f42u) // BOOT
+
+// BOOTFS images.  The "extra" field is the decompressed
+// size of the image, if compressed, otherwise the same
+// as the "length" field.
+#define BOOTDATA_BOOTFS_BOOT      (0x42534642u) // BFSB
+#define BOOTDATA_BOOTFS_SYSTEM    (0x53534642u) // BFSS
+#define BOOTDATA_BOOTFS_DISCARD   (0x58534642u) // BFSX
+
+#define BOOTDATA_BOOTFS_MASK      (0x00FFFFFFu)
+#define BOOTDATA_BOOTFS_TYPE      (0x00534642u) // BFS\0
+
+// MDI data.  The "extra" field is unused and set to 0.
+#define BOOTDATA_MDI              (0x3149444du) // MDI1
 
 // Flag indicating that the bootfs is compressed.
 #define BOOTDATA_BOOTFS_FLAG_COMPRESSED  (1 << 0)
 
-// Boot data header, describing the type and size of data used to initialize the
-// system. All fields are little-endian. Any changes to this struct must change
-// the magic number as well.
-typedef struct {
-    // Magic number: must be set to value of BOOTDATA_MAGIC
-    uint64_t magic;
 
+// BootData header, describing the type and size of data
+// used to initialize the system. All fields are little-endian.
+//
+// BootData headers in a stream must be 8-byte-aligned.
+//
+// The length field specifies the actual payload length
+// and does not include the size of padding.  The macro
+// BOOTDATA_ALIGN(length) may be used to determine the
+// number of padding bytes to insert or skip past.
+typedef struct {
     // Boot data type
     uint32_t type;
 
-    // Size of the block following the header
-    uint32_t insize;
+    // Size of the payload following this header
+    uint32_t length;
 
-    // If the type requires modifications, the resulting size after applying
-    // them. For example, for a compressed image, outsize represents the size of
-    // the final image after decompression.
-    // If no modifications are required, this must be set to insize.
-    uint32_t outsize;
+    // type-specific extra data
+    // For CONTAINER this is MAGIC.
+    // For BOOTFS this is the decompressed size.
+    uint32_t extra;
 
     // Flags for the boot data. See flag descriptions for each type.
     uint32_t flags;

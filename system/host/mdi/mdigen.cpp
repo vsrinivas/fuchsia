@@ -44,21 +44,32 @@ static bool run(std::vector<std::string>& in_paths, const char* out_path,
 
         root.compute_node_length();
 
-        // write empty bootdata header first
+        // write empty bootdata headers first
         bootdata_t header;
         memset(&header, 0, sizeof(header));
+        out_file.write((const char *)&header, sizeof(header));
         out_file.write((const char *)&header, sizeof(header));
 
         // write the nodes
         root.serialize(out_file);
 
-        // back up and fill in the header
-        header.magic = BOOTDATA_MAGIC;
-        header.type = BOOTDATA_TYPE_MDI;
-        header.insize = out_file.tellp();
-        header.insize -= sizeof(header);
-        header.outsize = header.insize;
+        size_t total_len = out_file.tellp();
+
+        // back up and fill in the headers
         out_file.seekp(0);
+
+        // Container header wraps the entire file
+        header.type = BOOTDATA_CONTAINER;
+        header.length = total_len - sizeof(header);
+        header.extra = BOOTDATA_MAGIC;
+        header.flags = 0;
+        out_file.write((const char *)&header, sizeof(header));
+
+        // MDI header around the MDI data
+        header.type = BOOTDATA_MDI;
+        header.length = total_len - 2 * sizeof(header);
+        header.extra = 0;
+        header.flags = 0;
         out_file.write((const char *)&header, sizeof(header));
     }
 

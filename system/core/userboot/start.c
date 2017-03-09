@@ -160,6 +160,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
             continue;
         }
 
+        uint64_t legacy_magic = 0x41544144544f4f42ULL;
+
         size_t off = 0;
         for (;;) {
             bootdata_t bootdata;
@@ -169,26 +171,36 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
                 break;
             }
 
-            if (bootdata.magic != BOOTDATA_MAGIC) {
-                break;
+            if ((off == 0) && (memcmp(&bootdata, &legacy_magic, sizeof(legacy_magic)) == 0)) {
+                fail(log, ERR_INVALID_ARGS, "***\n*** FATAL: old bootdata images not supported\n***\n");
             }
-            if (bootdata.type == BOOTDATA_TYPE_BOOTFS_BOOT) {
+
+            if (bootdata.type == BOOTDATA_CONTAINER) {
+                if (off == 0) {
+                    // quietly skip container header
+                    bootdata.length = 0;
+                } else {
+                    // container in the middle of bootdata is bogus
+                    break;
+                }
+            }
+            if (bootdata.type == BOOTDATA_BOOTFS_BOOT) {
                 const char* errmsg;
                 status = decompress_bootdata(vmar_self, handles[i],
-                                             0, bootdata.insize + sizeof(bootdata),
+                                             off, bootdata.length + sizeof(bootdata),
                                              &bootfs_vmo, &errmsg);
                 if (status < 0) {
                     fail(log, status, errmsg);
                 }
 
                 // signal that we've already processed this one
-                bootdata.type = BOOTDATA_TYPE_BOOTFS_DISCARD;
+                bootdata.type = BOOTDATA_BOOTFS_DISCARD;
                 mx_vmo_write(handles[i], &bootdata, off, sizeof(bootdata), &actual);
 
                 goto found_bootfs;
             }
 
-            off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.insize);
+            off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);
         }
     }
 

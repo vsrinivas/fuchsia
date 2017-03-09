@@ -99,12 +99,12 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
     }
     data += sizeof(uint32_t);
 
-    size_t newsize = hdr->outsize;
+    size_t newsize = hdr->extra;
     check_lz4_frame((const lz4_frame_desc*)data, newsize - sizeof(bootdata_t), err);
     data += sizeof(lz4_frame_desc);
 
     newsize = (newsize + 4095) & ~4095;
-    if (newsize < hdr->outsize) {
+    if (newsize < hdr->extra) {
         // newsize wrapped, which means the outsize was too large
         *err = "lz4 output size too large";
         return ERR_NO_MEMORY;
@@ -130,7 +130,7 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
     bootdata_t* boothdr = (bootdata_t*)dst;
     // Copy the bootdata header but mark it as not compressed
     *boothdr = *hdr;
-    boothdr->insize = hdr->outsize;
+    boothdr->length = hdr->extra;
     boothdr->flags &= ~BOOTDATA_BOOTFS_FLAG_COMPRESSED;
     dst += sizeof(bootdata_t);
     remaining -= sizeof(bootdata_t);
@@ -210,14 +210,9 @@ mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
     addr += align_shift;
 
     const bootdata_t* hdr = (bootdata_t*)addr;
-    if (hdr->magic != BOOTDATA_MAGIC) {
-        *err = "bad boot data header";
-        return ERR_INVALID_ARGS;
-    }
-
     switch (hdr->type) {
-    case BOOTDATA_TYPE_BOOTFS_BOOT:
-    case BOOTDATA_TYPE_BOOTFS_SYSTEM:
+    case BOOTDATA_BOOTFS_BOOT:
+    case BOOTDATA_BOOTFS_SYSTEM:
         if (hdr->flags & BOOTDATA_BOOTFS_FLAG_COMPRESSED) {
             status = decompress_bootfs_vmo(vmar, (const uint8_t*)addr, out, err);
         }
