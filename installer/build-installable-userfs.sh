@@ -37,10 +37,10 @@ fi
 DEFAULT_SIZE_SYSTEM=4
 DEFAULT_SIZE_EFI=1
 BLOCK_SIZE=1024
-STAGING_DIR="${script_dir}/build-installer"
+STAGING_DIR="${FUCHSIA_OUT_DIR:-${script_dir}}/build-installer"
 # TODO take a size for the magenta partition as well
-blocks_sys=0
-blocks_efi=0
+bytes_sys=$(($DEFAULT_SIZE_SYSTEM * 1024 * 1024 * 1024))
+bytes_efi=$(($DEFAULT_SIZE_EFI * 1024 * 1024 * 1024))
 release=0
 debug=0
 platform=""
@@ -54,7 +54,7 @@ bootdata=""
 while getopts ":u:hrdp:b:m:e:a:t:c:x:" opt; do
   case $opt in
     u)
-      blocks_sys=$(($OPTARG * 1024 * 1024))
+      bytes_sys=$(($OPTARG * 1024 * 1024 * 1024))
       ;;
     h)
       echo "build-installable-usersfs.sh -u <SIZE> [-r|-d] [-p] [-b <BUILD DIR>]"
@@ -91,7 +91,7 @@ while getopts ":u:hrdp:b:m:e:a:t:c:x:" opt; do
       minfs_path=$OPTARG
       ;;
     e)
-      blocks_efi=$(($OPTARG * 1024 * 1024))
+      bytes_efi=$(($OPTARG * 1024 * 1024 * 1024))
       ;;
     a)
       build_dir_magenta=$OPTARG
@@ -109,14 +109,6 @@ while getopts ":u:hrdp:b:m:e:a:t:c:x:" opt; do
       echo "Unknown option -$OPTARG"
   esac
 done
-
-if [ "$blocks_sys" -eq 0 ]; then
-  blocks_sys=$(($DEFAULT_SIZE_SYSTEM * 1024 * 1024))
-fi
-
-if [ "$blocks_efi" -eq 0 ]; then
-  blocks_efi=$(($DEFAULT_SIZE_EFI * 1024 * 1024))
-fi
 
 if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_magenta" = ""]; then
   if [ "$release" -eq "$debug" ]; then
@@ -213,15 +205,31 @@ if [ "$lz4_path" = "" ]; then
   exit -1
 fi
 
+emptyfile() {
+  local path=$1
+  local size=$2
+  case $host_type in
+    Darwin)
+      mkfile -n "${size}" "$path"
+      ;;
+    Linux)
+      truncate -s "${size}" "$path"
+      ;;
+    *)
+      head -c "${size}" /dev/zero > "$path"
+      ;;
+  esac
+}
+
 set -e
 
 # create a suitably large file
 echo "Creating system disk image, this may take some time..."
-dd if=/dev/zero of="$disk_path" bs="$BLOCK_SIZE" count="$blocks_sys"
+emptyfile "$disk_path" "$bytes_sys"
 "$minfs_path" "$disk_path" mkfs
 
 echo "Creating EFI disk image, this may take some time..."
-dd if=/dev/zero of="$disk_path_efi" bs="$BLOCK_SIZE" count="$blocks_efi"
+emptyfile "$disk_path_efi" "$bytes_efi"
 
 if [ "$host_type" = "Darwin" ]; then
   mount_path=$(hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount "$disk_path_efi")
@@ -238,3 +246,5 @@ fi
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch" \
   --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta" \
   --kernel_cmdline="$kernel_cmdline" --bootdata="$bootdata"
+
+echo "Built disks: $disk_path_efi & $disk_path"
