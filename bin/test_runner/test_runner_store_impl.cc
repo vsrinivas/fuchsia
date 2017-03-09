@@ -38,6 +38,14 @@ void TestRunnerStoreImpl::MaybeNotify(const std::string& key) {
     get_queue_it->second.pop();
     store_it->second.pop();
   }
+
+  if (get_queue_it->second.empty()) {
+    get_queue_.erase(key);
+  }
+
+  if (store_it->second.empty()) {
+    store_.erase(key);
+  }
 }
 
 }  // namespace testing
