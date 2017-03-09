@@ -31,7 +31,5 @@ executable("integration_tests") {
     "//third_party/gtest",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

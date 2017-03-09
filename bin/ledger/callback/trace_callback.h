@@ -108,14 +108,15 @@ constexpr const char* CheckConstantCString(const char* value) {
 // Wraps the given callback so that it's traces using async tracing from the
 // time it's wrapped to the time it completes. Can be used only for callbacks
 // that will be called at most once.
-#define TRACE_CALLBACK(cb, category, name, args...)                           \
-  (TRACE_ENABLED()                                                            \
-       ? ::callback::internal::TraceCallback(                                 \
-             cb, ::callback::internal::CheckConstantCString<__builtin_strlen( \
-                     category)>(category),                                    \
-             ::callback::internal::CheckConstantCString<__builtin_strlen(     \
-                 name)>(name),                                                \
-             ##args)                                                          \
+#define TRACE_CALLBACK(cb, category, name, args...)                       \
+  (TRACE_ENABLED()                                                        \
+       ? ::callback::internal::TraceCallback(                             \
+             cb,                                                          \
+             ::callback::internal::CheckConstantCString<__builtin_strlen( \
+                 category)>(category),                                    \
+             ::callback::internal::CheckConstantCString<__builtin_strlen( \
+                 name)>(name),                                            \
+             ##args)                                                      \
        : ::callback::internal::TraceCallback(cb))
 
 #endif  // APPS_LEDGER_SRC_CALLBACK_TRACE_CALLBACK_H_

@@ -24,9 +24,7 @@ executable("app") {
     "//lib/mtl",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
 source_set("lib") {
@@ -93,9 +91,7 @@ source_set("lib") {
     "//lib/ftl",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
 group("tests") {
@@ -134,9 +130,7 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
 executable("application_tests") {
@@ -161,7 +155,5 @@ executable("application_tests") {
     ":app",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

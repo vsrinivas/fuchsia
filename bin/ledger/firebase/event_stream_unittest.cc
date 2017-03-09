@@ -179,9 +179,8 @@ TEST_F(EventStreamTest, DeleteOnEvent) {
   delete_on_event_ = true;
   mtl::BlockingCopyFromString("event: abc\ndata: bazinga\n\n",
                               producer_socket_);
-  message_loop_.task_runner()->PostTask([this]() {
-    message_loop_.PostQuitTask();
-  });
+  message_loop_.task_runner()->PostTask(
+      [this]() { message_loop_.PostQuitTask(); });
   message_loop_.Run();
 
   EXPECT_EQ(1u, status_.size());

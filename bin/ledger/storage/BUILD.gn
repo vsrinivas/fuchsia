@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 group("storage") {
-
   deps = [
     "//apps/ledger/src/storage/impl",
     "//apps/ledger/src/storage/public",

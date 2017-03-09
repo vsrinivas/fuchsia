@@ -28,9 +28,7 @@ source_set("impl") {
     "//magenta/system/ulib/mx",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -52,7 +50,5 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

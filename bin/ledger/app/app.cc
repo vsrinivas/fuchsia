@@ -65,10 +65,11 @@ class App {
         std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());
 
     application_context_->outgoing_services()
-        ->AddService<LedgerRepositoryFactory>([this](
-            fidl::InterfaceRequest<LedgerRepositoryFactory> request) {
-          factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
-        });
+        ->AddService<LedgerRepositoryFactory>(
+            [this](fidl::InterfaceRequest<LedgerRepositoryFactory> request) {
+              factory_bindings_.AddBinding(factory_impl_.get(),
+                                           std::move(request));
+            });
     return true;
   }
 

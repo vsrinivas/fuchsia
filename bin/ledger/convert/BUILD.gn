@@ -21,9 +21,7 @@ source_set("convert") {
     "//third_party/leveldb",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
 flatbuffer("byte_storage") {
@@ -31,9 +29,7 @@ flatbuffer("byte_storage") {
     "bytes.fbs",
   ]
 
-  extra_configs = [
-    "//apps/ledger/src:ledger_config",
-  ]
+  extra_configs = [ "//apps/ledger/src:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -48,7 +44,5 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

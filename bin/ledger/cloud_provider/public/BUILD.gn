@@ -21,7 +21,5 @@ source_set("public") {
     "//magenta/system/ulib/mx",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

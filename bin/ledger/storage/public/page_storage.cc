@@ -9,8 +9,7 @@ namespace storage {
 PageStorage::CommitIdAndBytes::CommitIdAndBytes(CommitId id, std::string bytes)
     : id(std::move(id)), bytes(std::move(bytes)) {}
 
-PageStorage::CommitIdAndBytes::CommitIdAndBytes(
-    CommitIdAndBytes&&) = default;
+PageStorage::CommitIdAndBytes::CommitIdAndBytes(CommitIdAndBytes&&) = default;
 
 PageStorage::CommitIdAndBytes& PageStorage::CommitIdAndBytes::operator=(
     CommitIdAndBytes&&) = default;

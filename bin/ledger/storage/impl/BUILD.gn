@@ -5,7 +5,6 @@
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 group("impl") {
-
   deps = [
     ":lib",
     "//apps/ledger/src/storage/impl/btree",
@@ -21,9 +20,7 @@ flatbuffer("commit_storage") {
     "//apps/ledger/src/convert:byte_storage",
   ]
 
-  extra_configs = [
-    "//apps/ledger/src:ledger_config",
-  ]
+  extra_configs = [ "//apps/ledger/src:ledger_config" ]
 }
 
 source_set("lib") {
@@ -58,9 +55,7 @@ source_set("lib") {
     "//third_party/leveldb",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -90,7 +85,5 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

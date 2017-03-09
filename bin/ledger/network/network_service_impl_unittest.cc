@@ -192,8 +192,9 @@ TEST_F(NetworkServiceImplTest, SimpleRequest) {
         return NewRequest("GET", "http://example.com");
       },
       [
-        this, destroy_watcher = DestroyWatcher::Create(
-                  [&callback_destroyed] { callback_destroyed = true; }),
+        this, destroy_watcher = DestroyWatcher::Create([&callback_destroyed] {
+                callback_destroyed = true;
+              }),
         &response
       ](network::URLResponsePtr received_response) {
         response = std::move(received_response);

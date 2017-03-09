@@ -30,9 +30,7 @@ source_set("firebase") {
     "//lib/mtl",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -55,7 +53,5 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

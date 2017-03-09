@@ -17,9 +17,7 @@ source_set("lib") {
     "//third_party/gtest",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
 # Contains the standard gtest main that runs all tests included in the binary.
@@ -34,9 +32,7 @@ source_set("main") {
     "//third_party/gtest",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -51,7 +47,5 @@ source_set("unittests") {
     ":lib",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

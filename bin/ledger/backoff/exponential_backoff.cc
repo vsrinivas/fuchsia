@@ -17,11 +17,10 @@ ExponentialBackoff::ExponentialBackoff(std::function<uint64_t()> seed_generator)
                          ftl::TimeDelta::FromSeconds(60 * 60),
                          seed_generator) {}
 
-ExponentialBackoff::ExponentialBackoff(
-    ftl::TimeDelta initial_delay,
-    uint32_t retry_factor,
-    ftl::TimeDelta max_delay,
-    std::function<uint64_t()> seed_generator)
+ExponentialBackoff::ExponentialBackoff(ftl::TimeDelta initial_delay,
+                                       uint32_t retry_factor,
+                                       ftl::TimeDelta max_delay,
+                                       std::function<uint64_t()> seed_generator)
     : initial_delay_(initial_delay),
       retry_factor_(retry_factor),
       max_delay_(max_delay),

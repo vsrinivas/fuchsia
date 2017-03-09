@@ -176,16 +176,17 @@ void ConflictResolverClient::OnMergeDone(
                                    ? storage::KeyPriority::EAGER
                                    : storage::KeyPriority::LAZY);
     }
-    weak_this->journal_->Commit([weak_this](
-        storage::Status status, std::unique_ptr<const storage::Commit>) {
-      if (status != storage::Status::OK) {
-        FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
-      }
-      if (weak_this) {
-        weak_this->journal_.reset();
-        weak_this->Done();
-      }
-    });
+    weak_this->journal_->Commit(
+        [weak_this](storage::Status status,
+                    std::unique_ptr<const storage::Commit>) {
+          if (status != storage::Status::OK) {
+            FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
+          }
+          if (weak_this) {
+            weak_this->journal_.reset();
+            weak_this->Done();
+          }
+        });
   }));
 }
 

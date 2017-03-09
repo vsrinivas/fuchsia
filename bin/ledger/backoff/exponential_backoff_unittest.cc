@@ -6,11 +6,11 @@
 
 #include <stdlib.h>
 
-#include "gtest/gtest.h"
-#include "lib/ftl/macros.h"
-
-#include "lib/ftl/logging.h"
 #include <random>
+
+#include "gtest/gtest.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/macros.h"
 
 namespace backoff {
 
@@ -56,7 +56,8 @@ TEST_F(ExponentialBackoffTest, Reset) {
 }
 
 TEST_F(ExponentialBackoffTest, NoOverflow) {
-  ExponentialBackoff backoff(kDefaultInitialValue, 2, ftl::TimeDelta::Max(), GetSeed);
+  ExponentialBackoff backoff(kDefaultInitialValue, 2, ftl::TimeDelta::Max(),
+                             GetSeed);
 
   ftl::TimeDelta previous = backoff.GetNext();
   for (size_t i = 0; i < 200u; i++) {

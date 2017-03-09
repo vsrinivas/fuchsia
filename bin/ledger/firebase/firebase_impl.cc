@@ -181,9 +181,9 @@ void FirebaseImpl::OnResponse(
     auto& drainer = drainers_.emplace();
     drainer.Start(std::move(response->body->get_stream()),
                   [callback, url, status_line](const std::string& body) {
-                    FTL_LOG(ERROR) << url << " error " << status_line << ":"
-                                   << std::endl
-                                   << body;
+                    FTL_LOG(ERROR)
+                        << url << " error " << status_line << ":" << std::endl
+                        << body;
                     callback(Status::SERVER_ERROR, "");
                   });
     return;

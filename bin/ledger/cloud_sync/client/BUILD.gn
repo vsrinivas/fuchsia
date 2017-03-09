@@ -25,7 +25,5 @@ executable("client") {
     "//lib/mtl",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

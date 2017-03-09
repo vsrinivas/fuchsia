@@ -420,9 +420,8 @@ TEST_F(CloudProviderImplTest, GetObject) {
   uint64_t size;
   mx::socket data;
   cloud_provider_->GetObject(
-      "object_id",
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &size,
-                    &data));
+      "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -444,9 +443,8 @@ TEST_F(CloudProviderImplTest, GetObjectNotFound) {
   uint64_t size;
   mx::socket data;
   cloud_provider_->GetObject(
-      "object_id",
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &size,
-                    &data));
+      "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NOT_FOUND, status);
