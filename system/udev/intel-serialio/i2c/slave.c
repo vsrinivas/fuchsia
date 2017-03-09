@@ -127,9 +127,10 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
             restart = 0;
             switch (segments->type) {
             case I2C_SEGMENT_TYPE_WRITE:
-                while (!(*REG32(&controller->regs->i2c_sta) &
-                         (0x1 << I2C_STA_TFNF))) {
-                    ;
+                if (!WAIT_FOR((*REG32(&controller->regs->i2c_sta) &
+                         (0x1 << I2C_STA_TFNF)))) {
+                    status = ERR_TIMED_OUT;
+                    goto transfer_finish_1;
                 }
                 cmd |= (*buf << DATA_CMD_DAT);
                 cmd |= (DATA_CMD_CMD_WRITE << DATA_CMD_CMD);
@@ -152,9 +153,9 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
 
             // If this is a read, extract the data.
             if (segments->type == I2C_SEGMENT_TYPE_READ) {
-                while (!(*REG32(&controller->regs->i2c_sta) &
-                         (0x1 << I2C_STA_RFNE))) {
-                    ;
+                if (!WAIT_FOR(!rx_fifo_empty(controller))) {
+                    status = ERR_TIMED_OUT;
+                    goto transfer_finish_1;
                 }
                 *buf = *REG32(&controller->regs->data_cmd);
             }
