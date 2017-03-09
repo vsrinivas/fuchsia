@@ -143,14 +143,14 @@ MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> comm
         if (!semaphore)
             return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "wait semaphore id not found 0x%" PRIx64,
                             cmd_buf->wait_semaphore_id(i));
-        msd_wait_semaphores[i] = semaphore;
+        msd_wait_semaphores[i] = semaphore->msd_semaphore();
     }
     for (uint32_t i = 0; i < cmd_buf->signal_semaphore_count(); i++) {
         auto semaphore = owner_->LookupSemaphoreForContext(cmd_buf->signal_semaphore_id(i));
         if (!semaphore)
             return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "signal semaphore id not found 0x%" PRIx64,
                             cmd_buf->signal_semaphore_id(i));
-        msd_signal_semaphores[i] = semaphore;
+        msd_signal_semaphores[i] = semaphore->msd_semaphore();
     }
 
     // submit command buffer to driver

@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "magma_system_buffer.h"
+#include "magma_system_semaphore.h"
 #include "magma_util/status.h"
 #include "msd.h"
 
@@ -24,7 +25,7 @@ public:
     class Owner {
     public:
         virtual std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) = 0;
-        virtual msd_semaphore_t* LookupSemaphoreForContext(uint64_t id) = 0;
+        virtual std::shared_ptr<MagmaSystemSemaphore> LookupSemaphoreForContext(uint64_t id) = 0;
     };
 
     MagmaSystemContext(Owner* owner, msd_context_unique_ptr_t msd_ctx)

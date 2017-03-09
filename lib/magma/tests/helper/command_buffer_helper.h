@@ -208,7 +208,8 @@ private:
             success = connection_->ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE);
             DASSERT(success);
             abi_wait_semaphore_ids()[i] = semaphore->id();
-            msd_wait_semaphores_.push_back(connection_->LookupSemaphore(semaphore->id()));
+            msd_wait_semaphores_.push_back(
+                connection_->LookupSemaphore(semaphore->id())->msd_semaphore());
         }
 
         // signal semaphores
@@ -223,7 +224,8 @@ private:
             success = connection_->ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE);
             DASSERT(success);
             abi_signal_semaphore_ids()[i] = semaphore->id();
-            msd_signal_semaphores_.push_back(connection_->LookupSemaphore(semaphore->id()));
+            msd_signal_semaphores_.push_back(
+                connection_->LookupSemaphore(semaphore->id())->msd_semaphore());
         }
     }
 

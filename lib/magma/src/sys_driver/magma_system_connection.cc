@@ -176,12 +176,11 @@ bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject:
             if (iter != semaphore_map_.end())
                 return true;
 
-            msd_semaphore_t* abi_semaphore;
-            magma_status_t status = msd_semaphore_import(handle, &abi_semaphore);
-            if (status != MAGMA_STATUS_OK)
-                return DRETF(false, "msd_semaphore_import failed: %d", status);
+            auto semaphore = MagmaSystemSemaphore::Create(magma::PlatformSemaphore::Import(handle));
+            if (!semaphore)
+                return DRETF(false, "failed to import platform semaphore");
 
-            semaphore_map_.insert(std::make_pair(id, MsdSemaphoreUniquePtr(abi_semaphore)));
+            semaphore_map_.insert(std::make_pair(id, std::move(semaphore)));
         } break;
     }
 
@@ -213,12 +212,12 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint64_t 
     return iter->second;
 }
 
-msd_semaphore_t* MagmaSystemConnection::LookupSemaphore(uint64_t id)
+std::shared_ptr<MagmaSystemSemaphore> MagmaSystemConnection::LookupSemaphore(uint64_t id)
 {
     auto iter = semaphore_map_.find(id);
     if (iter == semaphore_map_.end())
         return nullptr;
-    return iter->second.get();
+    return iter->second;
 }
 
 void MagmaSystemConnection::PageFlip(uint64_t id, magma_system_pageflip_callback_t callback,
