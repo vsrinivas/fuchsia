@@ -26,8 +26,9 @@ const std::unordered_map<std::string, ProposalContent> kNextStories(
       {"file:///system/apps/email_story", 0xff4285f4 /*Blue from Inbox*/, "",
        ""}},
      {"Video Player",
-      {"file:///system/apps/video_player", 0xff9575cd /*Deep Purple 300*/, "",
-       ""}}});
+      {"file:///system/apps/media_player_flutter", 0xff9575cd /*Deep Purple 300*/, "",
+       ""}},
+      });
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
     {{"Terminal",
@@ -131,7 +132,8 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
 
   void Ask(maxwell::UserInputPtr query, const AskCallback& callback) override {
     if (query->is_text() && query->get_text() != "") {
-      // Propose everything; let the Next filter do the filtering HACK(rosswang)
+      // Propose everything; let the Next filter do the filtering
+      // HACK(rosswang)
       for (const auto& entry : kAskOnlyStories) {
         out_->Propose(MkProposal(entry.first, entry.second));
       }
