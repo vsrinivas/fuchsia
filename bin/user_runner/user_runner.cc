@@ -101,10 +101,7 @@ class UserRunnerImpl : public UserRunner {
       : application_context_(application_context),
         binding_(this, std::move(user_runner_request)),
         ledger_repository_(
-            ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
-        agent_runner_(application_context->launcher().get(),
-                      &message_queue_manager_,
-                      ledger_repository_.get()) {
+            ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))) {
     binding_.set_connection_error_handler([this] { delete this; });
 
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
@@ -134,12 +131,16 @@ class UserRunnerImpl : public UserRunner {
               << LedgerStatusToString(status);
         });
 
+    agent_runner_.reset(new AgentRunner(stories_scope_->GetLauncher(),
+                        &message_queue_manager_,
+                        ledger_repository_.get()));
+
     app::ApplicationEnvironmentPtr env;
     stories_scope_->environment()->Duplicate(env.NewRequest());
 
     story_provider_impl_.reset(new StoryProviderImpl(
         std::move(env), std::move(ledger), device_name,
-        {&message_queue_manager_, &agent_runner_, ledger_repository_.get()}));
+        {&message_queue_manager_, agent_runner_.get(), ledger_repository_.get()}));
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
     story_provider_impl_->AddBinding(story_provider.NewRequest());
@@ -249,7 +250,7 @@ class UserRunnerImpl : public UserRunner {
   UserShellPtr user_shell_;
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
   MessageQueueManager message_queue_manager_;
-  AgentRunner agent_runner_;
+  std::unique_ptr<AgentRunner> agent_runner_;
   StoryMarkerImpl story_marker_impl_;
 
   // Keep connections to applications started here around so they are

@@ -40,6 +40,13 @@ class Scope : public app::ApplicationEnvironmentHost {
     service_provider_impl_.AddService(handler, service_name);
   }
 
+  app::ApplicationLauncher* GetLauncher() {
+    if (!env_launcher_) {
+      env_->GetApplicationLauncher(env_launcher_.NewRequest());
+    }
+    return env_launcher_.get();
+  }
+
   app::ApplicationEnvironmentPtr& environment() { return env_; }
 
  private:
@@ -53,6 +60,7 @@ class Scope : public app::ApplicationEnvironmentHost {
   fidl::Binding<app::ApplicationEnvironmentHost> binding_;
   app::ApplicationEnvironmentPtr parent_env_;
   app::ApplicationEnvironmentPtr env_;
+  app::ApplicationLauncherPtr env_launcher_;
   app::ApplicationEnvironmentControllerPtr env_controller_;
   app::ServiceProviderImpl service_provider_impl_;
 };
