@@ -430,6 +430,14 @@ VkBool32 Demo::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
     // it would be better to provide a hook for Escher to disable reporting of
     // known false-positives.
     return false;
+  } else if (flags & vk::DebugReportFlagBitsEXT::eWarning &&
+             objectType == VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT &&
+             messageCode == 93) {
+    // This warning started to occur on Linux/NVIDIA after moving from the
+    // 1.0.39 to 1.0.42 SDK.  It seems that the validation layer doesn't think
+    // that the swapchain image is VK_IMAGE_TYPE_2D (because I'm pretty sure
+    // that the images that we create are 2D).
+    return false;
   }
 
   std::cerr << "Vulkan Error: " << pMessage << " (from layer: " << pLayerPrefix
