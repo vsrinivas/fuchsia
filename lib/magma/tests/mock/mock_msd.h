@@ -12,11 +12,11 @@
 #include <memory>
 #include <vector>
 
-// These classes contain default implementations of msd_device functionality.
+// These classes contain default implementations of msd_device_t functionality.
 // To override a specific function to contain test logic, inherit from the
 // desired class, override the desired function, and pass as the msd_abi object
 
-class MsdMockBuffer : public msd_buffer {
+class MsdMockBuffer : public msd_buffer_t {
 public:
     MsdMockBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
         : platform_buf_(std::move(platform_buf))
@@ -25,7 +25,7 @@ public:
     }
     virtual ~MsdMockBuffer() {}
 
-    static MsdMockBuffer* cast(msd_buffer* buf)
+    static MsdMockBuffer* cast(msd_buffer_t* buf)
     {
         DASSERT(buf);
         DASSERT(buf->magic_ == kMagic);
@@ -50,12 +50,12 @@ private:
     MsdMockBuffer* buffer_;
 };
 
-class MsdMockContext : public msd_context {
+class MsdMockContext : public msd_context_t {
 public:
     MsdMockContext(MsdMockConnection* connection) : connection_(connection) { magic_ = kMagic; }
     virtual ~MsdMockContext();
 
-    magma_status_t ExecuteCommandBuffer(msd_buffer* cmd_buf_in, msd_buffer** exec_resources)
+    magma_status_t ExecuteCommandBuffer(msd_buffer_t* cmd_buf_in, msd_buffer_t** exec_resources)
     {
         auto cmd_buf = MsdMockCommandBuffer(MsdMockBuffer::cast(cmd_buf_in));
         if (!cmd_buf.Initialize())
@@ -67,7 +67,7 @@ public:
         return MAGMA_STATUS_OK;
     }
 
-    static MsdMockContext* cast(msd_context* ctx)
+    static MsdMockContext* cast(msd_context_t* ctx)
     {
         DASSERT(ctx);
         DASSERT(ctx->magic_ == kMagic);
@@ -86,7 +86,7 @@ private:
     static const uint32_t kMagic = 0x6d6b6378; // "mkcx" (Mock Context)
 };
 
-class MsdMockConnection : public msd_connection {
+class MsdMockConnection : public msd_connection_t {
 public:
     MsdMockConnection() { magic_ = kMagic; }
     virtual ~MsdMockConnection() {}
@@ -95,7 +95,7 @@ public:
 
     virtual void DestroyContext(MsdMockContext* ctx) {}
 
-    static MsdMockConnection* cast(msd_connection* connection)
+    static MsdMockConnection* cast(msd_connection_t* connection)
     {
         DASSERT(connection);
         DASSERT(connection->magic_ == kMagic);
@@ -106,15 +106,15 @@ private:
     static const uint32_t kMagic = 0x6d6b636e; // "mkcn" (Mock Connection)
 };
 
-class MsdMockDevice : public msd_device {
+class MsdMockDevice : public msd_device_t {
 public:
     MsdMockDevice() { magic_ = kMagic; }
     virtual ~MsdMockDevice() {}
 
-    virtual msd_connection* Open(msd_client_id client_id) { return new MsdMockConnection(); }
+    virtual msd_connection_t* Open(msd_client_id client_id) { return new MsdMockConnection(); }
     virtual uint32_t GetDeviceId() { return 0; }
 
-    static MsdMockDevice* cast(msd_device* dev)
+    static MsdMockDevice* cast(msd_device_t* dev)
     {
         DASSERT(dev);
         DASSERT(dev->magic_ == kMagic);
@@ -125,7 +125,7 @@ private:
     static const uint32_t kMagic = 0x6d6b6476; // "mkdv" (Mock Device)
 };
 
-class MsdMockDriver : public msd_driver {
+class MsdMockDriver : public msd_driver_t {
 public:
     MsdMockDriver() { magic_ = kMagic; }
     virtual ~MsdMockDriver() {}
@@ -134,7 +134,7 @@ public:
 
     virtual void DestroyDevice(MsdMockDevice* dev) { delete dev; }
 
-    static MsdMockDriver* cast(msd_driver* drv)
+    static MsdMockDriver* cast(msd_driver_t* drv)
     {
         DASSERT(drv);
         DASSERT(drv->magic_ == kMagic);

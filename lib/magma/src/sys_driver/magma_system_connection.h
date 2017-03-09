@@ -15,16 +15,17 @@
 #include <unordered_map>
 
 using msd_connection_unique_ptr_t =
-    std::unique_ptr<msd_connection, decltype(&msd_connection_close)>;
+    std::unique_ptr<msd_connection_t, decltype(&msd_connection_close)>;
 
-static inline msd_connection_unique_ptr_t MsdConnectionUniquePtr(msd_connection* conn)
+static inline msd_connection_unique_ptr_t MsdConnectionUniquePtr(msd_connection_t* conn)
 {
     return msd_connection_unique_ptr_t(conn, &msd_connection_close);
 }
 
-using msd_semaphore_unique_ptr_t = std::unique_ptr<msd_semaphore, decltype(&msd_semaphore_release)>;
+using msd_semaphore_unique_ptr_t =
+    std::unique_ptr<msd_semaphore_t, decltype(&msd_semaphore_release)>;
 
-static inline msd_semaphore_unique_ptr_t MsdSemaphoreUniquePtr(msd_semaphore* semaphore)
+static inline msd_semaphore_unique_ptr_t MsdSemaphoreUniquePtr(msd_semaphore_t* semaphore)
 {
     return msd_semaphore_unique_ptr_t(semaphore, msd_semaphore_release);
 }
@@ -35,7 +36,7 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
                               public magma::PlatformConnection::Delegate {
 public:
     MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> device,
-                          msd_connection_unique_ptr_t msd_connection, uint32_t capabilities);
+                          msd_connection_unique_ptr_t msd_connection_t, uint32_t capabilities);
 
     ~MagmaSystemConnection() override;
 
@@ -54,8 +55,8 @@ public:
     // Returns nullptr if the buffer is not found
     std::shared_ptr<MagmaSystemBuffer> LookupBuffer(uint64_t id);
 
-    // Returns the msd_semaphore for the given |id| if present in the semaphore map.
-    msd_semaphore* LookupSemaphore(uint64_t id);
+    // Returns the msd_semaphore_t for the given |id| if present in the semaphore map.
+    msd_semaphore_t* LookupSemaphore(uint64_t id);
 
     magma::Status ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override;
 
@@ -67,7 +68,7 @@ public:
 
     uint32_t GetDeviceId();
 
-    msd_connection* msd_connection() { return msd_connection_.get(); }
+    msd_connection_t* msd_connection() { return msd_connection_.get(); }
 
     void PageFlip(uint64_t id, magma_system_pageflip_callback_t callback, void* data) override;
 
@@ -77,7 +78,7 @@ private:
     {
         return LookupBuffer(id);
     }
-    msd_semaphore* LookupSemaphoreForContext(uint64_t id) override { return LookupSemaphore(id); }
+    msd_semaphore_t* LookupSemaphoreForContext(uint64_t id) override { return LookupSemaphore(id); }
 
     std::weak_ptr<MagmaSystemDevice> device_;
     msd_connection_unique_ptr_t msd_connection_;

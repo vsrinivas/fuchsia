@@ -14,7 +14,7 @@ TEST(MsdSemaphore, ImportAndDestroy)
     uint32_t duplicate_handle;
     ASSERT_TRUE(semaphore->duplicate_handle(&duplicate_handle));
 
-    msd_semaphore* abi_sem = nullptr;
+    msd_semaphore_t* abi_sem = nullptr;
     EXPECT_EQ(MAGMA_STATUS_OK, msd_semaphore_import(duplicate_handle, &abi_sem));
 
     ASSERT_NE(abi_sem, nullptr);

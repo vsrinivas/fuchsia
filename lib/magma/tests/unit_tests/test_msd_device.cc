@@ -11,10 +11,10 @@ TEST(MsdDevice, CreateAndDestroy)
     magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);
 
-    msd_driver* driver = msd_driver_create();
+    msd_driver_t* driver = msd_driver_create();
     ASSERT_NE(driver, nullptr);
 
-    msd_device* device = msd_driver_create_device(driver, nullptr);
+    msd_device_t* device = msd_driver_create_device(driver, nullptr);
     EXPECT_EQ(device, nullptr);
 
     device = msd_driver_create_device(driver, platform_device->GetDeviceHandle());

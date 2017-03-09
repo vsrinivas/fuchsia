@@ -11,9 +11,9 @@
 
 #include "magma_system_device.h"
 
-using msd_driver_unique_ptr_t = std::unique_ptr<msd_driver, std::function<void(msd_driver*)>>;
+using msd_driver_unique_ptr_t = std::unique_ptr<msd_driver_t, std::function<void(msd_driver_t*)>>;
 
-static inline msd_driver_unique_ptr_t MsdDriverUniquePtr(msd_driver* driver)
+static inline msd_driver_unique_ptr_t MsdDriverUniquePtr(msd_driver_t* driver)
 {
     return msd_driver_unique_ptr_t(driver, &msd_driver_destroy);
 }
@@ -24,7 +24,7 @@ public:
 
     std::unique_ptr<MagmaSystemDevice> CreateDevice(void* device)
     {
-        msd_device* msd_dev = msd_driver_create_device(msd_drv_.get(), device);
+        msd_device_t* msd_dev = msd_driver_create_device(msd_drv_.get(), device);
         if (!msd_dev)
             return DRETP(nullptr, "msd_create_device failed");;
 
@@ -33,7 +33,7 @@ public:
 
     static MagmaDriver* Create()
     {
-        msd_driver* msd_drv = msd_driver_create();
+        msd_driver_t* msd_drv = msd_driver_create();
         if (!msd_drv) {
             DLOG("msd_create returned null");
             return nullptr;

@@ -17,31 +17,31 @@ extern "C" {
 typedef uint32_t msd_client_id;
 
 // The magma system driver... driver :)
-struct msd_driver {
+struct msd_driver_t {
     int32_t magic_;
 };
 
 // The magma system driver device.
-struct msd_device {
+struct msd_device_t {
     int32_t magic_;
 };
 
 // A driver defined connection, owned by the MagmaSystemConnection
-struct msd_connection {
+struct msd_connection_t {
     int32_t magic_;
 };
 
 // A driver defined buffer that owns a reference to an msd_platform_buffer
-struct msd_buffer {
+struct msd_buffer_t {
     int32_t magic_;
 };
 
 // A driver defined context, owned by the magma system context
-struct msd_context {
+struct msd_context_t {
     int32_t magic_;
 };
 
-struct msd_semaphore {
+struct msd_semaphore_t {
     int32_t magic_;
 };
 

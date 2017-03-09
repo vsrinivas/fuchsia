@@ -33,11 +33,11 @@ public:
         auto dev = std::make_shared<MagmaSystemDevice>(
             msd_device_unique_ptr_t(msd_dev, &msd_device_destroy));
         uint32_t ctx_id = 0;
-        auto msd_connection = msd_device_open(msd_dev, 0);
-        if (!msd_connection)
+        auto msd_connection_t = msd_device_open(msd_dev, 0);
+        if (!msd_connection_t)
             return DRETP(nullptr, "msd_device_open failed");
         auto connection = std::unique_ptr<MagmaSystemConnection>(new MagmaSystemConnection(
-            dev, MsdConnectionUniquePtr(msd_connection), MAGMA_SYSTEM_CAPABILITY_RENDERING));
+            dev, MsdConnectionUniquePtr(msd_connection_t), MAGMA_SYSTEM_CAPABILITY_RENDERING));
         if (!connection)
             return DRETP(nullptr, "failed to connect to msd device");
         connection->CreateContext(ctx_id);
@@ -56,14 +56,14 @@ public:
     static constexpr uint32_t kSignalSemaphoreCount = 2;
 
     std::vector<MagmaSystemBuffer*>& resources() { return resources_; }
-    std::vector<msd_buffer*>& msd_resources() { return msd_resources_; }
+    std::vector<msd_buffer_t*>& msd_resources() { return msd_resources_; }
 
-    msd_context* ctx() { return ctx_->msd_ctx(); }
+    msd_context_t* ctx() { return ctx_->msd_ctx(); }
     MagmaSystemDevice* dev() { return dev_.get(); }
     MagmaSystemBuffer* buffer() { return buffer_.get(); }
 
-    msd_semaphore** msd_wait_semaphores() { return msd_wait_semaphores_.data(); }
-    msd_semaphore** msd_signal_semaphores() { return msd_signal_semaphores_.data(); }
+    msd_semaphore_t** msd_wait_semaphores() { return msd_wait_semaphores_.data(); }
+    msd_semaphore_t** msd_signal_semaphores() { return msd_signal_semaphores_.data(); }
 
     magma_system_command_buffer* abi_cmd_buf()
     {
@@ -237,10 +237,10 @@ private:
     void* buffer_data_ = nullptr;
 
     std::vector<MagmaSystemBuffer*> resources_;
-    std::vector<msd_buffer*> msd_resources_;
+    std::vector<msd_buffer_t*> msd_resources_;
 
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores_;
-    std::vector<msd_semaphore*> msd_wait_semaphores_;
+    std::vector<msd_semaphore_t*> msd_wait_semaphores_;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
-    std::vector<msd_semaphore*> msd_signal_semaphores_;
+    std::vector<msd_semaphore_t*> msd_signal_semaphores_;
 };

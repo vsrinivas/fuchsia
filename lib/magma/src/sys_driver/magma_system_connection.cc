@@ -7,9 +7,9 @@
 #include "magma_util/macros.h"
 
 MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> weak_device,
-                                             msd_connection_unique_ptr_t msd_connection,
+                                             msd_connection_unique_ptr_t msd_connection_t,
                                              uint32_t capabilities)
-    : device_(weak_device), msd_connection_(std::move(msd_connection))
+    : device_(weak_device), msd_connection_(std::move(msd_connection_t))
 {
     DASSERT(msd_connection_);
 
@@ -176,7 +176,7 @@ bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject:
             if (iter != semaphore_map_.end())
                 return true;
 
-            msd_semaphore* abi_semaphore;
+            msd_semaphore_t* abi_semaphore;
             magma_status_t status = msd_semaphore_import(handle, &abi_semaphore);
             if (status != MAGMA_STATUS_OK)
                 return DRETF(false, "msd_semaphore_import failed: %d", status);
@@ -213,7 +213,7 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint64_t 
     return iter->second;
 }
 
-msd_semaphore* MagmaSystemConnection::LookupSemaphore(uint64_t id)
+msd_semaphore_t* MagmaSystemConnection::LookupSemaphore(uint64_t id)
 {
     auto iter = semaphore_map_.find(id);
     if (iter == semaphore_map_.end())

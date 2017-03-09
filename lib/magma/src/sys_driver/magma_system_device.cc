@@ -18,7 +18,7 @@ MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id
         (capabilities & ~(MAGMA_SYSTEM_CAPABILITY_DISPLAY | MAGMA_SYSTEM_CAPABILITY_RENDERING)))
         return DRETP(nullptr, "attempting to open connection to device with invalid capabilities");
 
-    msd_connection* msd_connection = msd_device_open(device->msd_dev(), client_id);
+    msd_connection_t* msd_connection = msd_device_open(device->msd_dev(), client_id);
     if (!msd_connection)
         return DRETP(nullptr, "msd_device_open failed");
 

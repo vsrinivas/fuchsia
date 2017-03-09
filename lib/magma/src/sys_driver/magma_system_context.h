@@ -12,9 +12,9 @@
 #include "magma_util/status.h"
 #include "msd.h"
 
-using msd_context_unique_ptr_t = std::unique_ptr<msd_context, decltype(&msd_context_destroy)>;
+using msd_context_unique_ptr_t = std::unique_ptr<msd_context_t, decltype(&msd_context_destroy)>;
 
-static inline msd_context_unique_ptr_t MsdContextUniquePtr(msd_context* context)
+static inline msd_context_unique_ptr_t MsdContextUniquePtr(msd_context_t* context)
 {
     return msd_context_unique_ptr_t(context, &msd_context_destroy);
 }
@@ -24,7 +24,7 @@ public:
     class Owner {
     public:
         virtual std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) = 0;
-        virtual msd_semaphore* LookupSemaphoreForContext(uint64_t id) = 0;
+        virtual msd_semaphore_t* LookupSemaphoreForContext(uint64_t id) = 0;
     };
 
     MagmaSystemContext(Owner* owner, msd_context_unique_ptr_t msd_ctx)
@@ -35,7 +35,7 @@ public:
     magma::Status ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> command_buffer);
 
 private:
-    msd_context* msd_ctx() { return msd_ctx_.get(); }
+    msd_context_t* msd_ctx() { return msd_ctx_.get(); }
 
     Owner* owner_;
 

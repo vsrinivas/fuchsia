@@ -76,7 +76,7 @@ MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> comm
     system_resources.reserve(cmd_buf->num_resources());
 
     // the resources to be sent to the MSD driver
-    auto msd_resources = std::vector<msd_buffer*>();
+    auto msd_resources = std::vector<msd_buffer_t*>();
     msd_resources.reserve(cmd_buf->num_resources());
 
     // validate batch buffer index
@@ -134,8 +134,8 @@ MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> comm
     }
 
     // used to keep semaphores in scope until msd_context_execute_command_buffer returns
-    std::vector<msd_semaphore*> msd_wait_semaphores(cmd_buf->wait_semaphore_count());
-    std::vector<msd_semaphore*> msd_signal_semaphores(cmd_buf->signal_semaphore_count());
+    std::vector<msd_semaphore_t*> msd_wait_semaphores(cmd_buf->wait_semaphore_count());
+    std::vector<msd_semaphore_t*> msd_signal_semaphores(cmd_buf->signal_semaphore_count());
 
     // validate semaphores
     for (uint32_t i = 0; i < cmd_buf->wait_semaphore_count(); i++) {

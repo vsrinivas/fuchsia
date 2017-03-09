@@ -11,9 +11,9 @@
 #include <functional>
 #include <memory>
 
-using msd_buffer_unique_ptr_t = std::unique_ptr<msd_buffer, decltype(&msd_buffer_destroy)>;
+using msd_buffer_unique_ptr_t = std::unique_ptr<msd_buffer_t, decltype(&msd_buffer_destroy)>;
 
-static inline msd_buffer_unique_ptr_t MsdBufferUniquePtr(msd_buffer* buffer)
+static inline msd_buffer_unique_ptr_t MsdBufferUniquePtr(msd_buffer_t* buffer)
 {
     return msd_buffer_unique_ptr_t(buffer, &msd_buffer_destroy);
 }
@@ -30,7 +30,7 @@ public:
     // note: this does not relinquish ownership of the PlatformBuffer
     magma::PlatformBuffer* platform_buffer() { return platform_buf_.get(); }
 
-    msd_buffer* msd_buf() { return msd_buf_.get(); }
+    msd_buffer_t* msd_buf() { return msd_buf_.get(); }
 
 private:
     MagmaSystemBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf,

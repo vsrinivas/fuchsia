@@ -14,9 +14,9 @@
 #include <thread>
 #include <unordered_map>
 
-using msd_device_unique_ptr_t = std::unique_ptr<msd_device, decltype(&msd_device_destroy)>;
+using msd_device_unique_ptr_t = std::unique_ptr<msd_device_t, decltype(&msd_device_destroy)>;
 
-static inline msd_device_unique_ptr_t MsdDeviceUniquePtr(msd_device* msd_dev)
+static inline msd_device_unique_ptr_t MsdDeviceUniquePtr(msd_device_t* msd_dev)
 {
     return msd_device_unique_ptr_t(msd_dev, &msd_device_destroy);
 }
@@ -36,7 +36,7 @@ public:
     static std::shared_ptr<magma::PlatformConnection>
     Open(std::shared_ptr<MagmaSystemDevice>, msd_client_id client_id, uint32_t capabilities);
 
-    msd_device* msd_dev() { return msd_dev_.get(); }
+    msd_device_t* msd_dev() { return msd_dev_.get(); }
 
     // Returns the device id. 0 is invalid.
     uint32_t GetDeviceId();
