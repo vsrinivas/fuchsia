@@ -176,14 +176,20 @@ public:
         }
     }
 
-    void AssertLineContains(int line_num, const char* str) {
+    void AssertTextbufLineContains(vc_char_t* buf, int line_num,
+                                   const char* str) {
         size_t len = strlen(str);
         EXPECT_LE(len, size_x, "");
         for (size_t i = 0; i < len; ++i)
-            EXPECT_EQ(str[i], textbuf[size_x * line_num + i], "");
+            EXPECT_EQ(str[i], TOCHAR(buf[size_x * line_num + i]), "");
         // The rest of the line should contain spaces.
         for (size_t i = len; i < size_x; ++i)
-            EXPECT_EQ(' ', textbuf[size_x * line_num + i], "");
+            EXPECT_EQ(' ', TOCHAR(buf[size_x * line_num + i]), "");
+    }
+
+    void AssertLineContains(int line_num, const char* str) {
+        AssertTextbufLineContains(textbuf, line_num, str);
+        AssertTextbufLineContains(vc_dev->text_buf, line_num, str);
     }
 
     uint32_t size_x;
