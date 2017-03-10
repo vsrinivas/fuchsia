@@ -263,7 +263,8 @@ const int kEight = 8;
 //                G channel means that the cell is higher than its down-neighbor.
 //                B channel means that the cell is higher than its left-neighbor.
 //                A channel means that the cell is higher than its right-neighbor.
-const int kNeighborhoodSize = kEight + 2 * kRadius;
+const int kNeighborhoodHeight = kEight + 2 * kRadius;
+const int kNeighborhoodWidth = kEight + 2 * kRadius;
 
 // NOTE: we put the two variables below in shared memory even though we have a
 // single thread per workgroup, in order to avoid exceeding the available
@@ -272,96 +273,216 @@ const int kNeighborhoodSize = kEight + 2 * kRadius;
 // the Acer Switch 12 Alpha, both are necessary to avoid VK_ERROR_DEVICE_LOST.
 
 // The 'region of interest' that stores the intermediate data structure.
-shared ivec4 roi[kNeighborhoodSize];
-
-// Used internally by computeNeighborRelationships().
-shared float depths[kNeighborhoodSize][kNeighborhoodSize];
+shared ivec4 roi[kNeighborhoodHeight];
 
 void computeNeighborRelationships() {
+  float depths0[kNeighborhoodWidth];
+  float depths1[kNeighborhoodWidth];
+
   ivec2 depth_base =
       ivec2(gl_GlobalInvocationID.xy) * kEight - ivec2(kRadius, kRadius);
 
-  for (uint x = 0; x < kNeighborhoodSize; ++x) {
-    for (uint y = 0; y < kNeighborhoodSize; ++y) {
-      depths[x][y] = texture(depthImage, depth_base + ivec2(x, y)).r;
-    }
+  for (uint x = 0; x < kNeighborhoodWidth; ++x) {
+    // Load into depths1.  It will be copied into depths0 before using
+    // (wasteful, but makes the code cleaner), hence the 'y = 0' below.
+    depths1[x] = texture(depthImage, depth_base + ivec2(x, 0)).r;
   }
 
-  for (uint y = 0; y < kNeighborhoodSize; ++y) {
-    int casts_leftward = 0;
-    for (uint x = 1; x < kNeighborhoodSize; ++x) {
-      float diff = depths[x][y] - depths[x - 1][y];
-      casts_leftward += (diff < 0.0) ? (1 << x) : 0;
-    }
-    roi[y].b = casts_leftward;
-  }
-
-  for (uint y = 0; y < kNeighborhoodSize; ++y) {
-    int casts_rightward = 0;
-    for (uint x = 0; x < kNeighborhoodSize - 1; ++x) {
-      float diff = depths[x][y] - depths[x + 1][y];
-      casts_rightward += (diff < 0.0) ? (1 << x) : 0;
-    }
-    roi[y].a = casts_rightward;
-  }
-
-  for (uint y = 1; y < kNeighborhoodSize; ++y) {
-    int casts_upward = 0;
-    for (uint x = 0; x < kNeighborhoodSize; ++x) {
-      float diff = depths[x][y] - depths[x][y - 1];
-      casts_upward += (diff < 0.0) ? (1 << x) : 0;
-    }
-    roi[y].r = casts_upward;
-  }
-  // Don't know about top row, don't care.
+  // Bottom row doesn't cast shadows downward, and top row doesn't cast
+  // shadows upward.
+  roi[kNeighborhoodHeight - 1].g = 0;
   roi[0].r = 0;
 
-  for (uint y = 0; y < kNeighborhoodSize - 1; ++y) {
-    int casts_downward = 0;
-    for (uint x = 0; x < kNeighborhoodSize; ++x) {
-      float diff = depths[x][y] - depths[x][y + 1];
-      casts_downward += (diff < 0.0) ? (1 << x) : 0;
-    }
-    roi[y].g = casts_downward;
+  // Compute leftward/rightward shadow-casting for top row.
+  {
+    int casts_rightward = 0;
+    int casts_leftward = 0;
+
+    /*  What follows is a vectorized version of this code:
+        for (uint x = 1; x < kNeighborhoodWidth; ++x) {
+          float diff = depths1[(x - 1)] - depths1[x];
+          casts_rightward += (diff < 0.0) ? (1 << x) : 0;
+          casts_leftward += (diff > 0.0) ? (2 << x) : 0;
+        }
+    */
+
+    vec4 diff1 = vec4(depths1[0], depths1[1], depths1[2], depths1[3]);
+    vec4 diff2 = vec4(depths1[1], depths1[2], depths1[3], depths1[4]);
+    diff1 -= diff2;
+    casts_rightward += int(dot(ivec4(1, 2, 4, 8),
+                               mix(ivec4(0, 0, 0, 0),
+                                   ivec4(1, 1, 1, 1),
+                                   lessThan(diff1, vec4(0, 0, 0, 0)))));
+    casts_leftward += int(dot(ivec4(1, 2, 4, 8),
+                              mix(ivec4(0, 0, 0, 0),
+                                  ivec4(1, 1, 1, 1),
+                                  greaterThan(diff1, vec4(0, 0, 0, 0))))) << 1;
+    diff1 = vec4(depths1[4], depths1[5], depths1[6], depths1[7]);
+    diff2 = vec4(depths1[5], depths1[6], depths1[7], depths1[8]);
+    diff1 -= diff2;
+    casts_rightward += int(dot(ivec4(1, 2, 4, 8),
+                               mix(ivec4(0, 0, 0, 0),
+                                   ivec4(1, 1, 1, 1),
+                                   lessThan(diff1, vec4(0, 0, 0, 0))))) << 4;
+    casts_leftward += int(dot(ivec4(1, 2, 4, 8),
+                              mix(ivec4(0, 0, 0, 0),
+                                  ivec4(1, 1, 1, 1),
+                                  greaterThan(diff1, vec4(0, 0, 0, 0))))) << 5;
+    diff1 = vec4(depths1[8], depths1[9], depths1[10], depths1[11]);
+    diff2 = vec4(depths1[9], depths1[10], depths1[11], depths1[12]);
+    diff1 -= diff2;
+    casts_rightward += int(dot(ivec4(1, 2, 4, 8),
+                               mix(ivec4(0, 0, 0, 0),
+                                   ivec4(1, 1, 1, 1),
+                                   lessThan(diff1, vec4(0, 0, 0, 0))))) << 8;
+    casts_leftward += int(dot(ivec4(1, 2, 4, 8),
+                              mix(ivec4(0, 0, 0, 0),
+                                  ivec4(1, 1, 1, 1),
+                                  greaterThan(diff1, vec4(0, 0, 0, 0))))) << 9;
+    diff1 = vec4(depths1[12], depths1[13], depths1[14], depths1[15]);
+    // Note that the last value is repeated, to not go out-of-bounds.
+    diff2 = vec4(depths1[13], depths1[14], depths1[15], depths1[15]);
+    diff1 -= diff2;
+    casts_rightward += int(dot(ivec4(1, 2, 4, 8),
+                               mix(ivec4(0, 0, 0, 0),
+                                   ivec4(1, 1, 1, 1),
+                                   lessThan(diff1, vec4(0, 0, 0, 0))))) << 12;
+    casts_leftward += int(dot(ivec4(1, 2, 4, 8),
+                              mix(ivec4(0, 0, 0, 0),
+                                  ivec4(1, 1, 1, 1),
+                                  greaterThan(diff1, vec4(0, 0, 0, 0))))) << 13;
+
+    roi[0].b = casts_leftward;
+    roi[0].a = casts_rightward;
   }
-  // Don't know about bottom row, don't care.
-  roi[kNeighborhoodSize - 1].g = 0;
+
+  for (uint y = 1; y < kNeighborhoodHeight; ++y) {
+    // Update depth values for 2-row subneighborhood, and compute upward/
+    // downward shadow-casting.
+    {
+      int casts_upward = 0;
+      int casts_downward = 0;
+
+      /*  What follows is a vectorized version of this code:
+          for (uint x = 0; x < kNeighborhoodWidth; ++x) {
+            depths0[x] = depths1[x];
+            depths1[x] = texture(depthImage, depth_base + ivec2(x, y)).r;
+
+            float diff = depths1[x] - depths0[x];
+            casts_downward += (diff > 0.0) ? (1 << x) : 0;
+            casts_upward += (diff < 0.0) ? (1 << x) : 0;
+          }
+      */
+
+      for (uint x = 0; x < kNeighborhoodWidth; x += 4) {
+        depths0[x] = depths1[x];
+        depths0[x + 1] = depths1[x + 1];
+        depths0[x + 2] = depths1[x + 2];
+        depths0[x + 3] = depths1[x + 3];
+        depths1[x] = texture(depthImage, depth_base + ivec2(x, y)).r;
+        depths1[x + 1] = texture(depthImage, depth_base + ivec2(x + 1, y)).r;
+        depths1[x + 2] = texture(depthImage, depth_base + ivec2(x + 2, y)).r;
+        depths1[x + 3] = texture(depthImage, depth_base + ivec2(x + 3, y)).r;
+
+        vec4 diff = vec4(depths1[x], depths1[x + 1], depths1[x + 2], depths1[x + 3]) -
+                    vec4(depths0[x], depths0[x + 1], depths0[x + 2], depths0[x + 3]);
+        casts_downward += int(dot(ivec4(1, 2, 4, 8),
+                                  mix(ivec4(0, 0, 0, 0),
+                                      ivec4(1, 1, 1, 1),
+                                      greaterThan(diff, vec4(0, 0, 0, 0))))) << x;
+        casts_upward += int(dot(ivec4(1, 2, 4, 8),
+                                mix(ivec4(0, 0, 0, 0),
+                                    ivec4(1, 1, 1, 1),
+                                    lessThan(diff, vec4(0, 0, 0, 0))))) << x;
+      }
+
+      roi[y - 1].g = casts_downward;
+      roi[y].r = casts_upward;
+    }
+
+    // Compute leftward/rightward shadow casting for current row.
+    {
+      int casts_rightward = 0;
+      int casts_leftward = 0;
+
+      /*  What follows is a vectorized version of this code:
+          for (uint x = 1; x < kNeighborhoodWidth; ++x) {
+            float diff = depths1[(x - 1)] - depths1[x];
+            casts_rightward += (diff < 0.0) ? (1 << x) : 0;
+            casts_leftward += (diff > 0.0) ? (2 << x) : 0;
+          }
+      */
+
+      vec4 diff1 = vec4(depths1[0], depths1[1], depths1[2], depths1[3]);
+      vec4 diff2 = vec4(depths1[1], depths1[2], depths1[3], depths1[4]);
+      diff1 -= diff2;
+      casts_rightward += int(dot(ivec4(1, 2, 4, 8),
+                                 mix(ivec4(0, 0, 0, 0),
+                                     ivec4(1, 1, 1, 1),
+                                     lessThan(diff1, vec4(0, 0, 0, 0)))));
+      casts_leftward += int(dot(ivec4(1, 2, 4, 8),
+                                mix(ivec4(0, 0, 0, 0),
+                                    ivec4(1, 1, 1, 1),
+                                    greaterThan(diff1, vec4(0, 0, 0, 0))))) << 1;
+      diff1 = vec4(depths1[4], depths1[5], depths1[6], depths1[7]);
+      diff2 = vec4(depths1[5], depths1[6], depths1[7], depths1[8]);
+      diff1 -= diff2;
+      casts_rightward += int(dot(ivec4(1, 2, 4, 8),
+                                 mix(ivec4(0, 0, 0, 0),
+                                     ivec4(1, 1, 1, 1),
+                                     lessThan(diff1, vec4(0, 0, 0, 0))))) << 4;
+      casts_leftward += int(dot(ivec4(1, 2, 4, 8),
+                                mix(ivec4(0, 0, 0, 0),
+                                    ivec4(1, 1, 1, 1),
+                                    greaterThan(diff1, vec4(0, 0, 0, 0))))) << 5;
+      diff1 = vec4(depths1[8], depths1[9], depths1[10], depths1[11]);
+      diff2 = vec4(diff1.gba, depths1[12]);
+      diff1 -= diff2;
+      casts_rightward += int(dot(ivec4(1, 2, 4, 8),
+                                 mix(ivec4(0, 0, 0, 0),
+                                     ivec4(1, 1, 1, 1),
+                                     lessThan(diff1, vec4(0, 0, 0, 0))))) << 8;
+      casts_leftward += int(dot(ivec4(1, 2, 4, 8),
+                                mix(ivec4(0, 0, 0, 0),
+                                    ivec4(1, 1, 1, 1),
+                                    greaterThan(diff1, vec4(0, 0, 0, 0))))) << 9;
+      diff1 = vec4(depths1[12], depths1[13], depths1[14], depths1[15]);
+      // Note that the last value is repeated, to not go out-of-bounds.
+      diff2 = vec4(depths1[13], depths1[14], depths1[15], depths1[15]);
+      diff1 -= diff2;
+      casts_rightward += int(dot(ivec4(1, 2, 4, 8),
+                                 mix(ivec4(0, 0, 0, 0),
+                                     ivec4(1, 1, 1, 1),
+                                     lessThan(diff1, vec4(0, 0, 0, 0))))) << 12;
+      casts_leftward += int(dot(ivec4(1, 2, 4, 8),
+                                mix(ivec4(0, 0, 0, 0),
+                                    ivec4(1, 1, 1, 1),
+                                    greaterThan(diff1, vec4(0, 0, 0, 0))))) << 13;
+
+      roi[y].b = casts_leftward;
+      roi[y].a = casts_rightward;
+    }
+  }
 }
 
 void smearNeighborRelationships() {
   // Smear 'downward' to cast shadows even further 'downward'.
-  // Note: the commented-out code below is rewritten to avoid a Mesa
-  // compiler bug.  Once this bug is fixed, use the original version again.
-  /*
-  for (uint y = kEight - 1; y >= 0; --y) {
+  // Count downward so that we don't smear already-smeared values.
+  for (int y = kEight - 1; y >= 0; --y) {
     ivec4 smeared = roi[kRadius + y];
     for (uint rad = 1; rad < kRadius; ++rad) {
-      smeared.g |= roi[kRadius + y - rad].g;
-      smeared.b |= roi[kRadius + y - rad].b;
-      smeared.a |= roi[kRadius + y - rad].a;
+      smeared.gba |= roi[kRadius + y - rad].gba;
     }
     roi[kRadius + y] = smeared;
-  }
-  */
-  for (uint y = 0; y < kEight; ++y) {
-    ivec4 smeared = roi[kRadius + kEight - 1 - y];
-    for (uint rad = 1; rad < kRadius; ++rad) {
-      smeared.g |= roi[kRadius + kEight - 1 - y - rad].g;
-      smeared.b |= roi[kRadius + kEight - 1 - y - rad].b;
-      smeared.a |= roi[kRadius + kEight - 1 - y - rad].a;
-    }
-    roi[kRadius + kEight - 1 - y] = smeared;
   }
 
   // Smear 'upward' to cast shadows even further 'upward'.
   for (uint y = 0; y < kEight; ++y) {
-    ivec4 smeared = roi[kRadius + y];
+    ivec3 smeared = roi[kRadius + y].rba;
     for (uint rad = 1; rad < kRadius; ++rad) {
-      smeared.r |= roi[kRadius + y + rad].r;
-      smeared.b |= roi[kRadius + y + rad].b;
-      smeared.a |= roi[kRadius + y + rad].a;
+      smeared |= roi[kRadius + y + rad].rba;
     }
-    roi[kRadius + y] = smeared;
+    roi[kRadius + y].rba = smeared;
   }
 
   // Smear 'rightward' to cast shadows even further 'rightward', and similarly
@@ -369,19 +490,11 @@ void smearNeighborRelationships() {
   for (uint y = 0; y < kEight; ++y) {
     ivec4 smeared = roi[kRadius + y];
     for (uint rad = 1; rad < kRadius; ++rad) {
-      // Smear 'upward' bits to left and right.
-      smeared.r |= (smeared.r >> 1);
-      smeared.r |= (smeared.r << 1);
-
-      // Smear 'downward' bits to left and right.
-      smeared.g |= (smeared.g >> 1);
-      smeared.g |= (smeared.g << 1);
-
+      // Smear 'upward' and 'downward' bits to left and right.
       // Smear 'leftward' bits to left only, to avoid false positives.
-      smeared.b |= (smeared.b >> 1);
-
       // Smear 'rightward' bits to right only, to avoid false positives.
-      smeared.a |= (smeared.a << 1);
+      smeared.rgb |= (smeared.rgb >> 1);
+      smeared.rga |= (smeared.rga << 1);
     }
     roi[kRadius + y] = smeared;
   }
