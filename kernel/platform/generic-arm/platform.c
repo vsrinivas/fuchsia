@@ -41,8 +41,16 @@
 #include <kernel/thread.h>
 #endif
 
+#include <magenta/boot/bootdata.h>
+#include <mdi/mdi.h>
+#include <mdi/mdi-defs.h>
+#include <pdev/pdev.h>
+
 static void* ramdisk_base;
 static size_t ramdisk_size;
+
+static uint cpu_cluster_count = 0;
+static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 
 /* initial memory mappings. parsed by start.S */
 struct mmu_initial_mapping mmu_initial_mappings[] = {
@@ -124,11 +132,108 @@ void* platform_get_ramdisk(size_t *size) {
     }
 }
 
+#if WITH_SMP
+static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
+    mdi_node_ref_t  clusters;
+
+    if (mdi_find_node(cpu_map, MDI_CPU_MAP_CLUSTERS, &clusters) != NO_ERROR) {
+        panic("platform_cpu_early_init couldn't find clusters\n");
+        return;
+    }
+
+    mdi_node_ref_t  cluster;
+
+    mdi_each_child(&clusters, &cluster) {
+        mdi_node_ref_t node;
+        uint8_t cpu_count;
+
+        if (mdi_find_node(&cluster, MDI_CPU_MAP_CLUSTERS_CPU_COUNT, &node) != NO_ERROR) {
+            panic("platform_cpu_early_init couldn't find cluster cpu-count\n");
+            return;
+        }
+        if (mdi_node_uint8(&node, &cpu_count) != NO_ERROR) {
+            panic("platform_cpu_early_init could not read cluster id\n");
+            return;
+        }
+
+        if (cpu_cluster_count >= SMP_CPU_MAX_CLUSTERS) {
+            panic("platform_cpu_early_init: MDI contains more than SMP_CPU_MAX_CLUSTERS clusters\n");
+            return;
+        }
+        cpu_cluster_cpus[cpu_cluster_count++] = cpu_count;
+    }
+    arch_init_cpu_map(cpu_cluster_count, cpu_cluster_cpus);
+}
+
+static void platform_cpu_init(void) {
+    for (uint cluster = 0; cluster < cpu_cluster_count; cluster++) {
+        for (uint cpu = 0; cpu < cpu_cluster_cpus[cluster]; cpu++) {
+            if (cluster != 0 || cpu != 0) {
+                arm64_set_secondary_sp(cluster, cpu,
+                        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL));
+                psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
+            }
+        }
+    }
+}
+#endif
+
+static void platform_mdi_init(void) {
+    mdi_node_ref_t  root;
+    mdi_node_ref_t  cpu_map;
+    mdi_node_ref_t  kernel_drivers;
+
+    // Look for MDI data in ramdisk bootdata
+    size_t offset = 0;
+    bootdata_t* header = (ramdisk_base + offset);
+    if (header->type != BOOTDATA_CONTAINER) {
+        panic("invalid bootdata container header\n");
+    }
+    offset += sizeof(*header);
+
+    while (offset < ramdisk_size) {
+        header = (ramdisk_base + offset);
+
+        if (header->type == BOOTDATA_MDI) {
+            break;
+        } else {
+            offset += BOOTDATA_ALIGN(sizeof(*header) + header->length);
+        }
+    }
+    if (offset >= ramdisk_size) {
+        panic("No MDI found in ramdisk\n");
+    }
+
+    if (mdi_init(ramdisk_base + offset, ramdisk_size - offset, &root) != NO_ERROR) {
+        panic("mdi_init failed\n");
+    }
+
+    // search top level nodes for CPU info and kernel drivers
+    if (mdi_find_node(&root, MDI_CPU_MAP, &cpu_map) != NO_ERROR) {
+        panic("platform_mdi_init couldn't find cpu-map\n");
+    }
+    if (mdi_find_node(&root, MDI_KERNEL_DRIVERS, &kernel_drivers) != NO_ERROR) {
+        panic("platform_mdi_init couldn't find kernel-drivers\n");
+    }
+
+#if WITH_SMP
+    platform_cpu_early_init(&cpu_map);
+#endif
+
+    pdev_init(&kernel_drivers);
+}
+
 void platform_early_init(void)
 {
     uart_init_early();
 
     read_device_tree(&ramdisk_base, &ramdisk_size, NULL);
+
+    if (!ramdisk_base || !ramdisk_size) {
+        panic("no ramdisk!\n");
+    }
+
+    platform_mdi_init();
 
     /* initialize the interrupt controller and timers */
     arm_gic_init();
@@ -151,22 +256,7 @@ void platform_init(void)
     uart_init();
 
 #if WITH_SMP
-    /* TODO - number of cpus (and topology) should be parsed from device index or command line */
-#define CLUSTER_COUNT   2
-#define CLUSTER_CPUS    4
-
-    uint cluster_cpus[] = { CLUSTER_CPUS, CLUSTER_CPUS };
-    arch_init_cpu_map(countof(cluster_cpus), cluster_cpus);
-
-    for (uint cluster = 0; cluster < CLUSTER_COUNT; cluster++) {
-        for (uint cpu = 0; cpu < CLUSTER_CPUS; cpu++) {
-            if (cluster != 0 || cpu != 0) {
-                arm64_set_secondary_sp(cluster, cpu,
-                        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL));
-                psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
-            }
-        }
-    }
+    platform_cpu_init();
 #endif
 }
 

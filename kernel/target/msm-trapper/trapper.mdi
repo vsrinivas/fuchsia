@@ -1,0 +1,17 @@
+include "kernel/include/mdi/kernel-defs.mdi"
+
+cpu-map = {
+    clusters = {
+        {
+            name = "silver"
+            cpu-count = 4
+        }
+        {
+            name = "gold"
+            cpu-count = 4
+        }
+    }
+}
+
+kernel-drivers = {
+}

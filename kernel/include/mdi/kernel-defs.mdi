@@ -2,3 +2,9 @@
 
 // Top level nodes
 list    kernel-drivers                          1
+list    cpu-map                                 2
+
+// CPU topology
+list    cpu-map.clusters                        100
+string  cpu-map.clusters.name                   102
+uint8   cpu-map.clusters.cpu-count              103
