@@ -28,12 +28,14 @@
 #include <magenta/ktrace.h>
 #include <magenta/syscalls.h>
 
-#include "arch.h"
-#include "arch-x86.h"
+#include "debugger-utils/util.h"
+#include "debugger-utils/x86-pt.h"
+
+#include "inferior-control/arch.h"
+#include "inferior-control/arch-x86.h"
+
 #include "ipt-ctrl.h"
 #include "ipt-server.h"
-#include "util.h"
-#include "x86-pt.h"
 
 constexpr char kUsageString[] =
     "Usage: ipt [options] program [args...]\n"

@@ -15,8 +15,9 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
+#include "debugger-utils/util.h"
+
 #include "server.h"
-#include "util.h"
 
 // This is a global variable that exists in the dynamic linker, and thus in
 // every processes's address space (since Fuchsia is PIE-only). It contains

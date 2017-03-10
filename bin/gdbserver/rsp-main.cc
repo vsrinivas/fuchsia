@@ -8,13 +8,14 @@
 #include <string>
 #include <vector>
 
+#include "inferior-control/process.h"
+
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/handles/object_info.h"
 
-#include "process.h"
 #include "rsp-server.h"
 
 namespace {

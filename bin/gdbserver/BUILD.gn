@@ -2,97 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# A collection of utilities useful to debuggers and similar programs.
-# This library is "public" in the sense that it's available to be used
-# by anyone outside of this directory.
-# TODO(dje): Living in bin/foo is suboptimal.
-static_library("debugger-utils") {
-  sources = [
-    "dso-list.cc",
-    "dso-list.h",
-    "elf-reader.cc",
-    "elf-reader.h",
-    "memory.h",
-    "util.cc",
-    "util.h",
-  ]
-
-  if (current_cpu == "x64") {
-    sources += [
-      "x86-cpuid.cc",
-      "x86-cpuid.h",
-      "x86-pt.cc",
-      "x86-pt.h",
-    ]
-  }
-
-  deps = [
-    "//lib/ftl",
-    "//lib/mtl",
-    "//magenta/system/ulib/mx",
-  ]
-}
-
-# A framework for running subprocesses ("inferiors") under debugger-like
-# control.
-# This library is "public" in the sense that it's available to be used
-# by anyone outside of this directory.
-# TODO(dje): Living in bin/foo is suboptimal.
-static_library("inferior-control") {
-  sources = [
-    "arch.h",
-    "breakpoint.cc",
-    "breakpoint.h",
-    "exception-port.cc",
-    "exception-port.h",
-    "io-loop.cc",
-    "io-loop.h",
-    "memory-process.cc",
-    "memory-process.h",
-    "process.cc",
-    "process.h",
-    "registers.cc",
-    "registers.h",
-    "server.cc",
-    "server.h",
-    "thread.cc",
-    "thread.h",
-  ]
-
-  if (current_cpu == "x64") {
-    sources += [
-      "arch-amd64.cc",
-      "arch-x86.h",
-      "breakpoint-amd64.cc",
-      "registers-amd64.cc",
-    ]
-  } else if (current_cpu == "arm64") {
-    sources += [
-      "arch-arm64.cc",
-      "breakpoint-arm64.cc",
-      "registers-arm64.cc",
-    ]
-  } else {
-    sources += [
-      "arch-default.cc",
-      "breakpoint-default.cc",
-      "registers-default.cc",
-    ]
-  }
-
-  deps = [
-    ":debugger-utils",
-    "//lib/ftl",
-    "//lib/mtl",
-    "//magenta/system/ulib/mx",
-  ]
-}
-
 # To avoid breaking anything this follows convention and uses the name
 # gdbserver, the name of this directory.
 # TODO(dje): Later the directory name is expected to change.
 group("gdbserver") {
   deps = [
+    "lib/debugger-utils",
+    "lib/inferior-control",
     ":debugserver",
     ":ipt",
   ]
@@ -122,11 +38,15 @@ executable("debugserver") {
   ]
 
   deps = [
-    ":debugger-utils",
-    ":inferior-control",
+    "lib/debugger-utils",
+    "lib/inferior-control",
     "//lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
+  ]
+
+  include_dirs = [
+    "lib"
   ]
 
   libs = [
@@ -156,11 +76,15 @@ executable("ipt") {
   }
 
   deps = [
-    ":debugger-utils",
-    ":inferior-control",
+    "lib/debugger-utils",
+    "lib/inferior-control",
     "//lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
+  ]
+
+  include_dirs = [
+    "lib"
   ]
 
   libs = [
@@ -192,14 +116,16 @@ executable("gdbserver-unittests") {
     "thread-action-list.cc",
     "thread-action-list.h",
     "thread-action-list-unittest.cc",
-    "util.cc",
-    "util.h",
-    "util-unittest.cc",
   ]
 
   deps = [
+    "lib/debugger-utils",
     "//lib/ftl",
     "//third_party/gtest",
+  ]
+
+  include_dirs = [
+    "lib"
   ]
 
   libs = [

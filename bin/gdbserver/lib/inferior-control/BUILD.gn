@@ -1,0 +1,62 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# A framework for running subprocesses ("inferiors") under debugger-like
+# control.
+# This library is "public" in the sense that it's available to be used
+# by anyone outside of this directory.
+# TODO(dje): Living in bin/foo is suboptimal.
+static_library("inferior-control") {
+  sources = [
+    "arch.h",
+    "breakpoint.cc",
+    "breakpoint.h",
+    "exception-port.cc",
+    "exception-port.h",
+    "io-loop.cc",
+    "io-loop.h",
+    "memory-process.cc",
+    "memory-process.h",
+    "process.cc",
+    "process.h",
+    "registers.cc",
+    "registers.h",
+    "server.cc",
+    "server.h",
+    "thread.cc",
+    "thread.h",
+  ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "arch-amd64.cc",
+      "arch-x86.h",
+      "breakpoint-amd64.cc",
+      "registers-amd64.cc",
+    ]
+  } else if (current_cpu == "arm64") {
+    sources += [
+      "arch-arm64.cc",
+      "breakpoint-arm64.cc",
+      "registers-arm64.cc",
+    ]
+  } else {
+    sources += [
+      "arch-default.cc",
+      "breakpoint-default.cc",
+      "registers-default.cc",
+    ]
+  }
+
+  deps = [
+    "../debugger-utils",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magenta/system/ulib/mx",
+  ]
+
+  include_dirs = [
+    "..",
+  ]
+}

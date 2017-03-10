@@ -6,9 +6,9 @@
 
 #include <string>
 
-#include "gtest/gtest.h"
+#include "debugger-utils/util.h"
 
-#include "util.h"
+#include "gtest/gtest.h"
 
 namespace debugserver {
 namespace util {

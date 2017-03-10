@@ -12,12 +12,13 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
 
-#include "exception-port.h"
-#include "process.h"
+#include "inferior-control/exception-port.h"
+#include "inferior-control/process.h"
+#include "inferior-control/server.h"
+#include "inferior-control/thread.h"
+
 #include "rsp-cmd-handler.h"
 #include "rsp-io-loop.h"
-#include "server.h"
-#include "thread.h"
 
 namespace debugserver {
 

@@ -9,17 +9,19 @@
 #include <elf.h>
 #include <string>
 
+#include "debugger-utils/util.h"
+
+#include "inferior-control/registers.h"
+#include "inferior-control/thread.h"
+
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "registers.h"
 #include "rsp-server.h"
 #include "rsp-util.h"
-#include "thread.h"
 #include "thread-action-list.h"
-#include "util.h"
 
 namespace debugserver {
 

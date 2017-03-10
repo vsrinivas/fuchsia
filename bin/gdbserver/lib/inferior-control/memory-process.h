@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "memory.h"
+#include "debugger-utils/memory.h"
 
 namespace debugserver {
 

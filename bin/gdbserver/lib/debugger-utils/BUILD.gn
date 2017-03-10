@@ -1,0 +1,64 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# A collection of utilities useful to debuggers and similar programs.
+# This library is "public" in the sense that it's available to be used
+# by anyone outside of this directory.
+# TODO(dje): Living in bin/foo is suboptimal.
+static_library("debugger-utils") {
+  sources = [
+    "dso-list.cc",
+    "dso-list.h",
+    "elf-reader.cc",
+    "elf-reader.h",
+    "ktrace-reader.cc",
+    "ktrace-reader.h",
+    "memory.h",
+    "util.cc",
+    "util.h",
+  ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "x86-cpuid.cc",
+      "x86-cpuid.h",
+      "x86-pt.cc",
+      "x86-pt.h",
+    ]
+  }
+
+  deps = [
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magenta/system/ulib/mx",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":util-unittests",
+  ]
+}
+
+executable("util-unittests") {
+  testonly = true
+
+  sources = [
+    "../../test/run-all-unittests.cc",
+    "util.cc",
+    "util.h",
+    "util-unittest.cc",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//third_party/gtest",
+  ]
+
+  libs = [
+    "magenta",
+  ]
+}

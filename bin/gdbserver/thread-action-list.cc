@@ -4,10 +4,11 @@
 
 #include "thread-action-list.h"
 
+#include "debugger-utils/util.h"
+
 #include "lib/ftl/logging.h"
 
 #include "rsp-util.h"
-#include "util.h"
 
 // N.B. This file is included in the unittest, which does not
 // contain all the server/process/thread logic. Therefore do not

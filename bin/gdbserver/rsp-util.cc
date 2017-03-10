@@ -9,12 +9,12 @@
 
 #include <magenta/status.h>
 
+#include "debugger-utils/util.h"
+#include "debugger-utils/memory.h"
+
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
-
-#include "memory.h"
-#include "util.h"
 
 namespace debugserver {
 namespace util {

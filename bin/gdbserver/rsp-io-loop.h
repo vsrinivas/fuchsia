@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "io-loop.h"
-
 #include <array>
+
+#include "inferior-control/io-loop.h"
 
 namespace debugserver {
 

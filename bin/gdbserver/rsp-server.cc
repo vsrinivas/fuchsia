@@ -13,12 +13,13 @@
 #include <string>
 #include <vector>
 
+#include "debugger-utils/util.h"
+
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
 #include "rsp-util.h"
 #include "stop-reply-packet.h"
-#include "util.h"
 
 namespace debugserver {
 

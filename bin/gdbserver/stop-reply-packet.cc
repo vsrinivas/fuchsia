@@ -4,10 +4,11 @@
 
 #include "stop-reply-packet.h"
 
+#include "debugger-utils/util.h"
+
 #include "lib/ftl/logging.h"
 
 #include "rsp-util.h"
-#include "util.h"
 
 namespace debugserver {
 namespace {

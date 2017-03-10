@@ -13,9 +13,10 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
+#include "debugger-utils/util.h"
+
 #include "arch-x86.h"
 #include "thread.h"
-#include "util.h"
 
 namespace debugserver {
 namespace arch {

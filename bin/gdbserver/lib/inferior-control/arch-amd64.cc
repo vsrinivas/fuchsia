@@ -6,11 +6,12 @@
 
 #include "lib/ftl/logging.h"
 
+#include "debugger-utils/util.h"
+#include "debugger-utils/x86-cpuid.h"
+#include "debugger-utils/x86-pt.h"
+
 #include "arch-x86.h"
 #include "thread.h"
-#include "util.h"
-#include "x86-cpuid.h"
-#include "x86-pt.h"
 
 namespace debugserver {
 namespace arch {

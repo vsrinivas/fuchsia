@@ -24,15 +24,17 @@
 #include <mx/vmo.h>
 #include <mxio/util.h>
 
+#include "debugger-utils/util.h"
+#include "debugger-utils/x86-pt.h"
+
+#include "inferior-control/arch.h"
+#include "inferior-control/arch-x86.h"
+
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "arch.h"
-#include "arch-x86.h"
 #include "ipt-server.h"
-#include "util.h"
-#include "x86-pt.h"
 
 namespace debugserver {
 

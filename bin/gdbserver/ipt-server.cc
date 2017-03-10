@@ -15,11 +15,12 @@
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
 
+#include "debugger-utils/util.h"
+
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
 #include "ipt-ctrl.h"
-#include "util.h"
 
 static constexpr char ldso_trace_env_var[] = "LD_TRACE_FILE";
 static constexpr char ldso_trace_output_path[] = "/tmp/ptout.ldso";

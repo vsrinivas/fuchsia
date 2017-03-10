@@ -13,7 +13,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "util.h"
+#include "debugger-utils/util.h"
 
 namespace debugserver {
 
