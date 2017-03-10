@@ -66,4 +66,27 @@ typedef struct {
     uint32_t flags;
 } bootdata_t;
 
+
+// These items are for passing from bootloader to kernel
+
+// Kernel Command Line String
+// Content: uint8_t[]
+#define BOOTDATA_CMDLINE          (0x4c444d43u) // CMDL
+
+// ACPI Root Table Pointer
+// Content: uint64_t phys addr
+#define BOOTDATA_ACPI_RSDP        (0x50445352u) // RSDP
+
+// Framebuffer Parameters
+// Content: bootdata_swfb_t
+#define BOOTDATA_FRAMEBUFFER      (0x42465753u) // SWFB
+
+typedef struct {
+    uint64_t phys_base;
+    uint32_t width;
+    uint32_t height;
+    uint32_t stride;
+    uint32_t format;
+} bootdata_swfb_t;
+
 __END_CDECLS;
