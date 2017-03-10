@@ -33,11 +33,11 @@ class ModularTestRunObserver : public modular::testing::TestRunObserver {
     FTL_CHECK(test_id == test_id_);
     success_ = success;
 
-    // IMPORTANT: leave this log here, exactly as it is. Currently, tests
-    // launched from host (e.g. Linux) grep for this text to figure out the
-    // amount of the log to associate with the test.
-    FTL_LOG(INFO) << "test_runner: teardown " << test_id
-                  << " success=" << success;
+    // LEAVE THIS LOG HERE, EXACTLY AS IT IS.
+    //
+    // Currently, tests launched from host (e.g. Linux) grep for this text to
+    // figure out the amount of the log to associate with the test.
+    FTL_LOG(INFO) << "test_runner: teardown " << test_id;
 
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
