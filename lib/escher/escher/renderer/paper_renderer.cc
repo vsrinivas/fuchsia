@@ -218,13 +218,6 @@ void PaperRenderer::DrawDebugOverlays(const ImagePtr& output,
         illumination->get(), vk::ImageLayout::eShaderReadOnlyOptimal,
         output->get(), vk::ImageLayout::eColorAttachmentOptimal, 1, &blit,
         vk::Filter::eLinear);
-    blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eDepth;
-    blit.dstOffsets[0] = vk::Offset3D{width * 3 / 4, height / 4, 0};
-    blit.dstOffsets[1] = vk::Offset3D{width, height / 2, 1};
-    current_frame()->get().blitImage(
-        depth->get(), vk::ImageLayout::eShaderReadOnlyOptimal, output->get(),
-        vk::ImageLayout::eColorAttachmentOptimal, 1, &blit,
-        vk::Filter::eLinear);
 
     AddTimestamp("finished blitting debug overlay");
   }
@@ -235,8 +228,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
                               const ImagePtr& color_image_out,
                               const SemaphorePtr& frame_done,
                               FrameRetiredCallback frame_retired_callback) {
-  // TODO: use a SRGB format for the lighting pass.
-  UpdateModelRenderer(color_image_out->format(), vk::Format::eB8G8R8A8Unorm);
+  UpdateModelRenderer(color_image_out->format(), color_image_out->format());
 
   uint32_t width = color_image_out->width();
   uint32_t height = color_image_out->height();
@@ -309,9 +301,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     info.width = width;
     info.height = height;
     info.sample_count = kSampleCount;
-
-    // TODO: use Srgb, and make corresponding change to pipelines/render-passes.
-    info.format = vk::Format::eB8G8R8A8Unorm;
+    info.format = color_image_out->format();
     info.usage = vk::ImageUsageFlagBits::eColorAttachment |
                  vk::ImageUsageFlagBits::eTransferSrc;
     ImagePtr color_image_multisampled = image_cache_->NewImage(info);
