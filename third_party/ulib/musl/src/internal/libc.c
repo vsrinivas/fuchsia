@@ -1,4 +1,5 @@
 #include "libc.h"
+#include "setjmp_impl.h"
 
 struct __libc __libc;
 
@@ -7,3 +8,5 @@ char *__progname = 0, *__progname_full = 0;
 
 weak_alias(__progname, program_invocation_short_name);
 weak_alias(__progname_full, program_invocation_name);
+
+struct setjmp_manglers __setjmp_manglers;

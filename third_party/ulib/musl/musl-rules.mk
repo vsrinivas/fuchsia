@@ -1104,10 +1104,10 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/math/x86_64/sqrtf.S \
     $(LOCAL_DIR)/src/math/x86_64/sqrtl.S \
     $(LOCAL_DIR)/src/math/x86_64/truncl.S \
+    $(LOCAL_DIR)/src/setjmp/x86_64/longjmp.S \
+    $(LOCAL_DIR)/src/setjmp/x86_64/setjmp.S \
     $(LOCAL_DIR)/src/signal/x86_64/restore.S \
     $(LOCAL_DIR)/src/signal/x86_64/sigsetjmp.S \
-    $(LOCAL_DIR)/third_party/arch/x86_64/longjmp.S \
-    $(LOCAL_DIR)/third_party/arch/x86_64/setjmp.S \
 
 else
 error Unsupported architecture for musl build!

@@ -1,6 +1,7 @@
 #include "libc.h"
 #include "magenta_impl.h"
 #include "pthread_impl.h"
+#include "setjmp_impl.h"
 #include <elf.h>
 #include <stdatomic.h>
 #include <string.h>
@@ -48,12 +49,27 @@ static void start_main(const struct start_params* p) {
 
 __NO_SAFESTACK _Noreturn void __libc_start_main(
     void* arg, int (*main)(int, char**, char**)) {
-    // Initialize stack-protector canary value first thing.
+
+    // Initialize stack-protector canary value first thing.  Do the setjmp
+    // manglers in the same call to avoid the overhead of two system calls.
+    // That means we need a temporary buffer on the stack, which we then
+    // want to clear out so the values don't leak there.
     size_t actual;
-    mx_status_t status = mx_cprng_draw(&__stack_chk_guard,
-                                       sizeof(__stack_chk_guard), &actual);
-    if (status != NO_ERROR || actual != sizeof(__stack_chk_guard))
+    struct randoms {
+        uintptr_t stack_guard;
+        struct setjmp_manglers setjmp_manglers;
+    } randoms;
+    static_assert(sizeof(randoms) <= MX_CPRNG_DRAW_MAX_LEN, "");
+    mx_status_t status = mx_cprng_draw(&randoms, sizeof(randoms), &actual);
+    if (status != NO_ERROR || actual != sizeof(randoms))
         __builtin_trap();
+    __stack_chk_guard = randoms.stack_guard;
+    __setjmp_manglers = randoms.setjmp_manglers;
+    // Zero the stack temporaries.
+    randoms = (struct randoms) {};
+    // Tell the compiler that the value is used, so it doesn't optimize
+    // out the zeroing as dead stores.
+    __asm__("# keepalive %0" :: "m"(randoms));
 
     // extract process startup information from channel in arg
     mx_handle_t bootstrap = (uintptr_t)arg;
