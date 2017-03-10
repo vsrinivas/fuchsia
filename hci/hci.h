@@ -29,6 +29,12 @@ using EventCode = uint8_t;
 // Data Connection Handle used for ACL and SCO logical link connections.
 using ConnectionHandle = uint16_t;
 
+// Handle used to identify an advertising set used in the 5.0 Extended Advertising feature.
+using AdvertisingHandle = uint8_t;
+
+// Handle used to identify a periodic advertiser used in the 5.0 Perodic Advertising feature.
+using PeriodicAdvertiserHandle = uint16_t;
+
 // Returns the OGF (OpCode Group Field) which occupies the upper 6-bits of the
 // opcode.
 inline uint8_t GetOGF(const OpCode opcode) {
@@ -1204,6 +1210,607 @@ struct LEReadMaximumDataLengthReturnParams {
 
   // Range: see kLEMaxTxTime[Min|Max] in hci_constants.h
   uint16_t supported_max_rx_time;
+} __PACKED;
+
+// ===============================
+// LE Read PHY Command (v5.0) (LE)
+constexpr OpCode kLEReadPHY = LEControllerCommandOpCode(0x0030);
+
+struct LEReadPHYCommandParams {
+  // Connection_Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+} __PACKED;
+
+struct LEReadPHYReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection_Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // The transmitter PHY.
+  LEPHY tx_phy;
+
+  // The receiveer PHY.
+  LEPHY rx_phy;
+} __PACKED;
+
+// ======================================
+// LE Set Default PHY Command (v5.0) (LE)
+constexpr OpCode kLESetDefaultPHY = LEControllerCommandOpCode(0x0031);
+
+struct LESetDefaultPHYCommandParams {
+  // See the kLEAllPHYSBit* constants in hci_constants.h for possible bitfield values.
+  uint8_t all_phys;
+
+  // See the kLEPHYBit* constants in hci_constants.h for possible bitfield values.
+  uint8_t tx_phys;
+
+  // See the kLEPHYBit* constants in hci_constants.h for possible bitfield values.
+  uint8_t rx_phys;
+} __PACKED;
+
+// ==============================
+// LE Set PHY Command (v5.0) (LE)
+constexpr OpCode kLESetPHY = LEControllerCommandOpCode(0x0032);
+
+struct LESetPHYCommandParams {
+  // Connection_Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // See the kLEAllPHYSBit* constants in hci_constants.h for possible bitfield values.
+  uint8_t all_phys;
+
+  // See the kLEPHYBit* constants in hci_constants.h for possible bitfield values.
+  uint8_t tx_phys;
+
+  // See the kLEPHYBit* constants in hci_constants.h for possible bitfield values.
+  uint8_t rx_phys;
+
+  LEPHYOptions phy_options;
+} __PACKED;
+
+// NOTE on ReturnParams: A Command Complete event is not sent by the Controller to indicate that
+// this command has been completed. Instead, the LE PHY Update Complete event indicates that this
+// command has been completed. The LE PHY Update Complete event may also be issued autonomously by
+// the Link Layer.
+
+// =============================================
+// LE Enhanced Receiver Test Command (v5.0) (LE)
+constexpr OpCode kLEEnhancedReceiverText = LEControllerCommandOpCode(0x0033);
+
+struct LEEnhancedReceiverTestCommandParams {
+  // N = (F - 2402) / 2
+  // Range: 0x00 - 0x27. Frequency Range : 2402 MHz to 2480 MHz.
+  uint8_t rx_channel;
+
+  // Receiver PHY.
+  LEPHY phy;
+
+  // Transmitter modulation index that should be assumed.
+  LETestModulationIndex modulation_index;
+} __PACKED;
+
+// ================================================
+// LE Enhanced Transmitter Test Command (v5.0) (LE)
+constexpr OpCode kLEEnhancedTransmitterTest = LEControllerCommandOpCode(0x0034);
+
+struct LEEnhancedTransmitterTestCommandParams {
+  // N = (F - 2402) / 2
+  // Range: 0x00 - 0x27. Frequency Range : 2402 MHz to 2480 MHz.
+  uint8_t tx_channel;
+
+  // Length in bytes of payload data in each packet
+  uint8_t length_of_test_data;
+
+  // The packet payload sequence. See Core Spec 5.0, Vol 2, Part E, Section 7.8.51 for a description
+  // of possible values.
+  uint8_t packet_payload;
+
+  // Transmitter PHY.
+  LEPHY phy;
+} __PACKED;
+
+// =========================================================
+// LE Set Advertising Set Random Address Command (v5.0) (LE)
+constexpr OpCode kLESetAdvertisingSetRandomAddress = LEControllerCommandOpCode(0x0035);
+
+struct LESetAdvertisingSetRandomAddressCommandParams {
+  // Handle used to identify an advertising set.
+  AdvertisingHandle adv_handle;
+
+  // Random Device Address.
+  common::DeviceAddress adv_random_address;
+} __PACKED;
+
+// ==========================================================
+// LE Set Extended Advertising Parameters Command (v5.0) (LE)
+constexpr OpCode kLESetExtendedAdvertisingParameters = LEControllerCommandOpCode(0x0036);
+
+struct LESetExtendedAdvertisingParametersCommandParams {
+  // Handle used to identify an advertising set.
+  AdvertisingHandle adv_handle;
+
+  // See the kLEAdvEventPropBit* constants in hci_constants.h for possible bit values.
+  uint16_t adv_event_properties;
+
+  // Range: See kLEExtendedAdvertisingInterval[Min|Max] in hci_constants.h
+  // Time = N * 0.625 s
+  // Time Range: 20 ms to 10,485.759375 s
+  uint8_t primary_adv_internal_min[3];
+  uint8_t primary_adv_interval_max[3];
+
+  // (see the constants kLEAdvertisingChannel* in hci_constants.h for possible values).
+  uint8_t primary_adv_channel_map;
+
+  LEOwnAddressType own_address_type;
+  LEPeerAddressType peer_address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
+  // Identity Address of the device to be connected.
+  common::DeviceAddress peer_address;
+
+  LEAdvFilterPolicy adv_filter_policy;
+
+  // Range: -127 <= N <= +126
+  // Units: dBm
+  // If N = 127: Host has no preference.
+  int8_t adv_tx_power;
+
+  // LEPHY::kLE2M and LEPHY::kLECodedS2 are excluded.
+  LEPHY primary_adv_phy;
+
+  uint8_t secondary_adv_max_skip;
+  LEPHY secondary_adv_phy;
+  uint8_t advertising_sid;
+  GenericEnableParam scan_request_notification_enable;
+} __PACKED;
+
+struct LESetExtendedAdvertisingParametersReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+  int8_t selected_tx_power;
+} __PACKED;
+
+// ====================================================
+// LE Set Extended Advertising Data Command (v5.0) (LE)
+constexpr OpCode kLESetExtendedAdvertisingData = LEControllerCommandOpCode(0x0037);
+
+struct LESetExtendedAdvertisingDataCommandParams {
+  // Handle used to identify an advertising set.
+  AdvertisingHandle adv_handle;
+
+  // See hci_constants.h for possible values.
+  LESetExtendedAdvDataOp operation;
+
+  // The Fragment_Preference parameter provides a hint to the Controller as to whether advertising
+  // data should be fragmented.
+  LEExtendedAdvFragmentPreference fragment_preference;
+
+  // Length of the advertising data included in this command packet, up to
+  // kMaxLEExtendedAdvertisingDataLength bytes. If the advertising set uses legacy advertising PDUs
+  // that support advertising data then this shall not exceed kMaxLEAdvertisingDataLength bytes.
+  uint8_t adv_data_length;
+
+  // Variable length advertising data.
+  uint8_t adv_data[0];
+} __PACKED;
+
+// ======================================================
+// LE Set Extended Scan Response Data Command (v5.0) (LE)
+constexpr OpCode kLESetExtendedScanResponseData = LEControllerCommandOpCode(0x0038);
+
+struct LESetExtendedScanResponseDataCommandParams {
+  // Handle used to identify an advertising set.
+  AdvertisingHandle adv_handle;
+
+  // See hci_constants.h for possible values. LESetExtendedAdvDataOp::kUnchangedData is excluded for
+  // scan response data.
+  LESetExtendedAdvDataOp operation;
+
+  LEExtendedAdvFragmentPreference fragment_preference;
+
+  // Length of the scan response data included in this command packet, up to
+  // kMaxLEExtendedAdvertisingDataLength bytes. If the advertising set uses scannable legacy
+  // advertising PDUs then this shall not exceed kMaxLEAdvertisingDataLength bytes.
+  uint8_t scan_rsp_data_length;
+
+  // Variable length advertising data.
+  uint8_t scan_rsp_data[0];
+} __PACKED;
+
+// ======================================================
+// LE Set Extended Advertising Enable Command (v5.0) (LE)
+constexpr OpCode kLESetExtendedAdvertisingEnable = LEControllerCommandOpCode(0x0039);
+
+struct LESetExtendedAdvertisingEnableData {
+  // Handle used to identify an advertising set.
+  AdvertisingHandle adv_handle;
+
+  // Possible values:
+  //   0x0000: No advertising duration. Advertising to continue until the Host disables it.
+  //   0x0001-0xFFFF: Advertising duration, where:
+  //     Time = N * 10 ms
+  //     Time Range: 10 ms to 655,350 ms
+  uint16_t duration;
+
+  // Possible values:
+  //   0x00: No maximum number of advertising events.
+  //   0xXX: Maximum number of extended advertising events the Controller shall attempt to send
+  //         prior to terminating the extended advertising
+  uint8_t max_extended_adv_events;
+} __PACKED;
+
+struct LESetExtendedAdvertisingEnableCommandParams {
+  // Enable or Disable extended advertising.
+  GenericEnableParam enable;
+
+  // The number of advertising sets contained in the parameter arrays. If Enable and Number_of_Sets
+  // are both set to 0x00, then all advertising sets are disabled.
+  uint8_t number_of_sets;
+
+  // The parameter array containing |number_of_sets| entries for each advertising set included in
+  // this command.
+  LESetExtendedAdvertisingEnableData data[0];
+} __PACKED;
+
+// ===========================================================
+// LE Read Maximum Advertising Data Length Command (v5.0) (LE)
+constexpr OpCode kLEReadMaxAdvertisingDataLength = LEControllerCommandOpCode(0x003A);
+
+struct LEReadMaxAdvertisingDataLengthReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  uint16_t max_adv_data_length;
+} __PACKED;
+
+// ================================================================
+// LE Read Number of Supported Advertising Sets Command (v5.0) (LE)
+constexpr OpCode kLEReadNumSupportedAdvertisingSets = LEControllerCommandOpCode(0x003B);
+
+struct LEReadNumSupportedAdvertisingSetsReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  uint8_t num_supported_adv_sets;
+} __PACKED;
+
+// =============================================
+// LE Remove Advertising Set Command (v5.0) (LE)
+constexpr OpCode kLERemoveAdvertisingSet = LEControllerCommandOpCode(0x003C);
+
+struct LERemoveAdvertisingSetCommandParams {
+  // Handle used to identify an advertising set.
+  AdvertisingHandle adv_handle;
+} __PACKED;
+
+// =============================================
+// LE Clear Advertising Sets Command (v5.0) (LE)
+constexpr OpCode kLEClearAdvertisingSets = LEControllerCommandOpCode(0x003D);
+
+// ==========================================================
+// LE Set Periodic Advertising Parameters Command (v5.0) (LE)
+constexpr OpCode kLESetPeriodicAdvertisingParameters = LEControllerCommandOpCode(0x003E);
+
+struct LESetPeriodicAdvertisingParametersCommandParams {
+  // Identifies the advertising set whose periodic advertising parameters are being configured.
+  AdvertisingHandle adv_handle;
+
+  // Range: See kLEPeriodicAdvertisingInterval[Min|Max] in hci_constants.h
+  // Time = N * 1.25 ms
+  // Time Range: 7.5ms to 81.91875 s
+  uint16_t periodic_adv_interval_min;
+  uint16_t periodic_adv_interval_max;
+
+  // See the kLEPeriodicAdvPropBit* constants in hci_constants.h for possible bit values.
+  uint16_t periodic_adv_properties;
+} __PACKED;
+
+// ====================================================
+// LE Set Periodic Advertising Data Command (v5.0) (LE)
+constexpr OpCode kLESetPeriodicAdvertisingData = LEControllerCommandOpCode(0x003F);
+
+struct LESetPeriodicAdvertisingDataCommandParams {
+  // Handle used to identify an advertising set.
+  AdvertisingHandle adv_handle;
+
+  // See hci_constants.h for possible values. LESetExtendedAdvDataOp::kUnchangedData is excluded for
+  // this command.
+  LESetExtendedAdvDataOp operation;
+
+  // Length of the advertising data included in this command packet, up to
+  // kMaxLEExtendedAdvertisingDataLength bytes.
+  uint8_t adv_data_length;
+
+  // Variable length advertising data.
+  uint8_t adv_data[0];
+} __PACKED;
+
+// ======================================================
+// LE Set Periodic Advertising Enable Command (v5.0) (LE)
+constexpr OpCode kLESetPeriodicAdvertisingEnable = LEControllerCommandOpCode(0x0040);
+
+struct LESetPeriodicAdvertisingEnableCommandParams {
+  // Enable or Disable periodic advertising.
+  GenericEnableParam enable;
+
+  // Handle used to identify an advertising set.
+  AdvertisingHandle adv_handle;
+} __PACKED;
+
+// ===================================================
+// LE Set Extended Scan Parameters Command (v5.0) (LE)
+constexpr OpCode kLESetExtendedScanParameters = LEControllerCommandOpCode(0x0041);
+
+struct LESetExtendedScanParametersData {
+  // Controls the type of scan to perform.
+  LEScanType scan_type;
+
+  // Range: see kLEExtendedScanInterval[Min|Max] in hci_constants.h
+  // Time: N * 0.625 ms
+  // Time Range: 2.5 ms to 40.959375 s
+  uint16_t scan_interval;
+  uint16_t scan_window;
+} __PACKED;
+
+struct LESetExtendedScanParametersCommandParams {
+  // Indicates the type of address being used in the scan request packets (for
+  // active scanning).
+  LEOwnAddressType own_address_type;
+
+  // The LE white-list and privacy filter policy that should be used while
+  // scanning for directed and undirected advertisements.
+  LEScanFilterPolicy filter_policy;
+
+  // See kLEPHYBit* constants in hci_constants.h for possible values. kLEPHYBit2M is excluded for
+  // this command.
+  uint8_t scan_phys;
+
+  // The number of array elements is determined by the number of bits set in the scan_phys
+  // parameter.
+  LESetExtendedScanParametersData data[0];
+} __PACKED;
+
+// ===============================================
+// LE Set Extended Scan Enable Command (v5.0) (LE)
+constexpr OpCode kLESetExtendedScanEnable = LEControllerCommandOpCode(0x0042);
+
+struct LESetExtendedScanEnableCommandParams {
+  GenericEnableParam scanning_enabled;
+  LEExtendedDuplicateFilteringOption filter_duplicates;
+
+  // Possible values:
+  //   0x0000: Scan continuously until explicitly disabled
+  //   0x0001-0xFFFF: Scan duration, where:
+  //     Time = N * 10 ms
+  //     Time Range: 10 ms to 655.35 s
+  uint16_t duration;
+
+  // Possible values:
+  //   0x0000: Periodic scanning disabled
+  //   0xXXXX: Time interval from when the Controller started its last Scan_Duration until it begins
+  //   the subsequent Scan_Duration, where:
+  //     Range: 0x0001 – 0xFFFF
+  //     Time = N * 1.28 sec
+  //     Time Range: 1.28 s to 83,884.8 s
+  uint16_t period;
+} __PACKED;
+
+// =================================================
+// LE Extended Create Connection Command (v5.0) (LE)
+constexpr OpCode kLEExtendedCreateConnection = LEControllerCommandOpCode(0x0043);
+
+struct LEExtendedCreateConnectionData {
+  // Range: see kLEExtendedScanInterval[Min|Max] in hci_constants.h
+  // Time: N * 0.625 ms
+  // Time Range: 2.5 ms to 40.959375 s
+  uint16_t scan_interval;
+  uint16_t scan_window;
+
+  // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
+  // Time: N * 1.25 ms
+  // Time Range: 7.5 ms to 4 s.
+  uint16_t conn_interval_min;
+  uint16_t conn_interval_max;
+
+  // Range: 0x0000 to kLEConnectionLatencyMax in hci_constants.h
+  uint16_t conn_latency;
+
+  // Range: see kLEConnectionSupervisionTimeout[Min|Max] in hci_constants.h
+  // Time: N * 10 ms
+  // Time Range: 100 ms to 32 s
+  uint16_t supervision_timeout;
+
+  // Range: 0x0000 - 0xFFFF
+  // Time: N * 0x625 ms
+  uint16_t minimum_ce_length;
+  uint16_t maximum_ce_length;
+} __PACKED;
+
+struct LEExtendedCreateConnectionCommandParams {
+  GenericEnableParam initiator_filter_policy;
+  LEOwnAddressType own_address_type;
+  LEPeerAddressType peer_address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
+  // Identity Address of the device to be connected.
+  common::DeviceAddress peer_address;
+
+  // See the kLEPHYBit* constants in hci_constants.h for possible bitfield values.
+  uint8_t initiating_phys;
+
+  // The number of array elements is determined by the number of bits set in the |initiating_phys|
+  // parameter.
+  LEExtendedCreateConnectionData data[0];
+} __PACKED;
+
+// NOTE on ReturnParams: No Command Complete event is sent by the Controller to indicate that this
+// command has been completed. Instead, the LE Enhanced Connection Complete event indicates that
+// this command has been completed.
+
+// =======================================================
+// LE Periodic Advertising Create Sync Command (v5.0) (LE)
+constexpr OpCode kLEPeriodicAdvertisingCreateSync = LEControllerCommandOpCode(0x0044);
+
+struct LEPeriodicAdvertisingCreateSyncCommandParams {
+  LEPeriodicAdvFilterPolicy filter_policy;
+
+  // Advertising SID subfield in the ADI field used to identify the Periodic Advertising.
+  uint8_t advertising_sid;
+
+  // Address type of the advertiser. The LEAddressType::kPublicIdentity and
+  // LEAddressType::kRandomIdentity values are excluded for this command.
+  LEAddressType advertiser_address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
+  // Identity Address of the advertiser.
+  common::DeviceAddress advertiser_address;
+
+  // The number of periodic advertising packets that can be skipped after a successful receive.
+  //
+  //   Range: 0x0000 to 0x01F3
+  uint16_t skip;
+
+  // Synchronization timeout for the periodic advertising.
+  //
+  //   Range: 0x000A to 0x4000
+  //   Time = N * 10 ms
+  //   Time Range: 100 ms to 163.84 s
+  uint16_t sync_timeout;
+
+  // As of Core Spec v5.0 this parameter is intended to be used in a future feature. The Host must
+  // set this value to 0x00.
+  uint8_t unused;
+} __PACKED;
+
+// NOTE on ReturnParams: No Command Complete event is sent by the Controller to indicate that this
+// command has been completed. Instead, the LE Periodic Advertising Sync Established event indicates
+// that this command has been completed.
+
+// ==============================================================
+// LE Periodic Advertising Create Sync Cancel Command (v5.0) (LE)
+constexpr OpCode kLEPeriodicAdvertisingCreateSyncCancel = LEControllerCommandOpCode(0x0045);
+
+// ==========================================================
+// LE Periodic Advertising Terminate Sync Command (v5.0) (LE)
+constexpr OpCode kLEPeriodicAdvertisingTerminateSync = LEControllerCommandOpCode(0x0046);
+
+struct LEPeriodicAdvertisingTerminateSyncCommandParams {
+  // Handle used to identify the periodic advertiser (only the lower 12 bits are meaningful).
+  PeriodicAdvertiserHandle sync_handle;
+} __PACKED;
+
+// =============================================================
+// LE Add Device To Periodic Advertiser List Command (v5.0) (LE)
+constexpr OpCode kLEAddDeviceToPeriodicAdvertiserList = LEControllerCommandOpCode(0x0047);
+
+struct LEAddDeviceToPeriodicAdvertiserListCommandParams {
+  // Address type of the advertiser. The LEAddressType::kPublicIdentity and
+  // LEAddressType::kRandomIdentity values are excluded for this command.
+  LEAddressType advertiser_address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
+  // Identity Address of the advertiser.
+  common::DeviceAddress advertiser_address;
+
+  // Advertising SID subfield in the ADI field used to identify the Periodic Advertising.
+  uint8_t advertising_sid;
+} __PACKED;
+
+// ==================================================================
+// LE Remove Device From Periodic Advertiser List Command (v5.0) (LE)
+constexpr OpCode kLERemoveDeviceFromPeriodicAdvertiserList = LEControllerCommandOpCode(0x0048);
+
+struct LERemoveDeviceFromPeriodicAdvertiserListCommandParams {
+  // Address type of the advertiser. The LEAddressType::kPublicIdentity and
+  // LEAddressType::kRandomIdentity values are excluded for this command.
+  LEAddressType advertiser_address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
+  // Identity Address of the advertiser.
+  common::DeviceAddress advertiser_address;
+
+  // Advertising SID subfield in the ADI field used to identify the Periodic Advertising.
+  uint8_t advertising_sid;
+} __PACKED;
+
+// =====================================================
+// LE Clear Periodic Advertiser List Command (v5.0) (LE)
+constexpr OpCode kLEClearPeriodicAdvertiserList = LEControllerCommandOpCode(0x0049);
+
+// =========================================================
+// LE Read Periodic Advertiser List Size Command (v5.0) (LE)
+constexpr OpCode kLEReadPeriodicAdvertiserListSize = LEControllerCommandOpCode(0x004A);
+
+struct LEReadPeriodicAdvertiserListSizeReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Total number of Periodic Advertiser list entries that can be stored in the Controller.
+  uint8_t periodic_advertiser_list_size;
+} __PACKED;
+
+// ==========================================
+// LE Read Transmit Power Command (v5.0) (LE)
+constexpr OpCode kLEReadTransmitPower = LEControllerCommandOpCode(0x004B);
+
+struct LEReadTransmitPowerReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Range: -127 <= N <= +126
+  // Units: dBm
+  int8_t min_tx_power;
+  int8_t max_tx_power;
+} __PACKED;
+
+// ================================================
+// LE Read RF Path Compensation Command (v5.0) (LE)
+constexpr OpCode kLEReadRFPathCompensation = LEControllerCommandOpCode(0x004C);
+
+struct LEReadRFPathCompensationReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // The RF Path Compensation Values parameters used in the Tx Power Level and RSSI calculation.
+  //   Range: -128.0 dB (0xFB00) ≤ N ≤ 128.0 dB (0x0500)
+  //   Units: 0.1 dB
+  int16_t rf_tx_path_comp_value;
+  int16_t rf_rx_path_comp_value;
+} __PACKED;
+
+// =================================================
+// LE Write RF Path Compensation Command (v5.0) (LE)
+constexpr OpCode kLEWriteRFPathCompensation = LEControllerCommandOpCode(0x004D);
+
+struct LEWriteRFPathCompensationCommandParams {
+  // The RF Path Compensation Values parameters used in the Tx Power Level and RSSI calculation.
+  //   Range: -128.0 dB (0xFB00) ≤ N ≤ 128.0 dB (0x0500)
+  //   Units: 0.1 dB
+  int16_t rf_tx_path_comp_value;
+  int16_t rf_rx_path_comp_value;
+} __PACKED;
+
+// =======================================
+// LE Set Privacy Mode Command (v5.0) (LE)
+constexpr OpCode kLESetPrivacyMode = LEControllerCommandOpCode(0x004E);
+
+struct LESetPrivacyModeCommandParams {
+  // The peer identity address type (either Public Identity or Private Identity).
+  LEPeerAddressType peer_identity_address_type;
+
+  // Public Identity Address or Random (static) Identity Address of the advertiser.
+  common::DeviceAddress peer_identity_address;
+
+  // The privacy mode to be used for the given entry on the resolving list.
+  LEPrivacyMode privacy_mode;
 } __PACKED;
 
 }  // namespace hci

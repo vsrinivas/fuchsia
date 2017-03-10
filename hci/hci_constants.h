@@ -551,6 +551,16 @@ enum class GenericEnableParam : uint8_t {
 constexpr uint16_t kLEAdvertisingIntervalMin = 0x0020;
 constexpr uint16_t kLEAdvertisingIntervalMax = 0x4000;
 
+// The minimum and maximum range values for the LE periodic advertising interval
+// parameters.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.61)
+constexpr uint16_t kLEPeriodicAdvertisingIntervalMin = 0x0006;
+constexpr uint16_t kLEPeriodicAdvertisingIntervalMax = 0xFFFF;
+
+// The minimum and maximum range values for the LE extended advertising interval parameters.
+constexpr uint32_t kLEExtendedAdvertisingIntervalMin = 0x000020;
+constexpr uint32_t kLEExtendedAdvertisingIntervalMax = 0xFFFFFF;
+
 // The default LE advertising interval parameter value, corresponding to 1.28
 // seconds (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5).
 constexpr uint16_t kLEAdvertisingIntervalDefault = 0x0800;
@@ -559,6 +569,11 @@ constexpr uint16_t kLEAdvertisingIntervalDefault = 0x0800;
 // (see Core Spec v5.0, Vol 2, Part E, Section 7.8.10)
 constexpr uint16_t kLEScanIntervalMin = 0x0004;
 constexpr uint16_t kLEScanIntervalMax = 0x4000;
+
+// The minimum and maximum range values for the LE extended scan interval parameters.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.64)
+constexpr uint16_t kLEExtendedScanIntervalMin = 0x0004;
+constexpr uint16_t kLEExtendedScanIntervalMax = 0xFFFF;
 
 // The default LE scan interval parameter value, corresponding to 10
 // milliseconds (see Core Spec v5.0, Vol 2, Part E, Section 7.8.10).
@@ -719,6 +734,18 @@ enum class LEAdvFilterPolicy : uint8_t {
   // The rest is reserved for future use.
 };
 
+// Possible values that can be used for the Filter_Policy parameter in a
+// HCI_LE_Periodic_Advertising_Create_Sync command.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.67)
+enum class LEPeriodicAdvFilterPolicy : uint8_t {
+  // Use the Advertising_SID, Advertising_Address_Type, and Advertising_Address parameters to
+  // determine which advertiser to listen to.
+  kListNotUsed = 0x00,
+
+  // Use the Periodic Advertiser List to determine which advertiser to listen to.
+  kUsePeriodicAdvList = 0x01,
+};
+
 // Possible values that can be used for the |scan_type| parameter in a
 // LE_Set_Scan_Parameters command.
 // (see Core Spec v5.0, Vol 2, Part E, Section 7.8.10)
@@ -764,6 +791,106 @@ enum class LEScanFilterPolicy : uint8_t {
   kUseWhiteListWithPrivacy = 0x03,
 };
 
+// Possible values that can be used for the |filter_duplicates| parameter in a
+// HCI_LE_Set_Extended_Scan_Enable command.
+enum class LEExtendedDuplicateFilteringOption : uint8_t {
+  kDisabled = 0x00,
+  kEnabled = 0x01,
+
+  // Duplicate advertisements in a single scan period should not be sent to the Host in advertising
+  // report events; this setting shall only be used if the Period parameter is non-zero.
+  kEnabledResetForEachScanPeriod = 0x02,
+};
+
+// The PHY bitfield values that can be used in HCI_LE_Set_PHY and HCI_LE_Set_Default_PHY commands
+// that can be used for the TX_PHYS and RX_PHYS parameters.
+constexpr uint8_t kLEPHYBit1M = (1 << 0);
+constexpr uint8_t kLEPHYBit2M = (1 << 1);
+constexpr uint8_t kLEPHYBitCoded = (1 << 2);
+
+// The PHY bitfield values that can be used in HCI_LE_Set_PHY and HCI_LE_Set_Default_PHY commands
+// that can be used for the ALL_PHYS parameter.
+constexpr uint8_t kLEAllPHYSBitTxNoPreference = (1 << 0);
+constexpr uint8_t kLEAllPHYSBitRxNoPreference = (1 << 1);
+
+// Potential values that can be used for the TX_PHY and RX_PHY parameters in a HCI_LE_Read_PHY
+// command.
+enum class LEPHY : uint8_t {
+  kLE1M = 0x01,
+  kLE2M = 0x02,
+
+  // Only for the HCI_LE_Enhanced_Transmitter_Test command this value implies S=8 data coding.
+  kLECoded = 0x03,
+
+  // This should ony be used with the HCI_LE_Enhanced_Transmitter_Test command.
+  kLECodedS2 = 0x04,
+};
+
+// Potential values that can be used for the PHY_options parameter in a HCI_LE_Set_PHY command.
+enum class LEPHYOptions : uint16_t {
+  kNoPreferredEncoding = 0x00,
+  kPreferS2Coding = 0x01,
+  kPreferS8Coding = 0x02,
+};
+
+// Potential values that can be passed for the Modulation_Index parameter in a
+// HCI_LE_Enhanced_Receiver_Test command.
+enum class LETestModulationIndex : uint8_t {
+  kAssumeStandard = 0x00,
+  kAssumeStable = 0x01,
+};
+
+// Potential values for the Operation parameter in a HCI_LE_Set_Extended_Advertising_Data command.
+enum class LESetExtendedAdvDataOp : uint8_t {
+  // Intermediate fragment of fragmented extended advertising data.
+  kIntermediateFragment = 0x00,
+
+  // First fragment of fragmented extended advertising data.
+  kFirstFragment = 0x01,
+
+  // Last fragment of fragmented extended advertising data.
+  kLastFragment = 0x02,
+
+  // Complete extended advertising data.
+  kComplete = 0x03,
+
+  // Unchanged data (just update the Advertising DID)
+  kUnchangedData = 0x04,
+};
+
+// Potential values for the Fragment_Preference parameter in a HCI_LE_Set_Extended_Advertising_Data
+// command.
+enum class LEExtendedAdvFragmentPreference : uint8_t {
+  // The Controller may fragment all Host advertising data
+  kMayFragment = 0x00,
+
+  // The Controller should not fragment or should minimize fragmentation of Host advertising data
+  kShouldNotFragment = 0x01,
+};
+
+// The Advertising_Event_Properties bitfield values used in a
+// HCI_LE_Set_Extended_Advertising_Parameters command.
+constexpr uint16_t kLEAdvEventPropBitConnectable                      = (1 << 0);
+constexpr uint16_t kLEAdvEventPropBitScannable                        = (1 << 1);
+constexpr uint16_t kLEAdvEventPropBitDirected                         = (1 << 2);
+constexpr uint16_t kLEAdvEventPropBitHighDutyCycleDirectedConnectable = (1 << 3);
+constexpr uint16_t kLEAdvEventPropBitUseLegacyPDUs                    = (1 << 4);
+constexpr uint16_t kLEAdvEventPropBitAnonymousAdvertising             = (1 << 5);
+constexpr uint16_t kLEAdvEventPropBitIncludeTxPower                   = (1 << 6);
+
+// The Periodic_Advertising_Properties bitfield used in a HCI_LE_Set_Periodic_Advertising_Parameters
+// command.
+constexpr uint16_t kLEPeriodicAdvPropBitIncludeTxPower = (1 << 6);
+
+// Potential values for the Privacy_Mode parameter in a HCI_LE_Set_Privacy_Mode command.
+enum class LEPrivacyMode : uint8_t {
+  // Use Network Privacy Mode for this peer device (default).
+  kNetwork = 0x00,
+
+  // Use Device Privacy Mode for this peer device.
+  kDevice = 0x01,
+};
+
 // The maximum length of advertising data that can get passed to the
 // HCI_LE_Set_Advertising_Data command.
 //
@@ -771,8 +898,20 @@ enum class LEScanFilterPolicy : uint8_t {
 // should use the HCI_LE_Read_Maximum_Advertising_Data_Length command to obtain this information.
 constexpr size_t kMaxLEAdvertisingDataLength = 0x1F;  // (31)
 
+// The maximum length of advertising data that can get passed to the
+// HCI_LE_Set_Extended_Advertising_Data command. The advertised data can be larger than this value
+// (based on the value returned for the LE Read Maximum Advertising Data Length parameter), however
+// must be fragmented among multiple command packets.
+constexpr size_t kMaxLEExtendedAdvertisingDataLength = 251;
+
+// Maximum value of the Advertising SID subfield in the ADI field of the PDU
+constexpr uint8_t kLEAdvertsingSIDMax = 0xEF;
+
 // Invalid RSSI value.
 constexpr int8_t kRSSIInvalid = 127;
+
+// Invalid Tx Power value
+constexpr int8_t kTxPowerInvalid = 127;
 
 // The maximum length of Local Name that can be assigned to a BR/EDR controller,
 // in octets.
@@ -817,6 +956,9 @@ constexpr size_t kMinLEACLDataBufferLength = 27;
 
 // The maximum value that can be used for a 12-bit connection handle.
 constexpr uint16_t kConnectionHandleMax = 0x0EFF;
+
+// The maximum value that can ve used for a 8-bit advertising set handle.
+constexpr uint8_t kAdvertisingHandleMax = 0xEF;
 
 }  // namespace hci
 }  // namespace bluetooth
