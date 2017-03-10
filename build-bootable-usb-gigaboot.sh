@@ -19,12 +19,25 @@ if [[ $OSTYPE != "linux-gnu" ]]; then
   exit 1
 fi
 
-FUCHSIA_CONFIG="debug"
+usage(){
+  echo "build-bootable-usb-gigaboot.sh [-r] [-m] [-f]"
+  echo "-r: use release build files instead of debug"
+  echo "-m: DON'T include the Magenta kernel"
+  echo "-f: DON'T include the Fuchsia filesystem"
+}
 
-while getopts "r" opt; do
+FUCHSIA_CONFIG="debug"
+INCLUDE_MAGENTA=1
+INCLUDE_FUCHSIA=1
+
+while getopts "rmf" opt; do
     case "${opt}" in
         r) FUCHSIA_CONFIG="release" ;;
-        *) usage ;;
+        m) INCLUDE_MAGENTA=0 ;;
+        f) INCLUDE_FUCHSIA=0 ;;
+        *) usage
+           exit 0
+           ;;
     esac
 done
 
@@ -127,18 +140,25 @@ MOUNT_PATH=`mktemp -d`
 sudo mount "$EFI_PARTITION_PATH" "$MOUNT_PATH"
 trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted succesfully\"" INT TERM EXIT
 
-USER_BOOTFS_PATH="${FUCHSIA_DIR}/out/${FUCHSIA_CONFIG}-x86-64/user.bootfs"
-
 sudo mkdir -p "${MOUNT_PATH}/EFI/BOOT"
 echo -n "Copying Bootloader..."
 sudo cp "$FUCHSIA_DIR/out/build-magenta/build-magenta-pc-x86-64/bootloader/bootx64.efi" "${MOUNT_PATH}/EFI/BOOT/BOOTX64.EFI"
 echo " SUCCESS"
-echo -n "Copying magenta.bin..."
-sudo cp "$FUCHSIA_DIR/magenta/build-magenta-pc-x86-64/magenta.bin" "${MOUNT_PATH}/magenta.bin"
-echo " SUCCESS"
-echo -n "Copying user.bootfs..."
-sudo cp "${USER_BOOTFS_PATH}" "${MOUNT_PATH}/ramdisk.bin"
-echo " SUCCESS"
+
+if [ "$INCLUDE_MAGENTA" -eq 1 ]; then
+  echo -n "Copying magenta.bin..."
+  sudo cp "$FUCHSIA_DIR/magenta/build-magenta-pc-x86-64/magenta.bin" "${MOUNT_PATH}/magenta.bin"
+  sudo cp "$FUCHSIA_DIR/magenta/build-magenta-pc-x86-64/bootdata.bin" "${MOUNT_PATH}/ramdisk.bin"
+  echo " SUCCESS"
+fi
+
+if [ "$INCLUDE_FUCHSIA" -eq 1 ]; then
+  USER_BOOTFS_PATH="${FUCHSIA_DIR}/out/${FUCHSIA_CONFIG}-x86-64/user.bootfs"
+  echo -n "Copying user.bootfs..."
+  sudo cp "${USER_BOOTFS_PATH}" "${MOUNT_PATH}/ramdisk.bin"
+  echo " SUCCESS"
+fi
+
 echo -n "Syncing EFI partition (this may take a minute)..."
 pushd "$MOUNT_PATH" > /dev/null
 sync
