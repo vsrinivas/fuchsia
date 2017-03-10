@@ -140,6 +140,14 @@ public:
         magma_system_signal_semaphore(semaphore);
         thread.join();
 
+        magma_system_signal_semaphore(semaphore);
+        magma_system_reset_semaphore(semaphore);
+
+        thread = std::thread([semaphore] {
+            EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_system_wait_semaphore(semaphore, 100));
+        });
+        thread.join();
+
         magma_system_destroy_semaphore(connection_, semaphore);
     }
 

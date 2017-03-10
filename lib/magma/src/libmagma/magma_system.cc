@@ -233,6 +233,11 @@ void magma_system_signal_semaphore(magma_semaphore_t semaphore)
     reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->Signal();
 }
 
+void magma_system_reset_semaphore(magma_semaphore_t semaphore)
+{
+    reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->Reset();
+}
+
 magma_status_t magma_system_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout)
 {
     if (!reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->Wait(timeout))

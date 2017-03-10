@@ -87,6 +87,9 @@ uint64_t magma_system_get_semaphore_id(magma_semaphore_t semaphore);
 // Signals |semaphore|.
 void magma_system_signal_semaphore(magma_semaphore_t semaphore);
 
+// Resets |semaphore|.
+void magma_system_reset_semaphore(magma_semaphore_t semaphore);
+
 // Waits for |semaphore| to be signaled.  Returns MAGMA_STATUS_TIMED_OUT if the timeout
 // expires first.
 magma_status_t magma_system_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout);

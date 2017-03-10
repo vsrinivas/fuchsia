@@ -132,6 +132,8 @@ uint64_t magma_system_get_semaphore_id(magma_semaphore_t semaphore) { return 0; 
 
 void magma_system_signal_semaphore(magma_semaphore_t semaphore) {}
 
+void magma_system_reset_semaphore(magma_semaphore_t semaphore) {}
+
 magma_status_t magma_system_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout)
 {
     return MAGMA_STATUS_OK;
