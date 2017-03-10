@@ -39,9 +39,6 @@ void arm_gicv2m_init(const paddr_t* reg_frames, uint reg_frame_count) {
     DEBUG_ASSERT(reg_frames);
     DEBUG_ASSERT(reg_frame_count);
 
-    // Initialize the base GIC module first
-    arm_gic_init();
-
     // Stash the frame info
     g_reg_frames      = reg_frames;
     g_reg_frame_count = reg_frame_count;

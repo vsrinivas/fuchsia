@@ -9,7 +9,6 @@
 
 /* up to 30 GB of ram */
 #define MEMORY_BASE_PHYS     (0x40000000)
-#define MEMORY_APERTURE_SIZE (30ULL * 1024 * 1024 * 1024)
 
 /* memory map of peripherals, from qemu hw/arm/virt.c */
 #if 0

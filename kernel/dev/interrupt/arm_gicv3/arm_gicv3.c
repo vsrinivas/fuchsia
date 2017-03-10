@@ -152,7 +152,7 @@ static void gic_init(void)
     gic_init_percpu_early();
 }
 
-status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
+static status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
 {
     if (flags != ARM_GIC_SGI_FLAG_NS) {
         return ERR_INVALID_ARGS;
@@ -352,8 +352,6 @@ static const struct pdev_interrupt_ops gic_ops = {
 };
 
 static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
-    printf("arm_gic_v3_init %x\n", level);
-
     uint64_t gic_base_phys = 0;
 
     bool got_gic_base_phys = false;

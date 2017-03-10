@@ -26,7 +26,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/fpu.c \
 	$(LOCAL_DIR)/hypervisor.cpp \
 	$(LOCAL_DIR)/mmu.cpp \
-	$(LOCAL_DIR)/platform.c \
 	$(LOCAL_DIR)/spinlock.S \
 	$(LOCAL_DIR)/start.S \
 	$(LOCAL_DIR)/thread.c \

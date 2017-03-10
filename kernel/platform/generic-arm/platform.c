@@ -13,6 +13,7 @@
 #include <dev/uart.h>
 #include <arch.h>
 #include <lk/init.h>
+#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
 #include <dev/display.h>
@@ -20,7 +21,6 @@
 #include <dev/psci.h>
 
 #include <platform.h>
-#include <arch/arm64/platform.h>
 #include <dev/bcm28xx.h>
 
 #include <target.h>
@@ -42,6 +42,12 @@
 #include <mdi/mdi.h>
 #include <mdi/mdi-defs.h>
 #include <pdev/pdev.h>
+#include <libfdt.h>
+
+extern ulong lk_boot_args[4];
+
+static paddr_t ramdisk_start_phys = 0;
+static paddr_t ramdisk_end_phys = 0;
 
 static void* ramdisk_base;
 static size_t ramdisk_size;
@@ -115,8 +121,95 @@ void platform_panic_start(void)
     }
 }
 
-void platform_init_mmu_mappings(void)
-{
+// Reads Linux device tree to initialize command line and return ramdisk location
+static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* mem_size) {
+    if (ramdisk_base) *ramdisk_base = NULL;
+    if (ramdisk_size) *ramdisk_size = 0;
+    if (mem_size) *mem_size = 0;
+
+    void* fdt = paddr_to_kvaddr(lk_boot_args[0]);
+    if (!fdt) {
+        printf("%s: could not find device tree\n", __FUNCTION__);
+        return;
+    }
+
+    if (fdt_check_header(fdt) < 0) {
+        printf("%s fdt_check_header failed\n", __FUNCTION__);
+        return;
+    }
+
+    int offset = fdt_path_offset(fdt, "/chosen");
+    if (offset < 0) {
+        printf("%s: fdt_path_offset(/chosen) failed\n", __FUNCTION__);
+        return;
+    }
+
+    int length;
+    const char* bootargs = fdt_getprop(fdt, offset, "bootargs", &length);
+    if (bootargs) {
+        printf("kernel command line: %s\n", bootargs);
+        cmdline_init(bootargs);
+    }
+
+    if (ramdisk_base && ramdisk_size) {
+        const void* ptr = fdt_getprop(fdt, offset, "linux,initrd-start", &length);
+        if (ptr) {
+            if (length == 4) {
+                ramdisk_start_phys = fdt32_to_cpu(*(uint32_t *)ptr);
+            } else if (length == 8) {
+                ramdisk_start_phys = fdt64_to_cpu(*(uint64_t *)ptr);
+            }
+        }
+        ptr = fdt_getprop(fdt, offset, "linux,initrd-end", &length);
+        if (ptr) {
+            if (length == 4) {
+                ramdisk_end_phys = fdt32_to_cpu(*(uint32_t *)ptr);
+            } else if (length == 8) {
+                ramdisk_end_phys = fdt64_to_cpu(*(uint64_t *)ptr);
+            }
+        }
+
+        if (ramdisk_start_phys && ramdisk_end_phys) {
+            *ramdisk_base = paddr_to_kvaddr(ramdisk_start_phys);
+            size_t length = ramdisk_end_phys - ramdisk_start_phys;
+            *ramdisk_size = (length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+        }
+    }
+
+    // look for memory size. currently only used for qemu build
+    if (mem_size) {
+        offset = fdt_path_offset(fdt, "/memory");
+        if (offset < 0) {
+            printf("%s: fdt_path_offset(/memory) failed\n", __FUNCTION__);
+            return;
+        }
+        int lenp;
+        const void *prop_ptr = fdt_getprop(fdt, offset, "reg", &lenp);
+        if (prop_ptr && lenp == 0x10) {
+            /* we're looking at a memory descriptor */
+            //uint64_t base = fdt64_to_cpu(*(uint64_t *)prop_ptr);
+            *mem_size = fdt64_to_cpu(*((const uint64_t *)prop_ptr + 1));
+        }
+    }
+}
+
+static void platform_preserve_ramdisk(void) {
+    if (!ramdisk_start_phys || !ramdisk_end_phys) {
+        return;
+    }
+
+    struct list_node list = LIST_INITIAL_VALUE(list);
+    size_t pages = (ramdisk_end_phys - ramdisk_start_phys + PAGE_SIZE - 1) / PAGE_SIZE;
+    size_t actual = pmm_alloc_range(ramdisk_start_phys, pages, &list);
+    if (actual != pages) {
+        panic("unable to reserve ramdisk memory range\n");
+    }
+
+    // mark all of the pages we allocated as WIRED
+    vm_page_t *p;
+    list_for_every_entry(&list, p, vm_page_t, free.node) {
+        p->state = VM_PAGE_STATE_WIRED;
+    }
 }
 
 void* platform_get_ramdisk(size_t *size) {
@@ -234,9 +327,19 @@ static void platform_mdi_init(void) {
     pdev_init(&kernel_drivers);
 }
 
+extern ulong lk_boot_args[4];
+
 void platform_early_init(void)
 {
-    read_device_tree(&ramdisk_base, &ramdisk_size, NULL);
+    // qemu does not put device tree pointer in lk_boot_args,
+    // so set it here before calling read_device_tree
+    if (!lk_boot_args[0]) {
+        lk_boot_args[0] = MEMBASE;
+    }
+
+    // on qemu we read arena size from the device tree
+    size_t arena_size = 0;
+    read_device_tree(&ramdisk_base, &ramdisk_size, &arena_size);
 
     if (!ramdisk_base || !ramdisk_size) {
         panic("no ramdisk!\n");
@@ -245,12 +348,14 @@ void platform_early_init(void)
     platform_mdi_init();
 
     /* add the main memory arena */
+    if (arena_size) {
+        arena.size = arena_size;
+    }
     pmm_add_arena(&arena);
 
 #ifdef BOOTLOADER_RESERVE_START
     /* Allocate memory regions reserved by bootloaders for other functions */
-    struct list_node list = LIST_INITIAL_VALUE(list);
-    pmm_alloc_range(BOOTLOADER_RESERVE_START, BOOTLOADER_RESERVE_SIZE / PAGE_SIZE, &list);
+    pmm_alloc_range(BOOTLOADER_RESERVE_START, BOOTLOADER_RESERVE_SIZE / PAGE_SIZE, NULL);
 #endif
 
     platform_preserve_ramdisk();
@@ -261,11 +366,6 @@ void platform_init(void)
 #if WITH_SMP
     platform_cpu_init();
 #endif
-}
-
-void target_init(void)
-{
-
 }
 
 void platform_dputs(const char* str, size_t len)

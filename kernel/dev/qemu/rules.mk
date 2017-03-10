@@ -6,19 +6,12 @@
 # https://opensource.org/licenses/MIT
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
-
 MODULE := $(LOCAL_DIR)
 
-MODULE_SRCS += \
-	$(LOCAL_DIR)/arm_gic.c \
-	$(LOCAL_DIR)/arm_gicv2m.c \
-	$(LOCAL_DIR)/arm_gicv2m_msi.c \
+MODULE_SRCS := \
+    $(LOCAL_DIR)/qemu_pcie.cpp \
 
 MODULE_DEPS += \
-	dev/interrupt \
-	dev/pdev \
-	dev/pdev/interrupt \
-	lib/mdi \
-	lib/pow2_range_allocator
+	dev/interrupt/arm_gicv2 \
 
 include make/module.mk

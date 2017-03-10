@@ -28,13 +28,16 @@ MODULE_DEPS += \
 	lib/cbuf \
 	lib/mdi \
 	dev/bcm28xx \
+	dev/pcie \
 	dev/pdev \
 	dev/timer/arm_generic \
-	dev/interrupt/bcm28xx \
+	dev/interrupt/arm_gicv2 \
 	dev/interrupt/arm_gicv3 \
+	dev/interrupt/bcm28xx \
 	dev/psci \
+	dev/qemu \
 	dev/uart/bcm28xx \
 	dev/uart/msm \
+	dev/uart/qemu \
 
 include make/module.mk
-

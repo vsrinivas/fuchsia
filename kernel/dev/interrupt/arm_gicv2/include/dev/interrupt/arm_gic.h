@@ -10,8 +10,6 @@
 
 #include <sys/types.h>
 
-void arm_gic_init(void);
-
 enum {
     /* Ignore cpu_mask and forward interrupt to all CPUs other than the current cpu */
     ARM_GIC_SGI_FLAG_TARGET_FILTER_NOT_SENDER = 0x1,
@@ -22,7 +20,6 @@ enum {
     /* Only forward the interrupt to CPUs that has the interrupt configured as group 1 (non-secure) */
     ARM_GIC_SGI_FLAG_NS = 0x4,
 };
-status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask);
 
 #endif
 

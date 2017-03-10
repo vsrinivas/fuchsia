@@ -14,8 +14,12 @@
 #include <lk/init.h>
 #include <mxtl/ref_ptr.h>
 #include <new.h>
-#include <platform/qemu-virt.h>
+#include <dev/qemu-virt.h>
 #include <trace.h>
+#include <mdi/mdi.h>
+#include <mdi/mdi-defs.h>
+#include <pdev/driver.h>
+#include <pdev/interrupt.h>
 
 class QemuPciePlatformSupport : public PciePlatformInterface {
 public:
@@ -83,7 +87,7 @@ private:
         : PcieRoot(bus_drv, managed_bus_id) { }
 };
 
-static void arm_qemu_pcie_init_hook(uint level) {
+static void arm_qemu_pcie_init(mdi_node_ref_t* node, uint level) {
     /* Initialize the MSI allocator */
     status_t res = arm_gicv2m_msi_init();
     if (res != NO_ERROR)
@@ -152,6 +156,6 @@ static void arm_qemu_pcie_init_hook(uint level) {
     }
 }
 
-LK_INIT_HOOK(arm_qemu_pcie_init, arm_qemu_pcie_init_hook, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(arm_qemu_pcie_init, MDI_KERNEL_DRIVERS_QEMU_PCIE, arm_qemu_pcie_init, LK_INIT_LEVEL_PLATFORM);
 
 #endif  // if WITH_DEV_PCIE
