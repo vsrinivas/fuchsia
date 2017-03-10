@@ -11,6 +11,7 @@ group("agents") {
     # changes.
     ":bandsintown",
     ":module_suggester",
+    ":module_suggester_dart",
     ":music_brainz",
   ]
 }
@@ -89,5 +90,16 @@ executable("module_suggester") {
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/rapidjson",
     "//lib/mtl",
+  ]
+}
+
+dart_app("module_suggester_dart") {
+  output_name = "agents/module_suggester.dartx"
+
+  main_dart = "module_suggester_dart/main.dart"
+
+  deps = [
+    "//application/lib/app/dart",
+    "//apps/maxwell/services/suggestion:suggestion_dart",
   ]
 }

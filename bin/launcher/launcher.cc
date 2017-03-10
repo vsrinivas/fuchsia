@@ -64,6 +64,7 @@ class LauncherApp : public maxwell::Launcher {
     StartAgent("file:///system/apps/acquirers/focus");
     StartAgent("file:///system/apps/agents/bandsintown.dartx");
     StartAgent("file:///system/apps/agents/module_suggester");
+    StartAgent("file:///system/apps/agents/module_suggester.dartx");
     StartAgent("file:///system/apps/agents/music_brainz.dartx");
 
     // Only start Kronk if it exists.
