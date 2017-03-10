@@ -1,0 +1,12 @@
+config("gpt_config") {
+  include_dirs = [ "include" ]
+}
+
+static_library("gpt") {
+  sources = [ "gpt.c" ]
+  public = [ "include/gpt/gpt.h" ]
+  deps = [
+    "//magenta/third_party/ulib/cksum"
+  ]
+  public_configs = [ ":gpt_config" ]
+}
