@@ -166,13 +166,15 @@ static ethmac_ifc_t ethmac_ifc = {
     .recv = eth0_recv,
 };
 
-static void eth_tx_echo_locked(ethdev0_t* edev0, const void* data, size_t len) {
+static void eth_tx_echo(ethdev0_t* edev0, const void* data, size_t len) {
     ethdev_t* edev;
+    mtx_lock(&edev0->lock);
     list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
         if (edev->state & ETHDEV_TX_LISTEN) {
             eth_handle_rx(edev, data, len, ETH_FIFO_RX_TX);
         }
     }
+    mtx_unlock(&edev0->lock);
 }
 
 static mx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
@@ -229,7 +231,6 @@ static int eth_tx_thread(void* arg) {
         }
 
         uint32_t n = count;
-        mtx_lock(&edev0->lock);
         for (eth_fifo_entry_t* e = entries; count-- > 0; e++) {
             if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
                 e->flags = ETH_FIFO_INVALID;
@@ -237,11 +238,10 @@ static int eth_tx_thread(void* arg) {
                 edev0->macops->send(edev0->mac, 0, edev->io_buf + e->offset, e->length);
                 e->flags = ETH_FIFO_TX_OK;
                 if (edev->state & ETHDEV_TX_LOOPBACK) {
-                    eth_tx_echo_locked(edev0, edev->io_buf + e->offset, e->length);
+                    eth_tx_echo(edev0, edev->io_buf + e->offset, e->length);
                 }
             }
         }
-        mtx_unlock(&edev0->lock);
 
         if ((status = mx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * n, &count)) < 0) {
             printf("eth: tx_fifo: cannot write %u! %d\n", n, status);

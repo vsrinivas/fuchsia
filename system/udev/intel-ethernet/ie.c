@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #if _KERNEL
 //TODO: proper includes/defines kernel driver
@@ -76,6 +77,10 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
         return ERR_INVALID_ARGS;
     }
 
+    mx_status_t status = NO_ERROR;
+
+    mtx_lock(&eth->send_lock);
+
     // reclaim completed buffers from hw
     uint32_t n = eth->tx_rd_ptr;
     for (;;) {
@@ -97,7 +102,8 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
     // obtain buffer, copy into it, setup descriptor
     framebuf_t *frame = list_remove_head_type(&eth->free_frames, framebuf_t, node);
     if (frame == NULL) {
-        return ERR_NO_MEMORY;
+        status = ERR_NO_MEMORY;
+        goto out;
     }
 
     n = eth->tx_wr_ptr;
@@ -111,7 +117,9 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
     eth->tx_wr_ptr = n;
     writel(n, IE_TDT);
 
-    return len;
+out:
+    mtx_unlock(&eth->send_lock);
+    return status;
 }
 
 status_t eth_reset_hw(ethdev_t* eth) {

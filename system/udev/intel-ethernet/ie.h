@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include "ie-hw.h"
 
 typedef struct framebuf framebuf_t;
@@ -39,6 +41,8 @@ struct ethdev {
     void* rxb;
 
     uint8_t mac[6];
+
+    mtx_t send_lock;
 };
 
 #define ETH_RXBUF_SIZE  2048

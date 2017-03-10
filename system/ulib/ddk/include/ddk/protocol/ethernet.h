@@ -75,7 +75,7 @@ typedef struct ethmac_protocol {
     mx_status_t (*start)(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie);
 
     // send() is valid if FEATURE_TX_QUEUE is not present, otherwise it is no-op
-    // This may be called at any time, but will never be called from multiple
+    // This may be called at any time, and can be called from multiple
     // threads simultaneously.
     void (*send)(mx_device_t* dev, uint32_t options, void* data, size_t length);
 
