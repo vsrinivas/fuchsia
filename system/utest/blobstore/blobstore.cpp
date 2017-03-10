@@ -123,22 +123,6 @@ static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count) {
     }
 
     return MountBlobstore();
-    fd = open(RAMDISK_PATH, O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "Could not open ramdisk\n");
-        return -1;
-    }
-
-    // fd consumed by mount. By default, mount waits until the filesystem is
-    // ready to accept commands.
-    if ((status = mount(fd, MOUNT_PATH, DISK_FORMAT_BLOBFS, &default_mount_options,
-                        launch_logs_async)) != NO_ERROR) {
-        fprintf(stderr, "Could not mount blobstore\n");
-        UnlinkRamdisk();
-        return status;
-    }
-
-    return 0;
 }
 
 // Helper functions for testing:
