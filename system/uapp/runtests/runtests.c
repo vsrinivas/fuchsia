@@ -14,6 +14,8 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <unittest/unittest.h>
+
 typedef struct failure {
     list_node_t node;
     int cause;
@@ -122,21 +124,62 @@ static void run_tests(const char* dirn) {
     closedir(dir);
 }
 
+int usage(char* name) {
+    fprintf(stderr,
+            "usage: %s [-q|-v][-s][-m][-l][-p][-a]\n"
+            "\n"
+            "options:                                               \n"
+            "   -v: Verbose output                                  \n"
+            "   -q: Quiet output                                    \n"
+            "   -s: Toggle Small tests         (on by default)      \n"
+            "   -m: Toggle Medium tests        (on by default)      \n"
+            "   -l: Toggle Large tests         (off by default)     \n"
+            "   -p: Toggle Performance tests   (off by default)     \n"
+            "   -a: Turn on All tests                               \n", name);
+    return -1;
+}
+
 int main(int argc, char** argv) {
-    if (argc > 1) {
-        if (strcmp(argv[1], "-q") == 0) {
+    test_type_t test_type = TEST_DEFAULT;
+
+    int i = 1;
+    while (i < argc) {
+        if (strcmp(argv[i], "-q") == 0) {
             verbosity = 0;
-        } else if (strcmp(argv[1], "-v") == 0) {
+        } else if (strcmp(argv[i], "-v") == 0) {
             printf("verbose output. enjoy.\n");
             verbosity = 1;
+        } else if (strcmp(argv[i], "-s") == 0) {
+            test_type ^= TEST_SMALL;
+        } else if (strcmp(argv[i], "-m") == 0) {
+            test_type ^= TEST_MEDIUM;
+        } else if (strcmp(argv[i], "-l") == 0) {
+            test_type ^= TEST_LARGE;
+        } else if (strcmp(argv[i], "-p") == 0) {
+            test_type ^= TEST_PERFORMANCE;
+        } else if (strcmp(argv[i], "-a") == 0) {
+            test_type |= TEST_ALL;
         } else {
-            printf("unknown option. usage: %s [-q|-v]\n", argv[0]);
-            return -1;
+            return usage(argv[0]);
         }
+        i++;
+    }
+
+    // Configure the 'class' of tests which are meant to be executed by putting
+    // it in an environment variable. Test executables can consume this environment
+    // variable and process it as they would like.
+    char test_opt[32];
+    snprintf(test_opt, sizeof(test_opt), "%u", test_type);
+    if (setenv(TEST_ENV_NAME, test_opt, 1) != 0) {
+        printf("Failed: Could not set %s environment variable\n", TEST_ENV_NAME);
+        return -1;
     }
 
     run_tests("/boot/test");
     run_tests("/system/test");
+
+    // It's not catastrophic if we can't unset it; we're just trying to clean up
+    unsetenv(TEST_ENV_NAME);
 
     printf("\nSUMMARY: Ran %d tests: %d failed\n", total_count, failed_count);
 

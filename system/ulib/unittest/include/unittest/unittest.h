@@ -60,6 +60,19 @@ __BEGIN_CDECLS
 
 extern int utest_verbosity_level;
 
+typedef enum test_type {
+    TEST_SMALL       = 0x00000001,
+    TEST_MEDIUM      = 0x00000002,
+    TEST_LARGE       = 0x00000004,
+    TEST_PERFORMANCE = 0x00000008,
+    TEST_ALL         = 0xFFFFFFFF,
+} test_type_t;
+
+#define TEST_ENV_NAME "RUNTESTS_TEST_CLASS"
+#define TEST_DEFAULT (TEST_SMALL | TEST_MEDIUM)
+
+extern test_type_t utest_test_type;
+
 /*
  * Type for unit test result Output
  */
@@ -134,20 +147,50 @@ int unittest_set_verbosity_level(int new_level);
     };                                                                  \
     DEFINE_REGISTER_TEST_CASE(case_name);
 
-#define RUN_NAMED_TEST(name, test)                                  \
+#define RUN_NAMED_TEST_TYPE(name, test, test_type)                  \
     {                                                               \
-        unittest_printf_critical("    %-51s [RUNNING]", name);      \
-        struct test_info test_info;                                 \
-        current_test_info = &test_info;                             \
-        if (!test()) {                                              \
-            all_success = false;                                    \
+        if (utest_test_type & test_type) {                          \
+            unittest_printf_critical("    %-51s [RUNNING]", name);  \
+            struct test_info test_info;                             \
+            current_test_info = &test_info;                         \
+            if (!test()) {                                          \
+                all_success = false;                                \
+            } else {                                                \
+                unittest_printf_critical(" [PASSED] \n");           \
+            }                                                       \
+            current_test_info = NULL;                               \
         } else {                                                    \
-            unittest_printf_critical(" [PASSED] \n");               \
+            unittest_printf_critical("    %-51s [IGNORED]\n", name);  \
         }                                                           \
-        current_test_info = NULL;                                   \
     }
 
-#define RUN_TEST(test) RUN_NAMED_TEST(#test, test)
+/*
+ * Test classes:
+ *
+ * Small: Isolated tests for functions and classes. These must be totally
+ * synchronous and single-threaded. These tests should be parallelizable;
+ * there shouldn't be any shared resources between them.
+ *
+ * Medium: Single-process integration tests. Ideally these are also synchronous
+ * and single-threaded but they might run through a large chunk of code in each
+ * test case, or they might use disk, making them a bit slower.
+ *
+ * Large: Multi-process (or particularly incomprehensible single-process)
+ * integration tests. These tests are often too flaky to run in a CQ, and we
+ * should try to limit how many we have.
+ *
+ * Performance: Tests which are expected to pass, but which are measured
+ * using other metrics (thresholds, statistical techniques) to identify
+ * regressions.
+*/
+#define RUN_TEST_SMALL(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL)
+#define RUN_TEST_MEDIUM(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_MEDIUM)
+#define RUN_TEST_LARGE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_LARGE)
+#define RUN_TEST_PERFORMANCE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_PERFORMANCE)
+
+// "RUN_TEST" implies the test is small
+#define RUN_TEST(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL)
+#define RUN_NAMED_TEST(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL)
 
 /*
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST

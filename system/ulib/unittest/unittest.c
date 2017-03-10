@@ -33,6 +33,11 @@ static void* out_func_arg = NULL;
 // To override, specify v=N on the command line.
 int utest_verbosity_level = 0;
 
+// Controls the types of tests which are executed.
+// Multiple test types can be "OR-ed" together to
+// run a subset of all tests.
+test_type_t utest_test_type = TEST_DEFAULT;
+
 /**
  * \brief Function called to dump results
  *

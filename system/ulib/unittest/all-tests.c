@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdlib.h>
 #include <unittest/unittest.h>
 
 static struct test_case_element* test_case_list = NULL;
@@ -24,11 +25,24 @@ bool unittest_run_all_tests(int argc, char** argv) {
     unsigned int n_failed = 0;
 
     int prev_verbosity_level = -1;
-    if (argc == 2) {
-        if ((strlen(argv[1]) == 3) && (argv[1][0] == 'v') && (argv[1][1] = '=')) {
-            prev_verbosity_level = unittest_set_verbosity_level(argv[1][2] - '0');
+
+    int i = 1;
+    while (i < argc) {
+        if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] = '=')) {
+            prev_verbosity_level = unittest_set_verbosity_level(argv[i][2] - '0');
         }
+        i++;
     }
+
+    // Rely on the TEST_ENV_NAME environment variable to tell us which
+    // classes of tests we should execute.
+    const char* test_type_str = getenv(TEST_ENV_NAME);
+    if (test_type_str == NULL) {
+        unittest_printf_critical("FAILURE: Cannot access %s environment variable",
+                                 TEST_ENV_NAME);
+        return false;
+    }
+    utest_test_type = atoi(test_type_str);
 
     bool all_success = true;
     struct test_case_element* current = test_case_list;
