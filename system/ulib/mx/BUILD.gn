@@ -35,6 +35,7 @@ static_library("mx") {
     "process.cpp",
     "socket.cpp",
     "thread.cpp",
+    "vmar.cpp",
     "vmo.cpp",
     "waitset.cpp",
   ]
