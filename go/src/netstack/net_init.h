@@ -6,5 +6,6 @@
 #define APPS_NETSTACK_INIT_H_
 
 int net_init(void);
+int net_reinit(void);
 
 #endif  // APPS_NETSTACK_INIT_H_

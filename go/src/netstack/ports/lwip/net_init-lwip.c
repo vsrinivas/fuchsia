@@ -5,6 +5,7 @@
 #include "third_party/lwip/src/include/lwip/dhcp.h"
 #include "third_party/lwip/src/include/lwip/inet.h"
 #include "third_party/lwip/src/include/lwip/netif.h"
+#include "third_party/lwip/src/include/lwip/netifapi.h"
 #include "third_party/lwip/src/include/lwip/tcpip.h"
 #include "third_party/lwip/src/include/lwip/stats.h"
 #if USE_LWIPERF
@@ -17,6 +18,9 @@
 // initialize a lwip network interface
 
 static struct netif netif;
+
+static int ip4_addr_printed = 0;
+static int ip6_addr_printed_bits = 0;
 
 // the callback to signal sem_tcpip_done
 static void lwip_tcpip_init_done(void *arg) {
@@ -51,10 +55,8 @@ static void print_ip6_addr(int *printed_bits, int idx) {
 
 // the callback called every time the netif status changes
 static void lwip_netif_status_callback(struct netif *netif) {
-  static int ip4_addr_printed = 0;
   if (!ip4_addr_printed) ip4_addr_printed = print_ip4_addr();
 
-  static int ip6_addr_printed_bits = 0;
   for (int i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
     if (!(ip6_addr_printed_bits & (1 << i)))
       print_ip6_addr(&ip6_addr_printed_bits, i);
@@ -112,7 +114,6 @@ static int lwip_netif_init(void) {
   netif_create_ip6_linklocal_address(&netif, 1);
 
   // start dhcp
-  // TODO: handle lease renewal
   dhcp_start(&netif);
 
 #if USE_LWIPERF
@@ -128,6 +129,31 @@ int net_init(void) {
   lwip_debug_flags = LWIP_DBG_ON;
 #endif
   return lwip_netif_init();
+}
+
+static void lwip_netif_set_status_callback(struct netif* netif) {
+  netif_set_status_callback(netif, lwip_netif_status_callback);
+}
+
+static void lwip_netif_create_ip6_linklocal_address(struct netif* netif) {
+  netif_create_ip6_linklocal_address(netif, 1);
+}
+
+void net_reinit(void) {
+  netifapi_dhcp_stop(&netif);
+  netifapi_netif_set_down(&netif);
+  netifapi_netif_remove(&netif);
+  mem_free(netif.state);
+
+  ip4_addr_printed = 0;
+  ip6_addr_printed_bits = 0;
+  netifapi_netif_add(&netif, NULL, NULL, NULL, NULL, ethernetif_init,
+                     tcpip_input);
+  netifapi_netif_common(&netif, lwip_netif_set_status_callback, NULL);
+  netifapi_netif_set_default(&netif);
+  netifapi_netif_set_up(&netif);
+  netifapi_netif_common(&netif, lwip_netif_create_ip6_linklocal_address, NULL);
+  netifapi_dhcp_start(&netif);
 }
 
 void net_debug(void) {

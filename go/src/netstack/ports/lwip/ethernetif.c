@@ -27,6 +27,7 @@
 #include "third_party/lwip/src/include/lwip/stats.h"
 #include "third_party/lwip/src/include/netif/etharp.h"
 
+#include "apps/netstack/net_init.h"
 #include "apps/netstack/trace.h"
 #include "apps/netstack/ports/lwip/eth-client.h"
 #include "apps/netstack/ports/lwip/ethernetif.h"
@@ -336,14 +337,17 @@ static int ethernetif_thread(void* arg) {
     mx_status_t status;
     if ((status = eth_complete_rx(ethernetif->eth, netif, rx_complete)) < 0) {
       error("eth rx failed: %d\n", status);
-      return -1;
+      break;
     }
     status = eth_wait_rx(ethernetif->eth, MX_TIME_INFINITE);
     if ((status < 0) && (status != ERR_TIMED_OUT)) {
       error("eth rx wait failed: %d\n", status);
-      return -1;
+      break;
     }
   }
+
+  info("reinit netif\n");
+  net_reinit();
   return 0;
 }
 
