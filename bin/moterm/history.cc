@@ -16,16 +16,18 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace moterm {
 
 namespace {
 constexpr int kMaxHistorySize = 1000;
 
-std::string ToString(fidl::Array<uint8_t>& data) {
+std::string ToString(const mx::vmo& value) {
   std::string ret;
-  ret.resize(data.size());
-  memcpy(&ret[0], data.data(), data.size());
+  if (!mtl::StringFromVmo(value, &ret)) {
+    FTL_DCHECK(false);
+  }
   return ret;
 }
 
@@ -133,7 +135,7 @@ void History::DoReadEntries(
 
     std::vector<std::string> results;
     for (auto& entry : entries) {
-      results.push_back(ToString(entry->value->get_bytes()));
+      results.push_back(ToString(entry->value));
     }
     callback(std::move(results));
   });
