@@ -14,6 +14,7 @@
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
+#include "mx/vmo.h"
 
 namespace ledger {
 namespace integration_tests {
@@ -37,6 +38,10 @@ std::string SnapshotGetPartial(PageSnapshotPtr* snapshot,
                                fidl::Array<uint8_t> key,
                                int64_t offset,
                                int64_t max_size);
+
+std::string ToString(const mx::vmo& vmo);
+
+fidl::Array<uint8_t> ToArray(const mx::vmo& vmo);
 
 class LedgerRepositoryFactoryContainer {
  public:

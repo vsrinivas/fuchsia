@@ -14,13 +14,15 @@
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace ledger {
 namespace {
 
 app::ApplicationContext* context_;
 
-bool Equals(const fidl::Array<uint8_t>& a1, const fidl::Array<uint8_t>& a2) {
+template <class A>
+bool Equals(const fidl::Array<uint8_t>& a1, const A& a2) {
   if (a1.size() != a2.size())
     return false;
   return memcmp(a1.data(), a2.data(), a1.size()) == 0;
@@ -86,11 +88,12 @@ TEST_F(LedgerAppTest, PutAndGet) {
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   page->GetSnapshot(GetSynchronousProxy(&snapshot), nullptr, &status);
   EXPECT_EQ(Status::OK, status);
-  ValuePtr value;
+  mx::vmo value;
   snapshot->Get(TestArray(), &status, &value);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(value->is_bytes());
-  EXPECT_TRUE(Equals(TestArray(), value->get_bytes()));
+  std::string value_as_string;
+  EXPECT_TRUE(mtl::StringFromVmo(value, &value_as_string));
+  EXPECT_TRUE(Equals(TestArray(), value_as_string));
 }
 
 }  // namespace

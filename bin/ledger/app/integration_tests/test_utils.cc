@@ -96,6 +96,17 @@ fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
   return result;
 }
 
+std::string ToString(const mx::vmo& vmo) {
+  std::string value;
+  bool status = mtl::StringFromVmo(vmo, &value);
+  FTL_DCHECK(status);
+  return value;
+}
+
+fidl::Array<uint8_t> ToArray(const mx::vmo& vmo) {
+  return convert::ToArray(ToString(vmo));
+}
+
 std::string SnapshotGetPartial(PageSnapshotPtr* snapshot,
                                fidl::Array<uint8_t> key,
                                int64_t offset,

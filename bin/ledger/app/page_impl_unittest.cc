@@ -27,6 +27,13 @@
 namespace ledger {
 namespace {
 
+std::string ToString(const mx::vmo& vmo) {
+  std::string value;
+  bool status = mtl::StringFromVmo(vmo, &value);
+  FTL_DCHECK(status);
+  return value;
+}
+
 class PageImplTest : public test::TestWithMessageLoop {
  public:
   PageImplTest() {}
@@ -476,13 +483,11 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
 
   ASSERT_EQ(2u, actual_entries.size());
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
-  EXPECT_EQ(eager_value,
-            convert::ExtendedStringView(actual_entries[0]->value->get_bytes()));
+  EXPECT_EQ(eager_value, ToString(actual_entries[0]->value));
   EXPECT_EQ(Priority::EAGER, actual_entries[0]->priority);
 
   EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
-  EXPECT_EQ(lazy_value,
-            convert::ExtendedStringView(actual_entries[1]->value->get_bytes()));
+  EXPECT_EQ(lazy_value, ToString(actual_entries[1]->value));
   EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
 }
 
@@ -534,7 +539,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithToken) {
     ASSERT_EQ(ftl::StringPrintf("key %04d", i),
               convert::ToString(actual_entries[i]->key));
     ASSERT_EQ(ftl::StringPrintf("val %04d", i),
-              convert::ToString(actual_entries[i]->value->get_bytes()));
+              ToString(actual_entries[i]->value));
   }
 }
 
@@ -639,8 +644,8 @@ TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
   EXPECT_FALSE(RunLoopWithTimeout());
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  ValuePtr actual_value;
-  auto callback_get = [this, &actual_value](Status status, ValuePtr value) {
+  mx::vmo actual_value;
+  auto callback_get = [this, &actual_value](Status status, mx::vmo value) {
     EXPECT_EQ(Status::OK, status);
     actual_value = std::move(value);
     message_loop_.PostQuitTask();
@@ -648,8 +653,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
   snapshot->Get(convert::ToArray(key), callback_get);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_TRUE(actual_value->is_bytes());
-  EXPECT_EQ(value, convert::ExtendedStringView(actual_value->get_bytes()));
+  EXPECT_EQ(value, ToString(actual_value));
 }
 
 TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
@@ -669,8 +673,8 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
   EXPECT_FALSE(RunLoopWithTimeout());
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  ValuePtr actual_value;
-  auto callback_get = [this, &actual_value](Status status, ValuePtr value) {
+  mx::vmo actual_value;
+  auto callback_get = [this, &actual_value](Status status, mx::vmo value) {
     EXPECT_EQ(Status::OK, status);
     actual_value = std::move(value);
     message_loop_.PostQuitTask();
@@ -678,11 +682,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
   snapshot->Get(convert::ExtendedStringView(key).ToArray(), callback_get);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_FALSE(actual_value->is_bytes());
-  EXPECT_TRUE(actual_value->is_buffer());
-  std::string content;
-  EXPECT_TRUE(mtl::StringFromVmo(actual_value->get_buffer(), &content));
-  EXPECT_EQ(value_string, content);
+  EXPECT_EQ(value_string, ToString(actual_value));
 }
 
 TEST_F(PageImplTest, SnapshotGetPartial) {
@@ -758,9 +758,9 @@ TEST_F(PageImplTest, ParallelPut) {
 
   std::string actual_value1;
   auto callback_getvalue1 = [this, &actual_value1](Status status,
-                                                   ValuePtr returned_value) {
+                                                   mx::vmo returned_value) {
     EXPECT_EQ(Status::OK, status);
-    actual_value1 = convert::ToString(returned_value->get_bytes());
+    actual_value1 = ToString(returned_value);
     message_loop_.PostQuitTask();
   };
   snapshot1->Get(convert::ToArray(key), callback_getvalue1);
@@ -768,9 +768,9 @@ TEST_F(PageImplTest, ParallelPut) {
 
   std::string actual_value2;
   auto callback_getvalue2 = [this, &actual_value2](Status status,
-                                                   ValuePtr returned_value) {
+                                                   mx::vmo returned_value) {
     EXPECT_EQ(Status::OK, status);
-    actual_value2 = convert::ToString(returned_value->get_bytes());
+    actual_value2 = ToString(returned_value);
     message_loop_.PostQuitTask();
   };
   snapshot2->Get(convert::ToArray(key), callback_getvalue2);

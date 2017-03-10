@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
+#include "mx/vmo.h"
 
 namespace ledger {
 namespace integration_tests {
@@ -34,18 +34,17 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGet) {
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  ValuePtr value;
-  snapshot->Get(convert::ToArray("name"), [&value](Status status, ValuePtr v) {
+  mx::vmo value;
+  snapshot->Get(convert::ToArray("name"), [&value](Status status, mx::vmo v) {
     EXPECT_EQ(status, Status::OK);
     value = std::move(v);
   });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
-  EXPECT_TRUE(value->is_bytes());
-  EXPECT_EQ("Alice", convert::ToString(value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(value));
 
   // Attempt to get an entry that is not in the page.
   snapshot->Get(convert::ToArray("favorite book"),
-                [](Status status, ValuePtr v) {
+                [](Status status, mx::vmo v) {
                   // People don't read much these days.
                   EXPECT_EQ(status, Status::KEY_NOT_FOUND);
                 });
@@ -175,7 +174,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
-    EXPECT_TRUE(values[i].Equals(entries[i]->value->get_bytes()));
+    EXPECT_TRUE(values[i].Equals(ToArray(entries[i]->value)));
   }
 
   // Get entries matching the prefix "0".
@@ -184,7 +183,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
-    EXPECT_TRUE(values[i].Equals(entries[i]->value->get_bytes()));
+    EXPECT_TRUE(values[i].Equals(ToArray(entries[i]->value)));
   }
 
   // Get entries matching the prefix "00".
@@ -193,7 +192,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   ASSERT_EQ(2u, entries.size());
   for (size_t i = 0; i < 2; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
-    EXPECT_TRUE(values[i].Equals(entries[i]->value->get_bytes()));
+    EXPECT_TRUE(values[i].Equals(ToArray(entries[i]->value)));
   }
 
   // Get keys matching the prefix "010".
@@ -201,7 +200,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
       &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
   ASSERT_EQ(1u, entries.size());
   EXPECT_TRUE(keys[2].Equals(entries[0]->key));
-  EXPECT_TRUE(values[2].Equals(entries[0]->value->get_bytes()));
+  EXPECT_TRUE(values[2].Equals(ToArray(entries[0]->value)));
 
   // Get keys matching the prefix "5".
   snapshot->GetEntries(fidl::Array<uint8_t>::From(std::vector<uint8_t>{5}),
@@ -248,13 +247,13 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   fidl::Array<EntryPtr> entries =
       SnapshotGetEntries(&snapshot, fidl::Array<uint8_t>());
   EXPECT_TRUE(keys[3].Equals(entries[0]->key));
-  EXPECT_TRUE(values[3].Equals(entries[0]->value->get_bytes()));
+  EXPECT_TRUE(values[3].Equals(ToArray(entries[0]->value)));
   EXPECT_TRUE(keys[0].Equals(entries[1]->key));
-  EXPECT_TRUE(values[0].Equals(entries[1]->value->get_bytes()));
+  EXPECT_TRUE(values[0].Equals(ToArray(entries[1]->value)));
   EXPECT_TRUE(keys[2].Equals(entries[2]->key));
-  EXPECT_TRUE(values[2].Equals(entries[2]->value->get_bytes()));
+  EXPECT_TRUE(values[2].Equals(ToArray(entries[2]->value)));
   EXPECT_TRUE(keys[1].Equals(entries[3]->key));
-  EXPECT_TRUE(values[1].Equals(entries[3]->value->get_bytes()));
+  EXPECT_TRUE(values[1].Equals(ToArray(entries[3]->value)));
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceNegativeSize) {
@@ -302,19 +301,15 @@ TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReference) {
 
   // Get a snapshot and read the value.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  ValuePtr value;
+  mx::vmo value;
   snapshot->Get(convert::ToArray("big data"),
-                [&value](Status status, ValuePtr v) {
+                [&value](Status status, mx::vmo v) {
                   EXPECT_EQ(status, Status::OK);
                   value = std::move(v);
                 });
   ASSERT_TRUE(snapshot.WaitForIncomingResponse());
 
-  EXPECT_FALSE(value->is_bytes());
-  EXPECT_TRUE(value->is_buffer());
-  std::string retrieved_data;
-  EXPECT_TRUE(mtl::StringFromVmo(value->get_buffer(), &retrieved_data));
-  EXPECT_EQ(big_data, retrieved_data);
+  EXPECT_EQ(big_data, ToString(value));
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
@@ -328,18 +323,17 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   // Close the channel. PageSnapshotPtr should remain valid.
   page.reset();
 
-  ValuePtr value;
-  snapshot->Get(convert::ToArray("name"), [&value](Status status, ValuePtr v) {
+  mx::vmo value;
+  snapshot->Get(convert::ToArray("name"), [&value](Status status, mx::vmo v) {
     EXPECT_EQ(status, Status::OK);
     value = std::move(v);
   });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
-  EXPECT_TRUE(value->is_bytes());
-  EXPECT_EQ("Alice", convert::ToString(value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(value));
 
   // Attempt to get an entry that is not in the page.
   snapshot->Get(convert::ToArray("favorite book"),
-                [](Status status, ValuePtr v) {
+                [](Status status, mx::vmo v) {
                   // People don't read much these days.
                   EXPECT_EQ(status, Status::KEY_NOT_FOUND);
                 });
@@ -367,14 +361,13 @@ TEST_F(PageSnapshotIntegrationTest, PageGetById) {
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  ValuePtr value;
-  snapshot->Get(convert::ToArray("name"), [&value](Status status, ValuePtr v) {
+  mx::vmo value;
+  snapshot->Get(convert::ToArray("name"), [&value](Status status, mx::vmo v) {
     EXPECT_EQ(status, Status::OK);
     value = std::move(v);
   });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
-  EXPECT_TRUE(value->is_bytes());
-  EXPECT_EQ("Alice", convert::ToString(value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(value));
 }
 
 }  // namespace

@@ -73,7 +73,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
   PageChangePtr change = std::move(watcher.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(change->changes[0]->value));
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
@@ -124,7 +124,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
       SnapshotGetEntries(&(watcher.last_snapshot_), convert::ToArray(""));
   ASSERT_EQ(1u, entries.size());
   EXPECT_EQ("name", convert::ToString(entries[0]->key));
-  EXPECT_EQ("Alice", convert::ToString(entries[0]->value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(entries[0]->value));
   EXPECT_EQ(Priority::EAGER, entries[0]->priority);
 }
 
@@ -159,7 +159,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
   PageChangePtr change = std::move(watcher.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(change->changes[0]->value));
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
@@ -208,7 +208,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(change->changes[0]->value));
 
   page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
@@ -218,7 +218,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   change = std::move(watcher2.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); },
@@ -231,7 +231,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
@@ -294,13 +294,13 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(change->changes[0]->value));
 
   ASSERT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(change->changes[0]->value));
 }
 
 class WaitingWatcher : public PageWatcher {

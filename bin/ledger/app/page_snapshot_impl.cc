@@ -27,9 +27,6 @@ const size_t kFidlPointerSize = sizeof(uint64_t);
 const size_t kFidlPrioritySize = sizeof(int32_t);
 const size_t kFidlHandleSize = sizeof(int32_t);
 
-const size_t kEstimatedValueLength = 16;
-const size_t kMaxInlinedValueLength = 256;
-
 EntryPtr CreateEntry(const storage::Entry& entry) {
   EntryPtr entry_ptr = Entry::New();
   entry_ptr->key = convert::ToArray(entry.key);
@@ -44,34 +41,10 @@ bool MatchesPrefix(const std::string& key, const std::string& prefix) {
          convert::ExtendedStringView(prefix);
 }
 
-size_t GetValueFidlSize(size_t value_length, bool value_as_bytes) {
-  return value_as_bytes ? value_length + kFidlArrayHeaderSize : kFidlHandleSize;
-}
-
-size_t GetEntryFidlSize(size_t key_length,
-                        size_t value_length,
-                        bool value_as_bytes) {
+size_t GetEntryFidlSize(size_t key_length) {
   size_t key_size = key_length + kFidlArrayHeaderSize;
-  size_t object_size = GetValueFidlSize(value_length, value_as_bytes);
+  size_t object_size = kFidlHandleSize;
   return kFidlPointerSize + key_size + object_size + kFidlPrioritySize;
-}
-
-Status UpdateEntryValue(EntryPtr* entry,
-                        ftl::StringView object_contents,
-                        bool value_as_bytes) {
-  (*entry)->value = Value::New();
-  if (value_as_bytes) {
-    (*entry)->value->set_bytes(convert::ToArray(object_contents));
-  } else {
-    mx::vmo buffer;
-    bool vmo_success = mtl::VmoFromString(object_contents, &buffer);
-    if (!vmo_success) {
-      FTL_LOG(ERROR) << "Failed to create vmo.";
-      return Status::IO_ERROR;
-    }
-    (*entry)->value->set_buffer(std::move(buffer));
-  }
-  return Status::OK;
 }
 
 }  // namespace
@@ -107,7 +80,7 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
   struct Context {
     fidl::Array<EntryPtr> entries;
     // The estimated serialization size of all entries.
-    size_t estimated_size;
+    size_t size;
     // If |entries| array is estimated to exceed kMaxInlineDataSize,
     // |next_token| will have the value of the following entry's key.
     std::string next_token = "";
@@ -126,9 +99,8 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
         if (!MatchesPrefix(entry.key, prefix)) {
           return false;
         }
-        context->estimated_size +=
-            GetEntryFidlSize(entry.key.size(), kEstimatedValueLength, true);
-        if (context->estimated_size > kMaxInlineDataSize) {
+        context->size += GetEntryFidlSize(entry.key.size());
+        if (context->size > kMaxInlineDataSize && context->entries.size()) {
           context->next_token = std::move(entry.key);
           return false;
         }
@@ -160,7 +132,6 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
           }
           FTL_DCHECK(context->entries.size() == results.size());
 
-          size_t size = kFidlArrayHeaderSize;
           for (size_t i = 0; i < results.size(); i++) {
             ftl::StringView object_contents;
             storage::Status read_status = results[i]->GetData(&object_contents);
@@ -170,30 +141,8 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
             }
 
             EntryPtr& entry_ptr = context->entries[i];
-            bool value_as_bytes =
-                object_contents.size() <= kMaxInlinedValueLength;
-
-            size += GetEntryFidlSize(entry_ptr->key.size(),
-                                     object_contents.size(), value_as_bytes);
-            if (size > kMaxInlineDataSize) {
-              // Make sure there is at least one element in the result.
-              if (i > 0) {
-                fidl::Array<uint8_t> next_token = std::move(entry_ptr->key);
-                context->entries.resize(i);
-                callback(Status::PARTIAL_RESULT, std::move(context->entries),
-                         std::move(next_token));
-                return;
-              }
-              // Use a handle<vmo> for the value, instead of the object bytes.
-              size_t object_size =
-                  GetValueFidlSize(object_contents.size(), value_as_bytes);
-              size = size - object_size + kFidlHandleSize;
-              value_as_bytes = false;
-            }
-            Status status =
-                UpdateEntryValue(&entry_ptr, object_contents, value_as_bytes);
-            if (status != Status::OK) {
-              callback(status, nullptr, nullptr);
+            if (!mtl::VmoFromString(object_contents, &entry_ptr->value)) {
+              callback(Status::INTERNAL_ERROR, nullptr, nullptr);
               return;
             }
           }
@@ -277,11 +226,12 @@ void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
   ](storage::Status status, storage::Entry entry) {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-               nullptr);
+               mx::vmo());
       return;
     }
-    PageUtils::GetReferenceAsValuePtr(page_storage_, entry.object_id,
-                                      std::move(callback));
+    PageUtils::GetPartialReferenceAsBuffer(page_storage_, entry.object_id, 0u,
+                                           std::numeric_limits<int64_t>::max(),
+                                           std::move(callback));
   });
 }
 

@@ -185,9 +185,9 @@ TEST_F(MergingIntegrationTest, Merging) {
   PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Paris", ToString(change->changes[0]->value));
   EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("Alice", convert::ToString(change->changes[1]->value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(change->changes[1]->value));
 
   page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
@@ -197,10 +197,9 @@ TEST_F(MergingIntegrationTest, Merging) {
   change = std::move(watcher2.last_page_change_);
   ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("0123456789",
-            convert::ToString(change->changes[1]->value->get_bytes()));
+  EXPECT_EQ("0123456789", ToString(change->changes[1]->value));
 
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -209,16 +208,15 @@ TEST_F(MergingIntegrationTest, Merging) {
   change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("0123456789",
-            convert::ToString(change->changes[1]->value->get_bytes()));
+  EXPECT_EQ("0123456789", ToString(change->changes[1]->value));
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Paris", ToString(change->changes[0]->value));
 }
 
 TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
@@ -287,9 +285,9 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Paris", ToString(change->changes[0]->value));
   EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("Alice", convert::ToString(change->changes[1]->value->get_bytes()));
+  EXPECT_EQ("Alice", ToString(change->changes[1]->value));
 
   page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
@@ -299,10 +297,9 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   change = std::move(watcher2.last_page_change_);
   ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("0123456789",
-            convert::ToString(change->changes[1]->value->get_bytes()));
+  EXPECT_EQ("0123456789", ToString(change->changes[1]->value));
   EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 
@@ -325,16 +322,15 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("0123456789",
-            convert::ToString(change->changes[1]->value->get_bytes()));
+  EXPECT_EQ("0123456789", ToString(change->changes[1]->value));
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("Paris", ToString(change->changes[0]->value));
 
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 }
@@ -397,31 +393,29 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   EXPECT_EQ("email",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_left->changes[0]->key));
-  EXPECT_EQ("alice@example.org",
-            convert::ExtendedStringView(resolver_impl->requests[0]
-                                            .change_left->changes[0]
-                                            ->value->get_bytes()));
+  EXPECT_EQ(
+      "alice@example.org",
+      ToString(resolver_impl->requests[0].change_left->changes[0]->value));
   EXPECT_EQ("phone",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_left->changes[1]->key));
-  EXPECT_EQ("0123456789",
-            convert::ExtendedStringView(resolver_impl->requests[0]
-                                            .change_left->changes[1]
-                                            ->value->get_bytes()));
+  EXPECT_EQ(
+      "0123456789",
+      ToString(resolver_impl->requests[0].change_left->changes[1]->value));
   // Right change comes from |page1|.
   ASSERT_EQ(2u, resolver_impl->requests[0].change_right->changes.size());
   EXPECT_EQ("city",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[0]->key));
-  EXPECT_EQ("Paris", convert::ExtendedStringView(resolver_impl->requests[0]
-                                                     .change_right->changes[0]
-                                                     ->value->get_bytes()));
+  EXPECT_EQ(
+      "Paris",
+      ToString(resolver_impl->requests[0].change_right->changes[0]->value));
   EXPECT_EQ("name",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[1]->key));
-  EXPECT_EQ("Alice", convert::ExtendedStringView(resolver_impl->requests[0]
-                                                     .change_right->changes[1]
-                                                     ->value->get_bytes()));
+  EXPECT_EQ(
+      "Alice",
+      ToString(resolver_impl->requests[0].change_right->changes[1]->value));
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));
@@ -769,25 +763,24 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   EXPECT_EQ("city",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_left->changes[0]->key));
-  EXPECT_EQ("San Francisco",
-            convert::ExtendedStringView(resolver_impl->requests[0]
-                                            .change_left->changes[0]
-                                            ->value->get_bytes()));
+  EXPECT_EQ(
+      "San Francisco",
+      ToString(resolver_impl->requests[0].change_left->changes[0]->value));
   EXPECT_EQ("name",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_left->changes[1]->key));
-  EXPECT_EQ("Alice", convert::ExtendedStringView(resolver_impl->requests[0]
-                                                     .change_left->changes[1]
-                                                     ->value->get_bytes()));
+  EXPECT_EQ(
+      "Alice",
+      ToString(resolver_impl->requests[0].change_left->changes[1]->value));
 
   // Right change comes from |page1|.
   ASSERT_EQ(1u, resolver_impl->requests[0].change_right->changes.size());
   EXPECT_EQ("city",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[0]->key));
-  EXPECT_EQ("Paris", convert::ExtendedStringView(resolver_impl->requests[0]
-                                                     .change_right->changes[0]
-                                                     ->value->get_bytes()));
+  EXPECT_EQ(
+      "Paris",
+      ToString(resolver_impl->requests[0].change_right->changes[0]->value));
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));

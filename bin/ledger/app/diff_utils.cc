@@ -10,6 +10,7 @@
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/public/object.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace ledger {
 namespace diff_utils {
@@ -96,10 +97,11 @@ void ComputePageChange(
         }
 
         // TODO(etiennej): LE-75 implement pagination on OnChange.
-        // TODO(etiennej): LE-120 Use VMOs for big values.
-        page_change->changes[i]->value = Value::New();
-        page_change->changes[i]->value->set_bytes(
-            convert::ToArray(object_contents));
+        if (!mtl::VmoFromString(object_contents,
+                                &(page_change->changes[i]->value))) {
+          callback(storage::Status::IO_ERROR, nullptr);
+          return;
+        }
       }
       callback(storage::Status::OK, std::move(page_change));
     });

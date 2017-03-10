@@ -74,35 +74,6 @@ Status PageUtils::ConvertStatus(storage::Status status,
   }
 }
 
-void PageUtils::GetReferenceAsValuePtr(
-    storage::PageStorage* storage,
-    convert::ExtendedStringView reference_id,
-    std::function<void(Status, ValuePtr)> callback) {
-  GetReferenceAsStringView(
-      storage, reference_id, [callback](Status status, ftl::StringView data) {
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-        if (data.size() <= kMaxInlineDataSize) {
-          ValuePtr value = Value::New();
-          value->set_bytes(convert::ToArray(data));
-          callback(Status::OK, std::move(value));
-          return;
-        }
-
-        mx::vmo buffer;
-        Status buffer_status = ToBuffer(data, 0, -1, &buffer);
-        if (buffer_status != Status::OK) {
-          callback(buffer_status, nullptr);
-          return;
-        }
-        ValuePtr value = Value::New();
-        value->set_buffer(std::move(buffer));
-        callback(Status::OK, std::move(value));
-      });
-}
-
 void PageUtils::GetPartialReferenceAsBuffer(
     storage::PageStorage* storage,
     convert::ExtendedStringView reference_id,

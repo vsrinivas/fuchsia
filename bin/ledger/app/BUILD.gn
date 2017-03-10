@@ -89,6 +89,7 @@ source_set("lib") {
     "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
+    "//lib/mtl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
