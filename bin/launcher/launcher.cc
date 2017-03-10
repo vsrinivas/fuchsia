@@ -48,7 +48,8 @@ class LauncherApp : public maxwell::Launcher {
         });
   }
 
-  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+  void Initialize(fidl::InterfaceHandle<modular::ComponentContext> component_context,
+                  fidl::InterfaceHandle<modular::StoryProvider> story_provider,
                   fidl::InterfaceHandle<modular::FocusController>
                       focus_controller) override {
     focus_controller_.Bind(std::move(focus_controller));

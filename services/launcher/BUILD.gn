@@ -11,6 +11,7 @@ fidl("launcher") {
 
   deps = [
     "//apps/maxwell/services/suggestion",
+    "//apps/modular/services/component",
     "//apps/modular/services/user",
   ]
 }

@@ -62,6 +62,7 @@ source_set("launcher_test") {
   deps = [
     ":common",
     ":test_suggestion_listener",
+    "//apps/modular/services/component",
     "//apps/maxwell/services/launcher",
     "//apps/maxwell/services/suggestion",
   ]
