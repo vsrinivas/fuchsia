@@ -182,7 +182,8 @@ allowing the device being booted to advertise its bootability and the host to fi
 it and send a system image to it.
 
 If you have a device (for example a Broadwell or Skylake Intel NUC) running
-GigaBoot20x6, you can boot Magenta on it like so:
+GigaBoot20x6 first create a USB drive [manually](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/acer12.md#How-to-Create-a-Bootable-USB-Flash-Drive)
+or (Linux only) using the [script](https://fuchsia.googlesource.com/scripts/+/master/build-bootable-usb-gigaboot.sh).
 
 ```
 $BUILDDIR/tools/bootserver $BUILDDIR/magenta.bin
