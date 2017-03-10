@@ -15,56 +15,58 @@
 #include <new.h>
 #include <unittest.h>
 
-static bool pmm_tests(void* context) {
+static const uint kArchRwFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+// Allocates a single page, translates it to a vm_page_t and frees it.
+static bool pmm_smoke_test(void* context) {
     BEGIN_TEST;
-    // allocate a single page, translate it to a vm_page_t and free it
-    unittest_printf("allocating single page, then freeing it\n");
-    {
-        paddr_t pa;
+    paddr_t pa;
 
-        vm_page_t* page = pmm_alloc_page(0, &pa);
-        EXPECT_NEQ(nullptr, page, "pmm_alloc single page");
-        EXPECT_NEQ(0u, pa, "pmm_alloc single page");
+    vm_page_t* page = pmm_alloc_page(0, &pa);
+    EXPECT_NEQ(nullptr, page, "pmm_alloc single page");
+    EXPECT_NEQ(0u, pa, "pmm_alloc single page");
 
-        vm_page_t* page2 = paddr_to_vm_page(pa);
-        EXPECT_EQ(page2, page, "paddr_to_vm_page on single page");
+    vm_page_t* page2 = paddr_to_vm_page(pa);
+    EXPECT_EQ(page2, page, "paddr_to_vm_page on single page");
 
-        auto ret = pmm_free_page(page);
-        EXPECT_EQ(1u, ret, "pmm_free_page on single page");
-    }
+    auto ret = pmm_free_page(page);
+    EXPECT_EQ(1u, ret, "pmm_free_page on single page");
+    END_TEST;
+}
 
-    // allocate a bunch of pages then free them
-    unittest_printf("allocating a lot of pages, then freeing them\n");
-    {
-        list_node list = LIST_INITIAL_VALUE(list);
+// Allocates a bunch of pages then frees them.
+static bool pmm_large_alloc_test(void* context) {
+    BEGIN_TEST;
+    list_node list = LIST_INITIAL_VALUE(list);
 
-        static const size_t alloc_count = 1024;
+    static const size_t alloc_count = 1024;
 
-        auto count = pmm_alloc_pages(alloc_count, 0, &list);
-        EXPECT_EQ(alloc_count, count, "pmm_alloc_pages a bunch of pages count");
-        EXPECT_EQ(alloc_count, list_length(&list), "pmm_alloc_pages a bunch of pages list count");
+    auto count = pmm_alloc_pages(alloc_count, 0, &list);
+    EXPECT_EQ(alloc_count, count, "pmm_alloc_pages a bunch of pages count");
+    EXPECT_EQ(alloc_count, list_length(&list),
+              "pmm_alloc_pages a bunch of pages list count");
 
-        auto ret = pmm_free(&list);
-        EXPECT_EQ(alloc_count, ret, "pmm_free_page on a list of pages");
-    }
+    auto ret = pmm_free(&list);
+    EXPECT_EQ(alloc_count, ret, "pmm_free_page on a list of pages");
+    END_TEST;
+}
 
-    // allocate too many pages and make sure it fails nicely
-    unittest_printf("allocating too many pages, then freeing them\n");
-    {
-        list_node list = LIST_INITIAL_VALUE(list);
+// Allocates too many pages and makes sure it fails nicely.
+static bool pmm_oversized_alloc_test(void* context) {
+    BEGIN_TEST;
+    list_node list = LIST_INITIAL_VALUE(list);
 
-        static const size_t alloc_count = (128 * 1024 * 1024 * 1024ULL) / PAGE_SIZE; // 128GB
+    static const size_t alloc_count =
+        (128 * 1024 * 1024 * 1024ULL) / PAGE_SIZE; // 128GB
 
-        auto count = pmm_alloc_pages(alloc_count, 0, &list);
-        EXPECT_NEQ(alloc_count, 0, "pmm_alloc_pages too many pages count > 0");
-        EXPECT_NEQ(alloc_count, count, "pmm_alloc_pages too many pages count");
-        EXPECT_EQ(count, list_length(&list), "pmm_alloc_pages too many pages list count");
+    auto count = pmm_alloc_pages(alloc_count, 0, &list);
+    EXPECT_NEQ(alloc_count, 0, "pmm_alloc_pages too many pages count > 0");
+    EXPECT_NEQ(alloc_count, count, "pmm_alloc_pages too many pages count");
+    EXPECT_EQ(count, list_length(&list),
+              "pmm_alloc_pages too many pages list count");
 
-        auto ret = pmm_free(&list);
-        EXPECT_EQ(count, ret, "pmm_free_page on a list of pages");
-    }
-
-    unittest_printf("done with pmm tests\n");
+    auto ret = pmm_free(&list);
+    EXPECT_EQ(count, ret, "pmm_free_page on a list of pages");
     END_TEST;
 }
 
@@ -124,508 +126,525 @@ static bool fill_and_test(void* ptr, size_t len) {
     END_TEST;
 }
 
-static bool vmm_tests(void* context) {
+// Allocates a region in kernel space, reads/writes it, then destroys it.
+static bool vmm_alloc_smoke_test(void* context) {
     BEGIN_TEST;
-    unittest_printf("allocating a region in kernel space, read/write it, then destroy it\n");
-    {
-        static const size_t alloc_size = 256 * 1024;
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+    static const size_t alloc_size = 256 * 1024;
 
-        // allocate a region of memory
-        void* ptr;
-        auto err = vmm_alloc(vmm_get_kernel_aspace(), "test", alloc_size, &ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(0, err, "vmm_allocate region of memory");
-        EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
+    // allocate a region of memory
+    void* ptr;
+    auto err = vmm_alloc(vmm_get_kernel_aspace(), "test",
+                         alloc_size, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(0, err, "vmm_allocate region of memory");
+    EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
 
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
 
-        // free the region
-        err = vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)ptr);
-        EXPECT_EQ(0, err, "vmm_free_region region of memory");
-    }
+    // free the region
+    err = vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)ptr);
+    EXPECT_EQ(0, err, "vmm_free_region region of memory");
+    END_TEST;
+}
 
-    unittest_printf("allocating a contiguous region in kernel space, read/write it, then destroy it\n");
-    {
-        static const size_t alloc_size = 256 * 1024;
+// Allocates a contiguous region in kernel space, reads/writes it,
+// then destroys it.
+static bool vmm_alloc_contiguous_smoke_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = 256 * 1024;
 
-        // allocate a region of memory
-        void* ptr;
-        auto err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test", alloc_size, &ptr, 0, 0,
-                                        VMM_FLAG_COMMIT, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
-        EXPECT_EQ(0, err, "vmm_allocate_contiguous region of memory");
-        EXPECT_NEQ(nullptr, ptr, "vmm_allocate_contiguous region of memory");
+    // allocate a region of memory
+    void* ptr;
+    auto err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test",
+                                    alloc_size, &ptr, 0, 0,
+                                    VMM_FLAG_COMMIT, kArchRwFlags);
+    EXPECT_EQ(0, err, "vmm_allocate_contiguous region of memory");
+    EXPECT_NEQ(nullptr, ptr, "vmm_allocate_contiguous region of memory");
 
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
 
-        // test that it is indeed contiguous
-        unittest_printf("testing that region is contiguous\n");
-        paddr_t last_pa = 0;
-        for (size_t i = 0; i < alloc_size / PAGE_SIZE; i++) {
-            paddr_t pa = vaddr_to_paddr((uint8_t*)ptr + i * PAGE_SIZE);
-            if (last_pa != 0) {
-                EXPECT_EQ(pa, last_pa + PAGE_SIZE, "region is contiguous");
-            }
-
-            last_pa = pa;
+    // test that it is indeed contiguous
+    unittest_printf("testing that region is contiguous\n");
+    paddr_t last_pa = 0;
+    for (size_t i = 0; i < alloc_size / PAGE_SIZE; i++) {
+        paddr_t pa = vaddr_to_paddr((uint8_t*)ptr + i * PAGE_SIZE);
+        if (last_pa != 0) {
+            EXPECT_EQ(pa, last_pa + PAGE_SIZE, "region is contiguous");
         }
 
-        // free the region
-        err = vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)ptr);
-        EXPECT_EQ(0, err, "vmm_free_region region of memory");
+        last_pa = pa;
     }
 
-    unittest_printf("allocating a new address space and creating a few regions in it, then destroy it\n");
-    {
-        void* ptr;
-        vmm_aspace_t* aspace;
-        static const size_t alloc_size = 16 * 1024;
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+    // free the region
+    err = vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)ptr);
+    EXPECT_EQ(0, err, "vmm_free_region region of memory");
+    END_TEST;
+}
 
-        auto err = vmm_create_aspace(&aspace, "test aspace", 0);
-        EXPECT_EQ(0, err, "vmm_allocate_aspace error code");
-        EXPECT_NEQ(nullptr, aspace, "vmm_allocate_aspace pointer");
+// Allocates a new address space and creates a few regions in it,
+// then destroys it.
+static bool multiple_regions_test(void* context) {
+    BEGIN_TEST;
+    void* ptr;
+    vmm_aspace_t* aspace;
+    static const size_t alloc_size = 16 * 1024;
 
-        vmm_aspace_t* old_aspace = get_current_thread()->aspace;
-        vmm_set_active_aspace(aspace);
+    auto err = vmm_create_aspace(&aspace, "test aspace", 0);
+    EXPECT_EQ(0, err, "vmm_allocate_aspace error code");
+    EXPECT_NEQ(nullptr, aspace, "vmm_allocate_aspace pointer");
 
-        // allocate region 0
-        err = vmm_alloc(aspace, "test0", alloc_size, &ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(0, err, "vmm_allocate region of memory");
-        EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
+    vmm_aspace_t* old_aspace = get_current_thread()->aspace;
+    vmm_set_active_aspace(aspace);
 
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
+    // allocate region 0
+    err = vmm_alloc(aspace, "test0", alloc_size, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(0, err, "vmm_allocate region of memory");
+    EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
 
-        // allocate region 1
-        err = vmm_alloc(aspace, "test1", 16384, &ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(0, err, "vmm_allocate region of memory");
-        EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
 
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
+    // allocate region 1
+    err = vmm_alloc(aspace, "test1", 16384, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(0, err, "vmm_allocate region of memory");
+    EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
 
-        // allocate region 2
-        err = vmm_alloc(aspace, "test2", 16384, &ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(0, err, "vmm_allocate region of memory");
-        EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
 
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
+    // allocate region 2
+    err = vmm_alloc(aspace, "test2", 16384, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(0, err, "vmm_allocate region of memory");
+    EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
 
-        vmm_set_active_aspace(old_aspace);
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
 
-        // free the address space all at once
-        err = vmm_free_aspace(aspace);
-        EXPECT_EQ(0, err, "vmm_free_aspace");
-    }
+    vmm_set_active_aspace(old_aspace);
 
-    unittest_printf("allocating a new address space and creating a few gap regions in it, then destroy it\n");
-    {
-        void* ptr[3];
-        vmm_aspace_t* aspace;
-        static const size_t alloc_size = 4 * PAGE_SIZE;
-        static const size_t gap_size = PAGE_SIZE;
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+    // free the address space all at once
+    err = vmm_free_aspace(aspace);
+    EXPECT_EQ(0, err, "vmm_free_aspace");
+    END_TEST;
+}
 
-        auto err = vmm_create_aspace(&aspace, "test aspace", 0);
-        EXPECT_EQ(0, err, "vmm_allocate_aspace error code");
-        EXPECT_NEQ(nullptr, aspace, "vmm_allocate_aspace pointer");
+static bool vmm_alloc_zero_size_fails(void* context) {
+    BEGIN_TEST;
+    const size_t zero_size = 0;
+    void* ptr;
+    status_t err = vmm_alloc(vmm_get_kernel_aspace(), "test",
+                             zero_size, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(ERR_INVALID_ARGS, err, "");
+    END_TEST;
+}
 
-        vmm_aspace_t* old_aspace = get_current_thread()->aspace;
-        vmm_set_active_aspace(aspace);
+static bool vmm_alloc_bad_specific_pointer_fails(void* context) {
+    BEGIN_TEST;
+    // bad specific pointer
+    void* ptr = (void*)1;
+    status_t err = vmm_alloc(vmm_get_kernel_aspace(), "test", 16384, &ptr, 0, 0,
+                             VMM_FLAG_VALLOC_SPECIFIC | VMM_FLAG_COMMIT, kArchRwFlags);
+    EXPECT_EQ(ERR_INVALID_ARGS, err, "");
+    END_TEST;
+}
 
-        // allocate regions
-        for (unsigned int i = 0; i < countof(ptr); ++i) {
-            err = vmm_alloc(aspace, "test0", alloc_size, &ptr[i], 0, gap_size, 0, arch_rw_flags);
-            EXPECT_EQ(0, err, "vmm_allocate region of memory");
-            EXPECT_NEQ(nullptr, ptr[i], "vmm_allocate region of memory");
+static bool vmm_alloc_contiguous_missing_flag_commit_fails(void* context) {
+    BEGIN_TEST;
+    // should have VMM_FLAG_COMMIT
+    const uint zero_vmm_flags = 0;
+    void* ptr;
+    status_t err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test",
+                                        4096, &ptr, 0, 0, zero_vmm_flags,
+                                        kArchRwFlags);
+    EXPECT_EQ(ERR_INVALID_ARGS, err, "");
+    END_TEST;
+}
 
-            // fill with known pattern and test
-            if (!fill_and_test(ptr[i], alloc_size))
-                all_ok = false;
-        }
+static bool vmm_alloc_contiguous_zero_size_fails(void* context) {
+    BEGIN_TEST;
+    const size_t zero_size = 0;
+    void* ptr;
+    status_t err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test",
+                                        zero_size, &ptr, 0, 0, VMM_FLAG_COMMIT,
+                                        kArchRwFlags);
+    EXPECT_EQ(ERR_INVALID_ARGS, err, "");
+    END_TEST;
+}
 
-        for (void* p : ptr) {
-            paddr_t paddr;
-            vaddr_t vaddr = reinterpret_cast<vaddr_t>(p);
-            arch_aspace_t* aaspace = vmm_get_arch_aspace(aspace);
+// Allocates a vm address space object directly, allows it to go out of scope.
+static bool vmaspace_create_smoke_test(void* context) {
+    BEGIN_TEST;
+    auto aspace = VmAspace::Create(0, "test aspace");
+    aspace->Destroy();
+    END_TEST;
+}
 
-            vaddr_t addresses[] = {
-                vaddr - 1, vaddr - gap_size + 1, vaddr + alloc_size, vaddr + alloc_size + gap_size - 1,
-            };
+// Allocates a vm address space object directly, maps something on it,
+// allows it to go out of scope.
+static bool vmaspace_alloc_smoke_test(void* context) {
+    BEGIN_TEST;
+    auto aspace = VmAspace::Create(0, "test aspace2");
 
-            for (vaddr_t address : addresses) {
-                if (vaddr_to_aspace(reinterpret_cast<void*>(address)) == aspace) {
-                    err = arch_mmu_query(aaspace, address, &paddr, nullptr);
-                    EXPECT_EQ(ERR_NOT_FOUND, err, "gap occupied");
-                }
-            }
-        }
+    void* ptr;
+    auto err = aspace->Alloc("test", PAGE_SIZE, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(NO_ERROR, err, "allocating region\n");
 
-        vmm_set_active_aspace(old_aspace);
+    // destroy the aspace, which should drop all the internal refs to it
+    aspace->Destroy();
 
-        // free the address space all at once
-        err = vmm_free_aspace(aspace);
-        EXPECT_EQ(0, err, "vmm_free_aspace");
-    }
+    // drop the ref held by this pointer
+    aspace.reset();
+    END_TEST;
+}
 
-    unittest_printf("test for some invalid arguments\n");
-    {
-        void* ptr;
-        status_t err;
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-
-        // zero size
-        err = vmm_alloc(vmm_get_kernel_aspace(), "test", 0, &ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(ERR_INVALID_ARGS, err, "invalid args to vmm_alloc");
-
-        // bad pointer
-        ptr = (void*)1;
-        err = vmm_alloc(vmm_get_kernel_aspace(), "test", 16384, &ptr, 0, 0,
-                        VMM_FLAG_VALLOC_SPECIFIC | VMM_FLAG_COMMIT, arch_rw_flags);
-        EXPECT_EQ(ERR_INVALID_ARGS, err, "invalid args to vmm_alloc");
-
-        // should have VMM_FLAG_COMMIT
-        err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test", 4096, &ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(ERR_INVALID_ARGS, err, "invalid args to vmm_alloc_contiguous");
-
-        // zero size
-        err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test", 0, &ptr, 0, 0, VMM_FLAG_COMMIT,
-                                   arch_rw_flags);
-        EXPECT_EQ(ERR_INVALID_ARGS, err, "invalid args to vmm_alloc_contiguous");
-    }
-
-    unittest_printf("allocating a vm address space object directly, allowing it to go out of scope\n");
-    {
-        auto aspace = VmAspace::Create(0, "test aspace");
-        aspace->Destroy();
-    }
-
-    unittest_printf("allocating a vm address space object directly, mapping somethign on it, "
-                    "allowing it to go out of scope\n");
-    {
-        auto aspace = VmAspace::Create(0, "test aspace2");
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-
-        void* ptr;
-        auto err = aspace->Alloc("test", PAGE_SIZE, &ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(NO_ERROR, err, "allocating region\n");
-
-        // destroy the aspace, which should drop all the internal refs to it
-        aspace->Destroy();
-
-        // drop the ref held by this pointer
-        aspace.reset();
-    }
-
+// Doesn't do anything, just prints all aspaces.
+// Should be run after all other tests so that people can manually comb
+// through the output for leaked test aspaces.
+static bool dump_all_aspaces(void* context) {
+    BEGIN_TEST;
     unittest_printf("verify there are no test aspaces left around\n");
-    DumpAllAspaces(true);
-
-    unittest_printf("done with vmm tests\n");
+    DumpAllAspaces(/*verbose*/ true);
     END_TEST;
 }
 
-static bool vmm_object_tests(void* context) {
+// Creates a vm object.
+static bool vmo_create_test(void* context) {
     BEGIN_TEST;
-    unittest_printf("creating vm object\n");
-    {
-        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-    }
-
-    unittest_printf("creating vm object, committing memory\n");
-    {
-        static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-
-        uint64_t committed;
-        auto ret = vmo->CommitRange(0, alloc_size, &committed);
-        EXPECT_EQ(0, ret, "committing vm object\n");
-        EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed, "committing vm object\n");
-    }
-
-    unittest_printf("creating vm object, committing odd sized memory\n");
-    {
-        static const size_t alloc_size = 15;
-        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-
-        uint64_t committed;
-        auto ret = vmo->CommitRange(0, alloc_size, &committed);
-        EXPECT_EQ(0, ret, "committing vm object\n");
-        EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed, "committing vm object\n");
-    }
-
-    unittest_printf("creating vm object, committing contiguous memory\n");
-    {
-        static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-
-        uint64_t committed;
-        auto ret = vmo->CommitRangeContiguous(0, alloc_size, &committed, 0);
-        EXPECT_EQ(0, ret, "committing vm object contig\n");
-        EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed, "committing vm object contig\n");
-    }
-
-    unittest_printf("creating vm object, mapping it, precommitted\n");
-    {
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-        static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-
-        auto ka = VmAspace::kernel_aspace();
-        void* ptr;
-        auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
-        EXPECT_EQ(NO_ERROR, ret, "mapping object");
-
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
-
-        auto err = ka->FreeRegion((vaddr_t)ptr);
-        EXPECT_EQ(NO_ERROR, err, "unmapping object");
-    }
-
-    unittest_printf("creating vm object, mapping it, demand paged\n");
-    {
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-        static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-
-        auto ka = VmAspace::kernel_aspace();
-        void* ptr;
-        auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(ret, NO_ERROR, "mapping object");
-
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
-
-        auto err = ka->FreeRegion((vaddr_t)ptr);
-        EXPECT_EQ(NO_ERROR, err, "unmapping object");
-    }
-
-    unittest_printf("creating vm object, mapping it, dropping ref before unmapping\n");
-    {
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-        static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-
-        auto ka = VmAspace::kernel_aspace();
-        void* ptr;
-        auto ret =
-            ka->MapObject(mxtl::move(vmo), "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
-        EXPECT_EQ(ret, NO_ERROR, "mapping object");
-
-        EXPECT_FALSE(vmo, "dropped ref to object");
-
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
-
-        auto err = ka->FreeRegion((vaddr_t)ptr);
-        EXPECT_EQ(NO_ERROR, err, "unmapping object");
-    }
-
-    unittest_printf(
-        "creating vm object, mapping it, filling it with data, unmapping, mapping again somewhere "
-        "else\n");
-    {
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-        static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-
-        auto ka = VmAspace::kernel_aspace();
-        void* ptr;
-        auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
-        EXPECT_EQ(NO_ERROR, ret, "mapping object");
-
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
-
-        auto err = ka->FreeRegion((vaddr_t)ptr);
-        EXPECT_EQ(NO_ERROR, err, "unmapping object");
-
-        // map it again
-        ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
-        EXPECT_EQ(ret, NO_ERROR, "mapping object");
-
-        // test that the pattern is still valid
-        bool result = test_region((uintptr_t)ptr, ptr, alloc_size);
-        EXPECT_TRUE(result, "testing region for corruption");
-
-        err = ka->FreeRegion((vaddr_t)ptr);
-        EXPECT_EQ(NO_ERROR, err, "unmapping object");
-    }
-
-    unittest_printf(
-        "creating vm object, mapping it, filling it with data, mapping it a second time and third "
-        "time somwehere else\n");
-    {
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-        static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-
-        auto ka = VmAspace::kernel_aspace();
-        void* ptr;
-        auto ret = ka->MapObject(vmo, "test0", 0, alloc_size, &ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(NO_ERROR, ret, "mapping object");
-
-        // fill with known pattern and test
-        if (!fill_and_test(ptr, alloc_size))
-            all_ok = false;
-
-        // map it again
-        void* ptr2;
-        ret = ka->MapObject(vmo, "test1", 0, alloc_size, &ptr2, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(ret, NO_ERROR, "mapping object second time");
-        EXPECT_NEQ(ptr, ptr2, "second mapping is different");
-
-        // test that the pattern is still valid
-        bool result = test_region((uintptr_t)ptr, ptr2, alloc_size);
-        EXPECT_TRUE(result, "testing region for corruption");
-
-        // map it a third time with an offset
-        void* ptr3;
-        static const size_t alloc_offset = PAGE_SIZE;
-        ret = ka->MapObject(vmo, "test2", alloc_offset, alloc_size - alloc_offset, &ptr3, 0, 0, 0,
-                            arch_rw_flags);
-        EXPECT_EQ(ret, NO_ERROR, "mapping object third time");
-        EXPECT_NEQ(ptr3, ptr2, "third mapping is different");
-        EXPECT_NEQ(ptr3, ptr, "third mapping is different");
-
-        // test that the pattern is still valid
-        int mc = memcmp((uint8_t*)ptr + alloc_offset, ptr3, alloc_size - alloc_offset);
-        EXPECT_EQ(0, mc, "testing region for corruption");
-
-        ret = ka->FreeRegion((vaddr_t)ptr3);
-        EXPECT_EQ(NO_ERROR, ret, "unmapping object third time");
-
-        ret = ka->FreeRegion((vaddr_t)ptr2);
-        EXPECT_EQ(NO_ERROR, ret, "unmapping object second time");
-
-        ret = ka->FreeRegion((vaddr_t)ptr);
-        EXPECT_EQ(NO_ERROR, ret, "unmapping object");
-    }
-
-    unittest_printf("creating vm object, writing to it\n");
-    {
-        const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-        static const size_t alloc_size = PAGE_SIZE * 16;
-
-        // create object
-        auto vmo = VmObjectPaged::Create(0, alloc_size);
-        EXPECT_TRUE(vmo, "vmobject creation\n");
-
-        // create test buffer
-        AllocChecker ac;
-        mxtl::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
-        EXPECT_TRUE(ac.check(), "");
-        fill_region(99, a.get(), alloc_size);
-
-        // write to it, make sure it seems to work with valid args
-        size_t bytes_written = -1;
-        status_t err = vmo->Write(a.get(), 0, 0, &bytes_written);
-        EXPECT_EQ(NO_ERROR, err, "writing to object");
-        EXPECT_EQ(0u, bytes_written, "writing to object");
-
-        bytes_written = -1;
-        err = vmo->Write(a.get(), 0, 37, &bytes_written);
-        EXPECT_EQ(NO_ERROR, err, "writing to object");
-        EXPECT_EQ(37u, bytes_written, "writing to object");
-
-        bytes_written = -1;
-        err = vmo->Write(a.get(), 99, 37, &bytes_written);
-        EXPECT_EQ(NO_ERROR, err, "writing to object");
-        EXPECT_EQ(37u, bytes_written, "writing to object");
-
-        // should trim the returned size
-        bytes_written = -1;
-        err = vmo->Write(a.get(), 0, alloc_size + 47, &bytes_written);
-        EXPECT_EQ(NO_ERROR, err, "writing to object");
-        EXPECT_EQ(alloc_size - 0, bytes_written, "writing to object");
-
-        bytes_written = -1;
-        err = vmo->Write(a.get(), 31, alloc_size + 47, &bytes_written);
-        EXPECT_EQ(NO_ERROR, err, "writing to object");
-        EXPECT_EQ(alloc_size - 31, bytes_written, "writing to object");
-
-        // should return an error because out of range
-        bytes_written = -1;
-        err = vmo->Write(a.get(), alloc_size + 99, 42, &bytes_written);
-        EXPECT_EQ(ERR_OUT_OF_RANGE, err, "writing to object");
-        EXPECT_EQ(0u, bytes_written, "writing to object");
-
-        // map the object
-        auto ka = VmAspace::kernel_aspace();
-        uint8_t* ptr;
-        err = ka->MapObject(vmo, "test", 0, alloc_size, (void**)&ptr, 0, 0, 0, arch_rw_flags);
-        EXPECT_EQ(NO_ERROR, err, "mapping object");
-
-        // write to it at odd offsets
-        bytes_written = -1;
-        err = vmo->Write(a.get(), 31, 4197, &bytes_written);
-        EXPECT_EQ(NO_ERROR, err, "writing to object");
-        EXPECT_EQ(4197u, bytes_written, "writing to object");
-        int cmpres = memcmp(ptr + 31, a.get(), 4197);
-        EXPECT_EQ(0, cmpres, "reading from object");
-
-        // write to it, filling the object completely
-        err = vmo->Write(a.get(), 0, alloc_size, &bytes_written);
-        EXPECT_EQ(NO_ERROR, err, "writing to object");
-        EXPECT_EQ(alloc_size, bytes_written, "writing to object");
-
-        // test that the data was actually written to it
-        bool result = test_region(99, ptr, alloc_size);
-        EXPECT_TRUE(result, "writing to object");
-
-        // unmap it
-        ka->FreeRegion((vaddr_t)ptr);
-
-        // test that we can read from it
-        unittest_printf("reading back from vm object\n");
-        mxtl::Array<uint8_t> b(new (&ac) uint8_t[alloc_size], alloc_size);
-        EXPECT_TRUE(ac.check(), "");
-
-        size_t bytes_read = -1;
-        err = vmo->Read(b.get(), 0, alloc_size, &bytes_read);
-        EXPECT_EQ(NO_ERROR, err, "reading from object");
-        EXPECT_EQ(alloc_size, bytes_read, "reading from object");
-
-        // validate the buffer is valid
-        cmpres = memcmp(b.get(), a.get(), alloc_size);
-        EXPECT_EQ(0, cmpres, "reading from object");
-
-        // read from it at an offset
-        bytes_read = -1;
-        err = vmo->Read(b.get(), 31, 4197, &bytes_read);
-        EXPECT_EQ(NO_ERROR, err, "reading from object");
-        EXPECT_EQ(4197u, bytes_read, "reading from object");
-        cmpres = memcmp(b.get(), a.get() + 31, 4197);
-        EXPECT_EQ(0, cmpres, "reading from object");
-    }
-
-    unittest_printf("done with vmm object based tests\n");
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE);
+    EXPECT_TRUE(vmo, "");
     END_TEST;
 }
+
+// Creates a vm object, commits memory.
+static bool vmo_commit_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    uint64_t committed;
+    auto ret = vmo->CommitRange(0, alloc_size, &committed);
+    EXPECT_EQ(0, ret, "committing vm object\n");
+    EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed,
+              "committing vm object\n");
+    END_TEST;
+}
+
+// Creates a vm object, commits odd sized memory.
+static bool vmo_odd_size_commit_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = 15;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    uint64_t committed;
+    auto ret = vmo->CommitRange(0, alloc_size, &committed);
+    EXPECT_EQ(0, ret, "committing vm object\n");
+    EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed,
+              "committing vm object\n");
+    END_TEST;
+}
+
+// Creates a vm object, commits contiguous memory.
+static bool vmo_contiguous_commit_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    uint64_t committed;
+    auto ret = vmo->CommitRangeContiguous(0, alloc_size, &committed, 0);
+    EXPECT_EQ(0, ret, "committing vm object contig\n");
+    EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed,
+              "committing vm object contig\n");
+    END_TEST;
+}
+
+// Creats a vm object, maps it, precommitted.
+static bool vmo_precommitted_map_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    auto ka = VmAspace::kernel_aspace();
+    void* ptr;
+    auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
+                             0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+    EXPECT_EQ(NO_ERROR, ret, "mapping object");
+
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
+
+    auto err = ka->FreeRegion((vaddr_t)ptr);
+    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+    END_TEST;
+}
+
+// Creates a vm object, maps it, demand paged.
+static bool vmo_demand_paged_map_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    auto ka = VmAspace::kernel_aspace();
+    void* ptr;
+    auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
+                             0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(ret, NO_ERROR, "mapping object");
+
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
+
+    auto err = ka->FreeRegion((vaddr_t)ptr);
+    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+    END_TEST;
+}
+
+// Creates a vm object, maps it, drops ref before unmapping.
+static bool vmo_dropped_ref_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    auto ka = VmAspace::kernel_aspace();
+    void* ptr;
+    auto ret = ka->MapObject(mxtl::move(vmo), "test", 0, alloc_size, &ptr,
+                             0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+    EXPECT_EQ(ret, NO_ERROR, "mapping object");
+
+    EXPECT_NULL(vmo, "dropped ref to object");
+
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
+
+    auto err = ka->FreeRegion((vaddr_t)ptr);
+    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+    END_TEST;
+}
+
+// Creates a vm object, maps it, fills it with data, unmaps,
+// maps again somewhere else.
+static bool vmo_remap_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    auto ka = VmAspace::kernel_aspace();
+    void* ptr;
+    auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
+                             0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+    EXPECT_EQ(NO_ERROR, ret, "mapping object");
+
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
+
+    auto err = ka->FreeRegion((vaddr_t)ptr);
+    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+
+    // map it again
+    ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
+                        0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+    EXPECT_EQ(ret, NO_ERROR, "mapping object");
+
+    // test that the pattern is still valid
+    bool result = test_region((uintptr_t)ptr, ptr, alloc_size);
+    EXPECT_TRUE(result, "testing region for corruption");
+
+    err = ka->FreeRegion((vaddr_t)ptr);
+    EXPECT_EQ(NO_ERROR, err, "unmapping object");
+    END_TEST;
+}
+
+// Creates a vm object, maps it, fills it with data, maps it a second time and
+// third time somwehere else.
+static bool vmo_double_remap_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    auto ka = VmAspace::kernel_aspace();
+    void* ptr;
+    auto ret = ka->MapObject(vmo, "test0", 0, alloc_size, &ptr,
+                             0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(NO_ERROR, ret, "mapping object");
+
+    // fill with known pattern and test
+    if (!fill_and_test(ptr, alloc_size))
+        all_ok = false;
+
+    // map it again
+    void* ptr2;
+    ret = ka->MapObject(vmo, "test1", 0, alloc_size, &ptr2,
+                        0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(ret, NO_ERROR, "mapping object second time");
+    EXPECT_NEQ(ptr, ptr2, "second mapping is different");
+
+    // test that the pattern is still valid
+    bool result = test_region((uintptr_t)ptr, ptr2, alloc_size);
+    EXPECT_TRUE(result, "testing region for corruption");
+
+    // map it a third time with an offset
+    void* ptr3;
+    static const size_t alloc_offset = PAGE_SIZE;
+    ret = ka->MapObject(vmo, "test2", alloc_offset, alloc_size - alloc_offset,
+                        &ptr3, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(ret, NO_ERROR, "mapping object third time");
+    EXPECT_NEQ(ptr3, ptr2, "third mapping is different");
+    EXPECT_NEQ(ptr3, ptr, "third mapping is different");
+
+    // test that the pattern is still valid
+    int mc =
+        memcmp((uint8_t*)ptr + alloc_offset, ptr3, alloc_size - alloc_offset);
+    EXPECT_EQ(0, mc, "testing region for corruption");
+
+    ret = ka->FreeRegion((vaddr_t)ptr3);
+    EXPECT_EQ(NO_ERROR, ret, "unmapping object third time");
+
+    ret = ka->FreeRegion((vaddr_t)ptr2);
+    EXPECT_EQ(NO_ERROR, ret, "unmapping object second time");
+
+    ret = ka->FreeRegion((vaddr_t)ptr);
+    EXPECT_EQ(NO_ERROR, ret, "unmapping object");
+    END_TEST;
+}
+
+static bool vmo_read_write_smoke_test(void* context) {
+    BEGIN_TEST;
+    static const size_t alloc_size = PAGE_SIZE * 16;
+
+    // create object
+    auto vmo = VmObjectPaged::Create(0, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    // create test buffer
+    AllocChecker ac;
+    mxtl::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
+    EXPECT_TRUE(ac.check(), "");
+    fill_region(99, a.get(), alloc_size);
+
+    // write to it, make sure it seems to work with valid args
+    size_t bytes_written = -1;
+    status_t err = vmo->Write(a.get(), 0, 0, &bytes_written);
+    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(0u, bytes_written, "writing to object");
+
+    bytes_written = -1;
+    err = vmo->Write(a.get(), 0, 37, &bytes_written);
+    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(37u, bytes_written, "writing to object");
+
+    bytes_written = -1;
+    err = vmo->Write(a.get(), 99, 37, &bytes_written);
+    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(37u, bytes_written, "writing to object");
+
+    // should trim the returned size
+    bytes_written = -1;
+    err = vmo->Write(a.get(), 0, alloc_size + 47, &bytes_written);
+    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(alloc_size - 0, bytes_written, "writing to object");
+
+    bytes_written = -1;
+    err = vmo->Write(a.get(), 31, alloc_size + 47, &bytes_written);
+    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(alloc_size - 31, bytes_written, "writing to object");
+
+    // should return an error because out of range
+    bytes_written = -1;
+    err = vmo->Write(a.get(), alloc_size + 99, 42, &bytes_written);
+    EXPECT_EQ(ERR_OUT_OF_RANGE, err, "writing to object");
+    EXPECT_EQ(0u, bytes_written, "writing to object");
+
+    // map the object
+    auto ka = VmAspace::kernel_aspace();
+    uint8_t* ptr;
+    err = ka->MapObject(vmo, "test", 0, alloc_size, (void**)&ptr,
+                        0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(NO_ERROR, err, "mapping object");
+
+    // write to it at odd offsets
+    bytes_written = -1;
+    err = vmo->Write(a.get(), 31, 4197, &bytes_written);
+    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(4197u, bytes_written, "writing to object");
+    int cmpres = memcmp(ptr + 31, a.get(), 4197);
+    EXPECT_EQ(0, cmpres, "reading from object");
+
+    // write to it, filling the object completely
+    err = vmo->Write(a.get(), 0, alloc_size, &bytes_written);
+    EXPECT_EQ(NO_ERROR, err, "writing to object");
+    EXPECT_EQ(alloc_size, bytes_written, "writing to object");
+
+    // test that the data was actually written to it
+    bool result = test_region(99, ptr, alloc_size);
+    EXPECT_TRUE(result, "writing to object");
+
+    // unmap it
+    ka->FreeRegion((vaddr_t)ptr);
+
+    // test that we can read from it
+    mxtl::Array<uint8_t> b(new (&ac) uint8_t[alloc_size], alloc_size);
+    EXPECT_TRUE(ac.check(), "can't allocate buffer");
+
+    size_t bytes_read = -1;
+    err = vmo->Read(b.get(), 0, alloc_size, &bytes_read);
+    EXPECT_EQ(NO_ERROR, err, "reading from object");
+    EXPECT_EQ(alloc_size, bytes_read, "reading from object");
+
+    // validate the buffer is valid
+    cmpres = memcmp(b.get(), a.get(), alloc_size);
+    EXPECT_EQ(0, cmpres, "reading from object");
+
+    // read from it at an offset
+    bytes_read = -1;
+    err = vmo->Read(b.get(), 31, 4197, &bytes_read);
+    EXPECT_EQ(NO_ERROR, err, "reading from object");
+    EXPECT_EQ(4197u, bytes_read, "reading from object");
+    cmpres = memcmp(b.get(), a.get() + 31, 4197);
+    EXPECT_EQ(0, cmpres, "reading from object");
+    END_TEST;
+}
+
+// Use the function name as the test name
+#define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
 UNITTEST_START_TESTCASE(vm_tests)
-UNITTEST("pmm tests", pmm_tests)
-UNITTEST("vmm tests", vmm_tests)
-UNITTEST("vm object based test", vmm_object_tests)
+VM_UNITTEST(pmm_smoke_test)
+VM_UNITTEST(pmm_large_alloc_test)
+VM_UNITTEST(pmm_oversized_alloc_test)
+VM_UNITTEST(vmm_alloc_smoke_test)
+VM_UNITTEST(vmm_alloc_contiguous_smoke_test)
+VM_UNITTEST(multiple_regions_test)
+VM_UNITTEST(vmm_alloc_zero_size_fails)
+VM_UNITTEST(vmm_alloc_bad_specific_pointer_fails)
+VM_UNITTEST(vmm_alloc_contiguous_missing_flag_commit_fails)
+VM_UNITTEST(vmm_alloc_contiguous_zero_size_fails)
+VM_UNITTEST(vmaspace_create_smoke_test)
+VM_UNITTEST(vmaspace_alloc_smoke_test)
+VM_UNITTEST(vmo_create_test)
+VM_UNITTEST(vmo_commit_test)
+VM_UNITTEST(vmo_odd_size_commit_test)
+VM_UNITTEST(vmo_contiguous_commit_test)
+VM_UNITTEST(vmo_precommitted_map_test)
+VM_UNITTEST(vmo_demand_paged_map_test)
+VM_UNITTEST(vmo_dropped_ref_test)
+VM_UNITTEST(vmo_remap_test)
+VM_UNITTEST(vmo_double_remap_test)
+VM_UNITTEST(vmo_read_write_smoke_test)
+VM_UNITTEST(dump_all_aspaces)  // Run last
 UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", nullptr, nullptr);
