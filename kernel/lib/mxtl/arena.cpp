@@ -59,13 +59,18 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     const size_t control_mem_sz = count * sizeof(Node);
 
     control_vmo_ = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, control_mem_sz);
-    if (!control_vmo_)
+    if (!control_vmo_) {
+        LTRACEF("Arena '%s': can't create control VMO\n", name);
         return ERR_NO_MEMORY;
+    }
 
     // commit the entire object first
     uint64_t committed;
     st = control_vmo_->CommitRange(0, control_mem_sz, &committed);
-    if (st < 0 || committed != control_mem_sz) {
+    if (st < 0 || committed < control_mem_sz) {
+        LTRACEF("Arena '%s': can't commit control VMO: st %d, committed %"
+                PRIu64 ", control_mem_sz %zu\n",
+                name, st, committed, control_mem_sz);
         return ERR_NO_MEMORY;
     }
 
@@ -88,13 +93,17 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     sprintf(vname, "%s_data", name);
     vmo_ = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, data_mem_sz);
     if (!vmo_) {
+        LTRACEF("Arena '%s': can't create data VMO\n", name);
         kspace->FreeRegion(reinterpret_cast<vaddr_t>(c_start_));
         return ERR_NO_MEMORY;
     }
 
     // commit the entire object first
     st = vmo_->CommitRange(0, data_mem_sz, &committed);
-    if (st < 0 || committed != data_mem_sz) {
+    if (st < 0 || committed < data_mem_sz) {
+        LTRACEF("Arena '%s': can't commit data VMO: st %d, committed %"
+                PRIu64 ", data_mem_sz %zu\n",
+                name, st, committed, data_mem_sz);
         kspace->FreeRegion(reinterpret_cast<vaddr_t>(c_start_));
         return ERR_NO_MEMORY;
     }
@@ -105,6 +114,7 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
             0, 0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
 
     if (st < 0) {
+        LTRACEF("Arena '%s': can't map data VMO: %d\n", name, st);
         kspace->FreeRegion(reinterpret_cast<vaddr_t>(c_start_));
         return st;
     }
