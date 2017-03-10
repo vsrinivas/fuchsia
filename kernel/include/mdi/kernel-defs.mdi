@@ -1,0 +1,4 @@
+// MDI definitions for the kernel
+
+// Top level nodes
+list    kernel-drivers                          1
