@@ -9,13 +9,13 @@
 #include <magenta/device/intel-pt.h>
 #include <magenta/syscalls.h>
 
+#include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
+
 #include "inferior-control/exception-port.h"
 #include "inferior-control/process.h"
 #include "inferior-control/server.h"
 #include "inferior-control/thread.h"
-
-#include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_view.h"
 
 namespace debugserver {
 

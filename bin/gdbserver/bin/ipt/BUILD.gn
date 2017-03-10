@@ -1,0 +1,39 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# There's no way to specify in packages/gn/gdbserver that the ipt only exists
+# for x64, so we build it even for arm64, but it's just a stub.
+
+executable("ipt") {
+  if (current_cpu == "x64") {
+    sources = [
+      "control.cc",
+      "control.h",
+      "main.cc",
+      "server.cc",
+      "server.h",
+    ]
+  } else {
+    sources = [
+      "main.cc",
+    ]
+  }
+
+  deps = [
+    "../../lib/debugger-utils",
+    "../../lib/inferior-control",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magenta/system/ulib/mx",
+  ]
+
+  include_dirs = [
+    "../../lib",
+  ]
+
+  libs = [
+    "launchpad",
+    "magenta",
+  ]
+}

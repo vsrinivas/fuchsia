@@ -34,8 +34,8 @@
 #include "inferior-control/arch.h"
 #include "inferior-control/arch-x86.h"
 
-#include "ipt-ctrl.h"
-#include "ipt-server.h"
+#include "control.h"
+#include "server.h"
 
 constexpr char kUsageString[] =
     "Usage: ipt [options] program [args...]\n"

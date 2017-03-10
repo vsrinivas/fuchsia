@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ipt-server.h"
+#include "server.h"
 
 #include <array>
 #include <cinttypes>
@@ -15,12 +15,12 @@
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
 
-#include "debugger-utils/util.h"
-
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "ipt-ctrl.h"
+#include "debugger-utils/util.h"
+
+#include "control.h"
 
 static constexpr char ldso_trace_env_var[] = "LD_TRACE_FILE";
 static constexpr char ldso_trace_output_path[] = "/tmp/ptout.ldso";
