@@ -19,6 +19,7 @@
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace todo {
 
@@ -29,10 +30,11 @@ const double kListSizeStdDev = 2.0;
 const int kMinDelaySeconds = 1;
 const int kMaxDelaySeconds = 5;
 
-std::string ToString(fidl::Array<uint8_t>& data) {
+std::string ToString(const mx::vmo& vmo) {
   std::string ret;
-  ret.resize(data.size());
-  memcpy(&ret[0], data.data(), data.size());
+  if (!mtl::StringFromVmo(vmo, &ret)) {
+    FTL_DCHECK(false);
+  }
   return ret;
 }
 
@@ -147,7 +149,7 @@ void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
 
     std::cout << "--- To Do ---" << std::endl;
     for (auto& entry : entries) {
-      std::cout << ToString(entry->value->get_bytes()) << std::endl;
+      std::cout << ToString(entry->value) << std::endl;
     }
     std::cout << "---" << std::endl;
   });

@@ -21,6 +21,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace {
 
@@ -295,8 +296,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
                       // 4. Read the counter from the root page.
                       page_snapshot_->Get(
                           to_array(kLedgerCounterKey),
-                          [this](ledger::Status status,
-                                 ledger::ValuePtr value) {
+                          [this](ledger::Status status, mx::vmo value) {
                             // 5. If counter doesn't exist, initialize.
                             // Otherwise, increment.
                             if (status == ledger::Status::KEY_NOT_FOUND) {
@@ -311,9 +311,10 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
                                   });
                             } else {
                               FTL_CHECK(status == ledger::Status::OK);
-                              FTL_CHECK(value->is_bytes());
-                              fidl::Array<uint8_t> counter_data =
-                                  value->get_bytes().Clone();
+                              std::string counter_data;
+                              bool conversion =
+                                  mtl::StringFromVmo(value, &counter_data);
+                              FTL_DCHECK(conversion);
                               FTL_LOG(INFO)
                                   << "Retrieved counter from root page: "
                                   << static_cast<uint32_t>(counter_data[0])
@@ -321,7 +322,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
                               counter_data[0]++;
                               module_root_page_->Put(
                                   to_array(kLedgerCounterKey),
-                                  std::move(counter_data),
+                                  to_array(counter_data),
                                   [](ledger::Status status) {
                                     FTL_CHECK(status == ledger::Status::OK);
                                   });

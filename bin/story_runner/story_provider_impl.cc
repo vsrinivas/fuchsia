@@ -18,6 +18,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/strings.h"
 #include "lib/mtl/vmo/vector.h"
 
 namespace modular {
@@ -112,7 +113,7 @@ class GetStoryDataCall : public Operation<StoryDataPtr> {
   void Run() override {
     (*root_snapshot_)
         ->Get(to_array(story_id_),
-              [this](ledger::Status status, ledger::ValuePtr value) {
+              [this](ledger::Status status, mx::vmo value) {
                 if (status != ledger::Status::OK) {
                   FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
                                  << " PageSnapshot.Get() " << status;
@@ -120,9 +121,15 @@ class GetStoryDataCall : public Operation<StoryDataPtr> {
                   return;
                 }
 
+                std::vector<char> value_as_vector;
+                if (!mtl::VectorFromVmo(value, &value_as_vector)) {
+                  FTL_LOG(ERROR) << "Unable to extract data.";
+                  Done(nullptr);
+                  return;
+                }
                 story_data_ = StoryData::New();
-                story_data_->Deserialize(value->get_bytes().data(),
-                                         value->get_bytes().size());
+                story_data_->Deserialize(value_as_vector.data(),
+                                         value_as_vector.size());
 
                 Done(std::move(story_data_));
               });
@@ -477,24 +484,21 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
               continue;
             }
 
-            StoryDataPtr story_data = StoryData::New();
-            if (entry->value->is_bytes()) {
-              story_data->Deserialize(entry->value->get_bytes().data(),
-                                      entry->value->get_bytes().size());
-            } else {
-              // If the value is big, Ledger may return a vmo.
-              std::vector<char> value;
-              mtl::VectorFromVmo(entry->value->get_buffer(), &value);
-              story_data->Deserialize(static_cast<void*>(value.data()),
-                                      value.size());
+            std::vector<char> value_as_vector;
+            if (!mtl::VectorFromVmo(entry->value, &value_as_vector)) {
+              FTL_LOG(ERROR) << "Unable to extract data.";
+              Done(nullptr);
+              return;
             }
+            StoryDataPtr story_data = StoryData::New();
+            story_data->Deserialize(value_as_vector.data(),
+                                    value_as_vector.size());
             story_ids_.push_back(story_data->story_info->id);
             FTL_LOG(INFO) << "PreviousStoryCall() "
                           << " previous story " << story_data->story_info->id
                           << " " << story_data->story_info->url << " "
                           << story_data->story_info->is_running;
           }
-
           Done(std::move(story_ids_));
         });
   }
@@ -522,7 +526,7 @@ class UpdateDeviceNameCall : public Operation<void> {
   void Run() override {
     (*root_snapshot_)
         ->Get(to_array(kDeviceMapKey),
-              [this](ledger::Status status, ledger::ValuePtr value) {
+              [this](ledger::Status status, mx::vmo value) {
                 if (status != ledger::Status::OK &&
                     status != ledger::Status::KEY_NOT_FOUND) {
                   FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
@@ -532,9 +536,15 @@ class UpdateDeviceNameCall : public Operation<void> {
                 }
 
                 rapidjson::Document doc;
-                if (!value.is_null()) {
-                  doc.Parse(to_string(value->get_bytes()));
-                  FTL_DCHECK(doc.IsObject());
+                if (value) {
+                  std::string value_as_string;
+                  if (mtl::StringFromVmo(value, &value_as_string)) {
+                    doc.Parse(value_as_string);
+                    FTL_DCHECK(doc.IsObject());
+                  } else {
+                    FTL_LOG(ERROR) << "Unable to extract data.";
+                    doc.SetObject();
+                  }
                 } else {
                   doc.SetObject();
                 }
@@ -750,9 +760,13 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
       continue;
     }
 
+    std::vector<char> value_as_vector;
+    if (!mtl::VectorFromVmo(entry->value, &value_as_vector)) {
+      FTL_LOG(ERROR) << "Unable to extract data.";
+      return;
+    }
     auto story_data = StoryData::New();
-    auto& bytes = entry->value->get_bytes();
-    story_data->Deserialize(bytes.data(), bytes.size());
+    story_data->Deserialize(value_as_vector.data(), value_as_vector.size());
 
     // If this is a new story, guard against double using its key.
     story_ids_.insert(story_data->story_info->id.get());

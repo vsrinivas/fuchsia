@@ -6,6 +6,7 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace modular {
 
@@ -26,11 +27,11 @@ bool IsRootPageId(const fidl::Array<uint8_t>& id) {
   return true;
 }
 
-void MaybeMergeDeviceMap(ledger::PageChange* const change_left,
+bool MaybeMergeDeviceMap(ledger::PageChange* const change_left,
                          ledger::PageChange* const change_right,
                          fidl::Array<ledger::MergedValuePtr>* ret) {
   if (change_left == nullptr || change_right == nullptr) {
-    return;
+    return true;
   }
 
   bool found_left = false;
@@ -38,13 +39,15 @@ void MaybeMergeDeviceMap(ledger::PageChange* const change_left,
   for (auto& change : change_left->changes) {
     if (to_string(change->key) == kDeviceMapKey) {
       found_left = true;
-      bytes_left = to_string(change->value->get_bytes());
+      if (!mtl::StringFromVmo(change->value, &bytes_left)) {
+        return false;
+      }
       break;
     }
   }
 
   if (!found_left) {
-    return;
+    return true;
   }
 
   bool found_right = false;
@@ -52,13 +55,15 @@ void MaybeMergeDeviceMap(ledger::PageChange* const change_left,
   for (auto& change : change_right->changes) {
     if (to_string(change->key) == kDeviceMapKey) {
       found_right = true;
-      bytes_right = to_string(change->value->get_bytes());
+      if (!mtl::StringFromVmo(change->value, &bytes_right)) {
+        return false;
+      }
       break;
     }
   }
 
   if (!found_right) {
-    return;
+    return true;
   }
 
   rapidjson::Document doc_left;
@@ -78,7 +83,7 @@ void MaybeMergeDeviceMap(ledger::PageChange* const change_left,
   }
 
   if (!changed) {
-    return;
+    return true;
   }
 
   ledger::MergedValuePtr result = ledger::MergedValue::New();
@@ -91,6 +96,7 @@ void MaybeMergeDeviceMap(ledger::PageChange* const change_left,
   result->new_value = std::move(bytes_result);
 
   ret->push_back(std::move(result));
+  return true;
 }
 
 }  // namespace
@@ -128,7 +134,11 @@ void ConflictResolverImpl::Resolve(
   fidl::Array<ledger::MergedValuePtr> ret;
   ret.resize(0);
 
-  MaybeMergeDeviceMap(change_left.get(), change_right.get(), &ret);
+  if (!MaybeMergeDeviceMap(change_left.get(), change_right.get(), &ret)) {
+    FTL_LOG(ERROR) << "Unable to parse changes, disconnecting the resolver...";
+    bindings_.CloseAllBindings();
+    return;
+  }
 
   callback(std::move(ret));
 }

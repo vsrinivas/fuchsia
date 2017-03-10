@@ -10,6 +10,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/services/story/story_storage.fidl.h"
+#include "lib/mtl/vmo/vector.h"
 
 namespace modular {
 
@@ -29,27 +30,31 @@ class ReadLinkDataCall : public Operation<fidl::String> {
 
   void Run() override {
     (*page_snapshot_)
-        ->Get(to_array(link_id_),
-              [this](ledger::Status status, ledger::ValuePtr value) {
-                if (status != ledger::Status::OK) {
-                  if (status != ledger::Status::KEY_NOT_FOUND) {
-                    // It's expected that the key is not found when the link
-                    // is accessed for the first time. Don't log an error
-                    // then.
-                    FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
-                                   << " PageSnapshot.Get() " << status;
-                  }
-                  Done(fidl::String());
-                  return;
-                }
+        ->Get(to_array(link_id_), [this](ledger::Status status, mx::vmo value) {
+          if (status != ledger::Status::OK) {
+            if (status != ledger::Status::KEY_NOT_FOUND) {
+              // It's expected that the key is not found when the link
+              // is accessed for the first time. Don't log an error
+              // then.
+              FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
+                             << " PageSnapshot.Get() " << status;
+            }
+            Done(fidl::String());
+            return;
+          }
 
-                data_ = LinkData::New();
-                if (value) {
-                  data_->Deserialize(value->get_bytes().data(),
-                                     value->get_bytes().size());
-                }
-                Done(std::move(data_->json));
-              });
+          data_ = LinkData::New();
+          if (value) {
+            std::vector<char> value_as_vector;
+            if (!mtl::VectorFromVmo(value, &value_as_vector)) {
+              FTL_LOG(ERROR) << "Unable to extract data.";
+              Done(nullptr);
+              return;
+            }
+            data_->Deserialize(value_as_vector.data(), value_as_vector.size());
+          }
+          Done(std::move(data_->json));
+        });
   }
 
  private:
@@ -185,8 +190,12 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
       for (auto& watcher_entry : watchers_) {
         if (link_id == watcher_entry.first) {
           auto data = LinkData::New();
-          data->Deserialize(entry->value->get_bytes().data(),
-                            entry->value->get_bytes().size());
+          std::vector<char> value_as_vector;
+          if (!mtl::VectorFromVmo(entry->value, &value_as_vector)) {
+            FTL_LOG(ERROR) << "Unable to extract data.";
+            return;
+          }
+          data->Deserialize(value_as_vector.data(), value_as_vector.size());
           watcher_entry.second(data->json);
         }
       }
