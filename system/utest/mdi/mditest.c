@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <magenta/bootdata.h>
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 #include <mdi/mdi.h>
@@ -39,6 +40,18 @@ static bool load_mdi(void) {
     mdi_length = length;
 
     close(fd);
+
+    bootdata_t* header = mdi_data;
+    EXPECT_EQ(header->type, BOOTDATA_CONTAINER, "invalid bootdata container header");
+    EXPECT_EQ(header->extra, BOOTDATA_MAGIC, "bootdata container bad magic");
+    EXPECT_GT(header->length, sizeof(*header), "bootdata length too small");
+
+    mdi_data += sizeof(*header);
+    mdi_length -= sizeof(*header);
+    header = mdi_data;
+
+    EXPECT_EQ(header->type, BOOTDATA_MDI, "bootdata type not BOOTDATA_MDI");
+    EXPECT_EQ(header->length + sizeof(*header), mdi_length, "bootdata length invalid");
 
     END_TEST;
 }
