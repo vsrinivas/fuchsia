@@ -47,6 +47,10 @@
             "bootfs_path": "apps/email_thread"
         },
         {
+            "binary": "image_picker.flx",
+            "bootfs_path": "apps/image_picker"
+        },
+        {
             "binary": "interactive_receipt.flx",
             "bootfs_path": "apps/interactive_receipt"
         },
