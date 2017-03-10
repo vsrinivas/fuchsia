@@ -26,7 +26,7 @@ public:
         CACHE_POLICY_WRITE_COMBINING = 3,
     };
 
-    void Write32(uint32_t val, uint64_t offset)
+    void Write32(uint64_t offset, uint32_t val)
     {
         DASSERT(offset < size());
         DASSERT((offset & 0x3) == 0);
@@ -40,7 +40,7 @@ public:
         return *reinterpret_cast<volatile uint32_t*>(addr(offset));
     }
 
-    void Write64(uint64_t val, uint64_t offset)
+    void Write64(uint64_t offset, uint64_t val)
     {
         DASSERT(offset < size());
         DASSERT((offset & 0x7) == 0);
