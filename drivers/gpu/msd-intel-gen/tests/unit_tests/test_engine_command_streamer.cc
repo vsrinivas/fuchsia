@@ -274,14 +274,14 @@ public:
                         // set ready for reset bit
                         if (val & 0x00010001) {
                             val = register_io_->mmio()->Read32(offset) | 0x2;
-                            register_io_->mmio()->Write32(val, offset);
+                            register_io_->mmio()->Write32(offset, val);
                         }
                         break;
                     case registers::GraphicsDeviceResetControl::kOffset:
                         // clear the render reset bit
                         if (val & 0x2) {
                             val = register_io_->mmio()->Read32(offset) & ~0x2;
-                            register_io_->mmio()->Write32(val, offset);
+                            register_io_->mmio()->Write32(offset, val);
                         }
                         break;
                 }

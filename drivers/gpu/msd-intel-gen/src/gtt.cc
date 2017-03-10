@@ -139,7 +139,7 @@ bool Gtt::Clear(uint64_t start, uint64_t length)
     uint64_t pte_offset = pte_mmio_offset() + first_entry * sizeof(gen_pte_t);
 
     for (unsigned int i = 0; i < num_entries; i++) {
-        mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + i * sizeof(gen_pte_t));
+        mmio_->Write64(pte_offset + i * sizeof(gen_pte_t), static_cast<uint64_t>(pte));
     }
 
     mmio_->PostingRead32(pte_offset + (num_entries - 1) * sizeof(gen_pte_t));
@@ -180,12 +180,12 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, 
 
     for (unsigned int i = 0; i < num_pages; i++) {
         auto pte = gen_pte_encode(bus_addr_array[i], true);
-        mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + i * sizeof(gen_pte_t));
+        mmio_->Write64(pte_offset + i * sizeof(gen_pte_t), static_cast<uint64_t>(pte));
     }
 
     // insert pte for overfetch protection page
     auto pte = gen_pte_encode(scratch_bus_addr_, true);
-    mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + (num_pages) * sizeof(gen_pte_t));
+    mmio_->Write64(pte_offset + (num_pages) * sizeof(gen_pte_t), static_cast<uint64_t>(pte));
 
     uint64_t readback = mmio_->PostingRead64(pte_offset + (num_pages - 1) * sizeof(gen_pte_t));
 

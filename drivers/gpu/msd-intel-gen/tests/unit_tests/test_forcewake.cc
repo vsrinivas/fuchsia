@@ -32,14 +32,14 @@ public:
 
     void Reset()
     {
-        register_io_->mmio()->Write32(0, offset_);
+        register_io_->mmio()->Write32(offset_, 0);
         ForceWake::reset(register_io_.get(), domain_);
         EXPECT_EQ(0xFFFF0000, register_io_->mmio()->Read32(offset_));
     }
 
     void Request()
     {
-        register_io_->mmio()->Write32(0, status_offset_);
+        register_io_->mmio()->Write32(status_offset_, 0);
 
         // Verify timeout waiting for status
         auto start = std::chrono::high_resolution_clock::now();
@@ -53,7 +53,7 @@ public:
 
     void Release()
     {
-        register_io_->mmio()->Write32(0xFFFFFFFF, status_offset_);
+        register_io_->mmio()->Write32(status_offset_, 0xFFFFFFFF);
 
         // Verify timeout waiting for status
         auto start = std::chrono::high_resolution_clock::now();

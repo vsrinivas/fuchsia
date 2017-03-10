@@ -181,7 +181,7 @@ public:
             // Write the reply message into registers.
             assert(reply.size <= DpAuxMessage::kMaxTotalSize);
             for (uint32_t offset = 0; offset < reply.size; offset += 4) {
-                mmio_->Write32(reply.GetPackedWord(offset), data_reg + offset);
+                mmio_->Write32(data_reg + offset, reply.GetPackedWord(offset));
             }
 
             // Update the register to mark the transaction as completed.
@@ -190,7 +190,7 @@ public:
             value &= ~registers::DdiAuxControl::kSendBusyBit;
             value = SetBits(value, registers::DdiAuxControl::kMessageSizeShift,
                             registers::DdiAuxControl::kMessageSizeMask, reply.size);
-            mmio_->Write32(value, control_reg);
+            mmio_->Write32(control_reg, value);
         }
     }
 

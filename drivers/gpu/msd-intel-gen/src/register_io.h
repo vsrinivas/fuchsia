@@ -16,7 +16,7 @@ public:
 
     void Write32(uint32_t offset, uint32_t val)
     {
-        mmio_->Write32(val, offset);
+        mmio_->Write32(offset, val);
         if (hook_)
             hook_->Write32(offset, val);
     }
