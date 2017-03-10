@@ -26,6 +26,12 @@ A single application can be run using the `dev_user_shell`, for example:
 device_runner --user_shell=dev_user_shell --user_shell_args='--root_module=example_flutter_counter_parent,--root_link={"http://schema.domokit.org/counter":5}'
 ```
 
+Note: if you are running this through *netruncmd* you will need to escape the quotes:
+
+```sh
+device_runner --user_shell=dev_user_shell --user_shell_args='--root_module=example_flutter_counter_parent,--root_link={\\\"http://schema.domokit.org/counter\\\":5}'
+```
+
 The flags `--user_shell` and `--user_shell_args` are read by `device_runner`.
 The value of `--user_shell` is the application run as user shell. The value of
 `--user_shell_args` is a comma separated list of arguments passed to the user
