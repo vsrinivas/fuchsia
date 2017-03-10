@@ -29,9 +29,7 @@ ApplicationContext::CreateFromStartupInfo() {
       mx_get_startup_handle(MX_HND_TYPE_APPLICATION_ENVIRONMENT);
   mx_handle_t services =
       mx_get_startup_handle(MX_HND_TYPE_APPLICATION_SERVICES);
-
-  FTL_CHECK(environment != MX_HANDLE_INVALID)
-      << "Did you run this program outside the Fuchsia environment?";
+  // It's legal for |environment| or |services| to be null.
 
   return std::make_unique<ApplicationContext>(
       fidl::InterfaceHandle<ApplicationEnvironment>(mx::channel(environment),
