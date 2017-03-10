@@ -39,7 +39,7 @@ static constexpr mx_rights_t kDefaultProcessRights =
         MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY | MX_RIGHT_ENUMERATE;
 
 
-mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
+static mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
     // Ensure that the last bit of the result is not zero and that
     // we don't lose upper bits.
     DEBUG_ASSERT((mixer & 0x1) == 0);
@@ -49,7 +49,7 @@ mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
     return mixer ^ handle_id;
 }
 
-Handle* map_value_to_handle(mx_handle_t value, mx_handle_t mixer) {
+static Handle* map_value_to_handle(mx_handle_t value, mx_handle_t mixer) {
     auto handle_id = (value ^ mixer) >> 2;
     return MapU32ToHandle(handle_id);
 }
