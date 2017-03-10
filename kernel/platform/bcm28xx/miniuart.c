@@ -80,7 +80,7 @@ static enum handler_return aux_irq(void* arg) {
     return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
-int uart_putc(int port, char c) {
+int uart_putc(char c) {
     // There's only one UART for now.
     // TODO(gkalsi): Unify the two UART code paths using the port.
     struct bcm283x_mu_regs* regs = (struct bcm283x_mu_regs*)MINIUART_BASE;
@@ -125,7 +125,7 @@ void uart_init(void) {
 void uart_init_early(void) {
 }
 
-int uart_getc(int port, bool wait) {
+int uart_getc(bool wait) {
     cbuf_t* rxbuf = &uart_rx_buf;
 
     char c;
@@ -133,19 +133,4 @@ int uart_getc(int port, bool wait) {
         return c;
 
     return -1;
-}
-
-void uart_flush_tx(int port) {
-    volatile struct bcm283x_mu_regs* mu_regs =
-        (struct bcm283x_mu_regs*)MINIUART_BASE;
-    writel(MU_IIR_CLR_XMIT_FIFO, &mu_regs->iir);
-}
-
-void uart_flush_rx(int port) {
-    volatile struct bcm283x_mu_regs* mu_regs =
-        (struct bcm283x_mu_regs*)MINIUART_BASE;
-    writel(MU_IIR_CLR_RECV_FIFO, &mu_regs->iir);
-}
-
-void uart_init_port(int port, uint baud) {
 }

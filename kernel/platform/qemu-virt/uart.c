@@ -34,41 +34,27 @@
 #define UARTREG(base, reg)  (*REG32((base)  + (reg)))
 
 #define RXBUF_SIZE 16
-#define NUM_UART 1
 
-static cbuf_t uart_rx_buf[NUM_UART];
-
-static inline uintptr_t uart_to_ptr(unsigned int n)
-{
-    switch (n) {
-        default:
-        case 0:
-            return UART_BASE;
-    }
-}
+static cbuf_t uart_rx_buf;
 
 static enum handler_return uart_irq(void *arg)
 {
     bool resched = false;
-    uint port = (uintptr_t)arg;
-    uintptr_t base = uart_to_ptr(port);
 
     /* read interrupt status and mask */
-    uint32_t isr = UARTREG(base, UART_TMIS);
+    uint32_t isr = UARTREG(UART_BASE, UART_TMIS);
 
     if (isr & (1<<4)) { // rxmis
-        cbuf_t *rxbuf = &uart_rx_buf[port];
-
         /* while fifo is not empty, read chars out of it */
-        while ((UARTREG(base, UART_TFR) & (1<<4)) == 0) {
+        while ((UARTREG(UART_BASE, UART_TFR) & (1<<4)) == 0) {
             /* if we're out of rx buffer, mask the irq instead of handling it */
-            if (cbuf_space_avail(rxbuf) == 0) {
-                UARTREG(base, UART_IMSC) &= ~(1<<4); // !rxim
+            if (cbuf_space_avail(&uart_rx_buf) == 0) {
+                UARTREG(UART_BASE, UART_IMSC) &= ~(1<<4); // !rxim
                 break;
             }
 
-            char c = UARTREG(base, UART_DR);
-            cbuf_write_char(rxbuf, c, false);
+            char c = UARTREG(UART_BASE, UART_DR);
+            cbuf_write_char(&uart_rx_buf, c, false);
 
             resched = true;
         }
@@ -79,58 +65,48 @@ static enum handler_return uart_irq(void *arg)
 
 void uart_init(void)
 {
-    for (size_t i = 0; i < NUM_UART; i++) {
-        uintptr_t base = uart_to_ptr(i);
+    // create circular buffer to hold received data
+    cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
-        // create circular buffer to hold received data
-        cbuf_initialize(&uart_rx_buf[i], RXBUF_SIZE);
+    // assumes interrupts are contiguous
+    register_int_handler(UART0_INT, &uart_irq, NULL);
 
-        // assumes interrupts are contiguous
-        register_int_handler(UART0_INT + i, &uart_irq, (void *)i);
+    // clear all irqs
+    UARTREG(UART_BASE, UART_ICR) = 0x3ff;
 
-        // clear all irqs
-        UARTREG(base, UART_ICR) = 0x3ff;
+    // set fifo trigger level
+    UARTREG(UART_BASE, UART_IFLS) = 0; // 1/8 rxfifo, 1/8 txfifo
 
-        // set fifo trigger level
-        UARTREG(base, UART_IFLS) = 0; // 1/8 rxfifo, 1/8 txfifo
+    // enable rx interrupt
+    UARTREG(UART_BASE, UART_IMSC) = (1<<4); // rxim
 
-        // enable rx interrupt
-        UARTREG(base, UART_IMSC) = (1<<4); // rxim
+    // enable receive
+    UARTREG(UART_BASE, UART_CR) |= (1<<9); // rxen
 
-        // enable receive
-        UARTREG(base, UART_CR) |= (1<<9); // rxen
-
-        // enable interrupt
-        unmask_interrupt(UART0_INT + i);
-    }
+    // enable interrupt
+    unmask_interrupt(UART0_INT);
 }
 
 void uart_init_early(void)
 {
-    for (size_t i = 0; i < NUM_UART; i++) {
-        UARTREG(uart_to_ptr(i), UART_CR) = (1<<8)|(1<<0); // tx_enable, uarten
-    }
+    UARTREG(UART_BASE, UART_CR) = (1<<8)|(1<<0); // tx_enable, uarten
 }
 
-int uart_putc(int port, char c)
+int uart_putc(char c)
 {
-    uintptr_t base = uart_to_ptr(port);
-
     /* spin while fifo is full */
-    while (UARTREG(base, UART_TFR) & (1<<5))
+    while (UARTREG(UART_BASE, UART_TFR) & (1<<5))
         ;
-    UARTREG(base, UART_DR) = c;
+    UARTREG(UART_BASE, UART_DR) = c;
 
     return 1;
 }
 
-int uart_getc(int port, bool wait)
+int uart_getc(bool wait)
 {
-    cbuf_t *rxbuf = &uart_rx_buf[port];
-
     char c;
-    if (cbuf_read_char(rxbuf, &c, wait) == 1) {
-        UARTREG(uart_to_ptr(port), UART_IMSC) = (1<<4); // rxim
+    if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
+        UARTREG(UART_BASE, UART_IMSC) = (1<<4); // rxim
         return c;
     }
 
@@ -138,39 +114,21 @@ int uart_getc(int port, bool wait)
 }
 
 /* panic-time getc/putc */
-int uart_pputc(int port, char c)
+int uart_pputc(char c)
 {
-    uintptr_t base = uart_to_ptr(port);
-
     /* spin while fifo is full */
-    while (UARTREG(base, UART_TFR) & (1<<5))
+    while (UARTREG(UART_BASE, UART_TFR) & (1<<5))
         ;
-    UARTREG(base, UART_DR) = c;
+    UARTREG(UART_BASE, UART_DR) = c;
 
     return 1;
 }
 
-int uart_pgetc(int port)
+int uart_pgetc()
 {
-    uintptr_t base = uart_to_ptr(port);
-
-    if ((UARTREG(base, UART_TFR) & (1<<4)) == 0) {
-        return UARTREG(base, UART_DR);
+    if ((UARTREG(UART_BASE, UART_TFR) & (1<<4)) == 0) {
+        return UARTREG(UART_BASE, UART_DR);
     } else {
         return -1;
     }
 }
-
-
-void uart_flush_tx(int port)
-{
-}
-
-void uart_flush_rx(int port)
-{
-}
-
-void uart_init_port(int port, uint baud)
-{
-}
-

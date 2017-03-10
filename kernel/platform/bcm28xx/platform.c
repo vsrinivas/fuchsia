@@ -56,8 +56,6 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
  {}
 };
 
-#define DEBUG_UART 1
-
 extern void arm_reset(void);
 
 static pmm_arena_info_t arena = {
@@ -142,15 +140,15 @@ void platform_dputs(const char* str, size_t len)
     while (len-- > 0) {
         char c = *str++;
         if (c == '\n') {
-            uart_putc(DEBUG_UART, '\r');
+            uart_putc('\r');
         }
-        uart_putc(DEBUG_UART, c);
+        uart_putc(c);
     }
 }
 
 int platform_dgetc(char *c, bool wait)
 {
-    int ret = uart_getc(DEBUG_UART, wait);
+    int ret = uart_getc(wait);
     if (ret == -1)
         return -1;
     *c = ret;

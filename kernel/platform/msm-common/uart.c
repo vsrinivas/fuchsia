@@ -140,19 +140,19 @@ static void msm_printstr(const char* str, size_t count) {
     }
 }
 
-int uart_putc(int port, char c) {
+int uart_putc(char c) {
     msm_printstr(&c, 1);
     return 1;
 }
 
 /* panic-time getc/putc */
-int uart_pputc(int port, char c)
+int uart_pputc(char c)
 {
     msm_printstr(&c, 1);
     return 1;
 }
 
-int uart_pgetc(int port)
+int uart_pgetc()
 {
     cbuf_t* rxbuf = &uart_rx_buf;
 
@@ -272,19 +272,8 @@ void uart_init(void) {
 void uart_init_early(void) {
 }
 
-int uart_getc(int port, bool wait) {
+int uart_getc(bool wait) {
     char ch;
     size_t count = cbuf_read_char(&uart_rx_buf, &ch, wait);
     return (count == 1 ? ch : -1);
-}
-
-void uart_flush_tx(int port) {
-
-}
-
-void uart_flush_rx(int port) {
-
-}
-
-void uart_init_port(int port, uint baud) {
 }

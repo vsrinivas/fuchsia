@@ -15,29 +15,20 @@
 #include <target/debugconfig.h>
 #include <reg.h>
 
-/* DEBUG_UART must be defined to 0 or 1 */
-#if defined(DEBUG_UART) && DEBUG_UART == 0
-#define DEBUG_UART_BASE UART0_BASE
-#elif defined(DEBUG_UART) && DEBUG_UART == 1
-#define DEBUG_UART_BASE UART1_BASE
-#else
-#error define DEBUG_UART to something valid
-#endif
-
 void platform_dputs(const char* str, size_t len)
 {
     while (len-- > 0) {
         char c = *str++;
         if (c == '\n') {
-            uart_putc(DEBUG_UART, '\r');
+            uart_putc('\r');
         }
-        uart_putc(DEBUG_UART, c);
+        uart_putc(c);
     }
 }
 
 int platform_dgetc(char *c, bool wait)
 {
-    int ret = uart_getc(DEBUG_UART, wait);
+    int ret = uart_getc(wait);
     if (ret == -1)
         return -1;
     *c = ret;
@@ -47,13 +38,13 @@ int platform_dgetc(char *c, bool wait)
 void platform_pputc(char c)
 {
     if (c == '\n')
-        uart_pputc(DEBUG_UART, '\r');
-    uart_pputc(DEBUG_UART, c);
+        uart_pputc('\r');
+    uart_pputc(c);
 }
 
 int platform_pgetc(char *c, bool wait)
 {
-    int ret = uart_pgetc(DEBUG_UART);
+    int ret = uart_pgetc();
     if (ret < 0)
         return ret;
     *c = ret;
