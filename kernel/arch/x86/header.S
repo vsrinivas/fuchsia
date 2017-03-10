@@ -15,6 +15,29 @@
 /* The flags for the Multiboot header. */
 #define MULTIBOOT_HEADER_FLAGS 0x00010002
 
+
+#if ENABLE_NEW_BOOT
+
+#include <magenta/bootdata.h>
+
+.section .text.boot0, "ax", @progbits
+
+LOCAL_DATA(_setup_start)
+
+    /* bootdata file header */
+    .int BOOTDATA_CONTAINER
+    .int PHYS(__data_end) - PHYS_LOAD_ADDRESS - 16
+    .int BOOTDATA_MAGIC
+    .int 0
+
+    /* bootdata kernel header */
+    .int BOOTDATA_KERNEL
+    .int PHYS(__data_end) - PHYS_LOAD_ADDRESS - 32
+    .int 0
+    .int 0
+
+#else
+
 .section .text.header, "ax", @progbits
 .code16
 
@@ -275,28 +298,39 @@ _setup_gdt:
     .byte  0x0          /* base 31:24 */
 
 _setup_gdt_end:
+#endif
+
 
 .align 8
-.type _multiboot_header,STT_OBJECT
-_multiboot_header:
+LOCAL_DATA(_multiboot_header)
     /* magic */
     .int MULTIBOOT_HEADER_MAGIC
+LOCAL_DATA(_multiboot_flags)
     /* flags */
     .int MULTIBOOT_HEADER_FLAGS
+LOCAL_DATA(_multiboot_checksum)
     /* checksum */
     .int -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
 
+LOCAL_DATA(_multiboot_header_addr)
     /* header_addr */
     .int PHYS_LOAD_ADDRESS - PHYS_HEADER_LOAD_OFFSET + (_multiboot_header - _setup_start)
+LOCAL_DATA(_multiboot_load_addr)
     /* load_addr */
     .int PHYS_LOAD_ADDRESS - PHYS_HEADER_LOAD_OFFSET
+LOCAL_DATA(_multiboot_load_end_addr)
     /* load_end_addr */
     .int PHYS(__data_end)
+LOCAL_DATA(_multiboot_bss_end_addr)
     /* bss_end_addr */
     .int PHYS(__bss_end)
+LOCAL_DATA(_multiboot_entry)
     /* entry_addr */
     .int PHYS(_multiboot_start)
 
-.align 4096
-
+#if !ENABLE_NEW_BOOT
+/* pad the zero page out to 8K */
+LOCAL_DATA(_padding)
+.org 0x2000
 _setup_end:
+#endif

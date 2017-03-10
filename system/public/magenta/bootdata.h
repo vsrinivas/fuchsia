@@ -4,16 +4,16 @@
 
 #pragma once
 
+#ifndef ASSEMBLY
 #include <magenta/compiler.h>
 #include <stdint.h>
+#endif
 
 // lsw of sha256("bootdata")
 #define BOOTDATA_MAGIC (0x868cf7e6u)
 
 // Round n up to the next 8 byte boundary
 #define BOOTDATA_ALIGN(n) (((n) + 7) & (~7))
-
-__BEGIN_CDECLS;
 
 // Containers are used to wrap a set of bootdata items
 // written to a file or partition.  The "length" is the
@@ -43,6 +43,24 @@ __BEGIN_CDECLS;
 #define BOOTDATA_BOOTFS_FLAG_COMPRESSED  (1 << 0)
 
 
+// These items are for passing from bootloader to kernel
+
+// Kernel Command Line String
+// Content: uint8_t[]
+#define BOOTDATA_CMDLINE          (0x4c444d43u) // CMDL
+
+// ACPI Root Table Pointer
+// Content: uint64_t phys addr
+#define BOOTDATA_ACPI_RSDP        (0x50445352u) // RSDP
+
+// Framebuffer Parameters
+// Content: bootdata_swfb_t
+#define BOOTDATA_FRAMEBUFFER      (0x42465753u) // SWFB
+
+
+#ifndef ASSEMBLY
+__BEGIN_CDECLS;
+
 // BootData header, describing the type and size of data
 // used to initialize the system. All fields are little-endian.
 //
@@ -66,21 +84,6 @@ typedef struct {
     uint32_t flags;
 } bootdata_t;
 
-
-// These items are for passing from bootloader to kernel
-
-// Kernel Command Line String
-// Content: uint8_t[]
-#define BOOTDATA_CMDLINE          (0x4c444d43u) // CMDL
-
-// ACPI Root Table Pointer
-// Content: uint64_t phys addr
-#define BOOTDATA_ACPI_RSDP        (0x50445352u) // RSDP
-
-// Framebuffer Parameters
-// Content: bootdata_swfb_t
-#define BOOTDATA_FRAMEBUFFER      (0x42465753u) // SWFB
-
 typedef struct {
     uint64_t phys_base;
     uint32_t width;
@@ -90,3 +93,5 @@ typedef struct {
 } bootdata_swfb_t;
 
 __END_CDECLS;
+#endif
+

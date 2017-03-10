@@ -31,6 +31,7 @@ extern uint8_t g_paddr_width;
 
 /* IA32_MTRRCAP read functions */
 #define MTRRCAP_VCNT(x) ((x) & 0xff)
+#define MTRRCAP_VCNT_MAX 255
 #define MTRRCAP_FIX(x) !!((x) & (1 << 8))
 #define MTRRCAP_WC(x) !!((x) & (1 << 10))
 
@@ -71,9 +72,15 @@ struct mtrrs {
     uint64_t mtrr_fix64k;
     uint64_t mtrr_fix16k[IA32_MTRR_NUM_FIX16K];
     uint64_t mtrr_fix4k[IA32_MTRR_NUM_FIX4K];
+#if ENABLE_NEW_BOOT
+    struct variable_mtrr mtrr_var[MTRRCAP_VCNT_MAX];
+#else
     struct variable_mtrr mtrr_var[];
+#endif
 };
-static struct mtrrs *target_mtrrs;
+
+static struct mtrrs THE_MTRRS;
+static struct mtrrs *target_mtrrs = &THE_MTRRS;
 
 /* Function called by all CPUs to setup their PAT */
 static void x86_pat_sync_task(void *context);
@@ -91,9 +98,11 @@ void x86_mmu_mem_type_init(void)
     supports_fixed_range = MTRRCAP_FIX(caps);
     supports_wc = MTRRCAP_WC(caps);
 
+#if !ENABLE_NEW_BOOT
     target_mtrrs = boot_alloc_mem(
             sizeof(struct mtrrs) + sizeof(struct variable_mtrr) * num_variable);
     ASSERT(target_mtrrs);
+#endif
 
     target_mtrrs->mtrr_def = read_msr(IA32_MTRR_DEF_TYPE);
     target_mtrrs->mtrr_fix64k = read_msr(IA32_MTRR_FIX64K_00000);

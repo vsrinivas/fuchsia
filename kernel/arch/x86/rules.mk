@@ -41,6 +41,13 @@ USER_ASPACE_SIZE   ?= 0x00007ffffefff000UL
 SUBARCH_DIR := $(LOCAL_DIR)/64
 endif
 
+ifneq ($(ENABLE_NEW_BOOT),)
+KERNEL_DEFINES += ENABLE_NEW_BOOT=1
+
+# set this to 0 to override the 8K offset that was set before
+PHYS_HEADER_LOAD_OFFSET := 0
+endif
+
 SUBARCH_BUILDDIR := $(call TOBUILDDIR,$(SUBARCH_DIR))
 
 KERNEL_DEFINES += \
@@ -203,5 +210,8 @@ $(SUBARCH_BUILDDIR)/kernel.ld: $(SUBARCH_DIR)/kernel.ld $(wildcard arch/*.ld)
 	@$(MKDIR)
 	$(NOECHO)sed "s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/;s/%KERNEL_BASE%/$(KERNEL_BASE)/;s/%KERNEL_LOAD_OFFSET%/$(KERNEL_LOAD_OFFSET)/;s/%HEADER_LOAD_OFFSET%/$(HEADER_LOAD_OFFSET)/;s/%PHYS_HEADER_LOAD_OFFSET%/$(PHYS_HEADER_LOAD_OFFSET)/;" < $< > $@.tmp
 	@$(call TESTANDREPLACEFILE,$@.tmp,$@)
+
+# force a rebuild every time in case something changes
+$(SUBARCH_BUILDDIR)/kernel.ld: FORCE
 
 include make/module.mk

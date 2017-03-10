@@ -15,6 +15,10 @@ SECTIONS
 {
     . = %MEMBASE% + %HEADER_LOAD_OFFSET%;
 
+    /* TODO: remove this logic and push .text.header into .text where
+     * .text.boot0 is once ENABLE_NEW_BOOT is made default.
+     * Remove PHYS_HEADER_LOAD_OFFSET as well.
+     */
     .text.header : AT (%MEMBASE% + %KERNEL_LOAD_OFFSET% - %PHYS_HEADER_LOAD_OFFSET%) {
         KEEP(*(.text.header))
     }
@@ -24,6 +28,7 @@ SECTIONS
 
     .text : AT(%MEMBASE% + %KERNEL_LOAD_OFFSET%) {
         __code_start = .;
+        KEEP(*(.text.boot0))
         KEEP(*(.text.boot))
         *(.text* .sram.text)
         *(.gnu.linkonce.t.*)

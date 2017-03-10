@@ -19,6 +19,7 @@
 #include <platform/pc/acpi.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
+#include <platform/multiboot.h>
 #include <dev/uart.h>
 #include <arch/mmu.h>
 #include <arch/mp.h>
@@ -31,6 +32,9 @@
 #include <kernel/vm.h>
 
 #define LOCAL_TRACE 0
+
+extern multiboot_info_t* _multiboot_info;
+
 
 struct mmu_initial_mapping mmu_initial_mappings[] = {
 #if ARCH_X86_64
@@ -83,8 +87,33 @@ static bool early_console_disabled;
  * kernel in a way that would to badly interact with a Linux kernel booting
  * from the same loader.
  */
+
+void *boot_alloc_mem(size_t len);
+void boot_alloc_reserve(uintptr_t phys, size_t _len);
+
 static void platform_save_bootloader_data(void)
 {
+#if ENABLE_NEW_BOOT
+    if (_multiboot_info != NULL) {
+        multiboot_info_t* mi = (multiboot_info_t*) X86_PHYS_TO_VIRT(_multiboot_info);
+        printf("multiboot: info @ %p\n", mi);
+
+        if ((mi->flags & MB_INFO_CMD_LINE) && mi->cmdline) {
+            const char* cmdline = (const char*) X86_PHYS_TO_VIRT(mi->cmdline);
+            printf("multiboot: cmdline @ %p\n", cmdline);
+            cmdline_init(cmdline);
+        }
+        if ((mi->flags & MB_INFO_MODS) && mi->mods_addr) {
+            module_t* mod = (module_t*) X86_PHYS_TO_VIRT(mi->mods_addr);
+            if (mi->mods_count > 0) {
+                printf("multiboot: ramdisk @ %08x..%08x\n", mod->mod_start, mod->mod_end);
+                bootloader_ramdisk_base = mod->mod_start;
+                bootloader_ramdisk_size = mod->mod_end - mod->mod_start;
+                boot_alloc_reserve(bootloader_ramdisk_base, bootloader_ramdisk_size);
+            }
+        }
+    }
+#else
     uint32_t *zp = (void*) ((uintptr_t)_zero_page_boot_params + KERNEL_BASE);
 
     bootloader_ramdisk_base = zp[0x218 / 4];
@@ -104,6 +133,7 @@ static void platform_save_bootloader_data(void)
         bootloader_i915_reg_base = zp[0xA4 / 4];
         bootloader_fb_window_size = zp[0xA8 / 4];
     }
+#endif
 }
 
 static void* ramdisk_base;
@@ -145,8 +175,6 @@ void* platform_get_ramdisk(size_t *size) {
 
 #include <dev/display.h>
 #include <lib/gfxconsole.h>
-
-void *boot_alloc_mem(size_t len);
 
 status_t display_get_info(struct display_info *info) {
     return gfxconsole_display_get_info(info);
