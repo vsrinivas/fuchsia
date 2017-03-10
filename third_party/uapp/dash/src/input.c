@@ -158,6 +158,7 @@ retry:
 			// properly save the string and then free it,
 			// or it will be clobbered.
 			prompt = savestr(getprompt(NULL));
+			controller_pull_remote_entries();
 			pending_line = linenoise(prompt);
 			if (pending_line) {
 				pending_line_index = 0u;
@@ -212,7 +213,7 @@ static void addtohistory(const char* entry, size_t length) {
 #ifdef USE_LINENOISE
 	linenoiseHistoryAdd(entry);
 #endif
-	controller_add_to_history(entry, length);
+	controller_add_local_entry(entry, length);
 }
 
 /*

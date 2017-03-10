@@ -9,17 +9,23 @@
 // To run shell with a controller, pass a controller channel handle as
 // MX_HND_TYPE_USER1.
 //
-// Commands issued by the shell to the controller:
+// Messages sent by the shell to the controller:
 //
-//  - "get_history" retrieves the shell history.
+//  - "get_history" retrieves the initial shell history record.
 //    response payload: empty
 //    response handles: a vmo where shell history is stored as '\n' separated
 //      entries, including a trailing '\n' after the last entry.
 //      The maximum length of a single history entry in the vmo including the
 //      trailing '\n' is 1024 bytes.
-//  - "add_to_history:<entry>" adds the given <entry> to the shell
-//    history.
+//  - "add_local_entry:<entry>" adds the given <entry> to the history record
+//
+// Messages sent by the controller to the shell:
+//
+//  - "add_remote_entry:<entry>" informs the shell that a new entry has been
+//    added to the history record from another client.
 
 void controller_init();
 
-void controller_add_to_history(const char*, size_t);
+void controller_add_local_entry(const char*, size_t);
+
+void controller_pull_remote_entries();

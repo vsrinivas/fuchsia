@@ -17,8 +17,10 @@ static mx_handle_t ctrl_channel = MX_HANDLE_INVALID;
 static const size_t kMaxHistoryEntrySize = 1024;
 static const char kGetHistoryCommand[] = "get_history";
 static const size_t kGetHistoryCommandLen = sizeof(kGetHistoryCommand) - 1;
-static const char kAddToHistoryPrefix[] = "add_to_history:";
-static const size_t kAddToHistoryPrefixLen = sizeof(kAddToHistoryPrefix) - 1;
+static const char kAddLocalEntryCommand[] = "add_local_entry:";
+static const size_t kAddLocalEntryCommandLen = sizeof(kAddLocalEntryCommand) - 1;
+static const char kAddRemoteEntryCommand[] = "add_remote_entry:";
+static const size_t kAddRemoteEntryCommandLen = sizeof(kAddRemoteEntryCommand) - 1;
 
 void controller_init() {
   ctrl_channel = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
@@ -97,15 +99,15 @@ void controller_init() {
   }
 }
 
-void controller_add_to_history(const char* entry, size_t length) {
+void controller_add_local_entry(const char* entry, size_t length) {
   if (ctrl_channel == MX_HANDLE_INVALID || length > kMaxHistoryEntrySize) {
     return;
   }
-  char buffer[kAddToHistoryPrefixLen + kMaxHistoryEntrySize];
-  memcpy(buffer, kAddToHistoryPrefix, kAddToHistoryPrefixLen);
-  memcpy(buffer + kAddToHistoryPrefixLen, entry, length);
+  char buffer[kAddLocalEntryCommandLen + kMaxHistoryEntrySize];
+  memcpy(buffer, kAddLocalEntryCommand, kAddLocalEntryCommandLen);
+  memcpy(buffer + kAddLocalEntryCommandLen, entry, length);
   mx_status_t status = mx_channel_write(ctrl_channel, 0,
-                                        buffer, kAddToHistoryPrefixLen + length,
+                                        buffer, kAddLocalEntryCommandLen + length,
                                         NULL, 0);
   if (status != NO_ERROR) {
     fprintf(stderr,
@@ -114,6 +116,37 @@ void controller_add_to_history(const char* entry, size_t length) {
     ctrl_channel = MX_HANDLE_INVALID;
     return;
   }
+}
+
+void controller_pull_remote_entries() {
+  if (ctrl_channel == MX_HANDLE_INVALID) {
+    return;
+  }
+
+  // The commands should not be bigger than the name of the command + max size
+  // of a history entry.
+  char buffer[kMaxHistoryEntrySize + 100];
+
+  while(true) {
+    uint32_t read_bytes = 0;
+    mx_status_t status = mx_channel_read(ctrl_channel, 0, buffer, sizeof(buffer) - 1, &read_bytes,
+                                         NULL, 0, NULL);
+    if (status == NO_ERROR) {
+      if (strncmp(buffer, kAddRemoteEntryCommand, kAddRemoteEntryCommandLen) != 0) {
+        fprintf(stderr, "Unrecognized shell controller command.\n");
+        continue;
+      }
+      buffer[read_bytes] = '\0';
+      const char* start = buffer + kAddRemoteEntryCommandLen;
+      linenoiseHistoryAdd(start);
+    } else if (status == ERR_SHOULD_WAIT) {
+      return;
+    } else {
+      fprintf(stderr, "Failed to read the command from the ctrl channel, status: %u.\n", status);
+      return;
+    }
+  }
+
 }
 
 #ifdef mkinit
