@@ -158,6 +158,9 @@ typedef uint32_t mx_signals_t;
 typedef uint64_t mx_koid_t;
 #define MX_KOID_INVALID ((uint64_t) 0)
 
+// Transaction ID and argument types for mx_channel_call.
+typedef uint32_t mx_txid_t;
+
 typedef struct {
     void* wr_bytes;
     mx_handle_t* wr_handles;

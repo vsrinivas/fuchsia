@@ -35,7 +35,7 @@ constexpr mx_rights_t kDefaultChannelRights = MX_RIGHT_TRANSFER | MX_RIGHT_READ 
 // See also: comments in ChannelDispatcher::Call()
 class MessageWaiter : public mxtl::DoublyLinkedListable<MessageWaiter*> {
 public:
-    MessageWaiter(uint32_t txid) : txid_(txid), status_(ERR_TIMED_OUT) {
+    MessageWaiter(mx_txid_t txid) : txid_(txid), status_(ERR_TIMED_OUT) {
     }
     ~MessageWaiter() {
     }
@@ -52,7 +52,7 @@ public:
         return event_.Signal(status);
     }
 
-    uint32_t get_txid() const { return txid_; }
+    mx_txid_t get_txid() const { return txid_; }
 
     mx_status_t Wait(lk_time_t timeout) {
         return event_.Wait(timeout);
@@ -67,7 +67,7 @@ public:
 private:
     mxtl::unique_ptr<MessagePacket> msg_;
     WaitEvent event_;
-    uint32_t txid_;
+    mx_txid_t txid_;
     mx_status_t status_;
 };
 
@@ -274,7 +274,7 @@ int ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
         // If the far side is waiting for replies to messages
         // send via "call", see if this message has a matching
         // txid to one of the waiters, and if so, deliver it.
-        uint32_t txid = msg->get_txid();
+        mx_txid_t txid = msg->get_txid();
         for (auto& waiter: waiters_) {
             // (3C) Deliver message to waiter.
             // Remove waiter from list.

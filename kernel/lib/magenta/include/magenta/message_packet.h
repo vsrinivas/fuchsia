@@ -30,13 +30,13 @@ public:
     Handle* const* handles() const { return handles_; }
     Handle** mutable_handles() { return handles_; }
 
-    // channel calls treat the leading uint32_t of the payload as
-    // a transaction id
-    uint32_t get_txid() const {
-        if (data_size_ < sizeof(uint32_t)) {
+    // mx_channel_call treats the leading bytes of the payload as
+    // a transaction id of type mx_txid_t.
+    mx_txid_t get_txid() const {
+        if (data_size_ < sizeof(mx_txid_t)) {
             return 0;
         } else {
-            return *(reinterpret_cast<const uint32_t*>(data()));
+            return *(reinterpret_cast<const mx_txid_t*>(data()));
         }
     }
 

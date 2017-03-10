@@ -385,7 +385,7 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
 
 static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
                                   const void* data, size_t len) {
-    static atomic_uint_fast32_t next_txid;
+    static _Atomic mx_txid_t next_txid;
 
     struct {
         mx_loader_svc_msg_t header;

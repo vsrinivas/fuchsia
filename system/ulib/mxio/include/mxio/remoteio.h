@@ -115,7 +115,7 @@ typedef struct {
 
 
 struct mxrio_msg {
-    uint32_t txid;                     // transaction id
+    mx_txid_t txid;                    // transaction id
     uint32_t op;                       // opcode
     uint32_t datalen;                  // size of data[]
     int32_t arg;                       // tx: argument, rx: return value

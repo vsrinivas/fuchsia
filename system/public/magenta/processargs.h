@@ -127,7 +127,7 @@ struct mx_proc_args {
 // Used by dynamic loader to obtain objects to link.
 typedef struct mx_loader_svc_msg mx_loader_svc_msg_t;
 struct mx_loader_svc_msg {
-    uint32_t txid;
+    mx_txid_t txid;
     uint32_t opcode;
     int32_t arg;
     uint32_t reserved0;

@@ -39,7 +39,7 @@ struct mxrio {
     mx_handle_t h2;
 
     // transaction id used for synchronous remoteio calls
-    atomic_uint_fast32_t txid;
+    _Atomic mx_txid_t txid;
 };
 
 static pthread_key_t rchannel_key;

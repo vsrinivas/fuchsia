@@ -2036,7 +2036,7 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 
 // This detects recursion via the error function.
 static bool loader_svc_rpc_in_progress;
-static uint32_t loader_svc_txid;
+static mx_txid_t loader_svc_txid;
 
 __NO_SAFESTACK static mx_status_t loader_svc_rpc(uint32_t opcode,
                                                  const void* data, size_t len,

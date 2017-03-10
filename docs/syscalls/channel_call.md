@@ -38,8 +38,9 @@ The write and read phases of this operation behave like **channel_write**() and
 **channel_read**() with the difference that their parameters are provided via the
 *mx_channel_call_args_t* structure.
 
-The first four bytes of *wr_bytes* are considered to be the transaction id (txid).
-If there are fewer than four bytes, the txid is considered to be zero.
+The first four bytes (i.e., a leading **mx_txid_t**) of
+*wr_bytes* are considered to be the transaction id (txid).  If there
+are fewer than four bytes, the txid is considered to be zero.
 
 When the outbound message is written, simultaneously an interest is registered
 for inbound messages of the matching txid.

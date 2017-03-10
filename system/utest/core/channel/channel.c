@@ -449,7 +449,7 @@ static mtx_t call_test_lock;
 static cnd_t call_test_cvar;
 
 typedef struct {
-    uint32_t txid;
+    mx_txid_t txid;
     uint32_t cmd;
     uint32_t bit;
     unsigned action;
