@@ -10,12 +10,12 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
+	$(LOCAL_DIR)/arm_gic.c \
 	$(LOCAL_DIR)/arm_gicv2m.c \
-	$(LOCAL_DIR)/arm_gicv2m_msi.c
+	$(LOCAL_DIR)/arm_gicv2m_msi.c \
 
 MODULE_DEPS += \
 	dev/interrupt \
-	dev/interrupt/arm_gic \
 	lib/pow2_range_allocator
 
 include make/module.mk

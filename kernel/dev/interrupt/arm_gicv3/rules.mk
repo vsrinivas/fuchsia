@@ -7,7 +7,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-KERNEL_INCLUDES += kernel/dev/interrupt/arm_gic/include
+KERNEL_INCLUDES += kernel/dev/interrupt/arm_gicv2/include
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/arm_gicv3.c

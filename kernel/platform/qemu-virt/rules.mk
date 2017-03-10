@@ -33,7 +33,7 @@ MODULE_DEPS += \
     lib/cbuf \
     dev/pcie \
     dev/timer/arm_generic \
-    dev/interrupt/arm_gicv2m \
+    dev/interrupt/arm_gicv2 \
 	dev/psci \
 
 KERNEL_DEFINES += \

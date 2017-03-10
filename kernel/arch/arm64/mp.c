@@ -13,7 +13,7 @@
 #include <dev/interrupt.h>
 #include <arch/ops.h>
 
-#if WITH_DEV_INTERRUPT_ARM_GIC || WITH_DEV_INTERRUPT_ARM_GICV3
+#if WITH_DEV_INTERRUPT_ARM_GICV2 || WITH_DEV_INTERRUPT_ARM_GICV3
 #include <dev/interrupt/arm_gic.h>
 #include <platform/gic.h>
 #elif PLATFORM_BCM28XX
