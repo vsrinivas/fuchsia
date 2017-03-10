@@ -34,9 +34,6 @@ typedef struct worker worker_t;
 typedef struct env {
     worker_t* all_workers;
 
-    mtx_t work_lock;
-    cnd_t work_start_cnd;
-
     list_node_t threads;
 } env_t;
 
@@ -202,6 +199,7 @@ int do_work(env_t* env) {
 }
 
 void do_all_work_single_thread(void) {
+    printf("Test Workers (single-threaded)\n");
     env_t env;
     init_environment(&env);
 
@@ -254,9 +252,6 @@ static void init_environment(env_t* env) {
     // tests are run repeatedly, so reinitialize each time
     env->all_workers = NULL;
 
-    mtx_init(&env->work_lock, mtx_plain);
-    cnd_init(&env->work_start_cnd);
-
     list_initialize(&env->threads);
 
     // assemble the work
@@ -271,11 +266,8 @@ static void init_environment(env_t* env) {
 
 static int do_threaded_work(void* arg) {
     worker_t* w = arg;
-    env_t* env = w->env;
-    mtx_lock(&env->work_lock);
-    cnd_wait(&env->work_start_cnd, &env->work_lock);
-    mtx_unlock(&env->work_lock);
 
+    fprintf(stderr, "work thread(%s) started\n", w->name);
     while ((w->status = w->work(w)) == BUSY) {
         thrd_yield();
     }
@@ -288,6 +280,7 @@ static int do_threaded_work(void* arg) {
 }
 
 static void do_all_work_concurrently(void) {
+    printf("Test Workers (multi-threaded)\n");
     env_t env;
     init_environment(&env);
 
@@ -308,8 +301,6 @@ static void do_all_work_concurrently(void) {
             assert(false);
         }
     }
-
-    cnd_broadcast(&env.work_start_cnd);
 
     thread_list_t* next;
     int failed = 0;
