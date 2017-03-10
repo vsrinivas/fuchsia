@@ -68,6 +68,15 @@ interface ViewAssociate {
 [ServiceName="mozart::ViewAssociateOwner"]
 interface ViewAssociateOwner {};
 
+// |FocusChain| defines the chain that a keyboard input event will follow.
+struct FocusChain {
+  // |version| of the focus chain.
+  uint64 version;
+
+  // |chain| is the ordered list of views that a keyboard event will propagate
+  array<ViewToken> chain;
+};
+
 // Provides information about the services offered by an associate.
 struct ViewAssociateInfo {
   // The names of view services offered by the associate.
@@ -106,4 +115,14 @@ interface ViewInspector {
   // create several scenes during its lifetime.
   ResolveScenes(array<SceneToken> scene_tokens)
       => (array<ViewToken?> view_tokens);
+
+  // Given a token for a view tree, retrieve the current active focus chain for
+  // this view tree.
+  ResolveFocusChain(ViewTreeToken view_tree_token) => (FocusChain? focus_chain);
+
+  // TODO(jpoichet) Move this
+  // Set the current input focus to the provided |view_token|.
+  // This is a back channel from input_manager to view_manager to swap focus
+  // on touch down events. This logic should be moved in the future
+  ActivateFocusChain(ViewToken view_token) => (FocusChain new_chain);
 };

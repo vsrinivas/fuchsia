@@ -126,6 +126,7 @@ class ViewStub {
       std::unique_ptr<ViewStub> view_stub,
       fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
+
  private:
   void SetTreeRecursively(ViewTreeState* tree);
   static void SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree);

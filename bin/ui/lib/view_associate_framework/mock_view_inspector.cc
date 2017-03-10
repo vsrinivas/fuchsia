@@ -84,4 +84,13 @@ void MockViewInspector::ResolveScenes(fidl::Array<SceneTokenPtr> scene_tokens,
   callback(std::move(view_tokens));
 }
 
+void MockViewInspector::ResolveFocusChain(mozart::ViewTreeTokenPtr view_tree_token,
+                                     const ResolveFocusChainCallback& callback) {
+  mozart::FocusChainPtr focus_chain = mozart::FocusChain::New();
+  callback(std::move(focus_chain));
+}
+
+void MockViewInspector::ActivateFocusChain(mozart::ViewTokenPtr view_token,
+                                 const ActivateFocusChainCallback& callback) {}
+
 }  // namespace mozart

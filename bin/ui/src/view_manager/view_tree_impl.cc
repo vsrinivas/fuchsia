@@ -61,6 +61,10 @@ void ViewTreeImpl::SetChildProperties(
                                 std::move(child_view_properties));
 }
 
+void ViewTreeImpl::RequestFocus(uint32_t child_key) {
+  registry_->RequestFocus(state_, child_key);
+}
+
 void ViewTreeImpl::FlushChildren(uint32_t flush_token) {
   registry_->FlushChildren(state_, flush_token);
 }

@@ -56,6 +56,19 @@ void ApplyOverrides(mozart::ViewProperties* value,
 std::string SanitizeLabel(const fidl::String& label) {
   return label.get().substr(0, mozart::ViewManager::kLabelMaxLength);
 }
+
+mozart::FocusChainPtr CopyFocusChain(const mozart::FocusChain* chain) {
+  mozart::FocusChainPtr new_chain = nullptr;
+  if (chain) {
+    new_chain = mozart::FocusChain::New();
+    new_chain->version = chain->version;
+    new_chain->chain.resize(chain->chain.size());
+    for (size_t index = 0; index < chain->chain.size(); ++index) {
+      new_chain->chain[index] = chain->chain[index].Clone();
+    }
+  }
+  return new_chain;
+}
 }  // namespace
 
 ViewRegistry::ViewRegistry(mozart::CompositorPtr compositor)
@@ -499,6 +512,32 @@ void ViewRegistry::SetChildProperties(
   }
 }
 
+void ViewRegistry::RequestFocus(ViewContainerState* container_state,
+                                uint32_t child_key) {
+  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FTL_VLOG(1) << "RequestFocus: container=" << container_state
+              << ", child_key=" << child_key;
+
+  // Check whether the child key exists in the container.
+  auto child_it = container_state->children().find(child_key);
+  if (child_it == container_state->children().end()) {
+    FTL_LOG(ERROR) << "Attempted to modify child with an invalid key: "
+                   << "container=" << container_state
+                   << ", child_key=" << child_key;
+    UnregisterViewContainer(container_state);
+    return;
+  }
+
+  // Immediately discard requests on unavailable views.
+  ViewStub* child_stub = child_it->second.get();
+  if (child_stub->is_unavailable())
+    return;
+
+  // Set active focus chain for this view tree
+  ViewTreeState* tree_state = child_stub->tree();
+  tree_state->RequestFocus(child_stub);
+}
+
 void ViewRegistry::FlushChildren(ViewContainerState* container_state,
                                  uint32_t flush_token) {
   FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
@@ -832,6 +871,38 @@ void ViewRegistry::ResolveScenes(
   callback(std::move(result));
 }
 
+void ViewRegistry::ResolveFocusChain(
+    mozart::ViewTreeTokenPtr view_tree_token,
+    const ResolveFocusChainCallback& callback) {
+  FTL_DCHECK(view_tree_token);
+  FTL_VLOG(1) << "ResolveFocusChain: view_tree_token=" << view_tree_token;
+
+  auto it = view_trees_by_token_.find(view_tree_token->value);
+  if (it != view_trees_by_token_.end()) {
+    callback(CopyFocusChain(it->second->focus_chain()));
+  } else {
+    callback(nullptr);
+  }
+}
+
+void ViewRegistry::ActivateFocusChain(
+    mozart::ViewTokenPtr view_token,
+    const ActivateFocusChainCallback& callback) {
+  FTL_DCHECK(view_token);
+  FTL_VLOG(1) << "ActivateFocusChain: view_token=" << view_token;
+
+  ViewState* view = FindView(view_token->value);
+  if (!view) {
+    callback(nullptr);
+    return;
+  }
+
+  RequestFocus(view->view_stub()->container(), view->view_stub()->key());
+  auto tree_state = view->view_stub()->tree();
+  mozart::FocusChainPtr new_chain = CopyFocusChain(tree_state->focus_chain());
+  callback(std::move(new_chain));
+}  // namespace view_manager
+
 // EXTERNAL SIGNALING
 
 void ViewRegistry::SendInvalidation(ViewState* view_state,
@@ -852,9 +923,8 @@ void ViewRegistry::SendInvalidation(ViewState* view_state,
         FTL_DCHECK(old_flags & ViewState::INVALIDATION_IN_PROGRESS);
 
         view_state->set_invalidation_flags(
-            old_flags &
-            ~(ViewState::INVALIDATION_IN_PROGRESS |
-              ViewState::INVALIDATION_STALLED));
+            old_flags & ~(ViewState::INVALIDATION_IN_PROGRESS |
+                          ViewState::INVALIDATION_STALLED));
 
         if (old_flags & ViewState::INVALIDATION_STALLED) {
           FTL_VLOG(2) << "View recovered from stalled invalidation: view_state="

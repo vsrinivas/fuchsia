@@ -64,6 +64,10 @@ void ViewImpl::SetChildProperties(
                                 std::move(child_view_properties));
 }
 
+void ViewImpl::RequestFocus(uint32_t child_key) {
+  registry_->RequestFocus(state_, child_key);
+}
+
 void ViewImpl::FlushChildren(uint32_t flush_token) {
   registry_->FlushChildren(state_, flush_token);
 }

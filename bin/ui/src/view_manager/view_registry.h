@@ -105,6 +105,10 @@ class ViewRegistry : public mozart::ViewInspector {
                           uint32_t child_scene_version,
                           mozart::ViewPropertiesPtr child_properties);
 
+  // Make child the first responder
+  // Destroys |container_state| if an error occurs.
+  void RequestFocus(ViewContainerState* container_state, uint32_t child_key);
+
   // Flushes changes to children.
   // Destroys |container_state| if an error occurs.
   void FlushChildren(ViewContainerState* container_state, uint32_t flush_token);
@@ -132,6 +136,11 @@ class ViewRegistry : public mozart::ViewInspector {
 
   void ResolveScenes(fidl::Array<mozart::SceneTokenPtr> scene_tokens,
                      const ResolveScenesCallback& callback) override;
+
+  void ResolveFocusChain(mozart::ViewTreeTokenPtr view_tree_token,
+                    const ResolveFocusChainCallback& callback) override;
+  void ActivateFocusChain(mozart::ViewTokenPtr view_token,
+                const ActivateFocusChainCallback& callback) override;
 
  private:
   // LIFETIME

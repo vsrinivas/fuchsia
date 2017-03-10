@@ -93,6 +93,9 @@ class ViewTreeState : public ViewContainerState {
   const std::string& label() const { return label_; }
   const std::string& FormattedLabel() const override;
 
+  void RequestFocus(ViewStub* child_stub);
+  const mozart::FocusChain* focus_chain() { return active_focus_chain_; }
+
  private:
   void ClearHitTesterCallbacks(bool renderer_changed);
 
@@ -113,6 +116,8 @@ class ViewTreeState : public ViewContainerState {
 
   uint32_t invalidation_flags_ = 0u;
   bool frame_scheduled_ = false;
+
+  const mozart::FocusChain* active_focus_chain_;
 
   ftl::WeakPtrFactory<ViewTreeState> weak_factory_;  // must be last
 

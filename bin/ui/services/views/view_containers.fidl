@@ -160,6 +160,9 @@ interface ViewContainer {
   //
   // This method does nothing if |flush_token| is zero.
   FlushChildren(uint32 flush_token);
+
+  // Request the child view to get input focus for key events.
+  RequestFocus(uint32 child_key);
 };
 
 // An interface clients may implement to receive events from a view container.

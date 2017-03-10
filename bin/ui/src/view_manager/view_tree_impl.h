@@ -26,8 +26,8 @@ class ViewTreeImpl : public mozart::ViewTree,
  private:
   // |ViewTree|:
   void GetToken(const GetTokenCallback& callback) override;
-  void GetServiceProvider(fidl::InterfaceRequest<app::ServiceProvider>
-                              service_provider) override;
+  void GetServiceProvider(
+      fidl::InterfaceRequest<app::ServiceProvider> service_provider) override;
   void SetRenderer(fidl::InterfaceHandle<mozart::Renderer> renderer) override;
   void GetContainer(fidl::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;
@@ -45,6 +45,7 @@ class ViewTreeImpl : public mozart::ViewTree,
       uint32_t child_key,
       uint32_t child_scene_version,
       mozart::ViewPropertiesPtr child_view_properties) override;
+  void RequestFocus(uint32_t child_key) override;
   void FlushChildren(uint32_t flush_token) override;
 
   // |app::ServiceProvider|:

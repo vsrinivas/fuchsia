@@ -74,6 +74,12 @@ ViewTreeState* ViewTreeState::AsViewTreeState() {
   return this;
 }
 
+void ViewTreeState::RequestFocus(ViewStub* child_stub) {
+  if (child_stub->is_unavailable())
+    return;
+  active_focus_chain_ = child_stub->state()->focus_chain();
+}
+
 const std::string& ViewTreeState::FormattedLabel() const {
   if (formatted_label_cache_.empty()) {
     formatted_label_cache_ =

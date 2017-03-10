@@ -70,6 +70,24 @@ const std::string& ViewState::FormattedLabel() const {
   return formatted_label_cache_;
 }
 
+void ViewState::RebuildFocusChain() {
+  focus_chain_ = mozart::FocusChain::New();
+  // This will come into play with focus chain management API
+  focus_chain_->version = 1;
+
+  // Construct focus chain by adding our ancestors until we hit a root
+  size_t index = 0;
+  focus_chain_->chain.resize(index + 1);
+  focus_chain_->chain[index++] = view_token().Clone();
+  ViewState* parent = view_stub()->parent();
+  while (parent) {
+    focus_chain_->chain.resize(index + 1);
+    focus_chain_->chain[index++] = parent->view_token().Clone();
+    ViewStub* stub = parent->view_stub();
+    parent = stub ? stub->parent() : nullptr;
+  }
+}
+
 std::ostream& operator<<(std::ostream& os, ViewState* view_state) {
   if (!view_state)
     return os << "null";

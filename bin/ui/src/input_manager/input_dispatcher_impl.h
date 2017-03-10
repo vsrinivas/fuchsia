@@ -39,11 +39,20 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
 
  private:
   void ProcessNextEvent();
+  // Used for located events (touch, stylus)
   void DeliverEvent(mozart::InputEventPtr event);
   void DeliverEvent(uint64_t event_path_propagation_id,
-                    const EventPath* chain,
+                    const EventPath* event_path,
                     mozart::InputEventPtr event);
+  // Used for key events (keyboard)
+  // |propagation_index| is the current index in the |focus_chain|
+  void DeliverKeyEvent(mozart::FocusChainPtr focus_chain,
+                       uint64_t propagation_index,
+                       mozart::InputEventPtr event);
+  // Used to post as task and schedule the next call to |DispatchEvent|
+  void ScheduleNextEvent();
 
+  void OnFocusResult(mozart::FocusChainPtr focus_chain);
   void OnHitTestResult(mozart::PointFPtr point,
                        std::unique_ptr<mozart::ResolvedHits> resolved_hits);
 
@@ -59,6 +68,8 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   uint64_t event_path_propagation_id_ = 0;
 
   fidl::Binding<mozart::InputDispatcher> binding_;
+
+  mozart::FocusChainPtr active_focus_chain_;
 
   ftl::WeakPtrFactory<InputDispatcherImpl> weak_factory_;
 

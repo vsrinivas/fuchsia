@@ -47,6 +47,7 @@ class ViewImpl : public mozart::View,
       uint32_t child_key,
       uint32_t child_scene_version,
       mozart::ViewPropertiesPtr child_view_properties) override;
+  void RequestFocus(uint32_t child_key) override;
   void FlushChildren(uint32_t flush_token) override;
 
   // |app::ServiceProvider|:

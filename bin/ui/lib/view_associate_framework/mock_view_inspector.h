@@ -42,6 +42,10 @@ class MockViewInspector : public ViewInspector {
                     const GetHitTesterCallback& callback) override;
   void ResolveScenes(fidl::Array<SceneTokenPtr> scene_tokens,
                      const ResolveScenesCallback& callback) override;
+  void ResolveFocusChain(mozart::ViewTreeTokenPtr view_tree_token,
+                    const ResolveFocusChainCallback& callback) override;
+  void ActivateFocusChain(mozart::ViewTokenPtr view_token,
+                const ActivateFocusChainCallback& callback) override;
 
  private:
   std::unordered_map<uint32_t, HitTester*> hit_testers_;

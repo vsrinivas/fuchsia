@@ -59,6 +59,7 @@ InputDispatcherImpl::~InputDispatcherImpl() {}
 
 void InputDispatcherImpl::DispatchEvent(mozart::InputEventPtr event) {
   FTL_DCHECK(event);
+  FTL_VLOG(1) << "DispatchEvent: " << *event;
 
   pending_events_.push(std::move(event));
   if (pending_events_.size() == 1u)
@@ -70,6 +71,8 @@ void InputDispatcherImpl::ProcessNextEvent() {
 
   do {
     const mozart::InputEvent* event = pending_events_.front().get();
+    FTL_VLOG(1) << "ProcessNextEvent: " << *event;
+
     if (event->is_pointer()) {
       const mozart::PointerEventPtr& pointer = event->get_pointer();
       if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
@@ -86,6 +89,14 @@ void InputDispatcherImpl::ProcessNextEvent() {
         hit_tester_->HitTest(std::move(point), hit_result_callback);
         return;
       }
+    } else if (event->is_keyboard()) {
+      associate_->inspector()->view_inspector()->ResolveFocusChain(
+          view_tree_token_.Clone(), [weak = weak_factory_.GetWeakPtr()](
+                                        mozart::FocusChainPtr focus_chain) {
+            if (weak && focus_chain)
+              weak->OnFocusResult(std::move(focus_chain));
+          });
+      return;
     }
     DeliverEvent(std::move(pending_events_.front()));
     pending_events_.pop();
@@ -93,27 +104,38 @@ void InputDispatcherImpl::ProcessNextEvent() {
 }
 
 void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
-                                       const EventPath* chain,
+                                       const EventPath* event_path,
                                        mozart::InputEventPtr event) {
   FTL_VLOG(1) << "DeliverEvent " << event_path_propagation_id << " " << *event;
   // TODO(jpoichet) when the chain is changed, we might need to cancel events
   // that have not progagated fully through the chain.
-  if (chain && event_path_propagation_id_ == event_path_propagation_id) {
-    FTL_DCHECK(chain->token);
-    FTL_DCHECK(chain->transform);
+  if (event_path && event_path_propagation_id_ == event_path_propagation_id) {
+    FTL_DCHECK(event_path->token);
+    FTL_DCHECK(event_path->transform);
     mozart::InputEventPtr cloned_event = event.Clone();
     // TODO(jpoichet) once input arena is in place, we won't need the "handled"
     // boolean on the callback anymore.
     associate_->DeliverEvent(
-        chain->token.get(), std::move(event), ftl::MakeCopyable([
-          this, event_path_propagation_id, chain, evt = std::move(cloned_event)
+        event_path->token.get(), std::move(event), ftl::MakeCopyable([
+          this, event_path_propagation_id, event_path,
+          cloned_event = std::move(cloned_event)
         ](bool handled) mutable {
           if (!handled &&
               event_path_propagation_id_ == event_path_propagation_id &&
-              chain && chain->next) {
-            // Move up the focus chain if not handled
-            DeliverEvent(event_path_propagation_id, chain->next.get(),
-                         std::move(evt));
+              event_path && event_path->next) {
+            // Avoid re-entrance on DeliverEvent
+            mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+                ftl::MakeCopyable([
+                  weak = weak_factory_.GetWeakPtr(), event_path_propagation_id,
+                  event_path = std::move(event_path),
+                  cloned_event = std::move(cloned_event)
+                ]() mutable {
+                  if (weak)
+                    weak->DeliverEvent(event_path_propagation_id,
+                                       event_path->next.get(),
+                                       std::move(cloned_event));
+
+                }));
           }
         }));
   }
@@ -125,6 +147,66 @@ void InputDispatcherImpl::DeliverEvent(mozart::InputEventPtr event) {
     DeliverEvent(event_path_propagation_id_, event_path_.get(),
                  std::move(event));
   }
+}
+
+void InputDispatcherImpl::DeliverKeyEvent(mozart::FocusChainPtr focus_chain,
+                                          uint64_t propagation_index,
+                                          mozart::InputEventPtr event) {
+  FTL_VLOG(1) << "DeliverKeyEvent " << focus_chain->version << " "
+              << (1 + propagation_index) << "/" << focus_chain->chain.size()
+              << " " << *(focus_chain->chain[propagation_index]) << " "
+              << *event;
+
+  auto cloned_event = event.Clone();
+  associate_->DeliverEvent(
+      focus_chain->chain[propagation_index].get(), std::move(event),
+      ftl::MakeCopyable([
+        this, focus_chain = std::move(focus_chain), propagation_index,
+        cloned_event = std::move(cloned_event)
+      ](bool handled) mutable {
+        FTL_VLOG(2) << "Event " << *cloned_event << (handled ? "" : " Not")
+                    << " Handled by "
+                    << *(focus_chain->chain[propagation_index]);
+
+        if (!handled && propagation_index + 1 < focus_chain->chain.size()) {
+          // Avoid re-entrance on DeliverKeyEvent
+          mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+              ftl::MakeCopyable([
+                weak = weak_factory_.GetWeakPtr(),
+                focus_chain = std::move(focus_chain), propagation_index,
+                cloned_event = std::move(cloned_event)
+              ]() mutable {
+                FTL_VLOG(2) << "Propagating event to "
+                            << *(focus_chain->chain[propagation_index + 1]);
+
+                if (weak)
+                  weak->DeliverKeyEvent(std::move(focus_chain),
+                                        propagation_index + 1,
+                                        std::move(cloned_event));
+
+              }));
+        }
+      }));
+}
+
+void InputDispatcherImpl::ScheduleNextEvent() {
+  if (!pending_events_.empty()) {
+    // Prevent reentrance from ProcessNextEvent.
+    auto process_next_event = [weak = weak_factory_.GetWeakPtr()] {
+      if (weak)
+        weak->ProcessNextEvent();
+    };
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(process_next_event);
+  }
+}
+
+void InputDispatcherImpl::OnFocusResult(mozart::FocusChainPtr focus_chain) {
+  FTL_VLOG(1) << "OnFocusResult " << focus_chain->version << " "
+              << *(focus_chain->chain.front());
+  DeliverKeyEvent(std::move(focus_chain), 0,
+                  std::move(pending_events_.front()));
+  pending_events_.pop();
+  ScheduleNextEvent();
 }
 
 void InputDispatcherImpl::OnHitTestResult(
@@ -143,37 +225,43 @@ void InputDispatcherImpl::OnHitTestResult(
             return;
           }
 
-          bool focus_switched = true;
-          if (event_path_) {
-            if (event_path_->token->value != views.back()->token->value) {
-              // Focus lost event
-              mozart::InputEventPtr event = mozart::InputEvent::New();
-              mozart::FocusEventPtr focus = mozart::FocusEvent::New();
-              focus->event_time = InputEventTimestampNow();
-              focus->focused = false;
-              event->set_focus(std::move(focus));
-              associate_->DeliverEvent(event_path_->token.get(),
-                                       std::move(event), nullptr);
+          // FIXME(jpoichet) This should be done somewhere else.
+          associate_->inspector()->view_inspector()->ActivateFocusChain(
+              views.back()->token->Clone(),
+              [this](mozart::FocusChainPtr new_chain) {
+                if (!active_focus_chain_ ||
+                    active_focus_chain_->chain.front()->value !=
+                        new_chain->chain.front()->value) {
+                  if (active_focus_chain_) {
+                    FTL_VLOG(1) << "Input focus lost by "
+                                << *(active_focus_chain_->chain.front().get());
+                    mozart::InputEventPtr event = mozart::InputEvent::New();
+                    mozart::FocusEventPtr focus = mozart::FocusEvent::New();
+                    focus->event_time = InputEventTimestampNow();
+                    focus->focused = false;
+                    event->set_focus(std::move(focus));
+                    associate_->DeliverEvent(
+                        active_focus_chain_->chain.front().get(),
+                        std::move(event), nullptr);
+                  }
 
-            } else {
-              focus_switched = false;
-            }
-          }
+                  FTL_VLOG(1) << "Input focus gained by "
+                              << *(new_chain->chain.front().get());
+                  mozart::InputEventPtr event = mozart::InputEvent::New();
+                  mozart::FocusEventPtr focus = mozart::FocusEvent::New();
+                  focus->event_time = InputEventTimestampNow();
+                  focus->focused = true;
+                  event->set_focus(std::move(focus));
+                  associate_->DeliverEvent(new_chain->chain.front().get(),
+                                           std::move(event), nullptr);
 
-          if (focus_switched) {
-            // TODO(jpoichet) Implement Input Arena
-            event_path_propagation_id_++;
-            event_path_ = std::move(views.back());
+                  active_focus_chain_ = std::move(new_chain);
+                }
+              });
 
-            // Focus gained event
-            mozart::InputEventPtr event = mozart::InputEvent::New();
-            mozart::FocusEventPtr focus = mozart::FocusEvent::New();
-            focus->event_time = InputEventTimestampNow();
-            focus->focused = true;
-            event->set_focus(std::move(focus));
-            associate_->DeliverEvent(event_path_->token.get(), std::move(event),
-                                     nullptr);
-          }
+          // TODO(jpoichet) Implement Input Arena
+          event_path_propagation_id_++;
+          event_path_ = std::move(views.back());
 
           FTL_VLOG(1) << "OnViewHitResolved: view_token_=" << event_path_->token
                       << ", view_transform_=" << event_path_->transform
@@ -183,15 +271,7 @@ void InputDispatcherImpl::OnHitTestResult(
           DeliverEvent(std::move(pending_events_.front()));
           pending_events_.pop();
 
-          if (!pending_events_.empty()) {
-            // Prevent reentrance from ProcessNextEvent.
-            auto process_next_event = [weak = weak_factory_.GetWeakPtr()] {
-              if (weak)
-                weak->ProcessNextEvent();
-            };
-            mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-                process_next_event);
-          }
+          ScheduleNextEvent();
         });
   }
 }
