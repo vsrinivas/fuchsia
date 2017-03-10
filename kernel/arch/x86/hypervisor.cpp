@@ -306,6 +306,18 @@ VmxonCpuContext* VmxonContext::CurrCpuContext() {
     return &cpu_contexts_[arch_curr_cpu_num()];
 }
 
+AutoVmcsLoad::AutoVmcsLoad(VmxPage* page) {
+    DEBUG_ASSERT(!arch_ints_disabled());
+    arch_disable_ints();
+    __UNUSED mx_status_t status = vmptrld(page->PhysicalAddress());
+    DEBUG_ASSERT(status == NO_ERROR);
+}
+
+AutoVmcsLoad::~AutoVmcsLoad() {
+    DEBUG_ASSERT(arch_ints_disabled());
+    arch_enable_ints();
+}
+
 mx_status_t VmcsCpuContext::Init(const VmxInfo& info) {
     mx_status_t status = VmxCpuContext::Init(info);
     if (status != NO_ERROR)
@@ -336,14 +348,16 @@ static mx_status_t set_vmcs_control(uint32_t controls, uint64_t true_msr, uint64
     return NO_ERROR;
 }
 
+mx_status_t VmcsCpuContext::Clear() {
+    return vmclear(page_.PhysicalAddress());
+}
+
 mx_status_t VmcsCpuContext::Setup() {
     mx_status_t status = Clear();
     if (status != NO_ERROR)
         return status;
 
-    status = vmptrld(page_.PhysicalAddress());
-    if (status != NO_ERROR)
-        return status;
+    AutoVmcsLoad vmcs_load(&page_);
 
     // Setup secondary processor-based VMCS controls.
     status = set_vmcs_control(VMCS_32_PROCBASED_CTLS2,
@@ -460,8 +474,31 @@ mx_status_t VmcsCpuContext::Setup() {
     return NO_ERROR;
 }
 
-mx_status_t VmcsCpuContext::Clear() {
-    return vmclear(page_.PhysicalAddress());
+mx_status_t VmcsCpuContext::Launch() {
+    AutoVmcsLoad vmcs_load(&page_);
+    VmxHostState host_state;
+    if (vmx_host_save(&host_state)) {
+        // We may return from the guest with flags set, due to a vmlaunch
+        // failure, therefore we use an unchecked vmread to get the exit reason
+        // so as not to trigger the CF and ZF flags check.
+        uint64_t reason = vmread_unchecked(VMCS_32_EXIT_REASON) & VMCS_32_EXIT_REASON_BASIC_MASK;
+        dprintf(SPEW, "vmexit reason: %#" PRIx64 "\n", reason);
+        return NO_ERROR;
+    }
+
+    // FS is used for thread-local storage — save each time.
+    vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
+    // CR3 is used to maintain the virtual address space — save each time.
+    vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
+    // RSP is used to store host state – save each time.
+    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state));
+
+    mx_status_t status = vmlaunch();
+    if (status != NO_ERROR) {
+        uint64_t error = vmread(VMCS_32_INSTRUCTION_ERROR);
+        dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
+    }
+    return status;
 }
 
 static int vmcs_setup(void* arg) {
@@ -515,33 +552,13 @@ VmcsCpuContext* VmcsContext::CurrCpuContext() {
 }
 
 static int vmcs_launch(void* arg) {
-    VmxHostState host_state;
-    if (vmx_host_save(&host_state)) {
-        // We may return from the guest with flags set, due to a vmlaunch
-        // failure, therefore we use an unchecked vmread to get the exit reason
-        // so as not to trigger the CF and ZF flags check.
-        uint64_t reason = vmread_unchecked(VMCS_32_EXIT_REASON) & VMCS_32_EXIT_REASON_BASIC_MASK;
-        dprintf(SPEW, "vmexit reason: %#" PRIx64 "\n", reason);
-        return NO_ERROR;
-    }
-
-    // FS is used for thread-local storage — save each time.
-    vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
-    // CR3 is used to maintain the virtual address space — save each time.
-    vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
-    // RSP is used to store host state – save each time.
-    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state));
-
-    mx_status_t status = vmlaunch();
-    if (status != NO_ERROR) {
-        uint64_t error = vmread(VMCS_32_INSTRUCTION_ERROR);
-        dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
-    }
-    return status;
+    VmcsContext* context = static_cast<VmcsContext*>(arg);
+    VmcsCpuContext* cpu_context = context->CurrCpuContext();
+    return cpu_context->Launch();
 }
 
 mx_status_t VmcsContext::Start(uintptr_t entry, uintptr_t stack) {
-    return percpu_exec(vmcs_launch, nullptr);
+    return percpu_exec(vmcs_launch, this);
 }
 
 mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {

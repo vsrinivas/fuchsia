@@ -136,12 +136,18 @@ public:
     mx_status_t VmxOff();
 };
 
+struct AutoVmcsLoad {
+    AutoVmcsLoad(VmxPage* page);
+    ~AutoVmcsLoad();
+};
+
 /* Creates a VMCS CPU context to initialize a VM. */
 class VmcsCpuContext : public VmxCpuContext {
 public:
     mx_status_t Init(const VmxInfo& info) override;
-    mx_status_t Setup();
     mx_status_t Clear();
+    mx_status_t Setup();
+    mx_status_t Launch();
 
 private:
     VmxPage msr_bitmaps_page_;
