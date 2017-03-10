@@ -134,6 +134,9 @@ class VmxonCpuContext : public VmxCpuContext {
 public:
     mx_status_t VmxOn();
     mx_status_t VmxOff();
+
+private:
+    bool is_on_ = false;
 };
 
 struct AutoVmcsLoad {

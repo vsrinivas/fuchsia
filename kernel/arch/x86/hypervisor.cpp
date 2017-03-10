@@ -168,11 +168,13 @@ mx_status_t VmxCpuContext::Init(const VmxInfo& info) {
 }
 
 mx_status_t VmxonCpuContext::VmxOn() {
-    return vmxon(page_.PhysicalAddress());
+    mx_status_t status = vmxon(page_.PhysicalAddress());
+    is_on_ = status == NO_ERROR;
+    return status;
 }
 
 mx_status_t VmxonCpuContext::VmxOff() {
-    return vmxoff();
+    return is_on_ ? vmxoff() : NO_ERROR;
 }
 
 VmxPage::~VmxPage() {
