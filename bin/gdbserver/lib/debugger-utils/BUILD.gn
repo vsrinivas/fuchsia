@@ -8,16 +8,24 @@
 # TODO(dje): Living in bin/foo is suboptimal.
 static_library("debugger-utils") {
   sources = [
-    "dso-list.cc",
-    "dso-list.h",
     "elf-reader.cc",
     "elf-reader.h",
     "ktrace-reader.cc",
     "ktrace-reader.h",
     "memory.h",
+    "memory-file.cc",
+    "memory-file.h",
     "util.cc",
     "util.h",
   ]
+
+  if (is_fuchsia) {
+    sources += [
+      "dso-list.cc",
+      "dso-list.h",
+      "util-mx.cc",
+    ]
+  }
 
   if (current_cpu == "x64") {
     sources += [
@@ -30,9 +38,13 @@ static_library("debugger-utils") {
 
   deps = [
     "//lib/ftl",
-    "//lib/mtl",
-    "//magenta/system/ulib/mx",
   ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//magenta/system/ulib/mx",
+    ]
+  }
 }
 
 group("tests") {
@@ -50,6 +62,7 @@ executable("util-unittests") {
     "../../test/run-all-unittests.cc",
     "util.cc",
     "util.h",
+    "util-mx.cc",
     "util-unittest.cc",
   ]
 

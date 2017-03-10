@@ -10,8 +10,10 @@
 #include <string>
 #include <vector>
 
+#ifdef __Fuchsia__
 #include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
+#endif  // __Fuchsia__
 
 #include "lib/ftl/strings/string_view.h"
 
@@ -56,9 +58,11 @@ void LogError(const std::string& message);
 // result of strerror in a nicely formatted way.
 void LogErrorWithErrno(const std::string& message);
 
+#ifdef __Fuchsia__
 // Logs the given |message| using the string representation of |status| in a
 // nicely formatted way.
 void LogErrorWithMxStatus(const std::string& message, mx_status_t status);
+#endif  // __Fuchsia__
 
 // Joins multiple strings using the given delimiter. This aims to avoid
 // repeated dynamic allocations and simply writes the strings into the given
@@ -72,15 +76,6 @@ size_t JoinStrings(const std::deque<std::string>& strings,
                    const char delimiter,
                    char* buffer,
                    size_t buffer_size);
-
-// Return the name of exception |type| as a C string.
-const char* ExceptionName(mx_excp_type_t type);
-
-// Return the string representation of an exception.
-std::string ExceptionToString(mx_excp_type_t type,
-                              const mx_exception_context_t& context);
-
-bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max);
 
 // An argv abstraction, and easier to type.
 using Argv = std::vector<std::string>;
@@ -98,6 +93,19 @@ char* xstrdup(const char* s);
 const char* basename(const char* s);
 
 void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr);
+
+#ifdef __Fuchsia__
+
+// Return the name of exception |type| as a C string.
+const char* ExceptionName(mx_excp_type_t type);
+
+// Return the string representation of an exception.
+std::string ExceptionToString(mx_excp_type_t type,
+                              const mx_exception_context_t& context);
+
+bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max);
+
+#endif  // __Fuchsia__
 
 }  // namespace util
 }  // namespace debugserver
