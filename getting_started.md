@@ -92,16 +92,25 @@ After Fuchsia is built, you will have a Magenta (`magenta.bin`) image and a
 
 ### Boot from hardware
 
-If you have the appropriate hardware, you can run Fuchsia on any of these
-devices. Follow the links for configuration information.
+There are three options for booting Fuchsia on hardware: network booting (see
+below), booting from USB (see below), or [installing](https://fuchsia.googlesource.com/magenta/+/master/system/uapp/install-fuchsia/README.md)
+Fuchsia on internal storage. In all cases you'll need to put some code on the
+target hardware, using a USB drive is a good option for doing this.
+
+If you want to netboot or create a bootable USB drive, but not install Fuchsia
+you can use the [build-bootable-usb-gigaboot.sh script](https://fuchsia.googlesource.com/scripts/+/master/build-bootable-usb-gigaboot.sh).
+If you plan to netboot, pass the `-m` and `-f` options to skip copying over the
+Magenta kernel and Fuchsia system images since the bootserver will supply these.
+
+It may be useful to look at some of the hardware specific instructions. The
+Raspberry Pi 3 requires very different procedures and the other guides may help
+with hardware-specific firmware configuration.
 
 * [Acer Switch Alpha 12](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/acer12.md)
 * [Intel NUC](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/nuc.md)
 * [Raspberry Pi 3](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/rpi3.md)
 
-Once you've configured the hardware, run `fboot` on your host system, then boot
-the hardware from the USB thumb drive that can be built following the directions
-at the end of the Acer Switch page.
+Once your hardware is configured, you can run `fboot` to start the bootserver.
 
 ### Boot from QEMU
 
