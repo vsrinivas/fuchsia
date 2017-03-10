@@ -471,7 +471,7 @@ mx_status_t VmcsCpuContext::Setup() {
     vmwrite(VMCS_XX_HOST_IDTR_BASE, reinterpret_cast<uint64_t>(idt_get_readonly()));
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_ESP, 0);
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_EIP, 0);
-    vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load));
+    vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load_entry));
 
     return NO_ERROR;
 }
@@ -561,6 +561,17 @@ static int vmcs_launch(void* arg) {
 
 mx_status_t VmcsContext::Start(uintptr_t entry, uintptr_t stack) {
     return percpu_exec(vmcs_launch, this);
+}
+
+void vmx_host_load(VmxHostState* host_state) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    uint cpu_num = arch_curr_cpu_num();
+
+    // Reload the task segment in order to restore its limit.  VMX always
+    // restores it with a limit of 0x67, which excludes the IO bitmap.
+    seg_sel_t selector = TSS_SELECTOR(cpu_num);
+    x86_clear_tss_busy(selector);
+    x86_ltr(selector);
 }
 
 mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {

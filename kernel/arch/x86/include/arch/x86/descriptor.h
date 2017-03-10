@@ -23,7 +23,7 @@
 #define USER_DATA_SELECTOR      (0x28 | 3)
 #define USER_CODE_64_SELECTOR   (0x30 | 3)
 
-#define TSS_SELECTOR(i)            (0x38 + 16 * (i))
+#define TSS_SELECTOR(i)            ((uint16_t)(0x38 + 16 * (i)))
 /* 0x40 is used by the second half of the first TSS descriptor */
 
 /* selector priviledge level */
@@ -71,6 +71,7 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
 void x86_initialize_percpu_tss(void);
 
 void x86_set_tss_sp(vaddr_t sp);
+void x86_clear_tss_busy(seg_sel_t sel);
 
 __END_CDECLS
 

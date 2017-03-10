@@ -57,9 +57,12 @@ int vmx_host_save(VmxHostState* host_state);
 
 /* Load the host state.
  * This is the VMX equivalent of longjmp. This is never called directly by the
- * code, but is executed by VMX on VM exit.
+ * code, but is executed by VMX on VM exit.  It calls vmx_host_load() before
+ * returning through vmx_host_save.
  */
-void vmx_host_load();
+void vmx_host_load_entry();
+void vmx_host_load(VmxHostState* host_state);
+
 __END_CDECLS
 
 #endif // ASSEMBLY

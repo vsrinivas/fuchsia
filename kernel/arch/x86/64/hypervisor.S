@@ -36,7 +36,7 @@ FUNCTION(vmx_host_save)
  * VM exit, host_state argument is stored in %rsp. We use this to restore the
  * stack and registers to the state they were in when vmx_host_save was called.
  */
-FUNCTION(vmx_host_load)
+FUNCTION(vmx_host_load_entry)
     // Load host_state from %rsp.
     mov %rsp, %rdi
 
@@ -53,6 +53,14 @@ FUNCTION(vmx_host_load)
     pushq VHS_RFLAGS(%rdi)
     popfq
 
-    // Return 1, using the return address of vmx_host_save.
+    # Set up the later return
+    pushq VHS_RIP(%rdi)
+
+    # call vmx_host_load(host_state)
+    sub $8, %rsp
+    call vmx_host_load
+    add $8, %rsp
+
+    // Return 1, using the return address of vmx_host_save pushed above.
     mov $1, %eax
-    jmp *VHS_RIP(%rdi)
+    ret

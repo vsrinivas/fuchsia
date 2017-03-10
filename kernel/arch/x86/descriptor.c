@@ -20,9 +20,16 @@
 #include <string.h>
 #include <trace.h>
 
+#define TSS_DESC_BUSY_BIT (1ull << 41)
+
 /* the main global gdt in the system, declared in assembly */
 extern uint8_t _gdt[];
 static void x86_tss_assign_ists(struct x86_percpu *percpu, tss_t *tss);
+
+struct task_desc {
+    uint64_t low;
+    uint64_t high;
+} __PACKED;
 
 void x86_initialize_percpu_tss(void)
 {
@@ -72,6 +79,13 @@ void x86_set_tss_sp(vaddr_t sp)
 #elif ARCH_X86_64
     tss->rsp0 = sp;
 #endif
+}
+
+void x86_clear_tss_busy(seg_sel_t sel)
+{
+    uint16_t index = sel >> 3;
+    struct task_desc *desc = (struct task_desc *)(_gdt + index * 8);
+    desc->low &= ~TSS_DESC_BUSY_BIT;
 }
 
 void set_global_desc_32(seg_sel_t sel, uint32_t base, uint32_t limit,
