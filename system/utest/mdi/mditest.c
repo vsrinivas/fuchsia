@@ -11,7 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <magenta/bootdata.h>
+#include <magenta/boot/bootdata.h>
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 #include <mdi/mdi.h>
