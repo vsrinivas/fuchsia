@@ -15,8 +15,6 @@
 int thread_injection_test(void) {
     BEGIN_TEST;
 
-    char msg[128];
-
     // Create a channel to communicate with the injector.  This channel
     // will serve two purposes.  First, we'll use it to give the
     // injector some important bits and our process handle.  Second,
@@ -25,37 +23,20 @@ int thread_injection_test(void) {
     // another process, so it relies on us (the injectee) having
     // created the channel beforehand and told the injector its handle
     // number in this process.
-    mx_handle_t channelh[2];
-    mx_status_t status = mx_channel_create(0, channelh, channelh + 1);
+    mx_handle_t injector_channel_handle, injector_channel;
+    mx_status_t status = mx_channel_create(0, &injector_channel,
+                                           &injector_channel_handle);
+    char msg[128];
     snprintf(msg, sizeof(msg), "mx_channel_create failed: %d", status);
     ASSERT_EQ(status, 0, msg);
 
-    // Start the injector program, which will inject a third program
-    // into this here process.
-    const char* argv[] = { "/boot/bin/thread-injection-injector" };
-    uint32_t id = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
-
-    launchpad_t* lp;
-    launchpad_create(0, argv[0], &lp);
-    launchpad_load_from_file(lp, argv[0]);
-    launchpad_set_args(lp, 1, argv);
-    launchpad_add_handle(lp, channelh[1], id);
-    launchpad_clone(lp, LP_CLONE_ALL);
-
-
-    mx_handle_t proc;
-    const char* errmsg;
-    status = launchpad_go(lp, &proc, &errmsg);
-    snprintf(msg, sizeof(msg), "launchpad_go failed: %s: %d", errmsg, status);
-    ASSERT_GT(proc, 0, msg);
-    mx_handle_close(proc);
-
     // Now send our own process handle to the injector, along with
-    // some crucial information.
+    // some crucial information.  This has to be done before starting
+    // the injector, so it can immediately read from the channel.
     atomic_int my_futex = ATOMIC_VAR_INIT(0);
     struct helper_data data = {
         .futex_addr = &my_futex,
-        .bootstrap = channelh[0],
+        .bootstrap = injector_channel,
     };
     mx_handle_t handles[2];
 
@@ -71,10 +52,29 @@ int thread_injection_test(void) {
              mx_vmar_root_self(), status);
     ASSERT_EQ(status, 0, msg);
 
-    status = mx_channel_write(channelh[0], 0, &data, sizeof(data), handles,
-                              countof(handles));
+    status = mx_channel_write(injector_channel, 0, &data, sizeof(data),
+                              handles, countof(handles));
     snprintf(msg, sizeof(msg), "mx_channel_write failed: %d", status);
     ASSERT_EQ(status, 0, msg);
+
+    // Start the injector program, which will inject a third program
+    // into this here process.
+    const char* argv[] = { "/boot/bin/thread-injection-injector" };
+    uint32_t id = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
+
+    launchpad_t* lp;
+    launchpad_create(0, argv[0], &lp);
+    launchpad_load_from_file(lp, argv[0]);
+    launchpad_set_args(lp, 1, argv);
+    launchpad_add_handle(lp, injector_channel_handle, id);
+    launchpad_clone(lp, LP_CLONE_ALL);
+
+    mx_handle_t proc;
+    const char* errmsg;
+    status = launchpad_go(lp, &proc, &errmsg);
+    snprintf(msg, sizeof(msg), "launchpad_go failed: %s: %d", errmsg, status);
+    ASSERT_GT(proc, 0, msg);
+    mx_handle_close(proc);
 
     // Now the injector will inject the "injected" program into this process.
     // When that program starts up, it will see the &my_futex value and
