@@ -10,7 +10,7 @@
 // lsw of sha256("bootdata")
 #define BOOTDATA_MAGIC (0x868cf7e6u)
 
-// Align bootdata_t to 8 byte boundary
+// Round n up to the next 8 byte boundary
 #define BOOTDATA_ALIGN(n) (((n) + 7) & (~7))
 
 __BEGIN_CDECLS;
@@ -35,6 +35,10 @@ __BEGIN_CDECLS;
 // MDI data.  The "extra" field is unused and set to 0.
 #define BOOTDATA_MDI              (0x3149444du) // MDI1
 
+// A Magenta Kernel Image
+// "extra" and "flags" are 0.
+#define BOOTDATA_KERNEL           (0x4c4e524bu) // KRNL
+
 // Flag indicating that the bootfs is compressed.
 #define BOOTDATA_BOOTFS_FLAG_COMPRESSED  (1 << 0)
 
@@ -45,9 +49,7 @@ __BEGIN_CDECLS;
 // BootData headers in a stream must be 8-byte-aligned.
 //
 // The length field specifies the actual payload length
-// and does not include the size of padding.  The macro
-// BOOTDATA_ALIGN(length) may be used to determine the
-// number of padding bytes to insert or skip past.
+// and does not include the size of padding.
 typedef struct {
     // Boot data type
     uint32_t type;
