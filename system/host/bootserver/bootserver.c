@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <magenta/netboot.h>
+#include <magenta/boot/netboot.h>
 
 #define DEFAULT_US_BETWEEN_PACKETS 20
 

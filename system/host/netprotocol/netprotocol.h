@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/netboot.h>
+#include <magenta/boot/netboot.h>
 
 #define MAXSIZE 1024
 

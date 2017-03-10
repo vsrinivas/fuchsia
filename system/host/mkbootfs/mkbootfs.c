@@ -20,7 +20,7 @@
 
 #include <lz4frame.h>
 
-#include <magenta/bootdata.h>
+#include <magenta/boot/bootdata.h>
 
 #define MAXBUFFER (1024*1024)
 

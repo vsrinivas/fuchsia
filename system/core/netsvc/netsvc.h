@@ -9,7 +9,7 @@
 
 #include <inet6/inet6.h>
 
-#include <magenta/netboot.h>
+#include <magenta/boot/netboot.h>
 
 typedef struct netfile_state_t {
     int      fd;

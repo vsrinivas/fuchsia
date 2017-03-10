@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #include <mdi/mdi.h>
-#include <magenta/bootdata.h>
+#include <magenta/boot/bootdata.h>
 
 #define DEBUG   0
 

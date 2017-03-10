@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <magenta/bootdata.h>
+#include <magenta/boot/bootdata.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 

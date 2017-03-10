@@ -8,7 +8,7 @@
 #ifndef __PLATFORM_MULTIBOOT_H
 #define __PLATFORM_MULTIBOOT_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
 /* magic number for multiboot header */
 #define MULTIBOOT_HEADER_MAGIC      0x1BADB002

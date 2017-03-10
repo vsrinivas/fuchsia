@@ -12,7 +12,7 @@
 
 #include <bootdata/decompress.h>
 
-#include <magenta/bootdata.h>
+#include <magenta/boot/bootdata.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>

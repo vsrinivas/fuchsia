@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <err.h>
 #include <kernel/vm.h>
-#include <platform/multiboot.h>
+#include <magenta/boot/multiboot.h>
 #include <trace.h>
 
 #include "platform_p.h"

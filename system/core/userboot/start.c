@@ -10,7 +10,7 @@
 #pragma GCC visibility push(hidden)
 
 #include <bootdata/decompress.h>
-#include <magenta/bootdata.h>
+#include <magenta/boot/bootdata.h>
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/log.h>

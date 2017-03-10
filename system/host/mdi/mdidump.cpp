@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <magenta/bootdata.h>
+#include <magenta/boot/bootdata.h>
 #include <magenta/mdi.h>
 
 static void dump_node(int fd, int level);

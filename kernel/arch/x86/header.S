@@ -18,7 +18,7 @@
 
 #if ENABLE_NEW_BOOT
 
-#include <magenta/bootdata.h>
+#include <magenta/boot/bootdata.h>
 
 .section .text.boot0, "ax", @progbits
 

@@ -19,7 +19,7 @@
 #include <magenta/syscalls.h>
 #include <launchpad/launchpad.h>
 
-#include <magenta/netboot.h>
+#include <magenta/boot/netboot.h>
 
 #define TMP_SUFFIX ".netsvc.tmp"
 

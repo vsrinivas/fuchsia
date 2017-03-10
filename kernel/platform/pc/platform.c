@@ -19,7 +19,7 @@
 #include <platform/pc/acpi.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
-#include <platform/multiboot.h>
+#include <magenta/boot/multiboot.h>
 #include <dev/uart.h>
 #include <arch/mmu.h>
 #include <arch/mp.h>

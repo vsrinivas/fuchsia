@@ -19,7 +19,7 @@
 #include <magenta.h>
 #include <xefi.h>
 
-#include <magenta/netboot.h>
+#include <magenta/boot/netboot.h>
 
 #define DEFAULT_TIMEOUT 3
 

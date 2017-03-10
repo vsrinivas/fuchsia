@@ -21,7 +21,7 @@
 #include <magenta/syscalls/log.h>
 #include <mxio/io.h>
 
-#include <magenta/netboot.h>
+#include <magenta/boot/netboot.h>
 
 #include "device_id.h"
 

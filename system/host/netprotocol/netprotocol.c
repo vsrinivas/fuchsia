@@ -6,7 +6,7 @@
 
 #include "netprotocol.h"
 
-#include <magenta/netboot.h>
+#include <magenta/boot/netboot.h>
 
 #include <arpa/inet.h>
 #include <ifaddrs.h>
