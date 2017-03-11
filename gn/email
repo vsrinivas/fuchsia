@@ -1,11 +1,43 @@
 {
-    "labels": [
-        "//apps/email"
-    ],
-    "binaries": [
-        {
-            "binary": "email.flx",
-            "bootfs_path": "apps/email"
-        }
-    ]
+  "labels": [
+    "//apps/email"
+  ],
+  "binaries": [
+    {
+      "binary": "content_provider.dartx",
+      "bootfs_path": "apps/email_content_provider"
+    },
+    {
+      "binary": "nav.flx",
+      "bootfs_path": "apps/email_nav"
+    },
+    {
+      "binary": "service.flx",
+      "bootfs_path": "apps/email_service"
+    },
+    {
+      "binary": "session.flx",
+      "bootfs_path": "apps/email_session"
+    },
+    {
+      "binary": "story.flx",
+      "bootfs_path": "apps/email_story"
+    },
+    {
+      "binary": "thread.flx",
+      "bootfs_path": "apps/email_thread"
+    },
+    {
+      "binary": "thread_list.flx",
+      "bootfs_path": "apps/email_thread_list"
+    }
+  ],
+  "components": [
+    "apps/email/modules/nav/email_nav_component.json",
+    "apps/email/modules/service/email_service_component.json",
+    "apps/email/modules/session/email_session_component.json",
+    "apps/email/modules/story/email_story_component.json",
+    "apps/email/modules/thread/email_thread_component.json",
+    "apps/email/modules/thread_list/email_thread_list_component.json"
+  ]
 }

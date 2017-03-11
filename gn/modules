@@ -15,38 +15,6 @@
             "bootfs_path": "apps/color"
         },
         {
-            "binary": "email_list.flx",
-            "bootfs_path": "apps/email_list"
-        },
-        {
-            "binary": "email_list_grid.flx",
-            "bootfs_path": "apps/email_list_grid"
-        },
-        {
-            "binary": "email_nav.flx",
-            "bootfs_path": "apps/email_nav"
-        },
-        {
-            "binary": "email_service_app.flx",
-            "bootfs_path": "apps/email_service"
-        },
-        {
-            "binary": "email_content_provider.dartx",
-            "bootfs_path": "apps/email_content_provider"
-        },
-        {
-            "binary": "email_session_app.flx",
-            "bootfs_path": "apps/email_session"
-        },
-        {
-            "binary": "email_story.flx",
-            "bootfs_path": "apps/email_story"
-        },
-        {
-            "binary": "email_thread.flx",
-            "bootfs_path": "apps/email_thread"
-        },
-        {
             "binary": "image_picker.flx",
             "bootfs_path": "apps/image_picker"
         },
@@ -89,18 +57,11 @@
   ],
   "resources": [
         {
-            "bootfs_path": "data/email/config.json",
-            "file": "apps/modules/email/config.json"
+            "bootfs_path": "data/modules/config.json",
+            "file": "apps/modules/config.json"
         }
   ],
   "components": [
-      "apps/modules/email/email_list/email_list_component.json",
-      "apps/modules/email/email_list_grid/email_list_grid_component.json",
-      "apps/modules/email/email_nav/email_nav_component.json",
-      "apps/modules/email/email_service/email_service_component.json",
-      "apps/modules/email/email_session/email_session_component.json",
-      "apps/modules/email/email_story/email_story_component.json",
-      "apps/modules/email/email_thread/email_thread_component.json",
       "apps/modules/email/interactive_receipt/interactive_receipt_component.json",
       "apps/modules/email/interactive_receipt_http/interactive_receipt_http_component.json",
       "apps/modules/email/map/map_component.json",
