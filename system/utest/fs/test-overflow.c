@@ -37,8 +37,8 @@ static void extend_name(char* name, size_t len, char c) {
     strcat(name, buf);
 }
 
-void test_overflow_name(void) {
-    fprintf(stderr, "Test Overflow (name)\n");
+bool test_overflow_name(void) {
+    BEGIN_TEST;
 
     char name_largest[PATH_MAX];
     char name_largest_alt[PATH_MAX];
@@ -48,35 +48,36 @@ void test_overflow_name(void) {
     make_name(name_too_large, NAME_MAX + 1, 'a');
 
     // Try opening, closing, renaming, and unlinking the largest acceptable name
-    int fd = TRY(open(name_largest, O_RDWR | O_CREAT | O_EXCL, 0644));
-    TRY(close(fd));
-    TRY(rename(name_largest, name_largest_alt));
-    TRY(rename(name_largest_alt, name_largest));
-    fprintf(stderr, "    (1 / 5) Name overflow: Accessed Largest Filename\n");
-    EXPECT_FAIL(rename(name_largest, name_too_large));
-    EXPECT_FAIL(rename(name_too_large, name_largest));
-    TRY(unlink(name_largest));
-    fprintf(stderr, "    (2 / 5) Name overflow: Unlinked Largest Filename\n");
+    int fd = open(name_largest, O_RDWR | O_CREAT | O_EXCL, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(rename(name_largest, name_largest_alt), 0, "");
+    ASSERT_EQ(rename(name_largest_alt, name_largest), 0, "");
+
+    ASSERT_EQ(rename(name_largest, name_too_large), -1, "");
+    ASSERT_EQ(rename(name_too_large, name_largest), -1, "");
+    ASSERT_EQ(unlink(name_largest), 0, "");
 
     // Try it with a directory too
-    TRY(mkdir(name_largest, 0755));
-    TRY(rename(name_largest, name_largest_alt));
-    TRY(rename(name_largest_alt, name_largest));
-    fprintf(stderr, "    (3 / 5) Name overflow: Accessed Largest Dirname\n");
-    EXPECT_FAIL(rename(name_largest, name_too_large));
-    EXPECT_FAIL(rename(name_too_large, name_largest));
-    TRY(unlink(name_largest));
-    fprintf(stderr, "    (4 / 5) Name overflow: Unlinked Largest Dirname\n");
+    ASSERT_EQ(mkdir(name_largest, 0755), 0, "");
+    ASSERT_EQ(rename(name_largest, name_largest_alt), 0, "");
+    ASSERT_EQ(rename(name_largest_alt, name_largest), 0, "");
+
+    ASSERT_EQ(rename(name_largest, name_too_large), -1, "");
+    ASSERT_EQ(rename(name_too_large, name_largest), -1, "");
+    ASSERT_EQ(unlink(name_largest), 0, "");
 
     // Try opening an unacceptably large name
-    EXPECT_FAIL(open(name_too_large, O_RDWR | O_CREAT | O_EXCL, 0644));
+    ASSERT_EQ(open(name_too_large, O_RDWR | O_CREAT | O_EXCL, 0644), -1, "");
     // Try it with a directory too
-    EXPECT_FAIL(mkdir(name_too_large, 0755));
-    fprintf(stderr, "    (5 / 5) Name overflow: Tried opening 'too large' names\n");
+    ASSERT_EQ(mkdir(name_too_large, 0755), -1, "");
+
+    END_TEST;
 }
 
-void test_overflow_path(void) {
-    fprintf(stderr, "Test Overflow (path)\n");
+bool test_overflow_path(void) {
+    BEGIN_TEST;
+
     // Make the name buffer larger than PATH_MAX so we don't overflow
     char name[2 * PATH_MAX];
 
@@ -84,7 +85,7 @@ void test_overflow_path(void) {
 
     // Create an initial directory
     make_name(name, NAME_MAX, 'a');
-    TRY(mkdir(name, 0755));
+    ASSERT_EQ(mkdir(name, 0755), 0, "");
     depth++;
     // Create child directories until we hit PATH_MAX
     while (true) {
@@ -97,52 +98,53 @@ void test_overflow_path(void) {
         depth++;
     }
 
-    fprintf(stderr, "    (1 / 2) Path overflow: Reached PATH_MAX.\n");
-
     // Remove all child directories
     while (depth != 0) {
         char* last_slash = strrchr(name, '/');
         assert(last_slash != NULL);
         assert(*last_slash == '/');
         *last_slash = '\0';
-        TRY(unlink(name));
+        ASSERT_EQ(unlink(name), 0, "");
         depth--;
     }
 
-    fprintf(stderr, "    (2 / 2) Path overflow: Finished deleting directories.\n");
+    END_TEST;
 }
 
-void test_overflow_integer(void) {
-    fprintf(stderr, "Test Overflow (integer)\n");
-    int fd = TRY(open("::file", O_CREAT | O_RDWR | O_EXCL, 0644));
+bool test_overflow_integer(void) {
+    BEGIN_TEST;
+
+    int fd = open("::file", O_CREAT | O_RDWR | O_EXCL, 0644);
+    ASSERT_GT(fd, 0, "");
 
     // TODO(smklein): Test extremely large reads/writes when remoteio can handle them without
     // crashing
     /*
     char buf[4096];
-    EXPECT_FAIL(write(fd, buf, SIZE_MAX - 1));
-    EXPECT_FAIL(write(fd, buf, SIZE_MAX));
+    ASSERT_EQ(write(fd, buf, SIZE_MAX - 1), -1, "");
+    ASSERT_EQ(write(fd, buf, SIZE_MAX), -1, "");
 
-    EXPECT_FAIL(read(fd, buf, SIZE_MAX - 1));
-    EXPECT_FAIL(read(fd, buf, SIZE_MAX));
+    ASSERT_EQ(read(fd, buf, SIZE_MAX - 1), -1, "");
+    ASSERT_EQ(read(fd, buf, SIZE_MAX), -1, "");
     */
 
-    EXPECT_FAIL(ftruncate(fd, INT_MIN));
-    EXPECT_FAIL(ftruncate(fd, -1));
-    EXPECT_FAIL(ftruncate(fd, SIZE_MAX - 1));
-    EXPECT_FAIL(ftruncate(fd, SIZE_MAX));
+    ASSERT_EQ(ftruncate(fd, INT_MIN), -1, "");
+    ASSERT_EQ(ftruncate(fd, -1), -1, "");
+    ASSERT_EQ(ftruncate(fd, SIZE_MAX - 1), -1, "");
+    ASSERT_EQ(ftruncate(fd, SIZE_MAX), -1, "");
 
-    EXPECT_FAIL(lseek(fd, INT_MIN, SEEK_SET));
-    EXPECT_FAIL(lseek(fd, -1, SEEK_SET));
-    EXPECT_FAIL(lseek(fd, SIZE_MAX - 1, SEEK_SET));
-    EXPECT_FAIL(lseek(fd, SIZE_MAX, SEEK_SET));
-    close(fd);
-    TRY(unlink("::file"));
+    ASSERT_EQ(lseek(fd, INT_MIN, SEEK_SET), -1, "");
+    ASSERT_EQ(lseek(fd, -1, SEEK_SET), -1, "");
+    ASSERT_EQ(lseek(fd, SIZE_MAX - 1, SEEK_SET), -1, "");
+    ASSERT_EQ(lseek(fd, SIZE_MAX, SEEK_SET), -1, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink("::file"), 0, "");
+
+    END_TEST;
 }
 
-int test_overflow(fs_info_t* info) {
-    test_overflow_name();
-    test_overflow_path();
-    test_overflow_integer();
-    return 0;
-}
+RUN_FOR_ALL_FILESYSTEMS(overflow_tests,
+    RUN_TEST_MEDIUM(test_overflow_name)
+    RUN_TEST_MEDIUM(test_overflow_path)
+    RUN_TEST_MEDIUM(test_overflow_integer)
+)

@@ -19,13 +19,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-
 #include <magenta/compiler.h>
 #include <magenta/listnode.h>
 #include <magenta/types.h>
 
 #include "filesystems.h"
-#include "misc.h"
 
 #define FAIL -1
 #define DONE 0
@@ -38,9 +36,6 @@ typedef struct random_op random_op_t;
 
 typedef struct env {
     worker_t* all_workers;
-
-    mtx_t work_lock;
-    cnd_t work_start_cnd;
 
     mtx_t log_timer_lock;
     cnd_t log_timer_cnd;
@@ -69,19 +64,17 @@ typedef struct worker {
     unsigned opcnt;
 } worker_t;
 
-static void init_environment(env_t*);
-void add_random_ops(env_t* env);
+static bool init_environment(env_t*);
+static void add_random_ops(env_t* env);
 
 typedef struct thread_list {
     list_node_t node;
     thrd_t t;
 } thread_list_t;
 
-static int worker_new(env_t* env, const char* where, const char* fn, uint32_t size) {
-    worker_t* w;
-    if ((w = calloc(1, sizeof(worker_t))) == NULL) {
-        return -1;
-    }
+static bool worker_new(env_t* env, const char* where, const char* fn, uint32_t size) {
+    worker_t* w = calloc(1, sizeof(worker_t));
+    ASSERT_NEQ(w, NULL, "");
 
     // per-thread random seed
     struct timespec ts;
@@ -99,7 +92,7 @@ static int worker_new(env_t* env, const char* where, const char* fn, uint32_t si
     w->next = env->all_workers;
     env->all_workers = w;
 
-    return 0;
+    return true;
 }
 
 static void free_workers(env_t* env) {
@@ -129,13 +122,9 @@ static struct {
     { "thd0007", KB(512)},
 };
 
-
-static void init_environment(env_t* env) {
+static bool init_environment(env_t* env) {
     // tests are run repeatedly, so reinitialize each time
     env->all_workers = NULL;
-
-    mtx_init(&env->work_lock, mtx_plain);
-    cnd_init(&env->work_start_cnd);
 
     list_initialize(&env->threads);
 
@@ -150,13 +139,11 @@ static void init_environment(env_t* env) {
     // assemble the work
     const char* where = "::";
     for (unsigned n = 0; n < countof(WORK); n++) {
-        if (worker_new(env, where, WORK[n].name, WORK[n].size) < 0) {
-            fprintf(stderr, "failed to create new worker %d\n", n);
-            assert(false);
-        }
+        ASSERT_TRUE(worker_new(env, where, WORK[n].name, WORK[n].size), "");
     }
-}
 
+    return true;
+}
 
 // wait until test finishes or timer suggests we may be hung
 static const unsigned TEST_MAX_RUNTIME = 120; // 120 sec max
@@ -174,7 +161,6 @@ static int log_timer(void* arg) {
     mtx_unlock(&env->log_timer_lock);
     return 0;
 }
-
 
 static void task_debug_op(worker_t* w, const char* fn) {
     env_t* env = w->env;
@@ -212,7 +198,7 @@ static int task_create_a(worker_t* w) {
             return FAIL;
         }
         assert(len == sizeof(buf));
-        TRY(close(fd));
+        EXPECT_EQ(close(fd), 0, "");
     }
     return DONE;
 }
@@ -236,7 +222,7 @@ static int task_create_b(worker_t* w) {
             return FAIL;
         }
         assert(len == sizeof(buf));
-        TRY(close(fd));
+        EXPECT_EQ(close(fd), 0, "");
     }
     return DONE;
 }
@@ -399,7 +385,7 @@ static int task_write_private_b(worker_t* w) {
             return FAIL;
         }
         assert(len == sizeof(buf));
-        TRY(close(fd));
+        EXPECT_EQ(close(fd), 0, "");
     }
     return DONE;
 }
@@ -440,7 +426,7 @@ static int task_open_private_a(worker_t* w) {
     // close(fd); fd <- open("::/threadhame/a")
     task_debug_op(w, "t: open_private_a");
     if (w->fd >= 0) {
-        TRY(close(w->fd));
+        EXPECT_EQ(close(w->fd), 0, "");
     }
     char fname[PATH_MAX];
     snprintf(fname, sizeof(fname), "::/%s/a", w->name);
@@ -584,7 +570,6 @@ static int task_seek_fd_start(worker_t* w) {
     return DONE;
 }
 
-
 static int task_truncate_a(worker_t* w) {
     // truncate("::/a")
     int rc = truncate("::/a", 0);
@@ -624,8 +609,7 @@ struct random_op {
 };
 
 // create a weighted list of operations for each thread
-void add_random_ops(env_t* env) {
-
+static void add_random_ops(env_t* env) {
     // expand the list of n*countof(OPS) operations weighted appropriately
     int n_ops = 0;
     for (unsigned i=0; i<countof(OPS); i++) {
@@ -643,7 +627,6 @@ void add_random_ops(env_t* env) {
     }
     env->ops = ops_list;
     env->n_ops = n_ops;
-
 }
 
 static const unsigned N_SERIAL_OPS = 4; // yield every 1/n ops
@@ -652,10 +635,6 @@ const unsigned MAX_OPS = 1000;
 static int do_random_ops(void* arg) {
     worker_t* w = arg;
     env_t* env = w->env;
-
-    mtx_lock(&env->work_lock);
-    cnd_wait(&env->work_start_cnd, &env->work_lock);
-    mtx_unlock(&env->work_lock);
 
     // for some big number of operations
     // do an operation and yield, repeat
@@ -679,47 +658,32 @@ static int do_random_ops(void* arg) {
     return DONE;
 }
 
-static void do_all_work_concurrently(void) {
+bool test_random_op_multithreaded(void) {
+    BEGIN_TEST;
+
     env_t env;
-    init_environment(&env);
+    ASSERT_TRUE(init_environment(&env), "");
 
     for (worker_t* w = env.all_workers; w != NULL; w = w->next) {
         // start the workers on separate threads
         thrd_t t;
-        int r = thrd_create(&t, do_random_ops, w);
-        assert(r == thrd_success);
+        ASSERT_EQ(thrd_create(&t, do_random_ops, w), thrd_success, "");
 
         thread_list_t* thread = malloc(sizeof(thread_list_t));
-        if (thread == NULL) {
-            fprintf(stderr, "couldn't allocate thread list\n");
-            assert(false);
-        }
+        ASSERT_NEQ(thread, NULL, "");
         thread->t = t;
         list_add_tail(&env.threads, &thread->node);
     }
 
     thrd_t timer_thread;
-    int r = thrd_create(&timer_thread, log_timer, &env);
-    if (r != thrd_success) {
-        fprintf(stderr, "couldn't create log timer thread\n");
-        assert(false);
-    }
-
-    cnd_broadcast(&env.work_start_cnd);
+    ASSERT_EQ(thrd_create(&timer_thread, log_timer, &env), thrd_success, "");
 
     thread_list_t* next;
     thread_list_t* prev = NULL;
-    int failed = 0;
     list_for_every_entry(&env.threads, next, thread_list_t, node) {
         int rc;
-        int r;
-        r = thrd_join(next->t, &rc);
-        if (r != thrd_success) {
-            fprintf(stderr, "thread_join failed: %d\n", r);
-            failed++;
-        } else if (rc != DONE) {
-            failed++;
-        }
+        ASSERT_EQ(thrd_join(next->t, &rc), thrd_success, "");
+        ASSERT_EQ(rc, DONE, "Background thread joined, but failed");
         if (prev) {
             free(prev);
         }
@@ -734,20 +698,18 @@ static void do_all_work_concurrently(void) {
     env.tests_finished = true;
     mtx_unlock(&env.log_timer_lock);
 
-    r = cnd_broadcast(&env.log_timer_cnd);
-    assert(r == thrd_success);
+    ASSERT_EQ(cnd_broadcast(&env.log_timer_cnd), thrd_success, "");
 
     int rc;
-    r = thrd_join(timer_thread, &rc);
-    assert(r == thrd_success);
-
-    assert(failed == 0);
+    ASSERT_EQ(thrd_join(timer_thread, &rc), thrd_success, "");
+    ASSERT_EQ(rc, 0, "Timer thread failed");
 
     free(env.ops);
     free_workers(&env);
+
+    END_TEST;
 }
 
-int test_random_op_multithreaded(fs_info_t* info) {
-    do_all_work_concurrently();
-    return 0;
-}
+RUN_FOR_ALL_FILESYSTEMS(random_ops_tests,
+    RUN_TEST_LARGE(test_random_op_multithreaded)
+)

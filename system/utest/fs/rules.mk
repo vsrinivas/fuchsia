@@ -6,9 +6,9 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := usertest
 
-MODULE_NAME := fs-tests
+MODULE_NAME := fs-test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/filesystems.c \
@@ -34,6 +34,11 @@ MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir
 MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink
 
 MODULE_LIBS := \
-    ulib/fs-management ulib/mxio ulib/launchpad ulib/magenta ulib/c
+    ulib/mxio \
+    ulib/c \
+    ulib/fs-management \
+    ulib/launchpad \
+    ulib/magenta \
+    ulib/unittest \
 
 include make/module.mk

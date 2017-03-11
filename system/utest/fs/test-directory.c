@@ -17,10 +17,9 @@
 #include <magenta/compiler.h>
 
 #include "filesystems.h"
-#include "misc.h"
 
-void test_directory_filename_max(void) {
-    printf("Test Directory (filename max)\n");
+bool test_directory_filename_max(void) {
+    BEGIN_TEST;
 
     // TODO(smklein): This value may be filesystem-specific. Plumb it through
     // from the test driver.
@@ -32,50 +31,56 @@ void test_directory_filename_max(void) {
     assert(max_file_len + 3 /* '::' + '0' for 'too large' file */ < PATH_MAX);
 
     // Largest possible file length
-    TRY(snprintf(path, sizeof(path), "::%0*d", max_file_len, 0x1337));
-    int fd = TRY(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
-    TRY(close(fd));
-    TRY(unlink(path));
+    snprintf(path, sizeof(path), "::%0*d", max_file_len, 0x1337);
+    int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink(path), 0, "");
 
     // Slightly too large file length
-    TRY(snprintf(path, sizeof(path), "::%0*d", max_file_len + 1, 0xBEEF));
-    EXPECT_FAIL(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
+    snprintf(path, sizeof(path), "::%0*d", max_file_len + 1, 0xBEEF);
+    ASSERT_EQ(open(path, O_RDWR | O_CREAT | O_EXCL, 0644), -1, "");
+
+    END_TEST;
 }
 
 // Hopefuly not pushing against any 'max file length' boundaries, but large
 // enough to fill a directory quickly.
 #define LARGE_PATH_LENGTH 128
 
-void test_directory_large(void) {
-    printf("Test Directory (large)\n");
+bool test_directory_large(void) {
+    BEGIN_TEST;
 
     // Write a bunch of files to a directory
     const int num_files = 1024;
     for (int i = 0; i < num_files; i++) {
         char path[LARGE_PATH_LENGTH + 1];
-        TRY(snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i));
-        int fd = TRY(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
-        TRY(close(fd));
+        snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i);
+        int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0644);
+        ASSERT_GT(fd, 0, "");
+        ASSERT_EQ(close(fd), 0, "");
     }
 
     // Unlink all those files
     for (int i = 0; i < num_files; i++) {
         char path[LARGE_PATH_LENGTH + 1];
-        TRY(snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i));
-        TRY(unlink(path));
+        snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i);
+        ASSERT_EQ(unlink(path), 0, "");
     }
 
     // TODO(smklein): Verify contents
+
+    END_TEST;
 }
 
-void test_directory_max(void) {
-    printf("Test Directory (max)\n");
+bool test_directory_max(void) {
+    BEGIN_TEST;
 
     // Write the maximum number of files to a directory
     int i = 0;
     for (;; i++) {
         char path[LARGE_PATH_LENGTH + 1];
-        TRY(snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i));
+        snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i);
         if (i % 100 == 0) {
             printf(" Allocating: %s\n", path);
         }
@@ -85,18 +90,20 @@ void test_directory_max(void) {
             printf("    wrote %d direntries\n", i);
             break;
         }
-        TRY(close(fd));
+        ASSERT_EQ(close(fd), 0, "");
     }
 
     // Unlink all those files
     for (i -= 1; i >= 0; i--) {
         char path[LARGE_PATH_LENGTH + 1];
-        TRY(snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i));
-        TRY(unlink(path));
+        snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i);
+        ASSERT_EQ(unlink(path), 0, "");
     }
+
+    END_TEST;
 }
 
-void test_directory_coalesce_helper(const int* unlink_order) {
+bool test_directory_coalesce_helper(const int* unlink_order) {
     const char* files[] = {
         "::coalesce/aaaaaaaa",
         "::coalesce/bbbbbbbb",
@@ -107,23 +114,25 @@ void test_directory_coalesce_helper(const int* unlink_order) {
     int num_files = countof(files);
 
     // Allocate a bunch of files in a directory
-    TRY(mkdir("::coalesce", 0755));
+    ASSERT_EQ(mkdir("::coalesce", 0755), 0, "");
     for (int i = 0; i < num_files; i++) {
-        int fd = TRY(open(files[i], O_RDWR | O_CREAT | O_EXCL, 0644));
-        TRY(close(fd));
+        int fd = open(files[i], O_RDWR | O_CREAT | O_EXCL, 0644);
+        ASSERT_GT(fd, 0, "");
+        ASSERT_EQ(close(fd), 0, "");
     }
 
     // Unlink all those files in the order specified
     for (int i = 0; i < num_files; i++) {
         assert(0 <= unlink_order[i] && unlink_order[i] < num_files);
-        TRY(unlink(files[unlink_order[i]]));
+        ASSERT_EQ(unlink(files[unlink_order[i]]), 0, "");
     }
 
-    TRY(unlink("::coalesce"));
+    ASSERT_EQ(unlink("::coalesce"), 0, "");
+    return true;
 }
 
-void test_directory_coalesce(void) {
-    printf("Test Directory (coalesce)\n");
+bool test_directory_coalesce(void) {
+    BEGIN_TEST;
 
     // Test some cases of coalescing, assuming the directory was filled
     // according to allocation order. If it wasn't, this test should still pass,
@@ -132,58 +141,64 @@ void test_directory_coalesce(void) {
     // coalesce.
 
     // Case 1: Test merge-with-left
-    printf("  Test merge-with-left\n");
     const int merge_with_left[] = {0, 1, 2, 3, 4};
-    test_directory_coalesce_helper(merge_with_left);
+    ASSERT_TRUE(test_directory_coalesce_helper(merge_with_left), "");
 
     // Case 2: Test merge-with-right
-    printf("  Test merge-with-right\n");
     const int merge_with_right[] = {4, 3, 2, 1, 0};
-    test_directory_coalesce_helper(merge_with_right);
+    ASSERT_TRUE(test_directory_coalesce_helper(merge_with_right), "");
 
     // Case 3: Test merge-with-both
-    printf("  Test merge-with-both\n");
     const int merge_with_both[] = {1, 3, 2, 0, 4};
-    test_directory_coalesce_helper(merge_with_both);
+    ASSERT_TRUE(test_directory_coalesce_helper(merge_with_both), "");
+
+    END_TEST;
 }
 
-void test_directory_trailing_slash(void) {
-    printf("Test Directory Trailing Slash\n");
+bool test_directory_trailing_slash(void) {
+    BEGIN_TEST;
 
     // We should be able to refer to directories with any number of trailing
     // slashes, and still refer to the same entity.
-    TRY(mkdir("::a", 0755));
-    TRY(mkdir("::b/", 0755));
-    TRY(mkdir("::c//", 0755));
-    TRY(mkdir("::d///", 0755));
+    ASSERT_EQ(mkdir("::a", 0755), 0, "");
+    ASSERT_EQ(mkdir("::b/", 0755), 0, "");
+    ASSERT_EQ(mkdir("::c//", 0755), 0, "");
+    ASSERT_EQ(mkdir("::d///", 0755), 0, "");
 
-    TRY(unlink("::a///"));
-    TRY(unlink("::b//"));
-    TRY(unlink("::c/"));
+    ASSERT_EQ(unlink("::a///"), 0, "");
+    ASSERT_EQ(unlink("::b//"), 0, "");
+    ASSERT_EQ(unlink("::c/"), 0, "");
 
     // Before we unlink 'd', try renaming it using some trailing '/' characters.
-    TRY(rename("::d", "::e"));
-    TRY(rename("::e", "::d/"));
-    TRY(rename("::d/", "::e"));
-    TRY(rename("::e/", "::d/"));
-    TRY(unlink("::d"));
+    ASSERT_EQ(rename("::d", "::e"), 0, "");
+    ASSERT_EQ(rename("::e", "::d/"), 0, "");
+    ASSERT_EQ(rename("::d/", "::e"), 0, "");
+    ASSERT_EQ(rename("::e/", "::d/"), 0, "");
+    ASSERT_EQ(unlink("::d"), 0, "");
 
     // We can make / unlink a file...
-    TRY(close(TRY(open("::a", O_RDWR | O_CREAT | O_EXCL, 0644))));
-    TRY(unlink("::a"));
+    int fd = open("::a", O_RDWR | O_CREAT | O_EXCL, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink("::a"), 0, "");
 
     // ... But we cannot refer to that file using a trailing '/'.
-    TRY(close(TRY(open("::a", O_RDWR | O_CREAT | O_EXCL, 0644))));
-    EXPECT_FAIL(open("::a/", O_RDWR, 0644));
+    fd = open("::a", O_RDWR | O_CREAT | O_EXCL, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(open("::a/", O_RDWR, 0644), -1, "");
 
     // We can rename the file...
-    TRY(rename("::a", "::b"));
+    ASSERT_EQ(rename("::a", "::b"), 0, "");
     // ... But neither the source (nor the destination) can have trailing slashes.
-    EXPECT_FAIL(rename("::b", "::a/"));
-    EXPECT_FAIL(rename("::b/", "::a"));
-    EXPECT_FAIL(rename("::b/", "::a/"));
-    EXPECT_FAIL(unlink("::b/"));
-    TRY(unlink("::b"));
+    ASSERT_EQ(rename("::b", "::a/"), -1, "");
+    ASSERT_EQ(rename("::b/", "::a"), -1, "");
+    ASSERT_EQ(rename("::b/", "::a/"), -1, "");
+    ASSERT_EQ(unlink("::b/"), -1, "");
+
+    ASSERT_EQ(unlink("::b"), 0, "");
+
+    END_TEST;
 }
 
 typedef struct expected_dirent {
@@ -226,10 +241,11 @@ void check_contains_all(const char* dirname, expected_dirent_t* edirents, size_t
     }
 }
 
-void test_directory_readdir(void) {
-    printf("Test Directory Readdir\n");
-    TRY(mkdir("::a", 0755));
-    EXPECT_FAIL(mkdir("::a", 0755));
+bool test_directory_readdir(void) {
+    BEGIN_TEST;
+
+    ASSERT_EQ(mkdir("::a", 0755), 0, "");
+    ASSERT_EQ(mkdir("::a", 0744), -1, "");
 
     expected_dirent_t empty_dir[] = {
         {false, ".", DT_DIR},
@@ -237,10 +253,16 @@ void test_directory_readdir(void) {
     };
     check_contains_all("::a", empty_dir, countof(empty_dir));
 
-    TRY(mkdir("::a/dir1", 0755));
-    TRY(close(TRY(open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644))));
-    TRY(close(TRY(open("::a/file2", O_RDWR | O_CREAT | O_EXCL, 0644))));
-    TRY(mkdir("::a/dir2", 0755));
+    ASSERT_EQ(mkdir("::a/dir1", 0755), 0, "");
+    int fd = open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+
+    fd = open("::a/file2", O_RDWR | O_CREAT | O_EXCL, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+
+    ASSERT_EQ(mkdir("::a/dir2", 0755), 0, "");
     expected_dirent_t filled_dir[] = {
         {false, ".", DT_DIR},
         {false, "..", DT_DIR},
@@ -251,8 +273,8 @@ void test_directory_readdir(void) {
     };
     check_contains_all("::a", filled_dir, countof(filled_dir));
 
-    TRY(unlink("::a/dir2"));
-    TRY(unlink("::a/file2"));
+    ASSERT_EQ(unlink("::a/dir2"), 0, "");
+    ASSERT_EQ(unlink("::a/file2"), 0, "");
     expected_dirent_t partial_dir[] = {
         {false, ".", DT_DIR},
         {false, "..", DT_DIR},
@@ -261,20 +283,22 @@ void test_directory_readdir(void) {
     };
     check_contains_all("::a", partial_dir, countof(partial_dir));
 
-    TRY(unlink("::a/dir1"));
-    TRY(unlink("::a/file1"));
+    ASSERT_EQ(unlink("::a/dir1"), 0, "");
+    ASSERT_EQ(unlink("::a/file1"), 0, "");
     check_contains_all("::a", empty_dir, countof(empty_dir));
+
+    END_TEST;
 }
 
-int test_directory(fs_info_t* info) {
-    test_directory_coalesce();
-    test_directory_filename_max();
-    test_directory_large();
-    test_directory_trailing_slash();
-    test_directory_readdir();
+RUN_FOR_ALL_FILESYSTEMS(directory_tests,
+    RUN_TEST_MEDIUM(test_directory_coalesce)
+    RUN_TEST_MEDIUM(test_directory_filename_max)
+    RUN_TEST_LARGE(test_directory_large)
+    RUN_TEST_MEDIUM(test_directory_trailing_slash)
+    RUN_TEST_MEDIUM(test_directory_readdir)
+)
+
 // TODO(smklein): Run this when MemFS can execute it without causing an OOM
 #if 0
-    test_directory_max();
+    RUN_TEST_LARGE(test_directory_max)
 #endif
-    return 0;
-}

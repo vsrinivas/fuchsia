@@ -10,13 +10,14 @@
 #include <unistd.h>
 
 #include "filesystems.h"
-#include "misc.h"
 
-int test_maxfile(fs_info_t* info) {
-    int fd = TRY(open("::bigfile", O_CREAT | O_WRONLY, 0644));
-    if (fd < 0) {
-        return -1;
-    }
+// Print progress every ~5 MB
+#define PRINT_SIZE (1 << 19)
+
+bool test_maxfile(void) {
+    BEGIN_TEST;
+    int fd = open("::bigfile", O_CREAT | O_WRONLY, 0644);
+    ASSERT_GT(fd, 0, "");
     char data[8192];
     memset(data, 0xee, sizeof(data));
     ssize_t sz = 0;
@@ -30,15 +31,22 @@ int test_maxfile(fs_info_t* info) {
             }
             break;
         }
+        if ((sz + r) % PRINT_SIZE < (sz % PRINT_SIZE)) {
+            fprintf(stderr, "wrote %d bytes\n", (int)(sz + r));
+        }
         sz += r;
         if (r < (ssize_t)(sizeof(data))) {
             fprintf(stderr, "bigfile write short write of %ld bytes\n", r);
             break;
         }
-        fprintf(stderr, "wrote %d bytes\n", (int)sz);
     }
-    TRY(close(fd));
-    TRY(unlink("::bigfile"));
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink("::bigfile"), 0, "");
     fprintf(stderr, "wrote %d bytes\n", (int)sz);
-    return (r < 0) ? -1 : 0;
+    ASSERT_EQ(r, 0, "Saw an unexpected error");
+    END_TEST;
 }
+
+RUN_FOR_ALL_FILESYSTEMS(maxfile_tests,
+    RUN_TEST_LARGE(test_maxfile)
+)

@@ -15,17 +15,19 @@
 #include <magenta/syscalls.h>
 
 #include "filesystems.h"
-#include "misc.h"
 
 int64_t nstimespec(struct timespec ts) {
     // assumes very small number of seconds in deltas
     return ts.tv_sec * MX_SEC(1) + ts.tv_nsec;
 }
 
-int test_attr(fs_info_t* info) {
+bool test_attr(void) {
+    BEGIN_TEST;
     int64_t now = mx_time_get(MX_CLOCK_UTC);
+    ASSERT_NEQ(now, 0, "mx_time_get only returns zero on error");
 
-    int fd1 = TRY(open("::file.txt", O_CREAT | O_RDWR, 0644));
+    int fd1 = open("::file.txt", O_CREAT | O_RDWR, 0644);
+    ASSERT_GT(fd1, 0, "");
 
     struct timespec ts[2];
     ts[0].tv_nsec = UTIME_OMIT;
@@ -33,18 +35,23 @@ int test_attr(fs_info_t* info) {
     ts[1].tv_nsec = (long)(now % MX_SEC(1));
 
     // make sure we get back "now" from stat()
-    TRY(futimens(fd1, ts));
+    ASSERT_EQ(futimens(fd1, ts), 0, "");
     struct stat statb1;
-    TRY(fstat(fd1, &statb1));
-    assert(statb1.st_mtim.tv_sec == (long)(now / MX_SEC(1)) &&
-           statb1.st_mtim.tv_nsec == (long)(now % MX_SEC(1)));
-    close(fd1);
+    ASSERT_EQ(fstat(fd1, &statb1), 0, "");
+    ASSERT_EQ(statb1.st_mtim.tv_sec, (long)(now / MX_SEC(1)), "");
+    ASSERT_EQ(statb1.st_mtim.tv_nsec, (long)(now % MX_SEC(1)), "");
+    ASSERT_EQ(close(fd1), 0, "");
 
-    TRY(utimes("::file.txt", NULL));
+    ASSERT_EQ(utimes("::file.txt", NULL), 0, "");
     struct stat statb2;
-    TRY(stat("::file.txt", &statb2));
-    assert(nstimespec(statb2.st_mtim) > nstimespec(statb1.st_mtim));
+    ASSERT_EQ(stat("::file.txt", &statb2), 0, "");
+    ASSERT_GT(nstimespec(statb2.st_mtim), nstimespec(statb1.st_mtim), "");
 
-    TRY(unlink("::file.txt"));
-    return 0;
+    ASSERT_EQ(unlink("::file.txt"), 0, "");
+
+    END_TEST;
 }
+
+RUN_FOR_ALL_FILESYSTEMS(attr_tests,
+    RUN_TEST_MEDIUM(test_attr)
+)

@@ -9,24 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-// Test wrappers
-
-#define TRY(func) ({\
-    int ret = (func); \
-    if (ret < 0) { \
-        printf("%s:%d:error: %s -> %d (errno %d)\n", __FILE__, __LINE__, #func, ret, errno); \
-        exit(1); \
-    } \
-    ret; })
-
-#define EXPECT_FAIL(func) ({\
-    int ret = (func); \
-    if (ret >= 0) { \
-        printf("%s:%d:expected error from: %s -> %d\n", __FILE__, __LINE__, #func, ret); \
-        exit(1); \
-    } \
-    ret; })
-
 // FNV-1a Hash
 //
 // http://www.isthe.com/chongo/tech/comp/fnv/index.html

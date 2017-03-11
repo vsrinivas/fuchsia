@@ -62,10 +62,10 @@ typedef struct worker {
 #define F_RAND_IOSIZE 1
 
 
-int worker_new(env_t* env, const char* where, const char* fn,
-               int (*work)(worker_t* w), uint32_t size, uint32_t flags);
+bool worker_new(env_t* env, const char* where, const char* fn,
+                int (*work)(worker_t* w), uint32_t size, uint32_t flags);
 int worker_writer(worker_t* w);
-static void init_environment(env_t* env);
+static bool init_environment(env_t* env);
 
 typedef struct thread_list {
     list_node_t node;
@@ -150,12 +150,10 @@ int worker_writer(worker_t* w) {
     return r;
 }
 
-int worker_new(env_t* env, const char* where, const char* fn,
-               int (*work)(worker_t* w), uint32_t size, uint32_t flags) {
-    worker_t* w;
-    if ((w = calloc(1, sizeof(worker_t))) == NULL) {
-        return -1;
-    }
+bool worker_new(env_t* env, const char* where, const char* fn,
+                int (*work)(worker_t* w), uint32_t size, uint32_t flags) {
+    worker_t* w = calloc(1, sizeof(worker_t));
+    ASSERT_NEQ(w, NULL, "");
 
     w->env = env;
 
@@ -166,17 +164,12 @@ int worker_new(env_t* env, const char* where, const char* fn,
     w->work = work;
     w->flags = flags;
 
-    if ((w->fd = open(w->name, O_RDWR | O_CREAT | O_EXCL, 0644)) < 0) {
-        fprintf(stderr, "worker('%s') cannot create file; error %d\n",
-                w->name, errno);
-        free(w);
-        return -1;
-    }
+    ASSERT_GT((w->fd = open(w->name, O_RDWR | O_CREAT | O_EXCL, 0644)), 0, "");
 
     w->next = w->env->all_workers;
     env->all_workers = w;
 
-    return 0;
+    return true;
 }
 
 int do_work(env_t* env) {
@@ -186,20 +179,21 @@ int do_work(env_t* env) {
         if (w->status == BUSY) {
             busy_count++;
             if ((w->status = w->work(w)) == FAIL) {
-                TRY(unlink(w->name));
+                EXPECT_EQ(unlink(w->name), 0, "");
                 return FAIL;
             }
             if (w->status == DONE) {
                 fprintf(stderr, "worker('%s') finished\n", w->name);
-                TRY(unlink(w->name));
+                EXPECT_EQ(unlink(w->name), 0, "");
             }
         }
     }
     return busy_count ? BUSY : DONE;
 }
 
-void do_all_work_single_thread(void) {
-    printf("Test Workers (single-threaded)\n");
+bool test_work_single_thread(void) {
+    BEGIN_TEST;
+
     env_t env;
     init_environment(&env);
 
@@ -210,6 +204,8 @@ void do_all_work_single_thread(void) {
             break;
         }
     }
+
+    END_TEST;
 }
 
 #define KB(n) ((n)*1024)
@@ -247,7 +243,7 @@ struct {
     },
 };
 
-static void init_environment(env_t* env) {
+static bool init_environment(env_t* env) {
 
     // tests are run repeatedly, so reinitialize each time
     env->all_workers = NULL;
@@ -257,11 +253,10 @@ static void init_environment(env_t* env) {
     // assemble the work
     const char* where = "::";
     for (unsigned n = 0; n < countof(WORK); n++) {
-        if (worker_new(env, where, WORK[n].name, WORK[n].work, WORK[n].size, WORK[n].flags) < 0) {
-            fprintf(stderr, "failed to create new worker %d\n", n);
-            assert(false);
-        }
+        ASSERT_TRUE(worker_new(env, where, WORK[n].name, WORK[n].work,
+                               WORK[n].size, WORK[n].flags), "");
     }
+    return true;
 }
 
 static int do_threaded_work(void* arg) {
@@ -274,54 +269,38 @@ static int do_threaded_work(void* arg) {
 
     fprintf(stderr, "work thread(%s) %s\n", w->name,
             w->status == DONE ? "finished" : "failed");
-    TRY(unlink(w->name));
+    EXPECT_EQ(unlink(w->name), 0, "");
 
     return w->status;
 }
 
-static void do_all_work_concurrently(void) {
-    printf("Test Workers (multi-threaded)\n");
+static bool test_work_concurrently(void) {
+    BEGIN_TEST;
+
     env_t env;
-    init_environment(&env);
+    ASSERT_TRUE(init_environment(&env), "");
 
     for (worker_t* w = env.all_workers; w != NULL; w = w->next) {
         // start the workers on separate threads
         thrd_t t;
-        int r = thrd_create(&t, do_threaded_work, w);
-        if (r == thrd_success) {
-            thread_list_t* thread = malloc(sizeof(thread_list_t));
-            if (thread == NULL) {
-                fprintf(stderr, "couldn't allocate thread list\n");
-                assert(false);
-            }
-            thread->t = t;
-            list_add_tail(&env.threads, &thread->node);
-        } else {
-            fprintf(stderr, "thread create error\n");
-            assert(false);
-        }
+        ASSERT_EQ(thrd_create(&t, do_threaded_work, w), thrd_success, "");
+        thread_list_t* thread = malloc(sizeof(thread_list_t));
+        ASSERT_NEQ(thread, NULL, "");
+        thread->t = t;
+        list_add_tail(&env.threads, &thread->node);
     }
 
     thread_list_t* next;
-    int failed = 0;
     list_for_every_entry(&env.threads, next, thread_list_t, node) {
         int rc;
-        int r = thrd_join(next->t, &rc);
-        if (r != thrd_success) {
-            fprintf(stderr, "thread_join failed: %d\n", r);
-            failed++;
-        } else if (rc != DONE) {
-            fprintf(stderr, "thread exited rc='%s'\n",
-                    rc == BUSY ? "busy" : "fail");
-            failed++;
-        }
+        ASSERT_EQ(thrd_join(next->t, &rc), thrd_success, "");
+        ASSERT_EQ(rc, DONE, "Thread joined, but failed");
     }
 
-    assert(failed == 0);
+    END_TEST;
 }
 
-int test_rw_workers(fs_info_t* info) {
-    do_all_work_single_thread();
-    do_all_work_concurrently();
-    return 0;
-}
+RUN_FOR_ALL_FILESYSTEMS(rw_workers_test,
+    RUN_TEST_MEDIUM(test_work_single_thread)
+    RUN_TEST_LARGE(test_work_concurrently)
+)

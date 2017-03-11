@@ -20,6 +20,7 @@
 
 const char* test_root_path;
 char test_disk_path[PATH_MAX];
+fs_info_t* test_info;
 
 #define RAMCTL_PATH "/dev/misc/ramctl"
 
@@ -68,6 +69,46 @@ int destroy_ramdisk(const char* ramdisk_path) {
     }
     return 0;
 }
+
+int setup_fs_test(void) {
+    test_root_path = MOUNT_PATH;
+    int r = mkdir(test_root_path, 0755);
+    if ((r < 0) && errno != EEXIST) {
+        fprintf(stderr, "Could not create mount point for test filesystem\n");
+        return -1;
+    }
+
+    if (create_ramdisk("fs-test-ramdisk", test_disk_path)) {
+        fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
+        exit(-1);
+    }
+    if (test_info->mkfs(test_disk_path)) {
+        fprintf(stderr, "[FAILED]: Could not format ramdisk for test\n");
+        exit(-1);
+    }
+
+    if (test_info->mount(test_disk_path, test_root_path)) {
+        fprintf(stderr, "[FAILED]: Error mounting filesystem\n");
+        exit(-1);
+    }
+    return 0;
+}
+
+int teardown_fs_test(void) {
+    if (test_info->unmount(test_root_path)) {
+        fprintf(stderr, "[FAILED]: Error unmounting filesystem\n");
+        exit(-1);
+    }
+
+    if (destroy_ramdisk(test_disk_path)) {
+        fprintf(stderr, "[FAILED]: Error destroying ramdisk\n");
+        exit(-1);
+    }
+
+    return 0;
+}
+
+// FS-specific functionality:
 
 int mkfs_memfs(const char* disk_path) {
     return 0;
