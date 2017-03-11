@@ -4,54 +4,13 @@
 
 # To avoid breaking anything this follows convention and uses the name
 # gdbserver, the name of this directory.
-# TODO(dje): Later the directory name is expected to change.
+# TODO(dje): TO-127: Move this entire directory to better location.
 group("gdbserver") {
   deps = [
+    "bin/debugserver",
     "bin/ipt",
     "lib/debugger-utils",
     "lib/inferior-control",
-    ":debugserver",
-  ]
-}
-
-executable("debugserver") {
-  # This is called debugserver and not gdbserver because it is not intended
-  # to be gdb specific. E.g., The GDB Remote Serial Protocol is used by other
-  # debuggers, e.g., lldb.
-  # TODO(dje): Rename directory and reorganize when things settle a bit.
-  output_name = "debugserver"
-
-  sources = [
-    "rsp-cmd-handler.cc",
-    "rsp-cmd-handler.h",
-    "rsp-io-loop.cc",
-    "rsp-io-loop.h",
-    "rsp-main.cc",
-    "rsp-server.cc",
-    "rsp-server.h",
-    "rsp-util.cc",
-    "rsp-util.h",
-    "stop-reply-packet.cc",
-    "stop-reply-packet.h",
-    "thread-action-list.cc",
-    "thread-action-list.h",
-  ]
-
-  deps = [
-    "lib/debugger-utils",
-    "lib/inferior-control",
-    "//lib/ftl",
-    "//lib/mtl",
-    "//magenta/system/ulib/mx",
-  ]
-
-  include_dirs = [
-    "lib"
-  ]
-
-  libs = [
-    "launchpad",
-    "magenta",
   ]
 }
 
@@ -59,38 +18,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":gdbserver-unittests",
     "test-apps",
-  ]
-}
-
-executable("gdbserver-unittests") {
-  testonly = true
-
-  sources = [
-    "rsp-util.cc",
-    "rsp-util.h",
-    "rsp-util-unittest.cc",
-    "stop-reply-packet.cc",
-    "stop-reply-packet.h",
-    "stop-reply-packet-unittest.cc",
-    "test/run-all-unittests.cc",
-    "thread-action-list.cc",
-    "thread-action-list.h",
-    "thread-action-list-unittest.cc",
-  ]
-
-  deps = [
-    "lib/debugger-utils",
-    "//lib/ftl",
-    "//third_party/gtest",
-  ]
-
-  include_dirs = [
-    "lib"
-  ]
-
-  libs = [
-    "magenta",
   ]
 }

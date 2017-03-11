@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "rsp-server.h"
+#include "server.h"
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -18,8 +18,8 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "rsp-util.h"
 #include "stop-reply-packet.h"
+#include "util.h"
 
 namespace debugserver {
 

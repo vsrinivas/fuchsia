@@ -16,7 +16,7 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/handles/object_info.h"
 
-#include "rsp-server.h"
+#include "server.h"
 
 namespace {
 

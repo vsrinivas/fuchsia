@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "rsp-cmd-handler.h"
+#include "cmd-handler.h"
 
 #include <algorithm>
 #include <cinttypes>
@@ -19,9 +19,9 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "rsp-server.h"
-#include "rsp-util.h"
+#include "server.h"
 #include "thread-action-list.h"
+#include "util.h"
 
 namespace debugserver {
 

@@ -17,8 +17,8 @@
 #include "inferior-control/server.h"
 #include "inferior-control/thread.h"
 
-#include "rsp-cmd-handler.h"
-#include "rsp-io-loop.h"
+#include "cmd-handler.h"
+#include "io-loop.h"
 
 namespace debugserver {
 

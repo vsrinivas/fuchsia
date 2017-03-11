@@ -8,11 +8,11 @@
 
 #include "lib/ftl/logging.h"
 
-#include "rsp-util.h"
+#include "util.h"
 
 // N.B. This file is included in the unittest, which does not
-// contain all the server/process/thread logic. Therefore do not
-// #include rsp-server.h, process.h, thread.h, etc.
+// contain all the inferior-control logic. Therefore do not
+// #include server.h.
 
 namespace debugserver {
 
