@@ -514,6 +514,103 @@ enum class LESupportedFeature : uint64_t {
   // The rest is reserved for future use.
 };
 
+// Bitmask values for the 8-octet HCI_Set_Event_Mask command parameter.
+enum class EventMask : uint64_t {
+  kInquiryCompleteEvent = (1 << 0),
+  kInquiryResultEvent = (1 << 1),
+  kConnectionCompleteEvent = (1 << 2),
+  kConnectionRequestEvent = (1 << 3),
+  kDisconnectionCompleteEvent = (1 << 4),
+  kAuthenticationCompleteEvent = (1 << 5),
+  kRemoteNameRequestCompleteEvent = (1 << 6),
+  kEncryptionChangeEvent = (1 << 7),
+  kChangeConnectionLinkKeyCompleteEvent = (1 << 8),
+  kMasterLinkKeyCompleteEvent = (1 << 9),
+  kReadRemoteSupportedFeaturesCompleteEvent = (1 << 10),
+  kReadRemoteVersionInformationCompleteEvent = (1 << 11),
+  kQoSSetupCompleteEvent = (1 << 12),
+  // Reserved For Future Use: (1 << 13)
+  // Reserved For Future Use: (1 << 14)
+  kHardwareErrorEvent = (1 << 15),
+  kFlushOccurredEvent = (1 << 16),
+  kRoleChangeEvent = (1 << 17),
+  // Reserved For Future Use: (1 << 18)
+  kModeChangeEvent = (1 << 19),
+  kReturnLinkKeysEvent = (1 << 20),
+  kPINCodeRequestEvent = (1 << 21),
+  kLinkKeyRequestEvent = (1 << 22),
+  kLinkKeyNotificationEvent = (1 << 23),
+  kLoopbackCommandEvent = (1 << 24),
+  kDataBufferOverflowEvent = (1 << 25),
+  kMaxSlotsChangeEvent = (1 << 26),
+  kReadClockOffsetCompleteEvent = (1 << 27),
+  kConnectionPacketTypeChangedEvent = (1 << 28),
+  kQoSViolationEvent = (1 << 29),
+  kPageScanModeChangeEvent = (1 << 30),  // deprecated
+  kPageScanRepetitionModeChangeEvent = (1ull << 31),
+  kFlowSpecificationCompleteEvent = (1ull << 32),
+  kInquiryResultWithRSSIEvent = (1ull << 33),
+  kReadRemoteExtendedFeaturesCompleteEvent = (1ull << 34),
+  // Reserved For Future Use: (1ull << 35)
+  // Reserved For Future Use: (1ull << 36)
+  // Reserved For Future Use: (1ull << 37)
+  // Reserved For Future Use: (1ull << 38)
+  // Reserved For Future Use: (1ull << 39)
+  // Reserved For Future Use: (1ull << 40)
+  // Reserved For Future Use: (1ull << 41)
+  // Reserved For Future Use: (1ull << 42)
+  kSynchronousConnectionCompleteEvent = (1ull << 43),
+  kSynchronousConnectionChangedEvent = (1ull << 44),
+  kSniffSubratingEvent = (1ull << 45),
+  kExtendedInquiryResultEvent = (1ull << 46),
+  kEncryptionKeyRefreshCompleteEvent = (1ull << 47),
+  kIOCapabilityRequestEvent = (1ull << 48),
+  kIOCapabilityResponseEvent = (1ull << 49),
+  kUserConfirmationRequestEvent = (1ull << 50),
+  kUserPasskeyRequestEvent = (1ull << 51),
+  kRemoteOOBDataRequestEvent = (1ull << 52),
+  kSimplePairingCompleteEvent = (1ull << 53),
+  // Reserved For Future Use: (1ull << 54)
+  kLinkSupervisionTimeoutChangedEvent = (1ull << 55),
+  kEnhancedFlushCompleteEvent = (1ull << 56),
+  kReservedforFutureUse = (1ull << 57),
+  kUserPasskeyNotificationEvent = (1ull << 58),
+  kKeypressNotificationEvent = (1ull << 59),
+  kRemoteHostSupportedFeaturesNotificationEvent = (1ull << 60),
+  kLEMetaEvent = (1ull << 61),
+  // Reserved For Future Use: (1ull << 62)
+  // Reserved For Future Use: (1ull << 63)
+};
+
+// Bitmask values for the 8-octet HCI_Set_Event_Mask_Page_2 command parameter.
+enum class EventMaskPage2 : uint64_t {
+  kPhysicalLinkCompleteEvent = (1 << 0),
+  kChannelSelectedEvent = (1 << 1),
+  kDisconnectionPhysicalLinkCompleteEvent = (1 << 2),
+  kPhysicalLinkLossEarlyWarningEvent = (1 << 3),
+  kPhysicalLinkRecoveryEvent = (1 << 4),
+  kLogicalLinkCompleteEvent = (1 << 5),
+  kDisconnectionLogicalLinkCompleteEvent = (1 << 6),
+  kFlowSpecModifyCompleteEvent = (1 << 7),
+  kNumberOfCompletedDataBlocksEvent = (1 << 8),
+  kAMPStartTestEvent = (1 << 9),
+  kAMPTestEndEvent = (1 << 10),
+  kAMPReceiverReportEvent = (1 << 11),
+  kShortRangeModeChangeCompleteEvent = (1 << 12),
+  kAMPStatusChangeEvent = (1 << 13),
+  kTriggeredClockCaptureEvent = (1 << 14),
+  kSynchronizationTrainCompleteEvent = (1 << 15),
+  kSynchronizationTrainReceivedEvent = (1 << 16),
+  kConnectionlessSlaveBroadcastReceiveEvent = (1 << 17),
+  kConnectionlessSlaveBroadcastTimeoutEvent = (1 << 18),
+  kTruncatedPageCompleteEvent = (1 << 19),
+  kSlavePageResponseTimeoutEvent = (1 << 20),
+  kConnectionlessSlaveBroadcastChannelMapChangeEvent = (1 << 21),
+  kInquiryResponseNotificationEvent = (1 << 22),
+  kAuthenticatedPayloadTimeoutExpiredEvent = (1 << 23),
+  kSAMStatusChangeEvent = (1 << 24),
+};
+
 // Bitmask values for the 8-octet HCI_LE_Set_Event_Mask command parameter.
 enum class LEEventMask : uint64_t {
   kLEConnectionComplete                 = (1 << 0),
@@ -543,6 +640,15 @@ enum class LEEventMask : uint64_t {
 enum class GenericEnableParam : uint8_t {
   kDisable = 0x00,
   kEnable = 0x01,
+};
+
+// Values that can be passed to the Type parameter in a HCI_Read_Transmit_Power_Level command.
+enum class ReadTransmitPowerType : uint8_t {
+  // Read Current Transmit Power Level.
+  kCurrent = 0x00,
+
+  // Read Maximum Transmit Power Level.
+  kMax = 0x01,
 };
 
 // The minimum and maximum range values for the LE advertising interval
