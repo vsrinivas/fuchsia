@@ -23,6 +23,7 @@
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
+#include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
@@ -38,6 +39,8 @@ namespace modular {
 namespace {
 
 const char kAppId[] = "modular_user_runner";
+
+const char kMaxwellUrl[] = "file:///system/apps/maxwell_launcher";
 
 // This is the prefix for the ApplicationEnvironment under which all
 // stories run for a user.
@@ -145,19 +148,28 @@ class UserRunnerImpl : public UserRunner {
     fidl::InterfaceHandle<StoryProvider> story_provider;
     story_provider_impl_->AddBinding(story_provider.NewRequest());
 
-    auto maxwell_services =
-        GetServiceProvider("file:///system/apps/maxwell_launcher", nullptr);
+    auto maxwell_services = GetServiceProvider(kMaxwellUrl, nullptr);
 
     auto maxwell_launcher =
         app::ConnectToService<maxwell::Launcher>(maxwell_services.get());
+
     fidl::InterfaceHandle<StoryProvider> story_provider_aux;
     story_provider_impl_->AddBinding(story_provider_aux.NewRequest());
 
     // The FocusController is implemented by the UserShell.
     fidl::InterfaceHandle<FocusController> focus_controller;
     auto focus_controller_request = focus_controller.NewRequest();
-    maxwell_launcher->Initialize(std::move(story_provider_aux),
-                                 std::move(focus_controller));
+
+    maxwell_component_context_impl_.reset(
+        new ComponentContextImpl({&message_queue_manager_, agent_runner_.get(),
+                                  ledger_repository_.get()},
+                                 kMaxwellUrl));
+    maxwell_component_context_binding_.reset(
+        new fidl::Binding<ComponentContext>(
+            maxwell_component_context_impl_.get()));
+    maxwell_launcher->Initialize(
+        maxwell_component_context_binding_->NewBinding(),
+        std::move(story_provider_aux), std::move(focus_controller));
 
     auto context_engine =
         app::ConnectToService<maxwell::ContextEngine>(maxwell_services.get());
@@ -252,6 +264,11 @@ class UserRunnerImpl : public UserRunner {
   MessageQueueManager message_queue_manager_;
   std::unique_ptr<AgentRunner> agent_runner_;
   StoryMarkerImpl story_marker_impl_;
+
+  // Passed to maxwell_launcher.
+  std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
+  std::unique_ptr<fidl::Binding<ComponentContext>>
+      maxwell_component_context_binding_;
 
   // Keep connections to applications started here around so they are
   // killed when this instance is deleted.
