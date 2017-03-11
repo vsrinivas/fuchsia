@@ -204,9 +204,14 @@ high_entry:
 
     /* 64bit entry point from a secondary loader */
 .align 8
+#if ENABLE_NEW_BOOT
+FUNCTION(_entry64)
+    mov %esi, PHYS(_bootdata_base)
+#else
 .org 0x200
 FUNCTION(_entry64)
     mov %esi, PHYS(_zero_page_boot_params)
+#endif
 
     /* ensure the stack pointer is sane */
 

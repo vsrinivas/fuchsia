@@ -46,6 +46,9 @@ __SECTION(".data") void *_multiboot_info;
 /* also save a pointer to the boot_params structure */
 __SECTION(".data") void *_zero_page_boot_params;
 
+/* save a pointer to the bootdata, if present */
+__SECTION(".data") void *_bootdata_base;
+
 void arch_early_init(void)
 {
     x86_mmu_percpu_init();

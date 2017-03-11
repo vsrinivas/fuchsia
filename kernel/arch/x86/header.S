@@ -36,6 +36,9 @@ LOCAL_DATA(_setup_start)
     .int 0
     .int 0
 
+    .quad PHYS(_entry64)
+    .quad 0
+
 #else
 
 .section .text.header, "ax", @progbits

@@ -19,6 +19,7 @@
 #include <platform/pc/acpi.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
+#include <magenta/boot/bootdata.h>
 #include <magenta/boot/multiboot.h>
 #include <dev/uart.h>
 #include <arch/mmu.h>
@@ -34,7 +35,7 @@
 #define LOCAL_TRACE 0
 
 extern multiboot_info_t* _multiboot_info;
-
+extern bootdata_t* _bootdata_base;
 
 struct mmu_initial_mapping mmu_initial_mappings[] = {
 #if ARCH_X86_64
@@ -77,22 +78,95 @@ uint32_t bootloader_fb_format;
 uint32_t bootloader_i915_reg_base;
 uint32_t bootloader_fb_window_size;
 
+void* bootloader_e820_table;
+uint32_t bootloader_e820_count;
+
 static uint32_t bootloader_ramdisk_base;
 static uint32_t bootloader_ramdisk_size;
 
 static bool early_console_disabled;
 
-/* This is a temporary extension to the "zero page" protcol, making use
- * of obsolete fields to pass some additional data from bootloader to
- * kernel in a way that would to badly interact with a Linux kernel booting
- * from the same loader.
- */
+static int process_bootitem(bootdata_t* bd, void* item) {
+    switch (bd->type) {
+    case BOOTDATA_ACPI_RSDP:
+        if (bd->length < sizeof(uint64_t)) {
+            break;
+        }
+        bootloader_acpi_rsdp = *((uint64_t*)item);
+        break;
+    case BOOTDATA_FRAMEBUFFER:
+        if (bd->length < sizeof(bootdata_swfb_t)) {
+            break;
+        }
+        bootdata_swfb_t* fb = item;
+        bootloader_fb_base = (uint32_t) fb->phys_base;
+        bootloader_fb_width = fb->width;
+        bootloader_fb_height = fb->height;
+        bootloader_fb_stride = fb->stride;
+        bootloader_fb_format = fb->format;
+        printf("framebuffer %08x %u x %u  %u %u\n",
+            (uint32_t)fb->phys_base, fb->width, fb->height, fb->stride, fb->format);
+        break;
+    case BOOTDATA_CMDLINE:
+        if (bd->length < 1) {
+            break;
+        }
+        ((char*) item)[bd->length - 1] = 0;
+        printf("cmdline: '%s'\n", (char*) item);
+        cmdline_init((char*) item);
+        break;
+    case BOOTDATA_E820_TABLE:
+        bootloader_e820_table = item;
+        bootloader_e820_count = bd->length / (8+8+4);
+        printf("e820 x %u\n", bootloader_e820_count);
+        break;
+    case BOOTDATA_IGNORE:
+        break;
+    }
+    return 0;
+}
 
 void *boot_alloc_mem(size_t len);
 void boot_alloc_reserve(uintptr_t phys, size_t _len);
 
-static void platform_save_bootloader_data(void)
-{
+static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
+    if ((hdr->type != BOOTDATA_CONTAINER) ||
+        (hdr->extra != BOOTDATA_MAGIC) ||
+        (hdr->flags != 0)) {
+        printf("bootdata: invalid %08x %08x %08x %08x\n",
+               hdr->type, hdr->length, hdr->extra, hdr->flags);
+        return;
+    }
+
+    printf("bootdata: @ %p (%u bytes)\n", hdr, hdr->length);
+        uint32_t* fb = (void*) X86_PHYS_TO_VIRT(0xC0000000);
+        for (unsigned n = 0; n < (1920*8); n++) {
+            fb[n] = 0x0000FFFF;
+        }
+
+    bootdata_t* bd = hdr + 1;
+    uint32_t remain = hdr->length;
+    while (remain > sizeof(bootdata_t)) {
+        remain -= sizeof(bootdata_t);
+        void* item = (bd + 1);
+        size_t len = BOOTDATA_ALIGN(bd->length);
+        if (len > remain) {
+            printf("bootdata: truncated\n");
+            break;
+        }
+        if (process_bootitem(bd, item)) {
+            break;
+        }
+        bd = (item + len);
+        remain -= len;
+    }
+
+    boot_alloc_reserve(phys, hdr->length);
+    bootloader_ramdisk_base = phys;
+    bootloader_ramdisk_size = hdr->length;
+}
+
+static void platform_save_bootloader_data(void) {
 #if ENABLE_NEW_BOOT
     if (_multiboot_info != NULL) {
         multiboot_info_t* mi = (multiboot_info_t*) X86_PHYS_TO_VIRT(_multiboot_info);
@@ -107,11 +181,13 @@ static void platform_save_bootloader_data(void)
             module_t* mod = (module_t*) X86_PHYS_TO_VIRT(mi->mods_addr);
             if (mi->mods_count > 0) {
                 printf("multiboot: ramdisk @ %08x..%08x\n", mod->mod_start, mod->mod_end);
-                bootloader_ramdisk_base = mod->mod_start;
-                bootloader_ramdisk_size = mod->mod_end - mod->mod_start;
-                boot_alloc_reserve(bootloader_ramdisk_base, bootloader_ramdisk_size);
+                process_bootdata((void*) X86_PHYS_TO_VIRT(mod->mod_start), mod->mod_start);
             }
         }
+    }
+    if (_bootdata_base != NULL) {
+        bootdata_t* bd = (bootdata_t*) X86_PHYS_TO_VIRT(_bootdata_base);
+        process_bootdata(bd, (uintptr_t) _bootdata_base);
     }
 #else
     uint32_t *zp = (void*) ((uintptr_t)_zero_page_boot_params + KERNEL_BASE);

@@ -198,11 +198,22 @@ static void e820_range_advance(boot_addr_range_t *range)
     range->is_reset = 0;
 }
 
+// e820 table extracted from bootdata
+extern void* bootloader_e820_table;
+extern uint32_t bootloader_e820_count;
+
 static int e820_range_init(boot_addr_range_t *range, e820_range_seq_t *seq)
 {
     range->seq = seq;
     range->advance = &e820_range_advance;
     range->reset = &e820_range_reset;
+
+    if (bootloader_e820_count) {
+        seq->count = bootloader_e820_count;
+        seq->map = bootloader_e820_table;
+        range->reset(range);
+        return 1;
+    }
 
     if (_zero_page_boot_params == NULL) {
         LTRACEF("No zero page found.\n");
