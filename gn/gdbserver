@@ -13,24 +13,24 @@
             "bootfs_path": "bin/ipt"
         },
         {
-            "binary": "gdbserver-unittests",
-            "bootfs_path": "test/gdbserver-unittests"
+            "binary": "debugserver-unittests",
+            "bootfs_path": "test/debugserver-unittests"
         },
         {
             "binary": "exit-test",
-            "bootfs_path": "test/gdbserver/exit-test"
+            "bootfs_path": "test/debugserver/exit-test"
         },
         {
             "binary": "crash-test",
-            "bootfs_path": "test/gdbserver/crash-test"
+            "bootfs_path": "test/debugserver/crash-test"
         },
         {
             "binary": "loop-test",
-            "bootfs_path": "test/gdbserver/loop-test"
+            "bootfs_path": "test/debugserver/loop-test"
         },
         {
             "binary": "thread-test",
-            "bootfs_path": "test/gdbserver/thread-test"
+            "bootfs_path": "test/debugserver/thread-test"
         }
     ]
 }
