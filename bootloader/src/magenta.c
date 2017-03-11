@@ -11,6 +11,9 @@
 #include <string.h>
 #include <xefi.h>
 
+#include "osboot.h"
+
+#include <magenta/boot/bootdata.h>
 #include <magenta/pixelformat.h>
 
 static efi_guid AcpiTableGUID = ACPI_TABLE_GUID;
@@ -128,12 +131,12 @@ static int process_memory_map(efi_system_table* sys, size_t* _key, int silent) {
         }
         if ((n > 0) && (entry[n - 1].type == type)) {
             if ((entry[n - 1].addr + entry[n - 1].size) == mmap->PhysicalStart) {
-                entry[n - 1].size += mmap->NumberOfPages * 4096UL;
+                entry[n - 1].size += mmap->NumberOfPages * PAGE_SIZE;
                 continue;
             }
         }
         entry[n].addr = mmap->PhysicalStart;
-        entry[n].size = mmap->NumberOfPages * 4096UL;
+        entry[n].size = mmap->NumberOfPages * PAGE_SIZE;
         entry[n].type = type;
         n++;
         if (n == 128) {
@@ -247,7 +250,7 @@ static int get_mx_pixel_format(efi_graphics_output_protocol* gop) {
     }
 }
 
-static void start_kernel(kernel_t* k) {
+static void start_deprecated(kernel_t* k) {
     // 64bit entry is at offset 0x200
     uint64_t entry = (uint64_t)(k->image + 0x200);
 
@@ -262,7 +265,7 @@ static void start_kernel(kernel_t* k) {
         ;
 }
 
-static int load_kernel(efi_boot_services* bs, uint8_t* image, size_t sz, kernel_t* k) {
+static int load_deprecated(efi_boot_services* bs, uint8_t* image, size_t sz, kernel_t* k) {
     uint32_t setup_sz;
     uint32_t image_sz;
     uint32_t setup_end;
@@ -312,7 +315,7 @@ static int load_kernel(efi_boot_services* bs, uint8_t* image, size_t sz, kernel_
     k->cmdline = (void*)mem;
 
     mem = 0x100000;
-    k->pages = (image_sz + 4095) / 4096;
+    k->pages = BYTES_TO_PAGES(image_sz);
     if (bs->AllocatePages(AllocateAddress, EfiLoaderData, k->pages + 1, &mem)) {
         printf("kernel: cannot allocate kernel\n");
         goto fail;
@@ -320,7 +323,7 @@ static int load_kernel(efi_boot_services* bs, uint8_t* image, size_t sz, kernel_
     k->image = (void*)mem;
 
     // setup zero page, copy setup header from kernel binary
-    memset(k->zeropage, 0, 4096);
+    memset(k->zeropage, 0, PAGE_SIZE);
     memcpy(k->zeropage + ZP_SETUP, image + ZP_SETUP, setup_end - ZP_SETUP);
 
     memcpy(k->image, image + setup_sz, image_sz);
@@ -354,9 +357,9 @@ fail:
     return -1;
 }
 
-int boot_kernel(efi_handle img, efi_system_table* sys,
-                void* image, size_t sz, void* ramdisk, size_t rsz,
-                void* cmdline, size_t csz, void* cmdline2, size_t csz2) {
+int boot_deprecated(efi_handle img, efi_system_table* sys,
+                    void* image, size_t sz, void* ramdisk, size_t rsz,
+                    void* cmdline, size_t csz, void* cmdline2, size_t csz2) {
     efi_boot_services* bs = sys->BootServices;
     kernel_t kernel;
     efi_status r;
@@ -371,7 +374,7 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
         printf("ramdisk at %p (%zu bytes)\n", ramdisk, rsz);
     }
 
-    if (load_kernel(sys->BootServices, image, sz, &kernel)) {
+    if (load_deprecated(sys->BootServices, image, sz, &kernel)) {
         printf("Failed to load kernel image\n");
         return -1;
     }
@@ -431,7 +434,216 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
     }
 
     install_memmap(&kernel, e820table, n);
-    start_kernel(&kernel);
+    start_deprecated(&kernel);
 
     return 0;
+}
+
+static void start_magenta(uint64_t entry, void* bootdata) {
+
+    // ebx = 0, ebp = 0, edi = 0, esi = zeropage
+    __asm__ __volatile__(
+        "movl $0, %%ebp \n"
+        "cli \n"
+        "jmp *%[entry] \n" ::[entry] "a"(entry),
+        [zeropage] "S"(bootdata),
+        "b"(0), "D"(0));
+    for (;;)
+        ;
+}
+
+
+static int add_bootdata(void** ptr, size_t* avail,
+                        bootdata_t* bd, void* data) {
+    size_t len = BOOTDATA_ALIGN(bd->length);
+    if ((sizeof(bootdata_t) + len) > *avail) {
+        printf("boot: no room for bootdata type=%08x size=%08x\n",
+               bd->type, bd->length);
+        return -1;
+    }
+    memcpy(*ptr, bd, sizeof(bootdata_t));
+    memcpy((*ptr) + sizeof(bootdata_t), data, len);
+    len += sizeof(bootdata_t);
+    (*ptr) += len;
+    (*avail) -= len;
+    return 0;
+}
+
+typedef struct {
+    bootdata_t hdr_file;
+    bootdata_t hdr_kernel;
+    bootdata_kernel_t data_kernel;
+} magenta_kernel_t;
+
+// if this is allocated on the stack, the clang build
+// fails because it emits calls to __chkstk...
+static char cmdline_tmp[PAGE_SIZE];
+
+int boot_magenta(efi_handle img, efi_system_table* sys,
+                 void* image, size_t isz, void* ramdisk, size_t rsz,
+                 void* cmdline, size_t csz, void* cmdline2, size_t csz2) {
+
+    efi_boot_services* bs = sys->BootServices;
+
+    magenta_kernel_t* kernel = image;
+    if ((isz < sizeof(magenta_kernel_t)) ||
+        (kernel->hdr_kernel.type != BOOTDATA_KERNEL)) {
+        printf("boot: invalid magenta kernel header\n");
+        return -1;
+    }
+    printf("*** BOOT MAGENTA ***\n");
+    printf("IMAGE %p\nRAMDISK %p\n", image, ramdisk);
+
+    if ((ramdisk == NULL) || (rsz < sizeof(bootdata_t))) {
+        printf("boot: ramdisk missing or too small\n");
+        return -1;
+    }
+
+    bootdata_t* hdr0 = ramdisk;
+    if ((hdr0->type != BOOTDATA_CONTAINER) ||
+        (hdr0->extra != BOOTDATA_MAGIC) ||
+        (hdr0->flags != 0)) {
+        printf("boot: ramdisk has invalid bootdata header\n");
+        return -1;
+    }
+    if ((hdr0->length > (rsz - sizeof(bootdata_t)))) {
+        printf("boot: ramdisk has invalid bootdata length\n");
+        return -1;
+    }
+
+    // osboot ensures we have FRONT_BYTES ahead of the
+    // ramdisk to prepend our own bootdata items.
+    //
+    // We used sizeof(hdr) up front but will overwrite
+    // the header at the start of the ramdisk so it works
+    // out in the end.
+
+    bootdata_t hdr;
+    void* bptr = ramdisk - FRONT_BYTES;
+    size_t blen = FRONT_BYTES;
+
+    hdr.type = BOOTDATA_CONTAINER;
+    hdr.length = hdr0->length + 8192;
+    hdr.extra = BOOTDATA_MAGIC;
+    hdr.flags = 0;
+    memcpy(bptr, &hdr, sizeof(hdr));
+    bptr += sizeof(hdr);
+
+
+    // pass combined commandlines, truncating if they don't fit
+    char* tmp = cmdline_tmp;
+    unsigned total = sizeof(cmdline_tmp) - 1;
+    if (csz > total) {
+        csz = total;
+        csz2 = 0;
+    }
+    if (csz2 > (total - csz)) {
+        csz2 = total;
+    }
+    memcpy(tmp, cmdline, csz);
+    memcpy(tmp + csz, cmdline2, csz2);
+    tmp[csz + csz2] = 0;
+
+    hdr.type = BOOTDATA_CMDLINE;
+    hdr.length = csz + csz2 + 1;
+    hdr.extra = 0;
+    hdr.flags = 0;
+    if (add_bootdata(&bptr, &blen, &hdr, tmp)) {
+        return -1;
+    }
+
+    // pass ACPI root pointer
+    uint64_t rsdp = find_acpi_root(img, sys);
+    hdr.type = BOOTDATA_ACPI_RSDP;
+    hdr.length = sizeof(rsdp);
+    if (add_bootdata(&bptr, &blen, &hdr, &rsdp)) {
+        return -1;
+    }
+
+    // pass framebuffer data
+    efi_graphics_output_protocol* gop = NULL;
+    bs->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
+    if (gop) {
+        bootdata_swfb_t fb = {
+            .phys_base = gop->Mode->FrameBufferBase,
+            .width = gop->Mode->Info->HorizontalResolution,
+            .height = gop->Mode->Info->VerticalResolution,
+            .stride = gop->Mode->Info->PixelsPerScanLine,
+            .format = get_mx_pixel_format(gop),
+        };
+        hdr.type = BOOTDATA_FRAMEBUFFER;
+        hdr.length = sizeof(fb);
+        if (add_bootdata(&bptr, &blen, &hdr, &fb)) {
+            return -1;
+        }
+    }
+
+    // Allocate at 1M and copy kernel down there
+    efi_physical_addr mem = 0x100000;
+    unsigned pages = BYTES_TO_PAGES(isz);
+    //TODO: sort out why pages + 1?  Inherited from deprecated_load()
+    if (bs->AllocatePages(AllocateAddress, EfiLoaderData, pages + 1, &mem)) {
+        printf("boot: cannot obtain memory @ %p\n", (void*) mem);
+        goto fail;
+    }
+    memcpy((void*)mem, image, isz);
+
+    size_t key;
+    unsigned n = process_memory_map(sys, &key, 0);
+    for (unsigned i = 0; i < n; i++) {
+        struct e820entry* e = e820table + i;
+        printf("%016" PRIx64 " %016" PRIx64 " %s\n",
+               e->addr, e->size, e820name(e->type));
+    }
+
+    efi_status r = sys->BootServices->ExitBootServices(img, key);
+    if (r == EFI_INVALID_PARAMETER) {
+        n = process_memory_map(sys, &key, 1);
+        r = sys->BootServices->ExitBootServices(img, key);
+        if (r) {
+            printf("boot: Cannot ExitBootServices! (2) %s\n", xefi_strerror(r));
+            goto fail;
+        }
+    } else if (r) {
+        printf("boot: Cannot ExitBootServices! (1) %s\n", xefi_strerror(r));
+        goto fail;
+    }
+
+    // install memory map
+    hdr.type = BOOTDATA_E820_TABLE;
+    hdr.length = n * sizeof(struct e820entry);
+    if (add_bootdata(&bptr, &blen, &hdr, e820table)) {
+        goto fail;
+    }
+
+    // fill the remaining gap between pre-data and ramdisk image
+    if ((blen < sizeof(bootdata_t)) || (blen & 7)) {
+        goto fail;
+    }
+    hdr.type = BOOTDATA_IGNORE;
+    hdr.length = blen - sizeof(bootdata_t);
+    memcpy(bptr, &hdr, sizeof(hdr));
+
+    // jump to the kernel
+    start_magenta(kernel->data_kernel.entry64, ramdisk - 8192);
+
+fail:
+    printf("FAILURE!\n");
+    for(;;) ;
+    bs->FreePages(mem, pages);
+    return -1;
+}
+
+int boot_kernel(efi_handle img, efi_system_table* sys,
+                void* image, size_t sz, void* ramdisk, size_t rsz,
+                void* cmdline, size_t csz, void* cmdline2, size_t csz2) {
+    bootdata_t* bd = image;
+
+    if ((bd->type = BOOTDATA_CONTAINER) &&
+        (bd->extra == BOOTDATA_MAGIC) &&
+        (bd->flags == 0)) {
+        return boot_magenta(img, sys, image, sz, ramdisk, rsz, cmdline, csz, cmdline2, csz2);
+    } else {
+        return boot_deprecated(img, sys, image, sz, ramdisk, rsz, cmdline, csz, cmdline2, csz2);
+    }
 }

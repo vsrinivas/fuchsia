@@ -30,8 +30,8 @@ efi_status xefi_open_protocol(efi_handle h, efi_guid* guid, void** ifc);
 efi_status xefi_close_protocol(efi_handle h, efi_guid* guid);
 
 efi_file_protocol* xefi_open_file(char16_t* filename);
-void* xefi_read_file(efi_file_protocol* file, size_t* _sz);
-void* xefi_load_file(char16_t* filename, size_t* size_out);
+void* xefi_read_file(efi_file_protocol* file, size_t* _sz, size_t front_bytes);
+void* xefi_load_file(char16_t* filename, size_t* size_out, size_t front_bytes);
 
 efi_status xefi_find_pci_mmio(efi_boot_services* bs, uint8_t cls, uint8_t sub, uint8_t ifc, uint64_t* mmio);
 

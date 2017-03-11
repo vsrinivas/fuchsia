@@ -19,6 +19,8 @@
 #include <magenta.h>
 #include <xefi.h>
 
+#include "osboot.h"
+
 #include <magenta/boot/netboot.h>
 
 #define DEFAULT_TIMEOUT 3
@@ -40,13 +42,13 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
     }
     if (!memcmp(name, "ramdisk.bin", 12)) {
         efi_physical_addr mem = 0xFFFFFFFF;
-        size_t buf_size = size > 0 ? (size + 4095) & ~4095 : RBUFSIZE;
+        size_t buf_size = size > 0 ? (size + PAGE_MASK) & ~PAGE_MASK : RBUFSIZE;
 
         if (nbramdisk.size > 0) {
             if (nbramdisk.size < buf_size) {
                 mem = (efi_physical_addr)nbramdisk.data;
                 nbramdisk.data = 0;
-                if (gBS->FreePages(mem, nbramdisk.size / 4096)) {
+                if (gBS->FreePages(mem - FRONT_BYTES, (nbramdisk.size / PAGE_SIZE) + FRONT_PAGES)) {
                     printf("Could not free previous ramdisk allocation\n");
                     nbramdisk.size = 0;
                     return NULL;
@@ -58,11 +60,12 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
         }
 
         printf("netboot: allocating %zu for ramdisk (requested %zu)\n", buf_size, size);
-        if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, buf_size / 4096, &mem)) {
+        if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData,
+                               (buf_size / PAGE_SIZE) + FRONT_PAGES, &mem)) {
             printf("Failed to allocate network io buffer\n");
             return NULL;
         }
-        nbramdisk.data = (void*)mem;
+        nbramdisk.data = (void*) (mem + FRONT_BYTES);
         nbramdisk.size = buf_size;
 
         return &nbramdisk;
@@ -321,7 +324,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     // Load the cmdline
     size_t csz = 0;
-    char* cmdline = xefi_load_file(L"cmdline", &csz);
+    char* cmdline = xefi_load_file(L"cmdline", &csz, 0);
     if (cmdline) {
         cmdline[csz] = '\0';
         printf("cmdline: %s\n", cmdline);
@@ -376,7 +379,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     // Look for a kernel image on disk
     // TODO: use the filesystem protocol
     size_t ksz = 0;
-    void* kernel = xefi_load_file(L"magenta.bin", &ksz);
+    void* kernel = xefi_load_file(L"magenta.bin", &ksz, 0);
 
     if (!have_network && kernel == NULL) {
         goto fail;
@@ -436,10 +439,15 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         case 'm': {
             size_t rsz = 0;
             void* ramdisk = NULL;
-            efi_file_protocol* ramdisk_file = xefi_open_file(L"ramdisk.bin");
+            efi_file_protocol* ramdisk_file = xefi_open_file(L"bootdata.bin");
+            const char* ramdisk_name = "bootdata.bin";
+            if (ramdisk_file == NULL) {
+                ramdisk_file = xefi_open_file(L"ramdisk.bin");
+                ramdisk_name = "ramdisk.bin";
+            }
             if (ramdisk_file) {
-                printf("Loading ramdisk.bin...\n");
-                ramdisk = xefi_read_file(ramdisk_file, &rsz);
+                printf("Loading %s...\n", ramdisk_name);
+                ramdisk = xefi_read_file(ramdisk_file, &rsz, FRONT_BYTES);
                 ramdisk_file->Close(ramdisk_file);
             }
             boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz,

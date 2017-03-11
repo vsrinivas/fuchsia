@@ -55,7 +55,7 @@ exit0:
     return file;
 }
 
-void* xefi_read_file(efi_file_protocol* file, size_t* _sz) {
+void* xefi_read_file(efi_file_protocol* file, size_t* _sz, size_t front_bytes) {
     efi_status r;
     size_t pages = 0;
     void* data = NULL;
@@ -69,7 +69,7 @@ void* xefi_read_file(efi_file_protocol* file, size_t* _sz) {
         return NULL;
     }
 
-    pages = (finfo->FileSize + 4095) / 4096;
+    pages = (finfo->FileSize + front_bytes + 4095) / 4096;
     r = gBS->AllocatePages(AllocateAnyPages, EfiLoaderData, pages, (efi_physical_addr *)&data);
     if (r) {
         printf("LoadFile: Cannot allocate buffer (%s)\n", xefi_strerror(r));
@@ -77,7 +77,7 @@ void* xefi_read_file(efi_file_protocol* file, size_t* _sz) {
     }
 
     sz = finfo->FileSize;
-    r = file->Read(file, &sz, data);
+    r = file->Read(file, &sz, data + front_bytes);
     if (r) {
         printf("LoadFile: Error reading file (%s)\n", xefi_strerror(r));
         gBS->FreePages((efi_physical_addr)data, pages);
@@ -90,15 +90,15 @@ void* xefi_read_file(efi_file_protocol* file, size_t* _sz) {
     }
     *_sz = finfo->FileSize;
 
-    return data;
+    return data + front_bytes;
 }
 
-void* xefi_load_file(char16_t* filename, size_t* _sz) {
+void* xefi_load_file(char16_t* filename, size_t* _sz, size_t front_bytes) {
     efi_file_protocol* file = xefi_open_file(filename);
     if (!file) {
         return NULL;
     }
-    void* data = xefi_read_file(file, _sz);
+    void* data = xefi_read_file(file, _sz, front_bytes);
     file->Close(file);
     return data;
 }

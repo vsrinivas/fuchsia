@@ -36,7 +36,7 @@
 #define BOOTDATA_MDI              (0x3149444du) // MDI1
 
 // A Magenta Kernel Image
-// "extra" and "flags" are 0.
+// Content: bootdata_kernel_t
 #define BOOTDATA_KERNEL           (0x4c4e524bu) // KRNL
 
 // Flag indicating that the bootfs is compressed.
@@ -57,6 +57,11 @@
 // Content: bootdata_swfb_t
 #define BOOTDATA_FRAMEBUFFER      (0x42465753u) // SWFB
 
+// E820 Memory Table
+// Content: e820entry[]
+#define BOOTDATA_E820_TABLE       (0x30323845u) // E820
+
+#define BOOTDATA_IGNORE           (0x50494b53u) // SKIP
 
 #ifndef ASSEMBLY
 __BEGIN_CDECLS;
@@ -91,6 +96,11 @@ typedef struct {
     uint32_t stride;
     uint32_t format;
 } bootdata_swfb_t;
+
+typedef struct {
+    uint64_t entry64;
+    uint64_t reserved;
+} bootdata_kernel_t;
 
 __END_CDECLS;
 #endif
