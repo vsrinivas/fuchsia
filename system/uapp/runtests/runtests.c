@@ -49,7 +49,7 @@ static int failed_count = 0;
 // provided by the user.
 static int verbosity = -1;
 
-static void run_tests(const char* dirn) {
+static void run_tests(const char* dirn, const char* test_name) {
     DIR* dir = opendir(dirn);
     if (dir == NULL) {
         return;
@@ -61,6 +61,10 @@ static void run_tests(const char* dirn) {
         char name[64 + NAME_MAX];
         snprintf(name, sizeof(name), "%s/%s", dirn, de->d_name);
         if (stat(name, &stat_buf) != 0 || !S_ISREG(stat_buf.st_mode)) {
+            continue;
+        }
+
+        if ((test_name != NULL) && strncmp(test_name, de->d_name, NAME_MAX)) {
             continue;
         }
 
@@ -126,21 +130,30 @@ static void run_tests(const char* dirn) {
 
 int usage(char* name) {
     fprintf(stderr,
-            "usage: %s [-q|-v][-s][-m][-l][-p][-a]\n"
+            "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a] [test name]\n"
             "\n"
-            "options:                                               \n"
-            "   -v: Verbose output                                  \n"
-            "   -q: Quiet output                                    \n"
-            "   -s: Toggle Small tests         (on by default)      \n"
-            "   -m: Toggle Medium tests        (on by default)      \n"
-            "   -l: Toggle Large tests         (off by default)     \n"
-            "   -p: Toggle Performance tests   (off by default)     \n"
-            "   -a: Turn on All tests                               \n", name);
+            "If the optional [test name] is supplied, runtests will\n"
+            "only run the [test name] executable.                  \n"
+            "\n"
+            "options:                                              \n"
+            "   -h: See this message                               \n"
+            "   -v: Verbose output                                 \n"
+            "   -q: Quiet output                                   \n"
+            "   -S: Turn ON  Small tests         (on by default)   \n"
+            "   -s: Turn OFF Small tests                           \n"
+            "   -M: Turn ON  Medium tests        (on by default)   \n"
+            "   -m: Turn OFF Medium tests                          \n"
+            "   -L: Turn ON  Large tests         (off by default)  \n"
+            "   -l: Turn OFF Large tests                           \n"
+            "   -P: Turn ON Performance tests    (off by default)  \n"
+            "   -p: Turn OFF Performance tests                     \n"
+            "   -a: Turn on All tests                              \n", name);
     return -1;
 }
 
 int main(int argc, char** argv) {
     test_type_t test_type = TEST_DEFAULT;
+    const char* test_name = NULL;
 
     int i = 1;
     while (i < argc) {
@@ -150,15 +163,28 @@ int main(int argc, char** argv) {
             printf("verbose output. enjoy.\n");
             verbosity = 1;
         } else if (strcmp(argv[i], "-s") == 0) {
-            test_type ^= TEST_SMALL;
+            test_type &= ~TEST_SMALL;
         } else if (strcmp(argv[i], "-m") == 0) {
-            test_type ^= TEST_MEDIUM;
+            test_type &= ~TEST_MEDIUM;
         } else if (strcmp(argv[i], "-l") == 0) {
-            test_type ^= TEST_LARGE;
+            test_type &= ~TEST_LARGE;
         } else if (strcmp(argv[i], "-p") == 0) {
-            test_type ^= TEST_PERFORMANCE;
+            test_type &= ~TEST_PERFORMANCE;
+        } else if (strcmp(argv[i], "-S") == 0) {
+            test_type |= TEST_SMALL;
+        } else if (strcmp(argv[i], "-M") == 0) {
+            test_type |= TEST_MEDIUM;
+        } else if (strcmp(argv[i], "-L") == 0) {
+            test_type |= TEST_LARGE;
+        } else if (strcmp(argv[i], "-P") == 0) {
+            test_type |= TEST_PERFORMANCE;
         } else if (strcmp(argv[i], "-a") == 0) {
             test_type |= TEST_ALL;
+        } else if (strcmp(argv[i], "-h") == 0) {
+            return usage(argv[0]);
+        } else if (i == argc - 1) {
+            // Last argument, not a flag: test name
+            test_name = argv[i];
         } else {
             return usage(argv[0]);
         }
@@ -175,8 +201,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    run_tests("/boot/test");
-    run_tests("/system/test");
+    run_tests("/boot/test", test_name);
+    run_tests("/system/test", test_name);
 
     // It's not catastrophic if we can't unset it; we're just trying to clean up
     unsetenv(TEST_ENV_NAME);
