@@ -631,6 +631,14 @@ function frun() {
   mrun -x "${FUCHSIA_BUILD_DIR}/user.bootfs" "$@"
 }
 
+### fbox: run fuchsia in virtualbox
+
+function fbox() {
+  fcheck || return 1
+
+  "$FUCHSIA_SCRIPTS_DIR/vbox/fbox.sh" "$@"
+}
+
 ### fsymbolize: symbolizes stack traces with fuchsia build
 
 function fsymbolize-usage() {
