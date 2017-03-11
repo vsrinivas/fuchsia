@@ -41,6 +41,8 @@ public:
             DLOG("WaitOne returned false, thread exiting");
         });
 
+        auto copy = semaphores;
+
         for (uint32_t i = 0; i < semaphore_count; i++) {
             uint32_t index = rand() % semaphores.size();
             DLOG("signalling semaphore 0x%" PRIx64, semaphores[index]->id());
@@ -63,8 +65,12 @@ public:
 
         EXPECT_EQ(1u, callback_count_);
 
+        semaphores = std::move(copy);
+
         for (uint32_t i = 0; i < semaphore_count; i++) {
             EXPECT_EQ(1u, semaphores[i].use_count());
+            // Semaphores should be unsignalled
+            EXPECT_FALSE(semaphores[i]->Wait(10));
         }
     }
 
@@ -74,6 +80,6 @@ private:
 
 } // namespace
 
-// TODO(MG-594): enable these tests once port close wakes up the waiter
-// TEST(SemaphorePort, One) { std::make_unique<TestSemaphorePort>()->Test(1); }
-// TEST(SemaphorePort, Many) { std::make_unique<TestSemaphorePort>()->Test(50); }
+TEST(SemaphorePort, One) { std::make_unique<TestSemaphorePort>()->Test(1); }
+
+TEST(SemaphorePort, Many) { std::make_unique<TestSemaphorePort>()->Test(50); }
