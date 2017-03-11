@@ -363,7 +363,43 @@ struct LEMetaEventParams {
   uint8_t subevent_parameters[0];
 } __PACKED;
 
-// LE Advertising Report Event
+// LE Connection Complete Event (v4.0) (LE)
+constexpr EventCode kLEConnectionCompleteSubeventCode = 0x01;
+
+struct LEConnectionCompleteSubeventParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  LEConnectionRole role;
+  LEPeerAddressType peer_address_type;
+
+  // Public Device Address or Random Device Address of the peer device.
+  common::DeviceAddress peer_address;
+
+  // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
+  // Time: N * 1.25 ms
+  // Time Range: 7.5 ms to 4 s.
+  uint16_t conn_interval;
+
+  // Range: 0x0000 to kLEConnectionLatencyMax in hci_constants.h
+  uint16_t conn_latency;
+
+  // Range: see kLEConnectionSupervisionTimeout[Min|Max] in hci_constants.h
+  // Time: N * 10 ms
+  // Time Range: 100 ms to 32 s
+  uint16_t supervision_timeout;
+
+  // The Master_Clock_Accuracy parameter is only valid for a slave. On a master, this parameter
+  // shall be set to 0x00.
+  LEClockAccuracy master_clock_accuracy;
+} __PACKED;
+
+// LE Advertising Report Event (v4.0) (LE)
 constexpr EventCode kLEAdvertisingReportSubeventCode = 0x02;
 
 struct LEAdvertisingReportData {
@@ -406,12 +442,421 @@ struct LEAdvertisingReportSubeventParams {
   uint8_t reports[0];
 } __PACKED;
 
+// LE Connection Update Complete Event (v4.0) (LE)
+constexpr EventCode kLEConnectionUpdateCompleteSubeventCode = 0x03;
+
+struct LEConnectionUpdateCompleteSubeventParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
+  // Time: N * 1.25 ms
+  // Time Range: 7.5 ms to 4 s.
+  uint16_t conn_interval;
+
+  // Range: 0x0000 to kLEConnectionLatencyMax in hci_constants.h
+  uint16_t conn_latency;
+
+  // Range: see kLEConnectionSupervisionTimeout[Min|Max] in hci_constants.h
+  // Time: N * 10 ms
+  // Time Range: 100 ms to 32 s
+  uint16_t supervision_timeout;
+} __PACKED;
+
+// LE Read Remote Features Complete Event (v4.0) (LE)
+constexpr EventCode kLEReadRemoteFeaturesCompleteSubeventCode = 0x04;
+
+struct LEReadRemoteFeaturesCompleteSubeventParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Bit Mask List of supported LE features. See enum class LEFeatures in
+  // hci_constants.h.
+  uint64_t le_features;
+} __PACKED;
+
+// LE Long Term Key Request Event (v4.0) (LE)
+constexpr EventCode LELongTermKeyRequestSubeventCode = 0x05;
+
+struct LELongTermKeyRequestSubeventParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // 64-bit random number.
+  uint64_t random_number;
+
+  // 16-bit encrypted diversifier.
+  uint16_t encrypted_diversifier;
+} __PACKED;
+
+// LE Remote Connection Parameter Request Event (v4.1) (LE)
+constexpr EventCode kLERemoteConnectionParameterRequestSubeventCode = 0x06;
+
+struct LERemoteConnectionParameterRequestSubeventParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
+  // Time: N * 1.25 ms
+  // Time Range: 7.5 ms to 4 s.
+  uint16_t interval_min;
+  uint16_t interval_max;
+
+  // Range: 0x0000 to kLEConnectionLatencyMax in hci_constants.h
+  uint16_t latency;
+
+  // Range: see kLEConnectionSupervisionTimeout[Min|Max] in hci_constants.h
+  // Time: N * 10 ms
+  // Time Range: 100 ms to 32 s
+  uint16_t timeout;
+} __PACKED;
+
+// LE Data Length Change Event (v4.2) (LE)
+constexpr EventCode kLEDataLengthChangeSubeventCode = 0x07;
+
+struct LEDataLengthChangeSubeventParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Range: see kLEMaxTxOctets[Min|Max] in hci_constants.h
+  uint16_t max_tx_octets;
+
+  // Range: see kLEMaxTxTime[Min|Max] in hci_constants.h
+  uint16_t max_tx_time;
+
+  // Range: see kLEMaxTxOctets[Min|Max] in hci_constants.h
+  uint16_t max_rx_octets;
+
+  // Range: see kLEMaxTxTime[Min|Max] in hci_constants.h
+  uint16_t mx_rx_time;
+} __PACKED;
+
+// LE Read Local P-256 Public Key Complete Event (v4.2) (LE)
+constexpr EventCode kLEReadLocalP256PublicKeyCompleteSubeventCode = 0x08;
+
+struct LEReadLOcalP256PublicKeyCompleteSubeventParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Local P-256 public key.
+  uint8_t local_p256_public_key[64];
+} __PACKED;
+
+// LE Generate DHKey Complete Event (v4.2) (LE)
+constexpr EventCode kLEGenerateDHKeyCompleteSubeventCode = 0x09;
+
+struct LEGenerateDHKeyCompleteSubeventParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Diffie Hellman Key.
+  uint8_t dh_key[32];
+} __PACKED;
+
+// LE Enhanced Connection Complete Event (v4.2) (LE)
+constexpr EventCode kLEEnhancedConnectionCompleteSubeventCode = 0x0A;
+
+struct LEEnhancedConnectionCompleteSubeventParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  LEConnectionRole role;
+  LEAddressType peer_address_type;
+
+  // Public Device Address, or Random Device Address, Public Identity Address or Random (static)
+  // Identity Address of the device to be connected.
+  common::DeviceAddress peer_address;
+
+  common::DeviceAddress local_resolvable_private_address;
+  common::DeviceAddress peer_resolvable_private_address;
+
+  // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
+  // Time: N * 1.25 ms
+  // Time Range: 7.5 ms to 4 s.
+  uint16_t conn_interval;
+
+  // Range: 0x0000 to kLEConnectionLatencyMax in hci_constants.h
+  uint16_t conn_latency;
+
+  // Range: see kLEConnectionSupervisionTimeout[Min|Max] in hci_constants.h
+  // Time: N * 10 ms
+  // Time Range: 100 ms to 32 s
+  uint16_t supervision_timeout;
+
+  // The Master_Clock_Accuracy parameter is only valid for a slave. On a master, this parameter
+  // shall be set to 0x00.
+  LEClockAccuracy master_clock_accuracy;
+} __PACKED;
+
+// LE Directed Advertising Report Event (v4.2) (LE)
+constexpr EventCode kLEDirectedAdvertisingReportSubeventCode = 0x0B;
+
+struct LEDirectedAdvertisingReportData {
+  // The event type. This is always equal to LEAdvertisingEventType::kAdvDirectInd.
+  LEAdvertisingEventType event_type;
+
+  // Type of |address| for the advertising device.
+  LEAddressType address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address or Random (static)
+  // Identity Address of the advertising device.
+  common::DeviceAddress address;
+
+  // By default this is set to LEAddressType::kRandom and |direct_address| will contain a random
+  // device address.
+  LEAddressType direct_address_type;
+  common::DeviceAddress direct_address;
+
+  // Range: -127 <= N <= +20
+  // Units: dBm
+  // If N == 127: RSSI is not available.
+  int8_t rssi;
+} __PACKED;
+
+struct LEDirectedAdvertisingReportSubeventParams {
+  // Number of LEAdvertisingReportData instances contained in the array
+  // |reports|.
+  uint8_t num_reports;
+
+  // The report array parameters.
+  LEDirectedAdvertisingReportData reports[0];
+} __PACKED;
+
+// LE PHY Update Complete Event (v5.0) (LE)
+constexpr EventCode kLEPHYUpdateCompleteSubeventCode = 0x0C;
+
+struct LEPHYUpdateCompleteSubeventParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // The transmitter PHY.
+  LEPHY tx_phy;
+
+  // The receiveer PHY.
+  LEPHY rx_phy;
+} __PACKED;
+
+// LE Extended Advertising Report Event (v5.0) (LE)
+constexpr EventCode kLEExtendedAdvertisingReportSubeventCode = 0x0D;
+
+struct LEExtendedAdvertisingReportData {
+  // The advertising event type bitfield. For more information on how to interpret this see
+  // kLEExtendedAdvEventType* constants in hci_constants.h and Core Spec v5.0, Vol 2, Part E,
+  // Section 7.7.65.13.
+  uint16_t event_type;
+
+  // Address type of the advertiser.
+  LEAddressType address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address or Random (static)
+  // Identity Address of the advertising device.
+  common::DeviceAddress address;
+
+  // Indicates the PHY used to send the advertising PDU on the primary advertising channel. Legacy
+  // PDUs always use LEPHY::kLE1M
+  //
+  // LEPHY::kNone, LEPHY::kLE2M, and LEPHY::kLECodedS2 are excluded.
+  LEPHY primary_phy;
+
+  // Indicates the PHY used to send the advertising PDU(s), if any, on the secondary advertising
+  // channel. A value of LEPHY::kNone means that no packets were received on the secondary
+  // advertising channel.
+  LEPHY secondary_phy;
+
+  // Value of the Advertising SID subfield in the ADI field of the PDU. A value of 0x00 means no ADI
+  // field in the PDU.
+  uint8_t advertising_sid;
+
+  // Range: -127 <= N <= +126
+  // Units: dBm
+  int8_t tx_power;
+
+  // Range: -127 <= N <= +20
+  // Units: dBm
+  // If N == 127: RSSI is not available.
+  int8_t rssi;
+
+  // 0x0000: No periodic advertising.
+  // 0xXXXX:
+  //   Range: See kLEPeriodicAdvertisingInterval[Min|Max] in hci_constants.h
+  //   Time = N * 1.25 ms
+  //   Time Range: 7.5ms to 81.91875 s
+  uint16_t periodic_adv_interval;
+
+  LEAddressType direct_address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address or Random (static)
+  // Identity Address of the target device.
+  common::DeviceAddress direct_address;
+
+  // Length of the data field.
+  uint8_t data_length;
+
+  // The beginning of |data_length| octets of advertising or scan response data formatted as defined
+  // in Core Spec v5.0, Vol 3, Part C, Section 11.
+  uint8_t data[0];
+} __PACKED;
+
+struct LEExtendedAdvertisingReportSubeventParams {
+  // Number of separate reports in the event.
+  uint8_t num_reports;
+
+  // Beginning of LEExtendedAdvertisingReportData array. Since each report data has a
+  // variable length, the contents of |reports| this is declared as an array of
+  // uint8_t.
+  uint8_t reports[0];
+} __PACKED;
+
+// LE Periodic Advertising Sync Established Event (v5.0) (LE)
+constexpr EventCode kLEPeriodicAdvertisingSyncEstablishedSubeventCode = 0x0E;
+
+struct LEPeriodicAdvertisingSyncEstablishedSubeventParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Handle used to identify the periodic advertiser (only the lower 12 bits are meaningful).
+  PeriodicAdvertiserHandle sync_handle;
+
+  // Value of the Advertising SID subfield in the ADI field of the PDU.
+  uint8_t advertising_sid;
+
+  // Address type of the advertiser.
+  LEAddressType advertiser_address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
+  // Identity Address of the advertiser.
+  common::DeviceAddress advertiser_address;
+
+  // Advertiser_PHY.
+  LEPHY advertiser_phy;
+
+  // Range: See kLEPeriodicAdvertisingInterval[Min|Max] in hci_constants.h
+  // Time = N * 1.25 ms
+  // Time Range: 7.5ms to 81.91875 s
+  uint16_t periodic_adv_interval;
+
+  // Advertiser_Clock_Accuracy.
+  LEClockAccuracy advertiser_clock_accuracy;
+} __PACKED;
+
+// LE Periodic Advertising Report Event (v5.0) (LE)
+constexpr EventCode kLEPeriodicAdvertisingReportSubeventCode = 0x0F;
+
+struct LEPeriodicAdvertisingReportSubeventParams {
+  // (only the lower 12 bits are meaningful).
+  PeriodicAdvertiserHandle sync_handle;
+
+  // Range: -127 <= N <= +126
+  // Units: dBm
+  int8_t tx_power;
+
+  // Range: -127 <= N <= +20
+  // Units: dBm
+  // If N == 127: RSSI is not available.
+  int8_t rssi;
+
+  // As of Core Spec v5.0 this parameter is intended to be used in a future feature.
+  uint8_t unused;
+
+  // Data status of the periodic advertisement. Indicates whether or not the controller has split
+  // the data into multiple reports.
+  LEAdvertisingDataStatus data_status;
+
+  // Length of the Data field.
+  uint8_t data_length;
+
+  // |data_length| octets of data received from a Periodic Advertising packet.
+  uint8_t data[0];
+} __PACKED;
+
+// LE Periodic Advertising Sync Lost Event (v5.0) (LE)
+constexpr EventCode kLEPeriodicAdvertisingSyncLostSubeventCode = 0x10;
+
+struct LEPeriodicAdvertisingSyncLostSubeventParams {
+  // Used to identify the periodic advertiser (only the lower 12 bits are meaningful).
+  PeriodicAdvertiserHandle sync_handle;
+} __PACKED;
+
+// LE Scan Timeout Event (v5.0) (LE)
+constexpr EventCode kLEScanTimeoutSubeventCode = 0x11;
+
+// LE Advertising Set Terminated Event (v5.0) (LE)
+constexpr EventCode kLEAdvertisingSetTerminatedSubeventCode = 0x012;
+
+struct LEAdvertisingSetTerminatedSubeventParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+
+  // Advertising Handle in which advertising has ended.
+  AdvertisingHandle adv_handle;
+
+  // Connection Handle of the connection whose creation ended the advertising.
+  ConnectionHandle connection_handle;
+
+  // Number of completed extended advertising events transmitted by the Controller.
+  uint8_t num_completed_extended_adv_events;
+} __PACKED;
+
+// LE Scan Request Received Event (v5.0) (LE)
+constexpr EventCode kLEScanRequestReceivedSubeventCode = 0x13;
+
+struct LEScanRequestReceivedSubeventParams {
+  // Used to identify an advertising set.
+  AdvertisingHandle adv_handle;
+
+  // Address type of the scanner address.
+  LEAddressType scanner_address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address or Random (static)
+  // Identity Address of the scanning device.
+  common::DeviceAddress scanner_address;
+} __PACKED;
+
+// LE Channel Selection Algorithm Event (v5.0) (LE)
+constexpr EventCode kLEChannelSelectionAlgorithmSubeventCode = 0x014;
+
+struct LEChannelSelectionAlgorithmSubeventParams {
+  // Connection Handle (only the lower 12-bits are meaningful).
+  //
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Channel selection algorithm is used on the data channel connection.
+  LEChannelSelectionAlgorithm channel_selection_algorithm;
+} __PACKED;
+
 // ================================================================
 // Number Of Completed Data Blocks Event (v3.0 + HS) (BR/EDR & AMP)
 constexpr EventCode kNumberOfCompletedDataBlocksEventCode = 0x48;
 
 struct NumberOfCompletedDataBlocksEventData {
-  // Handle (Connection Handle for a BR/EDR Controller or a Logical_Link_Handle
+  // Handle (Connection Handle for a BR/EDR Controller or a Logical_Link Handle
   // for an AMP Controller).
   uint16_t handle;
   uint16_t num_of_completed_packets;
@@ -1217,7 +1662,7 @@ struct LEReadMaximumDataLengthReturnParams {
 constexpr OpCode kLEReadPHY = LEControllerCommandOpCode(0x0030);
 
 struct LEReadPHYCommandParams {
-  // Connection_Handle (only the lower 12-bits are meaningful).
+  // Connection Handle (only the lower 12-bits are meaningful).
   //
   //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
   ConnectionHandle connection_handle;
@@ -1227,7 +1672,7 @@ struct LEReadPHYReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // Connection_Handle (only the lower 12-bits are meaningful).
+  // Connection Handle (only the lower 12-bits are meaningful).
   //
   //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
   ConnectionHandle connection_handle;
@@ -1259,7 +1704,7 @@ struct LESetDefaultPHYCommandParams {
 constexpr OpCode kLESetPHY = LEControllerCommandOpCode(0x0032);
 
 struct LESetPHYCommandParams {
-  // Connection_Handle (only the lower 12-bits are meaningful).
+  // Connection Handle (only the lower 12-bits are meaningful).
   //
   //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
   ConnectionHandle connection_handle;

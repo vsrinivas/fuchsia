@@ -663,6 +663,14 @@ enum class LEAddressType : uint8_t {
 
   // Random (static) Identity Address (Corresponds to Resolved Private Address)
   kRandomIdentity = 0x03,
+
+  // This is a special value used in LE Extended Advertising Report events to indicate a random
+  // address that the controller was unable to resolve.
+  kRandomUnresolved = 0xFE,
+
+  // This is a special value that is only used in LE Directed Advertising Report events.
+  // Meaning: No address provided (anonymous advertisement)
+  kAnonymous = 0xFF,
 };
 
 // Possible values that can be used for the |own_address_type| parameter in a
@@ -813,17 +821,21 @@ constexpr uint8_t kLEPHYBitCoded = (1 << 2);
 constexpr uint8_t kLEAllPHYSBitTxNoPreference = (1 << 0);
 constexpr uint8_t kLEAllPHYSBitRxNoPreference = (1 << 1);
 
-// Potential values that can be used for the TX_PHY and RX_PHY parameters in a HCI_LE_Read_PHY
-// command.
+// Potential values that can be used for the LE PHY parameters in HCI commands and events.
 enum class LEPHY : uint8_t {
   kLE1M = 0x01,
   kLE2M = 0x02,
 
   // Only for the HCI_LE_Enhanced_Transmitter_Test command this value implies S=8 data coding.
+  // Otherwise this refers to general LE Coded PHY.
   kLECoded = 0x03,
 
   // This should ony be used with the HCI_LE_Enhanced_Transmitter_Test command.
   kLECodedS2 = 0x04,
+
+  // Some HCI events may use this value to indicate that no packets were sent on a particular PHY,
+  // specifically the LE Extended Advertising Report event.
+  kNone = 0x00,
 };
 
 // Potential values that can be used for the PHY_options parameter in a HCI_LE_Set_PHY command.
@@ -877,6 +889,26 @@ constexpr uint16_t kLEAdvEventPropBitHighDutyCycleDirectedConnectable = (1 << 3)
 constexpr uint16_t kLEAdvEventPropBitUseLegacyPDUs                    = (1 << 4);
 constexpr uint16_t kLEAdvEventPropBitAnonymousAdvertising             = (1 << 5);
 constexpr uint16_t kLEAdvEventPropBitIncludeTxPower                   = (1 << 6);
+
+// The Event_Type bitfield values reported in a LE Extended Advertising Report Event.
+constexpr uint16_t kLEExtendedAdvEventTypeConnectable  = (1 << 0);
+constexpr uint16_t kLEExtendedAdvEventTypeScannable    = (1 << 1);
+constexpr uint16_t kLEExtendedAdvEventTypeDirected     = (1 << 2);
+constexpr uint16_t kLEExtendedAdvEventTypeScanResponse = (1 << 3);
+constexpr uint16_t kLEExtendedAdvEventTypeLegacy       = (1 << 4);
+
+// LE Advertising data status properties stored in bits 5 and 6 of the Event_Type bitfield of a LE
+// Extended Advertising Report event and in a LE Periodic Advertising Report event.
+enum class LEAdvertisingDataStatus : uint16_t {
+  // Data is complete.
+  kComplete = 0x00,
+
+  // Data is incomplete, more data to come in future events.
+  kIncomplete = 0x01,
+
+  // Data is incomplete and truncated, no more data to come.
+  kIncompleteTruncated = 0x02,
+};
 
 // The Periodic_Advertising_Properties bitfield used in a HCI_LE_Set_Periodic_Advertising_Parameters
 // command.
@@ -947,6 +979,31 @@ enum class ACLPacketBoundaryFlag : uint8_t {
 enum class ACLBroadcastFlag : uint8_t {
   kPointToPoint         = 0x00,
   kActiveSlaveBroadcast = 0x01,
+};
+
+// The LE connection role.
+enum class LEConnectionRole : uint8_t {
+  kMaster = 0x00,
+  kSlave = 0x01,
+};
+
+// Possible values that can be reported for the Master_Clock_Accuracy and Advertiser_Clock_Accuracy
+// parameters.
+enum class LEClockAccuracy : uint8_t {
+  k500Ppm = 0x00,
+  k250Ppm = 0x01,
+  k150Ppm = 0x02,
+  k100Ppm = 0x03,
+  k75Ppm = 0x04,
+  k50Ppm = 0x05,
+  k30Ppm = 0x06,
+  k20Ppm = 0x07,
+};
+
+// Possible values that can be reported in a LE Channel Selection Algorithm event.
+enum class LEChannelSelectionAlgorithm : uint8_t {
+  kAlgorithm1 = 0x00,
+  kAlgorithm2 = 0x01,
 };
 
 // "Hosts and Controllers shall be able to accept HCI ACL Data Packets with up to 27 bytes of data
