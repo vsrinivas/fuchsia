@@ -518,14 +518,23 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
 
 void RenderEngineCommandStreamer::ScheduleContext()
 {
-    uint64_t status = registers::ExeclistStatus::read(register_io(), mmio_base());
+    auto start = std::chrono::high_resolution_clock::now();
 
-    if (registers::ExeclistStatus::execlist_write_pointer(status) ==
-            registers::ExeclistStatus::execlist_current_pointer(status) &&
-        registers::ExeclistStatus::execlist_queue_full(status)) {
-        DLOG("execlist queue full: status 0x%lx", status);
-        DASSERT(false);
-        return;
+    for (bool busy = true; busy;) {
+        constexpr uint32_t kTimeoutUs = 100;
+        uint64_t status = registers::ExeclistStatus::read(register_io(), mmio_base());
+
+        busy = registers::ExeclistStatus::execlist_write_pointer(status) ==
+                   registers::ExeclistStatus::execlist_current_pointer(status) &&
+               registers::ExeclistStatus::execlist_queue_full(status);
+        if (busy) {
+            if (std::chrono::duration<double, std::micro>(
+                    std::chrono::high_resolution_clock::now() - start)
+                    .count() > kTimeoutUs) {
+                magma::log(magma::LOG_WARNING, "Timeout waiting for execlist port");
+                break;
+            }
+        }
     }
 
     while (true) {
