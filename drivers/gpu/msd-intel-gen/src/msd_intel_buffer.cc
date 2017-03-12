@@ -8,10 +8,7 @@
 #include "msd.h"
 
 MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
-    : platform_buf_(std::move(platform_buf))
-{
-    wait_rendering_event_ = magma::PlatformEvent::Create();
-}
+    : platform_buf_(std::move(platform_buf)) {}
 
 std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Import(uint32_t handle)
 {
@@ -96,6 +93,9 @@ void MsdIntelBuffer::DecrementInflightCounter()
 
 void MsdIntelBuffer::WaitRendering()
 {
+    if (!wait_rendering_event_)
+        wait_rendering_event_ = magma::PlatformEvent::Create();
+
     std::unique_lock<std::mutex> lock(wait_rendering_mutex_);
 
     while (true) {
