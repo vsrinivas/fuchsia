@@ -4,18 +4,13 @@
 
 #include "asm.h"
 
-// %rax = memcpy(%rdi, %rsi, %rdx)
-.hidden __memcpy_fwd
-ENTRY(memcpy)
-ALIAS_ENTRY(__memcpy_fwd)
-
-    // Save return value.
-    mov %rdi, %rax
+// %rax = mempcpy(%rdi, %rsi, %rdx)
+ENTRY(mempcpy)
 
     mov %rdx, %rcx
     rep movsb // while (rcx-- > 0) *rdi++ = *rsi++;
 
+    mov %rdi, %rax
     ret
 
-ALIAS_END(__memcpy_fwd)
-END(memcpy)
+END(mempcpy)

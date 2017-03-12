@@ -7,7 +7,6 @@ LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/memchr.c \
     $(GET_LOCAL_DIR)/memcmp.c \
     $(GET_LOCAL_DIR)/memmem.c \
-    $(GET_LOCAL_DIR)/mempcpy.c \
     $(GET_LOCAL_DIR)/memrchr.c \
     $(GET_LOCAL_DIR)/rindex.c \
     $(GET_LOCAL_DIR)/stpcpy.c \
@@ -74,12 +73,14 @@ ifeq ($(ARCH),arm64)
 LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/memcpy.c \
     $(GET_LOCAL_DIR)/memmove.c \
+    $(GET_LOCAL_DIR)/mempcpy.c \
     $(GET_LOCAL_DIR)/memset.c \
 
 else ifeq ($(SUBARCH),x86-64)
 LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/x86_64/memcpy.S \
     $(GET_LOCAL_DIR)/x86_64/memmove.S \
+    $(GET_LOCAL_DIR)/x86_64/mempcpy.S \
     $(GET_LOCAL_DIR)/x86_64/memset.S \
 
 else
