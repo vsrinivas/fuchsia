@@ -14,4 +14,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS += dev/hw_rng
 
+# This flag is required to use _rdseed64_step from <x86intrin.h>.
+MODULE_COMPILEFLAGS += -mrdseed
+
 include make/module.mk

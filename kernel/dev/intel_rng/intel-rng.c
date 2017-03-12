@@ -3,19 +3,18 @@
 #include <string.h>
 #include <sys/types.h>
 
+// TODO(mcgrathr): As of GCC 6.2.0, these other files included by
+// <x86intrin.h> are incompatible with -mno-sse.
+#ifndef __clang__
+#define _IMMINTRIN_H_INCLUDED
+#define _MM3DNOW_H_INCLUDED
+#define _FMA4INTRIN_H_INCLUDED
+#define _XOPMMINTRIN_H_INCLUDED
+#endif
+#include <x86intrin.h>
+
 #include <arch/x86/feature.h>
 #include <dev/hw_rng.h>
-
-static bool rdseed64(uint64_t *out) {
-    bool success = false;
-    __asm__ volatile ("xor %%al, %%al\r\n"
-                      "rdseed %0\r\n"
-                      "adc $0, %%al\r\n"
-                      : "=r"(*out), "=a"(success)
-                      :
-                      : "cc");
-    return success;
-}
 
 /* @brief Get entropy from the CPU using RDSEED.
  *
@@ -45,8 +44,8 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
 
     size_t written = 0;
     while (written < len) {
-        uint64_t val = 0;
-        if (!rdseed64(&val)) {
+        unsigned long long int val = 0;
+        if (!_rdseed64_step(&val)) {
             if (!block) {
                 break;
             }
@@ -56,7 +55,9 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
         memcpy(buf + written, &val, to_copy);
         written += to_copy;
     }
-    DEBUG_ASSERT(written == len);
+    if (block) {
+        DEBUG_ASSERT(written == len);
+    }
     return (ssize_t)written;
 }
 
