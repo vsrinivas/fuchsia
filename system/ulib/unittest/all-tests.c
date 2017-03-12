@@ -38,11 +38,11 @@ bool unittest_run_all_tests(int argc, char** argv) {
     // classes of tests we should execute.
     const char* test_type_str = getenv(TEST_ENV_NAME);
     if (test_type_str == NULL) {
-        unittest_printf_critical("FAILURE: Cannot access %s environment variable",
-                                 TEST_ENV_NAME);
-        return false;
+        // If we cannot access the environment variable, run all tests
+        utest_test_type = TEST_ALL;
+    } else {
+        utest_test_type = atoi(test_type_str);
     }
-    utest_test_type = atoi(test_type_str);
 
     bool all_success = true;
     struct test_case_element* current = test_case_list;
