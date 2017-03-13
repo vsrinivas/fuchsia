@@ -28,10 +28,15 @@ bool ReadSymbolicLink(const std::string& path, std::string* resolved_path) {
 }
 
 std::string GetAbsoluteFilePath(const std::string& path) {
+#if defined(OS_FUCHSIA)
+  // realpath() isn't supported by Fuchsia. See MG-425.
+  return SimplifyPath(AbsolutePath(path));
+#else
   char buffer[PATH_MAX];
   if (realpath(path.c_str(), buffer) == nullptr)
     return std::string();
   return buffer;
+#endif  // defined(OS_FUCHSIA)
 }
 
 }  // namespace files
