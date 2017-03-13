@@ -263,6 +263,12 @@ pub enum ClockId {
     /// The number of nanoseconds since the system was powered on. Corresponds to
     /// `MX_CLOCK_MONOTONIC`.
     Monotonic = 0,
+    /// The number of wall clock nanoseconds since the Unix epoch (midnight on January 1 1970) in
+    /// UTC. Corresponds to MX_CLOCK_UTC.
+    UTC = 1,
+    /// The number of nanoseconds the current thread has been running for. Corresponds to
+    /// MX_CLOCK_THREAD.
+    Thread = 2,
 }
 
 /// Get the current time, from the specific clock id.
@@ -277,7 +283,7 @@ pub fn time_get(clock_id: ClockId) -> Time {
 /// Sleep the given number of nanoseconds.
 ///
 /// Wraps the
-/// [mx_nanosleep](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/nano_sleep.md)
+/// [mx_nanosleep](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/nanosleep.md)
 /// syscall.
 pub fn nanosleep(time: Time) {
     unsafe { sys::mx_nanosleep(time); }
@@ -852,9 +858,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn time_increases() {
+    fn monotonic_time_increases() {
         let time1 = time_get(ClockId::Monotonic);
         let time2 = time_get(ClockId::Monotonic);
+        assert!(time2 > time1);
+    }
+
+    #[test]
+    fn utc_time_increases() {
+        let time1 = time_get(ClockId::UTC);
+        let time2 = time_get(ClockId::UTC);
+        assert!(time2 > time1);
+    }
+
+    #[test]
+    fn thread_time_increases() {
+        let time1 = time_get(ClockId::Thread);
+        let time2 = time_get(ClockId::Thread);
         assert!(time2 > time1);
     }
 
