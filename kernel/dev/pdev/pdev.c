@@ -9,7 +9,7 @@
 #include <pdev/pdev.h>
 #include <lk/init.h>
 
-static mdi_node_ref_t driver_list = {0};
+static mdi_node_ref_t driver_list = {};
 
 extern const struct lk_pdev_init_struct __start_lk_pdev_init[] __WEAK;
 extern const struct lk_pdev_init_struct __stop_lk_pdev_init[] __WEAK;

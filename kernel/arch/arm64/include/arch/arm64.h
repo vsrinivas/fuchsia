@@ -30,7 +30,8 @@ __BEGIN_CDECLS
 
 #define ARM64_WRITE_SYSREG(reg, val) \
 ({ \
-    __asm__ volatile("msr " TOSTRING(reg) ", %0" :: "r" (val)); \
+    uint64_t _val = (val); \
+    __asm__ volatile("msr " TOSTRING(reg) ", %0" :: "r" (_val)); \
     ISB; \
 })
 
