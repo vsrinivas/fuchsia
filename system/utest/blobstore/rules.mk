@@ -8,21 +8,19 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/blobstore.cpp
-
 MODULE_NAME := blobstore-test
 
-MODULE_DEP := uapp/blobstore
+MODULE_SRCS := \
+    $(LOCAL_DIR)/blobstore.cpp
 
 MODULE_STATIC_LIBS := \
     ulib/merkle \
     ulib/cryptolib \
 
 MODULE_LIBS := \
+    ulib/mxio \
     ulib/c \
     ulib/fs-management \
-    ulib/mxio \
     ulib/magenta \
     ulib/mxcpp \
     ulib/mxtl \

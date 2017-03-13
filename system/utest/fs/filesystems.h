@@ -37,9 +37,6 @@ extern fs_info_t* test_info;
 #define NUM_FILESYSTEMS 2
 extern fs_info_t FILESYSTEMS[NUM_FILESYSTEMS];
 
-int create_ramdisk(const char* ramdisk_name, char* ramdisk_path_out);
-int destroy_ramdisk(const char* ramdisk_path);
-
 int setup_fs_test(void);
 int teardown_fs_test(void);
 

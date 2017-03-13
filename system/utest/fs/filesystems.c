@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <fs-management/mount.h>
+#include <fs-management/ramdisk.h>
 #include <magenta/device/block.h>
 #include <magenta/device/ramdisk.h>
 
@@ -22,54 +23,6 @@ const char* test_root_path;
 char test_disk_path[PATH_MAX];
 fs_info_t* test_info;
 
-#define RAMCTL_PATH "/dev/misc/ramctl"
-
-int create_ramdisk(const char* ramdisk_name, char* ramdisk_path_out) {
-    if (strlen(ramdisk_name) + strlen(RAMCTL_PATH) + 1 >= PATH_MAX) {
-        return -1;
-    }
-    strcpy(ramdisk_path_out, RAMCTL_PATH);
-    strcat(ramdisk_path_out, "/");
-    strcat(ramdisk_path_out, ramdisk_name);
-    int fd = open(RAMCTL_PATH, O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "Could not open ramctl\n");
-        return fd;
-    }
-    ramdisk_ioctl_config_t config;
-    config.blk_size = 512;
-    config.blk_count = (1 << 22);
-    strcpy(config.name, ramdisk_name);
-    ssize_t r = ioctl_ramdisk_config(fd, &config);
-    if (r != NO_ERROR) {
-        fprintf(stderr, "Could not configure ramdev\n");
-        return -1;
-    }
-    close(fd);
-
-    // TODO(smklein): Remove once MG-468 is resolved
-    usleep(10000);
-    return 0;
-}
-
-int destroy_ramdisk(const char* ramdisk_path) {
-    int fd = open(ramdisk_path, O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "Could not open ramdisk\n");
-        return -1;
-    }
-    ssize_t r = ioctl_ramdisk_unlink(fd);
-    if (r != NO_ERROR) {
-        fprintf(stderr, "Could not shut off ramdisk\n");
-        return -1;
-    }
-    if (close(fd) < 0) {
-        fprintf(stderr, "Could not close ramdisk fd\n");
-        return -1;
-    }
-    return 0;
-}
-
 int setup_fs_test(void) {
     test_root_path = MOUNT_PATH;
     int r = mkdir(test_root_path, 0755);
@@ -78,7 +31,7 @@ int setup_fs_test(void) {
         return -1;
     }
 
-    if (create_ramdisk("fs-test-ramdisk", test_disk_path)) {
+    if (create_ramdisk("fs-test", test_disk_path, 512, (1 << 22))) {
         fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
         exit(-1);
     }

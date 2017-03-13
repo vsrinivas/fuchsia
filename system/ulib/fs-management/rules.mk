@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/launch.c \
     $(LOCAL_DIR)/mkfs.c \
     $(LOCAL_DIR)/mount.c \
+    $(LOCAL_DIR)/ramdisk.c \
 
 MODULE_STATIC_LIBS := \
     ulib/fs \

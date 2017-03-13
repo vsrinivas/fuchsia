@@ -20,43 +20,7 @@
 #include <unittest/unittest.h>
 
 #include <fs-management/mount.h>
-
-#define RAMCTL_PATH "/dev/misc/ramctl"
-
-static int set_up_ramdisk(const char* name, uint64_t blk_size, uint64_t blk_count) {
-    // Open the "ramdisk controller", and ask it to create a ramdisk for us.
-    int fd = open(RAMCTL_PATH, O_RDWR);
-    ASSERT_GE(fd, 0, "Could not open ramctl device");
-    ramdisk_ioctl_config_t config;
-    config.blk_size = blk_size;
-    config.blk_count = blk_count;
-    strcpy(config.name, name);
-    ssize_t r = ioctl_ramdisk_config(fd, &config);
-    ASSERT_EQ(r, NO_ERROR, "Failed to create ramdisk");
-    ASSERT_EQ(close(fd), 0, "Failed to close ramctl");
-
-    // TODO(smklein): This "sleep" prevents a bug from triggering:
-    // - 'ioctl_ramdisk_config' --> 'device_add' --> 'open' *should* work, but sometimes
-    //   fails, as the ramdisk does not exist in the FS heirarchy yet. (MG-468)
-    usleep(10000);
-
-    // At this point, our ramdisk is accessible from filesystem hierarchy
-    char ramdisk_path[PATH_MAX];
-    snprintf(ramdisk_path, sizeof(ramdisk_path), "%s/%s", RAMCTL_PATH, name);
-    fd = open(ramdisk_path, O_RDWR);
-    ASSERT_GE(fd, 0, "Could not open ramdisk device");
-    return fd;
-}
-
-static int shut_down_ramdisk(const char* name) {
-    char ramdisk_path[PATH_MAX];
-    snprintf(ramdisk_path, sizeof(ramdisk_path), "%s/%s", RAMCTL_PATH, name);
-    int fd = open(ramdisk_path, O_RDWR);
-    ASSERT_GE(fd, 0, "Could not open ramdisk device");
-    ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
-    return 0;
-}
+#include <fs-management/ramdisk.h>
 
 static bool check_mounted_fs(const char* path, const char* fs_name, size_t len) {
     int fd = open(path, O_RDWR);
@@ -71,74 +35,77 @@ static bool check_mounted_fs(const char* path, const char* fs_name, size_t len) 
 
 static bool mount_unmount(void) {
     const char* ramdisk_name = "mount_unmount";
-    const char* ramdisk_path = RAMCTL_PATH "/mount_unmount";
+    char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_unmount";
 
     BEGIN_TEST;
-    int fd = set_up_ramdisk(ramdisk_name, 512, 1 << 16);
+    ASSERT_EQ(create_ramdisk(ramdisk_name, ramdisk_path, 512, 1 << 16), 0, "");
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
     ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
               NO_ERROR, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
     ASSERT_EQ(umount(mount_path), NO_ERROR, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
-    ASSERT_EQ(shut_down_ramdisk(ramdisk_name), 0, "");
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
     END_TEST;
 }
 
 static bool mount_remount(void) {
     const char* ramdisk_name = "mount_remount";
-    const char* ramdisk_path = RAMCTL_PATH "/mount_remount";
+    char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_remount";
 
     BEGIN_TEST;
-    int fd = set_up_ramdisk(ramdisk_name, 512, 1 << 16);
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(create_ramdisk(ramdisk_name, ramdisk_path, 512, 1 << 16), 0, "");
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
 
     // We should still be able to mount and unmount the filesystem multiple times
     for (size_t i = 0; i < 10; i++) {
-        fd = open(ramdisk_path, O_RDWR);
+        int fd = open(ramdisk_path, O_RDWR);
         ASSERT_GE(fd, 0, "");
         ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                         launch_stdio_async),
                   NO_ERROR, "");
         ASSERT_EQ(umount(mount_path), NO_ERROR, "");
     }
-    ASSERT_EQ(shut_down_ramdisk(ramdisk_name), 0, "");
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
     END_TEST;
 }
 
 static bool mount_fsck(void) {
     const char* ramdisk_name = "mount_fsck";
-    const char* ramdisk_path = RAMCTL_PATH "/mount_fsck";
+    char ramdisk_path[PATH_MAX];
     const char* mount_path = "/tmp/mount_fsck";
 
     BEGIN_TEST;
-    int fd = set_up_ramdisk(ramdisk_name, 512, 1 << 16);
+    ASSERT_EQ(create_ramdisk(ramdisk_name, ramdisk_path, 512, 1 << 16), 0, "");
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GE(fd, 0, "Could not open ramdisk device");
     ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
               NO_ERROR, "");
     ASSERT_EQ(umount(mount_path), NO_ERROR, "");
     // fsck shouldn't require any user input for a newly mkfs'd filesystem
     ASSERT_EQ(fsck(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
-    ASSERT_EQ(shut_down_ramdisk(ramdisk_name), 0, "");
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
     END_TEST;
 }
 
 BEGIN_TEST_CASE(fs_management_tests)
-RUN_TEST(mount_unmount)
-RUN_TEST(mount_remount)
-RUN_TEST(mount_fsck)
+RUN_TEST_MEDIUM(mount_unmount)
+RUN_TEST_MEDIUM(mount_remount)
+RUN_TEST_MEDIUM(mount_fsck)
 END_TEST_CASE(fs_management_tests)
 
 int main(int argc, char** argv) {
