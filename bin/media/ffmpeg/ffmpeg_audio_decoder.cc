@@ -13,14 +13,10 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
   FTL_DCHECK(context());
   FTL_DCHECK(context()->channels > 0);
 
-  context()->opaque = this;
-  context()->get_buffer2 = AllocateBufferForAvFrame;
-  context()->refcounted_frames = 1;
-
   std::unique_ptr<StreamType> stream_type = output_stream_type();
   FTL_DCHECK(stream_type);
   FTL_DCHECK(stream_type->audio());
-  pts_rate_ = TimelineRate(stream_type->audio()->frames_per_second(), 1);
+  set_pts_rate(TimelineRate(stream_type->audio()->frames_per_second(), 1));
 
   if (av_sample_fmt_is_planar(context()->sample_fmt)) {
     // Prepare for interleaving.
@@ -31,121 +27,50 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
 
 FfmpegAudioDecoder::~FfmpegAudioDecoder() {}
 
-void FfmpegAudioDecoder::Flush() {
-  FfmpegDecoderBase::Flush();
-  next_pts_ = Packet::kUnknownPts;
-}
-
-int FfmpegAudioDecoder::Decode(const AVPacket& av_packet,
-                               const ffmpeg::AvFramePtr& av_frame_ptr,
-                               PayloadAllocator* allocator,
-                               const PacketPtr& original_input_packet,
-                               bool* frame_decoded_out) {
-  FTL_DCHECK(allocator);
-  FTL_DCHECK(frame_decoded_out);
-  FTL_DCHECK(context());
-  FTL_DCHECK(av_frame_ptr);
-
-  if (next_pts_ == Packet::kUnknownPts) {
-    if (av_packet.pts == AV_NOPTS_VALUE) {
-      next_pts_ = 0;
+void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
+  if (next_pts() == Packet::kUnknownPts) {
+    if (packet->pts() == Packet::kUnknownPts) {
+      FTL_DLOG(WARNING) << "No PTS established, using 0 by default.";
+      set_next_pts(0);
     } else {
-      next_pts_ = av_packet.pts;
+      set_next_pts(packet->pts());
     }
   }
-
-  // Use the provided allocator (for allocations in AllocateBufferForAvFrame)
-  // unless we intend to interleave later, in which case use the default
-  // allocator. We'll interleave into a buffer from the provided allocator
-  // in CreateOutputPacket.
-  allocator_ = lpcm_util_ ? PayloadAllocator::GetDefault() : allocator;
-
-  int frame_decoded = 0;
-  int input_bytes_used = avcodec_decode_audio4(
-      context().get(), av_frame_ptr.get(), &frame_decoded, &av_packet);
-  *frame_decoded_out = frame_decoded != 0;
-
-  // We're done with this allocator.
-  allocator_ = nullptr;
-
-  return input_bytes_used;
 }
 
-PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
-                                                 PayloadAllocator* allocator) {
+int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
+                                     AVFrame* av_frame,
+                                     PayloadAllocator* allocator) {
+  FTL_DCHECK(av_frame);
   FTL_DCHECK(allocator);
 
-  int64_t pts = av_frame.pts;
-  if (pts == AV_NOPTS_VALUE) {
-    pts = next_pts_;
-    next_pts_ += av_frame.nb_samples;
-  } else {
-    next_pts_ = pts;
+  // Use the provided allocator unless we intend to interleave later, in which
+  // case use the default allocator. We'll interleave into a buffer from the
+  // provided allocator in CreateOutputPacket.
+  if (lpcm_util_ != nullptr) {
+    allocator = PayloadAllocator::GetDefault();
   }
-
-  if (lpcm_util_) {
-    // We need to interleave. The non-interleaved frames are in a buffer that
-    // was allocated from the default allocator. That buffer will get released
-    // later in ReleaseBufferForAvFrame. We need a new buffer for the
-    // interleaved frames, which we get from the provided allocator.
-    FTL_DCHECK(stream_type_);
-    FTL_DCHECK(stream_type_->audio());
-    uint64_t payload_size =
-        stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
-    void* payload_buffer = allocator->AllocatePayloadBuffer(payload_size);
-
-    lpcm_util_->Interleave(av_frame.buf[0]->data, av_frame.buf[0]->size,
-                           payload_buffer, av_frame.nb_samples);
-
-    return Packet::Create(
-        pts, pts_rate_,
-        false,  // Not a keyframe
-        false,  // The base class is responsible for end-of-stream.
-        payload_size, payload_buffer, allocator);
-  } else {
-    // We don't need to interleave. The interleaved frames are in a buffer that
-    // was allocated from the correct allocator.
-    return DecoderPacket::Create(pts, pts_rate_, false,
-                                 av_buffer_ref(av_frame.buf[0]));
-  }
-}
-
-PacketPtr FfmpegAudioDecoder::CreateOutputEndOfStreamPacket() {
-  return Packet::CreateEndOfStream(next_pts_, pts_rate_);
-}
-
-int FfmpegAudioDecoder::AllocateBufferForAvFrame(
-    AVCodecContext* av_codec_context,
-    AVFrame* av_frame,
-    int flags) {
-  // CODEC_CAP_DR1 is required in order to do allocation this way.
-  FTL_DCHECK(av_codec_context->codec->capabilities & CODEC_CAP_DR1);
-
-  FfmpegAudioDecoder* self =
-      reinterpret_cast<FfmpegAudioDecoder*>(av_codec_context->opaque);
-  FTL_DCHECK(self);
-  FTL_DCHECK(self->allocator_);
 
   AVSampleFormat av_sample_format =
       static_cast<AVSampleFormat>(av_frame->format);
 
   int buffer_size = av_samples_get_buffer_size(
-      &av_frame->linesize[0], av_codec_context->channels, av_frame->nb_samples,
+      &av_frame->linesize[0], av_codec_context.channels, av_frame->nb_samples,
       av_sample_format, FfmpegAudioDecoder::kChannelAlign);
   if (buffer_size < 0) {
     FTL_LOG(WARNING) << "av_samples_get_buffer_size failed";
     return buffer_size;
   }
 
-  uint8_t* buffer = static_cast<uint8_t*>(
-      self->allocator_->AllocatePayloadBuffer(buffer_size));
+  uint8_t* buffer =
+      static_cast<uint8_t*>(allocator->AllocatePayloadBuffer(buffer_size));
 
   if (!av_sample_fmt_is_planar(av_sample_format)) {
     // Samples are interleaved. There's just one buffer.
     av_frame->data[0] = buffer;
   } else {
     // Samples are not interleaved. There's one buffer per channel.
-    int channels = av_codec_context->channels;
+    int channels = av_codec_context.channels;
     int bytes_per_channel = buffer_size / channels;
     uint8_t* channel_buffer = buffer;
 
@@ -180,19 +105,49 @@ int FfmpegAudioDecoder::AllocateBufferForAvFrame(
     }
   }
 
-  av_frame->buf[0] = av_buffer_create(buffer, buffer_size,
-                                      ReleaseBufferForAvFrame, self->allocator_,
-                                      0);  // flags
+  av_frame->buf[0] =
+      CreateAVBuffer(buffer, static_cast<size_t>(buffer_size), allocator);
 
   return 0;
 }
 
-void FfmpegAudioDecoder::ReleaseBufferForAvFrame(void* opaque,
-                                                 uint8_t* buffer) {
-  FTL_DCHECK(opaque);
-  FTL_DCHECK(buffer);
-  PayloadAllocator* allocator = reinterpret_cast<PayloadAllocator*>(opaque);
-  allocator->ReleasePayloadBuffer(buffer);
+PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
+                                                 PayloadAllocator* allocator) {
+  FTL_DCHECK(allocator);
+
+  int64_t pts = av_frame.pts;
+  if (pts == AV_NOPTS_VALUE) {
+    pts = next_pts();
+    set_next_pts(pts + av_frame.nb_samples);
+  } else {
+    set_next_pts(pts);
+  }
+
+  if (lpcm_util_) {
+    // We need to interleave. The non-interleaved frames are in a buffer that
+    // was allocated from the default allocator. That buffer will get released
+    // later in ReleaseBufferForAvFrame. We need a new buffer for the
+    // interleaved frames, which we get from the provided allocator.
+    FTL_DCHECK(stream_type_);
+    FTL_DCHECK(stream_type_->audio());
+    uint64_t payload_size =
+        stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
+    void* payload_buffer = allocator->AllocatePayloadBuffer(payload_size);
+
+    lpcm_util_->Interleave(av_frame.buf[0]->data, av_frame.buf[0]->size,
+                           payload_buffer, av_frame.nb_samples);
+
+    return Packet::Create(
+        pts, pts_rate(),
+        false,  // Not a keyframe
+        false,  // The base class is responsible for end-of-stream.
+        payload_size, payload_buffer, allocator);
+  } else {
+    // We don't need to interleave. The interleaved frames are in a buffer that
+    // was allocated from the correct allocator.
+    return DecoderPacket::Create(pts, pts_rate(), false,
+                                 av_buffer_ref(av_frame.buf[0]));
+  }
 }
 
 }  // namespace media

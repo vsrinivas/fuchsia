@@ -19,42 +19,21 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
 
  protected:
   // FfmpegDecoderBase overrides.
-  void Flush() override;
+  void OnNewInputPacket(const PacketPtr& packet) override;
 
-  int Decode(const AVPacket& av_packet,
-             const ffmpeg::AvFramePtr& av_frame_ptr,
-             PayloadAllocator* allocator,
-             const PacketPtr& original_input_packet,
-             bool* frame_decoded_out) override;
+  int BuildAVFrame(const AVCodecContext& av_codec_context,
+                   AVFrame* av_frame,
+                   PayloadAllocator* allocator) override;
 
   PacketPtr CreateOutputPacket(const AVFrame& av_frame,
                                PayloadAllocator* allocator) override;
 
-  PacketPtr CreateOutputEndOfStreamPacket() override;
-
  private:
   using Extent = VideoStreamType::Extent;
-
-  // Callback used by the ffmpeg decoder to acquire a buffer.
-  static int AllocateBufferForAvFrame(AVCodecContext* av_codec_context,
-                                      AVFrame* av_frame,
-                                      int flags);
-
-  // Callback used by the ffmpeg decoder to release a buffer.
-  static void ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer);
 
   std::vector<uint32_t> line_stride_;
   std::vector<uint32_t> plane_offset_;
   size_t frame_buffer_size_;
-
-  // The allocator used by avcodec_decode_audio4 to provide context for
-  // AllocateBufferForAvFrame. This is set only during the call to
-  // avcodec_decode_audio4.
-  PayloadAllocator* allocator_;
-
-  // Used to supply PTS for end-of-stream.
-  int64_t next_pts_ = Packet::kUnknownPts;
-  TimelineRate pts_rate_;
 
   // TODO(dalesat): For investigation only...remove these three fields.
   bool first_frame_ = true;

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <limits>
+
 #include "apps/media/src/decode/decoder.h"
 #include "apps/media/src/ffmpeg/av_codec_context.h"
 #include "apps/media/src/ffmpeg/av_frame.h"
@@ -66,37 +68,69 @@ class FfmpegDecoderBase : public Decoder {
     AVBufferRef* av_buffer_ref_;
   };
 
-  // Decodes from av_packet into av_frame_ptr. The result indicates how many
-  // bytes were consumed from av_packet_. *frame_decoded_out indicates whether
-  // av_frame_ptr contains a complete frame.
-  virtual int Decode(const AVPacket& av_packet,
-                     const ffmpeg::AvFramePtr& av_frame_ptr,
-                     PayloadAllocator* allocator,
-                     const PacketPtr& original_input_packet,
-                     bool* frame_decoded_out) = 0;
+  // Called when a new input packet is about to be processed. The default
+  // implementation does nothing.
+  virtual void OnNewInputPacket(const PacketPtr& packet);
+
+  // Fills in |av_frame|, probably using an |AVBuffer| allocated via
+  // CreateAVBuffer. |av_codec_context| may be distinct from context() and
+  // should be used when a codec context is required.
+  virtual int BuildAVFrame(const AVCodecContext& av_codec_context,
+                           AVFrame* av_frame,
+                           PayloadAllocator* allocator) = 0;
 
   // Creates a Packet from av_frame.
   virtual PacketPtr CreateOutputPacket(const AVFrame& av_frame,
                                        PayloadAllocator* allocator) = 0;
 
-  // Creates an end-of-stream packet with no payload.
-  virtual PacketPtr CreateOutputEndOfStreamPacket() = 0;
-
   // The ffmpeg codec context.
   const AvCodecContextPtr& context() { return av_codec_context_; }
 
- private:
-  // Prepares to process a new input packet.
-  void PrepareInputPacket(const PacketPtr& input);
+  // Gets the current 'next PTS' value.
+  int64_t next_pts() { return next_pts_; }
 
-  // Finishes up after processing of an input packet has completed, possibly
-  // producing a zero-size end-of-stream packet. Returns true to indicate that
-  // a new input packet is required.
-  bool UnprepareInputPacket(const PacketPtr& input, PacketPtr* output);
+  // Sets the next PTS value. This is used by this class to create an
+  // end-of-stream packet. Subclasses may also use it as needed.
+  void set_next_pts(int64_t value) { next_pts_ = value; }
+
+  // Gets the current PTS rate value.
+  TimelineRate pts_rate() { return pts_rate_; }
+
+  // Gets the PTS rate value.
+  void set_pts_rate(TimelineRate value) { pts_rate_ = value; }
+
+  // Creates an AVBuffer.
+  AVBufferRef* CreateAVBuffer(uint8_t* payload_buffer,
+                              size_t payload_buffer_size,
+                              PayloadAllocator* allocator) {
+    FTL_DCHECK(payload_buffer_size <=
+               static_cast<size_t>(std::numeric_limits<int>::max()));
+    return av_buffer_create(payload_buffer,
+                            static_cast<int>(payload_buffer_size),
+                            ReleaseBufferForAvFrame, allocator, /* flags */ 0);
+  }
+
+ private:
+  // Callback used by the ffmpeg decoder to acquire a buffer.
+  static int AllocateBufferForAvFrame(AVCodecContext* av_codec_context,
+                                      AVFrame* av_frame,
+                                      int flags);
+
+  // Callback used by the ffmpeg decoder to release a buffer.
+  static void ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer);
+
+  // Creates an end-of-stream packet with no payload.
+  PacketPtr CreateOutputEndOfStreamPacket();
 
   AvCodecContextPtr av_codec_context_;
-  AVPacket av_packet_;
   ffmpeg::AvFramePtr av_frame_ptr_;
+  int64_t next_pts_ = Packet::kUnknownPts;
+  TimelineRate pts_rate_;
+
+  // The allocator used by avcodec_send_packet and avcodec_receive_frame to
+  // provide context for AllocateBufferForAvFrame. This is set only during
+  // those calls.
+  PayloadAllocator* allocator_ = nullptr;
 };
 
 }  // namespace media

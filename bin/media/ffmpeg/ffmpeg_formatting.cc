@@ -229,7 +229,6 @@ std::ostream& operator<<(std::ostream& os, const AVStream* value) {
   os << indent;
   os << begl << "int index: " << value->index << std::endl;
   os << begl << "int id: " << value->id << std::endl;
-  os << begl << "AVCodecContext *codec: " << value->codec;
   os << begl << "AVRational time_base: " << value->time_base;
   os << begl << "int64_t start_time: " << value->start_time << std::endl;
   os << begl << "int64_t duration: " << value->duration << std::endl;
@@ -426,7 +425,6 @@ std::ostream& operator<<(std::ostream& os, const AVFrame* value) {
   os << begl << "int format: " << value->format << std::endl;
   os << begl << "int key_frame: " << value->key_frame << std::endl;
   os << begl << "int64_t pts: " << value->pts << std::endl;
-  os << begl << "int64_t pkt_pts: " << value->pkt_pts << std::endl;
   os << begl << "int64_t pkt_dts: " << value->pkt_dts << std::endl;
   os << begl << "int sample_rate: " << value->sample_rate << std::endl;
   os << begl << "AVBufferRef *buf[AV_NUM_DATA_POINTERS]: ";

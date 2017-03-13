@@ -57,7 +57,8 @@ void TransformStage::Update(Engine* engine) {
   FTL_DCHECK(engine);
   FTL_DCHECK(allocator_);
 
-  if (input_.packet_from_upstream() && output_.demand() != Demand::kNegative) {
+  while (input_.packet_from_upstream() &&
+         output_.demand() != Demand::kNegative) {
     PacketPtr output_packet;
     if (transform_->TransformPacket(input_.packet_from_upstream(),
                                     input_packet_is_new_, allocator_,

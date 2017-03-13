@@ -13,6 +13,10 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
     : av_codec_context_(std::move(av_codec_context)),
       av_frame_ptr_(ffmpeg::AvFrame::Create()) {
   FTL_DCHECK(av_codec_context_);
+
+  av_codec_context_->opaque = this;
+  av_codec_context_->get_buffer2 = AllocateBufferForAvFrame;
+  av_codec_context_->refcounted_frames = 1;
 }
 
 FfmpegDecoderBase::~FfmpegDecoderBase() {}
@@ -24,6 +28,7 @@ std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() {
 void FfmpegDecoderBase::Flush() {
   FTL_DCHECK(av_codec_context_);
   avcodec_flush_buffers(av_codec_context_.get());
+  next_pts_ = Packet::kUnknownPts;
 }
 
 bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
@@ -37,64 +42,93 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
   *output = nullptr;
 
   if (new_input) {
-    PrepareInputPacket(input);
+    OnNewInputPacket(input);
+
+    // TODO(dalesat): Logic for payload-bearing eos input packets.
+
+    AVPacket av_packet;
+    av_init_packet(&av_packet);
+    av_packet.data = reinterpret_cast<uint8_t*>(input->payload());
+    av_packet.size = input->size();
+    av_packet.pts = input->pts();
+
+    if (input->keyframe()) {
+      av_packet.flags |= AV_PKT_FLAG_KEY;
+    }
+
+    // Used during avcodec_send_packet by AllocateBufferForAvFrame.
+    allocator_ = allocator;
+    int result = avcodec_send_packet(av_codec_context_.get(), &av_packet);
+    allocator_ = nullptr;
+
+    if (result != 0) {
+      FTL_DLOG(ERROR) << "avcodec_send_packet failed " << result;
+      return true;  // Done with input packet.
+    }
   }
 
-  bool frame_decoded = false;
-  int input_bytes_used =
-      Decode(av_packet_, av_frame_ptr_, allocator, input, &frame_decoded);
-  if (input_bytes_used < 0) {
-    // Decode failed.
-    return UnprepareInputPacket(input, output);
+  // Used during avcodec_receive_frame by AllocateBufferForAvFrame.
+  allocator_ = allocator;
+  int result =
+      avcodec_receive_frame(av_codec_context_.get(), av_frame_ptr_.get());
+  allocator_ = nullptr;
+
+  switch (result) {
+    case 0:
+      // Succeeded, frame produced.
+      FTL_DCHECK(allocator);
+      *output = CreateOutputPacket(*av_frame_ptr_, allocator);
+      av_frame_unref(av_frame_ptr_.get());
+      return false;
+
+    case AVERROR(EAGAIN):
+      // Succeeded, no frame produced, need another input packet.
+      FTL_DCHECK(!input->end_of_stream());
+      return true;
+
+    case AVERROR_EOF:
+      // Succeeded, no frame produced, end-of-stream sequence complete.
+      FTL_DCHECK(input->end_of_stream());
+      *output = CreateOutputEndOfStreamPacket();
+      return true;
+
+    default:
+      FTL_DLOG(ERROR) << "avcodec_receive_frame failed " << result;
+      return true;
   }
-
-  if (frame_decoded) {
-    FTL_DCHECK(allocator);
-    *output = CreateOutputPacket(*av_frame_ptr_, allocator);
-    av_frame_unref(av_frame_ptr_.get());
-  }
-
-  FTL_CHECK(input_bytes_used <= av_packet_.size)
-      << "Ffmpeg decoder read beyond end of packet";
-  av_packet_.size -= input_bytes_used;
-  av_packet_.data += input_bytes_used;
-
-  if (av_packet_.size != 0 || (input->end_of_stream() && frame_decoded)) {
-    // The input packet is only partially decoded, or it's an end-of-stream
-    // packet and we're still draining. Let the caller know we want to see the
-    // input packet again.
-    return false;
-  }
-
-  // Used up the whole input packet, and, if we were draining, we're done with
-  // that too.
-  return UnprepareInputPacket(input, output);
 }
 
-void FfmpegDecoderBase::PrepareInputPacket(const PacketPtr& input) {
-  av_init_packet(&av_packet_);
-  av_packet_.data = reinterpret_cast<uint8_t*>(input->payload());
-  av_packet_.size = input->size();
-  av_packet_.pts = input->pts();
+void FfmpegDecoderBase::OnNewInputPacket(const PacketPtr& packet) {}
 
-  if (input->keyframe()) {
-    av_packet_.flags |= AV_PKT_FLAG_KEY;
-  }
+PacketPtr FfmpegDecoderBase::CreateOutputEndOfStreamPacket() {
+  return Packet::CreateEndOfStream(next_pts_, pts_rate_);
 }
 
-bool FfmpegDecoderBase::UnprepareInputPacket(const PacketPtr& input,
-                                             PacketPtr* output) {
-  if (input->end_of_stream()) {
-    // Indicate end of stream. This happens when we're draining for the last
-    // time, so there should be no output packet yet.
-    FTL_DCHECK(*output == nullptr);
-    *output = CreateOutputEndOfStreamPacket();
-  }
+int FfmpegDecoderBase::AllocateBufferForAvFrame(
+    AVCodecContext* av_codec_context,
+    AVFrame* av_frame,
+    int flags) {
+  // It's important to use av_codec_context here rather than context(),
+  // because av_codec_context is different for different threads when we're
+  // decoding on multiple threads. Be sure to avoid using self->context() or
+  // self->av_codec_context_.
 
-  av_packet_.size = 0;
-  av_packet_.data = nullptr;
+  // CODEC_CAP_DR1 is required in order to do allocation this way.
+  FTL_DCHECK(av_codec_context->codec->capabilities & CODEC_CAP_DR1);
 
-  return true;
+  FfmpegDecoderBase* self =
+      reinterpret_cast<FfmpegDecoderBase*>(av_codec_context->opaque);
+  FTL_DCHECK(self);
+  FTL_DCHECK(self->allocator_);
+
+  return self->BuildAVFrame(*av_codec_context, av_frame, self->allocator_);
+}
+
+void FfmpegDecoderBase::ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer) {
+  FTL_DCHECK(opaque);
+  FTL_DCHECK(buffer);
+  PayloadAllocator* allocator = reinterpret_cast<PayloadAllocator*>(opaque);
+  allocator->ReleasePayloadBuffer(buffer);
 }
 
 FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {

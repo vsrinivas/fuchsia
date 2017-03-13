@@ -56,57 +56,88 @@ void ExtraDataFromBytes(const Bytes& bytes, const AvCodecContextPtr& context) {
   context->extradata_size = byte_count;
 }
 
-// Creates a StreamType from an AVCodecContext describing an LPCM type.
-std::unique_ptr<StreamType> StreamTypeFromLpcmCodecContext(
-    const AVCodecContext& from) {
-  return AudioStreamType::Create(StreamType::kAudioEncodingLpcm, nullptr,
-                                 Convert(from.sample_fmt), from.channels,
-                                 from.sample_rate);
-}
-
-// Creates a StreamType from an AVCodecContext describing a compressed audio
-// type.
-std::unique_ptr<StreamType> StreamTypeFromCompressedAudioCodecContext(
-    const AVCodecContext& from) {
-  const char* encoding;
-  switch (from.codec_id) {
+// Gets the encoding from a codec_id.
+const char* EncodingFromCodecId(AVCodecID from) {
+  switch (from) {
     case AV_CODEC_ID_AAC:
-      encoding = StreamType::kAudioEncodingAac;
-      break;
+      return StreamType::kAudioEncodingAac;
     case AV_CODEC_ID_AMR_NB:
-      encoding = StreamType::kAudioEncodingAmrNb;
-      break;
+      return StreamType::kAudioEncodingAmrNb;
     case AV_CODEC_ID_AMR_WB:
-      encoding = StreamType::kAudioEncodingAmrWb;
-      break;
+      return StreamType::kAudioEncodingAmrWb;
     case AV_CODEC_ID_FLAC:
-      encoding = StreamType::kAudioEncodingFlac;
-      break;
+      return StreamType::kAudioEncodingFlac;
     case AV_CODEC_ID_GSM_MS:
-      encoding = StreamType::kAudioEncodingGsmMs;
-      break;
+      return StreamType::kAudioEncodingGsmMs;
     case AV_CODEC_ID_MP3:
-      encoding = StreamType::kAudioEncodingMp3;
-      break;
+      return StreamType::kAudioEncodingMp3;
     case AV_CODEC_ID_PCM_ALAW:
-      encoding = StreamType::kAudioEncodingPcmALaw;
-      break;
+      return StreamType::kAudioEncodingPcmALaw;
     case AV_CODEC_ID_PCM_MULAW:
-      encoding = StreamType::kAudioEncodingPcmMuLaw;
-      break;
+      return StreamType::kAudioEncodingPcmMuLaw;
     case AV_CODEC_ID_VORBIS:
-      encoding = StreamType::kAudioEncodingVorbis;
-      break;
+      return StreamType::kAudioEncodingVorbis;
+    case AV_CODEC_ID_H263:
+      return StreamType::kVideoEncodingH263;
+    case AV_CODEC_ID_H264:
+      return StreamType::kVideoEncodingH264;
+    case AV_CODEC_ID_MPEG4:
+      return StreamType::kVideoEncodingMpeg4;
+    case AV_CODEC_ID_THEORA:
+      return StreamType::kVideoEncodingTheora;
+    case AV_CODEC_ID_VP3:
+      return StreamType::kVideoEncodingVp3;
+    case AV_CODEC_ID_VP8:
+      return StreamType::kVideoEncodingVp8;
+    case AV_CODEC_ID_VP9:
+      return StreamType::kVideoEncodingVp9;
     default:
-      FTL_LOG(ERROR) << "unsupported codec_id " << from.codec_id;
+      FTL_LOG(ERROR) << "unsupported codec_id " << from;
       abort();
   }
+}
+
+// Determines if codec_id represents an LPCM audio format.
+bool IsLpcm(AVCodecID codec_id) {
+  switch (codec_id) {
+    case AV_CODEC_ID_PCM_S16BE:
+    case AV_CODEC_ID_PCM_S16LE:
+    case AV_CODEC_ID_PCM_S24BE:
+    case AV_CODEC_ID_PCM_S24LE:
+    case AV_CODEC_ID_PCM_U8:
+      return true;
+    default:
+      return false;
+  }
+}
+
+// Creates a StreamType from an AVCodecContext describing an audio type.
+std::unique_ptr<StreamType> StreamTypeFromAudioCodecContext(
+    const AVCodecContext& from) {
+  bool decoded = from.codec != nullptr || IsLpcm(from.codec_id);
 
   return AudioStreamType::Create(
-      encoding, from.extradata_size == 0
-                    ? nullptr
-                    : Bytes::Create(from.extradata, from.extradata_size),
+      decoded ? StreamType::kAudioEncodingLpcm
+              : EncodingFromCodecId(from.codec_id),
+      (decoded || from.extradata_size == 0)
+          ? nullptr
+          : Bytes::Create(from.extradata, from.extradata_size),
       Convert(from.sample_fmt), from.channels, from.sample_rate);
+}
+
+// Creates a StreamType from an AVCodecContext describing an audio type.
+std::unique_ptr<StreamType> StreamTypeFromAudioCodecParameters(
+    const AVCodecParameters& from) {
+  bool decoded = IsLpcm(from.codec_id);
+
+  return AudioStreamType::Create(
+      decoded ? StreamType::kAudioEncodingLpcm
+              : EncodingFromCodecId(from.codec_id),
+      (decoded || from.extradata_size == 0)
+          ? nullptr
+          : Bytes::Create(from.extradata, from.extradata_size),
+      Convert(static_cast<AVSampleFormat>(from.format)), from.channels,
+      from.sample_rate);
 }
 
 // Converts AVColorSpace and AVColorRange to ColorSpace.
@@ -191,38 +222,9 @@ VideoStreamType::Extent FfmpegAlignedSize(
   return adjusted;
 }
 
-// Creates a StreamType from an AVCodecContext describing a compressed video
-// type.
-std::unique_ptr<StreamType> StreamTypeFromCompressedVideoCodecContext(
+// Creates a StreamType from an AVCodecContext describing a video type.
+std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
     const AVCodecContext& from) {
-  const char* encoding;
-  switch (from.codec_id) {
-    case AV_CODEC_ID_H263:
-      encoding = StreamType::kVideoEncodingH263;
-      break;
-    case AV_CODEC_ID_H264:
-      encoding = StreamType::kVideoEncodingH264;
-      break;
-    case AV_CODEC_ID_MPEG4:
-      encoding = StreamType::kVideoEncodingMpeg4;
-      break;
-    case AV_CODEC_ID_THEORA:
-      encoding = StreamType::kVideoEncodingTheora;
-      break;
-    case AV_CODEC_ID_VP3:
-      encoding = StreamType::kVideoEncodingVp3;
-      break;
-    case AV_CODEC_ID_VP8:
-      encoding = StreamType::kVideoEncodingVp8;
-      break;
-    case AV_CODEC_ID_VP9:
-      encoding = StreamType::kVideoEncodingVp9;
-      break;
-    default:
-      FTL_LOG(ERROR) << "unsupported codec_id " << from.codec_id;
-      abort();
-  }
-
   VideoStreamType::PixelFormat pixel_format =
       PixelFormatFromAVPixelFormat(from.pix_fmt);
 
@@ -233,34 +235,32 @@ std::unique_ptr<StreamType> StreamTypeFromCompressedVideoCodecContext(
               &line_stride, &plane_offset);
 
   return VideoStreamType::Create(
-      encoding, from.extradata_size == 0
-                    ? nullptr
-                    : Bytes::Create(from.extradata, from.extradata_size),
+      from.codec == nullptr ? EncodingFromCodecId(from.codec_id)
+                            : StreamType::kVideoEncodingUncompressed,
+      (from.codec != nullptr || from.extradata_size == 0)
+          ? nullptr
+          : Bytes::Create(from.extradata, from.extradata_size),
       VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
       ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range),
       from.width, from.height, from.coded_width, from.coded_height, line_stride,
       plane_offset);
 }
 
-// Creates a StreamType from an AVCodecContext describing an uncompressed video
-// type.
-std::unique_ptr<StreamType> StreamTypeFromUncompressedVideoCodecContext(
-    const AVCodecContext& from) {
+// Creates a StreamType from AVCodecParameters describing a video type.
+std::unique_ptr<StreamType> StreamTypeFromVideoCodecParameters(
+    const AVCodecParameters& from) {
   VideoStreamType::PixelFormat pixel_format =
-      PixelFormatFromAVPixelFormat(from.pix_fmt);
-
-  std::vector<uint32_t> line_stride;
-  std::vector<uint32_t> plane_offset;
-  LayoutFrame(pixel_format,
-              VideoStreamType::Extent(from.coded_width, from.coded_height),
-              &line_stride, &plane_offset);
+      PixelFormatFromAVPixelFormat(static_cast<AVPixelFormat>(from.format));
 
   return VideoStreamType::Create(
-      StreamType::kVideoEncodingUncompressed, nullptr,
+      EncodingFromCodecId(from.codec_id),
+      from.extradata_size == 0
+          ? nullptr
+          : Bytes::Create(from.extradata, from.extradata_size),
       VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
-      ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range),
-      from.width, from.height, from.coded_width, from.coded_height, line_stride,
-      plane_offset);
+      ColorSpaceFromAVColorSpaceAndRange(from.color_space, from.color_range),
+      from.width, from.height, 0, 0, std::vector<uint32_t>(),
+      std::vector<uint32_t>());
 }
 
 // Creates a StreamType from an AVCodecContext describing a data type.
@@ -270,9 +270,24 @@ std::unique_ptr<StreamType> StreamTypeFromDataCodecContext(
   return TextStreamType::Create("UNSUPPORTED TYPE (FFMPEG DATA)", nullptr);
 }
 
+// Creates a StreamType from AVCodecParameters describing a data type.
+std::unique_ptr<StreamType> StreamTypeFromDataCodecParameters(
+    const AVCodecParameters& from) {
+  // TODO(dalesat): Implement.
+  return TextStreamType::Create("UNSUPPORTED TYPE (FFMPEG DATA)", nullptr);
+}
+
 // Creates a StreamType from an AVCodecContext describing a subtitle type.
 std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecContext(
     const AVCodecContext& from) {
+  // TODO(dalesat): Implement.
+  return SubpictureStreamType::Create("UNSUPPORTED TYPE (FFMPEG SUBTITLE)",
+                                      nullptr);
+}
+
+// Creates a StreamType from AVCodecParameters describing a subtitle type.
+std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecParameters(
+    const AVCodecParameters& from) {
   // TODO(dalesat): Implement.
   return SubpictureStreamType::Create("UNSUPPORTED TYPE (FFMPEG SUBTITLE)",
                                       nullptr);
@@ -505,32 +520,37 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
     const AVCodecContext& from) {
   switch (from.codec_type) {
     case AVMEDIA_TYPE_AUDIO:
-      switch (from.codec_id) {
-        case AV_CODEC_ID_PCM_S16BE:
-        case AV_CODEC_ID_PCM_S16LE:
-        case AV_CODEC_ID_PCM_S24BE:
-        case AV_CODEC_ID_PCM_S24LE:
-        case AV_CODEC_ID_PCM_U8:
-          return StreamTypeFromLpcmCodecContext(from);
-        default:
-          if (from.codec == nullptr) {
-            return StreamTypeFromCompressedAudioCodecContext(from);
-          } else {
-            return StreamTypeFromLpcmCodecContext(from);
-          }
-      }
+      return StreamTypeFromAudioCodecContext(from);
     case AVMEDIA_TYPE_VIDEO:
-      if (from.codec == nullptr) {
-        return StreamTypeFromCompressedVideoCodecContext(from);
-      } else {
-        return StreamTypeFromUncompressedVideoCodecContext(from);
-      }
+      return StreamTypeFromVideoCodecContext(from);
     case AVMEDIA_TYPE_UNKNOWN:
     // Treated as AVMEDIA_TYPE_DATA.
     case AVMEDIA_TYPE_DATA:
       return StreamTypeFromDataCodecContext(from);
     case AVMEDIA_TYPE_SUBTITLE:
       return StreamTypeFromSubtitleCodecContext(from);
+    case AVMEDIA_TYPE_ATTACHMENT:
+    case AVMEDIA_TYPE_NB:
+    default:
+      FTL_LOG(ERROR) << "unsupported code type " << from.codec_type;
+      abort();
+  }
+}
+
+// static
+std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
+    const AVCodecParameters& from) {
+  switch (from.codec_type) {
+    case AVMEDIA_TYPE_AUDIO:
+      return StreamTypeFromAudioCodecParameters(from);
+    case AVMEDIA_TYPE_VIDEO:
+      return StreamTypeFromVideoCodecParameters(from);
+    case AVMEDIA_TYPE_UNKNOWN:
+    // Treated as AVMEDIA_TYPE_DATA.
+    case AVMEDIA_TYPE_DATA:
+      return StreamTypeFromDataCodecParameters(from);
+    case AVMEDIA_TYPE_SUBTITLE:
+      return StreamTypeFromSubtitleCodecParameters(from);
     case AVMEDIA_TYPE_ATTACHMENT:
     case AVMEDIA_TYPE_NB:
     default:

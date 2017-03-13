@@ -28,6 +28,9 @@ struct AvCodecContext {
   static AvCodecContextPtr Create(const StreamType& stream_type);
 
   static std::unique_ptr<StreamType> GetStreamType(const AVCodecContext& from);
+
+  static std::unique_ptr<StreamType> GetStreamType(
+      const AVCodecParameters& from);
 };
 
 // Converts an AVPixelFormat to a PixelFormat.
