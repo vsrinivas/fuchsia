@@ -202,6 +202,12 @@ static int stub_pipe2(int pipe2fd[2], int flags) {
 }
 weak_alias(stub_pipe2, pipe2);
 
+static int stub_utimensat(int fd, const char* path, const struct timespec times[2], int flags) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_utimensat, utimensat);
+
 static int stub_chdir(const char* path) {
     errno = ENOSYS;
     return -1;

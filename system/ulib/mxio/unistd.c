@@ -1157,14 +1157,12 @@ int utimensat(int dirfd, const char *fn,
     return STATUS(r);
 }
 
-
 int futimens(int fd, const struct timespec times[2]) {
     mxio_t* io = fd_to_io(fd);
 
     mx_status_t r = mx_utimens(io, times, 0);
     return STATUS(r);
 }
-
 
 int pipe2(int pipefd[2], int flags) {
     const int allowed_flags = O_NONBLOCK | O_CLOEXEC;
