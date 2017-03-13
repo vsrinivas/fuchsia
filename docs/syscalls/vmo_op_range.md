@@ -17,7 +17,35 @@ mx_status_t vmo_op_range(mx_handle_t handle, uint32_t op,
 
 ## DESCRIPTION
 
-TODO: fill in
+**vmo_op_range()** performs cache and memory operations against pages held by the VMO.
+
+*offset* byte offset specifying the starting location for *op* in the VMO's held memory.
+
+*size* length, in bytes, to perform the operation on.
+
+*op* the operation to perform:
+
+*buffer* and *buffer_size* are used to store the addresses returned by *MX_VMO_OP_LOOKUP*.
+
+**MX_VMO_OP_COMMIT** - Commit *size* bytes worth of pages starting at byte *offset* for the VMO.
+More information can be found in the [vm object documentation](../objects/vm_object.md).
+
+**MX_VMO_OP_DECOMMIT** - Release a range of pages previously commited to the VMO from *offset* to *offset*+*size*.
+
+**MX_VMO_OP_LOCK** - Presently unsupported.
+
+**MX_VMO_OP_UNLOCK** - Presently unsupported.
+
+**MX_VMO_OP_LOOKUP** - Returns a list of physical addresses (paddr_t) corresponding to the pages held by the VMO from *offset* to *offset*+*size*. The result is stored in *buffer*, up to *buffer_size* bytes.
+
+**MX_VMO_OP_CACHE_SYNC** - Performs a cache sync operation.
+
+**MX_VMO_OP_INVALIDATE** - Performs a cache invalidation operation.
+
+**MX_VMO_OP_CACHE_CLEAN** - Performs a cache clean operation.
+
+**MX_VMO_OP_CACHE_CLEAN_INVALIDATE** - Performs cache clean and invalidate operations together.
+
 
 ## RETURN VALUE
 
@@ -28,12 +56,16 @@ value is returned.
 
 **ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
+**ERR_OUT_OF_RANGE**  An invalid memory range specified by *offset* and *size*.
+
+**ERR_NO_MEMORY**  Allocations to commit pages for *MX_VMO_OP_COMMIT* failed.
+
 **ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
-**ERR_INVALID_ARGS**  *out* is an invalid pointer,
-or *op* is not a valid operation.
+**ERR_INVALID_ARGS**  *out* is an invalid pointer, *op* is not a valid operation, *op* is
+*MX_VMO_LOOPUP* and *buffer* is an invalid pointer, or *size* is zero and *op* is a cache operation.
 
-TODO: fill in
+**ERR_NOT_SUPPORTED**  *op* was *MX_VMO_OP_LOCK* or *MX_VMO_OP_UNLOCK*.
 
 ## SEE ALSO
 
