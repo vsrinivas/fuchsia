@@ -105,42 +105,42 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
     ssize_t result = ERR_NOT_SUPPORTED;
 
     switch (op) {
-    case IOCTL_MAGMA_GET_DEVICE_ID: {
-        auto device_id_out = reinterpret_cast<uint32_t*>(out_buf);
-        if (!out_buf || out_len < sizeof(*device_id_out))
-            return ERR_INVALID_ARGS;
-        *device_id_out = device->magma_system_device->GetDeviceId();
-        result = sizeof(*device_id_out);
-        break;
-    }
-    case IOCTL_MAGMA_CONNECT: {
-        auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
-        if (!in_buf || in_len < sizeof(*request))
-            return DRET(ERR_INVALID_ARGS);
+        case IOCTL_MAGMA_GET_DEVICE_ID: {
+            auto device_id_out = reinterpret_cast<uint32_t*>(out_buf);
+            if (!out_buf || out_len < sizeof(*device_id_out))
+                return ERR_INVALID_ARGS;
+            *device_id_out = device->magma_system_device->GetDeviceId();
+            result = sizeof(*device_id_out);
+            break;
+        }
+        case IOCTL_MAGMA_CONNECT: {
+            auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
+            if (!in_buf || in_len < sizeof(*request))
+                return DRET(ERR_INVALID_ARGS);
 
-        auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
-        if (!out_buf || out_len < sizeof(*device_handle_out))
-            return DRET(ERR_INVALID_ARGS);
+            auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
+            if (!out_buf || out_len < sizeof(*device_handle_out))
+                return DRET(ERR_INVALID_ARGS);
 
-        auto connection = MagmaSystemDevice::Open(device->magma_system_device, request->client_id,
-                                                  request->capabilities);
-        if (!connection)
-            return DRET(ERR_INVALID_ARGS);
+            auto connection = MagmaSystemDevice::Open(device->magma_system_device,
+                                                      request->client_id, request->capabilities);
+            if (!connection)
+                return DRET(ERR_INVALID_ARGS);
 
-        *device_handle_out = connection->GetHandle();
-        result = sizeof(*device_handle_out);
+            *device_handle_out = connection->GetHandle();
+            result = sizeof(*device_handle_out);
 
-        device->magma_system_device->StartConnectionThread(std::move(connection));
+            device->magma_system_device->StartConnectionThread(std::move(connection));
 
-        break;
-    }
+            break;
+        }
 #if MAGMA_INDRIVER_TEST
-    case IOCTL_MAGMA_TEST_RESTART:
-        result = magma_stop(device);
-        if (result != NO_ERROR)
-            return DRET_MSG(result, "magma_stop failed");
-        result = magma_start(device);
-        break;
+        case IOCTL_MAGMA_TEST_RESTART:
+            result = magma_stop(device);
+            if (result != NO_ERROR)
+                return DRET_MSG(result, "magma_stop failed");
+            result = magma_start(device);
+            break;
 #endif
     }
     DLOG("intel_i915_ioctl op 0x%x returning %zd\n", op, result);
@@ -199,9 +199,8 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
     device->framebuffer_handle = MX_HANDLE_INVALID;
     if (!MAGMA_START) {
         mx_handle_t handle;
-        status = pci->map_mmio(dev, 2, MX_CACHE_POLICY_WRITE_COMBINING,
-                               &device->framebuffer, &device->framebuffer_size,
-                               &handle);
+        status = pci->map_mmio(dev, 2, MX_CACHE_POLICY_WRITE_COMBINING, &device->framebuffer,
+                               &device->framebuffer_size, &handle);
         if (status < 0) {
             delete device;
             return status;
@@ -229,15 +228,15 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
 
     if (device->framebuffer_handle == MX_HANDLE_INVALID) {
         switch (di->format) {
-        case MX_PIXEL_FORMAT_RGB_565:
-            device->framebuffer_size = di->stride * di->height * sizeof(uint16_t);
-            break;
-        default:
-            DLOG("unrecognized format 0x%x, defaulting to 32bpp", di->format);
-        case MX_PIXEL_FORMAT_ARGB_8888:
-        case MX_PIXEL_FORMAT_RGB_x888:
-            device->framebuffer_size = di->stride * di->height * sizeof(uint32_t);
-            break;
+            case MX_PIXEL_FORMAT_RGB_565:
+                device->framebuffer_size = di->stride * di->height * sizeof(uint16_t);
+                break;
+            default:
+                DLOG("unrecognized format 0x%x, defaulting to 32bpp", di->format);
+            case MX_PIXEL_FORMAT_ARGB_8888:
+            case MX_PIXEL_FORMAT_RGB_x888:
+                device->framebuffer_size = di->stride * di->height * sizeof(uint32_t);
+                break;
         }
         device->framebuffer = malloc(device->framebuffer_size);
     } else {
