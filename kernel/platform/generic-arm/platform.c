@@ -425,10 +425,11 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
         // XXX shutdown seem to not work through psci
         // implement shutdown via pmic
-#if 0
+#if BCM2837
+        printf("shutdown is unsupported\n");
+#else
         psci_system_off();
 #endif
-        printf("shutdown is unsupported\n");
     }
 
 #if WITH_LIB_DEBUGLOG
