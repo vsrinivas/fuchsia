@@ -19,6 +19,9 @@
 // Add a bootfs vmo to the system fs.
 #define IOCTL_DEVMGR_MOUNT_BOOTFS_VMO \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_DEVMGR, 3)
+// Determine which filesystem the vnode belongs to.
+#define IOCTL_DEVMGR_QUERY_FS \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVMGR, 4)
 
 // ssize_t ioctl_devmgr_mount_fs(int fd, mx_handle_t* in);
 IOCTL_WRAPPER_IN(ioctl_devmgr_mount_fs, IOCTL_DEVMGR_MOUNT_FS, mx_handle_t);
@@ -32,9 +35,12 @@ IOCTL_WRAPPER_OUT(ioctl_devmgr_unmount_node, IOCTL_DEVMGR_UNMOUNT_NODE, mx_handl
 // ssize_t ioctl_devmgr_mount_bootfs_vmo(int fd, mx_handle_t* in);
 IOCTL_WRAPPER_IN(ioctl_devmgr_mount_bootfs_vmo, IOCTL_DEVMGR_MOUNT_BOOTFS_VMO, mx_handle_t);
 
+// ssize_t ioctl_devmgr_query_fs(int fd, char* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_devmgr_query_fs, IOCTL_DEVMGR_QUERY_FS, char);
+
 // TODO(smklein): Move these ioctls to a new location
 #define IOCTL_BLOBSTORE_BLOB_INIT \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVMGR, 4)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVMGR, 5)
 
 typedef struct blob_ioctl_config {
     size_t size_data;

@@ -48,9 +48,22 @@ void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {
     return;
 }
 
+#define FS_NAME "minfs"
+
 ssize_t vfs_do_local_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
                            size_t in_len, void* out_buf, size_t out_len) {
-    return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
+    switch (op) {
+        case IOCTL_DEVMGR_QUERY_FS: {
+            if (out_len < strlen(FS_NAME) + 1) {
+                return ERR_INVALID_ARGS;
+            }
+            strcpy(static_cast<char*>(out_buf), FS_NAME);
+            return strlen(FS_NAME);
+        }
+        default: {
+            return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
+        }
+    }
 }
 
 ssize_t vfs_do_ioctl_watch_dir(vnode_t* vn, const void* in_buf, size_t in_len,

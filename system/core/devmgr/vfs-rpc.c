@@ -53,6 +53,8 @@ mx_status_t vfs_get_handles(vnode_t* vn, uint32_t flags, mx_handle_t* hnds,
     }
 }
 
+#define FS_NAME "memfs"
+
 ssize_t vfs_do_local_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
                            size_t in_len, void* out_buf, size_t out_len) {
     switch (op) {
@@ -62,6 +64,13 @@ ssize_t vfs_do_local_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
         }
         const mx_handle_t* vmo = in_buf;
         return devmgr_add_systemfs_vmo(*vmo);
+    case IOCTL_DEVMGR_QUERY_FS: {
+        if (out_len < strlen(FS_NAME) + 1) {
+            return ERR_INVALID_ARGS;
+        }
+        strcpy(out_buf, FS_NAME);
+        return strlen(FS_NAME);
+    }
     default:
         return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
     }

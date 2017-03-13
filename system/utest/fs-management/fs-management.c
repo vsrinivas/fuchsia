@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include <magenta/device/block.h>
+#include <magenta/device/devmgr.h>
 #include <magenta/device/ramdisk.h>
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
@@ -57,6 +58,17 @@ static int shut_down_ramdisk(const char* name) {
     return 0;
 }
 
+static bool check_mounted_fs(const char* path, const char* fs_name, size_t len) {
+    int fd = open(path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    char out[128];
+    ASSERT_EQ(ioctl_devmgr_query_fs(fd, out, sizeof(out)), (ssize_t)len,
+              "Failed to query filesystem");
+    ASSERT_EQ(strncmp(fs_name, out, len), 0, "Unexpected filesystem mounted");
+    ASSERT_EQ(close(fd), 0, "");
+    return true;
+}
+
 static bool mount_unmount(void) {
     const char* ramdisk_name = "mount_unmount";
     const char* ramdisk_path = RAMCTL_PATH "/mount_unmount";
@@ -66,10 +78,13 @@ static bool mount_unmount(void) {
     int fd = set_up_ramdisk(ramdisk_name, 512, 1 << 16);
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
     ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
               NO_ERROR, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
     ASSERT_EQ(umount(mount_path), NO_ERROR, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
     ASSERT_EQ(shut_down_ramdisk(ramdisk_name), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
     END_TEST;
