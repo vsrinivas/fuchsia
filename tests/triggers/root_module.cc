@@ -73,7 +73,11 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
                           [this](const fidl::String&) {
                             task_triggered_.Pass();
 
-                            module_context_->Done();
+                            modular::testing::GetStore()->Get(
+                                "trigger_test_agent_stopped",
+                                [this](const fidl::String&) {
+                                  module_context_->Done();
+                                });
                           });
 
                     });
@@ -84,7 +88,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     // Start a timer to call Story.Done in case the test agent misbehaves and we
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { delete this; },
+        [this] { mtl::MessageLoop::GetCurrent()->QuitNow(); },
         ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
@@ -92,7 +96,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
     done();
-    delete this;
+    mtl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   modular::ModuleContextPtr module_context_;
@@ -114,7 +118,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  new ParentApp();
+  ParentApp parent_app;
   loop.Run();
   TEST_PASS("Root module exited");
   modular::testing::Teardown();
