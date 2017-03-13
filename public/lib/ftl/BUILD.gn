@@ -62,6 +62,8 @@ static_library("ftl") {
     "memory/weak_ptr.h",
     "memory/weak_ptr_internal.cc",
     "memory/weak_ptr_internal.h",
+    "random/rand.cc",
+    "random/uuid.cc",
     "strings/ascii.cc",
     "strings/ascii.h",
     "strings/concatenate.cc",
