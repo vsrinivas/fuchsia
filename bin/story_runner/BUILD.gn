@@ -5,6 +5,7 @@
 group("all") {
   deps = [
     ":story_runner",
+    ":dummy_story_shell",
   ]
 }
 
@@ -47,3 +48,19 @@ source_set("story_runner") {
     "//lib/mtl",
   ]
 }
+
+executable("dummy_story_shell") {
+  sources = [
+    "dummy_story_shell.cc",
+  ]
+
+  deps = [
+    "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/lib/fidl:view_host",
+    "//apps/modular/services/story",
+    "//apps/mozart/services/views",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+

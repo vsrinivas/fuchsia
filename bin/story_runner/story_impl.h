@@ -14,10 +14,12 @@
 #include <string>
 #include <vector>
 
+#include "application/services/application_controller.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
+#include "apps/modular/services/story/story_shell.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -41,7 +43,7 @@ class StoryStorageImpl;
 // The actual implementation of the Story service. It also implements
 // the StoryController service to give clients control over the Story
 // instance.
-class StoryImpl : public StoryController, ModuleWatcher {
+class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
  public:
   StoryImpl(StoryDataPtr story_data,
             StoryProviderImpl* const story_provider_impl);
@@ -58,6 +60,12 @@ class StoryImpl : public StoryController, ModuleWatcher {
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
+  void StartModuleInShell(
+      const fidl::String& query,
+      fidl::InterfaceHandle<Link> link,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller);
   const std::string& GetStoryId();
 
   // Releases ownership of |controller|.
@@ -81,10 +89,12 @@ class StoryImpl : public StoryController, ModuleWatcher {
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
 
   // Phases of Start() broken out into separate methods.
+  void StartStoryShell(fidl::InterfaceRequest<mozart::ViewOwner> request);
   void StartRootModule(fidl::InterfaceRequest<mozart::ViewOwner> request);
 
   // Phases of Stop() broken out into separate methods.
   void StopModules();
+  void StopStoryShell();
   void StopLinks();
   void StopFinish();
 
@@ -106,6 +116,11 @@ class StoryImpl : public StoryController, ModuleWatcher {
   // Implements the primary service provided here: StoryController.
   fidl::BindingSet<StoryController> bindings_;
   fidl::InterfacePtrSet<StoryWatcher> watchers_;
+
+  // Everything for the story shell.
+  app::ApplicationControllerPtr story_shell_controller_;
+  StoryShellPtr story_shell_;
+  fidl::Binding<StoryContext> story_context_binding_;
 
   // Needed to hold on to a running story. They get reset on Stop().
   LinkPtr root_;

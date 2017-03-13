@@ -12,6 +12,7 @@ fidl("story") {
     "story_info.fidl",
     "story_marker.fidl",
     "story_provider.fidl",
+    "story_shell.fidl",
   ]
 
   deps = [

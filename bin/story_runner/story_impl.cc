@@ -30,6 +30,7 @@ StoryImpl::StoryImpl(StoryDataPtr story_data,
                      StoryProviderImpl* const story_provider_impl)
     : story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
+      story_context_binding_(this),
       module_watcher_binding_(this) {
   bindings_.set_on_empty_set_handler([this] {
     story_provider_impl_->PurgeController(story_data_->story_info->id);
@@ -132,7 +133,14 @@ void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
 
   auto cont = [this] {
     if (start_request_ && !deleted_) {
-      StartRootModule(std::move(start_request_));
+      // Start the root module and then show it in the story shell.
+      mozart::ViewOwnerPtr root_module_view;
+      StartRootModule(root_module_view.NewRequest());
+
+      // Story shell can be used right after its start was requested.
+      StartStoryShell(std::move(start_request_));
+      story_shell_->ConnectView(std::move(root_module_view));
+
       NotifyStateChange();
     }
 
@@ -151,6 +159,31 @@ void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
   } else {
     cont();
   }
+}
+
+void StoryImpl::StartStoryShell(
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  app::ServiceProviderPtr story_shell_services;
+  auto story_shell_launch_info = app::ApplicationLaunchInfo::New();
+  story_shell_launch_info->services = story_shell_services.NewRequest();
+  story_shell_launch_info->url = "file:///system/apps/dummy_story_shell";
+
+  story_provider_impl_->launcher()->CreateApplication(
+      std::move(story_shell_launch_info),
+      story_shell_controller_.NewRequest());
+
+  mozart::ViewProviderPtr story_shell_view_provider;
+  ConnectToService(story_shell_services.get(),
+                   story_shell_view_provider.NewRequest());
+
+  StoryShellFactoryPtr story_shell_factory;
+  ConnectToService(story_shell_services.get(),
+                   story_shell_factory.NewRequest());
+
+  story_shell_view_provider->CreateView(std::move(view_owner_request), nullptr);
+
+  story_shell_factory->Create(story_context_binding_.NewBinding(),
+                              story_shell_.NewRequest());
 }
 
 void StoryImpl::StartRootModule(
@@ -309,6 +342,20 @@ void StoryImpl::StartModule(
   connections_.emplace_back(std::move(connection));
 }
 
+
+void StoryImpl::StartModuleInShell(
+    const fidl::String& module_url,
+    fidl::InterfaceHandle<Link> link,
+    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller_request) {
+  mozart::ViewOwnerPtr view_owner;
+  StartModule(module_url, std::move(link), std::move(outgoing_services),
+              std::move(incoming_services), std::move(module_controller_request),
+              view_owner.NewRequest());
+  story_shell_->ConnectView(view_owner.PassInterfaceHandle());
+}
+
 const std::string& StoryImpl::GetStoryId() {
   return story_data_->story_info->id;
 }
@@ -367,7 +414,7 @@ void StoryImpl::StopModules() {
       return;
     }
 
-    StopLinks();
+    StopStoryShell();
   };
 
   if (connections_.empty()) {
@@ -377,6 +424,14 @@ void StoryImpl::StopModules() {
       connection.module_controller_impl->TearDown(cont);
     }
   }
+}
+
+void StoryImpl::StopStoryShell() {
+  story_shell_->Terminate([this] {
+      story_shell_controller_.reset();
+      story_shell_.reset();
+      StopLinks();
+    });
 }
 
 void StoryImpl::StopLinks() {

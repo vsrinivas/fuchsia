@@ -11,7 +11,6 @@
 #include "apps/modular/examples/counter_cpp/store.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
@@ -158,24 +157,6 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> services) override {
-    view_.reset(new modular::ViewHost(
-        application_context()
-            ->ConnectToEnvironmentService<mozart::ViewManager>(),
-        std::move(view_owner_request)));
-
-    for (auto& view_owner : child_views_) {
-      view_->ConnectView(std::move(view_owner));
-    }
-
-    child_views_.clear();
-  }
-
-  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
-    if (view_) {
-      view_->ConnectView(std::move(view_owner));
-    } else {
-      child_views_.emplace_back(std::move(view_owner));
-    }
   }
 
   // |Module|
@@ -214,12 +195,10 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         });
 
     app::ServiceProviderPtr services_from_module1;
-    fidl::InterfaceHandle<mozart::ViewOwner> module1_view;
-    module_context_->StartModule(
+    module_context_->StartModuleInShell(
         "file:///system/apps/example_module1", std::move(module1_link_handle),
         std::move(services_for_module1), services_from_module1.NewRequest(),
-        module1_.NewRequest(), module1_view.NewRequest());
-    ConnectView(std::move(module1_view));
+        module1_.NewRequest());
 
     // Consume services from Module 1.
     auto multiplier_service =
@@ -237,11 +216,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
           FTL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
-    fidl::InterfaceHandle<mozart::ViewOwner> module2_view;
-    module_context_->StartModule(
+    module_context_->StartModuleInShell(
         "file:///system/apps/example_module2", std::move(module2_link_handle),
-        nullptr, nullptr, module2_.NewRequest(), module2_view.NewRequest());
-    ConnectView(std::move(module2_view));
+        nullptr, nullptr, module2_.NewRequest());
 
     connections_.emplace_back(
         new LinkConnection(module1_link_.get(), module2_link_.get()));
@@ -343,9 +320,6 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     module_monitors_.clear();
     done();
   }
-
-  std::unique_ptr<modular::ViewHost> view_;
-  std::vector<fidl::InterfaceHandle<mozart::ViewOwner>> child_views_;
 
   modular::LinkPtr link_;
   modular::ModuleContextPtr module_context_;

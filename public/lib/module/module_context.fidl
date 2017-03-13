@@ -49,6 +49,13 @@ interface ModuleContext {
               ModuleController& module_controller,
               mozart.ViewOwner& view_owner);
 
+  // Like StartModule(), but the view of the newly started module is
+  // sent to the story shell for display.
+  StartModuleInShell(string module_url, Link link,
+                     app.ServiceProvider? outgoing_services,
+                     app.ServiceProvider&? incoming_services,
+                     ModuleController& module_controller);
+
   // Gets the ComponentContext associated with this module. This component
   // context is unique to this particular module instance.
   GetComponentContext(ComponentContext& context_request);

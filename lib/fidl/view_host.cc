@@ -39,10 +39,10 @@ ViewHost::~ViewHost() = default;
 
 void ViewHost::ConnectView(
     fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
-  const uint32_t key = next_child_key_++;
-  GetViewContainer()->AddChild(key, std::move(view_owner));
+  const uint32_t child_key = next_child_key_++;
+  GetViewContainer()->AddChild(child_key, std::move(view_owner));
   views_.emplace(
-      std::make_pair(key, std::unique_ptr<ViewData>(new ViewData(key))));
+      std::make_pair(child_key, std::unique_ptr<ViewData>(new ViewData(child_key))));
 }
 
 void ViewHost::OnChildAttached(uint32_t child_key,
