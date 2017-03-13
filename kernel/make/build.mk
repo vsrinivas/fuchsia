@@ -33,7 +33,7 @@ $(OUTLKELF): $(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LINKER_SCRIPT)
 	$(NOECHO)$(SIZECMD) -t --common $(sort $(ALLMODULE_OBJS)) $(EXTRA_OBJS)
 	$(NOECHO)$(SIZECMD) $@
 
-$(OUTLKELF)-gdb.py: $(call SCRIPTNAME, scripts/$(LKNAME).elf-gdb.py)
+$(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 	@echo generating $@
 	$(NOECHO)cp -f $< $@
 
@@ -90,7 +90,7 @@ $(BUILDDIR)/%.size: $(BUILDDIR)/%
 	$(NOECHO)$(NM) -S --size-sort $< > $@
 
 $(BUILDDIR)/%.id: $(BUILDDIR)/%
-	$(NOECHO)env READELF="$(READELF)" $(call SCRIPTNAME, scripts/get-build-id) $< > $@
+	$(NOECHO)env READELF="$(READELF)" scripts/get-build-id $< > $@
 
 ifneq ($(USER_AUTORUN),)
 USER_MANIFEST_LINES += autorun=$(USER_AUTORUN)
@@ -106,7 +106,7 @@ $(USER_MANIFEST): usermanifestfile $(USER_MANIFEST_DEBUG_INPUTS)
 	@$(MKDIR)
 	$(NOECHO)echo $(USER_MANIFEST_LINES) | tr ' ' '\n' | sort > $@.tmp
 	$(NOECHO)for f in $(USER_MANIFEST_DEBUG_INPUTS) ; do \
-	  echo debug/$$(env READELF=$(READELF) $(call SCRIPTNAME, scripts/get-build-id) $$f).debug=$$f >> $@.tmp ; \
+	  echo debug/$$(env READELF=$(READELF) $(SHELLEXEC) scripts/get-build-id $$f).debug=$$f >> $@.tmp ; \
 	done
 	$(NOECHO)$(call TESTANDREPLACEFILE,$@.tmp,$@)
 
@@ -144,7 +144,7 @@ ifneq ($(wildcard $(LKMAKEROOT)/prebuilt/config.mk),)
 ifeq ($(PREBUILT_TOOLCHAINS),)
 $(info WARNING:)
 $(info WARNING: prebuilt/config.mk is out of date)
-$(info WARNING: run $(call SCRIPTNAME, scripts/download-toolchain))
+$(info WARNING: run scripts/download-toolchain)
 $(info WARNING:)
 else
 # For each prebuilt toolchain, check if the shafile (checked in)
@@ -160,7 +160,7 @@ ifneq ($(PREBUILT_STALE),)
 $(info WARNING:)
 $(foreach tool,$(PREBUILT_STALE),\
 $(info WARNING: toolchain $(tool) is out of date))
-$(info WARNING: run $(call SCRIPTNAME, scripts/download-toolchain))
+$(info WARNING: run scripts/download-toolchain)
 $(info WARNING:)
 endif
 endif

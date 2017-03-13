@@ -23,11 +23,10 @@ MODULE_SRCDEPS += $(userboot-filename).strip
 # This generated header file tells the userboot.cpp code
 # where the segment boundaries and entry points are.
 MODULE_SRCDEPS += $(BUILDDIR)/$(LOCAL_DIR)/userboot-code.h
-$(BUILDDIR)/$(LOCAL_DIR)/userboot-code.h: \
-    $(call SCRIPTNAME, scripts/gen-rodso-code.sh) $(userboot-filename)
+$(BUILDDIR)/$(LOCAL_DIR)/userboot-code.h: scripts/gen-rodso-code.sh $(userboot-filename)
 	@$(MKDIR)
 	@echo generating $@
-	$(NOECHO)$< '$(NM)' USERBOOT $(userboot-filename) > $@.new
+	$(NOECHO)$(SHELLEXEC) $< '$(NM)' $@.new USERBOOT $(userboot-filename)
 	@mv -f $@.new $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/userboot-code.h
 MODULE_COMPILEFLAGS += -I$(BUILDDIR)/$(LOCAL_DIR)

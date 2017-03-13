@@ -633,9 +633,9 @@ endif
 
 # Regenerate this every time, but if it comes out identical then
 # don't touch the file so gratuitous recompiles won't be triggered.
-$(GIT_VERSION_HEADER): $(call SCRIPTNAME, scripts/git-version.sh) FORCE
+$(GIT_VERSION_HEADER): scripts/git-version.sh FORCE
 	@echo generating $@
-	$(NOECHO)$< $@.new
+	$(NOECHO)$(SHELLEXEC) $< $@.new
 	$(NOECHO)if cmp -s $@.new $@; then rm $@.new; else mv -f $@.new $@; fi
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS

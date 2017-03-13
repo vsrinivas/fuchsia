@@ -1,8 +1,12 @@
 #!/bin/sh
 
 REV=`git rev-parse HEAD 2> /dev/null`
-if [ -n "`git diff-index --name-only HEAD 2> /dev/null`" ]; then
-  REV="${REV}-dirty"
+if [ "$?" -eq 0 ]; then
+  if [ -n "`git diff-index --name-only HEAD 2> /dev/null`" ]; then
+    REV="${REV}-dirty"
+  fi
+else
+  REV="unknown"
 fi
 
 cat > "$1" <<EOF

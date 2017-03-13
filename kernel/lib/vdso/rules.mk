@@ -24,10 +24,10 @@ MODULE_SRCDEPS += $(vdso-filename).strip
 # This generated header file tells the vdso.cpp code
 # where the segment boundaries and entry points are.
 MODULE_SRCDEPS += $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h
-$(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h: $(call SCRIPTNAME, scripts/gen-rodso-code.sh) $(vdso-filename)
+$(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h: scripts/gen-rodso-code.sh $(vdso-filename)
 	@$(MKDIR)
 	@echo generating $@
-	$(NOECHO)$< '$(NM)' VDSO $(vdso-filename) > $@.new
+	$(NOECHO)$(SHELLEXEC) $< '$(NM)' $@.new VDSO $(vdso-filename)
 	@mv -f $@.new $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h
 MODULE_COMPILEFLAGS += -I$(BUILDDIR)/$(LOCAL_DIR)

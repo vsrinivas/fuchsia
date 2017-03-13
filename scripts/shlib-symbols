@@ -28,7 +28,12 @@
 # ELF symbol bits consistently.  But the type letters map to these symbol
 # details when symbols are defined in the usual ways by a compiler.)
 
-set -o pipefail -e
+if [ "$(basename $0)" = "sh" ]
+then
+  set -e
+else
+  set -o pipefail -e
+fi
 
 show_address=false
 zero_function_size=false

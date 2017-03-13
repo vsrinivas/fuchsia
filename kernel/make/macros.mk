@@ -120,5 +120,9 @@ endef
 copy-dst-src = $(eval $(call generate-copy-dst-src,$(strip $1),$(strip $2)))
 
 UNAME := $(shell uname)
-SCRIPTNAME = $(firstword $(wildcard $1.$(UNAME)) $(wildcard $1))
+ifeq ($(UNAME), Magenta)
+SHELLEXEC = /boot/bin/sh
+else
+SHELLEXEC =
+endif
 

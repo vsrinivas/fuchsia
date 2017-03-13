@@ -17,7 +17,7 @@
 # of entries in the table.
 
 usage() {
-  echo >&2 "Usage: $0 NM {NAME DSO}..."
+  echo >&2 "Usage: $0 NM OUTFILE {NAME DSO}..."
   exit 2
 }
 
@@ -27,8 +27,15 @@ fi
 
 NM="$1"
 shift
+OUTFILE="$1"
+shift
 
-set -o pipefail -e
+if [ "$(basename $0)" = "sh" ]
+then
+  set -e
+else
+  set -o pipefail -e
+fi
 
 grok_code_symbols() {
   local symbol type addr size rest
@@ -38,10 +45,10 @@ grok_code_symbols() {
       if [ "$symbol" = _start ]; then
         symbol=ENTRY
       fi
-      echo "#define ${1}_${symbol} 0x${addr}"
+      echo "#define ${1}_${symbol} 0x${addr}" >> $OUTFILE
       case "$size" in
       ''|0|0x0) ;;
-      *) echo "#define ${1}_${symbol}_SIZE 0x${size}"
+      *) echo "#define ${1}_${symbol}_SIZE 0x${size}" >> $OUTFILE
       esac
       status=0
       ;;
@@ -59,11 +66,11 @@ grok_dynsym_slots() {
   local symbol rest
   while read symbol rest; do
     let symno++ 1
-    echo "#define ${1}_DYNSYM_${symbol} ${symno}"
+    echo "#define ${1}_DYNSYM_${symbol} ${symno}" >> $OUTFILE
   done
   if [ $symno -gt 0 ]; then
     let symno++ 1
-    echo "#define ${1}_DYNSYM_COUNT ${symno}"
+    echo "#define ${1}_DYNSYM_COUNT ${symno}" >> $OUTFILE
   fi
 }
 
@@ -75,7 +82,7 @@ while [ $# -gt 0 ]; do
   if [ $# -lt 2 ]; then
     usage
   fi
-  echo "#define ${1}_FILENAME \"${2}\""
+  echo "#define ${1}_FILENAME \"${2}\"" > $OUTFILE
   find_code_symbols "$1" "$2"
   find_dynsym_slots "$1" "$2"
   shift 2
