@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/music"
+    ],
+    "binaries": [
+        {
+            "binary": "music.flx",
+            "bootfs_path": "apps/music"
+        }
+    ]
+}

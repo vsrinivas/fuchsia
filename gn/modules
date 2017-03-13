@@ -3,10 +3,11 @@
         "//apps/modules"
     ],
     "imports": [
+      "calendar",
       "chat",
       "contacts",
-      "calendar",
-      "email"
+      "email",
+      "music"
     ],
     "binaries": [
         {
