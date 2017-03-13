@@ -182,10 +182,12 @@ void IptServer::OnThreadExiting(Process* process,
   PrintException(stdout, process, thread, type, context);
 
   // Dump any collected trace.
-  if (thread->ipt_buffer() >= 0) {
-    StopThreadPerf(thread, config_);
-    DumpThreadPerf(thread, config_);
-    ResetThreadPerf(thread, config_);
+  if (config_.mode == IPT_MODE_THREADS) {
+    if (thread->ipt_buffer() >= 0) {
+      StopThreadPerf(thread, config_);
+      DumpThreadPerf(thread, config_);
+      ResetThreadPerf(thread, config_);
+    }
   }
 
   // We still have to "resume" the thread so that the o/s will complete the
