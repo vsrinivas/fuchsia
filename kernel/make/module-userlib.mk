@@ -23,7 +23,7 @@ $(MODULE_LIBNAME).a: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 	@$(MKDIR)
 	@echo linking $@
 	@rm -f $@
-	$(NOECHO)echo $^ > $@.opts && $(AR) cr $@ @$@.opts
+	$(call BUILDCMD,$(AR),cr $@ $^)
 
 # always build all libraries
 EXTRA_BUILDDEPS += $(MODULE_LIBNAME).a
@@ -45,8 +45,8 @@ $(MODULE_LIBNAME).so: _LDFLAGS := $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(MODU
 $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODULE_SOLIBS)
 	@$(MKDIR)
 	@echo linking userlib $@
-	$(NOECHO)echo $(_OBJS) $(_LIBS) $(LIBGCC) > $@.opts && \
-	  $(USER_LD) $(_LDFLAGS) -shared -soname $(_SONAME) @$@.opts -o $@
+	$(call BUILDCMD,$(USER_LD),$(_LDFLAGS) -shared -soname $(_SONAME) \
+                                   $(_OBJS) $(_LIBS) $(LIBGCC) -o $@)
 
 EXTRA_IDFILES += $(MODULE_LIBNAME).so.id
 

@@ -56,6 +56,19 @@ define MAKECONFIGHEADER
 	$(call TESTANDREPLACEFILE,$1.tmp,$1)
 endef
 
+# invoke a command $(1), using arguments $(2), putting those arguments
+# into a command file if this version of Make supports it.
+ifeq (4.0,$(firstword $(sort $(MAKE_VERSION) 4.0)))
+define BUILDCMD =
+	$(shell $(MKDIR))
+	$(if $(NOECHO),,$(info echo "$(2)" > $@.opts))
+	$(file >$@.opts,$(2))
+	$(NOECHO)$(1) @$@.opts
+endef
+else
+BUILDCMD = $(NOECHO)$(1) $(2)
+endif
+
 # Tools to make module names canonical (expand to a full path relative
 # to LKROOT) and to ensure that canonical names exist and are non-ambigous.
 
