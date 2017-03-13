@@ -228,10 +228,14 @@ type c_sockaddr_storage struct {
 	__ss_padding [112]uint8
 }
 
-type c_mxio_socket_msg struct {
+type c_mxio_socket_msg_hdr struct {
 	addr    c_sockaddr_storage
 	addrlen c_socklen
 	flags   int32
-	data    [1]uint8
-	_       [7]byte
+}
+
+type c_mxio_socket_msg struct {
+	hdr  c_mxio_socket_msg_hdr
+	data [1]uint8
+	_    [7]byte
 }

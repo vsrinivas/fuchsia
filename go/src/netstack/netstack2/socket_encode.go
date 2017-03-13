@@ -23,6 +23,7 @@ const (
 	c_sockaddr_in6_len         = int(unsafe.Sizeof(c_sockaddr_in6{}))
 	c_sockaddr_storage_len     = int(unsafe.Sizeof(c_sockaddr_storage{}))
 	c_mxrio_sockaddr_reply_len = int(unsafe.Sizeof(c_mxrio_sockaddr_reply{}))
+	c_mxio_socket_msg_hdr_len  = int(unsafe.Sizeof(c_mxio_socket_msg_hdr{}))
 )
 
 func init() {
@@ -76,6 +77,21 @@ func writeSockaddrStorage6(dst *c_sockaddr_storage, src *c_sockaddr_in6) c_sockl
 	dstb := (*[unsafe.Sizeof(*dst)]byte)(unsafe.Pointer(dst))[:]
 	return c_socklen(copy(dstb, srcb))
 }
+func writeSockaddrStorage(dst *c_sockaddr_storage, a tcpip.FullAddress) (c_socklen, error) {
+	switch len(a.Addr) {
+	case 0, 4:
+		sockaddr := c_sockaddr_in{sin_family: AF_INET}
+		sockaddr.sin_port.setPort(a.Port)
+		copy(sockaddr.sin_addr[:], a.Addr)
+		return writeSockaddrStorage4(dst, &sockaddr), nil
+	case 16:
+		sockaddr := c_sockaddr_in6{sin6_family: AF_INET6}
+		sockaddr.sin6_port.setPort(a.Port)
+		copy(sockaddr.sin6_addr[:], a.Addr)
+		return writeSockaddrStorage6(dst, &sockaddr), nil
+	}
+	return 0, mxerror.Errorf(mx.ErrInvalidArgs, "write sockaddr: bad address len %d", len(a.Addr))
+}
 
 func (v c_in_port) port() uint16 {
 	return uint16(v[0])<<8 | uint16(v[1])
@@ -128,4 +144,26 @@ func readSockaddrIn(data []byte) (*tcpip.FullAddress, error) {
 	default:
 		return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading c_sockaddr: unknown family: %d", family)
 	}
+}
+
+func readSocketMsgHdr(data []byte) (*tcpip.FullAddress, error) {
+	if len(data) < c_mxio_socket_msg_hdr_len {
+		return nil, mxerror.Errorf(mx.ErrInvalidArgs, "reading socket msg header: too short: %d", len(data))
+	}
+	hdr := (*c_mxio_socket_msg_hdr)(unsafe.Pointer(&data[0]))
+	if hdr.addrlen == 0 {
+		return nil, nil
+	}
+	return readSockaddrIn(data) // first field of c_mxio_socket_msg_hdr is c_sockaddr_storage
+}
+
+func writeSocketMsgHdr(data []byte, addr tcpip.FullAddress) error {
+	if len(data) < c_mxio_socket_msg_hdr_len {
+		return mxerror.Errorf(mx.ErrInvalidArgs, "writing socket msg header: too short: %d", len(data))
+	}
+	hdr := (*c_mxio_socket_msg_hdr)(unsafe.Pointer(&data[0]))
+	l, err := writeSockaddrStorage(&hdr.addr, addr)
+	hdr.addrlen = l
+	hdr.flags = 0
+	return err
 }
