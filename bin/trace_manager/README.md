@@ -45,6 +45,17 @@ the resulting trace can then be retrieved from the device with `netcp` as in:
 $ netcp :/tmp/trace.json trace.json
 ```
 
+### Visualizing trace files
+
+You can use [Chromium](https://www.chromium.org/Home)'s (or
+[Google Chrome](https://www.google.com/chrome/)'s) [Trace Event Profiling
+Tool](https://www.chromium.org/developers/how-tos/trace-event-profiling-tool) to
+visualize `trace.json` files:
+
+1.  Navigate to `chrome://tracing/`
+1.  Click the **Load** button
+1.  Select the `trace.json` file you copied off the fuchsia device
+
 ### Tracing specification file
 
 Tracing specification file is a JSON file that can be passed to `trace record`
