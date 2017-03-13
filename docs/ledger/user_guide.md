@@ -72,12 +72,11 @@ this makes the database data world-readable and world-writeable)
 
 In `Storage / Rules`, change the line starting with "allow" to match the example
 below and click "Publish". (note that this makes the database data
-world-readable and world-writeable) Also take note of "YOUR_BUCKET_NAME" in the
-rules - you will need that in a second.
+world-readable and world-writeable).
 
 ```
 service firebase.storage {
-  match /b/<BUCKET NAME>/o {
+  match /b/{bucket}/o {
     match /{allPaths=**} {
       allow read, write: if true;
     }
@@ -91,10 +90,11 @@ In order to point Ledger to your database, run the configuration script:
 configure_ledger --gcs_bucket=<BUCKET NAME> --firebase_id=<DATABASE_ID> [ --cloud_prefix=<CLOUD_PREFIX> ]
 ```
 
-`BUCKET_NAME` is the name of the storage bucket referenced above. Firebase
-Storage is backed by GCS, so this is actually a name of a Google Cloud Storage
-bucket. It however has to be the bucket of the Firebase Storage instance
-configured as described above, and not any general GCS bucket.
+`BUCKET_NAME` is the name of the storage bucket.  By default this is
+<DATABASE_ID>.appspot.com.  Firebase Storage is backed by GCS, so this is
+actually a name of a Google Cloud Storage bucket. It however has to be the
+bucket of the Firebase Storage instance configured as described above, and not
+any general GCS bucket.
 
 `DATABASE_ID` is the identifier of your Firebase project. (it's "ABC" for a
 firebase database "ABC.firebaseio.com")
