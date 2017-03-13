@@ -232,5 +232,5 @@ int main(int argc, char** argv) {
         }
     }
 
-    return 0;
+    return failed_count ? 1 : 0;
 }
