@@ -335,7 +335,6 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
     xhci_trb_t* trb = cr->current;
     int index = trb - cr->start;
     xhci->command_contexts[index] = context;
-    context->clear_ptr = &xhci->command_contexts[index];
 
     XHCI_WRITE64(&trb->ptr, ptr);
     XHCI_WRITE32(&trb->status, 0);
@@ -360,11 +359,7 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
     xhci->command_contexts[index] = NULL;
     mtx_unlock(&xhci->command_ring.mutex);
 
-    if (context) {
-        context->callback(context->data, cc, command_trb, event_trb);
-    } else {
-        printf("context is NULL in xhci_handle_command_complete_event!\n");
-    }
+    context->callback(context->data, cc, command_trb, event_trb);
 }
 
 static void xhci_handle_mfindex_wrap(xhci_t* xhci) {

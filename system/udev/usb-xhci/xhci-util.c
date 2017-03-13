@@ -4,8 +4,6 @@
 
 #include "xhci-util.h"
 
-#define SYNC_COMMAND_TIMEOUT MX_SEC(1)
-
 static void xhci_sync_command_callback(void* data, uint32_t cc, xhci_trb_t* command_trb,
                                          xhci_trb_t* event_trb) {
     xhci_sync_command_t* command = (xhci_sync_command_t*)data;
@@ -22,15 +20,7 @@ void xhci_sync_command_init(xhci_sync_command_t* command) {
 
 // returns condition code
 int xhci_sync_command_wait(xhci_sync_command_t* command) {
-    mx_status_t status = completion_wait(&command->completion, SYNC_COMMAND_TIMEOUT);
-
-    // FIXME(voydanoff) ugly workaround for hang in xhci_queue_transfer().
-    // the real fix is to not call xhci_reset_endpoint() within xhci_queue_transfer(),
-    // since that can hang the USB stack.
-    if (status != NO_ERROR) {
-        *command->context.clear_ptr = NULL;
-        return status;
-    }
+    completion_wait(&command->completion, MX_TIME_INFINITE);
 
     return (command->status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
 }

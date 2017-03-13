@@ -41,12 +41,9 @@ typedef struct xhci xhci_t;
 typedef void (*xhci_command_complete_cb)(void* data, uint32_t cc, xhci_trb_t* command_trb,
                                          xhci_trb_t* event_trb);
 
-typedef struct xhci_command_context {
+typedef struct {
     xhci_command_complete_cb callback;
     void* data;
-
-    // FIXME(voydanoff) hack to support cancelling requests
-    struct xhci_command_context** clear_ptr;
 } xhci_command_context_t;
 
 struct xhci {
