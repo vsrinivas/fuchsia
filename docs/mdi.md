@@ -108,7 +108,7 @@ and `bool-array`.
 ## Binary Format
 
 An MDI binary begins with a `bootdata_t` header
-(see [system/public/magenta/bootdata.h](../system/public/magenta/bootdata.h))
+(see [system/public/magenta/boot/bootdata.h](../system/public/magenta/boot/bootdata.h))
 The `bootdata_t.type` field is set to `BOOTDATA_TYPE_MDI`.
 
 Following the `bootdata_t` header are a sequence of `mdi_node_t` structs.
