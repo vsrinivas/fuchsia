@@ -5,7 +5,7 @@
     "binaries": [
         {
             "binary": "benchmarks",
-            "bootfs_path": "test/benchmarks"
+            "bootfs_path": "bin/magenta-benchmarks"
         }
     ]
 }
