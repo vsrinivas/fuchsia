@@ -763,7 +763,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
     std::vector<char> value_as_vector;
     if (!mtl::VectorFromVmo(entry->value, &value_as_vector)) {
       FTL_LOG(ERROR) << "Unable to extract data.";
-      return;
+      continue;
     }
     auto story_data = StoryData::New();
     story_data->Deserialize(value_as_vector.data(), value_as_vector.size());
