@@ -145,11 +145,13 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     iotxn_priv_t* cpriv = iotxn_get_clone(extra_size);
     if (!cpriv) return ERR_NO_MEMORY;
 
-    // copy data payload metadata to the clone so the api can just work
-    mx_status_t status = io_buffer_clone(&priv->buffer, &cpriv->buffer);
-    if (status < 0) {
-        iotxn_release(&cpriv->txn);
-        return status;
+    if (priv->data_size > 0) {
+        // copy data payload metadata to the clone so the api can just work
+        mx_status_t status = io_buffer_clone(&priv->buffer, &cpriv->buffer);
+        if (status < 0) {
+            iotxn_release(&cpriv->txn);
+            return status;
+        }
     }
     cpriv->data_size = priv->data_size;
     memcpy(&cpriv->txn, txn, sizeof(iotxn_t));
