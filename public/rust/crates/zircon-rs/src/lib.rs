@@ -307,12 +307,9 @@ pub struct HandleRef<'a> {
 impl<'a> HandleRef<'a> {
     fn duplicate(&self, rights: Rights) -> Result<Handle, Status> {
         let handle = self.handle;
-        let result = unsafe { sys::mx_handle_duplicate(handle, rights) };
-        if result < 0 {
-            Err(Status::from_raw(result))
-        } else {
-            Ok(Handle(result))
-        }
+        let mut out = 0;
+        let status = unsafe { sys::mx_handle_duplicate(handle, rights, &mut out) };
+        into_result(status, || Handle(out))
     }
 
     fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
@@ -899,5 +896,39 @@ mod tests {
         let result = p2.read_raw(0, &mut buf);
         assert_eq!(result, Err((5, 0)));
         assert_eq!(buf.bytes(), b"");
+    }
+
+    #[test]
+    fn channel_send_handle() {
+        let hello_length: usize = 5;
+
+        // Create a pair of channels and a virtual memory object.
+        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
+        let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
+
+        // Create a virtual memory object and send it down the channel.
+        let duplicate_vmo_handle = vmo.duplicate(MX_RIGHT_SAME_RIGHTS).unwrap().into_handle();
+        let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
+        assert!(p1.write(b"", &mut handles_to_send, 0).is_ok());
+
+        // Read the handle from the receiving channel.
+        let mut buf = MessageBuf::new();
+        assert!(p2.read(0, &mut buf).is_ok());
+        assert_eq!(buf.n_handles(), 1);
+        // Take the handle from the buffer.
+        let received_handle = buf.take_handle(0).unwrap();
+        // Should not affect number of handles.
+        assert_eq!(buf.n_handles(), 1);
+        // Trying to take it again should fail.
+        assert!(buf.take_handle(0).is_none());
+
+        // Now to test that we got the right handle, try writing something to it...
+        let received_vmo = Vmo::from_handle(received_handle);
+        assert_eq!(received_vmo.write(b"hello", 0).unwrap(), hello_length);
+
+        // ... and reading it back from the original VMO.
+        let mut read_vec = vec![0; hello_length];
+        assert_eq!(vmo.read(&mut read_vec, 0).unwrap(), hello_length);
+        assert_eq!(read_vec, b"hello");
     }
 }

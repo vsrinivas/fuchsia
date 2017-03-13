@@ -169,8 +169,8 @@ extern {
 
     // Generic handle operations
     pub fn mx_handle_close(handle: mx_handle_t) -> mx_status_t;
-    pub fn mx_handle_duplicate(handle: mx_handle_t, rights: mx_rights_t) -> mx_handle_t;
-    pub fn mx_handle_replace(handle: mx_handle_t, rights: mx_rights_t) -> mx_handle_t;
+    pub fn mx_handle_duplicate(handle: mx_handle_t, rights: mx_rights_t, out: *mut mx_handle_t) -> mx_status_t;
+    pub fn mx_handle_replace(handle: mx_handle_t, rights: mx_rights_t, out: *mut mx_handle_t) -> mx_status_t;
     pub fn mx_object_wait_one(handle: mx_handle_t, signals: mx_signals_t, timeout: mx_time_t,
         pending: *mut mx_signals_t) -> mx_status_t;
     pub fn mx_object_wait_many(items: *mut mx_wait_item_t, count: u32,
