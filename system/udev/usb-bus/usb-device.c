@@ -25,15 +25,6 @@ static mx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interf
     return ERR_INVALID_ARGS;
 }
 
-static void usb_device_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
-    usb_device_t* dev = get_usb_device(device);
-    usb_protocol_data_t* usb_data = iotxn_pdata(txn, usb_protocol_data_t);
-    usb_data->device_id = dev->device_id;
-
-    // forward iotxn to HCI device
-    iotxn_queue(dev->hci_device, txn);
-}
-
 static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int config) {
     int num_configurations = dev->device_desc.bNumConfigurations;
     for (int i = 0; i < num_configurations; i++) {
@@ -219,7 +210,6 @@ static mx_status_t usb_device_release(mx_device_t* device) {
 }
 
 static mx_protocol_device_t usb_device_proto = {
-    .iotxn_queue = usb_device_iotxn_queue,
     .ioctl = usb_device_ioctl,
     .release = usb_device_release,
 };
