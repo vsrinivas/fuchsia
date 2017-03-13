@@ -6,6 +6,12 @@ instance running on either the build host (using QEMU) or on a target
 device. The test runner discovers the running fuchsia instance automatically,
 but may get confused if there is more than one.
 
+NOTE: In order to run tests, the test_runner must be run at startup time. You
+can either:
+
+* Use a gn module to automatically start it: `./packages/gn/gen.py -m boot_test_modular`
+* or, run `@boot /system/apps/test_runner` at your `magenta$` prompt.
+
 Each subdirectory contains one integration test, which can be run by invoking
 its `test.sh` script.
 
