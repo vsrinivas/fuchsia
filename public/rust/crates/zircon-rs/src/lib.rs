@@ -312,6 +312,13 @@ impl<'a> HandleRef<'a> {
         into_result(status, || Handle(out))
     }
 
+    fn replace(self, rights: Rights) -> Result<Handle, Status> {
+        let handle = self.handle;
+        let mut out = 0;
+        let status = unsafe { sys::mx_handle_replace(handle, rights, &mut out) };
+        into_result(status, || Handle(out))
+    }
+
     fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
         let handle = self.handle;
         let mut pending = sys::mx_signals_t::empty();
@@ -346,6 +353,14 @@ pub trait HandleBase: Sized {
     fn duplicate(&self, rights: Rights) -> Result<Self, Status> {
         self.get_ref().duplicate(rights).map(|handle|
             Self::from_handle(handle))
+    }
+
+    /// Create a replacement for a handle, possibly reducing the rights available. This invalidates
+    /// the original handle. Wraps the
+    /// [mx_handle_replace](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_replace.md)
+    /// syscall.
+    fn replace(self, rights: Rights) -> Result<Self, Status> {
+        self.get_ref().replace(rights).map(|handle| Self::from_handle(handle))
     }
 
     /// Waits on a handle. Wraps the
@@ -871,6 +886,47 @@ mod tests {
         assert_eq!(b"ab123f", &vec1[0..6]);
         assert_eq!(15, vmo.read(&mut vec1, 1).unwrap());
         assert_eq!(b"b123f", &vec1[0..5]);
+    }
+
+    /// Test duplication by means of a VMO
+    #[test]
+    fn duplicate() {
+        let hello_length: usize = 5;
+
+        // Create a VMO and write some data to it.
+        let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
+        assert!(vmo.write(b"hello", 0).is_ok());
+
+        // Replace, reducing rights to read.
+        let readonly_vmo = vmo.duplicate(MX_RIGHT_READ).unwrap();
+        // Make sure we can read but not write.
+        let mut read_vec = vec![0; hello_length];
+        assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
+        assert_eq!(read_vec, b"hello");
+        assert_eq!(readonly_vmo.write(b"", 0), Err(Status::ErrAccessDenied));
+
+        // Write new data to the original handle, and read it from the new handle
+        assert!(vmo.write(b"bye", 0).is_ok());
+        assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
+        assert_eq!(read_vec, b"byelo");
+    }
+
+    // Test replace by means of a VMO
+    #[test]
+    fn replace() {
+        let hello_length: usize = 5;
+
+        // Create a VMO and write some data to it.
+        let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
+        assert!(vmo.write(b"hello", 0).is_ok());
+
+        // Replace, reducing rights to read.
+        let readonly_vmo = vmo.replace(MX_RIGHT_READ).unwrap();
+        // Make sure we can read but not write.
+        let mut read_vec = vec![0; hello_length];
+        assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
+        assert_eq!(read_vec, b"hello");
+        assert_eq!(readonly_vmo.write(b"", 0), Err(Status::ErrAccessDenied));
     }
 
     #[test]
