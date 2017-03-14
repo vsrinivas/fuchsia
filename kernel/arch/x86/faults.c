@@ -145,6 +145,14 @@ static void x86_invop_handler(x86_iframe_t *frame)
     exception_die(frame, "invalid opcode, halting\n");
 }
 
+static void x86_df_handler(x86_iframe_t *frame)
+{
+    // Do not give Magenta the opportunity to handle double faults,
+    // since they indicate an unexpected system state and cannot be
+    // recovered from.
+    exception_die(frame, "double fault, halting\n");
+}
+
 static void x86_unhandled_exception(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
@@ -338,6 +346,9 @@ void x86_exception_handler(x86_iframe_t *frame)
             exception_die(frame, "device na fault\n");
         }
 
+        case X86_INT_DOUBLE_FAULT:
+            x86_df_handler(frame);
+            break;
         case X86_INT_FPU_FP_ERROR: {
             THREAD_STATS_INC(exceptions);
             uint16_t fsw;
