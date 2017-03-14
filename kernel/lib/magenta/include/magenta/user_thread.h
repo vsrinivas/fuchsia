@@ -9,6 +9,7 @@
 #include <kernel/event.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
+#include <kernel/vm/vm_address_region.h>
 #include <lib/dpc.h>
 
 #include <magenta/dispatcher.h>
@@ -209,6 +210,11 @@ private:
 
     // Used to protect thread name read/writes
     SpinLock name_lock_;
+
+    // hold a reference to the mapping and vmar used to wrap the mapping of this
+    // thread's kernel stack
+    mxtl::RefPtr<VmMapping> kstack_mapping_;
+    mxtl::RefPtr<VmAddressRegion> kstack_vmar_;
 
     // LK thread structure
     // put last to ease debugging since this is a pretty large structure

@@ -22,6 +22,7 @@
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
+#include <kernel/vm/vm_address_region.h>
 
 #include <magenta/c_user_thread.h>
 #include <magenta/exception.h>
@@ -32,6 +33,7 @@
 #include <magenta/thread_dispatcher.h>
 
 #include <mxtl/algorithm.h>
+#include <mxtl/auto_call.h>
 
 #define LOCAL_TRACE 0
 
@@ -75,6 +77,13 @@ UserThread::~UserThread() {
         DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n", StateToString(state_), this);
     }
 
+    // free the kernel stack
+    kstack_mapping_.reset();
+    if (kstack_vmar_) {
+        kstack_vmar_->Destroy();
+        kstack_vmar_.reset();
+    }
+
     event_destroy(&exception_event_);
 }
 
@@ -96,15 +105,69 @@ status_t UserThread::Initialize(const char* name, size_t len) {
     memset(thread_name + len, 0, MX_MAX_NAME_LEN - len);
     memcpy(thread_name, name, len);
 
+    // Create a VMO for our stack
+    auto stack_vmo = VmObjectPaged::Create(0, DEFAULT_STACK_SIZE);
+    if (!stack_vmo) {
+        TRACEF("error allocating stack for thread\n");
+        return ERR_NO_MEMORY;
+    }
+
+    // Map the kernel stack somewhere
+    auto vmar = VmAspace::kernel_aspace()->RootVmar()->as_vm_address_region();
+    DEBUG_ASSERT(!!vmar);
+
+    // create a vmar with enough padding for a page before and after the stack
+    const size_t padding_size = PAGE_SIZE;
+
+    mxtl::RefPtr<VmAddressRegion> kstack_vmar;
+    auto status = vmar->CreateSubVmar(0, 2 * padding_size + DEFAULT_STACK_SIZE, 0,
+                                     VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE,
+                                     "kstack_vmar", &kstack_vmar);
+    if (status != NO_ERROR)
+        return status;
+
+    // destroy the vmar if we early abort
+    // this will also clean up any mappings that may get placed on the vmar
+    auto vmar_cleanup = mxtl::MakeAutoCall([&kstack_vmar]() {
+        kstack_vmar->Destroy();
+    });
+
+    LTRACEF("stack vmar at %#" PRIxPTR "\n", kstack_vmar->base());
+
+    // create a mapping offset padding_size into the vmar we created
+    mxtl::RefPtr<VmMapping> kstack_mapping;
+    status = kstack_vmar->CreateVmMapping(padding_size, DEFAULT_STACK_SIZE, 0,
+                                     VMAR_FLAG_SPECIFIC,
+                                     mxtl::move(stack_vmo), 0,
+                                     ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+                                     "kstack",
+                                     &kstack_mapping);
+    if (status != NO_ERROR)
+        return status;
+
+    LTRACEF("stack mapping at %#" PRIxPTR "\n", kstack_mapping->base());
+
+    // fault in all the pages so we dont demand fault in the stack
+    status = kstack_mapping->MapRange(0, DEFAULT_STACK_SIZE, true);
+    if (status != NO_ERROR)
+        return status;
+
     // create an underlying LK thread
     thread_t* lkthread = thread_create_etc(&thread_, thread_name, StartRoutine, this, LOW_PRIORITY,
-                                           nullptr, DEFAULT_STACK_SIZE, nullptr);
+                                           reinterpret_cast<void *>(kstack_mapping->base()), DEFAULT_STACK_SIZE, nullptr);
 
     if (!lkthread) {
         TRACEF("error creating thread\n");
         return ERR_NO_MEMORY;
     }
     DEBUG_ASSERT(lkthread == &thread_);
+
+    // cancel the cleanup handler on the vmar since we're about to save a reference to it
+    vmar_cleanup.cancel();
+
+    // save the ref to our stack mapping
+    kstack_mapping_ = mxtl::move(kstack_mapping);
+    kstack_vmar_ = mxtl::move(kstack_vmar);
 
     // bump the ref on this object that the LK thread state will now own until the lk thread has exited
     AddRef();
