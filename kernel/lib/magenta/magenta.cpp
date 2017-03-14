@@ -45,8 +45,8 @@ static mxtl::TypedArena<Handle> TA_GUARDED(handle_mutex) handle_arena;
 static size_t outstanding_handles TA_GUARDED(handle_mutex) = 0u;
 
 // The system exception port.
-static mxtl::RefPtr<ExceptionPort> system_exception_port;
 static mutex_t system_exception_mutex = MUTEX_INITIAL_VALUE(system_exception_mutex);
+static mxtl::RefPtr<ExceptionPort> system_exception_port TA_GUARDED(system_exception_mutex);
 
 // All jobs and processes are rooted at the |root_job|.
 static mxtl::RefPtr<JobDispatcher> root_job;

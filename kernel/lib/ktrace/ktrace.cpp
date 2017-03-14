@@ -14,6 +14,7 @@
 #include <kernel/vm/vm_aspace.h>
 #include <lib/ktrace.h>
 #include <lk/init.h>
+#include <magenta/thread_annotations.h>
 #include <magenta/user_thread.h>
 
 #if __x86_64__
@@ -51,10 +52,10 @@ static uint32_t probe_number = 1;
 extern ktrace_probe_info_t __start_ktrace_probe[] __WEAK;
 extern ktrace_probe_info_t __stop_ktrace_probe[] __WEAK;
 
-static ktrace_probe_info_t* probe_list;
 static mutex_t probe_list_lock = MUTEX_INITIAL_VALUE(probe_list_lock);
+static ktrace_probe_info_t* probe_list TA_GUARDED(probe_list_lock);
 
-static ktrace_probe_info_t* ktrace_find_probe(const char* name) {
+static ktrace_probe_info_t* ktrace_find_probe(const char* name) TA_REQ(probe_list_lock) {
     ktrace_probe_info_t* probe;
     for (probe = probe_list; probe != nullptr; probe = probe->next) {
         if (!strcmp(name, probe->name)) {
@@ -64,7 +65,7 @@ static ktrace_probe_info_t* ktrace_find_probe(const char* name) {
     return nullptr;
 }
 
-static void ktrace_add_probe(ktrace_probe_info_t* probe) {
+static void ktrace_add_probe(ktrace_probe_info_t* probe) TA_REQ(probe_list_lock) {
     if (probe->num == 0) {
         probe->num = probe_number++;
     }
