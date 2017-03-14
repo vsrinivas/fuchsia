@@ -95,3 +95,12 @@ func ioctlStop(m mxio.MXIO) error {
 	}
 	return nil
 }
+
+func ioctlTXListenStart(m mxio.MXIO) error {
+	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpTXListenStart)
+	_, err := m.Ioctl(num, nil, nil)
+	if err != nil {
+		return fmt.Errorf("IOCTL_ETHERNET_TX_LISTEN_START: %v", err)
+	}
+	return nil
+}

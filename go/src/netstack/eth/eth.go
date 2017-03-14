@@ -300,3 +300,10 @@ func (c *Client) WaitSend() error {
 func (c *Client) WaitRecv() {
 	c.rx.WaitOne(mx.SignalFIFOReadable|mx.SignalFIFOPeerClosed, mx.TimensecInfinite)
 }
+
+// ListenTX tells the ethernet driver to reflect all transmitted
+// packets back to this ethernet client.
+func (c *Client) ListenTX() {
+	m := syscall.MXIOForFD(int(c.f.Fd()))
+	ioctlTXListenStart(m)
+}
