@@ -888,10 +888,22 @@ mod tests {
     }
 
     #[test]
-    fn vmo_size() {
+    fn vmo_get_size() {
         let size = 16 * 1024 * 1024;
         let vmo = Vmo::create(size, VmoOpts::Default).unwrap();
-        assert_eq!(size as u64, vmo.get_size().unwrap());
+        assert_eq!(size, vmo.get_size().unwrap());
+    }
+
+    #[test]
+    fn vmo_set_size() {
+        let start_size = 12;
+        let vmo = Vmo::create(start_size, VmoOpts::Default).unwrap();
+        assert_eq!(start_size, vmo.get_size().unwrap());
+
+        // Change the size and make sure the new size is reported
+        let new_size = 23;
+        assert!(vmo.set_size(new_size).is_ok());
+        assert_eq!(new_size, vmo.get_size().unwrap());
     }
 
     #[test]
