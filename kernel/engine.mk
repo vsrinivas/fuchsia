@@ -558,8 +558,7 @@ endif
 endif
 
 ifneq ($(HOST_SYSROOT),)
-HOST_CFLAGS += --sysroot=$(HOST_SYSROOT)
-HOST_CPPFLAGS += --sysroot=$(HOST_SYSROOT)
+HOST_COMPILEFLAGS += --sysroot=$(HOST_SYSROOT)
 endif
 
 # tool locations
