@@ -179,7 +179,8 @@ void x86_init_percpu(uint8_t cpu_num)
     // handler to user space handler).
     // TODO nicer way to handle idle across different processors
     const struct x86_model_info* model = x86_get_model();
-    if (x86_vendor == X86_VENDOR_INTEL && model->display_family == 0x6 && (
+    if (!x86_feature_test(X86_FEATURE_HYPERVISOR) &&
+            x86_vendor == X86_VENDOR_INTEL && model->display_family == 0x6 && (
             model->display_model == 0x1a || // nehalem
             model->display_model == 0x1e ||
             model->display_model == 0x1f ||

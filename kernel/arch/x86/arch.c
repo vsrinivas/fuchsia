@@ -57,6 +57,12 @@ void arch_early_init(void)
 
 void arch_init(void)
 {
+    const struct x86_model_info* model = x86_get_model();
+    printf("Processor Model Info: type %#x family %#x model %#x stepping %#x\n",
+        model->processor_type, model->family, model->model, model->stepping);
+    printf("\tdisplay_family %#x display_model %#x\n",
+        model->display_family, model->display_model);
+
     x86_feature_debug();
 
     x86_mmu_init();
