@@ -221,7 +221,6 @@ HOST_COMPILEFLAGS := -Wall -g -O2 -Isystem/public -Isystem/private
 HOST_CFLAGS := -std=c11
 HOST_CPPFLAGS := -std=c++11 -fno-exceptions -fno-rtti
 HOST_ASMFLAGS :=
-HOST_PLATFORM := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 
 # top level rule
 all:: $(OUTLKBIN) $(OUTLKELF)-gdb.py
