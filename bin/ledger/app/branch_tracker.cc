@@ -192,11 +192,11 @@ void BranchTracker::OnNewCommits(
 void BranchTracker::StartTransaction(ftl::Closure watchers_drained_callback) {
   FTL_DCHECK(!transaction_in_progress_);
   transaction_in_progress_ = true;
-  callback::BasicWaiter waiter;
+  auto waiter = callback::CompletionWaiter::Create();
   for (auto it = watchers_.begin(); it != watchers_.end(); ++it) {
-    it->SetOnDrainedCallback(waiter.NewCallback());
+    it->SetOnDrainedCallback(waiter->NewCallback());
   }
-  waiter.Finalize(std::move(watchers_drained_callback));
+  waiter->Finalize(std::move(watchers_drained_callback));
 }
 
 void BranchTracker::StopTransaction(

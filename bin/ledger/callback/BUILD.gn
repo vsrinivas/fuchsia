@@ -36,6 +36,7 @@ source_set("unittests") {
     "cancellable_unittest.cc",
     "capture_unittest.cc",
     "destruction_sentinel_unittest.cc",
+    "waiter_unittest.cc",
   ]
 
   deps = [

@@ -437,14 +437,14 @@ void PageStorageImpl::AddCommitsFromSync(
     return;
   }
 
-  callback::StatusWaiter<Status> waiter(Status::OK);
+  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
     btree::GetObjectsFromSync(leaf.second->GetRootId(), this,
-                              waiter.NewCallback());
+                              waiter->NewCallback());
   }
 
-  waiter.Finalize(ftl::MakeCopyable([
+  waiter->Finalize(ftl::MakeCopyable([
     this, commits = std::move(commits), callback = std::move(callback)
   ](Status status) mutable {
     if (status != Status::OK) {
