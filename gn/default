@@ -14,6 +14,7 @@
         "gdbserver",
         "icu_data",
         "init",
+        "install-fuchsia",
         "ledger",
         "leveldb",
         "libc-tests",
