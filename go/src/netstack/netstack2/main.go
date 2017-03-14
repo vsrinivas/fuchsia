@@ -142,6 +142,14 @@ func addEth(stk *stack.Stack, s *socketServer, nicid tcpip.NICID, path string, a
 		if oldAddr != "" && oldAddr != newAddr {
 			log.Printf("DHCP IP %s expired", oldAddr)
 		}
+		if config.Error != nil {
+			log.Printf("%v", config.Error)
+			return
+		}
+		if newAddr == "" {
+			log.Printf("DHCP could not acquire address")
+			return
+		}
 		log.Printf("DHCP acquired IP %s on NIC %d for %s", newAddr, nicid, config.LeaseLength)
 
 		// Update default route with new gateway.
