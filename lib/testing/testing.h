@@ -48,6 +48,16 @@ class TestRunnerStore;
 // ApplicationEnvironment. Init() must be called before GetStore().
 TestRunnerStore* GetStore();
 
+namespace internal {
+
+// Register a test point that should pass for a test to be considered
+// successful.
+void RegisterTestPoint(const std::string& label);
+
+// Signals that a test point has been passed.
+void PassTestPoint(const std::string& label);
+
+}  // namespace internal
 }  // namespace testing
 }  // namespace modular
 

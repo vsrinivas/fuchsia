@@ -31,6 +31,12 @@ interface TestRunner {
   // specified. If it is not killed that is a failure. A test that calls this
   // should not call |Done()| or |Teardown()|.
   WillTerminate(double withinSeconds);
+
+  // Declare how many test points this test is expected to pass to complete.
+  SetTestPointCount(int64 count);
+
+  // Signals that a test point has been passed.
+  PassTestPoint();
 };
 
 // This service is included in the ApplicationEnvironment of the test runner

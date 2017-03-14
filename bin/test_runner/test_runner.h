@@ -42,6 +42,11 @@ class TestRunnerImpl : public testing::TestRunner {
   // terminate it will call |Teardown|.
   void TeardownAfterTermination();
 
+  // Indicates if there are test points that haven't been passed yet.
+  bool TestPointsRemaining() {
+    return remaining_test_points_ > 0;
+  }
+
  private:
   // |TestRunner|
   void Identify(const fidl::String& test_name) override;
@@ -53,6 +58,10 @@ class TestRunnerImpl : public testing::TestRunner {
   void Teardown() override;
   // |TestRunner|
   void WillTerminate(double withinSeconds) override;
+  // |TestRunner|
+  void SetTestPointCount(int64_t count) override;
+  // |TestRunner|
+  void PassTestPoint() override;
 
   fidl::Binding<testing::TestRunner> binding_;
   TestRunContext* const test_run_context_;
@@ -60,6 +69,7 @@ class TestRunnerImpl : public testing::TestRunner {
   bool waiting_for_termination_ = false;
   ftl::OneShotTimer termination_timer_;
   bool teardown_after_termination_ = false;
+  int64_t remaining_test_points_ = -1;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerImpl);
 };

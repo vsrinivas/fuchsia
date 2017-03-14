@@ -117,6 +117,28 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
                            ftl::TimeDelta::FromSecondsF(withinSeconds));
 }
 
+void TestRunnerImpl::SetTestPointCount(int64_t count) {
+  // Check that the count hasn't been set yet.
+  FTL_CHECK(remaining_test_points_ == -1);
+
+  // Check that the count makes sense.
+  FTL_CHECK(count >= 0);
+
+  remaining_test_points_ = count;
+}
+
+void TestRunnerImpl::PassTestPoint() {
+  // Check that the test point count has been set.
+  FTL_CHECK(remaining_test_points_ >= 0);
+
+  if (remaining_test_points_ == 0) {
+    Fail(test_name_ + " passed more test points than expected.");
+    return;
+  }
+
+  remaining_test_points_--;
+}
+
 TestRunContext::TestRunContext(
     std::shared_ptr<app::ApplicationContext> app_context,
     TestRunObserver* connection,
@@ -170,6 +192,13 @@ void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   if (crashed) {
     FTL_LOG(WARNING) << client->test_name()
                      << " finished without calling modular::testing::Done().";
+    test_runner_connection_->Teardown(test_id_, false);
+    return;
+  }
+
+  if (client->TestPointsRemaining()) {
+    FTL_LOG(WARNING) << client->test_name()
+                     << " finished without passing all test points.";
     test_runner_connection_->Teardown(test_id_, false);
     return;
   }
