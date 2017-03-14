@@ -27,6 +27,10 @@
 // successfully.
 #define ERR_CALL_FAILED (-53)
 
+// ERR_INTERRUPTED_RETRY: The system call was interrupted, but should be
+// retried.  This should not be seen outside of the VDSO.
+#define ERR_INTERRUPTED_RETRY (-57)
+
 // ======= Parameter errors =======
 // ERR_INVALID_ARGS: an argument is invalid, ex. null pointer
 #define ERR_INVALID_ARGS (-10)
