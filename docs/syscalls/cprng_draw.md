@@ -26,7 +26,7 @@ drawn into *buffer* (via *actual) on success.
 ## ERRORS
 
 **ERR_INVALID_ARGS** *len* is too large, or *buffer* or *actual* is
-not a valid user space pointer.
+not a valid userspace pointer.
 
 ## NOTES
 
