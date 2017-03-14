@@ -740,6 +740,10 @@ mx_status_t dwc_hub_device_removed(mx_device_t* hci_device,
     return NO_ERROR;
 }
 
+mx_status_t dwc_reset_endpoint(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
+    return ERR_NOT_SUPPORTED;
+}
+
 static usb_hci_protocol_t dwc_hci_protocol = {
     .set_bus_device = dwc_set_bus_device,
     .get_max_device_count = dwc_get_max_device_count,
@@ -748,6 +752,7 @@ static usb_hci_protocol_t dwc_hci_protocol = {
     .configure_hub = dwc_config_hub,
     .hub_device_added = dwc_hub_device_added,
     .hub_device_removed = dwc_hub_device_removed,
+    .reset_endpoint = dwc_reset_endpoint,
 };
 
 static void dwc_handle_channel_irq(uint32_t channel, dwc_usb_t* dwc) {
