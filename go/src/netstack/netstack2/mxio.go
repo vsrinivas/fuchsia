@@ -202,6 +202,15 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 	}
 }
 
+func (ios *iostate) loopRead(stk tcpip.Stack) {
+	switch ios.transProto {
+	case tcp.ProtocolNumber:
+		go ios.loopSocketRead(stk)
+	case udp.ProtocolNumber:
+		go ios.loopDgramRead(stk)
+	}
+}
+
 // loopSocketRead connects libc read to the network stack for TCP sockets.
 func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 	dataHandle := mx.Socket(ios.dataHandle)
@@ -459,12 +468,10 @@ func (s *socketServer) newIostate(transProto tcpip.TransportProtocolNumber, wq *
 		if ep != nil {
 			go ios.loopShutdown()
 			go ios.loopSocketWrite(s.stack)
-			go ios.loopSocketRead(s.stack)
 		}
 	case udp.ProtocolNumber:
 		go ios.loopShutdown()
 		go ios.loopDgramWrite(s.stack)
-		go ios.loopDgramRead(s.stack)
 	}
 
 	return ios, h1.Handle, peerS, nil
@@ -575,6 +582,7 @@ func (s *socketServer) opAccept(ios *iostate, msg *rio.Msg, path string) (peerH,
 		}
 		return 0, 0, err
 	}
+	go ios.loopRead(s.stack)
 	_, peerH, peerS, err = s.newIostate(ios.transProto, newwq, newep)
 	return peerH, peerS, err
 }
@@ -764,6 +772,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) mx.Status {
 			log.Printf("connect: signal failed: %v", err)
 		}
 	}
+	go ios.loopRead(s.stack)
 
 	msg.SetOff(0)
 	msg.Datalen = 0
