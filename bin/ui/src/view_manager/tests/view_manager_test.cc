@@ -166,6 +166,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   parent_view_properties->view_layout->size = mozart::Size::New();
   parent_view_properties->view_layout->size->width = parent_view_width;
   parent_view_properties->view_layout->size->height = parent_view_height;
+  parent_view_properties->view_layout->inset = mozart::Inset::New();
   tree_container->SetChildProperties(parent_key, parent_scene_version,
                                      std::move(parent_view_properties));
 
@@ -204,6 +205,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   view_properties->view_layout->size = mozart::Size::New();
   view_properties->view_layout->size->width = child_view_width;
   view_properties->view_layout->size->height = child_view_height;
+  view_properties->view_layout->inset = mozart::Inset::New();
 
   parent_view_container->SetChildProperties(child_key, child_scene_version,
                                             std::move(view_properties));

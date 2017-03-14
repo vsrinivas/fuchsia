@@ -320,6 +320,7 @@ void Presentation::OnLayout() {
       display_info_->device_pixel_ratio;
   properties->view_layout = mozart::ViewLayout::New();
   properties->view_layout->size = display_info_->size.Clone();
+  properties->view_layout->inset = mozart::Inset::New();
 
   root_container_->SetChildProperties(
       kContentViewKey, mozart::kSceneVersionNone, std::move(properties));
@@ -332,6 +333,7 @@ void Presentation::UpdateRootViewProperties() {
       display_info_->device_pixel_ratio;
   properties->view_layout = mozart::ViewLayout::New();
   properties->view_layout->size = display_info_->size.Clone();
+  properties->view_layout->inset = mozart::Inset::New();
 
   tree_container_->SetChildProperties(kRootViewKey, mozart::kSceneVersionNone,
                                       std::move(properties));

@@ -33,4 +33,8 @@ struct ViewLayout {
   // The size of the view in device pixels.
   // Must be non-negative.
   Size size;
+
+  // The inset of the view in device pixels.
+  // Must be non-negative.
+  Inset inset;
 };

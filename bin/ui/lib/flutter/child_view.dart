@@ -204,12 +204,17 @@ class ChildViewConnection {
   }
 
   ViewProperties _createViewProperties(
-      int physicalWidth, int physicalHeight, double devicePixelRatio) {
+      int physicalWidth, int physicalHeight, double devicePixelRatio,
+      int insetTop, int insetRight, int insetBottom, int insetLeft) {
     if (_currentViewProperties != null &&
         _currentViewProperties.displayMetrics.devicePixelRatio ==
             devicePixelRatio &&
         _currentViewProperties.viewLayout.size.width == physicalWidth &&
-        _currentViewProperties.viewLayout.size.height == physicalHeight)
+        _currentViewProperties.viewLayout.size.height == physicalHeight &&
+        _currentViewProperties.viewLayout.inset.top == insetTop &&
+        _currentViewProperties.viewLayout.inset.right == insetRight &&
+        _currentViewProperties.viewLayout.inset.bottom == insetBottom &&
+        _currentViewProperties.viewLayout.inset.left == insetLeft)
       return null;
 
     DisplayMetrics displayMetrics = new DisplayMetrics()
@@ -217,7 +222,14 @@ class ChildViewConnection {
     fidl.Size size = new fidl.Size()
       ..width = physicalWidth
       ..height = physicalHeight;
-    ViewLayout viewLayout = new ViewLayout()..size = size;
+    fidl.Inset inset = new fidl.Inset()
+      ..top = insetTop
+      ..right = insetRight
+      ..bottom = insetBottom
+      ..left = insetLeft;
+    ViewLayout viewLayout = new ViewLayout()
+      ..size = size
+      ..inset = inset;
     _currentViewProperties = new ViewProperties()
       ..displayMetrics = displayMetrics
       ..viewLayout = viewLayout;
@@ -225,13 +237,15 @@ class ChildViewConnection {
   }
 
   void _setChildProperties(
-      int physicalWidth, int physicalHeight, double devicePixelRatio) {
+      int physicalWidth, int physicalHeight, double devicePixelRatio,
+      int insetTop, int insetRight, int insetBottom, int insetLeft) {
     assert(_attached);
     assert(_attachments == 1);
     assert(_viewKey != null);
     if (_viewContainer == null) return;
     ViewProperties viewProperties =
-        _createViewProperties(physicalWidth, physicalHeight, devicePixelRatio);
+        _createViewProperties(physicalWidth, physicalHeight, devicePixelRatio,
+        insetTop, insetRight, insetBottom, insetLeft);
     if (viewProperties == null) return;
     _viewContainer.setChildProperties(
         _viewKey, _sceneVersion++, viewProperties);
@@ -331,7 +345,8 @@ class _RenderChildView extends RenderBox {
     if (_connection != null) {
       _physicalWidth = (size.width * scale).round();
       _physicalHeight = (size.height * scale).round();
-      _connection._setChildProperties(_physicalWidth, _physicalHeight, scale);
+      _connection._setChildProperties(_physicalWidth, _physicalHeight, scale,
+        0, 0, 0, 0);
       assert(() {
         if (_viewContainer == null) {
           _debugErrorMessage ??= new TextPainter(

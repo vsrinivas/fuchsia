@@ -180,6 +180,11 @@ void TileView::OnLayout() {
           view_data->layout_bounds.width;
       view_properties->view_layout->size->height =
           view_data->layout_bounds.height;
+      view_properties->view_layout->inset = mozart::Inset::New();
+      view_properties->view_layout->inset->top = 0;
+      view_properties->view_layout->inset->right = 0;
+      view_properties->view_layout->inset->bottom = 0;
+      view_properties->view_layout->inset->left = 0;
 
       if (view_data->view_properties.Equals(view_properties))
         continue;  // no layout work to do
