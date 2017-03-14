@@ -49,6 +49,7 @@ class StoryStorageImpl : public ledger::PageWatcher {
  private:
   // |PageWatcher|
   void OnChange(ledger::PageChangePtr page,
+                ledger::ResultState result_state,
                 const OnChangeCallback& callback) override;
 
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;

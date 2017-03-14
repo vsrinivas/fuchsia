@@ -102,6 +102,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   // |PageWatcher|
   void OnChange(ledger::PageChangePtr page,
+                ledger::ResultState result_state,
                 const OnChangeCallback& callback) override;
 
   app::ApplicationEnvironmentPtr environment_;

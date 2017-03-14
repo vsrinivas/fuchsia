@@ -36,6 +36,7 @@ class TodoApp : public modular::Module, public ledger::PageWatcher {
 
   // ledger::PageWatcher:
   void OnChange(ledger::PageChangePtr page_change,
+                ledger::ResultState result_state,
                 const OnChangeCallback& callback) override;
 
  private:

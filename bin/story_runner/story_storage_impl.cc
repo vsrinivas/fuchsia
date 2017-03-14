@@ -183,6 +183,7 @@ void StoryStorageImpl::Sync(const SyncCallback& callback) {
 
 // |PageWatcher|
 void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
+                                ledger::ResultState result_state,
                                 const OnChangeCallback& callback) {
   if (!page.is_null() && !page->changes.is_null()) {
     for (auto& entry : page->changes) {

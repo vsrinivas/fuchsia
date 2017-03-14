@@ -750,6 +750,7 @@ void StoryProviderImpl::PreviousStories(
 
 // |PageWatcher|
 void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
+                                 ledger::ResultState result_state,
                                  const OnChangeCallback& callback) {
   FTL_DCHECK(!page.is_null());
   FTL_DCHECK(!page->changes.is_null());
