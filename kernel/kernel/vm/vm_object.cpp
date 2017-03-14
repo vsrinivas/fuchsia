@@ -15,7 +15,6 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
-#include <lib/user_copy.h>
 #include <new.h>
 #include <stdlib.h>
 #include <string.h>
