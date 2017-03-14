@@ -7,41 +7,41 @@
     case 1: ret = static_cast<uint64_t>(sys_nanosleep(
         static_cast<mx_time_t>(arg1)));
         break;
-    case 2: ret = static_cast<uint64_t>(sys_handle_close(
+    case 2: ret = static_cast<uint64_t>(sys_handle_cancel(
+        static_cast<mx_handle_t>(arg1),
+        static_cast<uint64_t>(arg2),
+        static_cast<uint32_t>(arg3)));
+        break;
+    case 3: ret = static_cast<uint64_t>(sys_handle_close(
         static_cast<mx_handle_t>(arg1)));
         break;
-    case 3: ret = static_cast<uint64_t>(sys_handle_duplicate(
+    case 4: ret = static_cast<uint64_t>(sys_handle_duplicate(
         static_cast<mx_handle_t>(arg1),
         static_cast<mx_rights_t>(arg2),
         reinterpret_cast<mx_handle_t*>(arg3)));
         break;
-    case 4: ret = static_cast<uint64_t>(sys_handle_replace(
+    case 5: ret = static_cast<uint64_t>(sys_handle_replace(
         static_cast<mx_handle_t>(arg1),
         static_cast<mx_rights_t>(arg2),
         reinterpret_cast<mx_handle_t*>(arg3)));
         break;
-    case 5: ret = static_cast<uint64_t>(sys_object_wait_one(
+    case 6: ret = static_cast<uint64_t>(sys_object_wait_one(
         static_cast<mx_handle_t>(arg1),
         static_cast<mx_signals_t>(arg2),
         static_cast<mx_time_t>(arg3),
         reinterpret_cast<mx_signals_t*>(arg4)));
         break;
-    case 6: ret = static_cast<uint64_t>(sys_object_wait_many(
+    case 7: ret = static_cast<uint64_t>(sys_object_wait_many(
         reinterpret_cast<mx_wait_item_t*>(arg1),
         static_cast<uint32_t>(arg2),
         static_cast<mx_time_t>(arg3)));
         break;
-    case 7: ret = static_cast<uint64_t>(sys_object_wait_async(
+    case 8: ret = static_cast<uint64_t>(sys_object_wait_async(
         static_cast<mx_handle_t>(arg1),
         static_cast<mx_handle_t>(arg2),
         static_cast<uint64_t>(arg3),
         static_cast<mx_signals_t>(arg4),
         static_cast<uint32_t>(arg5)));
-        break;
-    case 8: ret = static_cast<uint64_t>(sys_object_wait_cancel(
-        static_cast<mx_handle_t>(arg1),
-        static_cast<uint64_t>(arg2),
-        static_cast<uint32_t>(arg3)));
         break;
     case 9: ret = static_cast<uint64_t>(sys_object_signal(
         static_cast<mx_handle_t>(arg1),

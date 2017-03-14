@@ -3,13 +3,13 @@
 
 #define MX_SYS_time_get 0
 #define MX_SYS_nanosleep 1
-#define MX_SYS_handle_close 2
-#define MX_SYS_handle_duplicate 3
-#define MX_SYS_handle_replace 4
-#define MX_SYS_object_wait_one 5
-#define MX_SYS_object_wait_many 6
-#define MX_SYS_object_wait_async 7
-#define MX_SYS_object_wait_cancel 8
+#define MX_SYS_handle_cancel 2
+#define MX_SYS_handle_close 3
+#define MX_SYS_handle_duplicate 4
+#define MX_SYS_handle_replace 5
+#define MX_SYS_object_wait_one 6
+#define MX_SYS_object_wait_many 7
+#define MX_SYS_object_wait_async 8
 #define MX_SYS_object_signal 9
 #define MX_SYS_object_signal_peer 10
 #define MX_SYS_object_get_property 11

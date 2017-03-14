@@ -252,12 +252,12 @@ bool wait_cancel_test(void) {
     wait_data_t wait_data = {event_handle, MX_EVENT_SIGNALED, MX_MSEC(400), 0u};
     ASSERT_EQ(thrd_create(&thread1, wait_thread_func, &wait_data), thrd_success, "");
     mx_nanosleep(MX_MSEC(20));
-    ASSERT_EQ(mx_object_wait_cancel(event_handle, 0ull,  MX_CANCEL_ANY), 0, "");
+    ASSERT_EQ(mx_handle_cancel(event_handle, 0ull,  MX_CANCEL_ANY), 0, "");
 
     EXPECT_EQ(thrd_join(thread1, NULL), thrd_success, "");
     EXPECT_EQ(wait_data.status, ERR_CANCELED, "");
 
-    ASSERT_EQ(mx_object_wait_cancel(event_handle, 0ull,  MX_CANCEL_ANY), 0, "");
+    ASSERT_EQ(mx_handle_cancel(event_handle, 0ull,  MX_CANCEL_ANY), 0, "");
 
     EXPECT_EQ(mx_handle_close(event_handle), NO_ERROR, "");
     END_TEST;

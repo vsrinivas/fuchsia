@@ -1,6 +1,7 @@
 # Magenta System Calls
 
 ## Handles
++ [handle_cancel](syscalls/handle_cancel.md) - cancel waits and async operations
 + [handle_close](syscalls/handle_close.md) - close a handle
 + [handle_duplicate](syscalls/handle_duplicate.md) - create a duplicate handle (optionally with reduced rights)
 + [handle_replace](syscalls/handle_replace.md) - create a new handle (optionally with reduced rights) and destroy the old one
@@ -15,7 +16,6 @@
 + [object_wait_many](syscalls/object_wait_many.md) - wait for signals on multiple objects
 + [object_wait_one](syscalls/object_wait_one.md) - wait for signals on one object
 + [object_wait_async](syscalls/object_wait_async.md) - asynchronous notifications on signal change
-+ [object_wait_cancel](syscalls/object_wait_cancel.md) - cancel waits and async waits
 
 ## Threads
 + [thread_create](syscalls/thread_create.md) - create a new thread within a process

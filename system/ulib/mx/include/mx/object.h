@@ -72,7 +72,7 @@ public:
     }
 
     mx_status_t wait_cancel(uint64_t key, uint32_t options) {
-        return mx_object_wait_cancel(value_, key, options);
+        return mx_handle_cancel(value_, key, options);
     }
 
     // TODO(abarth): Not all of these methods apply to every type of object. We

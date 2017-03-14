@@ -31,7 +31,7 @@ object state transitions from some other state to the *signals* state again.
 See [port_wait](port_wait.md) for more information about each type
 of packet and their semantics.
 
-To stop packet delivery, close *handle* or use **object_wait_cancel**().
+To stop packet delivery, close *handle* or use **handle_cancel**().
 
 ## RETURN VALUE
 
@@ -54,4 +54,4 @@ does not have **MX_RIGHT_WRITE**.
 
 ## SEE ALSO
 
-[object_wait_cancel](object_wait_cancel.md).
+[handle_cancel](handle_cancel.md).

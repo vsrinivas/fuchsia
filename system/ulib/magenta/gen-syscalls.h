@@ -24,6 +24,11 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_cache_flush(
     size_t len,
     uint32_t options) __attribute__((__leaf__));
 
+__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_handle_cancel(
+    mx_handle_t handle,
+    uint64_t key,
+    uint32_t options) __attribute__((__leaf__));
+
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_handle_close(
     mx_handle_t handle) __attribute__((__leaf__));
 
@@ -53,11 +58,6 @@ __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_object_wait_asy
     mx_handle_t port_handle,
     uint64_t key,
     mx_signals_t signals,
-    uint32_t options) __attribute__((__leaf__));
-
-__attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_object_wait_cancel(
-    mx_handle_t handle,
-    uint64_t key,
     uint32_t options) __attribute__((__leaf__));
 
 __attribute__((visibility("hidden"))) extern mx_status_t VDSO_mx_object_signal(

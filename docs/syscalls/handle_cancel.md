@@ -1,32 +1,32 @@
-# mx_object_wait_cancel
+# mx_handle_cancel
 
 ## NAME
 
-object_wait_cancel - cancels waits or async waits on an object
+handle_cancel - cancels waits or async operations on an object
 
 ## SYNOPSIS
 
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_object_wait_cancel(mx_handle_t handle,
-                                  uint64_t key,
-                                  uint32_t options);
+mx_status_t mx_handle_cancel(mx_handle_t handle,
+                             uint64_t key,
+                             uint32_t options);
 ```
 
 ## DESCRIPTION
 
-**object_wait_cancel**() is a non-blocking syscall which aborts
+**handle_cancel**() is a non-blocking syscall which aborts
 **object_wait_one**() or **object_wait_many**() calls which are pending
 via *handle*. It can also cancel pending **object_wait_async**() calls.
 
 The *options* argument can be **MX_CANCEL_ANY** to cancel any pending
-wait syscall or async wait done via *handle*, or it can be **MX_CANCEL_KEY** to
+wait syscall or async operation done via *handle*, or it can be **MX_CANCEL_KEY** to
 cancel only async waits which where done with *handle* and *key*.
 
 ## RETURN VALUE
 
-**mx_object_wait_cancel**() returns **NO_ERROR** if cancellation succeeded.
+**mx_handle_cancel**() returns **NO_ERROR** if cancellation succeeded.
 
 ## ERRORS
 

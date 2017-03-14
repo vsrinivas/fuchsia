@@ -47,6 +47,16 @@ extern mx_status_t _mx_cache_flush(
     size_t len,
     uint32_t options) __attribute__((__leaf__));
 
+extern mx_status_t mx_handle_cancel(
+    mx_handle_t handle,
+    uint64_t key,
+    uint32_t options) __attribute__((__leaf__));
+
+extern mx_status_t _mx_handle_cancel(
+    mx_handle_t handle,
+    uint64_t key,
+    uint32_t options) __attribute__((__leaf__));
+
 extern mx_status_t mx_handle_close(
     mx_handle_t handle) __attribute__((__leaf__));
 
@@ -107,16 +117,6 @@ extern mx_status_t _mx_object_wait_async(
     mx_handle_t port_handle,
     uint64_t key,
     mx_signals_t signals,
-    uint32_t options) __attribute__((__leaf__));
-
-extern mx_status_t mx_object_wait_cancel(
-    mx_handle_t handle,
-    uint64_t key,
-    uint32_t options) __attribute__((__leaf__));
-
-extern mx_status_t _mx_object_wait_cancel(
-    mx_handle_t handle,
-    uint64_t key,
     uint32_t options) __attribute__((__leaf__));
 
 extern mx_status_t mx_object_signal(

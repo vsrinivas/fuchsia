@@ -401,7 +401,7 @@ static bool cancel_event(uint32_t wait_mode, uint32_t cancel_mode) {
 
     uint64_t cancel_key = (cancel_mode == MX_CANCEL_ANY) ? 0u : 13u;
 
-    EXPECT_EQ(mx_object_wait_cancel(ev, cancel_key, cancel_mode), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_cancel(ev, cancel_key, cancel_mode), NO_ERROR, "");
     for (int ix = 0; ix != 2; ++ix) {
         EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
         EXPECT_EQ(mx_object_signal(ev, MX_EVENT_SIGNALED, 0u), NO_ERROR, "");

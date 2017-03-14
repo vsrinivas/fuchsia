@@ -7,6 +7,11 @@ mx_time_t sys_time_get(
 mx_status_t sys_nanosleep(
     mx_time_t nanoseconds);
 
+mx_status_t sys_handle_cancel(
+    mx_handle_t handle,
+    uint64_t key,
+    uint32_t options);
+
 mx_status_t sys_handle_close(
     mx_handle_t handle);
 
@@ -36,11 +41,6 @@ mx_status_t sys_object_wait_async(
     mx_handle_t port_handle,
     uint64_t key,
     mx_signals_t signals,
-    uint32_t options);
-
-mx_status_t sys_object_wait_cancel(
-    mx_handle_t handle,
-    uint64_t key,
     uint32_t options);
 
 mx_status_t sys_object_signal(

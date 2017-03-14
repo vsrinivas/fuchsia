@@ -68,6 +68,10 @@ syscall cache_flush vdsocall
 
 # Generic handle operations
 
+syscall handle_cancel
+    (handle: mx_handle_t, key: uint64_t, options: uint32_t)
+    returns (mx_status_t);
+
 syscall handle_close
     (handle: mx_handle_t)
     returns (mx_status_t);
@@ -94,10 +98,6 @@ syscall object_wait_many
 syscall object_wait_async
     (handle: mx_handle_t, port_handle: mx_handle_t, key: uint64_t,
         signals: mx_signals_t, options: uint32_t)
-    returns (mx_status_t);
-
-syscall object_wait_cancel
-    (handle: mx_handle_t, key: uint64_t, options: uint32_t)
     returns (mx_status_t);
 
 syscall object_signal
