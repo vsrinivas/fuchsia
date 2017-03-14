@@ -30,6 +30,7 @@ ModelRenderer::ModelRenderer(EscherImpl* escher,
                              ModelData* model_data,
                              vk::Format pre_pass_color_format,
                              vk::Format lighting_pass_color_format,
+                             uint32_t lighting_pass_sample_count,
                              vk::Format depth_format)
     : device_(escher->vulkan_context().device),
       life_preserver(escher->resource_life_preserver()),
@@ -40,7 +41,7 @@ ModelRenderer::ModelRenderer(EscherImpl* escher,
   white_texture_ = CreateWhiteTexture(escher);
 
   CreateRenderPasses(pre_pass_color_format, lighting_pass_color_format,
-                     depth_format);
+                     lighting_pass_sample_count, depth_format);
   pipeline_cache_ = std::make_unique<impl::ModelPipelineCacheOLD>(
       device_, depth_prepass_, lighting_pass_, model_data_, mesh_manager_);
 }
@@ -218,6 +219,7 @@ TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {
 
 void ModelRenderer::CreateRenderPasses(vk::Format pre_pass_color_format,
                                        vk::Format lighting_pass_color_format,
+                                       uint32_t lighting_pass_sample_count,
                                        vk::Format depth_format) {
   constexpr uint32_t kAttachmentCount = 2;
   const uint32_t kColorAttachment = 0;
@@ -305,13 +307,15 @@ void ModelRenderer::CreateRenderPasses(vk::Format pre_pass_color_format,
 
   // Create the illumination RenderPass.
   color_attachment.format = lighting_pass_color_format;
-  color_attachment.samples = vk::SampleCountFlagBits::e4;
+  color_attachment.samples =
+      SampleCountFlagBitsFromInt(lighting_pass_sample_count);
   color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
   // TODO: necessary to store if we resolve as part of the render-pass?
   color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
   color_attachment.initialLayout = vk::ImageLayout::eUndefined;
   color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-  depth_attachment.samples = vk::SampleCountFlagBits::e4;
+  depth_attachment.samples =
+      SampleCountFlagBitsFromInt(lighting_pass_sample_count);
   depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
   depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
   depth_attachment.initialLayout = vk::ImageLayout::eUndefined;

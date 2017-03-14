@@ -21,6 +21,7 @@ class ModelRenderer {
                 ModelData* model_data,
                 vk::Format pre_pass_color_format,
                 vk::Format lighting_pass_color_format,
+                uint32_t lighting_pass_sample_count,
                 vk::Format depth_format);
   ~ModelRenderer();
   void Draw(const Stage& stage,
@@ -55,6 +56,7 @@ class ModelRenderer {
  private:
   void CreateRenderPasses(vk::Format pre_pass_color_format,
                           vk::Format lighting_pass_color_format,
+                          uint32_t lighting_pass_sample_count,
                           vk::Format depth_format);
 
   vk::Device device_;

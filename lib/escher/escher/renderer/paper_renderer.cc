@@ -41,6 +41,8 @@ constexpr uint32_t kSsdoAccelDownsampleFactor =
 
 constexpr bool kSkipFiltering = false;
 
+constexpr uint32_t kLightingPassSampleCount = 1;
+
 }  // namespace
 
 PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
@@ -237,7 +239,7 @@ void PaperRenderer::UpdateModelRenderer(vk::Format pre_pass_color_format,
   if (!model_renderer_) {
     model_renderer_ = std::make_unique<impl::ModelRenderer>(
         escher_, model_data_.get(), pre_pass_color_format,
-        lighting_pass_color_format,
+        lighting_pass_color_format, kLightingPassSampleCount,
         ESCHER_CHECKED_VK_RESULT(
             impl::GetSupportedDepthFormat(context_.physical_device)));
   }
@@ -413,14 +415,24 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     illumination_texture->KeepAlive(current_frame());
   }
 
-  // Use multisampling for final lighting pass.
-  {
-    constexpr uint32_t kSampleCount = 4;
+  // Use multisampling for final lighting pass, or not.
+  if (kLightingPassSampleCount == 1) {
+    FramebufferPtr lighting_fb = ftl::MakeRefCounted<Framebuffer>(
+        escher_, width, height,
+        std::vector<ImagePtr>{color_image_out, depth_image},
+        model_renderer_->lighting_pass());
 
+    lighting_fb->KeepAlive(current_frame());
+
+    DrawLightingPass(kLightingPassSampleCount, lighting_fb,
+                     illumination_texture, stage, model);
+
+    AddTimestamp("finished lighting pass");
+  } else {
     ImageInfo info;
     info.width = width;
     info.height = height;
-    info.sample_count = kSampleCount;
+    info.sample_count = kLightingPassSampleCount;
     info.format = color_image_out->format();
     info.usage = vk::ImageUsageFlagBits::eColorAttachment |
                  vk::ImageUsageFlagBits::eTransferSrc;
@@ -439,8 +451,8 @@ void PaperRenderer::DrawFrame(const Stage& stage,
 
     multisample_fb->KeepAlive(current_frame());
 
-    DrawLightingPass(kSampleCount, multisample_fb, illumination_texture, stage,
-                     model);
+    DrawLightingPass(kLightingPassSampleCount, multisample_fb,
+                     illumination_texture, stage, model);
 
     AddTimestamp("finished lighting pass");
 
@@ -460,9 +472,9 @@ void PaperRenderer::DrawFrame(const Stage& stage,
         color_image_multisampled->get(),
         vk::ImageLayout::eColorAttachmentOptimal, color_image_out->get(),
         vk::ImageLayout::eColorAttachmentOptimal, resolve);
-  }
 
-  AddTimestamp("finished multisample resolve");
+    AddTimestamp("finished multisample resolve");
+  }
 
   DrawDebugOverlays(
       color_image_out, depth_image,

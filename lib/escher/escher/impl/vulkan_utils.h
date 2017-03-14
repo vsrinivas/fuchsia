@@ -52,5 +52,12 @@ uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device,
                             uint32_t type_bits,
                             vk::MemoryPropertyFlags required_properties);
 
+// Return the sample-count corresponding to the specified flag-bits.
+uint32_t SampleCountFlagBitsToInt(vk::SampleCountFlagBits bits);
+
+// Return flag-bits corresponding to the specified sample count.  Explode if
+// an invalid value is provided.
+vk::SampleCountFlagBits SampleCountFlagBitsFromInt(uint32_t sample_count);
+
 }  // namespace impl
 }  // namespace escher

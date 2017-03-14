@@ -51,5 +51,49 @@ uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device,
   return 0;
 }
 
+// Return the sample-count corresponding to the specified flag-bits.
+uint32_t SampleCountFlagBitsToInt(vk::SampleCountFlagBits bits) {
+  switch (bits) {
+    case vk::SampleCountFlagBits::e1:
+      return 1;
+    case vk::SampleCountFlagBits::e2:
+      return 2;
+    case vk::SampleCountFlagBits::e4:
+      return 4;
+    case vk::SampleCountFlagBits::e8:
+      return 8;
+    case vk::SampleCountFlagBits::e16:
+      return 16;
+    case vk::SampleCountFlagBits::e32:
+      return 32;
+    case vk::SampleCountFlagBits::e64:
+      return 64;
+  }
+}
+
+// Return flag-bits corresponding to the specified sample count.  Explode if
+// an invalid value is provided.
+vk::SampleCountFlagBits SampleCountFlagBitsFromInt(uint32_t sample_count) {
+  switch (sample_count) {
+    case 1:
+      return vk::SampleCountFlagBits::e1;
+    case 2:
+      return vk::SampleCountFlagBits::e2;
+    case 4:
+      return vk::SampleCountFlagBits::e4;
+    case 8:
+      return vk::SampleCountFlagBits::e8;
+    case 16:
+      return vk::SampleCountFlagBits::e16;
+    case 32:
+      return vk::SampleCountFlagBits::e32;
+    case 64:
+      return vk::SampleCountFlagBits::e64;
+    default:
+      FTL_CHECK(false);
+      return vk::SampleCountFlagBits::e1;
+  }
+}
+
 }  // namespace impl
 }  // namespace escher

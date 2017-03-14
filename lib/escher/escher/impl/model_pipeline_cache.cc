@@ -396,34 +396,11 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
         ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(module_info));
   }
 
-  // TODO: put this in a utility method somewhere.
-  vk::SampleCountFlagBits sample_count;
-  switch (spec.sample_count) {
-    case 1:
-      sample_count = vk::SampleCountFlagBits::e1;
-      break;
-    case 2:
-      sample_count = vk::SampleCountFlagBits::e2;
-      break;
-    case 4:
-      sample_count = vk::SampleCountFlagBits::e4;
-      break;
-    case 8:
-      sample_count = vk::SampleCountFlagBits::e8;
-      break;
-    case 16:
-      sample_count = vk::SampleCountFlagBits::e16;
-      break;
-    default:
-      sample_count = vk::SampleCountFlagBits::e1;
-      FTL_DCHECK(false);
-  }
-
   auto pipeline_and_layout = NewPipelineHelper(
       device_, vertex_module, fragment_module, enable_depth_write,
       depth_compare_op, render_pass,
       {model_data_->per_model_layout(), model_data_->per_object_layout()},
-      mesh_spec_impl, sample_count);
+      mesh_spec_impl, SampleCountFlagBitsFromInt(spec.sample_count));
 
   device_.destroyShaderModule(vertex_module);
   device_.destroyShaderModule(fragment_module);
