@@ -43,8 +43,10 @@ build() {
     --target-list=aarch64-softmmu,x86_64-softmmu \
     --without-system-pixman \
     --without-system-fdt \
+    --disable-vnc-jpeg \
+    --disable-vnc-png \
+    --disable-vnc-sasl \
     --disable-vte \
-    --disable-vnc \
     --disable-docs \
     --disable-curl \
     --disable-debug-info \
