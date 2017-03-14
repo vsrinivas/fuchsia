@@ -48,6 +48,10 @@
             "bootfs_path": "apps/dummy_device_shell"
         },
         {
+            "binary": "dummy_story_shell",
+            "bootfs_path": "apps/dummy_story_shell"
+        },
+        {
             "binary": "dummy_user_shell",
             "bootfs_path": "apps/dummy_user_shell"
         },
