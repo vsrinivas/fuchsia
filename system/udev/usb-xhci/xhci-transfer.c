@@ -28,7 +28,7 @@ static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb)
 // reads a range of bits from an integer
 #define READ_FIELD(i, start, bits) (((i) >> (start)) & ((1 << (bits)) - 1))
 
-static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
+mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
     xprintf("xhci_reset_endpoint %d %d\n", slot_id, endpoint);
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
@@ -83,10 +83,9 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
     if (!ring->enabled)
         return ERR_REMOTE_CLOSED;
 
-    // reset endpoint if it is halted
     xhci_endpoint_context_t* epc = slot->epcs[endpoint];
     if (XHCI_GET_BITS32(&epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS) == 2 /* halted */ ) {
-        xhci_reset_endpoint(xhci, slot_id, endpoint);
+        return ERR_IO_REFUSED;
     }
 
     uint32_t interruptor_target = 0;
@@ -327,8 +326,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             result = length;
             break;
         case TRB_CC_STALL_ERROR:
-            // FIXME - better error for stall case?
-            result = ERR_BAD_STATE;
+            result = ERR_IO_REFUSED;
             break;
         case TRB_CC_RING_UNDERRUN:
             // non-fatal error that happens when no transfers are available for isochronous endpoint
@@ -346,7 +344,6 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             xprintf("ignoring transfer event with cc: %d\n", cc);
             return;
         default:
-            // FIXME - how do we report stalls, etc?
             result = ERR_REMOTE_CLOSED;
             break;
     }

@@ -185,6 +185,12 @@ mx_status_t xhci_hub_device_removed(mx_device_t* hci_device, uint32_t hub_addres
     return NO_ERROR;
 }
 
+mx_status_t xhci_reset_ep(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
+    usb_xhci_t* uxhci = dev_to_usb_xhci(device);
+    uint8_t ep_index = xhci_endpoint_index(ep_address);
+    return xhci_reset_endpoint(&uxhci->xhci, device_id, ep_index);
+}
+
 usb_hci_protocol_t xhci_hci_protocol = {
     .set_bus_device = xhci_set_bus_device,
     .get_max_device_count = xhci_get_max_device_count,
@@ -193,6 +199,7 @@ usb_hci_protocol_t xhci_hci_protocol = {
     .configure_hub = xhci_config_hub,
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,
+    .reset_endpoint = xhci_reset_ep,
 };
 
 static void xhci_iotxn_callback(mx_status_t result, void* cookie) {

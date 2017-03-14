@@ -114,7 +114,7 @@
 // ERR_REFUSED: The entity the I/O operation is being performed on
 // rejected the operation.
 // Example: an I2C device NAK'ing a transaction or a disk controller
-// rejecting an invalid command.
+// rejecting an invalid command, or a stalled USB endpoint.
 #define ERR_IO_REFUSED (-41)
 
 // ERR_IO_DATA_INTEGRITY: The data in the operation failed an integrity

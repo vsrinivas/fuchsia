@@ -204,6 +204,15 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
     return status;
 }
 
+mx_status_t usb_interface_reset_endpoint(mx_device_t* device, uint8_t ep_address) {
+    usb_interface_t* intf = get_usb_interface(device);
+    return intf->hci_protocol->reset_endpoint(intf->hci_device, intf->device_id, ep_address);
+}
+
+static usb_protocol_t _usb_protocol = {
+    .reset_endpoint = usb_interface_reset_endpoint,
+};
+
 mx_status_t usb_device_add_interface(usb_device_t* device,
                                      usb_device_descriptor_t* device_desc,
                                      usb_interface_descriptor_t* interface_desc,
@@ -227,6 +236,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
 
     device_init(&intf->device, &_driver_usb_interface, name, &usb_interface_proto);
     intf->device.protocol_id = MX_PROTOCOL_USB;
+    intf->device.protocol_ops = &_usb_protocol;
 
     int count = 0;
     intf->props[count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
@@ -280,6 +290,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
 
     device_init(&intf->device, &_driver_usb_interface, name, &usb_interface_proto);
     intf->device.protocol_id = MX_PROTOCOL_USB;
+    intf->device.protocol_ops = &_usb_protocol;
 
     int count = 0;
     intf->props[count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };

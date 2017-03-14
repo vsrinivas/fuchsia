@@ -33,6 +33,11 @@ mx_status_t usb_set_feature(mx_device_t* device, uint8_t request_type, int featu
 
 mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int feature, int index);
 
+// resets an endpoint that is in a halted state. endpoints will be halted if the device returns
+// a STALL in response to a USB transaction. When that occurs, the transaction will fail with
+// ERR_IO_REFUSED. usb_reset_endpoint() returns a halted endpoint to normal running state.
+mx_status_t usb_reset_endpoint(mx_device_t* device, uint8_t ep_address);
+
 // helper function for allocating iotxns for USB transfers
 iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size, size_t extra_size);
 

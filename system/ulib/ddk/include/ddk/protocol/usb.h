@@ -19,4 +19,8 @@ typedef struct usb_protocol_data {
     uint8_t ep_address;     // bEndpointAddress from endpoint descriptor
 } usb_protocol_data_t;
 
+typedef struct usb_protocol {
+    mx_status_t (*reset_endpoint)(mx_device_t* device, uint8_t ep_address);
+} usb_protocol_t;
+
 __END_CDECLS;
