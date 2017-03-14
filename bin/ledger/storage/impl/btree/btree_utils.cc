@@ -20,6 +20,9 @@ class SynchronousStorage {
                      coroutine::CoroutineHandler* handler)
       : page_storage_(page_storage), handler_(handler) {}
 
+  PageStorage* page_storage() { return page_storage_; }
+  coroutine::CoroutineHandler* handler() { return handler_; }
+
   Status TreeNodeFromId(ObjectIdView object_id,
                         std::unique_ptr<const TreeNode>* result) {
     Status status;
@@ -349,6 +352,9 @@ class NodeBuilder {
 
   // Validate that the content of this builder follows the expected constraints.
   bool Validate() {
+    if (type_ == BuilderType::NULL_NODE && !object_id_.empty()) {
+      return false;
+    }
     if (type_ == BuilderType::EXISTING_NODE && object_id_.empty()) {
       return false;
     }
@@ -390,6 +396,24 @@ class NodeBuilder {
                            return entry.key < key;
                          });
     return lower - entries_.begin();
+  }
+
+  // Collect the maximal set of nodes in the tree root at this builder than can
+  // currently be built. A node can be built if and only if all its children are
+  // already built. Add the buildable nodes to |output|. Return if at least a
+  // node has been added to |output|.
+  bool CollectNodesToBuild(std::vector<NodeBuilder*>* output) {
+    if (type_ != BuilderType::NEW_NODE) {
+      return false;
+    }
+    bool found_nodes_to_build = false;
+    for (auto& child : children_) {
+      found_nodes_to_build |= child.CollectNodesToBuild(output);
+    }
+    if (!found_nodes_to_build) {
+      output->push_back(this);
+    }
+    return true;
   }
 
   BuilderType type_;
@@ -497,31 +521,46 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
     *object_id = object_id_;
     return Status::OK;
   }
-  // TODO(qsr): Instead of doing one creation at a time, compute all createable
-  // node, and start all asynchronous creation at the same time using a waiter.
 
-  Status status;
-  // Build all children.
-  std::vector<ObjectId> children_ids;
-  for (auto& child : children_) {
-    ObjectId id;
-    if (child) {
-      status = child.Build(page_storage, &id, new_ids);
-      if (status != Status::OK) {
-        return status;
+  std::vector<NodeBuilder*> to_build;
+  while (CollectNodesToBuild(&to_build)) {
+    auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+    for (NodeBuilder* child : to_build) {
+      std::vector<ObjectId> children;
+      for (const auto& sub_child : child->children_) {
+        FTL_DCHECK(sub_child.type_ != BuilderType::NEW_NODE);
+        children.push_back(sub_child.object_id_);
       }
+      TreeNode::FromEntries(page_storage->page_storage(), child->level_,
+                            child->entries_, std::move(children), [
+                              new_ids, child, callback = waiter->NewCallback()
+                            ](Status status, ObjectId object_id) {
+                              if (status == Status::OK) {
+                                child->type_ = BuilderType::EXISTING_NODE;
+                                child->object_id_ = std::move(object_id);
+                                new_ids->insert(child->object_id_);
+                              }
+                              callback(status);
+                            });
     }
-    children_ids.push_back(std::move(id));
+    Status status;
+    if (coroutine::SyncCall(page_storage->handler(),
+                            [&waiter](std::function<void(Status)> callback) {
+                              waiter->Finalize(std::move(callback));
+                            },
+                            &status)) {
+      return Status::ILLEGAL_STATE;
+    }
+    if (status != Status::OK) {
+      return status;
+    }
+    to_build.clear();
   }
 
-  status = page_storage->TreeNodeFromEntries(
-      level_, entries_, std::move(children_ids), &object_id_);
-  if (status == Status::OK) {
-    *object_id = object_id_;
-    new_ids->insert(object_id_);
-    type_ = BuilderType::EXISTING_NODE;
-  }
-  return status;
+  FTL_DCHECK(type_ == BuilderType::EXISTING_NODE);
+  *object_id = object_id_;
+
+  return Status::OK;
 }
 
 Status NodeBuilder::ComputeContent(SynchronousStorage* page_storage) {
