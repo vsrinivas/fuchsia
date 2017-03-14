@@ -188,7 +188,7 @@ mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_han
 }
 
 mx_status_t sys_object_wait_cancel(mx_handle_t handle_value, uint64_t key, uint32_t options) {
-    if (options & ~MX_CANCEL_KEY)
+    if ((options != MX_CANCEL_KEY) && (options != MX_CANCEL_ANY))
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();

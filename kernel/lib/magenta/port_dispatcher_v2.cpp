@@ -88,7 +88,7 @@ void PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t count) {
     if ((trigger_ & new_state) == 0u)
         return;
 
-    packet_.packet.signal.effective |= new_state;
+    packet_.packet.signal.observed |= new_state;
 
     auto status = port_->Queue(&packet_, count);
 

@@ -62,7 +62,7 @@ typedef union mx_packet_user {
 // port_packet_t::type MX_PKT_TYPE_SIGNAL_ONE and MX_PKT_TYPE_SIGNAL_REP.
 typedef struct mx_packet_signal {
     mx_signals_t trigger;
-    mx_signals_t effective;
+    mx_signals_t observed;
     uint64_t count;
 } mx_packet_signal_t;
 
