@@ -62,14 +62,14 @@ find_code_symbols() {
 }
 
 grok_dynsym_slots() {
-  local -i symno=0
+  local symno=0
   local symbol rest
   while read symbol rest; do
-    let symno++ 1
+    symno=$((symno+1))
     echo "#define ${1}_DYNSYM_${symbol} ${symno}" >> $OUTFILE
   done
   if [ $symno -gt 0 ]; then
-    let symno++ 1
+    symno=$((symno+1))
     echo "#define ${1}_DYNSYM_COUNT ${symno}" >> $OUTFILE
   fi
 }
