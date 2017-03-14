@@ -40,8 +40,11 @@ class Watcher : public PageWatcher {
  private:
   // PageWatcher:
   void OnChange(PageChangePtr page_change,
+                ResultState result_state,
                 const OnChangeCallback& callback) override {
     FTL_DCHECK(page_change);
+    FTL_DCHECK(result_state == ResultState::FINISHED)
+        << "Handling OnChange pagination not implemented yet";
     changes_seen++;
     last_page_change_ = std::move(page_change);
     last_snapshot_.reset();

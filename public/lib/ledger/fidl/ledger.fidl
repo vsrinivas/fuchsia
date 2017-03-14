@@ -170,7 +170,7 @@ struct Entry {
 interface PageSnapshot {
   // Returns the entries in the page with keys matching the given prefix. If
   // |key_prefix| is NULL, all entries are returned. If the result fits in a
-  // single mojo message, |status| will be |OK| and |next_token| equal to NULL.
+  // single fidl message, |status| will be |OK| and |next_token| equal to NULL.
   // Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will have a
   // non-NULL value. To retrieve the remaining results, another call to
   // |GetEntries| should be made, initializing the optional |token| argument
@@ -216,6 +216,11 @@ interface PageSnapshot {
       => (Status status, handle<vmo>? buffer);
 };
 
+enum ResultState {
+  FINISHED = 0,
+  CONTINUED,
+};
+
 struct PageChange {
   // The timestamp of this change. This represents the number of microseconds
   // since Unix epoch (i.e., since "1970-01-01 00:00 UTC", ignoring leap
@@ -234,14 +239,21 @@ struct PageChange {
 // of a transaction will never be split across multiple OnChange() calls, but
 // the contents of multiple transactions may be merged into one OnChange() call.
 interface PageWatcher {
-  // Called for changes made on the page. No new OnChange() call will be made
-  // while the previous one is still active. If the client is interested in the
-  // full content of the page at the time of the change, it can request a
-  // PageSnapshot in the callback. This request is optional.
+  // Called for changes made on the page. If the result does not fit in a single
+  // fidl message, |result_state| will be |CONTINUED| and the following OnChange
+  // call will contain the remaining set of changes. No new OnChange() call will
+  // be made while the previous one is still active. If clients are interested
+  // in the full content of the page at the time of the change, they can request
+  // a PageSnapshot in the callback. This request is optional and can be
+  // requested in partial (ResultState::CONTINUED) and/or in finished results
+  // (ResultState::FINISHED). In any case, all requests made on a sequence of
+  // OnChange calls for the same page change, will always return the same
+  // snapshot: the one including all changes.
   //
   // Note that calls to Page.StartTransaction() will block until all OnChange()
   // calls have finished.
-  OnChange(PageChange page_change) => (PageSnapshot&? snapshot);
+  OnChange(PageChange page_change, ResultState result_state)
+      => (PageSnapshot&? snapshot);
 };
 
 // This interface lets clients control the conflict resolution policy of the

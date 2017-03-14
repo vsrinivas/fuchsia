@@ -106,7 +106,8 @@ class BranchTracker::PageWatcherContainer {
           }
 
           interface_->OnChange(
-              std::move(page_change_ptr), ftl::MakeCopyable([
+              std::move(page_change_ptr), ResultState::FINISHED,
+              ftl::MakeCopyable([
                 this, new_commit = std::move(new_commit)
               ](fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
                 if (snapshot_request) {
