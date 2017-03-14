@@ -52,6 +52,7 @@ typedef struct iotxn_ops iotxn_ops_t;
 // are started.
 #define IOTXN_SYNC_AFTER   2
 
+typedef uint64_t iotxn_proto_data_t[6];
 
 struct iotxn {
     // basic request data
@@ -72,7 +73,7 @@ struct iotxn {
 
     // protocol specific extra data
     // (filled in by requestor, read by processor, type identified by 'protocol')
-    uint64_t protocol_data[6];
+    iotxn_proto_data_t protocol_data;
 
     // list node and context
     // the current "owner" of the iotxn may use these however desired

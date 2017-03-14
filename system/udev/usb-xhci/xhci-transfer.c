@@ -67,7 +67,7 @@ static mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t 
 
 mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* setup, mx_paddr_t data,
                         uint16_t length, int endpoint, int direction, uint64_t frame,
-                        xhci_transfer_context_t* context, list_node_t* txn_node) {
+                        xhci_transfer_context_t* context) {
     xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n",
             slot_id, setup, endpoint, length);
 
@@ -141,10 +141,6 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
 
     // don't allow queueing new requests if we have deferred requests
     if (!list_is_empty(&ring->deferred_txns) || required_trbs > xhci_transfer_ring_free_trbs(ring)) {
-        // add txn to deferred_txn list for later processing
-        if (txn_node) {
-            list_add_tail(&ring->deferred_txns, txn_node);
-        }
         mtx_unlock(&ring->mutex);
         return ERR_BUFFER_TOO_SMALL;
     }
@@ -272,7 +268,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
     xhci_sync_transfer_init(&xfer);
 
     mx_status_t result = xhci_queue_transfer(xhci, slot_id, &setup, data, length, 0,
-                                             request_type & USB_DIR_MASK, 0, &xfer.context, NULL);
+                                             request_type & USB_DIR_MASK, 0, &xfer.context);
     if (result != NO_ERROR)
         return result;
 

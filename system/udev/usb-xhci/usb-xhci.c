@@ -207,8 +207,6 @@ static void xhci_iotxn_callback(mx_status_t result, void* cookie) {
         actual = 0;
         status = result;
     }
-    free(txn->context);
-    txn->context = NULL;
 
     txn->ops->complete(txn, status, actual);
 }
@@ -219,33 +217,50 @@ static mx_status_t xhci_do_iotxn_queue(xhci_t* xhci, iotxn_t* txn) {
     if (rh_index >= 0) {
         return xhci_rh_iotxn_queue(xhci, txn, rh_index);
     }
-    if (data->device_id > xhci->max_slots) {
+    uint32_t device_id = data->device_id;
+    if (device_id > xhci->max_slots) {
         return ERR_INVALID_ARGS;
     }
     uint8_t ep_index = xhci_endpoint_index(data->ep_address);
     if (ep_index >= XHCI_NUM_EPS) {
         return ERR_INVALID_ARGS;
     }
+    uint64_t frame = data->frame;
     mx_paddr_t phys_addr;
     txn->ops->physmap(txn, &phys_addr);
 
-    xhci_transfer_context_t* context = malloc(sizeof(xhci_transfer_context_t));
-    if (!context) {
-        return ERR_NO_MEMORY;
-    }
+    // save a copy of our protocol data
+    usb_protocol_data_t proto_data;
+    memcpy(&proto_data, data, sizeof(proto_data));
 
-    context->callback = xhci_iotxn_callback;
-    context->data = txn;
-    txn->context = context;
-    usb_setup_t* setup = (ep_index == 0 ? &data->setup : NULL);
+    usb_setup_t* setup = (ep_index == 0 ? &proto_data.setup : NULL);
     uint8_t direction;
     if (setup) {
         direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
     } else {
         direction = data->ep_address & USB_ENDPOINT_DIR_MASK;
     }
-    return xhci_queue_transfer(xhci, data->device_id, setup, phys_addr, txn->length,
-                               ep_index, direction, data->frame, context, &txn->node);
+
+    // Now that we have read everything we need from the usb_protocol_data_t
+    // we can reuse this space for our xhci_transfer_context_t.
+    // We are operating on a clone of the iotxn from the driver so it is safe to do this.
+    static_assert(sizeof(xhci_transfer_context_t) <= sizeof(iotxn_proto_data_t), "");
+    xhci_transfer_context_t* context = iotxn_pdata(txn, xhci_transfer_context_t);
+    context->callback = xhci_iotxn_callback;
+    context->data = txn;
+
+    mx_status_t status = xhci_queue_transfer(xhci, device_id, setup, phys_addr, txn->length,
+                               ep_index, direction, frame, context);
+    if (status == ERR_BUFFER_TOO_SMALL) {
+        // restore the protocol data, which was overwritten by our xhci_transfer_context_t
+        memcpy(data, &proto_data, sizeof(proto_data));
+
+        // add txn to deferred_txn list for later processing
+        xhci_slot_t* slot = &xhci->slots[device_id];
+        xhci_transfer_ring_t* ring = &slot->transfer_rings[ep_index];
+        list_add_tail(&ring->deferred_txns, &txn->node);
+    }
+    return status;
 }
 
 void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool closed) {

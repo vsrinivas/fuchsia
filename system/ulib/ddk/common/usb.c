@@ -22,6 +22,8 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
     mx_status_t status = iotxn_alloc(&txn, 0, length, 0);
     if (status != NO_ERROR) return status;
     txn->protocol = MX_PROTOCOL_USB;
+
+    static_assert(sizeof(usb_protocol_data_t) <= sizeof(iotxn_proto_data_t), "");
     usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
 
     // fill in protocol data
