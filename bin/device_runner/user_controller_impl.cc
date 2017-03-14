@@ -23,6 +23,7 @@ UserControllerImpl::UserControllerImpl(
     const std::string& user_runner,
     const AppConfig& user_shell,
     const AppConfig& story_shell,
+    const std::string& auth_token,
     fidl::Array<uint8_t> user_id,
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -56,8 +57,9 @@ UserControllerImpl::UserControllerImpl(
   app::ConnectToService(services.get(), user_runner_factory.NewRequest());
   user_runner_factory->Create(
       std::move(user_id), device_name, user_shell.Clone(), story_shell.Clone(),
-      std::move(ledger_repository), user_context_binding_.NewBinding(),
-      std::move(view_owner_request), user_runner_.NewRequest());
+      auth_token, std::move(ledger_repository),
+      user_context_binding_.NewBinding(), std::move(view_owner_request),
+      user_runner_.NewRequest());
 }
 
 // |UserController|

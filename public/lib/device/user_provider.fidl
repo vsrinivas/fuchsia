@@ -23,8 +23,10 @@ interface UserProvider {
   // Passes in the user authentication information from the lockscreen or shell.
   // |view_owner| is the view given to the UserShell.
   // If authentication fails, |user_controller| is closed.
-  Login(string username, string? password, mozart.ViewOwner& view_owner,
-        UserController& user_controller);
+  // NOTE: |auth_token| is a temporary way to provide authentication tokens to
+  // email agent.
+  Login(string username, string? password, string? auth_token,
+        mozart.ViewOwner& view_owner, UserController& user_controller);
 
   // List of all users who have authenticated to this device in the past.
   PreviousUsers() => (array<string> users);

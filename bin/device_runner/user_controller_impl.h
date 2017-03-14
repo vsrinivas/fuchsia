@@ -59,6 +59,7 @@ class UserControllerImpl : public UserController {
       const std::string& user_runner,
       const AppConfig& user_shell,
       const AppConfig& story_shell,
+      const std::string& auth_token,
       fidl::Array<uint8_t> user_id,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,

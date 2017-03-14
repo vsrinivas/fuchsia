@@ -5,6 +5,7 @@
 group("services") {
   deps = [
     "agent",
+    "auth",
     "component",
     "config",
     "device",

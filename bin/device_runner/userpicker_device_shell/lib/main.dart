@@ -119,7 +119,7 @@ class _UserPickerScreenState extends State<_UserPickerScreen> {
     final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
     final InterfacePair<UserController> userController = new
       InterfacePair<UserController>();
-    _appState.userProviderProxy.login(user, null, viewOwner.passRequest(),
+    _appState.userProviderProxy.login(user, null, null, viewOwner.passRequest(),
         userController.passRequest());
     _childViewConnection = new ChildViewConnection(viewOwner.passHandle());
     setState(() { _childViewConnectionReady = true; });

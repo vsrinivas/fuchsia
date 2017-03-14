@@ -19,6 +19,7 @@ interface UserRunnerFactory {
          string device_name,
          AppConfig user_shell,
          AppConfig story_shell,
+         string? auth_token,
          ledger.LedgerRepository ledger_repository,
          UserContext user_context,
          mozart.ViewOwner& view_owner,

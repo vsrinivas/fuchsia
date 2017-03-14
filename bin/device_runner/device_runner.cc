@@ -24,6 +24,7 @@
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -42,6 +43,11 @@
 
 namespace modular {
 namespace {
+
+// To generate this configuration file follow instructions at
+// https://fuchsia.googlesource.com/modules/+/master/#Email
+// TODO(alhaad) Find a different home this config file.
+constexpr char kAuthConfigurationFile[] = "/system/data/email/config.json";
 
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
@@ -64,6 +70,8 @@ class Settings {
 
     ledger_repository_for_testing =
         command_line.HasOption("ledger_repository_for_testing");
+    user_auth_config_file =
+        command_line.HasOption("user_auth_config_file");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("device_shell_args", ""),
@@ -89,6 +97,7 @@ class Settings {
       --story_shell=STORY_SHELL
       --story_shell_args=SHELL_ARGS
       --ledger_repository_for_testing
+      --user_auth_config_file
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to "file:///system/apps/dummy_device_shell".
@@ -111,6 +120,7 @@ class Settings {
   AppConfig story_shell;
 
   bool ledger_repository_for_testing;
+  bool user_auth_config_file;
 
  private:
   void ParseShellArgs(const std::string& value,
@@ -248,6 +258,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
   void Login(
       const fidl::String& username,
       const fidl::String& password,
+      const fidl::String& auth_token,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserController> user_controller_request) override {
     // Check username and password before logging in.
@@ -294,11 +305,27 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
               << "GetRepository failed: " << status;
         });
 
+    std::string ret_auth_token;
+    if (settings_.user_auth_config_file) {
+      if (!files::IsFile(kAuthConfigurationFile)) {
+        FTL_LOG(ERROR) << "Auth configuration file not found at: "
+                       << kAuthConfigurationFile;
+      } else {
+        if (!files::ReadFileToString(kAuthConfigurationFile,
+                                     &ret_auth_token)) {
+          // Unable to read file. Bailing out.
+          FTL_LOG(ERROR) << "Unable to read auth configuration file at: "
+                         << kAuthConfigurationFile;
+          ret_auth_token = auth_token;
+        }
+      }
+    }
+
     user_controller_impl_.reset(new UserControllerImpl(
         app_context_, settings_.device_name, settings_.user_runner,
-        settings_.user_shell, settings_.story_shell, std::move(user_id),
-        std::move(ledger_repository), std::move(view_owner_request),
-        std::move(user_controller_request),
+        settings_.user_shell, settings_.story_shell, ret_auth_token,
+        std::move(user_id), std::move(ledger_repository),
+        std::move(view_owner_request), std::move(user_controller_request),
         [this] { user_controller_impl_.reset(); }));
   }
 

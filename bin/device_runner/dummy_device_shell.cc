@@ -77,7 +77,7 @@ class DummyDeviceShellApp
   void Connect() {
     if (user_provider_ && view_owner_request_) {
       user_provider_->AddUser(settings_.user, nullptr, "ledger.fuchsia.com");
-      user_provider_->Login(settings_.user, nullptr,
+      user_provider_->Login(settings_.user, nullptr, nullptr,
                             std::move(view_owner_request_),
                             user_controller_.NewRequest());
       user_controller_->Watch(user_watcher_binding_.NewBinding());

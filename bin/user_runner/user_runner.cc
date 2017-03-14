@@ -14,6 +14,7 @@
 #include "apps/maxwell/services/launcher/launcher.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
+#include "apps/modular/lib/auth/token_provider_impl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
@@ -28,6 +29,7 @@
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -98,6 +100,7 @@ class UserRunnerImpl : public UserRunner {
       const fidl::String& device_name,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
+      const fidl::String& auth_token,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -105,7 +108,8 @@ class UserRunnerImpl : public UserRunner {
       : application_context_(application_context),
         binding_(this, std::move(user_runner_request)),
         ledger_repository_(
-            ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))) {
+            ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
+        token_provider_impl_(auth_token) {
     binding_.set_connection_error_handler([this] { delete this; });
 
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
@@ -196,9 +200,16 @@ class UserRunnerImpl : public UserRunner {
     // modules in a story and standalone from the shell to determine
     // whether they are in a story. See story_marker.fidl for more
     // details.
+    // TODO(alhaad): This also gets passed to agents which should not be the
+    // case.
     stories_scope_->AddService<StoryMarker>(
         [this](fidl::InterfaceRequest<StoryMarker> request) {
           story_marker_impl_.AddBinding(std::move(request));
+        });
+
+    stories_scope_->AddService<TokenProvider>(
+        [this](fidl::InterfaceRequest<TokenProvider> request) {
+          token_provider_impl_.AddBinding(std::move(request));
         });
 
     user_shell_->Initialize(std::move(user_context), std::move(story_provider),
@@ -266,6 +277,7 @@ class UserRunnerImpl : public UserRunner {
   MessageQueueManager message_queue_manager_;
   std::unique_ptr<AgentRunner> agent_runner_;
   StoryMarkerImpl story_marker_impl_;
+  TokenProviderImpl token_provider_impl_;
 
   // Passed to maxwell_launcher.
   std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
@@ -295,6 +307,7 @@ class UserRunnerApp : public UserRunnerFactory {
               const fidl::String& device_name,
               AppConfigPtr user_shell,
               AppConfigPtr story_shell,
+              const fidl::String& auth_token,
               fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
               fidl::InterfaceHandle<UserContext> user_context,
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -302,7 +315,8 @@ class UserRunnerApp : public UserRunnerFactory {
     // Deleted in UserRunnerImpl::Terminate().
     new UserRunnerImpl(application_context_, std::move(user_id), device_name,
                        std::move(user_shell), std::move(story_shell),
-                       std::move(ledger_repository), std::move(user_context),
+                       auth_token, std::move(ledger_repository),
+                       std::move(user_context),
                        std::move(view_owner_request),
                        std::move(user_runner_request));
   }

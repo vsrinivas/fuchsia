@@ -1,0 +1,13 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// This service is included in the ApplicationEnvironment of all applications
+// running in the user scope. Currently, |auth_token| contains a JSON string
+// (see //apps/modules/email/config.json) and will evolve based on requirement.
+[ServiceName="modular.TokenProvider"]
+interface TokenProvider {
+  GetAuthToken() => (string? auth_token);
+};
