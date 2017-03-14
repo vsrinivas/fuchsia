@@ -109,9 +109,16 @@ static mx_status_t usb_hid_get_idle(mx_hid_device_t* dev, uint8_t rpt_id, uint8_
 }
 
 static mx_status_t usb_hid_set_idle(mx_hid_device_t* dev, uint8_t rpt_id, uint8_t duration) {
+    mx_status_t status;
     usb_hid_device_t* hid = to_usb_hid(dev);
-    return usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+    status = usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_IDLE, (duration << 8) | rpt_id, hid->interface, NULL, 0);
+    if (status == ERR_IO_REFUSED) {
+        // The SET_IDLE command is optional, so this may stall.
+        // If that occurs, reset the endpoint and ignore the error
+        status = usb_reset_endpoint(hid->usbdev, 0);
+    }
+    return status;
 }
 
 static mx_status_t usb_hid_get_protocol(mx_hid_device_t* dev, uint8_t* protocol) {
