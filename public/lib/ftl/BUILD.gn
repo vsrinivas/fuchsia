@@ -148,6 +148,7 @@ executable("ftl_unittests") {
     "log_settings_unittest.cc",
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",
+    "random/rand_unittest.cc",
     "strings/ascii_unittest.cc",
     "strings/concatenate_unittest.cc",
     "strings/join_strings_unittest.cc",
