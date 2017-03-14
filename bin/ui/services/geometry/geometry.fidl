@@ -52,10 +52,3 @@ struct Transform {
   // Row major order.
   array<float, 16> matrix;
 };
-
-struct Inset {
-  int32 top;
-  int32 right;
-  int32 bottom;
-  int32 left;
-};
