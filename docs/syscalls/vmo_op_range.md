@@ -40,7 +40,7 @@ More information can be found in the [vm object documentation](../objects/vm_obj
 
 **MX_VMO_OP_CACHE_SYNC** - Performs a cache sync operation.
 
-**MX_VMO_OP_INVALIDATE** - Performs a cache invalidation operation.
+**MX_VMO_OP_CACHE_INVALIDATE** - Performs a cache invalidation operation.
 
 **MX_VMO_OP_CACHE_CLEAN** - Performs a cache clean operation.
 
