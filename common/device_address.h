@@ -19,6 +19,16 @@ class DeviceAddress {
   // Initializes the contents from |bytes|.
   explicit DeviceAddress(std::initializer_list<uint8_t> bytes);
 
+  // Initializes the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
+  // ASCII encoded two-digit hexadecimal integer. Returns false if |bdaddr_string| is badly
+  // formatted.
+  explicit DeviceAddress(const std::string& bdaddr_string);
+
+  // Resets the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
+  // ASCII encoded two-digit hexadecimal integer. Returns false if |bdaddr_string| is badly
+  // formatted.
+  bool SetFromString(const std::string& bdaddr_string);
+
   // Returns a string representation of the device address. The bytes in
   // human-readable form will appear in big-endian byte order even though the
   // underlying array stores the bytes in little-endian. The returned string

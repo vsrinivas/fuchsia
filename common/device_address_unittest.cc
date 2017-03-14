@@ -23,6 +23,28 @@ TEST(DeviceAddressTest, ToString) {
   EXPECT_EQ("00:00:00:00:00:00", bdaddr.ToString());
 }
 
+TEST(DeviceAddressTest, SetFromString) {
+  DeviceAddress bdaddr;
+  EXPECT_FALSE(bdaddr.SetFromString(""));
+  EXPECT_FALSE(bdaddr.SetFromString("FF"));
+  EXPECT_FALSE(bdaddr.SetFromString("FF:FF:FF:FF:"));
+  EXPECT_FALSE(bdaddr.SetFromString("FF:FF:FF:FF:FF:F"));
+  EXPECT_FALSE(bdaddr.SetFromString("FF:FF:FF:FF:FF:FZ"));
+  EXPECT_FALSE(bdaddr.SetFromString("FF:FF:FF:FF:FF:FZ"));
+  EXPECT_FALSE(bdaddr.SetFromString("FF:FF:FF:FF:FF:FF "));
+  EXPECT_FALSE(bdaddr.SetFromString(" FF:FF:FF:FF:FF:FF"));
+
+  EXPECT_TRUE(bdaddr.SetFromString("FF:FF:FF:FF:FF:FF"));
+  EXPECT_EQ("FF:FF:FF:FF:FF:FF", bdaddr.ToString());
+
+  EXPECT_TRUE(bdaddr.SetFromString("03:7F:FF:02:0F:01"));
+  EXPECT_EQ("03:7F:FF:02:0F:01", bdaddr.ToString());
+
+  // Test the constructor with a valid string (an invalid one would fail fatally).
+  bdaddr = DeviceAddress("03:7F:FF:02:0F:01");
+  EXPECT_EQ("03:7F:FF:02:0F:01", bdaddr.ToString());
+}
+
 TEST(DeviceAddressTest, CastFromBytes) {
   std::array<uint8_t, 7> bytes{{10, 1, 15, 2, 255, 127, 3}};
   EXPECT_EQ(bytes.size(), sizeof(TestPayload));
