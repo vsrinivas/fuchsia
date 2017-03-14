@@ -11,9 +11,9 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
-#include "lib/mtl/threading/create_thread.h"
 
 #include "command_packet.h"
+#include "transport.h"
 
 namespace bluetooth {
 namespace hci {
@@ -40,46 +40,43 @@ CommandChannel::QueuedCommand::QueuedCommand(TransactionId id, const CommandPack
                                           command_packet.mutable_buffer()->TransferContents());
 }
 
-CommandChannel::CommandChannel(mx::channel hci_command_channel)
-    : channel_(std::move(hci_command_channel)),
-      is_running_(false),
+CommandChannel::CommandChannel(Transport* transport, mx::channel hci_command_channel)
+    : transport_(transport),
+      channel_(std::move(hci_command_channel)),
+      is_initialized_(false),
       io_handler_key_(0u),
       is_command_pending_(false) {
-  FTL_DCHECK(channel_.get() != MX_HANDLE_INVALID);
+  FTL_DCHECK(transport_);
+  FTL_DCHECK(channel_.is_valid());
 }
 
 CommandChannel::~CommandChannel() {
-  if (is_running_) ShutDown();
+  if (is_initialized_) ShutDown();
 }
 
 void CommandChannel::Initialize() {
-  FTL_DCHECK(!is_running_);
+  FTL_DCHECK(!is_initialized_);
 
-  is_running_ = true;
-  io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-command-channel");
-
+  io_task_runner_ = transport_->io_task_runner();
   io_task_runner_->PostTask([this] {
     io_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
         this, channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
     FTL_LOG(INFO) << "hci: CommandChannel: I/O loop handler registered";
   });
 
-  FTL_LOG(INFO) << "hci: CommandChannel initialized";
+  is_initialized_ = true;
+
+  FTL_LOG(INFO) << "hci: CommandChannel: initialized";
 }
 
 void CommandChannel::ShutDown() {
-  FTL_DCHECK(is_running_);
-  FTL_LOG(INFO) << "hci: CommandChannel Shutting down";
+  FTL_DCHECK(is_initialized_);
+  FTL_LOG(INFO) << "hci: CommandChannel: shutting down";
 
-  io_task_runner_->PostTask([this] {
+  io_task_runner_->PostTask([handler_key = io_handler_key_] {
     FTL_DCHECK(mtl::MessageLoop::GetCurrent());
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
-    io_handler_key_ = 0u;
-
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
   });
-
-  if (io_thread_.joinable()) io_thread_.join();
 
   SetPendingCommand(nullptr);
 
@@ -88,9 +85,8 @@ void CommandChannel::ShutDown() {
   event_code_handlers_.clear();
   subevent_code_handlers_.clear();
   io_task_runner_ = nullptr;
-  is_running_ = false;
-
-  FTL_LOG(INFO) << "hci: CommandChannel: I/O loop exited";
+  io_handler_key_ = 0u;
+  is_initialized_ = false;
 }
 
 CommandChannel::TransactionId CommandChannel::SendCommand(

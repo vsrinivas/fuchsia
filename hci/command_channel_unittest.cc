@@ -17,6 +17,7 @@
 #include "apps/bluetooth/common/test_helpers.h"
 #include "apps/bluetooth/hci/command_packet.h"
 #include "apps/bluetooth/hci/hci.h"
+#include "apps/bluetooth/hci/transport.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -174,14 +175,16 @@ class CommandChannelTest : public ::testing::Test {
     mx_status_t status = mx::channel::create(0, &endpoint0, &endpoint1);
     ASSERT_EQ(NO_ERROR, status);
 
-    cmd_channel_ = std::make_unique<CommandChannel>(std::move(endpoint0));
+    transport_ = std::make_unique<Transport>();
+
+    auto cmd_channel = std::make_unique<CommandChannel>(transport_.get(), std::move(endpoint0));
     fake_controller_ = std::make_unique<FakeController>(std::move(endpoint1));
 
-    cmd_channel_->Initialize();
+    transport_->InitializeForTesting(std::move(cmd_channel));
   }
 
   void TearDown() override {
-    cmd_channel_ = nullptr;
+    transport_ = nullptr;
     fake_controller_ = nullptr;
   }
 
@@ -193,12 +196,12 @@ class CommandChannelTest : public ::testing::Test {
     message_loop_.Run();
   }
 
-  CommandChannel* cmd_channel() const { return cmd_channel_.get(); }
+  CommandChannel* cmd_channel() const { return transport_->command_channel(); }
   FakeController* fake_controller() const { return fake_controller_.get(); }
   mtl::MessageLoop* message_loop() { return &message_loop_; }
 
  private:
-  std::unique_ptr<CommandChannel> cmd_channel_;
+  std::unique_ptr<Transport> transport_;
   std::unique_ptr<FakeController> fake_controller_;
   mtl::MessageLoop message_loop_;
 };

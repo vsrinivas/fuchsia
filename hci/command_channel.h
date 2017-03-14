@@ -9,7 +9,6 @@
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <thread>
 #include <unordered_map>
 
 #include <mx/channel.h>
@@ -29,6 +28,7 @@ namespace bluetooth {
 namespace hci {
 
 class CommandPacket;
+class Transport;
 
 // Represents the HCI Bluetooth command channel. Manages HCI command and event
 // packet control flow.
@@ -37,19 +37,15 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // |hci_command_channel| is a Magenta channel construct that can receive
   // Bluetooth HCI command and event packets, in which the remote end is
   // implemented by the underlying Bluetooth HCI device driver.
-  explicit CommandChannel(mx::channel hci_command_channel);
+  //
+  // |transport| is the Transport instance that owns this CommandChannel.
+  CommandChannel(Transport* transport, mx::channel hci_command_channel);
   virtual ~CommandChannel();
 
-  // Starts the I/O event loop. This kicks off a new I/O thread for
-  // this channel instance. Care must be taken such that the public methods of
-  // this class are not called in a manner that would race with the execution of
-  // Initialize().
+  // Starts listening on the HCI command channel and starts handling commands and events.
   void Initialize();
 
-  // This stops the I/O event loop and joins the I/O thread.
-  // NOTE: Care must be taken such that this method is not called from a thread
-  // that would race with a call to Initialize(). ShutDown() is not thread-safe
-  // and should not be called from multiple threads at the same time.
+  // Unregisters event handlers and cleans up.
   void ShutDown();
 
   // Used to identify an individual HCI command<->event transaction.
@@ -206,19 +202,19 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
+  // The Transport object that owns this CommandChannel.
+  Transport* transport_;  // weak
+
   // The channel we use to send/receive HCI commands/events.
   mx::channel channel_;
 
-  // True if the I/O event loop is currently running.
-  std::atomic_bool is_running_;
-
-  // The thread on which the command channel event loop runs.
-  std::thread io_thread_;
+  // True if this CommandChannel has been initialized through a call to Initialize().
+  std::atomic_bool is_initialized_;
 
   // The HandlerKey returned from mtl::MessageLoop::AddHandler
   mtl::MessageLoop::HandlerKey io_handler_key_;
 
-  // The task runner used for posting tasks on |io_thread_|.
+  // The task runner used for posting tasks on the HCI transport I/O thread.
   ftl::RefPtr<ftl::TaskRunner> io_task_runner_;
 
   // The HCI command queue. These are the commands that have been queued to be
