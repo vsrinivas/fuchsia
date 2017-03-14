@@ -56,8 +56,12 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
   const uint64_t first_time = results_[0].time;
   const float microsecond_multiplier = timestamp_period_ * 0.001f;
   for (size_t i = 0; i < results_.size(); ++i) {
-    results_[i].elapsed = static_cast<uint64_t>(
-        (results_[i].time - first_time) * microsecond_multiplier);
+    results_[i].time = static_cast<uint64_t>((results_[i].time - first_time) *
+                                             microsecond_multiplier);
+  }
+  results_[0].elapsed = 0;
+  for (size_t i = 1; i < results_.size(); ++i) {
+    results_[i].elapsed = results_[i].time - results_[i - 1].time;
   }
 
   return std::move(results_);

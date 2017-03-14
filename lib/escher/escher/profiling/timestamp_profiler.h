@@ -29,8 +29,8 @@ class TimestampProfiler : public ftl::RefCountedThreadSafe<TimestampProfiler> {
                     std::string name);
 
   struct Result {
-    uint64_t time;     // Vulkan timestamp value (number of timestamp periods)
-    uint64_t elapsed;  // microseconds elapsed since first result
+    uint64_t time;     // microseconds elapsed since the first timestamp
+    uint64_t elapsed;  // microseconds elapsed since the previous timestamp
     std::string name;
   };
 

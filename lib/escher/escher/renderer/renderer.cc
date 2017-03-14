@@ -34,9 +34,8 @@ void Renderer::BeginFrame() {
   if (enable_profiling_ && escher_->supports_timer_queries()) {
     profiler_ = ftl::MakeRefCounted<TimestampProfiler>(
         context_.device, escher_->timestamp_period());
-    profiler_->AddTimestamp(current_frame_,
-                            vk::PipelineStageFlagBits::eTopOfPipe,
-                            "start of frame");
+    AddTimestamp("throwaway");  // Intel/Mesa workaround; see EndFrame().
+    AddTimestamp("start of frame");
   }
 }
 
@@ -65,12 +64,15 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
       FTL_LOG(INFO) << "total\t | \tsince previous (all times in microseconds)";
       FTL_LOG(INFO) << "------------------------------------------------------";
       auto timestamps = profiler->GetQueryResults();
-      uint64_t previous_time = timestamps[0].elapsed;
+      // Workaround: Intel/Mesa gives a screwed-up value for the second time.
+      // So, we add a throwaway value first (see BeginFrame()), and then fix up
+      // the first value that we actually print.
+      timestamps[1].time = 0;
+      timestamps[1].elapsed = 0;
+      timestamps[2].elapsed = timestamps[2].time;
       for (size_t i = 1; i < timestamps.size(); ++i) {
-        uint64_t time = timestamps[i].elapsed;
-        FTL_LOG(INFO) << time << " \t | \t" << (time - previous_time) << "   \t"
-                      << timestamps[i].name;
-        previous_time = time;
+        FTL_LOG(INFO) << timestamps[i].time << " \t | \t"
+                      << timestamps[i].elapsed << "   \t" << timestamps[i].name;
       }
     });
   } else {

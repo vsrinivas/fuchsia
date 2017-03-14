@@ -335,9 +335,6 @@ void PaperRenderer::DrawFrame(const Stage& stage,
 
   BeginFrame();
 
-  // How much overlap between the previous frame and this one?
-  AddTimestamp("previous frame completely finished");
-
   // Downsized depth-only prepass for SSDO acceleration.
   FTL_CHECK(width % kSsdoAccelDownsampleFactor == 0);
   FTL_CHECK(height % kSsdoAccelDownsampleFactor == 0);
