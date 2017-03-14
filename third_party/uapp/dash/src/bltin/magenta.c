@@ -143,16 +143,17 @@ static bool file_exists(const char *filename)
     return stat(filename, &statbuf) == 0;
 }
 
-static bool verify_file(const char *filename)
+static bool verify_file(bool is_mv, const char *filename)
 {
     struct stat statbuf;
 
     if (stat(filename, &statbuf) != 0) {
-        fprintf(stderr, "cp: Unable to stat %s\n", filename);
+        fprintf(stderr, "%s: Unable to stat %s\n", is_mv ? "mv" : "cp",
+                filename);
         return false;
     }
 
-    if (S_ISDIR(statbuf.st_mode)) {
+    if (!is_mv && S_ISDIR(statbuf.st_mode)) {
         fprintf(stderr, "cp: Recursive copy not supported\n");
         return false;
     }
@@ -164,7 +165,7 @@ static bool verify_file(const char *filename)
 static int cp_here(const char *src_name, const char *dest_name,
                    bool dest_exists, bool force)
 {
-    if (! verify_file(src_name)) {
+    if (! verify_file(false, src_name)) {
         return -1;
     }
 
@@ -210,7 +211,7 @@ done:
 static int mv_here(const char *src_name, const char *dest_name,
                    bool dest_exists, bool force)
 {
-    if (! verify_file(src_name)) {
+    if (! verify_file(true, src_name)) {
         return -1;
     }
 
@@ -229,7 +230,7 @@ static int mv_here(const char *src_name, const char *dest_name,
 static int mv_or_cp_to_dir(bool is_mv, const char *src_name,
                            const char *dest_name, bool force)
 {
-    if (! verify_file(src_name)) {
+    if (! verify_file(is_mv, src_name)) {
         return -1;
     }
 
