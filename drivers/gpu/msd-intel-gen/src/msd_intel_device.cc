@@ -305,7 +305,7 @@ int MsdIntelDevice::InterruptThreadLoop()
         auto request = std::make_unique<InterruptRequest>();
         auto reply = request->GetReply();
 
-        EnqueueDeviceRequest(std::move(request));
+        EnqueueDeviceRequest(std::move(request), true);
 
         reply->Wait();
 
@@ -454,12 +454,17 @@ void MsdIntelDevice::ProcessPendingFlip()
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MsdIntelDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request)
+void MsdIntelDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request,
+                                          bool enqueue_front)
 {
     DASSERT(monitor_);
     magma::Monitor::Lock lock(monitor_);
     lock.Acquire();
-    device_request_list_.emplace_back(std::move(request));
+    if (enqueue_front) {
+        device_request_list_.emplace_front(std::move(request));
+    } else {
+        device_request_list_.emplace_back(std::move(request));
+    }
     lock.Release();
     monitor_->Signal();
 }

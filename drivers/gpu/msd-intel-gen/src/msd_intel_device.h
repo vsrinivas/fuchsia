@@ -130,7 +130,7 @@ private:
     magma::Status ProcessInterrupts();
 
     void ProcessPendingFlip();
-    void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request);
+    void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
 
     bool WaitIdle();
 
