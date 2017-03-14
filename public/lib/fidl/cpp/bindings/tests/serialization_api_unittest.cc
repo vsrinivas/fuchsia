@@ -73,42 +73,6 @@ TEST_F(StructSerializationAPITest, GetSerializedSize) {
   EXPECT_EQ(40u, handle_struct.GetSerializedSize());
 }
 
-TEST_F(StructSerializationAPITest, BasicStructSerialization) {
-  {
-    SCOPED_TRACE("Rect");
-    Rect rect;
-    rect.x = 123;
-    rect.y = 456;
-    rect.width = 789;
-    rect.height = 999;
-    SerializeAndDeserialize(&rect, fidl::internal::ValidationError::NONE);
-  }
-
-  {
-    SCOPED_TRACE("DefaultFieldValues");
-    DefaultFieldValues default_values;
-    SerializeAndDeserialize(&default_values,
-                            fidl::internal::ValidationError::NONE);
-  }
-
-  {
-    SCOPED_TRACE("NoDefaultFieldValues.Serialize() should fail");
-    NoDefaultFieldValues nd;
-    nd.f0 = true;
-    nd.f23 = fidl::Array<fidl::String>::New(10);
-
-    char buf[1000] = {};
-    EXPECT_FALSE(nd.Serialize(buf, sizeof(buf)));
-
-    size_t bytes_written = 0;
-    EXPECT_FALSE(nd.Serialize(buf, sizeof(buf), &bytes_written));
-    EXPECT_EQ(192UL, bytes_written);
-    // The Serialize() shouldn't get around to reserving space for the |f23|
-    // array field.
-    EXPECT_LT(bytes_written, nd.GetSerializedSize());
-  }
-}
-
 // This tests serialization of handles -- These should be deaths or
 TEST_F(StructSerializationAPITest, HandlesSerialization) {
   {

@@ -203,33 +203,6 @@ TEST_F(ConnectorTest, Basic_TwoMessages_Synchronous) {
   ASSERT_TRUE(accumulator.IsEmpty());
 }
 
-TEST_F(ConnectorTest, WriteToClosedPipe) {
-  internal::Connector connector0(std::move(handle0_));
-
-  const char kText[] = "hello world";
-
-  Message message;
-  AllocMessage(kText, &message);
-
-  // Close the other end of the pipe.
-  handle1_.reset();
-
-  // Not observed yet because we haven't spun the RunLoop yet.
-  EXPECT_FALSE(connector0.encountered_error());
-
-  // Write failures are not reported.
-  bool ok = connector0.Accept(&message);
-  EXPECT_TRUE(ok);
-
-  // Still not observed.
-  EXPECT_FALSE(connector0.encountered_error());
-
-  // Spin the RunLoop, and then we should start observing the closed pipe.
-  PumpMessages();
-
-  EXPECT_TRUE(connector0.encountered_error());
-}
-
 TEST_F(ConnectorTest, MessageWithHandles) {
   internal::Connector connector0(std::move(handle0_));
   internal::Connector connector1(std::move(handle1_));
