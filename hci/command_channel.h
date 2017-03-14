@@ -117,8 +117,21 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // Only one handler can be registered for a given |event_code| at a time. If a
   // handler was previously registered for the given |event_code|, this method
   // returns zero.
+  //
+  // The following values for |event_code| cannot be passed to this method:
+  //    - HCI_Command_Complete event code
+  //    - HCI_Command_Status event code
+  //    - HCI_LE_Meta event code (use AddLEMetaEventHandler instead).
   EventHandlerId AddEventHandler(EventCode event_code, const EventCallback& event_callback,
                                  ftl::RefPtr<ftl::TaskRunner> task_runner);
+
+  // Works just like AddEventHandler but the passed in event code is only valid within the LE Meta
+  // Event sub-event code namespace. |event_callback| will get invoked whenever the controller sends
+  // a LE Meta Event with a matching subevent code.
+  //
+  // |subevent_code| cannot be 0.
+  EventHandlerId AddLEMetaEventHandler(EventCode subevent_code, const EventCallback& event_callback,
+                                       ftl::RefPtr<ftl::TaskRunner> task_runner);
 
   // Removes a previously registered event handler. Does nothing if an event
   // handler with the given |id| could not be found.
@@ -161,6 +174,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
     EventHandlerId id;
     EventCode event_code;
     EventCallback event_callback;
+    bool is_le_meta_subevent;
     ftl::RefPtr<ftl::TaskRunner> task_runner;
   };
 
@@ -234,6 +248,10 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // Mapping from event code to the event handler that was registered to handle
   // that event code.
   std::unordered_map<EventCode, EventHandlerId> event_code_handlers_;
+
+  // Mapping from LE Meta Event Subevent code to the event handler that was registered to handle
+  // that event code.
+  std::unordered_map<EventCode, EventHandlerId> subevent_code_handlers_;
 
   // Guards |event_handler_id_map_| and |event_code_handlers_| which can be
   // accessed by both the public EventHandler methods and |io_thread_|.

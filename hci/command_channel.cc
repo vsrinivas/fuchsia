@@ -86,6 +86,7 @@ void CommandChannel::ShutDown() {
   send_queue_ = std::queue<QueuedCommand>();
   event_handler_id_map_.clear();
   event_code_handlers_.clear();
+  subevent_code_handlers_.clear();
   io_task_runner_ = nullptr;
   is_running_ = false;
 
@@ -116,6 +117,7 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
   FTL_DCHECK(event_code != 0);
   FTL_DCHECK(event_code != kCommandStatusEventCode);
   FTL_DCHECK(event_code != kCommandCompleteEventCode);
+  FTL_DCHECK(event_code != kLEMetaEventCode);
 
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
@@ -131,10 +133,39 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
   data.event_code = event_code;
   data.event_callback = event_callback;
   data.task_runner = task_runner;
+  data.is_le_meta_subevent = false;
 
   FTL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
   event_handler_id_map_[id] = data;
   event_code_handlers_[event_code] = id;
+
+  return id;
+}
+
+CommandChannel::EventHandlerId CommandChannel::AddLEMetaEventHandler(
+    EventCode subevent_code, const EventCallback& event_callback,
+    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  FTL_DCHECK(subevent_code != 0);
+
+  std::lock_guard<std::mutex> lock(event_handler_mutex_);
+
+  if (subevent_code_handlers_.find(subevent_code) != subevent_code_handlers_.end()) {
+    FTL_LOG(ERROR) << "hci: event handler already registered for LE Meta subevent code: "
+                   << ftl::StringPrintf("0x%02x", subevent_code);
+    return 0u;
+  }
+
+  auto id = ++next_event_handler_id_;
+  EventHandlerData data;
+  data.id = id;
+  data.event_code = subevent_code;
+  data.event_callback = event_callback;
+  data.task_runner = task_runner;
+  data.is_le_meta_subevent = true;
+
+  FTL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
+  event_handler_id_map_[id] = data;
+  subevent_code_handlers_[subevent_code] = id;
 
   return id;
 }
@@ -145,7 +176,13 @@ void CommandChannel::RemoveEventHandler(const EventHandlerId id) {
   auto iter = event_handler_id_map_.find(id);
   if (iter == event_handler_id_map_.end()) return;
 
-  if (iter->second.event_code != 0) event_code_handlers_.erase(iter->second.event_code);
+  if (iter->second.event_code != 0) {
+    if (iter->second.is_le_meta_subevent) {
+      subevent_code_handlers_.erase(iter->second.event_code);
+    } else {
+      event_code_handlers_.erase(iter->second.event_code);
+    }
+  }
   event_handler_id_map_.erase(iter);
 }
 
@@ -191,6 +228,19 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
         "hci: CommandChannel: Unmatched CommandComplete event - opcode: "
         "0x%04x, pending: 0x%04x",
         le16toh(event.GetPayload<CommandCompleteEventParams>()->command_opcode),
+        pending_command->opcode);
+    return;
+  }
+
+  // In case that this is a CommandComplete event, make sure that the command
+  // opcode actually matches the pending command.
+  if (event.event_code() == kCommandStatusEventCode &&
+      le16toh(event.GetPayload<CommandStatusEventParams>()->command_opcode) !=
+          pending_command->opcode) {
+    FTL_LOG(ERROR) << ftl::StringPrintf(
+        "hci: CommandChannel: Unmatched CommandStatus event - opcode: "
+        "0x%04x, pending: 0x%04x",
+        le16toh(event.GetPayload<CommandStatusEventParams>()->command_opcode),
         pending_command->opcode);
     return;
   }
@@ -270,8 +320,19 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
 
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
-  auto iter = event_code_handlers_.find(event.event_code());
-  if (iter == event_code_handlers_.end()) {
+  EventCode event_code;
+  const std::unordered_map<EventCode, EventHandlerId>* event_handlers;
+
+  if (event.event_code() == kLEMetaEventCode) {
+    event_code = event.GetPayload<LEMetaEventParams>()->subevent_code;
+    event_handlers = &subevent_code_handlers_;
+  } else {
+    event_code = event.event_code();
+    event_handlers = &event_code_handlers_;
+  }
+
+  auto iter = event_handlers->find(event_code);
+  if (iter == event_handlers->end()) {
     // No handler registered for event.
     return;
   }
@@ -280,7 +341,7 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
   FTL_DCHECK(handler_iter != event_handler_id_map_.end());
 
   auto& handler = handler_iter->second;
-  FTL_DCHECK(handler.event_code == event.event_code());
+  FTL_DCHECK(handler.event_code == event_code);
 
   common::DynamicByteBuffer buffer(event.size());
   memcpy(buffer.GetMutableData(), event.buffer()->GetData(), event.size());

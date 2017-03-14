@@ -550,6 +550,71 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   EXPECT_EQ(1, event_count);
 }
 
+TEST_F(CommandChannelTest, LEMetaEventHandler) {
+  constexpr EventCode kTestSubeventCode0 = 0xFE;
+  constexpr EventCode kTestSubeventCode1 = 0xFF;
+  auto le_meta_event_bytes0 =
+      common::CreateStaticByteBuffer(hci::kLEMetaEventCode, 0x01, kTestSubeventCode0);
+  auto le_meta_event_bytes1 =
+      common::CreateStaticByteBuffer(hci::kLEMetaEventCode, 0x01, kTestSubeventCode1);
+
+  int event_count0 = 0;
+  auto event_cb0 = [&event_count0, kTestSubeventCode0, this](const EventPacket& event) {
+    event_count0++;
+    EXPECT_EQ(hci::kLEMetaEventCode, event.event_code());
+    EXPECT_EQ(kTestSubeventCode0, event.GetPayload<LEMetaEventParams>()->subevent_code);
+    message_loop()->PostQuitTask();
+  };
+
+  int event_count1 = 0;
+  auto event_cb1 = [&event_count1, kTestSubeventCode1, this](const EventPacket& event) {
+    event_count1++;
+    EXPECT_EQ(hci::kLEMetaEventCode, event.event_code());
+    EXPECT_EQ(kTestSubeventCode1, event.GetPayload<LEMetaEventParams>()->subevent_code);
+    message_loop()->PostQuitTask();
+  };
+
+  auto id0 = cmd_channel()->AddLEMetaEventHandler(kTestSubeventCode0, event_cb0,
+                                                  message_loop()->task_runner());
+  EXPECT_NE(0u, id0);
+
+  // Cannot register a handler for the same event code more than once.
+  auto id1 = cmd_channel()->AddLEMetaEventHandler(kTestSubeventCode0, event_cb0,
+                                                  message_loop()->task_runner());
+  EXPECT_EQ(0u, id1);
+
+  // Add a handle for a different event code.
+  id1 = cmd_channel()->AddLEMetaEventHandler(kTestSubeventCode1, event_cb1,
+                                             message_loop()->task_runner());
+  EXPECT_NE(0u, id1);
+
+  std::vector<TestTransaction> transactions;
+  fake_controller()->Start(&transactions);
+
+  fake_controller()->SendPacket(&le_meta_event_bytes0);
+  RunMessageLoop();
+  EXPECT_EQ(1, event_count0);
+  EXPECT_EQ(0, event_count1);
+
+  fake_controller()->SendPacket(&le_meta_event_bytes0);
+  RunMessageLoop();
+  EXPECT_EQ(2, event_count0);
+  EXPECT_EQ(0, event_count1);
+
+  fake_controller()->SendPacket(&le_meta_event_bytes1);
+  RunMessageLoop();
+  EXPECT_EQ(2, event_count0);
+  EXPECT_EQ(1, event_count1);
+
+  // Remove the first event handler.
+  cmd_channel()->RemoveEventHandler(id0);
+  fake_controller()->SendPacket(&le_meta_event_bytes0);
+  fake_controller()->SendPacket(&le_meta_event_bytes1);
+  RunMessageLoop();
+  EXPECT_EQ(2, event_count0);
+  EXPECT_EQ(2, event_count1);
+}
+
 }  // namespace
 }  // namespace hci
 }  // namespace bluetooth

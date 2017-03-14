@@ -57,8 +57,6 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  // TODO(armansito): Add a command-line option for passing a bt-hci device
-  // path.
   ftl::UniqueFD hci_dev(open(hci_dev_path.c_str(), O_RDWR));
   if (!hci_dev.is_valid()) {
     std::perror("Failed to open HCI device");

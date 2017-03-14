@@ -601,10 +601,10 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
   params->filter_duplicates = filter_duplicates;
 
   // Event handler to log when we receive advertising reports
-  auto le_meta_event_cb = [name_filter](const hci::EventPacket& event) {
-    if (event.GetPayload<hci::LEMetaEventParams>()->subevent_code !=
-        hci::kLEAdvertisingReportSubeventCode)
-      return;
+  auto le_adv_report_cb = [name_filter](const hci::EventPacket& event) {
+    FTL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
+    FTL_DCHECK(event.GetPayload<hci::LEMetaEventParams>()->subevent_code ==
+               hci::kLEAdvertisingReportSubeventCode);
 
     hci::AdvertisingReportParser parser(event);
     const hci::LEAdvertisingReportData* data;
@@ -613,8 +613,8 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
       DisplayAdvertisingReport(*data, rssi, name_filter);
     }
   };
-  auto event_handler_id = owner.cmd_channel()->AddEventHandler(
-      hci::kLEMetaEventCode, le_meta_event_cb, owner.task_runner());
+  auto event_handler_id = owner.cmd_channel()->AddLEMetaEventHandler(
+      hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb, owner.task_runner());
 
   auto cleanup_cb = [ complete_cb, event_handler_id, cmd_channel = owner.cmd_channel() ] {
     cmd_channel->RemoveEventHandler(event_handler_id);
