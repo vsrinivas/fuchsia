@@ -1,17 +1,17 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 module maxwell;
 
-// Exposes access to Context values, each of which are explicitly
-// named. Each named Context value has a known/pre-defined value representation.
+// Exposes access to Context values, each of which are explicitly named. Each
+// named Context value has a known/pre-defined value representation.
 //
 // This interface is meant to be used in the scope of a single Fuchsia
 // component.
 //
 // TODO(thatguy): There are no access controls as of yet.
-interface ContextReader {
+interface ContextProvider {
   // When any of the conditions in 'query' change, a serialized ContextResult
   // is sent to the MessageQueue identified by 'message_queue_token'.
   //
@@ -19,12 +19,13 @@ interface ContextReader {
   // to the specified MessageQueue.
   // 
   // The query will continue to stay active as long as the MessageQueue is
-  // valid.
+  // not deleted.
   //
   // TODO(thatguy): Revisit serializing the ContextResult: we really shouldn't
-  // be serializing FIDL structs right now, it's just so convenient to do so.
+  // be serializing FIDL structs; it's just so convenient and there are no
+  // better options.
   // TODO(thatguy): Add ACL checking for the Component scope in which this
-  // ContextReader was created. Return errors here immediately, or in
+  // ContextProvider was created. Return errors here immediately, or in
   // ContextResult if ACLs change after a valid Query() is started.
   Subscribe(ContextQuery query, string message_queue_token);
 };

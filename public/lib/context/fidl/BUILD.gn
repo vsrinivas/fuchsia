@@ -8,7 +8,7 @@ fidl("context") {
   sources = [
     "client.fidl",
     "context_engine.fidl",
-    "context_reader.fidl",
+    "context_provider.fidl",
     "publisher_link.fidl",
     "subscriber_link.fidl",
   ]
