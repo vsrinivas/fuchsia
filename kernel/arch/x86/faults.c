@@ -233,6 +233,17 @@ static void x86_pfe_handler(x86_iframe_t *frame)
         goto fatal;
     }
 
+    /* check for a potential SMAP failure */
+    if (unlikely(
+        !(error_code & PFEX_U) &&
+         (error_code & PFEX_P) &&
+        !(frame->flags & X86_FLAGS_AC) &&
+         is_user_address(va))) {
+        /* supervisor mode page-present access failure with the AC bit clear (SMAP enabled) */
+        printf("x86_pfe_handler: potential SMAP failure, supervisor access at address %#" PRIxPTR "\n", va);
+        goto fatal;
+    }
+
     /* convert the PF error codes to page fault flags */
     uint flags = 0;
     flags |= (error_code & PFEX_W) ? VMM_PF_FLAG_WRITE : 0;

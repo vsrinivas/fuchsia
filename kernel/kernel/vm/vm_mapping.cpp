@@ -489,15 +489,6 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
         return ERR_ACCESS_DENIED;
     }
 
-    if (!(pf_flags & VMM_PF_FLAG_NOT_PRESENT)) {
-        // kernel attempting to access userspace, and permissions were fine, so
-        // architecture prevented the cross-privilege access
-        if (!(pf_flags & VMM_PF_FLAG_USER) && aspace_->is_user()) {
-            TRACEF("ERROR: kernel faulted on user address\n");
-            return ERR_ACCESS_DENIED;
-        }
-    }
-
     // grab the lock for the vmo
     AutoLock al(object_->lock());
 
