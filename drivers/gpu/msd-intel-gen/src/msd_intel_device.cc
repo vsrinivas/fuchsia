@@ -650,24 +650,10 @@ magma::Status MsdIntelDevice::ProcessFlip(
     // Error indicators are passed to the callback
     magma::Status status(MAGMA_STATUS_OK);
 
-    std::shared_ptr<GpuMapping> mapping;
-
-    for (auto iter = display_mappings_.begin(); iter != display_mappings_.end(); iter++) {
-        if ((*iter)->buffer() == buffer.get()) {
-            mapping = *iter;
-            break;
-        }
-    }
-
-    if (!mapping) {
-        mapping = AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
-        if (!mapping)
-            return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't map buffer to gtt");
-
-        display_mappings_.push_front(mapping);
-        while (display_mappings_.size() > 3)
-            display_mappings_.pop_back();
-    }
+    std::shared_ptr<GpuMapping> mapping =
+        AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
+    if (!mapping)
+        return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't map buffer to gtt");
 
     uint32_t width, height;
     registers::DisplayPlaneSurfaceSize::read(
@@ -750,6 +736,7 @@ magma::Status MsdIntelDevice::ProcessFlip(
     }
 
     signal_semaphores_ = std::move(signal_semaphores);
+    saved_display_mapping_ = std::move(mapping);
 
     return status;
 }

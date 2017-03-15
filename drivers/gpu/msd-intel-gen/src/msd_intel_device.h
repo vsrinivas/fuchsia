@@ -177,7 +177,7 @@ private:
     std::unique_ptr<magma::SemaphorePort> semaphore_port_;
 
     // page flipping
-    std::deque<std::shared_ptr<GpuMapping>> display_mappings_;
+    std::shared_ptr<GpuMapping> saved_display_mapping_;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
 
     class CommandBufferRequest;
