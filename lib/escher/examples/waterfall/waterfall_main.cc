@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <stdlib.h>
 
 #include "demo.h"
 
@@ -42,6 +43,8 @@ bool g_profile_one_frame = false;
 bool g_sort_by_pipeline = true;
 bool g_cycle_ssdo_acceleration = false;
 bool g_stop_time = false;
+// True if lighting should be periodically toggled on and off.
+bool g_auto_toggle_lighting = false;
 
 std::unique_ptr<Demo> CreateDemo(bool use_fullscreen) {
   Demo::WindowParams window_params;
@@ -69,6 +72,24 @@ int main(int argc, char** argv) {
   for (int i = 1; i < argc; ++i) {
     if (!strcmp("--fullscreen", argv[i])) {
       use_fullscreen = true;
+    } else if (!strcmp("--scene", argv[i])) {
+      if (i == argc - 1) {
+        FTL_LOG(ERROR) << "--scene must be followed by a numeric argument";
+      } else {
+        char* end;
+        int scene = strtol(argv[i + 1], &end, 10);
+        if (argv[i + 1] == end) {
+          FTL_LOG(ERROR) << "--scene must be followed by a numeric argument";
+        } else {
+          g_current_scene = scene;
+        }
+      }
+    } else if (!strcmp("--debug", argv[i])) {
+      g_show_debug_info = true;
+    } else if (!strcmp("--no-debug", argv[i])) {
+      g_show_debug_info = false;
+    } else if (!strcmp("--toggle-lighting", argv[i])) {
+      g_auto_toggle_lighting = true;
     }
   }
 
@@ -189,6 +210,14 @@ int main(int argc, char** argv) {
         stopwatch.Reset();
       } else if (frame_count % 200 == 0) {
         g_profile_one_frame = true;
+
+        if (g_auto_toggle_lighting) {
+          if (g_enable_lighting && frame_count % 600 == 0) {
+            g_enable_lighting = false;
+          } else {
+            g_enable_lighting = true;
+          }
+        }
 
         // Print out FPS stats.  Omit the first frame when computing the
         // average, because it is generating pipelines.

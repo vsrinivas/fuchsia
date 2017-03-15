@@ -35,7 +35,7 @@ void UberScene3::Init(escher::Stage* stage) {
 
   MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
                 MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
-  ring_mesh_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 75.f,
+  ring_mesh_ = escher::NewRingMesh(escher(), spec, 5, vec2(0.f, 0.f), 75.f,
                                    55.f, 18.f, -15.f);
 }
 
