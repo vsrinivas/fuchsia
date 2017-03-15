@@ -47,7 +47,7 @@ MsdIntelBuffer::FindBufferMapping(std::shared_ptr<AddressSpace> address_space, u
 {
     for (auto weak_mapping : mapping_list_) {
         std::shared_ptr<GpuMapping> shared_mapping = weak_mapping.lock();
-        if (!shared_mapping)
+        if (!shared_mapping || shared_mapping->address_space().expired())
             continue;
 
         gpu_addr_t gpu_addr = shared_mapping->gpu_addr();
