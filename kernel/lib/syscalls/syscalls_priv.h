@@ -10,4 +10,4 @@
 #include <magenta/syscalls/types.h>
 #include <lib/user_copy/user_ptr.h>
 
-#include <magenta/gen-sysdefs.h>
+#include <magenta/syscall-definitions.h>

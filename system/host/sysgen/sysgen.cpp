@@ -733,10 +733,21 @@ using gen = std::function<bool(std::ofstream& os, const Syscall& sc)>;
 #define gen2(name, arg1, arg2) std::bind(name, std::placeholders::_1, std::placeholders::_2, arg1, arg2)
 #define gen4(name, arg1, arg2, arg3, arg4) std::bind(name, std::placeholders::_1, std::placeholders::_2, arg1, arg2, arg3, arg4)
 
-const std::map<string, gen> generators = {
+const std::map<string, string> type_to_default_suffix = {
+  {"user-header",   ".user.h"} ,
+  {"vdso-header",   ".vdso.h"},
+  {"kernel-header", ".kernel.h"},
+  {"kernel-code",   ".kernel.inc"},
+  {"x86-asm",   ".x86-64.S"},
+  {"arm-asm",   ".arm64.S"},
+  {"numbers",   ".syscall-numbers.h"},
+  {"trace",   ".trace.inc"},
+};
+
+const std::map<string, gen> type_to_generator = {
     {
     // The user header, pure C.
-        ".user.h",
+        "user-header",
         gen4(generate_legacy_header,
             "extern ",                              // function prefix
             std::vector<string>({"mx_", "_mx_"}),   // function name prefixes
@@ -745,7 +756,7 @@ const std::map<string, gen> generators = {
     },
     // The vDSO-internal header, pure C.  (VDsoHeaderC)
     {
-        ".vdso.h",
+        "vdso-header",
         gen4(generate_legacy_header,
             "__attribute__((visibility(\"hidden\"))) extern ",  // function prefix
             std::vector<string>({"VDSO_mx_"}),                  // function name prefixes
@@ -754,14 +765,14 @@ const std::map<string, gen> generators = {
     },
     // The kernel header, C++.
     {
-        ".kernel.h",
+        "kernel-header",
         gen2(generate_kernel_header,
             "sys_",                     // function prefix
             kernel_attrs)
     },
     // The kernel C++ code. A switch statement set.
     {
-        ".kernel.inc",
+        "kernel-code",
         gen4(generate_kernel_code,
             "sys_",                     // function prefix
             "ret",                      // variable to assign invocation result to
@@ -770,27 +781,27 @@ const std::map<string, gen> generators = {
     },
     //  The assembly file for x86-64.
     {
-        ".x86-64.S",
+        "x86-asm",
         gen2(generate_legacy_assembly_x64,
             "m_syscall",                // syscall macro name
             "mx_")                      // syscall name prefix
     },
     //  The assembly include file for ARM64.
     {
-        ".arm64.S",
+        "arm-asm",
         gen2(generate_legacy_assembly_arm64,
             "m_syscall",                // syscall macro name
             "mx_")                      // syscall name prefix
     },
     // A C header defining MX_SYS_* syscall number macros.
     {
-        ".syscall-numbers.h",
+        "numbers",
         gen1(generate_syscall_numbers_header,
             "#define MX_SYS_")          // prefix for each syscall row
     },
     // The trace subsystem data, to be interpreted as an array of structs.
     {
-        ".trace.inc",
+        "trace",
         gen(generate_trace_info)
     },
 };
@@ -807,9 +818,15 @@ public:
         return true;
     }
 
-    bool Generate(const char* output_prefix) {
-        for (auto& generator : generators) {
-            if (!generate_one(generator.first, generator.second, output_prefix))
+    bool Generate(const string& type, const string& output_filename) {
+        auto generator = type_to_generator.at(type);
+        return generate_one(output_filename, generator);
+    }
+
+    bool Generate(const string& output_prefix) {
+        for (auto& type_then_generator : type_to_generator) {
+            string suffix = type_to_default_suffix.at(type_then_generator.first);
+            if (!generate_one(output_prefix + suffix, type_then_generator.second))
                 return false;
         }
         return true;
@@ -818,10 +835,7 @@ public:
     bool verbose() const { return verbose_; }
 
 private:
-    bool generate_one(string file_postfix, gen generator, const char* output_prefix) {
-
-        string output_file = string(output_prefix) + file_postfix;
-
+    bool generate_one(const string& output_file, gen generator) {
         std::ofstream ofile;
         ofile.open(output_file.c_str(), std::ofstream::out);
 
@@ -851,8 +865,6 @@ private:
     int next_index_ = 0;
     const bool verbose_;
 };
-
-
 
 bool process_comment(SygenGenerator* parser, TokenStream& ts) {
     return true;
@@ -908,7 +920,11 @@ constexpr Dispatch<SygenGenerator> sysgen_table[] = {
 // =================================== driver ====================================================
 
 int main(int argc, char* argv[]) {
-    const char* output_prefix = "generated";
+    // TODO(andymutton): Just delete the multi-file path entirely
+    string output_prefix = "generated";
+    string type;
+    string output_filename;
+
     bool verbose = false;
 
     argc--;
@@ -917,19 +933,39 @@ int main(int argc, char* argv[]) {
         const char *cmd = argv[0];
         if (cmd[0] != '-')
             break;
-        if (!strcmp(cmd,"-v")) {
+        if (!strcmp(cmd, "-v")) {
             verbose = true;
-        } else if (!strcmp(cmd,"-o")) {
+        } else if (!strcmp(cmd, "-o")) {
             if (argc < 2) {
-              fprintf(stderr, "no output prefix given\n");
-              return -1;
+                fprintf(stderr, "no output prefix given\n");
+                return -1;
             }
-            output_prefix = argv[1];
+            output_prefix.assign(argv[1]);
             argc--;
             argv++;
-        } else if (!strcmp(cmd,"-h")) {
+        } else if (!strcmp(cmd, "-h")) {
             fprintf(stderr, "usage: sysgen [-v] [-o output_prefix] file1 ... fileN\n");
             return 0;
+        } else if (!strcmp(cmd, "-t")) {
+            if (argc < 2) {
+                fprintf(stderr, "no generation type given\n");
+                return -1;
+            }
+            type.assign(argv[1]);
+            if (type_to_generator.find(type) == type_to_generator.end()) {
+                fprintf(stderr, "unknown types\n");
+                return -1;
+            }
+            argc--;
+            argv++;
+        } else if (!strcmp(cmd, "-f")) {
+            if (argc < 2) {
+                fprintf(stderr, "no filename given\n");
+                return -1;
+            }
+            output_filename.assign(argv[1]);
+            argc--;
+            argv++;
         } else {
             fprintf(stderr, "unknown option: %s\n", cmd);
             return -1;
@@ -948,6 +984,13 @@ int main(int argc, char* argv[]) {
         if (!run_parser(&generator, sysgen_table, argv[ix], verbose))
             return 1;
     }
+    if (type.empty()) {
+        // No specific type, just generate all.
+        return generator.Generate(output_prefix) ? 0 : 1;
+    }
 
-    return generator.Generate(output_prefix) ? 0 : 1;
+    if (output_filename.empty()) {
+        output_filename.assign(output_prefix + type_to_default_suffix.at(type));
+    }
+    return generator.Generate(type, output_filename) ? 0 : 1;
 }

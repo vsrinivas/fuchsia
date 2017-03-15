@@ -95,14 +95,14 @@ endif
 
 BUILDDIR := $(BUILDROOT)/build-$(PROJECT)$(BUILDDIR_SUFFIX)
 $(info BUILDDIR = $(BUILDDIR))
+GENERATED_INCLUDES:=$(BUILDDIR)/gen/include
 OUTLKBIN := $(BUILDDIR)/$(LKNAME).bin
 OUTLKELF := $(BUILDDIR)/$(LKNAME).elf
 GLOBAL_CONFIG_HEADER := $(BUILDDIR)/config-global.h
 KERNEL_CONFIG_HEADER := $(BUILDDIR)/config-kernel.h
 USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
 GIT_VERSION_HEADER := $(BUILDDIR)/git-version.h
-
-GLOBAL_INCLUDES := system/public system/private
+GLOBAL_INCLUDES := system/public system/private $(GENERATED_INCLUDES)
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
 GLOBAL_DEBUGFLAGS ?= -g
 GLOBAL_COMPILEFLAGS := $(GLOBAL_DEBUGFLAGS) -finline -include $(GLOBAL_CONFIG_HEADER)
@@ -217,7 +217,7 @@ ARCH_CPPFLAGS :=
 ARCH_ASMFLAGS :=
 
 # Host compile flags
-HOST_COMPILEFLAGS := -Wall -g -O2 -Isystem/public -Isystem/private
+HOST_COMPILEFLAGS := -Wall -g -O2 -Isystem/public -Isystem/private -I$(GENERATED_INCLUDES)
 HOST_CFLAGS := -std=c11
 HOST_CPPFLAGS := -std=c++11 -fno-exceptions -fno-rtti
 HOST_ASMFLAGS :=
@@ -353,6 +353,7 @@ $(info TARGET = $(TARGET))
 include host/rules.mk
 include arch/$(ARCH)/rules.mk
 include top/rules.mk
+include make/sysgen.mk
 
 # recursively include any modules in the MODULE variable, leaving a trail of included
 # modules in the ALLMODULES list

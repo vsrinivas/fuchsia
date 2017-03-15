@@ -4,7 +4,7 @@
 
 #include "syscall-entry.h"
 #include "magenta-syscall-arm64.S"
-#include "gen-syscall-numbers.h"
+#include <magenta/mx-syscall-numbers.h>
 
 .text
 

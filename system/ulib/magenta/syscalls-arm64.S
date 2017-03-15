@@ -18,6 +18,6 @@ syscall_entry_begin \name
 syscall_entry_end \name
 .endm
 
-#include "gen-arm64.S"
+#include <magenta/syscalls-arm64.S>
 
 #include "syscalls-stubs.S"

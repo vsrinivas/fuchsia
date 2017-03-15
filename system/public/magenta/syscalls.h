@@ -12,7 +12,7 @@
 
 __BEGIN_CDECLS
 
-#include <magenta/gen-syscalls.h>
+#include <magenta/syscalls/definitions.h>
 
 // Compatibility Wrappers for Deprecated Syscalls
 

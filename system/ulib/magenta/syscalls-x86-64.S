@@ -56,6 +56,6 @@ syscall_entry_begin \name
 syscall_entry_end \name
 .endm
 
-#include "gen-x86-64.S"
+#include <magenta/syscalls-x86-64.S>
 
 #include "syscalls-stubs.S"

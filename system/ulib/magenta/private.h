@@ -15,4 +15,4 @@ extern const struct vdso_constants DATA_CONSTANTS
 // This declares the VDSO_mx_* aliases for the vDSO entry points.
 // Calls made from within the vDSO must use these names rather than
 // the public names so as to avoid PLT entries.
-#include "gen-syscalls.h"
+#include <magenta/syscall-vdso-definitions.h>

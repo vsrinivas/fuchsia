@@ -27,7 +27,7 @@ inline uint64_t invoke_syscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
     uint64_t ret;
 
     switch (syscall_num) {
-#include <magenta/gen-switch.inc>
+#include <magenta/syscall-invocation-cases.inc>
         default:
             ret = sys_invalid_syscall();
     }

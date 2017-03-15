@@ -35,7 +35,7 @@ static struct ktrace_syscall_info {
     uint32_t nargs;
     const char* name;
 } kt_syscall_info [] = {
-    #include <magenta/gen-trace.inc>
+    #include <magenta/syscall-ktrace-info.inc>
     {0, 0, nullptr}
 };
 
