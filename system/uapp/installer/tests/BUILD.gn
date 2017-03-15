@@ -1,0 +1,13 @@
+executable("install-fuchsia-tests") {
+  testonly = true
+  sources = [ "tests.c" ]
+  libs = [
+    "fs-management",
+    "magenta",
+  ]
+  deps = [
+    "//apps/install-fuchsia/lib",
+    "//magenta/system/ulib/gpt",
+    "//magenta/system/ulib/unittest"
+   ]
+}

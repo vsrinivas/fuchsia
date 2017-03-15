@@ -1,0 +1,16 @@
+executable("install-fuchsia") {
+  sources = [
+    "install-fuchsia.c"
+  ]
+
+  libs = [
+    "fs-management",
+    "magenta"
+  ]
+
+  deps = [
+    "//apps/install-fuchsia/lib",
+    "//magenta/system/ulib/gpt",
+    "//magenta/third_party/ulib/lz4",
+  ]
+}
