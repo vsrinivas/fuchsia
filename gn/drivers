@@ -1,6 +1,7 @@
 {
     "imports": [
-        "init"
+        "init",
+        "intel-hda"
     ],
     "labels": [
         "//drivers/wifi/qualcomm:wifi-qca6174",
