@@ -161,11 +161,11 @@ def main():
         os.path.dirname(SCRIPT_DIR), "build-magenta-pc-x86-64")
     build_dirs = [magenta_build_dir]
     if args.build_dir:
-        build_dirs += args.build_dir
+        build_dirs = args.build_dir + build_dirs
     else:
         fuchsia_build_dir = os.path.abspath(os.path.join(
             os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64"))
-        build_dirs.append(fuchsia_build_dir)
+        build_dirs.insert(0, fuchsia_build_dir)
 
     # Parsing vars
     arch = "x86_64"
