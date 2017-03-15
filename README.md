@@ -1,5 +1,4 @@
-Fuchsia Open Source Template Repository
-=======================================
+Audio Driver Repository
+=======================
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This repository contains drivers for audio controllers and codecs.
