@@ -726,28 +726,23 @@ function fmkbootloader() {
 
 if [[ -n "${ZSH_VERSION}" ]]; then
   ### Zsh Completion
-  fpath+=${FUCHSIA_SCRIPTS_DIR}/zsh-completion
+  fpath=(${FUCHSIA_SCRIPTS_DIR}/zsh-completion $fpath[@])
+  # clear cached load of _path_files
+  unfunction _path_files
+  autoload -U _path_files
+  # load and run compinit
   autoload -U compinit
   compinit
 
-  ### Directory shortcuts for Jiri projects
-  # a mapping of jiri project names to paths will be in the associative array fuchsia_projects
-  # a directory shortcut ~f-projectname will be present for each project with / replaced by -
-  function regenerate_fuchsia_projects() {
-    local _update_file=${FUCHSIA_DIR}/.jiri_root/update_history/latest
-    local _projects_file=${FUCHSIA_DIR}/.jiri_root/projects.zsh
-    if [[ -e $_update_file ]]; then
-      if [ $_update_file -nt $_projects_file -o ! -e $_projects_file ]; then
-        grep '<project name=' $_update_file | \
-          sed -e 's, *<project name="\([^"]*\)" path="\([^"]*\)".*,fuchsia_projects+=(\1 \2),' > \
-          $_projects_file
-      fi
-      . $_projects_file
-    fi
+  ### Map paths that start // to $FUCHSIA_DIR
+  function fuchsia::zle::accept-line() {
+    # make a shorter version of $FUCHSIA_DIR using ~
+    local short_dir=${FUCHSIA_DIR/${HOME}/\~}
+    # at the start of the line
+    BUFFER=${BUFFER/#\/\//$short_dir\/}
+    # anywhere in the line
+    BUFFER=${BUFFER// \/\// $short_dir\/}
+    zle .accept-line
   }
-  typeset -A fuchsia_projects
-  regenerate_fuchsia_projects
-  for _p in "${(@k)fuchsia_projects}"; do
-    hash -d f-${_p//\//-}=$FUCHSIA_DIR/$fuchsia_projects[$_p]
-  done
+  zle -N accept-line fuchsia::zle::accept-line
 fi
