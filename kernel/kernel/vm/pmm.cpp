@@ -10,6 +10,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
+#include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/timer.h>
 #include <kernel/vm.h>
@@ -23,16 +24,19 @@
 
 #include "pmm_arena.h"
 
+#include <magenta/thread_annotations.h>
 #include <mxtl/intrusive_double_list.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 // the main arena list
-static mxtl::DoublyLinkedList<PmmArena*> arena_list;
 static Mutex arena_lock;
-static size_t arena_cumulative_size;
+static mxtl::DoublyLinkedList<PmmArena*> arena_list TA_GUARDED(arena_lock);
+static size_t arena_cumulative_size TA_GUARDED(arena_lock);
 
-paddr_t vm_page_to_paddr(const vm_page_t* page) {
+// We don't need to hold the arena lock while executing this, since it is
+// only accesses values that are set once during system initialization.
+paddr_t vm_page_to_paddr(const vm_page_t* page) TA_NO_THREAD_SAFETY_ANALYSIS {
     for (const auto& a : arena_list) {
         // LTRACEF("testing page %p against arena %p\n", page, &a);
         if (a.page_belongs_to_arena(page)) {
@@ -42,7 +46,9 @@ paddr_t vm_page_to_paddr(const vm_page_t* page) {
     return -1;
 }
 
-vm_page_t* paddr_to_vm_page(paddr_t addr) {
+// We don't need to hold the arena lock while executing this, since it is
+// only accesses values that are set once during system initialization.
+vm_page_t* paddr_to_vm_page(paddr_t addr) TA_NO_THREAD_SAFETY_ANALYSIS {
     for (auto& a : arena_list) {
         if (a.address_in_arena(addr)) {
             size_t index = (addr - a.base()) / PAGE_SIZE;
@@ -52,8 +58,15 @@ vm_page_t* paddr_to_vm_page(paddr_t addr) {
     return nullptr;
 }
 
-status_t pmm_add_arena(const pmm_arena_info_t* info) {
+// We disable thread safety analysis here, since this function is only called
+// during early boot before threading exists.
+status_t pmm_add_arena(const pmm_arena_info_t* info) TA_NO_THREAD_SAFETY_ANALYSIS {
     LTRACEF("arena %p name '%s' base %#" PRIxPTR " size %#zx\n", info, info->name, info->base, info->size);
+
+    // Make sure we're in early boot (ints disabled and no active CPUs according
+    // to the scheduler).
+    DEBUG_ASSERT(mp_get_active_mask() == 0);
+    DEBUG_ASSERT(arch_ints_disabled());
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(info->base));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(info->size));
@@ -301,7 +314,7 @@ size_t pmm_free_page(vm_page_t* page) {
     return pmm_free(&list);
 }
 
-void pmm_dump_free() {
+void pmm_dump_free() TA_REQ(arena_lock) {
     size_t free = 0u;
     for (const auto& a : arena_list) {
         free += a.free_count();
@@ -319,24 +332,39 @@ size_t pmm_count_free_pages() {
     return free;
 }
 
-size_t pmm_count_total_bytes() {
+size_t pmm_count_total_bytes() TA_REQ(arena_lock) {
     return arena_cumulative_size;
 }
 
 extern "C"
-enum handler_return pmm_dump_timer(struct timer *t, lk_time_t, void *) {
+enum handler_return pmm_dump_timer(struct timer *t, lk_time_t, void *) TA_REQ(arena_lock) {
     pmm_dump_free();
     return INT_NO_RESCHEDULE;
 }
 
+// No lock analysis here, as we want to just go for it in the panic case without the lock.
+static void arena_dump(bool is_panic) TA_NO_THREAD_SAFETY_ANALYSIS {
+    if (!is_panic) {
+        arena_lock.Acquire();
+    }
+    for (auto& a : arena_list) {
+        a.Dump(false);
+    }
+    if (!is_panic) {
+        arena_lock.Release();
+    }
+}
+
 static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
+    bool is_panic = flags & CMD_FLAG_PANIC;
+
     if (argc < 2) {
     notenoughargs:
         printf("not enough arguments\n");
     usage:
         printf("usage:\n");
         printf("%s arenas\n", argv[0].str);
-        if (!(flags & CMD_FLAG_PANIC)) {
+        if (!is_panic) {
             printf("%s alloc <count>\n", argv[0].str);
             printf("%s alloc_range <address> <count>\n", argv[0].str);
             printf("%s alloc_kpages <count>\n", argv[0].str);
@@ -351,10 +379,12 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     static struct list_node allocated = LIST_INITIAL_VALUE(allocated);
 
     if (!strcmp(argv[1].str, "arenas")) {
-        for (auto& a : arena_list) {
-            a.Dump(false);
-        }
-    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "free")) {
+        arena_dump(is_panic);
+    } else if (is_panic) {
+        // No other operations will work during a panic.
+        printf("Only the \"arenas\" command is available during a panic.\n");
+        goto usage;
+    } else if (!strcmp(argv[1].str, "free")) {
         static bool show_mem = false;
         static timer_t timer;
 
@@ -367,7 +397,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
             timer_cancel(&timer);
             show_mem = false;
         }
-    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "alloc")) {
+    } else if (!strcmp(argv[1].str, "alloc")) {
         if (argc < 3)
             goto notenoughargs;
 
@@ -379,7 +409,13 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
 
         vm_page_t* p;
         list_for_every_entry (&list, p, vm_page_t, free.node) {
-            printf("\tpage %p, address %#" PRIxPTR "\n", p, vm_page_to_paddr(p));
+            paddr_t paddr;
+            {
+                DEBUG_ASSERT(!is_panic);
+                AutoLock al(&arena_lock);
+                paddr = vm_page_to_paddr(p);
+            };
+            printf("\tpage %p, address %#" PRIxPTR "\n", p, paddr);
         }
 
         /* add the pages to the local allocated list */
@@ -387,11 +423,11 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
         while ((node = list_remove_head(&list))) {
             list_add_tail(&allocated, node);
         }
-    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "dump_alloced")) {
+    } else if (!strcmp(argv[1].str, "dump_alloced")) {
         vm_page_t* page;
 
         list_for_every_entry (&allocated, page, vm_page_t, free.node) { dump_page(page); }
-    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "alloc_range")) {
+    } else if (!strcmp(argv[1].str, "alloc_range")) {
         if (argc < 4)
             goto notenoughargs;
 
@@ -403,7 +439,13 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
 
         vm_page_t* p;
         list_for_every_entry (&list, p, vm_page_t, free.node) {
-            printf("\tpage %p, address %#" PRIxPTR "\n", p, vm_page_to_paddr(p));
+            paddr_t paddr;
+            {
+                DEBUG_ASSERT(!is_panic);
+                AutoLock al(&arena_lock);
+                paddr = vm_page_to_paddr(p);
+            }
+            printf("\tpage %p, address %#" PRIxPTR "\n", p, paddr);
         }
 
         /* add the pages to the local allocated list */
@@ -411,14 +453,14 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
         while ((node = list_remove_head(&list))) {
             list_add_tail(&allocated, node);
         }
-    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "alloc_kpages")) {
+    } else if (!strcmp(argv[1].str, "alloc_kpages")) {
         if (argc < 3)
             goto notenoughargs;
 
         paddr_t pa;
         void* ptr = pmm_alloc_kpages((uint)argv[2].u, nullptr, &pa);
         printf("pmm_alloc_kpages returns %p pa %#" PRIxPTR "\n", ptr, pa);
-    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "alloc_contig")) {
+    } else if (!strcmp(argv[1].str, "alloc_contig")) {
         if (argc < 4)
             goto notenoughargs;
 
@@ -435,7 +477,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
         while ((node = list_remove_head(&list))) {
             list_add_tail(&allocated, node);
         }
-    } else if (!(flags & CMD_FLAG_PANIC) && !strcmp(argv[1].str, "free_alloced")) {
+    } else if (!strcmp(argv[1].str, "free_alloced")) {
         size_t err = pmm_free(&allocated);
         printf("pmm_free returns %zu\n", err);
     } else {
