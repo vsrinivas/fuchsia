@@ -12,6 +12,7 @@ import subprocess
 fuchsia_root = os.environ['FUCHSIA_DIR']
 fuchsia_sysroot = os.environ['FUCHSIA_SYSROOT_DIR']
 fuchsia_build = os.environ['FUCHSIA_BUILD_DIR']
+fuchsia_buildtools = os.path.join(fuchsia_root, 'buildtools')
 
 common_flags = [
     '-std=c++14',
@@ -55,10 +56,12 @@ def GetClangCommandFromNinjaForFilename(filename):
   # Cut off the common part and /.
   subdir_filename = filename[len(fuchsia_root) + 1:]
   rel_filename = os.path.join('..', '..', subdir_filename)
+  ninja_filename = os.path.join(fuchsia_buildtools, 'ninja')
 
   # Ask ninja how it would build our source file.
   ninja_command = [
-      'ninja', '-v', '-C', fuchsia_build, '-t', 'commands', rel_filename + '^'
+      ninja_filename, '-v', '-C', fuchsia_build, '-t', 'commands',
+      rel_filename + '^'
   ]
   p = subprocess.Popen(ninja_command, stdout=subprocess.PIPE)
   stdout, stderr = p.communicate()

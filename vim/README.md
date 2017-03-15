@@ -8,22 +8,43 @@
 
 ## Installation
 
-Make sure `env.sh` is being called in your login scripts. This code depends on variables set in `env.sh` and by the
-`fset` command.
+1. Update your login script
 
-Add this to your `vimrc`:
-```
-if $FUCHSIA_DIR != ""
-  source $FUCHSIA_DIR/scripts/vim/fuchsia.vim
-endif
-```
+   Steps #2 and #3 depend on variables set in `env.sh` and by the `fset`
+   command. Add these lines to your startup script (typically `~/.bashrc`).
 
-Optionally install [YouCompleteMe](https://github.com/Valloric/YouCompleteMe) for fancy completion, source navigation
-and inline errors.
+   ```
+   source /path-to-fuchsia-dir/scripts/env.sh
+   fset x86-64
+   ```
+
+1. Update your vim startup file
+
+   Add these lines to `~/.vimrc`:
+
+   ```
+   if $FUCHSIA_DIR != ""
+     source $FUCHSIA_DIR/scripts/vim/fuchsia.vim
+   endif
+   ```
+
+1. Install YouCompleteMe (ycm)
+
+   Optionally install [YouCompleteMe](https://github.com/Valloric/YouCompleteMe)
+   for fancy completion, source navigation and inline errors.  See the
+   [installation guide](https://github.com/Valloric/YouCompleteMe#installation).
+
+   Google users can install YCM by adding these two lines to `.vimrc`:
+
+   ```
+   source /usr/share/vim/google/google.vim
+   Glug youcompleteme-google
+   ```
 
 ## See also
 
-For Magenta YouCompleteMe integration: https://fuchsia.googlesource.com/magenta/+/master/docs/editors.md
+For Magenta YouCompleteMe integration:
+https://fuchsia.googlesource.com/magenta/+/master/docs/editors.md
 
 ## TODO
 
