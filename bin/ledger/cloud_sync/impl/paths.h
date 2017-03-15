@@ -5,6 +5,8 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_PATHS_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_PATHS_H_
 
+#include <string>
+
 #include "lib/ftl/strings/string_view.h"
 
 namespace cloud_sync {
@@ -29,6 +31,10 @@ std::string GetFirebasePathForApp(ftl::StringView cloud_prefix,
 // given the path for the app.
 std::string GetFirebasePathForPage(ftl::StringView app_path,
                                    ftl::StringView page_id);
+
+// Returns the Firebase path under which the data for the given ledger is
+// stored.
+std::string GetFirebasePathForLedger(ftl::StringView cloud_prefix);
 
 }  // namespace cloud_sync
 

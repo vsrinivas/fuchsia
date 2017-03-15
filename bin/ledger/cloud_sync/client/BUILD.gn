@@ -11,6 +11,8 @@ executable("client") {
     "command.h",
     "doctor_command.cc",
     "doctor_command.h",
+    "clean_command.cc",
+    "clean_command.h",
   ]
 
   deps = [

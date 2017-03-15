@@ -10,6 +10,8 @@
 #include "application/lib/app/connect.h"
 #include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
+#include "apps/ledger/src/cloud_sync/client/clean_command.h"
+#include "apps/ledger/src/cloud_sync/client/doctor_command.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/configuration/configuration_encoder.h"
@@ -38,6 +40,8 @@ ClientApp::ClientApp(ftl::CommandLine command_line)
       context_(app::ApplicationContext::CreateFromStartupInfo()) {
   if (Initialize()) {
     Start();
+  } else {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 }
 
@@ -46,6 +50,9 @@ void ClientApp::PrintUsage() {
   std::cout << "Commands:" << std::endl;
   std::cout << " - `doctor` - checks up the cloud sync configuration (default)"
             << std::endl;
+  std::cout
+      << " - `clean` - removes all data from both local and remote storage"
+      << std::endl;
 }
 
 std::unique_ptr<Command> ClientApp::CommandFromArgs(
@@ -57,11 +64,16 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
         cloud_provider_.get());
   }
 
+  if ((args[0] == "clean" && args.size() == 1)) {
+    return std::make_unique<CleanCommand>(configuration_,
+                                          network_service_.get());
+  }
+
   return nullptr;
 }
 
 bool ClientApp::Initialize() {
-  std::unordered_set<std::string> valid_commands = {"doctor"};
+  std::unordered_set<std::string> valid_commands = {"doctor", "clean"};
   const std::vector<std::string>& args = command_line_.positional_args();
   if (args.size() && valid_commands.count(args[0]) == 0) {
     PrintUsage();

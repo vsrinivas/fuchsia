@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
 
+#include <string>
+
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/strings/concatenate.h"
@@ -51,6 +53,12 @@ std::string GetFirebasePathForPage(ftl::StringView app_path,
                                    ftl::StringView page_id) {
   return ftl::Concatenate(
       {app_path, kFirebaseSeparator, firebase::EncodeKey(page_id)});
+}
+
+std::string GetFirebasePathForLedger(ftl::StringView cloud_prefix) {
+  ftl::StringView cloud_prefix_or_default =
+      cloud_prefix.empty() ? kDefaultCloudPrefix : cloud_prefix;
+  return firebase::EncodeKey(cloud_prefix_or_default);
 }
 
 }  // namespace cloud_sync
