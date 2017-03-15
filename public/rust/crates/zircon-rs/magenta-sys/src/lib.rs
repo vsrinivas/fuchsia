@@ -185,6 +185,14 @@ extern {
     pub fn mx_channel_write(handle: mx_handle_t, options: u32, bytes: *const u8,
         num_bytes: u32, handles: *const mx_handle_t, num_handles: u32) -> mx_status_t;
 
+    // Fifos
+    pub fn mx_fifo_create(elem_count: u32, elem_size: u32, options: u32, out0: *mut mx_handle_t,
+        out1: *mut mx_handle_t) -> mx_status_t;
+    pub fn mx_fifo_write(handle: mx_handle_t, buffer: *const u8, size: usize,
+        num_entries_written: *mut u32) -> mx_status_t;
+    pub fn mx_fifo_read(handle: mx_handle_t, buffer: *mut u8, size: usize,
+        num_entries_read: *mut u32) -> mx_status_t;
+
     // Wait sets
     pub fn mx_waitset_create(options: u32, out: *mut mx_handle_t) -> mx_status_t;
     pub fn mx_waitset_add(waitset_handle: mx_handle_t, cookie: u64, handle: mx_handle_t,
