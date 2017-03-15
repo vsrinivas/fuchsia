@@ -414,7 +414,7 @@ pub trait Peered: HandleBase {
         let status = unsafe {
             sys::mx_object_signal_peer(handle, clear_mask.bits(), set_mask.bits())
         };
-        into_status(status, || ())
+        into_result(status, || ())
     }
 }
 
