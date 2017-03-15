@@ -13,7 +13,7 @@ declare_args() {
 group("netstack") {
   deps = [
     ":app",
-    "//apps/netstack/apps:netstack_debug",
+    "//apps/netstack/apps",
   ]
   if (netstack2) {
     deps += [ ":netstack2" ]

@@ -1,0 +1,19 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("examples") {
+  testonly = true
+
+  deps = [
+    "//apps/netstack/examples/sockettest",
+    "//apps/netstack/examples/sockettest:epolltest",
+    "//apps/netstack/examples/sockettest:mctest",
+    "//apps/netstack/examples/sockettest:nbiotest",
+    "//apps/netstack/examples/sockettest:polltest",
+    "//apps/netstack/examples/sockettest:selecttest",
+    "//apps/netstack/examples/third_party/asio:async_client",
+    "//apps/netstack/examples/third_party/asio:async_https",
+    "//apps/netstack/examples/third_party/openbsd-netcat:nc",
+  ]
+}

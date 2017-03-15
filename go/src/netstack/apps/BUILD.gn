@@ -1,14 +1,9 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("netstack_debug") {
-  sources = [
-    "netstack_debug.c",
-  ]
-
-  libs = [
-    "mxio",
-    "magenta",
+group("apps") {
+  deps = [
+    "//apps/netstack/apps/netstack_debug",
   ]
 }
