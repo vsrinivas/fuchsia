@@ -581,8 +581,10 @@ StoryProviderImpl::StoryProviderImpl(
     app::ApplicationEnvironmentPtr environment,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
     const std::string& device_name,
+    AppConfigPtr story_shell,
     const ComponentContextInfo& component_context_info)
     : environment_(std::move(environment)),
+      story_shell_(std::move(story_shell)),
       storage_(new Storage),
       root_snapshot_("StoryProviderImpl"),
       page_watcher_binding_(this),

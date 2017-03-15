@@ -11,6 +11,7 @@
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/device/device_context.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
@@ -51,22 +52,30 @@ class Settings {
   explicit Settings(const ftl::CommandLine& command_line) {
     device_name =
         command_line.GetOptionValueWithDefault("device_name", "magenta");
-    device_shell = command_line.GetOptionValueWithDefault(
-        "device_shell", "file:///system/apps/dummy_device_shell");
     user_runner = command_line.GetOptionValueWithDefault(
         "user_runner", "file:///system/apps/user_runner");
-    user_shell = command_line.GetOptionValueWithDefault(
+
+    device_shell.url = command_line.GetOptionValueWithDefault(
+        "device_shell", "file:///system/apps/dummy_device_shell");
+    user_shell.url = command_line.GetOptionValueWithDefault(
         "user_shell", "file:///system/apps/armadillo_user_shell");
+    story_shell.url = command_line.GetOptionValueWithDefault(
+        "story_shell", "file:///system/apps/dummy_story_shell");
+
     ledger_repository_for_testing =
         command_line.HasOption("ledger_repository_for_testing");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("device_shell_args", ""),
-        &device_shell_args);
+        &device_shell.args);
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("user_shell_args", ""),
-        &user_shell_args);
+        &user_shell.args);
+
+    ParseShellArgs(
+        command_line.GetOptionValueWithDefault("story_shell_args", ""),
+        &story_shell.args);
   }
 
   static std::string GetUsage() {
@@ -77,6 +86,8 @@ class Settings {
       --user_runner=USER_RUNNER
       --user_shell=USER_SHELL
       --user_shell_args=SHELL_ARGS
+      --story_shell=STORY_SHELL
+      --story_shell_args=SHELL_ARGS
       --ledger_repository_for_testing
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
@@ -86,20 +97,24 @@ class Settings {
     USER_SHELL: URL of the user shell to run.
                 Defaults to "file:///system/apps/armadillo_user_shell".
                 For integration testing use "dummy_user_shell".
+    STORY_SHELL: URL of the story shell to run.
+                Defaults to "file:///system/apps/dummy_story_shell".
     SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.)USAGE";
   }
 
   std::string device_name;
-  std::string device_shell;
-  std::vector<std::string> device_shell_args;
+  AppConfig device_shell;
+
   std::string user_runner;
-  std::string user_shell;
-  std::vector<std::string> user_shell_args;
+  AppConfig user_shell;
+
+  AppConfig story_shell;
+
   bool ledger_repository_for_testing;
 
  private:
   void ParseShellArgs(const std::string& value,
-                      std::vector<std::string>* args) {
+                      fidl::Array<fidl::String>* args) {
     bool escape = false;
     std::string arg;
     for (std::string::const_iterator i = value.begin(); i != value.end(); ++i) {
@@ -131,6 +146,8 @@ class Settings {
       FTL_LOG(INFO) << "ARG " << s;
     }
   }
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(Settings);
 };
 
 // TODO(vardhan): A running user's state is starting to grow, so break it
@@ -185,8 +202,8 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
     // 2. Start the device shell.
     app::ServiceProviderPtr device_shell_services;
     auto device_shell_launch_info = app::ApplicationLaunchInfo::New();
-    device_shell_launch_info->url = settings_.device_shell;
-    device_shell_launch_info->arguments = to_array(settings_.device_shell_args);
+    device_shell_launch_info->url = settings_.device_shell.url;
+    device_shell_launch_info->arguments = settings_.device_shell.args.Clone();
     device_shell_launch_info->services = device_shell_services.NewRequest();
 
     app_context_->launcher()->CreateApplication(
@@ -279,7 +296,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
 
     user_controller_impl_.reset(new UserControllerImpl(
         app_context_, settings_.device_name, settings_.user_runner,
-        settings_.user_shell, settings_.user_shell_args, std::move(user_id),
+        settings_.user_shell, settings_.story_shell, std::move(user_id),
         std::move(ledger_repository), std::move(view_owner_request),
         std::move(user_controller_request),
         [this] { user_controller_impl_.reset(); }));
@@ -361,7 +378,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
     return true;
   }
 
-  const Settings settings_;
+  const Settings& settings_;  // Not owned nor copied.
   std::string serialized_users_;
   const modular::UsersStorage* users_storage_ = nullptr;
 

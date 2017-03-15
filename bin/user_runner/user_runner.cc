@@ -17,6 +17,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
@@ -95,8 +96,8 @@ class UserRunnerImpl : public UserRunner {
       std::shared_ptr<app::ApplicationContext> application_context,
       fidl::Array<uint8_t> user_id,
       const fidl::String& device_name,
-      const fidl::String& user_shell,
-      fidl::Array<fidl::String> user_shell_args,
+      AppConfigPtr user_shell,
+      AppConfigPtr story_shell,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -114,7 +115,7 @@ class UserRunnerImpl : public UserRunner {
     stories_scope_ = std::make_unique<Scope>(std::move(user_runner_env), label);
 
     auto resolver_service_provider = GetServiceProvider(
-        "file:///system/apps/resolver_main", nullptr /* user_shell_args */);
+        "file:///system/apps/resolver_main");
     stories_scope_->AddService<resolver::Resolver>(
         ftl::MakeCopyable([resolver_service_provider =
                                std::move(resolver_service_provider)](
@@ -124,7 +125,7 @@ class UserRunnerImpl : public UserRunner {
                            std::move(resolver_service_request));
         }));
 
-    RunUserShell(user_shell, user_shell_args, std::move(view_owner_request));
+    RunUserShell(std::move(user_shell), std::move(view_owner_request));
 
     ledger::LedgerPtr ledger;
     ledger_repository_->GetLedger(
@@ -142,13 +143,13 @@ class UserRunnerImpl : public UserRunner {
     stories_scope_->environment()->Duplicate(env.NewRequest());
 
     story_provider_impl_.reset(new StoryProviderImpl(
-        std::move(env), std::move(ledger), device_name,
+        std::move(env), std::move(ledger), device_name, std::move(story_shell),
         {&message_queue_manager_, agent_runner_.get(), ledger_repository_.get()}));
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
     story_provider_impl_->AddBinding(story_provider.NewRequest());
 
-    auto maxwell_services = GetServiceProvider(kMaxwellUrl, nullptr);
+    auto maxwell_services = GetServiceProvider(kMaxwellUrl);
 
     auto maxwell_launcher =
         app::ConnectToService<maxwell::Launcher>(maxwell_services.get());
@@ -218,17 +219,13 @@ class UserRunnerImpl : public UserRunner {
     });
   }
 
-  app::ServiceProviderPtr GetServiceProvider(
-      const fidl::String& url,
-      const fidl::Array<fidl::String>* const args) {
+  app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config) {
     auto launch_info = app::ApplicationLaunchInfo::New();
 
     app::ServiceProviderPtr services;
     launch_info->services = services.NewRequest();
-    launch_info->url = url;
-    if (args != nullptr) {
-      launch_info->arguments = args->Clone();
-    }
+    launch_info->url = config->url;
+    launch_info->arguments = config->args.Clone();
 
     app::ApplicationControllerPtr ctrl;
     application_context_->launcher()->CreateApplication(std::move(launch_info),
@@ -238,14 +235,19 @@ class UserRunnerImpl : public UserRunner {
     return services;
   }
 
+  app::ServiceProviderPtr GetServiceProvider(const std::string& url) {
+    AppConfig config;
+    config.url = url;
+    return GetServiceProvider(config.Clone());
+  }
+
   // This method starts UserShell in a new process, connects to its
   // |ViewProvider| interface, passes a |ViewOwner| request, gets
   // |ServiceProvider| and finally connects to UserShell.
   void RunUserShell(
-      const fidl::String& user_shell,
-      const fidl::Array<fidl::String>& user_shell_args,
+      AppConfigPtr user_shell,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-    auto app_services = GetServiceProvider(user_shell, &user_shell_args);
+    auto app_services = GetServiceProvider(std::move(user_shell));
 
     mozart::ViewProviderPtr view_provider;
     ConnectToService(app_services.get(), view_provider.NewRequest());
@@ -291,15 +293,15 @@ class UserRunnerApp : public UserRunnerFactory {
   // |UserRunnerFactory|
   void Create(fidl::Array<uint8_t> user_id,
               const fidl::String& device_name,
-              const fidl::String& user_shell,
-              fidl::Array<fidl::String> user_shell_args,
+              AppConfigPtr user_shell,
+              AppConfigPtr story_shell,
               fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
               fidl::InterfaceHandle<UserContext> user_context,
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
               fidl::InterfaceRequest<UserRunner> user_runner_request) override {
     // Deleted in UserRunnerImpl::Terminate().
     new UserRunnerImpl(application_context_, std::move(user_id), device_name,
-                       user_shell, std::move(user_shell_args),
+                       std::move(user_shell), std::move(story_shell),
                        std::move(ledger_repository), std::move(user_context),
                        std::move(view_owner_request),
                        std::move(user_runner_request));

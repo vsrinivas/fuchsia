@@ -34,6 +34,7 @@ fidl("private") {
   ]
 
   deps = [
+    "//apps/modular/services/config",
     "//apps/mozart/services/views",
     "//apps/ledger/services/internal",
   ]

@@ -166,7 +166,8 @@ void StoryImpl::StartStoryShell(
   app::ServiceProviderPtr story_shell_services;
   auto story_shell_launch_info = app::ApplicationLaunchInfo::New();
   story_shell_launch_info->services = story_shell_services.NewRequest();
-  story_shell_launch_info->url = "file:///system/apps/dummy_story_shell";
+  story_shell_launch_info->url = story_provider_impl_->story_shell().url;
+  story_shell_launch_info->arguments = story_provider_impl_->story_shell().args.Clone();
 
   story_provider_impl_->launcher()->CreateApplication(
       std::move(story_shell_launch_info),

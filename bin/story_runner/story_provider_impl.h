@@ -12,6 +12,7 @@
 #include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
@@ -40,6 +41,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   StoryProviderImpl(app::ApplicationEnvironmentPtr environment,
                     fidl::InterfaceHandle<ledger::Ledger> ledger,
                     const std::string& device_name,
+                    AppConfigPtr story_shell,
                     const ComponentContextInfo& component_context_info);
 
   ~StoryProviderImpl() override;
@@ -67,6 +69,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   using Storage = StoryStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
+  const AppConfig& story_shell() const { return *story_shell_; }
 
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
 
@@ -117,6 +120,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   std::vector<fidl::InterfaceRequest<StoryProvider>> requests_;
 
   app::ApplicationLauncherPtr launcher_;
+
+  AppConfigPtr story_shell_;
 
   // A list of IDs of *all* stories available on a user's ledger.
   std::unordered_set<std::string> story_ids_;

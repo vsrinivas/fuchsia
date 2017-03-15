@@ -38,6 +38,7 @@ source_set("story_runner") {
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/component",
+    "//apps/modular/services/config",
     "//apps/modular/services/module",
     "//apps/modular/services/story:private",
     "//apps/modular/src/agent_runner:public",

@@ -46,6 +46,7 @@ executable("device_runner") {
     "//apps/ledger/services/internal",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:scope",
+    "//apps/modular/services/config",
     "//apps/modular/services/device",
     "//apps/modular/services/user:private",
     "//apps/mozart/services/presentation",

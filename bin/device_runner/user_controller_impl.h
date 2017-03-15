@@ -9,6 +9,7 @@
 #include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/lib/fidl/scope.h"
+#include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
@@ -56,8 +57,8 @@ class UserControllerImpl : public UserController {
       std::shared_ptr<app::ApplicationContext> app_context,
       const std::string& device_name,
       const std::string& user_runner,
-      const std::string& user_shell,
-      const std::vector<std::string>& user_shell_args,
+      const AppConfig& user_shell,
+      const AppConfig& story_shell,
       fidl::Array<uint8_t> user_id,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
