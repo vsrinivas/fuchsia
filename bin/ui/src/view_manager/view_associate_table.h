@@ -42,7 +42,7 @@ class ViewAssociateTable : public mozart::ViewAssociateOwner {
                                 const fidl::String& service_name,
                                 mx::channel client_handle);
 
-  void OnConnected(uint32_t index, mozart::ViewAssociateInfoPtr info);
+
 
   size_t associate_count();
 
@@ -64,6 +64,7 @@ class ViewAssociateTable : public mozart::ViewAssociateOwner {
     fidl::Binding<mozart::ViewInspector> inspector_binding;
   };
 
+  void OnConnected(AssociateData* data, mozart::ViewAssociateInfoPtr info);
   bool RemoveAssociateData(AssociateData* associate_data, std::string& label);
   void CompleteDeferredWorkIfReady();
   void OnAssociateOwnerConnectionError(AssociateData* associate_data);

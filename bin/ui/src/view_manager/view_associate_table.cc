@@ -49,11 +49,10 @@ void ViewAssociateTable::RegisterViewAssociate(
   // Connect the associate to our view inspector.
   mozart::ViewInspectorPtr inspector_ptr;
   data->inspector_binding.Bind(inspector_ptr.NewRequest());
-  data->associate->Connect(std::move(inspector_ptr), [
-    this, index = pending_connection_count_
-  ](mozart::ViewAssociateInfoPtr info) {
-    OnConnected(index, std::move(info));
-  });
+  data->associate->Connect(std::move(inspector_ptr),
+                           [this, data](mozart::ViewAssociateInfoPtr info) {
+                             OnConnected(data, std::move(info));
+                           });
 
   // Wait for the associate to connect to our view inspector.
   pending_connection_count_++;
@@ -161,15 +160,20 @@ void ViewAssociateTable::ConnectToViewTreeService(
   // Allow pipe to be closed as an indication of failure.
 }
 
-void ViewAssociateTable::OnConnected(uint32_t index,
+void ViewAssociateTable::OnConnected(AssociateData* associate_data,
                                      mozart::ViewAssociateInfoPtr info) {
   FTL_DCHECK(info);
   FTL_DCHECK(pending_connection_count_);
-  FTL_DCHECK(!associates_[index]->info);
 
-  FTL_VLOG(1) << "Connected to view associate: label="
-              << associates_[index]->label << ", info=" << info;
-  associates_[index]->info = std::move(info);
+  for (auto it = associates_.begin(); it != associates_.end(); it++) {
+    AssociateData* data = it->get();
+    if (associate_data == data) {
+      FTL_VLOG(1) << "Connected to view associate: label=" << data->label
+                  << ", info=" << info;
+      data->info = std::move(info);
+      break;
+    }
+  }
 
   pending_connection_count_--;
   CompleteDeferredWorkIfReady();

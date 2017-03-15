@@ -13,16 +13,16 @@ bool TestWithMessageLoop::RunLoopWithTimeout(ftl::TimeDelta timeout) {
   auto canceled = std::make_unique<bool>(false);
   bool* canceled_ptr = canceled.get();
   bool timed_out = false;
-  message_loop_.task_runner()->PostDelayedTask(
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       ftl::MakeCopyable([ this, canceled = std::move(canceled), &timed_out ] {
         if (*canceled) {
           return;
         }
         timed_out = true;
-        message_loop_.QuitNow();
+        mtl::MessageLoop::GetCurrent()->QuitNow();
       }),
       timeout);
-  message_loop_.Run();
+  mtl::MessageLoop::GetCurrent()->Run();
   if (!timed_out) {
     *canceled_ptr = true;
   }

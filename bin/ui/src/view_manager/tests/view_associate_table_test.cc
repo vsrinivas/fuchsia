@@ -13,16 +13,7 @@
 namespace view_manager {
 namespace test {
 
-class ViewAssociateTableTest : public TestWithMessageLoop {
- public:
-  ViewAssociateTableTest() {}
-  ~ViewAssociateTableTest() override {}
-
-  void SetUp() override {}
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ViewAssociateTableTest);
-};
+class ViewAssociateTableTest : public TestWithMessageLoop {};
 
 TEST_F(ViewAssociateTableTest, RegisterViewAssociateThenCloseIt) {
   // Create a mock view registry

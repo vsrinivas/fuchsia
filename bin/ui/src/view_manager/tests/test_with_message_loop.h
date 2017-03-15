@@ -10,10 +10,10 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-// Run message loop until condition is true (timeout after 400*10ms = 4000ms)
-#define RUN_MESSAGE_LOOP_WHILE(x)                               \
+// Run message loop until condition is false (timeout after 400*10ms = 4000ms)
+#define RUN_MESSAGE_LOOP_WHILE(condition)                       \
   {                                                             \
-    for (int i = 0; x && i < 400; i++) {                        \
+    for (int i = 0; condition && i < 400; i++) {                \
       RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(10)); \
     }                                                           \
   }
@@ -25,14 +25,16 @@ class TestWithMessageLoop : public ::testing::Test {
  public:
   TestWithMessageLoop() {}
 
+  void SetUp() override {
+    FTL_CHECK(nullptr != mtl::MessageLoop::GetCurrent());
+  }
+
  protected:
   // Run the loop for at most |timeout|. Returns |true| if the timeout has
   // been
   // reached.
   bool RunLoopWithTimeout(
       ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
-
-  mtl::MessageLoop message_loop_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(TestWithMessageLoop);
