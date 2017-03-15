@@ -1,10 +1,10 @@
 {
     "imports": [
         "audio",
-        "init"
+        "init",
+        "magma"
     ],
     "labels": [
-        "//magma:magma_service_driver"
     ],
     "binaries": [
     ]
