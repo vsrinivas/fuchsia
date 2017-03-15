@@ -134,3 +134,10 @@
 #define __BEGIN_CDECLS
 #define __END_CDECLS
 #endif
+
+// constexpr annotation for use in static inlines usable in both C and C++
+#ifdef __cplusplus
+#define __CONSTEXPR constexpr
+#else
+#define __CONSTEXPR
+#endif
