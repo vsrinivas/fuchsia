@@ -119,9 +119,6 @@ class FfmpegDecoderBase : public Decoder {
   // Callback used by the ffmpeg decoder to release a buffer.
   static void ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer);
 
-  // Creates an end-of-stream packet with no payload.
-  PacketPtr CreateOutputEndOfStreamPacket();
-
   AvCodecContextPtr av_codec_context_;
   ffmpeg::AvFramePtr av_frame_ptr_;
   int64_t next_pts_ = Packet::kUnknownPts;

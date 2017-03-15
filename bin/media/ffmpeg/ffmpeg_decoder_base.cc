@@ -42,9 +42,15 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
   *output = nullptr;
 
   if (new_input) {
-    OnNewInputPacket(input);
+    if (input->size() == 0 && !input->end_of_stream()) {
+      // Throw away empty packets that aren't end-of-stream packets. The
+      // underlying decoder interprets an empty packet as end-of-stream.
+      // Returning true here causes the stage to release the input packet and
+      // call again with a new one.
+      return true;
+    }
 
-    // TODO(dalesat): Logic for payload-bearing eos input packets.
+    OnNewInputPacket(input);
 
     AVPacket av_packet;
     av_init_packet(&av_packet);
@@ -63,7 +69,13 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
 
     if (result != 0) {
       FTL_DLOG(ERROR) << "avcodec_send_packet failed " << result;
-      return true;  // Done with input packet.
+      if (input->end_of_stream()) {
+        // The input packet was end-of-stream. We won't get called again before
+        // a flush, so make sure the output gets an end-of-stream packet.
+        *output = Packet::CreateEndOfStream(next_pts_, pts_rate_);
+      }
+
+      return true;
     }
   }
 
@@ -84,26 +96,40 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
     case AVERROR(EAGAIN):
       // Succeeded, no frame produced, need another input packet.
       FTL_DCHECK(!input->end_of_stream());
-      return true;
+      if (!input->end_of_stream() || input->size() == 0) {
+        return true;
+      }
+
+      // The input packet is an end-of-stream packet, but it has payload. The
+      // underlying decoder interprets an empty packet as end-of-stream, so
+      // we need to send it an empty packet. We do this by reentering
+      // |TransformPacket|. This is safe, because we get |AVERROR_EOF|, not
+      // |AVERROR(EAGAIN)| when the decoder is drained following an empty
+      // input packet.
+      return TransformPacket(Packet::CreateEndOfStream(next_pts_, pts_rate_),
+                             true, allocator, output);
 
     case AVERROR_EOF:
       // Succeeded, no frame produced, end-of-stream sequence complete.
       FTL_DCHECK(input->end_of_stream());
-      *output = CreateOutputEndOfStreamPacket();
+      *output = Packet::CreateEndOfStream(next_pts_, pts_rate_);
       return true;
 
     default:
       FTL_DLOG(ERROR) << "avcodec_receive_frame failed " << result;
+      if (input->end_of_stream()) {
+        // The input packet was end-of-stream. We won't get called again before
+        // a flush, so make sure the output gets an end-of-stream packet.
+        *output = Packet::CreateEndOfStream(next_pts_, pts_rate_);
+      }
+
       return true;
   }
 }
 
 void FfmpegDecoderBase::OnNewInputPacket(const PacketPtr& packet) {}
 
-PacketPtr FfmpegDecoderBase::CreateOutputEndOfStreamPacket() {
-  return Packet::CreateEndOfStream(next_pts_, pts_rate_);
-}
-
+// static
 int FfmpegDecoderBase::AllocateBufferForAvFrame(
     AVCodecContext* av_codec_context,
     AVFrame* av_frame,
@@ -124,6 +150,7 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(
   return self->BuildAVFrame(*av_codec_context, av_frame, self->allocator_);
 }
 
+// static
 void FfmpegDecoderBase::ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer) {
   FTL_DCHECK(opaque);
   FTL_DCHECK(buffer);
