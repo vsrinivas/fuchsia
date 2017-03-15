@@ -40,13 +40,13 @@ static void halt_other_cpus(void) {
 void platform_panic_start(void) {
     arch_disable_ints();
 
-    halt_other_cpus();
-
     if (atomic_swap(&panic_started, 1) == 0) {
 #if WITH_LIB_DEBUGLOG
         dlog_bluescreen_init();
 #endif
     }
+
+    halt_other_cpus();
 }
 
 void platform_halt(
