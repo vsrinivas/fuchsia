@@ -49,7 +49,7 @@ class ModelDisplayListBuilder {
   const ViewingVolume volume_;
 
   // Scale object coordinates relative to the size of the stage.
-  const vec2 stage_scale_;
+  const vec3 stage_scale_;
 
   // If this is false, use |default_white_texture_| instead of a material's
   // existing texture (e.g. to save bandwidth during depth-only passes).

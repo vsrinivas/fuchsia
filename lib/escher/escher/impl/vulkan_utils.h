@@ -42,9 +42,13 @@ std::vector<vk::Format> GetSupportedDepthFormats(
     vk::PhysicalDevice device,
     std::vector<vk::Format> desired_formats);
 
-// Pick the highest precision depth format that supports optimal tiling.
+// Pick the lowest precision depth format that supports optimal tiling.
 typedef vk::ResultValueType<vk::Format>::type FormatResult;
 FormatResult GetSupportedDepthFormat(vk::PhysicalDevice device);
+
+// Pick the lowest precision depth/stencil format that supports optimal tiling.
+typedef vk::ResultValueType<vk::Format>::type FormatResult;
+FormatResult GetSupportedDepthStencilFormat(vk::PhysicalDevice device);
 
 // Search through all memory types specified by |type_bits| and return the index
 // of the first one that has all necessary flags.  Panic if nones is found.

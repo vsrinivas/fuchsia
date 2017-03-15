@@ -30,9 +30,6 @@ namespace escher {
 
 namespace {
 constexpr float kMaxDepth = 1.f;
-// Add a small fudge-factor so that we don't clip objects
-// resting on the stage floor.
-constexpr float kDepthClearValue = kMaxDepth + 0.01f;
 
 // Amount by which the SsdoAccelerator table is scaled down in each dimension,
 // not including bit-packing.
@@ -70,7 +67,7 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
           escher->resource_life_preserver())),
       clear_values_({vk::ClearColorValue(
                          std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}}),
-                     vk::ClearDepthStencilValue(kDepthClearValue, 0)}) {}
+                     vk::ClearDepthStencilValue(kMaxDepth, 0)}) {}
 
 PaperRenderer::~PaperRenderer() {
   escher_->command_buffer_pool()->Cleanup();

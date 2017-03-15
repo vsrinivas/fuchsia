@@ -23,9 +23,19 @@ std::vector<vk::Format> GetSupportedDepthFormats(
 
 FormatResult GetSupportedDepthFormat(vk::PhysicalDevice device) {
   auto supported_formats = GetSupportedDepthFormats(
-      device, {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint,
-               vk::Format::eD24UnormS8Uint, vk::Format::eD16UnormS8Uint,
-               vk::Format::eD16Unorm});
+      device, {vk::Format::eD16Unorm, vk::Format::eD32Sfloat});
+  if (supported_formats.empty()) {
+    auto undefined = vk::Format::eUndefined;
+    return FormatResult(vk::Result::eErrorFeatureNotPresent, undefined);
+  } else {
+    return FormatResult(vk::Result::eSuccess, supported_formats[0]);
+  }
+}
+
+FormatResult GetSupportedDepthStencilFormat(vk::PhysicalDevice device) {
+  auto supported_formats = GetSupportedDepthFormats(
+      device, {vk::Format::eD16UnormS8Uint, vk::Format::eD24UnormS8Uint,
+               vk::Format::eD32SfloatS8Uint});
   if (supported_formats.empty()) {
     auto undefined = vk::Format::eUndefined;
     return FormatResult(vk::Result::eErrorFeatureNotPresent, undefined);

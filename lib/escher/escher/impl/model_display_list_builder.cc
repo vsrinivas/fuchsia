@@ -7,8 +7,8 @@
 #include <glm/gtx/transform.hpp>
 
 #include "escher/impl/command_buffer.h"
-#include "escher/impl/model_renderer.h"
 #include "escher/impl/model_pipeline_cache.h"
+#include "escher/impl/model_renderer.h"
 
 namespace escher {
 namespace impl {
@@ -16,7 +16,12 @@ namespace impl {
 namespace {
 // TODO: should be queried from device.
 constexpr vk::DeviceSize kMinUniformBufferOffsetAlignment = 256;
-}
+
+// Add a small fudge-factor so that we don't clip objects resting on the stage
+// floor.  It can't be much smaller than this (0.00075 is too small for 16-bit
+// depth formats).
+constexpr float kStageFloorFudgeFactor = 0.0008f;
+}  // namespace
 
 ModelDisplayListBuilder::ModelDisplayListBuilder(
     vk::Device device,
@@ -33,7 +38,10 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     bool use_depth_prepass)
     : device_(device),
       volume_(stage.viewing_volume()),
-      stage_scale_(scale * vec2(2.f / volume_.width(), 2.f / volume_.height())),
+      stage_scale_(
+          vec3(scale.x * 2.f / volume_.width(),
+               scale.y * 2.f / volume_.height(),
+               1.f / (volume_.depth_range() + kStageFloorFudgeFactor))),
       use_material_textures_(use_material_textures),
       white_texture_(white_texture),
       illumination_texture_(illumination_texture ? illumination_texture
@@ -151,7 +159,8 @@ void ModelDisplayListBuilder::AddObject(const Object& object) {
   // normalized to the range (0,1).  This is passed unaltered through the
   // vertex shader.  See the note above, where we set the viewport min/max
   // depth.
-  translate_z = 1.f - (object.position().z / volume_.depth_range());
+  translate_z =
+      1.f - (object.position().z + kStageFloorFudgeFactor) * stage_scale_.z;
 
   if (object.rotation() != 0.f) {
     float pre_rot_translation_x = -object.rotation_point().x;
