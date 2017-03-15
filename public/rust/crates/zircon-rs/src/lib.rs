@@ -14,9 +14,11 @@ use std::mem;
 
 use conv::{ValueInto, ValueFrom, UnwrapOrSaturate};
 
+mod event;
 mod eventpair;
 mod socket;
 
+pub use event::{Event, EventOpts};
 pub use eventpair::EventPair;
 pub use socket::{Socket, SocketOpts, SocketReadOpts, SocketWriteOpts};
 
@@ -141,6 +143,7 @@ pub use magenta_sys::{
 pub type Signals = sys::mx_signals_t;
 
 pub use magenta_sys::{
+        MX_SIGNAL_NONE,
         MX_OBJECT_SIGNAL_0,
         MX_OBJECT_SIGNAL_1,
         MX_OBJECT_SIGNAL_2,
@@ -325,6 +328,12 @@ impl<'a> HandleRef<'a> {
         into_result(status, || Handle(out))
     }
 
+    fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+        let handle = self.handle;
+        let status = unsafe { sys::mx_object_signal(handle, clear_mask.bits(), set_mask.bits()) };
+        into_result(status, || ())
+    }
+
     fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
         let handle = self.handle;
         let mut pending = sys::mx_signals_t::empty();
@@ -367,6 +376,13 @@ pub trait HandleBase: Sized {
     /// syscall.
     fn replace(self, rights: Rights) -> Result<Self, Status> {
         self.get_ref().replace(rights).map(|handle| Self::from_handle(handle))
+    }
+
+    /// Set and clear userspace-accessible signal bits on an object. Wraps the
+    /// [mx_object_signal](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_signal.md)
+    /// syscall.
+    fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+        self.get_ref().signal(clear_mask, set_mask)
     }
 
     /// Waits on a handle. Wraps the
@@ -1018,5 +1034,25 @@ mod tests {
         let mut read_vec = vec![0; hello_length];
         assert_eq!(vmo.read(&mut read_vec, 0).unwrap(), hello_length);
         assert_eq!(read_vec, b"hello");
+    }
+
+    #[test]
+    fn wait_and_signal() {
+        let event = Event::create(EventOpts::Default).unwrap();
+        let ten_ms: Time = 10_000_000;
+
+        // Waiting on it without setting any signal should time out.
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
+
+        // If we set a signal, we should be able to wait for it.
+        assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms).unwrap(), MX_USER_SIGNAL_0);
+
+        // Should still work, signals aren't automatically cleared.
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms).unwrap(), MX_USER_SIGNAL_0);
+
+        // Now clear it, and waiting should time out again.
+        assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
     }
 }

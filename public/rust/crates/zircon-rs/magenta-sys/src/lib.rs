@@ -210,4 +210,14 @@ extern {
         actual: *mut usize) -> mx_status_t;
     pub fn mx_socket_read(handle: mx_handle_t, options: u32, buffer: *mut u8, len: usize,
         actual: *mut usize) -> mx_status_t;
+
+    // Event objects
+    pub fn mx_event_create(options: u32, out: *mut mx_handle_t) -> mx_status_t;
+    pub fn mx_eventpair_create(options: u32, out0: *mut mx_handle_t, out1: *mut mx_handle_t)
+        -> mx_status_t;
+
+    // Sending signals
+    pub fn mx_object_signal(handle: mx_handle_t, clear_mask: u32, set_mask: u32) -> mx_status_t;
+    pub fn mx_object_signal_peer(handle: mx_handle_t, clear_mask: u32, set_mask: u32)
+        -> mx_status_t;
 }
