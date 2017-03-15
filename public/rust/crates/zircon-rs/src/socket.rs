@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta sockets.
 
-use {HandleBase, Handle, HandleRef};
+use {HandleBase, Handle, HandleRef, Peered};
 use {sys, Status, into_result};
 
 use std::ptr;
@@ -23,6 +23,9 @@ impl HandleBase for Socket {
     fn from_handle(handle: Handle) -> Self {
         Socket(handle)
     }
+}
+
+impl Peered for Socket {
 }
 
 /// Options for creating a socket pair.

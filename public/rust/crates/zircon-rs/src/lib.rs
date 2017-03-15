@@ -19,7 +19,7 @@ mod eventpair;
 mod socket;
 
 pub use event::{Event, EventOpts};
-pub use eventpair::EventPair;
+pub use eventpair::{EventPair, EventPairOpts};
 pub use socket::{Socket, SocketOpts, SocketReadOpts, SocketWriteOpts};
 
 use magenta_sys as sys;
@@ -404,6 +404,20 @@ pub trait HandleBase: Sized {
     }
 }
 
+/// A trait implemented by all handles for objects which have a peer.
+pub trait Peered: HandleBase {
+    /// Set and clear userspace-accessible signal bits on the object's peer. Wraps the
+    /// [mx_object_signal_peer](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_signal.md)
+    /// syscall.
+    fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+        let handle = self.get_ref().handle;
+        let status = unsafe {
+            sys::mx_object_signal_peer(handle, clear_mask.bits(), set_mask.bits())
+        };
+        into_status(status, || ())
+    }
+}
+
 fn handle_drop(handle: sys::mx_handle_t) {
     let _ = unsafe { sys::mx_handle_close(handle) };
 }
@@ -481,6 +495,9 @@ impl HandleBase for Channel {
     fn from_handle(handle: Handle) -> Self {
         Channel(handle)
     }
+}
+
+impl Peered for Channel {
 }
 
 impl Channel {
@@ -1054,5 +1071,25 @@ mod tests {
         // Now clear it, and waiting should time out again.
         assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
         assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
+    }
+
+    #[test]
+    fn wait_and_signal_peer() {
+        let (p1, p2) = EventPair::create(EventPairOpts::Default).unwrap();
+        let ten_ms: Time = 10_000_000;
+
+        // Waiting on one without setting any signal should time out.
+        assert_eq!(p2.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
+
+        // If we set a signal, we should be able to wait for it.
+        assert!(p1.signal_peer(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert_eq!(p2.wait(MX_USER_SIGNAL_0, ten_ms).unwrap(), MX_USER_SIGNAL_0);
+
+        // Should still work, signals aren't automatically cleared.
+        assert_eq!(p2.wait(MX_USER_SIGNAL_0, ten_ms).unwrap(), MX_USER_SIGNAL_0);
+
+        // Now clear it, and waiting should time out again.
+        assert!(p1.signal_peer(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
+        assert_eq!(p2.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
     }
 }
