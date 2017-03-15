@@ -28,8 +28,11 @@ DDK_PROTOCOL_DEF(MISC_PARENT,    'pMSP', "misc-parent", PF_NOPUB)
 DDK_PROTOCOL_DEF(PCI,            'pPCI', "pci", 0)
 DDK_PROTOCOL_DEF(TPM,            'pTPM', "tpm", 0)
 DDK_PROTOCOL_DEF(USB,            'pUSB', "usb", 0)
-DDK_PROTOCOL_DEF(USB_HCI,        'pUHI', "usb-hci", 0)
 DDK_PROTOCOL_DEF(USB_BUS,        'pUBS', "usb-bus", 0)
+DDK_PROTOCOL_DEF(USB_DCI,        'pUDC', "usb-dci", 0)  // Device Controller Interface
+DDK_PROTOCOL_DEF(USB_DEVICE,     'pUSD', "usb-device", 0)
+DDK_PROTOCOL_DEF(USB_FUNCTION,   'pUSF', "usb-function", 0)
+DDK_PROTOCOL_DEF(USB_HCI,        'pUHI', "usb-hci", 0)  // Host Controller Interface
 DDK_PROTOCOL_DEF(BLUETOOTH_HCI,  'pBHC', "bt-hci", 0)
 DDK_PROTOCOL_DEF(AUDIO,          'pAUD', "audio", 0)
 DDK_PROTOCOL_DEF(MIDI,           'pMID', "midi", 0)

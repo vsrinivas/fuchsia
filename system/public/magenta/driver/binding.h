@@ -87,6 +87,7 @@ __BEGIN_CDECLS;
 #define BIND_PCI_BDF_UNPACK_FUNC(bdf) ((uint32_t)(bdf) & 0x07)
 
 // usb binding variables at 0x02XX
+// these are used for both MX_PROTOCOL_USB and MX_PROTOCOL_USB_FUNCTION
 #define BIND_USB_VID          0x0200
 #define BIND_USB_PID          0x0201
 #define BIND_USB_CLASS        0x0202

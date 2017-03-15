@@ -274,6 +274,7 @@ static mx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
 
 static void usb_interface_queue(void* ctx, iotxn_t* txn, uint8_t ep_address, uint64_t frame) {
     usb_interface_t* intf = ctx;
+    txn->protocol = MX_PROTOCOL_USB;
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
 
     memset(data, 0, sizeof(*data));
