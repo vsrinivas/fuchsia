@@ -523,7 +523,7 @@ func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH,
 		return 0, 0, err
 	}
 	if n == ipv6.ProtocolNumber {
-		if err := ios.ep.SetSockOpt(tcpip.V6OnlyOption(0)); err != nil {
+		if err := ep.SetSockOpt(tcpip.V6OnlyOption(0)); err != nil {
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
