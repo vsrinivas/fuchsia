@@ -607,16 +607,36 @@ int main(int argc, char** argv) {
 
         // ensure any payload is null-terminated
         buf[r] = 0;
-        if (nodename) {
-            if (!strncmp((const char*)msg->data, "nodename=", 9)) {
-                const char* node = (void*)msg->data + 9;
-                if (strcmp(node, nodename)) {
-                    fprintf(stderr, "%s: ignoring nodename %s (expecting %s)\n", appname, node, nodename);
-                    continue;
-                }
-            } else {
-                fprintf(stderr, "%s: ignoring unknown nodename (expecting %s)\n", appname, nodename);
+
+
+        char* save = NULL;
+        char* adv_nodename = NULL;
+        char* adv_version = "unknown";
+        for (char* var = strtok_r((char*)msg->data, ";", &save); var; var = strtok_r(NULL, ";", &save)) {
+            if (!strncmp(var, "nodename=", 9)) {
+                adv_nodename = var + 9;
+            } else if(!strncmp(var, "version=", 8)) {
+                adv_version = var + 8;
             }
+        }
+
+        if (nodename) {
+            if (adv_nodename == NULL) {
+                fprintf(stderr, "%s: ignoring unknown nodename (expecting %s)\n",
+                        appname, nodename);
+            } else if (strcmp(adv_nodename, nodename)) {
+                fprintf(stderr, "%s: ignoring nodename %s (expecting %s)\n",
+                        appname, adv_nodename, nodename);
+                continue;
+            }
+        }
+
+        if (strcmp(BOOTLOADER_VERSION, adv_version)) {
+            fprintf(stderr,
+                    "%s: WARNING:\n"
+                    "%s: WARNING: Bootloader version '%s' != '%s'. Please Upgrade.\n"
+                    "%s: WARNING:\n",
+                    appname, appname, adv_version, BOOTLOADER_VERSION, appname);
         }
 
         if (cmdline[0]) {

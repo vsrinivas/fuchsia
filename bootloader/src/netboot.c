@@ -129,7 +129,7 @@ transmit:
 }
 
 static char advertise_nodename[64] = "";
-static char advertise_data[128] = "nodename=magenta";
+static char advertise_data[256] = "nodename=magenta";
 
 static void advertise(void) {
     uint8_t buffer[256];
@@ -158,7 +158,8 @@ int netboot_init(const char* nodename) {
     }
     if (nodename) {
         strncpy(advertise_nodename, nodename, sizeof(advertise_nodename) - 1);
-        snprintf(advertise_data, sizeof(advertise_data), "nodename=%s", nodename);
+        snprintf(advertise_data, sizeof(advertise_data),
+                 "version=%s;nodename=%s", BOOTLOADER_VERSION, nodename);
     }
     return 0;
 }

@@ -9,6 +9,8 @@
 
 // clang-format off
 
+#define BOOTLOADER_VERSION "0.5"
+
 #define NB_MAGIC              0xAA774217
 
 #define NB_SERVER_PORT        33330
