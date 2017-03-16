@@ -100,9 +100,11 @@ Status JournalDBImpl::Put(convert::ExtendedStringView key,
     failed_operation_ = true;
     return s;
   }
-  UpdateValueCounter(object_id, [](int counter) { return counter + 1; });
-  if (prev_entry_status == Status::OK) {
-    UpdateValueCounter(prev_id, [](int counter) { return counter - 1; });
+  if (object_id != prev_id) {
+    UpdateValueCounter(object_id, [](int counter) { return counter + 1; });
+    if (prev_entry_status == Status::OK) {
+      UpdateValueCounter(prev_id, [](int counter) { return counter - 1; });
+    }
   }
   return batch->Execute();
 }
