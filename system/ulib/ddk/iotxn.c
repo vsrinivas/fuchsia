@@ -231,6 +231,7 @@ mx_status_t iotxn_alloc_vmo(iotxn_t** out, mx_handle_t vmo_handle, size_t data_s
     io_buffer_init_vmo(&priv->buffer, vmo_handle, data_offset, IO_BUFFER_RW);
     priv->data_size = data_size;
 
+    priv->txn.ops = &ops;
     *out = &priv->txn;
     return NO_ERROR;
 }
