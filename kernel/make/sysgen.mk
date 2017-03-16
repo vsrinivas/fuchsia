@@ -28,7 +28,7 @@ SG_SYSCALLS := $(SG_MAGENTA)/syscalls
 SG_PUBLIC_HEADER := $(SG_SYSCALLS)/definitions.h
 
 SG_SYSROOT_MAGENTA := $(BUILDDIR)/sysroot/include/magenta
-SG_SYSROOT_HEADER := $(SG_SYSROOT_MAGENTA)/syscall-definitions.h
+SG_SYSROOT_HEADER := $(SG_SYSROOT_MAGENTA)/syscalls/definitions.h
 
 # STAMPY ultimately generates most of the files and paths here.
 $(STAMPY): $(SYSGEN_APP) $(SYSCALLS_SRC)
