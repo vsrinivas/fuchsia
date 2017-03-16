@@ -290,6 +290,7 @@ PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                  PageId page_id)
     : main_runner_(task_runner),
       io_runner_(io_runner),
+      coroutine_service_(coroutine_service),
       page_dir_(page_dir),
       page_id_(std::move(page_id)),
       db_(coroutine_service, this, page_dir_ + kLevelDbDir),
@@ -440,8 +441,8 @@ void PageStorageImpl::AddCommitsFromSync(
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
-    btree::GetObjectsFromSync(leaf.second->GetRootId(), this,
-                              waiter->NewCallback());
+    btree::GetObjectsFromSync(coroutine_service_, this,
+                              leaf.second->GetRootId(), waiter->NewCallback());
   }
 
   waiter->Finalize(ftl::MakeCopyable([
@@ -527,7 +528,7 @@ void PageStorageImpl::GetUnsyncedObjectIds(
       callback(s, {});
       return;
     }
-    btree::GetObjectIds(this, commit->GetRootId(), [
+    btree::GetObjectIds(coroutine_service_, this, commit->GetRootId(), [
       this, callback = std::move(callback)
     ](Status s, std::set<ObjectId> commit_objects) {
       if (s != Status::OK) {
@@ -618,7 +619,7 @@ void PageStorageImpl::GetCommitContents(const Commit& commit,
                                         std::function<bool(Entry)> on_next,
                                         std::function<void(Status)> on_done) {
   btree::ForEachEntry(
-      this, commit.GetRootId(), min_key,
+      coroutine_service_, this, commit.GetRootId(), min_key,
       [on_next = std::move(on_next)](btree::EntryAndNodeId next) {
         return on_next(next.entry);
       },
@@ -651,8 +652,8 @@ void PageStorageImpl::GetEntryFromCommit(
     }
     callback(s, Entry());
   });
-  btree::ForEachEntry(this, commit.GetRootId(), std::move(key),
-                      std::move(on_next), std::move(on_done));
+  btree::ForEachEntry(coroutine_service_, this, commit.GetRootId(),
+                      std::move(key), std::move(on_next), std::move(on_done));
 }
 
 void PageStorageImpl::GetCommitContentsDiff(
@@ -660,8 +661,9 @@ void PageStorageImpl::GetCommitContentsDiff(
     const Commit& other_commit,
     std::function<bool(EntryChange)> on_next_diff,
     std::function<void(Status)> on_done) {
-  btree::ForEachDiff(this, base_commit.GetRootId(), other_commit.GetRootId(),
-                     std::move(on_next_diff), std::move(on_done));
+  btree::ForEachDiff(coroutine_service_, this, base_commit.GetRootId(),
+                     other_commit.GetRootId(), std::move(on_next_diff),
+                     std::move(on_done));
 }
 
 void PageStorageImpl::NotifyWatchers(

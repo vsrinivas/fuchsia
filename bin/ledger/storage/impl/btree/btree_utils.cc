@@ -98,146 +98,71 @@ uint8_t GetNodeLevel(convert::ExtendedStringView key) {
 
 constexpr NodeLevelCalculator kDefaultNodeLevelCalculator = {&GetNodeLevel};
 
-// Helper functions for btree::ForEach.
-void ForEachEntryInSubtree(PageStorage* page_storage,
-                           std::unique_ptr<const TreeNode> node,
-                           std::string min_key,
-                           std::function<bool(EntryAndNodeId)> on_next,
-                           std::function<void(Status, bool)> on_done);
-
-// If |child_id| is not empty, calls |on_done| with the TreeNode corresponding
-// to the id. Otherwise, calls |on_done| with Status::NO_SUCH_CHILD and nullptr.
-void FindChild(
-    PageStorage* page_storage,
-    ObjectIdView child_id,
-    std::function<void(Status, std::unique_ptr<const TreeNode>)> on_done) {
-  if (child_id.empty()) {
-    on_done(Status::NO_SUCH_CHILD, nullptr);
-    return;
-  }
-  TreeNode::FromId(page_storage, child_id, std::move(on_done));
+// Returns the index of |entries| that contains |key|, or the first entry that
+// has key greather than |key|. In the second case, the key, if present, will
+// be found in the children at the returned index.
+size_t GetEntryOrChildIndex(const std::vector<Entry> entries,
+                            ftl::StringView key) {
+  auto lower = std::lower_bound(
+      entries.begin(), entries.end(), key,
+      [](const Entry& entry, ftl::StringView key) { return entry.key < key; });
+  return lower - entries.begin();
 }
 
-// Recursively iterates throught the child nodes and entries of |parent|
-// starting at |index|. |on_done| is called with the return status and a bool
-// indicating whether the iteration was interrupted by |on_next|.
-void ForEachEntryInChildIndex(PageStorage* page_storage,
-                              std::unique_ptr<const TreeNode> parent,
-                              int index,
-                              std::string min_key,
-                              std::function<bool(EntryAndNodeId)> on_next,
-                              std::function<void(Status, bool)> on_done) {
-  if (index == parent->GetKeyCount() + 1) {
-    on_done(Status::OK, false);
-    return;
+Status ForEachEntryInternal(
+    SynchronousStorage* storage,
+    ObjectIdView node_id,
+    ftl::StringView min_key,
+    const std::function<bool(EntryAndNodeId)>& on_next) {
+  if (node_id.empty()) {
+    return Status::OK;
   }
-  // First, find the child at index.
-  FindChild(page_storage, parent->GetChildId(index), ftl::MakeCopyable([
-              page_storage, parent = std::move(parent), index,
-              min_key = std::move(min_key), on_next = std::move(on_next),
-              on_done = std::move(on_done)
-            ](Status s, std::unique_ptr<const TreeNode> child) mutable {
-              if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
-                on_done(s, false);
-                return;
-              }
-              if (child == nullptr) {
-                // If the child was not found in the search branch, no need to
-                // search again.
-                min_key = "";
-              }
-              // Then, finish iterating through the subtree of that child.
-              ForEachEntryInSubtree(
-                  page_storage, std::move(child), min_key, on_next,
-                  ftl::MakeCopyable([
-                    page_storage, parent = std::move(parent), index,
-                    min_key = std::move(min_key), on_next = std::move(on_next),
-                    on_done = std::move(on_done)
-                  ](Status s, bool interrupted) mutable {
-                    if (s != Status::OK || interrupted) {
-                      on_done(s, interrupted);
-                      return;
-                    }
-                    // Then, add the entry right after the child.
-                    if (index != parent->GetKeyCount()) {
-                      Entry entry;
-                      FTL_CHECK(parent->GetEntry(index, &entry) == Status::OK);
-                      EntryAndNodeId next{entry, parent->GetId()};
-                      if (!on_next(next)) {
-                        on_done(Status::OK, true);
-                        return;
-                      }
-                    }
-                    // Finally, continue the recursion at index + 1.
-                    ForEachEntryInChildIndex(page_storage, std::move(parent),
-                                             index + 1, std::move(min_key),
-                                             std::move(on_next),
-                                             std::move(on_done));
-                  }));
-            }));
-}
 
-// Performs an in-order traversal of the subtree having |node| as root and calls
-// |on_next| on each entry found with a key equal to or greater than |min_key|.
-// |on_done| is called with the return status and a bool indicating whether the
-// iteration was interrupted by |on_next|.
-void ForEachEntryInSubtree(PageStorage* page_storage,
-                           std::unique_ptr<const TreeNode> node,
-                           std::string min_key,
-                           std::function<bool(EntryAndNodeId)> on_next,
-                           std::function<void(Status, bool)> on_done) {
-  if (node == nullptr) {
-    on_done(Status::OK, false);
-    return;
+  std::unique_ptr<const TreeNode> node;
+  Status status = storage->TreeNodeFromId(node_id, &node);
+  if (status != Status::OK) {
+    return status;
   }
-  // Supposing that min_key = "35":
-  //  [10, 30, 40, 70]                [10, 35, 40, 70]
-  //         /    \                      /    \
-  //   [32, 35]  [49, 50]          [22, 34]  [38, 39]
-  // In the left tree's root node, "35" is not found and start_index will be 2,
-  // i.e. continue search in child node at index 2.
-  // In the right tree's root node, "35" is found and start_index will be 1,
-  // i.e. call |on_next| for entry at index 1 ("35") and continue in child node
-  // at 2.
-  int start_index;
-  Status key_found = node->FindKeyOrChild(min_key, &start_index);
-  // If the key is found call on_next with the corresponding entry. Otherwise,
-  // handle directly the next child, which is already pointed by start_index.
-  if (key_found != Status::NOT_FOUND) {
-    if (key_found != Status::OK) {
-      on_done(key_found, false);
-      return;
+
+  size_t child_index = 0;
+  if (!min_key.empty()) {
+    child_index = GetEntryOrChildIndex(node->entries(), min_key);
+  }
+  if (child_index == node->entries().size() ||
+      node->entries()[child_index].key != min_key) {
+    status = ForEachEntryInternal(storage, node->children_ids()[child_index],
+                                  min_key, on_next);
+    if (status != Status::OK) {
+      return status;
     }
-
-    Entry entry;
-    FTL_CHECK(node->GetEntry(start_index, &entry) == Status::OK);
-    EntryAndNodeId next{entry, node->GetId()};
-    if (!on_next(next)) {
-      on_done(Status::OK, true);
-      return;
-    }
-    // The child is found, no need to search again.
-    min_key = "";
-    ++start_index;
   }
-
-  ForEachEntryInChildIndex(page_storage, std::move(node), start_index,
-                           std::move(min_key), std::move(on_next),
-                           std::move(on_done));
+  while (child_index < node->entries().size()) {
+    if (!on_next({node->entries()[child_index], node->GetId()})) {
+      return Status::OK;
+    }
+    ++child_index;
+    status = ForEachEntryInternal(storage, node->children_ids()[child_index],
+                                  "", on_next);
+    if (status != Status::OK) {
+      return status;
+    }
+  }
+  return Status::OK;
 }
 
 // Returns a vector with all the tree's entries, sorted by key.
 void GetEntriesVector(
+    coroutine::CoroutineService* coroutine_service,
     PageStorage* page_storage,
     ObjectIdView root_id,
     std::function<void(Status, std::unique_ptr<std::vector<Entry>>)> on_done) {
   auto entries = std::make_unique<std::vector<Entry>>();
   auto on_next = [entries = entries.get()](EntryAndNodeId e) {
-    entries->push_back(e.entry);
+    entries->push_back(std::move(e.entry));
     return true;
   };
   btree::ForEachEntry(
-      page_storage, root_id, "", on_next, ftl::MakeCopyable([
+      coroutine_service, page_storage, root_id, "", on_next, ftl::MakeCopyable([
         entries = std::move(entries), on_done = std::move(on_done)
       ](Status s) mutable {
         if (s != Status::OK) {
@@ -386,17 +311,6 @@ class NodeBuilder {
     return *this;
   }
 
-  // Returns the index of |entries| that contains |key|, or the first entry that
-  // has key greather than |key|. In the second case, the key, if present, will
-  // be found in the children at the returned index.
-  size_t GetEntryOrChildIndex(const std::string& key) {
-    auto lower =
-        std::lower_bound(entries_.begin(), entries_.end(), key,
-                         [](const Entry& entry, const std::string& key) {
-                           return entry.key < key;
-                         });
-    return lower - entries_.begin();
-  }
 
   // Collect the maximal set of nodes in the tree root at this builder than can
   // currently be built. A node can be built if and only if all its children are
@@ -476,7 +390,7 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
       return status;
     }
 
-    size_t index = GetEntryOrChildIndex(change.entry.key);
+    size_t index = GetEntryOrChildIndex(entries_, change.entry.key);
     FTL_DCHECK(index == entries_.size() ||
                entries_[index].key != change.entry.key);
 
@@ -601,7 +515,7 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage,
     return status;
   }
 
-  size_t index = GetEntryOrChildIndex(key);
+  size_t index = GetEntryOrChildIndex(entries_, key);
 
   // The key must be in the current node if it is in the tree.
   if (index == entries_.size() || entries_[index].key != key) {
@@ -664,7 +578,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
 
   // The change is at the current level. The entries must be splitted
   // according to the key of the change.
-  size_t split_index = GetEntryOrChildIndex(entry.key);
+  size_t split_index = GetEntryOrChildIndex(entries_, entry.key);
 
   if (split_index < entries_.size() && entries_[split_index].key == entry.key) {
     // The key is already present in the current entries of the node. The
@@ -713,7 +627,7 @@ Status NodeBuilder::Split(SynchronousStorage* page_storage,
   }
 
   // Find the index at which to split.
-  size_t split_index = GetEntryOrChildIndex(key);
+  size_t split_index = GetEntryOrChildIndex(entries_, key);
 
   // Ensure that |key| is not part of the entries.
   FTL_DCHECK(split_index == entries_.size() ||
@@ -906,7 +820,8 @@ void ApplyChanges(
   }));
 }
 
-void GetObjectIds(PageStorage* page_storage,
+void GetObjectIds(coroutine::CoroutineService* coroutine_service,
+                  PageStorage* page_storage,
                   ObjectIdView root_id,
                   std::function<void(Status, std::set<ObjectId>)> callback) {
   FTL_DCHECK(!root_id.empty());
@@ -927,12 +842,13 @@ void GetObjectIds(PageStorage* page_storage,
     }
     callback(status, std::move(*object_ids));
   });
-  ForEachEntry(page_storage, root_id, "", std::move(on_next),
+  ForEachEntry(coroutine_service, page_storage, root_id, "", std::move(on_next),
                std::move(on_done));
 }
 
-void GetObjectsFromSync(ObjectIdView root_id,
+void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
                         PageStorage* page_storage,
+                        ObjectIdView root_id,
                         std::function<void(Status)> callback) {
   ftl::RefPtr<callback::Waiter<Status, std::unique_ptr<const Object>>> waiter_ =
       callback::Waiter<Status, std::unique_ptr<const Object>>::Create(
@@ -954,34 +870,29 @@ void GetObjectsFromSync(ObjectIdView root_id,
       callback(s);
     });
   };
-  ForEachEntry(page_storage, root_id, "", std::move(on_next),
+  ForEachEntry(coroutine_service, page_storage, root_id, "", std::move(on_next),
                std::move(on_done));
 }
 
-void ForEachEntry(PageStorage* page_storage,
+void ForEachEntry(coroutine::CoroutineService* coroutine_service,
+                  PageStorage* page_storage,
                   ObjectIdView root_id,
                   std::string min_key,
                   std::function<bool(EntryAndNodeId)> on_next,
                   std::function<void(Status)> on_done) {
   FTL_DCHECK(!root_id.empty());
-  TreeNode::FromId(page_storage, root_id, [
-    min_key = std::move(min_key), page_storage, on_next = std::move(on_next),
-    on_done = std::move(on_done)
-  ](Status status, std::unique_ptr<const TreeNode> root) {
-    if (status != Status::OK) {
-      on_done(status);
-      return;
-    }
-    ForEachEntryInSubtree(
-        page_storage, std::move(root), std::move(min_key),
-        std::move(on_next), [on_done = std::move(on_done)](Status s, bool) {
-          on_done(s);
-        });
+  coroutine_service->StartCoroutine([
+    page_storage, root_id, min_key = std::move(min_key),
+    on_next = std::move(on_next), on_done = std::move(on_done)
+  ](coroutine::CoroutineHandler * handler) {
+    SynchronousStorage storage(page_storage, handler);
 
+    on_done(ForEachEntryInternal(&storage, root_id, min_key, on_next));
   });
 }
 
-void ForEachDiff(PageStorage* page_storage,
+void ForEachDiff(coroutine::CoroutineService* coroutine_service,
+                 PageStorage* page_storage,
                  ObjectIdView base_root_id,
                  ObjectIdView other_root_id,
                  std::function<bool(EntryChange)> on_next,
@@ -992,8 +903,10 @@ void ForEachDiff(PageStorage* page_storage,
   auto waiter =
       callback::Waiter<Status, std::unique_ptr<std::vector<Entry>>>::Create(
           Status::OK);
-  GetEntriesVector(page_storage, base_root_id, waiter->NewCallback());
-  GetEntriesVector(page_storage, other_root_id, waiter->NewCallback());
+  GetEntriesVector(coroutine_service, page_storage, base_root_id,
+                   waiter->NewCallback());
+  GetEntriesVector(coroutine_service, page_storage, other_root_id,
+                   waiter->NewCallback());
   waiter->Finalize([
     on_next = std::move(on_next), on_done = std::move(on_done)
   ](Status s, std::vector<std::unique_ptr<std::vector<Entry>>> entries) {

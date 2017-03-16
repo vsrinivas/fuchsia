@@ -123,10 +123,11 @@ class PageStorageImpl : public PageStorage {
   void NotifyWatchers(const std::vector<std::unique_ptr<const Commit>>& commits,
                       ChangeSource source);
 
-  ftl::RefPtr<ftl::TaskRunner> main_runner_;
-  ftl::RefPtr<ftl::TaskRunner> io_runner_;
-  std::string page_dir_;
-  PageId page_id_;
+  const ftl::RefPtr<ftl::TaskRunner> main_runner_;
+  const ftl::RefPtr<ftl::TaskRunner> io_runner_;
+  coroutine::CoroutineService* const coroutine_service_;
+  const std::string page_dir_;
+  const PageId page_id_;
   DbImpl db_;
   std::vector<CommitWatcher*> watchers_;
   std::set<ObjectId, convert::StringViewComparator> untracked_objects_;

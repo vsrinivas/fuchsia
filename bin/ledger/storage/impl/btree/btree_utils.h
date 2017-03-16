@@ -48,15 +48,17 @@ void ApplyChanges(
 // Retrieves the ids of all objects in the BTree, i.e tree nodes and values of
 // entries in the tree. After a successfull call, |callback| will be called
 // with the set of results.
-void GetObjectIds(PageStorage* page_storage,
+void GetObjectIds(coroutine::CoroutineService* coroutine_service,
+                  PageStorage* page_storage,
                   ObjectIdView root_id,
                   std::function<void(Status, std::set<ObjectId>)> callback);
 
 // Tries to download all tree nodes and values with EAGER priority that are not
 // locally available from sync. To do this PageStorage::GetObject is called for
 // all corresponding objects.
-void GetObjectsFromSync(ObjectIdView root_id,
+void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
                         PageStorage* page_storage,
+                        ObjectIdView root_id,
                         std::function<void(Status)> callback);
 
 // Iterates through the nodes of the tree with the given root and calls
@@ -66,7 +68,8 @@ void GetObjectsFromSync(ObjectIdView root_id,
 // will be made. |on_done| is called once, upon successfull completion, i.e.
 // when there are no more elements or iteration was interrupted, or if an error
 // occurs.
-void ForEachEntry(PageStorage* page_storage,
+void ForEachEntry(coroutine::CoroutineService* coroutine_service,
+                  PageStorage* page_storage,
                   ObjectIdView root_id,
                   std::string min_key,
                   std::function<bool(EntryAndNodeId)> on_next,
@@ -77,7 +80,8 @@ void ForEachEntry(PageStorage* page_storage,
 // Returning false from |on_next| will immediately stop the iteration. |on_done|
 // is called once, upon successfull completion, i.e. when there are no more
 // differences or iteration was interrupted, or if an error occurs.
-void ForEachDiff(PageStorage* page_storage,
+void ForEachDiff(coroutine::CoroutineService* coroutine_service,
+                 PageStorage* page_storage,
                  ObjectIdView base_root_id,
                  ObjectIdView other_root_id,
                  std::function<bool(EntryChange)> on_next,

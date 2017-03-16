@@ -105,8 +105,8 @@ class BTreeUtilsTest : public StorageTest {
       EXPECT_EQ(Status::OK, status);
       message_loop_.PostQuitTask();
     };
-    ForEachEntry(&fake_storage_, root_id, "", std::move(on_next),
-                 std::move(on_done));
+    ForEachEntry(&coroutine_service_, &fake_storage_, root_id, "",
+                 std::move(on_next), std::move(on_done));
     EXPECT_FALSE(RunLoopWithTimeout());
     return entries;
   }
@@ -663,7 +663,7 @@ TEST_F(BTreeUtilsTest, GetObjectIdsFromEmpty) {
   ASSERT_TRUE(GetEmptyNodeId(&root_id));
   Status status;
   std::set<ObjectId> object_ids;
-  GetObjectIds(&fake_storage_, root_id,
+  GetObjectIds(&coroutine_service_, &fake_storage_, root_id,
                callback::Capture([this] { message_loop_.PostQuitTask(); },
                                  &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -679,7 +679,7 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
 
   Status status;
   std::set<ObjectId> object_ids;
-  GetObjectIds(&fake_storage_, root_id,
+  GetObjectIds(&coroutine_service_, &fake_storage_, root_id,
                callback::Capture([this] { message_loop_.PostQuitTask(); },
                                  &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -698,7 +698,7 @@ TEST_F(BTreeUtilsTest, GetObjectIdsBigTree) {
 
   Status status;
   std::set<ObjectId> object_ids;
-  GetObjectIds(&fake_storage_, root_id,
+  GetObjectIds(&coroutine_service_, &fake_storage_, root_id,
                callback::Capture([this] { message_loop_.PostQuitTask(); },
                                  &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -723,7 +723,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   //       /        \
   // [00, 01, 02]  [04]
   GetObjectsFromSync(
-      root_id, &fake_storage_,
+      &coroutine_service_, &fake_storage_, root_id,
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
@@ -737,7 +737,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   EXPECT_EQ(3 + 4u, object_requests.size());
 
   std::set<ObjectId> object_ids;
-  GetObjectIds(&fake_storage_, root_id,
+  GetObjectIds(&coroutine_service_, &fake_storage_, root_id,
                callback::Capture([this] { message_loop_.PostQuitTask(); },
                                  &status, &object_ids));
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -763,8 +763,8 @@ TEST_F(BTreeUtilsTest, ForEachEmptyTree) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  ForEachEntry(&fake_storage_, root_id, "", std::move(on_next),
-               std::move(on_done));
+  ForEachEntry(&coroutine_service_, &fake_storage_, root_id, "",
+               std::move(on_next), std::move(on_done));
   ASSERT_FALSE(RunLoopWithTimeout());
 }
 
@@ -784,7 +784,8 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  ForEachEntry(&fake_storage_, root_id, "", on_next, on_done);
+  ForEachEntry(&coroutine_service_, &fake_storage_, root_id, "", on_next,
+               on_done);
   ASSERT_FALSE(RunLoopWithTimeout());
 }
 
@@ -809,7 +810,8 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
     EXPECT_EQ(40, current_key);
     message_loop_.PostQuitTask();
   };
-  ForEachEntry(&fake_storage_, root_id, prefix, on_next, on_done);
+  ForEachEntry(&coroutine_service_, &fake_storage_, root_id, prefix, on_next,
+               on_done);
   ASSERT_FALSE(RunLoopWithTimeout());
 }
 
@@ -846,7 +848,7 @@ TEST_F(BTreeUtilsTest, ForEachDiff) {
   // ForEachDiff should return all changes just applied.
   size_t current_change = 0;
   ForEachDiff(
-      &fake_storage_, base_root_id, other_root_id,
+      &coroutine_service_, &fake_storage_, base_root_id, other_root_id,
       [&changes, &current_change](EntryChange e) {
         EXPECT_EQ(changes[current_change].deleted, e.deleted);
         if (e.deleted) {
