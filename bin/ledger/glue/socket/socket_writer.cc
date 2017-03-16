@@ -13,7 +13,12 @@
 
 namespace glue {
 
-SocketWriter::SocketWriter(const FidlAsyncWaiter* waiter) : waiter_(waiter) {}
+// TODO(qsr): Remove this, and retrieve the buffer size from the socket when
+// available.
+constexpr size_t kDefaultSocketBufferSize = 256 * 1024u;
+
+SocketWriter::SocketWriter(Client* client, const FidlAsyncWaiter* waiter)
+    : client_(client), waiter_(waiter) {}
 
 SocketWriter::~SocketWriter() {
   if (wait_id_) {
@@ -21,27 +26,56 @@ SocketWriter::~SocketWriter() {
   }
 }
 
-void SocketWriter::Start(std::string data, mx::socket destination) {
-  data_ = std::move(data);
+void SocketWriter::Start(mx::socket destination) {
   destination_ = std::move(destination);
-  WriteData();
+  GetData();
 }
 
-void SocketWriter::WriteData() {
+void SocketWriter::GetData() {
+  FTL_DCHECK(data_.empty());
+  client_->GetNext(offset_, kDefaultSocketBufferSize,
+                   [this](ftl::StringView data) {
+                     if (data.empty()) {
+                       Done();
+                       return;
+                     }
+                     offset_ += data.size();
+                     WriteData(data);
+                   });
+}
+
+void SocketWriter::WriteData(ftl::StringView data) {
   mx_status_t status = NO_ERROR;
-  while (status == NO_ERROR && offset_ < data_.size()) {
+  while (status == NO_ERROR && !data.empty()) {
     size_t written;
-    status = destination_.write(0u, data_.data() + offset_,
-                                data_.size() - offset_, &written);
-    if (status == NO_ERROR)
-      offset_ += written;
+    status = destination_.write(0u, data.data(), data.size(), &written);
+    if (status == NO_ERROR) {
+      data = data.substr(written);
+    }
   }
 
-  if (status == NO_ERROR || status == ERR_REMOTE_CLOSED) {
+  if (status == NO_ERROR) {
+    FTL_DCHECK(data.empty());
+    data_.clear();
+    data_view_ = "";
+    GetData();
+    return;
+  }
+
+  FTL_DCHECK(!data.empty());
+
+  if (status == ERR_REMOTE_CLOSED) {
     Done();
     return;
   }
+
   if (status == ERR_SHOULD_WAIT) {
+    if (data_.empty()) {
+      data_ = data.ToString();
+      data_view_ = data_;
+    } else {
+      data_view_ = data;
+    }
     WaitForSocket();
     return;
   }
@@ -60,10 +94,31 @@ void SocketWriter::WaitComplete(mx_status_t result,
                                 void* context) {
   SocketWriter* writer = static_cast<SocketWriter*>(context);
   writer->wait_id_ = 0;
-  writer->WriteData();
+  writer->WriteData(writer->data_view_);
 }
 
 void SocketWriter::Done() {
+  destination_.reset();
+  client_->OnDataComplete();
+}
+
+StringSocketWriter::StringSocketWriter(const FidlAsyncWaiter* waiter)
+    : socket_writer_(this, waiter) {}
+
+void StringSocketWriter::Start(std::string data, mx::socket destination) {
+  data_ = std::move(data);
+  socket_writer_.Start(std::move(destination));
+}
+
+void StringSocketWriter::GetNext(
+    size_t offset,
+    size_t max_size,
+    std::function<void(ftl::StringView)> callback) {
+  ftl::StringView data = data_;
+  callback(data.substr(offset, max_size));
+}
+
+void StringSocketWriter::OnDataComplete() {
   delete this;
 }
 

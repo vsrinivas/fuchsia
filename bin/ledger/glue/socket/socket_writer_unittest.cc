@@ -15,10 +15,60 @@
 namespace glue {
 namespace {
 
+class StringClient : public SocketWriter::Client {
+ public:
+  StringClient(std::string value) : value_(std::move(value)) {}
+
+  void GetNext(size_t offset,
+               size_t max_size,
+               std::function<void(ftl::StringView)> callback) override {
+    ftl::StringView data = value_;
+    callback(data.substr(offset, max_size));
+  }
+
+  void OnDataComplete() override { completed_ = true; }
+
+  bool completed() { return completed_; }
+
+ private:
+  std::string value_;
+  bool completed_ = false;
+};
+
 TEST(SocketWriter, WriteAndRead) {
   mtl::MessageLoop message_loop;
   glue::SocketPair socket;
-  SocketWriter* writer = new SocketWriter();
+  StringClient client("bazinga\n");
+  SocketWriter writer(&client);
+  writer.Start(std::move(socket.socket1));
+
+  std::string value;
+  auto drainer = std::make_unique<SocketDrainerClient>();
+  drainer->Start(std::move(socket.socket2),
+                 [&value, &message_loop](const std::string& v) {
+                   value = v;
+                   message_loop.PostQuitTask();
+                 });
+  message_loop.Run();
+
+  EXPECT_EQ("bazinga\n", value);
+  EXPECT_TRUE(client.completed());
+}
+
+TEST(SocketWriter, ClientClosedTheirEnd) {
+  mtl::MessageLoop message_loop;
+  glue::SocketPair socket;
+  StringClient client("bazinga\n");
+  SocketWriter writer(&client);
+  socket.socket2.reset();
+  writer.Start(std::move(socket.socket1));
+  EXPECT_TRUE(client.completed());
+}
+
+TEST(SocketWriter, StringSocketWriter) {
+  mtl::MessageLoop message_loop;
+  glue::SocketPair socket;
+  StringSocketWriter* writer = new StringSocketWriter();
   writer->Start("bazinga\n", std::move(socket.socket1));
 
   std::string value;
@@ -31,14 +81,6 @@ TEST(SocketWriter, WriteAndRead) {
   message_loop.Run();
 
   EXPECT_EQ("bazinga\n", value);
-}
-
-TEST(SocketWriter, ClientClosedTheirEnd) {
-  mtl::MessageLoop message_loop;
-  glue::SocketPair socket;
-  SocketWriter* writer = new SocketWriter();
-  socket.socket2.reset();
-  writer->Start("bazinga\n", std::move(socket.socket1));
 }
 
 }  // namespace

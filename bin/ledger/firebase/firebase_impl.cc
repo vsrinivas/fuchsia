@@ -29,7 +29,7 @@ std::function<network::URLRequestPtr()> MakeRequest(
     if (!message.empty()) {
       glue::SocketPair socket;
       // Deletes itself.
-      glue::SocketWriter* writer = new glue::SocketWriter();
+      glue::StringSocketWriter* writer = new glue::StringSocketWriter();
       writer->Start(message, std::move(socket.socket1));
       request->body = network::URLBody::New();
       request->body->set_stream(std::move(socket.socket2));

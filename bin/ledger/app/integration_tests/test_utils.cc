@@ -153,7 +153,7 @@ mx::socket LedgerApplicationBaseTest::StreamDataToSocket(std::string data) {
   socket_task_runner_->PostTask(ftl::MakeCopyable([
     socket = std::move(sockets.socket1), data = std::move(data)
   ]() mutable {
-    auto writer = new glue::SocketWriter();
+    auto writer = new glue::StringSocketWriter();
     writer->Start(std::move(data), std::move(socket));
   }));
   return std::move(sockets.socket2);
