@@ -324,6 +324,9 @@ void ProcessDispatcher::SetStateLocked(State s) {
         LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
         {
             AutoLock lock(&handle_table_lock_);
+            for (auto& handle : handles_) {
+                handle.set_process_id(0u);
+            }
             // Delete handles out-of-band to avoid the worst case recursive
             // destruction behavior.
             ReapHandles(&handles_);
@@ -399,8 +402,9 @@ HandleOwner ProcessDispatcher::RemoveHandleLocked(mx_handle_t handle_value) {
     auto handle = GetHandleLocked(handle_value);
     if (!handle)
         return nullptr;
-    handles_.erase(*handle);
+
     handle->set_process_id(0u);
+    handles_.erase(*handle);
 
     return HandleOwner(handle);
 }

@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
 #include <inttypes.h>
 #include <lib/dpc.h>
 #include <kernel/mutex.h>
@@ -50,6 +51,7 @@ static void ReaperRoutine(dpc_t* dpc) {
     while ((handle = list.pop_front()) != nullptr) {
         LTRACEF("Reaping handle of koid %" PRIu64 " of pid %" PRIu64 "\n",
                 handle->dispatcher()->get_koid(), handle->process_id());
+        DEBUG_ASSERT(handle->process_id() == 0u);
         DeleteHandle(handle);
     }
     LTRACE_EXIT;
