@@ -12,10 +12,6 @@
       "bootfs_path": "apps/email_nav"
     },
     {
-      "binary": "service.flx",
-      "bootfs_path": "apps/email_service"
-    },
-    {
       "binary": "session.flx",
       "bootfs_path": "apps/email_session"
     },
@@ -34,7 +30,6 @@
   ],
   "components": [
     "apps/modules/email/modules/nav/email_nav_component.json",
-    "apps/modules/email/modules/service/email_service_component.json",
     "apps/modules/email/modules/session/email_session_component.json",
     "apps/modules/email/modules/story/email_story_component.json",
     "apps/modules/email/modules/thread/email_thread_component.json",
