@@ -21,7 +21,8 @@ static mx_status_t io_buffer_init_common(io_buffer_t* buffer, mx_handle_t vmo_ha
     }
 
     mx_paddr_t phys;
-    status = mx_vmo_op_range(vmo_handle, MX_VMO_OP_LOOKUP, 0, PAGE_SIZE, &phys, sizeof(phys));
+    size_t lookup_size = size < PAGE_SIZE ? size : PAGE_SIZE;
+    status = mx_vmo_op_range(vmo_handle, MX_VMO_OP_LOOKUP, 0, lookup_size, &phys, sizeof(phys));
     if (status != NO_ERROR) {
         printf("io_buffer: mx_vmo_op_range failed %d size: %zu\n", status, size);
         mx_handle_close(vmo_handle);

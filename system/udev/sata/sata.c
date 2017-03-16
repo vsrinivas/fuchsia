@@ -40,6 +40,8 @@
 typedef struct sata_device {
     mx_device_t device;
 
+    block_callbacks_t* callbacks;
+
     int port;
     int flags;
     int max_cmd; // inclusive
@@ -161,8 +163,12 @@ static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // offset must be aligned to block size
     if (txn->offset % device->sector_sz) {
-        xprintf("%s: offset 0x%" PRIx64 " is not aligned to sector size %zu!\n",
-                dev->name, txn->offset, device->sector_sz);
+        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        return;
+    }
+
+    // length must be a multiple of block size
+    if (txn->length % device->sector_sz) {
         txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
@@ -246,6 +252,69 @@ static mx_protocol_device_t sata_device_proto = {
     .release = sata_release,
 };
 
+static void sata_fifo_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
+    sata_device_t* device = get_sata_device(dev);
+    device->callbacks = cb;
+};
+
+static void sata_fifo_complete(iotxn_t* txn, void* cookie) {
+    sata_device_t* dev;
+    memcpy(&dev, txn->extra, sizeof(sata_device_t*));
+    //xprintf("sata: fifo_complete dev %p callbacks %p status %d actual 0x%" PRIx64 "\n", dev, dev->callbacks, txn->status, txn->actual);
+    dev->callbacks->complete(cookie, txn->status);
+    txn->ops->release(txn);
+}
+
+static void sata_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
+                           uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    sata_device_t* device = get_sata_device(dev);
+    //xprintf("sata: fifo_read dev %p vmo_offset 0x%" PRIx64 " dev_offset 0x%" PRIx64 " length 0x%" PRIx64 "\n", dev, vmo_offset, dev_offset, length);
+
+    mx_status_t status;
+    iotxn_t* txn;
+    if ((status = iotxn_alloc_vmo(&txn, vmo, length, vmo_offset, sizeof(sata_device_t*))) != NO_ERROR) {
+        device->callbacks->complete(cookie, status);
+        return;
+    }
+
+    txn->opcode = IOTXN_OP_READ;
+    txn->offset = dev_offset;
+    txn->length = length;
+    txn->complete_cb = sata_fifo_complete;
+    txn->cookie = cookie;
+    memcpy(txn->extra, &device, sizeof(sata_device_t*));
+
+    sata_iotxn_queue(dev, txn);
+}
+
+static void sata_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
+                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    sata_device_t* device = get_sata_device(dev);
+    //xprintf("sata: fifo_write dev %p vmo_offset 0x%" PRIx64 " dev_offset 0x%" PRIx64 " length 0x%" PRIx64 "\n", dev, vmo_offset, dev_offset, length);
+
+    mx_status_t status;
+    iotxn_t* txn;
+    if ((status = iotxn_alloc_vmo(&txn, vmo, length, vmo_offset, sizeof(sata_device_t*))) != NO_ERROR) {
+        device->callbacks->complete(cookie, status);
+        return;
+    }
+
+    txn->opcode = IOTXN_OP_WRITE;
+    txn->offset = dev_offset;
+    txn->length = length;
+    txn->complete_cb = sata_fifo_complete;
+    txn->cookie = cookie;
+    memcpy(txn->extra, &device, sizeof(sata_device_t*));
+
+    sata_iotxn_queue(dev, txn);
+}
+
+static block_ops_t sata_block_ops = {
+    .set_callbacks = sata_fifo_set_callbacks,
+    .read = sata_fifo_read,
+    .write = sata_fifo_write,
+};
+
 mx_status_t sata_bind(mx_device_t* dev, int port) {
     // initialize the device
     sata_device_t* device = calloc(1, sizeof(sata_device_t));
@@ -268,7 +337,8 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
     }
 
     // add the device
-    device->device.protocol_id = MX_PROTOCOL_BLOCK;
+    device->device.protocol_id = MX_PROTOCOL_BLOCK_CORE;
+    device->device.protocol_ops = &sata_block_ops;
     device_add(&device->device, dev);
 
     return NO_ERROR;

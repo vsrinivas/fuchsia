@@ -6,14 +6,24 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/main.c
+    $(LOCAL_DIR)/blktest.cpp \
+
+MODULE_SO_NAME := blktest
+
+MODULE_STATIC_LIBS := \
+    ulib/block-client \
+    ulib/sync \
+    ulib/hexdump \
 
 MODULE_LIBS := \
     ulib/c \
+    ulib/magenta \
+    ulib/mxcpp \
+    ulib/mxio \
+    ulib/mxtl \
     ulib/unittest \
-    ulib/blktest \
 
 include make/module.mk

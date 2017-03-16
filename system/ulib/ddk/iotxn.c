@@ -71,7 +71,7 @@ static void iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t o
 
 static void iotxn_physmap(iotxn_t* txn, mx_paddr_t* addr) {
     iotxn_priv_t* priv = get_priv(txn);
-    *addr = priv->buffer.phys;
+    *addr = io_buffer_phys(&priv->buffer);
 }
 
 static void iotxn_mmap(iotxn_t* txn, void** data) {

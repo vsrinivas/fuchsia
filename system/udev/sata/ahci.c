@@ -315,13 +315,15 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     }
 
     ahci_prd_t* prd = NULL;
+    uint64_t length = txn->length;
     for (int i = 0; i < cl->prdtl; i++) {
         prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t)) + i;
         prd->dba = LO32(phys);
         prd->dbau = HI32(phys);
-        prd->dbc = ((txn->length - 1) & 0x3fffff); // 0-based byte count
+        prd->dbc = ((length - 1) & 0x3fffff); // 0-based byte count
 
         phys += AHCI_PRD_MAX_SIZE;
+        length -= AHCI_PRD_MAX_SIZE;
     }
 
     port->running |= (1 << slot);
