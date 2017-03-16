@@ -408,41 +408,72 @@ void Demo::DestroyInstance() {
 }
 
 VkBool32 Demo::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
-                                 VkDebugReportObjectTypeEXT objectType,
+                                 VkDebugReportObjectTypeEXT object_type_in,
                                  uint64_t object,
                                  size_t location,
-                                 int32_t messageCode,
+                                 int32_t message_code,
                                  const char* pLayerPrefix,
                                  const char* pMessage) {
+  constexpr bool kSuppressVerboseLogging = true;
+
   vk::DebugReportFlagsEXT flags(
       static_cast<vk::DebugReportFlagBitsEXT>(flags_in));
+  vk::DebugReportObjectTypeEXT object_type(
+      static_cast<vk::DebugReportObjectTypeEXT>(object_type_in));
 
-  if (flags & vk::DebugReportFlagBitsEXT::ePerformanceWarning &&
-      objectType == VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT) {
-    // At the time of writing this comment, these performance warnings are
-    // erroneous.  We are rendering a completely different pass.
-    // TODO: It is possible for later code changes to trigger this same warning
-    // for legitimate reasons.  Rather than unconditionally disabling it here,
-    // it would be better to provide a hook for Escher to disable reporting of
-    // known false-positives.
-    return false;
-  } else if (flags & vk::DebugReportFlagBitsEXT::eWarning &&
-             objectType == VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT &&
-             messageCode == 93) {
-    // This warning started to occur on Linux/NVIDIA after moving from the
-    // 1.0.39 to 1.0.42 SDK.  It seems that the validation layer doesn't think
-    // that the swapchain image is VK_IMAGE_TYPE_2D (because I'm pretty sure
-    // that the images that we create are 2D).
-    return false;
+  bool fatal = false;
+
+  if (flags == vk::DebugReportFlagBitsEXT::eInformation) {
+    // Paranoid check that there aren't multiple flags.
+    FTL_DCHECK(flags == vk::DebugReportFlagBitsEXT::eInformation);
+
+    std::cerr << "## Vulkan Information: ";
+  } else if (flags == vk::DebugReportFlagBitsEXT::eWarning) {
+    if (object_type == vk::DebugReportObjectTypeEXT::eCommandBuffer &&
+        message_code == 93) {
+      // This warning started to occur on Linux/NVIDIA after moving from the
+      // 1.0.39 to 1.0.42 SDK.  It seems that the validation layer doesn't think
+      // that the swapchain image is VK_IMAGE_TYPE_2D (because I'm pretty sure
+      // that the images that we create are 2D).
+      if (kSuppressVerboseLogging) {
+        return false;
+      }
+    }
+    std::cerr << "## Vulkan Warning: ";
+  } else if (flags == vk::DebugReportFlagBitsEXT::ePerformanceWarning) {
+    if (object_type == vk::DebugReportObjectTypeEXT::eDescriptorSet) {
+      // At the time of writing this comment, these performance warnings are
+      // erroneous.  We are rendering a completely different pass.
+      // TODO: It is possible for later code changes to trigger this same
+      // warning for legitimate reasons.  Rather than unconditionally disabling
+      // it here, it would be better to provide a hook for Escher to disable
+      // reporting of known false-positives.
+      if (kSuppressVerboseLogging) {
+        return false;
+      }
+    }
+    std::cerr << "## Vulkan Performance Warning: ";
+  } else if (flags == vk::DebugReportFlagBitsEXT::eError) {
+    // Treat all errors as fatal.
+    fatal = true;
+    std::cerr << "## Vulkan Error: ";
+  } else if (flags == vk::DebugReportFlagBitsEXT::eDebug) {
+    std::cerr << "## Vulkan Debug: ";
+  } else {
+    // This should never happen, unless a new value has been added to
+    // vk::DebugReportFlagBitsEXT.  In that case, add a new if-clause above.
+    fatal = true;
+    std::cerr << "## Vulkan Unknown Message Type (flags: "
+              << vk::to_string(flags) << "): ";
   }
 
-  std::cerr << "Vulkan Error: " << pMessage << " (from layer: " << pLayerPrefix
-            << "  flags: " << vk::to_string(flags) << ")" << std::endl;
+  std::cerr << pMessage << " (layer: " << pLayerPrefix
+            << "  code: " << message_code
+            << "  object-type: " << vk::to_string(object_type)
+            << "  object: " << object << ")" << std::endl;
 
-  if (flags & vk::DebugReportFlagBitsEXT::eError) {
-    // Always crash immediately on errors.
-    FTL_CHECK(false);
-  }
+  // Crash immediately on fatal errors.
+  FTL_CHECK(!fatal);
 
   return false;
 }

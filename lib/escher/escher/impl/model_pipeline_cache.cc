@@ -156,19 +156,6 @@ constexpr char g_fragment_src[] = R"GLSL(
   }
   )GLSL";
 
-constexpr char g_fragment_depth_prepass_src[] = R"GLSL(
-  #version 450
-  #extension GL_ARB_separate_shader_objects : enable
-
-  layout(location = 0) in vec2 inUV;
-
-  layout(location = 0) out vec4 outColor;
-
-  void main() {
-    outColor = vec4(1.f, 1.f, 1.f, 1.f);
-  }
-  )GLSL";
-
 }  // namespace
 
 ModelPipelineCache::ModelPipelineCache(vk::Device device,
@@ -284,9 +271,11 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   multisampling.rasterizationSamples = sample_count;
 
   vk::PipelineColorBlendAttachmentState color_blend_attachment;
-  color_blend_attachment.colorWriteMask =
-      vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
-      vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+  if (fragment_module) {
+    color_blend_attachment.colorWriteMask =
+        vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+        vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+  }
   color_blend_attachment.blendEnable = false;
 
   vk::PipelineColorBlendStateCreateInfo color_blending;
@@ -316,7 +305,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
       device.createPipelineLayout(pipeline_layout_info, nullptr));
 
   vk::GraphicsPipelineCreateInfo pipeline_info;
-  pipeline_info.stageCount = 2;
+  pipeline_info.stageCount = fragment_module ? 2 : 1;
   pipeline_info.pStages = shader_stages;
   pipeline_info.pVertexInputState = &vertex_input_info;
   pipeline_info.pInputAssemblyState = &input_assembly_info;
@@ -363,10 +352,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
   bool enable_depth_write = true;
   vk::CompareOp depth_compare_op = vk::CompareOp::eLess;
   if (spec.use_depth_prepass) {
-    // Use cheap fragment shader, since the results will be discarded.
-    fragment_spirv_future = compiler_.Compile(
-        vk::ShaderStageFlagBits::eFragment, {{g_fragment_depth_prepass_src}},
-        std::string(), "main");
+    // Omit fragment shader.
   } else {
     render_pass = lighting_pass_;
     fragment_spirv_future =
@@ -386,7 +372,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
         ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(module_info));
   }
   vk::ShaderModule fragment_module;
-  {
+  if (!spec.use_depth_prepass) {
     SpirvData spirv = fragment_spirv_future.get();
 
     vk::ShaderModuleCreateInfo module_info;
