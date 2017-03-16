@@ -28,7 +28,7 @@ bool unittest_run_all_tests(int argc, char** argv) {
 
     int i = 1;
     while (i < argc) {
-        if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] = '=')) {
+        if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] == '=')) {
             prev_verbosity_level = unittest_set_verbosity_level(argv[i][2] - '0');
         }
         i++;
