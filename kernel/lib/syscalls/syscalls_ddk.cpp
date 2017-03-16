@@ -267,6 +267,35 @@ mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, void* vaddr, uint32_t len, ui
     return NO_ERROR;
 }
 
+mx_status_t sys_set_framebuffer_vmo(mx_handle_t hrsrc, mx_handle_t vmo_handle, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0)
+        return status;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    // lookup the dispatcher from handle
+    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    status = up->GetDispatcher(vmo_handle, &vmo);
+    if (status != NO_ERROR)
+        return status;
+
+    status = udisplay_set_framebuffer_vmo(vmo->vmo());
+    if (status != NO_ERROR)
+        return status;
+
+    struct display_info di;
+    memset(&di, 0, sizeof(struct display_info));
+    di.format = format;
+    di.width = width;
+    di.height = height;
+    di.stride = stride;
+    di.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
+    udisplay_set_display_info(&di);
+
+    return NO_ERROR;
+}
+
 /**
  * Gets info about an I/O mapping object.
  * @param handle Handle associated with an I/O mapping object.

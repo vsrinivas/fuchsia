@@ -4,12 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
 #include <dev/udisplay.h>
+#include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
+#include <kernel/vm/vm_object.h>
 #include <lib/debuglog.h>
 #include <lib/gfxconsole.h>
 #include <lib/io.h>
-#include <kernel/vm.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -17,6 +19,9 @@
 #include <qrcodegen/qrcode.h>
 
 #define LOCAL_TRACE 0
+
+constexpr uint kFramebufferArchMmuFlags = ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
+    ARCH_MMU_FLAG_PERM_WRITE;
 
 static qrcodegen::QrCode qrcode;
 
@@ -39,7 +44,6 @@ static print_callback_t qrcode_cb = {
 };
 
 struct udisplay_info {
-    paddr_t framebuffer_phys;
     void* framebuffer_virt;
     size_t framebuffer_size;
     struct display_info info;
@@ -93,25 +97,43 @@ void dlog_bluescreen_halt(void) {
 }
 
 status_t udisplay_set_framebuffer(paddr_t fb_phys, void* fb_user_virt, size_t fb_size) {
-    g_udisplay.framebuffer_phys = fb_phys;
     g_udisplay.framebuffer_size = fb_size;
 
     // map the framebuffer
     vmm_aspace_t* aspace = vmm_get_kernel_aspace();
     status_t result = vmm_alloc_physical(
-            aspace,
-            "udisplay_fb",
-            g_udisplay.framebuffer_size,
-            &g_udisplay.framebuffer_virt,
-            PAGE_SIZE_SHIFT,
-            0 /* min alloc gap */,
-            g_udisplay.framebuffer_phys,
-            0 /* vmm flags */,
-            ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
-                ARCH_MMU_FLAG_PERM_WRITE);
+        aspace,
+        "udisplay_fb",
+        g_udisplay.framebuffer_size,
+        &g_udisplay.framebuffer_virt,
+        PAGE_SIZE_SHIFT,
+        0 /* min alloc gap */,
+        fb_phys,
+        0 /* vmm flags */,
+        kFramebufferArchMmuFlags);
 
     if (result)
         g_udisplay.framebuffer_virt = 0;
+
+    return NO_ERROR;
+}
+
+status_t udisplay_set_framebuffer_vmo(mxtl::RefPtr<VmObject> vmo) {
+    g_udisplay.framebuffer_size = 0;
+    g_udisplay.framebuffer_virt = 0;
+
+    void* start;
+    status_t status = VmAspace::kernel_aspace()->MapObject(
+        vmo, "framebuffer_vmo", 0u, vmo->size(), &start, PAGE_SIZE_SHIFT,
+        0,               // min_alloc_gap
+        VMM_FLAG_COMMIT, // vmm flags
+        kFramebufferArchMmuFlags);
+
+    if (status != NO_ERROR)
+        return status;
+
+    g_udisplay.framebuffer_virt = start;
+    g_udisplay.framebuffer_size = vmo->size();
 
     return NO_ERROR;
 }

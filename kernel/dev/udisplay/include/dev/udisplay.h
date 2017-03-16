@@ -18,3 +18,10 @@ status_t udisplay_set_display_info(struct display_info* display);
 status_t udisplay_bind_gfxconsole(void);
 
 __END_CDECLS;
+
+#ifdef __cplusplus
+#include <magenta/dispatcher.h>
+
+class VmObject;
+status_t udisplay_set_framebuffer_vmo(mxtl::RefPtr<VmObject> vmo);
+#endif
