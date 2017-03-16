@@ -41,8 +41,8 @@ void ViewHost::ConnectView(
     fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
   const uint32_t child_key = next_child_key_++;
   GetViewContainer()->AddChild(child_key, std::move(view_owner));
-  views_.emplace(
-      std::make_pair(child_key, std::unique_ptr<ViewData>(new ViewData(child_key))));
+  views_.emplace(std::make_pair(
+      child_key, std::unique_ptr<ViewData>(new ViewData(child_key))));
 }
 
 void ViewHost::OnChildAttached(uint32_t child_key,
@@ -97,6 +97,7 @@ void ViewHost::OnLayout() {
           view_data->layout_bounds.width;
       view_properties->view_layout->size->height =
           view_data->layout_bounds.height;
+      view_properties->view_layout->inset = mozart::Inset::New();
 
       if (view_data->view_properties.Equals(view_properties))
         continue;  // no layout work to do

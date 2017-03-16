@@ -55,6 +55,7 @@ class RecipeView : public mozart::BaseView {
       view_properties->view_layout->size = mozart::Size::New();
       view_properties->view_layout->size->width = size.width;
       view_properties->view_layout->size->height = size.height;
+      view_properties->view_layout->inset = mozart::Inset::New();
       GetViewContainer()->SetChildProperties(kChildKey, 0,
                                              std::move(view_properties));
     }
