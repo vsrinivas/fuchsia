@@ -1,6 +1,6 @@
 {
     "labels": [
-        "//apps/calendar"
+        "//apps/modules/calendar"
     ],
     "binaries": [
         {

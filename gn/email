@@ -1,6 +1,6 @@
 {
   "labels": [
-    "//apps/email"
+    "//apps/modules/email"
   ],
   "binaries": [
     {
@@ -33,11 +33,11 @@
     }
   ],
   "components": [
-    "apps/email/modules/nav/email_nav_component.json",
-    "apps/email/modules/service/email_service_component.json",
-    "apps/email/modules/session/email_session_component.json",
-    "apps/email/modules/story/email_story_component.json",
-    "apps/email/modules/thread/email_thread_component.json",
-    "apps/email/modules/thread_list/email_thread_list_component.json"
+    "apps/modules/email/modules/nav/email_nav_component.json",
+    "apps/modules/email/modules/service/email_service_component.json",
+    "apps/modules/email/modules/session/email_session_component.json",
+    "apps/modules/email/modules/story/email_story_component.json",
+    "apps/modules/email/modules/thread/email_thread_component.json",
+    "apps/modules/email/modules/thread_list/email_thread_list_component.json"
   ]
 }

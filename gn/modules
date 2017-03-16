@@ -1,6 +1,6 @@
 {
     "labels": [
-        "//apps/modules"
+        "//apps/modules/common"
     ],
     "imports": [
       "calendar",
@@ -58,18 +58,18 @@
   "resources": [
         {
             "bootfs_path": "data/modules/config.json",
-            "file": "apps/modules/config.json"
+            "file": "apps/modules/common/config.json"
         }
   ],
   "components": [
-      "apps/modules/email/interactive_receipt/interactive_receipt_component.json",
-      "apps/modules/email/interactive_receipt_http/interactive_receipt_http_component.json",
-      "apps/modules/email/map/map_component.json",
-      "apps/modules/email/music_story/music_story_component.json",
-      "apps/modules/email/usps/usps_component.json",
-      "apps/modules/email/youtube_related_videos/youtube_related_videos_component.json",
-      "apps/modules/email/youtube_story/youtube_story_component.json",
-      "apps/modules/email/youtube_thumbnail/youtube_thumbnail_component.json",
-      "apps/modules/email/youtube_video/youtube_video_component.json"
+      "apps/modules/common/email/interactive_receipt/interactive_receipt_component.json",
+      "apps/modules/common/email/interactive_receipt_http/interactive_receipt_http_component.json",
+      "apps/modules/common/email/map/map_component.json",
+      "apps/modules/common/email/music_story/music_story_component.json",
+      "apps/modules/common/email/usps/usps_component.json",
+      "apps/modules/common/email/youtube_related_videos/youtube_related_videos_component.json",
+      "apps/modules/common/email/youtube_story/youtube_story_component.json",
+      "apps/modules/common/email/youtube_thumbnail/youtube_thumbnail_component.json",
+      "apps/modules/common/email/youtube_video/youtube_video_component.json"
   ]
 }

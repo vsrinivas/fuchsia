@@ -1,7 +1,7 @@
 {
     "labels": [
-        "//apps/chat",
-        "//apps/chat:test"
+        "//apps/modules/chat",
+        "//apps/modules/chat:test"
     ],
     "binaries": [
         {
