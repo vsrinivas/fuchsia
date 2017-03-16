@@ -15,11 +15,12 @@ final _askHandlerBinding = new AskHandlerBinding();
 
 class AskHandlerImpl extends AskHandler {
   final _urlSubPattern = new RegExp(r"\.[a-z]{2}");
+  final _dashboardSubPattern = new RegExp(r"^das|^fuc|^bui|^sta");
 
   @override
   void ask(UserInput query, void callback(List<Proposal> proposals)) {
     List<Proposal> proposals = new List();
-    if (query.text?.contains(_urlSubPattern)) {
+    if (query.text?.contains(_urlSubPattern) ?? false) {
       final proposal = new Proposal();
       proposal.id = "launch web_view";
 
@@ -37,6 +38,30 @@ class AskHandlerImpl extends AskHandler {
       final String url =
           query.text.startsWith("http") ? query.text : "https://" + query.text;
       createStory.initialData = JSON.encode({"url": url});
+
+      final action = new Action();
+      action.createStory = createStory;
+      proposal.onSelected = new List<Action>();
+      proposal.onSelected.add(action);
+
+      proposals.add(proposal);
+    }
+    if (query.text?.contains(_dashboardSubPattern) ?? false) {
+      final proposal = new Proposal();
+      proposal.id = "launch dashboard";
+
+      proposal.display = new SuggestionDisplay();
+      proposal.display.headline = "View the Fuchsia Dashboard";
+      proposal.display.subheadline = "";
+      proposal.display.details = "";
+      proposal.display.color = 0xFFFFF8FF;
+      proposal.display.iconUrls = new List<String>();
+      proposal.display.imageType = SuggestionImageType.other;
+      proposal.display.imageUrl =
+          "https://avatars2.githubusercontent.com/u/12826430?v=3&s=200";
+
+      final createStory = new CreateStory();
+      createStory.moduleId = "file:///system/apps/dashboard";
 
       final action = new Action();
       action.createStory = createStory;
