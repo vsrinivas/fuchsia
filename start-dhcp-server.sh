@@ -60,6 +60,20 @@ then
   exit 1
 fi
 
+if [[ $DARWIN == false ]]
+then
+  if [[ $(pidof NetworkManager) &&
+      $(nmcli d status | awk "/$INTERFACE/ { print \$3 }") != unmanaged ]]; then
+    echo "$INTERFACE is managed by NetworkManager so can't be configured by this script."
+    echo ""
+    echo "If you DON'T want this, create a file /etc/network/interfaces.d/$INTERFACE containing:"
+    echo "iface $INTERFACE inet manual"
+    echo ""
+    echo "Then restart Network manager with: sudo killall NetworkManager"
+    exit 1
+  fi
+fi
+
 # Check if dnsmasq is running.
 if [[ -r $PID_FILE ]]
 then
