@@ -513,7 +513,7 @@ void free(void* p) {
         return;
     }
 
-#if LK_DEBUGLEVEL > 1
+#if MX_DEBUGLEVEL > 1
     memset(p, FREE_FILL, CHUNK_SIZE(self) - OVERHEAD);
 #endif
     final_size = new_size = CHUNK_SIZE(self);

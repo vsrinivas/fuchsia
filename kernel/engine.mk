@@ -460,9 +460,11 @@ KERNEL_DEFINES += \
 	ARCH=\"$(ARCH)\" \
 
 # debug build?
+# TODO(johngro) : Make LK and MX debug levels independently controlable.
 ifneq ($(DEBUG),)
 GLOBAL_DEFINES += \
-	LK_DEBUGLEVEL=$(DEBUG)
+	LK_DEBUGLEVEL=$(DEBUG) \
+	MX_DEBUGLEVEL=$(DEBUG)
 endif
 
 # allow additional defines from outside the build system

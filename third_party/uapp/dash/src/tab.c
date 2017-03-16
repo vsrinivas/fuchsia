@@ -76,7 +76,7 @@ typedef struct {
 // |state->line_separator| begin the line before the file completion.
 static void complete_at_dir(DIR* dir, completion_state_t* state,
                             linenoiseCompletions* completions) {
-    DEBUG_ASSERT(strchr(state->file_prefix, '/') == NULL);
+    MX_DEBUG_ASSERT(strchr(state->file_prefix, '/') == NULL);
     size_t file_prefix_len = strlen(state->file_prefix);
 
     struct dirent *de;
@@ -157,8 +157,8 @@ void tab_complete(const char* line, linenoiseCompletions* completions) {
             // Case 1.
             // Because we are in a command, partial_path[-1] is a
             // space we want to zero out.
-            DEBUG_ASSERT(token.start > 0);
-            DEBUG_ASSERT(partial_path[-1] == ' ');
+            MX_DEBUG_ASSERT(token.start > 0);
+            MX_DEBUG_ASSERT(partial_path[-1] == ' ');
             partial_path[-1] = '\0';
 
             completion_state.line_prefix = buf;
@@ -175,7 +175,7 @@ void tab_complete(const char* line, linenoiseCompletions* completions) {
         // Case 3.
         // Because we are in a multiple component file path,
         // *file_prefix is a '/' we want to zero out.
-        DEBUG_ASSERT(*file_prefix == '/');
+        MX_DEBUG_ASSERT(*file_prefix == '/');
         *file_prefix = '\0';
 
         completion_state.line_prefix = buf;

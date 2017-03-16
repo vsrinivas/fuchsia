@@ -916,7 +916,7 @@ public:
         // properly, and that containers of such pointers automatically clean up
         // when the container goes out of scope and destructs.  Note: Don't try
         // this with an unmanaged pointer.  Lists of unmanaged pointers will
-        // ASSERT if they destruct with elements still in them.
+        // MX_ASSERT if they destruct with elements still in them.
         EXPECT_EQ(0U, ObjType::live_obj_count(), "");
 
         {  // Begin scope for container

@@ -118,10 +118,10 @@
 //  auto r8 = alloc.GetRegion(80000, 4 << 10);
 //
 //  /* Print some stuff about some of the allocations */
-//  DEBUG_ASSERT(r3 != nullptr);
+//  MX_DEBUG_ASSERT(r3 != nullptr);
 //  printf("R3 base %llx size %llx\n", r3->base, r3->size)
 //
-//  DEBUG_ASSERT(r8 != nullptr);
+//  MX_DEBUG_ASSERT(r8 != nullptr);
 //  printf("R8 base %llx size %llx\n", r8->base, r8->size)
 //
 //  /* No need to clean up.  Regions will automatically be returned to the
@@ -307,7 +307,7 @@ public:
         // with another available region, or when the allocator finally shuts
         // down.
         void mxtl_recycle() {
-            DEBUG_ASSERT(owner_ != nullptr);
+            MX_DEBUG_ASSERT(owner_ != nullptr);
             owner_->ReleaseRegion(this);
         }
 

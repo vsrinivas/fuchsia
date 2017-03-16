@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <assert.h>
+#include <magenta/assert.h>
 #include <mxtl/intrusive_container_utils.h>
 #include <mxtl/intrusive_pointer_traits.h>
 #include <mxtl/intrusive_single_list.h>
@@ -113,7 +113,7 @@ public:
     static_assert(is_unsigned_integer<HashType>::value, "HashTypes must be unsigned integers");
 
     constexpr HashTable() {}
-    ~HashTable() { DEBUG_ASSERT(PtrTraits::IsManaged || is_empty()); }
+    ~HashTable() { MX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty()); }
 
     // Standard begin/end, cbegin/cend iterator accessors.
     iterator begin()              { return       iterator(this,       iterator::BEGIN); }
@@ -132,7 +132,7 @@ public:
 
     void insert(const PtrType& ptr) { insert(PtrType(ptr)); }
     void insert(PtrType&& ptr) {
-        DEBUG_ASSERT(ptr != nullptr);
+        MX_DEBUG_ASSERT(ptr != nullptr);
         KeyType key = KeyTraits::GetKey(*ptr);
         BucketType& bucket = GetBucket(key);
 
@@ -140,7 +140,7 @@ public:
         // insert an element with a duplicate key.  If the user thought that
         // there might be a duplicate key in the HashTable already, he/she
         // should have used insert_or_find() instead.
-        DEBUG_ASSERT(FindInBucket(bucket, key).IsValid() == false);
+        MX_DEBUG_ASSERT(FindInBucket(bucket, key).IsValid() == false);
 
         bucket.push_front(mxtl::move(ptr));
         ++count_;
@@ -163,7 +163,7 @@ public:
     }
 
     bool insert_or_find(PtrType&& ptr, iterator* iter = nullptr) {
-        DEBUG_ASSERT(ptr != nullptr);
+        MX_DEBUG_ASSERT(ptr != nullptr);
         KeyType  key         = KeyTraits::GetKey(*ptr);
         HashType ndx         = GetHash(key);
         auto&    bucket      = buckets_[ndx];
@@ -342,7 +342,7 @@ private:
         // Prefix
         iterator_impl& operator++() {
             if (!IsValid()) return *this;
-            DEBUG_ASSERT(hash_table_);
+            MX_DEBUG_ASSERT(hash_table_);
 
             // Bump the bucket iterator and go looking for a new bucket if the
             // iterator has become invalid.
@@ -356,7 +356,7 @@ private:
             // If we have never been bound to a HashTable instance, the we had
             // better be invalid.
             if (!hash_table_) {
-                DEBUG_ASSERT(!IsValid());
+                MX_DEBUG_ASSERT(!IsValid());
                 return *this;
             }
 
@@ -372,7 +372,7 @@ private:
                 auto& bucket = GetBucket(bucket_ndx_);
                 if (!bucket.is_empty()) {
                     iter_ = --IterTraits::BucketEnd(bucket);
-                    DEBUG_ASSERT(iter_.IsValid());
+                    MX_DEBUG_ASSERT(iter_.IsValid());
                     return *this;
                 }
             }
@@ -440,7 +440,7 @@ private:
 
                     if (!bucket.is_empty()) {
                         iter_ = IterTraits::BucketBegin(bucket);
-                        DEBUG_ASSERT(iter_.IsValid());
+                        MX_DEBUG_ASSERT(iter_.IsValid());
                         break;
                     } else if (bucket_ndx_ == (kNumBuckets - 1)) {
                         iter_ = IterTraits::BucketEnd(bucket);
@@ -494,7 +494,7 @@ private:
 
     static HashType GetHash(const KeyType& obj) {
         HashType ret = HashTraits::GetHash(obj);
-        DEBUG_ASSERT((ret >= 0) && (ret < kNumBuckets));
+        MX_DEBUG_ASSERT((ret >= 0) && (ret < kNumBuckets));
         return ret;
     }
 

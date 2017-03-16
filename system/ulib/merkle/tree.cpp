@@ -26,7 +26,7 @@ size_t Tree::GetTreeLength(size_t data_len) {
         return 0;
     }
     data_len = mxtl::roundup(data_len, kNodeSize);
-    DEBUG_ASSERT(data_len != 0);
+    MX_DEBUG_ASSERT(data_len != 0);
     size_t total = 0;
     while (data_len > kNodeSize) {
         data_len = mxtl::roundup(data_len / kDigestsPerNode, kNodeSize);
@@ -232,7 +232,7 @@ mx_status_t Tree::SetLengths(size_t data_len, size_t tree_len) {
             return ERR_INTERNAL;
         }
         offsets[i] = offsets[i - 1] + length;
-        DEBUG_ASSERT(offsets[i] > offsets[i - 1]);
+        MX_DEBUG_ASSERT(offsets[i] > offsets[i - 1]);
     }
     if (i == 0) {
         offsets_.reset();
@@ -345,7 +345,7 @@ size_t merkle_tree_length(size_t data_len) {
 }
 
 mx_status_t merkle_tree_init(size_t data_len, merkle_tree_t** out) {
-    DEBUG_ASSERT(out);
+    MX_DEBUG_ASSERT(out);
     AllocChecker ac;
     mxtl::unique_ptr<merkle_tree_t> tree(new (&ac) merkle_tree_t());
     if (!ac.check()) {
@@ -367,13 +367,13 @@ mx_status_t merkle_tree_init(size_t data_len, merkle_tree_t** out) {
 
 mx_status_t merkle_tree_update(merkle_tree_t* tree, const void* data,
                                size_t length) {
-    DEBUG_ASSERT(tree && tree->nodes.get());
+    MX_DEBUG_ASSERT(tree && tree->nodes.get());
     return tree->obj.CreateUpdate(data, length, tree->nodes.get());
 }
 
 mx_status_t merkle_tree_final(merkle_tree_t* tree, void* out, size_t out_len) {
-    DEBUG_ASSERT(tree && tree->nodes.get());
-    DEBUG_ASSERT(out);
+    MX_DEBUG_ASSERT(tree && tree->nodes.get());
+    MX_DEBUG_ASSERT(out);
     merkle::Digest digest;
     mxtl::unique_ptr<merkle_tree_t> owned(tree);
     mx_status_t rc = owned->obj.CreateFinal(owned->nodes.get(), &digest);

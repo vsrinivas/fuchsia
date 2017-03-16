@@ -28,7 +28,7 @@ struct SlabMalloc {
     // which does not use the heap.
     static void* Allocate(size_t amt, size_t align) {
         void* mem = ::malloc(amt);
-        DEBUG_ASSERT((reinterpret_cast<uintptr_t>(mem) % align) == 0);
+        MX_DEBUG_ASSERT((reinterpret_cast<uintptr_t>(mem) % align) == 0);
         return mem;
     }
 

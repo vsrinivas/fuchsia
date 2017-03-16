@@ -82,8 +82,8 @@ public:
                 break;
         }
 
-        DEBUG_ASSERT(key != kBannedKeyValue);
-        DEBUG_ASSERT(other_key != kBannedOtherKeyValue);
+        MX_DEBUG_ASSERT(key != kBannedKeyValue);
+        MX_DEBUG_ASSERT(other_key != kBannedOtherKeyValue);
 
         // Set the primary key on the object.  Offset the "other" key by OBJ_COUNT
         test_obj->SetKey(key);

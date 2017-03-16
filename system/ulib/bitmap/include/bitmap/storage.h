@@ -65,13 +65,13 @@ public:
         return NO_ERROR;
     }
 
-    void* GetData() const { DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
+    void* GetData() const { MX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
 
-    mx_handle_t GetVmo() const { DEBUG_ASSERT(vmo_ != MX_HANDLE_INVALID); return vmo_; }
+    mx_handle_t GetVmo() const { MX_DEBUG_ASSERT(vmo_ != MX_HANDLE_INVALID); return vmo_; }
 private:
     void Release() {
         if (vmo_ != MX_HANDLE_INVALID) {
-            DEBUG_ASSERT(mapped_addr_ != 0);
+            MX_DEBUG_ASSERT(mapped_addr_ != 0);
             mx_vmar_unmap(mx_vmar_root_self(), mapped_addr_, size_);
             mx_handle_close(vmo_);
             vmo_ = MX_HANDLE_INVALID;

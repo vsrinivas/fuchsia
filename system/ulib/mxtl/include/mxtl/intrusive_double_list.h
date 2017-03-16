@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <assert.h>
+#include <magenta/assert.h>
 #include <mxtl/intrusive_pointer_traits.h>
 #include <mxtl/macros.h>
 
@@ -111,7 +111,7 @@ public:
     // an empty list of unmanaged pointers.  Like Rvalue construction, it will
     // result in the move of the source contents to the destination.
     DoublyLinkedList& operator=(DoublyLinkedList&& other_list) {
-        DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
+        MX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
 
         clear();
         swap(other_list);
@@ -123,7 +123,7 @@ public:
         // It is considered an error to allow a list of unmanaged pointers to
         // destruct if there are still elements in it.  Managed pointer lists
         // will automatically release their references to their elements.
-        DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
+        MX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
         clear();
         PtrTraits::DetachSentinel(head_);
     }
@@ -147,20 +147,20 @@ public:
     //
     // Return a reference to the element at the front of the list without
     // removing it.  It is an error to call front on an empty list.
-    typename PtrTraits::RefType      front()       { DEBUG_ASSERT(!is_empty()); return *head_; }
-    typename PtrTraits::ConstRefType front() const { DEBUG_ASSERT(!is_empty()); return *head_; }
+    typename PtrTraits::RefType      front()       { MX_DEBUG_ASSERT(!is_empty()); return *head_; }
+    typename PtrTraits::ConstRefType front() const { MX_DEBUG_ASSERT(!is_empty()); return *head_; }
 
     // back
     //
     // Return a reference to the element at the back of the list without
     // removing it.  It is an error to call back on an empty list.
     typename PtrTraits::RefType back() {
-        DEBUG_ASSERT(!is_empty());
+        MX_DEBUG_ASSERT(!is_empty());
         return *(NodeTraits::node_state(*head_).prev_);
     }
 
     typename PtrTraits::ConstRefType back() const {
-        DEBUG_ASSERT(!is_empty());
+        MX_DEBUG_ASSERT(!is_empty());
         return *(NodeTraits::node_state(*head_).prev_);
     }
 
@@ -186,15 +186,15 @@ public:
     // splice : Splice another list before iter in this list.
     void splice(const iterator& iter, DoublyLinkedList& other_list)  {
         auto before = iter.node_;
-        DEBUG_ASSERT(before != nullptr);
-        DEBUG_ASSERT(head_  != nullptr);
+        MX_DEBUG_ASSERT(before != nullptr);
+        MX_DEBUG_ASSERT(head_  != nullptr);
 
         if (other_list.is_empty()) {
             return;
         }
         if (is_empty()) {
-            DEBUG_ASSERT(before == sentinel());
-            DEBUG_ASSERT(before == PtrTraits::GetRaw(head_));
+            MX_DEBUG_ASSERT(before == sentinel());
+            MX_DEBUG_ASSERT(before == PtrTraits::GetRaw(head_));
             swap(other_list);
             return;
         }
@@ -238,7 +238,7 @@ public:
         insert_after(iter, PtrType(ptr));
     }
     void insert_after(const iterator& iter, PtrType&& ptr) {
-        DEBUG_ASSERT(iter.IsValid());
+        MX_DEBUG_ASSERT(iter.IsValid());
 
         auto& ns = NodeTraits::node_state(*iter.node_);
         internal_insert(PtrTraits::GetRaw(ns.next_), mxtl::move(ptr));
@@ -269,7 +269,7 @@ public:
 
         auto& ns = NodeTraits::node_state(*iter.node_);
         if (PtrTraits::IsSentinel(ns.next_)) {
-            DEBUG_ASSERT(sentinel() == PtrTraits::GetRaw(ns.next_));
+            MX_DEBUG_ASSERT(sentinel() == PtrTraits::GetRaw(ns.next_));
             return PtrType(nullptr);
         }
 
@@ -392,7 +392,7 @@ private:
             if (IsValid()) {
                 auto& ns = NodeTraits::node_state(*node_);
                 node_ = PtrTraits::GetRaw(ns.next_);
-                DEBUG_ASSERT(node_ != nullptr);
+                MX_DEBUG_ASSERT(node_ != nullptr);
             }
 
             return *this;
@@ -406,7 +406,7 @@ private:
                 } else {
                     auto& ns = NodeTraits::node_state(*node_);
                     node_ = ns.prev_;
-                    DEBUG_ASSERT(node_ != nullptr);
+                    MX_DEBUG_ASSERT(node_ != nullptr);
 
                     // If backing up would put us at a node whose next pointer
                     // is a sentinel, the we have looped around the start of the
@@ -440,12 +440,12 @@ private:
         }
 
         typename IterTraits::RefType operator*() const {
-            DEBUG_ASSERT(IsValid());
+            MX_DEBUG_ASSERT(IsValid());
             return *node_;
         }
 
         typename IterTraits::RawPtrType operator->() const {
-            DEBUG_ASSERT(IsValid());
+            MX_DEBUG_ASSERT(IsValid());
             return node_;
         }
 
@@ -476,17 +476,17 @@ private:
     }
 
     void internal_insert(RawPtrType before, PtrType&& ptr) {
-        DEBUG_ASSERT(ptr    != nullptr);
-        DEBUG_ASSERT(before != nullptr);
-        DEBUG_ASSERT(head_  != nullptr);
+        MX_DEBUG_ASSERT(ptr    != nullptr);
+        MX_DEBUG_ASSERT(before != nullptr);
+        MX_DEBUG_ASSERT(head_  != nullptr);
 
         auto& ptr_ns = NodeTraits::node_state(*ptr);
-        DEBUG_ASSERT((ptr_ns.prev_ == nullptr) && (ptr_ns.next_ == nullptr));
+        MX_DEBUG_ASSERT((ptr_ns.prev_ == nullptr) && (ptr_ns.next_ == nullptr));
 
         // Handle the (slightly) special case of an empty list.
         if (is_empty()) {
-            DEBUG_ASSERT(before == sentinel());
-            DEBUG_ASSERT(before == PtrTraits::GetRaw(head_));
+            MX_DEBUG_ASSERT(before == sentinel());
+            MX_DEBUG_ASSERT(before == PtrTraits::GetRaw(head_));
 
             ptr_ns.prev_ = PtrTraits::GetRaw(ptr);
             ptr_ns.next_ = mxtl::move(head_);
@@ -524,7 +524,7 @@ private:
             return PtrType(nullptr);
 
         auto& node_ns = NodeTraits::node_state(*node);
-        DEBUG_ASSERT((node_ns.prev_ != nullptr) && (node_ns.next_ != nullptr));
+        MX_DEBUG_ASSERT((node_ns.prev_ != nullptr) && (node_ns.next_ != nullptr));
 
         // Find the prev pointer we need to update.  If we are removing the tail
         // of the list, the prev pointer is head_'s prev pointer.  Otherwise, it
@@ -548,7 +548,7 @@ private:
     }
 
     RawPtrType tail() const {
-        DEBUG_ASSERT(head_ != nullptr);
+        MX_DEBUG_ASSERT(head_ != nullptr);
         if (PtrTraits::IsSentinel(head_))
             return PtrTraits::GetRaw(head_);
         return NodeTraits::node_state(*head_).prev_;

@@ -16,13 +16,13 @@ protected:
     constexpr RefCountedBase() : ref_count_(1) {}
     ~RefCountedBase() {}
     void AddRef() {
-        DEBUG_ASSERT_COND(adopted_);
+        MX_DEBUG_ASSERT_COND(adopted_);
         // TODO(jamesr): Replace uses of GCC builtins with something safer.
         ref_count_.fetch_add(1, memory_order_relaxed);
     }
     // Returns true if the object should self-delete.
     bool Release() __WARN_UNUSED_RESULT {
-        DEBUG_ASSERT_COND(adopted_);
+        MX_DEBUG_ASSERT_COND(adopted_);
         if (ref_count_.fetch_sub(1, memory_order_release) == 1) {
             atomic_thread_fence(memory_order_acquire);
             return true;
@@ -30,9 +30,9 @@ protected:
         return false;
     }
 
-#if DEBUG_ASSERT_IMPLEMENTED
+#if MX_DEBUG_ASSERT_IMPLEMENTED
     void Adopt() {
-        DEBUG_ASSERT(!adopted_);
+        MX_DEBUG_ASSERT(!adopted_);
         adopted_ = true;
     }
 #endif
@@ -44,7 +44,7 @@ protected:
 
 private:
     mxtl::atomic_int ref_count_;
-#if DEBUG_ASSERT_IMPLEMENTED
+#if MX_DEBUG_ASSERT_IMPLEMENTED
     bool adopted_ = false;
 #endif
 };

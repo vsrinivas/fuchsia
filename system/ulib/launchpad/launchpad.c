@@ -1040,7 +1040,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                               &stack_base);
         if (status == NO_ERROR) {
-            DEBUG_ASSERT(stack_size % PAGE_SIZE == 0);
+            MX_DEBUG_ASSERT(stack_size % PAGE_SIZE == 0);
             *sp = compute_initial_stack_pointer(stack_base, stack_size);
             // Pass the stack VMO to the process.  Our protocol with the
             // new process is that we warrant that this is the VMO from

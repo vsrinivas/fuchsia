@@ -77,7 +77,7 @@ struct ContainerPtrTraits<T*> {
     }
 
     static inline void DetachSentinel(PtrType& ptr) {
-        DEBUG_ASSERT((ptr == nullptr) || IsSentinel(ptr));
+        MX_DEBUG_ASSERT((ptr == nullptr) || IsSentinel(ptr));
         ptr = nullptr;
     }
 
@@ -113,7 +113,7 @@ struct ContainerPtrTraits<::mxtl::unique_ptr<T>> {
 
     static inline void DetachSentinel(PtrType& ptr) {
         __UNUSED RawPtrType detached = ptr.release();
-        DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
+        MX_DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
     }
 
     static constexpr bool IsSentinel(const PtrType& ptr) { return IsSentinel(ptr.get()); }
@@ -151,7 +151,7 @@ struct ContainerPtrTraits<::mxtl::RefPtr<T>> {
 
     static inline void DetachSentinel(PtrType& ptr) {
         __UNUSED RawPtrType detached = ptr.leak_ref();
-        DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
+        MX_DEBUG_ASSERT((detached == nullptr) || IsSentinel(detached));
     }
 
     static constexpr bool IsSentinel(const PtrType& ptr) { return IsSentinel(ptr.get()); }

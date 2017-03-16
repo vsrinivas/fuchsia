@@ -120,7 +120,7 @@ public:
     template <typename BaseType>
     RefPtr(T* ptr, RefPtr<BaseType>&& base)
         : ptr_(ptr) {
-        ASSERT(static_cast<BaseType*>(ptr_) == base.ptr_);
+        MX_ASSERT(static_cast<BaseType*>(ptr_) == base.ptr_);
         base.ptr_ = nullptr;
     }
 
@@ -196,7 +196,7 @@ private:
 
     RefPtr(T* ptr, AdoptTag)
         : ptr_(ptr) {
-#if (LK_DEBUGLEVEL > 1)
+#if MX_DEBUG_ASSERT_IMPLEMENTED
         ptr_->Adopt();
 #endif
     }

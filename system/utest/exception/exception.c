@@ -158,7 +158,7 @@ static bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
 // TODO(dje): test_not_enough_buffer is wip. Remove the argument and
 // have a separate explicit test for it.
 // TODO(dje): "kind" is losing its value. Delete?
-// The bool result is because we use the unittest EXPECT/ASSERT macros.
+// The bool result is because we use the unittest EXPECT/MX_ASSERT macros.
 
 static bool verify_exception(const mx_exception_packet_t* packet,
                              const char* kind,
@@ -224,7 +224,7 @@ static bool read_and_verify_exception(mx_handle_t eport,
 // We may receive thread-exit reports while the process is terminating but
 // any other kind of exception besides MX_EXCP_GONE is an error.
 // This may be used when attached to the process or debugger exception port.
-// The bool result is because we use the unittest EXPECT/ASSERT macros.
+// The bool result is because we use the unittest EXPECT/MX_ASSERT macros.
 
 static bool wait_process_exit(mx_handle_t eport, mx_handle_t process) {
     mx_exception_packet_t packet;
@@ -262,7 +262,7 @@ static bool wait_process_exit(mx_handle_t eport, mx_handle_t process) {
 // We may get other thread-exit reports, that's ok, we don't assume the child
 // is single-threaded. But it is an error to get any other kind of exception
 // report from a thread.
-// The bool result is because we use the unittest EXPECT/ASSERT macros.
+// The bool result is because we use the unittest EXPECT/MX_ASSERT macros.
 
 static bool wait_process_exit_from_debugger(mx_handle_t eport, mx_handle_t process, mx_koid_t tid) {
     bool tid_seen = false;

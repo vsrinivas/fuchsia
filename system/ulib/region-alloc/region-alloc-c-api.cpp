@@ -23,7 +23,7 @@ mx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool) {
 }
 
 void ralloc_release_pool(ralloc_pool_t* pool) {
-    DEBUG_ASSERT(pool != nullptr);
+    MX_DEBUG_ASSERT(pool != nullptr);
 
     // Relclaim our reference back from the land of C by turning the pointer
     // back into a RefPtr, then deliberately let it go out of scope, dropping
@@ -63,12 +63,12 @@ mx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool* p
 }
 
 void ralloc_reset_allocator(ralloc_allocator_t* allocator) {
-    DEBUG_ASSERT(allocator);
+    MX_DEBUG_ASSERT(allocator);
     reinterpret_cast<RegionAllocator*>(allocator)->Reset();
 }
 
 void ralloc_destroy_allocator(ralloc_allocator_t* allocator) {
-    DEBUG_ASSERT(allocator);
+    MX_DEBUG_ASSERT(allocator);
 
     RegionAllocator* alloc = reinterpret_cast<RegionAllocator*>(allocator);
     alloc->~RegionAllocator();
@@ -108,11 +108,11 @@ mx_status_t ralloc_get_sized_region_ex(ralloc_allocator_t* allocator,
         // Everything looks good.  Detach the managed_region our unique_ptr<>
         // and send the unmanaged pointer to the inner ralloc_region_t back
         // to the caller.
-        DEBUG_ASSERT(managed_region != nullptr);
+        MX_DEBUG_ASSERT(managed_region != nullptr);
         const RegionAllocator::Region* raw_region = managed_region.release();
         *out_region = static_cast<const ralloc_region_t*>(raw_region);
     } else {
-        DEBUG_ASSERT(managed_region == nullptr);
+        MX_DEBUG_ASSERT(managed_region == nullptr);
         *out_region = nullptr;
     }
 
@@ -134,11 +134,11 @@ mx_status_t ralloc_get_specific_region_ex(
         // Everything looks good.  Detach the managed_region our unique_ptr<>
         // and send the unmanaged pointer to the inner ralloc_region_t back
         // to the caller.
-        DEBUG_ASSERT(managed_region != nullptr);
+        MX_DEBUG_ASSERT(managed_region != nullptr);
         const RegionAllocator::Region* raw_region = managed_region.release();
         *out_region = static_cast<const ralloc_region_t*>(raw_region);
     } else {
-        DEBUG_ASSERT(managed_region == nullptr);
+        MX_DEBUG_ASSERT(managed_region == nullptr);
         *out_region = nullptr;
     }
 
@@ -146,19 +146,19 @@ mx_status_t ralloc_get_specific_region_ex(
 }
 
 size_t ralloc_get_allocated_region_count(const ralloc_allocator_t* allocator) {
-    DEBUG_ASSERT(allocator != nullptr);
+    MX_DEBUG_ASSERT(allocator != nullptr);
     const RegionAllocator& alloc = *(reinterpret_cast<const RegionAllocator*>(allocator));
     return alloc.AllocatedRegionCount();
 }
 
 size_t ralloc_get_available_region_count(const ralloc_allocator_t* allocator) {
-    DEBUG_ASSERT(allocator != nullptr);
+    MX_DEBUG_ASSERT(allocator != nullptr);
     const RegionAllocator& alloc = *(reinterpret_cast<const RegionAllocator*>(allocator));
     return alloc.AvailableRegionCount();
 }
 
 void ralloc_put_region(const ralloc_region_t* region) {
-    DEBUG_ASSERT(region);
+    MX_DEBUG_ASSERT(region);
 
     // Relclaim our reference back from the land of C by turning the pointer
     // back into a unique_ptr, then deliberately let it go out of scope, destroying the

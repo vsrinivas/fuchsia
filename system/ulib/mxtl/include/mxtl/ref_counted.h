@@ -37,8 +37,7 @@ public:
 
     using internal::RefCountedBase::AddRef;
     using internal::RefCountedBase::Release;
-
-#if (LK_DEBUGLEVEL > 1)
+#if MX_DEBUG_ASSERT_IMPLEMENTED
     using internal::RefCountedBase::Adopt;
 #endif
 

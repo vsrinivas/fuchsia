@@ -122,7 +122,7 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
     if (dso->debug_file_tried) {
         switch (dso->debug_file_status) {
         case NO_ERROR:
-            DEBUG_ASSERT(dso->debug_file != nullptr);
+            MX_DEBUG_ASSERT(dso->debug_file != nullptr);
             *out_debug_file = dso->debug_file;
             // fall through
         default:

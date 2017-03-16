@@ -53,7 +53,7 @@ size_t gLength;
 void InitZeroData(size_t length) {
     memset(gData, 0, sizeof(gData));
     gDataLen = length;
-    DEBUG_ASSERT(gDataLen <= sizeof(gData));
+    MX_DEBUG_ASSERT(gDataLen <= sizeof(gData));
     gTreeLen = sizeof(gTree);
     if (length >= kNodeSize * 3) {
         gOffset = gDataLen - (kNodeSize * 3);

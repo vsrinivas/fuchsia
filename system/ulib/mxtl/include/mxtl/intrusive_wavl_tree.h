@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <assert.h>
+#include <magenta/assert.h>
 #include <mxtl/intrusive_container_utils.h>
 #include <mxtl/intrusive_pointer_traits.h>
 #include <mxtl/intrusive_wavl_tree_internal.h>
@@ -155,7 +155,7 @@ public:
     // an empty tree of unmanaged pointers.  Like Rvalue construction, it will
     // result in the move of the source contents to the destination.
     WAVLTree& operator=(WAVLTree&& other_tree) {
-        DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
+        MX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
 
         clear();
         swap(other_tree);
@@ -167,7 +167,7 @@ public:
         // It is considered an error to allow a tree of unmanaged pointers to
         // destruct of there are still elements in it.  Managed pointer trees
         // will automatically release their references to their elements.
-        DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
+        MX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
         clear();
     }
 
@@ -191,12 +191,12 @@ public:
     // Return a reference to the element at the front of the list without
     // removing it.  It is an error to call front on an empty list.
     typename PtrTraits::RefType front() {
-        DEBUG_ASSERT(PtrTraits::IsValid(left_most_));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(left_most_));
         return *left_most_;
     }
 
     typename PtrTraits::ConstRefType front() const {
-        DEBUG_ASSERT(PtrTraits::IsValid(left_most_));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(left_most_));
         return *left_most_;
     }
 
@@ -205,12 +205,12 @@ public:
     // Return a reference to the element at the back of the list without
     // removing it.  It is an error to call back on an empty list.
     typename PtrTraits::RefType back() {
-        DEBUG_ASSERT(PtrTraits::IsValid(right_most_));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(right_most_));
         return *right_most_;
     }
 
     typename PtrTraits::ConstRefType back() const {
-        DEBUG_ASSERT(PtrTraits::IsValid(right_most_));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(right_most_));
         return *right_most_;
     }
 
@@ -341,9 +341,9 @@ public:
         if (is_empty())
             return;
 
-        DEBUG_ASSERT(PtrTraits::IsValid(root_));
-        DEBUG_ASSERT(PtrTraits::IsValid(left_most_));
-        DEBUG_ASSERT(PtrTraits::IsValid(right_most_));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(root_));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(left_most_));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(right_most_));
 
         // Detach the left and right sentinels right now so that we don't have
         // to worry about them while cleaning up the tree.
@@ -358,7 +358,7 @@ public:
 
             if ((ns.left_ == nullptr) && (ns.right_ == nullptr)) {
                 // Leaf node.  Trim it.
-                DEBUG_ASSERT(ns.parent_ == owner);
+                MX_DEBUG_ASSERT(ns.parent_ == owner);
                 ns.parent_ = nullptr;
                 *link_ptr  = nullptr;
 
@@ -373,15 +373,15 @@ public:
             } else {
                 // Non-leaf node, descend.  We have already detached the left
                 // and right sentinels, so we shouldn't be seeing any here.
-                DEBUG_ASSERT(!PtrTraits::IsSentinel(ns.left_));
-                DEBUG_ASSERT(!PtrTraits::IsSentinel(ns.right_));
+                MX_DEBUG_ASSERT(!PtrTraits::IsSentinel(ns.left_));
+                MX_DEBUG_ASSERT(!PtrTraits::IsSentinel(ns.right_));
 
                 owner    = PtrTraits::GetRaw(*link_ptr);
                 link_ptr = (ns.left_ != nullptr) ? &ns.left_ : &ns.right_;
             }
         }
 
-        DEBUG_ASSERT(root_ == nullptr);
+        MX_DEBUG_ASSERT(root_ == nullptr);
         left_most_  = sentinel();
         right_most_ = sentinel();
         count_ = 0;
@@ -575,8 +575,8 @@ private:
             return IsValid() ? PtrTraits::Copy(node_) : nullptr;
         }
 
-        typename IterTraits::RefType operator*()     const { DEBUG_ASSERT(node_); return *node_; }
-        typename IterTraits::RawPtrType operator->() const { DEBUG_ASSERT(node_); return node_; }
+        typename IterTraits::RefType operator*()     const { MX_DEBUG_ASSERT(node_); return *node_; }
+        typename IterTraits::RawPtrType operator->() const { MX_DEBUG_ASSERT(node_); return node_; }
 
     private:
         friend ContainerType;
@@ -590,7 +590,7 @@ private:
 
         template <typename LRTraits>
         void advance() {
-            DEBUG_ASSERT(PtrTraits::IsValid(node_));
+            MX_DEBUG_ASSERT(PtrTraits::IsValid(node_));
 
             // Find the next node in the ordered sequecnce.
             // key.  This will be either...
@@ -610,7 +610,7 @@ private:
                 // While we can go LR, do so.
                 auto lr_child = LRTraits::LRRawChild(NodeTraits::node_state(*node_));
                 while (lr_child != nullptr) {
-                    DEBUG_ASSERT(!PtrTraits::IsSentinel(lr_child));
+                    MX_DEBUG_ASSERT(!PtrTraits::IsSentinel(lr_child));
                     node_    = lr_child;
                     lr_child = LRTraits::LRRawChild(NodeTraits::node_state(*node_));
                 }
@@ -621,12 +621,12 @@ private:
                 bool done;
                 auto ns = &NodeTraits::node_state(*node_);
                 do {
-                    DEBUG_ASSERT(PtrTraits::IsValid(ns->parent_));
+                    MX_DEBUG_ASSERT(PtrTraits::IsValid(ns->parent_));
 
                     auto parent_ns = &NodeTraits::node_state(*ns->parent_);
                     done = (LRTraits::LRRawChild(*parent_ns) == node_);
 
-                    DEBUG_ASSERT(done || (LRTraits::RLRawChild(*parent_ns) == node_));
+                    MX_DEBUG_ASSERT(done || (LRTraits::RLRawChild(*parent_ns) == node_));
 
                     node_ = ns->parent_;
                     ns    = parent_ns;
@@ -644,10 +644,10 @@ private:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(WAVLTree);
 
     void internal_insert(PtrType&& ptr, RawPtrType* collision = nullptr) {
-        DEBUG_ASSERT(ptr != nullptr);
+        MX_DEBUG_ASSERT(ptr != nullptr);
 
         auto& ns = NodeTraits::node_state(*ptr);
-        DEBUG_ASSERT(ns.IsValid() && !ns.InContainer());
+        MX_DEBUG_ASSERT(ns.IsValid() && !ns.InContainer());
 
         // The rank of an inserted node always starts at 0.
         ns.rank_ = 0;
@@ -658,7 +658,7 @@ private:
             ns.left_   = PtrTraits::MakeSentinel(this);
             ns.right_  = PtrTraits::MakeSentinel(this);
 
-            DEBUG_ASSERT(PtrTraits::IsSentinel(left_most_) && PtrTraits::IsSentinel(right_most_));
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(left_most_) && PtrTraits::IsSentinel(right_most_));
             left_most_  = PtrTraits::GetRaw(ptr);
             right_most_ = PtrTraits::GetRaw(ptr);
 
@@ -687,10 +687,10 @@ private:
             // knows which object he/she collided with.  Either way, do not
             // actually insert the object.
             if (KeyTraits::EqualTo(key, parent_key)) {
-                DEBUG_ASSERT(collision);
+                MX_DEBUG_ASSERT(collision);
 
                 if (collision) {
-                    DEBUG_ASSERT(*collision == nullptr);
+                    MX_DEBUG_ASSERT(*collision == nullptr);
                     *collision = parent;
                 }
 
@@ -723,19 +723,19 @@ private:
 
         // We know that we are not the root of the tree, therefore we cannot be
         // both left and right-most.
-        DEBUG_ASSERT(!is_left_most || !is_right_most);
+        MX_DEBUG_ASSERT(!is_left_most || !is_right_most);
 
         if (is_right_most) {
-            DEBUG_ASSERT(PtrTraits::IsSentinel(*owner));
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(*owner));
             ns.right_   = PtrTraits::Take(*owner);
             right_most_ = PtrTraits::GetRaw(ptr);
         } else if (is_left_most) {
-            DEBUG_ASSERT(PtrTraits::IsSentinel(*owner));
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(*owner));
             ns.left_   = PtrTraits::Take(*owner);
             left_most_ = PtrTraits::GetRaw(ptr);
         }
 
-        DEBUG_ASSERT(*owner == nullptr);
+        MX_DEBUG_ASSERT(*owner == nullptr);
         ns.parent_ = parent;
         *owner = mxtl::move(ptr);
 
@@ -755,7 +755,7 @@ private:
 
         // If the target node is the root of the tree, then its parent will be
         // sentinel value and the owning pointer will be the root pointer.
-        DEBUG_ASSERT(ns.parent_ != nullptr);
+        MX_DEBUG_ASSERT(ns.parent_ != nullptr);
         if (PtrTraits::IsSentinel(ns.parent_)) {
             owner = &root_;
         } else {
@@ -768,7 +768,7 @@ private:
                   : &parent_ns.right_;
 
         }
-        DEBUG_ASSERT(PtrTraits::GetRaw(*owner) == ptr);
+        MX_DEBUG_ASSERT(PtrTraits::GetRaw(*owner) == ptr);
 
         // If the node we want to remove has two children, swap it with the
         // left-most node of the right-hand sub-tree before proceeding.  This
@@ -778,13 +778,13 @@ private:
             auto       new_ns    = &NodeTraits::node_state(*ns.right_);
 
             while (new_ns->left_ != nullptr) {
-                DEBUG_ASSERT(!PtrTraits::IsSentinel(new_ns->left_));
+                MX_DEBUG_ASSERT(!PtrTraits::IsSentinel(new_ns->left_));
                 new_owner = &new_ns->left_;
                 new_ns = &NodeTraits::node_state(*new_ns->left_);
             }
 
             owner = SwapWithRightDescendant(*owner, *new_owner);
-            DEBUG_ASSERT(PtrTraits::GetRaw(*owner) == ptr);
+            MX_DEBUG_ASSERT(PtrTraits::GetRaw(*owner) == ptr);
         }
 
         // Now that we know our relationship with our parent, go ahead and start
@@ -795,7 +795,7 @@ private:
         RawPtrType parent = ns.parent_;
         bool was_one_child, was_left_child;
 
-        DEBUG_ASSERT(parent != nullptr);
+        MX_DEBUG_ASSERT(parent != nullptr);
         if (!PtrTraits::IsSentinel(parent)) {
             auto& parent_ns = NodeTraits::node_state(*parent);
 
@@ -844,27 +844,27 @@ private:
         else {
             // The target's LR-child is the sentinel if and only if the target
             // is the LR-most node in the tree.
-            DEBUG_ASSERT(PtrTraits::IsSentinel(ns.left_)  == (left_most_  == target));
-            DEBUG_ASSERT(PtrTraits::IsSentinel(ns.right_) == (right_most_ == target));
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(ns.left_)  == (left_most_  == target));
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(ns.right_) == (right_most_ == target));
 
             if (PtrTraits::IsSentinel(ns.left_)) {
                 if (PtrTraits::IsSentinel(ns.right_)) {
                     // Target is both left and right most.
-                    DEBUG_ASSERT(count_ == 1);
-                    DEBUG_ASSERT(PtrTraits::IsSentinel(ns.parent_));
+                    MX_DEBUG_ASSERT(count_ == 1);
+                    MX_DEBUG_ASSERT(PtrTraits::IsSentinel(ns.parent_));
                     left_most_  = sentinel();
                     right_most_ = sentinel();
                     PtrTraits::DetachSentinel(ns.left_);
                     PtrTraits::DetachSentinel(ns.right_);
                 } else {
                     // Target is just left most.
-                    DEBUG_ASSERT(PtrTraits::IsValid(ns.parent_));
+                    MX_DEBUG_ASSERT(PtrTraits::IsValid(ns.parent_));
                     left_most_ = ns.parent_;
                     *owner = PtrTraits::Take(ns.left_);
                 }
             } else if (PtrTraits::IsSentinel(ns.right_)) {
                     // Target is just right most.
-                    DEBUG_ASSERT(PtrTraits::IsValid(ns.parent_));
+                    MX_DEBUG_ASSERT(PtrTraits::IsValid(ns.parent_));
                     right_most_ = ns.parent_;
                     *owner = PtrTraits::Take(ns.right_);
             }
@@ -876,7 +876,7 @@ private:
         // At this point in time, the target node should have been completely
         // removed from the tree.  Its internal state should be valid, and
         // indicate that it is not in the container.
-        DEBUG_ASSERT(ns.IsValid() && !ns.InContainer());
+        MX_DEBUG_ASSERT(ns.IsValid() && !ns.InContainer());
 
         // Update the count bookkeeping.
         --count_;
@@ -983,7 +983,7 @@ private:
 
         // node 2 is a right-hand descendant of node 1, so node 1's right hand
         // pointer must be valid.
-        DEBUG_ASSERT(PtrTraits::IsValid(ns1.right_));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(ns1.right_));
         auto ns1_rp = &NodeTraits::node_state(*ns1.right_).parent_;
 
         // Start by updating the LR-most bookkeeping.  Node 1 cannot be the
@@ -1044,8 +1044,8 @@ private:
             *ns1_rp = node2;
             return &ptr_ref2;
         } else {
-            DEBUG_ASSERT(ns1.parent_ == node1);
-            DEBUG_ASSERT(PtrTraits::GetRaw(ns2.right_) == node2);
+            MX_DEBUG_ASSERT(ns1.parent_ == node1);
+            MX_DEBUG_ASSERT(PtrTraits::GetRaw(ns2.right_) == node2);
             PtrTraits::Swap(ptr_ref1, ns2.right_);
             ns1.parent_ = node2;
             return &ns2.right_;
@@ -1069,14 +1069,14 @@ private:
     //
     template <typename LRTraits>
     void PromoteLRChild(PtrType& owner, RawPtrType node) {
-        DEBUG_ASSERT(owner == nullptr);
-        DEBUG_ASSERT(node != nullptr);
+        MX_DEBUG_ASSERT(owner == nullptr);
+        MX_DEBUG_ASSERT(node != nullptr);
 
         auto& ns = NodeTraits::node_state(*node);
         PtrType& lr_child = LRTraits::LRChild(ns);
         PtrType& rl_child = LRTraits::RLChild(ns);
 
-        DEBUG_ASSERT(PtrTraits::IsValid(lr_child) && !PtrTraits::IsValid(rl_child));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(lr_child) && !PtrTraits::IsValid(rl_child));
 
         // Promote by transferring the LR-Child pointer to the owner pointer and
         // fixing up the LR-Child's parent pointer be the current parent of the
@@ -1087,7 +1087,7 @@ private:
         // The removed node is the RL-most node if (and only if) its RL-child
         // was the sentinel value.
         RawPtrType& rl_most = LRTraits::RLMost(*this);
-        DEBUG_ASSERT((rl_most == node) == (PtrTraits::IsSentinel(rl_child)));
+        MX_DEBUG_ASSERT((rl_most == node) == (PtrTraits::IsSentinel(rl_child)));
         if (PtrTraits::IsSentinel(rl_child)) {
             // The target node was the RL-most.  Find the new RL-most node. It will
             // be the RL-most node in the LR-subtree of the target node.  Once
@@ -1100,7 +1100,7 @@ private:
                 auto& replacement_ns = NodeTraits::node_state(*replacement);
                 next_rl_child = &LRTraits::RLChild(replacement_ns);
 
-                DEBUG_ASSERT(!PtrTraits::IsSentinel(*next_rl_child));
+                MX_DEBUG_ASSERT(!PtrTraits::IsSentinel(*next_rl_child));
                 if (*next_rl_child == nullptr)
                     break;
 
@@ -1117,8 +1117,8 @@ private:
         // The left and right children of the target node should already be
         // nullptr by now.
         ns.parent_ = nullptr;
-        DEBUG_ASSERT(ns.left_  == nullptr);
-        DEBUG_ASSERT(ns.right_ == nullptr);
+        MX_DEBUG_ASSERT(ns.left_  == nullptr);
+        MX_DEBUG_ASSERT(ns.right_ == nullptr);
     }
 
     // After we have swapped contents with another tree, we need to fix up the
@@ -1126,16 +1126,16 @@ private:
     // A's sentinels will point at tree B's, and vice-versa.
     void FixSentinelsAfterSwap() {
         if (root_) {
-            DEBUG_ASSERT(!PtrTraits::IsSentinel(root_));
-            DEBUG_ASSERT(left_most_ &&  !PtrTraits::IsSentinel(left_most_));
-            DEBUG_ASSERT(right_most_ && !PtrTraits::IsSentinel(right_most_));
+            MX_DEBUG_ASSERT(!PtrTraits::IsSentinel(root_));
+            MX_DEBUG_ASSERT(left_most_ &&  !PtrTraits::IsSentinel(left_most_));
+            MX_DEBUG_ASSERT(right_most_ && !PtrTraits::IsSentinel(right_most_));
 
             auto& root_ns       = NodeTraits::node_state(*root_);
             auto& left_most_ns  = NodeTraits::node_state(*left_most_);
             auto& right_most_ns = NodeTraits::node_state(*right_most_);
 
-            DEBUG_ASSERT(PtrTraits::IsSentinel(left_most_ns.left_));
-            DEBUG_ASSERT(PtrTraits::IsSentinel(right_most_ns.right_));
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(left_most_ns.left_));
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(right_most_ns.right_));
 
             PtrTraits::DetachSentinel(left_most_ns.left_);
             PtrTraits::DetachSentinel(right_most_ns.right_);
@@ -1143,8 +1143,8 @@ private:
             left_most_ns.left_   = PtrTraits::MakeSentinel(this);
             right_most_ns.right_ = PtrTraits::MakeSentinel(this);
         } else {
-            DEBUG_ASSERT(PtrTraits::IsSentinel(left_most_));
-            DEBUG_ASSERT(PtrTraits::IsSentinel(right_most_));
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(left_most_));
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(right_most_));
             left_most_  = sentinel();
             right_most_ = sentinel();
         }
@@ -1156,21 +1156,21 @@ private:
     // a reference to the node's parent's left child, right child, or the root
     // node of the tree if the child has no parent.
     PtrType& GetLinkPtrToNode(RawPtrType node) {
-        DEBUG_ASSERT(PtrTraits::IsValid(node));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(node));
 
         auto& ns = NodeTraits::node_state(*node);
         if (PtrTraits::IsSentinel(ns.parent_)) {
-            DEBUG_ASSERT(ns.parent_ == sentinel());
-            DEBUG_ASSERT(PtrTraits::GetRaw(root_) == node);
+            MX_DEBUG_ASSERT(ns.parent_ == sentinel());
+            MX_DEBUG_ASSERT(PtrTraits::GetRaw(root_) == node);
             return root_;
         }
 
-        DEBUG_ASSERT(ns.parent_ != nullptr);
+        MX_DEBUG_ASSERT(ns.parent_ != nullptr);
         auto& parent_ns = NodeTraits::node_state(*ns.parent_);
         if (PtrTraits::GetRaw(parent_ns.left_) == node)
             return parent_ns.left_;
 
-        DEBUG_ASSERT(PtrTraits::GetRaw(parent_ns.right_) == node);
+        MX_DEBUG_ASSERT(PtrTraits::GetRaw(parent_ns.right_) == node);
         return parent_ns.right_;
     }
 
@@ -1227,8 +1227,8 @@ private:
     //    LR-child).
     template <typename LRTraits>
     void RotateLR(RawPtrType node, RawPtrType parent) {
-        DEBUG_ASSERT(PtrTraits::IsValid(node));     // Node must be valid
-        DEBUG_ASSERT(PtrTraits::IsValid(parent));   // Node must have a parent
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(node));     // Node must be valid
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(parent));   // Node must have a parent
 
         // Aliases, just to make the code below match the notation used above.
         RawPtrType X = node;
@@ -1238,7 +1238,7 @@ private:
         auto& Z_ns = NodeTraits::node_state(*Z);
 
         // X must be the RL-child of Z.
-        DEBUG_ASSERT(LRTraits::RLRawChild(Z_ns) == X);
+        MX_DEBUG_ASSERT(LRTraits::RLRawChild(Z_ns) == X);
 
         PtrType& X_link = LRTraits::RLChild(Z_ns);
         PtrType& Y_link = LRTraits::LRChild(X_ns);
@@ -1249,7 +1249,7 @@ private:
 
         // The pointer to Y cannot be a sentinel, because that would imply that
         // X was LR-most.
-        DEBUG_ASSERT(!PtrTraits::IsSentinel(Y));
+        MX_DEBUG_ASSERT(!PtrTraits::IsSentinel(Y));
 
         // Permute the downstream links.
         PtrTraits::Swap(X_link, Y_link);
@@ -1292,13 +1292,13 @@ private:
     void PostInsertFixupLR(RawPtrType node, RawPtrType parent) {
         using RLTraits = typename LRTraits::Inverse;
 
-        DEBUG_ASSERT(PtrTraits::IsValid(node));
-        DEBUG_ASSERT(PtrTraits::IsValid(parent));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(node));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(parent));
 
         auto& node_ns   = NodeTraits::node_state(*node);
         auto& parent_ns = NodeTraits::node_state(*parent);
 
-        DEBUG_ASSERT(LRTraits::LRRawChild(parent_ns) == node);
+        MX_DEBUG_ASSERT(LRTraits::LRRawChild(parent_ns) == node);
 
         RawPtrType rl_child = LRTraits::RLRawChild(node_ns);
         auto rl_child_ns    = PtrTraits::IsValid(rl_child)
@@ -1340,7 +1340,7 @@ private:
         // We do not balance the tree after inserting the first (root)
         // node, so we should be able to assert that we have a valid parent.
         auto node_ns = &NodeTraits::node_state(*node);
-        DEBUG_ASSERT(PtrTraits::IsValid(node_ns->parent_));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(node_ns->parent_));
 
         // If we have a sibling, then our parent just went from being a 1,2
         // unary node into a 1,1 binary node and no action needs to be taken.
@@ -1389,7 +1389,7 @@ private:
                                ? NodeTraits::node_state(*parent_ns->right_).rank_parity()
                                : true;
             } else {
-                DEBUG_ASSERT(PtrTraits::GetRaw(parent_ns->right_) == node);
+                MX_DEBUG_ASSERT(PtrTraits::GetRaw(parent_ns->right_) == node);
                 sibling_parity = PtrTraits::IsValid(parent_ns->left_)
                                ? NodeTraits::node_state(*parent_ns->left_).rank_parity()
                                : true;
@@ -1430,7 +1430,7 @@ private:
     // Checks to see if the node has become a 2,2 leaf node and takes
     // appropriate action to restore the rank rule if needed.
     void BalancePostErase_Fix22Leaf(RawPtrType node) {
-        DEBUG_ASSERT(PtrTraits::IsValid(node));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(node));
 
         // If we just turned node into a 2,2 leaf, it will have no children and
         // odd rank-parity.  If it has even parity, or any children at all,
@@ -1450,13 +1450,13 @@ private:
         // FixLR3Child method to check for the 3-child case and deal with it if
         // we need to.  If this node had no parent, then we know that we are
         // finished.
-        DEBUG_ASSERT(ns.parent_ != nullptr);
+        MX_DEBUG_ASSERT(ns.parent_ != nullptr);
         if (PtrTraits::IsSentinel(ns.parent_))
             return;
 
         auto& parent_ns     = NodeTraits::node_state(*ns.parent_);
         bool  is_left_child = PtrTraits::GetRaw(parent_ns.left_) == node;
-        DEBUG_ASSERT(is_left_child || (PtrTraits::GetRaw(parent_ns.right_) == node));
+        MX_DEBUG_ASSERT(is_left_child || (PtrTraits::GetRaw(parent_ns.right_) == node));
 
         if (is_left_child) BalancePostErase_FixLR3Child<ForwardTraits>(ns.parent_);
         else               BalancePostErase_FixLR3Child<ReverseTraits>(ns.parent_);
@@ -1482,7 +1482,7 @@ private:
     template <typename LRTraits>
     void BalancePostErase_FixLR3Child(RawPtrType node) {
         using RLTraits = typename LRTraits::Inverse;
-        DEBUG_ASSERT(PtrTraits::IsValid(node));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(node));
 
         // Throughout this method, we will use the following notation.
         //
@@ -1521,7 +1521,7 @@ private:
             //    meaning that the rank difference between Y and Z is either 1 or 2,
             //    therefor Y's rank is at least 0.
             // 3) Because Y has non-negative rank, it must exist.
-            DEBUG_ASSERT(PtrTraits::IsValid(Y));
+            MX_DEBUG_ASSERT(PtrTraits::IsValid(Y));
 
             auto& Y_ns = NodeTraits::node_state(*Y);
             bool  Y_is_2_child = (Y_ns.rank_parity() == Z_ns->rank_parity());
@@ -1612,8 +1612,8 @@ private:
     template <typename LRTraits>
     void BalancePostErase_DoRotations(RawPtrType Y, RawPtrType Z) {
         using RLTraits = typename LRTraits::Inverse;
-        DEBUG_ASSERT(PtrTraits::IsValid(Y));
-        DEBUG_ASSERT(PtrTraits::IsValid(Z));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(Y));
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(Z));
 
         auto& Y_ns = NodeTraits::node_state(*Y);
         auto& Z_ns = NodeTraits::node_state(*Z);
@@ -1655,9 +1655,9 @@ private:
             // 3) Demote Y once.
             // 3) Demote Z twice.
             RawPtrType V = LRTraits::LRRawChild(Y_ns);
-            DEBUG_ASSERT(PtrTraits::IsValid(V));                     // V must exist
+            MX_DEBUG_ASSERT(PtrTraits::IsValid(V));                     // V must exist
             auto& V_ns = NodeTraits::node_state(*V);
-            DEBUG_ASSERT(V_ns.rank_parity() != Y_ns.rank_parity());  // V must be a 1-child of Y
+            MX_DEBUG_ASSERT(V_ns.rank_parity() != Y_ns.rank_parity());  // V must be a 1-child of Y
 
             // TODO(johngro) : Special case the implementation of a double
             // rotation operation.  It would almost certainly be more efficient

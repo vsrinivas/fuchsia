@@ -74,7 +74,7 @@ public:
     }
 
     T& operator[](size_t i) const {
-        DEBUG_ASSERT(i < count_);
+        MX_DEBUG_ASSERT(i < count_);
         return ptr_[i];
     }
 

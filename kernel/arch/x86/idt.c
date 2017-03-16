@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <magenta/compiler.h>
-#include <magenta/assert.h>
 #include <err.h>
 #include <string.h>
 #include <kernel/mp.h>

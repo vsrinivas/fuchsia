@@ -70,7 +70,7 @@ int have_swbreak_magic(const gregs_type* regs) {
 #endif
 
 const char* excp_type_to_str(uint32_t type) {
-    DEBUG_ASSERT(MX_EXCP_IS_ARCH(type));
+    MX_DEBUG_ASSERT(MX_EXCP_IS_ARCH(type));
     switch (type) {
     case MX_EXCP_GENERAL:
         return "general fault";
@@ -175,7 +175,7 @@ bool write_general_regs(mx_handle_t thread, void* buf, size_t buf_size) {
 
 void dump_memory(mx_handle_t proc, uintptr_t start, size_t len) {
     // Make sure we're not allocating an excessive amount of stack.
-    DEBUG_ASSERT(len <= kMemoryDumpSize);
+    MX_DEBUG_ASSERT(len <= kMemoryDumpSize);
 
     uint8_t buf[len];
     auto res = mx_process_read_memory(proc, start, buf, len, &len);

@@ -6,6 +6,6 @@
 
 extern "C" void __cxa_pure_virtual(void)
 {
-    PANIC("pure virtual called\n");
+    MX_PANIC("pure virtual called\n");
 }
 

@@ -17,15 +17,15 @@ RegionAllocator::RegionPool::RefPtr RegionAllocator::RegionPool::Create(size_t m
 
 RegionAllocator::~RegionAllocator() {
     // No one should be destroying us while we have allocations in flight.
-    DEBUG_ASSERT(allocated_regions_by_base_.is_empty());
+    MX_DEBUG_ASSERT(allocated_regions_by_base_.is_empty());
 
     // We should have the same number of regions sorted by base address and by
     // size.
-    DEBUG_ASSERT(avail_regions_by_base_.size() == avail_regions_by_size_.size());
+    MX_DEBUG_ASSERT(avail_regions_by_base_.size() == avail_regions_by_size_.size());
 
     // We have to have a region pool assigned to us, or our available regions
     // need to be empty.
-    DEBUG_ASSERT((region_pool_ != nullptr) ||
+    MX_DEBUG_ASSERT((region_pool_ != nullptr) ||
                  (avail_regions_by_base_.is_empty() && avail_regions_by_size_.is_empty()));
 
     // Return all of our bookkeeping to our region pool.
@@ -38,7 +38,7 @@ RegionAllocator::~RegionAllocator() {
 void RegionAllocator::Reset() {
     mxtl::AutoLock alloc_lock(&alloc_lock_);
 
-    DEBUG_ASSERT((region_pool_ != nullptr) || avail_regions_by_base_.is_empty());
+    MX_DEBUG_ASSERT((region_pool_ != nullptr) || avail_regions_by_base_.is_empty());
 
     Region* removed;
     while ((removed = avail_regions_by_base_.pop_front()) != nullptr) {
@@ -46,8 +46,8 @@ void RegionAllocator::Reset() {
         region_pool_->Delete(removed);
     }
 
-    DEBUG_ASSERT(avail_regions_by_base_.is_empty());
-    DEBUG_ASSERT(avail_regions_by_size_.is_empty());
+    MX_DEBUG_ASSERT(avail_regions_by_base_.is_empty());
+    MX_DEBUG_ASSERT(avail_regions_by_size_.is_empty());
 }
 
 mx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool) {
@@ -124,7 +124,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
                 Region* removed = avail_regions_by_base_.erase(before);
                 avail_regions_by_size_.erase(*removed);
 
-                DEBUG_ASSERT(region_pool_ != nullptr);
+                MX_DEBUG_ASSERT(region_pool_ != nullptr);
                 region_pool_->Delete(removed);
 
                 return NO_ERROR;
@@ -158,7 +158,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
             // no need to recompute its position in the base index, this has not
             // changed.
             if (region.base == before->base) {
-                DEBUG_ASSERT(region_end < before_end);
+                MX_DEBUG_ASSERT(region_end < before_end);
 
                 Region* bptr = avail_regions_by_size_.erase(*before);
                 bptr->base += region.size;
@@ -170,8 +170,8 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
 
             // Case 4: region trims the end of before.  Update before's size and
             // recompute its position in the size index.
-            DEBUG_ASSERT(region.base != before->base);
-            DEBUG_ASSERT(region_end == before_end);
+            MX_DEBUG_ASSERT(region.base != before->base);
+            MX_DEBUG_ASSERT(region_end == before_end);
 
             Region* bptr = avail_regions_by_size_.erase(*before);
             bptr->size -= region.size;
@@ -195,8 +195,8 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
     // allocate any more bookkeeping, success is guaranteed.  Start by
     // considering the before region.
     if (before.IsValid()) {
-        DEBUG_ASSERT(region.base >= before->base);
-        DEBUG_ASSERT(region_end  >  before_end);
+        MX_DEBUG_ASSERT(region.base >= before->base);
+        MX_DEBUG_ASSERT(region_end  >  before_end);
         if (before_end > region.base) {
             // No matter what, 'before' needs to be removed from the size index.
             Region* bptr = avail_regions_by_size_.erase(*before);
@@ -207,7 +207,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
             if (bptr->base == region.base) {
                 avail_regions_by_base_.erase(*bptr);
 
-                DEBUG_ASSERT(region_pool_ != nullptr);
+                MX_DEBUG_ASSERT(region_pool_ != nullptr);
                 region_pool_->Delete(bptr);
             } else {
                 bptr->size = region.base - bptr->base;
@@ -218,7 +218,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
             // used to end.
             region.base = before_end;
             region.size = region_end - region.base;
-            DEBUG_ASSERT(region.size > 0);
+            MX_DEBUG_ASSERT(region.size > 0);
         }
     }
 
@@ -231,7 +231,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
     // 3) Stop because all remaining regions start after the end of our
     //    subtraction region.
     while (after.IsValid()) {
-        DEBUG_ASSERT(after->base > region.base);
+        MX_DEBUG_ASSERT(after->base > region.base);
 
         // Case #3
         if (after->base >= region_end)
@@ -259,7 +259,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
         region.base = trim_end;
         region.size = region_end - region.base;
 
-        DEBUG_ASSERT(region_pool_ != nullptr);
+        MX_DEBUG_ASSERT(region_pool_ != nullptr);
         region_pool_->Delete(trim);
 
         if (!region.size)
@@ -269,7 +269,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
 
     // Sanity check.  The number of elements in the base index should match the
     // number of elements in the size index.
-    DEBUG_ASSERT(avail_regions_by_base_.size() == avail_regions_by_size_.size());
+    MX_DEBUG_ASSERT(avail_regions_by_base_.size() == avail_regions_by_size_.size());
     return NO_ERROR;
 }
 
@@ -300,7 +300,7 @@ mx_status_t RegionAllocator::GetRegion(uint64_t size,
     // restrictions.
     uint64_t aligned_base;
     while (iter.IsValid()) {
-        DEBUG_ASSERT(iter->size >= size);
+        MX_DEBUG_ASSERT(iter->size >= size);
         aligned_base = (iter->base + mask) & inv_mask;
         uint64_t overhead = aligned_base - iter->base;
         uint64_t leftover = iter->size - size;
@@ -357,8 +357,8 @@ mx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
     // So, if request.end <= iter.end, we know that request is completely
     // contained within iter.  It does not matter if we use the inclusive or
     // exclusive end to check, as long as we are consistent.
-    DEBUG_ASSERT(iter->size > 0);
-    DEBUG_ASSERT(iter->base <= base);
+    MX_DEBUG_ASSERT(iter->size > 0);
+    MX_DEBUG_ASSERT(iter->base <= base);
     uint64_t req_end  = base + size - 1;
     uint64_t iter_end = iter->base + iter->size - 1;
     if (req_end > iter_end)
@@ -393,14 +393,14 @@ mx_status_t RegionAllocator::AddSubtractSanityCheckLocked(const ralloc_region_t&
 void RegionAllocator::ReleaseRegion(Region* region) {
     mxtl::AutoLock alloc_lock(&alloc_lock_);
 
-    DEBUG_ASSERT(region != nullptr);
+    MX_DEBUG_ASSERT(region != nullptr);
 
     // When a region comes back from a user, it should be in the
     // allocated_regions_by_base tree, but not in either of the avail_regions
     // trees, and not in any free list.  Remove it from the allocated_regions
     // bookkeeping and add it back to the available regions.
-    DEBUG_ASSERT(region->ns_tree_sort_by_base_.InContainer());
-    DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
+    MX_DEBUG_ASSERT(region->ns_tree_sort_by_base_.InContainer());
+    MX_DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
 
     allocated_regions_by_base_.erase(*region);
     AddRegionToAvailLocked(region);
@@ -410,16 +410,16 @@ mx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
                                                   Region::UPtr& out_region,
                                                   uint64_t base,
                                                   uint64_t size) {
-    DEBUG_ASSERT(out_region == nullptr);
-    DEBUG_ASSERT(source.IsValid());
-    DEBUG_ASSERT(base >= source->base);
-    DEBUG_ASSERT(size <= source->size);
+    MX_DEBUG_ASSERT(out_region == nullptr);
+    MX_DEBUG_ASSERT(source.IsValid());
+    MX_DEBUG_ASSERT(base >= source->base);
+    MX_DEBUG_ASSERT(size <= source->size);
 
     uint64_t overhead = base - source->base;
-    DEBUG_ASSERT(overhead < source->size);
+    MX_DEBUG_ASSERT(overhead < source->size);
 
     uint64_t leftover = source->size - size;
-    DEBUG_ASSERT(leftover >= overhead);
+    MX_DEBUG_ASSERT(leftover >= overhead);
 
     // Great, we found a region.  We may have to split the available region into
     // up to 2 sub regions depedning on where the aligned allocation lies in the
@@ -483,7 +483,7 @@ mx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
 
         Region* after_region = region_pool_->New(this);
         if (after_region == nullptr) {
-            DEBUG_ASSERT(region_pool_ != nullptr);
+            MX_DEBUG_ASSERT(region_pool_ != nullptr);
             region_pool_->Delete(region);
             return ERR_NO_MEMORY;
         }
@@ -509,10 +509,10 @@ mx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
 void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap) {
     // Sanity checks.  This region should not exist in any bookkeeping, and
     // should not overlap with any of the regions we are currently tracking.
-    DEBUG_ASSERT(!region->ns_tree_sort_by_base_.InContainer());
-    DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
-    DEBUG_ASSERT(!IntersectsLocked(allocated_regions_by_base_, *region));
-    DEBUG_ASSERT(allow_overlap || !IntersectsLocked(avail_regions_by_base_, *region));
+    MX_DEBUG_ASSERT(!region->ns_tree_sort_by_base_.InContainer());
+    MX_DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
+    MX_DEBUG_ASSERT(!IntersectsLocked(allocated_regions_by_base_, *region));
+    MX_DEBUG_ASSERT(allow_overlap || !IntersectsLocked(avail_regions_by_base_, *region));
 
     // Find the region which comes before us and the region which comes after us
     // in the tree.
@@ -522,7 +522,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
     // Merge with the region which comes before us if we can.
     uint64_t region_end = (region->base + region->size);    // exclusive end
     if (before.IsValid()) {
-        DEBUG_ASSERT(before->base <= region->base);
+        MX_DEBUG_ASSERT(before->base <= region->base);
 
         uint64_t before_end = (before->base + before->size);    // exclusive end
         if (allow_overlap ? (before_end >= region->base) : (before_end == region->base)) {
@@ -531,7 +531,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
 
             auto removed = avail_regions_by_base_.erase(before);
             avail_regions_by_size_.erase(*removed);
-            DEBUG_ASSERT(region_pool_ != nullptr);
+            MX_DEBUG_ASSERT(region_pool_ != nullptr);
             region_pool_->Delete(removed);
         }
     }
@@ -539,7 +539,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
     // Merge with the region which comes after us if we can, keep merging if we
     // allow overlaps.
     while (after.IsValid()) {
-        DEBUG_ASSERT(region->base < after->base);
+        MX_DEBUG_ASSERT(region->base < after->base);
 
         if (!(allow_overlap ? (region_end >= after->base) : (region_end == after->base)))
             break;
@@ -550,7 +550,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
         auto remove_me = after++;
         auto removed  = avail_regions_by_base_.erase(remove_me);
         avail_regions_by_size_.erase(*removed);
-        DEBUG_ASSERT(region_pool_ != nullptr);
+        MX_DEBUG_ASSERT(region_pool_ != nullptr);
         region_pool_->Delete(removed);
 
         if (!allow_overlap)

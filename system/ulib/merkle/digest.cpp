@@ -27,11 +27,11 @@ Digest::Digest(const uint8_t* other) {
 }
 
 Digest::~Digest() {
-    DEBUG_ASSERT(ref_count_ == 0);
+    MX_DEBUG_ASSERT(ref_count_ == 0);
 }
 
 Digest& Digest::operator=(const Digest& rhs) {
-    DEBUG_ASSERT(ref_count_ == 0);
+    MX_DEBUG_ASSERT(ref_count_ == 0);
     if (this != &rhs) {
         memcpy(&ctx_, &rhs.ctx_, sizeof(ctx_));
         memcpy(bytes_, rhs.bytes_, kLength);
@@ -40,13 +40,13 @@ Digest& Digest::operator=(const Digest& rhs) {
 }
 
 Digest& Digest::operator=(const uint8_t* rhs) {
-    DEBUG_ASSERT(ref_count_ == 0);
+    MX_DEBUG_ASSERT(ref_count_ == 0);
     memcpy(bytes_, rhs, kLength);
     return *this;
 }
 
 void Digest::Init() {
-    DEBUG_ASSERT(ref_count_ == 0);
+    MX_DEBUG_ASSERT(ref_count_ == 0);
 #ifdef USE_LIBCRYPTO
     SHA256_Init(&ctx_);
 #else
@@ -55,8 +55,8 @@ void Digest::Init() {
 }
 
 void Digest::Update(const void* buf, size_t len) {
-    DEBUG_ASSERT(ref_count_ == 0);
-    DEBUG_ASSERT(len <= INT_MAX);
+    MX_DEBUG_ASSERT(ref_count_ == 0);
+    MX_DEBUG_ASSERT(len <= INT_MAX);
 #ifdef USE_LIBCRYPTO
     SHA256_Update(&ctx_, buf, len);
 #else
@@ -65,7 +65,7 @@ void Digest::Update(const void* buf, size_t len) {
 }
 
 const uint8_t* Digest::Final() {
-    DEBUG_ASSERT(ref_count_ == 0);
+    MX_DEBUG_ASSERT(ref_count_ == 0);
 #ifdef USE_LIBCRYPTO
     SHA256_Final(bytes_, &ctx_);
 #else
@@ -81,7 +81,7 @@ const uint8_t* Digest::Hash(const void* buf, size_t len) {
 }
 
 mx_status_t Digest::Parse(const char* hex, size_t len) {
-    DEBUG_ASSERT(ref_count_ == 0);
+    MX_DEBUG_ASSERT(ref_count_ == 0);
     if (len < sizeof(bytes_) * 2) {
         return ERR_INVALID_ARGS;
     }
@@ -125,13 +125,13 @@ mx_status_t Digest::CopyTo(uint8_t* out, size_t len) const {
 }
 
 const uint8_t* Digest::AcquireBytes() const {
-    DEBUG_ASSERT(ref_count_ < SIZE_MAX);
+    MX_DEBUG_ASSERT(ref_count_ < SIZE_MAX);
     ++ref_count_;
     return bytes_;
 }
 
 void Digest::ReleaseBytes() const {
-    DEBUG_ASSERT(ref_count_ > 0);
+    MX_DEBUG_ASSERT(ref_count_ > 0);
     --ref_count_;
 }
 

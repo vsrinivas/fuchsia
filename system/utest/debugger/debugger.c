@@ -250,7 +250,7 @@ static void join_wait_inf_thread(thrd_t wait_inf_thread)
 static bool expect_debugger_attached_eq(
         mx_handle_t inferior, bool expected, const char* msg) {
     mx_info_process_t info;
-    // ASSERT returns false if the check fails.
+    // MX_ASSERT returns false if the check fails.
     ASSERT_EQ(mx_object_get_info(
             inferior, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), NO_ERROR, "");
     ASSERT_EQ(info.debugger_attached, expected, msg);

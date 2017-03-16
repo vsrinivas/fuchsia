@@ -119,22 +119,22 @@
  * to an instance of DeviceImpl created by the Create method.
  */
 
-#if (LK_DEBUGLEVEL > 1)
+#if (DEBUG_ASSERT_IMPLEMENTED)
 #define __PCIE_REQUIRE_ADOPT virtual void Adopt() = 0
-#else   // if (LK_DEBUGLEVEL > 1)
+#else   // if (DEBUG_ASSERT_IMPLEMENTED)
 #define __PCIE_REQUIRE_ADOPT
-#endif  // if (LK_DEBUGLEVEL > 1)
+#endif  // if (DEBUG_ASSERT_IMPLEMENTED)
 
 #define PCIE_REQUIRE_REFCOUNTED \
     __PCIE_REQUIRE_ADOPT; \
     virtual void AddRef()  = 0; \
     virtual bool Release() = 0 \
 
-#if (LK_DEBUGLEVEL > 1)
+#if (DEBUG_ASSERT_IMPLEMENTED)
 #define __PCIE_IMPLEMENT_ADOPT void Adopt() final { ref_count_impl_.Adopt(); }
-#else   // if (LK_DEBUGLEVEL > 1)
+#else   // if (DEBUG_ASSERT_IMPLEMENTED)
 #define __PCIE_IMPLEMENT_ADOPT
-#endif  // if (LK_DEBUGLEVEL > 1)
+#endif  // if (DEBUG_ASSERT_IMPLEMENTED)
 
 #define PCIE_IMPLEMENT_REFCOUNTED \
 private: \

@@ -85,7 +85,7 @@ fail:
 void BlockTransaction::Complete(mx_status_t status) {
     mxtl::AutoLock lock(&lock_);
     response_.count++;
-    DEBUG_ASSERT(response_.count <= goal_);
+    MX_DEBUG_ASSERT(response_.count <= goal_);
 
     if ((status != NO_ERROR) && (response_.status == NO_ERROR)) {
         response_.status = status;

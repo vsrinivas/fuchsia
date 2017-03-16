@@ -103,7 +103,7 @@ using has_mxtl_recycle = is_base_of<::mxtl::Recyclable<typename remove_cv<T>::ty
 // to undergo name lookup or template expansion.
 template <typename T, typename = void>
 struct recycler {
-    static inline void recycle(T* ptr) { ASSERT(false); }
+    static inline void recycle(T* ptr) { MX_ASSERT(false); }
 };
 
 template <typename T>

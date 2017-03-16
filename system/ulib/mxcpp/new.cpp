@@ -13,7 +13,7 @@ enum : unsigned {
 
 void panic_if_armed(unsigned state) {
     if (state & alloc_armed)
-        PANIC("AllocChecker::check() needs to be called\n");
+        MX_PANIC("AllocChecker::check() needs to be called\n");
 }
 
 AllocChecker::AllocChecker() : state_(0U) {
@@ -37,7 +37,7 @@ bool AllocChecker::check() {
 void* operator new(size_t s) {
     auto mem = ::malloc(s);
     if (!mem) {
-        PANIC("Out of memory (new)\n");
+        MX_PANIC("Out of memory (new)\n");
     }
     return mem;
 }
@@ -45,7 +45,7 @@ void* operator new(size_t s) {
 void* operator new[](size_t s) {
     auto mem = ::malloc(s);
     if (!mem) {
-        PANIC("Out of memory (new[])\n");
+        MX_PANIC("Out of memory (new[])\n");
     }
     return mem;
 }
