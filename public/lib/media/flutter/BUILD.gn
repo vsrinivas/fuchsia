@@ -17,5 +17,5 @@ dart_package("flutter") {
     "//lib/flutter/packages/flutter",
   ]
 
-  analysis_options = "//apps/modules/.analysis_options"
+  analysis_options = "//apps/modules/common/.analysis_options"
 }
