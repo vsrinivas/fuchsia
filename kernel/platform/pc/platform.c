@@ -78,8 +78,13 @@ uint32_t bootloader_fb_format;
 uint32_t bootloader_i915_reg_base;
 uint32_t bootloader_fb_window_size;
 
+void* bootloader_efi_system_table;
+
 void* bootloader_e820_table;
 uint32_t bootloader_e820_count;
+
+void* bootloader_efi_mmap;
+size_t bootloader_efi_mmap_size;
 
 static uint32_t bootloader_ramdisk_base;
 static uint32_t bootloader_ramdisk_size;
@@ -93,6 +98,12 @@ static int process_bootitem(bootdata_t* bd, void* item) {
             break;
         }
         bootloader_acpi_rsdp = *((uint64_t*)item);
+        break;
+    case BOOTDATA_EFI_SYSTEM_TABLE:
+        if (bd->length < sizeof(uint64_t)) {
+            break;
+        }
+        bootloader_efi_system_table = (void*) *((uint64_t*)item);
         break;
     case BOOTDATA_FRAMEBUFFER:
         if (bd->length < sizeof(bootdata_swfb_t)) {
@@ -114,6 +125,10 @@ static int process_bootitem(bootdata_t* bd, void* item) {
         ((char*) item)[bd->length - 1] = 0;
         printf("cmdline: '%s'\n", (char*) item);
         cmdline_init((char*) item);
+        break;
+    case BOOTDATA_EFI_MEMORY_MAP:
+        bootloader_efi_mmap = item;
+        bootloader_efi_mmap_size = bd->length;
         break;
     case BOOTDATA_E820_TABLE:
         bootloader_e820_table = item;

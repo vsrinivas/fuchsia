@@ -8,6 +8,7 @@
 #include <err.h>
 #include <kernel/vm.h>
 #include <magenta/boot/multiboot.h>
+#include <magenta/boot/efi.h>
 #include <trace.h>
 
 #include "platform_p.h"
@@ -233,6 +234,103 @@ static int e820_range_init(boot_addr_range_t *range, e820_range_seq_t *seq)
 }
 
 
+typedef struct efi_range_seq {
+    void* base;
+    size_t entrysz;
+    int index;
+    int count;
+} efi_range_seq_t;
+
+static void efi_range_reset(boot_addr_range_t *range)
+{
+    boot_addr_range_reset(range);
+
+    efi_range_seq_t *seq = (efi_range_seq_t *)(range->seq);
+    seq->index = -1;
+}
+
+static int efi_is_mem(uint32_t type) {
+    switch (type) {
+    case EfiLoaderCode:
+    case EfiLoaderData:
+    case EfiBootServicesCode:
+    case EfiBootServicesData:
+    case EfiConventionalMemory:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+static void efi_print(const char* tag, efi_memory_descriptor_t* e) {
+    bool mb = e->NumberOfPages > 256;
+    LTRACEF("%s%016lx %08x %lu%s\n",
+            tag, e->PhysicalStart, e->Type,
+            mb ? e->NumberOfPages / 256 : e->NumberOfPages * 4,
+            mb ? "MB" : "KB");
+}
+
+static void efi_range_advance(boot_addr_range_t *range)
+{
+    efi_range_seq_t *seq = (efi_range_seq_t *)(range->seq);
+
+    seq->index++;
+
+    if (seq->index == seq->count) {
+        /* reset range to signal that we're at the end of the map */
+        efi_range_reset(range);
+        return;
+    }
+
+    efi_memory_descriptor_t *entry = seq->base + (seq->index * seq->entrysz);
+    efi_print("EFI: ", entry);
+    range->base = entry->PhysicalStart;
+    range->size = entry->NumberOfPages * PAGE_SIZE;
+    range->is_reset = 0;
+    range->is_mem = efi_is_mem(entry->Type);
+
+    // coalesce adjacent memory ranges
+    while ((seq->index + 1) < seq->count) {
+        efi_memory_descriptor_t *next = seq->base + ((seq->index + 1) * seq->entrysz);
+        if ((range->base + range->size) != next->PhysicalStart) {
+            break;
+        }
+        if (efi_is_mem(next->Type) != range->is_mem) {
+            break;
+        }
+        efi_print("EFI+ ", next);
+        range->size += next->NumberOfPages * PAGE_SIZE;
+        seq->index++;
+    }
+}
+
+// efi table extracted from bootdata
+extern void* bootloader_efi_mmap;
+extern size_t bootloader_efi_mmap_size;
+
+static int efi_range_init(boot_addr_range_t *range, efi_range_seq_t *seq)
+{
+    range->seq = seq;
+    range->advance = &efi_range_advance;
+    range->reset = &efi_range_reset;
+
+    if (bootloader_efi_mmap &&
+        (bootloader_efi_mmap_size > sizeof(uint64_t))) {
+        seq->entrysz = *((uint64_t*) bootloader_efi_mmap);
+        if (seq->entrysz < sizeof(efi_memory_descriptor_t)) {
+            return 0;
+        }
+
+        seq->count = (bootloader_efi_mmap_size - sizeof(uint64_t)) / seq->entrysz;
+        seq->base = bootloader_efi_mmap + sizeof(uint64_t);
+        range->reset(range);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
 typedef struct multiboot_range_seq {
     multiboot_info_t *info;
     memory_map_t *mmap;
@@ -342,7 +440,13 @@ static int platform_mem_range_init(void)
     boot_addr_range_t range;
     int count = 0;
 
-    /* try getting range info from e820 first */
+    /* first try the efi memory table */
+    efi_range_seq_t efi_seq;
+    if (efi_range_init(&range, &efi_seq) &&
+        (count = mem_arena_init(&range)))
+        return count;
+
+    /* then try getting range info from e820 */
     e820_range_seq_t e820_seq;
     if (e820_range_init(&range, &e820_seq) &&
         (count = mem_arena_init(&range)))
@@ -394,11 +498,14 @@ void platform_mem_init(void)
     // entries we may have.  Find some other way to make this information
     // available at any point in time after we boot.
     boot_addr_range_t range;
+    efi_range_seq_t efi_seq;
     e820_range_seq_t e820_seq;
     multiboot_range_seq_t multiboot_seq;
 
     cached_e820_entry_count = 0;
-    if (e820_range_init(&range, &e820_seq) || multiboot_range_init(&range, &multiboot_seq)) {
+    if (efi_range_init(&range, &efi_seq) ||
+        e820_range_init(&range, &e820_seq) ||
+        multiboot_range_init(&range, &multiboot_seq)) {
         for (range.reset(&range),
              range.advance(&range);
              !range.is_reset; range.advance(&range)) {
