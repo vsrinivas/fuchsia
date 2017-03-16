@@ -8,7 +8,7 @@
 #include <string>
 
 #include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/storage/impl/btree/btree_utils.h"
+#include "apps/ledger/src/storage/impl/btree/builder.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/db.h"
 #include "apps/ledger/src/storage/public/commit.h"

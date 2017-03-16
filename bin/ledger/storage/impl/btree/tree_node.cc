@@ -8,7 +8,6 @@
 
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/impl/btree/btree_utils.h"
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/logging.h"

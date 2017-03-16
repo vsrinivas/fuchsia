@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/btree/btree_utils.h"
-
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -12,7 +10,10 @@
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
+#include "apps/ledger/src/storage/impl/btree/builder.h"
+#include "apps/ledger/src/storage/impl/btree/diff.h"
 #include "apps/ledger/src/storage/impl/btree/entry_change_iterator.h"
+#include "apps/ledger/src/storage/impl/btree/iterator.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -824,7 +825,7 @@ TEST_F(BTreeUtilsTest, ForEachDiff) {
   ASSERT_TRUE(CreateEntryChanges(50, &changes));
   ObjectId base_root_id = CreateTree(changes);
   changes.clear();
-  // Update value for key10.
+  // Update value for key1.
   changes.push_back(
       EntryChange{Entry{"key1", object_id, KeyPriority::LAZY}, false});
   // Add entry key255.

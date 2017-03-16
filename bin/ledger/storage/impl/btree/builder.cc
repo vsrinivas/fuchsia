@@ -1,11 +1,13 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/btree/btree_utils.h"
+#include "apps/ledger/src/storage/impl/btree/builder.h"
 
 #include "apps/ledger/src/callback/asynchronous_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
+#include "apps/ledger/src/storage/impl/btree/internal_helper.h"
+#include "apps/ledger/src/storage/impl/btree/synchronous_storage.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "third_party/murmurhash/murmurhash.h"
@@ -13,56 +15,6 @@
 namespace storage {
 namespace btree {
 namespace {
-
-class SynchronousStorage {
- public:
-  SynchronousStorage(PageStorage* page_storage,
-                     coroutine::CoroutineHandler* handler)
-      : page_storage_(page_storage), handler_(handler) {}
-
-  PageStorage* page_storage() { return page_storage_; }
-  coroutine::CoroutineHandler* handler() { return handler_; }
-
-  Status TreeNodeFromId(ObjectIdView object_id,
-                        std::unique_ptr<const TreeNode>* result) {
-    Status status;
-    if (coroutine::SyncCall(
-            handler_,
-            [this, &object_id](
-                std::function<void(Status, std::unique_ptr<const TreeNode>)>
-                    callback) {
-              TreeNode::FromId(page_storage_, object_id, std::move(callback));
-            },
-            &status, result)) {
-      return Status::ILLEGAL_STATE;
-    }
-    return status;
-  }
-
-  Status TreeNodeFromEntries(uint8_t level,
-                             const std::vector<Entry>& entries,
-                             const std::vector<ObjectId>& children,
-                             ObjectId* result) {
-    Status status;
-    if (coroutine::SyncCall(
-            handler_,
-            [this, level, &entries,
-             &children](std::function<void(Status, ObjectId)> callback) {
-              TreeNode::FromEntries(page_storage_, level, entries, children,
-                                    std::move(callback));
-            },
-            &status, result)) {
-      return Status::ILLEGAL_STATE;
-    }
-    return status;
-  }
-
- private:
-  PageStorage* page_storage_;
-  coroutine::CoroutineHandler* handler_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(SynchronousStorage);
-};
 
 constexpr uint32_t kMurmurHashSeed = 0xbeef;
 
@@ -97,81 +49,6 @@ uint8_t GetNodeLevel(convert::ExtendedStringView key) {
 }
 
 constexpr NodeLevelCalculator kDefaultNodeLevelCalculator = {&GetNodeLevel};
-
-// Returns the index of |entries| that contains |key|, or the first entry that
-// has key greather than |key|. In the second case, the key, if present, will
-// be found in the children at the returned index.
-size_t GetEntryOrChildIndex(const std::vector<Entry> entries,
-                            ftl::StringView key) {
-  auto lower = std::lower_bound(
-      entries.begin(), entries.end(), key,
-      [](const Entry& entry, ftl::StringView key) { return entry.key < key; });
-  return lower - entries.begin();
-}
-
-Status ForEachEntryInternal(
-    SynchronousStorage* storage,
-    ObjectIdView node_id,
-    ftl::StringView min_key,
-    const std::function<bool(EntryAndNodeId)>& on_next) {
-  if (node_id.empty()) {
-    return Status::OK;
-  }
-
-  std::unique_ptr<const TreeNode> node;
-  Status status = storage->TreeNodeFromId(node_id, &node);
-  if (status != Status::OK) {
-    return status;
-  }
-
-  size_t child_index = 0;
-  if (!min_key.empty()) {
-    child_index = GetEntryOrChildIndex(node->entries(), min_key);
-  }
-  if (child_index == node->entries().size() ||
-      node->entries()[child_index].key != min_key) {
-    status = ForEachEntryInternal(storage, node->children_ids()[child_index],
-                                  min_key, on_next);
-    if (status != Status::OK) {
-      return status;
-    }
-  }
-  while (child_index < node->entries().size()) {
-    if (!on_next({node->entries()[child_index], node->GetId()})) {
-      return Status::OK;
-    }
-    ++child_index;
-    status = ForEachEntryInternal(storage, node->children_ids()[child_index],
-                                  "", on_next);
-    if (status != Status::OK) {
-      return status;
-    }
-  }
-  return Status::OK;
-}
-
-// Returns a vector with all the tree's entries, sorted by key.
-void GetEntriesVector(
-    coroutine::CoroutineService* coroutine_service,
-    PageStorage* page_storage,
-    ObjectIdView root_id,
-    std::function<void(Status, std::unique_ptr<std::vector<Entry>>)> on_done) {
-  auto entries = std::make_unique<std::vector<Entry>>();
-  auto on_next = [entries = entries.get()](EntryAndNodeId e) {
-    entries->push_back(std::move(e.entry));
-    return true;
-  };
-  btree::ForEachEntry(
-      coroutine_service, page_storage, root_id, "", on_next, ftl::MakeCopyable([
-        entries = std::move(entries), on_done = std::move(on_done)
-      ](Status s) mutable {
-        if (s != Status::OK) {
-          on_done(s, nullptr);
-          return;
-        }
-        on_done(Status::OK, std::move(entries));
-      }));
-}
 
 // Base class for tree nodes during construction. To apply mutations on a tree
 // node, one starts by creating an instance of NodeBuilder from the id of an
@@ -310,7 +187,6 @@ class NodeBuilder {
     }
     return *this;
   }
-
 
   // Collect the maximal set of nodes in the tree root at this builder than can
   // currently be built. A node can be built if and only if all its children are
@@ -506,7 +382,6 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage,
 
   // If the change is at a higher level than this node, then it is a no-op.
   if (key_level > level_) {
-    *did_mutate = false;
     return Status::OK;
   }
 
@@ -818,157 +693,6 @@ void ApplyChanges(
       callback(status, std::move(object_id), std::move(new_ids));
     });
   }));
-}
-
-void GetObjectIds(coroutine::CoroutineService* coroutine_service,
-                  PageStorage* page_storage,
-                  ObjectIdView root_id,
-                  std::function<void(Status, std::set<ObjectId>)> callback) {
-  FTL_DCHECK(!root_id.empty());
-  auto object_ids = std::make_unique<std::set<ObjectId>>();
-  object_ids->insert(root_id.ToString());
-
-  auto on_next = [object_ids = object_ids.get()](EntryAndNodeId e) {
-    object_ids->insert(e.entry.object_id);
-    object_ids->insert(e.node_id);
-    return true;
-  };
-  auto on_done = ftl::MakeCopyable([
-    object_ids = std::move(object_ids), callback = std::move(callback)
-  ](Status status) {
-    if (status != Status::OK) {
-      callback(status, std::set<ObjectId>());
-      return;
-    }
-    callback(status, std::move(*object_ids));
-  });
-  ForEachEntry(coroutine_service, page_storage, root_id, "", std::move(on_next),
-               std::move(on_done));
-}
-
-void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
-                        PageStorage* page_storage,
-                        ObjectIdView root_id,
-                        std::function<void(Status)> callback) {
-  ftl::RefPtr<callback::Waiter<Status, std::unique_ptr<const Object>>> waiter_ =
-      callback::Waiter<Status, std::unique_ptr<const Object>>::Create(
-          Status::OK);
-  auto on_next = [page_storage, waiter_](EntryAndNodeId e) {
-    if (e.entry.priority == KeyPriority::EAGER) {
-      page_storage->GetObject(e.entry.object_id, PageStorage::Location::NETWORK,
-                              waiter_->NewCallback());
-    }
-    return true;
-  };
-  auto on_done = [ callback = std::move(callback), waiter_ ](Status status) {
-    if (status != Status::OK) {
-      callback(status);
-      return;
-    }
-    waiter_->Finalize([callback = std::move(callback)](
-        Status s, std::vector<std::unique_ptr<const Object>> objects) {
-      callback(s);
-    });
-  };
-  ForEachEntry(coroutine_service, page_storage, root_id, "", std::move(on_next),
-               std::move(on_done));
-}
-
-void ForEachEntry(coroutine::CoroutineService* coroutine_service,
-                  PageStorage* page_storage,
-                  ObjectIdView root_id,
-                  std::string min_key,
-                  std::function<bool(EntryAndNodeId)> on_next,
-                  std::function<void(Status)> on_done) {
-  FTL_DCHECK(!root_id.empty());
-  coroutine_service->StartCoroutine([
-    page_storage, root_id, min_key = std::move(min_key),
-    on_next = std::move(on_next), on_done = std::move(on_done)
-  ](coroutine::CoroutineHandler * handler) {
-    SynchronousStorage storage(page_storage, handler);
-
-    on_done(ForEachEntryInternal(&storage, root_id, min_key, on_next));
-  });
-}
-
-void ForEachDiff(coroutine::CoroutineService* coroutine_service,
-                 PageStorage* page_storage,
-                 ObjectIdView base_root_id,
-                 ObjectIdView other_root_id,
-                 std::function<bool(EntryChange)> on_next,
-                 std::function<void(Status)> on_done) {
-  // TODO(nellyv): This is a naive calculation of the the diff, loading all
-  // entries from both versions in memory and then computing the diff. This
-  // should be updated with the new version of the BTree.
-  auto waiter =
-      callback::Waiter<Status, std::unique_ptr<std::vector<Entry>>>::Create(
-          Status::OK);
-  GetEntriesVector(coroutine_service, page_storage, base_root_id,
-                   waiter->NewCallback());
-  GetEntriesVector(coroutine_service, page_storage, other_root_id,
-                   waiter->NewCallback());
-  waiter->Finalize([
-    on_next = std::move(on_next), on_done = std::move(on_done)
-  ](Status s, std::vector<std::unique_ptr<std::vector<Entry>>> entries) {
-    if (s != Status::OK) {
-      on_done(s);
-      return;
-    }
-    FTL_DCHECK(entries.size() == 2u);
-    auto base_it = entries[0].get()->begin();
-    auto base_it_end = entries[0].get()->end();
-    auto other_it = entries[1].get()->begin();
-    auto other_it_end = entries[1].get()->end();
-
-    while (base_it != base_it_end && other_it != other_it_end) {
-      if (*base_it == *other_it) {
-        // Entries are equal.
-        ++base_it;
-        ++other_it;
-        continue;
-      }
-      EntryChange change;
-      // strcmp will not work if keys contain '\0' characters.
-      int cmp = ftl::StringView(base_it->key).compare(other_it->key);
-      if (cmp >= 0) {
-        // The entry was added or updated.
-        change = {*other_it, false};
-      } else {
-        // The entry was deleted.
-        change = {*base_it, true};
-      }
-      if (!on_next(std::move(change))) {
-        on_done(Status::OK);
-        return;
-      }
-      // Advance the iterators.
-      if (cmp >= 0) {
-        ++other_it;
-      }
-      if (cmp <= 0) {
-        ++base_it;
-      }
-    }
-    while (base_it != base_it_end) {
-      // The entry was deleted.
-      EntryChange change{*base_it, true};
-      if (!on_next(std::move(change))) {
-        on_done(Status::OK);
-        return;
-      }
-      base_it++;
-    }
-    while (other_it != other_it_end) {
-      // The entry was added.
-      EntryChange change{*other_it, false};
-      if (!on_next(std::move(change))) {
-        on_done(Status::OK);
-        return;
-      }
-      other_it++;
-    }
-    on_done(Status::OK);
-  });
 }
 
 }  // namespace btree

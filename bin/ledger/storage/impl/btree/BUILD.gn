@@ -10,6 +10,40 @@ group("btree") {
   ]
 }
 
+source_set("lib") {
+  sources = [
+    "builder.cc",
+    "builder.h",
+    "diff.cc",
+    "diff.h",
+    "encoding.cc",
+    "encoding.h",
+    "iterator.cc",
+    "iterator.h",
+    "synchronous_storage.cc",
+    "synchronous_storage.h",
+    "tree_node.cc",
+    "tree_node.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/coroutine",
+  ]
+
+  deps = [
+    ":internal",
+    ":tree_node_storage",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/storage/public",
+    "//lib/ftl",
+    "//third_party/murmurhash",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
 flatbuffer("tree_node_storage") {
   sources = [
     "tree_node.fbs",
@@ -22,27 +56,14 @@ flatbuffer("tree_node_storage") {
   extra_configs = [ "//apps/ledger/src:ledger_config" ]
 }
 
-source_set("lib") {
+source_set("internal") {
   sources = [
-    "btree_utils.cc",
-    "btree_utils.h",
-    "encoding.cc",
-    "encoding.h",
-    "tree_node.cc",
-    "tree_node.h",
+    "internal_helper.cc",
+    "internal_helper.h",
   ]
 
   public_deps = [
-    "//apps/ledger/src/coroutine",
-  ]
-
-  deps = [
-    ":tree_node_storage",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/public",
-    "//lib/ftl",
-    "//third_party/murmurhash",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
