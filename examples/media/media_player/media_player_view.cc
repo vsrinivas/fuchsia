@@ -13,6 +13,7 @@
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/services/audio_renderer.fidl.h"
 #include "apps/media/services/media_service.fidl.h"
+#include "apps/media/services/net_media_service.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "lib/ftl/logging.h"
@@ -65,6 +66,10 @@ MediaPlayerView::MediaPlayerView(
   media::MediaServicePtr media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
 
+  media::NetMediaServicePtr net_media_service =
+      application_context
+          ->ConnectToEnvironmentService<media::NetMediaService>();
+
   // We start with a non-zero size so we get a progress bar regardless of
   // whether we get video.
   video_size_.width = 640u;
@@ -86,33 +91,36 @@ MediaPlayerView::MediaPlayerView(
     video_renderer_->CreateView(video_view_owner.NewRequest());
     GetViewContainer()->AddChild(kVideoChildKey, std::move(video_view_owner));
 
-    // Get a reader.
-    media::SeekingReaderPtr reader;
-    if (!params.url().empty()) {
-      media_service->CreateNetworkReader(params.url(), reader.NewRequest());
-    } else {
-      FTL_DCHECK(!params.path().empty());
-      media_service->CreateFileReader(params.path(), reader.NewRequest());
-    }
-
     // Create a player from all that stuff.
-    media_service->CreatePlayer(
-        std::move(reader), std::move(audio_media_renderer),
-        std::move(video_media_renderer), media_player_.NewRequest());
+    media::MediaPlayerPtr media_player;
+    media_service->CreatePlayer(nullptr, std::move(audio_media_renderer),
+                                std::move(video_media_renderer),
+                                media_player.NewRequest());
+
+    net_media_service->CreateNetMediaPlayer(
+        params.service_name().empty() ? "media_player" : params.service_name(),
+        std::move(media_player), net_media_player_.NewRequest());
+
+    HandleVideoRendererStatusUpdates();
   } else {
     // Create a player proxy.
-    FTL_CHECK(false) << "Remote control is temporarily disabled";
+    net_media_service->CreateNetMediaPlayerProxy(
+        params.device_name(), params.service_name(),
+        net_media_player_.NewRequest());
   }
 
-  // Get the first frames queued up so we can show something.
-  media_player_->Pause();
+  if (!params.url().empty()) {
+    net_media_player_->SetUrl(params.url());
+
+    // Get the first frames queued up so we can show something.
+    net_media_player_->Pause();
+  }
 
   // These are for calculating frame rate.
   frame_time_ = media::Timeline::local_now();
   prev_frame_time_ = frame_time_;
 
   HandlePlayerStatusUpdates();
-  HandleVideoRendererStatusUpdates();
 }
 
 MediaPlayerView::~MediaPlayerView() {}
@@ -126,10 +134,10 @@ void MediaPlayerView::OnEvent(mozart::InputEventPtr event,
     if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
       if (metadata_ && Contains(progress_bar_rect_, pointer->x, pointer->y)) {
         // User poked the progress bar...seek.
-        media_player_->Seek((pointer->x - progress_bar_rect_.x) *
-                            metadata_->duration / progress_bar_rect_.width);
+        net_media_player_->Seek((pointer->x - progress_bar_rect_.x) *
+                                metadata_->duration / progress_bar_rect_.width);
         if (state_ != State::kPlaying) {
-          media_player_->Play();
+          net_media_player_->Play();
         }
       } else {
         // User poked elsewhere.
@@ -436,7 +444,7 @@ void MediaPlayerView::HandlePlayerStatusUpdates(
   Invalidate();
 
   // Request a status update.
-  media_player_->GetStatus(
+  net_media_player_->GetStatus(
       version, [this](uint64_t version, media::MediaPlayerStatusPtr status) {
         HandlePlayerStatusUpdates(version, std::move(status));
       });
@@ -471,14 +479,14 @@ void MediaPlayerView::HandleVideoRendererStatusUpdates(
 void MediaPlayerView::TogglePlayPause() {
   switch (state_) {
     case State::kPaused:
-      media_player_->Play();
+      net_media_player_->Play();
       break;
     case State::kPlaying:
-      media_player_->Pause();
+      net_media_player_->Pause();
       break;
     case State::kEnded:
-      media_player_->Seek(0);
-      media_player_->Play();
+      net_media_player_->Seek(0);
+      net_media_player_->Play();
       break;
     default:
       break;

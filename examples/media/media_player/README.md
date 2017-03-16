@@ -8,11 +8,16 @@ create a media player.
 The media player uses a file reader or a network reader. To use the file
 reader, you'll need to have an accessible file. Here's an example command line:
 
-    launch media_player --path=/data/vid.ogv
+    launch media_player --url=file:///data/vid.ogv
 
 Here's an example using the network reader:
 
     launch media_player --url=http://example.com/vid.ogv
+
+By default, the media player is exposed via NetConnector under the service name
+'media_player'. The 'service' option can be used to change this:
+
+    launch media_player --service=special_media_player
 
 The app responds to mouse clicks (touch on the Acer) and the keyboard. Mozart
 requires a touch to focus the keyboard. Touching anywhere but the progress bar

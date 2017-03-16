@@ -17,8 +17,6 @@ class MediaPlayerParams {
 
   bool is_valid() const { return is_valid_; }
 
-  const std::string& path() const { return path_; }
-
   const std::string& url() const { return url_; }
 
   const std::string& device_name() const { return device_name_; }

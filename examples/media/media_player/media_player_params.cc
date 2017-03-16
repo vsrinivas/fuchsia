@@ -12,12 +12,12 @@ namespace examples {
 MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
-  bool path_found = command_line.GetOptionValue("path", &path_);
   bool url_found = command_line.GetOptionValue("url", &url_);
+  bool service_found = command_line.GetOptionValue("service", &service_name_);
 
   std::string remote;
   if (command_line.GetOptionValue("remote", &remote)) {
-    if (path_found || url_found) {
+    if (url_found || service_found) {
       Usage();
       return;
     }
@@ -33,9 +33,6 @@ MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
 
     device_name_ = split[0].ToString();
     service_name_ = split[1].ToString();
-  } else if (path_found == url_found) {
-    Usage();
-    return;
   }
 
   is_valid_ = true;
@@ -45,11 +42,12 @@ void MediaPlayerParams::Usage() {
   FTL_LOG(INFO) << "media_player usage:";
   FTL_LOG(INFO) << "    launch media_player [ options ]";
   FTL_LOG(INFO) << "options:";
-  FTL_LOG(INFO) << "    --path=<path>               play content from a file";
-  FTL_LOG(INFO)
-      << "    --url=<url>                 play content from a service";
+  FTL_LOG(INFO) << "    --url=<url>                 read content from <url> "
+                   "(file urls are ok)";
+  FTL_LOG(INFO) << "    --service=<service>         set the service name "
+                   "(default is media_player)";
   FTL_LOG(INFO) << "    --remote=<device>#<service> control a remote player";
-  FTL_LOG(INFO) << "options are mutually exclusive";
+  FTL_LOG(INFO) << "The remote option is exclusive of the others.";
 }
 
 }  // namespace examples

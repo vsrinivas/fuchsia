@@ -11,6 +11,7 @@
 #include "apps/media/examples/media_player/media_player_params.h"
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/services/media_player.fidl.h"
+#include "apps/media/services/net_media_player.fidl.h"
 #include "apps/media/services/video_renderer.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
@@ -75,7 +76,7 @@ class MediaPlayerView : public mozart::BaseView, public mozart::InputListener {
 
   mozart::InputHandler input_handler_;
   mozart::BufferProducer buffer_producer_;
-  media::MediaPlayerPtr media_player_;
+  media::NetMediaPlayerPtr net_media_player_;
   media::VideoRendererPtr video_renderer_;
   mozart::ViewInfoPtr video_view_info_;
   mozart::ViewPropertiesPtr video_view_properties_;
