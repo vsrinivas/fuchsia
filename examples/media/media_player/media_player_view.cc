@@ -177,6 +177,7 @@ void MediaPlayerView::OnLayout() {
   view_properties->view_layout->size = mozart::Size::New();
   view_properties->view_layout->size->width = video_size_.width;
   view_properties->view_layout->size->height = video_size_.height;
+  view_properties->view_layout->inset = mozart::Inset::New();
 
   if (video_view_properties_.Equals(view_properties)) {
     // no layout work to do
