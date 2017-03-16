@@ -61,6 +61,15 @@
 // Content: e820entry[]
 #define BOOTDATA_E820_TABLE       (0x30323845u) // E820
 
+// EFI Memory Map
+// Content: a uint64_t entrysz followed by a set of
+// efi_memory_descriptor aligned on entrysz
+#define BOOTDATA_EFI_MEMORY_MAP   (0x4d494645u) // EFIM
+
+// EFI System Table
+// Content: a uint64_t physical address of the table
+#define BOOTDATA_EFI_SYSTEM_TABLE (0x53494645u) // EFIS
+
 #define BOOTDATA_IGNORE           (0x50494b53u) // SKIP
 
 #ifndef ASSEMBLY

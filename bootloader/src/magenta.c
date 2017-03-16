@@ -452,7 +452,6 @@ static void start_magenta(uint64_t entry, void* bootdata) {
         ;
 }
 
-
 static int add_bootdata(void** ptr, size_t* avail,
                         bootdata_t* bd, void* data) {
     size_t len = BOOTDATA_ALIGN(bd->length);
@@ -491,8 +490,6 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
         printf("boot: invalid magenta kernel header\n");
         return -1;
     }
-    printf("*** BOOT MAGENTA ***\n");
-    printf("IMAGE %p\nRAMDISK %p\n", image, ramdisk);
 
     if ((ramdisk == NULL) || (rsz < sizeof(bootdata_t))) {
         printf("boot: ramdisk missing or too small\n");
@@ -523,7 +520,7 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
     size_t blen = FRONT_BYTES;
 
     hdr.type = BOOTDATA_CONTAINER;
-    hdr.length = hdr0->length + 8192;
+    hdr.length = hdr0->length + FRONT_BYTES;
     hdr.extra = BOOTDATA_MAGIC;
     hdr.flags = 0;
     memcpy(bptr, &hdr, sizeof(hdr));
@@ -560,6 +557,15 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
         return -1;
     }
 
+    // pass EFI system table
+    uint64_t addr = (uintptr_t) sys;
+    hdr.type = BOOTDATA_EFI_SYSTEM_TABLE;
+    hdr.length = sizeof(sys);
+    if (add_bootdata(&bptr, &blen, &hdr, &addr)) {
+        return -1;
+    }
+
+
     // pass framebuffer data
     efi_graphics_output_protocol* gop = NULL;
     bs->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
@@ -588,31 +594,45 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
     }
     memcpy((void*)mem, image, isz);
 
-    size_t key;
-    unsigned n = process_memory_map(sys, &key, 0);
-    for (unsigned i = 0; i < n; i++) {
-        struct e820entry* e = e820table + i;
-        printf("%016" PRIx64 " %016" PRIx64 " %s\n",
-               e->addr, e->size, e820name(e->type));
-    }
+    printf("boot: get memory map\n");
 
-    efi_status r = sys->BootServices->ExitBootServices(img, key);
-    if (r == EFI_INVALID_PARAMETER) {
-        n = process_memory_map(sys, &key, 1);
-        r = sys->BootServices->ExitBootServices(img, key);
-        if (r) {
-            printf("boot: Cannot ExitBootServices! (2) %s\n", xefi_strerror(r));
+    // Obtain the system memory map
+    size_t msize, dsize;
+    for (int attempts = 0;;attempts++) {
+        efi_memory_descriptor* mmap = (efi_memory_descriptor*) (scratch + sizeof(uint64_t));
+        uint32_t dversion = 0;
+        size_t mkey = 0;
+        msize = sizeof(scratch) - sizeof(uint64_t);
+        dsize = 0;
+        efi_status r = sys->BootServices->GetMemoryMap(&msize, mmap, &mkey, &dsize, &dversion);
+        if (r != EFI_SUCCESS) {
+            printf("boot: cannot GetMemoryMap()\n");
             goto fail;
         }
-    } else if (r) {
-        printf("boot: Cannot ExitBootServices! (1) %s\n", xefi_strerror(r));
+
+        r = sys->BootServices->ExitBootServices(img, mkey);
+        if (r == EFI_SUCCESS) {
+            break;
+        }
+        if (r == EFI_INVALID_PARAMETER) {
+            if (attempts > 0) {
+                printf("boot: cannot ExitBootServices(): %s\n", xefi_strerror(r));
+                goto fail;
+            }
+            // Attempting to exit may cause us to have to re-grab the
+            // memory map, but if it happens more than once something's
+            // broken.
+            continue;
+        }
+        printf("boot: cannot ExitBootServices(): %s\n", xefi_strerror(r));
         goto fail;
     }
+    *((uint64_t*) scratch) = dsize;
 
     // install memory map
-    hdr.type = BOOTDATA_E820_TABLE;
-    hdr.length = n * sizeof(struct e820entry);
-    if (add_bootdata(&bptr, &blen, &hdr, e820table)) {
+    hdr.type = BOOTDATA_EFI_MEMORY_MAP;
+    hdr.length = msize + sizeof(uint64_t);
+    if (add_bootdata(&bptr, &blen, &hdr, scratch)) {
         goto fail;
     }
 
@@ -625,11 +645,9 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
     memcpy(bptr, &hdr, sizeof(hdr));
 
     // jump to the kernel
-    start_magenta(kernel->data_kernel.entry64, ramdisk - 8192);
+    start_magenta(kernel->data_kernel.entry64, ramdisk - FRONT_BYTES);
 
 fail:
-    printf("FAILURE!\n");
-    for(;;) ;
     bs->FreePages(mem, pages);
     return -1;
 }
