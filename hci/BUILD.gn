@@ -12,8 +12,13 @@ static_library("hci") {
     "command_channel.h",
     "command_packet.cc",
     "command_packet.h",
+    "connection.cc",
+    "connection.h",
+    "defaults.h",
     "event_packet.cc",
     "event_packet.h",
+    "le_connection_params.cc",
+    "le_connection_params.h",
     "transport.cc",
     "transport.h",
   ]
