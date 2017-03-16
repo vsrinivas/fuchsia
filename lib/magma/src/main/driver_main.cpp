@@ -310,6 +310,13 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
 
     device->framebuffer_size = pitch * di->height;
 
+    // Tell the kernel about the console framebuffer so it can display a kernel panic screen.
+    // If other display clients come along and change the scanout address, then the panic
+    // won't be visible; however the plan is to move away from onscreen panics, instead
+    // writing the log somewhere it can be recovered then triggering a reboot.
+    mx_set_framebuffer(get_root_resource(), device->framebuffer_addr, device->framebuffer_size,
+                       format, width, height, stride);
+
     device->console_buffer = magma::PlatformBuffer::Create(device->framebuffer_size);
 
     if (!device->console_buffer->MapCpu(&device->framebuffer_addr))
