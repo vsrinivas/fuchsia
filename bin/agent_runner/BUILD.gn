@@ -10,6 +10,7 @@ source_set("public") {
   deps = [
     "//application/services",
     "//apps/ledger/services/internal",
+    "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
@@ -27,6 +28,8 @@ source_set("impl") {
     ":public",
     "//application/lib/app",
     "//application/services",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",
     "//apps/modular/services/component",
@@ -34,5 +37,6 @@ source_set("impl") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl/tasks:tasks",
+    "//lib/mtl/vmo:vmo",
   ]
 }

@@ -79,8 +79,7 @@ void AgentContextImpl::GetComponentContext(
 }
 
 void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {
-  agent_runner_->ScheduleTask(url_, task_info->task_id,
-                              task_info->trigger_condition->get_queue_name());
+  agent_runner_->ScheduleTask(url_, std::move(task_info));
 }
 
 void AgentContextImpl::DeleteTask(const fidl::String& task_id) {

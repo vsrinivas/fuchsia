@@ -17,7 +17,7 @@ namespace {
 
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
-constexpr int kTimeoutMilliseconds = 5000;
+constexpr int kTimeoutMilliseconds = 10000;
 constexpr char kTestAgent[] =
     "file:///system/apps/modular_tests/trigger_test_agent";
 

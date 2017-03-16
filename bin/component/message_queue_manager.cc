@@ -151,6 +151,9 @@ class MessageQueueStorage : public MessageSender {
 
   void RegisterWatcher(const std::function<void()> watcher) {
     watcher_ = watcher;
+    if (watcher_) {
+      watcher_();
+    }
   }
 
   void DropWatcher() { watcher_ = nullptr; }

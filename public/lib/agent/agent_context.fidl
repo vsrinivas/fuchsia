@@ -13,10 +13,10 @@ interface AgentContext {
   // |context| is the ComponentContext which this AgentContext is a part of.
   GetComponentContext(ComponentContext& context);
 
-  // Schedule a task described in |task_info|. When this task is scheduled to
+  // Schedules a task described in |task_info|. When this task is scheduled to
   // run, Agent::RunTask() gets called.
   ScheduleTask(TaskInfo task_info);
-  // Delete task |task_id| which means that no new tasks will be scheduled.
+  // No new runs of this task will be scheduled.
   DeleteTask(string task_id);
 
   // Declares that this agent is done, and wants to be torn down. Agent::Stop()
@@ -32,11 +32,14 @@ struct TaskInfo {
   TriggerCondition trigger_condition;
 };
 
-// Currently there is only one way of triggering a task, by receiving a message
-// on a message queue.
 union TriggerCondition {
   // Receiving any message on the queue |queue_name| will satisfy this trigger
   // condition. Note that |queue_name| is scoped to the Agent that created this
   // queue in the first place.
   string queue_name;
+
+  // Fires an inexact repeating alarm every |alarm_in_seconds| seconds that'll
+  // satisfy this trigger condition. The first alarm fires in
+  // |alarm_in_seconds| seconds.
+  uint32 alarm_in_seconds;
 };
