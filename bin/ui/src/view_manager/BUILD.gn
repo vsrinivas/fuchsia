@@ -56,25 +56,3 @@ source_set("lib") {
     "//lib/mtl",
   ]
 }
-executable("view_manager_apptests") {
-  output_name = "view_manager_apptests"
-
-  testonly = true
-
-  sources = [
-    "tests/mock_view_associate.cc",
-    "tests/mock_view_associate.h",
-    "tests/view_associate_table_test.cc",
-    "tests/view_manager_test.cc",
-    "tests/test_with_message_loop.cc",
-    "tests/test_with_message_loop.h",
-  ]
-
-  deps = [
-    ":lib",
-    "//apps/mozart/lib/view_associate_framework:mocks",
-    "//lib/fidl/cpp/bindings",
-    "//lib/fidl/cpp/bindings:bindings",
-    "//third_party/gtest"
-  ]
-}

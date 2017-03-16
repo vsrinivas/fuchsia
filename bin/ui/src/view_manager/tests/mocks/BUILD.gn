@@ -1,0 +1,28 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mocks") {
+  testonly = true
+
+  sources = [
+    "mock_view_associate.cc",
+    "mock_view_associate.h",
+    "mock_view_container_listener.h",
+    "mock_view_container_listener.cc",
+    "mock_view_listener.h",
+    "mock_view_listener.cc",
+    "mock_renderer.h",
+    "mock_renderer.cc",
+    "mock_view_tree_listener.h",
+    "mock_view_tree_listener.cc",
+  ]
+
+  deps = [
+    "//apps/mozart/src/view_manager:lib",
+    "//apps/mozart/lib/view_associate_framework:mocks",
+    "//lib/fidl/cpp/bindings",
+    "//lib/fidl/cpp/bindings:bindings",
+    "//third_party/gtest"
+  ]
+}

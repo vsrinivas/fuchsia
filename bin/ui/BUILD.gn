@@ -10,5 +10,16 @@ group("mozart") {
     "lib/view_framework",
     "services",
     "src",
+    ":tests"
+  ]
+
+  testonly = true
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "src/view_manager/tests",
   ]
 }
