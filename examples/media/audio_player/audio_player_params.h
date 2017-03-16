@@ -17,17 +17,17 @@ class AudioPlayerParams {
 
   bool is_valid() const { return is_valid_; }
 
-  const std::string& path() const { return path_; }
-
   const std::string& url() const { return url_; }
+
+  const std::string& service_name() const { return service_name_; }
 
  private:
   void Usage();
 
   bool is_valid_;
 
-  std::string path_;
   std::string url_;
+  std::string service_name_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AudioPlayerParams);
 };

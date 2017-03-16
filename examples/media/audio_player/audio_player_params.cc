@@ -12,23 +12,20 @@ namespace examples {
 AudioPlayerParams::AudioPlayerParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
-  bool path_found = command_line.GetOptionValue("path", &path_);
-  bool url_found = command_line.GetOptionValue("url", &url_);
-
-  if (path_found == url_found) {
-    Usage();
-    return;
-  }
+  command_line.GetOptionValue("url", &url_);
+  command_line.GetOptionValue("service", &service_name_);
 
   is_valid_ = true;
 }
 
 void AudioPlayerParams::Usage() {
   FTL_LOG(INFO) << "audio_player usage:";
-  FTL_LOG(INFO) << "    launch audio_player [ options ]";
+  FTL_LOG(INFO) << "    audio_player [ options ]";
   FTL_LOG(INFO) << "options:";
-  FTL_LOG(INFO) << "    --path=<path>  play content from a file";
-  FTL_LOG(INFO) << "    --url=<url>    play content from a service";
+  FTL_LOG(INFO)
+      << "    --url=<url>          play content from <url> (files urls are ok)";
+  FTL_LOG(INFO) << "    --service=<service>  set the service name (default is "
+                   "audio_player)";
   FTL_LOG(INFO) << "options are mutually exclusive";
 }
 

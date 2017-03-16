@@ -7,7 +7,7 @@
 #include "application/lib/app/application_context.h"
 #include "apps/media/examples/audio_player/audio_player_params.h"
 #include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/services/media_player.fidl.h"
+#include "apps/media/services/net_media_player.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace examples {
@@ -25,7 +25,7 @@ class AudioPlayer {
       uint64_t version = media::MediaPlayer::kInitialStatus,
       media::MediaPlayerStatusPtr status = nullptr);
 
-  media::MediaPlayerPtr media_player_;
+  media::NetMediaPlayerPtr net_media_player_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;
 

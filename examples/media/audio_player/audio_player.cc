@@ -11,6 +11,7 @@
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/services/audio_renderer.fidl.h"
 #include "apps/media/services/media_service.fidl.h"
+#include "apps/media/services/net_media_service.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -25,26 +26,28 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params) {
   media::MediaServicePtr media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
 
+  media::NetMediaServicePtr net_media_service =
+      application_context
+          ->ConnectToEnvironmentService<media::NetMediaService>();
+
   // Get an audio renderer.
   media::AudioRendererPtr audio_renderer;
   media::MediaRendererPtr audio_media_renderer;
   media_service->CreateAudioRenderer(audio_renderer.NewRequest(),
                                      audio_media_renderer.NewRequest());
 
-  // Get a reader.
-  media::SeekingReaderPtr reader;
+  media::MediaPlayerPtr media_player;
+  media_service->CreatePlayer(nullptr, std::move(audio_media_renderer), nullptr,
+                              media_player.NewRequest());
+
+  net_media_service->CreateNetMediaPlayer(
+      params.service_name().empty() ? "audio_player" : params.service_name(),
+      std::move(media_player), net_media_player_.NewRequest());
+
   if (!params.url().empty()) {
-    media_service->CreateNetworkReader(params.url(), reader.NewRequest());
-  } else {
-    FTL_DCHECK(!params.path().empty());
-    media_service->CreateFileReader(params.path(), reader.NewRequest());
+    net_media_player_->SetUrl(params.url());
+    net_media_player_->Play();
   }
-
-  media_service->CreatePlayer(std::move(reader),
-                              std::move(audio_media_renderer), nullptr,
-                              media_player_.NewRequest());
-
-  media_player_->Play();
 
   HandleStatusUpdates();
 }
@@ -96,7 +99,7 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
   }
 
   // Request a status update.
-  media_player_->GetStatus(
+  net_media_player_->GetStatus(
       version, [this](uint64_t version, media::MediaPlayerStatusPtr status) {
         HandleStatusUpdates(version, std::move(status));
       });
