@@ -10,6 +10,7 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/ledger_storage.h"
@@ -126,12 +127,13 @@ class LedgerManagerTest : public test::TestWithMessageLoop {
     std::unique_ptr<FakeLedgerSync> sync =
         std::make_unique<FakeLedgerSync>(message_loop_.task_runner());
     sync_ptr = sync.get();
-    ledger_manager_ =
-        std::make_unique<LedgerManager>(std::move(storage), std::move(sync));
+    ledger_manager_ = std::make_unique<LedgerManager>(
+        &coroutine_service_, std::move(storage), std::move(sync));
     ledger_manager_->BindLedger(ledger.NewRequest());
   }
 
  protected:
+  coroutine::CoroutineServiceImpl coroutine_service_;
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
   std::unique_ptr<LedgerManager> ledger_manager_;

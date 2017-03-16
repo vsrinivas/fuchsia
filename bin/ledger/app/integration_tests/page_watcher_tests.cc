@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_printf.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -34,6 +35,7 @@ class Watcher : public PageWatcher {
       : binding_(this, std::move(request)), change_callback_(change_callback) {}
 
   uint changes_seen = 0;
+  ResultState last_result_state_;
   PageSnapshotPtr last_snapshot_;
   PageChangePtr last_page_change_;
 
@@ -43,9 +45,8 @@ class Watcher : public PageWatcher {
                 ResultState result_state,
                 const OnChangeCallback& callback) override {
     FTL_DCHECK(page_change);
-    FTL_DCHECK(result_state == ResultState::FINISHED)
-        << "Handling OnChange pagination not implemented yet";
     changes_seen++;
+    last_result_state_ = result_state;
     last_page_change_ = std::move(page_change);
     last_snapshot_.reset();
     callback(last_snapshot_.NewRequest());
@@ -73,6 +74,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, watcher.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   PageChangePtr change = std::move(watcher.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
@@ -100,10 +102,66 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   ASSERT_EQ(1u, watcher.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   PageChangePtr change = std::move(watcher.last_page_change_);
   EXPECT_EQ(0u, change->changes.size());
   ASSERT_EQ(1u, change->deleted_keys.size());
   EXPECT_EQ("foo", convert::ToString(change->deleted_keys[0]));
+}
+
+TEST_F(PageWatcherIntegrationTest, PageWatcherBigChange) {
+  size_t entry_count = 70;
+  PagePtr page = GetTestPage();
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(watcher_ptr.NewRequest(),
+                  [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+
+  PageSnapshotPtr snapshot;
+  page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
+                    [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  for (size_t i = 0; i < entry_count; ++i) {
+    page->Put(convert::ToArray(ftl::StringPrintf("key%02" PRIuMAX, i)),
+              convert::ToArray("value"),
+              [](Status status) { EXPECT_EQ(status, Status::OK); });
+    EXPECT_TRUE(page.WaitForIncomingResponse());
+  }
+
+  EXPECT_TRUE(RunLoopWithTimeout());
+  EXPECT_EQ(0u, watcher.changes_seen);
+
+  page->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  // Get the first OnChagne call.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, watcher.changes_seen);
+  EXPECT_EQ(watcher.last_result_state_, ResultState::PARTIAL_STARTED);
+  PageChangePtr change = std::move(watcher.last_page_change_);
+  size_t initial_size = change->changes.size();
+  for (size_t i = 0; i < initial_size; ++i) {
+    EXPECT_EQ(ftl::StringPrintf("key%02" PRIuMAX, i),
+              convert::ToString(change->changes[i]->key));
+    EXPECT_EQ("value", ToString(change->changes[i]->value));
+    EXPECT_EQ(Priority::EAGER, change->changes[i]->priority);
+  }
+
+  // Get the second OnChagne call.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(2u, watcher.changes_seen);
+  EXPECT_EQ(ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
+  change = std::move(watcher.last_page_change_);
+
+  ASSERT_EQ(entry_count, initial_size + change->changes.size());
+  for (size_t i = 0; i < change->changes.size(); ++i) {
+    EXPECT_EQ(ftl::StringPrintf("key%02" PRIuMAX, i + initial_size),
+              convert::ToString(change->changes[i]->key));
+    EXPECT_EQ("value", ToString(change->changes[i]->value));
+    EXPECT_EQ(Priority::EAGER, change->changes[i]->priority);
+  }
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
@@ -123,6 +181,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, watcher.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   fidl::Array<EntryPtr> entries =
       SnapshotGetEntries(&(watcher.last_snapshot_), convert::ToArray(""));
   ASSERT_EQ(1u, entries.size());
@@ -159,6 +218,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, watcher.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
   PageChangePtr change = std::move(watcher.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
@@ -208,6 +268,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_TRUE(page1.WaitForIncomingResponse());
   mtl::MessageLoop::GetCurrent()->Run();
   EXPECT_EQ(1u, watcher1.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher1.last_result_state_);
   PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
@@ -218,6 +279,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   mtl::MessageLoop::GetCurrent()->Run();
 
   EXPECT_EQ(1u, watcher2.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher2.last_result_state_);
   change = std::move(watcher2.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
@@ -229,6 +291,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   mtl::MessageLoop::GetCurrent()->Run();
   // A merge happens now. Only the first watcher should see a change.
   EXPECT_EQ(2u, watcher1.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher2.last_result_state_);
   EXPECT_EQ(1u, watcher2.changes_seen);
 
   change = std::move(watcher1.last_page_change_);
@@ -294,12 +357,14 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   ASSERT_EQ(1u, watcher1.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher1.last_result_state_);
   PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Alice", ToString(change->changes[0]->value));
 
   ASSERT_EQ(1u, watcher2.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher2.last_result_state_);
   change = std::move(watcher2.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
@@ -328,7 +393,7 @@ class WaitingWatcher : public PageWatcher {
                 ResultState result_state,
                 const OnChangeCallback& callback) override {
     FTL_DCHECK(page_change);
-    FTL_DCHECK(result_state == ResultState::FINISHED)
+    FTL_DCHECK(result_state == ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";
     changes.emplace_back(std::move(page_change), callback);
     change_callback_();

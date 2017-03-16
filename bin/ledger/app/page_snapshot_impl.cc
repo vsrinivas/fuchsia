@@ -9,7 +9,7 @@
 
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 
-#include "apps/ledger/src/app/constants.h"
+#include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/trace_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
@@ -23,11 +23,6 @@
 namespace ledger {
 namespace {
 
-const size_t kFidlArrayHeaderSize = sizeof(fidl::internal::Array_Data<char>);
-const size_t kFidlPointerSize = sizeof(uint64_t);
-const size_t kFidlPrioritySize = sizeof(int32_t);
-const size_t kFidlHandleSize = sizeof(int32_t);
-
 EntryPtr CreateEntry(const storage::Entry& entry) {
   EntryPtr entry_ptr = Entry::New();
   entry_ptr->key = convert::ToArray(entry.key);
@@ -40,12 +35,6 @@ EntryPtr CreateEntry(const storage::Entry& entry) {
 bool MatchesPrefix(const std::string& key, const std::string& prefix) {
   return convert::ExtendedStringView(key).substr(0, prefix.size()) ==
          convert::ExtendedStringView(prefix);
-}
-
-size_t GetEntryFidlSize(size_t key_length) {
-  size_t key_size = key_length + kFidlArrayHeaderSize;
-  size_t object_size = kFidlHandleSize;
-  return kFidlPointerSize + key_size + object_size + kFidlPrioritySize;
 }
 
 }  // namespace
@@ -62,28 +51,18 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
                                   const GetEntriesCallback& callback) {
   // |token| represents the first key to be returned in the list of entries.
   // Initially, all entries starting from |token| are requested from storage.
-  // Iteration over the entries stops if either alls were found, or if the
-  // serialization size of entries including the value (with an estimated length
-  // of kEstimatedValueLength) exceeds kMaxInlineDataSize.
-  //
-  // Once requested objects are retrieved, the accurate serialization size can
-  // be computed:
-  //   - If the actual size is bigger than kMaxInlineDataSize, a subarray of
-  //   entries is returned.
-  //   - Otherwise, the array of entries is returned as a complete (Status::OK)
-  //   or a partial result (PARTIAL_RESULT), without trying to fetch any
-  //   additional entries.
-  //
-  // In any case, if the value size exceeds kMaxInlinedValueLength, a VMO is
-  // used instead of the value bytes.
+  // Iteration stops if either all entries were found, or if the serialization
+  // size of entries, including the value, exceeds
+  // fidl_serialization::kMaxInlineDataSize. In the second case callback will
+  // run with PARTIAL_RESULT status.
 
   // Represents information shared between on_next and on_done callbacks.
   struct Context {
     fidl::Array<EntryPtr> entries;
-    // The estimated serialization size of all entries.
-    size_t size;
-    // If |entries| array is estimated to exceed kMaxInlineDataSize,
-    // |next_token| will have the value of the following entry's key.
+    // The serialization size of all entries.
+    size_t size = fidl_serialization::kArrayHeaderSize;
+    // If |entries| array size exceeds kMaxInlineDataSize, |next_token| will
+    // have the value of the following entry's key.
     std::string next_token = "";
   };
   auto timed_callback =
@@ -100,8 +79,9 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
         if (!MatchesPrefix(entry.key, prefix)) {
           return false;
         }
-        context->size += GetEntryFidlSize(entry.key.size());
-        if (context->size > kMaxInlineDataSize && context->entries.size()) {
+        context->size += fidl_serialization::GetEntrySize(entry.key.size());
+        if (context->size > fidl_serialization::kMaxInlineDataSize &&
+            context->entries.size()) {
           context->next_token = std::move(entry.key);
           return false;
         }
@@ -190,7 +170,7 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
     // The result of GetKeys. New keys from on_next are appended to this array.
     fidl::Array<fidl::Array<uint8_t>> keys;
     // The total size in number of bytes of the |keys| array.
-    size_t size = 0;
+    size_t size = fidl_serialization::kArrayHeaderSize;
     // If the |keys| array size exceeds the maximum allowed inlined data size,
     // |next_token| will have the value of the next key (not included in array)
     // which can be used as the next token.
@@ -207,8 +187,8 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
     if (!MatchesPrefix(entry.key, key_prefix)) {
       return false;
     }
-    context->size += entry.key.size() + kFidlArrayHeaderSize;
-    if (context->size > kMaxInlineDataSize) {
+    context->size += fidl_serialization::GetByteArraySize(entry.key.size());
+    if (context->size > fidl_serialization::kMaxInlineDataSize) {
       context->next_token = entry.key;
       return false;
     }

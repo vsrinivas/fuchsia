@@ -10,6 +10,7 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -23,7 +24,9 @@ class PageManager;
 // have the same parent, the first one to be received will be followed.
 class BranchTracker : public storage::CommitWatcher {
  public:
-  BranchTracker(PageManager* manager, storage::PageStorage* storage);
+  BranchTracker(coroutine::CoroutineService* coroutine_service,
+                PageManager* manager,
+                storage::PageStorage* storage);
   ~BranchTracker();
 
   void set_on_empty(ftl::Closure on_empty_callback);
@@ -62,6 +65,7 @@ class BranchTracker : public storage::CommitWatcher {
 
   void CheckEmpty();
 
+  coroutine::CoroutineService* coroutine_service_;
   PageManager* manager_;
   storage::PageStorage* storage_;
   callback::AutoCleanableSet<PageWatcherContainer> watchers_;

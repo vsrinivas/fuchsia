@@ -93,8 +93,7 @@ void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
                              ledger::ResultState result_state,
                              const OnChangeCallback& callback) {
   FTL_DCHECK(page_change->changes.size() == 1);
-  FTL_DCHECK(result_state == ledger::ResultState::FINISHED)
-      << "Handling OnChange pagination not implemented yet";
+  FTL_DCHECK(result_state == ledger::ResultState::COMPLETED);
   int i = std::stoi(benchmark::ToString(page_change->changes[0]->key));
   TRACE_ASYNC_END("benchmark", "sync latency", i);
   RunSingle(i + 1);

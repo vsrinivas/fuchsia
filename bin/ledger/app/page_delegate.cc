@@ -19,13 +19,14 @@
 
 namespace ledger {
 
-PageDelegate::PageDelegate(PageManager* manager,
+PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
+                           PageManager* manager,
                            storage::PageStorage* storage,
                            fidl::InterfaceRequest<Page> request)
     : manager_(manager),
       storage_(storage),
       interface_(std::move(request), this),
-      branch_tracker_(manager, storage) {
+      branch_tracker_(coroutine_service, manager, storage) {
   interface_.set_on_empty([this] {
     branch_tracker_.StopTransaction(nullptr);
     CheckEmpty();

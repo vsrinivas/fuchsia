@@ -8,10 +8,12 @@
 #include <memory>
 
 #include "apps/ledger/src/app/constants.h"
+#include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
@@ -49,7 +51,8 @@ class PageImplTest : public test::TestWithMessageLoop {
     fake_storage_ = fake_storage.get();
     auto resolver = std::make_unique<MergeResolver>([] {}, fake_storage_);
 
-    manager_ = std::make_unique<PageManager>(std::move(fake_storage), nullptr,
+    manager_ = std::make_unique<PageManager>(&coroutine_service_,
+                                             std::move(fake_storage), nullptr,
                                              std::move(resolver));
     manager_->BindPage(page_ptr_.NewRequest());
   }
@@ -129,6 +132,7 @@ class PageImplTest : public test::TestWithMessageLoop {
   std::unique_ptr<PageManager> manager_;
 
   PagePtr page_ptr_;
+  coroutine::CoroutineServiceImpl coroutine_service_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
@@ -496,7 +500,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithToken) {
   // |entry| = |key| + |value| + 2 * |array_header| + |priority| + |ptr_header|
   //         = 48 bytes
   // entry_count * |entry| = 3120
-  FTL_DCHECK(kMaxInlineDataSize < 3120) << "Update test to store more entries";
+  FTL_DCHECK(fidl_serialization::kMaxInlineDataSize < 3120)
+      << "Update test to store more entries";
 
   int entry_count = 65;
   AddEntries(entry_count);
@@ -633,7 +638,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
 TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   // The expected size of the result is:
   // key_count * (|key| + |array_header|) = 200 * (8 + 8) = 3200
-  FTL_DCHECK(kMaxInlineDataSize < 3200) << "Update test to store more keys";
+  FTL_DCHECK(fidl_serialization::kMaxInlineDataSize < 3200)
+      << "Update test to store more keys";
 
   int key_count = 200;
   AddEntries(key_count);
@@ -704,7 +710,7 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
 }
 
 TEST_F(PageImplTest, SnapshotGetLarge) {
-  std::string value_string(kMaxInlineDataSize + 1, 'a');
+  std::string value_string(fidl_serialization::kMaxInlineDataSize + 1, 'a');
   storage::ObjectId object_id = AddObjectToStorage(value_string);
 
   std::string key("some_key");

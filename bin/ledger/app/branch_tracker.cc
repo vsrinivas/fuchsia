@@ -7,31 +7,48 @@
 #include <vector>
 
 #include "apps/ledger/src/app/diff_utils.h"
+#include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/page_manager.h"
+#include "apps/ledger/src/callback/destruction_guard.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace ledger {
 class BranchTracker::PageWatcherContainer {
  public:
-  PageWatcherContainer(PageWatcherPtr watcher,
+  PageWatcherContainer(coroutine::CoroutineService* coroutine_service,
+                       PageWatcherPtr watcher,
                        PageManager* page_manager,
                        storage::PageStorage* storage,
                        std::unique_ptr<const storage::Commit> base_commit)
       : change_in_flight_(false),
         last_commit_(std::move(base_commit)),
+        coroutine_service_(coroutine_service),
         manager_(page_manager),
         storage_(storage),
-        interface_(std::move(watcher)) {}
+        interface_(std::move(watcher)) {
+    interface_.set_connection_error_handler([this] {
+      if (handler_) {
+        handler_->Continue(true);
+      }
+      if (on_empty_callback_) {
+        on_empty_callback_();
+      }
+    });
+  }
 
   ~PageWatcherContainer() {
     if (on_drained_) {
       on_drained_();
     }
+    if (handler_) {
+      handler_->Continue(true);
+    }
+    FTL_DCHECK(!handler_);
   }
 
   void set_on_empty(ftl::Closure on_empty_callback) {
-    interface_.set_connection_error_handler(std::move(on_empty_callback));
+    on_empty_callback_ = std::move(on_empty_callback);
   }
 
   void UpdateCommit(std::unique_ptr<const storage::Commit> commit) {
@@ -66,6 +83,70 @@ class BranchTracker::PageWatcherContainer {
   bool Drained() {
     return !current_commit_ ||
            last_commit_->GetId() == current_commit_->GetId();
+  }
+
+  std::vector<PageChangePtr> PaginateChanges(PageChangePtr change) {
+    std::vector<PageChangePtr> changes;
+
+    size_t fidl_size;
+    size_t timestamp = change->timestamp;
+    auto entries = std::move(change->changes);
+    auto deletions = std::move(change->deleted_keys);
+    for (size_t i = 0, j = 0; i < entries.size() || j < deletions.size();) {
+      bool add_entry =
+          i < entries.size() && (j == deletions.size() ||
+                                 convert::ExtendedStringView(entries[i]->key) <
+                                     convert::ExtendedStringView(deletions[j]));
+      size_t entry_size =
+          add_entry ? fidl_serialization::GetEntrySize(entries[i]->key.size())
+                    : fidl_serialization::GetByteArraySize(deletions[j].size());
+
+      if (changes.empty() ||
+          fidl_size + entry_size > fidl_serialization::kMaxInlineDataSize) {
+        changes.push_back(PageChange::New());
+        changes.back()->timestamp = timestamp;
+        changes.back()->changes = fidl::Array<EntryPtr>::New(0);
+        changes.back()->deleted_keys =
+            fidl::Array<fidl::Array<uint8_t>>::New(0);
+        fidl_size = fidl_serialization::kPageChangeHeaderSize;
+      }
+      fidl_size += entry_size;
+      if (add_entry) {
+        changes.back()->changes.push_back(std::move(entries[i]));
+        ++i;
+      } else {
+        changes.back()->deleted_keys.push_back(std::move(deletions[j]));
+        ++j;
+      }
+    }
+    return changes;
+  }
+
+  void SendChange(PageChangePtr page_change,
+                  ResultState state,
+                  std::unique_ptr<const storage::Commit> new_commit,
+                  ftl::Closure on_done) {
+    interface_->OnChange(
+        std::move(page_change), state, ftl::MakeCopyable([
+          this, state, new_commit = std::move(new_commit),
+          on_done = std::move(on_done)
+        ](fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
+          if (snapshot_request) {
+            manager_->BindPageSnapshot(new_commit->Clone(),
+                                       std::move(snapshot_request));
+          }
+          if (state != ResultState::COMPLETED &&
+              state != ResultState::PARTIAL_COMPLETED) {
+            on_done();
+            return;
+          }
+          change_in_flight_ = false;
+          last_commit_.swap(new_commit);
+          // SendCommit will start handling the following commit, so we need to
+          // make sure on_done() is called before that.
+          on_done();
+          SendCommit();
+        }));
   }
 
   // Sends a commit to the watcher if needed.
@@ -104,35 +185,65 @@ class BranchTracker::PageWatcherContainer {
             SendCommit();
             return;
           }
+          std::vector<PageChangePtr> paginated_changes =
+              PaginateChanges(std::move(page_change_ptr));
+          if (paginated_changes.size() == 1) {
+            SendChange(std::move(paginated_changes[0]), ResultState::COMPLETED,
+                       std::move(new_commit), [] {});
+            return;
+          }
+          coroutine_service_->StartCoroutine(ftl::MakeCopyable([
+            this, new_commit = std::move(new_commit),
+            paginated_changes = std::move(paginated_changes)
+          ](coroutine::CoroutineHandler * handler) mutable {
+            auto guard =
+                callback::MakeDestructionGuard([this] { handler_ = nullptr; });
+            FTL_DCHECK(!handler_);
+            handler_ = handler;
+            for (size_t i = 0; i < paginated_changes.size(); ++i) {
+              ResultState state;
+              if (i == 0) {
+                state = ResultState::PARTIAL_STARTED;
+              } else if (i == paginated_changes.size() - 1) {
+                state = ResultState::PARTIAL_COMPLETED;
+              } else {
+                state = ResultState::PARTIAL_CONTINUED;
+              }
+              if (coroutine::SyncCall(
+                      handler, ftl::MakeCopyable([
+                        this, change = std::move(paginated_changes[i]), state,
+                        new_commit = new_commit->Clone()
+                      ](ftl::Closure on_done) mutable {
+                        SendChange(std::move(change), state,
+                                   std::move(new_commit), std::move(on_done));
 
-          interface_->OnChange(
-              std::move(page_change_ptr), ResultState::FINISHED,
-              ftl::MakeCopyable([
-                this, new_commit = std::move(new_commit)
-              ](fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
-                if (snapshot_request) {
-                  manager_->BindPageSnapshot(new_commit->Clone(),
-                                             std::move(snapshot_request));
-                }
-                change_in_flight_ = false;
-                last_commit_.swap(new_commit);
-                SendCommit();
-              }));
+                      }))) {
+                return;
+              }
+            }
+          }));
         }));
   }
 
   ftl::Closure on_drained_ = nullptr;
+  ftl::Closure on_empty_callback_ = nullptr;
   bool change_in_flight_;
   std::unique_ptr<const storage::Commit> last_commit_;
   std::unique_ptr<const storage::Commit> current_commit_;
+  coroutine::CoroutineService* coroutine_service_;
+  coroutine::CoroutineHandler* handler_ = nullptr;
   PageManager* manager_;
   storage::PageStorage* storage_;
   PageWatcherPtr interface_;
 };
 
-BranchTracker::BranchTracker(PageManager* manager,
+BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
+                             PageManager* manager,
                              storage::PageStorage* storage)
-    : manager_(manager), storage_(storage), transaction_in_progress_(false) {
+    : coroutine_service_(coroutine_service),
+      manager_(manager),
+      storage_(storage),
+      transaction_in_progress_(false) {
   watchers_.set_on_empty([this] { CheckEmpty(); });
   std::vector<storage::CommitId> commit_ids;
   // TODO(etiennej): Fail more nicely.
@@ -230,8 +341,8 @@ void BranchTracker::StopTransaction(
 void BranchTracker::RegisterPageWatcher(
     PageWatcherPtr page_watcher_ptr,
     std::unique_ptr<const storage::Commit> base_commit) {
-  watchers_.emplace(std::move(page_watcher_ptr), manager_, storage_,
-                    std::move(base_commit));
+  watchers_.emplace(coroutine_service_, std::move(page_watcher_ptr), manager_,
+                    storage_, std::move(base_commit));
 }
 
 bool BranchTracker::IsEmpty() {

@@ -217,8 +217,10 @@ interface PageSnapshot {
 };
 
 enum ResultState {
-  FINISHED = 0,
-  CONTINUED,
+  COMPLETED = 0,
+  PARTIAL_STARTED,
+  PARTIAL_CONTINUED,
+  PARTIAL_COMPLETED,
 };
 
 struct PageChange {
@@ -239,16 +241,18 @@ struct PageChange {
 // of a transaction will never be split across multiple OnChange() calls, but
 // the contents of multiple transactions may be merged into one OnChange() call.
 interface PageWatcher {
-  // Called for changes made on the page. If the result does not fit in a single
-  // fidl message, |result_state| will be |CONTINUED| and the following OnChange
-  // call will contain the remaining set of changes. No new OnChange() call will
-  // be made while the previous one is still active. If clients are interested
-  // in the full content of the page at the time of the change, they can request
-  // a PageSnapshot in the callback. This request is optional and can be
-  // requested in partial (ResultState::CONTINUED) and/or in finished results
-  // (ResultState::FINISHED). In any case, all requests made on a sequence of
-  // OnChange calls for the same page change, will always return the same
-  // snapshot: the one including all changes.
+  // Called for changes made on the page. If the result fits in a single fidl
+  // message, |result_state| will be |COMPLETED|. Otherwise, OnChange will be
+  // called multiple times and |result_state| will be |PARTIAL_STARTED| the
+  // first time, |PARTIAL_CONTINUED| the following ones and finally
+  // |PARTIAL_COMPLETED| on the last call. No new OnChange() call will be made
+  // while the previous one is still active. If clients are interested in the
+  // full content of the page at the time of the change, they can request a
+  // PageSnapshot in the callback. This request is optional and can be requested
+  // in any partial (started, continued or completed) and/or COMPLETED OnChange
+  // call. In any case, all requests made on a sequence of OnChange calls for
+  // the same page change, will always return the same snapshot: the one
+  // including all changes.
   //
   // Note that calls to Page.StartTransaction() will block until all OnChange()
   // calls have finished.

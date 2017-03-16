@@ -36,6 +36,8 @@ source_set("lib") {
     "diff_utils.cc",
     "diff_utils.h",
     "fidl/bound_interface.h",
+    "fidl/serialization_size.cc",
+    "fidl/serialization_size.h",
     "ledger_impl.cc",
     "ledger_impl.h",
     "ledger_manager.cc",

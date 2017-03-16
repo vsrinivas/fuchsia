@@ -53,7 +53,8 @@ void LedgerRepositoryImpl::GetLedger(
     auto result = ledger_managers_.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(name_as_string)),
-        std::forward_as_tuple(std::move(ledger_storage),
+        std::forward_as_tuple(environment_->coroutine_service(),
+                              std::move(ledger_storage),
                               std::move(ledger_sync)));
     FTL_DCHECK(result.second);
     it = result.first;

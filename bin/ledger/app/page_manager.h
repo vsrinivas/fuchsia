@@ -33,7 +33,8 @@ class PageManager {
  public:
   // Both |page_storage| and |page_sync| are owned by PageManager and are
   // deleted when it goes away.
-  PageManager(std::unique_ptr<storage::PageStorage> page_storage,
+  PageManager(coroutine::CoroutineService* coroutine_service,
+              std::unique_ptr<storage::PageStorage> page_storage,
               std::unique_ptr<cloud_sync::PageSyncContext> page_sync,
               std::unique_ptr<MergeResolver> merge_resolver);
   ~PageManager();
@@ -55,6 +56,7 @@ class PageManager {
   void CheckEmpty();
   void OnSyncBacklogDownloaded();
 
+  coroutine::CoroutineService* coroutine_service_;
   std::unique_ptr<storage::PageStorage> page_storage_;
   std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_;
   std::unique_ptr<MergeResolver> merge_resolver_;

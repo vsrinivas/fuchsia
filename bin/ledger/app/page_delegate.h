@@ -31,7 +31,8 @@ class PageManager;
 // |set_on_empty()|).
 class PageDelegate {
  public:
-  PageDelegate(PageManager* manager,
+  PageDelegate(coroutine::CoroutineService* coroutine_service,
+               PageManager* manager,
                storage::PageStorage* storage,
                fidl::InterfaceRequest<Page> request);
   ~PageDelegate();

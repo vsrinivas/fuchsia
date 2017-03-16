@@ -84,7 +84,6 @@ void ComputePageChange(storage::PageStorage* storage,
         if (!results[i]) {
           continue;
         }
-        // TODO(etiennej): LE-75 implement pagination on OnChange.
         page_change->changes[i]->value = std::move(results[i]);
       }
       callback(Status::OK, std::move(page_change));

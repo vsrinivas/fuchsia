@@ -29,7 +29,8 @@ namespace ledger {
 // deletes the LedgerImpl and tears down the storage.
 class LedgerManager : public LedgerImpl::Delegate {
  public:
-  LedgerManager(std::unique_ptr<storage::LedgerStorage> storage,
+  LedgerManager(coroutine::CoroutineService* coroutine_service,
+                std::unique_ptr<storage::LedgerStorage> storage,
                 std::unique_ptr<cloud_sync::LedgerSync> sync);
   ~LedgerManager();
 
@@ -72,6 +73,7 @@ class LedgerManager : public LedgerImpl::Delegate {
 
   void CheckEmpty();
 
+  coroutine::CoroutineService* coroutine_service_;
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<cloud_sync::LedgerSync> sync_;
   LedgerImpl ledger_impl_;
