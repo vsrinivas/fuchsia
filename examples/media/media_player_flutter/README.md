@@ -59,7 +59,7 @@ Here's an example config file:
       {
         "title": "Control player on myacer",
         "device": "myacer",
-        "service": "only_media_player",
+        "service": "media_player",
       },
     ]
 
@@ -109,8 +109,7 @@ field is required for remotes and prohibited for all other types.
 ### service
 
 Specifies the name of the service (in the NetConnector sense) for a remote. This
-field is required for remotes and prohibited for all other types. Currently,
-the service name for all media players is "only_media_player".
+field is required for remotes and prohibited for all other types.
 
 ## AUDIO SUPPORT
 

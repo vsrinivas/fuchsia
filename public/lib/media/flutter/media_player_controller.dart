@@ -10,8 +10,9 @@ import 'package:apps.media.services/media_metadata.fidl.dart';
 import 'package:apps.media.services/media_player.fidl.dart' as mp;
 import 'package:apps.media.services/media_renderer.fidl.dart';
 import 'package:apps.media.services/media_service.fidl.dart';
+import 'package:apps.media.services/net_media_player.fidl.dart';
+import 'package:apps.media.services/net_media_service.fidl.dart';
 import 'package:apps.media.services/problem.fidl.dart';
-import 'package:apps.media.services/seeking_reader.fidl.dart';
 import 'package:apps.media.services/video_renderer.fidl.dart';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
@@ -25,18 +26,17 @@ import 'package:flutter/widgets.dart';
 /// Controller for MediaPlayer widgets.
 class MediaPlayerController extends ChangeNotifier {
   final MediaServiceProxy _mediaService = new MediaServiceProxy();
+  final NetMediaServiceProxy _netMediaService = new NetMediaServiceProxy();
 
-  mp.MediaPlayerProxy _mediaPlayer;
+  NetMediaPlayerProxy _netMediaPlayer;
   ChildViewConnection _videoViewConnection;
 
   // We don't mess with these except during _activate, but they need to
   // stay in scope even after _activate returns.
   AudioRendererProxy _audioRenderer;
   VideoRendererProxy _videoRenderer;
-  InterfacePair<SeekingReader> _reader;
 
   bool _active = false;
-  bool _remote = false;
   bool _loading = false;
   bool _playing = false;
   bool _ended = false;
@@ -55,24 +55,28 @@ class MediaPlayerController extends ChangeNotifier {
   /// Constructs a MediaPlayerController.
   MediaPlayerController(ServiceProvider services) {
     connectToService(services, _mediaService.ctrl);
+    connectToService(services, _netMediaService.ctrl);
   }
 
-  /// Opens a URI for playback.
+  /// Opens a URI for playback. If there is no player or player proxy (because
+  /// the controller has never been opened or has been closed), a new local
+  /// player will be created. If there is a player or player proxy, the URL
+  /// will be set on it.
   void open(Uri uri) {
     if (uri == null) {
       throw new ArgumentError.notNull('uri');
     }
 
-    if (_active && !_remote) {
-      _updateLocalPlayer(uri);
+    if (_active) {
+      _netMediaPlayer.setUrl(uri.toString());
+      _hasVideo = false;
+      _timelineFunction = null;
     } else {
-      _close();
       _active = true;
-      _remote = false;
 
       _createLocalPlayer(uri);
 
-      _handlePlayerStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
+      _handlePlayerStatusUpdates(NetMediaPlayer.kInitialStatus, null);
     }
 
     notifyListeners();
@@ -92,12 +96,14 @@ class MediaPlayerController extends ChangeNotifier {
 
     _close();
     _active = true;
-    _remote = true;
 
-    // Remote control temporarily disabled.
-    assert(false);
+    _netMediaService.createNetMediaPlayerProxy(
+      device,
+      service,
+      _netMediaPlayer.ctrl.request()
+    );
 
-    _handlePlayerStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
+    _handlePlayerStatusUpdates(NetMediaPlayer.kInitialStatus, null);
     notifyListeners();
   }
 
@@ -117,10 +123,9 @@ class MediaPlayerController extends ChangeNotifier {
   /// Internal version of |close|.
   void _close() {
     _active = false;
-    _remote = false;
 
-    if (_mediaPlayer != null) {
-      _mediaPlayer.ctrl.close();
+    if (_netMediaPlayer != null) {
+      _netMediaPlayer.ctrl.close();
     }
 
     if (_audioRenderer != null) {
@@ -131,11 +136,10 @@ class MediaPlayerController extends ChangeNotifier {
       _videoRenderer.ctrl.close();
     }
 
-    _mediaPlayer = new mp.MediaPlayerProxy();
+    _netMediaPlayer = new NetMediaPlayerProxy();
 
     _audioRenderer = new AudioRendererProxy();
     _videoRenderer = new VideoRendererProxy();
-    _reader = new InterfacePair<SeekingReader>();
 
     _playing = false;
     _ended = false;
@@ -176,34 +180,19 @@ class MediaPlayerController extends ChangeNotifier {
       null
     );
 
-    if (uri.scheme == 'file') {
-      _mediaService.createFileReader(uri.toFilePath(), _reader.passRequest());
-    } else {
-      _mediaService.createNetworkReader(uri.toString(), _reader.passRequest());
-    }
-
+    InterfacePair<mp.MediaPlayer> mediaPlayer =
+      new InterfacePair<mp.MediaPlayer>();
     _mediaService.createPlayer(
-      _reader.passHandle(),
+      null,
       audioMediaRenderer.passHandle(),
       videoMediaRenderer.passHandle(),
-      _mediaPlayer.ctrl.request()
+      mediaPlayer.passRequest(),
     );
-  }
 
-  /// Changes the URI on a local player
-  void _updateLocalPlayer(Uri uri) {
-    _reader = new InterfacePair<SeekingReader>();
+    _netMediaService.createNetMediaPlayer('media_player',
+      mediaPlayer.passHandle(), _netMediaPlayer.ctrl.request());
 
-    if (uri.scheme == 'file') {
-      _mediaService.createFileReader(uri.toFilePath(), _reader.passRequest());
-    } else {
-      _mediaService.createNetworkReader(uri.toString(), _reader.passRequest());
-    }
-
-    _mediaPlayer.setReader(_reader.passHandle());
-
-    _hasVideo = false;
-    _timelineFunction = null;
+    _netMediaPlayer.setUrl(uri.toString());
   }
 
   /// Gets the physical size of the video.
@@ -266,10 +255,10 @@ class MediaPlayerController extends ChangeNotifier {
     }
 
     if (_ended) {
-      _mediaPlayer.seek(0);
+      _netMediaPlayer.seek(0);
     }
 
-    _mediaPlayer.play();
+    _netMediaPlayer.play();
   }
 
   /// Pauses playback.
@@ -278,7 +267,7 @@ class MediaPlayerController extends ChangeNotifier {
       return;
     }
 
-    _mediaPlayer.pause();
+    _netMediaPlayer.pause();
   }
 
   /// Seeks to a position expressed as a Duration.
@@ -290,7 +279,7 @@ class MediaPlayerController extends ChangeNotifier {
     int positionNanoseconds =
         (position.inMicroseconds * 1000).round().clamp(0, _durationNanoseconds);
 
-    _mediaPlayer.seek(positionNanoseconds);
+    _netMediaPlayer.seek(positionNanoseconds);
 
     if (!_playing) {
       play();
@@ -344,7 +333,7 @@ class MediaPlayerController extends ChangeNotifier {
       });
     }
 
-    _mediaPlayer.getStatus(version, _handlePlayerStatusUpdates);
+    _netMediaPlayer.getStatus(version, _handlePlayerStatusUpdates);
   }
 
   // Handles a status update from the video renderer and requests a new update.
