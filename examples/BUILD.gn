@@ -13,6 +13,7 @@ group("examples") {
     "https_flutter",
     "photos_flutter",
     "request_components",
+    "story_shell_flutter",
     "suggest_shell",
     "swap_cpp",
     "todo_cpp",
