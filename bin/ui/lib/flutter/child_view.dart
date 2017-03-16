@@ -72,17 +72,27 @@ class _ViewContainerListenerImpl extends ViewContainerListener {
       new HashMap<int, ChildViewConnection>();
 }
 
+typedef ChildViewConnectionCallback(ChildViewConnection connection);
+final ChildViewConnectionCallback _emptyConnectionCallback =
+    (ChildViewConnection c) {};
+
 /// A connection with a child view.
 ///
 /// Used with the [ChildView] widget to display a child view.
 class ChildViewConnection {
-  ChildViewConnection(this._viewOwner) {
+  ChildViewConnection(this._viewOwner,
+      {ChildViewConnectionCallback onAvailable,
+      ChildViewConnectionCallback onUnavailable})
+      : _onAvailableCallback = onAvailable ?? _emptyConnectionCallback,
+        _onUnavailableCallback = onUnavailable ?? _emptyConnectionCallback {
     assert(_viewOwner != null);
   }
 
   factory ChildViewConnection.launch(String url, ApplicationLauncher launcher,
       {InterfaceRequest<ApplicationController> controller,
-      InterfaceRequest<ServiceProvider> childServices}) {
+      InterfaceRequest<ServiceProvider> childServices,
+      ChildViewConnectionCallback onAvailable,
+      ChildViewConnectionCallback onUnavailable}) {
     final ServiceProviderProxy services = new ServiceProviderProxy();
     final ApplicationLaunchInfo launchInfo = new ApplicationLaunchInfo()
       ..url = url
@@ -90,26 +100,33 @@ class ChildViewConnection {
     try {
       launcher.createApplication(launchInfo, controller);
       return new ChildViewConnection.connect(services,
-          childServices: childServices);
+          childServices: childServices, onAvailable: onAvailable,
+          onUnavailable: onUnvailable);
     } finally {
       services.ctrl.close();
     }
   }
 
   factory ChildViewConnection.connect(ServiceProvider services,
-      {InterfaceRequest<ServiceProvider> childServices}) {
+      {InterfaceRequest<ServiceProvider> childServices,
+      ChildViewConnectionCallback onAvailable,
+      ChildViewConnectionCallback onUnavailable}) {
     final ViewProviderProxy viewProvider = new ViewProviderProxy();
     connectToService(services, viewProvider.ctrl);
     try {
       final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
       viewProvider.createView(viewOwner.passRequest(), childServices);
-      return new ChildViewConnection(viewOwner.passHandle());
+      return new ChildViewConnection(viewOwner.passHandle(),
+          onAvailable: onAvailable, onUnavailable: onUnvailable);
     } finally {
       viewProvider.ctrl.close();
     }
   }
 
+  final ChildViewConnectionCallback _onAvailableCallback;
+  final ChildViewConnectionCallback _onUnavailableCallback;
   InterfaceHandle<ViewOwner> _viewOwner;
+
 
   static int _nextViewKey = 1;
   int _viewKey;
@@ -124,10 +141,12 @@ class ChildViewConnection {
     assert(_viewInfo == null);
     _viewInfo = viewInfo;
     if (_onViewInfoAvailable != null) _onViewInfoAvailable();
+    _onAvailableCallback(this);
   }
 
   void _onUnavailable() {
     _viewInfo = null;
+    _onUnavailableCallback(this);
   }
 
   void _addChildToViewHost() {
