@@ -19,6 +19,16 @@ By default, the media player is exposed via NetConnector under the service name
 
     launch media_player --service=special_media_player
 
+The app can control a remote media player using the '--remote' option:
+
+    --remote=myacer#media_player
+
+In this case, the device name of the remote media player (as NetConnector
+understands device names) is 'myacer', and the service name for the media
+player is 'media_player'.
+
+Note that the '--service' and '--device' options are mutually exclusive.
+
 The app responds to mouse clicks (touch on the Acer) and the keyboard. Mozart
 requires a touch to focus the keyboard. Touching anywhere but the progress bar
 toggles between play and pause. Touching the progress bar does a seek to that

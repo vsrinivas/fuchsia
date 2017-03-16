@@ -12,12 +12,12 @@ namespace examples {
 MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
-  bool url_found = command_line.GetOptionValue("url", &url_);
+  command_line.GetOptionValue("url", &url_);
   bool service_found = command_line.GetOptionValue("service", &service_name_);
 
   std::string remote;
   if (command_line.GetOptionValue("remote", &remote)) {
-    if (url_found || service_found) {
+    if (service_found) {
       Usage();
       return;
     }
@@ -47,7 +47,7 @@ void MediaPlayerParams::Usage() {
   FTL_LOG(INFO) << "    --service=<service>         set the service name "
                    "(default is media_player)";
   FTL_LOG(INFO) << "    --remote=<device>#<service> control a remote player";
-  FTL_LOG(INFO) << "The remote option is exclusive of the others.";
+  FTL_LOG(INFO) << "The --service and --remote options are mutually exclusive.";
 }
 
 }  // namespace examples
