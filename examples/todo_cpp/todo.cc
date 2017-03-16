@@ -135,9 +135,13 @@ void TodoApp::Stop(const StopCallback& done) {
 void TodoApp::OnChange(ledger::PageChangePtr page_change,
                        ledger::ResultState result_state,
                        const OnChangeCallback& callback) {
-  // TODO(nellyv): Handle case of result_state being CONTINUED. Right now we
-  // request a new snapshot for every partial result received from OnChange
-  // which is redundant.
+  if (result_state != ledger::ResultState::PARTIAL_STARTED &&
+      result_state != ledger::ResultState::COMPLETED) {
+    // Only request the entries list once, on the first OnChange call.
+    callback(nullptr);
+    return;
+  }
+
   ledger::PageSnapshotPtr snapshot;
   callback(snapshot.NewRequest());
   List(std::move(snapshot));
