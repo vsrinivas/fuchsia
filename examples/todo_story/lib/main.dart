@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:math';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
@@ -15,7 +14,6 @@ import 'package:flutter/widgets.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import "./data.dart";
-import "./generator.dart";
 import "./view.dart";
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();

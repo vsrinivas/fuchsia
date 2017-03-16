@@ -2,17 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:math';
-
-import 'package:application.lib.app.dart/app.dart';
-import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.modular.services.story/link.fidl.dart';
-import 'package:apps.modular.services.module/module.fidl.dart';
-import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:lib.fidl.dart/bindings.dart';
 
 import "./data.dart";
 import "./generator.dart";
@@ -62,7 +53,7 @@ class TodoListViewState extends State<TodoListView> {
     });
   }
 
-  void _handleAddRandomTodo() {
+  void _handleGenerateRandomTodo() {
     String todoText = _generator.makeContent();
     setState(() {
       _newTodo = new InputValue(text: todoText);
@@ -91,7 +82,7 @@ class TodoListViewState extends State<TodoListView> {
                     : themeData.disabledColor))
       ]),
       new RaisedButton(
-          onPressed: _handleAddRandomTodo, child: new Text("Add random TODO"))
+          onPressed: _handleGenerateRandomTodo, child: new Text("Generate random TODO"))
     ]);
   }
 
@@ -141,15 +132,15 @@ class TodoItemView extends StatelessWidget {
         onAccept: _onAcceptDrop,
         builder: (BuildContext context, List<TodoItem> data,
             List<dynamic> rejectedData) {
-          List<ListItem> itemWidgets = new List.from(
+          List<ListTile> itemWidgets = new List.from(
               data.map((TodoItem item) => _itemToWidget(context, item)));
           itemWidgets.add(_itemToWidget(context, _item));
           return new Column(children: itemWidgets);
         });
   }
 
-  ListItem _itemToWidget(BuildContext context, TodoItem todoItem) {
-    return new ListItem(
+  ListTile _itemToWidget(BuildContext context, TodoItem todoItem) {
+    return new ListTile(
       title: new Text(todoItem.text),
       onTap: () {
         onItemDeleted(todoItem);
