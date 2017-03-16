@@ -72,6 +72,10 @@
             "bootfs_path": "apps/example_flutter_https"
         },
         {
+            "binary": "example_flutter_story_shell.flx",
+            "bootfs_path": "apps/example_flutter_story_shell"
+        },
+        {
             "binary": "example_module1",
             "bootfs_path": "apps/example_module1"
         },
