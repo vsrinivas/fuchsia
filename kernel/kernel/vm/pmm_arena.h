@@ -11,6 +11,9 @@
 #include <kernel/vm.h>
 #include <trace.h>
 
+#define PMM_ENABLE_FREE_FILL 0
+#define PMM_FREE_FILL_BYTE 0x42
+
 class PmmArena : public mxtl::DoublyLinkedListable<PmmArena*> {
 public:
     PmmArena(const pmm_arena_info_t* info);
@@ -20,6 +23,10 @@ public:
 
     // set up the per page structures, allocated out of the boot time allocator
     void BootAllocArray();
+
+#if PMM_ENABLE_FREE_FILL
+    void EnforceFill();
+#endif
 
     void Dump(bool dump_pages);
 
@@ -62,10 +69,18 @@ public:
     }
 
 private:
-    const pmm_arena_info_t* info_ = nullptr;
+#if PMM_ENABLE_FREE_FILL
+    void FreeFill(vm_page_t* page);
+    void CheckFreeFill(vm_page_t* page);
+#endif
 
+    const pmm_arena_info_t* info_ = nullptr;
     vm_page_t* page_array_ = nullptr;
 
     size_t free_count_ = 0;
     list_node free_list_ = LIST_INITIAL_VALUE(free_list_);
+
+#if PMM_ENABLE_FREE_FILL
+    bool enforce_fill_ = false;
+#endif
 };

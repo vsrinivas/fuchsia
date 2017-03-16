@@ -16,6 +16,7 @@
 #include <kernel/vm.h>
 #include <lib/console.h>
 #include <list.h>
+#include <lk/init.h>
 #include <new.h>
 #include <pow2.h>
 #include <stdlib.h>
@@ -33,6 +34,15 @@
 static Mutex arena_lock;
 static mxtl::DoublyLinkedList<PmmArena*> arena_list TA_GUARDED(arena_lock);
 static size_t arena_cumulative_size TA_GUARDED(arena_lock);
+
+#if PMM_ENABLE_FREE_FILL
+static void pmm_enforce_fill(uint level) {
+    for (auto& a : arena_list) {
+        a.EnforceFill();
+    }
+}
+LK_INIT_HOOK(pmm_fill, &pmm_enforce_fill, LK_INIT_LEVEL_VM);
+#endif
 
 // We don't need to hold the arena lock while executing this, since it is
 // only accesses values that are set once during system initialization.

@@ -19,6 +19,33 @@ PmmArena::PmmArena(const pmm_arena_info_t* info)
 
 PmmArena::~PmmArena() {}
 
+#if PMM_ENABLE_FREE_FILL
+void PmmArena::EnforceFill() {
+    DEBUG_ASSERT(!enforce_fill_);
+
+    vm_page_t* page;
+    list_for_every_entry (&free_list_, page, vm_page_t, free.node) {
+        FreeFill(page);
+    }
+
+    enforce_fill_ = true;
+}
+
+void PmmArena::FreeFill(vm_page_t* page) {
+    paddr_t paddr = page_address_from_arena(page);
+    void* kvaddr = paddr_to_kvaddr(paddr);
+    memset(kvaddr, PMM_FREE_FILL_BYTE, PAGE_SIZE);
+}
+
+void PmmArena::CheckFreeFill(vm_page_t* page) {
+    paddr_t paddr = page_address_from_arena(page);
+    uint8_t* kvaddr = static_cast<uint8_t*>(paddr_to_kvaddr(paddr));
+    for (size_t j = 0; j < PAGE_SIZE; ++j) {
+        ASSERT(!enforce_fill_ || *(kvaddr + j) == PMM_FREE_FILL_BYTE);
+    }
+}
+#endif // PMM_ENABLE_FREE_FILL
+
 void PmmArena::BootAllocArray() {
     /* allocate an array of pages to back this one */
     size_t page_count = size() / PAGE_SIZE;
@@ -54,6 +81,9 @@ vm_page_t* PmmArena::AllocPage(paddr_t* pa) {
     DEBUG_ASSERT(page_is_free(page));
 
     page->state = VM_PAGE_STATE_ALLOC;
+#if PMM_ENABLE_FREE_FILL
+    CheckFreeFill(page);
+#endif
 
     if (pa) {
         /* compute the physical address of the page based on its offset into the arena */
@@ -106,6 +136,9 @@ size_t PmmArena::AllocPages(size_t count, list_node* list) {
         free_count_--;
 
         DEBUG_ASSERT(page_is_free(page));
+#if PMM_ENABLE_FREE_FILL
+        CheckFreeFill(page);
+#endif
 
         page->state = VM_PAGE_STATE_ALLOC;
         list_add_tail(list, &page->free.node);
@@ -164,6 +197,10 @@ retry:
 
             free_count_--;
 
+#if PMM_ENABLE_FREE_FILL
+            CheckFreeFill(p);
+#endif
+
             if (list)
                 list_add_tail(list, &p->free.node);
         }
@@ -181,6 +218,10 @@ status_t PmmArena::FreePage(vm_page_t* page) {
     LTRACEF("page %p\n", page);
     if (!page_belongs_to_arena(page))
         return ERR_NOT_FOUND;
+
+#if PMM_ENABLE_FREE_FILL
+    FreeFill(page);
+#endif
 
     page->state = VM_PAGE_STATE_FREE;
 
