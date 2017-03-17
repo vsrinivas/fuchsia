@@ -42,7 +42,7 @@ static bool load_mdi(void) {
     close(fd);
 
     bootdata_t* header = mdi_data;
-    EXPECT_EQ(header->type, BOOTDATA_CONTAINER, "invalid bootdata container header");
+    EXPECT_EQ(header->type, (uint32_t)BOOTDATA_CONTAINER, "invalid bootdata container header");
     EXPECT_EQ(header->extra, BOOTDATA_MAGIC, "bootdata container bad magic");
     EXPECT_GT(header->length, sizeof(*header), "bootdata length too small");
 
@@ -50,7 +50,7 @@ static bool load_mdi(void) {
     mdi_length -= sizeof(*header);
     header = mdi_data;
 
-    EXPECT_EQ(header->type, BOOTDATA_MDI, "bootdata type not BOOTDATA_MDI");
+    EXPECT_EQ(header->type, (uint32_t)BOOTDATA_MDI, "bootdata type not BOOTDATA_MDI");
     EXPECT_EQ(header->length + sizeof(*header), mdi_length, "bootdata length invalid");
 
     END_TEST;

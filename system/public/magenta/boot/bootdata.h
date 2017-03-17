@@ -10,7 +10,7 @@
 #endif
 
 // lsw of sha256("bootdata")
-#define BOOTDATA_MAGIC (0x868cf7e6u)
+#define BOOTDATA_MAGIC (0x868cf7e6)
 
 // Round n up to the next 8 byte boundary
 #define BOOTDATA_ALIGN(n) (((n) + 7) & (~7))
@@ -20,24 +20,24 @@
 // length of the set of following bootdata items.  The
 // "extra" is the value BOOTDATA_MAGIC and "flags" is
 // set to 0.
-#define BOOTDATA_CONTAINER        (0x544f4f42u) // BOOT
+#define BOOTDATA_CONTAINER        (0x544f4f42) // BOOT
 
 // BOOTFS images.  The "extra" field is the decompressed
 // size of the image, if compressed, otherwise the same
 // as the "length" field.
-#define BOOTDATA_BOOTFS_BOOT      (0x42534642u) // BFSB
-#define BOOTDATA_BOOTFS_SYSTEM    (0x53534642u) // BFSS
-#define BOOTDATA_BOOTFS_DISCARD   (0x58534642u) // BFSX
+#define BOOTDATA_BOOTFS_BOOT      (0x42534642) // BFSB
+#define BOOTDATA_BOOTFS_SYSTEM    (0x53534642) // BFSS
+#define BOOTDATA_BOOTFS_DISCARD   (0x58534642) // BFSX
 
-#define BOOTDATA_BOOTFS_MASK      (0x00FFFFFFu)
-#define BOOTDATA_BOOTFS_TYPE      (0x00534642u) // BFS\0
+#define BOOTDATA_BOOTFS_MASK      (0x00FFFFFF)
+#define BOOTDATA_BOOTFS_TYPE      (0x00534642) // BFS\0
 
 // MDI data.  The "extra" field is unused and set to 0.
-#define BOOTDATA_MDI              (0x3149444du) // MDI1
+#define BOOTDATA_MDI              (0x3149444d) // MDI1
 
 // A Magenta Kernel Image
 // Content: bootdata_kernel_t
-#define BOOTDATA_KERNEL           (0x4c4e524bu) // KRNL
+#define BOOTDATA_KERNEL           (0x4c4e524b) // KRNL
 
 // Flag indicating that the bootfs is compressed.
 #define BOOTDATA_BOOTFS_FLAG_COMPRESSED  (1 << 0)
@@ -47,30 +47,30 @@
 
 // Kernel Command Line String
 // Content: uint8_t[]
-#define BOOTDATA_CMDLINE          (0x4c444d43u) // CMDL
+#define BOOTDATA_CMDLINE          (0x4c444d43) // CMDL
 
 // ACPI Root Table Pointer
 // Content: uint64_t phys addr
-#define BOOTDATA_ACPI_RSDP        (0x50445352u) // RSDP
+#define BOOTDATA_ACPI_RSDP        (0x50445352) // RSDP
 
 // Framebuffer Parameters
 // Content: bootdata_swfb_t
-#define BOOTDATA_FRAMEBUFFER      (0x42465753u) // SWFB
+#define BOOTDATA_FRAMEBUFFER      (0x42465753) // SWFB
 
 // E820 Memory Table
 // Content: e820entry[]
-#define BOOTDATA_E820_TABLE       (0x30323845u) // E820
+#define BOOTDATA_E820_TABLE       (0x30323845) // E820
 
 // EFI Memory Map
 // Content: a uint64_t entrysz followed by a set of
 // efi_memory_descriptor aligned on entrysz
-#define BOOTDATA_EFI_MEMORY_MAP   (0x4d494645u) // EFIM
+#define BOOTDATA_EFI_MEMORY_MAP   (0x4d494645) // EFIM
 
 // EFI System Table
 // Content: a uint64_t physical address of the table
-#define BOOTDATA_EFI_SYSTEM_TABLE (0x53494645u) // EFIS
+#define BOOTDATA_EFI_SYSTEM_TABLE (0x53494645) // EFIS
 
-#define BOOTDATA_IGNORE           (0x50494b53u) // SKIP
+#define BOOTDATA_IGNORE           (0x50494b53) // SKIP
 
 #ifndef ASSEMBLY
 __BEGIN_CDECLS;
