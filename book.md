@@ -45,7 +45,7 @@ Sections will be populated over time.
 # Networking
 
  - Ethernet
- - Wifi
+ - [Wireless](wireless_networking.md)
  - Bluetooth
  - Sockets
  - HTTP
