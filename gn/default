@@ -11,6 +11,7 @@
         "fonts",
         "fortune",
         "ftl",
+        "fuchsia_build_status",
         "gdbserver",
         "icu_data",
         "init",
