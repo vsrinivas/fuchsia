@@ -9,7 +9,6 @@ executable("integration") {
 
   deps = [
     ":context_engine_test",
-    ":launcher_test",
     ":suggestion_engine_test",
   ]
 }
@@ -49,22 +48,6 @@ source_set("suggestion_engine_test") {
     "//apps/maxwell/src/agents:ideas",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/testing:story_provider_mock",
-  ]
-}
-
-source_set("launcher_test") {
-  testonly = true
-
-  sources = [
-    "launcher_test.cc",
-  ]
-
-  deps = [
-    ":common",
-    ":test_suggestion_listener",
-    "//apps/modular/services/component",
-    "//apps/maxwell/services/launcher",
-    "//apps/maxwell/services/suggestion",
   ]
 }
 
