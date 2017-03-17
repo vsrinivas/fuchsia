@@ -517,7 +517,6 @@ mx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* actual) {
                        (const void*)vmo_merkle_tree_addr_, size_merkle,
                        off, len, d);
     if (status != NO_ERROR) {
-        fprintf(stderr, "BLOBSTORE: INTEGRITY VERIFICATION FAILURE\n");
         return status;
     }
 
