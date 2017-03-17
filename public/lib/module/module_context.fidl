@@ -26,7 +26,8 @@ interface ModuleContext {
   // the module was initialized with, or both, but two things are
   // tricky when done naively:
   //
-  //   1. the initial Link might not be unique to this module instance,
+  //   1. the initial Link might not be unique to this module
+  //      instance,
   //
   //   2. obtaining the name of a parent link would be asynchronous.
   //
@@ -56,26 +57,26 @@ interface ModuleContext {
                      app.ServiceProvider&? incoming_services,
                      ModuleController& module_controller);
 
-  // Gets the ComponentContext associated with this module. This component
-  // context is unique to this particular module instance.
+  // Gets the ComponentContext associated with this module. This
+  // component context is unique to this particular module instance.
   GetComponentContext(ComponentContext& context_request);
 
-  // Get story id for this story which may be used to create a suggestion
-  // proposal to reinflate this story.
+  // Get story id for this story which may be used to create a
+  // suggestion proposal to reinflate this story.
   GetStoryId() => (string story_id);
 
-  // The module holding this handle to the ModuleContext declares it's ready
-  // to run. The module context implementation notifies all ModuleWatchers
-  // registered on the ModuleController by calling OnStateChange().
-  // See ModuleState for all states and transitions.
+  // The module holding this handle to the ModuleContext declares it's
+  // ready to run. The module context implementation notifies all
+  // ModuleWatchers registered on the ModuleController by calling
+  // OnStateChange(). See ModuleState for all states and transitions.
   Ready();
 
-  // The module holding this handle to the ModuleContext declares it's done
-  // and wants to be torn down. The module context implementation notifies all
-  // ModuleWatchers registered on the ModuleController by calling
-  // OnStateChange(). The receiver is free to decide whether it's
-  // appropriate to Stop() the module. (It might be appropriate for
-  // the receiver to call Done() on its own instead.)
-  // See ModuleState for all states and transitions.
+  // The module holding this handle to the ModuleContext declares it's
+  // done and wants to be torn down. The module context implementation
+  // notifies all ModuleWatchers registered on the ModuleController by
+  // calling OnStateChange(). The receiver is free to decide whether
+  // it's appropriate to Stop() the module. (It might be appropriate
+  // for the receiver to call Done() on its own instead.) See
+  // ModuleState for all states and transitions.
   Done();
 };

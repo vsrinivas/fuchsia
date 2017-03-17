@@ -43,15 +43,6 @@ class LinkConnection;
 // make this possible, each connection is associated with a separate
 // LinkConnection implementation instance. All implementation
 // instances share a common LinkImpl instance that holds the data.
-//
-// The first such instance is created by StoryImpl::CreateLink() using
-// the LinkImpl::New() method. Subsequent such instances associated
-// with the same shared data are created by LinkConnection::Dup(). The
-// LinkImpl::New() method returns a handle to the shared LinkImpl
-// instance. When that instance is deleted, all connections to it are
-// closed. This is done by the StoryImpl that created it. TODO(mesch):
-// Link instances should already be deleted earlier, when they lose
-// all their references.
 class LinkImpl {
  public:
   // Connects a new LinkConnection object on the heap for the given
@@ -141,7 +132,7 @@ class LinkConnection : public Link {
   void Erase(fidl::Array<fidl::String> path) override;
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
-  void Dup(fidl::InterfaceRequest<Link> dup) override;
+  void Dup(fidl::InterfaceRequest<Link> request) override;
   void Sync(const SyncCallback& callback) override;
 
   // Used by Watch() and WatchAll().

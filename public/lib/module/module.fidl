@@ -8,14 +8,11 @@ import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/module/module_context.fidl";
 
 // This service is implemented by an application that is meant to be
-// run in a ModuleContext (aka story).
+// run in a ModuleContext (fka Story).
 //
 // When ModuleContext.StartModule() is invoked, the Module instance is
 // requested from its application and its dependent services and
 // parameters are passed to it by Initialize().
-//
-// TODO(mesch) Change this to a factory method that takes the
-// parameters as arguments, like we do elsewhere.
 [ServiceName="modular.Module"]  // Created by each module app.
 interface Module {
   // The arguments to Initialize() are the ModuleContext instance that created

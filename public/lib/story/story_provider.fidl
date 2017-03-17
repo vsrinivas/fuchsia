@@ -6,18 +6,17 @@ module modular;
 
 import "apps/modular/services/story/story_controller.fidl";
 
-// UserRunner implementation creates an instance of this service and
-// passes it to the UserShell service so it can operate on stories for
-// the user.
+// UserRunner creates an instance of this service and passes it to the
+// UserShell so it can operate on stories for the user.
 //
 // If |StoryProvider| is closed, all associated |StoryController|
 // instances are closed too. However, running stories are not properly
-// stopped, so it's a bad idea to close the story provider connection
-// while a story is still running.
+// stopped, so it's a bad idea for the user shell to close its story
+// provider connection while a story is still running.
 interface StoryProvider {
-  // Creates a new story running the module at |url|. The returned |story_id|
-  // can then be used to get a StoryController to perform actions on the newly
-  // created story.
+  // Creates a new story running the module at |url|. The returned
+  // |story_id| can then be used to get a StoryController to perform
+  // actions on the newly created story.
   CreateStory(string url) => (string story_id);
 
   // Like CreateStory, but with extra info and with values for the
@@ -29,23 +28,23 @@ interface StoryProvider {
 
   // Deletes an existing story from the list of known stories. Returns
   // when the delete notification is received from the Ledger. If the
-  // story deleted is running, it is first stopped and its story
+  // story to be deleted is running, it is first stopped and its story
   // controller disconnected. If the story ID doesn't exist, silently
   // does nothing.
   DeleteStory(string story_id) => ();
 
-  // Request detail information on the given story. If the story
+  // Requests detailed information about the given story. If the story
   // doesn't exist, returns null.
   GetStoryInfo(string story_id) => (StoryInfo? info);
 
-  // Obtains a controller for a previously run story identified by its
-  // story ID. Obtaining the controller doesn't run it yet. If the
+  // Obtains a controller for a previously created story identified by
+  // its story ID. Obtaining the controller doesn't run it yet. If the
   // story doesn't exist, the interface request is closed.
   GetController(string story_id, StoryController& story);
 
   // Returns IDs of known stories. More information about the stories
-  // can be retrieved using GetStoryInfo(), or by GetController(), then
-  // StoryController.GetInfo().
+  // can be retrieved using GetStoryInfo(), or by GetController(),
+  // then StoryController.GetInfo().
   PreviousStories() => (array<string> story_ids);
 
   // Registers a listener for changes in the story collection.
@@ -57,14 +56,13 @@ interface StoryProvider {
 // These calls are for a story event happening on ANY device, not just
 // the current device.
 //
-// No service name: created by the client.
-//
-// TODO(jimbe) Need a way to determine which device the action happened on.
+// TODO(jimbe) Need a way to determine which device the action
+// happened on.
 interface StoryProviderWatcher {
-  // The StoryInfo changed. |story_info.state| will be NEW if this story was
-  // just created.
+  // The StoryInfo changed. |story_info.state| is INITIAL if this
+  // story was just created.
   OnChange(StoryInfo story_info);
 
-  // A Story was deleted
+  // A Story was deleted.
   OnDelete(string story_id);
 };

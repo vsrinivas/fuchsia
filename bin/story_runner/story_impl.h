@@ -50,9 +50,10 @@ class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
 
   ~StoryImpl() override;
 
-  // Methods called by ModuleContextImpl.
+  // Called by ModuleContextImpl.
   void CreateLink(const fidl::String& name,
                   fidl::InterfaceRequest<Link> request);
+  // Called by ModuleContextImpl.
   void StartModule(
       const fidl::String& query,
       fidl::InterfaceHandle<Link> link,
@@ -60,12 +61,14 @@ class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
+  // Called by ModuleContextImpl.
   void StartModuleInShell(
       const fidl::String& query,
       fidl::InterfaceHandle<Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller);
+  // Called by ModuleContextImpl.
   const std::string& GetStoryId();
 
   // Releases ownership of |controller|.
