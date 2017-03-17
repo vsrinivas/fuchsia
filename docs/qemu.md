@@ -121,6 +121,16 @@ shell1$ ./scripts/run-magenta-x86-64 -- -s -S
 [... some QEMU start up text ...]
 ```
 
+This will start QEMU but freeze the system at startup,
+waiting for you to resume it with "continue" in GDB.
+If you want to run QEMU without GDB, but be able to attach with GDB later
+then start QEMU without "-S" in the above example:
+
+```
+shell1$ ./scripts/run-magenta-x86-64 -- -s
+[... some QEMU start up text ...]
+```
+
 And then in the shell you're running GDB in:
 [Commands here are fully spelled out, but remember most can be abbreviated.]
 
