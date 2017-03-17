@@ -9,7 +9,7 @@ This tool manages a set of repositories specified by a manifest.
 
 On Ubuntu:
 
- * `sudo apt-get install golang git-all build-essential curl unzip`
+ * `sudo apt-get install golang git build-essential curl unzip`
 
 On Mac:
 
