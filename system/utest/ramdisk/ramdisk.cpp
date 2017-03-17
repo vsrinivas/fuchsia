@@ -155,6 +155,8 @@ bool ramdisk_test_fifo_no_op(void) {
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
     ASSERT_EQ(ioctl_block_fifo_close(fd), ERR_BAD_STATE, "Failed to close fifo");
+    ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO after closing");
+    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     close(fd);
     END_TEST;

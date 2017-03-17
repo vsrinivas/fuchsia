@@ -161,6 +161,7 @@ static ssize_t blkdev_fifo_close(blkdev_t* bdev) {
         mtx_unlock(&bdev->lock);
         thrd_join(bdev->bs_thread, NULL);
         bdev->bs = NULL;
+        bdev->flags &= ~FLAG_BG_THREAD_JOINABLE;
     } else {
         // No background thread running.
         mtx_unlock(&bdev->lock);
