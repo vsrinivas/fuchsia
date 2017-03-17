@@ -24,9 +24,9 @@ const char kSyncArg[] = "sync";
 const char kNoSyncArg[] = "nosync";
 
 void PrintHelp() {
-  printf("Creates the configuration file used by Ledger.\n");
+  printf("Updates the configuration file used by Ledger.\n");
   printf("\n");
-  printf("Optional, global arguments:\n");
+  printf("Global arguments:\n");
   printf("  --config_path=/path/to/config/file: path to the configuration \n");
   printf("    file to write to (default: /data/ledger/config.json).\n");
   printf("  --help: prints this help.\n");
@@ -39,7 +39,7 @@ void PrintHelp() {
   printf("  --sync\n");
   printf("  --nosync\n");
 }
-}
+}  // namespace
 
 int main(int argc, const char** argv) {
   ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);

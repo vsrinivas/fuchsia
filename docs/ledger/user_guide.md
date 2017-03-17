@@ -1,5 +1,7 @@
 # User Guide
 
+[TOC]
+
 ## Disk Storage
 
 Ledger writes all data under `/data/ledger`. In order for data to be persisted,
@@ -23,11 +25,13 @@ data. (see Reset Everything below)
 the cloud is world-readable and world-writable. Please don't store anything
 private, sensitive or real in Ledger yet.
 
-### Prerequisities
+### Setup
+
+#### Setup the network stack
 
 Follow the instructions in
-[netstack](https://fuchsia.googlesource.com/netstack/+/master/README.md) to
-ensure that your Fuchsia has Internet access.
+[netstack](https://fuchsia.googlesource.com/netstack/+/d24151e74c745358b102f4f33a3c5f4d720ddc52/README.md)
+to ensure that your Fuchsia has Internet access.
 
 Run `wget` to verify that it worked:
 
@@ -37,13 +41,21 @@ wget http://example.com
 
 You should see the HTML content of the `example.com` placeholder page.
 
-### Setup
+#### Create your firebase project
 
 To use sync, you will need an instance of the Firebase Real-Time Database along
 with Firebase Storage. You can create a new Firebase project at
-https://firebase.google.com/. Then, visit the [Firebase
-Console](https://console.firebase.google.com/) and follow the instructions
-below.
+(https://firebase.google.com/)[https://firebase.google.com/].
+
+Take note of your *project ID*, as you will need it to setup your device. It is
+the name of your project, with spaces replaced by `-`. It is also in your
+console URL. For example, if you create a project named *My Firebase Project*
+project, its console URL will be
+`https://console.firebase.google.com/project/my-firebase-project` and its
+identifier will be `my-firebase-project`.
+
+#### Configure Firebase
+Go to the [Firebase Console](https://console.firebase.google.com/), and open your project.
 
 In `Database / Rules`, paste the rules below and click "Publish". (note that
 this makes the database data world-readable and world-writeable)
@@ -84,24 +96,21 @@ service firebase.storage {
 }
 ```
 
+#### Configure Ledger
+
 In order to point Ledger to your database, run the configuration script:
 
 ```
-configure_ledger --gcs_bucket=<BUCKET NAME> --firebase_id=<DATABASE_ID> [ --cloud_prefix=<CLOUD_PREFIX> ]
+configure_ledger --firebase_id=<DATABASE_ID> [--cloud_prefix=<CLOUD_PREFIX>]
 ```
 
-`BUCKET_NAME` is the name of the storage bucket.  By default this is
-<DATABASE_ID>.appspot.com.  Firebase Storage is backed by GCS, so this is
-actually a name of a Google Cloud Storage bucket. It however has to be the
-bucket of the Firebase Storage instance configured as described above, and not
-any general GCS bucket.
+`DATABASE_ID` is the identifier of your Firebase database. If you followed the
+setup instructions above, it is your project identifier. It is also your
+firebase ID as in `https://<firebase-id>.firebaseio.com`.
 
-`DATABASE_ID` is the identifier of your Firebase project. (it's "ABC" for a
-firebase database "ABC.firebaseio.com")
-
-`CLOUD_PREFIX` is a stop-gap self-declared namespace for the ledger. You can share
-one instance of the cloud database between multiple ledger declaring different
-identities. This parameter is not mandatory.
+`CLOUD_PREFIX` (optional) is a self-declared namespace for the ledger. You can
+share one instance of the cloud database between multiple ledger declaring
+different identities. This parameter is not mandatory.
 
 ### Diagnose
 
@@ -131,15 +140,28 @@ configure_ledger --sync
 The configuration tool remembers the Firebase settings even when the sync is
 off, so you don't need to pass them again.
 
-## Reset Everything
+## Reset the ledger
 
-To remove all locally persisted Ledger data, you can run:
+### Reset local and remote states
+To remove all data, locally and remotely, run the command:
+
+```
+cloud_sync clean
+```
+`cloud_sync clean` only clears Firebase for now, but not the associated Google
+Cloud Storage. This should not impact Ledger use; however, if you want to
+reclaim the space, use the visit `Storage / Files` in the [Firebase
+Console](https://console.firebase.google.com/) and delete all objects.
+
+### Reset local state
+
+To remove only the locally persisted Ledger data, you can run:
 
 ```
 $ rm -r /data/ledger
 ```
 
-To remove the data synced to the cloud, visit `Database / Data` in the [Firebase
-Console](https://console.firebase.google.com/) and click on the red cross that
-appears when you hover over the root of your database. Then, visit `Storage /
-Files` and delete all objects.
+Note that running this command also removes your current ledger configuration
+(See (Configure Ledger)[#Configure-Ledger] on how to configure your Ledger). It
+does not remove your Cloud data; if configured for Cloud synchronization,
+Ledger will start downloading the missing data the next time it starts.
