@@ -1,6 +1,6 @@
 {
     "labels": [
-        "//go/src/fuchsia.googlesource.com/thinfs"
+        "//apps/thinfs"
     ],
     "binaries": [
         {
