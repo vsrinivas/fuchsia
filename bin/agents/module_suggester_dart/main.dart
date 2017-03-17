@@ -61,7 +61,7 @@ class AskHandlerImpl extends AskHandler {
           "https://avatars2.githubusercontent.com/u/12826430?v=3&s=200";
 
       final createStory = new CreateStory();
-      createStory.moduleId = "file:///system/apps/dashboard";
+      createStory.moduleId = "file:///system/apps/fuchsia_build_status";
 
       final action = new Action();
       action.createStory = createStory;
