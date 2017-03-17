@@ -17,7 +17,7 @@ endif
 EFI_CFLAGS	:= -fshort-wchar -fno-stack-protector -mno-red-zone
 EFI_CFLAGS	+= -Wall -std=c99
 EFI_CFLAGS	+= -ffreestanding -nostdinc -I$(LOCAL_DIR)/include -I$(LOCAL_DIR)/src
-EFI_CFLAGS	+= -Isystem/public
+EFI_CFLAGS	+= -Isystem/public -Isystem/private
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 EFI_CFLAGS	+= --target=x86_64-windows-msvc
 else

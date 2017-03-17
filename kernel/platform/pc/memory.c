@@ -9,7 +9,7 @@
 #include <kernel/vm.h>
 #include <platform/pc/bootloader.h>
 #include <magenta/boot/multiboot.h>
-#include <magenta/boot/efi.h>
+#include <efi/boot-services.h>
 #include <trace.h>
 
 #include "platform_p.h"
@@ -259,7 +259,7 @@ static int efi_is_mem(uint32_t type) {
     }
 }
 
-static void efi_print(const char* tag, efi_memory_descriptor_t* e) {
+static void efi_print(const char* tag, efi_memory_descriptor* e) {
     bool mb = e->NumberOfPages > 256;
     LTRACEF("%s%016lx %08x %lu%s\n",
             tag, e->PhysicalStart, e->Type,
@@ -279,7 +279,7 @@ static void efi_range_advance(boot_addr_range_t *range)
         return;
     }
 
-    efi_memory_descriptor_t *entry = seq->base + (seq->index * seq->entrysz);
+    efi_memory_descriptor *entry = seq->base + (seq->index * seq->entrysz);
     efi_print("EFI: ", entry);
     range->base = entry->PhysicalStart;
     range->size = entry->NumberOfPages * PAGE_SIZE;
@@ -288,7 +288,7 @@ static void efi_range_advance(boot_addr_range_t *range)
 
     // coalesce adjacent memory ranges
     while ((seq->index + 1) < seq->count) {
-        efi_memory_descriptor_t *next = seq->base + ((seq->index + 1) * seq->entrysz);
+        efi_memory_descriptor *next = seq->base + ((seq->index + 1) * seq->entrysz);
         if ((range->base + range->size) != next->PhysicalStart) {
             break;
         }
@@ -310,7 +310,7 @@ static int efi_range_init(boot_addr_range_t *range, efi_range_seq_t *seq)
     if (bootloader.efi_mmap &&
         (bootloader.efi_mmap_size > sizeof(uint64_t))) {
         seq->entrysz = *((uint64_t*) bootloader.efi_mmap);
-        if (seq->entrysz < sizeof(efi_memory_descriptor_t)) {
+        if (seq->entrysz < sizeof(efi_memory_descriptor)) {
             return 0;
         }
 

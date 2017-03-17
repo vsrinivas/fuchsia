@@ -139,3 +139,5 @@ typedef enum {
     TimerPeriodic,
     TimerRelative
 } efi_timer_delay;
+
+typedef unsigned short char16_t;
