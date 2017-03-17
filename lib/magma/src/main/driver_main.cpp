@@ -310,13 +310,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
 
     device->framebuffer_size = pitch * di->height;
 
-    // Tell the kernel about the console framebuffer so it can display a kernel panic screen.
-    // If other display clients come along and change the scanout address, then the panic
-    // won't be visible; however the plan is to move away from onscreen panics, instead
-    // writing the log somewhere it can be recovered then triggering a reboot.
-    mx_set_framebuffer(get_root_resource(), device->framebuffer_addr, device->framebuffer_size,
-                       format, width, height, stride);
-
     device->console_buffer = magma::PlatformBuffer::Create(device->framebuffer_size);
 
     if (!device->console_buffer->MapCpu(&device->framebuffer_addr))
@@ -327,6 +320,19 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
         magma::PlatformBuffer::Create(magma::round_up(pitch, 512) * di->height);
 
     di->flags = MX_DISPLAY_FLAG_HW_FRAMEBUFFER;
+
+    // Tell the kernel about the console framebuffer so it can display a kernel panic screen.
+    // If other display clients come along and change the scanout address, then the panic
+    // won't be visible; however the plan is to move away from onscreen panics, instead
+    // writing the log somewhere it can be recovered then triggering a reboot.
+    uint32_t handle;
+    if (!device->console_buffer->duplicate_handle(&handle))
+        return DRET_MSG(ERR_INTERNAL, "Failed to duplicate framebuffer handle");
+
+    status = mx_set_framebuffer_vmo(get_root_resource(), handle, device->framebuffer_size, format,
+                                    width, height, stride);
+    if (status != NO_ERROR)
+        magma::log(magma::LOG_WARNING, "Failed to pass framebuffer to magenta: %d", status);
 
     // TODO remove when the gfxconsole moves to user space
     intel_i915_enable_backlight(device, true);
