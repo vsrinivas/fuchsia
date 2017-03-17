@@ -151,6 +151,14 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
           break;
         }
         case Action::Tag::CUSTOM_ACTION: {
+          auto custom_action = maxwell::CustomActionPtr::Create(
+              std::move(action->get_custom_action()));
+          custom_action->Execute(ftl::MakeCopyable([
+            this, custom_action = std::move(custom_action), story_color
+          ](fidl::Array<maxwell::ActionPtr> actions) {
+            if (actions)
+              PerformActions(std::move(actions), story_color);
+          }));
           break;
         }
         default:
