@@ -66,61 +66,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
     if (suggestion_prototype) {
       if (interaction->type == InteractionType::SELECTED) {
-        // TODO(rosswang): If we're asked to add multiple modules, we probably
-        // want to add them to the same story. We can't do that yet, but we need
-        // to receive a StoryController anyway (not optional atm.).
-        for (auto& action : suggestion_prototype->proposal->on_selected) {
-          switch (action->which()) {
-            case Action::Tag::CREATE_STORY: {
-              const auto& create_story = action->get_create_story();
-
-              if (story_provider_) {
-                // TODO(afergan): Make this more robust later. For now, we
-                // always assume that there's extra info and that it's a color.
-                fidl::Map<fidl::String, fidl::String> extra_info;
-                char hex_color[11];
-                sprintf(hex_color, "0x%x",
-                        suggestion_prototype->proposal->display->color);
-                extra_info["color"] = hex_color;
-                auto& initial_data = create_story->initial_data;
-                auto& module_id = create_story->module_id;
-                story_provider_->CreateStoryWithInfo(
-                    create_story->module_id, std::move(extra_info),
-                    std::move(initial_data),
-                    [this, module_id](const fidl::String& story_id) {
-                      modular::StoryControllerPtr story_controller;
-                      story_provider_->GetController(
-                          story_id, story_controller.NewRequest());
-                      FTL_LOG(INFO)
-                          << "Creating story with module " << module_id;
-
-                      story_controller->GetInfo(ftl::MakeCopyable(
-                          // TODO(thatguy): We should not be std::move()ing
-                          // story_controller *while we're calling it*.
-                          [ this, controller = std::move(story_controller) ](
-                              modular::StoryInfoPtr story_info) {
-                            FTL_LOG(INFO) << "Requesting focus for story_id "
-                                          << story_info->id;
-                            focus_provider_ptr_->Request(story_info->id);
-                          }));
-                    });
-              } else {
-                FTL_LOG(WARNING) << "Unable to add module; no story provider";
-              }
-              break;
-            }
-            case Action::Tag::FOCUS_STORY: {
-              const auto& focus_story = action->get_focus_story();
-              FTL_LOG(INFO)
-                  << "Requesting focus for story_id " << focus_story->story_id;
-              focus_provider_ptr_->Request(focus_story->story_id);
-              break;
-            }
-            default:
-              FTL_LOG(WARNING)
-                  << "Unknown action tag " << (uint32_t)action->which();
-          }
-        }
+        PerformActions(suggestion_prototype->proposal->on_selected,
+                       suggestion_prototype->proposal->display->color);
       }
     }
   }
@@ -153,6 +100,66 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   // end SuggestionEngine
 
  private:
+  void PerformActions(const fidl::Array<maxwell::ActionPtr>& actions,
+                      uint32_t story_color) {
+    // TODO(rosswang): If we're asked to add multiple modules, we probably
+    // want to add them to the same story. We can't do that yet, but we need
+    // to receive a StoryController anyway (not optional atm.).
+    for (const auto& action : actions) {
+      switch (action->which()) {
+        case Action::Tag::CREATE_STORY: {
+          const auto& create_story = action->get_create_story();
+
+          if (story_provider_) {
+            // TODO(afergan): Make this more robust later. For now, we
+            // always assume that there's extra info and that it's a color.
+            fidl::Map<fidl::String, fidl::String> extra_info;
+            char hex_color[11];
+            sprintf(hex_color, "0x%x", story_color);
+            extra_info["color"] = hex_color;
+            auto& initial_data = create_story->initial_data;
+            auto& module_id = create_story->module_id;
+            story_provider_->CreateStoryWithInfo(
+                create_story->module_id, std::move(extra_info),
+                std::move(initial_data),
+                [this, module_id](const fidl::String& story_id) {
+                  modular::StoryControllerPtr story_controller;
+                  story_provider_->GetController(story_id,
+                                                 story_controller.NewRequest());
+                  FTL_LOG(INFO) << "Creating story with module " << module_id;
+
+                  story_controller->GetInfo(ftl::MakeCopyable(
+                      // TODO(thatguy): We should not be std::move()ing
+                      // story_controller *while we're calling it*.
+                      [ this, controller = std::move(story_controller) ](
+                          modular::StoryInfoPtr story_info) {
+                        FTL_LOG(INFO) << "Requesting focus for story_id "
+                                      << story_info->id;
+                        focus_provider_ptr_->Request(story_info->id);
+                      }));
+                });
+          } else {
+            FTL_LOG(WARNING) << "Unable to add module; no story provider";
+          }
+          break;
+        }
+        case Action::Tag::FOCUS_STORY: {
+          const auto& focus_story = action->get_focus_story();
+          FTL_LOG(INFO) << "Requesting focus for story_id "
+                        << focus_story->story_id;
+          focus_provider_ptr_->Request(focus_story->story_id);
+          break;
+        }
+        case Action::Tag::CUSTOM_ACTION: {
+          break;
+        }
+        default:
+          FTL_LOG(WARNING) << "Unknown action tag "
+                           << (uint32_t)action->which();
+      }
+    }
+  }
+
   std::unique_ptr<app::ApplicationContext> app_context_;
 
   fidl::BindingSet<SuggestionEngine> bindings_;
