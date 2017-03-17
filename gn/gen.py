@@ -68,7 +68,10 @@ def main():
     if args.ccache:
         gn_args += " use_ccache=true"
     if args.autorun:
-        gn_args += " autorun=\"%s\"" % args.autorun
+        abs_autorun = os.path.abspath(args.autorun)
+        if not os.path.exists(abs_autorun):
+            parser.error('invalid autorun path: %s' % args.autorun)
+        gn_args += " autorun=\"%s\"" % abs_autorun
     if args.gn_args:
         gn_args += " " + " ".join(args.gn_args)
 
