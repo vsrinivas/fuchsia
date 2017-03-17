@@ -21,6 +21,8 @@ FutexNode::FutexNode() {
 FutexNode::~FutexNode() {
     LTRACE_ENTRY;
 
+    DEBUG_ASSERT(!IsInQueue());
+
     THREAD_LOCK(state);
     wait_queue_destroy(&wait_queue_);
     THREAD_UNLOCK(state);
