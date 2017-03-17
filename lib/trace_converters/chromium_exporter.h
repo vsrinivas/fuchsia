@@ -34,6 +34,8 @@ class ChromiumExporter {
   rapidjson::OStreamWrapper wrapper_;
   rapidjson::Writer<rapidjson::OStreamWrapper> writer_;
 
+  // Scale factor to get to microseconds.
+  // By default ticks are in nanoseconds.
   double tick_scale_ = 0.001;
 
   std::unordered_map<mx_koid_t, std::string> processes_;

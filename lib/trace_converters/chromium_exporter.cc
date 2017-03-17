@@ -66,7 +66,7 @@ ChromiumExporter::~ChromiumExporter() {
 void ChromiumExporter::Start() {
   writer_.StartObject();
   writer_.Key("displayTimeUnit");
-  writer_.String("ms");
+  writer_.String("ns");
   writer_.Key("traceEvents");
   writer_.StartArray();
 }
@@ -138,6 +138,7 @@ void ChromiumExporter::ExportRecord(const reader::Record& record) {
   switch (record.type()) {
     case RecordType::kInitialization:
       // Compute scale factor for ticks to microseconds.
+      // Microseconds is the unit for the "ts" field.
       tick_scale_ = 1'000'000.0 / record.GetInitialization().ticks_per_second;
       break;
     case RecordType::kEvent:
