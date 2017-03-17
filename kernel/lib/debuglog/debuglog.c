@@ -307,7 +307,7 @@ void dlog_bluescreen_init(void) {
 
     // replay debug log?
 
-    dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\n");
+    dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\nUPTIME: %" PRIu32 "ms\n", current_time());
     dprintf(INFO, "GIT REVISION %s\n\n", MAGENTA_GIT_REV);
 }
 
