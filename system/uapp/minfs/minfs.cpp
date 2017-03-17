@@ -12,6 +12,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <magenta/new.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 
 #include "minfs-private.h"
@@ -460,26 +461,32 @@ int minfs_mkfs(Bcache* bc) {
     info.inode_size = kMinfsInodeSize;
     info.block_count = blocks;
     info.inode_count = inodes;
+    // For now, we are aligning the
+    //  - Inode bitmap
+    //  - Block bitmap
+    //  - Inode table
+    // To an 8-block boundary on disk, allowing for future expansion.
     info.ibm_block = 8;
-    info.abm_block = 16;
-    info.ino_block = info.abm_block + ((abmblks + 8) & (~7));
+    info.abm_block = info.ibm_block + mxtl::roundup(ibmblks, 8u);
+    info.ino_block = info.abm_block + mxtl::roundup(abmblks, 8u);
     info.dat_block = info.ino_block + inoblks;
     minfs_dump_info(&info);
 
     RawBitmap abm;
     RawBitmap ibm;
 
+    // By allocating the bitmap and then shrinking it, we keep the underlying
+    // storage a block multiple but ensure we can't allocate beyond the last
+    // real block or inode.
     mx_status_t status;
-    if ((status = abm.Reset(info.abm_block * kMinfsBlockBits)) < 0) {
+    if ((status = abm.Reset(mxtl::roundup(info.block_count, kMinfsBlockBits))) < 0) {
         error("mkfs: Failed to allocate block bitmap\n");
         return status;
     }
-    if ((status = ibm.Reset(info.ibm_block * kMinfsBlockBits)) < 0) {
+    if ((status = ibm.Reset(mxtl::roundup(info.inode_count, kMinfsBlockBits))) < 0) {
         error("mkfs: Failed to allocate inode bitmap\n");
         return status;
     }
-    // this keeps the underlying storage a block multiple but ensures we
-    // can't allocate beyond the last real block or inode
     if ((status = abm.Shrink(info.block_count)) < 0) {
         error("mkfs: Failed to shrink block bitmap\n");
         return status;
