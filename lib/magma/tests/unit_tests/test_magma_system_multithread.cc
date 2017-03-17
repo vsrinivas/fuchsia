@@ -63,7 +63,7 @@ public:
     {
         auto connection = std::make_unique<MagmaSystemConnection>(
             device_, MsdConnectionUniquePtr(msd_device_open(device_->msd_dev(), 0)),
-            MAGMA_SYSTEM_CAPABILITY_RENDERING);
+            MAGMA_CAPABILITY_RENDERING);
         ASSERT_NE(connection, nullptr);
 
         uint32_t context_id = ++context_id_;

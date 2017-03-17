@@ -59,7 +59,7 @@ TEST(MagmaSystemConnection, ContextManagement)
     auto msd_dev = new MsdMockDevice();
     auto dev = std::make_shared<MagmaSystemDevice>(MsdDeviceUniquePtr(msd_dev));
     MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
-                                     MAGMA_SYSTEM_CAPABILITY_RENDERING);
+                                     MAGMA_CAPABILITY_RENDERING);
 
     EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
 
@@ -91,7 +91,7 @@ TEST(MagmaSystemConnection, BufferManagement)
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
     MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
-                                     MAGMA_SYSTEM_CAPABILITY_RENDERING);
+                                     MAGMA_CAPABILITY_RENDERING);
 
     uint64_t test_size = 4096;
 
@@ -133,12 +133,12 @@ TEST(MagmaSystemConnection, BufferSharing)
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
     MagmaSystemConnection connection_0(dev, MsdConnectionUniquePtr(msd_connection),
-                                       MAGMA_SYSTEM_CAPABILITY_RENDERING);
+                                       MAGMA_CAPABILITY_RENDERING);
 
     msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
     MagmaSystemConnection connection_1(dev, MsdConnectionUniquePtr(msd_connection),
-                                       MAGMA_SYSTEM_CAPABILITY_RENDERING);
+                                       MAGMA_CAPABILITY_RENDERING);
 
     auto platform_buf = magma::PlatformBuffer::Create(4096);
 
@@ -170,7 +170,7 @@ TEST(MagmaSystemConnection, PageFlip)
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
     MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
-                                     MAGMA_SYSTEM_CAPABILITY_DISPLAY);
+                                     MAGMA_CAPABILITY_DISPLAY);
 
     auto buf = magma::PlatformBuffer::Create(PAGE_SIZE);
 

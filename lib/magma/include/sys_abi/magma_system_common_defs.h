@@ -11,8 +11,8 @@
 extern "C" {
 #endif
 
-#define MAGMA_SYSTEM_CAPABILITY_RENDERING 1
-#define MAGMA_SYSTEM_CAPABILITY_DISPLAY 2
+#define MAGMA_CAPABILITY_RENDERING 1
+#define MAGMA_CAPABILITY_DISPLAY 2
 
 #define MAGMA_DOMAIN_CPU 0x00000001
 #define MAGMA_DOMAIN_GTT 0x00000040
@@ -39,7 +39,7 @@ typedef uintptr_t magma_buffer_t;
 
 typedef uintptr_t magma_semaphore_t;
 
-struct magma_system_connection {
+struct magma_connection_t {
     uint32_t magic_;
 };
 

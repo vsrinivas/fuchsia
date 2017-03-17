@@ -202,7 +202,7 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
                 return DRET(ERR_INVALID_ARGS);
 
             // Override console for new display connections
-            if (request->capabilities & MAGMA_SYSTEM_CAPABILITY_DISPLAY) {
+            if (request->capabilities & MAGMA_CAPABILITY_DISPLAY) {
                 reset_placeholder(device);
                 magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
                 device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer,

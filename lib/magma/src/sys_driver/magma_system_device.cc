@@ -14,8 +14,7 @@ MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id
                         uint32_t capabilities)
 {
     // at least one bit must be one and it must be one of the 2 least significant bits
-    if (!capabilities ||
-        (capabilities & ~(MAGMA_SYSTEM_CAPABILITY_DISPLAY | MAGMA_SYSTEM_CAPABILITY_RENDERING)))
+    if (!capabilities || (capabilities & ~(MAGMA_CAPABILITY_DISPLAY | MAGMA_CAPABILITY_RENDERING)))
         return DRETP(nullptr, "attempting to open connection to device with invalid capabilities");
 
     msd_connection_t* msd_connection = msd_device_open(device->msd_dev(), client_id);

@@ -21,7 +21,7 @@ public:
 
     ~TestBase() { close(fd_); }
 
-    void GetDeviceId() { EXPECT_NE(magma_system_get_device_id(fd_), 0u); }
+    void GetDeviceId() { EXPECT_NE(magma_get_device_id(fd_), 0u); }
 
 private:
     int fd_;
@@ -29,12 +29,12 @@ private:
 
 class TestConnection : public TestBase {
 public:
-    TestConnection() { connection_ = magma_system_open(fd(), MAGMA_SYSTEM_CAPABILITY_RENDERING); }
+    TestConnection() { connection_ = magma_open(fd(), MAGMA_CAPABILITY_RENDERING); }
 
     ~TestConnection()
     {
         if (connection_)
-            magma_system_close(connection_);
+            magma_close(connection_);
     }
 
     int32_t Test()
@@ -42,44 +42,44 @@ public:
         DASSERT(connection_);
 
         uint32_t context_id;
-        magma_system_create_context(connection_, &context_id);
+        magma_create_context(connection_, &context_id);
 
-        int32_t result = magma_system_get_error(connection_);
+        int32_t result = magma_get_error(connection_);
         if (result != 0)
             return DRET(result);
 
         uint64_t size;
         magma_buffer_t batch_buffer, command_buffer;
 
-        result = magma_system_alloc(connection_, PAGE_SIZE, &size, &batch_buffer);
+        result = magma_alloc(connection_, PAGE_SIZE, &size, &batch_buffer);
         if (result != 0)
             return DRET(result);
 
-        result = magma_system_alloc(connection_, PAGE_SIZE, &size, &command_buffer);
+        result = magma_alloc(connection_, PAGE_SIZE, &size, &command_buffer);
         if (result != 0)
             return DRET(result);
 
         EXPECT_TRUE(InitBatchBuffer(batch_buffer, size));
         EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size));
 
-        magma_system_submit_command_buffer(connection_, command_buffer, context_id);
-        magma_system_wait_rendering(connection_, batch_buffer);
+        magma_submit_command_buffer(connection_, command_buffer, context_id);
+        magma_wait_rendering(connection_, batch_buffer);
 
-        magma_system_destroy_context(connection_, context_id);
-        magma_system_free(connection_, batch_buffer);
-        magma_system_free(connection_, command_buffer);
+        magma_destroy_context(connection_, context_id);
+        magma_free(connection_, batch_buffer);
+        magma_free(connection_, command_buffer);
 
-        result = magma_system_get_error(connection_);
+        result = magma_get_error(connection_);
         return DRET(result);
     }
 
     bool InitBatchBuffer(magma_buffer_t buffer, uint64_t size)
     {
-        if (!TestPlatformDevice::is_intel_gen(magma_system_get_device_id(fd())))
+        if (!TestPlatformDevice::is_intel_gen(magma_get_device_id(fd())))
             return DRETF(false, "not an intel gen9 device");
 
         void* vaddr;
-        if (magma_system_map(connection_, buffer, &vaddr) != 0)
+        if (magma_map(connection_, buffer, &vaddr) != 0)
             return DRETF(false, "couldn't map batch buffer");
 
         memset(vaddr, 0, size);
@@ -87,7 +87,7 @@ public:
         // Intel end-of-batch
         *reinterpret_cast<uint32_t*>(vaddr) = 0xA << 23;
 
-        EXPECT_EQ(magma_system_unmap(connection_, buffer), 0);
+        EXPECT_EQ(magma_unmap(connection_, buffer), 0);
 
         return true;
     }
@@ -96,7 +96,7 @@ public:
                            uint64_t batch_buffer_length)
     {
         void* vaddr;
-        if (magma_system_map(connection_, buffer, &vaddr) != 0)
+        if (magma_map(connection_, buffer, &vaddr) != 0)
             return DRETF(false, "couldn't map command buffer");
 
         auto command_buffer = reinterpret_cast<struct magma_system_command_buffer*>(vaddr);
@@ -106,18 +106,18 @@ public:
 
         auto exec_resource =
             reinterpret_cast<struct magma_system_exec_resource*>(command_buffer + 1);
-        exec_resource->buffer_id = magma_system_get_buffer_id(batch_buffer);
+        exec_resource->buffer_id = magma_get_buffer_id(batch_buffer);
         exec_resource->num_relocations = 0;
         exec_resource->offset = 0;
         exec_resource->length = batch_buffer_length;
 
-        EXPECT_EQ(magma_system_unmap(connection_, buffer), 0);
+        EXPECT_EQ(magma_unmap(connection_, buffer), 0);
 
         return true;
     }
 
 private:
-    magma_system_connection* connection_;
+    magma_connection_t* connection_;
 };
 
 constexpr uint32_t kMaxCount = 100;

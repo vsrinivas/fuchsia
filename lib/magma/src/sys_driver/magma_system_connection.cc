@@ -14,13 +14,12 @@ MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> we
 {
     DASSERT(msd_connection_);
 
-    has_display_capability_ = capabilities & MAGMA_SYSTEM_CAPABILITY_DISPLAY;
-    has_render_capability_ = capabilities & MAGMA_SYSTEM_CAPABILITY_RENDERING;
+    has_display_capability_ = capabilities & MAGMA_CAPABILITY_DISPLAY;
+    has_render_capability_ = capabilities & MAGMA_CAPABILITY_RENDERING;
 
     // should already be enforced in MagmaSystemDevice
     DASSERT(has_render_capability_ || has_display_capability_);
-    DASSERT((capabilities &
-             ~(MAGMA_SYSTEM_CAPABILITY_DISPLAY | MAGMA_SYSTEM_CAPABILITY_RENDERING)) == 0);
+    DASSERT((capabilities & ~(MAGMA_CAPABILITY_DISPLAY | MAGMA_CAPABILITY_RENDERING)) == 0);
 }
 
 MagmaSystemConnection::~MagmaSystemConnection()

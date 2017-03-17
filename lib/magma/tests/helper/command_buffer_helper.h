@@ -37,7 +37,7 @@ public:
         if (!msd_connection_t)
             return DRETP(nullptr, "msd_device_open failed");
         auto connection = std::unique_ptr<MagmaSystemConnection>(new MagmaSystemConnection(
-            dev, MsdConnectionUniquePtr(msd_connection_t), MAGMA_SYSTEM_CAPABILITY_RENDERING));
+            dev, MsdConnectionUniquePtr(msd_connection_t), MAGMA_CAPABILITY_RENDERING));
         if (!connection)
             return DRETP(nullptr, "failed to connect to msd device");
         connection->CreateContext(ctx_id);

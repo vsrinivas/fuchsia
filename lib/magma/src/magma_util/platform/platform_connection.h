@@ -18,7 +18,7 @@
 namespace magma {
 
 // Any implementation of PlatformIpcConnection shall be threadsafe.
-class PlatformIpcConnection : public magma_system_connection {
+class PlatformIpcConnection : public magma_connection_t {
 public:
     virtual ~PlatformIpcConnection() {}
 
@@ -52,7 +52,7 @@ public:
     virtual void PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,
                           uint32_t signal_semaphore_count, const uint64_t* semaphore_ids) = 0;
 
-    static PlatformIpcConnection* cast(magma_system_connection* connection)
+    static PlatformIpcConnection* cast(magma_connection_t* connection)
     {
         DASSERT(connection);
         DASSERT(connection->magic_ == kMagic);
