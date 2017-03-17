@@ -41,6 +41,7 @@
  * The -s flag specifies that this is a posix 'special builtin' command.
  * The -u flag specifies that this is a posix 'standard utility'.
  * The -n flag specifies that this command has a special entry point.
+ * The -w flag specifies that this command is weak and should defer to the path.
  * The rest of the line specifies the command name or names used to run
  * the command.
  */
@@ -89,10 +90,10 @@ ulimitcmd	ulimit
 testcmd		test [
 
 /* mini-versions of standard unix tools */
-mxc_ls			ls
-mxc_mv_or_cp		cp mv
-mxc_mkdir		mkdir
-mxc_rm			rm
+mxc_ls			-w ls
+mxc_mv_or_cp		-w cp mv
+mxc_mkdir		-w mkdir
+mxc_rm			-w rm
 
 /* not-so-standard tools */
 mxc_dump	dump

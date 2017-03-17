@@ -48,6 +48,7 @@
 #define BUILTIN_SPECIAL 0x1
 #define BUILTIN_REGULAR 0x2
 #define BUILTIN_ASSIGN 0x4
+#define BUILTIN_WEAK 0x8
 
 struct builtincmd {
 	const char *name;

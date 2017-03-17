@@ -4,7 +4,7 @@
 # 1 "/usr/include/stdc-predef.h" 1 3 4
 # 1 "<command-line>" 2
 # 1 "builtins.def.in"
-# 57 "builtins.def.in"
+# 58 "builtins.def.in"
 breakcmd -s break -s continue
 cdcmd -u cd chdir
 commandcmd -u command
@@ -40,10 +40,10 @@ aliascmd -au alias
 testcmd test [
 
 
-mxc_ls ls
-mxc_mv_or_cp cp mv
-mxc_mkdir mkdir
-mxc_rm rm
+mxc_ls -w ls
+mxc_mv_or_cp -w cp mv
+mxc_mkdir -w mkdir
+mxc_rm -w rm
 
 
 mxc_dump dump

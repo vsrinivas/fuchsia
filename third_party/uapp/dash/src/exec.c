@@ -361,8 +361,9 @@ find_command(char *name, struct cmdentry *entry, int act, const char *path)
 
 	/* If %builtin not in path, check for builtin next */
 	bcmd = find_builtin(name);
-	if (bcmd && (bcmd->flags & BUILTIN_REGULAR || (
-		act & DO_ALTPATH ? !(act & DO_ALTBLTIN) : builtinloc <= 0
+	if (bcmd && !(bcmd->flags & BUILTIN_WEAK) &&
+		(bcmd->flags & BUILTIN_REGULAR || (
+			act & DO_ALTPATH ? !(act & DO_ALTBLTIN) : builtinloc <= 0
 	)))
 		goto builtin_success;
 
@@ -450,6 +451,9 @@ loop:
 		INTON;
 		goto success;
 	}
+
+	if (bcmd && (bcmd->flags & BUILTIN_WEAK))
+		goto builtin_success;
 
 	/* We failed.  If there was an entry for this command, delete it */
 	if (cmdp && updatetbl)
