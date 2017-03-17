@@ -4,7 +4,6 @@
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.modular.services.story/story.fidl.dart';
 import 'package:apps.modular.services.story/story_shell.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:apps.mozart.services.views/views.fidl.dart';
