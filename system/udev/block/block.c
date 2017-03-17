@@ -153,6 +153,23 @@ done:
     mtx_unlock(&bdev->lock);
     return status;
 }
+
+static ssize_t blkdev_fifo_close(blkdev_t* bdev) {
+    mtx_lock(&bdev->lock);
+    if (bdev->bs != NULL) {
+        blockserver_shutdown(bdev->bs);
+        mtx_unlock(&bdev->lock);
+        thrd_join(bdev->bs_thread, NULL);
+        bdev->bs = NULL;
+    } else {
+        // No background thread running.
+        mtx_unlock(&bdev->lock);
+        return ERR_BAD_STATE;
+    }
+
+    return NO_ERROR;
+}
+
 // implement device protocol:
 
 static ssize_t blkdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
@@ -167,6 +184,8 @@ static ssize_t blkdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         return blkdev_alloc_txn(blkdev, cmd, cmdlen, reply, max);
     case IOCTL_BLOCK_FREE_TXN:
         return blkdev_free_txn(blkdev, cmd, cmdlen, reply, max);
+    case IOCTL_BLOCK_FIFO_CLOSE:
+        return blkdev_fifo_close(blkdev);
     default: {
         mx_device_t* parent = dev->parent;
         return parent->ops->ioctl(parent, op, cmd, cmdlen, reply, max);
@@ -190,16 +209,7 @@ static void blkdev_unbind(mx_device_t* dev) {
 
 static mx_status_t blkdev_release(mx_device_t* dev) {
     blkdev_t* blkdev = get_blkdev(dev);
-    mtx_lock(&blkdev->lock);
-    if (blkdev->bs != NULL) {
-        // There is a background thread running. Terminate it before freeing the
-        // blkdev.
-        blockserver_shutdown(blkdev->bs);
-        mtx_unlock(&blkdev->lock);
-        thrd_join(blkdev->bs_thread, NULL);
-    } else {
-        mtx_unlock(&blkdev->lock);
-    }
+    blkdev_fifo_close(blkdev);
     free(blkdev);
     return NO_ERROR;
 }

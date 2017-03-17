@@ -10,26 +10,41 @@
 #include <magenta/device/ioctl-wrapper.h>
 #include <magenta/types.h>
 
+// Get the size of the device in bytes
 #define IOCTL_BLOCK_GET_SIZE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 1)
+// Get the size of a single block in bytes
 #define IOCTL_BLOCK_GET_BLOCKSIZE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 2)
+// Get the type GUID of the partition (if one exists)
 #define IOCTL_BLOCK_GET_TYPE_GUID \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 3)
+// Get the GUID of the partition (if one exists)
 #define IOCTL_BLOCK_GET_PARTITION_GUID \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 4)
+// Get the name of the partition (if one exists)
 #define IOCTL_BLOCK_GET_NAME \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 5)
+// Rebind the block device (if supported)
 #define IOCTL_BLOCK_RR_PART \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 6)
+// Set up a FIFO-based server on the block device; acquire the handle to it
 #define IOCTL_BLOCK_GET_FIFOS \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BLOCK, 7)
+// Attach a VMO to the currently running FIFO server
 #define IOCTL_BLOCK_ATTACH_VMO \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_BLOCK, 8)
+// Allocate a txn with the currently running FIFO server
 #define IOCTL_BLOCK_ALLOC_TXN \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 9)
+// Free a txn from the currently running FIFO server
 #define IOCTL_BLOCK_FREE_TXN \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 10)
+// Shut down the fifo server, waiting for it to be ready to be started again.
+// Only necessary to guarantee availibility to the next fifo server client;
+// otherwise, closing the client fifo is sufficient to shut down the server.
+#define IOCTL_BLOCK_FIFO_CLOSE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 11)
 
 // Block Core ioctls (specific to each block device):
 
@@ -72,6 +87,9 @@ IOCTL_WRAPPER_OUT(ioctl_block_alloc_txn, IOCTL_BLOCK_ALLOC_TXN, txnid_t);
 
 // ssize_t ioctl_block_free_txn(int fd, const size_t* in_txnid);
 IOCTL_WRAPPER_IN(ioctl_block_free_txn, IOCTL_BLOCK_FREE_TXN, txnid_t);
+
+// ssize_t ioctl_block_fifo_close(int fd);
+IOCTL_WRAPPER(ioctl_block_fifo_close, IOCTL_BLOCK_FIFO_CLOSE);
 
 // Multiple Block IO operations may be sent at once before a response is actually sent back.
 // Block IO ops may be sent concurrently to different vmoids, and they also may be sent
