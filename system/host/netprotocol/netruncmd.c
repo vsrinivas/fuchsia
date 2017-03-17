@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     cmd[cmd_len - 1] = 0;
 
     int s;
-    if ((s = netboot_open(hostname, NB_SERVER_PORT, NULL)) < 0) {
+    if ((s = netboot_open(hostname, NULL)) < 0) {
         if (errno == ETIMEDOUT) {
             fprintf(stderr, "%s: lookup timed out\n", appname);
             // TODO(jimbe): Remove this transitional code after May 1, 2017.

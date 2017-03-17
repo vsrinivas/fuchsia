@@ -23,3 +23,13 @@ MODULE_SRCS += $(LOCAL_DIR)/netcp.c $(LOCAL_DIR)/netprotocol.c
 MODULE_NAME := netcp
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR)-netls
+
+MODULE_TYPE := hostapp
+
+MODULE_SRCS += $(LOCAL_DIR)/netls.c $(LOCAL_DIR)/netprotocol.c
+
+MODULE_NAME := netls
+
+include make/module.mk

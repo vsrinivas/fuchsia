@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <arpa/inet.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 #include <magenta/boot/netboot.h>
 
 #define MAXSIZE 1024
@@ -13,8 +17,23 @@ typedef struct {
     uint8_t data[MAXSIZE];
 } msg;
 
-struct sockaddr_in6;
+typedef enum device_state {
+  UNKNOWN, OFFLINE, DEVICE, BOOTLOADER,
+} device_state_t;
 
-int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_out);
+typedef struct device_info {
+  char nodename[MAX_NODENAME_LENGTH];
+  char inet6_addr_s[INET6_ADDRSTRLEN];
+  struct sockaddr_in6 inet6_addr;
+  device_state_t state;
+  uint32_t bootloader_version;
+  uint16_t bootloader_port;
+} device_info_t;
+
+// Returns whether discovery should continue or not.
+typedef bool (*on_device_cb)(device_info_t* device, void* cookie);
+int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, void* cookie);
+
+int netboot_open(const char* hostname, const char* ifname);
 
 int netboot_txn(int s, msg* in, msg* out, int outlen);

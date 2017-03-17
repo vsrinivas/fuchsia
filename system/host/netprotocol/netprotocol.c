@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #define _POSIX_C_SOURCE 200809L
+#define _DARWIN_C_SOURCE
+#define _BSD_SOURCE
 
 #include "netprotocol.h"
 
@@ -15,6 +17,7 @@
 #include <sys/time.h>
 
 #include <fcntl.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,10 +28,38 @@
 
 static uint32_t cookie = 0x12345678;
 
+static struct timeval netboot_timeout_init(int msec) {
+    struct timeval timeout_tv;
+    timeout_tv.tv_sec = msec / 1000;
+    timeout_tv.tv_usec = (msec % 1000) * 1000;
+
+    struct timeval end_tv;
+    gettimeofday(&end_tv, NULL);
+    timeradd(&end_tv, &timeout_tv, &end_tv);
+
+    return end_tv;
+}
+
+static int netboot_timeout_get_msec(const struct timeval *end_tv) {
+    struct timeval wait_tv;
+    struct timeval now_tv;
+    gettimeofday(&now_tv, NULL);
+    timersub(end_tv, &now_tv, &wait_tv);
+    return wait_tv.tv_sec * 1000 + wait_tv.tv_usec / 1000;
+}
+
+static bool netboot_timer_is_expired(const struct timeval *end_tv) {
+    struct timeval now_tv;
+    gettimeofday(&now_tv, NULL);
+
+    return timercmp(&now_tv, end_tv, >=);
+}
+
 static int netboot_bind_to_cmd_port(int socket) {
     struct sockaddr_in6 addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin6_family = AF_INET6;
+
     for (uint16_t port = NB_CMD_PORT_START; port <= NB_CMD_PORT_END; port++) {
         addr.sin6_port = htons(port);
         if (bind(socket, (void*)&addr, sizeof(addr)) == 0) {
@@ -38,7 +69,152 @@ static int netboot_bind_to_cmd_port(int socket) {
     return -1;
 }
 
-int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_out) {
+static int netboot_send_query(int socket, unsigned port, const char *ifname) {
+    const char* hostname = "*";
+    size_t hostname_len = strlen(hostname) + 1;
+
+    msg m;
+    m.hdr.magic = NB_MAGIC;
+    m.hdr.cookie = ++cookie;
+    m.hdr.cmd = NB_QUERY;
+    m.hdr.arg = 0;
+    memcpy(m.data, hostname, hostname_len);
+
+    struct sockaddr_in6 addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin6_family = AF_INET6;
+    addr.sin6_port = htons(port);
+    inet_pton(AF_INET6, "ff02::1", &addr.sin6_addr);
+
+    struct ifaddrs* ifa;
+    if (getifaddrs(&ifa) < 0) {
+        fprintf(stderr, "error: cannot enumerate network interfaces\n");
+        return -1;
+    }
+
+    for (; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL) {
+            continue;
+        }
+        if (ifa->ifa_addr->sa_family != AF_INET6) {
+            continue;
+        }
+        struct sockaddr_in6* in6 = (void*)ifa->ifa_addr;
+        if (in6->sin6_scope_id == 0) {
+            continue;
+        }
+        if (ifname && ifname[0] != 0 && strcmp(ifname, ifa->ifa_name))
+            continue;
+        // printf("tx %s (sid=%d)\n", ifa->ifa_name, in6->sin6_scope_id);
+        size_t sz = sizeof(nbmsg) + hostname_len;
+        addr.sin6_scope_id = in6->sin6_scope_id;
+
+        int r;
+        if ((r = sendto(socket, &m, sz, 0, (struct sockaddr*)&addr, sizeof(addr))) != sz) {
+            fprintf(stderr, "error: cannot send %d %s\n", errno, strerror(errno));
+        }
+    }
+
+    return 0;
+}
+
+static bool netboot_receive_query(int socket, on_device_cb callback, void* data) {
+    struct sockaddr_in6 ra;
+    socklen_t rlen = sizeof(ra);
+    memset(&ra, 0, sizeof(ra));
+    msg m;
+    int r = recvfrom(socket, &m, sizeof(m), 0, (void*)&ra, &rlen);
+    if (r > sizeof(nbmsg)) {
+        r -= sizeof(nbmsg);
+        m.data[r] = 0;
+        if ((m.hdr.magic == NB_MAGIC) &&
+            (m.hdr.cookie == cookie) &&
+            (m.hdr.cmd == NB_ACK)) {
+            char tmp[INET6_ADDRSTRLEN];
+            if (inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)) == NULL) {
+                strcpy(tmp, "???");
+            }
+            // printf("found %s at %s/%d\n", (char*)m.data, tmp, ra.sin6_scope_id);
+            if (strncmp("::", tmp, 2)) {
+                device_info_t info;
+                strncpy(info.nodename, (char*)m.data, sizeof(info.nodename));
+                strncpy(info.inet6_addr_s, tmp, INET6_ADDRSTRLEN);
+                memcpy(&info.inet6_addr, &ra, sizeof(ra));
+                info.state = DEVICE;
+                return callback(&info, data);
+            }
+        }
+    }
+    return false;
+}
+
+int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, void* data) {
+    if (!callback) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int s;
+    if ((s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+        fprintf(stderr, "error: cannot create socket: %s\n", strerror(errno));
+        return -1;
+    }
+
+    if (netboot_bind_to_cmd_port(s) < 0) {
+        fprintf(stderr, "cannot bind to command port: %s\n", strerror(errno));
+        return -1;
+    }
+
+    netboot_send_query(s, port, ifname);
+
+    struct pollfd fds;
+    fds.fd = s;
+    fds.events = POLLIN;
+    bool received_packets = false;
+
+    struct timeval end_tv = netboot_timeout_init(250);
+    do {
+
+        int wait_ms = netboot_timeout_get_msec(&end_tv);
+
+        int r = poll(&fds, 1, wait_ms);
+        if (r > 0 && (fds.revents & POLLIN)) {
+            received_packets = true;
+            if (!netboot_receive_query(s, callback, data)) {
+                break;
+            }
+        } else if (r < 0 && errno != EAGAIN && errno != EINTR) {
+            fprintf(stderr, "poll returned error: %s\n", strerror(errno));
+            return -1;
+        }
+    } while (!netboot_timer_is_expired(&end_tv));
+
+    close(s);
+    if (received_packets) {
+        return 0;
+    } else {
+        errno = ETIMEDOUT;
+        return -1;
+    }
+}
+
+typedef struct netboot_open_cookie {
+    struct sockaddr_in6 addr;
+    const char *hostname;
+    uint32_t index;
+} netboot_open_cookie_t;
+
+static bool netboot_open_callback(device_info_t* device, void* data) {
+    netboot_open_cookie_t* cookie = data;
+    cookie->index++;
+    if (strcmp(cookie->hostname, "*") && strcmp(cookie->hostname, device->nodename)) {
+        return true;
+    }
+    memcpy(&cookie->addr, &device->inet6_addr, sizeof(device->inet6_addr));
+    return false;
+}
+
+int netboot_open(const char* hostname, const char* ifname) {
     if ((hostname == NULL) || (hostname[0] == 0)) {
         char* envname = getenv("MAGENTA_NODENAME");
         hostname = envname && envname[0] != 0 ? envname : "*";
@@ -49,11 +225,19 @@ int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_
         return -1;
     }
 
-    struct sockaddr_in6 addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin6_family = AF_INET6;
-    addr.sin6_port = htons(NB_SERVER_PORT);
-    inet_pton(AF_INET6, "ff02::1", &addr.sin6_addr);
+    netboot_open_cookie_t cookie;
+    socklen_t rlen = sizeof(cookie.addr);
+    memset(&(cookie.addr), 0, sizeof(cookie.addr));
+    cookie.index = 0;
+    cookie.hostname = hostname;
+    if (netboot_discover(NB_SERVER_PORT, ifname, netboot_open_callback, &cookie) < 0) {
+        return -1;
+    }
+    // Device not found
+    if (cookie.index == 0) {
+        errno = EINVAL;
+        return -1;
+    }
 
     int s;
     if ((s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
@@ -71,72 +255,12 @@ int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_
     tv.tv_usec = 250 * 1000;
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    msg m;
-    m.hdr.magic = NB_MAGIC;
-    m.hdr.cookie = ++cookie;
-    m.hdr.cmd = NB_QUERY;
-    m.hdr.arg = 0;
-    memcpy(m.data, hostname, hostname_len);
-
-    struct ifaddrs* ifa;
-    if (getifaddrs(&ifa) < 0) {
-        fprintf(stderr, "error: cannot enumerate network interfaces\n");
+    if (connect(s, (void*)&cookie.addr, rlen) < 0) {
+        fprintf(stderr, "error: cannot connect UDP port\n");
+        close(s);
         return -1;
     }
-
-    for (int i = 0; i < 5; i++) {
-        // transmit query on all local links
-        for (; ifa != NULL; ifa = ifa->ifa_next) {
-            if (ifa->ifa_addr == NULL) {
-                continue;
-            }
-            if (ifa->ifa_addr->sa_family != AF_INET6) {
-                continue;
-            }
-            struct sockaddr_in6* in6 = (void*)ifa->ifa_addr;
-            if (in6->sin6_scope_id == 0) {
-                continue;
-            }
-            // printf("tx %s (sid=%d)\n", ifa->ifa_name, in6->sin6_scope_id);
-            size_t sz = sizeof(nbmsg) + hostname_len;
-            addr.sin6_scope_id = in6->sin6_scope_id;
-
-            int r;
-            if ((r = sendto(s, &m, sz, 0, (struct sockaddr*)&addr, sizeof(addr))) != sz) {
-                fprintf(stderr, "error: cannot send %d %s\n", errno, strerror(errno));
-            }
-        }
-
-        // listen for replies
-        struct sockaddr_in6 ra;
-        socklen_t rlen = sizeof(ra);
-        memset(&ra, 0, sizeof(ra));
-        int r = recvfrom(s, &m, sizeof(m), 0, (void*)&ra, &rlen);
-        if (r > sizeof(nbmsg)) {
-            r -= sizeof(nbmsg);
-            m.data[r] = 0;
-            if ((m.hdr.magic == NB_MAGIC) &&
-                (m.hdr.cookie == cookie) &&
-                (m.hdr.cmd == NB_ACK)) {
-                char tmp[INET6_ADDRSTRLEN];
-                if (inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)) == NULL) {
-                    strcpy(tmp,"???");
-                }
-                printf("found %s at %s/%d\n", (char*)m.data, tmp, ra.sin6_scope_id);
-                ra.sin6_port = htons(NB_SERVER_PORT);
-                if (connect(s, (void*) &ra, rlen) < 0) {
-                    fprintf(stderr, "error: cannot connect UDP port\n");
-                    close(s);
-                    return -1;
-                }
-                return s;
-            }
-        }
-    }
-
-    close(s);
-    errno = ETIMEDOUT;
-    return -1;
+    return s;
 }
 
 // The netboot protocol ignores response packets that are invalid,
@@ -170,7 +294,7 @@ resend:
             (in->hdr.cookie != out->hdr.cookie) ||
             (in->hdr.cmd != NB_ACK)) {
             fprintf(stderr, "netboot: bad ack header"
-                    " (magic=0x%x, cookie=%x/%x, cmd=%d)\n",
+                            " (magic=0x%x, cookie=%x/%x, cmd=%d)\n",
                     in->hdr.magic, in->hdr.cookie, cookie, in->hdr.cmd);
             continue;
         }
