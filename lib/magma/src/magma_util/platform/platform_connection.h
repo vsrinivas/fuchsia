@@ -5,7 +5,7 @@
 #ifndef _PLATFORM_CONNECTION_H_
 #define _PLATFORM_CONNECTION_H_
 
-#include "magma_system.h"
+#include "magma.h"
 #include "magma_util/macros.h"
 #include "magma_util/status.h"
 #include "platform_buffer.h"

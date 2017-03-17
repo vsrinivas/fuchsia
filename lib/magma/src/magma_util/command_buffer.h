@@ -5,7 +5,7 @@
 #ifndef UTIL_COMMAND_BUFFER_H
 #define UTIL_COMMAND_BUFFER_H
 
-#include "magma_system_common_defs.h"
+#include "magma_common_defs.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 #include <vector>

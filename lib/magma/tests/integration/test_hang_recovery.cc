@@ -8,7 +8,7 @@
 #include <thread>
 
 #include "helper/platform_device_helper.h"
-#include "magma_system.h"
+#include "magma.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "gtest/gtest.h"

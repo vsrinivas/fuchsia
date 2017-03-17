@@ -4,7 +4,7 @@
 
 #include <fcntl.h>
 
-#include "magma_system.h"
+#include "magma.h"
 #include "platform_buffer.h"
 #include "gtest/gtest.h"
 #include <thread>

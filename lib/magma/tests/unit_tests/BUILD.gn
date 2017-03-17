@@ -72,7 +72,7 @@ source_set("magma_platform_tests") {
   ]
 
   deps = [
-    "$magma_build_root/include:sys_abi",
+    "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:connection",
@@ -98,7 +98,7 @@ executable("magma_sys_abi_conformance_tests") {
 
   deps = [
     "$magma_build_root:magma",
-    "$magma_build_root/include:sys_abi",
+    "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util/platform:buffer",
     "//third_party/gtest",
   ]

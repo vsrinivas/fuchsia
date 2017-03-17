@@ -5,7 +5,7 @@
 #ifndef STATUS_H
 #define STATUS_H
 
-#include "magma_system_common_defs.h"
+#include "magma_common_defs.h"
 
 namespace magma {
 

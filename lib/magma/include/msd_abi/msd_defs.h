@@ -5,7 +5,7 @@
 #ifndef _MSD_DEFS_H_
 #define _MSD_DEFS_H_
 
-#include "magma_system_common_defs.h"
+#include "magma_common_defs.h"
 #include <stdint.h>
 
 #define MSD_DRIVER_CONFIG_TEST_NO_DEVICE_THREAD 1

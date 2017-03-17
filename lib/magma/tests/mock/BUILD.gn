@@ -39,7 +39,7 @@ source_set("magma_system") {
     "mock_magma_system.cc",
   ]
   deps = [
-    "$magma_build_root/include:sys_abi",
+    "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util:common",
     "$magma_build_root/src/magma_util/platform:buffer",
   ]

@@ -7,7 +7,7 @@
 
 #include "helper/platform_device_helper.h"
 #include "magenta/magenta_platform_ioctl.h"
-#include "magma_system.h"
+#include "magma.h"
 #include "magma_util/macros.h"
 #include "gtest/gtest.h"
 

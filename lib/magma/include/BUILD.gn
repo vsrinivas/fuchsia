@@ -4,28 +4,28 @@
 
 import("//magma/gnbuild/magma.gni")
 
-# Magma System ABI
-config("sys_abi_config") {
-  include_dirs = [ "sys_abi" ]
+# Magma ABI
+config("magma_abi_config") {
+  include_dirs = [ "magma_abi" ]
 }
 
-source_set("sys_abi") {
-  public_configs = [ ":sys_abi_config" ]
+source_set("magma_abi") {
+  public_configs = [ ":magma_abi_config" ]
 
   sources = [
-    "sys_abi/magma_system.h",
+    "magma_abi/magma.h",
   ]
 
   public_deps = [
-    ":sys_abi_common",
+    ":magma_abi_common",
   ]
 }
 
-source_set("sys_abi_common") {
-  public_configs = [ ":sys_abi_config" ]
+source_set("magma_abi_common") {
+  public_configs = [ ":magma_abi_config" ]
 
   sources = [
-    "sys_abi/magma_system_common_defs.h",
+    "magma_abi/magma_common_defs.h",
   ]
 }
 
@@ -43,6 +43,6 @@ source_set("msd_abi") {
   ]
 
   public_deps = [
-    ":sys_abi_common",
+    ":magma_abi_common",
   ]
 }
