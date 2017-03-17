@@ -57,6 +57,33 @@ static void load_child_process(mx_handle_t log, mx_handle_t vmar_self,
     *vdso_base = elf_load_vmo(log, vmar_self, vmar, vdso_vmo);
 }
 
+// Reserve roughly the low half of the address space, so the initial
+// process can use sanitizers that need to allocate shadow memory there.
+// The reservation VMAR is kept around just long enough to make sure all
+// the initial allocations (mapping in the initial ELF object, and
+// allocating the initial stack) stay out of this area, and then destroyed.
+// The process's own allocations can then use the full address space; if
+// it's using a sanitizer, it will set up its shadow memory first thing.
+static mx_handle_t reserve_low_address_space(mx_handle_t log,
+                                             mx_handle_t root_vmar) {
+    mx_info_vmar_t info;
+    check(log, mx_object_get_info(root_vmar, MX_INFO_VMAR,
+                                  &info, sizeof(info), NULL, NULL),
+          "mx_object_get_info failed on child root VMAR handle\n");
+    mx_handle_t vmar;
+    uintptr_t addr;
+    size_t reserve_size =
+        (((info.base + info.len) / 2) + PAGE_SIZE - 1) & -PAGE_SIZE;
+    mx_status_t status = mx_vmar_allocate(root_vmar, 0,
+                                          reserve_size - info.base,
+                                          MX_VM_FLAG_SPECIFIC, &vmar, &addr);
+    check(log, status,
+          "mx_vmar_allocate failed for low address space reservation\n");
+    if (addr != info.base)
+        fail(log, ERR_BAD_STATE, "mx_vmar_allocate gave wrong address?!?\n");
+    return vmar;
+}
+
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
@@ -225,6 +252,8 @@ found_bootfs:
     if (status < 0)
         fail(log, status, "mx_process_create failed\n");
 
+    mx_handle_t reserve_vmar = reserve_low_address_space(log, vmar);
+
     // Create the initial thread in the new process
     mx_handle_t thread;
     status = mx_thread_create(proc, filename, strlen(filename), 0, &thread);
@@ -256,6 +285,12 @@ found_bootfs:
     } else {
         mx_handle_close(stack_vmo);
     }
+
+    // We're done doing mappings, so clear out the reservation VMAR.
+    check(log, mx_vmar_destroy(reserve_vmar),
+          "mx_vmar_destroy failed on reservation VMAR handle\n");
+    check(log, mx_handle_close(reserve_vmar),
+          "mx_handle_close failed on reservation VMAR handle\n");
 
     // Reuse the slot for the child's handle.
     status = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS, proc_handle_loc);
