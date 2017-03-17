@@ -30,7 +30,7 @@ namespace fidl {
 //
 // Example:
 //
-//   #include "foo.mojom.h"
+//   #include "foo.fidl.h"
 //
 //   class FooImpl : public Foo {
 //    public:
