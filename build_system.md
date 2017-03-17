@@ -55,6 +55,18 @@ You can configure the set of modules that `gen.py` uses with the `--modules`
 argument. After running `gen.py` once, you can do incremental builds using
 `ninja`.
 
+You can specify an "autorun" script to run at startup with the `--autorun`
+parameter. The argument to `--autorun` is the path to a shell script.
+This simple example powers off the machine immediately after booting.
+
+```
+echo 'dm poweroff' > poweroff.autorun
+./packages/gn/gen.py --autorun=poweroff.autorun
+./buildtools/ninja -C out/debug-x86-64
+```
+
+For a list of all `gen.py` options, run `gen.py --help`.
+
 ### Running Fuchsia
 
 The commands above create an `out/debug-{arch}/user.bootfs` file. To run the
