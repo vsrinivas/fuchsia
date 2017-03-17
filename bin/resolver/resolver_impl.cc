@@ -80,7 +80,7 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
             continue;
           }
 
-          if (!!json_data || !manifest[internal::kModuleFacetName].HasMember(
+          if (data.IsNull() || !manifest[internal::kModuleFacetName].HasMember(
                   "data_preconditions") ||
               internal::MatchDataPreconditions(
                   manifest[internal::kModuleFacetName]["data_preconditions"],
