@@ -61,7 +61,7 @@
         },
         {
             "binary": "maxwell_test",
-            "bootfs_path": "apps/maxwell_test"
+            "bootfs_path": "test/maxwell_test"
         },
         {
             "binary": "resolver_main",
@@ -69,7 +69,7 @@
         },
         {
             "binary": "resolver_test",
-            "bootfs_path": "apps/resolver_test"
+            "bootfs_path": "test/resolver_test"
         },
         {
             "binary": "suggestion_engine",
