@@ -58,6 +58,9 @@ struct launchpad {
 
     mx_handle_t special_handles[HND_SPECIAL_COUNT];
     bool loader_message;
+
+    mx_handle_t reserve_vmar;
+    bool fresh_process;
 };
 
 // Returned when calloc() fails on create, so callers
@@ -105,6 +108,7 @@ static void close_handles(mx_handle_t* handles, size_t count) {
 void launchpad_destroy(launchpad_t* lp) {
     if (lp == &invalid_launchpad)
         return;
+    close_handles(&lp->reserve_vmar, 1);
     close_handles(lp->special_handles, HND_SPECIAL_COUNT);
     close_handles(lp->handles, lp->handle_count);
     free(lp->handles);
@@ -142,7 +146,8 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t tra
     mx_status_t status = mx_process_create(creation_job, name, name_len, 0, &proc, &vmar);
 
     launchpad_t* lp;
-    launchpad_create_with_process(proc, vmar, &lp);
+    if (launchpad_create_with_process(proc, vmar, &lp) == NO_ERROR)
+        lp->fresh_process = true;
 
     if (status < 0)
         lp_error(lp, status, "create: mx_process_create() failed");
@@ -452,6 +457,44 @@ static mx_status_t setup_loader_svc(launchpad_t* lp) {
     return NO_ERROR;
 }
 
+// Reserve roughly the low half of the address space, so the new
+// process can use sanitizers that need to allocate shadow memory there.
+// The reservation VMAR is kept around just long enough to make sure all
+// the initial allocations (mapping in the initial ELF objects, and
+// allocating the initial stack) stay out of this area, and then destroyed.
+// The process's own allocations can then use the full address space; if
+// it's using a sanitizer, it will set up its shadow memory first thing.
+static mx_status_t reserve_low_address_space(launchpad_t* lp) {
+    if (lp->reserve_vmar != MX_HANDLE_INVALID)
+        return NO_ERROR;
+
+    mx_info_vmar_t info;
+    mx_status_t status = mx_object_get_info(lp_vmar(lp), MX_INFO_VMAR,
+                                            &info, sizeof(info), NULL, NULL);
+    if (status != NO_ERROR) {
+        return lp_error(lp, status,
+                        "mx_object_get_info failed on child root VMAR handle");
+    }
+
+    uintptr_t addr;
+    size_t reserve_size =
+        (((info.base + info.len) / 2) + PAGE_SIZE - 1) & -PAGE_SIZE;
+    status = mx_vmar_allocate(lp_vmar(lp), 0, reserve_size - info.base,
+                              MX_VM_FLAG_SPECIFIC, &lp->reserve_vmar, &addr);
+    if (status != NO_ERROR) {
+        return lp_error(
+            lp, status,
+            "mx_vmar_allocate failed for low address space reservation");
+    }
+
+    if (addr != info.base) {
+        return lp_error(lp, ERR_BAD_STATE,
+                        "mx_vmar_allocate gave wrong address?!?");
+    }
+
+    return NO_ERROR;
+}
+
 // Consumes 'vmo' on success, not on failure.
 static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
                                  const char* interp, size_t interp_len) {
@@ -464,6 +507,15 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
         interp, interp_len);
     if (interp_vmo < 0)
         return interp_vmo;
+
+    if (lp->fresh_process) {
+        // A fresh process using PT_INTERP might be loading a libc.so that
+        // supports sanitizers, so in that case (the most common case)
+        // keep the mappings launchpad makes out of the low address region.
+        status = reserve_low_address_space(lp);
+        if (status != NO_ERROR)
+            return status;
+    }
 
     elf_load_info_t* elf;
     mx_handle_t segments_vmar;
@@ -1061,6 +1113,20 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             mx_handle_close(*thread);
             free(msg);
             return lp_error(lp, status, "cannot map stack vmo");
+        }
+    }
+
+    if (lp->reserve_vmar != MX_HANDLE_INVALID) {
+        // We're done doing mappings, so clear out the reservation VMAR.
+        status = mx_vmar_destroy(lp->reserve_vmar);
+        if (status != NO_ERROR) {
+            return lp_error(lp, status, "\
+mx_vmar_destroy failed on low address space reservation VMAR");
+        }
+        status = mx_handle_close(lp->reserve_vmar);
+        if (status != NO_ERROR) {
+            return lp_error(lp, status, "\
+mx_handle_close failed on low address space reservation VMAR");
         }
     }
 
