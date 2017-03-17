@@ -36,8 +36,7 @@ def main():
     sympaths = {
         'apps': 'apps',
         'third_party/netstack': 'github.com/google/netstack',
-        # TODO(crawshaw): consider moving thinfs to apps/thinfs
-        'go/src/fuchsia.googlesource.com': 'fuchsia.googlesource.com',
+        'apps/thinfs': 'fuchsia.googlesource.com/thinfs',
     }
 
     go_binary = os.path.join(args.fuchsia_root, "third_party/go/bin/go")
