@@ -17,7 +17,8 @@ fidl("suggestion") {
   ]
 
   deps = [
-    "//apps/modular/services/user",
+    "//apps/modular/services/story",
+    "//apps/modular/services/user:focus",
   ]
 }
 

@@ -1,0 +1,66 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("user") {
+  deps = [
+    ":maxwell_main"
+  ]
+}
+
+executable("maxwell_main") {
+  output_name = "maxwell"
+
+  sources = [
+    "maxwell_main.cc",
+  ]
+
+  deps = [
+    ":user_intelligence_provider",
+    "//application/lib/app",
+    "//apps/maxwell/services/user",
+    "//lib/mtl",
+  ]
+}
+
+source_set("user_intelligence_provider") {
+  sources = [
+    "user_intelligence_provider_impl.cc",
+    "user_intelligence_provider_impl.h",
+  ]
+
+  deps = [
+    ":agent_launcher",
+    ":intelligence_services",
+    "//application/lib/app",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/user",
+    "//apps/network/services",
+  ]
+}
+
+source_set("intelligence_services") {
+  sources = [
+    "intelligence_services_impl.cc",
+    "intelligence_services_impl.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/user",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+  ]
+}
+
+source_set("agent_launcher") {
+  sources = [
+    "agent_launcher.cc",
+    "agent_launcher.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/maxwell/src:application_environment_host_impl",
+  ]
+}

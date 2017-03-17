@@ -4,14 +4,17 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("launcher") {
+fidl("user") {
   sources = [
-    "launcher.fidl",
+    "intelligence_services.fidl",
+    "user_intelligence_provider.fidl",
   ]
 
   deps = [
+    "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/services/component",
-    "//apps/modular/services/user",
+    "//apps/modular/services/story",
+    "//apps/modular/services/user:focus",
   ]
 }
