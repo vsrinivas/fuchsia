@@ -36,16 +36,10 @@ void magma_system_free(struct magma_system_connection* connection, magma_buffer_
 uint64_t magma_system_get_buffer_id(magma_buffer_t buffer);
 uint64_t magma_system_get_buffer_size(magma_buffer_t buffer);
 
-void magma_system_set_tiling_mode(struct magma_system_connection* connection, magma_buffer_t buffer,
-                                  uint32_t tiling_mode);
-
 magma_status_t magma_system_map(struct magma_system_connection* connection, magma_buffer_t buffer,
                                 void** addr_out);
 magma_status_t magma_system_unmap(struct magma_system_connection* connection,
                                   magma_buffer_t buffer);
-
-void magma_system_set_domain(struct magma_system_connection* connection, magma_buffer_t buffer,
-                             uint32_t read_domains, uint32_t write_domain);
 
 // Executes a command buffer.
 // Note that the buffer referred to by |command_buffer| must contain a valid

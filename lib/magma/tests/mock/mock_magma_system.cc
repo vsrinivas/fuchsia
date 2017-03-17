@@ -78,16 +78,6 @@ magma_status_t magma_system_unmap(magma_system_connection* connection, magma_buf
     return MAGMA_STATUS_OK;
 }
 
-void magma_system_set_tiling_mode(magma_system_connection* connection, uint64_t buffer_id,
-                                  uint32_t tiling_mode)
-{
-}
-
-void magma_system_set_domain(magma_system_connection* connection, magma_buffer_t buffer,
-                             uint32_t read_domains, uint32_t write_domain)
-{
-}
-
 void magma_system_submit_command_buffer(struct magma_system_connection* connection,
                                         uint64_t command_buffer_id, uint32_t context_id)
 {

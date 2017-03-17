@@ -123,12 +123,6 @@ magma_status_t magma_system_export(magma_system_connection* connection, magma_bu
     return MAGMA_STATUS_OK;
 }
 
-void magma_system_set_tiling_mode(magma_system_connection* connection, magma_buffer_t buffer,
-                                  uint32_t tiling_mode)
-{
-    DLOG("magma_system_set_tiling_mode unimplemented");
-}
-
 magma_status_t magma_system_map(magma_system_connection* connection, magma_buffer_t buffer,
                                 void** addr_out)
 {
@@ -148,12 +142,6 @@ magma_status_t magma_system_unmap(magma_system_connection* connection, magma_buf
         return DRET(MAGMA_STATUS_MEMORY_ERROR);
 
     return MAGMA_STATUS_OK;
-}
-
-void magma_system_set_domain(magma_system_connection* connection, magma_buffer_t buffer,
-                             uint32_t read_domains, uint32_t write_domain)
-{
-    DLOG("magma_system_set_tiling_mode unimplemented");
 }
 
 void magma_system_submit_command_buffer(magma_system_connection* connection,
