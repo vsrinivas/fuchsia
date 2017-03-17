@@ -44,6 +44,7 @@ union ExpiryCondition {
 union Action {
   CreateStory create_story;
   FocusStory focus_story;
+  CustomAction custom_action;
 
   // TODO(thatguy): Add other actions.
 };
@@ -64,4 +65,12 @@ struct FocusStory {
 
   // TODO(alhaad): Add some Link data that could be used to provide information
   // to the story as to why it was brought into focus.
+};
+
+// An action that calls back to the proposal publisher to be performed.
+// The callback can optionally resolve to a sequence of actions to perform.
+// This can be used to defer expensive RPCs until the suggestion has been
+// selected.
+interface CustomAction {
+  Execute() => (array<Action>? actions);
 };

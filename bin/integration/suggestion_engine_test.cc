@@ -873,15 +873,16 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
   story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info));
 
-  auto create_story = maxwell::CreateStory::New();
-  create_story->module_id = "foo://bar";
-  auto action = maxwell::Action::New();
-  action->set_create_story(std::move(create_story));
-  fidl::Array<maxwell::ActionPtr> actions;
-  actions.push_back(std::move(action));
+  for (int i = 0; i < 2; i++) {
+    auto create_story = maxwell::CreateStory::New();
+    create_story->module_id = "foo://bar";
+    auto action = maxwell::Action::New();
+    action->set_create_story(std::move(create_story));
+    fidl::Array<maxwell::ActionPtr> actions;
+    actions.push_back(std::move(action));
 
-  p.Propose("1", actions.Clone());
-  p.Propose("1", std::move(actions));
+    p.Propose("1", std::move(actions));
+  }
 
   // historically crashed by now
   p.Propose("2");
