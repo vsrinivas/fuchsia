@@ -598,6 +598,28 @@ func errStatus(err error) mx.Status {
 	return mx.ErrInternal
 }
 
+func (s *socketServer) opGetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
+	var val c_mxrio_sockopt_req_reply
+	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
+		if debug {
+			log.Printf("getsockopt: decode argument: %v", err)
+		}
+		return errStatus(err)
+	}
+	if ios.ep == nil {
+		if debug {
+			log.Printf("getsockopt: no socket")
+		}
+		return mx.ErrBadState
+	}
+	if opt := val.Unpack(); opt != nil {
+		ios.ep.GetSockOpt(opt)
+	}
+	msg.Datalen = 0
+	msg.SetOff(0)
+	return mx.ErrOk
+}
+
 func (s *socketServer) opSetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 	var val c_mxrio_sockopt_req_reply
 	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
@@ -971,7 +993,7 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 	case rio.OpGetPeerName:
 		return s.opGetPeerName(ios, msg)
 	case rio.OpGetSockOpt:
-		// TODO do_getsockopt
+		return s.opGetSockOpt(ios, msg)
 	case rio.OpSetSockOpt:
 		return s.opSetSockOpt(ios, msg)
 	default:
