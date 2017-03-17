@@ -34,7 +34,6 @@
         "runtime",
         "sysui",
         "thinfs",
-        "toybox",
         "tracing",
         "url",
         "vim"
