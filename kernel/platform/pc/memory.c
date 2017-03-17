@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <err.h>
 #include <kernel/vm.h>
+#include <platform/pc/bootloader.h>
 #include <magenta/boot/multiboot.h>
 #include <magenta/boot/efi.h>
 #include <trace.h>
@@ -199,19 +200,15 @@ static void e820_range_advance(boot_addr_range_t *range)
     range->is_reset = 0;
 }
 
-// e820 table extracted from bootdata
-extern void* bootloader_e820_table;
-extern uint32_t bootloader_e820_count;
-
 static int e820_range_init(boot_addr_range_t *range, e820_range_seq_t *seq)
 {
     range->seq = seq;
     range->advance = &e820_range_advance;
     range->reset = &e820_range_reset;
 
-    if (bootloader_e820_count) {
-        seq->count = bootloader_e820_count;
-        seq->map = bootloader_e820_table;
+    if (bootloader.e820_count) {
+        seq->count = bootloader.e820_count;
+        seq->map = bootloader.e820_table;
         range->reset(range);
         return 1;
     }
@@ -304,25 +301,21 @@ static void efi_range_advance(boot_addr_range_t *range)
     }
 }
 
-// efi table extracted from bootdata
-extern void* bootloader_efi_mmap;
-extern size_t bootloader_efi_mmap_size;
-
 static int efi_range_init(boot_addr_range_t *range, efi_range_seq_t *seq)
 {
     range->seq = seq;
     range->advance = &efi_range_advance;
     range->reset = &efi_range_reset;
 
-    if (bootloader_efi_mmap &&
-        (bootloader_efi_mmap_size > sizeof(uint64_t))) {
-        seq->entrysz = *((uint64_t*) bootloader_efi_mmap);
+    if (bootloader.efi_mmap &&
+        (bootloader.efi_mmap_size > sizeof(uint64_t))) {
+        seq->entrysz = *((uint64_t*) bootloader.efi_mmap);
         if (seq->entrysz < sizeof(efi_memory_descriptor_t)) {
             return 0;
         }
 
-        seq->count = (bootloader_efi_mmap_size - sizeof(uint64_t)) / seq->entrysz;
-        seq->base = bootloader_efi_mmap + sizeof(uint64_t);
+        seq->count = (bootloader.efi_mmap_size - sizeof(uint64_t)) / seq->entrysz;
+        seq->base = bootloader.efi_mmap + sizeof(uint64_t);
         range->reset(range);
         return 1;
     } else {

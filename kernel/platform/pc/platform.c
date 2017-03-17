@@ -17,6 +17,7 @@
 #include "platform_p.h"
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
+#include <platform/pc/bootloader.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
 #include <magenta/boot/bootdata.h>
@@ -34,8 +35,11 @@
 
 #define LOCAL_TRACE 0
 
+extern void *_zero_page_boot_params;
 extern multiboot_info_t* _multiboot_info;
 extern bootdata_t* _bootdata_base;
+
+pc_bootloader_info_t bootloader;
 
 struct mmu_initial_mapping mmu_initial_mappings[] = {
 #if ARCH_X86_64
@@ -67,28 +71,6 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
     {}
 };
 
-extern void *_zero_page_boot_params;
-
-uint32_t bootloader_acpi_rsdp;
-uint32_t bootloader_fb_base;
-uint32_t bootloader_fb_width;
-uint32_t bootloader_fb_height;
-uint32_t bootloader_fb_stride;
-uint32_t bootloader_fb_format;
-uint32_t bootloader_i915_reg_base;
-uint32_t bootloader_fb_window_size;
-
-void* bootloader_efi_system_table;
-
-void* bootloader_e820_table;
-uint32_t bootloader_e820_count;
-
-void* bootloader_efi_mmap;
-size_t bootloader_efi_mmap_size;
-
-static uint32_t bootloader_ramdisk_base;
-static uint32_t bootloader_ramdisk_size;
-
 static bool early_console_disabled;
 
 static int process_bootitem(bootdata_t* bd, void* item) {
@@ -97,43 +79,39 @@ static int process_bootitem(bootdata_t* bd, void* item) {
         if (bd->length < sizeof(uint64_t)) {
             break;
         }
-        bootloader_acpi_rsdp = *((uint64_t*)item);
+        bootloader.acpi_rsdp = *((uint64_t*)item);
         break;
     case BOOTDATA_EFI_SYSTEM_TABLE:
         if (bd->length < sizeof(uint64_t)) {
             break;
         }
-        bootloader_efi_system_table = (void*) *((uint64_t*)item);
+        bootloader.efi_system_table = (void*) *((uint64_t*)item);
         break;
     case BOOTDATA_FRAMEBUFFER:
         if (bd->length < sizeof(bootdata_swfb_t)) {
             break;
         }
         bootdata_swfb_t* fb = item;
-        bootloader_fb_base = (uint32_t) fb->phys_base;
-        bootloader_fb_width = fb->width;
-        bootloader_fb_height = fb->height;
-        bootloader_fb_stride = fb->stride;
-        bootloader_fb_format = fb->format;
-        printf("framebuffer %08x %u x %u  %u %u\n",
-            (uint32_t)fb->phys_base, fb->width, fb->height, fb->stride, fb->format);
+        bootloader.fb_base = (uint32_t) fb->phys_base;
+        bootloader.fb_width = fb->width;
+        bootloader.fb_height = fb->height;
+        bootloader.fb_stride = fb->stride;
+        bootloader.fb_format = fb->format;
         break;
     case BOOTDATA_CMDLINE:
         if (bd->length < 1) {
             break;
         }
         ((char*) item)[bd->length - 1] = 0;
-        printf("cmdline: '%s'\n", (char*) item);
         cmdline_init((char*) item);
         break;
     case BOOTDATA_EFI_MEMORY_MAP:
-        bootloader_efi_mmap = item;
-        bootloader_efi_mmap_size = bd->length;
+        bootloader.efi_mmap = item;
+        bootloader.efi_mmap_size = bd->length;
         break;
     case BOOTDATA_E820_TABLE:
-        bootloader_e820_table = item;
-        bootloader_e820_count = bd->length / (8+8+4);
-        printf("e820 x %u\n", bootloader_e820_count);
+        bootloader.e820_table = item;
+        bootloader.e820_count = bd->length / (8+8+4);
         break;
     case BOOTDATA_IGNORE:
         break;
@@ -177,8 +155,8 @@ static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
     }
 
     boot_alloc_reserve(phys, hdr->length);
-    bootloader_ramdisk_base = phys;
-    bootloader_ramdisk_size = hdr->length;
+    bootloader.ramdisk_base = phys;
+    bootloader.ramdisk_size = hdr->length;
 }
 
 static void platform_save_bootloader_data(void) {
@@ -207,22 +185,20 @@ static void platform_save_bootloader_data(void) {
 #else
     uint32_t *zp = (void*) ((uintptr_t)_zero_page_boot_params + KERNEL_BASE);
 
-    bootloader_ramdisk_base = zp[0x218 / 4];
-    bootloader_ramdisk_size = zp[0x21C / 4];
+    bootloader.ramdisk_base = zp[0x218 / 4];
+    bootloader.ramdisk_size = zp[0x21C / 4];
 
     if (zp[0x228/4] != 0) {
         cmdline_init((void*) X86_PHYS_TO_VIRT(zp[0x228/4]));
     }
 
     if (zp[0x220 / 4] == 0xDBC64323) {
-        bootloader_acpi_rsdp = zp[0x80 / 4];
-        bootloader_fb_base = zp[0x90 / 4];
-        bootloader_fb_width = zp[0x94 / 4];
-        bootloader_fb_height = zp[0x98 / 4];
-        bootloader_fb_stride = zp[0x9C / 4];
-        bootloader_fb_format = zp[0xA0 / 4];
-        bootloader_i915_reg_base = zp[0xA4 / 4];
-        bootloader_fb_window_size = zp[0xA8 / 4];
+        bootloader.acpi_rsdp = zp[0x80 / 4];
+        bootloader.fb_base = zp[0x90 / 4];
+        bootloader.fb_width = zp[0x94 / 4];
+        bootloader.fb_height = zp[0x98 / 4];
+        bootloader.fb_stride = zp[0x9C / 4];
+        bootloader.fb_format = zp[0xA0 / 4];
     }
 #endif
 }
@@ -231,15 +207,15 @@ static void* ramdisk_base;
 static size_t ramdisk_size;
 
 static void platform_preserve_ramdisk(void) {
-    if (bootloader_ramdisk_size == 0) {
+    if (bootloader.ramdisk_size == 0) {
         return;
     }
-    if (bootloader_ramdisk_base == 0) {
+    if (bootloader.ramdisk_base == 0) {
         return;
     }
     struct list_node list = LIST_INITIAL_VALUE(list);
-    size_t pages = (bootloader_ramdisk_size + PAGE_SIZE - 1) / PAGE_SIZE;
-    size_t actual = pmm_alloc_range(bootloader_ramdisk_base, pages, &list);
+    size_t pages = (bootloader.ramdisk_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    size_t actual = pmm_alloc_range(bootloader.ramdisk_base, pages, &list);
     if (actual != pages) {
         panic("unable to reserve ramdisk memory range\n");
     }
@@ -250,7 +226,7 @@ static void platform_preserve_ramdisk(void) {
         p->state = VM_PAGE_STATE_WIRED;
     }
 
-    ramdisk_base = paddr_to_kvaddr(bootloader_ramdisk_base);
+    ramdisk_base = paddr_to_kvaddr(bootloader.ramdisk_base);
     ramdisk_size = pages * PAGE_SIZE;
 }
 
@@ -275,7 +251,7 @@ static void platform_early_display_init(void) {
     struct display_info info;
     void *bits;
 
-    if (bootloader_fb_base == 0) {
+    if (bootloader.fb_base == 0) {
         return;
     }
 
@@ -285,16 +261,16 @@ static void platform_early_display_init(void) {
     }
 
     // allocate an offscreen buffer of worst-case size, page aligned
-    bits = boot_alloc_mem(8192 + bootloader_fb_height * bootloader_fb_stride * 4);
+    bits = boot_alloc_mem(8192 + bootloader.fb_height * bootloader.fb_stride * 4);
     bits = (void*) ((((uintptr_t) bits) + 4095) & (~4095));
 
     memset(&info, 0, sizeof(info));
-    info.format = bootloader_fb_format;
-    info.width = bootloader_fb_width;
-    info.height = bootloader_fb_height;
-    info.stride = bootloader_fb_stride;
+    info.format = bootloader.fb_format;
+    info.width = bootloader.fb_width;
+    info.height = bootloader.fb_height;
+    info.stride = bootloader.fb_stride;
     info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
-    info.framebuffer = (void*) X86_PHYS_TO_VIRT(bootloader_fb_base);
+    info.framebuffer = (void*) X86_PHYS_TO_VIRT(bootloader.fb_base);
 
     gfxconsole_bind_display(&info, bits);
 }
@@ -305,7 +281,7 @@ static void platform_early_display_init(void) {
  * come up so we can use PAT to manage the memory types. */
 static void platform_ensure_display_memtype(uint level)
 {
-    if (bootloader_fb_base == 0) {
+    if (bootloader.fb_base == 0) {
         return;
     }
     if (early_console_disabled) {
@@ -313,10 +289,10 @@ static void platform_ensure_display_memtype(uint level)
     }
     struct display_info info;
     memset(&info, 0, sizeof(info));
-    info.format = bootloader_fb_format;
-    info.width = bootloader_fb_width;
-    info.height = bootloader_fb_height;
-    info.stride = bootloader_fb_stride;
+    info.format = bootloader.fb_format;
+    info.width = bootloader.fb_width;
+    info.height = bootloader.fb_height;
+    info.stride = bootloader.fb_stride;
     info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
 
     void *addr = NULL;
@@ -327,7 +303,7 @@ static void platform_ensure_display_memtype(uint level)
             &addr,
             PAGE_SIZE_SHIFT,
             0 /* min alloc gap */,
-            bootloader_fb_base,
+            bootloader.fb_base,
             0 /* vmm flags */,
             ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
                 ARCH_MMU_FLAG_PERM_WRITE);

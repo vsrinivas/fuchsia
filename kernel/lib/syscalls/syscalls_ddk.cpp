@@ -19,6 +19,10 @@
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
+#if ARCH_X86
+#include <platform/pc/bootloader.h>
+#endif
+
 #include <magenta/handle_owner.h>
 #include <magenta/interrupt_dispatcher.h>
 #include <magenta/interrupt_event_dispatcher.h>
@@ -226,20 +230,12 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
     return NO_ERROR;
 }
 
-#if ARCH_X86
-extern uint32_t bootloader_fb_base;
-extern uint32_t bootloader_fb_width;
-extern uint32_t bootloader_fb_height;
-extern uint32_t bootloader_fb_stride;
-extern uint32_t bootloader_fb_format;
-#endif
-
 mx_status_t sys_bootloader_fb_get_info(uint32_t* format, uint32_t* width, uint32_t* height, uint32_t* stride) {
 #if ARCH_X86
-    if (!bootloader_fb_base || copy_to_user_u32_unsafe(format, bootloader_fb_format) ||
-            copy_to_user_u32_unsafe(width, bootloader_fb_width) ||
-            copy_to_user_u32_unsafe(height, bootloader_fb_height) ||
-            copy_to_user_u32_unsafe(stride, bootloader_fb_stride)) {
+    if (!bootloader.fb_base || copy_to_user_u32_unsafe(format, bootloader.fb_format) ||
+            copy_to_user_u32_unsafe(width, bootloader.fb_width) ||
+            copy_to_user_u32_unsafe(height, bootloader.fb_height) ||
+            copy_to_user_u32_unsafe(stride, bootloader.fb_stride)) {
         return ERR_INVALID_ARGS;
     } else {
         return NO_ERROR;
@@ -330,15 +326,14 @@ mx_status_t sys_mmap_device_io(mx_handle_t hrsrc, uint32_t io_addr, uint32_t len
 }
 #endif
 
-uint32_t sys_acpi_uefi_rsdp(mx_handle_t hrsrc) {
+uint64_t sys_acpi_uefi_rsdp(mx_handle_t hrsrc) {
     // TODO: finer grained validation
     mx_status_t status;
     if ((status = validate_resource_handle(hrsrc)) < 0) {
         return status;
     }
 #if ARCH_X86
-    extern uint32_t bootloader_acpi_rsdp;
-    return bootloader_acpi_rsdp;
+    return bootloader.acpi_rsdp;
 #endif
     return 0;
 }

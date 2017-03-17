@@ -11,7 +11,9 @@
 #include <trace.h>
 #include <kernel/vm.h>
 
-#if !ARCH_X86
+#if ARCH_X86
+#include <platform/pc/bootloader.h>
+#else
 #error "Unsupported architecture"
 #endif
 
@@ -46,15 +48,14 @@ ACPI_STATUS AcpiOsTerminate() {
     return AE_OK;
 }
 
-extern uint32_t bootloader_acpi_rsdp;
 /**
  * @brief Obtain the Root ACPI table pointer (RSDP).
  *
  * @return The physical address of the RSDP
  */
 ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
-    if (bootloader_acpi_rsdp) {
-        return bootloader_acpi_rsdp;
+    if (bootloader.acpi_rsdp) {
+        return bootloader.acpi_rsdp;
     } else {
         ACPI_PHYSICAL_ADDRESS TableAddress = 0;
         ACPI_STATUS status = AcpiFindRootPointer(&TableAddress);

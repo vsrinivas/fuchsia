@@ -562,7 +562,7 @@ syscall pci_add_subtract_io_range
 
 syscall acpi_uefi_rsdp
     (handle: mx_handle_t)
-    returns (uint32_t);
+    returns (uint64_t);
 
 syscall acpi_cache_flush
     (handle: mx_handle_t)
