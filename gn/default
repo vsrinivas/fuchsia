@@ -32,6 +32,7 @@
         "network",
         "re2",
         "runtime",
+        "sbase",
         "sysui",
         "thinfs",
         "tracing",
