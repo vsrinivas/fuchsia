@@ -32,16 +32,12 @@ SG_SYSROOT_HEADER := $(SG_SYSROOT_MAGENTA)/syscalls/definitions.h
 
 # STAMPY ultimately generates most of the files and paths here.
 $(STAMPY): $(SYSGEN_APP) $(SYSCALLS_SRC)
-	$(info Generating syscall files from $(SYSCALLS_SRC) into $(SG_MAGENTA))
+	$(info generating syscall files from $(SYSCALLS_SRC))
 	$(NOECHO) mkdir -p $(SG_SYSCALLS)
-	$(NOECHO) $(SYSGEN_APP) -t kernel-code   -f $(SG_KERNEL_CODE)          $(SYSCALLS_SRC)
-	$(NOECHO) $(SYSGEN_APP) -t trace         -f $(SG_KERNEL_TRACE)         $(SYSCALLS_SRC)
-	$(NOECHO) $(SYSGEN_APP) -t kernel-header -f $(SG_KERNEL_HEADER)        $(SYSCALLS_SRC)
-	$(NOECHO) $(SYSGEN_APP) -t arm-asm       -f $(SG_ULIB_ARM)             $(SYSCALLS_SRC)
-	$(NOECHO) $(SYSGEN_APP) -t x86-asm       -f $(SG_ULIB_X86)             $(SYSCALLS_SRC)
-	$(NOECHO) $(SYSGEN_APP) -t vdso-header   -f $(SG_ULIB_VDSO_HEADER)     $(SYSCALLS_SRC)
-	$(NOECHO) $(SYSGEN_APP) -t numbers       -f $(SG_ULIB_SYSCALL_NUMBER)  $(SYSCALLS_SRC)
-	$(NOECHO) $(SYSGEN_APP) -t user-header   -f $(SG_PUBLIC_HEADER)        $(SYSCALLS_SRC)
+	$(NOECHO) $(SYSGEN_APP) -kernel-code $(SG_KERNEL_CODE) -trace $(SG_KERNEL_TRACE) \
+		-kernel-header $(SG_KERNEL_HEADER) -arm-asm $(SG_ULIB_ARM) -x86-asm $(SG_ULIB_X86) \
+		-vdso-header $(SG_ULIB_VDSO_HEADER) -numbers $(SG_ULIB_SYSCALL_NUMBER) \
+		-user-header $(SG_PUBLIC_HEADER) $(SYSCALLS_SRC)
 	$(NOECHO) touch $(STAMPY)
 
 run-sysgen $(SG_PUBLIC_HEADER) $(SG_SYSROOT_HEADER): $(STAMPY)

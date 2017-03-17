@@ -13,6 +13,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <numeric>
 #include <set>
 #include <string>
 #include <vector>
@@ -818,15 +819,9 @@ public:
         return true;
     }
 
-    bool Generate(const string& type, const string& output_filename) {
-        auto generator = type_to_generator.at(type);
-        return generate_one(output_filename, generator);
-    }
-
-    bool Generate(const string& output_prefix) {
-        for (auto& type_then_generator : type_to_generator) {
-            string suffix = type_to_default_suffix.at(type_then_generator.first);
-            if (!generate_one(output_prefix + suffix, type_then_generator.second))
+    bool Generate(const std::map<string, string> type_to_filename) {
+        for (auto& entry : type_to_filename) {
+            if (!generate_one(entry.second, type_to_generator.at(entry.first)))
                 return false;
         }
         return true;
@@ -920,22 +915,27 @@ constexpr Dispatch<SygenGenerator> sysgen_table[] = {
 // =================================== driver ====================================================
 
 int main(int argc, char* argv[]) {
-    // TODO(andymutton): Just delete the multi-file path entirely
     string output_prefix = "generated";
-    string type;
-    string output_filename;
-
     bool verbose = false;
+    bool generate_all = false;
+    std::map<string, string> type_to_filename;
 
     argc--;
     argv++;
     while (argc > 0) {
-        const char *cmd = argv[0];
-        if (cmd[0] != '-')
+        const string command(argv[0]);
+        if (command[0] != '-')
             break;
-        if (!strcmp(cmd, "-v")) {
+        else if (type_to_generator.find(command.substr(1)) != type_to_generator.end()) {
+            string type = command.substr(1);
+            type_to_filename[type] = string(argv[1]);
+            argc--;
+            argv++;
+        } else if (command == "-a") {
+            generate_all = true;
+        } else if (command == "-v") {
             verbose = true;
-        } else if (!strcmp(cmd, "-o")) {
+        } else if (command == "-o") {
             if (argc < 2) {
                 fprintf(stderr, "no output prefix given\n");
                 return -1;
@@ -943,31 +943,17 @@ int main(int argc, char* argv[]) {
             output_prefix.assign(argv[1]);
             argc--;
             argv++;
-        } else if (!strcmp(cmd, "-h")) {
-            fprintf(stderr, "usage: sysgen [-v] [-o output_prefix] file1 ... fileN\n");
+        } else if (command == "-h") {
+            fprintf(stderr, "usage: sysgen [-a] [-v] [-o output_prefix] [-<type> filename] file1 ... fileN\n");
+            const string delimiter = ", ";
+            const string valid_types = std::accumulate(type_to_default_suffix.begin(), type_to_default_suffix.end(), std::string(),
+            [delimiter](const std::string& s, const std::pair<const std::string, std::string>& p) {
+                return s + (s.empty() ? std::string() : delimiter) + p.first;
+            });
+            fprintf(stderr, "\n       Valid <type>s: %s\n", valid_types.c_str());
             return 0;
-        } else if (!strcmp(cmd, "-t")) {
-            if (argc < 2) {
-                fprintf(stderr, "no generation type given\n");
-                return -1;
-            }
-            type.assign(argv[1]);
-            if (type_to_generator.find(type) == type_to_generator.end()) {
-                fprintf(stderr, "unknown types\n");
-                return -1;
-            }
-            argc--;
-            argv++;
-        } else if (!strcmp(cmd, "-f")) {
-            if (argc < 2) {
-                fprintf(stderr, "no filename given\n");
-                return -1;
-            }
-            output_filename.assign(argv[1]);
-            argc--;
-            argv++;
         } else {
-            fprintf(stderr, "unknown option: %s\n", cmd);
+            fprintf(stderr, "unknown option: %s\n", command.c_str());
             return -1;
         }
         argc--;
@@ -978,19 +964,20 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    // Use defaults for anything not specified.
+    if (generate_all) {
+        for (auto& entry : type_to_default_suffix) {
+            if (type_to_filename.find(entry.first) == type_to_filename.end()) {
+                type_to_filename[entry.first] = output_prefix + entry.second;
+            }
+        }
+    }
+
     SygenGenerator generator(verbose);
 
     for (int ix = 0; ix < argc; ix++) {
         if (!run_parser(&generator, sysgen_table, argv[ix], verbose))
             return 1;
     }
-    if (type.empty()) {
-        // No specific type, just generate all.
-        return generator.Generate(output_prefix) ? 0 : 1;
-    }
-
-    if (output_filename.empty()) {
-        output_filename.assign(output_prefix + type_to_default_suffix.at(type));
-    }
-    return generator.Generate(type, output_filename) ? 0 : 1;
+    return generator.Generate(type_to_filename) ? 0 : 1;
 }
