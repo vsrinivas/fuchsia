@@ -8,6 +8,7 @@ group("src") {
   deps = [
     "bootstrap",
     "component_manager",
+    "device_info",
     "device_runner:all",
     "run_component",
     "story_runner:all",

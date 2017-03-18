@@ -16,3 +16,6 @@ fidl("device") {
   ]
 }
 
+fidl("info") {
+  sources = ["device_info.fidl"]
+}

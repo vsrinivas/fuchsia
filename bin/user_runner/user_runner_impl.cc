@@ -23,6 +23,7 @@
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
+#include "apps/modular/src/device_info/device_info_impl.h"
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
@@ -129,6 +130,14 @@ UserRunnerImpl::UserRunnerImpl(
                      << LedgerStatusToString(status);
     }
   });
+
+  // DeviceInfo service
+
+  device_info_impl_.reset(new DeviceInfoImpl(to_hex_string(user_id)));
+  user_scope_.AddService<DeviceInfo>(
+      [this](fidl::InterfaceRequest<DeviceInfo> request) {
+        device_info_impl_->AddBinding(std::move(request));
+      });
 
   // DeviceMap
 
