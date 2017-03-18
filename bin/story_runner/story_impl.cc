@@ -26,14 +26,11 @@
 
 namespace modular {
 
-constexpr char kRootLink[] = "root";
-
 StoryImpl::StoryImpl(StoryDataPtr story_data,
                      StoryProviderImpl* const story_provider_impl)
     : story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
-      story_context_binding_(this),
-      module_watcher_binding_(this) {
+      story_context_binding_(this) {
   bindings_.set_on_empty_set_handler([this] {
     story_provider_impl_->PurgeController(story_data_->story_info->id);
   });
@@ -57,6 +54,7 @@ void StoryImpl::AddLinkDataAndSync(const fidl::String& json,
     return;
   }
 
+  // TODO(mesch): Should not be special to the "root" link.
   EnsureRoot()->UpdateObject(nullptr, json);
   EnsureRoot()->Sync(callback);
 }
@@ -97,6 +95,28 @@ void StoryImpl::SetInfoExtra(const fidl::String& name,
 }
 
 // |StoryController|
+void StoryImpl::AddModule(
+    const fidl::String& module_url,
+    const fidl::String& link_name) {
+  if (deleted_) {
+    FTL_LOG(INFO) << "StoryImpl::AddModule() during delete: ignored.";
+    return;
+  }
+
+  auto module = ModuleData::New();
+  module->url = module_url;
+  module->link = link_name;
+
+  story_data_->modules.push_back(std::move(module));
+
+  WriteStoryData([]{});
+
+  if (!module_controllers_.empty()) {
+    StartRootModule(module_url, link_name);
+  }
+}
+
+// |StoryController|
 void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
   // If a controller is stopped for delete, then it cannot be used
   // further. However, as of now nothing prevents a client to call
@@ -133,13 +153,20 @@ void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
 
   auto cont = [this] {
     if (start_request_ && !deleted_) {
-      // Start the root module and then show it in the story shell.
-      mozart::ViewOwnerPtr root_module_view;
-      StartRootModule(root_module_view.NewRequest());
-
       // Story shell can be used right after its start was requested.
       StartStoryShell(std::move(start_request_));
-      story_shell_->ConnectView(std::move(root_module_view));
+
+      // Start the root module and then show it in the story shell.
+      //
+      // Start *all* the root modules, not just the first one, with
+      // their respective links.
+      for (auto& module_data : story_data_->modules) {
+        StartRootModule(module_data->url, module_data->link);
+      }
+
+      story_data_->story_info->is_running = true;
+      story_data_->story_info->state = StoryState::STARTING;
+      WriteStoryData([] {});
 
       NotifyStateChange();
     }
@@ -188,19 +215,19 @@ void StoryImpl::StartStoryShell(
 }
 
 void StoryImpl::StartRootModule(
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  fidl::InterfaceHandle<Link> link;
-  EnsureRoot()->Dup(link.NewRequest());
+    const fidl::String& url, const fidl::String& link_name) {
+  LinkPtr link;
+  CreateLink(link_name, link.NewRequest());
 
-  StartModule(story_data_->story_info->url, std::move(link), nullptr, nullptr,
-              module_.NewRequest(), std::move(view_owner_request));
+  ModuleControllerPtr module_controller;
+  mozart::ViewOwnerPtr root_module_view;
+  StartModule(url, std::move(link), nullptr, nullptr,
+              module_controller.NewRequest(), root_module_view.NewRequest());
 
-  module_->Watch(module_watcher_binding_.NewBinding());
+  story_shell_->ConnectView(std::move(root_module_view));
 
-  story_data_->story_info->is_running = true;
-  story_data_->story_info->state = StoryState::STARTING;
-
-  WriteStoryData([] {});
+  module_controller->Watch(module_watcher_bindings_.AddBinding(this));
+  module_controllers_.emplace_back(std::move(module_controller));
 }
 
 // |StoryController|
@@ -261,6 +288,11 @@ LinkPtr& StoryImpl::EnsureRoot() {
 
 void StoryImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   CreateLink(kRootLink, std::move(request));
+}
+
+void StoryImpl::GetNamedLink(const fidl::String& name,
+                             fidl::InterfaceRequest<Link> request) {
+  CreateLink(name, std::move(request));
 }
 
 void StoryImpl::ReleaseModule(
@@ -395,9 +427,7 @@ void StoryImpl::Stop(const StopCallback& done) {
   // At this point, we don't need to monitor the root module for state
   // changes anymore, because the next state change of the story is
   // triggered by the Stop() call below.
-  if (module_watcher_binding_.is_bound()) {
-    module_watcher_binding_.Close();
-  }
+  module_watcher_bindings_.CloseAllBindings();
 
   // At this point, we don't need notifications from disconnected
   // Links anymore, as they will all be disposed soon anyway.
@@ -474,7 +504,7 @@ void StoryImpl::StopFinish() {
   story_data_->story_info->is_running = false;
   story_data_->story_info->state = StoryState::STOPPED;
 
-  module_.reset();
+  module_controllers_.clear();
   root_.reset();
 
   WriteStoryData([this] {

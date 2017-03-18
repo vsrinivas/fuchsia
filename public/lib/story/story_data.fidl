@@ -15,4 +15,19 @@ struct StoryData {
   // Page id on the user's ledger which stores story information. It
   // might be NULL until the story is being started.
   array<uint8, 16>? story_page_id;
+
+  // All the top level modules in the story. Those are the modules
+  // that are started by the story runner when a story is restarted.
+  array<ModuleData> modules;
+};
+
+// Information about root modules in the Story. TODO(mesch):
+// Eventually we would like to keep information about all modules
+// here.
+struct ModuleData {
+  // The URL of the module application.
+  string url;
+
+  // The name of the link the module was started with.
+  string link;
 };

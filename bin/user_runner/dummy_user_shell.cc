@@ -234,6 +234,8 @@ class DummyUserShellApp
 
     // Show the new story.
     view_->ConnectView(std::move(story_view));
+
+    story_controller_->AddModule(settings_.second_module, "root2");
   }
 
   // Every five counter increments, we dehydrate and rehydrate the story.

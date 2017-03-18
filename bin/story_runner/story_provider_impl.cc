@@ -218,6 +218,7 @@ class CreateStoryCall : public Operation<fidl::String> {
       story_page_->GetId([this](fidl::Array<uint8_t> story_page_id) {
         story_data_ = StoryData::New();
         story_data_->story_page_id = std::move(story_page_id);
+
         story_data_->story_info = StoryInfo::New();
         auto* const story_info = story_data_->story_info.get();
         story_info->url = url_;
@@ -226,6 +227,11 @@ class CreateStoryCall : public Operation<fidl::String> {
         story_info->state = StoryState::INITIAL;
         story_info->extra = std::move(extra_info_);
         story_info->extra.mark_non_null();
+
+        auto root_module = ModuleData::New();
+        root_module->url = url_;
+        root_module->link = kRootLink;
+        story_data_->modules.push_back(std::move(root_module));
 
         new WriteStoryDataCall(&operation_queue_, root_page_,
                                story_data_->Clone(), [this] { Cont(); });
@@ -237,7 +243,7 @@ class CreateStoryCall : public Operation<fidl::String> {
     controller_ = std::make_unique<StoryImpl>(std::move(story_data_),
                                               story_provider_impl_);
 
-    // We ensure that root data has been written before this operations is
+    // We ensure that root data has been written before this operation is
     // done.
     controller_->AddLinkDataAndSync(std::move(root_json_),
                                     [this] { Done(std::move(story_id_)); });
