@@ -582,8 +582,9 @@ func (s *socketServer) opAccept(ios *iostate, msg *rio.Msg, path string) (peerH,
 		}
 		return 0, 0, err
 	}
-	go ios.loopRead(s.stack)
-	_, peerH, peerS, err = s.newIostate(ios.transProto, newwq, newep)
+
+	newios, peerH, peerS, err := s.newIostate(ios.transProto, newwq, newep)
+	go newios.loopRead(s.stack)
 	return peerH, peerS, err
 }
 
