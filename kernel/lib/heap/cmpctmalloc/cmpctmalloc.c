@@ -19,6 +19,7 @@
 #include <lib/cmpctmalloc.h>
 #include <lib/heap.h>
 #include <lib/page_alloc.h>
+#include <platform.h>
 
 // Malloc implementation tuned for space.
 //
@@ -622,6 +623,22 @@ void cmpct_test(void)
     cmpct_dump(false);
 }
 
+static void check_free_fill(void *ptr, size_t size)
+{
+    // The first 16 bytes of the region won't have free fill due to overlap
+    // with the allocator bookkeeping.
+    const size_t start = sizeof(free_t) - sizeof(header_t);
+    for (size_t i = start; i < size; ++i) {
+        uint8_t byte = ((uint8_t*)ptr)[i];
+        if (byte != FREE_FILL) {
+            platform_panic_start();
+            printf("Heap free fill check fail.  Allocated region:\n");
+            hexdump8(ptr, size);
+            panic("allocating %lu bytes, fill was %02x, offset %lu\n", size, byte, i);
+        }
+    }
+}
+
 static void *large_alloc(size_t size)
 {
 #ifdef CMPCT_DEBUG
@@ -644,6 +661,7 @@ static void *large_alloc(size_t size)
     theheap.remaining -= free_area->header.size;
     unlock();
 #ifdef CMPCT_DEBUG
+    check_free_fill(result, requested_size);
     memset(result, ALLOC_FILL, requested_size);
     memset((char *)result + requested_size, PADDING_FILL, free_area->header.size - requested_size);
 #endif
@@ -769,6 +787,7 @@ void *cmpct_alloc(size_t size)
     void *result =
         create_allocation_header(head, 0, head->header.size, head->header.left);
 #ifdef CMPCT_DEBUG
+    check_free_fill(result, size);
     memset(result, ALLOC_FILL, size);
     memset(((char *)result) + size, PADDING_FILL, rounded_up - size - sizeof(header_t));
 #endif
