@@ -20,13 +20,13 @@
 #define EVENT_REQ_COUNT 8
 #define ACL_READ_REQ_COUNT 8
 #define ACL_WRITE_REQ_COUNT 8
-#define ACL_BUF_SIZE 2048
 
 #define CMD_BUF_SIZE 255 + 3   // 3 byte header + payload
 #define EVENT_BUF_SIZE 255 + 2 // 2 byte header + payload
 
 // The number of currently supported HCI channel endpoints. We currently have
-// one channel for command/event flow and one for ACL data flow.
+// one channel for command/event flow and one for ACL data flow. The sniff channel is managed
+// separately.
 #define NUM_CHANNELS 2
 
 // Uncomment these to force using a particular Bluetooth module
@@ -135,7 +135,7 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
                         printf("hci_interrupt failed to write: %s\n", mx_status_get_string(status));
                     }
                 }
-                snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_EVENT, buffer, length);
+                snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_RECEIVED, buffer, length);
                 goto out;
             }
         }
@@ -163,7 +163,7 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
                 printf("hci_interrupt failed to write: %s\n", mx_status_get_string(status));
             }
 
-            snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_EVENT, hci->event_buffer, packet_size);
+            snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_RECEIVED, hci->event_buffer, packet_size);
 
             uint32_t remaining = hci->event_buffer_offset - packet_size;
             memmove(hci->event_buffer, hci->event_buffer + packet_size, remaining);
@@ -196,6 +196,10 @@ static void hci_acl_read_complete(iotxn_t* txn, void* cookie) {
         if (status < 0) {
             printf("hci_acl_read_complete failed to write: %s\n", mx_status_get_string(status));
         }
+
+        // If the snoop channel is open then try to write the packet even if acl_channel was closed.
+        snoop_channel_write_locked(
+            hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_RECEIVED, buffer, txn->actual);
     }
 
     list_add_head(&hci->free_acl_read_reqs, &txn->node);
@@ -210,6 +214,14 @@ static void hci_acl_write_complete(iotxn_t* txn, void* cookie) {
     // FIXME what to do with error here?
     mtx_lock(&hci->mutex);
     list_add_tail(&hci->free_acl_write_reqs, &txn->node);
+
+    if (hci->snoop_channel) {
+        void* buffer;
+        txn->ops->mmap(txn, &buffer);
+        snoop_channel_write_locked(
+            hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_SENT, buffer, txn->actual);
+    }
+
     mtx_unlock(&hci->mutex);
 }
 
@@ -262,7 +274,7 @@ static bool hci_handle_cmd_read_events(hci_t* hci, mx_wait_item_t* cmd_item) {
         }
 
         mtx_lock(&hci->mutex);
-        snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_CMD, buf, length);
+        snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_SENT, buf, length);
         mtx_unlock(&hci->mutex);
     }
 
@@ -278,7 +290,7 @@ fail:
 
 static bool hci_handle_acl_read_events(hci_t* hci, mx_wait_item_t* acl_item) {
     if (acl_item->pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) {
-        uint8_t buf[ACL_BUF_SIZE];
+        uint8_t buf[BT_HCI_MAX_FRAME_SIZE];
         uint32_t length = sizeof(buf);
         mx_status_t status =
             mx_channel_read(acl_item->handle, 0, buf, length, &length, NULL, 0, NULL);
@@ -390,6 +402,29 @@ static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, s
         mx_status_t status = mx_channel_create(0, &hci->cmd_channel, &remote_end);
         if (status < 0) {
             printf("hci_ioctl: Failed to create command channel: %s\n",
+                   mx_status_get_string(status));
+            result = ERR_INTERNAL;
+            goto done;
+        }
+
+        *reply = remote_end;
+        result = sizeof(*reply);
+    } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
+        mx_handle_t* reply = out_buf;
+        if (out_len < sizeof(*reply)) {
+            result = ERR_BUFFER_TOO_SMALL;
+            goto done;
+        }
+
+        if (hci->acl_channel != MX_HANDLE_INVALID) {
+            result = ERR_ALREADY_BOUND;
+            goto done;
+        }
+
+        mx_handle_t remote_end;
+        mx_status_t status = mx_channel_create(0, &hci->acl_channel, &remote_end);
+        if (status < 0) {
+            printf("hci_ioctl: Failed to create ACL data channel: %s\n",
                    mx_status_get_string(status));
             result = ERR_INTERNAL;
             goto done;
@@ -544,23 +579,23 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         list_add_head(&hci->free_event_reqs, &txn->node);
     }
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, ACL_BUF_SIZE, 0);
+        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, BT_HCI_MAX_FRAME_SIZE, 0);
         if (!txn) {
             status = ERR_NO_MEMORY;
             goto fail;
         }
-        txn->length = ACL_BUF_SIZE;
+        txn->length = BT_HCI_MAX_FRAME_SIZE;
         txn->complete_cb = hci_acl_read_complete;
         txn->cookie = hci;
         list_add_head(&hci->free_acl_read_reqs, &txn->node);
     }
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, ACL_BUF_SIZE, 0);
+        iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, BT_HCI_MAX_FRAME_SIZE, 0);
         if (!txn) {
             status = ERR_NO_MEMORY;
             goto fail;
         }
-        txn->length = ACL_BUF_SIZE;
+        txn->length = BT_HCI_MAX_FRAME_SIZE;
         txn->complete_cb = hci_acl_write_complete;
         txn->cookie = hci;
         list_add_head(&hci->free_acl_write_reqs, &txn->node);

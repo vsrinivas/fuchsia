@@ -12,6 +12,14 @@
 
 __BEGIN_CDECLS
 
+// The maximum HCI ACL frame size used for data transactions
+#define BT_HCI_MAX_FRAME_SIZE         1028  // (1024 + 4 bytes for the ACL header)
+
+// Potential values for the flags bitfield in a snoop channel packet.
+#define BT_HCI_SNOOP_FLAG_SENT        0x00  // Host -> Controller
+#define BT_HCI_SNOOP_FLAG_RECEIVED    0x01  // Controller <- Host
+#define BT_HCI_SNOOP_FLAG_DATA        0x02  // Data packet
+
 // Get a channel handle for a two-way HCI command channel for sending and
 // receiving HCI command and event packets, respectively.
 //   in: none
@@ -19,8 +27,14 @@ __BEGIN_CDECLS
 #define IOCTL_BT_HCI_GET_COMMAND_CHANNEL \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BT_HCI, 0)
 
-// Get a uni-directional channel for listening to HCI command and event packet
-// traffic. The format of each message is as follows:
+// Get a channel handle for a two-way HCI ACL data channel for sending and receiving HCI ACL data
+// packets.
+//   in: none
+//   out: handle to channel
+#define IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL \
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BT_HCI, 1)
+
+// Get a uni-directional channel for sniffing HCI traffic. The format of each message is as follows:
 //
 //    [1-octet flags][n-octet payload]
 //
@@ -34,14 +48,13 @@ __BEGIN_CDECLS
 //   in: none
 //   out: handle to channel
 #define IOCTL_BT_HCI_GET_SNOOP_CHANNEL \
-    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BT_HCI, 1)
-
-// Potential values for the flags bitfield in a snoop channel packet.
-#define BT_HCI_SNOOP_FLAG_CMD      0x00
-#define BT_HCI_SNOOP_FLAG_EVENT    0x01
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BT_HCI, 2)
 
 // ssize_t ioctl_bt_hci_get_command_channel(int fd, mx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_command_channel, IOCTL_BT_HCI_GET_COMMAND_CHANNEL, mx_handle_t);
+
+// ssize_t ioctl_bt_hci_get_acl_data_channel(int fd, mx_handle_t* out);
+IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_acl_data_channel, IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL, mx_handle_t);
 
 // ssize_t ioctl_bt_hci_get_snoop_channel(int fd, mx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_snoop_channel, IOCTL_BT_HCI_GET_SNOOP_CHANNEL, mx_handle_t);
