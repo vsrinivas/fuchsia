@@ -62,7 +62,7 @@ void set_gfx_mode(uint32_t mode) {
     gSys->ConOut->ClearScreen(gSys->ConOut);
 }
 
-void set_gfx_mode_from_cmdline(char* fbres) {
+void set_gfx_mode_from_cmdline(const char* fbres) {
     if (!fbres)
         return;
     efi_graphics_output_protocol* gop = fb_get_gop();

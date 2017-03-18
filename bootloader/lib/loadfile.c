@@ -8,6 +8,12 @@
 #include <xefi.h>
 #include <stdio.h>
 
+#ifndef VERBOSE
+#define xprintf(...) do {} while (0);
+#else
+#define xprintf(fmt...) printf(fmt)
+#endif
+
 efi_file_protocol* xefi_open_file(char16_t* filename) {
     efi_loaded_image_protocol* loaded;
     efi_status r;
@@ -15,7 +21,7 @@ efi_file_protocol* xefi_open_file(char16_t* filename) {
 
     r = xefi_open_protocol(gImg, &LoadedImageProtocol, (void**)&loaded);
     if (r) {
-        printf("LoadFile: Cannot open LoadedImageProtocol (%s)\n", xefi_strerror(r));
+        xprintf("LoadFile: Cannot open LoadedImageProtocol (%s)\n", xefi_strerror(r));
         goto exit0;
     }
 
@@ -28,20 +34,20 @@ efi_file_protocol* xefi_open_file(char16_t* filename) {
     efi_simple_file_system_protocol* sfs;
     r = xefi_open_protocol(loaded->DeviceHandle, &SimpleFileSystemProtocol, (void**)&sfs);
     if (r) {
-        printf("LoadFile: Cannot open SimpleFileSystemProtocol (%s)\n", xefi_strerror(r));
+        xprintf("LoadFile: Cannot open SimpleFileSystemProtocol (%s)\n", xefi_strerror(r));
         goto exit1;
     }
 
     efi_file_protocol* root;
     r = sfs->OpenVolume(sfs, &root);
     if (r) {
-        printf("LoadFile: Cannot open root volume (%s)\n", xefi_strerror(r));
+        xprintf("LoadFile: Cannot open root volume (%s)\n", xefi_strerror(r));
         goto exit2;
     }
 
     r = root->Open(root, &file, filename, EFI_FILE_MODE_READ, 0);
     if (r) {
-        printf("LoadFile: Cannot open file (%s)\n", xefi_strerror(r));
+        xprintf("LoadFile: Cannot open file (%s)\n", xefi_strerror(r));
         goto exit3;
     }
 
@@ -65,26 +71,26 @@ void* xefi_read_file(efi_file_protocol* file, size_t* _sz, size_t front_bytes) {
     efi_file_info* finfo = (void*)buf;
     r = file->GetInfo(file, &FileInfoGuid, &sz, finfo);
     if (r) {
-        printf("LoadFile: Cannot get FileInfo (%s)\n", xefi_strerror(r));
+        xprintf("LoadFile: Cannot get FileInfo (%s)\n", xefi_strerror(r));
         return NULL;
     }
 
     pages = (finfo->FileSize + front_bytes + 4095) / 4096;
     r = gBS->AllocatePages(AllocateAnyPages, EfiLoaderData, pages, (efi_physical_addr *)&data);
     if (r) {
-        printf("LoadFile: Cannot allocate buffer (%s)\n", xefi_strerror(r));
+        xprintf("LoadFile: Cannot allocate buffer (%s)\n", xefi_strerror(r));
         return NULL;
     }
 
     sz = finfo->FileSize;
     r = file->Read(file, &sz, data + front_bytes);
     if (r) {
-        printf("LoadFile: Error reading file (%s)\n", xefi_strerror(r));
+        xprintf("LoadFile: Error reading file (%s)\n", xefi_strerror(r));
         gBS->FreePages((efi_physical_addr)data, pages);
         return NULL;
     }
     if (sz != finfo->FileSize) {
-        printf("LoadFile: Short read\n");
+        xprintf("LoadFile: Short read\n");
         gBS->FreePages((efi_physical_addr)data, pages);
         return NULL;
     }

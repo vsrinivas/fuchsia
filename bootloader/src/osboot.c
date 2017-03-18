@@ -16,7 +16,6 @@
 #include <device_id.h>
 #include <framebuffer.h>
 #include <inet6.h>
-#include <magenta.h>
 #include <xefi.h>
 
 #include "osboot.h"
@@ -28,7 +27,6 @@
 #define KBUFSIZE (32*1024*1024)
 #define RBUFSIZE (512 * 1024 * 1024)
 
-static char cmdextra[256];
 
 static nbfile nbkernel;
 static nbfile nbramdisk;
@@ -75,8 +73,6 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
     }
     return NULL;
 }
-
-static char cmdline[4096];
 
 // Wait for a keypress from a set of valid keys. If 0 < timeout_s < INT_MAX, the
 // first key in the set of valid keys will be returned after timeout_s seconds
@@ -216,6 +212,13 @@ void do_bootmenu(bool have_fb) {
     }
 }
 
+static char cmdbuf[CMDLINE_MAX];
+void print_cmdline(void) {
+    cmdline_to_string(cmdbuf, sizeof(cmdbuf));
+    printf("cmdline: %s\n", cmdbuf);
+}
+
+static char netboot_cmdline[CMDLINE_MAX];
 void do_netboot() {
     efi_physical_addr mem = 0xFFFFFFFF;
     if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, KBUFSIZE / 4096, &mem)) {
@@ -229,10 +232,9 @@ void do_netboot() {
     nbramdisk.data = 0;
     nbramdisk.size = 0;
 
-    nbcmdline.data = (void*) cmdline;
-    nbcmdline.size = sizeof(cmdline) - 1;
+    nbcmdline.data = (void*) netboot_cmdline;
+    nbcmdline.size = sizeof(netboot_cmdline);
     nbcmdline.offset = 0;
-    cmdline[0] = 0;
 
     printf("\nNetBoot Server Started...\n\n");
     efi_tpl prev_tpl = gBS->RaiseTPL(TPL_NOTIFY);
@@ -294,18 +296,17 @@ void do_netboot() {
         // Restore the TPL before booting the kernel, or failing to netboot
         gBS->RestoreTPL(prev_tpl);
 
-        // ensure cmdline is null terminated
-        cmdline[nbcmdline.offset] = 0;
+        cmdline_append((void*) nbcmdline.data, nbcmdline.offset);
+        print_cmdline();
 
-        // maybe it's a kernel image?
-        char fbres[11];
-        if (cmdline_get(cmdline, "bootloader.fbres", fbres, sizeof(fbres)) > 0) {
+        const char* fbres = cmdline_get("bootloader.fbres", NULL);
+        if (fbres) {
             set_gfx_mode_from_cmdline(fbres);
         }
 
+        // maybe it's a kernel image?
         boot_kernel(gImg, gSys, (void*) nbkernel.data, nbkernel.offset,
-                    (void*) nbramdisk.data, nbramdisk.offset,
-                    cmdline, strlen(cmdline), cmdextra, strlen(cmdextra));
+                    (void*) nbramdisk.data, nbramdisk.offset);
         break;
     }
 }
@@ -315,19 +316,17 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     gConOut->ClearScreen(gConOut);
 
     uint64_t mmio;
-    char* end_cmdextra = cmdextra;
     if (xefi_find_pci_mmio(gBS, 0x0C, 0x03, 0x30, &mmio) == EFI_SUCCESS) {
-        end_cmdextra += sprintf(cmdextra, " xdc.mmio=%#" PRIx64 " ", mmio);
-    } else {
-        cmdextra[0] = 0;
+        char tmp[32];
+        sprintf(tmp, "%#" PRIx64 , mmio);
+        cmdline_set("xdc.mmio", tmp);
     }
 
     // Load the cmdline
     size_t csz = 0;
-    char* cmdline = xefi_load_file(L"cmdline", &csz, 0);
-    if (cmdline) {
-        cmdline[csz] = '\0';
-        printf("cmdline: %s\n", cmdline);
+    char* cmdline_file = xefi_load_file(L"cmdline", &csz, 0);
+    if (cmdline_file) {
+        cmdline_append(cmdline_file, csz);
     }
 
     efi_graphics_output_protocol* gop;
@@ -336,8 +335,8 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     bool have_fb = !EFI_ERROR(status);
 
     if (have_fb) {
-        char fbres[11];
-        if (cmdline_get(cmdline, "bootloader.fbres", fbres, sizeof(fbres)) > 0) {
+        const char* fbres = cmdline_get("bootloader.fbres", NULL);
+        if (fbres) {
             set_gfx_mode_from_cmdline(fbres);
         }
         draw_logo();
@@ -345,19 +344,17 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     int32_t prev_attr = gConOut->Mode->Attribute;
     gConOut->SetAttribute(gConOut, EFI_LIGHTMAGENTA | EFI_BACKGROUND_BLACK);
-    printf("\nGigaBoot 20X6\n\n");
+    printf("\nGigaBoot 20X6 - Version %s\n\n", BOOTLOADER_VERSION);
     gConOut->SetAttribute(gConOut, prev_attr);
 
-    if (have_fb)
+    if (have_fb) {
         printf("Framebuffer base is at %" PRIx64 "\n\n",
                gop->Mode->FrameBufferBase);
+    }
 
     // Default boot defaults to network
-    char defboot[8] = "network";
-    cmdline_get(cmdline, "bootloader.default", defboot, sizeof(defboot));
-
-    char nodename[64] = "";
-    cmdline_get(cmdline, "magenta.nodename", nodename, sizeof(nodename));
+    const char* defboot = cmdline_get("bootloader.default", "network");
+    const char* nodename = cmdline_get("magenta.nodename", "");
 
     // See if there's a network interface
     bool have_network = netboot_init(nodename) == 0;
@@ -372,9 +369,12 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         // return the generated value in which case it needs to be added to
         // the command line arguments.
         if (nodename[0] == 0) {
-            end_cmdextra += sprintf(end_cmdextra, " magenta.nodename=%s ", netboot_nodename());
+            cmdline_set("magenta.nodename", netboot_nodename());
         }
     }
+
+    printf("\n\n");
+    print_cmdline();
 
     // Look for a kernel image on disk
     // TODO: use the filesystem protocol
@@ -412,7 +412,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     // make sure we update valid_keys if we ever add new options
     if (key_idx >= sizeof(valid_keys)) goto fail;
 
-    int timeout_s = cmdline_get_uint32(cmdline, "bootloader.timeout", DEFAULT_TIMEOUT);
+    int timeout_s = cmdline_get_uint32("bootloader.timeout", DEFAULT_TIMEOUT);
     while (true) {
         printf("\nPress (b) for the boot menu");
         if (have_network) {
@@ -450,8 +450,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
                 ramdisk = xefi_read_file(ramdisk_file, &rsz, FRONT_BYTES);
                 ramdisk_file->Close(ramdisk_file);
             }
-            boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz,
-                        cmdline, csz, cmdextra, strlen(cmdextra));
+            boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz);
             break;
         }
         default:

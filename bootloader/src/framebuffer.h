@@ -21,7 +21,7 @@ void set_gfx_mode(uint32_t mode);
 // Sets the graphics mode based on a string of the form "WxH" where W and H are
 // integers representing width and height of the mode. This is usually obtained
 // from the bootloader.fbres commandline argument.
-void set_gfx_mode_from_cmdline(char* fbres);
+void set_gfx_mode_from_cmdline(const char* fbres);
 
 // Print all the supported framebuffer modes to the system console.
 void print_fb_modes();

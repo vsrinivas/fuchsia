@@ -107,6 +107,7 @@ int eth_send(void* data, size_t len) {
 }
 
 void eth_dump_status(void) {
+#ifdef VERBOSE
     printf("State/HwAdSz/HdrSz/MaxSz %d %d %d %d\n",
            snp->Mode->State, snp->Mode->HwAddressSize,
            snp->Mode->MediaHeaderSize, snp->Mode->MaxPacketSize);
@@ -119,6 +120,7 @@ void eth_dump_status(void) {
     printf("SetMac/MultiTx/LinkDetect/Link %d %d %d %d\n",
            snp->Mode->MacAddressChangeable, snp->Mode->MultipleTxSupported,
            snp->Mode->MediaPresentSupported, snp->Mode->MediaPresent);
+#endif
 }
 
 int eth_add_mcast_filter(const mac_addr* addr) {
