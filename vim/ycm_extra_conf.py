@@ -22,6 +22,11 @@ common_flags = [
     fuchsia_sysroot + '/include/c++/v1',
 ]
 
+default_flags = [
+    '-I' + fuchsia_root,
+    '-I' + fuchsia_build + '/gen'
+]
+
 
 def GetClangCommandFromNinjaForFilename(filename):
   """Returns the command line to build |filename|.
@@ -76,7 +81,7 @@ def GetClangCommandFromNinjaForFilename(filename):
       clang_line = line
       break
   else:
-    return fuchsia_flags
+    return default_flags + fuchsia_flags
 
   # Parse out the -I and -D flags. These seem to be the only ones that are
   # important for YCM's purposes.
