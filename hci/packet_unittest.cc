@@ -106,6 +106,46 @@ TEST(HCIPacketTest, EventPacketGetReturnParams) {
   EXPECT_EQ(127, valid0.GetReturnParams<TestPayload>()->foo);
 }
 
+TEST(HCIPacketTest, GetLEEventParams) {
+  auto correct_size_bad_event_code = common::CreateStaticByteBuffer(
+    // Event header
+    0xFF, 0x02,  // (event_code is not LEMetaEventCode)
+
+    // Subevent code
+    0xFF,
+
+    // Subevent payload
+    0x7F
+  );
+  auto payload_too_small = common::CreateStaticByteBuffer(
+    0x3E, 0x01,
+
+    // Subevent code
+    0xFF
+  );
+  auto valid = common::CreateStaticByteBuffer(
+    // Event header
+    0x3E, 0x02,
+
+    // Subevent code
+    0xFF,
+
+    // Subevent payload
+    0x7F
+  );
+
+  // If the event code or the payload size don't match, then GetReturnParams should return nullptr.
+  EventPacket invalid0(&correct_size_bad_event_code);
+  EXPECT_EQ(nullptr, invalid0.GetLEEventParams<TestPayload>());
+  EventPacket invalid1(&payload_too_small);
+  EXPECT_EQ(nullptr, invalid1.GetLEEventParams<TestPayload>());
+
+  // Good packets
+  EventPacket valid0(&valid);
+  EXPECT_NE(nullptr, valid0.GetLEEventParams<TestPayload>());
+  EXPECT_EQ(127, valid0.GetLEEventParams<TestPayload>()->foo);
+}
+
 TEST(HCIPacketTest, ACLDataTxPacket) {
   constexpr size_t kMaxDataLength = 10;
   constexpr size_t kDataLength = 1;

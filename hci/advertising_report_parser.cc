@@ -15,8 +15,7 @@ AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
   auto params = event.GetPayload<LEMetaEventParams>();
   FTL_DCHECK(params->subevent_code == kLEAdvertisingReportSubeventCode);
 
-  const LEAdvertisingReportSubeventParams* subevent_params =
-      reinterpret_cast<const LEAdvertisingReportSubeventParams*>(params->subevent_parameters);
+  auto subevent_params = event.GetLEEventParams<LEAdvertisingReportSubeventParams>();
 
   remaining_reports_ = subevent_params->num_reports;
   remaining_bytes_ = event.GetPayloadSize() - sizeof(LEMetaEventParams) -

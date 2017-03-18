@@ -41,6 +41,18 @@ class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
     return reinterpret_cast<const ReturnParams*>(
         GetPayload<CommandCompleteEventParams>()->return_parameters);
   }
+
+  // If this is a LE Meta Event packet, this method returns a pointer to the beginning of the
+  // subevent parameter structure. If the given template type would exceed the bounds of the packet
+  // or if this packet does not represent a LE Meta Event, this method returns nullptr.
+  template <typename SubeventParams>
+  const SubeventParams* GetLEEventParams() const {
+    if (event_code() != kLEMetaEventCode ||
+        sizeof(SubeventParams) > GetPayloadSize() - sizeof(LEMetaEventParams))
+      return nullptr;
+    return reinterpret_cast<const SubeventParams*>(
+        GetPayload<LEMetaEventParams>()->subevent_parameters);
+  }
 };
 
 }  // namespace hci
