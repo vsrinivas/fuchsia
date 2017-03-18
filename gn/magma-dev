@@ -23,8 +23,8 @@
             "bootfs_path": "test/magma_integration_tests"
         },
         {
-            "binary": "magma_sys_abi_conformance_tests",
-            "bootfs_path": "test/magma_sys_abi_conformance_tests"
+            "binary": "magma_abi_conformance_tests",
+            "bootfs_path": "test/magma_abi_conformance_tests"
         },
         {
             "binary": "mesa_unit_tests",
