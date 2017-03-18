@@ -65,6 +65,15 @@ bool CommandBuffer::Submit(vk::Queue queue,
   return true;
 }
 
+vk::Result CommandBuffer::Wait(uint64_t nanoseconds) {
+  if (!is_active_) {
+    // The command buffer is already finished.
+    return vk::Result::eSuccess;
+  }
+  FTL_DCHECK(is_submitted_);
+  return device_.waitForFences(1, &fence_, true, nanoseconds);
+}
+
 void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore,
                                      vk::PipelineStageFlags stage) {
   FTL_DCHECK(is_active_);

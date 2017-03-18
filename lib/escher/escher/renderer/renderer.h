@@ -26,6 +26,12 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
                          const SemaphorePtr& frame_done,
                          FrameRetiredCallback frame_retired_callback) = 0;
 
+  void RunOffscreenBenchmark(const VulkanContext& context,
+                             const Stage& stage,
+                             const Model& model,
+                             vk::Format framebuffer_format,
+                             size_t frame_count);
+
   const VulkanContext& vulkan_context() { return context_; }
 
   void set_enable_profiling(bool enabled) { enable_profiling_ = enabled; }

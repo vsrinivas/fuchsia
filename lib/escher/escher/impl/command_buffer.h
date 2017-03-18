@@ -90,6 +90,11 @@ class CommandBuffer {
   // Simple wrapper around endRenderPass().
   void EndRenderPass() { command_buffer_.endRenderPass(); }
 
+  // Block until the command-buffer is no longer pending, or the specified
+  // number of nanoseconds has elapsed.  Return vk::Result::eSuccess in the
+  // former case, and vk::Result::eTimeout in the latter.
+  vk::Result Wait(uint64_t timeout_nanoseconds);
+
   // Each CommandBuffer that is obtained from a CommandBufferPool is given a
   // monotonically-increasing sequence number.  This number is globally unique
   // (per Escher instance), even across multiple CommandBufferPools.

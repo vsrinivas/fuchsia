@@ -33,18 +33,24 @@ static constexpr int kDemoHeight = 1440;
 // Material design places objects from 0.0f to 24.0f.
 static constexpr float kNear = 100.f;
 static constexpr float kFar = 0.f;
-
+// Toggle debug overlays.
 bool g_show_debug_info = false;
 bool g_enable_lighting = true;
 int g_current_scene = 0;
-bool g_profile_one_frame = false;
 // True if the Model objects should be binned by pipeline, false if they should
 // be rendered in their natural order.
 bool g_sort_by_pipeline = true;
+// Choose which SSDO acceleration mode is used.
 bool g_cycle_ssdo_acceleration = false;
 bool g_stop_time = false;
 // True if lighting should be periodically toggled on and off.
 bool g_auto_toggle_lighting = false;
+// Profile a single frame; print out timestamps about how long each part of
+// the frame took.
+bool g_profile_one_frame = false;
+// Run an offscreen benchmark.
+bool g_run_offscreen_benchmark = false;
+constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 
 std::unique_ptr<Demo> CreateDemo(bool use_fullscreen) {
   Demo::WindowParams window_params;
@@ -99,6 +105,7 @@ int main(int argc, char** argv) {
   demo->SetKeyCallback("SPACE",
                        [&]() { g_enable_lighting = !g_enable_lighting; });
   demo->SetKeyCallback("A", [&]() { g_cycle_ssdo_acceleration = true; });
+  demo->SetKeyCallback("B", [&]() { g_run_offscreen_benchmark = true; });
   demo->SetKeyCallback("D", [&]() { g_show_debug_info = !g_show_debug_info; });
   demo->SetKeyCallback("P", [&]() { g_profile_one_frame = true; });
   demo->SetKeyCallback("S", [&]() {
@@ -197,6 +204,20 @@ int main(int argc, char** argv) {
         renderer->CycleSsdoAccelerationMode();
         g_cycle_ssdo_acceleration = false;
       }
+
+      if (g_run_offscreen_benchmark) {
+        g_run_offscreen_benchmark = false;
+        stopwatch.Stop();
+        renderer->set_show_debug_info(false);
+        renderer->RunOffscreenBenchmark(vulkan_context, stage, *model,
+                                        swapchain_helper.swapchain().format,
+                                        kOffscreenBenchmarkFrameCount);
+        renderer->set_show_debug_info(g_show_debug_info);
+        if (!g_stop_time) {
+          stopwatch.Start();
+        }
+      }
+
       if (g_stop_time) {
         stopwatch.Stop();
       } else {

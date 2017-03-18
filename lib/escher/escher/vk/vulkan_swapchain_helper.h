@@ -16,6 +16,8 @@ class VulkanSwapchainHelper {
 
   void DrawFrame(Stage& stage, Model& model);
 
+  const VulkanSwapchain& swapchain() const { return swapchain_; }
+
  private:
   VulkanSwapchain swapchain_;
   RendererPtr renderer_;
