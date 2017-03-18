@@ -141,9 +141,6 @@ status_t PcieBridge::ParseBusWindowsLocked() {
         io_limit_ |= static_cast<uint32_t>(cfg_->Read(PciConfig::kIoLimitUpper)) << 16;
     }
 
-    io_base_  = base;
-    io_limit_ = limit;
-
     // Non-prefetchable memory window
     mem_base_  = (static_cast<uint32_t>(cfg_->Read(PciConfig::kMemoryBase)) << 16)
                        & ~0xFFFFF;
