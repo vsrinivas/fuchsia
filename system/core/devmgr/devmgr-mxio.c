@@ -152,24 +152,34 @@ static void setup_bootfs(void) {
     }
 
     for (unsigned n = 0; (vmo = mx_get_startup_handle(HND_BOOTDATA(n))); n++) {
-        size_t off = 0;
-        for (;;) {
-            bootdata_t bootdata;
-            size_t actual;
+        bootdata_t bootdata;
+        size_t actual;
+        mx_status_t status = mx_vmo_read(vmo, &bootdata, 0, sizeof(bootdata), &actual);
+        if ((status < 0) || (actual != sizeof(bootdata))) {
+            goto done;
+        }
+        if ((bootdata.type != BOOTDATA_CONTAINER) || (bootdata.extra != BOOTDATA_MAGIC)) {
+            printf("devmgr: bootdata item does not contain bootdata\n");
+            goto done;
+        }
+
+        size_t len = bootdata.length;
+        size_t off = sizeof(bootdata);
+
+        while (len > sizeof(bootdata)) {
             mx_status_t status = mx_vmo_read(vmo, &bootdata, off, sizeof(bootdata), &actual);
             if ((status < 0) || (actual != sizeof(bootdata))) {
                 break;
             }
+            size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);
+            if (itemlen > len) {
+                printf("devmgr: bootdata item too large (%zd > %zd)\n", itemlen, len);
+                break;
+            }
             switch (bootdata.type) {
             case BOOTDATA_CONTAINER:
-                if (off == 0) {
-                    // quietly skip a container header at start
-                    bootdata.length = 0;
-                } else {
-                    printf("devmgr: unexpected bootdata container header\n");
-                    goto done;
-                }
-                break;
+                printf("devmgr: unexpected bootdata container header\n");
+                goto done;
             case BOOTDATA_BOOTFS_DISCARD:
                 // this was already unpacked for us by userboot
                 break;
@@ -185,17 +195,24 @@ static void setup_bootfs(void) {
                     printf("devmgr: failed to decompress bootdata\n");
                 } else {
                     setup_bootfs_vmo(idx++, bootdata.type, bootfs_vmo);
-
                 }
                 break;
             }
-            case 0:
+            case BOOTDATA_MDI:
+            case BOOTDATA_CMDLINE:
+            case BOOTDATA_ACPI_RSDP:
+            case BOOTDATA_FRAMEBUFFER:
+            case BOOTDATA_E820_TABLE:
+            case BOOTDATA_EFI_MEMORY_MAP:
+            case BOOTDATA_EFI_SYSTEM_TABLE:
+                // quietly ignore these
                 break;
             default:
                 printf("devmgr: ignoring bootdata type=%08x size=%u\n",
                        bootdata.type, bootdata.length);
             }
-            off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);
+            off += itemlen;
+            len -= itemlen;
         }
 done:
         mx_handle_close(vmo);
