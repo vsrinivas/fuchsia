@@ -19,19 +19,25 @@ mx_status_t mx_object_wait_async(mx_handle_t handle,
 ## DESCRIPTION
 
 **object_wait_async**() is a non-blocking syscall which causes packet
-delivery on *port* when the object state changes and matches *signals*.
+delivery on *port* when the object state changes and matches *signals*. Use **port_wait**() to
+retrieve the packets.
 
-If the current signal state of the object matches *signals* a packet
-will be delivered to the *port* immediately.
+*handle* points to the object that is to be watched for changes and must be a waitable object.
 
-The *options* argument can be **MX_WAIT_ASYNC_ONCE** do deliver a single
-packet or **MX_WAIT_ASYNC_REPEATING** to deliver a packet every time the
-object state transitions from some other state to the *signals* state again.
+The *options* argument can be either:
++ **MX_WAIT_ASYNC_ONCE**: a single packet will be delivered when any of the specified *signals*
+    are asserted on *handle*. To receive further packets **object_wait_async**() needs to be
+    issued again.
++ **MX_WAIT_ASYNC_REPEATING**: a single packet will be delivered every time any of the
+    specified *signals* are asserted. if *signals* specifies more than one signal the relative
+    ordering of the packets generated might not match the order of the object signal changes.
+
+To stop packet delivery on either mode, close *handle* or use **handle_cancel**(). For both
+modes, if any of the specified signals are currently asserted on the object at the time of
+the **object_wait_async**() call, a packet (or packets) will be delivered immediately.
 
 See [port_wait](port_wait.md) for more information about each type
 of packet and their semantics.
-
-To stop packet delivery, close *handle* or use **handle_cancel**().
 
 ## RETURN VALUE
 
@@ -55,3 +61,5 @@ does not have **MX_RIGHT_WRITE**.
 ## SEE ALSO
 
 [handle_cancel](handle_cancel.md).
+[port_queue](port_queue.md).
+[port_wait](port_wait2.md).

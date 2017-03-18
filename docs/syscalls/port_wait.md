@@ -1,8 +1,8 @@
-# mx_port_wait
+# mx_port_wait (v1)
 
 ## NAME
 
-port_wait - wait for a packet in an IO port
+port_wait - wait for a packet arrival in n port, version 1.
 
 ## SYNOPSIS
 
@@ -15,18 +15,19 @@ mx_status_t mx_port_wait(mx_handle_t handle, mx_time_t timeout, void* packet, si
 
 ## DESCRIPTION
 
-**port_wait**() is a blocking syscall which causes the caller to
-wait until at least one packet is available. *packet* must not be invalid.
+**port_wait**() is a blocking syscall which causes the caller to wait until at least
+one packet is available. See [here](port_wait2.md) for version 2.
 
 Upon return, if successful *packet* will contain the earliest (in FIFO order)
 available packet data with **port_queue**().
 
-A *timeout* of 0 can be used to get a pending packet if availabe. If there is
-no packet available the return is ERR_TIMED_OUT. The special value **MX_TIME_INFINITE**
-can be used to wait forever for a packet.
+The *timeout* indicates how long to wait for a packet.  If no packet has arrived by the
+*timeout* deadline, **ERR_TIMED_OUT** is returned.  The value **MX_TIME_INFINITE** will
+result in waiting forever.  The value 0 will result in an immediate timeout, unless
+a packet is already available for reading.
 
 Unlike **mx_wait_one**() and **mx_wait_many**() only one waiting thread is
-released (per available packet) which makes IO ports amenable to be serviced
+released (per available packet) which makes ports amenable to be serviced
 by thread pools.
 
 If using **mx_port_queue**() the dequeued packet is of variable size
@@ -74,12 +75,11 @@ not be waited upon.
 
 **ERR_TIMED_OUT**  *timeout* nanoseconds have elapsed and no packet was available.
 
-
 ## NOTES
 
 Being able to determine which type of packet has been received (**mx_io_packet_t**
 vs **mx_user_packet_t**) depends on using suitably unique keys when binding or
-queueing packets.
+queuing packets.
 
 ## SEE ALSO
 
