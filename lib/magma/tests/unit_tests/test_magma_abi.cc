@@ -155,44 +155,44 @@ private:
     magma_connection_t* connection_;
 };
 
-TEST(MagmaSystemAbi, DeviceId)
+TEST(MagmaAbi, DeviceId)
 {
     TestBase test;
     test.GetDeviceId();
 }
 
-TEST(MagmaSystemAbi, Buffer)
+TEST(MagmaAbi, Buffer)
 {
     TestConnection test;
     test.Buffer();
 }
 
-TEST(MagmaSystemAbi, Connection)
+TEST(MagmaAbi, Connection)
 {
     TestConnection test;
     test.Connection();
 }
 
-TEST(MagmaSystemAbi, Context)
+TEST(MagmaAbi, Context)
 {
     TestConnection test;
     test.Context();
 }
 
-TEST(MagmaSystemAbi, WaitRendering)
+TEST(MagmaAbi, WaitRendering)
 {
     TestConnection test;
     test.WaitRendering();
 }
 
-TEST(MagmaSystemAbi, BufferImportExport)
+TEST(MagmaAbi, BufferImportExport)
 {
     TestConnection test1;
     TestConnection test2;
     TestConnection::BufferImportExport(&test1, &test2);
 }
 
-TEST(MagmaSystemAbi, Semaphore)
+TEST(MagmaAbi, Semaphore)
 {
     TestConnection test;
     test.Semaphore();

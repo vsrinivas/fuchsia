@@ -20,7 +20,7 @@ group("tests") {
 
   deps = [
     "integration",
-    "unit_tests:magma_sys_abi_conformance_tests",
+    "unit_tests:magma_abi_conformance_tests",
     "unit_tests:magma_sys_unit_tests",
     "vkcube",
     "vkreadback",

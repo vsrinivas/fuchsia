@@ -88,12 +88,12 @@ source_set("magma_platform_tests") {
   ]
 }
 
-executable("magma_sys_abi_conformance_tests") {
+executable("magma_abi_conformance_tests") {
   testonly = true
 
   sources = [
     "main.cc",
-    "test_sys_abi.cc",
+    "test_magma_abi.cc",
   ]
 
   deps = [

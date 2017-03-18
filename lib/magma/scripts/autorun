@@ -4,7 +4,7 @@ echo [SYS START=]
 echo [SYS END===]
 echo [==========]
 echo [ABI START=]
-/system/test/magma_sys_abi_conformance_tests
+/system/test/magma_abi_conformance_tests
 echo [ABI END===]
 echo [==========]
 echo [MESA START]
