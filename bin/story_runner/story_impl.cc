@@ -26,6 +26,8 @@
 
 namespace modular {
 
+constexpr char kRootLink[] = "root";
+
 StoryImpl::StoryImpl(StoryDataPtr story_data,
                      StoryProviderImpl* const story_provider_impl)
     : story_data_(std::move(story_data)),
@@ -252,13 +254,13 @@ void StoryImpl::NotifyStateChange() {
 
 LinkPtr& StoryImpl::EnsureRoot() {
   if (!root_.is_bound()) {
-    CreateLink("root", root_.NewRequest());
+    CreateLink(kRootLink, root_.NewRequest());
   }
   return root_;
 }
 
 void StoryImpl::GetLink(fidl::InterfaceRequest<Link> request) {
-  EnsureRoot()->Dup(std::move(request));
+  CreateLink(kRootLink, std::move(request));
 }
 
 void StoryImpl::ReleaseModule(
@@ -275,6 +277,14 @@ void StoryImpl::ReleaseModule(
 
 void StoryImpl::CreateLink(const fidl::String& name,
                            fidl::InterfaceRequest<Link> request) {
+  auto i = std::find_if(
+      links_.begin(), links_.end(),
+      [name](const std::unique_ptr<LinkImpl>& l) { return l->name() == name; });
+  if (i != links_.end()) {
+    (*i)->Connect(std::move(request));
+    return;
+  }
+
   auto* const link_impl =
       new LinkImpl(story_storage_impl_.get(), name, std::move(request));
   links_.emplace_back(link_impl);
@@ -340,7 +350,6 @@ void StoryImpl::StartModule(
 
   connections_.emplace_back(std::move(connection));
 }
-
 
 void StoryImpl::StartModuleInShell(
     const fidl::String& module_url,

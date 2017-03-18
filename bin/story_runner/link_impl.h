@@ -72,6 +72,8 @@ class LinkImpl {
   void Sync(const std::function<void()>& callback);
 
   // Used by StoryImpl.
+  void Connect(fidl::InterfaceRequest<Link> request);
+  const fidl::String& name() const { return name_; }
   void set_orphaned_handler(const std::function<void()>& fn) {
     orphaned_handler_ = fn;
   }
@@ -90,6 +92,11 @@ class LinkImpl {
   void ValidateSchema(const char* entry_point,
                       const CrtJsonPointer& pointer,
                       const std::string& json);
+
+  // We can only accept connection requests once the instance is fully
+  // initalized. So we queue them up initially.
+  bool ready_{};
+  std::vector<fidl::InterfaceRequest<Link>> requests_;
 
   CrtJsonDoc doc_;
   std::vector<std::unique_ptr<LinkConnection>> connections_;

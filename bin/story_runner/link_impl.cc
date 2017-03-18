@@ -44,16 +44,29 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
     : name_(name),
       story_storage_(story_storage),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
+  requests_.emplace_back(std::move(request));
   ReadLinkData(
-      ftl::MakeCopyable([ this, request = std::move(request) ]() mutable {
-        LinkConnection::New(this, std::move(request));
-      }));
+      [this]() {
+        for (auto& request : requests_) {
+          LinkConnection::New(this, std::move(request));
+        }
+        requests_.clear();
+        ready_ = true;
+      });
 
   story_storage_->WatchLink(
       name, [this](const fidl::String& json) { OnChange(json); });
 }
 
 LinkImpl::~LinkImpl() {}
+
+void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
+  if (ready_) {
+    LinkConnection::New(this, std::move(request));
+  } else {
+    requests_.emplace_back(std::move(request));
+  }
+}
 
 void LinkImpl::SetSchema(const fidl::String& json_schema) {
   rapidjson::Document doc;
