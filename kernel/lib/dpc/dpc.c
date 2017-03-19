@@ -23,6 +23,9 @@ status_t dpc_queue(dpc_t *dpc, bool reschedule)
     DEBUG_ASSERT(dpc);
     DEBUG_ASSERT(dpc->func);
 
+    if (list_in_list(&dpc->node))
+        return NO_ERROR;
+
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&dpc_lock, state);
 

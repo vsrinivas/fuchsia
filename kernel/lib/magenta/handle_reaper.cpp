@@ -29,8 +29,7 @@ void ReapHandles(mxtl::DoublyLinkedList<Handle*>* handles) {
     LTRACE_ENTRY;
     AutoLock lock(&reaper_mutex);
     reaper_handles.splice(reaper_handles.end(), *handles);
-    if (!list_in_list(&reaper_dpc.node))
-        dpc_queue(&reaper_dpc, false);
+    dpc_queue(&reaper_dpc, false);
 }
 
 void ReapHandles(Handle** handles, uint32_t num_handles) {
