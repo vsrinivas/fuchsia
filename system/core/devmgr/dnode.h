@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <fs/vfs.h>
 #include <mxio/vfs.h>
 #include <magenta/listnode.h>
 

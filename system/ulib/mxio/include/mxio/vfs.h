@@ -13,120 +13,21 @@
 
 __BEGIN_CDECLS
 
-// The VFS interface does not declare struct vnode, so
-// that implementations may provide their own and avoid
-// awkward casting between the base implementation and
-// the "subclass" of it.
-//
-// When using the VFS interface with the common helper
-// library and rpc glue, the initial fields of struct
-// vnode *must* be VNODE_BASE_FIELDS as defined below
-//
-// Example:
-//
-// struct vnode {
-//     VNODE_BASE_FIELDS
-//     my_fs_t* fs;
-//     ...
-// };
-//
-// The ops field is used for dispatch and the refcount
-// is used by the generic vn_acquire() and vn_release.
-// The flags field is private to the implementation.
-
-#define VNODE_BASE_FIELDS \
-    vnode_ops_t* ops; \
-    uint32_t flags; \
-    uint32_t refcount; \
-    mx_handle_t remote;
-
-typedef struct vnode vnode_t;
-typedef struct vnode_ops vnode_ops_t;
-
-typedef struct vnattr vnattr_t;
-typedef struct vdirent vdirent_t;
-
-typedef struct vdircookie {
-    uint64_t n;
-    void* p;
-} vdircookie_t;
-
 #define VFS_MAX_HANDLES 2
 
-struct vnode_ops {
-    void (*release)(vnode_t* vn);
-    // Called when refcount reaches zero.
-
-    mx_status_t (*open)(vnode_t** vn, uint32_t flags);
-    // Attempts to open *vn, refcount++ on success.
-
-    mx_status_t (*close)(vnode_t* vn);
-    // Closes vn, refcount--
-
-    ssize_t (*read)(vnode_t* vn, void* data, size_t len, size_t off);
-    // Read data from vn at offset.
-
-    ssize_t (*write)(vnode_t* vn, const void* data, size_t len, size_t off);
-    // Write data to vn at offset.
-
-    mx_status_t (*lookup)(vnode_t* vn, vnode_t** out, const char* name, size_t len);
-    // Attempt to find child of vn, child returned with refcount++ on success.
-    // Name is len bytes long, and does not include a null terminator.
-
-    mx_status_t (*getattr)(vnode_t* vn, vnattr_t* a);
-    // Read attributes of vn.
-
-    mx_status_t (*setattr)(vnode_t* vn, vnattr_t* a);
-    // Set attributes of vn.
-
-    mx_status_t (*readdir)(vnode_t* vn, void* cookie, void* dirents, size_t len);
-    // Read directory entries of vn, error if not a directory.
-    // Cookie must be a buffer of vdircookie_t size or larger.
-    // Cookie must be zero'd before first call and will be used by.
-    // the readdir implementation to maintain state across calls.
-    // To "rewind" and start from the beginning, cookie may be zero'd.
-
-    mx_status_t (*create)(vnode_t* vn, vnode_t** out, const char* name, size_t len, uint32_t mode);
-    // Create a new node under vn.
-    // Name is len bytes long, and does not include a null terminator.
-    // Mode specifies the type of entity to create.
-
-    ssize_t (*ioctl)(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
-    // Performs the given ioctl op on vn.
-    // On success, returns the number of bytes received.
-
-    mx_status_t (*unlink)(vnode_t* vn, const char* name, size_t len, bool must_be_dir);
-    // Removes name from directory vn
-
-    mx_status_t (*truncate)(vnode_t* vn, size_t len);
-    // Change the size of vn
-
-    mx_status_t (*rename)(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
-                          const char* newname, size_t newlen, bool src_must_be_dir, bool dst_must_be_dir);
-    // Renames the path at oldname in olddir to the path at newname in newdir.
-    // Unlinks any prior newname if it already exists.
-
-    mx_status_t (*link)(vnode_t* vndir, const char* name, size_t len, vnode_t* target);
-    // Creates a hard link to the 'target' vnode with a provided name in vndir
-
-    mx_status_t (*sync)(vnode_t* vn);
-    // Syncs the vnode with its underlying storage
-};
-
-struct vnattr {
+typedef struct vnattr {
     uint32_t valid;       // mask of which bits to set for setattr
     uint32_t mode;
     uint64_t inode;
     uint64_t size;
     uint64_t create_time;  // posix time (seconds since epoch)
     uint64_t modify_time;  // posix time
-};
+} vnattr_t;
 
 // mask that identifies what fields to set in setattr
 #define ATTR_CTIME  0000001
 #define ATTR_MTIME  0000002
 #define ATTR_ATIME  0000004  // not yet implemented
-
 
 // bits compatible with POSIX stat
 #define V_TYPE_MASK 0170000
@@ -157,13 +58,10 @@ struct vnattr {
 #define VTYPE_TO_DTYPE(mode) (((mode)&V_TYPE_MASK) >> 12)
 #define DTYPE_TO_VTYPE(type) (((type)&15) << 12)
 
-struct vdirent {
+typedef struct vdirent {
     uint32_t size;
     uint32_t type;
     char name[0];
-};
-
-void vn_acquire(vnode_t* vn);
-void vn_release(vnode_t* vn);
+} vdirent_t;
 
 __END_CDECLS
