@@ -5,6 +5,7 @@
 group("intel-hda") {
     deps = [
         "//drivers/audio/intel-hda/controller:ihda-controller",
+        "//drivers/audio/intel-hda/ihda",
         "//drivers/audio/intel-hda/utils:ihda-utils",
     ]
 }
