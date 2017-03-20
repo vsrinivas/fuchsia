@@ -11,7 +11,7 @@
 #define ARM_MAX_INT 1024
 #define ARM_MAX_PER_CPU_INT 32
 
-static spin_lock_t lock;
+static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
 
 static struct int_handler_struct int_handler_table_per_cpu[ARM_MAX_PER_CPU_INT][SMP_MAX_CPUS];
 static struct int_handler_struct int_handler_table_shared[ARM_MAX_INT-ARM_MAX_PER_CPU_INT];
@@ -150,6 +150,7 @@ enum handler_return platform_fiq(iframe* frame) {
 
 void pdev_register_interrupts(const struct pdev_interrupt_ops* ops) {
     intr_ops = ops;
+    smp_mb();
 }
 
 static void interrupt_init_percpu_early(uint level) {

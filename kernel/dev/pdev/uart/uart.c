@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <arch/arch_ops.h>
 #include <pdev/uart.h>
 
 static int default_putc(char c) {
@@ -57,4 +58,5 @@ int uart_pgetc(void) {
 
 void pdev_register_uart(const struct pdev_uart_ops* ops) {
     uart_ops = ops;
+    smp_mb();
 }

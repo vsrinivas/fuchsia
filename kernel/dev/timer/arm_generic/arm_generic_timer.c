@@ -186,7 +186,7 @@ __UNUSED static const struct timer_reg_procs cntps_procs = {
     .read_ct = read_cntpct,
 };
 
-#if (TIMER_ARM_GENERIC_SELECTED == CNTV)
+#if (TIMER_ARM_GENERIC_SELECTED_CNTV)
 static const struct timer_reg_procs* reg_procs = &cntv_procs;
 #else
 static const struct timer_reg_procs* reg_procs = &cntp_procs;
@@ -452,6 +452,7 @@ static void arm_generic_timer_pdev_init(mdi_node_ref_t* node, uint level) {
     } else {
         panic("neither irq-phys nor irq-virt set in arm_generic_timer_pdev_init\n");
     }
+    smp_mb();
 
     arm_generic_timer_init(irq, freq_override);
 }
