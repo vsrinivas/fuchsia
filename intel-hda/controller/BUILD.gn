@@ -1,0 +1,38 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+shared_library("ihda-controller") {
+    public = [ ]
+
+    sources = [
+        "binding.c",
+        "codec-cmd-job.cpp",
+        "codec-cmd-job.h",
+        "debug.cpp",
+        "debug-logging.h",
+        "intel-hda-codec.cpp",
+        "intel-hda-codec.h",
+        "intel-hda-controller-init.cpp",
+        "intel-hda-controller.cpp",
+        "intel-hda-controller.h",
+        "intel-hda-device.cpp",
+        "intel-hda-device.h",
+        "intel-hda-stream.cpp",
+        "intel-hda-stream.h",
+        "irq-thread.cpp",
+        "thread-annotations.h",
+        "utils.cpp",
+        "utils.h",
+    ]
+
+    deps = [
+        "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+        "//drivers/audio/intel-hda/utils:ihda-utils",
+        "//magenta/system/ulib/mx",
+        "//magenta/system/ulib/mxcpp",
+        "//magenta/system/ulib/mxtl",
+    ]
+
+    cflags = [ "-Wno-address-of-packed-member" ]
+}
