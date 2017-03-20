@@ -221,6 +221,17 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
 
             break;
         }
+
+        case IOCTL_MAGMA_DUMP_STATUS: {
+            DLOG("IOCTL_MAGMA_DUMP_STATUS");
+            std::unique_lock<std::mutex> lock(device->magma_mutex);
+            intel_i915_device_t* device = get_i915_device(mx_device);
+            if (device->magma_system_device)
+                device->magma_system_device->DumpStatus();
+            result = NO_ERROR;
+            break;
+        }
+
 #if MAGMA_INDRIVER_TEST
         case IOCTL_MAGMA_TEST_RESTART: {
             DLOG("IOCTL_MAGMA_TEST_RESTART");

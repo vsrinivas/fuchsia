@@ -66,6 +66,8 @@ public:
     // Called on connection thread
     void ConnectionClosed(std::thread::id thread_id);
 
+    void DumpStatus() { msd_device_dump_status(msd_dev()); }
+
 private:
     msd_device_unique_ptr_t msd_dev_;
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
