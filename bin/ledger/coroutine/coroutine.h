@@ -17,6 +17,11 @@ namespace coroutine {
 
 // The Handler of a coroutine. It allows a coroutine to yield and another
 // context of execution to resume the computation.
+//
+// Threading: until the first Yield(), the coroutine executes on the thread that
+// called CoroutineService::StartCoroutine(). Between Yield() and Continue(),
+// the handler can be passed to another thread - the computation resumes on the
+// thread that called Continue().
 class CoroutineHandler {
  public:
   virtual ~CoroutineHandler() {}
