@@ -458,7 +458,7 @@ status_t VmMapping::DestroyLocked() {
     return NO_ERROR;
 }
 
-status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
+status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     DEBUG_ASSERT(magic_ == kMagic);
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
@@ -473,7 +473,7 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
            vmm_pf_flags_to_string(pf_flags, pf_string));
 
     // make sure we have permission to continue
-    if ((pf_flags & VMM_PF_FLAG_USER) && (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_USER) == 0) {
+    if ((pf_flags & VMM_PF_FLAG_USER) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_USER)) {
         // user page fault on non user mapped region
         LTRACEF("permission failure: user fault on non user region\n");
         return ERR_ACCESS_DENIED;
@@ -503,11 +503,20 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
     // fault in or grab an existing page
     paddr_t new_pa;
     vm_page_t *page;
-    auto status = object_->GetPageLocked(vmo_offset, pf_flags, &page, &new_pa);
+    status_t status = object_->GetPageLocked(vmo_offset, pf_flags, &page, &new_pa);
     if (status < 0) {
         TRACEF("ERROR: failed to fault in or grab existing page\n");
         TRACEF("%p '%s', vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, name_, vmo_offset, pf_flags);
         return status;
+    }
+
+    // if we read faulted, make sure we map or modify the page without any write permissions
+    // this ensures we will fault again if a write is attempted so we can potentially
+    // replace this page with a copy or a new one
+    uint mmu_flags = arch_mmu_flags_;
+    if (!(pf_flags & VMM_PF_FLAG_WRITE)) {
+        // we read faulted, so only map with read permissions
+        mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
     }
 
     // see if something is mapped here now
@@ -520,15 +529,17 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
                 page_flags);
         if (pa == new_pa) {
             // page was already mapped, are the permissions compatible?
-            if (page_flags == arch_mmu_flags_)
+            // test that the page is already mapped with either the region's mmu flags
+            // or the flags that we're about to try to switch it to, which may be read-only
+            if (page_flags == arch_mmu_flags_ || page_flags == mmu_flags)
                 return NO_ERROR;
 
             // assert that we're not accidentally marking the zero page writable
-            DEBUG_ASSERT((pa != vm_get_zero_page_paddr()) || ((arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_WRITE) == 0));
+            DEBUG_ASSERT((pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
 
             // same page, different permission
-            auto ret = arch_mmu_protect(&aspace_->arch_aspace(), va, 1, arch_mmu_flags_);
-            if (ret < 0) {
+            status = arch_mmu_protect(&aspace_->arch_aspace(), va, 1, mmu_flags);
+            if (status < 0) {
                 TRACEF("failed to modify permissions on existing mapping\n");
                 return ERR_NO_MEMORY;
             }
@@ -538,21 +549,23 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
                    get_current_thread()->name, va);
             LTRACEF("old pa %#" PRIxPTR " new pa %#" PRIxPTR "\n", pa, new_pa);
 
+            // assert that we're not accidentally mapping the zero page writable
+            DEBUG_ASSERT((new_pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
+
             // unmap the old one and put the new one in place
-            auto ret = arch_mmu_unmap(&aspace_->arch_aspace(), va, 1, nullptr);
-            if (ret < 0) {
+            status = arch_mmu_unmap(&aspace_->arch_aspace(), va, 1, nullptr);
+            if (status < 0) {
                 TRACEF("failed to remove old mapping before replacing\n");
                 return ERR_NO_MEMORY;
             }
 
-            // assert that we're not accidentally mapping the zero page writable
-            DEBUG_ASSERT((new_pa != vm_get_zero_page_paddr()) || ((arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_WRITE) == 0));
-
-            ret = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, arch_mmu_flags_, nullptr);
-            if (ret < 0) {
+            size_t mapped;
+            status = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, mmu_flags, &mapped);
+            if (status < 0) {
                 TRACEF("failed to map replacement page\n");
                 return ERR_NO_MEMORY;
             }
+            DEBUG_ASSERT(mapped == 1);
 
             return NO_ERROR;
         }
@@ -561,21 +574,12 @@ status_t VmMapping::PageFault(vaddr_t va, uint pf_flags) {
         LTRACEF("mapping pa %#" PRIxPTR " to va %#" PRIxPTR " is zero page %d\n",
                 new_pa, va, (new_pa == vm_get_zero_page_paddr()));
 
-        // if we read faulted, make sure we map the page without any write permissions
-        // this ensures we will fault again if a write is attempted so we can potentially
-        // replace this page with a copy or a new one
-        uint mmu_flags = arch_mmu_flags_;
-        if ((pf_flags & VMM_PF_FLAG_WRITE) == 0) {
-            // we read faulted, so only map with read permissions
-            mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
-        }
-
         // assert that we're not accidentally mapping the zero page writable
-        DEBUG_ASSERT((new_pa != vm_get_zero_page_paddr()) || ((mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) == 0));
+        DEBUG_ASSERT((new_pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
 
         size_t mapped;
-        auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, mmu_flags, &mapped);
-        if (ret < 0) {
+        status = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, mmu_flags, &mapped);
+        if (status < 0) {
             TRACEF("failed to map page\n");
             return ERR_NO_MEMORY;
         }
