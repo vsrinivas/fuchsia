@@ -315,6 +315,38 @@ struct MergedValue {
   Priority priority;
 };
 
+// A merge result provider, obtained from |ConflictResolver.Resolve()|. Can be
+// used to retrieve the conflicting key/value pairs (|GetDiff()|) and to return
+// the merge result (|Merge()|). When all changes have been sent, |Done()|
+// should be called to mark the end of incoming merge changes.
+interface MergeResultProvider {
+  // Returns the set of conflicting key/value pairs between the two versions. If
+  // the |CUSTOM| policy was selected, all modified keys are present. Values of
+  // |LAZY| keys may not be present on the device. In that case, |Entry| objects
+  // inside the PageChange objects will have a NULL |value| field. If needed,
+  // |left| and |right|, provided by the |ConflictResolver.Resolve()| method can
+  // be used by clients to Fetch these values.
+  // The first call to get the |PageChange|s should be done using a NULL token.
+  // If the result does not fit in a single fidl message, |status| will be
+  // |PARTIAL_RESULT| and next_token will have a non-NULL value, which can be
+  // used to retrieve the rest of the results by calling |GetDiff()| with that
+  // token.
+  GetDiff(array<uint8>? token)
+      => (Status status, PageChange? left_change, PageChange? right_change,
+          array<uint8>? next_token);
+
+  // Once the result of the merge has been computed |Merge()| can be called with
+  // all changes that resolve this conflict. If the result does not fit in a
+  // single fidl message, |Merge()| can be called multiple times. If any of the
+  // |Merge()| calls fails, i.e. |status| is not |OK|, all following calls will
+  // fail with the same error.
+  Merge(array<MergedValue> merge_changes) => (Status status);
+
+  // Marks the end of merge changes to resolve this conflict. After |Done()| is
+  // called |MergeResultProvider| interface cannot be used any more.
+  Done() => (Status status);
+};
+
 // Custom conflict resolver. If a |ConflictResolverFactory| is registered, and
 // |ConflictResolverFactory.GetPolicy()| returns |AUTOMATIC_WITH_FALLBACK| or
 // |CUSTOM| when called for a given page, the |NewConflictResolver| method will
@@ -324,21 +356,14 @@ struct MergedValue {
 // conflict by returning the final value for all conflicting keys as well as
 // values for any other key that the client wants to change.
 interface ConflictResolver {
-  // Method called when a conflict needs to be resolved. |change_left| and
-  // |change_right| contain the keys/values of the 2 branches to merge.
-  // If the |CUSTOM| policy was selected, all modified keys are present.
-  // |common_version| is the snapshot of the first common ancestor of the 2
-  // changes and will only be NULL if this version is no longer available.
-  // This method must return a set of changes, using the left branch as the
-  // base, that will be used to define the merged commit. Only key/value pairs
-  // different from the left version of the page should be sent. Clients can
-  // introduce new keys if needed.
-  // Values of |LAZY| keys may not be present on the device. In that case,
-  // |Entry| objects (inside the PageChange objects) will have a null |value|
-  // field. |left| and |right| PageSnapshot handles may be used by clients to
-  // Fetch these values if necessary.
-  // TODO(etiennej): handle pagination.
-  Resolve(PageSnapshot left, PageChange change_left,
-          PageSnapshot right, PageChange change_right,
-          PageSnapshot? common_version) => (array<MergedValue>? merge_changes);
+  // Method called when a conflict needs to be resolved. |left| and |right|
+  // contain the snapshots of the two branches and |common_version| that of the
+  // lowest common ancestor. |common_version| can be NULL if this version is no
+  // longer available. The result of the merge can be given through the
+  // |result_provider|, using the left branch as the base of the merge commit,
+  // i.e. only key/value pairs that are different from the left version of the
+  // page should be sent. |result_provider| can also be used to retrieve the set
+  // of differences, i.e. conflicting keys, between the two versions.
+  Resolve(PageSnapshot left, PageSnapshot right, PageSnapshot? common_version,
+          MergeResultProvider result_provider);
 };

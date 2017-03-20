@@ -10,6 +10,8 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/page_manager.h"
+#include "apps/ledger/src/callback/operation_serializer.h"
+#include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/macros.h"
@@ -19,7 +21,7 @@ namespace ledger {
 // Client handling communication with a ConflictResolver interface in order to
 // merge conflicting commit branches. It is used both by AutoMergeStrategy and
 // CustomMergeStrategy.
-class ConflictResolverClient {
+class ConflictResolverClient : public MergeResultProvider {
  public:
   explicit ConflictResolverClient(
       storage::PageStorage* storage,
@@ -33,11 +35,19 @@ class ConflictResolverClient {
 
   void Start();
   void Cancel();
-  void Done();
 
  private:
-  void OnChangesReady(Status status, std::vector<PageChangePtr> changes);
-  void OnMergeDone(fidl::Array<MergedValuePtr> merged_values);
+  void OnNextMergeResult(
+      const MergedValuePtr& merged_value,
+      const ftl::RefPtr<callback::Waiter<storage::Status, storage::ObjectId>>&
+          waiter);
+  void Finalize();
+
+  // MergeResultProvider:
+  void GetDiff(fidl::Array<uint8_t> token, const GetDiffCallback& callback);
+  void Merge(fidl::Array<MergedValuePtr> merge_changes,
+             const MergeCallback& callback);
+  void Done(const DoneCallback& callback);
 
   storage::PageStorage* const storage_;
   PageManager* const manager_;
@@ -57,6 +67,9 @@ class ConflictResolverClient {
   // operation to finish (the other cases, such as committing the merge).
   bool in_client_request_ = false;
   bool cancelled_ = false;
+  callback::OperationSerializer<Status> operation_serializer_;
+
+  fidl::Binding<MergeResultProvider> merge_result_provider_binding_;
 
   // This must be the last member of the class.
   ftl::WeakPtrFactory<ConflictResolverClient> weak_factory_;

@@ -68,24 +68,63 @@ class ConflictResolverImpl : public ConflictResolver {
 
   struct ResolveRequest {
     fidl::InterfaceHandle<PageSnapshot> left_version;
-    PageChangePtr change_left;
     fidl::InterfaceHandle<PageSnapshot> right_version;
-    PageChangePtr change_right;
     fidl::InterfaceHandle<PageSnapshot> common_version;
-    ResolveCallback callback;
+    MergeResultProviderPtr result_provider;
 
     ResolveRequest(fidl::InterfaceHandle<PageSnapshot> left_version,
-                   PageChangePtr change_left,
                    fidl::InterfaceHandle<PageSnapshot> right_version,
-                   PageChangePtr change_right,
                    fidl::InterfaceHandle<PageSnapshot> common_version,
-                   const ResolveCallback& callback)
+                   fidl::InterfaceHandle<MergeResultProvider> result_provider)
         : left_version(std::move(left_version)),
-          change_left(std::move(change_left)),
           right_version(std::move(right_version)),
-          change_right(std::move(change_right)),
           common_version(std::move(common_version)),
-          callback(callback) {}
+          result_provider(
+              MergeResultProviderPtr::Create(std::move(result_provider))) {}
+
+    ::testing::AssertionResult GetDiff(PageChangePtr* change_left,
+                                       PageChangePtr* change_right) {
+      Status status;
+      result_provider->GetDiff(nullptr, [&status, change_left, change_right](
+                                            Status s, PageChangePtr left,
+                                            PageChangePtr right,
+                                            fidl::Array<uint8_t> next_token) {
+        status = s;
+        *change_left = std::move(left);
+        *change_right = std::move(right);
+        FTL_DCHECK(next_token.is_null()) << "Pagination not implemented, yet.";
+      });
+      if (!result_provider.WaitForIncomingResponse()) {
+        return ::testing::AssertionFailure() << "GetDiff failed.";
+      }
+      if (status != Status::OK) {
+        return ::testing::AssertionFailure()
+               << "GetDiff failed with status " << status;
+      }
+      return ::testing::AssertionSuccess();
+    }
+
+    ::testing::AssertionResult Merge(fidl::Array<MergedValuePtr> results) {
+      Status status;
+      result_provider->Merge(std::move(results),
+                             [&status](Status s) { status = s; });
+      if (!result_provider.WaitForIncomingResponse()) {
+        return ::testing::AssertionFailure() << "Merge failed.";
+      }
+      if (status != Status::OK) {
+        return ::testing::AssertionFailure()
+               << "Merge failed with status " << status;
+      }
+      result_provider->Done([&status](Status s) { status = s; });
+      if (!result_provider.WaitForIncomingResponse()) {
+        return ::testing::AssertionFailure() << "Done failed.";
+      }
+      if (status != Status::OK) {
+        return ::testing::AssertionFailure()
+               << "Done failed with status " << status;
+      }
+      return ::testing::AssertionSuccess();
+    }
   };
 
   std::vector<ResolveRequest> requests;
@@ -93,15 +132,14 @@ class ConflictResolverImpl : public ConflictResolver {
 
  private:
   // ConflictResolver:
-  void Resolve(fidl::InterfaceHandle<PageSnapshot> left_version,
-               PageChangePtr change_left,
-               fidl::InterfaceHandle<PageSnapshot> right_version,
-               PageChangePtr change_right,
-               fidl::InterfaceHandle<PageSnapshot> common_version,
-               const ResolveCallback& callback) override {
-    requests.emplace_back(std::move(left_version), std::move(change_left),
-                          std::move(right_version), std::move(change_right),
-                          std::move(common_version), callback);
+  void Resolve(
+      fidl::InterfaceHandle<PageSnapshot> left_version,
+      fidl::InterfaceHandle<PageSnapshot> right_version,
+      fidl::InterfaceHandle<PageSnapshot> common_version,
+      fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
+    requests.emplace_back(std::move(left_version), std::move(right_version),
+                          std::move(common_version),
+                          std::move(result_provider));
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
@@ -144,6 +182,32 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
   fidl::Binding<ConflictResolverFactory> binding_;
   ftl::Closure callback_;
 };
+
+::testing::AssertionResult ChangesMatch(
+    std::vector<std::string> expected_keys,
+    std::vector<std::string> expected_values,
+    const fidl::Array<EntryPtr>& found_entries) {
+  FTL_DCHECK(expected_keys.size() == expected_values.size());
+  if (found_entries.size() != expected_keys.size()) {
+    return ::testing::AssertionFailure()
+           << "Wrong changes size. Expected " << expected_keys.size()
+           << " but found " << found_entries.size();
+  }
+  for (size_t i = 0; i < expected_keys.size(); ++i) {
+    if (expected_keys[i] !=
+        convert::ExtendedStringView(found_entries[i]->key)) {
+      return ::testing::AssertionFailure()
+             << "Expected key \"" << expected_keys[i] << "\" but found \""
+             << convert::ExtendedStringView(found_entries[i]->key) << "\"";
+    }
+    if (expected_values[i] != ToString(found_entries[i]->value)) {
+      return ::testing::AssertionFailure()
+             << "Expected value \"" << expected_values[i] << "\" but found \""
+             << ToString(found_entries[i]->value) << "\"";
+    }
+  }
+  return ::testing::AssertionSuccess();
+}
 
 TEST_F(MergingIntegrationTest, Merging) {
   PagePtr page1 = GetTestPage();
@@ -400,34 +464,20 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
+  PageChangePtr change_left;
+  PageChangePtr change_right;
+  ASSERT_TRUE(resolver_impl->requests[0].GetDiff(&change_left, &change_right));
+
   // Left change is the most recent, so the one made on |page2|.
-  ASSERT_EQ(2u, resolver_impl->requests[0].change_left->changes.size());
-  EXPECT_EQ("email",
-            convert::ExtendedStringView(
-                resolver_impl->requests[0].change_left->changes[0]->key));
-  EXPECT_EQ(
-      "alice@example.org",
-      ToString(resolver_impl->requests[0].change_left->changes[0]->value));
-  EXPECT_EQ("phone",
-            convert::ExtendedStringView(
-                resolver_impl->requests[0].change_left->changes[1]->key));
-  EXPECT_EQ(
-      "0123456789",
-      ToString(resolver_impl->requests[0].change_left->changes[1]->value));
+  EXPECT_TRUE(ChangesMatch(
+      std::vector<std::string>({"email", "phone"}),
+      std::vector<std::string>({"alice@example.org", "0123456789"}),
+      change_left->changes));
   // Right change comes from |page1|.
-  ASSERT_EQ(2u, resolver_impl->requests[0].change_right->changes.size());
-  EXPECT_EQ("city",
-            convert::ExtendedStringView(
-                resolver_impl->requests[0].change_right->changes[0]->key));
-  EXPECT_EQ(
-      "Paris",
-      ToString(resolver_impl->requests[0].change_right->changes[0]->value));
-  EXPECT_EQ("name",
-            convert::ExtendedStringView(
-                resolver_impl->requests[0].change_right->changes[1]->key));
-  EXPECT_EQ(
-      "Alice",
-      ToString(resolver_impl->requests[0].change_right->changes[1]->value));
+  EXPECT_TRUE(ChangesMatch(std::vector<std::string>({"city", "name"}),
+                           std::vector<std::string>({"Paris", "Alice"}),
+                           change_right->changes));
+
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));
@@ -469,7 +519,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  resolver_impl->requests[0].callback(std::move(merged_values));
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -552,7 +602,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   // Resolution should not crash the Ledger
   fidl::Array<MergedValuePtr> merged_values =
       fidl::Array<MergedValuePtr>::New(0);
-  resolver_impl->requests[0].callback(std::move(merged_values));
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
   EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
 }
 
@@ -635,7 +685,8 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   // Resolution should not crash the Ledger
   fidl::Array<MergedValuePtr> merged_values =
       fidl::Array<MergedValuePtr>::New(0);
-  resolver_impl2->requests[0].callback(std::move(merged_values));
+
+  EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
   EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
 }
 
@@ -770,29 +821,18 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
-  // Left change is the most recent, so the one made on |page2|.
-  ASSERT_EQ(2u, resolver_impl->requests[0].change_left->changes.size());
-  EXPECT_EQ("city",
-            convert::ExtendedStringView(
-                resolver_impl->requests[0].change_left->changes[0]->key));
-  EXPECT_EQ(
-      "San Francisco",
-      ToString(resolver_impl->requests[0].change_left->changes[0]->value));
-  EXPECT_EQ("name",
-            convert::ExtendedStringView(
-                resolver_impl->requests[0].change_left->changes[1]->key));
-  EXPECT_EQ(
-      "Alice",
-      ToString(resolver_impl->requests[0].change_left->changes[1]->value));
+  PageChangePtr change_left;
+  PageChangePtr change_right;
+  ASSERT_TRUE(resolver_impl->requests[0].GetDiff(&change_left, &change_right));
 
+  // Left change is the most recent, so the one made on |page2|.
+  EXPECT_TRUE(ChangesMatch(std::vector<std::string>({"city", "name"}),
+                           std::vector<std::string>({"San Francisco", "Alice"}),
+                           change_left->changes));
   // Right change comes from |page1|.
-  ASSERT_EQ(1u, resolver_impl->requests[0].change_right->changes.size());
-  EXPECT_EQ("city",
-            convert::ExtendedStringView(
-                resolver_impl->requests[0].change_right->changes[0]->key));
-  EXPECT_EQ(
-      "Paris",
-      ToString(resolver_impl->requests[0].change_right->changes[0]->value));
+  EXPECT_TRUE(ChangesMatch(std::vector<std::string>({"city"}),
+                           std::vector<std::string>({"Paris"}),
+                           change_right->changes));
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));
@@ -819,7 +859,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  resolver_impl->requests[0].callback(std::move(merged_values));
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
