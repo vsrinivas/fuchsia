@@ -206,7 +206,6 @@ wait:
         if (st != NO_ERROR)
             return st;
     }
-    return ERR_BAD_STATE;
 }
 
 PortObserver* PortDispatcherV2::SnapCopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) {
