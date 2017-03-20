@@ -1141,10 +1141,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/ldso/dynlink.c
 
 
-# base.ld is a trivial linker script input file that defines
-# a symbol that cannot be defined from the assembler.
-MODULE_EXTRA_OBJS := $(LOCAL_DIR)/ldso/base.ld
-
 include make/module.mk
 
 

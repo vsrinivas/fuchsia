@@ -20,7 +20,7 @@
 __NO_SAFESTACK __attribute__((__visibility__("hidden")))
 dl_start_return_t _dl_start(
     void* start_arg, void* vdso) {
-    size_t base = (size_t)_BASE;
+    size_t base = (size_t)__ehdr_start;
     ElfW(Dyn)* dynv = _DYNAMIC;
 
     size_t i, dyn[DYN_CNT];

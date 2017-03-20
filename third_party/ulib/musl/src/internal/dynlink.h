@@ -77,7 +77,8 @@ typedef dl_start_return_t stage2_func(void* start_arg, void* vdso);
 typedef dl_start_return_t stage3_func(void* start_arg);
 
 // We can access these with simple PC-relative relocs.
-// _BASE is defined by base.ld to 0, i.e. the lowest address in the DSO image.
-// _DYNAMIC is defined automagically by the linker.
-extern const char _BASE[] __attribute__((visibility("hidden")));
+// Both of these symbols are defined automagically by the linker.
+// Since we use a standard 0-based DSO layout, __ehdr_start matches
+// the lowest address in the DSO image.
+extern const ElfW(Ehdr) __ehdr_start[] __attribute__((visibility("hidden")));
 extern ElfW(Dyn) _DYNAMIC[] __attribute__((visibility("hidden")));

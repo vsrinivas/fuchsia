@@ -1353,7 +1353,7 @@ __NO_SAFESTACK static void update_tls_size(void) {
 __NO_SAFESTACK __attribute__((__visibility__("hidden")))
 dl_start_return_t __dls2(
     void* start_arg, void* vdso_map) {
-    ldso.base = (unsigned char*)_BASE;
+    ldso.base = (unsigned char*)__ehdr_start;
 
     Ehdr* ehdr = (void*)ldso.base;
     ldso.name = (char*)"libc.so";
