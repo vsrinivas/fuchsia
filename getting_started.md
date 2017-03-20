@@ -156,7 +156,7 @@ Note: Networking support within QEMU is only available under x86_64.
 First, [configure](https://fuchsia.googlesource.com/magenta/+/master/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only)
 a virtual interface for QEMU's use.
 
-Once this is done you can add the -N and -u flags to `frun`:
+Once this is done you can add the `-N` and `-u` flags to `frun`:
 
 ```
 frun -N -u $FUCHSIA_SCRIPTS_DIR/start-dhcp-server.sh
