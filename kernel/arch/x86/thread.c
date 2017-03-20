@@ -42,6 +42,11 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     struct x86_64_context_switch_frame *frame = (struct x86_64_context_switch_frame *)(stack_top);
 #endif
 
+    // Record a zero return address so that backtraces will stop here.
+    // Otherwise if heap debugging is on, and say there is 99..99 here,
+    // then the debugger could try to continue the backtrace from there.
+    memset((void*) stack_top, 0, 8);
+
     // move down a frame size and zero it out
     frame--;
     memset(frame, 0, sizeof(*frame));
