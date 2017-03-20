@@ -90,8 +90,8 @@ system like apt, brew, or similar.
 > sudo apt-get install liblz4-tool mtools
 ```
 
-Build Fuchsia as you normally would, describing this procedure is outside the
-scope of this document. Then run the command to build the installer files
+[Build Fuchsia](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Build-Fuchsia)
+as you normally would, then run the command to build the installer files
 
 ```
 > scripts/installer/build-installable-userfs.sh
