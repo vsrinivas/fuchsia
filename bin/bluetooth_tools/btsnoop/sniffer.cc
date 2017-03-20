@@ -71,7 +71,7 @@ void Sniffer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 
   uint8_t flags = buffer_[0];
   logger_.WritePacket(bluetooth::common::BufferView(buffer_ + 1, read_size - 1),
-                      flags == BT_HCI_SNOOP_FLAG_EVENT, false);
+                      flags & BT_HCI_SNOOP_FLAG_RECEIVED, flags & BT_HCI_SNOOP_FLAG_DATA);
 }
 
 void Sniffer::OnHandleError(mx_handle_t handle, mx_status_t error) {
