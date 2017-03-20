@@ -7,6 +7,15 @@
 namespace bluetooth {
 namespace common {
 
+std::unique_ptr<uint8_t[]> ByteBuffer::CopyContents() const {
+  size_t size = GetSize();
+  if (!size) return nullptr;
+
+  auto buffer = std::make_unique<uint8_t[]>(size);
+  memcpy(buffer.get(), GetData(), size);
+  return buffer;
+}
+
 std::string ByteBuffer::AsString() const {
   return std::string(reinterpret_cast<const char*>(GetData()), GetSize());
 }
@@ -57,12 +66,6 @@ void DynamicByteBuffer::SetToZeros() {
   memset(buffer_.get(), 0, buffer_size_);
 }
 
-std::unique_ptr<uint8_t[]> DynamicByteBuffer::TransferContents() {
-  auto moved = std::move(buffer_);
-  buffer_size_ = 0u;
-  return moved;
-}
-
 ByteBuffer::const_iterator DynamicByteBuffer::cbegin() const {
   return buffer_.get();
 }
@@ -96,49 +99,6 @@ ByteBuffer::const_iterator BufferView::cbegin() const {
 }
 
 ByteBuffer::const_iterator BufferView::cend() const {
-  return bytes_ + size_;
-}
-
-MutableBufferView::MutableBufferView(uint8_t* bytes, size_t size) : size_(size), bytes_(bytes) {
-  FTL_DCHECK(bytes_);
-  FTL_DCHECK(size_);
-}
-
-MutableBufferView::MutableBufferView(MutableByteBuffer* buffer) {
-  FTL_DCHECK(buffer);
-  size_ = buffer->GetSize();
-  bytes_ = buffer->GetMutableData();
-}
-
-const uint8_t* MutableBufferView::GetData() const {
-  return bytes_;
-}
-
-uint8_t* MutableBufferView::GetMutableData() {
-  return bytes_;
-}
-
-size_t MutableBufferView::GetSize() const {
-  return size_;
-}
-
-void MutableBufferView::SetToZeros() {
-  memset(bytes_, 0, size_);
-}
-
-std::unique_ptr<uint8_t[]> MutableBufferView::TransferContents() {
-  if (!size_) return nullptr;
-
-  auto buffer = std::make_unique<uint8_t[]>(size_);
-  memcpy(buffer.get(), bytes_, size_);
-  return buffer;
-}
-
-ByteBuffer::const_iterator MutableBufferView::cbegin() const {
-  return bytes_;
-}
-
-ByteBuffer::const_iterator MutableBufferView::cend() const {
   return bytes_ + size_;
 }
 

@@ -37,7 +37,7 @@ CommandChannel::QueuedCommand::QueuedCommand(TransactionId id, const CommandPack
   transaction_data.task_runner = task_runner;
 
   packet_data = common::DynamicByteBuffer(command_packet.size(),
-                                          command_packet.mutable_buffer()->TransferContents());
+                                          command_packet.mutable_buffer()->CopyContents());
 }
 
 CommandChannel::CommandChannel(Transport* transport, mx::channel hci_command_channel)

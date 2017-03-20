@@ -53,10 +53,9 @@ struct TestTransaction final {
   // ByteBuffer.
   TestTransaction(common::MutableByteBuffer* expected,
                   const std::vector<common::MutableByteBuffer*>& responses) {
-    this->expected = common::DynamicByteBuffer(expected->GetSize(), expected->TransferContents());
+    this->expected = common::DynamicByteBuffer(expected->GetSize(), expected->CopyContents());
     for (auto* buffer : responses) {
-      this->responses.push(
-          common::DynamicByteBuffer(buffer->GetSize(), buffer->TransferContents()));
+      this->responses.push(common::DynamicByteBuffer(buffer->GetSize(), buffer->CopyContents()));
     }
   }
 

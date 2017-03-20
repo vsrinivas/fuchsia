@@ -31,7 +31,7 @@ TEST(ByteBufferTest, StaticByteBuffer) {
   EXPECT_TRUE(ContainersEqual(kExpected, buffer_copy));
 
   // Transfer contents into raw buffer.
-  auto contents = buffer.TransferContents();
+  auto contents = buffer.CopyContents();
   EXPECT_TRUE(ContainersEqual(kExpected, contents.get(), kBufferSize));
   EXPECT_EQ(kBufferSize, buffer.GetSize());
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
@@ -70,13 +70,9 @@ TEST(ByteBufferTest, DynamicByteBuffer) {
   EXPECT_EQ(nullptr, buffer.GetData());
   EXPECT_TRUE(ContainersEqual(kExpected, buffer_moved));
 
-  // Transfer contents into raw buffer. Calling TransferContents() should
-  // invalidate the buffer contents.
-  auto contents = buffer_moved.TransferContents();
-  EXPECT_TRUE(ContainersEqual(kExpected, contents.get(), kBufferSize));
-  EXPECT_EQ(nullptr, buffer_moved.GetData());
-  EXPECT_EQ(nullptr, buffer_moved.GetMutableData());
-  EXPECT_EQ(0u, buffer_moved.GetSize());
+  // Test CopyContents().
+  auto contents = buffer_moved.CopyContents();
+  EXPECT_TRUE(ContainersEqual(buffer_moved, contents.get(), kBufferSize));
   EXPECT_EQ(buffer.cbegin(), buffer.cend());
 }
 
@@ -102,27 +98,6 @@ TEST(ByteBufferTest, BufferViewTest) {
   BufferView view(buffer);
   EXPECT_EQ(0x00, buffer.GetData()[0]);
   EXPECT_EQ(0x00, view.GetData()[0]);
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
-  EXPECT_EQ(kBufferSize, view.GetSize());
-}
-
-TEST(ByteBufferTest, MutableBufferViewTest) {
-  constexpr size_t kBufferSize = 5;
-  DynamicByteBuffer buffer(kBufferSize);
-
-  EXPECT_EQ(kBufferSize, buffer.GetSize());
-  buffer.SetToZeros();
-
-  MutableBufferView view(&buffer);
-
-  // It should be possible to mutate the contents of the underlying buffer.
-  view.GetMutableData()[0] = 0xFF;
-  EXPECT_EQ(0xFF, buffer.GetData()[0]);
-  view.SetToZeros();
-  EXPECT_EQ(0x00, buffer.GetData()[0]);
-
-  // Calling TransferContents() should leave |buffer| untouched.
-  auto contents = view.TransferContents();
   EXPECT_EQ(kBufferSize, buffer.GetSize());
   EXPECT_EQ(kBufferSize, view.GetSize());
 }

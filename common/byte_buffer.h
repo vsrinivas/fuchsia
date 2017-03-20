@@ -28,7 +28,8 @@ class ByteBuffer {
   // Returns the number of bytes contained in this packet.
   virtual size_t GetSize() const = 0;
 
-  // TODO(armansito): Add a CopyContents() method
+  // Copy the contents of the underlying buffer and return them in a new buffer.
+  virtual std::unique_ptr<uint8_t[]> CopyContents() const;
 
   // Iterator functions.
   iterator begin() const { return cbegin(); }
@@ -50,21 +51,6 @@ class MutableByteBuffer : public ByteBuffer {
 
   // Sets the contents of the buffer to 0s.
   virtual void SetToZeros() = 0;
-
-  // TODO(armansito): Remove this function. All this over-engineering around
-  // "maybe moving" contents is too confusing. Replace this with
-  // ByteBuffer::CopyContents().
-  //
-  // Returns the contents of this buffer in a dynamic array of bytes the
-  // ownership of which now belongs to the caller. An implementation can choose
-  // to either:
-  //
-  //    - Copy its contents and return them in a newly allocated array.
-  //    - Move its contents without making a copy and invalidate itself.
-  //
-  // If an implementation chooses to move its contents then it needs to make
-  // sure that the source instance is left in a consistent state.
-  virtual std::unique_ptr<uint8_t[]> TransferContents() = 0;
 };
 
 // A ByteBuffer with static storage duration. Instances of this class are
@@ -90,19 +76,13 @@ class StaticByteBuffer : public MutableByteBuffer {
 
   // ByteBuffer overrides
   const uint8_t* GetData() const override { return buffer_.data(); }
-  uint8_t* GetMutableData() override { return buffer_.data(); }
   size_t GetSize() const override { return buffer_.size(); }
-  void SetToZeros() override { buffer_.fill(0); }
-
-  std::unique_ptr<uint8_t[]> TransferContents() override {
-    auto new_buffer = std::make_unique<uint8_t[]>(buffer_.size());
-    FTL_DCHECK(new_buffer.get());
-    memcpy(new_buffer.get(), buffer_.data(), buffer_.size());
-    return new_buffer;
-  }
-
   const_iterator cbegin() const override { return buffer_.cbegin(); }
   const_iterator cend() const override { return buffer_.cend(); }
+
+  // MutableByteBuffer overrides:
+  uint8_t* GetMutableData() override { return buffer_.data(); }
+  void SetToZeros() override { buffer_.fill(0); }
 
  private:
   std::array<uint8_t, BufferSize> buffer_;
@@ -122,10 +102,6 @@ StaticByteBuffer<sizeof...(T)> CreateStaticByteBuffer(T... bytes) {
 
 // A ByteBuffer with dynamic storage duration. The underlying buffer is
 // allocated using malloc. Instances of this class are move-only.
-//
-// TODO(armansito): If our libc malloc implementation proves to be inefficient
-// for data packets, we should allow for more efficient allocation schemes, e.g.
-// by using the trait/mixin pattern.
 class DynamicByteBuffer : public MutableByteBuffer {
  public:
   // The default constructor creates an empty buffer with size 0.
@@ -145,12 +121,13 @@ class DynamicByteBuffer : public MutableByteBuffer {
 
   // ByteBuffer overrides:
   const uint8_t* GetData() const override;
-  uint8_t* GetMutableData() override;
   size_t GetSize() const override;
-  void SetToZeros() override;
-  std::unique_ptr<uint8_t[]> TransferContents() override;
   const_iterator cbegin() const override;
   const_iterator cend() const override;
+
+  // MutableByteBuffer overrides:
+  uint8_t* GetMutableData() override;
+  void SetToZeros() override;
 
  private:
   // Pointer to the underlying buffer, which is owned and managed by us.
@@ -179,27 +156,6 @@ class BufferView : public ByteBuffer {
  private:
   size_t size_;
   const uint8_t* bytes_;
-};
-
-// Mutable version of BufferView, which is a light-weight wrapper over a
-// ByteBuffer that provides mutable access to its contents.
-class MutableBufferView : public MutableByteBuffer {
- public:
-  explicit MutableBufferView(MutableByteBuffer* buffer);
-  MutableBufferView(uint8_t* bytes, size_t size);
-
-  // ByteBuffer overrides:
-  const uint8_t* GetData() const override;
-  uint8_t* GetMutableData() override;
-  size_t GetSize() const override;
-  void SetToZeros() override;
-  std::unique_ptr<uint8_t[]> TransferContents() override;
-  const_iterator cbegin() const override;
-  const_iterator cend() const override;
-
- private:
-  size_t size_;
-  uint8_t* bytes_;
 };
 
 }  // namespace common
