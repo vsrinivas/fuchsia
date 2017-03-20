@@ -10,19 +10,24 @@ extern crate magenta_sys;
 extern crate conv;
 
 use std::marker::PhantomData;
-use std::mem;
 
 use conv::{ValueInto, ValueFrom, UnwrapOrSaturate};
 
+mod channel;
 mod event;
 mod eventpair;
 mod fifo;
 mod socket;
+mod vmo;
+mod waitset;
 
+pub use channel::{Channel, ChannelOpts, MessageBuf};
 pub use event::{Event, EventOpts};
 pub use eventpair::{EventPair, EventPairOpts};
 pub use fifo::{Fifo, FifoOpts};
 pub use socket::{Socket, SocketOpts, SocketReadOpts, SocketWriteOpts};
+pub use vmo::{Vmo, VmoOpts};
+pub use waitset::{WaitSet, WaitSetOpts};
 
 use magenta_sys as sys;
 
@@ -207,45 +212,6 @@ pub use magenta_sys::{
         MX_DATAPIPE_READ_THRESHOLD,
         MX_DATAPIPE_WRITE_THRESHOLD,
 };
-
-/// Options for creating a channel.
-#[repr(u32)]
-pub enum ChannelOpts {
-    /// A normal channel.
-    Normal = 0,
-}
-
-/// Options for creating wait sets. None supported yet.
-#[repr(u32)]
-pub enum WaitSetOpts {
-    /// Default options.
-    Default = 0,
-}
-
-/// Options for creating virtual memory objects. None supported yet.
-#[repr(u32)]
-pub enum VmoOpts {
-    /// Default options.
-    Default = 0,
-}
-
-impl Default for ChannelOpts {
-    fn default() -> Self {
-        ChannelOpts::Normal
-    }
-}
-
-impl Default for WaitSetOpts {
-    fn default() -> Self {
-        WaitSetOpts::Default
-    }
-}
-
-impl Default for VmoOpts {
-    fn default() -> Self {
-        VmoOpts::Default
-    }
-}
 
 /// A "wait item" containing a handle reference and information about what signals
 /// to wait on, and, on return from `object_wait_many`, which are pending.
@@ -481,375 +447,8 @@ impl Handle {
     }
 }
 
-// Channels
-
-/// An object representing a Magenta
-/// [channel](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/channel.md).
-///
-/// As essentially a subtype of `Handle`, it can be freely interconverted.
-pub struct Channel(Handle);
-
-impl HandleBase for Channel {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Channel(handle)
-    }
-}
-
-impl Peered for Channel {
-}
-
-impl Channel {
-    /// Create a channel, resulting an a pair of `Channel` objects representing both
-    /// sides of the channel. Messages written into one maybe read from the opposite.
-    ///
-    /// Wraps the
-    /// [mx_channel_create](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_create.md)
-    /// syscall.
-    pub fn create(opts: ChannelOpts) -> Result<(Channel, Channel), Status> {
-        unsafe {
-            let mut handle0 = 0;
-            let mut handle1 = 0;
-            let status = sys::mx_channel_create(opts as u32, &mut handle0, &mut handle1);
-            into_result(status, ||
-                (Self::from_handle(Handle(handle0)),
-                    Self::from_handle(Handle(handle1))))
-        }
-    }
-
-    /// Read a message from a channel. Wraps the
-    /// [mx_channel_read](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_read.md)
-    /// syscall.
-    ///
-    /// If the `MessageBuf` lacks the capacity to hold the pending message,
-    /// returns an `Err` with the number of bytes and number of handles needed.
-    /// Otherwise returns an `Ok` with the result as usual.
-    pub fn read_raw(&self, opts: u32, buf: &mut MessageBuf)
-        -> Result<Result<(), Status>, (usize, usize)>
-    {
-        unsafe {
-            buf.reset_handles();
-            let raw_handle = self.raw_handle();
-            let mut num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
-            let mut num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
-            let status = sys::mx_channel_read(raw_handle, opts,
-                buf.bytes.as_mut_ptr(), num_bytes, &mut num_bytes,
-                buf.handles.as_mut_ptr(), num_handles, &mut num_handles);
-            if status == sys::ERR_BUFFER_TOO_SMALL {
-                Err((num_bytes as usize, num_handles as usize))
-            } else {
-                Ok(into_result(status, || {
-                    buf.bytes.set_len(num_bytes as usize);
-                    buf.handles.set_len(num_handles as usize);
-                }))
-            }
-        }
-    }
-
-    /// Read a message from a channel.
-    ///
-    /// Note that this method can cause internal reallocations in the `MessageBuf`
-    /// if it is lacks capacity to hold the full message. If such reallocations
-    /// are not desirable, use `read_raw` instead.
-    pub fn read(&self, opts: u32, buf: &mut MessageBuf) -> Result<(), Status> {
-        loop {
-            match self.read_raw(opts, buf) {
-                Ok(result) => return result,
-                Err((num_bytes, num_handles)) => {
-                    buf.ensure_capacity_bytes(num_bytes);
-                    buf.ensure_capacity_handles(num_handles);
-                }
-            }
-        }
-    }
-
-    /// Write a message to a channel. Wraps the
-    /// [mx_channel_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_write.md)
-    /// syscall.
-    pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
-            -> Result<(), Status>
-    {
-        unsafe {
-            let n_bytes = try!(bytes.len().value_into().map_err(|_| Status::ErrOutOfRange));
-            let n_handles = try!(handles.len().value_into().map_err(|_| Status::ErrOutOfRange));
-            let status = sys::mx_channel_write(self.raw_handle(), opts, bytes.as_ptr(), n_bytes,
-                handles.as_ptr() as *const sys::mx_handle_t, n_handles);
-            into_result(status, || {
-                // Handles were successfully transferred, forget them on sender side
-                handles.set_len(0);
-            })
-        }
-    }
-}
-
-/// A buffer for _receiving_ messages from a channel.
-///
-/// A `MessageBuf` is essentially a byte buffer and a vector of
-/// handles, but move semantics for "taking" handles requires special handling.
-///
-/// Note that for sending messages to a channel, the caller manages the buffers,
-/// using a plain byte slice and `Vec<Handle>`.
-#[derive(Default)]
-pub struct MessageBuf {
-    bytes: Vec<u8>,
-    handles: Vec<sys::mx_handle_t>,
-}
-
-impl MessageBuf {
-    /// Create a new, empty, message buffer.
-    pub fn new() -> Self {
-        Default::default()
-    }
-
-    /// Ensure that the buffer has the capacity to hold at least `n_bytes` bytes.
-    pub fn ensure_capacity_bytes(&mut self, n_bytes: usize) {
-        ensure_capacity(&mut self.bytes, n_bytes);
-    }
-
-    /// Ensure that the buffer has the capacity to hold at least `n_handles` handles.
-    pub fn ensure_capacity_handles(&mut self, n_handles: usize) {
-        ensure_capacity(&mut self.handles, n_handles);
-    }
-
-    /// Get a reference to the bytes of the message buffer, as a `&[u8]` slice.
-    pub fn bytes(&self) -> &[u8] {
-        self.bytes.as_slice()
-    }
-
-    /// The number of handles in the message buffer. Note this counts the number
-    /// available when the message was received; `take_handle` does not affect
-    /// the count.
-    pub fn n_handles(&self) -> usize {
-        self.handles.len()
-    }
-
-    /// Take the handle at the specified index from the message buffer. If the
-    /// method is called again with the same index, it will return `None`, as
-    /// will happen if the index exceeds the number of handles available.
-    pub fn take_handle(&mut self, index: usize) -> Option<Handle> {
-        self.handles.get_mut(index).and_then(|handleref|
-            if *handleref == INVALID_HANDLE {
-                None
-            } else {
-                Some(Handle(mem::replace(handleref, INVALID_HANDLE)))
-            }
-        )
-    }
-
-    fn drop_handles(&mut self) {
-        for &handle in &self.handles {
-            if handle != 0 {
-                handle_drop(handle);
-            }
-        }
-    }
-
-    fn reset_handles(&mut self) {
-        self.drop_handles();
-        self.handles.clear();
-    }
-}
-
-impl Drop for MessageBuf {
-    fn drop(&mut self) {
-        self.drop_handles();
-    }
-}
-
 fn size_to_u32_sat(size: usize) -> u32 {
     u32::value_from(size).unwrap_or_saturate()
-}
-
-fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
-    let len = vec.len();
-    if size > len {
-        vec.reserve(size - len);
-    }
-}
-
-// Wait sets
-
-// This is the lowest level interface, strictly in terms of cookies.
-
-/// An object representing a Magenta
-/// [waitset](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/waitset.md).
-///
-/// As essentially a subtype of `Handle`, it can be freely interconverted.
-pub struct WaitSet(Handle);
-
-impl HandleBase for WaitSet {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        WaitSet(handle)
-    }
-}
-
-impl WaitSet {
-    /// Create a wait set.
-    ///
-    /// Wraps the
-    /// [mx_waitset_create](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_create.md)
-    /// sycall.
-    pub fn create(options: WaitSetOpts) -> Result<WaitSet, Status> {
-        let mut handle = 0;
-        let status = unsafe { sys::mx_waitset_create(options as u32, &mut handle) };
-        into_result(status, ||
-            WaitSet::from_handle(Handle(handle)))
-    }
-
-    /// Add an entry to a wait set.
-    ///
-    /// Wraps the
-    /// [mx_waitset_add](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_add.md)
-    /// sycall.
-    pub fn add<H>(&self, handle: &H, cookie: u64, signals: Signals) -> Result<(), Status>
-        where H: HandleBase
-    {
-        let status = unsafe {
-            sys::mx_waitset_add(self.raw_handle(), cookie, handle.raw_handle(), signals)
-        };
-        into_result(status, || ())
-    }
-
-    /// Remove an entry from a wait set.
-    ///
-    /// Wraps the
-    /// [mx_waitset_remove](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_remove.md)
-    /// sycall.
-    pub fn remove(&self, cookie: u64) -> Result<(), Status> {
-        let status = unsafe { sys::mx_waitset_remove(self.raw_handle(), cookie) };
-        into_result(status, || ())
-    }
-
-    /// Wait for one or more entires to be signalled.
-    ///
-    /// Wraps the
-    /// [mx_waitset_wait](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_wait.md)
-    /// sycall.
-    ///
-    /// The caller must make sure `results` has enough capacity. If the length is
-    /// equal to the capacity on return, that may be interpreted as a sign that
-    /// the capacity should be expanded.
-    pub fn wait(&self, timeout: Time, results: &mut Vec<WaitSetResult>)
-        -> Result<(), Status>
-    {
-        unsafe {
-            let mut count = size_to_u32_sat(results.capacity());
-            let status = sys::mx_waitset_wait(self.raw_handle(), timeout,
-                results.as_mut_ptr() as *mut sys::mx_waitset_result_t,
-                &mut count);
-            if status != sys::NO_ERROR {
-                results.clear();
-                return Err(Status::from_raw(status));
-            }
-            results.set_len(count as usize);
-            Ok(())
-        }
-    }
-}
-
-/// An element of the result of `WaitSet::wait`. See
-/// [waitset_wait](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_wait.md)
-/// for more information about the underlying structure.
-pub struct WaitSetResult(sys::mx_waitset_result_t);
-
-impl WaitSetResult {
-    /// The cookie used to identify the wait, same as was given in `WaitSet::add`.
-    pub fn cookie(&self) -> u64 {
-        self.0.cookie
-    }
-
-    /// The status. NoError if the signals are satisfied, ErrBadState if the signals
-    /// became unsatisfiable, or ErrHandleClosed if the handle was dropped.
-    pub fn status(&self) -> Status {
-        Status::from_raw(self.0.status)
-    }
-
-    /// The observed signals at some point shortly before `WaitSet::wait` returned.
-    pub fn observed(&self) -> Signals {
-        self.0.observed
-    }
-}
-
-// Virtual Memory Objects
-
-/// An object representing a Magenta
-/// [virtual memory object](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/vm_object.md).
-///
-/// As essentially a subtype of `Handle`, it can be freely interconverted.
-pub struct Vmo(Handle);
-
-impl HandleBase for Vmo {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Vmo(handle)
-    }
-}
-
-impl Vmo {
-    /// Create a virtual memory object.
-    ///
-    /// Wraps the
-    /// `mx_vmo_create`
-    /// syscall. See the
-    /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md#Shared-Memory_Virtual-Memory-Objects-VMOs)
-    /// for more information.
-    pub fn create(size: u64, options: VmoOpts) -> Result<Vmo, Status> {
-        let mut handle = 0;
-        let status = unsafe { sys::mx_vmo_create(size, options as u32, &mut handle) };
-        into_result(status, ||
-            Vmo::from_handle(Handle(handle)))
-    }
-
-    /// Read from a virtual memory object.
-    ///
-    /// Wraps the `mx_vmo_read` syscall.
-    pub fn read(&self, data: &mut [u8], offset: u64) -> Result<usize, Status> {
-        unsafe {
-            let mut actual = 0;
-            let status = sys::mx_vmo_read(self.raw_handle(), data.as_mut_ptr(),
-                offset, data.len(), &mut actual);
-            into_result(status, || actual)
-        }
-    }
-
-    /// Write to a virtual memory object.
-    ///
-    /// Wraps the `mx_vmo_write` syscall.
-    pub fn write(&self, data: &[u8], offset: u64) -> Result<usize, Status> {
-        unsafe {
-            let mut actual = 0;
-            let status = sys::mx_vmo_write(self.raw_handle(), data.as_ptr(),
-                offset, data.len(), &mut actual);
-            into_result(status, || actual)
-        }
-    }
-
-    /// Get the size of a virtual memory object.
-    ///
-    /// Wraps the `mx_vmo_get_size` syscall.
-    pub fn get_size(&self) -> Result<u64, Status> {
-        let mut size = 0;
-        let status = unsafe { sys::mx_vmo_get_size(self.raw_handle(), &mut size) };
-        into_result(status, || size)
-    }
-
-    /// Attempt to change the size of a virtual memory object.
-    ///
-    /// Wraps the `mx_vmo_set_size` syscall.
-    pub fn set_size(&self, size: u64) -> Result<(), Status> {
-        let status = unsafe { sys::mx_vmo_set_size(self.raw_handle(), size) };
-        into_result(status, || ())
-    }
 }
 
 // Data pipes (just a stub for now)
@@ -922,39 +521,6 @@ mod tests {
         assert!(time2 > time1 + sleep_ns);
     }
 
-    #[test]
-    fn vmo_get_size() {
-        let size = 16 * 1024 * 1024;
-        let vmo = Vmo::create(size, VmoOpts::Default).unwrap();
-        assert_eq!(size, vmo.get_size().unwrap());
-    }
-
-    #[test]
-    fn vmo_set_size() {
-        let start_size = 12;
-        let vmo = Vmo::create(start_size, VmoOpts::Default).unwrap();
-        assert_eq!(start_size, vmo.get_size().unwrap());
-
-        // Change the size and make sure the new size is reported
-        let new_size = 23;
-        assert!(vmo.set_size(new_size).is_ok());
-        assert_eq!(new_size, vmo.get_size().unwrap());
-    }
-
-    #[test]
-    fn vmo_read_write() {
-        let mut vec1 = vec![0; 16];
-        let vmo = Vmo::create(vec1.len() as u64, VmoOpts::Default).unwrap();
-        vmo.write(b"abcdef", 0).unwrap();
-        assert_eq!(16, vmo.read(&mut vec1, 0).unwrap());
-        assert_eq!(b"abcdef", &vec1[0..6]);
-        vmo.write(b"123", 2).unwrap();
-        assert_eq!(16, vmo.read(&mut vec1, 0).unwrap());
-        assert_eq!(b"ab123f", &vec1[0..6]);
-        assert_eq!(15, vmo.read(&mut vec1, 1).unwrap());
-        assert_eq!(b"b123f", &vec1[0..5]);
-    }
-
     /// Test duplication by means of a VMO
     #[test]
     fn duplicate() {
@@ -997,65 +563,6 @@ mod tests {
     }
 
     #[test]
-    fn channel_basic() {
-        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
-
-        let mut empty = vec![];
-        assert!(p1.write(b"hello", &mut empty, 0).is_ok());
-
-        let mut buf = MessageBuf::new();
-        assert!(p2.read(0, &mut buf).is_ok());
-        assert_eq!(buf.bytes(), b"hello");
-    }
-
-    #[test]
-    fn channel_read_raw_too_small() {
-        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
-
-        let mut empty = vec![];
-        assert!(p1.write(b"hello", &mut empty, 0).is_ok());
-
-        let mut buf = MessageBuf::new();
-        let result = p2.read_raw(0, &mut buf);
-        assert_eq!(result, Err((5, 0)));
-        assert_eq!(buf.bytes(), b"");
-    }
-
-    #[test]
-    fn channel_send_handle() {
-        let hello_length: usize = 5;
-
-        // Create a pair of channels and a virtual memory object.
-        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
-        let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
-
-        // Create a virtual memory object and send it down the channel.
-        let duplicate_vmo_handle = vmo.duplicate(MX_RIGHT_SAME_RIGHTS).unwrap().into_handle();
-        let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
-        assert!(p1.write(b"", &mut handles_to_send, 0).is_ok());
-
-        // Read the handle from the receiving channel.
-        let mut buf = MessageBuf::new();
-        assert!(p2.read(0, &mut buf).is_ok());
-        assert_eq!(buf.n_handles(), 1);
-        // Take the handle from the buffer.
-        let received_handle = buf.take_handle(0).unwrap();
-        // Should not affect number of handles.
-        assert_eq!(buf.n_handles(), 1);
-        // Trying to take it again should fail.
-        assert!(buf.take_handle(0).is_none());
-
-        // Now to test that we got the right handle, try writing something to it...
-        let received_vmo = Vmo::from_handle(received_handle);
-        assert_eq!(received_vmo.write(b"hello", 0).unwrap(), hello_length);
-
-        // ... and reading it back from the original VMO.
-        let mut read_vec = vec![0; hello_length];
-        assert_eq!(vmo.read(&mut read_vec, 0).unwrap(), hello_length);
-        assert_eq!(read_vec, b"hello");
-    }
-
-    #[test]
     fn wait_and_signal() {
         let event = Event::create(EventOpts::Default).unwrap();
         let ten_ms: Time = 10_000_000;
@@ -1073,51 +580,6 @@ mod tests {
         // Now clear it, and waiting should time out again.
         assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
         assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
-    }
-
-    #[test]
-    fn waitset() {
-        let ten_ms: Time = 10_000_000;
-        let cookie1 = 1;
-        let cookie2 = 2;
-        let e1 = Event::create(EventOpts::Default).unwrap();
-        let e2 = Event::create(EventOpts::Default).unwrap();
-
-        let waitset = WaitSet::create(WaitSetOpts::Default).unwrap();
-        assert!(waitset.add(&e1, cookie1, MX_USER_SIGNAL_0).is_ok());
-        // Adding another handle with the same cookie should fail
-        assert_eq!(waitset.add(&e2, cookie1, MX_USER_SIGNAL_0), Err(Status::ErrAlreadyExists));
-        assert!(waitset.add(&e2, cookie2, MX_USER_SIGNAL_1).is_ok());
-
-        // Waiting on the waitset now should time out.
-        let mut results = Vec::with_capacity(2);
-        assert_eq!(waitset.wait(ten_ms, &mut results), Err(Status::ErrTimedOut));
-        assert_eq!(results.len(), 0);
-
-        // Signal one object and it should return success.
-        assert!(e1.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert!(waitset.wait(ten_ms, &mut results).is_ok());
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].cookie(), cookie1);
-        assert_eq!(results[0].status(), Status::NoError);
-        assert_eq!(results[0].observed(), MX_USER_SIGNAL_0);
-
-        // Signal the other and it should return both.
-        assert!(e2.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_1).is_ok());
-        assert!(waitset.wait(ten_ms, &mut results).is_ok());
-        assert_eq!(results.len(), 2);
-        assert_eq!(results[0].cookie(), cookie1);
-        assert_eq!(results[0].status(), Status::NoError);
-        assert_eq!(results[0].observed(), MX_USER_SIGNAL_0);
-        assert_eq!(results[1].cookie(), cookie2);
-        assert_eq!(results[1].status(), Status::NoError);
-        assert_eq!(results[1].observed(), MX_USER_SIGNAL_1);
-
-        // Remove one and clear signals on the other; now it should time out again.
-        assert!(waitset.remove(cookie1).is_ok());
-        assert!(e2.signal(MX_USER_SIGNAL_1, MX_SIGNAL_NONE).is_ok());
-        assert_eq!(waitset.wait(ten_ms, &mut results), Err(Status::ErrTimedOut));
-        assert_eq!(results.len(), 0);
     }
 
     #[test]
