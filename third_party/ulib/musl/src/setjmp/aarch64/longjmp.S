@@ -50,6 +50,7 @@
 
 ENTRY(longjmp)
 ALIAS_ENTRY(_longjmp)
+ALIAS_ENTRY(siglongjmp)
 
     // Move the jmp_buf pointer to a temporary register.
     // We'll use x0 as a scratch register since we clobber it on return anyway.
@@ -149,3 +150,6 @@ ALIAS_ENTRY(_longjmp)
 
 END(longjmp)
 ALIAS_END(_longjmp)
+ALIAS_END(siglongjmp)
+
+    .weak siglongjmp

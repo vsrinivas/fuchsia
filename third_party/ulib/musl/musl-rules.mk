@@ -680,7 +680,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/signal/siginterrupt.c \
     $(LOCAL_DIR)/src/signal/sigisemptyset.c \
     $(LOCAL_DIR)/src/signal/sigismember.c \
-    $(LOCAL_DIR)/src/signal/siglongjmp.c \
     $(LOCAL_DIR)/src/signal/signal.c \
     $(LOCAL_DIR)/src/signal/sigorset.c \
     $(LOCAL_DIR)/src/signal/sigpause.c \
@@ -691,8 +690,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/signal/sigrtmax.c \
     $(LOCAL_DIR)/src/signal/sigrtmin.c \
     $(LOCAL_DIR)/src/signal/sigset.c \
-    $(LOCAL_DIR)/src/signal/sigsetjmp.c \
-    $(LOCAL_DIR)/src/signal/sigsetjmp_tail.c \
     $(LOCAL_DIR)/src/signal/sigsuspend.c \
     $(LOCAL_DIR)/src/signal/sigtimedwait.c \
     $(LOCAL_DIR)/src/signal/sigwait.c \
@@ -1056,7 +1053,6 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/setjmp/aarch64/longjmp.S \
     $(LOCAL_DIR)/src/setjmp/aarch64/setjmp.S \
     $(LOCAL_DIR)/src/signal/aarch64/restore.S \
-    $(LOCAL_DIR)/src/signal/aarch64/sigsetjmp.S \
     $(LOCAL_DIR)/third_party/math/acosl.c \
     $(LOCAL_DIR)/third_party/math/asinl.c \
     $(LOCAL_DIR)/third_party/math/atan2l.c \
@@ -1106,7 +1102,6 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/setjmp/x86_64/longjmp.S \
     $(LOCAL_DIR)/src/setjmp/x86_64/setjmp.S \
     $(LOCAL_DIR)/src/signal/x86_64/restore.S \
-    $(LOCAL_DIR)/src/signal/x86_64/sigsetjmp.S \
 
 else
 error Unsupported architecture for musl build!

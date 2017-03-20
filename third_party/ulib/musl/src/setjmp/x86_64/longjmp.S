@@ -30,6 +30,7 @@
 
 ENTRY(longjmp)
 ALIAS_ENTRY(_longjmp)
+ALIAS_ENTRY(siglongjmp)
 
     // Calculate return value: %r11d = %esi ?: 1
     mov $1, %r11d
@@ -91,3 +92,6 @@ ALIAS_ENTRY(_longjmp)
 
 END(longjmp)
 ALIAS_END(_longjmp)
+ALIAS_END(siglongjmp)
+
+    .weak siglongjmp

@@ -8,6 +8,7 @@
 
 ENTRY(setjmp)
 ALIAS_ENTRY(_setjmp)
+ALIAS_ENTRY(sigsetjmp)
 
     // Copy the values that need mangling into temporaries.
     mov (%rsp), %rax                            // PC
@@ -41,3 +42,6 @@ ALIAS_ENTRY(_setjmp)
 
 END(setjmp)
 ALIAS_END(_setjmp)
+ALIAS_END(sigsetjmp)
+
+    .weak sigsetjmp
