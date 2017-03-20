@@ -90,7 +90,7 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
         for (int x = x0; x < x0 + w; x++) {
             if (y < 0) {
                 vc_gfx_draw_char(dev, dev->scrollback_buf[x + sc * dev->columns],
-                                 x, y - dev->vpy, /* invert= */ false);
+                                 x, y - dev->viewport_y, /* invert= */ false);
             } else {
                 // Check whether we should display the cursor at this
                 // position.  Note that it's possible that the cursor is
@@ -102,7 +102,7 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
                                static_cast<unsigned>(x) == dev->cursor_x &&
                                static_cast<unsigned>(y) == dev->cursor_y);
                 vc_gfx_draw_char(dev, dev->text_buf[x + y * dev->columns],
-                                 x, y - dev->vpy, invert);
+                                 x, y - dev->viewport_y, invert);
             }
         }
     }
@@ -124,9 +124,9 @@ static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     if (dev->flags & VC_FLAG_RESETSCROLL) {
         dev->flags &= ~VC_FLAG_RESETSCROLL;
-        vc_device_scroll_viewport(dev, -dev->vpy);
+        vc_device_scroll_viewport(dev, -dev->viewport_y);
     }
-    if (dev->vpy < 0)
+    if (dev->viewport_y < 0)
         return;
     vc_device_invalidate(cookie, x0, y0, w, h);
     vc_invalidate_lines(dev, y0, h);
@@ -155,8 +155,8 @@ static void vc_tc_pushline(void* cookie, int y) {
     vc_char_t* src = &dev->text_buf[y * dev->columns];
     memcpy(dst, src, dev->columns * sizeof(vc_char_t));
     dev->scrollback_tail += 1;
-    if (dev->vpy < 0)
-        dev->vpy -= 1;
+    if (dev->viewport_y < 0)
+        dev->viewport_y -= 1;
     if (dev->scrollback_tail >= dev->scrollback_rows) {
         dev->scrollback_tail -= dev->scrollback_rows;
         if (dev->scrollback_tail >= dev->scrollback_head)
@@ -175,7 +175,7 @@ static void vc_set_cursor_hidden(vc_device_t* dev, bool hide) {
 static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
                              int line_count) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
-    if (dev->vpy < 0)
+    if (dev->viewport_y < 0)
         return;
 
     // Remove the cursor from the display before copying the lines on
@@ -229,7 +229,7 @@ static void vc_device_reset(vc_device_t* dev) {
     dev->cursor_x = 0;
     dev->cursor_y = 0;
     // reset the viewport position
-    dev->vpy = 0;
+    dev->viewport_y = 0;
 
     tc_init(&dev->textcon, dev->columns, vc_device_rows(dev), dev->text_buf, dev->front_color, dev->back_color);
     dev->textcon.cookie = dev;
@@ -349,11 +349,12 @@ int vc_device_get_scrollback_lines(vc_device_t* dev) {
 }
 
 void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
-    int vpy = MAX(MIN(dev->vpy + dir, 0), -vc_device_get_scrollback_lines(dev));
-    int delta = ABS(dev->vpy - vpy);
+    int vpy = MAX(MIN(dev->viewport_y + dir, 0),
+                  -vc_device_get_scrollback_lines(dev));
+    int delta = ABS(dev->viewport_y - vpy);
     if (delta == 0)
         return;
-    dev->vpy = vpy;
+    dev->viewport_y = vpy;
     unsigned rows = vc_device_rows(dev);
     if (dir > 0) {
         gfx_copyrect(dev->gfx, 0, delta * dev->charh,

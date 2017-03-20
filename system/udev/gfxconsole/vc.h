@@ -67,7 +67,7 @@ typedef struct vc_device {
     // cursor
     bool hide_cursor;
     // cursor visibility
-    int vpy;
+    int viewport_y;
     // viewport position, must be <= 0
     unsigned scrollback_head, scrollback_tail;
     // offsets into the scrollback buffer in rows

@@ -240,8 +240,8 @@ void vc_get_status_line(char* str, int n) {
                              i,
                              device->title,
                              device->flags & VC_FLAG_HASINPUT ? '*' : ' ',
-                             lines > 0 && -device->vpy < lines ? '<' : ' ',
-                             device->vpy < 0 ? '>' : ' ');
+                             lines > 0 && -device->viewport_y < lines ? '<' : ' ',
+                             device->viewport_y < 0 ? '>' : ' ');
         ptr += chars;
         n -= chars;
         i++;
