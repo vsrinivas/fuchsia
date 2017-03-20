@@ -9,9 +9,19 @@
 #include "vc.h"
 #include "vcdebug.h"
 
-void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y) {
+void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y,
+                      bool invert) {
+    uint8_t fg_color = TOFG(ch);
+    uint8_t bg_color = TOBG(ch);
+    if (invert) {
+        // Swap the colors.
+        uint8_t temp = fg_color;
+        fg_color = bg_color;
+        bg_color = temp;
+    }
     gfx_putchar(dev->gfx, dev->font, TOCHAR(ch), x * dev->charw, y * dev->charh,
-                palette_to_color(dev, TOFG(ch)), palette_to_color(dev, TOBG(ch)));
+                palette_to_color(dev, fg_color),
+                palette_to_color(dev, bg_color));
 }
 
 void vc_gfx_invalidate_all(vc_device_t* dev) {

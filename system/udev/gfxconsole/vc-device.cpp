@@ -89,9 +89,19 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
         }
         for (int x = x0; x < x0 + w; x++) {
             if (y < 0) {
-                vc_gfx_draw_char(dev, dev->scrollback_buf[x + sc * dev->columns], x, y - dev->vpy);
+                vc_gfx_draw_char(dev, dev->scrollback_buf[x + sc * dev->columns],
+                                 x, y - dev->vpy, /* invert= */ false);
             } else {
-                vc_gfx_draw_char(dev, dev->text_buf[x + y * dev->columns], x, y - dev->vpy);
+                // Check whether we should display the cursor at this
+                // position.  Note that it's possible that the cursor is
+                // outside the display area (dev->x == dev->columns).  In
+                // that case, we won't display the cursor, even if there's
+                // a margin.  This matches gnome-terminal.
+                bool invert = (!dev->hide_cursor &&
+                               static_cast<unsigned>(x) == dev->x &&
+                               static_cast<unsigned>(y) == dev->y);
+                vc_gfx_draw_char(dev, dev->text_buf[x + y * dev->columns],
+                                 x, y - dev->vpy, invert);
             }
         }
     }
@@ -123,22 +133,19 @@ static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h) {
 
 static void vc_tc_movecursor(void* cookie, int x, int y) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
-    if (!dev->hide_cursor) {
-        // Clear the cursor from its old position.
-        vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
-        vc_invalidate_lines(dev, dev->y, 1);
-
-        // Display the cursor in its new position.  Note that it's possible
-        // that x == dev->columns.  In that case, we don't display the
-        // cursor, even if there's a margin.  This matches gnome-terminal.
-        if (x < static_cast<int>(dev->columns)) {
-            gfx_fillrect(dev->gfx, x * dev->charw, y * dev->charh, dev->charw, dev->charh,
-                         palette_to_color(dev, dev->front_color));
-            vc_invalidate_lines(dev, y, 1);
-        }
-    }
+    unsigned old_x = dev->x;
+    unsigned old_y = dev->y;
     dev->x = x;
     dev->y = y;
+    if (!dev->hide_cursor) {
+        // Clear the cursor from its old position.
+        vc_device_invalidate(cookie, old_x, old_y, 1, 1);
+        vc_invalidate_lines(dev, old_y, 1);
+
+        // Display the cursor in its new position.
+        vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
+        vc_invalidate_lines(dev, dev->y, 1);
+    }
 }
 
 static void vc_tc_pushline(void* cookie, int y) {
@@ -156,6 +163,14 @@ static void vc_tc_pushline(void* cookie, int y) {
     }
 }
 
+static void vc_set_cursor_hidden(vc_device_t* dev, bool hide) {
+    if (dev->hide_cursor == hide)
+        return;
+    dev->hide_cursor = hide;
+    vc_device_invalidate(dev, dev->x, dev->y, 1, 1);
+    vc_invalidate_lines(dev, dev->y, 1);
+}
+
 static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
                              int line_count) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
@@ -166,13 +181,17 @@ static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
     // screen, otherwise we might be copying a rendering of the cursor to a
     // position where the cursor isn't.  This must be done before the
     // tc_copy_lines() call, otherwise we might render the wrong character.
-    vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
+    bool old_hide_cursor = dev->hide_cursor;
+    vc_set_cursor_hidden(dev, true);
 
     // The next two calls can be done in any order.
     tc_copy_lines(&dev->textcon, y_dest, y_src, line_count);
     gfx_copyrect(dev->gfx, 0, y_src * dev->charh,
                  dev->gfx->width, line_count * dev->charh,
                  0, y_dest * dev->charh);
+
+    // Restore the cursor.
+    vc_set_cursor_hidden(dev, old_hide_cursor);
 
     vc_device_write_status(dev);
     vc_gfx_invalidate_status(dev);
@@ -189,17 +208,11 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
         vc_gfx_invalidate_status(dev);
         break;
     case TC_SHOW_CURSOR:
-        if (dev->hide_cursor) {
-            dev->hide_cursor = false;
-            vc_tc_movecursor(dev, dev->x, dev->y);
-        }
+        vc_set_cursor_hidden(dev, false);
         break;
     case TC_HIDE_CURSOR:
-        if (!dev->hide_cursor) {
-            dev->hide_cursor = true;
-            vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
-            vc_invalidate_lines(dev, dev->y, 1);
-        }
+        vc_set_cursor_hidden(dev, true);
+        break;
     default:; // nothing
     }
 }

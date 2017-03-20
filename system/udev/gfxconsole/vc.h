@@ -133,7 +133,8 @@ void vc_gfx_invalidate_status(vc_device_t* dev);
 void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h);
 // invalidates a region in pixels
 void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h);
-void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y);
+void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y,
+                      bool invert);
 
 static inline uint32_t palette_to_color(vc_device_t* dev, uint8_t color) {
     assert(color <= MAX_COLOR);
