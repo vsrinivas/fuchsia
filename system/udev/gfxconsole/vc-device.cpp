@@ -83,7 +83,7 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
     for (int y = y0; y < y0 + h; y++) {
         int sc = 0;
         if (y < 0) {
-            sc = dev->sc_t + y;
+            sc = dev->scrollback_tail + y;
             if (sc < 0)
                 sc += dev->scrollback_rows;
         }
@@ -151,16 +151,16 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
 
 static void vc_tc_pushline(void* cookie, int y) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
-    vc_char_t* dst = &dev->scrollback_buf[dev->sc_t * dev->columns];
+    vc_char_t* dst = &dev->scrollback_buf[dev->scrollback_tail * dev->columns];
     vc_char_t* src = &dev->text_buf[y * dev->columns];
     memcpy(dst, src, dev->columns * sizeof(vc_char_t));
-    dev->sc_t += 1;
+    dev->scrollback_tail += 1;
     if (dev->vpy < 0)
         dev->vpy -= 1;
-    if (dev->sc_t >= dev->scrollback_rows) {
-        dev->sc_t -= dev->scrollback_rows;
-        if (dev->sc_t >= dev->sc_h)
-            dev->sc_h = dev->sc_t + 1;
+    if (dev->scrollback_tail >= dev->scrollback_rows) {
+        dev->scrollback_tail -= dev->scrollback_rows;
+        if (dev->scrollback_tail >= dev->scrollback_head)
+            dev->scrollback_head = dev->scrollback_tail + 1;
     }
 }
 
@@ -343,7 +343,9 @@ void vc_device_invalidate_all_for_testing(vc_device_t* dev) {
 }
 
 int vc_device_get_scrollback_lines(vc_device_t* dev) {
-    return dev->sc_t >= dev->sc_h ? dev->sc_t - dev->sc_h : dev->scrollback_rows - 1;
+    if (dev->scrollback_tail >= dev->scrollback_head)
+        return dev->scrollback_tail - dev->scrollback_head;
+    return dev->scrollback_rows - 1;
 }
 
 void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
