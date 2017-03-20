@@ -1165,4 +1165,39 @@ mod tests {
         assert_eq!(waitset.wait(ten_ms, &mut results), Err(Status::ErrTimedOut));
         assert_eq!(results.len(), 0);
     }
+
+    #[test]
+    fn wait_many_and_signal() {
+        let ten_ms: Time = 10_000_000;
+        let e1 = Event::create(EventOpts::Default).unwrap();
+        let e2 = Event::create(EventOpts::Default).unwrap();
+
+        // Waiting on them now should time out.
+        let mut items = vec![
+          WaitItem { handle: e1.get_ref(), waitfor: MX_USER_SIGNAL_0, pending: MX_SIGNAL_NONE },
+          WaitItem { handle: e2.get_ref(), waitfor: MX_USER_SIGNAL_1, pending: MX_SIGNAL_NONE },
+        ];
+        assert_eq!(object_wait_many(&mut items, ten_ms), Err(Status::ErrTimedOut));
+        assert_eq!(items[0].pending, MX_SIGNAL_NONE);
+        assert_eq!(items[1].pending, MX_SIGNAL_NONE);
+
+        // Signal one object and it should return success.
+        assert!(e1.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert!(object_wait_many(&mut items, ten_ms).is_ok());
+        assert_eq!(items[0].pending, MX_USER_SIGNAL_0);
+        assert_eq!(items[1].pending, MX_SIGNAL_NONE);
+
+        // Signal the other and it should return both.
+        assert!(e2.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_1).is_ok());
+        assert!(object_wait_many(&mut items, ten_ms).is_ok());
+        assert_eq!(items[0].pending, MX_USER_SIGNAL_0);
+        assert_eq!(items[1].pending, MX_USER_SIGNAL_1);
+
+        // Clear signals on both; now it should time out again.
+        assert!(e1.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
+        assert!(e2.signal(MX_USER_SIGNAL_1, MX_SIGNAL_NONE).is_ok());
+        assert_eq!(object_wait_many(&mut items, ten_ms), Err(Status::ErrTimedOut));
+        assert_eq!(items[0].pending, MX_SIGNAL_NONE);
+        assert_eq!(items[1].pending, MX_SIGNAL_NONE);
+    }
 }
