@@ -9,6 +9,7 @@
 
 #if WITH_DEV_PCIE
 
+#include <arch/x86/feature.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <mxtl/ref_ptr.h>
@@ -56,6 +57,10 @@ static void pcie_tolud_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
         // 0x59xx.
         { .match = 0x80865900, .mask = 0xFFFFFF00, .offset = 0xBC },
     };
+
+    // only makes sense on intel hardware
+    if (x86_vendor != X86_VENDOR_INTEL)
+        return;
 
     static bool found_chipset_device = false;
 
@@ -121,5 +126,68 @@ static void pcie_tolud_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
 }
 
 STATIC_PCIE_QUIRK_HANDLER(pcie_tolud_quirk);
+
+static void pcie_amd_topmem_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
+    // only makes sense on AMD hardware
+    if (x86_vendor != X86_VENDOR_AMD)
+        return;
+
+    // do this the first time
+    static bool initialized = false;
+    if (initialized)
+        return;
+
+    // only do this once
+    initialized = true;
+
+    // see if the TOP_MEM and TOP_MEM2 msrs are active by reading the SYSCFG MSR
+    uint64_t syscfg = read_msr(0xc0010010);
+    LTRACEF("SYSCFG 0x%lx\n", syscfg);
+
+    // for AMD, use the TOP_MEM and TOP_MEM2 MSR
+    // see AMD64 architecture programming manual, volume 2, rev 3.25, page 209
+    uint64_t top_mem = 0;
+    uint64_t top_mem2 = 0;
+    if (syscfg & (1<<20)) { // MtrrVarDramEn
+        top_mem = read_msr(0xc001001a);
+    }
+    if (syscfg & (1<<21)) { // MtrrTom2En
+        top_mem2 = read_msr(0xc001001d);
+    }
+
+    /* mask out reserved bits */
+    top_mem &= ((1ULL << 52) - 1);
+    top_mem &= ~((1ULL << 23) - 1);
+    top_mem2 &= ((1ULL << 52) - 1);
+    top_mem2 &= ~((1ULL << 23) - 1);
+
+    LTRACEF("TOP_MEM %#" PRIx64 " TOP_MEM2 %#" PRIx64 "\n", top_mem, top_mem2);
+
+    if (top_mem >= UINT32_MAX) {
+        TRACEF("WARNING: AMD TOP_MEM >= 4GB\n");
+    }
+
+    if (top_mem && dev) {
+        status_t res = dev->driver().SubtractBusRegion(0u, top_mem, PciAddrSpace::MMIO);
+        if (res != NO_ERROR) {
+            TRACEF("WARNING : PCIe AMD top_mem quirk failed to subtract region "
+                   "[0x0, %#" PRIx64 ") (res %d)!\n", top_mem, res);
+        }
+    }
+
+    if (top_mem2 && dev) {
+        uint64_t max = (1ULL << x86_physical_address_width());
+
+        // TODO: make this subtractive on (0, TOP_MEM2) when we start preloading the
+        // upper pci range.
+        status_t res = dev->driver().AddBusRegion(top_mem2, max, PciAddrSpace::MMIO);
+        if (res != NO_ERROR) {
+            TRACEF("WARNING : PCIe AMD top_mem quirk failed to add 64bit region "
+                   "[%#" PRIx64 ", %#" PRIx64 ") (res %d)!\n", top_mem2, max, res);
+        }
+    }
+}
+
+STATIC_PCIE_QUIRK_HANDLER(pcie_amd_topmem_quirk);
 
 #endif  // WITH_DEV_PCIE
