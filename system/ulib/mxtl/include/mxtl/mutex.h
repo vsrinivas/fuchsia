@@ -6,7 +6,7 @@
 
 #ifdef __cplusplus
 
-#include <magenta/thread_annotations.h>
+#include <magenta/compiler.h>
 #include <mxtl/macros.h>
 
 // Notes about class Mutex

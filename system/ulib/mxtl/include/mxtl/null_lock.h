@@ -5,7 +5,7 @@
 #pragma once
 
 #ifdef __cplusplus
-#include <magenta/thread_annotations.h>
+#include <magenta/compiler.h>
 
 // Notes about class NullLock
 //
