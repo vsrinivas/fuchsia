@@ -20,9 +20,13 @@ static bool intr_enable_per_cpu;
 
 struct int_handler_struct* pdev_get_int_handler(unsigned int vector, uint cpu)
 {
+    DEBUG_ASSERT(vector < ARM_MAX_INT);
+    DEBUG_ASSERT(cpu < SMP_MAX_CPUS);
+
     if (!intr_enable_per_cpu) {
         cpu = 0;
     }
+
     if (vector < ARM_MAX_PER_CPU_INT) {
         return &int_handler_table_per_cpu[vector][cpu];
     } else {

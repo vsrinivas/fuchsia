@@ -206,7 +206,7 @@ decoded:
         ret = INT_NO_RESCHEDULE;
     } else {
         struct int_handler_struct* handler = pdev_get_int_handler(vector, cpu);
-        if (handler) {
+        if (handler && handler->handler) {
             if (vector < ARM_IRQ_LOCAL_BASE) {
                 THREAD_STATS_INC(interrupts);
             }
