@@ -58,7 +58,11 @@ namespace mxtl {
 
 class __TA_CAPABILITY("mutex") Mutex {
 public:
+#ifdef MTX_INIT
     constexpr Mutex() : mutex_(MTX_INIT) { }
+#else
+    Mutex() { mtx_init(&mutex_, mtx_plain); }
+#endif
     ~Mutex() { mtx_destroy(&mutex_); }
     void Acquire() __TA_ACQUIRE() { mtx_lock(&mutex_); }
     void Release() __TA_RELEASE() { mtx_unlock(&mutex_); }
