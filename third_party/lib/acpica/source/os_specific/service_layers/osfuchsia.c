@@ -786,25 +786,27 @@ ACPI_STATUS AcpiOsWritePort(
 }
 
 /**
- * @brief Read a value from a PCI configuration register.
+ * @brief Read/Write a value from a PCI configuration register.
  *
  * @param PciId The full PCI configuration space address, consisting of a
  *        segment number, bus number, device number, and function number.
  * @param Register The PCI register address to be read from.
  * @param Value A pointer to a location where the data is to be returned.
  * @param Width The register width in bits, either 8, 16, 32, or 64.
+ * @param Write Write or Read.
  *
  * @return Exception code that indicates success or reason for failure.
  */
-ACPI_STATUS AcpiOsReadPciConfiguration(
+static ACPI_STATUS AcpiOsReadWritePciConfiguration(
         ACPI_PCI_ID *PciId,
         UINT32 Register,
         UINT64 *Value,
-        UINT32 Width) {
+        UINT32 Width,
+        bool Write) {
 
     if (LOCAL_TRACE)
-        printf("ACPI Read PCI Config %x:%x:%x:%x register %#x width %u\n",
-            PciId->Segment, PciId->Bus, PciId->Device, PciId->Function, Register, Width);
+        printf("ACPI %s PCI Config %x:%x:%x:%x register %#x width %u\n",
+            Write ? "write" : "read" ,PciId->Segment, PciId->Bus, PciId->Device, PciId->Function, Register, Width);
 
     *Value = 0;
 
@@ -869,7 +871,7 @@ ACPI_STATUS AcpiOsReadPciConfiguration(
         ecam_size = size_per_bus * num_buses;
 
         if (LOCAL_TRACE)
-            printf("ACPI read pci config, allocating window for ecam at %#" PRIx64 ", length %zu\n", base, ecam_size);
+            printf("ACPI read/write pci config, allocating window for ecam at %#" PRIx64 ", length %zu\n", base, ecam_size);
 
         mx_handle_t h = mx_mmap_device_memory(root_resource_handle, base, ecam_size,
                 MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t *)&ecam);
@@ -884,7 +886,7 @@ ACPI_STATUS AcpiOsReadPciConfiguration(
         return AE_ERROR;
 
     if (PciId->Segment != 0) {
-        printf("ACPI read config, segment != 0 not supported\n");
+        printf("ACPI read/write config, segment != 0 not supported\n");
         return AE_ERROR;
     }
 
@@ -899,29 +901,68 @@ ACPI_STATUS AcpiOsReadPciConfiguration(
     offset *= PCIE_EXTENDED_CONFIG_SIZE;
 
     if (offset >= ecam_size) {
-        printf("ACPI read config out of range\n");
+        printf("ACPI read/write config out of range\n");
         return AE_ERROR;
     }
 
     void *ptr = ((uint8_t *)ecam) + offset + Register;
-    switch (Width) {
-        case 8:
-            *Value = *((volatile uint8_t *)ptr);
-            break;
-        case 16:
-            *Value = *((volatile uint16_t *)ptr);
-            break;
-        case 32:
-            *Value = *((volatile uint32_t *)ptr);
-            break;
-        case 64:
-            *Value = *((volatile uint64_t *)ptr);
-            break;
-        default:
-            return AE_ERROR;
+    if (Write) {
+        switch (Width) {
+            case 8:
+                *((volatile uint8_t *)ptr) = *Value;
+                break;
+            case 16:
+                *((volatile uint16_t *)ptr) = *Value;
+                break;
+            case 32:
+                *((volatile uint32_t *)ptr) = *Value;
+                break;
+            case 64:
+                *((volatile uint64_t *)ptr) = *Value;
+                break;
+            default:
+                return AE_ERROR;
+        }
+
+    } else {
+        switch (Width) {
+            case 8:
+                *Value = *((volatile uint8_t *)ptr);
+                break;
+            case 16:
+                *Value = *((volatile uint16_t *)ptr);
+                break;
+            case 32:
+                *Value = *((volatile uint32_t *)ptr);
+                break;
+            case 64:
+                *Value = *((volatile uint64_t *)ptr);
+                break;
+            default:
+                return AE_ERROR;
+        }
     }
 
     return AE_OK;
+}
+/**
+ * @brief Read a value from a PCI configuration register.
+ *
+ * @param PciId The full PCI configuration space address, consisting of a
+ *        segment number, bus number, device number, and function number.
+ * @param Register The PCI register address to be read from.
+ * @param Value A pointer to a location where the data is to be returned.
+ * @param Width The register width in bits, either 8, 16, 32, or 64.
+ *
+ * @return Exception code that indicates success or reason for failure.
+ */
+ACPI_STATUS AcpiOsReadPciConfiguration(
+        ACPI_PCI_ID *PciId,
+        UINT32 Register,
+        UINT64 *Value,
+        UINT32 Width) {
+
+    return AcpiOsReadWritePciConfiguration(PciId, Register, Value, Width, false);
 }
 
 /**
@@ -941,12 +982,7 @@ ACPI_STATUS AcpiOsWritePciConfiguration(
         UINT64 Value,
         UINT32 Width) {
 
-    if (LOCAL_TRACE)
-        printf("ACPI Write Pci Config %x:%x:%x:%x register %#x width %u val %#" PRIx64 "\n",
-            PciId->Segment, PciId->Bus, PciId->Device, PciId->Function, Register, Width, (uint64_t)Value);
-
-    // TODO: Maybe implement
-    return AE_ERROR;
+    return AcpiOsReadWritePciConfiguration(PciId, Register, &Value, Width, true);
 }
 
 /**
