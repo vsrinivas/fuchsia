@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+shared_library("realtek-ihda-codec") {
+    public = [ ]
+
+    sources = [
+        "binding.c",
+        "debug-logging.h",
+        "realtek-codec.cpp",
+        "realtek-codec.h",
+        "realtek-stream.cpp",
+        "realtek-stream.h",
+    ]
+
+    deps = [
+        "//drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
+        "//drivers/audio/intel-hda/utils:ihda-utils",
+        "//magenta/system/ulib/mx",
+        "//magenta/system/ulib/mxcpp",
+        "//magenta/system/ulib/mxtl",
+    ]
+}
