@@ -37,6 +37,6 @@ struct pdev_interrupt_ops {
     enum handler_return (*handle_fiq)(iframe* frame);
 };
 
-void pdev_register_interrupts(const struct pdev_interrupt_ops* ops);
+void pdev_register_interrupts(const struct pdev_interrupt_ops* ops, bool enable_per_cpu);
 
 __END_CDECLS

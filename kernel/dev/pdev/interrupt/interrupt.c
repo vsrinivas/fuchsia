@@ -16,8 +16,13 @@ static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
 static struct int_handler_struct int_handler_table_per_cpu[ARM_MAX_PER_CPU_INT][SMP_MAX_CPUS];
 static struct int_handler_struct int_handler_table_shared[ARM_MAX_INT-ARM_MAX_PER_CPU_INT];
 
+static bool intr_enable_per_cpu;
+
 struct int_handler_struct* pdev_get_int_handler(unsigned int vector, uint cpu)
 {
+    if (!intr_enable_per_cpu) {
+        cpu = 0;
+    }
     if (vector < ARM_MAX_PER_CPU_INT) {
         return &int_handler_table_per_cpu[vector][cpu];
     } else {
@@ -148,8 +153,9 @@ enum handler_return platform_fiq(iframe* frame) {
     return intr_ops->handle_fiq(frame);
 }
 
-void pdev_register_interrupts(const struct pdev_interrupt_ops* ops) {
+void pdev_register_interrupts(const struct pdev_interrupt_ops* ops, bool enable_per_cpu) {
     intr_ops = ops;
+    intr_enable_per_cpu = enable_per_cpu;
     smp_mb();
 }
 

@@ -406,7 +406,7 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     arm_gicv3_gic_base = (uint64_t)paddr_to_kvaddr(gic_base_phys);
 
     gic_init();
-    pdev_register_interrupts(&gic_ops);
+    pdev_register_interrupts(&gic_ops, true);
 }
 
 LK_PDEV_INIT(arm_gic_v3_init, MDI_KERNEL_DRIVERS_ARM_GIC_V3, arm_gic_v3_init, LK_INIT_LEVEL_PLATFORM_EARLY);

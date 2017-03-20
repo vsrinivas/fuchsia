@@ -373,7 +373,7 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
         GICV2M_REG_FRAMES[0] = msi_frame_phys;
         arm_gicv2m_init(GICV2M_REG_FRAMES, countof(GICV2M_REG_FRAMES));
     }
-    pdev_register_interrupts(&gic_ops);
+    pdev_register_interrupts(&gic_ops, true);
 }
 
 LK_PDEV_INIT(arm_gic_v2_init, MDI_KERNEL_DRIVERS_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY);

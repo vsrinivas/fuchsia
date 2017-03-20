@@ -271,7 +271,7 @@ static void bcm28xx_intc_init(mdi_node_ref_t* node, uint level) {
     *REG32(INTC_DISABLE2) = 0xffffffff;
     *REG32(INTC_DISABLE3) = 0xffffffff;
 
-    pdev_register_interrupts(&intc_ops);
+    pdev_register_interrupts(&intc_ops, false);
 }
 
 LK_PDEV_INIT(bcm28xx_intc_init, MDI_KERNEL_DRIVERS_BCM28XX_INTERRUPT, bcm28xx_intc_init, LK_INIT_LEVEL_PLATFORM_EARLY);
