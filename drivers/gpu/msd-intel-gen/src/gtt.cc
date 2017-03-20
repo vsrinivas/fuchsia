@@ -76,18 +76,6 @@ bool Gtt::InitScratch()
     if (!scratch_->MapPageRangeBus(0, 1, &scratch_bus_addr_))
         return DRETF(false, "MapPageBus failed");
 
-    if (magma::kDebug) {
-        void* vaddr;
-        if (!scratch_->MapPageCpu(0, &vaddr)) {
-            DLOG("MapPageCpu failed");
-        } else {
-            auto pixel = reinterpret_cast<uint16_t*>(vaddr);
-            for (int i = 0; i < 2048; i++)
-                pixel[i] = 0xf81f;
-            scratch_->UnmapPageCpu(0);
-        }
-    }
-
     return true;
 }
 
