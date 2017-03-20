@@ -40,7 +40,7 @@ build() {
   # We don't pass it to --prefix however so as to not encode
   # any path info in the install. Instead we pass --prefix=/
   # and use DESTDIR=${prefix} during the make install.
-  local prefix="${destdir}/gdb-${HOST_TRIPLE}"
+  local prefix="${destdir}/${HOST_TRIPLE}/gdb"
   local builddir="${outdir}/build-gdb-${HOST_TRIPLE}"
 
   if [[ "${clean}" = "true" ]]; then
