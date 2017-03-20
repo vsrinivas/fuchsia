@@ -94,12 +94,13 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
             } else {
                 // Check whether we should display the cursor at this
                 // position.  Note that it's possible that the cursor is
-                // outside the display area (dev->x == dev->columns).  In
-                // that case, we won't display the cursor, even if there's
-                // a margin.  This matches gnome-terminal.
+                // outside the display area (dev->cursor_x ==
+                // dev->columns).  In that case, we won't display the
+                // cursor, even if there's a margin.  This matches
+                // gnome-terminal.
                 bool invert = (!dev->hide_cursor &&
-                               static_cast<unsigned>(x) == dev->x &&
-                               static_cast<unsigned>(y) == dev->y);
+                               static_cast<unsigned>(x) == dev->cursor_x &&
+                               static_cast<unsigned>(y) == dev->cursor_y);
                 vc_gfx_draw_char(dev, dev->text_buf[x + y * dev->columns],
                                  x, y - dev->vpy, invert);
             }
@@ -133,18 +134,18 @@ static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h) {
 
 static void vc_tc_movecursor(void* cookie, int x, int y) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
-    unsigned old_x = dev->x;
-    unsigned old_y = dev->y;
-    dev->x = x;
-    dev->y = y;
+    unsigned old_x = dev->cursor_x;
+    unsigned old_y = dev->cursor_y;
+    dev->cursor_x = x;
+    dev->cursor_y = y;
     if (!dev->hide_cursor) {
         // Clear the cursor from its old position.
         vc_device_invalidate(cookie, old_x, old_y, 1, 1);
         vc_invalidate_lines(dev, old_y, 1);
 
         // Display the cursor in its new position.
-        vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
-        vc_invalidate_lines(dev, dev->y, 1);
+        vc_device_invalidate(cookie, dev->cursor_x, dev->cursor_y, 1, 1);
+        vc_invalidate_lines(dev, dev->cursor_y, 1);
     }
 }
 
@@ -167,8 +168,8 @@ static void vc_set_cursor_hidden(vc_device_t* dev, bool hide) {
     if (dev->hide_cursor == hide)
         return;
     dev->hide_cursor = hide;
-    vc_device_invalidate(dev, dev->x, dev->y, 1, 1);
-    vc_invalidate_lines(dev, dev->y, 1);
+    vc_device_invalidate(dev, dev->cursor_x, dev->cursor_y, 1, 1);
+    vc_invalidate_lines(dev, dev->cursor_y, 1);
 }
 
 static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
@@ -225,8 +226,8 @@ static void vc_device_clear_gfx(vc_device_t* dev) {
 
 static void vc_device_reset(vc_device_t* dev) {
     // reset the cursor
-    dev->x = 0;
-    dev->y = 0;
+    dev->cursor_x = 0;
+    dev->cursor_y = 0;
     // reset the viewport position
     dev->vpy = 0;
 
@@ -338,7 +339,7 @@ void vc_device_invalidate_all_for_testing(vc_device_t* dev) {
     vc_device_clear_gfx(dev);
     vc_device_invalidate(dev, 0, 0, dev->columns, dev->rows);
     // Restore the cursor.
-    vc_tc_movecursor(dev, dev->x, dev->y);
+    vc_tc_movecursor(dev, dev->cursor_x, dev->cursor_y);
 }
 
 int vc_device_get_scrollback_lines(vc_device_t* dev) {

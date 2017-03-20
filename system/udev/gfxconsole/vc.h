@@ -63,7 +63,7 @@ typedef struct vc_device {
     int invy0, invy1;
     // offscreen invalid lines, tracked during textcon drawing
 
-    unsigned x, y;
+    unsigned cursor_x, cursor_y;
     // cursor
     bool hide_cursor;
     // cursor visibility
