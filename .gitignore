@@ -2,10 +2,13 @@
 /.cipd_client_cache
 /.versions
 /cmake
+/gdb
 /linux64/bootserver
 /linux64/bootserver.stamp
 /linux64/cmake.stamp
 /linux64/._go
+/linux64/gdb
+/linux64/gdb.stamp
 /linux64/gn
 /linux64/gn.stamp
 /linux64/go
@@ -24,6 +27,8 @@
 /mac64/bootserver
 /mac64/bootserver.stamp
 /mac/cmake.stamp
+/mac/gdb
+/mac/gdb.stamp
 /mac/gn
 /mac/gn.stamp
 /mac/go

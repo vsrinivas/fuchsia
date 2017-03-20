@@ -103,7 +103,14 @@ function download_qemu() {
   download_tarball qemu "qemu/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
 }
 
-function download_all() {
+function download_gdb() {
+  download_tarball gdb "gdb/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
+}
+
+# Download the default set of tools.
+# This doesn't include things like gdb which isn't needed by the bots.
+
+function download_all_default() {
   download_ninja
   download_gn
   download_cmake
@@ -156,6 +163,11 @@ case ${i} in
     has_arguments="true"
     shift
     ;;
+  --gdb)
+    download_gdb
+    has_arguments="true"
+    shift
+    ;;
   *)
     echo_error "Unknown argument."
     exit -1
@@ -164,5 +176,5 @@ esac
 done
 
 if [[ "${has_arguments}" = "false" ]]; then
-  download_all
+  download_all_default
 fi
