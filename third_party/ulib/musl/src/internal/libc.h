@@ -69,7 +69,6 @@ void __stack_chk_fail(void);
 
 int __lockfile(FILE*) ATTR_LIBC_VISIBILITY;
 void __unlockfile(FILE*) ATTR_LIBC_VISIBILITY;
-void __do_orphaned_stdio_locks(void) ATTR_LIBC_VISIBILITY;
 
 extern char** __environ;
 

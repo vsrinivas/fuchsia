@@ -177,7 +177,6 @@ _Noreturn void pthread_exit(void* result) {
     __vm_lock();
     __vm_unlock();
 
-    __do_orphaned_stdio_locks();
     __dl_thread_cleanup();
 
     // Switch off the thread's normal stack so it can be freed.  The TCB

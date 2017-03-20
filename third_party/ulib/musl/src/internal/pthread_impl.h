@@ -67,7 +67,6 @@ struct pthread {
     unsigned long sigmask[_NSIG / 8 / sizeof(long)];
     char* dlerror_buf;
     int dlerror_flag;
-    void* stdio_locks;
 
 #ifdef TLS_ABOVE_TP
     // These must be the very last members.

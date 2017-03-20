@@ -47,7 +47,6 @@ struct _IO_FILE {
     void* mustbezero_2;
     unsigned char* shend;
     off_t shlim, shcnt;
-    FILE *prev_locked, *next_locked;
     struct __locale_struct* locale;
 };
 
