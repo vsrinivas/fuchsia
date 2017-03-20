@@ -86,6 +86,17 @@ protected:
     magma::Status Process(MsdIntelDevice* device) override { return device->ProcessInterrupts(); }
 };
 
+class MsdIntelDevice::DumpRequest : public DeviceRequest {
+public:
+    DumpRequest() {}
+
+protected:
+    magma::Status Process(MsdIntelDevice* device) override
+    {
+        return device->ProcessDumpStatusToLog();
+    }
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<MsdIntelDevice> MsdIntelDevice::Create(void* device_handle,
@@ -357,16 +368,19 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
     DumpState dump_state;
     Dump(&dump_state);
 
+    const char* build = magma::kDebug ? "DEBUG" : "RELEASE";
     const char* fmt = "---- device dump begin ----\n"
+                      "%s build\n"
                       "Device id: 0x%x\n"
                       "RENDER_COMMAND_STREAMER\n"
                       "sequence_number 0x%x\n"
                       "active head pointer: 0x%llx\n";
-    int size = std::snprintf(nullptr, 0, fmt, device_id(), dump_state.render_cs.sequence_number,
-                             dump_state.render_cs.active_head_pointer);
+    int size =
+        std::snprintf(nullptr, 0, fmt, build, device_id(), dump_state.render_cs.sequence_number,
+                      dump_state.render_cs.active_head_pointer);
     std::vector<char> buf(size + 1);
-    std::snprintf(&buf[0], buf.size(), fmt, device_id(), dump_state.render_cs.sequence_number,
-                  dump_state.render_cs.active_head_pointer);
+    std::snprintf(&buf[0], buf.size(), fmt, build, device_id(),
+                  dump_state.render_cs.sequence_number, dump_state.render_cs.active_head_pointer);
     dump_out.append(&buf[0]);
 
     if (dump_state.fault_present) {
@@ -381,8 +395,19 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
     } else {
         dump_out.append("No engine faults detected.\n");
     }
+
+    fmt = "mapping cache footprint %.1f MB cap %.1f MB\n";
+    double footprint = (double)mapping_cache()->memory_footprint() / 1024 / 1024;
+    double cap = (double)mapping_cache()->memory_cap() / 1024 / 1024;
+    size = std::snprintf(nullptr, 0, fmt, footprint, cap);
+    buf = std::vector<char>(size + 1);
+    std::snprintf(buf.data(), buf.size(), fmt, footprint, cap);
+    dump_out.append(buf.data());
+
     dump_out.append("---- device dump end ----");
 }
+
+void MsdIntelDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
 
 magma::Status MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
 {
@@ -585,6 +610,14 @@ magma::Status MsdIntelDevice::ProcessInterrupts()
 
     registers::MasterInterruptControl::write(register_io_.get(), true);
 
+    return MAGMA_STATUS_OK;
+}
+
+magma::Status MsdIntelDevice::ProcessDumpStatusToLog()
+{
+    std::string dump;
+    DumpToString(dump);
+    magma::log(magma::LOG_INFO, "%s", dump.c_str());
     return MAGMA_STATUS_OK;
 }
 
@@ -795,11 +828,9 @@ void msd_device_destroy(msd_device_t* dev) { delete MsdIntelDevice::cast(dev); }
 
 uint32_t msd_device_get_id(msd_device_t* dev) { return MsdIntelDevice::cast(dev)->device_id(); }
 
-void msd_device_dump_status(struct msd_device_t* dev)
+void msd_device_dump_status(msd_device_t* device)
 {
-    std::string dump;
-    MsdIntelDevice::cast(dev)->DumpToString(dump);
-    printf("--------------------\n%s\n--------------------\n", dump.c_str());
+    MsdIntelDevice::cast(device)->DumpStatusToLog();
 }
 
 void msd_device_page_flip(msd_device_t* dev, msd_buffer_t* buf,

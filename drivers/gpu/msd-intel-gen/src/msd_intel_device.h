@@ -64,6 +64,7 @@ public:
 
     void Dump(DumpState* dump_state);
     void DumpToString(std::string& dump_string);
+    void DumpStatusToLog();
 
     void Flip(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
               std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
@@ -128,6 +129,7 @@ private:
                 const magma_system_image_descriptor& image_desc,
                 std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
     magma::Status ProcessInterrupts();
+    magma::Status ProcessDumpStatusToLog();
 
     void ProcessPendingFlip();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
@@ -184,6 +186,7 @@ private:
     class FlipRequest;
     class DestroyContextRequest;
     class InterruptRequest;
+    class DumpRequest;
 
     // Thread-shared data members
     std::shared_ptr<magma::Monitor> monitor_;
