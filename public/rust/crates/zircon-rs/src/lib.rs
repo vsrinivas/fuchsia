@@ -204,13 +204,6 @@ pub use magenta_sys::{
         MX_SOCKET_READABLE,
         MX_SOCKET_WRITABLE,
         MX_SOCKET_PEER_CLOSED,
-
-        // Data pipe
-        MX_DATAPIPE_READABLE,
-        MX_DATAPIPE_WRITABLE,
-        MX_DATAPIPE_PEER_CLOSED,
-        MX_DATAPIPE_READ_THRESHOLD,
-        MX_DATAPIPE_WRITE_THRESHOLD,
 };
 
 /// A "wait item" containing a handle reference and information about what signals
@@ -449,42 +442,6 @@ impl Handle {
 
 fn size_to_u32_sat(size: usize) -> u32 {
     u32::value_from(size).unwrap_or_saturate()
-}
-
-// Data pipes (just a stub for now)
-
-/// An object representing a Magenta
-/// [data pipe](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/datapipe_create.md)
-/// producer.
-///
-/// As essentially a subtype of `Handle`, it can be freely interconverted.
-pub struct DataPipeProducer(Handle);
-
-impl HandleBase for DataPipeProducer {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        DataPipeProducer(handle)
-    }
-}
-
-/// An object representing a Magenta
-/// [data pipe](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/datapipe_create.md)
-/// consumer.
-///
-/// As essentially a subtype of `Handle`, it can be freely interconverted.
-pub struct DataPipeConsumer(Handle);
-
-impl HandleBase for DataPipeConsumer {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        DataPipeConsumer(handle)
-    }
 }
 
 #[cfg(test)]

@@ -104,13 +104,6 @@ bitflags! {
         const MX_SOCKET_READABLE          = MX_OBJECT_SIGNAL_0.bits,
         const MX_SOCKET_WRITABLE          = MX_OBJECT_SIGNAL_1.bits,
         const MX_SOCKET_PEER_CLOSED       = MX_OBJECT_SIGNAL_2.bits,
-
-        // Data pipe
-        const MX_DATAPIPE_READABLE        = MX_OBJECT_SIGNAL_0.bits,
-        const MX_DATAPIPE_WRITABLE        = MX_OBJECT_SIGNAL_1.bits,
-        const MX_DATAPIPE_PEER_CLOSED     = MX_OBJECT_SIGNAL_2.bits,
-        const MX_DATAPIPE_READ_THRESHOLD  = MX_OBJECT_SIGNAL_4.bits,
-        const MX_DATAPIPE_WRITE_THRESHOLD = MX_OBJECT_SIGNAL_5.bits,
     }
 }
 
