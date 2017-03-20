@@ -12,7 +12,10 @@
 
 #define VERBOSE 1
 
-static mx_status_t get_inode(const Minfs* fs, minfs_inode_t* inode, uint32_t ino) {
+namespace minfs {
+namespace {
+
+mx_status_t get_inode(const Minfs* fs, minfs_inode_t* inode, uint32_t ino) {
     if (ino >= fs->info_.inode_count) {
         error("check: ino %u out of range (>=%u)\n",
               ino, fs->info_.inode_count);
@@ -34,8 +37,8 @@ static mx_status_t get_inode(const Minfs* fs, minfs_inode_t* inode, uint32_t ino
 #define CD_DUMP 1
 #define CD_RECURSE 2
 
-static mx_status_t get_inode_nth_bno(const Minfs* fs, minfs_inode_t* inode, uint32_t n,
-                                     uint32_t* bno_out) {
+mx_status_t get_inode_nth_bno(const Minfs* fs, minfs_inode_t* inode, uint32_t n,
+                              uint32_t* bno_out) {
     if (n < kMinfsDirect) {
         *bno_out = inode->dnum[n];
         return NO_ERROR;
@@ -65,8 +68,7 @@ static mx_status_t get_inode_nth_bno(const Minfs* fs, minfs_inode_t* inode, uint
 
 // Convert 'single-block-reads' to generic reads, which may cross block
 // boundaries. This function works on directories too.
-static mx_status_t file_read(const Minfs* fs, minfs_inode_t* inode, void* data,
-                             size_t len, size_t off) {
+mx_status_t file_read(const Minfs* fs, minfs_inode_t* inode, void* data, size_t len, size_t off) {
     if (off >= inode->size) {
         return 0;
     }
@@ -105,8 +107,8 @@ static mx_status_t file_read(const Minfs* fs, minfs_inode_t* inode, void* data,
     return static_cast<mx_status_t>((uintptr_t) data - (uintptr_t) start);
 }
 
-static mx_status_t check_directory(CheckMaps* chk, const Minfs* fs, minfs_inode_t* inode,
-                                   uint32_t ino, uint32_t parent, uint32_t flags) {
+mx_status_t check_directory(CheckMaps* chk, const Minfs* fs, minfs_inode_t* inode,
+                            uint32_t ino, uint32_t parent, uint32_t flags) {
     unsigned eno = 0;
     bool dot = false;
     bool dotdot = false;
@@ -268,6 +270,8 @@ mx_status_t check_file(CheckMaps* chk, const Minfs* fs,
     return NO_ERROR;
 }
 
+} // namespace anonymous
+
 mx_status_t check_inode(CheckMaps* chk, const Minfs* fs, uint32_t ino, uint32_t parent) {
     if (chk->checked_inodes.Get(ino, ino + 1)) {
         // we've been here before
@@ -369,3 +373,5 @@ mx_status_t minfs_check(Bcache* bc) {
     fprintf(stderr, "check: okay\n");
     return NO_ERROR;
 }
+
+} // namespace minfs

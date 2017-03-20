@@ -16,54 +16,60 @@
 
 #include "vfs-internal.h"
 
+namespace fs {
+
+// TODO(smklein): C++ify mount_node; make it a list of unique_ptrs
+
 // Non-intrusive node in linked list of vnodes acting as mount points
 typedef struct mount_node {
     list_node_t node;
-    vnode_t* vn;
+    Vnode* vn;
 } mount_node_t;
 
 static list_node_t remote_list = LIST_INITIAL_VALUE(remote_list);
 
+namespace {
+
+void do_unmount(mount_node_t* mount_point, mx_handle_t* h) {
+    Vnode* vn = mount_point->vn;
+    *h = vn->DetachRemote();
+    vn->RefRelease();
+    free(mount_point);
+}
+
+} // namespace anonymous
+
 // Installs a remote filesystem on vn and adds it to the remote_list.
-mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
-    if (vn == NULL) {
+mx_status_t Vfs::InstallRemote(Vnode* vn, mx_handle_t h) {
+    if (vn == nullptr) {
         return ERR_ACCESS_DENIED;
     }
 
     mtx_lock(&vfs_lock);
     // We cannot mount if anything else is already installed remotely
-    if (vn->remote > 0) {
+    if (vn->IsRemote()) {
         mtx_unlock(&vfs_lock);
         return ERR_ALREADY_BOUND;
     }
     // Allocate a node to track the remote handle
     mount_node_t* mount_point;
-    if ((mount_point = calloc(1, sizeof(mount_node_t))) == NULL) {
+    if ((mount_point = static_cast<mount_node_t*>(calloc(1, sizeof(mount_node_t)))) == nullptr) {
         mtx_unlock(&vfs_lock);
         return ERR_NO_MEMORY;
     }
     // Save this node in the list of mounted vnodes
     mount_point->vn = vn;
     list_add_tail(&remote_list, &mount_point->node);
-    vn->remote = h;
-    vn_acquire(vn); // Acquire the vn to make sure it isn't released from memory.
+    vn->AttachRemote(h);
+    vn->RefAcquire(); // Acquire the vn to make sure it isn't released from memory.
     mtx_unlock(&vfs_lock);
 
     return NO_ERROR;
 }
 
-static void do_unmount(mount_node_t* mount_point, mx_handle_t* h) {
-    *h = mount_point->vn->remote;
-    vnode_t* vn = mount_point->vn;
-    free(mount_point);
-    vn->remote = 0;
-    vn->flags &= ~V_FLAG_MOUNT_READY;
-    vn_release(vn);
-}
-
 // Uninstall the remote filesystem mounted on vn. Removes vn from the
 // remote_list, and sends its corresponding filesystem an 'unmount' signal.
-mx_status_t vfs_uninstall_remote(vnode_t* vn, mx_handle_t* h) {
+mx_status_t Vfs::UninstallRemote(Vnode* vn, mx_handle_t* h) {
     mount_node_t* mount_point;
     mount_node_t* tmp;
     mx_status_t status = NO_ERROR;
@@ -84,17 +90,19 @@ done:
     return NO_ERROR;
 }
 
-// Uninstall all remote filesystems. Acts like 'vfs_uninstall_remote' for all
+} // namespace fs
+
+// Uninstall all remote filesystems. Acts like 'UninstallRemote' for all
 // known remotes.
 mx_status_t vfs_uninstall_all(mx_time_t timeout) {
-    mount_node_t* mount_point;
+    fs::mount_node_t* mount_point;
     for (;;) {
         mtx_lock(&vfs_lock);
-        mount_point = list_remove_head_type(&remote_list, mount_node_t, node);
+        mount_point = list_remove_head_type(&fs::remote_list, fs::mount_node_t, node);
         mtx_unlock(&vfs_lock);
         if (mount_point) {
             mx_handle_t h;
-            do_unmount(mount_point, &h);
+            fs::do_unmount(mount_point, &h);
             vfs_unmount_handle(h, timeout);
         } else {
             return NO_ERROR;

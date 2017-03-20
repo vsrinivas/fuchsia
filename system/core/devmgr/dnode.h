@@ -10,7 +10,7 @@
 #include <mxio/vfs.h>
 #include <magenta/listnode.h>
 
-typedef struct dnode dnode_t;
+#include "memfs-private.h"
 
 #define DN_NAME_MAX NAME_MAX
 static_assert(NAME_MAX == 255, "NAME_MAX must be 255");
@@ -29,36 +29,39 @@ static_assert(((DN_NAME_MAX + 1) & DN_NAME_MAX) == 0,
 #define DN_TYPE(flags) ((flags) & DN_TYPE_MASK)
 
 // 'true' if directory, 'false' if file
-#define DNODE_IS_DIR(dn) (dn->vnode->dnode != NULL)
-#define VNODE_IS_DIR(vn) (vn->dnode != NULL)
+#define DNODE_IS_DIR(dn) (dn->vnode->IsDirectory() != NULL)
 
-struct dnode {
+namespace memfs {
+
+typedef struct dnode {
     dnode_t* parent;
-    vnode_t* vnode;
+    VnodeMemfs* vnode;
     list_node_t children;
     list_node_t dn_entry; // entry in parent's list
     list_node_t vn_entry; // entry in vnode's list
     uint32_t flags;
     char name[];
-};
+} dnode_t;
 
 // Shorthand for "dn_allocate" combined with "dn_attach"
-mx_status_t dn_create(dnode_t** dn, const char* name, size_t len, vnode_t* vn);
+mx_status_t dn_create(dnode_t** dn, const char* name, size_t len, VnodeMemfs* vn);
 
 // Allocates an empty dnode, not attached to a vnode
 mx_status_t dn_allocate(dnode_t** dn, const char* name, size_t len);
 
 // Attach a vnode to a dnode
-void dn_attach(dnode_t* dn, vnode_t* vn);
+void dn_attach(dnode_t* dn, VnodeMemfs* vn);
 
 // Detaches a dnode from it's parent / vnode and frees the dnode
 void dn_delete(dnode_t* dn);
 
 mx_status_t dn_lookup(dnode_t* dn, dnode_t** out, const char* name, size_t len);
-mx_status_t dn_lookup_name(const dnode_t* dn, const vnode_t* vn, char* out_name, size_t out_len);
+mx_status_t dn_lookup_name(const dnode_t* dn, const VnodeMemfs* vn, char* out_name, size_t out_len);
 
 void dn_add_child(dnode_t* parent, dnode_t* child);
 
 mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len);
 
 void dn_print_children(dnode_t* parent, int indent);
+
+} // namespace memfs

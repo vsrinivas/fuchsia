@@ -13,16 +13,16 @@ MODULE_NAME := devmgr
 MODULE_TYPE := userapp
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/dnode.c \
+    $(LOCAL_DIR)/dnode.cpp \
     $(LOCAL_DIR)/devmgr.c \
     $(LOCAL_DIR)/devmgr-mxio.c \
     $(LOCAL_DIR)/devmgr-coordinator.c \
     $(LOCAL_DIR)/shared.c \
-    $(LOCAL_DIR)/vfs-boot.c \
-    $(LOCAL_DIR)/vfs-devmgr.c \
-    $(LOCAL_DIR)/vfs-device.c \
-    $(LOCAL_DIR)/vfs-memory.c \
-    $(LOCAL_DIR)/vfs-rpc.c
+    $(LOCAL_DIR)/vfs-boot.cpp \
+    $(LOCAL_DIR)/vfs-devmgr.cpp \
+    $(LOCAL_DIR)/vfs-device.cpp \
+    $(LOCAL_DIR)/vfs-memory.cpp \
+    $(LOCAL_DIR)/vfs-rpc.cpp
 
 # userboot supports loading via the dynamic linker, so libc (ulib/c)
 # can be linked dynamically.  But it doesn't support any means to look
@@ -36,7 +36,9 @@ MODULE_STATIC_LIBS := \
     ulib/gpt \
     ulib/launchpad \
     ulib/elfload \
+    ulib/mxcpp \
     ulib/mxio \
+    ulib/mxtl \
     ulib/fs \
     ulib/fs-management \
     ulib/bootdata \

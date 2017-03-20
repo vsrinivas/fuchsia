@@ -36,13 +36,15 @@
 
 mtx_t vfs_lock = MTX_INIT;
 
-void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {
-    xprintf("devfs: notify vn=%p name='%.*s'\n", vn, (int)len, name);
+namespace memfs {
+
+void VnodeMemfs::NotifyAdd(const char* name, size_t len) {
+    xprintf("devfs: notify vn=%p name='%.*s'\n", this, (int)len, name);
     vnode_watcher_t* watcher;
     vnode_watcher_t* tmp;
-    list_for_every_entry_safe (&vn->watch_list, watcher, tmp, vnode_watcher_t, node) {
+    list_for_every_entry_safe (&watch_list_, watcher, tmp, vnode_watcher_t, node) {
         mx_status_t status;
-        if ((status = mx_channel_write(watcher->h, 0, name, len, NULL, 0)) < 0) {
+        if ((status = mx_channel_write(watcher->h, 0, name, static_cast<uint32_t>(len), NULL, 0)) < 0) {
             xprintf("devfs: watcher %p write failed %d\n", watcher, status);
             list_delete(&watcher->node);
             mx_handle_close(watcher->h);
@@ -53,17 +55,16 @@ void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {
     }
 }
 
-ssize_t vfs_do_ioctl_watch_dir(vnode_t* vn, const void* in_buf, size_t in_len,
-                               void* out_buf, size_t out_len) {
+mx_status_t VnodeMemfs::IoctlWatchDir(const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
     if ((out_len != sizeof(mx_handle_t)) || (in_len != 0)) {
         return ERR_INVALID_ARGS;
     }
-    if (vn->dnode == NULL) {
+    if (!IsDirectory()) {
         // not a directory
         return ERR_WRONG_TYPE;
     }
     vnode_watcher_t* watcher;
-    if ((watcher = calloc(1, sizeof(vnode_watcher_t))) == NULL) {
+    if ((watcher = static_cast<vnode_watcher_t*>(calloc(1, sizeof(vnode_watcher_t)))) == NULL) {
         return ERR_NO_MEMORY;
     }
     mx_handle_t h;
@@ -73,8 +74,10 @@ ssize_t vfs_do_ioctl_watch_dir(vnode_t* vn, const void* in_buf, size_t in_len,
     }
     memcpy(out_buf, &h, sizeof(mx_handle_t));
     mtx_lock(&vfs_lock);
-    list_add_tail(&vn->watch_list, &watcher->node);
+    list_add_tail(&watch_list_, &watcher->node);
     mtx_unlock(&vfs_lock);
-    xprintf("new watcher vn=%p w=%p\n", vn, watcher);
+    xprintf("new watcher vn=%p w=%p\n", this, watcher);
     return sizeof(mx_handle_t);
 }
+
+} // namespace memfs

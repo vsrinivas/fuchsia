@@ -21,18 +21,17 @@
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 
-
-struct vnode {
-    VNODE_BASE_FIELDS
-};
+#include "minfs-private.h"
 
 mtx_t vfs_lock = MTX_INIT;
 mxio_dispatcher_t* vfs_dispatcher;
 
-mx_status_t vfs_get_handles(vnode_t* vn, uint32_t flags, mx_handle_t* hnds,
-                            uint32_t* type, void* extra, uint32_t* esize) {
+namespace minfs {
+
+mx_status_t VnodeMinfs::GetHandles(uint32_t flags, mx_handle_t* hnds,
+                                   uint32_t* type, void* extra, uint32_t* esize) {
     // local vnode or device as a directory, we will create the handles
-    mx_status_t r = vfs_create_handle(vn, flags, hnds);
+    mx_status_t r = Serve(flags, hnds);
     if (r < 0) {
         return r;
     }
@@ -40,38 +39,7 @@ mx_status_t vfs_get_handles(vnode_t* vn, uint32_t flags, mx_handle_t* hnds,
     return 1;
 }
 
-mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
-    return vfs_handler_generic(msg, rh, cookie);
-}
-
-void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {
-    return;
-}
-
-#define FS_NAME "minfs"
-
-ssize_t vfs_do_local_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
-                           size_t in_len, void* out_buf, size_t out_len) {
-    switch (op) {
-        case IOCTL_DEVMGR_QUERY_FS: {
-            if (out_len < strlen(FS_NAME) + 1) {
-                return ERR_INVALID_ARGS;
-            }
-            strcpy(static_cast<char*>(out_buf), FS_NAME);
-            return strlen(FS_NAME);
-        }
-        default: {
-            return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
-        }
-    }
-}
-
-ssize_t vfs_do_ioctl_watch_dir(vnode_t* vn, const void* in_buf, size_t in_len,
-                               void* out_buf, size_t out_len) {
-    return ERR_NOT_SUPPORTED;
-}
-
-mx_handle_t vfs_rpc_server(vnode_t* vn) {
+mx_handle_t vfs_rpc_server(VnodeMinfs* vn) {
     vfs_iostate_t* ios;
     mx_status_t r;
 
@@ -106,4 +74,28 @@ mx_handle_t vfs_rpc_server(vnode_t* vn) {
     //vn_acquire(vn);
     mxio_dispatcher_run(vfs_dispatcher);
     return NO_ERROR;
+}
+
+} // namespace minfs
+
+mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
+    return vfs_handler_generic(msg, rh, cookie);
+}
+
+constexpr const char kFsName[] = "minfs";
+
+ssize_t vfs_do_local_ioctl(fs::Vnode* vn, uint32_t op, const void* in_buf,
+                           size_t in_len, void* out_buf, size_t out_len) {
+    switch (op) {
+        case IOCTL_DEVMGR_QUERY_FS: {
+            if (out_len < strlen(kFsName) + 1) {
+                return ERR_INVALID_ARGS;
+            }
+            strcpy(static_cast<char*>(out_buf), kFsName);
+            return strlen(kFsName);
+        }
+        default: {
+            return vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
+        }
+    }
 }

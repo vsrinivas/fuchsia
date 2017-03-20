@@ -54,7 +54,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/minfs.cpp \
     $(LOCAL_DIR)/minfs-ops.cpp \
     $(LOCAL_DIR)/minfs-check.cpp \
-    system/ulib/fs/vfs.c \
+    system/ulib/fs/vfs.cpp \
     system/ulib/mxcpp/new.cpp \
     system/ulib/mxcpp/pure_virtual.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \

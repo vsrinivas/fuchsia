@@ -19,6 +19,7 @@
 namespace blobstore {
 
 class Blobstore;
+class VnodeBlob;
 
 typedef uint32_t BlobFlags;
 
@@ -38,14 +39,6 @@ constexpr BlobFlags kBlobStateMask        = 0x000000FF;
 constexpr BlobFlags kBlobFlagSync         = 0x00000100; // The blob is being written to disk
 constexpr BlobFlags kBlobFlagDeletable    = 0x00000200; // This node should be unlinked when closed
 
-constexpr BlobFlags get_state(BlobFlags flags) {
-    return flags & kBlobStateMask;
-}
-
-constexpr BlobFlags set_state(BlobFlags flags, BlobFlags new_state) {
-    return (flags & ~kBlobStateMask) | new_state;
-}
-
 class Blob : public mxtl::DoublyLinkedListable<mxtl::RefPtr<Blob>>,
              public mxtl::RefCounted<Blob> {
 public:
@@ -62,6 +55,26 @@ public:
         return &digest_[0];
     };
 
+    BlobFlags GetState() const {
+        return flags_ & kBlobStateMask;
+    }
+
+    bool DeletionQueued() const {
+        return flags_ & kBlobFlagDeletable;
+    }
+
+    void SetState(BlobFlags new_state) {
+        flags_ = (flags_ & ~kBlobStateMask) | new_state;
+    }
+
+    size_t GetMapIndex() const {
+        return map_index_;
+    }
+
+    void SetMapIndex(size_t i) {
+        map_index_ = i;
+    }
+
     // If successful, allocates Blob Node and Blocks (in-memory)
     // kBlobStateEmpty --> kBlobStateMerkleWrite
     mx_status_t SpaceAllocate(uint64_t size_data);
@@ -70,9 +83,9 @@ public:
     // depending on the state.
     mx_status_t Write(const void* data, size_t len, size_t* actual);
 
-    void QueueUnlink(void);
+    void QueueUnlink();
 
-    mx_status_t Sync(void);
+    mx_status_t Sync();
 
     // Returns a handle to an event which will be signalled when
     // the blob is readable.
@@ -89,12 +102,12 @@ public:
     // Initializes to kBlobStateEmpty
     static mxtl::RefPtr<Blob> Create(const merkle::Digest& digest);
 
-    uint64_t SizeData(void) const;
+    uint64_t SizeData() const;
 
     virtual ~Blob();
-    vnode_t* vn;
+    VnodeBlob* vn;
+
 private:
-    friend class Blobstore;
     friend struct TypeListTraits;
     friend struct TypeWavlTraits;
 
@@ -108,14 +121,14 @@ private:
     // service, and it can properly handle pages faults on a vnode's contents,
     // then we can avoid reading the entire blob up-front. Until then, read
     // the contents of a VMO into memory when it is opened.
-    mx_status_t InitVmos(void);
+    mx_status_t InitVmos();
 
     mx_status_t WriteShared(const void** data, size_t* len, size_t* actual,
                             uint64_t maxlen, mx_handle_t vmo, uint64_t start_block);
 
     // Called by Blob once the last write has completed, updating the
     // on-disk metadata.
-    mx_status_t WriteMetadata(void);
+    mx_status_t WriteMetadata();
 
     NodeState type_list_state_;
     WAVLTreeNodeState type_wavl_state_;
@@ -152,7 +165,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobstore);
     friend class Blob;
 
-    static mx_status_t Create(int blockfd, const blobstore_info_t* info, vnode_t** out);
+    static mx_status_t Create(int blockfd, const blobstore_info_t* info, VnodeBlob** out);
     mx_status_t Unmount();
     virtual ~Blobstore();
 
@@ -168,14 +181,14 @@ public:
     // and it will be added to the "quick lookup" map if it was not there
     // already.
     static mx_status_t LookupBlob(mxtl::RefPtr<Blobstore> bs, const merkle::Digest& digest,
-                                  vnode_t** out);
+                                  VnodeBlob** out);
 
     // Creates a new blob in-memory, with no backing disk storage (yet).
     // If a blob with the name already exists, this function fails.
     //
     // Adds Blob to the "quick lookup" map.
     static mx_status_t NewBlob(mxtl::RefPtr<Blobstore> bs, const merkle::Digest& digest,
-                               vnode_t** out);
+                               VnodeBlob** out);
 
     // Removes blob from 'active' hashmap.
     // Deletes the blob if requested.
@@ -189,10 +202,11 @@ private:
 
     // Acquire a dummy vnode that acts like a root directory, allowing access
     // to other vnodes.
-    static mx_status_t RootVnodeNew(mxtl::RefPtr<Blobstore> bs, vnode_t** out);
+    static mx_status_t RootVnodeNew(mxtl::RefPtr<Blobstore> bs, VnodeBlob** out);
 
     // Wrap a blob in a new vnode.
-    static mx_status_t VnodeNew(mxtl::RefPtr<Blobstore> bs, mxtl::RefPtr<Blob> blob, vnode_t** out);
+    static mx_status_t VnodeNew(mxtl::RefPtr<Blobstore> bs, mxtl::RefPtr<Blob> blob,
+                                VnodeBlob** out);
 
     // Finds space for a block in memory. Does not update disk.
     mx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
@@ -224,23 +238,41 @@ private:
     mxtl::unique_ptr<blobstore_inode_t[]> node_map_;
 };
 
-extern vnode_ops_t blobstore_ops;
-
 int blobstore_mkfs(int fd);
 
-mx_status_t blobstore_mount(vnode_t** out, int blockfd);
+mx_status_t blobstore_mount(VnodeBlob** out, int blockfd);
 
 mx_status_t readblk(int fd, uint64_t bno, void* data);
 mx_status_t writeblk(int fd, uint64_t bno, const void* data);
 
-} // namespace blobstore
+mx_handle_t vfs_rpc_server(VnodeBlob* vn);
 
-mx_handle_t vfs_rpc_server(vnode_t* vn);
+class VnodeBlob final : public fs::Vnode {
+public:
+    VnodeBlob(mxtl::RefPtr<Blob> b, mxtl::RefPtr<Blobstore> bs) :
+        blobstore(bs), blob(b) {}
 
-struct vnode {
-    // ops, flags, refcount
-    VNODE_BASE_FIELDS;
+    bool IsDirectory() const { return blob == nullptr; }
 
-    mxtl::RefPtr<blobstore::Blobstore> blobstore;
-    mxtl::RefPtr<blobstore::Blob> blob;
+    ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                  void* out_buf, size_t out_len) final;
+
+    const mxtl::RefPtr<Blobstore> blobstore;
+    const mxtl::RefPtr<Blob> blob;
+
+private:
+    mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
+                           uint32_t* type, void* extra, uint32_t* esize) final;
+    void Release() final;
+    mx_status_t Open(uint32_t flags) final;
+    mx_status_t Close() final;
+    ssize_t Read(void* data, size_t len, size_t off) final;
+    ssize_t Write(const void* data, size_t len, size_t off) final;
+    mx_status_t Lookup(fs::Vnode** out, const char* name, size_t len) final;
+    mx_status_t Getattr(vnattr_t* a) final;
+    mx_status_t Create(fs::Vnode** out, const char* name, size_t len, uint32_t mode) final;
+    mx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;
+    mx_status_t Sync() final;
 };
+
+} // namespace blobstore

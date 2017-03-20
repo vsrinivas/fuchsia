@@ -34,8 +34,8 @@
 // device filesystem visible at /dev in the devmgr's root namespace.
 
 // vnodes for root driver and protocols
-static vnode_t* vnroot;
-static vnode_t* vnclass;
+static VnodeMemfs* vnroot;
+static VnodeMemfs* vnclass;
 
 static mxio_dispatcher_t* coordinator_dispatcher;
 
@@ -44,7 +44,7 @@ static mx_handle_t devhost_job_handle;
 typedef struct device_ctx {
     mx_handle_t hdevice;
     uint32_t protocol_id;
-    vnode_t* vnode;
+    VnodeMemfs* vnode;
     char name[MX_DEVICE_NAME_MAX];
 } device_ctx_t;
 
@@ -69,7 +69,7 @@ static const char* proto_names[] = {
 static void prepopulate_protocol_dirs(void) {
     const char** namep = proto_names;
     while (*namep) {
-        vnode_t* vnp;
+        VnodeMemfs* vnp;
         if (!strcmp(*namep, "misc") || !strcmp(*namep, "misc-parent")) {
             // don't publish /dev/class/misc or /dev/class/misc-parent
             namep++;
@@ -99,7 +99,7 @@ static void do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     const char* pname = proto_name(ctx->protocol_id, buf);
 
     // find or create a vnode for class/<pname>
-    vnode_t* vnp;
+    VnodeMemfs* vnp;
     mx_status_t status;
     if ((status = memfs_create_device_at(vnclass, &vnp, pname, 0)) < 0) {
         printf("devmgr: could not link to '%s'\n", ctx->name);

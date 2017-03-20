@@ -30,6 +30,8 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 
 // clang-format off
 
+namespace minfs {
+
 constexpr uint64_t kMinfsMagic0 = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1 = (0x385000d3d3d3d304ULL);
 constexpr uint32_t kMinfsVersion = 0x00000002;
@@ -280,3 +282,5 @@ private:
 
 void* GetBlock(const RawBitmap& bitmap, uint32_t blkno);
 void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);
+
+} // namespace minfs

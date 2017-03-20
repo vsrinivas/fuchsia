@@ -5,7 +5,10 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <magenta/compiler.h>
 #include <magenta/types.h>
+
+__BEGIN_CDECLS
 
 void devmgr_init(mx_handle_t root_job);
 void devmgr_handle_messages(void);
@@ -29,3 +32,5 @@ int devmgr_start_system_init(void* arg);
 #define LDSO_TRACE_CMDLINE "ldso.trace"
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
+
+__END_CDECLS

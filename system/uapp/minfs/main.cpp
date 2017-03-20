@@ -20,13 +20,27 @@
 #include "host.h"
 #endif
 
-int do_minfs_check(Bcache* bc, int argc, char** argv) {
+#ifndef __Fuchsia__
+
+static minfs::Bcache* the_block_cache;
+extern minfs::VnodeMinfs* fake_root;
+
+int run_fs_tests(int argc, char** argv);
+void drop_cache() {
+    the_block_cache->Invalidate();
+}
+
+#endif
+
+namespace {
+
+int do_minfs_check(minfs::Bcache* bc, int argc, char** argv) {
     return minfs_check(bc);
 }
 
 #ifdef __Fuchsia__
-int do_minfs_mount(Bcache* bc, int argc, char** argv) {
-    vnode_t* vn = 0;
+int do_minfs_mount(minfs::Bcache* bc, int argc, char** argv) {
+    minfs::VnodeMinfs* vn = 0;
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
     }
@@ -34,17 +48,8 @@ int do_minfs_mount(Bcache* bc, int argc, char** argv) {
     return 0;
 }
 #else
-int run_fs_tests(int argc, char** argv);
-
-static Bcache* the_block_cache;
-void drop_cache(void) {
-    the_block_cache->Invalidate();
-}
-
-extern vnode_t* fake_root;
-
-int io_setup(Bcache* bc) {
-    vnode_t* vn = 0;
+int io_setup(minfs::Bcache* bc) {
+    minfs::VnodeMinfs* vn = 0;
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
     }
@@ -53,14 +58,14 @@ int io_setup(Bcache* bc) {
     return 0;
 }
 
-int do_minfs_test(Bcache* bc, int argc, char** argv) {
+int do_minfs_test(minfs::Bcache* bc, int argc, char** argv) {
     if (io_setup(bc)) {
         return -1;
     }
     return run_fs_tests(argc, argv);
 }
 
-int do_cp(Bcache* bc, int argc, char** argv) {
+int do_cp(minfs::Bcache* bc, int argc, char** argv) {
     if (argc != 2) {
         fprintf(stderr, "cp requires two arguments\n");
         return -1;
@@ -106,7 +111,7 @@ done:
     return r;
 }
 
-int do_mkdir(Bcache* bc, int argc, char** argv) {
+int do_mkdir(minfs::Bcache* bc, int argc, char** argv) {
     if (argc != 1) {
         fprintf(stderr, "mkdir requires one argument\n");
         return -1;
@@ -123,7 +128,7 @@ int do_mkdir(Bcache* bc, int argc, char** argv) {
     return emu_mkdir(path, 0);
 }
 
-int do_unlink(Bcache* bc, int argc, char** argv) {
+int do_unlink(minfs::Bcache* bc, int argc, char** argv) {
     if (argc != 1) {
         fprintf(stderr, "unlink requires one argument\n");
         return -1;
@@ -139,7 +144,7 @@ int do_unlink(Bcache* bc, int argc, char** argv) {
     return emu_unlink(path);
 }
 
-int do_rename(Bcache* bc, int argc, char** argv) {
+int do_rename(minfs::Bcache* bc, int argc, char** argv) {
     if (argc != 2) {
         fprintf(stderr, "rename requires two arguments\n");
         return -1;
@@ -175,7 +180,7 @@ static const char* modestr(uint32_t mode) {
     }
 }
 
-int do_ls(Bcache* bc, int argc, char** argv) {
+int do_ls(minfs::Bcache* bc, int argc, char** argv) {
     if (argc != 1) {
         fprintf(stderr, "ls requires one argument\n");
         return -1;
@@ -213,13 +218,13 @@ int do_ls(Bcache* bc, int argc, char** argv) {
 
 #endif
 
-int do_minfs_mkfs(Bcache* bc, int argc, char** argv) {
+int do_minfs_mkfs(minfs::Bcache* bc, int argc, char** argv) {
     return minfs_mkfs(bc);
 }
 
 struct {
     const char* name;
-    int (*func)(Bcache* bc, int argc, char** argv);
+    int (*func)(minfs::Bcache* bc, int argc, char** argv);
     uint32_t flags;
     const char* help;
 } CMDS[] = {
@@ -241,7 +246,7 @@ struct {
 #endif
 };
 
-int usage(void) {
+int usage() {
     fprintf(stderr,
             "usage: minfs [ <option>* ] <file-or-device>[@<size>] <command> [ <arg>* ]\n"
             "\n"
@@ -270,6 +275,8 @@ off_t get_size(int fd) {
     }
     return s.st_size;
 }
+
+} // namespace anonymous
 
 int main(int argc, char** argv) {
     off_t size = 0;
@@ -359,10 +366,11 @@ found:
             return usage();
         }
     }
-    size /= kMinfsBlockSize;
+    size /= minfs::kMinfsBlockSize;
 
-    Bcache* bc;
-    if (Bcache::Create(&bc, fd, (uint32_t) size, kMinfsBlockSize, kMinfsBlockCacheSize) < 0) {
+    minfs::Bcache* bc;
+    if (minfs::Bcache::Create(&bc, fd, (uint32_t) size, minfs::kMinfsBlockSize,
+                              minfs::kMinfsBlockCacheSize) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }

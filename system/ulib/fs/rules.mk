@@ -9,14 +9,16 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/vfs.c \
-    $(LOCAL_DIR)/vfs-mount.c \
-    $(LOCAL_DIR)/vfs-unmount.c \
-    $(LOCAL_DIR)/vfs-rpc.c \
+    $(LOCAL_DIR)/vfs.cpp \
+    $(LOCAL_DIR)/vfs-mount.cpp \
+    $(LOCAL_DIR)/vfs-unmount.cpp \
+    $(LOCAL_DIR)/vfs-rpc.cpp \
 
 MODULE_LIBS := \
-    ulib/mxio \
+    ulib/c \
     ulib/magenta \
-    ulib/c
+    ulib/mxcpp \
+    ulib/mxio \
+    ulib/mxtl \
 
 include make/module.mk

@@ -19,14 +19,11 @@
 
 #include <mxio/vfs.h>
 #include "minfs.h"
+#include "minfs-private.h"
 
-struct vnode {
-    VNODE_BASE_FIELDS
-};
-
-static mx_status_t do_stat(vnode_t* vn, struct stat* s) {
+static mx_status_t do_stat(Vnode* vn, struct stat* s) {
     vnattr_t a;
-    mx_status_t status = vn->ops->getattr(vn, &a);
+    mx_status_t status = vn->Getattr(&a);
     if (status == NO_ERROR) {
         memset(s, 0, sizeof(struct stat));
         s->st_mode = a.mode;
@@ -39,7 +36,7 @@ static mx_status_t do_stat(vnode_t* vn, struct stat* s) {
 }
 
 typedef struct {
-    vnode_t* vn;
+    Vnode* vn;
     uint64_t off;
     vdircookie_t dircookie;
 } file_t;
@@ -97,7 +94,7 @@ int status_to_errno(mx_status_t status) {
             return name(args);         \
     } while (0)
 
-vnode_t* fake_root;
+Vnode* fake_root;
 
 static inline int check_path(const char* path) {
     if (strncmp(path, PATH_PREFIX, PREFIX_SIZE) || (fake_root == nullptr)) {
@@ -113,10 +110,12 @@ int emu_open(const char* path, int flags, mode_t mode) {
     for (fd = 0; fd < MAXFD; fd++) {
         if (fdtab[fd].vn == nullptr) {
             const char* pathout = nullptr;
-            mx_status_t status = vfs_open(fake_root, &fdtab[fd].vn, path + PREFIX_SIZE, &pathout, flags, mode);
+            fs::Vnode* vn_fs;
+            mx_status_t status = fs::Vfs::Open(fake_root, &vn_fs, path + PREFIX_SIZE, &pathout, flags, mode);
             if (status < 0) {
                 STATUS(status);
             }
+            fdtab[fd].vn = static_cast<Vnode*>(vn_fs);
             return fd | FD_MAGIC;
         }
     }
@@ -127,7 +126,7 @@ int emu_close(int fd) {
     //TODO: fdtab lock
     file_t* f;
     FILE_WRAP(f, fd, close, fd);
-    vfs_close(f->vn);
+    fs::Vfs::Close(f->vn);
     memset(f, 0, sizeof(file_t));
     return 0;
 }
@@ -147,7 +146,7 @@ int emu_mkdir(const char* path, mode_t mode) {
 ssize_t emu_read(int fd, void* buf, size_t count) {
     file_t* f;
     FILE_WRAP(f, fd, read, fd, buf, count);
-    ssize_t r = f->vn->ops->read(f->vn, buf, count, f->off);
+    ssize_t r = f->vn->Read(buf, count, f->off);
     if (r > 0) {
         f->off += r;
     }
@@ -157,7 +156,7 @@ ssize_t emu_read(int fd, void* buf, size_t count) {
 ssize_t emu_write(int fd, const void* buf, size_t count) {
     file_t* f;
     FILE_WRAP(f, fd, write, fd, buf, count);
-    ssize_t r = f->vn->ops->write(f->vn, buf, count, f->off);
+    ssize_t r = f->vn->Write(buf, count, f->off);
     if (r > 0) {
         f->off += r;
     }
@@ -180,7 +179,7 @@ off_t emu_lseek(int fd, off_t offset, int whence) {
         f->off = offset;
         break;
     case SEEK_END:
-        if (f->vn->ops->getattr(f->vn, &a)) {
+        if (f->vn->Getattr(&a)) {
             FAIL(EINVAL);
         }
         old = a.size;
@@ -212,25 +211,25 @@ int emu_fstat(int fd, struct stat* s) {
 
 int emu_unlink(const char* path) {
     PATH_WRAP(path, unlink, path);
-    vnode_t* vn;
-    mx_status_t status = vfs_walk(fake_root, &vn, path + PREFIX_SIZE, &path);
+    fs::Vnode* vn;
+    mx_status_t status = fs::Vfs::Walk(fake_root, &vn, path + PREFIX_SIZE, &path);
     if (status == NO_ERROR) {
-        status = vn->ops->unlink(vn, path, strlen(path), false);
-        vfs_close(vn);
+        status = vn->Unlink(path, strlen(path), false);
+        fs::Vfs::Close(vn);
     }
     STATUS(status);
 }
 
 int emu_rename(const char* oldpath, const char* newpath) {
     PATH_WRAP(oldpath, rename, oldpath, newpath);
-    mx_status_t status = vfs_rename(fake_root, oldpath + PREFIX_SIZE, newpath + PREFIX_SIZE,
-                                    NULL, NULL);
+    mx_status_t status = fs::Vfs::Rename(fake_root, oldpath + PREFIX_SIZE,
+                                              newpath + PREFIX_SIZE, NULL, NULL);
     STATUS(status);
 }
 
 int emu_stat(const char* fn, struct stat* s) {
     PATH_WRAP(fn, stat, fn, s);
-    vnode_t *vn, *cur = fake_root;
+    Vnode *vn, *cur = fake_root;
     mx_status_t status;
     const char* nextpath = nullptr;
     size_t len;
@@ -249,12 +248,14 @@ int emu_stat(const char* fn, struct stat* s) {
             len = nextpath - fn;
             nextpath++;
         }
-        status = cur->ops->lookup(cur, &vn, fn, len);
+        fs::Vnode* vn_fs;
+        status = cur->Lookup(&vn_fs, fn, len);
         if (status != NO_ERROR) {
             return -ENOENT;
         }
+        vn = static_cast<Vnode*>(vn_fs);
         if (cur != fake_root) {
-            vfs_close(cur);
+            fs::Vfs::Close(cur);
         }
         cur = vn;
         fn = nextpath;
@@ -262,7 +263,7 @@ int emu_stat(const char* fn, struct stat* s) {
 
     status = do_stat(vn, s);
     if (vn != fake_root) {
-        vfs_close(vn);
+        fs::Vfs::Close(vn);
     }
     STATUS(status);
 }
@@ -271,7 +272,7 @@ int emu_stat(const char* fn, struct stat* s) {
 
 typedef struct MINDIR {
     uint64_t magic;
-    vnode_t* vn;
+    Vnode* vn;
     vdircookie_t cookie;
     uint8_t* ptr;
     uint8_t data[DIR_BUFSIZE];
@@ -281,19 +282,19 @@ typedef struct MINDIR {
 
 DIR* emu_opendir(const char* name) {
     PATH_WRAP(name, opendir, name);
-    vnode_t* vn;
-    mx_status_t status = vfs_open(fake_root, &vn, name + PREFIX_SIZE, &name, O_RDONLY, 0);
+    fs::Vnode* vn;
+    mx_status_t status = fs::Vfs::Open(fake_root, &vn, name + PREFIX_SIZE, &name, O_RDONLY, 0);
     if (status != NO_ERROR) {
         return nullptr;
     }
     MINDIR* dir = (MINDIR*)calloc(1, sizeof(MINDIR));
-    dir->magic = kMinfsMagic0;
-    dir->vn = vn;
+    dir->magic = minfs::kMinfsMagic0;
+    dir->vn = static_cast<Vnode*>(vn);
     return (DIR*) dir;
 }
 
 struct dirent* emu_readdir(DIR* dirp) {
-    if (((uint64_t*)dirp)[0] != kMinfsMagic0) {
+    if (((uint64_t*)dirp)[0] != minfs::kMinfsMagic0) {
         return readdir(dirp);
     }
 
@@ -310,7 +311,7 @@ struct dirent* emu_readdir(DIR* dirp) {
             }
             dir->size = 0;
         }
-        mx_status_t status = dir->vn->ops->readdir(dir->vn, &dir->cookie, &dir->data, DIR_BUFSIZE);
+        mx_status_t status = dir->vn->Readdir(&dir->cookie, &dir->data, DIR_BUFSIZE);
         if (status < 0) {
             break;
         }
@@ -321,12 +322,12 @@ struct dirent* emu_readdir(DIR* dirp) {
 }
 
 int emu_closedir(DIR* dirp) {
-    if (((uint64_t*)dirp)[0] != kMinfsMagic0) {
+    if (((uint64_t*)dirp)[0] != minfs::kMinfsMagic0) {
         return closedir(dirp);
     }
 
     MINDIR* dir = (MINDIR*)dirp;
-    vfs_close(dir->vn);
+    fs::Vfs::Close(dir->vn);
     free(dirp);
 
     return 0;

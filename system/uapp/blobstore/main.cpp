@@ -16,8 +16,10 @@
 
 // TODO(smklein): Implement fsck for blobstore
 
+namespace {
+
 int do_blobstore_mount(int fd, int argc, char** argv) {
-    vnode_t* vn = 0;
+    blobstore::VnodeBlob* vn = 0;
     if (blobstore::blobstore_mount(&vn, fd) < 0) {
         return -1;
     }
@@ -39,7 +41,7 @@ struct {
     {"mount", do_blobstore_mount, "mount filesystem"},
 };
 
-int usage(void) {
+int usage() {
     fprintf(stderr,
             "usage: blobstore <command> [ <arg>* ]\n"
             "\n"
@@ -54,6 +56,8 @@ int usage(void) {
     fprintf(stderr, "\n");
     return -1;
 }
+
+} // namespace anonymous
 
 int main(int argc, char** argv) {
     if (argc < 2) {

@@ -30,49 +30,58 @@
 
 mxio_dispatcher_t* vfs_dispatcher;
 
-mx_status_t vfs_get_handles(vnode_t* vn, uint32_t flags, mx_handle_t* hnds,
-                            uint32_t* type, void* extra, uint32_t* esize) {
-    if ((vn->flags & V_FLAG_DEVICE) && !(flags & O_DIRECTORY)) {
+namespace memfs {
+
+static VnodeMemfs* global_vfs_root;
+
+mx_status_t VnodeDevice::GetHandles(uint32_t flags, mx_handle_t* hnds,
+                                    uint32_t* type, void* extra, uint32_t* esize) {
+    if (IsDevice() && !(flags & O_DIRECTORY)) {
         *type = 0;
-        hnds[0] = vn->remote;
-        return 1;
-    } else if (vn->flags & V_FLAG_VMOFILE) {
-        mx_off_t* args = extra;
-        hnds[0] = vfs_get_vmofile(vn, args + 0, args + 1);
-        *type = MXIO_PROTOCOL_VMOFILE;
-        *esize = sizeof(mx_off_t) * 2;
+        hnds[0] = remote_;
         return 1;
     } else {
-        // local vnode or device as a directory, we will create the handles
-        mx_status_t r = vfs_create_handle(vn, flags, hnds);
-        if (r < 0) {
-            return r;
-        }
-        *type = MXIO_PROTOCOL_REMOTE;
-        return 1;
+        return VnodeMemfs::GetHandles(flags, hnds, type, extra, esize);
     }
 }
 
-#define FS_NAME "memfs"
+mx_status_t VnodeMemfs::GetHandles(uint32_t flags, mx_handle_t* hnds, uint32_t* type, void* extra,
+                                   uint32_t* esize) {
+    // local vnode or device as a directory, we will create the handles
+    mx_status_t r = Serve(flags, hnds);
+    if (r < 0) {
+        return r;
+    }
+    *type = MXIO_PROTOCOL_REMOTE;
+    return 1;
+}
 
-ssize_t vfs_do_local_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
+} // namespace memfs
+
+// The following functions exist outside the memfs namespace so they
+// can be exposed to C:
+
+constexpr const char kFsName[] = "memfs";
+
+ssize_t vfs_do_local_ioctl(fs::Vnode* vn, uint32_t op, const void* in_buf,
                            size_t in_len, void* out_buf, size_t out_len) {
     switch (op) {
-    case IOCTL_DEVMGR_MOUNT_BOOTFS_VMO:
+    case IOCTL_DEVMGR_MOUNT_BOOTFS_VMO: {
         if (in_len < sizeof(mx_handle_t)) {
             return ERR_INVALID_ARGS;
         }
-        const mx_handle_t* vmo = in_buf;
+        const mx_handle_t* vmo = static_cast<const mx_handle_t*>(in_buf);
         return devmgr_add_systemfs_vmo(*vmo);
+    }
     case IOCTL_DEVMGR_QUERY_FS: {
-        if (out_len < strlen(FS_NAME) + 1) {
+        if (out_len < strlen(kFsName) + 1) {
             return ERR_INVALID_ARGS;
         }
-        strcpy(out_buf, FS_NAME);
-        return strlen(FS_NAME);
+        strcpy(static_cast<char*>(out_buf), kFsName);
+        return strlen(kFsName);
     }
     default:
-        return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
+        return vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
     }
 }
 
@@ -88,23 +97,21 @@ mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
 }
 
 // Acquire the root vnode and return a handle to it through the VFS dispatcher
-mx_handle_t vfs_create_root_handle(vnode_t* vn) {
+mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
     mx_status_t r;
-    if ((r = vn->ops->open(&vn, O_DIRECTORY)) < 0) {
+    if ((r = vn->Open(O_DIRECTORY)) < 0) {
         return r;
     }
     mx_handle_t h;
-    if ((r = vfs_create_handle(vn, 0, &h)) < 0) {
+    if ((r = vn->Serve(0, &h)) < 0) {
         return r;
     }
     return h;
 }
 
-static vnode_t* global_vfs_root;
-
 // Initialize the global root VFS node and dispatcher
-void vfs_global_init(vnode_t* root) {
-    global_vfs_root = root;
+void vfs_global_init(VnodeMemfs* root) {
+    memfs::global_vfs_root = root;
     if (mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler) == NO_ERROR) {
         mxio_dispatcher_start(vfs_dispatcher, "vfs-rio-dispatcher");
     }
@@ -112,5 +119,5 @@ void vfs_global_init(vnode_t* root) {
 
 // Return a RIO handle to the global root
 mx_handle_t vfs_create_global_root_handle() {
-    return vfs_create_root_handle(global_vfs_root);
+    return vfs_create_root_handle(memfs::global_vfs_root);
 }

@@ -15,8 +15,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+namespace memfs {
+
 // create a new dnode and attach it to a vnode
-mx_status_t dn_create(dnode_t** out, const char* name, size_t len, vnode_t* vn) {
+mx_status_t dn_create(dnode_t** out, const char* name, size_t len, VnodeMemfs* vn) {
     mx_status_t status;
     if ((status = dn_allocate(out, name, len)) < 0) {
         return status;
@@ -31,10 +33,10 @@ mx_status_t dn_allocate(dnode_t** out, const char* name, size_t len) {
     }
 
     dnode_t* dn;
-    if ((dn = calloc(1, sizeof(dnode_t) + len + 1)) == NULL) {
+    if ((dn = static_cast<dnode_t*>(calloc(1, sizeof(dnode_t) + len + 1))) == nullptr) {
         return ERR_NO_MEMORY;
     }
-    dn->flags = len;
+    dn->flags = static_cast<uint32_t>(len);
     memcpy(dn->name, name, len);
     dn->name[len] = '\0';
     list_initialize(&dn->children);
@@ -43,12 +45,12 @@ mx_status_t dn_allocate(dnode_t** out, const char* name, size_t len) {
 }
 
 // Attach a vnode to a dnode
-void dn_attach(dnode_t* dn, vnode_t* vn) {
+void dn_attach(dnode_t* dn, VnodeMemfs* vn) {
     dn->vnode = vn;
-    if (vn != NULL) {
-        vn_acquire(vn);
-        list_add_tail(&vn->dn_list, &dn->vn_entry);
-        vn->dn_count++;
+    if (vn != nullptr) {
+        vn->RefAcquire();
+        list_add_tail(&vn->dn_list_, &dn->vn_entry);
+        vn->dn_count_++;
     }
 }
 
@@ -56,22 +58,22 @@ void dn_delete(dnode_t* dn) {
     // detach from parent
     if (dn->parent) {
         list_delete(&dn->dn_entry);
-        dn->parent = NULL;
+        dn->parent = nullptr;
     }
 
     // detach from vnode
     if (dn->vnode) {
         list_delete(&dn->vn_entry);
-        dn->vnode->dn_count--;
-        vn_release(dn->vnode);
-        dn->vnode = NULL;
+        dn->vnode->dn_count_--;
+        dn->vnode->RefRelease();
+        dn->vnode = nullptr;
     }
 
     free(dn);
 }
 
 void dn_add_child(dnode_t* parent, dnode_t* child) {
-    if ((parent == NULL) || (child == NULL)) {
+    if ((parent == nullptr) || (child == nullptr)) {
         printf("dn_add_child(%p,%p) bad args\n", parent, child);
         panic();
     }
@@ -112,7 +114,7 @@ mx_status_t dn_lookup(dnode_t* parent, dnode_t** out, const char* name, size_t l
 }
 
 // return the (first) name matching this vnode
-mx_status_t dn_lookup_name(const dnode_t* parent, const vnode_t* vn, char* out, size_t out_len) {
+mx_status_t dn_lookup_name(const dnode_t* parent, const VnodeMemfs* vn, char* out, size_t out_len) {
     dnode_t* dn;
     list_for_every_entry(&parent->children, dn, dnode_t, dn_entry) {
         if (dn->vnode == vn) {
@@ -139,30 +141,30 @@ void dn_print_children(dnode_t* parent, int indent) {
 }
 
 mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len) {
-    vdircookie_t* c = cookie;
-    dnode_t* last = c->p;
+    vdircookie_t* c = static_cast<vdircookie_t*>(cookie);
+    dnode_t* last = static_cast<dnode_t*>(c->p);
     size_t pos = 0;
-    char* ptr = data;
-    bool search = (last != NULL);
+    char* ptr = static_cast<char*>(data);
+    bool search = (last != nullptr);
     mx_status_t r;
     dnode_t* dn;
 
     // Use 'c->p' to point to the last seen vnode.
     // Use 'c->n' to count the number of entries we've already returned.
     if (c->n == 0) {
-        r = vfs_fill_dirent((void*)(ptr + pos), len - pos, ".", 1,
-                            VTYPE_TO_DTYPE(V_TYPE_DIR));
+        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, ".", 1,
+                                VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
-            return pos;
+            return static_cast<mx_status_t>(pos);
         }
         pos += r;
         c->n++;
     }
     if (c->n == 1) {
-        r = vfs_fill_dirent((void*)(ptr + pos), len - pos, "..", 2,
-                            VTYPE_TO_DTYPE(V_TYPE_DIR));
+        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, "..", 2,
+                                VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
-            return pos;
+            return static_cast<mx_status_t>(pos);
         }
         pos += r;
         c->n++;
@@ -175,9 +177,9 @@ mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len) {
             }
         } else {
             uint32_t vtype = DNODE_IS_DIR(dn) ? V_TYPE_DIR : V_TYPE_FILE;
-            r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
-                                dn->name, DN_NAME_LEN(dn->flags),
-                                VTYPE_TO_DTYPE(vtype));
+            r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos,
+                                    dn->name, DN_NAME_LEN(dn->flags),
+                                    VTYPE_TO_DTYPE(vtype));
             if (r < 0) {
                 break;
             }
@@ -188,5 +190,7 @@ mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len) {
     }
 
     c->p = last;
-    return pos;
+    return static_cast<mx_status_t>(pos);
 }
+
+} // namespace memfs

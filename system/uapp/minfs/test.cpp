@@ -18,7 +18,7 @@
 #include "host.h"
 #include "misc.h"
 
-void drop_cache(void);
+void drop_cache();
 
 #define TRY(func) ({\
     int ret = (func); \
@@ -181,7 +181,7 @@ int worker_new(const char* where, const char* fn,
     return 0;
 }
 
-int do_work(void) {
+int do_work() {
     uint32_t busy_count = 0;
     for (worker_t* w = all_workers; w != nullptr; w = w->next) {
         if (w->status == BUSY) {
@@ -197,7 +197,7 @@ int do_work(void) {
     return busy_count ? BUSY : DONE;
 }
 
-int do_all_work(void) {
+int do_all_work() {
     for (;;) {
         int r = do_work();
         if (r == FAIL) {
@@ -228,7 +228,7 @@ struct {
     { worker_writer, "file0007", MB(8), 0, },
 };
 
-int test_rw1(void) {
+int test_rw1() {
     const char* where = "::";
     for (unsigned n = 0; n < countof(WORK); n++) {
         if (worker_new(where, WORK[n].name, WORK[n].work, WORK[n].size, WORK[n].flags) < 0) {
@@ -239,7 +239,7 @@ int test_rw1(void) {
     return do_all_work();
 }
 
-int test_maxfile(void) {
+int test_maxfile() {
     int fd = TRY(emu_open("::bigfile", O_CREAT | O_WRONLY, 0644));
     if (fd < 0) {
         return -1;
@@ -263,7 +263,7 @@ int test_maxfile(void) {
     return (r < 0) ? -1 : 0;
 }
 
-int test_basic(void) {
+int test_basic() {
     TRY(emu_mkdir("::alpha", 0755));
     TRY(emu_mkdir("::alpha/bravo", 0755));
     TRY(emu_mkdir("::alpha/bravo/charlie", 0755));
@@ -285,7 +285,7 @@ int test_basic(void) {
     return 0;
 }
 
-int test_rename(void) {
+int test_rename() {
     EXPECT_FAIL(emu_rename("::alpha", "::bravo")); // Cannot rename when src does not exist
     TRY(emu_mkdir("::alpha", 0755));
     EXPECT_FAIL(emu_rename("::alpha", "::alpha")); // Cannot rename to self

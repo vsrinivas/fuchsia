@@ -16,6 +16,8 @@
 #include "minfs.h"
 #include "minfs-private.h"
 
+namespace minfs {
+
 mx_status_t Bcache::Readblk(uint32_t bno, void* data) {
     off_t off = bno * kMinfsBlockSize;
     trace(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
@@ -250,3 +252,5 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
     return -1;
 }
 #endif
+
+} // namespace minfs

@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
 
 #include <bitmap/raw-bitmap.h>
@@ -16,6 +15,8 @@
 #include <mxtl/unique_ptr.h>
 
 #include "minfs-private.h"
+
+namespace minfs {
 
 void* GetBlock(const RawBitmap& bitmap, uint32_t blkno) {
     assert(blkno * kMinfsBlockSize < bitmap.size()); // Accessing beyond end of bitmap
@@ -37,14 +38,6 @@ void minfs_dump_info(minfs_info_t* info) {
     printf("minfs: alloc bitmap @ %10u\n", info->abm_block);
     printf("minfs: inode table  @ %10u\n", info->ino_block);
     printf("minfs: data blocks  @ %10u\n", info->dat_block);
-}
-
-static mx_time_t minfs_gettime_utc() {
-    // linux/magenta compatible
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    mx_time_t time = MX_SEC(ts.tv_sec)+ts.tv_nsec;
-    return time;
 }
 
 mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
@@ -71,39 +64,8 @@ mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
     return 0;
 }
 
-// sync the data portion of the current vnode
-void minfs_sync_vnode(vnode_t* vn, uint32_t flags) {
-
-    // by default, c/mtimes are not updated to current time
-    if (flags != kMxFsSyncDefault) {
-        mx_time_t cur_time = minfs_gettime_utc();
-        // update times before syncing
-        if ((flags & kMxFsSyncMtime) != 0) {
-            vn->inode.modify_time = cur_time;
-        }
-        if ((flags & kMxFsSyncCtime) != 0) {
-            vn->inode.create_time = cur_time;
-        }
-        // TODO(orr): no current support for atime
-    }
-
-    uint32_t bno_of_ino = vn->fs->info_.ino_block + (vn->ino / kMinfsInodesPerBlock);
-    uint32_t off_of_ino = (vn->ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
-
-    mxtl::RefPtr<BlockNode> blk;
-    if ((blk = vn->fs->bc_->Get(bno_of_ino)) == nullptr) {
-        panic("failed sync vnode %p(#%u)", vn, vn->ino);
-    }
-
-    memcpy((void*)((uintptr_t)blk->data() + off_of_ino), &vn->inode, kMinfsInodeSize);
-    vn->fs->bc_->Put(blk, kBlockDirty);
-}
-
 Minfs::Minfs(Bcache* bc, minfs_info_t* info) : bc_(bc) {
     memcpy(&info_, info, sizeof(minfs_info_t));
-    for (size_t n = 0; n < kMinfsBuckets; n++) {
-        list_initialize(vnode_hash_ + n);
-    }
 }
 
 mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
@@ -172,7 +134,7 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
     return NO_ERROR;
 }
 
-mx_status_t Minfs::InoNew(minfs_inode_t* inode, uint32_t* ino_out) {
+mx_status_t Minfs::InoNew(const minfs_inode_t* inode, uint32_t* ino_out) {
     size_t bitoff_start;
     mx_status_t status = inode_map_.Find(false, 0, inode_map_.size(), 1, &bitoff_start);
     if (status != NO_ERROR) {
@@ -221,65 +183,59 @@ mx_status_t Minfs::InoNew(minfs_inode_t* inode, uint32_t* ino_out) {
     return NO_ERROR;
 }
 
-mx_status_t Minfs::VnodeNew(vnode_t** out, uint32_t type) {
-    vnode_t* vn;
+mx_status_t Minfs::VnodeNew(VnodeMinfs** out, uint32_t type) {
     if ((type != kMinfsTypeFile) && (type != kMinfsTypeDir)) {
         return ERR_INVALID_ARGS;
     }
-    if ((vn = (vnode_t*)calloc(1, sizeof(vnode_t))) == nullptr) {
-        return ERR_NO_MEMORY;
-    }
-    vn->inode.magic = MinfsMagic(type);
-    vn->inode.create_time = vn->inode.modify_time = minfs_gettime_utc();
-    vn->inode.link_count = 1;
-    vn->refcount = 1;
-    vn->ops = &minfs_ops;
+
+    VnodeMinfs* vn;
     mx_status_t status;
-    if ((status = InoNew(&vn->inode, &vn->ino)) != NO_ERROR) {
-        free(vn);
+
+    // Allocate the in-memory vnode
+    if ((status = VnodeMinfs::Allocate(this, type, &vn)) != NO_ERROR) {
         return status;
     }
-    vn->fs = this;
-    list_add_tail(vnode_hash_ + INO_HASH(vn->ino), &vn->hashnode);
+
+    // Allocate the on-disk inode
+    if ((status = InoNew(&vn->inode_, &vn->ino_)) != NO_ERROR) {
+        delete vn;
+        return status;
+    }
+
+    vnode_hash_.insert(vn);
 
     trace(MINFS, "new_vnode() %p(#%u) { magic=%#08x }\n",
-          vn, vn->ino, vn->inode.magic);
+          vn, vn->ino_, vn->inode_.magic);
 
     *out = vn;
     return 0;
 }
 
-mx_status_t Minfs::VnodeGet(vnode_t** out, uint32_t ino) {
+void Minfs::VnodeRelease(VnodeMinfs* vn) {
+    vnode_hash_.erase(*vn);
+}
+
+mx_status_t Minfs::VnodeGet(VnodeMinfs** out, uint32_t ino) {
     if ((ino < 1) || (ino >= info_.inode_count)) {
         return ERR_OUT_OF_RANGE;
     }
-    vnode_t* vn;
-    uint32_t bucket = INO_HASH(ino);
-    list_for_every_entry(vnode_hash_ + bucket, vn, vnode_t, hashnode) {
-        if (vn->ino == ino) {
-            vn_acquire(vn);
-            *out = vn;
-            return NO_ERROR;
-        }
-    }
-    if ((vn = (vnode_t*)calloc(1, sizeof(vnode_t))) == nullptr) {
-        return ERR_NO_MEMORY;
+    VnodeMinfs* vn = vnode_hash_.find(ino).CopyPointer();
+    if (vn != nullptr) {
+        vn->RefAcquire();
+        *out = vn;
+        return NO_ERROR;
     }
     mx_status_t status;
+    if ((status = VnodeMinfs::AllocateHollow(this, &vn)) != NO_ERROR) {
+        return ERR_NO_MEMORY;
+    }
     uint32_t ino_per_blk = info_.block_size / kMinfsInodeSize;
-    if ((status = bc_->Read(info_.ino_block + ino / ino_per_blk, &vn->inode,
-                           kMinfsInodeSize * (ino % ino_per_blk), kMinfsInodeSize)) < 0) {
+    if ((status = bc_->Read(info_.ino_block + ino / ino_per_blk, &vn->inode_,
+                            kMinfsInodeSize * (ino % ino_per_blk), kMinfsInodeSize)) < 0) {
         return status;
     }
-    trace(MINFS, "get_vnode() %p(#%u) { magic=%#08x size=%u blks=%u dn=%u,%u,%u,%u... }\n",
-          vn, ino, vn->inode.magic, vn->inode.size, vn->inode.block_count,
-          vn->inode.dnum[0], vn->inode.dnum[1], vn->inode.dnum[2],
-          vn->inode.dnum[3]);
-    vn->fs = this;
-    vn->ino = ino;
-    vn->refcount = 1;
-    vn->ops = &minfs_ops;
-    list_add_tail(vnode_hash_ + bucket, &vn->hashnode);
+    vn->ino_ = ino;
+    vnode_hash_.insert(vn);
 
     *out = vn;
     return NO_ERROR;
@@ -411,7 +367,7 @@ mx_status_t Minfs::LoadBitmaps() {
     return NO_ERROR;
 }
 
-mx_status_t minfs_mount(vnode_t** out, Bcache* bc) {
+mx_status_t minfs_mount(VnodeMinfs** out, Bcache* bc) {
     minfs_info_t info;
     mx_status_t status;
 
@@ -426,7 +382,7 @@ mx_status_t minfs_mount(vnode_t** out, Bcache* bc) {
         return status;
     }
 
-    vnode_t* vn;
+    VnodeMinfs* vn;
     if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != NO_ERROR) {
         error("minfs: cannot find root inode\n");
         delete fs;
@@ -552,3 +508,5 @@ int minfs_mkfs(Bcache* bc) {
     bc->Put(blk, kBlockDirty);
     return 0;
 }
+
+} // namespace minfs

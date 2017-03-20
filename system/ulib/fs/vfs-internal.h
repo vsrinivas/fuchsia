@@ -29,7 +29,3 @@
 #ifndef __Fuchsia__
 #define O_NOREMOTE 0100000000
 #endif
-
-typedef struct vnode {
-    VNODE_BASE_FIELDS;
-} vnode_t;
