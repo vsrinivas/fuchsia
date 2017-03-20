@@ -11,6 +11,7 @@
 
 namespace bluetooth {
 namespace hci {
+namespace test {
 namespace {
 
 TEST(AdvertisingReportParserTest, EmptyReport) {
@@ -247,5 +248,6 @@ TEST(AdvertisingReportParserTest, ReportCountGreaterThanPayloadSize) {
 }
 
 }  // namespace
+}  // namespace test
 }  // namespace hci
 }  // namespace bluetooth

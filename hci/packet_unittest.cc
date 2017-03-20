@@ -21,6 +21,7 @@ using bluetooth::common::StaticByteBuffer;
 
 namespace bluetooth {
 namespace hci {
+namespace test {
 namespace {
 
 constexpr OpCode kTestOpCode = 0x07FF;
@@ -213,5 +214,6 @@ TEST(HCIPacketTest, ACLDataRxPacket) {
 }
 
 }  // namespace
+}  // namespace test
 }  // namespace hci
 }  // namespace bluetooth

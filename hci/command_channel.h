@@ -46,6 +46,8 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   void Initialize();
 
   // Unregisters event handlers and cleans up.
+  // NOTE: Initialize() and ShutDown() MUST be called on the same thread. These methods are not
+  // thread-safe.
   void ShutDown();
 
   // Used to identify an individual HCI command<->event transaction.
@@ -113,6 +115,10 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // Only one handler can be registered for a given |event_code| at a time. If a
   // handler was previously registered for the given |event_code|, this method
   // returns zero.
+  //
+  // If |task_runner| corresponds to the I/O thread's task runner, then the callback will be
+  // executed as soon as the event is received from the command channel. No delayed task posting
+  // will occur.
   //
   // The following values for |event_code| cannot be passed to this method:
   //    - HCI_Command_Complete event code

@@ -36,6 +36,8 @@ source_set("tests") {
   sources = [
     "advertising_report_parser_unittest.cc",
     "command_channel_unittest.cc",
+    "fake_controller.cc",
+    "fake_controller.h",
     "packet_unittest.cc",
   ]
 

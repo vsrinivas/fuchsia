@@ -1063,6 +1063,9 @@ constexpr size_t kMaxCommandPacketPayloadSize = 255;
 // header. See Core Spec v5.0 Vol 2, Part E, 5.4.4, paragraph 1.
 constexpr size_t kMaxEventPacketPayloadSize = 255;
 
+// The maximum number of bytes in a HCI ACL data packet payload supported by our stack.
+constexpr size_t kMaxACLPayloadSize = 1024;
+
 // Values that can be used in HCI Read|WriteFlowControlMode commands.
 enum class FlowControlMode : uint8_t {
   // Packet based data flow control mode (default for a Primary Controller)

@@ -53,7 +53,6 @@ bool Transport::InitializeForTesting(std::unique_ptr<CommandChannel> cmd_channel
   io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-transport-test");
 
   command_channel_ = std::move(cmd_channel);
-  if (command_channel_) command_channel_->Initialize();
 
   return true;
 }

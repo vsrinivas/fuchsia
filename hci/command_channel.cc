@@ -51,18 +51,31 @@ CommandChannel::CommandChannel(Transport* transport, mx::channel hci_command_cha
 }
 
 CommandChannel::~CommandChannel() {
-  if (is_initialized_) ShutDown();
+  ShutDown();
 }
 
 void CommandChannel::Initialize() {
   FTL_DCHECK(!is_initialized_);
 
+  // We make sure that this method blocks until the I/O handler registration task has run.
+  std::mutex init_mutex;
+  std::condition_variable init_cv;
+  bool ready = false;
+
   io_task_runner_ = transport_->io_task_runner();
-  io_task_runner_->PostTask([this] {
+  io_task_runner_->PostTask([&ready, &init_mutex, &init_cv, this] {
     io_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
         this, channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
-    FTL_LOG(INFO) << "hci: CommandChannel: I/O loop handler registered";
+    FTL_LOG(INFO) << "hci: CommandChannel: I/O handler registered";
+    {
+      std::lock_guard<std::mutex> lock(init_mutex);
+      ready = true;
+    }
+    init_cv.notify_one();
   });
+
+  std::unique_lock<std::mutex> lock(init_mutex);
+  init_cv.wait(lock, [&ready] { return ready; });
 
   is_initialized_ = true;
 
@@ -70,11 +83,13 @@ void CommandChannel::Initialize() {
 }
 
 void CommandChannel::ShutDown() {
-  FTL_DCHECK(is_initialized_);
+  if (!is_initialized_) return;
+
   FTL_LOG(INFO) << "hci: CommandChannel: shutting down";
 
   io_task_runner_->PostTask([handler_key = io_handler_key_] {
     FTL_DCHECK(mtl::MessageLoop::GetCurrent());
+    FTL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
     mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
   });
 
@@ -339,14 +354,20 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
   auto& handler = handler_iter->second;
   FTL_DCHECK(handler.event_code == event_code);
 
-  common::DynamicByteBuffer buffer(event.size());
-  memcpy(buffer.GetMutableData(), event.buffer()->GetData(), event.size());
+  // If the given task runner is the I/O task runner, then immediately execute the callback as there
+  // is no need to delay the execution.
+  if (handler.task_runner.get() == io_task_runner_.get()) {
+    handler.event_callback(event);
+  } else {
+    common::DynamicByteBuffer buffer(event.size());
+    memcpy(buffer.GetMutableData(), event.buffer()->GetData(), event.size());
 
-  handler.task_runner->PostTask(ftl::MakeCopyable(
-      [ buffer = std::move(buffer), event_callback = handler.event_callback ]() mutable {
-        EventPacket event(&buffer);
-        event_callback(event);
-      }));
+    handler.task_runner->PostTask(ftl::MakeCopyable(
+        [ buffer = std::move(buffer), event_callback = handler.event_callback ]() mutable {
+          EventPacket event(&buffer);
+          event_callback(event);
+        }));
+  }
 }
 
 void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
@@ -354,13 +375,14 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   FTL_DCHECK(pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED));
 
   uint32_t read_size;
-  mx_status_t status = channel_.read(0u, event_buffer_.GetMutableData(), kMaxEventPacketPayloadSize,
+  mx_status_t status = channel_.read(0u, event_buffer_.GetMutableData(), event_buffer_.GetSize(),
                                      &read_size, nullptr, 0, nullptr);
   if (status < 0) {
     FTL_LOG(ERROR) << "hci: CommandChannel: Failed to read event bytes: "
                    << mx_status_get_string(status);
     // TODO(armansito): Notify the upper layers via a callback and unregister
     // the handler.
+    ShutDown();
     return;
   }
 
@@ -403,6 +425,7 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 }
 
 void CommandChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
+  FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() == io_task_runner_.get());
   FTL_DCHECK(handle == channel_.get());
 
   FTL_LOG(ERROR) << "hci: CommandChannel: channel error: " << mx_status_get_string(error);

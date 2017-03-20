@@ -4,28 +4,21 @@
 
 #include "apps/bluetooth/hci/command_channel.h"
 
-#include <queue>
-#include <thread>
-#include <vector>
-
-#include <magenta/status.h>
 #include <mx/channel.h>
 
 #include "gtest/gtest.h"
 
 #include "apps/bluetooth/common/byte_buffer.h"
-#include "apps/bluetooth/common/test_helpers.h"
 #include "apps/bluetooth/hci/command_packet.h"
+#include "apps/bluetooth/hci/fake_controller.h"
 #include "apps/bluetooth/hci/hci.h"
 #include "apps/bluetooth/hci/transport.h"
-#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
-#include "lib/mtl/threading/create_thread.h"
 
 namespace bluetooth {
 namespace hci {
+namespace test {
 namespace {
 
 void NopStatusCallback(CommandChannel::TransactionId, Status) {}
@@ -46,122 +39,6 @@ constexpr uint8_t LowerBits(const OpCode opcode) {
 
 constexpr uint8_t kNumHCICommandPackets = 1;
 
-struct TestTransaction final {
-  TestTransaction() = default;
-
-  // TODO(armansito): Introduce ByteBuffer::CopyContents() and change these to
-  // ByteBuffer.
-  TestTransaction(common::MutableByteBuffer* expected,
-                  const std::vector<common::MutableByteBuffer*>& responses) {
-    this->expected = common::DynamicByteBuffer(expected->GetSize(), expected->CopyContents());
-    for (auto* buffer : responses) {
-      this->responses.push(common::DynamicByteBuffer(buffer->GetSize(), buffer->CopyContents()));
-    }
-  }
-
-  TestTransaction(TestTransaction&& other) {
-    expected = std::move(other.expected);
-    responses = std::move(other.responses);
-  }
-
-  TestTransaction& operator=(TestTransaction&& other) {
-    expected = std::move(other.expected);
-    responses = std::move(other.responses);
-    return *this;
-  }
-
-  common::DynamicByteBuffer expected;
-  std::queue<common::DynamicByteBuffer> responses;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(TestTransaction);
-};
-
-// Simple class that sits on one end of the HCI command channel and can be told
-// to respond to received command packets using a pre-defined set of byte
-// sequences.
-class FakeController final : public ::mtl::MessageLoopHandler {
- public:
-  // |channel|: The channel handle
-  explicit FakeController(mx::channel channel) : channel_(std::move(channel)) {
-    FTL_DCHECK(MX_HANDLE_INVALID != channel_.get());
-  }
-
-  ~FakeController() override { Stop(); }
-
-  void Start(std::vector<TestTransaction>* transactions) {
-    for (auto& t : *transactions) {
-      transactions_.push(std::move(t));
-    }
-    thread_ = mtl::CreateThread(&task_runner_, "FakeController thread");
-    task_runner_->PostTask([this] {
-      key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-          this, channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
-    });
-  }
-
-  void Stop() {
-    if (task_runner_) {
-      task_runner_->PostTask([this] {
-        mtl::MessageLoop::GetCurrent()->RemoveHandler(key_);
-        mtl::MessageLoop::GetCurrent()->QuitNow();
-      });
-    }
-    if (thread_.joinable()) thread_.join();
-  }
-
-  // Immediately sends the given packet over the channel.
-  void SendPacket(common::ByteBuffer* packet) {
-    FTL_DCHECK(packet);
-    FTL_DCHECK(task_runner_.get());
-
-    common::DynamicByteBuffer buffer(packet->GetSize());
-    memcpy(buffer.GetMutableData(), packet->GetData(), packet->GetSize());
-    task_runner_->PostTask(ftl::MakeCopyable([ buffer = std::move(buffer), this ]() mutable {
-      mx_status_t status = channel_.write(0, buffer.GetData(), buffer.GetSize(), nullptr, 0);
-      ASSERT_EQ(NO_ERROR, status);
-    }));
-  }
-
- private:
-  // ::mtl::MessageLoopHandler overrides:
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
-    ASSERT_EQ(handle, channel_.get());
-
-    common::StaticByteBuffer<kMaxCommandPacketPayloadSize> buffer;
-    uint32_t read_size;
-    mx_status_t status = channel_.read(0u, buffer.GetMutableData(), kMaxCommandPacketPayloadSize,
-                                       &read_size, nullptr, 0, nullptr);
-    ASSERT_TRUE(status == NO_ERROR || status == ERR_REMOTE_CLOSED);
-    if (status < 0) {
-      FTL_LOG(ERROR) << "Failed to read on channel: " << mx_status_get_string(status);
-      return;
-    }
-
-    ASSERT_FALSE(transactions_.empty());
-    auto& current = transactions_.front();
-    common::BufferView view(buffer.GetData(), read_size);
-    ASSERT_TRUE(ContainersEqual(current.expected, view));
-
-    while (!current.responses.empty()) {
-      auto& response = current.responses.front();
-      status = channel_.write(0, response.GetData(), response.GetSize(), nullptr, 0);
-      ASSERT_EQ(NO_ERROR, status) << "Failed to send response: " << mx_status_get_string(status);
-      current.responses.pop();
-    }
-
-    transactions_.pop();
-  }
-
-  mx::channel channel_;
-  std::queue<TestTransaction> transactions_;
-
-  std::thread thread_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  mtl::MessageLoop::HandlerKey key_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeController);
-};
-
 class CommandChannelTest : public ::testing::Test {
  public:
   CommandChannelTest() = default;
@@ -170,16 +47,17 @@ class CommandChannelTest : public ::testing::Test {
  protected:
   // ::testing::Test overrides:
   void SetUp() override {
-    mx::channel endpoint0, endpoint1;
+    mx::channel endpoint0, endpoint1, dummy_acl;
     mx_status_t status = mx::channel::create(0, &endpoint0, &endpoint1);
     ASSERT_EQ(NO_ERROR, status);
 
     transport_ = std::make_unique<Transport>();
 
     auto cmd_channel = std::make_unique<CommandChannel>(transport_.get(), std::move(endpoint0));
-    fake_controller_ = std::make_unique<FakeController>(std::move(endpoint1));
+    fake_controller_ = std::make_unique<FakeController>(std::move(endpoint1), std::move(dummy_acl));
 
     transport_->InitializeForTesting(std::move(cmd_channel));
+    transport_->command_channel()->Initialize();
   }
 
   void TearDown() override {
@@ -219,9 +97,8 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
       kNumHCICommandPackets, LowerBits(kReset),
       UpperBits(kReset),  // HCI_Reset opcode
       Status::kHardwareFailure);
-  std::vector<TestTransaction> transactions;
-  transactions.push_back(TestTransaction(&req, {&rsp}));
-  fake_controller()->Start(&transactions);
+  fake_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
+  fake_controller()->Start();
 
   // Send a HCI_Reset command.
   common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
@@ -266,9 +143,8 @@ TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
       kNumHCICommandPackets, LowerBits(kReset),
       UpperBits(kReset),  // HCI_Reset opcode
       Status::kSuccess);
-  std::vector<TestTransaction> transactions;
-  transactions.push_back(TestTransaction(&req, {&rsp0, &rsp1}));
-  fake_controller()->Start(&transactions);
+  fake_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp0, &rsp1}));
+  fake_controller()->Start();
 
   // Send HCI_Reset
   CommandChannel::TransactionId id;
@@ -311,9 +187,8 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
       Status::kSuccess, kNumHCICommandPackets, LowerBits(kReset),
       UpperBits(kReset)  // HCI_Reset opcode
       );
-  std::vector<TestTransaction> transactions;
-  transactions.push_back(TestTransaction(&req, {&rsp}));
-  fake_controller()->Start(&transactions);
+  fake_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
+  fake_controller()->Start();
 
   // Send HCI_Reset
   CommandChannel::TransactionId id;
@@ -378,10 +253,9 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
       kNumHCICommandPackets, LowerBits(kReadBDADDR), UpperBits(kReadBDADDR),
       Status::kSuccess, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06  // BD_ADDR
       );
-  std::vector<TestTransaction> transactions;
-  transactions.push_back(TestTransaction(&req0, {&rsp0}));
-  transactions.push_back(TestTransaction(&req1, {&rsp1, &rsp2}));
-  fake_controller()->Start(&transactions);
+  fake_controller()->QueueCommandTransaction(CommandTransaction(req0, {&rsp0}));
+  fake_controller()->QueueCommandTransaction(CommandTransaction(req1, {&rsp1, &rsp2}));
+  fake_controller()->Start();
 
   // Begin transactions:
   CommandChannel::TransactionId id0, id1;
@@ -465,17 +339,16 @@ TEST_F(CommandChannelTest, EventHandlerBasic) {
   id1 = cmd_channel()->AddEventHandler(kTestEventCode1, event_cb1, message_loop()->task_runner());
   EXPECT_NE(0u, id1);
 
-  std::vector<TestTransaction> transactions;
-  fake_controller()->Start(&transactions);
-  fake_controller()->SendPacket(&cmd_status);
-  fake_controller()->SendPacket(&cmd_complete);
-  fake_controller()->SendPacket(&event1);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&cmd_complete);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&cmd_status);
-  fake_controller()->SendPacket(&event1);
+  fake_controller()->Start();
+  fake_controller()->SendCommandChannelPacket(cmd_status);
+  fake_controller()->SendCommandChannelPacket(cmd_complete);
+  fake_controller()->SendCommandChannelPacket(event1);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(cmd_complete);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(cmd_status);
+  fake_controller()->SendCommandChannelPacket(event1);
 
   RunMessageLoop();
 
@@ -487,15 +360,15 @@ TEST_F(CommandChannelTest, EventHandlerBasic) {
 
   // Remove the first event handler.
   cmd_channel()->RemoveEventHandler(id0);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&event1);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&event0);
-  fake_controller()->SendPacket(&event1);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(event1);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(event0);
+  fake_controller()->SendCommandChannelPacket(event1);
 
   RunMessageLoop();
 
@@ -524,9 +397,9 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   // We will send the HCI_Reset command with kTestEventCode as the completion
   // event. The event handler we register below should only get invoked once and
   // after the pending transaction completes.
-  std::vector<TestTransaction> transactions;
-  transactions.push_back(TestTransaction(&req, {&cmd_status, &event0, &event1}));
-  fake_controller()->Start(&transactions);
+  fake_controller()->QueueCommandTransaction(
+      CommandTransaction(req, {&cmd_status, &event0, &event1}));
+  fake_controller()->Start();
 
   int event_count = 0;
   auto event_cb = [&event_count, kTestEventCode, this](const EventPacket& event) {
@@ -590,33 +463,33 @@ TEST_F(CommandChannelTest, LEMetaEventHandler) {
                                              message_loop()->task_runner());
   EXPECT_NE(0u, id1);
 
-  std::vector<TestTransaction> transactions;
-  fake_controller()->Start(&transactions);
+  fake_controller()->Start();
 
-  fake_controller()->SendPacket(&le_meta_event_bytes0);
+  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes0);
   RunMessageLoop();
   EXPECT_EQ(1, event_count0);
   EXPECT_EQ(0, event_count1);
 
-  fake_controller()->SendPacket(&le_meta_event_bytes0);
+  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes0);
   RunMessageLoop();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(0, event_count1);
 
-  fake_controller()->SendPacket(&le_meta_event_bytes1);
+  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes1);
   RunMessageLoop();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(1, event_count1);
 
   // Remove the first event handler.
   cmd_channel()->RemoveEventHandler(id0);
-  fake_controller()->SendPacket(&le_meta_event_bytes0);
-  fake_controller()->SendPacket(&le_meta_event_bytes1);
+  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes0);
+  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes1);
   RunMessageLoop();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(2, event_count1);
 }
 
 }  // namespace
+}  // namespace test
 }  // namespace hci
 }  // namespace bluetooth
