@@ -202,3 +202,47 @@ To see the list of QEMU commands you can execute from GDB:
 ```
 (gdb) monitor help
 ```
+
+### Saving system state for debugging
+
+If you have a crash that is difficult to debug, or that you need help
+with debugging, it's possible to save system state akin to a core dump.
+
+```
+bash$ qemu-img create -f qcow2 /tmp/my_snapshots.qcow2 32M
+```
+
+will create a "32M" block storage device.  Next launch QEMU and tell it
+about the device, but don't tell it to attach the device to the guest system.
+This is OK; we don't plan on using it to back up the disk state, we just want
+a core dump.  Note: all of this can be skipped if you are already emulating
+a block device and it is using the qcow2 format.
+
+```
+bash$ qemu <normal_launch_args> -drive if=none,format=qcow2,file=/tmp/my_snapshots.qcow2
+```
+
+When you get to a point where you want to save the core state, drop to the QEMU
+console using <C-a><C-c>.  You should get the (qemu) prompt at this point.
+From here, just say:
+
+```
+(qemu) savevm my_backup_tag_name
+```
+
+Later on, from an identical machine (one launched with the same args as before),
+you can drop to the console and run:
+
+```
+(qemu) loadvm my_backup_tag_name
+```
+
+to restore the state.  Alternatively, you can do it from the cmd line with:
+
+```
+bash$ qemu <normal_launch_args> -drive if=none,format=qcow2,file=/tmp/my_snapshots.qcow2 -loadvm my_backup_tag_name
+```
+
+In theory, you could package up the qcow2 image along with your build output
+directory and anyone should be able to restore your state and start to poke
+at stuff from the QEMU console.
