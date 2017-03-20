@@ -51,8 +51,8 @@ static inline void unlock(atomic_int* l) {
 
 static inline void unlock_requeue(atomic_int* l, mx_futex_t* r) {
     atomic_store(l, 0);
-    _mx_futex_requeue((void*)l, /* wake count */ 0, /* l futex value */ 0,
-                      (void*)r, /* requeue count */ 1);
+    _mx_futex_requeue(l, /* wake count */ 0, /* l futex value */ 0,
+                      r, /* requeue count */ 1);
 }
 
 enum {
