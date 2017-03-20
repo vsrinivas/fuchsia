@@ -81,3 +81,34 @@ impl Default for FifoOpts {
         FifoOpts::Default
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fifo_basic() {
+        let (fifo1, fifo2) = Fifo::create(4, 2, FifoOpts::Default).unwrap();
+
+        // Trying to write less than one element should fail.
+        assert_eq!(fifo1.write(b""), Err(Status::ErrOutOfRange));
+        assert_eq!(fifo1.write(b"h"), Err(Status::ErrOutOfRange));
+
+        // Should write one element "he" and ignore the last half-element as it rounds down.
+        assert_eq!(fifo1.write(b"hex").unwrap(), 1);
+
+        // Should write three elements "ll" "o " "wo" and drop the rest as it is full.
+        assert_eq!(fifo1.write(b"llo worlds").unwrap(), 3);
+
+        // Now that the fifo is full any further attempts to write should fail.
+        assert_eq!(fifo1.write(b"blah blah"), Err(Status::ErrShouldWait));
+
+        // Read all 4 entries from the other end.
+        let mut read_vec = vec![0; 8];
+        assert_eq!(fifo2.read(&mut read_vec).unwrap(), 4);
+        assert_eq!(read_vec, b"hello wo");
+
+        // Reading again should fail as the fifo is empty.
+        assert_eq!(fifo2.read(&mut read_vec), Err(Status::ErrShouldWait));
+    }
+}

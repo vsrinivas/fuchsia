@@ -1056,32 +1056,6 @@ mod tests {
     }
 
     #[test]
-    fn fifo_basic() {
-        let (fifo1, fifo2) = Fifo::create(4, 2, FifoOpts::Default).unwrap();
-
-        // Trying to write less than one element should fail.
-        assert_eq!(fifo1.write(b""), Err(Status::ErrOutOfRange));
-        assert_eq!(fifo1.write(b"h"), Err(Status::ErrOutOfRange));
-
-        // Should write one element "he" and ignore the last half-element as it rounds down.
-        assert_eq!(fifo1.write(b"hex").unwrap(), 1);
-
-        // Should write three elements "ll" "o " "wo" and drop the rest as it is full.
-        assert_eq!(fifo1.write(b"llo worlds").unwrap(), 3);
-
-        // Now that the fifo is full any further attempts to write should fail.
-        assert_eq!(fifo1.write(b"blah blah"), Err(Status::ErrShouldWait));
-
-        // Read all 4 entries from the other end.
-        let mut read_vec = vec![0; 8];
-        assert_eq!(fifo2.read(&mut read_vec).unwrap(), 4);
-        assert_eq!(read_vec, b"hello wo");
-
-        // Reading again should fail as the fifo is empty.
-        assert_eq!(fifo2.read(&mut read_vec), Err(Status::ErrShouldWait));
-    }
-
-    #[test]
     fn wait_and_signal() {
         let event = Event::create(EventOpts::Default).unwrap();
         let ten_ms: Time = 10_000_000;
@@ -1099,26 +1073,6 @@ mod tests {
         // Now clear it, and waiting should time out again.
         assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
         assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
-    }
-
-    #[test]
-    fn wait_and_signal_peer() {
-        let (p1, p2) = EventPair::create(EventPairOpts::Default).unwrap();
-        let ten_ms: Time = 10_000_000;
-
-        // Waiting on one without setting any signal should time out.
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
-
-        // If we set a signal, we should be able to wait for it.
-        assert!(p1.signal_peer(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, ten_ms).unwrap(), MX_USER_SIGNAL_0);
-
-        // Should still work, signals aren't automatically cleared.
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, ten_ms).unwrap(), MX_USER_SIGNAL_0);
-
-        // Now clear it, and waiting should time out again.
-        assert!(p1.signal_peer(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
     }
 
     #[test]
