@@ -6,6 +6,7 @@
 #define REGISTERS_H
 
 #include "magma_util/macros.h"
+#include "register_bitfields.h"
 #include "register_io.h"
 #include "types.h"
 
@@ -611,21 +612,17 @@ public:
 
 // DDI_AUX_CTL: Control register for the DisplayPort Aux channel
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
-class DdiAuxControl {
+class DdiAuxControl : public RegisterBase {
 public:
-    static constexpr uint32_t kSendBusyBit = 1 << 31;
-    static constexpr uint32_t kTimeoutBit = 1 << 28;
-    static constexpr uint32_t kMessageSizeShift = 20;
-    static constexpr uint32_t kMessageSizeMask = 0x1f;
-    // Appropriate flags that set the following:
-    //  * bits 4:0: Sync Pulse Count = 0x1f
-    //  * bits 9:5: Fast Wake Sync Pulse Count = 0
-    static constexpr uint32_t kFlags = 0x1f;
+    DEF_BIT(31, send_busy);
+    DEF_BIT(28, timeout);
+    DEF_FIELD(24, 20, message_size);
+    DEF_FIELD(4, 0, sync_pulse_count);
 
-    static uint32_t GetOffset(uint32_t ddi_number)
+    static auto Get(uint32_t ddi_number)
     {
         DASSERT(ddi_number < Ddi::kDdiCount);
-        return 0x64010 + 0x100 * ddi_number;
+        return RegisterAddr<DdiAuxControl>(0x64010 + 0x100 * ddi_number);
     }
 };
 

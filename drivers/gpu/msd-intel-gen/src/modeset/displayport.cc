@@ -76,7 +76,6 @@ private:
 
 bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply)
 {
-    uint32_t control_reg = registers::DdiAuxControl::GetOffset(ddi_number_);
     uint32_t data_reg = registers::DdiAuxData::GetOffset(ddi_number_);
 
     // Write the outgoing message to the hardware.
@@ -85,21 +84,22 @@ bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
         reg_io_->Write32(data_reg + offset, request->GetPackedWord(offset));
     }
 
-    // Set kSendBusyBit to initiate the transaction.
-    reg_io_->Write32(control_reg,
-                     registers::DdiAuxControl::kSendBusyBit | registers::DdiAuxControl::kFlags |
-                         (request->size << registers::DdiAuxControl::kMessageSizeShift));
+    auto status = registers::DdiAuxControl::Get(ddi_number_).FromValue(0);
+    status.sync_pulse_count().set(31);
+    status.message_size().set(request->size);
+    // Setting the send_busy bit initiates the transaction.
+    status.send_busy().set(1);
+    status.WriteTo(reg_io_);
 
     // Poll for the reply message.
     const int kNumTries = 10000;
     for (int tries = 0; tries < kNumTries; ++tries) {
-        uint32_t status = reg_io_->Read32(control_reg);
-        if ((status & registers::DdiAuxControl::kSendBusyBit) == 0) {
+        auto status = registers::DdiAuxControl::Get(ddi_number_).ReadFrom(reg_io_);
+        if (!status.send_busy().get()) {
             // TODO(MA-150): Test for handling of timeout errors
-            if (status & registers::DdiAuxControl::kTimeoutBit)
+            if (status.timeout().get())
                 return DRETF(false, "DP aux: Got timeout error");
-            reply->size = (status >> registers::DdiAuxControl::kMessageSizeShift) &
-                          registers::DdiAuxControl::kMessageSizeMask;
+            reply->size = status.message_size().get();
             if (reply->size > DpAuxMessage::kMaxTotalSize)
                 return DRETF(false, "DP aux: Invalid reply size");
             // Read the reply message from the hardware.

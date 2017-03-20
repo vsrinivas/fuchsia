@@ -139,14 +139,6 @@ private:
     unsigned defer_count_ = 0;
 };
 
-uint32_t SetBits(uint32_t reg_value, uint32_t shift, uint32_t mask, uint32_t field_value)
-{
-    assert((field_value & ~mask) == 0);
-    reg_value &= ~(mask << shift); // Clear the existing field value.
-    reg_value |= field_value << shift;
-    return reg_value;
-}
-
 // This represents the MMIO registers of an Intel graphics device.  It
 // represents the subset of registers used for sending messages over the
 // DisplayPort Aux channel.
@@ -156,22 +148,18 @@ public:
 
     void WriteDdiAuxControl(uint32_t ddi_number, uint32_t value)
     {
-        if (value & registers::DdiAuxControl::kSendBusyBit) {
-            uint32_t other_flags = value &
-                                   ~(registers::DdiAuxControl::kSendBusyBit |
-                                     (registers::DdiAuxControl::kMessageSizeMask
-                                      << registers::DdiAuxControl::kMessageSizeShift));
-            ASSERT_EQ(other_flags, uint32_t{registers::DdiAuxControl::kFlags});
+        auto control = registers::DdiAuxControl::Get(ddi_number).FromValue(value);
+
+        if (control.send_busy().get()) {
+            ASSERT_EQ(control.sync_pulse_count().get(), 31U);
 
             DpAuxMessage request;
             DpAuxMessage reply;
 
-            uint32_t control_reg = registers::DdiAuxControl::GetOffset(ddi_number);
             uint32_t data_reg = registers::DdiAuxData::GetOffset(ddi_number);
 
             // Read the request message from registers.
-            request.size = (value >> registers::DdiAuxControl::kMessageSizeShift) &
-                           registers::DdiAuxControl::kMessageSizeMask;
+            request.size = control.message_size().get();
             assert(request.size <= DpAuxMessage::kMaxTotalSize);
             for (uint32_t offset = 0; offset < request.size; offset += 4) {
                 request.SetFromPackedWord(offset, mmio_->Read32(data_reg + offset));
@@ -187,17 +175,16 @@ public:
             // Update the register to mark the transaction as completed.
             // (Note that since we do this immediately, we are not
             // exercising the polling logic in the software-under-test.)
-            value &= ~registers::DdiAuxControl::kSendBusyBit;
-            value = SetBits(value, registers::DdiAuxControl::kMessageSizeShift,
-                            registers::DdiAuxControl::kMessageSizeMask, reply.size);
-            mmio_->Write32(control_reg, value);
+            control.send_busy().set(0);
+            control.message_size().set(reply.size);
+            mmio_->Write32(control.reg_addr(), control.reg_value());
         }
     }
 
     void Write32(uint32_t offset, uint32_t value)
     {
         for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {
-            if (offset == registers::DdiAuxControl::GetOffset(ddi_number)) {
+            if (offset == registers::DdiAuxControl::Get(ddi_number).addr()) {
                 WriteDdiAuxControl(ddi_number, value);
             }
         }
@@ -219,6 +206,29 @@ private:
 
 class TestDisplayPort {
 };
+
+TEST(DisplayPort, BitfieldHandling)
+{
+    RegisterIo reg_io(MockMmio::Create(0x100000));
+
+    uint32_t ddi_number = 2;
+    uint32_t addr = 0x64010 + 0x100 * ddi_number;
+    EXPECT_EQ(reg_io.Read32(addr), 0U);
+    reg_io.Write32(addr, 0x100089);
+
+    // Using ReadFrom() should preserve the value 0x89 in the lower bits.
+    auto reg1 = registers::DdiAuxControl::Get(ddi_number).ReadFrom(&reg_io);
+    reg1.message_size().set(6);
+    reg1.WriteTo(&reg_io);
+    EXPECT_EQ(reg_io.Read32(addr), 0x600089U);
+
+    // The following will ignore the existing value and zero out the value
+    // in the lower bits.
+    auto reg2 = registers::DdiAuxControl::Get(ddi_number).FromValue(0);
+    reg2.message_size().set(5);
+    reg2.WriteTo(&reg_io);
+    EXPECT_EQ(reg_io.Read32(addr), 0x500000U);
+}
 
 // Test encoding and decoding of DP Aux messages to and from the big-endian
 // words that the Intel hardware uses.
