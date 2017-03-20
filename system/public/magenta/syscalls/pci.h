@@ -41,7 +41,7 @@ typedef struct mx_pci_init_arg {
         uint32_t global_irq;
         bool level_triggered;
         bool active_high;
-    } irqs[32];
+    } irqs[64];
 
     uint32_t ecam_window_count;
     struct {
