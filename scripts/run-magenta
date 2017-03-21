@@ -14,6 +14,7 @@ function HELP {
     echo "-C                   : use Clang build"
     echo "-d                   : run with emulated disk"
     echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
+    echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme), default is ahci"
     echo "-g                   : use graphical console"
     echo "-I <interface name>  : network interface name, default is qemu."
     echo "-k                   : use KVM"
@@ -45,6 +46,7 @@ BUILD=0
 CLANG=0
 DISK=0
 DISKFILE="blk.bin"
+DISKTYPE="ahci"
 BUILDDIR=
 GRAPHICS=0
 DO_KVM=0
@@ -98,6 +100,7 @@ while getopts "a:bc:CdD:gI:km:nNo:q:rs:u:vVx:h-:" FLAG; do
             audio) AUDIO=none;;
             audio=*) AUDIO=${OPTARG#*=};;
             wavfile=*) AUDIO_WAVFILE=${OPTARG#*=};;
+            disktype=*) DISKTYPE=${OPTARG#*=};;
             *)
                 echo unrecognized long option
                 HELP
@@ -168,9 +171,17 @@ fi
 
 if [ "$DISK" -eq 1 ]; then
     ARGS+=" -drive file=${DISKFILE},format=raw,if=none,id=mydisk"
-    if [ "$ARCH" == "x86-64" ] && [ "$VIRTIO" -eq 0 ]; then
-        # ahci
-        ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
+    if [ "$ARCH" == "x86-64" ]; then
+        if [ "$DISKTYPE" == "virtio" ]; then
+            ARGS+=" -device virtio-blk-pci,disable-modern=true,drive=mydisk"
+        elif [ "$DISKTYPE" == "ahci" ]; then
+            ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
+        elif [ "$DISKTYPE" == "nvme" ]; then
+            ARGS+=" -device nvme,drive=mydisk,serial=magenta"
+        else
+            echo unrecognized disk type \"$DISKTYPE\"
+            exit
+        fi
     else
         # virtio based block device, pci, transitional
         ARGS+=" -device virtio-blk-pci,disable-modern=true,drive=mydisk"
