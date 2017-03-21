@@ -16,5 +16,11 @@ The following terms and abbreviations are used in this codebase:
 
 * DP Aux: DisplayPort's auxiliary channel
 
+* DPCD: DisplayPort Configuration Data.  This is a set of registers exposed
+  by a DisplayPort sink device.  Each register is a byte in size.  The DPCD
+  can be read and written over the DisplayPort Aux channel using "native"
+  read and write messages, each of which can read or write a range of
+  bytes.
+
 * EDID: Extended Display Identification Data, a standard for data
   describing a display.

@@ -18,7 +18,7 @@ namespace {
 // Fill out the header of a DisplayPort Aux message.  For write operations,
 // |body_size| is the size of the body of the message to send.  For read
 // operations, |body_size| is the size of our receive buffer.
-bool SetDpAuxHeader(DpAuxMessage* msg, uint32_t addr, bool is_read, uint32_t body_size)
+bool SetDpAuxHeader(DpAuxMessage* msg, uint32_t addr, uint32_t dp_cmd, uint32_t body_size)
 {
     if (body_size > DpAuxMessage::kMaxBodySize)
         return DRETF(false, "DP aux: Message too large");
@@ -31,7 +31,6 @@ bool SetDpAuxHeader(DpAuxMessage* msg, uint32_t addr, bool is_read, uint32_t bod
     // I2C-over-Aux messages, not native Aux messages.
     if (addr >= 0x100)
         return DRETF(false, "DP aux: Large address not supported");
-    uint32_t dp_cmd = is_read;
     msg->data[0] = dp_cmd << 4;
     msg->data[1] = 0;
     msg->data[2] = addr;
@@ -48,7 +47,7 @@ bool SetDpAuxHeader(DpAuxMessage* msg, uint32_t addr, bool is_read, uint32_t bod
 
 } // namespace
 
-bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply)
+bool DpAuxChannel::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply)
 {
     uint32_t data_reg = registers::DdiAuxData::GetOffset(ddi_number_);
 
@@ -87,7 +86,7 @@ bool I2cOverDpAux::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
     return DRETF(false, "DP aux: No reply after %d tries", kNumTries);
 }
 
-bool I2cOverDpAux::SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessage* reply)
+bool DpAuxChannel::SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessage* reply)
 {
     // If the DisplayPort sink device isn't ready to handle an Aux message,
     // it can return an AUX_DEFER reply, which means we should retry the
@@ -144,12 +143,32 @@ bool I2cOverDpAux::SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessa
     return DRETF(false, "DP aux: Received too many AUX DEFERs (%d)", kNumTries);
 }
 
-bool I2cOverDpAux::I2cRead(uint32_t addr, uint8_t* buf, uint32_t size)
+bool DpAuxChannel::I2cRead(uint32_t addr, uint8_t* buf, uint32_t size)
+{
+    return DpAuxRead(DisplayPort::DP_REQUEST_I2C_READ, addr, buf, size);
+}
+
+bool DpAuxChannel::DpcdRead(uint32_t addr, uint8_t* buf, uint32_t size)
+{
+    return DpAuxRead(DisplayPort::DP_REQUEST_NATIVE_READ, addr, buf, size);
+}
+
+bool DpAuxChannel::I2cWrite(uint32_t addr, const uint8_t* buf, uint32_t size)
+{
+    return DpAuxWrite(DisplayPort::DP_REQUEST_I2C_WRITE, addr, buf, size);
+}
+
+bool DpAuxChannel::DpcdWrite(uint32_t addr, const uint8_t* buf, uint32_t size)
+{
+    return DpAuxWrite(DisplayPort::DP_REQUEST_NATIVE_WRITE, addr, buf, size);
+}
+
+bool DpAuxChannel::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size)
 {
     while (size > 0) {
         uint32_t chunk_size = std::min(size, uint32_t{DpAuxMessage::kMaxBodySize});
         uint32_t bytes_read = 0;
-        if (!I2cReadChunk(addr, buf, chunk_size, &bytes_read))
+        if (!DpAuxReadChunk(dp_cmd, addr, buf, chunk_size, &bytes_read))
             return false;
         if (bytes_read == 0) {
             // We failed to make progress on the last call.  To avoid the
@@ -164,12 +183,12 @@ bool I2cOverDpAux::I2cRead(uint32_t addr, uint8_t* buf, uint32_t size)
     return true;
 }
 
-bool I2cOverDpAux::I2cReadChunk(uint32_t addr, uint8_t* buf, uint32_t size_in, uint32_t* size_out)
+bool DpAuxChannel::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
+                                  uint32_t* size_out)
 {
     DpAuxMessage msg;
     DpAuxMessage reply;
-    if (!SetDpAuxHeader(&msg, addr, /* is_read= */ true, size_in) ||
-        !SendDpAuxMsgWithRetry(&msg, &reply)) {
+    if (!SetDpAuxHeader(&msg, addr, dp_cmd, size_in) || !SendDpAuxMsgWithRetry(&msg, &reply)) {
         return false;
     }
     uint32_t bytes_read = reply.size - 1;
@@ -183,11 +202,11 @@ bool I2cOverDpAux::I2cReadChunk(uint32_t addr, uint8_t* buf, uint32_t size_in, u
 
 // This does not support writes more than the message body size limit for
 // DisplayPort Aux (16 bytes), since we haven't needed that yet.
-bool I2cOverDpAux::I2cWrite(uint32_t addr, const uint8_t* buf, uint32_t size)
+bool DpAuxChannel::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, uint32_t size)
 {
     DpAuxMessage msg;
     DpAuxMessage reply;
-    if (!SetDpAuxHeader(&msg, addr, /* is_read= */ false, size))
+    if (!SetDpAuxHeader(&msg, addr, dp_cmd, size))
         return false;
     memcpy(&msg.data[4], buf, size);
     msg.size = size + 4;
@@ -203,7 +222,7 @@ bool I2cOverDpAux::I2cWrite(uint32_t addr, const uint8_t* buf, uint32_t size)
 bool DisplayPort::FetchEdidData(RegisterIo* reg_io, uint32_t ddi_number, uint8_t* buf,
                                 uint32_t size)
 {
-    I2cOverDpAux i2c(reg_io, ddi_number);
+    DpAuxChannel i2c(reg_io, ddi_number);
 
     // Seek to the start of the EDID data, in case the current seek
     // position is non-zero.

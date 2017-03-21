@@ -71,6 +71,26 @@ private:
     uint32_t seek_pos_ = 0;
 };
 
+// This represents a test instance of a DisplayPort sink device's DPCD
+// (DisplayPort Configuration Data).
+class Dpcd {
+public:
+    void DpcdRead(uint32_t addr, uint8_t* buf, uint32_t size)
+    {
+        for (uint32_t i = 0; i < size; ++i)
+            buf[i] = map_[addr + i];
+    }
+
+    void DpcdWrite(uint32_t addr, const uint8_t* buf, uint32_t size)
+    {
+        for (uint32_t i = 0; i < size; ++i)
+            map_[addr + i] = buf[i];
+    }
+
+private:
+    std::map<uint32_t, uint8_t> map_;
+};
+
 // This represents a DisplayPort Aux channel.  This implements sending I2C
 // messages over the Aux channel.
 class DpAux {
@@ -93,22 +113,31 @@ public:
             return;
         }
 
-        if (dp_cmd == 0) {
-            // I2C write
+        if (dp_cmd == DisplayPort::DP_REQUEST_I2C_WRITE ||
+            dp_cmd == DisplayPort::DP_REQUEST_NATIVE_WRITE) {
             assert(request->size == 4 + dp_size);
 
-            ASSERT_TRUE(i2c_.I2cWrite(addr, &request->data[4], dp_size));
+            if (dp_cmd == DisplayPort::DP_REQUEST_I2C_WRITE) {
+                ASSERT_TRUE(i2c_.I2cWrite(addr, &request->data[4], dp_size));
+            } else {
+                dpcd_.DpcdWrite(addr, &request->data[4], dp_size);
+            }
 
             reply->size = 1;
             reply->data[0] = 0; // Header byte: indicates an ack
-        } else if (dp_cmd == 1) {
-            // I2C read
+        } else if (dp_cmd == DisplayPort::DP_REQUEST_I2C_READ ||
+                   dp_cmd == DisplayPort::DP_REQUEST_NATIVE_READ) {
             // There should be no extra data in the input message.
             assert(request->size == 4);
             // This is the maximum amount we can read in a single I2C-read-over-DP.
             assert(dp_size <= DpAuxMessage::kMaxBodySize);
 
-            ASSERT_TRUE(i2c_.I2cRead(addr, &reply->data[1], dp_size));
+            if (dp_cmd == DisplayPort::DP_REQUEST_I2C_READ) {
+                ASSERT_TRUE(i2c_.I2cRead(addr, &reply->data[1], dp_size));
+            } else {
+                dpcd_.DpcdRead(addr, &reply->data[1], dp_size);
+            }
+
             reply->size = 1 + dp_size;
             reply->data[0] = 0; // Header byte: indicates an ack
         } else {
@@ -134,6 +163,7 @@ private:
     }
 
     DdcI2cBus i2c_;
+    Dpcd dpcd_;
     // Number of AUX DEFER replies sent since the last non-defer reply (or
     // since the start).
     unsigned defer_count_ = 0;
@@ -246,6 +276,33 @@ TEST(DisplayPort, DpAuxWordPacking)
     msg2.SetFromPackedWord(0, msg.GetPackedWord(0));
     msg2.SetFromPackedWord(4, msg.GetPackedWord(4));
     ASSERT_EQ(0, memcmp(msg2.data, msg.data, msg.size));
+}
+
+// Test reading and writing a DisplayPort sink device's DPCD.
+TEST(DisplayPort, DpcdReadAndWrite)
+{
+    RegisterIo reg_io(MockMmio::Create(0x100000));
+    reg_io.InstallHook(std::make_unique<TestDevice>(reg_io.mmio()));
+
+    DpAuxChannel dp_aux(&reg_io, 0);
+
+    uint8_t addr1 = 0x22;
+    uint8_t addr2 = 0x33;
+
+    // Write some data.
+    uint8_t write_data1[] = {0x44, 0x55};
+    uint8_t write_data2[] = {0x66};
+    EXPECT_TRUE(dp_aux.DpcdWrite(addr1, write_data1, sizeof(write_data1)));
+    EXPECT_TRUE(dp_aux.DpcdWrite(addr2, write_data2, sizeof(write_data2)));
+
+    // Check that we can read back the same data.
+    uint8_t read_data1[2] = {};
+    uint8_t read_data2[1] = {};
+    EXPECT_TRUE(dp_aux.DpcdRead(addr1, read_data1, sizeof(read_data1)));
+    EXPECT_TRUE(dp_aux.DpcdRead(addr2, read_data2, sizeof(read_data2)));
+    EXPECT_EQ(read_data1[0], 0x44);
+    EXPECT_EQ(read_data1[1], 0x55);
+    EXPECT_EQ(read_data2[0], 0x66);
 }
 
 void ReadbackTest(RegisterIo* reg_io, uint32_t ddi_number, ExampleEdidData* expected_data)

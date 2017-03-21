@@ -45,10 +45,12 @@ struct DpAuxMessage {
     }
 };
 
-// This implements sending I2C read and write requests over DisplayPort.
-class I2cOverDpAux {
+// This class implements sending and receiving messages over the
+// DisplayPort Aux channel.  The Aux channel supports read and write
+// requests for I2C messages and DisplayPort "native" messages.
+class DpAuxChannel {
 public:
-    I2cOverDpAux(RegisterIo* reg_io, uint32_t ddi_number) : reg_io_(reg_io), ddi_number_(ddi_number)
+    DpAuxChannel(RegisterIo* reg_io, uint32_t ddi_number) : reg_io_(reg_io), ddi_number_(ddi_number)
     {
     }
 
@@ -58,6 +60,13 @@ public:
     // Send an I2C write request.
     bool I2cWrite(uint32_t addr, const uint8_t* buf, uint32_t size);
 
+    // Send a "native" read request, reading a range of DPCD bytes starting
+    // at |addr|.
+    bool DpcdRead(uint32_t addr, uint8_t* buf, uint32_t size);
+    // Send a "native" write request, writing to a range of DPCD bytes
+    // starting at |addr|.
+    bool DpcdWrite(uint32_t addr, const uint8_t* buf, uint32_t size);
+
 private:
     // Send a DisplayPort Aux message and receive the synchronous reply
     // message.
@@ -66,8 +75,12 @@ private:
     // the reply for whether the request was successful, and it retries the
     // request if the sink device returns an AUX_DEFER reply.
     bool SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessage* reply);
+
+    bool DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size);
     // Read a single chunk, upto the DisplayPort Aux message size limit.
-    bool I2cReadChunk(uint32_t addr, uint8_t* buf, uint32_t size_in, uint32_t* size_out);
+    bool DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
+                        uint32_t* size_out);
+    bool DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, uint32_t size);
 
     RegisterIo* reg_io_;
     uint32_t ddi_number_;
@@ -77,6 +90,14 @@ class DisplayPort {
 public:
     // This is the I2C address for DDC, for fetching EDID data.
     static constexpr int kDdcI2cAddress = 0x50;
+
+    // 4-bit request type in Aux channel request messages.
+    enum {
+        DP_REQUEST_I2C_WRITE = 0,
+        DP_REQUEST_I2C_READ = 1,
+        DP_REQUEST_NATIVE_WRITE = 8,
+        DP_REQUEST_NATIVE_READ = 9,
+    };
 
     // 4-bit statuses in Aux channel reply messages.
     enum {
