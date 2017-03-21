@@ -25,7 +25,7 @@ MODULE_SRCDEPS += $(userboot-filename).strip
 MODULE_SRCDEPS += $(BUILDDIR)/$(LOCAL_DIR)/userboot-code.h
 $(BUILDDIR)/$(LOCAL_DIR)/userboot-code.h: scripts/gen-rodso-code.sh $(userboot-filename)
 	@$(MKDIR)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	$(NOECHO)$(SHELLEXEC) $< '$(NM)' $@.new USERBOOT $(userboot-filename)
 	@mv -f $@.new $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/userboot-code.h

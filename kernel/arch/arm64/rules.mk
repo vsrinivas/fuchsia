@@ -143,7 +143,7 @@ GENERATED += \
 
 # rules for generating the linker script
 $(BUILDDIR)/system-onesegment.ld: $(LOCAL_DIR)/system-onesegment.ld $(wildcard arch/*.ld) linkerscript.phony
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)sed "s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/;s/%KERNEL_BASE%/$(KERNEL_BASE)/;s/%KERNEL_LOAD_OFFSET%/$(KERNEL_LOAD_OFFSET)/" < $< > $@.tmp
 	@$(call TESTANDREPLACEFILE,$@.tmp,$@)

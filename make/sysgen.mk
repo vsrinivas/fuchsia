@@ -34,7 +34,7 @@ SG_SYSROOT_RUST := $(SG_SYSROOT_MAGENTA)/syscalls/definitions.rs
 
 # STAMPY ultimately generates most of the files and paths here.
 $(STAMPY): $(SYSGEN_APP) $(SYSCALLS_SRC)
-	$(info generating syscall files from $(SYSCALLS_SRC))
+	$(call BUILDECHO,generating syscall files from $(SYSCALLS_SRC))
 	$(NOECHO) mkdir -p $(SG_SYSCALLS)
 	$(NOECHO) $(SYSGEN_APP) -kernel-code $(SG_KERNEL_CODE) -trace $(SG_KERNEL_TRACE) \
 		-kernel-header $(SG_KERNEL_HEADER) -arm-asm $(SG_ULIB_ARM) -x86-asm $(SG_ULIB_X86) \

@@ -17,8 +17,8 @@ ifeq ($(MODULE_TYPE),userlib)
 # build static library
 $(MODULE_LIBNAME).a: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 	@$(MKDIR)
-	@echo linking $@
-	@rm -f $@
+	$(call BUILDECHO,linking $@)
+	@rm -f -- "$@"
 	$(call BUILDCMD,$(AR),cr $@ $^)
 
 # always build all libraries
@@ -40,7 +40,7 @@ $(MODULE_LIBNAME).so: _SONAME := lib$(MODULE_SO_NAME).so
 $(MODULE_LIBNAME).so: _LDFLAGS := $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(MODULE_LDFLAGS)
 $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODULE_SOLIBS)
 	@$(MKDIR)
-	@echo linking userlib $@
+	$(call BUILDECHO,linking userlib $@)
 	$(call BUILDCMD,$(USER_LD),$(_LDFLAGS) -shared -soname $(_SONAME) \
                                    $(_OBJS) $(_LIBS) $(LIBGCC) -o $@)
 
@@ -75,7 +75,7 @@ $(MODULE_LIBNAME).abi.stamp: _SONAME := lib$(MODULE_SO_NAME).so
 $(MODULE_LIBNAME).abi.stamp: _LIBS := $(MODULE_SOLIBS)
 $(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_SOLIBS) \
 			     $(MODULE_LIBNAME).abi.h scripts/shlib-symbols
-	@echo generating ABI stub $(@:.abi.stamp=.so.abi)
+	$(call BUILDECHO,generating ABI stub $(@:.abi.stamp=.so.abi))
 	$(NOECHO)$(USER_LD) $(GLOBAL_LDFLAGS) --no-gc-sections \
 		       -shared -soname $(_SONAME) -s \
 		       $< $(_LIBS) -o $(@:.abi.stamp=.so.abi).new

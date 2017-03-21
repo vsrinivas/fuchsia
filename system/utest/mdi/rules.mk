@@ -35,7 +35,7 @@ MDI_TEST_OPTS := -p "MDI_" -u
 $(MDI_TEST_HEADER): $(MDI_TEST_BIN)
 
 $(MDI_TEST_BIN): $(MDIGEN) $(MDI_TEST_SRCS) $(MDI_TEST_DEPS)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)$(MDIGEN) -o $@ $(MDI_TEST_SRCS) -h $(MDI_TEST_HEADER) $(MDI_TEST_OPTS)
 

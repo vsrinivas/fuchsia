@@ -17,7 +17,7 @@ EXPORTED_HEADERS := \
     $(BUILDDIR)/tools/include/magenta/types.h \
 
 $(BUILDDIR)/tools/include/%: $(PUBLIC_HEADER_DIR)/%
-	@echo exporting $<
+	$(call BUILDECHO,exporting $<)
 	@$(MKDIR)
 	$(NOECHO)cp -pf $< $@
 

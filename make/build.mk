@@ -23,18 +23,18 @@ SIZECMD:=true
 endif
 
 $(OUTLKBIN): $(OUTLKELF)
-	@echo generating image: $@
+	$(call BUILDECHO,generating image $@)
 	$(NOECHO)$(OBJCOPY) -O binary $< $@
 
 $(OUTLKELF): $(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LINKER_SCRIPT)
-	@echo linking $@
+	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -T $(LINKER_SCRIPT) \
 		$(ALLMODULE_OBJS) $(EXTRA_OBJS) -o $@
 	$(NOECHO)$(SIZECMD) -t --common $(sort $(ALLMODULE_OBJS)) $(EXTRA_OBJS)
 	$(NOECHO)$(SIZECMD) $@
 
 $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
-	@echo generating $@
+	$(call BUILDECHO, generating $@)
 	$(NOECHO)cp -f $< $@
 
 # print some information about the build
@@ -58,38 +58,39 @@ $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 # debug info rules
 
 $(BUILDDIR)/%.dump: $(BUILDDIR)/%
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	$(NOECHO)$(OBJDUMP) -x $< > $@
 
 $(BUILDDIR)/%.lst: $(BUILDDIR)/%
-	@echo generating listing: $@
+	$(call BUILDECHO,generating listing $@)
 	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -d $< | $(CPPFILT) > $@
 
 $(BUILDDIR)/%.debug.lst: $(BUILDDIR)/%
-	@echo generating debug listing: $@
+	$(call BUILDECHO,generating debug listing $@)
 	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -S $< | $(CPPFILT) > $@
 
 $(BUILDDIR)/%.strip: $(BUILDDIR)/%
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	$(NOECHO)$(STRIP) $< -o $@
 
 $(BUILDDIR)/%.debug: $(BUILDDIR)/%
-	@echo generating separate debug info file $@
+	$(call BUILDECHO,generating separate debug info file $@)
 	$(NOECHO)$(OBJCOPY) --only-keep-debug $< $@
 
 $(BUILDDIR)/%.sym: $(BUILDDIR)/%
-	@echo generating symbols: $@
+	$(call BUILDECHO,generating symbols $@)
 	$(NOECHO)$(OBJDUMP) -t $< | $(CPPFILT) > $@
 
 $(BUILDDIR)/%.sym.sorted: $(BUILDDIR)/%
-	@echo generating sorted symbols: $@
+	$(call BUILDECHO,generating sorted symbols $@)
 	$(NOECHO)$(OBJDUMP) -t $< | $(CPPFILT) | sort > $@
 
 $(BUILDDIR)/%.size: $(BUILDDIR)/%
-	@echo generating size map: $@
+	$(call BUILDECHO,generating size map $@)
 	$(NOECHO)$(NM) -S --size-sort $< > $@
 
 $(BUILDDIR)/%.id: $(BUILDDIR)/%
+	$(call BUILDECHO,generating id file $@)
 	$(NOECHO)env READELF="$(READELF)" scripts/get-build-id $< > $@
 
 ifneq ($(USER_AUTORUN),)
@@ -102,7 +103,7 @@ endif
 # build id).
 .PHONY: usermanifestfile
 $(USER_MANIFEST): usermanifestfile $(USER_MANIFEST_DEBUG_INPUTS)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)echo $(USER_MANIFEST_LINES) | tr ' ' '\n' | sort > $@.tmp
 	$(NOECHO)for f in $(USER_MANIFEST_DEBUG_INPUTS) ; do \
@@ -118,7 +119,7 @@ GENERATED += $(USER_MANIFEST)
 USER_MANIFEST_DEPS := $(foreach x,$(USER_MANIFEST_LINES),$(lastword $(subst =,$(SPACE),$(strip $(x)))))
 
 $(USER_BOOTDATA): $(MKBOOTFS) $(USER_MANIFEST) $(USER_MANIFEST_DEPS) $(ADDITIONAL_BOOTDATA_ITEMS)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)$(MKBOOTFS) --target=boot -c -o $(USER_BOOTDATA) $(USER_MANIFEST) $(ADDITIONAL_BOOTDATA_ITEMS)
 
@@ -126,7 +127,7 @@ GENERATED += $(USER_BOOTDATA)
 
 # build userspace filesystem image
 $(USER_FS): $(USER_BOOTDATA)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	$(NOECHO)dd if=/dev/zero of=$@ bs=1048576 count=16
 	$(NOECHO)dd if=$(USER_BOOTDATA) of=$@ conv=notrunc
 

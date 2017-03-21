@@ -89,7 +89,6 @@ endif
 endif
 
 BUILDDIR := $(BUILDROOT)/build-$(PROJECT)$(BUILDDIR_SUFFIX)
-$(info BUILDDIR = $(BUILDDIR))
 GENERATED_INCLUDES:=$(BUILDDIR)/gen/include
 OUTLKBIN := $(BUILDDIR)/$(LKNAME).bin
 OUTLKELF := $(BUILDDIR)/$(LKNAME).elf
@@ -339,7 +338,9 @@ $(error couldn't find target or target doesn't define platform)
 endif
 include kernel/platform/$(PLATFORM)/rules.mk
 
+ifeq ($(call TOBOOL,$(QUIET)),false)
 $(info PROJECT/PLATFORM/TARGET = $(PROJECT) / $(PLATFORM) / $(TARGET))
+endif
 
 include system/host/rules.mk
 include kernel/arch/$(ARCH)/rules.mk
@@ -353,8 +354,8 @@ include make/recurse.mk
 
 ifneq ($(EXTRA_IDFILES),)
 $(BUILDDIR)/ids.txt: $(EXTRA_IDFILES)
-	@echo generating $@
-	@rm -f $@.tmp
+	$(call BUILDECHO,generating $@)
+	@rm -f -- "$@.tmp"
 	@for f in $(EXTRA_IDFILES); do \
 	echo `cat $$f` `echo $$f | sed 's/\.id$$//g'` >> $@.tmp; \
 	done; \

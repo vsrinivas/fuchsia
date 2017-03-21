@@ -16,12 +16,12 @@ GENERATED += $(OUTLKZIMAGE) $(OUTLKZIMAGE_DTB)
 
 # rule for gzipping the kernel
 $(OUTLKZIMAGE): $(OUTLKBIN)
-	@echo gzipping image: $@
+	$(call BUILDECHO,gzipping image $@)
 	$(NOECHO)gzip -c $< > $@
 
 # rule for appending device tree
 $(OUTLKZIMAGE_DTB): $(OUTLKZIMAGE) $(DEVICE_TREE)
-	@echo concatenating device tree: $@
+	$(call BUILDECHO,concatenating device tree $@)
 	$(NOECHO)cat $< $(DEVICE_TREE) > $@
 
 # build gzipped kernel with concatenated device tree

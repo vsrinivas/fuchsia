@@ -20,12 +20,12 @@ MDIGEN := $(BUILDDIR)/tools/mdigen
 MDI_HEADER_OPTS := -p "MDI_" -u
 
 $(MDI_BIN): $(MDIGEN) $(MDI_SRCS) $(MDI_DEPS)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)$(MDIGEN) -o $@ $(MDI_SRCS)
 
 $(MDI_HEADER): $(MDIGEN) $(MDI_SRCS) $(MDI_DEPS)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)$(MDIGEN) $(MDI_SRCS) -h $@ $(MDI_HEADER_OPTS)
 

@@ -168,7 +168,7 @@ ifneq ($(MODULE_TYPE),hostapp)
 MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
 $(MODULE_OBJECT): $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 	@$(MKDIR)
-	@echo linking $@
+	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(LD) $(GLOBAL_MODULE_LDFLAGS) -r $^ -o $@
 
 # track the module object for make clean

@@ -26,7 +26,7 @@ MODULE_SRCDEPS += $(vdso-filename).strip
 MODULE_SRCDEPS += $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h
 $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h: scripts/gen-rodso-code.sh $(vdso-filename)
 	@$(MKDIR)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	$(NOECHO)$(SHELLEXEC) $< '$(NM)' $@.new VDSO $(vdso-filename)
 	@mv -f $@.new $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h

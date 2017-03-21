@@ -61,7 +61,7 @@ MODULE_COMPILEFLAGS += -Ithird_party/ulib/lz4/include/lz4 -DWITH_LZ4_NOALLOC
 # addresses.  It's used to generate vdso-syms.ld, below.
 $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h: $(BUILDDIR)/system/ulib/magenta/libmagenta.so
 	@$(MKDIR)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	$(NOECHO)$(SHELLEXEC) scripts/shlib-symbols -a '$(NM)' $< > $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h
 
@@ -72,7 +72,7 @@ GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h
 $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.ld: \
     $(LOCAL_DIR)/vdso-syms.ld.h $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h
 	@$(MKDIR)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	$(NOECHO)$(CC) -E -P -include $^ > $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.ld.h
 MODULE_EXTRA_OBJS := $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.ld

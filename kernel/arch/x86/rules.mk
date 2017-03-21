@@ -165,7 +165,7 @@ GENERATED += $(SUBARCH_BUILDDIR)/kernel.ld
 
 # rules for generating the linker scripts
 $(SUBARCH_BUILDDIR)/kernel.ld: $(SUBARCH_DIR)/kernel.ld $(wildcard arch/*.ld)
-	@echo generating $@
+	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)sed "s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/;s/%KERNEL_BASE%/$(KERNEL_BASE)/;s/%KERNEL_LOAD_OFFSET%/$(KERNEL_LOAD_OFFSET)/;s/%HEADER_LOAD_OFFSET%/$(HEADER_LOAD_OFFSET)/;s/%PHYS_HEADER_LOAD_OFFSET%/$(PHYS_HEADER_LOAD_OFFSET)/;" < $< > $@.tmp
 	@$(call TESTANDREPLACEFILE,$@.tmp,$@)

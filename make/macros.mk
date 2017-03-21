@@ -45,6 +45,13 @@ endef
 # replace all characters or sequences of letters in defines to convert to a proper C style variable
 MAKECVAR=$(subst C++,CPP,$(subst -,_,$(subst /,_,$(subst .,_,$1))))
 
+# conditionally echo text passed in
+ifeq ($(call TOBOOL,$(QUIET)),false)
+BUILDECHO = @echo $(1)
+else
+BUILDECHO =
+endif
+
 # generate a header file at $1 with an expanded variable in $2
 # $3 provides an (optional) raw footer to append to the end
 define MAKECONFIGHEADER
@@ -72,7 +79,7 @@ endif
 define generate-copy-dst-src
 $1: $2
 	@$$(MKDIR)
-	@echo installing $$@
+	$(call BUILDECHO,installing $$@)
 	$$(NOECHO) cp -f $$< $$@
 endef
 

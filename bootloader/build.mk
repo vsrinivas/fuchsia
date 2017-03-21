@@ -66,22 +66,22 @@ EFI_OBJS := $(patsubst $(LOCAL_DIR)/%.c,$(BUILDDIR)/bootloader/%.o,$(EFI_SOURCES
 EFI_DEPS := $(patsubst %.o,%.d,$(EFI_OBJS))
 
 $(BUILDDIR)/bootloader/%.o : $(LOCAL_DIR)/%.c
-	@mkdir -p $(dir $@)
-	@echo compiling: $@
+	@$(MKDIR)
+	$(call BUILDECHO,compiling $@)
 	$(NOECHO)$(EFI_CC) -MMD -MP -o $@ -c $(EFI_CFLAGS) $<
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 
 $(EFI_BOOTLOADER): $(EFI_OBJS)
-	@mkdir -p $(dir $@)
-	@echo linking: $@
+	@$(MKDIR)
+	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(EFI_LD) /out:$@ $(EFI_LDFLAGS) $^
 
 else
 
 $(EFI_SO): $(EFI_OBJS)
-	@mkdir -p $(dir $@)
-	@echo linking: $@
+	@$(MKDIR)
+	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(EFI_LD) -o $@ $(EFI_LDFLAGS) $^
 	$(NOECHO)if ! $(READELF) -r $@ | grep -q 'no relocations'; then \
 	    echo "error: $@ has relocations"; \
@@ -92,8 +92,8 @@ $(EFI_SO): $(EFI_OBJS)
 
 # TODO: update this to build other ARCHes
 $(EFI_BOOTLOADER): $(EFI_SO)
-	@mkdir -p $(dir $@)
-	@echo building: $@
+	@$(MKDIR)
+	$(call BUILDECHO,building $@)
 	$(NOECHO)$(OBJCOPY) --target=pei-x86-64 --subsystem 10 $(EFI_SECTIONS) $< $@
 	$(NOECHO)if [ "`$(NM) $< | grep ' U '`" != "" ]; then echo "error: $<: undefined symbols"; $(NM) $< | grep ' U '; rm $<; exit 1; fi
 
