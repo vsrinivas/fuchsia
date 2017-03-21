@@ -1,7 +1,7 @@
 # QEMU
 
-Magenta can run under emulation using QEMU. QEMU can either be installed via
-prebuilt binaries, or built locally. (Note that a full Fuchsia checkout already
+Magenta can [run under emulation](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Boot-from-QEMU) using QEMU. QEMU can either be installed via
+prebuilt binaries, or built locally. (Note that a full [Fuchsia checkout](https://fuchsia.googlesource.com/docs/+/master/getting_source.md#Creating-a-new-checkout) already
 includes prebuilts.)
 
 ## Install Prebuilt QEMU
