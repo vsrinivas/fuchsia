@@ -11,11 +11,6 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 
 namespace modular {
-namespace {
-
-constexpr char kUserScopeLabelPrefix[] = "user-";
-
-}  // namespace
 
 UserControllerImpl::UserControllerImpl(
     std::shared_ptr<app::ApplicationContext> app_context,
@@ -33,26 +28,15 @@ UserControllerImpl::UserControllerImpl(
       user_context_binding_(&user_context_impl_),
       user_controller_binding_(this, std::move(user_controller_request)),
       done_(done) {
-  const std::string label = kUserScopeLabelPrefix + to_hex_string(user_id);
-
-  // 1. Create a child environment for the UserRunner.
-  app::ApplicationEnvironmentPtr env;
-  app_context->environment()->Duplicate(env.NewRequest());
-  user_runner_scope_ = std::make_unique<Scope>(std::move(env), label);
-
-  app::ApplicationLauncherPtr launcher;
-  user_runner_scope_->environment()->GetApplicationLauncher(
-      launcher.NewRequest());
-
-  // 2. Launch UserRunner in the new environment.
+  // 1. Launch UserRunner in the current environment.
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = user_runner;
   app::ServiceProviderPtr services;
   launch_info->services = services.NewRequest();
-  launcher->CreateApplication(std::move(launch_info),
-                              user_runner_controller_.NewRequest());
+  app_context->launcher()->CreateApplication(
+      std::move(launch_info), user_runner_controller_.NewRequest());
 
-  // 3. Initialize the UserRunner service.
+  // 2. Initialize the UserRunner service.
   UserRunnerFactoryPtr user_runner_factory;
   app::ConnectToService(services.get(), user_runner_factory.NewRequest());
   user_runner_factory->Create(

@@ -19,7 +19,6 @@
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/config/config.fidl.h"
-#include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -45,9 +44,7 @@ const char kAppId[] = "modular_user_runner";
 
 const char kMaxwellUrl[] = "file:///system/apps/maxwell_launcher";
 
-// This is the prefix for the ApplicationEnvironment under which all
-// stories run for a user.
-const char kStoriesScopeLabelPrefix[] = "stories-";
+const char kUserScopeLabelPrefix[] = "user-";
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -76,26 +73,12 @@ std::string LedgerStatusToString(ledger::Status status) {
   }
 };
 
-class StoryMarkerImpl : private StoryMarker {
- public:
-  StoryMarkerImpl() = default;
-  ~StoryMarkerImpl() override = default;
-
-  void AddBinding(fidl::InterfaceRequest<StoryMarker> request) {
-    bindings_.AddBinding(this, std::move(request));
-  }
-
- private:
-  fidl::BindingSet<StoryMarker> bindings_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
-};
-
 }  // namespace
 
 class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(
-      std::shared_ptr<app::ApplicationContext> application_context,
+      app::ApplicationEnvironmentPtr application_environment,
       fidl::Array<uint8_t> user_id,
       const fidl::String& device_name,
       AppConfigPtr user_shell,
@@ -105,23 +88,19 @@ class UserRunnerImpl : public UserRunner {
       fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserRunner> user_runner_request)
-      : application_context_(application_context),
-        binding_(this, std::move(user_runner_request)),
+      : binding_(this, std::move(user_runner_request)),
         ledger_repository_(
             ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
+        user_scope_(
+            std::move(application_environment),
+            std::string(kUserScopeLabelPrefix) + to_hex_string(user_id)),
         message_queue_manager_(ledger_repository_.get()),
         token_provider_impl_(auth_token) {
     binding_.set_connection_error_handler([this] { delete this; });
 
-    const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
-    app::ApplicationEnvironmentPtr user_runner_env;
-    application_context_->environment()->Duplicate(
-        user_runner_env.NewRequest());
-    stories_scope_ = std::make_unique<Scope>(std::move(user_runner_env), label);
-
     auto resolver_service_provider =
         GetServiceProvider("file:///system/apps/resolver_main");
-    stories_scope_->AddService<resolver::Resolver>(
+    user_scope_.AddService<resolver::Resolver>(
         ftl::MakeCopyable([resolver_service_provider =
                                std::move(resolver_service_provider)](
             fidl::InterfaceRequest<resolver::Resolver>
@@ -140,15 +119,12 @@ class UserRunnerImpl : public UserRunner {
               << LedgerStatusToString(status);
         });
 
-    agent_runner_.reset(new AgentRunner(stories_scope_->GetLauncher(),
+    agent_runner_.reset(new AgentRunner(user_scope_.GetLauncher(),
                                         &message_queue_manager_,
                                         ledger_repository_.get()));
 
-    app::ApplicationEnvironmentPtr env;
-    stories_scope_->environment()->Duplicate(env.NewRequest());
-
     story_provider_impl_.reset(new StoryProviderImpl(
-        std::move(env), std::move(ledger), device_name, std::move(story_shell),
+        &user_scope_, std::move(ledger), device_name, std::move(story_shell),
         {&message_queue_manager_, agent_runner_.get(),
          ledger_repository_.get()}));
 
@@ -185,31 +161,20 @@ class UserRunnerImpl : public UserRunner {
             maxwell_services.get());
 
     // TODO(rosswang): Do proper attribution
-    stories_scope_->AddService<maxwell::ContextPublisher>(
+    user_scope_.AddService<maxwell::ContextPublisher>(
         ftl::MakeCopyable([context_engine = std::move(context_engine)](
             fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
           context_engine->RegisterPublisher("unknown", std::move(request));
         }));
 
-    stories_scope_->AddService<maxwell::ProposalPublisher>(
+    user_scope_.AddService<maxwell::ProposalPublisher>(
         ftl::MakeCopyable([maxwell_launcher = std::move(maxwell_launcher)](
             fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
           maxwell_launcher->RegisterAnonymousProposalPublisher(
               std::move(request));
         }));
 
-    // A dummy service that allows applications that can run both as
-    // modules in a story and standalone from the shell to determine
-    // whether they are in a story. See story_marker.fidl for more
-    // details.
-    // TODO(alhaad): This also gets passed to agents which should not be the
-    // case.
-    stories_scope_->AddService<StoryMarker>(
-        [this](fidl::InterfaceRequest<StoryMarker> request) {
-          story_marker_impl_.AddBinding(std::move(request));
-        });
-
-    stories_scope_->AddService<TokenProvider>(
+    user_scope_.AddService<TokenProvider>(
         [this](fidl::InterfaceRequest<TokenProvider> request) {
           token_provider_impl_.AddBinding(std::move(request));
         });
@@ -241,8 +206,8 @@ class UserRunnerImpl : public UserRunner {
     launch_info->arguments = config->args.Clone();
 
     app::ApplicationControllerPtr ctrl;
-    application_context_->launcher()->CreateApplication(std::move(launch_info),
-                                                        ctrl.NewRequest());
+    user_scope_.GetLauncher()->CreateApplication(std::move(launch_info),
+                                                 ctrl.NewRequest());
     application_controllers_.emplace_back(std::move(ctrl));
 
     return services;
@@ -270,15 +235,13 @@ class UserRunnerImpl : public UserRunner {
     ConnectToService(app_services.get(), user_shell_.NewRequest());
   }
 
-  std::shared_ptr<app::ApplicationContext> application_context_;
   fidl::Binding<UserRunner> binding_;
   ledger::LedgerRepositoryPtr ledger_repository_;
-  std::unique_ptr<Scope> stories_scope_;
+  Scope user_scope_;
   UserShellPtr user_shell_;
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
   MessageQueueManager message_queue_manager_;
   std::unique_ptr<AgentRunner> agent_runner_;
-  StoryMarkerImpl story_marker_impl_;
   TokenProviderImpl token_provider_impl_;
 
   // Passed to maxwell_launcher.
@@ -314,8 +277,10 @@ class UserRunnerApp : public UserRunnerFactory {
               fidl::InterfaceHandle<UserContext> user_context,
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
               fidl::InterfaceRequest<UserRunner> user_runner_request) override {
+    app::ApplicationEnvironmentPtr env;
+    application_context_->environment()->Duplicate(env.NewRequest());
     // Deleted in UserRunnerImpl::Terminate().
-    new UserRunnerImpl(application_context_, std::move(user_id), device_name,
+    new UserRunnerImpl(std::move(env), std::move(user_id), device_name,
                        std::move(user_shell), std::move(story_shell),
                        auth_token, std::move(ledger_repository),
                        std::move(user_context), std::move(view_owner_request),

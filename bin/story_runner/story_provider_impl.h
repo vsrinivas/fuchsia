@@ -9,9 +9,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
@@ -38,7 +38,7 @@ class DeleteStoryCall;
 
 class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
  public:
-  StoryProviderImpl(app::ApplicationEnvironmentPtr environment,
+  StoryProviderImpl(const Scope* const user_scope,
                     fidl::InterfaceHandle<ledger::Ledger> ledger,
                     const std::string& device_name,
                     AppConfigPtr story_shell,
@@ -59,7 +59,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // Used by CreateStory() to write story meta-data to the ledger.
   void WriteStoryData(StoryDataPtr story_data, std::function<void()> done);
 
-  app::ApplicationLauncher* launcher() { return launcher_.get(); }
+  const Scope* user_scope() const { return user_scope_; }
 
   const ComponentContextInfo& component_context_info() {
     return component_context_info_;
@@ -108,7 +108,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
                 ledger::ResultState result_state,
                 const OnChangeCallback& callback) override;
 
-  app::ApplicationEnvironmentPtr environment_;
+  const Scope* const user_scope_;
   ledger::LedgerPtr ledger_;
   ConflictResolverImpl conflict_resolver_;
 
@@ -118,8 +118,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // initalized. So we queue them up initially.
   bool ready_{};
   std::vector<fidl::InterfaceRequest<StoryProvider>> requests_;
-
-  app::ApplicationLauncherPtr launcher_;
 
   AppConfigPtr story_shell_;
 

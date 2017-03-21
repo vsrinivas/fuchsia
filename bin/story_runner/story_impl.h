@@ -15,11 +15,13 @@
 #include <vector>
 
 #include "application/services/application_controller.fidl.h"
+#include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_controller.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
+#include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/modular/services/story/story_shell.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -95,7 +97,8 @@ class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
                     fidl::InterfaceRequest<Link> request) override;
   void Stop(const StopCallback& callback) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
-  void AddModule(const fidl::String& url, const fidl::String& link_name) override;
+  void AddModule(const fidl::String& url,
+                 const fidl::String& link_name) override;
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(fidl::InterfaceRequest<mozart::ViewOwner> request);
@@ -115,6 +118,9 @@ class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
   void NotifyStateChange();
   void DisposeLink(LinkImpl* link);
   LinkPtr& EnsureRoot();
+
+  // The scope in which the modules within this story run.
+  Scope story_scope_;
 
   // The state of a Story and the context to obtain it from and
   // persist it to.
@@ -149,6 +155,25 @@ class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
   };
   std::vector<Connection> connections_;
   std::vector<std::unique_ptr<LinkImpl>> links_;
+
+  // A dummy service that allows applications that can run both as
+  // modules in a story and standalone from the shell to determine
+  // whether they are in a story. See story_marker.fidl for more
+  // details.
+  class StoryMarkerImpl : private StoryMarker {
+   public:
+    StoryMarkerImpl() = default;
+    ~StoryMarkerImpl() override = default;
+
+    void AddBinding(fidl::InterfaceRequest<StoryMarker> request) {
+      bindings_.AddBinding(this, std::move(request));
+    }
+
+   private:
+    fidl::BindingSet<StoryMarker> bindings_;
+    FTL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
+  };
+  StoryMarkerImpl story_marker_impl_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
 };

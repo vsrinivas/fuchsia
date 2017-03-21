@@ -26,9 +26,18 @@
 
 namespace modular {
 
+namespace {
+
+constexpr char kStoryScopeLabelPrefix[] = "story-";
+
+}  // namespace
+
 StoryImpl::StoryImpl(StoryDataPtr story_data,
                      StoryProviderImpl* const story_provider_impl)
-    : story_data_(std::move(story_data)),
+    : story_scope_(story_provider_impl->user_scope(),
+                   std::string(kStoryScopeLabelPrefix) +
+                       story_data->story_info->id.data()),
+      story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
       story_context_binding_(this) {
   bindings_.set_on_empty_set_handler([this] {
@@ -39,6 +48,11 @@ StoryImpl::StoryImpl(StoryDataPtr story_data,
       story_provider_impl_->storage(),
       story_provider_impl_->GetStoryPage(story_data_->story_page_id),
       story_data_->story_info->id));
+
+  story_scope_.AddService<StoryMarker>(
+      [this](fidl::InterfaceRequest<StoryMarker> request) {
+        story_marker_impl_.AddBinding(std::move(request));
+      });
 }
 
 StoryImpl::~StoryImpl() = default;
@@ -95,9 +109,8 @@ void StoryImpl::SetInfoExtra(const fidl::String& name,
 }
 
 // |StoryController|
-void StoryImpl::AddModule(
-    const fidl::String& module_url,
-    const fidl::String& link_name) {
+void StoryImpl::AddModule(const fidl::String& module_url,
+                          const fidl::String& link_name) {
   if (deleted_) {
     FTL_LOG(INFO) << "StoryImpl::AddModule() during delete: ignored.";
     return;
@@ -109,7 +122,7 @@ void StoryImpl::AddModule(
 
   story_data_->modules.push_back(std::move(module));
 
-  WriteStoryData([]{});
+  WriteStoryData([] {});
 
   if (!module_controllers_.empty()) {
     StartRootModule(module_url, link_name);
@@ -197,7 +210,7 @@ void StoryImpl::StartStoryShell(
   story_shell_launch_info->arguments =
       story_provider_impl_->story_shell().args.Clone();
 
-  story_provider_impl_->launcher()->CreateApplication(
+  story_scope_.GetLauncher()->CreateApplication(
       std::move(story_shell_launch_info), story_shell_controller_.NewRequest());
 
   mozart::ViewProviderPtr story_shell_view_provider;
@@ -214,8 +227,8 @@ void StoryImpl::StartStoryShell(
                               story_shell_.NewRequest());
 }
 
-void StoryImpl::StartRootModule(
-    const fidl::String& url, const fidl::String& link_name) {
+void StoryImpl::StartRootModule(const fidl::String& url,
+                                const fidl::String& link_name) {
   LinkPtr link;
   CreateLink(link_name, link.NewRequest());
 
@@ -353,7 +366,7 @@ void StoryImpl::StartModule(
   FTL_LOG(INFO) << "StoryImpl::StartModule() " << module_url;
 
   app::ApplicationControllerPtr application_controller;
-  story_provider_impl_->launcher()->CreateApplication(
+  story_scope_.GetLauncher()->CreateApplication(
       std::move(launch_info), application_controller.NewRequest());
 
   mozart::ViewProviderPtr view_provider;

@@ -23,14 +23,16 @@ namespace modular {
 class Scope : public app::ApplicationEnvironmentHost {
  public:
   Scope(app::ApplicationEnvironmentPtr parent_env, const std::string& label)
-      : binding_(this), parent_env_(std::move(parent_env)) {
-    app::ServiceProviderPtr parent_env_service_provider;
-    parent_env_->GetServices(parent_env_service_provider.NewRequest());
-    service_provider_impl_.SetDefaultServiceProvider(
-        std::move(parent_env_service_provider));
-    parent_env_->CreateNestedEnvironment(binding_.NewBinding(),
-                                         env_.NewRequest(),
-                                         env_controller_.NewRequest(), label);
+      : binding_(this) {
+    InitScope(std::move(parent_env), label);
+  }
+
+  Scope(const Scope* const parent_scope, const std::string& label)
+      : binding_(this) {
+    FTL_DCHECK(parent_scope != nullptr);
+    app::ApplicationEnvironmentPtr env;
+    parent_scope->environment()->Duplicate(env.NewRequest());
+    InitScope(std::move(env), label);
   }
 
   template <typename Interface>
@@ -47,7 +49,7 @@ class Scope : public app::ApplicationEnvironmentHost {
     return env_launcher_.get();
   }
 
-  app::ApplicationEnvironmentPtr& environment() { return env_; }
+  const app::ApplicationEnvironmentPtr& environment() const { return env_; }
 
  private:
   // |ApplicationEnvironmentHost|:
@@ -57,8 +59,18 @@ class Scope : public app::ApplicationEnvironmentHost {
     service_provider_impl_.AddBinding(std::move(environment_services));
   }
 
+  void InitScope(app::ApplicationEnvironmentPtr parent_env,
+                 const std::string& label) {
+    app::ServiceProviderPtr parent_env_service_provider;
+    parent_env->GetServices(parent_env_service_provider.NewRequest());
+    service_provider_impl_.SetDefaultServiceProvider(
+        std::move(parent_env_service_provider));
+    parent_env->CreateNestedEnvironment(binding_.NewBinding(),
+                                        env_.NewRequest(),
+                                        env_controller_.NewRequest(), label);
+  }
+
   fidl::Binding<app::ApplicationEnvironmentHost> binding_;
-  app::ApplicationEnvironmentPtr parent_env_;
   app::ApplicationEnvironmentPtr env_;
   app::ApplicationLauncherPtr env_launcher_;
   app::ApplicationEnvironmentControllerPtr env_controller_;

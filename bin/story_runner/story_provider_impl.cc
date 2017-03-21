@@ -584,19 +584,17 @@ class UpdateDeviceNameCall : public Operation<void> {
 }  // namespace
 
 StoryProviderImpl::StoryProviderImpl(
-    app::ApplicationEnvironmentPtr environment,
+    const Scope* const user_scope,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
     const std::string& device_name,
     AppConfigPtr story_shell,
     const ComponentContextInfo& component_context_info)
-    : environment_(std::move(environment)),
+    : user_scope_(user_scope),
       story_shell_(std::move(story_shell)),
       storage_(new Storage),
       root_snapshot_("StoryProviderImpl"),
       page_watcher_binding_(this),
       component_context_info_(component_context_info) {
-  environment_->GetApplicationLauncher(launcher_.NewRequest());
-
   ledger_.Bind(std::move(ledger));
 
   ledger_->SetConflictResolverFactory(
