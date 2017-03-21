@@ -7,7 +7,8 @@
     {
       "type": "duration",
       "event_name": "sync latency",
-      "event_category": "benchmark"
+      "event_category": "benchmark",
+      "split_samples_at": [1]
     }
   ]
 }
