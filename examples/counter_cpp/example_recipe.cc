@@ -156,8 +156,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
-  }
+      fidl::InterfaceRequest<app::ServiceProvider> services) override {}
 
   // |Module|
   void Initialize(
@@ -216,9 +215,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
           FTL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
-    module_context_->StartModuleInShell(
-        "file:///system/apps/example_module2", std::move(module2_link_handle),
-        nullptr, nullptr, module2_.NewRequest());
+    module_context_->StartModuleInShell("file:///system/apps/example_module2",
+                                        std::move(module2_link_handle), nullptr,
+                                        nullptr, module2_.NewRequest());
 
     connections_.emplace_back(
         new LinkConnection(module1_link_.get(), module2_link_.get()));

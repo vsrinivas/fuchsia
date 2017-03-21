@@ -35,8 +35,7 @@ class DummyStoryShellApp
 
   // |StoryShellFactory|
   void Create(fidl::InterfaceHandle<modular::StoryContext> story_context,
-              fidl::InterfaceRequest<modular::StoryShell> request)
-      override {
+              fidl::InterfaceRequest<modular::StoryShell> request) override {
     story_context_.Bind(std::move(story_context));
 
     FTL_DCHECK(!story_shell_binding_.is_bound());
@@ -46,7 +45,8 @@ class DummyStoryShellApp
   }
 
   // |StoryShell|
-  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) override {
+  void ConnectView(
+      fidl::InterfaceHandle<mozart::ViewOwner> view_owner) override {
     if (view_) {
       view_->ConnectView(std::move(view_owner));
     } else {
@@ -65,7 +65,7 @@ class DummyStoryShellApp
     if (story_context_.is_bound() && view_owner_request_) {
       view_.reset(new modular::ViewHost(
           application_context()
-          ->ConnectToEnvironmentService<mozart::ViewManager>(),
+              ->ConnectToEnvironmentService<mozart::ViewManager>(),
           std::move(view_owner_request_)));
 
       for (auto& view_owner : child_views_) {

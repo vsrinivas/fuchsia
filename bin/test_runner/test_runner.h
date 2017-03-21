@@ -43,9 +43,7 @@ class TestRunnerImpl : public testing::TestRunner {
   void TeardownAfterTermination();
 
   // Indicates if there are test points that haven't been passed yet.
-  bool TestPointsRemaining() {
-    return remaining_test_points_ > 0;
-  }
+  bool TestPointsRemaining() { return remaining_test_points_ > 0; }
 
  private:
   // |TestRunner|

@@ -60,6 +60,6 @@ class ModuleApp : public modular::SingleServiceViewApp<modular::Module> {
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleApp);
 };
 
-}  // namespace modula_example
+}  // namespace modular_example
 
 #endif  // APPS_MODULAR_EXAMPLES_SWAP_CPP_MODULE_H_

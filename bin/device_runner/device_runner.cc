@@ -70,8 +70,7 @@ class Settings {
 
     ledger_repository_for_testing =
         command_line.HasOption("ledger_repository_for_testing");
-    user_auth_config_file =
-        command_line.HasOption("user_auth_config_file");
+    user_auth_config_file = command_line.HasOption("user_auth_config_file");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("device_shell_args", ""),
@@ -311,8 +310,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
         FTL_LOG(ERROR) << "Auth configuration file not found at: "
                        << kAuthConfigurationFile;
       } else {
-        if (!files::ReadFileToString(kAuthConfigurationFile,
-                                     &ret_auth_token)) {
+        if (!files::ReadFileToString(kAuthConfigurationFile, &ret_auth_token)) {
           // Unable to read file. Bailing out.
           FTL_LOG(ERROR) << "Unable to read auth configuration file at: "
                          << kAuthConfigurationFile;

@@ -167,11 +167,11 @@ void StoryImpl::StartStoryShell(
   auto story_shell_launch_info = app::ApplicationLaunchInfo::New();
   story_shell_launch_info->services = story_shell_services.NewRequest();
   story_shell_launch_info->url = story_provider_impl_->story_shell().url;
-  story_shell_launch_info->arguments = story_provider_impl_->story_shell().args.Clone();
+  story_shell_launch_info->arguments =
+      story_provider_impl_->story_shell().args.Clone();
 
   story_provider_impl_->launcher()->CreateApplication(
-      std::move(story_shell_launch_info),
-      story_shell_controller_.NewRequest());
+      std::move(story_shell_launch_info), story_shell_controller_.NewRequest());
 
   mozart::ViewProviderPtr story_shell_view_provider;
   ConnectToService(story_shell_services.get(),
@@ -359,8 +359,8 @@ void StoryImpl::StartModuleInShell(
     fidl::InterfaceRequest<ModuleController> module_controller_request) {
   mozart::ViewOwnerPtr view_owner;
   StartModule(module_url, std::move(link), std::move(outgoing_services),
-              std::move(incoming_services), std::move(module_controller_request),
-              view_owner.NewRequest());
+              std::move(incoming_services),
+              std::move(module_controller_request), view_owner.NewRequest());
   story_shell_->ConnectView(view_owner.PassInterfaceHandle());
 }
 
@@ -436,10 +436,10 @@ void StoryImpl::StopModules() {
 
 void StoryImpl::StopStoryShell() {
   story_shell_->Terminate([this] {
-      story_shell_controller_.reset();
-      story_shell_.reset();
-      StopLinks();
-    });
+    story_shell_controller_.reset();
+    story_shell_.reset();
+    StopLinks();
+  });
 }
 
 void StoryImpl::StopLinks() {

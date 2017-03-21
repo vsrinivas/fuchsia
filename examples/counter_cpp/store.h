@@ -91,6 +91,6 @@ class Store : public modular::LinkWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(Store);
 };
 
-}  // namespace modular
+}  // namespace modular_example
 
 #endif  // APPS_MODULAR_EXAMPLES_COUNTER_CPP_STORE_H_

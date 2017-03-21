@@ -45,14 +45,13 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
       story_storage_(story_storage),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
   requests_.emplace_back(std::move(request));
-  ReadLinkData(
-      [this]() {
-        for (auto& request : requests_) {
-          LinkConnection::New(this, std::move(request));
-        }
-        requests_.clear();
-        ready_ = true;
-      });
+  ReadLinkData([this]() {
+    for (auto& request : requests_) {
+      LinkConnection::New(this, std::move(request));
+    }
+    requests_.clear();
+    ready_ = true;
+  });
 
   story_storage_->WatchLink(
       name, [this](const fidl::String& json) { OnChange(json); });

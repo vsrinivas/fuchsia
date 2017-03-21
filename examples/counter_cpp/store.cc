@@ -150,4 +150,4 @@ void Store::SendIfDirty() {
     dirty_ = false;
   }
 }
-}  // namespace modular
+}  // namespace modular_example

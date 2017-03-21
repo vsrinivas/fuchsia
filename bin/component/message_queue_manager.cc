@@ -43,7 +43,9 @@ void AppendEscaped(std::string* key, const std::string& data) {
   }
 }
 
-void AppendSeparator(std::string* key) { key->push_back(kSeparator); }
+void AppendSeparator(std::string* key) {
+  key->push_back(kSeparator);
+}
 
 std::string MakeQueueTokenKey(const std::string& component_instance_id,
                               const std::string& queue_name) {
@@ -229,7 +231,8 @@ MessageQueueManager::MessageQueueManager(
 MessageQueueManager::~MessageQueueManager() {}
 
 void MessageQueueManager::ObtainMessageQueue(
-    const std::string& component_instance_id, const std::string& queue_name,
+    const std::string& component_instance_id,
+    const std::string& queue_name,
     fidl::InterfaceRequest<MessageQueue> message_queue) {
   GetOrMakeMessageQueue(
       component_instance_id, queue_name,
@@ -246,7 +249,8 @@ void MessageQueueManager::ObtainMessageQueue(
 }
 
 MessageQueueStorage* MessageQueueManager::GetOrMakeMessageQueueStorage(
-    const std::string& component_instance_id, const std::string& queue_name,
+    const std::string& component_instance_id,
+    const std::string& queue_name,
     const std::string& queue_token) {
   auto it = message_queues_.find(queue_token);
   if (it == message_queues_.end()) {
@@ -269,7 +273,8 @@ MessageQueueStorage* MessageQueueManager::GetOrMakeMessageQueueStorage(
 }
 
 void MessageQueueManager::GetOrMakeMessageQueue(
-    const std::string& component_instance_id, const std::string& queue_name,
+    const std::string& component_instance_id,
+    const std::string& queue_name,
     std::function<void(ledger::Status, MessageQueueStorage*)> callback) {
   GetQueueToken(
       component_instance_id, queue_name,
@@ -326,7 +331,8 @@ void MessageQueueManager::GetOrMakeMessageQueue(
 }
 
 void MessageQueueManager::DeleteMessageQueue(
-    const std::string& component_instance_id, const std::string& queue_name) {
+    const std::string& component_instance_id,
+    const std::string& queue_name) {
   // Find the queue token for the queue.
   GetQueueToken(
       component_instance_id, queue_name,
@@ -378,8 +384,8 @@ void MessageQueueManager::DeleteMessageQueue(
 
 void MessageQueueManager::GetComponentInstanceQueueName(
     const std::string& queue_token,
-    std::function<void(ledger::Status, bool, const std::string&,
-                       const std::string&)>
+    std::function<
+        void(ledger::Status, bool, const std::string&, const std::string&)>
         callback) {
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(
@@ -459,7 +465,8 @@ void MessageQueueManager::GetComponentInstanceQueueName(
 }
 
 void MessageQueueManager::GetQueueToken(
-    const std::string& component_instance_id, const std::string& queue_name,
+    const std::string& component_instance_id,
+    const std::string& queue_name,
     std::function<void(ledger::Status, bool, const std::string&)> callback) {
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(
@@ -544,7 +551,8 @@ void MessageQueueManager::GetMessageSender(
 }
 
 void MessageQueueManager::RegisterWatcher(
-    const std::string& component_instance_id, const std::string& queue_name,
+    const std::string& component_instance_id,
+    const std::string& queue_name,
     const std::function<void()> callback) {
   auto queue_pair = std::make_pair(component_instance_id, queue_name);
   auto token_it = message_queue_tokens_.find(queue_pair);

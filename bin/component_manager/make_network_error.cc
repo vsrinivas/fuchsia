@@ -13,4 +13,4 @@ network::NetworkErrorPtr MakeNetworkError(int code,
   error->description = description;
   return error;
 }
-}
+}  // namespace component

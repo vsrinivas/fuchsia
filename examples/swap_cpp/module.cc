@@ -82,4 +82,4 @@ void ModuleApp::Stop(const StopCallback& done) {
   done();
 }
 
-}  // namespace modula_example
+}  // namespace modular_example

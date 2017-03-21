@@ -49,9 +49,9 @@ void ModuleContextImpl::StartModuleInShell(
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller) {
-  story_impl_->StartModuleInShell(query, std::move(link), std::move(outgoing_services),
-                                  std::move(incoming_services),
-                                  std::move(module_controller));
+  story_impl_->StartModuleInShell(
+      query, std::move(link), std::move(outgoing_services),
+      std::move(incoming_services), std::move(module_controller));
 }
 
 void ModuleContextImpl::GetComponentContext(

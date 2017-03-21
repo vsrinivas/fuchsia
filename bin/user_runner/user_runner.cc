@@ -110,8 +110,7 @@ class UserRunnerImpl : public UserRunner {
         ledger_repository_(
             ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
         message_queue_manager_(ledger_repository_.get()),
-        token_provider_impl_(auth_token)
-  {
+        token_provider_impl_(auth_token) {
     binding_.set_connection_error_handler([this] { delete this; });
 
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
@@ -120,8 +119,8 @@ class UserRunnerImpl : public UserRunner {
         user_runner_env.NewRequest());
     stories_scope_ = std::make_unique<Scope>(std::move(user_runner_env), label);
 
-    auto resolver_service_provider = GetServiceProvider(
-        "file:///system/apps/resolver_main");
+    auto resolver_service_provider =
+        GetServiceProvider("file:///system/apps/resolver_main");
     stories_scope_->AddService<resolver::Resolver>(
         ftl::MakeCopyable([resolver_service_provider =
                                std::move(resolver_service_provider)](
@@ -142,15 +141,16 @@ class UserRunnerImpl : public UserRunner {
         });
 
     agent_runner_.reset(new AgentRunner(stories_scope_->GetLauncher(),
-                        &message_queue_manager_,
-                        ledger_repository_.get()));
+                                        &message_queue_manager_,
+                                        ledger_repository_.get()));
 
     app::ApplicationEnvironmentPtr env;
     stories_scope_->environment()->Duplicate(env.NewRequest());
 
     story_provider_impl_.reset(new StoryProviderImpl(
         std::move(env), std::move(ledger), device_name, std::move(story_shell),
-        {&message_queue_manager_, agent_runner_.get(), ledger_repository_.get()}));
+        {&message_queue_manager_, agent_runner_.get(),
+         ledger_repository_.get()}));
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
     story_provider_impl_->AddBinding(story_provider.NewRequest());
@@ -318,8 +318,7 @@ class UserRunnerApp : public UserRunnerFactory {
     new UserRunnerImpl(application_context_, std::move(user_id), device_name,
                        std::move(user_shell), std::move(story_shell),
                        auth_token, std::move(ledger_repository),
-                       std::move(user_context),
-                       std::move(view_owner_request),
+                       std::move(user_context), std::move(view_owner_request),
                        std::move(user_runner_request));
   }
 
