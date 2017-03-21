@@ -21,6 +21,8 @@ class AudioPlayerParams {
 
   const std::string& service_name() const { return service_name_; }
 
+  bool stay() const { return stay_; }
+
  private:
   void Usage();
 
@@ -28,6 +30,7 @@ class AudioPlayerParams {
 
   std::string url_;
   std::string service_name_;
+  bool stay_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AudioPlayerParams);
 };

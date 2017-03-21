@@ -17,7 +17,8 @@
 
 namespace examples {
 
-AudioPlayer::AudioPlayer(const AudioPlayerParams& params) {
+AudioPlayer::AudioPlayer(const AudioPlayerParams& params)
+    : quit_when_done_(!params.stay()) {
   FTL_DCHECK(params.is_valid());
 
   std::unique_ptr<app::ApplicationContext> application_context =
@@ -58,8 +59,9 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
                                       media::MediaPlayerStatusPtr status) {
   if (status) {
     // Process status received from the player.
-    if (status->end_of_stream) {
+    if (status->end_of_stream && quit_when_done_) {
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      FTL_LOG(INFO) << "Reached end-of-stream. Quitting.";
     }
 
     if (status->problem) {
@@ -67,6 +69,10 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
         FTL_DLOG(INFO) << "PROBLEM: " << status->problem->type << ", "
                        << status->problem->details;
         problem_shown_ = true;
+        if (quit_when_done_) {
+          mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          FTL_LOG(INFO) << "Problem detected. Quitting.";
+        }
       }
     } else {
       problem_shown_ = false;

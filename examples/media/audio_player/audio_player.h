@@ -28,6 +28,7 @@ class AudioPlayer {
   media::NetMediaPlayerPtr net_media_player_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;
+  bool quit_when_done_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AudioPlayer);
 };
