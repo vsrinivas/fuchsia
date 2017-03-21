@@ -23,7 +23,8 @@ constexpr char kShell[] = "file:///boot/bin/sh";
 constexpr size_t kMaxHistoryEntrySize = 1024;
 
 constexpr char kGetHistoryCommand[] = "get_history";
-constexpr char kAddToHistoryCommand[] = "add_to_history:";
+constexpr char kAddLocalEntryCommand[] = "add_local_entry:";
+constexpr char kAddRemoteEntryCommand[] = "add_remote_entry:";
 
 std::string SerializeHistory(const std::vector<std::string>& history) {
   std::stringstream output_stream;
@@ -36,12 +37,15 @@ std::string SerializeHistory(const std::vector<std::string>& history) {
 
 }  // namespace
 
-ShellController::ShellController(History* history) : history_(history) {}
+ShellController::ShellController(History* history) : history_(history) {
+  history_->RegisterClient(this);
+}
 
 ShellController::~ShellController() {
   if (wait_id_) {
     waiter_->CancelWait(wait_id_);
   }
+  history_->UnregisterClient(this);
 }
 
 std::vector<std::string> ShellController::GetShellCommand() {
@@ -68,6 +72,20 @@ std::vector<mtl::StartupHandle> ShellController::GetStartupHandles() {
 
 void ShellController::Start() {
   WaitForShell();
+}
+
+void ShellController::OnRemoteEntry(const std::string& entry) {
+  // Ignore entries that are too big for the controller protocol to handle.
+  if (entry.size() > kMaxHistoryEntrySize) {
+    return;
+  }
+  std::string command = kAddRemoteEntryCommand + entry;
+  mx_status_t status =
+      channel_.write(0, command.data(), command.size(), nullptr, 0);
+  if (status != NO_ERROR && status != ERR_NO_MEMORY) {
+    FTL_LOG(ERROR) << "Failed to write a " << kAddRemoteEntryCommand
+                   << " command, status: " << status;
+  }
 }
 
 bool ShellController::SendBackHistory(std::vector<std::string> entries) {
@@ -107,12 +125,12 @@ void ShellController::ReadCommand() {
   if (rv == NO_ERROR) {
     const std::string command = std::string(buffer, num_bytes);
     if (command == kGetHistoryCommand) {
-      history_->ReadEntries([this](std::vector<std::string> entries) {
+      history_->ReadInitialEntries([this](std::vector<std::string> entries) {
         SendBackHistory(std::move(entries));
       });
-    } else if (command.substr(0, strlen(kAddToHistoryCommand)) ==
-               kAddToHistoryCommand) {
-      HandleAddToHistory(command.substr(strlen(kAddToHistoryCommand)));
+    } else if (command.substr(0, strlen(kAddLocalEntryCommand)) ==
+               kAddLocalEntryCommand) {
+      HandleAddToHistory(command.substr(strlen(kAddLocalEntryCommand)));
     } else {
       FTL_LOG(ERROR) << "Unrecognized shell command: " << command;
       return;

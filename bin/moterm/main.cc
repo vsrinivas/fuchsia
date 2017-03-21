@@ -66,9 +66,8 @@ class App : public modular::Module {
     ledger::LedgerPtr ledger;
     component_context_ptr->GetLedger(
         ledger.NewRequest(),
-        ftl::MakeCopyable([module_context = std::move(module_context)](ledger::Status status) {
-          LogLedgerError(status, "GetLedger");
-        }));
+        ftl::MakeCopyable([module_context = std::move(module_context)](
+            ledger::Status status) { LogLedgerError(status, "GetLedger"); }));
 
     ledger::PagePtr history_page;
     ledger::Ledger* ledger_ptr = ledger.get();

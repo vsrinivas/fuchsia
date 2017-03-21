@@ -8,10 +8,9 @@ terminal area before typing.
 
 ## Terminal history
 
-Terminal history is persisted in Ledger. In order to sync terminal history,
-[configure Ledger Cloud
+Terminal history is persisted in Ledger and synced between moterm instances in
+real-time. In order to sync terminal history, [configure Ledger Cloud
 Sync](https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md#Cloud-Sync).
 
-**Caveat**: the terminal history is populated from Ledger once, on Moterm
-startup, so commands being entered concurrently in two Moterm sessions are not
-immediately carried over to the other session.
+**Caveat**: note that the history sync works only when moterm is run within a
+story, as described above, and not when run directly through `launch moterm`.

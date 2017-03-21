@@ -27,10 +27,10 @@ namespace moterm {
 //
 // For the protocol description, see
 // magenta/third_party/uapp/dash/src/controller.h.
-class ShellController {
+class ShellController : public History::Client {
  public:
   ShellController(History* history);
-  ~ShellController();
+  ~ShellController() override;
 
   // Returns the system command for starting the default shell.
   std::vector<std::string> GetShellCommand();
@@ -40,6 +40,9 @@ class ShellController {
 
   // Starts the communication with shell.
   void Start();
+
+  // History::Client:
+  void OnRemoteEntry(const std::string& entry) override;
 
  private:
   bool SendBackHistory(std::vector<std::string> entries);
