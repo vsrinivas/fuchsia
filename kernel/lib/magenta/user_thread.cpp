@@ -188,6 +188,8 @@ status_t UserThread::Initialize(const char* name, size_t len) {
 }
 
 status_t UserThread::set_name(const char* name, size_t len) {
+    canary_.Assert();
+
     if (len >= MX_MAX_NAME_LEN)
         len = MX_MAX_NAME_LEN - 1;
 
@@ -198,6 +200,8 @@ status_t UserThread::set_name(const char* name, size_t len) {
 }
 
 void UserThread::get_name(char out_name[MX_MAX_NAME_LEN]) {
+    canary_.Assert();
+
     AutoSpinLock lock(name_lock_);
     memcpy(out_name, thread_.name, MX_MAX_NAME_LEN);
 }
@@ -206,6 +210,8 @@ void UserThread::get_name(char out_name[MX_MAX_NAME_LEN]) {
 status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
                            uintptr_t arg1, uintptr_t arg2,
                            bool initial_thread) {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&state_lock_);
@@ -236,6 +242,8 @@ status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
 
 // called in the context of our thread
 void UserThread::Exit() {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
 
     // only valid to call this on the current thread
@@ -257,6 +265,8 @@ void UserThread::Exit() {
 }
 
 void UserThread::Kill() {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&state_lock_);
@@ -283,6 +293,8 @@ void UserThread::Kill() {
 }
 
 void UserThread::DispatcherClosed() {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
     dispatcher_ = nullptr;
     Kill();
@@ -298,6 +310,8 @@ static void ThreadCleanupDpc(dpc_t *d) {
 }
 
 void UserThread::Exiting() {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
 
     // signal any waiters
@@ -386,6 +400,8 @@ int UserThread::StartRoutine(void* arg) {
 }
 
 void UserThread::SetState(State state) {
+    canary_.Assert();
+
     LTRACEF("thread %p: state %u (%s)\n", this, static_cast<unsigned int>(state), StateToString(state));
 
     DEBUG_ASSERT(state_lock_.IsHeld());
@@ -394,6 +410,8 @@ void UserThread::SetState(State state) {
 }
 
 status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<ExceptionPort> eport) {
+    canary_.Assert();
+
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::THREAD);
 
     // Lock both |state_lock_| and |exception_lock_| to ensure the thread
@@ -410,6 +428,8 @@ status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<Excepti
 }
 
 bool UserThread::ResetExceptionPort(bool quietly) {
+    canary_.Assert();
+
     mxtl::RefPtr<ExceptionPort> eport;
 
     // Remove the exception handler first. If the thread resumes execution
@@ -449,6 +469,8 @@ bool UserThread::ResetExceptionPort(bool quietly) {
 }
 
 mxtl::RefPtr<ExceptionPort> UserThread::exception_port() {
+    canary_.Assert();
+
     AutoLock lock(&exception_lock_);
     return exception_port_;
 }
@@ -458,6 +480,8 @@ status_t UserThread::ExceptionHandlerExchange(
         const mx_exception_report_t* report,
         const arch_exception_context_t* arch_context,
         ExceptionStatus *out_estatus) {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
 
     {
@@ -521,6 +545,8 @@ status_t UserThread::ExceptionHandlerExchange(
 }
 
 status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
+    canary_.Assert();
+
     LTRACEF("%s: obj %p, estatus %d\n", __FUNC__, this, static_cast<int>(estatus));
     AutoLock lock(&exception_wait_lock_);
     if (!InExceptionLocked())
@@ -534,6 +560,8 @@ status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
 }
 
 void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport) {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&exception_wait_lock_);
     if (!InExceptionLocked())
@@ -547,12 +575,16 @@ void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport
 }
 
 bool UserThread::InExceptionLocked() {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
     DEBUG_ASSERT(exception_wait_lock_.IsHeld());
     return thread_stopped_in_exception(&thread_);
 }
 
 bool UserThread::InException(ExceptionPort::Type* type) {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&exception_wait_lock_);
     if (!InExceptionLocked())
@@ -563,6 +595,8 @@ bool UserThread::InException(ExceptionPort::Type* type) {
 }
 
 status_t UserThread::GetExceptionReport(mx_exception_report_t* report) {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&exception_wait_lock_);
     if (!InExceptionLocked())
@@ -579,6 +613,8 @@ uint32_t UserThread::get_num_state_kinds() const {
 // Note: buffer must be sufficiently aligned
 
 status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&exception_wait_lock_);
@@ -598,6 +634,8 @@ status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buff
 // Note: buffer must be sufficiently aligned
 
 status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv) {
+    canary_.Assert();
+
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&exception_wait_lock_);

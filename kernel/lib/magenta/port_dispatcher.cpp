@@ -111,6 +111,8 @@ void PortDispatcher::FreePacketsLocked() {
 }
 
 void PortDispatcher::on_zero_handles() {
+    canary_.Assert();
+
     AutoLock al(&lock_);
     no_clients_ = true;
     FreePacketsLocked();
@@ -127,6 +129,8 @@ void PortDispatcher::on_zero_handles() {
 }
 
 mx_status_t PortDispatcher::Queue(IOP_Packet* packet) {
+    canary_.Assert();
+
     int wake_count = 0;
     mx_status_t status = NO_ERROR;
     {
@@ -151,6 +155,8 @@ mx_status_t PortDispatcher::Queue(IOP_Packet* packet) {
 }
 
 void* PortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
+    canary_.Assert();
+
     IOP_Signal* node;
     int prev_count;
 
@@ -194,6 +200,8 @@ void* PortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
 }
 
 mx_status_t PortDispatcher::Wait(mx_time_t timeout, IOP_Packet** packet) {
+    canary_.Assert();
+
     while (true) {
         {
             AutoLock al(&lock_);
@@ -234,6 +242,8 @@ mx_status_t PortDispatcher::Wait(mx_time_t timeout, IOP_Packet** packet) {
 }
 
 void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
+    canary_.Assert();
+
     AutoLock al(&lock_);
     DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ false));
     DEBUG_ASSERT(!eport->InContainer());
@@ -241,6 +251,8 @@ void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
 }
 
 void PortDispatcher::UnlinkExceptionPort(ExceptionPort* eport) {
+    canary_.Assert();
+
     AutoLock al(&lock_);
     DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ true));
     if (eport->InContainer()) {

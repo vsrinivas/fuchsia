@@ -70,6 +70,8 @@ mx_status_t FifoDispatcher::Init(mxtl::RefPtr<FifoDispatcher> other) TA_NO_THREA
 }
 
 void FifoDispatcher::on_zero_handles() {
+    canary_.Assert();
+
     mxtl::RefPtr<FifoDispatcher> fifo;
     {
         AutoLock lock(&lock_);
@@ -80,12 +82,16 @@ void FifoDispatcher::on_zero_handles() {
 }
 
 void FifoDispatcher::OnPeerZeroHandles() {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     other_.reset();
     state_tracker_.UpdateState(MX_FIFO_WRITABLE, MX_FIFO_PEER_CLOSED);
 }
 
 mx_status_t FifoDispatcher::Write(const uint8_t* ptr, size_t len, uint32_t* actual) {
+    canary_.Assert();
+
     mxtl::RefPtr<FifoDispatcher> other;
     {
         AutoLock lock(&lock_);
@@ -98,6 +104,8 @@ mx_status_t FifoDispatcher::Write(const uint8_t* ptr, size_t len, uint32_t* actu
 }
 
 mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32_t* actual) {
+    canary_.Assert();
+
     size_t count = bytelen / elem_size_;
     if (count == 0)
         return ERR_OUT_OF_RANGE;
@@ -152,6 +160,8 @@ mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
 }
 
 mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual) {
+    canary_.Assert();
+
     size_t count = bytelen / elem_size_;
     if (count == 0)
         return ERR_OUT_OF_RANGE;

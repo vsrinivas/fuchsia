@@ -56,6 +56,7 @@ JobDispatcher::~JobDispatcher() {
 }
 
 void JobDispatcher::on_zero_handles() {
+    canary_.Assert();
 }
 
 mx_koid_t JobDispatcher::get_related_koid() const {
@@ -63,6 +64,8 @@ mx_koid_t JobDispatcher::get_related_koid() const {
 }
 
 bool JobDispatcher::AddChildProcess(ProcessDispatcher* process) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     if (state_ != State::READY)
         return false;
@@ -73,6 +76,8 @@ bool JobDispatcher::AddChildProcess(ProcessDispatcher* process) {
 }
 
 bool JobDispatcher::AddChildJob(JobDispatcher* job) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     if (state_ != State::READY)
         return false;
@@ -83,6 +88,8 @@ bool JobDispatcher::AddChildJob(JobDispatcher* job) {
 }
 
 void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     // The process dispatcher can call us in its destructor or in Kill().
     if (!ProcessDispatcher::JobListTraitsWeak::node_state(*process).InContainer())
@@ -93,6 +100,8 @@ void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
 }
 
 void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     if (!JobDispatcher::ListTraitsWeak::node_state(*job).InContainer())
         return;
@@ -102,6 +111,8 @@ void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
 }
 
 void JobDispatcher::UpdateSignalsDecrementLocked() {
+    canary_.Assert();
+
     DEBUG_ASSERT(lock_.IsHeld());
     // removing jobs or processes.
     mx_signals_t set = 0u;
@@ -123,6 +134,8 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
 }
 
 void JobDispatcher::UpdateSignalsIncrementLocked() {
+    canary_.Assert();
+
     DEBUG_ASSERT(lock_.IsHeld());
     // Adding jobs or processes.
     mx_signals_t clear = 0u;
@@ -138,6 +151,8 @@ void JobDispatcher::UpdateSignalsIncrementLocked() {
 }
 
 void JobDispatcher::Kill() {
+    canary_.Assert();
+
     JobList jobs_to_kill;
     ProcessList procs_to_kill;
 
@@ -176,6 +191,8 @@ void JobDispatcher::Kill() {
 }
 
 bool JobDispatcher::EnumerateChildren(JobEnumerator* je) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     uint32_t proc_index = 0u;
@@ -205,6 +222,8 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je) {
 }
 
 mxtl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(mx_koid_t koid) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     for (auto& proc : procs_) {
         if (proc.get_koid() == koid)
@@ -214,6 +233,8 @@ mxtl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(mx_koid_t koid)
 }
 
 mxtl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(mx_koid_t koid) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     for (auto& job : jobs_) {
         if (job.get_koid() == koid) {
@@ -229,6 +250,8 @@ void JobDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
 }
 
 status_t JobDispatcher::set_name(const char* name, size_t len) {
+    canary_.Assert();
+
     if (len >= MX_MAX_NAME_LEN)
         len = MX_MAX_NAME_LEN - 1;
 

@@ -225,6 +225,8 @@ WaitSetDispatcher::~WaitSetDispatcher() {
 }
 
 status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* handle) {
+    canary_.Assert();
+
     if (!handle->dispatcher()->get_state_tracker())
         return ERR_NOT_SUPPORTED;
 
@@ -253,6 +255,8 @@ status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* hand
 }
 
 status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
+    canary_.Assert();
+
     mxtl::unique_ptr<Entry> entry;
     mxtl::RefPtr<Dispatcher> dispatcher;
     {
@@ -291,6 +295,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
                                  uint32_t* num_results,
                                  mx_waitset_result_t* results,
                                  uint32_t* max_results) {
+    canary_.Assert();
 
     lk_time_t lk_timeout = mx_time_to_lk(timeout);
     status_t result = event_wait_timeout(&event_, lk_timeout, true);
@@ -353,6 +358,8 @@ bool WaitSetDispatcher::OnInitialize(mx_signals_t initial_state,
 bool WaitSetDispatcher::OnStateChange(mx_signals_t new_state) { return false; }
 
 bool WaitSetDispatcher::OnCancel(Handle* handle) {
+    canary_.Assert();
+
     AutoLock lock(&mutex_);
     cancelled_ = true;
     return event_signal(&event_, false) > 0;

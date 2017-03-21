@@ -77,12 +77,16 @@ InterruptEventDispatcher::~InterruptEventDispatcher() {
 }
 
 status_t InterruptEventDispatcher::InterruptComplete() {
+    canary_.Assert();
+
     unsignal();
     unmask_interrupt(vector_);
     return NO_ERROR;
 }
 
 status_t InterruptEventDispatcher::UserSignal() {
+    canary_.Assert();
+
     mask_interrupt(vector_);
     signal(true);
     return NO_ERROR;

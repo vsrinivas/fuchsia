@@ -122,6 +122,8 @@ PortDispatcherV2::~PortDispatcherV2() {
 }
 
 void PortDispatcherV2::on_zero_handles() {
+    canary_.Assert();
+
     {
         AutoLock al(&lock_);
         zero_handles_ = true;
@@ -130,6 +132,8 @@ void PortDispatcherV2::on_zero_handles() {
 }
 
 mx_status_t PortDispatcherV2::QueueUser(const mx_port_packet_t& packet) {
+    canary_.Assert();
+
     AllocChecker ac;
     auto port_packet = new (&ac) PortPacket();
     if (!ac.check())
@@ -145,6 +149,8 @@ mx_status_t PortDispatcherV2::QueueUser(const mx_port_packet_t& packet) {
 }
 
 mx_status_t PortDispatcherV2::Queue(PortPacket* packet, uint64_t count) {
+    canary_.Assert();
+
     int wake_count = 0;
     {
         AutoLock al(&lock_);
@@ -178,6 +184,8 @@ bool PortDispatcherV2::HandleSignalsLocked(PortPacket* port_packet, uint64_t cou
 }
 
 mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, mx_port_packet_t* packet) {
+    canary_.Assert();
+
     PortPacket* port_packet = nullptr;
     PortObserver* observer = nullptr;
 
@@ -227,6 +235,8 @@ PortObserver* PortDispatcherV2::SnapCopyLocked(PortPacket* port_packet, mx_port_
 }
 
 bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) {
+    canary_.Assert();
+
     AutoLock al(&lock_);
     if (!port_packet->InContainer())
         return true;
@@ -238,6 +248,8 @@ bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) 
 
 mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
                                             uint64_t key, mx_signals_t signals) {
+    canary_.Assert();
+
     // Called under the handle table lock.
 
     auto dispatcher = handle->dispatcher();

@@ -45,6 +45,8 @@ status_t EventPairDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
 EventPairDispatcher::~EventPairDispatcher() {}
 
 void EventPairDispatcher::on_zero_handles() {
+    canary_.Assert();
+
     AutoLock locker(&lock_);
     DEBUG_ASSERT(other_);
 
@@ -53,6 +55,8 @@ void EventPairDispatcher::on_zero_handles() {
 }
 
 status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+    canary_.Assert();
+
     if ((set_mask & ~kUserSignalMask) || (clear_mask & ~kUserSignalMask))
         return ERR_INVALID_ARGS;
 

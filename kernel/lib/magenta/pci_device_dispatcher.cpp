@@ -71,6 +71,8 @@ PciDeviceDispatcher::~PciDeviceDispatcher() {
 }
 
 status_t PciDeviceDispatcher::ClaimDevice() {
+    canary_.Assert();
+
     status_t result;
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
@@ -85,6 +87,8 @@ status_t PciDeviceDispatcher::ClaimDevice() {
 }
 
 status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
 
@@ -96,6 +100,8 @@ status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
 }
 
 status_t PciDeviceDispatcher::EnablePio(bool enable) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
 
@@ -107,6 +113,8 @@ status_t PciDeviceDispatcher::EnablePio(bool enable) {
 }
 
 status_t PciDeviceDispatcher::ResetDevice() {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
 
@@ -117,6 +125,8 @@ status_t PciDeviceDispatcher::ResetDevice() {
 
 status_t PciDeviceDispatcher::MapConfig(mxtl::RefPtr<Dispatcher>* out_mapping,
                                         mx_rights_t* out_rights) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     return PciIoMappingDispatcher::Create(device_,
                                          "cfg",
@@ -134,6 +144,8 @@ status_t PciDeviceDispatcher::MapMmio(uint32_t bar_num,
                                       uint32_t cache_policy,
                                       mxtl::RefPtr<Dispatcher>* out_mapping,
                                       mx_rights_t* out_rights) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
 
@@ -157,6 +169,8 @@ status_t PciDeviceDispatcher::MapMmio(uint32_t bar_num,
 status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
                                            mxtl::RefPtr<Dispatcher>* interrupt_dispatcher,
                                            mx_rights_t* rights) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
 
@@ -198,6 +212,8 @@ status_t PciDeviceDispatcher::QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t*
 }
 
 status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
 

@@ -42,6 +42,8 @@ bool PortClient::Signal(mx_signals_t signals, const Mutex* mutex) {
 }
 
 bool PortClient::Signal(mx_signals_t signal, size_t count, const Mutex* mutex) {
+    canary_.Assert();
+
     DEBUG_ASSERT(signal);
     DEBUG_ASSERT(mutex->IsHeld());
     if ((signal & signals_) == 0)

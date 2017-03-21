@@ -201,6 +201,8 @@ mx_status_t SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) TA_NO_T
 }
 
 void SocketDispatcher::on_zero_handles() {
+    canary_.Assert();
+
     mxtl::RefPtr<SocketDispatcher> socket;
     {
         AutoLock lock(&lock_);
@@ -213,6 +215,8 @@ void SocketDispatcher::on_zero_handles() {
 }
 
 void SocketDispatcher::OnPeerZeroHandles() {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     other_.reset();
     state_tracker_.UpdateState(MX_SOCKET_WRITABLE, MX_SOCKET_PEER_CLOSED);
@@ -221,6 +225,8 @@ void SocketDispatcher::OnPeerZeroHandles() {
 }
 
 status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+    canary_.Assert();
+
     if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
         return ERR_INVALID_ARGS;
 
@@ -241,6 +247,8 @@ status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, b
 }
 
 status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     auto satisfied = state_tracker_.GetSignalsState();
     auto changed = ~satisfied & set_mask;
@@ -255,6 +263,8 @@ status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask
 }
 
 status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
+    canary_.Assert();
+
     if ((client->get_trigger_signals() & ~kValidSignalMask) != 0)
         return ERR_INVALID_ARGS;
 
@@ -271,6 +281,8 @@ status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) 
 }
 
 status_t SocketDispatcher::HalfClose() {
+    canary_.Assert();
+
     mxtl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
@@ -286,6 +298,8 @@ status_t SocketDispatcher::HalfClose() {
 }
 
 status_t SocketDispatcher::HalfCloseOther() {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     half_closed_[1] = true;
     state_tracker_.UpdateState(0u, MX_SOCKET_PEER_CLOSED);
@@ -294,6 +308,8 @@ status_t SocketDispatcher::HalfCloseOther() {
 
 mx_status_t SocketDispatcher::Write(const void* src, size_t len,
                                     bool from_user, size_t* nwritten) {
+    canary_.Assert();
+
     mxtl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
@@ -309,6 +325,8 @@ mx_status_t SocketDispatcher::Write(const void* src, size_t len,
 
 mx_status_t SocketDispatcher::WriteSelf(const void* src, size_t len,
                                         bool from_user, size_t* written) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     if (!cbuf_.free())
@@ -334,6 +352,8 @@ mx_status_t SocketDispatcher::WriteSelf(const void* src, size_t len,
 
 mx_status_t SocketDispatcher::Read(void* dest, size_t len,
                                    bool from_user, size_t* nread) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     // Just query for bytes outstanding.

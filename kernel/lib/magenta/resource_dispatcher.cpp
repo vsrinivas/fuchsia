@@ -69,6 +69,8 @@ ResourceDispatcher::~ResourceDispatcher() {
 }
 
 status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     if (iopc_)
         return ERR_BAD_STATE;
@@ -81,6 +83,8 @@ status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client
 }
 
 status_t ResourceDispatcher::MakeRoot() {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     if (valid_)
@@ -90,6 +94,8 @@ status_t ResourceDispatcher::MakeRoot() {
 }
 
 status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>& child) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     if (!valid_)
@@ -114,6 +120,8 @@ status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>& ch
 }
 
 mxtl::RefPtr<ResourceDispatcher> ResourceDispatcher::LookupChildById(mx_koid_t koid) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     auto iter = children_.find_if([koid](const ResourceDispatcher& r) { return r.get_koid() == koid; });
@@ -164,6 +172,8 @@ static mx_status_t default_do_action(const mx_rrec_t*, uint32_t, uint32_t, uint3
 }
 
 status_t ResourceDispatcher::AddRecord(mxtl::unique_ptr<ResourceRecord> rrec) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     if (valid_)
@@ -206,6 +216,8 @@ status_t ResourceDispatcher::AddRecord(mxtl::unique_ptr<ResourceRecord> rrec) {
 }
 
 status_t ResourceDispatcher::AddRecord(mx_rrec_t* tmpl) {
+    canary_.Assert();
+
     status_t status;
     mxtl::unique_ptr<ResourceRecord> rec;
     if ((status = ResourceRecord::Create(rec)) != NO_ERROR)
@@ -215,6 +227,8 @@ status_t ResourceDispatcher::AddRecord(mx_rrec_t* tmpl) {
 }
 
 status_t ResourceDispatcher::AddRecords(user_ptr<const mx_rrec_t> records, size_t count) {
+    canary_.Assert();
+
     for (uint32_t n = 1; n < count; n++) {
         status_t status;
         mxtl::unique_ptr<ResourceRecord> rec;
@@ -232,6 +246,8 @@ status_t ResourceDispatcher::AddRecords(user_ptr<const mx_rrec_t> records, size_
 }
 
 mx_status_t ResourceDispatcher::Validate() {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     return ValidateLocked();
 }
@@ -245,6 +261,8 @@ mx_status_t ResourceDispatcher::ValidateLocked() {
 }
 
 mx_rrec_self_t ResourceDispatcher::GetSelf() {
+    canary_.Assert();
+
     mx_rrec_self_t self;
 
     memcpy(self.name, name_, MX_MAX_NAME_LEN);
@@ -259,6 +277,8 @@ mx_rrec_self_t ResourceDispatcher::GetSelf() {
 }
 
 ResourceRecord* ResourceDispatcher::GetNthRecordLocked(uint32_t index) {
+    canary_.Assert();
+
     if (!valid_)
         return nullptr;
     for (auto& rec: records_) {
@@ -272,6 +292,8 @@ ResourceRecord* ResourceDispatcher::GetNthRecordLocked(uint32_t index) {
 
 mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t max,
                                            size_t* actual, size_t* available) {
+    canary_.Assert();
+
     size_t n = 0;
     *actual = 0;
     mx_status_t status = NO_ERROR;
@@ -314,6 +336,8 @@ done:
 
 mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t max,
                                             size_t* actual, size_t* available) {
+    canary_.Assert();
+
     mx_rrec_t rec = {};
     size_t n = 0;
     mx_status_t status = NO_ERROR;
@@ -345,6 +369,8 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
 mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index, uint32_t options,
                                                        mxtl::RefPtr<Dispatcher>* dispatcher,
                                                        mx_rights_t* rights) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     ResourceRecord* rec = GetNthRecordLocked(index);
@@ -357,6 +383,8 @@ mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index, uint32_t 
 
 mx_status_t ResourceDispatcher::RecordDoAction(uint32_t index, uint32_t action,
                                                uint32_t arg0, uint32_t arg1) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     ResourceRecord* rec = GetNthRecordLocked(index);
@@ -368,6 +396,8 @@ mx_status_t ResourceDispatcher::RecordDoAction(uint32_t index, uint32_t action,
 }
 
 mx_status_t ResourceDispatcher::Connect(HandleOwner* handle) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     if (inbound_)
@@ -381,6 +411,8 @@ mx_status_t ResourceDispatcher::Connect(HandleOwner* handle) {
 }
 
 mx_status_t ResourceDispatcher::Accept(HandleOwner* handle) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
 
     if (!inbound_)

@@ -45,6 +45,8 @@ void IoMappingDispatcher::Close() {
 }
 
 void IoMappingDispatcher::Cleanup() {
+    canary_.Assert();
+
     if (mapping_) {
         mapping_->Destroy();
     }
@@ -55,6 +57,7 @@ void IoMappingDispatcher::Cleanup() {
 }
 
 bool IoMappingDispatcher::closed() const {
+    canary_.Assert();
     return !aspace_ || !vaddr_;
 }
 

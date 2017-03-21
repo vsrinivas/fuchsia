@@ -41,6 +41,7 @@ void CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock,
 }  // namespace
 
 void StateTracker::AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
+    canary_.Assert();
     DEBUG_ASSERT(observer != nullptr);
 
     bool awoke_threads = false;
@@ -56,18 +57,24 @@ void StateTracker::AddObserver(StateObserver* observer, const StateObserver::Cou
 }
 
 void StateTracker::RemoveObserver(StateObserver* observer) {
+    canary_.Assert();
+
     AutoLock lock(&lock_);
     DEBUG_ASSERT(observer != nullptr);
     observers_.erase(*observer);
 }
 
 void StateTracker::Cancel(Handle* handle) {
+    canary_.Assert();
+
     CancelWithFunc(&observers_, &lock_, [handle](StateObserver* obs) {
         return obs->OnCancel(handle);
     });
 }
 
 void StateTracker::CancelByKey(Handle* handle, uint64_t key) {
+    canary_.Assert();
+
     CancelWithFunc(&observers_, &lock_, [handle, key](StateObserver* obs) {
         return obs->OnCancelByKey(handle, key);
     });
@@ -75,6 +82,8 @@ void StateTracker::CancelByKey(Handle* handle, uint64_t key) {
 
 void StateTracker::UpdateState(mx_signals_t clear_mask,
                                mx_signals_t set_mask) {
+    canary_.Assert();
+
     bool awoke_threads = false;
 
     ObserverList obs_to_remove;
