@@ -211,13 +211,14 @@ void arch_init(void)
 
     LTRACEF("midr_el1 %#" PRIx64 "\n", ARM64_READ_SYSREG(midr_el1));
 
-    uint32_t cmdline_max_cpus = cmdline_get_uint32("smp.maxcpus", SMP_MAX_CPUS);
-    if (cmdline_max_cpus > SMP_MAX_CPUS || cmdline_max_cpus <= 0) {
-        printf("invalid smp.maxcpus value, defaulting to %d\n", SMP_MAX_CPUS);
-        cmdline_max_cpus = SMP_MAX_CPUS;
+    uint32_t max_cpus = arch_max_num_cpus();
+    uint32_t cmdline_max_cpus = cmdline_get_uint32("smp.maxcpus", max_cpus);
+    if (cmdline_max_cpus > max_cpus || cmdline_max_cpus <= 0) {
+        printf("invalid smp.maxcpus value, defaulting to %u\n", max_cpus);
+        cmdline_max_cpus = max_cpus;
     }
 
-    secondaries_to_init = cmdline_max_cpus - 1; /* TODO: get count from somewhere else, or add cpus as they boot */
+    secondaries_to_init = cmdline_max_cpus - 1;
 
     lk_init_secondary_cpus(secondaries_to_init);
 
