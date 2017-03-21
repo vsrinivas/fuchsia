@@ -132,6 +132,8 @@ function mset() {
 
   # add tools to path, removing prior tools directory if any
   export PATH="${PATH//:${MAGENTA_DIR}\/build-*\/tools}:${MAGENTA_TOOLS_DIR}"
+  # add go tools to path, removing any prior repeated entry
+  export PATH="${FUCHSIA_DIR}/third_party/go/bin:${PATH//${FUCHSIA_DIR}\/third_party\/go\/bin:}"
 }
 
 ### mcheck: checks whether mset was run
@@ -390,6 +392,7 @@ function fset() {
   done
 
   export FUCHSIA_BUILD_DIR="${FUCHSIA_OUT_DIR}/${FUCHSIA_VARIANT}-${FUCHSIA_GEN_TARGET}"
+  export GOPATH="$FUCHSIA_BUILD_DIR"
   export FUCHSIA_BUILD_NINJA="${FUCHSIA_BUILD_DIR}/build.ninja"
   export FUCHSIA_GEN_ARGS_CACHE="${FUCHSIA_BUILD_DIR}/build.gen-args"
   export FUCHSIA_SYSROOT_DIR="${FUCHSIA_OUT_DIR}/sysroot/${FUCHSIA_SYSROOT_TARGET}-fuchsia"
