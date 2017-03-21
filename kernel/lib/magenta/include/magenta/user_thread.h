@@ -39,9 +39,10 @@ public:
 
     // the exception status (disposition?) of the thread
     enum class ExceptionStatus {
-        // Initial state.
-        // The thread is either not in an exception, or is and is waiting for
-        // a response.
+        // The thread is not in an exception
+        IDLE,
+
+        // The thread is blocked in an exception, waiting for a response
         UNPROCESSED,
 
         // The exception is unhandled, try the next handler.
@@ -193,7 +194,7 @@ private:
 
     // Support for sending an exception to an exception handler and then waiting for a response.
     ExceptionStatus exception_status_ TA_GUARDED(exception_wait_lock_)
-        = ExceptionStatus::UNPROCESSED;
+        = ExceptionStatus::IDLE;
     // The exception port of the handler the thread is waiting for a response from.
     mxtl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(exception_wait_lock_);
     const mx_exception_report_t* exception_report_ TA_GUARDED(exception_wait_lock_);

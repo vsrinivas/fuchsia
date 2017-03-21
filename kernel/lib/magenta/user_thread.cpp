@@ -450,7 +450,7 @@ status_t UserThread::ExceptionHandlerExchange(
     thread_.exception_context = nullptr;
 
     *out_estatus = exception_status_;
-    exception_status_ = ExceptionStatus::UNPROCESSED;
+    exception_status_ = ExceptionStatus::IDLE;
 
     LTRACEF("ExceptionHandlerExchange returning status %d, estatus %d\n",
             status, static_cast<int>(*out_estatus));
@@ -462,11 +462,11 @@ status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
     AutoLock lock(&exception_wait_lock_);
     if (!InExceptionLocked())
         return ERR_BAD_STATE;
-    if (exception_status_ == ExceptionStatus::UNPROCESSED)
-        exception_status_ = estatus;
+    if (exception_status_ != ExceptionStatus::UNPROCESSED)
+        return ERR_BAD_STATE;
 
+    exception_status_ = estatus;
     event_signal(&exception_event_, true);
-
     return NO_ERROR;
 }
 
@@ -476,10 +476,10 @@ void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport
     if (!InExceptionLocked())
         return;
     if (exception_wait_port_ == eport) {
-        if (exception_status_ == ExceptionStatus::UNPROCESSED)
+        if (exception_status_ == ExceptionStatus::UNPROCESSED) {
             exception_status_ = ExceptionStatus::TRY_NEXT;
-
-        event_signal(&exception_event_, true);
+            event_signal(&exception_event_, true);
+        }
     }
 }
 
