@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/modules/dashboard"
+    ],
+    "binaries": [
+        {
+            "binary": "dashboard.flx",
+            "bootfs_path": "apps/dashboard"
+        }
+    ]
+}
