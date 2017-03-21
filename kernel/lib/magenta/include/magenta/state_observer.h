@@ -8,6 +8,7 @@
 
 #include <magenta/types.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 
 class Handle;
@@ -64,6 +65,8 @@ protected:
     bool remove_ = false;
 
 private:
+    mxtl::Canary<mxtl::magic("SOBS")> canary_;
+
     friend struct StateObserverListTraits;
     mxtl::DoublyLinkedListNodeState<StateObserver*> state_observer_list_node_state_;
 };

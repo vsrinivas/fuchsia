@@ -8,6 +8,7 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
+#include <mxtl/canary.h>
 
 #include <lib/user_copy/user_ptr.h>
 
@@ -38,6 +39,7 @@ public:
 private:
     explicit VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo);
 
+    mxtl::Canary<mxtl::magic("VMOD")> canary_;
     mxtl::RefPtr<VmObject> vmo_;
     StateTracker state_tracker_;
 };

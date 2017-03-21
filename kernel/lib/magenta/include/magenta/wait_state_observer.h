@@ -12,6 +12,7 @@
 #include <magenta/state_observer.h>
 #include <magenta/types.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/ref_ptr.h>
 
 class WaitEvent;
@@ -38,6 +39,8 @@ private:
     bool OnInitialize(mx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
     bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle) final;
+
+    mxtl::Canary<mxtl::magic("WTSO")> canary_;
 
     WaitEvent* event_ = nullptr;
     Handle* handle_ = nullptr;

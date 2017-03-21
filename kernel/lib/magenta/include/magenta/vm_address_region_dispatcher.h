@@ -7,6 +7,7 @@
 #pragma once
 
 #include <magenta/dispatcher.h>
+#include <mxtl/canary.h>
 
 #include <sys/types.h>
 
@@ -47,5 +48,6 @@ public:
 private:
     explicit VmAddressRegionDispatcher(mxtl::RefPtr<VmAddressRegion> vmar);
 
+    mxtl::Canary<mxtl::magic("VARD")> canary_;
     mxtl::RefPtr<VmAddressRegion> vmar_;
 };

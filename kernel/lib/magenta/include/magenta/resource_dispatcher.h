@@ -12,6 +12,7 @@
 #include <magenta/handle_owner.h>
 #include <magenta/syscalls/resource.h>
 #include <magenta/thread_annotations.h>
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <sys/types.h>
 
@@ -74,6 +75,7 @@ private:
     mx_status_t AddRecord(mxtl::unique_ptr<ResourceRecord> rec);
     mx_rrec_self_t GetSelf();
 
+    mxtl::Canary<mxtl::magic("RSRD")> canary_;
     Mutex lock_;
 
     mxtl::DoublyLinkedList<mxtl::RefPtr<ResourceDispatcher>> children_ TA_GUARDED(lock_);

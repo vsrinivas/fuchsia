@@ -16,6 +16,7 @@
 #include <magenta/types.h>
 
 #include <mxtl/array.h>
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 
@@ -86,6 +87,8 @@ private:
 
     void UpdateSignalsIncrementLocked() TA_REQ(lock_);
     void UpdateSignalsDecrementLocked() TA_REQ(lock_);
+
+    mxtl::Canary<mxtl::magic("JOBD")> canary_;
 
     const mxtl::RefPtr<JobDispatcher> parent_;
 

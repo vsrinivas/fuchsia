@@ -14,6 +14,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/ref_counted.h>
 
 class VmObject;
@@ -70,6 +71,8 @@ private:
                           size_t* nwritten);
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t HalfCloseOther();
+
+    mxtl::Canary<mxtl::magic("SOCK")> canary_;
 
     mx_koid_t peer_koid_;
     StateTracker state_tracker_;

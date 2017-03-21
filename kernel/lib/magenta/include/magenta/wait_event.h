@@ -11,6 +11,7 @@
 #include <err.h>
 
 #include <kernel/event.h>
+#include <mxtl/canary.h>
 #include <sys/types.h>
 
 // "Event" for use by StateTracker. This should be waited on from only a single thread, but may be
@@ -46,5 +47,6 @@ public:
     }
 
 private:
+    mxtl::Canary<mxtl::magic("WEVT")> canary_;
     event_t event_;
 };

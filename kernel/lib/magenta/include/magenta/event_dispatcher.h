@@ -8,6 +8,7 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
+#include <mxtl/canary.h>
 
 #include <sys/types.h>
 
@@ -23,5 +24,6 @@ public:
 
 private:
     explicit EventDispatcher(uint32_t options);
+    mxtl::Canary<mxtl::magic("EVTD")> canary_;
     StateTracker state_tracker_;
 };

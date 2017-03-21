@@ -17,6 +17,7 @@
 #include <magenta/futex_node.h>
 #include <magenta/state_tracker.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
@@ -158,6 +159,8 @@ private:
 
     // change states of the object, do what is appropriate for the state transition
     void SetState(State) TA_REQ(state_lock_);
+
+    mxtl::Canary<mxtl::magic("UTHR")> canary_;
 
     // The kernel object id. Since ProcessDispatcher maintains a list of
     // UserThreads, and since use of dispatcher_ is racy (see

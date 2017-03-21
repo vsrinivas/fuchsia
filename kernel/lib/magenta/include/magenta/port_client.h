@@ -10,6 +10,7 @@
 
 #include <magenta/types.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/ref_ptr.h>
 
 class PortDispatcher;
@@ -29,6 +30,7 @@ private:
     PortClient(const PortClient&) = delete;
     PortClient& operator=(const PortClient&) = delete;
 
+    mxtl::Canary<mxtl::magic("PORC")> canary_;
     const uint64_t key_;
     const mx_signals_t signals_;
     mxtl::RefPtr<PortDispatcher> port_;

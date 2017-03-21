@@ -21,6 +21,7 @@
 #include <magenta/user_thread.h>
 
 #include <mxtl/array.h>
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
@@ -224,6 +225,8 @@ private:
 
     // Kill all threads
     void KillAllThreadsLocked() TA_REQ(state_lock_);
+
+    mxtl::Canary<mxtl::magic("PROC")> canary_;
 
     // The process can belong to either of these lists independently.
     mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_weak_;

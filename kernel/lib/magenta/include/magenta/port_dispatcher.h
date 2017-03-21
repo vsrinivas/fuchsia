@@ -14,6 +14,7 @@
 #include <magenta/syscalls/port.h>
 #include <magenta/types.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 
 #include <sys/types.h>
@@ -100,6 +101,7 @@ private:
     // Called by ExceptionPort.
     void UnlinkExceptionPort(ExceptionPort* eport);
 
+    mxtl::Canary<mxtl::magic("PORD")> canary_;
     Mutex lock_;
     bool no_clients_ TA_GUARDED(lock_);
     mxtl::DoublyLinkedList<IOP_Packet*> packets_ TA_GUARDED(lock_);

@@ -9,6 +9,7 @@
 #include <magenta/dispatcher.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/user_thread.h>
+#include <mxtl/canary.h>
 #include <sys/types.h>
 
 class ThreadDispatcher : public Dispatcher {
@@ -47,5 +48,6 @@ public:
 private:
     explicit ThreadDispatcher(mxtl::RefPtr<UserThread> thread);
 
+    mxtl::Canary<mxtl::magic("THRD")> canary_;
     mxtl::RefPtr<UserThread> thread_;
 };

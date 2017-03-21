@@ -17,6 +17,7 @@
 
 #include <sys/types.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_ptr.h>
@@ -149,6 +150,8 @@ private:
     bool OnInitialize(mx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
     bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle) final;
+
+    mxtl::Canary<mxtl::magic("WTSD")> canary_;
 
     // We are *not* waitable, but we need to observe handle "cancellation".
     StateTracker state_tracker_;

@@ -9,6 +9,7 @@
 #include <kernel/event.h>
 
 #include <magenta/dispatcher.h>
+#include <mxtl/canary.h>
 #include <sys/types.h>
 
 // TODO:
@@ -54,5 +55,6 @@ protected:
     }
 
 private:
+    mxtl::Canary<mxtl::magic("INTD")> canary_;
     event_t event_;
 };

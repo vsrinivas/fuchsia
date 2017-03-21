@@ -12,6 +12,7 @@
 #include <kernel/spinlock.h>
 #include <magenta/state_observer.h>
 #include <magenta/types.h>
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 
 class Handle;
@@ -46,6 +47,8 @@ public:
     using ObserverList = mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
 
 private:
+    mxtl::Canary<mxtl::magic("STRK")> canary_;
+
     mx_signals_t signals_;
     Mutex lock_;
 

@@ -8,6 +8,7 @@
 
 #include <kernel/vm/vm_aspace.h>
 #include <magenta/dispatcher.h>
+#include <mxtl/canary.h>
 #include <sys/types.h>
 
 class IoMappingDispatcher : public Dispatcher {
@@ -43,6 +44,7 @@ protected:
                   uint vmm_flags, uint arch_mmu_flags);
 
 private:
+    mxtl::Canary<mxtl::magic("IOMD")> canary_;
     mxtl::RefPtr<VmAspace> aspace_;
     paddr_t                 paddr_;
     mxtl::RefPtr<VmMapping> mapping_;

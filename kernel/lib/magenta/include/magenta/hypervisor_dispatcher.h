@@ -9,6 +9,7 @@
 #include <arch/hypervisor.h>
 #include <magenta/dispatcher.h>
 #include <magenta/types.h>
+#include <mxtl/canary.h>
 
 class HypervisorDispatcher final : public Dispatcher {
 public:
@@ -20,6 +21,7 @@ public:
     mx_obj_type_t get_type() const { return MX_OBJ_TYPE_HYPERVISOR; }
 
 private:
+    mxtl::Canary<mxtl::magic("HYPD")> canary_;
     mxtl::unique_ptr<HypervisorContext> context_;
 
     explicit HypervisorDispatcher(mxtl::unique_ptr<HypervisorContext> context);

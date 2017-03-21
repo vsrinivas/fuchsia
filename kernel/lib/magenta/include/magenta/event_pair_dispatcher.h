@@ -9,6 +9,7 @@
 #include <kernel/mutex.h>
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
+#include <mxtl/canary.h>
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
 
@@ -28,6 +29,8 @@ public:
 private:
     explicit EventPairDispatcher();
     void Init(EventPairDispatcher* other);
+
+    mxtl::Canary<mxtl::magic("EVPD")> canary_;
 
     StateTracker state_tracker_;
 

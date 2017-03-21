@@ -7,6 +7,7 @@
 #include <magenta/dispatcher.h>
 #include <magenta/syscalls/port.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
@@ -75,6 +76,8 @@ private:
     }
 
     void BuildReport(mx_exception_report_t* report, uint32_t type, mx_koid_t pid, mx_koid_t tid);
+
+    mxtl::Canary<mxtl::magic("EXCP")> canary_;
 
     // These aren't locked as once the exception port is created these are
     // immutable (the io port itself has its own locking though).

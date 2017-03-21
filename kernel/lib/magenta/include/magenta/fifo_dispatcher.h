@@ -14,6 +14,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/ref_counted.h>
 
 class FifoDispatcher final : public Dispatcher {
@@ -40,6 +41,7 @@ private:
 
     void OnPeerZeroHandles();
 
+    mxtl::Canary<mxtl::magic("FIFO")> canary_;
     const uint32_t elem_count_;
     const uint32_t elem_size_;
     const uint32_t mask_;

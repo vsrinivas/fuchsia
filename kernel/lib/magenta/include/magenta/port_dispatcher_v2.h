@@ -14,10 +14,11 @@
 #include <magenta/types.h>
 #include <magenta/wait_event.h>
 
-#include <sys/types.h>
-
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/unique_ptr.h>
+
+#include <sys/types.h>
 
 // Important pointers diagram for PortObserver
 //
@@ -149,6 +150,7 @@ private:
     bool HandleSignalsLocked(PortPacket* packet, uint64_t count) TA_REQ(lock_);
     PortObserver* SnapCopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
 
+    mxtl::Canary<mxtl::magic("POR2")> canary_;
     Mutex lock_;
     WaitEvent event_;
     bool zero_handles_ TA_GUARDED(lock_);

@@ -8,6 +8,7 @@
 
 #include <kernel/mutex.h>
 #include <magenta/interrupt_dispatcher.h>
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <sys/types.h>
 
@@ -36,6 +37,7 @@ private:
 
     static enum handler_return IrqHandler(void* ctx);
 
+    mxtl::Canary<mxtl::magic("INED")> canary_;
     const uint32_t vector_;
     mxtl::WAVLTreeNodeState<InterruptEventDispatcher*> wavl_node_state_;
 

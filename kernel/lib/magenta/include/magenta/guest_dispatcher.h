@@ -7,6 +7,7 @@
 #pragma once
 
 #include <magenta/hypervisor_dispatcher.h>
+#include <mxtl/canary.h>
 
 class GuestDispatcher final : public Dispatcher {
 public:
@@ -20,6 +21,7 @@ public:
     mx_status_t Start(uintptr_t entry, uintptr_t stack);
 
 private:
+    mxtl::Canary<mxtl::magic("GSTD")> canary_;
     mxtl::RefPtr<HypervisorDispatcher> hypervisor_;
     mxtl::unique_ptr<GuestContext> context_;
 

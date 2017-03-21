@@ -14,6 +14,7 @@
 #include <magenta/dispatcher.h>
 #include <magenta/io_mapping_dispatcher.h>
 #include <magenta/syscalls/pci.h>
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_single_list.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
@@ -91,6 +92,8 @@ private:
 
     PciDeviceDispatcher(const PciDeviceDispatcher &) = delete;
     PciDeviceDispatcher& operator=(const PciDeviceDispatcher &) = delete;
+
+    mxtl::Canary<mxtl::magic("PCID")> canary_;
 
     // Lock protecting upward facing APIs.  Generally speaking, this lock is
     // held for the duration of most of our dispatcher API implementations.  It

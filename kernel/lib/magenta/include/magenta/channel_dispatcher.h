@@ -12,6 +12,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/unique_ptr.h>
@@ -60,6 +61,8 @@ private:
     int WriteSelf(mxtl::unique_ptr<MessagePacket> msg);
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     void OnPeerZeroHandles();
+
+    mxtl::Canary<mxtl::magic("CHAN")> canary_;
 
     Mutex lock_;
     MessageList messages_ TA_GUARDED(lock_);

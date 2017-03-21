@@ -11,6 +11,7 @@
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <magenta/wait_event.h>
+#include <mxtl/canary.h>
 
 class LogDispatcher final : public Dispatcher {
 public:
@@ -28,6 +29,8 @@ private:
 
     static void Notify(void* cookie);
     void Signal();
+
+    mxtl::Canary<mxtl::magic("LOGD")> canary_;
 
     dlog_reader reader_;
     uint32_t flags_;
