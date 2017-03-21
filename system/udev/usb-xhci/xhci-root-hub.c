@@ -40,82 +40,83 @@ static const uint8_t* xhci_rh_string_table[] = {
 };
 
 // device descriptor for USB 2.0 root hub
-// represented as a byte array to avoid endianness issues
-static const uint8_t xhci_rh_device_desc_2[sizeof(usb_device_descriptor_t)] = {
-    sizeof(usb_device_descriptor_t),    // bLength
-    USB_DT_DEVICE,                      // bDescriptorType
-    0x00, 0x02,                         // bcdUSB = 2.0
-    USB_CLASS_HUB,                      // bDeviceClass
-    0,                                  // bDeviceSubClass
-    1,                                  // bDeviceProtocol = Single TT
-    64,                                 // bMaxPacketSize0
-    0xD1, 0x18,                         // idVendor = 0x18D1 (Google)
-    0x02, 0xA0,                         // idProduct = 0xA002
-    0x00, 0x01,                         // bcdDevice = 1.0
-    MANUFACTURER_STRING,                // iManufacturer
-    PRODUCT_STRING_2,                   // iProduct
-    0,                                  // iSerialNumber
-    1,                                  // bNumConfigurations
+static const usb_device_descriptor_t xhci_rh_device_desc_2 = {
+    .bLength = sizeof(usb_device_descriptor_t),
+    .bDescriptorType = USB_DT_DEVICE,
+    .bcdUSB = htole16(0x0200),
+    .bDeviceClass = USB_CLASS_HUB,
+    .bDeviceSubClass = 0,
+    .bDeviceProtocol = 1,   // Single TT
+    .bMaxPacketSize0 = 64,
+    .idVendor = htole16(0x18D1),
+    .idProduct = htole16(0xA002),
+    .bcdDevice = htole16(0x0100),
+    .iManufacturer = MANUFACTURER_STRING,
+    .iProduct = PRODUCT_STRING_2,
+    .iSerialNumber = 0,
+    .bNumConfigurations = 1,
 };
 
 // device descriptor for USB 3.1 root hub
-// represented as a byte array to avoid endianness issues
-static const uint8_t xhci_rh_device_desc_3[sizeof(usb_device_descriptor_t)] = {
-    sizeof(usb_device_descriptor_t),    // bLength
-    USB_DT_DEVICE,                      // bDescriptorType
-    0x00, 0x03,                         // bcdUSB = 3.0
-    USB_CLASS_HUB,                      // bDeviceClass
-    0,                                  // bDeviceSubClass
-    1,                                  // bDeviceProtocol = Single TT
-    64,                                 // bMaxPacketSize0
-    0xD1, 0x18,                         // idVendor = 0x18D1 (Google)
-    0x03, 0xA0,                         // idProduct = 0xA003
-    0x00, 0x01,                         // bcdDevice = 1.0
-    MANUFACTURER_STRING,                // iManufacturer
-    PRODUCT_STRING_3,                   // iProduct
-    0,                                  // iSerialNumber
-    1,                                  // bNumConfigurations
+static const usb_device_descriptor_t xhci_rh_device_desc_3 = {
+    .bLength = sizeof(usb_device_descriptor_t),
+    .bDescriptorType = USB_DT_DEVICE,
+    .bcdUSB = htole16(0x0300),
+    .bDeviceClass = USB_CLASS_HUB,
+    .bDeviceSubClass = 0,
+    .bDeviceProtocol = 1,   // Single TT
+    .bMaxPacketSize0 = 64,
+    .idVendor = htole16(0x18D1),
+    .idProduct = htole16(0xA003),
+    .bcdDevice = htole16(0x0100),
+    .iManufacturer = MANUFACTURER_STRING,
+    .iProduct = PRODUCT_STRING_3,
+    .iSerialNumber = 0,
+    .bNumConfigurations = 1,
 };
 
 // device descriptors for our virtual root hub devices
 static const usb_device_descriptor_t* xhci_rh_device_descs[] = {
-    (usb_device_descriptor_t *)xhci_rh_device_desc_2,
-    (usb_device_descriptor_t *)xhci_rh_device_desc_3,
+    (usb_device_descriptor_t *)&xhci_rh_device_desc_2,
+    (usb_device_descriptor_t *)&xhci_rh_device_desc_3,
 };
-
-#define CONFIG_DESC_SIZE sizeof(usb_configuration_descriptor_t) + \
-                         sizeof(usb_interface_descriptor_t) + \
-                         sizeof(usb_endpoint_descriptor_t)
 
 // we are currently using the same configuration descriptors for both USB 2.0 and 3.0 root hubs
 // this is not actually correct, but our usb-hub driver isn't sophisticated enough to notice
-static const uint8_t xhci_rh_config_desc[CONFIG_DESC_SIZE] = {
-    // config descriptor
-    sizeof(usb_configuration_descriptor_t),    // bLength
-    USB_DT_CONFIG,                             // bDescriptorType
-    CONFIG_DESC_SIZE, 0,                       // wTotalLength
-    1,                                         // bNumInterfaces
-    1,                                         // bConfigurationValue
-    0,                                         // iConfiguration
-    0xE0,                                      // bmAttributes = self powered
-    0,                                         // bMaxPower
-    // interface descriptor
-    sizeof(usb_interface_descriptor_t),         // bLength
-    USB_DT_INTERFACE,                           // bDescriptorType
-    0,                                          // bInterfaceNumber
-    0,                                          // bAlternateSetting
-    1,                                          // bNumEndpoints
-    USB_CLASS_HUB,                              // bInterfaceClass
-    0,                                          // bInterfaceSubClass
-    0,                                          // bInterfaceProtocol
-    0,                                          // iInterface
-    // endpoint descriptor
-    sizeof(usb_endpoint_descriptor_t),          // bLength
-    USB_DT_ENDPOINT,                            // bDescriptorType
-    USB_ENDPOINT_IN | 1,                        // bEndpointAddress
-    USB_ENDPOINT_INTERRUPT,                     // bmAttributes
-    4, 0,                                       // wMaxPacketSize
-    12,                                         // bInterval
+static const struct {
+    usb_configuration_descriptor_t config;
+    usb_interface_descriptor_t intf;
+    usb_endpoint_descriptor_t endp;
+} xhci_rh_config_desc = {
+     .config = {
+        .bLength = sizeof(usb_configuration_descriptor_t),
+        .bDescriptorType = USB_DT_CONFIG,
+        .wTotalLength = htole16(sizeof(xhci_rh_config_desc)),
+        .bNumInterfaces = 1,
+        .bConfigurationValue = 1,
+        .iConfiguration = 0,
+        .bmAttributes = 0xE0,   // self powered
+        .bMaxPower = 0,
+    },
+    .intf = {
+        .bLength = sizeof(usb_interface_descriptor_t),
+        .bDescriptorType = USB_DT_INTERFACE,
+        .bInterfaceNumber = 0,
+        .bAlternateSetting = 0,
+        .bNumEndpoints = 1,
+        .bInterfaceClass = USB_CLASS_HUB,
+        .bInterfaceSubClass = 0,
+        .bInterfaceProtocol = 0,
+        .iInterface = 0,
+    },
+    .endp = {
+        .bLength = sizeof(usb_endpoint_descriptor_t),
+        .bDescriptorType = USB_DT_ENDPOINT,
+        .bEndpointAddress = USB_ENDPOINT_IN | 1,
+        .bmAttributes = USB_ENDPOINT_INTERRUPT,
+        .wMaxPacketSize = htole16(4),
+        .bInterval = 12,
+    },
 };
 
 // speeds for our virtual root hub devices
@@ -232,7 +233,7 @@ mx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
     list_initialize(&rh->pending_intr_reqs);
 
     rh->device_desc = xhci_rh_device_descs[rh_index];
-    rh->config_desc = (usb_configuration_descriptor_t *)xhci_rh_config_desc;
+    rh->config_desc = (usb_configuration_descriptor_t *)&xhci_rh_config_desc;
 
     // first count number of ports
     int port_count = 0;
@@ -272,7 +273,8 @@ static mx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh
     if (!device_desc) {
         return ERR_NO_MEMORY;
     }
-    usb_configuration_descriptor_t* config_desc = (usb_configuration_descriptor_t *)malloc(CONFIG_DESC_SIZE);
+    usb_configuration_descriptor_t* config_desc =
+                        (usb_configuration_descriptor_t *)malloc(sizeof(xhci_rh_config_desc));
     if (!config_desc) {
         free(device_desc);
         return ERR_NO_MEMORY;

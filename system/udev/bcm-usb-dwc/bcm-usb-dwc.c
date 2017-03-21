@@ -204,57 +204,59 @@ static const uint8_t* dwc_rh_string_table[] = {
 };
 
 // device descriptor for USB 2.0 root hub
-// represented as a byte array to avoid endianness issues
-static const uint8_t dwc_rh_descriptor[sizeof(usb_device_descriptor_t)] = {
-    sizeof(usb_device_descriptor_t), // bLength
-    USB_DT_DEVICE,                   // bDescriptorType
-    0x00, 0x02,                      // bcdUSB = 2.0
-    USB_CLASS_HUB,                   // bDeviceClass
-    0,                               // bDeviceSubClass
-    1,                               // bDeviceProtocol = Single TT
-    64,                              // bMaxPacketSize0
-    0xD1, 0x18,                      // idVendor = 0x18D1 (Google)
-    0x02, 0xA0,                      // idProduct = 0xA002
-    0x00, 0x01,                      // bcdDevice = 1.0
-    MANUFACTURER_STRING,             // iManufacturer
-    PRODUCT_STRING_2,                // iProduct
-    0,                               // iSerialNumber
-    1,                               // bNumConfigurations
+static const usb_device_descriptor_t dwc_rh_descriptor = {
+    .bLength = sizeof(usb_device_descriptor_t),
+    .bDescriptorType = USB_DT_DEVICE,
+    .bcdUSB = htole16(0x0200),
+    .bDeviceClass = USB_CLASS_HUB,
+    .bDeviceSubClass = 0,
+    .bDeviceProtocol = 1,   // Single TT
+    .bMaxPacketSize0 = 64,
+    .idVendor = htole16(0x18D1),
+    .idProduct = htole16(0xA002),
+    .bcdDevice = htole16(0x0100),
+    .iManufacturer = MANUFACTURER_STRING,
+    .iProduct = PRODUCT_STRING_2,
+    .iSerialNumber = 0,
+    .bNumConfigurations = 1,
 };
-
-#define CONFIG_DESC_SIZE sizeof(usb_configuration_descriptor_t) + \
-                             sizeof(usb_interface_descriptor_t) + \
-                             sizeof(usb_endpoint_descriptor_t)
 
 // we are currently using the same configuration descriptors for both USB 2.0 and 3.0 root hubs
 // this is not actually correct, but our usb-hub driver isn't sophisticated enough to notice
-static const uint8_t dwc_rh_config_descriptor[CONFIG_DESC_SIZE] = {
-    // config descriptor
-    sizeof(usb_configuration_descriptor_t), // bLength
-    USB_DT_CONFIG,                          // bDescriptorType
-    CONFIG_DESC_SIZE, 0,                    // wTotalLength
-    1,                                      // bNumInterfaces
-    1,                                      // bConfigurationValue
-    0,                                      // iConfiguration
-    0xE0,                                   // bmAttributes = self powered
-    0,                                      // bMaxPower
-    // interface descriptor
-    sizeof(usb_interface_descriptor_t), // bLength
-    USB_DT_INTERFACE,                   // bDescriptorType
-    0,                                  // bInterfaceNumber
-    0,                                  // bAlternateSetting
-    1,                                  // bNumEndpoints
-    USB_CLASS_HUB,                      // bInterfaceClass
-    0,                                  // bInterfaceSubClass
-    0,                                  // bInterfaceProtocol
-    0,                                  // iInterface
-    // endpoint descriptor
-    sizeof(usb_endpoint_descriptor_t), // bLength
-    USB_DT_ENDPOINT,                   // bDescriptorType
-    USB_ENDPOINT_IN | 1,               // bEndpointAddress
-    USB_ENDPOINT_INTERRUPT,            // bmAttributes
-    4, 0,                              // wMaxPacketSize
-    12,                                // bInterval
+static const struct {
+    usb_configuration_descriptor_t config;
+    usb_interface_descriptor_t intf;
+    usb_endpoint_descriptor_t endp;
+} dwc_rh_config_descriptor = {
+     .config = {
+        .bLength = sizeof(usb_configuration_descriptor_t),
+        .bDescriptorType = USB_DT_CONFIG,
+        .wTotalLength = htole16(sizeof(dwc_rh_config_descriptor)),
+        .bNumInterfaces = 1,
+        .bConfigurationValue = 1,
+        .iConfiguration = 0,
+        .bmAttributes = 0xE0,   // self powered
+        .bMaxPower = 0,
+    },
+    .intf = {
+        .bLength = sizeof(usb_interface_descriptor_t),
+        .bDescriptorType = USB_DT_INTERFACE,
+        .bInterfaceNumber = 0,
+        .bAlternateSetting = 0,
+        .bNumEndpoints = 1,
+        .bInterfaceClass = USB_CLASS_HUB,
+        .bInterfaceSubClass = 0,
+        .bInterfaceProtocol = 0,
+        .iInterface = 0,
+    },
+    .endp = {
+        .bLength = sizeof(usb_endpoint_descriptor_t),
+        .bDescriptorType = USB_DT_ENDPOINT,
+        .bEndpointAddress = USB_ENDPOINT_IN | 1,
+        .bmAttributes = USB_ENDPOINT_INTERRUPT,
+        .wMaxPacketSize = htole16(4),
+        .bInterval = 12,
+    },
 };
 
 static int endpoint_request_scheduler_thread(void* arg);
@@ -884,15 +886,15 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
     if (desc_type == USB_DT_DEVICE && index == 0) {
         if (length > sizeof(usb_device_descriptor_t))
             length = sizeof(usb_device_descriptor_t);
-        txn->ops->copyto(txn, dwc_rh_descriptor, length, 0);
+        txn->ops->copyto(txn, &dwc_rh_descriptor, length, 0);
         complete_request(req, NO_ERROR, length, dwc);
     } else if (desc_type == USB_DT_CONFIG && index == 0) {
         usb_configuration_descriptor_t* config_desc =
-            (usb_configuration_descriptor_t*)dwc_rh_config_descriptor;
+            (usb_configuration_descriptor_t*)&dwc_rh_config_descriptor;
         uint16_t desc_length = le16toh(config_desc->wTotalLength);
         if (length > desc_length)
             length = desc_length;
-        txn->ops->copyto(txn, dwc_rh_config_descriptor, length, 0);
+        txn->ops->copyto(txn, &dwc_rh_config_descriptor, length, 0);
         complete_request(req, NO_ERROR, length, dwc);
     } else if (value >> 8 == USB_DT_STRING) {
         uint8_t string_index = value & 0xFF;
