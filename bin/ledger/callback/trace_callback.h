@@ -8,6 +8,7 @@
 #include <functional>
 #include <utility>
 
+#include "apps/ledger/src/callback/destruction_guard.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/functional/make_copyable.h"
 
@@ -56,16 +57,18 @@ class TracingLambda {
   template <typename... ArgType>
   auto operator()(ArgType&&... args) const {
     FTL_DCHECK(!did_run_or_moved_out_);
-
     did_run_or_moved_out_ = true;
-    auto id = id_;
-    auto category = category_;
-    auto name = name_;
-    auto trace_enabled = trace_enabled_;
-    callback_(std::forward<ArgType>(args)...);
-    if (trace_enabled) {
-      TRACE_ASYNC_END(category, name, id);
-    }
+
+    auto guard = MakeDestructionGuard([
+      trace_enabled = trace_enabled_, id = id_, category = category_,
+      name = name_
+    ] {
+      if (trace_enabled) {
+        TRACE_ASYNC_END(category, name, id);
+      }
+    });
+
+    return callback_(std::forward<ArgType>(args)...);
   }
 
  private:

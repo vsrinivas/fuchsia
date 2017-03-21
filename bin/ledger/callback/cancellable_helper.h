@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include "apps/ledger/src/callback/cancellable.h"
+#include "apps/ledger/src/callback/destruction_guard.h"
 #include "lib/ftl/logging.h"
 
 namespace callback {
@@ -22,23 +23,10 @@ class LambdaPostRunWrapper {
     FTL_DCHECK(callback_);
   }
 
-  template <typename... ArgType,
-            typename std::enable_if<!std::is_void<typename std::result_of<
-                T(ArgType...)>::type>::value>::type* = nullptr>
+  template <typename... ArgType>
   auto operator()(ArgType&&... args) const {
-    auto callback = std::move(callback_);
-    auto result = func_(std::forward<ArgType>(args)...);
-    callback();
-    return result;
-  }
-
-  template <typename... ArgType,
-            typename std::enable_if<std::is_void<typename std::result_of<
-                T(ArgType...)>::type>::value>::type* = nullptr>
-  void operator()(ArgType&&... args) const {
-    auto callback = std::move(callback_);
-    func_(std::forward<ArgType>(args)...);
-    callback();
+    auto call_on_exit = MakeDestructionGuard(std::move(callback_));
+    return func_(std::forward<ArgType>(args)...);
   }
 
  private:
