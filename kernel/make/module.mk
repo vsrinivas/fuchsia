@@ -145,6 +145,10 @@ ALLSRCS += $(MODULE_SRCS)
 # track all the objects built
 ALLOBJS += $(MODULE_OBJS)
 
+ifneq ($(MODULE_TYPE),hostapp)
+ALL_TARGET_OBJS += $(MODULE_OBJS)
+endif
+
 # build a ld -r style combined object
 # for all kernel and user modules
 ifneq ($(MODULE_TYPE),hostapp)

@@ -232,6 +232,9 @@ endif
 # master module object list
 ALLOBJS_MODULE :=
 
+# all module objects for the target (does not include hostapp)
+ALL_TARGET_OBJS :=
+
 # master object list (for dep generation)
 ALLOBJS :=
 
@@ -256,6 +259,10 @@ USER_DEFINES :=
 # Anything added to GLOBAL_SRCDEPS will become a dependency of every source file in the system.
 # Useful for header files that may be included by one or more source files.
 GLOBAL_SRCDEPS := $(GLOBAL_CONFIG_HEADER)
+
+# Anything added to TARGET_SRCDEPS will become a dependency of every target module file in the system.
+# Useful for header files that may be included by one or more source files.
+TARGET_MODDEPS :=
 
 # these need to be filled out by the project/target/platform rules.mk files
 TARGET :=
@@ -638,6 +645,9 @@ $(GIT_VERSION_HEADER): scripts/git-version.sh FORCE
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS
 $(ALLOBJS): $(GLOBAL_SRCDEPS)
+
+# make all target object files depend on any targets in TARGET_MODDEPS
+$(ALL_TARGET_OBJS): $(TARGET_MODDEPS)
 
 # any extra top level build dependencies that someone may have declared
 all:: $(EXTRA_BUILDDEPS)

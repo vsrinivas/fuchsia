@@ -11,7 +11,7 @@ GEN_DIR := $(BUILDDIR)/gen
 
 STAMPY := $(GEN_DIR)/sysgen-stamp
 # This gets STAMPY built (and generation complete) early in the build.
-GLOBAL_SRCDEPS += $(STAMPY)
+TARGET_MODDEPS += $(STAMPY)
 
 SG_MAGENTA := $(GENERATED_INCLUDES)/magenta
 

@@ -11,7 +11,7 @@ MDI_HEADER := $(MDI_HEADER_DIR)/mdi-defs.h
 
 # This is a big hammer, but we need to make sure $(MDI_HEADER) is generated
 # before it is included by any source files
-GLOBAL_SRCDEPS += $(MDI_HEADER)
+TARGET_MODDEPS += $(MDI_HEADER)
 GLOBAL_INCLUDES += $(GEN_HEADER_DIR)
 
 MDIGEN := $(BUILDDIR)/tools/mdigen
