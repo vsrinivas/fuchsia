@@ -45,6 +45,34 @@ struct DpAuxMessage {
     }
 };
 
+// This implements sending I2C read and write requests over DisplayPort.
+class I2cOverDpAux {
+public:
+    I2cOverDpAux(RegisterIo* reg_io, uint32_t ddi_number) : reg_io_(reg_io), ddi_number_(ddi_number)
+    {
+    }
+
+    // Send an I2C read request.  If this fails to read the full
+    // |size| bytes into |buf|, it returns false for failure.
+    bool I2cRead(uint32_t addr, uint8_t* buf, uint32_t size);
+    // Send an I2C write request.
+    bool I2cWrite(uint32_t addr, const uint8_t* buf, uint32_t size);
+
+private:
+    // Send a DisplayPort Aux message and receive the synchronous reply
+    // message.
+    bool SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply);
+    // This is like SendDpAuxMsg(), but it also checks the header field in
+    // the reply for whether the request was successful, and it retries the
+    // request if the sink device returns an AUX_DEFER reply.
+    bool SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessage* reply);
+    // Read a single chunk, upto the DisplayPort Aux message size limit.
+    bool I2cReadChunk(uint32_t addr, uint8_t* buf, uint32_t size_in, uint32_t* size_out);
+
+    RegisterIo* reg_io_;
+    uint32_t ddi_number_;
+};
+
 class DisplayPort {
 public:
     // This is the I2C address for DDC, for fetching EDID data.
