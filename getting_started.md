@@ -93,7 +93,7 @@ After Fuchsia is built, you will have a Magenta (`magenta.bin`) image and a
 ### Boot from hardware
 
 There are three options for booting Fuchsia on hardware: network booting (see
-below), booting from USB (see below), or [installing](https://fuchsia.googlesource.com/magenta/+/master/system/uapp/install-fuchsia/README.md)
+below), booting from USB (see below), or [installing](https://fuchsia.googlesource.com/install-fuchsia/+/master/README.md)
 Fuchsia on internal storage. In all cases you'll need to put some code on the
 target hardware, using a USB drive is a good option for doing this.
 
