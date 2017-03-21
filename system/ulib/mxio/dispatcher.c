@@ -3,17 +3,27 @@
 // found in the LICENSE file.
 
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
-#include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 #include <magenta/listnode.h>
 
-#define MXDEBUG 0
+// Eventually we want to use the repeating version of mx_object_wait_async,
+// but it is not ready for prime time yet.  This feature flag enables testing.
+#define USE_WAIT_ONCE 1
+
+#define VERBOSE_DEBUG 0
+
+#if VERBOSE_DEBUG
+#define xprintf(fmt...) printf(fmt)
+#else
+#define xprintf(...) do {} while (0)
+#endif
 
 typedef struct {
     list_node_t node;
@@ -23,7 +33,9 @@ typedef struct {
     void* cookie;
 } handler_t;
 
+#if !USE_WAIT_ONCE
 #define FLAG_DISCONNECTED 1
+#endif
 
 struct mxio_dispatcher {
     mtx_t lock;
@@ -42,6 +54,10 @@ static void destroy_handler(mxio_dispatcher_t* md, handler_t* handler, bool need
     if (need_close_cb) {
         md->cb(0, handler->cb, handler->cookie);
     }
+
+    mx_handle_close(handler->h);
+    handler->h = MX_HANDLE_INVALID;
+
     mtx_lock(&md->lock);
     list_delete(&handler->node);
     mtx_unlock(&md->lock);
@@ -53,39 +69,59 @@ static void destroy_handler(mxio_dispatcher_t* md, handler_t* handler, bool need
 #define SIGNAL_NEEDS_CLOSE_CB 1u
 
 static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler, bool need_close_cb) {
-    // close handle, so we get no further messages
-    mx_handle_close(handler->h);
+    xprintf("dispatcher: disconnect: %p / %x\n", handler, handler->h);
+
+#if USE_WAIT_ONCE
+    destroy_handler(md, handler, need_close_cb);
+#else
+    // Cancel the async wait operations.
+    mx_status_t r = mx_handle_cancel(handler->h, (uint64_t)(uintptr_t)handler, MX_CANCEL_KEY);
+    if (r) {
+        printf("dispatcher: CANCEL FAILED %d\n", r);
+    }
 
     // send a synthetic message so we know when it's safe to destroy
-    mx_io_packet_t packet;
-    packet.hdr.key = (uint64_t)(uintptr_t)handler;
-    packet.signals = need_close_cb ? SIGNAL_NEEDS_CLOSE_CB : 0;
-    mx_port_queue(md->ioport, &packet, sizeof(packet));
+    // TODO: once cancel guarantees no packets will arrive after,
+    // we can just destroy the object here instead of doing this...
+    mx_port_packet_t packet;
+    packet.key = (uint64_t)(uintptr_t)handler;
+    packet.signal.observed = need_close_cb ? SIGNAL_NEEDS_CLOSE_CB : 0;
+    r = mx_port_queue(md->ioport, &packet, 0);
+    if (r) {
+        printf("dispatcher: PORT QUEUE FAILED %d\n", r);
+    }
 
     // flag so we know to ignore further events
     handler->flags |= FLAG_DISCONNECTED;
+#endif
 }
 
 static int mxio_dispatcher_thread(void* _md) {
     mxio_dispatcher_t* md = _md;
     mx_status_t r;
+    xprintf("dispatcher: start %p\n", md);
 
     for (;;) {
-        mx_io_packet_t packet;
-        if ((r = mx_port_wait(md->ioport, MX_TIME_INFINITE, &packet, sizeof(packet))) < 0) {
+        mx_port_packet_t packet;
+        if ((r = mx_port_wait(md->ioport, MX_TIME_INFINITE, &packet, 0)) < 0) {
             printf("dispatcher: ioport wait failed %d\n", r);
             break;
         }
-        handler_t* handler = (void*)(uintptr_t)packet.hdr.key;
+        handler_t* handler = (void*)(uintptr_t)packet.key;
+#if !USE_WAIT_ONCE
         if (handler->flags & FLAG_DISCONNECTED) {
             // handler is awaiting gc
             // ignore events for it until we get the synthetic "destroy" event
-            if (packet.hdr.type == MX_PORT_PKT_TYPE_USER) {
-                destroy_handler(md, handler, packet.signals & SIGNAL_NEEDS_CLOSE_CB);
+            if (packet.type == MX_PKT_TYPE_USER) {
+                destroy_handler(md, handler, packet.signal.observed & SIGNAL_NEEDS_CLOSE_CB);
+                printf("dispatcher: destroy %p\n", handler);
+            } else {
+                printf("dispatcher: spurious packet for %p\n", handler);
             }
             continue;
         }
-        if (packet.signals & MX_CHANNEL_READABLE) {
+#endif
+        if (packet.signal.observed & MX_CHANNEL_READABLE) {
             if ((r = md->cb(handler->h, handler->cb, handler->cookie)) != 0) {
                 if (r == ERR_DISPATCHER_NO_WORK) {
                     printf("mxio: dispatcher found no work to do!\n");
@@ -94,14 +130,22 @@ static int mxio_dispatcher_thread(void* _md) {
                     continue;
                 }
             }
+#if USE_WAIT_ONCE
+            if ((r = mx_object_wait_async(handler->h, md->ioport, (uint64_t)(uintptr_t)handler,
+                                          MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                                          MX_WAIT_ASYNC_ONCE)) < 0) {
+                printf("dispatcher: could not re-arm: %p\n", handler);
+            }
+#endif
+            continue;
         }
-        if (packet.signals & MX_CHANNEL_PEER_CLOSED) {
+        if (packet.signal.observed & MX_CHANNEL_PEER_CLOSED) {
             // synthesize a close
             disconnect_handler(md, handler, true);
         }
     }
 
-    printf("dispatcher: FATAL ERROR, EXITING\n");
+    xprintf("dispatcher: FATAL ERROR, EXITING\n");
     mxio_dispatcher_destroy(md);
     return NO_ERROR;
 }
@@ -115,7 +159,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     list_initialize(&md->list);
     mtx_init(&md->lock, mtx_plain);
     mx_status_t status;
-    if ((status = mx_port_create(0u, &md->ioport)) < 0) {
+    if ((status = mx_port_create(MX_PORT_OPT_V2, &md->ioport)) < 0) {
         free(md);
         return status;
     }
@@ -160,15 +204,26 @@ mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, 
 
     mtx_lock(&md->lock);
     list_add_tail(&md->list, &handler->node);
-    if ((r = mx_port_bind(md->ioport, (uint64_t)(uintptr_t)handler, h,
-                             MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) < 0) {
+#if USE_WAIT_ONCE
+    if ((r = mx_object_wait_async(h, md->ioport, (uint64_t)(uintptr_t)handler,
+                                  MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                                  MX_WAIT_ASYNC_ONCE)) < 0) {
         list_delete(&handler->node);
     }
+#else
+    if ((r = mx_object_wait_async(h, md->ioport, (uint64_t)(uintptr_t)handler,
+                                  MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                                  MX_WAIT_ASYNC_REPEATING)) < 0) {
+        list_delete(&handler->node);
+    }
+#endif
     mtx_unlock(&md->lock);
 
     if (r < 0) {
         printf("dispatcher: failed to bind: %d\n", r);
         free(handler);
+    } else {
+        xprintf("dispatcher: added %p / %x\n", handler, h);
     }
     return r;
 }
