@@ -6,12 +6,17 @@
 #define APPS_TRACING_LIB_TRACE_TICKS_H_
 
 #include <stdint.h>
+
+#ifdef __Fuchsia__
 #include <magenta/syscalls.h>
+#endif
 
 namespace tracing {
 
 // Represents a moment in the trace timeline.
 using Ticks = uint64_t;
+
+#ifdef __Fuchsia__
 
 // Gets the current timestamp in ticks elapsed since some arbitrary epoch.
 inline Ticks GetTicksNow() {
@@ -22,6 +27,8 @@ inline Ticks GetTicksNow() {
 inline Ticks GetTicksPerSecond() {
   return mx_ticks_per_second();
 }
+
+#endif // __Fuchsia__
 
 }  // namepsace tracing
 
