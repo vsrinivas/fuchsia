@@ -21,7 +21,7 @@ fi
 
 SCRIPT_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)
 FUCHSIA_DIR="$SCRIPT_DIR/.."
-MINFS="$FUCHSIA_DIR/out/build-magenta/build-magenta-rpi3-arm64/tools/minfs"
+MINFS="$FUCHSIA_DIR/out/build-magenta/tools/minfs"
 MANIFEST_BUILDER="$SCRIPT_DIR/installer/manifest-builder.py"
 
 echo $FUCHSIA_DIR
@@ -31,6 +31,11 @@ echo $FUCHSIA_DIR
 pushd "$FUCHSIA_DIR/magenta" > /dev/null
 ./scripts/make-parallel magenta-rpi3-arm64
 popd > /dev/null
+
+if [[ ! -e "$MINFS" ]]; then
+  echo "minfs not found, please build fuchsia and try again."
+  exit 1
+fi
 
 lsblk
 echo "Enter the name of a block device to format: "
@@ -102,6 +107,9 @@ if [ "$BLK_DEV_SIZE_MB" -lt 8000 ]; then
     echo "[format_sdcard] ERROR: SD Card must be at least 8GB"
     exit 1
 fi
+
+# Stomp the existing MBR if one exists.
+sudo dd if=/dev/zero of="$DEVICE_PATH" bs=512 count=1
 
 BOOT_PTN_OF=0
 BOOT_PTN_SZ=1024
@@ -182,15 +190,15 @@ sudo cp "$FUCHSIA_DIR/magenta/kernel/target/rpi3/bcm2710-rpi-3-b.dtb" \
 # memory as a ramfs. Building the fuchsia system in a /system partition directly
 # to the SD card reduces memory presure and alleviates the need for the RPi3's
 # bootloader to load the whole fuchsia system from the SD card to RAM upon boot.
-sudo cp "$FUCHSIA_DIR/out/build-magenta/build-magenta-rpi3-arm64/bootdata.bin" \
+sudo cp "$FUCHSIA_DIR/magenta/build-magenta-rpi3-arm64/bootdata.bin" \
         "${MOUNT_PATH}/"
 
-curl -L "https://github.com/raspberrypi/firmware/raw/master/boot/start.elf" > \
+curl -L "https://github.com/raspberrypi/firmware/raw/390f53ed0fd79df274bdcc81d99e09fa262f03ab/boot/start.elf" > \
       /tmp/start.elf
 sudo cp /tmp/start.elf "${MOUNT_PATH}/start.elf"
 rm /tmp/start.elf
 
-curl -L https://github.com/raspberrypi/firmware/raw/master/boot/bootcode.bin > \
+curl -L https://github.com/raspberrypi/firmware/raw/7fcb39cb5b5543ca7485cd1ae9e6d908f31e40c6/boot/bootcode.bin > \
      /tmp/bootcode.bin
 sudo cp /tmp/bootcode.bin "${MOUNT_PATH}/bootcode.bin"
 rm /tmp/bootcode.bin
