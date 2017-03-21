@@ -243,7 +243,7 @@ static enum handler_return gic_handle_irq(struct iframe *frame)
     enum handler_return ret;
 
     ret = INT_NO_RESCHEDULE;
-    struct int_handler_struct* handler = pdev_get_int_handler(vector, cpu);
+    struct int_handler_struct* handler = pdev_get_int_handler(vector);
     if (handler->handler) {
         ret = handler->handler(handler->arg);
     }
@@ -297,9 +297,6 @@ static enum handler_return arm_ipi_halt_handler(void *arg) {
 }
 
 static void gic_init_percpu(void) {
-    register_int_handler(MP_IPI_GENERIC + ipi_base, &arm_ipi_generic_handler, 0);
-    register_int_handler(MP_IPI_RESCHEDULE + ipi_base, &arm_ipi_reschedule_handler, 0);
-    register_int_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
     mp_set_curr_cpu_online(true);
     unmask_interrupt(MP_IPI_GENERIC + ipi_base);
     unmask_interrupt(MP_IPI_RESCHEDULE + ipi_base);
@@ -373,7 +370,11 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
         GICV2M_REG_FRAMES[0] = msi_frame_phys;
         arm_gicv2m_init(GICV2M_REG_FRAMES, countof(GICV2M_REG_FRAMES));
     }
-    pdev_register_interrupts(&gic_ops, true);
+    pdev_register_interrupts(&gic_ops);
+
+    register_int_handler(MP_IPI_GENERIC + ipi_base, &arm_ipi_generic_handler, 0);
+    register_int_handler(MP_IPI_RESCHEDULE + ipi_base, &arm_ipi_reschedule_handler, 0);
+    register_int_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
 }
 
 LK_PDEV_INIT(arm_gic_v2_init, MDI_KERNEL_DRIVERS_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY);

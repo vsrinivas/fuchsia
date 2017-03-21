@@ -16,7 +16,7 @@ struct int_handler_struct {
     void* arg;
 };
 
-struct int_handler_struct* pdev_get_int_handler(unsigned int vector, uint cpu);
+struct int_handler_struct* pdev_get_int_handler(unsigned int vector);
 
 // Interrupt Controller interface
 struct pdev_interrupt_ops {
@@ -37,6 +37,6 @@ struct pdev_interrupt_ops {
     enum handler_return (*handle_fiq)(iframe* frame);
 };
 
-void pdev_register_interrupts(const struct pdev_interrupt_ops* ops, bool enable_per_cpu);
+void pdev_register_interrupts(const struct pdev_interrupt_ops* ops);
 
 __END_CDECLS

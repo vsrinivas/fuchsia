@@ -393,8 +393,7 @@ void arm_generic_timer_init(int irq, uint32_t freq_override)
 
 static void arm_generic_timer_init_secondary_cpu(uint level)
 {
-    LTRACEF("register irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
-    register_int_handler(timer_irq, &platform_tick, NULL);
+    LTRACEF("unmask irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
     unmask_interrupt(timer_irq);
 }
 

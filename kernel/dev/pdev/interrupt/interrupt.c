@@ -9,35 +9,20 @@
 #include <lk/init.h>
 
 #define ARM_MAX_INT 1024
-#define ARM_MAX_PER_CPU_INT 32
 
 static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
 
-static struct int_handler_struct int_handler_table_per_cpu[ARM_MAX_PER_CPU_INT][SMP_MAX_CPUS];
-static struct int_handler_struct int_handler_table_shared[ARM_MAX_INT-ARM_MAX_PER_CPU_INT];
+static struct int_handler_struct int_handler_table[ARM_MAX_INT];
 
-static bool intr_enable_per_cpu;
-
-struct int_handler_struct* pdev_get_int_handler(unsigned int vector, uint cpu)
+struct int_handler_struct* pdev_get_int_handler(unsigned int vector)
 {
     DEBUG_ASSERT(vector < ARM_MAX_INT);
-    DEBUG_ASSERT(cpu < SMP_MAX_CPUS);
-
-    if (!intr_enable_per_cpu) {
-        cpu = 0;
-    }
-
-    if (vector < ARM_MAX_PER_CPU_INT) {
-        return &int_handler_table_per_cpu[vector][cpu];
-    } else {
-        return &int_handler_table_shared[vector - ARM_MAX_PER_CPU_INT];
-    }
+    return &int_handler_table[vector];
 }
 
 void register_int_handler(unsigned int vector, int_handler handler, void* arg)
 {
     struct int_handler_struct *h;
-    uint cpu = arch_curr_cpu_num();
 
     spin_lock_saved_state_t state;
 
@@ -47,7 +32,7 @@ void register_int_handler(unsigned int vector, int_handler handler, void* arg)
 
     spin_lock_save(&lock, &state, SPIN_LOCK_FLAG_INTERRUPTS);
 
-    h = pdev_get_int_handler(vector, cpu);
+    h = pdev_get_int_handler(vector);
     h->handler = handler;
     h->arg = arg;
 
@@ -157,9 +142,8 @@ enum handler_return platform_fiq(iframe* frame) {
     return intr_ops->handle_fiq(frame);
 }
 
-void pdev_register_interrupts(const struct pdev_interrupt_ops* ops, bool enable_per_cpu) {
+void pdev_register_interrupts(const struct pdev_interrupt_ops* ops) {
     intr_ops = ops;
-    intr_enable_per_cpu = enable_per_cpu;
     smp_mb();
 }
 
