@@ -114,6 +114,15 @@ module mozart;
 //
 // See also |BufferConsumer|, |BufferProducer|, and |BufferFence|.
 struct Buffer {
+  // Specifies the type of VMO's memory.
+  enum MemoryType {
+    // VMO is regular device memory.
+    DEVICE_MEMORY = 0,
+
+    // VMO can be imported as a VkDeviceMemory using vkImportDeviceMemoryMAGMA.
+    VK_DEVICE_MEMORY = 1,
+  };
+
   // The VMO which backs this buffer.
   handle<vmo> vmo;
 
@@ -124,4 +133,8 @@ struct Buffer {
   // The event which retains this buffer in memory.
   // The handle may be invalid if the producer did not advise retention.
   handle<eventpair>? retention;
+
+  // The type of memory stored in the VMO, namely whether it's GPU memory or
+  // regular memory.
+  MemoryType memory_type;
 };

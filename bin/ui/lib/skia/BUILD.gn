@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//apps/mozart/config.gni")
+
 group("skia") {
   public_deps = [
     ":fonts",
@@ -56,4 +58,18 @@ source_set("vmo") {
     "//magenta/system/ulib/mx",
     "//third_party/skia",
   ]
+
+  configs += [ "//apps/mozart:vulkan_config" ]
+
+  if (mozart_use_vulkan) {
+    sources += [
+      "vk_vmo_image_generator.cc",
+      "vk_vmo_image_generator.h",
+    ]
+    public_deps += [
+      "//flutter/vulkan",
+      "//magma:vulkan",
+      "//third_party/skia:gpu",
+    ]
+  }
 }

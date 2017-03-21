@@ -6,6 +6,9 @@
 
 #include <atomic>
 
+#ifdef MOZART_USE_VULKAN
+#include "apps/mozart/lib/skia/vk_vmo_image_generator.h"
+#endif
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
@@ -33,6 +36,7 @@ sk_sp<SkImage> MakeSkImageInternal(
     std::unique_ptr<ConsumedBufferHolder> buffer_holder,
     std::unique_ptr<BufferFence>* out_fence) {
   FTL_DCHECK(buffer_holder);
+  FTL_DCHECK(out_fence);
 
   size_t needed_bytes = info.height() * row_bytes;
   if (!info.validRowBytes(row_bytes) ||
@@ -60,6 +64,31 @@ sk_sp<SkImage> MakeSkImageInternal(
   buffer_holder.release();  // now owned by SkImage
   return image;
 }
+
+#ifdef MOZART_USE_VULKAN
+sk_sp<SkImage> MakeSkImageFromVkDeviceMemoryInternal(
+    const SkImageInfo& info,
+    size_t row_bytes,
+    std::unique_ptr<ConsumedBufferHolder> buffer_holder,
+    std::unique_ptr<BufferFence>* out_fence) {
+  FTL_DCHECK(buffer_holder);
+  FTL_DCHECK(out_fence);
+
+  // Create a generator because we need to use the rasterizer's GrContext
+  // to create an Image (GrContext doesn't support multithreaded use).
+  auto vk_vmo_image_generator =
+      std::make_unique<VkVmoImageGenerator>(info, buffer_holder->shared_vmo());
+  sk_sp<SkImage> image = sk_sp<SkImage>(
+      SkImage::MakeFromGenerator(std::move(vk_vmo_image_generator)));
+  if (!image) {
+    FTL_LOG(ERROR) << "Could not create SkImage.";
+    return nullptr;
+  }
+
+  *out_fence = buffer_holder->TakeFence();
+  return image;
+};
+#endif  // MOZART_USE_VULKAN
 
 }  // namespace
 
@@ -123,11 +152,25 @@ sk_sp<SkImage> MakeSkImageFromBuffer(const SkImageInfo& info,
   FTL_DCHECK(consumer);
   FTL_DCHECK(consumer->map_flags() & MX_VM_FLAG_PERM_READ);
 
+  Buffer::MemoryType buffer_memory_type = buffer->memory_type;
   auto buffer_holder = consumer->ConsumeBuffer(std::move(buffer));
   if (!buffer_holder)
     return nullptr;
-  return MakeSkImageInternal(info, row_bytes, std::move(buffer_holder),
-                             out_fence);
+
+  switch (buffer_memory_type) {
+    case Buffer::MemoryType::VK_DEVICE_MEMORY:
+#ifdef MOZART_USE_VULKAN
+      return MakeSkImageFromVkDeviceMemoryInternal(
+          info, row_bytes, std::move(buffer_holder), out_fence);
+// Fall through if we aren't using Vulkan within Mozart.
+#endif
+    case Buffer::MemoryType::DEVICE_MEMORY:
+      return MakeSkImageInternal(info, row_bytes, std::move(buffer_holder),
+                                 out_fence);
+    default:
+      FTL_DCHECK(false);
+      return nullptr;
+  }
 }
 
 }  // namespace mozart

@@ -58,7 +58,7 @@ struct Image {
   // The intended interpretation of alpha information in the image, if any.
   AlphaFormat alpha_format = AlphaFormat.OPAQUE;
 
-  // The intended interpreration of color information the image.
+  // The intended interpretation of color information the image.
   ColorSpace color_space = ColorSpace.SRGB;
 
   // The buffer which contains the actual image data.

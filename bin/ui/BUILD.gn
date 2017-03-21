@@ -2,15 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("config.gni")
+
+config("vulkan_config") {
+  if (mozart_use_vulkan) {
+    defines = [ "MOZART_USE_VULKAN" ]
+  }
+}
+
 group("mozart") {
   deps = [
+    ":tests",
     "examples",
     "lib/skia",
     "lib/view_associate_framework",
     "lib/view_framework",
     "services",
     "src",
-    ":tests"
   ]
 
   testonly = true

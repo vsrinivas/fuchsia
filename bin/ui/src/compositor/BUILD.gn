@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-mozart_use_vulkan = false
+import("//apps/mozart/config.gni")
 
 source_set("common") {
   sources = [
@@ -88,6 +88,8 @@ source_set("common") {
 
 executable("compositor") {
   output_name = "compositor_service"
+
+  configs += [ "//apps/mozart:vulkan_config" ]
 
   sources = [
     "main.cc",
