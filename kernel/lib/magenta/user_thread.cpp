@@ -520,7 +520,7 @@ status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buff
 
     AutoLock lock(&exception_wait_lock_);
 
-    if (!InExceptionLocked() || thread_.state != THREAD_BLOCKED)
+    if (!InExceptionLocked())
         return ERR_BAD_STATE;
 
     switch (state_kind)
@@ -539,7 +539,7 @@ status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_
 
     AutoLock lock(&exception_wait_lock_);
 
-    if (!InExceptionLocked() || thread_.state != THREAD_BLOCKED)
+    if (!InExceptionLocked())
         return ERR_BAD_STATE;
 
     switch (state_kind)
