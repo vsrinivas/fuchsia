@@ -219,10 +219,7 @@ Status NodeBuilder::FromId(SynchronousStorage* page_storage,
                            ObjectId object_id,
                            NodeBuilder* result) {
   std::unique_ptr<const TreeNode> node;
-  Status status = page_storage->TreeNodeFromId(object_id, &node);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(page_storage->TreeNodeFromId(object_id, &node));
   FTL_DCHECK(node);
 
   std::vector<Entry> entries;
@@ -261,20 +258,17 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
   if (change_level < level_) {
     // The change is at a lower level than the current node. Find the children
     // to apply the change, transform it and reconstruct the new node.
-    Status status = ComputeContent(page_storage);
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(ComputeContent(page_storage));
 
     size_t index = GetEntryOrChildIndex(entries_, change.entry.key);
     FTL_DCHECK(index == entries_.size() ||
                entries_[index].key != change.entry.key);
 
     NodeBuilder& child = children_[index];
-    status = child.Apply(node_level_calculator, page_storage, std::move(change),
-                         did_mutate);
-    if (status != Status::OK || !*did_mutate) {
-      return status;
+    RETURN_ON_ERROR(child.Apply(node_level_calculator, page_storage,
+                                std::move(change), did_mutate));
+    if (!*did_mutate) {
+      return Status::OK;
     }
 
     type_ = BuilderType::NEW_NODE;
@@ -299,13 +293,13 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
                           ObjectId* object_id,
                           std::unordered_set<ObjectId>* new_ids) {
   if (!*this) {
-    Status status = page_storage->TreeNodeFromEntries(0, {}, {""}, &object_id_);
-    if (status == Status::OK) {
-      *object_id = object_id_;
-      new_ids->insert(object_id_);
-      type_ = BuilderType::EXISTING_NODE;
-    }
-    return status;
+    RETURN_ON_ERROR(
+        page_storage->TreeNodeFromEntries(0, {}, {""}, &object_id_));
+
+    *object_id = object_id_;
+    new_ids->insert(object_id_);
+    type_ = BuilderType::EXISTING_NODE;
+    return Status::OK;
   }
   if (type_ == BuilderType::EXISTING_NODE) {
     *object_id = object_id_;
@@ -363,10 +357,7 @@ Status NodeBuilder::ComputeContent(SynchronousStorage* page_storage) {
   FTL_DCHECK(type_ == BuilderType::EXISTING_NODE);
 
   std::unique_ptr<const TreeNode> node;
-  Status status = page_storage->TreeNodeFromId(object_id_, &node);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(page_storage->TreeNodeFromId(object_id_, &node));
   FTL_DCHECK(node);
 
   ExtractContent(*node, &entries_, &children_);
@@ -385,10 +376,7 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage,
     return Status::OK;
   }
 
-  Status status = ComputeContent(page_storage);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(ComputeContent(page_storage));
 
   size_t index = GetEntryOrChildIndex(entries_, key);
 
@@ -400,11 +388,8 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage,
   }
 
   // Element at |index| must be removed.
-  status =
-      children_[index].Merge(page_storage, std::move(children_[index + 1]));
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(
+      children_[index].Merge(page_storage, std::move(children_[index + 1])));
 
   type_ = BuilderType::NEW_NODE;
   *did_mutate = true;
@@ -431,10 +416,8 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
   // the 2 children.
   if (change_level > level_) {
     NodeBuilder right;
-    Status status = Split(page_storage, entry.key, &right);
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(Split(page_storage, entry.key, &right));
+
     std::vector<Entry> entries;
     entries.push_back(std::move(entry));
     std::vector<NodeBuilder> children;
@@ -446,10 +429,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
     return Status::OK;
   }
 
-  Status status = ComputeContent(page_storage);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(ComputeContent(page_storage));
 
   // The change is at the current level. The entries must be splitted
   // according to the key of the change.
@@ -476,10 +456,8 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
 
   // Split the child that encompass |entry.key|.
   NodeBuilder right;
-  status = children_[split_index].Split(page_storage, entry.key, &right);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(
+      children_[split_index].Split(page_storage, entry.key, &right));
 
   // Add |entry| to the list of entries of the result node.
   entries_.insert(entries_.begin() + split_index, std::move(entry));
@@ -496,10 +474,7 @@ Status NodeBuilder::Split(SynchronousStorage* page_storage,
     return Status::OK;
   }
 
-  Status status = ComputeContent(page_storage);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(ComputeContent(page_storage));
 
   // Find the index at which to split.
   size_t split_index = GetEntryOrChildIndex(entries_, key);
@@ -525,10 +500,8 @@ Status NodeBuilder::Split(SynchronousStorage* page_storage,
 
   // Recursively call |Split| on the child.
   NodeBuilder sub_right;
-  child_to_split.Split(page_storage, std::move(key), &sub_right);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(
+      child_to_split.Split(page_storage, std::move(key), &sub_right));
 
   std::vector<Entry> right_entries;
 
@@ -571,24 +544,15 @@ Status NodeBuilder::Merge(SynchronousStorage* page_storage, NodeBuilder other) {
     return Status::OK;
   }
 
-  Status status = ComputeContent(page_storage);
-  if (status != Status::OK) {
-    return status;
-  }
-  status = other.ComputeContent(page_storage);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(ComputeContent(page_storage));
+  RETURN_ON_ERROR(other.ComputeContent(page_storage));
 
   type_ = BuilderType::NEW_NODE;
 
   // Merge the right-most child from |left| with the left-most child
   // from |right|.
-  status =
-      children_.back().Merge(page_storage, std::move(other.children_.front()));
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(
+      children_.back().Merge(page_storage, std::move(other.children_.front())));
 
   // Concatenate entries.
   entries_.insert(entries_.end(),

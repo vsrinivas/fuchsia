@@ -22,19 +22,14 @@ class IteratorPair {
 
   // Initialize the pair with the ids of both roots.
   Status Init(ObjectIdView left_node_id, ObjectIdView right_node_id) {
-    Status status;
-    status = left_.Init(left_node_id);
-    if (status == Status::OK) {
-      status = right_.Init(right_node_id);
-    }
-    if (status == Status::OK) {
-      Normalize();
-    }
-    if (status == Status::OK && !Finished() && !HasDiff()) {
-      status = Advance();
+    RETURN_ON_ERROR(left_.Init(left_node_id));
+    RETURN_ON_ERROR(right_.Init(right_node_id));
+    Normalize();
+    if (!Finished() && !HasDiff()) {
+      RETURN_ON_ERROR(Advance());
     }
 
-    return status;
+    return Status::OK;
   }
 
   bool Finished() {
@@ -93,17 +88,11 @@ class IteratorPair {
       // to be advanced.
       if (right_.HasValue() && left_.HasValue() &&
           right_.CurrentEntry().key == left_.CurrentEntry().key) {
-        Status status = right_.Advance();
-        if (status != Status::OK) {
-          return status;
-        }
+        RETURN_ON_ERROR(right_.Advance());
         Swap();
       }
 
-      Status status = right_.Advance();
-      if (status != Status::OK) {
-        return status;
-      }
+      RETURN_ON_ERROR(right_.Advance());
       Normalize();
     } while (!Finished() && !HasDiff());
     return Status::OK;
@@ -243,19 +232,13 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
   }
 
   IteratorPair iterators(storage, on_next);
-  Status status = iterators.Init(left_node_id, right_node_id);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(iterators.Init(left_node_id, right_node_id));
 
   while (!iterators.Finished()) {
     if (!iterators.SendDiff()) {
       return Status::OK;
     }
-    Status status = iterators.Advance();
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(iterators.Advance());
   }
 
   return Status::OK;

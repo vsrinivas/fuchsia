@@ -10,6 +10,14 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/strings/string_view.h"
 
+#define RETURN_ON_ERROR(expr)   \
+  do {                          \
+    Status status = (expr);     \
+    if (status != Status::OK) { \
+      return status;            \
+    }                           \
+  } while (0)
+
 namespace storage {
 namespace btree {
 

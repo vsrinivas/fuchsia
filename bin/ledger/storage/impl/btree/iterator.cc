@@ -19,20 +19,18 @@ Status ForEachEntryInternal(
     ftl::StringView min_key,
     const std::function<bool(EntryAndNodeId)>& on_next) {
   BTreeIterator iterator(storage);
-  Status status = iterator.Init(root_id);
-  if (status == Status::OK) {
-    status = iterator.SkipTo(min_key);
-  }
-  while (status == Status::OK && !iterator.Finished()) {
-    status = iterator.AdvanceToValue();
-    if (status == Status::OK && iterator.HasValue()) {
+  RETURN_ON_ERROR(iterator.Init(root_id));
+  RETURN_ON_ERROR(iterator.SkipTo(min_key));
+  while (!iterator.Finished()) {
+    RETURN_ON_ERROR(iterator.AdvanceToValue());
+    if (iterator.HasValue()) {
       if (!on_next({iterator.CurrentEntry(), iterator.GetNodeId()})) {
         return Status::OK;
       }
-      status = iterator.Advance();
+      RETURN_ON_ERROR(iterator.Advance());
     }
   }
-  return status;
+  return Status::OK;
 }
 
 }  // namespace
@@ -64,10 +62,7 @@ Status BTreeIterator::SkipTo(ftl::StringView min_key) {
     if (next_child.empty()) {
       return Status::OK;
     }
-    Status status = Descend(next_child);
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(Descend(next_child));
   }
 }
 
@@ -123,10 +118,7 @@ Status BTreeIterator::Advance() {
 
 Status BTreeIterator::AdvanceToValue() {
   while (!Finished() && !HasValue()) {
-    Status status = Advance();
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(Advance());
   }
   return Status::OK;
 }
@@ -159,10 +151,7 @@ Status BTreeIterator::Descend(ftl::StringView node_id) {
   }
 
   std::unique_ptr<const TreeNode> node;
-  Status status = storage_->TreeNodeFromId(node_id, &node);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(storage_->TreeNodeFromId(node_id, &node));
   stack_.emplace_back(std::move(node), 0);
   return Status::OK;
 }
