@@ -176,12 +176,15 @@ class AgentRunner::PageWatcherImpl : ledger::PageWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(PageWatcherImpl);
 };
 
-AgentRunner::AgentRunner(app::ApplicationLauncher* application_launcher,
-                         MessageQueueManager* message_queue_manager,
-                         ledger::LedgerRepository* ledger_repository)
+AgentRunner::AgentRunner(
+    app::ApplicationLauncher* application_launcher,
+    MessageQueueManager* message_queue_manager,
+    ledger::LedgerRepository* ledger_repository,
+    maxwell::UserIntelligenceProvider* user_intelligence_provider)
     : application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
-      ledger_repository_(ledger_repository) {
+      ledger_repository_(ledger_repository),
+      user_intelligence_provider_(user_intelligence_provider) {
   trigger_list_watcher_.reset(new PageWatcherImpl(
       ledger_repository, kTriggerListLedger,
       [this](std::string key, std::string value) { AddedTrigger(key, value); },
@@ -380,10 +383,12 @@ AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
   auto found_it = running_agents_.find(agent_url);
   if (found_it == running_agents_.end()) {
     bool inserted = false;
+    ComponentContextInfo component_info = {message_queue_manager_, this,
+                                           ledger_repository_};
+    AgentContextInfo info = {component_info, application_launcher_,
+                             user_intelligence_provider_};
     std::tie(found_it, inserted) = running_agents_.emplace(
-        agent_url, std::make_unique<AgentContextImpl>(
-                       application_launcher_, message_queue_manager_, this,
-                       ledger_repository_, agent_url));
+        agent_url, std::make_unique<AgentContextImpl>(info, agent_url));
     FTL_DCHECK(inserted);
   }
 

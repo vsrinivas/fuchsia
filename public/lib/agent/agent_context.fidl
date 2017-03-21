@@ -4,6 +4,7 @@
 
 module modular;
 
+import "apps/maxwell/services/user/intelligence_services.fidl";
 import "apps/modular/services/component/component_context.fidl";
 
 // This interface is exposed to all agents. It allows to schedule tasks to occur
@@ -12,6 +13,9 @@ import "apps/modular/services/component/component_context.fidl";
 interface AgentContext {
   // |context| is the ComponentContext which this AgentContext is a part of.
   GetComponentContext(ComponentContext& context);
+
+  // Returns the IntelligenceServices container specific to this Agent.
+  GetIntelligenceServices(maxwell.IntelligenceServices& intelligence_services);
 
   // Schedules a task described in |task_info|. When this task is scheduled to
   // run, Agent::RunTask() gets called.

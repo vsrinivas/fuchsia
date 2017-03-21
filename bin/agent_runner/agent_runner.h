@@ -13,6 +13,7 @@
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
+#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "lib/ftl/macros.h"
@@ -30,7 +31,8 @@ class AgentRunner {
  public:
   AgentRunner(app::ApplicationLauncher* application_launcher,
               MessageQueueManager* message_queue_manager,
-              ledger::LedgerRepository* ledger_repository);
+              ledger::LedgerRepository* ledger_repository,
+              maxwell::UserIntelligenceProvider* user_intelligence_provider);
   ~AgentRunner();
 
   // Connects to an agent (and starts it up if it doesn't exist). Called via
@@ -102,6 +104,7 @@ class AgentRunner {
   MessageQueueManager* const message_queue_manager_;
 
   ledger::LedgerRepository* const ledger_repository_;
+  maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
 
   // A watcher for any changes happening to the trigger list on the ledger.
   class PageWatcherImpl;

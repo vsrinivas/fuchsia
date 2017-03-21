@@ -628,13 +628,15 @@ StoryProviderImpl::StoryProviderImpl(
     fidl::InterfaceHandle<ledger::Ledger> ledger,
     const std::string& device_name,
     AppConfigPtr story_shell,
-    const ComponentContextInfo& component_context_info)
+    const ComponentContextInfo& component_context_info,
+    maxwell::UserIntelligenceProvider* const user_intelligence_provider)
     : user_scope_(user_scope),
       story_shell_(std::move(story_shell)),
       storage_(new Storage),
       root_snapshot_("StoryProviderImpl"),
       page_watcher_binding_(this),
-      component_context_info_(component_context_info) {
+      component_context_info_(component_context_info),
+      user_intelligence_provider_(user_intelligence_provider) {
   ledger_.Bind(std::move(ledger));
 
   ledger_->SetConflictResolverFactory(

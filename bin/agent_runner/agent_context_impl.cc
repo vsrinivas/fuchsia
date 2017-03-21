@@ -16,24 +16,19 @@ constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
 
 }  // namespace
 
-AgentContextImpl::AgentContextImpl(
-    app::ApplicationLauncher* const app_launcher,
-    MessageQueueManager* const message_queue_manager,
-    AgentRunner* const agent_runner,
-    ledger::LedgerRepository* ledger_repository,
-    const std::string& url)
+AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
+                                   const std::string& url)
     : url_(url),
       agent_context_binding_(this),
-      agent_runner_(agent_runner),
-      component_context_impl_(
-          {message_queue_manager, agent_runner, ledger_repository},
-          url) {
+      agent_runner_(info.component_context_info.agent_runner),
+      component_context_impl_(info.component_context_info, url),
+      user_intelligence_provider_(info.user_intelligence_provider) {
   // Start up the agent process.
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
   launch_info->services = application_services_.NewRequest();
-  app_launcher->CreateApplication(std::move(launch_info),
-                                  application_controller_.NewRequest());
+  info.app_launcher->CreateApplication(std::move(launch_info),
+                                       application_controller_.NewRequest());
 
   // Initialize the agent service.
   ConnectToService(application_services_.get(), agent_.NewRequest());
@@ -41,7 +36,7 @@ AgentContextImpl::AgentContextImpl(
 
   // When the agent process dies, we remove it.
   application_controller_.set_connection_error_handler(
-      [agent_runner, url] { agent_runner->RemoveAgent(url); });
+      [this] { agent_runner_->RemoveAgent(url_); });
 
   // When all the |AgentController| bindings go away maybe stop the agent.
   agent_controller_bindings_.set_on_empty_set_handler(
@@ -76,6 +71,12 @@ void AgentContextImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> context) {
   component_context_bindings_.AddBinding(&component_context_impl_,
                                          std::move(context));
+}
+
+void AgentContextImpl::GetIntelligenceServices(
+    fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+  user_intelligence_provider_->GetComponentIntelligenceServices(
+      nullptr, url_, std::move(request));
 }
 
 void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {

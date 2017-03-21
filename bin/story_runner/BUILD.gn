@@ -33,6 +33,7 @@ source_set("story_runner") {
     "//application/lib/app",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
+    "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/lib/fidl:bottleneck",

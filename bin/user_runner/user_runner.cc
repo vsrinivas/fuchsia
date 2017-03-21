@@ -11,9 +11,9 @@
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/launcher/launcher.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
+#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/auth/token_provider_impl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
@@ -44,7 +44,7 @@ namespace {
 
 const char kAppId[] = "modular_user_runner";
 
-const char kMaxwellUrl[] = "file:///system/apps/maxwell_launcher";
+const char kMaxwellUrl[] = "file:///system/apps/maxwell";
 
 const char kUserScopeLabelPrefix[] = "user-";
 
@@ -124,21 +124,24 @@ class UserRunnerImpl : UserRunner, UserShellContext {
               << LedgerStatusToString(status);
         });
 
-    agent_runner_.reset(new AgentRunner(user_scope_.GetLauncher(),
-                                        &message_queue_manager_,
-                                        ledger_repository_.get()));
-
-    story_provider_impl_.reset(new StoryProviderImpl(
-        &user_scope_, std::move(ledger), device_name, std::move(story_shell),
-        {&message_queue_manager_, agent_runner_.get(),
-         ledger_repository_.get()}));
-
-    maxwell_services_ = GetServiceProvider(kMaxwellUrl);
-    auto maxwell_launcher =
-        app::ConnectToService<maxwell::Launcher>(maxwell_services_.get());
-
-    fidl::InterfaceHandle<StoryProvider> story_provider_aux;
-    story_provider_impl_->AddBinding(story_provider_aux.NewRequest());
+    // Begin init maxwell.
+    //
+    // NOTE: There is an awkward service exchange here between
+    // UserIntelligenceProvider, AgentRunner and StoryProviderImpl. AgentRunner
+    // needs a UserIntelligenceProvider to expose services from Maxwell through
+    // its getIntelligenceServices() method. Initializing the Maxwell process
+    // (through UserIntelligenceProviderFactory) requires a ComponentContext.
+    // ComponentContext requires an AgentRunner, which creates a circular
+    // dependency. Because of FIDL late bindings, we can get around this by
+    // creating a new InterfaceRequest here (|intelligence_provider_request|),
+    // making the InterfacePtr a valid proxy to be passed to AgentRunner and
+    // StoryProviderImpl, even though it won't be bound to a real implementation
+    // (provided by Maxwell) until later. It works, but it's not a good pattern.
+    auto intelligence_provider_request =
+        user_intelligence_provider_.NewRequest();
+    agent_runner_.reset(new AgentRunner(
+        user_scope_.GetLauncher(), &message_queue_manager_,
+        ledger_repository_.get(), user_intelligence_provider_.get()));
 
     maxwell_component_context_impl_.reset(
         new ComponentContextImpl({&message_queue_manager_, agent_runner_.get(),
@@ -147,27 +150,24 @@ class UserRunnerImpl : UserRunner, UserShellContext {
     maxwell_component_context_binding_.reset(
         new fidl::Binding<ComponentContext>(
             maxwell_component_context_impl_.get()));
-    maxwell_launcher->Initialize(
+    auto maxwell_services = GetServiceProvider(kMaxwellUrl);
+    auto maxwell_factory =
+        app::ConnectToService<maxwell::UserIntelligenceProviderFactory>(
+            maxwell_services.get());
+    fidl::InterfaceHandle<StoryProvider> maxwell_story_provider;
+    auto maxwell_story_provider_request = maxwell_story_provider.NewRequest();
+    maxwell_factory->GetUserIntelligenceProvider(
         maxwell_component_context_binding_->NewBinding(),
-        std::move(story_provider_aux), focus_handler_.GetProvider(),
-        visible_stories_handler_.GetProvider());
+        std::move(maxwell_story_provider), focus_handler_.GetProvider(),
+        visible_stories_handler_.GetProvider(),
+        std::move(intelligence_provider_request));
+    // End init maxwell.
 
-    auto context_engine =
-        app::ConnectToService<maxwell::ContextEngine>(maxwell_services_.get());
-
-    // TODO(rosswang): Do proper attribution
-    user_scope_.AddService<maxwell::ContextPublisher>(
-        ftl::MakeCopyable([context_engine = std::move(context_engine)](
-            fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
-          context_engine->RegisterPublisher("unknown", std::move(request));
-        }));
-
-    user_scope_.AddService<maxwell::ProposalPublisher>(
-        ftl::MakeCopyable([maxwell_launcher = std::move(maxwell_launcher)](
-            fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
-          maxwell_launcher->RegisterAnonymousProposalPublisher(
-              std::move(request));
-        }));
+    story_provider_impl_.reset(new StoryProviderImpl(
+        &user_scope_, std::move(ledger), device_name, std::move(story_shell),
+        {&message_queue_manager_, agent_runner_.get(),
+         ledger_repository_.get()},
+        user_intelligence_provider_.get()));
 
     user_scope_.AddService<TokenProvider>(
         [this](fidl::InterfaceRequest<TokenProvider> request) {
@@ -205,8 +205,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   // |UserShellContext|
   void GetSuggestionProvider(
       fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override {
-    app::ConnectToService<maxwell::SuggestionProvider>(maxwell_services_.get(),
-                                                       std::move(request));
+    user_intelligence_provider_->GetSuggestionProvider(std::move(request));
   }
 
   // |UserShellContext|
@@ -294,11 +293,11 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   TokenProviderImpl token_provider_impl_;
   std::string device_name_;
 
-  // Passed to maxwell_launcher.
   std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
   std::unique_ptr<fidl::Binding<ComponentContext>>
       maxwell_component_context_binding_;
-  app::ServiceProviderPtr maxwell_services_;
+  fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
+      user_intelligence_provider_;
 
   // Keep connections to applications started here around so they are
   // killed when this instance is deleted.

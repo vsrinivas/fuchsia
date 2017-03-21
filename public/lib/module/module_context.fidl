@@ -5,6 +5,7 @@
 module modular;
 
 import "application/services/service_provider.fidl";
+import "apps/maxwell/services/user/intelligence_services.fidl";
 import "apps/modular/services/component/component_context.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/module/module_controller.fidl";
@@ -61,6 +62,9 @@ interface ModuleContext {
   // Gets the ComponentContext associated with this module. This
   // component context is unique to this particular module instance.
   GetComponentContext(ComponentContext& context_request);
+
+  // Gets the IntelligenceServices service vendor associated with this module.
+  GetIntelligenceServices(maxwell.IntelligenceServices& request);
 
   // Get story id for this story which may be used to create a
   // suggestion proposal to reinflate this story.

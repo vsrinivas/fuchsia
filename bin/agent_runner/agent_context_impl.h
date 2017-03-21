@@ -10,6 +10,8 @@
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
+#include "apps/maxwell/services/user/intelligence_services.fidl.h"
+#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
@@ -25,16 +27,21 @@ namespace modular {
 
 class AgentRunner;
 
+// This contains constructor parameters for |AgentContextImpl| that tend
+// not to change between instances.
+struct AgentContextInfo {
+  const ComponentContextInfo component_context_info;
+  app::ApplicationLauncher* const app_launcher;
+  maxwell::UserIntelligenceProvider* const user_intelligence_provider;
+};
+
 // This class manages an agent and its life cycle. AgentRunner owns this class,
 // and instantiates one for every instance of an agent running. All requests for
 // this agent (identified for now by the agent's URL) are routed to this
 // class. This class manages all AgentControllers associated with this agent.
 class AgentContextImpl : public AgentContext, public AgentController {
  public:
-  explicit AgentContextImpl(app::ApplicationLauncher* app_launcher,
-                            MessageQueueManager* message_queue_manager,
-                            AgentRunner* agent_runner,
-                            ledger::LedgerRepository* ledger_repository,
+  explicit AgentContextImpl(const AgentContextInfo& info,
                             const std::string& url);
   ~AgentContextImpl() override;
 
@@ -57,6 +64,9 @@ class AgentContextImpl : public AgentContext, public AgentController {
   void DeleteTask(const fidl::String& task_id) override;
   // |AgentContext|
   void Done() override;
+  // |AgentContext|
+  void GetIntelligenceServices(
+      fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
 
   // Stop this agent when there are no active AgentControllers and there are no
   // outstanding tasks.
@@ -73,6 +83,9 @@ class AgentContextImpl : public AgentContext, public AgentController {
 
   ComponentContextImpl component_context_impl_;
   fidl::BindingSet<ComponentContext> component_context_bindings_;
+
+  maxwell::UserIntelligenceProvider* const
+      user_intelligence_provider_;  // Not owned.
 
   // Number of times Agent.RunTask() was called but we're still waiting on its
   // completion callback.

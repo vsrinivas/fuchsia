@@ -8,6 +8,7 @@
 #include "application/lib/app/connect.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
+#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
@@ -386,12 +387,14 @@ uint64_t StoryImpl::StartModule(
       this, module_url, std::move(application_controller), std::move(module),
       std::move(module_controller_request)));
 
-
+  ModuleContextInfo module_context_info = {
+      story_provider_impl_->component_context_info(), this,
+      story_provider_impl_->user_intelligence_provider()};
 
   const auto id = next_module_instance_id_++;
   connection.module_context_impl.reset(new ModuleContextImpl(
-      id, this, module_url, connection.module_controller_impl.get(),
-      story_provider_impl_->component_context_info(), std::move(self_request)));
+      module_context_info, id, module_url,
+      connection.module_controller_impl.get(), std::move(self_request)));
 
   connections_.emplace_back(std::move(connection));
   return id;
@@ -411,7 +414,7 @@ void StoryImpl::StartModuleInShell(
       std::move(incoming_services), std::move(module_controller_request),
       view_owner.NewRequest());
   story_shell_->ConnectView(view_owner.PassInterfaceHandle(), id, parent_id,
-      view_type);
+                            view_type);
 }
 
 const std::string& StoryImpl::GetStoryId() {

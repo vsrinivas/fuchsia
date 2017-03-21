@@ -10,6 +10,7 @@ source_set("public") {
   deps = [
     "//application/services",
     "//apps/ledger/services/internal",
+    "//apps/maxwell/services/user",
     "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",
     "//lib/fidl/cpp/bindings",
@@ -28,6 +29,7 @@ source_set("impl") {
     ":public",
     "//application/lib/app",
     "//application/services",
+    "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/agent",

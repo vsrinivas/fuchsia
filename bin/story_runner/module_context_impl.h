@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include "apps/maxwell/services/user/intelligence_services.fidl.h"
+#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
@@ -21,17 +23,25 @@ namespace modular {
 class ModuleControllerImpl;
 class StoryImpl;
 
+// Contains constructor parameters to |ModuleContextImpl| that tend not to
+// change between instances in a user scope.
+struct ModuleContextInfo {
+  const ComponentContextInfo& component_context_info;
+  StoryImpl* const story_impl;
+  maxwell::UserIntelligenceProvider* const user_intelligence_provider;
+};
+
 // ModuleContextImpl keeps a single connection from a module instance in
 // the story to a StoryImpl. This way, requests that the module makes
 // on its Story handle can be associated with the Module instance.
 class ModuleContextImpl : public ModuleContext {
  public:
-  ModuleContextImpl(const uint64_t id,
-                    StoryImpl* story_impl,
-                    const std::string& module_url,
-                    ModuleControllerImpl* module_controller_impl,
-                    const ComponentContextInfo& component_context_info,
-                    fidl::InterfaceRequest<ModuleContext> module_context);
+  ModuleContextImpl(
+      const ModuleContextInfo& info,
+      const uint64_t id,
+      const std::string& module_url,
+      ModuleControllerImpl* module_controller_impl,
+      fidl::InterfaceRequest<ModuleContext> module_context);
 
   ~ModuleContextImpl() override;
 
@@ -54,7 +64,9 @@ class ModuleContextImpl : public ModuleContext {
       fidl::InterfaceRequest<ModuleController> module_controller,
       const fidl::String& view_type) override;
   void GetComponentContext(
-      fidl::InterfaceRequest<ComponentContext> context_request) override;
+      fidl::InterfaceRequest<ComponentContext> request) override;
+  void GetIntelligenceServices(
+      fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
   void GetStoryId(const GetStoryIdCallback& callback) override;
   void Ready() override;
   void Done() override;
@@ -77,6 +89,9 @@ class ModuleContextImpl : public ModuleContext {
 
   ComponentContextImpl component_context_impl_;
   fidl::BindingSet<ComponentContext> component_context_bindings_;
+
+  maxwell::UserIntelligenceProvider* const
+      user_intelligence_provider_;  // Not owned
 
   // The one connection to the StoryImpl instance that this
   // ModuleContextImpl instance represents.

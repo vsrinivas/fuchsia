@@ -13,17 +13,16 @@
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
-    const uint64_t id,
-    StoryImpl* const story_impl,
-    const std::string& module_url,
-    ModuleControllerImpl* const module_controller_impl,
-    const ComponentContextInfo& component_context_info,
-    fidl::InterfaceRequest<ModuleContext> module_context)
-    : id_(id),
-      story_impl_(story_impl),
+      const ModuleContextInfo& info,
+      const uint64_t id,
+      const std::string& module_url,
+      ModuleControllerImpl* const module_controller_impl,
+      fidl::InterfaceRequest<ModuleContext> module_context)
+    : id_(id), story_impl_(info.story_impl),
       module_url_(module_url),
       module_controller_impl_(module_controller_impl),
-      component_context_impl_(component_context_info, module_url),
+      component_context_impl_(info.component_context_info, module_url),
+      user_intelligence_provider_(info.user_intelligence_provider),
       binding_(this, std::move(module_context)) {}
 
 ModuleContextImpl::~ModuleContextImpl() {}
@@ -61,6 +60,12 @@ void ModuleContextImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> context_request) {
   component_context_bindings_.AddBinding(&component_context_impl_,
                                          std::move(context_request));
+}
+
+void ModuleContextImpl::GetIntelligenceServices(
+    fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+  user_intelligence_provider_->GetComponentIntelligenceServices(
+      story_impl_->GetStoryId(), module_url_, std::move(request));
 }
 
 void ModuleContextImpl::GetStoryId(const GetStoryIdCallback& callback) {

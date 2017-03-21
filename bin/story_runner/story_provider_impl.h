@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/config/config.fidl.h"
@@ -42,11 +43,13 @@ class DeleteStoryCall;
 
 class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
  public:
-  StoryProviderImpl(const Scope* const user_scope,
-                    fidl::InterfaceHandle<ledger::Ledger> ledger,
-                    const std::string& device_name,
-                    AppConfigPtr story_shell,
-                    const ComponentContextInfo& component_context_info);
+  StoryProviderImpl(
+      const Scope* user_scope,
+      fidl::InterfaceHandle<ledger::Ledger> ledger,
+      const std::string& device_name,
+      AppConfigPtr story_shell,
+      const ComponentContextInfo& component_context_info,
+      maxwell::UserIntelligenceProvider* user_intelligence_provider);
 
   ~StoryProviderImpl() override;
 
@@ -67,6 +70,10 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   const ComponentContextInfo& component_context_info() {
     return component_context_info_;
+  }
+
+  maxwell::UserIntelligenceProvider* user_intelligence_provider() {
+    return user_intelligence_provider_;
   }
 
   // Used by StoryImpl.
@@ -175,6 +182,9 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   std::pair<std::string, DeleteStoryCall*> pending_deletion_;
 
   ComponentContextInfo component_context_info_;
+
+  maxwell::UserIntelligenceProvider* const
+      user_intelligence_provider_;  // Not owned.
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

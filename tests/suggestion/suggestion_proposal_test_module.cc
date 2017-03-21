@@ -38,7 +38,10 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
     link_.Bind(std::move(link));
     initialized_.Pass();
 
-    application_context()->ConnectToEnvironmentService(
+    maxwell::IntelligenceServicesPtr intelligence_services;
+    module_context_->GetIntelligenceServices(
+        intelligence_services.NewRequest());
+    intelligence_services->GetProposalPublisher(
         proposal_publisher_.NewRequest());
 
     module_context_->GetStoryId([this](const fidl::String& story_id) {
