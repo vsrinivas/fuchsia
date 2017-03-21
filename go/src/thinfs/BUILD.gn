@@ -21,7 +21,7 @@ action("thinfs") {
     rebase_path(depfile_path),
     "--current-cpu",
     current_cpu,
-    "fuchsia.googlesource.com/thinfs",
+    "fuchsia.googlesource.com/thinfs/cmd/thinfs",
   ]
 
   deps = [
