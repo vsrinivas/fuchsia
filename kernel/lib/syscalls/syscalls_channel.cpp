@@ -300,15 +300,29 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
             for (size_t ix = 0; ix != num_handles; ++ix) {
                 up->UndoRemoveHandleLocked(handles[ix]);
             }
-            // 2. Return error directly
+            // 2. Return error directly.  Note that if err is
+            // ERR_SUSPEND_PENDING, the syscall glue will fully retry the Call
+            // on resume.
             return result;
         }
+
+        // Check if we have a pending suspend after the write phase and handle
+        // it.  Then retry the wait-and-read after resuming.
+        // TODO(teisenbe): Get rid of this check when we move retries to the
+        // VDSO.
+        while (result == ERR_INTERRUPTED_RETRY) {
+            thread_process_pending_signals();
+            result = channel->ResumeInterruptedCall(timeout, &reply);
+        }
+
         // Timeout is always returned directly.
-        if (result == ERR_TIMED_OUT)
+        if (result == ERR_TIMED_OUT) {
             return result;
-        // Read phase failed:
-        // Return error via read_status
-        goto read_failed;
+        } else if (result != NO_ERROR) {
+            // Read phase failed:
+            // Return error via read_status
+            goto read_failed;
+        }
     }
 
     // Return inbound message to userspace
@@ -342,6 +356,7 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
     return NO_ERROR;
 
 read_failed:
+    DEBUG_ASSERT(result != ERR_INTERRUPTED_RETRY);
     if (read_status)
         read_status.copy_to_user(result);
     return ERR_CALL_FAILED;

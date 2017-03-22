@@ -18,59 +18,14 @@
 #include <magenta/handle.h>
 #include <magenta/message_packet.h>
 #include <magenta/port_client.h>
-#include <magenta/wait_event.h>
+#include <magenta/process_dispatcher.h>
+#include <magenta/user_thread.h>
 
 #include <mxtl/type_support.h>
 
 #define LOCAL_TRACE 0
 
 constexpr mx_rights_t kDefaultChannelRights = MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
-
-
-// MessageWaiter's state is guarded by the lock of the
-// owning ChannelDispatcher, and Deliver(), Signal(),
-// and get_msg() methods must only be called under
-// that lock.
-//
-// See also: comments in ChannelDispatcher::Call()
-class MessageWaiter : public mxtl::DoublyLinkedListable<MessageWaiter*> {
-public:
-    MessageWaiter(mx_txid_t txid) : txid_(txid), status_(ERR_TIMED_OUT) {
-    }
-    ~MessageWaiter() {
-    }
-
-    int Deliver(mxtl::unique_ptr<MessagePacket> msg) {
-        txid_ = msg->get_txid();
-        msg_ = mxtl::move(msg);
-        status_ = NO_ERROR;
-        return event_.Signal(NO_ERROR);
-    }
-
-    int Cancel(status_t status) {
-        status_ = status;
-        return event_.Signal(status);
-    }
-
-    mx_txid_t get_txid() const { return txid_; }
-
-    mx_status_t Wait(lk_time_t timeout) {
-        return event_.Wait(timeout);
-    }
-
-    // Returns any delivered message via out and the status.
-    mx_status_t EndWait(mxtl::unique_ptr<MessagePacket>* out) {
-        *out = mxtl::move(msg_);
-        return status_;
-    }
-
-private:
-    mxtl::unique_ptr<MessagePacket> msg_;
-    WaitEvent event_;
-    mx_txid_t txid_;
-    mx_status_t status_;
-};
-
 
 // static
 status_t ChannelDispatcher::Create(uint32_t flags,
@@ -125,6 +80,14 @@ mx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
         {{{messages_.size_slow(), MX_CHANNEL_READABLE}, {0u, 0u}}};
     state_tracker_.AddObserver(observer, &cinfo);
     return NO_ERROR;
+}
+
+void ChannelDispatcher::RemoveWaiter(MessageWaiter* waiter) {
+    AutoLock lock(&lock_);
+    if (!waiter->InContainer()) {
+        return;
+    }
+    waiters_.erase(*waiter);
 }
 
 // Thread safety analysis disabled as this accesses guarded member variables without holding
@@ -231,7 +194,12 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
 
     canary_.Assert();
 
-    MessageWaiter waiter(msg->get_txid());
+    auto waiter = UserThread::GetCurrent()->GetMessageWaiter();
+    if (unlikely(waiter->BeginWait(mxtl::WrapRefPtr(this), msg->get_txid()) != NO_ERROR)) {
+        // If a thread tries BeginWait'ing twice, the VDSO contract around retrying
+        // channel calls has been violated.  Shoot the misbehaving thread.
+        ProcessDispatcher::GetCurrent()->Exit(ERR_BAD_STATE);
+    }
 
     mxtl::RefPtr<ChannelDispatcher> other;
     {
@@ -241,21 +209,38 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
             // the caller should put them back into the process table.
             msg->set_owns_handles(false);
             *return_handles = true;
+            waiter->EndWait(reply);
             return ERR_REMOTE_CLOSED;
         }
         other = other_;
 
         // (0) Before writing outbound message and waiting.
         // Add our stack-allocated waiter to the list.
-        waiters_.push_back(&waiter);
+        waiters_.push_back(waiter);
     }
 
     // (1) Write outbound message to opposing endpoint.
     other->WriteSelf(mxtl::move(msg));
 
+    // Reuse the code from the half-call used for retrying a Call after thread
+    // suspend.
+    return ResumeInterruptedCall(timeout, reply);
+}
+
+status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t timeout,
+                                                  mxtl::unique_ptr<MessagePacket>* reply) {
+    canary_.Assert();
+
+    auto waiter = UserThread::GetCurrent()->GetMessageWaiter();
+
     // (2) Wait for notification via waiter's event or
     // timeout to occur.
-    mx_status_t status = waiter.Wait(mx_time_to_lk(timeout));
+    mx_status_t status = waiter->Wait(mx_time_to_lk(timeout));
+    if (status == ERR_INTERRUPTED_RETRY) {
+        // If we got interrupted, return out to usermode, but
+        // do not clear the waiter.
+        return status;
+    }
 
     // (3) see (3A), (3B) above or (3C) below for paths where
     // the waiter could be signaled and removed from the list.
@@ -271,8 +256,8 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
         // and get_msg() returns a non-TIMED_OUT status.
         // Otherwise, the status is ERR_TIMED_OUT and it
         // is our job to remove the waiter from the list.
-        if ((status = waiter.EndWait(reply)) == ERR_TIMED_OUT)
-            waiters_.erase(waiter);
+        if ((status = waiter->EndWait(reply)) == ERR_TIMED_OUT)
+            waiters_.erase(*waiter);
     }
 
     return status;
@@ -364,4 +349,14 @@ status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mas
 
     state_tracker_.UpdateState(clear_mask, set_mask);
     return NO_ERROR;
+}
+
+
+int ChannelDispatcher::MessageWaiter::Deliver(mxtl::unique_ptr<MessagePacket> msg) {
+    DEBUG_ASSERT(armed());
+
+    txid_ = msg->get_txid();
+    msg_ = mxtl::move(msg);
+    status_ = NO_ERROR;
+    return event_.Signal(NO_ERROR);
 }

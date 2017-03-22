@@ -9,8 +9,10 @@
 #include <stdint.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/message_packet.h>
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
+#include <magenta/wait_event.h>
 
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
@@ -18,8 +20,6 @@
 #include <mxtl/unique_ptr.h>
 
 class PortClient;
-class MessageWaiter;
-class MessagePacket;
 
 class ChannelDispatcher final : public Dispatcher {
 public:
@@ -52,9 +52,86 @@ public:
                   mx_time_t timeout, bool* return_handles,
                   mxtl::unique_ptr<MessagePacket>* reply);
 
+    // Performs the wait-then-read half of Call.  This is meant for retrying
+    // after an interruption caused by suspending.
+    status_t ResumeInterruptedCall(mx_time_t timeout, mxtl::unique_ptr<MessagePacket>* reply);
+
+    // MessageWaiter's state is guarded by the lock of the
+    // owning ChannelDispatcher, and Deliver(), Signal(), Cancel(),
+    // and EndWait() methods must only be called under
+    // that lock.
+    //
+    // MessageWaiters are embedded in UserThreads, and the channel_ pointer
+    // can only be manipulated by their thread (via BeginWait() or EndWait()), and
+    // only transitions to nullptr while holding the ChannelDispatcher's lock.
+    //
+    // See also: comments in ChannelDispatcher::Call()
+    class MessageWaiter : public mxtl::DoublyLinkedListable<MessageWaiter*> {
+    public:
+        MessageWaiter() : txid_(0), status_(ERR_BAD_STATE) {
+        }
+
+        ~MessageWaiter() {
+            if (unlikely(channel_ != nullptr)) {
+                channel_->RemoveWaiter(this);
+            }
+            DEBUG_ASSERT(!InContainer());
+        }
+
+        mx_status_t BeginWait(mxtl::RefPtr<ChannelDispatcher> channel, mx_txid_t txid) {
+            if (unlikely(channel_ != nullptr)) {
+                return ERR_BAD_STATE;
+            }
+            DEBUG_ASSERT(!InContainer());
+
+            txid_ = txid;
+            status_ = ERR_TIMED_OUT;
+            channel_ = mxtl::move(channel);
+            event_.Unsignal();
+            return NO_ERROR;
+        }
+
+        int Deliver(mxtl::unique_ptr<MessagePacket> msg);
+
+        int Cancel(status_t status) {
+            DEBUG_ASSERT(!InContainer());
+            DEBUG_ASSERT(armed());
+            status_ = status;
+            return event_.Signal(status);
+        }
+
+        mx_txid_t get_txid() const { return txid_; }
+
+        mx_status_t Wait(lk_time_t timeout) {
+            DEBUG_ASSERT(armed());
+            return event_.Wait(timeout);
+        }
+
+        // Returns any delivered message via out and the status.
+        mx_status_t EndWait(mxtl::unique_ptr<MessagePacket>* out) {
+            DEBUG_ASSERT(armed());
+            *out = mxtl::move(msg_);
+            channel_ = nullptr;
+            return status_;
+        }
+
+    private:
+        bool armed() const { return channel_ != nullptr; }
+
+        mxtl::RefPtr<ChannelDispatcher> channel_;
+        mxtl::unique_ptr<MessagePacket> msg_;
+        // TODO(teisenbe/swetland): Investigate hoisting this outside to reduce
+        // userthread size
+        WaitEvent event_;
+        mx_txid_t txid_;
+        mx_status_t status_;
+    };
+
 private:
     using MessageList = mxtl::DoublyLinkedList<mxtl::unique_ptr<MessagePacket>>;
     using WaiterList = mxtl::DoublyLinkedList<MessageWaiter*>;
+
+    void RemoveWaiter(MessageWaiter* waiter);
 
     ChannelDispatcher(uint32_t flags);
     void Init(mxtl::RefPtr<ChannelDispatcher> other);
