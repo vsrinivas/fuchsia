@@ -23,10 +23,6 @@
             "bootfs_path": "apps/interactive_receipt"
         },
         {
-            "binary": "interactive_receipt_http.flx",
-            "bootfs_path": "apps/interactive_receipt_http"
-        },
-        {
             "binary": "map.flx",
             "bootfs_path": "apps/map"
         },
