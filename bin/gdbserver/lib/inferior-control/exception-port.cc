@@ -217,10 +217,10 @@ void PrintException(FILE* out, Process* process, Thread* thread,
   } else {
     switch (type) {
     case MX_EXCP_THREAD_STARTING:
-      fprintf(out, "Thread %s started\n", thread->GetDebugName().c_str());
+      fprintf(out, "Thread %s is starting\n", thread->GetDebugName().c_str());
       break;
     case MX_EXCP_THREAD_EXITING:
-      fprintf(out, "Thread %s exited\n", thread->GetDebugName().c_str());
+      fprintf(out, "Thread %s is exiting\n", thread->GetDebugName().c_str());
       break;
     case MX_EXCP_GONE:
       if (thread)

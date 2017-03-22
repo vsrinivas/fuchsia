@@ -156,7 +156,17 @@ void Thread::ResumeForExit() {
     // This might fail if the process has been killed in the interim.
     // It shouldn't otherwise fail. Just log the failure, nothing else
     // we can do.
-    util::LogErrorWithMxStatus("Failed to resume thread", status);
+    mx_info_process_t info;
+    auto info_status = mx_object_get_info(process()->handle(),
+                                          MX_INFO_PROCESS, &info,
+                                          sizeof(info), nullptr, nullptr);
+    if (info_status != NO_ERROR)
+      util::LogErrorWithMxStatus("error getting process info", info_status);
+    if (info_status == NO_ERROR && info.exited) {
+      FTL_VLOG(2) << "Process " << process()->GetName() << " exited too";
+    } else {
+      util::LogErrorWithMxStatus("Failed to resume thread for exit", status);
+    }
   }
 
   set_state(State::kGone);
@@ -187,7 +197,7 @@ bool Thread::Step() {
   mx_status_t status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
-    util::LogErrorWithMxStatus("Failed to resume thread", status);
+    util::LogErrorWithMxStatus("Failed to resume thread for step", status);
     return false;
   }
 
