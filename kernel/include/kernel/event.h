@@ -68,6 +68,8 @@ status_t event_unsignal(event_t *);
 
 static inline bool event_initialized(event_t *e) { return e->magic == EVENT_MAGIC; }
 
+static inline bool event_signaled(const event_t *e) { return e->signaled; }
+
 __END_CDECLS;
 
 #endif

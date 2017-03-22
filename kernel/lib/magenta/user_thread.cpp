@@ -519,11 +519,17 @@ status_t UserThread::ExceptionHandlerExchange(
 
     AutoLock lock(&exception_wait_lock_);
 
+    // It's critical that at this point the event no longer be armed.
+    // Otherwise the next time we get an exception we'll fall right through
+    // without waiting for an exception response.
+    DEBUG_ASSERT(!event_signaled(&exception_event_));
+
     // Note: If |status| != NO_ERROR, then |exception_status_| is still
     // ExceptionStatus::UNPROCESSED.
     switch (status) {
     case NO_ERROR:
-        DEBUG_ASSERT(exception_status_ != ExceptionStatus::UNPROCESSED);
+        DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE &&
+                     exception_status_ != ExceptionStatus::UNPROCESSED);
         break;
     case ERR_INTERRUPTED:
         break;
@@ -548,9 +554,22 @@ status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
     canary_.Assert();
 
     LTRACEF("%s: obj %p, estatus %d\n", __FUNC__, this, static_cast<int>(estatus));
+    DEBUG_ASSERT(estatus != ExceptionStatus::IDLE &&
+                 estatus != ExceptionStatus::UNPROCESSED);
+
     AutoLock lock(&exception_wait_lock_);
     if (!InExceptionLocked())
         return ERR_BAD_STATE;
+
+    // The thread can be in several states at this point. Alas this is a bit
+    // complicated because there is a window in the middle of
+    // ExceptionHandlerExchange between the thread going to sleep and after
+    // the thread waking up where we can obtain the lock. Things are further
+    // complicated by the fact that OnExceptionPortRemoval could get there
+    // first, or we might get called a second time for the same exception.
+    // It's critical that we don't re-arm the event after the thread wakes up.
+    // To keep things simple we take a first-one-wins approach.
+    DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
     if (exception_status_ != ExceptionStatus::UNPROCESSED)
         return ERR_BAD_STATE;
 
@@ -566,7 +585,9 @@ void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport
     AutoLock lock(&exception_wait_lock_);
     if (!InExceptionLocked())
         return;
+    DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
     if (exception_wait_port_ == eport) {
+        // Leave things alone if already processed. See MarkExceptionHandled.
         if (exception_status_ == ExceptionStatus::UNPROCESSED) {
             exception_status_ = ExceptionStatus::TRY_NEXT;
             event_signal(&exception_event_, true);
