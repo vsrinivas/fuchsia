@@ -64,7 +64,6 @@ struct pthread {
     struct __ptcb* cancelbuf;
     int unblock_cancel;
     locale_t locale;
-    unsigned long sigmask[_NSIG / 8 / sizeof(long)];
     char* dlerror_buf;
     int dlerror_flag;
 
