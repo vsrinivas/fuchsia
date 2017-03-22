@@ -1,7 +1,6 @@
 #include "nscd.h"
 #include "pwf.h"
 #include <byteswap.h>
-#include <pthread.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -19,12 +18,9 @@ static char* itoa(char* p, uint32_t x) {
 int __getpw_a(const char* name, uid_t uid, struct passwd* pw, char** buf, size_t* size,
               struct passwd** res) {
     FILE* f;
-    int cs;
     int rv = 0;
 
     *res = 0;
-
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 
     f = fopen("/etc/passwd", "rbe");
     if (!f) {
@@ -135,7 +131,6 @@ int __getpw_a(const char* name, uid_t uid, struct passwd* pw, char** buf, size_t
     }
 
 done:
-    pthread_setcancelstate(cs, 0);
     if (rv)
         errno = rv;
     return rv;

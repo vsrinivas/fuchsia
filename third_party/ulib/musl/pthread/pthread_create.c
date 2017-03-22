@@ -26,9 +26,6 @@ static void start_pthread(void* arg) {
     //     }
     //     __restore_sigs(self->sigmask);
     // }
-    // if (self->unblock_cancel)
-    //     __syscall(SYS_rt_sigprocmask, SIG_UNBLOCK,
-    //               SIGPT_SET, 0, _NSIG / 8);
     mxr_tp_set(mxr_thread_get_handle(&self->mxr_thread), pthread_to_tp(self));
     pthread_exit(self->start(self->start_arg));
 }
@@ -68,7 +65,6 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
         goto fail_after_alloc;
 
     mxr_thread_entry_t start = attr.__c11 ? start_c11 : start_pthread;
-    struct pthread* self = __pthread_self();
 
     new->start = entry;
     new->start_arg = arg;
@@ -79,7 +75,6 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     //     do_sched = new->startlock[0] = 1;
     //     __block_app_sigs(new->sigmask);
     // }
-    new->unblock_cancel = self->cancel;
 
     atomic_fetch_add(&libc.thread_count, 1);
     status = mxr_thread_start(&new->mxr_thread,
@@ -136,17 +131,7 @@ _Noreturn void pthread_exit(void* result) {
     // TODO(kulakowski) Signals?
     // sigset_t set;
 
-    self->canceldisable = 1;
-    self->cancelasync = 0;
     self->result = result;
-
-    // TODO(kulakowski) pthread_cancel?
-    // while (self->cancelbuf) {
-    //     void (*f)(void*) = self->cancelbuf->__f;
-    //     void* x = self->cancelbuf->__x;
-    //     self->cancelbuf = self->cancelbuf->__next;
-    //     f(x);
-    // }
 
     __pthread_tsd_run_dtors();
 
@@ -206,14 +191,4 @@ _Noreturn void pthread_exit(void* result) {
 #error what architecture?
 #endif
     __builtin_unreachable();
-}
-
-void __do_cleanup_push(struct __ptcb* cb) {
-    struct pthread* self = __pthread_self();
-    cb->__next = self->cancelbuf;
-    self->cancelbuf = cb;
-}
-
-void __do_cleanup_pop(struct __ptcb* cb) {
-    __pthread_self()->cancelbuf = cb->__next;
 }

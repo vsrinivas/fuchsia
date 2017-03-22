@@ -80,7 +80,7 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
      *  4) On Linux, interrupted by an asynchronous signal.  This does
      *     not apply on Magenta. */
     do
-        e = __timedwait_cp(fut, seq, clock, ts);
+        e = __timedwait(fut, seq, clock, ts);
     while (*fut == seq && !e);
 
     oldstate = a_cas_shim(&node.state, WAITING, LEAVING);

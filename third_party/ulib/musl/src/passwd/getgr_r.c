@@ -1,5 +1,4 @@
 #include "pwf.h"
-#include <pthread.h>
 
 #define FIX(x) (gr->gr_##x = gr->gr_##x - line + buf)
 
@@ -11,9 +10,6 @@ static int getgr_r(const char* name, gid_t gid, struct group* gr, char* buf, siz
     size_t nmem = 0;
     int rv = 0;
     size_t i;
-    int cs;
-
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 
     rv = __getgr_a(name, gid, gr, &line, &len, &mem, &nmem, res);
     if (*res && size < len + (nmem + 1) * sizeof(char*) + 32) {
@@ -33,7 +29,6 @@ static int getgr_r(const char* name, gid_t gid, struct group* gr, char* buf, siz
     }
     free(mem);
     free(line);
-    pthread_setcancelstate(cs, 0);
     return rv;
 }
 

@@ -1,9 +1,6 @@
 #include "futex_impl.h"
 #include "pthread_impl.h"
 
-void __pthread_testcancel(void);
-int __pthread_setcancelstate(int, int*);
-
 /*
  * struct waiter
  *
@@ -18,12 +15,6 @@ int __pthread_setcancelstate(int, int*);
  * modified again, but can only be traversed in reverse order, and are
  * protected by the "barrier" locks in each node, which are unlocked
  * in turn to control wake order.
- *
- * Since process-shared cond var semantics do not necessarily allow
- * one thread to see another's automatic storage (they may be in
- * different processes), the waiter list is not used for the
- * process-shared case, but the structure is still used to store data
- * needed by the cancellation cleanup handler.
  */
 
 struct waiter {
@@ -63,7 +54,7 @@ enum {
 
 int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict m,
                            const struct timespec* restrict ts) {
-    int e, clock = c->_c_clock, cs, oldstate, tmp;
+    int e, clock = c->_c_clock, oldstate, tmp;
 
     if ((m->_m_type != PTHREAD_MUTEX_NORMAL) &&
         (m->_m_lock & INT_MAX) != __thread_get_tid())
@@ -71,8 +62,6 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
 
     if (ts && ts->tv_nsec >= 1000000000UL)
         return EINVAL;
-
-    __pthread_testcancel();
 
     lock(&c->_c_lock);
 
@@ -96,10 +85,6 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
 
     pthread_mutex_unlock(m);
 
-    __pthread_setcancelstate(PTHREAD_CANCEL_MASKED, &cs);
-    if (cs == PTHREAD_CANCEL_DISABLE)
-        __pthread_setcancelstate(cs, 0);
-
     /* Wait to be signaled.  There are multiple ways this loop could exit:
      *  1) After being woken by __private_cond_signal().
      *  2) After being woken by pthread_mutex_unlock(), after we were
@@ -109,7 +94,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
      *  4) On Linux, interrupted by an asynchronous signal.  This does
      *     not apply on Magenta. */
     do
-        e = __timedwait_cp(fut, seq, clock, ts);
+        e = __timedwait(fut, seq, clock, ts);
     while (*fut == seq && !e);
 
     oldstate = a_cas_shim(&node.state, WAITING, LEAVING);
@@ -166,9 +151,8 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
         lock(&node.barrier);
     }
 
-    /* Errors locking the mutex override any existing error or
-     * cancellation, since the caller must see them to know the
-     * state of the mutex. */
+    /* Errors locking the mutex override any existing error, since the
+     * caller must see them to know the state of the mutex. */
     if ((tmp = pthread_mutex_lock(m)))
         e = tmp;
 
@@ -197,17 +181,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
     else
         atomic_fetch_sub(&m->_m_waiters, 1);
 
-    /* Since a signal was consumed, cancellation is not permitted. */
-    if (e == ECANCELED)
-        e = 0;
-
 done:
-    __pthread_setcancelstate(cs, 0);
-
-    if (e == ECANCELED) {
-        __pthread_testcancel();
-        __pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, 0);
-    }
 
     return e;
 }

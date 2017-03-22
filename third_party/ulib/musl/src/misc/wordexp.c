@@ -29,7 +29,7 @@ static char* getword(FILE* f) {
     return getdelim(&s, (size_t[1]){0}, 0, f) < 0 ? 0 : s;
 }
 
-static int do_wordexp(const char* s, wordexp_t* we, int flags) {
+int wordexp(const char* s, wordexp_t* we, int flags) {
     size_t i, l;
     int sq = 0, dq = 0;
     size_t np = 0;
@@ -186,14 +186,6 @@ nospace:
         we->we_wordv = 0;
     }
     return WRDE_NOSPACE;
-}
-
-int wordexp(const char* restrict s, wordexp_t* restrict we, int flags) {
-    int r, cs;
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-    r = do_wordexp(s, we, flags);
-    pthread_setcancelstate(cs, 0);
-    return r;
 }
 
 void wordfree(wordexp_t* we) {

@@ -56,13 +56,9 @@ struct pthread {
     int tsd_used;
     int errno_value;
 
-    volatile atomic_int cancel, canceldisable, cancelasync;
-
     void* start_arg;
     void* (*start)(void*);
     void* result;
-    struct __ptcb* cancelbuf;
-    int unblock_cancel;
     locale_t locale;
     char* dlerror_buf;
     int dlerror_flag;
@@ -114,9 +110,6 @@ static inline struct pthread* tp_to_pthread(void* tp) {
 #define DTP_OFFSET 0
 #endif
 
-#define SIGTIMER 32
-#define SIGCANCEL 33
-
 #define SIGALL_SET ((sigset_t*)(const unsigned long long[2]){-1, -1})
 #define SIGPT_SET                                                                     \
     ((sigset_t*)(const unsigned long[_NSIG / 8 / sizeof(long)]){[sizeof(long) == 4] = \
@@ -147,9 +140,8 @@ void __vm_wait(void);
 void __vm_lock(void);
 void __vm_unlock(void);
 
-// These are guaranteed to only return 0, EINVAL, or ETIMEDOUT.
+// This is guaranteed to only return 0, EINVAL, or ETIMEDOUT.
 int __timedwait(atomic_int*, int, clockid_t, const struct timespec*);
-int __timedwait_cp(atomic_int*, int, clockid_t, const struct timespec*);
 
 void __acquire_ptc(void);
 void __release_ptc(void);

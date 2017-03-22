@@ -4,12 +4,11 @@
 #include <pthread.h>
 #include <time.h>
 
-int __pthread_setcancelstate(int, int*);
 int __clock_gettime(clockid_t, struct timespec*);
 
 #define NS_PER_S (1000000000ull)
 
-int __timedwait_cp(atomic_int* futex, int val, clockid_t clk, const struct timespec* at) {
+int __timedwait(atomic_int* futex, int val, clockid_t clk, const struct timespec* at) {
     struct timespec to;
     mx_time_t deadline = MX_TIME_INFINITE;
 
@@ -43,12 +42,4 @@ int __timedwait_cp(atomic_int* futex, int val, clockid_t clk, const struct times
     default:
         __builtin_trap();
     }
-}
-
-int __timedwait(atomic_int* futex, int val, clockid_t clk, const struct timespec* at) {
-    int cs, r;
-    __pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-    r = __timedwait_cp(futex, val, clk, at);
-    __pthread_setcancelstate(cs, 0);
-    return r;
 }

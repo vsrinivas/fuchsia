@@ -13,10 +13,6 @@
 #include <time.h>
 #include <unistd.h>
 
-static void cleanup(void* p) {
-    close((int)(intptr_t)p);
-}
-
 static unsigned long mtime(void) {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
@@ -38,11 +34,8 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
     int rlen;
     int next;
     int i, j;
-    int cs;
     struct pollfd pfd;
     unsigned long t0, t1, t2;
-
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 
     timeout = 1000 * conf->timeout;
     attempts = conf->attempts;
@@ -77,9 +70,6 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
     /* Past this point, there are no errors. Each individual query will
      * yield either no reply (indicated by zero length) or an answer
      * packet which is up to the caller to interpret. */
-
-    pthread_cleanup_push(cleanup, (void*)(intptr_t)fd);
-    pthread_setcancelstate(cs, 0);
 
     /* Convert any IPv4 addresses in a mixed environment to v4-mapped */
     if (family == AF_INET6) {
@@ -170,7 +160,6 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
         }
     }
 out:
-    pthread_cleanup_pop(1);
 
     return 0;
 }

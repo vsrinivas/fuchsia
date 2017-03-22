@@ -1,7 +1,6 @@
 #include "nscd.h"
 #include "pwf.h"
 #include <byteswap.h>
-#include <pthread.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -20,11 +19,9 @@ int __getgr_a(const char* name, gid_t gid, struct group* gr, char** buf, size_t*
               size_t* nmem, struct group** res) {
     FILE* f;
     int rv = 0;
-    int cs;
 
     *res = 0;
 
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     f = fopen("/etc/group", "rbe");
     if (!f) {
         rv = errno;
@@ -165,7 +162,6 @@ int __getgr_a(const char* name, gid_t gid, struct group* gr, char** buf, size_t*
     }
 
 done:
-    pthread_setcancelstate(cs, 0);
     if (rv)
         errno = rv;
     return rv;

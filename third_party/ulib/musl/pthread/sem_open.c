@@ -2,7 +2,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <pthread.h>
 #include <semaphore.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -29,7 +28,7 @@ sem_t* sem_open(const char* name, int flags, ...) {
     va_list ap;
     mode_t mode;
     unsigned value;
-    int fd, i, e, slot, first = 1, cnt, cs;
+    int fd, i, e, slot, first = 1, cnt;
     sem_t newsem;
     void* map;
     char tmp[64];
@@ -67,8 +66,6 @@ sem_t* sem_open(const char* name, int flags, ...) {
     mtx_unlock(&lock);
 
     flags &= (O_CREAT | O_EXCL);
-
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 
     /* Early failure check for exclusive open; otherwise the case
      * where the semaphore already exists is expensive. */
@@ -155,11 +152,9 @@ sem_t* sem_open(const char* name, int flags, ...) {
     semtab[slot].sem = map;
     semtab[slot].ino = st.st_ino;
     mtx_unlock(&lock);
-    pthread_setcancelstate(cs, 0);
     return map;
 
 fail:
-    pthread_setcancelstate(cs, 0);
     mtx_lock(&lock);
     semtab[slot].sem = 0;
     mtx_unlock(&lock);

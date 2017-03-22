@@ -1,12 +1,4 @@
-#include "libc.h"
-#include "pthread_impl.h"
+#include <pthread.h>
 
-static void dummy(void) {}
-
-weak_alias(dummy, __testcancel);
-
-void __pthread_testcancel(void) {
-    __testcancel();
+void pthread_testcancel(void) {
 }
-
-weak_alias(__pthread_testcancel, pthread_testcancel);

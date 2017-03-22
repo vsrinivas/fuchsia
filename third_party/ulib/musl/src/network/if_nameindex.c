@@ -2,7 +2,6 @@
 #include "netlink.h"
 #include <errno.h>
 #include <net/if.h>
-#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -88,9 +87,7 @@ struct if_nameindex* if_nameindex() {
     struct ifnamemap* s;
     char* p;
     int i;
-    int cs;
 
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     memset(ctx, 0, sizeof(*ctx));
     if (__rtnetlink_enumerate(AF_UNSPEC, AF_INET, netlink_msg_to_nameindex, ctx) < 0)
         goto err;
@@ -110,7 +107,6 @@ struct if_nameindex* if_nameindex() {
     d->if_index = 0;
     d->if_name = 0;
 err:
-    pthread_setcancelstate(cs, 0);
     free(ctx->list);
     errno = ENOBUFS;
     return ifs;

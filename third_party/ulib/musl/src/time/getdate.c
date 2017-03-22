@@ -1,5 +1,4 @@
 #include <errno.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -12,9 +11,6 @@ struct tm* getdate(const char* s) {
     char* datemsk = getenv("DATEMSK");
     FILE* f = 0;
     char fmt[100], *p;
-    int cs;
-
-    pthread_setcancelstate(PTHREAD_CANCEL_DEFERRED, &cs);
 
     if (!datemsk) {
         getdate_err = 1;
@@ -42,6 +38,5 @@ struct tm* getdate(const char* s) {
 out:
     if (f)
         fclose(f);
-    pthread_setcancelstate(cs, 0);
     return ret;
 }

@@ -133,13 +133,11 @@ int __posix_spawnx(pid_t* restrict res, const char* restrict path,
                    const posix_spawn_file_actions_t* fa, const posix_spawnattr_t* restrict attr,
                    char* const argv[restrict], char* const envp[restrict]) {
     pid_t pid;
-    int ec = 0, cs;
+    int ec = 0;
     struct args args;
 
     if (pipe2(args.p, O_CLOEXEC))
         return errno;
-
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 
     args.path = path;
     args.exec = exec;
@@ -168,7 +166,6 @@ int __posix_spawnx(pid_t* restrict res, const char* restrict path,
         *res = pid;
 
     pthread_sigmask(SIG_SETMASK, &args.oldmask, 0);
-    pthread_setcancelstate(cs, 0);
 
     return ec;
 }

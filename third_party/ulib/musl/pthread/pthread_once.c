@@ -4,7 +4,7 @@
 #include <assert.h>
 
 enum {
-    STATE_INIT = 0, // we're the first or the other cancelled; run init
+    STATE_INIT = 0, // we're the first; run init
     STATE_WAIT = 1, // another thread is running init; wait
     STATE_DONE = 2, // another thread finished running init; just return
     STATE_WAKE = 3, // another thread is running init, waiters present; wait
@@ -12,22 +12,11 @@ enum {
 
 static_assert(STATE_INIT == PTHREAD_ONCE_INIT, "");
 
-static void undo(void* control) {
-    atomic_int* futex = control;
-
-    /* Wake all waiters, since the waiter status is lost when
-     * resetting control to the initial state. */
-    if (atomic_exchange(futex, STATE_INIT) == STATE_WAKE)
-        __wake(futex, -1);
-}
-
-int __pthread_once_full(pthread_once_t* control, void (*init)(void)) {
+static int __pthread_once_full(pthread_once_t* control, void (*init)(void)) {
     for (;;)
         switch (a_cas_shim(control, STATE_INIT, STATE_WAIT)) {
         case STATE_INIT:
-            pthread_cleanup_push(undo, control);
             init();
-            pthread_cleanup_pop(0);
 
             if (atomic_exchange(control, STATE_DONE) == STATE_WAKE)
                 __wake(control, -1);

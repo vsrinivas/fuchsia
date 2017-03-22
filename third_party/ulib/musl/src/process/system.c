@@ -1,5 +1,4 @@
 #include "libc.h"
-#include "pthread_impl.h"
 #include <errno.h>
 #include <signal.h>
 #include <spawn.h>
@@ -13,8 +12,6 @@ int system(const char* cmd) {
     struct sigaction sa = {.sa_handler = SIG_IGN}, oldint, oldquit;
     int status = 0x7f00, ret;
     posix_spawnattr_t attr;
-
-    pthread_testcancel();
 
     if (!cmd)
         return 1;

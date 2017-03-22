@@ -1,5 +1,4 @@
 #include <fcntl.h>
-#include <pthread.h>
 #include <pty.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,14 +7,12 @@
 /* Nonstandard, but vastly superior to the standard functions */
 
 int openpty(int* pm, int* ps, char* name, const struct termios* tio, const struct winsize* ws) {
-    int m, s, n = 0, cs;
+    int m, s, n = 0;
     char buf[20];
 
     m = open("/dev/ptmx", O_RDWR | O_NOCTTY);
     if (m < 0)
         return -1;
-
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 
     if (ioctl(m, TIOCSPTLCK, &n) || ioctl(m, TIOCGPTN, &n))
         goto fail;
@@ -34,10 +31,8 @@ int openpty(int* pm, int* ps, char* name, const struct termios* tio, const struc
     *pm = m;
     *ps = s;
 
-    pthread_setcancelstate(cs, 0);
     return 0;
 fail:
     close(m);
-    pthread_setcancelstate(cs, 0);
     return -1;
 }

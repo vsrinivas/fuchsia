@@ -1,5 +1,4 @@
 #include "pwf.h"
-#include <pthread.h>
 
 static unsigned atou(char** s) {
     unsigned x;
@@ -14,8 +13,6 @@ int __getgrent_a(FILE* f, struct group* gr, char** line, size_t* size, char*** m
     char *s, *mems;
     size_t i;
     int rv = 0;
-    int cs;
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     for (;;) {
         if ((l = getline(line, size, f)) < 0) {
             rv = ferror(f) ? errno : 0;
@@ -69,7 +66,6 @@ int __getgrent_a(FILE* f, struct group* gr, char** line, size_t* size, char*** m
     }
     gr->gr_mem = *mem;
 end:
-    pthread_setcancelstate(cs, 0);
     *res = gr;
     if (rv)
         errno = rv;

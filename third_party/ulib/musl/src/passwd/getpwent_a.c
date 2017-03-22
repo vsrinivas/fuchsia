@@ -1,5 +1,4 @@
 #include "pwf.h"
-#include <pthread.h>
 
 static unsigned atou(char** s) {
     unsigned x;
@@ -12,8 +11,6 @@ int __getpwent_a(FILE* f, struct passwd* pw, char** line, size_t* size, struct p
     ssize_t l;
     char* s;
     int rv = 0;
-    int cs;
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     for (;;) {
         if ((l = getline(line, size, f)) < 0) {
             rv = ferror(f) ? errno : 0;
@@ -58,7 +55,6 @@ int __getpwent_a(FILE* f, struct passwd* pw, char** line, size_t* size, struct p
         pw->pw_shell = s;
         break;
     }
-    pthread_setcancelstate(cs, 0);
     *res = pw;
     if (rv)
         errno = rv;

@@ -1744,8 +1744,6 @@ __NO_SAFESTACK dl_start_return_t __dls3(void* start_arg) {
 }
 
 static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
-    int cs;
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
     pthread_rwlock_wrlock(&lock);
     __inhibit_ptc();
 
@@ -1762,7 +1760,6 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     fail:
         __release_ptc();
         pthread_rwlock_unlock(&lock);
-        pthread_setcancelstate(cs, 0);
         return NULL;
     }
 
@@ -1851,7 +1848,6 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
 
     do_init_fini(new_tail);
 
-    pthread_setcancelstate(cs, 0);
     return p;
 }
 

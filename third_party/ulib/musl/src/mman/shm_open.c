@@ -1,7 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <pthread.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -27,14 +26,10 @@ char* __shm_mapname(const char* name, char* buf) {
 }
 
 int shm_open(const char* name, int flag, mode_t mode) {
-    int cs;
     char buf[NAME_MAX + 10];
     if (!(name = __shm_mapname(name, buf)))
         return -1;
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-    int fd = open(name, flag | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK, mode);
-    pthread_setcancelstate(cs, 0);
-    return fd;
+    return open(name, flag | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK, mode);
 }
 
 int shm_unlink(const char* name) {

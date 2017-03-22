@@ -79,7 +79,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/pthread/pthread_barrierattr_destroy.c \
     $(LOCAL_DIR)/pthread/pthread_barrierattr_init.c \
     $(LOCAL_DIR)/pthread/pthread_cancel.c \
-    $(LOCAL_DIR)/pthread/pthread_cleanup_push.c \
     $(LOCAL_DIR)/pthread/pthread_cond_broadcast.c \
     $(LOCAL_DIR)/pthread/pthread_cond_destroy.c \
     $(LOCAL_DIR)/pthread/pthread_cond_init.c \

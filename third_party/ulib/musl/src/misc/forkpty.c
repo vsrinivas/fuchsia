@@ -7,7 +7,7 @@
 #include <utmp.h>
 
 int forkpty(int* pm, char* name, const struct termios* tio, const struct winsize* ws) {
-    int m, s, ec = 0, p[2], cs;
+    int m, s, ec = 0, p[2];
     pid_t pid = -1;
     sigset_t set, oldset;
 
@@ -16,7 +16,6 @@ int forkpty(int* pm, char* name, const struct termios* tio, const struct winsize
 
     sigfillset(&set);
     pthread_sigmask(SIG_BLOCK, &set, &oldset);
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 
     if (pipe2(p, O_CLOEXEC)) {
         close(s);
@@ -32,7 +31,6 @@ int forkpty(int* pm, char* name, const struct termios* tio, const struct winsize
             _exit(127);
         }
         close(p[1]);
-        pthread_setcancelstate(cs, 0);
         pthread_sigmask(SIG_SETMASK, &oldset, 0);
         return 0;
     }
@@ -52,7 +50,6 @@ out:
     else
         close(m);
 
-    pthread_setcancelstate(cs, 0);
     pthread_sigmask(SIG_SETMASK, &oldset, 0);
 
     return pid;
