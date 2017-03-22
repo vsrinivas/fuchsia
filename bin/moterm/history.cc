@@ -167,7 +167,7 @@ void History::UnregisterClient(Client* client) {
 void History::OnChange(ledger::PageChangePtr page_change,
                        ledger::ResultState result_state,
                        const OnChangeCallback& callback) {
-  FTL_DCHECK(result_state == ledger::ResultState::FINISHED);
+  FTL_DCHECK(result_state == ledger::ResultState::COMPLETED);
   for (auto& entry : page_change->changes) {
     if (local_entry_keys_.count(ToString(entry->key)) == 0) {
       // Notify clients about the remote entry.
