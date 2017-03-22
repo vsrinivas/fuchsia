@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "filesystems.h"
+#include "misc.h"
 
 bool test_append(void) {
     BEGIN_TEST;

@@ -18,17 +18,7 @@
 #include <magenta/compiler.h>
 
 #include "filesystems.h"
-
-// Check the contents of a file are what we expect
-bool confirm_contents(int fd, uint8_t* buf, size_t length) {
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    uint8_t* out = malloc(length);
-    assert(out != NULL);
-    ASSERT_STREAM_ALL(read, fd, out, length);
-    ASSERT_EQ(memcmp(buf, out, length), 0, "");
-    free(out);
-    return true;
-}
+#include "misc.h"
 
 bool test_link_basic(void) {
     if (!test_info->supports_hardlinks) {
@@ -47,15 +37,15 @@ bool test_link_basic(void) {
         buf[i] = (uint8_t) rand();
     }
     ASSERT_STREAM_ALL(write, fd, buf, sizeof(buf));
-    ASSERT_TRUE(confirm_contents(fd, buf, sizeof(buf)), "");
+    ASSERT_TRUE(check_file_contents(fd, buf, sizeof(buf)), "");
 
     ASSERT_EQ(link(oldpath, newpath), 0, "");
 
     // Confirm that both the old link and the new links exist
     int fd2 = open(newpath, O_RDONLY, 0644);
     ASSERT_GT(fd2, 0, "");
-    ASSERT_TRUE(confirm_contents(fd2, buf, sizeof(buf)), "");
-    ASSERT_TRUE(confirm_contents(fd, buf, sizeof(buf)), "");
+    ASSERT_TRUE(check_file_contents(fd2, buf, sizeof(buf)), "");
+    ASSERT_TRUE(check_file_contents(fd, buf, sizeof(buf)), "");
 
     // Remove the old link
     ASSERT_EQ(close(fd), 0, "");
@@ -66,7 +56,7 @@ bool test_link_basic(void) {
     // not been altered by the removal of the old link.
     fd = open(newpath, O_RDONLY, 0644);
     ASSERT_GT(fd, 0, "");
-    ASSERT_TRUE(confirm_contents(fd, buf, sizeof(buf)), "");
+    ASSERT_TRUE(check_file_contents(fd, buf, sizeof(buf)), "");
 
     ASSERT_EQ(close(fd), 0, "");
     ASSERT_EQ(unlink(newpath), 0, "");
@@ -93,15 +83,15 @@ bool test_link_between_dirs(void) {
         buf[i] = (uint8_t) rand();
     }
     ASSERT_STREAM_ALL(write, fd, buf, sizeof(buf));
-    ASSERT_TRUE(confirm_contents(fd, buf, sizeof(buf)), "");
+    ASSERT_TRUE(check_file_contents(fd, buf, sizeof(buf)), "");
 
     ASSERT_EQ(link(oldpath, newpath), 0, "");
 
     // Confirm that both the old link and the new links exist
     int fd2 = open(newpath, O_RDWR, 0644);
     ASSERT_GT(fd2, 0, "");
-    ASSERT_TRUE(confirm_contents(fd2, buf, sizeof(buf)), "");
-    ASSERT_TRUE(confirm_contents(fd, buf, sizeof(buf)), "");
+    ASSERT_TRUE(check_file_contents(fd2, buf, sizeof(buf)), "");
+    ASSERT_TRUE(check_file_contents(fd, buf, sizeof(buf)), "");
 
     // Remove the old link
     ASSERT_EQ(close(fd), 0, "");
@@ -111,7 +101,7 @@ bool test_link_between_dirs(void) {
     // Open the link by its new name
     fd = open(newpath, O_RDWR, 0644);
     ASSERT_GT(fd, 0, "");
-    ASSERT_TRUE(confirm_contents(fd, buf, sizeof(buf)), "");
+    ASSERT_TRUE(check_file_contents(fd, buf, sizeof(buf)), "");
 
     ASSERT_EQ(close(fd), 0, "");
     ASSERT_EQ(unlink(newpath), 0, "");

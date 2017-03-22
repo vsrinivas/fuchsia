@@ -15,6 +15,7 @@
 #include <magenta/compiler.h>
 
 #include "filesystems.h"
+#include "misc.h"
 
 bool test_persist_simple(void) {
     if (!test_info->can_be_mounted) {
@@ -31,16 +32,14 @@ bool test_persist_simple(void) {
         ASSERT_EQ(close(fd), 0, "");
     }
 
-    ASSERT_EQ(test_info->unmount(test_root_path), 0, "");
-    ASSERT_EQ(test_info->mount(test_disk_path, test_root_path), 0, "");
+    ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
     // The files should still exist when we remount
     for (size_t i = 0; i < countof(paths); i++) {
         ASSERT_EQ(unlink(paths[i]), 0, "");
     }
 
-    ASSERT_EQ(test_info->unmount(test_root_path), 0, "");
-    ASSERT_EQ(test_info->mount(test_disk_path, test_root_path), 0, "");
+    ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
     // But they should stay deleted!
     for (size_t i = 0; i < countof(paths); i++) {

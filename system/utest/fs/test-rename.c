@@ -2,15 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "filesystems.h"
+#include <magenta/compiler.h>
 
-int test_rename(void) {
+#include "filesystems.h"
+#include "misc.h"
+
+bool test_rename_basic(void) {
     BEGIN_TEST;
     // Cannot rename when src does not exist
     ASSERT_EQ(rename("::alpha", "::bravo"), -1, "");
@@ -71,6 +75,57 @@ int test_rename(void) {
     END_TEST;
 }
 
+bool test_rename_with_children(void) {
+    BEGIN_TEST;
+
+    ASSERT_EQ(mkdir("::dir_before_move", 0755), 0, "");
+    ASSERT_EQ(mkdir("::dir_before_move/dir1", 0755), 0, "");
+    ASSERT_EQ(mkdir("::dir_before_move/dir2", 0755), 0, "");
+    ASSERT_EQ(mkdir("::dir_before_move/dir2/subdir", 0755), 0, "");
+    int fd = open("::dir_before_move/file", O_RDWR | O_CREAT, 0644);
+    ASSERT_GT(fd, 0, "");
+
+    const char file_contents[] = "This should be in the file";
+    ASSERT_STREAM_ALL(write, fd, (uint8_t*) file_contents, strlen(file_contents));
+
+    ASSERT_EQ(rename("::dir_before_move", "::dir"), 0, "Could not rename");
+
+    // Check that the directory layout has persisted across rename
+    expected_dirent_t dir_contents[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+        {false, "dir1", DT_DIR},
+        {false, "dir2", DT_DIR},
+        {false, "file", DT_REG},
+    };
+    ASSERT_TRUE(check_dir_contents("::dir", dir_contents, countof(dir_contents)), "");
+    expected_dirent_t dir2_contents[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+        {false, "subdir", DT_DIR},
+    };
+    ASSERT_TRUE(check_dir_contents("::dir/dir2", dir2_contents, countof(dir2_contents)), "");
+
+    // Check the our file data has lasted (without re-opening)
+    ASSERT_TRUE(check_file_contents(fd, (uint8_t*) file_contents, strlen(file_contents)), "");
+
+    // Check the our file data has lasted (with re-opening)
+    ASSERT_EQ(close(fd), 0, "");
+    fd = open("::dir/file", O_RDONLY, 06444);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_TRUE(check_file_contents(fd, (uint8_t*) file_contents, strlen(file_contents)), "");
+
+    // Clean up
+    ASSERT_EQ(unlink("::dir/dir1"), 0, "");
+    ASSERT_EQ(unlink("::dir/dir2/subdir"), 0, "");
+    ASSERT_EQ(unlink("::dir/dir2"), 0, "");
+    ASSERT_EQ(unlink("::dir/file"), 0, "");
+    ASSERT_EQ(unlink("::dir"), 0, "");
+
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(rename_tests,
-    RUN_TEST_MEDIUM(test_rename)
+    RUN_TEST_MEDIUM(test_rename_basic)
+    RUN_TEST_MEDIUM(test_rename_with_children)
 )

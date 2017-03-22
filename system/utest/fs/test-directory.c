@@ -17,6 +17,7 @@
 #include <magenta/compiler.h>
 
 #include "filesystems.h"
+#include "misc.h"
 
 bool test_directory_filename_max(void) {
     BEGIN_TEST;
@@ -201,46 +202,6 @@ bool test_directory_trailing_slash(void) {
     END_TEST;
 }
 
-typedef struct expected_dirent {
-    bool seen; // Flip to true once it has been seen
-    const char* d_name;
-    unsigned char d_type;
-} expected_dirent_t;
-
-void check_contains_all(const char* dirname, expected_dirent_t* edirents, size_t len) {
-    DIR* dir = opendir(dirname);
-    assert(dir != NULL);
-    size_t seen = 0;
-
-    while (seen != len) {
-        struct dirent* de = readdir(dir);
-        assert(de != NULL); // Terminated before seeing all the direntries we expected to see
-        bool found = false;
-        for (size_t i = 0; i < len; i++) {
-            if (strcmp(edirents[i].d_name, de->d_name) == 0) {
-                assert(edirents[i].d_type == de->d_type);
-                assert(!edirents[i].seen);
-                edirents[i].seen = true;
-                seen++;
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            printf("Saw an unexpected dirent: %s\n", de->d_name);
-            assert(false);
-        }
-    }
-
-    assert(readdir(dir) == NULL); // There exists an entry we didn't expect to see
-    closedir(dir);
-
-    // Flip 'seen' back to false so the array of expected dirents can be reused
-    for (size_t i = 0; i < len; i++) {
-        edirents[i].seen = false;
-    }
-}
-
 bool test_directory_readdir(void) {
     BEGIN_TEST;
 
@@ -251,7 +212,7 @@ bool test_directory_readdir(void) {
         {false, ".", DT_DIR},
         {false, "..", DT_DIR},
     };
-    check_contains_all("::a", empty_dir, countof(empty_dir));
+    ASSERT_TRUE(check_dir_contents("::a", empty_dir, countof(empty_dir)), "");
 
     ASSERT_EQ(mkdir("::a/dir1", 0755), 0, "");
     int fd = open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644);
@@ -271,7 +232,7 @@ bool test_directory_readdir(void) {
         {false, "file1", DT_REG},
         {false, "file2", DT_REG},
     };
-    check_contains_all("::a", filled_dir, countof(filled_dir));
+    ASSERT_TRUE(check_dir_contents("::a", filled_dir, countof(filled_dir)), "");
 
     ASSERT_EQ(unlink("::a/dir2"), 0, "");
     ASSERT_EQ(unlink("::a/file2"), 0, "");
@@ -281,11 +242,11 @@ bool test_directory_readdir(void) {
         {false, "dir1", DT_DIR},
         {false, "file1", DT_REG},
     };
-    check_contains_all("::a", partial_dir, countof(partial_dir));
+    ASSERT_TRUE(check_dir_contents("::a", partial_dir, countof(partial_dir)), "");
 
     ASSERT_EQ(unlink("::a/dir1"), 0, "");
     ASSERT_EQ(unlink("::a/file1"), 0, "");
-    check_contains_all("::a", empty_dir, countof(empty_dir));
+    ASSERT_TRUE(check_dir_contents("::a", empty_dir, countof(empty_dir)), "");
 
     END_TEST;
 }

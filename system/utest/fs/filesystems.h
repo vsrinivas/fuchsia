@@ -11,9 +11,6 @@
 
 #include <unittest/unittest.h>
 
-#define ASSERT_STREAM_ALL(op, fd, buf, len) \
-    ASSERT_EQ(op(fd, (buf), (len)), (ssize_t)(len), "");
-
 typedef struct fs_info {
     const char* name;
     int (*mkfs)(const char* disk_path);

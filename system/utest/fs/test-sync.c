@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "filesystems.h"
+#include "misc.h"
 
 // TODO(smklein): Create a more complex test, capable of mocking a block device
 // and ensuring that data is actually being flushed to a block device.

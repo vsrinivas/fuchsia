@@ -13,6 +13,7 @@ MODULE_NAME := fs-test
 MODULE_SRCS := \
     $(LOCAL_DIR)/filesystems.c \
     $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/misc.c \
     $(LOCAL_DIR)/wrap.c \
     $(LOCAL_DIR)/test-attr.c \
     $(LOCAL_DIR)/test-append.c \

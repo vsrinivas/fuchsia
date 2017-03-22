@@ -9,6 +9,25 @@
 #include <stdio.h>
 #include <string.h>
 
+// Filesystem test utilities
+
+#define ASSERT_STREAM_ALL(op, fd, buf, len) \
+    ASSERT_EQ(op(fd, (buf), (len)), (ssize_t)(len), "");
+
+typedef struct expected_dirent {
+    bool seen; // Should be set to "false", used internally by checking function.
+    const char* d_name;
+    unsigned char d_type;
+} expected_dirent_t;
+
+bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t len);
+
+// Check the contents of a file are what we expect
+bool check_file_contents(int fd, const uint8_t* buf, size_t length);
+
+// Unmount and remount our filesystem, simulating a reboot
+bool check_remount(void);
+
 // FNV-1a Hash
 //
 // http://www.isthe.com/chongo/tech/comp/fnv/index.html
