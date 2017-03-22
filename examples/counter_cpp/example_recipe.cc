@@ -194,10 +194,11 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         });
 
     app::ServiceProviderPtr services_from_module1;
-    module_context_->StartModuleInShell(
-        "file:///system/apps/example_module1", std::move(module1_link_handle),
-        std::move(services_for_module1), services_from_module1.NewRequest(),
-        module1_.NewRequest());
+    module_context_->StartModuleInShell("file:///system/apps/example_module1",
+                                        std::move(module1_link_handle),
+                                        std::move(services_for_module1),
+                                        services_from_module1.NewRequest(),
+                                        module1_.NewRequest(), "");
 
     // Consume services from Module 1.
     auto multiplier_service =
@@ -216,8 +217,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         }));
 
     module_context_->StartModuleInShell("file:///system/apps/example_module2",
-                                        std::move(module2_link_handle), nullptr,
-                                        nullptr, module2_.NewRequest());
+                                        std::move(module2_link_handle),
+                                        nullptr, nullptr,
+                                        module2_.NewRequest(), "");
 
     connections_.emplace_back(
         new LinkConnection(module1_link_.get(), module2_link_.get()));

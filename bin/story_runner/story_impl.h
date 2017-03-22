@@ -58,8 +58,10 @@ class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
   // Called by ModuleContextImpl.
   void CreateLink(const fidl::String& name,
                   fidl::InterfaceRequest<Link> request);
-  // Called by ModuleContextImpl.
-  void StartModule(
+  // Called by ModuleContextImpl and StartModuleInShell().
+  // Returns the module instance id so StartModuleInShell() can pass it to the
+  // StoryShell.
+  uint64_t StartModule(
       const fidl::String& query,
       fidl::InterfaceHandle<Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -72,7 +74,9 @@ class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceHandle<Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller);
+      fidl::InterfaceRequest<ModuleController> module_controller,
+      const uint64_t parent_id,
+      const fidl::String& view_type);
   // Called by ModuleContextImpl.
   const std::string& GetStoryId();
 
@@ -155,6 +159,7 @@ class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
   };
   std::vector<Connection> connections_;
   std::vector<std::unique_ptr<LinkImpl>> links_;
+  uint64_t next_module_instance_id_{};
 
   // A dummy service that allows applications that can run both as
   // modules in a story and standalone from the shell to determine

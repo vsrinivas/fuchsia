@@ -55,7 +55,8 @@ interface ModuleContext {
   StartModuleInShell(string module_url, Link link,
                      app.ServiceProvider? outgoing_services,
                      app.ServiceProvider&? incoming_services,
-                     ModuleController& module_controller);
+                     ModuleController& module_controller,
+                     string view_type);
 
   // Gets the ComponentContext associated with this module. This
   // component context is unique to this particular module instance.

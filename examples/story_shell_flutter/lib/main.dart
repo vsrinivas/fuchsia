@@ -73,7 +73,8 @@ class StoryShellImpl extends StoryShell {
 
   /// StoryShell
   @override
-  void connectView(InterfaceHandle<ViewOwner> view) {
+  void connectView(InterfaceHandle<ViewOwner> view, int view_id, int parent_id,
+      String view_type) {
     _surfaceLayoutKey.currentState.addChild(view);
   }
 

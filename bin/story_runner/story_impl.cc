@@ -233,11 +233,8 @@ void StoryImpl::StartRootModule(const fidl::String& url,
   CreateLink(link_name, link.NewRequest());
 
   ModuleControllerPtr module_controller;
-  mozart::ViewOwnerPtr root_module_view;
-  StartModule(url, std::move(link), nullptr, nullptr,
-              module_controller.NewRequest(), root_module_view.NewRequest());
-
-  story_shell_->ConnectView(std::move(root_module_view));
+  StartModuleInShell(url, std::move(link), nullptr, nullptr,
+                     module_controller.NewRequest(), 0L, "");
 
   module_controller->Watch(module_watcher_bindings_.AddBinding(this));
   module_controllers_.emplace_back(std::move(module_controller));
@@ -345,7 +342,7 @@ void StoryImpl::DisposeLink(LinkImpl* const link) {
   links_.erase(f);
 }
 
-void StoryImpl::StartModule(
+uint64_t StoryImpl::StartModule(
     const fidl::String& module_url,
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -389,11 +386,15 @@ void StoryImpl::StartModule(
       this, module_url, std::move(application_controller), std::move(module),
       std::move(module_controller_request)));
 
+
+
+  const auto id = next_module_instance_id_++;
   connection.module_context_impl.reset(new ModuleContextImpl(
-      this, module_url, connection.module_controller_impl.get(),
+      id, this, module_url, connection.module_controller_impl.get(),
       story_provider_impl_->component_context_info(), std::move(self_request)));
 
   connections_.emplace_back(std::move(connection));
+  return id;
 }
 
 void StoryImpl::StartModuleInShell(
@@ -401,12 +402,16 @@ void StoryImpl::StartModuleInShell(
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller_request) {
+    fidl::InterfaceRequest<ModuleController> module_controller_request,
+    const uint64_t parent_id,
+    const fidl::String& view_type) {
   mozart::ViewOwnerPtr view_owner;
-  StartModule(module_url, std::move(link), std::move(outgoing_services),
-              std::move(incoming_services),
-              std::move(module_controller_request), view_owner.NewRequest());
-  story_shell_->ConnectView(view_owner.PassInterfaceHandle());
+  const uint64_t id = StartModule(
+      module_url, std::move(link), std::move(outgoing_services),
+      std::move(incoming_services), std::move(module_controller_request),
+      view_owner.NewRequest());
+  story_shell_->ConnectView(view_owner.PassInterfaceHandle(), id, parent_id,
+      view_type);
 }
 
 const std::string& StoryImpl::GetStoryId() {

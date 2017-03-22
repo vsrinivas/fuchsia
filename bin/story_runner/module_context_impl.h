@@ -26,7 +26,8 @@ class StoryImpl;
 // on its Story handle can be associated with the Module instance.
 class ModuleContextImpl : public ModuleContext {
  public:
-  ModuleContextImpl(StoryImpl* story_impl,
+  ModuleContextImpl(const uint64_t id,
+                    StoryImpl* story_impl,
                     const std::string& module_url,
                     ModuleControllerImpl* module_controller_impl,
                     const ComponentContextInfo& component_context_info,
@@ -50,12 +51,19 @@ class ModuleContextImpl : public ModuleContext {
       fidl::InterfaceHandle<Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller) override;
+      fidl::InterfaceRequest<ModuleController> module_controller,
+      const fidl::String& view_type) override;
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> context_request) override;
   void GetStoryId(const GetStoryIdCallback& callback) override;
   void Ready() override;
   void Done() override;
+
+  // Used to identify the module instance within the story,
+  // and everything directly associated with it,
+  // specifically the view of the module instance to
+  // the story shell.
+  const uint64_t id_;
 
   // Not owned. The StoryImpl instance this ModuleContextImpl instance
   // connects to.

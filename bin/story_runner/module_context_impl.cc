@@ -13,12 +13,14 @@
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
+    const uint64_t id,
     StoryImpl* const story_impl,
     const std::string& module_url,
     ModuleControllerImpl* const module_controller_impl,
     const ComponentContextInfo& component_context_info,
     fidl::InterfaceRequest<ModuleContext> module_context)
-    : story_impl_(story_impl),
+    : id_(id),
+      story_impl_(story_impl),
       module_url_(module_url),
       module_controller_impl_(module_controller_impl),
       component_context_impl_(component_context_info, module_url),
@@ -48,10 +50,11 @@ void ModuleContextImpl::StartModuleInShell(
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller) {
-  story_impl_->StartModuleInShell(
-      query, std::move(link), std::move(outgoing_services),
-      std::move(incoming_services), std::move(module_controller));
+    fidl::InterfaceRequest<ModuleController> module_controller,
+    const fidl::String& view_type) {
+  story_impl_->StartModuleInShell(query, std::move(link), std::move(outgoing_services),
+                                  std::move(incoming_services),
+                                  std::move(module_controller), id_, view_type);
 }
 
 void ModuleContextImpl::GetComponentContext(
