@@ -174,7 +174,7 @@ For QEMU, use the -x option to the run-magenta-* scripts to specify an extra boo
 
 ## Network Booting
 
-The GigaBoot20x6 bootloader speaks a simple network boot protocol (over IPV6 UDP)
+The [GigaBoot20x6](https://fuchsia.googlesource.com/magenta/+/master/bootloader) bootloader speaks a simple network boot protocol (over IPV6 UDP)
 which does not require any special host configuration or privileged access to use.
 
 It does this by taking advantage of IPV6 Link Local Addressing and Multicast,
