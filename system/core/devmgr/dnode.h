@@ -52,12 +52,16 @@ mx_status_t dn_allocate(dnode_t** dn, const char* name, size_t len);
 // Attach a vnode to a dnode
 void dn_attach(dnode_t* dn, VnodeMemfs* vn);
 
-// Detaches a dnode from it's parent / vnode and frees the dnode
+// Detaches a dnode from it's parent / vnode and frees the dnode.
+// Decrements parent link count by one (if parent exists).
+// Decrements dn->vnode link count by one (if it exists).
 void dn_delete(dnode_t* dn);
 
 mx_status_t dn_lookup(dnode_t* dn, dnode_t** out, const char* name, size_t len);
 mx_status_t dn_lookup_name(const dnode_t* dn, const VnodeMemfs* vn, char* out_name, size_t out_len);
 
+// Increments child link count by one.
+// If the child is a directory, increments parent link count by one.
 void dn_add_child(dnode_t* parent, dnode_t* child);
 
 mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len);

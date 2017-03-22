@@ -50,7 +50,6 @@ void dn_attach(dnode_t* dn, VnodeMemfs* vn) {
     if (vn != nullptr) {
         vn->RefAcquire();
         list_add_tail(&vn->dn_list_, &dn->vn_entry);
-        vn->dn_count_++;
     }
 }
 
@@ -60,13 +59,16 @@ void dn_delete(dnode_t* dn) {
     // detach from parent
     if (dn->parent) {
         list_delete(&dn->dn_entry);
+        if (DNODE_IS_DIR(dn)) {
+            dn->parent->vnode->link_count_--;
+        }
         dn->parent = nullptr;
     }
 
     // detach from vnode
     if (dn->vnode) {
         list_delete(&dn->vn_entry);
-        dn->vnode->dn_count_--;
+        dn->vnode->link_count_--;
         dn->vnode->RefRelease();
         dn->vnode = nullptr;
     }
@@ -89,6 +91,11 @@ void dn_add_child(dnode_t* parent, dnode_t* child) {
     }
 
     child->parent = parent;
+    child->vnode->link_count_++;
+    if (child->vnode->dnode_) {
+        // Child has '..' pointing back at parent.
+        parent->vnode->link_count_++;
+    }
     list_add_tail(&parent->children, &child->dn_entry);
 }
 

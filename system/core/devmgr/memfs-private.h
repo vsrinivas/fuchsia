@@ -43,9 +43,10 @@ public:
 
     // TODO(smklein): The following members should become private
     uint32_t seqcount_;
-    dnode_t* dnode_;
+
+    dnode_t* dnode_;      // list of my children
     list_node_t dn_list_; // all dnodes that point at this vnode
-    uint32_t dn_count_;
+    uint32_t link_count_;
 
 protected:
     VnodeMemfs();
@@ -73,6 +74,7 @@ private:
 
 class VnodeDir final : public VnodeMemfs {
 public:
+    VnodeDir();
     ~VnodeDir();
 
 private:

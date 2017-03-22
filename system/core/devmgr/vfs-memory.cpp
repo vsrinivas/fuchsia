@@ -37,7 +37,7 @@ static VnodeMemfs* devfs_root = nullptr;
 static VnodeMemfs* bootfs_root = nullptr;
 static VnodeMemfs* systemfs_root = nullptr;
 
-VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr) {
+VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr), link_count_(0) {
     list_initialize(&dn_list_);
     list_initialize(&watch_list_);
     create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
@@ -47,6 +47,9 @@ VnodeMemfs::~VnodeMemfs() {}
 VnodeFile::VnodeFile() : vmo_(MX_HANDLE_INVALID), length_(0) {}
 VnodeFile::~VnodeFile() {}
 
+VnodeDir::VnodeDir() {
+    link_count_ = 1; // Implied '.'
+}
 VnodeDir::~VnodeDir() {}
 
 VnodeVmo::VnodeVmo() : vmo_(MX_HANDLE_INVALID), length_(0), offset_(0) {}
@@ -54,6 +57,7 @@ VnodeVmo::~VnodeVmo() {}
 
 VnodeDevice::VnodeDevice() {
     flags_ |= V_FLAG_DEVICE;
+    link_count_ = 1; // Implied '.'
 }
 VnodeDevice::~VnodeDevice() {}
 
@@ -196,18 +200,20 @@ mx_status_t VnodeDevice::Lookup(fs::Vnode** out, const char* name, size_t len) {
 mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_FILE | V_IRUSR;
+    attr->size = length_;
+    attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
-    attr->size = length_;
     return NO_ERROR;
 }
 
 mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_DIR | V_IRUSR;
+    attr->size = 0;
+    attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
-    attr->size = 0;
     return NO_ERROR;
 }
 
@@ -218,9 +224,10 @@ mx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
     }
+    attr->size = length_;
+    attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
-    attr->size = length_;
     return NO_ERROR;
 }
 
@@ -232,6 +239,7 @@ mx_status_t VnodeDevice::Getattr(vnattr_t* attr) {
         attr->mode = V_TYPE_DIR | V_IRUSR;
     }
     attr->size = 0;
+    attr->nlink = link_count_;
     return NO_ERROR;
 }
 
@@ -837,12 +845,15 @@ mx_status_t _memfs_create(memfs::VnodeMemfs* parent, memfs::VnodeMemfs** out,
     }
     vn->RefRelease(); // vn refcount = 1
 
-    // parent takes first reference
-    dn_add_child(parent->dnode_, dn);
-
+    // Identify tht the vnode is a directory (vn->dnode_ != nullptr) so that
+    // dn_add_child will also increment the parent link_count (after all,
+    // directories contain a ".." entry, which is a link to their parent).
     if (type == MEMFS_TYPE_DIR || type == MEMFS_TYPE_DEVICE) {
         vn->dnode_ = dn;
     }
+
+    // parent takes first reference
+    dn_add_child(parent->dnode_, dn);
 
     // returning, without incrementing refcount
     *out = vn;

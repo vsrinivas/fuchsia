@@ -16,10 +16,11 @@ __BEGIN_CDECLS
 #define VFS_MAX_HANDLES 2
 
 typedef struct vnattr {
-    uint32_t valid;       // mask of which bits to set for setattr
+    uint32_t valid;        // mask of which bits to set for setattr
     uint32_t mode;
     uint64_t inode;
     uint64_t size;
+    uint64_t nlink;
     uint64_t create_time;  // posix time (seconds since epoch)
     uint64_t modify_time;  // posix time
 } vnattr_t;

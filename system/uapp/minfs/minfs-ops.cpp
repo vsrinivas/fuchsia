@@ -502,6 +502,7 @@ mx_status_t VnodeMinfs::UnlinkChild(VnodeMinfs* childvn, minfs_dirent_t* de, Dir
     de->ino = 0;
     de->reclen = static_cast<uint32_t>(coalesced_size & kMinfsReclenMask) |
         (de->reclen & kMinfsReclenLast);
+    // Erase dirent (replace with 'empty' dirent)
     if ((status = WriteExactInternal(de, MINFS_DIRENT_SIZE, off)) != NO_ERROR) {
         goto fail;
     }
@@ -512,12 +513,23 @@ mx_status_t VnodeMinfs::UnlinkChild(VnodeMinfs* childvn, minfs_dirent_t* de, Dir
         TruncateInternal(off + MINFS_DIRENT_SIZE);
     }
 
+    inode_.dirent_count--;
     // This effectively 'unlinks' the target node without deleting the direntry
     childvn->inode_.link_count--;
-    childvn->RefRelease();
 
-    // erase dirent (convert to empty entry), decrement dirent count
-    inode_.dirent_count--;
+    if (MinfsMagicType(childvn->inode_.magic) == kMinfsTypeDir) {
+        // Child directory had '..' which pointed to parent directory
+        inode_.link_count--;
+        if (childvn->inode_.link_count == 1) {
+            // Directories are initialized with two links, since they point
+            // to themselves via ".". Thus, when they reach "one link", they
+            // are only pointed to by themselves, and should be deleted.
+            childvn->inode_.link_count--;
+        }
+    }
+
+    childvn->InodeSync(kMxFsSyncMtime);
+    childvn->RefRelease();
     return DIR_CB_SAVE_SYNC;
 
 fail:
@@ -627,16 +639,19 @@ static mx_status_t cb_dir_update_inode(VnodeMinfs* vndir, minfs_dirent_t* de,
     return DIR_CB_SAVE_SYNC;
 }
 
-static mx_status_t fill_dirent(VnodeMinfs* vndir, minfs_dirent_t* de,
-                               DirArgs* args, size_t off) {
+static mx_status_t add_dirent(VnodeMinfs* vndir, minfs_dirent_t* de, DirArgs* args, size_t off) {
     de->ino = args->ino;
     de->type = static_cast<uint8_t>(args->type);
     de->namelen = static_cast<uint8_t>(args->len);
     memcpy(de->name, args->name, args->len);
-    vndir->inode_.dirent_count++;
     mx_status_t status = vndir->WriteExactInternal(de, DirentSize(de->namelen), off);
     if (status != NO_ERROR) {
         return status;
+    }
+    vndir->inode_.dirent_count++;
+    if (args->type == kMinfsTypeDir) {
+        // Child directory has '..' which will point to parent directory
+        vndir->inode_.link_count++;
     }
     return DIR_CB_SAVE_SYNC;
 }
@@ -649,7 +664,7 @@ static mx_status_t cb_dir_append(VnodeMinfs* vndir, minfs_dirent_t* de,
         if (args->reclen > reclen) {
             return do_next_dirent(de, offs);
         }
-        return fill_dirent(vndir, de, args, offs->off);
+        return add_dirent(vndir, de, args, offs->off);
     } else {
         // filled entry, can we sub-divide?
         uint32_t size = static_cast<uint32_t>(DirentSize(de->namelen));
@@ -674,7 +689,7 @@ static mx_status_t cb_dir_append(VnodeMinfs* vndir, minfs_dirent_t* de,
         char data[kMinfsMaxDirentSize];
         de = (minfs_dirent_t*) data;
         de->reclen = extra | (was_last_record ? kMinfsReclenLast : 0);
-        return fill_dirent(vndir, de, args, offs->off);
+        return add_dirent(vndir, de, args, offs->off);
     }
 }
 
@@ -966,10 +981,11 @@ mx_status_t VnodeMinfs::Lookup(fs::Vnode** out, const char* name, size_t len) {
 }
 
 mx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
-    trace(MINFS, "minfs_Getattr() vn=%p(#%u)\n", this, ino_);
+    trace(MINFS, "minfs_getattr() vn=%p(#%u)\n", this, ino_);
+    a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic));
     a->inode = ino_;
     a->size = inode_.size;
-    a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic));
+    a->nlink = inode_.link_count;
     a->create_time = inode_.create_time;
     a->modify_time = inode_.modify_time;
     return NO_ERROR;
@@ -1084,7 +1100,7 @@ mx_status_t VnodeMinfs::Allocate(Minfs* fs, uint32_t type, VnodeMinfs** out) {
     memset(&(*out)->inode_, 0, sizeof((*out)->inode_));
     (*out)->inode_.magic = MinfsMagic(type);
     (*out)->inode_.create_time = (*out)->inode_.modify_time = minfs_gettime_utc();
-    (*out)->inode_.link_count = 1;
+    (*out)->inode_.link_count = (type == kMinfsTypeDir ? 2 : 1);
     return NO_ERROR;
 }
 
