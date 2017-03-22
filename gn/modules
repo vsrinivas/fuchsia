@@ -15,8 +15,8 @@
             "bootfs_path": "apps/color"
         },
         {
-            "binary": "image_picker.flx",
-            "bootfs_path": "apps/image_picker"
+            "binary": "gallery.flx",
+            "bootfs_path": "apps/gallery"
         },
         {
             "binary": "interactive_receipt.flx",
@@ -62,14 +62,14 @@
         }
   ],
   "components": [
-      "apps/modules/common/email/interactive_receipt/interactive_receipt_component.json",
-      "apps/modules/common/email/interactive_receipt_http/interactive_receipt_http_component.json",
-      "apps/modules/common/email/map/map_component.json",
-      "apps/modules/common/email/music_story/music_story_component.json",
-      "apps/modules/common/email/usps/usps_component.json",
-      "apps/modules/common/email/youtube_related_videos/youtube_related_videos_component.json",
-      "apps/modules/common/email/youtube_story/youtube_story_component.json",
-      "apps/modules/common/email/youtube_thumbnail/youtube_thumbnail_component.json",
-      "apps/modules/common/email/youtube_video/youtube_video_component.json"
+      "apps/modules/common/modules/gallery/gallery_component.json",
+      "apps/modules/common/modules/interactive_receipt/interactive_receipt_component.json",
+      "apps/modules/common/modules/map/map_component.json",
+      "apps/modules/common/modules/music_story/music_story_component.json",
+      "apps/modules/common/modules/usps/usps_component.json",
+      "apps/modules/common/modules/youtube_related_videos/youtube_related_videos_component.json",
+      "apps/modules/common/modules/youtube_story/youtube_story_component.json",
+      "apps/modules/common/modules/youtube_thumbnail/youtube_thumbnail_component.json",
+      "apps/modules/common/modules/youtube_video/youtube_video_component.json"
   ]
 }
