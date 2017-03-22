@@ -29,9 +29,9 @@ PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispa
                            uint64_t key, mx_signals_t signals)
     : type_(type),
       key_(key),
-      trigger_(signals),
       handle_(handle),
-      port_(mxtl::move(port)) {
+      port_(mxtl::move(port)),
+      trigger_(signals) {
 
     if (type_ == MX_PKT_TYPE_SIGNAL_REP) {
         // only one signal bit supported as a trigger.
@@ -67,14 +67,18 @@ bool PortObserver::OnStateChange(mx_signals_t new_state) {
 }
 
 bool PortObserver::OnCancel(Handle* handle) {
-    if (handle_ == handle)
+    if (handle_ == handle) {
+        port_->RecallPacket(&packet_);
         remove_ = true;
+    }
     return false;
 }
 
 bool PortObserver::OnCancelByKey(Handle* handle, uint64_t key) {
-    if ((key_ == key) && (handle_ == handle))
+    if ((key_ == key) && (handle_ == handle)) {
+        port_->RecallPacket(&packet_);
         remove_ = true;
+    }
     return false;
 }
 
@@ -88,11 +92,13 @@ void PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t count) {
     if ((trigger_ & new_state) == 0u)
         return;
 
+    if (type_ == MX_PKT_TYPE_SIGNAL_ONE)
+        trigger_ = 0u;
+
     packet_.packet.signal.observed |= new_state;
 
     auto status = port_->Queue(&packet_, count);
-
-    if ((type_ == MX_PKT_TYPE_SIGNAL_ONE) || (status < 0))
+    if (status < 0)
         remove_ = true;
 }
 
@@ -244,6 +250,13 @@ bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) 
     DEBUG_ASSERT(port_packet->observer == nullptr);
     port_packet->observer = observer;
     return false;
+}
+
+void PortDispatcherV2::RecallPacket(PortPacket* port_packet) {
+    AutoLock al(&lock_);
+    if (!port_packet->InContainer())
+        return;
+    packets_.erase(*port_packet);
 }
 
 mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,

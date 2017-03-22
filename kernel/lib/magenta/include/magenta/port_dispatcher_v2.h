@@ -115,10 +115,11 @@ private:
 
     const uint32_t type_;
     const uint64_t key_;
-    const mx_signals_t trigger_;
     const Handle* const handle_;
     mxtl::RefPtr<PortDispatcherV2> const port_;
 
+    // The members below are only mutated under the state observer lock.
+    mx_signals_t trigger_;
     PortPacket packet_;
 };
 
@@ -140,6 +141,9 @@ public:
     // Decides who is going to destroy the observer. If it returns |true| it
     // is the duty of the caller. If it is false it is the duty of the port.
     bool CanReap(PortObserver* observer, PortPacket* port_packet);
+
+    // Removes the packet form the port queue. No-op if the packet was not queued.
+    void RecallPacket(PortPacket* port_packet);
 
     // Called under the handle table lock.
     mx_status_t MakeObservers(uint32_t options, Handle* handle,

@@ -381,7 +381,7 @@ static bool channel_pre_writes_repeat() {
     return pre_writes_channel_test(MX_WAIT_ASYNC_REPEATING);
 }
 
-static bool cancel_event(uint32_t wait_mode, uint32_t cancel_mode) {
+static bool cancel_event(uint32_t wait_mode, uint32_t cancel_mode, bool before) {
     BEGIN_TEST;
     mx_status_t status;
 
@@ -401,11 +401,16 @@ static bool cancel_event(uint32_t wait_mode, uint32_t cancel_mode) {
 
     uint64_t cancel_key = (cancel_mode == MX_CANCEL_ANY) ? 0u : 13u;
 
-    EXPECT_EQ(mx_handle_cancel(ev, cancel_key, cancel_mode), NO_ERROR, "");
+    if (before)
+        EXPECT_EQ(mx_handle_cancel(ev, cancel_key, cancel_mode), NO_ERROR, "");
+
     for (int ix = 0; ix != 2; ++ix) {
         EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
         EXPECT_EQ(mx_object_signal(ev, MX_EVENT_SIGNALED, 0u), NO_ERROR, "");
     }
+
+    if (!before)
+        EXPECT_EQ(mx_handle_cancel(ev, cancel_key, cancel_mode), NO_ERROR, "");
 
     mx_port_packet_t out = {};
     int wait_count = 0;
@@ -436,20 +441,36 @@ static bool cancel_event(uint32_t wait_mode, uint32_t cancel_mode) {
     END_TEST;
 }
 
-static bool cancel_event_key_once() {
-    return cancel_event(MX_WAIT_ASYNC_ONCE, MX_CANCEL_KEY);
+static bool cancel_event_key_once_before() {
+    return cancel_event(MX_WAIT_ASYNC_ONCE, MX_CANCEL_KEY, true);
 }
 
-static bool cancel_event_key_repeat() {
-    return cancel_event(MX_WAIT_ASYNC_REPEATING, MX_CANCEL_KEY);
+static bool cancel_event_key_repeat_before() {
+    return cancel_event(MX_WAIT_ASYNC_REPEATING, MX_CANCEL_KEY, true);
 }
 
-static bool cancel_event_any_once() {
-    return cancel_event(MX_WAIT_ASYNC_ONCE, MX_CANCEL_ANY);
+static bool cancel_event_any_once_before() {
+    return cancel_event(MX_WAIT_ASYNC_ONCE, MX_CANCEL_ANY, true);
 }
 
-static bool cancel_event_any_repeat() {
-    return cancel_event(MX_WAIT_ASYNC_REPEATING, MX_CANCEL_ANY);
+static bool cancel_event_any_repeat_before() {
+    return cancel_event(MX_WAIT_ASYNC_REPEATING, MX_CANCEL_ANY, true);
+}
+
+static bool cancel_event_key_once_after() {
+    return cancel_event(MX_WAIT_ASYNC_ONCE, MX_CANCEL_KEY, false);
+}
+
+static bool cancel_event_key_repeat_after() {
+    return cancel_event(MX_WAIT_ASYNC_REPEATING, MX_CANCEL_KEY, false);
+}
+
+static bool cancel_event_any_once_after() {
+    return cancel_event(MX_WAIT_ASYNC_ONCE, MX_CANCEL_ANY, false);
+}
+
+static bool cancel_event_any_repeat_after() {
+    return cancel_event(MX_WAIT_ASYNC_REPEATING, MX_CANCEL_ANY, false);
 }
 
 BEGIN_TEST_CASE(port_tests)
@@ -466,10 +487,14 @@ RUN_TEST(async_wait_close_order_5)
 RUN_TEST(async_wait_close_order_6)
 RUN_TEST(channel_pre_writes_once)
 RUN_TEST(channel_pre_writes_repeat)
-RUN_TEST(cancel_event_key_once)
-RUN_TEST(cancel_event_key_repeat)
-RUN_TEST(cancel_event_any_once)
-RUN_TEST(cancel_event_any_repeat)
+RUN_TEST(cancel_event_key_once_before)
+RUN_TEST(cancel_event_key_repeat_before)
+RUN_TEST(cancel_event_any_once_before)
+RUN_TEST(cancel_event_any_repeat_before)
+RUN_TEST(cancel_event_key_once_after)
+RUN_TEST(cancel_event_key_repeat_after)
+RUN_TEST(cancel_event_any_once_after)
+RUN_TEST(cancel_event_any_repeat_after)
 END_TEST_CASE(port_tests)
 
 #ifndef BUILD_COMBINED_TESTS
