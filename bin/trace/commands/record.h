@@ -12,6 +12,7 @@
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_launcher.fidl.h"
 #include "apps/tracing/lib/measure/duration.h"
+#include "apps/tracing/lib/measure/measurements.h"
 #include "apps/tracing/lib/measure/time_between.h"
 #include "apps/tracing/lib/trace_converters/chromium_exporter.h"
 #include "apps/tracing/src/trace/command.h"
@@ -35,7 +36,7 @@ class Record : public CommandWithTraceController {
     bool decouple = false;
     uint32_t buffer_size_megabytes_hint = 4;
     std::string output_file_name = "/tmp/trace.json";
-    Measurements measurements;
+    measure::Measurements measurements;
   };
 
   static Info Describe();

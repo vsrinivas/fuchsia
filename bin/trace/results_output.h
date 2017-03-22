@@ -6,17 +6,15 @@
 #define APPS_TRACING_SRC_TRACE_RESULTS_OUTPUT_H_
 
 #include <ostream>
-#include <unordered_map>
 #include <vector>
 
+#include "apps/tracing/lib/measure/results.h"
 #include "apps/tracing/src/trace/spec.h"
 
 namespace tracing {
 
-void OutputResults(
-    std::ostream& out,
-    const Measurements& measurements,
-    const std::unordered_map<uint64_t, std::vector<Ticks>>& samples);
+void OutputResults(std::ostream& out,
+                   const std::vector<measure::Result>& results);
 
 }  // namespace tracing
 

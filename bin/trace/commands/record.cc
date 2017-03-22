@@ -207,16 +207,21 @@ void Record::ProcessMeasurements() {
     }
   }
 
-  std::unordered_map<uint64_t, std::vector<Ticks>> samples;
+  std::unordered_map<uint64_t, std::vector<Ticks>> ticks;
   if (measure_duration_) {
-    samples.insert(measure_duration_->results().begin(),
-                   measure_duration_->results().end());
+    ticks.insert(measure_duration_->results().begin(),
+                 measure_duration_->results().end());
   }
   if (measure_time_between_) {
-    samples.insert(measure_time_between_->results().begin(),
-                   measure_time_between_->results().end());
+    ticks.insert(measure_time_between_->results().begin(),
+                 measure_time_between_->results().end());
   }
-  OutputResults(out(), options_.measurements, samples);
+
+  uint64_t ticks_per_second = GetTicksPerSecond();
+  FTL_DCHECK(ticks_per_second);
+  std::vector<measure::Result> results =
+      measure::ComputeResults(options_.measurements, ticks, ticks_per_second);
+  OutputResults(out(), results);
 }
 
 void Record::DoneTrace() {
