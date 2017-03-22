@@ -363,7 +363,8 @@ void eth_recv(void* _data, size_t len) {
 
     // require that we are the destination
     if (memcmp(&ll_ip6_addr, ip->dst, IP6_ADDR_LEN) &&
-        memcmp(&snm_ip6_addr, ip->dst, IP6_ADDR_LEN)) {
+        memcmp(&snm_ip6_addr, ip->dst, IP6_ADDR_LEN) &&
+        memcmp(&ip6_ll_all_nodes, ip->dst, IP6_ADDR_LEN)) {
         return;
     }
 
