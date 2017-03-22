@@ -5,6 +5,7 @@
 group("tools") {
   deps = [
     "btsnoop",
+    "hci_acl_test",
     "hcitool",
   ]
 }
