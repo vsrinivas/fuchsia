@@ -2,20 +2,17 @@
 
 This file contains a random collection of notes for hacking on Magenta.
 
-## Regenerating syscall support
+## syscall generation
 
-Syscall support is generated from system/public/magenta/syscalls.sysgen.
-Generally we don't want to willy-nilly add syscalls of course.
-But if, perchance, you need to regenerate the syscall support files follow
-these instructions.
+Syscall support is generated from
+system/public/magenta/syscalls.sysgen.  A host tool called
+[sysgen](../system/host/sysgen) consumes that file and produces output
+for both the kernel and userspace in a variety of languages. This
+output includes C or C++ headers for both the kernel and userspace,
+syscall entry points, other language bindings, and so on.
 
-Generally it's best to regenerate the files in a clean client.
-That way `git status` will tell you what files have been changed.
-Regenerating the files is easy enough:
-
-```
-$ scripts/run-sysgen.sh
-```
+This tool is invoked as a part of the build, rather than checking in
+its output.
 
 ## Terminal navigation and keyboard shortcuts
 
