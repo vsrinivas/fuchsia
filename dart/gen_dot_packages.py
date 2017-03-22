@@ -50,6 +50,9 @@ def main():
   parser.add_argument("--deps", help="List of dependencies", nargs="*")
   args = parser.parse_args()
 
+  # Note: args.out will start with a toolchain subdirectory when applicable.
+  # Not using args.root_gen_dir exclusively as depfile needs to use target paths
+  # relative to args.root_build_dir.
   dot_packages_file = os.path.join(args.root_build_dir, args.out)
   create_base_directory(dot_packages_file)
   package_locator_file = os.path.join(args.root_gen_dir, "dart.sources",
@@ -71,6 +74,8 @@ def main():
       target_base = target_base[:target_sep]
     else:
       target_name = target_base[target_base.rfind("/")+1:]
+    # Note: args.root_gen_dir takes the toolchain into account, so we know we
+    # only depend on packages "built" for the same toolchain.
     dep_dot_packages_path = os.path.join(
         args.root_gen_dir, target_base, "%s.packages" % target_name)
     dependent_files.append(dep_dot_packages_path)
@@ -94,7 +99,7 @@ def main():
     depfile.write("%s: %s\n" % (args.out, " ".join(dependent_files)))
 
   with open(package_locator_file, "w") as package_locator:
-      package_locator.write(args.source_dir)
+    package_locator.write(args.source_dir)
 
   return 0
 
