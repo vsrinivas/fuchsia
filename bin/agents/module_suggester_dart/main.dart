@@ -14,8 +14,9 @@ final _proposalPublisher = new ProposalPublisherProxy();
 final _askHandlerBinding = new AskHandlerBinding();
 
 class AskHandlerImpl extends AskHandler {
-  final _urlSubPattern = new RegExp(r"\.[a-z]{2}");
-  final _dashboardSubPattern = new RegExp(r"^das|^fuc|^bui|^sta");
+  static final _urlSubPattern = new RegExp(r"\.[a-z]{2}");
+  static final _dashboardSubPattern = new RegExp(r"^das|^fuc|^bui|^sta");
+  static final _chatHeadline = "Open Chat";
 
   @override
   void ask(UserInput query, void callback(List<Proposal> proposals)) {
@@ -67,6 +68,28 @@ class AskHandlerImpl extends AskHandler {
       action.createStory = createStory;
       proposal.onSelected = new List<Action>();
       proposal.onSelected.add(action);
+
+      proposals.add(proposal);
+    }
+    if ((query.text?.isNotEmpty ?? false) &&
+        _chatHeadline.toLowerCase().contains(query.text.toLowerCase())) {
+      final proposal = new Proposal();
+      proposal.id = "open chat";
+
+      proposal.display = new SuggestionDisplay();
+      proposal.display.headline = _chatHeadline;
+      proposal.display.subheadline = "";
+      proposal.display.details = "";
+      proposal.display.color = 0xFF9C27B0; // Material Purple 500
+      proposal.display.iconUrls = const <String>[];
+      proposal.display.imageType = SuggestionImageType.other;
+      proposal.display.imageUrl = "";
+
+      final createStory = new CreateStory();
+      createStory.moduleId = "file:///system/apps/chat";
+
+      final action = new Action()..createStory = createStory;
+      proposal.onSelected = <Action>[action];
 
       proposals.add(proposal);
     }
