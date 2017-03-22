@@ -19,16 +19,11 @@ namespace fonts {
 namespace {
 
 constexpr char kFontManifestPath[] = "/system/data/fonts/manifest.json";
-constexpr char kFallbackFontFamily[] = "Roboto";
+constexpr char kFallback[] = "fallback";
+constexpr char kFamilies[] = "families";
+
 constexpr mx_rights_t kFontDataRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP;
-
-void LogInvalidJson() {
-  FTL_LOG(ERROR) << "Font manifest at '" << kFontManifestPath << "' is invalid."
-                 << " Specifically, it must be an object, with keys from font"
-                 << " family names to paths containing the corresponding"
-                 << " font data.";
-}
 
 }  // namespace
 
@@ -44,68 +39,40 @@ bool FontProviderImpl::LoadFontsInternal() {
     return false;
   }
 
-  rapidjson::Document json;
-  json.Parse(json_data.data());
-  if (!json.IsObject()) {
-    LogInvalidJson();
+  rapidjson::Document document;
+  document.Parse(json_data.data());
+  if (document.HasParseError() || !document.IsObject()) {
+    FTL_LOG(ERROR) << "Font manifest was not vaild JSON.";
     return false;
   }
 
-  mx::vmo fallback_vmo;
-  for (const auto& entry : json.GetObject()) {
-    // The iterator here is from string (family) to json type (path),
-    // so we have to check the second type.
-    const auto& family = entry.name.GetString();
-    const auto& json_path = entry.value;
-    if (!json_path.IsString()) {
-      LogInvalidJson();
-      return false;
-    }
-    auto path = json_path.GetString();
-
-    std::string data;
-    if (!files::ReadFileToString(path, &data)) {
-      FTL_LOG(ERROR) << "Failed to read " << family << " font data from '"
-                     << path << "'.";
-      return false;
-    }
-
-    mx::vmo vmo;
-    mx_status_t rv = mx::vmo::create(data.size(), 0, &vmo);
-    if (rv != NO_ERROR) {
-      FTL_LOG(ERROR) << "Failed to create VMO for " << family << ":"
-                     << mx_status_get_string(rv);
-      return false;
-    }
-
-    size_t actual = 0;
-    rv = vmo.write(data.data(), 0, data.size(), &actual);
-    if (rv < 0) {
-      FTL_LOG(ERROR) << "Failed to write data to VMO for " << family << ":"
-                     << mx_status_get_string(rv);
-      return false;
-    }
-
-    if (!strcmp(family, kFallbackFontFamily)) {
-      rv = vmo.duplicate(kFontDataRights, &fallback_vmo);
-      if (rv != NO_ERROR) {
-        FTL_LOG(ERROR) << "Failed to create fallback vmo."
-                       << mx_status_get_string(rv);
-        return false;
-      }
-    }
-
-    font_vmos_.push_back(std::move(vmo));
-    font_data_[family] = font_vmos_.size() - 1;
+  const auto& fallback = document.FindMember(kFallback);
+  if (fallback == document.MemberEnd() || !fallback->value.IsString()) {
+    FTL_LOG(ERROR) << "Font manifest did not contain a valid 'fallback' family.";
+    return false;
   }
+  fallback_ = fallback->value.GetString();
 
-  if (!fallback_vmo) {
-    FTL_LOG(ERROR) << "Failed to find fallback family " << kFallbackFontFamily
-                   << ".";
+  const auto& families = document.FindMember(kFamilies);
+  if (families == document.MemberEnd() || !families->value.IsArray()) {
+    FTL_LOG(ERROR) << "Font manifest did not contain any families.";
     return false;
   }
 
-  fallback_vmo_ = std::move(fallback_vmo);
+  for (const auto& family : families->value.GetArray()) {
+    auto parsed_family = std::make_unique<FontFamily>();
+    if (!parsed_family->Load(family))
+      return false;
+    std::string name = parsed_family->name();
+    families_.emplace(name, std::move(parsed_family));
+  }
+
+  if (families_.find(fallback_) == families_.end()) {
+    FTL_LOG(ERROR) << "Font manifest did not contain '" << fallback_
+                   << "', which is the fallback family.";
+    return false;
+  }
+
   return true;
 }
 
@@ -117,9 +84,8 @@ bool FontProviderImpl::LoadFonts() {
 }
 
 void FontProviderImpl::Reset() {
-  font_data_.clear();
-  font_vmos_.clear();
-  fallback_vmo_.reset();
+  fallback_.clear();
+  families_.clear();
 }
 
 void FontProviderImpl::AddBinding(
@@ -129,20 +95,28 @@ void FontProviderImpl::AddBinding(
 
 void FontProviderImpl::GetFont(FontRequestPtr request,
                                const GetFontCallback& callback) {
-  if (!fallback_vmo_) {
+  if (families_.empty()) {
     callback(nullptr);
     return;
   }
 
-  // TODO(kulakowski) Do something smarter than just lookup by family.
-  mx::vmo* font_vmo = &fallback_vmo_;
-  auto font_data = font_data_.find(request->family);
-  if (font_data != font_data_.end()) {
-    font_vmo = &font_vmos_[font_data->second];
+  auto it = families_.find(request->family);
+  if (it == families_.end())
+    it = families_.find(fallback_);
+
+  if (it == families_.end()) {
+    callback(nullptr);
+    return;
+  }
+
+  mx::vmo* font_data = it->second->GetFontData(request);
+  if (!font_data) {
+    callback(nullptr);
+    return;
   }
 
   auto data = FontData::New();
-  if (font_vmo->duplicate(kFontDataRights, &data->vmo) < 0) {
+  if (font_data->duplicate(kFontDataRights, &data->vmo) < 0) {
     callback(nullptr);
     return;
   }

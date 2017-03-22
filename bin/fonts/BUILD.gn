@@ -4,6 +4,8 @@
 
 executable("fonts") {
   sources = [
+    "font_family.cc",
+    "font_family.h",
     "font_provider_impl.cc",
     "font_provider_impl.h",
     "main.cc",

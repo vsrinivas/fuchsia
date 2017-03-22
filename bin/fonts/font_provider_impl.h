@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "apps/fonts/font_family.h"
 #include "apps/fonts/services/font_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -39,17 +40,8 @@ class FontProviderImpl : public FontProvider {
   void Reset();
 
   fidl::BindingSet<FontProvider> bindings_;
-
-  // Map from font family name to vmo containing font data. Indices in
-  // font_data_ point into font_vmos_.
-  // TODO(kulakowski): We should be smarter than matching family
-  // exactly.
-  std::unordered_map<std::string, size_t> font_data_;
-  std::vector<mx::vmo> font_vmos_;
-
-  // VMO for a fallback font when font_data_ does not contain an exact
-  // family match for a request.
-  mx::vmo fallback_vmo_;
+  std::string fallback_;
+  std::unordered_map<std::string, std::unique_ptr<FontFamily>> families_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FontProviderImpl);
 };
