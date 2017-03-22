@@ -49,7 +49,7 @@ public:
     uint32_t NumActiveContexts() { return active_context_count_; }
 
 private:
-    uint32_t active_context_count_;
+    uint32_t active_context_count_ = 0;
 };
 
 TEST(MagmaSystemConnection, ContextManagement)
