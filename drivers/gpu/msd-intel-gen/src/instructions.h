@@ -79,14 +79,16 @@ public:
 
     static constexpr uint32_t kIndirectStatePointersDisableBit = 1 << 9;
     static constexpr uint32_t kPostSyncWriteImmediateBit = 1 << 14;
+    static constexpr uint32_t kGenericMediaStateClearBit = 1 << 16;
     static constexpr uint32_t kCommandStreamerStallEnableBit = 1 << 20;
     static constexpr uint32_t kAddressSpaceGlobalGttBit = 1 << 24;
 
     static void write(InstructionWriter* writer, uint32_t sequence_number, uint64_t gpu_addr,
                       uint32_t flags)
     {
-        DASSERT((flags & ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisableBit)) ==
-                0);
+        DASSERT((flags &
+                 ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisableBit |
+                   kGenericMediaStateClearBit)) == 0);
         writer->write_dword(kCommandType | kCommandSubType | k3dCommandOpcode |
                             k3dCommandSubOpcode | (kDwordCount - 2));
         writer->write_dword(flags | kPostSyncWriteImmediateBit | kAddressSpaceGlobalGttBit);

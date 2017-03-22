@@ -69,8 +69,18 @@ std::weak_ptr<MsdIntelContext> CommandBuffer::GetContext() { return context_; }
 
 uint32_t CommandBuffer::GetPipeControlFlags()
 {
-    return MiPipeControl::kIndirectStatePointersDisableBit |
-           MiPipeControl::kCommandStreamerStallEnableBit;
+    uint32_t flags = MiPipeControl::kCommandStreamerStallEnableBit;
+
+    // Experimentally including this bit has been shown to resolve gpu faults where a batch
+    // completes; we clear gtt mappings for resources; then on the next batch,
+    // an invalid address is emitted corresponding to a cleared gpu mapping.  This was
+    // first seen when a compute shader was introduced.
+    flags |= MiPipeControl::kGenericMediaStateClearBit;
+
+    // Similarly, including this bit was shown to resolve the emission of an invalid address.
+    flags |= MiPipeControl::kIndirectStatePointersDisableBit;
+
+    return flags;
 }
 
 bool CommandBuffer::GetGpuAddress(gpu_addr_t* gpu_addr_out)
