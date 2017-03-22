@@ -84,6 +84,12 @@ TEST(Spec, DecodingErrors) {
       "{\"type\": \"time_between\"}"
       "]}";
   EXPECT_FALSE(DecodeSpec(json, &result));
+
+  // Additional properies.
+  json = R"({
+    "bla": "hey there"
+  })";
+  EXPECT_FALSE(DecodeSpec(json, &result));
 }
 
 TEST(Spec, DecodeEmpty) {
@@ -119,6 +125,13 @@ TEST(Spec, DecodeDuration) {
   ASSERT_TRUE(DecodeSpec(json, &result));
   EXPECT_EQ(ftl::TimeDelta::FromSeconds(42).ToNanoseconds(),
             result.duration.ToNanoseconds());
+}
+
+TEST(Spec, ErrorOnNegativeDuration) {
+  std::string json = "{\"duration\": -42}";
+
+  Spec result;
+  EXPECT_FALSE(DecodeSpec(json, &result));
 }
 
 TEST(Spec, DecodeMeasureDuration) {
