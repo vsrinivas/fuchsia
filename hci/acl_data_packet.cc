@@ -40,7 +40,7 @@ void ACLDataTxPacket::EncodeHeader() {
   GetMutableHeader()->data_total_length = htole16(static_cast<uint16_t>(GetPayloadSize()));
 }
 
-ACLDataRxPacket::ACLDataRxPacket(common::ByteBuffer* buffer)
+ACLDataRxPacket::ACLDataRxPacket(const common::ByteBuffer* buffer)
     : common::Packet<ACLDataHeader>(buffer) {
   SetPayloadSize(le16toh(GetHeader().data_total_length));
 }

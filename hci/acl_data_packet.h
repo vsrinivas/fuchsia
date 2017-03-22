@@ -16,6 +16,8 @@ class MutableByteBuffer;
 
 namespace hci {
 
+// TODO(armansito): Rename these to ACLDataPacketReader and ACLDataPacketWriter.
+
 // Represents a HCI ACL data packet to be sent from the host to the controller.
 class ACLDataTxPacket : public ::bluetooth::common::MutablePacket<ACLDataHeader> {
  public:
@@ -41,7 +43,7 @@ class ACLDataTxPacket : public ::bluetooth::common::MutablePacket<ACLDataHeader>
 // Represents a HCI ACL data packet received from the controller.
 class ACLDataRxPacket : public ::bluetooth::common::Packet<ACLDataHeader> {
  public:
-  explicit ACLDataRxPacket(common::ByteBuffer* buffer);
+  explicit ACLDataRxPacket(const common::ByteBuffer* buffer);
 
   // Getters for header fields.
   ConnectionHandle GetConnectionHandle() const;

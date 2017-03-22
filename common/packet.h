@@ -101,7 +101,7 @@ class Packet {
   // Initializes this Packet to operate over |buffer|. |payload_size| is the
   // size of the packet payload not including the packet header. A
   // |payload_size| value of 0 indicates that the packet contains no payload.
-  explicit Packet(ByteBuffer* buffer, size_t payload_size = 0u)
+  explicit Packet(const ByteBuffer* buffer, size_t payload_size = 0u)
       : buffer_(buffer), size_(sizeof(HeaderType) + payload_size) {
     FTL_DCHECK(buffer_);
     FTL_DCHECK(buffer_->GetSize() >= size_);
@@ -144,14 +144,14 @@ class Packet {
   size_t size() const { return size_; }
 
   // Returns a pointer to the underlying buffer.
-  ByteBuffer* buffer() const { return buffer_; }
+  const ByteBuffer* buffer() const { return buffer_; }
 
   // Returns the raw bytes of the packet in a ByteBuffer. The returned buffer is a view over the
   // portion of the underlying buffer that is used by this packet.
   const BufferView GetBytes() const { return BufferView(buffer_->GetData(), size_); }
 
  private:
-  ByteBuffer* buffer_;  // weak
+  const ByteBuffer* buffer_;  // weak
   size_t size_;
 };
 
@@ -179,7 +179,9 @@ class MutablePacket : public Packet<HeaderType> {
   }
 
   MutableByteBuffer* mutable_buffer() const {
-    return static_cast<MutableByteBuffer*>(this->buffer());
+    // Cast-away the const. This is OK in this case since we're storing our buffer in the parent
+    // class instead of duplicating a non-const version in this class.
+    return const_cast<MutableByteBuffer*>(static_cast<const MutableByteBuffer*>(this->buffer()));
   }
 
  protected:
