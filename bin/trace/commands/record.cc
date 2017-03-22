@@ -7,7 +7,6 @@
 
 #include "apps/tracing/src/trace/commands/record.h"
 #include "apps/tracing/src/trace/results_output.h"
-#include "apps/tracing/src/trace/spec.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
@@ -43,8 +42,7 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
     args = std::move(spec.args);
     categories = std::move(spec.categories);
     duration = std::move(spec.duration);
-    measure_duration_specs = std::move(spec.duration_specs);
-    measure_time_between_specs = std::move(spec.time_between_specs);
+    measurements = std::move(spec.measurements);
   }
 
   // --categories=<cat1>,<cat2>,...
@@ -146,15 +144,15 @@ void Record::Run(const ftl::CommandLine& command_line) {
 
   exporter_.reset(new ChromiumExporter(std::move(out_file)));
   tracer_.reset(new Tracer(trace_controller().get()));
-  if (!options_.measure_duration_specs.empty()) {
+  if (!options_.measurements.duration.empty()) {
     aggregate_events_ = true;
     measure_duration_.reset(
-        new measure::MeasureDuration(options_.measure_duration_specs));
+        new measure::MeasureDuration(options_.measurements.duration));
   }
-  if (!options_.measure_time_between_specs.empty()) {
+  if (!options_.measurements.time_between.empty()) {
     aggregate_events_ = true;
     measure_time_between_.reset(
-        new measure::MeasureTimeBetween(options_.measure_time_between_specs));
+        new measure::MeasureTimeBetween(options_.measurements.time_between));
   }
 
   tracing_ = true;
@@ -191,12 +189,7 @@ void Record::StopTrace() {
   }
 }
 
-void Record::DoneTrace() {
-  tracer_.reset();
-  exporter_.reset();
-
-  out() << "Trace file written to " << options_.output_file_name << std::endl;
-
+void Record::ProcessMeasurements() {
   if (!events_.empty()) {
     std::sort(
         std::begin(events_), std::end(events_),
@@ -214,9 +207,27 @@ void Record::DoneTrace() {
     }
   }
 
-  OutputResults(out(), options_.measure_duration_specs,
-                options_.measure_time_between_specs,
-                measure_duration_->results(), measure_time_between_->results());
+  std::unordered_map<uint64_t, std::vector<Ticks>> samples;
+  if (measure_duration_) {
+    samples.insert(measure_duration_->results().begin(),
+                   measure_duration_->results().end());
+  }
+  if (measure_time_between_) {
+    samples.insert(measure_time_between_->results().begin(),
+                   measure_time_between_->results().end());
+  }
+  OutputResults(out(), options_.measurements, samples);
+}
+
+void Record::DoneTrace() {
+  tracer_.reset();
+  exporter_.reset();
+
+  out() << "Trace file written to " << options_.output_file_name << std::endl;
+
+  if (measure_duration_ || measure_time_between_) {
+    ProcessMeasurements();
+  }
 
   mtl::MessageLoop::GetCurrent()->QuitNow();
 }

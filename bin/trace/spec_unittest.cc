@@ -98,8 +98,8 @@ TEST(Spec, DecodeEmpty) {
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
   EXPECT_EQ("", result.app);
-  EXPECT_EQ(0u, result.duration_specs.size());
-  EXPECT_EQ(0u, result.time_between_specs.size());
+  EXPECT_EQ(0u, result.measurements.duration.size());
+  EXPECT_EQ(0u, result.measurements.time_between.size());
 }
 
 TEST(Spec, DecodeArgs) {
@@ -148,11 +148,11 @@ TEST(Spec, DecodeMeasureDuration) {
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
-  EXPECT_EQ(2u, result.duration_specs.size());
+  EXPECT_EQ(2u, result.measurements.duration.size());
   EXPECT_EQ(measure::DurationSpec({0u, {"initialization", "bazinga"}}),
-            result.duration_specs[0]);
+            result.measurements.duration[0]);
   EXPECT_EQ(measure::DurationSpec({1u, {"startup", "foo"}}),
-            result.duration_specs[1]);
+            result.measurements.duration[1]);
 }
 
 TEST(Spec, DecodeMeasureTimeBetween) {
@@ -170,13 +170,42 @@ TEST(Spec, DecodeMeasureTimeBetween) {
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
-  EXPECT_EQ(1u, result.time_between_specs.size());
+  EXPECT_EQ(1u, result.measurements.time_between.size());
   EXPECT_EQ(measure::TimeBetweenSpec({0u,
                                       {"e1", "c1"},
                                       measure::Anchor::Begin,
                                       {"e2", "c2"},
                                       measure::Anchor::End}),
-            result.time_between_specs[0]);
+            result.measurements.time_between[0]);
+}
+
+TEST(Spec, DecodeMeasurementSplitSamplesAt) {
+  std::string json = R"({
+    "measure": [
+      {
+        "type": "duration",
+        "event_name": "foo",
+        "event_category": "bar",
+        "split_samples_at": [1,42]
+      },
+      {
+        "type": "time_between",
+        "first_event_name": "foo1",
+        "first_event_category": "bar1",
+        "second_event_name": "foo2",
+        "second_event_category": "bar2",
+        "split_samples_at": [2]
+      }
+    ]
+  })";
+
+  Spec spec;
+  ASSERT_TRUE(DecodeSpec(json, &spec));
+  auto measurements = std::move(spec.measurements);
+  EXPECT_EQ(1u, measurements.duration.size());
+  auto expected = std::unordered_map<uint64_t, std::vector<size_t>>{
+      {0u, {1u, 42u}}, {1u, {2u}}};
+  EXPECT_EQ(expected, measurements.split_samples_at);
 }
 
 }  // namespace

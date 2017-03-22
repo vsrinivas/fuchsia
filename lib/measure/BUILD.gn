@@ -8,6 +8,8 @@ source_set("measure") {
     "duration.h",
     "event_spec.cc",
     "event_spec.h",
+    "split.cc",
+    "split.h",
     "time_between.cc",
     "time_between.h",
   ]
@@ -23,6 +25,7 @@ source_set("unittests") {
 
   sources = [
     "duration_unittest.cc",
+    "split_unittest.cc",
     "test_events.cc",
     "test_events.h",
     "time_between_unittest.cc",

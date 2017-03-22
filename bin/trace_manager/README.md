@@ -65,11 +65,11 @@ line value overrides the one from the file.
 
 The file supports the following top level-parameters:
 
- - `"app"`: string, url of the application to be run
- - `"args"`: array of strings, startup arguments to be passed to the application
- - `"categories"`: array of strings, tracing categories to be enabled
- - `"duration"`: integer, duration of tracing in seconds
- - `"measure"`: array of measurement specifications, see below
+ - `app`: string, url of the application to be run
+ - `args`: array of strings, startup arguments to be passed to the application
+ - `categories`: array of strings, tracing categories to be enabled
+ - `duration`: integer, duration of tracing in seconds
+ - `measure`: array of measurement specifications, see below
 
 ### Benchmarking
 
@@ -81,11 +81,12 @@ Example:
 ```
 {
   "app": "ledger_benchmark_put",
-  "args": ["--entry-count=10", "--value-size=100"],
+  "args": ["--entry-count=100", "--value-size=1000"],
   "categories": ["benchmark", "ledger"],
   "measure": [
     {
       "type": "duration",
+      "split_samples_at": [1, 50],
       "event_name": "put",
       "event_category": "benchmark"
     },
@@ -101,22 +102,33 @@ Example:
 }
 ```
 
-A `"duration"` measurement targets a single trace event and computes the
+A `duration` measurement targets a single trace event and computes the
 duration of its occurences. The target trace event can be recorded as a
-"duration" or as an "async" event. Takes arguments: `"event_name"`,
-`"event_category"`.
+duration or as an async event. Takes arguments: `event_name`,
+`event_category`.
 
-A `"time_between"` measurement targets two trace events with the specified
+A `time_between` measurement targets two trace events with the specified
 anchors (either the beginning or the end of the events) and computes the time
 between the consecutive occurences of the two. The target events can be
 "duration", "async" or "instant" (in which case the anchor doesn't matter).
-Takes arguments: `"first_event_name"`, `"first_event_category"`,
-`"first_event_anchor"`, `"second_event_name"`, `"second_event_category"`,
-`"second_event_anchor"`.
+Takes arguments: `first_event_name`, `first_event_category`,
+`first_event_anchor`, `second_event_name`, `second_event_category`,
+`second_event_anchor`.
 
-In the example above the `"time_between"` measurement captures the time between
+In the example above the `time_between` measurement captures the time between
 the instant event "initialized" and the beginning of the duration event
 "commit_download".
+
+Both `duration` and `time_between` measurements can optionally group the
+recorded samples into consecutive ranges, splitting the samples at the given
+instances of the recorded events and reporting the results of each group
+separately. In order to achieve that, pass a strictly increasing list of
+zero-based numbers denoting the occurences at which samples must be split as
+`split_samples_at`.
+
+For example, if a measurement specifies `"split_samples_at": [1, 50],`, the
+results will be reported in three groups: sample 0, samples 1 - 49, and samples
+50 to N, where N is the last samples.
 
 ## Capturing Trace Data from Host
 

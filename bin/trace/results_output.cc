@@ -8,6 +8,7 @@
 #include <limits>
 #include <numeric>
 
+#include "apps/tracing/lib/measure/split.h"
 #include "apps/tracing/lib/trace/ticks.h"
 
 namespace tracing {
@@ -39,37 +40,65 @@ double StdDev(const std::vector<Ticks>& samples, double average) {
   return std::sqrt(sum_of_squared_deltas / samples.size());
 }
 
-template <typename Spec>
-void OutputSingle(
-    std::ostream& out,
-    const Spec& spec,
-    const std::unordered_map<uint64_t, std::vector<Ticks>>& results,
-    const Ticks ticks_per_second) {
-  const double ticks_to_ms_scale = 1'000.0 / ticks_per_second;
+void OutputSamples(std::ostream& out,
+                   const std::vector<Ticks>& samples,
+                   const double ticks_to_ms) {
+  FTL_DCHECK(!samples.empty());
+  if (samples.size() == 1) {
+    out << samples[0] * ticks_to_ms << "ms";
+    return;
+  }
 
-  out << spec << " -> ";
-  if (!results.count(spec.id) || results.at(spec.id).empty()) {
+  double average = Average(samples);
+  double std_dev = StdDev(samples, average);
+
+  out << "avg " << average * ticks_to_ms << "ms out of " << samples.size()
+      << " samples. "
+      << "(std dev " << std_dev * ticks_to_ms << ")";
+}
+
+template <typename MeasureSpec>
+void OutputMeasurement(
+    std::ostream& out,
+    const MeasureSpec& measure_spec,
+    const Measurements& measurements,
+    const std::unordered_map<uint64_t, std::vector<Ticks>>& samples,
+    const double ticks_to_ms) {
+  const uint64_t id = measure_spec.id;
+  std::vector<measure::SampleRange> ranges;
+  if (samples.count(id) > 0) {
+    ranges = measure::Split(samples.at(id),
+                            measurements.split_samples_at.count(id)
+                                ? measurements.split_samples_at.at(id)
+                                : std::vector<size_t>());
+  }
+
+  out << measure_spec << " -> ";
+  if (ranges.empty()) {
     out << " no results" << std::endl;
     return;
   }
 
-  double average = Average(results.at(spec.id));
-  double std_dev = StdDev(results.at(spec.id), average);
+  if (ranges.size() == 1) {
+    OutputSamples(out, ranges.front().samples, ticks_to_ms);
+    out << std::endl;
+    return;
+  }
 
-  out << "avg " << average * ticks_to_ms_scale << "ms out of "
-      << results.at(spec.id).size() << " samples. "
-      << "(std dev " << std_dev * ticks_to_ms_scale << ")" << std::endl;
+  out << std::endl;
+  for (measure::SampleRange& range : ranges) {
+    out << "  samples " << range.begin << " to " << range.end - 1 << ": ";
+    OutputSamples(out, range.samples, ticks_to_ms);
+    out << std::endl;
+  }
 }
 
 }  // namespace
 
 void OutputResults(
     std::ostream& out,
-    const std::vector<measure::DurationSpec>& duration_specs,
-    const std::vector<measure::TimeBetweenSpec>& time_between_specs,
-    const std::unordered_map<uint64_t, std::vector<Ticks>>& duration_results,
-    const std::unordered_map<uint64_t, std::vector<Ticks>>&
-        time_between_results) {
+    const Measurements& measurements,
+    const std::unordered_map<uint64_t, std::vector<Ticks>>& samples) {
   out.precision(std::numeric_limits<double>::digits10);
 
   uint64_t ticks_per_second = GetTicksPerSecond();
@@ -80,13 +109,13 @@ void OutputResults(
         << "mx_ticks_per_second() returned 0, assuming 10^9 ticks per second.";
     ticks_per_second = 1'000'000'000;
   }
+  const double ticks_to_ms = 1'000.0 / ticks_per_second;
 
-  for (auto& spec : duration_specs) {
-    OutputSingle(out, spec, duration_results, ticks_per_second);
+  for (auto& measure_spec : measurements.duration) {
+    OutputMeasurement(out, measure_spec, measurements, samples, ticks_to_ms);
   }
-
-  for (auto& spec : time_between_specs) {
-    OutputSingle(out, spec, time_between_results, ticks_per_second);
+  for (auto& measure_spec : measurements.time_between) {
+    OutputMeasurement(out, measure_spec, measurements, samples, ticks_to_ms);
   }
 }
 

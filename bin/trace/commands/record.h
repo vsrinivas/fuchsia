@@ -15,6 +15,7 @@
 #include "apps/tracing/lib/measure/time_between.h"
 #include "apps/tracing/lib/trace_converters/chromium_exporter.h"
 #include "apps/tracing/src/trace/command.h"
+#include "apps/tracing/src/trace/spec.h"
 #include "apps/tracing/src/trace/tracer.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/time/time_delta.h"
@@ -33,9 +34,8 @@ class Record : public CommandWithTraceController {
     bool detach = false;
     bool decouple = false;
     uint32_t buffer_size_megabytes_hint = 4;
-    std::vector<measure::DurationSpec> measure_duration_specs;
-    std::vector<measure::TimeBetweenSpec> measure_time_between_specs;
     std::string output_file_name = "/tmp/trace.json";
+    Measurements measurements;
   };
 
   static Info Describe();
@@ -45,6 +45,7 @@ class Record : public CommandWithTraceController {
 
  private:
   void StopTrace();
+  void ProcessMeasurements();
   void DoneTrace();
   void LaunchApp();
   void StartTimer();

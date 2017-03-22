@@ -9,18 +9,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/tracing/lib/measure/duration.h"
-#include "apps/tracing/lib/measure/time_between.h"
+#include "apps/tracing/src/trace/spec.h"
 
 namespace tracing {
 
 void OutputResults(
     std::ostream& out,
-    const std::vector<measure::DurationSpec>& duration_specs,
-    const std::vector<measure::TimeBetweenSpec>& time_between_specs,
-    const std::unordered_map<uint64_t, std::vector<Ticks>>& duration_results,
-    const std::unordered_map<uint64_t, std::vector<Ticks>>&
-        time_between_results);
+    const Measurements& measurements,
+    const std::unordered_map<uint64_t, std::vector<Ticks>>& samples);
 
 }  // namespace tracing
 

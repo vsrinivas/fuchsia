@@ -47,6 +47,13 @@ const char kRootSchema[] = R"({
           "type": {
             "type": "string"
           },
+          "split_samples_at": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
           "required": ["type"]
         }
       }
@@ -59,6 +66,7 @@ const char kDurationKey[] = "duration";
 const char kCategoriesKey[] = "categories";
 const char kMeasurementsKey[] = "measure";
 const char kTypeKey[] = "type";
+const char kSplitSamplesAtKey[] = "split_samples_at";
 const char kMeasureDurationType[] = "duration";
 const char kMeasureTimeBetweenType[] = "time_between";
 
@@ -241,8 +249,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
           !DecodeMeasureDuration(measurement, &spec)) {
         return false;
       }
-      result.duration_specs.push_back(std::move(spec));
-      counter++;
+      result.measurements.duration.push_back(std::move(spec));
     } else if (type == kMeasureTimeBetweenType) {
       measure::TimeBetweenSpec spec;
       spec.id = counter;
@@ -250,12 +257,27 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
           !DecodeMeasureTimeBetween(measurement, &spec)) {
         return false;
       }
-      result.time_between_specs.push_back(std::move(spec));
-      counter++;
+      result.measurements.time_between.push_back(std::move(spec));
     } else {
       FTL_LOG(ERROR) << "Unrecognized measurement type: " << type;
       return false;
     }
+
+    if (measurement.HasMember(kSplitSamplesAtKey)) {
+      for (auto& value : measurement[kSplitSamplesAtKey].GetArray()) {
+        if (!result.measurements.split_samples_at[counter].empty() &&
+            value.GetUint() <=
+                result.measurements.split_samples_at[counter].back()) {
+          FTL_LOG(ERROR)
+              << "Incorrect split samples at values - not strictly increasing.";
+          return false;
+        }
+        result.measurements.split_samples_at[counter].push_back(
+            value.GetUint());
+      }
+    }
+
+    counter++;
   }
   *spec = result;
   return true;
