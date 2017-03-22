@@ -20,12 +20,12 @@
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
-#include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/story_runner/story_provider_impl.h"
+#include "apps/modular/src/user_runner/focus.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -75,7 +75,7 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 }  // namespace
 
-class UserRunnerImpl : public UserRunner {
+class UserRunnerImpl : UserRunner, UserShellContext {
  public:
   UserRunnerImpl(
       app::ApplicationEnvironmentPtr application_environment,
@@ -89,13 +89,16 @@ class UserRunnerImpl : public UserRunner {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserRunner> user_runner_request)
       : binding_(this, std::move(user_runner_request)),
+        user_shell_context_binding_(this),
         ledger_repository_(
             ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
         user_scope_(
             std::move(application_environment),
             std::string(kUserScopeLabelPrefix) + to_hex_string(user_id)),
         message_queue_manager_(ledger_repository_.get()),
-        token_provider_impl_(auth_token) {
+        token_provider_impl_(auth_token),
+        device_name_(device_name),
+        focus_handler_(device_name, ledger_repository_.get()) {
     binding_.set_connection_error_handler([this] { delete this; });
 
     auto resolver_service_provider =
@@ -128,20 +131,12 @@ class UserRunnerImpl : public UserRunner {
         {&message_queue_manager_, agent_runner_.get(),
          ledger_repository_.get()}));
 
-    fidl::InterfaceHandle<StoryProvider> story_provider;
-    story_provider_impl_->AddBinding(story_provider.NewRequest());
-
-    auto maxwell_services = GetServiceProvider(kMaxwellUrl);
-
+    maxwell_services_ = GetServiceProvider(kMaxwellUrl);
     auto maxwell_launcher =
-        app::ConnectToService<maxwell::Launcher>(maxwell_services.get());
+        app::ConnectToService<maxwell::Launcher>(maxwell_services_.get());
 
     fidl::InterfaceHandle<StoryProvider> story_provider_aux;
     story_provider_impl_->AddBinding(story_provider_aux.NewRequest());
-
-    // The FocusController is implemented by the UserShell.
-    fidl::InterfaceHandle<FocusController> focus_controller;
-    auto focus_controller_request = focus_controller.NewRequest();
 
     maxwell_component_context_impl_.reset(
         new ComponentContextImpl({&message_queue_manager_, agent_runner_.get(),
@@ -152,13 +147,11 @@ class UserRunnerImpl : public UserRunner {
             maxwell_component_context_impl_.get()));
     maxwell_launcher->Initialize(
         maxwell_component_context_binding_->NewBinding(),
-        std::move(story_provider_aux), std::move(focus_controller));
+        std::move(story_provider_aux), focus_handler_.GetProvider(),
+        visible_stories_handler_.GetProvider());
 
     auto context_engine =
-        app::ConnectToService<maxwell::ContextEngine>(maxwell_services.get());
-    auto suggestion_provider =
-        app::ConnectToService<maxwell::SuggestionProvider>(
-            maxwell_services.get());
+        app::ConnectToService<maxwell::ContextEngine>(maxwell_services_.get());
 
     // TODO(rosswang): Do proper attribution
     user_scope_.AddService<maxwell::ContextPublisher>(
@@ -179,9 +172,8 @@ class UserRunnerImpl : public UserRunner {
           token_provider_impl_.AddBinding(std::move(request));
         });
 
-    user_shell_->Initialize(std::move(user_context), std::move(story_provider),
-                            std::move(suggestion_provider),
-                            std::move(focus_controller_request));
+    user_shell_->Initialize(std::move(user_context),
+                            user_shell_context_binding_.NewBinding());
   }
 
  private:
@@ -195,6 +187,42 @@ class UserRunnerImpl : public UserRunner {
       delete this;
       FTL_LOG(INFO) << "UserRunner::Terminate(): deleted";
     });
+  }
+
+  // |UserShellContext|
+  void GetDeviceName(const GetDeviceNameCallback& callback) override {
+    callback(device_name_);
+  }
+
+  // |UserShellContext|
+  void GetStoryProvider(
+      fidl::InterfaceRequest<StoryProvider> request) override {
+    story_provider_impl_->AddBinding(std::move(request));
+  }
+
+  // |UserShellContext|
+  void GetSuggestionProvider(
+      fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override {
+    app::ConnectToService<maxwell::SuggestionProvider>(maxwell_services_.get(),
+                                                       std::move(request));
+  }
+
+  // |UserShellContext|
+  void GetVisibleStoriesController(
+      fidl::InterfaceRequest<VisibleStoriesController> request) override {
+    visible_stories_handler_.GetController(std::move(request));
+  }
+
+  // |UserShellContext|
+  void GetFocusController(
+      fidl::InterfaceRequest<FocusController> request) override {
+    focus_handler_.GetController(std::move(request));
+  }
+
+  // |UserShellContext|
+  void GetFocusProvider(
+      fidl::InterfaceRequest<FocusProvider> request) override {
+    focus_handler_.GetProvider(std::move(request));
   }
 
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config) {
@@ -236,6 +264,7 @@ class UserRunnerImpl : public UserRunner {
   }
 
   fidl::Binding<UserRunner> binding_;
+  fidl::Binding<UserShellContext> user_shell_context_binding_;
   ledger::LedgerRepositoryPtr ledger_repository_;
   Scope user_scope_;
   UserShellPtr user_shell_;
@@ -243,15 +272,20 @@ class UserRunnerImpl : public UserRunner {
   MessageQueueManager message_queue_manager_;
   std::unique_ptr<AgentRunner> agent_runner_;
   TokenProviderImpl token_provider_impl_;
+  std::string device_name_;
 
   // Passed to maxwell_launcher.
   std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
   std::unique_ptr<fidl::Binding<ComponentContext>>
       maxwell_component_context_binding_;
+  app::ServiceProviderPtr maxwell_services_;
 
   // Keep connections to applications started here around so they are
   // killed when this instance is deleted.
   std::vector<app::ApplicationControllerPtr> application_controllers_;
+
+  FocusHandler focus_handler_;
+  VisibleStoriesHandler visible_stories_handler_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };

@@ -82,14 +82,14 @@ class DummyUserShellApp
   }
 
   // |UserShell|
-  void Initialize(
-      fidl::InterfaceHandle<modular::UserContext> user_context,
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<maxwell::SuggestionProvider> suggestion_provider,
-      fidl::InterfaceRequest<modular::FocusController> focus_controller_request)
-      override {
+  void Initialize(fidl::InterfaceHandle<modular::UserContext> user_context,
+                  fidl::InterfaceHandle<modular::UserShellContext>
+                      user_shell_context) override {
     user_context_.Bind(std::move(user_context));
-    story_provider_.Bind(std::move(story_provider));
+
+    auto user_shell_context_ptr =
+        modular::UserShellContextPtr::Create(std::move(user_shell_context));
+    user_shell_context_ptr->GetStoryProvider(story_provider_.NewRequest());
     story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
     story_provider_->GetStoryInfo("X", [](modular::StoryInfoPtr story_info) {
       FTL_LOG(INFO) << "StoryInfo for X is null: " << story_info.is_null();

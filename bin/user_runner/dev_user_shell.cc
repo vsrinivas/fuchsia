@@ -60,15 +60,15 @@ class DevUserShellApp
   }
 
   // |UserShell|
-  void Initialize(
-      fidl::InterfaceHandle<modular::UserContext> user_context,
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<maxwell::SuggestionProvider> suggestion_provider,
-      fidl::InterfaceRequest<modular::FocusController> focus_controller_request)
-      override {
+  void Initialize(fidl::InterfaceHandle<modular::UserContext> user_context,
+                  fidl::InterfaceHandle<modular::UserShellContext>
+                      user_shell_context) override {
     user_context_.Bind(std::move(user_context));
-    story_provider_.Bind(std::move(story_provider));
-    suggestion_provider_.Bind(std::move(suggestion_provider));
+    auto user_shell_context_ptr =
+        modular::UserShellContextPtr::Create(std::move(user_shell_context));
+    user_shell_context_ptr->GetStoryProvider(story_provider_.NewRequest());
+    user_shell_context_ptr->GetSuggestionProvider(
+        suggestion_provider_.NewRequest());
 
     suggestion_provider_->SubscribeToInterruptions(
         suggestion_listener_bindings_.AddBinding(this));

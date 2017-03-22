@@ -13,6 +13,8 @@ group("all") {
 executable("user_runner") {
   sources = [
     "user_runner.cc",
+    "focus.cc",
+    "focus.h",
   ]
 
   deps = [
@@ -25,6 +27,7 @@ executable("user_runner") {
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/auth:token_provider_impl",
     "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/fidl:scope",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/config",
