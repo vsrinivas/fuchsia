@@ -573,7 +573,7 @@ enum class EventMask : uint64_t {
   // Reserved For Future Use: (1ull << 54)
   kLinkSupervisionTimeoutChangedEvent = (1ull << 55),
   kEnhancedFlushCompleteEvent = (1ull << 56),
-  kReservedforFutureUse = (1ull << 57),
+  // Reserved For Future Use: (1ull << 57)
   kUserPasskeyNotificationEvent = (1ull << 58),
   kKeypressNotificationEvent = (1ull << 59),
   kRemoteHostSupportedFeaturesNotificationEvent = (1ull << 60),
