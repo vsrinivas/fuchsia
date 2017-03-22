@@ -50,7 +50,7 @@ information, see `docs/getting_started.md`:
         cp ./build-magenta-rpi3-arm64/bootdata.bin <path/to/sdcard/mount>/bootdata.bin
 
 5. You must also copy `bootcode.bin` and `start.elf` to the boot partition. They
-   can be obtained from [here](https://github.com/raspberrypi/firmware/tree/master/boot).
+   can be obtained from [here](https://github.com/raspberrypi/firmware/raw/7fcb39cb5b5543ca7485cd1ae9e6d908f31e40c6/boot/bootcode.bin) and [here](https://github.com/raspberrypi/firmware/raw/390f53ed0fd79df274bdcc81d99e09fa262f03ab/boot/start.elf) respectively.
 
 6. Copy `config.txt` `cmdline.txt` and `bcm2710-rpi-3-b.dtb` from
    `./kernel/target/rpi3/` to the boot partition:
