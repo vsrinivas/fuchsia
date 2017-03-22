@@ -4,6 +4,8 @@
 
 static_library("hci") {
   sources = [
+    "acl_data_channel.cc",
+    "acl_data_channel.h",
     "acl_data_packet.cc",
     "acl_data_packet.h",
     "advertising_report_parser.cc",
@@ -34,6 +36,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "acl_data_channel_unittest.cc",
     "advertising_report_parser_unittest.cc",
     "command_channel_unittest.cc",
     "fake_controller.cc",

@@ -45,7 +45,33 @@ bool Transport::Initialize() {
   return true;
 }
 
-bool Transport::InitializeForTesting(std::unique_ptr<CommandChannel> cmd_channel) {
+bool Transport::InitializeACLDataChannel(
+    size_t max_data_len, size_t le_max_data_len, size_t max_num_packets, size_t le_max_num_packets,
+    const ACLDataChannel::ConnectionLookupCallback& conn_lookup_cb,
+    const ACLDataChannel::DataReceivedCallback& rx_callback,
+    ftl::RefPtr<ftl::TaskRunner> rx_task_runner) {
+  FTL_DCHECK(device_fd_.get());
+  FTL_DCHECK(is_running_);
+
+  // Obtain ACL data channel handle.
+  mx_handle_t handle = MX_HANDLE_INVALID;
+  ssize_t ioctl_status = ioctl_bt_hci_get_acl_data_channel(device_fd_.get(), &handle);
+  if (ioctl_status < 0) {
+    FTL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
+                   << mx_status_get_string(ioctl_status);
+    return false;
+  }
+
+  mx::channel channel(handle);
+  acl_data_channel_ = std::make_unique<ACLDataChannel>(this, std::move(channel), conn_lookup_cb,
+                                                       rx_callback, rx_task_runner);
+  acl_data_channel_->Initialize(max_data_len, le_max_data_len, max_num_packets, le_max_num_packets);
+
+  return true;
+}
+
+void Transport::InitializeForTesting(std::unique_ptr<CommandChannel> cmd_channel,
+                                     std::unique_ptr<ACLDataChannel> acl_data_channel) {
   FTL_DCHECK(cmd_channel);
   FTL_DCHECK(!is_running_);
 
@@ -53,13 +79,15 @@ bool Transport::InitializeForTesting(std::unique_ptr<CommandChannel> cmd_channel
   io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-transport-test");
 
   command_channel_ = std::move(cmd_channel);
-
-  return true;
+  if (acl_data_channel) acl_data_channel_ = std::move(acl_data_channel);
 }
 
 void Transport::ShutDown() {
   FTL_DCHECK(is_running_);
 
+  FTL_LOG(INFO) << "hci: Transport: shutting down";
+
+  if (acl_data_channel_) acl_data_channel_->ShutDown();
   if (command_channel_) command_channel_->ShutDown();
 
   io_task_runner_->PostTask([] {
@@ -69,7 +97,8 @@ void Transport::ShutDown() {
 
   if (io_thread_.joinable()) io_thread_.join();
 
-  command_channel_.reset();
+  acl_data_channel_ = nullptr;
+  command_channel_ = nullptr;
   is_running_ = false;
   io_task_runner_ = nullptr;
 

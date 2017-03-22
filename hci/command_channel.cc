@@ -382,6 +382,8 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
                    << mx_status_get_string(status);
     // TODO(armansito): Notify the upper layers via a callback and unregister
     // the handler.
+    // TODO(armansito): Probably log the message here at a verbose level and have the callback log
+    // something that makes sense.
     ShutDown();
     return;
   }
@@ -432,6 +434,9 @@ void CommandChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
 
   // TODO(armansito): Notify the upper layers via a callback and unregister the
   // handler.
+  // TODO(armansito): Probably log the message here at a verbose level and have the callback log
+  // something that makes sense.
+  // TODO(armansito): Need to call ShutDown() in this scenario as well.
 }
 
 }  // namespace hci

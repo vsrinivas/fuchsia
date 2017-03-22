@@ -56,7 +56,7 @@ class CommandChannelTest : public ::testing::Test {
     auto cmd_channel = std::make_unique<CommandChannel>(transport_.get(), std::move(endpoint0));
     fake_controller_ = std::make_unique<FakeController>(std::move(endpoint1), std::move(dummy_acl));
 
-    transport_->InitializeForTesting(std::move(cmd_channel));
+    transport_->InitializeForTesting(std::move(cmd_channel), nullptr);
     transport_->command_channel()->Initialize();
   }
 
