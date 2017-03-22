@@ -36,7 +36,7 @@ MediaDecoderImpl::MediaDecoderImpl(
 
   if (Decoder::Create(*input_stream_type, &decoder_) != Result::kOk) {
     FTL_LOG(WARNING) << "Couldn't find decoder for stream type";
-    UnbindAndReleaseFromOwner();
+    RCHECK(false);
     return;
   }
 

@@ -9,7 +9,6 @@
 #include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "lib/ftl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
 
@@ -30,8 +29,7 @@ AudioCapturerImpl::AudioCapturerImpl(
 
   if (audio_enum.input_device_paths().empty()) {
     FTL_LOG(WARNING) << "No USB audio input devices found";
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        [this]() { UnbindAndReleaseFromOwner(); });
+    RCHECK(false);
     return;
   }
 

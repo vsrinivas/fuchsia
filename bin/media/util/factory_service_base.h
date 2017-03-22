@@ -10,6 +10,7 @@
 #include "application/lib/app/application_context.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 class FactoryServiceBase {
  public:
@@ -24,7 +25,8 @@ class FactoryServiceBase {
     // Returns the owner.
     FactoryServiceBase* owner() { return owner_; }
 
-    // Tells the factory service to release this product.
+    // Tells the factory service to release this product. This method can only
+    // be called after the first shared_ptr to the product is created.
     void ReleaseFromOwner() {
       size_t erased = owner_->products_.erase(shared_from_this());
       FTL_DCHECK(erased);
@@ -56,14 +58,16 @@ class FactoryServiceBase {
     void Retain() { ++retention_count_; }
 
     // Decrements the retention count and calls UnbindAndReleaseFromOwner if
-    // the count has reached zero.
+    // the count has reached zero. This method can only be called after the
+    // first shared_ptr to the product is created.
     void Release() {
       if (--retention_count_ == 0) {
         UnbindAndReleaseFromOwner();
       }
     }
 
-    // Closes the binding and calls ReleaseFromOwner.
+    // Closes the binding and calls ReleaseFromOwner. This method can only
+    // be called after the first shared_ptr to the product is created.
     void UnbindAndReleaseFromOwner() {
       if (binding_.is_bound()) {
         binding_.Close();
@@ -112,6 +116,7 @@ class FactoryServiceBase {
 #define RCHECK(condition)                                             \
   if (!(condition)) {                                                 \
     FTL_LOG(ERROR) << "request precondition failed: " #condition "."; \
-    UnbindAndReleaseFromOwner();                                      \
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(          \
+        [this]() { UnbindAndReleaseFromOwner(); });                   \
     return;                                                           \
   }
