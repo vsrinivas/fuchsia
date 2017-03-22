@@ -137,7 +137,7 @@ std::string HCIVersionToString(hci::HCIVersion version) {
 }
 
 void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t rssi,
-                              const std::string& name_filter) {
+                              const std::string& name_filter, const std::string& addr_type_filter) {
   gap::AdvertisingDataReader reader(common::BufferView(data.data, data.length_data));
 
   // The AD fields that we'll parse out.
@@ -172,6 +172,17 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
   if (!name_filter.empty()) {
     if (complete_name.compare(0, name_filter.length(), name_filter) != 0 &&
         short_name.compare(0, name_filter.length(), name_filter) != 0)
+      return;
+  }
+
+  // Apply the address type filter.
+  if (!addr_type_filter.empty()) {
+    FTL_DCHECK(addr_type_filter == "public" || addr_type_filter == "random");
+    if (addr_type_filter == "public" && data.address_type != hci::LEAddressType::kPublic &&
+        data.address_type != hci::LEAddressType::kPublicIdentity)
+      return;
+    if (addr_type_filter == "random" && data.address_type != hci::LEAddressType::kRandom &&
+        data.address_type != hci::LEAddressType::kRandomIdentity)
       return;
   }
 
@@ -567,7 +578,8 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
                  "    --no-dedup - Tell the controller not to filter duplicate\n"
                  "                 reports\n"
                  "    --name-filter=<prefix> - Filter advertising reports by local\n"
-                 "                             name, if present.";
+                 "                             name, if present.\n"
+                 "    --addr-type-filter=[public|random]";
     std::cout << std::endl;
     return false;
   }
@@ -587,6 +599,13 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
   std::string name_filter;
   cmd_line.GetOptionValue("name-filter", &name_filter);
 
+  std::string addr_type_filter;
+  cmd_line.GetOptionValue("addr-type-filter", &addr_type_filter);
+  if (!addr_type_filter.empty() && addr_type_filter != "public" && addr_type_filter != "random") {
+    std::cout << "  Unknown address type filter: " << addr_type_filter << std::endl;
+    return false;
+  }
+
   hci::GenericEnableParam filter_duplicates = hci::GenericEnableParam::kEnable;
   if (cmd_line.HasOption("no-dedup")) {
     filter_duplicates = hci::GenericEnableParam::kDisable;
@@ -601,7 +620,7 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
   params->filter_duplicates = filter_duplicates;
 
   // Event handler to log when we receive advertising reports
-  auto le_adv_report_cb = [name_filter](const hci::EventPacket& event) {
+  auto le_adv_report_cb = [name_filter, addr_type_filter](const hci::EventPacket& event) {
     FTL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
     FTL_DCHECK(event.GetPayload<hci::LEMetaEventParams>()->subevent_code ==
                hci::kLEAdvertisingReportSubeventCode);
@@ -610,7 +629,7 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
     const hci::LEAdvertisingReportData* data;
     int8_t rssi;
     while (parser.GetNextReport(&data, &rssi)) {
-      DisplayAdvertisingReport(*data, rssi, name_filter);
+      DisplayAdvertisingReport(*data, rssi, name_filter, addr_type_filter);
     }
   };
   auto event_handler_id = owner.cmd_channel()->AddLEMetaEventHandler(
