@@ -92,3 +92,17 @@ executable("udptest") {
     "magenta",
   ]
 }
+
+executable("closetest") {
+  testonly = true
+
+  sources = [
+    "closetest.c",
+  ]
+
+  libs = [
+    "mxio",
+    "magenta",
+    "launchpad",
+  ]
+}

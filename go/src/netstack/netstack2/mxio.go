@@ -148,9 +148,13 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 
 	// Warm up.
 	_, err := dataHandle.WaitOne(MX_SOCKET_READABLE|MX_SOCKET_PEER_CLOSED, mx.TimensecInfinite)
-	if err != nil {
-		log.Printf("loopSocketWrite: warmup failed: %v", err)
+	switch mxerror.Status(err) {
+	case mx.ErrOk:
+		// NOP
+	case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 		return
+	default:
+		log.Printf("loopSocketWrite: warmup failed: %v", err)
 	}
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
@@ -161,27 +165,30 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 		// ends in nearby code we control in link.go.
 		v := buffer.NewView(2048)
 		n, err := dataHandle.Read([]byte(v), 0)
-		if mxerror.Status(err) == mx.ErrShouldWait {
+		switch mxerror.Status(err) {
+		case mx.ErrOk:
+			// NOP
+		case mx.ErrShouldWait:
 			obs, err := dataHandle.WaitOne(MX_SOCKET_READABLE|MX_SOCKET_PEER_CLOSED, mx.TimensecInfinite)
 			if err != nil {
-				log.Printf("loopSocketWrite: wait failed: %v", ios.cookie, err)
+				if mxerror.Status(err) != mx.ErrHandleClosed {
+					log.Printf("loopSocketWrite: wait failed: %v", ios.cookie, err)
+				}
 				return
 			}
 			switch {
 			case obs&MX_SOCKET_PEER_CLOSED != 0:
-				if debug2 {
-					log.Printf("loopSocketWrite: MX_SOCKET_PEER_CLOSED on socket: %x", obs)
-				}
 				return
 			case obs&MX_SOCKET_READABLE != 0:
 				continue
 			}
-		} else if mxerror.Status(err) == mx.ErrRemoteClosed {
+		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 			return
-		} else if err != nil {
+		default:
 			log.Printf("socket read failed: %v", err) // TODO: communicate this
 			continue
 		}
+
 		if debug2 {
 			log.Printf("loopSocketWrite: sending packet n=%d, v=%q", n, v[:n])
 		}
@@ -217,11 +224,13 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 
 	// Warm up.
 	obs, err := dataHandle.WaitOne(MX_SOCKET_WRITABLE|MX_SOCKET_PEER_CLOSED, mx.TimensecInfinite)
-	if err != nil {
-		if debug {
-			log.Printf("loopSocketRead: warmup failed: %v", err)
-		}
+	switch mxerror.Status(err) {
+	case mx.ErrOk:
+		// NOP
+	case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 		return
+	default:
+		log.Printf("loopSocketWrite: warmup failed: %v", err)
 	}
 	switch {
 	case obs&MX_SOCKET_PEER_CLOSED != 0:
@@ -246,7 +255,10 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 				continue
 			} else if err == tcpip.ErrClosedForReceive {
 				_, err := dataHandle.Write(nil, MX_SOCKET_HALF_CLOSE)
-				if err != nil && mxerror.Status(err) != mx.ErrRemoteClosed {
+				switch mxerror.Status(err) {
+				case mx.ErrOk:
+				case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+				default:
 					log.Printf("socket read: send MX_SOCKET_HALF_CLOSE failed: %v", err)
 				}
 				return
@@ -259,11 +271,13 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 			log.Printf("loopSocketRead: got a buffer, len(v)=%d", len(v))
 		}
 
+	writeLoop:
 		for {
 			_, err = dataHandle.Write([]byte(v), 0)
-			if err == nil {
-				break
-			} else if mxerror.Status(err) == mx.ErrShouldWait {
+			switch mxerror.Status(err) {
+			case mx.ErrOk:
+				break writeLoop
+			case mx.ErrShouldWait:
 				if debug2 {
 					log.Printf("loopSocketRead: gto mx.ErrShouldWait")
 				}
@@ -272,7 +286,9 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 					mx.TimensecInfinite,
 				)
 				if err != nil {
-					log.Printf("loopSocketRead: wait failed: %v", ios.cookie, err)
+					if mxerror.Status(err) != mx.ErrHandleClosed {
+						log.Printf("loopSocketRead: wait failed: %v", ios.cookie, err)
+					}
 					return
 				}
 				switch {
@@ -281,28 +297,36 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 				case obs&MX_SOCKET_WRITABLE != 0:
 					continue
 				}
-			} else if mxerror.Status(err) == mx.ErrRemoteClosed {
-				log.Printf("loopSocketRead: got ErrRemoteClosed")
+			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 				return
+			default:
+				log.Printf("socket write failed: %v", err) // TODO: communicate this
+				break writeLoop
 			}
-			log.Printf("socket write failed: %v", err) // TODO: communicate this
-			break
 		}
 	}
 }
 
 func (ios *iostate) loopShutdown() {
-	obs, err := ios.dataHandle.WaitOne(MX_SOCKET_PEER_CLOSED|MXSIO_SIGNAL_HALFCLOSED, mx.TimensecInfinite)
-	if err != nil {
-		return
-	}
-	switch {
-	case obs&MX_SOCKET_PEER_CLOSED != 0:
-		ios.ep.Close()
-	case obs&MXSIO_SIGNAL_HALFCLOSED != 0:
-		if err := ios.ep.Shutdown(tcpip.ShutdownRead | tcpip.ShutdownWrite); err != nil {
-			if debug {
-				log.Printf("shutdown failed: %v", err)
+	defer ios.ep.Close()
+	for {
+		obs, err := ios.dataHandle.WaitOne(MX_SOCKET_PEER_CLOSED|MXSIO_SIGNAL_HALFCLOSED, mx.TimensecInfinite)
+		switch mxerror.Status(err) {
+		case mx.ErrOk:
+			// NOP
+		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+			return
+		default:
+			log.Printf("shutdown wait failed: %v", err)
+			return
+		}
+		switch {
+		case obs&MX_SOCKET_PEER_CLOSED != 0:
+			return
+		case obs&MXSIO_SIGNAL_HALFCLOSED != 0:
+			err := ios.ep.Shutdown(tcpip.ShutdownRead | tcpip.ShutdownWrite)
+			if debug2 && err != nil {
+				log.Printf("shutdown: %v", err) // typically ignored
 			}
 		}
 	}
@@ -340,18 +364,18 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 		writeSocketMsgHdr(out, sender)
 		copy(out[c_mxio_socket_msg_hdr_len:], v)
 
+	writeLoop:
 		for {
 			err = dataHandle.Write(out, nil, 0)
-			if err == nil {
-				break
-			} else if mxerror.Status(err) == mx.ErrRemoteClosed {
-				if debug2 {
-					log.Printf("loopDgramRead: got ErrRemoteClosed")
-				}
+			switch mxerror.Status(err) {
+			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 				return
+			case mx.ErrOk:
+				break writeLoop
+			default:
+				log.Printf("socket write failed: %v", err) // TODO: communicate this
+				break writeLoop
 			}
-			log.Printf("socket write failed: %v", err) // TODO: communicate this
-			break
 		}
 	}
 }
@@ -364,20 +388,28 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 	for {
 		v := buffer.NewView(2048)
 		n, _, err := dataHandle.Read([]byte(v), nil, 0)
-		if mxerror.Status(err) == mx.ErrShouldWait {
-			obs, err := dataHandle.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
-			if err != nil {
-				return
-			}
-			switch {
-			case obs&mx.SignalChannelPeerClosed != 0:
-				return
-			case obs&MX_SOCKET_READABLE != 0:
-				continue
-			}
-		} else if mxerror.Status(err) == mx.ErrRemoteClosed {
+		switch mxerror.Status(err) {
+		case mx.ErrOk:
+			// NOP
+		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 			return
-		} else if err != nil {
+		case mx.ErrShouldWait:
+			obs, err := dataHandle.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
+			switch mxerror.Status(err) {
+			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+				return
+			case mx.ErrOk:
+				switch {
+				case obs&mx.SignalChannelPeerClosed != 0:
+					return
+				case obs&MX_SOCKET_READABLE != 0:
+					continue
+				}
+			default:
+				log.Printf("loopDgramWrite wait failed: %v", err)
+				return
+			}
+		default:
 			log.Printf("loopDgramWrite failed: %v", err) // TODO: communicate this
 			continue
 		}
@@ -572,7 +604,15 @@ func (s *socketServer) opAccept(ios *iostate, msg *rio.Msg, path string) (peerH,
 		// If we just accepted the only queued incoming connection,
 		// clear the signal so the mxio client knows no incoming
 		// connection is available.
-		if err := mx.Handle(ios.dataHandle).SignalPeer(MXSIO_SIGNAL_INCOMING, 0); err != nil {
+		err := mx.Handle(ios.dataHandle).SignalPeer(MXSIO_SIGNAL_INCOMING, 0)
+		switch mxerror.Status(err) {
+		case mx.ErrOk:
+			// NOP
+		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+			// Ignore the closure of the origin endpoint here,
+			// as we have accepted a new endpoint and it can be
+			// valid.
+		default:
 			log.Printf("accept: clearing MXSIO_SIGNAL_INCOMING: %v", err)
 		}
 	}
@@ -740,10 +780,13 @@ func (s *socketServer) opListen(ios *iostate, msg *rio.Msg) (status mx.Status) {
 		ios.wq.EventRegister(&inEntry, waiter.EventIn)
 		defer ios.wq.EventUnregister(&inEntry)
 		for range inCh {
-			if err := mx.Handle(ios.dataHandle).SignalPeer(0, MXSIO_SIGNAL_INCOMING); err != nil {
-				if mxerror.Status(err) == mx.ErrRemoteClosed {
-					return
-				}
+			err := mx.Handle(ios.dataHandle).SignalPeer(0, MXSIO_SIGNAL_INCOMING)
+			switch mxerror.Status(err) {
+			case mx.ErrOk:
+				continue
+			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+				return
+			default:
 				log.Printf("socket signal MXSIO_SIGNAL_INCOMING: %v", err)
 			}
 		}
@@ -791,7 +834,13 @@ func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) mx.Status {
 		log.Printf("connect: connected")
 	}
 	if ios.transProto == tcp.ProtocolNumber {
-		if err := mx.Handle(ios.dataHandle).SignalPeer(0, MXSIO_SIGNAL_CONNECTED); err != nil {
+		err := mx.Handle(ios.dataHandle).SignalPeer(0, MXSIO_SIGNAL_CONNECTED)
+		switch status := mxerror.Status(err); status {
+		case mx.ErrOk:
+			// NOP
+		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+			return status
+		default:
 			log.Printf("connect: signal failed: %v", err)
 		}
 	}
@@ -960,7 +1009,7 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 		return s.opConnect(ios, msg) // do_connect
 	case rio.OpClose:
 		if ios.ep != nil {
-			ios.ep.Close()
+			ios.dataHandle.Close() // loopShutdown closes ep
 		}
 		s.mu.Lock()
 		delete(s.io, cookie)
