@@ -36,6 +36,7 @@ source_set("story_runner") {
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:bottleneck",
     "//apps/modular/lib/fidl:operation",
+    "//apps/modular/lib/fidl:scope",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/component",
     "//apps/modular/services/config",
