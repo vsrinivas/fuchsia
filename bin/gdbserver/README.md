@@ -256,3 +256,7 @@ finished for basic debugging to work:
 - downgrade some errors to INFO (e.g., for unsupported optional commands)
 - some FTL_DCHECKs in application independent code assume the app is gdbserver,
   and may need to be replaced with non-fatal failures
+- replace util::LogError* with FTL logging
+- attach (waiting on suspend/resume)
+- Ctrl-C from host gdb (waiting on suspend/resume)
+- multi-inferior debugging
