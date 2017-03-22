@@ -66,7 +66,7 @@ typedef struct mx_packet_signal {
     uint64_t count;
 } mx_packet_signal_t;
 
-struct mx_port_packet_t {
+typedef struct mx_port_packet {
     uint64_t key;
     uint32_t type;
     int32_t status;
@@ -74,7 +74,7 @@ struct mx_port_packet_t {
         mx_packet_user_t user;
         mx_packet_signal_t signal;
     };
-};
+} mx_port_packet_t;
 
 
 __END_CDECLS
