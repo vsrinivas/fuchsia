@@ -1,5 +1,5 @@
-Fuchsia Open Source Template Repository
+Fuchsia Wireless Network Service
 =======================================
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This repository contains the Fuchsia Wireless Network Service and related
+utilities.
