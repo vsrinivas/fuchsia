@@ -46,49 +46,35 @@ TEST(Spec, DecodingErrors) {
   EXPECT_FALSE(DecodeSpec(json, &result));
 
   // Incorrect parameter types.
-  json = "{\"app\": 42}";
+  json = R"({"app": 42})";
   EXPECT_FALSE(DecodeSpec(json, &result));
-  json = "{\"args\": \"many\"}";
+  json = R"({"args": "many"})";
   EXPECT_FALSE(DecodeSpec(json, &result));
-  json = "{\"args\": [42]}";
+  json = R"({"args": [42]})";
   EXPECT_FALSE(DecodeSpec(json, &result));
-  json = "{\"categories\": \"many\"}";
+  json = R"({"categories": "many"})";
   EXPECT_FALSE(DecodeSpec(json, &result));
-  json = "{\"categories\": [42]}";
+  json = R"({"categories": [42]})";
   EXPECT_FALSE(DecodeSpec(json, &result));
-  json = "{\"duration\": \"long\"}";
+  json = R"({"duration": "long"})";
   EXPECT_FALSE(DecodeSpec(json, &result));
-  json = "{\"measure\": \"yes\"}";
+  json = R"({"measure": "yes"})";
   EXPECT_FALSE(DecodeSpec(json, &result));
-  json =
-      "{\"measure\": ["
-      "{\"type\": 42}"
-      "]}";
+  json = R"({"measure": [{"type": 42}]})";
   EXPECT_FALSE(DecodeSpec(json, &result));
 
   // Unknown measurement type.
-  json =
-      "{\"measure\": ["
-      "{\"type\": \"unknown\"}"
-      "]}";
+  json = R"({"measure": [{"type": "unknown"}]})";
   EXPECT_FALSE(DecodeSpec(json, &result));
 
   // Missing measurement params.
-  json =
-      "{\"measure\": ["
-      "{\"type\": \"duration\"}"
-      "]}";
+  json = R"({"measure": [{"type": "duration"}]})";
   EXPECT_FALSE(DecodeSpec(json, &result));
-  json =
-      "{\"measure\": ["
-      "{\"type\": \"time_between\"}"
-      "]}";
+  json = R"({"measure": [{"type": "time_between"}]})";
   EXPECT_FALSE(DecodeSpec(json, &result));
 
   // Additional properies.
-  json = R"({
-    "bla": "hey there"
-  })";
+  json = R"({"bla": "hey there"})";
   EXPECT_FALSE(DecodeSpec(json, &result));
 }
 
@@ -103,7 +89,7 @@ TEST(Spec, DecodeEmpty) {
 }
 
 TEST(Spec, DecodeArgs) {
-  std::string json = "{\"args\": [\"--flag\", \"positional\"]}";
+  std::string json = R"({"args": ["--flag", "positional"]})";
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
@@ -111,7 +97,7 @@ TEST(Spec, DecodeArgs) {
 }
 
 TEST(Spec, DecodeCategories) {
-  std::string json = "{\"categories\": [\"c1\", \"c2\"]}";
+  std::string json = R"({"categories": ["c1", "c2"]})";
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
@@ -119,7 +105,7 @@ TEST(Spec, DecodeCategories) {
 }
 
 TEST(Spec, DecodeDuration) {
-  std::string json = "{\"duration\": 42}";
+  std::string json = R"({"duration": 42})";
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
@@ -128,23 +114,27 @@ TEST(Spec, DecodeDuration) {
 }
 
 TEST(Spec, ErrorOnNegativeDuration) {
-  std::string json = "{\"duration\": -42}";
+  std::string json = R"({"duration": -42})";
 
   Spec result;
   EXPECT_FALSE(DecodeSpec(json, &result));
 }
 
 TEST(Spec, DecodeMeasureDuration) {
-  std::string json =
-      "{\"measure\":["
-      "{\"type\":\"duration\","
-      "\"event_name\":\"initialization\","
-      "\"event_category\":\"bazinga\"},"
-      "{\"type\":\"duration\","
-      "\"event_name\":\"startup\","
-      "\"event_category\":\"foo\"}"
-      "]"
-      "}";
+  std::string json = R"({
+    "measure":[
+      {
+        "type": "duration",
+        "event_name": "initialization",
+        "event_category": "bazinga"
+      },
+      {
+        "type": "duration",
+        "event_name": "startup",
+        "event_category": "foo"
+      }
+    ]
+  })";
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
@@ -156,17 +146,19 @@ TEST(Spec, DecodeMeasureDuration) {
 }
 
 TEST(Spec, DecodeMeasureTimeBetween) {
-  std::string json =
-      "{\"measure\":["
-      "{\"type\":\"time_between\","
-      "\"first_event_name\":\"e1\","
-      "\"first_event_category\":\"c1\","
-      "\"first_event_anchor\":\"begin\","
-      "\"second_event_name\":\"e2\","
-      "\"second_event_category\":\"c2\","
-      "\"second_event_anchor\":\"end\"}"
-      "]"
-      "}";
+  std::string json = R"({
+    "measure": [
+      {
+        "type": "time_between",
+        "first_event_name": "e1",
+        "first_event_category": "c1",
+        "first_event_anchor": "begin",
+        "second_event_name": "e2",
+        "second_event_category": "c2",
+        "second_event_anchor": "end"
+      }
+    ]
+  })";
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
