@@ -241,6 +241,22 @@ public:
 
         EXPECT_GE(freq, current_freq);
     }
+
+    void QuerySliceInfo()
+    {
+        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        ASSERT_NE(platform_device, nullptr);
+
+        std::unique_ptr<MsdIntelDevice> device =
+            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
+        EXPECT_NE(device, nullptr);
+
+        uint32_t subslice_total = 0, eu_total = 0;
+        device->QuerySliceInfo(&subslice_total, &eu_total);
+
+        EXPECT_EQ(3u, subslice_total);
+        EXPECT_EQ(23u, eu_total);
+    }
 };
 
 TEST(MsdIntelDevice, CreateAndDestroy)
@@ -283,4 +299,10 @@ TEST(MsdIntelDevice, MaxFreq)
 {
     TestMsdIntelDevice test;
     test.MaxFreq();
+}
+
+TEST(MsdIntelDevice, QuerySliceInfo)
+{
+    TestMsdIntelDevice test;
+    test.QuerySliceInfo();
 }

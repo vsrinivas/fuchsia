@@ -146,6 +146,8 @@ private:
     int InterruptThreadLoop();
     void WaitThreadLoop();
 
+    void QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out);
+
     std::shared_ptr<GlobalContext> global_context() { return global_context_; }
 
     RenderEngineCommandStreamer* render_engine_cs() { return render_engine_cs_.get(); }

@@ -11,6 +11,7 @@
 #include "modeset/displayport.h"
 #include "msd_intel_semaphore.h"
 #include "registers.h"
+#include <bitset>
 #include <cstdio>
 #include <string>
 
@@ -812,6 +813,45 @@ HardwareStatusPage* MsdIntelDevice::hardware_status_page(EngineCommandStreamerId
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     DASSERT(global_context_);
     return global_context_->hardware_status_page(id);
+}
+
+void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out)
+{
+    uint32_t slice_enable_mask;
+    uint32_t subslice_enable_mask;
+
+    registers::Fuse2ControlDwordMirror::read(register_io_.get(), &slice_enable_mask,
+                                             &subslice_enable_mask);
+
+    DLOG("slice_enable_mask 0x%x subslice_enable_mask 0x%x", slice_enable_mask,
+           subslice_enable_mask);
+
+    std::bitset<registers::MirrorEuDisable::kMaxSliceCount> slice_bitset(slice_enable_mask);
+    std::bitset<registers::MirrorEuDisable::kMaxSubsliceCount> subslice_bitset(
+        subslice_enable_mask);
+
+    *subslice_total_out = slice_bitset.count() * subslice_bitset.count();
+    *eu_total_out = 0;
+
+    for (uint32_t slice = 0; slice < registers::MirrorEuDisable::kMaxSliceCount; slice++) {
+        if ((slice_enable_mask & (1 << slice)) == 0)
+            continue; // skip disabled slice
+
+        std::vector<uint32_t> eu_disable_mask;
+        registers::MirrorEuDisable::read(register_io_.get(), slice, eu_disable_mask);
+
+        for (uint32_t subslice = 0; subslice < eu_disable_mask.size(); subslice++) {
+            if ((subslice_enable_mask & (1 << subslice)) == 0)
+                continue; // skip disabled subslice
+
+            DLOG("subslice %u eu_disable_mask 0x%x", subslice, eu_disable_mask[subslice]);
+
+            uint32_t eu_disable_count =
+                std::bitset<registers::MirrorEuDisable::kEuPerSubslice>(eu_disable_mask[subslice])
+                    .count();
+            *eu_total_out += registers::MirrorEuDisable::kEuPerSubslice - eu_disable_count;
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -9,6 +9,7 @@
 #include "register_bitfields.h"
 #include "register_io.h"
 #include "types.h"
+#include <vector>
 
 namespace registers {
 
@@ -668,6 +669,54 @@ public:
     enum Cacheability { DIRECT = 0, UNCACHED, WRITETHROUGH, WRITEBACK };
 
     static uint16_t format(Cacheability cacheability) { return cacheability << kCacheabilityShift; }
+};
+
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.403
+class Fuse2ControlDwordMirror {
+public:
+    static constexpr uint32_t kOffset = 0x9120;
+
+    static constexpr uint32_t kSliceEnableShift = 25;
+    static constexpr uint32_t kSliceEnableMask = 0x7 << kSliceEnableShift;
+    static constexpr uint32_t kSubsliceDisableShift = 20;
+    static constexpr uint32_t kSubsliceDisableMask = 0xf << kSubsliceDisableShift;
+
+    static void read(RegisterIo* register_io, uint32_t* slice_enable_mask_out,
+                     uint32_t* subslice_enable_mask_out)
+    {
+        uint32_t val = register_io->Read32(kOffset);
+        *slice_enable_mask_out = (val & kSliceEnableMask) >> kSliceEnableShift;
+        *subslice_enable_mask_out = ((~val) & kSubsliceDisableMask) >> kSubsliceDisableShift;
+    }
+};
+
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.398
+class MirrorEuDisable {
+public:
+    static constexpr uint32_t kOffset = 0x9134;
+
+    static constexpr uint32_t kMaxSliceCount = 3;
+    static constexpr uint32_t kMaxSubsliceCount = 4;
+    static constexpr uint32_t kEuPerSubslice = 8;
+    static constexpr uint32_t kSubsliceMask = 0xff;
+
+    static_assert(kMaxSubsliceCount * kEuPerSubslice == sizeof(uint32_t) * 8,
+                  "eu/subslice math is wrong");
+    static_assert(kSubsliceMask == (1 << kEuPerSubslice) - 1, "wrong kSubsliceMask");
+
+    static void read(RegisterIo* register_io, uint8_t slice,
+                     std::vector<uint32_t>& eu_disable_mask_out)
+    {
+        DASSERT(slice < kMaxSliceCount);
+        uint32_t val = register_io->Read32(kOffset + slice * sizeof(uint32_t));
+
+        eu_disable_mask_out.clear();
+
+        for (uint32_t subslice = 0; subslice < kMaxSubsliceCount; subslice++) {
+            eu_disable_mask_out.push_back(val & kSubsliceMask);
+            val >>= kEuPerSubslice;
+        }
+    }
 };
 
 } // namespace
