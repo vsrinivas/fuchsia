@@ -37,6 +37,11 @@
 #include "control.h"
 #include "server.h"
 
+static constexpr char ldso_trace_env_var[] = "LD_TRACE";
+static constexpr char ldso_trace_value[] = "1";
+
+static constexpr char default_output_path_prefix[] = "/tmp/ptout";
+
 constexpr char kUsageString[] =
     "Usage: ipt [options] program [args...]\n"
     "       ipt [options] --control action1 [action2 ...]\n"
@@ -55,6 +60,9 @@ constexpr char kUsageString[] =
     "  --control          perform the specified actions\n"
     "  --dump-arch        print random facts about the architecture and exit\n"
     "  --help             show this help message and exit\n"
+    "  --output-path-prefix PREFIX\n"
+    "                     set the file path prefix of output files\n"
+    "                     The default is \"/tmp/ptout\".\n"
     "  --quiet[=level]    set quietness level (opposite of verbose)\n"
     "  --verbose[=level]  set debug verbosity level\n"
     "\n"
@@ -140,7 +148,9 @@ static debugserver::IptConfig GetIptConfig(const ftl::CommandLine& cl) {
   return config;
 }
 
-static bool ControlIpt(const debugserver::IptConfig& config, const ftl::CommandLine& cl) {
+static bool ControlIpt(const debugserver::IptConfig& config,
+                       const std::string& output_path_prefix,
+                       const ftl::CommandLine& cl) {
   // We only support the cpu mode here.
   // This isn't a full test as we only actually set the mode for "init".
   // But it catches obvious mistakes like passing --mode=thread.
@@ -166,8 +176,8 @@ static bool ControlIpt(const debugserver::IptConfig& config, const ftl::CommandL
       debugserver::StopCpuPerf(config);
       debugserver::StopPerf(config);
     } else if (action == "dump") {
-      debugserver::DumpCpuPerf(config);
-      debugserver::DumpPerf(config);
+      debugserver::DumpCpuPerf(config, output_path_prefix);
+      debugserver::DumpPerf(config, output_path_prefix);
     } else if (action == "reset") {
       debugserver::ResetCpuPerf(config);
       debugserver::ResetPerf(config);
@@ -180,7 +190,9 @@ static bool ControlIpt(const debugserver::IptConfig& config, const ftl::CommandL
   return true;
 }
 
-static bool RunProgram(const debugserver::IptConfig& config, const ftl::CommandLine& cl) {
+static bool RunProgram(const debugserver::IptConfig& config,
+                       const std::string& output_path_prefix,
+                       const ftl::CommandLine& cl) {
   debugserver::util::Argv inferior_argv(cl.positional_args().begin(),
 					cl.positional_args().end());
 
@@ -189,7 +201,13 @@ static bool RunProgram(const debugserver::IptConfig& config, const ftl::CommandL
     return false;
   }
 
-  debugserver::IptServer ipt(config);
+  // We need details of where the program and its dsos are loaded.
+  // This data is obtained from the dynamic linker.
+  // TODO(dje): MG-519: ld.so can't write to files, and the only thing it
+  // can write to at the moment is the kernel debug log.
+  setenv(ldso_trace_env_var, ldso_trace_value, 1);
+
+  debugserver::IptServer ipt(config, output_path_prefix);
 
   auto inferior = new debugserver::Process(&ipt, &ipt);
   inferior->set_argv(inferior_argv);
@@ -222,13 +240,17 @@ int main(int argc, char* argv[]) {
 
   debugserver::IptConfig config = GetIptConfig(cl);
 
+  std::string output_path_prefix;
+  if (!cl.GetOptionValue("output-path-prefix", &output_path_prefix))
+    output_path_prefix = default_output_path_prefix;
+
   FTL_LOG(INFO) << "ipt control program starting";
 
   bool success;
   if (cl.HasOption("control", nullptr)) {
-    success = ControlIpt(config, cl);
+    success = ControlIpt(config, output_path_prefix, cl);
   } else {
-    success = RunProgram(config, cl);
+    success = RunProgram(config, output_path_prefix, cl);
   }
 
   if (!success) {

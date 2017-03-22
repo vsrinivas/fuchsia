@@ -22,13 +22,12 @@
 
 #include "control.h"
 
-static constexpr char ldso_trace_env_var[] = "LD_TRACE_FILE";
-static constexpr char ldso_trace_output_path[] = "/tmp/ptout.ldso";
-
 namespace debugserver {
 
-IptServer::IptServer(const IptConfig& config)
-  : config_(config) {
+IptServer::IptServer(const IptConfig& config,
+                     const std::string& output_path_prefix)
+  : config_(config),
+    output_path_prefix_(output_path_prefix) {
 }
 
 bool IptServer::StartInferior() {
@@ -39,11 +38,6 @@ bool IptServer::StartInferior() {
 
   if (!SetPerfMode(config_))
     return false;
-
-  // We need details of where the program and its dsos are loaded.
-  // This data is obtained from the dynamic linker.
-  // TODO(dje): Is there a better way?
-  setenv(ldso_trace_env_var, ldso_trace_output_path, 1);
 
   if (config_.mode == IPT_MODE_CPUS) {
     if (!InitCpuPerf(config_))
@@ -94,8 +88,8 @@ bool IptServer::DumpResults() {
     StopCpuPerf(config_);
   StopPerf(config_);
   if (config_.mode == IPT_MODE_CPUS)
-    DumpCpuPerf(config_);
-  DumpPerf(config_);
+    DumpCpuPerf(config_, output_path_prefix_);
+  DumpPerf(config_, output_path_prefix_);
   if (config_.mode == IPT_MODE_CPUS)
     ResetCpuPerf(config_);
   ResetPerf(config_);
@@ -185,14 +179,14 @@ void IptServer::OnThreadExiting(Process* process,
   if (config_.mode == IPT_MODE_THREADS) {
     if (thread->ipt_buffer() >= 0) {
       StopThreadPerf(thread, config_);
-      DumpThreadPerf(thread, config_);
+      DumpThreadPerf(thread, config_, output_path_prefix_);
       ResetThreadPerf(thread, config_);
     }
   }
 
   // We still have to "resume" the thread so that the o/s will complete the
   // termination of the thread.
-  thread->Resume();
+  thread->ResumeForExit();
 }
 
 void IptServer::OnProcessExit(Process* process,

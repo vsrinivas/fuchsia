@@ -61,7 +61,7 @@ struct IptConfig {
 // calling methods which modify the internal state of a IptServer instance.
 class IptServer final : public Server {
  public:
-  IptServer(const IptConfig& config);
+  IptServer(const IptConfig& config, const std::string& output_path_prefix);
 
   bool Run() override;
 
@@ -91,6 +91,7 @@ class IptServer final : public Server {
                                 const mx_exception_context_t& context) override;
 
   IptConfig config_;
+  std::string output_path_prefix_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IptServer);
 };

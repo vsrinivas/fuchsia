@@ -41,10 +41,9 @@ namespace debugserver {
 static constexpr char ipt_device_path[] = "/dev/misc/intel-pt";
 static constexpr char ktrace_device_path[] = "/dev/misc/ktrace";
 
-static constexpr char pt_output_path_prefix[] = "/tmp/ptout";
-static constexpr char ktrace_output_path[] = "/tmp/ptout.ktrace";
-
-static constexpr char cpuid_output_path[] = "/tmp/ptout.cpuid";
+static constexpr char buffer_output_path_suffix[] = "pt";
+static constexpr char ktrace_output_path_suffix[] = "ktrace";
+static constexpr char cpuid_output_path_suffix[] = "cpuid";
 
 static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
                         ftl::UniqueFD* out_ktrace_fd,
@@ -253,7 +252,7 @@ bool StartThreadPerf(Thread* thread, const IptConfig& config) {
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   if (thread->ipt_buffer() < 0) {
-    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRId64 " has no IPT buffer",
+    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
                                        thread->id());
     // TODO(dje): For now. This isn't an error in the normal sense.
     return true;
@@ -306,7 +305,7 @@ void StopThreadPerf(Thread* thread, const IptConfig& config) {
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   if (thread->ipt_buffer() < 0) {
-    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRId64 " has no IPT buffer",
+    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
                                        thread->id());
     return;
   }
@@ -352,14 +351,17 @@ void StopPerf(const IptConfig& config) {
 }
 
 // Write the contents of buffer |descriptor| to a file.
-// The file's name is output_prefix.buffer.pt.
+// The file's name is $output_path_prefix.$name_prefix$id.pt.
 
 static mx_status_t WriteBufferData(const IptConfig& config,
                                    const ftl::UniqueFD& ipt_fd,
                                    uint32_t descriptor,
-                                   const char* output_prefix) {
+                                   const std::string& output_path_prefix,
+                                   const char* name_prefix,
+                                   uint64_t id) {
   std::string output_path =
-    ftl::StringPrintf("%s.%u.pt", output_prefix, descriptor);
+    ftl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
+                      name_prefix, id, buffer_output_path_suffix);
   const char* c_path = output_path.c_str();
 
   mx_status_t status = NO_ERROR;
@@ -466,7 +468,8 @@ static mx_status_t WriteBufferData(const IptConfig& config,
 // Write all output files.
 // This assumes tracing has already been stopped.
 
-void DumpCpuPerf(const IptConfig& config) {
+void DumpCpuPerf(const IptConfig& config,
+                 const std::string& output_path_prefix) {
   FTL_LOG(INFO) << "DumpCpuPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_CPUS);
 
@@ -475,7 +478,9 @@ void DumpCpuPerf(const IptConfig& config) {
     return;
 
   for (uint32_t cpu = 0; cpu < config.num_cpus; ++cpu) {
-    auto status = WriteBufferData(config, ipt_fd, cpu, pt_output_path_prefix);
+    // Buffer descriptors for cpus is the cpu number.
+    auto status = WriteBufferData(config, ipt_fd, cpu,
+                                  output_path_prefix, "cpu", cpu);
     if (status != NO_ERROR) {
       util::LogErrorWithMxStatus(ftl::StringPrintf("dump perf of cpu %u", cpu),
                                  status);
@@ -487,13 +492,16 @@ void DumpCpuPerf(const IptConfig& config) {
 // Write the buffer contents for |thread|.
 // This assumes the thread is stopped.
 
-void DumpThreadPerf(Thread* thread, const IptConfig& config) {
+void DumpThreadPerf(Thread* thread, const IptConfig& config,
+                    const std::string& output_path_prefix) {
   FTL_LOG(INFO) << "DumpThreadPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
+  mx_koid_t id = thread->id();
+
   if (thread->ipt_buffer() < 0) {
-    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRId64 " has no IPT buffer",
-                                       thread->id());
+    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
+                                       id);
     return;
   }
 
@@ -501,17 +509,16 @@ void DumpThreadPerf(Thread* thread, const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
-  uint32_t descriptor = thread->ipt_buffer();
-  auto status = WriteBufferData(config, ipt_fd, descriptor,
-                                pt_output_path_prefix);
+  auto status = WriteBufferData(config, ipt_fd, thread->ipt_buffer(),
+                                output_path_prefix, "thr", id);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus(
-      ftl::StringPrintf("dump perf of thread buffer %u", descriptor),
+      ftl::StringPrintf("dump perf of thread %" PRIu64, id),
       status);
   }
 }
 
-void DumpPerf(const IptConfig& config) {
+void DumpPerf(const IptConfig& config, const std::string& output_path_prefix) {
   FTL_LOG(INFO) << "DumpPerf called";
 
   {
@@ -519,25 +526,35 @@ void DumpPerf(const IptConfig& config) {
     if (!OpenDevices(nullptr, &ktrace_fd, nullptr))
       return;
 
-    ftl::UniqueFD dest_fd(open(ktrace_output_path, O_CREAT | O_TRUNC | O_RDWR,
+    std::string ktrace_output_path =
+      ftl::StringPrintf("%s.%s", output_path_prefix.c_str(),
+                        ktrace_output_path_suffix);
+    const char* ktrace_c_path = ktrace_output_path.c_str();
+
+    ftl::UniqueFD dest_fd(open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR,
                                S_IRUSR | S_IWUSR));
     if (dest_fd.is_valid()) {
       ssize_t count;
       char buf[1024];
       while ((count = read(ktrace_fd.get(), buf, sizeof(buf))) != 0) {
         if (write(dest_fd.get(), buf, count) != count) {
-          FTL_LOG(ERROR) << "error writing " << ktrace_output_path;
+          FTL_LOG(ERROR) << "error writing " << ktrace_c_path;
         }
       }
     } else {
       util::LogErrorWithErrno(ftl::StringPrintf("unable to create %s",
-                                                ktrace_output_path));
+                                                ktrace_c_path));
     }
   }
 
   // TODO(dje): UniqueFILE?
   {
-    FILE* f = fopen(cpuid_output_path, "w");
+    std::string cpuid_output_path =
+      ftl::StringPrintf("%s.%s", output_path_prefix.c_str(),
+                        cpuid_output_path_suffix);
+    const char* cpuid_c_path = cpuid_output_path.c_str();
+
+    FILE* f = fopen(cpuid_c_path, "w");
     if (f != nullptr) {
       arch::DumpArch(f);
       // Also put the mtc_freq value in the cpuid file, it's as good a place
@@ -548,7 +565,7 @@ void DumpPerf(const IptConfig& config) {
       fprintf(f, "mtc_freq: %u\n", mtc_freq);
       fclose(f);
     } else {
-      FTL_LOG(ERROR) << "unable to write PT config to " << cpuid_output_path;
+      FTL_LOG(ERROR) << "unable to write PT config to " << cpuid_c_path;
     }
   }
 }
@@ -576,7 +593,7 @@ void ResetThreadPerf(Thread* thread, const IptConfig& config) {
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   if (thread->ipt_buffer() < 0) {
-    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRId64 " has no IPT buffer",
+    FTL_LOG(INFO) << ftl::StringPrintf("Thread %" PRIu64 " has no IPT buffer",
                                        thread->id());
     return;
   }
