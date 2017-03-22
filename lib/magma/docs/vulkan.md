@@ -41,6 +41,47 @@ Vulkan Development
 
     To toggle display ownership between the vulkan app and the gfxconsole, press alt-esc.
 
-4) Demo
+5) Reporting issues
+
+    Keep an eye on the system log for various types of graphics driver specific issues, and file tickets on the Magma project.
+    The driver should kill the connection corresponding to the context that was executing when these issues occurred; but otherwise should handle this failure gracefully.  
+    If nothing works afterward, please file that as an issue as well.
+
+    a) Gpu fault
+
+    Looks something like the following.  This can happen due to user error or driver bug.  Please make sure your app has no validation layer issues.
+    If you believe your app is innocent, please file a Magma ticket and include at least this portion of the log, plus ideally a recipe to repro:
+
+        > [WARNING] GPU fault detected
+        > ---- device dump begin ----
+        > RELEASE build
+        > Device id: 0x1916
+        > RENDER_COMMAND_STREAMER
+        > sequence_number 0x1003
+        > active head pointer: 0x1f328
+        > ENGINE FAULT DETECTED
+        > engine 0x0 src 0x3 type 0x0 gpu_address 0x1000000
+        > mapping cache footprint 11.9 MB cap 190.0 MB
+        > ---- device dump end ----
+        > [WARNING] resetting render engine
+
+    b) Gpu hang
+
+    If a command buffer fails to complete within a certain amount of time, the gpu driver should detect the condition and treat it as if a fault occured.
+    Again, may be an application error or driver bug. If you believe your app is innocent, please file a Magma ticket and include at least this portion of the log, plus ideally a recipe to repro:
+
+        > [WARNING] Suspected GPU hang: last submitted sequence number 0x1007 master_interrupt_control 0x80000000
+        > ---- device dump begin ----
+        > DEBUG build
+        > Device id: 0x1916
+        > RENDER_COMMAND_STREAMER
+        > sequence_number 0x1006
+        > active head pointer: 0x20
+        > No engine faults detected.
+        > mapping cache footprint 0.0 MB cap 0.0 MB
+        > ---- device dump end ----
+        > [WARNING] resetting render engine
+
+6) Demo
 
     The magma build includes a spinning cube demo 'vkcube', which you can copy over to your fuchsia system and execute via netruncmd.
