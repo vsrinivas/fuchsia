@@ -14,6 +14,8 @@ source_set("common") {
     "manufacturer_names.h",
     "packet.h",
     "test_helpers.h",
+    "uint128.cc",
+    "uint128.h",
   ]
 
   deps = [
@@ -30,6 +32,7 @@ source_set("tests") {
     "device_address_unittest.cc",
     "manufacturer_names_unittest.cc",
     "packet_unittest.cc",
+    "uint128_unittest.cc",
   ]
 
   deps = [
