@@ -386,21 +386,39 @@ mx_status_t VnodeDir::Rename(fs::Vnode* _newdir, const char* oldname, size_t old
 
     // Allocate the new dnode (not yet attached to anything)
     dnode_t* newdn;
-    if ((r = dn_allocate(&newdn, newname, newlen)) < 0)
+    if ((r = dn_allocate(&newdn, newname, newlen)) < 0) {
         return r;
+    }
 
     // NOTE:
     //
     // Validation ends here, and modifications begin. Rename should not fail
     // beyond this point.
 
-    if (target_exists)
+    if (target_exists) {
         dn_delete(targetdn);
+    }
     // Acquire the source vnode; we're going to delete the source dnode, and we
     // need to make sure the source vnode still exists afterwards.
     VnodeMemfs* vn = olddn->vnode;
     vn->RefAcquire(); // Acquire +1
     uint32_t oldtype = DN_TYPE(olddn->flags);
+
+    // Move the children of the source dnode to the new dnode.
+    list_move(&olddn->children, &newdn->children);
+    dnode_t* dn;
+    list_for_every_entry(&newdn->children, dn, dnode_t, dn_entry) {
+        // TODO(smklein): Because each child has an explicit pointer
+        // to the parent entry, we must traverse through all children
+        // to rename a parent directory.
+        //
+        // Possible solution:
+        //  - Don't reallocate the new dnode. Decouple dnode names from the
+        //  rest of their structure (possibly allow in-line storage for short
+        //  names). Resuing the original dnode will not require any
+        //  modifications in the childs.
+        dn->parent = newdn;
+    }
 
     // Delete source dnode
     dn_delete(olddn); // Acquire +0

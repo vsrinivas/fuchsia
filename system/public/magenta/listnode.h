@@ -255,4 +255,17 @@ static inline size_t list_length(list_node_t* list) {
     return cnt;
 }
 
+// Moves all the contents of old_list (which may or may not be empty)
+// to new_list (which should be empty).
+static inline void list_move(list_node_t* old_list, list_node_t* new_list) {
+    if (list_is_empty(old_list)) {
+        return;
+    }
+    new_list->next = old_list->next;
+    new_list->prev = old_list->prev;
+    new_list->next->prev = new_list;
+    new_list->prev->next = new_list;
+    list_initialize(old_list);
+}
+
 __END_CDECLS;

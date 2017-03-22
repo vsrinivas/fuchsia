@@ -55,6 +55,8 @@ void dn_attach(dnode_t* dn, VnodeMemfs* vn) {
 }
 
 void dn_delete(dnode_t* dn) {
+    MX_DEBUG_ASSERT(list_is_empty(&dn->children));
+
     // detach from parent
     if (dn->parent) {
         list_delete(&dn->dn_entry);
