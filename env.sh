@@ -730,8 +730,10 @@ function fmkbootloader() {
 if [[ -n "${ZSH_VERSION}" ]]; then
   ### Zsh Completion
   fpath=(${FUCHSIA_SCRIPTS_DIR}/zsh-completion $fpath[@])
-  # clear cached load of _path_files
-  unfunction _path_files
+  if whence -w _path_files > /dev/null; then
+    # clear cached load of _path_files
+    unfunction _path_files
+  fi
   autoload -U _path_files
   # load and run compinit
   autoload -U compinit
