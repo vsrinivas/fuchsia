@@ -35,7 +35,11 @@ Vulkan Development
 
     The magma display driver supports toggling ownership between the main display owner, and the graphics console.
 
-    Press alt-esc to toggle between gfxconsole and the main display owner.
+    Currently, on system startup the gfxconsole owns the display.
+
+    When a vulkan application starts, it will take over the display.
+
+    To toggle display ownership between the vulkan app and the gfxconsole, press alt-esc.
 
 4) Demo
 
