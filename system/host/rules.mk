@@ -10,8 +10,11 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 PUBLIC_HEADER_DIR := system/public
 EXPORTED_HEADERS := \
     $(BUILDDIR)/tools/include/magenta/compiler.h \
+    $(BUILDDIR)/tools/include/magenta/errors.h \
     $(BUILDDIR)/tools/include/magenta/ktrace-def.h \
     $(BUILDDIR)/tools/include/magenta/ktrace.h \
+    $(BUILDDIR)/tools/include/magenta/syscalls/object.h \
+    $(BUILDDIR)/tools/include/magenta/types.h \
 
 $(BUILDDIR)/tools/include/%: $(PUBLIC_HEADER_DIR)/%
 	@echo exporting $<
