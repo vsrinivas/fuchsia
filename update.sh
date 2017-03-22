@@ -118,6 +118,8 @@ function download_all_default() {
   download_go
   download_godepfile
   download_qemu
+  # See IN-29. Need to distinguish bots from humans.
+  download_gdb
 }
 
 function echo_error() {
