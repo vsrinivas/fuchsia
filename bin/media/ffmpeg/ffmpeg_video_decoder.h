@@ -6,6 +6,7 @@
 
 #include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/src/ffmpeg/ffmpeg_decoder_base.h"
+#include "apps/media/src/ffmpeg/ffmpeg_video_frame_layout.h"
 
 namespace media {
 
@@ -29,16 +30,12 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
                                PayloadAllocator* allocator) override;
 
  private:
-  using Extent = VideoStreamType::Extent;
-
-  std::vector<uint32_t> line_stride_;
-  std::vector<uint32_t> plane_offset_;
-  size_t frame_buffer_size_;
+  FfmpegVideoFrameLayout frame_layout_;
 
   // TODO(dalesat): For investigation only...remove these three fields.
   bool first_frame_ = true;
   AVColorSpace colorspace_;
-  Extent coded_size_;
+  VideoStreamType::Extent coded_size_;
 };
 
 }  // namespace media

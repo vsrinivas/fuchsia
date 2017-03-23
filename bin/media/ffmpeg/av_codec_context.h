@@ -41,11 +41,4 @@ VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(
 AVPixelFormat AVPixelFormatFromPixelFormat(
     VideoStreamType::PixelFormat pixel_format);
 
-// Determines frame layout compatible with ffmpeg, returning the minimum
-// payload size required to accommodate a decoded frame.
-size_t LayoutFrame(VideoStreamType::PixelFormat pixel_format,
-                   const VideoStreamType::Extent& coded_size,
-                   std::vector<uint32_t>* line_stride_out,
-                   std::vector<uint32_t>* plane_offset_out);
-
 }  // namespace media

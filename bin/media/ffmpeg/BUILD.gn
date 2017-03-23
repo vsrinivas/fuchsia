@@ -25,6 +25,8 @@ source_set("ffmpeg") {
     "ffmpeg_init.h",
     "ffmpeg_video_decoder.cc",
     "ffmpeg_video_decoder.h",
+    "ffmpeg_video_frame_layout.cc",
+    "ffmpeg_video_frame_layout.h",
   ]
 
   deps = [

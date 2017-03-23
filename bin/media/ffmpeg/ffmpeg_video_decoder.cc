@@ -27,11 +27,7 @@ FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
   context()->thread_count = 2;
   context()->thread_type = FF_THREAD_FRAME;
 
-  // Determine the frame layout we will use.
-  frame_buffer_size_ = LayoutFrame(
-      PixelFormatFromAVPixelFormat(context()->pix_fmt),
-      VideoStreamType::Extent(context()->coded_width, context()->coded_height),
-      &line_stride_, &plane_offset_);
+  frame_layout_.Update(*context());
 }
 
 FfmpegVideoDecoder::~FfmpegVideoDecoder() {}
@@ -55,7 +51,11 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   FTL_DCHECK(av_frame);
   FTL_DCHECK(allocator);
 
-  Extent visible_size(av_codec_context.width, av_codec_context.height);
+  // TODO(dalesat): Need to send type changes downstream.
+  frame_layout_.Update(av_codec_context);
+
+  VideoStreamType::Extent visible_size(av_codec_context.width,
+                                       av_codec_context.height);
   const int result =
       av_image_check_size(visible_size.width(), visible_size.height(), 0, NULL);
   if (result < 0) {
@@ -69,14 +69,14 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   // When lowres is non-zero, dimensions should be divided by 2^(lowres), but
   // since we don't use this, just FTL_DCHECK that it's zero.
   FTL_DCHECK(av_codec_context.lowres == 0);
-  Extent coded_size(
+  VideoStreamType::Extent coded_size(
       std::max(visible_size.width(),
                static_cast<uint32_t>(av_codec_context.coded_width)),
       std::max(visible_size.height(),
                static_cast<uint32_t>(av_codec_context.coded_height)));
 
   uint8_t* buffer = static_cast<uint8_t*>(
-      allocator->AllocatePayloadBuffer(frame_buffer_size_));
+      allocator->AllocatePayloadBuffer(frame_layout_.buffer_size()));
 
   // TODO(dalesat): For investigation purposes only...remove one day.
   if (first_frame_) {
@@ -102,18 +102,19 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
 
   if (buffer == nullptr) {
     FTL_LOG(ERROR) << "failed to allocate buffer of size "
-                   << frame_buffer_size_;
+                   << frame_layout_.buffer_size();
     return -1;
   }
 
   // Decoders require a zeroed buffer.
-  std::memset(buffer, 0, frame_buffer_size_);
+  std::memset(buffer, 0, frame_layout_.buffer_size());
 
-  FTL_DCHECK(line_stride_.size() == plane_offset_.size());
+  FTL_DCHECK(frame_layout_.line_stride().size() ==
+             frame_layout_.plane_offset().size());
 
-  for (size_t plane = 0; plane < plane_offset_.size(); ++plane) {
-    av_frame->data[plane] = buffer + plane_offset_[plane];
-    av_frame->linesize[plane] = line_stride_[plane];
+  for (size_t plane = 0; plane < frame_layout_.plane_offset().size(); ++plane) {
+    av_frame->data[plane] = buffer + frame_layout_.plane_offset()[plane];
+    av_frame->linesize[plane] = frame_layout_.line_stride()[plane];
   }
 
   // TODO(dalesat): Do we need to attach colorspace info to the packet?
@@ -124,7 +125,8 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   av_frame->reordered_opaque = av_codec_context.reordered_opaque;
 
   FTL_DCHECK(av_frame->data[0] == buffer);
-  av_frame->buf[0] = CreateAVBuffer(buffer, frame_buffer_size_, allocator);
+  av_frame->buf[0] =
+      CreateAVBuffer(buffer, frame_layout_.buffer_size(), allocator);
 
   return 0;
 }
