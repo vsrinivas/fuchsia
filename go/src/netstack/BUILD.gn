@@ -7,7 +7,7 @@ declare_args() {
   lwiperf = false
 
   # if true, use netstack2 for netstack
-  netstack2 = false
+  netstack2 = true
 }
 
 group("netstack") {
