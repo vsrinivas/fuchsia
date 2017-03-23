@@ -23,6 +23,34 @@ static int nb_active = 0;
 // item being downloaded
 static nbfile* item;
 
+static char advertise_nodename[64] = "";
+static char advertise_data[256] = "nodename=magenta";
+
+static void send_query_ack(const ip6_addr* addr, uint16_t port,
+                           uint32_t cookie) {
+    uint8_t buffer[256];
+    nbmsg* msg = (void*)buffer;
+    msg->magic = NB_MAGIC;
+    msg->cookie = cookie;
+    msg->cmd = NB_ACK;
+    msg->arg = NB_VERSION_CURRENT;
+    memcpy(msg->data, advertise_nodename, sizeof(advertise_nodename));
+    udp6_send(buffer, sizeof(nbmsg) + strlen(advertise_nodename) + 1,
+              addr, port, NB_SERVER_PORT);
+}
+
+static void advertise(void) {
+    uint8_t buffer[256];
+    nbmsg* msg = (void*)buffer;
+    msg->magic = NB_MAGIC;
+    msg->cookie = 0;
+    msg->cmd = NB_ADVERTISE;
+    msg->arg = NB_VERSION_CURRENT;
+    memcpy(msg->data, advertise_data, sizeof(advertise_data));
+    udp6_send(buffer, sizeof(nbmsg) + sizeof(advertise_data),
+              &ip6_ll_all_nodes, NB_ADVERT_PORT, NB_SERVER_PORT);
+}
+
 void udp6_recv(void* data, size_t len,
                const ip6_addr* daddr, uint16_t dport,
                const ip6_addr* saddr, uint16_t sport) {
@@ -105,6 +133,10 @@ void udp6_recv(void* data, size_t len,
         nb_boot_now = 1;
         printf("netboot: Boot Kernel...\n");
         break;
+    case NB_QUERY:
+        // Send reply and return w/o getting the netboot state out of sync.
+        send_query_ack(saddr, sport, msg->cookie);
+        return;
     default:
         ack.cmd = NB_ERROR_BAD_CMD;
         ack.arg = 0;
@@ -126,21 +158,6 @@ transmit:
 
         udp6_send(&ack, sizeof(ack), saddr, sport, NB_SERVER_PORT);
     }
-}
-
-static char advertise_nodename[64] = "";
-static char advertise_data[256] = "nodename=magenta";
-
-static void advertise(void) {
-    uint8_t buffer[256];
-    nbmsg* msg = (void*)buffer;
-    msg->magic = NB_MAGIC;
-    msg->cookie = 0;
-    msg->cmd = NB_ADVERTISE;
-    msg->arg = NB_VERSION_CURRENT;
-    memcpy(msg->data, advertise_data, sizeof(advertise_data));
-    udp6_send(buffer, sizeof(nbmsg) + sizeof(advertise_data),
-              &ip6_ll_all_nodes, NB_ADVERT_PORT, NB_SERVER_PORT);
 }
 
 #define FAST_TICK 100

@@ -9,7 +9,7 @@
 
 // clang-format off
 
-#define BOOTLOADER_VERSION "0.5.1"
+#define BOOTLOADER_VERSION "0.5.2"
 
 #define NB_MAGIC              0xAA774217
 
