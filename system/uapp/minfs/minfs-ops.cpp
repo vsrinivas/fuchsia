@@ -440,9 +440,6 @@ bool VnodeMinfs::CanUnlink() const {
         if (inode_.dirent_count != 2) {
             // if we have more than "." and "..", not empty, cannot unlink
             return false;
-        } else if (IsBusy()) {
-            // if the target directory is open elsewhere, cannot unlink
-            return false;
         }
     }
     return true;
@@ -525,6 +522,7 @@ mx_status_t VnodeMinfs::UnlinkChild(VnodeMinfs* childvn, minfs_dirent_t* de, Dir
             // to themselves via ".". Thus, when they reach "one link", they
             // are only pointed to by themselves, and should be deleted.
             childvn->inode_.link_count--;
+            childvn->flags_ |= kMinfsFlagDeletedDirectory;
         }
     }
 
@@ -1124,6 +1122,9 @@ mx_status_t VnodeMinfs::Create(fs::Vnode** out, const char* name, size_t len, ui
     if (!IsDirectory()) {
         return ERR_NOT_SUPPORTED;
     }
+    if (IsDeletedDirectory()) {
+        return ERR_BAD_STATE;
+    }
 
     DirArgs args = DirArgs();
     args.name = name;
@@ -1418,6 +1419,8 @@ mx_status_t VnodeMinfs::Link(const char* name, size_t len, fs::Vnode* _target) {
     assert(memchr(name, '/', len) == NULL);
     if (!IsDirectory()) {
         return ERR_NOT_SUPPORTED;
+    } else if (IsDeletedDirectory()) {
+        return ERR_BAD_STATE;
     }
 
     // rule out any invalid names

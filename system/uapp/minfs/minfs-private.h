@@ -105,6 +105,12 @@ struct DirectoryOffset {
 
 #define INO_HASH(ino) fnv1a_tiny(ino, kMinfsHashBits)
 
+constexpr uint32_t kMinfsFlagDeletedDirectory = 0x00010000;
+constexpr uint32_t kMinfsFlagReservedMask     = 0xFFFF0000;
+
+static_assert((kMinfsFlagReservedMask & V_FLAG_RESERVED_MASK) == 0,
+              "MinFS should not be using any Vnode flags which are reserved");
+
 class VnodeMinfs final : public fs::Vnode, public mxtl::SinglyLinkedListable<VnodeMinfs*> {
     friend class Minfs;
 public:
@@ -114,6 +120,7 @@ public:
     static mx_status_t AllocateHollow(Minfs* fs, VnodeMinfs** out);
 
     bool IsDirectory() const { return inode_.magic == kMinfsMagicDir; }
+    bool IsDeletedDirectory() const { return flags_ & kMinfsFlagDeletedDirectory; }
     bool CanUnlink() const;
 
     uint32_t GetKey() const { return ino_; }

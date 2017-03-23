@@ -128,7 +128,7 @@ bool test_directory_coalesce_helper(const int* unlink_order) {
         ASSERT_EQ(unlink(files[unlink_order[i]]), 0, "");
     }
 
-    ASSERT_EQ(unlink("::coalesce"), 0, "");
+    ASSERT_EQ(rmdir("::coalesce"), 0, "");
     return true;
 }
 
@@ -166,16 +166,16 @@ bool test_directory_trailing_slash(void) {
     ASSERT_EQ(mkdir("::c//", 0755), 0, "");
     ASSERT_EQ(mkdir("::d///", 0755), 0, "");
 
-    ASSERT_EQ(unlink("::a///"), 0, "");
-    ASSERT_EQ(unlink("::b//"), 0, "");
-    ASSERT_EQ(unlink("::c/"), 0, "");
+    ASSERT_EQ(rmdir("::a///"), 0, "");
+    ASSERT_EQ(rmdir("::b//"), 0, "");
+    ASSERT_EQ(rmdir("::c/"), 0, "");
 
     // Before we unlink 'd', try renaming it using some trailing '/' characters.
     ASSERT_EQ(rename("::d", "::e"), 0, "");
     ASSERT_EQ(rename("::e", "::d/"), 0, "");
     ASSERT_EQ(rename("::d/", "::e"), 0, "");
     ASSERT_EQ(rename("::e/", "::d/"), 0, "");
-    ASSERT_EQ(unlink("::d"), 0, "");
+    ASSERT_EQ(rmdir("::d"), 0, "");
 
     // We can make / unlink a file...
     int fd = open("::a", O_RDWR | O_CREAT | O_EXCL, 0644);
@@ -206,7 +206,7 @@ bool test_directory_readdir(void) {
     BEGIN_TEST;
 
     ASSERT_EQ(mkdir("::a", 0755), 0, "");
-    ASSERT_EQ(mkdir("::a", 0744), -1, "");
+    ASSERT_EQ(mkdir("::a", 0755), -1, "");
 
     expected_dirent_t empty_dir[] = {
         {false, ".", DT_DIR},
@@ -234,7 +234,7 @@ bool test_directory_readdir(void) {
     };
     ASSERT_TRUE(check_dir_contents("::a", filled_dir, countof(filled_dir)), "");
 
-    ASSERT_EQ(unlink("::a/dir2"), 0, "");
+    ASSERT_EQ(rmdir("::a/dir2"), 0, "");
     ASSERT_EQ(unlink("::a/file2"), 0, "");
     expected_dirent_t partial_dir[] = {
         {false, ".", DT_DIR},
@@ -244,7 +244,7 @@ bool test_directory_readdir(void) {
     };
     ASSERT_TRUE(check_dir_contents("::a", partial_dir, countof(partial_dir)), "");
 
-    ASSERT_EQ(unlink("::a/dir1"), 0, "");
+    ASSERT_EQ(rmdir("::a/dir1"), 0, "");
     ASSERT_EQ(unlink("::a/file1"), 0, "");
     ASSERT_TRUE(check_dir_contents("::a", empty_dir, countof(empty_dir)), "");
     ASSERT_EQ(unlink("::a"), 0, "");
@@ -283,14 +283,57 @@ bool test_directory_rewind(void) {
     ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, countof(dir_contents)), "");
     ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, countof(dir_contents)), "");
 
-    ASSERT_EQ(unlink("::a/b"), 0, "");
-    ASSERT_EQ(unlink("::a/c"), 0, "");
+    ASSERT_EQ(rmdir("::a/b"), 0, "");
+    ASSERT_EQ(rmdir("::a/c"), 0, "");
 
     ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
     ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
 
     ASSERT_EQ(closedir(dir), 0, "");
-    ASSERT_EQ(unlink("::a"), 0, "");
+    ASSERT_EQ(rmdir("::a"), 0, "");
+
+    END_TEST;
+}
+
+bool test_directory_after_rmdir(void) {
+    BEGIN_TEST;
+
+    expected_dirent_t empty_dir[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+    };
+
+    // Make a directory...
+    ASSERT_EQ(mkdir("::dir", 0755), 0, "");
+    DIR* dir = opendir("::dir");
+    ASSERT_NEQ(dir, NULL, "");
+    // We can make and delete subdirectories, since "::dir" exists...
+    ASSERT_EQ(mkdir("::dir/subdir", 0755), 0, "");
+    ASSERT_EQ(rmdir("::dir/subdir"), 0, "");
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
+
+    // Remove the directory. It's still open, so it should appear empty.
+    ASSERT_EQ(rmdir("::dir"), 0, "");
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
+
+    // But we can't make new files / directories, by path...
+    ASSERT_EQ(mkdir("::dir/subdir", 0755), -1, "");
+    // ... Or with the open fd.
+    int fd = dirfd(dir);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(openat(fd, "file", O_CREAT | O_RDWR), -1, "Can't make new files in deleted dirs");
+    ASSERT_EQ(mkdirat(fd, "dir", 0755), -1, "Can't make new files in deleted dirs");
+
+    // In fact, the "dir" path should still be usable, even as a file!
+    fd = open("::dir", O_CREAT | O_EXCL | O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink("::dir"), 0, "");
+
+    // After all that, dir still looks like an empty directory...
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
+    ASSERT_EQ(closedir(dir), 0, "");
 
     END_TEST;
 }
@@ -302,6 +345,7 @@ RUN_FOR_ALL_FILESYSTEMS(directory_tests,
     RUN_TEST_MEDIUM(test_directory_trailing_slash)
     RUN_TEST_MEDIUM(test_directory_readdir)
     RUN_TEST_MEDIUM(test_directory_rewind)
+    RUN_TEST_MEDIUM(test_directory_after_rmdir)
 )
 
 // TODO(smklein): Run this when MemFS can execute it without causing an OOM

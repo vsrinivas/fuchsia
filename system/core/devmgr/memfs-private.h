@@ -38,7 +38,10 @@ public:
     virtual mx_status_t Setattr(vnattr_t* a) override;
     virtual mx_status_t Sync() override;
 
+    // To be more specific: Is this vnode connected into the directory hierarchy?
+    // VnodeDirs can be unlinked, and this method will subsequently return false.
     bool IsDirectory() const { return dnode_ != nullptr; }
+
     virtual ~VnodeMemfs();
 
     // TODO(smklein): The following members should become private

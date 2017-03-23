@@ -21,7 +21,6 @@
 bool fcheck_dir_contents(DIR* dir, expected_dirent_t* edirents, size_t len) {
     rewinddir(dir);
     size_t seen = 0;
-
     while (seen != len) {
         struct dirent* de = readdir(dir);
         ASSERT_NEQ(de, NULL, "Didn't see all expected direntries");

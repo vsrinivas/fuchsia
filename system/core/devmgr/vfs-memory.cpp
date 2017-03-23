@@ -173,6 +173,9 @@ ssize_t VnodeVmo::Write(const void* data, size_t len, size_t off) {
 }
 
 mx_status_t VnodeDir::Lookup(fs::Vnode** out, const char* name, size_t len) {
+    if (!IsDirectory()) {
+        return ERR_NOT_FOUND;
+    }
     dnode_t* dn;
     mx_status_t r = dn_lookup(dnode_, &dn, name, len);
     assert(r <= 0);
@@ -281,13 +284,16 @@ mx_status_t VnodeDir::Create(fs::Vnode** out, const char* name, size_t len, uint
 
 mx_status_t VnodeDir::Unlink(const char* name, size_t len, bool must_be_dir) {
     xprintf("memfs_unlink(%p,'%.*s')\n", this, (int)len, name);
+    if (!IsDirectory()) {
+        // Calling unlink from unlinked, empty directory
+        return ERR_BAD_STATE;
+    }
     dnode_t* dn;
     mx_status_t r;
     if ((r = dn_lookup(dnode_, &dn, name, len)) < 0) {
         return r;
     }
-    bool is_directory = (dn->vnode->dnode_ != nullptr);
-    if (!is_directory && must_be_dir) {
+    if (!dn->vnode->IsDirectory() && must_be_dir) {
         return ERR_NOT_DIR;
     }
     if ((r = memfs_can_unlink(dn)) < 0) {
@@ -339,7 +345,7 @@ mx_status_t VnodeDir::Rename(fs::Vnode* _newdir, const char* oldname, size_t old
                              bool dst_must_be_dir) {
     VnodeMemfs* newdir = static_cast<VnodeMemfs*>(_newdir);
 
-    if (!newdir->IsDirectory())
+    if (!IsDirectory() || !newdir->IsDirectory())
         return ERR_BAD_STATE;
     if ((oldlen == 1) && (oldname[0] == '.'))
         return ERR_BAD_STATE;
@@ -429,12 +435,13 @@ mx_status_t VnodeDir::Rename(fs::Vnode* _newdir, const char* oldname, size_t old
     }
 
     // Delete source dnode
+    bool moved_node_was_dir = vn->IsDirectory();
     dn_delete(olddn); // Acquire +0
 
     // Bind the newdn and vn, and attach it to the destination's parent
     dn_attach(newdn, vn); // Acquire +1
     vn->RefRelease(); // Acquire +0. No change in refcount, no chance of deletion.
-    if (vn->dnode_ != nullptr) {
+    if (moved_node_was_dir) {
         vn->dnode_ = newdn;
     }
     newdn->flags |= oldtype;
@@ -446,10 +453,14 @@ mx_status_t VnodeDir::Rename(fs::Vnode* _newdir, const char* oldname, size_t old
 mx_status_t VnodeDir::Link(const char* name, size_t len, fs::Vnode* _target) {
     VnodeMemfs* target = static_cast<VnodeMemfs*>(_target);
 
-    if ((len == 1) && (name[0] == '.'))
+    if ((len == 1) && (name[0] == '.')) {
         return ERR_BAD_STATE;
-    if ((len == 2) && (name[0] == '.') && (name[1] == '.'))
+    } else if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
         return ERR_BAD_STATE;
+    } else if (!IsDirectory()) {
+        // Empty, unlinked parent
+        return ERR_BAD_STATE;
+    }
 
     dnode_t *targetdn;
     mx_status_t r;
@@ -479,11 +490,7 @@ mx_status_t VnodeMemfs::Sync() {
 }
 
 mx_status_t memfs_can_unlink(dnode_t* dn) {
-    bool is_directory = DNODE_IS_DIR(dn);
-    if (is_directory && (dn->vnode->IsBusy())) {
-        // Cannot unlink an open directory
-        return ERR_BAD_STATE;
-    } else if (!list_is_empty(&dn->children)) {
+    if (!list_is_empty(&dn->children)) {
         // Cannot unlink non-empty directory
         return ERR_BAD_STATE;
     } else if (dn->vnode->IsRemote()) {

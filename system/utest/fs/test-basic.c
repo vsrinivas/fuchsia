@@ -41,9 +41,10 @@ bool test_basic(void) {
     ASSERT_EQ(read(fd1, NULL, 0), -1, "");
     ASSERT_EQ(write(fd1, "Don't write to directories", 26), -1, "");
     ASSERT_EQ(ftruncate(fd1, 0), -1, "");
-    ASSERT_EQ(unlink("::emptydir"), -1, "");
+    ASSERT_EQ(rmdir("::emptydir"), 0, "");
+    ASSERT_EQ(rmdir("::emptydir"), -1, "");
     ASSERT_EQ(close(fd1), 0, "");
-    ASSERT_EQ(unlink("::emptydir"), 0, "");
+    ASSERT_EQ(rmdir("::emptydir"), -1, "");
 
     END_TEST;
 }

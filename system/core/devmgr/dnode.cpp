@@ -69,6 +69,7 @@ void dn_delete(dnode_t* dn) {
     if (dn->vnode) {
         list_delete(&dn->vn_entry);
         dn->vnode->link_count_--;
+        dn->vnode->dnode_ = nullptr;
         dn->vnode->RefRelease();
         dn->vnode = nullptr;
     }
@@ -177,6 +178,10 @@ mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len) {
         }
         pos += r;
         c->n++;
+    }
+    if (parent == NULL) {
+        // This is the case for directories which have been deleted.
+        return static_cast<mx_status_t>(pos);
     }
 
     list_for_every_entry(&parent->children, dn, dnode_t, dn_entry) {
