@@ -38,6 +38,8 @@ const AudioStreamType* AudioStreamType::audio() const {
 // static
 uint32_t AudioStreamType::SampleSizeFromFormat(SampleFormat sample_format) {
   switch (sample_format) {
+    case SampleFormat::kNone:
+      return 0;
     case SampleFormat::kAny:
       FTL_LOG(ERROR) << "sample size requested for SampleFormat::kAny";
       abort();

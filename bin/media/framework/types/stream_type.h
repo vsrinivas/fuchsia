@@ -25,6 +25,8 @@ class StreamType {
  public:
   enum class Medium { kAudio, kVideo, kText, kSubpicture };
 
+  static const char* kMediaEncodingUnsupported;
+
   static const char* kAudioEncodingAac;
   static const char* kAudioEncodingAmrNb;
   static const char* kAudioEncodingAmrWb;

@@ -312,6 +312,13 @@ void Builder::AddConverterForLpcm() {
 }
 
 void Builder::AddConverters() {
+  if ((*type_)->encoding() == StreamType::kMediaEncodingUnsupported) {
+    FTL_DLOG(WARNING) << "Conversion not supported for encoding "
+                      << StreamType::kMediaEncodingUnsupported;
+    Fail();
+    return;
+  }
+
   if (GoalTypeSetsInclude(**type_)) {
     Succeed();
     return;

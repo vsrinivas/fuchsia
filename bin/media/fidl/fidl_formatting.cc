@@ -366,6 +366,8 @@ const char* StringFromMediaTypeMedium(MediaTypeMedium value) {
 
 const char* StringFromAudioSampleFormat(AudioSampleFormat value) {
   switch (value) {
+    case AudioSampleFormat::NONE:
+      return "NONE";
     case AudioSampleFormat::ANY:
       return "ANY";
     case AudioSampleFormat::UNSIGNED_8:

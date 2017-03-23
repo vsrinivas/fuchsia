@@ -17,6 +17,7 @@ namespace media {
 class AudioStreamType : public StreamType {
  public:
   enum class SampleFormat {
+    kNone,
     kAny,
     kUnsigned8,
     kSigned16,

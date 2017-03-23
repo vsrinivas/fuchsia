@@ -24,6 +24,8 @@ static const uint32_t kFrameSizePadding = 16;
 // Converts an AVSampleFormat into an AudioStreamType::SampleFormat.
 AudioStreamType::SampleFormat Convert(AVSampleFormat av_sample_format) {
   switch (av_sample_format) {
+    case AV_SAMPLE_FMT_NONE:
+      return AudioStreamType::SampleFormat::kNone;
     case AV_SAMPLE_FMT_U8:
     case AV_SAMPLE_FMT_U8P:
       return AudioStreamType::SampleFormat::kUnsigned8;
@@ -36,7 +38,6 @@ AudioStreamType::SampleFormat Convert(AVSampleFormat av_sample_format) {
     case AV_SAMPLE_FMT_FLT:
     case AV_SAMPLE_FMT_FLTP:
       return AudioStreamType::SampleFormat::kFloat;
-    case AV_SAMPLE_FMT_NONE:
     case AV_SAMPLE_FMT_DBL:
     case AV_SAMPLE_FMT_DBLP:
     case AV_SAMPLE_FMT_NB:
@@ -92,8 +93,8 @@ const char* EncodingFromCodecId(AVCodecID from) {
     case AV_CODEC_ID_VP9:
       return StreamType::kVideoEncodingVp9;
     default:
-      FTL_LOG(ERROR) << "unsupported codec_id " << from;
-      abort();
+      FTL_LOG(WARNING) << "unsupported codec_id " << from;
+      return StreamType::kMediaEncodingUnsupported;
   }
 }
 
@@ -341,9 +342,11 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
     codec_id = AV_CODEC_ID_PCM_MULAW;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingVorbis) {
     codec_id = AV_CODEC_ID_VORBIS;
+  } else if (stream_type.encoding() == StreamType::kMediaEncodingUnsupported) {
+    codec_id = AV_CODEC_ID_NONE;
   } else {
-    FTL_LOG(ERROR) << "unsupported encoding " << stream_type.encoding();
-    abort();
+    FTL_LOG(WARNING) << "unsupported encoding " << stream_type.encoding();
+    codec_id = AV_CODEC_ID_NONE;
   }
 
   AvCodecContextPtr context(avcodec_alloc_context3(nullptr));
@@ -380,9 +383,11 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(
     codec_id = AV_CODEC_ID_VP8;
   } else if (stream_type.encoding() == StreamType::kVideoEncodingVp9) {
     codec_id = AV_CODEC_ID_VP9;
+  } else if (stream_type.encoding() == StreamType::kMediaEncodingUnsupported) {
+    codec_id = AV_CODEC_ID_NONE;
   } else {
-    FTL_LOG(ERROR) << "unsupported encoding " << stream_type.encoding();
-    abort();
+    FTL_LOG(WARNING) << "unsupported encoding " << stream_type.encoding();
+    codec_id = AV_CODEC_ID_NONE;
   }
 
   if (codec_id == AV_CODEC_ID_NONE) {

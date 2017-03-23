@@ -57,6 +57,8 @@ StreamType::Medium Convert(MediaTypeMedium media_type_medium) {
 
 AudioStreamType::SampleFormat Convert(AudioSampleFormat audio_sample_format) {
   switch (audio_sample_format) {
+    case AudioSampleFormat::NONE:
+      return AudioStreamType::SampleFormat::kNone;
     case AudioSampleFormat::ANY:
       return AudioStreamType::SampleFormat::kAny;
     case AudioSampleFormat::UNSIGNED_8:
@@ -177,6 +179,8 @@ MediaTypeMedium Convert(StreamType::Medium medium) {
 
 AudioSampleFormat Convert(AudioStreamType::SampleFormat sample_format) {
   switch (sample_format) {
+    case AudioStreamType::SampleFormat::kNone:
+      return AudioSampleFormat::NONE;
     case AudioStreamType::SampleFormat::kAny:
       return AudioSampleFormat::ANY;
     case AudioStreamType::SampleFormat::kUnsigned8:

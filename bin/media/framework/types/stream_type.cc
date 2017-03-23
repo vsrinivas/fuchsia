@@ -12,6 +12,8 @@ namespace media {
 // These must match the definitions in media_types.fidl. This is verfied by
 // the KnownEncodingsMatch function in fidl/fidl_type_conversion.cc. Changes
 // to this list should be reflected there.
+const char* StreamType::kMediaEncodingUnsupported = "unsupported";
+
 const char* StreamType::kAudioEncodingAac = "aac";
 const char* StreamType::kAudioEncodingAmrNb = "amrnb";
 const char* StreamType::kAudioEncodingAmrWb = "amrwb";

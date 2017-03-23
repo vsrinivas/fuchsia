@@ -213,6 +213,8 @@ std::ostream& operator<<(std::ostream& os, StreamType::Medium value) {
 std::ostream& operator<<(std::ostream& os,
                          AudioStreamType::SampleFormat value) {
   switch (value) {
+    case AudioStreamType::SampleFormat::kNone:
+      return os << "kNone";
     case AudioStreamType::SampleFormat::kAny:
       return os << "kAny";
     case AudioStreamType::SampleFormat::kUnsigned8:

@@ -83,7 +83,18 @@ void MediaSinkImpl::BuildConversionPipeline() {
              std::unique_ptr<StreamType> stream_type,
              std::vector<mx_koid_t> converter_koids) {
         FTL_DCHECK(!producer_getter);
-        RCHECK(succeeded);
+        FTL_DCHECK(packet_consumer_request_);
+
+        if (!succeeded) {
+          FTL_LOG(WARNING) << "Failed to create conversion pipeline.";
+          // TODO(dalesat): Log this to flog.
+          // TODO(dalesat): Report this to owner somehow.
+          // Break the promised producer/consumer connection.
+          packet_consumer_request_ = nullptr;
+          original_media_type_.reset();
+          return;
+        }
+
         FTL_DCHECK(consumer_getter);
 
         stream_type_ = std::move(stream_type);
@@ -98,7 +109,6 @@ void MediaSinkImpl::BuildConversionPipeline() {
         // Not needed anymore.
         original_media_type_.reset();
 
-        FTL_DCHECK(packet_consumer_request_);
         consumer_getter(std::move(packet_consumer_request_));
       });
 }

@@ -96,9 +96,9 @@ void VideoFrameSource::GetTimelineControlPoint(
 
 fidl::Array<MediaTypeSetPtr> VideoFrameSource::SupportedMediaTypes() {
   VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
-  video_details->min_width = 1;
+  video_details->min_width = 0;
   video_details->max_width = std::numeric_limits<uint32_t>::max();
-  video_details->min_height = 1;
+  video_details->min_height = 0;
   video_details->max_height = std::numeric_limits<uint32_t>::max();
   MediaTypeSetPtr supported_type = MediaTypeSet::New();
   supported_type->medium = MediaTypeMedium::VIDEO;
