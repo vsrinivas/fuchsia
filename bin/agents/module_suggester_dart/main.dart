@@ -9,6 +9,7 @@ import 'package:apps.maxwell.services.suggestion/proposal.fidl.dart';
 import 'package:apps.maxwell.services.suggestion/proposal_publisher.fidl.dart';
 import 'package:apps.maxwell.services.suggestion/suggestion_display.fidl.dart';
 import 'package:apps.maxwell.services.suggestion/user_input.fidl.dart';
+import 'package:web_view/web_view.dart' as web_view;
 
 final _proposalPublisher = new ProposalPublisherProxy();
 final _askHandlerBinding = new AskHandlerBinding();
@@ -35,7 +36,7 @@ class AskHandlerImpl extends AskHandler {
       proposal.display.imageUrl = "";
 
       final createStory = new CreateStory();
-      createStory.moduleId = "file:///system/apps/web_view";
+      createStory.moduleId = web_view.kWebViewURL;
       final String url =
           query.text.startsWith("http") ? query.text : "https://" + query.text;
       createStory.initialData = JSON.encode({"url": url});

@@ -101,5 +101,6 @@ dart_app("module_suggester_dart") {
   deps = [
     "//application/lib/app/dart",
     "//apps/maxwell/services/suggestion:suggestion_dart",
+    "//apps/web_runner/lib/dart:web_view",
   ]
 }
