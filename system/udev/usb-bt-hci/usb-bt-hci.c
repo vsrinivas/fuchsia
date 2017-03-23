@@ -18,6 +18,8 @@
 #include <unistd.h>
 
 #define EVENT_REQ_COUNT 8
+
+// TODO(armansito): Consider increasing these.
 #define ACL_READ_REQ_COUNT 8
 #define ACL_WRITE_REQ_COUNT 8
 
@@ -44,7 +46,7 @@ typedef struct {
     mx_wait_item_t read_wait_items[NUM_CHANNELS];
     uint32_t read_wait_item_count;
 
-    bool read_thread_started;
+    bool read_thread_running;
 
     void* intr_queue;
 
@@ -57,6 +59,9 @@ typedef struct {
     list_node_t free_event_reqs;
     list_node_t free_acl_read_reqs;
     list_node_t free_acl_write_reqs;
+
+    // thread we use to process packets we receive on the channels.
+    thrd_t read_thread;
 
     mtx_t mutex;
 } hci_t;
@@ -290,6 +295,13 @@ fail:
 
 static bool hci_handle_acl_read_events(hci_t* hci, mx_wait_item_t* acl_item) {
     if (acl_item->pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) {
+        mtx_lock(&hci->mutex);
+        list_node_t* node = list_peek_head(&hci->free_acl_write_reqs);
+        mtx_unlock(&hci->mutex);
+
+        // We don't have enough iotxn's. Simply punt the channel read until later.
+        if (!node) return node;
+
         uint8_t buf[BT_HCI_MAX_FRAME_SIZE];
         uint32_t length = sizeof(buf);
         mx_status_t status =
@@ -301,14 +313,12 @@ static bool hci_handle_acl_read_events(hci_t* hci, mx_wait_item_t* acl_item) {
         }
 
         mtx_lock(&hci->mutex);
-        list_node_t* node = list_remove_head(&hci->free_acl_write_reqs);
+        node = list_remove_head(&hci->free_acl_write_reqs);
         mtx_unlock(&hci->mutex);
 
-        // TODO(armansito): There used to be a hack here that polled
-        // list_remove_head until it returned a none-NULL value. The hack looked
-        // ugly but I haven't really tested the ACL flow yet. Revisit this code
-        // once the ACL work has started.
-        assert(node);
+        // At this point if we don't get a free node from |free_acl_write_reqs| that means that
+        // they were cleaned up in hci_release(). Just drop the packet.
+        if (!node) return true;
 
         iotxn_t* txn = containerof(node, iotxn_t, node);
         txn->ops->copyto(txn, buf, length, 0);
@@ -373,7 +383,7 @@ static int hci_read_thread(void* arg) {
 
 done:
     mtx_lock(&hci->mutex);
-    hci->read_thread_started = false;
+    hci->read_thread_running = false;
     mtx_unlock(&hci->mutex);
 
     return 0;
@@ -462,11 +472,10 @@ static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, s
     hci_build_read_wait_items_locked(hci);
 
     // Kick off the hci_read_thread if it's not already running.
-    if (result >= 0 && !hci->read_thread_started) {
-        thrd_t thread;
-        thrd_create_with_name(&thread, hci_read_thread, hci, "hci_read_thread");
-        hci->read_thread_started = true;
-        thrd_detach(thread);
+    if (result >= 0 && !hci->read_thread_running) {
+        thrd_create_with_name(&hci->read_thread, hci_read_thread, hci, "hci_read_thread");
+        hci->read_thread_running = true;
+        thrd_detach(hci->read_thread);
     }
 
 done:
@@ -481,6 +490,8 @@ static void hci_unbind(mx_device_t* device) {
 
 static mx_status_t hci_release(mx_device_t* device) {
     hci_t* hci = get_hci(device);
+
+    mtx_lock(&hci->mutex);
 
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&hci->free_event_reqs, iotxn_t, node)) != NULL) {
@@ -501,6 +512,11 @@ static mx_status_t hci_release(mx_device_t* device) {
 
     if (hci->snoop_channel != MX_HANDLE_INVALID)
         snoop_channel_cleanup_locked(hci);
+
+    mtx_unlock(&hci->mutex);
+
+    thrd_join(hci->read_thread, NULL);
+    mtx_destroy(&hci->mutex);
 
     free(hci);
 
@@ -562,6 +578,8 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
     list_initialize(&hci->free_event_reqs);
     list_initialize(&hci->free_acl_read_reqs);
     list_initialize(&hci->free_acl_write_reqs);
+
+    mtx_init(&hci->mutex, mtx_plain);
 
     hci->usb_device = device;
 
