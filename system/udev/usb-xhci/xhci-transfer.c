@@ -32,7 +32,8 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
     xprintf("xhci_reset_endpoint %d %d\n", slot_id, endpoint);
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[endpoint];
+    xhci_endpoint_t* ep = &slot->eps[endpoint];
+    xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
     mtx_lock(&transfer_ring->mutex);
 
@@ -79,11 +80,12 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
     }
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    xhci_transfer_ring_t* ring = &slot->transfer_rings[endpoint];
-    if (!ring->enabled)
+    xhci_endpoint_t* ep = &slot->eps[endpoint];
+    xhci_transfer_ring_t* ring = &ep->transfer_ring;
+    if (!ep->enabled)
         return ERR_REMOTE_CLOSED;
 
-    xhci_endpoint_context_t* epc = slot->epcs[endpoint];
+    xhci_endpoint_context_t* epc = slot->eps[endpoint].epc;
     if (XHCI_GET_BITS32(&epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS) == 2 /* halted */ ) {
         return ERR_IO_REFUSED;
     }
@@ -138,12 +140,12 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
     mtx_lock(&ring->mutex);
 
     // don't allow queueing new requests if we have deferred requests
-    if (!list_is_empty(&ring->deferred_txns) || required_trbs > xhci_transfer_ring_free_trbs(ring)) {
+    if (!list_is_empty(&ep->deferred_txns) || required_trbs > xhci_transfer_ring_free_trbs(ring)) {
         mtx_unlock(&ring->mutex);
         return ERR_BUFFER_TOO_SMALL;
     }
 
-    list_add_tail(&ring->pending_requests, &context->node);
+    list_add_tail(&ep->pending_requests, &context->node);
 
     if (setup) {
         // Setup Stage
@@ -291,9 +293,10 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     // ep_index is device context index, so decrement by 1 to get zero based index
     uint32_t ep_index = READ_FIELD(control, TRB_ENDPOINT_ID_START, TRB_ENDPOINT_ID_BITS) - 1;
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    xhci_transfer_ring_t* ring = &slot->transfer_rings[ep_index];
+    xhci_endpoint_t* ep =  &slot->eps[ep_index];
+    xhci_transfer_ring_t* ring = &ep->transfer_ring;
 
-    if (!ring->enabled) {
+    if (!ep->enabled) {
         // endpoint shutting down. device manager thread will complete all pending transations
         return;
     }
@@ -359,7 +362,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     // been completed. In the typical case, the context will be found at the head of pending_requests.
     bool found_context = false;
     xhci_transfer_context_t* test;
-    list_for_every_entry(&ring->pending_requests, test, xhci_transfer_context_t, node) {
+    list_for_every_entry(&ep->pending_requests, test, xhci_transfer_context_t, node) {
         if (test == context) {
             found_context = true;
             break;
@@ -377,12 +380,12 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     // remove context from pending_requests
     list_delete(&context->node);
 
-    bool process_deferred_txns = !list_is_empty(&ring->deferred_txns);
+    bool process_deferred_txns = !list_is_empty(&ep->deferred_txns);
     mtx_unlock(&ring->mutex);
 
     context->callback(result, context->data);
 
     if (process_deferred_txns) {
-        xhci_process_deferred_txns(xhci, ring, false);
+        xhci_process_deferred_txns(xhci, ep, false);
     }
 }

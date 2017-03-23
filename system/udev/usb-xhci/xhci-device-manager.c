@@ -79,9 +79,10 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     }
     uint8_t* device_context = (uint8_t *)io_buffer_virt(&slot->buffer);
 
-    xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[0];
-    status = xhci_transfer_ring_init(transfer_ring, TRANSFER_RING_SIZE);
+    xhci_endpoint_t* ep = &slot->eps[0];
+    status = xhci_endpoint_init(ep, TRANSFER_RING_SIZE);
     if (status < 0) return status;
+    xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
     mx_paddr_t icc_phys = xhci->input_context_phys;
@@ -94,7 +95,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     slot->sc = (xhci_slot_context_t*)device_context;
     device_context += xhci->context_size;
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
-        slot->epcs[i] = (xhci_endpoint_context_t*)device_context;
+        slot->eps[i].epc = (xhci_endpoint_context_t*)device_context;
         device_context += xhci->context_size;
     }
 
@@ -143,7 +144,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
                       (slot_id << TRB_SLOT_ID_START), &command.context);
     int cc = xhci_sync_command_wait(&command);
     if (cc == TRB_CC_SUCCESS) {
-        transfer_ring->enabled = true;
+        ep->enabled = true;
         return NO_ERROR;
     } else {
         printf("xhci_address_device failed cc: %d\n", cc);
@@ -289,9 +290,10 @@ disable_slot_exit:
 // returns true if endpoint was enabled
 static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[ep_index];
+    xhci_endpoint_t* ep =  &slot->eps[ep_index];
+    xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
-    if (!transfer_ring->enabled) {
+    if (!ep->enabled) {
         return false;
     }
 
@@ -314,10 +316,10 @@ static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
     mtx_lock(&transfer_ring->mutex);
 
     // copy pending requests to a different list so we can complete them outside of the mutex
-    while ((node = list_remove_head(&transfer_ring->pending_requests)) != NULL) {
+    while ((node = list_remove_head(&ep->pending_requests)) != NULL) {
         list_add_tail(&list, node);
     }
-    transfer_ring->enabled = false;
+    ep->enabled = false;
 
     mtx_unlock(&transfer_ring->mutex);
 
@@ -327,7 +329,7 @@ static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
         context->callback(ERR_REMOTE_CLOSED, context->data);
     }
     // and any deferred requests
-    xhci_process_deferred_txns(xhci, transfer_ring, true);
+    xhci_process_deferred_txns(xhci, ep, true);
     xhci_transfer_ring_free(transfer_ring);
 
     return true;
@@ -474,7 +476,7 @@ mx_status_t xhci_queue_start_root_hubs(xhci_t* xhci) {
     return xhci_queue_command(xhci, START_ROOT_HUBS, 0, 0, USB_SPEED_UNDEFINED);
 }
 
-mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_descriptor_t* ep, bool enable) {
+mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_descriptor_t* ep_desc, bool enable) {
     if (xhci_is_root_hub(xhci, slot_id)) {
         // nothing to do for root hubs
         return NO_ERROR;
@@ -482,8 +484,8 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
     usb_speed_t speed = slot->speed;
-    uint32_t index = xhci_endpoint_index(ep->bEndpointAddress);
-    xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[index];
+    uint32_t index = xhci_endpoint_index(ep_desc->bEndpointAddress);
+    xhci_endpoint_t* ep = &slot->eps[index];
 
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
     mx_paddr_t icc_phys = xhci->input_context_phys;
@@ -493,16 +495,16 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
     if (enable) {
         memset((void*)sc, 0, xhci->context_size);
 
-        uint32_t ep_type = ep->bmAttributes & USB_ENDPOINT_TYPE_MASK;
+        uint32_t ep_type = ep_desc->bmAttributes & USB_ENDPOINT_TYPE_MASK;
         uint32_t ep_index = ep_type;
-        if ((ep->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
+        if ((ep_desc->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
             ep_index += 4;
         }
 
         // See Table 65 in XHCI spec
         int cerr = (ep_type == USB_ENDPOINT_ISOCHRONOUS ? 0 : 3);
-        int max_packet_size = usb_ep_max_packet(ep);
-        int max_burst = usb_ep_max_burst(ep);
+        int max_packet_size = usb_ep_max_packet(ep_desc);
+        int max_burst = usb_ep_max_burst(ep_desc);
         int avg_trb_length = max_packet_size * max_burst;
         int max_esit_payload = 0;
         if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
@@ -513,13 +515,12 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         xhci_endpoint_context_t* epc = (xhci_endpoint_context_t*)&xhci->input_context[(index + 2) * xhci->context_size];
         memset((void*)epc, 0, xhci->context_size);
         // allocate a transfer ring for the endpoint
-        mx_status_t status = xhci_transfer_ring_init(transfer_ring, TRANSFER_RING_SIZE);
-        if (status < 0)
-            return status;
+        mx_status_t status = xhci_endpoint_init(ep, TRANSFER_RING_SIZE);
+        if (status < 0) return status;
 
-        mx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(&slot->transfer_rings[index]);
+        mx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(&slot->eps[index].transfer_ring);
 
-        XHCI_SET_BITS32(&epc->epc0, EP_CTX_INTERVAL_START, EP_CTX_INTERVAL_BITS, compute_interval(ep, speed));
+        XHCI_SET_BITS32(&epc->epc0, EP_CTX_INTERVAL_START, EP_CTX_INTERVAL_BITS, compute_interval(ep_desc, speed));
         XHCI_SET_BITS32(&epc->epc0, EP_CTX_MAX_ESIT_PAYLOAD_HI_START, EP_CTX_MAX_ESIT_PAYLOAD_HI_BITS,
                         max_esit_payload >> EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS);
         XHCI_SET_BITS32(&epc->epc1, EP_CTX_CERR_START, EP_CTX_CERR_BITS, cerr);
@@ -550,7 +551,7 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
 
     // xhci_stop_endpoint() will handle the !enable case
     if (enable) {
-        transfer_ring->enabled = true;
+        ep->enabled = true;
     }
 
     return NO_ERROR;

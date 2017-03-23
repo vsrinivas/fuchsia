@@ -230,26 +230,26 @@ static mx_status_t xhci_do_iotxn_queue(xhci_t* xhci, iotxn_t* txn) {
 
         // add txn to deferred_txn list for later processing
         xhci_slot_t* slot = &xhci->slots[device_id];
-        xhci_transfer_ring_t* ring = &slot->transfer_rings[ep_index];
-        list_add_tail(&ring->deferred_txns, &txn->node);
+        xhci_endpoint_t* ep = &slot->eps[ep_index];
+        list_add_tail(&ep->deferred_txns, &txn->node);
     }
     return status;
 }
 
-void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool closed) {
+void xhci_process_deferred_txns(xhci_t* xhci, xhci_endpoint_t* ep, bool closed) {
     list_node_t list;
     list_node_t* node;
     iotxn_t* txn;
 
     list_initialize(&list);
 
-    mtx_lock(&ring->mutex);
+    mtx_lock(&ep->transfer_ring.mutex);
     // make a copy of deferred_txns list so we can operate on it safely outside of the mutex
-    while ((node = list_remove_head(&ring->deferred_txns)) != NULL) {
+    while ((node = list_remove_head(&ep->deferred_txns)) != NULL) {
         list_add_tail(&list, node);
     }
-    list_initialize(&ring->deferred_txns);
-    mtx_unlock(&ring->mutex);
+    list_initialize(&ep->deferred_txns);
+    mtx_unlock(&ep->transfer_ring.mutex);
 
     if (closed) {
         while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {

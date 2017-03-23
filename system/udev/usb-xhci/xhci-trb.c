@@ -11,9 +11,6 @@ mx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, int count) {
     mx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t), IO_BUFFER_RW);
     if (status != NO_ERROR) return status;
 
-    list_initialize(&ring->pending_requests);
-    list_initialize(&ring->deferred_txns);
-
     ring->start = io_buffer_virt(&ring->buffer);
     ring->current = ring->start;
     ring->dequeue_ptr = ring->start;

@@ -362,6 +362,17 @@ fail:
     return result;
 }
 
+mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count) {
+    mx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, ring_count);
+    if (status != NO_ERROR) return status;
+
+    list_initialize(&ep->pending_requests);
+    list_initialize(&ep->deferred_txns);
+    return NO_ERROR;
+}
+
+
+
 static void xhci_update_erdp(xhci_t* xhci, int interruptor) {
     xhci_event_ring_t* er = &xhci->event_rings[interruptor];
     xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interruptor];

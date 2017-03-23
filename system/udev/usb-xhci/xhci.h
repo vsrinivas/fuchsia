@@ -27,13 +27,20 @@
 #define XHCI_RH_USB_3 1 // index of USB 2.0 virtual root hub device
 #define XHCI_RH_COUNT 2 // number of virtual root hub devices
 
+typedef struct xhci_endpoint {
+    xhci_endpoint_context_t* epc;
+    xhci_transfer_ring_t transfer_ring;
+    list_node_t pending_requests;   // pending transfers that should be completed when ring is dead
+    list_node_t deferred_txns;      // used by upper layer to defer iotxns when ring is full
+    bool enabled;
+} xhci_endpoint_t;
+
 typedef struct xhci_slot {
     // buffer for our device context
     io_buffer_t buffer;
     xhci_slot_context_t* sc;
     // epcs point into DMA memory past sc
-    xhci_endpoint_context_t* epcs[XHCI_NUM_EPS];
-    xhci_transfer_ring_t transfer_rings[XHCI_NUM_EPS];
+    xhci_endpoint_t eps[XHCI_NUM_EPS];
     uint32_t hub_address;
     uint32_t port;
     uint32_t rh_port;
@@ -130,6 +137,7 @@ struct xhci {
 };
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
+mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count);
 void xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
@@ -151,4 +159,4 @@ inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
 // upper layer routines in usb-xhci.c
 mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed);
 void xhci_remove_device(xhci_t* xhci, int slot_id);
-void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool closed);
+void xhci_process_deferred_txns(xhci_t* xhci, xhci_endpoint_t* ep, bool closed);
