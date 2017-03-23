@@ -13,7 +13,7 @@
 __BEGIN_CDECLS;
 
 status_t udisplay_init(void);
-status_t udisplay_set_framebuffer(paddr_t fb_phys, void* fb_user_virt, size_t fb_size);
+status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size);
 status_t udisplay_set_display_info(struct display_info* display);
 status_t udisplay_bind_gfxconsole(void);
 

@@ -96,7 +96,7 @@ void dlog_bluescreen_halt(void) {
 
 }
 
-status_t udisplay_set_framebuffer(paddr_t fb_phys, void* fb_user_virt, size_t fb_size) {
+status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size) {
     g_udisplay.framebuffer_size = fb_size;
 
     // map the framebuffer

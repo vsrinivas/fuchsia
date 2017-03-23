@@ -253,7 +253,7 @@ mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, void* vaddr, uint32_t len, ui
     }
 
     intptr_t paddr = vaddr_to_paddr(vaddr);
-    udisplay_set_framebuffer(paddr, vaddr, len);
+    udisplay_set_framebuffer(paddr, len);
 
     struct display_info di;
     memset(&di, 0, sizeof(struct display_info));
