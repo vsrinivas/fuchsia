@@ -12,6 +12,6 @@ kernel-drivers = {
     bcm28xx-uart = {}
     bcm28xx-interrupt = {}
     arm-generic-timer = {
-        irq-phys = 97 // INTERRUPT_ARM_LOCAL_CNTPNSIRQ
+        irq-virt = 99 // INTERRUPT_ARM_LOCAL_CNTVIRQ
     }
 }
