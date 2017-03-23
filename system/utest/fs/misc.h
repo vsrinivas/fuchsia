@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <dirent.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
 
 // Filesystem test utilities
 
@@ -20,6 +22,7 @@ typedef struct expected_dirent {
     unsigned char d_type;
 } expected_dirent_t;
 
+bool fcheck_dir_contents(DIR* dir, expected_dirent_t* edirents, size_t len);
 bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t len);
 
 // Check the contents of a file are what we expect

@@ -133,6 +133,9 @@ struct mxrio_msg {
 
 static_assert(MXIO_CHUNK_SIZE >= PATH_MAX, "MXIO_CHUNK_SIZE must be large enough to contain paths");
 
+#define READDIR_CMD_NONE  0
+#define READDIR_CMD_RESET 1
+
 // - msg.datalen is the size of data sent or received and must be <= MXIO_CHUNK_SIZE
 // - msg.arg is the return code on replies
 
@@ -148,7 +151,7 @@ static_assert(MXIO_CHUNK_SIZE >= PATH_MAX, "MXIO_CHUNK_SIZE must be large enough
 // WRITE_AT    0          offset   <bytes>           0           -               -
 // SEEK        whence     offset   -                 offset      -               -
 // STAT        maxreply   0        -                 0           <vnattr_t>      -
-// READDIR     maxreply   0        -                 0           <vndirent_t[]>  -
+// READDIR     maxreply   cmd      -                 0           <vndirent_t[]>  -
 // IOCTL       out_len    opcode   <in_bytes>        0           <out_bytes>     -
 // UNLINK      0          0        <name>            0           -               -
 // TRUNCATE    0          offset   -                 0           -               -

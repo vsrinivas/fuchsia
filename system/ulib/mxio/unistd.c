@@ -922,12 +922,12 @@ off_t lseek(int fd, off_t offset, int whence) {
     return r;
 }
 
-static int getdirents(int fd, void* ptr, size_t len) {
+static int getdirents(int fd, void* ptr, size_t len, long cmd) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    int r = STATUS(io->ops->misc(io, MXRIO_READDIR, 0, len, ptr, 0));
+    int r = STATUS(io->ops->misc(io, MXRIO_READDIR, cmd, len, ptr, 0));
     mxio_release(io);
     return r;
 }
@@ -1275,9 +1275,14 @@ int chdir(const char* path) {
 struct __dirstream {
     mtx_t lock;
     int fd;
+    // Total size of 'data' which has been filled with dirents
     size_t size;
+    // Offset into 'data' of next ptr. NULL to reset the
+    // directory lazily on the next call to getdirents
     uint8_t* ptr;
+    // Internal cache of dirents
     uint8_t data[DIR_BUFSIZE];
+    // Buffer returned to user
     struct dirent de;
 };
 
@@ -1340,7 +1345,8 @@ struct dirent* readdir(DIR* dir) {
             }
             dir->size = 0;
         }
-        int r = getdirents(dir->fd, dir->data, DIR_BUFSIZE);
+        int64_t cmd = (dir->ptr == NULL) ? READDIR_CMD_RESET : READDIR_CMD_NONE;
+        int r = getdirents(dir->fd, dir->data, DIR_BUFSIZE, cmd);
         if (r > 0) {
             dir->ptr = dir->data;
             dir->size = r;
@@ -1351,6 +1357,13 @@ struct dirent* readdir(DIR* dir) {
     }
     mtx_unlock(&dir->lock);
     return de;
+}
+
+void rewinddir(DIR* dir) {
+    mtx_lock(&dir->lock);
+    dir->size = 0;
+    dir->ptr = NULL;
+    mtx_unlock(&dir->lock);
 }
 
 int dirfd(DIR* dir) {

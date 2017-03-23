@@ -1016,10 +1016,13 @@ mx_status_t VnodeMinfs::Setattr(vnattr_t* a) {
 #define DIRCOOKIE_FLAG_ERROR 2
 
 typedef struct dircookie {
-    uint32_t flags;  // Identifies the state of the dircookie
     size_t off;      // Offset into directory
+    uint32_t flags;  // Identifies the state of the dircookie
     uint32_t seqno;  // inode seq no
 } dircookie_t;
+
+static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
+              "MinFS dircookie too large to fit in IO state");
 
 mx_status_t VnodeMinfs::Readdir(void* cookie, void* dirents, size_t len) {
     trace(MINFS, "minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);

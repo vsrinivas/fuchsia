@@ -247,6 +247,50 @@ bool test_directory_readdir(void) {
     ASSERT_EQ(unlink("::a/dir1"), 0, "");
     ASSERT_EQ(unlink("::a/file1"), 0, "");
     ASSERT_TRUE(check_dir_contents("::a", empty_dir, countof(empty_dir)), "");
+    ASSERT_EQ(unlink("::a"), 0, "");
+
+    END_TEST;
+}
+
+bool test_directory_rewind(void) {
+    BEGIN_TEST;
+
+    ASSERT_EQ(mkdir("::a", 0755), 0, "");
+    expected_dirent_t empty_dir[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+    };
+
+    DIR* dir = opendir("::a");
+    ASSERT_NEQ(dir, NULL, "");
+
+    // We should be able to repeatedly access the directory without
+    // re-opening it.
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
+
+    ASSERT_EQ(mkdirat(dirfd(dir), "b", 0755), 0, "");
+    ASSERT_EQ(mkdirat(dirfd(dir), "c", 0755), 0, "");
+
+    // We should be able to modify the directory and re-process it without
+    // re-opening it.
+    expected_dirent_t dir_contents[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+        {false, "b", DT_DIR},
+        {false, "c", DT_DIR},
+    };
+    ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, countof(dir_contents)), "");
+    ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, countof(dir_contents)), "");
+
+    ASSERT_EQ(unlink("::a/b"), 0, "");
+    ASSERT_EQ(unlink("::a/c"), 0, "");
+
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
+    ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, countof(empty_dir)), "");
+
+    ASSERT_EQ(closedir(dir), 0, "");
+    ASSERT_EQ(unlink("::a"), 0, "");
 
     END_TEST;
 }
@@ -257,6 +301,7 @@ RUN_FOR_ALL_FILESYSTEMS(directory_tests,
     RUN_TEST_LARGE(test_directory_large)
     RUN_TEST_MEDIUM(test_directory_trailing_slash)
     RUN_TEST_MEDIUM(test_directory_readdir)
+    RUN_TEST_MEDIUM(test_directory_rewind)
 )
 
 // TODO(smklein): Run this when MemFS can execute it without causing an OOM

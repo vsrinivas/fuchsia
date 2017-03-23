@@ -18,9 +18,8 @@
 #include "misc.h"
 #include "filesystems.h"
 
-bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t len) {
-    DIR* dir = opendir(dirname);
-    ASSERT_NEQ(dir, NULL, "Could not open directory");
+bool fcheck_dir_contents(DIR* dir, expected_dirent_t* edirents, size_t len) {
+    rewinddir(dir);
     size_t seen = 0;
 
     while (seen != len) {
@@ -42,13 +41,19 @@ bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t
     }
 
     ASSERT_EQ(readdir(dir), NULL, "There exists an entry we didn't expect to see");
-    ASSERT_EQ(closedir(dir), 0, "Couldn't close inspected directory");
 
     // Flip 'seen' back to false so the array of expected dirents can be reused
     for (size_t i = 0; i < len; i++) {
         edirents[i].seen = false;
     }
     return true;
+}
+
+bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t len) {
+    DIR* dir = opendir(dirname);
+    bool ret = fcheck_dir_contents(dir, edirents, len);
+    ASSERT_EQ(closedir(dir), 0, "Couldn't close inspected directory");
+    return ret;
 }
 
 // Check the contents of a file are what we expect

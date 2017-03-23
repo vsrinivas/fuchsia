@@ -335,6 +335,9 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         if (arg > MXIO_CHUNK_SIZE) {
             return ERR_INVALID_ARGS;
         }
+        if (msg->arg2.off == READDIR_CMD_RESET) {
+            memset(&ios->dircookie, 0, sizeof(ios->dircookie));
+        }
         mx_status_t r;
         mtx_lock(&vfs_lock);
         r = vn->Readdir(&ios->dircookie, msg->data, arg);

@@ -114,7 +114,7 @@ public:
     }
 
     // Read directory entries of vn, error if not a directory.
-    // Cookie must be a buffer of vdircookie_t size or larger.
+    // FS-specific Cookie must be a buffer of vdircookie_t size or smaller.
     // Cookie must be zero'd before first call and will be used by.
     // the readdir implementation to maintain state across calls.
     // To "rewind" and start from the beginning, cookie may be zero'd.
