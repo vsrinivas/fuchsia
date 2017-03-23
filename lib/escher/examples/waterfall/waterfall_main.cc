@@ -6,10 +6,9 @@
 #include <iostream>
 #include <stdlib.h>
 
-#include "demo.h"
-
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
+#include "escher/examples/common/demo.h"
 #include "escher/examples/waterfall/scenes/wobbly_ocean_scene.h"
 #include "escher/examples/waterfall/scenes/ring_tricks3.h"
 #include "escher/examples/waterfall/scenes/ring_tricks2.h"
