@@ -519,19 +519,21 @@ status_t UserThread::ExceptionHandlerExchange(
 
     AutoLock lock(&exception_wait_lock_);
 
-    // It's critical that at this point the event no longer be armed.
-    // Otherwise the next time we get an exception we'll fall right through
-    // without waiting for an exception response.
-    DEBUG_ASSERT(!event_signaled(&exception_event_));
-
     // Note: If |status| != NO_ERROR, then |exception_status_| is still
     // ExceptionStatus::UNPROCESSED.
     switch (status) {
     case NO_ERROR:
+        // It's critical that at this point the event no longer be armed.
+        // Otherwise the next time we get an exception we'll fall right through
+        // without waiting for an exception response.
+        // Note: The event could be signaled after event_wait_timeout returns
+        // if the thread was killed while the event was signaled.
+        DEBUG_ASSERT(!event_signaled(&exception_event_));
         DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE &&
                      exception_status_ != ExceptionStatus::UNPROCESSED);
         break;
     case ERR_INTERRUPTED:
+        // Thread was killed.
         break;
     default:
         ASSERT_MSG(false, "unexpected exception result: %d\n", status);
@@ -545,7 +547,7 @@ status_t UserThread::ExceptionHandlerExchange(
     *out_estatus = exception_status_;
     exception_status_ = ExceptionStatus::IDLE;
 
-    LTRACEF("ExceptionHandlerExchange returning status %d, estatus %d\n",
+    LTRACEF("returning status %d, estatus %d\n",
             status, static_cast<int>(*out_estatus));
     return status;
 }
@@ -553,7 +555,7 @@ status_t UserThread::ExceptionHandlerExchange(
 status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
     canary_.Assert();
 
-    LTRACEF("%s: obj %p, estatus %d\n", __FUNC__, this, static_cast<int>(estatus));
+    LTRACEF("obj %p, estatus %d\n", this, static_cast<int>(estatus));
     DEBUG_ASSERT(estatus != ExceptionStatus::IDLE &&
                  estatus != ExceptionStatus::UNPROCESSED);
 
