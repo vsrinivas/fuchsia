@@ -10,6 +10,18 @@
 #include <unittest/unittest.h>
 #include <stdio.h>
 
+static mx_status_t check_signals(mx_handle_t h, mx_signals_t expected) {
+    mx_signals_t observed;
+    mx_status_t status = mx_object_wait_one(h, 0u, 0u, &observed);
+    if (status != ERR_TIMED_OUT) {
+        return status;
+    }
+    if (expected != observed) {
+        return ERR_BAD_STATE;
+    }
+    return NO_ERROR;
+}
+
 extern mx_handle_t root_resource;
 
 static bool test_resource_actions(void) {
@@ -34,6 +46,9 @@ static bool test_resource_actions(void) {
     ASSERT_EQ(mx_port_bind(ph, 1u, rrh, MX_RESOURCE_CHILD_ADDED), NO_ERROR, "");
     ASSERT_EQ(mx_port_wait(ph, 0, &pkt, sizeof(pkt)), ERR_TIMED_OUT, "");
 
+    // verify that our signals are in the expected state after creation
+    ASSERT_EQ(check_signals(rrh, MX_RESOURCE_WRITABLE), NO_ERROR, "");
+
     // create a child resource
     mx_rrec_t r0 = {
         .self = {
@@ -49,6 +64,7 @@ static bool test_resource_actions(void) {
     // verify that we're notified about the creation
     ASSERT_EQ(mx_port_wait(ph, 0, &pkt, sizeof(pkt)), NO_ERROR, "");
     ASSERT_EQ(mx_port_wait(ph, 0, &pkt, sizeof(pkt)), ERR_TIMED_OUT, "");
+
 
     // create children
     mx_handle_t ch[5];
@@ -82,6 +98,37 @@ static bool test_resource_actions(void) {
         mx_handle_close(h);
     }
 
+    // enumerate once more
+    ASSERT_EQ(mx_object_get_info(rh, MX_INFO_RESOURCE_CHILDREN, rec, sizeof(rec), &count, 0), NO_ERROR, "");
+    ASSERT_EQ(count, 5u, "");
+
+    // get a handle to the middle child
+    mx_handle_t h;
+    ASSERT_EQ(mx_object_get_child(rh, rec[2].self.koid, MX_RIGHT_SAME_RIGHTS, &h), NO_ERROR, "");
+
+    // verify that our signals are in the expected state
+    ASSERT_EQ(check_signals(h, MX_RESOURCE_WRITABLE), NO_ERROR, "");
+
+    ASSERT_EQ(mx_resource_destroy(h), NO_ERROR, "");
+
+    // verify that our signals are in the expected state
+    ASSERT_EQ(check_signals(h, MX_RESOURCE_WRITABLE | MX_RESOURCE_DESTROYED), NO_ERROR, "");
+
+    // enumerate once more, to verify that it's gone
+    ASSERT_EQ(mx_object_get_info(rh, MX_INFO_RESOURCE_CHILDREN, rec, sizeof(rec), &count, 0), NO_ERROR, "");
+    ASSERT_EQ(count, 4u, "");
+    for (int n = 0, id = 0; n < 4; n++) {
+        char tmp[32];
+        sprintf(tmp, "child%d", id);
+        ASSERT_EQ(strcmp(tmp,rec[n].self.name), 0, "");
+        id++;
+        if (n == 1) {
+            id++;
+        }
+    }
+
+    ASSERT_EQ(mx_handle_close(h), NO_ERROR, "");
+
     // check that bogus children are disallowed
     r0.self.subtype = 0xabcd;
     status = mx_resource_create(rrh, &r0, 1, &rh);
@@ -90,18 +137,6 @@ static bool test_resource_actions(void) {
 
     ASSERT_EQ(mx_object_get_info(rrh, MX_INFO_RESOURCE_CHILDREN, rec, sizeof(rec), &count, 0), NO_ERROR, "");
     END_TEST;
-}
-
-static mx_status_t check_signals(mx_handle_t h, mx_signals_t expected) {
-    mx_signals_t observed;
-    mx_status_t status = mx_object_wait_one(h, 0u, 0u, &observed);
-    if (status != ERR_TIMED_OUT) {
-        return status;
-    }
-    if (expected != observed) {
-        return ERR_BAD_STATE;
-    }
-    return NO_ERROR;
 }
 
 static bool test_resource_connect(void) {

@@ -118,3 +118,37 @@ void StateTracker::UpdateState(mx_signals_t clear_mask,
         thread_preempt(false);
     }
 }
+
+void StateTracker::StrobeState(mx_signals_t notify_mask) {
+    canary_.Assert();
+
+    bool awoke_threads = false;
+
+    ObserverList obs_to_remove;
+
+    {
+        AutoLock lock(&lock_);
+
+        // include currently active signals as well
+        notify_mask |= signals_;
+
+        for (auto it = observers_.begin(); it != observers_.end();) {
+            awoke_threads = it->OnStateChange(notify_mask) || awoke_threads;
+            if (it->remove()) {
+                auto to_remove = it;
+                ++it;
+                obs_to_remove.push_back(observers_.erase(to_remove));
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    while (!obs_to_remove.is_empty()) {
+        obs_to_remove.pop_front()->OnRemoved();
+    }
+
+    if (awoke_threads) {
+        thread_preempt(false);
+    }
+}

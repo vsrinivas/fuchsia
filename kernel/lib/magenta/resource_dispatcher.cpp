@@ -40,10 +40,10 @@ private:
 // ENUMERATE: ability to list children, list records, and get children
 
 constexpr mx_rights_t kDefaultResourceRights =
-    MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE |
+    MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE | MX_RIGHT_DESTROY |
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_ENUMERATE;
 
-status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher,
+mx_status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher,
                                     mx_rights_t* rights, const char* name, uint16_t subtype) {
     AllocChecker ac;
     ResourceDispatcher* disp = new (&ac) ResourceDispatcher(name, subtype);
@@ -56,7 +56,8 @@ status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher
 }
 
 ResourceDispatcher::ResourceDispatcher(const char* name, uint16_t subtype) :
-    num_children_(0), num_records_(0), subtype_(subtype), valid_(false),
+    parent_(nullptr), num_children_(0), num_records_(0),
+    subtype_(subtype), state_(State::Created),
     state_tracker_(MX_RESOURCE_WRITABLE) {
     size_t len = strlen(name);
     if (len >= MX_MAX_NAME_LEN)
@@ -65,10 +66,17 @@ ResourceDispatcher::ResourceDispatcher(const char* name, uint16_t subtype) :
     memset(name_ + len, 0, MX_MAX_NAME_LEN - len);
 }
 
+//TODO: deferred deletion of children
+//
+// Right now the resource tree lives for the lifespan of the system
+// and deletion of resources may only occur from leaf to root, so
+// the default recursive teardown is not a problem.  It would be
+// nice to be able to prune subtrees and as they could be of
+// an arbitrary size, we'll need to be careful.
 ResourceDispatcher::~ResourceDispatcher() {
 }
 
-status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
+mx_status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -82,31 +90,60 @@ status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client
     return NO_ERROR;
 }
 
-status_t ResourceDispatcher::MakeRoot() {
+mx_status_t ResourceDispatcher::MakeRoot() {
     canary_.Assert();
 
     AutoLock lock(&lock_);
 
-    if (valid_)
+    if (state_ != State::Created)
         return ERR_BAD_STATE;
 
-    return ValidateLocked();
+    state_ = State::Alive;
+    return NO_ERROR;
 }
 
-status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>& child) {
+mx_status_t ResourceDispatcher::SetParent(ResourceDispatcher* parent) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
 
-    if (!valid_)
+    if (state_ != State::Alive)
         return ERR_BAD_STATE;
 
-    // Note that this acquires the child lock under the parent
-    // lock. This is safe, as this is only ever called from
-    // sys_resource_create on a freshly created child. Thus the
-    // parent-child relationship is strictly hierarchical.
-    DEBUG_ASSERT(child.get() != this);
-    status_t status = child->Validate();
+    if (parent_ != nullptr)
+        return ERR_ALREADY_BOUND;
+
+    parent_ = parent;
+    return NO_ERROR;
+}
+
+mx_status_t ResourceDispatcher::GetParent(mxtl::RefPtr<ResourceDispatcher>* dispatcher) {
+    canary_.Assert();
+
+    AutoLock lock(&lock_);
+
+    if (parent_ == nullptr)
+        return ERR_BAD_STATE;
+
+    *dispatcher = mxtl::RefPtr<ResourceDispatcher>(parent_);
+    return NO_ERROR;
+}
+
+mx_status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>& child) {
+    canary_.Assert();
+
+    AutoLock lock(&lock_);
+
+    if (state_ != State::Alive)
+        return ERR_BAD_STATE;
+
+    // Currently this should be impossible, as it is only ever
+    // called from sys_resource_create on a freshly created child.
+    // But let's ensure that we can't ever create loops.
+    if (child.get() == this)
+        return ERR_BAD_STATE;
+
+    mx_status_t status = child->SetParent(this);
     if (status != NO_ERROR)
         return status;
 
@@ -116,7 +153,44 @@ status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>& ch
     if (iopc_)
         iopc_->Signal(MX_RESOURCE_CHILD_ADDED, &lock_);
 
+    state_tracker_.StrobeState(MX_RESOURCE_CHILD_ADDED);
+
     return NO_ERROR;
+}
+
+mx_status_t ResourceDispatcher::DestroySelf(ResourceDispatcher* parent) {
+    AutoLock lock(&lock_);
+
+    if (state_ != State::Alive)
+        return ERR_BAD_STATE;
+
+    if (num_children_ > 0)
+        return ERR_BAD_STATE;
+
+    if (parent != parent_)
+        return ERR_INVALID_ARGS;
+
+    state_ = State::Dead;
+    parent_ = nullptr;
+
+    state_tracker_.UpdateState(0, MX_RESOURCE_DESTROYED);
+
+    return NO_ERROR;
+}
+
+mx_status_t ResourceDispatcher::DestroyChild(mxtl::RefPtr<ResourceDispatcher> child) {
+    canary_.Assert();
+
+    AutoLock lock(&lock_);
+
+    mx_status_t status = child->DestroySelf(this);
+
+    if (status == NO_ERROR) {
+        children_.erase(*child);
+        --num_children_;
+    }
+
+    return status;
 }
 
 mxtl::RefPtr<ResourceDispatcher> ResourceDispatcher::LookupChildById(mx_koid_t koid) {
@@ -171,12 +245,8 @@ static mx_status_t default_do_action(const mx_rrec_t*, uint32_t, uint32_t, uint3
     return ERR_NOT_SUPPORTED;
 }
 
-status_t ResourceDispatcher::AddRecord(mxtl::unique_ptr<ResourceRecord> rrec) {
-    canary_.Assert();
-
-    AutoLock lock(&lock_);
-
-    if (valid_)
+mx_status_t ResourceDispatcher::AddRecordLocked(mxtl::unique_ptr<ResourceRecord> rrec) {
+    if (state_ != State::Created)
         return ERR_BAD_STATE;
 
     if (num_records_ >= kMaxRecords)
@@ -215,19 +285,22 @@ status_t ResourceDispatcher::AddRecord(mxtl::unique_ptr<ResourceRecord> rrec) {
     return NO_ERROR;
 }
 
-status_t ResourceDispatcher::AddRecord(mx_rrec_t* tmpl) {
-    canary_.Assert();
-
+mx_status_t ResourceDispatcher::AddRecordLocked(mx_rrec_t* tmpl) {
     status_t status;
     mxtl::unique_ptr<ResourceRecord> rec;
     if ((status = ResourceRecord::Create(rec)) != NO_ERROR)
         return status;
     memcpy(&rec->content_, tmpl, sizeof(mx_rrec_t));
-    return AddRecord(mxtl::move(rec));
+    return AddRecordLocked(mxtl::move(rec));
 }
 
-status_t ResourceDispatcher::AddRecords(user_ptr<const mx_rrec_t> records, size_t count) {
+mx_status_t ResourceDispatcher::AddRecords(user_ptr<const mx_rrec_t> records, size_t count) {
     canary_.Assert();
+
+    AutoLock lock(&lock_);
+
+    if (state_ != State::Created)
+        return ERR_BAD_STATE;
 
     for (uint32_t n = 1; n < count; n++) {
         status_t status;
@@ -237,49 +310,36 @@ status_t ResourceDispatcher::AddRecords(user_ptr<const mx_rrec_t> records, size_
         if (records.copy_array_from_user(&rec->content_, 1, n) != NO_ERROR) {
             return ERR_INVALID_ARGS;
         }
-        if ((status = AddRecord(mxtl::move(rec))) != NO_ERROR) {
+        if ((status = AddRecordLocked(mxtl::move(rec))) != NO_ERROR) {
             return status;
         }
     }
 
+    state_ = State::Alive;
+
     return NO_ERROR;
 }
 
-mx_status_t ResourceDispatcher::Validate() {
+void ResourceDispatcher::GetSelf(mx_rrec_self_t* self) {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
-    return ValidateLocked();
-}
-
-mx_status_t ResourceDispatcher::ValidateLocked() {
-    if (valid_)
-        return ERR_BAD_STATE;
-
-    valid_ = true;
-    return NO_ERROR;
-}
-
-mx_rrec_self_t ResourceDispatcher::GetSelf() {
-    canary_.Assert();
-
-    mx_rrec_self_t self;
-
-    memcpy(self.name, name_, MX_MAX_NAME_LEN);
-    self.subtype = subtype_;
-    self.koid = get_koid();
+    self->type = MX_RREC_SELF;
+    self->subtype = subtype_;
+    self->options = 0;
+    self->koid = get_koid();
+    self->reserved[0] = 0;
+    self->reserved[1] = 0;
+    memcpy(self->name, name_, MX_MAX_NAME_LEN);
 
     AutoLock lock(&lock_);
-    self.child_count = num_children_;
-    self.record_count = num_records_;
-
-    return self;
+    self->child_count = num_children_;
+    self->record_count = num_records_;
 }
 
 ResourceRecord* ResourceDispatcher::GetNthRecordLocked(uint32_t index) {
     canary_.Assert();
 
-    if (!valid_)
+    if (state_ != State::Alive)
         return nullptr;
     for (auto& rec: records_) {
         if (index == 0) {
@@ -341,7 +401,6 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
     mx_rrec_t rec = {};
     size_t n = 0;
     mx_status_t status = NO_ERROR;
-    rec.self.type = MX_RREC_SELF;
     {
         AutoLock lock(&lock_);
 
@@ -353,7 +412,7 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
                 break;
             // This acquires the child lock. Doing so is safe because
             // the parent-child relationship is strictly hierarchical.
-            rec.self = child.GetSelf();
+            child.GetSelf(&rec.self);
 
             if (records.copy_array_to_user(&rec, 1, n) != NO_ERROR) {
                 status = ERR_INVALID_ARGS;

@@ -34,16 +34,26 @@ public:
     // be added as a child to another Resource.
     mx_status_t MakeRoot();
 
-    // AddChild() requires that the Resource being added have not yet
-    // been validated and that the Resource the child is being added
-    // to has been validated.
+    // DestroyChild() removes a resource from its parent and marks the
+    // resource for destruction.  Once so-marked it will be released
+    // when the last handle to it is closed, additional children may
+    // no longer be added to it, and record actions are no longer
+    // available.
+    //
+    // For now, the child must have no children to be destroyed.
+    mx_status_t DestroyChild(mxtl::RefPtr<ResourceDispatcher> child);
+
+    // AddChild() requires that the Resource being added be alive, and
+    // not already have a parent.
     mx_status_t AddChild(const mxtl::RefPtr<ResourceDispatcher>& child);
 
     // Records may be added until MakeRoot() or AddChild() are called,
     // at which point the Resource is validated, and if valid, sealed
     // against further modifications.
     mx_status_t AddRecords(user_ptr<const mx_rrec_t> records, size_t count);
-    mx_status_t AddRecord(mx_rrec_t* record);
+
+    // Obtain a reference to this Resource's parent, if it has one
+    mx_status_t GetParent(mxtl::RefPtr<ResourceDispatcher>* dispatcher);
 
     // Create a Dispatcher for the indicated Record
     mx_status_t RecordCreateDispatcher(uint32_t index, uint32_t options,
@@ -68,23 +78,30 @@ public:
     static constexpr uint32_t kMaxRecords = 32;
 
 private:
+    enum class State {
+        Created,
+        Alive,
+        Dead,
+    };
     ResourceDispatcher(const char* name, uint16_t subtype_);
-    mx_status_t Validate();
-    mx_status_t ValidateLocked() TA_REQ(lock_);
     ResourceRecord* GetNthRecordLocked(uint32_t index) TA_REQ(lock_);
-    mx_status_t AddRecord(mxtl::unique_ptr<ResourceRecord> rec);
-    mx_rrec_self_t GetSelf();
+    mx_status_t AddRecordLocked(mxtl::unique_ptr<ResourceRecord> rec) TA_REQ(lock_);
+    mx_status_t AddRecordLocked(mx_rrec_t* record) TA_REQ(lock_);
+    mx_status_t SetParent(ResourceDispatcher* parent);
+    void GetSelf(mx_rrec_self_t* out);
+    mx_status_t DestroySelf(ResourceDispatcher* parent);
 
     mxtl::Canary<mxtl::magic("RSRD")> canary_;
     Mutex lock_;
 
     mxtl::DoublyLinkedList<mxtl::RefPtr<ResourceDispatcher>> children_ TA_GUARDED(lock_);
     mxtl::DoublyLinkedList<mxtl::unique_ptr<ResourceRecord>> records_ TA_GUARDED(lock_);
+    ResourceDispatcher* parent_ TA_GUARDED(lock_);
 
     uint32_t num_children_ TA_GUARDED(lock_);
     uint16_t num_records_ TA_GUARDED(lock_);
     const uint16_t subtype_;
-    bool valid_ TA_GUARDED(lock_);
+    State state_ TA_GUARDED(lock_);
 
     HandleOwner inbound_ TA_GUARDED(lock_);
     StateTracker state_tracker_;

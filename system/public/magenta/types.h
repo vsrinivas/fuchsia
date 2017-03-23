@@ -114,6 +114,7 @@ typedef uint32_t mx_signals_t;
 #define MX_PORT_READABLE            __MX_OBJECT_READABLE
 
 // Resource
+#define MX_RESOURCE_DESTROYED       __MX_OBJECT_SIGNALED
 #define MX_RESOURCE_READABLE        __MX_OBJECT_READABLE
 #define MX_RESOURCE_WRITABLE        __MX_OBJECT_WRITABLE
 #define MX_RESOURCE_CHILD_ADDED     __MX_OBJECT_SIGNAL_4
@@ -197,8 +198,8 @@ typedef uint32_t mx_rights_t;
 #define MX_RIGHT_GET_PROPERTY     ((mx_rights_t)1u << 6)
 #define MX_RIGHT_SET_PROPERTY     ((mx_rights_t)1u << 7)
 #define MX_RIGHT_ENUMERATE        ((mx_rights_t)1u << 8)
-#define MX_RIGHT_FIFO_PRODUCER    ((mx_rights_t)1u << 9)
-#define MX_RIGHT_FIFO_CONSUMER    ((mx_rights_t)1u << 10)
+#define MX_RIGHT_DESTROY          ((mx_rights_t)1u << 9)
+
 #define MX_RIGHT_SAME_RIGHTS      ((mx_rights_t)1u << 31)
 
 // VM Object opcodes

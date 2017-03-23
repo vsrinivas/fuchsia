@@ -20,9 +20,6 @@
 // records must be an array of valid resource info records
 // records[0] must be a mx_rrec_type_self describing the resource.
 // On success, a new resource is created and handle is returned
-// If records[0].options MX_ROPT_SELF_CHANNEL, a new ipc channel is returned
-// via new_channel_handle and ipc connections may be accepted via this pipe.
-// parent_handle must have RIGHT_WRITE
 mx_status_t sys_resource_create(mx_handle_t handle,
                                 const mx_rrec_t* _records, uint32_t count,
                                 mx_handle_t* _rsrc_out) {
@@ -59,12 +56,12 @@ mx_status_t sys_resource_create(mx_handle_t handle,
     if (result != NO_ERROR)
         return result;
 
-    // Add Records to the child
+    // Add Records to the child, completing its creation
     result = child->AddRecords(records, count);
     if (result != NO_ERROR)
         return result;
 
-    // Add child to the parent (validating it)
+    // Add child to the parent
     result = parent->AddChild(child);
     if (result != NO_ERROR)
         return result;
@@ -80,6 +77,23 @@ mx_status_t sys_resource_create(mx_handle_t handle,
     up->AddHandle(mxtl::move(child_h));
 
     return NO_ERROR;
+}
+
+mx_status_t sys_resource_destroy(mx_handle_t handle) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mx_status_t result;
+    mxtl::RefPtr<ResourceDispatcher> resource;
+    result = up->GetDispatcherWithRights(handle, MX_RIGHT_DESTROY, &resource);
+    if (result)
+        return result;
+
+    // Obtain the parent Resource
+    mxtl::RefPtr<ResourceDispatcher> parent;
+    if ((result = resource->GetParent(&parent)) != NO_ERROR)
+        return result;
+
+    return parent->DestroyChild(mxtl::move(resource));
 }
 
 // Given a resource handle and an index into its array of rsrc info records

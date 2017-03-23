@@ -42,6 +42,10 @@ public:
     // setting satisfiable signals should not wake anyone.)
     void UpdateState(mx_signals_t clear_mask, mx_signals_t set_mask);
 
+    // Notify others of a change in state (possibly waking them) in an edge-triggered
+    // manner.  Waiters on strobe_mask will wake, but the tracked state is unmodified.
+    void StrobeState(mx_signals_t strobe_mask);
+
     mx_signals_t GetSignalsState() { return signals_; }
 
     using ObserverList = mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
