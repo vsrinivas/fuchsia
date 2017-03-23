@@ -111,7 +111,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
     msg.hcount = MXIO_MAX_HANDLES;
     uint32_t dsz = sizeof(msg);
     if ((r = mx_channel_read(h, 0, &msg, dsz, &dsz, msg.handle, msg.hcount, &msg.hcount)) < 0) {
-        if (r == ERR_BAD_STATE) {
+        if (r == ERR_SHOULD_WAIT) {
             return ERR_DISPATCHER_NO_WORK;
         }
         return r;
