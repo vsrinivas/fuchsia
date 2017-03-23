@@ -344,6 +344,10 @@ syscall vmo_clone
     (handle: mx_handle_t, options: uint32_t, offset: uint64_t, size: uint64_t)
     returns (mx_status_t, out: mx_handle_t);
 
+syscall vmo_set_cache_policy
+    (handle: mx_handle_t, cache_policy: uint32_t)
+    returns (mx_status_t);
+
 # Address space management
 
 syscall vmar_allocate

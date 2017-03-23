@@ -110,6 +110,14 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
+    virtual status_t GetMappingCachePolicy(uint32_t* cache_policy) {
+        return ERR_NOT_SUPPORTED;
+    }
+
+    virtual status_t SetMappingCachePolicy(const uint32_t cache_policy) {
+        return ERR_NOT_SUPPORTED;
+    }
+
     // create a copy-on-write clone vmo at the page-aligned offset and length
     // note: it's okay to start or extend past the size of the parent
     virtual status_t CloneCOW(uint64_t offset, uint64_t size, mxtl::RefPtr<VmObject>* clone_vmo) {

@@ -125,25 +125,31 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
         ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
         ARCH_MMU_FLAG_PERM_USER;
 
+    uint vmo_cache_policy;
     switch (cache_policy) {
-        case MX_CACHE_POLICY_CACHED:
-            arch_mmu_flags |= ARCH_MMU_FLAG_CACHED;
-            break;
-        case MX_CACHE_POLICY_UNCACHED:
-            arch_mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
-            break;
-        case MX_CACHE_POLICY_UNCACHED_DEVICE:
-            arch_mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
-            break;
-        case MX_CACHE_POLICY_WRITE_COMBINING:
-            arch_mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
-            break;
-        default: return ERR_INVALID_ARGS;
+    case MX_CACHE_POLICY_CACHED:
+        vmo_cache_policy = ARCH_MMU_FLAG_CACHED;
+        break;
+    case MX_CACHE_POLICY_UNCACHED:
+        vmo_cache_policy = ARCH_MMU_FLAG_UNCACHED;
+        break;
+    case MX_CACHE_POLICY_UNCACHED_DEVICE:
+        vmo_cache_policy = ARCH_MMU_FLAG_UNCACHED_DEVICE;
+        break;
+    case MX_CACHE_POLICY_WRITE_COMBINING:
+        vmo_cache_policy = ARCH_MMU_FLAG_WRITE_COMBINING;
+        break;
+    default:
+        return ERR_INVALID_ARGS;
     }
 
     mxtl::RefPtr<VmObject> vmo(VmObjectPhysical::Create(paddr, len));
     if (!vmo) {
         return ERR_NO_MEMORY;
+    }
+
+    if (vmo->SetMappingCachePolicy(vmo_cache_policy) != NO_ERROR) {
+        return ERR_INVALID_ARGS;
     }
 
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
