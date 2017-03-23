@@ -18,6 +18,10 @@
         {
             "binary": "libvulkan_vendor.so",
             "bootfs_path": "lib/libvulkan_vendor.so"
+        },
+        {
+            "binary": "magma_info",
+            "bootfs_path": "bin/magma_info"
         }
     ],
     "resources": [
