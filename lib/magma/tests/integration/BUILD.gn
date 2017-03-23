@@ -7,7 +7,9 @@ import("//magma/gnbuild/magma.gni")
 group("integration") {
   testonly = true
 
-  deps = [ ":magma_integration_tests" ]
+  deps = [
+    ":magma_integration_tests",
+  ]
 }
 
 executable("magma_integration_tests") {
@@ -20,11 +22,11 @@ executable("magma_integration_tests") {
   ]
 
   public_deps = [
-    "$magma_build_root",
+    "$magma_build_root:libmagma",
     "$magma_build_root/include:magma_abi",
-    "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform:buffer", # this is weird
+    "$magma_build_root/src/magma_util/platform:buffer",  # this is weird
+    "$magma_build_root/tests/helper:platform_device_helper",
     "//third_party/gtest",
   ]
 }

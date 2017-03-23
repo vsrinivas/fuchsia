@@ -7,7 +7,7 @@ import("//magma/gnbuild/magma.gni")
 group("magma_service_driver") {
   if (target_cpu == "x64") {
     deps = [
-      "$msd_intel_gen_build_root",
+      "$msd_intel_gen_build_root:msd_vendor",
     ]
   }
 }
@@ -18,6 +18,23 @@ group("magma_service_driver_test") {
   if (target_cpu == "x64") {
     deps = [
       "$msd_intel_gen_build_root:test",
+    ]
+  }
+}
+
+group("libvulkan") {
+  if (target_cpu == "x64") {
+    deps = [
+      "$mesa_build_root:magma_vulkan",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  if (target_cpu == "x64") {
+    deps = [
+      "tests",
     ]
   }
 }
@@ -42,7 +59,7 @@ source_set("libmsd") {
   ]
 }
 
-shared_library("magma") {
+shared_library("libmagma") {
   deps = [
     "src/libmagma($magma_shared_toolchain)",
   ]

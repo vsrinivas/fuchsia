@@ -97,7 +97,7 @@ executable("magma_abi_conformance_tests") {
   ]
 
   deps = [
-    "$magma_build_root:magma",
+    "$magma_build_root:libmagma",
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util/platform:buffer",
     "//third_party/gtest",
