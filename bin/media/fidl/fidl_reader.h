@@ -72,6 +72,7 @@ class FidlReader : public Reader,
   ReadAtCallback read_at_callback_;
   mx::socket socket_;
   size_t socket_position_ = kUnknownSize;
+  FidlAsyncWaitID wait_id_ = 0;
 };
 
 }  // namespace media

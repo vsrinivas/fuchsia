@@ -31,7 +31,11 @@ FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
       });
 }
 
-FidlReader::~FidlReader() {}
+FidlReader::~FidlReader() {
+  if (wait_id_ != 0) {
+    fidl::GetDefaultAsyncWaiter()->CancelWait(wait_id_);
+  }
+}
 
 void FidlReader::Describe(const DescribeCallback& callback) {
   ready_.When([this, callback]() { callback(result_, size_, can_seek_); });
@@ -90,18 +94,18 @@ void FidlReader::ContinueReadAt() {
       return;
     }
 
-    seeking_reader_->ReadAt(
-        read_at_position_, [this](MediaResult result, mx::socket socket) {
-          result_ = Convert(result);
-          if (result_ != Result::kOk) {
-            CompleteReadAt(result_);
-            return;
-          }
+    seeking_reader_->ReadAt(read_at_position_,
+                            [this](MediaResult result, mx::socket socket) {
+                              result_ = Convert(result);
+                              if (result_ != Result::kOk) {
+                                CompleteReadAt(result_);
+                                return;
+                              }
 
-          socket_ = std::move(socket);
-          socket_position_ = read_at_position_;
-          ReadFromSocket();
-        });
+                              socket_ = std::move(socket);
+                              socket_position_ = read_at_position_;
+                              ReadFromSocket();
+                            });
   });
 }
 
@@ -113,7 +117,7 @@ void FidlReader::ReadFromSocket() {
                                       read_at_bytes_remaining_, &byte_count);
 
     if (status == ERR_SHOULD_WAIT) {
-      fidl::GetDefaultAsyncWaiter()->AsyncWait(
+      wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
           socket_.get(), MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
           MX_TIME_INFINITE, FidlReader::ReadFromSocketStatic, this);
       break;
@@ -157,6 +161,9 @@ void FidlReader::ReadFromSocketStatic(mx_status_t status,
                                       mx_signals_t pending,
                                       void* closure) {
   FidlReader* reader = reinterpret_cast<FidlReader*>(closure);
+
+  reader->wait_id_ = 0;
+
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "AsyncWait failed, status " << status;
     reader->FailReadAt(status);

@@ -43,7 +43,11 @@ FileReaderImpl::FileReaderImpl(const fidl::String& path,
   }
 }
 
-FileReaderImpl::~FileReaderImpl() {}
+FileReaderImpl::~FileReaderImpl() {
+  if (wait_id_ != 0) {
+    fidl::GetDefaultAsyncWaiter()->CancelWait(wait_id_);
+  }
+}
 
 void FileReaderImpl::Describe(const DescribeCallback& callback) {
   callback(result_, size_, true);
