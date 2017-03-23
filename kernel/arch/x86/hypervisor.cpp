@@ -625,11 +625,15 @@ void vmx_host_load(VmxHostState* host_state) {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu_num = arch_curr_cpu_num();
 
-    // Reload the task segment in order to restore its limit.  VMX always
+    // Reload the task segment in order to restore its limit. VMX always
     // restores it with a limit of 0x67, which excludes the IO bitmap.
     seg_sel_t selector = TSS_SELECTOR(cpu_num);
     x86_clear_tss_busy(selector);
     x86_ltr(selector);
+
+    // Reload the interrupt descriptor table in order to restore its limit. VMX
+    // always restores it with a limit of 0xffff, which is too large.
+    idt_load(idt_get_readonly());
 }
 
 mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
