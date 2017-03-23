@@ -4,8 +4,8 @@
     ],
     "binaries": [
         {
-            "binary": "libmsd-intel-gen.so",
-            "bootfs_path": "lib/driver/libmsd-intel-gen.so"
+            "binary": "libmsd_vendor.so",
+            "bootfs_path": "lib/driver/libmsd_vendor.so"
         }
     ]
 }

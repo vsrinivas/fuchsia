@@ -5,12 +5,10 @@
         "vulkan_loader_and_layers"
     ],
     "labels": [
-        "//magma:magma",
+        "//magma:libmagma",
         "//magma:magma_service_driver",
         "//magma:magma_service_driver_test",
-        "//magma/tests",
-        "//third_party/mesa:tests",
-        "//third_party/mesa:magma_vulkan"
+        "//magma:tests"
     ],
     "binaries": [
         {
@@ -18,14 +16,14 @@
             "bootfs_path": "lib/libmagma.so"
         },
         {
-            "binary": "libvulkan_magma_intel.so",
-            "bootfs_path": "lib/libvulkan_magma_intel.so"
+            "binary": "libvulkan_vendor.so",
+            "bootfs_path": "lib/libvulkan_vendor.so"
         }
     ],
     "resources": [
         {
-            "bootfs_path": "lib/vulkan/icd.d/intel_magma_icd.json",
-            "file": "third_party/mesa/src/intel/vulkan/intel_magma_icd.json"
+            "bootfs_path": "lib/vulkan/icd.d/magma_icd.json",
+            "file": "magma/icd/magma_icd.json"
         }
     ]
 }
