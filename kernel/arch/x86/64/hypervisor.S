@@ -37,6 +37,10 @@ FUNCTION(vmx_host_save)
  * stack and registers to the state they were in when vmx_host_save was called.
  */
 FUNCTION(vmx_host_load_entry)
+    // Reload the global descriptor table in order to restore its limit. VMX
+    // always restores it with a limit of 0xffff, which is too large.
+    lgdt _gdtr
+
     // Load host_state from %rsp.
     mov %rsp, %rdi
 
@@ -53,10 +57,10 @@ FUNCTION(vmx_host_load_entry)
     pushq VHS_RFLAGS(%rdi)
     popfq
 
-    # Set up the later return
+    // Set up the return address.
     pushq VHS_RIP(%rdi)
 
-    # call vmx_host_load(host_state)
+    // Call vmx_host_load(host_state).
     sub $8, %rsp
     call vmx_host_load
     add $8, %rsp
