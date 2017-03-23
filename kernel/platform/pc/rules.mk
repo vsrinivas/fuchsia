@@ -32,6 +32,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS += \
     lib/acpica \
+    lib/capsule \
     lib/gfxconsole \
     lib/fixed_point \
     lib/pow2_range_allocator \

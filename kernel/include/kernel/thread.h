@@ -193,6 +193,14 @@ status_t thread_detach_and_resume(thread_t *t);
 status_t thread_set_real_time(thread_t *t);
 
 void thread_owner_name(thread_t *t, char out_name[THREAD_NAME_LENGTH]);
+
+#define THREAD_BACKTRACE_DEPTH 10
+typedef struct thread_backtrace {
+    void* pc[THREAD_BACKTRACE_DEPTH];
+} thread_backtrace_t;
+
+int thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb);
+
 void thread_print_backtrace(thread_t* t, void* fp);
 
 // Return true if stopped in an exception.

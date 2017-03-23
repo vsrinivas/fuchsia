@@ -1537,20 +1537,35 @@ static status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t sz)
     return NO_ERROR;
 }
 
-void thread_print_backtrace(thread_t* t, void* fp)
+int thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb)
 {
     void* pc;
     if (t == NULL) {
-        return;
+        return -1;
     }
-    for (int n = 0; n < 10; n++) {
+    int n = 0;
+    for (; n < THREAD_BACKTRACE_DEPTH; n++) {
         if (thread_read_stack(t, fp + 8, &pc, sizeof(void*))) {
             break;
         }
-        printf("bt#%02d: %p\n", n, pc);
+        tb->pc[n] = pc;
         if (thread_read_stack(t, fp, &fp, sizeof(void*))) {
             break;
         }
+    }
+    return n;
+}
+
+void thread_print_backtrace(thread_t* t, void* fp)
+{
+    thread_backtrace_t tb;
+    int count = thread_get_backtrace(t, fp, &tb);
+    if (count < 0) {
+        return;
+    }
+
+    for (int n = 0; n < count; n++) {
+        printf("bt#%02d: %p\n", n, tb.pc[n]);
     }
 }
 #endif
