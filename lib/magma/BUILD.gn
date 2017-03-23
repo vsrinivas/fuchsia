@@ -9,6 +9,8 @@ group("magma_service_driver") {
     deps = [
       "$msd_intel_gen_build_root:msd_vendor",
     ]
+  } else {
+    deps = [ "src/stub:msd_vendor" ]
   }
 }
 
@@ -27,6 +29,8 @@ group("libvulkan") {
     deps = [
       "$mesa_build_root:magma_vulkan",
     ]
+  } else {
+    deps = [ "src/stub:vulkan_vendor" ]
   }
 }
 
