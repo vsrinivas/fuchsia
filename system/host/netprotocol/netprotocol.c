@@ -25,6 +25,19 @@
 
 static uint32_t cookie = 0x12345678;
 
+static int netboot_bind_to_cmd_port(int socket) {
+    struct sockaddr_in6 addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin6_family = AF_INET6;
+    for (uint16_t port = NB_CMD_PORT_START; port <= NB_CMD_PORT_END; port++) {
+        addr.sin6_port = htons(port);
+        if (bind(socket, (void*)&addr, sizeof(addr)) == 0) {
+            return 0;
+        }
+    }
+    return -1;
+}
+
 int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_out) {
     if ((hostname == NULL) || (hostname[0] == 0)) {
         char* envname = getenv("MAGENTA_NODENAME");
@@ -45,6 +58,11 @@ int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_
     int s;
     if ((s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
         fprintf(stderr, "error: cannot create socket: %s\n", strerror(errno));
+        return -1;
+    }
+
+    if (netboot_bind_to_cmd_port(s) < 0) {
+        fprintf(stderr, "cannot bind to command port: %s\n", strerror(errno));
         return -1;
     }
 
