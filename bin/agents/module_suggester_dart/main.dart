@@ -86,7 +86,7 @@ class AskHandlerImpl extends AskHandler {
       proposal.display.imageUrl = "";
 
       final createStory = new CreateStory();
-      createStory.moduleId = "file:///system/apps/chat";
+      createStory.moduleId = "file:///system/apps/chat_story";
 
       final action = new Action()..createStory = createStory;
       proposal.onSelected = <Action>[action];
