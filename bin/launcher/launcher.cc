@@ -46,18 +46,15 @@ class LauncherApp : public maxwell::Launcher {
         });
   }
 
-  void Initialize(fidl::InterfaceHandle<modular::ComponentContext> component_context,
-                  fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-                  fidl::InterfaceHandle<modular::FocusController>
-                      focus_controller) override {
-    focus_controller_.Bind(std::move(focus_controller));
-
-    fidl::InterfaceHandle<modular::FocusController> focus_controller_dup;
-    auto focus_controller_request = focus_controller_dup.NewRequest();
-    focus_controller_->Duplicate(std::move(focus_controller_request));
-
+  void Initialize(
+      fidl::InterfaceHandle<modular::ComponentContext> component_context,
+      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+      fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
+      fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+          visible_stories_provider) override {
+    visible_stories_provider_.Bind(std::move(visible_stories_provider));
     suggestion_engine_->Initialize(std::move(story_provider),
-                                   std::move(focus_controller_dup));
+                                   std::move(focus_provider));
 
     // TODO(rosswang): Search the ComponentIndex and iterate through results.
     StartAgent("file:///system/apps/acquirers/focus");
@@ -109,9 +106,10 @@ class LauncherApp : public maxwell::Launcher {
           suggestion_engine_->RegisterPublisher(url, std::move(request));
         });
 
-    agent_host->AddService<modular::FocusController>(
-        [this](fidl::InterfaceRequest<modular::FocusController> request) {
-          focus_controller_->Duplicate(std::move(request));
+    agent_host->AddService<modular::VisibleStoriesProvider>(
+        [this](
+            fidl::InterfaceRequest<modular::VisibleStoriesProvider> request) {
+          visible_stories_provider_->Duplicate(std::move(request));
         });
     agent_host->AddService<network::NetworkService>(
         [this](fidl::InterfaceRequest<network::NetworkService> request) {
@@ -132,7 +130,7 @@ class LauncherApp : public maxwell::Launcher {
 
   maxwell::AgentLauncher agent_launcher_;
 
-  fidl::InterfacePtr<modular::FocusController> focus_controller_;
+  fidl::InterfacePtr<modular::VisibleStoriesProvider> visible_stories_provider_;
 };
 
 }  // namespace

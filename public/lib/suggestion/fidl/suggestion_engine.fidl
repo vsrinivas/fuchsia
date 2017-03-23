@@ -13,7 +13,7 @@ import "apps/modular/services/user/focus.fidl";
 [ServiceName="maxwell.SuggestionEngine"]
 interface SuggestionEngine {
   // Initializes the SuggestionEngine and provides dependencies.
-  Initialize(modular.StoryProvider story_provider, modular.FocusController focus_controller);
+  Initialize(modular.StoryProvider story_provider, modular.FocusProvider focus_provider);
 
   // Registers a component that produces suggestions.
   RegisterPublisher(string url, ProposalPublisher& client);

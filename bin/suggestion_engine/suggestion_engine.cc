@@ -101,7 +101,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                               modular::StoryInfoPtr story_info) {
                             FTL_LOG(INFO) << "Requesting focus for story_id "
                                           << story_info->id;
-                            focus_controller_ptr_->FocusStory(story_info->id);
+                            focus_provider_ptr_->Request(story_info->id);
                           }));
                     });
               } else {
@@ -111,9 +111,9 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
             }
             case Action::Tag::FOCUS_STORY: {
               const auto& focus_story = action->get_focus_story();
-              FTL_LOG(INFO) << "Requesting focus for story_id " <<
-                            focus_story->story_id;
-              focus_controller_ptr_->FocusStory(focus_story->story_id);
+              FTL_LOG(INFO)
+                  << "Requesting focus for story_id " << focus_story->story_id;
+              focus_provider_ptr_->Request(focus_story->story_id);
               break;
             }
             default:
@@ -135,11 +135,11 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
     repo_->GetOrCreateSourceClient(url)->AddBinding(std::move(client));
   }
 
-  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-                  fidl::InterfaceHandle<modular::FocusController>
-                      focus_controller) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+      fidl::InterfaceHandle<modular::FocusProvider> focus_provider) override {
     story_provider_.Bind(std::move(story_provider));
-    focus_controller_ptr_.Bind(std::move(focus_controller));
+    focus_provider_ptr_.Bind(std::move(focus_provider));
 
     timeline_stories_watcher_.reset(
         new TimelineStoriesWatcher(&story_provider_));
@@ -159,7 +159,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
 
   modular::StoryProviderPtr story_provider_;
-  fidl::InterfacePtr<modular::FocusController> focus_controller_ptr_;
+  fidl::InterfacePtr<modular::FocusProvider> focus_provider_ptr_;
 
   // Watches for changes in StoryInfo from the StoryProvider, acts as a filter
   // for Proposals on all channels, and notifies when there are changes so that
@@ -175,7 +175,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   std::unique_ptr<Repo> repo_;
 };
 
-}  // maxwell
+}  // namespace maxwell
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;

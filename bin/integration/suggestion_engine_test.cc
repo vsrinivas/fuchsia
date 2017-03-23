@@ -133,10 +133,10 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     story_provider_binding_.Bind(&story_provider_handle);
 
     // Hack to get an unbound FocusController for Initialize().
-    fidl::InterfaceHandle<modular::FocusController> focus_controller_handle;
-    focus_controller_handle.NewRequest();
+    fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle;
+    focus_provider_handle.NewRequest();
     suggestion_engine()->Initialize(std::move(story_provider_handle),
-                                    std::move(focus_controller_handle));
+                                    std::move(focus_provider_handle));
   }
 
  protected:

@@ -22,23 +22,27 @@ constexpr char FocusAcquirer::kSchema[];
 
 namespace {
 
-class FocusAcquirerApp : public modular::FocusListener,
+class FocusAcquirerApp : public modular::VisibleStoriesWatcher,
                          public maxwell::ContextPublisherController {
  public:
   FocusAcquirerApp()
       : app_ctx_(app::ApplicationContext::CreateFromStartupInfo()),
         ctl_(this),
-        focus_listener_(this) {
+        visible_stories_watcher_(this) {
     srand(time(NULL));
 
     auto cx =
         app_ctx_->ConnectToEnvironmentService<maxwell::ContextPublisher>();
 
-    auto focus_controller_handle =
-        app_ctx_->ConnectToEnvironmentService<modular::FocusController>();
-    fidl::InterfaceHandle<modular::FocusListener> focus_listener_handle;
-    focus_listener_.Bind(&focus_listener_handle);
-    focus_controller_handle->Watch(std::move(focus_listener_handle));
+    auto visible_stories_provider_handle =
+        app_ctx_
+            ->ConnectToEnvironmentService<modular::VisibleStoriesProvider>();
+    fidl::InterfaceHandle<modular::VisibleStoriesWatcher>
+        visible_stories_watcher_handle;
+    visible_stories_watcher_.Bind(
+        &visible_stories_watcher_handle);
+    visible_stories_provider_handle->Watch(
+        std::move(visible_stories_watcher_handle));
 
     fidl::InterfaceHandle<maxwell::ContextPublisherController> ctl_handle;
     ctl_.Bind(&ctl_handle);
@@ -48,7 +52,7 @@ class FocusAcquirerApp : public modular::FocusListener,
     PublishFocusState();
   }
 
-  void OnFocusChanged(fidl::Array<fidl::String> ids) override {
+  void OnVisibleStoriesChange(fidl::Array<fidl::String> ids) override {
     focused_story_ids_.clear();
     for (std::string str : ids) {
       focused_story_ids_.push_back(str);
@@ -85,7 +89,7 @@ class FocusAcquirerApp : public modular::FocusListener,
   fidl::Binding<maxwell::ContextPublisherController> ctl_;
   maxwell::ContextPublisherLinkPtr out_;
   std::vector<std::string> focused_story_ids_;
-  fidl::Binding<modular::FocusListener> focus_listener_;
+  fidl::Binding<modular::VisibleStoriesWatcher> visible_stories_watcher_;
 };
 
 }  // namespace

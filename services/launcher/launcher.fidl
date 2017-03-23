@@ -12,9 +12,12 @@ import "apps/modular/services/user/focus.fidl";
 [ServiceName="maxwell.Launcher"]
 interface Launcher {
   // Initializes Maxwell services and provides dependencies.
+  // TODO(alhaad): Have single MaxwellContext so that it is easier to add new
+  // methods to it.
   Initialize(modular.ComponentContext component_context,
              modular.StoryProvider story_provider,
-             modular.FocusController focus_controller);
+             modular.FocusProvider focus_provider,
+             modular.VisibleStoriesProvider visible_stories_provider);
 
   // HACK(alhaad): To allow modules / agents to publish proposals. These
   // proposals are a hack to plumb notifications (selecting which might start
