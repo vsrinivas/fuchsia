@@ -42,7 +42,18 @@ TimelineControlPoint::TimelineControlPoint()
       });
 }
 
-TimelineControlPoint::~TimelineControlPoint() {}
+TimelineControlPoint::~TimelineControlPoint() {
+  // Close the bindings before members are destroyed so we don't try to
+  // destroy any callbacks that are pending on open channels.
+
+  if (control_point_binding_.is_bound()) {
+    control_point_binding_.Close();
+  }
+
+  if (consumer_binding_.is_bound()) {
+    consumer_binding_.Close();
+  }
+}
 
 void TimelineControlPoint::Bind(
     fidl::InterfaceRequest<MediaTimelineControlPoint> request) {

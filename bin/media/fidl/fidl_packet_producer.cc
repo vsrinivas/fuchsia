@@ -17,7 +17,9 @@ FidlPacketProducer::FidlPacketProducer() : binding_(this) {
   FTL_DCHECK(task_runner_);
 }
 
-FidlPacketProducer::~FidlPacketProducer() {}
+FidlPacketProducer::~FidlPacketProducer() {
+  Reset();
+}
 
 void FidlPacketProducer::Bind(
     fidl::InterfaceRequest<MediaPacketProducer> request) {

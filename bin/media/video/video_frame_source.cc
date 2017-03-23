@@ -18,15 +18,31 @@ VideoFrameSource::VideoFrameSource()
   // Make sure the PTS rate for all packets is nanoseconds.
   SetPtsRate(TimelineRate::NsPerSecond);
 
-  status_publisher_.SetCallbackRunner([this](
-      const VideoRenderer::GetStatusCallback& callback, uint64_t version) {
-    VideoRendererStatusPtr status = VideoRendererStatus::New();
-    status->video_size = converter_.GetSize().Clone();
-    callback(version, std::move(status));
-  });
+  status_publisher_.SetCallbackRunner(
+      [this](const VideoRenderer::GetStatusCallback& callback,
+             uint64_t version) {
+        VideoRendererStatusPtr status = VideoRendererStatus::New();
+        status->video_size = converter_.GetSize().Clone();
+        callback(version, std::move(status));
+      });
 }
 
-VideoFrameSource::~VideoFrameSource() {}
+VideoFrameSource::~VideoFrameSource() {
+  // Close the bindings before members are destroyed so we don't try to
+  // destroy any callbacks that are pending on open channels.
+
+  if (media_renderer_binding_.is_bound()) {
+    media_renderer_binding_.Close();
+  }
+
+  if (control_point_binding_.is_bound()) {
+    control_point_binding_.Close();
+  }
+
+  if (timeline_consumer_binding_.is_bound()) {
+    timeline_consumer_binding_.Close();
+  }
+}
 
 void VideoFrameSource::Bind(
     fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
