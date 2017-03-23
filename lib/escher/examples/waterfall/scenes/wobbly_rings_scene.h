@@ -13,8 +13,7 @@ using escher::vec3;
 
 class WobblyRingsScene : public Scene {
  public:
-  WobblyRingsScene(escher::VulkanContext* vulkan_context,
-                   escher::Escher* escher,
+  WobblyRingsScene(Demo* demo,
                    vec3 clear_color,
                    vec3 ring1_color,
                    vec3 ring2_color,

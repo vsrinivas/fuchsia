@@ -10,8 +10,7 @@
 
 class WobblyOceanScene : public Scene {
  public:
-  WobblyOceanScene(escher::VulkanContext* vulkan_context,
-                   escher::Escher* escher);
+  WobblyOceanScene(Demo* demo);
   ~WobblyOceanScene();
 
   void Init(escher::Stage* stage) override;

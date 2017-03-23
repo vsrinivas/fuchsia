@@ -9,6 +9,7 @@
 group("examples") {
   deps = [
     "//lib/escher/examples/waterfall($host_toolchain)",
+    "//lib/escher/examples/sketchy($host_toolchain)",
   ]
 }
 

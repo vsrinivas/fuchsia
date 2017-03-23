@@ -24,15 +24,14 @@ using escher::TexturePtr;
 
 const float kRectYPos = 40.f;
 
-WobblyRingsScene::WobblyRingsScene(escher::VulkanContext* vulkan_context,
-                                   escher::Escher* escher,
+WobblyRingsScene::WobblyRingsScene(Demo* demo,
                                    vec3 clear_color,
                                    vec3 ring1_color,
                                    vec3 ring2_color,
                                    vec3 ring3_color,
                                    vec3 circle_color,
                                    vec3 checkerboard_color)
-    : Scene(vulkan_context, escher), clear_color_(clear_color) {
+    : Scene(demo), clear_color_(clear_color) {
   ring1_color_ = ftl::MakeRefCounted<escher::Material>();
   ring2_color_ = ftl::MakeRefCounted<escher::Material>();
   ring3_color_ = ftl::MakeRefCounted<escher::Material>();

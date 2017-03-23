@@ -5,6 +5,7 @@
 #pragma once
 
 #include "escher/escher.h"
+#include "escher/examples/common/demo.h"
 
 namespace escher {
 class Stopwatch;
@@ -12,7 +13,7 @@ class Stopwatch;
 
 class Scene {
  public:
-  Scene(escher::VulkanContext* vulkan_context, escher::Escher* escher);
+  Scene(Demo* demo);
   virtual ~Scene();
 
   // Convenience method for initializing scene. Use this to create meshes,
@@ -28,12 +29,13 @@ class Scene {
                                 escher::Stage* stage) = 0;
 
  protected:
-  escher::VulkanContext* vulkan_context() { return vulkan_context_; }
-  escher::Escher* escher() { return escher_; }
+  const escher::VulkanContext& vulkan_context() const {
+    return demo_->vulkan_context();
+  }
+  escher::Escher* escher() { return demo_->escher(); }
 
  private:
-  escher::VulkanContext* vulkan_context_;
-  escher::Escher* escher_;
+  Demo* demo_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };

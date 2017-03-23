@@ -6,13 +6,13 @@
 
 #include "escher/geometry/tessellation.h"
 #include "escher/geometry/types.h"
+#include "escher/material/color_utils.h"
 #include "escher/material/material.h"
 #include "escher/renderer/image.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
 #include "escher/shape/modifier_wobble.h"
 #include "escher/util/stopwatch.h"
-#include "escher/material/color_utils.h"
 #include "escher/vk/vulkan_context.h"
 
 using escher::vec2;
@@ -23,9 +23,7 @@ using escher::Object;
 using escher::ShapeModifier;
 using escher::TexturePtr;
 
-WobblyOceanScene::WobblyOceanScene(escher::VulkanContext* vulkan_context,
-                                   escher::Escher* escher)
-    : Scene(vulkan_context, escher) {}
+WobblyOceanScene::WobblyOceanScene(Demo* demo) : Scene(demo) {}
 
 void WobblyOceanScene::Init(escher::Stage* stage) {
   bg_ = ftl::MakeRefCounted<escher::Material>();

@@ -21,9 +21,7 @@ using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
 
-UberScene3::UberScene3(escher::VulkanContext* vulkan_context,
-                       escher::Escher* escher)
-    : Scene(vulkan_context, escher) {}
+UberScene3::UberScene3(Demo* demo) : Scene(demo) {}
 
 void UberScene3::Init(escher::Stage* stage) {
   bg_ = ftl::MakeRefCounted<escher::Material>();
@@ -113,9 +111,10 @@ escher::Model* UberScene3::Update(const escher::Stopwatch& stopwatch,
           hex_circle_radius * circle_scale, circle_elevation, color2_));
       objects.push_back(circle);
 
-      Object circle_bg(ring_mesh_, vec3(hex_current_x_pos, hex_current_y_pos,
-                                        circle_elevation - 4.f),
-                       color1_, vec2(circle_scale_alt, circle_scale_alt));
+      Object circle_bg(
+          ring_mesh_,
+          vec3(hex_current_x_pos, hex_current_y_pos, circle_elevation - 4.f),
+          color1_, vec2(circle_scale_alt, circle_scale_alt));
       circle_bg.set_shape_modifiers(ShapeModifier::kWobble);
       escher::ModifierWobble wobble_data{
           {{-0.3f * TWO_PI, 0.1f, 7.f * TWO_PI},

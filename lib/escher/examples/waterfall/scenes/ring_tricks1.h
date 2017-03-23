@@ -10,7 +10,7 @@
 
 class RingTricks1 : public Scene {
  public:
-  RingTricks1(escher::VulkanContext* vulkan_context, escher::Escher* escher);
+  RingTricks1(Demo* demo);
   ~RingTricks1();
 
   void Init(escher::Stage* stage) override;

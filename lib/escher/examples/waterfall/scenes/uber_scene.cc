@@ -21,9 +21,7 @@ using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
 
-UberScene::UberScene(escher::VulkanContext* vulkan_context,
-                     escher::Escher* escher)
-    : Scene(vulkan_context, escher) {}
+UberScene::UberScene(Demo* demo) : Scene(demo) {}
 
 void UberScene::Init(escher::Stage* stage) {
   blue_ = ftl::MakeRefCounted<escher::Material>();

@@ -21,9 +21,7 @@ using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
 
-RingTricks2::RingTricks2(escher::VulkanContext* vulkan_context,
-                         escher::Escher* escher)
-    : Scene(vulkan_context, escher) {}
+RingTricks2::RingTricks2(Demo* demo) : Scene(demo) {}
 
 void RingTricks2::Init(escher::Stage* stage) {
   red_ = ftl::MakeRefCounted<escher::Material>();

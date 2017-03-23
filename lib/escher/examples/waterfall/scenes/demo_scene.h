@@ -10,7 +10,7 @@
 
 class DemoScene : public Scene {
  public:
-  DemoScene(escher::VulkanContext* vulkan_context, escher::Escher* escher);
+  DemoScene(Demo* demo);
   ~DemoScene();
 
   void Init(escher::Stage* stage) override;

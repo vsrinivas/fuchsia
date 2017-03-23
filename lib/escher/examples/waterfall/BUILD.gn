@@ -15,6 +15,8 @@ executable("waterfall") {
     "scenes/uber_scene3.cc",
     "scenes/wobbly_ocean_scene.cc",
     "scenes/wobbly_rings_scene.cc",
+    "waterfall_demo.cc",
+    "waterfall_demo.h",
     "waterfall_main.cc",
   ]
   deps = [

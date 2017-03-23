@@ -4,7 +4,6 @@
 
 #include "examples/waterfall/scenes/scene.h"
 
-Scene::Scene(escher::VulkanContext* vulkan_context, escher::Escher* escher)
-    : vulkan_context_(vulkan_context), escher_(escher) {}
+Scene::Scene(Demo* demo) : demo_(demo) {}
 
 Scene::~Scene() {}

@@ -10,7 +10,7 @@
 
 class UberScene2 : public Scene {
  public:
-  UberScene2(escher::VulkanContext* vulkan_context, escher::Escher* escher);
+  UberScene2(Demo* demo);
   ~UberScene2();
 
   void Init(escher::Stage* stage) override;

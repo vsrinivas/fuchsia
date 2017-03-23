@@ -22,9 +22,7 @@ using escher::Object;
 using escher::ShapeModifier;
 using escher::TexturePtr;
 
-DemoScene::DemoScene(escher::VulkanContext* vulkan_context,
-                     escher::Escher* escher)
-    : Scene(vulkan_context, escher) {}
+DemoScene::DemoScene(Demo* demo) : Scene(demo) {}
 
 void DemoScene::Init(escher::Stage* stage) {
   TexturePtr checkerboard = escher()->NewTexture(
