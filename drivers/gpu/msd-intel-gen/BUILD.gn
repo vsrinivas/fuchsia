@@ -6,7 +6,7 @@ import("//magma/gnbuild/magma.gni")
 
 shared_ldflags = "-Wl,--no-undefined"
 
-shared_library("msd-intel-gen") {
+shared_library("msd_vendor") {
   deps = [
     "$magma_build_root/src/main($magma_shared_toolchain)",
     "src($magma_shared_toolchain)",
