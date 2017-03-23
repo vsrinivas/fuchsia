@@ -320,8 +320,6 @@ int MsdIntelDevice::InterruptThreadLoop()
         EnqueueDeviceRequest(std::move(request), true);
 
         reply->Wait();
-
-        interrupt_->Complete();
     }
 
     DLOG("Interrupt thread exited");
@@ -609,6 +607,7 @@ magma::Status MsdIntelDevice::ProcessInterrupts()
         DASSERT(false);
     }
 
+    interrupt_->Complete();
     registers::MasterInterruptControl::write(register_io_.get(), true);
 
     return MAGMA_STATUS_OK;
