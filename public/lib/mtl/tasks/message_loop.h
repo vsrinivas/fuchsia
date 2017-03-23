@@ -7,6 +7,7 @@
 
 #include <magenta/types.h>
 #include <mx/event.h>
+#include <mx/port.h>
 
 #include <map>
 #include <memory>
@@ -46,14 +47,13 @@ class MessageLoop : public internal::TaskQueueDelegate {
   }
 
   // Adds a |handler| that the message loop calls when the |handle| triggers one
-  // of the given |handle_signals| or when |timeout| elapses, whichever happens
-  // first.
+  // of the given |trigger| or when |timeout| elapses, whichever happens first.
   //
   // The returned key can be used to remove the callback. The returned key will
   // always be non-zero.
   HandlerKey AddHandler(MessageLoopHandler* handler,
                         mx_handle_t handle,
-                        mx_signals_t handle_signals,
+                        mx_signals_t trigger,
                         ftl::TimeDelta timeout = ftl::TimeDelta::Max());
 
   // The message loop will no longer call the handler identified by the key. It
@@ -93,7 +93,7 @@ class MessageLoop : public internal::TaskQueueDelegate {
   struct HandlerData {
     MessageLoopHandler* handler = nullptr;
     mx_handle_t handle = MX_HANDLE_INVALID;
-    mx_signals_t signals = MX_SIGNAL_NONE;
+    mx_signals_t trigger = MX_SIGNAL_NONE;
     ftl::TimePoint deadline;
   };
 
@@ -121,6 +121,7 @@ class MessageLoop : public internal::TaskQueueDelegate {
   bool is_running_ = false;
   std::priority_queue<internal::PendingTask> queue_;
   mx::event event_;
+  mx::port port_;
 
   // An ever increasing value assigned to each HandlerData::id. Used to detect
   // uniqueness while notifying. That is, while notifying expired timers we
@@ -131,22 +132,6 @@ class MessageLoop : public internal::TaskQueueDelegate {
 
   using HandleToHandlerData = std::map<HandlerKey, HandlerData>;
   HandleToHandlerData handler_data_;
-
-  class WaitState {
-   public:
-    std::vector<HandlerKey> keys;
-    std::vector<mx_wait_item_t> items;
-
-    size_t size() const { return keys.size(); }
-
-    void Set(size_t index,
-             HandlerKey key,
-             mx_handle_t handle,
-             mx_signals_t signals);
-    void Resize(size_t size);
-  };
-
-  WaitState wait_state_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };

@@ -5,6 +5,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/port.h>
 
 #include <utility>
 
@@ -15,7 +16,7 @@ namespace {
 
 thread_local MessageLoop* g_current;
 
-constexpr MessageLoop::HandlerKey kIgnoredKey = 0;
+constexpr MessageLoop::HandlerKey kEventKey = 0;
 
 }  // namespace
 
@@ -27,6 +28,8 @@ MessageLoop::MessageLoop(
     : task_runner_(std::move(incoming_tasks)) {
   FTL_DCHECK(!g_current) << "At most one message loop per thread.";
   FTL_CHECK(mx::event::create(0, &event_) == NO_ERROR);
+  FTL_CHECK(mx::port::create(MX_PORT_OPT_V2, &port_) == NO_ERROR);
+  event_.wait_async(port_, kEventKey, MX_EVENT_SIGNALED, MX_WAIT_ASYNC_ONCE);
   MessageLoop::incoming_tasks()->InitDelegate(this);
   g_current = this;
 }
@@ -65,7 +68,7 @@ MessageLoop* MessageLoop::GetCurrent() {
 
 MessageLoop::HandlerKey MessageLoop::AddHandler(MessageLoopHandler* handler,
                                                 mx_handle_t handle,
-                                                mx_signals_t handle_signals,
+                                                mx_signals_t trigger,
                                                 ftl::TimeDelta timeout) {
   FTL_DCHECK(GetCurrent() == this);
   FTL_DCHECK(handler);
@@ -73,19 +76,24 @@ MessageLoop::HandlerKey MessageLoop::AddHandler(MessageLoopHandler* handler,
   HandlerData handler_data;
   handler_data.handler = handler;
   handler_data.handle = handle;
-  handler_data.signals = handle_signals;
+  handler_data.trigger = trigger;
   if (timeout == ftl::TimeDelta::Max())
     handler_data.deadline = ftl::TimePoint::Max();
   else
     handler_data.deadline = ftl::TimePoint::Now() + timeout;
   HandlerKey key = next_handler_key_++;
   handler_data_[key] = handler_data;
+  mx_object_wait_async(handle, port_.get(), key, trigger, MX_WAIT_ASYNC_ONCE);
   return key;
 }
 
 void MessageLoop::RemoveHandler(HandlerKey key) {
   FTL_DCHECK(GetCurrent() == this);
-  handler_data_.erase(key);
+  auto it = handler_data_.find(key);
+  if (it == handler_data_.end())
+    return;
+  mx_handle_cancel(it->second.handle, key, MX_CANCEL_KEY);
+  handler_data_.erase(it);
 }
 
 bool MessageLoop::HasHandler(HandlerKey key) const {
@@ -102,9 +110,8 @@ void MessageLoop::ClearAfterTaskCallback() {
 
 void MessageLoop::CancelAllHandlers(mx_status_t error) {
   std::vector<HandlerKey> keys;
-  for (auto it = handler_data_.begin(); it != handler_data_.end(); ++it) {
+  for (auto it = handler_data_.begin(); it != handler_data_.end(); ++it)
     keys.push_back(it->first);
-  }
   CancelHandlers(std::move(keys), error);
 }
 
@@ -116,6 +123,7 @@ void MessageLoop::CancelHandlers(std::vector<HandlerKey> keys,
       continue;
 
     mx_handle_t handle = it->second.handle;
+    mx_handle_cancel(handle, key, MX_CANCEL_KEY);
     MessageLoopHandler* handler = it->second.handler;
     handler_data_.erase(it);
     handler->OnHandleError(handle, error);
@@ -154,22 +162,19 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
     timeout = (next_run_time - now).ToNanoseconds();
   }
 
-  wait_state_.Resize(handler_data_.size() + 1);
-  wait_state_.Set(0, kIgnoredKey, event_.get(), MX_EVENT_SIGNALED);
-  size_t count = 1;
-  for (auto it = handler_data_.begin(); it != handler_data_.end();
-       ++it, ++count) {
-    wait_state_.Set(count, it->first, it->second.handle, it->second.signals);
-    if (it->second.deadline <= now) {
+  // TODO(abarth): Use a priority queue to track the nearest deadlines.
+  for (const auto& entry : handler_data_) {
+    const HandlerData& handler_data = entry.second;
+    if (handler_data.deadline <= now) {
       timeout = 0;
-    } else if (it->second.deadline != ftl::TimePoint::Max()) {
-      mx_time_t handle_timeout = (it->second.deadline - now).ToNanoseconds();
+    } else if (handler_data.deadline != ftl::TimePoint::Max()) {
+      mx_time_t handle_timeout = (handler_data.deadline - now).ToNanoseconds();
       timeout = std::min(timeout, handle_timeout);
     }
   }
 
-  const mx_status_t wait_status =
-      mx_object_wait_many(wait_state_.items.data(), count, timeout);
+  mx_port_packet_t packet;
+  const mx_status_t wait_status = port_.wait(timeout, &packet, 0);
 
   // Update now after waiting.
   now = ftl::TimePoint::Now();
@@ -180,39 +185,56 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
     return now;
   }
 
-  // Reset signals on control channel.
-  if (wait_state_.items[0].pending & MX_EVENT_SIGNALED) {
+  // Deliver timeouts.
+  if (wait_status == ERR_TIMED_OUT) {
+    // TODO(abarth): Use a priority queue to track the nearest deadlines.
+    std::vector<HandlerKey> keys;
+    for (const auto& entry : handler_data_) {
+      if (entry.second.deadline <= now)
+        keys.push_back(entry.first);
+    }
+    CancelHandlers(std::move(keys), ERR_TIMED_OUT);
+    return now;
+  }
+
+  FTL_CHECK(packet.type == MX_PKT_TYPE_SIGNAL_ONE)
+      << "Received unexpected packet type: " << packet.type;
+  FTL_DCHECK(packet.status == NO_ERROR);
+
+  /// Reset signals on control channel.
+  if (packet.key == kEventKey) {
+    FTL_DCHECK(packet.signal.observed & MX_EVENT_SIGNALED);
     mx_status_t rv = event_.signal(MX_EVENT_SIGNALED, 0u);
     FTL_DCHECK(rv == NO_ERROR);
+    event_.wait_async(port_, kEventKey, MX_EVENT_SIGNALED, MX_WAIT_ASYNC_ONCE);
+    return now;
   }
 
   // Deliver pending signals.
-  for (size_t i = 1; i < count; ++i) {
-    const mx_wait_item_t& wait_item = wait_state_.items[i];
-    if (!(wait_item.pending & wait_item.waitfor))
-      continue;  // handler was not signalled
-
-    HandlerKey key = wait_state_.keys[i];
-    auto it = handler_data_.find(key);
-    if (it == handler_data_.end())
-      continue;  // handler was removed while delivering signals
-
-    const HandlerData& data = it->second;
-    FTL_DCHECK(data.handle == wait_item.handle);
-    data.handler->OnHandleReady(data.handle, wait_item.pending);
-    CallAfterTaskCallback();
+  auto it = handler_data_.find(packet.key);
+  if (it == handler_data_.end()) {
+    // We can currently get packets for a key after we've canceled, but that's
+    // something we should fix in the kernel.
+    return now;
   }
 
-  // Deliver timeouts.
-  if (wait_status == ERR_TIMED_OUT) {
-    std::vector<HandlerKey> keys;
-    for (auto it = handler_data_.begin(); it != handler_data_.end(); ++it) {
-      if (it->second.deadline <= now)
-        keys.push_back(it->first);
-    }
-    CancelHandlers(std::move(keys), ERR_TIMED_OUT);
+  // We should only wake up when one of the signals we asked for was actually
+  // observed.
+  FTL_DCHECK(packet.signal.trigger & packet.signal.observed);
+
+  const HandlerData& handler_data = it->second;
+  FTL_DCHECK(packet.signal.trigger == handler_data.trigger);
+  handler_data.handler->OnHandleReady(handler_data.handle,
+                                      packet.signal.observed);
+
+  // TODO(abarth): Slip the "repeating" and "once" cases in the MessageLoop
+  // API.
+  if (handler_data_.find(packet.key) != handler_data_.end()) {
+    mx_object_wait_async(handler_data.handle, port_.get(), packet.key,
+                         handler_data.trigger, MX_WAIT_ASYNC_ONCE);
   }
 
+  CallAfterTaskCallback();
   return now;
 }
 
@@ -268,19 +290,6 @@ void MessageLoop::CallAfterTaskCallback() {
   if (should_quit_ || !after_task_callback_)
     return;
   after_task_callback_();
-}
-
-void MessageLoop::WaitState::Set(size_t i,
-                                 HandlerKey key,
-                                 mx_handle_t handle,
-                                 mx_signals_t signals) {
-  keys[i] = key;
-  items[i] = {handle, signals, 0};
-}
-
-void MessageLoop::WaitState::Resize(size_t size) {
-  keys.resize(size);
-  items.resize(size);
 }
 
 }  // namespace mtl
