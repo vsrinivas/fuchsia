@@ -11,6 +11,7 @@
 
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -22,6 +23,7 @@
 #include "lib/mtl/vmo/vector.h"
 
 namespace modular {
+
 namespace {
 
 void InitStoryId() {
@@ -87,6 +89,28 @@ void GetEntries(ledger::PageSnapshotPtr* snapshot,
   GetEntries(snapshot, {}, nullptr, std::move(callback));
 }
 
+// Serialization and deserialization of StoryData, ModuleData,
+// StoryInfo to and from JSON.
+
+void XdrStoryInfo(XdrContext* const xdr, StoryInfo* const data) {
+  xdr->Field("url", &data->url);
+  xdr->Field("id", &data->id);
+  xdr->Field("is_running", &data->is_running);
+  xdr->Field("state", &data->state);
+  xdr->Field("extra", &data->extra);
+}
+
+void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
+  xdr->Field("url", &data->url);
+  xdr->Field("link", &data->link);
+}
+
+void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
+  xdr->Field("story_info", &data->story_info, XdrStoryInfo);
+  xdr->Field("story_page_id", &data->story_page_id);
+  xdr->Field("modules", &data->modules, XdrModuleData);
+}
+
 // Below are helper classes that encapsulate a chain of asynchronous
 // operations on the Ledger. Because the operations all return
 // something, the handles on which they are invoked need to be kept
@@ -121,15 +145,17 @@ class GetStoryDataCall : public Operation<StoryDataPtr> {
                   return;
                 }
 
-                std::vector<char> value_as_vector;
-                if (!mtl::VectorFromVmo(value, &value_as_vector)) {
+                std::string value_as_string;
+                if (!mtl::StringFromVmo(value, &value_as_string)) {
                   FTL_LOG(ERROR) << "Unable to extract data.";
                   Done(nullptr);
                   return;
                 }
-                story_data_ = StoryData::New();
-                story_data_->Deserialize(value_as_vector.data(),
-                                         value_as_vector.size());
+
+                if (!XdrRead(value_as_string, &story_data_, XdrStoryData)) {
+                  Done(nullptr);
+                  return;
+                }
 
                 Done(std::move(story_data_));
               });
@@ -158,12 +184,11 @@ class WriteStoryDataCall : public Operation<void> {
   void Run() override {
     FTL_DCHECK(!story_data_.is_null());
 
-    const size_t size = story_data_->GetSerializedSize();
-    fidl::Array<uint8_t> value = fidl::Array<uint8_t>::New(size);
-    story_data_->Serialize(value.data(), size);
+    std::string json;
+    XdrWrite(&json, &story_data_, XdrStoryData);
 
     root_page_->PutWithPriority(
-        to_array(story_data_->story_info->id), std::move(value),
+        to_array(story_data_->story_info->id), to_array(json),
         ledger::Priority::EAGER, [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             const fidl::String& story_id = story_data_->story_info->id;
@@ -490,16 +515,23 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
               continue;
             }
 
-            std::vector<char> value_as_vector;
-            if (!mtl::VectorFromVmo(entry->value, &value_as_vector)) {
+            std::string value_as_string;
+            if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
               FTL_LOG(ERROR) << "Unable to extract data.";
               Done(nullptr);
               return;
             }
-            StoryDataPtr story_data = StoryData::New();
-            story_data->Deserialize(value_as_vector.data(),
-                                    value_as_vector.size());
+
+            StoryDataPtr story_data;
+            if (!XdrRead(value_as_string, &story_data, XdrStoryData)) {
+              Done(nullptr);
+              return;
+            }
+
+            FTL_DCHECK(!story_data.is_null());
+
             story_ids_.push_back(story_data->story_info->id);
+
             FTL_LOG(INFO) << "PreviousStoryCall() "
                           << " previous story " << story_data->story_info->id
                           << " " << story_data->story_info->url << " "
@@ -767,13 +799,16 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
       continue;
     }
 
-    std::vector<char> value_as_vector;
-    if (!mtl::VectorFromVmo(entry->value, &value_as_vector)) {
+    std::string value_as_string;
+    if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
       FTL_LOG(ERROR) << "Unable to extract data.";
       continue;
     }
+
     auto story_data = StoryData::New();
-    story_data->Deserialize(value_as_vector.data(), value_as_vector.size());
+    if (!XdrRead(value_as_string, &story_data, XdrStoryData)) {
+      continue;
+    }
 
     // If this is a new story, guard against double using its key.
     story_ids_.insert(story_data->story_info->id.get());
