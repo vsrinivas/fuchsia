@@ -147,7 +147,8 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
 
     if (priv->data_size > 0) {
         // copy data payload metadata to the clone so the api can just work
-        mx_status_t status = io_buffer_clone(&priv->buffer, &cpriv->buffer);
+        mx_status_t status = io_buffer_init_vmo(&cpriv->buffer, priv->buffer.vmo_handle,
+                                                priv->buffer.offset, IO_BUFFER_RW);
         if (status < 0) {
             iotxn_release(&cpriv->txn);
             return status;
