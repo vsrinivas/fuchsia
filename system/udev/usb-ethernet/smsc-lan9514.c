@@ -55,31 +55,48 @@ typedef struct {
     void* cookie;
 
     mtx_t mutex;
+    mtx_t control_ep_mutex;
 } lan9514_t;
 
 #define get_lan9514(dev) ((lan9514_t*)dev->ctx)
 
-static mx_status_t lan9514_write_register(lan9514_t* eth, uint16_t reg, uint32_t value) {
+static mx_status_t lan9514_write_register_locked(lan9514_t* eth, uint16_t reg, uint32_t value) {
 
-    mx_status_t status = usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                     LAN9514_REQ_REG_WRITE, 0, reg, &value, sizeof(value));
+    return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                       LAN9514_REQ_REG_WRITE, 0, reg, &value, sizeof(value));
+}
+
+static mx_status_t lan9514_read_register_locked(lan9514_t* eth, uint16_t reg, uint32_t* value) {
+
+    return usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                       LAN9514_REQ_REG_READ, 0, reg, value, sizeof(*value));
+}
+
+static mx_status_t lan9514_write_register(lan9514_t* eth, uint16_t reg, uint32_t value) {
+    mtx_lock(&eth->control_ep_mutex);
+
+    mx_status_t status = lan9514_write_register_locked(eth, reg, value);
+
+    mtx_unlock(&eth->control_ep_mutex);
 
     return status;
 }
 
 static mx_status_t lan9514_read_register(lan9514_t* eth, uint16_t reg, uint32_t* value) {
+    mtx_lock(&eth->control_ep_mutex);
 
-    mx_status_t status = usb_control(eth->usb_device, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                                     LAN9514_REQ_REG_READ, 0, reg, value, sizeof(*value));
+    mx_status_t status = lan9514_read_register_locked(eth, reg, value);
+
+    mtx_unlock(&eth->control_ep_mutex);
 
     return status;
 }
 
-static mx_status_t lan9514_mdio_wait_not_busy(lan9514_t* eth) {
+static mx_status_t lan9514_mdio_wait_not_busy_locked(lan9514_t* eth) {
     uint32_t retval;
     mx_time_t timecheck = mx_time_get(MX_CLOCK_MONOTONIC);
     do {
-        mx_status_t status = lan9514_read_register(eth, LAN9514_MII_ACCESS_REG, &retval);
+        mx_status_t status = lan9514_read_register_locked(eth, LAN9514_MII_ACCESS_REG, &retval);
         if (status < 0)
             return status;
         if ((mx_time_get(MX_CLOCK_MONOTONIC) - timecheck) > MX_SEC(1))
@@ -92,26 +109,26 @@ static mx_status_t lan9514_mdio_read(lan9514_t* eth, uint8_t idx, uint16_t* retv
     mx_status_t status;
     uint32_t value;
 
-    mtx_lock(&eth->mutex);
+    mtx_lock(&eth->control_ep_mutex);
 
-    status = lan9514_mdio_wait_not_busy(eth);
+    status = lan9514_mdio_wait_not_busy_locked(eth);
     if (status < 0)
         goto done;
 
     value = (LAN9514_PHY_ID << 11) | (idx << 6) | LAN9514_MII_ACCESS_MIIBZY;
-    status = lan9514_write_register(eth, LAN9514_MII_ACCESS_REG, value);
+    status = lan9514_write_register_locked(eth, LAN9514_MII_ACCESS_REG, value);
     if (status < 0)
         goto done;
 
-    status = lan9514_mdio_wait_not_busy(eth);
+    status = lan9514_mdio_wait_not_busy_locked(eth);
     if (status < 0)
         goto done;
 
-    status = lan9514_read_register(eth, LAN9514_MII_DATA_REG, &value);
+    status = lan9514_read_register_locked(eth, LAN9514_MII_DATA_REG, &value);
     *retval = (uint16_t)(value & 0xffff);
 
 done:
-    mtx_unlock(&eth->mutex);
+    mtx_unlock(&eth->control_ep_mutex);
     return status;
 }
 
@@ -119,25 +136,25 @@ static mx_status_t lan9514_mdio_write(lan9514_t* eth, uint8_t idx, uint16_t valu
     mx_status_t status;
     uint32_t writeval;
 
-    mtx_lock(&eth->mutex);
+    mtx_lock(&eth->control_ep_mutex);
 
-    status = lan9514_mdio_wait_not_busy(eth);
+    status = lan9514_mdio_wait_not_busy_locked(eth);
     if (status < 0)
         goto done;
 
-    status = lan9514_write_register(eth, LAN9514_MII_DATA_REG, (uint32_t)value);
+    status = lan9514_write_register_locked(eth, LAN9514_MII_DATA_REG, (uint32_t)value);
     if (status < 0)
         goto done;
 
     writeval = (LAN9514_PHY_ID << 11) | (idx << 6) | LAN9514_MII_ACCESS_MIIBZY | LAN9514_MII_ACCESS_MIIWnR;
-    status = lan9514_write_register(eth, LAN9514_MII_ACCESS_REG, writeval);
+    status = lan9514_write_register_locked(eth, LAN9514_MII_ACCESS_REG, writeval);
     if (status < 0)
         goto done;
 
-    status = lan9514_mdio_wait_not_busy(eth);
+    status = lan9514_mdio_wait_not_busy_locked(eth);
 
 done:
-    mtx_unlock(&eth->mutex);
+    mtx_unlock(&eth->control_ep_mutex);
     return status;
 }
 
