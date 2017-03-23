@@ -399,6 +399,11 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
     // TODO: add new flag to precisely mean pre-map
     vmm_flags |= VMM_FLAG_COMMIT;
 
+    // Apply the cache policy
+    if (vmo->SetMappingCachePolicy(arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    arch_mmu_flags &= ~ARCH_MMU_FLAG_CACHE_MASK;
     return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                      arch_mmu_flags);
 }

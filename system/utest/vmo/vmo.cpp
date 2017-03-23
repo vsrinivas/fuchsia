@@ -767,6 +767,21 @@ bool vmo_clone_test_3() {
     END_TEST;
 }
 
+bool vmo_cache_test() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    const size_t size = PAGE_SIZE * 4;
+
+    // The objects returned by mx_vmo_create() are VmObjectPaged objects which
+    // should not support these syscalls.
+    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "creation for cache_policy");
+    EXPECT_EQ(ERR_NOT_SUPPORTED, mx_vmo_set_cache_policy(vmo, MX_CACHE_POLICY_UNCACHED),
+              "attempt set cache");
+    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "close handle");
+    END_TEST;
+}
+
 // test set 4: deal with clones with nonzero offsets and offsets that extend beyond the original
 bool vmo_clone_test_4() {
     BEGIN_TEST;
@@ -875,6 +890,7 @@ RUN_TEST(vmo_resize_test);
 RUN_TEST(vmo_rights_test);
 RUN_TEST(vmo_lookup_test);
 RUN_TEST(vmo_commit_test);
+RUN_TEST(vmo_cache_test);
 RUN_TEST(vmo_zero_page_test);
 RUN_TEST(vmo_clone_test_1);
 RUN_TEST(vmo_clone_test_2);

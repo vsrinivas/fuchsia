@@ -11,6 +11,7 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_object_paged.h>
+#include <kernel/vm/vm_object_physical.h>
 #include <mxalloc/new.h>
 #include <mxtl/array.h>
 #include <unittest.h>
@@ -103,7 +104,8 @@ static bool test_region(uintptr_t seed, void* _ptr, size_t len) {
 #endif
     for (size_t i = 0; i < len / 4; i++) {
         if (ptr[i] != val) {
-            unittest_printf("value at %p (%zu) is incorrect: 0x%x vs 0x%x\n", &ptr[i], i, ptr[i], val);
+            unittest_printf("value at %p (%zu) is incorrect: 0x%x vs 0x%x\n", &ptr[i], i, ptr[i],
+                            val);
             return false;
         }
 
@@ -619,6 +621,79 @@ static bool vmo_read_write_smoke_test(void* context) {
     END_TEST;
 }
 
+bool vmo_cache_test(void* context) {
+    BEGIN_TEST;
+
+    paddr_t pa;
+    vm_page_t* vm_page = pmm_alloc_page(0, &pa);
+    auto ka = VmAspace::kernel_aspace();
+    uint32_t cache_policy = ARCH_MMU_FLAG_UNCACHED_DEVICE;
+    uint32_t cache_policy_get;
+    void* ptr;
+
+    EXPECT_TRUE(vm_page, "");
+    // Test that the flags set/get properly
+    {
+        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
+        EXPECT_TRUE(vmo, "");
+        EXPECT_EQ(NO_ERROR, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
+        EXPECT_NEQ(cache_policy, cache_policy_get, "check initial cache policy");
+        EXPECT_EQ(NO_ERROR, vmo->SetMappingCachePolicy(cache_policy), "try set");
+        EXPECT_EQ(NO_ERROR, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
+        EXPECT_EQ(cache_policy, cache_policy_get, "compare flags");
+    }
+
+    // Test that we can't set the flags twice
+    {
+        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
+        EXPECT_TRUE(vmo, "");
+        EXPECT_EQ(NO_ERROR, vmo->SetMappingCachePolicy(cache_policy), "try set");
+        EXPECT_EQ(ERR_ACCESS_DENIED, vmo->SetMappingCachePolicy(cache_policy),
+                  "try set a second time");
+    }
+
+    // Test valid flags
+    for (uint32_t i = 0; i <= ARCH_MMU_FLAG_CACHE_MASK; i++) {
+        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
+        EXPECT_TRUE(vmo, "");
+        EXPECT_EQ(NO_ERROR, vmo->SetMappingCachePolicy(cache_policy), "try setting valid flags");
+    }
+
+    // Test invalid flags
+    for (uint32_t i = ARCH_MMU_FLAG_CACHE_MASK + 1; i < 32; i++) {
+        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
+        EXPECT_TRUE(vmo, "");
+        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(i), "try set with invalid flags");
+    }
+
+    // Test valid flags with invalid flags
+    {
+        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
+        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0x5), "bad 0x5");
+        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0xA), "bad 0xA");
+        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0x55), "bad 0x55");
+        EXPECT_EQ(ERR_INVALID_ARGS, vmo->SetMappingCachePolicy(cache_policy | 0xAA), "bad 0xAA");
+    }
+
+    // Test that changing policy while mapped is blocked
+    {
+        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
+        EXPECT_TRUE(vmo, "");
+        EXPECT_EQ(NO_ERROR, ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0,
+                  kArchRwFlags), "map vmo");
+        EXPECT_EQ(ERR_UNAVAILABLE, vmo->SetMappingCachePolicy(cache_policy),
+                  "set flags while mapped");
+        EXPECT_EQ(NO_ERROR, ka->FreeRegion((vaddr_t)ptr), "unmap vmo");
+        EXPECT_EQ(NO_ERROR, vmo->SetMappingCachePolicy(cache_policy), "set flags after unmapping");
+        EXPECT_EQ(NO_ERROR, ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0,
+                  kArchRwFlags), "map vmo again");
+        EXPECT_EQ(NO_ERROR, ka->FreeRegion((vaddr_t)ptr), "unmap vmo");
+    }
+
+    pmm_free_page(vm_page);
+    END_TEST;
+}
+
 // Use the function name as the test name
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -645,5 +720,7 @@ VM_UNITTEST(vmo_dropped_ref_test)
 VM_UNITTEST(vmo_remap_test)
 VM_UNITTEST(vmo_double_remap_test)
 VM_UNITTEST(vmo_read_write_smoke_test)
-VM_UNITTEST(dump_all_aspaces) // Run last
+VM_UNITTEST(vmo_cache_test)
+// Uncomment for debugging
+// VM_UNITTEST(dump_all_aspaces)  // Run last
 UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", nullptr, nullptr);

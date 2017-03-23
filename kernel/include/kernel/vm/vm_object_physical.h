@@ -34,6 +34,9 @@ public:
     status_t GetPageLocked(uint64_t offset, uint pf_flags,
                            vm_page_t**, paddr_t* pa) override TA_REQ(lock_);
 
+    status_t GetMappingCachePolicy(uint32_t* cache_policy) override;
+    status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
+
 private:
     // private constructor (use Create())
     VmObjectPhysical(paddr_t base, uint64_t size);
@@ -47,4 +50,5 @@ private:
     // members
     const uint64_t size_ TA_GUARDED(lock_) = 0;
     const paddr_t base_ TA_GUARDED(lock_) = 0;
+    uint32_t mapping_cache_flags_ = 0;
 };

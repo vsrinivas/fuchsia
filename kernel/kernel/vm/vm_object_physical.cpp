@@ -48,6 +48,8 @@ mxtl::RefPtr<VmObject> VmObjectPhysical::Create(paddr_t base, uint64_t size) {
     if (!ac.check())
         return nullptr;
 
+    // Physical VMOs should default to uncached access.
+    vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED);
     return vmo;
 }
 
@@ -120,5 +122,33 @@ status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<pa
             return status;
     }
 
+    return NO_ERROR;
+}
+
+status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
+    AutoLock l(&lock_);
+
+    if (!cache_policy) {
+        return ERR_INVALID_ARGS;
+    }
+
+    *cache_policy = mapping_cache_flags_;
+    return NO_ERROR;
+}
+
+status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
+    AutoLock l(&lock_);
+
+    // Is it a valid cache flag?
+    if (cache_policy & ~ARCH_MMU_FLAG_CACHE_MASK) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // If this VMO is mapped already it is not safe to allow its caching policy to change
+    if (mapping_list_len_ != 0) {
+        return ERR_BAD_STATE;
+    }
+
+    mapping_cache_flags_ = cache_policy;
     return NO_ERROR;
 }
