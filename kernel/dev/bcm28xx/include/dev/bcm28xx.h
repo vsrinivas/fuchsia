@@ -47,6 +47,9 @@
 #define ARMCTRL_TIMER0_1_BASE   (ARM_BASE + 0x400)
 #define ARMCTRL_0_SBM_BASE      (ARM_BASE + 0x800)
 
+#define PM_RSTC                 (PM_BASE + 0x01c)
+#define PM_WDOG                 (PM_BASE + 0x024)
+
 /* Videocore (GPU) mailbox registers for core0 */
 #define	ARM0_MAILBOX_BASE		(ARM_BASE + 0x0880)
 #define	ARM0_MAILBOX_READ		(ARM0_MAILBOX_BASE + 0x00)

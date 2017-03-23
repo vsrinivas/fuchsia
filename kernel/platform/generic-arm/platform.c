@@ -416,11 +416,22 @@ status_t display_get_info(struct display_info *info) {
 
 void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
 {
+
     if (suggested_action == HALT_ACTION_REBOOT) {
+
+#if BCM2837
+#define PM_PASSWORD 0x5a000000
+#define PM_RSTC_WRCFG_FULL_RESET 0x00000020
+        *REG32(PM_WDOG) =  PM_PASSWORD | 1; // timeout = 1/16th of a second? (whatever)
+        *REG32(PM_RSTC) =  PM_PASSWORD | PM_RSTC_WRCFG_FULL_RESET;
+        while(1){
+        }
+#else
         psci_system_reset();
 #ifdef MSM8998_PSHOLD_PHYS
         // Deassert PSHold
         *REG32(paddr_to_kvaddr(MSM8998_PSHOLD_PHYS)) = 0;
+#endif
 #endif
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
         // XXX shutdown seem to not work through psci
