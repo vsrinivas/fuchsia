@@ -105,24 +105,28 @@ void MotermView::StartCommand() {
     exit(1);
   }
 
-  Blink();
+  Blink(++blink_timer_id_);
   Invalidate();
 }
 
-void MotermView::Blink() {
-  ftl::TimeDelta delta = ftl::TimePoint::Now() - last_key_;
-  if (delta > kBlinkInterval) {
-    blink_on_ = !blink_on_;
-    Invalidate();
-  }
+void MotermView::Blink(uint64_t blink_timer_id) {
+  if (blink_timer_id != blink_timer_id_)
+    return;
 
-  task_runner_->PostDelayedTask(
-      [weak = weak_ptr_factory_.GetWeakPtr()] {
-        if (weak) {
-          weak->Blink();
-        }
-      },
-      kBlinkInterval);
+  if (focused_) {
+    ftl::TimeDelta delta = ftl::TimePoint::Now() - last_key_;
+    if (delta > kBlinkInterval) {
+      blink_on_ = !blink_on_;
+      Invalidate();
+    }
+    task_runner_->PostDelayedTask(
+        [ weak = weak_ptr_factory_.GetWeakPtr(), blink_timer_id ] {
+          if (weak) {
+            weak->Blink(blink_timer_id);
+          }
+        },
+        kBlinkInterval);
+  }
 }
 
 // |BaseView|:
@@ -235,11 +239,18 @@ void MotermView::DrawContent(SkCanvas* canvas,
     MotermModel::Position cursor_pos = model_.GetCursorPosition();
     // TODO(jpoichet): Vary how we draw the cursor, depending on if we're
     // focused and/or active.
-    bg_paint.setARGB(64, 255, 255, 255);
+    SkPaint caret_paint;
+    caret_paint.setStyle(SkPaint::kFill_Style);
+    if (!focused_) {
+      caret_paint.setStyle(SkPaint::kStroke_Style);
+      caret_paint.setStrokeWidth(2);
+    }
+
+    caret_paint.setARGB(64, 255, 255, 255);
     canvas->drawRect(SkRect::MakeXYWH(cursor_pos.column * advance_width_,
                                       cursor_pos.row * line_height_,
                                       advance_width_, line_height_),
-                     bg_paint);
+                     caret_paint);
   }
 
   canvas->flush();
@@ -267,6 +278,7 @@ void MotermView::OnSetKeypadMode(bool application_mode) {
 // |InputListener|:
 void MotermView::OnEvent(mozart::InputEventPtr event,
                          const OnEventCallback& callback) {
+  bool handled = false;
   if (event->is_keyboard()) {
     const mozart::KeyboardEventPtr& keyboard = event->get_keyboard();
     if (keyboard->phase == mozart::KeyboardEvent::Phase::PRESSED ||
@@ -283,11 +295,20 @@ void MotermView::OnEvent(mozart::InputEventPtr event,
         Resize();
       }
       OnKeyPressed(std::move(event));
-      callback(true);
-      return;
+      handled = true;
     }
+  } else if (event->is_focus()) {
+    const mozart::FocusEventPtr& focus = event->get_focus();
+    focused_ = focus->focused;
+    blink_on_ = true;
+    if (focused_) {
+      Blink(++blink_timer_id_);
+    } else {
+      Invalidate();
+    }
+    handled = true;
   }
-  callback(false);
+  callback(handled);
 }
 
 void MotermView::OnKeyPressed(mozart::InputEventPtr key_event) {

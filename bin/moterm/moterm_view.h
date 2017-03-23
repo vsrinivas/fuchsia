@@ -8,9 +8,9 @@
 #include "application/lib/app/application_context.h"
 #include "application/services/application_environment.fidl.h"
 #include "apps/moterm/command.h"
+#include "apps/moterm/history.h"
 #include "apps/moterm/moterm_model.h"
 #include "apps/moterm/moterm_params.h"
-#include "apps/moterm/history.h"
 #include "apps/moterm/shell_controller.h"
 #include "apps/mozart/lib/skia/skia_font_loader.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
@@ -58,7 +58,7 @@ class MotermView : public mozart::BaseView,
 
   void ComputeMetrics();
   void StartCommand();
-  void Blink();
+  void Blink(uint64_t blink_timer_id);
   void Resize();
 
   mozart::InputHandler input_handler_;
@@ -89,6 +89,8 @@ class MotermView : public mozart::BaseView,
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ftl::TimePoint last_key_;
   bool blink_on_ = true;
+  uint64_t blink_timer_id_ = 0;
+  bool focused_ = false;
 
   History* history_;
 
