@@ -282,7 +282,9 @@ func statShared(msg *rio.Msg, size int64, mtime time.Time, dir bool) mx.Status {
 		r.Mode = syscall.S_IFREG
 	}
 	r.Size = uint64(size)
+	r.Nlink = 1
 	r.ModifyTime = uint64(mtime.UnixNano())
+	r.CreateTime = r.ModifyTime
 	*(*mxio.Vnattr)(unsafe.Pointer(&msg.Data[0])) = r
 	msg.Datalen = uint32(unsafe.Sizeof(r))
 	return mx.Status(msg.Datalen)
