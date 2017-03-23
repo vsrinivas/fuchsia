@@ -66,6 +66,7 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   struct Stream {
     fidl::InterfaceHandle<MediaRenderer> renderer_handle_;
     MediaSinkPtr sink_;
+    bool connected_ = false;
   };
 
   MediaPlayerImpl(fidl::InterfaceHandle<SeekingReader> reader_handle,
@@ -111,6 +112,9 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
       uint64_t version = MediaTimelineControlPoint::kInitialStatus,
       MediaTimelineControlPointStatusPtr status = nullptr);
 
+  // Determines whether the content has video.
+  bool HasVideo();
+
   MediaServicePtr media_service_;
   fidl::InterfaceHandle<SeekingReader> reader_handle_;
   MediaSourcePtr source_;
@@ -126,9 +130,6 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   // The state we're trying to transition to, either because the client has
   // called |Play| or |Pause| or because we've hit end-of-stream.
   State target_state_ = State::kFlushed;
-
-  // Whether the current media contains a video stream.
-  bool has_video_ = false;
 
   // Whether we're currently at end-of-stream.
   bool end_of_stream_ = false;

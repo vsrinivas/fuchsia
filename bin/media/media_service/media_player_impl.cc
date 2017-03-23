@@ -52,7 +52,7 @@ MediaPlayerImpl::MediaPlayerImpl(
                                              uint64_t version) {
     MediaPlayerStatusPtr status = MediaPlayerStatus::New();
     status->timeline_transform = TimelineTransform::From(timeline_function_);
-    status->has_video = has_video_;
+    status->has_video = HasVideo();
     status->end_of_stream = end_of_stream_;
     status->metadata = metadata_.Clone();
     status->problem = problem_.Clone();
@@ -101,12 +101,17 @@ void MediaPlayerImpl::ConnectSinks(fidl::Array<MediaTypePtr> stream_types) {
   for (MediaTypePtr& stream_type : stream_types) {
     auto iter = streams_by_medium_.find(stream_type->medium);
     if (iter != streams_by_medium_.end()) {
+      if (iter->second.connected_) {
+        // TODO(dalesat): How do we choose the right stream?
+        FTL_DLOG(INFO) << "Stream " << stream_index
+                       << " redundant, already connected to sink with medium "
+                       << stream_type->medium;
+        ++stream_index;
+        continue;
+      }
+
       PrepareStream(&iter->second, stream_index, stream_type,
                     callback_joiner->NewCallback());
-    }
-
-    if (stream_type->medium == MediaTypeMedium::VIDEO) {
-      has_video_ = true;
     }
 
     ++stream_index;
@@ -146,6 +151,8 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
 
     timeline_controller_->AddControlPoint(std::move(timeline_control_point));
   }
+
+  stream->connected_ = true;
 
   // Capture producer so it survives through the callback.
   producer->Connect(std::move(consumer), ftl::MakeCopyable([
@@ -211,7 +218,9 @@ void MediaPlayerImpl::Update() {
           source_.reset();
           metadata_.reset();
           problem_.reset();
-          has_video_ = false;
+          for (auto& pair : streams_by_medium_) {
+            pair.second.connected_ = false;
+          }
           // Setting |transform_subject_time_| ensures that we tell the
           // renderers to start with PTS 0 when we transition to |kPlay|. It
           // doesn't cause a seek on the source, which should already be at
@@ -465,6 +474,15 @@ void MediaPlayerImpl::HandleTimelineControlPointStatusUpdates(
       [this](uint64_t version, MediaTimelineControlPointStatusPtr status) {
         HandleTimelineControlPointStatusUpdates(version, std::move(status));
       });
+}
+
+bool MediaPlayerImpl::HasVideo() {
+  auto iter = streams_by_medium_.find(MediaTypeMedium::VIDEO);
+  if (iter == streams_by_medium_.end()) {
+    return false;
+  }
+
+  return iter->second.connected_;
 }
 
 }  // namespace media
