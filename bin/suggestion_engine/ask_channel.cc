@@ -67,8 +67,20 @@ AskChannel::~AskChannel() {
   }
 }
 
-// Ranks based on substring. More complete substrings are ranked better, with a
-// secondary rank preferring shorter prefixes.
+float RankBySubstring(std::string text, const std::string& query) {
+  std::transform(text.begin(), text.end(), text.begin(), ::tolower);
+  auto pos = text.find(query);
+  if (pos == std::string::npos)
+    return kExcludeRank;
+
+  // major: length by which text exceeds query
+  float rank = text.size() - query.size();
+  // minor: match position
+  return rank + static_cast<float>(pos) / text.size();
+}
+
+// Ranks based on substring. More complete substrings are ranked better (lower),
+// with a secondary rank preferring shorter prefixes.
 //
 // TODO(rosswang): Allow intersections and more generally edit distance with
 // substring discounting.
@@ -87,16 +99,10 @@ float AskChannel::Rank(const SuggestionPrototype* prototype) {
     return next_rank();
   }
 
-  std::string text = prototype->proposal->display->headline;
-  std::transform(text.begin(), text.end(), text.begin(), ::tolower);
-  auto pos = text.find(query_);
-  if (pos == std::string::npos)
-    return kExcludeRank;
-
-  // major: length by which text exceeds query
-  float rank = text.size() - query_.size();
-  // minor: match position
-  return rank + static_cast<float>(pos) / text.size();
+  const auto& display = prototype->proposal->display;
+  return std::min(RankBySubstring(display->headline, query_),
+                  std::min(RankBySubstring(display->subheadline, query_),
+                           RankBySubstring(display->details, query_)));
 }
 
 void AskChannel::OnAddSuggestion(SuggestionPrototype* prototype) {

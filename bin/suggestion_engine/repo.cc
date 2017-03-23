@@ -19,8 +19,14 @@ void Repo::AddSuggestion(SuggestionPrototype* prototype,
                          SuggestionChannel* channel) {
   prototype->suggestion_id = RandomUuid();
   if (channel) {
+    FTL_VLOG(2) << "Adding suggestion "
+                << prototype->proposal->display->headline
+                << " on a specific channel.";
     channel->OnAddSuggestion(prototype);
   } else {
+    FTL_VLOG(2) << "Adding suggestion "
+                << prototype->proposal->display->headline << " on next + "
+                << ask_channels_.size() << " ask channels.";
     next_channel_.OnAddSuggestion(prototype);
     for (auto& ask_channel : ask_channels_) {
       ask_channel->OnAddSuggestion(prototype);
