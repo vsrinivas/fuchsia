@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 
+DEFAULT_DST_ROOT='/system'
 DEFAULT_OUT_DIR='out/debug-x86-64'
 
 
@@ -19,13 +20,13 @@ def parse_package_file(package_file_path):
     return data
 
 
-def netcp_everything(package_data, out_dir):
+def netcp_everything(package_data, out_dir, dst_root):
     for binary in package_data['binaries']:
         src_path = os.path.join(out_dir, binary['binary'])
-        dst_path = os.path.join('/tmp', binary['bootfs_path'])
+        dst_path = os.path.join(dst_root, binary['bootfs_path'])
 
         print 'Copying "%s" to "%s"' % (src_path, dst_path)
-        status = subprocess.call(['netcp', src_path, 'magenta:' + dst_path])
+        status = subprocess.call(['netcp', src_path, ':' + dst_path])
         if status != 0:
             print 'netcp failed'
             return status
@@ -38,13 +39,18 @@ def main():
     parser.add_argument("package_file",
                         help='JSON file containing package data')
     parser.add_argument('-o', '--out-dir', metavar='DIR',
+                        default=DEFAULT_OUT_DIR,
                         help='Directory containing build products')
+    parser.add_argument('-d', '--dst-root', metavar='PATH',
+                        default=DEFAULT_DST_ROOT,
+                        help='Path to the directory to copy package products')
     args = parser.parse_args()
 
     package_data = parse_package_file(args.package_file)
     out_dir = args.out_dir or DEFAULT_OUT_DIR
+    dst_root = args.dst_root or DEFAULT_DST_ROOT
 
-    return netcp_everything(package_data, out_dir)
+    return netcp_everything(package_data, out_dir, dst_root)
 
 
 if __name__ == "__main__":
