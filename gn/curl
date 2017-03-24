@@ -1,0 +1,14 @@
+{
+    "imports": [
+        "boringssl_libssl"
+    ],
+    "labels": [
+        "//third_party/curl"
+    ],
+    "binaries": [
+        {
+            "binary": "curl",
+            "bootfs_path": "bin/curl"
+        }
+    ]
+}
