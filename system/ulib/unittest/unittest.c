@@ -70,6 +70,15 @@ bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, si
     return true;
 }
 
+bool unittest_expect_str_eq(const char* expected, const char* actual, size_t len,
+                            const char* msg) {
+    if (strncmp(expected, actual, len)) {
+        printf("%s. expected\n'%s'\nactual\n'%s'\n", msg, expected, actual);
+        return false;
+    }
+    return true;
+}
+
 void unittest_set_output_function(test_output_func fun, void* arg) {
     out_func = fun;
     out_func_arg = arg;

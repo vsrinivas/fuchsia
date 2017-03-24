@@ -287,12 +287,29 @@ int unittest_set_verbosity_level(int new_level);
 #define UT_BYTES_NE(bytes1, bytes2, length, msg, ret) \
     if (!memcmp(bytes1, bytes2, length)) {            \
         UNITTEST_TRACEF(                              \
-            "%s and %s are the same; "                \
+            "%s: %s and %s are the same; "            \
             "expected different\n",                   \
-            #bytes1, #bytes2);                        \
+            msg, #bytes1, #bytes2);                   \
         hexdump8(bytes1, length);                     \
         current_test_info->all_ok = false;            \
         ret;                                          \
+    }
+
+#define UT_STR_EQ(expected, actual, length, msg, ret)                   \
+    if (!unittest_expect_str_eq((expected), (actual), (length), msg)) { \
+        current_test_info->all_ok = false;                              \
+        ret;                                                            \
+    }
+
+#define UT_STR_NE(str1, str2, length, msg, ret) \
+    if (!strncmp(str1, str2, length)) {         \
+        UNITTEST_TRACEF(                        \
+            "%s: %s and %s are the same; "      \
+            "expected different:\n"             \
+            "        '%s'\n",                   \
+            msg, #str1, #str2, str1);           \
+        current_test_info->all_ok = false;      \
+        ret;                                    \
     }
 
 /* For comparing uint64_t, like hw_id_t. */
@@ -325,6 +342,8 @@ int unittest_set_verbosity_level(int new_level);
 #define EXPECT_NONNULL(actual, msg) UT_NONNULL(actual, msg, DONOT_RET)
 #define EXPECT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, DONOT_RET)
 #define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, DONOT_RET)
+#define EXPECT_STR_EQ(expected, actual, length, msg) UT_STR_EQ(expected, actual, length, msg, DONOT_RET)
+#define EXPECT_STR_NE(str1, str2, length, msg) UT_STR_NE(str1, str2, length, msg, DONOT_RET)
 
 /* For comparing uint64_t, like hw_id_t. */
 #define EXPECT_EQ_LL(expected, actual, msg) UT_EQ_LL(expected, actual, msg, DONOT_RET)
@@ -354,6 +373,8 @@ int unittest_set_verbosity_level(int new_level);
 #define ASSERT_NONNULL(actual, msg) UT_NONNULL(actual, msg, RET_FALSE)
 #define ASSERT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, RET_FALSE)
 #define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
+#define ASSERT_STR_EQ(expected, actual, length, msg) UT_STR_EQ(expecetd, actual, length, msg, RET_FALSE)
+#define ASSERT_STR_NE(str1, str2, length, msg) UT_STR_NE(str1, str2, length, msg, RET_FALSE)
 
 /* For comparing uint64_t, like hw_id_t. */
 #define ASSERT_EQ_LL(expected, actual, msg) UT_EQ_LL(expected, actual, msg, RET_FALSE)
@@ -396,5 +417,7 @@ bool unittest_run_all_tests(int argc, char** argv);
  */
 bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, size_t len,
                               const char* msg);
+
+bool unittest_expect_str_eq(const char* expected, const char* actual, size_t len, const char* msg);
 
 __END_CDECLS
