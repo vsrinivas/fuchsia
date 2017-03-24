@@ -18,8 +18,6 @@ typedef struct xhci_transfer_ring {
     xhci_trb_t* dequeue_ptr;    // next to be processed by consumer
                                 // (not used for command ring)
     size_t size;                // number of TRBs in ring
-
-    mtx_t mutex;
 } xhci_transfer_ring_t;
 
 typedef struct xhci_event_ring {

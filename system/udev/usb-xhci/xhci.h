@@ -13,6 +13,10 @@
 #include <stdbool.h>
 #include <threads.h>
 
+#include <ddk/device.h>
+#include <ddk/protocol/pci.h>
+#include <ddk/protocol/usb-bus.h>
+
 #include "xhci-hw.h"
 #include "xhci-root-hub.h"
 #include "xhci-trb.h"
@@ -32,6 +36,7 @@ typedef struct xhci_endpoint {
     xhci_transfer_ring_t transfer_ring;
     list_node_t pending_requests;   // pending transfers that should be completed when ring is dead
     list_node_t deferred_txns;      // used by upper layer to defer iotxns when ring is full
+    mtx_t lock;
     bool enabled;
 } xhci_endpoint_t;
 
@@ -58,6 +63,22 @@ typedef struct {
 } xhci_command_context_t;
 
 struct xhci {
+    // the device we implement
+    mx_device_t device;
+
+    mx_device_t* bus_device;
+    usb_bus_protocol_t* bus_protocol;
+
+    pci_protocol_t* pci_proto;
+    bool legacy_irq_mode;
+    mx_handle_t irq_handle;
+    mx_handle_t mmio_handle;
+    mx_handle_t cfg_handle;
+    thrd_t irq_thread;
+
+    // used by the start thread
+    mx_device_t* parent;
+
     // MMIO data structures
     xhci_cap_regs_t* cap_regs;
     xhci_op_regs_t* op_regs;
@@ -69,6 +90,7 @@ struct xhci {
     mx_paddr_t dcbaa_phys;
 
     xhci_transfer_ring_t command_ring;
+    mtx_t command_ring_lock;
     xhci_command_context_t* command_contexts[COMMAND_RING_SIZE];
 
     // One event ring for now, but we will have multiple if we use multiple interruptors
@@ -112,8 +134,6 @@ struct xhci {
     // DMA buffers used by xhci_device_thread in xhci-device-manager.c
     uint8_t* input_context;
     mx_paddr_t input_context_phys;
-    usb_device_descriptor_t* device_descriptor;
-    mx_paddr_t device_descriptor_phys;
 
     // for xhci_get_current_frame()
     mtx_t mfindex_mutex;
@@ -135,6 +155,7 @@ struct xhci {
     mx_handle_t scratch_pad_index_handle;
     mx_vaddr_t scratch_pad_index_virt;
 };
+#define dev_to_xhci(dev) containerof(dev, xhci_t, device)
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
 mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count);

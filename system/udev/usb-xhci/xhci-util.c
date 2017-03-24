@@ -24,20 +24,3 @@ int xhci_sync_command_wait(xhci_sync_command_t* command) {
 
     return (command->status & XHCI_MASK(EVT_TRB_CC_START, EVT_TRB_CC_BITS)) >> EVT_TRB_CC_START;
 }
-
-static void xhci_sync_transfer_callback(mx_status_t result, void* data) {
-    xhci_sync_transfer_t* xfer = (xhci_sync_transfer_t*)data;
-    xfer->result = result;
-    completion_signal(&xfer->completion);
-}
-
-void xhci_sync_transfer_init(xhci_sync_transfer_t* xfer) {
-    completion_reset(&xfer->completion);
-    xfer->context.callback = xhci_sync_transfer_callback;
-    xfer->context.data = xfer;
-}
-
-mx_status_t xhci_sync_transfer_wait(xhci_sync_transfer_t* xfer) {
-    completion_wait(&xfer->completion, MX_TIME_INFINITE);
-    return xfer->result;
-}

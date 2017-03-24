@@ -286,10 +286,6 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         printf("mx_vmo_op_range failed for xhci->input_context_handle\n");
         goto fail;
     }
-    // allocate device_descriptor buffer after input_context
-    size_t input_context_size = xhci->context_size * XHCI_NUM_EPS;
-    xhci->device_descriptor = (usb_device_descriptor_t*)(xhci->input_context + input_context_size);
-    xhci->device_descriptor_phys = xhci->input_context_phys + input_context_size;
 
     // DCBAA can only be 256 * sizeof(uint64_t) = 2048 bytes, so we have room for ERST array after DCBAA
     mx_off_t erst_offset = 256 * sizeof(uint64_t);
@@ -329,6 +325,8 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         printf("xhci_command_ring_init failed\n");
         goto fail;
     }
+    mtx_init(&xhci->command_ring_lock, mtx_plain);
+
     result = xhci_event_ring_init(xhci, 0, EVENT_RING_SIZE);
     if (result != NO_ERROR) {
         printf("xhci_event_ring_init failed\n");
@@ -368,6 +366,7 @@ mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count) {
 
     list_initialize(&ep->pending_requests);
     list_initialize(&ep->deferred_txns);
+    mtx_init(&ep->lock, mtx_plain);
     return NO_ERROR;
 }
 
@@ -441,7 +440,7 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
                        xhci_command_context_t* context) {
     // FIXME - check that command ring is not full?
 
-    mtx_lock(&xhci->command_ring.mutex);
+    mtx_lock(&xhci->command_ring_lock);
 
     xhci_transfer_ring_t* cr = &xhci->command_ring;
     xhci_trb_t* trb = cr->current;
@@ -456,7 +455,7 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
 
     XHCI_WRITE32(&xhci->doorbells[0], 0);
 
-    mtx_unlock(&xhci->command_ring.mutex);
+    mtx_unlock(&xhci->command_ring_lock);
 }
 
 static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_trb) {
@@ -466,10 +465,10 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
             (event_trb->control >> TRB_SLOT_ID_START), trb_get_type(command_trb), cc);
 
     int index = command_trb - xhci->command_ring.start;
-    mtx_lock(&xhci->command_ring.mutex);
+    mtx_lock(&xhci->command_ring_lock);
     xhci_command_context_t* context = xhci->command_contexts[index];
     xhci->command_contexts[index] = NULL;
-    mtx_unlock(&xhci->command_ring.mutex);
+    mtx_unlock(&xhci->command_ring_lock);
 
     context->callback(context->data, cc, command_trb, event_trb);
 }
