@@ -99,20 +99,6 @@ class GetLedgerSnapshotCall : public Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetLedgerSnapshotCall);
 };
 
-// TODO(alhaad): This was also used in story_storage_impl.cc. Factor it out.
-class SyncCall : public Operation<void> {
- public:
-  SyncCall(OperationContainer* const container, ResultCall result_call)
-      : Operation(container, std::move(result_call)) {
-    Ready();
-  }
-
-  void Run() override { Done(); }
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(SyncCall);
-};
-
 }  // namespace
 
 FocusHandler::FocusHandler(const fidl::String& device_name,

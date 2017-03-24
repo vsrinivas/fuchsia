@@ -103,19 +103,6 @@ class WriteLinkDataCall : public Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
 
-class SyncCall : public Operation<void> {
- public:
-  SyncCall(OperationContainer* const container, ResultCall result_call)
-      : Operation(container, std::move(result_call)) {
-    Ready();
-  }
-
-  void Run() override { Done(); }
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(SyncCall);
-};
-
 }  // namespace
 
 StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,

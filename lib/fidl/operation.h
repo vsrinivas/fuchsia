@@ -182,6 +182,24 @@ class Operation<void> : public OperationBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(Operation);
 };
 
+// Following is a list of commonly used operations.
+
+// An operation which immediately calls its result callback.
+// This is useful for making sure that all operations that run before this have
+// completed.
+class SyncCall : public Operation<void> {
+ public:
+  SyncCall(OperationContainer* const container, ResultCall result_call)
+      : Operation(container, std::move(result_call)) {
+    Ready();
+  }
+
+  void Run() override { Done(); }
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(SyncCall);
+};
+
 }  // namespace modular
 
 #endif  // APPS_MODULAR_LIB_FIDL_OPERATION_H_
