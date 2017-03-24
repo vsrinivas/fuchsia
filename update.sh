@@ -91,6 +91,10 @@ function download_toolchain() {
   download_tarball toolchain "toolchain/${HOST_PLATFORM}" "${SCRIPT_ROOT}/toolchain"
 }
 
+function download_rust() {
+  download_tarball rust "rust/${HOST_PLATFORM}" "${SCRIPT_ROOT}/rust"
+}
+
 function download_go() {
   download_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
 }
@@ -115,6 +119,7 @@ function download_all_default() {
   download_gn
   download_cmake
   download_toolchain
+  download_rust
   download_go
   download_godepfile
   download_qemu
@@ -147,6 +152,11 @@ case ${i} in
     ;;
   --toolchain)
     download_toolchain
+    has_arguments="true"
+    shift
+    ;;
+  --rust)
+    download_rust
     has_arguments="true"
     shift
     ;;

@@ -23,6 +23,7 @@
 /linux64/ninja.stamp
 /linux64/qemu
 /linux64/qemu.stamp
+/linux64/rust.stamp
 /linux64/toolchain.stamp
 /mac64/bootserver
 /mac64/bootserver.stamp
@@ -43,7 +44,9 @@
 /mac/ninja.stamp
 /mac/qemu
 /mac/qemu.stamp
+/mac/rust.stamp
 /mac/toolchain.stamp
 /qemu
+/rust
 /toolchain
 /win/gn.exe
