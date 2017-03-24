@@ -503,13 +503,14 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
 
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::OnBufferBody(const asio::error_code& err) {
-  if (err) {
-    FTL_LOG(ERROR) << "OnBufferBody: " << err.message();
+  if (err && err != asio::ssl::error::stream_truncated) {
+    FTL_LOG(ERROR) << "OnBufferBody: " << err.message() << " (" << err << ")";
+    // TODO(somebody who knows asio/network errors): real translation
+    SendError(network::NETWORK_ERR_FAILED);
+  } else {
+    SendBufferedBody();
+    loader_->SendResponse(std::move(response_));
   }
-
-  SendBufferedBody();
-
-  loader_->SendResponse(std::move(response_));
 }
 
 template <typename T>
