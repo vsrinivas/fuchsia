@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "devmgr.h"
 #include "dnode.h"
 #include "memfs-private.h"
 
@@ -487,6 +488,30 @@ mx_status_t VnodeMemfs::Sync() {
     // Since this filesystem is in-memory, all data is already up-to-date in
     // the underlying storage
     return NO_ERROR;
+}
+
+constexpr const char kFsName[] = "memfs";
+
+ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
+                          void* out_buf, size_t out_len) {
+    switch (op) {
+    case IOCTL_DEVMGR_MOUNT_BOOTFS_VMO: {
+        if (in_len < sizeof(mx_handle_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        const mx_handle_t* vmo = static_cast<const mx_handle_t*>(in_buf);
+        return devmgr_add_systemfs_vmo(*vmo);
+    }
+    case IOCTL_DEVMGR_QUERY_FS: {
+        if (out_len < strlen(kFsName) + 1) {
+            return ERR_INVALID_ARGS;
+        }
+        strcpy(static_cast<char*>(out_buf), kFsName);
+        return strlen(kFsName);
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
 }
 
 mx_status_t memfs_can_unlink(dnode_t* dn) {

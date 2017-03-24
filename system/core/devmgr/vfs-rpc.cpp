@@ -61,30 +61,6 @@ mx_status_t VnodeMemfs::GetHandles(uint32_t flags, mx_handle_t* hnds, uint32_t* 
 // The following functions exist outside the memfs namespace so they
 // can be exposed to C:
 
-constexpr const char kFsName[] = "memfs";
-
-ssize_t vfs_do_local_ioctl(fs::Vnode* vn, uint32_t op, const void* in_buf,
-                           size_t in_len, void* out_buf, size_t out_len) {
-    switch (op) {
-    case IOCTL_DEVMGR_MOUNT_BOOTFS_VMO: {
-        if (in_len < sizeof(mx_handle_t)) {
-            return ERR_INVALID_ARGS;
-        }
-        const mx_handle_t* vmo = static_cast<const mx_handle_t*>(in_buf);
-        return devmgr_add_systemfs_vmo(*vmo);
-    }
-    case IOCTL_DEVMGR_QUERY_FS: {
-        if (out_len < strlen(kFsName) + 1) {
-            return ERR_INVALID_ARGS;
-        }
-        strcpy(static_cast<char*>(out_buf), kFsName);
-        return strlen(kFsName);
-    }
-    default:
-        return vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
-    }
-}
-
 static volatile int vfs_txn = -1;
 static int vfs_txn_no = 0;
 

@@ -255,14 +255,8 @@ extern mtx_t vfs_lock;
 #endif
 extern mxio_dispatcher_t* vfs_dispatcher;
 
-// The following functions must be defined by the filesystem linking
+// The following function must be defined by the filesystem linking
 // with this VFS layer.
-
-#ifdef __Fuchsia__
-// Called to implement filesystem-specific ioctls
-ssize_t vfs_do_local_ioctl(Vnode* vn, uint32_t op, const void* in_buf,
-                           size_t in_len, void* out_buf, size_t out_len);
-#endif
 
 // Handle incoming mxrio messages.
 mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);

@@ -88,21 +88,3 @@ mx_handle_t vfs_rpc_server(VnodeBlob* vn) {
 mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     return vfs_handler_generic(msg, rh, cookie);
 }
-
-constexpr const char kFsName[] = "blobstore";
-
-ssize_t vfs_do_local_ioctl(fs::Vnode* vn, uint32_t op, const void* in_buf,
-                           size_t in_len, void* out_buf, size_t out_len) {
-    switch (op) {
-        case IOCTL_DEVMGR_QUERY_FS: {
-            if (out_len < strlen(kFsName) + 1) {
-                return ERR_INVALID_ARGS;
-            }
-            strcpy(static_cast<char*>(out_buf), kFsName);
-            return strlen(kFsName);
-        }
-        default: {
-            return vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
-        }
-    }
-}
