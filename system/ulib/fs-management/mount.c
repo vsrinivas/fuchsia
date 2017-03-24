@@ -90,7 +90,6 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
                                     uint32_t* ids, size_t n, int fd, mx_handle_t mountpoint) {
     mx_status_t status;
     if ((status = cb(argc, argv, hnd, ids, n)) != NO_ERROR) {
-        close(fd);
         return status;
     }
 
@@ -105,14 +104,12 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
         }
     }
 
-    // Install remote handle. Thankfully, we know 'fd' hasn't been unlinked, since open directories
-    // may not be unlinked.
+    // Install remote handle.
     if ((status = ioctl_devmgr_mount_fs(fd, &mountpoint)) != NO_ERROR) {
         // TODO(smklein): Retreive the mountpoint handle if mounting fails.
         goto fail;
     }
 
-    close(fd);
     return NO_ERROR;
 
 fail:
@@ -124,24 +121,17 @@ fail:
     // The unmount process is a little atypical, since we're just sending a signal over a handle,
     // rather than detaching the mounted filesytem from the "parent" filesystem.
     vfs_unmount_handle(mountpoint, options->wait_until_ready ? MX_TIME_INFINITE : 0);
-    close(fd);
     return status;
 }
 
-static mx_status_t mount_mxfs(const char* binary, int devicefd, const char* mountpath,
+static mx_status_t mount_mxfs(const char* binary, int devicefd, int mountfd,
                               const mount_options_t* options, LaunchCallback cb) {
-    int fd;
-    if ((fd = open(mountpath, O_DIRECTORY | O_RDWR)) < 0) {
-        return ERR_BAD_STATE;
-    }
-
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
     mx_handle_t mountpoint;
     mx_status_t status;
     if ((status = mount_prepare_handles(devicefd, &mountpoint, hnd, ids, &n)) != NO_ERROR) {
-        close(fd);
         return status;
     }
 
@@ -149,23 +139,17 @@ static mx_status_t mount_mxfs(const char* binary, int devicefd, const char* moun
         printf("fs_mount: Launching %s\n", binary);
     }
     const char* argv[] = { binary, "mount" };
-    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, fd, mountpoint);
+    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mountfd, mountpoint);
 }
 
-static mx_status_t mount_fat(int devicefd, const char* mountpath, const mount_options_t* options,
+static mx_status_t mount_fat(int devicefd, int mountfd, const mount_options_t* options,
                              LaunchCallback cb) {
-    int fd;
-    if ((fd = open(mountpath, O_DIRECTORY | O_RDWR)) < 0) {
-        return ERR_BAD_STATE;
-    }
-
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
     mx_handle_t mountpoint;
     mx_status_t status;
     if ((status = mount_prepare_handles(devicefd, &mountpoint, hnd, ids, &n)) != NO_ERROR) {
-        close(fd);
         return status;
     }
 
@@ -184,22 +168,45 @@ static mx_status_t mount_fat(int devicefd, const char* mountpath, const mount_op
         blockfd_arg,
         "mount",
     };
-    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, fd, mountpoint);
+    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mountfd, mountpoint);
 }
 
-mx_status_t mount(int devicefd, const char* mountpath,
-                  disk_format_t df, const mount_options_t* options, LaunchCallback cb) {
+mx_status_t fmount(int devicefd, int mountfd, disk_format_t df, const mount_options_t* options,
+                   LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return mount_mxfs("/boot/bin/minfs", devicefd, mountpath, options, cb);
+        return mount_mxfs("/boot/bin/minfs", devicefd, mountfd, options, cb);
     case DISK_FORMAT_BLOBFS:
-        return mount_mxfs("/boot/bin/blobstore", devicefd, mountpath, options, cb);
+        return mount_mxfs("/boot/bin/blobstore", devicefd, mountfd, options, cb);
     case DISK_FORMAT_FAT:
-        return mount_fat(devicefd, mountpath, options, cb);
+        return mount_fat(devicefd, mountfd, options, cb);
     default:
         close(devicefd);
         return ERR_NOT_SUPPORTED;
     }
+}
+
+mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
+                  const mount_options_t* options, LaunchCallback cb) {
+    int fd;
+    if ((fd = open(mountpath, O_DIRECTORY | O_RDWR)) < 0) {
+        return ERR_BAD_STATE;
+    }
+
+    mx_status_t status = fmount(devicefd, fd, df, options, cb);
+    close(fd);
+    return status;
+}
+
+mx_status_t fumount(int mountfd) {
+    mx_handle_t h;
+    mx_status_t status = ioctl_devmgr_unmount_node(mountfd, &h);
+    if (status < 0) {
+        fprintf(stderr, "Could not unmount filesystem: %d\n", status);
+    } else {
+        status = vfs_unmount_handle(h, MX_TIME_INFINITE);
+    }
+    return status;
 }
 
 mx_status_t umount(const char* mountpath) {
@@ -208,14 +215,7 @@ mx_status_t umount(const char* mountpath) {
         fprintf(stderr, "Could not open directory: %s\n", strerror(errno));
         return ERR_BAD_STATE;
     }
-
-    mx_handle_t h;
-    mx_status_t status = ioctl_devmgr_unmount_node(fd, &h);
-    if (status < 0) {
-        fprintf(stderr, "Could not unmount filesystem: %d\n", status);
-    } else {
-        status = vfs_unmount_handle(h, MX_TIME_INFINITE);
-    }
+    mx_status_t status = fumount(fd);
     close(fd);
     return status;
 }

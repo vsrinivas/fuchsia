@@ -56,6 +56,33 @@ static bool mount_unmount(void) {
     END_TEST;
 }
 
+static bool fmount_funmount(void) {
+    const char* ramdisk_name = "mount_unmount";
+    char ramdisk_path[PATH_MAX];
+    const char* mount_path = "/tmp/mount_unmount";
+
+    BEGIN_TEST;
+    ASSERT_EQ(create_ramdisk(ramdisk_name, ramdisk_path, 512, 1 << 16), 0, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
+    ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+
+    int mountfd = open(mount_path, O_DIRECTORY | O_RDWR);
+    ASSERT_GT(mountfd, 0, "Couldn't open mount point");
+    ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async),
+              NO_ERROR, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
+    ASSERT_EQ(fumount(mountfd), NO_ERROR, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
+    ASSERT_EQ(close(mountfd), 0, "Couldn't close ex-mount point");
+    ASSERT_EQ(unlink(mount_path), 0, "");
+    END_TEST;
+}
+
 static bool mount_remount(void) {
     const char* ramdisk_name = "mount_remount";
     char ramdisk_path[PATH_MAX];
@@ -104,6 +131,7 @@ static bool mount_fsck(void) {
 
 BEGIN_TEST_CASE(fs_management_tests)
 RUN_TEST_MEDIUM(mount_unmount)
+RUN_TEST_MEDIUM(fmount_funmount)
 RUN_TEST_MEDIUM(mount_remount)
 RUN_TEST_MEDIUM(mount_fsck)
 END_TEST_CASE(fs_management_tests)
