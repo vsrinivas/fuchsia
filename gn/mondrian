@@ -6,6 +6,10 @@
         {
             "binary": "flutter_mondrian.flx",
             "bootfs_path": "apps/mondrian"
+        },
+        {
+            "binary": "example_manual_relationships.flx",
+            "bootfs_path": "apps/example_manual_relationships"
         }
     ]
 }
