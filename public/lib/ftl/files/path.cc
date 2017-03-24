@@ -177,6 +177,12 @@ std::string GetDirectoryName(std::string path) {
   return path.substr(0, separator);
 }
 
+std::string GetBaseName(const std::string& path) {
+  size_t separator = path.rfind('/');
+  if (separator == std::string::npos) return path;
+  return path.substr(separator + 1);
+}
+
 bool DeletePath(const std::string& path, bool recursive) {
   struct stat stat_buffer;
   if (lstat(path.c_str(), &stat_buffer) != 0)

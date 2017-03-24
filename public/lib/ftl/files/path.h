@@ -20,6 +20,10 @@ std::string AbsolutePath(const std::string& path);
 // Returns the directory name component of the given path.
 std::string GetDirectoryName(std::string path);
 
+// Returns the basename component of the given path by stripping everything up
+// to and including the last slash.
+std::string GetBaseName(const std::string& path);
+
 // Delete the file or directly at the given path. If recursive is true, and path
 // is a directory, also delete the directory's content.
 bool DeletePath(const std::string& path, bool recursive);

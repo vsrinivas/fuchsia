@@ -140,6 +140,20 @@ TEST(Path, GetDirectoryName) {
   EXPECT_EQ("a", GetDirectoryName("a/"));
 }
 
+TEST(Path, GetBaseName) {
+  EXPECT_EQ("", GetBaseName("foo/"));
+  EXPECT_EQ("", GetBaseName("foo/bar/"));
+  EXPECT_EQ("bar", GetBaseName("foo/bar"));
+  EXPECT_EQ("..", GetBaseName("foo/bar/.."));
+  EXPECT_EQ("..", GetBaseName("foo/bar/../.."));
+  EXPECT_EQ("foo", GetBaseName("foo"));
+  EXPECT_EQ("", GetBaseName("/"));
+  EXPECT_EQ("a", GetBaseName("a"));
+  EXPECT_EQ("a", GetBaseName("/a"));
+  EXPECT_EQ("", GetBaseName("/a/"));
+  EXPECT_EQ("", GetBaseName("a/"));
+}
+
 TEST(Path, DeletePath) {
   ScopedTempDir dir;
 
