@@ -567,6 +567,36 @@ status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len, siz
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
 }
 
+status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+                               vmo_lookup_fn_t lookup_fn, void* context) {
+    DEBUG_ASSERT(magic_ == MAGIC);
+    if (unlikely(len == 0))
+        return ERR_INVALID_ARGS;
+
+    AutoLock a(&lock_);
+
+    // verify that the range is within the object
+    if (unlikely(!InRange(offset, len, size_)))
+        return ERR_OUT_OF_RANGE;
+
+    uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
+    uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
+
+    size_t index = 0;
+    for (uint64_t off = start_page_offset; off != end_page_offset; off += PAGE_SIZE, index++) {
+        paddr_t pa;
+        auto status = GetPageLocked(off, pf_flags, nullptr, &pa);
+        if (status < 0)
+            return ERR_NO_MEMORY;
+
+        status = lookup_fn(context, off, index, pa);
+        if (unlikely(status < 0))
+            return status;
+    }
+
+    return NO_ERROR;
+}
+
 status_t VmObjectPaged::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
     DEBUG_ASSERT(magic_ == MAGIC);
 
@@ -600,42 +630,23 @@ status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, siz
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
 }
 
-status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer, size_t buffer_size) {
+status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+                                   size_t buffer_size) {
     DEBUG_ASSERT(magic_ == MAGIC);
 
-    if (unlikely(len == 0))
-        return ERR_INVALID_ARGS;
-
-    AutoLock a(&lock_);
-
-    // verify that the range is within the object
-    if (unlikely(!InRange(offset, len, size_)))
-        return ERR_OUT_OF_RANGE;
-
     uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
-    uint64_t end = offset + len;
-    uint64_t end_page_offset = ROUNDUP(end, PAGE_SIZE);
-
+    uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
     // compute the size of the table we'll need and make sure it fits in the user buffer
     uint64_t table_size = ((end_page_offset - start_page_offset) / PAGE_SIZE) * sizeof(paddr_t);
     if (unlikely(table_size > buffer_size))
         return ERR_BUFFER_TOO_SMALL;
 
-    size_t index = 0;
-    for (uint64_t off = start_page_offset; off != end_page_offset; off += PAGE_SIZE, index++) {
-        // grab a pointer to the page only if it's already present
-        paddr_t pa;
-        auto status = GetPageLocked(off, 0, nullptr, &pa);
-        if (status < 0)
-            return ERR_NO_MEMORY;
-
-        // copy it out into user space
-        status = buffer.element_offset(index).copy_to_user(pa);
-        if (unlikely(status < 0))
-            return status;
-    }
-
-    return NO_ERROR;
+    auto copy_to_user = [](void* context, size_t offset, size_t index, paddr_t pa) -> status_t {
+        user_ptr<paddr_t>* buffer = static_cast<user_ptr<paddr_t>*>(context);
+        return buffer->element_offset(index).copy_to_user(pa);
+    };
+    // only lookup pages that are already present
+    return Lookup(offset, len, 0, copy_to_user, &buffer);
 }
 
 status_t VmObjectPaged::InvalidateCache(const uint64_t offset, const uint64_t len) {

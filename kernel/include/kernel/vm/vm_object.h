@@ -22,6 +22,8 @@
 
 class VmMapping;
 
+typedef status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, paddr_t pa);
+
 // The base vm object that holds a range of bytes of data
 //
 // Can be created without mapping and used as a container of data, or mappable
@@ -53,7 +55,7 @@ public:
     virtual status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
                                            uint8_t alignment_log2) {
         return ERR_NOT_SUPPORTED;
-    };
+    }
 
     // free a range of the vmo back to the default state
     virtual status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
@@ -66,7 +68,13 @@ public:
     }
     virtual status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) {
         return ERR_NOT_SUPPORTED;
-    };
+    }
+
+    // execute lookup_fn on a given range of physical addresses within the vmo
+    virtual status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+                            vmo_lookup_fn_t lookup_fn, void* context) {
+        return ERR_NOT_SUPPORTED;
+    }
 
     // read/write operators against user space pointers only
     virtual status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
@@ -78,7 +86,8 @@ public:
     }
 
     // translate a range of the vmo to physical addresses and store in the buffer
-    virtual status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) {
+    virtual status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+                                size_t buffer_size) {
         return ERR_NOT_SUPPORTED;
     }
 
@@ -97,6 +106,7 @@ public:
     virtual status_t SyncCache(const uint64_t offset, const uint64_t len) {
         return ERR_NOT_SUPPORTED;
     }
+
 protected:
     // private constructor (use Create())
     VmObject();
@@ -149,13 +159,16 @@ public:
 
     status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) override;
     status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) override;
+    status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
+                    vmo_lookup_fn_t lookup_fn, void* context) override;
 
     status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len,
                               size_t* bytes_read) override;
     status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
                                size_t* bytes_written) override;
 
-    status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
+    status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+                        size_t buffer_size) override;
 
     void Dump(uint depth, bool verbose) override;
 
@@ -210,7 +223,8 @@ class VmObjectPhysical final : public VmObject {
 public:
     static mxtl::RefPtr<VmObject> Create(paddr_t base, uint64_t size);
 
-    status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
+    status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+                        size_t buffer_size) override;
 
     void Dump(uint depth, bool verbose) override;
 

@@ -405,7 +405,7 @@ bool vmo_lookup_test() {
 
     // do a lookup out of range
     status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, size + 1, buf, sizeof(buf));
-    EXPECT_EQ(ERR_OUT_OF_RANGE, status, "out of range");
+    EXPECT_EQ(ERR_BUFFER_TOO_SMALL, status, "buffer too small");
 
     // close the handle
     status = mx_handle_close(vmo);

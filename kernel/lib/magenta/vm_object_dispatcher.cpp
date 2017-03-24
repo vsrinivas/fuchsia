@@ -101,7 +101,7 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
             // make sure that mx_paddr_t doesn't drift from paddr_t, which the VM uses internally
             static_assert(sizeof(mx_paddr_t) == sizeof(paddr_t), "");
 
-            return vmo_->Lookup(offset, size, buffer.reinterpret<paddr_t>(), buffer_size);
+            return vmo_->LookupUser(offset, size, buffer.reinterpret<paddr_t>(), buffer_size);
         case MX_VMO_OP_CACHE_SYNC:
             return vmo_->SyncCache(offset, size);
         case MX_VMO_OP_CACHE_INVALIDATE:

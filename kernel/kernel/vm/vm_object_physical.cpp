@@ -82,8 +82,8 @@ status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, vm_page
     return NO_ERROR;
 }
 
-status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
-                                  size_t buffer_size) {
+status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+                                      size_t buffer_size) {
     DEBUG_ASSERT(magic_ == MAGIC);
 
     if (unlikely(len == 0))
