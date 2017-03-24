@@ -21,6 +21,9 @@ constexpr const char kDefaultAppsConfigFile[] =
 constexpr const char kDefaultLabel[] = "boot";
 
 // --<option>=<key>@<app url>,...
+// TODO(rosswang): Determine whether there are any active users of these command
+// line options. If there are, add escaping since '@' and ',' are valid URI
+// characters. Otherwise, remove support.
 bool BuildServiceMap(const ftl::CommandLine& command_line,
                      const std::string& option,
                      Params::ServiceMap* service_map) {
