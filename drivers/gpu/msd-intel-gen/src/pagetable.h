@@ -25,5 +25,4 @@
 #define PAGE_PCD (1 << 4)
 #define PAGE_PAT (1 << 7)
 
-
 #endif // PAGETABLE_H

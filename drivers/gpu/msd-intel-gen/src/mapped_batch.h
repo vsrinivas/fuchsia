@@ -36,10 +36,7 @@ public:
         batch_buffer_mapping_->buffer()->IncrementInflightCounter();
     }
 
-    ~SimpleMappedBatch()
-    {
-        batch_buffer_mapping_->buffer()->DecrementInflightCounter();
-    }
+    ~SimpleMappedBatch() { batch_buffer_mapping_->buffer()->DecrementInflightCounter(); }
 
     std::weak_ptr<MsdIntelContext> GetContext() override { return context_; }
 

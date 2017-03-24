@@ -44,11 +44,17 @@ public:
             last_submitted_sequence_number_ = last_completed_sequence_number_;
     }
 
-    bool work_outstanding() { return last_submitted_sequence_number_ > last_completed_sequence_number_; }
+    bool work_outstanding()
+    {
+        return last_submitted_sequence_number_ > last_completed_sequence_number_;
+    }
 
     uint32_t last_submitted_sequence_number() { return last_submitted_sequence_number_; }
 
-    std::chrono::high_resolution_clock::time_point hangcheck_time_start() { return hangcheck_time_start_; }
+    std::chrono::high_resolution_clock::time_point hangcheck_time_start()
+    {
+        return hangcheck_time_start_;
+    }
 
 private:
     uint32_t last_submitted_sequence_number_ = Sequencer::kInvalidSequenceNumber;

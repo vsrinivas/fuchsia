@@ -217,22 +217,22 @@ public:
         uint32_t val32 = mask;
         val32 = (val32 << 16) | val;
         switch (domain) {
-        case GEN8:
-            reg_io->Write32(kOffset, val32);
-            break;
-        case GEN9_RENDER:
-            reg_io->Write32(kRenderOffset, val32);
-            break;
+            case GEN8:
+                reg_io->Write32(kOffset, val32);
+                break;
+            case GEN9_RENDER:
+                reg_io->Write32(kRenderOffset, val32);
+                break;
         }
     }
 
     static uint16_t read_status(RegisterIo* reg_io, Domain domain)
     {
         switch (domain) {
-        case GEN8:
-            return static_cast<uint16_t>(reg_io->Read32(kStatusOffset));
-        case GEN9_RENDER:
-            return static_cast<uint16_t>(reg_io->Read32(kRenderStatusOffset));
+            case GEN8:
+                return static_cast<uint16_t>(reg_io->Read32(kStatusOffset));
+            case GEN9_RENDER:
+                return static_cast<uint16_t>(reg_io->Read32(kRenderStatusOffset));
         }
     }
 };
@@ -262,17 +262,17 @@ public:
     static uint32_t read(RegisterIo* reg_io, Plane plane)
     {
         switch (plane) {
-        case PIPE_A_PLANE_1:
-            return reg_io->Read32(kOffsetPipeAPlane1);
+            case PIPE_A_PLANE_1:
+                return reg_io->Read32(kOffsetPipeAPlane1);
         }
     }
 
     static void write(RegisterIo* reg_io, Plane plane, uint32_t gpu_addr_gtt)
     {
         switch (plane) {
-        case PIPE_A_PLANE_1:
-            reg_io->Write32(kOffsetPipeAPlane1, gpu_addr_gtt);
-            break;
+            case PIPE_A_PLANE_1:
+                reg_io->Write32(kOffsetPipeAPlane1, gpu_addr_gtt);
+                break;
         }
     }
 };
@@ -287,17 +287,17 @@ public:
     static uint32_t read(RegisterIo* reg_io, Plane plane)
     {
         switch (plane) {
-        case PIPE_A_PLANE_1:
-            return reg_io->Read32(kOffsetPipeAPlane1);
+            case PIPE_A_PLANE_1:
+                return reg_io->Read32(kOffsetPipeAPlane1);
         }
     }
 
     static void write(RegisterIo* reg_io, Plane plane, uint32_t stride)
     {
         switch (plane) {
-        case PIPE_A_PLANE_1:
-            reg_io->Write32(kOffsetPipeAPlane1, stride);
-            break;
+            case PIPE_A_PLANE_1:
+                reg_io->Write32(kOffsetPipeAPlane1, stride);
+                break;
         }
     }
 };
@@ -316,9 +316,9 @@ public:
     {
         uint32_t val;
         switch (plane) {
-        case PIPE_A_PLANE_1:
-            val = reg_io->Read32(kOffsetPipeAPlane1);
-            break;
+            case PIPE_A_PLANE_1:
+                val = reg_io->Read32(kOffsetPipeAPlane1);
+                break;
         }
         *width_out = (val & kWidthMask) + 1;
         *height_out = ((val & kHeightMask) >> kHeightShift) + 1;
@@ -339,17 +339,17 @@ public:
     static uint32_t read(RegisterIo* reg_io, Plane plane)
     {
         switch (plane) {
-        case PIPE_A_PLANE_1:
-            return reg_io->Read32(kOffsetPipeAPlane1);
+            case PIPE_A_PLANE_1:
+                return reg_io->Read32(kOffsetPipeAPlane1);
         }
     }
 
     static void write(RegisterIo* reg_io, Plane plane, uint32_t val)
     {
         switch (plane) {
-        case PIPE_A_PLANE_1:
-            reg_io->Write32(kOffsetPipeAPlane1, val);
-            break;
+            case PIPE_A_PLANE_1:
+                reg_io->Write32(kOffsetPipeAPlane1, val);
+                break;
         }
     }
 
@@ -385,9 +385,9 @@ public:
     {
         uint32_t offset, val;
         switch (pipe) {
-        case PIPE_A:
-            offset = kMaskOffsetPipeA;
-            break;
+            case PIPE_A:
+                offset = kMaskOffsetPipeA;
+                break;
         }
 
         val = reg_io->Read32(offset);
@@ -400,9 +400,9 @@ public:
     {
         uint32_t offset, val;
         switch (pipe) {
-        case PIPE_A:
-            offset = kIdentityOffsetPipeA;
-            break;
+            case PIPE_A:
+                offset = kIdentityOffsetPipeA;
+                break;
         }
         val = reg_io->Read32(offset);
         if ((*bits_present_out = val & bits))
@@ -478,17 +478,17 @@ public:
     static void initiate_reset(RegisterIo* register_io, Engine engine)
     {
         switch (engine) {
-        case RENDER_ENGINE:
-            register_io->Write32(kOffset, (1 << kRenderResetBit));
-            break;
+            case RENDER_ENGINE:
+                register_io->Write32(kOffset, (1 << kRenderResetBit));
+                break;
         }
     }
 
     static bool is_reset_complete(RegisterIo* register_io, Engine engine)
     {
         switch (engine) {
-        case RENDER_ENGINE:
-            return (register_io->Read32(kOffset) & (1 << kRenderResetBit)) == 0;
+            case RENDER_ENGINE:
+                return (register_io->Read32(kOffset) & (1 << kRenderResetBit)) == 0;
         }
     }
 };
@@ -521,15 +521,15 @@ public:
     {
         uint32_t bit;
         switch (source) {
-        case USER:
-            bit = kUserInterruptBit;
-            break;
-        case PAGE_FAULT:
-            bit = kPageFaultBit;
-            break;
-        case CONTEXT_SWITCH:
-            bit = kContextSwitchBit;
-            break;
+            case USER:
+                bit = kUserInterruptBit;
+                break;
+            case PAGE_FAULT:
+                bit = kPageFaultBit;
+                break;
+            case CONTEXT_SWITCH:
+                bit = kContextSwitchBit;
+                break;
         }
 
         uint32_t val = register_io->Read32(offset);
@@ -548,10 +548,10 @@ public:
                       MaskOp op)
     {
         switch (engine) {
-        case RENDER_ENGINE:
-            InterruptRegisterBase::write(register_io, mmio_base + kRenderOffset, source,
-                                         op == MASK);
-            break;
+            case RENDER_ENGINE:
+                InterruptRegisterBase::write(register_io, mmio_base + kRenderOffset, source,
+                                             op == MASK);
+                break;
         }
     }
 };
@@ -563,9 +563,9 @@ public:
     static void write(RegisterIo* register_io, Engine engine, Source source, MaskOp op)
     {
         switch (engine) {
-        case RENDER_ENGINE:
-            InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
-            break;
+            case RENDER_ENGINE:
+                InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
+                break;
         }
     }
 };
@@ -577,16 +577,16 @@ public:
     static uint32_t read(RegisterIo* register_io, Engine engine)
     {
         switch (engine) {
-        case RENDER_ENGINE:
-            return register_io->Read32(kOffset);
+            case RENDER_ENGINE:
+                return register_io->Read32(kOffset);
         }
     }
     static void write(RegisterIo* register_io, Engine engine, Source source, MaskOp op)
     {
         switch (engine) {
-        case RENDER_ENGINE:
-            InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
-            break;
+            case RENDER_ENGINE:
+                InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
+                break;
         }
     }
 };
@@ -598,9 +598,9 @@ public:
     static void write(RegisterIo* register_io, Engine engine, Source source, bool enable)
     {
         switch (engine) {
-        case RENDER_ENGINE:
-            InterruptRegisterBase::write(register_io, kOffset, source, enable);
-            break;
+            case RENDER_ENGINE:
+                InterruptRegisterBase::write(register_io, kOffset, source, enable);
+                break;
         }
     }
 };
