@@ -4,5 +4,6 @@
 
 group("codecs") {
     deps = [
+        "//drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
     ]
 }

@@ -1,0 +1,35 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+shared_library("ihda-codec-utils") {
+    public = [
+        "codec-driver-base.h",
+        "stream-base.h",
+    ]
+
+    sources = [
+        "codec-driver-base.cpp",
+        "debug-logging.h",
+        "stream-base.cpp",
+    ]
+
+    public_deps = [
+        "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+    ]
+
+    deps = [
+        "//drivers/audio/intel-hda/utils:ihda-utils",
+        "//magenta/system/ulib/mx",
+        "//magenta/system/ulib/mxcpp",
+        "//magenta/system/ulib/mxtl",
+    ]
+
+    libs = [
+        "driver",
+    ]
+
+    configs -= [
+        "//build/config:symbol_visibility_hidden",
+    ]
+}
