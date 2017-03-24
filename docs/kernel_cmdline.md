@@ -48,6 +48,10 @@ MAGENTA\_DRIVER\_BEGIN macro.
 
 Example: `driver.usb-audio.disable`
 
+## kernel.entropy=\<hex>
+
+Provides entropy to be mixed into the kernel's CPRNG.
+
 ## kernel.watchdog=\<bool>
 If this option is set (disabled by default), the system will attempt
 to detect hangs/crashes and reboot upon detection.

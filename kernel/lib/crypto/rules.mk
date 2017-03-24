@@ -19,6 +19,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS += dev/hw_rng
 MODULE_DEPS += lib/cryptolib
+MODULE_DEPS += lib/mxtl
 MODULE_DEPS += lib/unittest
 
 include make/module.mk
