@@ -65,10 +65,8 @@ void VmObjectPhysical::Dump(uint depth, bool verbose) {
 
 // get the physical address of a page at offset
 status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t** _page, paddr_t* _pa) TA_REQ(lock_) {
-    // we do not support returning a page pointer
-    DEBUG_ASSERT(_page == nullptr);
     if (_page)
-        return ERR_INVALID_ARGS;
+        *_page = nullptr;
 
     if (offset >= size_)
         return ERR_OUT_OF_RANGE;
