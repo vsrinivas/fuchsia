@@ -6,13 +6,14 @@
 #include <arch/x86/feature.h>
 #include <dev/hw_rng.h>
 
-static bool rdseed64_step(unsigned long long int* val) {
-    // We use inline asm here instead of the intrinsic since we observed a
-    // codegen bug with rdseed in GCC 6.2.
-    bool success = false;
-    __asm__ volatile ("rdseed %0; setc %1" : "=r"(*val), "=r"(success) : : "cc");
-    return success;
-}
+enum entropy_instr {
+    ENTROPY_INSTR_RDSEED,
+    ENTROPY_INSTR_RDRAND,
+};
+static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
+                                            enum entropy_instr instr);
+static ssize_t get_entropy_from_rdseed(void* buf, size_t len, bool block);
+static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block);
 
 /* @brief Get entropy from the CPU using RDSEED.
  *
@@ -34,16 +35,45 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
         return ERR_INVALID_ARGS;
     }
 
-    if (!x86_feature_test(X86_FEATURE_RDSEED)) {
-        /* We don't have an entropy source */
-        static_assert(ERR_NOT_SUPPORTED < 0, "");
-        return ERR_NOT_SUPPORTED;
+    if (x86_feature_test(X86_FEATURE_RDSEED)) {
+        return get_entropy_from_rdseed(buf, len, block);
+    } else if (x86_feature_test(X86_FEATURE_RDRAND)) {
+        return get_entropy_from_rdrand(buf, len, block);
     }
 
+    /* We don't have an entropy source */
+    static_assert(ERR_NOT_SUPPORTED < 0, "");
+    return ERR_NOT_SUPPORTED;
+}
+
+static bool rdrand64_step(unsigned long long int* val) {
+    bool success = false;
+    __asm__ volatile ("rdrand %0; setc %1" : "=r"(*val), "=r"(success) : : "cc");
+    return success;
+}
+
+static bool rdseed64_step(unsigned long long int* val) {
+    // We use inline asm here instead of the intrinsic since we observed a
+    // codegen bug with rdseed in GCC 6.2.
+    bool success = false;
+    __asm__ volatile ("rdseed %0; setc %1" : "=r"(*val), "=r"(success) : : "cc");
+    return success;
+}
+
+static bool instruction_step(enum entropy_instr instr, unsigned long long int* val) {
+    switch (instr) {
+        case ENTROPY_INSTR_RDRAND: return rdrand64_step(val);
+        case ENTROPY_INSTR_RDSEED: return rdseed64_step(val);
+        default: panic("Invalid entropy instruction %u\n", instr);
+    }
+}
+
+static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
+                                            enum entropy_instr instr) {
     size_t written = 0;
     while (written < len) {
         unsigned long long int val = 0;
-        if (!rdseed64_step(&val)) {
+        if (!instruction_step(instr, &val)) {
             if (!block) {
                 break;
             }
@@ -57,6 +87,20 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
         DEBUG_ASSERT(written == len);
     }
     return (ssize_t)written;
+}
+
+static ssize_t get_entropy_from_rdseed(void* buf, size_t len, bool block) {
+    return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDSEED);
+}
+
+static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block) {
+    // TODO(security): This method is not compliant with Intel's "Digital Random
+    // Number Generator (DRNG) Software Implementation Guide".  We are using
+    // rdrand in a way that is explicitly against their recommendations.  This
+    // needs to be corrected, but this fallback is a compromise to allow our
+    // development platforms that don't support RDSEED to get some degree of
+    // hardware-based randomization.
+    return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDRAND);
 }
 
 size_t hw_rng_get_entropy(void* buf, size_t len, bool block)
