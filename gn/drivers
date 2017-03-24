@@ -1,7 +1,7 @@
 {
     "imports": [
-        "init",
-        "intel-hda"
+        "audio",
+        "init"
     ],
     "labels": [
         "//magma:magma_service_driver"
