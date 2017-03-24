@@ -1,0 +1,109 @@
+#!/usr/bin/python
+
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import hashlib
+import json
+import os
+import os.path
+import random
+import re
+import socket
+import subprocess
+import sys
+
+def read_log_listener(listener_process, test_id):
+    """ Returns the output of loglistener up until it sees the |test_id|."""
+    termination_substring = "test_runner: teardown %s" % test_id
+    lines = []
+    while True:
+        line = listener_process.stdout.readline()
+        if line == "" or line.find(termination_substring) != -1:
+            return "".join(lines) + line
+        lines.append(line)
+
+    return "".join(lines)
+
+def run_test(sock, listener_process, command_str):
+    """ Runs |command_str| on the remote test runner server, waits for the
+    result, and prints the relevant device log snippet in the event of a
+    failure. """
+    test_id = hashlib.sha1(command_str + str(random.random())).hexdigest()
+
+    sock.send("run %s %s\n" % (test_id, command_str))
+    read_sock_file = sock.makefile()
+    for line in read_sock_file:
+        ret_test_id, op, msg = line.split(" ", 2)
+        msg = msg.strip()
+        assert ret_test_id == test_id, "Uhoh, wrong test result returned."
+
+        if op == "teardown":
+            result = msg
+            print ".. %s" % result
+            # Consume the log output even, regardless of if we print it.
+            log_output = read_log_listener(listener_process, test_id)
+            if result == "fail":
+                print log_output
+            return
+        elif op == "log":
+            print msg
+        else:
+            print "UNRECOGNIZED STRING:", line.strip()
+
+def main(argv):
+    assert "FUCHSIA_DIR" in os.environ, "Could not find env variable $FUCHSIA_DIR"
+    parser = argparse.ArgumentParser()
+    default_server = "192.168.3.53:8342"
+    parser.add_argument("--server",
+            help="Address ('server:port') of where the test_runner daemon is running. Default: " + default_server,
+            type=str,
+            default=default_server)
+    parser.add_argument("--loglistener_path",
+            help="Path to the loglistener binary",
+            type=str,
+            default=os.path.join(os.environ["FUCHSIA_DIR"],
+                                 "out/build-magenta/tools/loglistener"))
+    parser.add_argument("--test_file",
+            help="Path to a json file containing a series of tests to run.",
+            type=str,
+            default="")
+    parser.add_argument("command", nargs="*")
+    args = parser.parse_args()
+
+    # 1. Start listening to the device log.
+    listener_process = subprocess.Popen([args.loglistener_path],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # 2. Open up a connection to the on-device test runner server.
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server, port = args.server.split(":")
+    sock.connect((server, int(port)))
+
+    # 3. Read commands and send them to the test runner server.
+    assert args.test_file or len(args.command) > 0, \
+        "Either a single test command, or --test_file must be specified."
+
+    if len(args.command) > 0:
+        command_str = " ".join(args.command)
+        # Run a single command
+        print "Running %s .." % command_str
+        sys.stdout.flush()
+        run_test(sock, listener_process, command_str)
+    else:
+        # Run series of commands from test file
+        with open(args.test_file) as f:
+            tests = json.load(f)
+            for test in tests["tests"]:
+                print "Running %s .." % test["name"]
+                sys.stdout.flush()
+                run_test(sock, listener_process, test["exec"])
+
+    # 4. Cleanup
+    listener_process.terminate()
+    sock.close()
+
+if __name__ == "__main__":
+    main(sys.argv)
