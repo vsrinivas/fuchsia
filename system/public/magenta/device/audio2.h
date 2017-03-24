@@ -13,7 +13,7 @@
 // When communicating with an Audio2 driver using mx_channel_call, do not use
 // the AUDIO2_INVALID_TRANSACTION_ID as your message's transaction ID.  It is
 // reserved for async notifications sent from the driver to the application.
-#define AUDIO2_INVALID_TRANSACTION_ID ((uint32_t)0)
+#define AUDIO2_INVALID_TRANSACTION_ID ((mx_txid_t)0)
 
 __BEGIN_CDECLS
 
