@@ -32,7 +32,17 @@ public:
     virtual status_t Resize(uint64_t size) { return ERR_NOT_SUPPORTED; }
 
     virtual uint64_t size() const { return 0; }
-    virtual size_t AllocatedPages() const { return 0; }
+
+    // Returns the number of physical pages currently allocated to the
+    // object where (offset <= page_offset < offset+len).
+    // |offset| and |len| are in bytes.
+    virtual size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const {
+        return 0;
+    }
+    // Returns the number of physical pages currently allocated to the object.
+    size_t AllocatedPages() const {
+        return AllocatedPagesInRange(0, size());
+    }
 
     // find physical pages to back the range of the object
     virtual status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
@@ -130,7 +140,7 @@ public:
     status_t Resize(uint64_t size) override;
 
     uint64_t size() const override { return size_; }
-    size_t AllocatedPages() const override;
+    size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
     status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) override;
     status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,

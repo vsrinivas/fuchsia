@@ -43,7 +43,7 @@ size_t VmMapping::AllocatedPagesLocked() const {
     if (state_ != LifeCycleState::ALIVE) {
         return 0;
     }
-    return object_->AllocatedPages();
+    return object_->AllocatedPagesInRange(object_offset_, size_);
 }
 
 void VmMapping::Dump(uint depth, bool verbose) const {
@@ -52,9 +52,15 @@ void VmMapping::Dump(uint depth, bool verbose) const {
         printf("  ");
     }
     printf("map %p [%#" PRIxPTR " %#" PRIxPTR
-           "] sz %#zx mmufl %#x vmo %p off %#" PRIx64 " ref %d '%s'\n",
+           "] sz %#zx mmufl %#x vmo %p off %#" PRIx64
+           " pages %zu ref %d '%s'\n",
            this, base_, base_ + size_ - 1, size_, arch_mmu_flags_,
-           object_.get(), object_offset_, ref_count_debug(), name_);
+           object_.get(), object_offset_,
+           // TODO: Use AllocatePagesLocked() when Dump() is locked
+           // consistently. Currently, Dump() may be called without the aspace
+           // lock.
+           object_->AllocatedPagesInRange(object_offset_, size_),
+           ref_count_debug(), name_);
     if (verbose)
         object_->Dump(depth + 1, false);
 }

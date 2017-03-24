@@ -101,11 +101,20 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
     }
 }
 
-size_t VmObjectPaged::AllocatedPages() const {
+size_t VmObjectPaged::AllocatedPagesInRange(uint64_t offset, uint64_t len) const {
     DEBUG_ASSERT(magic_ == MAGIC);
     AutoLock a(&lock_);
+    uint64_t new_len;
+    if (!TrimRange(offset, len, size_, &new_len)) {
+        return 0;
+    }
     size_t count = 0;
-    page_list_.ForEveryPage([&count](const auto p, uint64_t) { count++; });
+    page_list_.ForEveryPage(
+        [&count, offset, new_len](const auto p, uint64_t off) {
+            if (off >= offset && off < offset + new_len) {
+                count++;
+            }
+        });
     return count;
 }
 
