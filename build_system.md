@@ -3,13 +3,13 @@
 These are notes on using the `gen.py` script and `ninja` directly for builds,
 and the `scripts/run-magenta-*` scripts to launch QEMU.
 
-You can alternatively use the [standard build instructions](getting_started.md)
+You can alternatively use the [standard build instructions](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Setup-Build-Environment)
 using commands defined in `env.sh` instead.
 
 ### Build Magenta and the sysroot
 
 First, you need to
-[build the Magenta kernel](https://fuchsia.googlesource.com/magenta/+/master/README.md)
+[build the Magenta kernel](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md)
 and the sysroot:
 
 ```
@@ -78,7 +78,7 @@ the value of the `-x` parameter in Magenta's start command script, for example:
 ./scripts/run-magenta-arm64 -x out/debug-aarch64/user.bootfs -m 2048
 ```
 
-See the [standard build instructions](getting_started.md) for other flags you
+See the [standard build instructions](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Boot-from-QEMU) for other flags you
 can pass to QEMU.
 
 [magenta]: https://fuchsia.googlesource.com/magenta/+/HEAD/docs/getting_started.md "Magenta"
