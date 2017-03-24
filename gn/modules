@@ -11,6 +11,10 @@
     ],
     "binaries": [
         {
+            "binary": "chess.flx",
+            "bootfs_path": "apps/chess"
+        },
+        {
             "binary": "color.flx",
             "bootfs_path": "apps/color"
         },
