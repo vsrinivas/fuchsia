@@ -16,10 +16,7 @@ public:
 
     uint32_t id() { return id_; }
 
-    void SetToCurrent()
-    {
-        id_ = GetCurrentThreadId();
-    }
+    void SetToCurrent() { id_ = GetCurrentThreadId(); }
 
     bool IsCurrent() { return id_ == GetCurrentThreadId(); }
 

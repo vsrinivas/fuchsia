@@ -11,10 +11,7 @@ namespace magma {
 
 class ThreadIdCheck {
 public:
-    static bool IsCurrent(PlatformThreadId& thread_id)
-    {
-        return thread_id.IsCurrent();
-    }
+    static bool IsCurrent(PlatformThreadId& thread_id) { return thread_id.IsCurrent(); }
 };
 
 } // namespace magma

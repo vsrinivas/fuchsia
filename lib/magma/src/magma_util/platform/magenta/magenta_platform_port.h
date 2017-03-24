@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "platform_port.h"
 #include "magenta_platform_semaphore.h"
+#include "platform_port.h"
 
 #include "magenta/syscalls/port.h"
 #include "mx/port.h"

@@ -43,6 +43,6 @@ public:
     virtual bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) = 0;
 };
 
-}  // namespace magma
+} // namespace magma
 
-#endif  // PLATFORM_BUFFER_H
+#endif // PLATFORM_BUFFER_H

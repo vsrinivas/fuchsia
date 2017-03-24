@@ -39,10 +39,7 @@ public:
 
     uint32_t wait_semaphore_count() const { return command_buffer_->wait_semaphore_count; }
 
-    uint32_t signal_semaphore_count() const
-    {
-        return command_buffer_->signal_semaphore_count;
-    }
+    uint32_t signal_semaphore_count() const { return command_buffer_->signal_semaphore_count; }
 
     uint32_t batch_start_offset() const
     {

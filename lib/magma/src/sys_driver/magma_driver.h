@@ -26,7 +26,7 @@ public:
     {
         msd_device_t* msd_dev = msd_driver_create_device(msd_drv_.get(), device);
         if (!msd_dev)
-            return DRETP(nullptr, "msd_create_device failed");;
+            return DRETP(nullptr, "msd_create_device failed");
 
         return std::make_unique<MagmaSystemDevice>(MsdDeviceUniquePtr(msd_dev));
     }

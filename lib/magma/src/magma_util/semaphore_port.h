@@ -61,8 +61,8 @@ public:
             DASSERT(completed_count_ < semaphore_count());
             ++completed_count_;
             DLOG("completed_count %u semaphore count %u", completed_count_, semaphore_count());
-            if (completed_count_ == semaphore_count()){
-                for(auto semaphore : semaphores_){
+            if (completed_count_ == semaphore_count()) {
+                for (auto semaphore : semaphores_) {
                     semaphore->Reset();
                 }
                 callback_(this);

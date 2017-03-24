@@ -95,8 +95,12 @@ enum LogLevel { LOG_WARNING, LOG_INFO };
 __attribute__((format(printf, 2, 3))) static inline void log(LogLevel level, const char* msg, ...)
 {
     switch (level) {
-    case LOG_WARNING: printf("[WARNING] "); break;
-    case LOG_INFO: printf("[INFO] "); break;
+        case LOG_WARNING:
+            printf("[WARNING] ");
+            break;
+        case LOG_INFO:
+            printf("[INFO] ");
+            break;
     }
     va_list args;
     va_start(args, msg);
