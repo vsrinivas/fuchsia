@@ -170,10 +170,13 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 			// NOP
 		case mx.ErrShouldWait:
 			obs, err := dataHandle.WaitOne(MX_SOCKET_READABLE|MX_SOCKET_PEER_CLOSED, mx.TimensecInfinite)
-			if err != nil {
-				if mxerror.Status(err) != mx.ErrHandleClosed {
-					log.Printf("loopSocketWrite: wait failed: %v", ios.cookie, err)
-				}
+			switch mxerror.Status(err) {
+			case mx.ErrOk:
+				// NOP
+			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+				return
+			default:
+				log.Printf("loopSocketWrite: wait failed: %v", err)
 				return
 			}
 			switch {
@@ -286,10 +289,13 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 					MX_SOCKET_WRITABLE|MX_SOCKET_PEER_CLOSED,
 					mx.TimensecInfinite,
 				)
-				if err != nil {
-					if mxerror.Status(err) != mx.ErrHandleClosed {
-						log.Printf("loopSocketRead: wait failed: %v", ios.cookie, err)
-					}
+				switch mxerror.Status(err) {
+				case mx.ErrOk:
+					// NOP
+				case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+					return
+				default:
+					log.Printf("loopSocketRead: wait failed: %v", err)
 					return
 				}
 				switch {
