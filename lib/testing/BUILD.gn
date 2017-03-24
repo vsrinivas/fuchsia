@@ -12,7 +12,7 @@ source_set("testing") {
 
   deps = [
     "//application/lib/app",
-    "//apps/modular/services/test_runner",
+    "//apps/test_runner/services:test_runner",
   ]
 }
 

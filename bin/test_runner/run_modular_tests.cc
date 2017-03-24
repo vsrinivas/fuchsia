@@ -11,8 +11,8 @@
 #include <magenta/status.h>
 #include <iostream>
 
-#include "apps/modular/src/test_runner/test_runner.h"
 #include "apps/modular/src/test_runner/test_runner_config.h"
+#include "apps/test_runner/lib/test_runner.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -20,7 +20,7 @@
 constexpr char kModularTestsJson[] =
     "/system/apps/modular_tests/modular_tests.json";
 
-class ModularTestRunObserver : public modular::testing::TestRunObserver {
+class ModularTestRunObserver : public test_runner::TestRunObserver {
  public:
   ModularTestRunObserver(const std::string& test_id) : test_id_(test_id) {}
   void SendMessage(const std::string& test_id,
@@ -57,8 +57,8 @@ bool RunTest(std::shared_ptr<app::ApplicationContext> app_context,
   mx_cprng_draw(&random_number, sizeof random_number, &random_size);
   std::string test_id = ftl::StringPrintf("test_%lX", random_number);
   ModularTestRunObserver observer(test_id);
-  modular::testing::TestRunContext context(app_context, &observer, test_id, url,
-                                           args);
+  test_runner::TestRunContext context(app_context, &observer, test_id, url,
+                                      args);
 
   mtl::MessageLoop::GetCurrent()->Run();
 

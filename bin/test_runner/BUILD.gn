@@ -5,33 +5,6 @@
 group("test_runner") {
   deps = [
     ":run_modular_tests",
-    ":test_runner_server",
-  ]
-}
-
-source_set("common") {
-  sources = [
-    "test_runner.cc",
-    "test_runner.h",
-    "test_runner_store_impl.cc",
-    "test_runner_store_impl.h",
-  ]
-  public_deps = [
-    "//application/lib/app",
-    "//apps/modular/lib/fidl:scope",
-    "//apps/modular/services/test_runner",
-    "//lib/ftl",
-    "//lib/mtl",
-  ]
-}
-
-executable("test_runner_server") {
-  output_name = "test_runner"
-  sources = [
-    "test_runner_server.cc",
-  ]
-  deps = [
-    ":common",
   ]
 }
 
@@ -42,7 +15,7 @@ executable("run_modular_tests") {
     "test_runner_config.h",
   ]
   deps = [
-    ":common",
+    "//apps/test_runner/lib",
     "//third_party/rapidjson",
   ]
 }

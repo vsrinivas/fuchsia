@@ -4,13 +4,13 @@
 
 #include "apps/modular/lib/testing/testing.h"
 
-#include "apps/modular/services/test_runner/test_runner.fidl.h"
+#include "apps/test_runner/services/test_runner.fidl.h"
 
 namespace modular {
 namespace testing {
 
-static TestRunnerPtr g_test_runner;
-static TestRunnerStorePtr g_test_runner_store;
+static test_runner::TestRunnerPtr g_test_runner;
+static test_runner::TestRunnerStorePtr g_test_runner_store;
 static std::set<std::string> g_test_points;
 
 void Init(app::ApplicationContext* app_context, const std::string& identity) {
@@ -18,7 +18,8 @@ void Init(app::ApplicationContext* app_context, const std::string& identity) {
   FTL_DCHECK(!g_test_runner.is_bound());
   FTL_DCHECK(!g_test_runner_store.is_bound());
 
-  g_test_runner = app_context->ConnectToEnvironmentService<TestRunner>();
+  g_test_runner =
+      app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
   g_test_runner.set_connection_error_handler([]{
     FTL_LOG(FATAL) << "Could not connect to TestRunner. Make sure the test is"
                       "running under a TestRunner environment.";
@@ -26,7 +27,7 @@ void Init(app::ApplicationContext* app_context, const std::string& identity) {
   g_test_runner->Identify(identity);
   g_test_runner->SetTestPointCount(g_test_points.size());
   g_test_runner_store =
-      app_context->ConnectToEnvironmentService<TestRunnerStore>();
+      app_context->ConnectToEnvironmentService<test_runner::TestRunnerStore>();
 }
 
 void Fail(const std::string& log_msg) {
@@ -59,7 +60,7 @@ void WillTerminate(double withinSeconds) {
   }
 }
 
-TestRunnerStore* GetStore() {
+test_runner::TestRunnerStore* GetStore() {
   FTL_DCHECK(g_test_runner_store.is_bound());
   return g_test_runner_store.get();
 }

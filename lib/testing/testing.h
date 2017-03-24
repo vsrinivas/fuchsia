@@ -8,6 +8,7 @@
 #include <string>
 
 #include "application/lib/app/application_context.h"
+#include "apps/test_runner/services/test_runner.fidl.h"
 
 namespace modular {
 namespace testing {
@@ -43,10 +44,9 @@ void Teardown();
 // |Done()| or |Teardown()|.
 void WillTerminate(double withinSeconds);
 
-class TestRunnerStore;
 // This returns the TestRunnerStore interface from the caller's
 // ApplicationEnvironment. Init() must be called before GetStore().
-TestRunnerStore* GetStore();
+test_runner::TestRunnerStore* GetStore();
 
 namespace internal {
 
