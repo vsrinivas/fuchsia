@@ -27,12 +27,11 @@ bool SetDpAuxHeader(DpAuxMessage* msg, uint32_t addr, uint32_t dp_cmd, uint32_t 
     // address.)
     if (body_size == 0)
         return DRETF(false, "DP aux: Empty message not supported");
-    // For now, we only handle 8-bit addresses.  Also, we only handle
-    // I2C-over-Aux messages, not native Aux messages.
-    if (addr >= 0x100)
-        return DRETF(false, "DP aux: Large address not supported");
-    msg->data[0] = dp_cmd << 4;
-    msg->data[1] = 0;
+    // Addresses should fit into 20 bits.
+    if (addr >= (1 << 20))
+        return DRETF(false, "DP aux: Address is too large: 0x%x", addr);
+    msg->data[0] = (dp_cmd << 4) | ((addr >> 16) & 0xf);
+    msg->data[1] = addr >> 8;
     msg->data[2] = addr;
     // For writes, the size of the message will be encoded twice:
     //  * The msg->size field contains the total message size (header and

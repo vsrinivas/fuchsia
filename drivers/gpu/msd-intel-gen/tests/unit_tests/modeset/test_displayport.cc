@@ -286,8 +286,9 @@ TEST(DisplayPort, DpcdReadAndWrite)
 
     DpAuxChannel dp_aux(&reg_io, 0);
 
-    uint8_t addr1 = 0x22;
-    uint8_t addr2 = 0x33;
+    // Test that we handle 20-bit addresses.
+    uint32_t addr1 = 0x54321;
+    uint32_t addr2 = 0x4321;
 
     // Write some data.
     uint8_t write_data1[] = {0x44, 0x55};
