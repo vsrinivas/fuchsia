@@ -2,6 +2,7 @@
     "labels": [
         "//dart/pkg/analyzer_cli(//build/toolchain:host_x64)",
         "//dart/runtime/bin:dart",
+        "//dart/runtime/bin:dart_precompiled_runtime",
         "//dart/runtime/bin:dart(//build/toolchain:host_x64)",
         "//dart:create_sdk",
         "//dart:create_sdk(//build/toolchain:host_x64)"
@@ -12,8 +13,16 @@
             "bootfs_path": "bin/dart"
         },
         {
+            "binary": "dart_precompiled_runtime",
+            "bootfs_path": "bin/dart_precompiled_runtime"
+        },
+        {
             "binary": "hello_fuchsia.dart",
             "bootfs_path": "apps/hello_fuchsia.dart"
+        },
+        {
+            "binary": "libhello_fuchsia.so",
+            "bootfs_path": "apps/libhello_fuchsia.so"
         }
     ]
 }
