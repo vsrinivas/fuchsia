@@ -119,6 +119,8 @@ void print_fb_modes() {
     }
 }
 
+#include "logo.h"
+
 void draw_logo() {
     efi_graphics_output_protocol* gop = fb_get_gop();
     if (!gop)
@@ -137,10 +139,38 @@ void draw_logo() {
         .Blue = 0x0,
     };
 
+
     // Blank the screen, removing vendor UEFI logos
     gop->Blt(gop, &black, EfiBltVideoFill, 0, 0, 0, 0, h_res, v_res, 0);
-    // Draw the Fuchsia stripe on the top of the screen
-    gop->Blt(gop, &fuchsia, EfiBltVideoFill, 0, 0, 0, 0, h_res, v_res / 100, 0);
+
+    efi_graphics_output_blt_pixel* tmp;
+    unsigned sz = sizeof(efi_graphics_output_blt_pixel) * logo_width * logo_height;
+    if (EFI_ERROR(gBS->AllocatePool(EfiLoaderData, sz, (void*)&tmp))) {
+        // Draw the Fuchsia stripe on the top of the screen
+        gop->Blt(gop, &fuchsia, EfiBltVideoFill, 0, 0, 0, 0, h_res, v_res / 100, 0);
+        return;
+    }
+
+    // Un-RLE the logo
+    unsigned char* iptr = logo_rle;
+    efi_graphics_output_blt_pixel* optr = tmp;
+    unsigned entries = sizeof(logo_rle) / 2;
+    while (entries-- > 0) {
+        unsigned count = *iptr++;
+        unsigned alpha = *iptr++;
+        efi_graphics_output_blt_pixel px = {
+            .Red = (alpha * 0xFF) / 255,
+            .Green = 0,
+            .Blue = (alpha * 0x80) / 255,
+        };
+        while (count-- > 0) {
+            *optr++ = px;
+        }
+    }
+
+    gop->Blt(gop, tmp, EfiBltBufferToVideo, 0, 0,
+             h_res - logo_width - (h_res / 75), v_res - logo_height - (v_res / 75),
+             logo_width, logo_height, 0);
 }
 
 #include "font-1x.h"
