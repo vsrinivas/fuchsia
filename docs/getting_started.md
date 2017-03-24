@@ -214,3 +214,6 @@ $BUILDDIR/tools/loglistener
 
 For random tips on debugging in the magenta environment see
 [debugging](debugging.md).
+
+## Contribute changes
+* See [contributing.md](contributing.md).
