@@ -56,8 +56,8 @@
             "bootfs_path": "apps/hello_dart.dartx"
         },
         {
-            "binary": "maxwell_launcher",
-            "bootfs_path": "apps/maxwell_launcher"
+            "binary": "maxwell",
+            "bootfs_path": "apps/maxwell"
         },
         {
             "binary": "maxwell_test",
