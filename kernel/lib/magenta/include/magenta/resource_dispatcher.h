@@ -27,6 +27,7 @@ public:
     virtual ~ResourceDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_RESOURCE; }
     StateTracker* get_state_tracker()  final { return &state_tracker_; }
+    CookieJar* get_cookie_jar() final { return &cookie_jar_; }
     mx_status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // MakeRoot() validates the resource as the parent of a tree.
@@ -105,6 +106,7 @@ private:
 
     HandleOwner inbound_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
+    CookieJar cookie_jar_;
     mxtl::unique_ptr<PortClient> iopc_ TA_GUARDED(lock_);
 
     char name_[MX_MAX_NAME_LEN];

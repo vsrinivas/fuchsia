@@ -53,6 +53,7 @@ DECLARE_DISPTAG(GuestDispatcher, MX_OBJ_TYPE_GUEST)
 
 class StateTracker;
 class StateObserver;
+class CookieJar;
 
 class Dispatcher : public mxtl::RefCounted<Dispatcher> {
 public:
@@ -88,6 +89,10 @@ public:
     // set_name() will truncate to MX_MAX_NAME_LEN - 1 and ensure there is a
     // terminating null
     virtual status_t set_name(const char* name, size_t len) { return ERR_NOT_SUPPORTED; }
+
+    // Dispatchers that support get/set cookie must provide
+    // a CookieJar for those cookies to be stored in.
+    virtual CookieJar* get_cookie_jar() { return nullptr; }
 
 protected:
     static mx_koid_t GenerateKernelObjectId();

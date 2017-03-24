@@ -25,6 +25,7 @@ public:
     ~VmObjectDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_VMEM; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
+    CookieJar* get_cookie_jar() final { return &cookie_jar_; }
 
     mx_status_t Read(user_ptr<void> user_data, size_t length,
                      uint64_t offset, size_t* actual);
@@ -42,4 +43,5 @@ private:
     mxtl::Canary<mxtl::magic("VMOD")> canary_;
     mxtl::RefPtr<VmObject> vmo_;
     StateTracker state_tracker_;
+    CookieJar cookie_jar_;
 };

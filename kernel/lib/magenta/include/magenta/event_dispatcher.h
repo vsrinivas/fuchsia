@@ -20,10 +20,12 @@ public:
     ~EventDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_EVENT; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
+    CookieJar* get_cookie_jar() final { return &cookie_jar_; }
     status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
 private:
     explicit EventDispatcher(uint32_t options);
     mxtl::Canary<mxtl::magic("EVTD")> canary_;
     StateTracker state_tracker_;
+    CookieJar cookie_jar_;
 };

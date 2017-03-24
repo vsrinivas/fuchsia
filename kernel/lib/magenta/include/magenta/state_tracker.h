@@ -17,6 +17,13 @@
 
 class Handle;
 
+class CookieJar {
+public:
+    CookieJar() : scope_(MX_KOID_INVALID), cookie_(0) {}
+    mx_koid_t scope_;
+    uint64_t cookie_;
+};
+
 class StateTracker {
 public:
     StateTracker(mx_signals_t signals = 0u) : signals_(signals) { }
@@ -49,6 +56,13 @@ public:
     mx_signals_t GetSignalsState() { return signals_; }
 
     using ObserverList = mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
+
+    // Accessors for CookieJars
+    // These live with the state tracker so they can make use of the state tracker's
+    // lock (since not all objects have their own locks, but all Dispatchers that are
+    // cookie-capable have state trackers)
+    mx_status_t SetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t cookie);
+    mx_status_t GetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t* cookie);
 
 private:
     mxtl::Canary<mxtl::magic("STRK")> canary_;

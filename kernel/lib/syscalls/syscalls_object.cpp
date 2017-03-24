@@ -604,3 +604,50 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
 
     return ERR_WRONG_TYPE;
 }
+
+
+mx_status_t sys_object_set_cookie(mx_handle_t handle, mx_handle_t hscope, uint64_t cookie) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mx_koid_t scope = up->GetKoidForHandle(hscope);
+    if (scope == MX_KOID_INVALID)
+        return ERR_BAD_HANDLE;
+
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    auto status = up->GetDispatcher(handle, &dispatcher);
+    if (status != NO_ERROR)
+        return status;
+
+    StateTracker* st = dispatcher->get_state_tracker();
+    if (st == nullptr)
+        return ERR_NOT_SUPPORTED;
+
+    return st->SetCookie(dispatcher->get_cookie_jar(), scope, cookie);
+}
+
+mx_status_t sys_object_get_cookie(mx_handle_t handle, mx_handle_t hscope, user_ptr<uint64_t> _cookie) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mx_koid_t scope = up->GetKoidForHandle(hscope);
+    if (scope == MX_KOID_INVALID)
+        return ERR_BAD_HANDLE;
+
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    auto status = up->GetDispatcher(handle, &dispatcher);
+    if (status != NO_ERROR)
+        return status;
+
+    StateTracker* st = dispatcher->get_state_tracker();
+    if (st == nullptr)
+        return ERR_NOT_SUPPORTED;
+
+    uint64_t cookie;
+    status = st->GetCookie(dispatcher->get_cookie_jar(), scope, &cookie);
+    if (status != NO_ERROR)
+        return status;
+
+    if (_cookie.copy_to_user(cookie) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
+}

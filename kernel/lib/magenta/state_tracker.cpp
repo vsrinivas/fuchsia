@@ -152,3 +152,37 @@ void StateTracker::StrobeState(mx_signals_t notify_mask) {
         thread_preempt(false);
     }
 }
+
+mx_status_t StateTracker::SetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t cookie) {
+    if (cookiejar == nullptr)
+        return ERR_NOT_SUPPORTED;
+
+    AutoLock lock(&lock_);
+
+    if (cookiejar->scope_ == MX_KOID_INVALID) {
+        cookiejar->scope_ = scope;
+        cookiejar->cookie_ = cookie;
+        return NO_ERROR;
+    }
+
+    if (cookiejar->scope_ == scope) {
+        cookiejar->cookie_ = cookie;
+        return NO_ERROR;
+    }
+
+    return ERR_ACCESS_DENIED;
+}
+
+mx_status_t StateTracker::GetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t* cookie) {
+    if (cookiejar == nullptr)
+        return ERR_NOT_SUPPORTED;
+
+    AutoLock lock(&lock_);
+
+    if (cookiejar->scope_ == scope) {
+        *cookie = cookiejar->cookie_;
+        return NO_ERROR;
+    }
+
+    return ERR_ACCESS_DENIED;
+}

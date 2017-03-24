@@ -116,6 +116,14 @@ syscall object_set_property
     (handle: mx_handle_t, property: uint32_t, value: any[size] IN, size: size_t)
     returns (mx_status_t);
 
+syscall object_set_cookie
+    (handle: mx_handle_t, scope: mx_handle_t, cookie: uint64_t)
+    returns (mx_status_t);
+
+syscall object_get_cookie
+    (handle: mx_handle_t, scope: mx_handle_t, cookie: uint64_t[1] OUT)
+    returns (mx_status_t);
+
 syscall object_get_info
     (handle: mx_handle_t, topic: uint32_t,
         buffer: any[buffer_size] OUT, buffer_size: size_t,

@@ -415,6 +415,14 @@ void ProcessDispatcher::UndoRemoveHandleLocked(mx_handle_t handle_value) {
     AddHandleLocked(HandleOwner(handle));
 }
 
+mx_koid_t ProcessDispatcher::GetKoidForHandle(mx_handle_t handle_value) {
+    AutoLock lock(&handle_table_lock_);
+    Handle* handle = GetHandleLocked(handle_value);
+    if (!handle)
+        return MX_KOID_INVALID;
+    return handle->dispatcher()->get_koid();
+}
+
 mx_status_t ProcessDispatcher::GetDispatcherInternal(mx_handle_t handle_value,
                                                      mxtl::RefPtr<Dispatcher>* dispatcher,
                                                      mx_rights_t* rights) {
@@ -703,12 +711,4 @@ mx_status_t ProcessDispatcher::BadHandle(mx_handle_t handle_value,
         Exit(error);
     }
     return error;
-}
-
-mx_koid_t ProcessDispatcher::GetKoidForHandle(mx_handle_t handle_value) {
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    auto status = GetDispatcherInternal(handle_value, &dispatcher, nullptr);
-    if (status != NO_ERROR)
-        return 0ull;
-    return dispatcher->get_koid();
 }
