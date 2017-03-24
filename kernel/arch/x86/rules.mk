@@ -25,7 +25,11 @@ USER_ASPACE_BASE   ?= 0x0000000001000000UL # 16MB
 USER_ASPACE_SIZE   ?= 0x00007ffffefff000UL
 SUBARCH_DIR := $(LOCAL_DIR)/64
 
-ifneq ($(ENABLE_NEW_BOOT),)
+ifeq ($(ENABLE_NEW_BOOT),)
+ENABLE_NEW_BOOT := true
+endif
+
+ifneq ($(call TOBOOL,$(ENABLE_NEW_BOOT)),false)
 KERNEL_DEFINES += ENABLE_NEW_BOOT=1
 
 # set this to 0 to override the 8K offset that was set before
