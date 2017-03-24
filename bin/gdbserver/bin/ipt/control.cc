@@ -45,6 +45,9 @@ static constexpr char buffer_output_path_suffix[] = "pt";
 static constexpr char ktrace_output_path_suffix[] = "ktrace";
 static constexpr char cpuid_output_path_suffix[] = "cpuid";
 
+static constexpr uint32_t kKtraceGroupMask =
+  KTRACE_GRP_ARCH | KTRACE_GRP_TASKS;
+
 static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
                         ftl::UniqueFD* out_ktrace_fd,
                         mx::handle* out_ktrace_handle) {
@@ -195,6 +198,20 @@ bool InitPerfPreProcess(const IptConfig& config) {
   if (!OpenDevices(nullptr, nullptr, &ktrace_handle))
     return false;
 
+  // If tracing cpus we may want all the records for processes that were
+  // started during boot, so don't reset ktrace here. If tracing threads it
+  // doesn't much matter other than hopefully the necessary records don't get
+  // over run, which is handled below by only enabling the collection groups
+  // we need. So for now leave existing records alone.
+  // We also need to make the distinction of ktrace records for processes
+  // started during boot (they can appear a fair bit in traces), and random
+  // processes that were started later that have nothing to do with what we
+  // want to collect. IWBN to capture the ktrace records from boot and save
+  // them away. Then it'd make more sense to rewind here, though even then
+  // the user may have started something important before we get run. Another
+  // thought is to provide an action to control ktrace specifically.
+#if 0 // TODO(dje)
+  if (config.mode == IPT_MODE_THREADS) {
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0,
                              nullptr);
   if (status != NO_ERROR) {
@@ -207,10 +224,21 @@ bool InitPerfPreProcess(const IptConfig& config) {
     util::LogErrorWithMxStatus("ktrace rewind", status);
     goto Fail;
   }
+#endif
+
+  // We definitely need ktrace turned on in order to get cr3->pid mappings,
+  // which we need to map trace cr3 values to ld.so mappings, which we need in
+  // order to be able to find the ELFs, which are required by the decoder.
+  // So this isn't a nice-to-have, we need it. It's possible ktrace is
+  // currently off, so ensure it's turned on.
   // For now just include arch info in the ktrace - we need it, and we don't
   // want to risk the ktrace buffer filling without it.
+  // Also include task info to get process exit records - we need to know when
+  // a cr3 value becomes invalid. Hopefully this won't cause the buffer to
+  // overrun. It it does we could consider having special ktrace records just
+  // for this, but that's a last resort kind of thing.
   status = mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START,
-                             KTRACE_GRP_ARCH, nullptr);
+                             kKtraceGroupMask, nullptr);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("ktrace start", status);
     goto Fail;
@@ -219,9 +247,12 @@ bool InitPerfPreProcess(const IptConfig& config) {
   return true;
 
  Fail:
-  // TODO(dje): Resume original ktracing?
+  // TODO(dje): Resume original ktracing? Need ability to get old value.
+  // For now set the values to what we need: A later run might still need
+  // the boot time records.
   mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0, nullptr);
-  mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START, 0, nullptr);
+  mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START,
+                    kKtraceGroupMask, nullptr);
 
   return false;
 }
@@ -342,6 +373,8 @@ void StopPerf(const IptConfig& config) {
   if (!OpenDevices(nullptr, nullptr, &ktrace_handle))
     return;
 
+  // Avoid having the records we need overrun by the time we collect them by
+  // stopping ktrace here. It will get turned back on by "reset".
   mx_status_t status =
     mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0, nullptr);
   if (status != NO_ERROR) {
@@ -632,10 +665,15 @@ void ResetPerf(const IptConfig& config) {
   if (ssize < 0)
     util::LogErrorWithMxStatus("reset perf mode", ssize);
 
-  // TODO(dje): Resume original ktracing?
+  // TODO(dje): Resume original ktracing? Need ability to get old value.
+  // For now set the values to what we need: A later run might still need
+  // the boot time records.
   mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0, nullptr);
+#if 0 // TODO(dje): See rewind comments in InitPerfPreProcess.
   mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_REWIND, 0, nullptr);
-  mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START, 0, nullptr);
+#endif
+  mx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START,
+                    kKtraceGroupMask, nullptr);
 }
 
 } // debugserver namespace

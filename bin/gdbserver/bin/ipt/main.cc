@@ -24,8 +24,6 @@
 #ifdef __x86_64__  // for other arches we're just a stub, TO-128
 
 #include <magenta/device/intel-pt.h>
-#include <magenta/device/ktrace.h>
-#include <magenta/ktrace.h>
 #include <magenta/syscalls.h>
 
 #include "debugger-utils/util.h"
