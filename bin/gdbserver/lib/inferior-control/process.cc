@@ -49,15 +49,12 @@ bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
   if (status != NO_ERROR)
     goto fail;
 
-  // TODO(armansito): Make the inferior inherit the environment (i.e.
-  // launchpad_environ)?
-
   status = launchpad_add_vdso_vmo(lp);
   if (status != NO_ERROR)
     goto fail;
 
-  // Clone root, cwd, and stdin/stdout/stderr
-  launchpad_clone(lp, LP_CLONE_MXIO_ALL);
+  // Clone root, cwd, stdio, and environ.
+  launchpad_clone(lp, LP_CLONE_MXIO_ALL | LP_CLONE_ENVIRON);
 
   *out_lp = lp;
   return true;
