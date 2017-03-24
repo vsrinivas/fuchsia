@@ -119,6 +119,7 @@ class DevUserShellApp
 
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 
+    FTL_LOG(INFO) << "DevUserShell Starting story with id: " << story_id;
     fidl::InterfaceHandle<mozart::ViewOwner> root_module_view;
     story_controller_->Start(root_module_view.NewRequest());
     view_->ConnectView(std::move(root_module_view));
