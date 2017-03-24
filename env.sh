@@ -36,7 +36,7 @@ magenta functions:
   mboot, mbuild, mbuild-if-changed, mcheck, mgo, mrev, mrun, mset, msymbolize
 fuchsia functions:
   fboot, fbuild, fbuild-sysroot, fbuild-sysroot-if-changed, fcheck, fgen,
-  fgen-if-changed, fgo, freboot, frun, fset, fsymbolize, ftrace
+  fgen-if-changed, fgo, finstall, freboot, frun, fset, fsymbolize, ftrace
 END
     return
   fi
@@ -392,13 +392,13 @@ function fset() {
   done
 
   export FUCHSIA_BUILD_DIR="${FUCHSIA_OUT_DIR}/${FUCHSIA_VARIANT}-${FUCHSIA_GEN_TARGET}"
-  export GOPATH="$FUCHSIA_BUILD_DIR"
   export FUCHSIA_BUILD_NINJA="${FUCHSIA_BUILD_DIR}/build.ninja"
   export FUCHSIA_GEN_ARGS_CACHE="${FUCHSIA_BUILD_DIR}/build.gen-args"
   export FUCHSIA_SYSROOT_DIR="${FUCHSIA_OUT_DIR}/sysroot/${FUCHSIA_SYSROOT_TARGET}-fuchsia"
   export FUCHSIA_SYSROOT_REV_CACHE="${FUCHSIA_SYSROOT_DIR}/build.rev"
   export FUCHSIA_SETTINGS="${settings}"
   export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
+  export GOPATH="${FUCHSIA_BUILD_DIR}"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
   if [[ -n "${goma_dir}" ]]; then
@@ -636,6 +636,24 @@ function fboot() {
   fcheck || return 1
 
   mboot "${FUCHSIA_BUILD_DIR}/user.bootfs" "$@"
+}
+
+### finstall: build installer image and run boot server
+
+function finstall-usage() {
+  cat >&2 <<END
+Usage: finstall [extra bootserver args...]
+Builds installer image and runs fuchsia system bootserver with it.
+END
+}
+
+function finstall() {
+  fcheck || return 1
+
+  "${FUCHSIA_SCRIPTS_DIR}/installer/build-installable-userfs.sh" \
+      -b "${FUCHSIA_BUILD_DIR}" \
+    && echo "After netbooting, please run 'install-fuchsia' on the device to complete the installation." \
+    && mboot "${FUCHSIA_BUILD_DIR}/installer.bootfs" "$@"
 }
 
 ### frun: run fuchsia in qemu

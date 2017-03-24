@@ -110,7 +110,7 @@ while getopts ":u:hrdp:b:m:e:a:t:c:x:" opt; do
   esac
 done
 
-if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_magenta" = ""]; then
+if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_magenta" = "" ]; then
   if [ "$release" -eq "$debug" ]; then
     if [ "$debug" -eq 0 ]; then
       debug=1
