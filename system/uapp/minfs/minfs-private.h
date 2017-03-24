@@ -162,6 +162,7 @@ private:
     mx_status_t Link(const char* name, size_t len, fs::Vnode* target) final;
     mx_status_t Truncate(size_t len) final;
     mx_status_t Sync() final;
+    mx_status_t AttachRemote(mx_handle_t) final;
 
     mx_status_t InitVmo();
 

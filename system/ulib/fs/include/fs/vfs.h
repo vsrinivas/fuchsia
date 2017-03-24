@@ -166,6 +166,11 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
+    // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
+    virtual mx_status_t AttachRemote(mx_handle_t h) {
+        return ERR_NOT_SUPPORTED;
+    }
+
     virtual ~Vnode() {};
 
     // The vnode is acting as a mount point for a remote filesystem or device.
@@ -177,11 +182,6 @@ public:
     bool IsDevice() const { return (flags_ & V_FLAG_DEVICE) && IsRemote(); }
     // The vnode is "open elsewhere".
     bool IsBusy() const { return refcount_ > 1; }
-
-    void AttachRemote(mx_handle_t h) {
-        MX_DEBUG_ASSERT(remote_ == MX_HANDLE_INVALID);
-        remote_ = h;
-    }
 
     mx_handle_t DetachRemote() {
         mx_handle_t h = remote_;

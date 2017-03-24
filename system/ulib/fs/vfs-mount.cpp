@@ -57,10 +57,16 @@ mx_status_t Vfs::InstallRemote(Vnode* vn, mx_handle_t h) {
         mtx_unlock(&vfs_lock);
         return ERR_NO_MEMORY;
     }
+    mx_status_t status = vn->AttachRemote(h);
+    if (status != NO_ERROR) {
+        free(mount_point);
+        mtx_unlock(&vfs_lock);
+        return status;
+    }
+
     // Save this node in the list of mounted vnodes
     mount_point->vn = vn;
     list_add_tail(&remote_list, &mount_point->node);
-    vn->AttachRemote(h);
     vn->RefAcquire(); // Acquire the vn to make sure it isn't released from memory.
     mtx_unlock(&vfs_lock);
 

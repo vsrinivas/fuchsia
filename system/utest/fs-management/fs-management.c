@@ -83,6 +83,103 @@ static bool fmount_funmount(void) {
     END_TEST;
 }
 
+// All "parent" filesystems attempt to mount a MinFS ramdisk under malicious
+// conditions.
+bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
+    const char* ramdisk_name = "mount_evil";
+    char ramdisk_path[PATH_MAX];
+    ASSERT_EQ(create_ramdisk(ramdisk_name, ramdisk_path, 512, 1 << 16), 0, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
+    ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+
+    int mountfd = open(mount_path, O_DIRECTORY | O_RDWR);
+    ASSERT_GT(mountfd, 0, "Couldn't open mount point");
+
+    // Everything *would* be perfect to call fmount, when suddenly...
+    ASSERT_EQ(rmdir(mount_path), 0, "");
+    // The directory was unlinked! We can't mount now!
+    ASSERT_NEQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async),
+               NO_ERROR, "");
+    ASSERT_NEQ(fumount(mountfd), NO_ERROR, "");
+    ASSERT_EQ(close(mountfd), 0, "Couldn't close unlinked not-mount point");
+
+    // Re-acquire the ramdisk mount point; it's always consumed...
+    fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+
+    // Okay, okay, let's get a new mount path...
+    mountfd = open(mount_path, O_CREAT | O_RDWR);
+    ASSERT_GT(mountfd, 0, "");
+    // Wait a sec, that was a file, not a directory! We can't mount that!
+    ASSERT_NEQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async),
+               NO_ERROR, "");
+    ASSERT_NEQ(fumount(mountfd), NO_ERROR, "");
+    ASSERT_EQ(close(mountfd), 0, "Couldn't close file not-mount point");
+    ASSERT_EQ(unlink(mount_path), 0, "");
+
+    // Okay, fine, let's mount successfully...
+    fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+    mountfd = open(mount_path, O_DIRECTORY | O_RDWR);
+    ASSERT_GT(mountfd, 0, "Couldn't open mount point");
+    ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async),
+              NO_ERROR, "");
+    // Awesome, that worked. But we shouldn't be able to mount again!
+    fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_NEQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async),
+               NO_ERROR, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
+    ASSERT_EQ(fumount(mountfd), NO_ERROR, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, parentfs_name, strlen(parentfs_name)), "");
+    ASSERT_EQ(close(mountfd), 0, "");
+    ASSERT_EQ(rmdir(mount_path), 0, "");
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
+    return true;
+}
+
+static bool mount_evil_memfs(void) {
+    BEGIN_TEST;
+    const char* mount_path = "/tmp/mount_evil";
+    ASSERT_TRUE(do_mount_evil("memfs", mount_path), "");
+    END_TEST;
+}
+
+static bool mount_evil_minfs(void) {
+    const char* ramdisk_name = "mount_parent";
+    char ramdisk_path[PATH_MAX];
+
+    BEGIN_TEST;
+    ASSERT_EQ(create_ramdisk(ramdisk_name, ramdisk_path, 512, 1 << 16), 0, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
+    const char* parent_path = "/tmp/parent";
+    ASSERT_EQ(mkdir(parent_path, 0666), 0, "");
+    int mountfd = open(parent_path, O_DIRECTORY | O_RDWR);
+    ASSERT_GT(mountfd, 0, "Couldn't open mount point");
+    int ramdiskfd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(ramdiskfd, 0, "");
+    ASSERT_EQ(fmount(ramdiskfd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                    launch_stdio_async),
+              NO_ERROR, "");
+    ASSERT_EQ(close(mountfd), 0, "");
+
+    const char* mount_path = "/tmp/parent/mount_evil";
+    ASSERT_TRUE(do_mount_evil("minfs", mount_path), "");
+
+    ASSERT_EQ(umount(parent_path), 0, "");
+    ASSERT_EQ(rmdir(parent_path), 0, "");
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
+    END_TEST;
+}
+
 static bool mount_remount(void) {
     const char* ramdisk_name = "mount_remount";
     char ramdisk_path[PATH_MAX];
@@ -132,6 +229,8 @@ static bool mount_fsck(void) {
 BEGIN_TEST_CASE(fs_management_tests)
 RUN_TEST_MEDIUM(mount_unmount)
 RUN_TEST_MEDIUM(fmount_funmount)
+RUN_TEST_MEDIUM(mount_evil_memfs)
+RUN_TEST_MEDIUM(mount_evil_minfs)
 RUN_TEST_MEDIUM(mount_remount)
 RUN_TEST_MEDIUM(mount_fsck)
 END_TEST_CASE(fs_management_tests)

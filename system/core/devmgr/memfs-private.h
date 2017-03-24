@@ -39,6 +39,7 @@ public:
     virtual mx_status_t Sync() override;
     ssize_t Ioctl(uint32_t op, const void* in_buf,
                   size_t in_len, void* out_buf, size_t out_len) final;
+    mx_status_t AttachRemote(mx_handle_t h) final;
 
     // To be more specific: Is this vnode connected into the directory hierarchy?
     // VnodeDirs can be unlinked, and this method will subsequently return false.

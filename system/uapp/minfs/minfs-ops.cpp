@@ -1470,4 +1470,14 @@ mx_status_t VnodeMinfs::Sync() {
     return fs_->bc_->Sync();
 }
 
+mx_status_t VnodeMinfs::AttachRemote(mx_handle_t h) {
+    if (!IsDirectory() || IsDeletedDirectory()) {
+        return ERR_NOT_DIR;
+    } else if (IsRemote()) {
+        return ERR_ALREADY_BOUND;
+    }
+    remote_ = h;
+    return NO_ERROR;
+}
+
 } // namespace minfs

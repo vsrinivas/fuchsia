@@ -514,6 +514,16 @@ ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
     }
 }
 
+mx_status_t VnodeMemfs::AttachRemote(mx_handle_t h) {
+    if (!IsDirectory()) {
+        return ERR_NOT_DIR;
+    } else if (IsRemote()) {
+        return ERR_ALREADY_BOUND;
+    }
+    remote_ = h;
+    return NO_ERROR;
+}
+
 mx_status_t memfs_can_unlink(dnode_t* dn) {
     if (!list_is_empty(&dn->children)) {
         // Cannot unlink non-empty directory
