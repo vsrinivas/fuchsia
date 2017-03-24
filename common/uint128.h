@@ -8,8 +8,6 @@
 #include <cstdint>
 #include <initializer_list>
 
-#include <magenta/compiler.h>
-
 namespace bluetooth {
 namespace common {
 
@@ -34,7 +32,9 @@ class UInt128 final {
  private:
   // The raw bytes of the 128-bit integer are stored in little-endian byte order.
   std::array<uint8_t, 16> bytes_;
-} __PACKED;
+};
+
+static_assert(sizeof(UInt128) == 16, "UInt128 must take up exactly 16 bytes");
 
 }  // namespace common
 }  // namespace bluetooth

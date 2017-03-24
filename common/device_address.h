@@ -7,8 +7,6 @@
 #include <array>
 #include <initializer_list>
 
-#include <magenta/compiler.h>
-
 namespace bluetooth {
 namespace common {
 
@@ -34,13 +32,14 @@ class DeviceAddress {
 
   // Comparison operators.
   inline bool operator==(const DeviceAddress& other) const { return bytes_ == other.bytes_; }
-
   inline bool operator!=(const DeviceAddress& other) const { return !(*this == other); }
 
  private:
   // The raw bytes of the BD_ADDR stored in little-endian byte order.
   std::array<uint8_t, 6> bytes_;
-} __PACKED;
+};
+
+static_assert(sizeof(DeviceAddress) == 6, "DeviceAddress must take up exactly 6 bytes");
 
 }  // namespace common
 }  // namespace bluetooth
