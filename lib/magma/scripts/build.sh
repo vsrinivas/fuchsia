@@ -15,7 +15,8 @@ build_dir=$fuchsia_root/out/$build-x86-64
 rm -f $bootfs
 cd $fuchsia_root
 $fuchsia_root/packages/gn/gen.py --modules magma-dev --$build
-$fuchsia_root/buildtools/ninja -C $build_dir && cp $build_dir/user.bootfs $bootfs
+$fuchsia_root/buildtools/ninja -C $build_dir
+cp $build_dir/user.bootfs $bootfs
 
 echo "Recommended bootserver command:"
 echo ""
