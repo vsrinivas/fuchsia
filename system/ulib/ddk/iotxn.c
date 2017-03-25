@@ -6,8 +6,10 @@
 #include <ddk/io-buffer.h>
 #include <ddk/iotxn.h>
 #include <ddk/device.h>
+#include <magenta/assert.h>
 #include <magenta/syscalls.h>
 #include <sys/param.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -25,6 +27,7 @@
 
 #define IOTXN_FLAG_CLONE (1 << 0)
 #define IOTXN_FLAG_FREE  (1 << 1)   // for double-free checking
+#define IOTXN_FLAG_DEAD  (1 << 2)   // buffer is no longer valid
 
 typedef struct iotxn_priv iotxn_priv_t;
 
@@ -39,10 +42,18 @@ struct iotxn_priv {
     // extra data, at the end of this ioxtn_t structure
     size_t extra_size;
 
+    // number of times we have been cloned
+    int clone_count;
+    // the iotxn we were cloned from
+    iotxn_priv_t* orig_txn;
+
     iotxn_t txn; // must be at the end for extra data, only valid if not a clone
 };
 
 #define get_priv(iotxn) containerof(iotxn, iotxn_priv_t, txn)
+
+// This assert will fail if we attempt to access the buffer of a cloned txn after it has been completed
+#define ASSERT_BUFFER_VALID(priv) MX_DEBUG_ASSERT(!(priv->flags & IOTXN_FLAG_DEAD))
 
 static list_node_t free_list = LIST_INITIAL_VALUE(free_list);
 static list_node_t clone_list = LIST_INITIAL_VALUE(clone_list); // free list for clones
@@ -50,6 +61,18 @@ static mtx_t free_list_mutex = MTX_INIT;
 static mtx_t clone_list_mutex = MTX_INIT;
 
 static void iotxn_complete(iotxn_t* txn, mx_status_t status, mx_off_t actual) {
+    iotxn_priv_t* priv = get_priv(txn);
+    if (priv->orig_txn) {
+        priv->orig_txn->clone_count--;
+        MX_DEBUG_ASSERT(priv->orig_txn->clone_count >= 0);
+        // completing a cloned txn can result in the original txn being released
+        // so after this point it is unsafe to reference our buffer
+        // clearing priv->buffer will trigger ASSERT_BUFFER_VALID() if someone attempts
+        // to access the buffer after it has been cleared
+        memset(&priv->buffer, 0, sizeof(priv->buffer));
+        priv->flags |= IOTXN_FLAG_DEAD;
+    }
+
     txn->actual = actual;
     txn->status = status;
     if (txn->complete_cb) {
@@ -60,22 +83,26 @@ static void iotxn_complete(iotxn_t* txn, mx_status_t status, mx_off_t actual) {
 static void iotxn_copyfrom(iotxn_t* txn, void* data, size_t length, size_t offset) {
     iotxn_priv_t* priv = get_priv(txn);
     size_t count = MIN(length, priv->data_size - offset);
+    ASSERT_BUFFER_VALID(priv);
     memcpy(data, io_buffer_virt(&priv->buffer) + offset, count);
 }
 
 static void iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offset) {
     iotxn_priv_t* priv = get_priv(txn);
     size_t count = MIN(length, priv->data_size - offset);
+    ASSERT_BUFFER_VALID(priv);
     memcpy(io_buffer_virt(&priv->buffer) + offset, data, count);
 }
 
 static void iotxn_physmap(iotxn_t* txn, mx_paddr_t* addr) {
     iotxn_priv_t* priv = get_priv(txn);
+    ASSERT_BUFFER_VALID(priv);
     *addr = io_buffer_phys(&priv->buffer);
 }
 
 static void iotxn_mmap(iotxn_t* txn, void** data) {
     iotxn_priv_t* priv = get_priv(txn);
+    ASSERT_BUFFER_VALID(priv);
     *data = io_buffer_virt(&priv->buffer);
 }
 
@@ -124,10 +151,9 @@ static void iotxn_release(iotxn_t* txn) {
         abort();
     }
 
-    if (priv->flags & IOTXN_FLAG_CLONE) {
-        // close our io-buffer's copy of the VMO handle
-        io_buffer_release(&priv->buffer);
+    MX_DEBUG_ASSERT(priv->clone_count == 0);
 
+    if (priv->flags & IOTXN_FLAG_CLONE) {
         mtx_lock(&clone_list_mutex);
         list_add_tail(&clone_list, &txn->node);
         priv->flags |= IOTXN_FLAG_FREE;
@@ -138,6 +164,7 @@ static void iotxn_release(iotxn_t* txn) {
         priv->flags |= IOTXN_FLAG_FREE;
         mtx_unlock(&free_list_mutex);
     }
+    priv->flags &= ~IOTXN_FLAG_DEAD;
 }
 
 static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
@@ -145,24 +172,24 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     iotxn_priv_t* cpriv = iotxn_get_clone(extra_size);
     if (!cpriv) return ERR_NO_MEMORY;
 
-    if (priv->data_size > 0) {
-        // copy data payload metadata to the clone so the api can just work
-        mx_status_t status = io_buffer_init_vmo(&cpriv->buffer, priv->buffer.vmo_handle,
-                                                priv->buffer.offset, IO_BUFFER_RW);
-        if (status < 0) {
-            iotxn_release(&cpriv->txn);
-            return status;
-        }
-    }
+    // Here we directly copy txn's io_buffer rather than cloning it, to reduce overhead
+    // of duplicating and remapping the VMO. This is safe to do as long as we guarantee
+    // that the clone will be completed before the source txn.
+    memcpy(&cpriv->buffer, &priv->buffer, sizeof(cpriv->buffer));
     cpriv->data_size = priv->data_size;
     memcpy(&cpriv->txn, txn, sizeof(iotxn_t));
     cpriv->txn.complete_cb = NULL; // clear the complete cb
+
+    cpriv->orig_txn = priv;
+    priv->clone_count++;
+
     *out = &cpriv->txn;
     return NO_ERROR;
 }
 
 static void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length) {
     iotxn_priv_t* priv = get_priv(txn);
+    ASSERT_BUFFER_VALID(priv);
     io_buffer_cache_op(&priv->buffer, op, offset, length);
 }
 

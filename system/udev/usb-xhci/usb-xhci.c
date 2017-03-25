@@ -233,8 +233,10 @@ static mx_status_t xhci_do_iotxn_queue(xhci_t* xhci, iotxn_t* txn) {
         return ERR_INVALID_ARGS;
     }
     uint64_t frame = data->frame;
-    mx_paddr_t phys_addr;
-    txn->ops->physmap(txn, &phys_addr);
+    mx_paddr_t phys_addr = 0;
+    if (txn->length > 0) {
+        txn->ops->physmap(txn, &phys_addr);
+    }
 
     // save a copy of our protocol data
     usb_protocol_data_t proto_data;
