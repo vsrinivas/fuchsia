@@ -80,6 +80,9 @@ uint32_t CommandBuffer::GetPipeControlFlags()
     // Similarly, including this bit was shown to resolve the emission of an invalid address.
     flags |= MiPipeControl::kIndirectStatePointersDisableBit;
 
+    // This one is needed when l3 caching enabled via mocs (memory object control state).
+    flags |= MiPipeControl::kDcFlushEnableBit;
+
     return flags;
 }
 

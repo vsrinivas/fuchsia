@@ -77,6 +77,7 @@ public:
     static constexpr uint32_t k3dCommandOpcode = 0x2 << 24;
     static constexpr uint32_t k3dCommandSubOpcode = 0 << 16;
 
+    static constexpr uint32_t kDcFlushEnableBit = 1 << 5;
     static constexpr uint32_t kIndirectStatePointersDisableBit = 1 << 9;
     static constexpr uint32_t kPostSyncWriteImmediateBit = 1 << 14;
     static constexpr uint32_t kGenericMediaStateClearBit = 1 << 16;
@@ -88,7 +89,7 @@ public:
     {
         DASSERT((flags &
                  ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisableBit |
-                   kGenericMediaStateClearBit)) == 0);
+                   kGenericMediaStateClearBit | kDcFlushEnableBit)) == 0);
         writer->write_dword(kCommandType | kCommandSubType | k3dCommandOpcode |
                             k3dCommandSubOpcode | (kDwordCount - 2));
         writer->write_dword(flags | kPostSyncWriteImmediateBit | kAddressSpaceGlobalGttBit);

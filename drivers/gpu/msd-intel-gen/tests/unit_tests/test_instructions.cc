@@ -76,7 +76,8 @@ public:
         uint32_t sequence_number = 0xdeadbeef;
         uint32_t flags = MiPipeControl::kCommandStreamerStallEnableBit |
                          MiPipeControl::kIndirectStatePointersDisableBit |
-                         MiPipeControl::kGenericMediaStateClearBit;
+                         MiPipeControl::kGenericMediaStateClearBit |
+                         MiPipeControl::kDcFlushEnableBit;
 
         MiPipeControl::write(ringbuffer_.get(), sequence_number, gpu_addr, flags);
 
