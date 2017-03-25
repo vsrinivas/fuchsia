@@ -8,6 +8,8 @@
 #include "platform_buffer.h"
 #include "registers.h"
 
+constexpr bool kLogEnable = false;
+
 static unsigned int gen_ppat_index(CachingType caching_type)
 {
     switch (caching_type) {
@@ -207,15 +209,27 @@ bool PerProcessGtt::Free(uint64_t addr)
 {
     DASSERT(initialized_);
     DASSERT(allocator_);
+
+    size_t length;
+    if (!allocator_->GetSize(addr, &length))
+        return DRETF(false, "couldn't find length for addr 0x%" PRIx64, addr);
+
+    if (kLogEnable)
+        magma::log(magma::LOG_INFO, "ppgtt free (%p) 0x%" PRIx64 "-0x%" PRIx64 " length 0x%" PRIx64,
+                   this, addr, addr + length - 1, length);
+
     return allocator_->Free(addr);
 }
 
 bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset,
                            uint64_t length, CachingType caching_type)
 {
-    DLOG("InsertEntries addr 0x%lx", addr);
-    DASSERT(initialized_);
+    if (kLogEnable)
+        magma::log(magma::LOG_INFO,
+                   "ppgtt insert (%p) 0x%" PRIx64 "-0x%" PRIx64 " length 0x%" PRIx64, this, addr,
+                   addr + length - 1, length);
 
+    DASSERT(initialized_);
     DASSERT(magma::is_page_aligned(offset));
     DASSERT(magma::is_page_aligned(length));
 
