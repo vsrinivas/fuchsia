@@ -440,11 +440,9 @@ class XdrContext {
   JsonValue* const value_;
 
   // A JSON value to continue processing on when the expected one is
-  // not found in the JSON AST, to avoid value_ becoming null.
-  //
-  // TODO(mesch): This is the only thing in the whole library that
-  // doesn't work in multiple threads. We don't have multiple threads,
-  // but should still fix this here.
+  // not found in the JSON AST, to avoid value_ becoming null. It
+  // needs to be thread local because it is a global that's modified
+  // potentially by every ongoing XDR invocation.
   static thread_local JsonValue null_;
 
   // All Xdr* functions take a XdrContext* and pass it on. We might
