@@ -42,14 +42,6 @@ typedef int (*thread_start_routine)(void *arg);
 typedef void (*thread_trampoline_routine)(void) __NO_RETURN;
 typedef void (*thread_exit_callback_t)(void *arg);
 
-/* thread local storage */
-enum thread_tls_list {
-#ifdef WITH_LIB_USERBOOT
-    TLS_ENTRY_LKUSER,
-#endif
-    MAX_TLS_ENTRY
-};
-
 #define THREAD_FLAG_DETACHED                  (1<<0)
 #define THREAD_FLAG_FREE_STACK                (1<<1)
 #define THREAD_FLAG_FREE_STRUCT               (1<<2)
