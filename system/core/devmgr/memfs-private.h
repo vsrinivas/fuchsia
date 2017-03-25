@@ -197,10 +197,6 @@ mx_status_t memfs_create_directory(const char* path, uint32_t flags);
 mx_status_t memfs_create_from_vmo(const char* path, uint32_t flags,
                                   mx_handle_t vmo, mx_off_t off, mx_off_t len);
 
-// big vfs lock protects lookup and walk operations
-//TODO: finer grained locking
-extern mtx_t vfs_lock;
-
 void memfs_mount(VnodeMemfs* parent, VnodeMemfs* subtree);
 
 __END_CDECLS
