@@ -41,7 +41,7 @@ sets up for a x86-64 build.
 source scripts/env.sh && envprompt && fset x86-64
 ```
 
-Alternatively, you may [use the underlying build scripts](build_system.md).
+Alternatively, you may use the [underlying build scripts](build_system.md).
 
 Run `envhelp` to see other useful shell functions, and `envhelp <function>` for
 specific usage information.
