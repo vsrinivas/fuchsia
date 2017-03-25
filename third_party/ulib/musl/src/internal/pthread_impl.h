@@ -117,6 +117,11 @@ static inline struct pthread* tp_to_pthread(void* tp) {
                                                                     << (32 * (sizeof(long) > 4))})
 #define SIGTIMER_SET ((sigset_t*)(const unsigned long[_NSIG / 8 / sizeof(long)]){0x80000000})
 
+#define PTHREAD_MUTEX_MASK (PTHREAD_MUTEX_RECURSIVE | PTHREAD_MUTEX_ERRORCHECK)
+// The bit used in the recursive and errorchecking cases, which track thread owners.
+#define PTHREAD_MUTEX_OWNED_LOCK_BIT 0x80000000
+#define PTHREAD_MUTEX_OWNED_LOCK_MASK 0x7fffffff
+
 extern void* __pthread_tsd_main[];
 extern volatile size_t __pthread_tsd_size;
 
@@ -125,9 +130,14 @@ static inline pthread_t __pthread_self(void) {
 }
 
 static inline pid_t __thread_get_tid(void) {
-    // TODO(kulakowski) Replace this with the current thread handle's
-    // ID when magenta exposes those.
-    return (pid_t)(intptr_t)__pthread_self();
+    // We rely on the fact that the high bit is not set. For now,
+    // let's incur the cost of this check, until we consider the
+    // userspace handle value representation completely baked.
+    pid_t id = __pthread_self()->mxr_thread.handle;
+    if (id & PTHREAD_MUTEX_OWNED_LOCK_BIT) {
+        __builtin_trap();
+    }
+    return id;
 }
 
 // Signal n (or all, for -1) threads on a pthread_cond_t or cnd_t.
@@ -195,5 +205,3 @@ pthread_t __allocate_thread(const pthread_attr_t* attr)
     __attribute__((nonnull(1))) ATTR_LIBC_VISIBILITY;
 
 pthread_t __init_main_thread(mx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
-
-#define PTHREAD_MUTEX_MASK (PTHREAD_MUTEX_RECURSIVE | PTHREAD_MUTEX_ERRORCHECK)

@@ -6,7 +6,7 @@ int __pthread_mutex_trylock_owner(pthread_mutex_t* m) {
     int tid = __thread_get_tid();
 
     old = atomic_load(&m->_m_lock);
-    own = old & 0x7fffffff;
+    own = old & PTHREAD_MUTEX_OWNED_LOCK_MASK;
     if (own == tid && (type & PTHREAD_MUTEX_MASK) == PTHREAD_MUTEX_RECURSIVE) {
         if ((unsigned)m->_m_count >= INT_MAX)
             return EAGAIN;

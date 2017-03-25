@@ -57,7 +57,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
     int e, clock = c->_c_clock, oldstate, tmp;
 
     if ((m->_m_type != PTHREAD_MUTEX_NORMAL) &&
-        (m->_m_lock & INT_MAX) != __thread_get_tid())
+        (m->_m_lock & PTHREAD_MUTEX_OWNED_LOCK_MASK) != __thread_get_tid())
         return EPERM;
 
     if (ts && ts->tv_nsec >= 1000000000UL)
