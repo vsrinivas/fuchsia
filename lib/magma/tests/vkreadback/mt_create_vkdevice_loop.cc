@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan/vulkan.h"
+#if defined(MAGMA_USE_SHIM)
+#include "vulkan_shim.h"
+#else
+#include <vulkan/vulkan.h>
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -380,16 +384,17 @@ bool VkReadbackTest::Readback()
 
 int main(void)
 {
-    VkReadbackTest app;
+#if defined(MAGMA_USE_SHIM)
+  VulkanShimInit();
+#endif
 
-    if (!app.Initialize())
-        return DRET_MSG(-1, "could not initialize app");
+  VkReadbackTest app;
 
-    if (!app.Exec())
-        return DRET_MSG(-1, "Exec failed");
+  if (!app.Initialize()) return DRET_MSG(-1, "could not initialize app");
 
-    if (!app.Readback())
-        return DRET_MSG(-1, "Readback failed");
+  if (!app.Exec()) return DRET_MSG(-1, "Exec failed");
 
-    return 0;
+  if (!app.Readback()) return DRET_MSG(-1, "Readback failed");
+
+  return 0;
 }
