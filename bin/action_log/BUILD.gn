@@ -1,0 +1,19 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("action_log") {
+  sources = [
+    "action_log_main.cc",
+    "action_log_impl.h",
+    "action_log_impl.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/maxwell/services/action_log",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/rapidjson",
+  ]
+}

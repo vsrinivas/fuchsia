@@ -5,6 +5,7 @@
 group("maxwell") {
   deps = [
     "src/acquirers",
+    "src/action_log",
     "src/agents",
     "src/context_engine",
     "src/launcher",

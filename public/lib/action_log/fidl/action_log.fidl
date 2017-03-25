@@ -1,0 +1,14 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+[ServiceName="maxwell.ActionLogFactory"]
+interface ActionLogFactory {
+  GetActionLog(string module_url, ActionLog& action_log);
+};
+
+interface ActionLog {
+  LogAction(string method, string parameters);
+};
