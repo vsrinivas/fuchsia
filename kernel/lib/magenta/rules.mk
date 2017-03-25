@@ -50,7 +50,6 @@ MODULE_SRCS := \
 
 MODULE_DEPS := \
     lib/dpc \
-    lib/hypervisor \
     lib/mxtl \
     dev/interrupt \
     dev/udisplay \

@@ -10,10 +10,11 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS := \
-	lib/libc \
 	lib/debug \
 	lib/heap \
-    lib/mxtl \
+	lib/hypervisor \
+	lib/libc \
+	lib/mxtl \
 
 
 MODULE_SRCS := \
