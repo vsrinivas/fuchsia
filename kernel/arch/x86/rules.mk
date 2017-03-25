@@ -103,7 +103,9 @@ MODULE_SRCS += \
 	$(SUBARCH_DIR)/uspace_entry.S
 endif
 
-MODULE_DEPS += lib/bitmap
+MODULE_DEPS += \
+	lib/bitmap \
+	lib/hypervisor \
 
 include $(LOCAL_DIR)/toolchain.mk
 

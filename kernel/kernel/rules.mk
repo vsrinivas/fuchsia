@@ -12,7 +12,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_DEPS := \
 	lib/debug \
 	lib/heap \
-	lib/hypervisor \
 	lib/libc \
 	lib/mxtl \
 
