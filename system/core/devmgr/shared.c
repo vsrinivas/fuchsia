@@ -44,7 +44,7 @@ void devmgr_launch_devhost(mx_handle_t job,
                            mx_handle_t hdevice, mx_handle_t hrpc) {
 
     launchpad_t* lp;
-    launchpad_create(job, argv[0], &lp);
+    launchpad_create(job, name, &lp);
     launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, (const char* const*) argv);
 
