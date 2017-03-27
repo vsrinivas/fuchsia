@@ -382,6 +382,8 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
 
     mx_context->arch_id = ARCH_ID_ARM_64;
 
+    mx_context->arch.u.arm_64.esr = arch_context->esr;
+
     // If there was a fatal page fault, fill in the address that caused the fault.
     if (MX_EXCP_FATAL_PAGE_FAULT == report->header.type) {
         mx_context->arch.u.arm_64.far = arch_context->far;

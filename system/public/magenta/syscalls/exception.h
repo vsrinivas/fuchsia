@@ -61,6 +61,7 @@ typedef struct x86_64_exc_data {
 } x86_64_exc_data_t;
 
 typedef struct arm64_exc_data {
+    uint32_t esr;
     uint64_t far;
 } arm64_exc_data_t;
 
