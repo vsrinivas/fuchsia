@@ -49,6 +49,13 @@ void AudioPipe::PrimeRequested(
     FTL_LOG(WARNING) << "multiple prime requests received";
     prime_callback_();
   }
+
+  if (!is_bound()) {
+    // This renderer isn't connected. No need to prime.
+    cbk();
+    return;
+  }
+
   prime_callback_ = cbk;
   SetDemand(kDemandMinPacketsOutstanding);
   // TODO(dalesat): Implement better demand strategy.
