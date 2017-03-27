@@ -70,12 +70,19 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
     mxio_watcher_t* watcher;
 
     DIR* dir;
-    int fd;
-    if ((fd = openat(dirfd, ".", O_RDONLY | O_DIRECTORY)) < 0) {
-        return ERR_IO;
-    }
-    if ((dir = fdopendir(fd)) == NULL) {
-        return ERR_NO_MEMORY;
+
+    {
+        // Limit the scope of 'fd'.  Once we hand it off to 'dir', we are no
+        // longer permitted to use it.
+        int fd;
+        if ((fd = openat(dirfd, ".", O_RDONLY | O_DIRECTORY)) < 0) {
+            return ERR_IO;
+        }
+
+        if ((dir = fdopendir(fd)) == NULL) {
+            close(fd);
+            return ERR_NO_MEMORY;
+        }
     }
 
     mx_status_t status;
