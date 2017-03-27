@@ -18,6 +18,9 @@ VideoFrameSource::VideoFrameSource()
   // Make sure the PTS rate for all packets is nanoseconds.
   SetPtsRate(TimelineRate::NsPerSecond);
 
+  // We accept revised media types.
+  AcceptRevisedMediaType();
+
   status_publisher_.SetCallbackRunner(
       [this](const VideoRenderer::GetStatusCallback& callback,
              uint64_t version) {
@@ -53,9 +56,7 @@ void VideoFrameSource::Bind(
               FLOG_ADDRESS(static_cast<MediaPacketConsumerBase*>(this))));
 }
 
-void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
-                                    const mozart::Size& rgba_buffer_size,
-                                    int64_t reference_time) {
+void VideoFrameSource::AdvanceReferenceTime(int64_t reference_time) {
   MaybeApplyPendingTimelineChange(reference_time);
   MaybePublishEndOfStream();
 
@@ -64,7 +65,10 @@ void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
   DiscardOldPackets();
 
   // TODO(dalesat): Detect starvation.
+}
 
+void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
+                                    const mozart::Size& rgba_buffer_size) {
   if (packet_queue_.empty()) {
     memset(rgba_buffer, 0,
            rgba_buffer_size.width * rgba_buffer_size.height * 4);
@@ -88,16 +92,16 @@ void VideoFrameSource::GetSupportedMediaTypes(
 }
 
 void VideoFrameSource::SetMediaType(MediaTypePtr media_type) {
+  // TODO(dalesat): Shouldn't DCHECK these...need an RCHECK.
   FTL_DCHECK(media_type);
   FTL_DCHECK(media_type->details);
   const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
   FTL_DCHECK(details);
 
-  FLOG(log_channel_, SetMediaType(media_type.Clone()));
-
   converter_.SetMediaType(media_type);
-
   status_publisher_.SendUpdates();
+
+  FLOG(log_channel_, SetMediaType(std::move(media_type)));
 }
 
 void VideoFrameSource::GetPacketConsumer(
@@ -146,6 +150,11 @@ void VideoFrameSource::OnPacketSupplied(
   }
 
   bool packet_queue_was_empty = packet_queue_.empty();
+  if (packet_queue_was_empty) {
+    // Make sure the front of the queue has been checked for revised media
+    // type.
+    CheckForRevisedMediaType(supplied_packet->packet());
+  }
 
   packet_queue_.push(std::move(supplied_packet));
 
@@ -243,6 +252,21 @@ void VideoFrameSource::DiscardOldPackets() {
          packet_queue_.front()->packet()->pts < pts_) {
     // TODO(dalesat): Add hysteresis.
     packet_queue_.pop();
+    // Make sure the front of the queue has been checked for revised media
+    // type.
+    CheckForRevisedMediaType(packet_queue_.front()->packet());
+  }
+}
+
+void VideoFrameSource::CheckForRevisedMediaType(const MediaPacketPtr& packet) {
+  FTL_DCHECK(packet);
+
+  const MediaTypePtr& revised_media_type = packet->revised_media_type;
+
+  if (revised_media_type && revised_media_type->details &&
+      revised_media_type->details->get_video()) {
+    converter_.SetMediaType(revised_media_type);
+    status_publisher_.SendUpdates();
   }
 }
 

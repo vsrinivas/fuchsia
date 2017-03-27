@@ -51,8 +51,9 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   FTL_DCHECK(av_frame);
   FTL_DCHECK(allocator);
 
-  // TODO(dalesat): Need to send type changes downstream.
-  frame_layout_.Update(av_codec_context);
+  if (frame_layout_.Update(av_codec_context)) {
+    revised_stream_type_ = AvCodecContext::GetStreamType(av_codec_context);
+  }
 
   VideoStreamType::Extent visible_size(av_codec_context.width,
                                        av_codec_context.height);
@@ -138,9 +139,15 @@ PacketPtr FfmpegVideoDecoder::CreateOutputPacket(const AVFrame& av_frame,
   // Recover the pts deposited in Decode.
   set_next_pts(av_frame.reordered_opaque);
 
-  return DecoderPacket::Create(av_frame.reordered_opaque, pts_rate(),
-                               av_frame.key_frame,
-                               av_buffer_ref(av_frame.buf[0]));
+  PacketPtr packet =
+      DecoderPacket::Create(av_frame.reordered_opaque, pts_rate(),
+                            av_frame.key_frame, av_buffer_ref(av_frame.buf[0]));
+
+  if (revised_stream_type_) {
+    packet->SetRevisedStreamType(std::move(revised_stream_type_));
+  }
+
+  return packet;
 }
 
 }  // namespace media

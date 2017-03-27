@@ -31,6 +31,7 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
 
  private:
   FfmpegVideoFrameLayout frame_layout_;
+  std::unique_ptr<StreamType> revised_stream_type_;
 
   // TODO(dalesat): For investigation only...remove these three fields.
   bool first_frame_ = true;

@@ -54,8 +54,7 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
                                   const mozart::SceneUpdatePtr& update);
 
     // Draws the video texture image and returns its resource.
-    mozart::ResourcePtr DrawVideoTexture(const mozart::Size& size,
-                                         int64_t presentation_time);
+    mozart::ResourcePtr DrawVideoTexture(const mozart::Size& size);
 
     mozart::BufferProducer buffer_producer_;
     std::shared_ptr<VideoFrameSource> video_frame_source_;

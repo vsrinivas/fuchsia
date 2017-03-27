@@ -39,20 +39,27 @@ class VideoFrameSource : public MediaPacketConsumerBase,
 
   void UnregisterView(mozart::BaseView* view) { views_.erase(view); }
 
+  // Advances reference time to the indicated value. This ensures that
+  // |GetSize| and |GetRgbaFrame| refer to the video frame appropriate to
+  // the specified reference time.
+  void AdvanceReferenceTime(int64_t reference_time);
+
+  // Returns the current video size.
   mozart::Size GetSize() { return converter_.GetSize(); }
 
+  // Determines if views should animate because presentation time is
+  // progressing.
   bool views_should_animate() {
     return current_timeline_function_.subject_delta() != 0 ||
            pending_timeline_function_.subject_delta() != 0;
   }
 
+  // Gets status (see |VideoRenderer::GetStatus|).
   void GetStatus(uint64_t version_last_seen,
                  const VideoRenderer::GetStatusCallback& callback);
 
-  // Gets an RGBA video frame corresponding to the specified reference time.
-  void GetRgbaFrame(uint8_t* rgba_buffer,
-                    const mozart::Size& rgba_buffer_size,
-                    int64_t reference_time);
+  // Gets an RGBA video frame corresponding to the current reference time.
+  void GetRgbaFrame(uint8_t* rgba_buffer, const mozart::Size& rgba_buffer_size);
 
  private:
   // MediaRenderer implementation.
@@ -94,6 +101,9 @@ class VideoFrameSource : public MediaPacketConsumerBase,
 
   // Discards packets that are older than pts_.
   void DiscardOldPackets();
+
+  // Checks |packet| for a revised media type and updates state accordingly.
+  void CheckForRevisedMediaType(const MediaPacketPtr& packet);
 
   // Clears the pending timeline function and calls its associated callback
   // with the indicated completed status.

@@ -71,6 +71,9 @@ void VideoRendererImpl::View::OnDraw() {
 
   auto update = mozart::SceneUpdate::New();
 
+  video_frame_source_->AdvanceReferenceTime(
+      frame_tracker().frame_info().presentation_time);
+
   const mozart::Size& view_size = *properties()->view_layout->size;
   mozart::Size video_size = video_frame_source_->GetSize();
 
@@ -121,8 +124,7 @@ mozart::NodePtr VideoRendererImpl::View::MakeVideoNode(
     return mozart::Node::New();
   }
 
-  mozart::ResourcePtr vid_resource = DrawVideoTexture(
-      video_size, frame_tracker().frame_info().presentation_time);
+  mozart::ResourcePtr vid_resource = DrawVideoTexture(video_size);
   FTL_DCHECK(vid_resource);
   update->resources.insert(kVideoImageResourceId, std::move(vid_resource));
 
@@ -141,8 +143,7 @@ mozart::NodePtr VideoRendererImpl::View::MakeVideoNode(
 }
 
 mozart::ResourcePtr VideoRendererImpl::View::DrawVideoTexture(
-    const mozart::Size& size,
-    int64_t presentation_time) {
+    const mozart::Size& size) {
   std::unique_ptr<mozart::ProducedBufferHolder> buffer_holder =
       buffer_producer_.ProduceBuffer(size.height * size.width *
                                      sizeof(uint32_t));
@@ -158,8 +159,7 @@ mozart::ResourcePtr VideoRendererImpl::View::DrawVideoTexture(
   if (buffer == nullptr) {
     FTL_LOG(ERROR) << "Failed to map vmo for video frame";
   } else {
-    video_frame_source_->GetRgbaFrame(static_cast<uint8_t*>(buffer), size,
-                                      presentation_time);
+    video_frame_source_->GetRgbaFrame(static_cast<uint8_t*>(buffer), size);
   }
 
   buffer_holder->SetReadySignal();
