@@ -538,6 +538,7 @@ void DumpAllAspaces(bool verbose) {
         a.Dump(verbose);
 }
 
+// TODO(dbort): Use GetMemoryUsage()
 size_t VmAspace::AllocatedPages() const {
     DEBUG_ASSERT(magic_ == MAGIC);
 

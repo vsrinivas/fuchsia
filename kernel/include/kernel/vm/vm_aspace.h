@@ -66,6 +66,20 @@ public:
     // returns false. Returns true otherwise.
     bool EnumerateChildren(VmEnumerator* ve);
 
+    // A collection of memory usage counts.
+    struct vm_usage_t {
+        // A count of pages covered by VmMapping ranges.
+        size_t mapped_pages;
+
+        // A count of allocated pages. A page is considered allocated if a
+        // VmMapping covers a range of a VmObject that contains that page, and
+        // that page has physical memory allocated to it.
+        size_t allocated_pages;
+    };
+
+    // Counts memory usage under the VmAspace.
+    status_t GetMemoryUsage(vm_usage_t* usage);
+
     size_t AllocatedPages() const;
 
     // Convenience method for traversing the tree of VMARs to find the deepest

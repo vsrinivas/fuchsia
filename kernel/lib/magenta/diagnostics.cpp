@@ -270,6 +270,34 @@ void KillProcess(mx_koid_t id) {
     pd->Kill();
 }
 
+namespace {
+// Counts memory usage under a VmAspace.
+class VmCounter final : public VmEnumerator {
+public:
+    bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
+                     uint depth) override {
+        if (map->IsAliveLocked()) {
+            usage.mapped_pages += map->size() / PAGE_SIZE;
+            usage.allocated_pages += map->vmo()->AllocatedPagesInRange(
+                map->object_offset(), map->size());
+        }
+        return true;
+    }
+
+    VmAspace::vm_usage_t usage = {};
+};
+} // namespace
+
+status_t VmAspace::GetMemoryUsage(vm_usage_t* usage) {
+    VmCounter vc;
+    if (!EnumerateChildren(&vc)) {
+        *usage = {};
+        return ERR_INTERNAL;
+    }
+    *usage = vc.usage;
+    return NO_ERROR;
+}
+
 void DumpProcessAddressSpace(mx_koid_t id) {
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {

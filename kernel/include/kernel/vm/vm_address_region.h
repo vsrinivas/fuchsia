@@ -104,6 +104,10 @@ public:
     uint32_t flags() const { return flags_; }
     const mxtl::RefPtr<VmAspace>& aspace() const { return aspace_; }
 
+    // Returns true if the instance is alive and reporting information that
+    // reflects the address space layout. |aspace()->lock()| must be held.
+    bool IsAliveLocked() const;
+
     // Recursively compute the number of allocated pages within this region
     virtual size_t AllocatedPages() const;
 
@@ -391,7 +395,7 @@ public:
     // Accessors for VMO-mapping state
     uint arch_mmu_flags() const { return arch_mmu_flags_; }
     uint64_t object_offset() const { return object_offset_; }
-    mxtl::RefPtr<VmObject> vmo() { return object_; };
+    mxtl::RefPtr<VmObject> vmo() const { return object_; };
 
     // Map in pages from the underlying vm object, optionally committing pages as it goes
     status_t MapRange(size_t offset, size_t len, bool commit);

@@ -52,6 +52,11 @@ VmAddressRegionOrMapping::~VmAddressRegionOrMapping() {
     magic_ = 0;
 }
 
+bool VmAddressRegionOrMapping::IsAliveLocked() const {
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    return state_ == LifeCycleState::ALIVE;
+}
+
 mxtl::RefPtr<VmAddressRegion> VmAddressRegionOrMapping::as_vm_address_region() {
     if (is_mapping()) {
         return nullptr;
