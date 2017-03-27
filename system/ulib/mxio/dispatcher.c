@@ -29,7 +29,8 @@ typedef struct {
     list_node_t node;
     mx_handle_t h;
     uint32_t flags;
-    void* cb;
+    mxio_dispatcher_cb_t cb;
+    void* func;
     void* cookie;
 } handler_t;
 
@@ -41,7 +42,7 @@ struct mxio_dispatcher {
     mtx_t lock;
     list_node_t list;
     mx_handle_t ioport;
-    mxio_dispatcher_cb_t cb;
+    mxio_dispatcher_cb_t default_cb;
     thrd_t t;
 };
 
@@ -52,7 +53,7 @@ static void mxio_dispatcher_destroy(mxio_dispatcher_t* md) {
 
 static void destroy_handler(mxio_dispatcher_t* md, handler_t* handler, bool need_close_cb) {
     if (need_close_cb) {
-        md->cb(0, handler->cb, handler->cookie);
+        handler->cb(0, handler->func, handler->cookie);
     }
 
     mx_handle_close(handler->h);
@@ -122,7 +123,7 @@ static int mxio_dispatcher_thread(void* _md) {
         }
 #endif
         if (packet.signal.observed & MX_CHANNEL_READABLE) {
-            if ((r = md->cb(handler->h, handler->cb, handler->cookie)) != 0) {
+            if ((r = handler->cb(handler->h, handler->func, handler->cookie)) != 0) {
                 if (r == ERR_DISPATCHER_NO_WORK) {
                     printf("mxio: dispatcher found no work to do!\n");
                 } else {
@@ -163,7 +164,7 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
         free(md);
         return status;
     }
-    md->cb = cb;
+    md->default_cb = cb;
     *out = md;
     return NO_ERROR;
 }
@@ -190,7 +191,13 @@ void mxio_dispatcher_run(mxio_dispatcher_t* md) {
     mxio_dispatcher_thread(md);
 }
 
-mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, void* cookie) {
+mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* func, void* cookie) {
+    return mxio_dispatcher_add_etc(md, h, md->default_cb, func, cookie);
+}
+
+mx_status_t mxio_dispatcher_add_etc(mxio_dispatcher_t* md, mx_handle_t h,
+                                    mxio_dispatcher_cb_t cb,
+                                    void* func, void* cookie) {
     handler_t* handler;
     mx_status_t r;
 
@@ -200,6 +207,7 @@ mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, 
     handler->h = h;
     handler->flags = 0;
     handler->cb = cb;
+    handler->func = func;
     handler->cookie = cookie;
 
     mtx_lock(&md->lock);

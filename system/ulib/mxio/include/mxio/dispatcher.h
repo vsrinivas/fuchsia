@@ -11,7 +11,7 @@ __BEGIN_CDECLS
 
 typedef struct mxio_dispatcher mxio_dispatcher_t;
 
-typedef mx_status_t (*mxio_dispatcher_cb_t)(mx_handle_t h, void* cb, void* cookie);
+typedef mx_status_t (*mxio_dispatcher_cb_t)(mx_handle_t h, void* func, void* cookie);
 
 // Create a dispatcher that will process messages from many channels.
 //
@@ -32,8 +32,14 @@ mx_status_t mxio_dispatcher_start(mxio_dispatcher_t* md, const char* name);
 // run the dispatcher loop on the current thread, never to return
 void mxio_dispatcher_run(mxio_dispatcher_t* md);
 
-// add a pipe and handler to a dispatcher
-mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, void* cookie);
+// add a channel to the dispatcher, using the default callback
+mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h,
+                                void* func, void* cookie);
+
+// add a channel to the dispatcher, using a specified callback
+mx_status_t mxio_dispatcher_add_etc(mxio_dispatcher_t* md, mx_handle_t h,
+                                    mxio_dispatcher_cb_t callback,
+                                    void* func, void* cookie);
 
 // dispatcher callback return code that there were no messages to read
 #define ERR_DISPATCHER_NO_WORK (-9999)
