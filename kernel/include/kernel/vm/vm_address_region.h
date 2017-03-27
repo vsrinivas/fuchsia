@@ -52,6 +52,29 @@ class VmAspace;
 class VmAddressRegion;
 class VmMapping;
 
+// Interface for walking a VmAspace-rooted VmAddressRegion/VmMapping tree.
+// Override this class and pass an instance to VmAspace::EnumerateChildren().
+class VmEnumerator {
+public:
+    // VmAspace::EnumerateChildren() will call the On* methods in depth-first
+    // pre-order. If any call returns false, the traversal will stop. The root
+    // VmAspace's lock will be held during the entire traversal.
+    // |depth| will be 0 for the root VmAddressRegion.
+    virtual bool OnVmAddressRegion(const VmAddressRegion* vmar, uint depth) {
+        return true;
+    }
+
+    // |vmar| is the parent of |map|.
+    virtual bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
+                             uint depth) {
+        return true;
+    }
+
+protected:
+    VmEnumerator() = default;
+    ~VmEnumerator() = default;
+};
+
 // A VmAddressRegion represents a contiguous region of the virtual address
 // space.  It is partitioned by non-overlapping children of the following types:
 // 1) child VmAddressRegion
@@ -220,6 +243,9 @@ protected:
     explicit VmAddressRegion(VmAspace& kernel_aspace);
     // Count the allocated pages, caller must be holding the aspace lock
     size_t AllocatedPagesLocked() const override;
+    // Used to implement VmAspace::EnumerateChildren.
+    // |aspace_->lock()| must be held.
+    virtual bool EnumerateChildrenLocked(VmEnumerator* ve, uint depth);
 
     friend class VmMapping;
     // Remove *region* from the subregion list
@@ -351,6 +377,10 @@ public:
 
     void Activate() override {
         return;
+    }
+
+    bool EnumerateChildrenLocked(VmEnumerator* ve, uint depth) override {
+        return false;
     }
 };
 

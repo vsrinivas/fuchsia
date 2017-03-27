@@ -523,6 +523,14 @@ void VmAspace::Dump(bool verbose) const {
         root_vmar_->Dump(1, verbose);
 }
 
+bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
+    AutoLock a(&lock_);
+    if (!ve->OnVmAddressRegion(root_vmar_.get(), 0)) {
+        return false;
+    }
+    return root_vmar_->EnumerateChildrenLocked(ve, 1);
+}
+
 void DumpAllAspaces(bool verbose) {
     AutoLock a(&aspace_list_lock);
 

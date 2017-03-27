@@ -480,6 +480,27 @@ vaddr_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint a
     return LinearRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
 }
 
+bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
+    DEBUG_ASSERT(magic_ == kMagic);
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    for (auto& child : subregions_) {
+        if (child.is_mapping()) {
+            if (!ve->OnVmMapping(child.as_vm_mapping().get(), this, depth)) {
+                return false;
+            }
+        } else {
+            VmAddressRegion* vmar = child.as_vm_address_region().get();
+            if (!ve->OnVmAddressRegion(vmar, depth)) {
+                return false;
+            }
+            if (!vmar->EnumerateChildrenLocked(ve, depth + 1)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 void VmAddressRegion::Dump(uint depth, bool verbose) const {
     DEBUG_ASSERT(magic_ == kMagic);
     for (uint i = 0; i < depth; ++i) {

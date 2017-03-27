@@ -61,6 +61,11 @@ public:
 
     void Dump(bool verbose) const;
 
+    // Traverses the VM tree rooted at this node, in depth-first pre-order. If
+    // any methods of |ve| return false, the traversal stops and this method
+    // returns false. Returns true otherwise.
+    bool EnumerateChildren(VmEnumerator* ve);
+
     size_t AllocatedPages() const;
 
     // Convenience method for traversing the tree of VMARs to find the deepest
