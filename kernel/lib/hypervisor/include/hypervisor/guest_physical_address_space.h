@@ -17,6 +17,7 @@ public:
 
     ~GuestPhysicalAddressSpace();
 
+    size_t size() const { return guest_phys_mem_->size(); }
 #if ARCH_X86_64
     paddr_t Pml4Address() { return paspace_.pt_phys; }
 #endif

@@ -21,8 +21,6 @@
 
 class VmObject;
 
-__BEGIN_CDECLS
-
 /* Create a hypervisor context.
  * This setups up the CPUs to allow a hypervisor to be run.
  */
@@ -37,5 +35,3 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
 /* Start a guest within a guest context.
  */
 status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context);
-
-__END_CDECLS

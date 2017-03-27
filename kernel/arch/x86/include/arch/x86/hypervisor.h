@@ -59,9 +59,13 @@ public:
 
     paddr_t Pml4Address();
     VmcsPerCpu* PerCpu();
+    status_t set_cr3(uintptr_t guest_cr3);
+    uintptr_t cr3() { return cr3_; }
+
     status_t Start();
 
 private:
+    uintptr_t cr3_ = UINTPTR_MAX;
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     mxtl::Array<VmcsPerCpu> per_cpus_;
 
@@ -70,3 +74,8 @@ private:
 
 using HypervisorContext = VmxonContext;
 using GuestContext = VmcsContext;
+
+
+/* Set the CR3 of the guest context.
+ */
+status_t x86_guest_set_cr3(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_cr3);

@@ -21,6 +21,10 @@ public:
     mx_obj_type_t get_type() const { return MX_OBJ_TYPE_GUEST; }
     mx_status_t Start();
 
+#if ARCH_X86_64
+    mx_status_t set_cr3(uintptr_t guest_cr3);
+#endif // ARCH_X86_64
+
 private:
     mxtl::Canary<mxtl::magic("GSTD")> canary_;
     mxtl::RefPtr<HypervisorDispatcher> hypervisor_;

@@ -72,10 +72,14 @@
 #define VMCS_XX_GUEST_CR0                           0x6800      /* Guest CR0 */
 #define VMCS_XX_GUEST_CR3                           0x6802      /* Guest CR3 */
 #define VMCS_XX_GUEST_CR4                           0x6804      /* Guest CR4 */
+#define VMCS_XX_GUEST_GDTR_BASE                     0x6816      /* Guest GDTR base */
+#define VMCS_XX_GUEST_IDTR_BASE                     0x6818      /* Guest IDTR base */
 #define VMCS_XX_GUEST_RSP                           0x681c      /* Guest RSP */
 #define VMCS_XX_GUEST_RIP                           0x681e      /* Guest RIP */
 #define VMCS_XX_GUEST_RFLAGS                        0x6820      /* Guest RFLAGS */
 #define VMCS_XX_GUEST_PENDING_DEBUG_EXCEPTIONS      0x6822      /* Guest pending debug exceptions */
+#define VMCS_XX_GUEST_IA32_SYSENTER_ESP             0x6824      /* Guest SYSENTER ESP */
+#define VMCS_XX_GUEST_IA32_SYSENTER_EIP             0x6826      /* Guest SYSENTER EIP */
 #define VMCS_XX_HOST_CR0                            0x6c00      /* Host CR0 */
 #define VMCS_XX_HOST_CR3                            0x6c02      /* Host CR3 */
 #define VMCS_XX_HOST_CR4                            0x6c04      /* Host CR4 */
@@ -125,25 +129,19 @@
 /* VMCS_32_EXIT_REASON values */
 #define VMCS_32_EXIT_REASON_BASIC_MASK              0xffff
 
-/* VMCS_32_GUEST_ACCESS_RIGHTS flags */
+/* VMCS_32_GUEST_XX_ACCESS_RIGHTS flags */
+#define VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE     (1u << 16)
 // See Volume 3, Section 24.4.1 for access rights format.
-#define VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE           (1u << 16)
-
-#define VMCS_GUEST_ACCESS_RIGHTS_64BIT_CS           (1u << 13)
-#define VMCS_GUEST_ACCESS_RIGHTS_SEGMENT_PRESENT    (1u << 7)
-#define VMCS_GUEST_ACCESS_RIGHTS_DPL_00             (0u << 5)
-#define VMCS_GUEST_ACCESS_RIGHTS_NON_SYSTEM_SEGMENT (1u << 4)
-#define VMCS_GUEST_ACCESS_RIGHTS_SYSTEM_SEGMENT     (0u << 4)
-
-// See Volume 1, Section 3.4.5.1 for valid non-system selector types.
-#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_ACCESSED   (1u << 8)
-#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_READ       (1u << 9)
-#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_CONFORMING (1u << 10)
-#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_EXECUTE    (1u << 11)
-
-// See Volume 1, Section 3.5 for valid system selectors types.
-#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_TSS_64BIT     (9u << 8)
-#define VMCS_GUEST_ACCESS_RIGHTS_TYPE_TSS_BUSY      (1u << 9)
+#define VMCS_32_GUEST_XX_ACCESS_RIGHTS_TYPE_A       (1u << 0)
+#define VMCS_32_GUEST_XX_ACCESS_RIGHTS_TYPE_W       (1u << 1)
+#define VMCS_32_GUEST_XX_ACCESS_RIGHTS_TYPE_E       (1u << 2)
+#define VMCS_32_GUEST_XX_ACCESS_RIGHTS_TYPE_CODE    (1u << 3)
+// See Volume 3, Section 3.4.5.1 for valid non-system selector types.
+#define VMCS_32_GUEST_XX_ACCESS_RIGHTS_S            (1u << 4)
+#define VMCS_32_GUEST_XX_ACCESS_RIGHTS_P            (1u << 7)
+#define VMCS_32_GUEST_XX_ACCESS_RIGHTS_L            (1u << 13)
+// See Volume 3, Section 3.5 for valid system selectors types.
+#define VMCS_32_GUEST_TR_ACCESS_RIGHTS_TSS_BUSY     (11u << 0)
 
 
 /* Stores VMX info from the VMX basic MSR. */
@@ -205,7 +203,7 @@ public:
     status_t Init(const VmxInfo& vmx_info) override;
     status_t Clear();
     status_t Setup(paddr_t pml4_address);
-    status_t Launch();
+    status_t Launch(uintptr_t guest_cr3);
 
 private:
     VmxPage msr_bitmaps_page_;

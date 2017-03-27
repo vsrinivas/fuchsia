@@ -561,30 +561,30 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     }
     vmwrite(VMCS_XX_GUEST_CR4, cr4);
 
-    vmwrite(VMCS_32_GUEST_CS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_64BIT_CS |
-                                            VMCS_GUEST_ACCESS_RIGHTS_SEGMENT_PRESENT |
-                                            VMCS_GUEST_ACCESS_RIGHTS_DPL_00 |
-                                            VMCS_GUEST_ACCESS_RIGHTS_NON_SYSTEM_SEGMENT |
-                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_EXECUTE |
-                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_READ |
-                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_CONFORMING |
-                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_CS_ACCESSED);
+    vmwrite(VMCS_32_GUEST_CS_ACCESS_RIGHTS,
+            VMCS_32_GUEST_XX_ACCESS_RIGHTS_TYPE_A |
+            VMCS_32_GUEST_XX_ACCESS_RIGHTS_TYPE_W |
+            VMCS_32_GUEST_XX_ACCESS_RIGHTS_TYPE_E |
+            VMCS_32_GUEST_XX_ACCESS_RIGHTS_TYPE_CODE |
+            VMCS_32_GUEST_XX_ACCESS_RIGHTS_S |
+            VMCS_32_GUEST_XX_ACCESS_RIGHTS_P |
+            VMCS_32_GUEST_XX_ACCESS_RIGHTS_L);
 
-    vmwrite(VMCS_32_GUEST_TR_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_SEGMENT_PRESENT |
-                                            VMCS_GUEST_ACCESS_RIGHTS_DPL_00 |
-                                            VMCS_GUEST_ACCESS_RIGHTS_SYSTEM_SEGMENT |
-                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_TSS_64BIT |
-                                            VMCS_GUEST_ACCESS_RIGHTS_TYPE_TSS_BUSY);
+    vmwrite(VMCS_32_GUEST_TR_ACCESS_RIGHTS,
+            VMCS_32_GUEST_TR_ACCESS_RIGHTS_TSS_BUSY |
+            VMCS_32_GUEST_XX_ACCESS_RIGHTS_P);
 
     // Disable all other segment selectors until we have a guest that uses them.
-    vmwrite(VMCS_32_GUEST_SS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
-    vmwrite(VMCS_32_GUEST_DS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
-    vmwrite(VMCS_32_GUEST_ES_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
-    vmwrite(VMCS_32_GUEST_FS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
-    vmwrite(VMCS_32_GUEST_GS_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
-    vmwrite(VMCS_32_GUEST_LDTR_ACCESS_RIGHTS, VMCS_GUEST_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_SS_ACCESS_RIGHTS, VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_DS_ACCESS_RIGHTS, VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_ES_ACCESS_RIGHTS, VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_FS_ACCESS_RIGHTS, VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_GS_ACCESS_RIGHTS, VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
+    vmwrite(VMCS_32_GUEST_LDTR_ACCESS_RIGHTS, VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
 
+    vmwrite(VMCS_XX_GUEST_GDTR_BASE, 0);
     vmwrite(VMCS_32_GUEST_GDTR_LIMIT, 0);
+    vmwrite(VMCS_XX_GUEST_IDTR_BASE, 0);
     vmwrite(VMCS_32_GUEST_IDTR_LIMIT, 0);
 
     // Set all reserved RFLAGS bits to their correct values
@@ -593,6 +593,11 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmwrite(VMCS_32_GUEST_ACTIVITY_STATE, 0);
     vmwrite(VMCS_32_GUEST_INTERRUPTIBILITY_STATE, 0);
     vmwrite(VMCS_XX_GUEST_PENDING_DEBUG_EXCEPTIONS, 0);
+
+    // From Volume 3, Section 26.3.1.1: The IA32_SYSENTER_ESP field and the
+    // IA32_SYSENTER_EIP field must each contain a canonical address.
+    vmwrite(VMCS_XX_GUEST_IA32_SYSENTER_ESP, 0);
+    vmwrite(VMCS_XX_GUEST_IA32_SYSENTER_EIP, 0);
 
     // We begin execution at the base of guest logical address space. It's up
     // to the guest to then setup the environment correctly.
@@ -609,7 +614,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     return NO_ERROR;
 }
 
-status_t VmcsPerCpu::Launch() {
+status_t VmcsPerCpu::Launch(uintptr_t guest_cr3) {
     AutoVmcsLoad vmcs_load(&page_);
     VmxHostState host_state;
     if (vmx_host_save(&host_state)) {
@@ -627,6 +632,8 @@ status_t VmcsPerCpu::Launch() {
     vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
     // RSP is used to store host state – save each time.
     vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state));
+
+    vmwrite(VMCS_XX_GUEST_CR3, guest_cr3);
 
     status_t status = vmlaunch();
     if (status != NO_ERROR) {
@@ -696,13 +703,22 @@ VmcsPerCpu* VmcsContext::PerCpu() {
     return &per_cpus_[arch_curr_cpu_num()];
 }
 
+status_t VmcsContext::set_cr3(uintptr_t guest_cr3) {
+    if (guest_cr3 > gpas_->size() - PAGE_SIZE)
+        return ERR_INVALID_ARGS;
+    cr3_ = guest_cr3;
+    return NO_ERROR;
+}
+
 static int vmcs_launch(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
-    return per_cpu->Launch();
+    return per_cpu->Launch(context->cr3());
 }
 
 status_t VmcsContext::Start() {
+    if (cr3_ == UINTPTR_MAX)
+        return ERR_BAD_STATE;
     return percpu_exec(vmcs_launch, this);
 }
 
@@ -730,8 +746,12 @@ status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
 }
 
 status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
-                              mxtl::unique_ptr<GuestContext>* context) {
+                           mxtl::unique_ptr<GuestContext>* context) {
     return VmcsContext::Create(guest_phys_mem, context);
+}
+
+status_t x86_guest_set_cr3(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_cr3) {
+    return context->set_cr3(guest_cr3);
 }
 
 status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context) {
