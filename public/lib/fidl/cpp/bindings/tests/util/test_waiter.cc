@@ -9,9 +9,10 @@
 // TODO(vardhan): Make this AsyncWaiter impl use thread-local storage so that
 // tests using multiple threads can work.
 
-#include <unordered_set>
+#include <map>
 
-#include <mx/waitset.h>
+#include <magenta/syscalls/port.h>
+#include <mx/port.h>
 
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
@@ -22,14 +23,16 @@ namespace fidl {
 namespace {
 
 struct WaitHolder {
+  mx_handle_t handle;
   FidlAsyncWaitCallback callback;
   void* context;
 };
 
 // TODO(vardhan): Probably shouldn't have global objects with non-trivial
 // constructors. Clean this up.
-static std::unordered_set<struct WaitHolder*> g_all_holders;
-static mx::waitset* g_waiting_set = nullptr;
+static FidlAsyncWaitID g_next_key = 1;
+static std::map<uint64_t, struct WaitHolder*> g_holders;
+static mx::port* g_port = nullptr;
 
 // This implementation of AsyncWait completely disregards the supplied timeout.
 FidlAsyncWaitID AsyncWait(mx_handle_t handle,
@@ -37,21 +40,22 @@ FidlAsyncWaitID AsyncWait(mx_handle_t handle,
                           mx_time_t /* timeout */,
                           FidlAsyncWaitCallback callback,
                           void* context) {
-  FTL_CHECK(g_waiting_set);
-  struct WaitHolder* holder = new WaitHolder{callback, context};
-  auto result = g_waiting_set->add(reinterpret_cast<uint64_t>(holder), handle,
-                                   signals);
+  FTL_CHECK(g_port);
+  FidlAsyncWaitID wait_id = g_next_key++;
+  struct WaitHolder* holder = new WaitHolder{handle, callback, context};
+  auto result = mx_object_wait_async(handle, g_port->get(), wait_id, signals,
+                                     MX_WAIT_ASYNC_ONCE);
   FTL_CHECK(result == NO_ERROR);
-  g_all_holders.insert(holder);
-  return reinterpret_cast<FidlAsyncWaitID>(holder);
+  g_holders.emplace(wait_id, holder);
+  return wait_id;
 }
 
 void CancelWait(FidlAsyncWaitID wait_id) {
-  FTL_DCHECK(g_waiting_set);
-  auto result = g_waiting_set->remove(reinterpret_cast<uint64_t>(wait_id));
+  FTL_DCHECK(g_port);
+  auto* holder = g_holders[wait_id];
+  auto result = mx_handle_cancel(holder->handle, wait_id, MX_CANCEL_KEY);
   FTL_CHECK(result == NO_ERROR);
-  auto* holder = reinterpret_cast<WaitHolder*>(wait_id);
-  g_all_holders.erase(holder);
+  g_holders.erase(wait_id);
   delete holder;
 }
 
@@ -62,47 +66,50 @@ static constexpr FidlAsyncWaiter kDefaultAsyncWaiter = {AsyncWait, CancelWait};
 namespace test {
 
 void WaitForAsyncWaiter() {
-  mx_waitset_result_t results[10];
-  mx_status_t result = NO_ERROR;
-  uint32_t num_results = arraysize(results);
-  // TODO(vardhan): Once mx_waitset_wait() has been fixed, update our usage
-  // here.
-  result = g_waiting_set->wait(0, results, &num_results);
-  if (result == NO_ERROR) {
-    if (num_results == 0)
-      return;
-    for (uint32_t i = 0; i < num_results; i++) {
-      // It is important to remove this handle from our waitset /before/
-      // dispatching the callback.
-      auto* holder = reinterpret_cast<struct WaitHolder*>(results[i].cookie);
+  while (!g_holders.empty()) {
+    mx_port_packet_t packet;
+    mx_status_t result = g_port->wait(0, &packet, 0);
+    if (result == NO_ERROR) {
+      FTL_CHECK(packet.type == MX_PKT_TYPE_SIGNAL_ONE) << packet.type;
+      FTL_CHECK(packet.status == NO_ERROR) << packet.status;
+      FidlAsyncWaitID wait_id = packet.key;
+
+      // This wait was already canceled. TODO(cpu): Remove once canceled waits
+      // don't trigger packets any more.
+      if (g_holders.find(wait_id) == g_holders.end())
+        continue;
+
+      auto* holder = g_holders[wait_id];
       auto cb = holder->callback;
       auto context = holder->context;
-      mx_waitset_result_t result = results[i];
-      CancelWait(reinterpret_cast<FidlAsyncWaitID>(holder));
-      cb(result.status, result.observed, context);
+      g_holders.erase(wait_id);
+      delete holder;
+      cb(packet.status, packet.signal.observed, context);
+    } else {
+      FTL_CHECK(result == ERR_TIMED_OUT) << result;
+      return;
     }
-    WaitForAsyncWaiter();
-  } else {
-    FTL_CHECK(result == ERR_TIMED_OUT) << result;
   }
 }
 
 void ClearAsyncWaiter() {
-  for (auto* holder : g_all_holders) {
-    auto result = g_waiting_set->remove(reinterpret_cast<uint64_t>(holder));
+  for (const auto& entry : g_holders) {
+    FidlAsyncWaitID wait_id = entry.first;
+    auto* holder = entry.second;
+    auto result = mx_handle_cancel(holder->handle, wait_id, MX_CANCEL_KEY);
     FTL_CHECK(result == NO_ERROR) << result;
     delete holder;
   }
-  g_all_holders.clear();
+  g_holders.clear();
 }
 
 }  // namespace test
 
 // Not thread safe.
 const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
-  if (!g_waiting_set) {
-    g_waiting_set = new mx::waitset;
-    auto result = mx::waitset::create(0, g_waiting_set);
+  if (!g_port) {
+    g_port = new mx::port;
+    auto result = mx::port::create(MX_PORT_OPT_V2, g_port);
     FTL_CHECK(result == NO_ERROR) << result;
   }
   return &kDefaultAsyncWaiter;
