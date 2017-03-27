@@ -22,6 +22,7 @@ class Amalgamation:
         self.build_root = ""
         self.omit_files = []
         self.bootfs_paths = {}
+        self.resources = []
 
     def add_file(self, file):
         bootfs_path = file["bootfs_path"]
@@ -51,7 +52,9 @@ class Amalgamation:
             if r["file"] in self.omit_files:
                 continue
             file = {}
-            file["file"] = os.path.join(paths.FUCHSIA_ROOT, r["file"])
+            source_path = os.path.join(paths.FUCHSIA_ROOT, r["file"])
+            file["file"] = source_path
+            self.resources.append(source_path)
             file["bootfs_path"] = r["bootfs_path"]
             file["default"] = r.has_key("default")
             self.add_file(file)
@@ -135,6 +138,8 @@ def main():
             f.write(args.manifest)
             for path in amalgamation.config_paths:
                 f.write(" " + path)
+            for resource in amalgamation.resources:
+                f.write(" " + resource)
 
     if args.component_index != "":
         with open(args.component_index, "w") as f:
