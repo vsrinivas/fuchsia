@@ -28,7 +28,7 @@
 
 extern uint8_t _gdt[];
 
-static mx_status_t vmxon(paddr_t pa) {
+static status_t vmxon(paddr_t pa) {
     uint8_t err;
 
     __asm__ volatile (
@@ -41,7 +41,7 @@ static mx_status_t vmxon(paddr_t pa) {
     return err ? ERR_INTERNAL : NO_ERROR;
 }
 
-static mx_status_t vmxoff() {
+static status_t vmxoff() {
     uint8_t err;
 
     __asm__ volatile (
@@ -54,7 +54,7 @@ static mx_status_t vmxoff() {
     return err ? ERR_INTERNAL : NO_ERROR;
 }
 
-static mx_status_t vmptrld(paddr_t pa) {
+static status_t vmptrld(paddr_t pa) {
     uint8_t err;
 
     __asm__ volatile (
@@ -67,7 +67,7 @@ static mx_status_t vmptrld(paddr_t pa) {
     return err ? ERR_INTERNAL : NO_ERROR;
 }
 
-static mx_status_t vmclear(paddr_t pa) {
+static status_t vmclear(paddr_t pa) {
     uint8_t err;
 
     __asm__ volatile (
@@ -120,7 +120,7 @@ static void vmwrite(uint64_t field, uint64_t val) {
     DEBUG_ASSERT(err == NO_ERROR);
 }
 
-static mx_status_t vmlaunch() {
+static status_t vmlaunch() {
     uint8_t err;
 
     __asm__ volatile (
@@ -135,13 +135,13 @@ static mx_status_t vmlaunch() {
 
 // TODO(abdulla): Update this to execute on every CPU. For development, it is
 // convenient to only consider a single CPU for now.
-static mx_status_t percpu_exec(thread_start_routine entry, void* arg) {
+static status_t percpu_exec(thread_start_routine entry, void* arg) {
     thread_t *t = thread_create("vmx", entry, arg, HIGH_PRIORITY, DEFAULT_STACK_SIZE);
     if (!t)
         return ERR_NO_MEMORY;
 
     thread_set_pinned_cpu(t, 0);
-    mx_status_t status = thread_resume(t);
+    status_t status = thread_resume(t);
     if (status != NO_ERROR)
         return status;
 
@@ -183,7 +183,7 @@ VmxPage::~VmxPage() {
         pmm_free_page(page);
 }
 
-mx_status_t VmxPage::Alloc(const VmxInfo& vmx_info) {
+status_t VmxPage::Alloc(const VmxInfo& vmx_info) {
     // From Volume 3, Appendix A.1: Bits 44:32 report the number of bytes that
     // software should allocate for the VMXON region and any VMCS region. It is
     // a value greater than 0 and at most 4096 (bit 44 is set if and only if
@@ -278,8 +278,8 @@ static int vmx_enable(void* arg) {
     return per_cpu->VmxOn();
 }
 
-mx_status_t PerCpu::Init(const VmxInfo& info) {
-    mx_status_t status = page_.Alloc(info);
+status_t PerCpu::Init(const VmxInfo& info) {
+    status_t status = page_.Alloc(info);
     if (status != NO_ERROR)
         return status;
 
@@ -288,18 +288,18 @@ mx_status_t PerCpu::Init(const VmxInfo& info) {
     return NO_ERROR;
 }
 
-mx_status_t VmxonPerCpu::VmxOn() {
-    mx_status_t status = vmxon(page_.PhysicalAddress());
+status_t VmxonPerCpu::VmxOn() {
+    status_t status = vmxon(page_.PhysicalAddress());
     is_on_ = status == NO_ERROR;
     return status;
 }
 
-mx_status_t VmxonPerCpu::VmxOff() {
+status_t VmxonPerCpu::VmxOff() {
     return is_on_ ? vmxoff() : NO_ERROR;
 }
 
 // static
-mx_status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
+status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
     uint num_cpus = arch_max_num_cpus();
 
     AllocChecker ac;
@@ -313,7 +313,7 @@ mx_status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
         return ERR_NO_MEMORY;
 
     VmxInfo vmx_info;
-    mx_status_t status = InitPerCpus(vmx_info, &ctx->per_cpus_);
+    status_t status = InitPerCpus(vmx_info, &ctx->per_cpus_);
     if (status != NO_ERROR)
         return status;
 
@@ -333,7 +333,7 @@ static int vmx_disable(void* arg) {
     VmxonPerCpu* per_cpu = context->PerCpu();
 
     // Execute VMXOFF.
-    mx_status_t status = per_cpu->VmxOff();
+    status_t status = per_cpu->VmxOff();
     if (status != NO_ERROR)
         return status;
 
@@ -343,7 +343,7 @@ static int vmx_disable(void* arg) {
 }
 
 VmxonContext::~VmxonContext() {
-    __UNUSED mx_status_t status = percpu_exec(vmx_disable, this);
+    __UNUSED status_t status = percpu_exec(vmx_disable, this);
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
@@ -354,7 +354,7 @@ VmxonPerCpu* VmxonContext::PerCpu() {
 AutoVmcsLoad::AutoVmcsLoad(VmxPage* page) {
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
-    __UNUSED mx_status_t status = vmptrld(page->PhysicalAddress());
+    __UNUSED status_t status = vmptrld(page->PhysicalAddress());
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
@@ -363,16 +363,16 @@ AutoVmcsLoad::~AutoVmcsLoad() {
     arch_enable_ints();
 }
 
-mx_status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
-    mx_status_t status = PerCpu::Init(vmx_info);
+status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
+    status_t status = PerCpu::Init(vmx_info);
     if (status != NO_ERROR)
         return status;
 
     return msr_bitmaps_page_.Alloc(vmx_info);
 }
 
-static mx_status_t set_vmcs_control(uint32_t controls, uint64_t true_msr, uint64_t old_msr,
-                                    uint32_t set) {
+static status_t set_vmcs_control(uint32_t controls, uint64_t true_msr, uint64_t old_msr,
+                                 uint32_t set) {
     uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
     uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
     if ((allowed_1 & set) != set) {
@@ -393,7 +393,7 @@ static mx_status_t set_vmcs_control(uint32_t controls, uint64_t true_msr, uint64
     return NO_ERROR;
 }
 
-mx_status_t VmcsPerCpu::Clear() {
+status_t VmcsPerCpu::Clear() {
     return page_.IsAllocated() ? vmclear(page_.PhysicalAddress()) : NO_ERROR;
 }
 
@@ -410,8 +410,8 @@ static uint64_t ept_pointer(paddr_t pml4_address) {
         1u << 6;
 }
 
-mx_status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
-    mx_status_t status = Clear();
+status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
+    status_t status = Clear();
     if (status != NO_ERROR)
         return status;
 
@@ -609,7 +609,7 @@ mx_status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     return NO_ERROR;
 }
 
-mx_status_t VmcsPerCpu::Launch() {
+status_t VmcsPerCpu::Launch() {
     AutoVmcsLoad vmcs_load(&page_);
     VmxHostState host_state;
     if (vmx_host_save(&host_state)) {
@@ -628,7 +628,7 @@ mx_status_t VmcsPerCpu::Launch() {
     // RSP is used to store host state – save each time.
     vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state));
 
-    mx_status_t status = vmlaunch();
+    status_t status = vmlaunch();
     if (status != NO_ERROR) {
         uint64_t error = vmread(VMCS_32_INSTRUCTION_ERROR);
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
@@ -643,8 +643,8 @@ static int vmcs_setup(void* arg) {
 }
 
 // static
-mx_status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
-                                mxtl::unique_ptr<VmcsContext>* context) {
+status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                             mxtl::unique_ptr<VmcsContext>* context) {
     uint num_cpus = arch_max_num_cpus();
 
     AllocChecker ac;
@@ -657,7 +657,7 @@ mx_status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    mx_status_t status = GuestPhysicalAddressSpace::Create(guest_phys_mem, &ctx->gpas_);
+    status_t status = GuestPhysicalAddressSpace::Create(guest_phys_mem, &ctx->gpas_);
     if (status != NO_ERROR)
         return status;
 
@@ -684,7 +684,7 @@ static int vmcs_clear(void* arg) {
 }
 
 VmcsContext::~VmcsContext() {
-    __UNUSED mx_status_t status = percpu_exec(vmcs_clear, this);
+    __UNUSED status_t status = percpu_exec(vmcs_clear, this);
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
@@ -702,7 +702,7 @@ static int vmcs_launch(void* arg) {
     return per_cpu->Launch();
 }
 
-mx_status_t VmcsContext::Start() {
+status_t VmcsContext::Start() {
     return percpu_exec(vmcs_launch, this);
 }
 
@@ -721,7 +721,7 @@ void vmx_host_load(VmxHostState* host_state) {
     idt_load(idt_get_readonly());
 }
 
-mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
+status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
     // Check that the CPU supports VMX.
     if (!x86_feature_test(X86_FEATURE_VMX))
         return ERR_NOT_SUPPORTED;
@@ -729,11 +729,11 @@ mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context)
     return VmxonContext::Create(context);
 }
 
-mx_status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
+status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
                               mxtl::unique_ptr<GuestContext>* context) {
     return VmcsContext::Create(guest_phys_mem, context);
 }
 
-mx_status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context) {
+status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context) {
     return context->Start();
 }

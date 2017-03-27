@@ -176,7 +176,7 @@ struct VmxRegion {
 /* Base class for CPU contexts. */
 class PerCpu {
 public:
-    virtual mx_status_t Init(const VmxInfo& vmx_info);
+    virtual status_t Init(const VmxInfo& vmx_info);
 
 protected:
     VmxPage page_;
@@ -187,8 +187,8 @@ protected:
 /* Creates a VMXON CPU context to initialize VMX. */
 class VmxonPerCpu : public PerCpu {
 public:
-    mx_status_t VmxOn();
-    mx_status_t VmxOff();
+    status_t VmxOn();
+    status_t VmxOff();
 
 private:
     bool is_on_ = false;
@@ -202,19 +202,19 @@ struct AutoVmcsLoad {
 /* Creates a VMCS CPU context to initialize a VM. */
 class VmcsPerCpu : public PerCpu {
 public:
-    mx_status_t Init(const VmxInfo& vmx_info) override;
-    mx_status_t Clear();
-    mx_status_t Setup(paddr_t pml4_address);
-    mx_status_t Launch();
+    status_t Init(const VmxInfo& vmx_info) override;
+    status_t Clear();
+    status_t Setup(paddr_t pml4_address);
+    status_t Launch();
 
 private:
     VmxPage msr_bitmaps_page_;
 };
 
 template<typename T>
-mx_status_t InitPerCpus(const VmxInfo& vmx_info, mxtl::Array<T>* ctxs) {
+status_t InitPerCpus(const VmxInfo& vmx_info, mxtl::Array<T>* ctxs) {
     for (size_t i = 0; i < ctxs->size(); i++) {
-        mx_status_t status = (*ctxs)[i].Init(vmx_info);
+        status_t status = (*ctxs)[i].Init(vmx_info);
         if (status != NO_ERROR)
             return status;
     }

@@ -26,16 +26,16 @@ __BEGIN_CDECLS
 /* Create a hypervisor context.
  * This setups up the CPUs to allow a hypervisor to be run.
  */
-mx_status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context);
+status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context);
 
 /* Create a guest context.
  * This creates the structures to allow a guest to be run.
  */
-mx_status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
-                              mxtl::unique_ptr<GuestContext>* context);
+status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                           mxtl::unique_ptr<GuestContext>* context);
 
 /* Start a guest within a guest context.
  */
-mx_status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context);
+status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context);
 
 __END_CDECLS

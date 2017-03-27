@@ -22,7 +22,7 @@ class VmxPage {
 public:
     ~VmxPage();
 
-    mx_status_t Alloc(const VmxInfo& info);
+    status_t Alloc(const VmxInfo& info);
     paddr_t PhysicalAddress();
     void* VirtualAddress();
 
@@ -39,7 +39,7 @@ private:
 
 class VmxonContext {
 public:
-    static mx_status_t Create(mxtl::unique_ptr<VmxonContext>* context);
+    static status_t Create(mxtl::unique_ptr<VmxonContext>* context);
 
     ~VmxonContext();
 
@@ -53,14 +53,13 @@ private:
 
 class VmcsContext {
 public:
-    static mx_status_t Create(mxtl::RefPtr<VmObject> vmo,
-                              mxtl::unique_ptr<VmcsContext>* context);
+    static status_t Create(mxtl::RefPtr<VmObject> vmo, mxtl::unique_ptr<VmcsContext>* context);
 
     ~VmcsContext();
 
     paddr_t Pml4Address();
     VmcsPerCpu* PerCpu();
-    mx_status_t Start();
+    status_t Start();
 
 private:
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
