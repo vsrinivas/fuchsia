@@ -9,7 +9,7 @@ namespace callback {
 namespace {
 
 TEST(CancellableImpl, CancelInvalidateCancellable) {
-  bool is_cancelled;
+  bool is_cancelled = false;
   ftl::RefPtr<Cancellable> cancellable =
       CancellableImpl::Create([&is_cancelled] { is_cancelled = true; });
 
@@ -23,7 +23,7 @@ TEST(CancellableImpl, CancelInvalidateCancellable) {
 }
 
 TEST(CancellableImpl, DoneInvalidateCancellable) {
-  bool is_cancelled;
+  bool is_cancelled = false;
   ftl::RefPtr<CancellableImpl> cancellable =
       CancellableImpl::Create([&is_cancelled] { is_cancelled = true; });
 
@@ -38,7 +38,7 @@ TEST(CancellableImpl, DoneInvalidateCancellable) {
 
 TEST(CancellableImpl, DoneCallsOnDone) {
   ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
-  bool is_done;
+  bool is_done = false;
   cancellable->SetOnDone([&is_done] { is_done = true; });
 
   EXPECT_FALSE(is_done);
