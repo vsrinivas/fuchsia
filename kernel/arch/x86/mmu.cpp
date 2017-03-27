@@ -1195,6 +1195,8 @@ static status_t mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, con
         return ERR_INVALID_ARGS;
     if (!x86_mmu_check_vaddr(vaddr))
         return ERR_INVALID_ARGS;
+    if (!is_valid_vaddr(aspace, vaddr))
+        return ERR_INVALID_ARGS;
     if (count == 0)
         return NO_ERROR;
 
@@ -1223,8 +1225,6 @@ static status_t mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, con
 
 status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const size_t count,
                       uint mmu_flags, size_t* mapped) {
-    if (!is_valid_vaddr(aspace, vaddr))
-        return ERR_INVALID_ARGS;
     return mmu_map<PageTable>(aspace, vaddr, paddr, count, mmu_flags, mapped);
 }
 
@@ -1382,6 +1382,7 @@ status_t guest_mmu_init_paspace(guest_paspace_t* paspace, size_t size) {
     LTRACEF("guest paspace: pt phys %#" PRIxPTR ", virt %p\n", paspace->pt_phys, paspace->pt_virt);
 
     paspace->flags = ARCH_MMU_FLAG_GUEST_PASPACE;
+    paspace->base = 0;
     paspace->size = size;
     paspace->active_cpus = 0;
     paspace->io_bitmap = nullptr;
