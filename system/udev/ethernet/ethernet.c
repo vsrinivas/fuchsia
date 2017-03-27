@@ -403,7 +403,9 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
             eth_info_t* info = out_buf;
             memset(info, 0, sizeof(*info));
             memcpy(info->mac, edev->edev0->info.mac, ETH_MAC_SIZE);
-            info->features = edev->edev0->info.features;
+            if (edev->edev0->info.features & ETHMAC_FEATURE_WLAN) {
+                info->features |= ETH_FEATURE_WLAN;
+            }
             info->mtu = edev->edev0->info.mtu;
             status = sizeof(*info);
         }
