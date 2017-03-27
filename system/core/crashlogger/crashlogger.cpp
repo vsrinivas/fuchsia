@@ -30,7 +30,7 @@
 #if defined(__x86_64__)
 using gregs_type = mx_x86_64_general_regs_t;
 #elif defined(__aarch64__)
-using gregs_type = mx_aarch64_general_regs_t;
+using gregs_type = mx_arm64_general_regs_t;
 #else
 using gregs_type = int; // unsupported arch
 #endif
@@ -132,7 +132,7 @@ void output_frame_x86_64(const x86_64_exc_data_t& exc_data,
 }
 
 void output_frame_arm64(const arm64_exc_data_t& exc_data,
-                        const mx_aarch64_general_regs_t& regs) {
+                        const mx_arm64_general_regs_t& regs) {
     printf(" x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n",
            regs.r[0], regs.r[1], regs.r[2], regs.r[3]);
     printf(" x4  %#18" PRIx64 " x5  %#18" PRIx64 " x6  %#18" PRIx64 " x7  %#18" PRIx64 "\n",

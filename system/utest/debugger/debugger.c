@@ -72,7 +72,7 @@ static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)
     test_data_addr = get_uint64_register(thread, offsetof(mx_x86_64_general_regs_t, r9));
 #endif
 #ifdef __aarch64__
-    test_data_addr = get_uint64_register(thread, offsetof(mx_aarch64_general_regs_t, r[9]));
+    test_data_addr = get_uint64_register(thread, offsetof(mx_arm64_general_regs_t, r[9]));
 #endif
 
     size_t size = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
@@ -105,8 +105,8 @@ static void fix_inferior_segv(mx_handle_t thread)
 #ifdef __aarch64__
     // The segv was because r8 == 0, change it to a usable value.
     // See test_prep_and_segv.
-    uint64_t sp = get_uint64_register(thread, offsetof(mx_aarch64_general_regs_t, sp));
-    set_uint64_register(thread, offsetof(mx_aarch64_general_regs_t, r[8]), sp);
+    uint64_t sp = get_uint64_register(thread, offsetof(mx_arm64_general_regs_t, sp));
+    set_uint64_register(thread, offsetof(mx_arm64_general_regs_t, r[8]), sp);
 #endif
 }
 
@@ -121,9 +121,9 @@ static bool test_segv_pc(mx_handle_t thread) {
 
 #ifdef __aarch64__
     uint64_t pc = get_uint64_register(
-        thread, offsetof(mx_aarch64_general_regs_t, pc));
+        thread, offsetof(mx_arm64_general_regs_t, pc));
     uint64_t x10 = get_uint64_register(
-        thread, offsetof(mx_aarch64_general_regs_t, r[10]));
+        thread, offsetof(mx_arm64_general_regs_t, r[10]));
     ASSERT_EQ(pc, x10, "fault PC does not match x10");
 #endif
 

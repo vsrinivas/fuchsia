@@ -42,8 +42,7 @@ typedef struct mx_arm64_general_regs {
     uint64_t sp;
     uint64_t pc;
     uint64_t cpsr;
-} mx_aarch64_general_regs_t;
-
+} mx_arm64_general_regs_t;
 
 // mx_thread_read_state, mx_thread_write_state
 // The maximum size of thread state, in bytes, that can be processed by the

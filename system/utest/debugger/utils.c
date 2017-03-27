@@ -118,11 +118,11 @@ static const regspec_t general_regs[] =
 
 #ifdef __aarch64__
 
-#define R(reg) { #reg, offsetof(mx_aarch64_general_regs_t, reg), 1, 64 }
+#define R(reg) { #reg, offsetof(mx_arm64_general_regs_t, reg), 1, 64 }
 
 static const regspec_t general_regs[] =
 {
-    { "r", offsetof(mx_aarch64_general_regs_t, r), 30, 64 },
+    { "r", offsetof(mx_arm64_general_regs_t, r), 30, 64 },
     R(lr),
     R(sp),
     R(pc),
