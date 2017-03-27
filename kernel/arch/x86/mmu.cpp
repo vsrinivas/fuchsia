@@ -584,7 +584,7 @@ static void update_entry(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* pte, 
 }
 
 template <typename PageTable>
-static void unmap_entry(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* pte, bool flush) {
+static void unmap_entry(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* pte) {
     DEBUG_ASSERT(pte);
 
     pt_entry_t olde = *pte;
@@ -592,7 +592,7 @@ static void unmap_entry(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* pte, b
     *pte = 0;
 
     /* attempt to invalidate the page */
-    if (flush && IS_PAGE_PRESENT(olde)) {
+    if (IS_PAGE_PRESENT(olde)) {
         PageTable::tlb_invalidate_page(aspace, vaddr, is_kernel_address(vaddr));
     }
 }
@@ -777,7 +777,7 @@ static bool x86_mmu_remove_mapping(arch_aspace_t* aspace, pt_entry_t* table,
             bool vaddr_level_aligned = PageTable::page_aligned(new_cursor->vaddr);
             // If the request covers the entire large page, just unmap it
             if (vaddr_level_aligned && new_cursor->size >= ps) {
-                unmap_entry<PageTable>(aspace, new_cursor->vaddr, e, true);
+                unmap_entry<PageTable>(aspace, new_cursor->vaddr, e);
                 unmapped = true;
 
                 new_cursor->vaddr += ps;
@@ -816,7 +816,7 @@ static bool x86_mmu_remove_mapping(arch_aspace_t* aspace, pt_entry_t* table,
             }
         }
         if (unmap_page_table) {
-            unmap_entry<PageTable>(aspace, new_cursor->vaddr, e, false);
+            unmap_entry<PageTable>(aspace, new_cursor->vaddr, e);
             pmm_free_page(paddr_to_vm_page(X86_VIRT_TO_PHYS(next_table)));
             unmapped = true;
         }
@@ -845,7 +845,7 @@ static bool x86_mmu_remove_mapping_l0(arch_aspace_t* aspace, pt_entry_t* table,
     for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
         pt_entry_t* e = table + index;
         if (IS_PAGE_PRESENT(*e)) {
-            unmap_entry<PageTable>(aspace, new_cursor->vaddr, e, true);
+            unmap_entry<PageTable>(aspace, new_cursor->vaddr, e);
             unmapped = true;
         }
 
@@ -1282,7 +1282,7 @@ void x86_mmu_early_init() {
 
 #if ARCH_X86_64
     /* unmap the lower identity mapping */
-    unmap_entry<PageTable<PML4_L>>(nullptr, 0, &pml4[0], true);
+    unmap_entry<PageTable<PML4_L>>(nullptr, 0, &pml4[0]);
 #else
     /* unmap the lower identity mapping */
     for (uint i = 0; i < (1 * GB) / (4 * MB); i++) {
