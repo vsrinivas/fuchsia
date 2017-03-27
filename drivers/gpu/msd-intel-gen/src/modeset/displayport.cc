@@ -239,6 +239,13 @@ bool DisplayPort::FetchEdidData(RegisterIo* reg_io, uint32_t ddi_number, uint8_t
 // function as it is now.
 void DisplayPort::FetchAndCheckEdidData(RegisterIo* reg_io)
 {
+    if (!MSD_INTEL_ENABLE_MODESETTING) {
+        magma::log(magma::LOG_INFO, "Modesetting code is disabled; "
+                   "build with \"packages/gn/gen.py ... "
+                   "--args msd_intel_enable_modesetting=true\" to enable");
+        return;
+    }
+
     uint32_t logged_count = 0;
 
     for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {

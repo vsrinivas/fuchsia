@@ -6,6 +6,7 @@ import("//magma/gnbuild/magma.gni")
 
 declare_args() {
   msd_intel_enable_mapping_cache = !is_debug
+  msd_intel_enable_modesetting = false
 }
 
 source_set("src") {
@@ -73,5 +74,11 @@ source_set("src") {
   defines = []
   if (msd_intel_enable_mapping_cache) {
     defines += [ "MSD_INTEL_ENABLE_MAPPING_CACHE" ]
+  }
+
+  if (msd_intel_enable_modesetting) {
+    defines += [ "MSD_INTEL_ENABLE_MODESETTING=1" ]
+  } else {
+    defines += [ "MSD_INTEL_ENABLE_MODESETTING=0" ]
   }
 }
