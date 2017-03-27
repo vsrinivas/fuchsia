@@ -7,7 +7,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <climits>
+#ifdef __APPLE__
+// TODO(dje): Private copy until available on osx.
+#include <bin/gdbserver/third_party/musl/include/elf.h>
+#else
 #include <elf.h>
+#endif
 #include <memory>
 
 #include "memory.h"
