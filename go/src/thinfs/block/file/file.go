@@ -18,6 +18,7 @@ type File struct {
 	info      os.FileInfo
 	size      int64
 	blockSize int64
+	base      int64
 }
 
 func getSize(f *os.File, info os.FileInfo) int64 {
@@ -67,6 +68,45 @@ func New(f *os.File, defaultBlockSize int64) (*File, error) {
 		info:      info,
 		size:      size,
 		blockSize: blockSize,
+	}, nil
+}
+
+// NewRange creates and returns a new File, using a subset of f as the backing
+// store. The blockSize, offset and size must be provided.
+func NewRange(f *os.File, blockSize, offset, size int64) (*File, error) {
+	// TODO(raggi): there might be some case where one day we'll want to support
+	// mis-alignment in the outer range, but for now, this keeps the check() code
+	// simple:
+	if offset%blockSize != 0 {
+		return nil, &os.PathError{
+			Op:   "NewRange",
+			Path: f.Name(),
+			Err:  fmt.Errorf("offset (%v) is not a multiple of blocksize (%v)", offset, blockSize),
+		}
+	}
+
+	info, err := f.Stat()
+	if err != nil {
+		return nil, &os.PathError{
+			Op:   "New",
+			Path: f.Name(),
+			Err:  err,
+		}
+	}
+
+	if glog.V(2) {
+		glog.Info("File name:      ", info.Name())
+		glog.Info("     size:      ", size)
+		glog.Info("     mode:      ", info.Mode())
+		glog.Info("     blocksize: ", blockSize)
+	}
+
+	return &File{
+		f:         f,
+		info:      info,
+		size:      size,
+		blockSize: blockSize,
+		base:      offset,
 	}, nil
 }
 
@@ -122,7 +162,7 @@ func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
 		glog.Infof("ReadAt: reading %v bytes from offset %#x\n", len(p), off)
 	}
 
-	return f.f.ReadAt(p, off)
+	return f.f.ReadAt(p, f.base+off)
 }
 
 // WriteAt writes the contents of p to the devices starting at offset off.  Both off and len(p) must
@@ -137,7 +177,7 @@ func (f *File) WriteAt(p []byte, off int64) (n int, err error) {
 		glog.Infof("WriteAt: writing %v bytes to address %#x\n", len(p), off)
 	}
 
-	return f.f.WriteAt(p, off)
+	return f.f.WriteAt(p, f.base+off)
 }
 
 // Flush forces any writes that have been cached in memory to be committed to persistent storage.
@@ -159,10 +199,10 @@ func (f *File) Discard(off, len int64) error {
 	}
 
 	if f.info.Mode()&os.ModeDevice != 0 {
-		return ioctlBlockDiscard(f.f.Fd(), uint64(off), uint64(len))
+		return ioctlBlockDiscard(f.f.Fd(), uint64(f.base+off), uint64(len))
 	}
 
-	return fallocate(f.f.Fd(), off, len)
+	return fallocate(f.f.Fd(), f.base+off, len)
 }
 
 // Close calls Flush() and then closes the device, rendering it unusable for I/O.  It returns an error,

@@ -5,6 +5,7 @@
 package file
 
 import (
+	"bytes"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -111,4 +112,49 @@ func TestErrorPaths(t *testing.T) {
 	}()
 
 	blocktest.ErrorPaths(t, file)
+}
+
+func TestRangeReadWrite(t *testing.T) {
+	name, _, _ := setUp(t)
+	defer os.Remove(name)
+
+	f, err := os.OpenFile(name, os.O_RDWR, 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	file, err := NewRange(f, 512, 1024, 10240)
+	if err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Error("Error closing File: ", err)
+		}
+	}()
+
+	want := make([]byte, 512)
+	copy(want, []byte("hello world"))
+	if _, err := file.WriteAt(want, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	b := make([]byte, len(want))
+	if _, err := f.ReadAt(b, 1024); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(b, want) {
+		t.Errorf("Range WriteAt: got %x, want %x", b, want)
+	}
+
+	b = make([]byte, len(want))
+	if _, err := file.ReadAt(b, 0); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(b, want) {
+		t.Errorf("Range ReadAt: got %x, want %x", b, want)
+	}
+
+	// TODO(raggi): I'm not aware of a portable / good way to test discard here.
 }
