@@ -23,6 +23,7 @@
 #include <kernel/vm/vm_object.h>
 
 #include <lib/crypto/global_prng.h>
+#include <lib/ktrace.h>
 
 #include <magenta/futex_context.h>
 #include <magenta/handle_owner.h>
@@ -367,6 +368,10 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // the semantics of signaling MX_JOB_NO_PROCESSES match that of MX_TASK_TERMINATED.
         if (job_)
             job_->RemoveChildProcess(this);
+
+        // The PROC_CREATE record currently emits a uint32_t.
+        uint32_t koid = static_cast<uint32_t>(get_koid());
+        ktrace(TAG_PROC_EXIT, koid, 0, 0, 0);
     }
 }
 
