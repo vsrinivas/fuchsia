@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <ddk/device.h>
 #include <fs/vfs.h>
 #include <magenta/compiler.h>
-#include <magenta/listnode.h>
 #include <magenta/types.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
-#include <threads.h>
 
 #define MEMFS_TYPE_DATA   0
 #define MEMFS_TYPE_DIR    1
@@ -21,9 +21,12 @@
 
 #ifdef __cplusplus
 
+#include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
+
 namespace memfs {
 
-typedef struct dnode dnode_t;
+class Dnode;
 
 class VnodeMemfs : public fs::Vnode {
 public:
@@ -50,8 +53,7 @@ public:
     // TODO(smklein): The following members should become private
     uint32_t seqcount_;
 
-    dnode_t* dnode_;      // list of my children
-    list_node_t dn_list_; // all dnodes that point at this vnode
+    mxtl::RefPtr<Dnode> dnode_;
     uint32_t link_count_;
 
 protected:
@@ -78,10 +80,10 @@ private:
     mx_off_t length_;
 };
 
-class VnodeDir final : public VnodeMemfs {
+class VnodeDir : public VnodeMemfs {
 public:
     VnodeDir();
-    ~VnodeDir();
+    virtual ~VnodeDir();
 
 private:
     mx_status_t Lookup(fs::Vnode** out, const char* name, size_t len) final;
@@ -93,7 +95,19 @@ private:
                        const char* newname, size_t newlen,
                        bool src_must_be_dir, bool dst_must_be_dir) final;
     mx_status_t Link(const char* name, size_t len, fs::Vnode* target) final;
+    mx_status_t Getattr(vnattr_t* a) override;
+};
+
+class VnodeDevice final : public VnodeDir {
+public:
+    VnodeDevice();
+    ~VnodeDevice();
+
+private:
+    void Release() final;
     mx_status_t Getattr(vnattr_t* a) final;
+    mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
+                           uint32_t* type, void* extra, uint32_t* esize) final;
 };
 
 class VnodeVmo final : public VnodeMemfs {
@@ -121,20 +135,6 @@ private:
     mx_handle_t vmo_;
     mx_off_t length_;
     mx_off_t offset_;
-};
-
-class VnodeDevice final : public VnodeMemfs {
-public:
-    VnodeDevice();
-    ~VnodeDevice();
-
-private:
-    void Release() final;
-    mx_status_t Lookup(fs::Vnode** out, const char* name, size_t len) final;
-    mx_status_t Getattr(vnattr_t* a) final;
-    mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
-    mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
-                           uint32_t* type, void* extra, uint32_t* esize) final;
 };
 
 } // namespace memfs
@@ -189,8 +189,6 @@ VnodeMemfs* vfs_create_global_root(void);
 VnodeMemfs* vfs_create_root(void);
 
 // shared among all memory filesystems
-mx_status_t memfs_lookup_name(const VnodeMemfs* vn, char* outname, size_t out_len);
-
 mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,
                                      const char* ptr, mx_off_t len);
 mx_status_t memfs_create_directory(const char* path, uint32_t flags);

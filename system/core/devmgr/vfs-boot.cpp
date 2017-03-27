@@ -2,22 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dnode.h"
-#include "memfs-private.h"
-
-#include <fs/vfs.h>
-
-#include <magenta/listnode.h>
-
-#include <ddk/device.h>
-
-#include <mxio/debug.h>
-#include <mxio/io.h>
-#include <mxio/vfs.h>
-
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <ddk/device.h>
+#include <fs/vfs.h>
+#include <mxio/debug.h>
+#include <mxio/io.h>
+#include <mxio/vfs.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
+
+#include "dnode.h"
+#include "memfs-private.h"
 
 #define MXDEBUG 0
 
@@ -65,19 +63,18 @@ static mx_status_t _vnb_create(VnodeMemfs* parent, VnodeMemfs** out,
 
 static mx_status_t _vnb_mkdir(VnodeMemfs* parent, VnodeMemfs** out, const char* name, size_t namelen) {
     // TODO(orr): subsequent patch will move this to more regular vnode operations
-    //printf("vnb_mkdir: parent=%p name='%.*s'\n", parent, (int)namelen, name);
-    if (parent->dnode_ == nullptr) {
+    if (!parent->IsDirectory()) {
         printf("bootfs: %p not a directory\n", parent);
         return ERR_NOT_DIR;
     }
 
     // existing directory of the same name?
-    dnode_t* dn;
-    if (dn_lookup(parent->dnode_, &dn, name, namelen) == NO_ERROR) {
-        //printf("vnb_mkdir: found vn %p\n", dn->vnode);
-        if (dn->vnode->dnode_ != nullptr) {
-            // is a directory, success!
-            *out = dn->vnode;
+    mxtl::RefPtr<Dnode> dn;
+    if (parent->dnode_->Lookup(name, namelen, &dn) == NO_ERROR) {
+        if (dn == nullptr) {
+            return ERR_ALREADY_EXISTS;
+        } else if (dn->IsDirectory()) {
+            *out = dn->AcquireVnode();
             return NO_ERROR;
         } else {
             return ERR_NOT_DIR;

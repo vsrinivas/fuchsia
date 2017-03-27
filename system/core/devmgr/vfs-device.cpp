@@ -12,7 +12,6 @@
 
 #include <ddk/device.h>
 
-#include <magenta/listnode.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 
@@ -36,18 +35,8 @@ mx_status_t devfs_remove(VnodeMemfs* vn) {
     // if this vnode is a directory, delete its dnode
     if (vn->IsDirectory()) {
         xprintf("devfs_remove(%p) delete dnode\n", vn);
-        dn_delete(vn->dnode_);
-        vn->dnode_ = NULL;
-    }
-
-    // delete all dnodes that point to this vnode
-    // (effectively unlink() it from every directory it is in)
-    memfs::dnode_t* dn;
-    while ((dn = list_peek_head_type(&vn->dn_list_, memfs::dnode_t, vn_entry)) != NULL) {
-        if (vn->dnode_ == dn) {
-            vn->dnode_ = NULL;
-        }
-        dn_delete(dn);
+        vn->dnode_->Detach();
+        vn->dnode_ = nullptr;
     }
 
     vn->RefRelease();

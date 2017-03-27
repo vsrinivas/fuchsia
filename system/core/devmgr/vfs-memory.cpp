@@ -2,26 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devmgr.h"
-#include "dnode.h"
-#include "memfs-private.h"
-
-#include <fs/vfs.h>
-
-#include <magenta/device/devmgr.h>
-#include <magenta/listnode.h>
-#include <magenta/new.h>
-
-#include <ddk/device.h>
-
-#include <mxio/debug.h>
-#include <mxio/vfs.h>
-
 #include <fcntl.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+
+#include <ddk/device.h>
+#include <fs/vfs.h>
+#include <magenta/device/devmgr.h>
+#include <magenta/new.h>
+#include <mxio/debug.h>
+#include <mxio/vfs.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
+
+#include "devmgr.h"
+#include "dnode.h"
+#include "memfs-private.h"
 
 #define MXDEBUG 0
 
@@ -30,7 +28,6 @@ namespace memfs {
 constexpr size_t kMinfsMaxFileSize = (8192 * 8192);
 
 mx_status_t memfs_get_node(VnodeMemfs** out, mx_device_t* dev);
-mx_status_t memfs_can_unlink(dnode_t* dn);
 
 static VnodeMemfs* vfs_root = nullptr;
 static VnodeMemfs* memfs_root = nullptr;
@@ -39,7 +36,6 @@ static VnodeMemfs* bootfs_root = nullptr;
 static VnodeMemfs* systemfs_root = nullptr;
 
 VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr), link_count_(0) {
-    list_initialize(&dn_list_);
     list_initialize(&watch_list_);
     create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
 }
@@ -177,26 +173,18 @@ mx_status_t VnodeDir::Lookup(fs::Vnode** out, const char* name, size_t len) {
     if (!IsDirectory()) {
         return ERR_NOT_FOUND;
     }
-    dnode_t* dn;
-    mx_status_t r = dn_lookup(dnode_, &dn, name, len);
-    assert(r <= 0);
-    if (r == 0) {
-        dn->vnode->RefAcquire();
-        *out = dn->vnode;
-    }
-    return r;
-}
-
-mx_status_t VnodeDevice::Lookup(fs::Vnode** out, const char* name, size_t len) {
-    if (!IsDirectory()) {
-        return ERR_NOT_FOUND;
-    }
-    dnode_t* dn;
-    mx_status_t r = dn_lookup(dnode_, &dn, name, len);
-    assert(r <= 0);
-    if (r == 0) {
-        dn->vnode->RefAcquire();
-        *out = dn->vnode;
+    mxtl::RefPtr<Dnode> dn;
+    mx_status_t r = dnode_->Lookup(name, len, &dn);
+    MX_DEBUG_ASSERT(r <= 0);
+    if (r == NO_ERROR) {
+        if (dn == nullptr) {
+            // Looking up our own vnode
+            RefAcquire();
+            *out = this;
+        } else {
+            // Looking up a different vnode
+            *out = dn->AcquireVnode();
+        }
     }
     return r;
 }
@@ -237,7 +225,7 @@ mx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
 
 mx_status_t VnodeDevice::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
-    if (IsRemote() && list_is_empty(&dnode_->children)) {
+    if (IsRemote() && !IsDirectory()) {
         attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
@@ -259,14 +247,11 @@ mx_status_t VnodeMemfs::Setattr(vnattr_t* attr) {
 }
 
 mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
-    return dn_readdir(dnode_, cookie, data, len);
-}
-
-mx_status_t VnodeDevice::Readdir(void* cookie, void* data, size_t len) {
     if (!IsDirectory()) {
-        return ERR_NOT_DIR;
+        // This WAS a directory, but it has been deleted.
+        return Dnode::ReaddirStart(cookie, data, len);
     }
-    return dn_readdir(dnode_, cookie, data, len);
+    return dnode_->Readdir(cookie, data, len);
 }
 
 // postcondition: reference taken on vn returned through "out"
@@ -289,18 +274,21 @@ mx_status_t VnodeDir::Unlink(const char* name, size_t len, bool must_be_dir) {
         // Calling unlink from unlinked, empty directory
         return ERR_BAD_STATE;
     }
-    dnode_t* dn;
+    mxtl::RefPtr<Dnode> dn;
     mx_status_t r;
-    if ((r = dn_lookup(dnode_, &dn, name, len)) < 0) {
+    if ((r = dnode_->Lookup(name, len, &dn)) != NO_ERROR) {
         return r;
-    }
-    if (!dn->vnode->IsDirectory() && must_be_dir) {
+    } else if (dn == nullptr) {
+        // Cannot unlink directory 'foo' using the argument 'foo/.'
+        return ERR_INVALID_ARGS;
+    } else if (!dn->IsDirectory() && must_be_dir) {
+        // Path ending in "/" was requested, implying that the dnode must be a directory
         return ERR_NOT_DIR;
-    }
-    if ((r = memfs_can_unlink(dn)) < 0) {
+    } else if ((r = dn->CanUnlink()) != NO_ERROR) {
         return r;
     }
-    dn_delete(dn);
+
+    dn->Detach();
     return NO_ERROR;
 }
 
@@ -357,52 +345,60 @@ mx_status_t VnodeDir::Rename(fs::Vnode* _newdir, const char* oldname, size_t old
     if ((newlen == 2) && (newname[0] == '.') && (newname[1] == '.'))
         return ERR_BAD_STATE;
 
-    dnode_t* olddn, *targetdn;
+    mxtl::RefPtr<Dnode> olddn;
     mx_status_t r;
     // The source must exist
-    if ((r = dn_lookup(dnode_, &olddn, oldname, oldlen)) < 0) {
+    if ((r = dnode_->Lookup(oldname, oldlen, &olddn)) != NO_ERROR) {
         return r;
     }
-    if (!DNODE_IS_DIR(olddn) && (src_must_be_dir || dst_must_be_dir)) {
+    MX_DEBUG_ASSERT(olddn != nullptr);
+
+    if (!olddn->IsDirectory() && (src_must_be_dir || dst_must_be_dir)) {
         return ERR_NOT_DIR;
     }
 
     // Verify that the destination is not a subdirectory of the source (if
     // both are directories).
-    if (DNODE_IS_DIR(olddn)) {
-        dnode_t* observeddn = newdir->dnode_;
-        // Iterate all the way up to root
-        while (observeddn->parent != observeddn) {
-            if (observeddn == olddn) {
-                return ERR_INVALID_ARGS;
-            }
-            observeddn = observeddn->parent;
-        }
+    if (olddn->IsSubdirectory(newdir->dnode_)) {
+        return ERR_INVALID_ARGS;
     }
 
     // The destination may or may not exist
-    r = dn_lookup(newdir->dnode_, &targetdn, newname, newlen);
+    mxtl::RefPtr<Dnode> targetdn;
+    r = newdir->dnode_->Lookup(newname, newlen, &targetdn);
     bool target_exists = (r == NO_ERROR);
     if (target_exists) {
+        MX_DEBUG_ASSERT(targetdn != nullptr);
         // The target exists. Validate and unlink it.
-        if (olddn->vnode == targetdn->vnode) {
+        if (olddn == targetdn) {
             // Cannot rename node to itself
             return ERR_INVALID_ARGS;
         }
-        if (DNODE_IS_DIR(olddn) != DNODE_IS_DIR(targetdn)) {
+        if (olddn->IsDirectory() != targetdn->IsDirectory()) {
             // Cannot rename files to directories (and vice versa)
             return ERR_INVALID_ARGS;
-        } else if ((r = memfs_can_unlink(targetdn)) < 0) {
+        } else if ((r = targetdn->CanUnlink()) != NO_ERROR) {
             return r;
         }
     } else if (r != ERR_NOT_FOUND) {
         return r;
     }
 
-    // Allocate the new dnode (not yet attached to anything)
-    dnode_t* newdn;
-    if ((r = dn_allocate(&newdn, newname, newlen)) < 0) {
-        return r;
+    // Allocate the new name for the dnode, either by
+    // (1) Stealing it from the previous dnode, if it used the same name, or
+    // (2) Allocating a new name, if creating a new name.
+    mxtl::unique_ptr<char[]> namebuffer(nullptr);
+    if (target_exists) {
+        targetdn->Detach();
+        namebuffer = mxtl::move(targetdn->TakeName());
+    } else {
+        AllocChecker ac;
+        namebuffer.reset(new (&ac) char[newlen + 1]);
+        if (!ac.check()) {
+            return ERR_NO_MEMORY;
+        }
+        memcpy(namebuffer.get(), newname, newlen);
+        namebuffer[newlen] = '\0';
     }
 
     // NOTE:
@@ -410,49 +406,14 @@ mx_status_t VnodeDir::Rename(fs::Vnode* _newdir, const char* oldname, size_t old
     // Validation ends here, and modifications begin. Rename should not fail
     // beyond this point.
 
-    if (target_exists) {
-        dn_delete(targetdn);
-    }
-    // Acquire the source vnode; we're going to delete the source dnode, and we
-    // need to make sure the source vnode still exists afterwards.
-    VnodeMemfs* vn = olddn->vnode;
-    vn->RefAcquire(); // Acquire +1
-    uint32_t oldtype = DN_TYPE(olddn->flags);
-
-    // Move the children of the source dnode to the new dnode.
-    list_move(&olddn->children, &newdn->children);
-    dnode_t* dn;
-    list_for_every_entry(&newdn->children, dn, dnode_t, dn_entry) {
-        // TODO(smklein): Because each child has an explicit pointer
-        // to the parent entry, we must traverse through all children
-        // to rename a parent directory.
-        //
-        // Possible solution:
-        //  - Don't reallocate the new dnode. Decouple dnode names from the
-        //  rest of their structure (possibly allow in-line storage for short
-        //  names). Resuing the original dnode will not require any
-        //  modifications in the childs.
-        dn->parent = newdn;
-    }
-
-    // Delete source dnode
-    bool moved_node_was_dir = vn->IsDirectory();
-    dn_delete(olddn); // Acquire +0
-
-    // Bind the newdn and vn, and attach it to the destination's parent
-    dn_attach(newdn, vn); // Acquire +1
-    vn->RefRelease(); // Acquire +0. No change in refcount, no chance of deletion.
-    if (moved_node_was_dir) {
-        vn->dnode_ = newdn;
-    }
-    newdn->flags |= oldtype;
-    dn_add_child(newdir->dnode_, newdn);
-
+    olddn->RemoveFromParent();
+    olddn->PutName(mxtl::move(namebuffer), newlen);
+    Dnode::AddChild(newdir->dnode_, mxtl::move(olddn));
     return NO_ERROR;
 }
 
-mx_status_t VnodeDir::Link(const char* name, size_t len, fs::Vnode* _target) {
-    VnodeMemfs* target = static_cast<VnodeMemfs*>(_target);
+mx_status_t VnodeDir::Link(const char* name, size_t len, fs::Vnode* target) {
+    VnodeMemfs* vn = static_cast<VnodeMemfs*>(target);
 
     if ((len == 1) && (name[0] == '.')) {
         return ERR_BAD_STATE;
@@ -463,23 +424,24 @@ mx_status_t VnodeDir::Link(const char* name, size_t len, fs::Vnode* _target) {
         return ERR_BAD_STATE;
     }
 
-    dnode_t *targetdn;
-    mx_status_t r;
-
-    if (target->IsDirectory()) {
+    if (vn->IsDirectory()) {
         // The target must not be a directory
         return ERR_NOT_FILE;
-    } else if ((r = dn_lookup(dnode_, &targetdn, name, len)) == 0) {
+    }
+
+    if (dnode_->Lookup(name, len, nullptr) == NO_ERROR) {
         // The destination should not exist
         return ERR_ALREADY_EXISTS;
     }
 
     // Make a new dnode for the new name, attach the target vnode to it
-    if ((r = dn_create(&targetdn, name, len, target)) < 0) {
-        return r;
+    mxtl::RefPtr<Dnode> targetdn;
+    if ((targetdn = Dnode::Create(name, len, vn)) == nullptr) {
+        return ERR_NO_MEMORY;
     }
+
     // Attach the new dnode to its parent
-    dn_add_child(dnode_, targetdn);
+    Dnode::AddChild(dnode_, mxtl::move(targetdn));
 
     return NO_ERROR;
 }
@@ -524,32 +486,7 @@ mx_status_t VnodeMemfs::AttachRemote(mx_handle_t h) {
     return NO_ERROR;
 }
 
-mx_status_t memfs_can_unlink(dnode_t* dn) {
-    if (!list_is_empty(&dn->children)) {
-        // Cannot unlink non-empty directory
-        return ERR_BAD_STATE;
-    } else if (dn->vnode->IsRemote()) {
-        // Cannot unlink mount points
-        return ERR_BAD_STATE;
-    }
-    return NO_ERROR;
-}
-
-mx_status_t memfs_lookup_name(const VnodeMemfs* vn, char* out_name, size_t out_len) {
-    return dn_lookup_name(vn->dnode_->parent, vn, out_name, out_len);
-}
-
 static mx_status_t memfs_create_fs(const char* name, bool device, VnodeMemfs** out) {
-    uint32_t namelen = static_cast<uint32_t>(strlen(name));
-    dnode_t* dn = static_cast<dnode_t*>(calloc(1, sizeof(dnode_t)+namelen+1));
-    if (dn == nullptr) {
-        return ERR_NO_MEMORY;
-    }
-    memcpy(dn->name, name, namelen+1);
-    dn->flags = namelen;
-    list_initialize(&dn->children);
-    dn->parent = dn; // until we mount, we are our own parent
-
     AllocChecker ac;
     VnodeMemfs* fs;
     if (device) {
@@ -558,23 +495,22 @@ static mx_status_t memfs_create_fs(const char* name, bool device, VnodeMemfs** o
         fs = new (&ac) VnodeDir();
     }
     if (!ac.check()) {
-        free(dn);
         return ERR_NO_MEMORY;
     }
-    fs->dnode_ = dn;
 
-    dn->vnode = fs;
+    mxtl::RefPtr<Dnode> dn = Dnode::Create(name, strlen(name), fs);
+    if (dn == nullptr) {
+        delete fs;
+        return ERR_NO_MEMORY;
+    }
+
+    fs->dnode_ = dn; // FS root is directory
     *out = fs;
     return NO_ERROR;
 }
 
 static void _memfs_mount(VnodeMemfs* parent, VnodeMemfs* subtree) {
-    if (subtree->dnode_->parent) {
-        // subtrees will have "parent" set, either to themselves
-        // while they are standalone, or to their mount parent
-        subtree->dnode_->parent = nullptr;
-    }
-    dn_add_child(parent->dnode_, subtree->dnode_);
+    Dnode::AddChild(parent->dnode_, subtree->dnode_);
 }
 
 // precondition: no ref taken on parent
@@ -588,14 +524,15 @@ static mx_status_t _memfs_create_device_at(VnodeMemfs* parent, VnodeMemfs** out,
     size_t len = strlen(name);
 
     // check for duplicate
-    dnode_t* dn;
-    if (dn_lookup(parent->dnode_, &dn, name, len) == NO_ERROR) {
-        *out = dn->vnode;
-        if ((h == 0) && (!dn->vnode->IsRemote())) {
+    mxtl::RefPtr<Dnode> dn;
+    if (parent->dnode_->Lookup(name, len, &dn) == NO_ERROR) {
+        *out = dn->AcquireVnode();
+        if ((h == 0) && (!(*out)->IsRemote())) {
             // creating a duplicate directory node simply
             // returns the one that's already there
             return NO_ERROR;
         }
+        (*out)->RefRelease();
         return ERR_ALREADY_EXISTS;
     }
 
@@ -617,14 +554,12 @@ static mx_status_t _memfs_create_device_at(VnodeMemfs* parent, VnodeMemfs** out,
     return NO_ERROR;
 }
 
-static mx_status_t _memfs_add_link(VnodeMemfs* parent, const char* name, VnodeMemfs* target) {
-    if ((parent == nullptr) || (target == nullptr)) {
+static mx_status_t _memfs_add_link(VnodeMemfs* parent, const char* name, VnodeMemfs* vn) {
+    if ((parent == nullptr) || (vn == nullptr)) {
         return ERR_INVALID_ARGS;
     }
 
     xprintf("memfs_add_link() p=%p name='%s'\n", parent, name ? name : "###");
-    mx_status_t r;
-    dnode_t* dn;
 
     char tmp[8];
     size_t len;
@@ -635,7 +570,7 @@ static mx_status_t _memfs_add_link(VnodeMemfs* parent, const char* name, VnodeMe
         // seqcount is used to avoid rapidly re-using device numbers
         for (unsigned n = 0; n < 1000; n++) {
             snprintf(tmp, sizeof(tmp), "%03u", (parent->seqcount_++) % 1000);
-            if (dn_lookup(parent->dnode_, &dn, tmp, 3) != NO_ERROR) {
+            if (parent->dnode_->Lookup(tmp, 3, nullptr) != NO_ERROR) {
                 name = tmp;
                 len = 3;
                 goto got_name;
@@ -644,15 +579,16 @@ static mx_status_t _memfs_add_link(VnodeMemfs* parent, const char* name, VnodeMe
         return ERR_ALREADY_EXISTS;
     } else {
         len = strlen(name);
-        if (dn_lookup(parent->dnode_, &dn, name, len) == NO_ERROR) {
+        if (parent->dnode_->Lookup(name, len, nullptr) == NO_ERROR) {
             return ERR_ALREADY_EXISTS;
         }
     }
 got_name:
-    if ((r = dn_create(&dn, name, len, target)) < 0) {
-        return r;
+    mxtl::RefPtr<Dnode> dn;
+    if ((dn = Dnode::Create(name, len, vn)) == nullptr) {
+        return ERR_NO_MEMORY;
     }
-    dn_add_child(parent->dnode_, dn);
+    Dnode::AddChild(parent->dnode_, mxtl::move(dn));
     parent->NotifyAdd(name, len);
     return NO_ERROR;
 }
@@ -844,7 +780,11 @@ mx_status_t _memfs_create(memfs::VnodeMemfs* parent, memfs::VnodeMemfs** out,
         return ERR_INVALID_ARGS;
     }
 
-    uint32_t type = flags & MEMFS_TYPE_MASK;
+    if (parent->dnode_->Lookup(name, namelen, nullptr) == NO_ERROR) {
+        return ERR_ALREADY_EXISTS;
+    }
+
+   uint32_t type = flags & MEMFS_TYPE_MASK;
 
     AllocChecker ac;
     memfs::VnodeMemfs* vn;
@@ -873,31 +813,24 @@ mx_status_t _memfs_create(memfs::VnodeMemfs* parent, memfs::VnodeMemfs** out,
     xprintf("memfs_create: vn=%p, parent=%p name='%.*s'\n",
             vn, parent, (int)namelen, name);
 
-    memfs::dnode_t* dn;
-    if (dn_lookup(parent->dnode_, &dn, name, namelen) == NO_ERROR) {
-        delete vn;
-        return ERR_ALREADY_EXISTS;
-    }
-
     // dnode takes a reference to the vnode
-    mx_status_t r;
-    if ((r = dn_create(&dn, name, namelen, vn)) < 0) { // vn refcount = 2
+    mxtl::RefPtr<memfs::Dnode> dn;
+    if ((dn = memfs::Dnode::Create(name, namelen, vn)) == nullptr) { // vn refcount +1
         delete vn;
-        return r;
+        return ERR_NO_MEMORY;
     }
-    vn->RefRelease(); // vn refcount = 1
+    vn->RefRelease(); // vn refcount +0
 
-    // Identify tht the vnode is a directory (vn->dnode_ != nullptr) so that
-    // dn_add_child will also increment the parent link_count (after all,
+    // Identify that the vnode is a directory (vn->dnode_ != nullptr) so that
+    // addding a child will also increment the parent link_count (after all,
     // directories contain a ".." entry, which is a link to their parent).
     if (type == MEMFS_TYPE_DIR || type == MEMFS_TYPE_DEVICE) {
         vn->dnode_ = dn;
     }
 
     // parent takes first reference
-    dn_add_child(parent->dnode_, dn);
+    memfs::Dnode::AddChild(parent->dnode_, mxtl::move(dn));
 
-    // returning, without incrementing refcount
     *out = vn;
     return NO_ERROR;
 }

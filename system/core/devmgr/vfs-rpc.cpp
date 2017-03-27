@@ -13,8 +13,6 @@
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
 
-#include <magenta/listnode.h>
-
 #include <magenta/device/device.h>
 #include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
