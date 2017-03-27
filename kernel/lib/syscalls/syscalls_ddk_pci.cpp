@@ -294,7 +294,7 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, user_ptr<m
 
     // TODO(andymutton): Change to use user_ptr copy
     if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_info.get()),
-                            &info, sizeof(*(out_info.get())) != NO_ERROR))
+                            &info, sizeof(mx_pcie_get_nth_info_t)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
