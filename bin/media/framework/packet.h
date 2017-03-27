@@ -9,6 +9,7 @@
 
 #include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/src/framework/payload_allocator.h"
+#include "apps/media/src/framework/types/stream_type.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
@@ -89,6 +90,16 @@ class Packet {
   // cost as GetPts, but may save the expense of subsequent conversions.
   void SetPtsRate(TimelineRate pts_rate);
 
+  // Gets the revised stream type, which may be null.
+  const std::unique_ptr<StreamType>& revised_stream_type() {
+    return revised_stream_type_;
+  }
+
+  // Sets the revised stream type for the packet.
+  void SetRevisedStreamType(std::unique_ptr<StreamType> stream_type) {
+    revised_stream_type_ = std::move(stream_type);
+  }
+
  protected:
   Packet(int64_t pts,
          TimelineRate pts_rate,
@@ -108,6 +119,7 @@ class Packet {
   bool end_of_stream_;
   size_t size_;
   void* payload_;
+  std::unique_ptr<StreamType> revised_stream_type_;
 
   friend PacketDeleter;
 };

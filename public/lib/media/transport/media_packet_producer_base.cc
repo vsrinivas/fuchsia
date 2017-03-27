@@ -36,7 +36,10 @@ void MediaPacketProducerBase::Connect(
   FLOG(log_channel_, Connecting());
 
   consumer_ = std::move(consumer);
-  consumer_.set_connection_error_handler([this]() { OnFailure(); });
+  consumer_.set_connection_error_handler([this]() {
+    consumer_.reset();
+    OnFailure();
+  });
 
   HandleDemandUpdate();
   callback();
@@ -100,6 +103,7 @@ void MediaPacketProducerBase::ProducePacket(
     TimelineRate pts_rate,
     bool keyframe,
     bool end_of_stream,
+    MediaTypePtr revised_media_type,
     const ProducePacketCallback& callback) {
 #ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
@@ -119,6 +123,7 @@ void MediaPacketProducerBase::ProducePacket(
   media_packet->pts_rate_seconds = pts_rate.reference_delta();
   media_packet->keyframe = keyframe;
   media_packet->end_of_stream = end_of_stream;
+  media_packet->revised_media_type = std::move(revised_media_type);
   media_packet->payload_buffer_id = locator.buffer_id();
   media_packet->payload_offset = locator.offset();
   media_packet->payload_size = size;

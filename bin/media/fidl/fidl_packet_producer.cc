@@ -6,6 +6,7 @@
 
 #include "apps/media/lib/flog/flog.h"
 #include "apps/media/services/logs/media_packet_producer_channel.fidl.h"
+#include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -103,6 +104,7 @@ void FidlPacketProducer::SendPacket(PacketPtr packet) {
 
   ProducePacket(packet->payload(), packet->size(), packet->pts(),
                 packet->pts_rate(), packet->keyframe(), packet->end_of_stream(),
+                MediaType::From(packet->revised_stream_type()),
                 ftl::MakeCopyable([ this, packet = std::move(packet) ]() {
                   FTL_DCHECK(demand_callback_);
                   demand_callback_(CurrentDemand());

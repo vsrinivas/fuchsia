@@ -206,6 +206,14 @@ void MediaPacketConsumerBase::SupplyPacket(
 #endif
   FTL_DCHECK(media_packet);
 
+  if (media_packet->revised_media_type && !accept_revised_media_type_) {
+    // TODO(dalesat): FLOG this.
+    FTL_DLOG(WARNING) << "Media type revision rejected. Resetting.";
+    callback(nullptr);
+    Reset();
+    return;
+  }
+
   void* payload;
   if (media_packet->payload_size == 0) {
     payload = nullptr;

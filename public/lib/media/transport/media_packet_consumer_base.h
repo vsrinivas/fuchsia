@@ -71,6 +71,9 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // are not adjusted.
   void SetPtsRate(TimelineRate pts_rate) { pts_rate_ = pts_rate; }
 
+  // Indicates that revised media type is to be accepted.
+  void AcceptRevisedMediaType() { accept_revised_media_type_ = true; }
+
   const MediaPacketDemand& current_demand() { return demand_; }
 
   // Sets the demand, which is communicated back to the producer at the first
@@ -196,6 +199,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   void SetPacketPtsRate(const MediaPacketPtr& packet);
 
   fidl::Binding<MediaPacketConsumer> binding_;
+  bool accept_revised_media_type_ = false;
   MediaPacketDemand demand_;
   bool demand_update_required_ = false;
   bool returning_packet_ = false;

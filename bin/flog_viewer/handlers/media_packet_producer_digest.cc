@@ -113,7 +113,7 @@ void MediaPacketProducerDigest::ProducingPacket(uint64_t label,
 
   accumulator_->outstanding_packets_.emplace(
       label,
-      MediaPacketProducerAccumulator::Packet(
+      MediaPacketProducerAccumulator::Packet::Create(
           label, std::move(packet), payload_address, packets_outstanding));
 }
 
@@ -125,7 +125,7 @@ void MediaPacketProducerDigest::RetiringPacket(uint64_t label,
     return;
   }
 
-  accumulator_->packets_.Remove(iter->second.packet_.payload_size);
+  accumulator_->packets_.Remove(iter->second->packet_->payload_size);
   accumulator_->outstanding_packets_.erase(iter);
 }
 
@@ -177,14 +177,16 @@ void MediaPacketProducerAccumulator::Print(std::ostream& os) {
        << std::endl;
   }
 
-  for (const std::pair<uint64_t, Packet>& pair : outstanding_packets_) {
+  for (const std::pair<uint64_t, std::shared_ptr<Packet>>& pair :
+       outstanding_packets_) {
     os << begl << "SUSPENSE: outstanding packet" << std::endl;
     os << indent;
-    os << begl << "label: " << pair.second.label_ << std::endl;
-    os << begl << "packet: " << pair.second.packet_;
-    os << begl << "payload address: " << AsAddress(pair.second.payload_address_)
+    os << begl << "label: " << pair.second->label_ << std::endl;
+    os << begl << "packet: " << pair.second->packet_;
+    os << begl
+       << "payload address: " << AsAddress(pair.second->payload_address_)
        << std::endl;
-    os << begl << "packets outstanding: " << pair.second.packets_outstanding_
+    os << begl << "packets outstanding: " << pair.second->packets_outstanding_
        << std::endl;
     os << outdent;
   }

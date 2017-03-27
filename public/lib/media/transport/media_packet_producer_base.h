@@ -55,6 +55,7 @@ class MediaPacketProducerBase {
                      TimelineRate pts_rate,
                      bool keyframe,
                      bool end_of_stream,
+                     MediaTypePtr revised_media_type,
                      const ProducePacketCallback& callback);
 
   // Gets the current demand.

@@ -75,16 +75,24 @@ class MediaPacketConsumerAccumulator : public Accumulator {
 
  private:
   struct Packet {
+    static std::shared_ptr<Packet> Create(uint64_t label,
+                                          media::MediaPacketPtr packet,
+                                          uint64_t payload_address,
+                                          uint32_t packets_outstanding) {
+      return std::make_shared<Packet>(label, std::move(packet), payload_address,
+                                      packets_outstanding);
+    }
+
     Packet(uint64_t label,
            media::MediaPacketPtr packet,
            uint64_t payload_address,
            uint32_t packets_outstanding)
         : label_(label),
-          packet_(*packet),
+          packet_(std::move(packet)),
           payload_address_(payload_address),
           packets_outstanding_(packets_outstanding) {}
     uint64_t label_;
-    media::MediaPacket packet_;
+    media::MediaPacketPtr packet_;
     uint64_t payload_address_;
     uint32_t packets_outstanding_;
   };
@@ -101,7 +109,7 @@ class MediaPacketConsumerAccumulator : public Accumulator {
   media::MediaPacketDemandPtr current_demand_;
   uint32_t min_packets_outstanding_highest_ = 0;
 
-  std::unordered_map<uint64_t, Packet> outstanding_packets_;
+  std::unordered_map<uint64_t, std::shared_ptr<Packet>> outstanding_packets_;
   Tracked packets_;
 
   std::unordered_map<uint32_t, PayloadBuffer> outstanding_payload_buffers_;
