@@ -223,7 +223,7 @@ static bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed
 
 static int vmx_enable(void* arg) {
     VmxonContext* context = static_cast<VmxonContext*>(arg);
-    VmxonCpuContext* cpu_context = context->CurrCpuContext();
+    VmxonPerCpu* per_cpu = context->PerCpu();
 
     // Check that full VMX controls are supported.
     VmxInfo vmx_info;
@@ -275,10 +275,10 @@ static int vmx_enable(void* arg) {
     x86_set_cr4(cr4);
 
     // Execute VMXON.
-    return cpu_context->VmxOn();
+    return per_cpu->VmxOn();
 }
 
-mx_status_t VmxCpuContext::Init(const VmxInfo& info) {
+mx_status_t PerCpu::Init(const VmxInfo& info) {
     mx_status_t status = page_.Alloc(info);
     if (status != NO_ERROR)
         return status;
@@ -288,13 +288,13 @@ mx_status_t VmxCpuContext::Init(const VmxInfo& info) {
     return NO_ERROR;
 }
 
-mx_status_t VmxonCpuContext::VmxOn() {
+mx_status_t VmxonPerCpu::VmxOn() {
     mx_status_t status = vmxon(page_.PhysicalAddress());
     is_on_ = status == NO_ERROR;
     return status;
 }
 
-mx_status_t VmxonCpuContext::VmxOff() {
+mx_status_t VmxonPerCpu::VmxOff() {
     return is_on_ ? vmxoff() : NO_ERROR;
 }
 
@@ -303,17 +303,17 @@ mx_status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
     uint num_cpus = arch_max_num_cpus();
 
     AllocChecker ac;
-    VmxonCpuContext* ctxs = new (&ac) VmxonCpuContext[num_cpus];
+    VmxonPerCpu* ctxs = new (&ac) VmxonPerCpu[num_cpus];
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    mxtl::Array<VmxonCpuContext> cpu_ctxs(ctxs, num_cpus);
+    mxtl::Array<VmxonPerCpu> cpu_ctxs(ctxs, num_cpus);
     mxtl::unique_ptr<VmxonContext> ctx(new (&ac) VmxonContext(mxtl::move(cpu_ctxs)));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
     VmxInfo vmx_info;
-    mx_status_t status = InitCpuContexts(vmx_info, &ctx->cpu_contexts_);
+    mx_status_t status = InitPerCpus(vmx_info, &ctx->per_cpus_);
     if (status != NO_ERROR)
         return status;
 
@@ -325,15 +325,15 @@ mx_status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
     return NO_ERROR;
 }
 
-VmxonContext::VmxonContext(mxtl::Array<VmxonCpuContext> cpu_contexts)
-    : cpu_contexts_(mxtl::move(cpu_contexts)) {}
+VmxonContext::VmxonContext(mxtl::Array<VmxonPerCpu> per_cpus)
+    : per_cpus_(mxtl::move(per_cpus)) {}
 
 static int vmx_disable(void* arg) {
     VmxonContext* context = static_cast<VmxonContext*>(arg);
-    VmxonCpuContext* cpu_context = context->CurrCpuContext();
+    VmxonPerCpu* per_cpu = context->PerCpu();
 
     // Execute VMXOFF.
-    mx_status_t status = cpu_context->VmxOff();
+    mx_status_t status = per_cpu->VmxOff();
     if (status != NO_ERROR)
         return status;
 
@@ -347,8 +347,8 @@ VmxonContext::~VmxonContext() {
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
-VmxonCpuContext* VmxonContext::CurrCpuContext() {
-    return &cpu_contexts_[arch_curr_cpu_num()];
+VmxonPerCpu* VmxonContext::PerCpu() {
+    return &per_cpus_[arch_curr_cpu_num()];
 }
 
 AutoVmcsLoad::AutoVmcsLoad(VmxPage* page) {
@@ -363,8 +363,8 @@ AutoVmcsLoad::~AutoVmcsLoad() {
     arch_enable_ints();
 }
 
-mx_status_t VmcsCpuContext::Init(const VmxInfo& vmx_info) {
-    mx_status_t status = VmxCpuContext::Init(vmx_info);
+mx_status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
+    mx_status_t status = PerCpu::Init(vmx_info);
     if (status != NO_ERROR)
         return status;
 
@@ -393,7 +393,7 @@ static mx_status_t set_vmcs_control(uint32_t controls, uint64_t true_msr, uint64
     return NO_ERROR;
 }
 
-mx_status_t VmcsCpuContext::Clear() {
+mx_status_t VmcsPerCpu::Clear() {
     return page_.IsAllocated() ? vmclear(page_.PhysicalAddress()) : NO_ERROR;
 }
 
@@ -410,7 +410,7 @@ static uint64_t ept_pointer(paddr_t pml4_address) {
         1u << 6;
 }
 
-mx_status_t VmcsCpuContext::Setup(paddr_t pml4_address) {
+mx_status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     mx_status_t status = Clear();
     if (status != NO_ERROR)
         return status;
@@ -609,7 +609,7 @@ mx_status_t VmcsCpuContext::Setup(paddr_t pml4_address) {
     return NO_ERROR;
 }
 
-mx_status_t VmcsCpuContext::Launch() {
+mx_status_t VmcsPerCpu::Launch() {
     AutoVmcsLoad vmcs_load(&page_);
     VmxHostState host_state;
     if (vmx_host_save(&host_state)) {
@@ -638,8 +638,8 @@ mx_status_t VmcsCpuContext::Launch() {
 
 static int vmcs_setup(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
-    VmcsCpuContext* cpu_context = context->CurrCpuContext();
-    return cpu_context->Setup(context->Pml4Address());
+    VmcsPerCpu* per_cpu = context->PerCpu();
+    return per_cpu->Setup(context->Pml4Address());
 }
 
 // static
@@ -648,11 +648,11 @@ mx_status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
     uint num_cpus = arch_max_num_cpus();
 
     AllocChecker ac;
-    VmcsCpuContext* ctxs = new (&ac) VmcsCpuContext[num_cpus];
+    VmcsPerCpu* ctxs = new (&ac) VmcsPerCpu[num_cpus];
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    mxtl::Array<VmcsCpuContext> cpu_ctxs(ctxs, num_cpus);
+    mxtl::Array<VmcsPerCpu> cpu_ctxs(ctxs, num_cpus);
     mxtl::unique_ptr<VmcsContext> ctx(new (&ac) VmcsContext(mxtl::move(cpu_ctxs)));
     if (!ac.check())
         return ERR_NO_MEMORY;
@@ -662,7 +662,7 @@ mx_status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
         return status;
 
     VmxInfo vmx_info;
-    status = InitCpuContexts(vmx_info, &ctx->cpu_contexts_);
+    status = InitPerCpus(vmx_info, &ctx->per_cpus_);
     if (status != NO_ERROR)
         return status;
 
@@ -674,13 +674,13 @@ mx_status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
     return NO_ERROR;
 }
 
-VmcsContext::VmcsContext(mxtl::Array<VmcsCpuContext> cpu_contexts)
-    : cpu_contexts_(mxtl::move(cpu_contexts)) {}
+VmcsContext::VmcsContext(mxtl::Array<VmcsPerCpu> per_cpus)
+    : per_cpus_(mxtl::move(per_cpus)) {}
 
 static int vmcs_clear(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
-    VmcsCpuContext* cpu_context = context->CurrCpuContext();
-    return cpu_context->Clear();
+    VmcsPerCpu* per_cpu = context->PerCpu();
+    return per_cpu->Clear();
 }
 
 VmcsContext::~VmcsContext() {
@@ -692,14 +692,14 @@ paddr_t VmcsContext::Pml4Address() {
     return gpas_->Pml4Address();
 }
 
-VmcsCpuContext* VmcsContext::CurrCpuContext() {
-    return &cpu_contexts_[arch_curr_cpu_num()];
+VmcsPerCpu* VmcsContext::PerCpu() {
+    return &per_cpus_[arch_curr_cpu_num()];
 }
 
 static int vmcs_launch(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
-    VmcsCpuContext* cpu_context = context->CurrCpuContext();
-    return cpu_context->Launch();
+    VmcsPerCpu* per_cpu = context->PerCpu();
+    return per_cpu->Launch();
 }
 
 mx_status_t VmcsContext::Start() {

@@ -14,8 +14,8 @@
 typedef struct vm_page vm_page_t;
 class VmObject;
 struct VmxInfo;
-class VmxonCpuContext;
-class VmcsCpuContext;
+class VmxonPerCpu;
+class VmcsPerCpu;
 class GuestPhysicalAddressSpace;
 
 class VmxPage {
@@ -43,12 +43,12 @@ public:
 
     ~VmxonContext();
 
-    VmxonCpuContext* CurrCpuContext();
+    VmxonPerCpu* PerCpu();
 
 private:
-    mxtl::Array<VmxonCpuContext> cpu_contexts_;
+    mxtl::Array<VmxonPerCpu> per_cpus_;
 
-    explicit VmxonContext(mxtl::Array<VmxonCpuContext> cpu_contexts);
+    explicit VmxonContext(mxtl::Array<VmxonPerCpu> per_cpus);
 };
 
 class VmcsContext {
@@ -59,14 +59,14 @@ public:
     ~VmcsContext();
 
     paddr_t Pml4Address();
-    VmcsCpuContext* CurrCpuContext();
+    VmcsPerCpu* PerCpu();
     mx_status_t Start();
 
 private:
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
-    mxtl::Array<VmcsCpuContext> cpu_contexts_;
+    mxtl::Array<VmcsPerCpu> per_cpus_;
 
-    explicit VmcsContext(mxtl::Array<VmcsCpuContext> cpu_contexts);
+    explicit VmcsContext(mxtl::Array<VmcsPerCpu> per_cpus);
 };
 
 using HypervisorContext = VmxonContext;
