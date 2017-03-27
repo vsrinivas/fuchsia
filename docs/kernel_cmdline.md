@@ -71,6 +71,17 @@ needed for debugging it may speed up boot to disable it.
 This option asks the graphics console to use a specific font.  Currently
 only "9x16" (the default) and "18x32" (a double-size font) are supported.
 
+## ktrace.bufsize
+
+This option specifies the size of the buffer for ktrace records, in megabytes.
+The default is 32MB.
+
+## ktrace.grpmask
+
+This option specifies what ktrace records are emitted.
+The value is a bitmask of KTRACE\_GRP\_\* values from magenta/ktrace.h.
+Hex values may be specified as 0xNNN.
+
 ## ldso.trace
 
 This option (disabled by default) turns on dynamic linker trace output.
