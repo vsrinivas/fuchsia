@@ -16,13 +16,10 @@
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
 
-// Bring in a definition of the placement new operator.  Currently, kernel code
-// and user-mode code put this definition in different places.
-#ifdef _KERNEL
-#include <new.h>
-#else
-#include <magenta/new.h>
-#endif
+// Demand that the project using us has a definition of the
+// bring-your-own-memory, non-array, placement new operator.  We don't want to
+// demand a specific implementation, just that one exists.
+void* operator new(size_t sz, void *ptr);
 
 // Usage Notes:
 //
