@@ -1,0 +1,112 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_package.gni")
+
+# Defines a Dart application that can be run on the host
+#
+# Parameters
+#
+#   package_name (optional)
+#     Name of the dart package.
+#
+#   main_dart (required)
+#     File containing the main function of the application.
+#
+#   deps (optional)
+#     Dependencies of this application
+#
+#   output_name (optional)
+#     Name of the output file to generate. Defaults to $target_name.
+template("dart_tool") {
+  assert(defined(invoker.main_dart), "Must specify main_dart file")
+
+  dart_package_target_name = target_name + "_dart_package"
+
+  dart_package(dart_package_target_name) {
+    forward_variables_from(invoker, [ "deps", "source_dir" ])
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    } else {
+      infer_package_name = true
+    }
+  }
+
+  dart_binary_label = "//dart/runtime/bin:dart($host_toolchain)"
+  dart_binary_dir = get_label_info(dart_binary_label, "root_out_dir")
+  dart_binary = "$dart_binary_dir/dart"
+
+  snapshot_path = "$target_gen_dir/${target_name}.snapshot"
+  depfile_path = "${snapshot_path}.d"
+  packages_path = "$target_gen_dir/$dart_package_target_name.packages"
+
+  snapshot_target_name = target_name + "_snapshot"
+
+  # Creates a snapshot file.
+  # The main advantage of snapshotting is that it sets up source dependencies
+  # via a depfile so that a Dart app gets properly rebuilt when one of its
+  # sources is modified.
+  action(snapshot_target_name) {
+    if (defined(invoker.testonly)) {
+      testonly = invoker.testonly
+    }
+
+    depfile = depfile_path
+
+    outputs = [
+      snapshot_path,
+    ]
+
+    script = dart_binary
+
+    # The snapshot path needs to be rebased on top of the root build dir so
+    # that the resulting depfile gets properly formatted.
+    rebased_snapshot_path = rebase_path(snapshot_path, root_build_dir)
+    rebased_depfile_path = rebase_path(depfile_path)
+    rebased_packages_path = rebase_path(packages_path)
+
+    args = [
+      "--snapshot=$rebased_snapshot_path",
+      "--snapshot-depfile=$rebased_depfile_path",
+      "--packages=$rebased_packages_path",
+      rebase_path(invoker.main_dart),
+    ]
+
+    deps = [
+      ":$dart_package_target_name",
+      dart_binary_label,
+    ]
+  }
+
+  if (defined(invoker.output_name)) {
+    app_name = invoker.output_name
+  } else {
+    app_name = target_name
+  }
+
+  # Builds a convenience script to invoke the app.
+  action(target_name) {
+    script = "//build/dart/gen_app_invocation.py"
+
+    app_path = "$root_out_dir/dart-tools/$app_name"
+
+    outputs = [
+      app_path,
+    ]
+
+    args = [
+      "--out",
+      rebase_path(app_path),
+      "--dart",
+      rebase_path(dart_binary),
+      "--snapshot",
+      rebase_path(snapshot_path),
+    ]
+
+    deps = [
+      ":$snapshot_target_name",
+      dart_binary_label,
+    ]
+  }
+}
