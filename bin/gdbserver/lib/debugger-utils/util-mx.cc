@@ -18,9 +18,12 @@
 namespace debugserver {
 namespace util {
 
+std::string MxErrorString(mx_status_t status) {
+  return ftl::StringPrintf("%s(%d)", mx_status_get_string(status), status);
+}
+
 void LogErrorWithMxStatus(const std::string& message, mx_status_t status) {
-  FTL_LOG(ERROR) << message << ": " << mx_status_get_string(status)
-                 << " (" << status << ")";
+  FTL_LOG(ERROR) << message << ": " << MxErrorString(status);
 }
 
 const char* ExceptionName(mx_excp_type_t type) {

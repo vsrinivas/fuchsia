@@ -62,6 +62,10 @@ void LogErrorWithErrno(const std::string& message);
 // Logs the given |message| using the string representation of |status| in a
 // nicely formatted way.
 void LogErrorWithMxStatus(const std::string& message, mx_status_t status);
+
+// Return a string representation of |status|.
+// This includes both the numeric and text values.
+std::string MxErrorString(mx_status_t status);
 #endif  // __Fuchsia__
 
 // Joins multiple strings using the given delimiter. This aims to avoid
