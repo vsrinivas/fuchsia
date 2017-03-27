@@ -54,6 +54,7 @@ class ResponsePrinter {
           break;
         }
       } else {
+        printf("\nUnexpected error reading response %d\n", result);
         break;
       }
     }
