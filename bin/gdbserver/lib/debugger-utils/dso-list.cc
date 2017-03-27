@@ -19,19 +19,8 @@
 #include "dso-list.h"
 #include "util.h"
 
-extern struct r_debug* _dl_debug_addr;
-
 namespace debugserver {
 namespace util {
-
-// TODO: For now we make the simplifying assumption that the address of
-// this variable in our address space is constant among all processes.
-#define rdebug_vaddr ((uintptr_t)_dl_debug_addr)
-#define rdebug_off_lmap offsetof(struct r_debug, r_map)
-
-#define lmap_off_next offsetof(struct link_map, l_next)
-#define lmap_off_name offsetof(struct link_map, l_name)
-#define lmap_off_addr offsetof(struct link_map, l_addr)
 
 const char kDebugDirectory[] = "/boot/debug";
 const char kDebugSuffix[] = ".debug";

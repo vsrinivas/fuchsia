@@ -19,12 +19,6 @@
 
 #include "server.h"
 
-// This is a global variable that exists in the dynamic linker, and thus in
-// every processes's address space (since Fuchsia is PIE-only). It contains
-// various information provided by the dynamic linker for use by debugging
-// tools.
-extern struct r_debug* _dl_debug_addr;
-
 namespace debugserver {
 namespace {
 
@@ -617,11 +611,19 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
 
   FTL_VLOG(2) << "Building dso list";
 
-  // TODO(dje): For now we make the simplifying assumption that the address of
-  // this variable in our address space is constant among all processes.
-  auto rdebug_vaddr = reinterpret_cast<mx_vaddr_t>(_dl_debug_addr);
+  uintptr_t debug_addr;
+  mx_handle_t process_handle = thread->process()->handle();
+  mx_status_t status = mx_object_get_property(process_handle,
+                                              MX_PROP_PROCESS_DEBUG_ADDR,
+                                              &debug_addr, sizeof(debug_addr));
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "mx_object_get_property failed, unable to fetch dso list: "
+		   << util::MxErrorString(status);
+    return;
+  }
+
   struct r_debug debug;
-  if (!ReadMemory(rdebug_vaddr, &debug, sizeof(debug))) {
+  if (!ReadMemory(debug_addr, &debug, sizeof(debug))) {
     FTL_VLOG(2) << "unable to read _dl_debug_addr";
     // Don't set dsos_build_failed_ here, it may be too early to try.
     return;
