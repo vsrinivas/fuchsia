@@ -12,6 +12,7 @@
 
 namespace debugserver {
 namespace arch {
+
 namespace {
 
 // The i386 Int3 instruction.

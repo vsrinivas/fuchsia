@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "registers.h"
+#include "registers-amd64.h"
 
 #include <cinttypes>
 #include <cstring>
@@ -64,39 +65,12 @@ class RegistersAmd64 final : public Registers {
 
   bool RefreshRegset(int regset) override {
     FTL_DCHECK(regset == 0);
-
-    // We report all zeros for the registers if the thread was just created.
-    if (thread()->state() == Thread::State::kNew) {
-      memset(&gregs_, 0, sizeof(gregs_));
-      return true;
-    }
-
-    uint32_t gregs_size;
-    mx_status_t status = mx_thread_read_state(
-        thread()->handle(), regset, &gregs_, sizeof(gregs_), &gregs_size);
-    if (status < 0) {
-      util::LogErrorWithMxStatus("Failed to read x86_64 registers", status);
-      return false;
-    }
-
-    FTL_DCHECK(gregs_size == sizeof(gregs_));
-
-    FTL_VLOG(1) << "Regset " << regset << " refreshed";
-    return true;
+    return RefreshRegsetHelper(regset, &gregs_, sizeof(gregs_));
   }
 
   bool WriteRegset(int regset) override {
     FTL_DCHECK(regset == 0);
-
-    mx_status_t status = mx_thread_write_state(thread()->handle(), regset,
-                                               &gregs_, sizeof(gregs_));
-    if (status < 0) {
-      util::LogErrorWithMxStatus("Failed to write x86_64 registers", status);
-      return false;
-    }
-
-    FTL_VLOG(1) << "Regset " << regset << " written";
-    return true;
+    return WriteRegsetHelper(regset, &gregs_, sizeof(gregs_));
   }
 
   std::string GetRegsetAsString(int regset) override {
@@ -106,17 +80,7 @@ class RegistersAmd64 final : public Registers {
 
   bool SetRegsetFromString(int regset, const ftl::StringView& value) override {
     FTL_DCHECK(regset == 0);
-
-    auto bytes = util::DecodeByteArrayString(value);
-    if (bytes.size() != sizeof(gregs_)) {
-      FTL_LOG(ERROR) << "|value| doesn't match x86-64 general registers size: "
-                     << value;
-      return false;
-    }
-
-    memcpy(&gregs_, bytes.data(), sizeof(gregs_));
-    FTL_VLOG(1) << "Regset " << regset << " cache written";
-    return true;
+    return SetRegsetFromStringHelper(regset, &gregs_, sizeof(gregs_), value);
   }
 
   std::string GetRegisterAsString(int regno) override {

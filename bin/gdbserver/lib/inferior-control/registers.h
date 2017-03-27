@@ -19,30 +19,6 @@ class Thread;
 
 namespace arch {
 
-// The x86-64 general register names.
-// TODO(dje): Move to amd64-specific file.
-enum class Amd64Register {
-  RAX = 0,
-  RBX,
-  RCX,
-  RDX,
-  RSI,
-  RDI,
-  RBP,
-  RSP,
-  R8,
-  R9,
-  R10,
-  R11,
-  R12,
-  R13,
-  R14,
-  R15,
-  RIP,
-  EFLAGS,
-  NUM_REGISTERS
-};
-
 // Returns the register number for the "Program Counter Register" on the current
 // platform. Returns -1, if this operation is not supported.
 int GetPCRegisterNumber();
@@ -162,6 +138,20 @@ class Registers {
   Registers(Thread* thread);
 
   Thread* thread() const { return thread_; }
+
+  // Loads and caches register values for |regset|.
+  // Returns false if there is an error.
+  bool RefreshRegsetHelper(int regset, void* buf, size_t buf_size);
+
+  // Write the cached register set |regset| values back.
+  // Returns false if there is an error.
+  bool WriteRegsetHelper(int regset, const void* buf, size_t buf_size);
+
+  // Fill a regset buffer from its string representation.
+  // This does not write the values to the cpu.
+  // N.B. This helper assumes there is no padding in the regset buffer.
+  bool SetRegsetFromStringHelper(int regset, void* buffer, size_t buf_size,
+                                 const ftl::StringView& value);
 
  private:
   Thread* thread_;  // weak
