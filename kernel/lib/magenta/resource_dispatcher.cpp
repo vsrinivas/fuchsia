@@ -366,6 +366,8 @@ mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t m
 
     {
         AutoLock lock(&lock_);
+        rec.self.child_count = num_children_;
+        rec.self.record_count = num_records_;
 
         // indicate how many we *could* return
         *available = num_records_ + 1;
