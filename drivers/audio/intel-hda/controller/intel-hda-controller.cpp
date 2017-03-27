@@ -7,7 +7,6 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/pci.h>
 #include <magenta/assert.h>
-#include <magenta/cpp.h>
 #include <mxtl/auto_lock.h>
 #include <stdio.h>
 #include <string.h>
@@ -288,12 +287,7 @@ mx_status_t IntelHDAController::DriverBind(mx_driver_t* driver,
     if (cookie == nullptr) return ERR_INVALID_ARGS;
     if (driver != driver_) return ERR_INVALID_ARGS;
 
-    AllocChecker ac;
-    mxtl::RefPtr<IntelHDAController> controller;
-
-    controller = mxtl::AdoptRef(new (&ac) IntelHDAController());
-    if (!ac.check())
-        return ERR_NO_MEMORY;
+    mxtl::RefPtr<IntelHDAController> controller(mxtl::AdoptRef(new IntelHDAController()));
 
     // If we successfully initialize, transfer our reference into the unmanaged
     // world.  We will re-claim it later when unbind is called.

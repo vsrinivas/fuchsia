@@ -252,17 +252,11 @@ mx_status_t IntelHDAController::SetupStreamDescriptors() {
                   ? IntelHDAStream::Type::OUTPUT
                   : IntelHDAStream::Type::BIDIR);
 
-        AllocChecker ac;
-        auto stream = mxtl::AdoptRef(new (&ac) IntelHDAStream(type,
-                                                              stream_id,
-                                                              &regs_->stream_desc[i],
-                                                              bdl_mem_.phys() + bdl_off,
-                                                              bdl_mem_.virt() + bdl_off));
-
-        if (!ac.check()) {
-            LOG("Failed to allocate IntelHDAStream %hu/%u!\n", stream_id, total_stream_cnt);
-            return ERR_NO_MEMORY;
-        }
+        auto stream = mxtl::AdoptRef(new IntelHDAStream(type,
+                                                        stream_id,
+                                                        &regs_->stream_desc[i],
+                                                        bdl_mem_.phys() + bdl_off,
+                                                        bdl_mem_.virt() + bdl_off));
 
         MX_DEBUG_ASSERT(i < countof(all_streams_));
         MX_DEBUG_ASSERT(all_streams_[i] == nullptr);

@@ -16,7 +16,6 @@ shared_library("audio-dispatcher-pool") {
 
     deps = [
         "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/mxcpp",
         "//magenta/system/ulib/mxtl",
     ]
 

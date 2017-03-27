@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/new.h>
 #include <mxtl/auto_lock.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
@@ -20,13 +19,7 @@ void RealtekCodec::PrintDebugPrefix() const {
 }
 
 mxtl::RefPtr<RealtekCodec> RealtekCodec::Create() {
-    AllocChecker ac;
-
-    auto codec = mxtl::AdoptRef(new (&ac) RealtekCodec);
-    if (!ac.check())
-        return nullptr;
-
-    return codec;
+    return mxtl::AdoptRef(new RealtekCodec);
 }
 
 mx_status_t RealtekCodec::Init(mx_driver_t* driver, mx_device_t* codec_dev) {
@@ -317,15 +310,8 @@ mx_status_t RealtekCodec::CreateAndPublishStreams(const StreamProperties* stream
         return ERR_INVALID_ARGS;
 
     for (size_t i = 0; i < stream_cnt; ++i) {
-        AllocChecker ac;
         const auto& stream_def = streams[i];
-        auto stream = mxtl::AdoptRef(new (&ac) RealtekStream(stream_def));
-
-        if (!ac.check()) {
-            LOG("Failed to allocate memory for %s stream id #%u!",
-                 stream_def.is_input ? "input" : "output", stream_def.stream_id);
-            return ERR_NO_MEMORY;
-        }
+        auto stream = mxtl::AdoptRef(new RealtekStream(stream_def));
 
         res = ActivateStream(stream);
         if (res != NO_ERROR) {
@@ -345,8 +331,7 @@ extern "C" mx_status_t realtek_ihda_codec_bind_hook(mx_driver_t* driver,
         return ERR_INVALID_ARGS;
 
     auto codec = RealtekCodec::Create();
-    if (codec == nullptr)
-        return ERR_NO_MEMORY;
+    MX_DEBUG_ASSERT(codec != nullptr);
 
     // Init our codec.  If we succeed, transfer our reference to the unmanaged
     // world.  We will re-claim it later when unbind is called.
