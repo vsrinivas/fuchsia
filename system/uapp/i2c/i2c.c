@@ -59,6 +59,7 @@ int cmd_add_slave(int fd, int argc, const char** argv) {
         return 1;
     }
 
+    errno = 0;
     long int address = strtol(argv[0], NULL, 16);
     if (errno) {
         print_usage();
@@ -85,6 +86,7 @@ int cmd_remove_slave(int fd, int argc, const char** argv) {
         return 1;
     }
 
+    errno = 0;
     long int address = strtol(argv[0], NULL, 16);
     if (errno) {
         print_usage();
@@ -111,6 +113,7 @@ int cmd_set_bus_frequency(int fd, int argc, const char** argv) {
         return 1;
     }
 
+    errno = 0;
     long int frequency = strtol(argv[0], NULL, 10);
     if (errno) {
         print_usage();
@@ -136,6 +139,7 @@ int cmd_read(int fd, int argc, const char** argv) {
         return 1;
     }
 
+    errno = 0;
     long int length = strtol(argv[0], NULL, 10);
     if (errno) {
         print_usage();
@@ -179,6 +183,7 @@ int cmd_write(int fd, int argc, const char** argv) {
 
     int ret = 0;
 
+    errno = 0;
     for (int i = 0; i < argc; i++) {
         buf[i] = strtol(argv[i], NULL, 16);
         if (errno) {
@@ -209,6 +214,7 @@ int cmd_transfer(int fd, int argc, const char** argv) {
     int segments = 1;
     int count = argc;
     const char** arg = argv;
+    errno = 0;
     while (count) {
         if (count < 2) {
             print_usage();
