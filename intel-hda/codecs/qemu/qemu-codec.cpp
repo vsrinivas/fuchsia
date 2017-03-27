@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/new.h>
 #include <mxtl/auto_lock.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
@@ -34,13 +33,7 @@ void QemuCodec::PrintDebugPrefix() const {
 }
 
 mxtl::RefPtr<QemuCodec> QemuCodec::Create() {
-    AllocChecker ac;
-
-    auto codec = mxtl::AdoptRef(new (&ac) QemuCodec);
-    if (!ac.check())
-        return nullptr;
-
-    return codec;
+    return mxtl::AdoptRef(new QemuCodec);
 }
 
 mx_status_t QemuCodec::Init(mx_driver_t* driver, mx_device_t* codec_dev) {
@@ -60,25 +53,14 @@ mx_status_t QemuCodec::Init(mx_driver_t* driver, mx_device_t* codec_dev) {
 mx_status_t QemuCodec::Start() {
     mx_status_t res;
 
-    AllocChecker ac;
-    auto output = mxtl::AdoptRef<QemuStream>(new (&ac) QemuOutputStream());
-    if (!ac.check()) {
-        LOG("Failed to allocate memory for output stream!");
-        return ERR_NO_MEMORY;
-    }
-
-    auto input = mxtl::AdoptRef<QemuStream>(new (&ac) QemuInputStream());
-    if (!ac.check()) {
-        LOG("Failed to allocate memory for input stream!");
-        return ERR_NO_MEMORY;
-    }
-
+    auto output = mxtl::AdoptRef<QemuStream>(new QemuOutputStream());
     res = ActivateStream(output);
     if (res != NO_ERROR) {
         LOG("Failed to activate output stream (res %d)!", res);
         return res;
     }
 
+    auto input = mxtl::AdoptRef<QemuStream>(new QemuInputStream());
     res = ActivateStream(input);
     if (res != NO_ERROR) {
         LOG("Failed to activate input stream (res %d)!", res);
@@ -95,8 +77,7 @@ extern "C" mx_status_t qemu_ihda_codec_bind_hook(mx_driver_t* driver,
         return ERR_INVALID_ARGS;
 
     auto codec = QemuCodec::Create();
-    if (codec == nullptr)
-        return ERR_NO_MEMORY;
+    MX_DEBUG_ASSERT(codec != nullptr);
 
     // Init our codec.  If we succeed, transfer our reference to the unmanaged
     // world.  We will re-claim it later when unbind is called.

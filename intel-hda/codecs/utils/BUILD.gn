@@ -21,7 +21,6 @@ shared_library("ihda-codec-utils") {
     deps = [
         "//drivers/audio/intel-hda/utils:ihda-utils",
         "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/mxcpp",
         "//magenta/system/ulib/mxtl",
     ]
 

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/cpp.h>
-
 #include "intel_hda_codec.h"
 
 namespace audio {
@@ -99,11 +97,7 @@ static mx_status_t ParseAWConnectionListLen(AudioWidgetState& widget, const Code
         widget.conn_list_len_ = resp.data & 0x7f;
 
         if (widget.conn_list_len_) {
-            AllocChecker ac;
-            widget.conn_list_.reset(
-                    new (&ac) AudioWidgetState::ConnListEntry[widget.conn_list_len_]);
-            if (!ac.check())
-                return ERR_NO_MEMORY;
+            widget.conn_list_.reset(new AudioWidgetState::ConnListEntry[widget.conn_list_len_]);
         }
     } else {
         widget.long_form_conn_list_ = false;
@@ -153,11 +147,24 @@ static mx_status_t ParseAWPinWidgetCtrl(AudioWidgetState& widget, const CodecRes
 }
 
 static mx_status_t ParseAudioWidgetType(AudioWidgetStatePtr& ptr, const CodecResponse& resp) {
-    AllocChecker ac;
-    ptr.reset(new (&ac) AudioWidgetState(AudioWidgetState::Caps(resp.data)));
+    AudioWidgetState::Caps caps(resp.data);
 
-    if (!ac.check())
-        return ERR_NO_MEMORY;
+    switch (caps.type()) {
+    case AudioWidgetState::Type::OUTPUT:
+    case AudioWidgetState::Type::INPUT:
+    case AudioWidgetState::Type::MIXER:
+    case AudioWidgetState::Type::SELECTOR:
+    case AudioWidgetState::Type::PIN_COMPLEX:
+    case AudioWidgetState::Type::POWER:
+    case AudioWidgetState::Type::VOLUME_KNOB:
+    case AudioWidgetState::Type::BEEP_GEN:
+    case AudioWidgetState::Type::VENDOR:
+        break;
+    default:
+        return ERR_INVALID_ARGS;
+    }
+
+    ptr.reset(new AudioWidgetState(caps));
 
     return NO_ERROR;
 }
@@ -283,10 +290,7 @@ static mx_status_t ParseAFGWidgetCount(AudioFunctionGroupState& afg, const Codec
         return ERR_INTERNAL;
 
     if (afg.widget_count_) {
-        AllocChecker ac;
-        afg.widgets_.reset(new (&ac) AudioWidgetStatePtr[afg.widget_count_]);
-        if (!ac.check())
-            return ERR_NO_MEMORY;
+        afg.widgets_.reset(new AudioWidgetStatePtr[afg.widget_count_]);
     }
 
     return NO_ERROR;
@@ -307,27 +311,23 @@ static mx_status_t ParseFnGroupType(FunctionGroupStatePtr& ptr, const CodecRespo
     /* Response format documented in section 7.3.4.1 */
     auto type = static_cast<FunctionGroupState::Type>(resp.data & 0xFF);
 
-    AllocChecker ac;
     switch (type) {
     case FunctionGroupState::Type::AUDIO:
-        ptr.reset(new (&ac) AudioFunctionGroupState());
+        ptr.reset(new AudioFunctionGroupState());
         break;
 
     case FunctionGroupState::Type::MODEM:
-        ptr.reset(new (&ac) ModemFunctionGroupState());
+        ptr.reset(new ModemFunctionGroupState());
         break;
     default:
         if ((type >= FunctionGroupState::Type::VENDOR_START) &&
             (type <= FunctionGroupState::Type::VENDOR_END)) {
-            ptr.reset(new (&ac) VendorFunctionGroupState(type));
+            ptr.reset(new VendorFunctionGroupState(type));
         } else {
             return ERR_INTERNAL;
         }
         break;
     }
-
-    if (!ac.check())
-        return ERR_NO_MEMORY;
 
     ptr->can_send_unsolicited_ = ((resp.data & 0x100) != 0);
     return NO_ERROR;
@@ -375,10 +375,7 @@ static mx_status_t ParseFnGroupCount(CodecState& codec, const CodecResponse& res
 
     // Allocate the storage for the function group state pointers, then
     // start the process of enumerating their properties and widgets.
-    AllocChecker ac;
-    codec.fn_groups_.reset(new (&ac) FunctionGroupStatePtr[codec.fn_group_count_]);
-    if (!ac.check())
-        return ERR_NO_MEMORY;
+    codec.fn_groups_.reset(new FunctionGroupStatePtr[codec.fn_group_count_]);
 
     return NO_ERROR;
 }
@@ -391,13 +388,7 @@ static const IntelHDACodec::CommandListEntry<CodecState> FETCH_CODEC_ROOT_COMMAN
 
 mxtl::unique_ptr<IntelHDACodec> IntelHDACodec::Create(uint32_t codec_id,
                                                       const char* const dev_name) {
-    AllocChecker ac;
-
-    mxtl::unique_ptr<IntelHDACodec> ret(new (&ac) IntelHDACodec(codec_id, dev_name));
-    if (!ac.check())
-        return nullptr;
-
-    return ret;
+    return mxtl::unique_ptr<IntelHDACodec>(new IntelHDACodec(codec_id, dev_name));
 }
 
 mx_status_t IntelHDACodec::DumpCodec(int argc, const char** argv) {

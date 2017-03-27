@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <magenta/assert.h>
-#include <magenta/cpp.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
@@ -93,16 +92,7 @@ IntelHDACodec::IntelHDACodec(IntelHDAController& controller, uint8_t codec_id)
 mxtl::RefPtr<IntelHDACodec> IntelHDACodec::Create(IntelHDAController& controller,
                                                       uint8_t codec_id) {
     MX_DEBUG_ASSERT(codec_id < HDA_MAX_CODECS);
-
-    AllocChecker ac;
-    IntelHDACodec* ret = new (&ac) IntelHDACodec(controller, codec_id);
-
-    if (!ac.check()) {
-        LOG_EX(controller, "Failed to create allocate memory for codec ID %u\n", codec_id);
-        return nullptr;
-    }
-
-    return mxtl::AdoptRef(ret);
+    return mxtl::AdoptRef(new IntelHDACodec(controller, codec_id));
 }
 
 mx_status_t IntelHDACodec::Startup() {

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/cpp.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
 #include <stdio.h>
@@ -52,14 +51,7 @@ mx_status_t DispatcherThread::AddClientLocked() {
     while ((active_thread_count_ < active_client_count_) &&
            (active_thread_count_ < mx_system_get_num_cpus())) {
 
-        AllocChecker ac;
-        mxtl::unique_ptr<DispatcherThread> thread(new (&ac) DispatcherThread(active_thread_count_));
-
-        if (!ac.check()) {
-            printf("Out of memory while trying to grow client thread pool!\n");
-            active_client_count_--;
-            return ERR_NO_MEMORY;
-        }
+        mxtl::unique_ptr<DispatcherThread> thread(new DispatcherThread(active_thread_count_));
 
         int c11_res = thrd_create(
                 &thread->thread_,

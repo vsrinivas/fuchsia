@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/cpp.h>
 #include <magenta/device/intel-hda.h>
 #include <mxio/io.h>
 
@@ -104,11 +103,7 @@ mx_status_t IntelHDAController::Enumerate() {
 
     mx_status_t res = MagentaDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
     [](void*, uint32_t id, const char* const dev_name) -> mx_status_t {
-        AllocChecker ac;
-
-        mxtl::unique_ptr<IntelHDAController> dev(new (&ac) IntelHDAController(id, dev_name));
-        if (!ac.check())
-            return ERR_NO_MEMORY;
+        mxtl::unique_ptr<IntelHDAController> dev(new IntelHDAController(id, dev_name));
 
         if (!controllers_.insert_or_find(mxtl::move(dev)))
             return ERR_INTERNAL;

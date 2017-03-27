@@ -30,7 +30,6 @@ shared_library("ihda-controller") {
         "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
         "//drivers/audio/intel-hda/utils:ihda-utils",
         "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/mxcpp",
         "//magenta/system/ulib/mxtl",
     ]
 
