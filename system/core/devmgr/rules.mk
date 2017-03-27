@@ -26,11 +26,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-memory.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp
 
-ifeq ($(ENABLE_DEVHOST_V2),true)
-MODULE_SRCS += $(LOCAL_DIR)/devmgr-coordinator-v2.c
-MODULE_DEFINES := DEVHOST_V2=1
-endif
-
 # userboot supports loading via the dynamic linker, so libc (ulib/c)
 # can be linked dynamically.  But it doesn't support any means to look
 # up other shared libraries, so everything else must be linked statically.
@@ -53,7 +48,20 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := ulib/magenta ulib/c
 
-MODULE_CFLAGS += -DDEVMGR=1
+MODULE_DEFINES := DEVMGR=1
+
+ifeq ($(ENABLE_DEVHOST_V2),true)
+MODULE_SRCS += \
+	$(LOCAL_DIR)/devmgr-coordinator-v2.c \
+	$(LOCAL_DIR)/devmgr-drivers.c \
+	$(LOCAL_DIR)/driver-info.c \
+	$(LOCAL_DIR)/acpi.c
+
+MODULE_DEFINES += DEVHOST_V2=1
+
+MODULE_STATIC_LIBS += ulib/acpisvc-client
+endif
+
 
 include make/module.mk
 

@@ -6,10 +6,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <magenta/process.h>
+#include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/log.h>
 
 #include <mxio/util.h>
+
+#include "devcoordinator.h"
+
 
 
 static void devhost_io_init(void) {
@@ -27,6 +32,15 @@ static void devhost_io_init(void) {
 }
 
 int main(int argc, char** argv) {
+    devhost_io_init();
+
     printf("devhost-v2: main()\n");
+
+    mx_handle_t hrpc = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    if (hrpc == MX_HANDLE_INVALID) {
+        printf("devhost: rpc handle invalid\n");
+        return -1;
+    }
+
     return 0;
 }
