@@ -37,18 +37,6 @@
 static VnodeMemfs* vnroot;
 static VnodeMemfs* vnclass;
 
-static mxio_dispatcher_t* coordinator_dispatcher;
-
-static mx_handle_t devhost_job_handle;
-
-typedef struct device_ctx {
-    mx_handle_t hdevice;
-    uint32_t protocol_id;
-    VnodeMemfs* vnode;
-    char name[MX_DEVICE_NAME_MAX];
-} device_ctx_t;
-
-
 #define PNMAX 16
 static const char* proto_name(uint32_t id, char buf[PNMAX]) {
     switch (id) {
@@ -79,10 +67,10 @@ static void prepopulate_protocol_dirs(void) {
     }
 }
 
-static void do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
+mx_status_t do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     if (memfs_create_device_at(parent->vnode, &ctx->vnode, ctx->name, ctx->hdevice)) {
         printf("devmgr: could not add '%s' to devfs!\n", ctx->name);
-        return;
+        return ERR_INTERNAL;
     }
 
     if ((ctx->protocol_id == MX_PROTOCOL_MISC_PARENT) ||
@@ -92,7 +80,7 @@ static void do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
         // They do not get aliases in /dev/class/misc/...
         // instead they exist only under their parent
         // device.
-        return;
+        return NO_ERROR;
     }
 
     char buf[PNMAX];
@@ -103,6 +91,7 @@ static void do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     mx_status_t status;
     if ((status = memfs_create_device_at(vnclass, &vnp, pname, 0)) < 0) {
         printf("devmgr: could not link to '%s'\n", ctx->name);
+        return NO_ERROR;
     }
 
     const char* name = ctx->name;
@@ -115,7 +104,17 @@ static void do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     if ((status = memfs_add_link(vnp, name, ctx->vnode)) < 0) {
         printf("devmgr: could not link to '%s'\n", ctx->name);
     }
+
+    return NO_ERROR;
 }
+
+void do_unpublish(device_ctx_t* dev) {
+    devfs_remove(dev->vnode);
+}
+
+#if !DEVHOST_V2
+static mxio_dispatcher_t* coordinator_dispatcher;
+static mx_handle_t devhost_job_handle;
 
 static mx_status_t do_remote_create(const char* name, uint32_t protocol_id, device_ctx_t** out,
                                     mx_handle_t* _hdevice, mx_handle_t* _hrpc) {
@@ -202,7 +201,7 @@ static mx_status_t do_remote_remove(device_ctx_t* dev, bool clean) {
 }
 
 // handle dev_coordinator_msgs from devhosts
-static mx_status_t coordinator_handler(mx_handle_t h, void* cb, void* cookie) {
+mx_status_t coordinator_handler(mx_handle_t h, void* cb, void* cookie) {
     device_ctx_t* dev = cookie;
     dev_coordinator_msg_t msg;
     mx_handle_t handles[2];
@@ -254,13 +253,7 @@ fail:
     return ERR_IO;
 }
 
-void devmgr_init(mx_handle_t root_job) {
-    printf("devmgr: init\n");
-
-    vnroot = devfs_get_root();
-    memfs_create_device_at(vnroot, &vnclass, "class", 0);
-    prepopulate_protocol_dirs();
-
+void coordinator_init(mx_handle_t root_job) {
     mx_status_t status = mx_job_create(root_job, 0u, &devhost_job_handle);
     if (status < 0) {
         printf("unable to create devhost job\n");
@@ -269,7 +262,7 @@ void devmgr_init(mx_handle_t root_job) {
     mxio_dispatcher_create(&coordinator_dispatcher, coordinator_handler);
 }
 
-void devmgr_handle_messages(void) {
+void coordinator(void) {
     device_ctx_t* root;
     mx_status_t status;
     mx_handle_t hdevice, hrpc;
@@ -283,4 +276,19 @@ void devmgr_handle_messages(void) {
 
     printf("devmgr: root ctx %p\n", root);
     mxio_dispatcher_run(coordinator_dispatcher);
+}
+#endif
+
+void devmgr_init(mx_handle_t root_job) {
+    printf("devmgr: init\n");
+
+    vnroot = devfs_get_root();
+    memfs_create_device_at(vnroot, &vnclass, "class", 0);
+    prepopulate_protocol_dirs();
+
+    coordinator_init(root_job);
+}
+
+void devmgr_handle_messages(void) {
+    coordinator();
 }

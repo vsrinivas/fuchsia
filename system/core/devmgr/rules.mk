@@ -4,6 +4,8 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
+ENABLE_DEVHOST_V2 := $(call TOBOOL,$(ENABLE_DEVHOST_V2))
+
 MODULE := $(LOCAL_DIR)
 
 # devmgr - core userspace services process
@@ -15,14 +17,19 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/dnode.cpp \
     $(LOCAL_DIR)/devmgr.c \
-    $(LOCAL_DIR)/devmgr-mxio.c \
     $(LOCAL_DIR)/devmgr-coordinator.c \
+    $(LOCAL_DIR)/devmgr-mxio.c \
     $(LOCAL_DIR)/shared.c \
     $(LOCAL_DIR)/vfs-boot.cpp \
     $(LOCAL_DIR)/vfs-devmgr.cpp \
     $(LOCAL_DIR)/vfs-device.cpp \
     $(LOCAL_DIR)/vfs-memory.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp
+
+ifeq ($(ENABLE_DEVHOST_V2),true)
+MODULE_SRCS += $(LOCAL_DIR)/devmgr-coordinator-v2.c
+MODULE_DEFINES := DEVHOST_V2=1
+endif
 
 # userboot supports loading via the dynamic linker, so libc (ulib/c)
 # can be linked dynamically.  But it doesn't support any means to look
@@ -70,6 +77,15 @@ LOCAL_DIR := $(LOCAL_SAVEDIR)
 
 MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1
 
+ifeq ($(ENABLE_DEVHOST_V2),true)
+MODULE_DEFINES += DEVHOST_V2=1
+MODULE_SRCS := \
+	$(LOCAL_DIR)/devhost-v2.c
+
+MODULE_STATIC_LIBS := ulib/ddk ulib/sync
+
+MODULE_LIBS := ulib/driver ulib/mxio ulib/magenta ulib/c
+else
 MODULE_SRCS := \
     $(LOCAL_DIR)/acpi.c \
     $(LOCAL_DIR)/acpi-device.c \
@@ -87,6 +103,7 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := ulib/acpisvc-client ulib/ddk ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/mxio ulib/launchpad ulib/magenta ulib/c
+endif
 
 include make/module.mk
 
