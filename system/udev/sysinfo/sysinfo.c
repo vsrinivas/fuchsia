@@ -17,7 +17,7 @@ mx_handle_t get_sysinfo_job_root(void);
 static ssize_t sysinfo_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen,
                              void* reply, size_t max) {
     switch (op) {
-    case IOCTL_SYSINFO_GET_ROOT_JOB:
+    case IOCTL_SYSINFO_GET_ROOT_JOB: {
         if ((cmdlen != 0) || (max < sizeof(mx_handle_t))) {
             return ERR_INVALID_ARGS;
         }
@@ -28,6 +28,22 @@ static ssize_t sysinfo_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, siz
             memcpy(reply, &h, sizeof(mx_handle_t));
             return sizeof(mx_handle_t);
         }
+    }
+    case IOCTL_SYSINFO_GET_ROOT_RESOURCE: {
+        if ((cmdlen != 0) || (max < sizeof(mx_handle_t))) {
+            return ERR_INVALID_ARGS;
+        }
+        mx_handle_t h = get_root_resource();
+        if (h == MX_HANDLE_INVALID) {
+            return ERR_NOT_SUPPORTED;
+        }
+        mx_status_t status = mx_handle_duplicate(h, MX_RIGHT_ENUMERATE | MX_RIGHT_TRANSFER, &h);
+        if (status < 0) {
+            return status;
+        }
+        memcpy(reply, &h, sizeof(mx_handle_t));
+        return sizeof(mx_handle_t);
+    }
     default:
         return ERR_INVALID_ARGS;
     }
