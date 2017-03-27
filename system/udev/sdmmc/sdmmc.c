@@ -315,6 +315,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
 
     int attempt = 0;
     const int max_attempts = 10;
+    bool card_supports_18v_signalling = false;
     while (true) {
         // Ask for high speed.
         const uint32_t flags = (1 << 30)  | 0x00ff8000 | (1 << 24);
@@ -334,6 +335,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
                 xprintf("sdmmc: unsupported card type, must use sdhc card\n");
                 goto err;
             }
+            card_supports_18v_signalling = !!((ocr >> 24) & 0x1);
             break;
         }
 
@@ -345,7 +347,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
         mx_nanosleep(MX_MSEC(5));
     }
 
-    uint32_t new_bus_frequency = 10000000;
+    uint32_t new_bus_frequency = 25000000;
     st = dev->ops->ioctl(dev, IOCTL_SDMMC_SET_BUS_FREQ, &new_bus_frequency,
                         sizeof(new_bus_frequency), NULL, 0);
     if (st != NO_ERROR) {
@@ -353,6 +355,23 @@ static int sdmmc_bootstrap_thread(void* arg) {
         xprintf("sdmmc: failed to increase bus frequency.\n");
     }
 
+    // Try to switch the bus voltage to 1.8v
+    if (card_supports_18v_signalling) {
+        if ((st = sdmmc_do_command(dev, SDMMC_VOLTAGE_SWITCH, 0, setup_txn)) != NO_ERROR) {
+            xprintf("sdmmc: failed to send switch voltage command to card, "
+                    "retcode = %d\n", st);
+            goto err;
+        }
+
+        const uint32_t new_voltage = SDMMC_VOLTAGE_18;
+        st = dev->ops->ioctl(dev, IOCTL_SDMMC_SET_VOLTAGE, &new_voltage,
+                             sizeof(new_voltage), NULL, 0);
+        if (st != NO_ERROR) {
+            xprintf("sdmmc: Card supports 1.8v signalling but was unable to "
+                    "switch to 1.8v mode, retcode = %d\n", st);
+            goto err;
+        }
+    }
 
     if ((st = sdmmc_do_command(dev, SDMMC_ALL_SEND_CID, 0, setup_txn)) != NO_ERROR) {
         xprintf("sdmmc: ALL_SEND_CID failed with retcode = %d\n", st);

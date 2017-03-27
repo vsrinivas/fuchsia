@@ -88,6 +88,7 @@ struct emmc_regs {
         #define EMMC_HOSTCTRL_LED_ON              (1 << 0)
         #define EMMC_HOSTCTRL_FOUR_BIT_BUS_WIDTH  (1 << 1)
         #define EMMC_HOSTCTRL_HIGHSPEED_ENABLE    (1 << 2)
+        #define EMMC_PWRCTRL_SD_BUS_POWER         (1 << 8)
     uint32_t ctrl1;         // 2Ch
         #define EMMC_INTERNAL_CLOCK_ENABLE        (1 << 0)
         #define EMMC_INTERNAL_CLOCK_STABLE        (1 << 1)
@@ -499,6 +500,56 @@ static mx_status_t emmc_set_bus_width(emmc_t* emmc, const uint32_t new_bus_width
     return NO_ERROR;
 }
 
+static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
+
+    switch (new_voltage) {
+        case SDMMC_VOLTAGE_33:
+        case SDMMC_VOLTAGE_30:
+        case SDMMC_VOLTAGE_18:
+            break;
+        default:
+            return ERR_INVALID_ARGS;
+    }
+
+    volatile struct emmc_regs* regs = emmc->regs;
+
+    // Disable the SD clock before messing with the voltage.
+    regs->ctrl1 &= ~EMMC_SD_CLOCK_ENABLE;
+    mx_nanosleep(MX_MSEC(2));
+
+    // Wait for the DAT lines to settle
+    const mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_SEC(1);
+    while (true) {
+        printf("Waiting for dat lines to go to 0\n");
+        if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline) {
+            return ERR_TIMED_OUT;
+        }
+
+        uint8_t dat_lines = ((regs->state) >> 20) & 0xf;
+        if (dat_lines == 0) break;
+
+        mx_nanosleep(MX_MSEC(10));
+    }
+
+    // Cut voltage to the card
+    regs->ctrl0 &= ~EMMC_PWRCTRL_SD_BUS_POWER;
+
+    regs->ctrl0 |= new_voltage;
+
+    // Restore voltage to the card.
+    regs->ctrl0 |= EMMC_PWRCTRL_SD_BUS_POWER;
+
+    // Make sure our changes are acknolwedged.
+    const uint32_t expected_mask = (EMMC_PWRCTRL_SD_BUS_POWER) | (new_voltage);
+    if ((regs->ctrl0 & expected_mask) != expected_mask) return ERR_INTERNAL;
+
+    // Turn the clock back on
+    regs->ctrl1 |= EMMC_SD_CLOCK_ENABLE;
+    mx_nanosleep(MX_MSEC(2));
+
+    return NO_ERROR;
+}
+
 static ssize_t emmc_ioctl(mx_device_t* dev, uint32_t op,
                           const void* in_buf, size_t in_len,
                           void* out_buf, size_t out_len) {
@@ -510,9 +561,7 @@ static ssize_t emmc_ioctl(mx_device_t* dev, uint32_t op,
 
     switch (op) {
     case IOCTL_SDMMC_SET_VOLTAGE:
-        xprintf("emmc: ioctl set voltage\n");
-        break;
-
+        return emmc_set_voltage(emmc, *arg);
     case IOCTL_SDMMC_SET_BUS_WIDTH:
         if ((*arg != 4) && (*arg != 1))
             return ERR_INVALID_ARGS;

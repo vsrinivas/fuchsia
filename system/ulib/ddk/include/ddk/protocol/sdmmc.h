@@ -96,6 +96,10 @@ typedef struct sdmmc_protocol_data {
 #define SDMMC_SET_CLR_CARD_DETECT     (SDMMC_COMMAND(42) | SDMMC_RESP_R1)
 #define SDMMC_SEND_SCR                (SDMMC_COMMAND(51) | SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ)
 
+#define SDMMC_VOLTAGE_18            (5 << 9)
+#define SDMMC_VOLTAGE_30            (6 << 9)
+#define SDMMC_VOLTAGE_33            (7 << 9)
+
 #define IOCTL_SDMMC_SET_VOLTAGE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SDMMC, 0)
 
