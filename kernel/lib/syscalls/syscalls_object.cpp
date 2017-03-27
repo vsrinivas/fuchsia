@@ -295,6 +295,40 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 return ERR_BUFFER_TOO_SMALL;
             return NO_ERROR;
         }
+        case MX_INFO_TASK_STATS: {
+            // TODO(MG-458): Handle forward/backward compatibility issues
+            // with changes to the struct.
+            size_t actual =
+                (buffer_size < sizeof(mx_info_task_stats_t)) ? 0 : 1;
+            size_t avail = 1;
+
+            // Grab a reference to the dispatcher. Only supports processes for
+            // now, but could support jobs or threads in the future.
+            mxtl::RefPtr<ProcessDispatcher> process;
+            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_READ,
+                                                     &process);
+            if (error < 0)
+                return error;
+
+            if (actual > 0) {
+                // Build the info structure.
+                mx_info_task_stats_t info = {};
+
+                auto err = process->GetStats(&info);
+                if (err != NO_ERROR)
+                    return err;
+
+                if (_buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
+                    return ERR_INVALID_ARGS;
+            }
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (actual == 0)
+                return ERR_BUFFER_TOO_SMALL;
+            return NO_ERROR;
+        }
         case MX_INFO_VMAR: {
             mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
             mx_status_t status = up->GetDispatcher(handle, &vmar);

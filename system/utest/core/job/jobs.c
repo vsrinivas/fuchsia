@@ -129,9 +129,21 @@ static bool wait_test(void) {
     END_TEST;
 }
 
+static bool info_task_stats_fails(void) {
+    BEGIN_TEST;
+    mx_info_task_stats_t info;
+    ASSERT_NEQ(mx_object_get_info(mx_job_default(), MX_INFO_TASK_STATS,
+                                  &info, sizeof(info), NULL, NULL),
+               NO_ERROR,
+               "Just added job support to info_task_status?");
+    // If so, replace this with a real test; see example in process.cpp.
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(job_tests)
 RUN_TEST(basic_test)
 RUN_TEST(create_test)
 RUN_TEST(kill_test)
 RUN_TEST(wait_test)
+RUN_TEST(info_task_stats_fails)
 END_TEST_CASE(job_tests)

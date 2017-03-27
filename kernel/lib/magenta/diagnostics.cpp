@@ -278,7 +278,7 @@ public:
                      uint depth) override {
         if (map->IsAliveLocked()) {
             usage.mapped_pages += map->size() / PAGE_SIZE;
-            usage.allocated_pages += map->vmo()->AllocatedPagesInRange(
+            usage.committed_pages += map->vmo()->AllocatedPagesInRange(
                 map->object_offset(), map->size());
         }
         return true;

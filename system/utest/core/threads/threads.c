@@ -172,6 +172,29 @@ static bool test_kill_wait_thread(void) {
     END_TEST;
 }
 
+static bool test_info_task_stats_fails(void) {
+    BEGIN_TEST;
+    // Spin up a thread.
+    mxr_thread_t thread;
+    ASSERT_TRUE(start_thread(test_thread_fn, NULL, &thread), "");
+    mx_handle_t thandle = mxr_thread_get_handle(&thread);
+    ASSERT_EQ(mx_object_wait_one(thandle,
+                                 MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
+              NO_ERROR, "");
+
+    // Ensure that task_stats doesn't work on it.
+    mx_info_task_stats_t info;
+    EXPECT_NEQ(mx_object_get_info(thandle, MX_INFO_TASK_STATS,
+                                  &info, sizeof(info), NULL, NULL),
+               NO_ERROR,
+               "Just added thread support to info_task_status?");
+    // If so, replace this with a real test; see example in process.cpp.
+
+    // Clean up the thread.
+    mxr_thread_destroy(&thread);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(threads_tests)
 RUN_TEST(test_basics)
 RUN_TEST(test_long_name_succeeds)
@@ -180,6 +203,7 @@ RUN_TEST(test_thread_start_with_zero_instruction_pointer)
 RUN_TEST(test_kill_busy_thread)
 RUN_TEST(test_kill_sleep_thread)
 RUN_TEST(test_kill_wait_thread)
+RUN_TEST(test_info_task_stats_fails)
 END_TEST_CASE(threads_tests)
 
 #ifndef BUILD_COMBINED_TESTS

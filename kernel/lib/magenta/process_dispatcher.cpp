@@ -14,6 +14,8 @@
 #include <string.h>
 #include <trace.h>
 
+#include <arch/defines.h>
+
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
@@ -479,7 +481,17 @@ status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
             info->debugger_attached = true;
         }
     }
+    return NO_ERROR;
+}
 
+status_t ProcessDispatcher::GetStats(mx_info_task_stats_t* stats) {
+    VmAspace::vm_usage_t usage;
+    status_t s = aspace_->GetMemoryUsage(&usage);
+    if (s != NO_ERROR) {
+        return s;
+    }
+    stats->mem_mapped_bytes = usage.mapped_pages * PAGE_SIZE;
+    stats->mem_committed_bytes = usage.committed_pages * PAGE_SIZE;
     return NO_ERROR;
 }
 

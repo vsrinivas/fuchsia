@@ -71,10 +71,10 @@ public:
         // A count of pages covered by VmMapping ranges.
         size_t mapped_pages;
 
-        // A count of allocated pages. A page is considered allocated if a
+        // A count of committed pages. A page is considered committed if a
         // VmMapping covers a range of a VmObject that contains that page, and
         // that page has physical memory allocated to it.
-        size_t allocated_pages;
+        size_t committed_pages;
     };
 
     // Counts memory usage under the VmAspace.

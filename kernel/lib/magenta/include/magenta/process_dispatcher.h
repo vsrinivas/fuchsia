@@ -164,7 +164,9 @@ public:
     void Exit(int retcode) __NO_RETURN;
     void Kill();
 
+    // Syscall helpers
     status_t GetInfo(mx_info_process_t* info);
+    status_t GetStats(mx_info_task_stats_t* stats);
 
     status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread);
 

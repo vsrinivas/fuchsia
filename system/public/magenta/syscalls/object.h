@@ -25,6 +25,7 @@ typedef enum {
     MX_INFO_JOB_PROCESSES              = 9,  // mx_koid_t[n]
     MX_INFO_THREAD                     = 10, // mx_info_thread_t[1]
     MX_INFO_THREAD_EXCEPTION_REPORT    = 11, // mx_exception_report_t[1]
+    MX_INFO_TASK_STATS                 = 12, // mx_info_task_stats_t[1]
     MX_INFO_LAST
 } mx_object_info_topic_t;
 
@@ -88,6 +89,20 @@ typedef struct mx_info_thread {
     // The value is one of MX_EXCEPTION_PORT_TYPE_*.
     uint32_t wait_exception_port_type;
 } mx_info_thread_t;
+
+// Statistics about resources (e.g., memory) used by a task. Can be relatively
+// expensive to gather.
+typedef struct mx_info_task_stats {
+    // The total size of mapped memory ranges in the task.
+    // Not all will be backed by physical memory.
+    size_t mem_mapped_bytes;
+
+    // The amount of mapped address space backed by physical memory.
+    // Will be no larger than mem_mapped_bytes.
+    // Some of the pages may be double-mapped (and thus double-counted),
+    // or may be shared with other tasks.
+    size_t mem_committed_bytes;
+} mx_info_task_stats_t;
 
 typedef struct mx_info_vmar {
     uintptr_t base;
