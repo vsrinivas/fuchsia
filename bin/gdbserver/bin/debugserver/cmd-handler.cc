@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <cinttypes>
-#include <elf.h>
 #include <string>
 
 #include "debugger-utils/util.h"
