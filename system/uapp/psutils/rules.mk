@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)-ps
 
 MODULE_TYPE := userapp
 
-MODULE_SRCS += $(LOCAL_DIR)/ps.c $(LOCAL_DIR)/processes.c
+MODULE_SRCS += $(LOCAL_DIR)/ps.c $(LOCAL_DIR)/processes.c $(LOCAL_DIR)/format.c
 
 MODULE_NAME := ps
 
@@ -40,3 +40,19 @@ MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk
 
+MODULE := $(LOCAL_DIR)-test
+
+MODULE_TYPE := usertest
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/format.c \
+    $(LOCAL_DIR)/test.c
+
+MODULE_NAME := psutils-test
+
+MODULE_LIBS := \
+    ulib/unittest \
+    ulib/mxio \
+    ulib/c
+
+include make/module.mk

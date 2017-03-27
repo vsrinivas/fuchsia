@@ -21,6 +21,30 @@ static mx_status_t walk_process_tree_internal(job_callback_t job_callback, proce
     size_t avail;
     mx_status_t status;
 
+    // get the list of processes under this job
+    status = mx_object_get_info(job, MX_INFO_JOB_PROCESSES, koids, sizeof(koids), &actual, &avail);
+    // TODO: allocate a larger koids if 128 is not enough
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    for (size_t n = 0; n < actual; n++) {
+        mx_handle_t child;
+        status = mx_object_get_child(job, koids[n], MX_RIGHT_SAME_RIGHTS, &child);
+        if (status == NO_ERROR) {
+            // call the process_callback if supplied
+            if (process_callback) {
+                status = (process_callback)(depth, child, koids[n]);
+                // abort on failure
+                if (status != NO_ERROR) {
+                    return status;
+                }
+            }
+
+            mx_handle_close(child);
+        }
+    }
+
     // get a list of child jobs for this job
     status = mx_object_get_info(job, MX_INFO_JOB_CHILDREN, koids, sizeof(koids), &actual, &avail);
     // TODO: allocate a larger koids if 128 is not enough
@@ -47,30 +71,6 @@ static mx_status_t walk_process_tree_internal(job_callback_t job_callback, proce
             // abort on failure
             if (status != NO_ERROR) {
                 return status;
-            }
-
-            mx_handle_close(child);
-        }
-    }
-
-    // get the list of processes under this job
-    status = mx_object_get_info(job, MX_INFO_JOB_PROCESSES, koids, sizeof(koids), &actual, &avail);
-    // TODO: allocate a larger koids if 128 is not enough
-    if (status != NO_ERROR) {
-        return status;
-    }
-
-    for (size_t n = 0; n < actual; n++) {
-        mx_handle_t child;
-        status = mx_object_get_child(job, koids[n], MX_RIGHT_SAME_RIGHTS, &child);
-        if (status == NO_ERROR) {
-            // call the process_callback if supplied
-            if (process_callback) {
-                status = (process_callback)(depth, child, koids[n]);
-                // abort on failure
-                if (status != NO_ERROR) {
-                    return status;
-                }
             }
 
             mx_handle_close(child);
