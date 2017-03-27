@@ -94,6 +94,8 @@ template("fidl") {
         deps += [ "//lib/fidl/compiler/interfaces:interfaces" ]
       }
       sources = invoker.sources
+      # In case one of our |sources| depends/imports another one of our |sources|:
+      inputs = invoker.sources
       outputs = generator_cpp_outputs + generator_dart_outputs +
                 generator_python_outputs + generator_go_outputs +
                 generator_rust_outputs
