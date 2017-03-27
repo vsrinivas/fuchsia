@@ -59,15 +59,18 @@ class GetLedgerSnapshotCall : public Operation<void> {
   }
 
   void Run() override {
+    GetSnapshotEntries(nullptr);
+  }
+
+ private:
+  void GetSnapshotEntries(fidl::Array<uint8_t> continuation_token) {
     snapshot_->GetEntries(
-        nullptr, nullptr,
+        nullptr, std::move(continuation_token),
         [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
                fidl::Array<uint8_t> continuation_token) {
-          // TODO(alhaad): It is possible that entries in ledger snapshot are
-          // played in multiple runs. Handle it!
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "Ledger status " << status << "."
-                           << "This maybe because of the TODO above";
+          if (status != ledger::Status::OK &&
+              status != ledger::Status::PARTIAL_RESULT) {
+            FTL_LOG(ERROR) << "Ledger status " << status << ".";
             Done();
             return;
           }
@@ -89,11 +92,15 @@ class GetLedgerSnapshotCall : public Operation<void> {
 
             ledger_map_->insert({key, value});
           }
-          Done();
+
+          if (status == ledger::Status::PARTIAL_RESULT) {
+            GetSnapshotEntries(std::move(continuation_token));
+          } else {
+            Done();
+          }
         });
   }
 
- private:
   ledger::PageSnapshotPtr snapshot_;
   std::unordered_map<std::string, std::string>* const ledger_map_;
   FTL_DISALLOW_COPY_AND_ASSIGN(GetLedgerSnapshotCall);
