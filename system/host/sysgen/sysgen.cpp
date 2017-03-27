@@ -245,6 +245,38 @@ struct ArraySpec {
     }
 };
 
+const std::map<string, string> rust_overrides = {
+    {"any[]IN", "*const u8"},
+    {"any[]OUT", "*mut u8"},
+    {"any[]INOUT", "*mut u8"}
+};
+
+const std::map<string, string> rust_primitives = {
+    {"int8_t", "i8"},
+    {"int16_t", "i16"},
+    {"int32_t", "i32"},
+    {"int64_t", "i64"},
+    {"uint8_t", "u8"},
+    {"uint16_t", "u16"},
+    {"uint32_t", "u32"},
+    {"uint64_t", "u64"},
+    {"size_t", "usize"},
+    {"uintptr_t", "usize"},
+    {"int", "isize"},
+    {"char", "u8"},
+    {"float", "f32"},
+    {"double", "f64"},
+};
+
+const std::map<string, string> rust_reserved_words = {
+    {"proc", "proc_"},
+};
+
+const string map_override(const string& name, const std::map<string, string>& overrides) {
+    auto ft = overrides.find(name);
+    return (ft == overrides.end()) ? name : ft->second;
+}
+
 struct TypeSpec {
     string name;
     string type;
@@ -276,6 +308,30 @@ struct TypeSpec {
             return "user_ptr<" + modifier + ptr_type + "> " + name;
         }
         return modifier + ptr_type + "* " + name;
+    }
+
+    string as_rust_declaration() const {
+        auto overridden = map_override(to_string(), rust_overrides);
+        auto scalar_type = map_override(type, rust_primitives);
+        auto safe_name = map_override(name, rust_reserved_words);
+
+        if (overridden != to_string()) {
+            return safe_name + ": " + overridden;
+        } else if (!arr_spec) {
+            return safe_name + ": " + scalar_type;
+        } else {
+            string ret = safe_name + ": ";
+            if (arr_spec->kind == ArraySpec::IN) {
+                ret += "*const ";
+            } else {
+                ret += "*mut ";
+            }
+
+            ret += scalar_type;
+            if (arr_spec->count > 1)
+                ret += " " + std::to_string(arr_spec->count);
+            return ret;
+        }
     }
 
     string as_cpp_cast(string arg) const {
@@ -534,7 +590,7 @@ bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
     return true;
 }
 
-bool generate_file_header(std::ofstream& os) {
+bool generate_file_header(std::ofstream& os, const string& type) {
     auto t = std::time(nullptr);
     auto ltime = std::localtime(&t);
 
@@ -542,6 +598,22 @@ bool generate_file_header(std::ofstream& os) {
        << " " << kAuthors << ". All rights reserved.\n";
     os << "// This is a GENERATED file. The license governing this file can be ";
     os << "found in the LICENSE file.\n\n";
+
+    if (type == "rust") {
+        os << "#[link(name = \"magenta\")]\n";
+        os << "extern {\n";
+    }
+
+    return os.good();
+}
+
+bool generate_file_trailer(std::ofstream& os, const string& type) {
+    os << "\n";
+
+    if (type == "rust") {
+        os << "}\n";
+    }
+
     return os.good();
 }
 
@@ -595,6 +667,30 @@ bool generate_legacy_header(std::ofstream& os, const Syscall& sc,
 
         syscall_name = "_" + syscall_name;
     }
+
+    return os.good();
+}
+
+bool generate_rust_bindings(std::ofstream& os, const Syscall& sc) {
+    os << "    pub fn mx_" << sc.name << "(";
+
+    // Writes all arguments.
+    for (const auto& arg : sc.arg_spec) {
+        if (!os.good())
+            return false;
+        os << "\n        "
+            << arg.as_rust_declaration() << ",";
+    }
+    if (!sc.arg_spec.empty()) {
+        // remove the comma.
+        os.seekp(-1, std::ios_base::end);
+    }
+    // Finish off list and write return type
+    os << "\n        )";
+    if (sc.return_type() != "void") {
+      os << " -> " << map_override(sc.return_type(), rust_primitives);
+    }
+    os << ";\n\n";
 
     return os.good();
 }
@@ -734,6 +830,7 @@ const std::map<string, string> type_to_default_suffix = {
   {"arm-asm",   ".arm64.S"},
   {"numbers",   ".syscall-numbers.h"},
   {"trace",   ".trace.inc"},
+  {"rust",    ".rs"},
 };
 
 const std::map<string, gen> type_to_generator = {
@@ -798,6 +895,11 @@ const std::map<string, gen> type_to_generator = {
         "trace",
         gen(generate_trace_info)
     },
+    // The Rust bindings.
+    {
+        "rust",
+        gen(generate_rust_bindings)
+    },
 };
 
 class SysgenGenerator {
@@ -814,7 +916,7 @@ public:
 
     bool Generate(const std::map<string, string> type_to_filename) {
         for (auto& entry : type_to_filename) {
-            if (!generate_one(entry.second, type_to_generator.at(entry.first)))
+            if (!generate_one(entry.second, type_to_generator.at(entry.first), entry.first))
                 return false;
         }
         return true;
@@ -823,11 +925,11 @@ public:
     bool verbose() const { return verbose_; }
 
 private:
-    bool generate_one(const string& output_file, gen generator) {
+    bool generate_one(const string& output_file, gen generator, const string& type) {
         std::ofstream ofile;
         ofile.open(output_file.c_str(), std::ofstream::out);
 
-        if (!generate_file_header(ofile)) {
+        if (!generate_file_header(ofile, type)) {
             print_error("i/o error", output_file);
             return false;
         }
@@ -840,7 +942,10 @@ private:
             return false;
         }
 
-        ofile << "\n";
+        if (!generate_file_trailer(ofile, type)) {
+            print_error("i/o error", output_file);
+            return false;
+        }
 
         return true;
     }
