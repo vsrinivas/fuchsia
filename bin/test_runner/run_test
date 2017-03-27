@@ -14,6 +14,22 @@ import re
 import socket
 import subprocess
 import sys
+from subprocess import call
+from urlparse import urlparse
+
+
+class color:
+  PURPLE = "\033[95m"
+  CYAN = "\033[96m"
+  DARKCYAN = "\033[36m"
+  BLUE = "\033[94m"
+  GREEN = "\033[92m"
+  YELLOW = "\033[93m"
+  RED = "\033[91m"
+  BOLD = "\033[1m"
+  UNDERLINE = "\033[4m"
+  END = "\033[0m"
+
 
 
 def read_log_listener(listener_process, test_id):
@@ -27,6 +43,26 @@ def read_log_listener(listener_process, test_id):
     lines.append(line)
 
   return "".join(lines)
+
+
+def copy_files(copy):
+  """ copy is a map of destination directories on the device to source
+    files in $FUCHSIA_BUILD_DIR """
+  if copy is None:
+    return True
+
+  netcp = os.path.join(os.environ["FUCHSIA_DIR"],
+                       "out/build-magenta/tools/netcp")
+  for dirname, files in copy.iteritems():
+    for filename in files:
+      filepath = os.path.join(os.environ["FUCHSIA_BUILD_DIR"], filename)
+      command_line = [netcp, filepath, ":" + os.path.join(dirname, filename)]
+      print "Copying %s" % filename
+      # netcp returns the error value from magenta
+      if call(command_line) != 0:
+        print "Error: netcp failed to copy %s" % filename
+        return false
+  return True
 
 
 def run_test(sock, listener_process, command_str):
@@ -48,7 +84,7 @@ def run_test(sock, listener_process, command_str):
       # Consume the log output even, regardless of if we print it.
       log_output = read_log_listener(listener_process, test_id)
       if result == "fail":
-        print log_output
+        print "%s%s%s" % (colors.RED, log_output, colors.END)
       return
     elif op == "log":
       print msg
@@ -57,13 +93,20 @@ def run_test(sock, listener_process, command_str):
 
 
 def main(argv):
-  assert "FUCHSIA_DIR" in os.environ, "Could not find env variable $FUCHSIA_DIR"
+  if not "FUCHSIA_DIR" in os.environ:
+    print "Error: could not find env variable $FUCHSIA_DIR"
+    return 1
+  if not "FUCHSIA_BUILD_DIR" in os.environ:
+    print "Error: could not find env variable $FUCHSIA_BUILD_DIR"
+    return 1
+
   parser = argparse.ArgumentParser()
-  default_server = "192.168.3.53:8342"
+  default_port = 8342
+  # An ipv6 address must be in square brackets
+  default_server = "192.168.3.53:" + str(default_port)
   parser.add_argument(
       "--server",
-      help=
-      "Address ('server:port') of where the test_runner daemon is running. Default: "
+      help="Address ('server:port') of where the test_runner daemon is running. Default: "
       + default_server,
       type=str,
       default=default_server)
@@ -81,23 +124,38 @@ def main(argv):
   parser.add_argument("command", nargs="*")
   args = parser.parse_args()
 
+  host = urlparse("http://" + args.server)
+  port = host.port
+  if port is None:
+    port = default_port
+
+  if args.test_file == "" and len(args.command) == 0:
+    print("Error: either a single test command, or --test_file must be "
+          "specified.")
+    return 1
+
   # 1. Start listening to the device log.
   listener_process = subprocess.Popen(
       [args.loglistener_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
   # 2. Open up a connection to the on-device test runner server.
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  server, port = args.server.split(":")
-  sock.connect((server, int(port)))
+  try:
+    sock.connect((host.hostname, port))
+  except socket.error, exc:
+    print "Error: Can't connect socket %s for %s port %d" % (exc, host.hostname,
+                                                            port)
+    return 1
 
   # 3. Read commands and send them to the test runner server.
-  assert args.test_file or len(args.command) > 0, \
-      "Either a single test command, or --test_file must be specified."
+  if args.test_file is None and len(args.command) == 0:
+    print "Error: either a single test command, or --test_file must be specified."
+    return 1
 
   if len(args.command) > 0:
     command_str = " ".join(args.command)
     # Run a single command
-    print "Running %s .." % command_str
+    print "%sRunning %s ..%s" % (color.BOLD, command_str, color.END)
     sys.stdout.flush()
     run_test(sock, listener_process, command_str)
   else:
@@ -105,8 +163,11 @@ def main(argv):
     with open(args.test_file) as f:
       tests = json.load(f)
       for test in tests["tests"]:
-        print "Running %s .." % test["name"]
+        print "%sRunning %s ..%s" % (color.BOLD, test["name"], color.END)
         sys.stdout.flush()
+        if "copy" in test:
+          if not copy_files(test["copy"]):
+            return 1
         run_test(sock, listener_process, test["exec"])
 
   # 4. Cleanup
