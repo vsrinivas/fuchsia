@@ -56,7 +56,7 @@ class AskHandlerImpl extends AskHandler {
       proposal.display.headline = "View the Fuchsia Dashboard";
       proposal.display.subheadline = "";
       proposal.display.details = "";
-      proposal.display.color = 0xFFFFF8FF;
+      proposal.display.color = 0xFFFF00C0;
       proposal.display.iconUrls = new List<String>();
       proposal.display.imageType = SuggestionImageType.other;
       proposal.display.imageUrl =
