@@ -8,8 +8,6 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 C_STRING_OPS := \
-	bcopy \
-	bzero \
 	memchr \
 	memcmp \
 	memcpy \

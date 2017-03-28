@@ -12,10 +12,6 @@
 .text
 .align 2
 
-/* void bzero(void *s, size_t n); */
-FUNCTION(bzero)
-    ret
-
 /* void *memset(void *s, int c, size_t n); */
 FUNCTION(memset)
     ret

@@ -7,7 +7,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-ASM_STRING_OPS := #bcopy bzero memcpy memmove memset
+ASM_STRING_OPS := #memcpy memmove memset
 
 MODULE_SRCS += \
 	#$(LOCAL_DIR)/memcpy.S \
