@@ -28,11 +28,23 @@ mx_status_t mxr_thread_destroy(mxr_thread_t* thread) {
     return handle == MX_HANDLE_INVALID ? NO_ERROR : _mx_handle_close(handle);
 }
 
-static _Noreturn void exit_joinable(mxr_thread_t* thread) {
+// Put the thread into DONE state.  As soon as thread->state has changed to
+// to DONE, a caller of mxr_thread_join might complete and deallocate the
+// memory containing the thread descriptor.  Hence it's no longer safe to
+// touch *thread or read anything out of it.  Therefore we must extract the
+// thread handle beforehand.  There is no safe time to change thread->magic,
+// because before thread->state is changed to DONE, mxr_thread_join might be
+// doing CHECK_THREAD; and afterwards, touching *thread at all is unsafe.
+// So a joined threads' ->magic stays as VALID.
+static int begin_exit(mxr_thread_t* thread, mx_handle_t* out_handle) {
+    *out_handle = thread->handle;
+    thread->handle = MX_HANDLE_INVALID;
+    return atomic_exchange_explicit(&thread->state, DONE, memory_order_release);
+}
+
+static _Noreturn void exit_joinable(mx_handle_t handle) {
     // A later mxr_thread_join call will complete immediately.
     // The magic stays valid for mxr_thread_join to check.
-    mx_handle_t handle = thread->handle;
-    thread->handle = MX_HANDLE_INVALID;
     if (_mx_handle_close(handle) != NO_ERROR)
         __builtin_trap();
     // If there were no other handles to the thread, closing the handle
@@ -40,13 +52,15 @@ static _Noreturn void exit_joinable(mxr_thread_t* thread) {
     _mx_thread_exit();
 }
 
-static _Noreturn void exit_joined(mxr_thread_t* thread) {
-    // Wake the _mx_futex_wait in mxr_thread_join (below), and then
-    // die.  This has to be done with the special three-in-one vDSO
-    // call because as soon as the mx_futex_wake completes, the joiner
-    // is free to unmap our stack out from under us.
-    mx_handle_t handle = thread->handle;
-    thread->handle = MX_HANDLE_INVALID;
+static _Noreturn void exit_joined(mxr_thread_t* thread, mx_handle_t handle) {
+    // Wake the _mx_futex_wait in mxr_thread_join (below), and then die.
+    // This has to be done with the special three-in-one vDSO call because
+    // as soon as the mx_futex_wake completes, the joiner is free to unmap
+    // our stack out from under us.  Doing so is a benign race: if the
+    // address is unmapped and our futex_wake fails, it's OK; if the memory
+    // is reused for something else and our futex_wake tickles somebody
+    // completely unrelated, well, that's why futex_wait can always have
+    // spurious wakeups.
     _mx_futex_wake_handle_close_thread_exit(&thread->state, 1, handle);
     __builtin_trap();
 }
@@ -56,8 +70,8 @@ static _Noreturn void thread_trampoline(uintptr_t ctx) {
 
     thread->entry(thread->arg);
 
-    int old_state = atomic_exchange_explicit(&thread->state, DONE,
-                                             memory_order_release);
+    mx_handle_t handle;
+    int old_state = begin_exit(thread, &handle);
     switch (old_state) {
     case DETACHED:
         // Nobody cares.  Just die, alone and in the dark.
@@ -65,12 +79,12 @@ static _Noreturn void thread_trampoline(uintptr_t ctx) {
 
     case JOINABLE:
         // Nobody's watching right now, but they might care later.
-        exit_joinable(thread);
+        exit_joinable(handle);
         break;
 
     case JOINED:
         // Somebody loves us!  Or at least intends to inherit when we die.
-        exit_joined(thread);
+        exit_joined(thread, handle);
         break;
     }
 
@@ -80,22 +94,21 @@ static _Noreturn void thread_trampoline(uintptr_t ctx) {
 _Noreturn void mxr_thread_exit_unmap_if_detached(
     mxr_thread_t* thread, mx_handle_t vmar, uintptr_t addr, size_t len) {
 
-    int old_state = atomic_exchange_explicit(&thread->state, DONE,
-                                             memory_order_release);
+    mx_handle_t handle;
+    int old_state = begin_exit(thread, &handle);
     switch (old_state) {
     case DETACHED:
         // Don't bother touching the mxr_thread_t about to be unmapped.
-        _mx_vmar_unmap_handle_close_thread_exit(vmar, addr, len,
-                                                thread->handle);
+        _mx_vmar_unmap_handle_close_thread_exit(vmar, addr, len, handle);
         // If that returned, the unmap operation was invalid.
         break;
 
     case JOINABLE:
-        exit_joinable(thread);
+        exit_joinable(handle);
         break;
 
     case JOINED:
-        exit_joined(thread);
+        exit_joined(thread, handle);
         break;
     }
 
