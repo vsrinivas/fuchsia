@@ -241,6 +241,8 @@ public:
             DLOG("remote endpoint closed");
             return false;
         }
+        if (error_)
+            return DRETF(false, "PlatformConnection encountered fatal error");
         return true;
     }
 
