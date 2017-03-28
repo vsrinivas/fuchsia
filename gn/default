@@ -35,6 +35,7 @@
         "runtime",
         "sbase",
         "sysui",
+        "test_runner",
         "thinfs",
         "tracing",
         "url",

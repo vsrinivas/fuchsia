@@ -160,10 +160,6 @@
             "bootfs_path": "apps/modular_tests/trigger_test_agent"
         },
         {
-            "binary": "test_runner",
-            "bootfs_path": "apps/test_runner"
-        },
-        {
             "binary": "user_runner",
             "bootfs_path": "apps/user_runner"
         },

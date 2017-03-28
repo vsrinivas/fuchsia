@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/test_runner"
+    ],
+    "binaries": [
+        {
+            "binary": "test_runner",
+            "bootfs_path": "apps/test_runner"
+        }
+    ]
+}
