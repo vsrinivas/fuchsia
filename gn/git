@@ -1,0 +1,22 @@
+{
+    "imports": [
+        "boringssl_libssl"
+    ],
+    "labels": [
+        "//third_party/git"
+    ],
+    "binaries": [
+        {
+            "binary": "git",
+            "bootfs_path": "bin/git"
+        },
+        {
+            "binary": "git-http-fetch",
+            "bootfs_path": "bin/git-http-fetch"
+        },
+        {
+            "binary": "git-http-push",
+            "bootfs_path": "bin/git-http-push"
+        }
+    ]
+}
