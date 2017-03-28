@@ -10,8 +10,6 @@
 #include "minfs.h"
 #include "minfs-private.h"
 
-#define VERBOSE 1
-
 namespace minfs {
 namespace {
 
@@ -291,13 +289,11 @@ const char* check_data_block(CheckMaps* chk, const Minfs* fs, uint32_t bno) {
 
 mx_status_t check_file(CheckMaps* chk, const Minfs* fs,
                        minfs_inode_t* inode, uint32_t ino) {
-#if VERBOSE
     info("Direct blocks: \n");
     for (unsigned n = 0; n < kMinfsDirect; n++) {
         info(" %d,", inode->dnum[n]);
     }
     info(" ...\n");
-#endif
 
     uint32_t blocks = 0;
 
@@ -377,11 +373,9 @@ mx_status_t check_inode(CheckMaps* chk, const Minfs* fs, uint32_t ino, uint32_t 
         if ((status = check_file(chk, fs, &inode, ino)) < 0) {
             return status;
         }
-#if VERBOSE
         if ((status = check_directory(chk, fs, &inode, ino, parent, CD_DUMP)) < 0) {
             return status;
         }
-#endif
         if ((status = check_directory(chk, fs, &inode, ino, parent, CD_RECURSE)) < 0) {
             return status;
         }

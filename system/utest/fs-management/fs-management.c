@@ -220,7 +220,8 @@ static bool mount_fsck(void) {
               NO_ERROR, "");
     ASSERT_EQ(umount(mount_path), NO_ERROR, "");
     // fsck shouldn't require any user input for a newly mkfs'd filesystem
-    ASSERT_EQ(fsck(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
+    ASSERT_EQ(fsck(ramdisk_path, DISK_FORMAT_MINFS, &default_fsck_options, launch_stdio_sync),
+              NO_ERROR, "");
     ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
     ASSERT_EQ(unlink(mount_path), 0, "");
     END_TEST;

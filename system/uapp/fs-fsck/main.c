@@ -36,12 +36,12 @@ int usage(void) {
     return -1;
 }
 
-int parse_args(int argc, char** argv, bool* verbose, disk_format_t* df, char** devicepath) {
-    *verbose = false;
+int parse_args(int argc, char** argv, fsck_options_t* options, disk_format_t* df,
+               char** devicepath) {
     *df = DISK_FORMAT_UNKNOWN;
     while (argc > 1) {
         if (!strcmp(argv[1], "-v")) {
-            *verbose = true;
+            options->verbose = true;
         } else {
             break;
         }
@@ -67,19 +67,20 @@ int parse_args(int argc, char** argv, bool* verbose, disk_format_t* df, char** d
 }
 
 int main(int argc, char** argv) {
-    bool verbose;
     char* devicepath;
     disk_format_t df;
     int r;
-    if ((r = parse_args(argc, argv, &verbose, &df, &devicepath))) {
+    fsck_options_t options;
+    memcpy(&options, &default_fsck_options, sizeof(fsck_options_t));
+    if ((r = parse_args(argc, argv, &options, &df, &devicepath))) {
         return r;
     }
 
-    if (verbose) {
+    if (options.verbose) {
         printf("fs_fsck: Formatting device [%s]\n", devicepath);
     }
 
-    if ((r = fsck(devicepath, df, launch_stdio_sync)) < 0) {
+    if ((r = fsck(devicepath, df, &options, launch_stdio_sync)) < 0) {
         fprintf(stderr, "fs_fsck: Failed to format device: %d\n", r);
     }
     return r;

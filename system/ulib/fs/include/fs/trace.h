@@ -9,11 +9,6 @@
 
 // General Utilities
 
-// #define panic(fmt...) do { fprintf(stderr, fmt); __builtin_trap(); } while (0)
-#define error(fmt...) fprintf(stderr, fmt)
-#define warn(fmt...) fprintf(stderr, fmt)
-#define info(fmt...) fprintf(stderr, fmt)
-
 #define TRACE_MINFS   0x0001
 #define TRACE_VFS     0x0010
 #define TRACE_WALK    0x0020
@@ -39,3 +34,7 @@ static inline void trace_off(uint32_t bits) {
 }
 
 #define trace(what,fmt...) do { if (__trace_bits & (TRACE_##what)) fprintf(stderr, fmt); } while (0)
+
+#define error(fmt...) fprintf(stderr, fmt)
+#define warn(fmt...) fprintf(stderr, fmt)
+#define info(fmt...) trace(SOME, fmt)

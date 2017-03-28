@@ -16,7 +16,8 @@
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
 
-static mx_status_t fsck_minfs(const char* devicepath, LaunchCallback cb) {
+static mx_status_t fsck_minfs(const char* devicepath, const fsck_options_t* options,
+                              LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
@@ -32,21 +33,31 @@ static mx_status_t fsck_minfs(const char* devicepath, LaunchCallback cb) {
     }
     n += status;
 
-    const char* argv[] = {"/boot/bin/minfs", "fsck"};
-    return cb(countof(argv), argv, hnd, ids, n);
+    const char** argv = calloc(sizeof(char*), (2 + NUM_FSCK_OPTIONS));
+    size_t argc = 0;
+    argv[argc++] = "/boot/bin/minfs";
+    if (options->verbose) {
+        argv[argc++] = "-v";
+    }
+    argv[argc++] = "fsck";
+    status = cb(argc, argv, hnd, ids, n);
+    free(argv);
+    return status;
 }
 
-static mx_status_t fsck_fat(const char* devicepath, LaunchCallback cb) {
+static mx_status_t fsck_fat(const char* devicepath, const fsck_options_t* options,
+                            LaunchCallback cb) {
     const char* argv[] = {"/boot/bin/fsck-msdosfs", devicepath};
     return cb(countof(argv), argv, NULL, NULL, 0);
 }
 
-mx_status_t fsck(const char* devicepath, disk_format_t df, LaunchCallback cb) {
+mx_status_t fsck(const char* devicepath, disk_format_t df,
+                 const fsck_options_t* options, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return fsck_minfs(devicepath, cb);
+        return fsck_minfs(devicepath, options, cb);
     case DISK_FORMAT_FAT:
-        return fsck_fat(devicepath, cb);
+        return fsck_fat(devicepath, options, cb);
     default:
         return ERR_NOT_SUPPORTED;
     }

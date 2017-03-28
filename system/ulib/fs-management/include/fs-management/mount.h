@@ -37,6 +37,16 @@ static const mount_options_t default_mount_options = {
     .wait_until_ready = true,
 };
 
+typedef struct fsck_options {
+    bool verbose;
+} fsck_options_t;
+
+#define NUM_FSCK_OPTIONS 1
+
+static const fsck_options_t default_fsck_options = {
+    .verbose = false,
+};
+
 typedef mx_status_t (*LaunchCallback)(int argc, const char** argv,
                                       mx_handle_t* hnd, uint32_t* ids, size_t len);
 
@@ -74,7 +84,8 @@ mx_status_t fmount(int devicefd, int mountfd, disk_format_t df,
 mx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb);
 
 // Check and repair a device with a requested disk format.
-mx_status_t fsck(const char* devicepath, disk_format_t df, LaunchCallback cb);
+mx_status_t fsck(const char* devicepath, disk_format_t df,
+                 const fsck_options_t* options, LaunchCallback cb);
 
 // Umount the filesystem process.
 //
