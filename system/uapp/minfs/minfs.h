@@ -255,8 +255,9 @@ public:
     // flags *must* contain kBlockDirty if it was modified
     void Put(mxtl::RefPtr<BlockNode> blk, uint32_t flags);
 
-    // Helper function which combines 'Get' and 'Put'.
+    // Helper functions which combine 'Get' and 'Put'.
     mx_status_t Read(uint32_t bno, void* data, uint32_t off, uint32_t len);
+    mx_status_t Write(uint32_t bno, const void* data, uint32_t off, uint32_t len);
 
     // drop all non-busy, non-dirty blocks
     void Invalidate();

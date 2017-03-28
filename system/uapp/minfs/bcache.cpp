@@ -143,13 +143,29 @@ void Bcache::Put(mxtl::RefPtr<BlockNode> blk, uint32_t flags) {
 mx_status_t Bcache::Read(uint32_t bno, void* data, uint32_t off, uint32_t len) {
     trace(BCACHE, "bcache_read() bno=%u off=%u len=%u\n", bno, off, len);
     if ((off > blocksize_) || ((blocksize_ - off) < len)) {
-        return -1;
+        return ERR_INVALID_ARGS;
     }
     mxtl::RefPtr<BlockNode> blk = Get(bno);
     if (blk != nullptr) {
         void* bdata_src = (void*)((uintptr_t)blk->data() + off);
         memcpy(data, bdata_src, len);
         Put(mxtl::move(blk), 0);
+        return 0;
+    } else {
+        return ERR_IO;
+    }
+}
+
+mx_status_t Bcache::Write(uint32_t bno, const void* data, uint32_t off, uint32_t len) {
+    trace(BCACHE, "bcache_write() bno=%u off=%u len=%u\n", bno, off, len);
+    if ((off > blocksize_) || ((blocksize_ - off) < len)) {
+        return ERR_INVALID_ARGS;
+    }
+    mxtl::RefPtr<BlockNode> blk = Get(bno);
+    if (blk != nullptr) {
+        void* bdata_src = (void*)((uintptr_t)blk->data() + off);
+        memcpy(bdata_src, data, len);
+        Put(mxtl::move(blk), kBlockDirty);
         return 0;
     } else {
         return ERR_IO;

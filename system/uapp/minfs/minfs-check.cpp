@@ -70,6 +70,7 @@ mx_status_t get_inode_nth_bno(const Minfs* fs, minfs_inode_t* inode, uint32_t n,
 // boundaries. This function works on directories too.
 mx_status_t file_read(const Minfs* fs, minfs_inode_t* inode, void* data, size_t len, size_t off) {
     if (off >= inode->size) {
+        warn("file_read: offset %lu is greater than inode size (%u)\n", off, inode->size);
         return 0;
     }
     if (len > (inode->size - off)) {
@@ -107,6 +108,49 @@ mx_status_t file_read(const Minfs* fs, minfs_inode_t* inode, void* data, size_t 
     return static_cast<mx_status_t>((uintptr_t) data - (uintptr_t) start);
 }
 
+// Convert 'single-block-writes' to generic writes, which may cross block
+// boundaries. This function works on directories too.
+mx_status_t file_write(const Minfs* fs, minfs_inode_t* inode, const void* data, size_t len,
+                       size_t off) {
+    if (off >= inode->size) {
+        warn("file_write: offset %lu is greater than inode size (%u)\n", off, inode->size);
+        return 0;
+    }
+    if (len > (inode->size - off)) {
+        len = inode->size - off;
+    }
+
+    const void* start = data;
+    uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
+    uint32_t adjust = off % kMinfsBlockSize;
+
+    while ((len > 0) && (n < kMinfsMaxFileBlock)) {
+        uint32_t xfer;
+        if (len > (kMinfsBlockSize - adjust)) {
+            xfer = kMinfsBlockSize - adjust;
+        } else {
+            xfer = static_cast<uint32_t>(len);
+        }
+
+        uint32_t bno;
+        mx_status_t status;
+        if ((status = get_inode_nth_bno(fs, inode, n, &bno)) != NO_ERROR) {
+            return status;
+        }
+
+        if ((status = fs->bc_->Write(bno, data, adjust, xfer)) != NO_ERROR) {
+            return status;
+        }
+
+        adjust = 0;
+        len -= xfer;
+        data = (void*)((uintptr_t)data + xfer);
+        n++;
+    }
+
+    return static_cast<mx_status_t>((uintptr_t) data - (uintptr_t) start);
+}
+
 mx_status_t check_directory(CheckMaps* chk, const Minfs* fs, minfs_inode_t* inode,
                             uint32_t ino, uint32_t parent, uint32_t flags) {
     unsigned eno = 0;
@@ -114,13 +158,42 @@ mx_status_t check_directory(CheckMaps* chk, const Minfs* fs, minfs_inode_t* inod
     bool dotdot = false;
     uint32_t dirent_count = 0;
 
+    size_t prev_off = 0;
     size_t off = 0;
     while (true) {
         uint32_t data[MINFS_DIRENT_SIZE];
         mx_status_t status = file_read(fs, inode, data, MINFS_DIRENT_SIZE, off);
         if (status != MINFS_DIRENT_SIZE) {
-            error("check: ino#%u: Could not read direnty at %zd\n", ino, off);
-            return status < 0 ? status : ERR_IO;
+            error("check: ino#%u: Could not read de[%u] at %zd\n", eno, ino, off);
+            if (inode->dirent_count >= 2 && inode->dirent_count == eno - 1) {
+                // So we couldn't read the last direntry, for whatever reason, but our
+                // inode says that we shouldn't have been able to read it anyway.
+                error("check: de count (%u) > inode_dirent_count (%u)\n", eno, inode->dirent_count);
+                error("This directory and its inode disagree; the directory contents indicate\n"
+                      "there might be more contents, but the inode says that the last entry\n"
+                      "should already be marked as last.\n\n"
+                      "Mark the directory as holding [%u] entries? (DEFAULT: y) [y/n] > ",
+                      inode->dirent_count);
+                int c = getchar();
+                if (c == 'y') {
+                    // Mark the 'last' visible direntry as last.
+                    status = file_read(fs, inode, data, MINFS_DIRENT_SIZE, prev_off);
+                    if (status != MINFS_DIRENT_SIZE) {
+                        error("check: Error trying to update last dirent as 'last': %d.\n"
+                              "Can't read the last dirent even though we just did earlier.\n",
+                              status);
+                        return status < 0 ? status : ERR_IO;
+                    }
+                    minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
+                    de->reclen |= kMinfsReclenLast;
+                    file_write(fs, inode, data, MINFS_DIRENT_SIZE, prev_off);
+                    return NO_ERROR;
+                } else {
+                    return ERR_IO;
+                }
+            } else {
+                return status < 0 ? status : ERR_IO;
+            }
         }
         minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
         uint32_t rlen = static_cast<uint32_t>(MinfsReclen(de, off));
@@ -135,6 +208,15 @@ mx_status_t check_directory(CheckMaps* chk, const Minfs* fs, minfs_inode_t* inod
                 info("ino#%u: de[%u]: <empty> reclen=%u\n", ino, eno, rlen);
             }
         } else {
+            // Re-read the dirent to acquire the full name
+            uint32_t record_full[DirentSize(NAME_MAX)];
+            status = file_read(fs, inode, record_full, DirentSize(de->namelen), off);
+            if (status != static_cast<mx_status_t>(DirentSize(de->namelen))) {
+                error("check: Error reading dirent of size: %u\n", DirentSize(de->namelen));
+                return ERR_IO;
+            }
+            de = reinterpret_cast<minfs_dirent_t*>(record_full);
+
             if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
                 error("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
                 return ERR_IO_DATA_INTEGRITY;
@@ -159,8 +241,8 @@ mx_status_t check_directory(CheckMaps* chk, const Minfs* fs, minfs_inode_t* inod
             }
             //TODO: check for cycles (non-dot/dotdot dir ref already in checked bitmap)
             if (flags & CD_DUMP) {
-                info("ino#%u: de[%u]: ino=%u type=%u '%.*s'\n",
-                     ino, eno, de->ino, de->type, de->namelen, de->name);
+                info("ino#%u: de[%u]: ino=%u type=%u '%.*s' %s\n",
+                     ino, eno, de->ino, de->type, de->namelen, de->name, is_last ? "[last]" : "");
             }
             if (flags & CD_RECURSE) {
                 if ((status = check_inode(chk, fs, de->ino, ino)) < 0) {
@@ -172,6 +254,7 @@ mx_status_t check_directory(CheckMaps* chk, const Minfs* fs, minfs_inode_t* inod
         if (is_last) {
             break;
         } else {
+            prev_off = off;
             off += rlen;
         }
         eno++;
@@ -209,10 +292,11 @@ const char* check_data_block(CheckMaps* chk, const Minfs* fs, uint32_t bno) {
 mx_status_t check_file(CheckMaps* chk, const Minfs* fs,
                        minfs_inode_t* inode, uint32_t ino) {
 #if VERBOSE
+    info("Direct blocks: \n");
     for (unsigned n = 0; n < kMinfsDirect; n++) {
-        info("%d, ", inode->dnum[n]);
+        info(" %d,", inode->dnum[n]);
     }
-    info("...\n");
+    info(" ...\n");
 #endif
 
     uint32_t blocks = 0;
