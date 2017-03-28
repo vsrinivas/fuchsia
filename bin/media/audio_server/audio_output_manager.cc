@@ -7,16 +7,18 @@
 #include <string>
 
 #include "apps/media/src/audio_server/audio_output.h"
-#include "apps/media/src/audio_server/audio_server_impl.h"
+#include "apps/media/src/audio_server/audio_plug_detector.h"
 #include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
+#include "apps/media/src/audio_server/audio_server_impl.h"
 #include "apps/media/src/audio_server/platform/generic/throttle_output.h"
-#include "apps/media/src/audio_server/platform/usb/usb_output_enum.h"
 
 namespace media {
 namespace audio {
 
 AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
-    : server_(server) {}
+    : server_(server) {
+  plug_detector_ = AudioPlugDetector::Create();
+}
 
 AudioOutputManager::~AudioOutputManager() {
   Shutdown();
@@ -24,40 +26,30 @@ AudioOutputManager::~AudioOutputManager() {
 }
 
 MediaResult AudioOutputManager::Init() {
-  // Step #1: Instantiate all of the built-in audio output devices.
-  //
-  // TODO(johngro): Come up with a better way of doing this based on our
-  // platform.  Right now, we just create some hardcoded default outputs and
-  // leave it at that.
-  outputs_.emplace(audio::ThrottleOutput::New(this));
+  // Step #1: Instantiate and initialize the default throttle output.
+  auto throttle_output = ThrottleOutput::New(this);
+  if (throttle_output == nullptr) {
+    FTL_LOG(WARNING)
+        << "AudioOutputManager failed to create default throttle output!";
+    return MediaResult::INSUFFICIENT_RESOURCES;
+  }
 
-  {
-    UsbOutputEnum usb_output_enum;
-    AudioOutputPtr default_usb_output = usb_output_enum.GetDefaultOutput(this);
-    if (default_usb_output) {
-      outputs_.emplace(default_usb_output);
-    }
+  MediaResult res = AddOutput(throttle_output);
+  if (res != MediaResult::OK) {
+    FTL_LOG(WARNING)
+        << "AudioOutputManager failed to initalize the throttle output (res "
+        << res << ")";
+    return res;
   }
 
   // Step #2: Being monitoring for plug/unplug events for pluggable audio
   // output devices.
-  //
-  // TODO(johngro): Implement step #3.  Right now, the details are behind
-  // hot-plug monitoring are TBD, so the feature is not implemented.
-
-  // Step #3: Attempt to initialize each of the audio outputs we have created,
-  // then kick off the callback engine for each of them.
-  for (auto iter = outputs_.begin(); iter != outputs_.end();) {
-    const AudioOutputPtr& output = *iter;
-    auto tmp = iter++;
-    FTL_DCHECK(output);
-
-    MediaResult res = output->Init(output);
-    if (res != MediaResult::OK) {
-      // TODO(johngro): Probably should log something about this, assuming that
-      // the output has not already.
-      outputs_.erase(tmp);
-    }
+  FTL_DCHECK(plug_detector_ != nullptr);
+  res = plug_detector_->Start(this);
+  if (res != MediaResult::OK) {
+    FTL_LOG(WARNING) << "AudioOutputManager failed to start plug detector (res "
+                     << res << ")";
+    return res;
   }
 
   return MediaResult::OK;
@@ -66,9 +58,8 @@ MediaResult AudioOutputManager::Init() {
 void AudioOutputManager::Shutdown() {
   // Step #1: Stop monitoringing plug/unplug events.  We are shutting down and
   // no longer care about outputs coming and going.
-  //
-  // TODO(johngro): Implement step #1.  Right now, the details are behind
-  // hot-plug monitoring are TBD, so the feature is not implemented.
+  FTL_DCHECK(plug_detector_ != nullptr);
+  plug_detector_->Stop();
 
   // Step #2: Shut down each currently active output in the system.  It is
   // possible for this to take a bit of time as outputs release their hardware,
@@ -77,6 +68,23 @@ void AudioOutputManager::Shutdown() {
     output_ptr->Shutdown();
   }
   outputs_.clear();
+
+  // TODO(johngro) : shut down the thread pool
+}
+
+MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
+  FTL_DCHECK(output != nullptr);
+
+  auto emplace_res = outputs_.emplace(output);
+  FTL_DCHECK(emplace_res.second);
+
+  MediaResult res = output->Init(output);
+  if (res != MediaResult::OK) {
+    outputs_.erase(emplace_res.first);
+    output->Shutdown();
+  }
+
+  return res;
 }
 
 void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
@@ -87,7 +95,8 @@ void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
   }
 }
 
-void AudioOutputManager::SelectOutputsForRenderer(AudioRendererImplPtr renderer) {
+void AudioOutputManager::SelectOutputsForRenderer(
+    AudioRendererImplPtr renderer) {
   // TODO(johngro): Someday, base this on policy.  For now, every renderer gets
   // assigned to every output in the system.
   FTL_DCHECK(renderer);
