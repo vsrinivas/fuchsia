@@ -19,10 +19,11 @@ Likewise, no build output is placed in the source tree as everything goes under
 
 ## Targets
 
-There are four gn targets for building Dart:
+There are five gn targets for building Dart:
 - [`dart_package`][target-package] defines a library that can be used by other
 Dart targets;
-- [`dart_app`][target-app] defines a Dart executable;
+- [`dart_app`][target-app] defines a Dart executable for Fuchsia;
+- [`dart_tool`][target-tool] defines a Dart tool for the host;
 - [`flutter_app`][target-flutter] defines a [Flutter][flutter] application;
 - [`dart_test`][target-test] defines a group of test.
 
@@ -155,6 +156,7 @@ itself.
 [dart-3p-script]: https://fuchsia.googlesource.com/scripts/+/master/update_dart_packages.py "Dependencies script"
 [target-package]: https://fuchsia.googlesource.com/build/+/master/dart/dart_package.gni "dart_package target"
 [target-app]: https://fuchsia.googlesource.com/dart_content_handler/+/master/dart_app.gni "dart_package app"
+[target-tool]: https://fuchsia.googlesource.com/build/+/master/dart/dart_tool.gni "dart_tool target"
 [target-flutter]: https://github.com/flutter/engine/blob/master/build/flutter_app.gni "flutter_app target"
 [target-test]: https://fuchsia.googlesource.com/build/+/master/dart/dart_test.gni "dart_test target"
 [flutter]: https://flutter.io/ "Flutter"
