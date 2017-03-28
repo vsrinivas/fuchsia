@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magenta/assert.h>
 #include <magenta/hw/usb.h>
 #include <stdio.h>
+#include <string.h>
 #include <threads.h>
 #include <ddk/protocol/usb.h>
 
@@ -18,7 +20,7 @@
 static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
     int index = trb - ring->start;
     uint32_t* ptr = (uint32_t *)trb;
-    uint64_t paddr = io_buffer_phys(&ring->buffer, index * sizeof(xhci_trb_t));
+    uint64_t paddr = io_buffer_phys(&ring->buffer) + index * sizeof(xhci_trb_t);
 
     printf("trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
 }
@@ -67,83 +69,102 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
     return (cc == TRB_CC_SUCCESS ? NO_ERROR : ERR_INTERNAL);
 }
 
-mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
-    usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
-    int rh_index = xhci_get_root_hub_index(xhci, proto_data->device_id);
-    if (rh_index >= 0) {
-        return xhci_rh_iotxn_queue(xhci, txn, rh_index);
-    }
-    uint32_t slot_id = proto_data->device_id;
-    if (slot_id > xhci->max_slots) {
-        return ERR_INVALID_ARGS;
-    }
-    uint8_t endpoint = xhci_endpoint_index(proto_data->ep_address);
-    if (endpoint >= XHCI_NUM_EPS) {
-        return ERR_INVALID_ARGS;
-    }
-
-    xprintf("xhci_queue_transfer slot_id: %d setup: %p endpoint: %d length: %d\n",
-            slot_id, setup, endpoint, length);
-
-    usb_setup_t* setup = (endpoint == 0 ? &proto_data->setup : NULL);
-    if ((setup && endpoint != 0) || (!setup && endpoint == 0)) {
-        return ERR_INVALID_ARGS;
-    }
-    if (slot_id < 1 || slot_id >= xhci->max_slots) {
-        return ERR_INVALID_ARGS;
-    }
-
-    size_t length = txn->length;
-    mx_paddr_t paddr = 0;
-    if (length > 0) {
-        iotxn_physmap(txn);
-        paddr = iotxn_phys(txn);
-    }
-    uint64_t frame = proto_data->frame;
-    uint8_t direction;
-    if (setup) {
-        direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
-    } else {
-        direction = proto_data->ep_address & USB_ENDPOINT_DIR_MASK;
-    }
-
-    xhci_slot_t* slot = &xhci->slots[slot_id];
-    xhci_endpoint_t* ep = &slot->eps[endpoint];
+// locked on ep->lock
+static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
     if (!ep->enabled)
         return ERR_PEER_CLOSED;
 
-    xhci_endpoint_context_t* epc = slot->eps[endpoint].epc;
+    usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
+    xhci_transfer_state_t* state = ep->transfer_state;
+    memset(state, 0, sizeof(*state));
+
+    if (txn->length > 0) {
+        mx_status_t status = iotxn_physmap(txn);
+        if (status != NO_ERROR) {
+            printf("%s: iotxn_physmap failed: %d\n", __FUNCTION__, status);
+            return status;
+        }
+    }
+
+    // compute number of packets needed for this transaction
+    if (txn->length > 0) {
+        iotxn_phys_iter_init(&state->phys_iter, txn, XHCI_MAX_DATA_BUFFER);
+        mx_paddr_t dummy_paddr;
+        while (iotxn_phys_iter_next(&state->phys_iter, &dummy_paddr) > 0) {
+            state->packet_count++;
+        }
+    }
+
+    iotxn_phys_iter_init(&state->phys_iter, txn, XHCI_MAX_DATA_BUFFER);
+    xhci_endpoint_context_t* epc = ep->epc;
+    uint32_t ep_type = XHCI_GET_BITS32(&epc->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS);
+    if (ep_type >= 4) ep_type -= 4;
+    state->ep_type = ep_type;
+    usb_setup_t* setup = (proto_data->ep_address == 0 ? &proto_data->setup : NULL);
+    if (setup) {
+        state->direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
+        state->needs_status = true;
+    } else {
+        state->direction = proto_data->ep_address & USB_ENDPOINT_DIR_MASK;
+    }
+    state->needs_data_event = true;
+
+    size_t length = txn->length;
+
+
     if (XHCI_GET_BITS32(&epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS) == 2 /* halted */ ) {
         return ERR_IO_REFUSED;
     }
 
     uint32_t interruptor_target = 0;
-    size_t data_packets = (length + XHCI_MAX_DATA_BUFFER - 1) / XHCI_MAX_DATA_BUFFER;
-    size_t required_trbs = data_packets + 1;   // add 1 for event data TRB
+
     if (setup) {
-        required_trbs += 2;
-    }
-    if (required_trbs > ring->size) {
-        // no way this will ever succeed
-        printf("required_trbs %zu ring->size %zu\n", required_trbs, ring->size);
-        return ERR_INVALID_ARGS;
+        // Setup Stage
+        xhci_trb_t* trb = ring->current;
+        xhci_clear_trb(trb);
+
+        XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_REQ_TYPE_START, SETUP_TRB_REQ_TYPE_BITS,
+                        setup->bmRequestType);
+        XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_REQUEST_START, SETUP_TRB_REQUEST_BITS,
+                        setup->bRequest);
+        XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_VALUE_START, SETUP_TRB_VALUE_BITS, setup->wValue);
+        XHCI_SET_BITS32(&trb->ptr_high, SETUP_TRB_INDEX_START, SETUP_TRB_INDEX_BITS, setup->wIndex);
+        XHCI_SET_BITS32(&trb->ptr_high, SETUP_TRB_LENGTH_START, SETUP_TRB_LENGTH_BITS, length);
+        XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS, 8);
+        XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
+                        interruptor_target);
+
+        uint32_t control_bits = (length == 0 ? XFER_TRB_TRT_NONE :
+                            (state->direction == USB_DIR_IN ? XFER_TRB_TRT_IN : XFER_TRB_TRT_OUT));
+        control_bits |= XFER_TRB_IDT; // immediate data flag
+        trb_set_control(trb, TRB_TRANSFER_SETUP, control_bits);
+        print_trb(xhci, ring, trb);
+        xhci_increment_ring(ring);
     }
 
-    uint32_t ep_type = XHCI_GET_BITS32(&epc->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS);
-    if (ep_type >= 4) ep_type -= 4;
-    bool isochronous = (ep_type == USB_ENDPOINT_ISOCHRONOUS);
+    return NO_ERROR;
+}
+
+// returns NO_ERROR if txn has been successfully queued,
+// ERR_SHOULD_WAIT if we ran out of TRBs and need to try again later,
+// or other error for a hard failure.
+static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep, iotxn_t* txn) {
+    xhci_transfer_ring_t* ring = &ep->transfer_ring;
+
+    usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
+    uint8_t ep_index = xhci_endpoint_index(proto_data->ep_address);
+    xhci_transfer_state_t* state = ep->transfer_state;
+    size_t length = txn->length;
+    size_t free_trbs = xhci_transfer_ring_free_trbs(&ep->transfer_ring);
+    uint8_t direction = state->direction;
+    bool isochronous = (state->ep_type == USB_ENDPOINT_ISOCHRONOUS);
+    uint64_t frame = proto_data->frame;
+
+    uint32_t interruptor_target = 0;
+
     if (isochronous) {
-        if (!paddr || !length) return ERR_INVALID_ARGS;
-        // we currently do not support isoch buffers that span page boundaries
-        // Section 3.2.11 in the XHCI spec describes how to handle this, but since
-        // iotxn buffers are always close to the beginning of a page, this shouldn't be necessary.
-        mx_paddr_t start_page = paddr & ~(xhci->page_size - 1);
-        mx_paddr_t end_page = (paddr + length - 1) & ~(xhci->page_size - 1);
-        if (start_page != end_page) {
-            printf("isoch buffer spans page boundary in xhci_queue_transfer\n");
-            return ERR_INVALID_ARGS;
-        }
+        if (length == 0) return ERR_INVALID_ARGS;
     }
     if (frame != 0) {
         if (!isochronous) {
@@ -162,120 +183,225 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
         }
     }
 
-    // FIXME handle zero length packets
-
-    mtx_lock(&ep->lock);
-
-    // don't allow queueing new requests if we have deferred requests
-    if (!list_is_empty(&ep->deferred_txns) || required_trbs > xhci_transfer_ring_free_trbs(ring)) {
-        list_add_tail(&ep->deferred_txns, &txn->node);
-        mtx_unlock(&ep->lock);
-        return ERR_BUFFER_TOO_SMALL;
-    }
-
-    list_add_tail(&ep->pending_requests, &txn->node);
-
-    if (setup) {
-        // Setup Stage
+    // Data Stage
+    mx_paddr_t paddr;
+    size_t transfer_size;
+    bool first_packet = (state->phys_iter.offset == 0);
+    while (free_trbs > 0 && (transfer_size = iotxn_phys_iter_next(&state->phys_iter, &paddr)) > 0) {
         xhci_trb_t* trb = ring->current;
         xhci_clear_trb(trb);
+        XHCI_WRITE64(&trb->ptr, paddr);
+        XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS,
+                        transfer_size);
+        // number of packets remaining after this one
+        uint32_t td_size = --state->packet_count;
+        XHCI_SET_BITS32(&trb->status, XFER_TRB_TD_SIZE_START, XFER_TRB_TD_SIZE_BITS, td_size);
+        XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
+                        interruptor_target);
 
-        XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_REQ_TYPE_START, SETUP_TRB_REQ_TYPE_BITS, setup->bmRequestType);
-        XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_REQUEST_START, SETUP_TRB_REQUEST_BITS, setup->bRequest);
-        XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_VALUE_START, SETUP_TRB_VALUE_BITS, setup->wValue);
-        XHCI_SET_BITS32(&trb->ptr_high, SETUP_TRB_INDEX_START, SETUP_TRB_INDEX_BITS, setup->wIndex);
-        XHCI_SET_BITS32(&trb->ptr_high, SETUP_TRB_LENGTH_START, SETUP_TRB_LENGTH_BITS, length);
-        XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS, 8);
-        XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
+        uint32_t control_bits = TRB_CHAIN;
+        if (td_size == 0) {
+            control_bits |= XFER_TRB_ENT;
+        }
+        if (ep_index == 0 && first_packet) {
+            // use TRB_TRANSFER_DATA for first data packet on setup requests
+            control_bits |= (direction == USB_DIR_IN ? XFER_TRB_DIR_IN : XFER_TRB_DIR_OUT);
+            trb_set_control(trb, TRB_TRANSFER_DATA, control_bits);
+        } else if (isochronous) {
+            // we currently do not support isoch buffers that span page boundaries
+            // Section 3.2.11 in the XHCI spec describes how to handle this, but since iotxn buffers
+            // are always close to the beginning of a page, this shouldn't be necessary.
+            if (transfer_size != txn->length) {
+                printf("isoch buffer spans page boundary in xhci_queue_transfer\n");
+                return ERR_INVALID_ARGS;
+            }
 
-        uint32_t control_bits = (length == 0 ? XFER_TRB_TRT_NONE : (direction == USB_DIR_IN ? XFER_TRB_TRT_IN : XFER_TRB_TRT_OUT));
-        control_bits |= XFER_TRB_IDT; // immediate data flag
-        trb_set_control(trb, TRB_TRANSFER_SETUP, control_bits);
+            if (frame == 0) {
+                // set SIA bit to schedule packet ASAP
+                control_bits |= XFER_TRB_SIA;
+            } else {
+                // schedule packet for specified frame
+                control_bits |= (((frame % 2048) << XFER_TRB_FRAME_ID_START) &
+                                 XHCI_MASK(XFER_TRB_FRAME_ID_START, XFER_TRB_FRAME_ID_BITS));
+           }
+            trb_set_control(trb, TRB_TRANSFER_ISOCH, control_bits);
+        } else {
+            trb_set_control(trb, TRB_TRANSFER_NORMAL, control_bits);
+        }
         print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
+        free_trbs--;
+
+        first_packet = false;
     }
 
-    // Data Stage
-    if (length > 0) {
-        size_t remaining = length;
+    if (state->phys_iter.offset < txn->length) {
+        // still more data to queue, but we are out of TRBs.
+        // come back and finish later.
+        return ERR_SHOULD_WAIT;
+    }
 
-        for (size_t i = 0; i < data_packets; i++) {
-            size_t transfer_size = (remaining > XHCI_MAX_DATA_BUFFER ? XHCI_MAX_DATA_BUFFER : remaining);
-            remaining -= transfer_size;
-
-            xhci_trb_t* trb = ring->current;
-            xhci_clear_trb(trb);
-            XHCI_WRITE64(&trb->ptr, paddr + (i * XHCI_MAX_DATA_BUFFER));
-            XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS, transfer_size);
-            uint32_t td_size = data_packets - i - 1;
-            XHCI_SET_BITS32(&trb->status, XFER_TRB_TD_SIZE_START, XFER_TRB_TD_SIZE_BITS, td_size);
-            XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
-
-            uint32_t control_bits = TRB_CHAIN;
-            if (td_size == 0) {
-                control_bits |= XFER_TRB_ENT;
-            }
-            if (setup && i == 0) {
-                // use TRB_TRANSFER_DATA for first data packet on setup requests
-                control_bits |= (direction == USB_DIR_IN ? XFER_TRB_DIR_IN : XFER_TRB_DIR_OUT);
-                trb_set_control(trb, TRB_TRANSFER_DATA, control_bits);
-            } else if (isochronous) {
-                if (frame == 0) {
-                    // set SIA bit to schedule packet ASAP
-                    control_bits |= XFER_TRB_SIA;
-                } else {
-                    // schedule packet for specified frame
-                    control_bits |= (((frame % 2048) << XFER_TRB_FRAME_ID_START) &
-                                     XHCI_MASK(XFER_TRB_FRAME_ID_START, XFER_TRB_FRAME_ID_BITS));
-               }
-                trb_set_control(trb, TRB_TRANSFER_ISOCH, control_bits);
-            } else {
-                trb_set_control(trb, TRB_TRANSFER_NORMAL, control_bits);
-            }
-            print_trb(xhci, ring, trb);
-            xhci_increment_ring(ring);
+    // if data length is zero, we queue event data after the status TRB
+    if (state->needs_data_event && txn->length > 0) {
+        if (free_trbs == 0) {
+            // will need to do this later
+            return ERR_SHOULD_WAIT;
         }
 
-        // Follow up with event data TRB
+        // Queue event data TRB
         xhci_trb_t* trb = ring->current;
         xhci_clear_trb(trb);
         trb_set_ptr(trb, txn);
-        XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
+        XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
+                        interruptor_target);
         trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
         print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
+        free_trbs--;
+        state->needs_data_event = false;
     }
 
-    if (setup) {
+
+    if (state->needs_status) {
+        if (free_trbs == 0) {
+            // will need to do this later
+            return ERR_SHOULD_WAIT;
+        }
+
         // Status Stage
         xhci_trb_t* trb = ring->current;
         xhci_clear_trb(trb);
-        XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
-        uint32_t control_bits = (direction == USB_DIR_IN && length > 0 ? XFER_TRB_DIR_OUT : XFER_TRB_DIR_IN);
+        XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
+                        interruptor_target);
+        uint32_t control_bits = (direction == USB_DIR_IN && length > 0 ? XFER_TRB_DIR_OUT
+                                                                       : XFER_TRB_DIR_IN);
         if (length == 0) {
             control_bits |= TRB_CHAIN;
         }
         trb_set_control(trb, TRB_TRANSFER_STATUS, control_bits);
         print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
-
-        if (length == 0) {
-            // Follow up with event data TRB
-            xhci_trb_t* trb = ring->current;
-            xhci_clear_trb(trb);
-            trb_set_ptr(trb, txn);
-            XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
-            trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
-            print_trb(xhci, ring, trb);
-            xhci_increment_ring(ring);
-        }
+        free_trbs--;
+        state->needs_status = false;
     }
+
+     // if data length is zero, we queue event data after the status TRB
+    if (state->needs_data_event && txn->length == 0) {
+        if (free_trbs == 0) {
+            // will need to do this later
+            return ERR_SHOULD_WAIT;
+        }
+
+        // Queue event data TRB
+        xhci_trb_t* trb = ring->current;
+        xhci_clear_trb(trb);
+        trb_set_ptr(trb, txn);
+        XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
+                        interruptor_target);
+        trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
+        print_trb(xhci, ring, trb);
+        xhci_increment_ring(ring);
+        free_trbs--;
+        state->needs_data_event = false;
+    }
+
+    // if we get here, then we are ready to ring the doorbell
     // update dequeue_ptr to TRB following this transaction
     txn->context = (void *)ring->current;
 
-    XHCI_WRITE32(&xhci->doorbells[slot_id], endpoint + 1);
+    XHCI_WRITE32(&xhci->doorbells[proto_data->device_id], ep_index + 1);
+
+    return NO_ERROR;
+}
+
+static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
+                                             list_node_t* completed_txns) {
+    // loop until we fill our transfer ring or run out of iotxns to process
+    while (1) {
+        if (xhci_transfer_ring_free_trbs(&ep->transfer_ring) == 0) {
+            // no available TRBs - need to wait for some complete
+            return;
+        }
+
+        while (!ep->current_txn) {
+            // start the next transaction in the queue
+            iotxn_t* txn = list_remove_head_type(&ep->queued_txns, iotxn_t, node);
+            if (!txn) {
+                // nothing to do
+                return;
+            }
+
+            mx_status_t status = xhci_start_transfer_locked(xhci, ep, txn);
+            if (status == NO_ERROR) {
+                list_add_tail(&ep->pending_txns, &txn->node);
+                ep->current_txn = txn;
+            } else {
+                txn->status = status;
+                txn->actual = 0;
+                list_add_tail(completed_txns, &txn->node);
+            }
+        }
+
+        if (ep->current_txn) {
+            iotxn_t* txn = ep->current_txn;
+            mx_status_t status = xhci_continue_transfer_locked(xhci, ep, txn);
+            if (status == ERR_SHOULD_WAIT) {
+                // no available TRBs - need to wait for some complete
+                return;
+            } else {
+                if (status != NO_ERROR) {
+                    txn->status = status;
+                    txn->actual = 0;
+                    list_add_tail(completed_txns, &txn->node);
+                }
+                ep->current_txn = NULL;
+            }
+        }
+    }
+}
+
+mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
+    usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
+    uint32_t slot_id = proto_data->device_id;
+    uint8_t ep_index = xhci_endpoint_index(proto_data->ep_address);
+    __UNUSED usb_setup_t* setup = (ep_index == 0 ? &proto_data->setup : NULL);
+
+    xprintf("xhci_queue_transfer slot_id: %d setup: %p ep_index: %d length: %lu\n",
+            slot_id, setup, ep_index, txn->length);
+
+    int rh_index = xhci_get_root_hub_index(xhci, slot_id);
+    if (rh_index >= 0) {
+        return xhci_rh_iotxn_queue(xhci, txn, rh_index);
+    }
+
+    if (slot_id < 1 || slot_id >= xhci->max_slots) {
+        return ERR_INVALID_ARGS;
+    }
+    if (ep_index >= XHCI_NUM_EPS) {
+        return ERR_INVALID_ARGS;
+    }
+
+    xhci_slot_t* slot = &xhci->slots[slot_id];
+    xhci_endpoint_t* ep = &slot->eps[ep_index];
+
+    mtx_lock(&ep->lock);
+    if (!ep->enabled) {
+        mtx_unlock(&ep->lock);
+        return ERR_PEER_CLOSED;
+    }
+
+    list_add_tail(&ep->queued_txns, &txn->node);
+
+    list_node_t completed_txns;
+    list_initialize(&completed_txns);
+    xhci_process_transactions_locked(xhci, ep, &completed_txns);
 
     mtx_unlock(&ep->lock);
+
+    // call complete callbacks out of the lock
+    while ((txn = list_remove_head_type(&completed_txns, iotxn_t, node)) != NULL) {
+        iotxn_complete(txn, txn->status, txn->actual);
+    }
 
     return NO_ERROR;
 }
@@ -416,10 +542,10 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     // when transaction errors occur, we sometimes receive multiple events for the same transfer.
     // here we check to make sure that this event doesn't correspond to a transfer that has already
-    // been completed. In the typical case, the context will be found at the head of pending_requests.
+    // been completed. In the typical case, the context will be found at the head of pending_txns.
     bool found_txn = false;
     iotxn_t* test;
-    list_for_every_entry(&ep->pending_requests, test, iotxn_t, node) {
+    list_for_every_entry(&ep->pending_txns, test, iotxn_t, node) {
         if (test == txn) {
             found_txn = true;
             break;
@@ -434,19 +560,27 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     // update dequeue_ptr to TRB following this transaction
     ring->dequeue_ptr = txn->context;
 
-    // remove txn from pending_requests
+    // remove txn from pending_txns
     list_delete(&txn->node);
 
-    bool process_deferred_txns = !list_is_empty(&ep->deferred_txns);
-    mtx_unlock(&ep->lock);
-
     if (result < 0) {
-        iotxn_complete(txn, result, 0);
+        txn->status = result;
+        txn->actual = 0;
     } else {
-        iotxn_complete(txn, NO_ERROR, result);
+        txn->status = 0;
+        txn->actual = result;
     }
 
-    if (process_deferred_txns) {
-        xhci_process_deferred_txns(xhci, ep, false);
+    list_node_t completed_txns;
+    list_initialize(&completed_txns);
+    list_add_head(&completed_txns, &txn->node);
+
+    xhci_process_transactions_locked(xhci, ep, &completed_txns);
+
+    mtx_unlock(&ep->lock);
+
+    // call complete callbacks out of the lock
+    while ((txn = list_remove_head_type(&completed_txns, iotxn_t, node)) != NULL) {
+        iotxn_complete(txn, txn->status, txn->actual);
     }
 }

@@ -131,14 +131,14 @@ mx_status_t xhci_reset_ep(mx_device_t* device, uint32_t device_id, uint8_t ep_ad
 
 size_t xhci_get_max_transfer_size(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
     if (ep_address == 0) {
-        // control requests have uint16 length field
+        // control requests have uint16 length field so we need to support UINT16_MAX
+        // we require one setup, status and data event TRB in addition to data transfer TRBs
+        static_assert(PAGE_SIZE * (TRANSFER_RING_SIZE - 3) >= UINT16_MAX, "TRANSFER_RING_SIZE too small");
         return UINT16_MAX;
     }
     // non-control transfers consist of normal transfer TRBs plus one data event TRB
-    // Assuming contiguous data buffers here.
-    // This will need to change when we add scatter/gather support.
     // Subtract 1 to reserve a TRB for data event.
-    return XHCI_MAX_DATA_BUFFER * (TRANSFER_RING_SIZE - 1);
+    return PAGE_SIZE * (TRANSFER_RING_SIZE - 1);
 }
 
 usb_hci_protocol_t xhci_hci_protocol = {
@@ -152,38 +152,6 @@ usb_hci_protocol_t xhci_hci_protocol = {
     .reset_endpoint = xhci_reset_ep,
     .get_max_transfer_size = xhci_get_max_transfer_size,
 };
-
-void xhci_process_deferred_txns(xhci_t* xhci, xhci_endpoint_t* ep, bool closed) {
-    list_node_t list;
-    list_node_t* node;
-    iotxn_t* txn;
-
-    list_initialize(&list);
-
-    mtx_lock(&ep->lock);
-    // make a copy of deferred_txns list so we can operate on it safely outside of the mutex
-    while ((node = list_remove_head(&ep->deferred_txns)) != NULL) {
-        list_add_tail(&list, node);
-    }
-    list_initialize(&ep->deferred_txns);
-    mtx_unlock(&ep->lock);
-
-    if (closed) {
-        while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
-            iotxn_complete(txn, ERR_PEER_CLOSED, 0);
-        }
-        return;
-    }
-
-    // requeue all deferred transactions
-    // this will either add them to the transfer ring or put them back on deferred_txns list
-    while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
-        mx_status_t status = xhci_queue_transfer(xhci, txn);
-        if (status != NO_ERROR && status != ERR_BUFFER_TOO_SMALL) {
-            iotxn_complete(txn, status, 0);
-        }
-    }
-}
 
 static void xhci_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);

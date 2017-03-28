@@ -31,11 +31,23 @@
 #define XHCI_RH_USB_3 1 // index of USB 2.0 virtual root hub device
 #define XHCI_RH_COUNT 2 // number of virtual root hub devices
 
+// state for endpoint's current transfer
+typedef struct xhci_transfer_state {
+    iotxn_phys_iter_t   phys_iter;
+    uint32_t            packet_count;       // remaining packets to send
+    uint8_t             ep_type;
+    uint8_t             direction;
+    bool                needs_data_event;   // true if we still need to queue data event TRB
+    bool                needs_status;       // true if we still need to queue status TRB
+} xhci_transfer_state_t;
+
 typedef struct xhci_endpoint {
     xhci_endpoint_context_t* epc;
     xhci_transfer_ring_t transfer_ring;
-    list_node_t pending_requests;   // pending transfers that should be completed when ring is dead
-    list_node_t deferred_txns;      // used by upper layer to defer iotxns when ring is full
+    list_node_t queued_txns;    // iotxns waiting to be processed
+    iotxn_t* current_txn;       // iotxn currently being processed
+    list_node_t pending_txns;   // processed txns waiting for completion, including current_txn
+    xhci_transfer_state_t* transfer_state;  // transfer state for current_txn
     mtx_t lock;
     bool enabled;
 } xhci_endpoint_t;
@@ -159,6 +171,7 @@ struct xhci {
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
 mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count);
+void xhci_endpoint_free(xhci_endpoint_t* ep);
 void xhci_start(xhci_t* xhci);
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
@@ -180,4 +193,3 @@ inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
 // upper layer routines in usb-xhci.c
 mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed);
 void xhci_remove_device(xhci_t* xhci, int slot_id);
-void xhci_process_deferred_txns(xhci_t* xhci, xhci_endpoint_t* ep, bool closed);

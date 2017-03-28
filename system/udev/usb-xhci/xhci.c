@@ -179,7 +179,7 @@ static mx_status_t xhci_vmo_init(size_t size, mx_handle_t* out_handle, mx_vaddr_
 static void xhci_vmo_release(mx_handle_t handle, mx_vaddr_t virt) {
     uint64_t size;
     mx_vmo_get_size(handle, &size);
-    mx_vmar_unmap(handle, virt, size);
+    mx_vmar_unmap(mx_vmar_root_self(), virt, size);
     mx_handle_close(handle);
 }
 
@@ -364,13 +364,17 @@ mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count) {
     mx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, ring_count);
     if (status != NO_ERROR) return status;
 
-    list_initialize(&ep->pending_requests);
-    list_initialize(&ep->deferred_txns);
     mtx_init(&ep->lock, mtx_plain);
+    list_initialize(&ep->queued_txns);
+    list_initialize(&ep->pending_txns);
+    ep->current_txn = NULL;
     return NO_ERROR;
 }
 
-
+void xhci_endpoint_free(xhci_endpoint_t* ep) {
+    free(ep->transfer_state);
+    ep->transfer_state = NULL;
+}
 
 static void xhci_update_erdp(xhci_t* xhci, int interruptor) {
     xhci_event_ring_t* er = &xhci->event_rings[interruptor];
