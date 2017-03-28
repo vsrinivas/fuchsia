@@ -13,17 +13,19 @@ __BEGIN_CDECLS
 
 // Valid topics for mx_object_get_info.
 typedef enum {
-    MX_INFO_HANDLE_VALID = 1,
-    MX_INFO_HANDLE_BASIC,           // mx_info_handle_basic_t[1]
-    MX_INFO_PROCESS,                // mx_info_process_t[1]
-    MX_INFO_PROCESS_THREADS,        // mx_koid_t[n]
-    MX_INFO_RESOURCE_CHILDREN,      // mx_rrec_t[n]
-    MX_INFO_RESOURCE_RECORDS,       // mx_rrec_t[n]
-    MX_INFO_VMAR,                   // mx_info_vmar_t
-    MX_INFO_JOB_CHILDREN,           // mx_koid_t[n]
-    MX_INFO_JOB_PROCESSES,          // mx_koid_t[n]
-    MX_INFO_THREAD,                 // mx_info_thread_t[1]
-    MX_INFO_THREAD_EXCEPTION_REPORT, // mx_exception_report_t[1]
+    MX_INFO_NONE                       = 0,
+    MX_INFO_HANDLE_VALID               = 1,
+    MX_INFO_HANDLE_BASIC               = 2,  // mx_info_handle_basic_t[1]
+    MX_INFO_PROCESS                    = 3,  // mx_info_process_t[1]
+    MX_INFO_PROCESS_THREADS            = 4,  // mx_koid_t[n]
+    MX_INFO_RESOURCE_CHILDREN          = 5,  // mx_rrec_t[n]
+    MX_INFO_RESOURCE_RECORDS           = 6,  // mx_rrec_t[n]
+    MX_INFO_VMAR                       = 7,  // mx_info_vmar_t
+    MX_INFO_JOB_CHILDREN               = 8,  // mx_koid_t[n]
+    MX_INFO_JOB_PROCESSES              = 9,  // mx_koid_t[n]
+    MX_INFO_THREAD                     = 10, // mx_info_thread_t[1]
+    MX_INFO_THREAD_EXCEPTION_REPORT    = 11, // mx_exception_report_t[1]
+    MX_INFO_LAST
 } mx_object_info_topic_t;
 
 typedef enum {
