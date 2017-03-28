@@ -36,7 +36,11 @@ More information can be found in the [vm object documentation](../objects/vm_obj
 
 **MX_VMO_OP_UNLOCK** - Presently unsupported.
 
-**MX_VMO_OP_LOOKUP** - Returns a list of physical addresses (paddr_t) corresponding to the pages held by the VMO from *offset* to *offset*+*size*. The result is stored in *buffer*, up to *buffer_size* bytes.
+**MX_VMO_OP_LOOKUP** - Returns a list of physical addresses (paddr_t) corresponding to the pages held by the VMO
+from *offset* to *offset*+*size*. The result is stored in *buffer*, up to *buffer_size* bytes.
+The returned physical addresses are aligned to page boundaries. So if the provided offset
+is not page aligned, the first physical address returned will match the beginning of the page containing
+the offset, not the actual physical address corresponding to the offset.
 
 **MX_VMO_OP_CACHE_SYNC** - Performs a cache sync operation.
 
