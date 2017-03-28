@@ -12,8 +12,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define DEFAULT_BLOCKDEV "/dev/class/block/000"
-
 #define FLAG_HIDDEN ((uint64_t) 0x2)
 
 static int cgetc(void) {
@@ -50,13 +48,6 @@ static char* guid_to_cstring(char* dst, const uint8_t* src) {
 }
 
 static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
-    if (warn) {
-        printf("WARNING: You are about to permanently alter %s\n\nType 'y' to continue, any other key to cancel\n", dev);
-
-        int c = cgetc();
-        if (c != 'y') return NULL;
-    }
-
     int fd = open(dev, O_RDWR);
     if (fd < 0) {
         printf("error opening %s\n", dev);
@@ -81,6 +72,17 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
     blocks /= blocksize;
 
     printf("blocksize=%" PRIu64 " blocks=%" PRIu64 "\n", blocksize, blocks);
+
+    if (warn) {
+        printf("WARNING: You are about to permanently alter %s\n\n"
+               "Type 'y' to continue, any other key to cancel\n", dev);
+
+        int c = cgetc();
+        if (c != 'y') {
+            close(fd);
+            return NULL;
+        }
+    }
 
     gpt_device_t* gpt;
     rc = gpt_device_init(fd, blocksize, blocks, &gpt);
@@ -116,10 +118,19 @@ static void dump_partitions(const char* dev) {
 
     if (!gpt->valid) {
         printf("No valid GPT found\n");
-        return;
+        goto done;
     }
 
     printf("Partition table is valid\n");
+
+    uint64_t start, end;
+    if (gpt_device_range(gpt, &start, &end)) {
+        printf("Couldn't identify device range\n");
+        goto done;
+    }
+
+    printf("GPT contains usable blocks from %" PRIu64 " to %" PRIu64" (inclusive)\n", start, end);
+
     gpt_partition_t* p;
     char name[GPT_GUID_STRLEN];
     char guid[GPT_GUID_STRLEN];
@@ -129,19 +140,32 @@ static void dump_partitions(const char* dev) {
         p = gpt->partitions[i];
         if (!p) break;
         memset(name, 0, GPT_GUID_STRLEN);
-        printf("%d: %s 0x%" PRIx64 " 0x%" PRIx64 " (%" PRIx64 " blocks)\n    id:   %s\n    type: %s\n",
-               i, utf16_to_cstring(name, (const uint16_t*)p->name, GPT_GUID_STRLEN - 1), p->first,
-               p->last, p->last - p->first + 1,
-               guid_to_cstring(guid, (const uint8_t*)p->guid),
-               guid_to_cstring(id, (const uint8_t*)p->type));
+        printf("Paritition %d: %s\n",
+               i, utf16_to_cstring(name, (const uint16_t*)p->name, GPT_GUID_STRLEN - 1));
+        printf("    Start: %" PRIu64 ", End: %" PRIu64 " (%" PRIu64 " blocks)\n",
+               p->first, p->last, p->last - p->first + 1);
+        printf("    id:   %s\n", guid_to_cstring(guid, (const uint8_t*)p->guid));
+        printf("    type: %s\n", guid_to_cstring(id, (const uint8_t*)p->type));
     }
     printf("Total: %d partitions\n", i);
 
+done:
     gpt_device_release(gpt);
     close(fd);
 }
 
-static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, const char* name) {
+static void init_gpt(const char* dev) {
+    int fd;
+    gpt_device_t* gpt = init(dev, true, &fd);
+    if (!gpt) return;
+
+    // generate a default header
+    commit(gpt, fd);
+    gpt_device_release(gpt);
+    close(fd);
+}
+
+static void add_partition(const char* dev, uint64_t start, uint64_t end, const char* name) {
     uint8_t guid[GPT_GUID_LEN];
     size_t sz;
     if (mx_cprng_draw(guid, GPT_GUID_LEN, &sz) != NO_ERROR)
@@ -153,16 +177,16 @@ static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, con
 
     if (!gpt->valid) {
         // generate a default header
-        if(commit(gpt, fd)) {
+        if (commit(gpt, fd)) {
             return;
         }
     }
 
     uint8_t type[GPT_GUID_LEN];
     memset(type, 0xff, GPT_GUID_LEN);
-    int rc = gpt_partition_add(gpt, name, type, guid, offset, blocks, 0);
+    int rc = gpt_partition_add(gpt, name, type, guid, start, end - start + 1, 0);
     if (rc == 0) {
-        printf("add partition: name=%s offset=0x%" PRIx64 " blocks=0x%" PRIx64 "\n", name, offset, blocks);
+        printf("add partition: name=%s start=%" PRIu64 " end=%" PRIu64 "\n", name, start, end);
         commit(gpt, fd);
     }
 
@@ -427,20 +451,23 @@ static mx_status_t set_visibility(char* path_device, long idx_part,
 }
 
 int main(int argc, char** argv) {
-    const char* dev = DEFAULT_BLOCKDEV;
     if (argc == 1) goto usage;
 
     const char* cmd = argv[1];
     if (!strcmp(cmd, "dump")) {
-        dump_partitions(argc > 2 ? argv[2] : dev);
+        if (argc <= 2) goto usage;
+        dump_partitions(argv[2]);
+    } else if (!strcmp(cmd, "init")) {
+        if (argc <= 2) goto usage;
+        init_gpt(argv[2]);
     } else if (!strcmp(cmd, "add")) {
-        if (argc < 5) goto usage;
-        add_partition(argc > 5 ? argv[5] : dev, strtoull(argv[2], NULL, 0), strtoull(argv[3], NULL, 0), argv[4]);
+        if (argc <= 5) goto usage;
+        add_partition(argv[5], strtoull(argv[2], NULL, 0), strtoull(argv[3], NULL, 0), argv[4]);
     } else if (!strcmp(cmd, "remove")) {
-        if (argc < 3) goto usage;
-        remove_partition(argc > 3 ? argv[3] : dev, strtol(argv[2], NULL, 0));
+        if (argc <= 3) goto usage;
+        remove_partition(argv[3], strtol(argv[2], NULL, 0));
     } else if (!strcmp(cmd, "edit")) {
-        if (argc < 6) goto usage;
+        if (argc <= 5) goto usage;
         if (edit_partition(argv[5], strtol(argv[2], NULL, 0), argv[3], argv[4])) {
             printf("Failed to edit partition.\n");
         }
@@ -465,10 +492,23 @@ int main(int argc, char** argv) {
     return 0;
 usage:
     printf("usage:\n");
-    printf("dump [<dev>]\n");
-    printf("add <offset> <blocks> <name> [<dev>]\n");
-    printf("remove <n> [<dev>]\n");
-    printf("edit <n> type|id DATA|SYSTEM|EFI|<guid> <dev>\n");
-    printf("visible <n> true|false <dev>\n");
+    printf("Note that for all these commands, [<dev>] is the device containing the GPT.\n");
+    printf("Although using a GPT will split your device into small partitions, [<dev>] \n");
+    printf("should always refer to the containing device, NOT block devices representing\n");
+    printf("the partitions themselves.\n\n");
+    printf("> %s dump [<dev>]\n", argv[0]);
+    printf("  View the properties of the selected device\n");
+    printf("> %s init [<dev>]\n", argv[0]);
+    printf("  Initialize the block device with a GPT\n");
+    printf("> %s add <start block> <end block> <name> [<dev>]\n", argv[0]);
+    printf("  Add a partition to the device (and create a GPT if one does not exist)\n");
+    printf("  Range of blocks is INCLUSIVE (both start and end). Full device range\n");
+    printf("  may be queried using '%s dump'\n", argv[0]);
+    printf("> %s edit <n> type|id DATA|SYSTEM|EFI|<guid> [<dev>]\n", argv[0]);
+    printf("  Edit the GUID of the nth partition on the device\n");
+    printf("> %s remove <n> [<dev>]\n", argv[0]);
+    printf("  Remove the nth partition from the device\n");
+    printf("> %s visible <n> true|false [<dev>]\n", argv[0]);
+    printf("  Set the visibility of the nth partition on the device\n");
     return 0;
 }

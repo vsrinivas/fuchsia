@@ -76,7 +76,8 @@ static void cstring_to_utf16(uint16_t* dst, const char* src, size_t maxlen) {
     }
 }
 
-static void partition_init(gpt_partition_t* part, const char* name, uint8_t* type, uint8_t* guid, uint64_t first, uint64_t last, uint64_t flags) {
+static void partition_init(gpt_partition_t* part, const char* name, uint8_t* type, uint8_t* guid,
+                           uint64_t first, uint64_t last, uint64_t flags) {
     memcpy(part->type, type, sizeof(part->type));
     memcpy(part->guid, guid, sizeof(part->guid));
     part->first = first;
@@ -318,7 +319,22 @@ fail:
     return -1;
 }
 
-int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_t* guid, uint64_t offset, uint64_t blocks, uint64_t flags) {
+int gpt_device_range(gpt_device_t* dev, uint64_t* block_start, uint64_t* block_end) {
+    gpt_priv_t* priv = get_priv(dev);
+
+    if (!dev->valid) {
+        printf("partition header invalid\n");
+        return -1;
+    }
+
+    // check range
+    *block_start = priv->header.first;
+    *block_end = priv->header.last;
+    return 0;
+}
+
+int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_t* guid,
+                      uint64_t offset, uint64_t blocks, uint64_t flags) {
     gpt_priv_t* priv = get_priv(dev);
 
     if (!dev->valid) {
@@ -335,12 +351,9 @@ int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_
     uint64_t last = first + blocks - 1;
 
     // check range
-    if (first < priv->header.first) {
-        printf("offset must be at least %" PRIu64 "\n", priv->header.first);
-        return -1;
-    }
-    if (first > priv->blocks - priv->header.first || last > priv->blocks - priv->header.first) {
-        printf("offset is too big!\n");
+    if (last <= first || first < priv->header.first || last > priv->header.last) {
+        printf("partition must be in range of usable blocks[%" PRIu64", %" PRIu64"]\n",
+                priv->header.first, priv->header.last);
         return -1;
     }
 

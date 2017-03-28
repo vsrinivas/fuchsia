@@ -7,8 +7,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct gpt_device gpt_device_t;
-
 #define PARTITIONS_COUNT 128
 #define GPT_GUID_LEN 16
 #define GPT_GUID_STRLEN 37
@@ -48,12 +46,12 @@ typedef struct gpt_partition {
     uint8_t name[GPT_NAME_LEN];
 } gpt_partition_t;
 
-struct gpt_device {
+typedef struct gpt_device {
     bool valid;
     // true if the partition table on the device is valid
     gpt_partition_t* partitions[PARTITIONS_COUNT];
     // pointer to a list of partitions
-};
+} gpt_device_t;
 
 int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** out_dev);
 // read the partition table from the device.
@@ -61,11 +59,15 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
 void gpt_device_release(gpt_device_t* dev);
 // releases the device
 
+int gpt_device_range(gpt_device_t* dev, uint64_t* block_start, uint64_t* block_end);
+// Returns the range of usable blocks within the GPT, from [block_start, block_end] (inclusive)
+
 int gpt_device_sync(gpt_device_t* dev);
 // writes the partition table to the device. it is the caller's responsibility to
 // rescan partitions for the block device if needed
 
-int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_t* guid, uint64_t offset, uint64_t blocks, uint64_t flags);
+int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_t* guid,
+                      uint64_t offset, uint64_t blocks, uint64_t flags);
 // adds a partition
 
 int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid);

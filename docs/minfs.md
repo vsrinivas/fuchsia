@@ -6,21 +6,21 @@ It currently supports files up to 512MB in size.
 
 ## Using MinFS
 
-### Host Device
+### Host Device (QEMU Only)
 
  * Create a disk image which stores MinFS
 ```shell
-$ dd if=/dev/zero of=blk.bin bs=1M count=512
+$ truncate --size=16G blk.bin
 ```
  * Execute the run magenta script on your platform with the '--' to pass
-   arguments directly to Qemu and then use '-hda' to point to the file. If you
+   arguments directly to QEMU and then use '-hda' to point to the file. If you
    wish to attach additional devices, you can supply them with '-hdb', '-hdc,
    and so on.
 ```shell
 $ ./scripts/run-magenta-x86-64 -- -hda blk.bin
 ```
 
-### Target Device
+### Target Device (QEMU and Real Hardware)
 
 **WARNING**: On real hardware, "/dev/class/block/..." refers to **REAL** storage
 devices (USBs, SSDs, etc).
@@ -30,31 +30,41 @@ following commands through QEMU.
 The `lsblk` command can be used to see more information about the devices
 accessible from Magenta.
 
- * Within magenta, add a GPT to the raw device. Note that the third argument
-   passed is the number of blocks on the device, less 68 blocks for GPT data.
-   17K (34, 512-byte blocks) is required at the beginning and end of the disk
-   to hold GPT and MBR data. The numbers here assume 512-byte blocks and should
-   be adjusted accordingly if your block size is different.
+ * Within magenta, 'lsblk' can be used to list the block devices currently on
+   the system. On this example system below, "/dev/class/block/000" is a raw
+   block device.
 ```
-> gpt add 34 1048508 myvol /dev/class/block/000
-```
-
- * Run 'lsblk' again, you should see output similar to the below. Note that 000
-   and 002 actually refer to the same physical device. A duplicate has been
-   created. This seems wrong and will probably be fixed in the future.
-```
-$ lsblk
+> lsblk
 ID  DEV      DRV      SIZE TYPE           LABEL
-.
-..
-000 sata0    ahci     512M
-002 sata0 (aligned) align    512M
-003 sata0 (aligned)p0 gpt      511M unknown        myvol
+000 block    block     16G
 ```
-
+ * Let's add a GPT to this block device.
+```
+> gpt init /dev/class/block/000
+...
+> lsblk
+ID  DEV      DRV      SIZE TYPE           LABEL
+002 block    block     16G
+```
+ * Now that we have a GPT on this device, let's check what we can do with it.
+   (NOTE: after manipulating the gpt, the device number may change. Use lsblk
+   to keep track of how to refer to the block device).
+```
+> gpt dump /dev/class/block/002
+blocksize=512 blocks=33554432
+Partition table is valid
+GPT contains usable blocks from 34 to 33554398 (inclusive)
+Total: 0 partitions
+```
+ * "gpt dump" tells us some important info: it tells us (1) How big blocks are,
+   and (2) which blocks we can actually use.
+   Let's fill part of the disk with a MinFS filesystem.
+```
+> gpt add 34 20000000 minfs /dev/class/block/002
+```
  * Within Magenta, format the partition as MinFS. Using 'lsblk' you should see
    a block device which is the whole disk and a slightly smaller device which
-   is the partition. In the above output the partition is device 003 and would
+   is the partition. In the above output, the partition is device 003, and would
    have the path '/dev/class/block/003'
 ```
 > mkfs <PARTITION_PATH> minfs
@@ -62,18 +72,17 @@ ID  DEV      DRV      SIZE TYPE           LABEL
 
  * If you want the device to be mounted automatically on reboot, use the GPT
    tool to set its type. As we did above, **you must** use 'lsblk' **again**
-   to locate the entry for the disk. In the same output above the device path
-   is /dev/class/block/002. We want to edit the type of the zero-th partition.
-   Here we use the keyword 'DATA' to set the type GUID, but if you wanted to
-   use an arbitrary GUID you would supply it where 'DATA' is used.
+   to locate the entry for the disk. We want to edit the type of the zero-th
+   partition.  Here we use the keyword 'DATA' to set the type GUID, but if you
+   wanted to use an arbitrary GUID you would supply it where 'DATA' is used.
 ```
 > gpt edit 0 type DATA <DEVICE_PATH>
 ```
 
  * On any future boots, the partition will be mounted automatically at /data.
- 
- * If you don't want the partition to be mounted automatically, you can simply
-   mount it manually.
+
+ * If you don't want the partition to be mounted automatically, you can update
+   the visibility (or GUID) of the partition, and simply mount it manually.
 ```
 > mount <PARTITION_PATH> /data
 ```
