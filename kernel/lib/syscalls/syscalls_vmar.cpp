@@ -117,6 +117,11 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     if (!VmAddressRegionDispatcher::is_valid_mapping_protection(map_flags))
         return ERR_INVALID_ARGS;
 
+    bool do_map_range = false;
+    if (map_flags & MX_VM_FLAG_MAP_RANGE) {
+        do_map_range = true;
+        map_flags &= ~MX_VM_FLAG_MAP_RANGE;
+    }
 
     // Usermode is not allowed to specify these flags on mappings, though we may
     // set them below.
@@ -156,6 +161,13 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     auto cleanup_handler = mxtl::MakeAutoCall([vm_mapping]() {
         vm_mapping->Destroy();
     });
+
+    if (do_map_range) {
+        status = vm_mapping->MapRange(0, len, false);
+        if (status != NO_ERROR) {
+            return status;
+        }
+    }
 
     if (_mapped_addr.copy_to_user(vm_mapping->base()) != NO_ERROR)
         return ERR_INVALID_ARGS;

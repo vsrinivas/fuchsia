@@ -41,6 +41,8 @@ closing the VMO handle does not remove the mapping added by this function.
   does not have *MX_VM_FLAG_CAN_MAP_EXECUTE* permissions, the *vmar* handle does
   not have the *MX_RIGHT_EXECUTE* right, or the *vmo* handle does not have the
   *MX_RIGHT_EXECUTE* right.
+- **MX_VM_FLAG_MAP_RANGE**  Immediately page into the new mapping all backed
+  regions of the VMO
 
 *vmar_offset* must be 0 if *map_flags* does not have **MX_VM_FLAG_SPECIFIC** or
 **MX_VM_FLAG_SPECIFIC_OVERWRITE** set.
