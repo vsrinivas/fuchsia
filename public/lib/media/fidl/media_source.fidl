@@ -36,6 +36,18 @@ interface MediaSource {
 
 // Describes the status of the media source.
 struct MediaSourceStatus {
+  // Indicates whether an audio stream producer is currently connected. This
+  // value will be false if the content contains no audio or if no audio stream
+  // producer is connected (possibly because the audio stream media type isn't
+  // supported).
+  bool audio_connected;
+
+  // Indicates whether a video stream producer is currently connected. This
+  // value will be false if the content contains no video or if no video stream
+  // producer is connected (possibly because the video stream media type isn't
+  // supported).
+  bool video_connected;
+
   // Describes the media.
   MediaMetadata? metadata;
 

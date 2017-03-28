@@ -89,8 +89,7 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   MediaSourcePtr demux_;
   Incident init_complete_;
   std::vector<std::unique_ptr<Stream>> streams_;
-  MediaMetadataPtr metadata_;
-  ProblemPtr problem_;
+  MediaSourceStatusPtr demux_status_;
   FidlPublisher<GetStatusCallback> status_publisher_;
 
   FLOG_INSTANCE_CHANNEL(logs::MediaSourceChannel, log_channel_);

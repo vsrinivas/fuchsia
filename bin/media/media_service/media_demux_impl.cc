@@ -36,6 +36,24 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
         MediaSourceStatusPtr status = MediaSourceStatus::New();
+
+        for (std::unique_ptr<Stream>& stream : streams_) {
+          if (!stream->producer()->is_connected()) {
+            continue;
+          }
+
+          switch (stream->stream_type()->medium()) {
+            case StreamType::Medium::kAudio:
+              status->audio_connected = true;
+              break;
+            case StreamType::Medium::kVideo:
+              status->video_connected = true;
+              break;
+            default:
+              break;
+          }
+        }
+
         status->metadata = metadata_.Clone();
         status->problem = problem_.Clone();
         callback(version, std::move(status));
@@ -88,8 +106,13 @@ void MediaDemuxImpl::OnDemuxInitialized(Result result) {
     streams_.push_back(std::unique_ptr<Stream>(
         new Stream(demux_part_.output(demux_stream->index()),
                    demux_stream->stream_type(), &graph_)));
+
+    streams_.back()->producer()->SetConnectionStateChangedCallback(
+        [this]() { status_publisher_.SendUpdates(); });
+
     FLOG(log_channel_,
-         NewStream(streams_.size() - 1, streams_.back()->media_type(),
+         NewStream(streams_.size() - 1,
+                   MediaType::From(streams_.back()->stream_type()),
                    FLOG_ADDRESS(streams_.back()->producer().get())));
   }
 
@@ -113,7 +136,7 @@ void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
     fidl::Array<MediaTypePtr> result =
         fidl::Array<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
-      result[i] = streams_[i]->media_type();
+      result[i] = MediaType::From(streams_[i]->stream_type());
     }
 
     callback(std::move(result));
@@ -171,10 +194,6 @@ MediaDemuxImpl::Stream::Stream(OutputRef output,
 }
 
 MediaDemuxImpl::Stream::~Stream() {}
-
-MediaTypePtr MediaDemuxImpl::Stream::media_type() const {
-  return MediaType::From(stream_type_);
-}
 
 void MediaDemuxImpl::Stream::BindPacketProducer(
     fidl::InterfaceRequest<MediaPacketProducer> producer) {

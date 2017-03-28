@@ -27,6 +27,11 @@ void FidlPacketProducer::Bind(
   binding_.Bind(std::move(request));
 }
 
+void FidlPacketProducer::SetConnectionStateChangedCallback(
+    const ConnectionStateChangedCallback& callback) {
+  connectionStateChangedCallback_ = callback;
+}
+
 void FidlPacketProducer::FlushConnection(
     const FlushConnectionCallback& callback) {
   if (is_connected()) {
@@ -75,6 +80,10 @@ void FidlPacketProducer::Connect(
   FLOG(log_channel_, ConnectedTo(FLOG_HANDLE_KOID(consumer)));
   MediaPacketProducerBase::Connect(
       MediaPacketConsumerPtr::Create(std::move(consumer)), callback);
+
+  if (connectionStateChangedCallback_) {
+    connectionStateChangedCallback_();
+  }
 }
 
 void FidlPacketProducer::Disconnect() {
@@ -83,6 +92,10 @@ void FidlPacketProducer::Disconnect() {
   }
 
   MediaPacketProducerBase::Disconnect();
+
+  if (connectionStateChangedCallback_) {
+    connectionStateChangedCallback_();
+  }
 }
 
 void* FidlPacketProducer::AllocatePayloadBuffer(size_t size) {
@@ -97,6 +110,12 @@ void FidlPacketProducer::OnDemandUpdated(uint32_t min_packets_outstanding,
                                          int64_t min_pts) {
   FTL_DCHECK(demand_callback_);
   demand_callback_(CurrentDemand());
+}
+
+void FidlPacketProducer::OnFailure() {
+  if (connectionStateChangedCallback_) {
+    connectionStateChangedCallback_();
+  }
 }
 
 void FidlPacketProducer::SendPacket(PacketPtr packet) {

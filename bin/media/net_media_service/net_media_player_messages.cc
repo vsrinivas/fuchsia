@@ -141,7 +141,9 @@ Serializer& operator<<(Serializer& serializer,
                        const MediaPlayerStatusPtr& value) {
   FTL_DCHECK(value);
   return serializer << Optional(value->timeline_transform)
-                    << value->end_of_stream << Optional(value->metadata)
+                    << value->end_of_stream << value->content_has_audio
+                    << value->content_has_video << value->audio_connected
+                    << value->video_connected << Optional(value->metadata)
                     << Optional(value->problem);
 }
 
@@ -286,6 +288,8 @@ Deserializer& operator>>(Deserializer& deserializer,
                          MediaPlayerStatusPtr& value) {
   value = MediaPlayerStatus::New();
   deserializer >> Optional(value->timeline_transform) >> value->end_of_stream >>
+      value->content_has_audio >> value->content_has_video >>
+      value->audio_connected >> value->video_connected >>
       Optional(value->metadata) >> Optional(value->problem);
   if (!deserializer.healthy()) {
     value.reset();

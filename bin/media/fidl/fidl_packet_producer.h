@@ -21,6 +21,7 @@ class FidlPacketProducer
       public PayloadAllocator,
       public std::enable_shared_from_this<FidlPacketProducer> {
  public:
+  using ConnectionStateChangedCallback = std::function<void()>;
   using FlushConnectionCallback = std::function<void()>;
 
   static std::shared_ptr<FidlPacketProducer> Create() {
@@ -31,6 +32,10 @@ class FidlPacketProducer
 
   // Binds.
   void Bind(fidl::InterfaceRequest<MediaPacketProducer> request);
+
+    // Sets a callback called whenever the connection state changes.
+  void SetConnectionStateChangedCallback(
+      const ConnectionStateChangedCallback& callback);
 
   // Flushes and tells the connected consumer to flush.
   void FlushConnection(const FlushConnectionCallback& callback);
@@ -59,6 +64,8 @@ class FidlPacketProducer
   void OnDemandUpdated(uint32_t min_packets_outstanding,
                        int64_t min_pts) override;
 
+  void OnFailure() override;
+
  private:
   FidlPacketProducer();
 
@@ -79,6 +86,7 @@ class FidlPacketProducer
 
   DemandCallback demand_callback_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  ConnectionStateChangedCallback connectionStateChangedCallback_;
 };
 
 }  // namespace media

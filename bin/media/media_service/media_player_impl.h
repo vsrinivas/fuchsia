@@ -80,7 +80,7 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   void MaybeCreateSource();
 
   // Creates sinks as needed and connects enabled streams.
-  void ConnectSinks(fidl::Array<MediaTypePtr> stream_types);
+  void ConnectSinks();
 
   // Prepares a stream.
   void PrepareStream(Stream* stream,
@@ -112,12 +112,10 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
       uint64_t version = MediaTimelineControlPoint::kInitialStatus,
       MediaTimelineControlPointStatusPtr status = nullptr);
 
-  // Determines whether the content has video.
-  bool HasVideo();
-
   MediaServicePtr media_service_;
   fidl::InterfaceHandle<SeekingReader> reader_handle_;
   MediaSourcePtr source_;
+  fidl::Array<MediaTypePtr> stream_types_;
   std::unordered_map<MediaTypeMedium, Stream> streams_by_medium_;
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;
@@ -146,8 +144,7 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   // A function that translates local time into presentation time in ns.
   TimelineFunction timeline_function_;
 
-  MediaMetadataPtr metadata_;
-  ProblemPtr problem_;
+  MediaSourceStatusPtr source_status_;
   FidlPublisher<GetStatusCallback> status_publisher_;
 
   FLOG_INSTANCE_CHANNEL(logs::MediaPlayerChannel, log_channel_);

@@ -40,11 +40,24 @@ struct MediaPlayerStatus {
   // (presentation time to local time) is only valid when media is playing.
   TimelineTransform? timeline_transform;
 
-  // Whether the current media has a video stream.
-  bool has_video;
-
   // Indicates whether presentation has reached end-of-stream.
   bool end_of_stream;
+
+  // Whether the current content has an audio stream.
+  bool content_has_audio;
+
+  // Whether the current content has a video stream.
+  bool content_has_video;
+
+  // Indicates whether an audio stream is currently connected for rendering.
+  // This value will be false if |content_has_audio| is false, if no audio
+  // renderer was provided, or if the audio media type isn't supported.
+  bool audio_connected;
+
+  // Indicates whether a video stream is currently connected for rendering.
+  // This value will be false if |content_has_video| is false, if no video
+  // renderer was provided, or if the video media type isn't supported.
+  bool video_connected;
 
   // Describes the media.
   MediaMetadata? metadata;

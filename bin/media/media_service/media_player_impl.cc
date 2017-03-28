@@ -52,10 +52,40 @@ MediaPlayerImpl::MediaPlayerImpl(
                                              uint64_t version) {
     MediaPlayerStatusPtr status = MediaPlayerStatus::New();
     status->timeline_transform = TimelineTransform::From(timeline_function_);
-    status->has_video = HasVideo();
     status->end_of_stream = end_of_stream_;
-    status->metadata = metadata_.Clone();
-    status->problem = problem_.Clone();
+
+    if (stream_types_) {
+      for (MediaTypePtr& stream_type : stream_types_) {
+        switch (stream_type->medium) {
+          case MediaTypeMedium::AUDIO:
+            status->content_has_audio = true;
+            break;
+          case MediaTypeMedium::VIDEO:
+            status->content_has_video = true;
+            break;
+          default:
+            break;
+        }
+      }
+    }
+
+    if (source_status_) {
+      status->audio_connected = source_status_->audio_connected;
+      status->video_connected = source_status_->video_connected;
+      status->metadata = source_status_->metadata.Clone();
+
+      if (source_status_->problem) {
+        status->problem = source_status_->problem.Clone();
+      } else if (state_ >= State::kFlushed && !status->audio_connected &&
+                 !status->video_connected) {
+        // The source isn't reporting a problem, but neither audio nor video
+        // is connected. We report this as a problem so the client doesn't
+        // have to check these values separately.
+        status->problem = Problem::New();
+        status->problem->type = Problem::kProblemMediaTypeNotSupported;
+      }
+    }
+
     callback(version, std::move(status));
   });
 
@@ -89,16 +119,17 @@ void MediaPlayerImpl::MaybeCreateSource() {
   source_->Describe(
       ftl::MakeCopyable([this](fidl::Array<MediaTypePtr> stream_types) mutable {
         FLOG(log_channel_, ReceivedSourceDescription(stream_types.Clone()));
-        ConnectSinks(std::move(stream_types));
+        stream_types_ = std::move(stream_types);
+        ConnectSinks();
       }));
 }
 
-void MediaPlayerImpl::ConnectSinks(fidl::Array<MediaTypePtr> stream_types) {
+void MediaPlayerImpl::ConnectSinks() {
   std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 
   size_t stream_index = 0;
 
-  for (MediaTypePtr& stream_type : stream_types) {
+  for (MediaTypePtr& stream_type : stream_types_) {
     auto iter = streams_by_medium_.find(stream_type->medium);
     if (iter != streams_by_medium_.end()) {
       if (iter->second.connected_) {
@@ -216,8 +247,8 @@ void MediaPlayerImpl::Update() {
           reader_transition_pending_ = false;
           state_ = State::kInactive;
           source_.reset();
-          metadata_.reset();
-          problem_.reset();
+          stream_types_.reset();
+          source_status_.reset();
           for (auto& pair : streams_by_medium_) {
             pair.second.connected_ = false;
           }
@@ -448,8 +479,7 @@ void MediaPlayerImpl::SetReader(
 void MediaPlayerImpl::HandleSourceStatusUpdates(uint64_t version,
                                                 MediaSourceStatusPtr status) {
   if (status) {
-    metadata_ = std::move(status->metadata);
-    problem_ = std::move(status->problem);
+    source_status_ = std::move(status);
     status_publisher_.SendUpdates();
   }
 
@@ -474,15 +504,6 @@ void MediaPlayerImpl::HandleTimelineControlPointStatusUpdates(
       [this](uint64_t version, MediaTimelineControlPointStatusPtr status) {
         HandleTimelineControlPointStatusUpdates(version, std::move(status));
       });
-}
-
-bool MediaPlayerImpl::HasVideo() {
-  auto iter = streams_by_medium_.find(MediaTypeMedium::VIDEO);
-  if (iter == streams_by_medium_.end()) {
-    return false;
-  }
-
-  return iter->second.connected_;
 }
 
 }  // namespace media

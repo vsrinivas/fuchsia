@@ -61,8 +61,10 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
 
     ~Stream();
 
-    // Gets the media type of the stream.
-    MediaTypePtr media_type() const;
+    // Returns the stream's |StreamType|.
+    const std::unique_ptr<StreamType>& stream_type() const {
+      return stream_type_;
+    }
 
     // Returns the stream's producer.
     std::shared_ptr<FidlPacketProducer> producer() const { return producer_; }

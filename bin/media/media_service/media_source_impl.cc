@@ -39,10 +39,8 @@ MediaSourceImpl::MediaSourceImpl(
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
-        MediaSourceStatusPtr status = MediaSourceStatus::New();
-        status->metadata = metadata_.Clone();
-        status->problem = problem_.Clone();
-        callback(version, std::move(status));
+        callback(version, demux_status_ ? demux_status_.Clone()
+                                        : MediaSourceStatus::New());
       });
 
   media_service_ = owner->ConnectToEnvironmentService<MediaService>();
@@ -136,8 +134,7 @@ void MediaSourceImpl::Seek(int64_t position, const SeekCallback& callback) {
 void MediaSourceImpl::HandleDemuxStatusUpdates(uint64_t version,
                                                MediaSourceStatusPtr status) {
   if (status) {
-    metadata_ = std::move(status->metadata);
-    problem_ = std::move(status->problem);
+    demux_status_ = std::move(status);
     status_publisher_.SendUpdates();
   }
 
