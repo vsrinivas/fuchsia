@@ -61,7 +61,7 @@ def copy_files(copy):
       # netcp returns the error value from magenta
       if call(command_line) != 0:
         print "Error: netcp failed to copy %s" % filename
-        return false
+        return False
   return True
 
 
