@@ -79,10 +79,6 @@ bool mxr_thread_detached(mxr_thread_t* thread);
 // If not, mxr_thread_join can still be used.
 mx_status_t mxr_thread_kill(mxr_thread_t* thread);
 
-// Exit from the thread. Equivalent to returning from that thread's
-// entrypoint.
-_Noreturn void mxr_thread_exit(mxr_thread_t* thread);
-
 // Exit from the thread.  Equivalent to mxr_thread_exit unless the
 // thread has been detached.  If it has been detached, then this does
 // mx_vmar_unmap(vmar, addr, len) first, but in a way that permits

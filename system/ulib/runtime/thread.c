@@ -42,13 +42,6 @@ mx_status_t mxr_thread_destroy(mxr_thread_t* thread) {
     return handle == MX_HANDLE_INVALID ? NO_ERROR : _mx_handle_close(handle);
 }
 
-static void thread_trampoline(uintptr_t ctx) {
-    mxr_thread_t* thread = (mxr_thread_t*)ctx;
-    CHECK_THREAD(thread);
-    thread->entry(thread->arg);
-    mxr_thread_exit(thread);
-}
-
 static _Noreturn void exit_joinable(mxr_thread_t* thread) {
     // A later mxr_thread_join call will complete immediately.
     // The magic stays valid for mxr_thread_join to check.
@@ -73,8 +66,11 @@ static _Noreturn void exit_joined(mxr_thread_t* thread) {
     __builtin_trap();
 }
 
-_Noreturn void mxr_thread_exit(mxr_thread_t* thread) {
+static _Noreturn void thread_trampoline(uintptr_t ctx) {
+    mxr_thread_t* thread = (mxr_thread_t*)ctx;
     CHECK_THREAD(thread);
+
+    thread->entry(thread->arg);
 
     int old_state = atomic_exchange_explicit(&thread->state, DONE,
                                              memory_order_release);
