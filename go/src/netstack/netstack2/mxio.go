@@ -654,10 +654,41 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 		return mx.ErrBadState
 	}
 	if opt := val.Unpack(); opt != nil {
-		ios.ep.GetSockOpt(opt)
+		err := ios.ep.GetSockOpt(opt)
+		switch o := opt.(type) {
+		case tcpip.ErrorOption:
+			errno := uint32(0)
+			if err != nil {
+				errno = uint32(errStatus(err)) // TODO: convert from err?
+			}
+			binary.LittleEndian.PutUint32(val.optval[:], errno)
+			val.optlen = c_socklen(4)
+		case *tcpip.SendBufferSizeOption:
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+			val.optlen = c_socklen(4)
+		case *tcpip.ReceiveBufferSizeOption:
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+			val.optlen = c_socklen(4)
+		case *tcpip.ReceiveQueueSizeOption:
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+			val.optlen = c_socklen(4)
+		case *tcpip.NoDelayOption:
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+			val.optlen = c_socklen(4)
+		case *tcpip.ReuseAddressOption:
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+			val.optlen = c_socklen(4)
+		case *tcpip.V6OnlyOption:
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+			val.optlen = c_socklen(4)
+		default:
+			binary.LittleEndian.PutUint32(val.optval[:], 0)
+			val.optlen = c_socklen(4)
+		}
+	} else {
+		val.optlen = 0
 	}
-	msg.Datalen = 0
-	msg.SetOff(0)
+	val.Encode(msg)
 	return mx.ErrOk
 }
 

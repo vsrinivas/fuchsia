@@ -44,6 +44,12 @@ func (v *c_mxrio_sockopt_req_reply) Decode(data []byte) error {
 	return nil
 }
 
+func (v *c_mxrio_sockopt_req_reply) Encode(msg *rio.Msg) {
+	r := (*c_mxrio_sockopt_req_reply)(unsafe.Pointer(&msg.Data[0]))
+	*r = *v
+	msg.Datalen = uint32(unsafe.Sizeof(*v))
+}
+
 func (v *c_mxrio_gai_req) Decode(msg *rio.Msg) error {
 	data := msg.Data[:msg.Datalen]
 	if uintptr(len(data)) < unsafe.Sizeof(c_mxrio_gai_req{}) {
