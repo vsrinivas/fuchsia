@@ -221,6 +221,17 @@ constexpr size_t kMaxInputArgs = 8;
 
 constexpr char kAuthors[] = "The Fuchsia Authors";
 
+static bool has_attribute(const char* attr, const std::vector<string> attrs) {
+    return std::find(attrs.begin(), attrs.end(), attr) != attrs.end();
+}
+
+static void dump_attributes(const std::vector<string> attrs) {
+    for (auto& a : attrs) {
+        fprintf(stderr, "%s ", a.c_str());
+    }
+    fprintf(stderr, "\n");
+}
+
 struct ArraySpec {
     enum Kind : uint32_t {
         IN,
@@ -238,6 +249,19 @@ struct ArraySpec {
         case OUT: return "OUT";
         default: return "INOUT";
         }
+    }
+
+    bool assign_kind(const std::vector<string> attrs) {
+        if (has_attribute("IN", attrs)) {
+            kind = ArraySpec::IN;
+        } else if (has_attribute("OUT", attrs)) {
+            kind = ArraySpec::OUT;
+        } else if (has_attribute("INOUT", attrs)) {
+            kind = ArraySpec::INOUT;
+        } else {
+            return false;
+        }
+        return true;
     }
 
     string to_string() const {
@@ -280,6 +304,7 @@ const string map_override(const string& name, const std::map<string, string>& ov
 struct TypeSpec {
     string name;
     string type;
+    std::vector<string> attributes;
     ArraySpec* arr_spec = nullptr;
 
     void debug_dump() const {
@@ -289,6 +314,10 @@ struct TypeSpec {
                 fprintf(stderr, "      [%u] (explicit)\n", arr_spec->count);
             else
                 fprintf(stderr, "      [%s]\n", arr_spec->name.c_str());
+        }
+        if (!attributes.empty()) {
+            fprintf(stderr, "       - ");
+            dump_attributes(attributes);
         }
     }
 
@@ -356,25 +385,20 @@ struct Syscall {
     Syscall(const FileCtx& sc_fc, const string& sc_name)
         : fc(sc_fc), name(sc_name) {}
 
-    bool has_attribute(const char* attr) const {
-        return std::find(attributes.begin(), attributes.end(),
-                         attr) != attributes.end();
-    }
-
     bool is_vdso() const {
-        return has_attribute("vdsocall");
+        return has_attribute("vdsocall", attributes);
     }
 
     bool is_noreturn() const {
-        return has_attribute("noreturn");
+        return has_attribute("noreturn", attributes);
     }
 
     bool is_no_wrap() const {
-        return has_attribute("no_wrap");
+        return has_attribute("no_wrap", attributes);
     }
 
     bool is_blocking() const {
-        return has_attribute("blocking");
+        return has_attribute("blocking", attributes);
     }
 
     bool validate() const {
@@ -448,9 +472,7 @@ struct Syscall {
             a.debug_dump();
         }
         fprintf(stderr, "- attrs(s)\n");
-        for (auto& a : attributes) {
-            fprintf(stderr, "  %s\n", a.c_str());
-        }
+        dump_attributes(attributes);
     }
 
     string return_type() const {
@@ -492,7 +514,15 @@ bool vet_identifier(const string& iden, const FileCtx& fc) {
     return true;
 }
 
-bool parse_arrayspec(TokenStream& ts, TypeSpec* type_spec) {
+bool parse_param_attributes(TokenStream& ts, std::vector<string>& attrs) {
+    while (ts.peek_next() != ")" && ts.peek_next() != ",") {
+        auto attr = ts.next();
+        attrs.push_back(attr);
+    }
+    return true;
+}
+
+bool parse_arrayspec(TokenStream& ts, TypeSpec& type_spec) {
     std::string name;
     uint32_t count = 0;
 
@@ -520,7 +550,7 @@ bool parse_arrayspec(TokenStream& ts, TypeSpec* type_spec) {
         return false;
     }
 
-    if (name == type_spec->name) {
+    if (name == type_spec.name) {
         ts.filectx().print_error("invalid name for an array specifier", name);
         return false;
     }
@@ -530,31 +560,17 @@ bool parse_arrayspec(TokenStream& ts, TypeSpec* type_spec) {
         return false;
     }
 
-    auto attr = ts.next();
-    ArraySpec::Kind kind;
-
-    if (attr == "IN") {
-        kind = ArraySpec::IN;
-    } else if (attr == "OUT") {
-        kind = ArraySpec::OUT;
-    } else if (attr == "INOUT") {
-        kind = ArraySpec::INOUT;
-    } else {
-        ts.filectx().print_error("invalid array attribute", attr);
-        return false;
-    }
-
-    type_spec->arr_spec = new ArraySpec {kind, count, name};
+    type_spec.arr_spec = new ArraySpec {ArraySpec::IN, count, name};
     return true;
 }
 
-bool parse_typespec(TokenStream& ts, TypeSpec* type_spec) {
+bool parse_typespec(TokenStream& ts, TypeSpec& type_spec) {
     if (ts.peek_next() == ":") {
         auto name = ts.curr();
         if (!vet_identifier(name, ts.filectx()))
             return false;
 
-        type_spec->name = name;
+        type_spec.name = name;
 
         ts.next();
         if (ts.next().empty())
@@ -565,15 +581,24 @@ bool parse_typespec(TokenStream& ts, TypeSpec* type_spec) {
     if (!vet_identifier(type, ts.filectx()))
         return false;
 
-    type_spec->type = type;
+    type_spec.type = type;
 
-    if (ts.peek_next() != "[")
-        return true;
+    if (ts.peek_next() == "[" && !parse_arrayspec(ts, type_spec)) {
+        return false;
+    }
 
-    return parse_arrayspec(ts, type_spec);
+    if (!parse_param_attributes(ts, type_spec.attributes)) {
+        return false;
+    }
+
+    if (type_spec.arr_spec && !type_spec.arr_spec->assign_kind(type_spec.attributes)) {
+        ts.filectx().print_error("expected", "IN, INOUT or OUT");
+        return false;
+    }
+    return true;
 }
 
-bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
+bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>& v) {
     if (ts.curr() != "(") {
         ts.filectx().print_error("expected", "(");
         return false;
@@ -583,7 +608,7 @@ bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
         if (ts.next() == ")")
             break;
 
-        if (v->size() > 0) {
+        if (v.size() > 0) {
             if (ts.curr() != ",") {
                 ts.filectx().print_error("expected", ", or :");
                 return false;
@@ -593,9 +618,9 @@ bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
 
         TypeSpec type_spec;
 
-        if (!parse_typespec(ts, &type_spec))
+        if (!parse_typespec(ts, type_spec))
             return false;
-        v->emplace_back(type_spec);
+        v.emplace_back(type_spec);
     }
     return true;
 }
@@ -1007,7 +1032,7 @@ bool process_syscall(SysgenGenerator* parser, TokenStream& ts) {
         }
     }
 
-    if (!parse_argpack(ts, &syscall.arg_spec))
+    if (!parse_argpack(ts, syscall.arg_spec))
         return false;
 
     auto return_spec = ts.next();
@@ -1015,7 +1040,7 @@ bool process_syscall(SysgenGenerator* parser, TokenStream& ts) {
     if (return_spec == "returns") {
         ts.next();
 
-        if (!parse_argpack(ts, &syscall.ret_spec))
+        if (!parse_argpack(ts, syscall.ret_spec))
             return false;
     } else if (return_spec != ";") {
         ts.filectx().print_error("expected", ";");
