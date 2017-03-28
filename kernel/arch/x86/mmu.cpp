@@ -26,18 +26,12 @@
 
 /* Default address width including virtual/physical address.
  * newer versions fetched below */
-#if ARCH_X86_64
 uint8_t g_vaddr_width = 48;
 uint8_t g_paddr_width = 32;
-#elif ARCH_X86_32
-uint8_t g_vaddr_width = 32;
-uint8_t g_paddr_width = 32;
-#endif
 
 /* True if the system supports 1GB pages */
 static bool supports_huge_pages = false;
 
-#if ARCH_X86_64
 /* top level kernel page tables, initialized in start.S */
 pt_entry_t pml4[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE);
 pt_entry_t pdp[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE); /* temporary */
@@ -51,18 +45,6 @@ pt_entry_t linear_map_pdp[(64ULL * GB) / (2 * MB)] __ALIGNED(PAGE_SIZE);
 
 /* which of the above variables is the top level page table */
 #define KERNEL_PT pml4
-#else
-/* 32bit code */
-pt_entry_t pd[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE);
-
-#if PAE_MODE_ENABLED
-/* PAE has one more level, with the pdp at the top */
-pt_entry_t pdp[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE);
-#define KERNEL_PT pdp
-#else
-#define KERNEL_PT pd
-#endif
-#endif /* !ARCH_X86_64 */
 
 /* kernel base top level page table in physical space */
 static const paddr_t kernel_pt_phys = (vaddr_t)KERNEL_PT - KERNEL_BASE;
@@ -84,7 +66,6 @@ static bool is_valid_vaddr(arch_aspace_t* aspace, vaddr_t vaddr) {
  * @brief  check if the virtual address is canonical
  */
 bool x86_is_vaddr_canonical(vaddr_t vaddr) {
-#if ARCH_X86_64
     uint64_t max_vaddr_lohalf, min_vaddr_hihalf;
 
     /* get max address in lower-half canonical addr space */
@@ -98,7 +79,6 @@ bool x86_is_vaddr_canonical(vaddr_t vaddr) {
     /* Check to see if the address in a canonical address */
     if ((vaddr > max_vaddr_lohalf) && (vaddr < min_vaddr_hihalf))
         return false;
-#endif
 
     return true;
 }
@@ -348,7 +328,6 @@ struct PageTable : PageTableBase<Level> {
             arch_flags |= X86_MMU_PG_G;
         }
 
-#if defined(PAE_MODE_ENABLED) || ARCH_X86_64
         if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE))
             arch_flags |= X86_MMU_PG_NX;
 
@@ -383,19 +362,6 @@ struct PageTable : PageTableBase<Level> {
                 PANIC_UNIMPLEMENTED;
             }
         }
-#else
-        switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
-        case ARCH_MMU_FLAG_CACHED:
-            break;
-        case ARCH_MMU_FLAG_WRITE_COMBINING:
-        case ARCH_MMU_FLAG_UNCACHED_DEVICE:
-        case ARCH_MMU_FLAG_UNCACHED:
-            arch_flags |= X86_MMU_PG_CD | X86_MMU_PG_WT;
-            break;
-        default:
-            PANIC_UNIMPLEMENTED;
-        }
-#endif
 
         return arch_flags;
     }
@@ -497,7 +463,6 @@ static uint x86_mmu_flags(arch_flags_t flags, enum page_table_levels level) {
     if (flags & X86_MMU_PG_U)
         mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
 
-#if defined(PAE_MODE_ENABLED) || ARCH_X86_64
     if (!(flags & X86_MMU_PG_NX))
         mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
 
@@ -530,13 +495,6 @@ static uint x86_mmu_flags(arch_flags_t flags, enum page_table_levels level) {
             PANIC_UNIMPLEMENTED;
         }
     }
-#else
-    if (flags & X86_MMU_PG_CD) {
-        mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
-    } else {
-        mmu_flags |= ARCH_MMU_FLAG_CACHED;
-    }
-#endif
     return mmu_flags;
 }
 
@@ -1280,18 +1238,8 @@ void x86_mmu_early_init() {
     x86_mmu_mem_type_init();
     x86_mmu_percpu_init();
 
-#if ARCH_X86_64
     /* unmap the lower identity mapping */
     unmap_entry<PageTable<PML4_L>>(nullptr, 0, &pml4[0]);
-#else
-    /* unmap the lower identity mapping */
-    for (uint i = 0; i < (1 * GB) / (4 * MB); i++) {
-        pd[i] = 0;
-    }
-
-    /* tlb flush */
-    x86_tlb_global_invalidate();
-#endif
 
     /* get the address width from the CPU */
     uint8_t vaddr_width = x86_linear_address_width();
@@ -1332,10 +1280,6 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
         LTRACEF("kernel aspace: pt phys %#" PRIxPTR ", virt %p\n", aspace->pt_phys,
                 aspace->pt_virt);
     } else {
-#if ARCH_X86_32
-        /* not fully functional on 32bit x86 */
-        return ERR_NOT_SUPPORTED;
-#else
         /* allocate a top level page table for the new address space */
         paddr_t pa;
         vm_page_t* p;
@@ -1356,7 +1300,6 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
                sizeof(pt_entry_t) * NO_OF_PT_ENTRIES / 2);
 
         LTRACEF("user aspace: pt phys %#" PRIxPTR ", virt %p\n", aspace->pt_phys, aspace->pt_virt);
-#endif
     }
     aspace->io_bitmap = nullptr;
     aspace->active_cpus = 0;

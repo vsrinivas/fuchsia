@@ -11,36 +11,6 @@
 // and __<type>_C for the various types.  All we have to do here is
 // define the public names based on those macros.
 
-#if !defined(__clang__) && (defined(__arm__) || defined(__i386__))
-// The arm-eabi and i386-elf GCC target uses 'long' types for these, which is
-// inconsistent with everything else.  Both the arm-linux targets,
-// and the *-elf targets, use 'int' for 32-bit types.  Since it's so
-// near-universal, it makes life simpler to rely on e.g. using plain
-// %x et al in printf formats for uint32_t and friends.
-#undef __CHAR32_TYPE__
-#undef __INT32_TYPE__
-#undef __UINT32_TYPE__
-#undef __INT_LEAST32_TYPE__
-#undef __UINT_LEAST32_TYPE__
-#undef __INT32_MAX__
-#undef __UINT32_MAX__
-#undef __INT_LEAST32_MAX__
-#undef __UINT_LEAST32_MAX__
-#undef __INT32_C
-#undef __UINT32_C
-#define __CHAR32_TYPE__       unsigned int
-#define __INT32_TYPE__        int
-#define __UINT32_TYPE__       unsigned int
-#define __INT_LEAST32_TYPE__  int
-#define __UINT_LEAST32_TYPE__ unsigned int
-#define __INT32_C(c)          c
-#define __UINT32_C(c)         c##U
-#define __INT32_MAX__         0x7fffffff
-#define __UINT32_MAX__        0xffffffffU
-#define __INT_LEAST32_MAX__   __INT32_MAX__
-#define __UINT_LEAST32_MAX__  __UINT32_MAX__
-#endif
-
 // Clang predefines macros __<type>_FMT<letter>__ for each type,
 // with <letter> being i and for signed types, and o, u, x, and X
 // for unsigned types.  That lets <inttypes.h> do its work without

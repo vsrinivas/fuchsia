@@ -18,9 +18,6 @@
 
 #if __x86_64__
 #define ACPI_MACHINE_WIDTH 64
-#elif __i386__
-#define ACPI_MACHINE_WIDTH 32
-#define ACPI_USE_NATIVE_DIVIDE
 #else
 #error Unexpected architecture
 #endif

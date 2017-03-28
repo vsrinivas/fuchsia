@@ -11,7 +11,6 @@
 
 static bool mmu_tests(void* context) {
     BEGIN_TEST;
-#ifdef ARCH_X86_64
     unittest_printf("creating large un-aligned vm region, and unmap it without mapping, make sure no leak (MG-315)\n");
     {
         arch_aspace_t aspace;
@@ -104,7 +103,6 @@ static bool mmu_tests(void* context) {
         err = arch_mmu_destroy_aspace(&aspace);
         EXPECT_EQ(err, NO_ERROR, "destroy aspace");
     }
-#endif
 
     unittest_printf("done with mmu tests\n");
     END_TEST;

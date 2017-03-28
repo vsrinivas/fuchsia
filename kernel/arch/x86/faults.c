@@ -25,16 +25,6 @@
 
 static void dump_fault_frame(x86_iframe_t *frame)
 {
-#if ARCH_X86_32
-    dprintf(CRITICAL, " CS:     %04x EIP: %08x EFL: %08x CR2: %08lx\n",
-            frame->cs, frame->ip, frame->flags, x86_get_cr2());
-    dprintf(CRITICAL, "EAX: %08x ECX: %08x EDX: %08x EBX: %08x\n",
-            frame->eax, frame->ecx, frame->edx, frame->ebx);
-    dprintf(CRITICAL, "ESP: %08x EBP: %08x ESI: %08x EDI: %08x\n",
-            frame->esp, frame->ebp, frame->esi, frame->edi);
-    dprintf(CRITICAL, " DS:     %04x  ES:     %04x  FS:   %04x  GS:     %04x\n",
-            frame->ds, frame->es, frame->fs, frame->gs);
-#elif ARCH_X86_64
     dprintf(CRITICAL, " CS:  %#18" PRIx64 " RIP: %#18" PRIx64 " EFL: %#18" PRIx64 " CR2: %#18lx\n",
             frame->cs, frame->ip, frame->flags, x86_get_cr2());
     dprintf(CRITICAL, " RAX: %#18" PRIx64 " RBX: %#18" PRIx64 " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
@@ -47,7 +37,6 @@ static void dump_fault_frame(x86_iframe_t *frame)
             frame->r12, frame->r13, frame->r14, frame->r15);
     dprintf(CRITICAL, "errc: %#18" PRIx64 "\n",
             frame->err_code);
-#endif
 
     // dump the bottom of the current stack
     void *stack = frame;
@@ -66,7 +55,6 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
     dprintf(CRITICAL, "%s", msg);
     dump_fault_frame(frame);
 
-#if ARCH_X86_64
     // try to dump the user stack
     if (is_user_address(frame->user_sp)) {
         uint8_t buf[256];
@@ -75,7 +63,6 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
             hexdump_ex(buf, sizeof(buf), frame->user_sp);
         }
     }
-#endif
 
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
@@ -269,14 +256,12 @@ static void x86_pfe_handler(x86_iframe_t *frame)
     /* if the high level page fault handler can't deal with it,
      * resort to trying to recover first, before bailing */
 
-#ifdef ARCH_X86_64
     /* Check if a resume address is specified, and just return to it if so */
     thread_t *current_thread = get_current_thread();
     if (unlikely(current_thread->arch.page_fault_resume)) {
         frame->ip = (uintptr_t)current_thread->arch.page_fault_resume;
         goto out_good;
     }
-#endif
 
     /* let high level code deal with this */
 #if WITH_LIB_MAGENTA
@@ -433,11 +418,7 @@ void x86_exception_handler(x86_iframe_t *frame)
     ktrace_tiny(TAG_IRQ_EXIT, (frame->vector << 8) | arch_curr_cpu_num());
 
     DEBUG_ASSERT_MSG(arch_ints_disabled(),
-#if ARCH_X86_64
         "ints disabled on way out of exception, vector %" PRIu64 " IP %#" PRIx64 "\n",
-#else
-        "ints disabled on way out of exception, vector %u IP 0x%x\n",
-#endif
         frame->vector, frame->ip);
 }
 

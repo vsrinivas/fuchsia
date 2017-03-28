@@ -14,17 +14,12 @@
 
 uint arch_num_regsets(void)
 {
-#if ARCH_X86_64
     // TODO(dje): for now. general regs
     return 1;
-#else
-    return 0;
-#endif
 }
 
 static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t *buf_size)
 {
-#if ARCH_X86_64
     mx_x86_64_general_regs_t *gr = grp;
 
     uint32_t provided_buf_size = *buf_size;
@@ -66,14 +61,10 @@ static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t
     gr->rflags = p->flags;
 
     return NO_ERROR;
-#else
-    return ERR_NOT_SUPPORTED;
-#endif
 }
 
 static status_t arch_set_general_regs(struct thread *thread, const void *grp, uint32_t buf_size)
 {
-#if ARCH_X86_64
     const mx_x86_64_general_regs_t *gr = grp;
 
     if (buf_size != sizeof(*gr))
@@ -110,9 +101,6 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
     p->flags &= ~X86_FLAGS_RESERVED;
 
     return NO_ERROR;
-#else
-    return ERR_NOT_SUPPORTED;
-#endif
 }
 
 status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_t *buf_size)

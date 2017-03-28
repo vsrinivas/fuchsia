@@ -24,13 +24,6 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     // create a default stack frame on the stack
     vaddr_t stack_top = (vaddr_t)t->stack + t->stack_size;
 
-#if ARCH_X86_32
-    // make sure the top of the stack is 8 byte aligned for ABI compliance
-    stack_top = ROUNDDOWN(stack_top, 8);
-    t->stack_top = stack_top;
-    struct x86_32_context_switch_frame *frame = (struct x86_32_context_switch_frame *)(stack_top);
-#endif
-#if ARCH_X86_64
     // make sure the top of the stack is 16 byte aligned for ABI compliance
     stack_top = ROUNDDOWN(stack_top, 16);
     t->stack_top = stack_top;
@@ -40,7 +33,6 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     // context switch, this leaves the stack in unaligned relative to how a called function expects it.
     stack_top -= 8;
     struct x86_64_context_switch_frame *frame = (struct x86_64_context_switch_frame *)(stack_top);
-#endif
 
     // Record a zero return address so that backtraces will stop here.
     // Otherwise if heap debugging is on, and say there is 99..99 here,
@@ -51,15 +43,8 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     frame--;
     memset(frame, 0, sizeof(*frame));
 
-#if ARCH_X86_32
-    frame->eip = entry_point;
-    frame->eflags = 0x3002; // IF = 0, NT = 0, IOPL = 3
-#endif
-
-#if ARCH_X86_64
     frame->rip = entry_point;
     frame->rflags = 0x3002; /* IF = 0, NT = 0, IOPL = 3 */
-#endif
 
     // initialize the saved extended register state
     vaddr_t buf = ROUNDUP(((vaddr_t)t->arch.extended_register_buffer), 64);
@@ -73,10 +58,8 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     t->arch.sp = (vaddr_t)frame;
 
     // initialize the fs, gs and kernel bases to 0.
-#if ARCH_X86_64
     t->arch.fs_base = 0;
     t->arch.gs_base = 0;
-#endif
 }
 
 void arch_dump_thread(thread_t *t)
@@ -86,55 +69,6 @@ void arch_dump_thread(thread_t *t)
         dprintf(INFO, "sp %#" PRIxPTR "\n", t->arch.sp);
     }
 }
-
-#if ARCH_X86_32
-
-void arch_context_switch(thread_t *oldthread, thread_t *newthread)
-{
-    //dprintf(DEBUG, "arch_context_switch: old %p (%s), new %p (%s)\n", oldthread, oldthread->name, newthread, newthread->name);
-
-    x86_extended_register_context_switch(oldthread, newthread);
-
-    __asm__ __volatile__ (
-        "pushl $1f			\n\t"
-        "pushf				\n\t"
-        "pusha				\n\t"
-        "movl %%esp,(%%edx)	\n\t"
-        "movl %%eax,%%esp	\n\t"
-        "popa				\n\t"
-        "popf				\n\t"
-        "ret				\n\t"
-        "1:					\n\t"
-
-        :
-        : "d" (&oldthread->arch.sp), "a" (newthread->arch.sp)
-    );
-
-    /*__asm__ __volatile__ (
-        "pushf              \n\t"
-        "pushl %%cs         \n\t"
-        "pushl $1f          \n\t"
-        "pushl %%gs         \n\t"
-        "pushl %%fs         \n\t"
-        "pushl %%es         \n\t"
-        "pushl %%ds         \n\t"
-        "pusha              \n\t"
-        "movl %%esp,(%%edx) \n\t"
-        "movl %%eax,%%esp   \n\t"
-        "popa               \n\t"
-        "popl %%ds          \n\t"
-        "popl %%es          \n\t"
-        "popl %%fs          \n\t"
-        "popl %%gs          \n\t"
-        "iret               \n\t"
-        "1: "
-        :
-        : "d" (&oldthread->arch.sp), "a" (newthread->arch.sp)
-    );*/
-}
-#endif
-
-#if ARCH_X86_64
 
 void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 {
@@ -179,5 +113,4 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 
     x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }
-#endif
 

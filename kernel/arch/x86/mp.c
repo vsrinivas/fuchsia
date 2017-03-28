@@ -91,14 +91,12 @@ void x86_init_percpu(uint8_t cpu_num)
     DEBUG_ASSERT(percpu->cpu_num == cpu_num);
     DEBUG_ASSERT(percpu->direct == percpu);
 
-#if ARCH_X86_64
     /* point gs at the per cpu structure */
     write_msr(X86_MSR_IA32_GS_BASE, (uintptr_t)percpu);
 
     /* set the KERNEL_GS_BASE MSR to 0 */
     /* when we enter user space, this will be populated via a swapgs */
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, 0);
-#endif
 
     x86_feature_init();
     x86_cpu_topology_init();
@@ -117,13 +115,11 @@ void x86_init_percpu(uint8_t cpu_num)
     // Setup the post early boot IDT
     if (cpu_num == 0) {
         idt_setup(&_idt);
-#ifdef ARCH_X86_64
         // Setup alternate stacks to guarantee stack sanity when handling these
         // interrupts
         idt_set_ist_index(&_idt, X86_INT_NMI, NMI_IST_INDEX);
         idt_set_ist_index(&_idt, X86_INT_MACHINE_CHECK, MCE_IST_INDEX);
         idt_set_ist_index(&_idt, X86_INT_DOUBLE_FAULT, DBF_IST_INDEX);
-#endif
         idt_load(&_idt);
     } else {
         // Load the read-only IDT setup on arch initialization.
@@ -134,7 +130,6 @@ void x86_init_percpu(uint8_t cpu_num)
     // suspend/resume.
     x86_tsc_adjust();
 
-#if ARCH_X86_64
     /* load the syscall entry point */
     extern void x86_syscall(void);
 
@@ -170,7 +165,6 @@ void x86_init_percpu(uint8_t cpu_num)
     if (x86_feature_test(X86_FEATURE_FSGSBASE)) {
         x86_set_cr4(x86_get_cr4() | X86_CR4_FSGSBASE);
     }
-#endif
 
     // These intel cpus support auto-entering C1E state when all cores are at C1. In
     // C1E state the voltage is reduced on all cores as well as clock gated. There is

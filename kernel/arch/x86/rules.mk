@@ -9,21 +9,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-ifeq ($(SUBARCH),x86-32)
-MEMBASE ?= 0x00000000
-KERNEL_BASE ?= 0x80000000
-KERNEL_SIZE ?= 0x40000000 # 1GB
-KERNEL_LOAD_OFFSET ?= 0x00100000
-HEADER_LOAD_OFFSET ?= 0x00010000
-PHYS_HEADER_LOAD_OFFSET ?= 0x00002000
-KERNEL_ASPACE_BASE ?= 0x80000000
-KERNEL_ASPACE_SIZE ?= 0x7ff00000
-USER_ASPACE_BASE   ?= 0x01000000 # 16MB
-USER_ASPACE_SIZE   ?= 0x7e000000 # full 2GB - 32MB
-
-SUBARCH_DIR := $(LOCAL_DIR)/32
-endif
-ifeq ($(SUBARCH),x86-64)
 MEMBASE ?= 0
 KERNEL_BASE ?= 0xffffffff80000000
 KERNEL_SIZE ?= 0x40000000 # 1GB
@@ -39,7 +24,6 @@ USER_ASPACE_BASE   ?= 0x0000000001000000UL # 16MB
 # USER_ASPACE_SIZE below.
 USER_ASPACE_SIZE   ?= 0x00007ffffefff000UL
 SUBARCH_DIR := $(LOCAL_DIR)/64
-endif
 
 ifneq ($(ENABLE_NEW_BOOT),)
 KERNEL_DEFINES += ENABLE_NEW_BOOT=1
@@ -69,7 +53,11 @@ MODULE_SRCS += \
 	$(SUBARCH_DIR)/start.S \
 	$(SUBARCH_DIR)/asm.S \
 	$(SUBARCH_DIR)/exceptions.S \
+	$(SUBARCH_DIR)/hypervisor.S \
 	$(SUBARCH_DIR)/ops.S \
+	$(SUBARCH_DIR)/syscall.S \
+	$(SUBARCH_DIR)/user_copy.S \
+	$(SUBARCH_DIR)/uspace_entry.S \
 \
 	$(LOCAL_DIR)/arch.c \
 	$(LOCAL_DIR)/cache.c \
@@ -95,14 +83,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/tsc.c \
 	$(LOCAL_DIR)/user_copy.c
 
-ifeq ($(SUBARCH),x86-64)
-MODULE_SRCS += \
-	$(SUBARCH_DIR)/hypervisor.S \
-	$(SUBARCH_DIR)/syscall.S \
-	$(SUBARCH_DIR)/user_copy.S \
-	$(SUBARCH_DIR)/uspace_entry.S
-endif
-
 MODULE_DEPS += \
 	lib/bitmap \
 	lib/hypervisor \
@@ -112,8 +92,6 @@ include $(LOCAL_DIR)/toolchain.mk
 # enable more if smp is requested
 ifeq ($(call TOBOOL,$(WITH_SMP)),true)
 
-# only 64bit supports smp
-ifeq ($(SUBARCH),x86-64)
 SMP_MAX_CPUS ?= 16
 KERNEL_DEFINES += \
 	WITH_SMP=1
@@ -121,10 +99,7 @@ MODULE_SRCS += \
 	$(SUBARCH_DIR)/bootstrap16.c \
 	$(SUBARCH_DIR)/smp.c \
 	$(SUBARCH_DIR)/start16.S
-else
-# non 64bit does not support SMP
-SMP_MAX_CPUS := 1
-endif
+
 endif
 
 # always set this to something
@@ -132,16 +107,9 @@ KERNEL_DEFINES += \
 	SMP_MAX_CPUS=$(SMP_MAX_CPUS)
 
 # set the default toolchain to x86 elf and set a #define
-ifeq ($(SUBARCH),x86-32)
-ifndef TOOLCHAIN_PREFIX
-TOOLCHAIN_PREFIX := $(ARCH_x86_TOOLCHAIN_PREFIX)
-endif
-endif # SUBARCH x86-32
-ifeq ($(SUBARCH),x86-64)
 ifndef TOOLCHAIN_PREFIX
 TOOLCHAIN_PREFIX := $(ARCH_x86_64_TOOLCHAIN_PREFIX)
 endif
-endif # SUBARCH x86-64
 
 #$(warning ARCH_x86_TOOLCHAIN_PREFIX = $(ARCH_x86_TOOLCHAIN_PREFIX))
 #$(warning ARCH_x86_64_TOOLCHAIN_PREFIX = $(ARCH_x86_64_TOOLCHAIN_PREFIX))
@@ -176,12 +144,6 @@ endif
 GLOBAL_COMPILEFLAGS += --target=$(ARCH_x86_64_CLANG_TARGET)
 endif
 
-ifeq ($(SUBARCH),x86-32)
-# get at least 686 so builtin atomic routines are picked up
-GLOBAL_COMPILEFLAGS += -march=i686
-endif
-
-ifeq ($(SUBARCH),x86-64)
 KERNEL_COMPILEFLAGS += -mcmodel=kernel
 KERNEL_COMPILEFLAGS += -mno-red-zone
 
@@ -197,7 +159,6 @@ endif
 # Note: If you wish to turn off .eh_frame on x86 you need to both
 # -fno-exceptions and -fno-asynchronous-unwind-tables.
 GLOBAL_COMPILEFLAGS += -fasynchronous-unwind-tables
-endif # SUBARCH x86-64
 
 ARCH_OPTFLAGS := -O2
 

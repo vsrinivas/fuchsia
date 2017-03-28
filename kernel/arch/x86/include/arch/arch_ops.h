@@ -35,13 +35,8 @@ static inline bool arch_ints_disabled(void)
     x86_flags_t state;
 
     __asm__ volatile(
-#if ARCH_X86_32
-        "pushfl;"
-        "popl %%eax"
-#elif ARCH_X86_64
         "pushfq;"
         "popq %%rax"
-#endif
         : "=a" (state)
         :: "memory");
 

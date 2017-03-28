@@ -83,9 +83,6 @@ void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
 
     arch_disable_ints();
 
-#if ARCH_X86_32
-    PANIC_UNIMPLEMENTED;
-#elif ARCH_X86_64
     /* default user space flags:
      * IOPL 0
      * Interrupts enabled
@@ -103,7 +100,6 @@ void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
 
     x86_uspace_entry(arg1, arg2, sp, entry_point, flags);
     __UNREACHABLE;
-#endif
 }
 
 #if WITH_SMP

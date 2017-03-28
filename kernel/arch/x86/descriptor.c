@@ -38,47 +38,29 @@ void x86_initialize_percpu_tss(void)
     tss_t *tss = &percpu->default_tss;
     memset(tss, 0, sizeof(*tss));
 
-#if ARCH_X86_32
-    tss->esp0 = 0;
-    tss->ss0 = DATA_SELECTOR;
-    tss->ss1 = 0;
-    tss->ss2 = 0;
-    tss->eflags = 0x00003002;
-    tss->bitmap = offsetof(tss_32_t, tss_bitmap);
-    tss->trace = 1; // trap on hardware task switch
-
-    set_global_desc_32(TSS_SELECTOR(cpu_num), (uintptr_t)tss, sizeof(*tss) - 1, 1, 0, 0, SEG_TYPE_TSS, 0, 0);
-#elif ARCH_X86_64
     /* zeroed out TSS is okay for now */
     set_global_desc_64(TSS_SELECTOR(cpu_num), (uintptr_t)tss, sizeof(*tss) - 1, 1, 0, 0, SEG_TYPE_TSS, 0, 0);
 
     x86_tss_assign_ists(percpu, tss);
 
     tss->iomap_base = offsetof(tss_64_t, tss_bitmap);
-#endif
     // Need to have an extra byte at the end of the bitmap because it will always potentially read two bytes
     tss->tss_bitmap[IO_BITMAP_BYTES] = 0xff;
 
     x86_ltr(TSS_SELECTOR(cpu_num));
 }
 
-#ifdef ARCH_X86_64
 static void x86_tss_assign_ists(struct x86_percpu *percpu, tss_t *tss)
 {
     tss->ist1 = (uintptr_t)&percpu->interrupt_stacks[0] + PAGE_SIZE;
     tss->ist2 = (uintptr_t)&percpu->interrupt_stacks[1] + PAGE_SIZE;
     tss->ist3 = (uintptr_t)&percpu->interrupt_stacks[2] + PAGE_SIZE;
 }
-#endif
 
 void x86_set_tss_sp(vaddr_t sp)
 {
     tss_t *tss = &x86_get_percpu()->default_tss;
-#if ARCH_X86_32
-    tss->esp0 = sp;
-#elif ARCH_X86_64
     tss->rsp0 = sp;
-#endif
 }
 
 void x86_clear_tss_busy(seg_sel_t sel)

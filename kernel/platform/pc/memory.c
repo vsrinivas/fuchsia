@@ -107,18 +107,6 @@ static int mem_arena_init(boot_addr_range_t *range)
             size -= adjust;
         }
 
-#if ARCH_X86_32
-        /* X86-32 can only handle up to 1GB of physical memory */
-        if (base > 1*GB)
-            continue;
-
-        if (base + size > 1*GB) {
-            uint64_t adjust = 1*GB - base;
-
-            size -= adjust;
-        }
-#endif
-
         while (size && used < PMM_ARENAS) {
             pmm_arena_info_t *arena = &mem_arenas[used];
 

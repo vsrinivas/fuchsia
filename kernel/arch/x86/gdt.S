@@ -24,11 +24,7 @@ DATA(_gdtr_phys)
 .align 8
 DATA(_gdtr)
     .short _gdt_end - _gdt - 1
-#if ARCH_X86_32
-    .int _gdt
-#elif ARCH_X86_64
     .quad _gdt
-#endif
 
 .data
 .align 8
@@ -61,19 +57,9 @@ DATA(_gdt)
     .byte  0b11001111       /* G(1) B(1) 0 0 limit 19:16 */
     .byte  0x0              /* base 31:24 */
 
-#if ARCH_X86_64
     /* disable 32bit ring3 code descriptor on 64bit kernel */
     .int  0x0
     .int  0x0
-#else
-    /* USER_CODE_SELECTOR */
-    .short 0xffff           /* limit 15:00 */
-    .short 0x0000           /* base 15:00 */
-    .byte  0x00             /* base 23:16 */
-    .byte  0b11111010       /* P(1) DPL(11) S(1) 1 C(0) R(1) A(0) */
-    .byte  0b11001111       /* G(1) D(1) 0 0 limit 19:16 */
-    .byte  0x0              /* base 31:24 */
-#endif
 
     /* USER_DATA_SELECTOR */
     .short 0xffff           /* limit 15:00 */

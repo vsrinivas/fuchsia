@@ -16,10 +16,6 @@ uint64_t _mx_ticks_get(void) {
     uint32_t ticks_high;
     __asm__ volatile("rdtsc" : "=a" (ticks_low), "=d" (ticks_high));
     return ((uint64_t)ticks_high << 32) | ticks_low;
-#elif __i386__
-    uint64_t ticks;
-    __asm__ volatile("rdtsc" : "=A" (ticks));
-    return ticks;
 #else
 #error Unsupported architecture
 #endif

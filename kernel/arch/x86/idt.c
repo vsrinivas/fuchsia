@@ -44,10 +44,8 @@ static inline void idt_set_offset(struct idt_entry *entry, uintptr_t offset)
     uint32_t mid_16 = (offset >> 16) & 0xffff;
     entry->w0 = (entry->w0 & 0xffff0000) | low_16;
     entry->w1 = (entry->w1 & 0x0000ffff) | (mid_16 << 16);
-    #ifdef ARCH_X86_64
     uint32_t high_32 = offset >> 32;
     entry->w2 = high_32;
-    #endif
 }
 
 static inline void idt_set_present(struct idt_entry *entry, bool present)
@@ -85,14 +83,12 @@ void idt_set_vector(
     idt_set_present(entry, true);
 }
 
-#ifdef ARCH_X86_64
 void idt_set_ist_index(struct idt *idt, uint8_t vec, uint8_t ist_idx)
 {
     ASSERT(ist_idx < 8);
     struct idt_entry *entry = &idt->entries[vec];
     entry->w1 = (entry->w1 & ~0x7) | ist_idx;
 }
-#endif
 
 void idt_setup(struct idt *idt)
 {
@@ -107,13 +103,8 @@ void idt_setup(struct idt *idt)
 
     uint16_t sel;
     enum idt_entry_type typ;
-#ifdef ARCH_X86_64
     sel = CODE_64_SELECTOR;
     typ = IDT_INTERRUPT_GATE64;
-#else
-    sel = CODE_SELECTOR;
-    typ = IDT_INTERRUPT_GATE32;
-#endif
     for (unsigned int i = 0; i < countof(idt->entries); ++i) {
         uintptr_t offset = _isr_table[i] + clac_shift;
         enum idt_dpl dpl;

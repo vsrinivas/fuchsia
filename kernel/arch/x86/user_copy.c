@@ -28,7 +28,6 @@ static inline bool ac_flag(void)
 
 status_t arch_copy_from_user(void *dst, const void *src, size_t len)
 {
-#if ARCH_X86_64
     DEBUG_ASSERT(!ac_flag());
 
     bool smap_avail = x86_feature_test(X86_FEATURE_SMAP);
@@ -38,14 +37,10 @@ status_t arch_copy_from_user(void *dst, const void *src, size_t len)
 
     DEBUG_ASSERT(!ac_flag());
     return status;
-#else
-    return ERR_NOT_SUPPORTED;
-#endif
 }
 
 status_t arch_copy_to_user(void *dst, const void *src, size_t len)
 {
-#if ARCH_X86_64
     DEBUG_ASSERT(!ac_flag());
 
     bool smap_avail = x86_feature_test(X86_FEATURE_SMAP);
@@ -55,9 +50,6 @@ status_t arch_copy_to_user(void *dst, const void *src, size_t len)
 
     DEBUG_ASSERT(!ac_flag());
     return status;
-#else
-    return ERR_NOT_SUPPORTED;
-#endif
 }
 
 static bool can_access(const void *base, size_t len, bool for_write)
