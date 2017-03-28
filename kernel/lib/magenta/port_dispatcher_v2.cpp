@@ -20,7 +20,6 @@
 constexpr mx_rights_t kDefaultIOPortRightsV2 =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-
 PortPacket::PortPacket() : packet{}, observer(nullptr) {
     // Note that packet is initialized to zeros.
 }
@@ -113,8 +112,7 @@ mx_status_t PortDispatcherV2::Create(uint32_t options,
 }
 
 PortDispatcherV2::PortDispatcherV2(uint32_t /*options*/)
-    : event_(EVENT_FLAG_AUTOUNSIGNAL),
-      zero_handles_(false) {
+    : zero_handles_(false) {
 }
 
 PortDispatcherV2::~PortDispatcherV2() {
@@ -157,11 +155,10 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* packet, uint64_t count) {
         if (zero_handles_)
             return ERR_BAD_STATE;
 
-        if (HandleSignalsLocked(packet, count))
-            return NO_ERROR;
+        if (!UpdateSignalCountLocked(packet, count))
+            packets_.push_back(packet);
 
-        packets_.push_back(packet);
-        wake_count = event_.Signal();
+        wake_count = sema_.Post();
     }
 
     if (wake_count)
@@ -170,16 +167,15 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* packet, uint64_t count) {
     return NO_ERROR;
 }
 
-bool PortDispatcherV2::HandleSignalsLocked(PortPacket* port_packet, uint64_t count) {
+bool PortDispatcherV2::UpdateSignalCountLocked(PortPacket* port_packet, uint64_t count) {
     if (port_packet->InContainer()) {
         DEBUG_ASSERT(port_packet->type() == MX_PKT_TYPE_SIGNAL_REP);
         port_packet->packet.signal.count += count;
         return true;
     }
-
+    // Not in container.
     if (port_packet->type() != MX_PKT_TYPE_USER)
         port_packet->packet.signal.count = count;
-
     return false;
 }
 
@@ -206,11 +202,7 @@ mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, mx_port_packet_t* packe
         return NO_ERROR;
 
 wait:
-        if (timeout == 0ull)
-            return ERR_TIMED_OUT;
-
-        lk_time_t to = mx_time_to_lk(timeout);
-        status_t st = event_.Wait((to == 0u) ? 1u : to);
+        status_t st = sema_.Wait(mx_time_to_lk(timeout));
         if (st != NO_ERROR)
             return st;
     }

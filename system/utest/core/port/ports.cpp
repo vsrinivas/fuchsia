@@ -452,6 +452,69 @@ static bool cancel_event_any_repeat() {
     return cancel_event(MX_WAIT_ASYNC_REPEATING, MX_CANCEL_ANY);
 }
 
+struct test_context {
+    mx_handle_t port;
+    uint32_t count;
+};
+
+static int port_reader_thread(void* arg) {
+    auto ctx = reinterpret_cast<test_context*>(arg);
+    mx_port_packet_t out = {};
+    uint64_t received = 0;
+    do {
+        auto st = mx_port_wait(ctx->port, MX_TIME_INFINITE, &out, 0u);
+        if (st < 0)
+            return st;
+        ++received;
+    } while (received < ctx->count);
+    return 0;
+}
+
+static bool threads_event(uint32_t wait_mode) {
+    BEGIN_TEST;
+
+    mx_handle_t port;
+    mx_handle_t ev;
+
+    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), NO_ERROR, "");
+    EXPECT_EQ(mx_event_create(0u, &ev), NO_ERROR, "");
+
+    thrd_t threads[3];
+    test_context ctx[3];
+    for (size_t ix = 0; ix != countof(threads); ++ix) {
+        // |count| is one so each thread is going to pick one packet each
+        // and exit. See bug MG-648 for the case this is testing.
+        ctx[ix] = { port, 1u };
+
+        EXPECT_EQ(mx_object_wait_async(
+                  ev, port, (500u + ix), MX_EVENT_SIGNALED, wait_mode), NO_ERROR, "");
+        EXPECT_EQ(thrd_create(&threads[ix], port_reader_thread, &ctx[ix]),
+                  thrd_success, "");
+    }
+
+    EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
+
+    for (size_t ix = 0; ix != countof(threads); ++ix) {
+        int res;
+        EXPECT_EQ(thrd_join(threads[ix], &res), thrd_success, "");
+        EXPECT_EQ(res, 0, "");
+        EXPECT_EQ(ctx[ix].count, 1u, "");
+    }
+
+    EXPECT_EQ(mx_handle_close(port), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(ev), NO_ERROR, "");
+
+    END_TEST;
+}
+
+static bool threads_event_once() {
+    return threads_event(MX_WAIT_ASYNC_ONCE);
+}
+
+static bool threads_event_repeat() {
+    return threads_event(MX_WAIT_ASYNC_REPEATING);
+}
+
 BEGIN_TEST_CASE(port_tests)
 RUN_TEST(basic_test)
 RUN_TEST(queue_and_close_test)
@@ -470,6 +533,8 @@ RUN_TEST(cancel_event_key_once)
 RUN_TEST(cancel_event_key_repeat)
 RUN_TEST(cancel_event_any_once)
 RUN_TEST(cancel_event_any_repeat)
+RUN_TEST(threads_event_once)
+RUN_TEST(threads_event_repeat)
 END_TEST_CASE(port_tests)
 
 #ifndef BUILD_COMBINED_TESTS

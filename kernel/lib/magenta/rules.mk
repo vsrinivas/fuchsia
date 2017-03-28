@@ -38,6 +38,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/port_dispatcher_v2.cpp \
     $(LOCAL_DIR)/process_dispatcher.cpp \
     $(LOCAL_DIR)/resource_dispatcher.cpp \
+    $(LOCAL_DIR)/semaphore.cpp \
     $(LOCAL_DIR)/socket_dispatcher.cpp \
     $(LOCAL_DIR)/state_tracker.cpp \
     $(LOCAL_DIR)/thread_dispatcher.cpp \

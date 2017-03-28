@@ -9,6 +9,7 @@
 #include <kernel/mutex.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/semaphore.h>
 #include <magenta/state_observer.h>
 #include <magenta/syscalls/port.h>
 #include <magenta/types.h>
@@ -147,12 +148,12 @@ public:
 
 private:
     PortDispatcherV2(uint32_t options);
-    bool HandleSignalsLocked(PortPacket* packet, uint64_t count) TA_REQ(lock_);
+    bool UpdateSignalCountLocked(PortPacket* packet, uint64_t count) TA_REQ(lock_);
     PortObserver* SnapCopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
 
     mxtl::Canary<mxtl::magic("POR2")> canary_;
     Mutex lock_;
-    WaitEvent event_;
+    Semaphore sema_;
     bool zero_handles_ TA_GUARDED(lock_);
     mxtl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(lock_);
 };
