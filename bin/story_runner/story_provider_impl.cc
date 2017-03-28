@@ -55,6 +55,14 @@ std::string MakeStoryId(std::unordered_set<std::string>* story_ids,
   return id;
 }
 
+// HACK(mesch): Computes whether to skip this key in places where only
+// story ID keys are expected.
+bool SkipKey(fidl::Array<uint8_t>& key) {
+  std::string key_as_string = to_string(key);
+  return key_as_string == kDeviceMapKey ||
+      key_as_string == kUserShellKey;
+}
+
 void GetEntries(ledger::PageSnapshotPtr* snapshot,
                 std::vector<ledger::EntryPtr> entries,
                 fidl::Array<uint8_t> token,
@@ -511,7 +519,7 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
             // more comfortable dealing with JSON data, we can
             // make a better mapping of a complex data
             // structure to a page.
-            if (to_string(entry->key) == kDeviceMapKey) {
+            if (SkipKey(entry->key)) {
               continue;
             }
 
@@ -723,6 +731,18 @@ ledger::PagePtr StoryProviderImpl::GetStoryPage(
   return ret;
 }
 
+ledger::PagePtr StoryProviderImpl::GetRootPage() {
+  ledger::PagePtr ret;
+  ledger_->GetRootPage(ret.NewRequest(),
+                       [](ledger::Status status) {
+                         if (status != ledger::Status::OK) {
+                           FTL_LOG(ERROR) << "GetRootPage() status " << status;
+                         }
+                       });
+
+  return ret;
+}
+
 void StoryProviderImpl::WriteStoryData(StoryDataPtr story_data,
                                        std::function<void()> done) {
   new WriteStoryDataCall(&operation_queue_, root_page_.get(),
@@ -795,7 +815,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
 
   for (auto& entry : page->changes) {
     // TODO(mesch): See PreviousStoriesCall().
-    if (to_string(entry->key) == kDeviceMapKey) {
+    if (SkipKey(entry->key)) {
       continue;
     }
 

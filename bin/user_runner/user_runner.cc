@@ -24,7 +24,9 @@
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
+#include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/story_provider_impl.h"
+#include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/focus.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
@@ -225,6 +227,24 @@ class UserRunnerImpl : UserRunner, UserShellContext {
     focus_handler_.GetProvider(std::move(request));
   }
 
+  // |UserShellContext|
+  void GetLink(fidl::InterfaceRequest<Link> request) override {
+    if (user_shell_link_) {
+      user_shell_link_->Connect(std::move(request));
+      return;
+    }
+
+    link_storage_.reset(new StoryStorageImpl(
+        story_provider_impl_->storage(),
+        story_provider_impl_->GetRootPage(),
+        kUserShellKey));
+
+    user_shell_link_.reset(new LinkImpl(
+        link_storage_.get(),
+        kUserShellKey,
+        std::move(request)));
+  }
+
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config) {
     auto launch_info = app::ApplicationLaunchInfo::New();
 
@@ -286,6 +306,12 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   FocusHandler focus_handler_;
   VisibleStoriesHandler visible_stories_handler_;
+
+  // Given to the user shell so it can store its own data. These data
+  // are shared between all user shells (so it's not private to the
+  // user shell *app*).
+  std::unique_ptr<LinkImpl> user_shell_link_;
+  std::unique_ptr<StoryStorageImpl> link_storage_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };

@@ -32,6 +32,10 @@ namespace modular {
 class Resolver;
 class StoryImpl;
 
+// The key under which the user runner link is stored in the root page
+// of the user.
+constexpr char kUserShellKey[] = "user-shell-link";
+
 namespace {
 class DeleteStoryCall;
 }  // namespace
@@ -70,6 +74,9 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
   const AppConfig& story_shell() const { return *story_shell_; }
+
+  // Used by user runner.
+  ledger::PagePtr GetRootPage();
 
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
 

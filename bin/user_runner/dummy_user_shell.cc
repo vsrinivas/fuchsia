@@ -16,6 +16,7 @@
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/testing.h"
+#include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
@@ -49,10 +50,13 @@ class Settings {
         "first_module", "file:///system/apps/example_recipe");
     second_module = command_line.GetOptionValueWithDefault(
         "second_module", "file:///system/apps/example_flutter_hello_world");
+    test = command_line.GetOptionValueWithDefault(
+        "test", "1") == "1";
   }
 
   std::string first_module;
   std::string second_module;
+  bool test{};
 };
 
 class DummyUserShellApp
@@ -66,7 +70,9 @@ class DummyUserShellApp
         story_provider_watcher_binding_(this),
         story_watcher_binding_(this),
         link_watcher_binding_(this) {
-    modular::testing::Init(application_context(), __FILE__);
+    if (settings_.test) {
+      modular::testing::Init(application_context(), __FILE__);
+    }
   }
   ~DummyUserShellApp() override = default;
 
@@ -94,6 +100,11 @@ class DummyUserShellApp
     story_provider_->GetStoryInfo("X", [](modular::StoryInfoPtr story_info) {
       FTL_LOG(INFO) << "StoryInfo for X is null: " << story_info.is_null();
     });
+
+    user_shell_context_ptr->GetLink(user_shell_link_.NewRequest());
+    user_shell_link_->Get(nullptr, [](const fidl::String& value) {
+        FTL_LOG(INFO) << "User shell link: " << value;
+      });
 
     story_provider_->PreviousStories([this](fidl::Array<fidl::String> stories) {
       if (stories.size() > 0) {
@@ -127,7 +138,9 @@ class DummyUserShellApp
     FTL_LOG(INFO) << "UserShell::Terminate()";
     // Notify the test runner harness that we can be torn down.
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    modular::testing::Teardown();
+    if (settings_.test) {
+      modular::testing::Teardown();
+    }
     done();
   }
 
@@ -283,6 +296,7 @@ class DummyUserShellApp
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   modular::LinkPtr root_;
+  modular::LinkPtr user_shell_link_;
   modular::StoryInfoPtr story_info_;
   int data_count_{0};
 
