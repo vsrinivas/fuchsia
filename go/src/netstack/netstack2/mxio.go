@@ -858,7 +858,7 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	}
 	node, service, hints := val.Unpack()
 
-	if debug {
+	if debug2 {
 		log.Printf("getaddrinfo node=%q, service=%q", node, service)
 	}
 
