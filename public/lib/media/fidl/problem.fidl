@@ -17,6 +17,7 @@ module media;
 struct Problem {
   const string kProblemInternal = "ProblemInternal";
   const string kProblemAssetNotFound = "ProblemAssetNotFound";
+  const string kProblemContainerNotSupported = "ProblemContainerNotSupported";
   const string kProblemMediaTypeNotSupported = "ProblemMediaTypeNotSupported";
 
   // The type of problem. This is a string for extensibility.

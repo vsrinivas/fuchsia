@@ -25,13 +25,22 @@ void AVIOContextDeleter::operator()(AVIOContext* context) const {
 }
 
 // static
-AvIoContextPtr AvIoContext::Create(std::shared_ptr<Reader> reader) {
+Result AvIoContext::Create(std::shared_ptr<Reader> reader,
+                           AvIoContextPtr* context_ptr_out) {
+  FTL_CHECK(context_ptr_out);
+
   // Internal buffer size used by AVIO for reading.
   constexpr int kBufferSize = 32 * 1024;
 
   InitFfmpeg();
 
   AvIoContextOpaque* avIoContextOpaque = new AvIoContextOpaque(reader);
+  Result result = avIoContextOpaque->describe_result_;
+  if (result != Result::kOk) {
+    *context_ptr_out = nullptr;
+    delete avIoContextOpaque;
+    return result;
+  }
 
   AVIOContext* avIoContext = avio_alloc_context(
       static_cast<unsigned char*>(av_malloc(kBufferSize)), kBufferSize,
@@ -46,7 +55,9 @@ AvIoContextPtr AvIoContext::Create(std::shared_ptr<Reader> reader) {
   // Ensure writing is disabled.
   avIoContext->write_flag = 0;
 
-  return AvIoContextPtr(avIoContext);
+  *context_ptr_out = AvIoContextPtr(avIoContext);
+
+  return result;
 }
 
 // static

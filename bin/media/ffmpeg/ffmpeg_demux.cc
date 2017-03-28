@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "apps/media/lib/timeline/timeline_rate.h"
+#include "apps/media/services/problem.fidl.h"
 #include "apps/media/src/ffmpeg/av_codec_context.h"
 #include "apps/media/src/ffmpeg/av_format_context.h"
 #include "apps/media/src/ffmpeg/av_io_context.h"
@@ -208,20 +209,24 @@ void FfmpegDemuxImpl::RequestPacket() {
 void FfmpegDemuxImpl::Worker() {
   static constexpr uint64_t kNanosecondsPerMicrosecond = 1000;
 
-  io_context_ = AvIoContext::Create(reader_);
-  if (!io_context_) {
-    FTL_LOG(ERROR) << "AvIoContext::Create failed";
-    result_ = Result::kInternalError;
-    ReportProblem("ProblemInternal", "AvIoContext::Create failed");
+  result_ = AvIoContext::Create(reader_, &io_context_);
+  if (result_ != Result::kOk) {
+    FTL_LOG(ERROR) << "AvIoContext::Create failed, result "
+                   << static_cast<int>(result_);
+    ReportProblem(result_ == Result::kNotFound ? Problem::kProblemAssetNotFound
+                                               : Problem::kProblemInternal,
+                  "");
     init_complete_.Occur();
     return;
   }
 
+  FTL_DCHECK(io_context_);
+
   format_context_ = AvFormatContext::OpenInput(io_context_);
   if (!format_context_) {
     FTL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
-    result_ = Result::kInternalError;
-    ReportProblem("ProblemAssetNotFound", "");
+    result_ = Result::kUnsupportedOperation;
+    ReportProblem(Problem::kProblemContainerNotSupported, "");
     init_complete_.Occur();
     return;
   }
@@ -230,7 +235,8 @@ void FfmpegDemuxImpl::Worker() {
   if (r < 0) {
     FTL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
     result_ = Result::kInternalError;
-    ReportProblem("ProblemInternal", "avformat_find_stream_info failed");
+    ReportProblem(Problem::kProblemInternal,
+                  "avformat_find_stream_info failed");
     init_complete_.Occur();
     return;
   }

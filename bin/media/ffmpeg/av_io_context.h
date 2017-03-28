@@ -26,7 +26,8 @@ using AvIoContextPtr = std::unique_ptr<AVIOContext, AVIOContextDeleter>;
 class AvIoContext {
  public:
   // Creates an ffmpeg avio_context for a given reader.
-  static AvIoContextPtr Create(std::shared_ptr<Reader> reader);
+  static Result Create(std::shared_ptr<Reader> reader,
+                       AvIoContextPtr* context_ptr_out);
 };
 
 // 'Opaque' context bound to ffmpeg AVIOContext.
