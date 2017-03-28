@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "apps/ledger/src/configuration/configuration.h"
@@ -47,6 +48,25 @@ int main(int argc, const char** argv) {
   if (command_line.HasOption(kHelpArg)) {
     PrintHelp();
     return 0;
+  }
+
+  const std::unordered_set<std::string> known_options = {
+      kHelpArg,        kConfigPathArg, kGcsBucketArg, kFirebaseIdArg,
+      kCloudPrefixArg, kSyncArg,       kNoSyncArg,
+  };
+
+  for (auto& option : command_line.options()) {
+    if (known_options.count(option.name) == 0) {
+      printf("Unknown option: %s\n", option.name.c_str());
+      PrintHelp();
+      return 1;
+    }
+  }
+
+  if (!command_line.positional_args().empty()) {
+    printf("%s doesn't take positional args\n", command_line.argv0().c_str());
+    PrintHelp();
+    return 1;
   }
 
   std::string config_path = configuration::kDefaultConfigurationFile.ToString();
