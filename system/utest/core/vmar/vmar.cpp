@@ -537,8 +537,9 @@ bool overmapping_test() {
 
 
     // Create a region, and try to map on top of it
-    ASSERT_EQ(mx_vmar_allocate(region[0], 0, 2 * PAGE_SIZE,
-                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
+    ASSERT_EQ(mx_vmar_allocate(region[0], PAGE_SIZE, 2 * PAGE_SIZE,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
+                               MX_VM_FLAG_SPECIFIC,
                                &region[1], &region_addr[1]),
               NO_ERROR, "");
 

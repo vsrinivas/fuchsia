@@ -317,6 +317,12 @@ private:
     vaddr_t NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
                                                       uint arch_mmu_flags);
 
+    // Utility for allocators for iterating over gaps between allocations
+    // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).
+    // If func returns false, the iteration stops.  gap_base will be aligned in
+    // accordance with align_pow2.
+    template <typename F> void ForEachGap(F func, uint8_t align_pow2);
+
     // list of subregions, indexed by base address
     ChildList subregions_;
 };

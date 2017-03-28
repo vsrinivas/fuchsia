@@ -719,102 +719,105 @@ vaddr_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_
     return -1;
 }
 
-namespace {
-    // Return the width (in bits) of the offset selection range available for ASLR
-    uint NonCompactRandomizedAllocatorSelectWidth(bool is_user, size_t aspace_size,
-                                                  size_t alloc_size) {
-        // For userspace allocations, we will do a super-rough ASLR.  All
-        // allocations will have (N - align_pow2) bits of entropy, where
-        // N = floor(log2(aspace_size - allocation_size).)
-        size_t max_offset = aspace_size - alloc_size;
-        if (max_offset == 0) {
-            return 0;
+template <typename F> void VmAddressRegion::ForEachGap(F func, uint8_t align_pow2) {
+    const vaddr_t align = 1UL << align_pow2;
+
+    // Scan the regions list to find the gap to the left of each region.  We
+    // round up the end of the previous region to the requested alignment, so
+    // all gaps reported will be for aligned ranges.
+    vaddr_t prev_region_end = ROUNDUP(base_, align);
+    for (const auto& region : subregions_) {
+        if (region.base() > prev_region_end) {
+            const size_t gap = region.base() - prev_region_end;
+            if (!func(prev_region_end, gap)) {
+                return;
+            }
         }
-
-        // Calculate floor(log2(max_offset)) to decide the range of values to
-        // generate.  We remove all possible placement offsets greater than 1<<log2
-        // for convenience to keep the distribution uniform.
-        uint log2 = log2_ulong_floor(max_offset);
-
-        if (is_user) {
-            // BUG(MG-528): Cap log2 at 31 bits, since musl assumes 31-bit thread IDs and uses
-            // thread struct addresses for those.
-            log2 = mxtl::min(log2, 31u);
-        }
-
-        return log2;
+        prev_region_end = ROUNDUP(region.base() + region.size(), align);
     }
-} // namespace
+
+    // Grab the gap to the right of the last region (note that if there are no
+    // regions, this handles reporting the VMAR's whole span as a gap).
+    const vaddr_t end = base_ + size_;
+    if (end > prev_region_end) {
+        const size_t gap = end - prev_region_end;
+        func(prev_region_end, gap);
+    }
+}
+
+namespace {
+
+// Compute the number of allocation spots that satisfy the alignment within the
+// given range size, for a range that has a base that satisfies the alignment.
+constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size, uint8_t align_pow2) {
+    return ((range_size - alloc_size) >> align_pow2) + 1;
+}
+
+} // namespace {}
 
 // Perform allocations for VMARs that aren't using the COMPACT policy.  This
-// allocator works by choosing an offset in the VMAR in the
-// range [0, size_ - size), and attempting to place the allocation there.  If
-// the spot is occupied, the allocator retries several times before giving up.
+// allocator works by choosing uniformly at random from the set of positions
+// that could satisfy the allocation.
 vaddr_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
                                                                    uint arch_mmu_flags) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     align_pow2 = mxtl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
     const vaddr_t align = 1UL << align_pow2;
-    const uint aslr_width = NonCompactRandomizedAllocatorSelectWidth(aspace_->is_user(), size_,
-                                                                     size);
 
-    // If our width is 0, the only placement choice we have is the start of the
-    // region (due to the allocation filling the region).
-    if (aslr_width == 0) {
-        vaddr_t spot;
-        if (CheckGapLocked(subregions_.end(), subregions_.begin(), &spot, 0, align, size, 0,
-                           arch_mmu_flags)) {
-            return spot;
+    // Calculate the number of spaces that we can fit this allocation in.
+    size_t candidate_spaces = 0;
+    ForEachGap([align, align_pow2, size, &candidate_spaces](vaddr_t gap_base, size_t gap_len) -> bool {
+        DEBUG_ASSERT(IS_ALIGNED(gap_base, align));
+        if (gap_len >= size) {
+            candidate_spaces += AllocationSpotsInRange(gap_len, size, align_pow2);
         }
-        return -1;
+        return true;
+    }, align_pow2);
+
+    if (candidate_spaces == 0) {
+        return static_cast<vaddr_t>(-1);
     }
 
-    // Generate a random offset from [0, 2^width). We choose a range
-    // that is a power of 2 in size to make maintaining a uniform distribution
-    // easier.
-    const auto choose_offset = [this, align, aslr_width]() -> size_t {
-        size_t chosen_offset;
-        aspace_->AslrPrng().Draw(reinterpret_cast<uint8_t*>(&chosen_offset), sizeof(chosen_offset));
-        chosen_offset &= ~(align - 1);
-        chosen_offset &= (1UL << aslr_width) - 1;
-        return chosen_offset;
-    };
+    // Choose the index of the allocation to use.
+    size_t selected_index = aspace_->AslrPrng().RandInt(candidate_spaces);
+    DEBUG_ASSERT(selected_index < candidate_spaces);
 
-    // Generate a random placement, and see if we can fit there.  Return an
-    // allocation failure if we can't find a placement after a number of tries.
-    // TODO(teisenbe): Be more intelligent here.  Instead of searching uniformly
-    // at random through the address space, look into generating uniformly at
-    // random through the valid placements.  This may be tricky without turning
-    // allocation into O(existing regions) or storing another tree of regions.
-    for (size_t tries_remaining = 10; tries_remaining > 0; --tries_remaining) {
-        const size_t offset = choose_offset();
-
-        const vaddr_t chosen_base = base_ + offset;
-        const vaddr_t chosen_end = chosen_base + size;
-        DEBUG_ASSERT(chosen_end - 1 <= base_ + size_ - 1);
-
-        // Attempt to use the generated address
-        auto after_iter = subregions_.upper_bound(chosen_end - 1);
-        auto before_iter = after_iter;
-
-        if (after_iter == subregions_.begin() || subregions_.size() == 0) {
-            before_iter = subregions_.end();
-        } else {
-            --before_iter;
+    // Find which allocation we picked.
+    vaddr_t alloc_spot = static_cast<vaddr_t>(-1);
+    ForEachGap([align_pow2, size, &alloc_spot, &selected_index](vaddr_t gap_base,
+                                                                size_t gap_len) -> bool {
+        if (gap_len < size) {
+            return true;
         }
 
-        if (before_iter != subregions_.end() && !before_iter.IsValid()) {
-            continue;
+        const size_t spots = AllocationSpotsInRange(gap_len, size, align_pow2);
+        if (selected_index < spots) {
+            alloc_spot = gap_base + (selected_index << align_pow2);
+            return false;
         }
+        selected_index -= spots;
+        return true;
+    }, align_pow2);
+    ASSERT(alloc_spot != static_cast<vaddr_t>(-1));
+    ASSERT(IS_ALIGNED(alloc_spot, align));
 
-        vaddr_t spot;
-        if (CheckGapLocked(before_iter, after_iter, &spot, chosen_base, align, size, 0,
-                           arch_mmu_flags) && spot != static_cast<vaddr_t>(-1)) {
-            return spot;
-        }
+    // Sanity check that the allocation fits.
+    auto after_iter = subregions_.upper_bound(alloc_spot + size - 1);
+    auto before_iter = after_iter;
+
+    if (after_iter == subregions_.begin() || subregions_.size() == 0) {
+        before_iter = subregions_.end();
+    } else {
+        --before_iter;
     }
 
-    // failed to find a placement
-    return -1;
+    ASSERT(before_iter == subregions_.end() || before_iter.IsValid());
+
+    vaddr_t spot;
+    if (CheckGapLocked(before_iter, after_iter, &spot, alloc_spot, align, size, 0,
+                       arch_mmu_flags) && spot != static_cast<vaddr_t>(-1)) {
+        return spot;
+    }
+    panic("Unexpected allocation failure\n");
 }
