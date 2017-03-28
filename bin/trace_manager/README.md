@@ -130,6 +130,20 @@ For example, if a measurement specifies `"split_samples_at": [1, 50],`, the
 results will be reported in three groups: sample 0, samples 1 - 49, and samples
 50 to N, where N is the last samples.
 
+#### Catapult dashboard upload
+
+Results of the benchmarking run can be uploaded to an instance of the
+[Catapult](https://github.com/catapult-project/catapult) dashboard. For that,
+the following additional parameters must be passed to `trace record`:
+
+ - `--upload-server-url` - the url of the Catapult dashboard server
+ - `--upload-master` - name of the buildbot master
+ - `--upload-bot` - name of the builder
+ - `--upload-point-id` - integer sequence number for the new samples
+
+In order to experiment against a local instance of the dashboard, follow these
+[instructions](docs/catapult.md).
+
 ## Capturing Trace Data from Host
 
 The `scripts/trace.sh` script takes care of remotely running `trace`, downloading

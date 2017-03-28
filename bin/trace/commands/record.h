@@ -16,6 +16,7 @@
 #include "apps/tracing/lib/measure/time_between.h"
 #include "apps/tracing/lib/trace_converters/chromium_exporter.h"
 #include "apps/tracing/src/trace/command.h"
+#include "apps/tracing/src/trace/results_upload.h"
 #include "apps/tracing/src/trace/spec.h"
 #include "apps/tracing/src/trace/tracer.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -37,6 +38,8 @@ class Record : public CommandWithTraceController {
     uint32_t buffer_size_megabytes_hint = 4;
     std::string output_file_name = "/tmp/trace.json";
     measure::Measurements measurements;
+    bool upload_results = false;
+    UploadMetadata upload_metadata;
   };
 
   static Info Describe();
@@ -46,7 +49,7 @@ class Record : public CommandWithTraceController {
 
  private:
   void StopTrace();
-  void ProcessMeasurements();
+  void ProcessMeasurements(ftl::Closure on_done);
   void DoneTrace();
   void LaunchApp();
   void StartTimer();

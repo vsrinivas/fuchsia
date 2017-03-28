@@ -5,15 +5,36 @@
 #include <fstream>
 #include <iostream>
 
+#include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/src/trace/commands/record.h"
 #include "apps/tracing/src/trace/results_output.h"
 #include "lib/ftl/files/file.h"
+#include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {
+
+namespace {
+
+const char kUploadServerUrl[] = "upload-server-url";
+const char kUploadMaster[] = "upload-master";
+const char kUploadBot[] = "upload-bot";
+const char kUploadPointId[] = "upload-point-id";
+
+bool EnsureNonEmpty(std::ostream& err,
+                    const ftl::CommandLine& command_line,
+                    size_t index) {
+  if (command_line.options()[index].value.empty()) {
+    err << "--" << command_line.options()[index].name << " can't be empty";
+    return false;
+  }
+  return true;
+}
+
+}  // namespace
 
 bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   size_t index = 0;
@@ -26,6 +47,9 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
       err() << spec_file_path << " is not a file" << std::endl;
       return false;
     }
+    // By default use the name of the tspec file as the test suite name.
+    // TODO(ppi): allow specyfing the test suite name in the tspec file.
+    upload_metadata.test_suite_name = files::GetBaseName(spec_file_path);
 
     std::string content;
     if (!files::ReadFileToString(spec_file_path, &content)) {
@@ -62,8 +86,8 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
     uint64_t seconds;
     if (!ftl::StringToNumberWithError(command_line.options()[index].value,
                                       &seconds)) {
-      FTL_LOG(ERROR) << "Failed to parse command-line option duration: "
-                     << command_line.options()[index].value;
+      err() << "Failed to parse command-line option duration: "
+            << command_line.options()[index].value;
       return false;
     }
     duration = ftl::TimeDelta::FromSeconds(seconds);
@@ -80,11 +104,66 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
     uint32_t megabytes;
     if (!ftl::StringToNumberWithError(command_line.options()[index].value,
                                       &megabytes)) {
-      FTL_LOG(ERROR) << "Failed to parse command-line option buffer-size: "
-                     << command_line.options()[index].value;
+      err() << "Failed to parse command-line option buffer-size: "
+            << command_line.options()[index].value;
       return false;
     }
     buffer_size_megabytes_hint = megabytes;
+  }
+
+  int upload_param_count = 0;
+  upload_param_count += command_line.HasOption(kUploadServerUrl);
+  upload_param_count += command_line.HasOption(kUploadMaster);
+  upload_param_count += command_line.HasOption(kUploadBot);
+  upload_param_count += command_line.HasOption(kUploadPointId);
+  if (upload_param_count != 0 && upload_param_count != 4) {
+    err() << "All of " << kUploadServerUrl << ", " << kUploadMaster << ", "
+          << kUploadBot << ", " << kUploadPointId
+          << " are required for results upload" << std::endl;
+    return false;
+  }
+  if (upload_param_count > 0) {
+    upload_results = true;
+  }
+
+  // --upload-server-url
+  if (command_line.HasOption(kUploadServerUrl, &index)) {
+    if (!EnsureNonEmpty(err(), command_line, index)) {
+      return false;
+    }
+    upload_metadata.server_url = command_line.options()[index].value;
+  }
+
+  // --upload-master
+  if (command_line.HasOption(kUploadMaster, &index)) {
+    if (!EnsureNonEmpty(err(), command_line, index)) {
+      return false;
+    }
+    upload_metadata.master = command_line.options()[index].value;
+  }
+
+  // --upload-bot
+  if (command_line.HasOption(kUploadBot, &index)) {
+    if (!EnsureNonEmpty(err(), command_line, index)) {
+      return false;
+    }
+    upload_metadata.bot = command_line.options()[index].value;
+  }
+
+  // --upload-point-id=<integer>
+  if (command_line.HasOption(kUploadPointId, &index)) {
+    if (!EnsureNonEmpty(err(), command_line, index)) {
+      return false;
+    }
+    uint64_t point_id;
+    if (!ftl::StringToNumberWithError(command_line.options()[index].value,
+                                      &point_id)) {
+      err() << "Failed to parse command-line option upload-point-id: "
+            << command_line.options()[index].value;
+      return false;
+    }
+    upload_results = true;
+    upload_metadata.point_id = point_id;
   }
 
   // <command> <args...>
@@ -120,6 +199,10 @@ Command::Info Record::Describe() {
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
        {"buffer-size=[4]",
         "Maximum size of trace buffer for each provider in megabytes"},
+       {"upload-server-url=[none]", "Url of the Catapult dashboard server"},
+       {"upload-master=[none]", "Name of the buildbot master"},
+       {"upload-bot=[none]", "Buildbot builder name"},
+       {"upload-point-id=[none]", "Integer identifier of the sample"},
        {"[command args]",
         "Run program before starting trace. The program is terminated when "
         "tracing ends unless --detach is specified"}}};
@@ -189,7 +272,7 @@ void Record::StopTrace() {
   }
 }
 
-void Record::ProcessMeasurements() {
+void Record::ProcessMeasurements(ftl::Closure on_done) {
   if (!events_.empty()) {
     std::sort(
         std::begin(events_), std::end(events_),
@@ -222,6 +305,15 @@ void Record::ProcessMeasurements() {
   std::vector<measure::Result> results =
       measure::ComputeResults(options_.measurements, ticks, ticks_per_second);
   OutputResults(out(), results);
+
+  if (options_.upload_results) {
+    network::NetworkServicePtr network_service =
+        context()->ConnectToEnvironmentService<network::NetworkService>();
+    UploadResults(out(), err(), std::move(network_service),
+                  options_.upload_metadata, results, std::move(on_done));
+  } else {
+    on_done();
+  }
 }
 
 void Record::DoneTrace() {
@@ -231,10 +323,10 @@ void Record::DoneTrace() {
   out() << "Trace file written to " << options_.output_file_name << std::endl;
 
   if (measure_duration_ || measure_time_between_) {
-    ProcessMeasurements();
+    ProcessMeasurements([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  } else {
+    mtl::MessageLoop::GetCurrent()->QuitNow();
   }
-
-  mtl::MessageLoop::GetCurrent()->QuitNow();
 }
 
 void Record::LaunchApp() {
