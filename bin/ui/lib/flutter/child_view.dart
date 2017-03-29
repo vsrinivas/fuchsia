@@ -101,7 +101,7 @@ class ChildViewConnection {
       launcher.createApplication(launchInfo, controller);
       return new ChildViewConnection.connect(services,
           childServices: childServices, onAvailable: onAvailable,
-          onUnavailable: onUnvailable);
+          onUnavailable: onUnavailable);
     } finally {
       services.ctrl.close();
     }
@@ -117,7 +117,7 @@ class ChildViewConnection {
       final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
       viewProvider.createView(viewOwner.passRequest(), childServices);
       return new ChildViewConnection(viewOwner.passHandle(),
-          onAvailable: onAvailable, onUnavailable: onUnvailable);
+          onAvailable: onAvailable, onUnavailable: onUnavailable);
     } finally {
       viewProvider.ctrl.close();
     }
