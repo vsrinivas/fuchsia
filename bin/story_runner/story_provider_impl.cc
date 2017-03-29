@@ -240,36 +240,37 @@ class CreateStoryCall : public Operation<fidl::String> {
   }
 
   void Run() override {
-    ledger_->NewPage(story_page_.NewRequest(), [this](ledger::Status status) {
-      if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "CreateStoryCall() " << story_id_
-                       << " Ledger.NewPage() " << status;
-        Done(std::move(story_id_));
-        return;
-      }
+    ledger_->GetPage(
+        nullptr, story_page_.NewRequest(), [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "CreateStoryCall() " << story_id_
+                           << " Ledger.GetPage() " << status;
+            Done(std::move(story_id_));
+            return;
+          }
 
-      story_page_->GetId([this](fidl::Array<uint8_t> story_page_id) {
-        story_data_ = StoryData::New();
-        story_data_->story_page_id = std::move(story_page_id);
+          story_page_->GetId([this](fidl::Array<uint8_t> story_page_id) {
+            story_data_ = StoryData::New();
+            story_data_->story_page_id = std::move(story_page_id);
 
-        story_data_->story_info = StoryInfo::New();
-        auto* const story_info = story_data_->story_info.get();
-        story_info->url = url_;
-        story_info->id = story_id_;
-        story_info->is_running = false;
-        story_info->state = StoryState::INITIAL;
-        story_info->extra = std::move(extra_info_);
-        story_info->extra.mark_non_null();
+            story_data_->story_info = StoryInfo::New();
+            auto* const story_info = story_data_->story_info.get();
+            story_info->url = url_;
+            story_info->id = story_id_;
+            story_info->is_running = false;
+            story_info->state = StoryState::INITIAL;
+            story_info->extra = std::move(extra_info_);
+            story_info->extra.mark_non_null();
 
-        auto root_module = ModuleData::New();
-        root_module->url = url_;
-        root_module->link = kRootLink;
-        story_data_->modules.push_back(std::move(root_module));
+            auto root_module = ModuleData::New();
+            root_module->url = url_;
+            root_module->link = kRootLink;
+            story_data_->modules.push_back(std::move(root_module));
 
-        new WriteStoryDataCall(&operation_queue_, root_page_,
-                               story_data_->Clone(), [this] { Cont(); });
-      });
-    });
+            new WriteStoryDataCall(&operation_queue_, root_page_,
+                                   story_data_->Clone(), [this] { Cont(); });
+          });
+        });
   }
 
   void Cont() {
