@@ -427,7 +427,7 @@ bool CommandHandler::Handle_G(const ftl::StringView& packet,
   // registers, not just the general registers. We'll have to take this into
   // account in the future, though for now we're just supporting general
   // registers.
-  if (!current_thread->registers()->SetGeneralRegisters(packet)) {
+  if (!current_thread->registers()->SetGeneralRegistersFromString(packet)) {
     FTL_LOG(ERROR) << "G: Failed to write to general registers";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }

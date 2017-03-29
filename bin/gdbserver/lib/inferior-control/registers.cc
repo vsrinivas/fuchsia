@@ -30,8 +30,8 @@ std::string Registers::GetGeneralRegistersAsString() {
   return GetRegsetAsString(MX_THREAD_STATE_REGSET0);
 }
 
-bool Registers::SetGeneralRegisters(const ftl::StringView& value) {
-  return SetRegset(MX_THREAD_STATE_REGSET0, value);
+bool Registers::SetGeneralRegistersFromString(const ftl::StringView& value) {
+  return SetRegsetFromString(MX_THREAD_STATE_REGSET0, value);
 }
 
 mx_vaddr_t Registers::GetIntRegister(int regno) {

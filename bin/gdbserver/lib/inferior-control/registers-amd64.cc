@@ -104,7 +104,7 @@ class RegistersAmd64 final : public Registers {
     return GetRegisterAsStringHelper(gregs_, -1);
   }
 
-  bool SetRegset(int regset, const ftl::StringView& value) override {
+  bool SetRegsetFromString(int regset, const ftl::StringView& value) override {
     FTL_DCHECK(regset == 0);
 
     auto bytes = util::DecodeByteArrayString(value);

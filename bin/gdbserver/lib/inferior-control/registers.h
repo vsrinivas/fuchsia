@@ -83,13 +83,13 @@ class Registers {
   bool RefreshGeneralRegisters();
   bool WriteGeneralRegisters();
   std::string GetGeneralRegistersAsString();
-  bool SetGeneralRegisters(const ftl::StringView& value);
+  bool SetGeneralRegistersFromString(const ftl::StringView& value);
 
-  // TODO(armansito): GetGeneralRegisters() and SetGeneralRegisters() below both
-  // work with strings that conform to the GDB remote serial protocol. We should
-  // change this so that this class is agnostic to the protocol and isolate such
-  // parsing to the CommandHandler/Server. This way we can separate the back end
-  // bits into a stand-alone library that we can use in gdb/lldb ports.
+  // TODO(armansito): The Get/Set AsString/FromString methods work with
+  // strings that conform to the GDB remote serial protocol. We should change
+  // this so that this class is agnostic to the protocol and isolate such
+  // parsing to the CommandHandler/Server. This way we can separate the back
+  // end bits into a stand-alone library that we can use in gdb/lldb ports.
 
   // Returns a string containing sequentially encoded hexadecimal values of all
   // registers in |regset|. For example, on an architecture with 4 registers of
@@ -106,7 +106,7 @@ class Registers {
   // GetRegsetAsString(), as described above.
   // WriteRegset() must be called afterwards.
   // Returns true on success.
-  virtual bool SetRegset(int regset, const ftl::StringView& value) = 0;
+  virtual bool SetRegsetFromString(int regset, const ftl::StringView& value) = 0;
 
   // Gets the value of the register numbered |regno|. Returns an empty
   // string in case of an error or if |regno| is invalid. This avoids

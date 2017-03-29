@@ -37,7 +37,7 @@ class RegistersDefault final : public Registers {
 
   std::string GetRegsetAsString(int regset) override { return ""; }
 
-  bool SetRegset(int regset, const ftl::StringView& value) override {
+  bool SetRegsetFromString(int regset, const ftl::StringView& value) override {
     return false;
   }
 
