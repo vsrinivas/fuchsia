@@ -43,11 +43,7 @@ mx_handle_t raw_thread_create(void (*thread_entry)(uintptr_t arg), uintptr_t arg
 
 bool tis_test(void) {
     BEGIN_TEST;
-#if _LP64
     uintptr_t arg = 0x1234567890abcdef;
-#else
-    uintptr_t arg = 0x90abcdef;
-#endif
     mx_handle_t handle = raw_thread_create(thread_entry, arg);
     ASSERT_GE(handle, 0, "Error while thread creation");
 
