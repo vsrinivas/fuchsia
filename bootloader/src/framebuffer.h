@@ -33,10 +33,12 @@ typedef struct font_t {
     const uint16_t* data;
     unsigned width;
     unsigned height;
+    efi_graphics_output_blt_pixel* color;
 } fb_font;
 
 // Draws provided text at coordinate x and y of the framebuffer.
 void draw_text(const char* text, size_t length, fb_font* font, int x, int y);
+void draw_version(const char*);
 
 // Draws nodename in appropriate location based on mode.
 void draw_nodename(const char* text);

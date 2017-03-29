@@ -344,7 +344,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     int32_t prev_attr = gConOut->Mode->Attribute;
     gConOut->SetAttribute(gConOut, EFI_LIGHTMAGENTA | EFI_BACKGROUND_BLACK);
-    printf("\nGigaBoot 20X6 - Version %s\n\n", BOOTLOADER_VERSION);
+    draw_version(BOOTLOADER_VERSION);
     gConOut->SetAttribute(gConOut, prev_attr);
 
     if (have_fb) {

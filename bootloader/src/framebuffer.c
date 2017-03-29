@@ -121,6 +121,24 @@ void print_fb_modes() {
 
 #include "logo.h"
 
+static efi_graphics_output_blt_pixel font_white = {
+    .Red = 0xFF,
+    .Green = 0xFF,
+    .Blue = 0xFF,
+};
+
+static efi_graphics_output_blt_pixel font_black = {
+    .Red = 0x0,
+    .Green = 0x0,
+    .Blue = 0x0,
+};
+
+static efi_graphics_output_blt_pixel font_fuchsia = {
+    .Red = 0xFF,
+    .Green = 0x0,
+    .Blue = 0x80,
+};
+
 void draw_logo() {
     efi_graphics_output_protocol* gop = fb_get_gop();
     if (!gop)
@@ -128,26 +146,15 @@ void draw_logo() {
 
     const uint32_t h_res = gop->Mode->Info->HorizontalResolution;
     const uint32_t v_res = gop->Mode->Info->VerticalResolution;
-    efi_graphics_output_blt_pixel fuchsia = {
-        .Red = 0xFF,
-        .Green = 0x0,
-        .Blue = 0xFF,
-    };
-    efi_graphics_output_blt_pixel black = {
-        .Red = 0x0,
-        .Green = 0x0,
-        .Blue = 0x0,
-    };
-
 
     // Blank the screen, removing vendor UEFI logos
-    gop->Blt(gop, &black, EfiBltVideoFill, 0, 0, 0, 0, h_res, v_res, 0);
+    gop->Blt(gop, &font_black, EfiBltVideoFill, 0, 0, 0, 0, h_res, v_res, 0);
 
     efi_graphics_output_blt_pixel* tmp;
     unsigned sz = sizeof(efi_graphics_output_blt_pixel) * logo_width * logo_height;
     if (EFI_ERROR(gBS->AllocatePool(EfiLoaderData, sz, (void*)&tmp))) {
         // Draw the Fuchsia stripe on the top of the screen
-        gop->Blt(gop, &fuchsia, EfiBltVideoFill, 0, 0, 0, 0, h_res, v_res / 100, 0);
+        gop->Blt(gop, &font_fuchsia, EfiBltVideoFill, 0, 0, 0, 0, h_res, v_res / 100, 0);
         return;
     }
 
@@ -190,19 +197,13 @@ static void putchar(efi_graphics_output_protocol* gop, fb_font* font, unsigned c
 
 void draw_text(const char* text, size_t length, fb_font* font, int x, int y) {
     efi_graphics_output_protocol* gop = fb_get_gop();
+    efi_graphics_output_blt_pixel* fg_color = &font_white;
     if (!gop)
         return;
 
-    efi_graphics_output_blt_pixel white = {
-        .Red = 0xFF,
-        .Green = 0xFF,
-        .Blue = 0xFF,
-    };
-    efi_graphics_output_blt_pixel black = {
-        .Red = 0x0,
-        .Green = 0x0,
-        .Blue = 0x0,
-    };
+    if (font->color != NULL) {
+        fg_color = font->color;
+    }
 
     size_t offset = 0;
     size_t scale = 1;
@@ -210,7 +211,7 @@ void draw_text(const char* text, size_t length, fb_font* font, int x, int y) {
         char c = text[i];
         if (c > 127)
             continue;
-        putchar(gop, font, c, x + offset, y, scale, scale, &white, &black);
+        putchar(gop, font, c, x + offset, y, scale, scale, fg_color, &font_black);
         offset += font->width * scale;
     }
 }
@@ -220,13 +221,35 @@ void draw_nodename(const char* nodename) {
     if (!gop)
         return;
 
-    fb_font font;
-    font.data = FONT2X;
-    font.width = FONT2X_WIDTH;
-    font.height = FONT2X_HEIGHT;
+    fb_font font = {
+        .data = FONT2X,
+        .width = FONT2X_WIDTH,
+        .height = FONT2X_HEIGHT,
+        .color = &font_white,
+    };
 
     const uint32_t h_res = gop->Mode->Info->HorizontalResolution;
     const uint32_t v_res = gop->Mode->Info->VerticalResolution;
     size_t length = strlen(nodename);
     draw_text(nodename, length, &font, h_res - (length + 1) * font.width, v_res / 100 + font.height);
+}
+
+void draw_version(const char* version) {
+    efi_graphics_output_protocol* gop = fb_get_gop();
+    if (!gop)
+        return;
+
+    const char* prefix = "GigaBoot 20X6 - Version";
+    size_t prefix_len = strlen(prefix);
+    size_t version_len = strlen(version);
+
+    fb_font font = {
+        .data = FONT1X,
+        .width = FONT1X_WIDTH,
+        .height = FONT1X_HEIGHT,
+        .color = &font_fuchsia,
+    };
+
+    draw_text(prefix, prefix_len, &font, 0, 0);
+    draw_text(version, version_len, &font, (prefix_len + 1) * font.width, 0);
 }
