@@ -365,17 +365,18 @@ void RspServer::OnArchitecturalException(
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
   FTL_DCHECK(process == current_process());
 
-  int sigval = thread->GetGdbSignal();
-  if (sigval < 0) {
+  arch::GdbSignal sigval = thread->GetGdbSignal();
+  if (sigval == arch::GdbSignal::kUnsupported) {
     FTL_LOG(ERROR) << "Exception reporting not supported on current "
                    << "architecture!";
     return;
   }
+  int isigval = static_cast<int>(sigval);
 
-  FTL_DCHECK(sigval < std::numeric_limits<uint8_t>::max());
+  FTL_DCHECK(isigval < std::numeric_limits<uint8_t>::max());
 
   StopReplyPacket stop_reply(StopReplyPacket::Type::kReceivedSignal);
-  stop_reply.SetSignalNumber(sigval);
+  stop_reply.SetSignalNumber(isigval);
   stop_reply.SetThreadId(process->id(), context.tid);
 
   // Registers.

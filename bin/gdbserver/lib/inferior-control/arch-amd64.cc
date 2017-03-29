@@ -16,37 +16,37 @@
 namespace debugserver {
 namespace arch {
 
-int ComputeGdbSignal(const mx_exception_context_t& context) {
-  int sigval;
+GdbSignal ComputeGdbSignal(const mx_exception_context_t& context) {
+  GdbSignal sigval;
   auto arch_exception = context.arch.u.x86_64.vector;
 
   switch (arch_exception) {
     case x86::INT_DIVIDE_0:
-      sigval = 8;
+      sigval = GdbSignal::kFpe;
       break;
     case x86::INT_DEBUG:
-      sigval = 5;
+      sigval = GdbSignal::kTrap;
       break;
     case x86::INT_NMI:
-      sigval = 29;
+      sigval = GdbSignal::kUrg;
       break;
     case x86::INT_BREAKPOINT:
-      sigval = 5;
+      sigval = GdbSignal::kTrap;
       break;
     case x86::INT_OVERFLOW:
-      sigval = 8;
+      sigval = GdbSignal::kFpe;
       break;
     case x86::INT_BOUND_RANGE:
-      sigval = 11;
+      sigval = GdbSignal::kSegv;
       break;
     case x86::INT_INVALID_OP:
-      sigval = 4;
+      sigval = GdbSignal::kIll;
       break;
     case x86::INT_DEVICE_NA:  // e.g., Coprocessor Not Available
-      sigval = 8;
+      sigval = GdbSignal::kFpe;
       break;
     case x86::INT_DOUBLE_FAULT:
-      sigval = 7;
+      sigval = GdbSignal::kEmt;
       break;
     case x86::INT_COPROCESSOR_SEGMENT_OVERRUN:
     case x86::INT_INVALID_TSS:
@@ -54,37 +54,37 @@ int ComputeGdbSignal(const mx_exception_context_t& context) {
     case x86::INT_STACK_FAULT:
     case x86::INT_GP_FAULT:
     case x86::INT_PAGE_FAULT:
-      sigval = 11;
+      sigval = GdbSignal::kSegv;
       break;
-    case x86::INT_RESERVED:  // -> SIGUSR1
-      sigval = 10;
+    case x86::INT_RESERVED:
+      sigval = GdbSignal::kUsr1;
       break;
     case x86::INT_FPU_FP_ERROR:
     case x86::INT_ALIGNMENT_CHECK:
-      sigval = 7;
+      sigval = GdbSignal::kEmt;
       break;
-    case x86::INT_MACHINE_CHECK:  // -> SIGURG
-      sigval = 23;
+    case x86::INT_MACHINE_CHECK:
+      sigval = GdbSignal::kUrg;
       break;
     case x86::INT_SIMD_FP_ERROR:
-      sigval = 8;
+      sigval = GdbSignal::kFpe;
       break;
-    case x86::INT_VIRT:  // Virtualization Exception -> SIGVTALRM
-      sigval = 26;
+    case x86::INT_VIRT:  // Virtualization Exception
+      sigval = GdbSignal::kVtalrm;
       break;
     case 21:  // Control Protection Exception
-      sigval = 11;
+      sigval = GdbSignal::kSegv;
       break;
     case 22 ... 31:
-      sigval = 10;  // reserved (-> SIGUSR1 for now)
+      sigval = GdbSignal::kUsr1;  // reserved (-> SIGUSR1 for now)
       break;
     default:
-      sigval = 12;  // "software generated" (-> SIGUSR2 for now)
+      sigval = GdbSignal::kUsr2;  // "software generated" (-> SIGUSR2 for now)
       break;
   }
 
   FTL_VLOG(1) << "x86 (AMD64) exception (" << arch_exception
-              << ") mapped to: " << sigval;
+              << ") mapped to: " << static_cast<int>(sigval);
 
   return sigval;
 }

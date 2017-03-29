@@ -275,22 +275,24 @@ bool CommandHandler::Handle_C(const ftl::StringView& packet,
   if (semicolon == ftl::StringView::npos)
     semicolon = packet.size();
 
-  unsigned int signo;
-  if (!ftl::StringToNumberWithError<unsigned int>(packet.substr(0, semicolon),
-                                                  &signo, ftl::Base::k16)) {
+  int signo;
+  if (!ftl::StringToNumberWithError<int>(packet.substr(0, semicolon),
+                                         &signo, ftl::Base::k16)) {
     FTL_LOG(ERROR) << "C: Malformed packet: " << packet;
     return ReplyWithError(util::ErrorCode::INVAL, callback);
   }
 
-  int thread_signo = current_thread->GetGdbSignal();
-  if (thread_signo < 0) {
+  arch::GdbSignal thread_signo = current_thread->GetGdbSignal();
+  // TODO(dje): kNone may be a better value to use here.
+  if (thread_signo == arch::GdbSignal::kUnsupported) {
     FTL_LOG(ERROR) << "C: Current thread has received no signal";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
+  int int_thread_signo = static_cast<int>(thread_signo);
 
-  if (static_cast<unsigned int>(thread_signo) != signo) {
-    FTL_LOG(ERROR) << "C: Signal numbers don't match - actual: " << thread_signo
-                   << ", received: " << signo;
+  if (int_thread_signo != signo) {
+    FTL_LOG(ERROR) << "C: Signal numbers don't match - actual: "
+                   << int_thread_signo << ", received: " << signo;
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 

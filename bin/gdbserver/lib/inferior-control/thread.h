@@ -12,6 +12,7 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
+#include "arch.h"
 #include "breakpoint.h"
 #include "registers.h"
 
@@ -60,8 +61,9 @@ class Thread final {
   // Returns a GDB signal number based on the current exception context. If no
   // exception context was set on this Thread or if the exception data from the
   // context does not map to a meaningful GDB signal number, this method returns
-  // -1.
-  int GetGdbSignal() const;
+  // GdbSignal::kUnsupported.
+  // TODO(dje): kNone might be a better value if there is no exception.
+  arch::GdbSignal GetGdbSignal() const;
 
   // Called when the thread gets an exception.
   void OnException(const mx_excp_type_t type,

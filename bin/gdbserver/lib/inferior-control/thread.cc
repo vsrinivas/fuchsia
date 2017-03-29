@@ -85,9 +85,11 @@ ftl::WeakPtr<Thread> Thread::AsWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
-int Thread::GetGdbSignal() const {
-  if (!exception_context_)
-    return -1;
+arch::GdbSignal Thread::GetGdbSignal() const {
+  if (!exception_context_) {
+    // TODO(dje): kNone may be a better value to return here.
+    return arch::GdbSignal::kUnsupported;
+  }
 
   return arch::ComputeGdbSignal(*exception_context_);
 }
