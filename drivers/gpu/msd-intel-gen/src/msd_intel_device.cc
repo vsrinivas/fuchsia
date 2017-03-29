@@ -243,6 +243,13 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     registers::MasterInterruptControl::write(register_io_.get(), true);
 
+    // The modesetting code is only tested on gen 9 (Skylake).
+    if (DeviceId::is_gen9(device_id_)) {
+        // Eventually the modesetting code will be able to bring up a
+        // display.  For now, all it does is fetch the display's EDID data.
+        DisplayPort::FetchAndCheckEdidData(register_io_.get());
+    }
+
     return true;
 }
 
@@ -262,13 +269,6 @@ bool MsdIntelDevice::RenderEngineInit()
         return DRETF(false, "render_engine_cs failed RenderInit");
 
     registers::MasterInterruptControl::write(register_io_.get(), true);
-
-    // The modesetting code is only tested on gen 9 (Skylake).
-    if (DeviceId::is_gen9(device_id_)) {
-        // Eventually the modesetting code will be able to bring up a
-        // display.  For now, all it does is fetch the display's EDID data.
-        DisplayPort::FetchAndCheckEdidData(register_io_.get());
-    }
 
     return true;
 }
