@@ -26,7 +26,7 @@ USER_ASPACE_SIZE   ?= 0x00007ffffefff000UL
 SUBARCH_DIR := $(LOCAL_DIR)/64
 
 ifeq ($(ENABLE_NEW_BOOT),)
-ENABLE_NEW_BOOT := true
+ENABLE_NEW_BOOT := false
 endif
 
 ifneq ($(call TOBOOL,$(ENABLE_NEW_BOOT)),false)
