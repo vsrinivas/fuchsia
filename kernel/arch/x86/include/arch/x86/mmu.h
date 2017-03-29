@@ -93,7 +93,6 @@
 #define IS_PAGE_PRESENT(pte)    ((pte) & X86_MMU_PG_P)
 #define IS_LARGE_PAGE(pte)      ((pte) & X86_MMU_PG_PS)
 
-#if defined(PAE_MODE_ENABLED) || ARCH_X86_64
 #define X86_MMU_PG_NX           (1UL << 63)
 
 // NOTE(abdulla): We assume that PT and EPT paging levels match, specifically:
@@ -102,13 +101,8 @@
 // - PD entries refer to 2MB pages
 // - PT entries refer to 4KB pages
 
-#if ARCH_X86_64
 #define X86_PAGING_LEVELS       4
 #define PML4_SHIFT              39
-#else
-#define X86_PAGING_LEVELS       3
-#endif
-
 #define PDP_SHIFT               30
 #define PD_SHIFT                21
 #define PT_SHIFT                12
@@ -128,21 +122,6 @@
 
 #define VADDR_TO_PML4_INDEX(vaddr) ((vaddr) >> PML4_SHIFT) & ((1ul << ADDR_OFFSET) - 1)
 #define VADDR_TO_PDP_INDEX(vaddr)  ((vaddr) >> PDP_SHIFT) & ((1ul << ADDR_OFFSET) - 1)
-
-#else
-/* non PAE mode */
-#define X86_PG_FRAME            (0xfffff000)
-#define X86_FLAGS_MASK          (0x00000fff)
-#define X86_LARGE_FLAGS_MASK    (0x00001fff)
-#define X86_LARGE_PAGE_FRAME    (0xffc00000)
-#define NO_OF_PT_ENTRIES        1024
-#define X86_PAGING_LEVELS       2
-#define PD_SHIFT                22
-#define PT_SHIFT                12
-#define ADDR_OFFSET             10
-#define PAGE_OFFSET_MASK_4KB    ((1 << PT_SHIFT) - 1)
-#define PAGE_OFFSET_MASK_LARGE  ((1 << PD_SHIFT) - 1)
-#endif
 
 #define VADDR_TO_PD_INDEX(vaddr)  ((vaddr) >> PD_SHIFT) & ((1ul << ADDR_OFFSET) - 1)
 #define VADDR_TO_PT_INDEX(vaddr)  ((vaddr) >> PT_SHIFT) & ((1ul << ADDR_OFFSET) - 1)
@@ -178,12 +157,8 @@ __BEGIN_CDECLS
 enum page_table_levels {
     PT_L,
     PD_L,
-#if defined(PAE_MODE_ENABLED) || ARCH_X86_64
     PDP_L,
-#endif
-#if ARCH_X86_64
     PML4_L,
-#endif
 };
 
 #define MAX_PAGING_LEVEL        (enum page_table_levels)(X86_PAGING_LEVELS - 1)
@@ -194,13 +169,8 @@ struct map_range {
     size_t size;
 };
 
-#if defined(PAE_MODE_ENABLED) || ARCH_X86_64
 typedef uint64_t pt_entry_t;
 #define PRIxPTE PRIx64
-#else
-typedef uint32_t pt_entry_t;
-#define PRIxPTE PRIx32
-#endif
 
 typedef pt_entry_t arch_flags_t;
 

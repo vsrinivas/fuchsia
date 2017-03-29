@@ -141,14 +141,10 @@ static void tlb_invalidate_page_task(void* raw_context) {
     }
 
     switch (context->level) {
-#if X86_PAGING_LEVELS > 3
     case PML4_L:
         x86_tlb_global_invalidate();
         break;
-#endif
-#if X86_PAGING_LEVELS > 2
     case PDP_L:
-#endif
     case PD_L:
     case PT_L:
         __asm__ volatile("invlpg %0" ::"m"(*(uint8_t*)context->vaddr));
@@ -207,14 +203,10 @@ struct PageTableBase {
             return 1ULL << PT_SHIFT;
         case PD_L:
             return 1ULL << PD_SHIFT;
-#if X86_PAGING_LEVELS > 2
         case PDP_L:
             return 1ULL << PDP_SHIFT;
-#if X86_PAGING_LEVELS > 3
         case PML4_L:
             return 1ULL << PML4_SHIFT;
-#endif
-#endif
         default:
             panic("page_size: invalid level\n");
         }
@@ -228,14 +220,10 @@ struct PageTableBase {
         switch (Level) {
         case PD_L:
             return true;
-#if X86_PAGING_LEVELS > 2
         case PDP_L:
             return supports_huge_pages;
-#if X86_PAGING_LEVELS > 3
         case PML4_L:
             return false;
-#endif
-#endif
         default:
             panic("Unreachable case in supports_page_size\n");
         }
@@ -250,14 +238,10 @@ struct PageTableBase {
 
     static uint vaddr_to_index(vaddr_t vaddr) {
         switch (Level) {
-#if X86_PAGING_LEVELS > 3
         case PML4_L:
             return VADDR_TO_PML4_INDEX(vaddr);
-#endif
-#if X86_PAGING_LEVELS > 2
         case PDP_L:
             return VADDR_TO_PDP_INDEX(vaddr);
-#endif
         case PD_L:
             return VADDR_TO_PD_INDEX(vaddr);
         case PT_L:
@@ -275,11 +259,9 @@ struct PageTableBase {
 
         paddr_t pa;
         switch (Level) {
-#if X86_PAGING_LEVELS > 2
         case PDP_L:
             pa = (pte & X86_HUGE_PAGE_FRAME);
             break;
-#endif
         case PD_L:
             pa = (pte & X86_LARGE_PAGE_FRAME);
             break;
@@ -371,11 +353,9 @@ struct PageTable : PageTableBase<Level> {
      */
     static arch_flags_t split_arch_flags(arch_flags_t arch_flags) {
         static_assert(Level != PT_L, "tried to split PT_L");
-#if X86_PAGING_LEVELS > 3
         // This can't easily be a static assert without duplicating
         // a bunch of code in the callers
         DEBUG_ASSERT(Level != PML4_L);
-#endif
         DEBUG_ASSERT(arch_flags & X86_MMU_PG_PS);
         if (Level == PD_L) {
             // Note: Clear PS before the check below; the PAT bit for a PTE is the
@@ -1439,12 +1419,10 @@ static status_t mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, 
     /* based on the return level, parse the page table entry */
     if (paddr) {
         switch (ret_level) {
-#if X86_PAGING_LEVELS > 2
         case PDP_L: /* 1GB page */
             *paddr = PageTable<PDP_L>::paddr_from_pte(*last_valid_entry);
             *paddr |= vaddr & PAGE_OFFSET_MASK_HUGE;
             break;
-#endif
         case PD_L: /* 2MB page */
             *paddr = PageTable<PD_L>::paddr_from_pte(*last_valid_entry);
             *paddr |= vaddr & PAGE_OFFSET_MASK_LARGE;
