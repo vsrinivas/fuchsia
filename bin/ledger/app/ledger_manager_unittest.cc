@@ -85,15 +85,15 @@ class FakeLedgerStorage : public storage::LedgerStorage {
 class FakeLedgerSync : public cloud_sync::LedgerSync {
  public:
   FakeLedgerSync(ftl::RefPtr<ftl::TaskRunner> task_runner)
-      : task_runner_(task_runner) {}
+      : called(false), task_runner_(task_runner) {}
   ~FakeLedgerSync() {}
 
   void RemoteContains(
       ftl::StringView page_id,
       std::function<void(cloud_sync::RemoteResponse)> callback) override {
-    remote_contains_calls++;
-    task_runner_->PostTask([ this, callback = std::move(callback) ] {
-      callback(response_to_return);
+    called = true;
+    task_runner_->PostTask([callback = std::move(callback)] {
+      callback(cloud_sync::RemoteResponse::NOT_FOUND);
     });
   }
 
@@ -103,10 +103,7 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
     return nullptr;
   }
 
-  cloud_sync::RemoteResponse response_to_return =
-      cloud_sync::RemoteResponse::NOT_FOUND;
-
-  int remote_contains_calls = 0;
+  bool called;
 
  private:
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
@@ -148,11 +145,12 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 
   PagePtr page;
-  ledger->NewPage(page.NewRequest(),
+  storage_ptr->should_get_page_fail = true;
+  ledger->GetPage(nullptr, page.NewRequest(),
                   [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
-  EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
+  EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
   page.reset();
   storage_ptr->ClearCalls();
@@ -171,7 +169,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   ledger->GetPage(convert::ToArray(id), page.NewRequest(),
                   [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
-  EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
+  EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(id, storage_ptr->get_page_calls[0]);
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
@@ -229,73 +227,42 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 }
 
-// Cloud shouldn't be queried if the page is present locally.
-TEST_F(LedgerManagerTest, GetPageFromStorageDontAskTheCloud) {
-  storage_ptr->should_get_page_fail = false;
-  Status status;
-
-  // Get the page when present in storage but not in the cloud.
-  sync_ptr->response_to_return = cloud_sync::RemoteResponse::NOT_FOUND;
-  PagePtr page1;
-  ledger->GetPage(
-      convert::ToArray(RandomId()), page1.NewRequest(),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(0, sync_ptr->remote_contains_calls);
-
-  // Get the page when present in storage and in the cloud.
-  sync_ptr->response_to_return = cloud_sync::RemoteResponse::FOUND;
-  PagePtr page2;
-  ledger->GetPage(
-      convert::ToArray(RandomId()), page2.NewRequest(),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(0, sync_ptr->remote_contains_calls);
-}
-
-TEST_F(LedgerManagerTest, GetPageFromTheCloud) {
+// Cloud should never be queried.
+TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   storage_ptr->should_get_page_fail = true;
   Status status;
 
-  // Get the page when not present in the cloud.
-  sync_ptr->response_to_return = cloud_sync::RemoteResponse::NOT_FOUND;
-  PagePtr page1;
-  ledger->GetPage(
-      convert::ToArray(RandomId()), page1.NewRequest(),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
-  EXPECT_EQ(1, sync_ptr->remote_contains_calls);
+  PagePtr page;
 
-  // Get the page when we can't reach the cloud.
-  sync_ptr->response_to_return = cloud_sync::RemoteResponse::NETWORK_ERROR;
-  PagePtr page2;
-  ledger->GetPage(
-      convert::ToArray(RandomId()), page2.NewRequest(),
+  // Get the root page.
+  storage_ptr->ClearCalls();
+  page.reset();
+  ledger->GetRootPage(
+      page.NewRequest(),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  // Gotcha: this returns INTERNAL_ERROR here, because we end up trying to
-  // create the local page storage, and FakeLedgerStorage above can't do that
-  // and returns IO_ERROR.
-  // TODO(ppi): make FakeLedgerStorage more capable and expect OK below.
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
-  EXPECT_EQ(2, sync_ptr->remote_contains_calls);
+  EXPECT_FALSE(sync_ptr->called);
 
-  // Get the page when present in the cloud.
-  sync_ptr->response_to_return = cloud_sync::RemoteResponse::FOUND;
-  PagePtr page3;
+  // Get a new page with a random id.
+  storage_ptr->ClearCalls();
+  page.reset();
   ledger->GetPage(
-      convert::ToArray(RandomId()), page3.NewRequest(),
+      convert::ToArray(RandomId()), page.NewRequest(),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  // Gotcha: this returns INTERNAL_ERROR here, because we end up trying to
-  // create the local page storage, and FakeLedgerStorage above can't do that
-  // and returns IO_ERROR.
-  // TODO(ppi): make FakeLedgerStorage more capable and expect OK below.
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
-  EXPECT_EQ(3, sync_ptr->remote_contains_calls);
+  EXPECT_FALSE(sync_ptr->called);
+
+  // Create a new page.
+  storage_ptr->ClearCalls();
+  page.reset();
+  ledger->GetPage(
+      nullptr, page.NewRequest(),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::INTERNAL_ERROR, status);
+  EXPECT_FALSE(sync_ptr->called);
 }
 
 }  // namespace

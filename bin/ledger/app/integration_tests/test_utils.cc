@@ -180,7 +180,8 @@ PagePtr LedgerApplicationBaseTest::GetTestPage() {
   fidl::InterfaceHandle<Page> page;
   Status status;
 
-  ledger_->NewPage(page.NewRequest(), [&status](Status s) { status = s; });
+  ledger_->GetPage(nullptr, page.NewRequest(),
+                   [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
 

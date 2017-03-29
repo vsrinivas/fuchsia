@@ -18,17 +18,6 @@
 
 namespace ledger {
 
-namespace {
-
-storage::PageId RandomId() {
-  std::string result;
-  result.resize(kPageIdSize);
-  glue::RandBytes(&result[0], kPageIdSize);
-  return result;
-}
-
-}  // namespace
-
 // Container for a PageManager that keeps tracks of in-flight page requests and
 // callbacks and fires them when the PageManager is available.
 class LedgerManager::PageManagerContainer {
@@ -112,25 +101,7 @@ void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
   bindings_.AddBinding(&ledger_impl_, std::move(ledger_request));
 }
 
-void LedgerManager::CreatePage(fidl::InterfaceRequest<Page> page_request,
-                               std::function<void(Status)> callback) {
-  storage::PageId page_id = RandomId();
-  std::unique_ptr<storage::PageStorage> page_storage;
-
-  storage::Status status = storage_->CreatePageStorage(page_id, &page_storage);
-  if (status != storage::Status::OK) {
-    callback(Status::INTERNAL_ERROR);
-    return;
-  }
-
-  PageManagerContainer* container = AddPageManagerContainer(page_id);
-  container->SetPageManager(Status::OK,
-                            NewPageManager(std::move(page_storage)));
-  container->BindPage(std::move(page_request), std::move(callback));
-}
-
 void LedgerManager::GetPage(convert::ExtendedStringView page_id,
-                            CreateIfNotFound create_if_not_found,
                             fidl::InterfaceRequest<Page> page_request,
                             std::function<void(Status)> callback) {
   // If we have the page manager ready, just ask for a new page impl.
@@ -145,7 +116,7 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
 
   storage_->GetPageStorage(
       page_id.ToString(),
-      [ this, create_if_not_found, page_id = page_id.ToString(), container ](
+      [ this, page_id = page_id.ToString(), container ](
           storage::Status storage_status,
           std::unique_ptr<storage::PageStorage> page_storage) mutable {
         Status status = PageUtils::ConvertStatus(storage_status, Status::OK);
@@ -161,23 +132,9 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
           return;
         }
 
-        // If the page was not found locally, but it doesn't matter whether it
-        // exists in the cloud (because it will be created anyway), don't bother
-        // asking the cloud.
-        if (create_if_not_found == CreateIfNotFound::YES || !sync_) {
-          HandleGetPage(std::move(page_id),
-                        cloud_sync::RemoteResponse::NOT_FOUND,
-                        create_if_not_found, container);
-          return;
-        }
-
-        // See if the page exists in the cloud.
-        sync_->RemoteContains(page_id, [
-          this, page_id = std::move(page_id), create_if_not_found, container
-        ](cloud_sync::RemoteResponse remote_response) {
-          HandleGetPage(std::move(page_id), remote_response,
-                        create_if_not_found, container);
-        });
+        // If the page was not found locally, create it.
+        CreatePageStorage(std::move(page_id), container);
+        return;
       });
 }
 
@@ -194,27 +151,8 @@ Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
   }
 }
 
-void LedgerManager::HandleGetPage(storage::PageId page_id,
-                                  cloud_sync::RemoteResponse remote_response,
-                                  CreateIfNotFound create_if_not_found,
-                                  PageManagerContainer* container) {
-  if (remote_response == cloud_sync::RemoteResponse::NOT_FOUND &&
-      create_if_not_found == CreateIfNotFound::NO) {
-    container->SetPageManager(Status::PAGE_NOT_FOUND, nullptr);
-    return;
-  }
-
-  if (remote_response != cloud_sync::RemoteResponse::FOUND &&
-      remote_response != cloud_sync::RemoteResponse::NOT_FOUND) {
-    // Remote response was one of the error responses - might be a network
-    // error, might be a server error; in any case we we can't verify if the
-    // remote page exists or not. In this case we still create the empty local
-    // page. This is sometimes useful, as when the connection is back, the data
-    // will sync automagically. TODO(ppi): expose a richer signal to the client.
-    FTL_LOG(WARNING) << "Failed to verify if the page exists in the cloud, "
-                     << "assuming yes and binding to an empty page.";
-  }
-
+void LedgerManager::CreatePageStorage(storage::PageId page_id,
+                                      PageManagerContainer* container) {
   std::unique_ptr<storage::PageStorage> page_storage;
   storage::Status status = storage_->CreatePageStorage(page_id, &page_storage);
   if (status != storage::Status::OK) {

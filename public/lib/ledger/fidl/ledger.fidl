@@ -30,24 +30,22 @@ enum Status {
 
 [ServiceName="ledger::Ledger"]
 interface Ledger {
-  // This is used to bootstrap a namespace. This page allows the client to keep
-  // track of new pages. The identifier of the root page is guaranteed to be
-  // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  GetRootPage(Page& page_request) => (Status status);
+  // Retrieves the page with the given identifier, creating it if needed. A
+  // |null| identifier can be passed to create a new page with a random unique
+  // identifier. It is allowed to connect to the same page concurrently
+  // multiple times.
 
-  // Retrieves the page with the given identifier. It is allowed to connect to
-  // the same page multiple times. Returns OK and binds |page_request| to the
-  // page on success.
+  // Parameters:
+  // |id| the identifier of the page, or |null| to create a new page with a random identifier.
   //
-  // On error returns one of:
-  //  - PAGE_NOT_REACHABLE if the requested page is not present locally, and
-  //    lookup of the page in the cloud failed due to a connection or server error
-  //  - PAGE_NOT_FOUND if the requested page is not present neither
-  //    locally nor remotely in the cloud
-  GetPage(array<uint8, 16> id, Page& page_request) => (Status status);
+  // Returns OK and binds |page_request| to the page on success.
+  GetPage(array<uint8, 16>? id, Page& page_request) => (Status status);
 
-  // Creates a new page.
-  NewPage(Page& page_request) => (Status status);
+  // Gets the page with identifier
+  // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].
+  // This is a convenience method equivalent to:
+  // GetPage([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], page_request).
+  GetRootPage(Page& page_request) => (Status status);
 
   // Deletes the page with the given id.
   DeletePage(array<uint8, 16> id) => (Status status);

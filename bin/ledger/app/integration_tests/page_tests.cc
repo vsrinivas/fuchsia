@@ -124,7 +124,7 @@ TEST_F(PageIntegrationTest, MultipleLedgerConnections) {
   // Create a page on the first connection.
   PagePtr page;
   Status status;
-  ledger_connection_1->NewPage(page.NewRequest(),
+  ledger_connection_1->GetPage(nullptr, page.NewRequest(),
                                [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_connection_1.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);

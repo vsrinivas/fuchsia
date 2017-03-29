@@ -38,10 +38,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   void BindLedger(fidl::InterfaceRequest<Ledger> ledger_request);
 
   // LedgerImpl::Delegate:
-  void CreatePage(fidl::InterfaceRequest<Page> page_request,
-                  std::function<void(Status)> callback) override;
   void GetPage(convert::ExtendedStringView page_id,
-               CreateIfNotFound create_if_not_found,
                fidl::InterfaceRequest<Page> page_request,
                std::function<void(Status)> callback) override;
   Status DeletePage(convert::ExtendedStringView page_id) override;
@@ -55,13 +52,10 @@ class LedgerManager : public LedgerImpl::Delegate {
  private:
   class PageManagerContainer;
 
-  // Handles a request to retrieve a page, making a decision about whether the
-  // page should be created locally based on the response from a query to the
-  // cloud.
-  void HandleGetPage(storage::PageId page_id,
-                     cloud_sync::RemoteResponse remote_response,
-                     CreateIfNotFound create_if_not_found,
-                     PageManagerContainer* container);
+  // Creates a page storage for the given |page_id| and completes the
+  // PageManagerContainer.
+  void CreatePageStorage(storage::PageId page_id,
+                         PageManagerContainer* container);
 
   // Adds a new PageManagerContainer for |page_id| and configures its so that we
   // delete it from |page_managers_| automatically when the last local client

@@ -24,12 +24,7 @@ class LedgerImpl : public Ledger {
     Delegate() {}
     ~Delegate() {}
 
-    virtual void CreatePage(fidl::InterfaceRequest<Page> page_request,
-                            std::function<void(Status)> callback) = 0;
-
-    enum class CreateIfNotFound { YES, NO };
     virtual void GetPage(convert::ExtendedStringView page_id,
-                         CreateIfNotFound create_if_not_found,
                          fidl::InterfaceRequest<Page> page_request,
                          std::function<void(Status)> callback) = 0;
 
@@ -53,8 +48,6 @@ class LedgerImpl : public Ledger {
   void GetPage(fidl::Array<uint8_t> id,
                fidl::InterfaceRequest<Page> page_request,
                const GetPageCallback& callback) override;
-  void NewPage(fidl::InterfaceRequest<Page> page_request,
-               const NewPageCallback& callback) override;
   void DeletePage(fidl::Array<uint8_t> id,
                   const DeletePageCallback& callback) override;
 

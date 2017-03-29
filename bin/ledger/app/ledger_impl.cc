@@ -12,10 +12,20 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/callback/trace_callback.h"
+#include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace ledger {
+
+namespace {
+
+void GenerateRandomId(fidl::Array<uint8_t>* id) {
+  id->resize(kPageIdSize);
+  glue::RandBytes(id->data(), kPageIdSize);
+}
+
+}  // namespace
 
 LedgerImpl::LedgerImpl(Delegate* delegate) : delegate_(delegate) {}
 
@@ -25,26 +35,20 @@ LedgerImpl::~LedgerImpl() {}
 void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
                              const GetRootPageCallback& callback) {
   delegate_->GetPage(
-      kRootPageId, Delegate::CreateIfNotFound::YES, std::move(page_request),
+      kRootPageId, std::move(page_request),
       TRACE_CALLBACK(std::move(callback), "ledger", "get_root_page"));
   ;
 }
 
-// GetPage(array<uint8> id, Page& page) => (Status status);
+// GetPage(array<uint8, 16>? id, Page& page) => (Status status);
 void LedgerImpl::GetPage(fidl::Array<uint8_t> id,
                          fidl::InterfaceRequest<Page> page_request,
                          const GetPageCallback& callback) {
-  delegate_->GetPage(id, Delegate::CreateIfNotFound::NO,
-                     std::move(page_request),
+  if (!id) {
+    GenerateRandomId(&id);
+  }
+  delegate_->GetPage(id, std::move(page_request),
                      TRACE_CALLBACK(std::move(callback), "ledger", "get_page"));
-}
-
-// NewPage(Page& page) => (Status status);
-void LedgerImpl::NewPage(fidl::InterfaceRequest<Page> page_request,
-                         const NewPageCallback& callback) {
-  delegate_->CreatePage(
-      std::move(page_request),
-      TRACE_CALLBACK(std::move(callback), "ledger", "new_page"));
 }
 
 // DeletePage(array<uint8> id) => (Status status);
