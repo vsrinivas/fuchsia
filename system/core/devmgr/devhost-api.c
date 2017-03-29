@@ -46,10 +46,11 @@ static void _device_init(mx_device_t* dev, mx_driver_t* drv,
     DM_UNLOCK();
 }
 
-static mx_status_t _device_add(mx_device_t* dev, mx_device_t* parent) {
+static mx_status_t _device_add(mx_device_t* dev, mx_device_t* parent,
+                               const char* businfo, mx_handle_t resource) {
     mx_status_t r;
     DM_LOCK();
-    r = devhost_device_add(dev, parent);
+    r = devhost_device_add(dev, parent, businfo, resource);
     DM_UNLOCK();
     return r;
 }
@@ -60,7 +61,7 @@ static mx_status_t _device_add_instance(mx_device_t* dev, mx_device_t* parent) {
     if (dev) {
         dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
     }
-    r = devhost_device_add(dev, parent);
+    r = devhost_device_add(dev, parent, NULL, 0);
     DM_UNLOCK();
     return r;
 }

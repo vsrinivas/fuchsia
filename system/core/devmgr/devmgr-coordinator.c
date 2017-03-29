@@ -253,7 +253,7 @@ fail:
     return ERR_IO;
 }
 
-void coordinator_init(mx_handle_t root_job) {
+void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job) {
     mx_status_t status = mx_job_create(root_job, 0u, &devhost_job_handle);
     if (status < 0) {
         printf("unable to create devhost job\n");
@@ -287,7 +287,7 @@ void devmgr_init(mx_handle_t root_job) {
     memfs_create_device_at(vnroot, &vnclass, "class", 0);
     prepopulate_protocol_dirs();
 
-    coordinator_init(root_job);
+    coordinator_init(vnroot, root_job);
 }
 
 void devmgr_handle_messages(void) {

@@ -28,8 +28,13 @@ __EXPORT void device_init(mx_device_t* dev, mx_driver_t* drv,
     API->device_init(dev, drv, name, ops);
 }
 
+__EXPORT mx_status_t device_add_etc(mx_device_t* dev, mx_device_t* parent,
+                                    const char* businfo, mx_handle_t resource) {
+    return API->device_add(dev, parent, businfo, resource);
+}
+
 __EXPORT mx_status_t device_add(mx_device_t* dev, mx_device_t* parent) {
-    return API->device_add(dev, parent);
+    return API->device_add(dev, parent, NULL, 0);
 }
 
 __EXPORT mx_status_t device_add_instance(mx_device_t* dev, mx_device_t* parent) {

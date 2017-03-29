@@ -339,7 +339,8 @@ mx_status_t devhost_device_add_root(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent) {
+mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
+                               const char* businfo, mx_handle_t resource) {
     mx_status_t status;
     if ((status = device_validate(dev)) < 0) {
         return status;

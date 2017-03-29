@@ -51,10 +51,11 @@ MODULE_DEFINES := DEVMGR=1
 
 ifeq ($(ENABLE_DEVHOST_V2),true)
 MODULE_SRCS += \
-	$(LOCAL_DIR)/devmgr-coordinator-v2.c \
-	$(LOCAL_DIR)/devmgr-drivers.c \
-	$(LOCAL_DIR)/driver-info.c \
-	$(LOCAL_DIR)/acpi.c
+    $(LOCAL_DIR)/devmgr-coordinator-v2.c \
+    $(LOCAL_DIR)/devmgr-drivers.c \
+    $(LOCAL_DIR)/devhost-shared.c \
+    $(LOCAL_DIR)/driver-info.c \
+    $(LOCAL_DIR)/acpi.c
 
 MODULE_DEFINES += DEVHOST_V2=1
 
@@ -84,15 +85,6 @@ LOCAL_DIR := $(LOCAL_SAVEDIR)
 
 MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1
 
-ifeq ($(ENABLE_DEVHOST_V2),true)
-MODULE_DEFINES += DEVHOST_V2=1
-MODULE_SRCS := \
-	$(LOCAL_DIR)/devhost-v2.c
-
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
-
-MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
-else
 MODULE_SRCS := \
     $(LOCAL_DIR)/acpi.c \
     $(LOCAL_DIR)/acpi-device.c \
@@ -110,7 +102,28 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := system/ulib/acpisvc-client system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/launchpad system/ulib/magenta system/ulib/c
-endif
+
+include make/module.mk
+
+
+# devhost - container for drivers - v2
+#
+MODULE := $(LOCAL_DIR).host2
+
+MODULE_NAME := devhost2
+
+MODULE_TYPE := userapp
+
+MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1
+
+MODULE_DEFINES += DEVHOST_V2=1
+MODULE_SRCS := \
+    $(LOCAL_DIR)/devhost-v2.c \
+    $(LOCAL_DIR)/devhost-shared.c \
+
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+
+MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk
 

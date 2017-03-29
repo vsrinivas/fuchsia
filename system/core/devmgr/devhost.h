@@ -39,7 +39,8 @@ mx_status_t devhost_driver_add(mx_driver_t* driver);
 mx_status_t devhost_driver_remove(mx_driver_t* driver);
 mx_status_t devhost_driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 
-mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent);
+mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
+                              const char* businfo, mx_handle_t resource);
 mx_status_t devhost_device_add_root(mx_device_t* dev);
 mx_status_t devhost_device_remove(mx_device_t* dev);
 mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_name);
