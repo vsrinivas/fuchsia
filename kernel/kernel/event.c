@@ -93,12 +93,6 @@ status_t event_wait_timeout(event_t *e, lk_time_t timeout, bool interruptable)
 
     THREAD_LOCK(state);
 
-    /* if we've been killed and going in interruptable, abort here */
-    if (interruptable && unlikely((current_thread->signals & THREAD_SIGNAL_KILL))) {
-        ret = ERR_INTERRUPTED;
-        goto out;
-    }
-
     current_thread->interruptable = interruptable;
 
     if (e->signaled) {

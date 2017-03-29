@@ -30,16 +30,19 @@ __BEGIN_CDECLS;
 #endif
 
 enum thread_state {
-    THREAD_SUSPENDED = 0,
+    THREAD_INITIAL = 0,
     THREAD_READY,
     THREAD_RUNNING,
     THREAD_BLOCKED,
     THREAD_SLEEPING,
+    THREAD_SUSPENDED,
     THREAD_DEATH,
 };
 
 enum thread_user_state_change {
     THREAD_USER_STATE_EXIT,
+    THREAD_USER_STATE_SUSPEND,
+    THREAD_USER_STATE_RESUME,
 };
 
 typedef int (*thread_start_routine)(void *arg);
@@ -55,6 +58,7 @@ typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
 #define THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK  (1<<5)
 
 #define THREAD_SIGNAL_KILL                    (1<<0)
+#define THREAD_SIGNAL_SUSPEND                 (1<<1)
 
 #define THREAD_MAGIC (0x74687264) // 'thrd'
 
@@ -179,6 +183,7 @@ void thread_set_user_callback(thread_t *t, thread_user_callback_t cb);
 thread_t *thread_create(const char *name, thread_start_routine entry, void *arg, int priority, size_t stack_size);
 thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine entry, void *arg, int priority, void *stack, void *unsafe_stack, size_t stack_size, thread_trampoline_routine alt_trampoline);
 status_t thread_resume(thread_t *);
+status_t thread_suspend(thread_t *);
 void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t *);
 

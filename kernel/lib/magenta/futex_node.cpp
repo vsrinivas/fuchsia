@@ -119,13 +119,9 @@ status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t timeout) TA_NO_THREAD_SA
     // otherwise we could miss a thread termination.
     thread_t* current_thread = get_current_thread();
     status_t result;
-    if (current_thread->signals & THREAD_SIGNAL_KILL) {
-        result = ERR_INTERRUPTED;
-    } else {
-        current_thread->interruptable = true;
-        result = wait_queue_block(&wait_queue_, t);
-        current_thread->interruptable = false;
-    }
+    current_thread->interruptable = true;
+    result = wait_queue_block(&wait_queue_, t);
+    current_thread->interruptable = false;
 
     THREAD_UNLOCK(state);
 
