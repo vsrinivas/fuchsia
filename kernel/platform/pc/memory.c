@@ -361,8 +361,10 @@ static void multiboot_range_advance(boot_addr_range_t *range)
             return;
         }
 
-        range->base = seq->info->mem_lower * 1024U;
-        range->size = (seq->info->mem_upper - seq->info->mem_lower) * 1024U;
+        // mem_lower is memory (KB) available at base=0
+        // mem_upper is memory (KB) available at base=1MB
+        range->base = 1024*1024;
+        range->size = seq->info->mem_upper * 1024U;
         range->is_mem = 1;
         range->is_reset = 0;
     }
