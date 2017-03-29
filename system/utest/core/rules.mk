@@ -14,6 +14,10 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/posix-bits.c \
     $(LOCAL_DIR)/main.c \
 
+ifeq ($(SUBARCH),x86-64)
+MODULE_SRCS += $(wildcard $(LOCAL_DIR)/*/*.S)
+endif
+
 MODULE_NAME := core-tests
 
 MODULE_STATIC_LIBS := \

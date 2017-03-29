@@ -9,7 +9,11 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/hypervisor.c \
+    $(LOCAL_DIR)/hypervisor.c
+
+ifeq ($(SUBARCH),x86-64)
+MODULE_SRCS += $(LOCAL_DIR)/x86-64.S
+endif
 
 MODULE_NAME := hypervisor-test
 

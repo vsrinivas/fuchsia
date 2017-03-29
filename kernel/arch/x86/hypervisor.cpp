@@ -528,7 +528,6 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     // it is acceptable to use per-CPU state.
     vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
     vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(percpu->cpu_num));
-    vmwrite(VMCS_32_HOST_IA32_SYSENTER_CS, 0);
     vmwrite(VMCS_64_HOST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
     vmwrite(VMCS_64_HOST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
     vmwrite(VMCS_XX_HOST_CR0, x86_get_cr0());
@@ -539,6 +538,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmwrite(VMCS_XX_HOST_IDTR_BASE, reinterpret_cast<uint64_t>(idt_get_readonly()));
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_ESP, 0);
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_EIP, 0);
+    vmwrite(VMCS_32_HOST_IA32_SYSENTER_CS, 0);
     vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load_entry));
 
     // Setup VMCS guest state.
@@ -599,10 +599,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmwrite(VMCS_XX_GUEST_IA32_SYSENTER_ESP, 0);
     vmwrite(VMCS_XX_GUEST_IA32_SYSENTER_EIP, 0);
 
-    // We begin execution at the base of guest logical address space. It's up
-    // to the guest to then setup the environment correctly.
+    vmwrite(VMCS_32_GUEST_IA32_SYSENTER_CS, 0);
     vmwrite(VMCS_XX_GUEST_RSP, 0);
-    vmwrite(VMCS_XX_GUEST_RIP, 0);
 
     // From Volume 3, Section 24.4.2: If the “VMCS shadowing” VM-execution
     // control is 1, the VMREAD and VMWRITE instructions access the VMCS
@@ -614,15 +612,23 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     return NO_ERROR;
 }
 
-status_t VmcsPerCpu::Launch(uintptr_t guest_cr3) {
+status_t VmcsPerCpu::Launch(uintptr_t guest_cr3, uintptr_t guest_entry) {
     AutoVmcsLoad vmcs_load(&page_);
     VmxHostState host_state;
     if (vmx_host_save(&host_state)) {
-        // We may return from the guest with flags set, due to a vmlaunch
-        // failure, therefore we use an unchecked vmread to get the exit reason
-        // so as not to trigger the CF and ZF flags check.
-        uint64_t reason = vmread_unchecked(VMCS_32_EXIT_REASON) & VMCS_32_EXIT_REASON_BASIC_MASK;
+        uint64_t reason = vmread(VMCS_32_EXIT_REASON);
         dprintf(SPEW, "vmexit reason: %#" PRIx64 "\n", reason);
+        uint64_t qualification = vmread(VMCS_XX_EXIT_QUALIFICATION);
+        dprintf(SPEW, "vmexit qualification: %#" PRIx64 "\n", qualification);
+        uint64_t interruption_information = vmread(VMCS_32_INTERRUPTION_INFORMATION);
+        dprintf(SPEW, "vmexit interruption information: %#" PRIx64 "\n", interruption_information);
+        uint64_t interruption_error_code = vmread(VMCS_32_INTERRUPTION_ERROR_CODE);
+        dprintf(SPEW, "vmexit interruption error code: %#" PRIx64 "\n", interruption_error_code);
+
+        uint64_t physical_address = vmread(VMCS_64_GUEST_PHYSICAL_ADDRESS);
+        dprintf(SPEW, "guest physical address: %#" PRIx64 "\n", physical_address);
+        uint64_t rip = vmread(VMCS_XX_GUEST_RIP);
+        dprintf(SPEW, "guest rip: %#" PRIx64 "\n", rip);
         return NO_ERROR;
     }
 
@@ -634,6 +640,7 @@ status_t VmcsPerCpu::Launch(uintptr_t guest_cr3) {
     vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state));
 
     vmwrite(VMCS_XX_GUEST_CR3, guest_cr3);
+    vmwrite(VMCS_XX_GUEST_RIP, guest_entry);
 
     status_t status = vmlaunch();
     if (status != NO_ERROR) {
@@ -704,7 +711,7 @@ VmcsPerCpu* VmcsContext::PerCpu() {
 }
 
 status_t VmcsContext::set_cr3(uintptr_t guest_cr3) {
-    if (guest_cr3 > gpas_->size() - PAGE_SIZE)
+    if (guest_cr3 >= gpas_->size() - PAGE_SIZE)
         return ERR_INVALID_ARGS;
     cr3_ = guest_cr3;
     return NO_ERROR;
@@ -713,12 +720,15 @@ status_t VmcsContext::set_cr3(uintptr_t guest_cr3) {
 static int vmcs_launch(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
-    return per_cpu->Launch(context->cr3());
+    return per_cpu->Launch(context->cr3(), context->entry());
 }
 
-status_t VmcsContext::Start() {
+status_t VmcsContext::Start(uintptr_t guest_entry) {
     if (cr3_ == UINTPTR_MAX)
         return ERR_BAD_STATE;
+    if (guest_entry >= gpas_->size())
+        return ERR_INVALID_ARGS;
+    entry_ = guest_entry;
     return percpu_exec(vmcs_launch, this);
 }
 
@@ -754,6 +764,6 @@ status_t x86_guest_set_cr3(const mxtl::unique_ptr<GuestContext>& context, uintpt
     return context->set_cr3(guest_cr3);
 }
 
-status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context) {
-    return context->Start();
+status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_entry) {
+    return context->Start(guest_entry);
 }

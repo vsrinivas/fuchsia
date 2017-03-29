@@ -65,7 +65,7 @@ static mx_status_t guest_create(mx_handle_t hypervisor_handle, mx_handle_t guest
     return NO_ERROR;
 }
 
-static mx_status_t guest_start(mx_handle_t handle) {
+static mx_status_t guest_start(mx_handle_t handle, uintptr_t guest_entry) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<GuestDispatcher> guest;
@@ -73,7 +73,7 @@ static mx_status_t guest_start(mx_handle_t handle) {
     if (status != NO_ERROR)
         return status;
 
-    return guest->Start();
+    return guest->Start(guest_entry);
 }
 
 #if ARCH_X86_64
@@ -108,8 +108,14 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
             return ERR_INVALID_ARGS;
         return NO_ERROR;
     }
-    case MX_HYPERVISOR_OP_GUEST_START:
-        return guest_start(handle);
+    case MX_HYPERVISOR_OP_GUEST_START: {
+        uintptr_t guest_entry;
+        if (args_len != sizeof(guest_entry))
+            return ERR_INVALID_ARGS;
+        if (args.copy_array_from_user(&guest_entry, sizeof(guest_entry)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        return guest_start(handle, guest_entry);
+    }
 #if ARCH_X86_64
     case MX_HYPERVISOR_OP_GUEST_SET_CR3: {
         uintptr_t guest_cr3;

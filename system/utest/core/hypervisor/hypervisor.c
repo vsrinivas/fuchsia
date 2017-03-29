@@ -11,6 +11,33 @@
 
 static const uint32_t kAllocateFlags = MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE;
 static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
+static const uint64_t kVmoSize = 2 << 20;
+
+extern const char guest_start[];
+extern const char guest_end[];
+
+#if __x86_64__
+#define X86_MMU_PG_P    0x0001  /* P    Valid           */
+#define X86_MMU_PG_RW   0x0002  /* R/W  Read/Write      */
+#define X86_MMU_PG_U    0x0004  /* U/S  User/Supervisor */
+#define X86_MMU_PG_PS   0x0080  /* PS   Page size       */
+
+static uintptr_t guest_setup(uint8_t* addr) {
+    memset(addr, 0, kVmoSize);
+
+    uint64_t* pml4 = (uint64_t*)addr;
+    uint64_t* pdp = (uint64_t*)(addr + PAGE_SIZE);
+    uint64_t* pd = (uint64_t*)(addr + PAGE_SIZE * 2);
+    uint64_t* ip = (uint64_t*)(addr + PAGE_SIZE * 3);
+
+    *pml4 = PAGE_SIZE | X86_MMU_PG_P | X86_MMU_PG_RW | X86_MMU_PG_U;
+    *pdp = PAGE_SIZE * 2 | X86_MMU_PG_P | X86_MMU_PG_RW | X86_MMU_PG_U;
+    *pd = X86_MMU_PG_P | X86_MMU_PG_RW | X86_MMU_PG_U | X86_MMU_PG_PS;
+
+    memcpy(ip, guest_start, guest_end - guest_start);
+    return PAGE_SIZE * 3;
+}
+#endif // __x86_64__
 
 static bool guest_start_test(void) {
     BEGIN_TEST;
@@ -23,7 +50,7 @@ static bool guest_start_test(void) {
     ASSERT_EQ(status, NO_ERROR, "");
 
     mx_handle_t vmo;
-    status = mx_vmo_create(2 << 20, 0, &vmo);
+    status = mx_vmo_create(kVmoSize, 0, &vmo);
 
     mx_handle_t guest;
     ASSERT_EQ(mx_hypervisor_op(hypervisor, MX_HYPERVISOR_OP_GUEST_CREATE,
@@ -33,20 +60,22 @@ static bool guest_start_test(void) {
     // Setup guest page tables.
     mx_handle_t vmar;
     uintptr_t addr;
-    ASSERT_EQ(mx_vmar_allocate(mx_vmar_root_self(), 0, PAGE_SIZE, kAllocateFlags, &vmar, &addr),
+    ASSERT_EQ(mx_vmar_allocate(mx_vmar_root_self(), 0, kVmoSize, kAllocateFlags, &vmar, &addr),
               NO_ERROR, "");
     uintptr_t mapped_addr;
-    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, PAGE_SIZE, kMapFlags, &mapped_addr), NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, kVmoSize, kMapFlags, &mapped_addr), NO_ERROR, "");
 
+    uintptr_t guest_entry = 0;
 #if __x86_64__
-    memset((void*)mapped_addr, 0, PAGE_SIZE);
+    guest_entry = guest_setup((uint8_t*)mapped_addr);
     uintptr_t guest_cr3 = 0;
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_CR3,
                                &guest_cr3, sizeof(guest_cr3), NULL, 0),
               NO_ERROR, "");
 #endif // __x86_64__
 
-    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_START, NULL, 0, NULL, 0),
+    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_START,
+                               &guest_entry, sizeof(guest_entry), NULL, 0),
               NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(vmar), NO_ERROR, "");

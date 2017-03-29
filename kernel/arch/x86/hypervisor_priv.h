@@ -47,6 +47,8 @@
 #define VMCS_32_PROCBASED_CTLS2                     0x401e      /* Secondary processor-based controls */
 #define VMCS_32_INSTRUCTION_ERROR                   0x4400      /* Instruction error */
 #define VMCS_32_EXIT_REASON                         0x4402      /* Exit reason */
+#define VMCS_32_INTERRUPTION_INFORMATION            0x4404      /* VM-exit interruption information */
+#define VMCS_32_INTERRUPTION_ERROR_CODE             0x4406      /* VM-exit interruption error code */
 #define VMCS_32_HOST_IA32_SYSENTER_CS               0x4c00      /* Host SYSENTER CS */
 #define VMCS_32_GUEST_GDTR_LIMIT                    0x4810      /* Guest GDTR Limit */
 #define VMCS_32_GUEST_IDTR_LIMIT                    0x4812      /* Guest IDTR Limit */
@@ -60,15 +62,18 @@
 #define VMCS_32_GUEST_TR_ACCESS_RIGHTS              0x4822      /* Guest TR Access Rights */
 #define VMCS_32_GUEST_INTERRUPTIBILITY_STATE        0x4824      /* Guest interruptibility state */
 #define VMCS_32_GUEST_ACTIVITY_STATE                0x4826      /* Guest activity state */
+#define VMCS_32_GUEST_IA32_SYSENTER_CS              0x482a      /* Guest SYSENTER CS */
 
 #define VMCS_64_MSR_BITMAPS_ADDRESS                 0x2004      /* MSR bitmaps address */
 #define VMCS_64_EPT_POINTER                         0x201a      /* EPT pointer */
+#define VMCS_64_GUEST_PHYSICAL_ADDRESS              0x2400      /* Guest physical address */
 #define VMCS_64_LINK_POINTER                        0x2800      /* VMCS link pointer */
 #define VMCS_64_GUEST_IA32_PAT                      0x2804      /* Guest PAT */
 #define VMCS_64_GUEST_IA32_EFER                     0x2806      /* Guest EFER */
 #define VMCS_64_HOST_IA32_PAT                       0x2c00      /* Host PAT */
 #define VMCS_64_HOST_IA32_EFER                      0x2c02      /* Host EFER */
 
+#define VMCS_XX_EXIT_QUALIFICATION                  0x6400      /* Exit qualification */
 #define VMCS_XX_GUEST_CR0                           0x6800      /* Guest CR0 */
 #define VMCS_XX_GUEST_CR3                           0x6802      /* Guest CR3 */
 #define VMCS_XX_GUEST_CR4                           0x6804      /* Guest CR4 */
@@ -203,7 +208,7 @@ public:
     status_t Init(const VmxInfo& vmx_info) override;
     status_t Clear();
     status_t Setup(paddr_t pml4_address);
-    status_t Launch(uintptr_t guest_cr3);
+    status_t Launch(uintptr_t guest_cr3, uintptr_t guest_entry);
 
 private:
     VmxPage msr_bitmaps_page_;

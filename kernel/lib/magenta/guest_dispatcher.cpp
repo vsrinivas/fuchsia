@@ -45,8 +45,8 @@ mx_status_t GuestDispatcher::set_cr3(uintptr_t guest_cr3) {
 }
 #endif // ARCH_X86_64
 
-mx_status_t GuestDispatcher::Start() {
+mx_status_t GuestDispatcher::Start(uintptr_t guest_entry) {
     canary_.Assert();
 
-    return arch_guest_start(context_);
+    return arch_guest_start(context_, guest_entry);
 }
