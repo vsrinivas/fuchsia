@@ -1,5 +1,4 @@
 // Copyright 2016 The Fuchsia Authors
-// Copyright (c) 2009 Corey Tabaka
 //
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
@@ -7,13 +6,16 @@
 
 #include <asm.h>
 
-/* TODO: */
-
 .text
-.align 2
 
-/* void *memcpy(void *dest, const void *src, size_t n); */
-FUNCTION(memmove)
+// %rax = memcpy(%rdi, %rsi, %rdx)
 FUNCTION(memcpy)
-    ret
+    // Save return value.
+    mov %rdi, %rax
 
+    mov %rdx, %rcx
+    rep movsb // while (rcx-- > 0) *rdi++ = *rsi++;
+
+.Lret:
+    ret
+END(memcpy)

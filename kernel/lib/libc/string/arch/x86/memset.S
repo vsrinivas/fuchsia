@@ -1,5 +1,4 @@
 // Copyright 2016 The Fuchsia Authors
-// Copyright (c) 2009 Corey Tabaka
 //
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
@@ -7,12 +6,17 @@
 
 #include <asm.h>
 
-/* TODO: */
-
 .text
-.align 2
 
-/* void *memset(void *s, int c, size_t n); */
+// %rax = memset(%rdi, %rsi, %rdx)
 FUNCTION(memset)
-    ret
+    // Save return value.
+    mov %rdi, %r11
 
+    mov %sil, %al
+    mov %rdx, %rcx
+    rep stosb // while (rcx-- > 0) *rdi++ = al;
+
+    mov %r11, %rax
+    ret
+END(memset)
