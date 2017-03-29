@@ -4,6 +4,8 @@
 
 #include "lib/ftl/functional/make_copyable.h"
 
+#include <memory>
+
 #include "gtest/gtest.h"
 
 namespace ftl {

@@ -11,6 +11,8 @@
 #include <mach/mach_time.h>
 #elif defined(OS_FUCHSIA)
 #include <magenta/syscalls.h>
+#elif defined(OS_WIN)
+#include <windows.h>
 #else
 #include <time.h>
 #endif  // defined(OS_MACOSX) || defined(OS_IOS)
@@ -46,6 +48,16 @@ TimePoint TimePoint::Now() {
 // static
 TimePoint TimePoint::Now() {
   return TimePoint(mx_time_get(MX_CLOCK_MONOTONIC));
+}
+
+#elif defined(OS_WIN)
+
+TimePoint TimePoint::Now() {
+  LARGE_INTEGER freq = {0};
+  FTL_DCHECK(QueryPerformanceFrequency(&freq));
+  LARGE_INTEGER count = {0};
+  FTL_DCHECK(QueryPerformanceCounter(&count));
+  return TimePoint((count.QuadPart * 1000000000) / freq.QuadPart);
 }
 
 #else

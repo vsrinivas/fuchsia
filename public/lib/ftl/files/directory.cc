@@ -4,14 +4,13 @@
 
 #include "lib/ftl/files/directory.h"
 
-#include <vector>
-
 #include <limits.h>
 #include <sys/stat.h>
-#include <unistd.h>
+#include <vector>
 
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/portable_unistd.h"
 
 namespace files {
 

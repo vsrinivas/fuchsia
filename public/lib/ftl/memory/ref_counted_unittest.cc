@@ -581,6 +581,7 @@ TEST(RefCountedTest, PublicCtorAndDtor) {
 // The danger with having a public constructor or destructor is that certain
 // things will compile. You should get some protection by assertions in Debug
 // builds.
+#ifndef NDEBUG
 TEST(RefCountedTest, DebugChecks) {
   {
     MyPublicClass* p = new MyPublicClass();
@@ -598,6 +599,7 @@ TEST(RefCountedTest, DebugChecks) {
     EXPECT_DEATH_IF_SUPPORTED(delete r.get(), "destruction_started_");
   }
 }
+#endif
 
 // TODO(vtl): Add (threaded) stress tests.
 

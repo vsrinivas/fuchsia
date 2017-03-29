@@ -4,7 +4,7 @@
 
 #include "lib/ftl/files/unique_fd.h"
 
-#include <unistd.h>
+#include "lib/ftl/portable_unistd.h"
 
 namespace ftl {
 namespace internal {

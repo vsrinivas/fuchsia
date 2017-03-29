@@ -23,7 +23,7 @@ TEST(StringNumberConversionsTest, NumberToString_Basic) {
   EXPECT_EQ("2309737967",
             NumberToString<int64_t>(static_cast<int64_t>(2309737967)));
   EXPECT_EQ("-2309737967",
-            NumberToString<int64_t>(static_cast<int64_t>(-2309737967)));
+            NumberToString<int64_t>(static_cast<int64_t>(-2309737967ll)));
 
   EXPECT_EQ("0", NumberToString<int>(0));
   EXPECT_EQ("123", NumberToString<int>(123));

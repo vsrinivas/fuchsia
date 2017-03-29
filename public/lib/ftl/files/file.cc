@@ -7,12 +7,18 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <sys/stat.h>
-#include <unistd.h>
+
+#if defined(OS_WIN)
+#define FILE_CREATE_MODE _S_IREAD | _S_IWRITE
+#else
+#define FILE_CREATE_MODE 0666
+#endif
 
 #include "lib/ftl/files/eintr_wrapper.h"
 #include "lib/ftl/files/file_descriptor.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/portable_unistd.h"
 
 namespace files {
 namespace {
@@ -47,7 +53,7 @@ bool ReadFile(const std::string& path, T* result) {
 }  // namespace
 
 bool WriteFile(const std::string& path, const char* data, ssize_t size) {
-  ftl::UniqueFD fd(HANDLE_EINTR(creat(path.c_str(), 0666)));
+  ftl::UniqueFD fd(HANDLE_EINTR(creat(path.c_str(), FILE_CREATE_MODE)));
   if (!fd.is_valid())
     return false;
   return ftl::WriteFileDescriptor(fd.get(), data, size);

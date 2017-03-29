@@ -6,13 +6,13 @@
 
 #include <fcntl.h>
 #include <string.h>
-#include <unistd.h>
 
 #include <algorithm>
 #include <iostream>
 
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/portable_unistd.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 
 namespace ftl {

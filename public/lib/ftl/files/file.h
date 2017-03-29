@@ -5,10 +5,10 @@
 #ifndef LIB_FTL_FILES_FILE_H_
 #define LIB_FTL_FILES_FILE_H_
 
-#include <stdint.h>
-
 #include <string>
 #include <vector>
+
+#include "lib/ftl/inttypes.h"
 
 namespace files {
 

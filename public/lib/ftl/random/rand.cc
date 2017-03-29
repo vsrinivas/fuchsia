@@ -9,6 +9,20 @@
 
 #if defined(OS_FUCHSIA)
 #include <magenta/syscalls.h>
+
+#elif defined(OS_WIN)
+#include <windows.h>
+#include <stddef.h>
+#include <stdint.h>
+// #define needed to link in RtlGenRandom(), a.k.a. SystemFunction036.  See the
+// "Community Additions" comment on MSDN here:
+// http://msdn.microsoft.com/en-us/library/windows/desktop/aa387694.aspx
+#define SystemFunction036 NTAPI SystemFunction036
+#include <NTSecAPI.h>
+#undef SystemFunction036
+#include <algorithm>
+#include <limits>
+
 #else
 #include <errno.h>
 #include <fcntl.h>
@@ -52,6 +66,19 @@ bool RandBytes(unsigned char* output, size_t output_length) {
   } while (remaining > 0);
 
   return true;
+#elif defined(OS_WIN)
+  bool success = true;
+  while (output_length > 0) {
+    const ULONG output_bytes_this_pass = std::min(
+    static_cast<ULONG>(output_length), std::numeric_limits<ULONG>::max());
+    success =
+        RtlGenRandom(output, output_bytes_this_pass) != FALSE;
+    if (!success)
+      return false;
+    output_length -= output_bytes_this_pass;
+    output += output_bytes_this_pass;
+  }
+  return success;
 #else
   ftl::UniqueFD fd(open("/dev/urandom", O_RDONLY | O_CLOEXEC));
   if (!fd.is_valid())

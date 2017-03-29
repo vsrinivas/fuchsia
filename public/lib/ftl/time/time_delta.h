@@ -16,7 +16,7 @@ namespace ftl {
 // A TimeDelta represents the difference between two time points.
 class TimeDelta {
  public:
-  TimeDelta() = default;
+  constexpr TimeDelta() = default;
 
   static constexpr TimeDelta Zero() { return TimeDelta(); }
   static constexpr TimeDelta Min() {

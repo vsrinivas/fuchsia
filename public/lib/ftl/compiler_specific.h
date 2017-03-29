@@ -16,36 +16,63 @@
 // Annotate a typedef or function indicating it's ok if it's not used.
 // Use like:
 //   typedef Foo Bar ALLOW_UNUSED_TYPE;
+#if defined(COMPILER_GCC) || defined(__clang__)
 #define FTL_ALLOW_UNUSED_TYPE __attribute__((unused))
+#else
+#define FTL_ALLOW_UNUSED_TYPE
+#endif
 
 // Annotate a function indicating it should not be inlined.
 // Use like:
 //   NOINLINE void DoStuff() { ... }
+#if defined(COMPILER_GCC)
 #define FTL_NOINLINE __attribute__((noinline))
+#elif defined(COMPILER_MSVC)
+#define FTL_NOINLINE __declspec(noinline)
+#else
+#define FTL_NOINLINE
+#endif
 
 // Specify memory alignment for structs, classes, etc.
 // Use like:
 //   class ALIGNAS(16) MyClass { ... }
 //   ALIGNAS(16) int array[4];
+#if defined(COMPILER_MSVC)
+#define FTL_ALIGNAS(byte_alignment) __declspec(align(byte_alignment))
+#elif defined(COMPILER_GCC)
 #define FTL_ALIGNAS(byte_alignment) __attribute__((aligned(byte_alignment)))
+#endif
 
 // Return the byte alignment of the given type (available at compile time).
 // Use like:
 //   ALIGNOF(int32)  // this would be 4
+#if defined(COMPILER_MSVC)
+#define FTL_ALIGNOF(type) __alignof(type)
+#elif defined(COMPILER_GCC)
 #define FTL_ALIGNOF(type) __alignof__(type)
+#endif
 
 // Annotate a function indicating the caller must examine the return value.
 // Use like:
 //   int foo() WARN_UNUSED_RESULT;
 // To explicitly ignore a result, see |ignore_result()| in base/macros.h.
+#if defined(COMPILER_GCC) || defined(__clang__)
 #define FTL_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+#define FTL_WARN_UNUSED_RESULT
+#endif
+
 
 // Tell the compiler a function is using a printf-style format string.
 // |format_param| is the one-based index of the format string parameter;
 // |dots_param| is the one-based index of the "..." parameter.
 // For v*printf functions (which take a va_list), pass 0 for dots_param.
 // (This is undocumented but matches what the system C headers do.)
+#if defined(COMPILER_GCC)
 #define FTL_PRINTF_FORMAT(format_param, dots_param) \
-  __attribute__((format(printf, format_param, dots_param)))
+    __attribute__((format(printf, format_param, dots_param)))
+#else
+#define FTL_PRINTF_FORMAT(format_param, dots_param)
+#endif
 
 #endif  // LIB_FTL_COMPILER_SPECIFIC_H_

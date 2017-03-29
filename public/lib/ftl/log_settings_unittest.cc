@@ -4,12 +4,11 @@
 
 #include "lib/ftl/log_settings.h"
 
-#include <unistd.h>
-
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/portable_unistd.h"
 #include "gtest/gtest.h"
 
 namespace ftl {

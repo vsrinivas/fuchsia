@@ -5,7 +5,8 @@
 #ifndef LIB_FTL_FILES_FILE_DESCRIPTOR_H_
 #define LIB_FTL_FILES_FILE_DESCRIPTOR_H_
 
-#include <unistd.h>
+#include "lib/ftl/inttypes.h"
+#include "lib/ftl/portable_unistd.h"
 
 namespace ftl {
 
