@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <magenta/compiler.h>
 #include <magenta/device/audio.h>
+#include <magenta/device/audio2.h>
 #include <magenta/device/device.h>
 #include <magenta/device/vfs.h>
 #include <mx/channel.h>
@@ -19,6 +20,7 @@
 
 #include "apps/media/src/audio_server/audio_output.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
+#include "apps/media/src/audio_server/platform/magenta/magenta_output.h"
 #include "apps/media/src/audio_server/platform/usb/usb_output.h"
 #include "lib/ftl/files/unique_fd.h"
 
@@ -230,10 +232,18 @@ void AudioPlugDetector::AddAudioDeviceLocked(const char* node_name,
 
   switch (watch_target.type) {
     case DevNodeType::AUDIO2_OUTPUT: {
-      FTL_LOG(INFO)
-          << "Audio2 Output device detected but unsupported, skipping.";
-      return;
-    }
+      mx::channel channel;
+      ssize_t res;
+
+      res = ioctl_audio2_get_channel(dev_node.get(), channel.get_address());
+      if (res < 0) {
+        FTL_LOG(INFO) << "Failed to open channel to Audio2 output (res " << res
+                      << ")";
+        return;
+      }
+
+      new_output = MagentaOutput::Create(std::move(channel), manager_);
+    } break;
 
     // TODO(johngro) Get rid of this once USB has been converted to the new
     // audio interface
