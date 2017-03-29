@@ -25,7 +25,7 @@ static mx_status_t io_buffer_init_common(io_buffer_t* buffer, mx_handle_t vmo_ha
     status = mx_vmo_op_range(vmo_handle, MX_VMO_OP_LOOKUP, 0, lookup_size, &phys, sizeof(phys));
     if (status != NO_ERROR) {
         printf("io_buffer: mx_vmo_op_range failed %d size: %zu\n", status, size);
-        mx_vmar_unmap(vmo_handle, virt, size);
+        mx_vmar_unmap(mx_vmar_root_self(), virt, size);
         mx_handle_close(vmo_handle);
         return status;
     }
@@ -80,7 +80,7 @@ mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle, mx_o
 
 void io_buffer_release(io_buffer_t* buffer) {
     if (buffer->vmo_handle) {
-        mx_vmar_unmap(buffer->vmo_handle, (uintptr_t)buffer->virt, buffer->size);
+        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)buffer->virt, buffer->size);
         mx_handle_close(buffer->vmo_handle);
         buffer->vmo_handle = MX_HANDLE_INVALID;
     }
