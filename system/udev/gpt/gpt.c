@@ -211,7 +211,7 @@ static int gpt_bind_thread(void* arg) {
 
     // allocate an iotxn to read the partition table
     iotxn_t* txn;
-    mx_status_t status = iotxn_alloc(&txn, 0, TXN_SIZE, 0);
+    mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, TXN_SIZE);
     if (status != NO_ERROR) {
         xprintf("gpt: error %d allocating iotxn\n", status);
         goto unbind;

@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <ddk/io-buffer.h>
 #include <ddk/iotxn.h>
 #include <ddk/device.h>
 #include <magenta/assert.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <sys/param.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <threads.h>
 
 #define TRACE 0
@@ -25,54 +26,142 @@
     } while (0)
 #endif
 
-#define IOTXN_FLAG_CLONE (1 << 0)
-#define IOTXN_FLAG_FREE  (1 << 1)   // for double-free checking
-#define IOTXN_FLAG_DEAD  (1 << 2)   // buffer is no longer valid
+#define IOTXN_PFLAG_CONTIGUOUS (1 << 0)   // the vmo is contiguous
+#define IOTXN_PFLAG_ALLOC      (1 << 1)   // the vmo is allocated by us
+#define IOTXN_PFLAG_PHYSMAP    (1 << 2)   // we performed physmap() on this vmo
+#define IOTXN_PFLAG_MMAP       (1 << 3)   // we performed mmap() on this vmo
+#define IOTXN_PFLAG_FREE       (1 << 4)   // this txn has been released
 
-typedef struct iotxn_priv iotxn_priv_t;
-
-struct iotxn_priv {
-    // data payload.
-    io_buffer_t buffer;
-
-    uint32_t flags;
-
-    // payload size
-    size_t data_size;
-    // extra data, at the end of this ioxtn_t structure
-    size_t extra_size;
-
-    // number of times we have been cloned
-    int clone_count;
-    // the iotxn we were cloned from
-    iotxn_priv_t* orig_txn;
-
-    iotxn_t txn; // must be at the end for extra data, only valid if not a clone
-};
-
-#define get_priv(iotxn) containerof(iotxn, iotxn_priv_t, txn)
+static list_node_t free_list = LIST_INITIAL_VALUE(free_list);
+static mtx_t free_list_mutex = MTX_INIT;
 
 // This assert will fail if we attempt to access the buffer of a cloned txn after it has been completed
 #define ASSERT_BUFFER_VALID(priv) MX_DEBUG_ASSERT(!(priv->flags & IOTXN_FLAG_DEAD))
 
-static list_node_t free_list = LIST_INITIAL_VALUE(free_list);
-static list_node_t clone_list = LIST_INITIAL_VALUE(clone_list); // free list for clones
-static mtx_t free_list_mutex = MTX_INIT;
-static mtx_t clone_list_mutex = MTX_INIT;
+static uint32_t alloc_flags_to_pflags(uint32_t alloc_flags) {
+    if (alloc_flags & IOTXN_ALLOC_CONTIGUOUS) {
+        return IOTXN_PFLAG_CONTIGUOUS;
+    }
+    return 0;
+}
 
-static void iotxn_complete(iotxn_t* txn, mx_status_t status, mx_off_t actual) {
-    iotxn_priv_t* priv = get_priv(txn);
-    if (priv->orig_txn) {
-        priv->orig_txn->clone_count--;
-        MX_DEBUG_ASSERT(priv->orig_txn->clone_count >= 0);
-        // completing a cloned txn can result in the original txn being released
-        // so after this point it is unsafe to reference our buffer
-        // clearing priv->buffer will trigger ASSERT_BUFFER_VALID() if someone attempts
-        // to access the buffer after it has been cleared
-        memset(&priv->buffer, 0, sizeof(priv->buffer));
-        priv->flags |= IOTXN_FLAG_DEAD;
+static iotxn_t* find_in_free_list(uint32_t pflags, uint64_t data_size) {
+    bool found = false;
+    iotxn_t* txn = NULL;
+    //xprintf("find_in_free_list pflags 0x%x data_size 0x%" PRIx64 "\n", pflags, data_size);
+    mtx_lock(&free_list_mutex);
+    list_for_every_entry (&free_list, txn, iotxn_t, node) {
+        //xprintf("find_in_free_list for_every txn %p\n", txn);
+        if ((txn->pflags & pflags) && (txn->vmo_length == data_size)) {
+            found = true;
+            break;
+        }
+    }
+    if (found) {
+        txn->pflags &= ~IOTXN_PFLAG_FREE;
+        list_delete(&txn->node);
+    }
+    mtx_unlock(&free_list_mutex);
+    //xprintf("find_in_free_list found %d txn %p\n", found, txn);
+    return found ? txn : NULL;
+}
+
+void iotxn_pages_to_sg(mx_paddr_t* pages, iotxn_sg_t* sg, uint32_t len, uint32_t* sg_len) {
+    if (len == 1) {
+        sg->paddr = *pages;
+        sg->length = PAGE_SIZE;
+        *sg_len = 1;
+        return;
     }
 
+    mx_paddr_t last = pages[0];
+    uint32_t sgl = 0;
+    uint32_t sgi = 0;
+    uint32_t pi = 0;
+    for (pi = 0; pi < len - 1; pi++) {
+        if (pages[pi] + PAGE_SIZE == pages[pi + 1]) {
+            sgl += PAGE_SIZE;
+        } else {
+            sg[sgi].paddr = last;
+            sg[sgi].length = sgl;
+            sgi += 1;
+            last = pages[pi + 1];
+            sgl = 0;
+        }
+    }
+
+    // fill in last entry
+    sg[sgi].paddr = last;
+    sg[sgi].length = sgl + PAGE_SIZE;
+
+    *sg_len = sgi + 1;
+}
+
+// return the iotxn into the free list
+static void iotxn_release_free_list(iotxn_t* txn) {
+    mx_handle_t vmo_handle = txn->vmo_handle;
+    uint64_t vmo_offset = txn->vmo_offset;
+    uint64_t vmo_length = txn->vmo_length;
+    void* virt = txn->virt;
+    iotxn_sg_t* sg = txn->sg;
+    uint32_t sg_length = txn->sg_length;
+    uint32_t pflags = txn->pflags;
+
+    memset(txn, 0, sizeof(iotxn_t));
+
+    if (pflags & IOTXN_PFLAG_ALLOC) {
+        // if we allocated the vmo, keep it around
+        txn->vmo_handle = vmo_handle;
+        txn->vmo_offset = vmo_offset;
+        txn->vmo_length = vmo_length;
+        txn->virt = virt;
+        txn->sg = sg;
+        txn->sg_length = sg_length;
+        txn->pflags = pflags;
+    } else {
+        if (pflags & IOTXN_PFLAG_PHYSMAP) {
+            // only free the scatter list if we called physmap()
+            if (sg != NULL) {
+                free(sg);
+            }
+        }
+        if (pflags & IOTXN_PFLAG_MMAP) {
+            // only unmap if we called mmap()
+            if (virt) {
+                mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)virt, vmo_length);
+            }
+        }
+    }
+
+    txn->pflags |= IOTXN_PFLAG_FREE;
+
+    mtx_lock(&free_list_mutex);
+    list_add_head(&free_list, &txn->node);
+    mtx_unlock(&free_list_mutex);
+
+    xprintf("iotxn_release_free_list released txn %p\n", txn);
+}
+
+// free the iotxn
+static void iotxn_release_free(iotxn_t* txn) {
+    if (txn->pflags & IOTXN_PFLAG_PHYSMAP) {
+        if (txn->sg != NULL) {
+            free(txn->sg);
+        }
+    }
+    if (txn->pflags & IOTXN_PFLAG_MMAP) {
+        if (txn->virt) {
+            mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)txn->virt, txn->vmo_length);
+        }
+    }
+    if (txn->pflags & IOTXN_PFLAG_ALLOC) {
+        mx_handle_close(txn->vmo_handle);
+    }
+    free(txn);
+}
+
+void iotxn_complete(iotxn_t* txn, mx_status_t status, mx_off_t actual) {
+    xprintf("iotxn_complete txn %p\n", txn);
     txn->actual = actual;
     txn->status = status;
     if (txn->complete_cb) {
@@ -80,117 +169,186 @@ static void iotxn_complete(iotxn_t* txn, mx_status_t status, mx_off_t actual) {
     }
 }
 
-static void iotxn_copyfrom(iotxn_t* txn, void* data, size_t length, size_t offset) {
-    iotxn_priv_t* priv = get_priv(txn);
-    size_t count = MIN(length, priv->data_size - offset);
-    ASSERT_BUFFER_VALID(priv);
-    memcpy(data, io_buffer_virt(&priv->buffer) + offset, count);
+ssize_t iotxn_copyfrom(iotxn_t* txn, void* data, size_t length, size_t offset) {
+    length = MIN(txn->vmo_length - offset, length);
+    size_t actual;
+    mx_status_t status = mx_vmo_read(txn->vmo_handle, data, txn->vmo_offset + offset, length, &actual);
+    xprintf("iotxn_copyfrom: txn %p vmo_offset 0x%" PRIx64 " offset 0x%zx length 0x%zx actual 0x%zx status %d\n", txn, txn->vmo_offset, offset, length, actual, status);
+    return (status == NO_ERROR) ? (ssize_t)actual : status;
 }
 
-static void iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offset) {
-    iotxn_priv_t* priv = get_priv(txn);
-    size_t count = MIN(length, priv->data_size - offset);
-    ASSERT_BUFFER_VALID(priv);
-    memcpy(io_buffer_virt(&priv->buffer) + offset, data, count);
+ssize_t iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offset) {
+    length = MIN(txn->vmo_length - offset, length);
+    size_t actual;
+    mx_status_t status = mx_vmo_write(txn->vmo_handle, data, txn->vmo_offset + offset, length, &actual);
+    xprintf("iotxn_copyto: txn %p vmo_offset 0x%" PRIx64 " offset 0x%zx length 0x%zx actual 0x%zx status %d\n", txn, txn->vmo_offset, offset, length, actual, status);
+    return (status == NO_ERROR) ? (ssize_t)actual : status;
 }
 
-static void iotxn_physmap(iotxn_t* txn, mx_paddr_t* addr) {
-    iotxn_priv_t* priv = get_priv(txn);
-    ASSERT_BUFFER_VALID(priv);
-    *addr = io_buffer_phys(&priv->buffer);
-}
+#define ROUNDUP(a, b)   (((a) + ((b)-1)) & ~((b)-1))
+#define ROUNDDOWN(a, b) ((a) & ~((b)-1))
 
-static void iotxn_mmap(iotxn_t* txn, void** data) {
-    iotxn_priv_t* priv = get_priv(txn);
-    ASSERT_BUFFER_VALID(priv);
-    *data = io_buffer_virt(&priv->buffer);
-}
-
-static iotxn_priv_t* iotxn_get_clone(size_t extra_size) {
-    iotxn_priv_t* cpriv = NULL;
-    iotxn_t* clone = NULL;
-
-    // look in clone list first for something that fits
-    bool found = false;
-
-    mtx_lock(&clone_list_mutex);
-    list_for_every_entry (&clone_list, clone, iotxn_t, node) {
-        cpriv = get_priv(clone);
-        if (cpriv->extra_size >= extra_size) {
-            found = true;
-            break;
-        }
-    }
-    // found one that fits, skip allocation
-    if (found) {
-        list_delete(&clone->node);
-        cpriv->flags &= ~IOTXN_FLAG_FREE;
-        if (cpriv->extra_size) memset(&cpriv[1], 0, cpriv->extra_size);
-        mtx_unlock(&clone_list_mutex);
-        goto out;
-    }
-    mtx_unlock(&clone_list_mutex);
-
-    // didn't find one that fits, allocate a new one
-    cpriv = calloc(1, sizeof(iotxn_priv_t) + extra_size);
-    if (!cpriv) {
-        xprintf("iotxn: out of memory\n");
-        return NULL;
+ mx_status_t iotxn_physmap_contiguous(iotxn_t* txn) {
+    iotxn_sg_t* sg = malloc(sizeof(iotxn_sg_t));
+    if (sg == NULL) {
+        xprintf("iotxn_physmap_contiguous: out of memory\n");
+        return ERR_NO_MEMORY;
     }
 
-out:
-    cpriv->flags |= IOTXN_FLAG_CLONE;
-    return cpriv;
-}
-
-static void iotxn_release(iotxn_t* txn) {
-    xprintf("iotxn_release: txn=%p\n", txn);
-    iotxn_priv_t* priv = get_priv(txn);
-    if (priv->flags & IOTXN_FLAG_FREE) {
-        printf("double free in iotxn_release\n");
-        abort();
+    // commit pages and lookup physical addresses
+    mx_status_t status = mx_vmo_op_range(txn->vmo_handle, MX_VMO_OP_COMMIT, txn->vmo_offset, txn->vmo_length, NULL, 0);
+    if (status != NO_ERROR) {
+        xprintf("iotxn_physmap_contiguous: error %d in commit\n", status);
+        free(sg);
+        return status;
     }
 
-    MX_DEBUG_ASSERT(priv->clone_count == 0);
-
-    if (priv->flags & IOTXN_FLAG_CLONE) {
-        mtx_lock(&clone_list_mutex);
-        list_add_tail(&clone_list, &txn->node);
-        priv->flags |= IOTXN_FLAG_FREE;
-        mtx_unlock(&clone_list_mutex);
-    } else {
-        mtx_lock(&free_list_mutex);
-        list_add_tail(&free_list, &txn->node);
-        priv->flags |= IOTXN_FLAG_FREE;
-        mtx_unlock(&free_list_mutex);
+    // contiguous vmo so just lookup the first page
+    uint64_t page_offset = ROUNDDOWN(txn->vmo_offset, PAGE_SIZE);
+    status = mx_vmo_op_range(txn->vmo_handle, MX_VMO_OP_LOOKUP, page_offset, PAGE_SIZE, &sg->paddr, sizeof(mx_paddr_t));
+    if (status) {
+        xprintf("iotxn_physmap_contiguous: error %d in lookup\n", status);
+        free(sg);
+        return status;
     }
-    priv->flags &= ~IOTXN_FLAG_DEAD;
-}
 
-static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
-    iotxn_priv_t* priv = get_priv(txn);
-    iotxn_priv_t* cpriv = iotxn_get_clone(extra_size);
-    if (!cpriv) return ERR_NO_MEMORY;
+    sg->length = txn->vmo_length;
+    sg->paddr += (txn->vmo_offset - page_offset);
 
-    // Here we directly copy txn's io_buffer rather than cloning it, to reduce overhead
-    // of duplicating and remapping the VMO. This is safe to do as long as we guarantee
-    // that the clone will be completed before the source txn.
-    memcpy(&cpriv->buffer, &priv->buffer, sizeof(cpriv->buffer));
-    cpriv->data_size = priv->data_size;
-    memcpy(&cpriv->txn, txn, sizeof(iotxn_t));
-    cpriv->txn.complete_cb = NULL; // clear the complete cb
-
-    cpriv->orig_txn = priv;
-    priv->clone_count++;
-
-    *out = &cpriv->txn;
+    txn->sg = sg;
+    txn->sg_length = 1;
     return NO_ERROR;
 }
 
-static void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length) {
-    iotxn_priv_t* priv = get_priv(txn);
-    ASSERT_BUFFER_VALID(priv);
-    io_buffer_cache_op(&priv->buffer, op, offset, length);
+static mx_status_t iotxn_physmap_paged(iotxn_t* txn) {
+    // MX_VMO_OP_LOOKUP returns whole pages, so take into account unaligned vmo
+    // offset and lengths
+    uint32_t offset_unaligned = txn->vmo_offset - ROUNDDOWN(txn->vmo_offset, PAGE_SIZE);
+    uint32_t length_unaligned = ROUNDUP(txn->vmo_offset + txn->vmo_length, PAGE_SIZE) - (txn->vmo_offset + txn->vmo_length);
+    uint32_t pages = txn->vmo_length / PAGE_SIZE;
+    if (offset_unaligned) {
+        pages += 1;
+    }
+    if (length_unaligned) {
+        pages += 1;
+    }
+    iotxn_sg_t* sg = malloc(sizeof(iotxn_sg_t) * pages + sizeof(mx_paddr_t) * pages);
+    if (sg == NULL) {
+        xprintf("iotxn_physmap_paged: out of memory\n");
+        return ERR_NO_MEMORY;
+    }
+
+    // commit pages and lookup physical addresses
+    // assume that commited pages will never be auto-decommitted...
+    mx_status_t status = mx_vmo_op_range(txn->vmo_handle, MX_VMO_OP_COMMIT, txn->vmo_offset, txn->vmo_length, NULL, 0);
+    if (status != NO_ERROR) {
+        xprintf("iotxn_physmap_paged: error %d in commit\n", status);
+        free(sg);
+        return status;
+    }
+
+    mx_paddr_t* paddrs = (mx_paddr_t*)&sg[pages];
+    status = mx_vmo_op_range(txn->vmo_handle, MX_VMO_OP_LOOKUP, txn->vmo_offset, txn->vmo_length, paddrs, sizeof(mx_paddr_t) * pages);
+    if (status != NO_ERROR) {
+        xprintf("iotxn_physmap_paged: error %d in lookup\n", status);
+        free(sg);
+        return status;
+    }
+
+    // coalesce contiguous ranges
+    uint32_t sg_len;
+    iotxn_pages_to_sg(paddrs, sg, pages, &sg_len);
+
+    // adjust for unaligned offset and length
+    sg[0].paddr += offset_unaligned;
+    sg[0].length = PAGE_SIZE - offset_unaligned;
+    sg[sg_len - 1].length -= length_unaligned;
+
+    txn->sg = sg;
+    txn->sg_length = sg_len;
+    return NO_ERROR;
+}
+
+mx_status_t iotxn_physmap(iotxn_t* txn, mx_paddr_t* addr) {
+    MX_DEBUG_ASSERT(txn->pflags & IOTXN_PFLAG_CONTIGUOUS);
+    mx_status_t status = iotxn_physmap_contiguous(txn);
+    if (status == NO_ERROR) {
+        *addr = txn->sg->paddr;
+    }
+    return status;
+}
+
+mx_status_t iotxn_physmap_sg(iotxn_t* txn, iotxn_sg_t** sg_out, uint32_t *sg_len) {
+    if (txn->sg != NULL) {
+        *sg_out = txn->sg;
+        *sg_len = txn->sg_length;
+        return NO_ERROR;
+    }
+
+    if (txn->vmo_length == 0) {
+        return ERR_INVALID_ARGS;
+    }
+
+    mx_status_t status;
+    if (txn->pflags & IOTXN_PFLAG_CONTIGUOUS) {
+        status = iotxn_physmap_contiguous(txn);
+    } else {
+        status = iotxn_physmap_paged(txn);
+    }
+
+    if (status == NO_ERROR) {
+        *sg_out = txn->sg;
+        *sg_len = txn->sg_length;
+        txn->pflags |= IOTXN_PFLAG_PHYSMAP;
+    }
+    return status;
+}
+
+mx_status_t iotxn_mmap(iotxn_t* txn, void** data) {
+    xprintf("iotxn_mmap: txn %p\n", txn);
+    if (txn->virt) {
+        *data = txn->virt;
+        return NO_ERROR;
+    }
+    mx_status_t status = mx_vmar_map(mx_vmar_root_self(), 0, txn->vmo_handle, txn->vmo_offset, txn->vmo_length, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (uintptr_t*)(&txn->virt));
+    if (status == NO_ERROR) {
+        txn->pflags |= IOTXN_PFLAG_MMAP;
+        *data = txn->virt;
+    }
+    return status;
+}
+
+mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out) {
+    xprintf("iotxn_clone txn %p\n", txn);
+    // look in clone list first
+    // TODO if out is set, init into out
+    iotxn_t* clone = find_in_free_list(0, 0);
+    if (clone == NULL) {
+        clone = calloc(1, sizeof(iotxn_t));
+        if (clone == NULL) {
+            return ERR_NO_MEMORY;
+        }
+    }
+
+    memcpy(clone, txn, sizeof(iotxn_t));
+    // the only relevant pflag for a clone is the contiguous bit
+    clone->pflags = txn->pflags & IOTXN_PFLAG_CONTIGUOUS;
+    clone->complete_cb = NULL;
+    // clones are always freelisted on release
+    clone->release_cb = iotxn_release_free_list;
+
+    *out = clone;
+    return NO_ERROR;
+}
+
+void iotxn_release(iotxn_t* txn) {
+    if (txn->release_cb) {
+        txn->release_cb(txn);
+    }
+}
+
+void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length) {
+    mx_vmo_op_range(txn->vmo_handle, op, txn->vmo_offset + offset, length, NULL, 0);
 }
 
 static iotxn_ops_t ops = {
@@ -198,69 +356,56 @@ static iotxn_ops_t ops = {
     .copyfrom = iotxn_copyfrom,
     .copyto = iotxn_copyto,
     .physmap = iotxn_physmap,
+    .physmap_sg = iotxn_physmap_sg,
     .mmap = iotxn_mmap,
     .clone = iotxn_clone,
     .release = iotxn_release,
     .cacheop = iotxn_cacheop,
 };
 
-mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t extra_size) {
-    xprintf("iotxn_alloc: flags=0x%x data_size=0x%zx extra_size=0x%zx\n", flags, data_size, extra_size);
-    iotxn_t* txn = NULL;
-    iotxn_priv_t* priv = NULL;
-    // look in free list first for something that fits
-    bool found = false;
+mx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size) {
+    //xprintf("iotxn_alloc: alloc_flags 0x%x data_size 0x%" PRIx64 "\n", alloc_flags, data_size);
 
-    mtx_lock(&free_list_mutex);
-    list_for_every_entry (&free_list, txn, iotxn_t, node) {
-        priv = get_priv(txn);
-        if (priv->buffer.size >= data_size && priv->extra_size >= extra_size) {
-            found = true;
-            break;
-        }
-    }
-    // found one that fits, skip allocation
-    if (found) {
-        list_delete(&txn->node);
-        memset(&txn, 0, sizeof(iotxn_t));
-        memset(io_buffer_virt(&priv->buffer), 0, priv->buffer.size);
-        priv->flags &= ~IOTXN_FLAG_FREE;
-        mtx_unlock(&free_list_mutex);
+    // look in free list first for a iotxn with data_size
+    iotxn_t* txn = find_in_free_list(alloc_flags_to_pflags(alloc_flags), data_size);
+    if (txn != NULL) {
+        //xprintf("iotxn_alloc: found iotxn with size 0x%" PRIx64 " in free list\n", data_size);
         goto out;
     }
-    mtx_unlock(&free_list_mutex);
 
     // didn't find one that fits, allocate a new one
-    priv = calloc(1, sizeof(iotxn_priv_t) + extra_size);
-    if (!priv) return ERR_NO_MEMORY;
+    txn = calloc(1, sizeof(iotxn_t));
+    if (!txn) {
+        return ERR_NO_MEMORY;
+    }
     if (data_size > 0) {
-        mx_status_t status = io_buffer_init(&priv->buffer, data_size, IO_BUFFER_RW);
+        mx_status_t status;
+        if (alloc_flags & IOTXN_ALLOC_CONTIGUOUS) {
+            status = mx_vmo_create_contiguous(get_root_resource(), data_size, 0, &txn->vmo_handle);
+            txn->pflags |= IOTXN_PFLAG_CONTIGUOUS;
+        } else {
+            status = mx_vmo_create(data_size, 0, &txn->vmo_handle);
+        }
         if (status != NO_ERROR) {
-            free(priv);
+            xprintf("iotxn_alloc: error %d in mx_vmo_create, flags 0x%x\n", status, alloc_flags);
+            free(txn);
             return status;
+        }
+        txn->vmo_offset = 0;
+        txn->vmo_length = data_size;
+        txn->pflags |= IOTXN_PFLAG_ALLOC;
+        if (alloc_flags & IOTXN_ALLOC_POOL) {
+            txn->release_cb = iotxn_release_free_list;
+        } else {
+            txn->release_cb = iotxn_release_free;
         }
     }
 
-    // layout is iotxn_priv_t | extra_size
-    priv->extra_size = extra_size;
 out:
-    priv->data_size = data_size;
-    priv->txn.ops = &ops;
-    *out = &priv->txn;
-    xprintf("iotxn_alloc: found=%d txn=%p buffer_size=0x%zx\n", found, &priv->txn, priv->buffer.size);
-    return NO_ERROR;
-}
-
-mx_status_t iotxn_alloc_vmo(iotxn_t** out, mx_handle_t vmo_handle, size_t data_size,
-                            mx_off_t data_offset, size_t extra_size) {
-    iotxn_priv_t* priv = iotxn_get_clone(extra_size);
-    if (!priv) return ERR_NO_MEMORY;
-
-    io_buffer_init_vmo(&priv->buffer, vmo_handle, data_offset, IO_BUFFER_RW);
-    priv->data_size = data_size;
-
-    priv->txn.ops = &ops;
-    *out = &priv->txn;
+    MX_DEBUG_ASSERT(txn != NULL);
+    MX_DEBUG_ASSERT(!(txn->pflags & IOTXN_PFLAG_FREE));
+    txn->ops = &ops;
+    *out = txn;
     return NO_ERROR;
 }
 

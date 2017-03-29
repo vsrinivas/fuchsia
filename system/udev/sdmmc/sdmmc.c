@@ -171,7 +171,7 @@ static void sdmmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
             return;
     }
 
-    if (iotxn_alloc(&emmc_txn, 0, txn->length, 0) != NO_ERROR) {
+    if (iotxn_alloc(&emmc_txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txn->length) != NO_ERROR) {
         xprintf("sdmmc: error allocating emmc iotxn\n");
         txn->ops->complete(txn, ERR_INTERNAL, 0);
         return;
@@ -272,7 +272,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
     }
 
     // Allocate a single iotxn that we use to bootstrap the card with.
-    if ((st = iotxn_alloc(&setup_txn, 0, SDHC_BLOCK_SIZE, 0)) != NO_ERROR) {
+    if ((st = iotxn_alloc(&setup_txn, IOTXN_ALLOC_CONTIGUOUS, SDHC_BLOCK_SIZE)) != NO_ERROR) {
         xprintf("sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
         goto err;
     }

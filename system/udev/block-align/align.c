@@ -112,7 +112,7 @@ static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // Allocates a larger iotxn, capable of containing the aligned length.
     iotxn_t* txn_aligned;
-    mx_status_t status = iotxn_alloc(&txn_aligned, 0, length_aligned, 0);
+    mx_status_t status = iotxn_alloc(&txn_aligned, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, length_aligned);
     if (status != NO_ERROR) {
         txn->ops->complete(txn, status, 0);
         return;

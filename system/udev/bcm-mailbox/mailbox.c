@@ -167,7 +167,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
 
         // buffer needs to be aligned on 16 byte boundary, pad the alloc to make sure we have room to adjust
         const size_t txnsize = sizeof(bcm_fb_desc_t) + 16;
-        ret = iotxn_alloc(&txn, 0, txnsize, 0);
+        ret = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txnsize);
         if (ret < 0)
             return ret;
 
@@ -255,7 +255,7 @@ static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
     header.buff_size = sizeof(header) + len + sizeof(endtag);
     header.code = BCM_MAILBOX_REQUEST;
 
-    ret = iotxn_alloc(&txn, 0, header.buff_size, 0);
+    ret = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, header.buff_size);
     if (ret != 0)
         return ret;
 

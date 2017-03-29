@@ -109,7 +109,7 @@ static void sync_io_complete(iotxn_t* txn, void* cookie) {
 
 static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t count, mx_off_t off) {
     iotxn_t* txn;
-    mx_status_t status = iotxn_alloc(&txn, 0, MXIO_CHUNK_SIZE, 0);
+    mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, MXIO_CHUNK_SIZE);
     if (status != NO_ERROR) {
         return status;
     }

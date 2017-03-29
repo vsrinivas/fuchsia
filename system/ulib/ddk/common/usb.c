@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/common/usb.h>
 #include <magenta/device/usb.h>
+#include <magenta/assert.h>
 #include <endian.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,7 +20,7 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
                         uint16_t value, uint16_t index, void* data, size_t length) {
     iotxn_t* txn;
 
-    mx_status_t status = iotxn_alloc(&txn, 0, length, 0);
+    mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, length);
     if (status != NO_ERROR) return status;
     txn->protocol = MX_PROTOCOL_USB;
 
@@ -165,7 +166,10 @@ size_t usb_get_max_transfer_size(mx_device_t* device, uint8_t ep_address) {
 iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size, size_t extra_size) {
     iotxn_t* txn;
 
-    mx_status_t status = iotxn_alloc(&txn, 0, data_size, extra_size);
+    // TODO remove extra_size param
+    MX_DEBUG_ASSERT(extra_size == 0);
+
+    mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, data_size);
     if (status != NO_ERROR) {
         return NULL;
     }

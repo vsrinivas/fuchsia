@@ -8,6 +8,7 @@
 #include <magenta/types.h>
 #include <magenta/listnode.h>
 #include <ddk/driver.h>
+#include <sys/types.h>
 
 __BEGIN_CDECLS;
 
@@ -28,7 +29,7 @@ typedef struct iotxn_ops iotxn_ops_t;
 
 // new device protcol hook
 // The driver *must* complete the txn (success or failure) by
-// calling txn->ops->complete(txn);
+// calling iotxn_complete(txn);
 //
 // void (*queue)(mx_device_t* dev, iotxn_t* txn);
 
@@ -53,6 +54,12 @@ typedef struct iotxn_ops iotxn_ops_t;
 #define IOTXN_SYNC_AFTER   2
 
 typedef uint64_t iotxn_proto_data_t[6];
+typedef uint64_t iotxn_extra_data_t[6];
+
+typedef struct iotxn_sg {
+    mx_paddr_t paddr;
+    uint64_t length;
+} iotxn_sg_t;
 
 struct iotxn {
     // basic request data
@@ -64,9 +71,26 @@ struct iotxn {
     uint32_t protocol;    // identifies the protocol-specific data
 
     // response data
-    // (filled in by processor before ops->complete() is called)
+    // (filled in by processor before iotxn_complete() is called)
     mx_status_t status;   // status of transaction
     mx_off_t actual;      // number of bytes actually transferred (on success)
+
+    uint32_t pflags;      // private flags, do not set
+
+    // data payload
+    mx_handle_t vmo_handle;
+    uint64_t vmo_offset;  // offset into the vmo to use for the buffer
+    uint64_t vmo_length;  // buffer size starting at offset
+
+    // TODO remove this after removing mmap()
+    void* virt;           // mapped address of vmo
+
+    // optional scatter list
+    // the current "owner" of the iotxn may set these to specify physical
+    // ranges backing the data payload. this field is also set by
+    // iotxn_physmap() and iotxn_physmap_sg()
+    iotxn_sg_t* sg;
+    uint64_t sg_length;  // number of entries in scatter list
 
     // methods to operate on the iotxn
     iotxn_ops_t* ops;
@@ -74,6 +98,9 @@ struct iotxn {
     // protocol specific extra data
     // (filled in by requestor, read by processor, type identified by 'protocol')
     iotxn_proto_data_t protocol_data;
+
+    // extra requestor data
+    iotxn_extra_data_t extra;
 
     // list node and context
     // the current "owner" of the iotxn may use these however desired
@@ -90,76 +117,81 @@ struct iotxn {
     // Set by requestor for passing data to complete_cb callback
     void* cookie;
 
-    // structure to this point is 132 bytes
-
-    // extra requestor data
-    // amount of space here depends on extra_size passed when
-    // allocating the iotxn
-    uint8_t extra[0];
+    // The release_cb() callback is set by the allocator and is
+    // invoked by the 'iotxn_release' method when it is called
+    // by the requestor.
+    void (*release_cb)(iotxn_t* txn);
 };
 
-#define iotxn_to(txn, type) ((type*) (txn)->extra)
 #define iotxn_pdata(txn, type) ((type*) (txn)->protocol_data)
 
+// convenience function to convert an array of physical page addresses to
+// iotxn_sg_t. 'len' is the number of entries in 'pages' and the 'sg' buffer
+// must be at least 'len' entries long.
+void iotxn_pages_to_sg(mx_paddr_t* pages, iotxn_sg_t* sg, uint32_t len, uint32_t* sg_len);
+
+// flags for iotxn_alloc
+#define IOTXN_ALLOC_CONTIGUOUS (1 << 0)    // allocate a contiguous vmo
+#define IOTXN_ALLOC_POOL       (1 << 1)    // freelist this iotxn on iotxn_release
 
 // create a new iotxn with payload space of data_size
-// and extra storage space of extra_size
-mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t extra_size);
-
-// creates a new iotxn based on a provided VMO buffer, offset and size
-// this duplicates the provided vmo_handle
-mx_status_t iotxn_alloc_vmo(iotxn_t** out, mx_handle_t vmo_handle, size_t data_size,
-                            mx_off_t data_offset, size_t extra_size);
+mx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size);
 
 // queue an iotxn against a device
 void iotxn_queue(mx_device_t* dev, iotxn_t* txn);
 
+// iotxn_complete() must be called by the processor when the io operation has
+// completed or failed and the iotxn and any virtual or physical memory obtained
+// from it may not be touched again by the processor.
+//
+// The iotxn's complete_cb() will be called as the last action of
+// this method.
+void iotxn_complete(iotxn_t* txn, mx_status_t status, mx_off_t actual);
+
+// iotxn_copyfrom() copies data from the iotxn's vm object.
+// Out of range operations are ignored.
+ssize_t iotxn_copyfrom(iotxn_t* txn, void* data, size_t length, size_t offset);
+
+// iotxn_copyto() copies data into an iotxn's vm object.
+// Out of range operations are ignored.
+ssize_t iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offset);
+
+// iotxn_physmap() returns the physical start address of the memory backing an
+// iotxn's vm object.
+// This function is only valid for iotxn's backed by a contiguous vm object.
+// iotxn_physmap_sg() is preferred.
+mx_status_t iotxn_physmap(iotxn_t* txn, mx_paddr_t* addr);
+
+// iotxn_physmap_sg() returns a list of physical ranges of the memory backing
+// an iotxn's vm object.
+mx_status_t iotxn_physmap_sg(iotxn_t* txn, iotxn_sg_t** sg_out, uint32_t* sg_len);
+
+// iotxn_mmap() maps the iotxn's vm object and returns the virtual address.
+// iotxn_copyfrom(), iotxn_copyto(), or iotxn_ physmap() are almost always a
+// better option.
+mx_status_t iotxn_mmap(iotxn_t* txn, void** data);
+
+// iotxn_cacheop() performs a cache maintenance op against the iotxn's internal
+// buffer.
+void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length);
+
+// iotxn_clone() creates a new iotxn which shares the vm object with this one,
+// suitable for a driver to use to make a request of a driver it is stacked on
+// top of.
+mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out);
+
+// free the iotxn -- should be called only by the entity that allocated it
+void iotxn_release(iotxn_t* txn);
 
 struct iotxn_ops {
-    // complete() must be called by the processor when the io operation has
-    // completed or failed and the iotxn and any virtual or physical memory
-    // obtained from it may not be touched again by the processor.
-    //
-    // If physmap() was used and created a temporary buffer, the contents
-    // of that buffer are copied back into the iotxn's buffer (if this was
-    // a read operation)
-    //
-    // The iotxn's complete_cb() will be called as the last action of
-    // this method.
     void (*complete)(iotxn_t* txn, mx_status_t status, mx_off_t actual);
-
-
-    // copyfrom() copies data from the iotxn's data buffer
-    // Out of range operations are ignored.
-    void (*copyfrom)(iotxn_t* txn, void* data, size_t length, size_t offset);
-
-    // copyto() copies data into an iotxn's data buffer.
-    // Out of range operations are ignored.
-    void (*copyto)(iotxn_t* txn, const void* data, size_t length, size_t offset);
-
-    // physmap() returns the physical start address of a buffer containing
-    // the iotxn's buffer data (on WRITE ops) or a buffer that will be
-    // copied back to the iotxn's buffer data (on READ ops).  This may
-    // be the buffer itself, or a temporary, depending on conditions.
-    void (*physmap)(iotxn_t* txn, mx_paddr_t* addr);
-
-    // mmap() returns a void* pointing at the data in the iotxn's buffer.
-    // This may have to do an expensive memory map operation or copy data
-    // to a local buffer.  copyfrom(), copyto(), or physmap() are almost
-    // always a better option.
-    void (*mmap)(iotxn_t* txn, void** data);
-
-    // cacheop() performs a cache maintenance op against the iotxn's internal
-    // buffer.
+    ssize_t (*copyfrom)(iotxn_t* txn, void* data, size_t length, size_t offset);
+    ssize_t (*copyto)(iotxn_t* txn, const void* data, size_t length, size_t offset);
+    mx_status_t (*physmap)(iotxn_t* txn, mx_paddr_t* addr);
+    mx_status_t (*physmap_sg)(iotxn_t* txn, iotxn_sg_t** sg_out, uint32_t* sg_len);
+    mx_status_t (*mmap)(iotxn_t* txn, void** data);
     void (*cacheop)(iotxn_t* txn, uint32_t op, size_t offset, size_t length);
-
-    // clone() creates a new iotxn which shares the underlying data
-    // storage with this one, suitable for a driver to use to make a
-    // request of a driver it is stacked on top of.
-    mx_status_t (*clone)(iotxn_t* txn, iotxn_t** out, size_t extra_size);
-
-
-    // free the iotxn -- should be called only by the entity that allocated it
+    mx_status_t (*clone)(iotxn_t* txn, iotxn_t** out);
     void (*release)(iotxn_t* txn);
 };
 

@@ -648,7 +648,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     ep0->desc.wMaxPacketSize = 8;
 
     iotxn_t* get_desc;
-    mx_status_t status = iotxn_alloc(&get_desc, 0, 64, 0);
+    mx_status_t status = iotxn_alloc(&get_desc, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, 64);
     assert(status == NO_ERROR);
 
     completion_t completion = COMPLETION_INIT;
@@ -680,7 +680,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
 
     // Set the Device ID of the newly added device.
     iotxn_t* set_addr;
-    status = iotxn_alloc(&set_addr, 0, 64, 0);
+    status = iotxn_alloc(&set_addr, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, 64);
     assert(status == NO_ERROR);
 
     completion_reset(&completion);
@@ -1593,7 +1593,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
 
                 // Allocate an iotxn for the SETUP packet.
                 mx_status_t status =
-                    iotxn_alloc(&req->setuptxn, 0, sizeof(usb_setup_t), 0);
+                    iotxn_alloc(&req->setuptxn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, sizeof(usb_setup_t));
                 assert(status == NO_ERROR);
 
                 usb_protocol_data_t* pdata =

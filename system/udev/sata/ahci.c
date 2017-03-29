@@ -13,7 +13,9 @@
 #include <magenta/listnode.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+#include <magenta/assert.h>
 #include <sync/completion.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -261,8 +263,13 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         return NO_ERROR;
     }
 
-    mx_paddr_t phys;
-    txn->ops->physmap(txn, &phys);
+    iotxn_sg_t* sg;
+    uint32_t sgl;
+    mx_status_t status = txn->ops->physmap_sg(txn, &sg, &sgl);
+    if (status != NO_ERROR) {
+        txn->ops->complete(txn, NO_ERROR, txn->length);
+        completion_signal(&dev->worker_completion);
+    }
 
     if (dev->cap & AHCI_CAP_NCQ) {
         if (pdata->cmd == SATA_CMD_READ_DMA_EXT) {
@@ -272,7 +279,13 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         }
     }
 
-    //xprintf("ahci.%d: do_txn slot=%d cmd=0x%x device=0x%x lba=0x%lx count=%u phys=0x%lx data_sz=0x%lx offset=0x%lx\n", port->nr, slot, pdata->cmd, pdata->device, pdata->lba, pdata->count, phys, txn->length, txn->offset);
+    //xprintf("ahci.%d: do_txn slot=%d cmd=0x%x device=0x%x lba=0x%lx count=%u data_sz=0x%lx offset=0x%lx sgl=0x%x\n", port->nr, slot, pdata->cmd, pdata->device, pdata->lba, pdata->count, txn->length, txn->offset, sgl);
+#if 0
+    xprintf("sg:\n");
+    for (unsigned u = 0; u < sgl; u++) {
+        xprintf("  [%u]: 0x%lx len 0x%lx" PRIx64 "\n", u, sg[u].paddr, sg[u].length);
+    }
+#endif
 
     // build the command
     ahci_cl_t* cl = port->cl + slot;
@@ -280,7 +293,7 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     cl->prdtl_flags_cfl = 0;
     cl->cfl = 5; // 20 bytes
     cl->w = cmd_is_write(pdata->cmd) ? 1 : 0;
-    cl->prdtl = txn->length / AHCI_PRD_MAX_SIZE + 1;
+    cl->prdtl = sgl;
     cl->prdbc = 0;
     memset(port->ct[slot], 0, sizeof(ahci_ct_t));
 
@@ -315,15 +328,14 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     }
 
     ahci_prd_t* prd = NULL;
-    uint64_t length = txn->length;
     for (int i = 0; i < cl->prdtl; i++) {
-        prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t)) + i;
-        prd->dba = LO32(phys);
-        prd->dbau = HI32(phys);
-        prd->dbc = ((length - 1) & 0x3fffff); // 0-based byte count
+        // TODO split this transaction
+        MX_DEBUG_ASSERT(sg[i].length <= AHCI_PRD_MAX_SIZE);
 
-        phys += AHCI_PRD_MAX_SIZE;
-        length -= AHCI_PRD_MAX_SIZE;
+        prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t)) + i;
+        prd->dba = LO32(sg[i].paddr);
+        prd->dbau = HI32(sg[i].paddr);
+        prd->dbc = ((sg[i].length - 1) & 0x3fffff); // 0-based byte count
     }
 
     port->running |= (1 << slot);
@@ -535,9 +547,9 @@ static int ahci_watchdog_thread(void* arg) {
                     if (pdata->timeout < now) {
                         // time out
                         printf("ahci: txn time out on port %d\n", port->nr);
-                        iotxn_t* txn = port->commands[i];
-                        port->running &= ~(1 << i);
-                        port->commands[i] = NULL;
+                        iotxn_t* txn = port->commands[j];
+                        port->running &= ~(1 << j);
+                        port->commands[j] = NULL;
                         mtx_unlock(&port->lock);
                         txn->ops->complete(txn, ERR_TIMED_OUT, 0);
                         mtx_lock(&port->lock);

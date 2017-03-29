@@ -19,7 +19,7 @@ MODULE_NAME := core-tests
 MODULE_STATIC_LIBS := \
     ulib/runtime ulib/ddk ulib/unittest ulib/hexdump ulib/mini-process ulib/sync
 
-MODULE_LIBS := ulib/magenta ulib/c
+MODULE_LIBS := ulib/magenta ulib/c ulib/driver
 
 MODULE_DEFINES := BUILD_COMBINED_TESTS=1
 

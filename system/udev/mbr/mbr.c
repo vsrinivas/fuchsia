@@ -243,7 +243,7 @@ static int mbr_bind_thread(void* arg) {
         iotxn_size = DIV_ROUND_UP(MBR_SIZE, blksiz) * blksiz;
     }
 
-    mx_status_t st = iotxn_alloc(&txn, 0, iotxn_size, 0);
+    mx_status_t st = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, iotxn_size);
     if (st != NO_ERROR) {
         xprintf("mbr: failed to allocate iotxn, retcode = %d\n", st);
         goto unbind;

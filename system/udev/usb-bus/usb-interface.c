@@ -84,7 +84,7 @@ static void usb_interface_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
 
     // clone the txn and pass it down to the HCI driver
     iotxn_t* clone;
-    mx_status_t status = txn->ops->clone(txn, &clone, 0);
+    mx_status_t status = txn->ops->clone(txn, &clone);
     if (status != NO_ERROR) {
         txn->ops->complete(txn, status, 0);
         return;

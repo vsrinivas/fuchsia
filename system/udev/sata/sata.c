@@ -59,7 +59,7 @@ static void sata_device_identify_complete(iotxn_t* txn, void* cookie) {
 static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* controller) {
     // send IDENTIFY DEVICE
     iotxn_t* txn;
-    mx_status_t status = iotxn_alloc(&txn, 0, 512, 0);
+    mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 512);
     if (status != NO_ERROR) {
         xprintf("%s: error %d allocating iotxn\n", dev->device.name, status);
         return status;
@@ -213,12 +213,13 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
     }
     case IOCTL_DEVICE_SYNC: {
         iotxn_t* txn;
-        mx_status_t status = iotxn_alloc(&txn, IOTXN_SYNC_BEFORE, 0, 0);
+        mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 0);
         if (status != NO_ERROR) {
             return status;
         }
         completion_t completion = COMPLETION_INIT;
         txn->opcode = IOTXN_OP_READ;
+        txn->flags = IOTXN_SYNC_BEFORE;
         txn->offset = 0;
         txn->length = 0;
         txn->complete_cb = sata_sync_complete;
@@ -260,7 +261,7 @@ static void sata_fifo_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
 static void sata_fifo_complete(iotxn_t* txn, void* cookie) {
     sata_device_t* dev;
     memcpy(&dev, txn->extra, sizeof(sata_device_t*));
-    //xprintf("sata: fifo_complete dev %p callbacks %p status %d actual 0x%" PRIx64 "\n", dev, dev->callbacks, txn->status, txn->actual);
+    //xprintf("sata: fifo_complete dev %p cookie %p callbacks %p status %d actual 0x%" PRIx64 "\n", dev, cookie, dev->callbacks, txn->status, txn->actual);
     dev->callbacks->complete(cookie, txn->status);
     txn->ops->release(txn);
 }
@@ -272,10 +273,14 @@ static void sata_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
 
     mx_status_t status;
     iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, vmo, length, vmo_offset, sizeof(sata_device_t*))) != NO_ERROR) {
+    if ((status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 0)) != NO_ERROR) {
         device->callbacks->complete(cookie, status);
         return;
     }
+
+    txn->vmo_handle = vmo;
+    txn->vmo_offset = vmo_offset;
+    txn->vmo_length = length;
 
     txn->opcode = IOTXN_OP_READ;
     txn->offset = dev_offset;
@@ -294,10 +299,14 @@ static void sata_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
 
     mx_status_t status;
     iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, vmo, length, vmo_offset, sizeof(sata_device_t*))) != NO_ERROR) {
+    if ((status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 0)) != NO_ERROR) {
         device->callbacks->complete(cookie, status);
         return;
     }
+
+    txn->vmo_handle = vmo;
+    txn->vmo_offset = vmo_offset;
+    txn->vmo_length = length;
 
     txn->opcode = IOTXN_OP_WRITE;
     txn->offset = dev_offset;
