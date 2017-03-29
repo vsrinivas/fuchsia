@@ -31,6 +31,7 @@
  */
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <sys/types.h>
 #define ALLOPTS                                                                  \
     AOPT('@', off_t, offset, 0, "Offset in device")                              \

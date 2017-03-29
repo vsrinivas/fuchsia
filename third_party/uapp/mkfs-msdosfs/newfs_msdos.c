@@ -26,12 +26,14 @@
  */
 
 #include <sys/param.h>
+#include <sys/types.h>
 
 #include <err.h>
 #include <errno.h>
 #include <paths.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -42,7 +44,7 @@
 #define argto4(arg, lo, msg) argtou(arg, lo, 0xffffffff, msg)
 #define argtox(arg, lo, msg) argtou(arg, lo, UINT_MAX, msg)
 
-static u_int argtou(const char*, u_int, u_int, const char*);
+static unsigned int argtou(const char*, unsigned int, unsigned int, const char*);
 static off_t argtooff(const char*, const char*);
 static void usage(void);
 
@@ -137,7 +139,7 @@ int main(int argc, char* argv[]) {
 /*
  * Convert and check a numeric option argument.
  */
-static u_int argtou(const char* arg, u_int lo, u_int hi, const char* msg) {
+static unsigned int argtou(const char* arg, unsigned int lo, unsigned int hi, const char* msg) {
     char* s;
     u_long x;
 

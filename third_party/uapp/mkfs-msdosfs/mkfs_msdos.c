@@ -29,6 +29,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/types.h>
 
 #include <ctype.h>
 #include <err.h>
@@ -684,7 +685,7 @@ static int oklabel(const char* src) {
     int c, i;
 
     for (i = 0; i <= 11; i++) {
-        c = (u_char)*src++;
+        c = (unsigned char)*src++;
         if (c < ' ' + !i || strchr("\"*+,./:;<=>?[\\]|", c))
             break;
     }
