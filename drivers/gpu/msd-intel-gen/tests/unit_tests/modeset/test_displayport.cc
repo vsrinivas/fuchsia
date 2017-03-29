@@ -6,6 +6,7 @@
 #include "modeset/displayport.h"
 #include "register_io.h"
 #include "registers.h"
+#include "registers_dpll.h"
 #include "gtest/gtest.h"
 #include <assert.h>
 #include <stdarg.h>
@@ -71,10 +72,69 @@ private:
     uint32_t seek_pos_ = 0;
 };
 
+bool DdiClockIsConfigured(magma::PlatformMmio* reg_io, uint32_t ddi_number)
+{
+    // Assumptions: This test currently only knows how to check for DDI C
+    // and DPLL 1.
+    if (ddi_number != 2)
+        return DRETF(false, "Unhandled DDI number");
+    uint32_t expected_dpll = 1;
+
+    // Is power enabled for this DDI?
+    auto power_reg = registers::PowerWellControl2::Get().ReadFrom(reg_io);
+    if (!power_reg.ddi_c_io_power_request().get())
+        return DRETF(false, "Power not enabled for DDI");
+
+    auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(reg_io);
+    if (dpll_ctrl2.ddi_c_clock_select().get() != expected_dpll)
+        return false;
+
+    auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(reg_io);
+    if (dpll_ctrl1.dpll1_hdmi_mode().get())
+        return DRETF(false, "DPLL not in DisplayPort mode");
+    if (dpll_ctrl1.dpll1_link_rate().get() != dpll_ctrl1.kLinkRate1350Mhz)
+        return DRETF(false, "DPLL set to wrong link rate");
+    // Currently we don't care about the fields ssc_enable and override.
+
+    auto lcpll_ctrl = registers::Lcpll2Control::Get().ReadFrom(reg_io);
+    if (!lcpll_ctrl.enable_dpll1().get())
+        return DRETF(false, "DPLL not enabled");
+
+    return true;
+}
+
+bool DdiIsSendingLinkTrainingPattern(magma::PlatformMmio* reg_io, uint32_t ddi_number,
+                                     int which_pattern)
+{
+    auto dp_tp = registers::DdiDpTransportControl::Get(ddi_number).ReadFrom(reg_io);
+    if (!dp_tp.transport_enable().get())
+        return DRETF(false, "DDI not enabled");
+    if (which_pattern == 1) {
+        if (dp_tp.dp_link_training_pattern().get() != dp_tp.kTrainingPattern1)
+            return DRETF(false, "Training pattern 1 not set");
+    } else {
+        DASSERT(which_pattern == 2);
+        if (dp_tp.dp_link_training_pattern().get() != dp_tp.kTrainingPattern2)
+            return DRETF(false, "Training pattern 2 not set");
+    }
+
+    uint32_t dp_lane_count = 2;
+
+    auto buf_ctl = registers::DdiBufControl::Get(ddi_number).ReadFrom(reg_io);
+    if (!buf_ctl.ddi_buffer_enable().get())
+        return DRETF(false, "DDI buffer not enabled");
+    if (buf_ctl.dp_port_width_selection().get() != dp_lane_count - 1)
+        return DRETF(false, "DDI lane count not set correctly");
+
+    return true;
+}
+
 // This represents a test instance of a DisplayPort sink device's DPCD
 // (DisplayPort Configuration Data).
 class Dpcd {
 public:
+    Dpcd(magma::PlatformMmio* mmio, uint32_t ddi_number) : mmio_(mmio), ddi_number_(ddi_number) {}
+
     void DpcdRead(uint32_t addr, uint8_t* buf, uint32_t size)
     {
         for (uint32_t i = 0; i < size; ++i)
@@ -83,18 +143,73 @@ public:
 
     void DpcdWrite(uint32_t addr, const uint8_t* buf, uint32_t size)
     {
+        // The spec says that when writing to TRAINING_PATTERN_SET, "The
+        // AUX CH burst write must be used for writing to
+        // TRAINING_LANEx_SET bytes of the enabled lanes".  (From section
+        // 3.5.1.3, "Link Training", in v1.1a.)  Check for that here.
+        if (addr == DisplayPort::DPCD_TRAINING_PATTERN_SET && size == 3) {
+            HandleLinkTrainingRequest(buf[0]);
+        }
+
         for (uint32_t i = 0; i < size; ++i)
             map_[addr + i] = buf[i];
     }
 
 private:
+    void HandleLinkTrainingRequest(uint8_t reg_byte)
+    {
+        // If the source device's clock is not configured, link training
+        // won't succeed.
+        if (!DdiClockIsConfigured(mmio_, ddi_number_))
+            return;
+
+        // Unpack the register value.
+        dpcd::TrainingPatternSet reg;
+        reg.set_reg_value(reg_byte);
+
+        if (!reg.scrambling_disable().get())
+            return;
+
+        if (reg.training_pattern_set().get() == reg.kTrainingPattern1) {
+            if (!DdiIsSendingLinkTrainingPattern(mmio_, ddi_number_, 1))
+                return;
+
+            // Indicate that training phase 1 was successful.
+            dpcd::Lane01Status lane_status;
+            lane_status.lane0_cr_done().set(1);
+            lane_status.lane1_cr_done().set(1);
+            map_[DisplayPort::DPCD_LANE0_1_STATUS] = lane_status.reg_value();
+        } else if (reg.training_pattern_set().get() == reg.kTrainingPattern2) {
+            if (!DdiIsSendingLinkTrainingPattern(mmio_, ddi_number_, 2))
+                return;
+
+            // Indicate that training phase 2 was successful.
+            dpcd::Lane01Status lane_status;
+            lane_status.lane0_cr_done().set(1);
+            lane_status.lane1_cr_done().set(1);
+            lane_status.lane0_channel_eq_done().set(1);
+            lane_status.lane1_channel_eq_done().set(1);
+            lane_status.lane0_symbol_locked().set(1);
+            lane_status.lane1_symbol_locked().set(1);
+            map_[DisplayPort::DPCD_LANE0_1_STATUS] = lane_status.reg_value();
+        }
+    }
+
+    // Info about DisplayPort sink device:
+    // Mapping from DPCD register address to register value.
     std::map<uint32_t, uint8_t> map_;
+
+    // Info about DisplayPort source device, for testing.
+    magma::PlatformMmio* mmio_;
+    uint32_t ddi_number_;
 };
 
 // This represents a DisplayPort Aux channel.  This implements sending I2C
 // messages over the Aux channel.
 class DpAux {
 public:
+    DpAux(magma::PlatformMmio* mmio, uint32_t ddi_number) : dpcd_(mmio, ddi_number) {}
+
     void SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply)
     {
         assert(request->size <= DpAuxMessage::kMaxTotalSize);
@@ -174,7 +289,12 @@ private:
 // DisplayPort Aux channel.
 class TestDevice : public RegisterIo::Hook {
 public:
-    TestDevice(magma::PlatformMmio* mmio) : mmio_(mmio) {}
+    TestDevice(magma::PlatformMmio* mmio) : mmio_(mmio)
+    {
+        for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {
+            dp_aux_[ddi_number].reset(new DpAux(mmio, ddi_number));
+        }
+    }
 
     void WriteDdiAuxControl(uint32_t ddi_number, uint32_t value)
     {
@@ -194,7 +314,7 @@ public:
             for (uint32_t offset = 0; offset < request.size; offset += 4) {
                 request.SetFromPackedWord(offset, mmio_->Read32(data_reg + offset));
             }
-            dp_aux_[ddi_number].SendDpAuxMsg(&request, &reply);
+            dp_aux_[ddi_number]->SendDpAuxMsg(&request, &reply);
 
             // Write the reply message into registers.
             assert(reply.size <= DpAuxMessage::kMaxTotalSize);
@@ -226,11 +346,11 @@ public:
 
     ExampleEdidData* get_edid_data(uint32_t ddi_number)
     {
-        return dp_aux_[ddi_number].get_edid_data();
+        return dp_aux_[ddi_number]->get_edid_data();
     }
 
 private:
-    DpAux dp_aux_[registers::Ddi::kDdiCount];
+    std::unique_ptr<DpAux> dp_aux_[registers::Ddi::kDdiCount];
     magma::PlatformMmio* mmio_;
 };
 
@@ -336,6 +456,24 @@ TEST(DisplayPort, ReadbackTestMultipleDdis)
 
     ReadbackTest(&reg_io, 0, test_device->get_edid_data(0));
     ReadbackTest(&reg_io, 1, test_device->get_edid_data(1));
+}
+
+TEST(DisplayPort, LinkTraining)
+{
+    RegisterIo reg_io(MockMmio::Create(0x100000));
+    TestDevice* test_device = new TestDevice(reg_io.mmio());
+    reg_io.InstallHook(std::unique_ptr<TestDevice>(test_device));
+
+    uint32_t ddi_number = 2;
+    EXPECT_TRUE(DisplayPort::PartiallyBringUpDisplay(&reg_io, ddi_number));
+
+    // Check that the training code leaves TRAINING_PATTERN_SET set to
+    // 0, to end the sink device's training mode.
+    DpAuxChannel dp_aux(&reg_io, ddi_number);
+    uint8_t reg_byte;
+    EXPECT_TRUE(
+        dp_aux.DpcdRead(DisplayPort::DPCD_TRAINING_PATTERN_SET, &reg_byte, sizeof(reg_byte)));
+    EXPECT_EQ(reg_byte, 0);
 }
 
 } // namespace

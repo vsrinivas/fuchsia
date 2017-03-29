@@ -6,6 +6,7 @@
 #include "magma_util/macros.h"
 #include "register_io.h"
 #include "registers.h"
+#include "registers_dpll.h"
 #include <algorithm>
 #include <chrono>
 #include <stdint.h>
@@ -233,11 +234,198 @@ bool DisplayPort::FetchEdidData(RegisterIo* reg_io, uint32_t ddi_number, uint8_t
     return i2c.I2cRead(kDdcI2cAddress, buf, size);
 }
 
-// This function is some bare minimum functionality for allowing us to test
-// FetchEdidData() by running the driver on real hardware and eyeballing
-// the log output.  Once we can bring up a display, we won't need this
-// function as it is now.
-void DisplayPort::FetchAndCheckEdidData(RegisterIo* reg_io)
+namespace {
+
+// Tell the sink device to start link training.
+bool DpcdRequestLinkTraining(DpAuxChannel* dp_aux, dpcd::TrainingPatternSet* tp_set)
+{
+    // Set 3 registers with a single write operation.
+    //
+    // The DisplayPort spec says that we are supposed to write these
+    // registers with a single operation: "The AUX CH burst write must be
+    // used for writing to TRAINING_LANEx_SET bytes of the enabled lanes."
+    // (From section 3.5.1.3, "Link Training", in v1.1a.)
+    uint8_t reg_bytes[3];
+    reg_bytes[0] = tp_set->reg_value();
+    reg_bytes[1] = 0;
+    reg_bytes[2] = 0;
+    constexpr int kAddr = DisplayPort::DPCD_TRAINING_PATTERN_SET;
+    static_assert(kAddr + 1 == DisplayPort::DPCD_TRAINING_LANE0_SET, "");
+    static_assert(kAddr + 2 == DisplayPort::DPCD_TRAINING_LANE1_SET, "");
+
+    if (!dp_aux->DpcdWrite(kAddr, reg_bytes, sizeof(reg_bytes)))
+        return DRETF(false, "Failure setting TRAINING_PATTERN_SET");
+    return true;
+}
+
+// Query the sink device for the results of link training.
+bool DpcdReadLaneStatus(DpAuxChannel* dp_aux, dpcd::Lane01Status* status)
+{
+    uint32_t addr = DisplayPort::DPCD_LANE0_1_STATUS;
+    uint8_t reg_byte;
+    if (!dp_aux->DpcdRead(addr, &reg_byte, sizeof(reg_byte)))
+        return DRETF(false, "Failure reading LANE0_1_STATUS");
+    status->set_reg_value(reg_byte);
+    return true;
+}
+
+// This function implements the link training process.  See the "Link
+// Training" section in the DisplayPort spec (section 3.5.1.3 in version
+// 1.1a).  There are two stages to this:
+//  1) Clock Recovery (CR), using training pattern 1.
+//  2) Channel Equalization / Symbol-Lock / Inter-lane Alignment, using
+//     training pattern 2.
+bool LinkTrainingBody(RegisterIo* reg_io, int32_t ddi_number)
+{
+    DpAuxChannel dp_aux(reg_io, ddi_number);
+
+    // For now, we only support 2 DisplayPort lanes.
+    // TODO(MA-150): We should also handle using 1 or 4 lanes.
+    uint32_t dp_lane_count = 2;
+
+    auto buf_ctl = registers::DdiBufControl::Get(ddi_number).FromValue(0);
+    buf_ctl.ddi_buffer_enable().set(1);
+    buf_ctl.dp_port_width_selection().set(dp_lane_count - 1);
+    buf_ctl.WriteTo(reg_io);
+
+    // Link training stage 1.
+
+    // Tell the source device to emit the training pattern.
+    auto dp_tp = registers::DdiDpTransportControl::Get(ddi_number).FromValue(0);
+    dp_tp.transport_enable().set(1);
+    dp_tp.enhanced_framing_enable().set(1);
+    dp_tp.dp_link_training_pattern().set(dp_tp.kTrainingPattern1);
+    dp_tp.WriteTo(reg_io);
+
+    // Tell the sink device to look for the training pattern.
+    dpcd::TrainingPatternSet tp_set;
+    tp_set.training_pattern_set().set(tp_set.kTrainingPattern1);
+    tp_set.scrambling_disable().set(1);
+    if (!DpcdRequestLinkTraining(&dp_aux, &tp_set))
+        return false;
+
+    // Allow 100us for the first training step, as specified by the
+    // DisplayPort spec.
+    std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+    // Did the sink device receive the signal successfully?
+    dpcd::Lane01Status lane01_status;
+    if (!DpcdReadLaneStatus(&dp_aux, &lane01_status))
+        return false;
+    // TODO(MA-150): If the training attempts fail, we are supposed to try
+    // again after telling the source device to produce a stronger signal
+    // (higher voltage swing level, etc.).  This is not implemented yet.
+    if (!lane01_status.lane0_cr_done().get() || !lane01_status.lane1_cr_done().get())
+        return DRETF(false, "DP: Link training: clock recovery step failed");
+
+    // Link training stage 2.
+
+    // Again, tell the source device to emit the training pattern.
+    dp_tp.dp_link_training_pattern().set(dp_tp.kTrainingPattern2);
+    dp_tp.WriteTo(reg_io);
+
+    // Again, tell the sink device to look for the training pattern.
+    tp_set.training_pattern_set().set(tp_set.kTrainingPattern2);
+    if (!DpcdRequestLinkTraining(&dp_aux, &tp_set))
+        return false;
+
+    // Allow 400us for the second training step, as specified by the
+    // DisplayPort spec.
+    std::this_thread::sleep_for(std::chrono::microseconds(400));
+
+    // Did the sink device receive the signal successfully?
+    if (!DpcdReadLaneStatus(&dp_aux, &lane01_status))
+        return false;
+    if (!lane01_status.lane0_cr_done().get() || !lane01_status.lane1_cr_done().get())
+        return DRETF(false, "DP: Link training: clock recovery regressed");
+    if (!lane01_status.lane0_symbol_locked().get() || !lane01_status.lane1_symbol_locked().get())
+        return DRETF(false, "DP: Link training: symbol lock failed");
+    if (!lane01_status.lane0_channel_eq_done().get() ||
+        !lane01_status.lane1_channel_eq_done().get())
+        return DRETF(false, "DP: Link training: channel equalization failed");
+
+    dp_tp.dp_link_training_pattern().set(dp_tp.kSendPixelData);
+    dp_tp.WriteTo(reg_io);
+
+    return true;
+}
+
+bool DoLinkTraining(RegisterIo* reg_io, int32_t ddi_number)
+{
+    bool result = LinkTrainingBody(reg_io, ddi_number);
+
+    // Tell the sink device to end its link training attempt.
+    //
+    // If link training was successful, we need to do this so that the sink
+    // device will accept pixel data from the source device.
+    //
+    // If link training was not successful, we want to do this so that
+    // subsequent link training attempts can work.  If we don't unset this
+    // register, subsequent link training attempts can also fail.  (This
+    // can be important during development.  The sink device won't
+    // necessarily get reset when the computer is reset.  This means that a
+    // bad version of the driver can leave the sink device in a state where
+    // good versions subsequently don't work.)
+    uint32_t addr = DisplayPort::DPCD_TRAINING_PATTERN_SET;
+    uint8_t reg_byte = 0;
+    DpAuxChannel dp_aux(reg_io, ddi_number);
+    if (!dp_aux.DpcdWrite(addr, &reg_byte, sizeof(reg_byte)))
+        return DRETF(false, "Failure setting TRAINING_PATTERN_SET");
+
+    return result;
+}
+
+} // namespace
+
+bool DisplayPort::PartiallyBringUpDisplay(RegisterIo* reg_io, uint32_t ddi_number)
+{
+    // TODO(MA-150): Handle other DDIs.
+    if (ddi_number != 2)
+        return DRETF(false, "Only DDI C (DDI 2) is currently supported");
+
+    uint32_t dpll_number = 1;
+
+    // Enable power for this DDI.
+    auto power_well = registers::PowerWellControl2::Get().ReadFrom(reg_io);
+    power_well.ddi_c_io_power_request().set(1);
+    power_well.WriteTo(reg_io);
+
+    // Configure this DPLL to produce a suitable clock signal.
+    auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(reg_io);
+    dpll_ctrl1.dpll1_hdmi_mode().set(0);
+    dpll_ctrl1.dpll1_ssc_enable().set(0);
+    dpll_ctrl1.dpll1_link_rate().set(dpll_ctrl1.kLinkRate1350Mhz);
+    dpll_ctrl1.dpll1_override().set(1);
+    dpll_ctrl1.WriteTo(reg_io);
+
+    // Enable this DPLL.
+    auto lcpll2 = registers::Lcpll2Control::Get().FromValue(0);
+    lcpll2.enable_dpll1().set(1);
+    lcpll2.WriteTo(reg_io);
+
+    // Configure this DDI to use the given DPLL as its clock source.
+    auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(reg_io);
+    dpll_ctrl2.ddi_c_clock_select().set(dpll_number);
+    dpll_ctrl2.ddi_c_select_override().set(1);
+    dpll_ctrl2.WriteTo(reg_io);
+
+    if (!DoLinkTraining(reg_io, ddi_number)) {
+        magma::log(magma::LOG_WARNING, "DDI %d: DisplayPort link training failed", ddi_number);
+        return false;
+    }
+    magma::log(magma::LOG_INFO, "DDI %d: DisplayPort link training succeeded", ddi_number);
+    return true;
+}
+
+// This function partially implements bringing up a display, though not yet
+// to the point where the display will display something.  It covers:
+//  * reading EDID data
+//  * doing DisplayPort link training
+//
+// We can test that functionality by running the driver on real hardware
+// and eyeballing the log output.  The log output will be less necessary
+// once we can bring up a display to display something.
+void DisplayPort::PartiallyBringUpDisplays(RegisterIo* reg_io)
 {
     if (!MSD_INTEL_ENABLE_MODESETTING) {
         magma::log(magma::LOG_INFO, "Modesetting code is disabled; "
@@ -262,6 +450,7 @@ void DisplayPort::FetchAndCheckEdidData(RegisterIo* reg_io)
             magma::log(magma::LOG_INFO,
                        "DDI %d: EDID: Read EDID data successfully, with correct header",
                        ddi_number);
+            PartiallyBringUpDisplay(reg_io, ddi_number);
         }
         ++logged_count;
     }

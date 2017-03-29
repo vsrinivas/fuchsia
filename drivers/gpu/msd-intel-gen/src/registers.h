@@ -639,6 +639,49 @@ public:
     }
 };
 
+// DDI_BUF_CTL: DDI buffer control.
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
+class DdiBufControl : public RegisterBase {
+public:
+    DEF_BIT(31, ddi_buffer_enable);
+    DEF_FIELD(27, 24, dp_vswing_emp_sel);
+    DEF_BIT(16, port_reversal);
+    DEF_BIT(7, ddi_idle_status);
+    DEF_BIT(4, ddi_a_lane_capability_control);
+    DEF_FIELD(3, 1, dp_port_width_selection);
+    DEF_BIT(0, init_display_detected);
+
+    static auto Get(uint32_t ddi_number)
+    {
+        DASSERT(ddi_number < Ddi::kDdiCount);
+        return RegisterAddr<DdiBufControl>(0x64000 + 0x100 * ddi_number);
+    }
+};
+
+// DP_TP_CTL: DisplayPort transport control.
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
+class DdiDpTransportControl : public RegisterBase {
+public:
+    DEF_BIT(31, transport_enable);
+    DEF_BIT(27, transport_mode_select);
+    DEF_BIT(25, force_act);
+    DEF_BIT(18, enhanced_framing_enable);
+
+    DEF_FIELD(10, 8, dp_link_training_pattern);
+    static constexpr int kTrainingPattern1 = 0;
+    static constexpr int kTrainingPattern2 = 1;
+    static constexpr int kIdlePattern = 2;
+    static constexpr int kSendPixelData = 3;
+
+    DEF_BIT(6, alternate_sr_enable);
+
+    static auto Get(uint32_t ddi_number)
+    {
+        DASSERT(ddi_number < Ddi::kDdiCount);
+        return RegisterAddr<DdiDpTransportControl>(0x64040 + 0x100 * ddi_number);
+    }
+};
+
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.764
 class MemoryObjectControlState {
 public:
@@ -717,6 +760,29 @@ public:
             val >>= kEuPerSubslice;
         }
     }
+};
+
+// PWR_WELL_CTL: Power well control.  This allows enabling or disabling
+// power to various "power wells" (groups of functional units).
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf
+class PowerWellControl2 : public RegisterBase {
+public:
+    DEF_BIT(31, power_well_2_request);
+    DEF_BIT(30, power_well_2_state);
+    DEF_BIT(29, power_well_1_request);
+    DEF_BIT(28, power_well_1_state);
+    DEF_BIT(9, ddi_d_io_power_request);
+    DEF_BIT(8, ddi_d_io_power_state);
+    DEF_BIT(7, ddi_c_io_power_request);
+    DEF_BIT(6, ddi_c_io_power_state);
+    DEF_BIT(5, ddi_b_io_power_request);
+    DEF_BIT(4, ddi_b_io_power_state);
+    DEF_BIT(3, ddi_a_and_e_io_power_request);
+    DEF_BIT(2, ddi_a_and_e_io_power_state);
+    DEF_BIT(1, misc_io_power_request);
+    DEF_BIT(0, misc_io_power_state);
+
+    static auto Get() { return RegisterAddr<PowerWellControl2>(0x45404); }
 };
 
 } // namespace

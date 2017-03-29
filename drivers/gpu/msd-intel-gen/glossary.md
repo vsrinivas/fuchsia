@@ -16,6 +16,11 @@ The following terms and abbreviations are used in this codebase:
 
 * DP Aux: DisplayPort's auxiliary channel
 
+* DPLL: Display PLL (Phase-Locked Loop).  In this context, the term "PLL"
+  is shorthand for "PLL-based clock".  Each display output (such as
+  DisplayPort or HDMI) requires a clock signal, and this clock signal is
+  provided by a DPLL, which is a functional unit in the graphics hardware.
+
 * DPCD: DisplayPort Configuration Data.  This is a set of registers exposed
   by a DisplayPort sink device.  Each register is a byte in size.  The DPCD
   can be read and written over the DisplayPort Aux channel using "native"

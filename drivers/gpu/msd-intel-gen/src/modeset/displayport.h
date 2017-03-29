@@ -6,6 +6,7 @@
 #define MODESET_DISPLAYPORT_H
 
 #include "magma_util/macros.h"
+#include "register_bitfields.h"
 #include "register_io.h"
 
 // This represents a message sent over DisplayPort's Aux channel, including
@@ -108,8 +109,45 @@ public:
         DP_REPLY_I2C_DEFER = 8,
     };
 
+    // DPCD register numbers.
+    enum {
+        DPCD_TRAINING_PATTERN_SET = 0x102,
+        DPCD_TRAINING_LANE0_SET = 0x103,
+        DPCD_TRAINING_LANE1_SET = 0x104,
+        DPCD_LANE0_1_STATUS = 0x202,
+    };
+
     static bool FetchEdidData(RegisterIo* dev, uint32_t ddi_number, uint8_t* buf, uint32_t size);
-    static void FetchAndCheckEdidData(RegisterIo* reg_io);
+    static bool PartiallyBringUpDisplay(RegisterIo* reg_io, uint32_t ddi_number);
+    static void PartiallyBringUpDisplays(RegisterIo* reg_io);
 };
+
+namespace dpcd {
+
+// DPCD register: TRAINING_PATTERN_SET
+class TrainingPatternSet : public registers::RegisterBase {
+public:
+    DEF_FIELD(1, 0, training_pattern_set);
+    static constexpr int kNotTraining = 0;
+    static constexpr int kTrainingPattern1 = 1;
+    static constexpr int kTrainingPattern2 = 2;
+
+    DEF_FIELD(3, 2, link_qual_pattern_set);
+    DEF_BIT(4, recovered_clock_out_enable);
+    DEF_BIT(5, scrambling_disable);
+};
+
+// DPCD register: LANE0_1_STATUS
+class Lane01Status : public registers::RegisterBase {
+public:
+    DEF_BIT(0, lane0_cr_done);
+    DEF_BIT(1, lane0_channel_eq_done);
+    DEF_BIT(2, lane0_symbol_locked);
+    DEF_BIT(4, lane1_cr_done);
+    DEF_BIT(5, lane1_channel_eq_done);
+    DEF_BIT(6, lane1_symbol_locked);
+};
+
+} // namespace dpcd
 
 #endif // MODESET_DISPLAYPORT_H

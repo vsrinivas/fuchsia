@@ -89,6 +89,9 @@ public:
     void ReadFrom(RegisterIo* reg_io) { reg_value_ = reg_io->Read32(reg_addr_); }
     void WriteTo(RegisterIo* reg_io) { reg_io->Write32(reg_addr_, reg_value_); }
 
+    void ReadFrom(magma::PlatformMmio* reg_io) { reg_value_ = reg_io->Read32(reg_addr_); }
+    void WriteTo(magma::PlatformMmio* reg_io) { reg_io->Write32(reg_addr_, reg_value_); }
+
 private:
     uint32_t reg_addr_ = 0;
     uint32_t reg_value_ = 0;
@@ -108,6 +111,14 @@ public:
     // Instantiate a RegisterBase using the value of the register read from
     // MMIO.
     RegType ReadFrom(RegisterIo* reg_io)
+    {
+        RegType reg;
+        reg.set_reg_addr(reg_addr_);
+        reg.ReadFrom(reg_io);
+        return reg;
+    }
+
+    RegType ReadFrom(magma::PlatformMmio* reg_io)
     {
         RegType reg;
         reg.set_reg_addr(reg_addr_);
@@ -155,11 +166,14 @@ private:
 #define DEF_FIELD(BIT_HIGH, BIT_LOW, NAME)                                                         \
     static_assert((BIT_HIGH) > (BIT_LOW), "Upper bit goes before lower bit");                      \
     static_assert((BIT_HIGH) < 32, "Upper bit is out of range");                                   \
-    BitfieldRef NAME() { return BitfieldRef(reg_value_ptr(), (BIT_HIGH), (BIT_LOW)); }
+    registers::BitfieldRef NAME()                                                                  \
+    {                                                                                              \
+        return registers::BitfieldRef(reg_value_ptr(), (BIT_HIGH), (BIT_LOW));                     \
+    }
 
 #define DEF_BIT(BIT, NAME)                                                                         \
     static_assert((BIT) < 32, "Bit is out of range");                                              \
-    BitfieldRef NAME() { return BitfieldRef(reg_value_ptr(), (BIT), (BIT)); }
+    registers::BitfieldRef NAME() { return registers::BitfieldRef(reg_value_ptr(), (BIT), (BIT)); }
 
 } // namespace registers
 
