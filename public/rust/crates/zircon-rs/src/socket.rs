@@ -104,12 +104,18 @@ impl Socket {
     ///
     /// Wraps
     /// [mx_socket_read](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/socket_read.md).
-    pub fn read(&self, opts: SocketReadOpts, bytes: &mut [u8]) -> Result<usize, Status> {
+    pub fn read(&self, opts: SocketReadOpts, bytes: &mut Vec<u8>) -> Result<usize, Status> {
         let mut actual = 0;
         let status = unsafe {
-            sys::mx_socket_read(self.raw_handle(), opts as u32, bytes.as_mut_ptr(), bytes.len(),
-                &mut actual)
+            sys::mx_socket_read(self.raw_handle(), opts as u32, bytes.as_mut_ptr(),
+                bytes.capacity(), &mut actual)
         };
+        if status != sys::NO_ERROR {
+            // If an error is returned then actual is undefined, so to be safe we set it to 0 and
+            // ignore any data that is set in bytes.
+            actual = 0;
+        }
+        unsafe { bytes.set_len(actual) };
         into_result(status, || actual)
     }
 
@@ -121,5 +127,44 @@ impl Socket {
         let status = unsafe { sys::mx_socket_write(self.raw_handle(), sys::MX_SOCKET_HALF_CLOSE,
             ptr::null(), 0, ptr::null_mut()) };
         into_result(status, || ())
+    }
+
+    pub fn outstanding_read_bytes(&self) -> Result<usize, Status> {
+        let mut outstanding = 0;
+        let status = unsafe {
+            sys::mx_socket_read(self.raw_handle(), 0, ptr::null_mut(), 0, &mut outstanding)
+        };
+        into_result(status, || outstanding)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn socket_basic() {
+        let (s1, s2) = Socket::create(SocketOpts::Default).unwrap();
+
+        // Write in one end and read it back out the other.
+        assert_eq!(s1.write(SocketWriteOpts::Default, b"hello").unwrap(), 5);
+
+        let mut read_vec = Vec::with_capacity(8);
+        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec).unwrap(), 5);
+        assert_eq!(read_vec, b"hello");
+
+        // Try reading when there is nothing to read.
+        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrShouldWait));
+
+        // Close the socket from one end.
+        assert!(s1.half_close().is_ok());
+        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrRemoteClosed));
+        assert_eq!(s1.write(SocketWriteOpts::Default, b"fail"), Err(Status::ErrBadState));
+
+        // Writing in the other direction should still work.
+        assert_eq!(s1.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrShouldWait));
+        assert_eq!(s2.write(SocketWriteOpts::Default, b"back").unwrap(), 4);
+        assert_eq!(s1.read(SocketReadOpts::Default, &mut read_vec).unwrap(), 4);
+        assert_eq!(read_vec, b"back");
     }
 }
