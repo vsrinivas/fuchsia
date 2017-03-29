@@ -272,11 +272,12 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 		}
 
 	writeLoop:
-		for {
-			_, err = dataHandle.Write([]byte(v), 0)
+		for len(v) > 0 {
+			n, err := dataHandle.Write([]byte(v), 0)
+			v = v[n:]
 			switch mxerror.Status(err) {
 			case mx.ErrOk:
-				break writeLoop
+				// NOP
 			case mx.ErrShouldWait:
 				if debug2 {
 					log.Printf("loopSocketRead: gto mx.ErrShouldWait")
