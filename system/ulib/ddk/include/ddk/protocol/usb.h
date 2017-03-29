@@ -21,6 +21,7 @@ typedef struct usb_protocol_data {
 
 typedef struct usb_protocol {
     mx_status_t (*reset_endpoint)(mx_device_t* device, uint8_t ep_address);
+    size_t (*get_max_transfer_size)(mx_device_t* device, uint8_t ep_address);
 } usb_protocol_t;
 
 __END_CDECLS;

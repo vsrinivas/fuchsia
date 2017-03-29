@@ -118,8 +118,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     }
 
     uint32_t interruptor_target = 0;
-    size_t max_transfer_size = 1 << (XFER_TRB_XFER_LENGTH_BITS - 1);
-    size_t data_packets = (length ? (length + max_transfer_size - 1) / max_transfer_size : 0);
+    size_t data_packets = (length + XHCI_MAX_DATA_BUFFER - 1) / XHCI_MAX_DATA_BUFFER;
     size_t required_trbs = data_packets + 1;   // add 1 for event data TRB
     if (setup) {
         required_trbs += 2;
@@ -200,12 +199,12 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
         size_t remaining = length;
 
         for (size_t i = 0; i < data_packets; i++) {
-            size_t transfer_size = (remaining > max_transfer_size ? max_transfer_size : remaining);
+            size_t transfer_size = (remaining > XHCI_MAX_DATA_BUFFER ? XHCI_MAX_DATA_BUFFER : remaining);
             remaining -= transfer_size;
 
             xhci_trb_t* trb = ring->current;
             xhci_clear_trb(trb);
-            XHCI_WRITE64(&trb->ptr, phys_addr + (i * max_transfer_size));
+            XHCI_WRITE64(&trb->ptr, phys_addr + (i * XHCI_MAX_DATA_BUFFER));
             XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS, transfer_size);
             uint32_t td_size = data_packets - i - 1;
             XHCI_SET_BITS32(&trb->status, XFER_TRB_TD_SIZE_START, XFER_TRB_TD_SIZE_BITS, td_size);

@@ -24,6 +24,9 @@
 // Max number of endpoints per device
 #define XHCI_NUM_EPS    32
 
+// Data buffers for TRBs are limited to 64K
+#define XHCI_MAX_DATA_BUFFER    65536
+
 // XHCI Capability Registers
 typedef struct {
     uint8_t length;         // Capability Register Length

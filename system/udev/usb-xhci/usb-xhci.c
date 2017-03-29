@@ -129,6 +129,18 @@ mx_status_t xhci_reset_ep(mx_device_t* device, uint32_t device_id, uint8_t ep_ad
     return xhci_reset_endpoint(xhci, device_id, ep_index);
 }
 
+size_t xhci_get_max_transfer_size(mx_device_t* device, uint32_t device_id, uint8_t ep_address) {
+    if (ep_address == 0) {
+        // control requests have uint16 length field
+        return UINT16_MAX;
+    }
+    // non-control transfers consist of normal transfer TRBs plus one data event TRB
+    // Assuming contiguous data buffers here.
+    // This will need to change when we add scatter/gather support.
+    // Subtract 1 to reserve a TRB for data event.
+    return XHCI_MAX_DATA_BUFFER * (TRANSFER_RING_SIZE - 1);
+}
+
 usb_hci_protocol_t xhci_hci_protocol = {
     .set_bus_device = xhci_set_bus_device,
     .get_max_device_count = xhci_get_max_device_count,
@@ -138,6 +150,7 @@ usb_hci_protocol_t xhci_hci_protocol = {
     .hub_device_added = xhci_hub_device_added,
     .hub_device_removed = xhci_hub_device_removed,
     .reset_endpoint = xhci_reset_ep,
+    .get_max_transfer_size = xhci_get_max_transfer_size,
 };
 
 void xhci_process_deferred_txns(xhci_t* xhci, xhci_endpoint_t* ep, bool closed) {
@@ -173,9 +186,16 @@ void xhci_process_deferred_txns(xhci_t* xhci, xhci_endpoint_t* ep, bool closed) 
 }
 
 static void xhci_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
-    xhci_t* xhci = dev_to_xhci(device);
+    usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
+    mx_status_t status;
 
-    mx_status_t status = xhci_queue_transfer(xhci, txn);
+    if (txn->length > xhci_get_max_transfer_size(device, data->device_id, data->ep_address)) {
+        status = ERR_INVALID_ARGS;
+    } else {
+        xhci_t* xhci = dev_to_xhci(device);
+        status = xhci_queue_transfer(xhci, txn);
+    }
+
     if (status != NO_ERROR && status != ERR_BUFFER_TOO_SMALL) {
         txn->ops->complete(txn, status, 0);
     }

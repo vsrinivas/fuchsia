@@ -209,8 +209,14 @@ mx_status_t usb_interface_reset_endpoint(mx_device_t* device, uint8_t ep_address
     return intf->hci_protocol->reset_endpoint(intf->hci_device, intf->device_id, ep_address);
 }
 
+size_t usb_interface_get_max_transfer_size(mx_device_t* device, uint8_t ep_address) {
+    usb_interface_t* intf = get_usb_interface(device);
+    return intf->hci_protocol->get_max_transfer_size(intf->hci_device, intf->device_id, ep_address);
+}
+
 static usb_protocol_t _usb_protocol = {
     .reset_endpoint = usb_interface_reset_endpoint,
+    .get_max_transfer_size = usb_interface_get_max_transfer_size,
 };
 
 mx_status_t usb_device_add_interface(usb_device_t* device,

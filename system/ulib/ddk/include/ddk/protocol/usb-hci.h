@@ -28,6 +28,7 @@ typedef struct usb_hci_protocol {
     mx_status_t (*hub_device_added)(mx_device_t* dev, uint32_t device_id, int port, usb_speed_t speed);
     mx_status_t (*hub_device_removed)(mx_device_t* dev, uint32_t device_id, int port);
     mx_status_t (*reset_endpoint)(mx_device_t* device, uint32_t device_id, uint8_t ep_address);
+    size_t (*get_max_transfer_size)(mx_device_t* device, uint32_t device_id, uint8_t ep_address);
 } usb_hci_protocol_t;
 
 __END_CDECLS;
