@@ -160,7 +160,9 @@ private:
 
     // callback from kernel when thread is exiting, just before it stops for good.
     void Exiting();
-    static void ThreadExitCallback(void* arg);
+
+    // Dispatch routine for state changes that LK tells us about
+    static void ThreadUserCallback(enum thread_user_state_change new_state, void* arg);
 
     // change states of the object, do what is appropriate for the state transition
     void SetState(State) TA_REQ(state_lock_);

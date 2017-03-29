@@ -451,8 +451,8 @@ void thread_exit(int retcode)
     DEBUG_ASSERT(!thread_is_idle(current_thread));
 
     /* if the thread has a callback set, call it here */
-    if (current_thread->exit_callback) {
-        current_thread->exit_callback(current_thread->exit_callback_arg);
+    if (current_thread->user_callback) {
+        current_thread->user_callback(THREAD_USER_STATE_EXIT, current_thread->user_thread);
     }
 
     THREAD_LOCK(state);
@@ -948,10 +948,9 @@ void thread_set_name(const char *name)
 /**
  * @brief Set the callback pointer to a function called on thread exit.
  */
-void thread_set_exit_callback(thread_t *t, thread_exit_callback_t cb, void *cb_arg)
+void thread_set_user_callback(thread_t *t, thread_user_callback_t cb)
 {
-    t->exit_callback = cb;
-    t->exit_callback_arg = cb_arg;
+    t->user_callback = cb;
 }
 
 /**

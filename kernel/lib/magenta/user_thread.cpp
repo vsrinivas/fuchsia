@@ -214,8 +214,8 @@ status_t UserThread::Initialize(const char* name, size_t len) {
     // bump the ref on this object that the LK thread state will now own until the lk thread has exited
     AddRef();
 
-    // register an exit handler with the LK kernel
-    thread_set_exit_callback(&thread_, &ThreadExitCallback, reinterpret_cast<void*>(this));
+    // register an event handler with the LK kernel
+    thread_set_user_callback(&thread_, &ThreadUserCallback);
 
     // set the per-thread pointer
     lkthread->user_thread = reinterpret_cast<void*>(this);
@@ -405,10 +405,14 @@ void UserThread::Exiting() {
 }
 
 // low level LK callback in thread's context just before exiting
-void UserThread::ThreadExitCallback(void* arg) {
+void UserThread::ThreadUserCallback(enum thread_user_state_change new_state, void* arg) {
     UserThread* t = reinterpret_cast<UserThread*>(arg);
 
-    t->Exiting();
+    switch (new_state) {
+        case THREAD_USER_STATE_EXIT: t->Exiting(); return;
+        // TODO(teisenbe): Remove this default in subsequent patch
+        default: break;
+    }
 }
 
 // low level LK entry point for the thread
