@@ -90,6 +90,9 @@ int main(int argc, char* argv[]) {
         case 'O':
             o.OEM_string = optarg;
             break;
+        case 'S':
+            o.disk_size = argtooff(optarg, "disk size");
+            break;
         case 'a':
             o.sectors_per_fat = argto4(optarg, 1, "sectors/FAT");
             break;

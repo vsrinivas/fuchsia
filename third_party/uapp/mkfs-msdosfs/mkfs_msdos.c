@@ -171,9 +171,8 @@ static const uint8_t bootcode[] = {
     ' ', 'a', 'n', 'y', ' ', 'k', 'e', 'y', ' ', 't', 'o', ' ',
     'r', 'e', 'b', 'o', 'o', 't', 0x0d, 0x0a, 0};
 
-static int getdiskinfo(int, const char*, struct bpb*);
+static int getdiskinfo(int, const char*, off_t, struct bpb*);
 static void print_bpb(struct bpb*);
-static int ckgeom(const char*, uint32_t, const char*);
 static void mklabel(uint8_t*, const char*);
 static int oklabel(const char*);
 static void setstr(uint8_t*, const char*, size_t);
@@ -234,7 +233,7 @@ int mkfs_msdos(const char* fname, const struct msdos_options* op) {
         if (!S_ISREG(sb.st_mode))
             warnx("warning, %s is not a regular file", fname);
     } else {
-        if (!S_ISCHR(sb.st_mode))
+        if (o.disk_size != -1 && !S_ISCHR(sb.st_mode))
             warnx("warning, %s is not a character device", fname);
     }
     if (o.offset && o.offset != lseek(fd, o.offset, SEEK_SET)) {
@@ -242,7 +241,7 @@ int mkfs_msdos(const char* fname, const struct msdos_options* op) {
         goto done;
     }
     memset(&bpb, 0, sizeof(bpb));
-    getdiskinfo(fd, fname, &bpb);
+    getdiskinfo(fd, fname, o.disk_size, &bpb);
     bpb.bpbHugeSectors -= (o.offset / bpb.bpbBytesPerSec);
     if (bpb.bpbSecPerClust == 0) {      /* set defaults */
         if (bpb.bpbHugeSectors <= 6000) /* about 3MB -> 512 bytes */
@@ -619,14 +618,16 @@ done:
 /*
  * Get disk slice, partition, and geometry information.
  */
-static int getdiskinfo(int fd, const char* fname, struct bpb* bpb) {
-    off_t ms = 0;
+static int getdiskinfo(int fd, const char* fname, off_t disk_size, struct bpb* bpb) {
+    off_t ms = disk_size;
 
-    struct stat st;
-    if (fstat(fd, &st))
-        err(1, "cannot get disk size");
+    if (ms < 1) {
+        struct stat st;
+        if (fstat(fd, &st))
+            err(1, "cannot get disk size");
+        ms = st.st_size;
+    }
     /* create a fake geometry for a file image */
-    ms = st.st_size;
     bpb->bpbBytesPerSec = 512;
     bpb->bpbSecPerTrack = 63;
     bpb->bpbHeads = 255;
@@ -661,21 +662,6 @@ static void print_bpb(struct bpb* bpb) {
         printf(bpb->bpbBackup == MAXU16 ? "%#x" : "%u", bpb->bpbBackup);
     }
     printf("\n");
-}
-
-/*
- * Check a disk geometry value.
- */
-static int ckgeom(const char* fname, uint32_t val, const char* msg) {
-    if (!val) {
-        warnx("%s: no default %s", fname, msg);
-        return -1;
-    }
-    if (val > MAXU16) {
-        warnx("%s: illegal %s %d", fname, msg, val);
-        return -1;
-    }
-    return 0;
 }
 
 /*
