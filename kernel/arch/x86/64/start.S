@@ -15,9 +15,6 @@
 
 /* shared code to set up a default 64bit page table structure */
 .macro page_table_init
-    /* load the physical pointer to the top level page table */
-    movl $PHYS(pml4), %eax
-
     /* Setting the First PML4E with a PDP table reference*/
     movl $PHYS(pdp), %eax
     orl  $X86_KERNEL_PD_FLAGS, %eax
