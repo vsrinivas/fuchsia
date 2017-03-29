@@ -153,7 +153,7 @@ mx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp);
 // by launchpad_destroy or transferred by launchpad_start.
 // Successive calls append more handles.  The list of handles to
 // send is cleared only by a successful launchpad_start call.
-// It is an error to add a handle of 0 (MX_INVALID_HANDLE)
+// It is an error to add a handle of 0 (MX_HANDLE_INVALID)
 mx_status_t launchpad_add_handle(launchpad_t* lp, mx_handle_t h, uint32_t id);
 mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
                                   const mx_handle_t h[], const uint32_t id[]);

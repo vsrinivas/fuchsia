@@ -111,7 +111,7 @@ for subsequent communication using the `AUDIO2_IOCTL_GET_CHANNEL` ioctl.  For
 example...
 ```C
 mx_handle_t OpenStream(const char* dev_node_path) {
-    mx_handle_t ret = MX_INVALID_HANDLE;
+    mx_handle_t ret = MX_HANDLE_INVALID;
     int fd = open(dev_node_path, O_RDONLY);
 
     if (fd < 0) {
