@@ -153,9 +153,13 @@ int __libc_sigprocmask(int, const sigset_t*, sigset_t*);
 int __timedwait(atomic_int*, int, clockid_t, const struct timespec*)
     ATTR_LIBC_VISIBILITY;
 
-void __acquire_ptc(void) ATTR_LIBC_VISIBILITY;
-void __release_ptc(void) ATTR_LIBC_VISIBILITY;
-void __inhibit_ptc(void) ATTR_LIBC_VISIBILITY;
+// Loading a library can introduce more thread_local variables. Thread
+// allocation bases bookkeeping decisions based on the current state
+// of thread_locals in the program, so thread creation needs to be
+// inhibited by a concurrent dlopen. This lock implements that
+// exclusion.
+void __thread_allocation_inhibit(void) ATTR_LIBC_VISIBILITY;
+void __thread_allocation_release(void) ATTR_LIBC_VISIBILITY;
 
 void __block_all_sigs(void*) ATTR_LIBC_VISIBILITY;
 void __block_app_sigs(void*) ATTR_LIBC_VISIBILITY;

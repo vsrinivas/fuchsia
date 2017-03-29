@@ -6,6 +6,23 @@
 #include <stddef.h>
 #include <string.h>
 
+static pthread_rwlock_t allocation_lock = PTHREAD_RWLOCK_INITIALIZER;
+
+// Many threads could be reading the TLS state.
+static void thread_allocation_acquire(void) {
+    pthread_rwlock_rdlock(&allocation_lock);
+}
+
+// dlopen calls this under another lock. Only one dlopen call can be
+// modifying state at a time.
+void __thread_allocation_inhibit(void) {
+    pthread_rwlock_wrlock(&allocation_lock);
+}
+
+void __thread_allocation_release(void) {
+    pthread_rwlock_unlock(&allocation_lock);
+}
+
 static inline size_t round_up_to_page(size_t sz) {
     return (sz + PAGE_SIZE - 1) & -PAGE_SIZE;
 }
@@ -76,10 +93,11 @@ __NO_SAFESTACK static bool map_block(mx_handle_t parent_vmar,
     return status != NO_ERROR;
 }
 
-// This allocates all the per-thread memory for a new thread about
-// to be created, or for the initial thread at startup.  It's called
-// either at startup or under __acquire_ptc.  Hence, it's serialized
-// with any dynamic linker changes to the TLS bookkeeping.
+// This allocates all the per-thread memory for a new thread about to
+// be created, or for the initial thread at startup.  It's called
+// either at startup or under thread_allocation_acquire.  Hence,
+// it's serialized with any dynamic linker changes to the TLS
+// bookkeeping.
 //
 // This conceptually allocates four things, but concretely allocates
 // three separate blocks.
@@ -96,6 +114,8 @@ __NO_SAFESTACK static bool map_block(mx_handle_t parent_vmar,
 // Everything else is zero-initialized.
 
 __NO_SAFESTACK pthread_t __allocate_thread(const pthread_attr_t* attr) {
+    thread_allocation_acquire();
+
     const size_t guard_size =
         attr->_a_guardsize == 0 ? 0 : round_up_to_page(attr->_a_guardsize);
     const size_t stack_size = round_up_to_page(attr->_a_stacksize);
@@ -105,17 +125,24 @@ __NO_SAFESTACK pthread_t __allocate_thread(const pthread_attr_t* attr) {
     const size_t vmo_size = tcb_size + stack_size * 2;
     mx_handle_t vmo;
     mx_status_t status = _mx_vmo_create(vmo_size, 0, &vmo);
-    if (status != NO_ERROR)
+    if (status != NO_ERROR) {
+        __thread_allocation_release();
         return NULL;
+    }
 
     struct iovec tcb, tcb_region;
     if (map_block(_mx_vmar_root_self(), vmo, 0, tcb_size, PAGE_SIZE, PAGE_SIZE,
                   &tcb, &tcb_region)) {
+        __thread_allocation_release();
         _mx_handle_close(vmo);
         return NULL;
     }
 
     pthread_t td = copy_tls(tcb.iov_base, tcb.iov_len);
+
+    // At this point all our access to global TLS state is done, so we
+    // can allow dlopen again.
+    __thread_allocation_release();
 
     if (map_block(_mx_vmar_root_self(), vmo,
                   tcb_size, stack_size, guard_size, 0,

@@ -849,7 +849,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/thread/cnd_signal.c \
     $(LOCAL_DIR)/src/thread/cnd_timedwait.c \
     $(LOCAL_DIR)/src/thread/cnd_wait.c \
-    $(LOCAL_DIR)/src/thread/lock_ptc.c \
     $(LOCAL_DIR)/src/thread/mtx_destroy.c \
     $(LOCAL_DIR)/src/thread/mtx_init.c \
     $(LOCAL_DIR)/src/thread/mtx_lock.c \

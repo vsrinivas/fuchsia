@@ -1723,7 +1723,7 @@ __NO_SAFESTACK dl_start_return_t __dls3(void* start_arg) {
 
 static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     pthread_rwlock_wrlock(&lock);
-    __inhibit_ptc();
+    __thread_allocation_inhibit();
 
     struct dso* orig_tail = tail;
 
@@ -1736,7 +1736,7 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
         error("Error loading shared library %s: %s",
               file, _mx_status_get_string(status));
     fail:
-        __release_ptc();
+        __thread_allocation_release();
         pthread_rwlock_unlock(&lock);
         return NULL;
     }
@@ -1811,7 +1811,7 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     }
 
     // Allow thread creation, now that the TLS bookkeeping is consistent.
-    __release_ptc();
+    __thread_allocation_release();
 
     // Bump the dl_iterate_phdr dlpi_adds counter.
     gencnt++;

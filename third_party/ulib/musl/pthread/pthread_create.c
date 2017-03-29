@@ -47,13 +47,9 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     if (attr._a_stackaddr != NULL)
         return ENOTSUP;
 
-    __acquire_ptc();
-
     pthread_t new = __allocate_thread(&attr);
-    if (new == NULL) {
-        __release_ptc();
+    if (new == NULL)
         return EAGAIN;
-    }
 
     const char* name = attr.__name ? attr.__name : "";
     mx_status_t status =
@@ -78,8 +74,6 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     status = mxr_thread_start(&new->mxr_thread,
                               (uintptr_t)new->safe_stack.iov_base,
                               new->safe_stack.iov_len, start, new);
-
-    __release_ptc();
 
     // TODO(kulakowski) Signals?
     // if (do_sched) {
