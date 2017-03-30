@@ -109,12 +109,12 @@ public:
 
     mx_status_t get_property(uint32_t property, void* value,
                              size_t size) const {
-        return get_property(get(), property, value, size);
+        return mx_object_get_property(get(), property, value, size);
     }
 
     mx_status_t set_property(uint32_t property, const void* value,
                              size_t size) const {
-        return set_property(get(), property, value, size);
+        return mx_object_set_property(get(), property, value, size);
     }
 
     bool is_valid() const { return value_ != MX_HANDLE_INVALID; }
