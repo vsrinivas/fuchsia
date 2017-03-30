@@ -31,8 +31,8 @@ class PutBenchmark {
 
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<app::ApplicationContext> application_context_;
-  int entry_count_;
-  fidl::Array<uint8_t> value_;
+  const int entry_count_;
+  const int value_size_;
 
   app::ApplicationControllerPtr ledger_controller_;
   ledger::PagePtr page_;

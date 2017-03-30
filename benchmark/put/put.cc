@@ -30,6 +30,12 @@ fidl::Array<uint8_t> MakeKey(int i) {
   return benchmark::ToArray(std::to_string(i));
 }
 
+fidl::Array<uint8_t> MakeValue(int i, size_t size) {
+  std::string data = std::to_string(i);
+  data.resize(size, 'a');
+  return benchmark::ToArray(data);
+}
+
 }  // namespace
 
 namespace benchmark {
@@ -38,7 +44,7 @@ PutBenchmark::PutBenchmark(int entry_count, int value_size)
     : tmp_dir_(kStoragePath),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
-      value_(fidl::Array<uint8_t>::New(value_size)) {
+      value_size_(value_size) {
   FTL_DCHECK(entry_count > 0);
   FTL_DCHECK(value_size > 0);
   tracing::InitializeTracer(application_context_.get(),
@@ -62,7 +68,7 @@ void PutBenchmark::RunSingle(int i, int count) {
   }
 
   fidl::Array<uint8_t> key = MakeKey(i);
-  fidl::Array<uint8_t> value = value_.Clone();
+  fidl::Array<uint8_t> value = MakeValue(i, value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
   page_->Put(std::move(key), std::move(value),
              [this, i, count](ledger::Status status) {
