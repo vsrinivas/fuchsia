@@ -138,9 +138,11 @@ class ViewRegistry : public mozart::ViewInspector {
                      const ResolveScenesCallback& callback) override;
 
   void ResolveFocusChain(mozart::ViewTreeTokenPtr view_tree_token,
-                    const ResolveFocusChainCallback& callback) override;
+                         const ResolveFocusChainCallback& callback) override;
   void ActivateFocusChain(mozart::ViewTokenPtr view_token,
-                const ActivateFocusChainCallback& callback) override;
+                          const ActivateFocusChainCallback& callback) override;
+  void HasFocus(mozart::ViewTokenPtr view_token,
+                const HasFocusCallback& callback) override;
 
  private:
   // LIFETIME

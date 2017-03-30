@@ -901,7 +901,27 @@ void ViewRegistry::ActivateFocusChain(
   auto tree_state = view->view_stub()->tree();
   mozart::FocusChainPtr new_chain = CopyFocusChain(tree_state->focus_chain());
   callback(std::move(new_chain));
-}  // namespace view_manager
+}
+
+void ViewRegistry::HasFocus(mozart::ViewTokenPtr view_token,
+                            const HasFocusCallback& callback) {
+  FTL_DCHECK(view_token);
+  FTL_VLOG(1) << "HasFocus: view_token=" << view_token;
+  ViewState* view = FindView(view_token->value);
+  if (!view) {
+    callback(false);
+    return;
+  }
+  auto tree_state = view->view_stub()->tree();
+  auto chain = tree_state->focus_chain();
+  for (size_t index = 0; index < chain->chain.size(); ++index) {
+    if (chain->chain[index]->value == view_token->value) {
+      callback(true);
+      return;
+    }
+  }
+  callback(false);
+}
 
 // EXTERNAL SIGNALING
 
