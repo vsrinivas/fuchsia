@@ -221,7 +221,7 @@ func checkOpenDirectory(t *testing.T, d fs.Directory, name string, flags fs.Open
 }
 
 func checkRename(t *testing.T, d fs.Directory, src, dst string) {
-	if err := d.Rename(src, dst); err != nil {
+	if err := d.Rename(d, src, dst); err != nil {
 		t.Fatal(err)
 	}
 }

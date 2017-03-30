@@ -157,9 +157,9 @@ func open(n node.DirectoryNode, name string, flags fs.OpenFlags) (node.Node, err
 
 // Renames a file or directory to a new location.
 // Currently, only supports a single-threaded version which locks the entire filesystem.
-func rename(n node.DirectoryNode, src, dst string) error {
-	metadata := n.Metadata()
-	srcParent, srcName, err := traversePath(n, src) // ACQUIRE srcParent...
+func rename(srcStart node.DirectoryNode, dstStart node.DirectoryNode, src, dst string) error {
+	metadata := srcStart.Metadata()
+	srcParent, srcName, err := traversePath(srcStart, src) // ACQUIRE srcParent...
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func rename(n node.DirectoryNode, src, dst string) error {
 		return fs.ErrNotFound
 	}
 
-	dstParent, dstName, err := traversePath(n, dst) // ACQUIRE dstParent...
+	dstParent, dstName, err := traversePath(dstStart, dst) // ACQUIRE dstParent...
 	if err != nil {
 		return err
 	}

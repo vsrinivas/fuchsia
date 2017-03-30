@@ -228,8 +228,8 @@ type Directory interface {
 
 	// Rename renames the resource pointed to by src to dst.
 	// Renaming a file or directory will not affect any active references to that file/directory.
-	// Rename will not overwrite dst if it already exists.  Returns an error, if any.
-	Rename(src, dst string) error
+	// Rename will overwrite dst if it already exists.  Returns an error, if any.
+	Rename(dstparent Directory, src, dst string) error
 
 	// Sync does not return until all changes to this directory have been persisted to stable
 	// storage.  Returns an error, if any.

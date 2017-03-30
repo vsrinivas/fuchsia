@@ -29,6 +29,7 @@ type directoryWrapper struct {
 	d       fs.Directory
 	dirents []fs.Dirent
 	reading bool
+	e       mx.Event
 }
 
 type ThinVFS struct {
@@ -60,7 +61,7 @@ func StartServer(filesys fs.FileSystem) error {
 	}
 	var serverHandler rio.ServerHandler = mxioServer
 	cookie := vfs.allocateCookie(&directoryWrapper{d: filesys.RootDirectory()})
-	if err := d.AddHandler(h, serverHandler, cookie); err != nil {
+	if err := d.AddHandler(h, serverHandler, int64(cookie)); err != nil {
 		h.Close()
 		return err
 	}
@@ -77,19 +78,58 @@ func StartServer(filesys fs.FileSystem) error {
 }
 
 // Makes a new pipe, registering one end with the 'mxioServer', and returning the other end
-func (vfs *ThinVFS) CreateHandle(obj interface{}) (mx.Handle, error) {
+func (vfs *ThinVFS) CreateHandles(obj interface{}) ([]mx.Handle, error) {
 	h0, h1, err := mx.NewChannel(0)
+	if err != nil {
+		return nil, err
+	}
+
+	var serverHandler rio.ServerHandler = mxioServer
+	cookie := vfs.allocateCookie(obj)
+	if err := vfs.dispatcher.AddHandler(h0.Handle, serverHandler, int64(cookie)); err != nil {
+		vfs.freeCookie(cookie)
+		h0.Close()
+		h1.Close()
+		return nil, err
+	}
+
+	return []mx.Handle{h1.Handle}, nil
+}
+
+func (dw *directoryWrapper) GetToken(cookie int64) (mx.Handle, error) {
+	if dw.e != 0 {
+		if e, err := dw.e.Duplicate(mx.RightSameRights); err != nil {
+			return 0, err
+		} else {
+			return mx.Handle(e), nil
+		}
+	}
+
+	// Create a new event which may later be used to refer to this object
+	e0, err := mx.NewEvent(0)
 	if err != nil {
 		return 0, err
 	}
 
-	var serverHandler rio.ServerHandler = mxioServer
-	if err := vfs.dispatcher.AddHandler(h0.Handle, serverHandler, vfs.allocateCookie(obj)); err != nil {
-		h0.Close()
-		h1.Close()
-		return 0, err
+	dw.e = e0
+
+	// One handle to the event returns to the client, one end is kept on the
+	// server (and is accessible within the cookie).
+	var e1 mx.Event
+	if e1, err = e0.Duplicate(mx.RightSameRights); err != nil {
+		goto fail_event_created
 	}
-	return h1.Handle, nil
+	if err := mx.Handle(e0).SetCookie(mx.ProcHandle, uint64(cookie)); err != nil {
+		goto fail_event_duplicated
+	}
+	return mx.Handle(e1), nil
+
+fail_event_duplicated:
+	e1.Close()
+fail_event_created:
+	e0.Close()
+	dw.e = 0
+	return 0, err
 }
 
 // TODO(smklein): Calibrate thinfs flags with standard C library flags to make conversion smoother
@@ -187,7 +227,7 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return rio.IndirectError(msg.Handle[0], mxErr)
 		}
-		h, err := vfs.CreateHandle(f2)
+		handles, err := vfs.CreateHandles(f2)
 		if err != nil {
 			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
 		}
@@ -199,7 +239,7 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 			Esize:  0,
 			Hcount: 1,
 		}
-		ro.Handle[0] = h
+		ro.Handle[0] = handles[0]
 		ro.Write(msg.Handle[0], 0)
 		return dispatcher.ErrIndirect.Status
 	case rio.OpClose:
@@ -311,17 +351,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		} else {
 			obj = &directoryWrapper{d: d}
 		}
-		h, err := vfs.CreateHandle(obj)
-		if err != nil {
-			println("Failed to create a handle")
-			if f != nil {
-				f.Close()
-			} else {
-				d.Close()
-			}
-			vfs.freeCookie(cookie)
-			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
-		}
+
 		ro := &rio.RioObject{
 			RioObjectHeader: rio.RioObjectHeader{
 				Status: mx.ErrOk,
@@ -330,7 +360,19 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 			Esize:  0,
 			Hcount: 1,
 		}
-		ro.Handle[0] = h
+
+		handles, err := vfs.CreateHandles(obj)
+
+		if err != nil {
+			println("Failed to create a handle")
+			if f != nil {
+				f.Close()
+			} else {
+				d.Close()
+			}
+			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
+		}
+		ro.Handle[0] = handles[0]
 		ro.Write(msg.Handle[0], 0)
 		return dispatcher.ErrIndirect.Status
 	case rio.OpClone:
@@ -338,7 +380,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return rio.IndirectError(msg.Handle[0], mxErr)
 		}
-		h, err := vfs.CreateHandle(&directoryWrapper{d: d2})
+		handles, err := vfs.CreateHandles(&directoryWrapper{d: d2})
 		if err != nil {
 			println("dir clone createhandle err: ", err.Error())
 			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
@@ -351,11 +393,16 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 			Esize:  0,
 			Hcount: 1,
 		}
-		ro.Handle[0] = h
+		ro.Handle[0] = handles[0]
 		ro.Write(msg.Handle[0], 0)
 		return dispatcher.ErrIndirect.Status
 	case rio.OpClose:
 		err := dir.Close()
+		vfs.Lock()
+		if dw.e != 0 {
+			mx.Handle(dw.e).SetCookie(mx.ProcHandle, 0)
+		}
+		vfs.Unlock()
 		vfs.freeCookie(cookie)
 		return errorToRIO(err)
 	case rio.OpStat:
@@ -413,19 +460,42 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		msg.Datalen = 0
 		return errorToRIO(err)
 	case rio.OpRename:
+		defer msg.DiscardHandles()
 		if len(inputData) < 4 { // Src + null + dst + null
-			return rio.IndirectError(msg.Handle[0], mx.ErrInvalidArgs)
+			return mx.ErrInvalidArgs
 		}
 		paths := strings.Split(strings.TrimRight(string(inputData), "\x00"), "\x00")
 		if len(paths) != 2 {
-			return rio.IndirectError(msg.Handle[0], mx.ErrInvalidArgs)
+			return mx.ErrInvalidArgs
 		}
-		err := dir.Rename(paths[0], paths[1])
-		return rio.IndirectError(msg.Handle[0], errorToRIO(err))
+
+		vfs.Lock()
+		defer vfs.Unlock()
+		cookie, err := msg.Handle[0].GetCookie(mx.ProcHandle)
+		if err != nil {
+			return mx.ErrInvalidArgs
+		}
+		obj := vfs.files[int64(cookie)]
+		switch obj := obj.(type) {
+		case *directoryWrapper:
+			return errorToRIO(dir.Rename(obj.d, paths[0], paths[1]))
+		default:
+			return mx.ErrInvalidArgs
+		}
 	case rio.OpSync:
 		return errorToRIO(dir.Sync())
 	case rio.OpIoctl:
 		switch msg.IoctlOp() {
+		case mxio.IoctlDevmgrGetTokenFS:
+			vfs.Lock()
+			defer vfs.Unlock()
+			h, err := dw.GetToken(cookie)
+			if err != nil {
+				return errorToRIO(err)
+			}
+			msg.Handle[0] = h
+			msg.Hcount = 1
+			return mx.ErrOk
 		case mxio.IoctlDevmgrUnmountFS:
 			// Shut down filesystem
 			err := vfs.fs.Close()
@@ -458,7 +528,7 @@ func mxioServer(msg *rio.Msg, rh mx.Handle, cookie int64) mx.Status {
 
 	// Determine if the object we're acting on is a directory or a file
 	vfs.Lock()
-	obj := vfs.files[cookie]
+	obj := vfs.files[int64(cookie)]
 	vfs.Unlock()
 	if obj == nil && msg.Op() == rio.OpClose {
 		// Removing object that has already been removed

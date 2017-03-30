@@ -173,19 +173,22 @@ func (d *directory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 	}, nil, nil
 }
 
-func (d *directory) Rename(src, dst string) error {
+func (d *directory) Rename(dstparent fs.Directory, src, dst string) error {
 	d.fs.Lock()
 	defer d.fs.Unlock()
 	if d.fs.unmounted {
 		return fs.ErrUnmounted
 	}
-	d.RLock()
-	defer d.RUnlock()
-	if d.closed {
-		return fs.ErrNotOpen
-	}
 
-	return rename(d.node, src, dst)
+	switch dstparent := dstparent.(type) {
+	case *directory:
+		if d.closed || dstparent.closed {
+			return fs.ErrNotOpen
+		}
+		return rename(d.node, dstparent.node, src, dst)
+	default:
+		return fs.ErrInvalidArgs
+	}
 }
 
 func (d *directory) Sync() error {

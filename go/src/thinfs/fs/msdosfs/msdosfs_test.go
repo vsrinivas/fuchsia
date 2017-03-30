@@ -700,7 +700,7 @@ func TestReadonly(t *testing.T) {
 		if _, _, err := root.Open("newDirectory", openFlags); err != fs.ErrPermission {
 			t.Fatal("Expected read only error, but saw: ", err)
 		}
-		if err := root.Rename("foo", "foo2"); err != fs.ErrPermission {
+		if err := root.Rename(root, "foo", "foo2"); err != fs.ErrPermission {
 			t.Fatal("Expected read only error, but saw: ", err)
 		} else if err := root.Unlink("foo"); err != fs.ErrPermission {
 			t.Fatal("Expected read only error, but saw: ", err)
@@ -716,7 +716,7 @@ func TestReadonly(t *testing.T) {
 		if _, _, err := subdir.Open("newDirectory", openFlags); err != fs.ErrPermission {
 			t.Fatal("Expected read only error, but saw: ", err)
 		}
-		if err := subdir.Rename("bar", "bar2"); err != fs.ErrPermission {
+		if err := subdir.Rename(subdir, "bar", "bar2"); err != fs.ErrPermission {
 			t.Fatal("Expected read only error, but saw: ", err)
 		} else if err := subdir.Unlink("bar"); err != fs.ErrPermission {
 			t.Fatal("Expected read only error, but saw: ", err)
@@ -782,24 +782,24 @@ func TestRenameInvalid(t *testing.T) {
 		renameTestsInDirectory := func(d fs.Directory) {
 			exclusiveCreateFlags := fs.OpenFlagRead | fs.OpenFlagWrite | fs.OpenFlagCreate | fs.OpenFlagExclusive
 			// Test invalid sources
-			if err := d.Rename("source_that_doesn't_exist", "dst"); err != fs.ErrNotFound {
+			if err := d.Rename(d, "source_that_doesn't_exist", "dst"); err != fs.ErrNotFound {
 				t.Fatal("Expected error; source doesn't exist")
-			} else if err := d.Rename(".", "dst"); err != fs.ErrIsActive {
+			} else if err := d.Rename(d, ".", "dst"); err != fs.ErrIsActive {
 				t.Fatal("Expected error; . does exist, but it should be busy")
-			} else if err := d.Rename("..", "dst"); err != fs.ErrIsActive {
+			} else if err := d.Rename(d, "..", "dst"); err != fs.ErrIsActive {
 				t.Fatal("Expected error; .. does exist, but it should be busy")
 			}
 
 			// Test invalid destinations (with input file)
 			filename := "foo.txt"
 			foo := checkOpenFile(t, d, filename, exclusiveCreateFlags)
-			if err := d.Rename(filename, "."); err != fs.ErrIsActive {
+			if err := d.Rename(d, filename, "."); err != fs.ErrIsActive {
 				t.Fatal("Expected error: . does exist, but it should be busy")
-			} else if err := d.Rename(filename, ".."); err != fs.ErrIsActive {
+			} else if err := d.Rename(d, filename, ".."); err != fs.ErrIsActive {
 				t.Fatal("Expected error: .. does exist, but it should be busy")
-			} else if err := d.Rename(filename, filename); err != fs.ErrIsActive {
+			} else if err := d.Rename(d, filename, filename); err != fs.ErrIsActive {
 				t.Fatal("Expected error: file does exist, but it should be busy")
-			} else if err := d.Rename(filename, "target_parent_dir/does_not_exist"); err != fs.ErrNotFound {
+			} else if err := d.Rename(d, filename, "target_parent_dir/does_not_exist"); err != fs.ErrNotFound {
 				t.Fatal("Expected error: source exists, but the target's parent directory does not")
 			}
 			checkClose(t, foo)
@@ -807,18 +807,18 @@ func TestRenameInvalid(t *testing.T) {
 			// Test invalid destinations (with input directory)
 			dirname := "bar"
 			bar := checkOpenDirectory(t, d, dirname, exclusiveCreateFlags)
-			if err := d.Rename(dirname, "."); err != fs.ErrIsActive {
+			if err := d.Rename(d, dirname, "."); err != fs.ErrIsActive {
 				t.Fatal("Expected error; . does exist, but it should be busy")
-			} else if err := d.Rename(dirname, ".."); err != fs.ErrIsActive {
+			} else if err := d.Rename(d, dirname, ".."); err != fs.ErrIsActive {
 				t.Fatal("Expected error; .. does exist, but it should be busy")
-			} else if err := d.Rename(dirname, dirname); err != fs.ErrIsActive {
+			} else if err := d.Rename(d, dirname, dirname); err != fs.ErrIsActive {
 				t.Fatal("Expected error; directory does exist, but it should be busy")
 			}
 
 			// Test renaming directory to target directory where target is not closed
 			overwriteName := "overwrite_me"
 			overwriteDir := checkOpenDirectory(t, d, overwriteName, exclusiveCreateFlags)
-			if err := d.Rename(dirname, overwriteName); err != fs.ErrIsActive {
+			if err := d.Rename(d, dirname, overwriteName); err != fs.ErrIsActive {
 				t.Fatal(err)
 				t.Fatal("Expected error: Should not be able to rename a directory to an OPEN directory")
 			}
@@ -826,9 +826,9 @@ func TestRenameInvalid(t *testing.T) {
 			checkUnlink(t, d, overwriteName)
 
 			// Test renaming file to directory and vice-versa
-			if err := d.Rename(filename, dirname); err != fs.ErrNotADir {
+			if err := d.Rename(d, filename, dirname); err != fs.ErrNotADir {
 				t.Fatal("Expected error: Should not be able to rename a file to a directory")
-			} else if err := d.Rename(dirname, filename); err != fs.ErrNotADir {
+			} else if err := d.Rename(d, dirname, filename); err != fs.ErrNotADir {
 				t.Fatal("Expected error: Should not be able to rename a directory to a file")
 			}
 
@@ -836,16 +836,16 @@ func TestRenameInvalid(t *testing.T) {
 			subdirname := "baz"
 			baz := checkOpenDirectory(t, bar, subdirname, exclusiveCreateFlags)
 			checkClose(t, baz)
-			if err := bar.Rename(subdirname, subdirname+"/blat"); err != fs.ErrInvalidArgs {
+			if err := bar.Rename(bar, subdirname, subdirname+"/blat"); err != fs.ErrInvalidArgs {
 				// bar/baz -> bar/baz/blat
 				t.Fatal("Expected error: Should not be able to make a directory a subdirectory of itself")
-			} else if err := bar.Rename(subdirname, subdirname+"/blat/blah"); err != fs.ErrNotFound {
+			} else if err := bar.Rename(bar, subdirname, subdirname+"/blat/blah"); err != fs.ErrNotFound {
 				// bar/baz -> bar/baz/blat/blah
 				t.Fatal("Expected error: Subdirectory does not exist")
-			} else if err := bar.Rename(subdirname, "../"+dirname+"/"+subdirname+"/blat"); err != fs.ErrInvalidArgs {
+			} else if err := bar.Rename(bar, subdirname, "../"+dirname+"/"+subdirname+"/blat"); err != fs.ErrInvalidArgs {
 				// bar/baz -> bar/../bar/baz/blat
 				t.Fatal("Expected error: Should not be able to make a directory a subdirectory of itself")
-			} else if err := bar.Rename(subdirname, "./"+subdirname+"/./blat"); err != fs.ErrInvalidArgs {
+			} else if err := bar.Rename(bar, subdirname, "./"+subdirname+"/./blat"); err != fs.ErrInvalidArgs {
 				// bar/baz -> bar/./baz/./blat
 				t.Fatal("Expected error: Should not be able to make a directory a subdirectory of itself")
 			}
@@ -854,7 +854,7 @@ func TestRenameInvalid(t *testing.T) {
 			// Test case where destination is non-empty directory
 			// bat -> bar, but bar contains baz
 			bat := checkOpenDirectory(t, d, "bat", exclusiveCreateFlags)
-			if err := d.Rename("bat", dirname); err != fs.ErrNotEmpty {
+			if err := d.Rename(d, "bat", dirname); err != fs.ErrNotEmpty {
 				t.Fatal("Expected error: Should not be able to (via rename) overwrite non-empty directory")
 			}
 			checkClose(t, bat)
@@ -1256,7 +1256,7 @@ func TestUseAfterClose(t *testing.T) {
 			t.Fatalf("Expected %s error, saw: %s", goldErr, err)
 		} else if _, _, err := d.Open("foo", fs.OpenFlagRead); err != goldErr {
 			t.Fatalf("Expected %s error, saw: %s", goldErr, err)
-		} else if err := d.Rename("foo", "bar"); err != goldErr {
+		} else if err := d.Rename(d, "foo", "bar"); err != goldErr {
 			t.Fatalf("Expected %s error, saw: %s", goldErr, err)
 		} else if err := d.Sync(); err != goldErr {
 			t.Fatalf("Expected %s error, saw: %s", goldErr, err)
