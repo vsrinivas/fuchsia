@@ -2,128 +2,154 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-#include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/path.h"
+#include "gtest/gtest.h"
+#include "lib/ftl/build_config.h"
+#include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 
 namespace files {
 namespace {
 
+void ExpectPlatformPath(std::string expected, std::string actual) {
+#if defined(OS_WIN)
+  std::replace(expected.begin(), expected.end(), '/', '\\');
+#endif
+  EXPECT_EQ(expected, actual);
+}
+
 TEST(Path, SimplifyPath) {
-  EXPECT_EQ(".", SimplifyPath(""));
-  EXPECT_EQ(".", SimplifyPath("."));
-  EXPECT_EQ("..", SimplifyPath(".."));
-  EXPECT_EQ("...", SimplifyPath("..."));
+  ExpectPlatformPath(".", SimplifyPath(""));
+  ExpectPlatformPath(".", SimplifyPath("."));
+  ExpectPlatformPath("..", SimplifyPath(".."));
+  ExpectPlatformPath("...", SimplifyPath("..."));
 
-  EXPECT_EQ("/", SimplifyPath("/"));
-  EXPECT_EQ("/", SimplifyPath("/."));
-  EXPECT_EQ("/", SimplifyPath("/.."));
-  EXPECT_EQ("/...", SimplifyPath("/..."));
+  ExpectPlatformPath("/", SimplifyPath("/"));
+  ExpectPlatformPath("/", SimplifyPath("/."));
+  ExpectPlatformPath("/", SimplifyPath("/.."));
+  ExpectPlatformPath("/...", SimplifyPath("/..."));
 
-  EXPECT_EQ("foo", SimplifyPath("foo"));
-  EXPECT_EQ("foo", SimplifyPath("foo/"));
-  EXPECT_EQ("foo", SimplifyPath("foo/."));
-  EXPECT_EQ("foo", SimplifyPath("foo/./"));
-  EXPECT_EQ(".", SimplifyPath("foo/.."));
-  EXPECT_EQ(".", SimplifyPath("foo/../"));
-  EXPECT_EQ("foo/...", SimplifyPath("foo/..."));
-  EXPECT_EQ("foo/...", SimplifyPath("foo/.../"));
-  EXPECT_EQ("foo/.b", SimplifyPath("foo/.b"));
-  EXPECT_EQ("foo/.b", SimplifyPath("foo/.b/"));
+  ExpectPlatformPath("foo", SimplifyPath("foo"));
+  ExpectPlatformPath("foo", SimplifyPath("foo/"));
+  ExpectPlatformPath("foo", SimplifyPath("foo/."));
+  ExpectPlatformPath("foo", SimplifyPath("foo/./"));
+  ExpectPlatformPath(".", SimplifyPath("foo/.."));
+  ExpectPlatformPath(".", SimplifyPath("foo/../"));
+  ExpectPlatformPath("foo/...", SimplifyPath("foo/..."));
+  ExpectPlatformPath("foo/...", SimplifyPath("foo/.../"));
+  ExpectPlatformPath("foo/.b", SimplifyPath("foo/.b"));
+  ExpectPlatformPath("foo/.b", SimplifyPath("foo/.b/"));
 
-  EXPECT_EQ("/foo", SimplifyPath("/foo"));
-  EXPECT_EQ("/foo", SimplifyPath("/foo/"));
-  EXPECT_EQ("/foo", SimplifyPath("/foo/."));
-  EXPECT_EQ("/foo", SimplifyPath("/foo/./"));
-  EXPECT_EQ("/", SimplifyPath("/foo/.."));
-  EXPECT_EQ("/", SimplifyPath("/foo/../"));
-  EXPECT_EQ("/foo/...", SimplifyPath("/foo/..."));
-  EXPECT_EQ("/foo/...", SimplifyPath("/foo/.../"));
-  EXPECT_EQ("/foo/.b", SimplifyPath("/foo/.b"));
-  EXPECT_EQ("/foo/.b", SimplifyPath("/foo/.b/"));
+  ExpectPlatformPath("/foo", SimplifyPath("/foo"));
+  ExpectPlatformPath("/foo", SimplifyPath("/foo/"));
+  ExpectPlatformPath("/foo", SimplifyPath("/foo/."));
+  ExpectPlatformPath("/foo", SimplifyPath("/foo/./"));
+  ExpectPlatformPath("/", SimplifyPath("/foo/.."));
+  ExpectPlatformPath("/", SimplifyPath("/foo/../"));
+  ExpectPlatformPath("/foo/...", SimplifyPath("/foo/..."));
+  ExpectPlatformPath("/foo/...", SimplifyPath("/foo/.../"));
+  ExpectPlatformPath("/foo/.b", SimplifyPath("/foo/.b"));
+  ExpectPlatformPath("/foo/.b", SimplifyPath("/foo/.b/"));
 
-  EXPECT_EQ("foo/bar", SimplifyPath("foo/bar"));
-  EXPECT_EQ("foo/bar", SimplifyPath("foo/bar/"));
-  EXPECT_EQ("foo/bar", SimplifyPath("foo/./bar"));
-  EXPECT_EQ("foo/bar", SimplifyPath("foo/./bar/"));
-  EXPECT_EQ("bar", SimplifyPath("foo/../bar"));
-  EXPECT_EQ("bar", SimplifyPath("foo/baz/../../bar"));
-  EXPECT_EQ("bar", SimplifyPath("foo/../bar/"));
-  EXPECT_EQ("foo/.../bar", SimplifyPath("foo/.../bar"));
-  EXPECT_EQ("foo/.../bar", SimplifyPath("foo/.../bar/"));
-  EXPECT_EQ("foo/.b/bar", SimplifyPath("foo/.b/bar"));
-  EXPECT_EQ("foo/.b/bar", SimplifyPath("foo/.b/bar/"));
+  ExpectPlatformPath("foo/bar", SimplifyPath("foo/bar"));
+  ExpectPlatformPath("foo/bar", SimplifyPath("foo/bar/"));
+  ExpectPlatformPath("foo/bar", SimplifyPath("foo/./bar"));
+  ExpectPlatformPath("foo/bar", SimplifyPath("foo/./bar/"));
+  ExpectPlatformPath("bar", SimplifyPath("foo/../bar"));
+  ExpectPlatformPath("bar", SimplifyPath("foo/baz/../../bar"));
+  ExpectPlatformPath("bar", SimplifyPath("foo/../bar/"));
+  ExpectPlatformPath("foo/.../bar", SimplifyPath("foo/.../bar"));
+  ExpectPlatformPath("foo/.../bar", SimplifyPath("foo/.../bar/"));
+  ExpectPlatformPath("foo/.b/bar", SimplifyPath("foo/.b/bar"));
+  ExpectPlatformPath("foo/.b/bar", SimplifyPath("foo/.b/bar/"));
 
-  EXPECT_EQ("/foo/bar", SimplifyPath("/foo/bar"));
-  EXPECT_EQ("/foo/bar", SimplifyPath("/foo/bar/"));
-  EXPECT_EQ("/foo/bar", SimplifyPath("/foo/./bar"));
-  EXPECT_EQ("/foo/bar", SimplifyPath("/foo/./bar/"));
-  EXPECT_EQ("/bar", SimplifyPath("/foo/../bar"));
-  EXPECT_EQ("/bar", SimplifyPath("/foo/../bar/"));
-  EXPECT_EQ("/foo/.../bar", SimplifyPath("/foo/.../bar"));
-  EXPECT_EQ("/foo/.../bar", SimplifyPath("/foo/.../bar/"));
-  EXPECT_EQ("/foo/.b/bar", SimplifyPath("/foo/.b/bar"));
-  EXPECT_EQ("/foo/.b/bar", SimplifyPath("/foo/.b/bar/"));
+  ExpectPlatformPath("/foo/bar", SimplifyPath("/foo/bar"));
+  ExpectPlatformPath("/foo/bar", SimplifyPath("/foo/bar/"));
+  ExpectPlatformPath("/foo/bar", SimplifyPath("/foo/./bar"));
+  ExpectPlatformPath("/foo/bar", SimplifyPath("/foo/./bar/"));
+  ExpectPlatformPath("/bar", SimplifyPath("/foo/../bar"));
+  ExpectPlatformPath("/bar", SimplifyPath("/foo/../bar/"));
+  ExpectPlatformPath("/foo/.../bar", SimplifyPath("/foo/.../bar"));
+  ExpectPlatformPath("/foo/.../bar", SimplifyPath("/foo/.../bar/"));
+  ExpectPlatformPath("/foo/.b/bar", SimplifyPath("/foo/.b/bar"));
+  ExpectPlatformPath("/foo/.b/bar", SimplifyPath("/foo/.b/bar/"));
 
-  EXPECT_EQ("../foo", SimplifyPath("../foo"));
-  EXPECT_EQ("../../bar", SimplifyPath("../foo/../../bar"));
-  EXPECT_EQ("/bar", SimplifyPath("/foo/../../bar"));
+  ExpectPlatformPath("../foo", SimplifyPath("../foo"));
+  ExpectPlatformPath("../../bar", SimplifyPath("../foo/../../bar"));
+  ExpectPlatformPath("/bar", SimplifyPath("/foo/../../bar"));
 
   // Already clean
-  EXPECT_EQ(".", SimplifyPath(""));
-  EXPECT_EQ("abc", SimplifyPath("abc"));
-  EXPECT_EQ("abc/def", SimplifyPath("abc/def"));
-  EXPECT_EQ("a/b/c", SimplifyPath("a/b/c"));
-  EXPECT_EQ(".", SimplifyPath("."));
-  EXPECT_EQ("..", SimplifyPath(".."));
-  EXPECT_EQ("../..", SimplifyPath("../.."));
-  EXPECT_EQ("../../abc", SimplifyPath("../../abc"));
-  EXPECT_EQ("/abc", SimplifyPath("/abc"));
-  EXPECT_EQ("/", SimplifyPath("/"));
+  ExpectPlatformPath(".", SimplifyPath(""));
+  ExpectPlatformPath("abc", SimplifyPath("abc"));
+  ExpectPlatformPath("abc/def", SimplifyPath("abc/def"));
+  ExpectPlatformPath("a/b/c", SimplifyPath("a/b/c"));
+  ExpectPlatformPath(".", SimplifyPath("."));
+  ExpectPlatformPath("..", SimplifyPath(".."));
+  ExpectPlatformPath("../..", SimplifyPath("../.."));
+  ExpectPlatformPath("../../abc", SimplifyPath("../../abc"));
+  ExpectPlatformPath("/abc", SimplifyPath("/abc"));
+  ExpectPlatformPath("/", SimplifyPath("/"));
 
   // Remove trailing slash
-  EXPECT_EQ("abc", SimplifyPath("abc/"));
-  EXPECT_EQ("abc/def", SimplifyPath("abc/def/"));
-  EXPECT_EQ("a/b/c", SimplifyPath("a/b/c/"));
-  EXPECT_EQ(".", SimplifyPath("./"));
-  EXPECT_EQ("..", SimplifyPath("../"));
-  EXPECT_EQ("../..", SimplifyPath("../../"));
-  EXPECT_EQ("/abc", SimplifyPath("/abc/"));
+  ExpectPlatformPath("abc", SimplifyPath("abc/"));
+  ExpectPlatformPath("abc/def", SimplifyPath("abc/def/"));
+  ExpectPlatformPath("a/b/c", SimplifyPath("a/b/c/"));
+  ExpectPlatformPath(".", SimplifyPath("./"));
+  ExpectPlatformPath("..", SimplifyPath("../"));
+  ExpectPlatformPath("../..", SimplifyPath("../../"));
+  ExpectPlatformPath("/abc", SimplifyPath("/abc/"));
 
   // Remove doubled slash
-  EXPECT_EQ("abc/def/ghi", SimplifyPath("abc//def//ghi"));
-  EXPECT_EQ("/abc", SimplifyPath("//abc"));
-  EXPECT_EQ("/abc", SimplifyPath("///abc"));
-  EXPECT_EQ("/abc", SimplifyPath("//abc//"));
-  EXPECT_EQ("abc", SimplifyPath("abc//"));
+  ExpectPlatformPath("abc/def/ghi", SimplifyPath("abc//def//ghi"));
+  ExpectPlatformPath("/abc", SimplifyPath("//abc"));
+  ExpectPlatformPath("/abc", SimplifyPath("///abc"));
+  ExpectPlatformPath("/abc", SimplifyPath("//abc//"));
+  ExpectPlatformPath("abc", SimplifyPath("abc//"));
 
   // Remove . elements
-  EXPECT_EQ("abc/def", SimplifyPath("abc/./def"));
-  EXPECT_EQ("/abc/def", SimplifyPath("/./abc/def"));
-  EXPECT_EQ("abc", SimplifyPath("abc/."));
+  ExpectPlatformPath("abc/def", SimplifyPath("abc/./def"));
+  ExpectPlatformPath("/abc/def", SimplifyPath("/./abc/def"));
+  ExpectPlatformPath("abc", SimplifyPath("abc/."));
 
   // Remove .. elements
-  EXPECT_EQ("abc/def/jkl", SimplifyPath("abc/def/ghi/../jkl"));
-  EXPECT_EQ("abc/jkl", SimplifyPath("abc/def/../ghi/../jkl"));
-  EXPECT_EQ("abc", SimplifyPath("abc/def/.."));
-  EXPECT_EQ(".", SimplifyPath("abc/def/../.."));
-  EXPECT_EQ("/", SimplifyPath("/abc/def/../.."));
-  EXPECT_EQ("..", SimplifyPath("abc/def/../../.."));
-  EXPECT_EQ("/", SimplifyPath("/abc/def/../../.."));
-  EXPECT_EQ("../../mno", SimplifyPath("abc/def/../../../ghi/jkl/../../../mno"));
+  ExpectPlatformPath("abc/def/jkl", SimplifyPath("abc/def/ghi/../jkl"));
+  ExpectPlatformPath("abc/jkl", SimplifyPath("abc/def/../ghi/../jkl"));
+  ExpectPlatformPath("abc", SimplifyPath("abc/def/.."));
+  ExpectPlatformPath(".", SimplifyPath("abc/def/../.."));
+  ExpectPlatformPath("/", SimplifyPath("/abc/def/../.."));
+  ExpectPlatformPath("..", SimplifyPath("abc/def/../../.."));
+  ExpectPlatformPath("/", SimplifyPath("/abc/def/../../.."));
+  ExpectPlatformPath("../../mno",
+                     SimplifyPath("abc/def/../../../ghi/jkl/../../../mno"));
+  ExpectPlatformPath("/mno", SimplifyPath("/../mno"));
 
   // Combinations
-  EXPECT_EQ("def", SimplifyPath("abc/./../def"));
-  EXPECT_EQ("def", SimplifyPath("abc//./../def"));
-  EXPECT_EQ("../../def", SimplifyPath("abc/../../././../def"));
+  ExpectPlatformPath("def", SimplifyPath("abc/./../def"));
+  ExpectPlatformPath("def", SimplifyPath("abc//./../def"));
+  ExpectPlatformPath("../../def", SimplifyPath("abc/../../././../def"));
+
+#if defined(OS_WIN)
+  ExpectPlatformPath("a\\c", SimplifyPath("a\\b\\..\\c"));
+  ExpectPlatformPath("X:\\a\\c", SimplifyPath("X:/a/b/../c"));
+  ExpectPlatformPath("X:\\a\\b\\c", SimplifyPath("X:/a/b/./c"));
+  ExpectPlatformPath("X:\\c", SimplifyPath("X:/../../c"));
+#endif
 }
 
 TEST(Path, AbsolutePath) {
+#if defined(OS_WIN)
+  EXPECT_EQ("C:\\foo\\bar", AbsolutePath("\\foo\\bar"));
+  EXPECT_EQ("C:\\foo\\bar", AbsolutePath("/foo/bar"));
+  EXPECT_EQ("C:\\foo\\bar\\", AbsolutePath("\\foo\\bar\\"));
+  EXPECT_EQ("C:\\foo\\bar\\", AbsolutePath("/foo/bar/"));
+  EXPECT_EQ("C:\\foo\\bar\\", AbsolutePath("C:\\foo\\bar\\"));
+  EXPECT_EQ(GetCurrentDirectory() + "\\foo", AbsolutePath("foo"));
+#else
   EXPECT_EQ("/foo/bar", AbsolutePath("/foo/bar"));
   EXPECT_EQ("/foo/bar/", AbsolutePath("/foo/bar/"));
-  EXPECT_EQ(GetCurrentDirectory(), AbsolutePath(""));
   EXPECT_EQ(GetCurrentDirectory() + "/foo", AbsolutePath("foo"));
+#endif
+  EXPECT_EQ(GetCurrentDirectory(), AbsolutePath(""));
 }
 
 TEST(Path, GetDirectoryName) {
@@ -138,6 +164,15 @@ TEST(Path, GetDirectoryName) {
   EXPECT_EQ("/", GetDirectoryName("/a"));
   EXPECT_EQ("/a", GetDirectoryName("/a/"));
   EXPECT_EQ("a", GetDirectoryName("a/"));
+#if defined(OS_WIN)
+  EXPECT_EQ("C:\\", GetDirectoryName("C:\\"));
+  EXPECT_EQ("C:\\foo", GetDirectoryName("C:\\foo\\"));
+  EXPECT_EQ("C:\\foo", GetDirectoryName("C:\\foo\\bar"));
+  EXPECT_EQ("foo\\bar", GetDirectoryName("foo\\bar\\"));
+  EXPECT_EQ("foo", GetDirectoryName("foo\\bar"));
+  EXPECT_EQ("\\", GetDirectoryName("\\"));
+  EXPECT_EQ("\\", GetDirectoryName("\\a"));
+#endif
 }
 
 TEST(Path, GetBaseName) {
@@ -152,6 +187,15 @@ TEST(Path, GetBaseName) {
   EXPECT_EQ("a", GetBaseName("/a"));
   EXPECT_EQ("", GetBaseName("/a/"));
   EXPECT_EQ("", GetBaseName("a/"));
+#if defined(OS_WIN)
+  EXPECT_EQ("", GetBaseName("C:\\"));
+  EXPECT_EQ("", GetBaseName("C:\\foo\\"));
+  EXPECT_EQ("bar", GetBaseName("C:\\foo\\bar"));
+  EXPECT_EQ("", GetBaseName("foo\\bar\\"));
+  EXPECT_EQ("bar", GetBaseName("foo\\bar"));
+  EXPECT_EQ("", GetBaseName("\\"));
+  EXPECT_EQ("a", GetBaseName("\\a"));
+#endif
 }
 
 TEST(Path, DeletePath) {

@@ -4,13 +4,13 @@
 
 #include "lib/ftl/synchronization/sleep.h"
 
-#include <time.h>
+#include <chrono>
+#include <thread>
 
 namespace ftl {
 
 void SleepFor(TimeDelta duration) {
-  struct timespec ts = duration.ToTimespec();
-  nanosleep(&ts, nullptr);
+  std::this_thread::sleep_for(std::chrono::nanoseconds(duration.ToNanoseconds()));
 }
 
 }  // namespace ftl
