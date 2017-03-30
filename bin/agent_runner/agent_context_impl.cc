@@ -32,7 +32,9 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
 
   // Initialize the agent service.
   ConnectToService(application_services_.get(), agent_.NewRequest());
-  agent_->Initialize(agent_context_binding_.NewBinding());
+  agent_->Initialize(agent_context_binding_.NewBinding(), [this]{
+    OnInitialized();
+  });
 
   // When the agent process dies, we remove it.
   application_controller_.set_connection_error_handler(
@@ -45,10 +47,27 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
 
 AgentContextImpl::~AgentContextImpl() = default;
 
+void AgentContextImpl::OnInitialized() {
+  ready_ = true;
+  for (auto& pending_connection : pending_connections_) {
+    NewConnection(pending_connection.requestor_url,
+                  std::move(pending_connection.incoming_services_request),
+                  std::move(pending_connection.agent_controller_request));
+  }
+  pending_connections_.clear();
+}
+
 void AgentContextImpl::NewConnection(
     const std::string& requestor_url,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
+  if (!ready_) {
+    pending_connections_.push_back({requestor_url,
+                                    std::move(incoming_services_request),
+                                    std::move(agent_controller_request)});
+    return;
+  }
+
   agent_->Connect(requestor_url, std::move(incoming_services_request));
 
   // Add a binding to the |controller|. When all the bindings go away

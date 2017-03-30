@@ -26,8 +26,8 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent>,
 
  private:
   // |Agent|
-  void Initialize(
-      fidl::InterfaceHandle<modular::AgentContext> agent_context) override {
+  void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
+                  const InitializeCallback& callback) override {
     agent_context_.Bind(std::move(agent_context));
     agent_context_->GetComponentContext(component_context_.NewRequest());
     agent1_services_.AddService<modular::testing::Agent1Interface>(
@@ -43,6 +43,8 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent>,
 
     // Killing the agent controller should stop it.
     agent2_controller_.reset();
+
+    callback();
   }
 
   // |Agent|

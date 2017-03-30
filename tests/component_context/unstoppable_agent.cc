@@ -25,11 +25,12 @@ class UnstoppableAgentApp : public modular::SingleServiceApp<modular::Agent> {
 
  private:
   // |Agent|
-  void Initialize(
-      fidl::InterfaceHandle<modular::AgentContext> agent_context) override {
+  void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
+                  const InitializeCallback& callback) override {
     agent_context_.Bind(std::move(agent_context));
     agent_context_->GetComponentContext(component_context_.NewRequest());
     initialized_.Pass();
+    callback();
   }
 
   // |Agent|

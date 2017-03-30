@@ -46,6 +46,8 @@ class AgentContextImpl : public AgentContext, public AgentController {
   ~AgentContextImpl() override;
 
   // Called by AgentRunner when a component wants to connect to this agent.
+  // Connections will pend until Agent::Initialize() responds back, at which
+  // point all connections will be forwarded to the agent.
   void NewConnection(
       const std::string& requestor_url,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
@@ -68,6 +70,10 @@ class AgentContextImpl : public AgentContext, public AgentController {
   void GetIntelligenceServices(
       fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
 
+  // Called once Agent::Initialize() returns back. At this point, all pending
+  // connections are forwarded to the agent.
+  void OnInitialized();
+
   // Stop this agent when there are no active AgentControllers and there are no
   // outstanding tasks.
   void MaybeStopAgent();
@@ -86,6 +92,15 @@ class AgentContextImpl : public AgentContext, public AgentController {
 
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.
+
+  // |ready_| is true once Initialize() responds.
+  bool ready_{};
+  struct PendingConnection {
+    std::string requestor_url;
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request;
+    fidl::InterfaceRequest<AgentController> agent_controller_request;
+  };
+  std::vector<PendingConnection> pending_connections_;
 
   // Number of times Agent.RunTask() was called but we're still waiting on its
   // completion callback.
