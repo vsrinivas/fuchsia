@@ -107,6 +107,16 @@ record containing the base and length of the region.
 **MX_INFO_JOB_PROCESSES**  Requires a Job handle. Returns an array of
   *mx_koid_t*s corresponding to the direct child Processes of the given Job.
 
+**MX_INFO_TASK_STATS** Requires a Process handle. May be somewhat expensive
+to gather. Always returns a single *mx_info_task_stats_t* record containing:
+
+*   *mem_mapped_bytes*: The total size of mapped memory ranges in the task.
+    Not all will be backed by physical memory.
+*   *mem_committed_bytes*: The amount of mapped address space backed by
+    physical memory. Will be no larger than mem_mapped_bytes. Some of the
+    pages may be double-mapped (and thus double-counted), or may be shared with
+    other tasks.
+
 
 ## RETURN VALUE
 
