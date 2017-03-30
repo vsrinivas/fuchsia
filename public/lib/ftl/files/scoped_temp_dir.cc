@@ -27,9 +27,10 @@ ScopedTempDir::ScopedTempDir(ftl::StringView parent_path) {
     const char* env_var = getenv("TMPDIR");
     parent_path = ftl::StringView(env_var ? env_var : "/tmp");
   }
+  const std::string parent_path_str = parent_path.ToString();
   // mkdtemp replaces "XXXXXX" so that the resulting directory path is unique.
-  directory_path_ = parent_path.ToString() + "/temp_dir_XXXXXX";
-  if (!CreateDirectory(directory_path_) || !mkdtemp(&directory_path_[0])) {
+  directory_path_ = parent_path_str + "/temp_dir_XXXXXX";
+  if (!CreateDirectory(parent_path_str) || !mkdtemp(&directory_path_[0])) {
     directory_path_ = "";
   }
 }

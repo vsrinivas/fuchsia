@@ -5,6 +5,7 @@
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/directory.h"
+#include "lib/ftl/files/path.h"
 
 namespace files {
 namespace {
@@ -41,6 +42,11 @@ TEST(ScopedTempDir, CustomParent) {
     path = dir.path();
     EXPECT_TRUE(IsDirectory(path));
     EXPECT_EQ(path.substr(0, parent.size()), parent);
+    EXPECT_NE("temp_dir_XXXXXX", GetBaseName(path));
+
+    // Regression test - don't create temp_dir_XXXXXX dir next to the temp one.
+    EXPECT_FALSE(
+        files::IsDirectory(GetDirectoryName(path) + "/temp_dir_XXXXXX"));
   }
 
   // Verify that the tmp directory itself was deleted, but not the parent.
