@@ -326,10 +326,10 @@ void x86_exception_handler(x86_iframe_t *frame)
             x86_invop_handler(frame);
             break;
 
-        case X86_INT_DEVICE_NA: {
+        case X86_INT_DEVICE_NA:
             THREAD_STATS_INC(exceptions);
             exception_die(frame, "device na fault\n");
-        }
+            break;
 
         case X86_INT_DOUBLE_FAULT:
             x86_df_handler(frame);
@@ -340,7 +340,6 @@ void x86_exception_handler(x86_iframe_t *frame)
             __asm__ __volatile__("fnstsw %0" : "=m" (fsw));
             TRACEF("fsw 0x%hx\n", fsw);
             exception_die(frame, "x87 math fault\n");
-            //asm volatile("fnclex");
             break;
         }
         case X86_INT_SIMD_FP_ERROR: {
@@ -362,7 +361,8 @@ void x86_exception_handler(x86_iframe_t *frame)
             break;
 
         /* ignore spurious APIC irqs */
-        case X86_INT_APIC_SPURIOUS: break;
+        case X86_INT_APIC_SPURIOUS:
+            break;
         case X86_INT_APIC_ERROR: {
             ret = apic_error_interrupt_handler();
             apic_issue_eoi();
@@ -393,12 +393,12 @@ void x86_exception_handler(x86_iframe_t *frame)
         /* pass all other non-Intel defined irq vectors to the platform */
         case X86_INT_PLATFORM_BASE  ... X86_INT_PLATFORM_MAX: {
             THREAD_STATS_INC(interrupts);
-
             ret = platform_irq(frame);
             break;
         }
         default:
             x86_unhandled_exception(frame);
+            break;
     }
 
     /* at this point we're able to be rescheduled, so we're 'outside' of the int handler */
