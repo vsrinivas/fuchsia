@@ -475,15 +475,10 @@ static int vc_log_reader_thread(void* arg) {
 }
 
 static int vc_battery_poll_thread(void* arg) {
+    int battery_fd = static_cast<int>(reinterpret_cast<uintptr_t>(arg));
     char str[16];
     for (;;) {
-        int fd = open("/dev/misc/acpi-battery", O_RDONLY);
-        if (fd < 0) {
-            printf("vc: no battery\n");
-            return -1;
-        }
-        ssize_t r = read(fd, str, sizeof(str));
-        close(fd);
+        ssize_t r = read(battery_fd, str, sizeof(str));
         if (r < 0) {
             break;
         }
@@ -507,33 +502,41 @@ static int vc_battery_poll_thread(void* arg) {
         }
         mx_nanosleep(MX_MSEC(1000));
     }
+    close(battery_fd);
     return 0;
 }
 
-static mx_status_t vc_misc_device_added(int dirfd, int event, const char* fn, void* cookie) {
+static mx_status_t vc_battery_device_added(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
         return NO_ERROR;
     }
 
-    if (strcmp("acpi-battery", fn)) {
+    int battery_fd = openat(dirfd, fn, O_RDONLY);
+    if (battery_fd < 0) {
+        printf("vc: failed to open battery device \"%s\"\n", fn);
         return NO_ERROR;
     }
-    printf("vc: found battery\n");
+
+    printf("vc: found battery \"%s\"\n", fn);
     thrd_t t;
-    int rc = thrd_create_with_name(&t, vc_battery_poll_thread, NULL, "vc-battery-poll");
+    int rc = thrd_create_with_name(
+        &t, vc_battery_poll_thread,
+        reinterpret_cast<void*>(static_cast<uintptr_t>(battery_fd)),
+        "vc-battery-poll");
     if (rc != thrd_success) {
+        close(battery_fd);
         return -1;
     }
     thrd_detach(t);
     return NO_ERROR;
 }
 
-static int vc_misc_poll_thread(void* arg) {
+static int vc_battery_dir_poll_thread(void* arg) {
     int dirfd;
-    if ((dirfd = open("/dev/class/misc", O_DIRECTORY | O_RDONLY)) < 0) {
+    if ((dirfd = open("/dev/class/battery", O_DIRECTORY | O_RDONLY)) < 0) {
         return -1;
     }
-    mxio_watch_directory(dirfd, vc_misc_device_added, NULL);
+    mxio_watch_directory(dirfd, vc_battery_device_added, NULL);
     close(dirfd);
     return 0;
 }
@@ -614,7 +617,8 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     }
 
     thrd_t u;
-    thrd_create_with_name(&u, vc_misc_poll_thread, NULL, "vc-misc-poll");
+    thrd_create_with_name(&u, vc_battery_dir_poll_thread, NULL,
+                          "vc-battery-dir-poll");
 
     return NO_ERROR;
 fail:
