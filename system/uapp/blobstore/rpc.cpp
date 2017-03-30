@@ -29,14 +29,12 @@ mxio_dispatcher_t* vfs_dispatcher;
 
 namespace blobstore {
 
-mx_status_t VnodeBlob::GetHandles(uint32_t flags, mx_handle_t* hnds, uint32_t* type, void* extra,
-                                  uint32_t* esize) {
-    // local vnode or device as a directory, we will create the handles
-    mx_status_t r = Serve(flags, hnds);
+mx_status_t VnodeBlob::GetHandles(uint32_t flags, mx_handle_t* hnds, uint32_t* type,
+                                  void* extra, uint32_t* esize) {
+    mx_status_t r = Serve(flags, hnds, type);
     if (r < 0) {
         return r;
     }
-    *type = MXIO_PROTOCOL_REMOTE;
     if (blob == nullptr) {
         return 1;
     }

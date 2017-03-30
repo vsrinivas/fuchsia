@@ -30,12 +30,6 @@
 #define V_FLAG_MOUNT_READY            2
 #define V_FLAG_RESERVED_MASK 0x0000FFFF
 
-// On Fuchsia, the Block Device is transmitted by file descriptor, rather than
-// by path. This can prevent some racy behavior relating to FS start-up.
-#ifdef __Fuchsia__
-#define FS_FD_BLOCKDEVICE 200
-#endif
-
 #ifdef __cplusplus
 
 namespace fs {
@@ -57,11 +51,11 @@ public:
     void RefAcquire();
     void RefRelease();
 
+#ifdef __Fuchsia__
     // Allocate iostate, create a channel, register it with the dispatcher
     // and return the other end.
     // Allows Vnode to act as server.
-#ifdef __Fuchsia__
-    mx_status_t Serve(uint32_t flags, mx_handle_t* out);
+    mx_status_t Serve(uint32_t flags, mx_handle_t* out, uint32_t* type);
 
     // Extract handle(s), type, and extra info from a vnode.
     //  - type == '0' means the vn represents a non-local device.
@@ -212,10 +206,10 @@ struct Vfs {
     static mx_status_t Open(Vnode* vn, Vnode** out, const char* path, const char** pathout,
                             uint32_t flags, uint32_t mode);
     static mx_status_t Unlink(Vnode* vn, const char* path, size_t len);
-    static mx_status_t Link(Vnode* vn, const char* oldpath, const char* newpath,
-                            const char** oldpathout, const char** newpathout);
-    static mx_status_t Rename(Vnode* vn, const char* oldpath, const char* newpath,
-                              const char** oldpathout, const char** newpathout);
+    static mx_status_t Link(Vnode* oldparent, Vnode* newparent,
+                            const char* oldname, const char* newname);
+    static mx_status_t Rename(Vnode* oldparent, Vnode* newparent,
+                              const char* oldname, const char* newname);
     static mx_status_t Close(Vnode* vn); // TODO(smklein): This has questionable utility
     static ssize_t Ioctl(Vnode* vn, uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len);
@@ -263,6 +257,10 @@ mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
 typedef struct vfs_iostate {
     Vnode* vn;
+    // Handle to event which allows client to refer to open vnodes in multi-path
+    // operations (see: link, rename). Defaults to MX_HANDLE_INVALID.
+    // Validated on the server side using cookies.
+    mx_handle_t token;
     vdircookie_t dircookie;
     size_t io_off;
     uint32_t io_flags;

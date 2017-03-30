@@ -21,6 +21,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 
@@ -971,39 +972,72 @@ int ftruncate(int fd, off_t len) {
      return r;
 }
 
+// Filesystem operations (such as rename and link) which act on multiple paths
+// have some additional complexity on Magenta. These operations (eventually) act
+// on two pairs of variables: a source parent vnode + name, and a target parent
+// vnode + name. However, the loose coupling of these pairs can make their
+// correspondence difficult, especially when accessing each parent vnode may
+// involve crossing various filesystem boundaries.
+//
+// To resolve this problem, these kinds of operations involve:
+// - Opening the source parent vnode directly.
+// - Opening the target parent vnode directly, + acquiring a "vnode token".
+// - Sending the real operation + names to the source parent vnode, along with
+//   the "vnode token" representing the target parent vnode.
+//
+// Using magenta kernel primitives (cookies) to authenticate the vnode token, this
+// allows these multi-path operations to mix absolute / relative paths and cross
+// mount points with ease.
 static int two_path_op(uint32_t op, const char* oldpath, const char* newpath) {
+    const char* oldname;
+    mxio_t* io_oldparent;
+    mx_status_t status;
+    if ((status = __mxio_opendir_containing(&io_oldparent, oldpath, &oldname)) < 0) {
+        return ERROR(status);
+    }
+
+    int r;
+    const char* newname;
+    mxio_t* io_newparent;
+    if ((status = __mxio_opendir_containing(&io_newparent, newpath, &newname)) < 0) {
+        r = ERROR(status);
+        goto oldparent_open;
+    }
+
+    mx_handle_t token;
+    status = io_newparent->ops->ioctl(io_newparent, IOCTL_DEVMGR_GET_TOKEN,
+                                      NULL, 0, &token, sizeof(token));
+    if (status < 0) {
+        r = ERROR(status);
+        goto newparent_open;
+    }
+
     char name[MXIO_CHUNK_SIZE];
-    size_t oldlen = strlen(oldpath);
-    size_t newlen = strlen(newpath);
-    if (oldlen + newlen + 2 > MXIO_CHUNK_SIZE) {
-        return ERRNO(EINVAL);
+    size_t oldlen = strlen(oldname);
+    size_t newlen = strlen(newname);
+    if (oldlen + newlen + 2 > sizeof(name)) {
+        r = ERRNO(EINVAL);
+        goto token_open;
     }
 
-    mxio_t* io;
-    if (oldpath[0] == '/' && newpath[0] == '/') {
-        // Both paths are absolute: Op relative to mxio_root
-        mtx_lock(&mxio_lock);
-        io = mxio_root_handle;
-        mxio_acquire(io);
-        mtx_unlock(&mxio_lock);
-    } else if (oldpath[0] != '/' && newpath[0] != '/') {
-        // Both paths are relative: Op relative to mxio_cwd
-        mtx_lock(&mxio_lock);
-        io = mxio_cwd_handle;
-        mxio_acquire(io);
-        mtx_unlock(&mxio_lock);
-    } else {
-        // Mixed absolute & relative paths: Unsupported
-        return ERROR(ERR_NOT_SUPPORTED);
-    }
-
-    memcpy(name, oldpath, oldlen);
+    memcpy(name, oldname, oldlen);
     name[oldlen] = '\0';
-    memcpy(name + oldlen + 1, newpath, newlen);
+    memcpy(name + oldlen + 1, newname, newlen);
     name[oldlen + newlen + 1] = '\0';
-    mx_status_t r = io->ops->misc(io, op, 0, 0, (void*)name, oldlen + newlen + 2);
-    mxio_release(io);
-    return STATUS(r);
+    status = io_oldparent->ops->misc(io_oldparent, op, token, 0,
+                                     (void*)name, oldlen + newlen + 2);
+    r = STATUS(status);
+    // Token transferred through misc; no longer needs to be closed.
+    goto newparent_open;
+token_open:
+    mx_handle_close(token);
+newparent_open:
+    io_newparent->ops->close(io_newparent);
+    mxio_release(io_newparent);
+oldparent_open:
+    io_oldparent->ops->close(io_oldparent);
+    mxio_release(io_oldparent);
+    return r;
 }
 
 int rename(const char* oldpath, const char* newpath) {

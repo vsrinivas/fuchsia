@@ -221,10 +221,7 @@ int emu_unlink(const char* path) {
 }
 
 int emu_rename(const char* oldpath, const char* newpath) {
-    PATH_WRAP(oldpath, rename, oldpath, newpath);
-    mx_status_t status = fs::Vfs::Rename(fake_root, oldpath + PREFIX_SIZE,
-                                              newpath + PREFIX_SIZE, NULL, NULL);
-    STATUS(status);
+    STATUS(ERR_NOT_SUPPORTED);
 }
 
 int emu_stat(const char* fn, struct stat* s) {

@@ -535,20 +535,13 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
     if (ptr && len > 0) {
         memcpy(msg.data, ptr, len);
     }
-
     switch (op) {
-        // The following are ops that send reply channels, like open and clone.
-        // These operations may need to be forwarded across filesystems to reach
-        // their destination.
-        case MXRIO_RENAME:
-        case MXRIO_LINK: {
-            mxrio_object_t info;
-            if ((r = mxrio_reply_channel_call(rio, &msg, &info)) < 0) {
-                return r;
-            }
-            discard_handles(info.handle, info.hcount);
-            return r;
-        }
+    case MXRIO_RENAME:
+    case MXRIO_LINK:
+        // As a hack, 'Rename' and 'Link' take token handles through
+        // the offset argument.
+        msg.handle[0] = (mx_handle_t) off;
+        msg.hcount = 1;
     }
 
     if ((r = mxrio_txn(rio, &msg)) < 0) {

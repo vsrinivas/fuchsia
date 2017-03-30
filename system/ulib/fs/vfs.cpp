@@ -171,109 +171,52 @@ mx_status_t Vfs::Unlink(Vnode* vndir, const char* path, size_t len) {
     return vndir->Unlink(path, len, must_be_dir);
 }
 
-mx_status_t Vfs::Link(Vnode* vndir, const char* oldpath, const char* newpath,
-                     const char** oldpathout, const char** newpathout) {
-    Vnode *oldparent, *newparent;
-    mx_status_t r = 0, r_old, r_new;
-
-    if ((r_old = Vfs::Walk(vndir, &oldparent, oldpath, &oldpath)) < 0) {
-        return r_old;
-    }
-    if ((r_new = Vfs::Walk(vndir, &newparent, newpath, &newpath)) < 0) {
-        oldparent->RefRelease();
-        return r_new;
-    }
-
-    if (r_old != r_new) {
-        // Link can only be directed to one filesystem
-        r = ERR_NOT_SUPPORTED;
-        goto done;
+mx_status_t Vfs::Link(Vnode* oldparent, Vnode* newparent,
+                      const char* oldname, const char* newname) {
+    // Local filesystem
+    size_t oldlen = strlen(oldname);
+    size_t newlen = strlen(newname);
+    bool old_must_be_dir;
+    bool new_must_be_dir;
+    mx_status_t r;
+    if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
+        return r;
+    } else if (old_must_be_dir) {
+        return ERR_NOT_DIR;
     }
 
-    if (r_old == 0) {
-        // Local filesystem
-        size_t oldlen = strlen(oldpath);
-        size_t newlen = strlen(newpath);
-        bool old_must_be_dir;
-        bool new_must_be_dir;
-        if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
-            goto done;
-        } else if (old_must_be_dir) {
-            r = ERR_NOT_DIR;
-            goto done;
-        }
-
-        if ((r = vfs_name_trim(newpath, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
-            goto done;
-        } else if (new_must_be_dir) {
-            r = ERR_NOT_DIR;
-            goto done;
-        }
-
-        // Look up the target vnode
-        Vnode* target;
-        if ((r = oldparent->Lookup(&target, oldpath, oldlen)) < 0) { // target: +1
-            goto done;
-        }
-        r = newparent->Link(newpath, newlen, target);
-        target->RefRelease(); // target: +0
-    } else {
-        // Remote filesystem -- forward the request
-        *oldpathout = oldpath;
-        *newpathout = newpath;
-        r = r_old;
+    if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
+        return r;
+    } else if (new_must_be_dir) {
+        return ERR_NOT_DIR;
     }
 
-done:
-    oldparent->RefRelease();
-    newparent->RefRelease();
+    // Look up the target vnode
+    Vnode* target;
+    if ((r = oldparent->Lookup(&target, oldname, oldlen)) < 0) { // target: +1
+        return r;
+    }
+    r = newparent->Link(newname, newlen, target);
+    target->RefRelease(); // target: +0
     return r;
 }
 
-mx_status_t Vfs::Rename(Vnode* vndir, const char* oldpath, const char* newpath,
-                             const char** oldpathout, const char** newpathout) {
-    Vnode *oldparent, *newparent;
-    mx_status_t r = 0, r_old, r_new;
-
-    if ((r_old = Vfs::Walk(vndir, &oldparent, oldpath, &oldpath)) < 0) {
-        return r_old;
+mx_status_t Vfs::Rename(Vnode* oldparent, Vnode* newparent,
+                        const char* oldname, const char* newname) {
+    // Local filesystem
+    size_t oldlen = strlen(oldname);
+    size_t newlen = strlen(newname);
+    bool old_must_be_dir;
+    bool new_must_be_dir;
+    mx_status_t r;
+    if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
+        return r;
     }
-    if ((r_new = Vfs::Walk(vndir, &newparent, newpath, &newpath)) < 0) {
-        oldparent->RefRelease();
-        return r_new;
+    if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
+        return r;
     }
-
-    if (r_old != r_new) {
-        // Rename can only be directed to one filesystem
-        r = ERR_NOT_SUPPORTED;
-        goto done;
-    }
-
-    if (r_old == 0) {
-        // Local filesystem
-        size_t oldlen = strlen(oldpath);
-        size_t newlen = strlen(newpath);
-        bool old_must_be_dir;
-        bool new_must_be_dir;
-        if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
-            goto done;
-        }
-        if ((r = vfs_name_trim(newpath, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
-            goto done;
-        }
-        r = oldparent->Rename(newparent, oldpath, oldlen, newpath, newlen,
-                              old_must_be_dir, new_must_be_dir);
-    } else {
-        // Remote filesystem -- forward the request
-        *oldpathout = oldpath;
-        *newpathout = newpath;
-        r = r_old;
-    }
-
-done:
-    oldparent->RefRelease();
-    newparent->RefRelease();
-    return r;
+    return oldparent->Rename(newparent, oldname, oldlen, newname, newlen,
+                             old_must_be_dir, new_must_be_dir);
 }
 
 ssize_t Vfs::Ioctl(Vnode* vn, uint32_t op, const void* in_buf, size_t in_len,

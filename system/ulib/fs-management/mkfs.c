@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fs-management/mount.h>
-#include <fs/vfs.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -14,7 +13,9 @@
 #include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <mxio/limits.h>
 #include <mxio/util.h>
+#include <mxio/vfs.h>
 
 static mx_status_t mkfs_mxfs(const char* binary, const char* devicepath, LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];

@@ -14,6 +14,10 @@
 #include <mxtl/array.h>
 #include <mxtl/macros.h>
 
+#ifdef __Fuchsia__
+#include <magenta/syscalls.h>
+#endif
+
 namespace bitmap {
 
 class DefaultStorage {
@@ -36,7 +40,6 @@ private:
 };
 
 #ifdef __Fuchsia__
-#include <magenta/syscalls.h>
 class VmoStorage {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmoStorage);

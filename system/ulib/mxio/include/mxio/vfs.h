@@ -15,6 +15,12 @@ __BEGIN_CDECLS
 
 #define VFS_MAX_HANDLES 2
 
+// On Fuchsia, the Block Device is transmitted by file descriptor, rather than
+// by path. This can prevent some racy behavior relating to FS start-up.
+#ifdef __Fuchsia__
+#define FS_FD_BLOCKDEVICE 200
+#endif
+
 typedef struct vnattr {
     uint32_t valid;        // mask of which bits to set for setattr
     uint32_t mode;

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fs-management/mount.h>
-#include <fs/vfs.h>
+#include <fs/vfs-client.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -14,7 +14,9 @@
 #include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <mxio/limits.h>
 #include <mxio/util.h>
+#include <mxio/vfs.h>
 
 #define HEADER_SIZE 4096
 

@@ -2,18 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mxio/debug.h>
-#include <mxio/dispatcher.h>
-#include <mxio/io.h>
-#include <mxio/remoteio.h>
-#include <mxio/vfs.h>
-
 #include <fcntl.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <threads.h>
+
+#include <magenta/process.h>
+#include <mxio/debug.h>
+#include <mxio/dispatcher.h>
+#include <mxio/io.h>
+#include <mxio/remoteio.h>
+#include <mxio/vfs.h>
+#include <mxtl/auto_call.h>
+#include <mxtl/auto_lock.h>
 
 #include "vfs-internal.h"
 
@@ -40,21 +43,6 @@ void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
     mxrio_txn_handoff(srv, rh, &msg);
 }
 
-void txn_handoff_two_path_op(mx_handle_t srv, mx_handle_t rh, uint32_t op, const char* oldpath,
-                             const char* newpath) {
-    mxrio_msg_t msg;
-    memset(&msg, 0, MXRIO_HDR_SZ);
-    size_t oldlen = strlen(oldpath);
-    size_t newlen = strlen(newpath);
-    msg.op = op;
-    memcpy(msg.data, oldpath, oldlen);
-    msg.data[oldlen] = '\0';
-    memcpy(msg.data + oldlen + 1, newpath, newlen);
-    msg.data[oldlen + newlen + 1] = '\0';
-    msg.datalen = static_cast<uint32_t>(oldlen + newlen) + 2;
-    return mxrio_txn_handoff(srv, rh, &msg);
-}
-
 // Initializes io state for a vnode and attaches it to a dispatcher.
 void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* path, uint32_t flags,
                   uint32_t mode) {
@@ -63,9 +51,10 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* p
 
     mx_status_t r;
 
-    mtx_lock(&vfs_lock);
-    r = Vfs::Open(vn, &vn, path, &path, flags, mode);
-    mtx_unlock(&vfs_lock);
+    {
+        mxtl::AutoLock lock(&vfs_lock);
+        r = Vfs::Open(vn, &vn, path, &path, flags, mode);
+    }
 
     if (r < 0) {
         xprintf("vfs: open: r=%d\n", r);
@@ -116,51 +105,16 @@ void mxrio_reply_channel_status(mx_handle_t rh, mx_status_t status) {
     mx_handle_close(rh);
 }
 
-void vfs_rpc_rename(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn,
-                    const char* oldpath, const char* newpath) {
-    mx_status_t r;
-
-    mtx_lock(&vfs_lock);
-    r = Vfs::Rename(vn, oldpath, newpath, &oldpath, &newpath);
-    mtx_unlock(&vfs_lock);
-
-    if (r > 0) {
-        // Remote filesystem -- forward the request.
-        txn_handoff_two_path_op(r, rh, MXRIO_RENAME, oldpath, newpath);
-        return;
-    } else {
-        // Local filesystem. Return the result of the completed rename.
-        mxrio_reply_channel_status(rh, r);
-    }
-}
-
-void vfs_rpc_link(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn,
-                  const char* oldpath, const char* newpath) {
-    mx_status_t r;
-
-    mtx_lock(&vfs_lock);
-    r = Vfs::Link(vn, oldpath, newpath, &oldpath, &newpath);
-    mtx_unlock(&vfs_lock);
-
-    if (r > 0) {
-        // Remote filesystem -- forward the request.
-        txn_handoff_two_path_op(r, rh, MXRIO_LINK, oldpath, newpath);
-        return;
-    } else {
-        // Local filesystem. Return the result of the completed link.
-        mxrio_reply_channel_status(rh, r);
-    }
-}
-
 } // namespace anonymous
 
-mx_status_t Vnode::Serve(uint32_t flags, mx_handle_t* out) {
+mx_status_t Vnode::Serve(uint32_t flags, mx_handle_t* out, uint32_t* type) {
     mx_handle_t h[2];
     mx_status_t r;
     vfs_iostate_t* ios;
 
-    if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr)
+    if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
         return ERR_NO_MEMORY;
+    }
     ios->vn = this;
     ios->io_flags = flags;
 
@@ -176,11 +130,39 @@ mx_status_t Vnode::Serve(uint32_t flags, mx_handle_t* out) {
     }
     // take a ref for the dispatcher
     RefAcquire();
-    *out = h[1];
-    return NO_ERROR;
+    out[0] = h[1];
+    type[0] = MXIO_PROTOCOL_REMOTE;
+    return 1;
 }
 
 } // namespace fs
+
+#define TOKEN_RIGHTS (MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER)
+
+static mx_status_t iostate_get_token(uint64_t vnode_cookie, vfs_iostate* ios, mx_handle_t* out) {
+    mxtl::AutoLock lock(&vfs_lock);
+    mx_status_t r;
+
+    if (ios->token != MX_HANDLE_INVALID) {
+        // Token has already been set for this iostate
+        if ((r = mx_handle_duplicate(ios->token, TOKEN_RIGHTS, out) != NO_ERROR)) {
+            return r;
+        }
+        return NO_ERROR;
+    } else if ((r = mx_event_create(0, &ios->token)) != NO_ERROR) {
+        return r;
+    } else if ((r = mx_handle_duplicate(ios->token, TOKEN_RIGHTS, out) != NO_ERROR)) {
+        mx_handle_close(ios->token);
+        ios->token = MX_HANDLE_INVALID;
+        return r;
+    } else if ((r = mx_object_set_cookie(ios->token, mx_process_self(), vnode_cookie)) != NO_ERROR) {
+        mx_handle_close(*out);
+        mx_handle_close(ios->token);
+        ios->token = MX_HANDLE_INVALID;
+        return r;
+    }
+    return sizeof(mx_handle_t);
+}
 
 mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
@@ -211,14 +193,31 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_CLOSE:
+        {
+            mxtl::AutoLock lock(&vfs_lock);
+            if (ios->token != MX_HANDLE_INVALID) {
+                // The token is nullified here to prevent the following race condition:
+                // 1) Open
+                // 2) GetToken
+                // 3) Close + Release Vnode
+                // 4) Use token handle to access defunct vnode (or a different vnode,
+                //    if the memory for it is reallocated).
+                //
+                // By nullifying the token cookie, any remaining handles to the event will
+                // be ignored by the filesystem server.
+                mx_object_set_cookie(ios->token, mx_process_self(), 0);
+                mx_handle_close(ios->token);
+                ios->token = MX_HANDLE_INVALID;
+            }
+        }
+
         // this will drop the ref on the vn
         fs::Vfs::Close(vn);
         free(ios);
         return NO_ERROR;
     case MXRIO_CLONE: {
         mxrio_object_t obj;
-        obj.status = vn->Serve(ios->io_flags, obj.handle);
-        obj.type = MXIO_PROTOCOL_REMOTE;
+        obj.status = vn->Serve(ios->io_flags, obj.handle, &obj.type);
         mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE,
                          obj.handle, (obj.status < 0) ? 0 : 1);
         mx_handle_close(msg->handle[0]);
@@ -339,9 +338,10 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
             memset(&ios->dircookie, 0, sizeof(ios->dircookie));
         }
         mx_status_t r;
-        mtx_lock(&vfs_lock);
-        r = vn->Readdir(&ios->dircookie, msg->data, arg);
-        mtx_unlock(&vfs_lock);
+        {
+            mxtl::AutoLock lock(&vfs_lock);
+            r = vn->Readdir(&ios->dircookie, msg->data, arg);
+        }
         if (r >= 0) {
             msg->datalen = r;
         }
@@ -384,7 +384,21 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
 
-        ssize_t r = fs::Vfs::Ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
+        ssize_t r;
+        switch (msg->arg2.op) {
+        // Ioctls which act on iostate
+        case IOCTL_DEVMGR_GET_TOKEN: {
+            if (arg != sizeof(mx_handle_t)) {
+                r = ERR_INVALID_ARGS;
+            } else {
+                mx_handle_t* out = reinterpret_cast<mx_handle_t*>(msg->data);
+                r = iostate_get_token(reinterpret_cast<uint64_t>(vn), ios, out);
+            }
+            break;
+        }
+        default:
+            r = fs::Vfs::Ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
+        }
         if (r >= 0) {
             switch (IOCTL_KIND(msg->arg2.op)) {
             case IOCTL_KIND_DEFAULT:
@@ -413,39 +427,48 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         return vn->Truncate(msg->arg2.off);
     }
-    case MXRIO_RENAME: {
-        if (len < 4) { // At least one byte for src + dst + null terminators
-            fs::mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
-            return ERR_DISPATCHER_INDIRECT;
-        }
-        char* data_end = (char*)(msg->data + len - 1);
-        *data_end = '\0';
-        const char* oldpath = (const char*)msg->data;
-        size_t oldlen = strlen(oldpath);
-        const char* newpath = (const char*)msg->data + (oldlen + 1);
-        if (data_end <= newpath) {
-            fs::mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
-            return ERR_DISPATCHER_INDIRECT;
-        }
-        fs::vfs_rpc_rename(msg, msg->handle[0], vn, oldpath, newpath);
-        return ERR_DISPATCHER_INDIRECT;
-    }
+    case MXRIO_RENAME:
     case MXRIO_LINK: {
+        // Regardless of success or failure, we'll close the client-provided
+        // vnode token handle.
+        auto ac = mxtl::MakeAutoCall([&msg](){ mx_handle_close(msg->handle[0]); });
+
         if (len < 4) { // At least one byte for src + dst + null terminators
-            fs::mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
-            return ERR_DISPATCHER_INDIRECT;
+            return ERR_INVALID_ARGS;
         }
+
         char* data_end = (char*)(msg->data + len - 1);
         *data_end = '\0';
-        const char* oldpath = (const char*)msg->data;
-        size_t oldlen = strlen(oldpath);
-        const char* newpath = (const char*)msg->data + (oldlen + 1);
-        if (data_end <= newpath) {
-            fs::mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
-            return ERR_DISPATCHER_INDIRECT;
+        const char* oldname = (const char*)msg->data;
+        size_t oldlen = strlen(oldname);
+        const char* newname = (const char*)msg->data + (oldlen + 1);
+
+        if (data_end <= newname) {
+            return ERR_INVALID_ARGS;
         }
-        fs::vfs_rpc_link(msg, msg->handle[0], vn, oldpath, newpath);
-        return ERR_DISPATCHER_INDIRECT;
+
+        mx_status_t r;
+        uint64_t vcookie;
+
+        mxtl::AutoLock lock(&vfs_lock);
+        if ((r = mx_object_get_cookie(msg->handle[0], mx_process_self(), &vcookie)) < 0) {
+            // TODO(smklein): Return a more specific error code for "token not from this server"
+            return ERR_INVALID_ARGS;
+        }
+
+        if (vcookie == 0) {
+            // Client closed the channel associated with the token
+            return ERR_INVALID_ARGS;
+        }
+
+        Vnode* target_parent = reinterpret_cast<Vnode*>(vcookie);
+        switch (MXRIO_OP(msg->op)) {
+        case MXRIO_RENAME:
+            return fs::Vfs::Rename(vn, target_parent, oldname, newname);
+        case MXRIO_LINK:
+            return fs::Vfs::Link(vn, target_parent, oldname, newname);
+        }
+        assert(false);
     }
     case MXRIO_SYNC: {
         return vn->Sync();

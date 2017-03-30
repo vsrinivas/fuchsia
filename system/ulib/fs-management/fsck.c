@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fs-management/mount.h>
-#include <fs/vfs.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -14,7 +13,9 @@
 #include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <mxio/limits.h>
 #include <mxio/util.h>
+#include <mxio/vfs.h>
 
 static mx_status_t fsck_minfs(const char* devicepath, const fsck_options_t* options,
                               LaunchCallback cb) {

@@ -31,12 +31,7 @@ namespace minfs {
 mx_status_t VnodeMinfs::GetHandles(uint32_t flags, mx_handle_t* hnds,
                                    uint32_t* type, void* extra, uint32_t* esize) {
     // local vnode or device as a directory, we will create the handles
-    mx_status_t r = Serve(flags, hnds);
-    if (r < 0) {
-        return r;
-    }
-    *type = MXIO_PROTOCOL_REMOTE;
-    return 1;
+    return Serve(flags, hnds, type);
 }
 
 mx_handle_t vfs_rpc_server(VnodeMinfs* vn) {
