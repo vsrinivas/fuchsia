@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <unordered_set>
 
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/src/trace/commands/record.h"
@@ -19,6 +20,14 @@ namespace tracing {
 
 namespace {
 
+// Command line options.
+const char kSpecFile[] = "spec-file";
+const char kCategories[] = "categories";
+const char kOutputFile[] = "output-file";
+const char kDuration[] = "duration";
+const char kDetach[] = "detach";
+const char kDecouple[] = "decouple";
+const char kBufferSize[] = "buffer-size";
 const char kUploadServerUrl[] = "upload-server-url";
 const char kUploadMaster[] = "upload-master";
 const char kUploadBot[] = "upload-bot";
@@ -37,11 +46,23 @@ bool EnsureNonEmpty(std::ostream& err,
 }  // namespace
 
 bool Record::Options::Setup(const ftl::CommandLine& command_line) {
+  const std::unordered_set<std::string> known_options = {
+      kSpecFile,     kCategories, kOutputFile,   kDuration,
+      kDetach,       kDecouple,   kBufferSize,   kUploadServerUrl,
+      kUploadMaster, kUploadBot,  kUploadPointId};
+
+  for (auto& option : command_line.options()) {
+    if (known_options.count(option.name) == 0) {
+      err() << "Unknown option: " << option.name << std::endl;
+      return false;
+    }
+  }
+
   size_t index = 0;
   // Read the spec file first. Arguments passed on the command line override the
   // spec.
   // --spec-file=<file>
-  if (command_line.HasOption("spec-file", &index)) {
+  if (command_line.HasOption(kSpecFile, &index)) {
     std::string spec_file_path = command_line.options()[index].value;
     if (!files::IsFile(spec_file_path)) {
       err() << spec_file_path << " is not a file" << std::endl;
@@ -70,19 +91,19 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   }
 
   // --categories=<cat1>,<cat2>,...
-  if (command_line.HasOption("categories", &index)) {
+  if (command_line.HasOption(kCategories, &index)) {
     categories =
         ftl::SplitStringCopy(command_line.options()[index].value, ",",
                              ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
   }
 
   // --output-file=<file>
-  if (command_line.HasOption("output-file", &index)) {
+  if (command_line.HasOption(kOutputFile, &index)) {
     output_file_name = command_line.options()[index].value;
   }
 
   // --duration=<seconds>
-  if (command_line.HasOption("duration", &index)) {
+  if (command_line.HasOption(kDuration, &index)) {
     uint64_t seconds;
     if (!ftl::StringToNumberWithError(command_line.options()[index].value,
                                       &seconds)) {
@@ -94,13 +115,13 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   }
 
   // --detach
-  detach = command_line.HasOption("detach");
+  detach = command_line.HasOption(kDetach);
 
   // --decouple
-  decouple = command_line.HasOption("decouple");
+  decouple = command_line.HasOption(kDecouple);
 
   // --buffer-size=<megabytes>
-  if (command_line.HasOption("buffer-size", &index)) {
+  if (command_line.HasOption(kBufferSize, &index)) {
     uint32_t megabytes;
     if (!ftl::StringToNumberWithError(command_line.options()[index].value,
                                       &megabytes)) {
