@@ -9,7 +9,6 @@
 #include <magenta/syscalls/hypervisor.h>
 #include <unittest/unittest.h>
 
-static const uint32_t kAllocateFlags = MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE;
 static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 static const uint64_t kVmoSize = 2 << 20;
 
@@ -57,14 +56,10 @@ static bool guest_start_test(void) {
                                &vmo, sizeof(vmo), &guest, sizeof(guest)),
               NO_ERROR, "");
 
-    // Setup guest page tables.
-    mx_handle_t vmar;
-    uintptr_t addr;
-    ASSERT_EQ(mx_vmar_allocate(mx_vmar_root_self(), 0, kVmoSize, kAllocateFlags, &vmar, &addr),
-              NO_ERROR, "");
+    // Setup the guest.
     uintptr_t mapped_addr;
-    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, kVmoSize, kMapFlags, &mapped_addr), NO_ERROR, "");
-
+    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, kVmoSize, kMapFlags, &mapped_addr),
+              NO_ERROR, "");
     uintptr_t guest_entry = 0;
 #if __x86_64__
     guest_entry = guest_setup((uint8_t*)mapped_addr);
@@ -78,7 +73,6 @@ static bool guest_start_test(void) {
                                &guest_entry, sizeof(guest_entry), NULL, 0),
               NO_ERROR, "");
 
-    ASSERT_EQ(mx_handle_close(vmar), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(guest), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(vmo), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(hypervisor), NO_ERROR, "");
