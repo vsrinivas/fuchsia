@@ -16,6 +16,7 @@
 #include <map>
 
 #include "apps/ledger/src/callback/asynchronous_callback.h"
+#include "apps/ledger/src/callback/trace_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/btree/diff.h"
@@ -23,6 +24,7 @@
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
@@ -84,6 +86,7 @@ std::string GetFilePath(ftl::StringView objects_dir,
 Status StagingToDestination(size_t expected_size,
                             std::string source_path,
                             std::string destination_path) {
+  TRACE_DURATION("ledger", "page_storage_staging_to_destination");
   // Check if file already exists.
   size_t size = 0;
   if (files::GetFileSize(destination_path, &size)) {
@@ -754,6 +757,7 @@ void PageStorageImpl::AddObject(
     mx::socket data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
+  auto traced_callback = TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
   auto file_writer = std::make_unique<FileWriter>(main_runner_, io_runner_,
                                                   staging_dir_, objects_dir_);
   FileWriter* file_writer_ptr = file_writer.get();
@@ -770,7 +774,7 @@ void PageStorageImpl::AddObject(
   };
 
   file_writer_ptr->Start(std::move(data), size, [
-    cleanup = std::move(cleanup), callback = std::move(callback)
+    cleanup = std::move(cleanup), callback = std::move(traced_callback)
   ](Status status, ObjectId object_id) {
     callback(status, std::move(object_id));
     cleanup();

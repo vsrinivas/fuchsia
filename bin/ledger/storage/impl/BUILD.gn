@@ -46,6 +46,7 @@ source_set("lib") {
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",
+    "//apps/tracing/lib/trace",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]

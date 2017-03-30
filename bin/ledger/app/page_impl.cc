@@ -36,7 +36,7 @@ void PageImpl::GetSnapshot(
 void PageImpl::Put(fidl::Array<uint8_t> key,
                    fidl::Array<uint8_t> value,
                    const PutCallback& callback) {
-  delegate_->Put(std::move(key), std::move(value), std::move(callback));
+  PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
 
 // PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
