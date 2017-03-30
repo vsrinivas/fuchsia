@@ -355,11 +355,11 @@ void Record::LaunchApp() {
   launch_info->url = fidl::String::From(options_.app);
   launch_info->arguments = fidl::Array<fidl::String>::From(options_.args);
 
-  out() << "Launching " << launch_info->url;
+  out() << "Launching " << launch_info->url << std::endl;
   context()->launcher()->CreateApplication(std::move(launch_info),
                                            GetProxy(&application_controller_));
   application_controller_.set_connection_error_handler([this] {
-    out() << "Application terminated";
+    out() << "Application terminated" << std::endl;
     if (!options_.decouple)
       StopTrace();
   });
