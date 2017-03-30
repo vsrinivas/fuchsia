@@ -19,24 +19,15 @@
 
 namespace modular {
 
-// An optionally memory only implementation of storage for story data.
-// If |story_page| is not bound, story data are just kept in memory.
-// This is useful when ledger is broken. TODO(mesch): Eventually
-// in-memory storage can be removed from here.
-class StoryStorageImpl : public ledger::PageWatcher {
+// A wrapper around a ledger page to store links in a story that runs
+// asynchronous operations pertaining to one Story instance in a
+// dedicated OperationQueue instance.
+class StoryStorageImpl : ledger::PageWatcher {
  public:
-  using Storage =
-      std::unordered_map<std::string,
-                         std::unordered_map<std::string, std::string>>;
-
   using DataCallback = std::function<void(const fidl::String&)>;
-
   using SyncCallback = std::function<void()>;
 
-  StoryStorageImpl(std::shared_ptr<Storage> storage,
-                   ledger::PagePtr story_page,
-                   const fidl::String& key);
-
+  StoryStorageImpl(ledger::PagePtr story_page);
   ~StoryStorageImpl() override;
 
   void ReadLinkData(const fidl::String& link_id, const DataCallback& callback);
@@ -52,17 +43,21 @@ class StoryStorageImpl : public ledger::PageWatcher {
                 ledger::ResultState result_state,
                 const OnChangeCallback& callback) override;
 
+  // This instance is a watcher on the ledger Page it stores data in.
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
-  std::vector<std::pair<fidl::String, DataCallback>> watchers_;
-  const std::string key_;
-  std::shared_ptr<Storage> storage_;
 
-  // The page we store the story data in.
+  // Clients to notify when the value of a given link changes in the
+  // ledger page. The first element in the pair is the link ID.
+  std::vector<std::pair<fidl::String, DataCallback>> watchers_;
+
+  // The ledger page the story data is stored in.
   ledger::PagePtr story_page_;
 
-  // The current snapshot of the page obtained from the watcher.
+  // The current snapshot of the page obtained by watching it.
   PageSnapshot story_snapshot_;
 
+  // All asynchronous operations are sequenced by this operation
+  // queue.
   OperationQueue operation_queue_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);

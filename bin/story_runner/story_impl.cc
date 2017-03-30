@@ -46,9 +46,7 @@ StoryImpl::StoryImpl(StoryDataPtr story_data,
   });
 
   story_storage_impl_.reset(new StoryStorageImpl(
-      story_provider_impl_->storage(),
-      story_provider_impl_->GetStoryPage(story_data_->story_page_id),
-      story_data_->story_info->id));
+      story_provider_impl_->GetStoryPage(story_data_->story_page_id)));
 
   story_scope_.AddService<StoryMarker>(
       [this](fidl::InterfaceRequest<StoryMarker> request) {

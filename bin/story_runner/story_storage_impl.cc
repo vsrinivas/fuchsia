@@ -105,58 +105,35 @@ class WriteLinkDataCall : public Operation<void> {
 
 }  // namespace
 
-StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
-                                   ledger::PagePtr story_page,
-                                   const fidl::String& key)
+StoryStorageImpl::StoryStorageImpl(ledger::PagePtr story_page)
     : page_watcher_binding_(this),
-      key_(key),
-      storage_(storage),
-      // Comment out this initializer in order to switch to in-memory storage.
       story_page_(std::move(story_page)),
       story_snapshot_("StoryStorageImpl") {
-  if (story_page_.is_bound()) {
-    story_page_->GetSnapshot(
-        story_snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
-        [](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR)
-                << "StoryStorageImpl() failed call to Ledger.GetSnapshot() "
-                << status;
-          }
-        });
-  }
+  FTL_DCHECK(story_page_.is_bound());
+  story_page_->GetSnapshot(
+      story_snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
+      [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR)
+              << "StoryStorageImpl() failed call to Ledger.GetSnapshot() "
+              << status;
+        }
+      });
 }
 
 StoryStorageImpl::~StoryStorageImpl() = default;
 
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
                                     const DataCallback& callback) {
-  if (story_page_.is_bound()) {
-    new ReadLinkDataCall(&operation_queue_, story_snapshot_.shared_ptr(),
-                         link_id, callback);
-
-  } else {
-    auto& story_data = (*storage_)[key_];
-    auto i = story_data.find(link_id);
-    if (i != story_data.end()) {
-      callback(i->second);
-    } else {
-      callback(nullptr);
-    }
-  }
+  new ReadLinkDataCall(&operation_queue_, story_snapshot_.shared_ptr(),
+                       link_id, callback);
 }
 
 void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
                                      const fidl::String& data,
                                      const SyncCallback& callback) {
-  if (story_page_.is_bound()) {
-    new WriteLinkDataCall(&operation_queue_, story_page_.get(), link_id, data,
-                          callback);
-
-  } else {
-    (*storage_)[key_][link_id] = data;
-    callback();
-  }
+  new WriteLinkDataCall(&operation_queue_, story_page_.get(), link_id, data,
+                        callback);
 }
 
 void StoryStorageImpl::WatchLink(const fidl::String& link_id,

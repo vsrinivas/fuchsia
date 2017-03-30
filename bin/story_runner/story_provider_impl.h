@@ -77,8 +77,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   }
 
   // Used by StoryImpl.
-  using Storage = StoryStorageImpl::Storage;
-  std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
   const AppConfig& story_shell() const { return *story_shell_; }
 
@@ -157,8 +155,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // right now, but we need to establish a pattern that makes it
   // simply and obvious how to not introduce deadlocks.
   OperationQueue operation_queue_;
-
-  std::shared_ptr<Storage> storage_;
 
   // The root page that we read from.
   ledger::PagePtr root_page_;

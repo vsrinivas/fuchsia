@@ -234,9 +234,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
     }
 
     link_storage_.reset(new StoryStorageImpl(
-        story_provider_impl_->storage(),
-        story_provider_impl_->GetRootPage(),
-        kUserShellKey));
+        story_provider_impl_->GetRootPage()));
 
     user_shell_link_.reset(new LinkImpl(
         link_storage_.get(),

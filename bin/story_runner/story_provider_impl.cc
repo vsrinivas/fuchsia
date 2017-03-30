@@ -633,7 +633,6 @@ StoryProviderImpl::StoryProviderImpl(
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
     : user_scope_(user_scope),
       story_shell_(std::move(story_shell)),
-      storage_(new Storage),
       root_snapshot_("StoryProviderImpl"),
       page_watcher_binding_(this),
       component_context_info_(component_context_info),
