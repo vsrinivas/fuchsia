@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/netstack/examples"
+    ],
+    "binaries": [
+        {
+            "binary": "nc",
+            "bootfs_path": "bin/nc"
+        }
+    ]
+}

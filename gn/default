@@ -33,6 +33,7 @@
         "mtl",
         "netconnector",
         "netstack",
+        "netstack_examples",
         "network",
         "re2",
         "runtime",
