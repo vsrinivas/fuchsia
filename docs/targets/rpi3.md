@@ -63,8 +63,9 @@ information, see `docs/getting_started.md`:
    the SD card.
 
 7. At this point your SD Card should be formatted with an MBR partition table
-   and FAT32 boot partition that contains the following 6 files:
+   and FAT32 boot partition that contains the following 7 files:
    + bootcode.bin
+   + bootdata.bin
    + config.txt
    + kernel8.img
    + start.elf
