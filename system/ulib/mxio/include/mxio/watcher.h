@@ -11,7 +11,7 @@ __BEGIN_CDECLS
 
 typedef struct mxio_watcher mxio_watcher_t;
 
-// Create a diretory watcher for the provided dirfd.
+// Create a directory watcher for the provided dirfd.
 // The watcher does not take ownership of the fd and
 // the fd may be closed after this call returns and
 // the watcher will continue to work.
