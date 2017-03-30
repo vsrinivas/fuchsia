@@ -38,24 +38,25 @@ class LinkConnection;
 // modules. The Dup() method allows to obtain more handles of the same
 // Link instance.
 //
-// If a watcher is registered through one handle, it only receives
-// notifications for changes by requests through other handles. To
-// make this possible, each connection is associated with a separate
-// LinkConnection implementation instance. All implementation
-// instances share a common LinkImpl instance that holds the data.
+// If a watcher is registered through one handle using the Watch()
+// method, it only receives notifications for changes by requests
+// through other handles. To make this possible, each connection bound
+// to a separate LinkConnection instance rather than to LinkImpl
+// directly, and LinkImpl owns all its LinkConnection instances.
 class LinkImpl {
  public:
   // Connects a new LinkConnection object on the heap for the given
-  // Link interface request. LinkImpl owns the LinkConnection created
-  // now and all future ones created by Dup(). LinkConnection
-  // instances are deleted when their connections close, and they are
-  // all deleted (and close their connections) when LinkImpl is
-  // destroyed.
+  // Link interface request.
   LinkImpl(StoryStorageImpl* story_storage,
-           const fidl::String& name,
-           fidl::InterfaceRequest<Link> request);
+           const fidl::String& name);
 
   ~LinkImpl();
+
+  // Creates a new LinkConnection for the given request.
+  // LinkConnection instances are deleted when their connections
+  // close, and they are all deleted (and close their connections)
+  // when LinkImpl is destroyed.
+  void Connect(fidl::InterfaceRequest<Link> request);
 
   // Used by LinkConnection.
   void SetSchema(const fidl::String& json_schema);
@@ -72,7 +73,6 @@ class LinkImpl {
   void Sync(const std::function<void()>& callback);
 
   // Used by StoryImpl.
-  void Connect(fidl::InterfaceRequest<Link> request);
   const fidl::String& name() const { return name_; }
   void set_orphaned_handler(const std::function<void()>& fn) {
     orphaned_handler_ = fn;

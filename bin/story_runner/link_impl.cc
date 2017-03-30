@@ -39,12 +39,10 @@ rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromArray(
 }  // namespace
 
 LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
-                   const fidl::String& name,
-                   fidl::InterfaceRequest<Link> request)
+                   const fidl::String& name)
     : name_(name),
       story_storage_(story_storage),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
-  requests_.emplace_back(std::move(request));
   ReadLinkData([this]() {
     for (auto& request : requests_) {
       LinkConnection::New(this, std::move(request));
@@ -57,7 +55,7 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
       name, [this](const fidl::String& json) { OnChange(json); });
 }
 
-LinkImpl::~LinkImpl() {}
+LinkImpl::~LinkImpl() = default;
 
 void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
   if (ready_) {

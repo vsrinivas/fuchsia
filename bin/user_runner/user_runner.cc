@@ -238,8 +238,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
     user_shell_link_.reset(new LinkImpl(
         link_storage_.get(),
-        kUserShellKey,
-        std::move(request)));
+        kUserShellKey));
+    user_shell_link_->Connect(std::move(request));
   }
 
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config) {

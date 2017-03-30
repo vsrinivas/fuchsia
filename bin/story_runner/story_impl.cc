@@ -326,8 +326,8 @@ void StoryImpl::CreateLink(const fidl::String& name,
     return;
   }
 
-  auto* const link_impl =
-      new LinkImpl(story_storage_impl_.get(), name, std::move(request));
+  auto* const link_impl = new LinkImpl(story_storage_impl_.get(), name);
+  link_impl->Connect(std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
       [this, link_impl] { DisposeLink(link_impl); });
