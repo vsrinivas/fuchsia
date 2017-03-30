@@ -13,6 +13,9 @@ pub type mx_handle_t = i32;
 
 pub type mx_status_t = i32;
 
+pub type mx_futex_t = isize;
+pub type mx_paddr_t = usize;
+
 // Auto-generated using tools/gen_status.py
 pub const NO_ERROR              : mx_status_t = 0;
 pub const ERR_INTERNAL          : mx_status_t = -1;
@@ -134,6 +137,14 @@ pub const MX_CLOCK_MONOTONIC: u32 = 0;
 pub const MX_SOCKET_HALF_CLOSE: u32 = 1;
 
 #[repr(C)]
+pub enum mx_cache_policy_t {
+    MX_CACHE_POLICY_CACHED = 0,
+    MX_CACHE_POLICY_UNCACHED = 1,
+    MX_CACHE_POLICY_UNCACHED_DEVICE = 2,
+    MX_CACHE_POLICY_WRITE_COMBINING = 3,
+}
+
+#[repr(C)]
 pub struct mx_wait_item_t {
     pub handle: mx_handle_t,
     pub waitfor: mx_signals_t,
@@ -147,78 +158,58 @@ pub struct mx_waitset_result_t {
     pub observed: mx_signals_t,
 }
 
-#[link(name = "magenta")]
-extern {
-
-    // Randomness
-    pub fn mx_cprng_draw(buffer: *mut u8, len: mx_size_t, actual: *mut mx_size_t)
-        -> mx_status_t;
-    pub fn mx_cprng_add_entropy(buffer: *const u8, len: mx_size_t) -> mx_status_t;
-
-    // Time
-    pub fn mx_time_get(clock_id: u32) -> mx_time_t;
-
-    pub fn mx_nanosleep(nanoseconds: mx_time_t) -> mx_status_t;
-
-    // Generic handle operations
-    pub fn mx_handle_close(handle: mx_handle_t) -> mx_status_t;
-    pub fn mx_handle_duplicate(handle: mx_handle_t, rights: mx_rights_t, out: *mut mx_handle_t) -> mx_status_t;
-    pub fn mx_handle_replace(handle: mx_handle_t, rights: mx_rights_t, out: *mut mx_handle_t) -> mx_status_t;
-    pub fn mx_object_wait_one(handle: mx_handle_t, signals: mx_signals_t, timeout: mx_time_t,
-        pending: *mut mx_signals_t) -> mx_status_t;
-    pub fn mx_object_wait_many(items: *mut mx_wait_item_t, count: u32,
-        timeout: mx_time_t) -> mx_status_t;
-
-    // Channels
-    pub fn mx_channel_create(options: u32, out0: *mut mx_handle_t, out1: *mut mx_handle_t)
-        -> mx_status_t;
-    pub fn mx_channel_read(handle: mx_handle_t, options: u32, bytes: *mut u8,
-        num_bytes: u32, actual_bytes: *mut u32, handles: *mut mx_handle_t,
-        num_handles: u32, actual_handles: *mut u32) -> mx_status_t;
-    pub fn mx_channel_write(handle: mx_handle_t, options: u32, bytes: *const u8,
-        num_bytes: u32, handles: *const mx_handle_t, num_handles: u32) -> mx_status_t;
-
-    // Fifos
-    pub fn mx_fifo_create(elem_count: u32, elem_size: u32, options: u32, out0: *mut mx_handle_t,
-        out1: *mut mx_handle_t) -> mx_status_t;
-    pub fn mx_fifo_write(handle: mx_handle_t, buffer: *const u8, size: usize,
-        num_entries_written: *mut u32) -> mx_status_t;
-    pub fn mx_fifo_read(handle: mx_handle_t, buffer: *mut u8, size: usize,
-        num_entries_read: *mut u32) -> mx_status_t;
-
-    // Wait sets
-    pub fn mx_waitset_create(options: u32, out: *mut mx_handle_t) -> mx_status_t;
-    pub fn mx_waitset_add(waitset_handle: mx_handle_t, cookie: u64, handle: mx_handle_t,
-        signals: mx_signals_t) -> mx_status_t;
-    pub fn mx_waitset_remove(waitset_handle: mx_handle_t, cookie: u64) -> mx_status_t;
-    pub fn mx_waitset_wait(waitset_handle: mx_handle_t, timeout: mx_time_t,
-        results: *mut mx_waitset_result_t, count: *mut u32) -> mx_status_t;
-
-    // Virtual Memory Objects
-    pub fn mx_vmo_create(size: u64, options: u32, out: *mut mx_handle_t) -> mx_status_t;
-    pub fn mx_vmo_read(handle: mx_handle_t, data: *mut u8, offset: u64, len: mx_size_t,
-        actual: *mut mx_size_t) -> mx_status_t;
-    pub fn mx_vmo_write(handle: mx_handle_t, data: *const u8, offset: u64, len: mx_size_t,
-        actual: *mut mx_size_t) -> mx_status_t;
-    pub fn mx_vmo_get_size(handle: mx_handle_t, size: *mut u64) -> mx_status_t;
-    pub fn mx_vmo_set_size(handle: mx_handle_t, size: u64) -> mx_status_t;
-    // todo: vmo_op_range
-
-    // Sockets
-    pub fn mx_socket_create(options: u32, out0: *mut mx_handle_t, out1: *mut mx_handle_t)
-        -> mx_status_t;
-    pub fn mx_socket_write(handle: mx_handle_t, options: u32, buffer: *const u8, len: usize,
-        actual: *mut usize) -> mx_status_t;
-    pub fn mx_socket_read(handle: mx_handle_t, options: u32, buffer: *mut u8, len: usize,
-        actual: *mut usize) -> mx_status_t;
-
-    // Event objects
-    pub fn mx_event_create(options: u32, out: *mut mx_handle_t) -> mx_status_t;
-    pub fn mx_eventpair_create(options: u32, out0: *mut mx_handle_t, out1: *mut mx_handle_t)
-        -> mx_status_t;
-
-    // Sending signals
-    pub fn mx_object_signal(handle: mx_handle_t, clear_mask: u32, set_mask: u32) -> mx_status_t;
-    pub fn mx_object_signal_peer(handle: mx_handle_t, clear_mask: u32, set_mask: u32)
-        -> mx_status_t;
+#[repr(C)]
+pub struct mx_channel_call_args_t {
+    pub wr_bytes: *mut u8,
+    pub wr_handles: *mut mx_handle_t,
+    pub rd_bytes: *mut u8,
+    pub rd_handles: *mut mx_handle_t,
+    pub wr_num_bytes: u32,
+    pub wr_num_handles: u32,
+    pub rd_num_bytes: u32,
+    pub rd_num_handles: u32,
 }
+
+pub type mx_pci_irq_swizzle_lut_t = [[[u32; 4]; 8]; 32];
+
+#[repr(C)]
+pub struct mx_pci_init_arg_t {
+    pub dev_pin_to_global_irq: mx_pci_irq_swizzle_lut_t,
+    pub num_irqs: u32,
+    pub irqs: [mx_irq_t; 32],
+    pub ecam_window_count: u32,
+    pub ecam_windows: [mx_ecam_window_t],
+}
+
+#[repr(C)]
+pub struct mx_irq_t {
+    pub global_irq: u32,
+    pub level_triggered: bool,
+    pub active_high: bool,
+}
+
+#[repr(C)]
+pub struct mx_ecam_window_t {
+    pub base: u64,
+    pub size: usize,
+    pub bus_start: u8,
+    pub bus_end: u8,
+}
+
+#[repr(C)]
+pub struct mx_pcie_get_nth_info_t {
+    pub vendor_id: u16,
+    pub device_id: u16,
+    pub base_class: u8,
+    pub sub_class: u8,
+    pub program_interface: u8,
+    pub revision_id: u8,
+    pub bus_id: u8,
+    pub dev_id: u8,
+    pub func_id: u8,
+}
+
+// TODO: Actually a union
+pub type mx_rrec_t = [u8; 64];
+
+include!("definitions.rs");
