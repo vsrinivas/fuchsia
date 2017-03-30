@@ -20,8 +20,7 @@ class DeviceAddress {
   explicit DeviceAddress(std::initializer_list<uint8_t> bytes);
 
   // Initializes the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
-  // ASCII encoded two-digit hexadecimal integer. Returns false if |bdaddr_string| is badly
-  // formatted.
+  // ASCII encoded two-digit hexadecimal integer.
   explicit DeviceAddress(const std::string& bdaddr_string);
 
   // Resets the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
