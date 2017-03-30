@@ -93,7 +93,7 @@ class NetworkServiceImpl::RunningRequest {
                              callback_(std::move(response));
                              return;
                            }),
-                       "network", "url_loader_start", "url", url));
+                       "ledger", "network_url_loader_start", "url", url));
 
     url_loader_.set_connection_error_handler([this]() {
       // If the connection to the url loader failed, restart the request.
@@ -164,7 +164,7 @@ ftl::RefPtr<callback::Cancellable> NetworkServiceImpl::Request(
       callback::CancellableImpl::Create([&request]() { request.Cancel(); });
 
   request.set_callback(cancellable->WrapCallback(
-      TRACE_CALLBACK(std::move(callback), "network", "request")));
+      TRACE_CALLBACK(std::move(callback), "ledger", "network_request")));
   if (!in_backoff_) {
     request.SetNetworkService(GetNetworkService());
   }

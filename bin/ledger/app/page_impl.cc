@@ -17,7 +17,8 @@ PageImpl::~PageImpl() {}
 
 // GetId() => (array<uint8> id);
 void PageImpl::GetId(const GetIdCallback& callback) {
-  auto timed_callback = TRACE_CALLBACK(std::move(callback), "page", "get_id");
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_get_id");
   delegate_->GetId(std::move(timed_callback));
 }
 
@@ -27,7 +28,7 @@ void PageImpl::GetSnapshot(
     fidl::InterfaceHandle<PageWatcher> watcher,
     const GetSnapshotCallback& callback) {
   auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "page", "get_snapshot");
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_get_snapshot");
   delegate_->GetSnapshot(std::move(snapshot_request), std::move(watcher),
                          std::move(timed_callback));
 }
@@ -46,7 +47,7 @@ void PageImpl::PutWithPriority(fidl::Array<uint8_t> key,
                                Priority priority,
                                const PutWithPriorityCallback& callback) {
   auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "page", "put_with_priority");
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_put_with_priority");
   delegate_->PutWithPriority(std::move(key), std::move(value), priority,
                              std::move(timed_callback));
 }
@@ -58,7 +59,7 @@ void PageImpl::PutReference(fidl::Array<uint8_t> key,
                             Priority priority,
                             const PutReferenceCallback& callback) {
   auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "page", "put_reference");
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_put_reference");
   delegate_->PutReference(std::move(key), std::move(reference), priority,
                           std::move(timed_callback));
 }
@@ -66,7 +67,8 @@ void PageImpl::PutReference(fidl::Array<uint8_t> key,
 // Delete(array<uint8> key) => (Status status);
 void PageImpl::Delete(fidl::Array<uint8_t> key,
                       const DeleteCallback& callback) {
-  auto timed_callback = TRACE_CALLBACK(std::move(callback), "page", "delete");
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_delete");
   delegate_->Delete(std::move(key), std::move(timed_callback));
 }
 
@@ -76,26 +78,28 @@ void PageImpl::CreateReference(int64_t size,
                                mx::socket data,
                                const CreateReferenceCallback& callback) {
   auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "page", "create_reference");
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_create_reference");
   delegate_->CreateReference(size, std::move(data), std::move(timed_callback));
 }
 
 // StartTransaction() => (Status status);
 void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
   auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "page", "start_transaction");
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_start_transaction");
   delegate_->StartTransaction(std::move(timed_callback));
 }
 
 // Commit() => (Status status);
 void PageImpl::Commit(const CommitCallback& callback) {
-  auto timed_callback = TRACE_CALLBACK(std::move(callback), "page", "commit");
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_commit");
   delegate_->Commit(std::move(timed_callback));
 }
 
 // Rollback() => (Status status);
 void PageImpl::Rollback(const RollbackCallback& callback) {
-  auto timed_callback = TRACE_CALLBACK(std::move(callback), "page", "rollback");
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_rollback");
   delegate_->Rollback(std::move(timed_callback));
 }
 

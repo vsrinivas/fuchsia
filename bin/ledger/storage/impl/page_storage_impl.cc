@@ -757,7 +757,8 @@ void PageStorageImpl::AddObject(
     mx::socket data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
-  auto traced_callback = TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
+  auto traced_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
   auto file_writer = std::make_unique<FileWriter>(main_runner_, io_runner_,
                                                   staging_dir_, objects_dir_);
   FileWriter* file_writer_ptr = file_writer.get();
