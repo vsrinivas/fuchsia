@@ -106,3 +106,16 @@ executable("closetest") {
     "launchpad",
   ]
 }
+
+executable("sockopttest") {
+  testonly = true
+
+  sources = [
+    "sockopttest.c",
+  ]
+
+  libs = [
+    "mxio",
+    "magenta",
+  ]
+}
