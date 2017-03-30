@@ -23,10 +23,9 @@ namespace modular {
 class ModuleControllerImpl;
 class StoryImpl;
 
-// Contains constructor parameters to |ModuleContextImpl| that tend not to
-// change between instances in a user scope.
+// The parameters of module context that do not vary by instance.
 struct ModuleContextInfo {
-  const ComponentContextInfo& component_context_info;
+  const ComponentContextInfo component_context_info;
   StoryImpl* const story_impl;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider;
 };

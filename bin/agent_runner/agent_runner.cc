@@ -70,10 +70,10 @@ rapidjson::Document CreateTriggerListKey(const std::string& agent_url,
 
 class AgentRunner::PageWatcherImpl : ledger::PageWatcher {
  public:
-  PageWatcherImpl(ledger::LedgerRepository* ledger_repository,
+  PageWatcherImpl(ledger::LedgerRepository* const ledger_repository,
                   const std::string& ledger_name,
-                  std::function<void(std::string, std::string)> added_entry,
-                  std::function<void(std::string)> deleted_entry)
+                  std::function<void(const std::string&, const std::string&)> added_entry,
+                  std::function<void(const std::string&)> deleted_entry)
       : binding_(this),
         added_entry_(added_entry),
         deleted_entry_(deleted_entry) {
@@ -170,25 +170,27 @@ class AgentRunner::PageWatcherImpl : ledger::PageWatcher {
   ledger::PagePtr page_;
   ledger::PageSnapshotPtr snapshot_;
 
-  std::function<void(const std::string&, const std::string&)> added_entry_;
-  std::function<void(const std::string&)> deleted_entry_;
+  std::function<void(const std::string&, const std::string&)> const added_entry_;
+  std::function<void(const std::string&)> const deleted_entry_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageWatcherImpl);
 };
 
 AgentRunner::AgentRunner(
-    app::ApplicationLauncher* application_launcher,
-    MessageQueueManager* message_queue_manager,
-    ledger::LedgerRepository* ledger_repository,
-    maxwell::UserIntelligenceProvider* user_intelligence_provider)
+    app::ApplicationLauncher* const application_launcher,
+    MessageQueueManager* const message_queue_manager,
+    ledger::LedgerRepository* const ledger_repository,
+    maxwell::UserIntelligenceProvider* const user_intelligence_provider)
     : application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
       user_intelligence_provider_(user_intelligence_provider) {
   trigger_list_watcher_.reset(new PageWatcherImpl(
       ledger_repository, kTriggerListLedger,
-      [this](std::string key, std::string value) { AddedTrigger(key, value); },
-      [this](std::string key) { DeletedTrigger(key); }));
+      [this](const std::string& key, const std::string& value) {
+        AddedTrigger(key, value);
+      },
+      [this](const std::string& key) { DeletedTrigger(key); }));
 }
 
 AgentRunner::~AgentRunner() = default;
@@ -337,8 +339,8 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
 
 void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
                                     const std::string& task_id,
-                                    uint32_t alarm_in_seconds,
-                                    bool is_new_request) {
+                                    const uint32_t alarm_in_seconds,
+                                    const bool is_new_request) {
   auto found_it = running_alarms_.find(agent_url);
   if (found_it != running_alarms_.end()) {
     if (found_it->second.count(task_id) != 0 && is_new_request) {

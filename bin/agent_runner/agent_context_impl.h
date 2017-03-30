@@ -27,8 +27,7 @@ namespace modular {
 
 class AgentRunner;
 
-// This contains constructor parameters for |AgentContextImpl| that tend
-// not to change between instances.
+// The parameters of agent context that do not vary by instance.
 struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
   app::ApplicationLauncher* const app_launcher;
@@ -59,7 +58,7 @@ class AgentContextImpl : public AgentContext, public AgentController {
  private:
   // |AgentContext|
   void GetComponentContext(
-      fidl::InterfaceRequest<ComponentContext> context) override;
+      fidl::InterfaceRequest<ComponentContext> request) override;
   // |AgentContext|
   void ScheduleTask(TaskInfoPtr task_info) override;
   // |AgentContext|
@@ -74,8 +73,8 @@ class AgentContextImpl : public AgentContext, public AgentController {
   // connections are forwarded to the agent.
   void OnInitialized();
 
-  // Stop this agent when there are no active AgentControllers and there are no
-  // outstanding tasks.
+  // Stops this agent when there are no active AgentControllers and
+  // there are no outstanding tasks.
   void MaybeStopAgent();
 
   const std::string url_;

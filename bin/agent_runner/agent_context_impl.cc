@@ -87,9 +87,9 @@ void AgentContextImpl::NewTask(const std::string& task_id) {
 }
 
 void AgentContextImpl::GetComponentContext(
-    fidl::InterfaceRequest<ComponentContext> context) {
+    fidl::InterfaceRequest<ComponentContext> request) {
   component_context_bindings_.AddBinding(&component_context_impl_,
-                                         std::move(context));
+                                         std::move(request));
 }
 
 void AgentContextImpl::GetIntelligenceServices(
@@ -109,6 +109,8 @@ void AgentContextImpl::DeleteTask(const fidl::String& task_id) {
 void AgentContextImpl::Done() {}
 
 void AgentContextImpl::MaybeStopAgent() {
+  // TODO(mesch): The code to stop modules does the same but uses
+  // different primitives.
   if (agent_controller_bindings_.size() == 0 && incomplete_task_count_ == 0) {
     auto kill_agent_once = std::make_shared<std::once_flag>();
     auto kill_agent = [kill_agent_once, this]() mutable {
