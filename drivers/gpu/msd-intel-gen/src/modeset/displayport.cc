@@ -6,6 +6,7 @@
 #include "magma_util/macros.h"
 #include "register_io.h"
 #include "registers.h"
+#include "registers_ddi.h"
 #include "registers_dpll.h"
 #include <algorithm>
 #include <chrono>

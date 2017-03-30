@@ -6,6 +6,7 @@
 #include "modeset/displayport.h"
 #include "register_io.h"
 #include "registers.h"
+#include "registers_ddi.h"
 #include "registers_dpll.h"
 #include "gtest/gtest.h"
 #include <assert.h>
