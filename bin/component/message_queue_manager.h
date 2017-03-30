@@ -23,10 +23,11 @@ namespace modular {
 
 class MessageQueueStorage;
 
-// This class manages message queues for components. It is meant to be called
-// from a ComponentContext instance, and manages the message queues for
-// that component instance. The ComponentContext instance is responsible for
-// deleting the message queues it has created, otherwise they are persisted.
+// Manages message queues for components. One MessageQueueManager
+// instance is used by all ComponentContextImpl instances, and manages
+// the message queues for all component instances. The
+// ComponentContext instance is responsible for deleting the message
+// queues it has created, otherwise they are persisted.
 class MessageQueueManager {
  public:
   MessageQueueManager(ledger::LedgerRepository* ledger_repository);
@@ -34,19 +35,20 @@ class MessageQueueManager {
 
   void ObtainMessageQueue(const std::string& component_instance_id,
                           const std::string& queue_name,
-                          fidl::InterfaceRequest<MessageQueue> message_queue);
+                          fidl::InterfaceRequest<MessageQueue> request);
 
   void DeleteMessageQueue(const std::string& component_instance_id,
                           const std::string& queue_name);
 
   void GetMessageSender(const std::string& queue_token,
-                        fidl::InterfaceRequest<MessageSender> sender);
+                        fidl::InterfaceRequest<MessageSender> request);
 
-  // Used by AgentRunner to look for new messages on queues which have a trigger
-  // associated with it. If a queue corresponding to
-  // |component_instance_id| x |queue_name| does not exist, a new one is
-  // created.
-  // Registering a new watcher will stomp over existing watcher.
+  // Used by AgentRunner to look for new messages on queues which have
+  // a trigger associated with it. If a queue corresponding to
+  // |component_instance_id| x |queue_name| does not exist, a new one
+  // is created.
+  //
+  // Registering a new watcher stomps over any existing watcher.
   void RegisterWatcher(const std::string& component_instance_id,
                        const std::string& queue_name,
                        const std::function<void()> callback);
@@ -66,8 +68,8 @@ class MessageQueueManager {
                          const std::string& component_instance_id,
                          const std::string& queue_name)> callback);
 
-  // Gets the queue token from the ledger for the given component instance id
-  // and queue name.
+  // Gets the queue token from the ledger for the given component
+  // instance id and queue name.
   void GetQueueToken(
       const std::string& component_instance_id,
       const std::string& queue_name,
@@ -75,14 +77,14 @@ class MessageQueueManager {
                          bool found,
                          const std::string& queue_token)> callback);
 
-  // If a |MessageQueueStorage| exists for the queue_token returns it, otherwise
-  // creates one.
+  // Returns the |MessageQueueStorage| for the queue_token. Creates it
+  // if it doesn't exist yet.
   MessageQueueStorage* GetOrMakeMessageQueueStorage(
       const std::string& component_instance_id,
       const std::string& queue_name,
       const std::string& queue_token);
 
-  // Returns an existing message queue or create one.
+  // Returns the |MessageQueueStorage| or create one.
   void GetOrMakeMessageQueue(
       const std::string& component_instance_id,
       const std::string& queue_name,

@@ -43,7 +43,7 @@ void AppendEscaped(std::string* key, const std::string& data) {
   }
 }
 
-void AppendSeparator(std::string* key) {
+void AppendSeparator(std::string* const key) {
   key->push_back(kSeparator);
 }
 
@@ -124,31 +124,29 @@ class MessageQueueStorage : public MessageSender {
     }
   }
 
-  std::string queue_token() { return queue_token_; }
+  const std::string& queue_token() const { return queue_token_; }
 
   void AddMessageSenderBinding(
-      fidl::InterfaceRequest<MessageSender> sender_request) {
-    message_sender_bindings_.AddBinding(std::move(this),
-                                        std::move(sender_request));
+      fidl::InterfaceRequest<MessageSender> request) {
+    message_sender_bindings_.AddBinding(this, std::move(request));
   }
 
-  void AddMessageQueueBinding(
-      fidl::InterfaceRequest<MessageQueue> msg_queue_request) {
+  void AddMessageQueueBinding(fidl::InterfaceRequest<MessageQueue> request) {
     message_queue_bindings_.AddBinding(
         std::make_unique<MessageQueueConnection>(this),
-        std::move(msg_queue_request));
+        std::move(request));
   }
 
   // |MessageQueueConnection| calls this method in its destructor so that we can
   // drop any pending receive callbacks.
   void RemoveMessageQueueConnection(const MessageQueueConnection* const conn) {
-    receive_callback_queue_.erase(
-        std::remove_if(receive_callback_queue_.begin(),
-                       receive_callback_queue_.end(),
-                       [conn](const ReceiveCallbackQueueItem& item) -> bool {
-                         return conn == item.first;
-                       }),
-        receive_callback_queue_.end());
+    auto i = std::remove_if(
+        receive_callback_queue_.begin(),
+        receive_callback_queue_.end(),
+        [conn](const ReceiveCallbackQueueItem& item) {
+          return conn == item.first;
+        });
+    receive_callback_queue_.erase(i, receive_callback_queue_.end());
   }
 
   void RegisterWatcher(const std::function<void()> watcher) {
@@ -176,7 +174,7 @@ class MessageQueueStorage : public MessageSender {
     }
   }
 
-  std::string queue_token_;
+  const std::string queue_token_;
 
   std::function<void()> watcher_;
 
@@ -186,9 +184,10 @@ class MessageQueueStorage : public MessageSender {
       std::pair<const MessageQueueConnection*, MessageQueue::ReceiveCallback>;
   std::deque<ReceiveCallbackQueueItem> receive_callback_queue_;
 
-  // When the |MessageQueue| interface closes, this MessageQueueConnection
-  // object gets removed (and destroyed due to unique_ptr semantics), which in
-  // turn will notify our RemoveMessageQueueConnection method.
+  // When a |MessageQueue| connection closes, the corresponding
+  // MessageQueueConnection instance gets removed (and destroyed due
+  // to unique_ptr semantics), which in turn will notify our
+  // RemoveMessageQueueConnection method.
   fidl::BindingSet<MessageQueue, std::unique_ptr<MessageQueueConnection>>
       message_queue_bindings_;
 
@@ -198,7 +197,7 @@ class MessageQueueStorage : public MessageSender {
 // MessageQueueConnection -----------------------------------------------------
 
 MessageQueueConnection::MessageQueueConnection(
-    MessageQueueStorage* queue_storage)
+    MessageQueueStorage* const queue_storage)
     : queue_storage_(queue_storage) {}
 
 MessageQueueConnection::~MessageQueueConnection() {
@@ -217,33 +216,35 @@ void MessageQueueConnection::GetToken(const GetTokenCallback& callback) {
 // MessageQueueManager --------------------------------------------------------
 
 MessageQueueManager::MessageQueueManager(
-    ledger::LedgerRepository* ledger_repository) {
-  auto error_handler = [](ledger::Status status) {
+    ledger::LedgerRepository* const ledger_repository) {
+  auto error_handler = [](const ledger::Status status) {
     if (status != ledger::Status::OK) {
       FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
     }
   };
+
   ledger_repository->GetLedger(to_array(kLedgerId), ledger_.NewRequest(),
                                error_handler);
+
   ledger_->GetRootPage(page_.NewRequest(), error_handler);
 }
 
-MessageQueueManager::~MessageQueueManager() {}
+MessageQueueManager::~MessageQueueManager() = default;
 
 void MessageQueueManager::ObtainMessageQueue(
     const std::string& component_instance_id,
     const std::string& queue_name,
-    fidl::InterfaceRequest<MessageQueue> message_queue) {
+    fidl::InterfaceRequest<MessageQueue> request) {
   GetOrMakeMessageQueue(
       component_instance_id, queue_name,
-      ftl::MakeCopyable([message_queue = std::move(message_queue)](
-          ledger::Status status, MessageQueueStorage * mqs) mutable {
+      ftl::MakeCopyable([request = std::move(request)](
+          const ledger::Status status, MessageQueueStorage* const mqs) mutable {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Failed to make or get message queue: " << status;
           return;
         }
         if (mqs) {
-          mqs->AddMessageQueueBinding(std::move(message_queue));
+          mqs->AddMessageQueueBinding(std::move(request));
         }
       }));
 }
@@ -520,18 +521,18 @@ void MessageQueueManager::GetQueueToken(
 
 void MessageQueueManager::GetMessageSender(
     const std::string& queue_token,
-    fidl::InterfaceRequest<MessageSender> sender) {
+    fidl::InterfaceRequest<MessageSender> request) {
   const auto& it = message_queues_.find(queue_token);
   if (it != message_queues_.cend()) {
     // Found the message queue already.
-    it->second->AddMessageSenderBinding(std::move(sender));
+    it->second->AddMessageSenderBinding(std::move(request));
     return;
   }
 
   // Need to look it up.
   GetComponentInstanceQueueName(
       queue_token,
-      ftl::MakeCopyable([ this, queue_token, sender = std::move(sender) ](
+      ftl::MakeCopyable([ this, queue_token, request = std::move(request) ](
           ledger::Status status, bool found, std::string component_instance_id,
           std::string queue_name) mutable {
         if (status != ledger::Status::OK) {
@@ -546,7 +547,7 @@ void MessageQueueManager::GetMessageSender(
         }
         GetOrMakeMessageQueueStorage(component_instance_id, queue_name,
                                      queue_token)
-            ->AddMessageSenderBinding(std::move(sender));
+            ->AddMessageSenderBinding(std::move(request));
       }));
 }
 
