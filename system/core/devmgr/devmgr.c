@@ -334,10 +334,13 @@ int main(int argc, char** argv) {
     devmgr_init(root_job_handle);
     devmgr_vfs_init();
 
+    mx_object_set_property(root_job_handle, MX_PROP_NAME, "root", 4);
+
     mx_status_t status = mx_job_create(root_job_handle, 0u, &svcs_job_handle);
     if (status < 0) {
         printf("unable to create service job\n");
     }
+    mx_object_set_property(svcs_job_handle, MX_PROP_NAME, "magenta-services", 16);
 
     // Features like Intel Processor Trace need a dump of ld.so activity.
     // The output has a specific format, and will eventually be recorded

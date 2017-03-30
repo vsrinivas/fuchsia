@@ -67,6 +67,7 @@ void coordinator_init(mx_handle_t root_job) {
     if (status < 0) {
         printf("unable to create devhost job\n");
     }
+    mx_object_set_property(devhost_job, MX_PROP_NAME, "magenta-drivers", 15);
 
     mxio_dispatcher_create(&coordinator_dispatcher, coordinator_handler);
 }
