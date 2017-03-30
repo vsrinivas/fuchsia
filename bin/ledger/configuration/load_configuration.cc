@@ -48,8 +48,8 @@ bool LoadConfiguration(Configuration* result) {
                   << kDefaultConfigurationFile;
   } else {
     FTL_LOG(WARNING)
-        << "No Ledger configuration - it will work locally but won't sync. "
-        << "To enable cloud sync, follow "
+        << "No Ledger configuration - will work locally but won't sync. "
+        << "To enable cloud sync, see "
         << "https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md";
   }
 
