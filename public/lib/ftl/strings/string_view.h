@@ -11,6 +11,14 @@
 
 #include "lib/ftl/logging.h"
 
+// MSVC 2015 doesn't support "extended constexpr" from C++14.
+#if __cplusplus >= 201402L
+// C++14 relaxed the limitation of the content of a constexpr function.
+#define CONSTEXPR_IN_CPP14 constexpr
+#else
+#define CONSTEXPR_IN_CPP14
+#endif
+
 namespace ftl {
 
 // A string-like object that points to a sized piece of memory.
@@ -22,7 +30,7 @@ class StringView {
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   using reverse_iterator = const_reverse_iterator;
 
-  constexpr static size_t npos = std::string::npos;
+  constexpr static size_t npos = static_cast<size_t>(-1);
 
   // Constructors.
   constexpr StringView() : data_(""), size_(0u) {}
@@ -32,15 +40,13 @@ class StringView {
 
   constexpr StringView(const char* str, size_t len) : data_(str), size_(len) {}
 
-  // strlen is not a constexpr function in clang, using __builtin_strlen that
-  // acts like one.
   explicit constexpr StringView(const char* str)
-      : data_(str), size_(__builtin_strlen(str)) {}
+      : data_(str), size_(constexpr_strlen(str)) {}
 
   // Implicit constructor for constant C strings.
   template<size_t N>
   constexpr StringView(const char(&str)[N])
-      : data_(str), size_(__builtin_strlen(str)) {}
+      : data_(str), size_(constexpr_strlen(str)) {}
 
   // Implicit constructor.
   StringView(const std::string& str) : data_(str.data()), size_(str.size()) {}
@@ -82,20 +88,20 @@ class StringView {
   }
 
   // Modifier methods.
-  constexpr void clear() {
+  CONSTEXPR_IN_CPP14 void clear() {
     data_ = "";
     size_ = 0;
   }
-  constexpr void remove_prefix(size_t n) {
+  CONSTEXPR_IN_CPP14 void remove_prefix(size_t n) {
     FTL_DCHECK(n <= size_);
     data_ += n;
     size_ -= n;
   }
-  constexpr void remove_suffix(size_t n) {
+  CONSTEXPR_IN_CPP14 void remove_suffix(size_t n) {
     FTL_DCHECK(n <= size_);
     size_ -= n;
   }
-  constexpr void swap(StringView& other) {
+  CONSTEXPR_IN_CPP14 void swap(StringView& other) {
     const char* data = data_;
     data_ = other.data_;
     other.data_ = data;
@@ -126,6 +132,14 @@ class StringView {
  private:
   constexpr static size_t min(size_t v1, size_t v2) {
     return v1 < v2 ? v1 : v2;
+  }
+
+  constexpr static int constexpr_strlen(const char* str) {
+#if defined(_MSC_VER)
+    return *str ? 1 + constexpr_strlen(str + 1) : 0;
+#else
+    return __builtin_strlen(str);
+#endif
   }
 
   const char* data_;

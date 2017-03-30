@@ -58,20 +58,8 @@ class WeakPtr {
   // Copy assignment.
   WeakPtr<T>& operator=(const WeakPtr<T>& r) = default;
 
-  template <typename U>
-  WeakPtr<T>& operator=(const WeakPtr<T>& r) {
-    ptr_ = r.ptr_;
-    flag_ = r.flag_;
-  }
-
   // Move assignment.
   WeakPtr<T>& operator=(WeakPtr<T>&& r) = default;
-
-  template <typename U>
-  WeakPtr<T>& operator=(WeakPtr<T>&& r) {
-    ptr_ = r.ptr_;
-    flag_ = std::move(r.flag_);
-  }
 
   void reset() { flag_ = nullptr; }
 

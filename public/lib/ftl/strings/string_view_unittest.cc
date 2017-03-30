@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/ftl/strings/string_view.h"
+
+#include <functional>
+
 #include "gtest/gtest.h"
 
 namespace ftl {
