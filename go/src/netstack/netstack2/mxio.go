@@ -920,7 +920,11 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 		hints.ai_socktype = SOCK_STREAM
 	}
 	if hints.ai_protocol == 0 {
-		hints.ai_protocol = IPPROTO_TCP
+		if hints.ai_socktype == SOCK_STREAM {
+			hints.ai_protocol = IPPROTO_TCP
+		} else if hints.ai_socktype == SOCK_DGRAM {
+			hints.ai_protocol = IPPROTO_UDP
+		}
 	}
 	t, err := sockProto(int(hints.ai_socktype), int(hints.ai_protocol))
 	if err != nil {
