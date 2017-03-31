@@ -328,7 +328,7 @@ public:
             // exercising the polling logic in the software-under-test.)
             control.send_busy().set(0);
             control.message_size().set(reply.size);
-            mmio_->Write32(control.reg_addr(), control.reg_value());
+            control.WriteTo(mmio_);
         }
     }
 
