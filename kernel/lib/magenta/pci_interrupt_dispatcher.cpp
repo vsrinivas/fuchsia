@@ -19,7 +19,7 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
     if (device_) {
         // Unregister our handler.
         __UNUSED status_t ret;
-        ret = device_->device()->RegisterIrqHandler(irq_id_, nullptr, nullptr);
+        ret = device_->RegisterIrqHandler(irq_id_, nullptr, nullptr);
         DEBUG_ASSERT(ret == NO_ERROR);  // This should never fail.
 
         // Release our reference to our device.
@@ -43,7 +43,7 @@ pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev
 }
 
 status_t PciInterruptDispatcher::Create(
-        const mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper>& device,
+        const mxtl::RefPtr<PcieDevice>& device,
         uint32_t irq_id,
         bool maskable,
         mx_rights_t* out_rights,
@@ -61,9 +61,9 @@ status_t PciInterruptDispatcher::Create(
 
     // Stash reference to the underlying device in the dispatcher we just
     // created, then attempt to register our dispatcher with the bus driver.
-    DEBUG_ASSERT(device->device());
+    DEBUG_ASSERT(device);
     interrupt_dispatcher->device_ = device;
-    status_t result = device->device()->RegisterIrqHandler(irq_id,
+    status_t result = device->RegisterIrqHandler(irq_id,
                                                            IrqThunk,
                                                            interrupt_dispatcher);
     if (result != NO_ERROR) {
@@ -75,7 +75,7 @@ status_t PciInterruptDispatcher::Create(
     // (if it is maskable) then transfer our dispatcher refererence to the
     // caller.
     if (maskable) {
-        device->device()->UnmaskIrq(irq_id);
+        device->UnmaskIrq(irq_id);
     }
     *out_interrupt = mxtl::move(dispatcher);
     *out_rights    = kDefaultPciInterruptRights;
@@ -87,7 +87,7 @@ status_t PciInterruptDispatcher::InterruptComplete() {
     unsignal();
 
     if (maskable_)
-        device_->device()->UnmaskIrq(irq_id_);
+        device_->UnmaskIrq(irq_id_);
 
     return NO_ERROR;
 }
@@ -96,7 +96,7 @@ status_t PciInterruptDispatcher::UserSignal() {
     DEBUG_ASSERT(device_ != nullptr);
 
     if (maskable_)
-        device_->device()->MaskIrq(irq_id_);
+        device_->MaskIrq(irq_id_);
 
     signal(true);
 

@@ -376,50 +376,6 @@ mx_status_t sys_pci_reset_device(mx_handle_t dev_handle) {
     return pci_device->ResetDevice();
 }
 
-mx_status_t sys_pci_map_mmio(mx_handle_t dev_handle, uint32_t bar_num,
-                             mx_cache_policy_t cache_policy, user_ptr<mx_handle_t> out_handle) {
-    /**
-     * Performs MMIO mapping for the PCI device associated with the handle.
-     * @param handle Handle associated with a PCI device
-     * @param bar_num BAR number
-     * @param cache_policy cache policy to use for mapping
-     * @param out_handle pointer to a handle to store the mapping
-     */
-    LTRACEF("handle %d\n", dev_handle);
-    if (!out_handle) {
-        return ERR_INVALID_ARGS;
-    }
-
-    // Caller only gets to control the cache policy, nothing else.
-    if (cache_policy & ~ARCH_MMU_FLAG_CACHE_MASK)
-        return ERR_INVALID_ARGS;
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_WRITE, &pci_device);
-    if (status != NO_ERROR)
-        return status;
-
-    mx_rights_t mmio_rights;
-    mxtl::RefPtr<Dispatcher> mmio_io_mapping;
-    status_t result = pci_device->MapMmio(bar_num, cache_policy, &mmio_io_mapping, &mmio_rights);
-    if (result != NO_ERROR)
-        return result;
-
-    HandleOwner mmio_handle(MakeHandle(mxtl::move(mmio_io_mapping), mmio_rights));
-    if (!mmio_handle)
-        return ERR_NO_MEMORY;
-
-    status = out_handle.copy_to_user(up->MapHandleToValue(mmio_handle));
-    if (status != NO_ERROR) {
-        return status;
-    }
-    up->AddHandle(mxtl::move(mmio_handle));
-
-    return NO_ERROR;
-}
-
 mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<mx_pci_resource_t> out_bar) {
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -632,42 +588,6 @@ mx_status_t sys_pci_map_interrupt(mx_handle_t dev_handle,
     return NO_ERROR;
 }
 
-mx_status_t sys_pci_map_config(mx_handle_t dev_handle, user_ptr<mx_handle_t> out_handle) {
-    /**
-     * Fetch an I/O Mapping object which maps the PCI device's mmaped config
-     * into the caller's address space (read only)
-     *
-     * @param handle Handle associated with a PCI device
-     * @param out_handle pointer to a handle to associate with the config mapping
-     */
-    LTRACEF("handle %d\n", dev_handle);
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_READ, &pci_device);
-    if (status != NO_ERROR)
-        return status;
-
-    mx_rights_t config_rights;
-    mxtl::RefPtr<Dispatcher> config_io_mapping;
-    status_t result = pci_device->MapConfig(&config_io_mapping, &config_rights);
-    if (result != NO_ERROR)
-        return result;
-
-    HandleOwner config_handle(MakeHandle(mxtl::move(config_io_mapping), config_rights));
-    if (!config_handle)
-        return ERR_NO_MEMORY;
-
-    status = out_handle.copy_to_user(up->MapHandleToValue(config_handle));
-    if (status != NO_ERROR) {
-        return status;
-    }
-    up->AddHandle(mxtl::move(config_handle));
-
-    return NO_ERROR;
-}
-
 /**
  * Gets info about the capabilities of a PCI device's IRQ modes.
  * @param handle Handle associated with a PCI device.
@@ -749,10 +669,6 @@ mx_status_t sys_pci_reset_device(mx_handle_t) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t sys_pci_map_mmio(mx_handle_t, uint32_t, mx_cache_policy_t, user_ptr<mx_handle_t>) {
-    return ERR_NOT_SUPPORTED;
-}
-
 mx_status_t sys_pci_get_bar(mx_handle_t, uint32_t, pci_resource_t**) {
     return ERR_NOT_SUPPORTED;
 }
@@ -770,10 +686,6 @@ mx_status_t sys_pci_io_read(mx_handle_t, uint32_t, uint32_t, uint32_t, user_ptr<
 }
 
 mx_status_t sys_pci_map_interrupt(mx_handle_t, int32_t, user_ptr<mx_handle_t>) {
-    return ERR_NOT_SUPPORTED;
-}
-
-mx_status_t sys_pci_map_config(mx_handle_t, user_ptr<mx_handle_t>) {
     return ERR_NOT_SUPPORTED;
 }
 
