@@ -37,18 +37,14 @@ type Arena struct {
 
 // NewArena creates a new Arena of fixed size.
 func NewArena() (*Arena, error) {
-	iosize := numBuffers * bufferSize
+	iosize := uint64(numBuffers * bufferSize)
 	iovmo, err := mx.NewVMO(uint64(iosize), 0)
 	if err != nil {
 		return nil, fmt.Errorf("eth: cannot allocate I/O VMO: %v", err)
 	}
-	var iobuf uintptr
 
-	// TODO: cleaner VMAR handling in the mx package
-	const MX_VM_FLAG_PERM_READ = 1 << 0
-	const MX_VM_FLAG_PERM_WRITE = 1 << 1
-	status := mx.Sys_vmar_map(mx.VmarRootHandle, 0, mx.Handle(iovmo), 0, uint(iosize), MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &iobuf)
-	if status < 0 {
+	iobuf, err := mx.VMARRoot.Map(0, iovmo, 0, iosize, mx.VMFlagPermRead|mx.VMFlagPermWrite)
+	if err != nil {
 		iovmo.Close()
 		return nil, fmt.Errorf("eth.Arena: I/O map failed: %v", err)
 	}
