@@ -5,6 +5,10 @@
 #ifndef LIB_FTL_COMPILER_SPECIFIC_H_
 #define LIB_FTL_COMPILER_SPECIFIC_H_
 
+#if !defined(COMPILER_GCC) && !defined(__clang__) && !defined(COMPILER_MSVC)
+#error Unsupported compiler.
+#endif
+
 // Annotate a variable indicating it's ok if the variable is not used.
 // (Typically used to silence a compiler warning when the assignment
 // is important for some other reason.)
@@ -25,31 +29,29 @@
 // Annotate a function indicating it should not be inlined.
 // Use like:
 //   NOINLINE void DoStuff() { ... }
-#if defined(COMPILER_GCC)
+#if defined(COMPILER_GCC) || defined(__clang__)
 #define FTL_NOINLINE __attribute__((noinline))
 #elif defined(COMPILER_MSVC)
 #define FTL_NOINLINE __declspec(noinline)
-#else
-#define FTL_NOINLINE
 #endif
 
 // Specify memory alignment for structs, classes, etc.
 // Use like:
 //   class ALIGNAS(16) MyClass { ... }
 //   ALIGNAS(16) int array[4];
-#if defined(COMPILER_MSVC)
-#define FTL_ALIGNAS(byte_alignment) __declspec(align(byte_alignment))
-#elif defined(COMPILER_GCC)
+#if defined(COMPILER_GCC) || defined(__clang__)
 #define FTL_ALIGNAS(byte_alignment) __attribute__((aligned(byte_alignment)))
+#elif defined(COMPILER_MSVC)
+#define FTL_ALIGNAS(byte_alignment) __declspec(align(byte_alignment))
 #endif
 
 // Return the byte alignment of the given type (available at compile time).
 // Use like:
 //   ALIGNOF(int32)  // this would be 4
-#if defined(COMPILER_MSVC)
-#define FTL_ALIGNOF(type) __alignof(type)
-#elif defined(COMPILER_GCC)
+#if defined(COMPILER_GCC) || defined(__clang__)
 #define FTL_ALIGNOF(type) __alignof__(type)
+#elif defined(COMPILER_MSVC)
+#define FTL_ALIGNOF(type) __alignof(type)
 #endif
 
 // Annotate a function indicating the caller must examine the return value.
@@ -68,7 +70,7 @@
 // |dots_param| is the one-based index of the "..." parameter.
 // For v*printf functions (which take a va_list), pass 0 for dots_param.
 // (This is undocumented but matches what the system C headers do.)
-#if defined(COMPILER_GCC)
+#if defined(COMPILER_GCC) || defined(__clang__)
 #define FTL_PRINTF_FORMAT(format_param, dots_param) \
     __attribute__((format(printf, format_param, dots_param)))
 #else
