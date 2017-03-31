@@ -28,7 +28,7 @@ class ReadLinkDataCall : public Operation<fidl::String> {
   }
 
   void Run() override {
-    fidl::String key{kLinkKeyPrefix + link_id_.get()};
+    std::string key{kLinkKeyPrefix + link_id_.get()};
     (*page_snapshot_)
         ->Get(to_array(key), [this](ledger::Status status, mx::vmo value) {
           if (status != ledger::Status::OK) {
@@ -79,7 +79,7 @@ class WriteLinkDataCall : public Operation<void> {
   }
 
   void Run() override {
-    fidl::String key{kLinkKeyPrefix + link_id_.get()};
+    std::string key{kLinkKeyPrefix + link_id_.get()};
     page_->Put(to_array(key), to_array(data_), [this](ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "WriteLinkDataCall() " << link_id_ << " Page.Put() "

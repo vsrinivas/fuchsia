@@ -5,6 +5,7 @@
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unordered_set>
 #include <vector>
@@ -22,6 +23,10 @@
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
+
+// Prefix of the keys under which story entries are stored in the user
+// root page.
+constexpr char kStoryKeyPrefix[] = "Story/";
 
 namespace {
 
@@ -54,12 +59,14 @@ std::string MakeStoryId(std::unordered_set<std::string>* const story_ids,
   return id;
 }
 
-// HACK(mesch): Computes whether to skip this key in places where only
-// story ID keys are expected.
-bool SkipKey(fidl::Array<uint8_t>& key) {
-  std::string key_as_string = to_string(key);
-  return key_as_string == kDeviceMapKey ||
-         key_as_string == std::string(kLinkKeyPrefix) + kUserShellKey;
+bool IsStoryKey(fidl::Array<uint8_t>& key) {
+  constexpr size_t prefix_size = sizeof(kStoryKeyPrefix) - 1;
+
+  // NOTE(mesch): A key that is *only* the prefix, without anything
+  // after it, is still not a valid story key. So the key must be
+  // truly longer than the prefix.
+  return key.size() > prefix_size &&
+         0 == memcmp(key.data(), kStoryKeyPrefix, prefix_size);
 }
 
 // Retrieves all entries from the given snapshot and calls the given
@@ -69,7 +76,7 @@ void GetEntries(ledger::PageSnapshotPtr* const snapshot,
                 fidl::Array<uint8_t> token,
                 std::function<void(ledger::Status)> callback) {
   (*snapshot)->GetEntries(
-      nullptr, std::move(token),
+      to_array(kStoryKeyPrefix), std::move(token),
       ftl::MakeCopyable([ snapshot, entries, callback = std::move(callback) ](
           ledger::Status status, auto new_entries, auto next_token) mutable {
         if (status != ledger::Status::OK &&
@@ -135,30 +142,30 @@ class GetStoryDataCall : public Operation<StoryDataPtr> {
   }
 
   void Run() override {
+    std::string key{kStoryKeyPrefix + story_id_.get()};
     (*root_snapshot_)
-        ->Get(to_array(story_id_),
-              [this](ledger::Status status, mx::vmo value) {
-                if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
-                                 << " PageSnapshot.Get() " << status;
-                  Done(std::move(story_data_));
-                  return;
-                }
+        ->Get(to_array(key), [this](ledger::Status status, mx::vmo value) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
+                           << " PageSnapshot.Get() " << status;
+            Done(std::move(story_data_));
+            return;
+          }
 
-                std::string value_as_string;
-                if (!mtl::StringFromVmo(value, &value_as_string)) {
-                  FTL_LOG(ERROR) << "Unable to extract data.";
-                  Done(nullptr);
-                  return;
-                }
+          std::string value_as_string;
+          if (!mtl::StringFromVmo(value, &value_as_string)) {
+            FTL_LOG(ERROR) << "Unable to extract data.";
+            Done(nullptr);
+            return;
+          }
 
-                if (!XdrRead(value_as_string, &story_data_, XdrStoryData)) {
-                  Done(nullptr);
-                  return;
-                }
+          if (!XdrRead(value_as_string, &story_data_, XdrStoryData)) {
+            Done(nullptr);
+            return;
+          }
 
-                Done(std::move(story_data_));
-              });
+          Done(std::move(story_data_));
+        });
   };
 
  private:
@@ -187,9 +194,10 @@ class WriteStoryDataCall : public Operation<void> {
     std::string json;
     XdrWrite(&json, &story_data_, XdrStoryData);
 
+    std::string key{kStoryKeyPrefix + story_data_->story_info->id.get()};
     root_page_->PutWithPriority(
-        to_array(story_data_->story_info->id), to_array(json),
-        ledger::Priority::EAGER, [this](ledger::Status status) {
+        to_array(key), to_array(json), ledger::Priority::EAGER,
+        [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             const fidl::String& story_id = story_data_->story_info->id;
             FTL_LOG(ERROR) << "WriteStoryDataCall() " << story_id
@@ -328,7 +336,8 @@ class DeleteStoryCall : public Operation<void> {
     FTL_DCHECK(pending_deletion_->second == nullptr);
     *pending_deletion_ = std::make_pair(story_id_, this);
 
-    root_page_->Delete(to_array(story_id_), [this](ledger::Status status) {
+    std::string key{kStoryKeyPrefix + story_id_.get()};
+    root_page_->Delete(to_array(key), [this](ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_ << " Page.Delete() "
                        << status;
@@ -506,15 +515,6 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
                  // also be too large to return from StoryProvider.
 
                  for (auto& entry : entries_) {
-                   // TODO(mesch): Not a good idea to mix keys of
-                   // different kinds in the same page. Once we are
-                   // more comfortable dealing with JSON data, we can
-                   // make a better mapping of a complex data
-                   // structure to a page.
-                   if (SkipKey(entry->key)) {
-                     continue;
-                   }
-
                    std::string value_as_string;
                    if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
                      FTL_LOG(ERROR) << "Unable to extract data.";
@@ -808,8 +808,10 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   FTL_DCHECK(!page->changes.is_null());
 
   for (auto& entry : page->changes) {
-    // TODO(mesch): See PreviousStoriesCall().
-    if (SkipKey(entry->key)) {
+    // TODO(mesch): Eventually we want to pick up changes to the
+    // device map too. (The changes to the user-shell-link, however,
+    // are already handled by the story storage impl.)
+    if (!IsStoryKey(entry->key)) {
       continue;
     }
 
