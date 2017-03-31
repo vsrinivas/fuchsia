@@ -151,6 +151,9 @@ endif
 KERNEL_COMPILEFLAGS += -mcmodel=kernel
 KERNEL_COMPILEFLAGS += -mno-red-zone
 
+# Clang now supports -fsanitize=safe-stack with -mcmodel=kernel.
+KERNEL_COMPILEFLAGS += $(SAFESTACK)
+
 # optimization: since fpu is disabled, do not pass flag in rax to varargs routines
 # that floating point args are in use.
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)

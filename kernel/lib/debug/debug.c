@@ -40,6 +40,10 @@ void _panic(void *caller, void *frame, const char *fmt, ...)
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
+void __stack_chk_fail(void) {
+    panic("stack canary corrupted!\n");
+}
+
 #if !DISABLE_DEBUG_OUTPUT
 
 void hexdump_very_ex(const void *ptr, size_t len, uint64_t disp_addr, hexdump_print_fn_t* pfn)

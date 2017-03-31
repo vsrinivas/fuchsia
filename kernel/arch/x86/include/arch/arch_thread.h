@@ -16,6 +16,9 @@ __BEGIN_CDECLS
 
 struct arch_thread {
     vaddr_t sp;
+#if __has_feature(safe_stack)
+    vaddr_t unsafe_sp;
+#endif
 #if ARCH_X86_64
     vaddr_t fs_base;
     vaddr_t gs_base;

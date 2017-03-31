@@ -215,6 +215,10 @@ private:
     // thread's kernel stack
     mxtl::RefPtr<VmMapping> kstack_mapping_;
     mxtl::RefPtr<VmAddressRegion> kstack_vmar_;
+#if __has_feature(safe_stack)
+    mxtl::RefPtr<VmMapping> unsafe_kstack_mapping_;
+    mxtl::RefPtr<VmAddressRegion> unsafe_kstack_vmar_;
+#endif
 
     // LK thread structure
     // put last to ease debugging since this is a pretty large structure

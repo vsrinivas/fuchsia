@@ -26,7 +26,8 @@ static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block);
  * Returns the number of bytes written to the buffer on success (potentially 0),
  * and a negative value on error.
  */
-static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
+__NO_SAFESTACK static ssize_t get_entropy_from_cpu(void* buf, size_t len,
+                                                   bool block) {
     /* TODO(security): Move this to a shared kernel/user lib, so we can write usermode
      * tests against this code */
 
@@ -46,13 +47,13 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
     return ERR_NOT_SUPPORTED;
 }
 
-static bool rdrand64_step(unsigned long long int* val) {
+__NO_SAFESTACK static bool rdrand64_step(unsigned long long int* val) {
     bool success = false;
     __asm__ volatile ("rdrand %0; setc %1" : "=r"(*val), "=r"(success) : : "cc");
     return success;
 }
 
-static bool rdseed64_step(unsigned long long int* val) {
+__NO_SAFESTACK static bool rdseed64_step(unsigned long long int* val) {
     // We use inline asm here instead of the intrinsic since we observed a
     // codegen bug with rdseed in GCC 6.2.
     bool success = false;
@@ -60,7 +61,8 @@ static bool rdseed64_step(unsigned long long int* val) {
     return success;
 }
 
-static bool instruction_step(enum entropy_instr instr, unsigned long long int* val) {
+__NO_SAFESTACK static bool instruction_step(enum entropy_instr instr,
+                                            unsigned long long int* val) {
     switch (instr) {
         case ENTROPY_INSTR_RDRAND: return rdrand64_step(val);
         case ENTROPY_INSTR_RDSEED: return rdseed64_step(val);
@@ -68,8 +70,8 @@ static bool instruction_step(enum entropy_instr instr, unsigned long long int* v
     }
 }
 
-static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
-                                            enum entropy_instr instr) {
+__NO_SAFESTACK static ssize_t get_entropy_from_instruction(
+    void* buf, size_t len, bool block, enum entropy_instr instr) {
     size_t written = 0;
     while (written < len) {
         unsigned long long int val = 0;
@@ -89,11 +91,13 @@ static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
     return (ssize_t)written;
 }
 
-static ssize_t get_entropy_from_rdseed(void* buf, size_t len, bool block) {
+__NO_SAFESTACK static ssize_t get_entropy_from_rdseed(void* buf, size_t len,
+                                                      bool block) {
     return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDSEED);
 }
 
-static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block) {
+__NO_SAFESTACK static ssize_t get_entropy_from_rdrand(void* buf, size_t len,
+                                                      bool block) {
     // TODO(security): This method is not compliant with Intel's "Digital Random
     // Number Generator (DRNG) Software Implementation Guide".  We are using
     // rdrand in a way that is explicitly against their recommendations.  This
@@ -103,7 +107,7 @@ static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block) {
     return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDRAND);
 }
 
-size_t hw_rng_get_entropy(void* buf, size_t len, bool block)
+__NO_SAFESTACK size_t hw_rng_get_entropy(void* buf, size_t len, bool block)
 {
     if (!len) {
         return 0;

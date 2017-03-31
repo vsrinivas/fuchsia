@@ -27,7 +27,7 @@ static struct x86_model_info model_info;
 
 static int initialized = 0;
 
-void x86_feature_init(void)
+__NO_SAFESTACK void x86_feature_init(void)
 {
     if (atomic_swap(&initialized, 1)) {
         return;

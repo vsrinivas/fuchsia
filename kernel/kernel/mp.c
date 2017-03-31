@@ -282,8 +282,7 @@ status_t mp_unplug_cpu(uint cpu_id) {
             NULL,
             &unplug_done,
             HIGHEST_PRIORITY,
-            NULL,
-            4096,
+            NULL, NULL, 4096,
             mp_unplug_trampoline);
     if (t == NULL) {
         status = ERR_NO_MEMORY;

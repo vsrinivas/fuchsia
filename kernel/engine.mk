@@ -176,11 +176,14 @@ USER_DYNAMIC_LDFLAGS := \
     --hash-style=gnu --eh-frame-hdr --build-id
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-USER_COMPILEFLAGS += -fsanitize=safe-stack
-NO_SAFESTACK := -fno-sanitize=safe-stack
+SAFESTACK := -fsanitize=safe-stack -fstack-protector-strong
+NO_SAFESTACK := -fno-sanitize=safe-stack -fno-stack-protector
 else
+SAFESTACK :=
 NO_SAFESTACK :=
 endif
+
+USER_COMPILEFLAGS += $(SAFESTACK)
 
 USER_CRT1_OBJ := $(BUILDDIR)/ulib/crt1.o
 

@@ -35,6 +35,7 @@
 #define __EXTERNALLY_VISIBLE __attribute__((externally_visible))
 #define __THREAD_ANNOTATION(x)
 #define __NO_SAFESTACK
+#define __has_feature(x) 0
 #else
 #define __OPTIMIZE(x)
 #define __EXTERNALLY_VISIBLE

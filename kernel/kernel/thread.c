@@ -130,7 +130,7 @@ thread_t *thread_create_etc(
         const char *name,
         thread_start_routine entry, void *arg,
         int priority,
-        void *stack, size_t stack_size,
+        void *stack, void *unsafe_stack, size_t stack_size,
         thread_trampoline_routine alt_trampoline)
 {
     unsigned int flags = 0;
@@ -177,6 +177,28 @@ thread_t *thread_create_etc(
         t->stack = stack;
     }
 
+#if __has_feature(safe_stack)
+    if (!unsafe_stack) {
+        DEBUG_ASSERT(!stack);
+        DEBUG_ASSERT(flags & THREAD_FLAG_FREE_STACK);
+        t->unsafe_stack = malloc(stack_size);
+        if (!t->unsafe_stack) {
+            free(t->stack);
+            if (flags & THREAD_FLAG_FREE_STRUCT)
+                free(t);
+            return NULL;
+        }
+# if THREAD_STACK_BOUNDS_CHECK
+        memset(t->unsafe_stack, STACK_DEBUG_BYTE, THREAD_STACK_PADDING_SIZE);
+# endif
+    } else {
+        DEBUG_ASSERT(stack);
+        t->unsafe_stack = unsafe_stack;
+    }
+#else
+    DEBUG_ASSERT(!unsafe_stack);
+#endif
+
     t->stack_size = stack_size;
 
     /* save whether or not we need to free the thread struct and/or stack */
@@ -199,7 +221,8 @@ thread_t *thread_create_etc(
 
 thread_t *thread_create(const char *name, thread_start_routine entry, void *arg, int priority, size_t stack_size)
 {
-    return thread_create_etc(NULL, name, entry, arg, priority, NULL, stack_size, NULL);
+    return thread_create_etc(NULL, name, entry, arg, priority,
+                             NULL, NULL, stack_size, NULL);
 }
 
 /**
@@ -307,8 +330,12 @@ status_t thread_join(thread_t *t, int *retcode, lk_time_t timeout)
     THREAD_UNLOCK(state);
 
     /* free its stack and the thread structure itself */
-    if (t->flags & THREAD_FLAG_FREE_STACK && t->stack)
+    if (t->flags & THREAD_FLAG_FREE_STACK && t->stack) {
         free(t->stack);
+#if __has_feature(safe_stack)
+        free(t->unsafe_stack);
+#endif
+    }
 
     if (t->flags & THREAD_FLAG_FREE_STRUCT)
         free(t);
@@ -355,6 +382,9 @@ __NO_RETURN static void thread_exit_locked(thread_t *current_thread, int retcode
         /* free its stack and the thread structure itself */
         if (current_thread->flags & THREAD_FLAG_FREE_STACK && current_thread->stack) {
             heap_delayed_free(current_thread->stack);
+#if __has_feature(safe_stack)
+            heap_delayed_free(current_thread->unsafe_stack);
+#endif
 
             /* make sure its not going to get a bounds check performed on the half-freed stack */
             current_thread->flags &= ~THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK;
@@ -394,8 +424,12 @@ void thread_forget(thread_t *t)
 
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
-    if (t->flags & THREAD_FLAG_FREE_STACK && t->stack)
+    if (t->flags & THREAD_FLAG_FREE_STACK && t->stack) {
         free(t->stack);
+#if __has_feature(safe_stack)
+        free(t->unsafe_stack);
+#endif
+    }
 
     if (t->flags & THREAD_FLAG_FREE_STRUCT)
         free(t);
@@ -633,6 +667,15 @@ void thread_resched(void)
                       oldthread, oldthread->name, oldthread->stack);
             }
         }
+# if __has_feature(safe_stack)
+        s = (uint32_t *)oldthread->unsafe_stack;
+        for (size_t i = 0; i < THREAD_STACK_PADDING_SIZE / sizeof(uint32_t); i++) {
+            if (unlikely(s[i] != STACK_DEBUG_WORD)) {
+                panic("unsafe_stack overrun at %p: thread %p (%s), unsafe_stack %p\n", &s[i],
+                      oldthread, oldthread->name, oldthread->unsafe_stack);
+            }
+        }
+# endif
     }
 #endif
 
@@ -976,7 +1019,7 @@ void thread_secondary_cpu_init_early(thread_t *t)
     thread_construct_first(t, name);
 }
 
-void thread_secondary_cpu_entry(void)
+__NO_SAFESTACK void thread_secondary_cpu_entry(void)
 {
     uint cpu = arch_curr_cpu_num();
 
@@ -1004,7 +1047,7 @@ thread_t *thread_create_idle_thread(uint cpu_num)
             &idle_threads[cpu_num], name,
             idle_thread_routine, NULL,
             IDLE_PRIORITY,
-            NULL, DEFAULT_STACK_SIZE,
+            NULL, NULL, DEFAULT_STACK_SIZE,
             NULL);
     if (t == NULL) {
         return t;

@@ -56,6 +56,10 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
 
     // set the stack pointer
     t->arch.sp = (vaddr_t)frame;
+#if __has_feature(safe_stack)
+    t->arch.unsafe_sp =
+        ROUNDDOWN((vaddr_t)t->unsafe_stack + t->stack_size, 16);
+#endif
 
     // initialize the fs, gs and kernel bases to 0.
     t->arch.fs_base = 0;
@@ -70,6 +74,7 @@ void arch_dump_thread(thread_t *t)
     }
 }
 
+__NO_SAFESTACK
 void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 {
     x86_extended_register_context_switch(oldthread, newthread);
@@ -111,6 +116,10 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
     write_msr(X86_MSR_IA32_FS_BASE, newthread->arch.fs_base);
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, newthread->arch.gs_base);
 
+#if __has_feature(safe_stack)
+    oldthread->arch.unsafe_sp = x86_read_gs_offset64(MX_TLS_UNSAFE_SP_OFFSET);
+    x86_write_gs_offset64(MX_TLS_UNSAFE_SP_OFFSET, newthread->arch.unsafe_sp);
+#endif
+
     x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }
-

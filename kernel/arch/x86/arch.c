@@ -104,6 +104,7 @@ void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
 
 #if WITH_SMP
 #include <arch/x86/apic.h>
+__NO_SAFESTACK
 void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
 {
     // Would prefer this to be in init_percpu, but there is a dependency on a
@@ -122,7 +123,12 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
     }
 
     DEBUG_ASSERT(cpu_num > 0);
-    x86_init_percpu((uint)cpu_num);
+    uintptr_t unsafe_sp = 0;
+#if __has_feature(safe_stack)
+    unsafe_sp =
+        ROUNDDOWN((uintptr_t)thread->unsafe_stack + thread->stack_size, 16);
+#endif
+    x86_init_percpu((uint)cpu_num, unsafe_sp);
 
     // Signal that this CPU is initialized.  It is important that after this
     // operation, we do not touch any resources associated with bootstrap
@@ -148,8 +154,8 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);
 
     thread_secondary_cpu_init_early(thread);
-    /* The thread stack and struct are from a single allocation, free it when we
-     * exit into the scheduler */
+    // The thread stacks and struct are from a single allocation, free it
+    // when we exit into the scheduler.
     thread->flags |= THREAD_FLAG_FREE_STRUCT;
     lk_secondary_cpu_entry();
 

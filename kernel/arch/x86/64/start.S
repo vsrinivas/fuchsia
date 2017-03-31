@@ -12,6 +12,7 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/registers.h>
+#include <magenta/tls.h>
 
 /* shared code to set up a default 64bit page table structure */
 .macro page_table_init

@@ -24,6 +24,7 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/tsc.h>
+#include <dev/hw_rng.h>
 #include <dev/interrupt.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
@@ -80,7 +81,7 @@ status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     return NO_ERROR;
 }
 
-void x86_init_percpu(uint8_t cpu_num)
+__NO_SAFESTACK void x86_init_percpu(uint8_t cpu_num, uintptr_t unsafe_sp)
 {
     struct x86_percpu *percpu;
     if (cpu_num == 0) {
@@ -99,6 +100,25 @@ void x86_init_percpu(uint8_t cpu_num)
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, 0);
 
     x86_feature_init();
+
+    if (cpu_num == 0) {
+        // Fill the stack canary with a random value as early as possible.
+        if (hw_rng_get_entropy(&bp_percpu.stack_guard, sizeof(uintptr_t),
+                               true) != sizeof(uintptr_t)) {
+            bp_percpu.stack_guard =
+                (uintptr_t)&bp_percpu.stack_guard ^ 0xdeadbeef00ff00ffUL;
+        }
+    } else {
+        percpu->stack_guard = bp_percpu.stack_guard;
+    }
+#if __has_feature(safe_stack)
+    if (cpu_num == 0) {
+        static uint8_t unsafe_kstack[PAGE_SIZE] __ALIGNED(16);
+        unsafe_sp = (uintptr_t)&unsafe_kstack[sizeof(unsafe_kstack)];
+    }
+    x86_write_gs_offset64(MX_TLS_UNSAFE_SP_OFFSET, unsafe_sp);
+#endif
+
     x86_cpu_topology_init();
     x86_extended_register_init();
     x86_extended_register_enable_feature(X86_EXTENDED_REGISTER_SSE);

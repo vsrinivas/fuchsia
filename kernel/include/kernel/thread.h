@@ -108,6 +108,9 @@ typedef struct thread {
     void *stack;
     size_t stack_size;
     vaddr_t stack_top;
+#if __has_feature(safe_stack)
+    void *unsafe_stack;
+#endif
 
     /* entry point */
     thread_start_routine entry;
@@ -170,7 +173,7 @@ void thread_set_name(const char *name);
 void thread_set_priority(int priority);
 void thread_set_exit_callback(thread_t *t, thread_exit_callback_t cb, void *cb_arg);
 thread_t *thread_create(const char *name, thread_start_routine entry, void *arg, int priority, size_t stack_size);
-thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine entry, void *arg, int priority, void *stack, size_t stack_size, thread_trampoline_routine alt_trampoline);
+thread_t *thread_create_etc(thread_t *t, const char *name, thread_start_routine entry, void *arg, int priority, void *stack, void *unsafe_stack, size_t stack_size, thread_trampoline_routine alt_trampoline);
 status_t thread_resume(thread_t *);
 void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t *);

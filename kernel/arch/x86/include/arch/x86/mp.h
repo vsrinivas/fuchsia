@@ -12,10 +12,12 @@
 /* offsets into this structure, used by assembly */
 #define PERCPU_DIRECT_OFFSET           0x0
 #define PERCPU_CURRENT_THREAD_OFFSET   0x8
-#define PERCPU_KERNEL_SP_OFFSET        0x10
-#define PERCPU_SAVED_USER_SP_OFFSET    0x18
-#define PERCPU_IN_IRQ_OFFSET           0x20
-#define PERCPU_DEFAULT_TSS_OFFSET      0x30
+//      MX_TLS_STACK_GUARD_OFFSET      0x10
+//      MX_TLS_UNSAFE_SP_OFFSET        0x18
+#define PERCPU_KERNEL_SP_OFFSET        0x20
+#define PERCPU_SAVED_USER_SP_OFFSET    0x28
+#define PERCPU_IN_IRQ_OFFSET           0x30
+#define PERCPU_DEFAULT_TSS_OFFSET      0x40
 
 #ifndef ASSEMBLY
 
@@ -24,6 +26,7 @@
 #include <arch/x86/idt.h>
 #include <assert.h>
 #include <magenta/compiler.h>
+#include <magenta/tls.h>
 #include <stdint.h>
 
 __BEGIN_CDECLS
@@ -36,6 +39,11 @@ struct x86_percpu {
 
     /* the current thread */
     struct thread *current_thread;
+
+    // The offsets of these two slots are published in
+    // system/public/magenta/tls.h and known to the compiler.
+    uintptr_t stack_guard;
+    uintptr_t kernel_unsafe_sp;
 
     /* our current kernel sp, to be loaded by syscall */
     // TODO: Remove this and replace with a fetch from
@@ -63,13 +71,15 @@ struct x86_percpu {
 
 static_assert(__offsetof(struct x86_percpu, direct) == PERCPU_DIRECT_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, current_thread) == PERCPU_CURRENT_THREAD_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, stack_guard) == MX_TLS_STACK_GUARD_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, kernel_unsafe_sp) == MX_TLS_UNSAFE_SP_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, kernel_sp) == PERCPU_KERNEL_SP_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, saved_user_sp) == PERCPU_SAVED_USER_SP_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, in_irq) == PERCPU_IN_IRQ_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_OFFSET, "");
 
 /* needs to be run very early in the boot process from start.S and as each cpu is brought up */
-void x86_init_percpu(uint8_t cpu_num);
+void x86_init_percpu(uint8_t cpu_num, uintptr_t unsafe_sp);
 
 /* used to set the bootstrap processor's apic_id once the APIC is initialized */
 void x86_set_local_apic_id(uint32_t apic_id);
@@ -134,4 +144,3 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread);
 __END_CDECLS
 
 #endif // !ASSEMBLY
-

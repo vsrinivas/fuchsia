@@ -70,14 +70,24 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     memset(&bootstrap_data->per_cpu, 0, sizeof(bootstrap_data->per_cpu));
     // Allocate kstacks and threads for all processors
     for (unsigned int i = 0; i < count; ++i) {
-        void *thread_addr = memalign(16, PAGE_SIZE + ROUNDUP(sizeof(thread_t), 16));
-        if (!thread_addr) {
+        thread_t *thread = memalign(16,
+                                    ROUNDUP(sizeof(thread_t), 16) +
+#if __has_feature(safe_stack)
+                                    PAGE_SIZE +
+#endif
+                                    PAGE_SIZE);
+        if (!thread) {
             status = ERR_NO_MEMORY;
             goto cleanup_allocations;
         }
-        bootstrap_data->per_cpu[i].kstack_base =
-                (uint64_t)thread_addr + ROUNDUP(sizeof(thread_t), 16);
-        bootstrap_data->per_cpu[i].thread = (uint64_t)thread_addr;
+        uintptr_t kstack_base =
+                (uint64_t)thread + ROUNDUP(sizeof(thread_t), 16);
+        bootstrap_data->per_cpu[i].kstack_base = kstack_base;
+        bootstrap_data->per_cpu[i].thread = (uint64_t)thread;
+#if __has_feature(safe_stack)
+        thread->unsafe_stack = (void *) (kstack_base + PAGE_SIZE);
+        thread->stack_size = PAGE_SIZE;
+#endif
     }
 
     // Memory fence to ensure all writes to the bootstrap region are

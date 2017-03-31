@@ -27,4 +27,6 @@ MODULE_SO_NAME := libmx
 
 MODULE_LIBS := ulib/magenta
 
+MODULE_COMPILEFLAGS := $(NO_SAFESTACK)
+
 include make/module.mk

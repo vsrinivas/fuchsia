@@ -37,7 +37,7 @@ LOCAL_CFLAGS := \
     -Werror=incompatible-pointer-types \
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-LOCAL_COMPILEFLAGS += -fsanitize=safe-stack
+LOCAL_COMPILEFLAGS += -fno-stack-protector
 
 # TODO(kulakowski) This is needed because clang, as an assembler,
 # yells loudly about ununused options such as -finline which are

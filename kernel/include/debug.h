@@ -83,6 +83,8 @@ void _panic(void *caller, void *frame, const char *fmt, ...) __PRINTFLIKE(3, 4) 
 
 #define PANIC_UNIMPLEMENTED panic("%s unimplemented\n", __PRETTY_FUNCTION__)
 
+void __stack_chk_fail(void) __NO_RETURN;
+
 /* spin the cpu for a period of (short) time */
 void spin(uint32_t usecs);
 

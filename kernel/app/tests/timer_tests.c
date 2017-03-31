@@ -57,7 +57,7 @@ static void timer_test_all_cpus(void)
 
         thread_t* t = thread_create_etc(
                 timer_threads(i), name, timer_do_one_thread, NULL,
-                DEFAULT_PRIORITY, NULL, DEFAULT_STACK_SIZE, NULL);
+                DEFAULT_PRIORITY, NULL, NULL, DEFAULT_STACK_SIZE, NULL);
         if (t == NULL) {
             printf("failed to create thread for cpu %d\n", i);
             return;
