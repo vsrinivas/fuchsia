@@ -81,6 +81,9 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   // |data_packet| must represent a valid ACL data packet.
   bool SendPacket(common::DynamicByteBuffer data_packet);
 
+  // Returns the underlying channel handle.
+  const mx::channel& channel() const { return channel_; }
+
  private:
   // Represents a queued ACL data packet.
   struct QueuedDataPacket {

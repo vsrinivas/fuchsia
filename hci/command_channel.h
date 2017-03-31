@@ -40,7 +40,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   //
   // |transport| is the Transport instance that owns this CommandChannel.
   CommandChannel(Transport* transport, mx::channel hci_command_channel);
-  virtual ~CommandChannel();
+  ~CommandChannel() override;
 
   // Starts listening on the HCI command channel and starts handling commands and events.
   void Initialize();
@@ -139,13 +139,10 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // handler with the given |id| could not be found.
   void RemoveEventHandler(EventHandlerId id);
 
+  // Returns the underlying channel handle.
+  const mx::channel& channel() const { return channel_; }
+
  private:
-  // TransactionId counter.
-  static std::atomic_size_t next_transaction_id_;
-
-  // EventHandlerId counter.
-  static std::atomic_size_t next_event_handler_id_;
-
   // Represents a pending HCI command.
   struct PendingTransactionData {
     TransactionId id;
@@ -207,6 +204,12 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // ::mtl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+
+  // TransactionId counter.
+  std::atomic_size_t next_transaction_id_;
+
+  // EventHandlerId counter.
+  std::atomic_size_t next_event_handler_id_;
 
   // The Transport object that owns this CommandChannel.
   Transport* transport_;  // weak

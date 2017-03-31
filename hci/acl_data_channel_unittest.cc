@@ -88,6 +88,7 @@ class ACLDataChannelTest : public ::testing::Test {
     conn_map_[handle] = Connection::NewLEConnection(handle, Connection::Role::kMaster, params);
   }
 
+  Transport* transport() const { return transport_.get(); }
   CommandChannel* cmd_channel() const { return transport_->command_channel(); }
   ACLDataChannel* acl_data_channel() const { return transport_->acl_data_channel(); }
   FakeController* fake_controller() const { return fake_controller_.get(); }
@@ -427,6 +428,34 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
   EXPECT_EQ(kExpectedPacketCount, num_rx_packets);
   EXPECT_EQ(0x0001, packet0_handle);
   EXPECT_EQ(0x0002, packet1_handle);
+}
+
+TEST_F(ACLDataChannelTest, TransportClosedCallback) {
+  bool closed_cb_called = false;
+  auto closed_cb = [&closed_cb_called, this] {
+    closed_cb_called = true;
+    message_loop()->QuitNow();
+  };
+  transport()->SetTransportClosedCallback(closed_cb, message_loop()->task_runner());
+
+  message_loop()->task_runner()->PostTask([this] { fake_controller()->CloseACLDataChannel(); });
+  RunMessageLoopWithTimeout(10);
+  EXPECT_TRUE(closed_cb_called);
+}
+
+TEST_F(ACLDataChannelTest, TransportClosedCallbackBothChannels) {
+  int closed_cb_count = 0;
+  auto closed_cb = [&closed_cb_count, this] { closed_cb_count++; };
+  transport()->SetTransportClosedCallback(closed_cb, message_loop()->task_runner());
+
+  // We'll send closed events for both channels. The closed callback should get invoked only once.
+  message_loop()->task_runner()->PostTask([this] {
+    fake_controller()->CloseACLDataChannel();
+    fake_controller()->CloseCommandChannel();
+  });
+
+  RunMessageLoopWithTimeout(2);
+  EXPECT_EQ(1, closed_cb_count);
 }
 
 }  // namespace

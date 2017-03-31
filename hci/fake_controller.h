@@ -75,6 +75,12 @@ class FakeController final : ::mtl::MessageLoopHandler {
   using DataCallback = std::function<void(const common::ByteBuffer& packet)>;
   void SetDataCallback(const DataCallback& callback, ftl::RefPtr<ftl::TaskRunner> task_runner);
 
+  // Immediately closes the command channel endpoint.
+  void CloseCommandChannel();
+
+  // Immediately closes the ACL data channel endpoint.
+  void CloseACLDataChannel();
+
  private:
   // ::mtl::MessageLoopHandler overrides
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;

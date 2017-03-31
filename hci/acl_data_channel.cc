@@ -14,9 +14,6 @@
 #include "connection.h"
 #include "transport.h"
 
-#define ACL_CHANNEL_ASSERT_ON_IO_THREAD() \
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() == io_task_runner_.get())
-
 namespace bluetooth {
 namespace hci {
 
@@ -65,11 +62,11 @@ void ACLDataChannel::Initialize(size_t max_data_len, size_t le_max_data_len, siz
   bool ready = false;
 
   io_task_runner_ = transport_->io_task_runner();
-  io_task_runner_->PostTask([&ready, &init_mutex, &init_cv, this] {
+  io_task_runner_->PostTask([&] {
     // TODO(armansito): We'll need to pay attention to MX_CHANNEL_WRITABLE as well or perhaps not if
     // we switch to mx fifo.
-    io_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-        this, channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
+    io_handler_key_ =
+        mtl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
     FTL_LOG(INFO) << "hci: ACLDataChannel: I/O handler registered";
     {
       std::lock_guard<std::mutex> lock(init_mutex);
@@ -105,13 +102,14 @@ void ACLDataChannel::ShutDown() {
 
   transport_->command_channel()->RemoveEventHandler(event_handler_id_);
 
+  is_initialized_ = false;
+
   send_queue_ = std::queue<QueuedDataPacket>();
   io_task_runner_ = nullptr;
   io_handler_key_ = 0u;
   event_handler_id_ = 0u;
   rx_callback_ = DataReceivedCallback();
   rx_task_runner_ = nullptr;
-  is_initialized_ = false;
 }
 
 size_t ACLDataChannel::GetMaxDataLength() const {
@@ -131,7 +129,10 @@ size_t ACLDataChannel::GetLEMaxNumberOfPackets() const {
 }
 
 bool ACLDataChannel::SendPacket(common::DynamicByteBuffer data_packet) {
-  FTL_DCHECK(is_initialized_);
+  if (!is_initialized_) {
+    FTL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
+    return false;
+  }
 
   // Use ACLDataRxPacket to since we want a data packet "reader" not a "writer".
   ACLDataRxPacket acl_packet(&data_packet);
@@ -164,7 +165,7 @@ bool ACLDataChannel::SendPacket(common::DynamicByteBuffer data_packet) {
 }
 
 void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) {
-  ACL_CHANNEL_ASSERT_ON_IO_THREAD();
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FTL_DCHECK(event.event_code() == kNumberOfCompletedPacketsEventCode);
 
   auto payload = event.GetPayload<NumberOfCompletedPacketsEventParams>();
@@ -203,7 +204,7 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) 
 void ACLDataChannel::TrySendNextQueuedPackets() {
   if (!is_initialized_) return;
 
-  ACL_CHANNEL_ASSERT_ON_IO_THREAD();
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   // TODO(armansito): We need to implement a proper packet scheduling algorithm here. Since this
   // can be expensive, it will likely make sense to do ACL data I/O on a dedicated thread instead
@@ -244,8 +245,6 @@ void ACLDataChannel::TrySendNextQueuedPackets() {
     if (status < 0) {
       // TODO(armansito): We'll almost certainly hit this case if the channel's buffer gets filled,
       // so we need to watch for MX_CHANNEL_WRITABLE.
-      // TODO(armansito): Figure out what to do if this happened for any other reason, for example
-      // ERR_CLOSED. Notify upper layers and clean up?
       FTL_LOG(ERROR) << "hci: ACLDataChannel: Failed to send data packet to HCI driver ("
                      << mx_status_get_string(status) << ") - dropping packet";
       continue;
@@ -312,20 +311,17 @@ bool ACLDataChannel::MaxLENumPacketsReachedLocked() const {
 }
 
 void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  ACL_CHANNEL_ASSERT_ON_IO_THREAD();
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FTL_DCHECK(handle == channel_.get());
-  FTL_DCHECK(pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED));
+  FTL_DCHECK(pending & MX_CHANNEL_READABLE);
 
   uint32_t read_size;
   mx_status_t status = channel_.read(0u, rx_buffer_.GetMutableData(), rx_buffer_.GetSize(),
                                      &read_size, nullptr, 0, nullptr);
   if (status < 0) {
-    FTL_LOG(ERROR) << "hci: ACLDataChannel: Failed to read RX bytes: "
-                   << mx_status_get_string(status);
-    // TODO(armansito): Notify the upper layers via a callback and perform the necessary clean up.
-    // TODO(armansito): Probably log the message here at a verbose level and have the callback log
-    // something that makes sense.
-    ShutDown();
+    FTL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: " << mx_status_get_string(status);
+    // Clear the handler so that we stop receiving events from it.
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
     return;
   }
 
@@ -355,18 +351,14 @@ void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 }
 
 void ACLDataChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  ACL_CHANNEL_ASSERT_ON_IO_THREAD();
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FTL_DCHECK(handle == channel_.get());
 
-  FTL_LOG(ERROR) << "hci: ACLDataChannel: channel error: " << mx_status_get_string(error);
+  FTL_VLOG(1) << "hci: ACLDataChannel: channel error: " << mx_status_get_string(error);
 
-  // TODO(armansito): Notify the upper layers via a callback and perform the necessary clean up.
-  // TODO(armansito): Probably log the message here at a verbose level and have the callback log
-  // something that makes sense.
-  // TODO(armansito): Need to call ShutDown() in this scenario as well.
+  // Clear the handler so that we stop receiving events from it.
+  mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
 }
-
-#undef ACL_CHANNEL_ASSERT_ON_IO_THREAD
 
 }  // namespace hci
 }  // namespace bluetooth

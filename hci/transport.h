@@ -14,6 +14,8 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace bluetooth {
 namespace hci {
@@ -21,12 +23,12 @@ namespace hci {
 // Represents the HCI transport layer. This object owns the HCI command, ACL,
 // and SCO channels and provides the necessary control-flow mechanisms to send
 // and receive HCI packets from the underlying Bluetooth controller.
-class Transport final {
+class Transport final : public ::mtl::MessageLoopHandler {
  public:
   // |device_fd| must be a valid file descriptor to a Bluetooth HCI device.
   explicit Transport(ftl::UniqueFD device_fd);
   Transport() = default;
-  ~Transport();
+  ~Transport() override;
 
   // Initializes the HCI command channel, starts the I/O event loop, and kicks off a new I/O thread
   // for transactions with the HCI driver. Care must be taken such that the public methods of this
@@ -63,6 +65,16 @@ class Transport final {
   // initialized, the return value will be nullptr.
   ftl::RefPtr<ftl::TaskRunner> io_task_runner() const { return io_task_runner_; }
 
+  // Set a callback that should be invoked when any one of the underlying channels gets closed
+  // for any reason (e.g. the HCI device has disappeared) and the task runner on which the
+  // callback should be posted.
+  //
+  // When this callback is called the channels will be in an invalid state and packet processing
+  // is no longer guaranteed to work. It is the responsibility of the callback implementation to
+  // clean up this Transport instance by calling ShutDown() and/or deleting it.
+  void SetTransportClosedCallback(const ftl::Closure& callback,
+                                  ftl::RefPtr<ftl::TaskRunner> task_runner);
+
   // Initialize function called from tests. |cmd_channel| cannot be nullptr. |acl_data_channel| can
   // be nullptr if it is not needed by a test.
   //
@@ -72,6 +84,13 @@ class Transport final {
                             std::unique_ptr<ACLDataChannel> acl_data_channel);
 
  private:
+  // ::mtl::MessageLoopHandler overrides:
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+
+  // Notifies the closed callback.
+  void NotifyClosedCallback();
+
   // The Bluetooth HCI device file descriptor.
   ftl::UniqueFD device_fd_;
 
@@ -81,6 +100,10 @@ class Transport final {
   // The thread that performs all HCI I/O operations.
   std::thread io_thread_;
 
+  // The HandlerKey returned from mtl::MessageLoop::AddHandler
+  mtl::MessageLoop::HandlerKey cmd_channel_handler_key_;
+  mtl::MessageLoop::HandlerKey acl_channel_handler_key_;
+
   // The task runner used for posting tasks on the HCI transport I/O thread.
   ftl::RefPtr<ftl::TaskRunner> io_task_runner_;
 
@@ -89,6 +112,10 @@ class Transport final {
 
   // The HCI command and event flow control handler.
   std::unique_ptr<CommandChannel> command_channel_;
+
+  // Callback invoked when the transport is closed (due to a channel error) and its task runner.
+  ftl::Closure closed_cb_;
+  ftl::RefPtr<ftl::TaskRunner> closed_cb_task_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Transport);
 };

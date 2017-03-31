@@ -73,6 +73,7 @@ class CommandChannelTest : public ::testing::Test {
     message_loop_.Run();
   }
 
+  Transport* transport() const { return transport_.get(); }
   CommandChannel* cmd_channel() const { return transport_->command_channel(); }
   FakeController* fake_controller() const { return fake_controller_.get(); }
   mtl::MessageLoop* message_loop() { return &message_loop_; }
@@ -487,6 +488,21 @@ TEST_F(CommandChannelTest, LEMetaEventHandler) {
   RunMessageLoop();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(2, event_count1);
+}
+
+TEST_F(CommandChannelTest, TransportClosedCallback) {
+  fake_controller()->Start();
+
+  bool closed_cb_called = false;
+  auto closed_cb = [&closed_cb_called, this] {
+    closed_cb_called = true;
+    message_loop()->QuitNow();
+  };
+  transport()->SetTransportClosedCallback(closed_cb, message_loop()->task_runner());
+
+  message_loop()->task_runner()->PostTask([this] { fake_controller()->CloseCommandChannel(); });
+  RunMessageLoop();
+  EXPECT_TRUE(closed_cb_called);
 }
 
 }  // namespace

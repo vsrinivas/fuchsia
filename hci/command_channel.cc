@@ -18,12 +18,6 @@
 namespace bluetooth {
 namespace hci {
 
-// static
-std::atomic_size_t CommandChannel::next_transaction_id_(0u);
-
-// static
-std::atomic_size_t CommandChannel::next_event_handler_id_(0u);
-
 CommandChannel::QueuedCommand::QueuedCommand(TransactionId id, const CommandPacket& command_packet,
                                              const CommandStatusCallback& status_callback,
                                              const CommandCompleteCallback& complete_callback,
@@ -41,7 +35,9 @@ CommandChannel::QueuedCommand::QueuedCommand(TransactionId id, const CommandPack
 }
 
 CommandChannel::CommandChannel(Transport* transport, mx::channel hci_command_channel)
-    : transport_(transport),
+    : next_transaction_id_(1u),
+      next_event_handler_id_(1u),
+      transport_(transport),
       channel_(std::move(hci_command_channel)),
       is_initialized_(false),
       io_handler_key_(0u),
@@ -63,9 +59,9 @@ void CommandChannel::Initialize() {
   bool ready = false;
 
   io_task_runner_ = transport_->io_task_runner();
-  io_task_runner_->PostTask([&ready, &init_mutex, &init_cv, this] {
-    io_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-        this, channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
+  io_task_runner_->PostTask([&] {
+    io_handler_key_ =
+        mtl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
     FTL_LOG(INFO) << "hci: CommandChannel: I/O handler registered";
     {
       std::lock_guard<std::mutex> lock(init_mutex);
@@ -95,22 +91,29 @@ void CommandChannel::ShutDown() {
 
   SetPendingCommand(nullptr);
 
+  is_initialized_ = false;
+
   send_queue_ = std::queue<QueuedCommand>();
   event_handler_id_map_.clear();
   event_code_handlers_.clear();
   subevent_code_handlers_.clear();
   io_task_runner_ = nullptr;
   io_handler_key_ = 0u;
-  is_initialized_ = false;
 }
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
     const CommandPacket& command_packet, const CommandStatusCallback& status_callback,
     const CommandCompleteCallback& complete_callback, ftl::RefPtr<ftl::TaskRunner> task_runner,
     const EventCode complete_event_code) {
+  if (!is_initialized_) {
+    FTL_VLOG(1) << "hci: CommandChannel: Cannot send commands while uninitialized";
+    return 0u;
+  }
+
   // We simply make the counter overflow and do not worry about re-assigning an
   // ID that is currently in use.
   // TODO(armansito): Make this more robust.
+  if (next_transaction_id_ == 0u) next_transaction_id_++;
   TransactionId id = next_transaction_id_++;
   QueuedCommand cmd(id, command_packet, status_callback, complete_callback, task_runner,
                     complete_event_code);
@@ -138,7 +141,8 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
     return 0u;
   }
 
-  auto id = ++next_event_handler_id_;
+  if (next_event_handler_id_ == 0u) next_event_handler_id_++;
+  auto id = next_event_handler_id_++;
   EventHandlerData data;
   data.id = id;
   data.event_code = event_code;
@@ -198,7 +202,8 @@ void CommandChannel::RemoveEventHandler(const EventHandlerId id) {
 }
 
 void CommandChannel::TrySendNextQueuedCommand() {
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() == io_task_runner_.get());
+  if (!is_initialized_) return;
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   // If a command is currently pending, then we have nothing to do.
   if (GetPendingCommand()) return;
@@ -372,19 +377,16 @@ void CommandChannel::NotifyEventHandler(const EventPacket& event) {
 
 void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   FTL_DCHECK(handle == channel_.get());
-  FTL_DCHECK(pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED));
+  FTL_DCHECK(pending & MX_CHANNEL_READABLE);
 
   uint32_t read_size;
   mx_status_t status = channel_.read(0u, event_buffer_.GetMutableData(), event_buffer_.GetSize(),
                                      &read_size, nullptr, 0, nullptr);
   if (status < 0) {
-    FTL_LOG(ERROR) << "hci: CommandChannel: Failed to read event bytes: "
-                   << mx_status_get_string(status);
-    // TODO(armansito): Notify the upper layers via a callback and unregister
-    // the handler.
-    // TODO(armansito): Probably log the message here at a verbose level and have the callback log
-    // something that makes sense.
-    ShutDown();
+    FTL_VLOG(1) << "hci: CommandChannel: Failed to read event bytes: "
+                << mx_status_get_string(status);
+    // Clear the handler so that we stop receiving events from it.
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
     return;
   }
 
@@ -427,16 +429,13 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 }
 
 void CommandChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() == io_task_runner_.get());
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FTL_DCHECK(handle == channel_.get());
 
-  FTL_LOG(ERROR) << "hci: CommandChannel: channel error: " << mx_status_get_string(error);
+  FTL_VLOG(1) << "hci: CommandChannel: channel error: " << mx_status_get_string(error);
 
-  // TODO(armansito): Notify the upper layers via a callback and unregister the
-  // handler.
-  // TODO(armansito): Probably log the message here at a verbose level and have the callback log
-  // something that makes sense.
-  // TODO(armansito): Need to call ShutDown() in this scenario as well.
+  // Clear the handler so that we stop receiving events from it.
+  mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
 }
 
 }  // namespace hci

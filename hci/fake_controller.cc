@@ -52,14 +52,30 @@ void FakeController::Start() {
   thread_ = mtl::CreateThread(&task_runner_, "bluetooth-hci-test-controller");
 
   FTL_DCHECK(cmd_channel_.is_valid());
-  task_runner_->PostTask([this] {
+
+  // We make sure that this method blocks until the I/O handler registration task has run.
+  std::mutex init_mutex;
+  std::condition_variable init_cv;
+  bool ready = false;
+
+  task_runner_->PostTask([&] {
     cmd_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
         this, cmd_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
     if (acl_channel_.is_valid()) {
       acl_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
           this, acl_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
     }
+
+    {
+      std::lock_guard<std::mutex> lock(init_mutex);
+      ready = true;
+    }
+
+    init_cv.notify_one();
   });
+
+  std::unique_lock<std::mutex> lock(init_mutex);
+  init_cv.wait(lock, [&ready] { return ready; });
 }
 
 void FakeController::Stop() {
@@ -108,6 +124,20 @@ void FakeController::SetDataCallback(const DataCallback& callback,
 
   data_callback_ = callback;
   data_task_runner_ = task_runner;
+}
+
+void FakeController::CloseCommandChannel() {
+  task_runner_->PostTask([this] {
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_handler_key_);
+    cmd_channel_.reset();
+  });
+}
+
+void FakeController::CloseACLDataChannel() {
+  task_runner_->PostTask([this] {
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_handler_key_);
+    acl_channel_.reset();
+  });
 }
 
 void FakeController::HandleCommandPacket() {
