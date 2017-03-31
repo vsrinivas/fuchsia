@@ -43,28 +43,94 @@ typedef enum {CSW_SUCCESS, CSW_FAILED, CSW_PHASE_ERROR, CSW_INVALID,
 #define CBW_SIGNATURE               0x43425355
 #define CSW_SIGNATURE               0x53425355
 
-#define UMS_COMMAND_BLOCK_WRAPPER_SIZE              31
-#define UMS_COMMAND_STATUS_WRAPPER_SIZE             13
-
-// command lengths
-#define UMS_INQUIRY_COMMAND_LENGTH                 6
-#define UMS_TEST_UNIT_READY_COMMAND_LENGTH         9
-#define UMS_REQUEST_SENSE_COMMAND_LENGTH           6
-#define UMS_READ_FORMAT_CAPACITIES_COMMAND_LENGTH  10
-#define UMS_READ_CAPACITY10_COMMAND_LENGTH         10
-#define UMS_READ_CAPACITY16_COMMAND_LENGTH         16
-#define UMS_READ10_COMMAND_LENGTH                  10
-#define UMS_READ12_COMMAND_LENGTH                  12
-#define UMS_READ16_COMMAND_LENGTH                  16
-#define UMS_WRITE10_COMMAND_LENGTH                 10
-#define UMS_WRITE12_COMMAND_LENGTH                 12
-#define UMS_WRITE16_COMMAND_LENGTH                 16
-#define UMS_TOGGLE_REMOVABLE_COMMAND_LENGTH        12
-
 // transfer lengths
-#define UMS_NO_TRANSFER_LENGTH                     0
 #define UMS_INQUIRY_TRANSFER_LENGTH                0x24
 #define UMS_REQUEST_SENSE_TRANSFER_LENGTH          0x12
 #define UMS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH 0xFC
-#define UMS_READ_CAPACITY10_TRANSFER_LENGTH        0x08
-#define UMS_READ_CAPACITY16_TRANSFER_LENGTH        0x20
+
+// 6 Byte SCSI command
+// This is big endian
+typedef struct {
+    uint8_t     opcode;
+    uint8_t     misc;
+    uint16_t    lba;    // logical block address
+    uint8_t     length;
+    uint8_t     control;
+} __PACKED scsi_command6_t;
+static_assert(sizeof(scsi_command6_t) == 6, "");
+
+// 10 Byte SCSI command
+// This is big endian
+typedef struct {
+    uint8_t     opcode;
+    uint8_t     misc;
+    uint32_t    lba;    // logical block address
+    uint8_t     misc2;
+    uint8_t     length_hi; // break length into two pieces to avoid odd alignment
+    uint8_t     length_lo;
+    uint8_t     control;
+} __PACKED scsi_command10_t;
+static_assert(sizeof(scsi_command10_t) == 10, "");
+
+// 12 Byte SCSI command
+// This is big endian
+typedef struct {
+    uint8_t     opcode;
+    uint8_t     misc;
+    uint32_t    lba;    // logical block address
+    uint32_t    length;
+    uint8_t     misc2;
+    uint8_t     control;
+} __PACKED scsi_command12_t;
+static_assert(sizeof(scsi_command12_t) == 12, "");
+
+// 16 Byte SCSI command
+// This is big endian
+typedef struct {
+    uint8_t     opcode;
+    uint8_t     misc;
+    uint64_t    lba;    // logical block address
+    uint32_t    length;
+    uint8_t     misc2;
+    uint8_t     control;
+} __PACKED scsi_command16_t;
+static_assert(sizeof(scsi_command16_t) == 16, "");
+
+// SCSI Read Capacity 10 payload
+// This is big endian
+typedef struct {
+    uint32_t    lba;
+    uint32_t    block_length;
+} __PACKED scsi_read_capacity_10_t;
+static_assert(sizeof(scsi_read_capacity_10_t) == 8, "");
+
+// SCSI Read Capacity 16 payload
+// This is big endian
+typedef struct {
+    uint64_t    lba;
+    uint64_t    block_length;
+    uint8_t     ptype_prot_en;  // bit 0: PROT_EN, bits 1-3: P_TYPE
+    uint8_t     resesrved[15];
+} __PACKED scsi_read_capacity_16_t;
+static_assert(sizeof(scsi_read_capacity_16_t) == 32, "");
+
+// Command Block Wrapper
+typedef struct {
+    uint32_t    dCBWSignature;      // CBW_SIGNATURE
+    uint32_t    dCBWTag;
+    uint32_t    dCBWDataTransferLength;
+    uint8_t     bmCBWFlags;
+    uint8_t     bCBWLUN;
+    uint8_t     bCBWCBLength;
+    uint8_t     CBWCB[16];
+} __PACKED ums_cbw_t;
+static_assert(sizeof(ums_cbw_t) == 31, "");
+
+// Command Status Wrapper
+typedef struct {
+    uint32_t    dCSWSignature;      // CSW_SIGNATURE
+    uint32_t    dCSWTag;
+    uint32_t    dCSWDataResidue;
+    uint8_t     bmCSWStatus;
+} __PACKED ums_csw_t;
+static_assert(sizeof(ums_csw_t) == 13, "");

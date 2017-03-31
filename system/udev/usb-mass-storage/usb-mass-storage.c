@@ -82,30 +82,6 @@ typedef struct {
 static void ums_csw_complete(iotxn_t* csw_request, void* cookie);
 static csw_status_t ums_verify_csw(ums_t* msd, iotxn_t* csw_request);
 
-static inline uint16_t read16be(uint8_t* ptr) {
-    return betoh16(*((uint16_t*)ptr));
-}
-
-static inline uint32_t read32be(uint8_t* ptr) {
-    return betoh32(*((uint32_t*)ptr));
-}
-
-static inline uint64_t read64be(uint8_t* ptr) {
-    return betoh64(*((uint64_t*)ptr));
-}
-
-static inline void write16be(uint8_t* ptr, uint16_t n) {
-    *((uint16_t*)ptr) = htobe16(n);
-}
-
-static inline void write32be(uint8_t* ptr, uint32_t n) {
-    *((uint32_t*)ptr) = htobe32(n);
-}
-
-static inline void write64be(uint8_t* ptr, uint64_t n) {
-    *((uint64_t*)ptr) = htobe64(n);
-}
-
 static mx_status_t ums_reset(ums_t* msd) {
     // for all these control requests, data is null, length is 0 because nothing is passed back
     // value and index not used for first command, though index is supposed to be set to interface number
@@ -146,25 +122,21 @@ static mx_status_t ums_send_cbw(ums_t* msd, uint32_t transfer_length, uint8_t fl
     if (!txn) {
         return ERR_BUFFER_TOO_SMALL;
     }
-    // CBWs always have 31 bytes
-    txn->length = 31;
 
-    // first three blocks are 4 byte
-    uint32_t buf_32[3];
-    buf_32[0] = htole32(CBW_SIGNATURE);
-    buf_32[1] = htole32(msd->tag_send++);
-    buf_32[2] = htole32(transfer_length);
-    txn->ops->copyto(txn, buf_32, sizeof(buf_32), 0);
+    ums_cbw_t* cbw;
+    txn->ops->mmap(txn, (void **)&cbw);
+    txn->length = sizeof(*cbw);
 
-    // get a 3 x 1 byte buffer and start at 12 because of uint32's
-    uint8_t buf_8[3];
-    buf_8[0] = flags;
-    buf_8[1] = msd->lun;
-    buf_8[2] = command_len;
-    txn->ops->copyto(txn, buf_8, sizeof(buf_8), sizeof(buf_32));
+    memset(cbw, 0, sizeof(*cbw));
+    cbw->dCBWSignature = htole32(CBW_SIGNATURE);
+    cbw->dCBWTag = htole32(msd->tag_send++);
+    cbw->dCBWDataTransferLength = htole32(transfer_length);
+    cbw->bmCBWFlags = flags;
+    cbw->bCBWLUN = msd->lun;
+    cbw->bCBWCBLength = command_len;
 
     // copy command_len bytes from the command passed in into the command_len
-    txn->ops->copyto(txn, command, command_len, sizeof(buf_32) + sizeof(buf_8));
+    memcpy(cbw->CBWCB, command, command_len);
     ums_queue_request(msd, txn);
     return NO_ERROR;
 }
@@ -245,25 +217,24 @@ static mx_status_t ums_queue_write(ums_t* msd, uint16_t transfer_length, iotxn_t
 }
 
 static csw_status_t ums_verify_csw(ums_t* msd, iotxn_t* csw_request) {
-    uint8_t buffer[UMS_COMMAND_STATUS_WRAPPER_SIZE];
-    csw_request->ops->copyfrom(csw_request, buffer, sizeof(buffer), 0);
+    ums_csw_t csw;
+    csw_request->ops->copyfrom(csw_request, &csw, sizeof(csw), 0);
 
     // check signature is "USBS"
-    uint32_t* ptr_32 = (uint32_t*)buffer;
-    if (letoh32(ptr_32[0]) != CSW_SIGNATURE) {
-        DEBUG_PRINT(("UMS:invalid csw sig, expected:%08x got:%08x \n", CSW_SIGNATURE, letoh32(ptr_32[0])));
+    if (letoh32(csw.dCSWSignature) != CSW_SIGNATURE) {
+        DEBUG_PRINT(("UMS:invalid csw sig: %08x \n", letoh32(csw.dCSWSignature)));
         return CSW_INVALID;
     }
     // check if tag matches the tag of last CBW
-    if (letoh32(ptr_32[1]) != msd->tag_receive++) {
-        DEBUG_PRINT(("UMS:csw tag mismatch, expected:%08x got in csw:%08x \n", msd->tag_receive - 1, letoh32(ptr_32[1])));
+    if (letoh32(csw.dCSWTag) != msd->tag_receive++) {
+        DEBUG_PRINT(("UMS:csw tag mismatch, expected:%08x got in csw:%08x \n", msd->tag_receive - 1,
+                    letoh32(csw.dCSWTag)));
         return CSW_TAG_MISMATCH;
     }
     // check if success is true or not?
-    uint8_t* ptr_8 = (uint8_t*)buffer;
-    if (ptr_8[12] == CSW_FAILED) {
+    if (csw.bmCSWStatus == CSW_FAILED) {
         return CSW_FAILED;
-    } else if (ptr_8[12] == CSW_PHASE_ERROR) {
+    } else if (csw.bmCSWStatus == CSW_PHASE_ERROR) {
         return CSW_PHASE_ERROR;
     }
     return CSW_SUCCESS;
@@ -344,14 +315,11 @@ static mx_status_t ums_inquiry(ums_t* msd, uint8_t* out_data) {
     mx_status_t status = NO_ERROR;
 
     // CBW Configuration
-    uint8_t command[UMS_INQUIRY_COMMAND_LENGTH];
-    memset(command, 0, UMS_INQUIRY_COMMAND_LENGTH);
-    // set command type
-    command[0] = UMS_INQUIRY;
-    // set allocated length in scsi command
-    command[4] = UMS_INQUIRY_TRANSFER_LENGTH;
-    status = ums_send_cbw(msd, UMS_INQUIRY_TRANSFER_LENGTH, USB_DIR_IN,
-                          UMS_INQUIRY_COMMAND_LENGTH, command);
+    scsi_command6_t command;
+    memset(&command, 0, sizeof(command));
+    command.opcode = UMS_INQUIRY;
+    command.length = UMS_INQUIRY_TRANSFER_LENGTH;
+    status = ums_send_cbw(msd, UMS_INQUIRY_TRANSFER_LENGTH, USB_DIR_IN, sizeof(command), &command);
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
     }
@@ -376,12 +344,10 @@ static mx_status_t ums_test_unit_ready(ums_t* msd) {
     mx_status_t status = NO_ERROR;
 
     // CBW Configuration
-    uint8_t command[UMS_TEST_UNIT_READY_COMMAND_LENGTH];
-    memset(command, 0, UMS_TEST_UNIT_READY_COMMAND_LENGTH);
-    // set command type
-    command[0] = (char)UMS_TEST_UNIT_READY;
-    status = ums_send_cbw(msd, UMS_NO_TRANSFER_LENGTH, USB_DIR_IN,
-                          UMS_TEST_UNIT_READY_COMMAND_LENGTH, command);
+    scsi_command6_t command;
+    memset(&command, 0, sizeof(command));
+    command.opcode = UMS_TEST_UNIT_READY;
+    status = ums_send_cbw(msd, 0, USB_DIR_IN, sizeof(command), &command);
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
     }
@@ -394,14 +360,11 @@ static mx_status_t ums_request_sense(ums_t* msd, uint8_t* out_data) {
     mx_status_t status = NO_ERROR;
 
     // CBW Configuration
-    uint8_t command[UMS_REQUEST_SENSE_COMMAND_LENGTH];
-    memset(command, 0, UMS_REQUEST_SENSE_COMMAND_LENGTH);
-    // set command type
-    command[0] = UMS_REQUEST_SENSE;
-    // set allocated length in scsi command
-    command[4] = UMS_REQUEST_SENSE_TRANSFER_LENGTH;
-    status = ums_send_cbw(msd, UMS_REQUEST_SENSE_TRANSFER_LENGTH, USB_DIR_IN,
-                            UMS_REQUEST_SENSE_COMMAND_LENGTH, command);
+    scsi_command6_t command;
+    memset(&command, 0, sizeof(command));
+    command.opcode = UMS_REQUEST_SENSE;
+    command.length = UMS_REQUEST_SENSE_TRANSFER_LENGTH;
+    status = ums_send_cbw(msd, UMS_REQUEST_SENSE_TRANSFER_LENGTH, USB_DIR_IN, sizeof(command), &command);
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
     }
@@ -426,14 +389,11 @@ static mx_status_t ums_read_format_capacities(ums_t* msd, uint8_t* out_data) {
     mx_status_t status = NO_ERROR;
 
     // CBW Configuration
-    uint8_t command[UMS_READ_FORMAT_CAPACITIES_COMMAND_LENGTH];
-    memset(command, 0, UMS_READ_FORMAT_CAPACITIES_COMMAND_LENGTH);
-    // set command type
-    command[0] = UMS_READ_FORMAT_CAPACITIES;
-    // set allocated length in scsi command
-    command[8] = UMS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH;
-    status = ums_send_cbw(msd, UMS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH, USB_DIR_IN,
-                            UMS_READ_FORMAT_CAPACITIES_COMMAND_LENGTH, command);
+    scsi_command10_t command;
+    memset(&command, 0, sizeof(command));
+    command.opcode = UMS_READ_FORMAT_CAPACITIES;
+    command.length_lo = UMS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH;
+    status = ums_send_cbw(msd, UMS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH, USB_DIR_IN, sizeof(command), &command);
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
     }
@@ -454,22 +414,20 @@ static mx_status_t ums_read_format_capacities(ums_t* msd, uint8_t* out_data) {
     return status;
 }
 
-static mx_status_t ums_read_capacity10(ums_t* msd, uint8_t* out_data) {
+static mx_status_t ums_read_capacity10(ums_t* msd, scsi_read_capacity_10_t* out_data) {
     mx_status_t status = NO_ERROR;
 
     // CBW Configuration
-    uint8_t command[UMS_READ_CAPACITY10_COMMAND_LENGTH];
-    memset(command, 0, UMS_READ_CAPACITY10_COMMAND_LENGTH);
-    // set command type
-    command[0] = UMS_READ_CAPACITY10;
-    status = ums_send_cbw(msd, UMS_READ_CAPACITY10_TRANSFER_LENGTH, USB_DIR_IN,
-                            UMS_READ_CAPACITY10_COMMAND_LENGTH, command);
+    scsi_command10_t command;
+    memset(&command, 0, sizeof(command));
+    command.opcode = UMS_READ_CAPACITY10;
+    status = ums_send_cbw(msd, sizeof(*out_data), USB_DIR_IN, sizeof(command), &command);
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
     }
 
     // read capacity10 response
-    status = ums_queue_read(msd, UMS_READ_CAPACITY10_TRANSFER_LENGTH);
+    status = ums_queue_read(msd, sizeof(*out_data));
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
     }
@@ -477,31 +435,29 @@ static mx_status_t ums_read_capacity10(ums_t* msd, uint8_t* out_data) {
     status = ums_read_csw(msd);
     iotxn_t* read_request = pop_completed_read(msd);
     if (status == NO_ERROR) {
-        read_request->ops->copyfrom(read_request, out_data, UMS_READ_CAPACITY10_TRANSFER_LENGTH, 0);
+        read_request->ops->copyfrom(read_request, out_data, sizeof(*out_data), 0);
     }
     list_add_tail(&msd->free_read_reqs, &read_request->node);
     return status;
 }
 
-static mx_status_t ums_read_capacity16(ums_t* msd, uint8_t* out_data) {
+static mx_status_t ums_read_capacity16(ums_t* msd, scsi_read_capacity_16_t* out_data) {
     mx_status_t status = NO_ERROR;
 
     // CBW Configuration
-    uint8_t command[UMS_READ_CAPACITY16_COMMAND_LENGTH];
-    memset(command, 0, UMS_READ_CAPACITY16_COMMAND_LENGTH);
-    // set command type
-    command[0] = UMS_READ_CAPACITY16;
+    scsi_command16_t command;
+    memset(&command, 0, sizeof(command));
+    command.opcode = UMS_READ_CAPACITY16;
     // service action = 10, not sure what that means
-    command[1] = 0x10;
-    command[13] = UMS_READ_CAPACITY16_TRANSFER_LENGTH;  // LSB of allocation length
-    status = ums_send_cbw(msd, UMS_READ_CAPACITY16_TRANSFER_LENGTH, USB_DIR_IN,
-                            UMS_READ_CAPACITY16_COMMAND_LENGTH, command);
+    command.misc = 0x10;
+    command.length = sizeof(*out_data);
+    status = ums_send_cbw(msd, sizeof(*out_data), USB_DIR_IN, sizeof(command), &command);
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
     }
 
     // read capacity16 response
-    status = ums_queue_read(msd, UMS_READ_CAPACITY16_TRANSFER_LENGTH);
+    status = ums_queue_read(msd, sizeof(*out_data));
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
     }
@@ -509,7 +465,7 @@ static mx_status_t ums_read_capacity16(ums_t* msd, uint8_t* out_data) {
     status = ums_read_csw(msd);
     iotxn_t* read_request = pop_completed_read(msd);
     if (status == NO_ERROR) {
-        read_request->ops->copyfrom(read_request, out_data, UMS_READ_CAPACITY16_TRANSFER_LENGTH, 0);
+        read_request->ops->copyfrom(read_request, out_data, sizeof(*out_data), 0);
     }
     list_add_tail(&msd->free_read_reqs, &read_request->node);
     return status;
@@ -527,49 +483,40 @@ static mx_status_t ums_read(mx_device_t* device, iotxn_t* txn) {
     // CBW Configuration
 
     if (msd->use_read_write_16) {
-        uint8_t command[UMS_READ16_COMMAND_LENGTH];
-        memset(command, 0, UMS_READ16_COMMAND_LENGTH);
-        // set command type
-        command[0] = UMS_READ16;
-        // set lba
-        write64be(command + 2, lba);
-        // set transfer length in blocks
-        write32be(command + 10, num_blocks);
-        status = ums_send_cbw(msd, transfer_length, USB_DIR_IN,
-                                UMS_READ16_COMMAND_LENGTH, command);
+        scsi_command16_t command;
+        memset(&command, 0, sizeof(command));
+        command.opcode = UMS_READ16;
+        command.lba = htobe64(lba);
+        command.length = htobe32(num_blocks);
+
+        status = ums_send_cbw(msd, transfer_length, USB_DIR_IN, sizeof(command), &command);
         if (status == ERR_BUFFER_TOO_SMALL) {
             return status;
         }
     } else if (num_blocks <= UINT16_MAX) {
-        uint8_t command[UMS_READ10_COMMAND_LENGTH];
-        memset(command, 0, UMS_READ10_COMMAND_LENGTH);
-        // set command type
-        command[0] = UMS_READ10;
-        // set lba
-        write32be(command + 2, lba);
-        // set transfer length in blocks
-        write16be(command + 7, num_blocks);
-        status = ums_send_cbw(msd, transfer_length, USB_DIR_IN, UMS_READ10_COMMAND_LENGTH, command);
+        scsi_command10_t command;
+        memset(&command, 0, sizeof(command));
+        command.opcode = UMS_READ10;
+        command.lba = htobe32(lba);
+        command.length_hi = num_blocks >> 8;
+        command.length_lo = num_blocks & 0xFF;
+        status = ums_send_cbw(msd, transfer_length, USB_DIR_IN, sizeof(command), &command);
         if (status == ERR_BUFFER_TOO_SMALL) {
             return status;
         }
     } else {
-        uint8_t command[UMS_READ12_COMMAND_LENGTH];
-        memset(command, 0, UMS_READ12_COMMAND_LENGTH);
-        // set command type
-        command[0] = UMS_READ12;
-        // set lba
-        write32be(command + 2, lba);
-        // set transfer length in blocks
-        write32be(command + 6, num_blocks);
-        status = ums_send_cbw(msd, transfer_length, USB_DIR_IN,
-            UMS_READ12_COMMAND_LENGTH, command);
+        scsi_command12_t command;
+        memset(&command, 0, sizeof(command));
+        command.opcode = UMS_READ12;
+        command.lba = htobe32(lba);
+        command.length = htobe32(num_blocks);
+        status = ums_send_cbw(msd, transfer_length, USB_DIR_IN, sizeof(command), &command);
         if (status == ERR_BUFFER_TOO_SMALL) {
             return status;
         }
     }
 
-    // read request sense response
+    // read read response
     status = ums_queue_read(msd, transfer_length);
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
@@ -589,50 +536,33 @@ static mx_status_t ums_write(mx_device_t* device, iotxn_t* txn) {
     uint32_t transfer_length = txn->length;
 
     if (msd->use_read_write_16) {
-        uint8_t command[UMS_WRITE16_COMMAND_LENGTH];
-        memset(command, 0, UMS_WRITE16_COMMAND_LENGTH);
-        // set command type
-        command[0] = UMS_WRITE16;
-        // set lba
-        uint64_t* lba_ptr = (uint64_t*)&(command[2]);
-        *lba_ptr = htobe64(lba);
-        // set transfer length
-        uint32_t* transfer_len_ptr = (uint32_t*)&(command[10]);
-        *transfer_len_ptr = htobe32(num_blocks);
-        status = ums_send_cbw(msd, transfer_length, USB_DIR_OUT,
-                                UMS_WRITE16_COMMAND_LENGTH, command);
+        scsi_command16_t command;
+        memset(&command, 0, sizeof(command));
+        command.opcode = UMS_WRITE16;
+        command.lba = htobe64(lba);
+        command.length = htobe32(num_blocks);
+        status = ums_send_cbw(msd, transfer_length, USB_DIR_OUT, sizeof(command), &command);
         if (status == ERR_BUFFER_TOO_SMALL) {
             return status;
         }
     } else if (num_blocks <= UINT16_MAX) {
-        uint8_t command[UMS_WRITE10_COMMAND_LENGTH];
-        memset(command, 0, UMS_WRITE10_COMMAND_LENGTH);
-        // set command type
-        command[0] = UMS_WRITE10;
-        // set lba
-        uint32_t* lba_ptr = (uint32_t*)&(command[2]);
-        *lba_ptr = htobe32(lba);
-        // set transfer length in blocks
-        uint16_t* transfer_len_ptr = (uint16_t*)&(command[7]);
-        *transfer_len_ptr = htobe16(num_blocks);
-        status = ums_send_cbw(msd, transfer_length, USB_DIR_OUT,
-                                UMS_WRITE10_COMMAND_LENGTH, command);
+        scsi_command10_t command;
+        memset(&command, 0, sizeof(command));
+        command.opcode = UMS_WRITE10;
+        command.lba = htobe32(lba);
+        command.length_hi = num_blocks >> 8;
+        command.length_lo = num_blocks & 0xFF;
+        status = ums_send_cbw(msd, transfer_length, USB_DIR_OUT, sizeof(command), &command);
         if (status == ERR_BUFFER_TOO_SMALL) {
             return status;
         }
     } else {
-        uint8_t command[UMS_WRITE12_COMMAND_LENGTH];
-        memset(command, 0, UMS_WRITE12_COMMAND_LENGTH);
-        // set command type
-        command[0] = UMS_WRITE12;
-        // set lba
-        uint32_t* lba_ptr = (uint32_t*)&(command[2]);
-        *lba_ptr = htobe32(lba);
-        // set transfer length
-        uint32_t* transfer_len_ptr = (uint32_t*)&(command[6]);
-        *transfer_len_ptr = htobe32(num_blocks);
-        status = ums_send_cbw(msd, transfer_length, USB_DIR_OUT,
-                                UMS_WRITE12_COMMAND_LENGTH, command);
+        scsi_command12_t command;
+        memset(&command, 0, sizeof(command));
+        command.opcode = UMS_WRITE12;
+        command.lba = htobe32(lba);
+        command.length = htobe32(num_blocks);
+        status = ums_send_cbw(msd, transfer_length, USB_DIR_OUT, sizeof(command), &command);
         if (status == ERR_BUFFER_TOO_SMALL) {
             return status;
         }
@@ -653,12 +583,10 @@ static mx_status_t ums_toggle_removable(mx_device_t* device, bool removable) {
     mx_status_t status = NO_ERROR;
 
     // CBW Configuration
-    uint8_t command[UMS_TOGGLE_REMOVABLE_COMMAND_LENGTH];
-    memset(command, 0, UMS_TOGGLE_REMOVABLE_COMMAND_LENGTH);
-    // set command type
-    command[0] = UMS_TOGGLE_REMOVABLE;
-    status = ums_send_cbw(msd, UMS_NO_TRANSFER_LENGTH, USB_DIR_OUT,
-                            UMS_TOGGLE_REMOVABLE_COMMAND_LENGTH, command);
+    scsi_command12_t command;
+    memset(&command, 0, sizeof(command));
+    command.opcode = UMS_TOGGLE_REMOVABLE;
+    status = ums_send_cbw(msd, 0, USB_DIR_OUT, sizeof(command), &command);
     if (status == ERR_BUFFER_TOO_SMALL) {
         return status;
     }
@@ -779,6 +707,8 @@ static int ums_start_thread(void* arg) {
     ums_t* msd = (ums_t*)arg;
     device_init(&msd->device, msd->driver, "usb_mass_storage", &ums_device_proto);
 
+    // we need to send the Inquiry command first,
+    // but currently we do not do anything with the response
     uint8_t inquiry_data[UMS_INQUIRY_TRANSFER_LENGTH];
     mx_status_t status = ums_inquiry(msd, inquiry_data);
     if (status < 0) {
@@ -811,27 +741,28 @@ static int ums_start_thread(void* arg) {
         goto fail;
     }
 
-    uint8_t read_capacity10_data[UMS_READ_CAPACITY10_TRANSFER_LENGTH];
-    status = ums_read_capacity10(msd, read_capacity10_data);
+    scsi_read_capacity_10_t data;
+    status = ums_read_capacity10(msd, &data);
     if (status < 0) {
         printf("read_capacity10 failed: %d\n", status);
         goto fail;
     }
 
     // +1 because this returns the address of the final block, and blocks are zero indexed
-    msd->total_blocks = read32be(read_capacity10_data) + 1;
-    msd->block_size = read32be(read_capacity10_data + 4);
+    msd->total_blocks = betoh32(data.lba) + 1;
+    msd->block_size = betoh32(data.block_length);
 
-    if (read32be(read_capacity10_data) == 0xFFFFFFFF) {
-        uint8_t read_capacity16_data[UMS_READ_CAPACITY16_TRANSFER_LENGTH];
-        status = ums_read_capacity16(msd, read_capacity16_data);
+    if (msd->total_blocks == 0xFFFFFFFF) {
+        scsi_read_capacity_16_t data;
+        status = ums_read_capacity16(msd, &data);
         if (status < 0) {
             printf("read_capacity16 failed: %d\n", status);
             goto fail;
         }
 
-        msd->total_blocks = read64be((uint8_t*)&read_capacity16_data);
-        msd->block_size = read32be((uint8_t*)&read_capacity16_data + 8);
+        // +1 because this returns the address of the final block, and blocks are zero indexed
+        msd->total_blocks = betoh64(data.lba) + 1;
+        msd->block_size = betoh64(data.block_length);
     }
 
     // Need to use READ16/WRITE16 if block addresses are greater than 32 bit
@@ -923,12 +854,12 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         list_add_head(&msd->free_read_reqs, &txn->node);
     }
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, UMS_COMMAND_STATUS_WRAPPER_SIZE, 0);
+        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, sizeof(ums_csw_t), 0);
         if (!txn) {
             status = ERR_NO_MEMORY;
             goto fail;
         }
-        txn->length = UMS_COMMAND_STATUS_WRAPPER_SIZE;
+        txn->length = sizeof(ums_csw_t);
         // complete_cb and cookie are set later
         list_add_head(&msd->free_csw_reqs, &txn->node);
     }
