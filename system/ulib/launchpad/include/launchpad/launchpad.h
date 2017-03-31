@@ -54,8 +54,8 @@ typedef struct launchpad launchpad_t;
 // The job handle is used for creation of the process, but is not
 // taken ownership of or closed.
 //
-// If the job handle is 0 (MX_INVALID_JOB), the default job for
-// the running process is used, if it exists (mx_job_default())
+// If the job handle is 0 (MX_HANDLE_INVALID), the default job for
+// the running process is used, if it exists (mx_job_default()).
 //
 // Unless the new process is provided with a job handle, at time
 // of launch or later, it will not be able to create any more
