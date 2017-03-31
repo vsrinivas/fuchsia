@@ -181,7 +181,10 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             size_t num_space_for = buffer_size / sizeof(mx_koid_t);
             size_t num_to_copy = MIN(num_threads, num_space_for);
 
-            if (_buffer.copy_array_to_user(threads.get(), sizeof(mx_koid_t) * num_to_copy) != NO_ERROR)
+            // Don't try to copy if there are no bytes to copy, as the "is
+            // user space" check may not handle (_buffer == NULL and len == 0).
+            if (num_to_copy &&
+                _buffer.copy_array_to_user(threads.get(), sizeof(mx_koid_t) * num_to_copy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             if (_actual && (_actual.copy_to_user(num_to_copy) != NO_ERROR))
                 return ERR_INVALID_ARGS;
