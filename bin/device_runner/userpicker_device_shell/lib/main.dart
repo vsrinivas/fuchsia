@@ -70,8 +70,8 @@ class _DeviceShellFactory extends DeviceShellFactory {
     _deviceContextProxy.ctrl.bind(deviceContextHandle);
     _userProviderProxy.ctrl.bind(userProviderHandle);
     _userProviderProxy.previousUsers((List<String> users) {
-      final _AppState appState = new _AppState(_deviceContextProxy,
-          _userProviderProxy, users);
+      final _AppState appState =
+          new _AppState(_deviceContextProxy, _userProviderProxy, users);
       _state.setAppState(appState);
     });
     _shell.bind(deviceShellRequest);
@@ -112,18 +112,21 @@ class _UserPickerScreenState extends State<_UserPickerScreen> {
 
   void setAppState(final _AppState appState) {
     _appState = appState;
-    setState(() { _appStateReady = true; });
+    setState(() {
+      _appStateReady = true;
+    });
   }
 
   void _runUser(String user) {
     final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
-    final InterfacePair<UserController> userController = new
-      InterfacePair<UserController>();
+    final InterfacePair<UserController> userController =
+        new InterfacePair<UserController>();
     _appState.userProviderProxy.login(user, null, null, viewOwner.passRequest(),
         userController.passRequest());
     _childViewConnection = new ChildViewConnection(viewOwner.passHandle());
-    setState(() { _childViewConnectionReady = true; });
-
+    setState(() {
+      _childViewConnectionReady = true;
+    });
   }
 
   void _defaultUser() {
@@ -139,41 +142,61 @@ class _UserPickerScreenState extends State<_UserPickerScreen> {
 
     final List<Widget> children = <Widget>[];
     if (_appStateReady) {
-      // Add shutdown button.
-      children.add(
-        new RaisedButton(
-            onPressed: _appState.shutdown,
-            child: new Text('Shutdown'),
-        ),
-        );
-
       // Add list of previous users.
-      children.addAll(_appState.users.map((String user) {
-        return new RaisedButton(
-            onPressed: () => _runUser(user),
-            child: new Text('Run as $user'),
-        );
-      }));
+      children.addAll(
+        _appState.users.map((String user) {
+          return new Container(
+            margin: const EdgeInsets.all(8.0),
+            child: new RaisedButton(
+              onPressed: () => _runUser(user),
+              child: new Text('Run as $user'),
+            ),
+          );
+        }),
+      );
 
       // Option to login as default user.
       children.add(
-          new RaisedButton(
+        new Container(
+          margin: const EdgeInsets.all(8.0),
+          child: new RaisedButton(
             onPressed: _defaultUser,
             child: new Text('Run as default user'),
-          )
+          ),
+        ),
       );
     }
 
     return new Material(
-        color: Colors.blue[200],
-        child: new Container(
-          child: new Column(children: children),
+      color: Colors.blue[200],
+      child: new Container(
+        child: new Stack(
+          children: [
+            new Center(
+              child: new Column(
+                mainAxisSize: MainAxisSize.min,
+                children: children,
+              ),
+            ),
+            // Add shutdown button.
+            new Align(
+              alignment: FractionalOffset.bottomCenter,
+              child: new Container(
+                margin: const EdgeInsets.all(16.0),
+                child: new RaisedButton(
+                  onPressed: _appState?.shutdown,
+                  child: new Text('Shutdown'),
+                ),
+              ),
+            ),
+          ],
         ),
+      ),
     );
   }
 }
 
 void main() {
-  runApp(new _UserPickerScreen(
-        context: new ApplicationContext.fromStartupInfo()));
+  runApp(
+      new _UserPickerScreen(context: new ApplicationContext.fromStartupInfo()));
 }

@@ -62,7 +62,7 @@ class Settings {
         "user_runner", "file:///system/apps/user_runner");
 
     device_shell.url = command_line.GetOptionValueWithDefault(
-        "device_shell", "file:///system/apps/dummy_device_shell");
+        "device_shell", "file:///system/apps/userpicker_device_shell");
     user_shell.url = command_line.GetOptionValueWithDefault(
         "user_shell", "file:///system/apps/armadillo_user_shell");
     story_shell.url = command_line.GetOptionValueWithDefault(
