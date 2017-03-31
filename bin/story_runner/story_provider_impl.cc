@@ -33,7 +33,7 @@ void InitStoryId() {
 
 // Generates a unique randomly generated string of |length| size to be
 // used as a story id.
-std::string MakeStoryId(std::unordered_set<std::string>* story_ids,
+std::string MakeStoryId(std::unordered_set<std::string>* const story_ids,
                         const size_t length) {
   std::function<char()> randchar = [] {
     const char charset[] =
@@ -63,38 +63,31 @@ bool SkipKey(fidl::Array<uint8_t>& key) {
       key_as_string == kUserShellKey;
 }
 
-void GetEntries(ledger::PageSnapshotPtr* snapshot,
-                std::vector<ledger::EntryPtr> entries,
+// Retrieves all entries from the given snapshot and calls the given
+// callback with the final status.
+void GetEntries(ledger::PageSnapshotPtr* const snapshot,
+                std::vector<ledger::EntryPtr>* const entries,
                 fidl::Array<uint8_t> token,
-                std::function<void(ledger::Status,
-                                   std::vector<ledger::EntryPtr>)> callback) {
+                std::function<void(ledger::Status)> callback) {
   (*snapshot)->GetEntries(
       nullptr, std::move(token), ftl::MakeCopyable([
-        snapshot, entries = std::move(entries), callback = std::move(callback)
+        snapshot, entries, callback = std::move(callback)
       ](ledger::Status status, auto new_entries, auto next_token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
-          callback(status, {});
+          callback(status);
           return;
         }
         for (auto& entry : new_entries) {
-          entries.push_back(std::move(entry));
+          entries->push_back(std::move(entry));
         }
         if (status == ledger::Status::OK) {
-          callback(ledger::Status::OK, std::move(entries));
+          callback(ledger::Status::OK);
           return;
         }
-        GetEntries(snapshot, std::move(entries), std::move(next_token),
+        GetEntries(snapshot, entries, std::move(next_token),
                    std::move(callback));
       }));
-}
-
-// Retrieves all entries from the given snapshot and calls the given callback
-// with the returned status and entry vector.
-void GetEntries(ledger::PageSnapshotPtr* snapshot,
-                std::function<void(ledger::Status,
-                                   std::vector<ledger::EntryPtr>)> callback) {
-  GetEntries(snapshot, {}, nullptr, std::move(callback));
 }
 
 // Serialization and deserialization of StoryData, ModuleData,
@@ -501,8 +494,8 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
     story_ids_.resize(0);
 
     GetEntries(
-        root_snapshot_.get(),
-        [this](ledger::Status status, std::vector<ledger::EntryPtr> entries) {
+        root_snapshot_.get(), &entries_, nullptr /* next_token */,
+        [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "PreviousStoryCall() "
                            << " PageSnapshot.GetEntries() " << status;
@@ -514,7 +507,7 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
           // of entries returned from the Ledger is too large, it might
           // also be too large to return from StoryProvider.
 
-          for (auto& entry : entries) {
+          for (auto& entry : entries_) {
             // TODO(mesch): Not a good idea to mix keys of
             // different kinds in the same page. Once we are
             // more comfortable dealing with JSON data, we can
@@ -552,6 +545,7 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
 
  private:
   std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot_;
+  std::vector<ledger::EntryPtr> entries_;
   fidl::Array<fidl::String> story_ids_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PreviousStoriesCall);
