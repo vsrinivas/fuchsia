@@ -5,6 +5,7 @@
 # found in the LICENSE file.
 
 import argparse
+import csv
 import hashlib
 import json
 import os
@@ -14,8 +15,8 @@ import re
 import socket
 import subprocess
 import sys
+
 from subprocess import call
-from urlparse import urlparse
 
 
 class color:
@@ -31,6 +32,27 @@ class color:
   END = "\033[0m"
 
 
+def error(text):
+  print "%serror: %s%s" % (color.RED, text, color.END)
+
+
+def is_ipv4_address(address):
+  try:
+    socket.inet_aton(address)
+    return True
+  except socket.error:
+    return False
+
+
+def magenta_ipv6_to_fuchsia(mac):
+  parts = mac.split(":")
+
+  # Magenta uses 4d:fe. Link local is ff:fe and invert the "local" bit.
+  parts[3] = parts[3][:2] + "ff"
+  parts[2] = "%x" % (int(parts[2], 16) ^ (1 << 9))
+
+  return ":".join(parts)
+
 
 def read_log_listener(listener_process, test_id):
   """ Returns the output of loglistener up until it sees the |test_id|."""
@@ -45,22 +67,24 @@ def read_log_listener(listener_process, test_id):
   return "".join(lines)
 
 
-def copy_files(copy):
+def copy_files(fuchsia_tools_dir, hostname, copy_map):
   """ copy is a map of destination directories on the device to source
     files in $FUCHSIA_BUILD_DIR """
-  if copy is None:
-    return True
+  if type(copy_map) is not dict:
+    error("malformed \"copy\" map in JSON file")
+    return False
 
-  netcp = os.path.join(os.environ["FUCHSIA_DIR"],
-                       "out/build-magenta/tools/netcp")
-  for dirname, files in copy.iteritems():
+  for dirname, files in copy_map.iteritems():
     for filename in files:
       filepath = os.path.join(os.environ["FUCHSIA_BUILD_DIR"], filename)
-      command_line = [netcp, filepath, ":" + os.path.join(dirname, filename)]
+      command_line = [
+          fuchsia_tools_dir + "netcp", filepath,
+          hostname + ":" + os.path.join(dirname, filename)
+      ]
       print "Copying %s" % filename
       # netcp returns the error value from magenta
       if call(command_line) != 0:
-        print "Error: netcp failed to copy %s" % filename
+        error("netcp failed to copy %s" % filename)
         return False
   return True
 
@@ -89,33 +113,111 @@ def run_test(sock, listener_process, command_str):
     elif op == "log":
       print msg
     else:
-      print "UNRECOGNIZED STRING:", line.strip()
+      error("UNRECOGNIZED STRING: %s" % line.strip())
+
+
+def get_device_table(fuchsia_tools_dir):
+  """ Get devices table from netls """
+  netls_path = fuchsia_tools_dir + "netls"
+  netls_process = subprocess.Popen([netls_path], stdout=subprocess.PIPE)
+  (output, err) = netls_process.communicate()
+  exit_code = netls_process.wait()
+  names = ["Device Type", "Device Name", "IPV6 Address"]
+
+  reader = csv.DictReader(
+      output.splitlines(),
+      fieldnames=names,
+      skipinitialspace=True,
+      delimiter=" ")
+
+  return [device for device in reader if device["Device Type"] == "device"]
+
+
+def translate_name_to_ipv6(devices, fuchsia_tools_dir, server):
+  """ Given an ipv4 address, a node name, or a colon, find the related
+  ipv6 Magenta address """
+  if is_ipv4_address(server):
+    print "Warning: ignoring ipv4 address, searching for a device instead."
+    server = ":"
+
+  if len(devices) == 0:
+    error("No devices were found on the local subnet.")
+    return None
+
+  if server == ":":
+    if len(devices) > 1:
+      error("multiple devices were found on the local subnet:\n%s" % devices)
+      return None
+    hostipv6 = devices[0]["IPV6 Address"]
+  elif re.match("\w+-\w+-\w+", server):
+    matches = [device for device in devices if device["Device Name"] == server]
+    if len(matches) == 0:
+      error("no device by the name %s" % server)
+      print("Available devices:\n%s") % devices
+      return None
+    hostipv6 = matches[0]["IPV6 Address"]
+  else:
+    error("server name was not in a recognized format.\n%s" % devices)
+    return None
+
+  return hostipv6
+
+
+def translate_ipv6_to_name(devices, ipv6):
+  """ Given a Magenta ipv6 address, find the related node name """
+  matches = [
+      device for device in devices
+      if normalize_ipv6(device["IPV6 Address"]) == ipv6
+  ]
+  if len(matches) == 0:
+    error("no device with the address %s" % ipv6)
+    print("Available devices:\n%s") % devices
+    return None
+  return matches[0]["Device Name"]
+
+
+def normalize_ipv6(ipv6):
+  """ Fixup variations in ipv6 syntax """
+  if ipv6[0] == "(" or ipv6[0] == "[":
+    ipv6 = ipv6[1:-1]
+  ipv6 = ipv6.replace("/", "%")
+  return ipv6
 
 
 def main(argv):
-  if not "FUCHSIA_DIR" in os.environ:
-    print "Error: could not find env variable $FUCHSIA_DIR"
-    return 1
-  if not "FUCHSIA_BUILD_DIR" in os.environ:
-    print "Error: could not find env variable $FUCHSIA_BUILD_DIR"
-    return 1
+  for dir in ["FUCHSIA_BUILD_DIR", "FUCHSIA_OUT_DIR"]:
+    if not dir in os.environ:
+      error("could not find env variable $%s" % dir)
+      return 1
+
+  fuchsia_tools_dir = os.path.join(os.environ["FUCHSIA_OUT_DIR"],
+                                   "build-magenta/tools/")
+
+  # A link-local ipv6 address must include the interface after a % sign. eg:
+  # run_test --server "fe80::8eae:4cff:fef4:350d%em1"
+  # run_test --server "fe80::8eae:4cff:fef4:350d%2"
+  default_server = ":"
+  default_port = 8342
 
   parser = argparse.ArgumentParser()
-  default_port = 8342
-  # An ipv6 address must be in square brackets
-  default_server = "192.168.3.53:" + str(default_port)
   parser.add_argument(
       "--server",
-      help="Address ('server:port') of where the test_runner daemon is running. Default: "
+      help=
+      "Host name or ipv6 address where the test_runner daemon is running. Default: "
       + default_server,
       type=str,
       default=default_server)
   parser.add_argument(
+      "--port",
+      help="Port where the test_runner daemon is running. Default: " +
+      str(default_port),
+      type=int,
+      default=default_port)
+  parser.add_argument(
       "--loglistener_path",
       help="Path to the loglistener binary",
       type=str,
-      default=os.path.join(os.environ["FUCHSIA_DIR"],
-                           "out/build-magenta/tools/loglistener"))
+      default=fuchsia_tools_dir + "loglistener")
   parser.add_argument(
       "--test_file",
       help="Path to a json file containing a series of tests to run.",
@@ -124,34 +226,66 @@ def main(argv):
   parser.add_argument("command", nargs="*")
   args = parser.parse_args()
 
-  host = urlparse("http://" + args.server)
-  port = host.port
-  if port is None:
-    port = default_port
-
   if args.test_file == "" and len(args.command) == 0:
-    print("Error: either a single test command, or --test_file must be "
-          "specified.")
+    error("either a single test command, or --test_file must be specified.")
     return 1
 
+  if len(args.command) == 1:
+    if is_ipv4_address(args.command[0]) or args.command[0][:4] == "fe80":
+      error("The ip address must be specified with the --server option.")
+      return 1
+
+  devices = get_device_table(fuchsia_tools_dir)
+
+  # Server name could be any of:
+  #   ipv4 address (ignored, uses : instead)
+  #   ipv6 address (must include interface)
+  #   : (uses netls to find the default)
+  #   node name (uses netls to translate to ipv6)
+  hostipv6 = args.server
+  if hostipv6[:4] != "fe80":
+    hostipv6 = translate_name_to_ipv6(devices, fuchsia_tools_dir, hostipv6)
+  if hostipv6 is None:
+    return 1
+
+  hostipv6 = normalize_ipv6(hostipv6)
+  if hostipv6.find("%") <= 0:
+    error("ipv6 address must include the interface.")
+    return None
+
+  hostname = translate_ipv6_to_name(devices, hostipv6)
+  if hostname is None:
+    return 1
+
+  # hostipv6 is now the *magenta* link local address, which works for netcp
+  # but does not allow us to talk to test_runner. So we need to calculate the
+  # "normal" Fuchsia link-local ipv6 address.
+  fuchsia_hostipv6 = magenta_ipv6_to_fuchsia(hostipv6)
+  addrinfo = socket.getaddrinfo(fuchsia_hostipv6, args.port, socket.AF_INET6,
+                                socket.SOCK_STREAM)
+  (family, socktype, proto, canonname, sockaddr) = addrinfo[0]
+
   # 1. Start listening to the device log.
+
+  # start loglistener from its own directory so its banner fits on a line.
+  starting_dirname = os.getcwd()
+  loglistener_dirname = os.path.dirname(args.loglistener_path)
+  loglistener_basename = os.path.basename(args.loglistener_path)
+  os.chdir(loglistener_dirname)
   listener_process = subprocess.Popen(
-      [args.loglistener_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      [loglistener_basename, hostname], stdout=subprocess.PIPE)
+  os.chdir(starting_dirname)
 
   # 2. Open up a connection to the on-device test runner server.
-  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sock = socket.socket(family, socktype)
   try:
-    sock.connect((host.hostname, port))
+    sock.connect(sockaddr)
   except socket.error, exc:
-    print "Error: Can't connect socket %s for %s port %d" % (exc, host.hostname,
-                                                            port)
+    error("Can't connect socket %s for\n%s. Did you start test_runner on "
+          "Fuchsia?" % (exc, hostname))
     return 1
 
   # 3. Read commands and send them to the test runner server.
-  if args.test_file is None and len(args.command) == 0:
-    print "Error: either a single test command, or --test_file must be specified."
-    return 1
-
   if len(args.command) > 0:
     command_str = " ".join(args.command)
     # Run a single command
@@ -166,7 +300,7 @@ def main(argv):
         print "%sRunning %s ..%s" % (color.BOLD, test["name"], color.END)
         sys.stdout.flush()
         if "copy" in test:
-          if not copy_files(test["copy"]):
+          if not copy_files(fuchsia_tools_dir, hostname, test["copy"]):
             return 1
         run_test(sock, listener_process, test["exec"])
 

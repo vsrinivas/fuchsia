@@ -20,6 +20,7 @@ class TestRunObserver {
                            const std::string& operation,
                            const std::string& msg) = 0;
   virtual void Teardown(const std::string& test_id, bool success) = 0;
+  virtual ~TestRunObserver();
 };
 
 class TestRunContext;

@@ -47,6 +47,8 @@
 
 namespace test_runner {
 
+TestRunObserver::~TestRunObserver() = default;
+
 TestRunnerImpl::TestRunnerImpl(
     fidl::InterfaceRequest<TestRunner> request,
     TestRunContext* test_run_context)

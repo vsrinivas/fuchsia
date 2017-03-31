@@ -95,7 +95,7 @@ class TestRunnerConnection : public TestRunObserver {
   }
 
  private:
-  virtual ~TestRunnerConnection() {
+  ~TestRunnerConnection() override {
     close(socket_);
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
@@ -106,14 +106,14 @@ class TestRunnerConnection : public TestRunObserver {
   std::string ReadCommand() {
     char buf[1024];
     // Read until we see a new line.
-    auto newline_pos = command_buffer_.find("\n");
+    auto newline_pos = command_buffer_.find('\n');
     while (newline_pos == std::string::npos) {
       ssize_t n = read(socket_, buf, sizeof(buf));
       if (n <= 0) {
         return std::string();
       }
       command_buffer_.append(buf, n);
-      newline_pos = command_buffer_.find("\n");
+      newline_pos = command_buffer_.find('\n');
     }
 
     // Consume only until the new line (and leave the rest of the bytes for
@@ -174,10 +174,12 @@ class TestRunnerTCPServer {
  public:
   TestRunnerTCPServer(uint16_t port)
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()) {
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    struct sockaddr_in6 addr;
+    addr.sin6_family = AF_INET6;
+    addr.sin6_port = htons(port);
+    // in6addr_any (by default) allows connections to be established from any
+    // IPv4 or IPv6 client that specifies the given port.
+    addr.sin6_addr = in6addr_any;
 
     // 1. Make a TCP socket.
     // We need to retry because there's a race condition at boot
@@ -185,7 +187,7 @@ class TestRunnerTCPServer {
     const auto duration = ftl::TimeDelta::FromMilliseconds(200u);
 
     for (int i = 0; i < 5 * 10; ++i) {
-      listener_ = socket(addr.sin_family, SOCK_STREAM, IPPROTO_TCP);
+      listener_ = socket(addr.sin6_family, SOCK_STREAM, IPPROTO_TCP);
       if (listener_ != -1) {
         break;
       }
