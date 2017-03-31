@@ -12,7 +12,6 @@ class FocusAcquirer {
   virtual ~FocusAcquirer() {}
 
   static constexpr char kLabel[] = "/modular_state";
-  static constexpr char kSchema[] = "int";
 };
 
 }  // namespace acquirers

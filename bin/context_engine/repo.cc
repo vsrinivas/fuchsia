@@ -7,35 +7,29 @@
 namespace maxwell {
 
 void Repo::Index(DataNode* data_node) {
-  by_label_and_schema_[data_node->label].emplace(data_node->schema, data_node);
+  const std::string& label = data_node->label;
+  by_label_[label] = data_node;
 
-  // Wire up any matching queries (which could be seen as 3p indexing).
-  for (auto query = queries_.begin(); query != queries_.end();) {
-    if (query->label == data_node->label &&
-        query->schema == data_node->schema) {
-      // TODO(rosswang): notify matches for open-ended queries; switch
-      // listener for singleton-result queries
-      data_node->Subscribe(std::move(query->subscriber));
-      query = queries_.erase(query);
-    } else {
-      ++query;
-    }
+  // Wire up any pending queries.
+  auto it = pending_queries_.find(label);
+  if (it == pending_queries_.end())
+    return;
+
+  auto& subscribers = it->second;
+  for (auto& subscriber_link : subscribers) {
+    data_node->Subscribe(std::move(subscriber_link));
   }
+
+  pending_queries_.erase(it);
 }
 
 void Repo::Query(const std::string& label,
-                 const std::string& schema,
                  ContextSubscriberLinkPtr subscriber) {
-  auto repo_by_schema = by_label_and_schema_.find(label);
-  if (repo_by_schema == by_label_and_schema_.end()) {
-    queries_.emplace(label, schema, std::move(subscriber));
+  auto it = by_label_.find(label);
+  if (it == by_label_.end()) {
+    pending_queries_[label].emplace_back(std::move(subscriber));
   } else {
-    auto result = repo_by_schema->second.find(schema);
-    if (result == repo_by_schema->second.end()) {
-      queries_.emplace(label, schema, std::move(subscriber));
-    } else {
-      result->second->Subscribe(std::move(subscriber));
-    }
+    it->second->Subscribe(std::move(subscriber));
   }
 }
 

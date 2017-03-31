@@ -108,7 +108,7 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
         ask_(this) {
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
-    maxwell_context_->Subscribe("/modular_state", "int", std::move(in_handle));
+    maxwell_context_->Subscribe("/modular_state", std::move(in_handle));
     fidl::InterfaceHandle<maxwell::AskHandler> ask_handle;
     ask_.Bind(&ask_handle);
     out_->RegisterAskHandler(std::move(ask_handle));

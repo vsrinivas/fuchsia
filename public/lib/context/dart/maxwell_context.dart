@@ -14,7 +14,6 @@ import 'package:meta/meta.dart';
 import 'context_publisher_controller_impl.dart';
 
 final _contextPublisher = new ContextPublisherProxy();
-final _contextPubSub = new ContextPubSubProxy();
 final _contextSubscriber = new ContextSubscriberProxy();
 
 /// Connects to the environment's [ContextPublisher]. This should typically be
@@ -23,14 +22,6 @@ final _contextSubscriber = new ContextSubscriberProxy();
 void connectPublisher(ApplicationContext appContext) {
   connectToService(appContext.environmentServices, _contextPublisher.ctrl);
   assert(_contextPublisher.ctrl.isBound);
-}
-
-/// Connects to the environment's [ContextPubSub]. This should typically be
-/// called from an app's [main] function, accompanied by a call to
-/// [closeGlobals] prior to shutdown.
-void connectPubSub(ApplicationContext appContext) {
-  connectToService(appContext.environmentServices, _contextPubSub.ctrl);
-  assert(_contextPubSub.ctrl.isBound);
 }
 
 /// Connects to the environment's [ContextSubscriber]. This should typically be
@@ -43,29 +34,22 @@ void connectSubscriber(ApplicationContext appContext) {
 
 typedef void PublishFn(
     String label,
-    String schema,
     InterfaceHandle<ContextPublisherController> controller,
     InterfaceRequest<ContextPublisherLink> link);
 
 typedef void SubscribeFn(
-    String label, String schema, InterfaceHandle<ContextSubscriberLink> link);
+    String label, InterfaceHandle<ContextSubscriberLink> link);
 
-/// Registers a publisher link using the globally bound [ContextPubSub] or
-/// [ContextPublisher].
-PublishFn get publish => _contextPubSub.ctrl.isBound
-    ? _contextPubSub.publish
-    : _contextPublisher.publish;
+/// Registers a publisher link using the globally bound [ContextPublisher].
+PublishFn get publish => _contextPublisher.publish;
 
-/// Registers a subscriber link using the globally bound [ContextPubSub] or
-/// [ContextSubscriber].
-SubscribeFn get subscribe => _contextPubSub.ctrl.isBound
-    ? _contextPubSub.subscribe
-    : _contextSubscriber.subscribe;
+/// Registers a subscriber link using the globally bound [ContextSubscriber].
+SubscribeFn get subscribe => _contextSubscriber.subscribe;
 
 /// Convenience function that creates a [ContextPublisherLinkProxy] with the
-/// given label and schema. The controller of the returned proxy should be
-/// closed once unneeded.
-ContextPublisherLinkProxy publisherLink(String label, String schema,
+/// given label. The controller of the returned proxy should be closed once
+/// unneeded.
+ContextPublisherLinkProxy publisherLink(String label,
     {Function onHasSubscribers, Function onNoSubscribers}) {
   final pub = new ContextPublisherLinkProxy();
 
@@ -77,17 +61,16 @@ ContextPublisherLinkProxy publisherLink(String label, String schema,
     pub.ctrl.error.then((_) => ctrl.close());
   }
 
-  publish(label, schema, ctrl?.getHandle(), pub.ctrl.request());
+  publish(label, ctrl?.getHandle(), pub.ctrl.request());
   return pub;
 }
 
-/// Convenience function that subscribes to a label and schema with a handler
-/// callback. The returned [ContextSubscriberLinkImpl] should be closed once
-/// unneeded.
+/// Convenience function that subscribes to a label with a handler callback.
+/// The returned [ContextSubscriberLinkImpl] should be closed once unneeded.
 ContextSubscriberLinkImpl subscriberLink(
-    String label, String schema, Function handler) {
+    String label, Function handler) {
   final sub = new ContextSubscriberLinkImpl(handler);
-  subscribe(label, schema, sub.getHandle());
+  subscribe(label, sub.getHandle());
   return sub;
 }
 
@@ -135,6 +118,5 @@ ContextPublisherLinkProxy buildTransform(
 /// Closes any bound global FIDL handles. This should be called on app cleanup.
 void closeGlobals() {
   _contextPublisher.ctrl.close();
-  _contextPubSub.ctrl.close();
   _contextSubscriber.ctrl.close();
 }

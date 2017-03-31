@@ -9,7 +9,6 @@
 #include "third_party/rapidjson/rapidjson/document.h"
 
 constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
-constexpr char maxwell::acquirers::GpsAcquirer::kSchema[];
 
 namespace {
 
@@ -18,26 +17,25 @@ class CarmenSandiegoApp : public maxwell::ContextPublisherController,
  public:
   CarmenSandiegoApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        maxwell_context_(
+        publisher_(
             app_context_
-                ->ConnectToEnvironmentService<maxwell::ContextPubSub>()),
+                ->ConnectToEnvironmentService<maxwell::ContextPublisher>()),
+        subscriber_(
+            app_context_
+                ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
         ctl_(this),
         in_(this) {
     fidl::InterfaceHandle<maxwell::ContextPublisherController> ctl_handle;
     ctl_.Bind(&ctl_handle);
-    // TODO(rosswang): V0 does not support semantic differentiation by source,
-    // so the labels have to be explicitly different. In the future, these could
-    // all be refinements on "location"
-    maxwell_context_->Publish("/location/region", "json:string",
-                              std::move(ctl_handle), out_.NewRequest());
+    publisher_->Publish("/location/region", std::move(ctl_handle),
+                        out_.NewRequest());
   }
 
   void OnHasSubscribers() override {
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
-    maxwell_context_->Subscribe(maxwell::acquirers::GpsAcquirer::kLabel,
-                                maxwell::acquirers::GpsAcquirer::kSchema,
-                                std::move(in_handle));
+    subscriber_->Subscribe(maxwell::acquirers::GpsAcquirer::kLabel,
+                           std::move(in_handle));
   }
 
   void OnNoSubscribers() override {
@@ -77,7 +75,8 @@ class CarmenSandiegoApp : public maxwell::ContextPublisherController,
  private:
   std::unique_ptr<app::ApplicationContext> app_context_;
 
-  maxwell::ContextPubSubPtr maxwell_context_;
+  maxwell::ContextPublisherPtr publisher_;
+  maxwell::ContextSubscriberPtr subscriber_;
   fidl::Binding<maxwell::ContextPublisherController> ctl_;
   fidl::Binding<maxwell::ContextSubscriberLink> in_;
   maxwell::ContextPublisherLinkPtr out_;

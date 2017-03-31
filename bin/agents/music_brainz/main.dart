@@ -15,12 +15,11 @@ ContextPublisherLinkProxy _artistIdPub, _socialNetworksPub;
 
 void main(List args) {
   final context = new ApplicationContext.fromStartupInfo();
-  maxwell_context.connectPubSub(context);
+  maxwell_context.connectPublisher(context);
+  maxwell_context.connectSubscriber(context);
   _artistIdPub = maxwell_context.buildTransform(
       labelIn: 'music artist name',
-      schemaIn: 'string',
       labelOut: 'music artist id',
-      schemaOut: 'https://musicbrainz.org/doc/MusicBrainz_Identifier',
       transform: (final ContextUpdate artistName) async {
         final Map<String, dynamic> artistInfo =
             await getArtistInfo(artistName.jsonValue);
@@ -29,9 +28,7 @@ void main(List args) {
 
   _socialNetworksPub = maxwell_context.buildTransform(
       labelIn: 'music artist id',
-      schemaIn: 'https://musicbrainz.org/doc/MusicBrainz_Identifier',
       labelOut: 'music artist social networks',
-      schemaOut: 'set<url>',
       transform: (final ContextUpdate artistId) async {
         List<String> socialNetworks =
             await getSocialNetworksFromArtistId(artistId.jsonValue);

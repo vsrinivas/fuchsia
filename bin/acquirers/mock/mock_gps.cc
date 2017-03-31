@@ -8,7 +8,6 @@ namespace maxwell {
 namespace acquirers {
 
 constexpr char GpsAcquirer::kLabel[];
-constexpr char GpsAcquirer::kSchema[];
 
 MockGps::MockGps(ContextEngine* context_engine) : ctl_(this) {
   maxwell::ContextPublisherPtr cx;
@@ -17,7 +16,7 @@ MockGps::MockGps(ContextEngine* context_engine) : ctl_(this) {
   fidl::InterfaceHandle<ContextPublisherController> ctl_handle;
   ctl_.Bind(&ctl_handle);
 
-  cx->Publish(kLabel, kSchema, std::move(ctl_handle), out_.NewRequest());
+  cx->Publish(kLabel, std::move(ctl_handle), out_.NewRequest());
 }
 
 void MockGps::Publish(float latitude, float longitude) {

@@ -53,7 +53,6 @@ TEST_F(ContextEngineTest, DirectSubscription) {
   {
     TestListener listener;
     out_->Subscribe(maxwell::acquirers::MockGps::kLabel,
-                    maxwell::acquirers::MockGps::kSchema,
                     listener.PassBoundHandle());
     ASYNC_CHECK(gps.has_subscribers());
   }
@@ -72,8 +71,7 @@ TEST_F(ContextEngineTest, TransitiveSubscription) {
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");
   {
     TestListener listener;
-    out_->Subscribe("/location/region", "json:string",
-                    listener.PassBoundHandle());
+    out_->Subscribe("/location/region", listener.PassBoundHandle());
     ASYNC_CHECK(gps.has_subscribers());
 
     gps.Publish(90, 0);
@@ -93,7 +91,6 @@ TEST_F(ContextEngineTest, TransitiveSubscription) {
 TEST_F(ContextEngineTest, PublishAfterSubscribe) {
   TestListener listener;
   out_->Subscribe(maxwell::acquirers::MockGps::kLabel,
-                  maxwell::acquirers::MockGps::kSchema,
                   listener.PassBoundHandle());
   Sleep();
 
@@ -112,7 +109,6 @@ TEST_F(ContextEngineTest, SubscribeAfterPublish) {
 
   TestListener listener;
   out_->Subscribe(maxwell::acquirers::MockGps::kLabel,
-                  maxwell::acquirers::MockGps::kSchema,
                   listener.PassBoundHandle());
   listener.WaitForUpdate();
   EXPECT_TRUE(listener.PopLast());
@@ -123,7 +119,6 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
   TestListener listeners[2];
   for (auto& listener : listeners)
     out_->Subscribe(maxwell::acquirers::MockGps::kLabel,
-                    maxwell::acquirers::MockGps::kSchema,
                     listener.PassBoundHandle());
 
   gps.Publish(90, 0);

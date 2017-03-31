@@ -14,10 +14,6 @@ interface ContextEngine {
   // network access. Such apps have publish-only access to Context Service.
   RegisterPublisher(string url, ContextPublisher& client);
 
-  // Registers a component that infers higher level context from other available
-  // context. Such apps have pub-sub access to Context Service.
-  RegisterPubSub(string url, ContextPubSub& client);
-
   // Registers a component that produces suggestions based on available context.
   // Such apps have subscribe-only access to Context Service.
   RegisterSubscriber(string url, ContextSubscriber& client);

@@ -12,9 +12,6 @@ class GpsAcquirer {
   virtual ~GpsAcquirer() {}
 
   static constexpr char kLabel[] = "/location/gps";
-  static constexpr char kSchema[] =
-      "https://developers.google.com/maps/documentation/javascript/3.exp/"
-      "reference#LatLngLiteral";
 };
 
 }  // namespace acquirers

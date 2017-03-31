@@ -11,21 +11,19 @@
 namespace maxwell {
 namespace {
 
-template <typename Interface>
-class PublisherClient : public virtual Interface {
+class ContextPublisherImpl : public ContextPublisher {
  public:
-  PublisherClient(ComponentNode* component, Repo* repo)
+  ContextPublisherImpl(ComponentNode* component, Repo* repo)
       : component_(component), repo_(repo) {}
 
   void Publish(const fidl::String& label,
-               const fidl::String& schema,
                fidl::InterfaceHandle<ContextPublisherController> controller,
                fidl::InterfaceRequest<ContextPublisherLink> link) override {
-    DataNode* output = component_->EmplaceDataNode(label, schema);
+    DataNode* output = component_->EmplaceDataNode(label);
     repo_->Index(output);
     output->SetPublisher(std::move(controller), std::move(link));
-    FTL_LOG(INFO) << "Context publisher registered for " << label << " ("
-                  << schema << ") by component " << component_->url;
+    FTL_LOG(INFO) << "Context publisher registered for " << label
+                  << " by component " << component_->url;
   }
 
  private:
@@ -33,11 +31,10 @@ class PublisherClient : public virtual Interface {
   Repo* repo_;
 };
 
-template <typename Interface>
-class SubscriberClient : public virtual Interface {
+class ContextSubscriberImpl : public ContextSubscriber {
  public:
-  SubscriberClient(Repo* repo) : repo_(repo) {}
-  virtual ~SubscriberClient() {}
+  ContextSubscriberImpl(Repo* repo) : repo_(repo) {}
+  virtual ~ContextSubscriberImpl() {}
 
   // TODO(rosswang): additional backpressure modes. For now, just do
   // on-backpressure-buffer, which is the default for Mx. When we add
@@ -46,30 +43,17 @@ class SubscriberClient : public virtual Interface {
   // match and ignore all others.
   virtual void Subscribe(
       const fidl::String& label,
-      const fidl::String& schema,
       fidl::InterfaceHandle<ContextSubscriberLink> link_handle) {
     ContextSubscriberLinkPtr link =
         ContextSubscriberLinkPtr::Create(std::move(link_handle));
     // TODO(rosswang): add a meta-query for whether any known publishers exist.
-    repo_->Query(label, schema, std::move(link));
-    FTL_LOG(INFO) << "Context subscriber registered for " << label << " ("
-                  << schema << ")";
+    repo_->Query(label, std::move(link));
+    FTL_LOG(INFO) << "Context subscriber registered for " << label;
   }
 
  private:
   Repo* repo_;
 };
-
-typedef PublisherClient<ContextPublisher> ContextPublisherImpl;
-
-class ContextPubSubImpl : public SubscriberClient<ContextPubSub>,
-                          public PublisherClient<ContextPubSub> {
- public:
-  ContextPubSubImpl(ComponentNode* component, Repo* repo)
-      : SubscriberClient(repo), PublisherClient(component, repo) {}
-};
-
-typedef SubscriberClient<ContextSubscriber> ContextSubscriberImpl;
 
 class ContextEngineApp : public ContextEngine {
  public:
@@ -86,13 +70,6 @@ class ContextEngineApp : public ContextEngine {
       fidl::InterfaceRequest<ContextPublisher> client) override {
     caq_bindings_.AddBinding(
         std::make_unique<ContextPublisherImpl>(new ComponentNode(url), &repo_),
-        std::move(client));
-  }
-
-  void RegisterPubSub(const fidl::String& url,
-                      fidl::InterfaceRequest<ContextPubSub> client) override {
-    cag_bindings_.AddBinding(
-        std::make_unique<ContextPubSubImpl>(new ComponentNode(url), &repo_),
         std::move(client));
   }
 
@@ -114,7 +91,6 @@ class ContextEngineApp : public ContextEngine {
 
   fidl::BindingSet<ContextEngine> bindings_;
   UptrBindingSet<ContextPublisher> caq_bindings_;
-  UptrBindingSet<ContextPubSub> cag_bindings_;
   UptrBindingSet<ContextSubscriber> sag_bindings_;
 };
 

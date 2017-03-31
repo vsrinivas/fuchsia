@@ -18,7 +18,6 @@
 using maxwell::acquirers::FocusAcquirer;
 
 constexpr char FocusAcquirer::kLabel[];
-constexpr char FocusAcquirer::kSchema[];
 
 namespace {
 
@@ -39,16 +38,15 @@ class FocusAcquirerApp : public modular::VisibleStoriesWatcher,
             ->ConnectToEnvironmentService<modular::VisibleStoriesProvider>();
     fidl::InterfaceHandle<modular::VisibleStoriesWatcher>
         visible_stories_watcher_handle;
-    visible_stories_watcher_.Bind(
-        &visible_stories_watcher_handle);
+    visible_stories_watcher_.Bind(&visible_stories_watcher_handle);
     visible_stories_provider_handle->Watch(
         std::move(visible_stories_watcher_handle));
 
     fidl::InterfaceHandle<maxwell::ContextPublisherController> ctl_handle;
     ctl_.Bind(&ctl_handle);
 
-    cx->Publish(FocusAcquirer::kLabel, FocusAcquirer::kSchema,
-                std::move(ctl_handle), out_.NewRequest());
+    cx->Publish(FocusAcquirer::kLabel, std::move(ctl_handle),
+                out_.NewRequest());
     PublishFocusState();
   }
 

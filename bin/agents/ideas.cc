@@ -28,8 +28,7 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
                  ->ConnectToEnvironmentService<maxwell::ProposalPublisher>()) {
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
-    maxwell_context_->Subscribe("/location/region", "json:string",
-                                std::move(in_handle));
+    maxwell_context_->Subscribe("/location/region", std::move(in_handle));
   }
 
   void OnUpdate(maxwell::ContextUpdatePtr update) override {

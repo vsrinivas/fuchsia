@@ -19,31 +19,8 @@ interface ContextPublisher {
   // Registers a potential context publisher and attains a publisher link for
   // it. When the existence or nonexistence of subscribers changes, the
   // publisher is notified through the provided ContextPublisherController.
-  Publish(string label, string schema, ContextPublisherController? controller,
+  Publish(string label, ContextPublisherController? controller,
           ContextPublisherLink& link);
-};
-
-// Client that should be requested by components interested in both publishing
-// and subscribing to context. All context read or written by this client is
-// attributed to the bound component.
-[ServiceName="maxwell.ContextPubSub"]
-interface ContextPubSub {
-  // Registers a potential context publisher and attains a publisher link for
-  // it. When the existence or nonexistence of subscribers changes, the
-  // publisher is notified through the provided ContextPublisherController.
-  //
-  // If the label/schema pair for this client has already been registered, the
-  // new controller and link replace the old. The new controller is notified of
-  // any existing subscribers, but no effort is made to notify the old
-  // controller beyond closing the pipe.
-  Publish(string label, string schema, ContextPublisherController? controller,
-          ContextPublisherLink& link);
-
-  // Registers a listener to a context label. Upon subscribing, the subscriber
-  // is immediately updated with the last known value of the context unless the
-  // publisher had invalidated it.
-  Subscribe(string label, string schema, ContextSubscriberLink link);
-  // TODO(thatguy) => (Subscription subscription);
 };
 
 // Client that should be requested by context subscribers. All context read by
@@ -51,6 +28,6 @@ interface ContextPubSub {
 [ServiceName="maxwell.ContextSubscriber"]
 interface ContextSubscriber {
   // Registers a listener to a context label.
-  Subscribe(string label, string schema, ContextSubscriberLink link);
+  Subscribe(string label, ContextSubscriberLink link);
   // TODO(thatguy) => (Subscription subscription);
 };

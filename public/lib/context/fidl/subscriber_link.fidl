@@ -18,11 +18,3 @@ struct ContextUpdate {
   // This may be null, indicating that the value was deleted.
   string? json_value;
 };
-
-// Eventually, Subscribe() will return this, and give you further control over
-// flow.
-/*interface Subscription {
-  // Pause()
-  // Resume()
-}*/
-

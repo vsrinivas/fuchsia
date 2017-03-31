@@ -35,20 +35,18 @@ class ComponentNode {
 
   // The returned DataNode is owned by this ComponentNode. It is deleted when
   // the ComponentNode is deleted.
-  inline DataNode* EmplaceDataNode(const std::string& label,
-                                   const std::string& schema);
+  inline DataNode* EmplaceDataNode(const std::string& label);
 
   const std::string url;
 
  private:
-  // label => schema => entry
-  std::unordered_map<std::string, std::unordered_map<std::string, DataNode>>
-      outputs_;
+  // label => entry
+  std::unordered_map<std::string, std::unique_ptr<DataNode>> outputs_;
 
   FIDL_MOVE_ONLY_TYPE(ComponentNode);
 };
 
-// DataNode represents a top-level schema'd datum.
+// DataNode represents a top-level data entry.
 //
 // TOOD(rosswang): Allow decomposed and fuzzy lookup.
 //
@@ -56,11 +54,8 @@ class ComponentNode {
 // the DataNode so it seems reasonable to have them be one and the same.
 class DataNode : public ContextPublisherLink {
  public:
-  DataNode(ComponentNode* const component,
-           const std::string& label,
-           const std::string& schema)
+  DataNode(ComponentNode* const component, const std::string& label)
       : label(label),
-        schema(schema),
         component_(component),
         publisher_(this),
         subscribers_(this) {}
@@ -73,7 +68,6 @@ class DataNode : public ContextPublisherLink {
       fidl::InterfaceRequest<ContextPublisherLink> link);
 
   const std::string label;
-  const std::string schema;
 
  private:
   class SubscriberSet : public BoundPtrSet<ContextSubscriberLink> {
@@ -94,16 +88,14 @@ class DataNode : public ContextPublisherLink {
   fidl::Binding<ContextPublisherLink> publisher_;
   SubscriberSet subscribers_;
 
-  FIDL_MOVE_ONLY_TYPE(DataNode);
+  FTL_DISALLOW_COPY_AND_ASSIGN(DataNode);
 };
 
-inline DataNode* ComponentNode::EmplaceDataNode(const std::string& label,
-                                                const std::string& schema) {
-  // outputs[label][schema] = DataNode(this, label, schema);
-  return &outputs_[label]
-              .emplace(std::piecewise_construct, std::forward_as_tuple(schema),
-                       std::forward_as_tuple(this, label, schema))
-              .first->second;
+inline DataNode* ComponentNode::EmplaceDataNode(const std::string& label) {
+  // outputs[label] = DataNode(this, label);
+  auto ret =
+      outputs_.emplace(label, std::make_unique<DataNode>(this, label));
+  return ret.first->second.get();
 }
 
 }  // namespace maxwell

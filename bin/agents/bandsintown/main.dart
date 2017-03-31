@@ -31,13 +31,13 @@ void main(List args) {
   // artist ID is derived from name by MusicBrainz).
   // TODO(rosswang): Merge these streams and evaluate usefulness of results.
   _artistMbidSub = maxwell_context.subscriberLink(
-      'music artist id', 'https://musicbrainz.org/doc/MusicBrainz_Identifier',
+      'music artist id',
       (ContextUpdate artistId) {
     if (artistId.jsonValue != null) {
       _processEvents(BandsInTownApi.getEventsForArtistMbid(artistId.jsonValue));
     }
   });
-  _artistNameSub = maxwell_context.subscriberLink('music artist name', 'string',
+  _artistNameSub = maxwell_context.subscriberLink('music artist name',
       (ContextUpdate artistName) {
     if (artistName.jsonValue != null) {
       _processEvents(

@@ -26,7 +26,7 @@ class NPublisher {
   NPublisher(maxwell::ContextEngine* context_engine) {
     maxwell::ContextPublisherPtr out;
     context_engine->RegisterPublisher("NPublisher", out.NewRequest());
-    out->Publish("n", "int", NULL, pub_.NewRequest());
+    out->Publish("n", NULL, pub_.NewRequest());
   }
 
   void Publish(int n) { pub_->Update(std::to_string(n)); }
@@ -97,7 +97,7 @@ class NProposals : public Proposinator, public maxwell::ContextSubscriberLink {
 
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> link_handle;
     link_binding_.Bind(&link_handle);
-    context_client_->Subscribe("n", "int", std::move(link_handle));
+    context_client_->Subscribe("n", std::move(link_handle));
   }
 
   void OnUpdate(maxwell::ContextUpdatePtr update) override {
