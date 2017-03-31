@@ -12,6 +12,10 @@
             "bootfs_path": "apps/acquirers/focus"
         },
         {
+            "binary": "action_log",
+            "bootfs_path": "apps/action_log"
+        },
+        {
             "binary": "agents/bandsintown.dartx",
             "bootfs_path": "apps/agents/bandsintown.dartx"
         },
