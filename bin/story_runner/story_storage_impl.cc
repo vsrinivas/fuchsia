@@ -80,14 +80,13 @@ class WriteLinkDataCall : public Operation<void> {
 
   void Run() override {
     fidl::String key{kLinkKeyPrefix + link_id_.get()};
-    page_->Put(to_array(key), to_array(data_),
-               [this](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "WriteLinkDataCall() " << link_id_
-                                  << " Page.Put() " << status;
-                 }
-                 Done();
-               });
+    page_->Put(to_array(key), to_array(data_), [this](ledger::Status status) {
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "WriteLinkDataCall() " << link_id_ << " Page.Put() "
+                       << status;
+      }
+      Done();
+    });
   }
 
  private:
@@ -120,8 +119,8 @@ StoryStorageImpl::~StoryStorageImpl() = default;
 
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
                                     const DataCallback& callback) {
-  new ReadLinkDataCall(&operation_queue_, story_snapshot_.shared_ptr(),
-                       link_id, callback);
+  new ReadLinkDataCall(&operation_queue_, story_snapshot_.shared_ptr(), link_id,
+                       callback);
 }
 
 void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,

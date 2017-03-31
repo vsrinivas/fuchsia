@@ -70,10 +70,11 @@ rapidjson::Document CreateTriggerListKey(const std::string& agent_url,
 
 class AgentRunner::PageWatcherImpl : ledger::PageWatcher {
  public:
-  PageWatcherImpl(ledger::LedgerRepository* const ledger_repository,
-                  const std::string& ledger_name,
-                  std::function<void(const std::string&, const std::string&)> added_entry,
-                  std::function<void(const std::string&)> deleted_entry)
+  PageWatcherImpl(
+      ledger::LedgerRepository* const ledger_repository,
+      const std::string& ledger_name,
+      std::function<void(const std::string&, const std::string&)> added_entry,
+      std::function<void(const std::string&)> deleted_entry)
       : binding_(this),
         added_entry_(added_entry),
         deleted_entry_(deleted_entry) {
@@ -170,7 +171,8 @@ class AgentRunner::PageWatcherImpl : ledger::PageWatcher {
   ledger::PagePtr page_;
   ledger::PageSnapshotPtr snapshot_;
 
-  std::function<void(const std::string&, const std::string&)> const added_entry_;
+  std::function<void(const std::string&, const std::string&)> const
+      added_entry_;
   std::function<void(const std::string&)> const deleted_entry_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageWatcherImpl);

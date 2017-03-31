@@ -59,7 +59,7 @@ std::string MakeStoryId(std::unordered_set<std::string>* const story_ids,
 bool SkipKey(fidl::Array<uint8_t>& key) {
   std::string key_as_string = to_string(key);
   return key_as_string == kDeviceMapKey ||
-      key_as_string == std::string(kLinkKeyPrefix) + kUserShellKey;
+         key_as_string == std::string(kLinkKeyPrefix) + kUserShellKey;
 }
 
 // Retrieves all entries from the given snapshot and calls the given
@@ -69,9 +69,9 @@ void GetEntries(ledger::PageSnapshotPtr* const snapshot,
                 fidl::Array<uint8_t> token,
                 std::function<void(ledger::Status)> callback) {
   (*snapshot)->GetEntries(
-      nullptr, std::move(token), ftl::MakeCopyable([
-        snapshot, entries, callback = std::move(callback)
-      ](ledger::Status status, auto new_entries, auto next_token) mutable {
+      nullptr, std::move(token),
+      ftl::MakeCopyable([ snapshot, entries, callback = std::move(callback) ](
+          ledger::Status status, auto new_entries, auto next_token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
           callback(status);
@@ -492,54 +492,54 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
     // of this return value does not allow nulls.
     story_ids_.resize(0);
 
-    GetEntries(
-        root_snapshot_.get(), &entries_, nullptr /* next_token */,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "PreviousStoryCall() "
-                           << " PageSnapshot.GetEntries() " << status;
-            Done(std::move(story_ids_));
-            return;
-          }
+    GetEntries(root_snapshot_.get(), &entries_, nullptr /* next_token */,
+               [this](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR) << "PreviousStoryCall() "
+                                  << " PageSnapshot.GetEntries() " << status;
+                   Done(std::move(story_ids_));
+                   return;
+                 }
 
-          // TODO(mesch): Pagination might be needed here. If the list
-          // of entries returned from the Ledger is too large, it might
-          // also be too large to return from StoryProvider.
+                 // TODO(mesch): Pagination might be needed here. If the list
+                 // of entries returned from the Ledger is too large, it might
+                 // also be too large to return from StoryProvider.
 
-          for (auto& entry : entries_) {
-            // TODO(mesch): Not a good idea to mix keys of
-            // different kinds in the same page. Once we are
-            // more comfortable dealing with JSON data, we can
-            // make a better mapping of a complex data
-            // structure to a page.
-            if (SkipKey(entry->key)) {
-              continue;
-            }
+                 for (auto& entry : entries_) {
+                   // TODO(mesch): Not a good idea to mix keys of
+                   // different kinds in the same page. Once we are
+                   // more comfortable dealing with JSON data, we can
+                   // make a better mapping of a complex data
+                   // structure to a page.
+                   if (SkipKey(entry->key)) {
+                     continue;
+                   }
 
-            std::string value_as_string;
-            if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
-              FTL_LOG(ERROR) << "Unable to extract data.";
-              Done(nullptr);
-              return;
-            }
+                   std::string value_as_string;
+                   if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
+                     FTL_LOG(ERROR) << "Unable to extract data.";
+                     Done(nullptr);
+                     return;
+                   }
 
-            StoryDataPtr story_data;
-            if (!XdrRead(value_as_string, &story_data, XdrStoryData)) {
-              Done(nullptr);
-              return;
-            }
+                   StoryDataPtr story_data;
+                   if (!XdrRead(value_as_string, &story_data, XdrStoryData)) {
+                     Done(nullptr);
+                     return;
+                   }
 
-            FTL_DCHECK(!story_data.is_null());
+                   FTL_DCHECK(!story_data.is_null());
 
-            story_ids_.push_back(story_data->story_info->id);
+                   story_ids_.push_back(story_data->story_info->id);
 
-            FTL_LOG(INFO) << "PreviousStoryCall() "
-                          << " previous story " << story_data->story_info->id
-                          << " " << story_data->story_info->url << " "
-                          << story_data->story_info->is_running;
-          }
-          Done(std::move(story_ids_));
-        });
+                   FTL_LOG(INFO)
+                       << "PreviousStoryCall() "
+                       << " previous story " << story_data->story_info->id
+                       << " " << story_data->story_info->url << " "
+                       << story_data->story_info->is_running;
+                 }
+                 Done(std::move(story_ids_));
+               });
   }
 
  private:
@@ -728,12 +728,11 @@ ledger::PagePtr StoryProviderImpl::GetStoryPage(
 
 ledger::PagePtr StoryProviderImpl::GetRootPage() {
   ledger::PagePtr ret;
-  ledger_->GetRootPage(ret.NewRequest(),
-                       [](ledger::Status status) {
-                         if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "GetRootPage() status " << status;
-                         }
-                       });
+  ledger_->GetRootPage(ret.NewRequest(), [](ledger::Status status) {
+    if (status != ledger::Status::OK) {
+      FTL_LOG(ERROR) << "GetRootPage() status " << status;
+    }
+  });
 
   return ret;
 }

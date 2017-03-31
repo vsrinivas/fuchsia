@@ -26,8 +26,7 @@ ComponentContextImpl::~ComponentContextImpl() = default;
 void ComponentContextImpl::GetLedger(
     fidl::InterfaceRequest<ledger::Ledger> request,
     const GetLedgerCallback& result) {
-  ledger_repository_->GetLedger(to_array(component_id_),
-                                std::move(request),
+  ledger_repository_->GetLedger(to_array(component_id_), std::move(request),
                                 result);
 }
 

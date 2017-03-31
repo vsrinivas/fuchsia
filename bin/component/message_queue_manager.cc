@@ -126,26 +126,23 @@ class MessageQueueStorage : public MessageSender {
 
   const std::string& queue_token() const { return queue_token_; }
 
-  void AddMessageSenderBinding(
-      fidl::InterfaceRequest<MessageSender> request) {
+  void AddMessageSenderBinding(fidl::InterfaceRequest<MessageSender> request) {
     message_sender_bindings_.AddBinding(this, std::move(request));
   }
 
   void AddMessageQueueBinding(fidl::InterfaceRequest<MessageQueue> request) {
     message_queue_bindings_.AddBinding(
-        std::make_unique<MessageQueueConnection>(this),
-        std::move(request));
+        std::make_unique<MessageQueueConnection>(this), std::move(request));
   }
 
   // |MessageQueueConnection| calls this method in its destructor so that we can
   // drop any pending receive callbacks.
   void RemoveMessageQueueConnection(const MessageQueueConnection* const conn) {
-    auto i = std::remove_if(
-        receive_callback_queue_.begin(),
-        receive_callback_queue_.end(),
-        [conn](const ReceiveCallbackQueueItem& item) {
-          return conn == item.first;
-        });
+    auto i = std::remove_if(receive_callback_queue_.begin(),
+                            receive_callback_queue_.end(),
+                            [conn](const ReceiveCallbackQueueItem& item) {
+                              return conn == item.first;
+                            });
     receive_callback_queue_.erase(i, receive_callback_queue_.end());
   }
 

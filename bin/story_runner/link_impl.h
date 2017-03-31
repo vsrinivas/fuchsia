@@ -47,8 +47,7 @@ class LinkImpl {
  public:
   // Connects a new LinkConnection object on the heap for the given
   // Link interface request.
-  LinkImpl(StoryStorageImpl* story_storage,
-           const fidl::String& name);
+  LinkImpl(StoryStorageImpl* story_storage, const fidl::String& name);
 
   ~LinkImpl();
 

@@ -50,8 +50,7 @@ class Settings {
         "first_module", "file:///system/apps/example_recipe");
     second_module = command_line.GetOptionValueWithDefault(
         "second_module", "file:///system/apps/example_flutter_hello_world");
-    test = command_line.GetOptionValueWithDefault(
-        "test", "1") == "1";
+    test = command_line.GetOptionValueWithDefault("test", "1") == "1";
   }
 
   std::string first_module;
@@ -103,8 +102,8 @@ class DummyUserShellApp
 
     user_shell_context_ptr->GetLink(user_shell_link_.NewRequest());
     user_shell_link_->Get(nullptr, [](const fidl::String& value) {
-        FTL_LOG(INFO) << "User shell link: " << value;
-      });
+      FTL_LOG(INFO) << "User shell link: " << value;
+    });
 
     story_provider_->PreviousStories([this](fidl::Array<fidl::String> stories) {
       if (stories.size() > 0) {

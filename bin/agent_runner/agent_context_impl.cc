@@ -32,9 +32,8 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
 
   // Initialize the agent service.
   ConnectToService(application_services_.get(), agent_.NewRequest());
-  agent_->Initialize(agent_context_binding_.NewBinding(), [this]{
-    OnInitialized();
-  });
+  agent_->Initialize(agent_context_binding_.NewBinding(),
+                     [this] { OnInitialized(); });
 
   // When the agent process dies, we remove it.
   application_controller_.set_connection_error_handler(

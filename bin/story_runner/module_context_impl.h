@@ -35,12 +35,11 @@ struct ModuleContextInfo {
 // on its Story handle can be associated with the Module instance.
 class ModuleContextImpl : public ModuleContext {
  public:
-  ModuleContextImpl(
-      const ModuleContextInfo& info,
-      const uint64_t id,
-      const std::string& module_url,
-      ModuleControllerImpl* module_controller_impl,
-      fidl::InterfaceRequest<ModuleContext> module_context);
+  ModuleContextImpl(const ModuleContextInfo& info,
+                    const uint64_t id,
+                    const std::string& module_url,
+                    ModuleControllerImpl* module_controller_impl,
+                    fidl::InterfaceRequest<ModuleContext> module_context);
 
   ~ModuleContextImpl() override;
 

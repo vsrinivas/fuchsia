@@ -234,12 +234,10 @@ class UserRunnerImpl : UserRunner, UserShellContext {
       return;
     }
 
-    link_storage_.reset(new StoryStorageImpl(
-        story_provider_impl_->GetRootPage()));
+    link_storage_.reset(
+        new StoryStorageImpl(story_provider_impl_->GetRootPage()));
 
-    user_shell_link_.reset(new LinkImpl(
-        link_storage_.get(),
-        kUserShellKey));
+    user_shell_link_.reset(new LinkImpl(link_storage_.get(), kUserShellKey));
     user_shell_link_->Connect(std::move(request));
   }
 

@@ -500,10 +500,10 @@ void XdrWrite(std::string* const json,
   std::string error;
   XdrContext xdr(XdrOp::TO_JSON, &doc, &error);
   xdr.Value(data, filter);
-  FTL_DCHECK(error.empty()) << "There are no errors possible in XdrOp::TO_JSON: "
-                            << std::endl << error
-                            << std::endl << JsonValueToPrettyString(doc)
-                            << std::endl;
+  FTL_DCHECK(error.empty())
+      << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
+      << error << std::endl
+      << JsonValueToPrettyString(doc) << std::endl;
 
   *json = JsonValueToString(doc);
 }

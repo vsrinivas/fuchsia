@@ -58,9 +58,7 @@ class GetLedgerSnapshotCall : public Operation<void> {
     Ready();
   }
 
-  void Run() override {
-    GetSnapshotEntries(nullptr);
-  }
+  void Run() override { GetSnapshotEntries(nullptr); }
 
  private:
   void GetSnapshotEntries(fidl::Array<uint8_t> continuation_token) {
