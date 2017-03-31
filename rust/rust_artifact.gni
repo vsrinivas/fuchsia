@@ -62,6 +62,8 @@ template("rust_artifact") {
     args = [
       "--type",
       type,
+      "--name",
+      name,
       "--out-dir",
       rebase_path(target_out_dir),
       "--gen-dir",

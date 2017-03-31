@@ -8,6 +8,10 @@ import os
 import subprocess
 import sys
 
+BUILD_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path += [os.path.join(BUILD_PATH, "third_party/pytoml-0.1.11")]
+import pytoml as toml
+
 
 def create_base_directory(file):
     path = os.path.dirname(file)
@@ -24,6 +28,9 @@ def main():
                         help="Type of artifact to produce",
                         required=True,
                         choices=["lib", "bin"])
+    parser.add_argument("--name",
+                        help="Name of the artifact to produce",
+                        required=True)
     parser.add_argument("--out-dir",
                         help="Path to the output directory",
                         required=True)
@@ -57,9 +64,34 @@ def main():
     original_manifest = os.path.join(args.crate_root, "Cargo.toml")
     generated_manifest = os.path.join(args.gen_dir, "Cargo.toml")
     create_base_directory(generated_manifest)
-    with open(original_manifest, "r") as config:
+    with open(original_manifest, "r") as manifest:
+        config = toml.load(manifest)
+        base = None
+        if args.type == "bin":
+            if "bin" not in config:
+                raise Exception("Missing [[bin]] section in manifest")
+            for bin in config["bin"]:
+                if "name" in bin and bin["name"] == args.name:
+                    base = bin
+                    break
+            if base is None:
+                raise Exception("Could not find binary named %s" % args.name)
+        if args.type == "lib":
+            if "lib" not in config:
+                raise Exception("Missing [lib] section in manifest")
+            lib = config["lib"]
+            if "name" not in lib or lib["name"] != args.name:
+                raise Exception("Could not find library named %s" % args.name)
+            base = lib
+        # Rewrite the artifact's entry point so that it can be located by
+        # reading the generated manifest file.
+        if "path" not in base:
+            raise Exception("Need to specify entry point for %s" % args.name)
+        relative_path = base["path"]
+        new_path = os.path.join(args.crate_root, relative_path)
+        base["path"] = new_path
         with open(generated_manifest, "w") as generated_config:
-            generated_config.write(config.read())
+            toml.dump(generated_config, config)
 
     call_args = [
         args.cargo,
@@ -71,8 +103,10 @@ def main():
         # "--frozen",  # Prohibit network access.
         "-q",  # Silence stdout.
     ]
-    if args.type is "lib":
+    if args.type == "lib":
         call_args.append("--lib")
+    if args.type == "bin":
+        call_args.extend(["--bin", args.name])
     return subprocess.call(call_args, env=env, cwd=args.gen_dir)
 
 
