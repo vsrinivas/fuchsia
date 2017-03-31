@@ -19,6 +19,7 @@ source_set("lib") {
   deps = [
     "//application/lib/app",
     "//apps/ledger/services/internal",
+    "//lib/ftl/",
     "//lib/mtl/",
   ]
 }

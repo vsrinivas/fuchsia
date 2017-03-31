@@ -11,6 +11,8 @@
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/logging.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace benchmark {
 
@@ -35,6 +37,10 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
   ledger::LedgerPtr ledger;
   repository->GetLedger(ToArray(ledger_name), ledger.NewRequest(),
                         QuitOnErrorCallback("GetLedger"));
+  ledger.set_connection_error_handler([] {
+    FTL_LOG(ERROR) << "The ledger connection was closed, quitting.";
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  });
   return ledger;
 }
 
@@ -44,6 +50,10 @@ void GetRootPageEnsureInitialized(
   ledger::PagePtr page;
   ledger->GetRootPage(page.NewRequest(),
                       benchmark::QuitOnErrorCallback("GetRootPage"));
+  page.set_connection_error_handler([] {
+    FTL_LOG(ERROR) << "The root page connection was closed, quitting.";
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  });
 
   ledger::Page* page_ptr = page.get();
   page_ptr->GetId(ftl::MakeCopyable([ page = std::move(page), callback = std::move(callback) ](
