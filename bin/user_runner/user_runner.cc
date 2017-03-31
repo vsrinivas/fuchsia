@@ -168,6 +168,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
         {&message_queue_manager_, agent_runner_.get(),
          ledger_repository_.get()},
         user_intelligence_provider_.get()));
+    story_provider_impl_->AddBinding(std::move(maxwell_story_provider_request));
 
     user_scope_.AddService<TokenProvider>(
         [this](fidl::InterfaceRequest<TokenProvider> request) {
