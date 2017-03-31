@@ -461,10 +461,6 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               // exit. On VM exit CS.L, IA32_EFER.LME, and
                               // IA32_EFER.LMA is set to true.
                               VMCS_32_EXIT_CTLS_64BIT_MODE |
-                              // On VM exit due to an external interrupt, make
-                              // the logical processor acknowledge the interrupt
-                              // controller, acquiring the interrupt’s vector.
-                              VMCS_32_EXIT_CTLS_ACK_INTERRUPT |
                               // Load the IA32_PAT MSR on exit.
                               VMCS_32_EXIT_CTLS_LOAD_IA32_PAT |
                               // Load the IA32_EFER MSR on exit.
@@ -613,11 +609,46 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     return NO_ERROR;
 }
 
+void vmx_host_load(VmxHostState* host_state) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    uint cpu_num = arch_curr_cpu_num();
+
+    // Reload the task segment in order to restore its limit. VMX always
+    // restores it with a limit of 0x67, which excludes the IO bitmap.
+    seg_sel_t selector = TSS_SELECTOR(cpu_num);
+    x86_clear_tss_busy(selector);
+    x86_ltr(selector);
+
+    // Reload the interrupt descriptor table in order to restore its limit. VMX
+    // always restores it with a limit of 0xffff, which is too large.
+    idt_load(idt_get_readonly());
+}
+
+static void vmexit_handler(uint64_t reason) {
+    switch (reason) {
+    case VMCS_32_EXIT_REASON_EXTERNAL_INTERRUPT:
+        dprintf(SPEW, "enabling interrupts for external interrupt\n");
+        DEBUG_ASSERT(arch_ints_disabled());
+        arch_enable_ints();
+        arch_disable_ints();
+        break;
+    }
+}
+
 status_t VmcsPerCpu::Launch(uintptr_t guest_cr3, uintptr_t guest_entry) {
     AutoVmcsLoad vmcs_load(&page_);
-    VmxHostState host_state;
-    if (vmx_host_save(&host_state)) {
-        uint64_t reason = vmread(VMCS_32_EXIT_REASON);
+    vmwrite(VMCS_XX_GUEST_CR3, guest_cr3);
+    vmwrite(VMCS_XX_GUEST_RIP, guest_entry);
+
+    // FS is used for thread-local storage — save each time.
+    vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
+    // CR3 is used to maintain the virtual address space — save each time.
+    vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
+    // RSP is used to store host state – save each time.
+    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state_));
+
+    if (vmx_host_save(&host_state_)) {
+        uint64_t reason = vmread_unchecked(VMCS_32_EXIT_REASON);
         dprintf(SPEW, "vmexit reason: %#" PRIx64 "\n", reason);
         uint64_t qualification = vmread(VMCS_XX_EXIT_QUALIFICATION);
         dprintf(SPEW, "vmexit qualification: %#" PRIx64 "\n", qualification);
@@ -630,18 +661,10 @@ status_t VmcsPerCpu::Launch(uintptr_t guest_cr3, uintptr_t guest_entry) {
         dprintf(SPEW, "guest physical address: %#" PRIx64 "\n", physical_address);
         uint64_t rip = vmread(VMCS_XX_GUEST_RIP);
         dprintf(SPEW, "guest rip: %#" PRIx64 "\n", rip);
+
+        vmexit_handler(reason);
         return NO_ERROR;
     }
-
-    // FS is used for thread-local storage — save each time.
-    vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
-    // CR3 is used to maintain the virtual address space — save each time.
-    vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
-    // RSP is used to store host state – save each time.
-    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state));
-
-    vmwrite(VMCS_XX_GUEST_CR3, guest_cr3);
-    vmwrite(VMCS_XX_GUEST_RIP, guest_entry);
 
     status_t status = vmlaunch();
     if (status != NO_ERROR) {
@@ -731,21 +754,6 @@ status_t VmcsContext::Start(uintptr_t guest_entry) {
         return ERR_INVALID_ARGS;
     entry_ = guest_entry;
     return percpu_exec(vmcs_launch, this);
-}
-
-void vmx_host_load(VmxHostState* host_state) {
-    DEBUG_ASSERT(arch_ints_disabled());
-    uint cpu_num = arch_curr_cpu_num();
-
-    // Reload the task segment in order to restore its limit. VMX always
-    // restores it with a limit of 0x67, which excludes the IO bitmap.
-    seg_sel_t selector = TSS_SELECTOR(cpu_num);
-    x86_clear_tss_busy(selector);
-    x86_ltr(selector);
-
-    // Reload the interrupt descriptor table in order to restore its limit. VMX
-    // always restores it with a limit of 0xffff, which is too large.
-    idt_load(idt_get_readonly());
 }
 
 status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {

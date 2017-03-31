@@ -133,6 +133,7 @@
 
 /* VMCS_32_EXIT_REASON values */
 #define VMCS_32_EXIT_REASON_BASIC_MASK              0xffff
+#define VMCS_32_EXIT_REASON_EXTERNAL_INTERRUPT      1u
 
 /* VMCS_32_GUEST_XX_ACCESS_RIGHTS flags */
 #define VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE     (1u << 16)
@@ -212,6 +213,7 @@ public:
 
 private:
     VmxPage msr_bitmaps_page_;
+    VmxHostState host_state_;
 };
 
 template<typename T>
