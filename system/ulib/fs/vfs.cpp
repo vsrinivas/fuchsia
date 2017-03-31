@@ -276,8 +276,8 @@ done:
     return r;
 }
 
-ssize_t Vfs::Ioctl(Vnode* vn, uint32_t op, const void* in_buf,
-                        size_t in_len, void* out_buf, size_t out_len) {
+ssize_t Vfs::Ioctl(Vnode* vn, uint32_t op, const void* in_buf, size_t in_len,
+                   void* out_buf, size_t out_len) {
     switch (op) {
 #ifdef __Fuchsia__
     case IOCTL_DEVICE_WATCH_DIR: {
@@ -290,6 +290,12 @@ ssize_t Vfs::Ioctl(Vnode* vn, uint32_t op, const void* in_buf,
         mx_handle_t h = *(mx_handle_t*)in_buf;
         mx_status_t status;
         if ((status = Vfs::InstallRemote(vn, h)) < 0) {
+            // If we can't install the filesystem, we shoot off a quick "unmount"
+            // signal to the filesystem process, since we are the owner of its
+            // root handle.
+            // TODO(smklein): Transfer the mountpoint back to the caller on error,
+            // so they can decide what to do with it.
+            vfs_unmount_handle(h, 0);
             mx_handle_close(h);
             return status;
         }

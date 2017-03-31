@@ -107,7 +107,9 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
     // Install remote handle.
     if ((status = ioctl_devmgr_mount_fs(fd, &mountpoint)) != NO_ERROR) {
         // TODO(smklein): Retreive the mountpoint handle if mounting fails.
-        goto fail;
+        // Currently, the recipient of the ioctl is sending the unmount signal
+        // if an error occurs.
+        return status;
     }
 
     return NO_ERROR;
