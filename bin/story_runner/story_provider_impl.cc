@@ -20,7 +20,6 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
-#include "lib/mtl/vmo/vector.h"
 
 namespace modular {
 
@@ -60,7 +59,7 @@ std::string MakeStoryId(std::unordered_set<std::string>* const story_ids,
 bool SkipKey(fidl::Array<uint8_t>& key) {
   std::string key_as_string = to_string(key);
   return key_as_string == kDeviceMapKey ||
-      key_as_string == kUserShellKey;
+      key_as_string == std::string(kLinkKeyPrefix) + kUserShellKey;
 }
 
 // Retrieves all entries from the given snapshot and calls the given

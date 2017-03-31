@@ -26,7 +26,6 @@ fidl("story") {
 fidl("private") {
   sources = [
     "story_data.fidl",
-    "story_storage.fidl",
   ]
 
   public_deps = [

@@ -9,8 +9,7 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/services/story/story_storage.fidl.h"
-#include "lib/mtl/vmo/vector.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace modular {
 
@@ -29,8 +28,9 @@ class ReadLinkDataCall : public Operation<fidl::String> {
   }
 
   void Run() override {
+    fidl::String key{kLinkKeyPrefix + link_id_.get()};
     (*page_snapshot_)
-        ->Get(to_array(link_id_), [this](ledger::Status status, mx::vmo value) {
+        ->Get(to_array(key), [this](ledger::Status status, mx::vmo value) {
           if (status != ledger::Status::OK) {
             if (status != ledger::Status::KEY_NOT_FOUND) {
               // It's expected that the key is not found when the link
@@ -43,24 +43,23 @@ class ReadLinkDataCall : public Operation<fidl::String> {
             return;
           }
 
-          data_ = LinkData::New();
+          std::string value_as_string;
           if (value) {
-            std::vector<char> value_as_vector;
-            if (!mtl::VectorFromVmo(value, &value_as_vector)) {
+            if (!mtl::StringFromVmo(value, &value_as_string)) {
               FTL_LOG(ERROR) << "Unable to extract data.";
               Done(nullptr);
               return;
             }
-            data_->Deserialize(value_as_vector.data(), value_as_vector.size());
           }
-          Done(std::move(data_->json));
+          fidl::String result;
+          result.Swap(&value_as_string);
+          Done(result);
         });
   }
 
  private:
   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
   const fidl::String link_id_;
-  LinkDataPtr data_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
@@ -69,23 +68,19 @@ class WriteLinkDataCall : public Operation<void> {
  public:
   WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
-                    const fidl::String& link_id,
-                    const fidl::String& data,
+                    fidl::String link_id,
+                    fidl::String data,
                     ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
-        link_id_(link_id) {
-    data_ = LinkData::New();
-    data_->json = data;
+        link_id_(std::move(link_id)),
+        data_(std::move(data)) {
     Ready();
   }
 
   void Run() override {
-    fidl::Array<uint8_t> bytes;
-    bytes.resize(data_->GetSerializedSize());
-    data_->Serialize(bytes.data(), bytes.size());
-
-    page_->Put(to_array(link_id_), std::move(bytes),
+    fidl::String key{kLinkKeyPrefix + link_id_.get()};
+    page_->Put(to_array(key), to_array(data_),
                [this](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "WriteLinkDataCall() " << link_id_
@@ -97,8 +92,8 @@ class WriteLinkDataCall : public Operation<void> {
 
  private:
   ledger::Page* const page_;  // not owned
-  const fidl::String link_id_;
-  LinkDataPtr data_;
+  fidl::String link_id_;
+  fidl::String data_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
@@ -154,14 +149,12 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
       const fidl::String link_id = to_string(entry->key);
       for (auto& watcher_entry : watchers_) {
         if (link_id == watcher_entry.first) {
-          auto data = LinkData::New();
-          std::vector<char> value_as_vector;
-          if (!mtl::VectorFromVmo(entry->value, &value_as_vector)) {
+          std::string value_as_string;
+          if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
             FTL_LOG(ERROR) << "Unable to extract data.";
             continue;
           }
-          data->Deserialize(value_as_vector.data(), value_as_vector.size());
-          watcher_entry.second(data->json);
+          watcher_entry.second(value_as_string);
         }
       }
     }
