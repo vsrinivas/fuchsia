@@ -16,8 +16,6 @@ __BEGIN_CDECLS
 typedef void (*mxr_thread_entry_t)(void*);
 
 typedef struct {
-    uint64_t magic;
-
     mxr_thread_entry_t entry;
     void* arg;
 
