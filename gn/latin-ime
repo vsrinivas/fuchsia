@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/latin-ime"
+    ],
+    "binaries": [
+        {
+            "binary": "latin-ime.flx",
+            "bootfs_path": "apps/latin-ime"
+        }
+    ]
+}

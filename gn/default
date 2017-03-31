@@ -17,6 +17,7 @@
         "init",
         "install-fuchsia",
         "iperf",
+        "latin-ime",
         "ledger",
         "leveldb",
         "libc-tests",
