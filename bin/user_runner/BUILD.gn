@@ -13,6 +13,8 @@ group("all") {
 executable("user_runner") {
   sources = [
     "user_runner.cc",
+    "user_runner_impl.cc",
+    "user_runner_impl.h",
     "focus.cc",
     "focus.h",
   ]
