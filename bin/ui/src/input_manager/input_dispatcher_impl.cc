@@ -93,8 +93,14 @@ void InputDispatcherImpl::ProcessNextEvent() {
       associate_->inspector()->view_inspector()->ResolveFocusChain(
           view_tree_token_.Clone(), [weak = weak_factory_.GetWeakPtr()](
                                         mozart::FocusChainPtr focus_chain) {
-            if (weak && focus_chain)
-              weak->OnFocusResult(std::move(focus_chain));
+            if (weak) {
+              // Make sure to keep processing events when no focus is defined
+              if (focus_chain) {
+                weak->OnFocusResult(std::move(focus_chain));
+              } else {
+                weak->PodAndScheduleNextEvent();
+              }
+            }
           });
       return;
     }
@@ -189,14 +195,18 @@ void InputDispatcherImpl::DeliverKeyEvent(mozart::FocusChainPtr focus_chain,
       }));
 }
 
-void InputDispatcherImpl::ScheduleNextEvent() {
+void InputDispatcherImpl::PodAndScheduleNextEvent() {
   if (!pending_events_.empty()) {
-    // Prevent reentrance from ProcessNextEvent.
-    auto process_next_event = [weak = weak_factory_.GetWeakPtr()] {
-      if (weak)
-        weak->ProcessNextEvent();
-    };
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(process_next_event);
+    pending_events_.pop();
+    if (!pending_events_.empty()) {
+      // Prevent reentrance from ProcessNextEvent.
+      auto process_next_event = [weak = weak_factory_.GetWeakPtr()] {
+        if (weak)
+          weak->ProcessNextEvent();
+      };
+      mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+          process_next_event);
+    }
   }
 }
 
@@ -205,8 +215,7 @@ void InputDispatcherImpl::OnFocusResult(mozart::FocusChainPtr focus_chain) {
               << *(focus_chain->chain.front());
   DeliverKeyEvent(std::move(focus_chain), 0,
                   std::move(pending_events_.front()));
-  pending_events_.pop();
-  ScheduleNextEvent();
+  PodAndScheduleNextEvent();
 }
 
 void InputDispatcherImpl::OnHitTestResult(
@@ -269,9 +278,7 @@ void InputDispatcherImpl::OnHitTestResult(
                       << event_path_propagation_id_;
 
           DeliverEvent(std::move(pending_events_.front()));
-          pending_events_.pop();
-
-          ScheduleNextEvent();
+          PodAndScheduleNextEvent();
         });
   }
 }
