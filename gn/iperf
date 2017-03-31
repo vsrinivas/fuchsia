@@ -1,7 +1,6 @@
 {
     "labels": [
-        "//third_party/iperf:iperf3",
-        "//third_party/iperf:iperf3(//build/toolchain:host_x64)"
+        "//third_party/iperf:iperf3"
     ],
     "binaries": [
         {
