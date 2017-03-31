@@ -152,9 +152,10 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     }
     fidl::InterfaceHandle<modular::Link> module_link_handle;
     module_link_->Dup(module_link_handle.NewRequest());
-    module_context_->StartModule(module_query, std::move(module_link_handle),
-                                 nullptr, nullptr, module_.NewRequest(),
-                                 module_view_.NewRequest());
+    // This module is named after its URL.
+    module_context_->StartModule(
+        module_query, module_query, std::move(module_link_handle), nullptr,
+        nullptr, module_.NewRequest(), module_view_.NewRequest());
     SetChild();
   }
 

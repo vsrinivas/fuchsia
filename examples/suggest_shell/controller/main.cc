@@ -71,7 +71,8 @@ class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
     view_link_->Dup(view_link.NewRequest());
 
     fidl::InterfaceHandle<mozart::ViewOwner> view;
-    module_context_->StartModule("file:///system/apps/suggest_shell_view",
+    module_context_->StartModule("suggest_shell_view",
+                                 "file:///system/apps/suggest_shell_view",
                                  std::move(view_link), nullptr, nullptr,
                                  view_module_.NewRequest(), view.NewRequest());
 

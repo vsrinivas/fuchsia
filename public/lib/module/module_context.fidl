@@ -35,17 +35,22 @@ interface ModuleContext {
   // For now, the name is scoped to the story.
   CreateLink(string name, Link& link);
 
-  // Starts a new module. The module is identified by the URL of the
-  // application executable. (In the future, such a URL might be
-  // obtained, for example, from a specification of a data schema the
-  // module can provide or consume through a resolver service provided
-  // to the module separately. The parameter provided may eventually
-  // also identify a component within an application rather than just
-  // an application.) The calling module and the new module may also
-  // interact by exchanging ServiceProviders. The calling module may
-  // provide its |outgoing_services|, and the new module may implement
-  // |incoming_services|, if an interface request is supplied.
-  StartModule(string module_url, Link link,
+  // Starts a new module. The module is identified by the URL of the application
+  // executable, and the instance is given a |name|.  (In the future, such a URL
+  // might be obtained, for example, from a specification of a data schema the
+  // module can provide or consume through a resolver service provided to the
+  // module separately. The parameter provided may eventually also identify a
+  // component within an application rather than just an application.) The name
+  // is used to identify existing component message queues and Links on
+  // subsequent inflations of the Story. If |name| is null, the module will be
+  // named using the |module_url| instead.  The calling module and the new
+  // module may also interact by exchanging ServiceProviders.  The calling
+  // module may provide its |outgoing_services|, and the new module may
+  // implement |incoming_services|, if an interface
+  // request is supplied.
+  // NOTE: "root" is a reserved name, given to the module that the story was
+  // started with.
+  StartModule(string name, string module_url, Link link,
               app.ServiceProvider? outgoing_services,
               app.ServiceProvider&? incoming_services,
               ModuleController& module_controller,
@@ -53,7 +58,7 @@ interface ModuleContext {
 
   // Like StartModule(), but the view of the newly started module is
   // sent to the story shell for display.
-  StartModuleInShell(string module_url, Link link,
+  StartModuleInShell(string name, string module_url, Link link,
                      app.ServiceProvider? outgoing_services,
                      app.ServiceProvider&? incoming_services,
                      ModuleController& module_controller,

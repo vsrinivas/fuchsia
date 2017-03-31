@@ -94,6 +94,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
 
     // Start the child module.
     _moduleContext.startModule(
+        'child',
         'file:///system/apps/example_flutter_counter_child',
         linkForChild.ctrl.unbind(),
         null,

@@ -195,9 +195,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
     app::ServiceProviderPtr services_from_module1;
     module_context_->StartModuleInShell(
-        "file:///system/apps/example_module1", std::move(module1_link_handle),
-        std::move(services_for_module1), services_from_module1.NewRequest(),
-        module1_.NewRequest(), "");
+        "module1", "file:///system/apps/example_module1",
+        std::move(module1_link_handle), std::move(services_for_module1),
+        services_from_module1.NewRequest(), module1_.NewRequest(), "");
 
     // Consume services from Module 1.
     auto multiplier_service =
@@ -215,7 +215,8 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
           FTL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
-    module_context_->StartModuleInShell("file:///system/apps/example_module2",
+    module_context_->StartModuleInShell("module2",
+                                        "file:///system/apps/example_module2",
                                         std::move(module2_link_handle), nullptr,
                                         nullptr, module2_.NewRequest(), "");
 

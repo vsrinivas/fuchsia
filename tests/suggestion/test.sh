@@ -15,4 +15,4 @@ netcp ${FUCHSIA_BUILD_DIR}/suggestion_proposal_test_module :/system/apps/modular
 
 netcp ${FUCHSIA_BUILD_DIR}/suggestion_test_user_shell :/system/apps/suggestion_test_user_shell
 
-${FUCHSIA_DIR}/apps/modular/src/test_runner/run_test "device_runner --user_shell=suggestion_test_user_shell"
+${FUCHSIA_DIR}/apps/test_runner/src/run_test "device_runner --user_shell=suggestion_test_user_shell"

@@ -108,7 +108,8 @@ void StoryImpl::SetInfoExtra(const fidl::String& name,
 }
 
 // |StoryController|
-void StoryImpl::AddModule(const fidl::String& module_url,
+void StoryImpl::AddModule(const fidl::String& module_name,
+                          const fidl::String& module_url,
                           const fidl::String& link_name) {
   if (deleted_) {
     FTL_LOG(INFO) << "StoryImpl::AddModule() during delete: ignored.";
@@ -117,6 +118,8 @@ void StoryImpl::AddModule(const fidl::String& module_url,
 
   auto module = ModuleData::New();
   module->url = module_url;
+  module->module_path = fidl::Array<fidl::String>::New(0);
+  module->module_path.push_back(module_name ? module_name : module_url);
   module->link = link_name;
 
   story_data_->modules.push_back(std::move(module));
@@ -124,7 +127,7 @@ void StoryImpl::AddModule(const fidl::String& module_url,
   WriteStoryData([] {});
 
   if (!module_controllers_.empty()) {
-    StartRootModule(module_url, link_name);
+    StartRootModule(module_name, module_url, link_name);
   }
 }
 
@@ -173,7 +176,8 @@ void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
       // Start *all* the root modules, not just the first one, with
       // their respective links.
       for (auto& module_data : story_data_->modules) {
-        StartRootModule(module_data->url, module_data->link);
+        StartRootModule(module_data->module_path[0], module_data->url,
+                        module_data->link);
       }
 
       story_data_->story_info->is_running = true;
@@ -226,14 +230,16 @@ void StoryImpl::StartStoryShell(
                               story_shell_.NewRequest());
 }
 
-void StoryImpl::StartRootModule(const fidl::String& url,
+void StoryImpl::StartRootModule(const fidl::String& module_name,
+                                const fidl::String& url,
                                 const fidl::String& link_name) {
   LinkPtr link;
   CreateLink(link_name, link.NewRequest());
 
   ModuleControllerPtr module_controller;
-  StartModuleInShell(url, std::move(link), nullptr, nullptr,
-                     module_controller.NewRequest(), 0L, "");
+  auto empty_parent_path = fidl::Array<fidl::String>::New(0);
+  StartModuleInShell(empty_parent_path, module_name, url, std::move(link),
+                     nullptr, nullptr, module_controller.NewRequest(), 0L, "");
 
   module_controller->Watch(module_watcher_bindings_.AddBinding(this));
   module_controllers_.emplace_back(std::move(module_controller));
@@ -342,6 +348,8 @@ void StoryImpl::DisposeLink(LinkImpl* const link) {
 }
 
 uint64_t StoryImpl::StartModule(
+    const fidl::Array<fidl::String>& parent_path,
+    const fidl::String& module_name,
     const fidl::String& module_url,
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -390,15 +398,18 @@ uint64_t StoryImpl::StartModule(
       story_provider_impl_->user_intelligence_provider()};
 
   const auto id = next_module_instance_id_++;
+  auto child_path = parent_path.Clone();
+  child_path.push_back(module_name ? module_name : module_url);
   connection.module_context_impl.reset(new ModuleContextImpl(
-      module_context_info, id, module_url,
+      std::move(child_path), module_context_info, id, module_url,
       connection.module_controller_impl.get(), std::move(self_request)));
-
   connections_.emplace_back(std::move(connection));
   return id;
 }
 
 void StoryImpl::StartModuleInShell(
+    const fidl::Array<fidl::String>& parent_path,
+    const fidl::String& module_name,
     const fidl::String& module_url,
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -408,9 +419,9 @@ void StoryImpl::StartModuleInShell(
     const fidl::String& view_type) {
   mozart::ViewOwnerPtr view_owner;
   const uint64_t id = StartModule(
-      module_url, std::move(link), std::move(outgoing_services),
-      std::move(incoming_services), std::move(module_controller_request),
-      view_owner.NewRequest());
+      parent_path, module_name, module_url, std::move(link),
+      std::move(outgoing_services), std::move(incoming_services),
+      std::move(module_controller_request), view_owner.NewRequest());
   story_shell_->ConnectView(view_owner.PassInterfaceHandle(), id, parent_id,
                             view_type);
 }

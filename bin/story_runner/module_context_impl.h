@@ -35,7 +35,12 @@ struct ModuleContextInfo {
 // on its Story handle can be associated with the Module instance.
 class ModuleContextImpl : ModuleContext {
  public:
-  ModuleContextImpl(const ModuleContextInfo& info,
+  // |module_path| identifies this particular module instance using the path of
+  // modules that have ended up starting this module. The last item in this list
+  // is this module's name. |module_path| can be used to internally name
+  // resources that belong to this module (message queues, Links).
+  ModuleContextImpl(fidl::Array<fidl::String> module_path,
+                    const ModuleContextInfo& info,
                     const uint64_t id,
                     const std::string& module_url,
                     ModuleControllerImpl* module_controller_impl,
@@ -48,6 +53,7 @@ class ModuleContextImpl : ModuleContext {
   void CreateLink(const fidl::String& name,
                   fidl::InterfaceRequest<Link> link) override;
   void StartModule(
+      const fidl::String& name,
       const fidl::String& query,
       fidl::InterfaceHandle<Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -55,6 +61,7 @@ class ModuleContextImpl : ModuleContext {
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   void StartModuleInShell(
+      const fidl::String& name,
       const fidl::String& query,
       fidl::InterfaceHandle<Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -69,6 +76,12 @@ class ModuleContextImpl : ModuleContext {
   void Ready() override;
   void Done() override;
 
+  // The path of the modules that have started this module (ie.,
+  // module_path_[n-1] starts module_path_[n]). The last element represents the
+  // name this module was given (as part of ModuleContext.StartModule() or
+  // related).
+  const fidl::Array<fidl::String> module_path_;
+
   // Used to identify the module instance within the story,
   // and everything directly associated with it,
   // specifically the view of the module instance to
@@ -80,7 +93,7 @@ class ModuleContextImpl : ModuleContext {
   StoryImpl* const story_impl_;
 
   // This ID is used to namespace a module's ledger.
-  std::string module_url_;
+  const std::string module_url_;
 
   // Not owned. Used to notify module watchers and request tear down.
   ModuleControllerImpl* const module_controller_impl_;

@@ -42,15 +42,15 @@ interface StoryController {
   // Registers a listener for changes of the story state.
   Watch(StoryWatcher watcher);
 
-  // Adds and starts a top level module to the story. The view of this
-  // module is sent to the story shell. The Link to be used for the
-  // module is identified by its name as used in calls to
-  // GetNamedLink(); using that method, the link can be configured
-  // with data before running the module. The implicit name of the
-  // link obtained from GetLink() is "root". TODO(mesch): Some form of
-  // ModuleController might be useful here, e.g. for status
-  // notifications.
-  AddModule(string url, string link_name);
+  // Adds and starts a top level module to the story. The view of this module is
+  // sent to the story shell. The module |name| is used to reinflate component
+  // message queues and Links on subsequent runs of the story. The Link to be
+  // used for the module is identified by its name as used in calls to
+  // GetNamedLink(); using that method, the link can be configured with data
+  // before running the module. The implicit name of the link obtained from
+  // GetLink() is "root". TODO(mesch): Some form of ModuleController might be
+  // useful here, e.g. for status notifications.
+  AddModule(string name, string url, string link_name);
 };
 
 // This interface is implemented by the client calling

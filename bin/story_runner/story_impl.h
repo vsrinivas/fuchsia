@@ -59,6 +59,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // Returns the module instance id so StartModuleInShell() can pass it to the
   // StoryShell.
   uint64_t StartModule(
+      const fidl::Array<fidl::String>& parent_path,
+      const fidl::String& module_name,
       const fidl::String& query,
       fidl::InterfaceHandle<Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -67,6 +69,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
   // Called by ModuleContextImpl.
   void StartModuleInShell(
+      const fidl::Array<fidl::String>& parent_path,
+      const fidl::String& module_name,
       const fidl::String& query,
       fidl::InterfaceHandle<Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -98,12 +102,15 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
                     fidl::InterfaceRequest<Link> request) override;
   void Stop(const StopCallback& callback) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
-  void AddModule(const fidl::String& url,
+  void AddModule(const fidl::String& module_name,
+                 const fidl::String& url,
                  const fidl::String& link_name) override;
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(fidl::InterfaceRequest<mozart::ViewOwner> request);
-  void StartRootModule(const fidl::String& url, const fidl::String& link_name);
+  void StartRootModule(const fidl::String& module_name,
+                       const fidl::String& url,
+                       const fidl::String& link_name);
 
   // Phases of Stop() broken out into separate methods.
   void StopModules();

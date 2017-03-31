@@ -13,12 +13,14 @@
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
+    fidl::Array<fidl::String> module_path,
     const ModuleContextInfo& info,
     const uint64_t id,
     const std::string& module_url,
     ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<ModuleContext> module_context)
-    : id_(id),
+    : module_path_(std::move(module_path)),
+      id_(id),
       story_impl_(info.story_impl),
       module_url_(module_url),
       module_controller_impl_(module_controller_impl),
@@ -34,25 +36,28 @@ void ModuleContextImpl::CreateLink(const fidl::String& name,
 }
 
 void ModuleContextImpl::StartModule(
+    const fidl::String& name,
     const fidl::String& query,
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_impl_->StartModule(query, std::move(link), std::move(outgoing_services),
+  story_impl_->StartModule(module_path_, name, query, std::move(link),
+                           std::move(outgoing_services),
                            std::move(incoming_services),
                            std::move(module_controller), std::move(view_owner));
 }
 
 void ModuleContextImpl::StartModuleInShell(
+    const fidl::String& name,
     const fidl::String& query,
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     const fidl::String& view_type) {
-  story_impl_->StartModuleInShell(query, std::move(link),
+  story_impl_->StartModuleInShell(module_path_, name, query, std::move(link),
                                   std::move(outgoing_services),
                                   std::move(incoming_services),
                                   std::move(module_controller), id_, view_type);

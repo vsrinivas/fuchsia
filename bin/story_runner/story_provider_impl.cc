@@ -109,6 +109,7 @@ void XdrStoryInfo(XdrContext* const xdr, StoryInfo* const data) {
 
 void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("url", &data->url);
+  xdr->Field("module_path", &data->module_path);
   xdr->Field("link", &data->link);
 }
 
@@ -263,8 +264,11 @@ class CreateStoryCall : Operation<void> {
           story_info->extra = std::move(extra_info_);
           story_info->extra.mark_non_null();
 
+          const char* kRootModuleName = "root";
           auto root_module = ModuleData::New();
           root_module->url = url_;
+          root_module->module_path = fidl::Array<fidl::String>::New(0);
+          root_module->module_path.push_back(kRootModuleName);
           root_module->link = kRootLink;
           story_data_->modules.push_back(std::move(root_module));
 
@@ -285,6 +289,7 @@ class CreateStoryCall : Operation<void> {
   ledger::Ledger* const ledger_;                  // not owned
   ledger::Page* const root_page_;                 // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
+  const fidl::String module_name_;
   const fidl::String url_;
   const fidl::String story_id_;
   FidlStringMap extra_info_;
