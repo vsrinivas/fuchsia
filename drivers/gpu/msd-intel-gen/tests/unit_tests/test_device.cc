@@ -255,7 +255,10 @@ public:
         device->QuerySliceInfo(&subslice_total, &eu_total);
 
         EXPECT_EQ(3u, subslice_total);
-        EXPECT_EQ(23u, eu_total);
+        // Expected values for eu_total are either 24 (for the Acer Switch
+        // Alpha 12) or 23 (for the Intel NUC).
+        if (eu_total != 24u)
+            EXPECT_EQ(23u, eu_total);
     }
 };
 
