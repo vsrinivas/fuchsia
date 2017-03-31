@@ -128,6 +128,8 @@ void VnodeMinfs::InodeSync(uint32_t flags) {
 mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
     mxtl::RefPtr<BlockNode> bitmap_blk = nullptr;
 
+    bool doSync = false;
+
     // release direct blocks
     for (unsigned bno = start; bno < kMinfsDirect; bno++) {
         if (inode_.dnum[bno] == 0) {
@@ -140,7 +142,7 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
         fs_->block_map_.Clear(inode_.dnum[bno], inode_.dnum[bno] + 1);
         inode_.dnum[bno] = 0;
         inode_.block_count--;
-        InodeSync(kMxFsSyncDefault);
+        doSync = true;
     }
 
     const unsigned direct_per_indirect = kMinfsBlockSize / sizeof(uint32_t);
@@ -187,7 +189,7 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
         }
         // only update the indirect block if an entry was deleted
         if (iflags & kBlockDirty) {
-            InodeSync(kMxFsSyncDefault);
+            doSync = true;
         }
         fs_->bc_->Put(blk, iflags);
 
@@ -200,10 +202,13 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
             fs_->block_map_.Clear(inode_.inum[indirect], inode_.inum[indirect] + 1);
             inode_.inum[indirect] = 0;
             inode_.block_count--;
-            InodeSync(kMxFsSyncDefault);
+            doSync = true;
         }
     }
 
+    if (doSync) {
+        InodeSync(kMxFsSyncDefault);
+    }
     fs_->BitmapBlockPut(bitmap_blk);
     return NO_ERROR;
 }
@@ -836,6 +841,9 @@ ssize_t VnodeMinfs::Write(const void* data, size_t len, size_t off) {
     if (status != NO_ERROR) {
         return status;
     }
+    if (actual != 0) {
+        InodeSync(kMxFsSyncMtime);  // Successful writes updates mtime
+    }
     return actual;
 }
 
@@ -940,7 +948,6 @@ done:
         inode_.size = static_cast<uint32_t>(off + len);
     }
 
-    InodeSync(kMxFsSyncMtime);  // writes always update mtime
     *actual = len;
     return NO_ERROR;
 }
@@ -1211,7 +1218,12 @@ mx_status_t VnodeMinfs::Truncate(size_t len) {
         return ERR_NOT_FILE;
     }
 
-    return TruncateInternal(len);
+    mx_status_t status = TruncateInternal(len);
+    if (status != NO_ERROR) {
+        // Successful truncates update inode
+        InodeSync(kMxFsSyncMtime);
+    }
+    return status;
 }
 
 mx_status_t VnodeMinfs::TruncateInternal(size_t len) {
@@ -1273,7 +1285,6 @@ mx_status_t VnodeMinfs::TruncateInternal(size_t len) {
             }
         }
         inode_.size = static_cast<uint32_t>(len);
-        InodeSync(kMxFsSyncMtime);
     } else if (len > inode_.size) {
         // Truncate should make the file longer, filled with zeroes.
         if (kMinfsMaxFileSize < len) {
