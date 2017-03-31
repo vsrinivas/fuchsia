@@ -128,6 +128,22 @@ FocusHandler::FocusHandler(const fidl::String& device_name,
                             &ledger_map_);
 }
 
+FocusHandler::~FocusHandler() = default;
+
+FocusProviderPtr FocusHandler::GetProvider() {
+  FocusProviderPtr ptr;
+  provider_bindings_.AddBinding(this, ptr.NewRequest());
+  return ptr;
+}
+
+void FocusHandler::GetProvider(fidl::InterfaceRequest<FocusProvider> request) {
+  provider_bindings_.AddBinding(this, std::move(request));
+}
+
+void FocusHandler::GetController(fidl::InterfaceRequest<FocusController> request) {
+  controller_bindings_.AddBinding(this, std::move(request));
+}
+
 void FocusHandler::Query(const QueryCallback& callback) {
   new SyncCall(&operation_queue_, [this, callback] {
     auto focused_stories = fidl::Array<FocusInfoPtr>::New(0);
@@ -137,6 +153,20 @@ void FocusHandler::Query(const QueryCallback& callback) {
     }
     callback(std::move(focused_stories));
   });
+}
+
+void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
+  change_watchers_.push_back(FocusWatcherPtr::Create(std::move(watcher)));
+}
+
+void FocusHandler::Request(const fidl::String& story_id) {
+  for (const auto& watcher : request_watchers_) {
+    watcher->OnRequest(story_id);
+  }
+}
+
+void FocusHandler::Duplicate(fidl::InterfaceRequest<FocusProvider> request) {
+  provider_bindings_.AddBinding(this, std::move(request));
 }
 
 void FocusHandler::Set(const fidl::String& story_id) {
@@ -154,6 +184,12 @@ void FocusHandler::Set(const fidl::String& story_id) {
         }
       });
   FTL_LOG(INFO) << "Setting focus to story_id: " << story_id;
+}
+
+void FocusHandler::WatchRequest(
+    fidl::InterfaceHandle<FocusRequestWatcher> watcher) {
+  request_watchers_.push_back(
+      FocusRequestWatcherPtr::Create(std::move(watcher)));
 }
 
 void FocusHandler::OnChange(ledger::PageChangePtr page,
@@ -174,6 +210,44 @@ void FocusHandler::OnChange(ledger::PageChangePtr page,
     }
   }
   callback(nullptr);
+}
+
+VisibleStoriesHandler::VisibleStoriesHandler()
+    : visible_stories_(fidl::Array<fidl::String>::New(0)) {}
+
+VisibleStoriesHandler::~VisibleStoriesHandler() = default;
+
+VisibleStoriesProviderPtr VisibleStoriesHandler::GetProvider() {
+  VisibleStoriesProviderPtr ptr;
+  provider_bindings_.AddBinding(this, ptr.NewRequest());
+  return ptr;
+}
+
+void VisibleStoriesHandler::GetController(
+    fidl::InterfaceRequest<VisibleStoriesController> request) {
+  controller_bindings_.AddBinding(this, std::move(request));
+}
+
+void VisibleStoriesHandler::Query(const QueryCallback& callback) {
+  callback(visible_stories_.Clone());
+}
+
+void VisibleStoriesHandler::Watch(
+    fidl::InterfaceHandle<VisibleStoriesWatcher> watcher) {
+  change_watchers_.push_back(
+      VisibleStoriesWatcherPtr::Create(std::move(watcher)));
+}
+
+void VisibleStoriesHandler::Duplicate(
+    fidl::InterfaceRequest<VisibleStoriesProvider> request) {
+  provider_bindings_.AddBinding(this, std::move(request));
+}
+
+void VisibleStoriesHandler::Set(fidl::Array<fidl::String> story_ids) {
+  visible_stories_ = std::move(story_ids);
+  for (const auto& watcher : change_watchers_) {
+    watcher->OnVisibleStoriesChange(visible_stories_.Clone());
+  }
 }
 
 }  // namespace modular

@@ -22,51 +22,23 @@ class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
  public:
   FocusHandler(const fidl::String& device_name,
                ledger::LedgerRepository* ledger_repository);
+  ~FocusHandler() override;
 
-  FocusProviderPtr GetProvider() {
-    FocusProviderPtr ptr;
-    provider_bindings_.AddBinding(this, ptr.NewRequest());
-    return ptr;
-  }
-
-  void GetProvider(fidl::InterfaceRequest<FocusProvider> request) {
-    provider_bindings_.AddBinding(this, std::move(request));
-  }
-
-  void GetController(fidl::InterfaceRequest<FocusController> request) {
-    controller_bindings_.AddBinding(this, std::move(request));
-  }
+  FocusProviderPtr GetProvider();
+  void GetProvider(fidl::InterfaceRequest<FocusProvider> request);
+  void GetController(fidl::InterfaceRequest<FocusController> request);
 
  private:
   // |FocusProvider|
   void Query(const QueryCallback& callback) override;
-
-  // |FocusProvider|
-  void Watch(fidl::InterfaceHandle<FocusWatcher> watcher) override {
-    change_watchers_.push_back(FocusWatcherPtr::Create(std::move(watcher)));
-  }
-
-  // |FocusProvider|
-  void Request(const fidl::String& story_id) override {
-    for (const auto& watcher : request_watchers_) {
-      watcher->OnRequest(story_id);
-    }
-  }
-
-  // |FocusProvider|
-  void Duplicate(fidl::InterfaceRequest<FocusProvider> request) override {
-    provider_bindings_.AddBinding(this, std::move(request));
-  }
+  void Watch(fidl::InterfaceHandle<FocusWatcher> watcher) override;
+  void Request(const fidl::String& story_id) override;
+  void Duplicate(fidl::InterfaceRequest<FocusProvider> request) override;
 
   // |FocusController|
   void Set(const fidl::String& story_id) override;
-
-  // |FocusController|
   void WatchRequest(
-      fidl::InterfaceHandle<FocusRequestWatcher> watcher) override {
-    request_watchers_.push_back(
-        FocusRequestWatcherPtr::Create(std::move(watcher)));
-  }
+      fidl::InterfaceHandle<FocusRequestWatcher> watcher) override;
 
   // |ledger::PageWatcher|
   void OnChange(ledger::PageChangePtr page,
@@ -95,44 +67,21 @@ class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
 
 class VisibleStoriesHandler : VisibleStoriesProvider, VisibleStoriesController {
  public:
-  VisibleStoriesHandler()
-      : visible_stories_(fidl::Array<fidl::String>::New(0)) {}
+  VisibleStoriesHandler();
+  ~VisibleStoriesHandler() override;
 
-  VisibleStoriesProviderPtr GetProvider() {
-    VisibleStoriesProviderPtr ptr;
-    provider_bindings_.AddBinding(this, ptr.NewRequest());
-    return ptr;
-  }
-
-  void GetController(fidl::InterfaceRequest<VisibleStoriesController> request) {
-    controller_bindings_.AddBinding(this, std::move(request));
-  }
+  VisibleStoriesProviderPtr GetProvider();
+  void GetController(fidl::InterfaceRequest<VisibleStoriesController> request);
 
  private:
   // |VisibleStoriesProvider|
-  void Query(const QueryCallback& callback) override {
-    callback(visible_stories_.Clone());
-  }
-
-  // |VisibleStoriesProvider|
-  void Watch(fidl::InterfaceHandle<VisibleStoriesWatcher> watcher) override {
-    change_watchers_.push_back(
-        VisibleStoriesWatcherPtr::Create(std::move(watcher)));
-  }
-
-  // |VisibleStoriesProvider|
+  void Query(const QueryCallback& callback) override;
+  void Watch(fidl::InterfaceHandle<VisibleStoriesWatcher> watcher) override;
   void Duplicate(
-      fidl::InterfaceRequest<VisibleStoriesProvider> request) override {
-    provider_bindings_.AddBinding(this, std::move(request));
-  }
+      fidl::InterfaceRequest<VisibleStoriesProvider> request) override;
 
   // |VisibleStoriesController|
-  void Set(fidl::Array<fidl::String> story_ids) override {
-    visible_stories_ = std::move(story_ids);
-    for (const auto& watcher : change_watchers_) {
-      watcher->OnVisibleStoriesChange(visible_stories_.Clone());
-    }
-  }
+  void Set(fidl::Array<fidl::String> story_ids) override;
 
   fidl::BindingSet<VisibleStoriesProvider> provider_bindings_;
   fidl::BindingSet<VisibleStoriesController> controller_bindings_;
