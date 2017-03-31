@@ -120,19 +120,6 @@ static void vmwrite(uint64_t field, uint64_t val) {
     DEBUG_ASSERT(err == NO_ERROR);
 }
 
-static status_t vmlaunch() {
-    uint8_t err;
-
-    __asm__ volatile (
-        "vmlaunch;"
-        "setna %[err];"     // Check CF and ZF for error.
-        : [err] "=r"(err)
-        :
-        : "cc", "memory");
-
-    return err ? ERR_INTERNAL : NO_ERROR;
-}
-
 // TODO(abdulla): Update this to execute on every CPU. For development, it is
 // convenient to only consider a single CPU for now.
 static status_t percpu_exec(thread_start_routine entry, void* arg) {
@@ -536,7 +523,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_ESP, 0);
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_EIP, 0);
     vmwrite(VMCS_32_HOST_IA32_SYSENTER_CS, 0);
-    vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_host_load_entry));
+    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state_));
+    vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_exit_entry));
 
     // Setup VMCS guest state.
 
@@ -609,7 +597,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     return NO_ERROR;
 }
 
-void vmx_host_load(VmxHostState* host_state) {
+void vmx_exit(VmxHostState* host_state) {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu_num = arch_curr_cpu_num();
 
@@ -640,14 +628,16 @@ status_t VmcsPerCpu::Launch(uintptr_t guest_cr3, uintptr_t guest_entry) {
     vmwrite(VMCS_XX_GUEST_CR3, guest_cr3);
     vmwrite(VMCS_XX_GUEST_RIP, guest_entry);
 
-    // FS is used for thread-local storage — save each time.
+    // FS is used for thread-local storage — save for this thread.
     vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
-    // CR3 is used to maintain the virtual address space — save each time.
+    // CR3 is used to maintain the virtual address space — save for this thread.
     vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
-    // RSP is used to store host state – save each time.
-    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state_));
 
-    if (vmx_host_save(&host_state_)) {
+    status_t status = vmx_launch(&host_state_);
+    if (status != NO_ERROR) {
+        uint64_t error = vmread(VMCS_32_INSTRUCTION_ERROR);
+        dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
+    } else {
         uint64_t reason = vmread_unchecked(VMCS_32_EXIT_REASON);
         dprintf(SPEW, "vmexit reason: %#" PRIx64 "\n", reason);
         uint64_t qualification = vmread(VMCS_XX_EXIT_QUALIFICATION);
@@ -663,13 +653,6 @@ status_t VmcsPerCpu::Launch(uintptr_t guest_cr3, uintptr_t guest_entry) {
         dprintf(SPEW, "guest rip: %#" PRIx64 "\n", rip);
 
         vmexit_handler(reason);
-        return NO_ERROR;
-    }
-
-    status_t status = vmlaunch();
-    if (status != NO_ERROR) {
-        uint64_t error = vmread(VMCS_32_INSTRUCTION_ERROR);
-        dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     }
     return status;
 }

@@ -49,19 +49,18 @@ static_assert(__offsetof(VmxHostState, r15) == VHS_R15, "");
 static_assert(__offsetof(VmxHostState, rflags) == VHS_RFLAGS, "");
 
 __BEGIN_CDECLS
-/* Save the host state.
- * This is the VMX equivalent of setjmp. If we return 0 we have saved the host
- * state, if we return 1 we have loaded the host state.
+/* Launch the guest and save the host state.
+ * If we return 0, we have exited from the guest, otherwise we have failed to
+ * launch the guest.
  */
-int vmx_host_save(VmxHostState* host_state);
+int vmx_launch(VmxHostState* host_state);
 
-/* Load the host state.
- * This is the VMX equivalent of longjmp. This is never called directly by the
- * code, but is executed by VMX on VM exit.  It calls vmx_host_load() before
- * returning through vmx_host_save.
+/* Exit from the guest, and load the saved host state.
+ * This function is never called directly, but is executed on exit from a guest.
+ * It calls vmx_exit before returning through vmx_launch.
  */
-void vmx_host_load_entry();
-void vmx_host_load(VmxHostState* host_state);
+void vmx_exit_entry();
+void vmx_exit(VmxHostState* host_state);
 
 __END_CDECLS
 

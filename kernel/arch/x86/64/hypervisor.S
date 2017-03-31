@@ -5,12 +5,14 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+
 #include <arch/x86/hypervisor_host.h>
+#include <magenta/errors.h>
 
 .text
 
-/* int vmx_host_save(VmxHostState* host_state) */
-FUNCTION(vmx_host_save)
+/* int vmx_launch(VmxHostState* host_state) */
+FUNCTION(vmx_launch)
     // Store the return address.
     // We do this first to adjust the %rsp we store.
     popq VHS_RIP(%rdi)
@@ -28,15 +30,18 @@ FUNCTION(vmx_host_save)
     pushfq
     popq VHS_RFLAGS(%rdi)
 
-    // Return 0.
-    mov $0, %eax
+    // Launch the guest.
+    vmlaunch
+
+    // Return ERR_INTERNAL, as this will only execute if vmlaunch failed.
+    mov $ERR_INTERNAL, %eax
     jmp *VHS_RIP(%rdi)
 
-/* This is effectively the second-half of vmx_host_save. When we return from a
+/* This is effectively the second-half of vmx_launch. When we return from a
  * VM exit, host_state argument is stored in %rsp. We use this to restore the
- * stack and registers to the state they were in when vmx_host_save was called.
+ * stack and registers to the state they were in when vmx_launch was called.
  */
-FUNCTION(vmx_host_load_entry)
+FUNCTION(vmx_exit_entry)
     // Reload the global descriptor table in order to restore its limit. VMX
     // always restores it with a limit of 0xffff, which is too large.
     lgdt _gdtr
@@ -60,11 +65,11 @@ FUNCTION(vmx_host_load_entry)
     // Set up the return address.
     pushq VHS_RIP(%rdi)
 
-    // Call vmx_host_load(host_state).
+    // Call vmx_exit(host_state).
     sub $8, %rsp
-    call vmx_host_load
+    call vmx_exit
     add $8, %rsp
 
-    // Return 1, using the return address of vmx_host_save pushed above.
-    mov $1, %eax
+    // Return 0, using the return address of vmx_launch pushed above.
+    mov $0, %eax
     ret
