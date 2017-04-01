@@ -13,6 +13,10 @@
             "bootfs_path": "bin/btsnoop"
         },
         {
+            "binary": "bluetooth_hci_acl_test",
+            "bootfs_path": "bin/hci_acl_test"
+        },
+        {
             "binary": "bluetooth_hcitool",
             "bootfs_path": "bin/hcitool"
         }
