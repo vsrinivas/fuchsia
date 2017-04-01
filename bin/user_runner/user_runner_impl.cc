@@ -92,8 +92,7 @@ UserRunnerImpl::UserRunnerImpl(
             std::string(kUserScopeLabelPrefix) + to_hex_string(user_id)),
       message_queue_manager_(ledger_repository_.get()),
       token_provider_impl_(auth_token),
-      device_name_(device_name),
-      focus_handler_(device_name, ledger_repository_.get()) {
+      device_name_(device_name) {
   binding_.set_connection_error_handler([this] { delete this; });
 
   auto resolver_service_provider =
@@ -109,6 +108,14 @@ UserRunnerImpl::UserRunnerImpl(
 
   RunUserShell(std::move(user_shell), std::move(view_owner_request));
 
+  // NOTE(mesch): It is a bad idea to try to invoke a method on a fidl
+  // pointer (such as GetRootPage() on this one below), and then move
+  // the pointer away before the method invokes its callback. For me
+  // this yielded the rather cryptic failure:
+  //
+  //   FATAL lib/fidl/cpp/bindings/internal/router.cc(152):
+  //   Check failed: testing_mode_
+  //
   ledger::LedgerPtr ledger;
   ledger_repository_->GetLedger(
       to_array(kAppId), ledger.NewRequest(), [](ledger::Status status) {
@@ -120,48 +127,77 @@ UserRunnerImpl::UserRunnerImpl(
   // Begin init maxwell.
   //
   // NOTE: There is an awkward service exchange here between
-  // UserIntelligenceProvider, AgentRunner and StoryProviderImpl. AgentRunner
-  // needs a UserIntelligenceProvider to expose services from Maxwell through
-  // its getIntelligenceServices() method. Initializing the Maxwell process
-  // (through UserIntelligenceProviderFactory) requires a ComponentContext.
-  // ComponentContext requires an AgentRunner, which creates a circular
-  // dependency. Because of FIDL late bindings, we can get around this by
-  // creating a new InterfaceRequest here (|intelligence_provider_request|),
-  // making the InterfacePtr a valid proxy to be passed to AgentRunner and
-  // StoryProviderImpl, even though it won't be bound to a real implementation
-  // (provided by Maxwell) until later. It works, but it's not a good pattern.
+  // UserIntelligenceProvider, AgentRunner, StoryProviderImpl,
+  // FocusHandler, VisibleStoriesHandler.
+  //
+  // AgentRunner needs a UserIntelligenceProvider to expose services
+  // from Maxwell through its GetIntelligenceServices() method.
+  // Initializing the Maxwell process (through
+  // UserIntelligenceProviderFactory) requires a ComponentContext.
+  // ComponentContext requires an AgentRunner, which creates a
+  // circular dependency.
+  //
+  // Because of FIDL late bindings, we can get around this by creating
+  // a new InterfaceRequest here (|intelligence_provider_request|),
+  // making the InterfacePtr a valid proxy to be passed to AgentRunner
+  // and StoryProviderImpl, even though it won't be bound to a real
+  // implementation (provided by Maxwell) until later. It works, but
+  // it's not a good pattern.
+  //
+  // A similar relationship holds between FocusHandler and
+  // UserIntelligenceProvider.
   auto intelligence_provider_request =
       user_intelligence_provider_.NewRequest();
+
+  fidl::InterfaceHandle<StoryProvider> story_provider;
+  auto story_provider_request = story_provider.NewRequest();
+
+  fidl::InterfaceHandle<FocusProvider> focus_provider;
+  auto focus_provider_request = focus_provider.NewRequest();
+
+  fidl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
+  auto visible_stories_provider_request = visible_stories_provider.NewRequest();
+
   agent_runner_.reset(new AgentRunner(
       user_scope_.GetLauncher(), &message_queue_manager_,
       ledger_repository_.get(), user_intelligence_provider_.get()));
 
+  ComponentContextInfo component_context_info{
+    &message_queue_manager_, agent_runner_.get(), ledger_repository_.get()};
+
   maxwell_component_context_impl_.reset(
-      new ComponentContextImpl({&message_queue_manager_, agent_runner_.get(),
-              ledger_repository_.get()},
-        kMaxwellUrl));
+      new ComponentContextImpl(component_context_info, kMaxwellUrl));
+
   maxwell_component_context_binding_.reset(
       new fidl::Binding<ComponentContext>(
           maxwell_component_context_impl_.get()));
+
   auto maxwell_services = GetServiceProvider(kMaxwellUrl);
   auto maxwell_factory =
       app::ConnectToService<maxwell::UserIntelligenceProviderFactory>(
           maxwell_services.get());
-  fidl::InterfaceHandle<StoryProvider> maxwell_story_provider;
-  auto maxwell_story_provider_request = maxwell_story_provider.NewRequest();
+
   maxwell_factory->GetUserIntelligenceProvider(
       maxwell_component_context_binding_->NewBinding(),
-      std::move(maxwell_story_provider), focus_handler_.GetProvider(),
-      visible_stories_handler_.GetProvider(),
-        std::move(intelligence_provider_request));
+      std::move(story_provider),
+      std::move(focus_provider),
+      std::move(visible_stories_provider),
+      std::move(intelligence_provider_request));
   // End init maxwell.
 
   story_provider_impl_.reset(new StoryProviderImpl(
       &user_scope_, std::move(ledger), device_name, std::move(story_shell),
-      {&message_queue_manager_, agent_runner_.get(),
-            ledger_repository_.get()},
-      user_intelligence_provider_.get()));
-  story_provider_impl_->AddBinding(std::move(maxwell_story_provider_request));
+      component_context_info, user_intelligence_provider_.get()));
+  story_provider_impl_->AddBinding(std::move(story_provider_request));
+
+  focus_handler_.reset(new FocusHandler(
+      device_name, story_provider_impl_->GetRootPage()));
+  focus_handler_->AddProviderBinding(
+      std::move(focus_provider_request));
+
+  visible_stories_handler_.reset(new VisibleStoriesHandler);
+  visible_stories_handler_->AddProviderBinding(
+      std::move(visible_stories_provider_request));
 
   user_scope_.AddService<TokenProvider>(
       [this](fidl::InterfaceRequest<TokenProvider> request) {
@@ -201,17 +237,17 @@ void UserRunnerImpl::GetSuggestionProvider(
 
 void UserRunnerImpl::GetVisibleStoriesController(
     fidl::InterfaceRequest<VisibleStoriesController> request) {
-  visible_stories_handler_.GetController(std::move(request));
+  visible_stories_handler_->AddControllerBinding(std::move(request));
 }
 
 void UserRunnerImpl::GetFocusController(
     fidl::InterfaceRequest<FocusController> request) {
-  focus_handler_.GetController(std::move(request));
+  focus_handler_->AddControllerBinding(std::move(request));
 }
 
 void UserRunnerImpl::GetFocusProvider(
     fidl::InterfaceRequest<FocusProvider> request) {
-  focus_handler_.GetProvider(std::move(request));
+  focus_handler_->AddProviderBinding(std::move(request));
 }
 
 void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {

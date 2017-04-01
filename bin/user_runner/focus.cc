@@ -5,6 +5,8 @@
 #include "apps/modular/src/user_runner/focus.h"
 
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/lib/fidl/json_xdr.h"
+#include "apps/modular/lib/fidl/page_snapshot.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/time/time_point.h"
@@ -12,147 +14,122 @@
 
 namespace modular {
 
+// Prefix of the keys under which focus entries are stored in the user
+// root page. After the prefix follows the device ID.
+constexpr char kFocusKeyPrefix[] = "Focus/";
+
 namespace {
 
-constexpr char kUserFocusLedger[] = "user-focus";
-constexpr char kFocusedStoryIdKey[] = "focused-story-id";
-constexpr char kLastFocusChangeTimestampKey[] = "last-focus-change-timestamp";
+bool IsFocusKey(const fidl::Array<uint8_t>& key) {
+  constexpr size_t prefix_size = sizeof(kFocusKeyPrefix) - 1;
 
-std::string SerializeToLedgerValue(const std::string& focused_story_id,
-                                   uint64_t timestamp) {
-  rapidjson::Document doc;
-  auto& allocator = doc.GetAllocator();
-  doc.SetObject();
-  doc.AddMember(kFocusedStoryIdKey,
-                rapidjson::Value(focused_story_id, allocator), allocator);
-  doc.AddMember(kLastFocusChangeTimestampKey,
-                rapidjson::Value().SetUint64(timestamp), allocator);
-  return modular::JsonValueToString(doc);
+  // NOTE(mesch): A key that is *only* the prefix, without anything
+  // after it, is still not a valid story key. So the key must be
+  // truly longer than the prefix.
+  return key.size() > prefix_size &&
+         0 == memcmp(key.data(), kFocusKeyPrefix, prefix_size);
 }
 
-FocusInfoPtr CreateFocusInfo(const std::string& key, const std::string& value) {
-  rapidjson::Document value_doc;
-  value_doc.Parse(value);
-  FTL_DCHECK(value_doc.HasMember(kFocusedStoryIdKey));
-  FTL_DCHECK(value_doc[kFocusedStoryIdKey].IsString());
-  FTL_DCHECK(value_doc.HasMember(kLastFocusChangeTimestampKey));
-  FTL_DCHECK(value_doc[kLastFocusChangeTimestampKey].IsUint64());
-
-  auto focus_info = FocusInfo::New();
-  focus_info->device_id = key;
-  focus_info->focused_story_id = value_doc[kFocusedStoryIdKey].GetString();
-  focus_info->last_focus_change_timestamp =
-      value_doc[kLastFocusChangeTimestampKey].GetUint64();
-  return focus_info;
+// Serialization and deserialization of FocusInfo to and from JSON.
+void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
+  xdr->Field("device_id", &data->device_id);
+  xdr->Field("focused_story_id", &data->focused_story_id);
+  xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
 }
 
-class GetLedgerSnapshotCall : public Operation<void> {
+// Asynchronous operations of this service.
+
+class QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
  public:
-  GetLedgerSnapshotCall(
+  QueryCall(
       OperationContainer* const container,
-      ledger::PageSnapshotPtr snapshot,
-      std::unordered_map<std::string, std::string>* const ledger_map)
-      : Operation(container, [] {}),
-        snapshot_(std::move(snapshot)),
-        ledger_map_(ledger_map) {
+      std::shared_ptr<ledger::PageSnapshotPtr> const snapshot,
+      ResultCall result_call)
+      : Operation(container, std::move(result_call)),
+        snapshot_(snapshot) {
+    data_.resize(0);  // never return null
     Ready();
   }
 
-  void Run() override { GetSnapshotEntries(nullptr); }
-
  private:
-  void GetSnapshotEntries(fidl::Array<uint8_t> continuation_token) {
-    snapshot_->GetEntries(
-        nullptr, std::move(continuation_token),
+  void Run() override { GetEntries(nullptr); }
+
+  void GetEntries(fidl::Array<uint8_t> continuation_token) {
+    (*snapshot_)->GetEntries(
+        to_array(kFocusKeyPrefix), std::move(continuation_token),
         [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
                fidl::Array<uint8_t> continuation_token) {
           if (status != ledger::Status::OK &&
               status != ledger::Status::PARTIAL_RESULT) {
             FTL_LOG(ERROR) << "Ledger status " << status << ".";
-            Done();
+            Done(std::move(data_));
             return;
           }
 
           if (entries.size() == 0) {
             // No existing entries.
-            Done();
+            Done(std::move(data_));
             return;
           }
 
           for (const auto& entry : entries) {
-            std::string key(reinterpret_cast<const char*>(entry->key.data()),
-                            entry->key.size());
             std::string value;
             if (!mtl::StringFromVmo(entry->value, &value)) {
-              FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
-              return;
+              FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
+                             << " couldn't be copied.";
+              continue;
             }
 
-            ledger_map_->insert({key, value});
+            auto focus_info = FocusInfo::New();
+            if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
+              continue;
+            }
+
+            data_.push_back(std::move(focus_info));
           }
 
           if (status == ledger::Status::PARTIAL_RESULT) {
-            GetSnapshotEntries(std::move(continuation_token));
+            GetEntries(std::move(continuation_token));
           } else {
-            Done();
+            Done(std::move(data_));
           }
         });
   }
 
-  ledger::PageSnapshotPtr snapshot_;
-  std::unordered_map<std::string, std::string>* const ledger_map_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(GetLedgerSnapshotCall);
+  std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
+  fidl::Array<FocusInfoPtr> data_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(QueryCall);
 };
 
 }  // namespace
 
-FocusHandler::FocusHandler(const fidl::String& device_name,
-                           ledger::LedgerRepository* ledger_repository)
-    : page_watcher_binding_(this), device_name_(device_name) {
-  auto error_handler = [](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-    }
-  };
-
-  ledger_repository->GetLedger(to_array(kUserFocusLedger), ledger_.NewRequest(),
-                               error_handler);
-
-  ledger_->GetRootPage(page_.NewRequest(), error_handler);
-
-  ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), page_watcher_binding_.NewBinding(),
-                     error_handler);
-
-  new GetLedgerSnapshotCall(&operation_queue_, std::move(snapshot),
-                            &ledger_map_);
+FocusHandler::FocusHandler(const fidl::String& device_name, ledger::PagePtr page)
+    : page_(std::move(page)),
+      snapshot_("FocusHandler"),
+      page_watcher_binding_(this),
+      device_name_(device_name) {
+  page_->GetSnapshot(snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
+                     [](ledger::Status status) {
+                       if (status != ledger::Status::OK) {
+                         FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;
+                       }
+                     });
 }
 
 FocusHandler::~FocusHandler() = default;
 
-FocusProviderPtr FocusHandler::GetProvider() {
-  FocusProviderPtr ptr;
-  provider_bindings_.AddBinding(this, ptr.NewRequest());
-  return ptr;
-}
-
-void FocusHandler::GetProvider(fidl::InterfaceRequest<FocusProvider> request) {
+void FocusHandler::AddProviderBinding(
+    fidl::InterfaceRequest<FocusProvider> request) {
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
-void FocusHandler::GetController(fidl::InterfaceRequest<FocusController> request) {
+void FocusHandler::AddControllerBinding(
+    fidl::InterfaceRequest<FocusController> request) {
   controller_bindings_.AddBinding(this, std::move(request));
 }
 
 void FocusHandler::Query(const QueryCallback& callback) {
-  new SyncCall(&operation_queue_, [this, callback] {
-    auto focused_stories = fidl::Array<FocusInfoPtr>::New(0);
-    for (const auto& kv : ledger_map_) {
-      auto focus_info = CreateFocusInfo(kv.first, kv.second);
-      focused_stories.push_back(std::move(focus_info));
-    }
-    callback(std::move(focused_stories));
-  });
+  new QueryCall(&operation_queue_, snapshot_.shared_ptr(), callback);
 }
 
 void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
@@ -170,20 +147,39 @@ void FocusHandler::Duplicate(fidl::InterfaceRequest<FocusProvider> request) {
 }
 
 void FocusHandler::Set(const fidl::String& story_id) {
-  uint64_t seconds_since_epoch =
+  auto focus_info = FocusInfo::New();
+  focus_info->device_id = device_name_;
+  focus_info->focused_story_id = story_id;
+  focus_info->last_focus_change_timestamp =
       ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
-  // Add the value to ledger. We'll update |device_name_to_focus_info_| once we
-  // get an update back.
+
+  std::string json;
+  XdrWrite(&json, &focus_info, XdrFocusInfo);
+
+  // Focus watchers are notified from the page watcher notification.
+  std::string key{kFocusKeyPrefix + device_name_};
   page_->PutWithPriority(
-      to_array(device_name_),
-      to_array(SerializeToLedgerValue(story_id, seconds_since_epoch)),
+      to_array(key),
+      to_array(json),
       ledger::Priority::EAGER, [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
           return;
         }
       });
+
   FTL_LOG(INFO) << "Setting focus to story_id: " << story_id;
+
+  // TODO(mesch): What exactly is the guarantee for a sequence of
+  // Set() and Query() call? A Query() following Set() does not have
+  // to obtain the value that was just Set(), because the two are on
+  // different interfaces (FocusProvider vs. FocusController).
+  //
+  // But a Query() in some combination with Watch() likely must
+  // guarantee that the client of the FocusProvider sees all values
+  // ever Set() on the FocusController. This doesn't seem the case,
+  // unlike the two are combined into one call, analog to ledger's
+  // Page.GetSnapshot().
 }
 
 void FocusHandler::WatchRequest(
@@ -196,20 +192,33 @@ void FocusHandler::OnChange(ledger::PageChangePtr page,
                             ledger::ResultState result_state,
                             const OnChangeCallback& callback) {
   for (auto& entry : page->changes) {
-    std::string key(reinterpret_cast<const char*>(entry->key.data()),
-                    entry->key.size());
+    if (!IsFocusKey(entry->key)) {
+      continue;
+    }
+
     std::string value;
     if (!mtl::StringFromVmo(entry->value, &value)) {
-      FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
+      FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
+                     << " couldn't be copied.";
       return;
     }
 
-    ledger_map_[key] = value;
+    auto focus_info = FocusInfo::New();
+    if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
+      continue;
+    }
+
     for (const auto& watcher : change_watchers_) {
-      watcher->OnFocusChange(CreateFocusInfo(key, value));
+      watcher->OnFocusChange(focus_info.Clone());
     }
   }
-  callback(nullptr);
+
+  if (result_state != ledger::ResultState::COMPLETED &&
+      result_state != ledger::ResultState::PARTIAL_COMPLETED) {
+    callback(nullptr);
+  } else {
+    callback(snapshot_.NewRequest());
+  }
 }
 
 VisibleStoriesHandler::VisibleStoriesHandler()
@@ -217,13 +226,12 @@ VisibleStoriesHandler::VisibleStoriesHandler()
 
 VisibleStoriesHandler::~VisibleStoriesHandler() = default;
 
-VisibleStoriesProviderPtr VisibleStoriesHandler::GetProvider() {
-  VisibleStoriesProviderPtr ptr;
-  provider_bindings_.AddBinding(this, ptr.NewRequest());
-  return ptr;
+void VisibleStoriesHandler::AddProviderBinding(
+    fidl::InterfaceRequest<VisibleStoriesProvider> request) {
+  provider_bindings_.AddBinding(this, std::move(request));
 }
 
-void VisibleStoriesHandler::GetController(
+void VisibleStoriesHandler::AddControllerBinding(
     fidl::InterfaceRequest<VisibleStoriesController> request) {
   controller_bindings_.AddBinding(this, std::move(request));
 }

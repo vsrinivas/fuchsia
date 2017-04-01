@@ -5,14 +5,18 @@
 #ifndef APPS_MODULAR_SRC_USER_RUNNER_FOCUS_H_
 #define APPS_MODULAR_SRC_USER_RUNNER_FOCUS_H_
 
-#include <unordered_map>
+#include <string>
+#include <vector>
 
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/fidl/page_snapshot.h"
 #include "apps/modular/services/user/focus.fidl.h"
+#include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/string.h"
 
 // See services/user/focus.fidl for details.
 
@@ -20,13 +24,13 @@ namespace modular {
 
 class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
  public:
-  FocusHandler(const fidl::String& device_name,
-               ledger::LedgerRepository* ledger_repository);
+  FocusHandler(const fidl::String& device_name, ledger::PagePtr page);
   ~FocusHandler() override;
 
-  FocusProviderPtr GetProvider();
-  void GetProvider(fidl::InterfaceRequest<FocusProvider> request);
-  void GetController(fidl::InterfaceRequest<FocusController> request);
+  void AddProviderBinding(
+      fidl::InterfaceRequest<FocusProvider> request);
+  void AddControllerBinding(
+      fidl::InterfaceRequest<FocusController> request);
 
  private:
   // |FocusProvider|
@@ -45,22 +49,21 @@ class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
                 ledger::ResultState result_state,
                 const OnChangeCallback& callback) override;
 
-  OperationQueue operation_queue_;
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
-  ledger::LedgerPtr ledger_;
   ledger::PagePtr page_;
+  PageSnapshot snapshot_;
+  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
   const std::string device_name_;
+
+  // Operations on an instance of this class are sequenced in this
+  // operation queue.
+  OperationQueue operation_queue_;
 
   fidl::BindingSet<FocusProvider> provider_bindings_;
   fidl::BindingSet<FocusController> controller_bindings_;
 
   std::vector<FocusWatcherPtr> change_watchers_;
   std::vector<FocusRequestWatcherPtr> request_watchers_;
-
-  // An in-memory map of what is in the ledger. This is first constructed from
-  // a snapshot and then updated via a watcher
-  std::unordered_map<std::string, std::string> ledger_map_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FocusHandler);
 };
@@ -70,8 +73,10 @@ class VisibleStoriesHandler : VisibleStoriesProvider, VisibleStoriesController {
   VisibleStoriesHandler();
   ~VisibleStoriesHandler() override;
 
-  VisibleStoriesProviderPtr GetProvider();
-  void GetController(fidl::InterfaceRequest<VisibleStoriesController> request);
+  void AddProviderBinding(
+      fidl::InterfaceRequest<VisibleStoriesProvider> request);
+  void AddControllerBinding(
+      fidl::InterfaceRequest<VisibleStoriesController> request);
 
  private:
   // |VisibleStoriesProvider|

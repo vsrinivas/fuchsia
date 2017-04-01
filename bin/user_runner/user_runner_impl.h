@@ -17,13 +17,12 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/src/component/message_queue_manager.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
-#include "apps/modular/src/component/component_context_impl.h"
-#include "apps/modular/src/user_runner/focus.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -31,9 +30,13 @@
 
 namespace modular {
 
+class AgentRunner;
+class ComponentContextImpl;
+class FocusHandler;
 class LinkImpl;
 class StoryStorageImpl;
 class StoryProviderImpl;
+class VisibleStoriesHandler;
 
 class UserRunnerImpl : UserRunner, UserShellContext {
  public:
@@ -90,9 +93,12 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   TokenProviderImpl token_provider_impl_;
   std::string device_name_;
 
+  // This component context is supplied to the user intelligence
+  // provider, below, so it can run agents and create message queues.
   std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
   std::unique_ptr<fidl::Binding<ComponentContext>>
       maxwell_component_context_binding_;
+
   fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
       user_intelligence_provider_;
 
@@ -100,8 +106,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   // killed when this instance is deleted.
   std::vector<app::ApplicationControllerPtr> application_controllers_;
 
-  FocusHandler focus_handler_;
-  VisibleStoriesHandler visible_stories_handler_;
+  std::unique_ptr<FocusHandler> focus_handler_;
+  std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;
 
   // Given to the user shell so it can store its own data. These data
   // are shared between all user shells (so it's not private to the

@@ -29,6 +29,8 @@ executable("user_runner") {
     "//apps/maxwell/services/user",
     "//apps/modular/lib/auth:token_provider_impl",
     "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:json_xdr",
+    "//apps/modular/lib/fidl:ledger",
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/fidl:scope",
     "//apps/modular/lib/rapidjson",

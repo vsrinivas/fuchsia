@@ -25,7 +25,7 @@
 namespace modular {
 
 // Prefix of the keys under which story entries are stored in the user
-// root page.
+// root page. After the prefix follows the story ID.
 constexpr char kStoryKeyPrefix[] = "Story/";
 
 namespace {
@@ -59,7 +59,7 @@ std::string MakeStoryId(std::unordered_set<std::string>* const story_ids,
   return id;
 }
 
-bool IsStoryKey(fidl::Array<uint8_t>& key) {
+bool IsStoryKey(const fidl::Array<uint8_t>& key) {
   constexpr size_t prefix_size = sizeof(kStoryKeyPrefix) - 1;
 
   // NOTE(mesch): A key that is *only* the prefix, without anything
