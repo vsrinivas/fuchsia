@@ -45,6 +45,9 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   startAgent("file:///system/apps/agents/module_suggester.dartx");
   startAgent("file:///system/apps/agents/music_brainz.dartx");
 
+  // TODO(jwnichols): Uncomment this when the dashboard is more functional
+  startAgent("file:///system/apps/agents/mi_dashboard.dartx");
+
   // Only start Kronk if it exists.
   if (files::IsFile(kKronkPath)) {
     startAgent(kKronkPath);

@@ -13,6 +13,7 @@ group("agents") {
     ":module_suggester",
     ":module_suggester_dart",
     ":music_brainz",
+    ":mi_dashboard",
   ]
 }
 
@@ -38,6 +39,17 @@ dart_app("music_brainz") {
     "//application/lib/app/dart",
     "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",
+    "//third_party/dart-pkg/pub/http",
+  ]
+}
+
+dart_app("mi_dashboard") {
+  output_name = "agents/mi_dashboard.dartx"
+
+  main_dart = "mi_dashboard/main.dart"
+
+  deps = [
+    "//application/lib/app/dart",
     "//third_party/dart-pkg/pub/http",
   ]
 }
