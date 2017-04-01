@@ -1,0 +1,22 @@
+{
+    "binaries": [
+        {
+            "binary": "agents/mi_dashboard.dartx",
+            "bootfs_path": "apps/agents/mi_dashboard.dartx"
+        }
+    ],
+    "resources": [
+        {
+            "file": "apps/maxwell/src/agents/mi_dashboard/dashboard.config",
+            "bootfs_path": "data/mi_dashboard/dashboard.config"
+        },
+        {
+            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/index.html",
+            "bootfs_path": "data/mi_dashboard/webroot/index.html"
+        },
+        {
+            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/snooty-badge.jpg",
+            "bootfs_path": "data/mi_dashboard/webroot/snooty-badge.jpg"
+        }
+    ]
+}
