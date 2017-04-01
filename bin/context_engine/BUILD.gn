@@ -2,19 +2,90 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("context_engine") {
+# Directory-level alias.
+source_set("context_engine") {
+  deps = [
+    ":context_engine_main",
+  ]
+}
+
+source_set("context_publisher_impl") {
   sources = [
-    "context_engine.cc",
+    "context_publisher_impl.h",
+    "context_publisher_impl.cc",
+  ]
+
+  deps = [
+    ":graph",
+    ":repo",
+    "//apps/maxwell/services/context",
+  ]
+}
+
+source_set("context_subscriber_impl") {
+  sources = [
+    "context_subscriber_impl.h",
+    "context_subscriber_impl.cc",
+  ]
+
+  deps = [
+    ":repo",
+    "//apps/maxwell/services/context",
+  ]
+}
+
+source_set("graph") {
+  sources = [
     "graph.cc",
     "graph.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//lib/fidl/cpp/bindings",
+    "//apps/maxwell/src:bound_set",
+  ]
+}
+
+source_set("repo") {
+  sources = [
     "repo.cc",
     "repo.h",
   ]
 
   deps = [
+    ":graph",
+    "//apps/maxwell/services/context",
+  ]
+}
+
+source_set("context_engine_impl") {
+  sources = [
+    "context_engine_impl.h",
+    "context_engine_impl.cc",
+  ]
+
+  deps = [
+    ":context_publisher_impl",
+    ":context_subscriber_impl",
+    ":graph",
+    ":repo",
     "//application/lib/app",
     "//apps/maxwell/services/context",
-    "//apps/maxwell/src:bound_set",
+    "//lib/fidl/cpp/bindings",
+  ]
+}
+
+executable("context_engine_main") {
+  output_name = "context_engine"
+
+  sources = [
+    "context_engine_main.cc",
+  ]
+
+  deps = [
+    ":context_engine_impl",
+    "//application/lib/app",
     "//lib/mtl",
   ]
 }
