@@ -249,6 +249,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/env/unsetenv.c \
     $(LOCAL_DIR)/src/errno/__errno_location.c \
     $(LOCAL_DIR)/src/errno/strerror.c \
+    $(LOCAL_DIR)/src/exit/__cxa_thread_atexit.c \
     $(LOCAL_DIR)/src/exit/_Exit.c \
     $(LOCAL_DIR)/src/exit/abort.c \
     $(LOCAL_DIR)/src/exit/assert.c \

@@ -50,6 +50,8 @@ void __libc_exit_fini(void) ATTR_LIBC_VISIBILITY;
 
 void __dl_thread_cleanup(void) ATTR_LIBC_VISIBILITY;
 
+void __tls_run_dtors(void) ATTR_LIBC_VISIBILITY;
+
 // Registers the handles that mx_get_startup_handle() will return.
 //
 // This function takes ownership of the data, but not the memory: it assumes

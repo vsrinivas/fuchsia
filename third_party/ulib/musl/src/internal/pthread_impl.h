@@ -35,6 +35,8 @@ typedef struct {
     uintptr_t unsafe_sp;
 } tp_abi_t;
 
+struct tls_dtor;
+
 struct pthread {
 #ifndef TLS_ABOVE_TP
     // These must be the very first members.
@@ -52,6 +54,7 @@ struct pthread {
     struct iovec safe_stack, safe_stack_region;
     struct iovec unsafe_stack, unsafe_stack_region;
 
+    struct tls_dtor* tls_dtors;
     void* tsd[PTHREAD_KEYS_MAX];
     int tsd_used;
     int errno_value;

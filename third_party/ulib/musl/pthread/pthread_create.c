@@ -132,6 +132,8 @@ _Noreturn void pthread_exit(void* result) {
 
     self->result = result;
 
+    __tls_run_dtors();
+
     __pthread_tsd_run_dtors();
 
     /* Block all signals before decrementing the live thread count.
