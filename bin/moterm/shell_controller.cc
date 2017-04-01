@@ -41,12 +41,7 @@ ShellController::ShellController(History* history) : history_(history) {
   history_->RegisterClient(this);
 }
 
-ShellController::~ShellController() {
-  if (wait_id_) {
-    waiter_->CancelWait(wait_id_);
-  }
-  history_->UnregisterClient(this);
-}
+ShellController::~ShellController() {}
 
 std::vector<std::string> ShellController::GetShellCommand() {
   return {std::string(kShell)};
@@ -72,6 +67,14 @@ std::vector<mtl::StartupHandle> ShellController::GetStartupHandles() {
 
 void ShellController::Start() {
   WaitForShell();
+}
+
+// Stops communication with the shell.
+void ShellController::Terminate() {
+  if (wait_id_) {
+    waiter_->CancelWait(wait_id_);
+  }
+  history_->UnregisterClient(this);
 }
 
 void ShellController::OnRemoteEntry(const std::string& entry) {

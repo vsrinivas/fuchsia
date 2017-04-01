@@ -60,6 +60,7 @@ class MotermView : public mozart::BaseView,
   void StartCommand();
   void Blink(uint64_t blink_timer_id);
   void Resize();
+  void OnCommandTerminated();
 
   mozart::InputHandler input_handler_;
 

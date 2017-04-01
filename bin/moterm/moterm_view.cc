@@ -91,15 +91,12 @@ void MotermView::StartCommand() {
     shell_controller_->Start();
   }
 
-  bool success = command_->Start(
-      context_->launcher().get(), command_to_run, std::move(startup_handles),
-      [this](const void* bytes, size_t num_bytes) {
-        OnDataReceived(bytes, num_bytes);
-      },
-      [] {
-        FTL_LOG(INFO) << "Command terminated.";
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
-      });
+  bool success = command_->Start(context_->launcher().get(), command_to_run,
+                                 std::move(startup_handles),
+                                 [this](const void* bytes, size_t num_bytes) {
+                                   OnDataReceived(bytes, num_bytes);
+                                 },
+                                 [this] { OnCommandTerminated(); });
   if (!success) {
     FTL_LOG(ERROR) << "Error starting command.";
     exit(1);
@@ -332,6 +329,14 @@ void MotermView::SendData(const void* bytes, size_t num_bytes) {
 void MotermView::OnDataReceived(const void* bytes, size_t num_bytes) {
   model_.ProcessInput(bytes, num_bytes, &model_state_changes_);
   ScheduleDraw(false);
+}
+
+void MotermView::OnCommandTerminated() {
+  FTL_LOG(INFO) << "Command terminated.";
+  if (shell_controller_) {
+    shell_controller_->Terminate();
+  }
+  mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 }  // namespace moterm

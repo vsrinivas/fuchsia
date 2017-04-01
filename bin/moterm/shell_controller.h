@@ -41,6 +41,9 @@ class ShellController : public History::Client {
   // Starts the communication with shell.
   void Start();
 
+  // Stops communication with the shell.
+  void Terminate();
+
   // History::Client:
   void OnRemoteEntry(const std::string& entry) override;
 
