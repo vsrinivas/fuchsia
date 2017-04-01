@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/client.fidl.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_subscriber.fidl.h"
 #include "apps/maxwell/src/acquirers/gps.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"

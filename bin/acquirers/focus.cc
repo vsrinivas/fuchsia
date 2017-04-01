@@ -5,7 +5,7 @@
 #include "apps/maxwell/src/acquirers/focus.h"
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/client.fidl.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 
 #include "lib/fidl/cpp/bindings/array.h"

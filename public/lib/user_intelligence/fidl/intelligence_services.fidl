@@ -4,7 +4,8 @@
 
 module maxwell;
 
-import "apps/maxwell/services/context/client.fidl";
+import "apps/maxwell/services/context/context_subscriber.fidl";
+import "apps/maxwell/services/context/context_publisher.fidl";
 import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
 
 // A container for component-scoped services. This contains any and all

@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/services/context/subscriber_link.fidl.h"
+#include "apps/maxwell/services/context/context_subscriber.fidl.h"
 #include "apps/maxwell/src/context_engine/graph.h"
 
 namespace maxwell {

@@ -6,7 +6,8 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/services/context/client.fidl.h"
+#include "apps/maxwell/services/context/context_subscriber.fidl.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/src/bound_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 

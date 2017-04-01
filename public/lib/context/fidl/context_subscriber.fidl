@@ -4,8 +4,16 @@
 
 module maxwell;
 
-// An attributed link that listens to updates to a context label with a bound
-// schema.
+// Client that should be requested by context subscribers. All context read by
+// this client is attributed to the bound component.
+[ServiceName="maxwell.ContextSubscriber"]
+interface ContextSubscriber {
+  // Registers a listener to a context label.
+  Subscribe(string label, ContextSubscriberLink link);
+  // TODO(thatguy) => (Subscription subscription);
+};
+
+// An attributed link that listens to updates to a context label.
 interface ContextSubscriberLink {
   // Receives an update for a context label.
   OnUpdate(ContextUpdate update);

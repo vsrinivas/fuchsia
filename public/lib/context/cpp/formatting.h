@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/services/context/subscriber_link.fidl.h"
+#include "apps/maxwell/services/context/context_subscriber.fidl.h"
 #include "lib/fidl/cpp/bindings/formatting.h"
 
 namespace maxwell {

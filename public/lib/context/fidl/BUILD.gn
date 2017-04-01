@@ -6,10 +6,8 @@ import("//lib/fidl/fidl.gni")
 
 fidl("context") {
   sources = [
-    "client.fidl",
     "context_engine.fidl",
-    "context_provider.fidl",
-    "publisher_link.fidl",
-    "subscriber_link.fidl",
+    "context_publisher.fidl",
+    "context_subscriber.fidl",
   ]
 }

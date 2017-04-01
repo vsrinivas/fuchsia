@@ -4,17 +4,17 @@
 
 module maxwell;
 
-import "client.fidl";
+import "context_publisher.fidl";
+import "context_subscriber.fidl";
 
 // Top-level client provider interface that produces clients that can be used by
 // various types of publishers or subscribers of context.
 [ServiceName="maxwell.ContextEngine"]
 interface ContextEngine {
   // Registers a component that publishes context based on sensors and/or
-  // network access. Such apps have publish-only access to Context Service.
+  // network access.
   RegisterPublisher(string url, ContextPublisher& client);
 
   // Registers a component that produces suggestions based on available context.
-  // Such apps have subscribe-only access to Context Service.
   RegisterSubscriber(string url, ContextSubscriber& client);
 };
