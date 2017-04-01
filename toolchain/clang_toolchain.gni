@@ -93,6 +93,26 @@ template("clang_toolchain") {
       ]
     }
 
+    tool("objc") {
+      depfile = "{{output}}.d"
+      command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} {{cflags_objc}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "OBJC {{output}}"
+      outputs = [
+        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+      ]
+    }
+
+    tool("objcxx") {
+      depfile = "{{output}}.d"
+      command = "$cxx -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} {{cflags_objcc}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "OBJCXX {{output}}"
+      outputs = [
+        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+      ]
+    }
+
     tool("alink") {
       rspfile = "{{output}}.rsp"
       command =
@@ -116,7 +136,7 @@ template("clang_toolchain") {
         unstripped_outfile = "{{root_out_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
       }
       if (invoker.toolchain_os == "mac") {
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{libs}} {{solibs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-install_name,@rpath/\"{{target_output_name}}{{output_extension}}\" -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{libs}} {{solibs}}"
         rspfile_content = "{{inputs_newline}}"
         default_output_extension = ".dylib"
       } else {

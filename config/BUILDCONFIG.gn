@@ -50,8 +50,10 @@ _shared_library_target_configs = _shared_binary_target_configs + [
                                    "//build/config:shared_library_config",
                                    "//build/config:symbol_visibility_hidden",
                                  ]
-_executable_target_configs =
-    _shared_binary_target_configs + [ "//build/config:executable_config" ]
+_executable_target_configs = _shared_binary_target_configs + [
+                               "//build/config:executable_config",
+                               "//build/config:default_libs",
+                             ]
 
 if (is_pic_default) {
   _shared_binary_target_configs += [ "//build/config:shared_library_config" ]
@@ -134,3 +136,6 @@ if (current_os == "fuchsia") {
 }
 
 set_default_toolchain(target_toolchain)
+
+# Some projects expect a default value for sources assigment filters.
+sources_assignment_filter = []

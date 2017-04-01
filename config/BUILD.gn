@@ -42,6 +42,8 @@ config("compiler") {
         # build directory.
         "-Wl,-rpath=\$ORIGIN/",
       ]
+    } else if (current_os == "mac") {
+      configs += [ "//build/config/mac:compiler" ]
     }
   }
 
@@ -134,6 +136,8 @@ config("shared_library_config") {
     configs += [ "//build/config/fuchsia:shared_library_config" ]
   } else if (current_os == "linux") {
     cflags += [ "-fPIC" ]
+  } else if (current_os == "mac") {
+    configs += [ "//build/config/mac:mac_dynamic_flags" ]
   }
 }
 
@@ -145,5 +149,18 @@ config("executable_config") {
       "//build/config/fuchsia:executable_config",
       "//build/config/fuchsia:mxio_config",
     ]
+  } else if (current_os == "mac") {
+    configs += [
+      "//build/config/mac:mac_dynamic_flags",
+      "//build/config/mac:mac_executable_flags",
+    ]
+  }
+}
+
+config("default_libs") {
+  configs = []
+
+  if (current_os == "mac") {
+    configs += [ "//build/config/mac:default_libs" ]
   }
 }
