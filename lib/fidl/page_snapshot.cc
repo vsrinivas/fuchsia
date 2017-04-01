@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/page_snapshot.h"
+#include "apps/modular/lib/fidl/page_snapshot.h"
 
 namespace modular {
 

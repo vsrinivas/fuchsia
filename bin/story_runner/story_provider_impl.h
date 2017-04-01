@@ -11,6 +11,7 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "apps/modular/lib/fidl/page_snapshot.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/config/config.fidl.h"
@@ -20,7 +21,6 @@
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
 #include "apps/modular/src/story_runner/conflict_resolver_impl.h"
-#include "apps/modular/src/story_runner/page_snapshot.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"

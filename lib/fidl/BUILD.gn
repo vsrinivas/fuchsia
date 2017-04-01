@@ -32,6 +32,19 @@ source_set("json_xdr") {
   ]
 }
 
+source_set("ledger") {
+  sources = [
+    "page_snapshot.cc",
+    "page_snapshot.h",
+  ]
+
+  deps = [
+    "//apps/ledger/services/public",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+  ]
+}
+
 source_set("operation") {
   sources = [
     "operation.cc",
