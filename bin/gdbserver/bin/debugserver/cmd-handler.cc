@@ -669,6 +669,11 @@ bool CommandHandler::Handle_q(const ftl::StringView& prefix,
   if (prefix == kXfer)
     return HandleQueryXfer(params, callback);
 
+  // TODO(dje): TO-195
+  // QDisableRandomization:VALUE ?
+  // qGetTLSAddr:THREAD-ID,OFFSET,LM
+  // qThreadExtraInfo,THREAD-ID ?
+
   return false;
 }
 
@@ -987,6 +992,11 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
 bool CommandHandler::HandleQueryXfer(const ftl::StringView& params,
                                      const ResponseCallback& callback) {
   // We only support qXfer:auxv:read::
+  // TODO(dje): TO-195
+  // - qXfer::osdata::read::OFFSET,LENGTH
+  // - qXfer:memory-map:read::OFFSET,LENGTH ?
+  // - qXfer:libraries-svr4:read:ANNEX:OFFSET,LENGTH ?
+  // - qXfer:features:read:ANNEX:OFFSET,LENGTH ?
   ftl::StringView auxv_read("auxv:read::");
   if (!StartsWith(params, auxv_read))
     return false;
