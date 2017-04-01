@@ -155,6 +155,8 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
         return Handle_q(prefix, params, callback);
       return Handle_Q(prefix, params, callback);
     }
+    case 'T':  // Is thread alive?
+      return Handle_T(packet.substr(1), callback);
     case 'v':  // v-packets
       return Handle_v(packet.substr(1), callback);
     case 'z':  // Remove software breakpoint
@@ -675,6 +677,36 @@ bool CommandHandler::Handle_Q(const ftl::StringView& prefix,
     return HandleSetNonStop(params, callback);
 
   return false;
+}
+
+bool CommandHandler::Handle_T(const ftl::StringView& packet,
+                              const ResponseCallback& callback) {
+  // If there is no current process or if the current process isn't attached,
+  // then report an error.
+  Process* current_process = server_->current_process();
+  if (!current_process || !current_process->IsAttached()) {
+    FTL_LOG(ERROR) << "T: No inferior";
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
+  }
+
+  mx_koid_t tid;
+  if (!ftl::StringToNumberWithError<mx_koid_t>(packet, &tid,
+                                               ftl::Base::k16)) {
+    FTL_LOG(ERROR) << "T: Malformed thread id given: " << packet;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  Thread* thread = current_process->FindThreadById(tid);
+  if (!thread) {
+    FTL_LOG(ERROR) << "T: no such thread: " << packet;
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
+  }
+  if (!thread->IsLive()) {
+    FTL_LOG(ERROR) << "T: thread found, but not live: " << packet;
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
+  }
+
+  return ReplyOK(callback);
 }
 
 bool CommandHandler::Handle_v(const ftl::StringView& packet,

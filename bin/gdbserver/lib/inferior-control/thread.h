@@ -56,6 +56,10 @@ class Thread final {
   // Returns the current state of this thread.
   State state() const { return state_; }
 
+  // Returns true if thread is alive. It could be stopped, but it's still
+  // alive.
+  bool IsLive() const;
+
   static const char* StateName(Thread::State state);
 
   // Returns a GDB signal number based on the current exception context. If no

@@ -74,6 +74,18 @@ void Thread::set_state(State state) {
   state_ = state;
 }
 
+bool Thread::IsLive() const {
+  switch (state_) {
+    case State::kNew:
+    case State::kStopped:
+    case State::kRunning:
+    case State::kStepping:
+      return true;
+    default:
+      return false;
+  }
+}
+
 void Thread::Clear() {
   // We close the handle here so the o/s will release the thread.
   if (handle_ != MX_HANDLE_INVALID)

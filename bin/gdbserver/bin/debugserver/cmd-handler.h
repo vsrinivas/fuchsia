@@ -57,6 +57,8 @@ class CommandHandler final {
   bool Handle_Q(const ftl::StringView& prefix,
                 const ftl::StringView& params,
                 const ResponseCallback& callback);
+  bool Handle_T(const ftl::StringView& packet,
+                const ResponseCallback& callback);
   bool Handle_v(const ftl::StringView& packet,
                 const ResponseCallback& callback);
   bool Handle_zZ(bool insert,
