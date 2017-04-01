@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:application.lib.app.dart/app.dart';
-import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.device/device_context.fidl.dart';
-import 'package:apps.modular.services.device/device_shell.fidl.dart';
 import 'package:apps.modular.services.device/user_provider.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:apps.mozart.services.views/view_token.fidl.dart';
@@ -14,154 +12,99 @@ import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-void _log(String msg) {
-  print('[UserPicker Device Shell] $msg');
-}
+import 'device_shell_factory_impl.dart';
+import 'device_shell_factory_widget.dart';
 
-class _DeviceShell extends DeviceShell {
-  final DeviceShellBinding _binding = new DeviceShellBinding();
-
-  void bind(InterfaceRequest<DeviceShell> request) {
-    _binding.bind(this, request);
-  }
-
-  @override
-  void terminate(void callback()) {
-    callback();
-  }
-}
-
-class _AppState {
-  final DeviceContextProxy _deviceContextProxy;
-  final UserProviderProxy _userProviderProxy;
-  final List<String> _users;
-
-  _AppState(this._deviceContextProxy, this._userProviderProxy, this._users);
-
-  // API below is exposed to the view state.
-  List<String> get users => _users;
-  void shutdown() => _deviceContextProxy.shutdown();
-  UserProviderProxy get userProviderProxy => _userProviderProxy;
-}
-
-class _DeviceShellFactory extends DeviceShellFactory {
-  final _UserPickerScreenState _state;
-  final DeviceShellFactoryBinding _binding = new DeviceShellFactoryBinding();
-
-  final DeviceContextProxy _deviceContextProxy = new DeviceContextProxy();
-  final UserProviderProxy _userProviderProxy = new UserProviderProxy();
-
-  _DeviceShell _shell = new _DeviceShell();
-
-  _DeviceShellFactory(this._state);
-
-  void bind(InterfaceRequest<DeviceShellFactory> request) {
-    _binding.bind(this, request);
-  }
-
-  // NOTE: Multiple calls to create() is broken. This is intentional as the
-  // device_runner only calls create() once.
-  @override
-  void create(
-      InterfaceHandle<DeviceContext> deviceContextHandle,
-      InterfaceHandle<UserProvider> userProviderHandle,
-      InterfaceRequest<DeviceShell> deviceShellRequest) {
-    _log("_DeviceShellFactory.create()");
-    _deviceContextProxy.ctrl.bind(deviceContextHandle);
-    _userProviderProxy.ctrl.bind(userProviderHandle);
-    _userProviderProxy.previousUsers((List<String> users) {
-      final _AppState appState =
-          new _AppState(_deviceContextProxy, _userProviderProxy, users);
-      _state.setAppState(appState);
-    });
-    _shell.bind(deviceShellRequest);
-  }
-}
+const String _kDefaultUserName = 'user1';
+const Color _kFuchsiaColor = const Color(0xFFFF00C0);
 
 class _UserPickerScreen extends StatefulWidget {
-  final ApplicationContext _context;
-  final _UserPickerScreenState _state;
-
-  _UserPickerScreen({Key key, ApplicationContext context})
-      : super(key: key),
-        _context = context,
-        _state = new _UserPickerScreenState() {
-    _log("UserPickerScreen()");
-    final deviceShellFactory = new _DeviceShellFactory(_state);
-    _context.outgoingServices.addServiceForName(
-        (InterfaceRequest<DeviceShellFactory> request) {
-      _log("Service request for DeviceShellFactory");
-      deviceShellFactory.bind(request);
-    }, DeviceShellFactory.serviceName);
-  }
+  _UserPickerScreen({Key key}) : super(key: key);
 
   @override
-  _UserPickerScreenState createState() {
-    return _state;
-  }
+  _UserPickerScreenState createState() => new _UserPickerScreenState();
 }
 
 class _UserPickerScreenState extends State<_UserPickerScreen> {
-  _AppState _appState;
-  bool _appStateReady = false;
-
+  DeviceContext _deviceContext;
+  UserProvider _userProvider;
+  List<String> _users;
   ChildViewConnection _childViewConnection;
-  bool _childViewConnectionReady = false;
 
-  _UserPickerScreenState();
+  set deviceContext(DeviceContext deviceContext) {
+    _deviceContext = deviceContext;
+  }
 
-  void setAppState(final _AppState appState) {
-    _appState = appState;
-    setState(() {
-      _appStateReady = true;
+  set userProvider(UserProvider userProvider) {
+    _userProvider = userProvider;
+    userProvider.previousUsers((List<String> users) {
+      setState(() {
+        _users = users;
+      });
     });
   }
 
-  void _runUser(String user) {
+  void _loginUser(String user) {
     final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
     final InterfacePair<UserController> userController =
         new InterfacePair<UserController>();
-    _appState.userProviderProxy.login(user, null, null, viewOwner.passRequest(),
-        userController.passRequest());
-    _childViewConnection = new ChildViewConnection(viewOwner.passHandle());
+    _userProvider?.login(
+      user,
+      null,
+      null,
+      viewOwner.passRequest(),
+      userController.passRequest(),
+    );
     setState(() {
-      _childViewConnectionReady = true;
+      _childViewConnection = new ChildViewConnection(viewOwner.passHandle());
     });
   }
 
   void _defaultUser() {
-    _appState.userProviderProxy.addUser("user1", null, "ledger.fuchsia.com");
-    _runUser("user1");
+    _userProvider?.addUser(_kDefaultUserName, null, "ledger.fuchsia.com");
+    _loginUser(_kDefaultUserName);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_childViewConnectionReady) {
+    if (_childViewConnection != null) {
       return new ChildView(connection: _childViewConnection);
     }
 
     final List<Widget> children = <Widget>[];
-    if (_appStateReady) {
-      // Add list of previous users.
-      children.addAll(
-        _appState.users.map((String user) {
-          return new Container(
+    if (_users != null) {
+      if (_users.isNotEmpty) {
+        // Add list of previous users.
+        children.addAll(
+          _users.map((String user) {
+            return new Container(
+              margin: const EdgeInsets.all(8.0),
+              child: new RaisedButton(
+                onPressed: () => _loginUser(user),
+                child: new Text('Login as $user'),
+              ),
+            );
+          }),
+        );
+      } else {
+        // Option to login as default user.
+        children.add(
+          new Container(
             margin: const EdgeInsets.all(8.0),
             child: new RaisedButton(
-              onPressed: () => _runUser(user),
-              child: new Text('Run as $user'),
+              onPressed: _defaultUser,
+              child: new Text('Login as default user: $_kDefaultUserName'),
             ),
-          );
-        }),
-      );
-
-      // Option to login as default user.
+          ),
+        );
+      }
+    } else {
       children.add(
         new Container(
-          margin: const EdgeInsets.all(8.0),
-          child: new RaisedButton(
-            onPressed: _defaultUser,
-            child: new Text('Run as default user'),
+          width: 64.0,
+          height: 64.0,
+          child: new CircularProgressIndicator(
+            valueColor: new AlwaysStoppedAnimation<Color>(_kFuchsiaColor),
           ),
         ),
       );
@@ -184,7 +127,7 @@ class _UserPickerScreenState extends State<_UserPickerScreen> {
               child: new Container(
                 margin: const EdgeInsets.all(16.0),
                 child: new RaisedButton(
-                  onPressed: _appState?.shutdown,
+                  onPressed: () => _deviceContext?.shutdown(),
                   child: new Text('Shutdown'),
                 ),
               ),
@@ -197,6 +140,23 @@ class _UserPickerScreenState extends State<_UserPickerScreen> {
 }
 
 void main() {
-  runApp(
-      new _UserPickerScreen(context: new ApplicationContext.fromStartupInfo()));
+  GlobalKey<_UserPickerScreenState> userPickerKey =
+      new GlobalKey<_UserPickerScreenState>();
+  DeviceShellFactoryWidget deviceShellFactoryWidget =
+      new DeviceShellFactoryWidget(
+    applicationContext: new ApplicationContext.fromStartupInfo(),
+    deviceShellFactory: new DeviceShellFactoryImpl(
+      onUserProviderReceived: (UserProvider userProvider) {
+        userPickerKey.currentState.userProvider = userProvider;
+      },
+      onDeviceContextReceived: (DeviceContext deviceContext) {
+        userPickerKey.currentState.deviceContext = deviceContext;
+      },
+    ),
+    child: new _UserPickerScreen(key: userPickerKey),
+  );
+
+  runApp(deviceShellFactoryWidget);
+
+  deviceShellFactoryWidget.advertise();
 }
