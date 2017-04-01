@@ -12,6 +12,7 @@ import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
+import 'device_shell_impl.dart';
 import 'device_shell_factory_impl.dart';
 import 'device_shell_factory_widget.dart';
 
@@ -146,6 +147,7 @@ void main() {
       new DeviceShellFactoryWidget(
     applicationContext: new ApplicationContext.fromStartupInfo(),
     deviceShellFactory: new DeviceShellFactoryImpl(
+      deviceShell: new DeviceShellImpl(),
       onUserProviderReceived: (UserProvider userProvider) {
         userPickerKey.currentState.userProvider = userProvider;
       },
