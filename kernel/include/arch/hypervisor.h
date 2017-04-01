@@ -32,6 +32,10 @@ status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context);
 status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
                            mxtl::unique_ptr<GuestContext>* context);
 
-/* Start a guest within a guest context.
+/* Enter a guest context.
  */
-status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_entry);
+status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context);
+
+/* Set the entry of the guest context.
+ */
+status_t arch_guest_set_entry(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_entry);

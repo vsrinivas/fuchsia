@@ -16,7 +16,7 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/hypervisor.h>
-#include <arch/x86/hypervisor_host.h>
+#include <arch/x86/hypervisor_state.h>
 #include <arch/x86/idt.h>
 #include <arch/x86/registers.h>
 #include <hypervisor/guest_physical_address_space.h>
@@ -523,7 +523,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_ESP, 0);
     vmwrite(VMCS_XX_HOST_IA32_SYSENTER_EIP, 0);
     vmwrite(VMCS_32_HOST_IA32_SYSENTER_CS, 0);
-    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&host_state_));
+    vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&vmx_state_));
     vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_exit_entry));
 
     // Setup VMCS guest state.
@@ -597,7 +597,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     return NO_ERROR;
 }
 
-void vmx_exit(VmxHostState* host_state) {
+void vmx_exit(VmxState* vmx_state) {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu_num = arch_curr_cpu_num();
 
@@ -623,17 +623,22 @@ static void vmexit_handler(uint64_t reason) {
     }
 }
 
-status_t VmcsPerCpu::Launch(uintptr_t guest_cr3, uintptr_t guest_entry) {
+status_t VmcsPerCpu::Enter(const VmcsContext& context) {
     AutoVmcsLoad vmcs_load(&page_);
-    vmwrite(VMCS_XX_GUEST_CR3, guest_cr3);
-    vmwrite(VMCS_XX_GUEST_RIP, guest_entry);
-
     // FS is used for thread-local storage — save for this thread.
     vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
     // CR3 is used to maintain the virtual address space — save for this thread.
     vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
 
-    status_t status = vmx_launch(&host_state_);
+    if (do_resume_) {
+        dprintf(SPEW, "re-entering guest\n");
+    } else {
+        vmwrite(VMCS_XX_GUEST_CR3, context.cr3());
+        vmwrite(VMCS_XX_GUEST_RIP, context.entry());
+    }
+
+    dprintf(SPEW, "guest rax (pre-enter): %#" PRIx64 "\n", vmx_state_.guest_state.rax);
+    status_t status = vmx_enter(&vmx_state_, do_resume_);
     if (status != NO_ERROR) {
         uint64_t error = vmread(VMCS_32_INSTRUCTION_ERROR);
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
@@ -654,6 +659,8 @@ status_t VmcsPerCpu::Launch(uintptr_t guest_cr3, uintptr_t guest_entry) {
 
         vmexit_handler(reason);
     }
+    do_resume_ = true;
+    dprintf(SPEW, "guest rax (post-enter): %#" PRIx64 "\n", vmx_state_.guest_state.rax);
     return status;
 }
 
@@ -724,18 +731,24 @@ status_t VmcsContext::set_cr3(uintptr_t guest_cr3) {
     return NO_ERROR;
 }
 
-static int vmcs_launch(void* arg) {
-    VmcsContext* context = static_cast<VmcsContext*>(arg);
-    VmcsPerCpu* per_cpu = context->PerCpu();
-    return per_cpu->Launch(context->cr3(), context->entry());
-}
-
-status_t VmcsContext::Start(uintptr_t guest_entry) {
-    if (cr3_ == UINTPTR_MAX)
-        return ERR_BAD_STATE;
+status_t VmcsContext::set_entry(uintptr_t guest_entry) {
     if (guest_entry >= gpas_->size())
         return ERR_INVALID_ARGS;
     entry_ = guest_entry;
+    return NO_ERROR;
+}
+
+static int vmcs_launch(void* arg) {
+    VmcsContext* context = static_cast<VmcsContext*>(arg);
+    VmcsPerCpu* per_cpu = context->PerCpu();
+    return per_cpu->Enter(*context);
+}
+
+status_t VmcsContext::Enter() {
+    if (cr3_ == UINTPTR_MAX)
+        return ERR_BAD_STATE;
+    if (entry_ == UINTPTR_MAX)
+        return ERR_BAD_STATE;
     return percpu_exec(vmcs_launch, this);
 }
 
@@ -752,10 +765,15 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
     return VmcsContext::Create(guest_phys_mem, context);
 }
 
+status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context) {
+    return context->Enter();
+}
+
 status_t x86_guest_set_cr3(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_cr3) {
     return context->set_cr3(guest_cr3);
 }
 
-status_t arch_guest_start(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_entry) {
-    return context->Start(guest_entry);
+status_t arch_guest_set_entry(const mxtl::unique_ptr<GuestContext>& context,
+                              uintptr_t guest_entry) {
+    return context->set_entry(guest_entry);
 }

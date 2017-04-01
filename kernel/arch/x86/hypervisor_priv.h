@@ -209,11 +209,12 @@ public:
     status_t Init(const VmxInfo& vmx_info) override;
     status_t Clear();
     status_t Setup(paddr_t pml4_address);
-    status_t Launch(uintptr_t guest_cr3, uintptr_t guest_entry);
+    status_t Enter(const VmcsContext& context);
 
 private:
+    bool do_resume_ = false;
     VmxPage msr_bitmaps_page_;
-    VmxHostState host_state_;
+    VmxState vmx_state_;
 };
 
 template<typename T>

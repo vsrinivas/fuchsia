@@ -9,5 +9,6 @@
 .text
 
 FUNCTION(guest_start)
-    jmp .
+    inc %rax
+    jmp guest_start
 FUNCTION(guest_end)

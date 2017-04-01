@@ -19,7 +19,9 @@ public:
     ~GuestDispatcher();
 
     mx_obj_type_t get_type() const { return MX_OBJ_TYPE_GUEST; }
-    mx_status_t Start(uintptr_t guest_entry);
+
+    mx_status_t Enter();
+    mx_status_t set_entry(uintptr_t guest_entry);
 
 #if ARCH_X86_64
     mx_status_t set_cr3(uintptr_t guest_cr3);

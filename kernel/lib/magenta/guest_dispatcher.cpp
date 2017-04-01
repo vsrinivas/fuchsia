@@ -37,6 +37,12 @@ GuestDispatcher::GuestDispatcher(mxtl::RefPtr<HypervisorDispatcher> hypervisor,
 
 GuestDispatcher::~GuestDispatcher() {}
 
+mx_status_t GuestDispatcher::Enter() {
+    canary_.Assert();
+
+    return arch_guest_enter(context_);
+}
+
 #if ARCH_X86_64
 mx_status_t GuestDispatcher::set_cr3(uintptr_t guest_cr3) {
     canary_.Assert();
@@ -45,8 +51,8 @@ mx_status_t GuestDispatcher::set_cr3(uintptr_t guest_cr3) {
 }
 #endif // ARCH_X86_64
 
-mx_status_t GuestDispatcher::Start(uintptr_t guest_entry) {
+mx_status_t GuestDispatcher::set_entry(uintptr_t guest_entry) {
     canary_.Assert();
 
-    return arch_guest_start(context_, guest_entry);
+    return arch_guest_set_entry(context_, guest_entry);
 }

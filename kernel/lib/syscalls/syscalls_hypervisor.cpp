@@ -65,7 +65,7 @@ static mx_status_t guest_create(mx_handle_t hypervisor_handle, mx_handle_t guest
     return NO_ERROR;
 }
 
-static mx_status_t guest_start(mx_handle_t handle, uintptr_t guest_entry) {
+static mx_status_t guest_enter(mx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<GuestDispatcher> guest;
@@ -73,7 +73,7 @@ static mx_status_t guest_start(mx_handle_t handle, uintptr_t guest_entry) {
     if (status != NO_ERROR)
         return status;
 
-    return guest->Start(guest_entry);
+    return guest->Enter();
 }
 
 #if ARCH_X86_64
@@ -88,6 +88,17 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
     return guest->set_cr3(guest_cr3);
 }
 #endif
+
+static mx_status_t guest_set_entry(mx_handle_t handle, uintptr_t guest_entry) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<GuestDispatcher> guest;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_EXECUTE, &guest);
+    if (status != NO_ERROR)
+        return status;
+
+    return guest->set_entry(guest_entry);
+}
 
  mx_status_t sys_hypervisor_op(mx_handle_t handle, uint32_t opcode, user_ptr<const void> args,
                                uint32_t args_len, user_ptr<void> result, uint32_t result_len) {
@@ -108,14 +119,8 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
             return ERR_INVALID_ARGS;
         return NO_ERROR;
     }
-    case MX_HYPERVISOR_OP_GUEST_START: {
-        uintptr_t guest_entry;
-        if (args_len != sizeof(guest_entry))
-            return ERR_INVALID_ARGS;
-        if (args.copy_array_from_user(&guest_entry, sizeof(guest_entry)) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-        return guest_start(handle, guest_entry);
-    }
+    case MX_HYPERVISOR_OP_GUEST_ENTER:
+        return guest_enter(handle);
 #if ARCH_X86_64
     case MX_HYPERVISOR_OP_GUEST_SET_CR3: {
         uintptr_t guest_cr3;
@@ -126,6 +131,14 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
         return guest_set_cr3(handle, guest_cr3);
     }
 #endif // ARCH_X86_64
+    case MX_HYPERVISOR_OP_GUEST_SET_ENTRY: {
+        uintptr_t guest_entry;
+        if (args_len != sizeof(guest_entry))
+            return ERR_INVALID_ARGS;
+        if (args.copy_array_from_user(&guest_entry, sizeof(guest_entry)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        return guest_set_entry(handle, guest_entry);
+    }
     default:
         return ERR_INVALID_ARGS;
     }

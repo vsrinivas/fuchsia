@@ -59,15 +59,16 @@ public:
 
     paddr_t Pml4Address();
     VmcsPerCpu* PerCpu();
-    status_t set_cr3(uintptr_t guest_cr3);
-    uintptr_t cr3() { return cr3_; }
-    uintptr_t entry() {  return entry_; }
+    status_t Enter();
 
-    status_t Start(uintptr_t guest_entry);
+    status_t set_cr3(uintptr_t guest_cr3);
+    uintptr_t cr3() const { return cr3_; }
+    status_t set_entry(uintptr_t guest_entry);
+    uintptr_t entry() const {  return entry_; }
 
 private:
     uintptr_t cr3_ = UINTPTR_MAX;
-    uintptr_t entry_;
+    uintptr_t entry_ = UINTPTR_MAX;
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     mxtl::Array<VmcsPerCpu> per_cpus_;
 
