@@ -22,7 +22,7 @@ class TodoListViewState extends State<TodoListView> {
   LinkConnector _linkConnector;
   final Generator _generator = new Generator();
   final List<TodoItem> _items = new List<TodoItem>();
-  InputValue _newTodo = InputValue.empty;
+  TextEditingController _newTodo = new TextEditingController();
 
   TodoListViewState(this._linkConnector) {
     _linkConnector.setCallback((List<TodoItem> items) {
@@ -41,45 +41,40 @@ class TodoListViewState extends State<TodoListView> {
   }
 
   /// Creates one item and adds it to the ledger.
-  void _handleTodoCreated(InputValue value) {
-    _newTodo = InputValue.empty;
-    _linkConnector.addItem(value.text);
-  }
-
-  void _handleInputChanged(InputValue value) {
-    // TODO(etiennej): Store this value in a link.
-    setState(() {
-      _newTodo = value;
-    });
+  void _handleTodoCreated(String value) {
+    _newTodo.clear();
+    _linkConnector.addItem(value);
   }
 
   void _handleGenerateRandomTodo() {
-    String todoText = _generator.makeContent();
-    setState(() {
-      _newTodo = new InputValue(text: todoText);
-    });
+    _newTodo.text = _generator.makeContent();
   }
 
-  /// Creates the text input.
+  /// Creates the text field.
   Widget _buildTextComposer() {
     ThemeData themeData = Theme.of(context);
     return new Column(children: <Widget>[
       new Row(children: <Widget>[
         new Flexible(
-            child: new Input(
-                value: _newTodo,
-                hintText: 'Enter TODO',
-                onSubmitted: _handleTodoCreated,
-                onChanged: _handleInputChanged)),
+            child: new TextField(
+                controller: _newTodo,
+                decoration: const InputDecoration(
+                  hintText: 'Enter TODO',
+                ),
+                onSubmitted: _handleTodoCreated)),
         new Container(
             margin: new EdgeInsets.symmetric(horizontal: 4.0),
-            child: new IconButton(
-                icon: new Icon(Icons.send),
-                onPressed:
-                    _isComposing ? () => _handleTodoCreated(_newTodo) : null,
-                color: _isComposing
-                    ? themeData.accentColor
-                    : themeData.disabledColor))
+            child: new AnimatedBuilder(
+              animation: _newTodo,
+              builder: (BuildContext context, Widget child) {
+                return new IconButton(
+                  icon: new Icon(Icons.send),
+                  onPressed:
+                      _isComposing ? () => _handleTodoCreated(_newTodo) : null,
+                  color: _isComposing
+                      ? themeData.accentColor
+                      : themeData.disabledColor);
+              }))
       ]),
       new RaisedButton(
           onPressed: _handleGenerateRandomTodo, child: new Text("Generate random TODO"))
