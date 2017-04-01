@@ -111,6 +111,7 @@ static int mount_minfs(int fd, mount_options_t* options) {
                 return ERR_ALREADY_BOUND;
             }
             data_mounted = true;
+            options->wait_until_ready = true;
 
             mount(fd, "/data", DISK_FORMAT_MINFS, options, launch_minfs);
 
