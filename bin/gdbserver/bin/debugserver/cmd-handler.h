@@ -11,12 +11,12 @@
 
 namespace debugserver {
 
-class Server;
+class RspServer;
 
 // CommandHandler is responsible for handling GDB Remote Protocol commands.
 class CommandHandler final {
  public:
-  explicit CommandHandler(Server* server);
+  explicit CommandHandler(RspServer* server);
   ~CommandHandler() = default;
 
   // Handles the command packet |packet| of size |packet_size| bytes. Returns
@@ -107,7 +107,7 @@ class CommandHandler final {
                                 const ResponseCallback& callback);
 
   // The root Server instance that owns us.
-  Server* server_;  // weak
+  RspServer* server_;  // weak
 
   // Indicates whether we are currently in a qfThreadInfo/qsThreadInfo sequence.
   bool in_thread_info_sequence_;

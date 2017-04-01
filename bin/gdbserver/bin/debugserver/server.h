@@ -61,6 +61,14 @@ class RspServer final : public Server {
       const ftl::TimeDelta& timeout =
           ftl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
 
+  // Set |parameter| to |value|. Return true if success.
+  bool SetParameter(const ftl::StringView& parameter,
+                    const ftl::StringView& value);
+
+  // Store the value of |parameter| in |*value|. Return true if success.
+  bool GetParameter(const ftl::StringView& parameter,
+                    std::string* value);
+
  private:
   // Maximum number of characters in the outbound buffer.
   constexpr static size_t kMaxBufferSize = 4096;

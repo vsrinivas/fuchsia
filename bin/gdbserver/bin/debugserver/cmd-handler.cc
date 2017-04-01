@@ -55,6 +55,8 @@ const char kRun[] = "Run;";
 const char kExit[] = "exit";
 const char kHelp[] = "help";
 const char kQuit[] = "quit";
+const char kSet[] = "set";
+const char kShow[] = "show";
 
 // This always returns true so that command handlers can simple call "return
 // ReplyOK()" rather than "ReplyOK(); return true;
@@ -103,7 +105,7 @@ std::vector<std::string> BuildArgvFor_vRun(const ftl::StringView& packet) {
 
 }  // namespace
 
-CommandHandler::CommandHandler(Server* server)
+CommandHandler::CommandHandler(RspServer* server)
     : server_(server), in_thread_info_sequence_(false) {
   FTL_DCHECK(server_);
 }
@@ -832,22 +834,59 @@ bool CommandHandler::HandleQueryCurrentThreadId(
 
 bool CommandHandler::HandleQueryRcmd(const ftl::StringView& command,
                                      const ResponseCallback& callback) {
-  auto cmd = util::DecodeString(command);
+  auto cmd_string = util::DecodeString(command);
+  std::vector<ftl::StringView> argv =
+    ftl::SplitString(cmd_string, " ",
+                     ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+  if (argv.size() == 0) {
+    // No command, just reply OK.
+    return ReplyOK(callback);
+  }
+  auto cmd = argv[0];
 
   // We support both because qemu uses "quit" and GNU gdbserver uses "exit".
   if (cmd == kQuit || cmd == kExit) {
+    if (argv.size() != 1)
+      goto bad_command;
     ReplyOK(callback);
     server_->PostQuitMessageLoop(true);
   } else if (cmd == kHelp) {
-    std::string text;
-    text += "help - print this help text\n";
-    text += "exit - quit debugserver\n";
-    text += "quit - quit debugserver\n";
-    callback(util::EncodeString(text));
+    if (argv.size() != 1)
+      goto bad_command;
+    static constexpr char kHelpText[] =
+      "help - print this help text\n"
+      "exit - quit debugserver\n"
+      "quit - quit debugserver\n"
+      "set <parameter> <value>\n"
+      "show <parameter>\n"
+      "\n"
+      "Parameters:\n"
+      "  verbosity - useful range is -2 to 3 (-2 is most verbose)\n";
+    callback(util::EncodeString(kHelpText));
+  } else if (cmd == kSet) {
+    if (argv.size() != 3)
+      goto bad_command;
+    if (!server_->SetParameter(argv[1], argv[2]))
+      goto bad_command;
+    ReplyOK(callback);
+  } else if (cmd == kShow) {
+    if (argv.size() != 2)
+      goto bad_command;
+    std::string value;
+    if (!server_->GetParameter(argv[1], &value))
+      goto bad_command;
+    callback(util::EncodeString("Value is " + value + "\n"));
   } else {
     callback(util::EncodeString("Invalid monitor command\n"));
   }
 
+  return true;
+
+ bad_command:
+  // Errors are not reported via the usual mechanism. For rCmd, the usual
+  // mechanism is for things like protocol errors. Instead we just want to
+  // return the desired error message.
+  callback(util::EncodeString("Invalid command\n"));
   return true;
 }
 

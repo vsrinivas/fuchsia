@@ -15,8 +15,11 @@
 
 #include "debugger-utils/util.h"
 
+#include "lib/ftl/log_settings.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/ftl/strings/string_view.h"
 
 #include "stop-reply-packet.h"
 #include "util.h"
@@ -91,6 +94,42 @@ void RspServer::QueueNotification(const ftl::StringView& name,
 void RspServer::QueueStopNotification(const ftl::StringView& event,
                                       const ftl::TimeDelta& timeout) {
   QueueNotification(kStopNotification, event, timeout);
+}
+
+bool RspServer::SetParameter(const ftl::StringView& parameter,
+                             const ftl::StringView& value) {
+  if (parameter == "verbosity") {
+    int verbosity;
+    if (!ftl::StringToNumberWithError<int>(value, &verbosity)) {
+      FTL_LOG(ERROR) << "Malformed verbosity level: " << value;
+      return false;
+    }
+    // We only support verbosity levels up to 2 (recorded as -2) but there's
+    // no point in disallowing higher levels (larger negative values). OTOH,
+    // we do want to catch bad severity levels (positive values).
+    if (verbosity >= static_cast<int>(ftl::LOG_NUM_SEVERITIES)) {
+      FTL_LOG(ERROR) << "Invalid verbosity level: " << value;
+      return false;
+    }
+    ftl::LogSettings log_settings = ftl::GetLogSettings();
+    log_settings.min_log_level = static_cast<ftl::LogSeverity>(verbosity);
+    ftl::SetLogSettings(log_settings);
+    return true;
+  } else {
+    FTL_LOG(ERROR) << "Invalid parameter: " << parameter;
+    return false;
+  }
+}
+
+bool RspServer::GetParameter(const ftl::StringView& parameter,
+                             std::string* value) {
+  if (parameter == "verbosity") {
+    *value = ftl::NumberToString<int>(ftl::GetMinLogLevel());
+    return true;
+  } else {
+    FTL_LOG(ERROR) << "Invalid parameter: " << parameter;
+    return false;
+  }
 }
 
 bool RspServer::Listen() {
