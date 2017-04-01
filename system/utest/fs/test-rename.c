@@ -4,9 +4,11 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <magenta/compiler.h>
@@ -125,7 +127,56 @@ bool test_rename_with_children(void) {
     END_TEST;
 }
 
+bool test_rename_absolute_relative(void) {
+    BEGIN_TEST;
+
+    char cwd[PATH_MAX];
+    ASSERT_NONNULL(getcwd(cwd, sizeof(cwd)), "");
+
+    // Change the cwd to a known directory
+    ASSERT_EQ(mkdir("::working_dir", 0755), 0, "");
+    DIR* dir = opendir("::working_dir");
+    ASSERT_NONNULL(dir, "");
+    ASSERT_EQ(chdir("::working_dir"), 0, "");
+
+    // Make a "foo" directory in the cwd
+    int fd = dirfd(dir);
+    ASSERT_NEQ(fd, -1, "");
+    ASSERT_EQ(mkdirat(fd, "foo", 0755), 0, "");
+    expected_dirent_t dir_contents_foo[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+        {false, "foo", DT_DIR},
+    };
+    ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_foo, countof(dir_contents_foo)), "");
+
+    // Rename "foo" to "bar" using mixed paths
+    ASSERT_EQ(rename("::working_dir/foo", "bar"), 0, "Could not rename foo to bar");
+    expected_dirent_t dir_contents_bar[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+        {false, "bar", DT_DIR},
+    };
+    ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_bar, countof(dir_contents_bar)), "");
+
+    // Rename "bar" back to "foo" using mixed paths in the other direction
+    ASSERT_EQ(rename("bar", "::working_dir/foo"), 0, "Could not rename bar to foo");
+    ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_foo, countof(dir_contents_foo)), "");
+
+    ASSERT_EQ(rmdir("::working_dir/foo"), 0, "");
+
+    // Change the cwd back to the original, whatever it was before
+    // this test started
+    ASSERT_EQ(chdir(cwd), 0, "Could not return to original cwd");
+
+    ASSERT_EQ(rmdir("::working_dir"), 0, "");
+    ASSERT_EQ(closedir(dir), 0, "");
+
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(rename_tests,
     RUN_TEST_MEDIUM(test_rename_basic)
     RUN_TEST_MEDIUM(test_rename_with_children)
+    RUN_TEST_MEDIUM(test_rename_absolute_relative)
 )

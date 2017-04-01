@@ -93,6 +93,13 @@ DIR* FN(opendir)(const char* path) {
     return __real_opendir(real_path);
 }
 
+int FL(chdir)(const char* path);
+int FN(chdir)(const char* path) {
+    char real_path[WPATH_MAX];
+    PATH_WRAP(path, real_path);
+    DO_REAL(chdir, real_path);
+}
+
 int FL(mkdir)(const char* path, mode_t mode);
 int FN(mkdir)(const char* path, mode_t mode) {
     char real_path[WPATH_MAX];
