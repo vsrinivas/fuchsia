@@ -79,11 +79,9 @@ static_library("ftl") {
     "strings/trim.h",
     "strings/utf_codecs.cc",
     "strings/utf_codecs.h",
-    "synchronization/cond_var.cc",
     "synchronization/cond_var.h",
     "synchronization/monitor.cc",
     "synchronization/monitor.h",
-    "synchronization/mutex.cc",
     "synchronization/mutex.h",
     "synchronization/sleep.cc",
     "synchronization/sleep.h",
@@ -110,11 +108,15 @@ static_library("ftl") {
     sources += [
       "files/path_win.cc",
       "files/symlink_win.cc",
+      "synchronization/cond_var_win.cc",
+      "synchronization/mutex_win.cc",
     ]
   } else {
     sources += [
       "files/path_posix.cc",
       "files/symlink_posix.cc",
+      "synchronization/cond_var_posix.cc",
+      "synchronization/mutex_posix.cc",
     ]
   }
 
@@ -149,6 +151,9 @@ executable("ftl_unittests") {
   testonly = true
 
   sources = [
+    "test/run_all_unittests.cc",
+    "test/timeout_tolerance.h",
+
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
     "files/file_unittest.cc",
@@ -173,7 +178,6 @@ executable("ftl_unittests") {
     "synchronization/thread_checker_unittest.cc",
     "synchronization/waitable_event_unittest.cc",
     "tasks/one_shot_timer_unittest.cc",
-    "test/run_all_unittests.cc",
     "time/time_unittest.cc",
   ]
 

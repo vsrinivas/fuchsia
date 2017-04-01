@@ -53,11 +53,11 @@ TimePoint TimePoint::Now() {
 #elif defined(OS_WIN)
 
 TimePoint TimePoint::Now() {
-  LARGE_INTEGER freq = {0};
-  FTL_DCHECK(QueryPerformanceFrequency(&freq));
-  LARGE_INTEGER count = {0};
-  FTL_DCHECK(QueryPerformanceCounter(&count));
-  return TimePoint((count.QuadPart * 1000000000) / freq.QuadPart);
+  uint64_t freq = 0;
+  uint64_t count = 0;
+  QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
+  QueryPerformanceCounter((LARGE_INTEGER *)&count);
+  return TimePoint((count * 1000000000) / freq);
 }
 
 #else

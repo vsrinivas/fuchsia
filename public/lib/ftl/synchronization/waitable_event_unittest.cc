@@ -16,6 +16,7 @@
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/sleep.h"
+#include "lib/ftl/test/timeout_tolerance.h"
 #include "lib/ftl/time/stopwatch.h"
 
 namespace ftl {
@@ -134,7 +135,7 @@ TEST(AutoResetWaitableEventTest, Timeouts) {
     TimeDelta elapsed = stopwatch.Elapsed();
 
     // It should time out after *at least* the specified amount of time.
-    EXPECT_GE(elapsed, timeout);
+    EXPECT_GE(elapsed, timeout - kTimeoutTolerance);
     // But we expect that it should time out soon after that amount of time.
     EXPECT_LT(elapsed, timeout + kEpsilonTimeout);
   }
@@ -245,7 +246,7 @@ TEST(ManualResetWaitableEventTest, Timeouts) {
     TimeDelta elapsed = stopwatch.Elapsed();
 
     // It should time out after *at least* the specified amount of time.
-    EXPECT_GE(elapsed, timeout);
+    EXPECT_GE(elapsed, timeout - kTimeoutTolerance);
     // But we expect that it should time out soon after that amount of time.
     EXPECT_LT(elapsed, timeout + kEpsilonTimeout);
   }

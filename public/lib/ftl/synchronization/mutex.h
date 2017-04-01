@@ -9,7 +9,13 @@
 #ifndef LIB_FTL_SYNCHRONIZATION_MUTEX_H_
 #define LIB_FTL_SYNCHRONIZATION_MUTEX_H_
 
+#include "lib/ftl/build_config.h"
+
+#if defined(OS_WIN)
+#include <windows.h>
+#else
 #include <pthread.h>
+#endif
 
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
@@ -32,6 +38,19 @@ class FTL_LOCKABLE Mutex final {
   bool TryLock() FTL_EXCLUSIVE_TRYLOCK_FUNCTION(true);
 
   void AssertHeld() FTL_ASSERT_EXCLUSIVE_LOCK();
+#elif defined(OS_WIN)
+ Mutex() : impl_(SRWLOCK_INIT) {}
+ ~Mutex() = default;
+
+  void Lock() FTL_EXCLUSIVE_LOCK_FUNCTION() { AcquireSRWLockExclusive(&impl_); }
+
+  void Unlock() FTL_UNLOCK_FUNCTION() { ReleaseSRWLockExclusive(&impl_); }
+
+  bool TryLock() FTL_EXCLUSIVE_TRYLOCK_FUNCTION(true) {
+    return (TryAcquireSRWLockExclusive(&impl_) != 0);
+  }
+
+  void AssertHeld() FTL_ASSERT_EXCLUSIVE_LOCK() {}
 #else
   Mutex() { pthread_mutex_init(&impl_, nullptr); }
   ~Mutex() { pthread_mutex_destroy(&impl_); }
@@ -55,7 +74,16 @@ class FTL_LOCKABLE Mutex final {
  private:
   friend class CondVar;
 
+#if defined(OS_WIN)
+  SRWLOCK impl_;
+#ifndef NDEBUG
+  void CheckHeldAndUnmark();
+  void CheckUnheldAndMark();
+  DWORD owning_thread_id_ = NULL;
+#endif //  NDEBUG
+#else
   pthread_mutex_t impl_;
+#endif //  defined(OS_WIN)
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Mutex);
 };

@@ -7,7 +7,13 @@
 #ifndef LIB_FTL_SYNCHRONIZATION_COND_VAR_H_
 #define LIB_FTL_SYNCHRONIZATION_COND_VAR_H_
 
+#include "lib/ftl/build_config.h"
+
+#if defined(OS_WIN)
+#include <windows.h>
+#else
 #include <pthread.h>
+#endif
 #include <stdint.h>
 
 #include "lib/ftl/macros.h"
@@ -55,7 +61,11 @@ class CondVar final {
   void SignalAll();
 
  private:
+#if defined(OS_WIN)
+  CONDITION_VARIABLE cv_;
+#elif defined(OS_POSIX)
   pthread_cond_t impl_;
+#endif
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CondVar);
 };
