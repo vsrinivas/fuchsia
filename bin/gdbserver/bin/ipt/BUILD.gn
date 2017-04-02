@@ -25,7 +25,6 @@ executable("ipt") {
     "../../lib/inferior-control",
     "//lib/ftl",
     "//lib/mtl",
-    "//magenta/system/ulib/mx",
   ]
 
   include_dirs = [
