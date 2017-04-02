@@ -16,10 +16,8 @@ Each subdirectory contains one integration test, which can be run by invoking
 its `test.sh` script.
 
 All tests together can be run by invoking [test.sh](test.sh) in this directory.
-
-A newly added test must be added to *both*
-[modular_tests.json](modular_tests.json) and [test.sh](test.sh), which evidently
-will change eventually.
+A new test must be added to [modular_tests.json](modular_tests.json) for it to
+be run by `test.sh`.
 
 All `test.sh` scripts require to set up the fuchsia environment by sourcing
 [scripts/env.sh](https://fuchsia.googlesource.com/scripts/+/master/env.sh).
