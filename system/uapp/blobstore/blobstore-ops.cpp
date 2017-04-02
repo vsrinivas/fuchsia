@@ -93,9 +93,10 @@ mx_status_t VnodeBlob::Lookup(fs::Vnode** out, const char* name, size_t len) {
 }
 
 mx_status_t VnodeBlob::Getattr(vnattr_t* a) {
+    a->mode = IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
     a->inode = 0;
     a->size = IsDirectory() ? 0 : blob->SizeData();
-    a->mode = IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
+    a->nlink = 1;
     a->create_time = 0;
     a->modify_time = 0;
     return NO_ERROR;
