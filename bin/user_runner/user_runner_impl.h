@@ -17,7 +17,6 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/src/component/message_queue_manager.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -35,6 +34,7 @@ class AgentRunner;
 class ComponentContextImpl;
 class FocusHandler;
 class LinkImpl;
+class MessageQueueManager;
 class StoryStorageImpl;
 class StoryProviderImpl;
 class VisibleStoriesHandler;
@@ -95,7 +95,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   UserShellPtr user_shell_;
 
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
-  MessageQueueManager message_queue_manager_;
+  std::unique_ptr<MessageQueueManager> message_queue_manager_;
   std::unique_ptr<AgentRunner> agent_runner_;
   TokenProviderImpl token_provider_impl_;
   std::string device_name_;

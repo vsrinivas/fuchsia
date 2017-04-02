@@ -18,7 +18,7 @@ namespace modular {
 
 namespace {
 
-// The ledger named kLedgerId has a single, root page.
+// All message queue information is stored in one page.
 // That page has keys mapping component instance ids and queue names to queue
 // tokens (in the form "CQ|component_instance_id|queue_name"), keys mapping
 // queue tokens to component instance ids (in the form "T|queue_token|C") and
@@ -26,7 +26,6 @@ namespace {
 // The component instance id and queue name for a queue token can be retrieved
 // in a single operation with a prefix query for "T|queue_token|".
 
-constexpr char kLedgerId[] = "queue_registry";
 constexpr char kComponentQueuePrefix[] = "CQ";
 constexpr char kTokenPrefix[] = "T";
 constexpr char kComponentSuffix[] = "C";
@@ -214,19 +213,8 @@ void MessageQueueConnection::GetToken(const GetTokenCallback& callback) {
 
 // MessageQueueManager --------------------------------------------------------
 
-MessageQueueManager::MessageQueueManager(
-    ledger::LedgerRepository* const ledger_repository) {
-  auto error_handler = [](const ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-    }
-  };
-
-  ledger_repository->GetLedger(to_array(kLedgerId), ledger_.NewRequest(),
-                               error_handler);
-
-  ledger_->GetRootPage(page_.NewRequest(), error_handler);
-}
+MessageQueueManager::MessageQueueManager(ledger::PagePtr page)
+    : page_(std::move(page)) {}
 
 MessageQueueManager::~MessageQueueManager() = default;
 

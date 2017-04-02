@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "apps/ledger/services/internal/internal.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/services/component/message_queue.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -30,7 +30,7 @@ class MessageQueueStorage;
 // queues it has created, otherwise they are persisted.
 class MessageQueueManager {
  public:
-  MessageQueueManager(ledger::LedgerRepository* ledger_repository);
+  MessageQueueManager(ledger::PagePtr page);
   ~MessageQueueManager();
 
   void ObtainMessageQueue(const std::string& component_instance_id,
@@ -91,7 +91,6 @@ class MessageQueueManager {
       std::function<void(ledger::Status status, MessageQueueStorage* storage)>
           callback);
 
-  ledger::LedgerPtr ledger_;
   ledger::PagePtr page_;
 
   // A map of queue_token to |MessageStorageQueue|.

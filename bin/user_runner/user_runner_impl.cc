@@ -14,13 +14,13 @@
 #include "apps/modular/lib/auth/token_provider_impl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
+#include "apps/modular/src/component/message_queue_manager.h"
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
@@ -28,8 +28,6 @@
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -39,9 +37,10 @@ namespace modular {
 
 namespace {
 
-const char kAppId[] = "modular_user_runner";
-const char kMaxwellUrl[] = "file:///system/apps/maxwell";
-const char kUserScopeLabelPrefix[] = "user-";
+constexpr char kAppId[] = "modular_user_runner";
+constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
+constexpr char kUserScopeLabelPrefix[] = "user-";
+constexpr char kMessageQueuePageId[] = "MessageQueuePage";  // 16 chars
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -90,7 +89,6 @@ UserRunnerImpl::UserRunnerImpl(
       user_scope_(
             std::move(application_environment),
             std::string(kUserScopeLabelPrefix) + to_hex_string(user_id)),
-      message_queue_manager_(ledger_repository_.get()),
       token_provider_impl_(auth_token),
       device_name_(device_name) {
   binding_.set_connection_error_handler([this] { delete this; });
@@ -110,8 +108,9 @@ UserRunnerImpl::UserRunnerImpl(
         token_provider_impl_.AddBinding(std::move(request));
       });
 
-
   RunUserShell(std::move(user_shell), std::move(view_owner_request));
+
+  // Open Ledger.
 
   ledger_repository_->GetLedger(
       to_array(kAppId), ledger_.NewRequest(), [](ledger::Status status) {
@@ -137,6 +136,22 @@ UserRunnerImpl::UserRunnerImpl(
               << LedgerStatusToString(status);
         }
       });
+
+
+  // Setup MessageQueueManager.
+
+  ledger::PagePtr message_queue_page;
+  ledger_->GetPage(
+      to_array(kMessageQueuePageId), message_queue_page.NewRequest(),
+      [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR)
+              << "Ledger.GetPage(kMessageQueuePageId) failed: "
+              << LedgerStatusToString(status);
+        }
+      });
+  message_queue_manager_.reset(
+      new MessageQueueManager(std::move(message_queue_page)));
 
   // Begin init maxwell.
   //
@@ -173,11 +188,11 @@ UserRunnerImpl::UserRunnerImpl(
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
   agent_runner_.reset(new AgentRunner(
-      user_scope_.GetLauncher(), &message_queue_manager_,
+      user_scope_.GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), user_intelligence_provider_.get()));
 
   ComponentContextInfo component_context_info{
-    &message_queue_manager_, agent_runner_.get(), ledger_repository_.get()};
+    message_queue_manager_.get(), agent_runner_.get(), ledger_repository_.get()};
 
   maxwell_component_context_impl_.reset(
       new ComponentContextImpl(component_context_info, kMaxwellUrl));

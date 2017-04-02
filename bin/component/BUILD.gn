@@ -12,6 +12,7 @@ source_set("component") {
 
   deps = [
     "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/services/component",
     "//apps/modular/src/agent_runner:public",
