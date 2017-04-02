@@ -12,6 +12,8 @@ group("all") {
 
 executable("user_runner") {
   sources = [
+    "conflict_resolver_impl.cc",
+    "conflict_resolver_impl.h",
     "user_runner.cc",
     "user_runner_impl.cc",
     "user_runner_impl.h",

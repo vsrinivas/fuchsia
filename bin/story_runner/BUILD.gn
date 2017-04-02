@@ -11,8 +11,6 @@ group("all") {
 
 source_set("story_runner") {
   sources = [
-    "conflict_resolver_impl.cc",
-    "conflict_resolver_impl.h",
     "link_impl.cc",
     "link_impl.h",
     "module_controller_impl.cc",

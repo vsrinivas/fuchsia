@@ -99,11 +99,11 @@ class WriteLinkDataCall : public Operation<void> {
 
 }  // namespace
 
-StoryStorageImpl::StoryStorageImpl(ledger::PagePtr story_page)
+StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
     : page_watcher_binding_(this),
-      story_page_(std::move(story_page)),
+      story_page_(story_page),
       story_snapshot_("StoryStorageImpl") {
-  FTL_DCHECK(story_page_.is_bound());
+  FTL_DCHECK(story_page_);
   story_page_->GetSnapshot(
       story_snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
@@ -126,7 +126,7 @@ void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
 void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
                                      const fidl::String& data,
                                      const SyncCallback& callback) {
-  new WriteLinkDataCall(&operation_queue_, story_page_.get(), link_id, data,
+  new WriteLinkDataCall(&operation_queue_, story_page_, link_id, data,
                         callback);
 }
 

@@ -103,8 +103,8 @@ class QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
 
 }  // namespace
 
-FocusHandler::FocusHandler(const fidl::String& device_name, ledger::PagePtr page)
-    : page_(std::move(page)),
+FocusHandler::FocusHandler(const fidl::String& device_name, ledger::Page* const page)
+    : page_(page),
       snapshot_("FocusHandler"),
       page_watcher_binding_(this),
       device_name_(device_name) {

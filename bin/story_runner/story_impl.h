@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "application/services/application_controller.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
@@ -38,8 +39,6 @@ namespace modular {
 class LinkImpl;
 class ModuleControllerImpl;
 class ModuleContextImpl;
-class StoryImpl;
-class StoryPage;
 class StoryProviderImpl;
 class StoryStorageImpl;
 
@@ -48,11 +47,9 @@ constexpr char kRootLink[] = "root";
 // The actual implementation of the Story service. It also implements
 // the StoryController service to give clients control over the Story
 // instance.
-class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
+class StoryImpl : StoryController, StoryContext, ModuleWatcher {
  public:
-  StoryImpl(StoryDataPtr story_data,
-            StoryProviderImpl* const story_provider_impl);
-
+  StoryImpl(StoryDataPtr story_data, StoryProviderImpl* story_provider_impl);
   ~StoryImpl() override;
 
   // Called by ModuleContextImpl.
@@ -123,14 +120,20 @@ class StoryImpl : public StoryController, StoryContext, ModuleWatcher {
   void DisposeLink(LinkImpl* link);
   LinkPtr& EnsureRoot();
 
-  // The scope in which the modules within this story run.
-  Scope story_scope_;
+  // The ID of the story. It cannot possibly change during the
+  // lifetime of the story.
+  const fidl::String story_id_;
 
   // The state of a Story and the context to obtain it from and
   // persist it to.
   StoryDataPtr story_data_;
   StoryProviderImpl* const story_provider_impl_;
+
+  ledger::PagePtr story_page_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
+
+  // The scope in which the modules within this story run.
+  Scope story_scope_;
 
   // Implements the primary service provided here: StoryController.
   fidl::BindingSet<StoryController> bindings_;

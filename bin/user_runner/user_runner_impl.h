@@ -23,6 +23,7 @@
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
+#include "apps/modular/src/user_runner/conflict_resolver_impl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -84,9 +85,15 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   fidl::Binding<UserRunner> binding_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
+
   ledger::LedgerRepositoryPtr ledger_repository_;
+  ledger::LedgerPtr ledger_;
+  ledger::PagePtr root_page_;
+  ConflictResolverImpl conflict_resolver_;
+
   Scope user_scope_;
   UserShellPtr user_shell_;
+
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
   MessageQueueManager message_queue_manager_;
   std::unique_ptr<AgentRunner> agent_runner_;
@@ -98,7 +105,6 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
   std::unique_ptr<fidl::Binding<ComponentContext>>
       maxwell_component_context_binding_;
-
   fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
       user_intelligence_provider_;
 

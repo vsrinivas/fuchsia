@@ -105,23 +105,37 @@ UserRunnerImpl::UserRunnerImpl(
                           ConnectToService(resolver_service_provider.get(),
                                            std::move(resolver_service_request));
                         }));
+  user_scope_.AddService<TokenProvider>(
+      [this](fidl::InterfaceRequest<TokenProvider> request) {
+        token_provider_impl_.AddBinding(std::move(request));
+      });
+
 
   RunUserShell(std::move(user_shell), std::move(view_owner_request));
 
-  // NOTE(mesch): It is a bad idea to try to invoke a method on a fidl
-  // pointer (such as GetRootPage() on this one below), and then move
-  // the pointer away before the method invokes its callback. For me
-  // this yielded the rather cryptic failure:
-  //
-  //   FATAL lib/fidl/cpp/bindings/internal/router.cc(152):
-  //   Check failed: testing_mode_
-  //
-  ledger::LedgerPtr ledger;
   ledger_repository_->GetLedger(
-      to_array(kAppId), ledger.NewRequest(), [](ledger::Status status) {
+      to_array(kAppId), ledger_.NewRequest(), [](ledger::Status status) {
         FTL_CHECK(status == ledger::Status::OK)
             << "LedgerRepository.GetLedger() failed: "
             << LedgerStatusToString(status);
+      });
+
+  ledger_->GetRootPage(
+      root_page_.NewRequest(), [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR)
+              << "Ledger.GetRootPage() failed: "
+              << LedgerStatusToString(status);
+        }
+      });
+
+  ledger_->SetConflictResolverFactory(
+      conflict_resolver_.AddBinding(), [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR)
+              << "Ledger.SetConflictResolverFactory() failed: "
+              << LedgerStatusToString(status);
+        }
       });
 
   // Begin init maxwell.
@@ -186,23 +200,17 @@ UserRunnerImpl::UserRunnerImpl(
   // End init maxwell.
 
   story_provider_impl_.reset(new StoryProviderImpl(
-      &user_scope_, std::move(ledger), device_name, std::move(story_shell),
+      &user_scope_, ledger_.get(), root_page_.get(),
+      device_name, std::move(story_shell),
       component_context_info, user_intelligence_provider_.get()));
   story_provider_impl_->AddBinding(std::move(story_provider_request));
 
-  focus_handler_.reset(new FocusHandler(
-      device_name, story_provider_impl_->GetRootPage()));
-  focus_handler_->AddProviderBinding(
-      std::move(focus_provider_request));
+  focus_handler_.reset(new FocusHandler(device_name, root_page_.get()));
+  focus_handler_->AddProviderBinding(std::move(focus_provider_request));
 
   visible_stories_handler_.reset(new VisibleStoriesHandler);
   visible_stories_handler_->AddProviderBinding(
       std::move(visible_stories_provider_request));
-
-  user_scope_.AddService<TokenProvider>(
-      [this](fidl::InterfaceRequest<TokenProvider> request) {
-        token_provider_impl_.AddBinding(std::move(request));
-      });
 
   user_shell_->Initialize(std::move(user_context),
                           user_shell_context_binding_.NewBinding());
@@ -213,12 +221,12 @@ UserRunnerImpl::~UserRunnerImpl() = default;
 void UserRunnerImpl::Terminate(const TerminateCallback& done) {
   FTL_DCHECK(user_shell_.is_bound());
   FTL_LOG(INFO) << "UserRunner::Terminate()";
-      user_shell_->Terminate([this, done] {
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
-          done();
-          delete this;
-          FTL_LOG(INFO) << "UserRunner::Terminate(): deleted";
-        });
+  user_shell_->Terminate([this, done] {
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      done();
+      delete this;
+      FTL_LOG(INFO) << "UserRunner::Terminate(): deleted";
+    });
 }
 
 void UserRunnerImpl::GetDeviceName(const GetDeviceNameCallback& callback) {
@@ -256,9 +264,7 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
     return;
   }
 
-  link_storage_.reset(
-      new StoryStorageImpl(story_provider_impl_->GetRootPage()));
-
+  link_storage_.reset(new StoryStorageImpl(root_page_.get()));
   user_shell_link_.reset(new LinkImpl(link_storage_.get(), kUserShellKey));
   user_shell_link_->Connect(std::move(request));
 }

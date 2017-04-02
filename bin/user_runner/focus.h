@@ -24,7 +24,7 @@ namespace modular {
 
 class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
  public:
-  FocusHandler(const fidl::String& device_name, ledger::PagePtr page);
+  FocusHandler(const fidl::String& device_name, ledger::Page* page);
   ~FocusHandler() override;
 
   void AddProviderBinding(
@@ -49,7 +49,7 @@ class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
                 ledger::ResultState result_state,
                 const OnChangeCallback& callback) override;
 
-  ledger::PagePtr page_;
+  ledger::Page* const page_;
   PageSnapshot snapshot_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 

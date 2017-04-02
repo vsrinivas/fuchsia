@@ -31,7 +31,7 @@ class StoryStorageImpl : ledger::PageWatcher {
   using DataCallback = std::function<void(const fidl::String&)>;
   using SyncCallback = std::function<void()>;
 
-  StoryStorageImpl(ledger::PagePtr story_page);
+  StoryStorageImpl(ledger::Page* story_page);
   ~StoryStorageImpl() override;
 
   void ReadLinkData(const fidl::String& link_id, const DataCallback& callback);
@@ -55,7 +55,7 @@ class StoryStorageImpl : ledger::PageWatcher {
   std::vector<std::pair<fidl::String, DataCallback>> watchers_;
 
   // The ledger page the story data is stored in.
-  ledger::PagePtr story_page_;
+  ledger::Page* const story_page_;
 
   // The current snapshot of the page obtained by watching it.
   PageSnapshot story_snapshot_;

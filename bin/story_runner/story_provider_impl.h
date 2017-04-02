@@ -20,7 +20,6 @@
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
-#include "apps/modular/src/story_runner/conflict_resolver_impl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -33,9 +32,16 @@ namespace modular {
 class Resolver;
 class StoryImpl;
 
-// The key under which the user runner link is stored in the root page
-// of the user.
+// The link name under which the user runner link is stored in the
+// root page of the user.
 constexpr char kUserShellKey[] = "user-shell-link";
+
+// The key under which the device map is stored in the root page of
+// the user. A conflict in this key is the only one we actually
+// resolve for now; it's just a toy to play with conflict resolution.
+// TODO(mesch): We move device map information to using a key prefix
+// soon, and then won't have conflicts for device information anymore.
+const char kDeviceMapKey[] = "device-map";
 
 namespace {
 class DeleteStoryCall;
@@ -45,7 +51,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
  public:
   StoryProviderImpl(
       const Scope* user_scope,
-      fidl::InterfaceHandle<ledger::Ledger> ledger,
+      ledger::Ledger* ledger,
+      ledger::Page* root_page,
       const std::string& device_name,
       AppConfigPtr story_shell,
       const ComponentContextInfo& component_context_info,
@@ -66,22 +73,16 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // Used by CreateStory() to write story meta-data to the ledger.
   void WriteStoryData(StoryDataPtr story_data, std::function<void()> done);
 
+  // Used by StoryImpl.
   const Scope* user_scope() const { return user_scope_; }
-
   const ComponentContextInfo& component_context_info() {
     return component_context_info_;
   }
-
   maxwell::UserIntelligenceProvider* user_intelligence_provider() {
     return user_intelligence_provider_;
   }
-
-  // Used by StoryImpl.
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
   const AppConfig& story_shell() const { return *story_shell_; }
-
-  // Used by user runner.
-  ledger::PagePtr GetRootPage();
 
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
 
@@ -121,9 +122,13 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
                 const OnChangeCallback& callback) override;
 
   const Scope* const user_scope_;
-  ledger::LedgerPtr ledger_;
-  ConflictResolverImpl conflict_resolver_;
 
+  // Story provider writes story records to the root page, and creates
+  // new pages for stories.
+  ledger::Ledger* const ledger_;
+  ledger::Page* const root_page_;
+
+  // The bindings for this instance.
   fidl::BindingSet<StoryProvider> bindings_;
 
   // We can only accept binding requests once the instance is fully
@@ -156,9 +161,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // simply and obvious how to not introduce deadlocks.
   OperationQueue operation_queue_;
 
-  // The root page that we read from.
-  ledger::PagePtr root_page_;
-
   // The last snapshot received from the root page.
   PageSnapshot root_snapshot_;
 
@@ -177,7 +179,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // trigger a new delete operation.
   std::pair<std::string, DeleteStoryCall*> pending_deletion_;
 
-  ComponentContextInfo component_context_info_;
+  const ComponentContextInfo component_context_info_;
 
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.

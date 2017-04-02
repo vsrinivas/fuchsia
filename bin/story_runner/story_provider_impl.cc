@@ -619,35 +619,20 @@ class UpdateDeviceNameCall : public Operation<void> {
 
 StoryProviderImpl::StoryProviderImpl(
     const Scope* const user_scope,
-    fidl::InterfaceHandle<ledger::Ledger> ledger,
+    ledger::Ledger* const ledger,
+    ledger::Page* const root_page,
     const std::string& device_name,
     AppConfigPtr story_shell,
     const ComponentContextInfo& component_context_info,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
     : user_scope_(user_scope),
+      ledger_(ledger),
+      root_page_(root_page),
       story_shell_(std::move(story_shell)),
       root_snapshot_("StoryProviderImpl"),
       page_watcher_binding_(this),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider) {
-  ledger_.Bind(std::move(ledger));
-
-  ledger_->SetConflictResolverFactory(
-      conflict_resolver_.AddBinding(), [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "StoryProviderImpl() failed call to "
-                         << "Ledger.SetConflictResolverFactory() " << status;
-        }
-      });
-
-  ledger_->GetRootPage(root_page_.NewRequest(), [](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR)
-          << "StoryProviderImpl() failed call to Ledger.GetRootPage() "
-          << status;
-    }
-  });
-
   root_page_->GetSnapshot(
       root_snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
@@ -660,7 +645,7 @@ StoryProviderImpl::StoryProviderImpl(
 
   // Record the device name of the current device in the ledger,
   // before we handle any requests.
-  new UpdateDeviceNameCall(&operation_queue_, root_page_.get(),
+  new UpdateDeviceNameCall(&operation_queue_, root_page_,
                            root_snapshot_.shared_ptr(), device_name);
 
   // We must initialize story_ids_ with the IDs of currently existing
@@ -726,20 +711,9 @@ ledger::PagePtr StoryProviderImpl::GetStoryPage(
   return ret;
 }
 
-ledger::PagePtr StoryProviderImpl::GetRootPage() {
-  ledger::PagePtr ret;
-  ledger_->GetRootPage(ret.NewRequest(), [](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "GetRootPage() status " << status;
-    }
-  });
-
-  return ret;
-}
-
 void StoryProviderImpl::WriteStoryData(StoryDataPtr story_data,
                                        std::function<void()> done) {
-  new WriteStoryDataCall(&operation_queue_, root_page_.get(),
+  new WriteStoryDataCall(&operation_queue_, root_page_,
                          std::move(story_data), done);
 }
 
@@ -748,7 +722,7 @@ void StoryProviderImpl::CreateStory(const fidl::String& url,
                                     const CreateStoryCallback& callback) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   FTL_LOG(INFO) << "CreateStory() " << url;
-  new CreateStoryCall(&operation_queue_, ledger_.get(), root_page_.get(), this,
+  new CreateStoryCall(&operation_queue_, ledger_, root_page_, this,
                       url, story_id, FidlStringMap(), fidl::String(), callback);
 }
 
@@ -760,7 +734,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
     const CreateStoryWithInfoCallback& callback) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
-  new CreateStoryCall(&operation_queue_, ledger_.get(), root_page_.get(), this,
+  new CreateStoryCall(&operation_queue_, ledger_, root_page_, this,
                       url, story_id, std::move(extra_info),
                       std::move(root_json), callback);
 }
@@ -768,7 +742,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
 // |StoryProvider|
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
                                     const DeleteStoryCallback& callback) {
-  new DeleteStoryCall(&operation_queue_, root_page_.get(), story_id,
+  new DeleteStoryCall(&operation_queue_, root_page_, story_id,
                       &story_ids_, &story_controllers_, &pending_deletion_,
                       callback);
 }
@@ -788,7 +762,7 @@ void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
 void StoryProviderImpl::GetController(
     const fidl::String& story_id,
     fidl::InterfaceRequest<StoryController> request) {
-  new GetControllerCall(&operation_queue_, ledger_.get(), root_page_.get(),
+  new GetControllerCall(&operation_queue_, ledger_, root_page_,
                         root_snapshot_.shared_ptr(), this, &story_controllers_,
                         story_id, std::move(request));
 }
@@ -846,7 +820,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
     if (pending_deletion_.first == story_id) {
       pending_deletion_.second->Complete();
     } else {
-      new DeleteStoryCall(&operation_queue_, root_page_.get(), story_id,
+      new DeleteStoryCall(&operation_queue_, root_page_, story_id,
                           &story_ids_, &story_controllers_,
                           nullptr /* pending_deletion */, [] {});
     }

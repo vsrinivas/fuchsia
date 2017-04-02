@@ -8,6 +8,7 @@
 #include "application/lib/app/connect.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/module/module_context.fidl.h"
@@ -35,18 +36,17 @@ constexpr char kStoryScopeLabelPrefix[] = "story-";
 
 StoryImpl::StoryImpl(StoryDataPtr story_data,
                      StoryProviderImpl* const story_provider_impl)
-    : story_scope_(story_provider_impl->user_scope(),
-                   std::string(kStoryScopeLabelPrefix) +
-                       story_data->story_info->id.data()),
+    : story_id_(story_data->story_info->id),
       story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
+      story_page_(story_provider_impl_->GetStoryPage(story_data_->story_page_id)),
+      story_storage_impl_(new StoryStorageImpl(story_page_.get())),
+      story_scope_(story_provider_impl_->user_scope(),
+                   kStoryScopeLabelPrefix + story_id_.get()),
       story_context_binding_(this) {
   bindings_.set_on_empty_set_handler([this] {
-    story_provider_impl_->PurgeController(story_data_->story_info->id);
+    story_provider_impl_->PurgeController(story_id_);
   });
-
-  story_storage_impl_.reset(new StoryStorageImpl(
-      story_provider_impl_->GetStoryPage(story_data_->story_page_id)));
 
   story_scope_.AddService<StoryMarker>(
       [this](fidl::InterfaceRequest<StoryMarker> request) {
