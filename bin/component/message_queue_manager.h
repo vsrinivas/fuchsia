@@ -51,16 +51,16 @@ class MessageQueueManager {
   // Registering a new watcher stomps over any existing watcher.
   void RegisterWatcher(const std::string& component_instance_id,
                        const std::string& queue_name,
-                       const std::function<void()> callback);
+                       const std::function<void()>& watcher);
   void DropWatcher(const std::string& component_instance_id,
                    const std::string& queue_name);
 
  private:
   // Generates a random string to use as a queue token.
-  std::string GenerateQueueToken() const;
+  static std::string GenerateQueueToken();
 
-  // Gets the component instance id and queue name from the ledger for the given
-  // queue token.
+  // Gets the component instance id and queue name from the ledger for
+  // the given queue token.
   void GetComponentInstanceQueueName(
       const std::string& queue_token,
       std::function<void(ledger::Status status,
@@ -98,29 +98,23 @@ class MessageQueueManager {
   std::unordered_map<std::string, std::unique_ptr<MessageQueueStorage>>
       message_queues_;
 
-  // A hasher for pairs of strings. Not great.
-  class PairHash {
+  class StringPairHash {
    public:
-    std::size_t operator()(std::pair<std::string, std::string> const& p) const {
-      std::string s;
-      s.append(p.first);
-      s.push_back('\0');
-      s.append(p.second);
-      return std::hash<std::string>{}(s);
-    }
+    std::size_t operator()(const std::pair<std::string, std::string>& p) const;
   };
+
+  using ComponentQueuePair = std::pair<std::string, std::string>;
 
   // A map of component instance id and queue name to queue tokens. Entries will
   // only be here while a |MessageQueueStorage| exists.
-  std::unordered_map<std::pair<std::string, std::string>, std::string, PairHash>
+  std::unordered_map<ComponentQueuePair, std::string, StringPairHash>
       message_queue_tokens_;
 
   // A map of component instance id and queue name to watcher callbacks. If a
   // watcher is registered before a |MessageQueueStorage| exists then it is
   // stashed here until a |MessageQueueStorage| is available.
-  std::
-      unordered_map<std::pair<std::string, std::string>, ftl::Closure, PairHash>
-          pending_watcher_callbacks_;
+  std::unordered_map<ComponentQueuePair, ftl::Closure, StringPairHash>
+      pending_watcher_callbacks_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MessageQueueManager);
 };

@@ -146,7 +146,7 @@ class MessageQueueStorage : public MessageSender {
     receive_callback_queue_.erase(i, receive_callback_queue_.end());
   }
 
-  void RegisterWatcher(const std::function<void()> watcher) {
+  void RegisterWatcher(const std::function<void()>& watcher) {
     watcher_ = watcher;
     if (watcher_) {
       watcher_();
@@ -372,7 +372,7 @@ void MessageQueueManager::DeleteMessageQueue(
 
         page_->Commit([queue_token](ledger::Status status) {
           if (status == ledger::Status::OK) {
-            FTL_LOG(INFO) << "Deleted querue from ledger: " << queue_token;
+            FTL_LOG(INFO) << "Deleted queue from ledger: " << queue_token;
           } else {
             FTL_LOG(ERROR) << "Error deleting queue from ledger: " << status;
           }
@@ -429,7 +429,7 @@ void MessageQueueManager::GetComponentInstanceQueueName(
               std::string queue;
               std::string queue_key(MakeQueueNameKey(queue_token));
               for (const auto& i : entries) {
-                const ftl::StringView key_string((const char*)i->key.data(),
+                const ftl::StringView key_string(reinterpret_cast<const char*>(i->key.data()),
                                                  i->key.size());
                 if (!i->value) {
                   FTL_LOG(ERROR) << "Key " << key_string << " has no value";
@@ -551,28 +551,32 @@ void MessageQueueManager::GetMessageSender(
 void MessageQueueManager::RegisterWatcher(
     const std::string& component_instance_id,
     const std::string& queue_name,
-    const std::function<void()> callback) {
+    const std::function<void()>& watcher) {
   auto queue_pair = std::make_pair(component_instance_id, queue_name);
+
   auto token_it = message_queue_tokens_.find(queue_pair);
   if (token_it == message_queue_tokens_.end()) {
-    // The |MessageQueueStorage| doesn't exist yet. Stash the callback.
-    pending_watcher_callbacks_[queue_pair] = callback;
+    // The |MessageQueueStorage| doesn't exist yet. Stash the watcher.
+    pending_watcher_callbacks_[queue_pair] = watcher;
     return;
   }
+
   auto msq_it = message_queues_.find(token_it->second);
   FTL_DCHECK(msq_it != message_queues_.end());
-  msq_it->second->RegisterWatcher(callback);
+  msq_it->second->RegisterWatcher(watcher);
 }
 
 void MessageQueueManager::DropWatcher(const std::string& component_instance_id,
                                       const std::string& queue_name) {
   auto queue_pair = std::make_pair(component_instance_id, queue_name);
+
   auto token_it = message_queue_tokens_.find(queue_pair);
   if (token_it == message_queue_tokens_.end()) {
     // The |MessageQueueStorage| doesn't exist yet.
     pending_watcher_callbacks_.erase(queue_pair);
     return;
   }
+
   auto msq_it = message_queues_.find(token_it->second);
   if (msq_it == message_queues_.end()) {
     FTL_LOG(WARNING) << "Asked to DropWatcher for a queue that doesn't exist";
@@ -581,7 +585,7 @@ void MessageQueueManager::DropWatcher(const std::string& component_instance_id,
   msq_it->second->DropWatcher();
 }
 
-std::string MessageQueueManager::GenerateQueueToken() const {
+std::string MessageQueueManager::GenerateQueueToken() {
   // Get 256 bits of pseudo-randomness.
   uint8_t randomness[256 / 8];
   size_t random_size;
@@ -592,6 +596,15 @@ std::string MessageQueueManager::GenerateQueueToken() const {
     ftl::StringAppendf(&token, "%X", byte);
   }
   return token;
+}
+
+std::size_t MessageQueueManager::StringPairHash::operator()(
+    const std::pair<std::string, std::string>& p) const {
+  std::string s;
+  s.append(p.first);
+  s.push_back('\0');
+  s.append(p.second);
+  return std::hash<std::string>{}(s);
 }
 
 }  // namespace modular
