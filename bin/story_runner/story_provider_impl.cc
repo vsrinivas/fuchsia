@@ -215,7 +215,7 @@ class WriteStoryDataCall : public Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteStoryDataCall);
 };
 
-class CreateStoryCall : public Operation<fidl::String> {
+class CreateStoryCall : public Operation<void> {
  public:
   using FidlStringMap = StoryProviderImpl::FidlStringMap;
 
@@ -249,7 +249,7 @@ class CreateStoryCall : public Operation<fidl::String> {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "CreateStoryCall() " << story_id_
                            << " Ledger.GetPage() " << status;
-            Done(std::move(story_id_));
+            Done();
             return;
           }
 
@@ -278,8 +278,7 @@ class CreateStoryCall : public Operation<fidl::String> {
 
     // We ensure that root data has been written before this operation is
     // done.
-    controller_->AddLinkDataAndSync(std::move(root_json_),
-                                    [this] { Done(std::move(story_id_)); });
+    controller_->AddLinkDataAndSync(std::move(root_json_), [this] { Done(); });
   }
 
  private:
@@ -287,7 +286,7 @@ class CreateStoryCall : public Operation<fidl::String> {
   ledger::Page* const root_page_;                 // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
   const fidl::String url_;
-  fidl::String story_id_;
+  const fidl::String story_id_;
   FidlStringMap extra_info_;
   fidl::String root_json_;
 
@@ -722,7 +721,10 @@ void StoryProviderImpl::CreateStory(const fidl::String& url,
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   FTL_LOG(INFO) << "CreateStory() " << url;
   new CreateStoryCall(&operation_queue_, ledger_, root_page_, this,
-                      url, story_id, FidlStringMap(), fidl::String(), callback);
+                      url, story_id, FidlStringMap(), fidl::String(),
+                      [callback, story_id] {
+                        callback(story_id);
+                      });
 }
 
 // |StoryProvider|
@@ -735,7 +737,10 @@ void StoryProviderImpl::CreateStoryWithInfo(
   FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
   new CreateStoryCall(&operation_queue_, ledger_, root_page_, this,
                       url, story_id, std::move(extra_info),
-                      std::move(root_json), callback);
+                      std::move(root_json),
+                      [callback, story_id] {
+                        callback(story_id);
+                      });
 }
 
 // |StoryProvider|
