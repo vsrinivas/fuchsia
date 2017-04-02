@@ -9,28 +9,17 @@ namespace acquirers {
 
 constexpr char GpsAcquirer::kLabel[];
 
-MockGps::MockGps(ContextEngine* context_engine) : ctl_(this) {
+MockGps::MockGps(ContextEngine* context_engine) {
   maxwell::ContextPublisherPtr cx;
   context_engine->RegisterPublisher("MockGps", cx.NewRequest());
 
-  fidl::InterfaceHandle<ContextPublisherController> ctl_handle;
-  ctl_.Bind(&ctl_handle);
-
-  cx->Publish(kLabel, std::move(ctl_handle), out_.NewRequest());
+  cx->Publish(kLabel, out_.NewRequest());
 }
 
 void MockGps::Publish(float latitude, float longitude) {
   std::ostringstream json;
   json << "{ \"lat\": " << latitude << ", \"lng\": " << longitude << " }";
   out_->Update(json.str());
-}
-
-void MockGps::OnHasSubscribers() {
-  has_subscribers_ = true;
-}
-
-void MockGps::OnNoSubscribers() {
-  has_subscribers_ = false;
 }
 
 }  // namespace acquirers

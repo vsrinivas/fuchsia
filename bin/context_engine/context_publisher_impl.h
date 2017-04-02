@@ -17,7 +17,6 @@ class ContextPublisherImpl : public ContextPublisher {
  private:
   // |ContextPublisher|
   void Publish(const fidl::String& label,
-               fidl::InterfaceHandle<ContextPublisherController> controller,
                fidl::InterfaceRequest<ContextPublisherLink> link) override;
 
   ComponentNode* component_;

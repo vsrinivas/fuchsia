@@ -13,7 +13,6 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "lib/ftl/logging.h"
-#include "lib/ftl/time/time_delta.h"
 
 using maxwell::acquirers::FocusAcquirer;
 
@@ -21,15 +20,11 @@ constexpr char FocusAcquirer::kLabel[];
 
 namespace {
 
-class FocusAcquirerApp : public modular::VisibleStoriesWatcher,
-                         public maxwell::ContextPublisherController {
+class FocusAcquirerApp : public modular::VisibleStoriesWatcher {
  public:
   FocusAcquirerApp()
       : app_ctx_(app::ApplicationContext::CreateFromStartupInfo()),
-        ctl_(this),
         visible_stories_watcher_(this) {
-    srand(time(NULL));
-
     auto cx =
         app_ctx_->ConnectToEnvironmentService<maxwell::ContextPublisher>();
 
@@ -42,14 +37,12 @@ class FocusAcquirerApp : public modular::VisibleStoriesWatcher,
     visible_stories_provider_handle->Watch(
         std::move(visible_stories_watcher_handle));
 
-    fidl::InterfaceHandle<maxwell::ContextPublisherController> ctl_handle;
-    ctl_.Bind(&ctl_handle);
-
-    cx->Publish(FocusAcquirer::kLabel, std::move(ctl_handle),
-                out_.NewRequest());
+    cx->Publish(FocusAcquirer::kLabel, out_.NewRequest());
     PublishFocusState();
   }
 
+ private:
+  // |VisibleStoriesWatcher|
   void OnVisibleStoriesChange(fidl::Array<fidl::String> ids) override {
     focused_story_ids_.clear();
     for (std::string str : ids) {
@@ -57,25 +50,11 @@ class FocusAcquirerApp : public modular::VisibleStoriesWatcher,
     }
 
     PublishFocusState();
-    FTL_LOG(INFO) << "Focus changed -- there are now "
-                  << focused_story_ids_.size() << " active story ids.";
+    FTL_VLOG(1) << "Focus changed -- there are now "
+                << focused_story_ids_.size() << " active story ids.";
   }
 
-  void OnHasSubscribers() override {
-    FTL_LOG(INFO) << "Focus acquirer has subscribers";
-  }
-
-  void OnNoSubscribers() override {
-    FTL_LOG(INFO) << "Focus acquirer subscribers lost.";
-  }
-
- private:
   void PublishFocusState() {
-    // TODO(afergan): Since right now we are not doing anything with the
-    // focused stories, we just change the modular_state to reflect if there
-    // are any focused stories. If we need to keep track of the actual story
-    // ids, publish the vector to the context service.
-
     int modular_state = focused_story_ids_.size() ? 1 : 0;
 
     out_->Update(std::to_string(modular_state));
@@ -84,7 +63,6 @@ class FocusAcquirerApp : public modular::VisibleStoriesWatcher,
 
   std::unique_ptr<app::ApplicationContext> app_ctx_;
 
-  fidl::Binding<maxwell::ContextPublisherController> ctl_;
   maxwell::ContextPublisherLinkPtr out_;
   std::vector<std::string> focused_story_ids_;
   fidl::Binding<modular::VisibleStoriesWatcher> visible_stories_watcher_;

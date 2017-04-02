@@ -26,7 +26,7 @@ class NPublisher {
   NPublisher(maxwell::ContextEngine* context_engine) {
     maxwell::ContextPublisherPtr out;
     context_engine->RegisterPublisher("NPublisher", out.NewRequest());
-    out->Publish("n", NULL, pub_.NewRequest());
+    out->Publish("n", pub_.NewRequest());
   }
 
   void Publish(int n) { pub_->Update(std::to_string(n)); }

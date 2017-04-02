@@ -48,61 +48,24 @@ class ContextEngineTest : public ContextEngineTestBase {
 
 }  // namespace
 
-TEST_F(ContextEngineTest, DirectSubscription) {
-  maxwell::acquirers::MockGps gps(context_engine());
-  {
-    TestListener listener;
-    out_->Subscribe(maxwell::acquirers::MockGps::kLabel,
-                    listener.PassBoundHandle());
-    ASYNC_CHECK(gps.has_subscribers());
-  }
-  ASYNC_CHECK(!gps.has_subscribers());
-}
-
-TEST_F(ContextEngineTest, NoSpontaneousTransitiveSubscription) {
-  maxwell::acquirers::MockGps gps(context_engine());
-  StartContextAgent("file:///system/apps/agents/carmen_sandiego");
-  Sleep();
-  ASYNC_CHECK(!gps.has_subscribers());
-}
-
-TEST_F(ContextEngineTest, TransitiveSubscription) {
-  maxwell::acquirers::MockGps gps(context_engine());
-  StartContextAgent("file:///system/apps/agents/carmen_sandiego");
-  {
-    TestListener listener;
-    out_->Subscribe("/location/region", listener.PassBoundHandle());
-    ASYNC_CHECK(gps.has_subscribers());
-
-    gps.Publish(90, 0);
-    listener.WaitForUpdate();
-    maxwell::ContextUpdatePtr update = listener.PopLast();
-    EXPECT_EQ("file:///system/apps/agents/carmen_sandiego", update->source);
-    EXPECT_EQ("\"The Arctic\"", update->json_value);
-
-    gps.Publish(-90, 0);
-    listener.WaitForUpdate();
-    update = listener.PopLast();
-    EXPECT_EQ("\"Antarctica\"", update->json_value);
-  }
-  ASYNC_CHECK(!gps.has_subscribers());
-}
-
 TEST_F(ContextEngineTest, PublishAfterSubscribe) {
+  // Show that a subscription made before a value is published
+  // will cause the subscriber's callback to be called the moment
+  // a value is published.
   TestListener listener;
   out_->Subscribe(maxwell::acquirers::MockGps::kLabel,
                   listener.PassBoundHandle());
   Sleep();
 
   maxwell::acquirers::MockGps gps(context_engine());
-  ASYNC_CHECK(gps.has_subscribers());
-
   gps.Publish(90, 0);
   listener.WaitForUpdate();
   EXPECT_TRUE(listener.PopLast());
 }
 
 TEST_F(ContextEngineTest, SubscribeAfterPublish) {
+  // Show that when a subscription is created for an existing
+  // topic, the value is immediately sent to the subscription listener.
   maxwell::acquirers::MockGps gps(context_engine());
   gps.Publish(90, 0);
   Sleep();
@@ -115,6 +78,8 @@ TEST_F(ContextEngineTest, SubscribeAfterPublish) {
 }
 
 TEST_F(ContextEngineTest, MultipleSubscribers) {
+  // When multiple subscriptions are made to the same topic, all listeners
+  // should be notified of new values.
   maxwell::acquirers::MockGps gps(context_engine());
   TestListener listeners[2];
   for (auto& listener : listeners)

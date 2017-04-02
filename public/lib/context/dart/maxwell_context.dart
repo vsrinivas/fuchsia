@@ -10,8 +10,6 @@ import 'package:apps.maxwell.services.context/context_subscriber.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 import 'package:meta/meta.dart';
 
-import 'context_publisher_controller_impl.dart';
-
 final _contextPublisher = new ContextPublisherProxy();
 final _contextSubscriber = new ContextSubscriberProxy();
 
@@ -33,7 +31,6 @@ void connectSubscriber(ApplicationContext appContext) {
 
 typedef void PublishFn(
     String label,
-    InterfaceHandle<ContextPublisherController> controller,
     InterfaceRequest<ContextPublisherLink> link);
 
 typedef void SubscribeFn(
@@ -46,21 +43,11 @@ PublishFn get publish => _contextPublisher.publish;
 SubscribeFn get subscribe => _contextSubscriber.subscribe;
 
 /// Convenience function that creates a [ContextPublisherLinkProxy] with the
-/// given label. The controller of the returned proxy should be closed once
-/// unneeded.
-ContextPublisherLinkProxy publisherLink(String label,
-    {Function onHasSubscribers, Function onNoSubscribers}) {
+/// given label.
+ContextPublisherLinkProxy publisherLink(String label) {
   final pub = new ContextPublisherLinkProxy();
 
-  ContextPublisherControllerImpl ctrl;
-  if (onHasSubscribers != null || onNoSubscribers != null) {
-    ctrl =
-        new ContextPublisherControllerImpl(onHasSubscribers, onNoSubscribers);
-    // TODO(rosswang): Do we need this?
-    pub.ctrl.error.then((_) => ctrl.close());
-  }
-
-  publish(label, ctrl?.getHandle(), pub.ctrl.request());
+  publish(label, pub.ctrl.request());
   return pub;
 }
 

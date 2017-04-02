@@ -11,19 +11,13 @@
 namespace maxwell {
 namespace acquirers {
 
-class MockGps : public GpsAcquirer, public ContextPublisherController {
+class MockGps : public GpsAcquirer {
  public:
   MockGps(ContextEngine* context_engine);
   void Publish(float latitude, float longitude);
-  void OnHasSubscribers() override;
-  void OnNoSubscribers() override;
-
-  bool has_subscribers() const { return has_subscribers_; }
 
  private:
-  fidl::Binding<ContextPublisherController> ctl_;
   ContextPublisherLinkPtr out_;
-  bool has_subscribers_ = false;
 };
 
 }  // namespace acquirers

@@ -14,25 +14,8 @@ module maxwell;
 [ServiceName="maxwell.ContextPublisher"]
 interface ContextPublisher {
   // Registers a potential context publisher and attains a publisher link for
-  // it. When the existence or nonexistence of subscribers changes, the
-  // publisher is notified through the provided ContextPublisherController.
-  Publish(string label, ContextPublisherController? controller,
-          ContextPublisherLink& link);
-};
-
-// Optional listener interface that a context publisher can implement to be
-// informed by Context Service that one or more subscribers has subscribed to
-// the bound label and schema. This is recommended for acquirers and agents.
-interface ContextPublisherController {
-  // Indicates that one or more subscribers has subscribed to the context
-  // published by this context publisher.
-  OnHasSubscribers();
-  // Indicates that all subscriber links to the context published by this
-  // context publisher have closed. The publisher is free to stop publishing. If
-  // the previously published context could become stale at the next
-  // subscription prior to a new update from the publisher, the publisher should
-  // invalidate the context by publishing null.
-  OnNoSubscribers();
+  // it.
+  Publish(string label, ContextPublisherLink& link);
 };
 
 // An attributed link that allows a context publisher to write to a context

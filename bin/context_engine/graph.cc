@@ -6,16 +6,6 @@
 
 namespace maxwell {
 
-void DataNode::SubscriberSet::OnConnectionError(
-    ContextSubscriberLink* interface_ptr) {
-  BoundPtrSet<ContextSubscriberLink>::OnConnectionError(interface_ptr);
-
-  // Notify if this was the last subscriber.
-  if (node_->subscribers_.empty() && node_->publisher_controller_) {
-    node_->publisher_controller_->OnNoSubscribers();
-  }
-}
-
 void DataNode::Update(const fidl::String& json_value) {
   json_value_ = json_value;
 
@@ -38,30 +28,11 @@ void DataNode::Subscribe(ContextSubscriberLinkPtr link) {
     link->OnUpdate(std::move(update));
   }
 
-  // Notify if this is the first subscriber.
-  if (subscribers_.empty() && publisher_controller_) {
-    publisher_controller_->OnHasSubscribers();
-  }
-
   subscribers_.emplace(std::move(link));
 }
 
 void DataNode::SetPublisher(
-    fidl::InterfaceHandle<ContextPublisherController> controller_handle,
     fidl::InterfaceRequest<ContextPublisherLink> link_request) {
-  if (controller_handle) {
-    auto controller =
-        ContextPublisherControllerPtr::Create(std::move(controller_handle));
-
-    // Immediately notify if there are already subscribers.
-    if (!subscribers_.empty())
-      controller->OnHasSubscribers();
-
-    publisher_controller_ = std::move(controller);
-  } else {
-    publisher_controller_.reset();
-  }
-
   publisher_.Bind(std::move(link_request));
 }
 

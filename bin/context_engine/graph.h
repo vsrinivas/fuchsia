@@ -6,8 +6,8 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/services/context/context_subscriber.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_subscriber.fidl.h"
 #include "apps/maxwell/src/bound_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
@@ -49,53 +49,35 @@ class ComponentNode {
 
 // DataNode represents a top-level data entry.
 //
-// TOOD(rosswang): Allow decomposed and fuzzy lookup.
-//
 // The ContextPublisherLink impl could be a separate class, but it is 1:1 with
 // the DataNode so it seems reasonable to have them be one and the same.
 class DataNode : public ContextPublisherLink {
  public:
   DataNode(ComponentNode* const component, const std::string& label)
-      : label(label),
-        component_(component),
-        publisher_(this),
-        subscribers_(this) {}
+      : label(label), component_(component), publisher_(this) {}
 
   void Update(const fidl::String& json_value) override;
   void Subscribe(ContextSubscriberLinkPtr link);
 
-  void SetPublisher(
-      fidl::InterfaceHandle<ContextPublisherController> controller,
-      fidl::InterfaceRequest<ContextPublisherLink> link);
+  void SetPublisher(fidl::InterfaceRequest<ContextPublisherLink> link);
 
   const std::string label;
 
  private:
-  class SubscriberSet : public BoundPtrSet<ContextSubscriberLink> {
-   public:
-    SubscriberSet(DataNode* node) : node_(node) {}
-
-   protected:
-    void OnConnectionError(ContextSubscriberLink* interface_ptr) override;
-
-   private:
-    DataNode* node_;
-  };
-
   ComponentNode* const component_;
   std::string json_value_;
 
-  ContextPublisherControllerPtr publisher_controller_;
   fidl::Binding<ContextPublisherLink> publisher_;
-  SubscriberSet subscribers_;
+  // We use a BoundPtrSet instead of a fidl::BindingSet because BoundPtrSet
+  // supports iteration, which we use in |Update()|.
+  BoundPtrSet<ContextSubscriberLink> subscribers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DataNode);
 };
 
 inline DataNode* ComponentNode::EmplaceDataNode(const std::string& label) {
   // outputs[label] = DataNode(this, label);
-  auto ret =
-      outputs_.emplace(label, std::make_unique<DataNode>(this, label));
+  auto ret = outputs_.emplace(label, std::make_unique<DataNode>(this, label));
   return ret.first->second.get();
 }
 

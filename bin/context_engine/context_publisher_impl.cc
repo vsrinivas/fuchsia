@@ -15,11 +15,10 @@ ContextPublisherImpl::~ContextPublisherImpl() = default;
 
 void ContextPublisherImpl::Publish(
     const fidl::String& label,
-    fidl::InterfaceHandle<ContextPublisherController> controller,
     fidl::InterfaceRequest<ContextPublisherLink> link) {
   DataNode* output = component_->EmplaceDataNode(label);
   repo_->Index(output);
-  output->SetPublisher(std::move(controller), std::move(link));
+  output->SetPublisher(std::move(link));
 }
 
 }  // namespace maxwell
