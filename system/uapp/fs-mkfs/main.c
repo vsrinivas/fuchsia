@@ -22,6 +22,7 @@ struct {
     const char* name;
     disk_format_t df;
 } FILESYSTEMS[] = {
+    {"blobstore", DISK_FORMAT_BLOBFS},
     {"minfs", DISK_FORMAT_MINFS},
     {"fat", DISK_FORMAT_FAT},
 };
