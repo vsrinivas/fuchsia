@@ -18,7 +18,7 @@ namespace ledger {
 
 class PageUtils {
  public:
-  // Converts a status from storage into a status from the mojo API. If the
+  // Converts a status from storage into a status from the FIDL API. If the
   // storage status is storage::Status::NOT_FOUND, |not_found_status| will be
   // returned.
   static Status ConvertStatus(storage::Status status,

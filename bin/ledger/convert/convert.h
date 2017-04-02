@@ -19,7 +19,7 @@ namespace convert {
 // representations of a data object.
 
 // This class doesn't take ownership of the data used to construct it. The data
-// must outlive it. It is used to allow transparent handling of mojo arrays,
+// must outlive it. It is used to allow transparent handling of FIDL arrays,
 // leveldb slices and strings.
 class ExtendedStringView : public ftl::StringView {
  public:

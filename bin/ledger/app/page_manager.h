@@ -23,7 +23,7 @@ namespace ledger {
 // Manages a ledger page.
 //
 // PageManager owns all page-level objects related to a single page: page
-// storage, and a set of mojo PageImpls backed by the page storage. It is safe
+// storage, and a set of FIDL PageImpls backed by the page storage. It is safe
 // to delete it at any point - this closes all channels, deletes PageImpls and
 // tears down the storage.
 //

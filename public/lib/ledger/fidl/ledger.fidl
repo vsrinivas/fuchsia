@@ -86,7 +86,7 @@ interface Page {
   //   They are guaranteed to be persisted as soon as the client receives a
   //   successful status.
   // |Put()| and |PutWithPriority()| can be used for small values that fit
-  // inside a mojo message. If the value is bigger, a reference must be first
+  // inside a FIDL message. If the value is bigger, a reference must be first
   // created using |CreateReference()| and then |PutReference()| can be used.
   // |PutWithPriority()| and |PutReference()| have an additional |priority|
   // parameter managing the synchronization policy for this value. |Put()| uses
@@ -183,7 +183,7 @@ interface PageSnapshot {
 
   // Returns the keys of all entries in the page that match the given prefix. If
   // |key_prefix| is NULL, all entries are returned. If the result fits in a
-  // single mojo message, |status| will be |OK| and |next_token| equal to NULL.
+  // single FIDL message, |status| will be |OK| and |next_token| equal to NULL.
   // Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will have a
   // non-NULL value. To retrieve the remaining results, another call to
   // |GetKeys| should be made, initializing the optional |token| argument
