@@ -56,6 +56,13 @@ static bool switch_to_first_vc(void) {
     return !strcmp(v, "0") || !strcmp(v, "false") || !strcmp(v, "off");
 }
 
+static mx_status_t launch_blobstore(int argc, const char** argv, mx_handle_t* hnd,
+                                    uint32_t* ids, size_t len) {
+    devmgr_launch(svcs_job_handle, "blobstore:/blobstore", argc, argv, NULL, -1,
+                  hnd, ids, len);
+    return NO_ERROR;
+}
+
 static mx_status_t launch_minfs(int argc, const char** argv, mx_handle_t* hnd,
                                 uint32_t* ids, size_t len) {
     devmgr_launch(svcs_job_handle, "minfs:/data", argc, argv, NULL, -1,
@@ -80,7 +87,7 @@ static bool data_mounted = false;
  * GUID of the device does not match a known valid one. Returns NO_ERROR if an
  * attempt to mount is made, without checking mount success.
  */
-static int mount_minfs(int fd, mount_options_t* options) {
+static mx_status_t mount_minfs(int fd, mount_options_t* options) {
     uint8_t type_guid[GPT_GUID_LEN];
     static const uint8_t sys_guid[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
     static const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
@@ -149,6 +156,10 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         // probe for partition table
         ioctl_device_bind(fd, "mbr", 4);
         close(fd);
+        return NO_ERROR;
+    }
+    case DISK_FORMAT_BLOBFS: {
+        mount(fd, "/blobstore", DISK_FORMAT_BLOBFS, &default_mount_options, launch_blobstore);
         return NO_ERROR;
     }
     case DISK_FORMAT_MINFS: {
