@@ -1207,7 +1207,7 @@ int faccessat(int dirfd, const char* filename, int amode, int flag) {
 
     // amode is allowed to be either a subset of this mask, or just F_OK.
     const int allowed_modes = R_OK | W_OK | X_OK;
-    if (amode != F_OK && (flag & (~allowed_modes))) {
+    if (amode != F_OK && (amode & (~allowed_modes))) {
         return ERRNO(EINVAL);
     }
 
