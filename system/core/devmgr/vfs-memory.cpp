@@ -12,8 +12,10 @@
 #include <fs/vfs.h>
 #include <magenta/device/devmgr.h>
 #include <magenta/new.h>
+#include <magenta/thread_annotations.h>
 #include <mxio/debug.h>
 #include <mxio/vfs.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
@@ -259,7 +261,7 @@ mx_status_t VnodeDir::Create(fs::Vnode** out, const char* name, size_t len, uint
     uint32_t flags = S_ISDIR(mode)
         ? MEMFS_TYPE_DIR
         : MEMFS_TYPE_DATA;
-    mx_status_t r = _memfs_create(this, &vn, name, len, flags);
+    mx_status_t r = memfs_create(this, &vn, name, len, flags);
     if (r >= 0) {
         vn->RefAcquire();
         *out = vn;
@@ -508,14 +510,14 @@ static mx_status_t memfs_create_fs(const char* name, bool device, VnodeMemfs** o
     return NO_ERROR;
 }
 
-static void _memfs_mount(VnodeMemfs* parent, VnodeMemfs* subtree) {
+static void memfs_mount_locked(VnodeMemfs* parent, VnodeMemfs* subtree) TA_REQ(vfs_lock) {
     Dnode::AddChild(parent->dnode_, subtree->dnode_);
 }
 
 // precondition: no ref taken on parent
 // postcondition: ref returned on out parameter
-static mx_status_t _memfs_create_device_at(VnodeMemfs* parent, VnodeMemfs** out, const char* name,
-                                           mx_handle_t h) {
+static mx_status_t memfs_create_device_at_locked(VnodeMemfs* parent, VnodeMemfs** out,
+                                                 const char* name, mx_handle_t h) TA_REQ(vfs_lock) {
     if ((parent == nullptr) || (name == nullptr)) {
         return ERR_INVALID_ARGS;
     }
@@ -537,7 +539,7 @@ static mx_status_t _memfs_create_device_at(VnodeMemfs* parent, VnodeMemfs** out,
 
     // create vnode
     VnodeMemfs* vn;
-    mx_status_t r = _memfs_create(parent, &vn, name, len, MEMFS_TYPE_DEVICE);
+    mx_status_t r = memfs_create(parent, &vn, name, len, MEMFS_TYPE_DEVICE);
     if (r < 0) {
         return r;
     }
@@ -553,7 +555,8 @@ static mx_status_t _memfs_create_device_at(VnodeMemfs* parent, VnodeMemfs** out,
     return NO_ERROR;
 }
 
-static mx_status_t _memfs_add_link(VnodeMemfs* parent, const char* name, VnodeMemfs* vn) {
+static mx_status_t memfs_add_link_locked(VnodeMemfs* parent, const char* name,
+                                         VnodeMemfs* vn) TA_REQ(vfs_lock) {
     if ((parent == nullptr) || (vn == nullptr)) {
         return ERR_INVALID_ARGS;
     }
@@ -617,7 +620,7 @@ mx_status_t memfs_create_from_vmo(const char* path, uint32_t flags,
     }
 
     VnodeMemfs* vn_fs;
-    r = _memfs_create(static_cast<VnodeMemfs*>(parent), &vn_fs, pathout, strlen(pathout),
+    r = memfs_create(static_cast<VnodeMemfs*>(parent), &vn_fs, pathout, strlen(pathout),
                       MEMFS_TYPE_VMO);
     if (r < 0) {
         if (mx_handle_close(h) < 0) {
@@ -651,7 +654,7 @@ mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,
     }
 
     VnodeMemfs* vn;
-    r = _memfs_create(parent, &vn, pathout, strlen(pathout), flags); // no ref taken
+    r = memfs_create(parent, &vn, pathout, strlen(pathout), flags); // no ref taken
     if (r != NO_ERROR) {
         parent->RefRelease();
         return r;
@@ -710,7 +713,7 @@ mx_status_t memfs_create_directory(const char* path, uint32_t flags) {
     }
 
     VnodeMemfs* vn;
-    r = _memfs_create(parent, &vn, pathout, strlen(pathout), MEMFS_TYPE_DIR);
+    r = memfs_create(parent, &vn, pathout, strlen(pathout), MEMFS_TYPE_DIR);
     parent->RefRelease();
 
     return r;
@@ -761,20 +764,17 @@ memfs::VnodeMemfs* bootfs_get_root() {
     return memfs::bootfs_root;
 }
 
-mx_status_t memfs_create_device_at(memfs::VnodeMemfs* parent, memfs::VnodeMemfs** out, const char* name,
-                                   mx_handle_t h) {
-    mx_status_t r;
-    mtx_lock(&vfs_lock);
-    r = _memfs_create_device_at(parent, out, name, h);
-    mtx_unlock(&vfs_lock);
-    return r;
+mx_status_t memfs_create_device_at(memfs::VnodeMemfs* parent, memfs::VnodeMemfs** out,
+                                   const char* name, mx_handle_t h) {
+    mxtl::AutoLock lock(&vfs_lock);
+    return memfs_create_device_at_locked(parent, out, name, h);
 }
 
 // common memfs node creation
 // postcondition: return vn linked into dir (1 ref); no extra ref returned
-mx_status_t _memfs_create(memfs::VnodeMemfs* parent, memfs::VnodeMemfs** out,
-                          const char* name, size_t namelen,
-                          uint32_t flags) {
+mx_status_t memfs_create(memfs::VnodeMemfs* parent, memfs::VnodeMemfs** out,
+                         const char* name, size_t namelen,
+                         uint32_t flags) {
     if ((parent == nullptr) || !parent->IsDirectory()) {
         return ERR_INVALID_ARGS;
     }
@@ -843,9 +843,9 @@ memfs::VnodeMemfs* vfs_create_global_root() {
             panic();
         }
 
-        _memfs_mount(memfs::vfs_root, devfs_get_root());
-        _memfs_mount(memfs::vfs_root, bootfs_get_root());
-        _memfs_mount(memfs::vfs_root, memfs_get_root());
+        memfs_mount_locked(memfs::vfs_root, devfs_get_root());
+        memfs_mount_locked(memfs::vfs_root, bootfs_get_root());
+        memfs_mount_locked(memfs::vfs_root, memfs_get_root());
 
         memfs_create_directory("/blobstore", 0);
         memfs_create_directory("/data", 0);
@@ -856,16 +856,12 @@ memfs::VnodeMemfs* vfs_create_global_root() {
 }
 
 void memfs_mount(memfs::VnodeMemfs* parent, memfs::VnodeMemfs* subtree) {
-    mtx_lock(&vfs_lock);
-    _memfs_mount(parent, subtree);
-    mtx_unlock(&vfs_lock);
+    mxtl::AutoLock lock(&vfs_lock);
+    memfs_mount_locked(parent, subtree);
 }
 
-mx_status_t memfs_add_link(memfs::VnodeMemfs* parent, const char* name, memfs::VnodeMemfs* target) {
-    mx_status_t r;
-    mtx_lock(&vfs_lock);
-    r = _memfs_add_link(parent, name, target);
-    mtx_unlock(&vfs_lock);
-    return r;
+mx_status_t memfs_add_link(memfs::VnodeMemfs* parent, const char* name,
+                           memfs::VnodeMemfs* target) {
+    mxtl::AutoLock lock(&vfs_lock);
+    return memfs_add_link_locked(parent, name, target);
 }
-

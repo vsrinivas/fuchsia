@@ -2,29 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdlib.h>
+#include <string.h>
+
+#include <fs/vfs.h>
+#include <ddk/device.h>
+#include <magenta/processargs.h>
+#include <magenta/syscalls.h>
+#include <mxio/debug.h>
+#include <mxtl/auto_lock.h>
 
 #include "dnode.h"
 #include "devmgr.h"
 #include "device-internal.h"
 #include "memfs-private.h"
 
-#include <fs/vfs.h>
-
-#include <ddk/device.h>
-
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-
-#include <mxio/debug.h>
-
-#include <stdlib.h>
-#include <string.h>
-
-
 #define MXDEBUG 0
 
 mx_status_t devfs_remove(VnodeMemfs* vn) {
-    mtx_lock(&vfs_lock);
+    mxtl::AutoLock lock(&vfs_lock);
 
     // hold a reference to ourselves so the rug doesn't get pulled out from under us
     vn->RefAcquire();
@@ -44,7 +40,6 @@ mx_status_t devfs_remove(VnodeMemfs* vn) {
     }
 
     vn->RefRelease();
-    mtx_unlock(&vfs_lock);
 
     // with all dnodes destroyed, nothing should hold a reference
     // to the vnode and it should be release()'d

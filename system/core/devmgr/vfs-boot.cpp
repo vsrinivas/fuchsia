@@ -39,15 +39,15 @@ mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
     return 1;
 }
 
-static mx_status_t _vnb_create(VnodeMemfs* parent, VnodeMemfs** out,
-                               const char* name, size_t namelen,
-                               mx_handle_t h, mx_off_t off, size_t datalen) {
+static mx_status_t vnb_create(VnodeMemfs* parent, VnodeMemfs** out,
+                              const char* name, size_t namelen,
+                              mx_handle_t h, mx_off_t off, size_t datalen) {
     if (parent->dnode_ == nullptr) {
         return ERR_NOT_DIR;
     }
 
     VnodeMemfs* vnb_fs;
-    mx_status_t r = _memfs_create(parent, &vnb_fs, name, namelen, MEMFS_TYPE_VMO);
+    mx_status_t r = memfs_create(parent, &vnb_fs, name, namelen, MEMFS_TYPE_VMO);
     if (r < 0) {
         printf("bootfs: memfs_create('%.*s') failed: %d\n", (int)namelen, name, r);
         return r;
@@ -61,7 +61,7 @@ static mx_status_t _vnb_create(VnodeMemfs* parent, VnodeMemfs** out,
     return NO_ERROR;
 }
 
-static mx_status_t _vnb_mkdir(VnodeMemfs* parent, VnodeMemfs** out, const char* name, size_t namelen) {
+static mx_status_t vnb_mkdir(VnodeMemfs* parent, VnodeMemfs** out, const char* name, size_t namelen) {
     // TODO(orr): subsequent patch will move this to more regular vnode operations
     if (!parent->IsDirectory()) {
         printf("bootfs: %p not a directory\n", parent);
@@ -82,11 +82,11 @@ static mx_status_t _vnb_mkdir(VnodeMemfs* parent, VnodeMemfs** out, const char* 
     }
 
     // create a new directory
-    return _memfs_create(parent, out, name, namelen, MEMFS_TYPE_DIR);
+    return memfs_create(parent, out, name, namelen, MEMFS_TYPE_DIR);
 }
 
-static mx_status_t _add_file(VnodeMemfs* vnb, const char* path, mx_handle_t vmo,
-                             mx_off_t off, size_t len) {
+static mx_status_t add_file(VnodeMemfs* vnb, const char* path, mx_handle_t vmo,
+                            mx_off_t off, size_t len) {
     mx_status_t r;
     if ((path[0] == '/') || (path[0] == 0))
         return ERR_INVALID_ARGS;
@@ -96,11 +96,11 @@ static mx_status_t _add_file(VnodeMemfs* vnb, const char* path, mx_handle_t vmo,
             if (path[0] == 0) {
                 return ERR_INVALID_ARGS;
             }
-            return _vnb_create(vnb, &vnb, path, strlen(path), vmo, off, len);
+            return vnb_create(vnb, &vnb, path, strlen(path), vmo, off, len);
         } else {
             if (nextpath == path)
                 return ERR_INVALID_ARGS;
-            r = _vnb_mkdir(vnb, &vnb, path, nextpath - path);
+            r = vnb_mkdir(vnb, &vnb, path, nextpath - path);
             if (r < 0) {
                 return r;
             }
@@ -115,9 +115,9 @@ static mx_status_t _add_file(VnodeMemfs* vnb, const char* path, mx_handle_t vmo,
 // be exposed to C:
 
 mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, size_t len) {
-    return _add_file(bootfs_get_root(), path, vmo, off, len);
+    return add_file(bootfs_get_root(), path, vmo, off, len);
 }
 
 mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, size_t len) {
-    return _add_file(systemfs_get_root(), path, vmo, off, len);
+    return add_file(systemfs_get_root(), path, vmo, off, len);
 }

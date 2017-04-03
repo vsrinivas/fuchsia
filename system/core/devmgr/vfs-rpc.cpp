@@ -14,6 +14,7 @@
 #include <magenta/new.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/thread_annotations.h>
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>
@@ -65,7 +66,7 @@ VnodeWatcher::~VnodeWatcher() {
     }
 }
 
-void VnodeDir::NotifyAdd(const char* name, size_t len) {
+void VnodeDir::NotifyAdd(const char* name, size_t len) TA_REQ(vfs_lock) {
     xprintf("devfs: notify vn=%p name='%.*s'\n", this, (int)len, name);
     for (auto &watcher : watch_list_) {
         mx_status_t status;
