@@ -16,6 +16,7 @@ MODULE_HEADER_DEPS := kernel/lib/vdso
 MODULE_SRCS := \
     $(LOCAL_DIR)/data.c \
     $(LOCAL_DIR)/mx_cache_flush.c \
+    $(LOCAL_DIR)/mx_deadline_after.c \
     $(LOCAL_DIR)/mx_status_get_string.c \
     $(LOCAL_DIR)/mx_system_get_num_cpus.c \
     $(LOCAL_DIR)/mx_system_get_physmem.c \

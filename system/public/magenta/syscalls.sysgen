@@ -46,6 +46,10 @@ syscall ticks_per_second vdsocall const
     ()
     returns (uint64_t);
 
+syscall deadline_after vdsocall
+    (nanoseconds: mx_duration_t)
+    returns (mx_time_t);
+
 # Global system information
 
 syscall system_get_num_cpus vdsocall const

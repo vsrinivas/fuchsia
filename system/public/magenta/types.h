@@ -33,12 +33,14 @@ typedef int32_t mx_handle_t;
 // Same as kernel status_t
 typedef int32_t mx_status_t;
 
-// time in nanoseconds
+// absolute time in nanoseconds (generally with respect to the monotonic clock)
 typedef uint64_t mx_time_t;
+// a duration in nanoseconds
+typedef uint64_t mx_duration_t;
 #define MX_TIME_INFINITE UINT64_MAX
-#define MX_USEC(n) ((mx_time_t)(1000ULL * (n)))
-#define MX_MSEC(n) ((mx_time_t)(1000000ULL * (n)))
-#define MX_SEC(n)  ((mx_time_t)(1000000000ULL * (n)))
+#define MX_USEC(n) ((mx_duration_t)(1000ULL * (n)))
+#define MX_MSEC(n) ((mx_duration_t)(1000000ULL * (n)))
+#define MX_SEC(n)  ((mx_duration_t)(1000000000ULL * (n)))
 
 typedef uint32_t mx_signals_t;
 
