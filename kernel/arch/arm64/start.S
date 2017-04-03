@@ -350,22 +350,22 @@ FUNCTION(arm_reset)
     cbnz    cpuid, .Lsecondary_boot
 #endif
 
-    ldr tmp, =__stack_end
-    mov sp, tmp
-
-    /* clear bss */
+    // Clear out the bss excluding the kernel translation table ("prebss").
+    // NOTE: Relies on __post_prebss_bss_start and __bss_end
+    // being 16 byte aligned.
 .L__do_bss:
-    /* clear out the bss excluding the stack and kernel translation table  */
-    /* NOTE: relies on __post_prebss_bss_start and __bss_end being 8 byte aligned */
     ldr     tmp, =__post_prebss_bss_start
     ldr     tmp2, =__bss_end
     sub     tmp2, tmp2, tmp
     cbz     tmp2, .L__bss_loop_done
 .L__bss_loop:
-    sub     tmp2, tmp2, #8
-    str     xzr, [tmp], #8
+    sub     tmp2, tmp2, #16
+    stp     xzr, xzr, [tmp], #16
     cbnz    tmp2, .L__bss_loop
 .L__bss_loop_done:
+
+    ldr     tmp, =boot_cpu_kstack_end
+    mov     sp, tmp
 
     adrp    tmp, boot_args
     add     tmp, tmp, #:lo12:boot_args
@@ -408,12 +408,12 @@ DATA(page_tables_not_ready)
 END(page_tables_not_ready)
 #endif
 
-.section .bss.prebss.stack, "aw", @nobits
-    .align 4
-DATA(__stack)
-    .skip ARCH_DEFAULT_STACK_SIZE * SMP_MAX_CPUS
-END(__stack)
-DATA(__stack_end)
+.bss
+LOCAL_DATA(boot_cpu_kstack)
+    .skip ARCH_DEFAULT_STACK_SIZE
+    .balign 16
+LOCAL_DATA(boot_cpu_kstack_end)
+END(boot_cpu_kstack)
 
 .section .bss.prebss.translation_table, "aw", @nobits
 .align 3 + MMU_PAGE_TABLE_ENTRIES_IDENT_SHIFT
