@@ -40,23 +40,31 @@ static size_t IntegrateCmdlineEntropy() {
     }
 
     const size_t kMaxEntropyArgumentLen = 128;
-    const int hex_len = static_cast<int>(mxtl::min(strlen(entropy), kMaxEntropyArgumentLen));
+    const size_t hex_len = mxtl::min(strlen(entropy), kMaxEntropyArgumentLen);
 
-    for (int i = 0; i < hex_len; ++i) {
+    for (size_t i = 0; i < hex_len; ++i) {
         if (!isxdigit(entropy[i])) {
-            panic("Invalid entropy string: idx %d is not an ASCII hex digit\n", i);
+            panic("Invalid entropy string: idx %zu is not an ASCII hex digit\n", i);
         }
     }
 
     uint8_t digest[clSHA256_DIGEST_SIZE];
-    clSHA256(entropy, hex_len, digest);
+    clSHA256(entropy, static_cast<int>(hex_len), digest);
     kGlobalPrng->AddEntropy(digest, sizeof(digest));
 
-    // TODO(security): Use HideFromCompiler() once we implement it.
-    // Make a best effort to clear this out so it isn't sent to usermode
-    memset(const_cast<char*>(entropy), '0', hex_len);
+    // We have a pointer to const, but it's actually a pointer to the
+    // mutable global state in __kernel_cmdline that is still live (it
+    // will be copied into the userboot bootstrap message later).  So
+    // it's fully well-defined to cast away the const and mutate this
+    // here so the bits can't leak to userboot.  While we're at it,
+    // prettify the result a bit so it's obvious what one is looking at.
+    memset(const_cast<char*>(entropy), 'x', hex_len);
+    if (hex_len >= sizeof(".redacted=") - 1) {
+        memcpy(const_cast<char*>(entropy) - 1,
+               ".redacted=", sizeof(".redacted=") - 1);
+    }
 
-    const size_t entropy_added = mxtl::max(static_cast<size_t>(hex_len / 2), sizeof(digest));
+    const size_t entropy_added = mxtl::max(hex_len / 2, sizeof(digest));
     return entropy_added;
 }
 
