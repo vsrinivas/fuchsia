@@ -129,7 +129,7 @@ void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
 // in one operation queue), so they cannot be fields of
 // StoryProviderImpl. Thus such operations are separate classes.
 
-class GetStoryDataCall : public Operation<StoryDataPtr> {
+class GetStoryDataCall : Operation<StoryDataPtr> {
  public:
   GetStoryDataCall(OperationContainer* const container,
                    std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot,
@@ -141,6 +141,7 @@ class GetStoryDataCall : public Operation<StoryDataPtr> {
     Ready();
   }
 
+ private:
   void Run() override {
     std::string key{kStoryKeyPrefix + story_id_.get()};
     (*root_snapshot_)
@@ -168,7 +169,6 @@ class GetStoryDataCall : public Operation<StoryDataPtr> {
         });
   };
 
- private:
   std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot_;
   const fidl::String story_id_;
   StoryDataPtr story_data_;
@@ -176,7 +176,7 @@ class GetStoryDataCall : public Operation<StoryDataPtr> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetStoryDataCall);
 };
 
-class WriteStoryDataCall : public Operation<void> {
+class WriteStoryDataCall : Operation<void> {
  public:
   WriteStoryDataCall(OperationContainer* const container,
                      ledger::Page* const root_page,
@@ -188,6 +188,7 @@ class WriteStoryDataCall : public Operation<void> {
     Ready();
   }
 
+ private:
   void Run() override {
     FTL_DCHECK(!story_data_.is_null());
 
@@ -208,14 +209,13 @@ class WriteStoryDataCall : public Operation<void> {
         });
   }
 
- private:
   ledger::Page* const root_page_;  // not owned
   StoryDataPtr story_data_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteStoryDataCall);
 };
 
-class CreateStoryCall : public Operation<void> {
+class CreateStoryCall : Operation<void> {
  public:
   using FidlStringMap = StoryProviderImpl::FidlStringMap;
 
@@ -239,6 +239,7 @@ class CreateStoryCall : public Operation<void> {
     Ready();
   }
 
+ private:
   void Run() override {
     std::string story_page_id{kStoryKeyPrefix + story_id_.get()};
     story_data_ = StoryData::New();
@@ -281,7 +282,6 @@ class CreateStoryCall : public Operation<void> {
     controller_->AddLinkDataAndSync(std::move(root_json_), [this] { Done(); });
   }
 
- private:
   ledger::Ledger* const ledger_;                  // not owned
   ledger::Page* const root_page_;                 // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
@@ -300,7 +300,7 @@ class CreateStoryCall : public Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
 
-class DeleteStoryCall : public Operation<void> {
+class DeleteStoryCall : Operation<void> {
  public:
   using StoryIdSet = std::unordered_set<std::string>;
   using ControllerMap =
@@ -323,6 +323,7 @@ class DeleteStoryCall : public Operation<void> {
     Ready();
   }
 
+ private:
   void Run() override {
     if (pending_deletion_ == nullptr) {
       Complete();
@@ -344,6 +345,7 @@ class DeleteStoryCall : public Operation<void> {
     // Complete() is called by PageWatcher::OnChange().
   }
 
+ public:
   void Complete() {
     story_ids_->erase(story_id_);
     if (pending_deletion_) {
@@ -373,7 +375,7 @@ class DeleteStoryCall : public Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
 };
 
-class GetControllerCall : public Operation<void> {
+class GetControllerCall : Operation<void> {
  public:
   using ControllerMap =
       std::unordered_map<std::string, std::unique_ptr<StoryImpl>>;
@@ -397,6 +399,7 @@ class GetControllerCall : public Operation<void> {
     Ready();
   }
 
+ private:
   void Run() override {
     // If possible, try connecting to an existing controller.
     auto i = story_controllers_->find(story_id_);
@@ -465,7 +468,6 @@ class GetControllerCall : public Operation<void> {
                      });
   }
 
- private:
   ledger::Ledger* const ledger_;   // not owned
   ledger::Page* const root_page_;  // not owned
   std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot_;
@@ -483,7 +485,7 @@ class GetControllerCall : public Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetControllerCall);
 };
 
-class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
+class PreviousStoriesCall : Operation<fidl::Array<fidl::String>> {
  public:
   PreviousStoriesCall(OperationContainer* const container,
                       std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot,
@@ -493,6 +495,7 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
     Ready();
   }
 
+ private:
   void Run() override {
     // This resize() has the side effect of marking the array as
     // non-null. Do not remove it because the fidl declaration
@@ -540,7 +543,6 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
                });
   }
 
- private:
   std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot_;
   std::vector<ledger::EntryPtr> entries_;
   fidl::Array<fidl::String> story_ids_;
@@ -548,7 +550,7 @@ class PreviousStoriesCall : public Operation<fidl::Array<fidl::String>> {
   FTL_DISALLOW_COPY_AND_ASSIGN(PreviousStoriesCall);
 };
 
-class UpdateDeviceNameCall : public Operation<void> {
+class UpdateDeviceNameCall : Operation<void> {
  public:
   UpdateDeviceNameCall(OperationContainer* const container,
                        ledger::Page* const root_page,
@@ -561,6 +563,7 @@ class UpdateDeviceNameCall : public Operation<void> {
     Ready();
   }
 
+ private:
   void Run() override {
     (*root_snapshot_)
         ->Get(to_array(kDeviceMapKey),
@@ -605,7 +608,6 @@ class UpdateDeviceNameCall : public Operation<void> {
               });
   }
 
- private:
   ledger::Page* const root_page_;  // not owned
   std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot_;
   const std::string device_name_;

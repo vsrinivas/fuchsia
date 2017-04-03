@@ -15,7 +15,7 @@ namespace modular {
 
 namespace {
 
-class ReadLinkDataCall : public Operation<fidl::String> {
+class ReadLinkDataCall : Operation<fidl::String> {
  public:
   ReadLinkDataCall(OperationContainer* const container,
                    std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot,
@@ -27,6 +27,7 @@ class ReadLinkDataCall : public Operation<fidl::String> {
     Ready();
   }
 
+ private:
   void Run() override {
     std::string key{kLinkKeyPrefix + link_id_.get()};
     (*page_snapshot_)
@@ -57,14 +58,13 @@ class ReadLinkDataCall : public Operation<fidl::String> {
         });
   }
 
- private:
   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
   const fidl::String link_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
 
-class WriteLinkDataCall : public Operation<void> {
+class WriteLinkDataCall : Operation<void> {
  public:
   WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
@@ -78,6 +78,7 @@ class WriteLinkDataCall : public Operation<void> {
     Ready();
   }
 
+ private:
   void Run() override {
     std::string key{kLinkKeyPrefix + link_id_.get()};
     page_->Put(to_array(key), to_array(data_), [this](ledger::Status status) {
@@ -89,7 +90,6 @@ class WriteLinkDataCall : public Operation<void> {
     });
   }
 
- private:
   ledger::Page* const page_;  // not owned
   fidl::String link_id_;
   fidl::String data_;
