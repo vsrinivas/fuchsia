@@ -20,7 +20,7 @@ def create_base_directory(file):
     try:
         os.makedirs(path)
     except os.error:
-        # Already existed
+        # Already existed.
         pass
 
 
@@ -37,6 +37,20 @@ def get_target(label):
         name = base[base.rfind("/")+1:]
         path = base
     return path, name
+
+
+# Writes a cargo config file.
+def write_cargo_config(path, vendor_directory):
+    create_base_directory(path)
+    config = '''[source.crates-io]
+registry = 'https://github.com/rust-lang/crates.io-index'
+replace-with = 'vendored-sources'
+
+[source.vendored-sources]
+directory = '%s'
+''' % vendor_directory
+    with open(path, "w") as config_file:
+        config_file.write(config)
 
 
 def main():
@@ -75,6 +89,12 @@ def main():
     parser.add_argument("--label",
                         help="Label of the target to build",
                         required=True)
+    parser.add_argument("--cmake-dir",
+                        help="Path to the directory containing cmake",
+                        required=True)
+    parser.add_argument("--vendor-directory",
+                        help="Path to the vendored crates",
+                        required=True)
     parser.add_argument("--deps",
                         help="List of dependencies",
                         nargs="*")
@@ -85,6 +105,7 @@ def main():
         env["CARGO_TARGET_%s_LINKER" % args.target_triple.replace("-", "_").upper()] = args.linker
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["RUSTC"] = args.rustc
+    env["PATH"] = "%s:%s" % (env["PATH"], args.cmake_dir)
 
     # Generate Cargo.toml.
     original_manifest = os.path.join(args.crate_root, "Cargo.toml")
@@ -146,6 +167,10 @@ def main():
         with open(name_path, "w") as name_file:
             name_file.write(args.name)
 
+    # Write a config file to allow cargo to find the vendored crates.
+    config_path = os.path.join(args.gen_dir, ".cargo", "config")
+    write_cargo_config(config_path, args.vendor_directory)
+
     call_args = [
         args.cargo,
         "build",
@@ -160,7 +185,20 @@ def main():
         call_args.append("--lib")
     if args.type == "bin":
         call_args.extend(["--bin", args.name])
-    return subprocess.call(call_args, env=env, cwd=args.gen_dir)
+    return_code = subprocess.call(call_args, env=env, cwd=args.gen_dir)
+    if return_code != 0:
+        return return_code
+
+    # Make binaries accessible from a standard location in the output directory.
+    if args.type == "bin":
+        symlink = os.path.join(args.out_dir, args.name)
+        # TODO(pylaligand): adjust debug/release when necessary.
+        bin = os.path.join(args.out_dir, args.target_triple, "debug", args.name)
+        if os.path.islink(symlink):
+            os.unlink(symlink)
+        os.symlink(bin, symlink)
+
+    return 0
 
 
 if __name__ == '__main__':

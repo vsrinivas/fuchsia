@@ -64,7 +64,7 @@ def fetch_license(subdir):
 def main():
     for subdir in os.listdir(os.getcwd()):
         if subdir.startswith('.') or not os.path.isdir(subdir): continue
-        license_files = [file for file in os.listdir(subdir) if file.startswith('LICENSE')]
+        license_files = [file for file in os.listdir(subdir) if file.startswith('LICENSE') or file.startswith('license')]
         if not license_files:
             fetch_license(subdir)
 

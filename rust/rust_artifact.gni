@@ -10,7 +10,7 @@ template("rust_artifact") {
   if (defined(invoker.name)) {
     name = invoker.name
   } else {
-    assert(false, "Must specify a crate name")
+    name = target_name
   }
 
   if (defined(invoker.type)) {
@@ -89,6 +89,10 @@ template("rust_artifact") {
       target_triple,
       "--label",
       target_label,
+      "--cmake-dir",
+      rebase_path("//buildtools/cmake/bin"),
+      "--vendor-directory",
+      rebase_path("//third_party/rust-crates/vendor"),
       "--deps",
     ] + rust_deps
 
