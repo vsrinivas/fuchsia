@@ -90,10 +90,6 @@ __BEGIN_CDECLS;
 #define BIND_USB_CLASS        0x0202
 #define BIND_USB_SUBCLASS     0x0203
 #define BIND_USB_PROTOCOL     0x0204
-#define BIND_USB_IFC_CLASS    0x0205
-#define BIND_USB_IFC_SUBCLASS 0x0206
-#define BIND_USB_IFC_PROTOCOL 0x0207
-#define BIND_USB_DEVICE_TYPE  0x0208
 
 // System on Chip (SoC) binding variables at 0x03XX
 #define BIND_SOC_VID          0x0300

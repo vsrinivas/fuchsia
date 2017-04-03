@@ -245,6 +245,4 @@ mx_driver_t _driver_usb_hid = {
 MAGENTA_DRIVER_BEGIN(_driver_usb_hid, "usb-hid", "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
     BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HID),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, 0),
-    BI_MATCH_IF(EQ, BIND_USB_IFC_CLASS, USB_CLASS_HID),
 MAGENTA_DRIVER_END(_driver_usb_hid)

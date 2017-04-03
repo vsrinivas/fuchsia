@@ -227,10 +227,8 @@ mx_driver_t _driver_usb_audio = {
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_usb_audio, "usb-audio", "magenta", "0.1", 4)
-    // USB audio devices are always specified at the interface level
-    BI_ABORT_IF(NE, BIND_USB_CLASS, 0),
-    BI_ABORT_IF(NE, BIND_USB_IFC_CLASS, USB_CLASS_AUDIO),
-    BI_ABORT_IF(NE, BIND_USB_IFC_SUBCLASS, USB_SUBCLASS_AUDIO_CONTROL),
-    BI_MATCH_IF(EQ, BIND_USB_IFC_PROTOCOL, 0),
+MAGENTA_DRIVER_BEGIN(_driver_usb_audio, "usb-audio", "magenta", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_AUDIO),
+    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_AUDIO_CONTROL),
+    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
 MAGENTA_DRIVER_END(_driver_usb_audio)

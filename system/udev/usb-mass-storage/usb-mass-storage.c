@@ -900,5 +900,5 @@ mx_driver_t _driver_usb_mass_storage = {
 
 MAGENTA_DRIVER_BEGIN(_driver_usb_mass_storage, "usb-mass-storage", "magenta", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
-    BI_MATCH_IF(EQ, BIND_USB_IFC_CLASS, USB_CLASS_MSC),
+    BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_MSC),
 MAGENTA_DRIVER_END(_driver_usb_mass_storage)
