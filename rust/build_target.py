@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import string
 import subprocess
 import sys
 
@@ -13,6 +14,7 @@ sys.path += [os.path.join(BUILD_PATH, "third_party/pytoml-0.1.11")]
 import pytoml as toml
 
 
+# Creates the directory containing the given file.
 def create_base_directory(file):
     path = os.path.dirname(file)
     try:
@@ -20,6 +22,21 @@ def create_base_directory(file):
     except os.error:
         # Already existed
         pass
+
+
+# Extracts a (path, name) tuple from the given build label.
+def get_target(label):
+    if not label.startswith("//"):
+        raise Exception("Expected label to start with //, got %s" % label)
+    base = label[2:]
+    separator_index = string.rfind(base, ":")
+    if separator_index >= 0:
+        name = base[separator_index+1:]
+        path = base[:separator_index]
+    else:
+        name = base[base.rfind("/")+1:]
+        path = base
+    return path, name
 
 
 def main():
@@ -35,7 +52,10 @@ def main():
                         help="Path to the output directory",
                         required=True)
     parser.add_argument("--gen-dir",
-                        help="Path to the generated source directory",
+                        help="Path to the target's generated source directory",
+                        required=True)
+    parser.add_argument("--root-gen-dir",
+                        help="Path to the root gen directory",
                         required=True)
     parser.add_argument("--crate-root",
                         help="Path to the crate root",
@@ -52,6 +72,12 @@ def main():
     parser.add_argument("--target-triple",
                         help="Compilation target",
                         required=True)
+    parser.add_argument("--label",
+                        help="Label of the target to build",
+                        required=True)
+    parser.add_argument("--deps",
+                        help="List of dependencies",
+                        nargs="*")
     args = parser.parse_args()
 
     env = os.environ.copy()
@@ -66,6 +92,8 @@ def main():
     create_base_directory(generated_manifest)
     with open(original_manifest, "r") as manifest:
         config = toml.load(manifest)
+
+        # Update the path to the sources.
         base = None
         if args.type == "bin":
             if "bin" not in config:
@@ -90,8 +118,33 @@ def main():
         relative_path = base["path"]
         new_path = os.path.join(args.crate_root, relative_path)
         base["path"] = new_path
+
+        if "dependencies" not in config:
+            config["dependencies"] = {}
+        # Add dependency sections for local deps.
+        for dep in args.deps:
+            path, name = get_target(dep)
+            # Read the name of the Rust artifact.
+            artifact_path = os.path.join(args.root_gen_dir, path,
+                                         "%s.rust_name" % name)
+            with open(artifact_path, "r") as artifact_file:
+                artifact_name = artifact_file.read()
+            config["dependencies"][artifact_name] = {
+                "path": os.path.join(args.root_gen_dir, path)
+            }
+
+        # Write the complete manifest.
         with open(generated_manifest, "w") as generated_config:
             toml.dump(generated_config, config)
+
+    if args.type == "lib":
+        # Write a file mapping target name to Rust artifact name.
+        # This will be used to set up dependencies.
+        _, target_name = get_target(args.label)
+        name_path = os.path.join(args.gen_dir, "%s.rust_name" % target_name)
+        create_base_directory(name_path)
+        with open(name_path, "w") as name_file:
+            name_file.write(args.name)
 
     call_args = [
         args.cargo,

@@ -19,6 +19,13 @@ template("rust_artifact") {
     assert(false, "Must specify an artifact type")
   }
 
+  rust_deps = []
+  if (defined(invoker.deps)) {
+    rust_deps = invoker.deps
+  }
+
+  target_label = get_label_info(":$target_name", "label_no_toolchain")
+
   assert(current_cpu == "x64")
   assert(current_os == "mac" || current_os == "linux" || current_os == "fuchsia")
   if (current_os == "mac") {
@@ -59,6 +66,8 @@ template("rust_artifact") {
       output_file,
     ]
 
+    deps = rust_deps
+
     args = [
       "--type",
       type,
@@ -68,6 +77,8 @@ template("rust_artifact") {
       rebase_path(target_out_dir),
       "--gen-dir",
       rebase_path(target_gen_dir),
+      "--root-gen-dir",
+      rebase_path(root_gen_dir),
       "--crate-root",
       rebase_path("."),
       "--cargo",
@@ -76,7 +87,10 @@ template("rust_artifact") {
       rebase_path("$rust_base/bin/rustc"),
       "--target-triple",
       target_triple,
-    ]
+      "--label",
+      target_label,
+      "--deps",
+    ] + rust_deps
 
     if (is_fuchsia) {
       args += [

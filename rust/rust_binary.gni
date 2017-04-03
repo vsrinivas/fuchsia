@@ -18,7 +18,7 @@ import("//build/rust/rust_artifact.gni")
 #   }
 template("rust_binary") {
   rust_artifact(target_name) {
-    forward_variables_from(invoker, [ "name" ])
+    forward_variables_from(invoker, [ "deps", "name" ])
     type = "bin"
   }
 }
