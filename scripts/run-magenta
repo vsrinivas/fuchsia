@@ -307,5 +307,6 @@ fi
 CMDLINE+="kernel.entropy=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
 
 # run qemu
-echo $QEMU $ARGS -append "$CMDLINE" $@
-$QEMU $ARGS -append "$CMDLINE" $@
+set -x
+$QEMU $ARGS -append "$CMDLINE" "$@"
+exit $?
