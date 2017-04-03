@@ -7,8 +7,12 @@ import("//flutter/build/flutter_app.gni")
 flutter_app("userpicker_device_shell") {
   main_dart = "lib/main.dart"
 
+  package_name = "userpicker_device_shell"
+
+  source_dir = "lib"
+
   manifest = "pubspec.yaml"
-  
+
   deps = [
     "//application/lib/app/dart",
     "//apps/modular/services/device:device_dart",
