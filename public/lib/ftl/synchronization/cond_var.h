@@ -63,7 +63,7 @@ class CondVar final {
  private:
 #if defined(OS_WIN)
   CONDITION_VARIABLE cv_;
-#elif defined(OS_POSIX)
+#else
   pthread_cond_t impl_;
 #endif
 
