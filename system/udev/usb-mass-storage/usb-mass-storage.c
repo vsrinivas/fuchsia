@@ -810,8 +810,6 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         } else {
             if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                 bulk_in_addr = endp->bEndpointAddress;
-            } else if (usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
-                DEBUG_PRINT(("UMS:bulk interrupt endpoint found. \nHowever CBI still needs to be implemented so this device probably wont work\n"));
             }
         }
         endp = usb_desc_iter_next_endpoint(&iter);
@@ -898,7 +896,9 @@ mx_driver_t _driver_usb_mass_storage = {
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_usb_mass_storage, "usb-mass-storage", "magenta", "0.1", 2)
+MAGENTA_DRIVER_BEGIN(_driver_usb_mass_storage, "usb-mass-storage", "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
-    BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_MSC),
+    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_MSC),
+    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, 6),      // SCSI transparent command set
+    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0x50),   // bulk-only protocol
 MAGENTA_DRIVER_END(_driver_usb_mass_storage)
