@@ -50,7 +50,7 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
                        uint64_t propagation_index,
                        mozart::InputEventPtr event);
   // Used to post as task and schedule the next call to |DispatchEvent|
-  void PodAndScheduleNextEvent();
+  void PopAndScheduleNextEvent();
 
   void OnFocusResult(mozart::FocusChainPtr focus_chain);
   void OnHitTestResult(mozart::PointFPtr point,

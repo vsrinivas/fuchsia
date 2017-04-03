@@ -98,7 +98,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
               if (focus_chain) {
                 weak->OnFocusResult(std::move(focus_chain));
               } else {
-                weak->PodAndScheduleNextEvent();
+                weak->PopAndScheduleNextEvent();
               }
             }
           });
@@ -158,6 +158,7 @@ void InputDispatcherImpl::DeliverEvent(mozart::InputEventPtr event) {
 void InputDispatcherImpl::DeliverKeyEvent(mozart::FocusChainPtr focus_chain,
                                           uint64_t propagation_index,
                                           mozart::InputEventPtr event) {
+  FTL_DCHECK(propagation_index < focus_chain->chain.size());
   FTL_VLOG(1) << "DeliverKeyEvent " << focus_chain->version << " "
               << (1 + propagation_index) << "/" << focus_chain->chain.size()
               << " " << *(focus_chain->chain[propagation_index]) << " "
@@ -195,7 +196,7 @@ void InputDispatcherImpl::DeliverKeyEvent(mozart::FocusChainPtr focus_chain,
       }));
 }
 
-void InputDispatcherImpl::PodAndScheduleNextEvent() {
+void InputDispatcherImpl::PopAndScheduleNextEvent() {
   if (!pending_events_.empty()) {
     pending_events_.pop();
     if (!pending_events_.empty()) {
@@ -212,10 +213,12 @@ void InputDispatcherImpl::PodAndScheduleNextEvent() {
 
 void InputDispatcherImpl::OnFocusResult(mozart::FocusChainPtr focus_chain) {
   FTL_VLOG(1) << "OnFocusResult " << focus_chain->version << " "
-              << *(focus_chain->chain.front());
-  DeliverKeyEvent(std::move(focus_chain), 0,
-                  std::move(pending_events_.front()));
-  PodAndScheduleNextEvent();
+              << focus_chain->chain.size();
+  if (focus_chain->chain.size() > 0) {
+    DeliverKeyEvent(std::move(focus_chain), 0,
+                    std::move(pending_events_.front()));
+  }
+  PopAndScheduleNextEvent();
 }
 
 void InputDispatcherImpl::OnHitTestResult(
@@ -278,7 +281,7 @@ void InputDispatcherImpl::OnHitTestResult(
                       << event_path_propagation_id_;
 
           DeliverEvent(std::move(pending_events_.front()));
-          PodAndScheduleNextEvent();
+          PopAndScheduleNextEvent();
         });
   }
 }
