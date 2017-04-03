@@ -31,11 +31,16 @@ namespace memfs {
 
 class Dnode;
 
+struct VnodeWatcher : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<VnodeWatcher>> {
+public:
+    VnodeWatcher();
+    ~VnodeWatcher();
+
+    mx_handle_t h;
+};
+
 class VnodeMemfs : public fs::Vnode {
 public:
-    mx_status_t IoctlWatchDir(const void* in_buf, size_t in_len, void* out_buf,
-                              size_t out_len) override;
-    void NotifyAdd(const char* name, size_t len) override;
     virtual mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
                                    uint32_t* type, void* extra, uint32_t* esize) override;
     virtual void Release() override;
@@ -63,7 +68,6 @@ public:
 protected:
     VnodeMemfs();
 
-    list_node_t watch_list_; // all directory watchers
     uint64_t create_time_;
     uint64_t modify_time_;
 };
@@ -90,6 +94,9 @@ public:
     virtual ~VnodeDir();
 
 private:
+    mx_status_t IoctlWatchDir(const void* in_buf, size_t in_len, void* out_buf,
+                              size_t out_len) final;
+    void NotifyAdd(const char* name, size_t len) final;
     mx_status_t Lookup(fs::Vnode** out, const char* name, size_t len) final;
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
     mx_status_t Create(fs::Vnode** out, const char* name, size_t len, uint32_t mode) final;
@@ -100,6 +107,8 @@ private:
                        bool src_must_be_dir, bool dst_must_be_dir) final;
     mx_status_t Link(const char* name, size_t len, fs::Vnode* target) final;
     mx_status_t Getattr(vnattr_t* a) override;
+
+    mxtl::DoublyLinkedList<mxtl::unique_ptr<VnodeWatcher>> watch_list_;
 };
 
 class VnodeDevice final : public VnodeDir {
@@ -152,11 +161,6 @@ typedef struct VnodeMemfs VnodeMemfs;
 #endif  // ifdef __cplusplus
 
 __BEGIN_CDECLS
-
-typedef struct vnode_watcher {
-    list_node_t node;
-    mx_handle_t h;
-} vnode_watcher_t;
 
 void vfs_global_init(VnodeMemfs* root);
 

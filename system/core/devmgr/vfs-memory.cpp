@@ -36,7 +36,6 @@ static VnodeMemfs* bootfs_root = nullptr;
 static VnodeMemfs* systemfs_root = nullptr;
 
 VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr), link_count_(0) {
-    list_initialize(&watch_list_);
     create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
 }
 VnodeMemfs::~VnodeMemfs() {}

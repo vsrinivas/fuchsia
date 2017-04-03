@@ -16,7 +16,10 @@
 
 // Watch a directory for changes
 //   in: none
-//   out: handle to channel to get notified on
+//   out: handle to channel to get notified on.
+//        Notification messages will be a string child entry name WITHOUT a
+//        null-terminating character; the length of the string should be
+//        determined by the message length during the channel read.
 #define IOCTL_DEVICE_WATCH_DIR \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DEVICE, 1)
 

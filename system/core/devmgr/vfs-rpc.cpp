@@ -2,29 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devmgr.h"
-#include "dnode.h"
-#include "memfs-private.h"
-
-#include <fs/vfs.h>
-
-#include <mxio/debug.h>
-#include <mxio/dispatcher.h>
-#include <mxio/io.h>
-#include <mxio/remoteio.h>
-
-#include <magenta/device/device.h>
-#include <magenta/device/devmgr.h>
-#include <magenta/processargs.h>
-#include <magenta/syscalls.h>
-
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 
+#include <fs/vfs.h>
+#include <magenta/device/device.h>
+#include <magenta/device/devmgr.h>
+#include <magenta/new.h>
+#include <magenta/processargs.h>
+#include <magenta/syscalls.h>
+#include <mxio/debug.h>
+#include <mxio/dispatcher.h>
+#include <mxio/io.h>
+#include <mxio/remoteio.h>
+#include <mxtl/auto_lock.h>
+#include <mxtl/unique_ptr.h>
+
+#include "devmgr.h"
+#include "dnode.h"
+#include "memfs-private.h"
+
 #define MXDEBUG 0
+
+mtx_t vfs_lock = MTX_INIT;
 
 mxio_dispatcher_t* vfs_dispatcher;
 
@@ -52,6 +55,47 @@ mx_status_t VnodeMemfs::GetHandles(uint32_t flags, mx_handle_t* hnds, uint32_t* 
     }
     *type = MXIO_PROTOCOL_REMOTE;
     return 1;
+}
+
+VnodeWatcher::VnodeWatcher() : h(MX_HANDLE_INVALID) {}
+
+VnodeWatcher::~VnodeWatcher() {
+    if (h != MX_HANDLE_INVALID) {
+        mx_handle_close(h);
+    }
+}
+
+void VnodeDir::NotifyAdd(const char* name, size_t len) {
+    xprintf("devfs: notify vn=%p name='%.*s'\n", this, (int)len, name);
+    for (auto &watcher : watch_list_) {
+        mx_status_t status;
+        if ((status = mx_channel_write(watcher.h, 0, name, static_cast<uint32_t>(len), nullptr, 0)) < 0) {
+            watch_list_.erase(watcher);
+        }
+    }
+}
+
+mx_status_t VnodeDir::IoctlWatchDir(const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
+    if ((out_len != sizeof(mx_handle_t)) || (in_len != 0)) {
+        return ERR_INVALID_ARGS;
+    }
+    if (!IsDirectory()) {
+        // not a directory
+        return ERR_WRONG_TYPE;
+    }
+    AllocChecker ac;
+    mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher);
+    if (!ac.check()) {
+        return ERR_NO_MEMORY;
+    }
+    mx_handle_t h;
+    if (mx_channel_create(0, &h, &watcher->h) < 0) {
+        return ERR_NO_RESOURCES;
+    }
+    memcpy(out_buf, &h, sizeof(mx_handle_t));
+    mxtl::AutoLock lock(&vfs_lock);
+    watch_list_.push_back(mxtl::move(watcher));
+    return sizeof(mx_handle_t);
 }
 
 } // namespace memfs
