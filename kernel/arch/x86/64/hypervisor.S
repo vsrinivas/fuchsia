@@ -32,7 +32,7 @@ FUNCTION(vmx_enter)
 
     // If we are resuming, jump to resume.
     test %sil, %sil
-    jne resume
+    jnz resume
 
     // Launch the guest.
     vmlaunch

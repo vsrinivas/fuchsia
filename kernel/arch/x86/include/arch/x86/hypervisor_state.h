@@ -56,7 +56,7 @@ struct HostState {
 };
 
 struct GuestState {
-    //  RIP and RSP are automatically saved by VMX in the VMCS.
+    //  RIP, RSP, and RFLAGS are automatically saved by VMX in the VMCS.
     uint64_t rax;
     uint64_t rbx;
     uint64_t rcx;
