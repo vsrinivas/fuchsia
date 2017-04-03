@@ -138,7 +138,7 @@ function umount_retry() {
 
 MOUNT_PATH=`mktemp -d`
 sudo mount "$EFI_PARTITION_PATH" "$MOUNT_PATH"
-trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted succesfully\"" INT TERM EXIT
+trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted successfully\"" INT TERM EXIT
 
 sudo mkdir -p "${MOUNT_PATH}/EFI/BOOT"
 echo -n "Copying Bootloader..."
