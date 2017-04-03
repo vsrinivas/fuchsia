@@ -73,6 +73,9 @@ def copy_files(fuchsia_tools_dir, hostname, copy_map):
   if type(copy_map) is not dict:
     error("malformed \"copy\" map in JSON file")
     return False
+  if hostname is None:
+    error("cannot copy files to ipv4 addresses")
+    return False
 
   for dirname, files in copy_map.iteritems():
     for filename in files:
@@ -133,12 +136,9 @@ def get_device_table(fuchsia_tools_dir):
   return [device for device in reader if device["Device Type"] == "device"]
 
 
-def translate_name_to_ipv6(devices, fuchsia_tools_dir, server):
-  """ Given an ipv4 address, a node name, or a colon, find the related
-  ipv6 Magenta address """
-  if is_ipv4_address(server):
-    print "Warning: ignoring ipv4 address, searching for a device instead."
-    server = ":"
+def translate_name_to_ipv6(fuchsia_tools_dir, devices, server):
+  """ Given a node name or a colon, find the related ipv6 Magenta address """
+  assert not is_ipv4_address(server), "Do not pass ipv4 to this routine"
 
   if len(devices) == 0:
     error("No devices were found on the local subnet.")
@@ -182,6 +182,38 @@ def normalize_ipv6(ipv6):
     ipv6 = ipv6[1:-1]
   ipv6 = ipv6.replace("/", "%")
   return ipv6
+
+
+def get_ipv4_addrinfo(fuchsia_tools_dir, hostipv4, port):
+  addrinfo = socket.getaddrinfo(hostipv4, port, socket.AF_INET,
+                                socket.SOCK_STREAM)
+  return None, addrinfo
+
+
+def get_ipv6_addrinfo(fuchsia_tools_dir, hostipv6, port):
+  devices = get_device_table(fuchsia_tools_dir)
+
+  if hostipv6[:4] != "fe80":
+    hostipv6 = translate_name_to_ipv6(fuchsia_tools_dir, devices, hostipv6)
+  if hostipv6 is None:
+    return None
+
+  hostipv6 = normalize_ipv6(hostipv6)
+  if hostipv6.find("%") <= 0:
+    error("ipv6 address must include the interface.")
+    return None
+
+  hostname = translate_ipv6_to_name(devices, hostipv6)
+  if hostname is None:
+    return None
+
+  # hostipv6 is now the *magenta* link local address, which works for netcp
+  # but does not allow us to talk to test_runner. So we need to calculate the
+  # "normal" Fuchsia link-local ipv6 address.
+  fuchsia_hostipv6 = magenta_ipv6_to_fuchsia(hostipv6)
+  addrinfo = socket.getaddrinfo(fuchsia_hostipv6, port, socket.AF_INET6,
+                                socket.SOCK_STREAM)
+  return hostname, addrinfo
 
 
 def main(argv):
@@ -235,45 +267,37 @@ def main(argv):
       error("The ip address must be specified with the --server option.")
       return 1
 
-  devices = get_device_table(fuchsia_tools_dir)
-
   # Server name could be any of:
-  #   ipv4 address (ignored, uses : instead)
+  #   ipv4 address (for automated testing only - can't copy files)
   #   ipv6 address (must include interface)
   #   : (uses netls to find the default)
   #   node name (uses netls to translate to ipv6)
-  hostipv6 = args.server
-  if hostipv6[:4] != "fe80":
-    hostipv6 = translate_name_to_ipv6(devices, fuchsia_tools_dir, hostipv6)
-  if hostipv6 is None:
+  if is_ipv4_address(args.server):
+    hostname, addrinfo = get_ipv4_addrinfo(fuchsia_tools_dir, args.server,
+                                           args.port)
+  else:
+    hostname, addrinfo = get_ipv6_addrinfo(fuchsia_tools_dir, args.server,
+                                           args.port)
+  if addrinfo is None or len(addrinfo) == 0:
     return 1
 
-  hostipv6 = normalize_ipv6(hostipv6)
-  if hostipv6.find("%") <= 0:
-    error("ipv6 address must include the interface.")
-    return None
-
-  hostname = translate_ipv6_to_name(devices, hostipv6)
-  if hostname is None:
-    return 1
-
-  # hostipv6 is now the *magenta* link local address, which works for netcp
-  # but does not allow us to talk to test_runner. So we need to calculate the
-  # "normal" Fuchsia link-local ipv6 address.
-  fuchsia_hostipv6 = magenta_ipv6_to_fuchsia(hostipv6)
-  addrinfo = socket.getaddrinfo(fuchsia_hostipv6, args.port, socket.AF_INET6,
-                                socket.SOCK_STREAM)
   (family, socktype, proto, canonname, sockaddr) = addrinfo[0]
 
   # 1. Start listening to the device log.
-
-  # start loglistener from its own directory so its banner fits on a line.
   starting_dirname = os.getcwd()
   loglistener_dirname = os.path.dirname(args.loglistener_path)
   loglistener_basename = os.path.basename(args.loglistener_path)
+
+  # if hostname is None, then this is an ipv4 address and we don't have
+  # the device name.
+  if hostname is None:
+    listener_command = loglistener_basename
+  else:
+    listener_command = [loglistener_basename, hostname]
+
+  # start loglistener from its own directory so its banner fits on a line.
   os.chdir(loglistener_dirname)
-  listener_process = subprocess.Popen(
-      [loglistener_basename, hostname], stdout=subprocess.PIPE)
+  listener_process = subprocess.Popen(listener_command, stdout=subprocess.PIPE)
   os.chdir(starting_dirname)
 
   # 2. Open up a connection to the on-device test runner server.
