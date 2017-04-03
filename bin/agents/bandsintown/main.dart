@@ -6,8 +6,7 @@ import 'dart:async';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.maxwell.lib.context.dart/maxwell_context.dart'
     as maxwell_context;
-import 'package:apps.maxwell.lib.context.dart/subscriber_link_impl.dart';
-import 'package:apps.maxwell.services.context/subscriber_link.fidl.dart';
+import 'package:apps.maxwell.services.context/context_subscriber.fidl.dart';
 
 import 'api.dart';
 import 'artist_event.dart';
