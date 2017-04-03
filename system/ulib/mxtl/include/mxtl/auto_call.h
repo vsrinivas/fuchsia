@@ -54,8 +54,9 @@ public:
 
     // call it immediately
     void call() {
-        if (active_) (call_)();
+        bool active = active_;
         cancel();
+        if (active) (call_)();
     }
 
 private:
