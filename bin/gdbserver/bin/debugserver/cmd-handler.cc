@@ -670,9 +670,9 @@ bool CommandHandler::Handle_q(const ftl::StringView& prefix,
     return HandleQueryXfer(params, callback);
 
   // TODO(dje): TO-195
-  // QDisableRandomization:VALUE ?
-  // qGetTLSAddr:THREAD-ID,OFFSET,LM
-  // qThreadExtraInfo,THREAD-ID ?
+  // - QDisableRandomization:VALUE ?
+  // - qGetTLSAddr:THREAD-ID,OFFSET,LM
+  // - qThreadExtraInfo,THREAD-ID ?
 
   return false;
 }

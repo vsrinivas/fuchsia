@@ -537,7 +537,8 @@ bool Process::RefreshAllThreads() {
   FTL_DCHECK(handle_);
 
   // First get the thread count so that we can allocate an appropriately sized
-  // buffer.
+  // buffer. This is racy but unless the caller stops all threads that's just
+  // the way things are.
   size_t num_threads;
   mx_status_t status =
       mx_object_get_info(handle_, MX_INFO_PROCESS_THREADS, nullptr, 0,
