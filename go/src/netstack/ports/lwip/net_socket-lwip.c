@@ -508,3 +508,146 @@ int net_freeaddrinfo(struct addrinfo* res) {
   } while (res != NULL);
   return 0;
 }
+
+int net_get_if_info(int index, net_if_info_t* info) {
+  int ret = -1;
+  lwip_net_if_info_t lwip_info;
+  ret = lwip_net_get_if_info(index, &lwip_info);
+  if (ret < 0) {
+    errno = EIO;
+    return -1;
+  }
+  strncpy(info->name, lwip_info.name, sizeof(lwip_info.name));
+  socklen_t addr_len = sizeof(info->addr);
+  if (convert_addr_from_lwip((const struct lwip_sockaddr*)&lwip_info.addr,
+                             sizeof(lwip_info.addr),
+                             (struct sockaddr*)&info->addr, &addr_len) < 0) {
+    errno = EIO;
+    return -1;
+  }
+  socklen_t netmask_len = sizeof(info->netmask);
+  if (convert_addr_from_lwip((const struct lwip_sockaddr*)&lwip_info.netmask,
+                             sizeof(lwip_info.netmask),
+                             (struct sockaddr*)&info->netmask,
+                             &netmask_len) < 0) {
+    errno = EIO;
+    return -1;
+  }
+  socklen_t broadaddr_len = sizeof(info->broadaddr);
+  if (convert_addr_from_lwip((const struct lwip_sockaddr*)&lwip_info.broadaddr,
+                             sizeof(lwip_info.broadaddr),
+                             (struct sockaddr*)&info->broadaddr,
+                             &broadaddr_len) < 0) {
+    errno = EIO;
+    return -1;
+  }
+  info->flags = lwip_info.flags;
+  info->index = lwip_info.index;
+  info->hwaddr_len = lwip_info.hwaddr_len;
+  if (sizeof(info->hwaddr) < info->hwaddr_len) {
+    errno = EIO;
+    return -1;
+  }
+  memcpy(info->hwaddr, lwip_info.hwaddr, info->hwaddr_len);
+  return ret;
+}
+
+int net_set_if_addr_v4(const char* ifname,
+                       const struct sockaddr* ipaddr,
+                       const struct sockaddr* netmask) {
+  struct lwip_sockaddr_storage lwip_ipaddr;
+  lwip_socklen_t lwip_ipaddr_len = sizeof(lwip_ipaddr);
+  if (convert_addr_to_lwip(ipaddr, sizeof(*ipaddr),
+                           (struct lwip_sockaddr*)&lwip_ipaddr,
+                           &lwip_ipaddr_len) < 0) {
+    errno = EINVAL;
+    return -1;
+  }
+  struct lwip_sockaddr_storage lwip_netmask;
+  lwip_socklen_t lwip_netmask_len = sizeof(lwip_netmask);
+  if (convert_addr_to_lwip(netmask, sizeof(*netmask),
+                           (struct lwip_sockaddr*)&lwip_netmask,
+                           &lwip_netmask_len) < 0) {
+    errno = EINVAL;
+    return -1;
+  }
+  if (lwip_net_set_if_addr_v4(ifname, (struct lwip_sockaddr*)&lwip_ipaddr,
+                              (struct lwip_sockaddr*)&lwip_netmask) < 0) {
+    errno = EIO;
+    return -1;
+  }
+  return 0;
+}
+
+int net_set_if_gateway_v4(const char* ifname, const struct sockaddr* gateway) {
+  struct lwip_sockaddr_storage lwip_gateway;
+  lwip_socklen_t lwip_gateway_len = sizeof(lwip_gateway);
+  if (convert_addr_to_lwip(gateway, sizeof(*gateway),
+                           (struct lwip_sockaddr*)&lwip_gateway,
+                           &lwip_gateway_len) < 0) {
+    errno = EINVAL;
+    return -1;
+  }
+  if (lwip_net_set_if_gateway_v4(ifname, (struct lwip_sockaddr*)&lwip_gateway) <
+      0) {
+    errno = EIO;
+    return -1;
+  }
+  return 0;
+}
+
+int net_get_if_gateway_v4(const char* ifname, struct sockaddr* gateway) {
+  struct lwip_sockaddr_storage lwip_gateway;
+  if (lwip_net_get_if_gateway_v4(ifname, (struct lwip_sockaddr*)&lwip_gateway) <
+      0) {
+    errno = EIO;
+    return -1;
+  }
+  socklen_t gateway_len = sizeof(struct sockaddr);
+  if (convert_addr_from_lwip((const struct lwip_sockaddr*)&lwip_gateway,
+                             sizeof(lwip_gateway), gateway, &gateway_len) < 0) {
+    errno = EIO;
+    return -1;
+  }
+  return 0;
+}
+
+int net_get_dhcp_status_v4(const char* ifname, int* dhcp_status) {
+  return lwip_net_get_dhcp_status_v4(ifname, dhcp_status);
+}
+
+int net_set_dhcp_status_v4(const char* ifname, const int dhcp_status) {
+  return lwip_net_set_dhcp_status_v4(ifname, dhcp_status);
+}
+
+int net_get_dns_server_v4(struct sockaddr* dns_server) {
+  struct lwip_sockaddr_storage lwip_dns_server;
+  if (lwip_net_get_dns_server_v4((struct lwip_sockaddr*)&lwip_dns_server) < 0) {
+    errno = EIO;
+    return -1;
+  }
+  socklen_t dns_server_len = sizeof(struct sockaddr);
+  if (convert_addr_from_lwip((const struct lwip_sockaddr*)&lwip_dns_server,
+                             sizeof(lwip_dns_server), dns_server,
+                             &dns_server_len) < 0) {
+    errno = EIO;
+    return -1;
+  }
+  return 0;
+}
+
+int net_set_dns_server_v4(const struct sockaddr* dns_server) {
+  struct lwip_sockaddr_storage lwip_dns_server;
+  lwip_socklen_t lwip_dns_server_len = sizeof(lwip_dns_server);
+  if (convert_addr_to_lwip(dns_server, sizeof(*dns_server),
+                           (struct lwip_sockaddr*)&lwip_dns_server,
+                           &lwip_dns_server_len) < 0) {
+    errno = EINVAL;
+    return -1;
+  }
+  if (lwip_net_set_dns_server_v4((struct lwip_sockaddr*)&lwip_dns_server) < 0) {
+    errno = EIO;
+    return -1;
+  }
+  return 0;
+}

@@ -20,6 +20,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 
+#include "apps/netstack/apps/include/netconfig.h"
 #include "apps/netstack/dispatcher.h"
 #include "apps/netstack/events.h"
 #include "apps/netstack/handle_watcher.h"
@@ -537,8 +538,139 @@ mx_status_t do_ioctl(mxrio_msg_t* msg, iostate_t* ios, int events,
                      mx_signals_t signals) {
   mx_status_t r = NO_ERROR;
   int op = msg->arg2.op;
-  debug("do_ioctl: op=0x%x, datalen=%d\n", op, msg->datalen);
+  debug("do_ioctl: op=0x%x, datalen=%d, arg=%d\n", op, msg->datalen, msg->arg);
   switch (op) {
+    case IOCTL_NETC_GET_IF_INFO: {
+      // output
+      static_assert(sizeof(netc_get_if_info_t) <= MXIO_CHUNK_SIZE,
+                    "netc_get_if_info_t should fit into msg->data");
+      netc_get_if_info_t* data = (netc_get_if_info_t*)msg->data;
+      memset(data, 0, sizeof(*data));
+      int ret = -1;
+      int index;
+      for (index = 0; index < NETC_IF_INFO_MAX; index++) {
+        net_if_info_t info;
+        ret = net_get_if_info(index, &info);
+        if (ret < 0)
+          break;
+        netc_if_info_t* out = &data->info[index];
+        strncpy(out->name, info.name, NETC_IFNAME_SIZE);
+        out->addr = info.addr;
+        out->netmask = info.netmask;
+        out->broadaddr = info.broadaddr;
+        out->flags = info.flags;
+        out->index = info.index;
+        out->hwaddr_len = info.hwaddr_len;
+        memcpy(out->hwaddr, info.hwaddr, info.hwaddr_len);
+        if (ret == 0)  // this is the last if
+          break;
+      }
+      if (ret < 0) {
+        r = errno_to_status(errno);
+        info("net_get_if_info: errno=%d\n", errno);
+        msg->datalen = 0;
+      } else {
+        data->n_info = index;
+        msg->datalen = sizeof(*data);
+      }
+      break;
+    }
+    case IOCTL_NETC_SET_IF_ADDR: {
+      // input
+      netc_set_if_addr_t* data = (netc_set_if_addr_t*)msg->data;
+      char ifname[NETC_IFNAME_SIZE];
+      strncpy(ifname, data->name, sizeof(ifname));
+      ifname[NETC_IFNAME_SIZE - 1] = '\0';
+
+      if (net_set_if_addr_v4(ifname, (struct sockaddr*)&data->addr,
+                             (struct sockaddr*)&data->netmask) < 0) {
+        r = errno_to_status(errno);
+      }
+      msg->datalen = 0;
+      break;
+    }
+    case IOCTL_NETC_GET_IF_GATEWAY: {
+      // input
+      char ifname[NETC_IFNAME_SIZE];
+      strncpy(ifname, (char*)msg->data, sizeof(ifname));
+      ifname[NETC_IFNAME_SIZE - 1] = '\0';
+      // output
+      struct sockaddr* gateway = (struct sockaddr*)msg->data;
+
+      if (net_get_if_gateway_v4(ifname, gateway) < 0) {
+        r = errno_to_status(errno);
+        msg->datalen = 0;
+      } else {
+        msg->datalen = sizeof(*gateway);
+      }
+      break;
+    }
+    case IOCTL_NETC_SET_IF_GATEWAY: {
+      // input
+      netc_set_if_gateway_t* data = (netc_set_if_gateway_t*)msg->data;
+      char ifname[NETC_IFNAME_SIZE];
+      strncpy(ifname, data->name, sizeof(ifname));
+      ifname[NETC_IFNAME_SIZE - 1] = '\0';
+      struct sockaddr* gateway = (struct sockaddr*)&data->gateway;
+
+      if (net_set_if_gateway_v4(ifname, gateway) < 0) {
+        r = errno_to_status(errno);
+      }
+      msg->datalen = 0;
+      break;
+    }
+    case IOCTL_NETC_GET_DHCP_STATUS: {
+      // input
+      char ifname[NETC_IFNAME_SIZE];
+      strncpy(ifname, (char*)msg->data, sizeof(ifname));
+      ifname[NETC_IFNAME_SIZE - 1] = '\0';
+      // output
+      int* dhcp_status = (int*)msg->data;
+
+      if (net_get_dhcp_status_v4(ifname, dhcp_status) < 0) {
+        r = errno_to_status(errno);
+        msg->datalen = 0;
+      } else {
+        msg->datalen = sizeof(*dhcp_status);
+      }
+      break;
+    }
+    case IOCTL_NETC_SET_DHCP_STATUS: {
+      // input
+      netc_set_dhcp_status_t* data = (netc_set_dhcp_status_t*)msg->data;
+      char ifname[NETC_IFNAME_SIZE];
+      strncpy(ifname, data->name, sizeof(ifname));
+      ifname[NETC_IFNAME_SIZE - 1] = '\0';
+      int dhcp_status = data->status;
+
+      if (net_set_dhcp_status_v4(ifname, dhcp_status) < 0) {
+        r = errno_to_status(errno);
+      }
+      msg->datalen = 0;
+      break;
+    }
+    case IOCTL_NETC_GET_DNS_SERVER: {
+      // output
+      struct sockaddr* dns_server = (struct sockaddr*)msg->data;
+
+      if (net_get_dns_server_v4(dns_server) < 0) {
+        r = errno_to_status(errno);
+        msg->datalen = 0;
+      } else {
+        msg->datalen = sizeof(*dns_server);
+      }
+      break;
+    }
+    case IOCTL_NETC_SET_DNS_SERVER: {
+      // input
+      struct sockaddr* dns_server = (struct sockaddr*)msg->data;
+
+      if (net_set_dns_server_v4(dns_server) < 0) {
+        r = errno_to_status(errno);
+      }
+      msg->datalen = 0;
+      break;
+    }
     default:
       error("do_ioctl: unknown op 0x%x\n", op);
       r = ERR_INVALID_ARGS;
@@ -833,7 +965,7 @@ mx_status_t do_getaddrinfo(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  static_assert(sizeof(mxrio_gai_reply_t) < MXIO_CHUNK_SIZE,
+  static_assert(sizeof(mxrio_gai_reply_t) <= MXIO_CHUNK_SIZE,
                 "mxrio_gai_reply_t should fit into msg->data");
   mxrio_gai_reply_t* gai_replyp = (struct mxrio_gai_reply*)msg->data;
   memset(gai_replyp, 0, sizeof(mxrio_gai_reply_t));

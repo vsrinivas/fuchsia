@@ -30,4 +30,26 @@ int net_getaddrinfo(const char* node, const char* service,
                     struct addrinfo** sys_res_p);
 int net_freeaddrinfo(struct addrinfo* res);
 
+typedef struct {
+  char name[16];  // null-terminated
+  struct sockaddr_storage addr;
+  struct sockaddr_storage netmask;
+  struct sockaddr_storage broadaddr;
+  uint32_t flags;
+  uint16_t index;
+  uint16_t hwaddr_len;
+  uint8_t hwaddr[8];
+} net_if_info_t;
+
+int net_get_if_info(int index, net_if_info_t* info);
+int net_set_if_addr_v4(const char* ifname,
+                       const struct sockaddr* ipaddr,
+                       const struct sockaddr* netmask);
+int net_get_if_gateway_v4(const char* ifname, struct sockaddr* gateway);
+int net_set_if_gateway_v4(const char* ifname, const struct sockaddr* gateway);
+int net_get_dhcp_status_v4(const char* ifname, int* dhcp_status);
+int net_set_dhcp_status_v4(const char* ifname, const int dhcp_status);
+int net_get_dns_server_v4(struct sockaddr* dns_server);
+int net_set_dns_server_v4(const struct sockaddr* dns_server);
+
 #endif  // APPS_NETSTACK_NETSOCKET_H_
