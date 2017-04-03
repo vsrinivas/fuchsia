@@ -5,7 +5,7 @@
 #ifndef LIB_FTL_COMPILER_SPECIFIC_H_
 #define LIB_FTL_COMPILER_SPECIFIC_H_
 
-#if !defined(COMPILER_GCC) && !defined(__clang__) && !defined(COMPILER_MSVC)
+#if !defined(__GNUC__) && !defined(__clang__) && !defined(_MSC_VER)
 #error Unsupported compiler.
 #endif
 
@@ -20,7 +20,7 @@
 // Annotate a typedef or function indicating it's ok if it's not used.
 // Use like:
 //   typedef Foo Bar ALLOW_UNUSED_TYPE;
-#if defined(COMPILER_GCC) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define FTL_ALLOW_UNUSED_TYPE __attribute__((unused))
 #else
 #define FTL_ALLOW_UNUSED_TYPE
@@ -29,9 +29,9 @@
 // Annotate a function indicating it should not be inlined.
 // Use like:
 //   NOINLINE void DoStuff() { ... }
-#if defined(COMPILER_GCC) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define FTL_NOINLINE __attribute__((noinline))
-#elif defined(COMPILER_MSVC)
+#elif defined(_MSC_VER)
 #define FTL_NOINLINE __declspec(noinline)
 #endif
 
@@ -39,18 +39,18 @@
 // Use like:
 //   class ALIGNAS(16) MyClass { ... }
 //   ALIGNAS(16) int array[4];
-#if defined(COMPILER_GCC) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define FTL_ALIGNAS(byte_alignment) __attribute__((aligned(byte_alignment)))
-#elif defined(COMPILER_MSVC)
+#elif defined(_MSC_VER)
 #define FTL_ALIGNAS(byte_alignment) __declspec(align(byte_alignment))
 #endif
 
 // Return the byte alignment of the given type (available at compile time).
 // Use like:
 //   ALIGNOF(int32)  // this would be 4
-#if defined(COMPILER_GCC) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define FTL_ALIGNOF(type) __alignof__(type)
-#elif defined(COMPILER_MSVC)
+#elif defined(_MSC_VER)
 #define FTL_ALIGNOF(type) __alignof(type)
 #endif
 
@@ -58,7 +58,7 @@
 // Use like:
 //   int foo() WARN_UNUSED_RESULT;
 // To explicitly ignore a result, see |ignore_result()| in base/macros.h.
-#if defined(COMPILER_GCC) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define FTL_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
 #define FTL_WARN_UNUSED_RESULT
@@ -70,7 +70,7 @@
 // |dots_param| is the one-based index of the "..." parameter.
 // For v*printf functions (which take a va_list), pass 0 for dots_param.
 // (This is undocumented but matches what the system C headers do.)
-#if defined(COMPILER_GCC) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define FTL_PRINTF_FORMAT(format_param, dots_param) \
     __attribute__((format(printf, format_param, dots_param)))
 #else
