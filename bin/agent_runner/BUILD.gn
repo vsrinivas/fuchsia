@@ -2,23 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("public") {
-  sources = [
-    "agent_runner.h",
-  ]
-
-  deps = [
-    "//application/services",
-    "//apps/ledger/services/internal",
-    "//apps/maxwell/services/user",
-    "//apps/modular/services/agent",
-    "//apps/modular/services/agent/agent_controller",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
-  ]
-}
-
-source_set("impl") {
+source_set("agent_runner") {
   sources = [
     "agent_context_impl.cc",
     "agent_context_impl.h",
@@ -35,10 +19,28 @@ source_set("impl") {
     "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",
     "//apps/modular/services/component",
-    "//apps/modular/src/component:component_context_impl",
+    "//apps/modular/src/component",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
-    "//lib/mtl/tasks:tasks",
-    "//lib/mtl/vmo:vmo",
+    "//lib/mtl/tasks",
+    "//lib/mtl/vmo",
   ]
 }
+
+# Broken out for component to depend on w/o creating circles.
+source_set("public") {
+  sources = [
+    "agent_runner.h",
+  ]
+
+  deps = [
+    "//application/services",
+    "//apps/ledger/services/internal",
+    "//apps/maxwell/services/user",
+    "//apps/modular/services/agent",
+    "//apps/modular/services/agent/agent_controller",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+  ]
+}
+

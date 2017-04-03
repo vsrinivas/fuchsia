@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("component_context_impl") {
+source_set("component") {
   sources = [
     "component_context_impl.cc",
     "component_context_impl.h",
