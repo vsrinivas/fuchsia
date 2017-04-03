@@ -160,6 +160,8 @@ static inline mx_status_t device_get_protocol(mx_device_t* dev, uint32_t proto_i
 #define DEV_STATE_READABLE DEVICE_SIGNAL_READABLE
 #define DEV_STATE_WRITABLE DEVICE_SIGNAL_WRITABLE
 #define DEV_STATE_ERROR DEVICE_SIGNAL_ERROR
+#define DEV_STATE_HANGUP DEVICE_SIGNAL_HANGUP
+#define DEV_STATE_OOB DEVICE_SIGNAL_OOB
 
 static inline void device_state_set(mx_device_t* dev, mx_signals_t stateflag) {
     mx_object_signal(dev->event, 0, stateflag);

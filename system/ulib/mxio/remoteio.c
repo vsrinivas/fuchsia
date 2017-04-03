@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <limits.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stddef.h>
@@ -12,6 +14,7 @@
 #include <sys/ioctl.h>
 #include <threads.h>
 
+#include <magenta/device/device.h>
 #include <magenta/device/ioctl.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -26,6 +29,16 @@
 #include "private.h"
 
 #define MXDEBUG 0
+
+#define POLL_SHIFT  24
+#define POLL_MASK   0x1F
+
+static_assert(MX_USER_SIGNAL_0 == (1 << POLL_SHIFT), "");
+static_assert((POLLIN << POLL_SHIFT) == DEVICE_SIGNAL_READABLE, "");
+static_assert((POLLPRI << POLL_SHIFT) == DEVICE_SIGNAL_OOB, "");
+static_assert((POLLOUT << POLL_SHIFT) == DEVICE_SIGNAL_WRITABLE, "");
+static_assert((POLLERR << POLL_SHIFT) == DEVICE_SIGNAL_ERROR, "");
+static_assert((POLLHUP << POLL_SHIFT) == DEVICE_SIGNAL_HANGUP, "");
 
 typedef struct mxrio mxrio_t;
 struct mxrio {
@@ -691,34 +704,12 @@ static mx_status_t mxrio_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* type
 static void mxrio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
-    mx_signals_t signals = MX_USER_SIGNAL_2; // EPOLLERR is always detected
-    if (events & EPOLLIN) {
-        signals |= MX_USER_SIGNAL_0 | MX_SOCKET_PEER_CLOSED;
-    }
-    if (events & EPOLLOUT) {
-        signals |= MX_USER_SIGNAL_1;
-    }
-    if (events & EPOLLRDHUP) {
-        signals |= MX_SOCKET_PEER_CLOSED;
-    }
-    *_signals = signals;
+    // POLLERR is always detected
+    *_signals = ((EPOLLERR | events) & POLL_MASK) << POLL_SHIFT;
 }
 
 static void mxrio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
-    uint32_t events = 0;
-    if (signals & (MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED)) {
-        events |= EPOLLIN;
-    }
-    if (signals & MX_USER_SIGNAL_1) {
-        events |= EPOLLOUT;
-    }
-    if (signals & MX_USER_SIGNAL_2) {
-        events |= EPOLLERR;
-    }
-    if (signals & MX_CHANNEL_PEER_CLOSED) {
-        events |= EPOLLRDHUP;
-    }
-    *_events = events;
+    *_events = (signals >> POLL_SHIFT) & POLL_MASK;
 }
 
 static mxio_ops_t mx_remote_ops = {
