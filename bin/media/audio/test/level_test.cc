@@ -8,15 +8,11 @@
 #include <limits>
 
 #include "apps/media/src/audio/gain.h"
+#include "apps/media/src/audio/test/test_utils.h"
 #include "gtest/gtest.h"
 
 namespace media {
-namespace {
-
-bool RoughlyEquals(float a, float b) {
-  static constexpr float kEpsilon = 0.00002f;
-  return std::abs(a - b) < kEpsilon;
-}
+namespace test {
 
 // Tests expectations regarding distinguished values of Level.
 TEST(LevelTest, DistinguishedValues) {
@@ -57,7 +53,8 @@ TEST(LevelTest, ArbitraryValues) {
 
     // FromGain and ToGain round-trip this value, with some error.
     EXPECT_TRUE(RoughlyEquals(level.value(),
-                              Level<float>::FromGain(level.ToGain()).value()));
+                              Level<float>::FromGain(level.ToGain()).value(),
+                              0.00002f));
 
     // This level should be greater than the previous one.
     EXPECT_GT(level, previous_level);
@@ -66,5 +63,5 @@ TEST(LevelTest, ArbitraryValues) {
   }
 }
 
-}  // namespace
+}  // namespace test
 }  // namespace media

@@ -19,6 +19,8 @@ source_set("audio") {
     "mixer_input.h",
     "mixer_input_impl.cc",
     "mixer_input_impl.h",
+    "resampler.cc",
+    "resampler.h",
     "usb_audio_enum.cc",
     "usb_audio_enum.h",
     "usb_audio_source.cc",
@@ -40,6 +42,9 @@ test("tests") {
     "test/level_test.cc",
     "test/mixdown_table_test.cc",
     "test/mixer_test.cc",
+    "test/resampler_test.cc",
+    "test/test_utils.cc",
+    "test/test_utils.h",
   ]
 
   deps = [

@@ -67,9 +67,8 @@ class MixerInputImpl : public MixerInput<TOutSample> {
         : table_(std::move(mixdown_table)), pts_(pts), fade_(fade) {}
 
     // This overload is defined in order to get the right entry ordering in
-    // mixdown_table_. It doesn't distinguish entries that have the save the
-    // same PTS.
-    bool operator<(const MixdownScheduleEntry& other) {
+    // mixdown_schedule_. It doesn't distinguish entries that have the same PTS.
+    bool operator<(const MixdownScheduleEntry& other) const {
       return pts_ < other.pts_;
     }
   };

@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 
 namespace media {
-namespace {
+namespace test {
 
 // Tests expectations regarding silent mixdown tables.
 TEST(MixdownTableTest, Silent) {
@@ -110,5 +110,5 @@ TEST(MixdownTableTest, Iteration) {
   EXPECT_EQ(under_test->end(), iter);
 }
 
-}  // namespace
+}  // namespace test
 }  // namespace media
