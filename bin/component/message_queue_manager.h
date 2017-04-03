@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/services/component/message_queue.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -56,40 +57,25 @@ class MessageQueueManager {
                    const std::string& queue_name);
 
  private:
-  // Generates a random string to use as a queue token.
-  static std::string GenerateQueueToken();
-
-  // Gets the component instance id and queue name from the ledger for
-  // the given queue token.
-  void GetComponentInstanceQueueName(
-      const std::string& queue_token,
-      std::function<void(ledger::Status status,
-                         bool found,
-                         const std::string& component_instance_id,
-                         const std::string& queue_name)> callback);
-
-  // Gets the queue token from the ledger for the given component
-  // instance id and queue name.
-  void GetQueueToken(
-      const std::string& component_instance_id,
-      const std::string& queue_name,
-      std::function<void(ledger::Status status,
-                         bool found,
-                         const std::string& queue_token)> callback);
+  // The two private methods further below are accessed by these two
+  // Operation classes.
+  class GetMessageQueueStorageCall;
+  class DeleteMessageQueueCall;
 
   // Returns the |MessageQueueStorage| for the queue_token. Creates it
   // if it doesn't exist yet.
-  MessageQueueStorage* GetOrMakeMessageQueueStorage(
+  MessageQueueStorage* GetMessageQueueStorage(
       const std::string& component_instance_id,
       const std::string& queue_name,
       const std::string& queue_token);
 
-  // Returns the |MessageQueueStorage| or create one.
-  void GetOrMakeMessageQueue(
+  // Clears the |MessageQueueStorage| for the queue_token.
+  void ClearMessageQueueStorage(
       const std::string& component_instance_id,
       const std::string& queue_name,
-      std::function<void(ledger::Status status, MessageQueueStorage* storage)>
-          callback);
+      const std::string& queue_token);
+
+  OperationCollection operation_collection_;
 
   ledger::PagePtr page_;
 
@@ -97,12 +83,12 @@ class MessageQueueManager {
   std::unordered_map<std::string, std::unique_ptr<MessageQueueStorage>>
       message_queues_;
 
+  using ComponentQueuePair = std::pair<std::string, std::string>;
+
   class StringPairHash {
    public:
     std::size_t operator()(const std::pair<std::string, std::string>& p) const;
   };
-
-  using ComponentQueuePair = std::pair<std::string, std::string>;
 
   // A map of component instance id and queue name to queue tokens. Entries will
   // only be here while a |MessageQueueStorage| exists.
