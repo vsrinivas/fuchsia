@@ -15,21 +15,23 @@
 #include "vcdebug.h"
 
 static uint32_t default_palette[] = {
+    // 0-7 Normal/dark versions of colors
     0xff000000, // black
-    0xff0000aa, // blue
-    0xff00aa00, // green
-    0xff00aaaa, // cyan
     0xffaa0000, // red
-    0xffaa00aa, // magenta
+    0xff00aa00, // green
     0xffaa5500, // brown
+    0xff0000aa, // blue
+    0xffaa00aa, // magenta
+    0xff00aaaa, // cyan
     0xffaaaaaa, // grey
+    // 8-15 Bright/light versions of colors
     0xff555555, // dark grey
-    0xff5555ff, // bright blue
-    0xff55ff55, // bright green
-    0xff55ffff, // bright cyan
     0xffff5555, // bright red
-    0xffff55ff, // bright magenta
+    0xff55ff55, // bright green
     0xffffff55, // yellow
+    0xff5555ff, // bright blue
+    0xffff55ff, // bright magenta
+    0xff55ffff, // bright cyan
     0xffffffff, // white
 };
 
@@ -312,11 +314,11 @@ void vc_device_write_status(vc_device_t* dev) {
             snprintf(str, sizeof(str), "err");
             break;
         case CHARGING:
-            snprintf(str, sizeof(str), "\033[36m\033[1mc %d%%", info.pct);
+            snprintf(str, sizeof(str), "\033[33m\033[1mc %d%%", info.pct);
             break;
         case NOT_CHARGING:
             if (info.pct <= 20) {
-                snprintf(str, sizeof(str), "\033[34m\033[1m%d%%", info.pct);
+                snprintf(str, sizeof(str), "\033[31m\033[1m%d%%", info.pct);
             } else {
                 snprintf(str, sizeof(str), "%d%%", info.pct);
             }

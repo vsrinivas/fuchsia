@@ -236,7 +236,7 @@ void vc_get_status_line(char* str, int n) {
 
         int lines = vc_device_get_scrollback_lines(device);
         int chars = snprintf(ptr, n, "%s[%u] %s%c    %c%c \033[m",
-                             device->active ? "\033[36m\033[1m" : "",
+                             device->active ? "\033[33m\033[1m" : "",
                              i,
                              device->title,
                              device->flags & VC_FLAG_HASINPUT ? '*' : ' ',
