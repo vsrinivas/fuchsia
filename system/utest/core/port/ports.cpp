@@ -381,7 +381,7 @@ static bool channel_pre_writes_repeat() {
     return pre_writes_channel_test(MX_WAIT_ASYNC_REPEATING);
 }
 
-static bool cancel_event(uint32_t wait_mode, uint32_t cancel_mode) {
+static bool cancel_event(uint32_t wait_mode) {
     BEGIN_TEST;
     mx_status_t status;
 
@@ -399,9 +399,8 @@ static bool cancel_event(uint32_t wait_mode, uint32_t cancel_mode) {
             ev, port, keys[ix], MX_EVENT_SIGNALED, wait_mode), NO_ERROR, "");
     }
 
-    uint64_t cancel_key = (cancel_mode == MX_CANCEL_ANY) ? 0u : 13u;
+    EXPECT_EQ(mx_port_cancel(port, ev, 13u), NO_ERROR, "");
 
-    EXPECT_EQ(mx_handle_cancel(ev, cancel_key, cancel_mode), NO_ERROR, "");
     for (int ix = 0; ix != 2; ++ix) {
         EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
         EXPECT_EQ(mx_object_signal(ev, MX_EVENT_SIGNALED, 0u), NO_ERROR, "");
@@ -421,12 +420,9 @@ static bool cancel_event(uint32_t wait_mode, uint32_t cancel_mode) {
         EXPECT_EQ(out.signal.observed, MX_EVENT_SIGNALED, "");
     }
 
-    int expected_count = (cancel_mode == MX_CANCEL_ANY) ?
-        0 : ((wait_mode == MX_WAIT_ASYNC_ONCE) ? 2 : 4);
-
+    int expected_count = (wait_mode == MX_WAIT_ASYNC_ONCE) ? 2 : 4;
     uint64_t keysum = keys[0] + keys[2];
-    uint64_t expected_key_sum = (cancel_mode == MX_CANCEL_ANY) ?
-        0u : ((wait_mode == MX_WAIT_ASYNC_ONCE) ? keysum : (2u * keysum));
+    uint64_t expected_key_sum = (wait_mode == MX_WAIT_ASYNC_ONCE) ? keysum : (2u * keysum);
 
     EXPECT_EQ(wait_count, expected_count, "");
     EXPECT_EQ(key_sum, expected_key_sum, "");
@@ -437,19 +433,11 @@ static bool cancel_event(uint32_t wait_mode, uint32_t cancel_mode) {
 }
 
 static bool cancel_event_key_once() {
-    return cancel_event(MX_WAIT_ASYNC_ONCE, MX_CANCEL_KEY);
+    return cancel_event(MX_WAIT_ASYNC_ONCE);
 }
 
 static bool cancel_event_key_repeat() {
-    return cancel_event(MX_WAIT_ASYNC_REPEATING, MX_CANCEL_KEY);
-}
-
-static bool cancel_event_any_once() {
-    return cancel_event(MX_WAIT_ASYNC_ONCE, MX_CANCEL_ANY);
-}
-
-static bool cancel_event_any_repeat() {
-    return cancel_event(MX_WAIT_ASYNC_REPEATING, MX_CANCEL_ANY);
+    return cancel_event(MX_WAIT_ASYNC_REPEATING);
 }
 
 struct test_context {
@@ -531,8 +519,6 @@ RUN_TEST(channel_pre_writes_once)
 RUN_TEST(channel_pre_writes_repeat)
 RUN_TEST(cancel_event_key_once)
 RUN_TEST(cancel_event_key_repeat)
-RUN_TEST(cancel_event_any_once)
-RUN_TEST(cancel_event_any_repeat)
 RUN_TEST(threads_event_once)
 RUN_TEST(threads_event_repeat)
 END_TEST_CASE(port_tests)

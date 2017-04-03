@@ -72,11 +72,11 @@ void StateTracker::Cancel(Handle* handle) {
     });
 }
 
-void StateTracker::CancelByKey(Handle* handle, uint64_t key) {
+void StateTracker::CancelByKey(Handle* handle, const void* port, uint64_t key) {
     canary_.Assert();
 
-    CancelWithFunc(&observers_, &lock_, [handle, key](StateObserver* obs) {
-        return obs->OnCancelByKey(handle, key);
+    CancelWithFunc(&observers_, &lock_, [handle, port, key](StateObserver* obs) {
+        return obs->OnCancelByKey(handle, port, key);
     });
 }
 

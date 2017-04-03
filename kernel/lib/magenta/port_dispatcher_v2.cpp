@@ -71,9 +71,15 @@ bool PortObserver::OnCancel(Handle* handle) {
     return false;
 }
 
-bool PortObserver::OnCancelByKey(Handle* handle, uint64_t key) {
-    if ((key_ == key) && (handle_ == handle))
-        remove_ = true;
+bool PortObserver::OnCancelByKey(Handle* handle, const void* port, uint64_t key) {
+    if ((key_ != key) || (handle_ != handle))
+        return false;
+    // Stopgap check so that mx_handle_cancel( ..MX_CANCEL_KEY) is not broken.
+    // Remove once clients have transitioned.
+    if (port && (port != port_.get()))
+        return false;
+
+    remove_ = true;
     return false;
 }
 

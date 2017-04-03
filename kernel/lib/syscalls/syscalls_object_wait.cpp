@@ -208,7 +208,7 @@ mx_status_t sys_handle_cancel(mx_handle_t handle_value, uint64_t key, uint32_t o
         if (options == MX_CANCEL_ANY) {
             state_tracker->Cancel(handle);
         } else {
-            state_tracker->CancelByKey(handle, key);
+            state_tracker->CancelByKey(handle, nullptr, key);
         }
     }
 

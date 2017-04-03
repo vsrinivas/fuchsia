@@ -178,3 +178,29 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key,
 
     return source_disp->set_port_client(mxtl::move(client));
 }
+
+mx_status_t sys_port_cancel(mx_handle_t handle, mx_handle_t source, uint64_t key) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<PortDispatcherV2> port;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
+    if (status != NO_ERROR)
+        return status;
+
+    {
+        AutoLock lock(up->handle_table_lock());
+        Handle* handle = up->GetHandleLocked(source);
+        if (!handle)
+            return up->BadHandle(source, ERR_BAD_HANDLE);
+        if (!magenta_rights_check(handle, MX_RIGHT_WRITE))
+            return ERR_ACCESS_DENIED;
+
+        auto state_tracker = handle->dispatcher()->get_state_tracker();
+        if (!state_tracker)
+            return ERR_NOT_SUPPORTED;
+
+        state_tracker->CancelByKey(handle, port.get(), key);
+    }
+
+    return NO_ERROR;
+}

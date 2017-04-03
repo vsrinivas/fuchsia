@@ -42,8 +42,9 @@ public:
     // destroyed or transferred. Or via mx_object_wait_cancel(MX_CANCEL_ANY..).
     void Cancel(Handle* handle);
 
-    // Like Cancel() but issued via mx_object_wait_cancel(MX_CANCEL_KEY.. ).
-    void CancelByKey(Handle* handle, uint64_t key);
+    // Like Cancel() but issued via mx_object_wait_cancel(..MX_CANCEL_KEY) and via
+    // mx_port_cancel(). The former will be deprecated.
+    void CancelByKey(Handle* handle, const void* port, uint64_t key);
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
