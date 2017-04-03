@@ -5,7 +5,13 @@
 #ifndef LIB_FTL_THREADING_THREAD_H_
 #define LIB_FTL_THREADING_THREAD_H_
 
+#include "lib/ftl/build_config.h"
+
+#if defined(OS_WIN)
+#include <windows.h>
+#else
 #include <pthread.h>
+#endif
 
 #include <functional>
 
@@ -28,7 +34,11 @@ class Thread {
   void Main();
 
   std::function<void(void)> runnable_;
+#if defined(OS_WIN)
+  HANDLE thread_;
+#else
   pthread_t thread_;
+#endif
   bool running_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Thread);
