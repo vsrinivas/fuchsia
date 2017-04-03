@@ -44,7 +44,7 @@ In the event of failure, a negative error value is returned.
 
 **ERR_NOT_SUPPORTED**  *handle* is not a handle to an object that may have a cookie set.
 
-**ERR_ACCESS_DENIED**  The cookie has not been set, or *scope* is not the correct scope.
+**ERR_ACCESS_DENIED**  The cookie has not been set, or *scope* is not the correct scope
 to obtain the set cookie.
 
 **ERR_INVALID_ARGS**  *cookie* is an invalid pointer.
