@@ -28,7 +28,7 @@ static int completion_thread_wait(void* arg) {
 static int completion_thread_signal(void* arg) {
     for (int iteration = 0u; iteration < ITERATIONS; iteration++) {
         completion_reset(&completion);
-        mx_nanosleep(10000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(10)));
         completion_signal(&completion);
     }
 

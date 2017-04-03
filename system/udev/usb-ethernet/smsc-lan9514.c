@@ -679,7 +679,7 @@ static int lan9514_start_thread(void* arg) {
                 mx_time_t timecheck = mx_time_get(MX_CLOCK_MONOTONIC);
                 while (!(temp & MII_PHY_BSR_LINK_UP)) {
                     lan9514_mdio_read(eth, MII_PHY_BSR_REG, &temp);
-                    mx_nanosleep(MX_MSEC(100));
+                    mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
                     if ((mx_time_get(MX_CLOCK_MONOTONIC - timecheck) > MX_SEC(1))) {
                         status = ERR_TIMED_OUT;
                         goto teardown;

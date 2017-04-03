@@ -508,7 +508,11 @@ mx_status_t mxio_get_vmo(int fd, mx_handle_t* vmo, size_t* off, size_t* len) {
     return r;
 }
 
+// TODO(teisenbe): Move this interface to deadlines
 mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* _pending, mx_time_t timeout) {
+    const mx_time_t deadline = (timeout == MX_TIME_INFINITE) ? MX_TIME_INFINITE :
+            mx_deadline_after(timeout);
+
     mx_status_t r = NO_ERROR;
     mxio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
@@ -524,7 +528,7 @@ mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* _pending, mx_time_t 
         goto end;
     }
     mx_signals_t pending;
-    if ((r = mx_object_wait_one(h, signals, timeout, &pending)) < 0) {
+    if ((r = mx_object_wait_one(h, signals, deadline, &pending)) < 0) {
         if (r != ERR_TIMED_OUT) {
             goto end;
         }
@@ -1524,7 +1528,7 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
 
     int nfds = 0;
     if (r == NO_ERROR && nvalid > 0) {
-        mx_time_t tmo = (timeout >= 0) ? MX_MSEC(timeout) : MX_TIME_INFINITE;
+        mx_time_t tmo = (timeout >= 0) ? mx_deadline_after(MX_MSEC(timeout)) : MX_TIME_INFINITE;
         r = mx_object_wait_many(items, nvalid, tmo);
         // pending signals could be reported on ERR_TIMED_OUT case as well
         if (r == NO_ERROR || r == ERR_TIMED_OUT) {
@@ -1613,7 +1617,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
     int nfds = 0;
     if (r == NO_ERROR && nvalid > 0) {
         mx_time_t tmo = (tv == NULL) ? MX_TIME_INFINITE :
-            MX_SEC(tv->tv_sec) + MX_USEC(tv->tv_usec);
+            mx_deadline_after(MX_SEC(tv->tv_sec) + MX_USEC(tv->tv_usec));
         r = mx_object_wait_many(items, nvalid, tmo);
         // pending signals could be reported on ERR_TIMED_OUT case as well
         if (r == NO_ERROR || r == ERR_TIMED_OUT) {

@@ -37,10 +37,10 @@ static bool test_futex_wait_timeout() {
 static bool test_futex_wait_timeout_elapsed() {
     BEGIN_TEST;
     int futex_value = 0;
-    constexpr mx_time_t kRelativeDeadline = 500 * 1000 * 1000;
+    constexpr mx_duration_t kRelativeDeadline = MX_MSEC(500);
     for (int i = 0; i < 5; ++i) {
         mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
-        mx_status_t rc = mx_futex_wait(&futex_value, 0, kRelativeDeadline);
+        mx_status_t rc = mx_futex_wait(&futex_value, 0, mx_deadline_after(kRelativeDeadline));
         ASSERT_EQ(rc, ERR_TIMED_OUT, "wait should time out");
         mx_time_t elapsed = mx_time_get(MX_CLOCK_MONOTONIC) - now;
         if (elapsed < kRelativeDeadline) {
@@ -67,9 +67,9 @@ static bool test_futex_wait_bad_address() {
 class TestThread {
 public:
     TestThread(volatile int* futex_addr,
-               mx_time_t timeout_in_us = MX_TIME_INFINITE)
+               mx_duration_t timeout_in_us = MX_TIME_INFINITE)
         : futex_addr_(futex_addr),
-          timeout_in_us_(timeout_in_us) {
+          timeout_in_ns_(timeout_in_us) {
         auto ret = thrd_create_with_name(&thread_, wakeup_test_thread, this, "wakeup_test_thread");
         EXPECT_EQ(ret, thrd_success, "Error during thread creation");
         while (state_ == STATE_STARTED) {
@@ -137,10 +137,11 @@ private:
     static int wakeup_test_thread(void* thread_arg) {
         TestThread* thread = reinterpret_cast<TestThread*>(thread_arg);
         thread->state_ = STATE_ABOUT_TO_WAIT;
-        mx_status_t rc =
-            mx_futex_wait(const_cast<int*>(thread->futex_addr_),
-                                *thread->futex_addr_, thread->timeout_in_us_);
-        if (thread->timeout_in_us_ == MX_TIME_INFINITE) {
+        mx_time_t deadline = thread->timeout_in_ns_ == MX_TIME_INFINITE ? MX_TIME_INFINITE :
+                mx_deadline_after(thread->timeout_in_ns_);
+        mx_status_t rc = mx_futex_wait(const_cast<int*>(thread->futex_addr_),
+                                       *thread->futex_addr_, deadline);
+        if (thread->timeout_in_ns_ == MX_TIME_INFINITE) {
             EXPECT_EQ(rc, NO_ERROR, "Error while wait");
         } else {
             EXPECT_EQ(rc, ERR_TIMED_OUT, "wait should have timedout");
@@ -151,7 +152,7 @@ private:
 
     thrd_t thread_;
     volatile int* futex_addr_;
-    mx_time_t timeout_in_us_;
+    mx_duration_t timeout_in_ns_;
     mx_handle_t handle_ = MX_HANDLE_INVALID;
     volatile enum {
         STATE_STARTED = 100,
@@ -239,7 +240,7 @@ bool test_futex_unqueued_on_timeout() {
     BEGIN_TEST;
     volatile int futex_value = 1;
     mx_status_t rc = mx_futex_wait(const_cast<int*>(&futex_value),
-                                         futex_value, 1);
+                                   futex_value, mx_deadline_after(1));
     ASSERT_EQ(rc, ERR_TIMED_OUT, "wait should have timedout");
     TestThread thread(&futex_value);
     // If the earlier futex_wait() did not remove itself from the wait
@@ -256,7 +257,7 @@ bool test_futex_unqueued_on_timeout_2() {
     BEGIN_TEST;
     volatile int futex_value = 10;
     TestThread thread1(&futex_value);
-    TestThread thread2(&futex_value, 200 * 1000 * 1000);
+    TestThread thread2(&futex_value, MX_MSEC(200));
     ASSERT_TRUE(thread2.wait_for_timeout(), "");
     // With the bug present, thread2 was removed but the futex wait queue's
     // tail pointer still points to thread2.  When another thread is
@@ -273,7 +274,7 @@ bool test_futex_unqueued_on_timeout_2() {
 bool test_futex_unqueued_on_timeout_3() {
     BEGIN_TEST;
     volatile int futex_value = 10;
-    TestThread thread1(&futex_value, 400 * 1000 * 1000);
+    TestThread thread1(&futex_value, MX_MSEC(400));
     TestThread thread2(&futex_value);
     TestThread thread3(&futex_value);
     ASSERT_TRUE(thread1.wait_for_timeout(), "");
@@ -351,10 +352,10 @@ bool test_futex_requeue() {
 // itself from the correct queue in that case.
 bool test_futex_requeue_unqueued_on_timeout() {
     BEGIN_TEST;
-    mx_time_t timeout_in_us = 300 * 1000 * 1000;
+    mx_duration_t timeout_in_ns = MX_MSEC(300);
     volatile int futex_value1 = 100;
     volatile int futex_value2 = 200;
-    TestThread thread1(&futex_value1, timeout_in_us);
+    TestThread thread1(&futex_value1, timeout_in_ns);
     mx_status_t rc = mx_futex_requeue(
         const_cast<int*>(&futex_value1), 0, futex_value1,
         const_cast<int*>(&futex_value2), INT_MAX);
@@ -482,7 +483,7 @@ static bool test_event_signaling() {
     thrd_create_with_name(&thread2, signal_thread2, NULL, "thread 2");
     thrd_create_with_name(&thread3, signal_thread3, NULL, "thread 3");
 
-    mx_nanosleep(300 * 1000 * 1000);
+    mx_nanosleep(mx_deadline_after(MX_MSEC(300)));
     log("signaling event\n");
     event.signal();
 

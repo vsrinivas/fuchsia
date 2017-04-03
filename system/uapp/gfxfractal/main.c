@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
         }
     }
     ioctl_display_flush_fb(vfd);
-    mx_nanosleep(MX_SEC(10));
+    mx_nanosleep(mx_deadline_after(MX_SEC(10)));
 
     gfx_surface_destroy(gfx);
     close(vfd);

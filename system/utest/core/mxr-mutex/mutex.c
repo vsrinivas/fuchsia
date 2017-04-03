@@ -25,7 +25,7 @@ static int mutex_thread_1(void* arg) {
 
     for (int times = 0; times < 300; times++) {
         mxr_mutex_lock(&mutex);
-        mx_nanosleep(1000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(1)));
         mxr_mutex_unlock(&mutex);
     }
 
@@ -38,7 +38,7 @@ static int mutex_thread_2(void* arg) {
 
     for (int times = 0; times < 150; times++) {
         mxr_mutex_lock(&mutex);
-        mx_nanosleep(2000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(2)));
         mxr_mutex_unlock(&mutex);
     }
 
@@ -51,7 +51,7 @@ static int mutex_thread_3(void* arg) {
 
     for (int times = 0; times < 100; times++) {
         mxr_mutex_lock(&mutex);
-        mx_nanosleep(3000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(3)));
         mxr_mutex_unlock(&mutex);
     }
 
@@ -68,7 +68,7 @@ static int mutex_try_thread_1(void* arg) {
 
     for (int times = 0; times < 300 || !got_lock_1; times++) {
         mx_status_t status = mxr_mutex_trylock(&mutex);
-        mx_nanosleep(1000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(1)));
         if (status == NO_ERROR) {
             got_lock_1 = true;
             mxr_mutex_unlock(&mutex);
@@ -84,7 +84,7 @@ static int mutex_try_thread_2(void* arg) {
 
     for (int times = 0; times < 150 || !got_lock_2; times++) {
         mx_status_t status = mxr_mutex_trylock(&mutex);
-        mx_nanosleep(2000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(2)));
         if (status == NO_ERROR) {
             got_lock_2 = true;
             mxr_mutex_unlock(&mutex);
@@ -100,7 +100,7 @@ static int mutex_try_thread_3(void* arg) {
 
     for (int times = 0; times < 100 || !got_lock_3; times++) {
         mx_status_t status = mxr_mutex_trylock(&mutex);
-        mx_nanosleep(3000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(3)));
         if (status == NO_ERROR) {
             got_lock_3 = true;
             mxr_mutex_unlock(&mutex);

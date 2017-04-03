@@ -102,7 +102,7 @@ int mem(volatile unsigned int* arg) {
         memset((void*)mem_alloc, 0xa5, 1024*1024);
         count++;
         if ((count % 128) == 0) {
-            mx_nanosleep(MX_MSEC(250));
+            mx_nanosleep(mx_deadline_after(MX_MSEC(250)));
             write(1, ".", 1);
         }
     }

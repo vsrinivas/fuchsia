@@ -44,7 +44,7 @@ static int thread_consumer(void* arg)
         }
 
         tinfo->work_count[(int)us_pkt.hdr.key] += us_pkt.param[0];
-        mx_nanosleep(1u);
+        mx_nanosleep(mx_deadline_after(1u));
     };
 
     return 0;
@@ -445,7 +445,7 @@ static bool port_timeout(void) {
     EXPECT_EQ(status, 0, "");
 
     mx_io_packet_t io_pkt = {};
-    status = mx_port_wait(port, 5000000ull, &io_pkt, sizeof(io_pkt));
+    status = mx_port_wait(port, mx_deadline_after(MX_MSEC(5)), &io_pkt, sizeof(io_pkt));
     EXPECT_EQ(status, ERR_TIMED_OUT, "");
 
     const mx_user_packet_t in = {{5u, 6u, 7u}, {}};

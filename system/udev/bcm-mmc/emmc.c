@@ -352,7 +352,7 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // Wait for the inhibit masks from above to become 0 before issuing the
     // command.
     while (regs->state & inhibit_mask)
-        mx_nanosleep(MX_MSEC(1));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(1)));
 
     // This command has a data phase?
     if (cmd & SDMMC_RESP_DATA_PRESENT) {
@@ -464,23 +464,23 @@ static mx_status_t emmc_set_bus_frequency(emmc_t* emmc, uint32_t target_freq) {
         if (++iterations > 1000)
             return ERR_TIMED_OUT;
 
-        mx_nanosleep(MX_MSEC(1));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(1)));
     }
 
     // Turn off the SD clock before messing with the clock rate.
     regs->ctrl1 &= ~EMMC_SD_CLOCK_ENABLE;
-    mx_nanosleep(MX_MSEC(2));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
     // Write the new divider into the control register.
     uint32_t ctrl1 = regs->ctrl1;
     ctrl1 &= ~0xffe0;
     ctrl1 |= ((divider_lo << 8) | (divider_hi << 6));
     regs->ctrl1 = ctrl1;
-    mx_nanosleep(MX_MSEC(2));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
     // Turn the SD clock back on.
     regs->ctrl1 |= EMMC_SD_CLOCK_ENABLE;
-    mx_nanosleep(MX_MSEC(2));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
     return NO_ERROR;
 }
@@ -515,7 +515,7 @@ static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
 
     // Disable the SD clock before messing with the voltage.
     regs->ctrl1 &= ~EMMC_SD_CLOCK_ENABLE;
-    mx_nanosleep(MX_MSEC(2));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
     // Wait for the DAT lines to settle
     const mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_SEC(1);
@@ -528,7 +528,7 @@ static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
         uint8_t dat_lines = ((regs->state) >> 20) & 0xf;
         if (dat_lines == 0) break;
 
-        mx_nanosleep(MX_MSEC(10));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
     }
 
     // Cut voltage to the card
@@ -545,7 +545,7 @@ static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
 
     // Turn the clock back on
     regs->ctrl1 |= EMMC_SD_CLOCK_ENABLE;
-    mx_nanosleep(MX_MSEC(2));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
     return NO_ERROR;
 }
@@ -745,11 +745,11 @@ static int emmc_bootstrap_thread(void *arg) {
     }
 
     // Enable the SD clock.
-    mx_nanosleep(MX_MSEC(2));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
     ctrl1 |= regs->ctrl1;
     ctrl1 |= EMMC_SD_CLOCK_ENABLE;
     regs->ctrl1 = ctrl1;
-    mx_nanosleep(MX_MSEC(2));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
 
     // Disable all interrupts before we create the IRQ thread.
     regs->irqen = 0;

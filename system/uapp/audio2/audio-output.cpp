@@ -24,7 +24,7 @@ mx_status_t DoCall(const mx::channel& channel,
                    const ReqType&     req,
                    RespType*          resp,
                    mx::handle*        resp_handle_out = nullptr) {
-    constexpr mx_time_t CALL_TIMEOUT = 100000000u;
+    constexpr mx_duration_t CALL_TIMEOUT = MX_MSEC(100);
     mx_channel_call_args_t args;
 
     MX_DEBUG_ASSERT((resp_handle_out == nullptr) || !resp_handle_out->is_valid());
@@ -41,7 +41,8 @@ mx_status_t DoCall(const mx::channel& channel,
     uint32_t bytes, handles;
     mx_status_t read_status, write_status;
 
-    write_status = channel.call(0, CALL_TIMEOUT, &args, &bytes, &handles, &read_status);
+    write_status = channel.call(0, mx_deadline_after(CALL_TIMEOUT), &args, &bytes, &handles,
+                                &read_status);
 
     if (write_status != NO_ERROR) {
         if (write_status == ERR_CALL_FAILED) {
@@ -366,7 +367,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
         //
         // TODO: base this on the start time and the number of frames queued
         // instead of just making a number up.
-        mx_nanosleep(30000000);
+        mx_nanosleep(mx_deadline_after(MX_MSEC(30)));
     }
 
     mx_status_t stop_res = StopRingBuffer();

@@ -129,7 +129,7 @@ bool handle_transfer_cancel_wait_test(void) {
     EXPECT_EQ(ret, thrd_success, "failed to create write thread");
 
     mx_signals_t signals = MX_CHANNEL_PEER_CLOSED;
-    status = mx_object_wait_one(A[0], signals, MX_SEC(1), NULL);
+    status = mx_object_wait_one(A[0], signals, mx_deadline_after(MX_SEC(1)), NULL);
     EXPECT_NEQ(ERR_TIMED_OUT, status, "failed to complete wait when handle transferred");
 
     thrd_join(thr, NULL);

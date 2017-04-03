@@ -45,7 +45,7 @@ typedef struct thread_data {
 typedef struct wait_data {
     mx_handle_t handle;
     mx_handle_t signals;
-    uint64_t timeout;
+    mx_time_t timeout;
     mx_status_t status;
 } wait_data_t;
 
@@ -61,8 +61,8 @@ static mx_handle_t event_handle;
 static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t pending;
     mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-    int64_t timeout = MX_TIME_INFINITE;
-    mx_status_t status = mx_object_wait_one(handle, signals, timeout, &pending);
+    mx_time_t deadline = MX_TIME_INFINITE;
+    mx_status_t status = mx_object_wait_one(handle, signals, deadline, &pending);
     if (status == ERR_CANCELED) {
         *result = WAIT_CANCELLED;
         return true;
@@ -80,8 +80,8 @@ static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
 static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t pending;
     mx_signals_t signals = MX_EVENT_SIGNALED;
-    int64_t timeout = MX_TIME_INFINITE;
-    mx_status_t status = mx_object_wait_one(handle, signals, timeout, &pending);
+    mx_time_t deadline = MX_TIME_INFINITE;
+    mx_status_t status = mx_object_wait_one(handle, signals, deadline, &pending);
     if (status == ERR_CANCELED) {
         *result = WAIT_CANCELLED;
         return true;
@@ -183,7 +183,8 @@ static int worker_thread_func(void* arg) {
 static int wait_thread_func(void* arg) {
     wait_data_t* data = arg;
     mx_signals_t observed;
-    data->status = mx_object_wait_one(data->handle, data->signals, data->timeout, &observed);
+    data->status = mx_object_wait_one(data->handle, data->signals, mx_deadline_after(data->timeout),
+                                      &observed);
     return 0;
 }
 
@@ -222,7 +223,7 @@ bool handle_wait_test(void) {
     // when there exists a duplicate of the handle.
     // N.B. We're assuming thread 1 is waiting on event_handle at this point.
     // TODO(vtl): This is a flaky assumption, though the following sleep should help.
-    mx_nanosleep(MX_MSEC(20));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(20)));
 
     mx_handle_t event_handle_dup;
     mx_status_t status = mx_handle_duplicate(event_handle, MX_RIGHT_SAME_RIGHTS, &event_handle_dup);

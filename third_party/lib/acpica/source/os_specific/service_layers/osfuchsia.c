@@ -412,7 +412,7 @@ void AcpiOsSleep(UINT64 Milliseconds) {
         // If we're asked to sleep for a long time (>1.5 months), shorten it
         Milliseconds = UINT32_MAX;
     }
-    mx_nanosleep(Milliseconds * 1000000);
+    mx_nanosleep(mx_deadline_after(MX_MSEC(Milliseconds)));
 }
 
 /**
@@ -423,7 +423,7 @@ void AcpiOsSleep(UINT64 Milliseconds) {
  * @param Microseconds The amount of time to delay, in microseconds.
  */
 void AcpiOsStall(UINT32 Microseconds) {
-    mx_nanosleep(Microseconds * 1000);
+    mx_nanosleep(mx_deadline_after(MX_USEC(Microseconds)));
 }
 
 /**

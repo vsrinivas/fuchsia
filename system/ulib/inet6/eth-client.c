@@ -137,6 +137,7 @@ mx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
 }
 
 
+// TODO(teisenbe): Change this interface to use deadlines
 // Wait for completed rx packets
 // ERR_PEER_CLOSED - far side disconnected
 // ERR_TIMED_OUT - timeout expired
@@ -145,9 +146,12 @@ mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t timeout) {
     mx_status_t status;
     mx_signals_t signals;
 
+    const mx_time_t deadline = (timeout == MX_TIME_INFINITE) ? MX_TIME_INFINITE :
+            mx_deadline_after(timeout);
+
     if ((status = mx_object_wait_one(eth->rx_fifo,
                                      MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
-                                     timeout, &signals)) < 0) {
+                                     deadline, &signals)) < 0) {
         return status;
     }
     if (signals & MX_FIFO_PEER_CLOSED) {

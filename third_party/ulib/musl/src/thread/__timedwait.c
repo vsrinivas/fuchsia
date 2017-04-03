@@ -24,8 +24,7 @@ int __timedwait(atomic_int* futex, int val, clockid_t clk, const struct timespec
         }
         if (to.tv_sec < 0)
             return ETIMEDOUT;
-        deadline = to.tv_sec * NS_PER_S;
-        deadline += to.tv_nsec;
+        deadline = _mx_deadline_after(to.tv_sec * NS_PER_S + to.tv_nsec);
     }
 
     // mx_futex_wait will return ERR_BAD_STATE if someone modifying *addr

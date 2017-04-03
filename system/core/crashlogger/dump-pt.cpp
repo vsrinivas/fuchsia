@@ -71,7 +71,8 @@ static mx_status_t crashlogger_run(const char* name, int argc, const char* const
         return status;
 
     mx_signals_t signals;
-    status = mx_object_wait_one(child, MX_TASK_TERMINATED, run_timeout, &signals);
+    status = mx_object_wait_one(child, MX_TASK_TERMINATED, mx_deadline_after(run_timeout),
+                                &signals);
     if (status != NO_ERROR) {
         // Leave reporting the error to the caller.
     } else {

@@ -128,7 +128,7 @@ static mx_status_t xhci_claim_ownership(xhci_t* xhci) {
     mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
     mx_time_t deadline = now + MX_SEC(1);
     while ((cap->bios_owned_sem & 1) && now < deadline) {
-        mx_nanosleep(MX_MSEC(10));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
         now = mx_time_get(MX_CLOCK_MONOTONIC);
     }
 

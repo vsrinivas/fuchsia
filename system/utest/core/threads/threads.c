@@ -69,7 +69,7 @@ static bool start_thread(mxr_thread_entry_t entry, void* arg,
 static bool start_and_kill_thread(mxr_thread_entry_t entry, void* arg) {
     mxr_thread_t thread;
     ASSERT_TRUE(start_thread(entry, arg, &thread), "");
-    mx_nanosleep(MX_MSEC(100));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
     ASSERT_EQ(mxr_thread_kill(&thread), NO_ERROR, "");
     ASSERT_EQ(mxr_thread_join(&thread), NO_ERROR, "");
     return true;
@@ -78,7 +78,8 @@ static bool start_and_kill_thread(mxr_thread_entry_t entry, void* arg) {
 static bool test_basics(void) {
     BEGIN_TEST;
     mxr_thread_t thread;
-    ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)MX_MSEC(100), &thread), "");
+    ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)mx_deadline_after(MX_MSEC(100)),
+                             &thread), "");
     ASSERT_EQ(mx_object_wait_one(mxr_thread_get_handle(&thread),
                                  MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "");
@@ -143,7 +144,7 @@ static bool test_thread_start_with_zero_instruction_pointer(void) {
     // Give crashlogger a little time to print info about the new thread
     // (since it will start and crash), otherwise that output gets
     // interleaved with the test runner's output.
-    mx_nanosleep(MX_MSEC(100));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
 
     ASSERT_EQ(mx_handle_close(process), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(vmar), NO_ERROR, "");
@@ -182,7 +183,8 @@ static bool test_info_task_stats_fails(void) {
     BEGIN_TEST;
     // Spin up a thread.
     mxr_thread_t thread;
-    ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)MX_MSEC(100), &thread), "");
+    ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)mx_deadline_after(MX_MSEC(100)), &thread),
+                "");
     mx_handle_t thandle = mxr_thread_get_handle(&thread);
     ASSERT_EQ(mx_object_wait_one(thandle,
                                  MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
@@ -212,17 +214,19 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
 
     // The thread should still be blocked on the event when it wakes up
-    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, MX_MSEC(100), NULL), ERR_TIMED_OUT, "");
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, mx_deadline_after(MX_MSEC(100)),
+                                 NULL), ERR_TIMED_OUT, "");
 
     // Check that signaling the event while suspended results in the expected
     // behavior
     ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
     // TODO: Use an exception port to wait for the suspend to take effect
-    mx_nanosleep(MX_MSEC(10));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
 
     ASSERT_EQ(mx_object_signal(event, 0, MX_USER_SIGNAL_0), NO_ERROR, "");
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
-    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, MX_MSEC(100), NULL), NO_ERROR, "");
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, mx_deadline_after(MX_MSEC(100)),
+                                 NULL), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
 
@@ -239,7 +243,7 @@ static bool test_kill_suspended(void) {
     ASSERT_TRUE(start_thread(test_wait_thread_fn, &event, &thread), "");
     mx_handle_t thread_h = mxr_thread_get_handle(&thread);
     ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
-    mx_nanosleep(MX_MSEC(10));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
     ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
@@ -250,17 +254,15 @@ static bool test_kill_suspended(void) {
 static bool test_suspend_sleeping(void) {
     BEGIN_TEST;
 
-    mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
-
-    const mx_time_t sleep_time = MX_MSEC(100);
+    const mx_time_t sleep_deadline = mx_deadline_after(MX_MSEC(100));
     mxr_thread_t thread;
 
     // TODO(teisenbe): This code could be made less racy with a deadline sleep
     // mode when we get one.
-    ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)sleep_time, &thread), "");
+    ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)sleep_deadline, &thread), "");
     mx_handle_t thread_h = mxr_thread_get_handle(&thread);
 
-    mx_nanosleep(sleep_time / 4);
+    mx_nanosleep(sleep_deadline - MX_MSEC(50));
     ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
 
     // TODO(teisenbe): Once we wire in exceptions for suspend, check here that
@@ -269,9 +271,10 @@ static bool test_suspend_sleeping(void) {
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
 
     // Wait for the sleep to finish
-    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, 2 * sleep_time, NULL), NO_ERROR, "");
-    mx_time_t elapsed = mx_time_get(MX_CLOCK_MONOTONIC) - now;
-    ASSERT_GE(elapsed, sleep_time, "thread did not sleep long enough");
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, sleep_deadline + MX_MSEC(50), NULL),
+              NO_ERROR, "");
+    const mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+    ASSERT_GE(now, sleep_deadline, "thread did not sleep long enough");
 
     END_TEST;
 }
@@ -401,7 +404,7 @@ static bool test_suspend_stops_thread(void) {
     while (arg.v != 2) {
         arg.v = 2;
         // Give the thread a chance to clobber the value
-        mx_nanosleep(MX_MSEC(50));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(50)));
     }
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
     while (arg.v != 1) {

@@ -46,7 +46,7 @@ int socket(int domain, int type, int protocol) {
     unsigned retry = 0;
     while ((r = __mxio_open(&io, path, 0, 0)) == ERR_NOT_FOUND) {
         retry++;
-        mx_nanosleep((retry < 8) ? MX_MSEC(250) : MX_MSEC(500));
+        mx_nanosleep(mx_deadline_after((retry < 8) ? MX_MSEC(250) : MX_MSEC(500)));
     }
     if (r < 0) {
         return ERROR(r);
@@ -235,7 +235,7 @@ int getaddrinfo(const char* __restrict node,
     while ((r = __mxio_open(&io, MXRIO_SOCKET_ROOT "/" MXRIO_SOCKET_DIR_NONE,
                             0, 0)) == ERR_NOT_FOUND) {
         retry++;
-        mx_nanosleep((retry < 8) ? MX_MSEC(250) : MX_MSEC(500));
+        mx_nanosleep(mx_deadline_after((retry < 8) ? MX_MSEC(250) : MX_MSEC(500)));
     }
     if (r < 0) {
         errno = mxio_status_to_errno(r);

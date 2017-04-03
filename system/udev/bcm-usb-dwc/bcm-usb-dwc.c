@@ -342,7 +342,7 @@ static void dwc_reset_host_port(void) {
 
     // Spec defines that we must wait this long for a host port reset to settle
     // in.
-    mx_nanosleep(MX_MSEC(60));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(60)));
 
     hw_status.reset = 0;
     regs->host_port_ctrlstatus = hw_status;
@@ -704,7 +704,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     do_dwc_iotxn_queue(dwc, set_addr);
     completion_wait(&completion, MX_TIME_INFINITE);
 
-    mx_nanosleep(MX_MSEC(10));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
 
     iotxn_release(set_addr);
     iotxn_release(get_desc);
@@ -860,7 +860,7 @@ static int dwc_irq_thread(void* arg) {
 
         wait_res = mx_interrupt_wait(dwc->irq_handle);
         if (wait_res != NO_ERROR)
-            printf("dwc_irq_thread::mx_object_wait_one(irq_handle) returned "
+            printf("dwc_irq_thread::mx_interrupt_wait(irq_handle) returned "
                    "error code = %d\n",
                    wait_res);
 
@@ -1484,7 +1484,7 @@ static bool handle_channel_halted_interrupt(uint channel,
     } else if (interrupts.nak_response_received) {
         // Wait a defined period of time
         uint8_t bInterval = ep->desc.bInterval;
-        mx_time_t sleep_ns;
+        mx_duration_t sleep_ns;
 
         req->next_data_toggle = chanptr->transfer.packet_id;
 
@@ -1508,7 +1508,7 @@ static bool handle_channel_halted_interrupt(uint channel,
             sleep_ns = MX_MSEC(1);
         }
 
-        mx_nanosleep(sleep_ns);
+        mx_nanosleep(mx_deadline_after(sleep_ns));
         await_sof_if_necessary(channel, req, ep, dwc);
 
         req->complete_split = false;
@@ -1527,7 +1527,7 @@ static bool handle_channel_halted_interrupt(uint channel,
         // Wait half a microframe to retry a NYET, otherwise wait for the start
         // of the next frame.
         if (usb_ep_type(&ep->desc) != USB_ENDPOINT_INTERRUPT) {
-            mx_nanosleep(62500);
+            mx_nanosleep(mx_deadline_after(62500));
         }
         await_sof_if_necessary(channel, req, ep, dwc);
         xprintf("Requeue NYET on ep = %u, devid = %u\n",

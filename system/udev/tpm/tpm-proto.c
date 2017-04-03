@@ -109,7 +109,7 @@ mx_status_t tpm_wait_for_locality(enum locality loc) {
     }
     // We assume we're the only one using the TPM, so we need to wait at most
     // TIMEOUT_A
-    mx_nanosleep(TIMEOUT_A);
+    mx_nanosleep(mx_deadline_after(TIMEOUT_A));
 
     if (!((val = *TPM_ACCESS(loc)) & TPM_ACCESS_REG_VALID)) {
         return ERR_BAD_STATE;
@@ -142,7 +142,7 @@ mx_status_t tpm_disable_irq_type(enum locality loc, enum irq_type type) {
 static mx_status_t get_status_field(enum locality loc, uint32_t *val) {
     for (int attempt = 0; attempt < 2; ++attempt) {
         if (attempt) {
-            mx_nanosleep(TIMEOUT_A);
+            mx_nanosleep(mx_deadline_after(TIMEOUT_A));
         }
 
         uint32_t status = *TPM_STS(loc);
@@ -158,7 +158,7 @@ static mx_status_t get_status_field(enum locality loc, uint32_t *val) {
 static mx_status_t get_burst_count(enum locality loc, uint16_t *val) {
     for (int attempt = 0; attempt < 2; ++attempt) {
         if (attempt) {
-            mx_nanosleep(TIMEOUT_A);
+            mx_nanosleep(mx_deadline_after(TIMEOUT_A));
         }
 
         uint32_t status = *TPM_STS(loc);

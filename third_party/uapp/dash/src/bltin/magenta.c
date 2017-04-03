@@ -51,7 +51,7 @@ int mxc_dump(int argc, char** argv) {
 
 int mxc_msleep(int argc, char** argv) {
     if (argc == 2) {
-        mx_nanosleep(MX_MSEC(atoi(argv[1])));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(atoi(argv[1]))));
     }
     return 0;
 }

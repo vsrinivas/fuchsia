@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
     int d = gfx->height / 5;
     int i = 10;
     while (i--) {
-        mx_nanosleep(MX_SEC(1));
+        mx_nanosleep(mx_deadline_after(MX_SEC(1)));
         gfx_fillrect(gfx, (gfx->width - d) / 2, (gfx->height - d) / 2, d, d, i % 2 ? 0xff55ff55 : 0xffaa00aa);
         ioctl_display_flush_fb(vfd);
     }

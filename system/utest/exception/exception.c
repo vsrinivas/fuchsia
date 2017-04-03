@@ -421,7 +421,7 @@ static int watchdog_thread_func(void* arg)
 {
     for (int i = 0; i < WATCHDOG_DURATION_TICKS; ++i)
     {
-        mx_nanosleep(WATCHDOG_DURATION_TICK);
+        mx_nanosleep(mx_deadline_after(WATCHDOG_DURATION_TICK));
         if (atomic_load(&done_tests))
             return 0;
     }

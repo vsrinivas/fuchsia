@@ -24,7 +24,8 @@ mx_status_t completion_wait(completion_t* completion, mx_time_t timeout) {
         if (current_value == SIGNALED) {
             return NO_ERROR;
         }
-        switch (mx_futex_wait(futex, current_value, timeout)) {
+        mx_time_t deadline = (timeout == MX_TIME_INFINITE) ? timeout : mx_deadline_after(timeout);
+        switch (mx_futex_wait(futex, current_value, deadline)) {
         case NO_ERROR:
             continue;
         case ERR_BAD_STATE:

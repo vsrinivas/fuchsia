@@ -27,7 +27,7 @@
 // Sleep interval in the watchdog thread. Make this short so we don't need to
 // wait too long when tearing down in the success case.  This is especially
 // helpful when running "while /boot/test/debugger-test; do true; done".
-#define WATCHDOG_DURATION_TICK ((int64_t) 30 * 1000 * 1000)  // 0.03 seconds
+#define WATCHDOG_DURATION_TICK ((int64_t)MX_MSEC(30))  // 0.03 seconds
 
 // Number of sleep intervals until the watchdog fires.
 #define WATCHDOG_DURATION_TICKS 100  // 3 seconds
@@ -209,7 +209,7 @@ static int wait_inferior_thread_func(void* arg)
 static int watchdog_thread_func(void* arg)
 {
     for (int i = 0; i < WATCHDOG_DURATION_TICKS; ++i) {
-        mx_nanosleep(WATCHDOG_DURATION_TICK);
+        mx_nanosleep(mx_deadline_after(WATCHDOG_DURATION_TICK));
         if (atomic_load(&done_tests))
             return 0;
     }
@@ -486,7 +486,7 @@ static int extra_thread_func(void* arg)
     atomic_fetch_add(&extra_thread_count, 1);
     unittest_printf("Extra thread started.\n");
     while (true)
-        mx_nanosleep(1000 * 1000 * 1000);
+        mx_nanosleep(mx_deadline_after(MX_SEC(1)));
     return 0;
 }
 
@@ -527,7 +527,7 @@ static bool msg_loop(mx_handle_t channel)
             // Wait for all threads to be started.
             // Each will require an MX_EXCP_STARTING exchange with the "debugger".
             while (atomic_load(&extra_thread_count) < NUM_EXTRA_THREADS)
-                mx_nanosleep(1000);
+                mx_nanosleep(mx_deadline_after(MX_USEC(1)));
             send_msg(channel, MSG_EXTRA_THREADS_STARTED);
             break;
         default:

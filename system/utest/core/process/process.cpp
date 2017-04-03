@@ -146,10 +146,10 @@ bool kill_process_handle_cycle() {
 
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
-        thread1, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
+        thread1, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), ERR_TIMED_OUT, "");
 
     EXPECT_EQ(mx_object_wait_one(
-        thread2, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
+        thread2, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), ERR_TIMED_OUT, "");
 
     EXPECT_EQ(mx_handle_close(thread1), NO_ERROR, "");
 
@@ -217,10 +217,10 @@ bool kill_channel_handle_cycle() {
 
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
-        thread1, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
+        thread1, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), ERR_TIMED_OUT, "");
 
     EXPECT_EQ(mx_object_wait_one(
-        thread2, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
+        thread2, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), ERR_TIMED_OUT, "");
 
     // At this point the two processes have each other thread/process handles. For example
     // if we close the thread handles, unlike the previous test, the processes will
@@ -229,7 +229,7 @@ bool kill_channel_handle_cycle() {
     EXPECT_EQ(mx_handle_close(thread1), NO_ERROR, "");
 
     EXPECT_EQ(mx_object_wait_one(
-        thread2, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
+        thread2, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), ERR_TIMED_OUT, "");
 
     // The only way out of this situation is to use the job handle.
 
@@ -273,7 +273,7 @@ bool info_reflects_process_state() {
     ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event), NO_ERROR, "");
     mx_signals_t signals;
     ASSERT_EQ(mx_object_wait_one(
-        proc, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
+        proc, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), ERR_TIMED_OUT, "");
 
     ASSERT_EQ(mx_object_get_info(
             proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), NO_ERROR, "");

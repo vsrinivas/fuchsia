@@ -32,7 +32,9 @@ static mx_status_t futex_wait_abstime(mx_futex_t* futex_addr,
         return ERR_TIMED_OUT;
     }
     mx_time_t relative_time = abstime - now;
-    return _mx_futex_wait(futex_addr, expected_value, relative_time);
+    // TODO(teisenbe): Get rid of the bounce through relative time after the
+    // syscall migration.
+    return _mx_futex_wait(futex_addr, expected_value, mx_deadline_after(relative_time));
 }
 
 // On success, this will leave the mutex in the LOCKED_WITH_WAITERS state.

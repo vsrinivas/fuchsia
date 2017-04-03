@@ -203,7 +203,7 @@ static void sdmmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
             break;
         }
 
-        mx_nanosleep(MX_MSEC(10));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
     }
 
     if (attempt == max_attempts) {
@@ -344,7 +344,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
             goto err;
         }
 
-        mx_nanosleep(MX_MSEC(5));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(5)));
     }
 
     uint32_t new_bus_frequency = 25000000;

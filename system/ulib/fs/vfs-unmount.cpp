@@ -12,6 +12,7 @@
 
 #include "vfs-internal.h"
 
+// TODO(teisenbe): Move this interface to deadlines
 // Sends an 'unmount' signal on the srv handle, and waits until it is closed.
 // Consumes 'srv'.
 mx_status_t vfs_unmount_handle(mx_handle_t srv, mx_time_t timeout) {
@@ -38,11 +39,14 @@ mx_status_t vfs_unmount_handle(mx_handle_t srv, mx_time_t timeout) {
     uint32_t hcount;
     mx_status_t rs;
 
+    const mx_time_t deadline = (timeout == MX_TIME_INFINITE) ? MX_TIME_INFINITE :
+            mx_deadline_after(timeout);
+
     // At the moment, we don't actually care what the response is from the
     // filesystem server (or even if it supports the unmount operation). As
     // soon as ANY response comes back, either in the form of a closed handle
     // or a visible response, shut down.
-    mx_status_t status = mx_channel_call(srv, 0, timeout, &args, &dsize, &hcount, &rs);
+    mx_status_t status = mx_channel_call(srv, 0, deadline, &args, &dsize, &hcount, &rs);
     if (status == ERR_CALL_FAILED) {
         // Write phase succeeded. The target filesystem had a chance to unmount properly.
         status = NO_ERROR;

@@ -286,7 +286,7 @@ static int console_starter(void* arg) {
                           countof(argv_sh), argv_sh, envp, fd, NULL, NULL, 0);
             break;
         }
-        mx_nanosleep(MX_MSEC(100));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
     }
     return 0;
 }

@@ -24,7 +24,7 @@ static int mutex_thread_1(void* arg) {
 
     for (int times = 0; times < 300; times++) {
         mtx_lock(&g_mutex);
-        mx_nanosleep(1000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(1)));
         mtx_unlock(&g_mutex);
     }
 
@@ -37,7 +37,7 @@ static int mutex_thread_2(void* arg) {
 
     for (int times = 0; times < 150; times++) {
         mtx_lock(&g_mutex);
-        mx_nanosleep(2000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(2)));
         mtx_unlock(&g_mutex);
     }
 
@@ -50,7 +50,7 @@ static int mutex_thread_3(void* arg) {
 
     for (int times = 0; times < 100; times++) {
         mtx_lock(&g_mutex);
-        mx_nanosleep(3000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(3)));
         mtx_unlock(&g_mutex);
     }
 
@@ -67,7 +67,7 @@ static int mutex_try_thread_1(void* arg) {
 
     for (int times = 0; times < 300 || !got_lock_1; times++) {
         int status = mtx_trylock(&g_mutex);
-        mx_nanosleep(1000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(1)));
         if (status == thrd_success) {
             got_lock_1 = true;
             mtx_unlock(&g_mutex);
@@ -83,7 +83,7 @@ static int mutex_try_thread_2(void* arg) {
 
     for (int times = 0; times < 150 || !got_lock_2; times++) {
         int status = mtx_trylock(&g_mutex);
-        mx_nanosleep(2000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(2)));
         if (status == thrd_success) {
             got_lock_2 = true;
             mtx_unlock(&g_mutex);
@@ -99,7 +99,7 @@ static int mutex_try_thread_3(void* arg) {
 
     for (int times = 0; times < 100 || !got_lock_3; times++) {
         int status = mtx_trylock(&g_mutex);
-        mx_nanosleep(3000);
+        mx_nanosleep(mx_deadline_after(MX_USEC(3)));
         if (status == thrd_success) {
             got_lock_3 = true;
             mtx_unlock(&g_mutex);

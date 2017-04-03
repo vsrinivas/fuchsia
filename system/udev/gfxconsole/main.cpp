@@ -503,7 +503,7 @@ static int vc_battery_poll_thread(void* arg) {
                    static_cast<int>(length));
             break;
         }
-        mx_nanosleep(MX_MSEC(1000));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(1000)));
     }
     close(battery_fd);
     return 0;

@@ -115,7 +115,7 @@ static bool wait_test(void) {
         job_child, MX_JOB_NO_JOBS, MX_TIME_INFINITE, &signals), NO_ERROR, "");
     ASSERT_EQ(signals, MX_JOB_NO_JOBS, "");
 
-    mx_nanosleep(5000000);
+    mx_nanosleep(mx_deadline_after(MX_MSEC(5)));
     ASSERT_EQ(mx_task_kill(process), NO_ERROR, "");
 
     ASSERT_EQ(mx_object_wait_one(

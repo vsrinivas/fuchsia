@@ -85,7 +85,7 @@ void tu_thread_create_c11(thrd_t* t, thrd_start_t entry, void* arg,
 
 static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signals,
                            uint32_t num_handles, uint32_t* result_index,
-                           mx_time_t deadline,
+                           mx_time_t timeout,
                            mx_signals_t* pending)
 {
     mx_wait_item_t items[num_handles];
@@ -93,6 +93,7 @@ static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signa
         items[n].handle = handles[n];
         items[n].waitfor = signals[n];
     }
+    mx_time_t deadline = mx_deadline_after(timeout);
     mx_status_t status = mx_object_wait_many(items, num_handles, deadline);
     for (uint32_t n = 0; n < num_handles; n++) {
         pending[n] = items[n].pending;

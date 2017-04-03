@@ -41,7 +41,7 @@ void controller_init() {
 
   status = mx_object_wait_one(ctrl_channel,
                               MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                              MX_SEC(5), NULL);
+                              mx_deadline_after(MX_SEC(5)), NULL);
   if (status != NO_ERROR) {
     fprintf(stderr, "Failed to wait on the ctrl channel.\n");
     return;

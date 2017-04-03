@@ -74,7 +74,7 @@ mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transfered_handle,
         // We wait 10ms here to make sure that the thread has transitioned
         // to into active. This is flaky but might make tests less flaky.
         // TODO(cpu): investigate signals for this job.
-        mx_nanosleep(10000000);
+        mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
     }
 
 exit:

@@ -57,7 +57,7 @@ static bool queue_and_close_test(void) {
     EXPECT_EQ(status, NO_ERROR, "could not create port v2");
 
     mx_port_packet_t out0 = {};
-    status = mx_port_wait(port, 1000u, &out0, 0u);
+    status = mx_port_wait(port, mx_deadline_after(MX_USEC(1)), &out0, 0u);
     EXPECT_EQ(status, ERR_TIMED_OUT, "");
 
     const mx_port_packet_t in = {
@@ -95,7 +95,7 @@ static bool async_wait_channel_test(void) {
         status = mx_object_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, MX_WAIT_ASYNC_ONCE);
         EXPECT_EQ(status, NO_ERROR, "");
 
-        status = mx_port_wait(port, 200000u, &out, 0u);
+        status = mx_port_wait(port, mx_deadline_after(MX_USEC(200)), &out, 0u);
         EXPECT_EQ(status, ERR_TIMED_OUT, "");
 
         status = mx_channel_write(ch[0], 0u, "here", 4, nullptr, 0u);
@@ -117,7 +117,7 @@ static bool async_wait_channel_test(void) {
 
     mx_port_packet_t out1 = {};
 
-    status = mx_port_wait(port, 200000u, &out1, 0u);
+    status = mx_port_wait(port, mx_deadline_after(MX_USEC(200)), &out1, 0u);
     EXPECT_EQ(status, ERR_TIMED_OUT, "");
 
     status = mx_object_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, MX_WAIT_ASYNC_ONCE);

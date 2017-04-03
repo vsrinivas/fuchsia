@@ -499,9 +499,10 @@ static int call_client(void* _args) {
     uint32_t act_bytes = 0xffffffff;
     uint32_t act_handles = 0xffffffff;
 
-    mx_time_t timeout = (ccargs->action & CLI_SHORT_WAIT) ? MX_MSEC(250) : MX_TIME_INFINITE;
+    mx_time_t deadline = (ccargs->action & CLI_SHORT_WAIT) ? mx_deadline_after(MX_MSEC(250)) :
+            MX_TIME_INFINITE;
     mx_status_t rs = NO_ERROR;
-    if ((r = mx_channel_call(ccargs->h, 0, timeout, &args, &act_bytes, &act_handles, &rs)) != ccargs->expect) {
+    if ((r = mx_channel_call(ccargs->h, 0, deadline, &args, &act_bytes, &act_handles, &rs)) != ccargs->expect) {
         ccargs->err = "channel call returned";
         ccargs->val = r;
     }
@@ -712,7 +713,7 @@ static bool create_and_nest(mx_handle_t out, mx_handle_t* end, size_t n) {
 
 static int call_server2(void* ptr) {
     mx_handle_t h = (mx_handle_t) (uintptr_t) ptr;
-    mx_nanosleep(MX_MSEC(250));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(250)));
     mx_handle_close(h);
     return 0;
 }
@@ -742,7 +743,8 @@ static bool channel_call2(void) {
     uint32_t act_handles = 0xffffffff;
 
     mx_status_t rs = NO_ERROR;
-    mx_status_t r = mx_channel_call(cli, 0, MX_MSEC(1000), &args, &act_bytes, &act_handles, &rs);
+    mx_status_t r = mx_channel_call(cli, 0, mx_deadline_after(MX_MSEC(1000)), &args, &act_bytes,
+                                    &act_handles, &rs);
 
     mx_handle_close(cli);
 

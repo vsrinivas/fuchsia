@@ -96,7 +96,7 @@ static int acpi_battery_poll_thread(void* arg) {
         free(bif);
         free(bst);
 
-        mx_nanosleep(MX_MSEC(1000));
+        mx_nanosleep(mx_deadline_after(MX_MSEC(1000)));
     }
     return 0;
 }

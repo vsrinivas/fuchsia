@@ -265,7 +265,7 @@ int epoll_wait(int epfd, struct epoll_event* ep_events, int maxevents, int timeo
     mx_status_t r;
     uint32_t num_results = maxevents;
     mx_waitset_result_t results[maxevents];
-    mx_time_t tmo = (timeout >= 0) ? MX_MSEC(timeout) : MX_TIME_INFINITE;
+    mx_time_t tmo = (timeout >= 0) ? mx_deadline_after(MX_MSEC(timeout)) : MX_TIME_INFINITE;
 
     if ((r = mx_waitset_wait(epio->h, tmo, results, &num_results)) < 0) {
         mxio_release(io);
