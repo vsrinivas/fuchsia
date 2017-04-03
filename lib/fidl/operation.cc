@@ -16,6 +16,10 @@ OperationCollection::OperationCollection() = default;
 
 OperationCollection::~OperationCollection() = default;
 
+bool OperationCollection::Empty() {
+  return operations_.empty();
+}
+
 void OperationCollection::Hold(OperationBase* const o) {
   operations_.emplace_back(o);
   o->Run();
@@ -39,6 +43,10 @@ void OperationCollection::Cont() {
 OperationQueue::OperationQueue() : weak_ptr_factory_(this) {}
 
 OperationQueue::~OperationQueue() = default;
+
+bool OperationQueue::Empty() {
+  return operations_.empty();
+}
 
 void OperationQueue::Hold(OperationBase* const o) {
   operations_.emplace(o);

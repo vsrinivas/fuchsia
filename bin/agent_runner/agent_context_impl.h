@@ -12,6 +12,7 @@
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
@@ -44,6 +45,10 @@ class AgentContextImpl : AgentContext, AgentController {
                             const std::string& url);
   ~AgentContextImpl() override;
 
+  // Stops the running agent, irrespective of whether there are active
+  // AgentControllers or outstanding tasks.
+  void StopForTeardown(const std::function<void()>& callback);
+
   // Called by AgentRunner when a component wants to connect to this agent.
   // Connections will pend until Agent::Initialize() responds back, at which
   // point all connections will be forwarded to the agent.
@@ -69,15 +74,20 @@ class AgentContextImpl : AgentContext, AgentController {
   void GetIntelligenceServices(
       fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
 
-  // Called once Agent::Initialize() returns back. At this point, all pending
-  // connections are forwarded to the agent.
-  void OnInitialized();
+  // Adds an operation on |operation_queue_|. This operation is immediately
+  // Done() if this agent is |ready_|. Else, we first setup agent connection and
+  // wait for Agent.Initialize() to complete.
+  void MaybeInitializeAgent();
 
-  // Stops this agent when there are no active AgentControllers and
-  // there are no outstanding tasks.
+  // Adds an operation on |operation_queue_|. This operation is immediately
+  // Done() if this agent is not |ready_|. Else if there are no active
+  // AgentControllers and no outstanding task, Agent.Stop() is called with a
+  // timeout.
   void MaybeStopAgent();
 
   const std::string url_;
+  app::ApplicationLauncher* const application_launcher_;
+
   app::ApplicationControllerPtr application_controller_;
   app::ServiceProviderPtr application_services_;
   AgentPtr agent_;
@@ -94,18 +104,12 @@ class AgentContextImpl : AgentContext, AgentController {
 
   // |ready_| is true once Initialize() responds.
   bool ready_{};
-  struct PendingConnection {
-    std::string requestor_url;
-    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request;
-    fidl::InterfaceRequest<AgentController> agent_controller_request;
-  };
-  std::vector<PendingConnection> pending_connections_;
 
   // Number of times Agent.RunTask() was called but we're still waiting on its
   // completion callback.
   int incomplete_task_count_ = 0;
 
-  ftl::OneShotTimer kill_timer_;
+  OperationQueue operation_queue_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
 };

@@ -22,6 +22,9 @@ class OperationContainer {
   OperationContainer();
   virtual ~OperationContainer();
 
+  // Checks whether the container is empty.
+  virtual bool Empty() = 0;
+
  private:
   friend class OperationBase;
   virtual void Hold(OperationBase* o) = 0;
@@ -35,6 +38,8 @@ class OperationCollection : public OperationContainer {
  public:
   OperationCollection();
   ~OperationCollection() override;
+
+  bool Empty() override;
 
  private:
   void Hold(OperationBase* o) override;
@@ -53,6 +58,8 @@ class OperationQueue : public OperationContainer {
  public:
   OperationQueue();
   ~OperationQueue() override;
+
+  bool Empty() override;
 
  private:
   void Hold(OperationBase* o) override;

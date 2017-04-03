@@ -25,8 +25,6 @@ class MessageQueueManager;
 
 // This class provides a way for components to connect to agents and manages the
 // life time of a running agent.
-// TODO(alhaad): Add a terminate method that can be called from user_runner.cc
-// for clean shutdown.
 class AgentRunner {
  public:
   AgentRunner(app::ApplicationLauncher* application_launcher,
@@ -34,6 +32,10 @@ class AgentRunner {
               ledger::LedgerRepository* ledger_repository,
               maxwell::UserIntelligenceProvider* user_intelligence_provider);
   ~AgentRunner();
+
+  // |callback| is called after - (1) all agents have been shutdown and (2)
+  // no new tasks are scheduled to run.
+  void Teardown(const std::function<void()>& callback);
 
   // Connects to an agent (and starts it up if it doesn't exist). Called via
   // ComponentContext.
@@ -109,6 +111,9 @@ class AgentRunner {
   // A watcher for any changes happening to the trigger list on the ledger.
   class PageWatcherImpl;
   std::unique_ptr<PageWatcherImpl> trigger_list_watcher_;
+
+  // When this is marked true, no new new tasks will be scheduled.
+  std::shared_ptr<bool> terminating_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
 };

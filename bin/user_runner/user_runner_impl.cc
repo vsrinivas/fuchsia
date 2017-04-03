@@ -237,11 +237,13 @@ void UserRunnerImpl::Terminate(const TerminateCallback& done) {
   FTL_DCHECK(user_shell_.is_bound());
   FTL_LOG(INFO) << "UserRunner::Terminate()";
   user_shell_->Terminate([this, done] {
+    agent_runner_->Teardown([this, done] {
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
       done();
       delete this;
       FTL_LOG(INFO) << "UserRunner::Terminate(): deleted";
     });
+  });
 }
 
 void UserRunnerImpl::GetDeviceName(const GetDeviceNameCallback& callback) {
@@ -284,7 +286,8 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   user_shell_link_->Connect(std::move(request));
 }
 
-app::ServiceProviderPtr UserRunnerImpl::GetServiceProvider(AppConfigPtr config) {
+app::ServiceProviderPtr UserRunnerImpl::GetServiceProvider(
+    AppConfigPtr config) {
   auto launch_info = app::ApplicationLaunchInfo::New();
 
   app::ServiceProviderPtr services;
@@ -294,13 +297,14 @@ app::ServiceProviderPtr UserRunnerImpl::GetServiceProvider(AppConfigPtr config) 
 
   app::ApplicationControllerPtr ctrl;
   user_scope_.GetLauncher()->CreateApplication(std::move(launch_info),
-                                                 ctrl.NewRequest());
+                                               ctrl.NewRequest());
   application_controllers_.emplace_back(std::move(ctrl));
 
   return services;
 }
 
-app::ServiceProviderPtr UserRunnerImpl::GetServiceProvider(const std::string& url) {
+app::ServiceProviderPtr UserRunnerImpl::GetServiceProvider(
+    const std::string& url) {
   AppConfig config;
   config.url = url;
   return GetServiceProvider(config.Clone());

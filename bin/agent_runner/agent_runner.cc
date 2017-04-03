@@ -186,7 +186,8 @@ AgentRunner::AgentRunner(
     : application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
-      user_intelligence_provider_(user_intelligence_provider) {
+      user_intelligence_provider_(user_intelligence_provider),
+      terminating_(std::make_shared<bool>(false)) {
   trigger_list_watcher_.reset(new PageWatcherImpl(
       ledger_repository, kTriggerListLedger,
       [this](const std::string& key, const std::string& value) {
@@ -197,11 +198,37 @@ AgentRunner::AgentRunner(
 
 AgentRunner::~AgentRunner() = default;
 
+void AgentRunner::Teardown(const std::function<void()>& callback) {
+  // No new agents will be scheduled to run.
+  *terminating_ = true;
+
+  // No agents were running, we are good to go.
+  if (running_agents_.size() == 0) {
+    callback();
+    return;
+  }
+
+  auto cont = [this, callback] {
+    if (running_agents_.size() == 0) {
+      callback();
+    }
+  };
+
+  for (auto& it : running_agents_) {
+    it.second->StopForTeardown(cont);
+  }
+}
+
 void AgentRunner::ConnectToAgent(
     const std::string& requestor_url,
     const std::string& agent_url,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
+  // Drop all new requests if AgentRunner is terminating.
+  if (*terminating_) {
+    return;
+  }
+
   MaybeRunAgent(agent_url)->NewConnection(requestor_url,
                                           std::move(incoming_services_request),
                                           std::move(agent_controller_request));
@@ -333,8 +360,14 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
   }
 
   found_it->second[task_id] = queue_name;
+  auto terminating = terminating_;
   message_queue_manager_->RegisterWatcher(
-      agent_url, queue_name, [this, agent_url, task_id] {
+      agent_url, queue_name, [this, agent_url, task_id, terminating] {
+        // If agent runner is terminating, do not run any new tasks.
+        if (*terminating) {
+          return;
+        }
+
         MaybeRunAgent(agent_url)->NewTask(task_id);
       });
 }
@@ -359,8 +392,14 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
   }
 
   found_it->second[task_id] = alarm_in_seconds;
+  auto terminating = terminating_;
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this, agent_url, task_id] {
+      [this, agent_url, task_id, terminating] {
+        // If agent runner is terminating, do not run any new tasks.
+        if (*terminating) {
+          return;
+        }
+
         // Stop the alarm if entry not found.
         auto found_it = running_alarms_.find(agent_url);
         if (found_it == running_alarms_.end()) {
