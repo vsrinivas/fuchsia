@@ -12,6 +12,7 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/path.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/concatenate.h"
 
@@ -53,23 +54,27 @@ LedgerStorageImpl::LedgerStorageImpl(
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
 
-Status LedgerStorageImpl::CreatePageStorage(
+void LedgerStorageImpl::CreatePageStorage(
     PageId page_id,
-    std::unique_ptr<PageStorage>* page_storage) {
+    std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   std::string path = GetPathFor(page_id);
   if (!files::CreateDirectory(path)) {
     FTL_LOG(ERROR) << "Failed to create the storage directory in " << path;
-    return Status::INTERNAL_IO_ERROR;
+    callback(Status::INTERNAL_IO_ERROR, nullptr);
+    return;
   }
   auto result = std::make_unique<PageStorageImpl>(
       main_runner_, io_runner_, coroutine_service_, path, std::move(page_id));
-  Status s = result->Init();
-  if (s != Status::OK) {
-    FTL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << s;
-    return s;
-  }
-  *page_storage = std::move(result);
-  return Status::OK;
+  result->Init(ftl::MakeCopyable([
+    callback = std::move(callback), result = std::move(result)
+  ](Status status) mutable {
+    if (status != Status::OK) {
+      FTL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
+      callback(status, nullptr);
+      return;
+    }
+    callback(Status::OK, std::move(result));
+  }));
 }
 
 void LedgerStorageImpl::GetPageStorage(
@@ -79,12 +84,15 @@ void LedgerStorageImpl::GetPageStorage(
   if (files::IsDirectory(path)) {
     auto result = std::make_unique<PageStorageImpl>(
         main_runner_, io_runner_, coroutine_service_, path, std::move(page_id));
-    Status status = result->Init();
-    if (status != Status::OK) {
-      callback(status, nullptr);
-      return;
-    }
-    callback(status, std::move(result));
+    result->Init(ftl::MakeCopyable([
+      callback = std::move(callback), result = std::move(result)
+    ](Status status) mutable {
+      if (status != Status::OK) {
+        callback(status, nullptr);
+        return;
+      }
+      callback(status, std::move(result));
+    }));
     return;
   }
   // TODO(nellyv): Maybe the page exists but is not synchronized, yet. We need

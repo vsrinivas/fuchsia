@@ -304,30 +304,34 @@ PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
 
 PageStorageImpl::~PageStorageImpl() {}
 
-Status PageStorageImpl::Init() {
+void PageStorageImpl::Init(std::function<void(Status)> callback) {
   // Initialize DB.
   Status s = db_.Init();
   if (s != Status::OK) {
-    return s;
+    callback(s);
+    return;
   }
 
   // Initialize paths.
   if (!files::CreateDirectory(objects_dir_) ||
       !files::CreateDirectory(staging_dir_)) {
     FTL_LOG(ERROR) << "Unable to create directories for PageStorageImpl.";
-    return Status::INTERNAL_IO_ERROR;
+    callback(Status::INTERNAL_IO_ERROR);
+    return;
   }
 
   // Add the default page head if this page is empty.
   std::vector<CommitId> heads;
   s = db_.GetHeads(&heads);
   if (s != Status::OK) {
-    return s;
+    callback(s);
+    return;
   }
   if (heads.empty()) {
     s = db_.AddHead(kFirstPageCommitId);
     if (s != Status::OK) {
-      return s;
+      callback(s);
+      return;
     }
   }
 
@@ -338,27 +342,31 @@ Status PageStorageImpl::Init() {
   std::vector<JournalId> journal_ids;
   s = db_.GetImplicitJournalIds(&journal_ids);
   if (s != Status::OK) {
-    return s;
+    callback(s);
+    return;
   }
+  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   for (JournalId& id : journal_ids) {
     std::unique_ptr<Journal> journal;
     s = db_.GetImplicitJournal(id, &journal);
     if (s != Status::OK) {
       FTL_LOG(ERROR) << "Failed to get implicit journal with status " << s
                      << ". journal id: " << id;
-      return s;
+      callback(s);
+      return;
     }
-    journal->Commit([](Status status, std::unique_ptr<const Commit>) {
-      // TODO(nellyv): We should commit implicit journals before returning. See
-      // LE-151.
+
+    journal->Commit([status_callback = waiter->NewCallback()](
+        Status status, std::unique_ptr<const Commit>) {
       if (status != Status::OK) {
         FTL_LOG(ERROR) << "Failed to commit implicit journal created in "
                           "previous Ledger execution.";
       }
+      status_callback(status);
     });
   }
 
-  return Status::OK;
+  waiter->Finalize(std::move(callback));
 }
 
 PageId PageStorageImpl::GetId() {

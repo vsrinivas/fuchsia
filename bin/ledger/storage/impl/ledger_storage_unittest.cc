@@ -6,7 +6,9 @@
 
 #include <memory>
 
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
@@ -15,7 +17,7 @@
 namespace storage {
 namespace {
 
-class LedgerStorageTest : public ::testing::Test {
+class LedgerStorageTest : public test::TestWithMessageLoop {
  public:
   LedgerStorageTest()
       : storage_(message_loop_.task_runner(),
@@ -31,7 +33,6 @@ class LedgerStorageTest : public ::testing::Test {
   coroutine::CoroutineServiceImpl coroutine_service_;
 
  protected:
-  mtl::MessageLoop message_loop_;
   LedgerStorageImpl storage_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerStorageTest);
@@ -46,10 +47,15 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
         EXPECT_EQ(nullptr, page_storage);
         message_loop_.PostQuitTask();
       });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   std::unique_ptr<PageStorage> page_storage;
-  ASSERT_EQ(Status::OK, storage_.CreatePageStorage(page_id, &page_storage));
+  storage::Status status;
+  storage_.CreatePageStorage(
+      page_id, callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &page_storage));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(page_id, page_storage->GetId());
   page_storage.reset();
   storage_.GetPageStorage(
@@ -59,13 +65,18 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
         EXPECT_NE(nullptr, page_storage);
         message_loop_.PostQuitTask();
       });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 }
 
 TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   PageId page_id = "1234";
+  Status status;
   std::unique_ptr<PageStorage> page_storage;
-  ASSERT_EQ(Status::OK, storage_.CreatePageStorage(page_id, &page_storage));
+  storage_.CreatePageStorage(
+      page_id, callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &page_storage));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(page_id, page_storage->GetId());
   page_storage.reset();
   storage_.GetPageStorage(
@@ -75,7 +86,7 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
         EXPECT_NE(nullptr, page_storage);
         message_loop_.PostQuitTask();
       });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(storage_.DeletePageStorage(page_id));
   storage_.GetPageStorage(
@@ -85,7 +96,7 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
         EXPECT_EQ(nullptr, page_storage);
         message_loop_.PostQuitTask();
       });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 }
 
 }  // namespace

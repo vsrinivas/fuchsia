@@ -153,14 +153,17 @@ Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
 
 void LedgerManager::CreatePageStorage(storage::PageId page_id,
                                       PageManagerContainer* container) {
-  std::unique_ptr<storage::PageStorage> page_storage;
-  storage::Status status = storage_->CreatePageStorage(page_id, &page_storage);
-  if (status != storage::Status::OK) {
-    container->SetPageManager(Status::INTERNAL_ERROR, nullptr);
-    return;
-  }
-  container->SetPageManager(Status::OK,
-                            NewPageManager(std::move(page_storage)));
+  storage_->CreatePageStorage(
+      page_id,
+      [this, container](storage::Status status,
+                        std::unique_ptr<storage::PageStorage> page_storage) {
+        if (status != storage::Status::OK) {
+          container->SetPageManager(Status::INTERNAL_ERROR, nullptr);
+          return;
+        }
+        container->SetPageManager(Status::OK,
+                                  NewPageManager(std::move(page_storage)));
+      });
 }
 
 LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(

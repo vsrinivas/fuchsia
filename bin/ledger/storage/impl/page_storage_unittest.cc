@@ -180,7 +180,11 @@ class PageStorageTest : public StorageTest {
         message_loop_.task_runner(), io_runner_, &coroutine_service_,
         tmp_dir_.path(), id);
 
-    EXPECT_EQ(Status::OK, storage_->Init());
+    Status status;
+    storage_->Init(
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+    message_loop_.Run();
+    EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(id, storage_->GetId());
   }
 

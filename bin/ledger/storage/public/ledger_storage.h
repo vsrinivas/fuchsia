@@ -20,9 +20,9 @@ class LedgerStorage {
   virtual ~LedgerStorage() {}
 
   // Creates a new |PageStorage| for the Page with the given |page_id|.
-  virtual Status CreatePageStorage(
+  virtual void CreatePageStorage(
       PageId page_id,
-      std::unique_ptr<PageStorage>* page_storage) = 0;
+      std::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
 
   // Finds the |PageStorage| corresponding to the page with the given |page_id|.
   // The result will be returned through the given |callback|. If the storage

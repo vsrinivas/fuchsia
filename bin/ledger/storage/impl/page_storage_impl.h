@@ -31,7 +31,7 @@ class PageStorageImpl : public PageStorage {
   // Initializes this PageStorageImpl. This includes initializing the underlying
   // database, adding the default page head if the page is empty, removing
   // uncommitted explicit and committing implicit journals.
-  Status Init();
+  void Init(std::function<void(Status)> callback);
 
   // Adds the given locally created |commit| in this |PageStorage|.
   void AddCommitFromLocal(std::unique_ptr<const Commit> commit,

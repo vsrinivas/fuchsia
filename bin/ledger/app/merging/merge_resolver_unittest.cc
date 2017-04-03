@@ -56,7 +56,11 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     page_storage_.reset(new storage::PageStorageImpl(
         message_loop_.task_runner(), message_loop_.task_runner(),
         &coroutine_service_, tmp_dir_.path(), kRootPageId.ToString()));
-    EXPECT_EQ(storage::Status::OK, page_storage_->Init());
+    storage::Status status;
+    page_storage_->Init(
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(storage::Status::OK, status);
   }
 
   storage::CommitId CreateCommit(
