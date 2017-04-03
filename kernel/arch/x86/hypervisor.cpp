@@ -134,6 +134,7 @@ VmxInfo::VmxInfo() {
     revision_id = static_cast<uint32_t>(BITS(basic_info, 30, 0));
     region_size = static_cast<uint16_t>(BITS_SHIFT(basic_info, 44, 32));
     write_back = BITS_SHIFT(basic_info, 53, 50) == VMX_MEMORY_TYPE_WRITE_BACK;
+    io_exit_info = BIT_SHIFT(basic_info, 54);
     vmx_controls = BIT_SHIFT(basic_info, 55);
 }
 
@@ -203,8 +204,12 @@ static int vmx_enable(void* arg) {
     VmxonContext* context = static_cast<VmxonContext*>(arg);
     VmxonPerCpu* per_cpu = context->PerCpu();
 
-    // Check that full VMX controls are supported.
+    // Check that we have instruction information when we VM exit on IO.
     VmxInfo vmx_info;
+    if (!vmx_info.io_exit_info)
+        return ERR_NOT_SUPPORTED;
+
+    // Check that full VMX controls are supported.
     if (!vmx_info.vmx_controls)
         return ERR_NOT_SUPPORTED;
 
@@ -341,14 +346,6 @@ AutoVmcsLoad::~AutoVmcsLoad() {
     arch_enable_ints();
 }
 
-status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
-    status_t status = PerCpu::Init(vmx_info);
-    if (status != NO_ERROR)
-        return status;
-
-    return msr_bitmaps_page_.Alloc(vmx_info);
-}
-
 static status_t set_vmcs_control(uint32_t controls, uint64_t true_msr, uint64_t old_msr,
                                  uint32_t set) {
     uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
@@ -426,6 +423,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     status = set_vmcs_control(VMCS_32_PROCBASED_CTLS,
                               read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
                               read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS),
+                              // IO instructions cause a VM exit.
+                              VMCS_32_PROCBASED_CTLS_IO_EXITING |
                               // Enable secondary processor-based controls.
                               VMCS_32_PROCBASED_CTLS_PROCBASED_CTLS2);
     if (status != NO_ERROR)
@@ -626,13 +625,17 @@ void vmx_exit(VmxState* vmx_state) {
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, vmx_state->host_state.kernel_gs_base);
 }
 
-static void vmexit_handler(uint64_t reason) {
+static void vmexit_handler(uint64_t reason, uint64_t next_rip) {
     switch (reason) {
     case VMCS_32_EXIT_REASON_EXTERNAL_INTERRUPT:
         dprintf(SPEW, "enabling interrupts for external interrupt\n");
         DEBUG_ASSERT(arch_ints_disabled());
         arch_enable_ints();
         arch_disable_ints();
+        break;
+    case VMCS_32_EXIT_REASON_IO_INSTRUCTION:
+        dprintf(SPEW, "handling IO instruction\n");
+        vmwrite(VMCS_XX_GUEST_RIP, next_rip);
         break;
     }
 }
@@ -668,14 +671,22 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context) {
         dprintf(SPEW, "vmexit interruption information: %#" PRIx64 "\n", interruption_information);
         uint64_t interruption_error_code = vmread(VMCS_32_INTERRUPTION_ERROR_CODE);
         dprintf(SPEW, "vmexit interruption error code: %#" PRIx64 "\n", interruption_error_code);
+        uint64_t instruction_length = vmread(VMCS_32_INSTRUCTION_LENGTH);
+        dprintf(SPEW, "vmexit instruction length: %#" PRIx64 "\n", instruction_length);
+        uint64_t instruction_information = vmread(VMCS_32_INSTRUCTION_INFORMATION);
+        dprintf(SPEW, "vmexit instruction information: %#" PRIx64 "\n", instruction_information);
 
         uint64_t physical_address = vmread(VMCS_64_GUEST_PHYSICAL_ADDRESS);
         dprintf(SPEW, "guest physical address: %#" PRIx64 "\n", physical_address);
+        uint64_t linear_address = vmread(VMCS_XX_GUEST_LINEAR_ADDRESS);
+        dprintf(SPEW, "guest linear address: %#" PRIx64 "\n", linear_address);
+        uint64_t interruptibility_state = vmread(VMCS_32_GUEST_INTERRUPTIBILITY_STATE);
+        dprintf(SPEW, "guest interruptibility state: %#" PRIx64 "\n", interruptibility_state);
         uint64_t rip = vmread(VMCS_XX_GUEST_RIP);
         dprintf(SPEW, "guest rip: %#" PRIx64 "\n", rip);
 
         do_resume_ = true;
-        vmexit_handler(reason);
+        vmexit_handler(reason, rip + instruction_length);
     }
     dprintf(SPEW, "guest rax (post-enter): %#" PRIx64 "\n", vmx_state_.guest_state.rax);
     return status;

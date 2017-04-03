@@ -42,6 +42,14 @@
 #define VMCS_16_HOST_GS_SELECTOR                    0x0c0a      /* Host GS selector */
 #define VMCS_16_HOST_TR_SELECTOR                    0x0c0c      /* Host TR selector */
 
+#define VMCS_64_EPT_POINTER                         0x201a      /* EPT pointer */
+#define VMCS_64_GUEST_PHYSICAL_ADDRESS              0x2400      /* Guest physical address */
+#define VMCS_64_LINK_POINTER                        0x2800      /* VMCS link pointer */
+#define VMCS_64_GUEST_IA32_PAT                      0x2804      /* Guest PAT */
+#define VMCS_64_GUEST_IA32_EFER                     0x2806      /* Guest EFER */
+#define VMCS_64_HOST_IA32_PAT                       0x2c00      /* Host PAT */
+#define VMCS_64_HOST_IA32_EFER                      0x2c02      /* Host EFER */
+
 #define VMCS_32_PINBASED_CTLS                       0x4000      /* Pin-based controls */
 #define VMCS_32_PROCBASED_CTLS                      0x4002      /* Primary processor-based controls */
 #define VMCS_32_EXCEPTION_BITMAP                    0x4004      /* Exception bitmap */
@@ -54,6 +62,8 @@
 #define VMCS_32_EXIT_REASON                         0x4402      /* Exit reason */
 #define VMCS_32_INTERRUPTION_INFORMATION            0x4404      /* VM-exit interruption information */
 #define VMCS_32_INTERRUPTION_ERROR_CODE             0x4406      /* VM-exit interruption error code */
+#define VMCS_32_INSTRUCTION_LENGTH                  0x440c      /* VM-exit instruction length */
+#define VMCS_32_INSTRUCTION_INFORMATION             0x440e      /* VM-exit instruction information */
 #define VMCS_32_HOST_IA32_SYSENTER_CS               0x4c00      /* Host SYSENTER CS */
 #define VMCS_32_GUEST_GDTR_LIMIT                    0x4810      /* Guest GDTR Limit */
 #define VMCS_32_GUEST_IDTR_LIMIT                    0x4812      /* Guest IDTR Limit */
@@ -69,16 +79,8 @@
 #define VMCS_32_GUEST_ACTIVITY_STATE                0x4826      /* Guest activity state */
 #define VMCS_32_GUEST_IA32_SYSENTER_CS              0x482a      /* Guest SYSENTER CS */
 
-#define VMCS_64_MSR_BITMAPS_ADDRESS                 0x2004      /* MSR bitmaps address */
-#define VMCS_64_EPT_POINTER                         0x201a      /* EPT pointer */
-#define VMCS_64_GUEST_PHYSICAL_ADDRESS              0x2400      /* Guest physical address */
-#define VMCS_64_LINK_POINTER                        0x2800      /* VMCS link pointer */
-#define VMCS_64_GUEST_IA32_PAT                      0x2804      /* Guest PAT */
-#define VMCS_64_GUEST_IA32_EFER                     0x2806      /* Guest EFER */
-#define VMCS_64_HOST_IA32_PAT                       0x2c00      /* Host PAT */
-#define VMCS_64_HOST_IA32_EFER                      0x2c02      /* Host EFER */
-
 #define VMCS_XX_EXIT_QUALIFICATION                  0x6400      /* Exit qualification */
+#define VMCS_XX_GUEST_LINEAR_ADDRESS                0x640a      /* Guest linear address */
 #define VMCS_XX_GUEST_CR0                           0x6800      /* Guest CR0 */
 #define VMCS_XX_GUEST_CR3                           0x6802      /* Guest CR3 */
 #define VMCS_XX_GUEST_CR4                           0x6804      /* Guest CR4 */
@@ -110,7 +112,7 @@
 #define VMCS_32_PROCBASED_CTLS2_XSAVES_XRSTORS      (1u << 20)
 
 /* VMCS_32_PROCBASED_CTLS flags */
-#define VMCS_32_PROCBASED_CTLS_MSR_BITMAPS          (1u << 28)
+#define VMCS_32_PROCBASED_CTLS_IO_EXITING           (1u << 24)
 #define VMCS_32_PROCBASED_CTLS_PROCBASED_CTLS2      (1u << 31)
 
 /* VMCS_32_PINBASED_CTLS flags */
@@ -139,6 +141,7 @@
 /* VMCS_32_EXIT_REASON values */
 #define VMCS_32_EXIT_REASON_BASIC_MASK              0xffff
 #define VMCS_32_EXIT_REASON_EXTERNAL_INTERRUPT      1u
+#define VMCS_32_EXIT_REASON_IO_INSTRUCTION          30u
 
 /* VMCS_32_GUEST_XX_ACCESS_RIGHTS flags */
 #define VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE     (1u << 16)
@@ -160,6 +163,7 @@ struct VmxInfo {
     uint32_t revision_id;
     uint16_t region_size;
     bool write_back;
+    bool io_exit_info;
     bool vmx_controls;
 
     VmxInfo();
@@ -211,14 +215,12 @@ struct AutoVmcsLoad {
 /* Creates a VMCS CPU context to initialize a VM. */
 class VmcsPerCpu : public PerCpu {
 public:
-    status_t Init(const VmxInfo& vmx_info) override;
     status_t Clear();
     status_t Setup(paddr_t pml4_address);
     status_t Enter(const VmcsContext& context);
 
 private:
     bool do_resume_ = false;
-    VmxPage msr_bitmaps_page_;
     VmxState vmx_state_;
 };
 
