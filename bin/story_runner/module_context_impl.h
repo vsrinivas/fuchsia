@@ -33,7 +33,7 @@ struct ModuleContextInfo {
 // ModuleContextImpl keeps a single connection from a module instance in
 // the story to a StoryImpl. This way, requests that the module makes
 // on its Story handle can be associated with the Module instance.
-class ModuleContextImpl : public ModuleContext {
+class ModuleContextImpl : ModuleContext {
  public:
   ModuleContextImpl(const ModuleContextInfo& info,
                     const uint64_t id,

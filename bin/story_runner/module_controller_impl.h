@@ -25,7 +25,7 @@ class StoryImpl;
 // client that called Story.StartModule(). Exactly one
 // ModuleControllerImpl instance is associated with each
 // ModuleContextImpl instance.
-class ModuleControllerImpl : public ModuleController {
+class ModuleControllerImpl : ModuleController {
  public:
   ModuleControllerImpl(
       StoryImpl* const story_impl,

@@ -25,12 +25,15 @@ namespace modular {
 
 class UserControllerImpl;
 
+// Public interface because bindings are outside the class.
+// TODO(mesch): Merge into UserControllerImpl.
 class UserContextImpl : public UserContext {
  public:
   explicit UserContextImpl(UserControllerImpl* controller)
       : controller_(controller) {}
 
  private:
+  // |UserContext|
   void Logout() override;
 
   UserControllerImpl* const controller_;
@@ -45,7 +48,7 @@ class UserContextImpl : public UserContext {
 // This class implements both |UserController| and |UserContext| (but for now,
 // since |UserContext| interface is a subset of |UserController|, we only
 // inherit one).
-class UserControllerImpl : public UserController {
+class UserControllerImpl : UserController {
  public:
   // After perfoming logout, to signal our completion (and deletion of our
   // instance) to our owner, we do it using a callback supplied to us in our

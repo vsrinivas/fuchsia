@@ -161,7 +161,7 @@ class Settings {
 
 // TODO(vardhan): A running user's state is starting to grow, so break it
 // outside of DeviceRunnerApp.
-class DeviceRunnerApp : public UserProvider, public DeviceContext {
+class DeviceRunnerApp : UserProvider, DeviceContext {
  public:
   DeviceRunnerApp(const Settings& settings)
       : settings_(settings),

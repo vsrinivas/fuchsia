@@ -110,7 +110,7 @@ class LinkImpl {
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
 
-class LinkConnection : public Link {
+class LinkConnection : Link {
  public:
   ~LinkConnection() override;
 

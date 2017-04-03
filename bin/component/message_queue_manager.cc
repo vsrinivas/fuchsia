@@ -87,6 +87,8 @@ class MessageQueueStorage;
 // |MessageQueueStorage|. It forwards all calls to its owner, and expects its
 // owner to manage outstanding |MessageQueue.Receive| calls. It also notifies
 // its owner on object destruction.
+//
+// Interface is public, because bindings are outside of the class.
 class MessageQueueConnection : public MessageQueue {
  public:
   explicit MessageQueueConnection(MessageQueueStorage* queue_storage);
@@ -105,7 +107,7 @@ class MessageQueueConnection : public MessageQueue {
 // Class for managing a particular message queue, its tokens and its storage.
 // Implementations of |MessageQueue| and |MessageSender| call into this class to
 // manipulate the message queue. Owned by |MessageQueueManager|.
-class MessageQueueStorage : public MessageSender {
+class MessageQueueStorage : MessageSender {
  public:
   MessageQueueStorage(const std::string& queue_token)
       : queue_token_(queue_token) {}

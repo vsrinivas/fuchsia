@@ -18,8 +18,8 @@
 namespace {
 
 class DummyStoryShellApp
-    : public modular::SingleServiceViewApp<modular::StoryShellFactory>,
-      public modular::StoryShell {
+    : modular::SingleServiceViewApp<modular::StoryShellFactory>,
+      modular::StoryShell {
  public:
   DummyStoryShellApp() : story_shell_binding_(this) {}
   ~DummyStoryShellApp() override = default;

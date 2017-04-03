@@ -38,7 +38,7 @@ struct AgentContextInfo {
 // and instantiates one for every instance of an agent running. All requests for
 // this agent (identified for now by the agent's URL) are routed to this
 // class. This class manages all AgentControllers associated with this agent.
-class AgentContextImpl : public AgentContext, public AgentController {
+class AgentContextImpl : AgentContext, AgentController {
  public:
   explicit AgentContextImpl(const AgentContextInfo& info,
                             const std::string& url);

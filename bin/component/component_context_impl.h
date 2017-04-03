@@ -26,7 +26,9 @@ struct ComponentContextInfo {
 };
 
 // Implements the ComponentContext interface, which is provided to
-// modules and agents.
+// modules and agents. The interface is public, because the class
+// doesn't contain the Bindings for this interface. TODO(mesch): Move
+// bindings into the class.
 class ComponentContextImpl : public ComponentContext {
  public:
   explicit ComponentContextImpl(const ComponentContextInfo& info,

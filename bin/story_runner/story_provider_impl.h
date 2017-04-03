@@ -47,7 +47,7 @@ namespace {
 class DeleteStoryCall;
 }  // namespace
 
-class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
+class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
  public:
   StoryProviderImpl(
       const Scope* user_scope,

@@ -28,9 +28,9 @@ class Settings {
 };
 
 class DummyDeviceShellApp
-    : public modular::SingleServiceViewApp<modular::DeviceShellFactory>,
-      public modular::DeviceShell,
-      public modular::UserWatcher {
+    : modular::SingleServiceViewApp<modular::DeviceShellFactory>,
+      modular::DeviceShell,
+      modular::UserWatcher {
  public:
   DummyDeviceShellApp(const Settings& settings)
       : settings_(settings),

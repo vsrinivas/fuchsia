@@ -59,10 +59,10 @@ class Settings {
 };
 
 class DummyUserShellApp
-    : public modular::StoryWatcher,
-      public modular::StoryProviderWatcher,
-      public modular::LinkWatcher,
-      public modular::SingleServiceViewApp<modular::UserShell> {
+    : modular::StoryWatcher,
+      modular::StoryProviderWatcher,
+      modular::LinkWatcher,
+      modular::SingleServiceViewApp<modular::UserShell> {
  public:
   explicit DummyUserShellApp(const Settings& settings)
       : settings_(settings),
