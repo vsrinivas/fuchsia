@@ -68,10 +68,15 @@ void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
 void LinkImpl::SetSchema(const fidl::String& json_schema) {
   rapidjson::Document doc;
   doc.Parse(json_schema.get());
-  FTL_DCHECK(!doc.HasParseError())
-      << "LinkImpl::SetSchema() " << name_ << " JSON parse failed error #"
-      << doc.GetParseError() << std::endl
-      << json_schema.get();
+  if (doc.HasParseError()) {
+    // TODO(jimbe, mesch): This method needs a success status,
+    // otherwise clients have no way to know they sent bogus data.
+    FTL_LOG(ERROR)
+        << "LinkImpl::SetSchema() " << name_ << " JSON parse failed error #"
+        << doc.GetParseError() << std::endl
+        << json_schema.get();
+    return;
+  }
   schema_doc_ = std::make_unique<rapidjson::SchemaDocument>(doc);
 }
 
@@ -92,8 +97,9 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
-    // TODO(jimbe) Handle errors better
-    FTL_CHECK(!new_value.HasParseError())
+    // TODO(jimbe, mesch): This method needs a success status,
+    // otherwise clients have no way to know they sent bogus data.
+    FTL_LOG(ERROR)
         << "LinkImpl::Set() " << name_ << " JSON parse failed error #"
         << new_value.GetParseError() << std::endl
         << json.get();
@@ -127,8 +133,9 @@ void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
-    // TODO(jimbe) Handle errors better
-    FTL_CHECK(!new_value.HasParseError())
+    // TODO(jimbe, mesch): This method needs a success status,
+    // otherwise clients have no way to know they sent bogus data.
+    FTL_LOG(ERROR)
         << "LinkImpl::UpdateObject() " << name_ << " JSON parse failed error #"
         << new_value.GetParseError() << std::endl
         << json.get();
