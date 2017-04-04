@@ -5,12 +5,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <stdio.h>
-#include <rand.h>
-#include <err.h>
 #include <app/tests.h>
+#include <err.h>
+#include <inttypes.h>
 #include <kernel/thread.h>
 #include <platform.h>
+#include <rand.h>
+#include <stdio.h>
 
 static int fibo_thread(void *argv)
 {
@@ -58,7 +59,7 @@ int fibo(int argc, const cmd_args *argv)
         return -1;
     }
 
-    lk_time_t tim = current_time();
+    lk_bigtime_t tim = current_time_hires();
 
     thread_t *t = thread_create("fibo", &fibo_thread, (void *)(uintptr_t)argv[1].u, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_resume(t);
@@ -66,10 +67,10 @@ int fibo(int argc, const cmd_args *argv)
     int retcode;
     thread_join(t, &retcode, INFINITE_TIME);
 
-    tim = current_time() - tim;
+    tim = (current_time_hires() - tim) / (1000 * 1000);
 
     printf("fibo %d\n", retcode);
-    printf("took %u msecs to calculate\n", tim);
+    printf("took %" PRIu64 " msecs to calculate\n", tim);
 
     return NO_ERROR;
 }

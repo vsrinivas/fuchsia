@@ -20,7 +20,7 @@ typedef struct watchdog {
     uint32_t                magic;
     const char             *name;
     bool                    enabled;
-    lk_time_t               timeout;
+    lk_bigtime_t            timeout;
     timer_t                 expire_timer;
 } watchdog_t;
 
@@ -34,7 +34,7 @@ typedef struct watchdog {
  */
 void watchdog_handler(watchdog_t *dog) __NO_RETURN;
 
-status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name);
+status_t watchdog_init(watchdog_t *dog, lk_bigtime_t timeout, const char *name);
 void     watchdog_set_enabled(watchdog_t *dog, bool enabled);
 void     watchdog_pet(watchdog_t *dog);
 
@@ -59,12 +59,12 @@ void     watchdog_pet(watchdog_t *dog);
  * something managed to break timers on LK.
  */
 
-extern status_t platform_watchdog_init(lk_time_t  target_timeout,
-                                       lk_time_t *recommended_pet_period);
+extern status_t platform_watchdog_init(lk_bigtime_t  target_timeout,
+                                       lk_bigtime_t *recommended_pet_period);
 extern void platform_watchdog_set_enabled(bool enabled);
 extern void platform_watchdog_pet(void);
 
-status_t watchdog_hw_init(lk_time_t timeout);
+status_t watchdog_hw_init(lk_bigtime_t timeout);
 void watchdog_hw_set_enabled(bool enabled);
 
 #endif  // __LIB_WATCHDOG_H__

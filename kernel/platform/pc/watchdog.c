@@ -7,21 +7,21 @@
 #include <platform/keyboard.h>
 #include "platform_p.h"
 
-static volatile uint64_t watchdog_last_time = 0;
+static volatile lk_bigtime_t watchdog_last_time = 0;
 
-#define WATCHDOG_CHECKIN_PERIOD_MS 50
+#define WATCHDOG_CHECKIN_PERIOD_NS LK_MSEC(50)
 
 // If the LK timer hasn't checked in in this long, reset the machine.
-#define ASSUMED_DEAD_PERIOD_MS 150
+#define ASSUMED_DEAD_PERIOD_NS LK_MSEC(150)
 
 void platform_handle_watchdog(void);
 void platform_handle_watchdog(void)
 {
-    uint64_t last_time = watchdog_last_time;
+    lk_bigtime_t last_time = watchdog_last_time;
 
-    uint64_t now = current_time();
-    uint64_t deadline = last_time + ASSUMED_DEAD_PERIOD_MS;
-    if (now < last_time - 2 || now > deadline) {
+    lk_bigtime_t now = current_time_hires();
+    lk_bigtime_t deadline = last_time + ASSUMED_DEAD_PERIOD_NS;
+    if (now < last_time - LK_MSEC(2) || now > deadline) {
         // Shoot all other cores
         apic_send_broadcast_ipi(0, DELIVERY_MODE_INIT);
 
@@ -47,9 +47,9 @@ void platform_handle_watchdog(void)
     apic_issue_eoi();
 }
 
-static enum handler_return checkin_callback(struct timer *t, lk_time_t now, void *arg)
+static enum handler_return checkin_callback(struct timer *t, lk_bigtime_t now, void *arg)
 {
-    watchdog_last_time = current_time();
+    watchdog_last_time = now;
     return INT_NO_RESCHEDULE;
 }
 
@@ -57,8 +57,8 @@ static timer_t watchdog_timer = TIMER_INITIAL_VALUE(watchdog_timer);
 static void install_watchdog_timer(uint level)
 {
     if (cmdline_get_bool("kernel.watchdog", false)) {
-        watchdog_last_time = current_time();
-        timer_set_periodic(&watchdog_timer, WATCHDOG_CHECKIN_PERIOD_MS, checkin_callback, NULL);
+        watchdog_last_time = current_time_hires();
+        timer_set_periodic(&watchdog_timer, WATCHDOG_CHECKIN_PERIOD_NS, checkin_callback, NULL);
 
         platform_configure_watchdog(20); // 50ms granularity
     }

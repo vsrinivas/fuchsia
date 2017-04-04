@@ -42,18 +42,6 @@ mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
 
 bool magenta_rights_check(const Handle* handle, mx_rights_t desired);
 
-// (temporary) conversion from mx_time (nanoseconds) to lk_time_t (milliseconds)
-// remove once mx_time_t is converted to 1:1 match mx_time_t
-inline lk_time_t mx_time_to_lk(mx_time_t mxt) {
-    if (mxt == MX_TIME_INFINITE)
-        return INFINITE_TIME;
-
-    uint64_t temp = mxt / 1000000ull; // nanosecs to milliseconds
-    if (temp >= UINT32_MAX)
-        return UINT32_MAX - 1;
-    return static_cast<lk_time_t>(temp & 0xffffffff);
-}
-
 mx_status_t magenta_sleep(mx_time_t nanoseconds);
 
 // Determines if this handle is to a Resource object.

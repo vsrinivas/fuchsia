@@ -282,8 +282,8 @@ static int debuglog_dumper(void *arg) {
             }
             int n;
             n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-                         (int) (rec.hdr.timestamp / 1000000000ULL),
-                         (int) ((rec.hdr.timestamp / 1000000ULL) % 1000ULL),
+                         (int) (rec.hdr.timestamp / LK_SEC(1)),
+                         (int) ((rec.hdr.timestamp / LK_MSEC(1)) % 1000ULL),
                          rec.hdr.pid, rec.hdr.tid, rec.data);
             if (n > (int)sizeof(tmp)) {
                 n = sizeof(tmp);
@@ -306,7 +306,8 @@ void dlog_bluescreen_init(void) {
 
     // replay debug log?
 
-    dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\nUPTIME: %" PRIu32 "ms\n", current_time());
+    dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\nUPTIME: %" PRIu64 "ms\n",
+            current_time_hires() / LK_MSEC(1));
     dprintf(INFO, "BUILDID %s\n\n", version.buildid);
 }
 

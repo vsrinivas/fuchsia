@@ -47,9 +47,8 @@ struct thread_stats thread_stats[SMP_MAX_CPUS];
 #define TRACE_CONTEXT_SWITCH(str, x...) \
     do { if (DEBUG_THREAD_CONTEXT_SWITCH) printf("CS " str, ## x); } while (0)
 
-#define THREAD_INITIAL_TIME_SLICE ((lk_bigtime_t)50000000u) // 50ms
-#define THREAD_TICK_RATE ((lk_bigtime_t)10000000u) // 10ms
-#define THREAD_TICK_RATE_MS (THREAD_TICK_RATE / 1000000u) // 10ms
+#define THREAD_INITIAL_TIME_SLICE LK_MSEC(50)
+#define THREAD_TICK_RATE          LK_MSEC(10)
 
 /* global thread list */
 static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
@@ -354,7 +353,7 @@ status_t thread_suspend(thread_t *t)
     return NO_ERROR;
 }
 
-status_t thread_join(thread_t *t, int *retcode, lk_time_t timeout)
+status_t thread_join(thread_t *t, int *retcode, lk_bigtime_t timeout)
 {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
@@ -736,7 +735,7 @@ void thread_resched(void)
          * set up a periodic timer to run our preemption tick. */
         TRACE_CONTEXT_SWITCH("start preempt, cpu %u, old %p (%s), new %p (%s)\n",
                 cpu, oldthread, oldthread->name, newthread, newthread->name);
-        timer_set_periodic(&preempt_timer[cpu], THREAD_TICK_RATE_MS, (timer_callback)thread_timer_tick, NULL);
+        timer_set_periodic(&preempt_timer[cpu], THREAD_TICK_RATE, (timer_callback)thread_timer_tick, NULL);
     }
 #endif
 
@@ -871,7 +870,7 @@ enum handler_return thread_timer_tick(void)
 }
 
 /* timer callback to wake up a sleeping thread */
-static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, void *arg)
+static enum handler_return thread_sleep_handler(timer_t *timer, lk_bigtime_t now, void *arg)
 {
     thread_t *t = (thread_t *)arg;
 
@@ -911,7 +910,7 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, v
  * interruptable argument allows this routine to return early if the thread was signaled
  * for something.
  */
-status_t thread_sleep_etc(lk_time_t delay, bool interruptable)
+status_t thread_sleep_etc(lk_bigtime_t delay, bool interruptable)
 {
     thread_t *current_thread = get_current_thread();
     status_t blocked_status;
@@ -1295,7 +1294,7 @@ void wait_queue_init(wait_queue_t *wait)
     *wait = (wait_queue_t)WAIT_QUEUE_INITIAL_VALUE(*wait);
 }
 
-static enum handler_return wait_queue_timeout_handler(timer_t *timer, lk_time_t now, void *arg)
+static enum handler_return wait_queue_timeout_handler(timer_t *timer, lk_bigtime_t now, void *arg)
 {
     thread_t *thread = (thread_t *)arg;
 
@@ -1336,7 +1335,7 @@ static enum handler_return wait_queue_timeout_handler(timer_t *timer, lk_time_t 
  * @return ERR_TIMED_OUT on timeout, else returns the return
  * value specified when the queue was woken by wait_queue_wake_one().
  */
-status_t wait_queue_block(wait_queue_t *wait, lk_time_t timeout)
+status_t wait_queue_block(wait_queue_t *wait, lk_bigtime_t timeout)
 {
     timer_t timer;
 

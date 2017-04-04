@@ -188,7 +188,7 @@ void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t *);
 
 status_t thread_detach(thread_t *t);
-status_t thread_join(thread_t *t, int *retcode, lk_time_t timeout);
+status_t thread_join(thread_t *t, int *retcode, lk_bigtime_t timeout);
 status_t thread_detach_and_resume(thread_t *t);
 status_t thread_set_real_time(thread_t *t);
 
@@ -212,10 +212,10 @@ static inline bool thread_stopped_in_exception(const thread_t* thread)
 /* wait for at least delay amount of time. interruptable may return early with ERR_INTERRUPTED
  * if thread is signaled for kill.
  */
-status_t thread_sleep_etc(lk_time_t delay, bool interruptable);
+status_t thread_sleep_etc(lk_bigtime_t delay, bool interruptable);
 
 /* non interruptable version of thread_sleep_etc */
-static inline status_t thread_sleep(lk_time_t delay) { return thread_sleep_etc(delay, false); }
+static inline status_t thread_sleep(lk_bigtime_t delay) { return thread_sleep_etc(delay, false); }
 
 /* return the number of nanoseconds a thread has been running for */
 lk_bigtime_t thread_runtime(const thread_t *t);

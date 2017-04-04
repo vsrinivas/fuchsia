@@ -5,12 +5,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <app.h>
+#include <inttypes.h>
+#include <kernel/thread.h>
+#include <malloc.h>
+#include <platform.h>
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
-#include <app.h>
-#include <platform.h>
-#include <kernel/thread.h>
 
 static uint8_t *src;
 static uint8_t *dst;
@@ -128,39 +129,39 @@ static void *null_memcpy(void *dst, const void *src, size_t len)
     return dst;
 }
 
-static lk_time_t bench_memcpy_routine(void *memcpy_routine(void *, const void *, size_t), size_t srcalign, size_t dstalign)
+static lk_bigtime_t bench_memcpy_routine(void *memcpy_routine(void *, const void *, size_t), size_t srcalign, size_t dstalign)
 {
     int i;
-    lk_time_t t0;
+    lk_bigtime_t t0;
 
-    t0 = current_time();
+    t0 = current_time_hires();
     for (i=0; i < ITERATIONS; i++) {
         memcpy_routine(dst + dstalign, src + srcalign, BUFFER_SIZE);
     }
-    return current_time() - t0;
+    return current_time_hires() - t0;
 }
 
 static void bench_memcpy(void)
 {
-    lk_time_t null, c, libc, mine;
+    lk_bigtime_t null, c, libc, mine;
     size_t srcalign, dstalign;
 
     printf("memcpy speed test\n");
-    thread_sleep(200); // let the debug string clear the serial port
+    thread_sleep(LK_MSEC(200)); // let the debug string clear the serial port
 
     for (srcalign = 0; srcalign < 64; ) {
         for (dstalign = 0; dstalign < 64; ) {
 
-            null = bench_memcpy_routine(&null_memcpy, srcalign, dstalign);
-            c = bench_memcpy_routine(&c_memmove, srcalign, dstalign);
-            libc = bench_memcpy_routine(&memcpy, srcalign, dstalign);
-            mine = bench_memcpy_routine(&mymemcpy, srcalign, dstalign);
+            null = bench_memcpy_routine(&null_memcpy, srcalign, dstalign) / (1000 * 1000);
+            c = bench_memcpy_routine(&c_memmove, srcalign, dstalign) / (1000 * 1000);
+            libc = bench_memcpy_routine(&memcpy, srcalign, dstalign) / (1000 * 1000);
+            mine = bench_memcpy_routine(&mymemcpy, srcalign, dstalign) / (1000 * 1000);
 
             printf("srcalign %zu, dstalign %zu: ", srcalign, dstalign);
-            printf("   null memcpy %u msecs\n", null);
-            printf("c memcpy %u msecs, %llu bytes/sec; ", c, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / c);
-            printf("libc memcpy %u msecs, %llu bytes/sec; ", libc, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / libc);
-            printf("my memcpy %u msecs, %llu bytes/sec; ", mine, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / mine);
+            printf("   null memcpy %" PRIu64 " msecs\n", null);
+            printf("c memcpy %" PRIu64 " msecs, %llu bytes/sec; ", c, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / c);
+            printf("libc memcpy %" PRIu64 " msecs, %llu bytes/sec; ", libc, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / libc);
+            printf("my memcpy %" PRIu64 " msecs, %llu bytes/sec; ", mine, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / mine);
             printf("\n");
 
             if (dstalign < 8)
@@ -221,36 +222,36 @@ static void validate_memcpy(void)
     }
 }
 
-static lk_time_t bench_memset_routine(void *memset_routine(void *, int, size_t), size_t dstalign, size_t len)
+static lk_bigtime_t bench_memset_routine(void *memset_routine(void *, int, size_t), size_t dstalign, size_t len)
 {
     int i;
-    lk_time_t t0;
+    lk_bigtime_t t0;
 
-    t0 = current_time();
+    t0 = current_time_hires();
     for (i=0; i < ITERATIONS; i++) {
         memset_routine(dst + dstalign, 0, len);
     }
-    return current_time() - t0;
+    return current_time_hires() - t0;
 }
 
 static void bench_memset(void)
 {
-    lk_time_t c, libc, mine;
+    lk_bigtime_t c, libc, mine;
     size_t dstalign;
 
     printf("memset speed test\n");
-    thread_sleep(200); // let the debug string clear the serial port
+    thread_sleep(LK_MSEC(200)); // let the debug string clear the serial port
 
     for (dstalign = 0; dstalign < 64; dstalign++) {
 
-        c = bench_memset_routine(&c_memset, dstalign, BUFFER_SIZE);
-        libc = bench_memset_routine(&memset, dstalign, BUFFER_SIZE);
-        mine = bench_memset_routine(&mymemset, dstalign, BUFFER_SIZE);
+        c = bench_memset_routine(&c_memset, dstalign, BUFFER_SIZE) / (1000 * 1000);
+        libc = bench_memset_routine(&memset, dstalign, BUFFER_SIZE) / (1000 * 1000);
+        mine = bench_memset_routine(&mymemset, dstalign, BUFFER_SIZE) / (1000 * 1000);
 
         printf("dstalign %zu: ", dstalign);
-        printf("c memset %u msecs, %llu bytes/sec; ", c, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / c);
-        printf("libc memset %u msecs, %llu bytes/sec; ", libc, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / libc);
-        printf("my memset %u msecs, %llu bytes/sec; ", mine, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / mine);
+        printf("c memset %" PRIu64 " msecs, %llu bytes/sec; ", c, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / c);
+        printf("libc memset %" PRIu64 " msecs, %llu bytes/sec; ", libc, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / libc);
+        printf("my memset %" PRIu64 " msecs, %llu bytes/sec; ", mine, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / mine);
         printf("\n");
     }
 }

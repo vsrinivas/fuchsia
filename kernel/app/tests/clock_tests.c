@@ -18,39 +18,15 @@
 void clock_tests(void)
 {
     uint32_t c;
-    lk_time_t t;
     lk_bigtime_t t2;
 
-    thread_sleep(100);
-    c = arch_cycle_count();
-    current_time();
-    c = arch_cycle_count() - c;
-    printf("%u cycles per current_time()\n", c);
-
-    thread_sleep(100);
+    thread_sleep(LK_MSEC(100));
     c = arch_cycle_count();
     current_time_hires();
     c = arch_cycle_count() - c;
     printf("%u cycles per current_time_hires()\n", c);
 
     printf("making sure time never goes backwards\n");
-    {
-        printf("testing current_time()\n");
-        lk_time_t start = current_time();
-        lk_time_t last = start;
-        for (;;) {
-            t = current_time();
-            //printf("%lu %lu\n", last, t);
-            if (TIME_LT(t, last)) {
-                printf("WARNING: time ran backwards: %lu < %lu\n", t, last);
-                last = t;
-                continue;
-            }
-            last = t;
-            if (last - start > 5000)
-                break;
-        }
-    }
     {
         printf("testing current_time_hires()\n");
         lk_bigtime_t start = current_time_hires();
@@ -64,28 +40,14 @@ void clock_tests(void)
                 continue;
             }
             last = t2;
-            if (last - start > 5000000)
-                break;
-        }
-    }
-
-    printf("making sure current_time() and current_time_hires() are always the same base\n");
-    {
-        lk_time_t start = current_time();
-        for (;;) {
-            t = current_time();
-            t2 = current_time_hires();
-            if (t > ((t2 + 500000) / 1000000)) {
-                printf("WARNING: current_time() ahead of current_time_hires() %u %" PRIu64 "\n", t, t2);
-            }
-            if (t - start > 5000)
+            if (last - start > LK_MSEC(5))
                 break;
         }
     }
 
     printf("counting to 5, in one second intervals\n");
     for (int i = 0; i < 5; i++) {
-        thread_sleep(1000);
+        thread_sleep(LK_SEC(1));
         printf("%d\n", i + 1);
     }
 
@@ -93,7 +55,7 @@ void clock_tests(void)
     for (int i = 0; i < 5; i++) {
         uint cycles = arch_cycle_count();
         lk_bigtime_t start = current_time_hires();
-        while ((current_time_hires() - start) < 1000000000)
+        while ((current_time_hires() - start) < LK_SEC(1))
             ;
         cycles = arch_cycle_count() - cycles;
         printf("%u cycles per second\n", cycles);

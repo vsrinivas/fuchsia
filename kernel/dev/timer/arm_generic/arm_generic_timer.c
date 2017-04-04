@@ -49,19 +49,12 @@
 static platform_timer_callback t_callback;
 static int timer_irq;
 
-struct fp_32_64 cntpct_per_ms;
-struct fp_32_64 ms_per_cntpct;
-struct fp_32_64 us_per_cntpct;
+struct fp_32_64 cntpct_per_ns;
 struct fp_32_64 ns_per_cntpct;
 
-static uint64_t lk_time_to_cntpct(lk_time_t lk_time)
+static uint64_t lk_bigtime_to_cntpct(lk_bigtime_t lk_time)
 {
-    return u64_mul_u32_fp32_64(lk_time, cntpct_per_ms);
-}
-
-static lk_time_t cntpct_to_lk_time(uint64_t cntpct)
-{
-    return u32_mul_u64_fp32_64(cntpct, ms_per_cntpct);
+    return u64_mul_u32_fp32_64(lk_time, cntpct_per_ns);
 }
 
 static lk_bigtime_t cntpct_to_lk_bigtime(uint64_t cntpct)
@@ -218,15 +211,15 @@ static enum handler_return platform_tick(void *arg)
 {
     write_ctl(0);
     if (t_callback) {
-        return t_callback(arg, current_time());
+        return t_callback(arg, current_time_hires());
     } else {
         return INT_NO_RESCHEDULE;
     }
 }
 
-status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg, lk_time_t interval)
+status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg, lk_bigtime_t interval)
 {
-    uint64_t cntpct_interval = lk_time_to_cntpct(interval);
+    uint64_t cntpct_interval = lk_bigtime_to_cntpct(interval);
 
     ASSERT(arg == NULL);
 
@@ -250,14 +243,9 @@ lk_bigtime_t current_time_hires(void)
     return cntpct_to_lk_bigtime(read_ct());
 }
 
-lk_time_t current_time(void)
-{
-    return cntpct_to_lk_time(read_ct());
-}
-
 uint64_t ticks_per_second(void)
 {
-    return u64_mul_u32_fp32_64(1000, cntpct_per_ms);
+    return u64_mul_u32_fp32_64(1000 * 1000 * 1000, cntpct_per_ns);
 }
 
 static uint32_t abs_int32(int32_t a)
@@ -282,37 +270,21 @@ static void test_time_conversion_check_result(uint64_t a, uint64_t b, uint64_t l
     }
 }
 
-static void test_lk_time_to_cntpct(uint32_t cntfrq, lk_time_t lk_time)
+static void test_lk_bigtime_to_cntpct(uint32_t cntfrq, lk_bigtime_t lk_time)
 {
-    uint64_t cntpct = lk_time_to_cntpct(lk_time);
-    uint64_t expected_cntpct = ((uint64_t)cntfrq * lk_time + 500) / 1000;
+    uint64_t cntpct = lk_bigtime_to_cntpct(lk_time);
+    const uint64_t nanos_per_sec = LK_SEC(1);
+    uint64_t expected_cntpct = ((uint64_t)cntfrq * lk_time + nanos_per_sec / 2) / nanos_per_sec;
 
     test_time_conversion_check_result(cntpct, expected_cntpct, 1, false);
-    LTRACEF_LEVEL(2, "lk_time_to_cntpct(%u): got %" PRIu64
+    LTRACEF_LEVEL(2, "lk_bigtime_to_cntpct(%" PRIu64 "): got %" PRIu64
                   ", expect %" PRIu64 "\n",
                   lk_time, cntpct, expected_cntpct);
 }
 
-static void test_cntpct_to_lk_time(uint32_t cntfrq, lk_time_t expected_lk_time, uint32_t wrap_count)
-{
-    lk_time_t lk_time;
-    uint64_t cntpct;
-
-    cntpct = (uint64_t)cntfrq * expected_lk_time / 1000;
-    if ((uint64_t)cntfrq * wrap_count > UINT_MAX)
-        cntpct += (((uint64_t)cntfrq << 32) / 1000) * wrap_count;
-    else
-        cntpct += (((uint64_t)(cntfrq * wrap_count) << 32) / 1000);
-    lk_time = cntpct_to_lk_time(cntpct);
-
-    test_time_conversion_check_result(lk_time, expected_lk_time, (1000 + cntfrq - 1) / cntfrq, true);
-    LTRACEF_LEVEL(2, "cntpct_to_lk_time(%" PRIu64 "): got %u, expect %u\n",
-                  cntpct, lk_time, expected_lk_time);
-}
-
 static void test_cntpct_to_lk_bigtime(uint32_t cntfrq, uint64_t expected_s)
 {
-    lk_bigtime_t expected_lk_bigtime = expected_s * 1000 * 1000;
+    lk_bigtime_t expected_lk_bigtime = LK_SEC(expected_s);
     uint64_t cntpct = (uint64_t)cntfrq * expected_s;
     lk_bigtime_t lk_bigtime = cntpct_to_lk_bigtime(cntpct);
 
@@ -324,19 +296,13 @@ static void test_cntpct_to_lk_bigtime(uint32_t cntfrq, uint64_t expected_s)
 
 static void test_time_conversions(uint32_t cntfrq)
 {
-    test_lk_time_to_cntpct(cntfrq, 0);
-    test_lk_time_to_cntpct(cntfrq, 1);
-    test_lk_time_to_cntpct(cntfrq, INT_MAX);
-    test_lk_time_to_cntpct(cntfrq, INT_MAX + 1U);
-    test_lk_time_to_cntpct(cntfrq, ~0);
-    test_cntpct_to_lk_time(cntfrq, 0, 0);
-    test_cntpct_to_lk_time(cntfrq, INT_MAX, 0);
-    test_cntpct_to_lk_time(cntfrq, INT_MAX + 1U, 0);
-    test_cntpct_to_lk_time(cntfrq, ~0, 0);
-    test_cntpct_to_lk_time(cntfrq, 0, 1);
-    test_cntpct_to_lk_time(cntfrq, 0, 7);
-    test_cntpct_to_lk_time(cntfrq, 0, 70);
-    test_cntpct_to_lk_time(cntfrq, 0, 700);
+    test_lk_bigtime_to_cntpct(cntfrq, 0);
+    test_lk_bigtime_to_cntpct(cntfrq, 1);
+    test_lk_bigtime_to_cntpct(cntfrq, 60 * 60 * 24);
+    test_lk_bigtime_to_cntpct(cntfrq, 60 * 60 * 24 * 365);
+    test_lk_bigtime_to_cntpct(cntfrq, 60 * 60 * 24 * (365 * 10 + 2));
+    test_lk_bigtime_to_cntpct(cntfrq, 60ULL * 60 * 24 * (365 * 100 + 2));
+    test_lk_bigtime_to_cntpct(cntfrq, ~0);
     test_cntpct_to_lk_bigtime(cntfrq, 0);
     test_cntpct_to_lk_bigtime(cntfrq, 1);
     test_cntpct_to_lk_bigtime(cntfrq, 60 * 60 * 24);
@@ -347,13 +313,9 @@ static void test_time_conversions(uint32_t cntfrq)
 
 static void arm_generic_timer_init_conversion_factors(uint32_t cntfrq)
 {
-    fp_32_64_div_32_32(&cntpct_per_ms, cntfrq, 1000);
-    fp_32_64_div_32_32(&ms_per_cntpct, 1000, cntfrq);
-    fp_32_64_div_32_32(&us_per_cntpct, 1000 * 1000, cntfrq);
-    fp_32_64_div_32_32(&ns_per_cntpct, 1000 * 1000 * 1000, cntfrq);
-    LTRACEF("cntpct_per_ms: %08x.%08x%08x\n", cntpct_per_ms.l0, cntpct_per_ms.l32, cntpct_per_ms.l64);
-    LTRACEF("ms_per_cntpct: %08x.%08x%08x\n", ms_per_cntpct.l0, ms_per_cntpct.l32, ms_per_cntpct.l64);
-    LTRACEF("us_per_cntpct: %08x.%08x%08x\n", us_per_cntpct.l0, us_per_cntpct.l32, us_per_cntpct.l64);
+    fp_32_64_div_32_32(&cntpct_per_ns, cntfrq, LK_SEC(1));
+    fp_32_64_div_32_32(&ns_per_cntpct, LK_SEC(1), cntfrq);
+    LTRACEF("cntpct_per_ns: %08x.%08x%08x\n", cntpct_per_ns.l0, cntpct_per_ns.l32, cntpct_per_ns.l64);
     LTRACEF("ns_per_cntpct: %08x.%08x%08x\n", ns_per_cntpct.l0, ns_per_cntpct.l32, ns_per_cntpct.l64);
 }
 

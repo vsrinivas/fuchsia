@@ -235,7 +235,7 @@ status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t timeout,
 
     // (2) Wait for notification via waiter's event or
     // timeout to occur.
-    mx_status_t status = waiter->Wait(mx_time_to_lk(timeout));
+    mx_status_t status = waiter->Wait(timeout);
     if (status == ERR_INTERRUPTED_RETRY) {
         // If we got interrupted, return out to usermode, but
         // do not clear the waiter.

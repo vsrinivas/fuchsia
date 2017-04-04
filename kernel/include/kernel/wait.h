@@ -45,7 +45,7 @@ void wait_queue_destroy(wait_queue_t *);
  * a timeout other than INFINITE_TIME will set abort after the specified time
  * and return ERR_TIMED_OUT. a timeout of 0 will immediately return.
  */
-status_t wait_queue_block(wait_queue_t *, lk_time_t timeout);
+status_t wait_queue_block(wait_queue_t *, lk_bigtime_t timeout);
 
 /*
  * release one or more threads from the wait queue.

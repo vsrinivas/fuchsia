@@ -29,14 +29,16 @@ typedef uintptr_t addr_t;
 typedef uintptr_t vaddr_t;
 typedef uintptr_t paddr_t;
 
-typedef uint32_t lk_time_t; // milliseconds
 typedef uint64_t lk_bigtime_t; // nanoseconds
-#define INFINITE_TIME UINT32_MAX
+#define INFINITE_TIME UINT64_MAX
+#define LK_USEC(n) ((lk_bigtime_t)(1000ULL * (n)))
+#define LK_MSEC(n) ((lk_bigtime_t)(1000000ULL * (n)))
+#define LK_SEC(n)  ((lk_bigtime_t)(1000000000ULL * (n)))
 
-#define TIME_GTE(a, b) ((int32_t)((a) - (b)) >= 0)
-#define TIME_LTE(a, b) ((int32_t)((a) - (b)) <= 0)
-#define TIME_GT(a, b) ((int32_t)((a) - (b)) > 0)
-#define TIME_LT(a, b) ((int32_t)((a) - (b)) < 0)
+#define TIME_GTE(a, b) ((int64_t)((a) - (b)) >= 0)
+#define TIME_LTE(a, b) ((int64_t)((a) - (b)) <= 0)
+#define TIME_GT(a, b) ((int64_t)((a) - (b)) > 0)
+#define TIME_LT(a, b) ((int64_t)((a) - (b)) < 0)
 
 enum handler_return {
     INT_NO_RESCHEDULE = 0,

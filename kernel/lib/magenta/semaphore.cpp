@@ -30,8 +30,9 @@ int Semaphore::Post() {
     return ret;
 }
 
-status_t Semaphore::Wait(lk_time_t timeout) {
+status_t Semaphore::Wait(lk_bigtime_t timeout) {
     thread_t *current_thread = get_current_thread();
+
      // If there are no resources available then we need to
      // sit in the wait queue until sem_post adds some.
     status_t ret = NO_ERROR;

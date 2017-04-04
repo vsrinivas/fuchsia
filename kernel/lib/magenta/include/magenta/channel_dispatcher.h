@@ -102,7 +102,7 @@ public:
 
         mx_txid_t get_txid() const { return txid_; }
 
-        mx_status_t Wait(lk_time_t timeout) {
+        mx_status_t Wait(lk_bigtime_t timeout) {
             DEBUG_ASSERT(armed());
             return event_.Wait(timeout);
         }

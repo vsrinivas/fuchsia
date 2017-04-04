@@ -33,9 +33,6 @@ typedef enum {
     HALT_REASON_SW_UPDATE,      // SW triggered reboot in order to begin firmware update
 } platform_halt_reason;
 
-/* current time in milliseconds */
-lk_time_t current_time(void);
-
 /* current time in nanoseconds */
 lk_bigtime_t current_time_hires(void);
 

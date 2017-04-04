@@ -94,7 +94,7 @@ static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags)
     return 0;
 }
 
-static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
+static enum handler_return threadload(struct timer *t, lk_bigtime_t now, void *arg)
 {
     static struct thread_stats old_stats[SMP_MAX_CPUS];
     static lk_bigtime_t last_idle_time[SMP_MAX_CPUS];
@@ -122,8 +122,8 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
         }
 
         lk_bigtime_t delta_time = idle_time - last_idle_time[i];
-        lk_bigtime_t busy_time = 1000000000ULL - (delta_time > 1000000000ULL ? 1000000000ULL : delta_time);
-        uint busypercent = (busy_time * 10000) / (1000000000);
+        lk_bigtime_t busy_time = LK_SEC(1) - (delta_time > LK_SEC(1) ? LK_SEC(1) : delta_time);
+        uint busypercent = (busy_time * 10000) / LK_SEC(1);
 
         printf("%3u"
                " %3u.%02u%%"
@@ -168,7 +168,7 @@ static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags)
     if (showthreadload == false) {
         // start the display
         timer_initialize(&tltimer);
-        timer_set_periodic(&tltimer, 1000, &threadload, NULL);
+        timer_set_periodic(&tltimer, LK_SEC(1), &threadload, NULL);
         showthreadload = true;
     } else {
         timer_cancel(&tltimer);

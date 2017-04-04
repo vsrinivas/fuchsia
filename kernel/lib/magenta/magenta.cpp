@@ -244,9 +244,7 @@ bool magenta_rights_check(const Handle* handle, mx_rights_t desired) {
 }
 
 mx_status_t magenta_sleep(mx_time_t nanoseconds) {
-    lk_time_t t = mx_time_to_lk(nanoseconds);
-    if ((nanoseconds > 0ull) && (t == 0u))
-        t = 1u;
+    lk_bigtime_t t = nanoseconds;
 
     /* sleep with interruptable flag set */
     return thread_sleep_etc(t, true);

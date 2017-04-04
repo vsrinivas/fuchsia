@@ -234,7 +234,7 @@ mx_status_t PortDispatcher::Wait(mx_time_t timeout, IOP_Packet** packet) {
         if (timeout == 0ull)
             return ERR_TIMED_OUT;
 
-        lk_time_t t = mx_time_to_lk(timeout);
+        lk_bigtime_t t = timeout;
         status_t st = event_wait_timeout(&event_, (t == 0u) ? 1u : t, true);
         if (st != NO_ERROR)
             return st;

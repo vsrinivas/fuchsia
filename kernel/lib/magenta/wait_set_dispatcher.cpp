@@ -297,7 +297,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
                                  uint32_t* max_results) {
     canary_.Assert();
 
-    lk_time_t lk_timeout = mx_time_to_lk(timeout);
+    lk_bigtime_t lk_timeout = timeout;
     status_t result = event_wait_timeout(&event_, lk_timeout, true);
 
     if (result != NO_ERROR && result != ERR_TIMED_OUT) {

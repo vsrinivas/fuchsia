@@ -191,7 +191,7 @@ mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, mx_port_packet_t* packe
         return NO_ERROR;
 
 wait:
-        status_t st = sema_.Wait(mx_time_to_lk(timeout));
+        status_t st = sema_.Wait(timeout);
         if (st != NO_ERROR)
             return st;
     }

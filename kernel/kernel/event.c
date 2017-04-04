@@ -76,14 +76,14 @@ void event_destroy(event_t *e)
  * by another thread.
  *
  * @param e        Event object
- * @param timeout  Timeout value, in ms
+ * @param timeout  Timeout value, in ns
  * @param interruptable  Allowed to interrupt if thread is signaled
  *
  * @return  0 on success, ERR_TIMED_OUT on timeout,
  *          other values depending on wait_result value
  *          when event_signal_etc is used.
  */
-status_t event_wait_timeout(event_t *e, lk_time_t timeout, bool interruptable)
+status_t event_wait_timeout(event_t *e, lk_bigtime_t timeout, bool interruptable)
 {
     thread_t *current_thread = get_current_thread();
     status_t ret = NO_ERROR;

@@ -66,7 +66,7 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
     // even if timeout is 0.  It will return ERR_TIMED_OUT
     // after the timeout expires if the event has not been
     // signaled.
-    result = event.Wait(mx_time_to_lk(timeout));
+    result = event.Wait(timeout);
 
     // Regardless of wait outcome, we must call End().
     auto signals_state = wait_state_observer.End();
@@ -147,7 +147,7 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
     // even if timeout is 0.  It will return ERR_TIMED_OUT
     // after the timeout expires if the event has not been
     // signaled.
-    result = event.Wait(mx_time_to_lk(timeout));
+    result = event.Wait(timeout);
 
     // Regardless of wait outcome, we must call End().
     mx_signals_t combined = 0;

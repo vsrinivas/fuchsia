@@ -110,36 +110,9 @@ uint64_t get_tsc_ticks_per_ms(void) {
 
 /* Maximum amount of time that can be program on the timer to schedule the next
  *  interrupt, in miliseconds */
-#define MAX_TIMER_INTERVAL 55
+#define MAX_TIMER_INTERVAL LK_MSEC(55)
 
 #define LOCAL_TRACE 0
-
-lk_time_t current_time(void)
-{
-    lk_time_t time;
-
-    switch (wall_clock) {
-        case CLOCK_TSC: {
-            uint64_t tsc = rdtsc();
-            time = tsc / tsc_ticks_per_ms;
-            break;
-        }
-        case CLOCK_HPET: {
-            uint64_t counter = hpet_get_value();
-            time = counter / hpet_ticks_per_ms();
-            break;
-        }
-        case CLOCK_PIT: {
-            // XXX slight race
-            time = (lk_time_t) (timer_current_time >> 32);
-            break;
-        }
-        default:
-            panic("Invalid wall clock source\n");
-    }
-
-    return time;
-}
 
 lk_bigtime_t current_time_hires(void)
 {
@@ -186,13 +159,13 @@ enum handler_return platform_handle_apic_timer_tick(void) {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu = arch_curr_cpu_num();
 
-    lk_time_t time = current_time();
+    lk_bigtime_t time = current_time_hires();
     //lk_bigtime_t btime = current_time_hires();
     //printf_xy(71, 0, WHITE, "%08u", (uint32_t) time);
     //printf_xy(63, 1, WHITE, "%016llu", (uint64_t) btime);
 
     if (t_callback[cpu] && timer_current_time >= next_trigger_time) {
-        lk_time_t delta = timer_current_time - next_trigger_time;
+        lk_bigtime_t delta = timer_current_time - next_trigger_time;
         next_trigger_time = timer_current_time + next_trigger_delta - delta;
 
         return t_callback[cpu](callback_arg[cpu], time);
@@ -542,7 +515,7 @@ static void platform_init_timer(uint level)
         outp(I8253_CONTROL_REG, 0x38);
         wall_clock = CLOCK_TSC;
     } else {
-        if (constant_tsc) {
+        if (constant_tsc || invariant_tsc) {
             // Calibrate the TSC even though it's not as good as we want, so we
             // can still let folks still use it for cheap timing.
             calibrate_tsc();
@@ -575,7 +548,7 @@ static void platform_init_timer(uint level)
 LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);
 
 status_t platform_set_oneshot_timer(platform_timer_callback callback,
-                                    void *arg, lk_time_t interval)
+                                    void *arg, lk_bigtime_t interval)
 {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu = arch_curr_cpu_num();
@@ -588,10 +561,11 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
     if (interval < 1) interval = 1;
 
     if (use_tsc_deadline) {
-        if (UINT64_MAX / interval < tsc_ticks_per_ms) {
+        if (UINT64_MAX / interval < (tsc_ticks_per_ms / LK_MSEC(1))) {
             return ERR_INVALID_ARGS;
         }
-        uint64_t tsc_interval = interval * tsc_ticks_per_ms;
+
+        const uint64_t tsc_interval = interval * tsc_ticks_per_ms / LK_MSEC(1);
         uint64_t deadline = rdtsc() + tsc_interval;
         LTRACEF("Scheduling oneshot timer: %" PRIu64 " deadline\n", deadline);
         apic_timer_set_tsc_deadline(deadline, false /* unmasked */);
@@ -599,13 +573,22 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
     }
 
     uint8_t extra_divisor = 1;
-    while (apic_ticks_per_ms > UINT32_MAX / interval / extra_divisor) {
+    while (apic_ticks_per_ms / LK_MSEC(1) > UINT32_MAX / interval / extra_divisor) {
         extra_divisor *= 2;
     }
-    uint32_t count = (apic_ticks_per_ms / extra_divisor) * interval;
+    const uint64_t count_per_ms = (apic_ticks_per_ms / extra_divisor) * interval;
+    uint32_t count = (uint32_t)(count_per_ms / LK_MSEC(1));
     uint32_t divisor = apic_divisor * extra_divisor;
     ASSERT(divisor <= UINT8_MAX);
+
+    // Make sure we're not underflowing
+    if (count == 0) {
+        DEBUG_ASSERT(divisor == 1);
+        count = 1;
+    }
+
     LTRACEF("Scheduling oneshot timer: %u count, %u div\n", count, divisor);
+
     return apic_timer_set_oneshot(count, divisor, false /* unmasked */);
 }
 
