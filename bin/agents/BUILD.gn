@@ -9,37 +9,9 @@ group("agents") {
     # If we don't include these explicitly here, for some reason it still
     # produces the expected build products but is not sensitive to source file
     # changes.
-    ":bandsintown",
     ":module_suggester",
     ":module_suggester_dart",
-    ":music_brainz",
     ":mi_dashboard",
-  ]
-}
-
-dart_app("bandsintown") {
-  output_name = "agents/bandsintown.dartx"
-
-  main_dart = "bandsintown/main.dart"
-
-  deps = [
-    "//application/lib/app/dart",
-    "//apps/maxwell/lib/context/dart",
-    "//apps/maxwell/services/context:context_dart",
-    "//third_party/dart-pkg/pub/http",
-  ]
-}
-
-dart_app("music_brainz") {
-  output_name = "agents/music_brainz.dartx"
-
-  main_dart = "music_brainz/main.dart"
-
-  deps = [
-    "//application/lib/app/dart",
-    "//apps/maxwell/lib/context/dart",
-    "//apps/maxwell/services/context:context_dart",
-    "//third_party/dart-pkg/pub/http",
   ]
 }
 
