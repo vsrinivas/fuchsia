@@ -971,8 +971,10 @@ static ssize_t mxsio_rx_dgram(mxio_t* io, void* buf, size_t buflen) {
         }
         if (r == ERR_REMOTE_CLOSED) {
             return 0;
-        } else if (r == ERR_SHOULD_WAIT &&
-                   !(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
+        } else if (r == ERR_SHOULD_WAIT) {
+            if (io->flags & MXIO_FLAG_NONBLOCK) {
+                return r;
+            }
             mx_signals_t pending;
             r = mx_object_wait_one(rio->h2,
                                    MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
