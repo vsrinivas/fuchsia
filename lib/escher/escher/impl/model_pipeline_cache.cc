@@ -389,7 +389,9 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
       mesh_spec_impl, SampleCountFlagBitsFromInt(spec.sample_count));
 
   device_.destroyShaderModule(vertex_module);
-  device_.destroyShaderModule(fragment_module);
+  if (fragment_module) {
+    device_.destroyShaderModule(fragment_module);
+  }
 
   return std::make_unique<ModelPipeline>(
       spec, device_, pipeline_and_layout.first, pipeline_and_layout.second);
