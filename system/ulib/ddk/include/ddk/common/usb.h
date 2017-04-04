@@ -42,7 +42,7 @@ mx_status_t usb_reset_endpoint(mx_device_t* device, uint8_t ep_address);
 size_t usb_get_max_transfer_size(mx_device_t* device, uint8_t ep_address);
 
 // helper function for allocating iotxns for USB transfers
-iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size, size_t extra_size);
+iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size);
 
 // sets the frame number in a USB iotxn for scheduling an isochronous transfer
 inline void usb_iotxn_set_frame(iotxn_t* txn, uint64_t frame) {

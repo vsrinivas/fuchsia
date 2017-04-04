@@ -203,7 +203,7 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
             dev_class = HID_DEV_CLASS_POINTER;
         }
 
-        iotxn_t* usbtxn = usb_alloc_iotxn(endpt->bEndpointAddress, usb_ep_max_packet(endpt), 0);
+        iotxn_t* usbtxn = usb_alloc_iotxn(endpt->bEndpointAddress, usb_ep_max_packet(endpt));
         if (usbtxn == NULL) {
             usb_desc_iter_release(&iter);
             free(usbhid);

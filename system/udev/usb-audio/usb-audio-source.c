@@ -352,7 +352,7 @@ mx_status_t usb_audio_source_create(mx_driver_t* driver, mx_device_t* device, in
     int packet_size = usb_ep_max_packet(ep);
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(source->ep_addr, packet_size, 0);
+        iotxn_t* txn = usb_alloc_iotxn(source->ep_addr, packet_size);
         if (!txn)
             return ERR_NO_MEMORY;
         txn->length = packet_size;

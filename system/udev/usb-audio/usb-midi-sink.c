@@ -198,7 +198,7 @@ mx_status_t usb_midi_sink_create(mx_driver_t* driver, mx_device_t* device, int i
         usb_set_interface(device, intf->bInterfaceNumber, intf->bAlternateSetting);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, usb_ep_max_packet(ep), 0);
+        iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, usb_ep_max_packet(ep));
         if (!txn)
             return ERR_NO_MEMORY;
         txn->length = packet_size;

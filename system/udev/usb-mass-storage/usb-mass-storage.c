@@ -844,7 +844,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
 
     mx_status_t status = NO_ERROR;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE, 0);
+        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
         if (!txn) {
             status = ERR_NO_MEMORY;
             goto fail;
@@ -854,7 +854,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         list_add_head(&msd->free_read_reqs, &txn->node);
     }
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, sizeof(ums_csw_t), 0);
+        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, sizeof(ums_csw_t));
         if (!txn) {
             status = ERR_NO_MEMORY;
             goto fail;
@@ -864,7 +864,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         list_add_head(&msd->free_csw_reqs, &txn->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE, 0);
+        iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE);
         if (!txn) {
             status = ERR_NO_MEMORY;
             goto fail;

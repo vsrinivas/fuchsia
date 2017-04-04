@@ -365,7 +365,7 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device, void**
     hub->bus_protocol = bus_protocol;
 
     mx_status_t status;
-    iotxn_t* txn = usb_alloc_iotxn(ep_addr, max_packet_size, 0);
+    iotxn_t* txn = usb_alloc_iotxn(ep_addr, max_packet_size);
     if (!txn) {
         status = ERR_NO_MEMORY;
         goto fail;

@@ -586,7 +586,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
     mx_status_t status;
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(intr_addr, intr_max_packet, 0);
+        iotxn_t* txn = usb_alloc_iotxn(intr_addr, intr_max_packet);
         if (!txn) {
             status = ERR_NO_MEMORY;
             goto fail;
@@ -597,7 +597,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         list_add_head(&hci->free_event_reqs, &txn->node);
     }
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, BT_HCI_MAX_FRAME_SIZE, 0);
+        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, BT_HCI_MAX_FRAME_SIZE);
         if (!txn) {
             status = ERR_NO_MEMORY;
             goto fail;
@@ -608,7 +608,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         list_add_head(&hci->free_acl_read_reqs, &txn->node);
     }
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, BT_HCI_MAX_FRAME_SIZE, 0);
+        iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, BT_HCI_MAX_FRAME_SIZE);
         if (!txn) {
             status = ERR_NO_MEMORY;
             goto fail;

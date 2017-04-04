@@ -690,7 +690,7 @@ static mx_status_t ax88179_bind(mx_driver_t* driver, mx_device_t* device, void**
 
     mx_status_t status = NO_ERROR;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE, 0);
+        iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
         if (!req) {
             status = ERR_NO_MEMORY;
             goto fail;
@@ -701,7 +701,7 @@ static mx_status_t ax88179_bind(mx_driver_t* driver, mx_device_t* device, void**
         list_add_head(&eth->free_read_reqs, &req->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE, 0);
+        iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE);
         if (!req) {
             status = ERR_NO_MEMORY;
             goto fail;
@@ -711,7 +711,7 @@ static mx_status_t ax88179_bind(mx_driver_t* driver, mx_device_t* device, void**
         req->cookie = eth;
         list_add_head(&eth->free_write_reqs, &req->node);
     }
-    iotxn_t* int_req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE, 0);
+    iotxn_t* int_req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE);
     if (!int_req) {
         status = ERR_NO_MEMORY;
         goto fail;
