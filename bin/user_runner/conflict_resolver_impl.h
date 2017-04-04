@@ -13,14 +13,9 @@
 
 namespace modular {
 
-// A conflict resolver for the user's ledger. So far it only resolves
-// the device map entry of the root page, so it's very compact. Once
-// we resolve more, we need to move it elsewhere and give it more
-// structure. It's just a toy to play with conflict resolution really.
-// TODO(mesch): We move device map information to using a key prefix
-// soon, and then won't have conflicts for device information anymore.
-class ConflictResolverImpl : public ledger::ConflictResolverFactory,
-                             public ledger::ConflictResolver {
+// A conflict resolver for the user's ledger. So far it does nothing.
+class ConflictResolverImpl : ledger::ConflictResolverFactory,
+                             ledger::ConflictResolver {
  public:
   ConflictResolverImpl();
   ~ConflictResolverImpl() override;

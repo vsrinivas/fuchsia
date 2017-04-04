@@ -24,6 +24,7 @@
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
+#include "apps/modular/src/user_runner/device_map_impl.h"
 #include "apps/modular/src/user_runner/focus.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
@@ -103,6 +104,7 @@ UserRunnerImpl::UserRunnerImpl(
                           ConnectToService(resolver_service_provider.get(),
                                            std::move(resolver_service_request));
                         }));
+
   user_scope_.AddService<TokenProvider>(
       [this](fidl::InterfaceRequest<TokenProvider> request) {
         token_provider_impl_.AddBinding(std::move(request));
@@ -137,6 +139,13 @@ UserRunnerImpl::UserRunnerImpl(
         }
       });
 
+  // DeviceMap
+
+  device_map_impl_.reset(new DeviceMapImpl(device_name_, root_page_.get()));
+  user_scope_.AddService<DeviceMap>(
+      [this](fidl::InterfaceRequest<DeviceMap> request) {
+        device_map_impl_->AddBinding(std::move(request));
+      });
 
   // Setup MessageQueueManager.
 
@@ -216,7 +225,7 @@ UserRunnerImpl::UserRunnerImpl(
 
   story_provider_impl_.reset(new StoryProviderImpl(
       &user_scope_, ledger_.get(), root_page_.get(),
-      device_name, std::move(story_shell),
+      std::move(story_shell),
       component_context_info, user_intelligence_provider_.get()));
   story_provider_impl_->AddBinding(std::move(story_provider_request));
 

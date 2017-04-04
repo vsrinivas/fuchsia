@@ -5,9 +5,6 @@
 #include "apps/modular/src/user_runner/conflict_resolver_impl.h"
 
 #include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/src/story_runner/story_provider_impl.h"
-#include "lib/mtl/vmo/strings.h"
 
 namespace modular {
 
@@ -25,78 +22,6 @@ bool IsRootPageId(const fidl::Array<uint8_t>& id) {
       return false;
     }
   }
-  return true;
-}
-
-bool MaybeMergeDeviceMap(ledger::PageChange* const change_left,
-                         ledger::PageChange* const change_right,
-                         fidl::Array<ledger::MergedValuePtr>* ret) {
-  if (change_left == nullptr || change_right == nullptr) {
-    return true;
-  }
-
-  bool found_left = false;
-  std::string bytes_left;
-  for (auto& change : change_left->changes) {
-    if (to_string(change->key) == kDeviceMapKey) {
-      found_left = true;
-      if (!mtl::StringFromVmo(change->value, &bytes_left)) {
-        return false;
-      }
-      break;
-    }
-  }
-
-  if (!found_left) {
-    return true;
-  }
-
-  bool found_right = false;
-  std::string bytes_right;
-  for (auto& change : change_right->changes) {
-    if (to_string(change->key) == kDeviceMapKey) {
-      found_right = true;
-      if (!mtl::StringFromVmo(change->value, &bytes_right)) {
-        return false;
-      }
-      break;
-    }
-  }
-
-  if (!found_right) {
-    return true;
-  }
-
-  rapidjson::Document doc_left;
-  doc_left.Parse(bytes_left);
-  FTL_DCHECK(doc_left.IsObject());
-
-  rapidjson::Document doc_right;
-  doc_right.Parse(bytes_right);
-  FTL_DCHECK(doc_right.IsObject());
-
-  bool changed = false;
-  for (auto& m : doc_right.GetObject()) {
-    if (!doc_left.GetObject().HasMember(m.name)) {
-      doc_left.AddMember(m.name, m.value, doc_left.GetAllocator());
-      changed = true;
-    }
-  }
-
-  if (!changed) {
-    return true;
-  }
-
-  ledger::MergedValuePtr result = ledger::MergedValue::New();
-  result->key = to_array(kDeviceMapKey);
-  result->source = ledger::ValueSource::NEW;
-
-  ledger::BytesOrReferencePtr bytes_result = ledger::BytesOrReference::New();
-  bytes_result->set_bytes(to_array(JsonValueToString(doc_left)));
-
-  result->new_value = std::move(bytes_result);
-
-  ret->push_back(std::move(result));
   return true;
 }
 
@@ -134,15 +59,18 @@ void ConflictResolverImpl::Resolve(
     ledger::PageChangePtr change_right,
     fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
     const ResolveCallback& callback) {
-  fidl::Array<ledger::MergedValuePtr> ret;
-  ret.resize(0);
+  FTL_LOG(WARNING) << "Conflict in root page. Doing nothing.";
 
-  if (!MaybeMergeDeviceMap(change_left.get(), change_right.get(), &ret)) {
-    FTL_LOG(ERROR) << "Unable to parse changes, disconnecting the resolver...";
-    bindings_.CloseAllBindings();
-    return;
+  for (auto& change : change_left->changes) {
+    FTL_LOG(INFO) << "changed right " << to_string(change->key);
   }
 
+  for (auto& change : change_right->changes) {
+    FTL_LOG(INFO) << "changed left " << to_string(change->key);
+  }
+
+  fidl::Array<ledger::MergedValuePtr> ret;
+  ret.resize(0);
   callback(std::move(ret));
 }
 

@@ -36,13 +36,6 @@ class StoryImpl;
 // root page of the user.
 constexpr char kUserShellKey[] = "user-shell-link";
 
-// The key under which the device map is stored in the root page of
-// the user. A conflict in this key is the only one we actually
-// resolve for now; it's just a toy to play with conflict resolution.
-// TODO(mesch): We move device map information to using a key prefix
-// soon, and then won't have conflicts for device information anymore.
-const char kDeviceMapKey[] = "device-map";
-
 namespace {
 class DeleteStoryCall;
 }  // namespace
@@ -53,7 +46,6 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
       const Scope* user_scope,
       ledger::Ledger* ledger,
       ledger::Page* root_page,
-      const std::string& device_name,
       AppConfigPtr story_shell,
       const ComponentContextInfo& component_context_info,
       maxwell::UserIntelligenceProvider* user_intelligence_provider);

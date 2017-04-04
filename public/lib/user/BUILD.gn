@@ -9,6 +9,7 @@ fidl("user") {
   sources = [
     "user_shell.fidl",
     "user_context.fidl",
+    "device_map.fidl",
   ]
 
   public_deps = [

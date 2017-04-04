@@ -14,6 +14,7 @@
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
+#include "apps/modular/services/user/device_map.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -308,6 +309,16 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
                     });
               });
         });
+
+    device_map_ = application_context()
+        ->ConnectToEnvironmentService<modular::DeviceMap>();
+
+    device_map_->Query([](fidl::Array<fidl::String> devices) {
+        FTL_LOG(INFO) << "Known devices:";
+        for (auto& device : devices) {
+          FTL_LOG(INFO) << " - " << device;
+        }
+      });
   }
 
   // |Module|
@@ -345,6 +356,8 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
   std::vector<std::unique_ptr<LinkConnection>> connections_;
   std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
+
+  modular::DeviceMapPtr device_map_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RecipeApp);
 };

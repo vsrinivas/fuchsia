@@ -1,0 +1,13 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Gives access to the device map of the logged in user.
+[ServiceName="modular.DeviceMap"]  // Exposed in user environment.
+interface DeviceMap {
+  // HACK(mesch): Just exposes all Device/* entries in the ledger.
+  // We'll need something better, possibly with access policy.
+  Query() => (array<string> devices);
+};

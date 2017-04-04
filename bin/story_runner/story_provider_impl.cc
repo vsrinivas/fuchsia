@@ -555,78 +555,12 @@ class PreviousStoriesCall : Operation<fidl::Array<fidl::String>> {
   FTL_DISALLOW_COPY_AND_ASSIGN(PreviousStoriesCall);
 };
 
-class UpdateDeviceNameCall : Operation<void> {
- public:
-  UpdateDeviceNameCall(OperationContainer* const container,
-                       ledger::Page* const root_page,
-                       std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot,
-                       const std::string& device_name)
-      : Operation(container, [] {}),
-        root_page_(root_page),
-        root_snapshot_(std::move(root_snapshot)),
-        device_name_(device_name) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    (*root_snapshot_)
-        ->Get(to_array(kDeviceMapKey),
-              [this](ledger::Status status, mx::vmo value) {
-                if (status != ledger::Status::OK &&
-                    status != ledger::Status::KEY_NOT_FOUND) {
-                  FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
-                                 << " PageSnapshot.Get() " << status;
-                  Done();
-                  return;
-                }
-
-                rapidjson::Document doc;
-                if (value) {
-                  std::string value_as_string;
-                  if (mtl::StringFromVmo(value, &value_as_string)) {
-                    doc.Parse(value_as_string);
-                    FTL_DCHECK(doc.IsObject());
-                  } else {
-                    FTL_LOG(ERROR) << "Unable to extract data.";
-                    doc.SetObject();
-                  }
-                } else {
-                  doc.SetObject();
-                }
-
-                // NOTE(mesch): Unclear why just device_name_ as
-                // the key doesn't compile.
-                doc.AddMember(rapidjson::StringRef(device_name_), true,
-                              doc.GetAllocator());
-
-                root_page_->Put(to_array(kDeviceMapKey),
-                                to_array(JsonValueToString(doc)),
-                                [this](ledger::Status status) {
-                                  if (status != ledger::Status::OK) {
-                                    FTL_LOG(ERROR) << "UpdateDeviceNameCall() "
-                                                   << " Page.Put() " << status;
-                                  }
-
-                                  Done();
-                                });
-              });
-  }
-
-  ledger::Page* const root_page_;  // not owned
-  std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot_;
-  const std::string device_name_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(UpdateDeviceNameCall);
-};
-
 }  // namespace
 
 StoryProviderImpl::StoryProviderImpl(
     const Scope* const user_scope,
     ledger::Ledger* const ledger,
     ledger::Page* const root_page,
-    const std::string& device_name,
     AppConfigPtr story_shell,
     const ComponentContextInfo& component_context_info,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
@@ -647,11 +581,6 @@ StoryProviderImpl::StoryProviderImpl(
               << status;
         }
       });
-
-  // Record the device name of the current device in the ledger,
-  // before we handle any requests.
-  new UpdateDeviceNameCall(&operation_queue_, root_page_,
-                           root_snapshot_.shared_ptr(), device_name);
 
   // We must initialize story_ids_ with the IDs of currently existing
   // stories *before* we can process any calls that might create a new
@@ -793,9 +722,6 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   FTL_DCHECK(!page->changes.is_null());
 
   for (auto& entry : page->changes) {
-    // TODO(mesch): Eventually we want to pick up changes to the
-    // device map too. (The changes to the user-shell-link, however,
-    // are already handled by the story storage impl.)
     if (!IsStoryKey(entry->key)) {
       continue;
     }
