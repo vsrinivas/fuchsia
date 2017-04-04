@@ -816,12 +816,16 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   }
 
   for (auto& key : page->deleted_keys) {
+    if (!IsStoryKey(key)) {
+      continue;
+    }
+
     const fidl::String story_id = to_string(key);
     watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
       watcher->OnDelete(story_id);
     });
 
-    if (pending_deletion_.first == story_id) {
+    if (kStoryKeyPrefix + pending_deletion_.first == story_id) {
       pending_deletion_.second->Complete();
     } else {
       new DeleteStoryCall(&operation_queue_, root_page_, story_id,
