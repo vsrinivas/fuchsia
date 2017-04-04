@@ -16,14 +16,6 @@
             "bootfs_path": "apps/action_log"
         },
         {
-            "binary": "agents/bandsintown.dartx",
-            "bootfs_path": "apps/agents/bandsintown.dartx"
-        },
-        {
-            "binary": "agents/music_brainz.dartx",
-            "bootfs_path": "apps/agents/music_brainz.dartx"
-        },
-        {
             "binary": "agents/carmen_sandiego",
             "bootfs_path": "apps/agents/carmen_sandiego"
         },
