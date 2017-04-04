@@ -21,7 +21,7 @@ readonly MAGENTA_GS_BUCKET="https://fuchsia-build.storage.googleapis.com/magenta
 readonly OS="$(uname)"
 readonly HOSTOS=$(uname | tr '[:upper:]' '[:lower:]')
 readonly HOSTARCH="$(uname -m)"
-readonly GCC_VERSION="6.2.0"
+readonly GCC_VERSION="6.3.0"
 
 # We assume the following directory structure:
 # ./magenta/scripts
