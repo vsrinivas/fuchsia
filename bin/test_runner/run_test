@@ -302,13 +302,14 @@ def main(argv):
   starting_dirname = os.getcwd()
   loglistener_dirname = os.path.dirname(args.loglistener_path)
   loglistener_basename = os.path.basename(args.loglistener_path)
+  loglistener_executable = './%s' % loglistener_basename
 
   # if hostname is None, then this is an ipv4 address and we don't have
   # the device name.
   if hostname is None:
-    listener_command = loglistener_basename
+    listener_command = loglistener_executable
   else:
-    listener_command = [loglistener_basename, hostname]
+    listener_command = [loglistener_executable, hostname]
 
   # start loglistener from its own directory so its banner fits on a line.
   os.chdir(loglistener_dirname)
