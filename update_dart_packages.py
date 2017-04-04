@@ -16,6 +16,7 @@ ROOT_PUBSPECS = [
     'dart/pkg/analysis_server',
     'dart/pkg/analyzer',
     'dart/pkg/analyzer_cli',
+    'dart/pkg/kernel',
     'dart/pkg/typed_mock',
     'lib/flutter/packages/flutter',
     'lib/flutter/packages/flutter_test',
@@ -24,7 +25,7 @@ ROOT_PUBSPECS = [
 
 # These are the locations of yaml files listing the Dart dependencies of a git
 # project.
-PROJECT_DEPENDENCIES = ['apps/modules', ]
+PROJECT_DEPENDENCIES = ['apps/modules/common', 'apps/modules/dashboard' ]
 
 
 def main():
