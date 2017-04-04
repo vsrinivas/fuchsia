@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -75,6 +76,66 @@ static bool ramdisk_test_simple(void) {
 
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     close(fd);
+    END_TEST;
+}
+
+// This test creates a ramdisk, verifies it is visible in the filesystem
+// (where we expect it to be!) and verifies that it is removed when we
+// "unplug" the device.
+static bool ramdisk_test_filesystem(void) {
+    BEGIN_TEST;
+
+    // Make a ramdisk
+    constexpr char name[] = "disk-test-name";
+    int fd = get_ramdisk(name, PAGE_SIZE / 2, 512);
+
+    // Verify the ramdisk name
+    char out[sizeof(name)];
+    ASSERT_EQ(ioctl_block_get_name(fd, out, sizeof(out)), (ssize_t) strlen(name), "");
+    ASSERT_EQ(strncmp(out, name, strlen(name)), 0, "Unexpected ramdisk name");
+
+    // Find the name of the ramdisk under "/dev/class/block", since it is a block device.
+    // Be slightly more lenient with errors during this section, since we might be poking
+    // block devices that don't belong to us.
+    char blockpath[PATH_MAX];
+    strcpy(blockpath, "/dev/class/block/");
+    DIR* dir = opendir(blockpath);
+    ASSERT_NONNULL(dir, "");
+
+    bool dev_class_block_found = false;
+
+    struct dirent* de;
+    while (!dev_class_block_found && ((de = readdir(dir)) != NULL)) {
+        if ((strcmp(de->d_name, ".") == 0) || strcmp(de->d_name, "..") == 0) {
+            continue;
+        }
+        int devfd = openat(dirfd(dir), de->d_name, O_RDONLY);
+        if (devfd > 0) {
+            if ((ioctl_block_get_name(devfd, out, sizeof(out)) == (ssize_t) strlen(name)) &&
+                strncmp(out, name, strlen(name)) == 0) {
+                // Found a device under /dev/class/block/XYZ with the name of the
+                // ramdisk we originally created.
+                strcat(blockpath, de->d_name);
+                dev_class_block_found = true;
+            }
+            close(devfd);
+        }
+    }
+    ASSERT_EQ(closedir(dir), 0, "Could not close /dev/class/block");
+    ASSERT_TRUE(dev_class_block_found, "Ramdisk did not appear in /dev/class/block");
+
+    // Check dev block is accessible before destruction
+    int devfd = open(blockpath, O_RDONLY);
+    ASSERT_GE(devfd, 0, "Ramdisk is not visible in /dev/class/block");
+    ASSERT_EQ(close(devfd), 0, "");
+
+    ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
+    ASSERT_EQ(close(fd), 0, "Could not close ramdisk device");
+
+    // Now that we've unlinked the ramdisk, we should notice that it doesn't appear
+    // under /dev/class/block.
+    ASSERT_EQ(open(blockpath, O_RDONLY), -1, "Ramdisk is visible in /dev after destruction");
+
     END_TEST;
 }
 
@@ -840,6 +901,7 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
 
 BEGIN_TEST_CASE(ramdisk_tests)
 RUN_TEST(ramdisk_test_simple)
+RUN_TEST(ramdisk_test_filesystem)
 RUN_TEST(ramdisk_test_bad_requests)
 RUN_TEST(ramdisk_test_multiple)
 RUN_TEST(ramdisk_test_fifo_no_op)

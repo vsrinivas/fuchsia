@@ -32,6 +32,7 @@ typedef struct ramdisk_device {
     mx_handle_t vmo;
     uintptr_t mapped_addr;
     block_callbacks_t* cb;
+    char name[NAME_MAX];
 } ramdisk_device_t;
 
 typedef struct ramctl_instance {
@@ -118,6 +119,12 @@ static ssize_t ramdisk_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         return NO_ERROR;
     }
     // Block Protocol
+    case IOCTL_BLOCK_GET_NAME: {
+        char* name = reply;
+        memset(name, 0, max);
+        strncpy(name, ramdev->name, max);
+        return strnlen(name, max);
+    }
     case IOCTL_BLOCK_GET_SIZE: {
         uint64_t* size = reply;
         if (max < sizeof(*size)) return ERR_BUFFER_TOO_SMALL;
@@ -216,6 +223,7 @@ static ssize_t ramctl_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         }
         ramdev->blk_size = config->blk_size;
         ramdev->blk_count = config->blk_count;
+        strcpy(ramdev->name, config->name);
         mx_status_t status;
         if ((status = mx_vmo_create(sizebytes(ramdev), 0, &ramdev->vmo)) != NO_ERROR) {
             free(ramdev);
