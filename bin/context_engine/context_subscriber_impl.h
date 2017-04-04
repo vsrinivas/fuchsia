@@ -6,11 +6,11 @@
 
 namespace maxwell {
 
-class Repo;
+class ContextRepository;
 
 class ContextSubscriberImpl : public ContextSubscriber {
  public:
-  ContextSubscriberImpl(Repo* repo);
+  ContextSubscriberImpl(ContextRepository* repository);
   ~ContextSubscriberImpl() override;
 
  private:
@@ -19,7 +19,7 @@ class ContextSubscriberImpl : public ContextSubscriber {
       const fidl::String& label,
       fidl::InterfaceHandle<ContextSubscriberLink> link_handle) override;
 
-  Repo* repo_;
+  ContextRepository* repository_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextSubscriberImpl);
 };

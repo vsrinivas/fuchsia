@@ -15,9 +15,9 @@ namespace maxwell {
 // Tracks current values of context topics as well as subscriptions to those
 // topics. Is responsible for notifying any subscribed clients whenever a topic
 // changes value.
-class Repo {
+class ContextRepository {
  public:
-  Repo() {}
+  ContextRepository() {}
 
   void Set(const std::string& topic, const std::string& json_value);
   void Remove(const std::string& topic);
@@ -33,7 +33,7 @@ class Repo {
   std::unordered_map<std::string, BoundPtrSet<ContextSubscriberLink>>
       subscriptions_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Repo);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ContextRepository);
 };
 
 }  // namespace maxwell

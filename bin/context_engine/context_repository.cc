@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/context_engine/repo.h"
+#include "apps/maxwell/src/context_engine/context_repository.h"
 
 namespace maxwell {
 
-void Repo::Set(const std::string& topic, const std::string& json_value) {
+void ContextRepository::Set(const std::string& topic, const std::string& json_value) {
   SetInternal(topic, &json_value);
 }
 
-void Repo::Remove(const std::string& topic) {
+void ContextRepository::Remove(const std::string& topic) {
   SetInternal(topic, nullptr);
 }
 
-void Repo::SetInternal(const std::string& topic,
+void ContextRepository::SetInternal(const std::string& topic,
                        const std::string* json_value) {
   ContextUpdate update;
   // update.source = component_->url;
@@ -36,7 +36,7 @@ void Repo::SetInternal(const std::string& topic,
   }
 }
 
-void Repo::AddSubscription(const std::string& topic,
+void ContextRepository::AddSubscription(const std::string& topic,
                            ContextSubscriberLinkPtr subscriber) {
   // If we already have a value for |topic|, notify the subscriber immediately.
   auto it = values_.find(topic);

@@ -4,21 +4,21 @@
 
 #include "apps/maxwell/src/context_engine/context_publisher_impl.h"
 
-#include "apps/maxwell/src/context_engine/repo.h"
+#include "apps/maxwell/src/context_engine/context_repository.h"
 
 namespace maxwell {
 
 ContextPublisherImpl::ContextPublisherImpl(const std::string& /* source_url */,
-                                           Repo* repo)
-    : /* source_url_(source_url), */ repo_(repo) {}
+                                           ContextRepository* repository)
+    : /* source_url_(source_url), */ repository_(repository) {}
 ContextPublisherImpl::~ContextPublisherImpl() = default;
 
 void ContextPublisherImpl::Publish(const fidl::String& topic,
                                    const fidl::String& json_data) {
   if (json_data) {
-    repo_->Set(topic, json_data);
+    repository_->Set(topic, json_data);
   } else {
-    repo_->Remove(topic);
+    repository_->Remove(topic);
   }
 }
 

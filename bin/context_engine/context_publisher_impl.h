@@ -8,19 +8,21 @@
 
 namespace maxwell {
 
-class Repo;
+class ContextRepository;
 
 class ContextPublisherImpl : public ContextPublisher {
  public:
-  ContextPublisherImpl(const std::string& source_url, Repo* repo);
+  ContextPublisherImpl(const std::string& source_url,
+                       ContextRepository* repository);
   ~ContextPublisherImpl() override;
 
  private:
   // |ContextPublisher|
-  void Publish(const fidl::String& topic, const fidl::String& json_data) override;
+  void Publish(const fidl::String& topic,
+               const fidl::String& json_data) override;
 
   /* const std::string& source_url_; */  // Unused now, will be used soon.
-  Repo* repo_;
+  ContextRepository* repository_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextPublisherImpl);
 };

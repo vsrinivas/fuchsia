@@ -4,11 +4,12 @@
 
 #include "apps/maxwell/src/context_engine/context_subscriber_impl.h"
 
-#include "apps/maxwell/src/context_engine/repo.h"
+#include "apps/maxwell/src/context_engine/context_repository.h"
 
 namespace maxwell {
 
-ContextSubscriberImpl::ContextSubscriberImpl(Repo* repo) : repo_(repo) {}
+ContextSubscriberImpl::ContextSubscriberImpl(ContextRepository* repository)
+    : repository_(repository) {}
 ContextSubscriberImpl::~ContextSubscriberImpl() = default;
 
 void ContextSubscriberImpl::Subscribe(
@@ -16,7 +17,7 @@ void ContextSubscriberImpl::Subscribe(
     fidl::InterfaceHandle<ContextSubscriberLink> link_handle) {
   ContextSubscriberLinkPtr link =
       ContextSubscriberLinkPtr::Create(std::move(link_handle));
-  repo_->AddSubscription(topic, std::move(link));
+  repository_->AddSubscription(topic, std::move(link));
 }
 
 }  // namespace maxwell

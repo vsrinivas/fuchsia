@@ -5,7 +5,7 @@
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/services/context/context_subscriber.fidl.h"
-#include "apps/maxwell/src/context_engine/repo.h"
+#include "apps/maxwell/src/context_engine/context_repository.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {
@@ -26,7 +26,7 @@ class ContextEngineImpl : public ContextEngine {
       const fidl::String& url,
       fidl::InterfaceRequest<ContextSubscriber> request) override;
 
-  Repo repo_;
+  ContextRepository repository_;
 
   fidl::BindingSet<ContextPublisher, std::unique_ptr<ContextPublisher>>
       publisher_bindings_;
