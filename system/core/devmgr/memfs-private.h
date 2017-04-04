@@ -21,8 +21,11 @@
 
 #ifdef __cplusplus
 
+#include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
+
+#include "dnode.h"
 
 namespace memfs {
 
@@ -53,6 +56,7 @@ public:
     // TODO(smklein): The following members should become private
     uint32_t seqcount_;
 
+    Dnode::DeviceList devices_; // All devices pointing to this vnode
     mxtl::RefPtr<Dnode> dnode_;
     uint32_t link_count_;
 

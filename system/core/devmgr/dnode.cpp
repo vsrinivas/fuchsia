@@ -36,6 +36,7 @@ mxtl::RefPtr<Dnode> Dnode::Create(const char* name, size_t len, VnodeMemfs* vn) 
         return nullptr;
     }
 
+    vn->devices_.push_back(dn);
     return dn;
 }
 
@@ -55,8 +56,10 @@ void Dnode::RemoveFromParent() {
 }
 
 void Dnode::Detach() {
-    MX_DEBUG_ASSERT(vnode_ != nullptr);
     MX_DEBUG_ASSERT(children_.is_empty());
+    if (vnode_ == nullptr) { // Dnode already detached.
+        return;
+    }
 
     RemoveFromParent();
     // Detach from vnode
@@ -227,6 +230,8 @@ void Dnode::PutName(mxtl::unique_ptr<char[]> name, size_t len) {
     flags_ = static_cast<uint32_t>((flags_ & ~kDnodeNameMax) | len);
     name_ = mxtl::move(name);
 }
+
+bool Dnode::IsDirectory() const { return vnode_->IsDirectory(); }
 
 Dnode::Dnode(VnodeMemfs* vn, mxtl::unique_ptr<char[]> name, uint32_t flags) :
     vnode_(vn), parent_(nullptr), flags_(flags), name_(mxtl::move(name)) {

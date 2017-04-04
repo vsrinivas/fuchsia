@@ -14,9 +14,9 @@
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
-#include "memfs-private.h"
-
 namespace memfs {
+
+class VnodeMemfs;
 
 constexpr size_t kDnodeNameMax = NAME_MAX;
 static_assert(NAME_MAX == 255, "NAME_MAX must be 255");
@@ -25,10 +25,22 @@ static_assert(NAME_MAX == 255, "NAME_MAX must be 255");
 static_assert(((kDnodeNameMax + 1) & kDnodeNameMax) == 0,
               "Expected kDnodeNameMax to be one less than a power of two");
 
-class Dnode : public mxtl::DoublyLinkedListable<mxtl::RefPtr<Dnode>>,
-              public mxtl::RefCounted<Dnode> {
+class Dnode : public mxtl::RefCounted<Dnode> {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Dnode);
+    using NodeState = mxtl::DoublyLinkedListNodeState<mxtl::RefPtr<Dnode>>;
+
+    // ChildTraits is the state used for a Dnode to appear as the child
+    // of another dnode.
+    struct TypeChildTraits { static NodeState& node_state(Dnode& dn) { return dn.type_child_state_; }};
+    // DeviceTraits it the state used by devices to effectively create
+    // multiple hard links to a single device vnode. This is used
+    // extensively by the device manager to make the "same" device
+    // vnode appear in multiple locations within "/dev".
+    struct TypeDeviceTraits { static NodeState& node_state(Dnode& dn) { return dn.type_device_state_; }};
+
+    using ChildList = mxtl::DoublyLinkedList<mxtl::RefPtr<Dnode>, Dnode::TypeChildTraits>;
+    using DeviceList = mxtl::DoublyLinkedList<mxtl::RefPtr<Dnode>, Dnode::TypeDeviceTraits>;
 
     // Allocates a dnode, attached to a vnode
     static mxtl::RefPtr<Dnode> Create(const char* name, size_t len, VnodeMemfs* vn);
@@ -77,17 +89,22 @@ public:
     mxtl::unique_ptr<char[]> TakeName();
     void PutName(mxtl::unique_ptr<char[]> name, size_t len);
 
-    bool IsDirectory() const { return vnode_->IsDirectory(); }
+    bool IsDirectory() const;
 
 private:
+    friend struct TypeChildTraits;
+    friend struct TypeDeviceTraits;
+
     Dnode(VnodeMemfs* vn, mxtl::unique_ptr<char[]> name, uint32_t flags);
 
     size_t NameLen() const;
     bool NameMatch(const char* name, size_t len) const;
 
+    NodeState type_child_state_;
+    NodeState type_device_state_;
     VnodeMemfs* vnode_;
     mxtl::RefPtr<Dnode> parent_;
-    mxtl::DoublyLinkedList<mxtl::RefPtr<Dnode>> children_;
+    ChildList children_;
     uint32_t flags_;
     mxtl::unique_ptr<char[]> name_;
 };

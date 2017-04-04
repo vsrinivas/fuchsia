@@ -39,6 +39,10 @@ mx_status_t devfs_remove(VnodeMemfs* vn) {
         vn->dnode_ = nullptr;
     }
 
+    while (!vn->devices_.is_empty()) {
+        vn->devices_.pop_front()->Detach();
+    }
+
     vn->RefRelease();
     mtx_unlock(&vfs_lock);
 
