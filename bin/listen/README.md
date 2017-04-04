@@ -1,5 +1,5 @@
-Fuchsia Open Source Template Repository
-=======================================
+listen
+======
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This implements a simple program that listens for connections on a particular TCP port and spawns a program for each
+connection. Connecting the socket to mxio stdin, stdout & stderr.
