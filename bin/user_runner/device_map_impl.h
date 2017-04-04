@@ -43,6 +43,9 @@ class DeviceMapImpl : DeviceMap, ledger::PageWatcher {
   PageSnapshot snapshot_;
   OperationQueue operation_queue_;
 
+  // Operations implemented here.
+  class QueryCall;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceMapImpl);
 };
 

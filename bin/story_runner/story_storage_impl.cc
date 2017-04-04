@@ -13,9 +13,7 @@
 
 namespace modular {
 
-namespace {
-
-class ReadLinkDataCall : Operation<fidl::String> {
+class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
  public:
   ReadLinkDataCall(OperationContainer* const container,
                    std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot,
@@ -64,7 +62,7 @@ class ReadLinkDataCall : Operation<fidl::String> {
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
 
-class WriteLinkDataCall : Operation<void> {
+class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
  public:
   WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
@@ -96,8 +94,6 @@ class WriteLinkDataCall : Operation<void> {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
-
-}  // namespace
 
 StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
     : page_watcher_binding_(this),

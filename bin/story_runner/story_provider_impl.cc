@@ -119,6 +119,8 @@ void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
   xdr->Field("modules", &data->modules, XdrModuleData);
 }
 
+}  // namespace
+
 // Below are helper classes that encapsulate a chain of asynchronous
 // operations on the Ledger. Because the operations all return
 // something, the handles on which they are invoked need to be kept
@@ -130,7 +132,7 @@ void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
 // in one operation queue), so they cannot be fields of
 // StoryProviderImpl. Thus such operations are separate classes.
 
-class GetStoryDataCall : Operation<StoryDataPtr> {
+class StoryProviderImpl::GetStoryDataCall : Operation<StoryDataPtr> {
  public:
   GetStoryDataCall(OperationContainer* const container,
                    std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot,
@@ -177,7 +179,7 @@ class GetStoryDataCall : Operation<StoryDataPtr> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetStoryDataCall);
 };
 
-class WriteStoryDataCall : Operation<void> {
+class StoryProviderImpl::WriteStoryDataCall : Operation<void> {
  public:
   WriteStoryDataCall(OperationContainer* const container,
                      ledger::Page* const root_page,
@@ -216,10 +218,8 @@ class WriteStoryDataCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteStoryDataCall);
 };
 
-class CreateStoryCall : Operation<void> {
+class StoryProviderImpl::CreateStoryCall : Operation<void> {
  public:
-  using FidlStringMap = StoryProviderImpl::FidlStringMap;
-
   CreateStoryCall(OperationContainer* const container,
                   ledger::Ledger* const ledger,
                   ledger::Page* const root_page,
@@ -305,7 +305,7 @@ class CreateStoryCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
 
-class DeleteStoryCall : Operation<void> {
+class StoryProviderImpl::DeleteStoryCall : Operation<void> {
  public:
   using StoryIdSet = std::unordered_set<std::string>;
   using ControllerMap =
@@ -380,7 +380,7 @@ class DeleteStoryCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
 };
 
-class GetControllerCall : Operation<void> {
+class StoryProviderImpl::GetControllerCall : Operation<void> {
  public:
   using ControllerMap =
       std::unordered_map<std::string, std::unique_ptr<StoryImpl>>;
@@ -490,7 +490,8 @@ class GetControllerCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetControllerCall);
 };
 
-class PreviousStoriesCall : Operation<fidl::Array<fidl::String>> {
+class StoryProviderImpl::PreviousStoriesCall
+    : Operation<fidl::Array<fidl::String>> {
  public:
   PreviousStoriesCall(OperationContainer* const container,
                       std::shared_ptr<ledger::PageSnapshotPtr> root_snapshot,
@@ -554,8 +555,6 @@ class PreviousStoriesCall : Operation<fidl::Array<fidl::String>> {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PreviousStoriesCall);
 };
-
-}  // namespace
 
 StoryProviderImpl::StoryProviderImpl(
     const Scope* const user_scope,

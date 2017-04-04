@@ -36,10 +36,6 @@ class StoryImpl;
 // root page of the user.
 constexpr char kUserShellKey[] = "user-shell-link";
 
-namespace {
-class DeleteStoryCall;
-}  // namespace
-
 class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
  public:
   StoryProviderImpl(
@@ -133,6 +129,21 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   // A list of IDs of *all* stories available on a user's ledger.
   std::unordered_set<std::string> story_ids_;
 
+  // The last snapshot received from the root page.
+  PageSnapshot root_snapshot_;
+
+  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
+
+  fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
+
+  std::unordered_map<std::string, std::unique_ptr<StoryImpl>>
+      story_controllers_;
+
+  const ComponentContextInfo component_context_info_;
+
+  maxwell::UserIntelligenceProvider* const
+      user_intelligence_provider_;  // Not owned.
+
   // This is a container of all operations that are currently enqueued
   // to run in a FIFO manner. All operations exposed via
   // |StoryProvider| interface are queued here.
@@ -153,28 +164,24 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   // simply and obvious how to not introduce deadlocks.
   OperationQueue operation_queue_;
 
-  // The last snapshot received from the root page.
-  PageSnapshot root_snapshot_;
+  // Operations implemented here.
+  class GetStoryDataCall;
+  class WriteStoryDataCall;
+  class CreateStoryCall;
+  class DeleteStoryCall;
+  class GetControllerCall;
+  class PreviousStoriesCall;
 
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
-
-  fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
-
-  std::unordered_map<std::string, std::unique_ptr<StoryImpl>>
-      story_controllers_;
-
-  // This represents a delete operation that was created via |DeleteStory()|
-  // but is awaiting the corresponding |PageWatcher::OnChange()| before the
-  // operation can be marked as done.
+  // Represents a delete operation that was started via DeleteStory()
+  // and is awaiting the corresponding PageWatcher::OnChange() call
+  // before the operation is Done(). Because operations run in a
+  // queue, there can be at most one DeleteStoryCall operation pending
+  // at a time at a time.
   //
-  // Note that delete operations taking place on remote devices can still
-  // trigger a new delete operation.
+  // Delete operations taking place on remote devices can still
+  // trigger a new delete operation (but those are queued after each
+  // other).
   std::pair<std::string, DeleteStoryCall*> pending_deletion_;
-
-  const ComponentContextInfo component_context_info_;
-
-  maxwell::UserIntelligenceProvider* const
-      user_intelligence_provider_;  // Not owned.
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

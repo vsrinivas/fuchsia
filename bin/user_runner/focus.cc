@@ -37,9 +37,11 @@ void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
   xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
 }
 
+}  // namespace
+
 // Asynchronous operations of this service.
 
-class QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
+class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
  public:
   QueryCall(
       OperationContainer* const container,
@@ -100,8 +102,6 @@ class QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
   fidl::Array<FocusInfoPtr> data_;
   FTL_DISALLOW_COPY_AND_ASSIGN(QueryCall);
 };
-
-}  // namespace
 
 FocusHandler::FocusHandler(const fidl::String& device_name, ledger::Page* const page)
     : page_(page),

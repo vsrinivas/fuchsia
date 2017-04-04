@@ -228,7 +228,9 @@ std::string GenerateQueueToken() {
   return token;
 }
 
-class GetQueueTokenCall : Operation<fidl::String> {
+}  // namespace
+
+class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
  public:
   GetQueueTokenCall(OperationContainer* const container,
                     ledger::Page* const page,
@@ -308,7 +310,7 @@ struct ResolveTokenResult {
   }
 };
 
-class ResolveTokenCall : Operation<ResolveTokenResult> {
+class MessageQueueManager::ResolveTokenCall : Operation<ResolveTokenResult> {
  public:
   ResolveTokenCall(OperationContainer* const container,
                    ledger::Page* const page,
@@ -403,8 +405,6 @@ class ResolveTokenCall : Operation<ResolveTokenResult> {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ResolveTokenCall);
 };
-
-}  // namespace
 
 class MessageQueueManager::GetMessageQueueStorageCall : Operation<MessageQueueStorage*> {
  public:
@@ -548,8 +548,6 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteMessageQueueCall);
 };
-
-
 
 MessageQueueManager::MessageQueueManager(ledger::PagePtr page)
     : page_(std::move(page)) {}

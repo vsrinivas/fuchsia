@@ -64,6 +64,10 @@ class StoryStorageImpl : ledger::PageWatcher {
   // queue.
   OperationQueue operation_queue_;
 
+  // Operations implemented here.
+  class ReadLinkDataCall;
+  class WriteLinkDataCall;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };
 

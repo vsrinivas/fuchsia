@@ -111,6 +111,9 @@ class AgentContextImpl : AgentContext, AgentController {
 
   OperationQueue operation_queue_;
 
+  class InitializeCall;
+  class StopCall;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
 };
 

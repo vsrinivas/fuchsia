@@ -15,7 +15,9 @@ namespace {
 
 constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
 
-class InitializeCall : Operation<void> {
+}
+
+class AgentContextImpl::InitializeCall : Operation<void> {
  public:
   InitializeCall(OperationContainer* const container,
                  bool* const ready,
@@ -54,7 +56,7 @@ class InitializeCall : Operation<void> {
 
 // If |is_terminating| is set to true, the agent will be torn down irrespective
 // of whether there is an open-connection or running task.
-class StopCall : Operation<void> {
+class AgentContextImpl::StopCall : Operation<void> {
  public:
   StopCall(OperationContainer* const container,
            bool* const ready,
@@ -115,8 +117,6 @@ class StopCall : Operation<void> {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
-
-}  // namespace
 
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
                                    const std::string& url)

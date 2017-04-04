@@ -55,15 +55,18 @@ class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
 
   const std::string device_name_;
 
-  // Operations on an instance of this class are sequenced in this
-  // operation queue.
-  OperationQueue operation_queue_;
-
   fidl::BindingSet<FocusProvider> provider_bindings_;
   fidl::BindingSet<FocusController> controller_bindings_;
 
   std::vector<FocusWatcherPtr> change_watchers_;
   std::vector<FocusRequestWatcherPtr> request_watchers_;
+
+  // Operations on an instance of this class are sequenced in this
+  // operation queue.
+  OperationQueue operation_queue_;
+
+  // Operations implemented here.
+  class QueryCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FocusHandler);
 };

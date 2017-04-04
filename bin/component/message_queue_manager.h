@@ -57,11 +57,6 @@ class MessageQueueManager {
                    const std::string& queue_name);
 
  private:
-  // The two private methods further below are accessed by these two
-  // Operation classes.
-  class GetMessageQueueStorageCall;
-  class DeleteMessageQueueCall;
-
   // Returns the |MessageQueueStorage| for the queue_token. Creates it
   // if it doesn't exist yet.
   MessageQueueStorage* GetMessageQueueStorage(
@@ -74,8 +69,6 @@ class MessageQueueManager {
       const std::string& component_instance_id,
       const std::string& queue_name,
       const std::string& queue_token);
-
-  OperationCollection operation_collection_;
 
   ledger::PagePtr page_;
 
@@ -100,6 +93,14 @@ class MessageQueueManager {
   // stashed here until a |MessageQueueStorage| is available.
   std::unordered_map<ComponentQueuePair, ftl::Closure, StringPairHash>
       pending_watcher_callbacks_;
+
+  OperationCollection operation_collection_;
+
+  // Operations implemented here.
+  class GetQueueTokenCall;
+  class ResolveTokenCall;
+  class GetMessageQueueStorageCall;
+  class DeleteMessageQueueCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MessageQueueManager);
 };

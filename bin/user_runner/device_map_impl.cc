@@ -38,9 +38,11 @@ void WriteDeviceName(std::string device_name, ledger::Page* const page) {
   page->Put(to_array(key), to_array(json), [](ledger::Status){});
 }
 
+}  // namespace
+
 // Asynchronous operations of this service.
 
-class QueryCall : Operation<fidl::Array<fidl::String>> {
+class DeviceMapImpl::QueryCall : Operation<fidl::Array<fidl::String>> {
  public:
   QueryCall(
       OperationContainer* const container,
@@ -101,8 +103,6 @@ class QueryCall : Operation<fidl::Array<fidl::String>> {
   fidl::Array<fidl::String> data_;
   FTL_DISALLOW_COPY_AND_ASSIGN(QueryCall);
 };
-
-}  // namespace
 
 DeviceMapImpl::DeviceMapImpl(const std::string& device_name, ledger::Page* const page)
     : device_name_(device_name),
