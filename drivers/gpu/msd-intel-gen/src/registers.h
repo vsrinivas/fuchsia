@@ -252,6 +252,12 @@ public:
     }
 };
 
+class Pipe {
+public:
+    // Number of pipes that the hardware provides.
+    static constexpr uint32_t kPipeCount = 3;
+};
+
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.601
 class DisplayPlaneSurfaceAddress {
 public:
@@ -326,49 +332,39 @@ public:
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.559-566
-class DisplayPlaneControl {
+class DisplayPlaneControl : public RegisterBase {
 public:
-    enum Plane { PIPE_A_PLANE_1 };
+    static constexpr uint32_t kBaseAddr = 0x70180;
+
+    DEF_BIT(31, plane_enable);
+    DEF_BIT(30, pipe_gamma_enable);
+    DEF_BIT(29, remove_yuv_offset);
+    DEF_BIT(28, yuv_range_correction_disable);
+    DEF_FIELD(27, 24, source_pixel_format);
+    DEF_BIT(23, pipe_csc_enable);
+    DEF_FIELD(22, 21, key_enable);
+    DEF_BIT(20, rgb_color_order);
+    DEF_BIT(19, plane_yuv_to_rgb_csc_dis);
+    DEF_BIT(18, plane_yuv_to_rgb_csc_format);
+    DEF_FIELD(17, 16, yuv_422_byte_order);
+    DEF_BIT(15, render_decompression);
+    DEF_BIT(14, trickle_feed_enable);
+    DEF_BIT(13, plane_gamma_disable);
+
+    DEF_FIELD(12, 10, tiled_surface);
     enum Tiling { TILING_NONE = 0, TILING_X = 1, TILING_Y_LEGACY = 4, TILING_YF = 5 };
 
-    static constexpr uint32_t kOffsetPipeAPlane1 = 0x70180;
-    static constexpr uint32_t kAsyncAddressAutoUpdateEnableBit = 1 << 9;
-    static constexpr uint32_t kTiledSurfaceShift = 10;
-    static constexpr uint32_t kTiledSurfaceMask = 0x7 << kTiledSurfaceShift;
+    DEF_BIT(9, async_address_update_enable);
+    DEF_FIELD(7, 6, stereo_surface_vblank_mask);
+    DEF_FIELD(5, 4, alpha_mode);
+    DEF_BIT(3, allow_double_buffer_update_disable);
+    DEF_FIELD(1, 0, plane_rotation);
 
-    static uint32_t read(RegisterIo* reg_io, Plane plane)
+    // Get the instance of this register for Plane 1 of the given pipe.
+    static auto Get(uint32_t pipe_number)
     {
-        switch (plane) {
-            case PIPE_A_PLANE_1:
-                return reg_io->Read32(kOffsetPipeAPlane1);
-        }
-    }
-
-    static void write(RegisterIo* reg_io, Plane plane, uint32_t val)
-    {
-        switch (plane) {
-            case PIPE_A_PLANE_1:
-                reg_io->Write32(kOffsetPipeAPlane1, val);
-                break;
-        }
-    }
-
-    static void enable_update_on_vblank(RegisterIo* reg_io, Plane plane, bool enable)
-    {
-        uint32_t val = read(reg_io, plane);
-        if (enable) {
-            val &= ~kAsyncAddressAutoUpdateEnableBit;
-        } else {
-            val |= kAsyncAddressAutoUpdateEnableBit;
-        }
-        write(reg_io, plane, val);
-    }
-
-    static void set_tiling(RegisterIo* reg_io, Plane plane, Tiling tiling)
-    {
-        uint32_t val = read(reg_io, plane);
-        val = (val & ~kTiledSurfaceMask) | (tiling << kTiledSurfaceShift);
-        write(reg_io, plane, val);
+        DASSERT(pipe_number < Pipe::kPipeCount);
+        return RegisterAddr<DisplayPlaneControl>(kBaseAddr + 0x1000 * pipe_number);
     }
 };
 

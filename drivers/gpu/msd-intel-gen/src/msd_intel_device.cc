@@ -700,8 +700,9 @@ magma::Status MsdIntelDevice::ProcessFlip(
     // have the upper layers import/release display buffers.
     constexpr bool kWaitForFlip = true;
 
-    registers::DisplayPlaneControl::enable_update_on_vblank(
-        register_io(), registers::DisplayPlaneControl::PIPE_A_PLANE_1, kUpdateOnVblank);
+    uint32_t pipe_number = 0;
+    auto plane_control = registers::DisplayPlaneControl::Get(pipe_number).ReadFrom(register_io());
+    plane_control.async_address_update_enable().set(!kUpdateOnVblank);
 
     if (kWaitForFlip)
         registers::DisplayPipeInterrupt::update_mask_bits(
@@ -717,9 +718,7 @@ magma::Status MsdIntelDevice::ProcessFlip(
         registers::DisplayPlaneSurfaceStride::write(
             register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1, stride);
 
-        registers::DisplayPlaneControl::set_tiling(register_io(),
-                                                   registers::DisplayPlaneControl::PIPE_A_PLANE_1,
-                                                   registers::DisplayPlaneControl::TILING_X);
+        plane_control.tiled_surface().set(plane_control.TILING_X);
     } else {
         // Stride must be an integer number of cache lines
         uint32_t stride =
@@ -727,10 +726,9 @@ magma::Status MsdIntelDevice::ProcessFlip(
         registers::DisplayPlaneSurfaceStride::write(
             register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1, stride);
 
-        registers::DisplayPlaneControl::set_tiling(register_io(),
-                                                   registers::DisplayPlaneControl::PIPE_A_PLANE_1,
-                                                   registers::DisplayPlaneControl::TILING_NONE);
+        plane_control.tiled_surface().set(plane_control.TILING_NONE);
     }
+    plane_control.WriteTo(register_io());
 
     registers::DisplayPlaneSurfaceAddress::write(
         register_io(), registers::DisplayPlaneSurfaceAddress::PIPE_A_PLANE_1, mapping->gpu_addr());
