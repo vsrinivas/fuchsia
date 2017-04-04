@@ -46,7 +46,7 @@ arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
 
 static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
 
-uint64_t arch_boot_el = 0;
+extern uint64_t arch_boot_el; // Defined in start.S.
 
 uint64_t arm64_get_boot_el(void)
 {

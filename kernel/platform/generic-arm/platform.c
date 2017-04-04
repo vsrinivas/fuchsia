@@ -44,7 +44,7 @@
 #include <pdev/pdev.h>
 #include <libfdt.h>
 
-extern ulong lk_boot_args[4];
+extern paddr_t device_tree_paddr; // Defined in start.S.
 
 static paddr_t ramdisk_start_phys = 0;
 static paddr_t ramdisk_end_phys = 0;
@@ -127,7 +127,7 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
     if (ramdisk_size) *ramdisk_size = 0;
     if (mem_size) *mem_size = 0;
 
-    void* fdt = paddr_to_kvaddr(lk_boot_args[0]);
+    void* fdt = paddr_to_kvaddr(device_tree_paddr);
     if (!fdt) {
         printf("%s: could not find device tree\n", __FUNCTION__);
         return;
@@ -327,14 +327,12 @@ static void platform_mdi_init(void) {
     pdev_init(&kernel_drivers);
 }
 
-extern ulong lk_boot_args[4];
-
 void platform_early_init(void)
 {
-    // qemu does not put device tree pointer in lk_boot_args,
-    // so set it here before calling read_device_tree
-    if (!lk_boot_args[0]) {
-        lk_boot_args[0] = MEMBASE;
+    // QEMU does not put device tree pointer in the boot-time x2 register,
+    // so set it here before calling read_device_tree.
+    if (device_tree_paddr == 0) {
+        device_tree_paddr = MEMBASE;
     }
 
     // on qemu we read arena size from the device tree

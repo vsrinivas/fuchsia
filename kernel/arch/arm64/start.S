@@ -41,12 +41,11 @@ FUNCTION(_start)
 #include "fastboot-header.S"
 #endif
 FUNCTION(arm_reset)
-    adrp    tmp, boot_args
-    add     tmp, tmp, #:lo12:boot_args
-    stp     x2, x3, [tmp]
-    stp     x0, x1, [tmp, #16]
+    adrp    tmp, device_tree_paddr
+    adrp    tmp2, arch_boot_el
     mrs     x0, CurrentEL
-    str     x0, [tmp, #32]
+    str     x2, [tmp, #:lo12:device_tree_paddr]
+    str     x0, [tmp2, #:lo12:arch_boot_el]
 
     bl      arm64_elX_to_el1
     bl      arch_invalidate_cache_all
@@ -367,16 +366,6 @@ FUNCTION(arm_reset)
     ldr     tmp, =boot_cpu_kstack_end
     mov     sp, tmp
 
-    adrp    tmp, boot_args
-    add     tmp, tmp, #:lo12:boot_args
-    adrp    x1, arch_boot_el
-    add     x1, x1, #:lo12:arch_boot_el
-
-    ldr     x0, [tmp, #32]
-    str     x0, [x1]
-    ldp     x2, x3, [tmp]
-    ldp     x0, x1, [tmp, #16]
-
     bl  lk_main
     b   .
 
@@ -396,11 +385,17 @@ FUNCTION(arm_reset)
 END(arm_reset)
 
 .ltorg
+
+// These are logically .bss (uninitialized data).  But they're set before
+// clearing the .bss, so put them in .data so they don't get zeroed.
 .data
-DATA(boot_args)
-    .align  6
-    .skip   40              /* x0-x3 and EL at boot */
-END(boot_args)
+    .balign 64
+DATA(arch_boot_el)
+    .quad 0xdeadbeef00ff00ff
+END(arch_boot_el)
+DATA(device_tree_paddr)
+    .quad 0x00ff00ffdeadbeef
+END(device_tree_paddr)
 
 #if WITH_SMP
 DATA(page_tables_not_ready)

@@ -25,9 +25,6 @@
 
 #include "git-version.h"
 
-/* saved boot arguments from whoever loaded the system */
-ulong lk_boot_args[4];
-
 extern void (*const __init_array_start[])(void);
 extern void (*const __init_array_end[])(void);
 extern int __bss_start;
@@ -48,14 +45,8 @@ static void call_constructors(void)
 }
 
 /* called from arch code */
-void lk_main(ulong arg0, ulong arg1, ulong arg2, ulong arg3)
+void lk_main(void)
 {
-    // save the boot args
-    lk_boot_args[0] = arg0;
-    lk_boot_args[1] = arg1;
-    lk_boot_args[2] = arg2;
-    lk_boot_args[3] = arg3;
-
     // get us into some sort of thread context
     thread_init_early();
 
@@ -80,9 +71,6 @@ void lk_main(ulong arg0, ulong arg1, ulong arg2, ulong arg3)
     dprintf(INFO, "\nwelcome to lk\n\n");
 #endif
     dprintf(INFO, "git revision [%s]\n", MAGENTA_GIT_REV);
-
-    dprintf(INFO, "boot args 0x%lx 0x%lx 0x%lx 0x%lx\n",
-            lk_boot_args[0], lk_boot_args[1], lk_boot_args[2], lk_boot_args[3]);
 
     // bring up the kernel heap
     lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET_EARLY, LK_INIT_LEVEL_HEAP - 1);
