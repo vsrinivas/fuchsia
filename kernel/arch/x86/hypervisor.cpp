@@ -509,12 +509,13 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     //
     // NOTE: We are pinned to a thread when executing this function, therefore
     // it is acceptable to use per-CPU state.
-    vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
-    vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(percpu->cpu_num));
     vmwrite(VMCS_64_HOST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
     vmwrite(VMCS_64_HOST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
     vmwrite(VMCS_XX_HOST_CR0, x86_get_cr0());
     vmwrite(VMCS_XX_HOST_CR4, x86_get_cr4());
+    vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
+    vmwrite(VMCS_16_HOST_SS_SELECTOR, DATA_SELECTOR);
+    vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(percpu->cpu_num));
     vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
     vmwrite(VMCS_XX_HOST_GS_BASE, read_msr(X86_MSR_IA32_GS_BASE));
     vmwrite(VMCS_XX_HOST_TR_BASE, reinterpret_cast<uint64_t>(&percpu->default_tss));
@@ -657,9 +658,9 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context) {
         uint64_t rip = vmread(VMCS_XX_GUEST_RIP);
         dprintf(SPEW, "guest rip: %#" PRIx64 "\n", rip);
 
+        do_resume_ = true;
         vmexit_handler(reason);
     }
-    do_resume_ = true;
     dprintf(SPEW, "guest rax (post-enter): %#" PRIx64 "\n", vmx_state_.guest_state.rax);
     return status;
 }

@@ -66,6 +66,7 @@ resume:
 
     // Resume the guest.
     vmresume
+    mov %rsp, %rdi
 
 failure:
     // Return ERR_INTERNAL. We will only be here if vmlaunch or vmresume failed.
