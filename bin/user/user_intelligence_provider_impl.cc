@@ -11,8 +11,6 @@
 
 namespace maxwell {
 
-constexpr char kKronkPath[] = "/system/apps/agents/kronk";
-
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     app::ApplicationContext* app_context,
     fidl::InterfaceHandle<modular::ComponentContext> component_context,
@@ -47,11 +45,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   // TODO(jwnichols): Uncomment this when the dashboard is more functional
   // startAgent("file:///system/apps/agents/mi_dashboard.dartx");
-
-  // Only start Kronk if it exists.
-  if (files::IsFile(kKronkPath)) {
-    startAgent(kKronkPath);
-  }
+  
+  startAgent("https://storage.googleapis.com/maxwell-agents/kronk");
 }
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
