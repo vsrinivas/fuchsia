@@ -47,7 +47,6 @@ escher::Model* DemoScene::Update(const escher::Stopwatch& stopwatch,
   rectangle.set_rotation_point(vec2(0.5f, 0.5f));
   std::vector<Object> objects{rectangle};
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));
-  model_->set_blur_plane_height(12.0f);
   model_->set_time(stopwatch.GetElapsedSeconds());
 
   return model_.get();

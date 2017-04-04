@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include "ftl/macros.h"
 #include "escher/scene/object.h"
+#include "ftl/macros.h"
 
 namespace escher {
 
@@ -32,14 +32,9 @@ class Model {
   float time() const { return time_; }
   void set_time(float time) { time_ = time; }
 
-  // TODO(jjosh): Used to parameterize DepthBasedBlur.  Need an API for this.
-  float blur_plane_height() const { return blur_plane_height_; }
-  void set_blur_plane_height(float height) { blur_plane_height_ = height; }
-
  private:
   std::vector<Object> objects_;
   float time_ = 0.0f;
-  float blur_plane_height_ = 0.0f;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Model);
 };

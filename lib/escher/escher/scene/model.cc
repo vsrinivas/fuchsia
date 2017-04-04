@@ -14,16 +14,10 @@ Model::~Model() {}
 
 Model::Model(std::vector<Object> objects) : objects_(std::move(objects)) {}
 
-Model::Model(Model&& other)
-    : objects_(std::move(other.objects_)),
-      blur_plane_height_(other.blur_plane_height_) {
-  other.blur_plane_height_ = 0;
-}
+Model::Model(Model&& other) : objects_(std::move(other.objects_)) {}
 
 Model& Model::operator=(Model&& other) {
   objects_ = std::move(other.objects_);
-  blur_plane_height_ = other.blur_plane_height_;
-  other.blur_plane_height_ = 0;
   return *this;
 }
 

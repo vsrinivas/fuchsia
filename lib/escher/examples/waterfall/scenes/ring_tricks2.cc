@@ -90,7 +90,6 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
 
   // Create the Model
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));
-  model_->set_blur_plane_height(12.0f);
   model_->set_time(current_time_sec);
 
   return model_.get();
