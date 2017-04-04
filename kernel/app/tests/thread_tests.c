@@ -38,7 +38,7 @@ static int sleep_test(void)
 static int mutex_thread(void *arg)
 {
     int i;
-    const int iterations = 1000000;
+    const int iterations = 100000;
 
     static volatile int shared = 0;
 
@@ -314,7 +314,6 @@ static int preempt_tester(void *arg)
     printf("exiting ts %" PRIu64 " ns\n", current_time_hires());
 
     atomic_add(&preempt_count, -1);
-#undef COUNT
 
     return 0;
 }
@@ -342,11 +341,14 @@ static void preempt_test(void)
      * complete in order, about a second apart. */
     printf("testing real time preemption\n");
 
-    preempt_count = 5;
 
-    for (int i = 0; i < preempt_count; i++) {
+    const int num_threads = 5;
+    preempt_count = num_threads;
+
+    for (int i = 0; i < num_threads; i++) {
         thread_t *t = thread_create("preempt tester", &preempt_tester, NULL, LOW_PRIORITY, DEFAULT_STACK_SIZE);
         thread_set_real_time(t);
+        thread_set_pinned_cpu(t, 0);
         thread_detach_and_resume(t);
     }
 
