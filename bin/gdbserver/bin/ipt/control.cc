@@ -44,6 +44,7 @@ static constexpr char ktrace_device_path[] = "/dev/misc/ktrace";
 static constexpr char buffer_output_path_suffix[] = "pt";
 static constexpr char ktrace_output_path_suffix[] = "ktrace";
 static constexpr char cpuid_output_path_suffix[] = "cpuid";
+static constexpr char pt_list_output_path_suffix[] = "ptlist";
 
 static constexpr uint32_t kKtraceGroupMask =
   KTRACE_GRP_ARCH | KTRACE_GRP_TASKS;
@@ -391,18 +392,32 @@ void StopPerf(const IptConfig& config) {
   }
 }
 
+static std::string GetCpuPtFileName(const std::string& output_path_prefix,
+                                    uint64_t id) {
+  const char* name_prefix = "cpu";
+  return ftl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
+                           name_prefix, id, buffer_output_path_suffix);
+}
+
+static std::string GetThreadPtFileName(const std::string& output_path_prefix,
+                                       uint64_t id) {
+  const char* name_prefix = "thr";
+  return ftl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
+                           name_prefix, id, buffer_output_path_suffix);
+}
+
 // Write the contents of buffer |descriptor| to a file.
 // The file's name is $output_path_prefix.$name_prefix$id.pt.
 
 static mx_status_t WriteBufferData(const IptConfig& config,
                                    const ftl::UniqueFD& ipt_fd,
                                    uint32_t descriptor,
-                                   const std::string& output_path_prefix,
-                                   const char* name_prefix,
                                    uint64_t id) {
-  std::string output_path =
-    ftl::StringPrintf("%s.%s%" PRIu64 ".%s", output_path_prefix.c_str(),
-                      name_prefix, id, buffer_output_path_suffix);
+  std::string output_path;
+  if (config.mode == IPT_MODE_CPUS)
+    output_path = GetCpuPtFileName(config.output_path_prefix, id);
+  else
+    output_path = GetThreadPtFileName(config.output_path_prefix, id);
   const char* c_path = output_path.c_str();
 
   mx_status_t status = NO_ERROR;
@@ -509,8 +524,7 @@ static mx_status_t WriteBufferData(const IptConfig& config,
 // Write all output files.
 // This assumes tracing has already been stopped.
 
-void DumpCpuPerf(const IptConfig& config,
-                 const std::string& output_path_prefix) {
+void DumpCpuPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "DumpCpuPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_CPUS);
 
@@ -520,8 +534,7 @@ void DumpCpuPerf(const IptConfig& config,
 
   for (uint32_t cpu = 0; cpu < config.num_cpus; ++cpu) {
     // Buffer descriptors for cpus is the cpu number.
-    auto status = WriteBufferData(config, ipt_fd, cpu,
-                                  output_path_prefix, "cpu", cpu);
+    auto status = WriteBufferData(config, ipt_fd, cpu, cpu);
     if (status != NO_ERROR) {
       util::LogErrorWithMxStatus(ftl::StringPrintf("dump perf of cpu %u", cpu),
                                  status);
@@ -533,8 +546,7 @@ void DumpCpuPerf(const IptConfig& config,
 // Write the buffer contents for |thread|.
 // This assumes the thread is stopped.
 
-void DumpThreadPerf(Thread* thread, const IptConfig& config,
-                    const std::string& output_path_prefix) {
+void DumpThreadPerf(Thread* thread, const IptConfig& config) {
   FTL_LOG(INFO) << "DumpThreadPerf called";
   FTL_DCHECK(config.mode == IPT_MODE_THREADS);
 
@@ -550,8 +562,7 @@ void DumpThreadPerf(Thread* thread, const IptConfig& config,
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
-  auto status = WriteBufferData(config, ipt_fd, thread->ipt_buffer(),
-                                output_path_prefix, "thr", id);
+  auto status = WriteBufferData(config, ipt_fd, thread->ipt_buffer(), id);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus(
       ftl::StringPrintf("dump perf of thread %" PRIu64, id),
@@ -559,7 +570,7 @@ void DumpThreadPerf(Thread* thread, const IptConfig& config,
   }
 }
 
-void DumpPerf(const IptConfig& config, const std::string& output_path_prefix) {
+void DumpPerf(const IptConfig& config) {
   FTL_LOG(INFO) << "DumpPerf called";
 
   {
@@ -568,7 +579,7 @@ void DumpPerf(const IptConfig& config, const std::string& output_path_prefix) {
       return;
 
     std::string ktrace_output_path =
-      ftl::StringPrintf("%s.%s", output_path_prefix.c_str(),
+      ftl::StringPrintf("%s.%s", config.output_path_prefix.c_str(),
                         ktrace_output_path_suffix);
     const char* ktrace_c_path = ktrace_output_path.c_str();
 
@@ -591,7 +602,7 @@ void DumpPerf(const IptConfig& config, const std::string& output_path_prefix) {
   // TODO(dje): UniqueFILE?
   {
     std::string cpuid_output_path =
-      ftl::StringPrintf("%s.%s", output_path_prefix.c_str(),
+      ftl::StringPrintf("%s.%s", config.output_path_prefix.c_str(),
                         cpuid_output_path_suffix);
     const char* cpuid_c_path = cpuid_output_path.c_str();
 
@@ -604,9 +615,31 @@ void DumpPerf(const IptConfig& config, const std::string& output_path_prefix) {
       // TODO(dje): Put constants in magenta/device/intel-pt.h.
       unsigned mtc_freq = config.mtc_freq;
       fprintf(f, "mtc_freq: %u\n", mtc_freq);
+      // TODO(dje): verify writes succeed
       fclose(f);
     } else {
       FTL_LOG(ERROR) << "unable to write PT config to " << cpuid_c_path;
+    }
+  }
+
+  // TODO(dje): UniqueFILE?
+  // TODO(dje): Handle IPT_MODE_THREADS
+  if (config.mode == IPT_MODE_CPUS) {
+    std::string pt_list_output_path =
+      ftl::StringPrintf("%s.%s", config.output_path_prefix.c_str(),
+                        pt_list_output_path_suffix);
+    const char* pt_list_c_path = pt_list_output_path.c_str();
+
+    FILE* f = fopen(pt_list_c_path, "w");
+    if (f != nullptr) {
+      for (uint32_t cpu = 0; cpu < config.num_cpus; ++cpu) {
+        std::string pt_file = GetCpuPtFileName(config.output_path_prefix, cpu);
+        fprintf(f, "%u %s\n", cpu, pt_file.c_str());
+      }
+      // TODO(dje): verify writes succeed
+      fclose(f);
+    } else {
+      FTL_LOG(ERROR) << "unable to write PT list to " << pt_list_c_path;
     }
   }
 }

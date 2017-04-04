@@ -28,13 +28,11 @@ void StopThreadPerf(Thread* thread, const IptConfig& config);
 
 void StopPerf(const IptConfig& config);
 
-void DumpCpuPerf(const IptConfig& config,
-                 const std::string& output_path_prefix);
+void DumpCpuPerf(const IptConfig& config);
 
-void DumpThreadPerf(Thread* thread, const IptConfig& config,
-                    const std::string& output_path_prefix);
+void DumpThreadPerf(Thread* thread, const IptConfig& config);
 
-void DumpPerf(const IptConfig& config, const std::string& output_path_prefix);
+void DumpPerf(const IptConfig& config);
 
 void ResetCpuPerf(const IptConfig& config);
 

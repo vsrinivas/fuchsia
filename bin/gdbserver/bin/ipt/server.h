@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #include <magenta/device/intel-pt.h>
 #include <magenta/syscalls.h>
@@ -19,12 +20,6 @@
 
 namespace debugserver {
 
-constexpr uint32_t kDefaultMode = IPT_MODE_CPUS;
-constexpr uint32_t kDefaultMaxThreads = 16;
-constexpr size_t kDefaultNumBuffers = 16;
-constexpr size_t kDefaultBufferOrder = 2;  // 16kb
-constexpr bool kDefaultIsCircular = false;
-
 // The parameters controlling data collection.
 
 struct IptConfig {
@@ -34,6 +29,13 @@ struct IptConfig {
     std::string elf;
     uint64_t begin, end;
   };
+
+  static constexpr uint32_t kDefaultMode = IPT_MODE_CPUS;
+  static constexpr uint32_t kDefaultMaxThreads = 16;
+  static constexpr size_t kDefaultNumBuffers = 16;
+  static constexpr size_t kDefaultBufferOrder = 2;  // 16kb
+  static constexpr bool kDefaultIsCircular = false;
+  static constexpr char kDefaultOutputPathPrefix[] = "/tmp/ptout";
 
   IptConfig();
 
@@ -76,6 +78,9 @@ struct IptConfig {
   bool os, user;
   bool retc;
   bool tsc;
+
+  // The path prefix of all of the output files.
+  std::string output_path_prefix;
 };
 
 // IptServer implements the main loop, which basically just waits until
@@ -86,7 +91,7 @@ struct IptConfig {
 // calling methods which modify the internal state of a IptServer instance.
 class IptServer final : public Server {
  public:
-  IptServer(const IptConfig& config, const std::string& output_path_prefix);
+  IptServer(const IptConfig& config);
 
   bool Run() override;
 
@@ -116,7 +121,6 @@ class IptServer final : public Server {
                                 const mx_exception_context_t& context) override;
 
   IptConfig config_;
-  std::string output_path_prefix_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IptServer);
 };

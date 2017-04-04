@@ -25,6 +25,8 @@
 
 namespace debugserver {
 
+constexpr char IptConfig::kDefaultOutputPathPrefix[];
+
 IptConfig::IptConfig()
   : mode(kDefaultMode),
     num_cpus(mx_system_get_num_cpus()),
@@ -43,7 +45,8 @@ IptConfig::IptConfig()
     os(true),
     user(true),
     retc(true),
-    tsc(true) {
+    tsc(true),
+    output_path_prefix(kDefaultOutputPathPrefix) {
   addr[0] = AddrFilter::kOff;
   addr[1] = AddrFilter::kOff;
 }
@@ -89,10 +92,8 @@ uint64_t IptConfig::AddrEnd(unsigned i) const {
   return addr_range[i].end;
 }
 
-IptServer::IptServer(const IptConfig& config,
-                     const std::string& output_path_prefix)
-  : config_(config),
-    output_path_prefix_(output_path_prefix) {
+IptServer::IptServer(const IptConfig& config)
+  : config_(config) {
 }
 
 bool IptServer::StartInferior() {
@@ -157,8 +158,8 @@ bool IptServer::DumpResults() {
     StopCpuPerf(config_);
   StopPerf(config_);
   if (config_.mode == IPT_MODE_CPUS)
-    DumpCpuPerf(config_, output_path_prefix_);
-  DumpPerf(config_, output_path_prefix_);
+    DumpCpuPerf(config_);
+  DumpPerf(config_);
   if (config_.mode == IPT_MODE_CPUS)
     ResetCpuPerf(config_);
   ResetPerf(config_);
@@ -248,7 +249,7 @@ void IptServer::OnThreadExiting(Process* process,
   if (config_.mode == IPT_MODE_THREADS) {
     if (thread->ipt_buffer() >= 0) {
       StopThreadPerf(thread, config_);
-      DumpThreadPerf(thread, config_, output_path_prefix_);
+      DumpThreadPerf(thread, config_);
       ResetThreadPerf(thread, config_);
     }
   }

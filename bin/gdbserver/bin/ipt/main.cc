@@ -42,8 +42,6 @@ static constexpr char ldso_trace_value[] = "1";
 // The lower 5 bits of CR3_MATCH MSR are reserved.
 static constexpr uint32_t kCr3MatchReservedMask = 0x1f;
 
-static constexpr char default_output_path_prefix[] = "/tmp/ptout";
-
 // TODO(dje): Split up into topics, output is long and can scroll off screen.
 constexpr char kUsageString[] =
   "Usage: ipt [options] program [args...]\n"
@@ -386,11 +384,14 @@ static debugserver::IptConfig GetIptConfig(const ftl::CommandLine& cl) {
     }
   }
 
+  std::string output_path_prefix;
+  if (cl.GetOptionValue("output-path-prefix", &output_path_prefix))
+    config.output_path_prefix = output_path_prefix;
+
   return config;
 }
 
 static bool ControlIpt(const debugserver::IptConfig& config,
-                       const std::string& output_path_prefix,
                        const ftl::CommandLine& cl) {
   // We only support the cpu mode here.
   // This isn't a full test as we only actually set the mode for "init".
@@ -417,8 +418,8 @@ static bool ControlIpt(const debugserver::IptConfig& config,
       debugserver::StopCpuPerf(config);
       debugserver::StopPerf(config);
     } else if (action == "dump") {
-      debugserver::DumpCpuPerf(config, output_path_prefix);
-      debugserver::DumpPerf(config, output_path_prefix);
+      debugserver::DumpCpuPerf(config);
+      debugserver::DumpPerf(config);
     } else if (action == "reset") {
       debugserver::ResetCpuPerf(config);
       debugserver::ResetPerf(config);
@@ -432,7 +433,6 @@ static bool ControlIpt(const debugserver::IptConfig& config,
 }
 
 static bool RunProgram(const debugserver::IptConfig& config,
-                       const std::string& output_path_prefix,
                        const ftl::CommandLine& cl) {
   debugserver::util::Argv inferior_argv(cl.positional_args().begin(),
                                         cl.positional_args().end());
@@ -448,7 +448,7 @@ static bool RunProgram(const debugserver::IptConfig& config,
   // can write to at the moment is the kernel debug log.
   setenv(ldso_trace_env_var, ldso_trace_value, 1);
 
-  debugserver::IptServer ipt(config, output_path_prefix);
+  debugserver::IptServer ipt(config);
 
   auto inferior = new debugserver::Process(&ipt, &ipt);
   inferior->set_argv(inferior_argv);
@@ -481,17 +481,13 @@ int main(int argc, char* argv[]) {
 
   debugserver::IptConfig config = GetIptConfig(cl);
 
-  std::string output_path_prefix;
-  if (!cl.GetOptionValue("output-path-prefix", &output_path_prefix))
-    output_path_prefix = default_output_path_prefix;
-
   FTL_LOG(INFO) << "ipt control program starting";
 
   bool success;
   if (cl.HasOption("control", nullptr)) {
-    success = ControlIpt(config, output_path_prefix, cl);
+    success = ControlIpt(config, cl);
   } else {
-    success = RunProgram(config, output_path_prefix, cl);
+    success = RunProgram(config, cl);
   }
 
   if (!success) {
