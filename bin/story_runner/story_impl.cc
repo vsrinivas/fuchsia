@@ -119,7 +119,7 @@ void StoryImpl::AddModule(const fidl::String& module_name,
   auto module = ModuleData::New();
   module->url = module_url;
   module->module_path = fidl::Array<fidl::String>::New(0);
-  module->module_path.push_back(module_name ? module_name : module_url);
+  module->module_path.push_back(module_name);
   module->link = link_name;
 
   story_data_->modules.push_back(std::move(module));
@@ -234,11 +234,10 @@ void StoryImpl::StartRootModule(const fidl::String& module_name,
                                 const fidl::String& url,
                                 const fidl::String& link_name) {
   LinkPtr link;
-  CreateLink(link_name, link.NewRequest());
+  CreateLink(nullptr, link_name, link.NewRequest());
 
   ModuleControllerPtr module_controller;
-  auto empty_parent_path = fidl::Array<fidl::String>::New(0);
-  StartModuleInShell(empty_parent_path, module_name, url, std::move(link),
+  StartModuleInShell(nullptr, module_name, url, std::move(link),
                      nullptr, nullptr, module_controller.NewRequest(), 0L, "");
 
   module_controller->Watch(module_watcher_bindings_.AddBinding(this));
@@ -296,18 +295,18 @@ void StoryImpl::NotifyStateChange() {
 
 LinkPtr& StoryImpl::EnsureRoot() {
   if (!root_.is_bound()) {
-    CreateLink(kRootLink, root_.NewRequest());
+    CreateLink(nullptr, kRootLink, root_.NewRequest());
   }
   return root_;
 }
 
 void StoryImpl::GetLink(fidl::InterfaceRequest<Link> request) {
-  CreateLink(kRootLink, std::move(request));
+  EnsureRoot()->Dup(std::move(request));
 }
 
 void StoryImpl::GetNamedLink(const fidl::String& name,
                              fidl::InterfaceRequest<Link> request) {
-  CreateLink(name, std::move(request));
+  CreateLink(nullptr, name, std::move(request));
 }
 
 void StoryImpl::ReleaseModule(
@@ -322,17 +321,21 @@ void StoryImpl::ReleaseModule(
   connections_.erase(f);
 }
 
-void StoryImpl::CreateLink(const fidl::String& name,
+void StoryImpl::CreateLink(const fidl::Array<fidl::String>& module_path,
+                           const fidl::String& name,
                            fidl::InterfaceRequest<Link> request) {
   auto i = std::find_if(
       links_.begin(), links_.end(),
-      [name](const std::unique_ptr<LinkImpl>& l) { return l->name() == name; });
+      [name, &module_path](const std::unique_ptr<LinkImpl>& l) {
+        return l->module_path().Equals(module_path) && l->name() == name;
+      });
   if (i != links_.end()) {
     (*i)->Connect(std::move(request));
     return;
   }
 
-  auto* const link_impl = new LinkImpl(story_storage_impl_.get(), name);
+  auto* const link_impl =
+      new LinkImpl(story_storage_impl_.get(), module_path, name);
   link_impl->Connect(std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
@@ -361,6 +364,7 @@ uint64_t StoryImpl::StartModule(
   // flutter only allows one ViewOwner per flutter application,
   // and we need one ViewOwner instance per Module instance.
 
+  // TODO(vardhan): Add this module to the StoryData.
   auto launch_info = app::ApplicationLaunchInfo::New();
 
   app::ServiceProviderPtr app_services;
@@ -399,7 +403,7 @@ uint64_t StoryImpl::StartModule(
 
   const auto id = next_module_instance_id_++;
   auto child_path = parent_path.Clone();
-  child_path.push_back(module_name ? module_name : module_url);
+  child_path.push_back(module_name);
   connection.module_context_impl.reset(new ModuleContextImpl(
       std::move(child_path), module_context_info, id, module_url,
       connection.module_controller_impl.get(), std::move(self_request)));

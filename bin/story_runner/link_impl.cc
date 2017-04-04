@@ -39,8 +39,10 @@ rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromArray(
 }  // namespace
 
 LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
+                   const fidl::Array<fidl::String>& module_path,
                    const fidl::String& name)
-    : name_(name),
+    : module_path_(module_path.Clone()),
+      name_(name),
       story_storage_(story_storage),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
   ReadLinkData([this]() {
@@ -206,15 +208,16 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
 }
 
 void LinkImpl::ReadLinkData(const std::function<void()>& done) {
-  story_storage_->ReadLinkData(name_, [this, done](const fidl::String& json) {
-    if (!json.is_null()) {
-      doc_.Parse(json.get());
-      FTL_LOG(INFO) << "LinkImpl::ReadLinkData() "
-                    << JsonValueToPrettyString(doc_);
-    }
+  story_storage_->ReadLinkData(
+      module_path_, name_, [this, done](const fidl::String& json) {
+        if (!json.is_null()) {
+          doc_.Parse(json.get());
+          FTL_LOG(INFO) << "LinkImpl::ReadLinkData() "
+                        << JsonValueToPrettyString(doc_);
+        }
 
-    done();
-  });
+        done();
+      });
 }
 
 void LinkImpl::WriteLinkData(const std::function<void()>& done) {
@@ -222,7 +225,8 @@ void LinkImpl::WriteLinkData(const std::function<void()>& done) {
 }
 
 void LinkImpl::WriteLinkDataImpl(const std::function<void()>& done) {
-  story_storage_->WriteLinkData(name_, JsonValueToString(doc_), done);
+  story_storage_->WriteLinkData(module_path_, name_, JsonValueToString(doc_),
+                                done);
 }
 
 void LinkImpl::DatabaseChanged(LinkConnection* const src) {

@@ -264,7 +264,6 @@ class StoryProviderImpl::CreateStoryCall : Operation<void> {
           story_info->extra = std::move(extra_info_);
           story_info->extra.mark_non_null();
 
-          const char* kRootModuleName = "root";
           auto root_module = ModuleData::New();
           root_module->url = url_;
           root_module->module_path = fidl::Array<fidl::String>::New(0);

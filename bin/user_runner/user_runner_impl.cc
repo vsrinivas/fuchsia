@@ -294,7 +294,7 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   }
 
   link_storage_.reset(new StoryStorageImpl(root_page_.get()));
-  user_shell_link_.reset(new LinkImpl(link_storage_.get(), kUserShellKey));
+  user_shell_link_.reset(new LinkImpl(link_storage_.get(), nullptr, kUserShellKey));
   user_shell_link_->Connect(std::move(request));
 }
 

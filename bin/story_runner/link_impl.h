@@ -46,8 +46,12 @@ class LinkConnection;
 class LinkImpl {
  public:
   // Connects a new LinkConnection object on the heap for the given
-  // Link interface request.
-  LinkImpl(StoryStorageImpl* story_storage, const fidl::String& name);
+  // Link interface request. The |module_path| is the series of module names
+  // (where the last element is the module that created this Link) that this
+  // Link will be namespaced under.
+  LinkImpl(StoryStorageImpl* story_storage,
+           const fidl::Array<fidl::String>& module_path,
+           const fidl::String& name);
 
   ~LinkImpl();
 
@@ -73,6 +77,7 @@ class LinkImpl {
 
   // Used by StoryImpl.
   const fidl::String& name() const { return name_; }
+  const fidl::Array<fidl::String>& module_path() const { return module_path_; }
   void set_orphaned_handler(const std::function<void()>& fn) {
     orphaned_handler_ = fn;
   }
@@ -99,6 +104,7 @@ class LinkImpl {
 
   CrtJsonDoc doc_;
   std::vector<std::unique_ptr<LinkConnection>> connections_;
+  const fidl::Array<fidl::String> module_path_;
   const fidl::String name_;
   StoryStorageImpl* const story_storage_;
   std::function<void()> orphaned_handler_;

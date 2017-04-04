@@ -32,7 +32,7 @@ ModuleContextImpl::~ModuleContextImpl() {}
 
 void ModuleContextImpl::CreateLink(const fidl::String& name,
                                    fidl::InterfaceRequest<Link> link) {
-  story_impl_->CreateLink(name, std::move(link));
+  story_impl_->CreateLink(module_path_, name, std::move(link));
 }
 
 void ModuleContextImpl::StartModule(

@@ -9,25 +9,50 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/util/string_escape.h"
+#include "lib/ftl/strings/join_strings.h"
+#include "lib/ftl/strings/escape.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
+namespace {
+
+std::string LinkNameToLedgerKey(const fidl::Array<fidl::String>& path,
+                                const fidl::String& link_id) {
+  std::vector<std::string> escaped_path;
+  escaped_path.reserve(path.size());
+
+  // Escape both '/' and ':':
+  //  - / is used to separate the module path components
+  //  - : is used to separate module path components and the link name
+  for (const auto& item : path) {
+    escaped_path.push_back(StringEscape(item.get(), "/:", '\\'));
+  }
+
+  return ftl::JoinStrings(escaped_path, "/") + ":" +
+         StringEscape(link_id.get(), "/:", '\\');
+}
+
+}  // namespace
 
 class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
  public:
   ReadLinkDataCall(OperationContainer* const container,
                    std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot,
+                   const fidl::Array<fidl::String>& module_path,
                    const fidl::String& link_id,
                    ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_snapshot_(std::move(page_snapshot)),
+        link_path_(LinkNameToLedgerKey(module_path, link_id)),
         link_id_(link_id) {
     Ready();
   }
 
  private:
   void Run() override {
-    std::string key{kLinkKeyPrefix + link_id_.get()};
+    FTL_LOG(INFO) << "ReadLinkDataCall, link_path_ = " << link_path_;
+    std::string key{kLinkKeyPrefix + link_path_};
     (*page_snapshot_)
         ->Get(to_array(key), [this](ledger::Status status, mx::vmo value) {
           if (status != ledger::Status::OK) {
@@ -57,6 +82,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
   }
 
   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
+  const std::string link_path_;
   const fidl::String link_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
@@ -66,11 +92,13 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
  public:
   WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
+                    const fidl::Array<fidl::String>& module_path,
                     fidl::String link_id,
                     fidl::String data,
                     ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
+        link_path_(LinkNameToLedgerKey(module_path, link_id)),
         link_id_(std::move(link_id)),
         data_(std::move(data)) {
     Ready();
@@ -78,7 +106,8 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
 
  private:
   void Run() override {
-    std::string key{kLinkKeyPrefix + link_id_.get()};
+    FTL_LOG(INFO) << "WriteLinkDataCall, link_path_ = " << link_path_;
+    std::string key{kLinkKeyPrefix + link_path_};
     page_->Put(to_array(key), to_array(data_), [this](ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "WriteLinkDataCall() " << link_id_ << " Page.Put() "
@@ -89,6 +118,7 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
   }
 
   ledger::Page* const page_;  // not owned
+  const std::string link_path_;
   fidl::String link_id_;
   fidl::String data_;
 
@@ -113,17 +143,18 @@ StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
 
 StoryStorageImpl::~StoryStorageImpl() = default;
 
-void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
+void StoryStorageImpl::ReadLinkData(const fidl::Array<fidl::String>& module_path,
+                                    const fidl::String& link_id,
                                     const DataCallback& callback) {
   new ReadLinkDataCall(&operation_queue_, story_client_.page_snapshot(),
-                       link_id, callback);
+                       module_path, link_id, callback);
 }
 
-void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
-                                     const fidl::String& data,
-                                     const SyncCallback& callback) {
-  new WriteLinkDataCall(&operation_queue_, story_page_, link_id, data,
-                        callback);
+void StoryStorageImpl::WriteLinkData(
+    const fidl::Array<fidl::String>& module_path, const fidl::String& link_id,
+    const fidl::String& data, const SyncCallback& callback) {
+  new WriteLinkDataCall(&operation_queue_, story_page_, module_path, link_id,
+                        data, callback);
 }
 
 void StoryStorageImpl::WatchLink(const fidl::String& link_id,

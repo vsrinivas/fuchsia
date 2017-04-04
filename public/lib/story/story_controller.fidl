@@ -26,13 +26,12 @@ interface StoryController {
   // completes.
   Start(mozart.ViewOwner& view_owner);
 
-  // Gets a connection to the Link to the root module.
+  // Gets a connection to the root Link.
   GetLink(Link& link);
 
-  // Gets a connection to the named Link in the story. The name of the
-  // link to the root module is "root", and it's implicitly created
-  // when the story is created. Any other link, if it doesn't exist
-  // yet, is implicitly created.
+  // Gets a connection to the named Link in the story. The name of the root link
+  // is "root", and it's implicitly created when the story is created. Any other
+  // link, if it doesn't exist yet, is implicitly created.
   GetNamedLink(string name, Link& link);
 
   // Stops this story if it is running, else does nothing. Returns
@@ -48,7 +47,8 @@ interface StoryController {
   // used for the module is identified by its name as used in calls to
   // GetNamedLink(); using that method, the link can be configured with data
   // before running the module. The implicit name of the link obtained from
-  // GetLink() is "root". TODO(mesch): Some form of ModuleController might be
+  // GetLink() is "root". This |link_name| is  scoped to the story controller,
+  // and not the module. TODO(mesch): Some form of ModuleController might be
   // useful here, e.g. for status notifications.
   AddModule(string name, string url, string link_name);
 };

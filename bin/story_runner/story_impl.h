@@ -43,6 +43,7 @@ class StoryProviderImpl;
 class StoryStorageImpl;
 
 constexpr char kRootLink[] = "root";
+constexpr char kRootModuleName[] = "root";
 
 // The actual implementation of the Story service. It also implements
 // the StoryController service to give clients control over the Story
@@ -53,7 +54,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   ~StoryImpl() override;
 
   // Called by ModuleContextImpl.
-  void CreateLink(const fidl::String& name,
+  void CreateLink(const fidl::Array<fidl::String>& module_path,
+                  const fidl::String& name,
                   fidl::InterfaceRequest<Link> request);
   // Called by ModuleContextImpl and StartModuleInShell().
   // Returns the module instance id so StartModuleInShell() can pass it to the
