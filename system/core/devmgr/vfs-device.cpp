@@ -19,7 +19,7 @@
 
 #define MXDEBUG 0
 
-mx_status_t devfs_remove(VnodeMemfs* vn) {
+mx_status_t devfs_remove(VnodeDir* vn) {
     mxtl::AutoLock lock(&vfs_lock);
 
     // hold a reference to ourselves so the rug doesn't get pulled out from under us

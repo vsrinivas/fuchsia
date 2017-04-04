@@ -20,7 +20,7 @@ typedef struct device_ctx {
     uint32_t flags;
     uint32_t protocol_id;
     uint32_t prop_count;
-    VnodeMemfs* vnode;
+    VnodeDir* vnode;
     char name[MX_DEVICE_NAME_MAX];
     mx_device_prop_t props[];
 } device_ctx_t;

@@ -34,8 +34,8 @@
 // device filesystem visible at /dev in the devmgr's root namespace.
 
 // vnodes for root driver and protocols
-static VnodeMemfs* vnroot;
-static VnodeMemfs* vnclass;
+static VnodeDir* vnroot;
+static VnodeDir* vnclass;
 
 #define PNMAX 16
 static const char* proto_name(uint32_t id, char buf[PNMAX]) {
@@ -57,7 +57,7 @@ static const char* proto_names[] = {
 static void prepopulate_protocol_dirs(void) {
     const char** namep = proto_names;
     while (*namep) {
-        VnodeMemfs* vnp;
+        VnodeDir* vnp;
         if (!strcmp(*namep, "misc") || !strcmp(*namep, "misc-parent")) {
             // don't publish /dev/class/misc or /dev/class/misc-parent
             namep++;
@@ -87,7 +87,7 @@ mx_status_t do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     const char* pname = proto_name(ctx->protocol_id, buf);
 
     // find or create a vnode for class/<pname>
-    VnodeMemfs* vnp;
+    VnodeDir* vnp;
     mx_status_t status;
     if ((status = memfs_create_device_at(vnclass, &vnp, pname, 0)) < 0) {
         printf("devmgr: could not link to '%s'\n", ctx->name);
@@ -101,7 +101,7 @@ mx_status_t do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
         name = NULL;
     }
 
-    if ((status = memfs_add_link(vnp, name, ctx->vnode)) < 0) {
+    if ((status = memfs_add_link(vnp, name, (VnodeMemfs*) ctx->vnode)) < 0) {
         printf("devmgr: could not link to '%s'\n", ctx->name);
     }
 

@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include <ddk/device.h>
 #include <fs/vfs.h>
@@ -39,53 +40,7 @@ mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
     return 1;
 }
 
-static mx_status_t vnb_create(VnodeMemfs* parent, VnodeMemfs** out,
-                              const char* name, size_t namelen,
-                              mx_handle_t h, mx_off_t off, size_t datalen) {
-    if (parent->dnode_ == nullptr) {
-        return ERR_NOT_DIR;
-    }
-
-    VnodeMemfs* vnb_fs;
-    mx_status_t r = memfs_create(parent, &vnb_fs, name, namelen, MEMFS_TYPE_VMO);
-    if (r < 0) {
-        printf("bootfs: memfs_create('%.*s') failed: %d\n", (int)namelen, name, r);
-        return r;
-    }
-    VnodeVmo* vnb = static_cast<VnodeVmo*>(vnb_fs);
-    xprintf("vnb_create: vn=%p, parent=%p name='%.*s' datalen=%zd\n",
-            vnb, parent, (int)namelen, name, datalen);
-    vnb->Init(h, datalen, off);
-
-    *out = vnb;
-    return NO_ERROR;
-}
-
-static mx_status_t vnb_mkdir(VnodeMemfs* parent, VnodeMemfs** out, const char* name, size_t namelen) {
-    // TODO(orr): subsequent patch will move this to more regular vnode operations
-    if (!parent->IsDirectory()) {
-        printf("bootfs: %p not a directory\n", parent);
-        return ERR_NOT_DIR;
-    }
-
-    // existing directory of the same name?
-    mxtl::RefPtr<Dnode> dn;
-    if (parent->dnode_->Lookup(name, namelen, &dn) == NO_ERROR) {
-        if (dn == nullptr) {
-            return ERR_ALREADY_EXISTS;
-        } else if (dn->IsDirectory()) {
-            *out = dn->AcquireVnode();
-            return NO_ERROR;
-        } else {
-            return ERR_NOT_DIR;
-        }
-    }
-
-    // create a new directory
-    return memfs_create(parent, out, name, namelen, MEMFS_TYPE_DIR);
-}
-
-static mx_status_t add_file(VnodeMemfs* vnb, const char* path, mx_handle_t vmo,
+static mx_status_t add_file(VnodeDir* vnb, const char* path, mx_handle_t vmo,
                             mx_off_t off, size_t len) {
     mx_status_t r;
     if ((path[0] == '/') || (path[0] == 0))
@@ -96,14 +51,23 @@ static mx_status_t add_file(VnodeMemfs* vnb, const char* path, mx_handle_t vmo,
             if (path[0] == 0) {
                 return ERR_INVALID_ARGS;
             }
-            return vnb_create(vnb, &vnb, path, strlen(path), vmo, off, len);
+            return vnb->CreateFromVmo(path, strlen(path), vmo, off, len);
         } else {
-            if (nextpath == path)
+            if (nextpath == path) {
                 return ERR_INVALID_ARGS;
-            r = vnb_mkdir(vnb, &vnb, path, nextpath - path);
+            }
+
+            fs::Vnode* out;
+            r = vnb->Lookup(&out, path, nextpath - path);
+            if (r == ERR_NOT_FOUND) {
+                r = vnb->Create(&out, path, nextpath - path, S_IFDIR);
+            }
+
             if (r < 0) {
                 return r;
             }
+            vnb = static_cast<VnodeDir*>(out);
+            vnb->RefRelease();
             path = nextpath + 1;
         }
     }
