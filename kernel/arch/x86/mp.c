@@ -81,7 +81,7 @@ status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     return NO_ERROR;
 }
 
-__NO_SAFESTACK void x86_init_percpu(uint8_t cpu_num, uintptr_t unsafe_sp)
+__NO_SAFESTACK uintptr_t x86_init_percpu(uint8_t cpu_num, uintptr_t unsafe_sp)
 {
     struct x86_percpu *percpu;
     if (cpu_num == 0) {
@@ -101,16 +101,6 @@ __NO_SAFESTACK void x86_init_percpu(uint8_t cpu_num, uintptr_t unsafe_sp)
 
     x86_feature_init();
 
-    if (cpu_num == 0) {
-        // Fill the stack canary with a random value as early as possible.
-        if (hw_rng_get_entropy(&bp_percpu.stack_guard, sizeof(uintptr_t),
-                               true) != sizeof(uintptr_t)) {
-            bp_percpu.stack_guard =
-                (uintptr_t)&bp_percpu.stack_guard ^ 0xdeadbeef00ff00ffUL;
-        }
-    } else {
-        percpu->stack_guard = bp_percpu.stack_guard;
-    }
 #if __has_feature(safe_stack)
     if (cpu_num == 0) {
         static uint8_t unsafe_kstack[PAGE_SIZE] __ALIGNED(16);
@@ -223,6 +213,8 @@ __NO_SAFESTACK void x86_init_percpu(uint8_t cpu_num, uintptr_t unsafe_sp)
 #if WITH_SMP
     mp_set_curr_cpu_online(true);
 #endif
+
+    return bp_percpu.stack_guard;
 }
 
 void x86_set_local_apic_id(uint32_t apic_id)

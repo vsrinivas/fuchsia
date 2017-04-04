@@ -189,8 +189,38 @@ high_entry:
     lidt _idtr
 
     /* assign this core CPU# 0 and initialize its per cpu state */
-    mov $0, %rdi
+    xor %edi, %edi
     call x86_init_percpu
+
+    // Fill the stack canary with a random value as early as possible.
+    // This isn't done in x86_init_percpu because the
+    // hw_rng_get_entropy call would make it eligible for stack-guard
+    // checking itself.  But %gs is not set up yet in the prologue of
+    // the function, so it would crash if it tried to use the
+    // stack-guard.  It's OK to call hw_rng_get_entropy now even if it
+    // uses stack-guard itself, because now %gs access is fine.  What
+    // we can't do is pass the address directly to hw_rng_get_entropy
+    // so that the stack-guard value changes in the middle of the
+    // function, since its epilogue would then detect an apparent
+    // stack clobberation.  Instead, hw_rng_get_entropy's frame will
+    // use the initial-zero stack-guard value and be happy.
+    sub $16, %rsp     // ABI-required stack alignment.
+    mov %rsp, %rdi    // 1st arg: void* buf = &stack_temp;
+    mov $8, %esi      // 2nd arg: size_t len = 8;
+    mov $1, %edx      // 3rd arg: bool block = true;
+    call hw_rng_get_entropy
+    pop %rcx          // %rcx = stack_temp
+    pop %rdx          // Restore stack pointer, popping ignored garbage word.
+    // If it failed to get real random bits, use some arbitrary bits instead.
+    cmp $8, %rax
+    je .Lgot_random_stack_guard
+    movabs $0xdeadbeef00ff00ff, %rcx
+    xor %rsp, %rcx
+.Lgot_random_stack_guard:
+    // Move it into place.
+    mov %rcx, %gs:MX_TLS_STACK_GUARD_OFFSET
+    // Don't leak that value to other code.
+    xor %ecx, %ecx
 
     /* call the main module */
     call lk_main

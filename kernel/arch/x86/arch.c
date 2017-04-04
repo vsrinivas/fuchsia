@@ -104,7 +104,7 @@ void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
 
 #if WITH_SMP
 #include <arch/x86/apic.h>
-__NO_SAFESTACK
+__NO_SAFESTACK __NO_RETURN
 void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
 {
     // Would prefer this to be in init_percpu, but there is a dependency on a
@@ -128,7 +128,7 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
     unsafe_sp =
         ROUNDDOWN((uintptr_t)thread->unsafe_stack + thread->stack_size, 16);
 #endif
-    x86_init_percpu((uint)cpu_num, unsafe_sp);
+    uintptr_t stack_guard = x86_init_percpu((uint)cpu_num, unsafe_sp);
 
     // Signal that this CPU is initialized.  It is important that after this
     // operation, we do not touch any resources associated with bootstrap
@@ -157,6 +157,13 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
     // The thread stacks and struct are from a single allocation, free it
     // when we exit into the scheduler.
     thread->flags |= THREAD_FLAG_FREE_STRUCT;
+
+    // Install the stack-guard value.  This is safe to do here even if this
+    // function itself does stack-guard checking, because this function
+    // never returns and so never runs the epilogue code where the checking
+    // would be done.
+    x86_write_gs_offset64(MX_TLS_STACK_GUARD_OFFSET, stack_guard);
+
     lk_secondary_cpu_entry();
 
     // lk_secondary_cpu_entry only returns on an error, halt the core in this
