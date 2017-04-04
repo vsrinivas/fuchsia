@@ -138,10 +138,11 @@ TEST(Path, SimplifyPath) {
 
 TEST(Path, AbsolutePath) {
 #if defined(OS_WIN)
-  EXPECT_EQ("C:\\foo\\bar", AbsolutePath("\\foo\\bar"));
-  EXPECT_EQ("C:\\foo\\bar", AbsolutePath("/foo/bar"));
-  EXPECT_EQ("C:\\foo\\bar\\", AbsolutePath("\\foo\\bar\\"));
-  EXPECT_EQ("C:\\foo\\bar\\", AbsolutePath("/foo/bar/"));
+  // We cut out the drive letter as it can be different on every system.
+  EXPECT_EQ(":\\foo\\bar", AbsolutePath("\\foo\\bar").substr(1));
+  EXPECT_EQ(":\\foo\\bar", AbsolutePath("/foo/bar").substr(1));
+  EXPECT_EQ(":\\foo\\bar\\", AbsolutePath("\\foo\\bar\\").substr(1));
+  EXPECT_EQ(":\\foo\\bar\\", AbsolutePath("/foo/bar/").substr(1));
   EXPECT_EQ("C:\\foo\\bar\\", AbsolutePath("C:\\foo\\bar\\"));
   EXPECT_EQ(GetCurrentDirectory() + "\\foo", AbsolutePath("foo"));
 #else
