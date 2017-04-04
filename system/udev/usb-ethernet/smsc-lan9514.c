@@ -280,7 +280,7 @@ mx_status_t lan9514_recv(lan9514_t* eth, iotxn_t* request) {
 
     size_t len = request->actual;
     uint8_t* pkt;
-    request->ops->mmap(request, (void**) &pkt);
+    iotxn_mmap(request, (void**) &pkt);
 
     uint32_t rx_status;
     if (len < sizeof(rx_status)) {
@@ -309,7 +309,7 @@ static void lan9514_read_complete(iotxn_t* request, void* cookie) {
     //printf("lan9514 read complete\n");
 
     if (request->status == ERR_REMOTE_CLOSED) {
-        request->ops->release(request);
+        iotxn_release(request);
         return;
     }
 
@@ -324,7 +324,7 @@ static void lan9514_read_complete(iotxn_t* request, void* cookie) {
 static void lan9514_write_complete(iotxn_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
     if (request->status == ERR_REMOTE_CLOSED) {
-        request->ops->release(request);
+        iotxn_release(request);
         return;
     }
 
@@ -336,14 +336,14 @@ static void lan9514_write_complete(iotxn_t* request, void* cookie) {
 static void lan9514_interrupt_complete(iotxn_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
     if ((request->status == ERR_REMOTE_CLOSED) || (request->status == ERR_IO)) { // ERR_IO = NACK (no status change)
-        request->ops->release(request);
+        iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
     if (request->status == NO_ERROR && request->actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
-        request->ops->copyfrom(request, status, sizeof(status), 0);
+        iotxn_copyfrom(request, status, sizeof(status), 0);
         memcpy(eth->status, status, sizeof(eth->status));
         completion_signal(&eth->phy_state_completion);
     }
@@ -390,8 +390,8 @@ mx_status_t _lan9514_send(mx_device_t* device, const void* buffer, size_t length
     header[6] = (command_b >> 16) & 0xff;
     header[7] = (command_b >> 24) & 0xff;
 
-    request->ops->copyto(request, header, 8, 0);
-    request->ops->copyto(request, buffer, length, 8);
+    iotxn_copyto(request, header, 8, 0);
+    iotxn_copyto(request, buffer, length, 8);
     request->length = length + 8;
     iotxn_queue(eth->usb_device, request);
 
@@ -443,13 +443,13 @@ static void lan9514_free(lan9514_t* eth) {
 
     mtx_lock(&eth->mutex);
     while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&eth->free_intr_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     mtx_unlock(&eth->mutex);
 

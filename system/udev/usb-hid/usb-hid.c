@@ -35,7 +35,7 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
     usb_hid_device_t* hid = (usb_hid_device_t*)cookie;
     // TODO use iotxn copyfrom instead of mmap
     void* buffer;
-    txn->ops->mmap(txn, &buffer);
+    iotxn_mmap(txn, &buffer);
 #if USB_HID_DEBUG
     printf("usb-hid: callback request status %d\n", txn->status);
     hexdump(buffer, txn->actual);

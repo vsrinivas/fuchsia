@@ -281,7 +281,7 @@ static void complete_request(
     size_t length,
     dwc_usb_t* dwc) {
     if (req->setuptxn) {
-        req->setuptxn->ops->release(req->setuptxn);
+        iotxn_release(req->setuptxn);
     }
 
     xprintf("Complete Request with Request ID = 0x%x, status = %d, "
@@ -293,10 +293,10 @@ static void complete_request(
     // Invalidate caches over this region since the DMA engine may have moved
     // data below us.
     if (status == NO_ERROR) {
-        txn->ops->cacheop(txn, IOTXN_CACHE_INVALIDATE, txn->offset, length);
+        iotxn_cacheop(txn, IOTXN_CACHE_INVALIDATE, txn->offset, length);
     }
 
-    txn->ops->complete(txn, status, length);
+    iotxn_complete(txn, status, length);
 
     // Put this back on the free list of requests, but make sure the free list
     // doesn't get too long.
@@ -322,7 +322,7 @@ static void dwc_complete_root_port_status_txn(dwc_usb_t* dwc) {
         if (dwc->rh_intr_req && dwc->rh_intr_req->txn) {
             iotxn_t* txn = dwc->rh_intr_req->txn;
             uint16_t val = 0x2;
-            txn->ops->copyto(txn, (void*)&val, sizeof(val), 0);
+            iotxn_copyto(txn, (void*)&val, sizeof(val), 0);
             complete_request(dwc->rh_intr_req, NO_ERROR, sizeof(val), dwc);
             dwc->rh_intr_req = NULL;
         }
@@ -446,7 +446,7 @@ static void dwc_iotxn_queue_hw(dwc_usb_t* dwc,
 
     // Writeback any items pending on the cache. We don't want these to be
     // flushed during a DMA op.
-    txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, txn->offset, txn->length);
+    iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, txn->offset, txn->length);
 
     // Append this transaction to the end of the Device/Endpoint's pending
     // transaction queue.
@@ -492,7 +492,7 @@ static void do_dwc_iotxn_queue(dwc_usb_t* dwc, iotxn_t* txn) {
     if (!req) {
         // If we can't allocate memory for the request, complete the iotxn with
         // a failure.
-        txn->ops->complete(txn, ERR_NO_MEMORY, 0);
+        iotxn_complete(txn, ERR_NO_MEMORY, 0);
         return;
     }
 
@@ -517,7 +517,7 @@ static void dwc_iotxn_queue(mx_device_t* hci_device, iotxn_t* txn) {
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
 
     if (txn->length > dwc_get_max_transfer_size(hci_device, data->device_id, data->ep_address)) {
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
     } else {
         dwc_usb_t* dwc = dev_to_usb_dwc(hci_device);
         do_dwc_iotxn_queue(dwc, txn);
@@ -673,7 +673,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     completion_wait(&completion, MX_TIME_INFINITE);
 
     usb_device_descriptor_t short_descriptor;
-    get_desc->ops->copyfrom(get_desc, &short_descriptor, get_desc->actual, 0);
+    iotxn_copyfrom(get_desc, &short_descriptor, get_desc->actual, 0);
 
     // Update the Max Packet Size of the control endpoint.
     ep0->desc.wMaxPacketSize = short_descriptor.bMaxPacketSize0;
@@ -706,8 +706,8 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
 
     mx_nanosleep(MX_MSEC(10));
 
-    set_addr->ops->release(set_addr);
-    get_desc->ops->release(get_desc);
+    iotxn_release(set_addr);
+    iotxn_release(get_desc);
 
     mtx_lock(&dwc->usb_devices[dwc->next_device_address].devmtx);
     dwc->usb_devices[dwc->next_device_address].speed = speed;
@@ -899,7 +899,7 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
     if (desc_type == USB_DT_DEVICE && index == 0) {
         if (length > sizeof(usb_device_descriptor_t))
             length = sizeof(usb_device_descriptor_t);
-        txn->ops->copyto(txn, &dwc_rh_descriptor, length, 0);
+        iotxn_copyto(txn, &dwc_rh_descriptor, length, 0);
         complete_request(req, NO_ERROR, length, dwc);
     } else if (desc_type == USB_DT_CONFIG && index == 0) {
         usb_configuration_descriptor_t* config_desc =
@@ -907,7 +907,7 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
         uint16_t desc_length = le16toh(config_desc->wTotalLength);
         if (length > desc_length)
             length = desc_length;
-        txn->ops->copyto(txn, &dwc_rh_config_descriptor, length, 0);
+        iotxn_copyto(txn, &dwc_rh_config_descriptor, length, 0);
         complete_request(req, NO_ERROR, length, dwc);
     } else if (value >> 8 == USB_DT_STRING) {
         uint8_t string_index = value & 0xFF;
@@ -916,7 +916,7 @@ static void dwc_root_hub_get_descriptor(dwc_usb_transfer_request_t* req,
             if (length > string[0])
                 length = string[0];
 
-            txn->ops->copyto(txn, string, length, 0);
+            iotxn_copyto(txn, string, length, 0);
             complete_request(req, NO_ERROR, length, dwc);
         } else {
             complete_request(req, ERR_NOT_SUPPORTED, 0, dwc);
@@ -965,7 +965,7 @@ static void dwc_process_root_hub_class_req(dwc_usb_transfer_request_t* req,
 
             if (length > sizeof(desc))
                 length = sizeof(desc);
-            txn->ops->copyto(txn, &desc, length, 0);
+            iotxn_copyto(txn, &desc, length, 0);
             complete_request(req, NO_ERROR, length, dwc);
             return;
         }
@@ -1001,7 +1001,7 @@ static void dwc_process_root_hub_class_req(dwc_usb_transfer_request_t* req,
         }
 
         mtx_lock(&dwc->rh_status_mtx);
-        txn->ops->copyto(txn, &dwc->root_port_status, length, 0);
+        iotxn_copyto(txn, &dwc->root_port_status, length, 0);
         mtx_unlock(&dwc->rh_status_mtx);
 
         complete_request(req, NO_ERROR, length, dwc);
@@ -1192,7 +1192,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
             assert(req->setuptxn);
             characteristics.endpoint_direction = DWC_EP_OUT;
 
-            req->setuptxn->ops->physmap(req->setuptxn, &phys_addr);
+            iotxn_physmap(req->setuptxn, &phys_addr);
             data = (void*)phys_addr;
 
             // Quick sanity check to make sure that we're actually tying to
@@ -1207,7 +1207,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
             characteristics.endpoint_direction =
                 protocol_data->setup.bmRequestType >> 7;
 
-            txn->ops->physmap(txn, &phys_addr);
+            iotxn_physmap(txn, &phys_addr);
             data = ((void*)phys_addr) + req->bytes_transferred;
 
             transfer.size = txn->length - req->bytes_transferred;
@@ -1241,7 +1241,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
             (ep->ep_address & USB_ENDPOINT_DIR_MASK) >> 7;
 
         mx_paddr_t phys_addr;
-        txn->ops->physmap(txn, &phys_addr);
+        iotxn_physmap(txn, &phys_addr);
         data = ((void*)phys_addr) + req->bytes_transferred;
 
         transfer.size = txn->length - req->bytes_transferred;
@@ -1601,8 +1601,8 @@ static int endpoint_request_scheduler_thread(void* arg) {
 
                 iotxn_t* txn = req->setuptxn;
                 // Copy the setup data into the setup iotxn.
-                txn->ops->copyto(txn, &pdata->setup, sizeof(usb_setup_t), 0);
-                txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, 0, sizeof(usb_setup_t));
+                iotxn_copyto(txn, &pdata->setup, sizeof(usb_setup_t), 0);
+                iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, sizeof(usb_setup_t));
                 txn->length = sizeof(usb_setup_t);
 
                 // Perform the SETUP phase of the control transfer.

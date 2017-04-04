@@ -219,7 +219,7 @@ static void usb_hub_unbind(mx_device_t* device) {
 
 static mx_status_t usb_hub_release(mx_device_t* device) {
     usb_hub_t* hub = get_hub(device);
-    hub->status_request->ops->release(hub->status_request);
+    iotxn_release(hub->status_request);
     free(hub);
     return NO_ERROR;
 }
@@ -281,7 +281,7 @@ static int usb_hub_thread(void* arg) {
             break;
         }
 
-        txn->ops->copyfrom(txn, status_buf, txn->actual, 0);
+        iotxn_copyfrom(txn, status_buf, txn->actual, 0);
         uint8_t* bitmap = status_buf;
         uint8_t* bitmap_end = bitmap + txn->actual;
 
@@ -386,7 +386,7 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device, void**
 
 fail:
     if (txn) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     free(hub);
     return status;

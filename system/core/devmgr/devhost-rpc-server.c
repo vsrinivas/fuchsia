@@ -126,7 +126,7 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
 
     // if write, write the data to the iotxn
     if (opcode == IOTXN_OP_WRITE) {
-        txn->ops->copyto(txn, buf, txn->length, 0);
+        iotxn_copyto(txn, buf, txn->length, 0);
     }
 
     dev->ops->iotxn_queue(dev, txn);
@@ -134,17 +134,17 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
 
     if (txn->status != NO_ERROR) {
         size_t txn_status = txn->status;
-        txn->ops->release(txn);
+        iotxn_release(txn);
         return txn_status;
     }
 
     // if read, get the data
     if (opcode == IOTXN_OP_READ) {
-        txn->ops->copyfrom(txn, buf, txn->actual, 0);
+        iotxn_copyfrom(txn, buf, txn->actual, 0);
     }
 
     ssize_t actual = txn->actual;
-    txn->ops->release(txn);
+    iotxn_release(txn);
     return actual;
 }
 

@@ -124,7 +124,7 @@ static mx_status_t ums_send_cbw(ums_t* msd, uint32_t transfer_length, uint8_t fl
     }
 
     ums_cbw_t* cbw;
-    txn->ops->mmap(txn, (void **)&cbw);
+    iotxn_mmap(txn, (void **)&cbw);
     txn->length = sizeof(*cbw);
 
     memset(cbw, 0, sizeof(*cbw));
@@ -210,15 +210,15 @@ static mx_status_t ums_queue_write(ums_t* msd, uint16_t transfer_length, iotxn_t
     iotxn_t* write_request = containerof(write_node, iotxn_t, node);
     write_request->length = transfer_length;
     void* buffer;
-    write_request->ops->mmap(write_request, &buffer);
-    txn->ops->copyfrom(txn, buffer, (size_t)transfer_length, 0);
+    iotxn_mmap(write_request, &buffer);
+    iotxn_copyfrom(txn, buffer, (size_t)transfer_length, 0);
     ums_queue_request(msd, write_request);
     return NO_ERROR;
 }
 
 static csw_status_t ums_verify_csw(ums_t* msd, iotxn_t* csw_request) {
     ums_csw_t csw;
-    csw_request->ops->copyfrom(csw_request, &csw, sizeof(csw), 0);
+    iotxn_copyfrom(csw_request, &csw, sizeof(csw), 0);
 
     // check signature is "USBS"
     if (letoh32(csw.dCSWSignature) != CSW_SIGNATURE) {
@@ -279,7 +279,7 @@ static void ums_csw_complete(iotxn_t* csw_request, void* cookie) {
             ums_reset(msd);
         }
         list_add_tail(&msd->free_csw_reqs, &csw_request->node);
-        curr_txn->ops->complete(curr_txn, ERR_BAD_STATE, 0);
+        iotxn_complete(curr_txn, ERR_BAD_STATE, 0);
         return;
     }
     // if head of iotxn list is a read iotxn and CSW reports success, then set its buffer to that
@@ -292,17 +292,17 @@ static void ums_csw_complete(iotxn_t* csw_request, void* cookie) {
         }
         // data residue field is the 3rd uint32_t in csw buffer
         uint32_t temp;
-        csw_request->ops->copyfrom(csw_request, &temp, sizeof(temp), 2 * sizeof(temp));
+        iotxn_copyfrom(csw_request, &temp, sizeof(temp), 2 * sizeof(temp));
         uint32_t residue = letoh32(temp);
         uint32_t length = read_request->actual - residue;
         void* buffer;
-        curr_txn->ops->mmap(curr_txn, &buffer);
-        read_request->ops->copyfrom(read_request, buffer, length, 0);
+        iotxn_mmap(curr_txn, &buffer);
+        iotxn_copyfrom(read_request, buffer, length, 0);
         list_add_tail(&msd->free_read_reqs, &read_request->node);
     }
 
     list_add_tail(&msd->free_csw_reqs, &csw_request->node);
-    curr_txn->ops->complete(curr_txn, NO_ERROR, curr_txn->length);
+    iotxn_complete(curr_txn, NO_ERROR, curr_txn->length);
 }
 
 static void ums_write_complete(iotxn_t* txn, void* cookie) {
@@ -334,7 +334,7 @@ static mx_status_t ums_inquiry(ums_t* msd, uint8_t* out_data) {
     status = ums_read_csw(msd);
     iotxn_t* read_request = pop_completed_read(msd);
     if (status == NO_ERROR) {
-        read_request->ops->copyfrom(read_request, out_data, UMS_INQUIRY_TRANSFER_LENGTH, 0);
+        iotxn_copyfrom(read_request, out_data, UMS_INQUIRY_TRANSFER_LENGTH, 0);
     }
     list_add_tail(&msd->free_read_reqs, &read_request->node);
     return status;
@@ -379,7 +379,7 @@ static mx_status_t ums_request_sense(ums_t* msd, uint8_t* out_data) {
     status = ums_read_csw(msd);
     iotxn_t* read_request = pop_completed_read(msd);
     if (status == NO_ERROR) {
-        read_request->ops->copyfrom(read_request, out_data, UMS_REQUEST_SENSE_TRANSFER_LENGTH, 0);
+        iotxn_copyfrom(read_request, out_data, UMS_REQUEST_SENSE_TRANSFER_LENGTH, 0);
     }
     list_add_tail(&msd->free_read_reqs, &read_request->node);
     return status;
@@ -408,7 +408,7 @@ static mx_status_t ums_read_format_capacities(ums_t* msd, uint8_t* out_data) {
     status = ums_read_csw(msd);
     iotxn_t* read_request = pop_completed_read(msd);
     if (status == NO_ERROR) {
-        read_request->ops->copyfrom(read_request, out_data, UMS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH, 0);
+        iotxn_copyfrom(read_request, out_data, UMS_READ_FORMAT_CAPACITIES_TRANSFER_LENGTH, 0);
     }
     list_add_tail(&msd->free_read_reqs, &read_request->node);
     return status;
@@ -435,7 +435,7 @@ static mx_status_t ums_read_capacity10(ums_t* msd, scsi_read_capacity_10_t* out_
     status = ums_read_csw(msd);
     iotxn_t* read_request = pop_completed_read(msd);
     if (status == NO_ERROR) {
-        read_request->ops->copyfrom(read_request, out_data, sizeof(*out_data), 0);
+        iotxn_copyfrom(read_request, out_data, sizeof(*out_data), 0);
     }
     list_add_tail(&msd->free_read_reqs, &read_request->node);
     return status;
@@ -465,7 +465,7 @@ static mx_status_t ums_read_capacity16(ums_t* msd, scsi_read_capacity_16_t* out_
     status = ums_read_csw(msd);
     iotxn_t* read_request = pop_completed_read(msd);
     if (status == NO_ERROR) {
-        read_request->ops->copyfrom(read_request, out_data, sizeof(*out_data), 0);
+        iotxn_copyfrom(read_request, out_data, sizeof(*out_data), 0);
     }
     list_add_tail(&msd->free_read_reqs, &read_request->node);
     return status;
@@ -604,13 +604,13 @@ static mx_status_t ums_release(mx_device_t* device) {
     ums_t* msd = get_ums(device);
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&msd->free_csw_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&msd->free_read_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&msd->free_write_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
 
     free(msd);
@@ -625,13 +625,13 @@ static void ums_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // offset must be aligned to block size
     if (txn->offset % block_size) {
         DEBUG_PRINT(("UMS:offset on iotxn (%" PRIu64 ") not aligned to block size(%d)\n", txn->offset, block_size));
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         goto out;
     }
 
     if (txn->length % block_size) {
         DEBUG_PRINT(("UMS:length on iotxn (%" PRIu64 ") not aligned to block size(%d)\n", txn->length, block_size));
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         goto out;
     }
 
@@ -646,7 +646,7 @@ static void ums_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     if (status == NO_ERROR) {
         list_add_tail(&msd->queued_iotxns, &txn->node);
     } else {
-        txn->ops->complete(txn, status, 0);
+        iotxn_complete(txn, status, 0);
     }
 
 out:

@@ -132,7 +132,7 @@ static void sdmmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         xprintf("sdmmc: iotxn offset not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->offset, SDHC_BLOCK_SIZE);
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -140,7 +140,7 @@ static void sdmmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         xprintf("sdmmc: iotxn length not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->length, SDHC_BLOCK_SIZE);
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -167,13 +167,13 @@ static void sdmmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
             break;
         default:
             // Invalid opcode?
-            txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+            iotxn_complete(txn, ERR_INVALID_ARGS, 0);
             return;
     }
 
     if (iotxn_alloc(&emmc_txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txn->length) != NO_ERROR) {
         xprintf("sdmmc: error allocating emmc iotxn\n");
-        txn->ops->complete(txn, ERR_INTERNAL, 0);
+        iotxn_complete(txn, ERR_INTERNAL, 0);
         return;
     }
     emmc_txn->opcode = txn->opcode;
@@ -190,7 +190,7 @@ static void sdmmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         mx_status_t rc = sdmmc_do_command(parent, SDMMC_SEND_STATUS,
                                           sdmmc->rca << 16, emmc_txn);
         if (rc != NO_ERROR) {
-            txn->ops->complete(txn, rc, 0);
+            iotxn_complete(txn, rc, 0);
             goto out;
         }
 
@@ -208,7 +208,7 @@ static void sdmmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     if (attempt == max_attempts) {
         // Too many retries, fail.
-        txn->ops->complete(txn, ERR_BAD_STATE, 0);
+        iotxn_complete(txn, ERR_BAD_STATE, 0);
         goto out;
     }
 
@@ -221,27 +221,27 @@ static void sdmmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     void* buffer;
     size_t bytes_processed = 0;
     if (txn->opcode == IOTXN_OP_WRITE) {
-        txn->ops->mmap(txn, &buffer);
-        emmc_txn->ops->copyto(emmc_txn, buffer, txn->length, 0);
+        iotxn_mmap(txn, &buffer);
+        iotxn_copyto(emmc_txn, buffer, txn->length, 0);
         bytes_processed = txn->length;
     }
 
     mx_status_t rc = sdmmc_do_command(parent, cmd, blkid, emmc_txn);
     if (rc != NO_ERROR) {
-        txn->ops->complete(txn, rc, 0);
+        iotxn_complete(txn, rc, 0);
     }
 
     if (txn->opcode == IOTXN_OP_READ) {
         bytes_processed = MIN(emmc_txn->actual, txn->length);
-        emmc_txn->ops->mmap(emmc_txn, &buffer);
-        txn->ops->copyto(txn, buffer, bytes_processed, 0);
+        iotxn_mmap(emmc_txn, &buffer);
+        iotxn_copyto(txn, buffer, bytes_processed, 0);
     }
 
-    txn->ops->complete(txn, NO_ERROR, bytes_processed);
+    iotxn_complete(txn, NO_ERROR, bytes_processed);
 
 out:
     if (emmc_txn)
-        emmc_txn->ops->release(emmc_txn);
+        iotxn_release(emmc_txn);
 }
 
 // Block device protocol.
@@ -435,7 +435,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
     pdata->blocksize = 512;
 
     uint32_t scr;
-    setup_txn->ops->copyfrom(setup_txn, &scr, sizeof(scr), 0);
+    iotxn_copyfrom(setup_txn, &scr, sizeof(scr), 0);
     scr = be32toh(scr);
 
     // If this card supports 4 bit mode, then put it into 4 bit mode.
@@ -474,7 +474,7 @@ err:
         free(sdmmc);
 
     if (setup_txn)
-        setup_txn->ops->release(setup_txn);
+        iotxn_release(setup_txn);
 
     driver_unbind(drv, dev);
 

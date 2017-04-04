@@ -39,7 +39,7 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
 
     bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
     if (length > 0 && out) {
-        txn->ops->copyto(txn, data, length, 0);
+        iotxn_copyto(txn, data, length, 0);
     }
 
     completion_t completion = COMPLETION_INIT;
@@ -55,10 +55,10 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
         status = txn->actual;
 
         if (length > 0 && !out) {
-            txn->ops->copyfrom(txn, data, txn->actual, 0);
+            iotxn_copyfrom(txn, data, txn->actual, 0);
         }
     }
-    txn->ops->release(txn);
+    iotxn_release(txn);
     return status;
 }
 

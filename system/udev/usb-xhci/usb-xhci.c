@@ -170,7 +170,7 @@ void xhci_process_deferred_txns(xhci_t* xhci, xhci_endpoint_t* ep, bool closed) 
 
     if (closed) {
         while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
-            txn->ops->complete(txn, ERR_REMOTE_CLOSED, 0);
+            iotxn_complete(txn, ERR_REMOTE_CLOSED, 0);
         }
         return;
     }
@@ -180,7 +180,7 @@ void xhci_process_deferred_txns(xhci_t* xhci, xhci_endpoint_t* ep, bool closed) 
     while ((txn = list_remove_head_type(&list, iotxn_t, node)) != NULL) {
         mx_status_t status = xhci_queue_transfer(xhci, txn);
         if (status != NO_ERROR && status != ERR_BUFFER_TOO_SMALL) {
-            txn->ops->complete(txn, status, 0);
+            iotxn_complete(txn, status, 0);
         }
     }
 }
@@ -197,7 +197,7 @@ static void xhci_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
     }
 
     if (status != NO_ERROR && status != ERR_BUFFER_TOO_SMALL) {
-        txn->ops->complete(txn, status, 0);
+        iotxn_complete(txn, status, 0);
     }
 }
 

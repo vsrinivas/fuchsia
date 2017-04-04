@@ -13,7 +13,6 @@
 __BEGIN_CDECLS;
 
 typedef struct iotxn iotxn_t;
-typedef struct iotxn_ops iotxn_ops_t;
 
 // An IO Transaction (iotxn) is an object that records all the state
 // necessary to accomplish an io operation -- the general (len/off)
@@ -91,9 +90,6 @@ struct iotxn {
     // iotxn_physmap() and iotxn_physmap_sg()
     iotxn_sg_t* sg;
     uint64_t sg_length;  // number of entries in scatter list
-
-    // methods to operate on the iotxn
-    iotxn_ops_t* ops;
 
     // protocol specific extra data
     // (filled in by requestor, read by processor, type identified by 'protocol')
@@ -182,17 +178,5 @@ mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out);
 
 // free the iotxn -- should be called only by the entity that allocated it
 void iotxn_release(iotxn_t* txn);
-
-struct iotxn_ops {
-    void (*complete)(iotxn_t* txn, mx_status_t status, mx_off_t actual);
-    ssize_t (*copyfrom)(iotxn_t* txn, void* data, size_t length, size_t offset);
-    ssize_t (*copyto)(iotxn_t* txn, const void* data, size_t length, size_t offset);
-    mx_status_t (*physmap)(iotxn_t* txn, mx_paddr_t* addr);
-    mx_status_t (*physmap_sg)(iotxn_t* txn, iotxn_sg_t** sg_out, uint32_t* sg_len);
-    mx_status_t (*mmap)(iotxn_t* txn, void** data);
-    void (*cacheop)(iotxn_t* txn, uint32_t op, size_t offset, size_t length);
-    mx_status_t (*clone)(iotxn_t* txn, iotxn_t** out);
-    void (*release)(iotxn_t* txn);
-};
 
 __END_CDECLS;

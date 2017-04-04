@@ -225,7 +225,7 @@ static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
         }
 
         uint8_t* read_data = NULL;
-        request->ops->mmap(request, (void*)&read_data);
+        iotxn_mmap(request, (void*)&read_data);
 
         ptrdiff_t rxhdr_off = request->actual - sizeof(ax88179_rx_hdr_t);
         ax88179_rx_hdr_t* rxhdr = (ax88179_rx_hdr_t*)(read_data + rxhdr_off);
@@ -279,7 +279,7 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
     if (request->status == ERR_REMOTE_CLOSED) {
-        request->ops->release(request);
+        iotxn_release(request);
         return;
     }
 
@@ -295,7 +295,7 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
     if (request->status == ERR_REMOTE_CLOSED) {
-        request->ops->release(request);
+        iotxn_release(request);
         return;
     }
 
@@ -319,7 +319,7 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
     if (request->status == NO_ERROR && request->actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
 
-        request->ops->copyfrom(request, status, sizeof(status), 0);
+        iotxn_copyfrom(request, status, sizeof(status), 0);
         if (memcmp(eth->status, status, sizeof(eth->status))) {
 #if AX88179_DEBUG
             const uint8_t* b = status;
@@ -372,8 +372,8 @@ static void ax88179_send(mx_device_t* dev, uint32_t options, void* data, size_t 
         .tx_len = htole16(length),
     };
 
-    request->ops->copyto(request, &hdr, sizeof(hdr), 0);
-    request->ops->copyto(request, data, length, sizeof(hdr));
+    iotxn_copyto(request, &hdr, sizeof(hdr), 0);
+    iotxn_copyto(request, data, length, sizeof(hdr));
     request->length = length + sizeof(hdr);
     iotxn_queue(eth->usb_device, request);
 }
@@ -392,12 +392,12 @@ static void ax88179_unbind(mx_device_t* device) {
 static void ax88179_free(ax88179_t* eth) {
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
-    eth->interrupt_req->ops->release(eth->interrupt_req);
+    iotxn_release(eth->interrupt_req);
 
     free(eth->device);
     free(eth);

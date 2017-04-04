@@ -89,8 +89,8 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     // parse results
     int flags = 0;
     uint16_t devinfo[512 / sizeof(uint16_t)];
-    txn->ops->copyfrom(txn, devinfo, 512, 0);
-    txn->ops->release(txn);
+    iotxn_copyfrom(txn, devinfo, 512, 0);
+    iotxn_release(txn);
 
     char str[41]; // model id is 40 chars
     xprintf("%s: dev info\n", dev->device.name);
@@ -163,13 +163,13 @@ static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // offset must be aligned to block size
     if (txn->offset % device->sector_sz) {
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
 
     // length must be a multiple of block size
     if (txn->length % device->sector_sz) {
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -227,7 +227,7 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
         sata_iotxn_queue(dev, txn);
         completion_wait(&completion, MX_TIME_INFINITE);
         status = txn->status;
-        txn->ops->release(txn);
+        iotxn_release(txn);
         return status;
     }
     default:
@@ -263,7 +263,7 @@ static void sata_fifo_complete(iotxn_t* txn, void* cookie) {
     memcpy(&dev, txn->extra, sizeof(sata_device_t*));
     //xprintf("sata: fifo_complete dev %p cookie %p callbacks %p status %d actual 0x%" PRIx64 "\n", dev, cookie, dev->callbacks, txn->status, txn->actual);
     dev->callbacks->complete(cookie, txn->status);
-    txn->ops->release(txn);
+    iotxn_release(txn);
 }
 
 static void sata_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length,

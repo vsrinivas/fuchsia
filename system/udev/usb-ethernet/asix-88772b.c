@@ -136,7 +136,7 @@ static void queue_interrupt_requests_locked(ax88772b_t* eth) {
 static void ax88772b_recv(ax88772b_t* eth, iotxn_t* request) {
     size_t len = request->actual;
     uint8_t* pkt;
-    request->ops->mmap(request, (void**) &pkt);
+    iotxn_mmap(request, (void**) &pkt);
 
     while (len > ETH_HEADER_SIZE) {
         uint16_t length1 = (pkt[0] | (uint16_t)pkt[1] << 8) & 0x7FF;
@@ -172,7 +172,7 @@ static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
     if (request->status == ERR_REMOTE_CLOSED) {
-        request->ops->release(request);
+        iotxn_release(request);
         return;
     }
 
@@ -188,7 +188,7 @@ static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
     if (request->status == ERR_REMOTE_CLOSED) {
-        request->ops->release(request);
+        iotxn_release(request);
         return;
     }
 
@@ -201,7 +201,7 @@ static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
     if (request->status == ERR_REMOTE_CLOSED) {
-        request->ops->release(request);
+        iotxn_release(request);
         return;
     }
 
@@ -209,7 +209,7 @@ static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
     if (request->status == NO_ERROR && request->actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
 
-        request->ops->copyfrom(request, status, sizeof(status), 0);
+        iotxn_copyfrom(request, status, sizeof(status), 0);
         if (memcmp(eth->status, status, sizeof(eth->status))) {
 #if 0
             const uint8_t* b = status;
@@ -272,8 +272,8 @@ static mx_status_t _ax88772b_send(mx_device_t* device, const void* buffer, size_
     header[2] = lo ^ 0xFF;
     header[3] = hi ^ 0xFF;
 
-    request->ops->copyto(request, header, ETH_HEADER_SIZE, 0);
-    request->ops->copyto(request, buffer, length, ETH_HEADER_SIZE);
+    iotxn_copyto(request, header, ETH_HEADER_SIZE, 0);
+    iotxn_copyto(request, buffer, length, ETH_HEADER_SIZE);
     request->length = length + ETH_HEADER_SIZE;
     iotxn_queue(eth->usb_device, request);
 
@@ -296,13 +296,13 @@ static void ax88772b_unbind(mx_device_t* device) {
 static void ax88772b_free(ax88772b_t* eth) {
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&eth->free_intr_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
 
     free(eth->device);

@@ -315,7 +315,7 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     if (txn->offset % SDHC_BLOCK_SIZE) {
         xprintf("sdmmc: iotxn offset not aligned to block boundary, "
                "offset =%" PRIu64", block size = %d\n", txn->offset, SDHC_BLOCK_SIZE);
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -323,7 +323,7 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     if (txn->length % SDHC_BLOCK_SIZE) {
         xprintf("sdmmc: iotxn length not aligned to block boundary, "
                "offset =%" PRIu64", block size = %d\n", txn->length, SDHC_BLOCK_SIZE);
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -356,11 +356,11 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // This command has a data phase?
     if (cmd & SDMMC_RESP_DATA_PRESENT) {
         mx_paddr_t paddr;
-        txn->ops->physmap(txn, &paddr);
+        iotxn_physmap(txn, &paddr);
         paddr += BCM_SDRAM_BUS_ADDR_BASE;
         regs->arg2 = paddr;
 
-        txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, 0, blkcnt * blksiz);
+        iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, blkcnt * blksiz);
 
         if (cmd & SDMMC_CMD_MULTI_BLK)
             cmd |= SDMMC_CMD_AUTO12;
@@ -381,7 +381,7 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     regs->cmd = cmd;
 
     if ((st = emmc_await_irq(emmc)) != NO_ERROR) {
-        txn->ops->complete(txn, ERR_IO, 0);
+        iotxn_complete(txn, ERR_IO, 0);
         goto exit;
     }
 
@@ -423,7 +423,7 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         for (size_t blkid = 0; blkid < blkcnt; blkid++) {
             mx_status_t st;
             if ((st = emmc_await_irq(emmc)) != NO_ERROR) {
-                txn->ops->complete(txn, st, bytes_copied);
+                iotxn_complete(txn, st, bytes_copied);
                 goto exit;
             }
 
@@ -432,9 +432,9 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
                 const size_t offset = blkid * blksiz + byteid;
                 if (cmd & SDMMC_CMD_READ) {
                     wrd = regs->data;
-                    txn->ops->copyto(txn, &wrd, sizeof(wrd), offset);
+                    iotxn_copyto(txn, &wrd, sizeof(wrd), offset);
                 } else {
-                    txn->ops->copyfrom(txn, &wrd, sizeof(wrd), offset);
+                    iotxn_copyfrom(txn, &wrd, sizeof(wrd), offset);
                     regs->data = wrd;
                 }
                 bytes_copied += sizeof(wrd);
@@ -446,7 +446,7 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         }
     }
 
-    txn->ops->complete(txn, NO_ERROR, bytes_copied);
+    iotxn_complete(txn, NO_ERROR, bytes_copied);
 
 exit:
     mtx_unlock(&emmc->mtx);

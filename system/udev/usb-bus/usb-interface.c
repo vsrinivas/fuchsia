@@ -41,7 +41,7 @@ static int callback_thread(void* arg) {
         iotxn_t* txn;
         iotxn_t* temp_txn;
         list_for_every_entry_safe(&temp_list, txn, temp_txn, iotxn_t, node) {
-            txn->ops->complete(txn, txn->status, txn->actual);
+            iotxn_complete(txn, txn->status, txn->actual);
         }
     }
 
@@ -76,7 +76,7 @@ static void clone_complete(iotxn_t* clone, void* cookie) {
     mtx_unlock(&intf->callback_lock);
     completion_signal(&intf->callback_thread_completion);
 
-    clone->ops->release(clone);
+    iotxn_release(clone);
 }
 
 static void usb_interface_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
@@ -84,9 +84,9 @@ static void usb_interface_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
 
     // clone the txn and pass it down to the HCI driver
     iotxn_t* clone;
-    mx_status_t status = txn->ops->clone(txn, &clone);
+    mx_status_t status = iotxn_clone(txn, &clone);
     if (status != NO_ERROR) {
-        txn->ops->complete(txn, status, 0);
+        iotxn_complete(txn, status, 0);
         return;
     }
     usb_protocol_data_t* dest_data = iotxn_pdata(clone, usb_protocol_data_t);

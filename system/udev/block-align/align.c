@@ -42,8 +42,8 @@ static ssize_t align_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
 static void aligned_write_complete(iotxn_t* txn_aligned, void* cookie) {
     iotxn_t* txn = cookie;
     mx_status_t status = txn_aligned->status;
-    txn_aligned->ops->release(txn_aligned);
-    txn->ops->complete(txn, status, txn->length);
+    iotxn_release(txn_aligned);
+    iotxn_complete(txn, status, txn->length);
 }
 
 static void aligned_read_complete(iotxn_t* txn_aligned, void* cookie) {
@@ -55,16 +55,16 @@ static void aligned_read_complete(iotxn_t* txn_aligned, void* cookie) {
     } else if (txn->opcode == IOTXN_OP_READ) {
         // Copy the result from the aligned read into the original txn
         void* buffer;
-        txn_aligned->ops->mmap(txn_aligned, &buffer);
-        txn->ops->copyto(txn, buffer + (txn->offset - txn_aligned->offset),
+        iotxn_mmap(txn_aligned, &buffer);
+        iotxn_copyto(txn, buffer + (txn->offset - txn_aligned->offset),
                          txn->length, 0);
         actual = txn->length;
         goto done;
     } else {
         // Copy the result from the original txn into the aligned read
         void* buffer;
-        txn->ops->mmap(txn, &buffer);
-        txn_aligned->ops->copyto(txn_aligned, buffer, txn->length,
+        iotxn_mmap(txn, &buffer);
+        iotxn_copyto(txn_aligned, buffer, txn->length,
                                  txn->offset - txn_aligned->offset);
         txn_aligned->opcode = IOTXN_OP_WRITE;
         txn_aligned->complete_cb = aligned_write_complete;
@@ -72,8 +72,8 @@ static void aligned_read_complete(iotxn_t* txn_aligned, void* cookie) {
         return;
     }
 done:
-    txn_aligned->ops->release(txn_aligned);
-    txn->ops->complete(txn, status, actual);
+    iotxn_release(txn_aligned);
+    iotxn_complete(txn, status, actual);
 }
 
 static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
@@ -100,7 +100,7 @@ static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // Prevent overflows from mx_off_t to size_t conversions
     if ((length_aligned > SIZE_MAX) || (blksize > SIZE_MAX)) {
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -114,7 +114,7 @@ static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     iotxn_t* txn_aligned;
     mx_status_t status = iotxn_alloc(&txn_aligned, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, length_aligned);
     if (status != NO_ERROR) {
-        txn->ops->complete(txn, status, 0);
+        iotxn_complete(txn, status, 0);
         return;
     }
     txn_aligned->opcode = IOTXN_OP_READ;

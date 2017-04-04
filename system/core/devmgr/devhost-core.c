@@ -84,7 +84,7 @@ static ssize_t default_write(mx_device_t* dev, const void* buf, size_t count, mx
 static void default_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     ssize_t rc;
     void* buf;
-    txn->ops->mmap(txn, &buf);
+    iotxn_mmap(txn, &buf);
     if (txn->opcode == IOTXN_OP_READ) {
         rc = dev->ops->read(dev, buf, txn->length, txn->offset);
     } else if (txn->opcode == IOTXN_OP_WRITE) {
@@ -93,9 +93,9 @@ static void default_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         rc = ERR_NOT_SUPPORTED;
     }
     if (rc < 0) {
-        txn->ops->complete(txn, rc, 0);
+        iotxn_complete(txn, rc, 0);
     } else {
-        txn->ops->complete(txn, NO_ERROR, rc);
+        iotxn_complete(txn, NO_ERROR, rc);
     }
 }
 

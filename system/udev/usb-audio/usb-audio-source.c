@@ -64,7 +64,7 @@ static void usb_audio_source_read_complete(iotxn_t* txn, void* cookie) {
     usb_audio_source_t* source = (usb_audio_source_t*)cookie;
 
     if (txn->status == ERR_REMOTE_CLOSED) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
         return;
     }
 
@@ -101,10 +101,10 @@ static mx_status_t usb_audio_source_release(mx_device_t* device) {
 
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&source->free_read_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&source->completed_reads, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     free(source->sample_rates);
     free(source);
@@ -218,7 +218,7 @@ static ssize_t usb_audio_source_read(mx_device_t* dev, void* data, size_t length
     list_remove_head(&source->completed_reads);
     source->completed_read_count--;
 
-    txn->ops->copyfrom(txn, data, txn->actual, 0);
+    iotxn_copyfrom(txn, data, txn->actual, 0);
     if (source->channels == 1) {
         // expand mono to stereo working backwards through the buffer
         uint16_t* start = (uint16_t *)data;
@@ -236,7 +236,7 @@ static ssize_t usb_audio_source_read(mx_device_t* dev, void* data, size_t length
 
     // requeue the transaction
     if (source->dead) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     } else {
         iotxn_queue(source->usb_device, txn);
     }

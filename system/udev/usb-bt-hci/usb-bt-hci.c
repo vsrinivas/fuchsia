@@ -127,7 +127,7 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
 
     if (txn->status == NO_ERROR) {
         uint8_t* buffer;
-        txn->ops->mmap(txn, (void **)&buffer);
+        iotxn_mmap(txn, (void **)&buffer);
         size_t length = txn->actual;
         size_t packet_size = buffer[1] + 2;
 
@@ -191,7 +191,7 @@ static void hci_acl_read_complete(iotxn_t* txn, void* cookie) {
 
     if (txn->status == NO_ERROR) {
         void* buffer;
-        txn->ops->mmap(txn, &buffer);
+        iotxn_mmap(txn, &buffer);
 
         // The channel handle could be invalid here (e.g. if no process called
         // the ioctl or they closed their endpoint). Instead of explicitly
@@ -222,7 +222,7 @@ static void hci_acl_write_complete(iotxn_t* txn, void* cookie) {
 
     if (hci->snoop_channel) {
         void* buffer;
-        txn->ops->mmap(txn, &buffer);
+        iotxn_mmap(txn, &buffer);
         snoop_channel_write_locked(
             hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_SENT, buffer, txn->actual);
     }
@@ -321,7 +321,7 @@ static bool hci_handle_acl_read_events(hci_t* hci, mx_wait_item_t* acl_item) {
         if (!node) return true;
 
         iotxn_t* txn = containerof(node, iotxn_t, node);
-        txn->ops->copyto(txn, buf, length, 0);
+        iotxn_copyto(txn, buf, length, 0);
         txn->length = length;
         iotxn_queue(hci->usb_device, txn);
     }
@@ -495,13 +495,13 @@ static mx_status_t hci_release(mx_device_t* device) {
 
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&hci->free_event_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&hci->free_acl_read_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     while ((txn = list_remove_head_type(&hci->free_acl_write_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
 
     if (hci->cmd_channel != MX_HANDLE_INVALID)

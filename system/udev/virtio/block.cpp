@@ -60,7 +60,7 @@ void BlockDevice::virtio_block_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         bd->QueueReadWriteTxn(txn);
         break;
     default:
-        txn->ops->complete(txn, -1, 0);
+        iotxn_complete(txn, -1, 0);
         break;
     }
 }
@@ -217,7 +217,7 @@ void BlockDevice::IrqRingUpdate() {
             if (txn->context == head_desc) {
                 LTRACEF("completes txn %p\n", txn);
                 list_delete(&txn->node);
-                txn->ops->complete(txn, NO_ERROR, txn->length);
+                iotxn_complete(txn, NO_ERROR, txn->length);
                 break;
             }
         }
@@ -241,7 +241,7 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     // offset must be aligned to block size
     if (txn->offset % config_.blk_size) {
         TRACEF("offset %#" PRIx64 " is not aligned to sector size %u!\n", txn->offset, config_.blk_size);
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -279,7 +279,7 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     desc = vring_.DescFromIndex(desc->next);
 
     mx_paddr_t pa;
-    txn->ops->physmap(txn, &pa);
+    iotxn_physmap(txn, &pa);
 
     desc->addr = (uint64_t)pa;
     desc->len = (uint32_t)txn->length;

@@ -81,7 +81,7 @@ static void update_signals(usb_audio_sink_t* sink) {
 
 static void usb_audio_sink_write_complete(iotxn_t* txn, void* cookie) {
     if (txn->status == ERR_REMOTE_CLOSED) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
         return;
     }
 
@@ -107,7 +107,7 @@ static mx_status_t usb_audio_sink_release(mx_device_t* device) {
 
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&sink->free_write_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     free(sink->sample_rates);
     free(sink);
@@ -254,7 +254,7 @@ static ssize_t usb_audio_sink_write(mx_device_t* dev, const void* data, size_t l
         uint64_t packet_bytes = current_audio_frames * sink->audio_frame_size;
         uint64_t copy = packet_bytes - txn_offset;
         if (copy <= length) {
-            txn->ops->copyto(txn, src, copy, txn_offset);
+            iotxn_copyto(txn, src, copy, txn_offset);
             txn->length = txn_offset + copy;
             src += copy;
             length -= copy;
@@ -267,7 +267,7 @@ static ssize_t usb_audio_sink_write(mx_device_t* dev, const void* data, size_t l
         } else {
             // not enough data remaining - save for next time
             sink->cur_txn = txn;
-            txn->ops->copyto(txn, src, length, 0);
+            iotxn_copyto(txn, src, length, 0);
             txn->length = length;
             length = 0;
         }

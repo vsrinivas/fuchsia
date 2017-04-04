@@ -124,7 +124,7 @@ static void gpt_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     uint64_t last = device->gpt_entry.last_lba;
     if (first + off_lba > last) {
         xprintf("%s: offset 0x%" PRIx64 " is past the end of partition!\n", dev->name, txn->offset);
-        txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
     // constrain if too many bytes are requested
@@ -236,10 +236,10 @@ static int gpt_bind_thread(void* arg) {
 
     // read the header
     gpt_t header;
-    txn->ops->copyfrom(txn, &header, sizeof(gpt_t), 0);
+    iotxn_copyfrom(txn, &header, sizeof(gpt_t), 0);
     if (header.magic != GPT_MAGIC) {
         xprintf("gpt: bad header magic\n");
-        txn->ops->release(txn);
+        iotxn_release(txn);
         goto unbind;
     }
 
@@ -269,7 +269,7 @@ static int gpt_bind_thread(void* arg) {
         gptpart_device_t* device = calloc(1, sizeof(gptpart_device_t));
         if (!device) {
             xprintf("gpt: out of memory!\n");
-            txn->ops->release(txn);
+            iotxn_release(txn);
             goto unbind;
         }
 
@@ -278,7 +278,7 @@ static int gpt_bind_thread(void* arg) {
         device_init(&device->device, drv, name, &gpt_proto);
 
         device->blksize = blksize;
-        txn->ops->copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * partitions);
+        iotxn_copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * partitions);
         if (device->gpt_entry.type[0] == 0) {
             free(device);
             continue;
@@ -301,7 +301,7 @@ static int gpt_bind_thread(void* arg) {
         }
     }
 
-    txn->ops->release(txn);
+    iotxn_release(txn);
 
     return NO_ERROR;
 unbind:

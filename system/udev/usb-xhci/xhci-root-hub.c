@@ -322,14 +322,14 @@ static mx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
         uint8_t desc_type = value >> 8;
         if (desc_type == USB_DT_DEVICE && index == 0) {
             if (length > sizeof(usb_device_descriptor_t)) length = sizeof(usb_device_descriptor_t);
-            txn->ops->copyto(txn, rh->device_desc, length, 0);
-            txn->ops->complete(txn, NO_ERROR, length);
+            iotxn_copyto(txn, rh->device_desc, length, 0);
+            iotxn_complete(txn, NO_ERROR, length);
             return NO_ERROR;
         } else if (desc_type == USB_DT_CONFIG && index == 0) {
             uint16_t desc_length = le16toh(rh->config_desc->wTotalLength);
             if (length > desc_length) length = desc_length;
-            txn->ops->copyto(txn, rh->config_desc, length, 0);
-            txn->ops->complete(txn, NO_ERROR, length);
+            iotxn_copyto(txn, rh->config_desc, length, 0);
+            iotxn_complete(txn, NO_ERROR, length);
             return NO_ERROR;
         } else if (value >> 8 == USB_DT_STRING) {
             uint8_t string_index = value & 0xFF;
@@ -337,8 +337,8 @@ static mx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
                 const uint8_t* string = xhci_rh_string_table[string_index];
                 if (length > string[0]) length = string[0];
 
-                txn->ops->copyto(txn, string, length, 0);
-                txn->ops->complete(txn, NO_ERROR, length);
+                iotxn_copyto(txn, string, length, 0);
+                iotxn_complete(txn, NO_ERROR, length);
                 return NO_ERROR;
             }
         }
@@ -355,14 +355,14 @@ static mx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
             // TODO - fill in other stuff. But usb-hub driver doesn't need anything else at this point.
 
             if (length > sizeof(desc)) length = sizeof(desc);
-            txn->ops->copyto(txn, &desc, length, 0);
-            txn->ops->complete(txn, NO_ERROR, length);
+            iotxn_copyto(txn, &desc, length, 0);
+            iotxn_complete(txn, NO_ERROR, length);
             return NO_ERROR;
         }
     }
 
     printf("xhci_rh_get_descriptor unsupported value: %d index: %d\n", value, index);
-    txn->ops->complete(txn, ERR_NOT_SUPPORTED, 0);
+    iotxn_complete(txn, ERR_NOT_SUPPORTED, 0);
     return ERR_NOT_SUPPORTED;
 }
 
@@ -381,7 +381,7 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
     } else if ((request_type & ~USB_DIR_MASK) == (USB_TYPE_CLASS | USB_RECIP_PORT)) {
         // index is 1-based port number
         if (index < 1 || index > rh->num_ports) {
-            txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+            iotxn_complete(txn, ERR_INVALID_ARGS, 0);
             return NO_ERROR;
         }
         int rh_port_index = rh->port_map[index - 1];
@@ -390,11 +390,11 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
         if (request == USB_REQ_SET_FEATURE) {
             if (value == USB_FEATURE_PORT_POWER) {
                 // nothing to do - root hub ports are already powered
-                txn->ops->complete(txn, NO_ERROR, 0);
+                iotxn_complete(txn, NO_ERROR, 0);
                 return NO_ERROR;
             } else if (value == USB_FEATURE_PORT_RESET) {
                 xhci_reset_port(xhci, rh, rh_port_index);
-                txn->ops->complete(txn, NO_ERROR, 0);
+                iotxn_complete(txn, NO_ERROR, 0);
                 return NO_ERROR;
             }
         } else if (request == USB_REQ_CLEAR_FEATURE) {
@@ -418,28 +418,28 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
                     break;
             }
 
-            txn->ops->complete(txn, NO_ERROR, 0);
+            iotxn_complete(txn, NO_ERROR, 0);
             return NO_ERROR;
         } else if ((request_type & USB_DIR_MASK) == USB_DIR_IN &&
                    request == USB_REQ_GET_STATUS && value == 0) {
             usb_port_status_t* status = &rh->port_status[port_index];
             size_t length = txn->length;
             if (length > sizeof(*status)) length = sizeof(*status);
-            txn->ops->copyto(txn, status, length, 0);
-            txn->ops->complete(txn, NO_ERROR, length);
+            iotxn_copyto(txn, status, length, 0);
+            iotxn_complete(txn, NO_ERROR, length);
             return NO_ERROR;
         }
     } else if (request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
                request == USB_REQ_SET_CONFIGURATION && txn->length == 0) {
         // nothing to do here
-        txn->ops->complete(txn, NO_ERROR, 0);
+        iotxn_complete(txn, NO_ERROR, 0);
         return NO_ERROR;
     }
 
     printf("unsupported root hub control request type: 0x%02X req: %d value: %d index: %d\n",
            request_type, request, value, index);
 
-    txn->ops->complete(txn, ERR_NOT_SUPPORTED, 0);
+    iotxn_complete(txn, ERR_NOT_SUPPORTED, 0);
     return ERR_NOT_SUPPORTED;
 }
 
@@ -467,8 +467,8 @@ static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, iotxn_t* txn) {
     if (have_status) {
         size_t length = txn->length;
         if (length > sizeof(status_bits)) length = sizeof(status_bits);
-        txn->ops->copyto(txn, status_bits, length, 0);
-        txn->ops->complete(txn, NO_ERROR, length);
+        iotxn_copyto(txn, status_bits, length, 0);
+        iotxn_complete(txn, NO_ERROR, length);
     } else {
         // queue transaction until we have something to report
         list_add_tail(&rh->pending_intr_reqs, &txn->node);
@@ -489,7 +489,7 @@ mx_status_t xhci_rh_iotxn_queue(xhci_t* xhci, iotxn_t* txn, int rh_index) {
         return NO_ERROR;
     }
 
-    txn->ops->complete(txn, ERR_NOT_SUPPORTED, 0);
+    iotxn_complete(txn, ERR_NOT_SUPPORTED, 0);
     return ERR_NOT_SUPPORTED;
 }
 

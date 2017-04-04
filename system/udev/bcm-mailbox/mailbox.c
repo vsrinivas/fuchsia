@@ -173,13 +173,13 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
 
         mx_paddr_t pa;
 
-        txn->ops->physmap(txn, &pa);
+        iotxn_physmap(txn, &pa);
 
         // calculate offset in buffer that will provide 16 byte alignment (physical)
         uint32_t offset = (16 - (pa % 16)) % 16;
 
-        txn->ops->copyto(txn, fb_desc, sizeof(bcm_fb_desc_t), offset);
-        txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, 0, txnsize);
+        iotxn_copyto(txn, fb_desc, sizeof(bcm_fb_desc_t), offset);
+        iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, txnsize);
 
         ret = mailbox_write(ch_framebuffer, (pa + offset + BCM_SDRAM_BUS_ADDR_BASE));
         if (ret != NO_ERROR)
@@ -190,8 +190,8 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
         if (ret != NO_ERROR)
             return ret;
 
-        txn->ops->cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, txnsize);
-        txn->ops->copyfrom(txn, &bcm_vc_framebuffer, sizeof(bcm_fb_desc_t), offset);
+        iotxn_cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, txnsize);
+        iotxn_copyfrom(txn, &bcm_vc_framebuffer, sizeof(bcm_fb_desc_t), offset);
 
         uintptr_t page_base;
 
@@ -203,7 +203,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
         vc_framebuffer = (uint8_t*)page_base;
         memset(vc_framebuffer, 0x00, bcm_vc_framebuffer.fb_size);
 
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     memcpy(fb_desc, &bcm_vc_framebuffer, sizeof(bcm_fb_desc_t));
     return sizeof(bcm_fb_desc_t);
@@ -261,18 +261,18 @@ static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
 
     mx_paddr_t pa;
 
-    txn->ops->physmap(txn, &pa);
+    iotxn_physmap(txn, &pa);
 
     uint32_t offset = 0;
 
-    txn->ops->copyto(txn, &header, sizeof(header), offset);
+    iotxn_copyto(txn, &header, sizeof(header), offset);
     offset += sizeof(header);
 
-    txn->ops->copyto(txn, buf, len, offset);
+    iotxn_copyto(txn, buf, len, offset);
     offset += len;
 
-    txn->ops->copyto(txn, &endtag, sizeof(endtag), offset);
-    txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, 0, header.buff_size);
+    iotxn_copyto(txn, &endtag, sizeof(endtag), offset);
+    iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, header.buff_size);
 
     ret = mailbox_write(ch_propertytags_tovc, (pa + BCM_SDRAM_BUS_ADDR_BASE));
     if (ret != NO_ERROR) {
@@ -285,11 +285,11 @@ static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
         goto cleanup_and_exit;
     }
 
-    txn->ops->cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, header.buff_size);
-    txn->ops->copyfrom(txn, buf, len, sizeof(header));
+    iotxn_cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, header.buff_size);
+    iotxn_copyfrom(txn, buf, len, sizeof(header));
 
 cleanup_and_exit:
-    txn->ops->release(txn);
+    iotxn_release(txn);
     return ret;
 }
 

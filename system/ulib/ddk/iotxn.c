@@ -351,18 +351,6 @@ void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length) {
     mx_vmo_op_range(txn->vmo_handle, op, txn->vmo_offset + offset, length, NULL, 0);
 }
 
-static iotxn_ops_t ops = {
-    .complete = iotxn_complete,
-    .copyfrom = iotxn_copyfrom,
-    .copyto = iotxn_copyto,
-    .physmap = iotxn_physmap,
-    .physmap_sg = iotxn_physmap_sg,
-    .mmap = iotxn_mmap,
-    .clone = iotxn_clone,
-    .release = iotxn_release,
-    .cacheop = iotxn_cacheop,
-};
-
 mx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size) {
     //xprintf("iotxn_alloc: alloc_flags 0x%x data_size 0x%" PRIx64 "\n", alloc_flags, data_size);
 
@@ -404,7 +392,6 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size)
 out:
     MX_DEBUG_ASSERT(txn != NULL);
     MX_DEBUG_ASSERT(!(txn->pflags & IOTXN_PFLAG_FREE));
-    txn->ops = &ops;
     *out = txn;
     return NO_ERROR;
 }

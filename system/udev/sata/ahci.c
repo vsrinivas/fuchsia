@@ -239,7 +239,7 @@ static void ahci_port_complete_txn(ahci_device_t* dev, ahci_port_t* port, mx_sta
             }
             mtx_unlock(&port->lock);
 
-            txn->ops->complete(txn, status, txn->length);
+            iotxn_complete(txn, status, txn->length);
         }
     }
     // hit the worker thread to do the next txn
@@ -258,16 +258,16 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
             port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
         }
-        txn->ops->complete(txn, NO_ERROR, txn->length);
+        iotxn_complete(txn, NO_ERROR, txn->length);
         completion_signal(&dev->worker_completion);
         return NO_ERROR;
     }
 
     iotxn_sg_t* sg;
     uint32_t sgl;
-    mx_status_t status = txn->ops->physmap_sg(txn, &sg, &sgl);
+    mx_status_t status = iotxn_physmap_sg(txn, &sg, &sgl);
     if (status != NO_ERROR) {
-        txn->ops->complete(txn, NO_ERROR, txn->length);
+        iotxn_complete(txn, NO_ERROR, txn->length);
         completion_signal(&dev->worker_completion);
     }
 
@@ -551,7 +551,7 @@ static int ahci_watchdog_thread(void* arg) {
                         port->running &= ~(1 << j);
                         port->commands[j] = NULL;
                         mtx_unlock(&port->lock);
-                        txn->ops->complete(txn, ERR_TIMED_OUT, 0);
+                        iotxn_complete(txn, ERR_TIMED_OUT, 0);
                         mtx_lock(&port->lock);
                     }
                 }

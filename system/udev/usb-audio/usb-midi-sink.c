@@ -49,7 +49,7 @@ static void update_signals(usb_midi_sink_t* sink) {
 
 static void usb_midi_sink_write_complete(iotxn_t* txn, void* cookie) {
     if (txn->status == ERR_REMOTE_CLOSED) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
         return;
     }
 
@@ -75,7 +75,7 @@ static mx_status_t usb_midi_sink_release(mx_device_t* device) {
 
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&sink->free_write_reqs, iotxn_t, node)) != NULL) {
-        txn->ops->release(txn);
+        iotxn_release(txn);
     }
     free(sink);
     return NO_ERROR;
@@ -145,7 +145,7 @@ static ssize_t usb_midi_sink_write(mx_device_t* dev, const void* data, size_t le
         buffer[2] = (message_length > 1 ? src[1] : 0);
         buffer[3] = (message_length > 2 ? src[2] : 0);
 
-        txn->ops->copyto(txn, buffer, 4, 0);
+        iotxn_copyto(txn, buffer, 4, 0);
         txn->length = 4;
         iotxn_queue(sink->usb_device, txn);
 

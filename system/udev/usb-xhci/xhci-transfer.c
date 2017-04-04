@@ -96,7 +96,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     size_t length = txn->length;
     mx_paddr_t phys_addr = 0;
     if (length > 0) {
-        txn->ops->physmap(txn, &phys_addr);
+        iotxn_physmap(txn, &phys_addr);
     }
     uint64_t frame = proto_data->frame;
     uint8_t direction;
@@ -309,7 +309,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
 
     bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
     if (length > 0 && out) {
-        txn->ops->copyto(txn, data, length, 0);
+        iotxn_copyto(txn, data, length, 0);
     }
 
     completion_t completion = COMPLETION_INIT;
@@ -325,10 +325,10 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
         status = txn->actual;
 
         if (length > 0 && !out) {
-            txn->ops->copyfrom(txn, data, txn->actual, 0);
+            iotxn_copyfrom(txn, data, txn->actual, 0);
         }
     }
-    txn->ops->release(txn);
+    iotxn_release(txn);
     xprintf("xhci_control_request returning %d\n", status);
     return status;
 }
@@ -440,9 +440,9 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
     mtx_unlock(&ep->lock);
 
     if (result < 0) {
-        txn->ops->complete(txn, result, 0);
+        iotxn_complete(txn, result, 0);
     } else {
-        txn->ops->complete(txn, NO_ERROR, result);
+        iotxn_complete(txn, NO_ERROR, result);
     }
 
     if (process_deferred_txns) {

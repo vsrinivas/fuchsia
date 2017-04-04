@@ -147,23 +147,23 @@ static void ramdisk_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     mx_status_t status = constrain_args(ramdev, &txn->offset, &txn->length);
     if (status != NO_ERROR) {
-        txn->ops->complete(txn, status, 0);
+        iotxn_complete(txn, status, 0);
         return;
     }
 
     switch (txn->opcode) {
         case IOTXN_OP_READ: {
-            txn->ops->copyto(txn, (void*) ramdev->mapped_addr + txn->offset, txn->length, 0);
-            txn->ops->complete(txn, NO_ERROR, txn->length);
+            iotxn_copyto(txn, (void*) ramdev->mapped_addr + txn->offset, txn->length, 0);
+            iotxn_complete(txn, NO_ERROR, txn->length);
             return;
         }
         case IOTXN_OP_WRITE: {
-            txn->ops->copyfrom(txn, (void*) ramdev->mapped_addr + txn->offset, txn->length, 0);
-            txn->ops->complete(txn, NO_ERROR, txn->length);
+            iotxn_copyfrom(txn, (void*) ramdev->mapped_addr + txn->offset, txn->length, 0);
+            iotxn_complete(txn, NO_ERROR, txn->length);
             return;
         }
         default: {
-            txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
+            iotxn_complete(txn, ERR_INVALID_ARGS, 0);
             return;
         }
     }
