@@ -23,8 +23,11 @@ module_context->GetComponentContext(
     component_context_.NewRequest());
 ledger::LedgerPtr ledger;
 component_context_->GetLedger(
-    ledger.NewRequest(), [] (auto status) {
-  // Check for errors.
+    ledger.NewRequest(),
+    [] (ledger::Status status) {
+  if (status != ledger::Status::OK) {
+    // Handle errors.
+  }
 });
 ledger.set_connection_error_handler([] {
   // Handle connection errors.
@@ -76,8 +79,11 @@ which retrieves the page with id `[0, 0 ... , 0]`.
 
 ``` cpp
 ledger::PagePtr page;
-ledger->GetRootPage(page.NewRequest(), [] (auto status) {
-  // Check for errors.
+ledger->GetRootPage(page.NewRequest(),
+    [] (ledger::Status status) {
+  if (status != ledger::Status::OK) {
+    // Handle errors.
+  }
 });
 page.set_connection_error_handler([] {
   // Handle connection errors.
@@ -129,15 +135,15 @@ There are two ways to write a value into page:
 
 ### Reading
 
-In order to ensure that reads across multiple entries are consistent, read
-operations are exposed through a snapshot API. Snapshot of the page can be
-obtained:
+In order to ensure that reads across multiple entries (key-value pairs) are
+consistent, read operations are exposed through a snapshot API. Snapshot of the
+page can be obtained:
 
  - directly from the page interface (`GetSnapshot()`), yielding a snapshot
    corresponding to the state of the page tracked by this page connection
- - through the watcher interface, which when delivering each notification allows
-   to also request the snapshot corresponding to the state associated with the
-   notification
+ - through the [watcher](#Watch) interface, which when delivering each
+   notification allows to also request the snapshot corresponding to the state
+   associated with the notification
 
 Once the snapshot is obtained, data can be read using the `GetEntries()` method
 which supports prefix queries on keys, or the `Get()` method which retrieves the
@@ -153,22 +159,7 @@ eagerly, but the value itself might be missing.
 
 To ensure predictable performance of read operations, `Get()` and `GetEntries`
 methods never retrieve the missing lazy values from the network - these must be
-explictly requested through a dedicated `Fetch()` method.
-
-### Transactions
-
-Transactions allow the application to make a set of changes that are guaranteed
-to be synced and surfaced atomically. A client application would typically:
-
- - start a transaction
- - take a snapshot of the page state and read the data
- - make changes through the Page interface
- - commit the transaction
-
-Once a transaction is started, the state of the page tracked on the page
-connection is pinned and won't advance until the transaction is either committed
-or aborted - this ensures that the transaction writes affect precisely the state
-visible on the page snapshot.
+explicitly requested through a dedicated `Fetch()` method.
 
 ### Watch
 
@@ -177,12 +168,35 @@ state tracked by the local page connection. As typically we are interested in
 retrieving the initial base state from the moment of registering the watcher,
 the watchers are registered using the `GetSnapshot()` method.
 
-*** note
-As starting the transaction pins the state of the page, the client app won't
-receive any watch notifications when a transaction is in progress.
-***
-
 [C++ watcher example], [Dart watcher example].
+
+### Transactions
+
+Transactions allow the application to make a set of changes that are guaranteed
+to be synced and surfaced atomically. A client application would typically:
+
+ - start a transaction
+ - get a snapshot of the page state through `GetSnapshot()` or a watcher (see
+   below), and read the data
+ - make changes through the Page interface
+ - commit the transaction
+
+Once a transaction is started, the state of the page tracked on the page
+connection is pinned and won't advance until the transaction is either committed
+or aborted - this ensures that the transaction writes affect precisely the state
+visible on the page snapshot.
+
+There can be only one transaction in progress per `Page` connection, but
+clients can create multiple connections to the same page. Each of these
+connections can run a transaction independently from the others.
+
+*** note
+*Watch and transactions*: As starting the transaction pins the state of the
+page, the client app won't receive any watch notifications when a transaction
+is in progress. Conversely, on a watched page, a `StartTransaction()` call will
+only return when the app finishes processing all pending change notification.
+This ensures the app knows the base state of the page when doing a transaction.
+***
 
 ## Conflict resolution
 
@@ -206,11 +220,28 @@ The client might opt for a different merge policy by implementing the
 Available conflict resolution policies:
 
  - last-one-wins (the default): `LAST_ONE_WINS`
+
+   For each entry modified on both sides, `LAST_ONE_WINS` takes the entry from
+   the most recent commit; for each entry modified only one one side (e.g.: a
+   new key, or an existing key with a new value), the modification is carried
+   over.
  - custom, invoked only for conflicting (modified on both branches being
    merged) entries: `AUTOMATIC_WITH_FALLBACK`
+
+   If all entries are either unchanged, or modified only on one side,
+   `AUTOMATIC_WITH_FALLBACK` applies the change automatically. If any entry is
+   modified on both sides, the app gets a callback with all changed entries
+   from both sides (not just the conflicting ones).
  - custom, invoked for all merges (even if the entries modified by each branch
    are disjoint): `CUSTOM`
  - disable merges: `NONE`
+
+## Synchronization
+
+Synchronization is configured at the Ledger level as described in the [user
+guide](user_guide.md). Once configured, the Ledger will upload local changes,
+and download changes made by other devices. These operations will happen
+automatically in the background, and clients do not have to manage them.
 
 ## See also
 
