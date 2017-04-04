@@ -18,7 +18,7 @@ void ContextEngineImpl::RegisterPublisher(
     const fidl::String& url,
     fidl::InterfaceRequest<ContextPublisher> request) {
   publisher_bindings_.AddBinding(
-      std::make_unique<ContextPublisherImpl>(new ComponentNode(url), &repo_),
+      std::make_unique<ContextPublisherImpl>(url, &repo_),
       std::move(request));
 }
 

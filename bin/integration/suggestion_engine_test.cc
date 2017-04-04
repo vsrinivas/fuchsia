@@ -24,15 +24,13 @@ namespace {
 class NPublisher {
  public:
   NPublisher(maxwell::ContextEngine* context_engine) {
-    maxwell::ContextPublisherPtr out;
-    context_engine->RegisterPublisher("NPublisher", out.NewRequest());
-    out->Publish("n", pub_.NewRequest());
+    context_engine->RegisterPublisher("NPublisher", pub_.NewRequest());
   }
 
-  void Publish(int n) { pub_->Update(std::to_string(n)); }
+  void Publish(int n) { pub_->Publish("n", std::to_string(n)); }
 
  private:
-  maxwell::ContextPublisherLinkPtr pub_;
+  maxwell::ContextPublisherPtr pub_;
 };
 
 maxwell::ProposalPtr CreateProposal(const std::string& id,

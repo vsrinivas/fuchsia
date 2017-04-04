@@ -25,7 +25,7 @@ class FocusAcquirerApp : public modular::VisibleStoriesWatcher {
   FocusAcquirerApp()
       : app_ctx_(app::ApplicationContext::CreateFromStartupInfo()),
         visible_stories_watcher_(this) {
-    auto cx =
+    publisher_ =
         app_ctx_->ConnectToEnvironmentService<maxwell::ContextPublisher>();
 
     auto visible_stories_provider_handle =
@@ -37,7 +37,6 @@ class FocusAcquirerApp : public modular::VisibleStoriesWatcher {
     visible_stories_provider_handle->Watch(
         std::move(visible_stories_watcher_handle));
 
-    cx->Publish(FocusAcquirer::kLabel, out_.NewRequest());
     PublishFocusState();
   }
 
@@ -57,13 +56,13 @@ class FocusAcquirerApp : public modular::VisibleStoriesWatcher {
   void PublishFocusState() {
     int modular_state = focused_story_ids_.size() ? 1 : 0;
 
-    out_->Update(std::to_string(modular_state));
+    publisher_->Publish(FocusAcquirer::kLabel, std::to_string(modular_state));
     FTL_VLOG(1) << ": " << modular_state;
   }
 
   std::unique_ptr<app::ApplicationContext> app_ctx_;
 
-  maxwell::ContextPublisherLinkPtr out_;
+  maxwell::ContextPublisherPtr publisher_;
   std::vector<std::string> focused_story_ids_;
   fidl::Binding<modular::VisibleStoriesWatcher> visible_stories_watcher_;
 };

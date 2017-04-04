@@ -24,8 +24,6 @@ class CarmenSandiegoApp : public maxwell::ContextSubscriberLink {
             app_context_
                 ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
         in_(this) {
-    publisher_->Publish("/location/region", out_.NewRequest());
-
     fidl::InterfaceHandle<ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
     subscriber_->Subscribe(maxwell::acquirers::GpsAcquirer::kLabel,
@@ -35,9 +33,6 @@ class CarmenSandiegoApp : public maxwell::ContextSubscriberLink {
  private:
   // |ContextSubscriberLink|
   void OnUpdate(maxwell::ContextUpdatePtr update) override {
-    FTL_VLOG(1) << "OnUpdate from " << update->source << ": "
-                << update->json_value;
-
     std::string hlloc = "somewhere";
 
     rapidjson::Document d;
@@ -60,7 +55,7 @@ class CarmenSandiegoApp : public maxwell::ContextSubscriberLink {
     std::ostringstream json;
     json << "\"" << hlloc << "\"";
 
-    out_->Update(json.str());
+    publisher_->Publish("/location/region", json.str());
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
@@ -68,7 +63,6 @@ class CarmenSandiegoApp : public maxwell::ContextSubscriberLink {
   maxwell::ContextPublisherPtr publisher_;
   maxwell::ContextSubscriberPtr subscriber_;
   fidl::Binding<maxwell::ContextSubscriberLink> in_;
-  maxwell::ContextPublisherLinkPtr out_;
 };
 
 }  // namespace

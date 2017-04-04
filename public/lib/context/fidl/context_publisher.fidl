@@ -4,25 +4,18 @@
 
 module maxwell;
 
-// Client that should be requested by context publishers. All context written by
-// this client is attributed to the bound component.
-//
-// Context may be pushed at any time, but Context Service will notify the
-// publisher as to whether any subscribers exist. The publisher is free to not
-// publish until subscribers exist, and to delete context once the last
-// subscriber is removed.
 [ServiceName="maxwell.ContextPublisher"]
 interface ContextPublisher {
-  // Registers a potential context publisher and attains a publisher link for
-  // it.
-  Publish(string label, ContextPublisherLink& link);
-};
-
-// An attributed link that allows a context publisher to write to a context
-// label with a bound schema.
-interface ContextPublisherLink {
-  // Writes attributed context data to the bound label. To remove the context,
-  // write null. Invalid JSON, including the empty string, should not be passed.
-  // TODO(rosswang): Validate JSON or expand formats.
-  Update(string? json_value);
+  // Writes the provided |json_data| to the named |topic|. A null |json_data|
+  // removes any value that was previously published.
+  //
+  // Depending on publishing policies bound to a specific service instance, the
+  // |topic| may not be directly readable from the Context Service. For
+  // example, a single ContextPublisher may write these topics in the global
+  // topic space with a prefix specifying the device or the Component that
+  // wrote it.
+  //
+  // TODO(thatguy): Add ContextPublishStatus struct return type, and do
+  // JSON validation of the data.
+  Publish(string topic, string? json_data);
 };

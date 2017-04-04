@@ -7,8 +7,7 @@
 namespace maxwell {
 
 std::ostream& operator<<(std::ostream& os, const ContextUpdate& o) {
-  return os << "{ source: " << o.source << ", json_value: " << o.json_value
-            << "}";
+  return os << "{ json_value: " << o.json_value << "}";
 }
 
 }  // namespace maxwell

@@ -29,27 +29,16 @@ void connectSubscriber(ApplicationContext appContext) {
   assert(_contextSubscriber.ctrl.isBound);
 }
 
-typedef void PublishFn(
-    String label,
-    InterfaceRequest<ContextPublisherLink> link);
+typedef void PublishFn(String topic, String json_value);
 
 typedef void SubscribeFn(
     String label, InterfaceHandle<ContextSubscriberLink> link);
 
-/// Registers a publisher link using the globally bound [ContextPublisher].
+/// Publish a value using the globally bound [ContextPublisher].
 PublishFn get publish => _contextPublisher.publish;
 
 /// Registers a subscriber link using the globally bound [ContextSubscriber].
 SubscribeFn get subscribe => _contextSubscriber.subscribe;
-
-/// Convenience function that creates a [ContextPublisherLinkProxy] with the
-/// given label.
-ContextPublisherLinkProxy publisherLink(String label) {
-  final pub = new ContextPublisherLinkProxy();
-
-  publish(label, pub.ctrl.request());
-  return pub;
-}
 
 /// Convenience function that subscribes to a label with a handler callback.
 /// The returned [ContextSubscriberLinkImpl] should be closed once unneeded.
@@ -58,47 +47,6 @@ ContextSubscriberLinkImpl subscriberLink(
   final sub = new ContextSubscriberLinkImpl(handler);
   subscribe(label, sub.getHandle());
   return sub;
-}
-
-typedef Future<String> TransformFn(String);
-
-/// Convenience function that sets up a transformation pipeline between two
-/// pieces of context.
-///
-/// This pipeline will tear down the subscriber link if there are no downstream
-/// subscribers and set it up when there are. To do so, the global context
-/// client must remain open, so [closeGlobals] should not be called until the
-/// transform pipeline is no longer necessary (or more accurately, until it no
-/// longer needs to be resurrected).
-ContextPublisherLinkProxy buildTransform(
-    {@required String labelIn,
-    @required String schemaIn,
-    @required String labelOut,
-    @required String schemaOut,
-    @required Function transform,
-    bool invalidateOnNoSubscribers = true,
-    bool invalidateOnNull = true}) {
-  ContextSubscriberLinkImpl sub;
-  ContextPublisherLinkProxy pub;
-
-  pub = publisherLink(labelOut, schemaOut, onHasSubscribers: () {
-    sub = subscriberLink(labelIn, schemaIn, (update) {
-      if (update == null) {
-        pub.update(null);
-      } else {
-        transform(update).then(pub.update);
-      }
-    });
-  }, onNoSubscribers: () {
-    if (invalidateOnNoSubscribers) pub.update(null);
-    sub.close();
-  });
-
-  // TODO(rosswang): Do we need this?
-  pub.ctrl.error.then((_) {
-    sub.close();
-  });
-  return pub;
 }
 
 /// Closes any bound global FIDL handles. This should be called on app cleanup.

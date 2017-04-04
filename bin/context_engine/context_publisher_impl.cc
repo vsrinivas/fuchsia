@@ -4,21 +4,22 @@
 
 #include "apps/maxwell/src/context_engine/context_publisher_impl.h"
 
-#include "apps/maxwell/src/context_engine/graph.h"
 #include "apps/maxwell/src/context_engine/repo.h"
 
 namespace maxwell {
 
-ContextPublisherImpl::ContextPublisherImpl(ComponentNode* component, Repo* repo)
-    : component_(component), repo_(repo) {}
+ContextPublisherImpl::ContextPublisherImpl(const std::string& /* source_url */,
+                                           Repo* repo)
+    : /* source_url_(source_url), */ repo_(repo) {}
 ContextPublisherImpl::~ContextPublisherImpl() = default;
 
-void ContextPublisherImpl::Publish(
-    const fidl::String& label,
-    fidl::InterfaceRequest<ContextPublisherLink> link) {
-  DataNode* output = component_->EmplaceDataNode(label);
-  repo_->Index(output);
-  output->SetPublisher(std::move(link));
+void ContextPublisherImpl::Publish(const fidl::String& topic,
+                                   const fidl::String& json_data) {
+  if (json_data) {
+    repo_->Set(topic, json_data);
+  } else {
+    repo_->Remove(topic);
+  }
 }
 
 }  // namespace maxwell

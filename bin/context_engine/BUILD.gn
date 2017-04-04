@@ -16,7 +16,6 @@ source_set("context_publisher_impl") {
   ]
 
   deps = [
-    ":graph",
     ":repo",
     "//apps/maxwell/services/context",
   ]
@@ -34,19 +33,6 @@ source_set("context_subscriber_impl") {
   ]
 }
 
-source_set("graph") {
-  sources = [
-    "graph.cc",
-    "graph.h",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/context",
-    "//lib/fidl/cpp/bindings",
-    "//apps/maxwell/src:bound_set",
-  ]
-}
-
 source_set("repo") {
   sources = [
     "repo.cc",
@@ -54,8 +40,8 @@ source_set("repo") {
   ]
 
   deps = [
-    ":graph",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/src:bound_set",
   ]
 }
 
@@ -68,7 +54,6 @@ source_set("context_engine_impl") {
   deps = [
     ":context_publisher_impl",
     ":context_subscriber_impl",
-    ":graph",
     ":repo",
     "//application/lib/app",
     "//apps/maxwell/services/context",

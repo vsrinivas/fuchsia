@@ -17,7 +17,7 @@ class MockGps : public GpsAcquirer {
   void Publish(float latitude, float longitude);
 
  private:
-  ContextPublisherLinkPtr out_;
+  ContextPublisherPtr publisher_;
 };
 
 }  // namespace acquirers

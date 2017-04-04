@@ -116,9 +116,6 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
 
   void OnUpdate(maxwell::ContextUpdatePtr update) override {
     const int modular_state = std::stoi(update->json_value.data());
-    FTL_LOG(INFO) << "OnUpdate from " << update->source << ": "
-                  << update->json_value << " = (int) " << modular_state;
-
     if (modular_state == 0) {
       for (const auto& entry : kNextStories) {
         out_->Propose(MkProposal(entry.first, entry.second));

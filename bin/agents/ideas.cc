@@ -32,9 +32,6 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
   }
 
   void OnUpdate(maxwell::ContextUpdatePtr update) override {
-    FTL_VLOG(1) << "OnUpdate from " << update->source << ": "
-                << update->json_value;
-
     rapidjson::Document d;
     d.Parse(update->json_value.data());
 

@@ -6,31 +6,47 @@
 
 namespace maxwell {
 
-void Repo::Index(DataNode* data_node) {
-  const std::string& label = data_node->label;
-  by_label_[label] = data_node;
-
-  // Wire up any pending queries.
-  auto it = pending_queries_.find(label);
-  if (it == pending_queries_.end())
-    return;
-
-  auto& subscribers = it->second;
-  for (auto& subscriber_link : subscribers) {
-    data_node->Subscribe(std::move(subscriber_link));
-  }
-
-  pending_queries_.erase(it);
+void Repo::Set(const std::string& topic, const std::string& json_value) {
+  SetInternal(topic, &json_value);
 }
 
-void Repo::Query(const std::string& label,
-                 ContextSubscriberLinkPtr subscriber) {
-  auto it = by_label_.find(label);
-  if (it == by_label_.end()) {
-    pending_queries_[label].emplace_back(std::move(subscriber));
+void Repo::Remove(const std::string& topic) {
+  SetInternal(topic, nullptr);
+}
+
+void Repo::SetInternal(const std::string& topic,
+                       const std::string* json_value) {
+  ContextUpdate update;
+  // update.source = component_->url;
+
+  if (json_value != nullptr) {
+    values_[topic] = *json_value;
+    update.json_value = *json_value;
   } else {
-    it->second->Subscribe(std::move(subscriber));
+    values_.erase(topic);
   }
+
+  // Notify any subscriptions watching this topic.
+  auto it = subscriptions_.find(topic);
+  if (it == subscriptions_.end())
+    return;
+
+  for (auto& subscriber_link : it->second) {
+    subscriber_link->OnUpdate(update.Clone());
+  }
+}
+
+void Repo::AddSubscription(const std::string& topic,
+                           ContextSubscriberLinkPtr subscriber) {
+  // If we already have a value for |topic|, notify the subscriber immediately.
+  auto it = values_.find(topic);
+  if (it != values_.end()) {
+    auto update = ContextUpdate::New();
+    update->json_value = it->second;
+    subscriber->OnUpdate(std::move(update));
+  }
+
+  subscriptions_[topic].emplace(std::move(subscriber));
 }
 
 }  // namespace maxwell
