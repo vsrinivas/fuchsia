@@ -773,13 +773,10 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   // root page snapshot so we see the current state. Note that pending
   // Operation instances hold on to the previous value until they finish. New
   // Operation instances created after the update receive the new snapshot.
-  if (result_state != ledger::ResultState::COMPLETED &&
-      result_state != ledger::ResultState::PARTIAL_COMPLETED) {
-    callback(nullptr);
-  } else {
-    // Only request the snapshot once, in the last OnChange notification.
-    callback(root_snapshot_.NewRequest());
-  }
+  //
+  // For continued updates, we only request the snapshot once, in the
+  // last OnChange() notification.
+  callback(root_snapshot_.Update(result_state));
 }
 
 }  // namespace modular

@@ -47,6 +47,12 @@ class PageSnapshot {
   // Replaces the previous page snapshot with a newly requested one.
   fidl::InterfaceRequest<ledger::PageSnapshot> NewRequest();
 
+  // Possibly replaces the previous page snapshot with a new one
+  // requested through the result callback of a PageWatcher, depending
+  // on the continuation code of the watcher notification.
+  fidl::InterfaceRequest<ledger::PageSnapshot> Update(
+      ledger::ResultState result_state);
+
   // Returns the current page snapshot.
   std::shared_ptr<ledger::PageSnapshotPtr> shared_ptr() {
     return page_snapshot_;

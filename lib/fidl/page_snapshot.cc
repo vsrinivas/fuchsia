@@ -20,4 +20,17 @@ fidl::InterfaceRequest<ledger::PageSnapshot> PageSnapshot::NewRequest() {
   return ret;
 }
 
+fidl::InterfaceRequest<ledger::PageSnapshot> PageSnapshot::Update(
+    const ledger::ResultState result_state) {
+  switch (result_state) {
+    case ledger::ResultState::PARTIAL_CONTINUED:
+    case ledger::ResultState::PARTIAL_STARTED:
+      return nullptr;
+
+    case ledger::ResultState::COMPLETED:
+    case ledger::ResultState::PARTIAL_COMPLETED:
+      return NewRequest();
+  }
+}
+
 }  // namespace modular

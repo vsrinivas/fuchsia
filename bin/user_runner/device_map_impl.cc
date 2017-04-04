@@ -142,9 +142,10 @@ void DeviceMapImpl::OnChange(ledger::PageChangePtr page,
     update = true;
   }
 
-  if (update &&
-      (result_state == ledger::ResultState::COMPLETED ||
-       result_state == ledger::ResultState::PARTIAL_COMPLETED)) {
+  // We request a new page snapshot if we see a new device. We have to
+  // do this regardless of continuation state, because there might be
+  // no keys we listen to in the last continuation.
+  if (update) {
     callback(snapshot_.NewRequest());
   } else {
     callback(nullptr);
