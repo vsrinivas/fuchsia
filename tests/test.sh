@@ -9,4 +9,7 @@ if [ "${FUCHSIA_BUILD_DIR}" = "" ]; then
   exit -1;
 fi
 
-${FUCHSIA_DIR}/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json "$@"
+# By default, this script syncs the files listed in the modular_tests.json.
+# To prevent this behavior, add --no-sync when calling this script, which will
+# override the --sync parameter below.
+${FUCHSIA_DIR}/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json --sync "$@"
