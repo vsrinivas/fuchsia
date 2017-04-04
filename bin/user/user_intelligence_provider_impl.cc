@@ -38,10 +38,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   // TODO(rosswang): Search the ComponentIndex and iterate through results.
   startAgent("file:///system/apps/acquirers/focus");
-  startAgent("file:///system/apps/agents/bandsintown.dartx");
   startAgent("file:///system/apps/agents/module_suggester");
   startAgent("file:///system/apps/agents/module_suggester.dartx");
-  startAgent("file:///system/apps/agents/music_brainz.dartx");
 
   // TODO(jwnichols): Uncomment this when the dashboard is more functional
   // startAgent("file:///system/apps/agents/mi_dashboard.dartx");
