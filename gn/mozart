@@ -56,6 +56,10 @@
             "bootfs_path": "apps/root_presenter"
         },
         {
+            "binary": "screencap",
+            "bootfs_path": "apps/screencap"
+        },
+        {
             "binary": "shapes_view",
             "bootfs_path": "apps/shapes_view"
         },
