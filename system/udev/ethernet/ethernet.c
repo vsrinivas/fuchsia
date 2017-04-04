@@ -108,7 +108,13 @@ typedef struct ethdev {
     thrd_t tx_thr;
 
     mx_device_t dev;
+
+    uint32_t fail_rx_read;
+    uint32_t fail_rx_write;
+    uint32_t fail_tx_write;
 } ethdev_t;
+
+#define FAIL_REPORT_RATE 50
 
 #define get_ethdev(d) containerof(d, ethdev_t, dev)
 #define get_ethdev0(d) containerof(d, ethdev0_t, dev)
@@ -120,7 +126,15 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
 
     // TODO: read multiple and cache locally to reduce syscalls
     if ((status = mx_fifo_read(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
-        printf("eth: rx_fifo: cannot read: %d\n", status);
+        if (status == ERR_SHOULD_WAIT) {
+            if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
+                printf("eth: no rx buffers available (%u times)\n",
+                       edev->fail_rx_read);
+            }
+        } else {
+            // Fatal, should force teardown
+            printf("eth: rx fifo read failed %d\n", status);
+        }
         return;
     }
 
@@ -139,7 +153,15 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
     }
 
     if ((status = mx_fifo_write(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
-        printf("eth: rx_fifo: cannot write: %d\n", status);
+        if (status == ERR_SHOULD_WAIT) {
+            if ((edev->fail_rx_write++ % FAIL_REPORT_RATE) == 0) {
+                printf("eth: no rx_fifo space available (%u times)\n",
+                       edev->fail_rx_write);
+            }
+        } else {
+            // Fatal, should force teardown
+            printf("eth: rx_fifo write failed %d\n", status);
+        }
         return;
     }
 }
@@ -244,8 +266,13 @@ static int eth_tx_thread(void* arg) {
         }
 
         if ((status = mx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * n, &count)) < 0) {
-            printf("eth: tx_fifo: cannot write %u! %d\n", n, status);
-            if (status != ERR_SHOULD_WAIT) {
+            if (status == ERR_SHOULD_WAIT) {
+                if ((edev->fail_tx_write++ % FAIL_REPORT_RATE) == 0) {
+                    printf("eth: no tx_fifo space available (%u times)\n",
+                           edev->fail_tx_write);
+                }
+            } else {
+                printf("eth: tx_fifo write failed %d\n", status);
                 break;
             }
         }
