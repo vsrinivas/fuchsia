@@ -6,9 +6,11 @@
 
 #include <magenta/compiler.h>
 #include <magenta/device/ioctl.h>
+#include <magenta/device/ioctl-wrapper.h>
 #include <magenta/types.h>
 
 #define AUDIO2_IOCTL_GET_CHANNEL IOCTL(IOCTL_KIND_GET_HANDLE, 0xFE, 0x00)
+IOCTL_WRAPPER_OUT(ioctl_audio2_get_channel, AUDIO2_IOCTL_GET_CHANNEL, mx_handle_t);
 
 // When communicating with an Audio2 driver using mx_channel_call, do not use
 // the AUDIO2_INVALID_TRANSACTION_ID as your message's transaction ID.  It is
