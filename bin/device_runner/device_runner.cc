@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/syscalls.h>
+#include <fcntl.h>
 #include <iostream>
+#include <magenta/device/devmgr.h>
+#include <magenta/syscalls.h>
 #include <memory>
+#include <unistd.h>
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
@@ -35,6 +38,7 @@
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
+#include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -46,8 +50,13 @@ namespace {
 
 // To generate this configuration file follow instructions at
 // https://fuchsia.googlesource.com/modules/+/master/#Email
-// TODO(alhaad) Find a different home this config file.
+// TODO(alhaad) Find a different home for this config file.
 constexpr char kAuthConfigurationFile[] = "/system/data/email/config.json";
+
+// For polling minfs.
+constexpr ftl::StringView kPersistentFileSystem = "/data";
+constexpr ftl::StringView kMinFsName = "minfs";
+constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(5);
 
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
@@ -168,47 +177,9 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
         app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         device_context_binding_(this),
         user_provider_binding_(this) {
-    // 0. Get login data for users of the device.
-    // There might not be a file of users persisted. If config file doesn't
-    // exist, move forward with no previous users.
-    if (files::IsFile(kUsersConfigurationFile)) {
-      std::string serialized_users;
-      if (!files::ReadFileToString(kUsersConfigurationFile,
-                                   &serialized_users)) {
-        // Unable to read file. Bailing out.
-        FTL_LOG(ERROR) << "Unable to read user configuration file at: "
-                       << kUsersConfigurationFile;
-        return;
-      }
-
-      if (!Parse(serialized_users)) {
-        return;
-      }
-    }
-
-    if (!app_context_->launcher()) {
-      FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
-      exit(1);
-    }
-    if (!app_context_->environment_services()) {
-      FTL_LOG(ERROR) << "Services handle not set. Please use @boot.";
-      exit(1);
-    }
-
-    // 1. Start the ledger.
-    app::ServiceProviderPtr ledger_services;
-    auto ledger_launch_info = app::ApplicationLaunchInfo::New();
-    ledger_launch_info->url = kLedgerAppUrl;
-    ledger_launch_info->arguments = nullptr;
-    ledger_launch_info->services = ledger_services.NewRequest();
-
-    app_context_->launcher()->CreateApplication(
-        std::move(ledger_launch_info), ledger_controller_.NewRequest());
-
-    ConnectToService(ledger_services.get(),
-                     ledger_repository_factory_.NewRequest());
-
-    // 2. Start the device shell.
+    // 1. Start the device shell. This also connects the root view of the device
+    // to the device shell. This is done first so that we can show some UI until
+    // other things come up.
     app::ServiceProviderPtr device_shell_services;
     auto device_shell_launch_info = app::ApplicationLaunchInfo::New();
     device_shell_launch_info->url = settings_.device_shell.url;
@@ -235,6 +206,47 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
     device_shell_factory->Create(device_context_binding_.NewBinding(),
                                  user_provider_binding_.NewBinding(),
                                  device_shell_.NewRequest());
+
+    // 2. Get login data for users of the device.
+    // There might not be a file of users persisted. If config file doesn't
+    // exist, move forward with no previous users.
+    WaitForMinfs();
+    if (files::IsFile(kUsersConfigurationFile)) {
+      std::string serialized_users;
+      if (!files::ReadFileToString(kUsersConfigurationFile,
+                                   &serialized_users)) {
+        // Unable to read file. Bailing out.
+        FTL_LOG(ERROR) << "Unable to read user configuration file at: "
+                       << kUsersConfigurationFile;
+        return;
+      }
+
+      if (!Parse(serialized_users)) {
+        return;
+      }
+    }
+
+    if (!app_context_->launcher()) {
+      FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
+      exit(1);
+    }
+    if (!app_context_->environment_services()) {
+      FTL_LOG(ERROR) << "Services handle not set. Please use @boot.";
+      exit(1);
+    }
+
+    // 3. Start the ledger.
+    app::ServiceProviderPtr ledger_services;
+    auto ledger_launch_info = app::ApplicationLaunchInfo::New();
+    ledger_launch_info->url = kLedgerAppUrl;
+    ledger_launch_info->arguments = nullptr;
+    ledger_launch_info->services = ledger_services.NewRequest();
+
+    app_context_->launcher()->CreateApplication(
+        std::move(ledger_launch_info), ledger_controller_.NewRequest());
+
+    ConnectToService(ledger_services.get(),
+                     ledger_repository_factory_.NewRequest());
   }
 
  private:
@@ -401,6 +413,28 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
     serialized_users_ = std::move(serialized_users);
     users_storage_ = modular::GetUsersStorage(serialized_users_.data());
     return true;
+  }
+
+  void WaitForMinfs() {
+    auto delay = ftl::TimeDelta::FromMilliseconds(10);
+    ftl::TimePoint now = ftl::TimePoint::Now();
+    while (ftl::TimePoint::Now() - now < kMaxPollingDelay) {
+      ftl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
+      FTL_DCHECK(fd.is_valid());
+      char out[128];
+      ssize_t len = ioctl_devmgr_query_fs(fd.get(), out, sizeof(out));
+      FTL_DCHECK(len >= 0);
+
+      ftl::StringView fs_name(out, len);
+      if (fs_name == kMinFsName) {
+        return;
+      }
+      usleep(delay.ToMicroseconds());
+      delay = delay * 2;
+    }
+
+    FTL_LOG(WARNING) << kPersistentFileSystem
+                     << " is not persistent. Did you forget to configure it?";
   }
 
   const Settings& settings_;  // Not owned nor copied.
