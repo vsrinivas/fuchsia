@@ -85,7 +85,7 @@ $(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_SOLIBS) \
 		       $< $(_LIBS) -o $(@:.abi.stamp=.so.abi).new
 # Sanity check that the ABI stub really matches the actual DSO.
 	$(NOECHO)$(SHELLEXEC) scripts/shlib-symbols '$(NM)' $(@:.abi.stamp=.so.abi).new | \
-	diff -U0 $(<:.o=.h) -
+	cmp $(<:.o=.h) -
 # Move it into place only if it's changed.
 	$(NOECHO)\
 	if cmp -s $(@:.abi.stamp=.so.abi).new $(@:.abi.stamp=.so.abi); then \
