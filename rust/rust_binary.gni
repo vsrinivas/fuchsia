@@ -12,6 +12,9 @@ import("//build/rust/rust_artifact.gni")
 #     Name of the crate as defined in its manifest file. If not specified, it is
 #     assumed to be the same as the target name.
 #
+#   deps (optional)
+#     List of labels for Rust libraries this binary depends on.
+#
 # Example of usage:
 #
 #   rust_binary("foo") {
@@ -19,7 +22,11 @@ import("//build/rust/rust_artifact.gni")
 #   }
 template("rust_binary") {
   rust_artifact(target_name) {
-    forward_variables_from(invoker, [ "deps", "name" ])
+    forward_variables_from(invoker, [
+      "deps",
+      "name",
+      "source_dir",
+    ])
     type = "bin"
   }
 }

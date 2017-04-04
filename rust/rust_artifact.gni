@@ -24,6 +24,11 @@ template("rust_artifact") {
     rust_deps = invoker.deps
   }
 
+  source_dir = "."
+  if (defined(invoker.source_dir)) {
+    source_dir = invoker.source_dir
+  }
+
   target_label = get_label_info(":$target_name", "label_no_toolchain")
 
   assert(current_cpu == "x64")
@@ -59,14 +64,22 @@ template("rust_artifact") {
     depfile = "$output_file.d"
 
     inputs = [
-      "Cargo.toml",
+      "${source_dir}/Cargo.toml",
     ]
 
     outputs = [
       output_file,
     ]
+    if (type == "lib") {
+      outputs += [
+        "${target_gen_dir}/${target_name}.rust/${target_name}.rust_name",
+      ]
+    }
 
     deps = rust_deps
+    if (defined(invoker.non_rust_deps)) {
+      deps += invoker.non_rust_deps
+    }
 
     args = [
       "--type",
@@ -74,13 +87,13 @@ template("rust_artifact") {
       "--name",
       name,
       "--out-dir",
-      rebase_path(target_out_dir),
+      rebase_path("${target_out_dir}/${target_name}.rust"),
       "--gen-dir",
-      rebase_path(target_gen_dir),
+      rebase_path("${target_gen_dir}/${target_name}.rust"),
       "--root-gen-dir",
       rebase_path(root_gen_dir),
       "--crate-root",
-      rebase_path("."),
+      rebase_path(source_dir),
       "--cargo",
       rebase_path("$rust_base/bin/cargo"),
       "--rustc",

@@ -118,7 +118,11 @@ def main():
         base = None
         if args.type == "bin":
             if "bin" not in config:
-                raise Exception("Missing [[bin]] section in manifest")
+                # Use the defaults.
+                config["bin"] = [{
+                    "name": config["package"]["name"],
+                    "path": "src/main.rs"
+                }]
             for bin in config["bin"]:
                 if "name" in bin and bin["name"] == args.name:
                     base = bin
@@ -127,7 +131,11 @@ def main():
                 raise Exception("Could not find binary named %s" % args.name)
         if args.type == "lib":
             if "lib" not in config:
-                raise Exception("Missing [lib] section in manifest")
+                # Use the defaults.
+                config["lib"] = {
+                    "name": config["package"]["name"],
+                    "path": "src/lib.rs"
+                }
             lib = config["lib"]
             if "name" not in lib or lib["name"] != args.name:
                 raise Exception("Could not find library named %s" % args.name)
@@ -145,13 +153,13 @@ def main():
         # Add dependency sections for local deps.
         for dep in args.deps:
             path, name = get_target(dep)
+            base_path = os.path.join(args.root_gen_dir, path, "%s.rust" % name)
             # Read the name of the Rust artifact.
-            artifact_path = os.path.join(args.root_gen_dir, path,
-                                         "%s.rust_name" % name)
+            artifact_path = os.path.join(base_path, "%s.rust_name" % name)
             with open(artifact_path, "r") as artifact_file:
                 artifact_name = artifact_file.read()
             config["dependencies"][artifact_name] = {
-                "path": os.path.join(args.root_gen_dir, path)
+                "path": base_path
             }
 
         # Write the complete manifest.
@@ -162,6 +170,7 @@ def main():
         # Write a file mapping target name to Rust artifact name.
         # This will be used to set up dependencies.
         _, target_name = get_target(args.label)
+        # Note: gen_dir already contains the "target.rust" directory.
         name_path = os.path.join(args.gen_dir, "%s.rust_name" % target_name)
         create_base_directory(name_path)
         with open(name_path, "w") as name_file:
