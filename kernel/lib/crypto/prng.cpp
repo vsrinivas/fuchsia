@@ -11,6 +11,7 @@
 #include <err.h>
 #include <lib/crypto/cryptolib.h>
 #include <kernel/auto_lock.h>
+#include <pow2.h>
 
 namespace crypto {
 
@@ -57,6 +58,28 @@ void PRNG::Draw(void* out, int size) {
         clPRNG_draw(&ctx_, out, size);
     } else {
         clPRNG_draw(&ctx_, out, size);
+    }
+}
+
+uint64_t PRNG::RandInt(uint64_t exclusive_upper_bound) {
+    ASSERT(exclusive_upper_bound != 0);
+
+    const uint log2 = log2_ulong_ceil(exclusive_upper_bound);
+    const size_t mask = (log2 != sizeof(uint64_t) * CHAR_BIT) ?
+            (uint64_t(1) << log2) - 1 :
+            UINT64_MAX;
+    DEBUG_ASSERT(exclusive_upper_bound - 1 <= mask);
+
+    // This loop should terminate very fast, since the probability that the
+    // drawn value is >= exclusive_upper_bound is less than 0.5.  This is the
+    // classic discard out-of-range values approach.
+    while (true) {
+        uint64_t v;
+        Draw(reinterpret_cast<uint8_t*>(&v), sizeof(uint64_t)/sizeof(uint8_t));
+        v &= mask;
+        if (v < exclusive_upper_bound) {
+            return v;
+        }
     }
 }
 

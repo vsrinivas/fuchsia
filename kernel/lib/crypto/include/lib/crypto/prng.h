@@ -44,6 +44,11 @@ public:
     // kMinEntropy bytes of entropy have been added to this PRNG.
     void Draw(void* out, int size);
 
+    // Return an integer in the range [0, exclusive_upper_bound) chosen
+    // uniformly at random.  This is a wrapper for Draw(), and so has the same
+    // caveats.
+    uint64_t RandInt(uint64_t exclusive_upper_bound);
+
     // Inspect if this PRNG is threadsafe.  Only really useful for test code.
     bool is_thread_safe() const { return is_thread_safe_; }
 

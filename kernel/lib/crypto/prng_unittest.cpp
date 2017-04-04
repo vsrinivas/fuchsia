@@ -108,12 +108,43 @@ bool prng_output(void*) {
     END_TEST;
 }
 
+bool prng_randint(void*) {
+    BEGIN_TEST;
+
+    static const char kSeed[32] = {'a', 'b', 'c'};
+    static const int kSeedSize = sizeof(kSeed);
+
+    PRNG prng(kSeed, kSeedSize);
+
+    // Technically could fall out of the log2 loop below, but let's be explicit
+    // about this case.
+    for (int i = 0; i < 100; ++i) {
+        EXPECT_EQ(prng.RandInt(1), 0u, "RandInt(1) must equal 0");
+    }
+
+    for (int log2 = 1; log2 < 64; ++log2) {
+        for (int i = 0; i < 100; ++i) {
+            uint64_t bound = 1ull << log2;
+            EXPECT_LT(prng.RandInt(bound), bound, "RandInt(2^i) must be less than 2^i");
+        }
+    }
+
+    bool high_bit = false;
+    for (int i = 0; i < 100; ++i) {
+        high_bit |= !!(prng.RandInt(UINT64_MAX) & (1ull<<63));
+    }
+    EXPECT_TRUE(high_bit, "RandInt(UINT64_MAX) should have high bit set sometimes");
+
+    END_TEST;
+}
+
 } // namespace
 
 UNITTEST_START_TESTCASE(prng_tests)
 UNITTEST("Instantiate", instantiate)
 UNITTEST("NonThreadSafeMode", non_thread_safe_prng_same_behavior)
 UNITTEST("Test Output", prng_output)
+UNITTEST("Test RandInt", prng_randint)
 UNITTEST_END_TESTCASE(prng_tests, "prng",
                       "Test pseudo-random number generator implementation.",
                       nullptr, nullptr);
