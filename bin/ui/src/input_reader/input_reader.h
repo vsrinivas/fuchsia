@@ -5,12 +5,11 @@
 #ifndef APPS_MOZART_SRC_INPUT_READER_INPUT_READER_H_
 #define APPS_MOZART_SRC_INPUT_READER_INPUT_READER_H_
 
-#include <mx/channel.h>
-
-#include <unordered_map>
+#include <map>
 #include <utility>
 
-#include "apps/mozart/src/input_reader/input_device.h"
+#include "apps/mozart/services/input/input_device_registry.fidl.h"
+#include "apps/mozart/services/input/input_reports.fidl.h"
 #include "apps/mozart/src/input_reader/input_interpreter.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/io/device_watcher.h"
@@ -21,29 +20,43 @@ namespace mozart {
 namespace input {
 
 class InputReader : mtl::MessageLoopHandler {
- public:
-  InputReader(InputInterpreter* interpreter);
+public:
+  InputReader(mozart::InputDeviceRegistry* registry);
   ~InputReader();
   void Start();
 
  private:
-  void DeviceAdded(std::unique_ptr<InputDevice> device);
+  class DeviceInfo {
+   public:
+    DeviceInfo(std::unique_ptr<InputInterpreter> interpreter,
+               mtl::MessageLoop::HandlerKey key);
+    ~DeviceInfo();
+
+    InputInterpreter* interpreter() { return interpreter_.get(); }
+    mtl::MessageLoop::HandlerKey key() { return key_; };
+
+   private:
+    std::unique_ptr<InputInterpreter> interpreter_;
+    mtl::MessageLoop::HandlerKey key_;
+
+    FTL_DISALLOW_COPY_AND_ASSIGN(DeviceInfo);
+  };
+
+  void DeviceAdded(std::unique_ptr<InputInterpreter> interpreter);
   void DeviceRemoved(mx_handle_t handle);
 
   void OnDirectoryHandleReady(mx_handle_t handle, mx_signals_t pending);
   void OnDeviceHandleReady(mx_handle_t handle, mx_signals_t pending);
 
+  void OnInternalReport(mx_handle_t handle, InputInterpreter::ReportType type);
+
   // |mtl::MessageLoopHandler|:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending);
 
-  InputInterpreter* const interpreter_;
+  mozart::InputDeviceRegistry* registry_;
 
-  std::unordered_map<
-      mx_handle_t,
-      std::pair<std::unique_ptr<InputDevice>, mtl::MessageLoop::HandlerKey>>
-      devices_;
+  std::map<mx_handle_t, std::unique_ptr<DeviceInfo>> devices_;
   std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
-  std::unordered_map<std::string, uint32_t> device_ids_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputReader);
 };

@@ -6,6 +6,7 @@
 
 #include <iostream>
 
+#include "apps/mozart/services/input/usages.fidl.h"
 #include "lib/ftl/strings/string_printf.h"
 
 namespace mozart {
@@ -118,6 +119,186 @@ std::ostream& operator<<(std::ostream& os, const KeyboardEvent& value) {
 
   os << ", hid=" << ftl::StringPrintf("0x%08X", value.hid_usage);
   os << ", timestamp=" << value.event_time;
+  return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const Range& value) {
+  return os << "{Range[" << value.min << "," << value.max << "]}";
+}
+
+std::ostream& operator<<(std::ostream& os, const Axis& value) {
+  return os << "{Axis: range=" << *(value.range)
+            << ", resolution=" << value.resolution << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const KeyboardDescriptor& value) {
+  os << "{Keyboard:";
+  bool first = true;
+  for (size_t index = 0; index < value.keys.size(); ++index) {
+    if (first) {
+      first = false;
+      os << value.keys[index];
+    } else {
+      os << ", " << value.keys[index];
+    }
+  }
+  return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const MouseDescriptor& value) {
+  os << "{Mouse:";
+  os << "rel_x=" << *(value.rel_x);
+  os << ", rel_y=" << *(value.rel_y);
+  // TODO(jpoichet) vscroll, hscroll
+  bool first = true;
+  os << ", buttons=[";
+  if (value.buttons & kMouseButtonPrimary) {
+    os << "PRIMARY";
+    first = false;
+  }
+  if (value.buttons & kMouseButtonSecondary) {
+    if (first) {
+      os << "SECONDARY";
+      first = false;
+    } else {
+      os << ",SECONDARY";
+    }
+  }
+  if (value.buttons & kMouseButtonTertiary) {
+    if (first) {
+      os << "TERTIARY";
+      first = false;
+    } else {
+      os << ",TERTIARY";
+    }
+  }
+  return os << "]}";
+}
+
+std::ostream& operator<<(std::ostream& os, const StylusDescriptor& value) {
+  os << "{Stylus:";
+  os << "x=" << *(value.x);
+  os << ", y=" << *(value.y);
+  os << ", buttons=[";
+  if (value.buttons & kStylusBarrel) {
+    os << "BARREL";
+  }
+  return os << "]}";
+}
+
+std::ostream& operator<<(std::ostream& os, const TouchscreenDescriptor& value) {
+  os << "{Touchscreen:";
+  os << "x=" << *(value.x);
+  os << ", y=" << *(value.y);
+  return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const DeviceDescriptor& value) {
+  os << "{DeviceDescriptor:";
+  bool previous = false;
+  if (value.keyboard) {
+    os << *(value.keyboard);
+    previous = true;
+  }
+  if (value.mouse) {
+    if (previous)
+      os << ", ";
+    os << *(value.mouse);
+    previous = true;
+  }
+  if (value.stylus) {
+    if (previous)
+      os << ", ";
+    os << *(value.stylus);
+    previous = true;
+  }
+  if (value.touchscreen) {
+    if (previous)
+      os << ", ";
+    os << *(value.touchscreen);
+    previous = true;
+  }
+  return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const KeyboardReport& value) {
+  os << "{KeyboardReport: pressed_keys=[";
+  bool first = true;
+  for (size_t index = 0; index < value.pressed_keys.size(); ++index) {
+    if (first) {
+      first = false;
+      os << value.pressed_keys[index];
+    } else {
+      os << ", " << value.pressed_keys[index];
+    }
+  }
+  return os << "]}";
+}
+
+std::ostream& operator<<(std::ostream& os, const MouseReport& value) {
+  os << "{MouseReport:";
+  os << "rel_x=" << value.rel_x;
+  os << ", rel_y=" << value.rel_y;
+  // TODO(jpoichet) vscroll, hscroll
+  os << ", pressed_buttons=" << value.pressed_buttons;
+  return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const StylusReport& value) {
+  os << "{StylusReport:";
+  os << "x=" << value.x;
+  os << ", y=" << value.y;
+  os << ", pressure=" << value.pressure;
+  os << ", in_range=" << value.in_range;
+  os << ", is_in_contact=" << value.is_in_contact;
+  os << ", is_inverted=" << value.is_inverted;
+
+  os << ", pressed_buttons=[";
+  if (value.pressed_buttons & kStylusBarrel) {
+    os << "BARREL";
+  }
+  return os << "]}";
+}
+
+std::ostream& operator<<(std::ostream& os, const Touch& value) {
+  os << "{Touch:";
+  os << "finger_id= " << value.finger_id;
+  os << ", x=" << value.x;
+  os << ", x=" << value.y;
+  os << ", width=" << value.width;
+  os << ", height=" << value.height;
+  return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const TouchscreenReport& value) {
+  os << "{TouchscreenReport: touches=[";
+  bool first = true;
+  for (size_t index = 0; index < value.touches.size(); ++index) {
+    if (first) {
+      first = false;
+      os << *(value.touches[index]);
+    } else {
+      os << ", " << *(value.touches[index]);
+    }
+  }
+
+  return os << "]}";
+}
+
+std::ostream& operator<<(std::ostream& os, const InputReport& value) {
+  os << "{InputReport: event_time=" << value.event_time << ",";
+
+  if (value.keyboard) {
+    os << *(value.keyboard);
+  } else if (value.mouse) {
+    os << *(value.mouse);
+  } else if (value.stylus) {
+    os << *(value.stylus);
+  } else if (value.touchscreen) {
+    os << *(value.touchscreen);
+  } else {
+    os << "{Unknown Report}";
+  }
   return os << "}";
 }
 

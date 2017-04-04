@@ -13,11 +13,13 @@ executable("root_presenter") {
 
   deps = [
     "//application/lib/app",
+    "//apps/mozart/lib/input",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/input",
+    "//apps/mozart/services/input/cpp",
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
@@ -28,4 +30,5 @@ executable("root_presenter") {
     "//lib/mtl",
     "//third_party/skia",
   ]
+  libs = [ "hid" ]
 }

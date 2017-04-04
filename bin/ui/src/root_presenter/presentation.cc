@@ -12,6 +12,7 @@
 #include "apps/mozart/services/composition/resources.fidl.h"
 #include "apps/mozart/services/composition/scenes.fidl.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
+#include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/vmo/file.h"
@@ -54,7 +55,6 @@ Presentation::Presentation(mozart::Compositor* compositor,
     : compositor_(compositor),
       view_manager_(view_manager),
       view_owner_(std::move(view_owner)),
-      input_reader_(&input_interpreter_),
       tree_listener_binding_(this),
       tree_container_listener_binding_(this),
       view_container_listener_binding_(this),
@@ -79,15 +79,8 @@ void Presentation::Present(ftl::Closure shutdown_callback) {
 
   renderer_->GetDisplayInfo([this](mozart::DisplayInfoPtr display_info) {
     display_info_ = std::move(display_info);
-    StartInput();
     CreateViewTree();
   });
-}
-
-void Presentation::StartInput() {
-  input_interpreter_.RegisterDisplay(*display_info_->size);
-  input_interpreter_.SetListener(weak_ptr_factory_.GetWeakPtr());
-  input_reader_.Start();
 }
 
 void Presentation::CreateViewTree() {
@@ -267,7 +260,50 @@ void Presentation::UpdateScene() {
   root_scene_->Publish(CreateSceneMetadata());
 }
 
+void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
+  FTL_VLOG(1) << "OnDeviceAdded: token=" << input_device->id();
+
+  FTL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
+  std::unique_ptr<mozart::DeviceState> state =
+      std::make_unique<mozart::DeviceState>(
+          input_device->id(), input_device->descriptor(),
+          [this](mozart::InputEventPtr event) { OnEvent(std::move(event)); });
+  mozart::DeviceState* state_ptr = state.get();
+  auto device_pair = std::make_pair(input_device, std::move(state));
+  state_ptr->OnRegistered();
+  device_states_by_id_.emplace(input_device->id(), std::move(device_pair));
+}
+
+void Presentation::OnDeviceRemoved(uint32_t device_id) {
+  FTL_VLOG(1) << "OnDeviceRemoved: token=" << device_id;
+  if (device_states_by_id_.count(device_id) != 0) {
+    device_states_by_id_[device_id].second->OnUnregistered();
+    device_states_by_id_.erase(device_id);
+  }
+}
+
+void Presentation::OnReport(uint32_t device_id,
+                            mozart::InputReportPtr input_report) {
+  FTL_VLOG(2) << "OnReport device=" << device_id
+              << ", count=" << device_states_by_id_.count(device_id)
+              << ", report=" << *(input_report);
+
+  if (device_states_by_id_.count(device_id) == 0) {
+    FTL_VLOG(1) << "OnReport: Unknown device " << device_id;
+    return;
+  }
+
+  if (!display_info_) {
+    FTL_VLOG(1) << "OnReport: No display info " << device_id;
+    return;
+  }
+
+  mozart::DeviceState* state = device_states_by_id_[device_id].second.get();
+  state->Update(std::move(input_report), *display_info_->size);
+}
+
 void Presentation::OnEvent(mozart::InputEventPtr event) {
+  FTL_VLOG(1) << "OnEvent " << *(event);
   if (event->is_pointer()) {
     const mozart::PointerEventPtr& pointer = event->get_pointer();
     if (pointer->type == mozart::PointerEvent::Type::MOUSE) {
@@ -310,8 +346,6 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
   if (input_dispatcher_)
     input_dispatcher_->DispatchEvent(std::move(event));
 }
-void Presentation::OnDeviceAdded(const mozart::input::InputDevice* device) {}
-void Presentation::OnDeviceRemoved(const mozart::input::InputDevice* device) {}
 
 void Presentation::OnLayout() {
   auto properties = mozart::ViewProperties::New();

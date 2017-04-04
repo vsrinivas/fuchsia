@@ -2,73 +2,100 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/mozart/lib/input/device_state.h"
+#include "apps/mozart/lib/input/input_device_impl.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
+#include "apps/mozart/services/input/input_device_registry.fidl.h"
 #include "apps/mozart/src/input_reader/input_reader.h"
 #include "lib/ftl/command_line.h"
+#include "lib/ftl/log_settings.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace {
+namespace print_input {
 
-std::ostream& operator<<(std::ostream& os,
-                         const mozart::input::InputDevice& value) {
-  os << "{InputDevice#" << value.id() << ":";
-  if (value.has_keyboard()) {
-    os << "KEYBOARD:";
-  }
-  if (value.has_mouse()) {
-    os << "MOUSE:";
-  }
-  if (value.has_stylus()) {
-    os << "STYLUS:";
-  }
-  if (value.has_touchscreen()) {
-    os << "TOUCHSCREEN:";
-  }
-  os << "/dev/class/input/" << value.name() << "}";
-  return os;
-}
-
-class PrintInput : public mozart::input::InterpreterListener {
+class App : public mozart::InputDeviceRegistry,
+            public mozart::InputDeviceImpl::Listener {
  public:
-  PrintInput() : weak_ptr_factory_(this) {
-    mozart::Size size;
-    size.width = 1.0;
-    size.height = 1.0;
-    interpreter_.RegisterDisplay(size);
-    interpreter_.SetListener(weak_ptr_factory_.GetWeakPtr());
-    reader_ = std::make_unique<mozart::input::InputReader>(&interpreter_);
-    reader_->Start();
+  App() : reader_(this) { reader_.Start(); }
+  ~App() {}
+
+  void OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
+    FTL_VLOG(1) << "UnregisterDevice " << input_device->id();
+
+    if (devices_.count(input_device->id()) != 0) {
+      devices_[input_device->id()].second->OnUnregistered();
+      devices_.erase(input_device->id());
+    }
   }
-  ~PrintInput() {}
+
+  void OnReport(mozart::InputDeviceImpl* input_device,
+                mozart::InputReportPtr report) {
+    FTL_VLOG(2) << "DispatchReport " << input_device->id() << " " << *report;
+    if (devices_.count(input_device->id()) == 0) {
+      FTL_VLOG(1) << "DispatchReport: Unknown device " << input_device->id();
+      return;
+    }
+
+    mozart::Size size;
+    size.width = 100.0;
+    size.height = 100.0;
+
+    mozart::DeviceState* state = devices_[input_device->id()].second.get();
+
+    FTL_CHECK(state);
+    state->Update(std::move(report), size);
+  }
 
  private:
-  // |InputInterpreterListener|:
-  void OnEvent(mozart::InputEventPtr event) { FTL_LOG(INFO) << *(event.get()); }
+  void RegisterDevice(
+      mozart::DeviceDescriptorPtr descriptor,
+      fidl::InterfaceRequest<mozart::InputDevice> input_device_request) {
+    uint32_t device_id = next_device_token_++;
 
-  void OnDeviceAdded(const mozart::input::InputDevice* device) {
-    FTL_LOG(INFO) << *device << " Added";
+    FTL_VLOG(1) << "RegisterDevice " << *descriptor << " -> " << device_id;
+
+    FTL_CHECK(devices_.count(device_id) == 0);
+
+    std::unique_ptr<mozart::InputDeviceImpl> input_device =
+        std::make_unique<mozart::InputDeviceImpl>(
+            device_id, std::move(descriptor), std::move(input_device_request),
+            this);
+
+    std::unique_ptr<mozart::DeviceState> state =
+        std::make_unique<mozart::DeviceState>(
+            input_device->id(), input_device->descriptor(),
+            [this](mozart::InputEventPtr event) { OnEvent(std::move(event)); });
+    mozart::DeviceState* state_ptr = state.get();
+    auto device_pair =
+        std::make_pair(std::move(input_device), std::move(state));
+    devices_.emplace(device_id, std::move(device_pair));
+    state_ptr->OnRegistered();
   }
 
-  void OnDeviceRemoved(const mozart::input::InputDevice* device) {
-    FTL_LOG(INFO) << *device << " Removed";
-  }
+  void OnEvent(mozart::InputEventPtr event) { FTL_LOG(INFO) << *event; }
 
-  mozart::input::InputInterpreter interpreter_;
-  std::unique_ptr<mozart::input::InputReader> reader_;
-  ftl::WeakPtrFactory<PrintInput> weak_ptr_factory_;
+  uint32_t next_device_token_ = 0;
+  mozart::input::InputReader reader_;
+  std::unordered_map<uint32_t,
+                     std::pair<std::unique_ptr<mozart::InputDeviceImpl>,
+                               std::unique_ptr<mozart::DeviceState>>>
+      devices_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(PrintInput);
+  FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
-}  // namespace
+}  // namespace print_input
 
 int main(int argc, char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+    return 1;
+
   mtl::MessageLoop message_loop;
-  PrintInput app;
+  print_input::App app;
   message_loop.Run();
   return 0;
 }

@@ -4,20 +4,16 @@
 
 source_set("input_reader") {
   sources = [
-    "input_descriptor.h",
-    "input_device.cc",
-    "input_device.h",
     "input_interpreter.cc",
     "input_interpreter.h",
     "input_reader.cc",
     "input_reader.h",
-    "input_report.h",
-    "input_state.cc",
-    "input_state.h",
   ]
 
   deps = [
+    "//apps/mozart/lib/input",
     "//apps/mozart/services/input",
+    "//apps/mozart/services/input/cpp",
     "//apps/tracing/lib/trace",
     "//lib/mtl",
     "//magenta/system/ulib/mx",

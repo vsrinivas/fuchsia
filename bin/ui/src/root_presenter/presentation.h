@@ -5,6 +5,8 @@
 #ifndef APPS_MOZART_SRC_ROOT_PRESENTER_PRESENTATION_H_
 #define APPS_MOZART_SRC_ROOT_PRESENTER_PRESENTATION_H_
 
+#include "apps/mozart/lib/input/device_state.h"
+#include "apps/mozart/lib/input/input_device_impl.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
@@ -12,8 +14,6 @@
 #include "apps/mozart/services/input/input_dispatcher.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
-#include "apps/mozart/src/input_reader/input_interpreter.h"
-#include "apps/mozart/src/input_reader/input_reader.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
@@ -22,8 +22,7 @@
 
 namespace root_presenter {
 
-class Presentation : public mozart::input::InterpreterListener,
-                     public mozart::ViewTreeListener,
+class Presentation : public mozart::ViewTreeListener,
                      public mozart::ViewListener,
                      public mozart::ViewContainerListener {
  public:
@@ -35,12 +34,11 @@ class Presentation : public mozart::input::InterpreterListener,
 
   void Present(ftl::Closure shutdown_callback);
 
- private:
-  // |InputInterpreterListener|:
-  void OnEvent(mozart::InputEventPtr event) override;
-  void OnDeviceAdded(const mozart::input::InputDevice* device) override;
-  void OnDeviceRemoved(const mozart::input::InputDevice* device) override;
+  void OnReport(uint32_t device_id, mozart::InputReportPtr report);
+  void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
+  void OnDeviceRemoved(uint32_t device_id);
 
+ private:
   // |ViewTreeListener|:
   void OnRendererDied(const OnRendererDiedCallback& callback) override;
 
@@ -55,13 +53,13 @@ class Presentation : public mozart::input::InterpreterListener,
   void OnInvalidation(mozart::ViewInvalidationPtr invalidation,
                       const OnInvalidationCallback& callback) override;
 
-  void StartInput();
   void CreateViewTree();
   void LoadCursor();
   void UpdateRootViewProperties();
   void OnLayout();
   mozart::SceneMetadataPtr CreateSceneMetadata() const;
   void UpdateScene();
+  void OnEvent(mozart::InputEventPtr event);
 
   void Shutdown();
 
@@ -78,8 +76,6 @@ class Presentation : public mozart::input::InterpreterListener,
   mozart::RendererPtr renderer_;
   mozart::DisplayInfoPtr display_info_;
 
-  mozart::input::InputInterpreter input_interpreter_;
-  mozart::input::InputReader input_reader_;
   mozart::PointF mouse_coordinates_;
 
   fidl::Binding<mozart::ViewTreeListener> tree_listener_binding_;
@@ -102,6 +98,10 @@ class Presentation : public mozart::input::InterpreterListener,
   bool layout_changed_ = true;
 
   std::map<uint32_t, std::pair<bool, mozart::PointF>> cursors_;
+  std::map<uint32_t,
+           std::pair<mozart::InputDeviceImpl*,
+                     std::unique_ptr<mozart::DeviceState>>>
+      device_states_by_id_;
 
   sk_sp<SkImage> cursor_image_;
   mozart::BufferProducer buffer_producer_;

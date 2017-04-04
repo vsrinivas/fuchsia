@@ -9,12 +9,29 @@
 
 #include "apps/mozart/services/input/input_event_constants.fidl.h"
 #include "apps/mozart/services/input/input_events.fidl.h"
+#include "apps/mozart/services/input/input_reports.fidl.h"
 
 namespace mozart {
 
 std::ostream& operator<<(std::ostream& os, const InputEvent& value);
 std::ostream& operator<<(std::ostream& os, const PointerEvent& value);
 std::ostream& operator<<(std::ostream& os, const KeyboardEvent& value);
+
+std::ostream& operator<<(std::ostream& os, const Range& value);
+std::ostream& operator<<(std::ostream& os, const Axis& value);
+
+std::ostream& operator<<(std::ostream& os, const KeyboardDescriptor& value);
+std::ostream& operator<<(std::ostream& os, const MouseDescriptor& value);
+std::ostream& operator<<(std::ostream& os, const StylusDescriptor& value);
+std::ostream& operator<<(std::ostream& os, const TouchscreenDescriptor& value);
+std::ostream& operator<<(std::ostream& os, const DeviceDescriptor& value);
+
+std::ostream& operator<<(std::ostream& os, const KeyboardReport& value);
+std::ostream& operator<<(std::ostream& os, const MouseReport& value);
+std::ostream& operator<<(std::ostream& os, const StylusReport& value);
+std::ostream& operator<<(std::ostream& os, const Touch& value);
+std::ostream& operator<<(std::ostream& os, const TouchscreenReport& value);
+std::ostream& operator<<(std::ostream& os, const InputReport& value);
 
 }  // namespace mozart
 

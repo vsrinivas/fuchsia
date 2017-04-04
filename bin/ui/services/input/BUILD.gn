@@ -7,11 +7,14 @@ import("//lib/fidl/fidl.gni")
 fidl("input") {
   sources = [
     "input_connection.fidl",
+    "input_device_registry.fidl",
     "input_dispatcher.fidl",
     "input_event_constants.fidl",
     "input_events.fidl",
+    "input_reports.fidl",
     "text_editing.fidl",
     "text_input.fidl",
+    "usages.fidl",
   ]
 
   public_deps = [

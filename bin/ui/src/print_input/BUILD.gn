@@ -8,6 +8,7 @@ executable("print_input") {
   ]
 
   deps = [
+    "//apps/mozart/lib/input",
     "//apps/mozart/services/input/cpp",
     "//apps/mozart/src/input_reader",
     "//lib/ftl",

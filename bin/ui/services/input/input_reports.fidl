@@ -1,0 +1,196 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+// Descriptors are used to describe the capabilities of an input device.
+//
+// Devices can have multiple descriptors of the following kinds
+// |KeyboardDescriptor|, |MouseDescriptor|, |StylusDescriptor| and
+// |TouchscreenDescriptor|
+//
+// An input device will generate |InputReport| corresponding to the
+// capabilities of that device listed in its descriptor.
+// For instance a input device with a |KeyboardDescriptor| will generate
+// |KeyboardReport| when a key is pressed on the keyboard.
+
+// Describe a |Range| of values
+struct Range {
+  int32 min;
+  int32 max;
+};
+
+struct RangeF {
+  float min;
+  float max;
+};
+
+enum AxisScale {
+  LINEAR, LOGARITHMIC,
+};
+
+// An |Axis| is defined as a |range| and |resolution|.
+struct Axis {
+  Range range;
+  int32 resolution = 1;
+  AxisScale scale = LINEAR;
+};
+
+struct AxisF {
+  RangeF range;
+  float resolution = 1.0;
+  AxisScale scale = LINEAR;
+};
+
+
+/* Keyboards */
+
+// |KeyboardDescriptor| describes the capabilities of a keyboard.
+struct KeyboardDescriptor {
+  // The list of HID keyboard usages that this keyboard can generate.
+  array<uint32> keys;
+};
+
+// |KeyboardReport| lists the keys currently pressed down.
+struct KeyboardReport {
+  // |pressed_keys| is the list of HID usage that are currently pressed down on
+  // the keyboard.
+  array<uint32> pressed_keys;
+};
+
+/* Mouse */
+
+// |MouseDescriptor| describes the capabilities of a mouse.
+struct MouseDescriptor {
+  // The range of relative X and Y movement which can be described by a mouse
+  // report.
+  Axis rel_x;
+  Axis rel_y;
+
+  // The range of relative vertical and horizontal scroll which can be
+  // described by a mouse report.
+  Axis? vscroll;
+  Axis? hscroll;
+
+  // The list of HID mouse usages that this mouse can generate.
+  uint32 buttons;
+};
+
+// |MouseReport| gives the relative mouvement of the mouse and currently
+// pressed buttons.
+struct MouseReport {
+  // Relative X and Y positional displacement.
+  int32 rel_x;
+  int32 rel_y;
+
+  // Relative horizontal and vertical scrolling displacement.
+  int32 rel_hscroll;
+  int32 rel_vscroll;
+
+  // buttons currently down
+  uint32 pressed_buttons;
+};
+
+/* Stylus */
+
+// |Stylus| describes the capabilities of a stylus.
+struct StylusDescriptor {
+  // Ranges for the |x| and |y| axis of the stylus.
+  Axis x;
+  Axis y;
+
+  // Range for the pressure of the tip
+  Axis? pressure;
+
+  bool is_invertible = false;
+
+  // The list of HID button usages that this stylus can generate.
+  uint32 buttons;
+};
+
+// |StylusReport| describes the current state of the stylus.
+struct StylusReport {
+  // Current position of the stylus within the range described in
+  // |StylusDescriptor|
+  int32 x;
+  int32 y;
+
+  // Pressure applied on the stylus tip
+  uint32 pressure;
+
+  // Whether the stylus has made contact with the surface.
+  bool is_in_contact;
+
+  // Whether the stylus is within range. If |is_in_contact| is false, then the stylus
+  // is hovering.
+  bool in_range;
+
+  // Whether the stylus is thought to be inverted.
+  bool is_inverted;
+
+  // List of buttons currently pressed down.
+  uint32 pressed_buttons;
+};
+
+/* Touchscreen */
+
+// |TouchscreenDescriptor| describes the capabilities of a touchscreen.
+struct TouchscreenDescriptor {
+  // Ranges of the |x| and |y| axis.
+  Axis x;
+  Axis y;
+  uint32 max_finger_id;
+};
+
+// |Touch| describes one touch on a touchscreen, which should correspond to
+// one finger.
+struct Touch {
+  // Identifier for a finger that is down.
+  // Note: |finger_id| might not be sequential and will range from 0 to
+  // |max_finger_id|
+  uint32 finger_id;
+
+  // Location within the axis defined in |TouchscreenDescriptor|
+  int32 x;
+  int32 y;
+
+  // Area pressed.
+  uint32 width;
+  uint32 height;
+};
+
+// |TouchscreenReport| describes the current touches recorded by the touchscreen
+// and holds a |Touch| per finger down.
+struct TouchscreenReport {
+  array<Touch> touches;
+};
+
+/* Device and Report */
+
+struct DeviceInfo {
+  uint32 vendor_id;
+  uint32 product_id;
+  uint32 version;
+  string name;
+};
+
+// |DeviceDescriptor| describes an input device.
+struct DeviceDescriptor {
+  DeviceInfo? device_info;
+  KeyboardDescriptor? keyboard;
+  MouseDescriptor? mouse;
+  StylusDescriptor? stylus;
+  TouchscreenDescriptor? touchscreen;
+};
+
+// |InputReport| is an input |report| triggered by an input device.
+struct InputReport {
+  // |event_time| is in nanoseconds when the event was recorded.
+  uint64 event_time;
+
+  KeyboardReport? keyboard;
+  MouseReport? mouse;
+  StylusReport? stylus;
+  TouchscreenReport? touchscreen;
+};
