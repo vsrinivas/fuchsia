@@ -389,7 +389,6 @@ int setsockopt(int fd, int level, int optname, const void* optval,
     req.level = level;
     req.optname = optname;
     if (optlen > sizeof(req.optval)) {
-        io->ops->close(io);
         mxio_release(io);
         return ERRNO(EINVAL);
     }
