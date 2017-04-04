@@ -775,7 +775,7 @@ vaddr_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, 
     // easier.
     const auto choose_offset = [this, align, aslr_width]() -> size_t {
         size_t chosen_offset;
-        aspace_->AslrDraw(reinterpret_cast<uint8_t*>(&chosen_offset), sizeof(chosen_offset));
+        aspace_->AslrPrng().Draw(reinterpret_cast<uint8_t*>(&chosen_offset), sizeof(chosen_offset));
         chosen_offset &= ~(align - 1);
         chosen_offset &= (1UL << aslr_width) - 1;
         return chosen_offset;

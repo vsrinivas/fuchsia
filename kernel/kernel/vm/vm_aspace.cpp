@@ -564,10 +564,3 @@ void VmAspace::InitializeAslr() {
     crypto::GlobalPRNG::GetInstance()->Draw(aslr_seed_, sizeof(aslr_seed_));
     aslr_prng_.AddEntropy(aslr_seed_, sizeof(aslr_seed_));
 }
-
-void VmAspace::AslrDraw(uint8_t* buf, size_t len) {
-    DEBUG_ASSERT(aslr_enabled_);
-
-    ASSERT(len <= INT_MAX);
-    aslr_prng_.Draw(buf, static_cast<int>(len));
-}

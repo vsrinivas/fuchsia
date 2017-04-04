@@ -115,7 +115,8 @@ protected:
     friend class VmMapping;
     mutex_t* lock() { return &lock_; }
 
-    void AslrDraw(uint8_t* buf, size_t len);
+    // Expose the PRNG for ASLR to VmAddressRegion
+    crypto::PRNG& AslrPrng() { DEBUG_ASSERT(aslr_enabled_); return aslr_prng_; }
 
 private:
     // can only be constructed via factory
