@@ -60,10 +60,24 @@ typedef enum {
 } mx_obj_props_t;
 
 typedef struct mx_info_handle_basic {
+    // The unique id assigned by kernel to the object referenced by the
+    // handle.
     mx_koid_t koid;
+
+    // The immutable rights assigned to the handle. Two handles that
+    // have the same koid and the same rights are equivalent and
+    // interchangeable.
     mx_rights_t rights;
+
+    // The object type: channel, event, socket, etc.
     uint32_t type;                // mx_obj_type_t;
+
+    // The koid of the logical counterpart or parent object of the
+    // object referenced by the handle. Otherwise this value is zero.
     mx_koid_t related_koid;
+
+    // Set to MX_OBJ_PROP_WAITABLE if the object referenced by the
+    // handle can be waited on; zero otherwise.
     uint32_t props;               // mx_obj_props_t;
 } mx_info_handle_basic_t;
 
@@ -105,7 +119,10 @@ typedef struct mx_info_task_stats {
 } mx_info_task_stats_t;
 
 typedef struct mx_info_vmar {
+    // Base address of the region.
     uintptr_t base;
+
+    // Length of the region, in bytes.
     size_t len;
 } mx_info_vmar_t;
 

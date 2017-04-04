@@ -134,7 +134,7 @@ typedef struct mx_exception_report {
 // will continue to wait for a response.
 
 // The type of exception port a thread may be waiting for a response from.
-// These values are reported in mx_info_thread_t.exception_port.
+// These values are reported in mx_info_thread_t.wait_exception_port_type.
 #define MX_EXCEPTION_PORT_TYPE_NONE     (0u)
 #define MX_EXCEPTION_PORT_TYPE_DEBUGGER (1u)
 #define MX_EXCEPTION_PORT_TYPE_THREAD   (2u)
