@@ -51,11 +51,14 @@ typedef struct {
     uint8_t lun;
     uint64_t total_blocks;
     uint32_t block_size;
+    size_t max_transfer;  // maximum transfer size reported by usb_get_max_transfer_size()
 
     bool use_read_write_16; // use READ16 and WRITE16 if total_blocks > 0xFFFFFFFF
 
     uint8_t bulk_in_addr;
     uint8_t bulk_out_addr;
+    size_t bulk_in_max_packet;
+    size_t bulk_out_max_packet;
 
     // FIXME (voydanoff) We only need small buffers for CBW, CSW and SCSI commands
     // Once we have the new iotxn API we can allocate these iotxns inline
@@ -79,6 +82,15 @@ typedef struct {
     list_node_t sync_nodes;
 } ums_t;
 #define get_ums(dev) containerof(dev, ums_t, device)
+
+// extra data for clone txns
+typedef struct {
+    ums_t*      msd;
+    mx_off_t    offset;
+    size_t      total_length;
+    size_t      max_packet;
+} ums_txn_extra_t;
+static_assert(sizeof(ums_txn_extra_t) <= sizeof (iotxn_extra_data_t), "");
 
 static csw_status_t ums_verify_csw(ums_t* msd, iotxn_t* csw_request, uint32_t* out_residue);
 
@@ -299,16 +311,30 @@ static mx_status_t ums_read_capacity16(ums_t* msd, scsi_read_capacity_16_t* out_
 }
 
 static void clone_complete(iotxn_t* clone, void* cookie) {
-    iotxn_t* txn = (iotxn_t *)cookie;
-//    ums_t* msd = (ums_t *)txn->context;
+    ums_txn_extra_t* extra = (ums_txn_extra_t *)&clone->extra;
+    ums_t* msd = extra->msd;
 
-    txn->status = clone->status;
-    txn->actual = clone->actual;
+    if (clone->status == NO_ERROR) {
+        extra->offset += clone->actual;
+        // Queue another read if we haven't read full length and did not receive a short packet
+        if (extra->offset < extra->total_length && clone->actual != 0 &&
+                (clone->actual % extra->max_packet) == 0) {
+            size_t length = extra->total_length - extra->offset;
+            if (length > msd->max_transfer) {
+                length = msd->max_transfer;
+            }
+            clone->length = length;
+            clone->vmo_offset += clone->actual;
+            ums_queue_request(msd, clone);
+            return;
+        }
+    }
 
-    iotxn_release(clone);
+    // transfer is done if we get here
+    completion_signal((completion_t *)cookie);
 }
 
-static void ums_queue_data_transfer(ums_t* msd, iotxn_t* txn, uint8_t ep_address) {
+static void ums_queue_data_transfer(ums_t* msd, iotxn_t* txn, uint8_t ep_address, size_t max_packet) {
     iotxn_t* clone = NULL;
     mx_status_t status = iotxn_clone(txn, &clone);
     if (status != NO_ERROR) {
@@ -319,13 +345,30 @@ static void ums_queue_data_transfer(ums_t* msd, iotxn_t* txn, uint8_t ep_address
     // stash msd in txn->context so we can get at it in clone_complete()
     txn->context = msd;
     clone->complete_cb = clone_complete;
-    clone->cookie = txn;
+
+    ums_txn_extra_t* extra = (ums_txn_extra_t *)&clone->extra;
+    extra->msd = msd;
+    extra->offset = 0;
+    extra->total_length = txn->length;
+    extra->max_packet = max_packet;
+
+    if (clone->length > msd->max_transfer) {
+        clone->length = msd->max_transfer;
+    }
 
     usb_protocol_data_t* pdata = iotxn_pdata(clone, usb_protocol_data_t);
     memset(pdata, 0, sizeof(*pdata));
     pdata->ep_address = ep_address;
 
+    completion_t completion = COMPLETION_INIT;
+    clone->cookie = &completion;
     ums_queue_request(msd, clone);
+    completion_wait(&completion, MX_TIME_INFINITE);
+
+    txn->status = clone->status;
+    txn->actual = (txn->status == NO_ERROR ? extra->offset : 0);
+
+    iotxn_release(clone);
 }
 
 static mx_status_t ums_read(ums_t* msd, iotxn_t* txn) {
@@ -362,7 +405,7 @@ static mx_status_t ums_read(ums_t* msd, iotxn_t* txn) {
         ums_send_cbw(msd, transfer_length, USB_DIR_IN, sizeof(command), &command);
     }
 
-    ums_queue_data_transfer(msd, txn, msd->bulk_in_addr);
+    ums_queue_data_transfer(msd, txn, msd->bulk_in_addr, msd->bulk_in_max_packet);
 
     uint32_t residue;
     mx_status_t status = ums_read_csw(msd, &residue);
@@ -404,7 +447,7 @@ static mx_status_t ums_write(ums_t* msd, iotxn_t* txn) {
         ums_send_cbw(msd, transfer_length, USB_DIR_OUT, sizeof(command), &command);
     }
 
-    ums_queue_data_transfer(msd, txn, msd->bulk_out_addr);
+    ums_queue_data_transfer(msd, txn, msd->bulk_out_addr, msd->bulk_out_max_packet);
 
     // receive CSW
     uint32_t residue;
@@ -675,16 +718,20 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
 
     uint8_t bulk_in_addr = 0;
     uint8_t bulk_out_addr = 0;
+    size_t bulk_in_max_packet = 0;
+    size_t bulk_out_max_packet = 0;
 
    usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
     while (endp) {
         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
             if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                 bulk_out_addr = endp->bEndpointAddress;
+                bulk_out_max_packet = usb_ep_max_packet(endp);
             }
         } else {
             if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                 bulk_in_addr = endp->bEndpointAddress;
+                bulk_in_max_packet = usb_ep_max_packet(endp);
             }
         }
         endp = usb_desc_iter_next_endpoint(&iter);
@@ -711,6 +758,12 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
     msd->driver = driver;
     msd->bulk_in_addr = bulk_in_addr;
     msd->bulk_out_addr = bulk_out_addr;
+    msd->bulk_in_max_packet = bulk_in_max_packet;
+    msd->bulk_out_max_packet = bulk_out_max_packet;
+
+    size_t max_in = usb_get_max_transfer_size(device, bulk_in_addr);
+    size_t max_out = usb_get_max_transfer_size(device, bulk_out_addr);
+    msd->max_transfer = (max_in < max_out ? max_in : max_out);
 
     mx_status_t status = NO_ERROR;
     msd->cbw_iotxn = usb_alloc_iotxn(bulk_out_addr, sizeof(ums_cbw_t));
