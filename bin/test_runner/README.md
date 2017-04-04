@@ -9,47 +9,68 @@ integration tests).
 
 ## Instructions
 
-Prerequisite:
-- An instance of magenta running (on qemu or real device), configured with networking. For
-  example, see [networking configuration
-  doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
+#### Prerequisites
+- An instance of magenta running (on qemu or real device), configured with
+networking. For example, see
+[networking configuration doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
 - A build configuration that runs `test_runner` at startup. For example,
   `./package/gn/gen.py -m boot_test_modular`.
+  (Alternatively, you can run `@boot test_runner` from a magenta$ prompt.)
 
-#### Testing on a qemu instance
+#### Running the tests
 
-Run a test using `//apps/test_runner/src/run_test`. E.g:
+The script will automatically search for a Magenta device on the local
+subnet and use it. This discovery is performed using ipv6. This process
+works for both qemu and for real hardware, but not for the
+[Fuchsia test infrastructure](#Fuchsia-test-infrastructure).
+
+Run a test using `//apps/test_runner/src/run_test`. For example:
 
 ```sh
-$ $FUCHSIA_DIR/apps/test_runner/src/run_test "device_runner --user_shell=dummy_user_shell"
+$ $FUCHSIA_DIR/apps/test_runner/src/run_test "device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test"
 ```
 
 This will return when it has completed (either by succeeding or crashing). You
 can watch the qemu console to see any console output written by test. In case of
-a crash, this console output will be dumped by `run_test`.
+a crash, this console output will also be dumped by `run_test`.
 
-You can also run a series of tests by supplying a JSON file describing the tests to run:
+You can also run a series of tests by supplying a JSON file describing the
+tests to run:
+
 ```sh
 $ $FUCHSIA_DIR/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
 ```
 
-#### Testing on a real device
-You must specify the IP address of the real device by using
-`run_test`'s `--server` flag.
+#### Selecting between multiple devices
 
-Troubleshooting:
-- If `run_test` is having trouble finding your qemu instance, your instance may
-  be assigned a different IP than the default that `run_test` assumes. If
-  incorrect, you can pass the assigned IPv4 address by looking at the device log
-  of qemu. Look for this line:
+If you have more than one device, you can select a particular device with
+`run_test`'s `--server` flag. The device name is displayed on the boot screen,
+or you can view all connected devices with the netls command, like this:
 
-  ``` [00006.470] 01216.01434> ip4_addr: 192.168.3.53 netmask: 255.255.255.0 gw: 192.168.3.1 ```
+```sh
+$FUCHSIA_OUT_DIR/build-magenta/tools/netls
+```
 
-  Pass the correct `ipv4_addr` to the `run_test` tool:
+Pass the device name to the `run_test` tool:
 
-  ``` $FUCHSIA_DIR/apps/test_runner/src/run_test --server 192.168.3.53:8342 ... ```
+```sh
+$FUCHSIA_DIR/apps/test_runner/src/run_test --server rain-detour-glaze-donut ...
+```
 
-- The `FUCHSIA_DIR` env variable is set, for example from sourcing `//scripts/env.sh`.
+- The environment variables above are set by sourcing `//scripts/env.sh`.
+
+
+#### Fuchsia test infrastructure
+
+For the Fuchsia automated test infrastructure, qemu is configured to
+transparently route 127.0.0.1:8342 to a known IP address. ipv6 is not
+supported. `run_test` supports this environment by allowing you to specify an
+ipv4 address for the `--server` parameter. However, there are caveats:
+
+  - `loglistener` does not work because it requires ipv6. Therefore, no
+    logging data will be captured if a test has errors.
+  - The `--sync` parameter is not supported.
+
 
 ## Test Config Description
 
@@ -64,14 +85,14 @@ The JSON file looks similar to this:
 
 ```
 {
-    "tests": [
+  "tests":[
     {
       "name":"dummy_user_shell",
-      "exec":"device_runner --ledger_repository_for_testing --user_shell=dummy_user_shell"
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dummy_user_shell"
     },
     {
       "name":"parent_child",
-      "exec":"device_runner --ledger_repository_for_testing --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
       "copy":{
         "/system/apps/modular_tests":[
           "parent_module",
@@ -95,4 +116,6 @@ Each test is an object with the following fields:
   - A map field where each key is the name of a directory on the Fuchsia
   system and each name value of the array is the name of a file on the host
   to be copied to that directory. The `copy` field is optional. If absent,
-  the files currently on the device will be used.
+  the files currently on the device will be used. You must pass the --sync
+  flag to `run_test` to cause the files to be copied. This does not work
+  with qemu devices accessed with ipv4.
