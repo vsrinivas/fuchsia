@@ -65,4 +65,6 @@ MODULE_CFLAGS += -Wno-gnu-designator -Wno-format-security -Wno-string-plus-int
 endif
 MODULE_CFLAGS += -Wno-logical-not-parentheses
 
+MODULE_DEFINES += DEBUG=1
+
 include make/module.mk
