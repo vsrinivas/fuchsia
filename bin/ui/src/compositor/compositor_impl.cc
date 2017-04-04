@@ -29,4 +29,9 @@ void CompositorImpl::CreateRenderer(
   engine_->CreateRenderer(std::move(renderer_request), label);
 }
 
+void CompositorImpl::TakeScreenshot(uint32_t renderer_index,
+                                    const TakeScreenshotCallback& callback) {
+  engine_->TakeScreenshot(renderer_index, callback);
+}
+
 }  // namespace compositor

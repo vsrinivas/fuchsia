@@ -10,6 +10,7 @@ group("src") {
     "launch",
     "print_input",
     "root_presenter",
+    "screencap",
     "view_manager",
   ]
 }

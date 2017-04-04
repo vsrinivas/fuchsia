@@ -24,6 +24,8 @@ class CompositorImpl : public mozart::Compositor {
                    const CreateSceneCallback& callback) override;
   void CreateRenderer(fidl::InterfaceRequest<mozart::Renderer> renderer_request,
                       const fidl::String& label) override;
+  void TakeScreenshot(uint32_t renderer_index,
+                      const TakeScreenshotCallback& callback) override;
 
   CompositorEngine* engine_;
 

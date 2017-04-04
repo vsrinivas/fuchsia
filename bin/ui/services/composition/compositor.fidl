@@ -4,6 +4,7 @@
 
 module mozart;
 
+import "apps/mozart/services/images/image.fidl";
 import "apps/mozart/services/composition/renderers.fidl";
 import "apps/mozart/services/composition/scene_token.fidl";
 import "apps/mozart/services/composition/scenes.fidl";
@@ -49,4 +50,13 @@ interface Compositor {
   // To destroy the renderer, simply close the |renderer| channel.
   CreateRenderer(Renderer& renderer,
                  string? label);
+
+  // Take a screenshot
+  //
+  // Since the compositor can have multiple renderers running at the same
+  // time, use the |renderer_index| parameter to specify which renderer
+  // to get a screenshot from.
+  //
+  // Returns an Image |image| or null if could not capture.
+  TakeScreenshot(uint32 renderer_index) => (Image? image);
 };

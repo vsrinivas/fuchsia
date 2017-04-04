@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/src/compositor/frame_info.h"
 #include "apps/mozart/src/compositor/graph/universe.h"
@@ -46,6 +47,11 @@ class CompositorEngine {
   // Creates a scene graph renderer.
   void CreateRenderer(fidl::InterfaceRequest<mozart::Renderer> renderer_request,
                       const fidl::String& label);
+
+  // Take a screenshot
+  void TakeScreenshot(
+      uint32_t renderer_index,
+      const mozart::Compositor::TakeScreenshotCallback& callback);
 
   // SCENE REQUESTS
 
@@ -159,6 +165,8 @@ class CompositorEngine {
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   Universe universe_;
+
+  mozart::BufferProducer buffer_producer_;
 
   ftl::WeakPtrFactory<CompositorEngine> weak_factory_;
 

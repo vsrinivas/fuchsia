@@ -8,14 +8,15 @@
 #include <sstream>
 #include <utility>
 
-#include "apps/tracing/lib/trace/event.h"
 #include "apps/mozart/lib/skia/type_converters.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
+#include "apps/tracing/lib/trace/event.h"
 #ifdef MOZART_USE_VULKAN
 #include "apps/mozart/src/compositor/backend/framebuffer_output_vulkan.h"
 #else
 #include "apps/mozart/src/compositor/backend/framebuffer_output_cpu.h"
 #endif
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
 #include "apps/mozart/src/compositor/renderer_impl.h"
@@ -191,6 +192,40 @@ void CompositorEngine::OnRendererConnectionError(
   FTL_VLOG(1) << "OnRendererConnectionError: renderer=" << renderer_state;
 
   DestroyRenderer(renderer_state);
+}
+
+void CompositorEngine::TakeScreenshot(
+    uint32_t renderer_index,
+    const mozart::Compositor::TakeScreenshotCallback& callback) {
+  if (renderers_.empty() || renderer_index >= renderers_.size()) {
+    callback(nullptr);
+    return;
+  }
+
+  auto renderer_state = renderers_[renderer_index];
+  if (!renderer_state->visible_snapshot()) {
+    callback(nullptr);
+    return;
+  }
+
+  // Metadata can be bogus, since it's basically kept within RenderFrame
+  // which won't be returned when taking a screenshot.
+  ftl::TimePoint composition_time = ftl::TimePoint();
+  FrameInfo frame_info;
+  RenderFrame::Metadata frame_metadata(frame_info, composition_time);
+
+  // Generate a render frame from the latest snapshot
+  ftl::RefPtr<RenderFrame> frame = renderer_state->visible_snapshot()->Paint(
+      frame_metadata, renderer_state->root_scene_viewport());
+
+  // Convert RenderFrame to an ImagePtr
+  mozart::ImagePtr image;
+  sk_sp<SkSurface> surface =
+      MakeSkSurface(frame->viewport().size(), &buffer_producer_, &image);
+  SkCanvas* canvas = surface->getCanvas();
+  // Rasterize
+  frame->Draw(canvas);
+  callback(std::move(image));
 }
 
 void CompositorEngine::DestroyRenderer(RendererState* renderer_state) {
@@ -427,7 +462,7 @@ void CompositorEngine::ComposeRenderer(RendererState* renderer_state,
   FTL_VLOG(2) << "ComposeRenderer: renderer_state=" << renderer_state;
 
   TRACE_DURATION("gfx", "CompositorEngine::ComposeRenderer", "renderer",
-                  renderer_state->FormattedLabel());
+                 renderer_state->FormattedLabel());
 
   ftl::TimePoint composition_time = ftl::TimePoint();
   PresentRenderer(renderer_state, frame_info.presentation_time);
@@ -441,7 +476,7 @@ void CompositorEngine::PresentRenderer(RendererState* renderer_state,
   FTL_VLOG(2) << "PresentRenderer: renderer_state=" << renderer_state;
 
   TRACE_DURATION("gfx", "CompositorEngine::PresentRenderer", "renderer",
-                  renderer_state->FormattedLabel());
+                 renderer_state->FormattedLabel());
 
   // TODO(jeffbrown): Be more selective and do this work only for scenes
   // associated with the renderer that actually have pending updates.
@@ -462,7 +497,7 @@ void CompositorEngine::SnapshotRenderer(RendererState* renderer_state) {
   FTL_VLOG(2) << "SnapshotRenderer: renderer_state=" << renderer_state;
 
   TRACE_DURATION("gfx", "CompositorEngine::SnapshotRenderer", "renderer",
-                  renderer_state->FormattedLabel());
+                 renderer_state->FormattedLabel());
 
   if (FTL_VLOG_IS_ON(2)) {
     std::ostringstream block_log;
@@ -503,7 +538,7 @@ void CompositorEngine::PaintRenderer(RendererState* renderer_state,
   FTL_VLOG(2) << "PaintRenderer: renderer_state=" << renderer_state;
 
   TRACE_DURATION("gfx", "CompositorEngine::PaintRenderer", "renderer",
-                  renderer_state->FormattedLabel());
+                 renderer_state->FormattedLabel());
 
   RenderFrame::Metadata frame_metadata(frame_info, composition_time);
 
