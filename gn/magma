@@ -6,6 +6,10 @@
         {
             "binary": "libmsd_vendor.so",
             "bootfs_path": "lib/driver/libmsd_vendor.so"
+        },
+        {
+            "binary": "vkcube",
+            "bootfs_path": "apps/vkcube"
         }
     ]
 }
