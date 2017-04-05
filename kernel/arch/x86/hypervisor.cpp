@@ -26,6 +26,9 @@
 
 #include "hypervisor_priv.h"
 
+#define VMX_ERR_CHECK(var) \
+    "setna %[" #var "];"     // Check CF and ZF for error.
+
 extern uint8_t _gdt[];
 
 static status_t vmxon(paddr_t pa) {
@@ -33,7 +36,7 @@ static status_t vmxon(paddr_t pa) {
 
     __asm__ volatile (
         "vmxon %[pa];"
-        "setna %[err];"     // Check CF and ZF for error.
+        VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         : [pa] "m"(pa)
         : "cc", "memory");
@@ -46,7 +49,7 @@ static status_t vmxoff() {
 
     __asm__ volatile (
         "vmxoff;"
-        "setna %[err];"     // Check CF and ZF for error.
+        VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         :
         : "cc");
@@ -59,7 +62,7 @@ static status_t vmptrld(paddr_t pa) {
 
     __asm__ volatile (
         "vmptrld %[pa];"
-        "setna %[err];"     // Check CF and ZF for error.
+        VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         : [pa] "m"(pa)
         : "cc", "memory");
@@ -72,7 +75,7 @@ static status_t vmclear(paddr_t pa) {
 
     __asm__ volatile (
         "vmclear %[pa];"
-        "setna %[err];"     // Check CF and ZF for error.
+        VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         : [pa] "m"(pa)
         : "cc", "memory");
@@ -82,28 +85,16 @@ static status_t vmclear(paddr_t pa) {
 
 static uint64_t vmread(uint64_t field) {
     uint8_t err;
-    uint64_t val = 0;
+    uint64_t val;
 
-    __asm__ volatile (
-        "vmread %[val], %[field];"
-        "setna %[err];"     // Check CF and ZF for error.
-        : [err] "=r"(err), [val] "=r"(val)
-        : [field] "r"(field)
-        : "cc", "memory");
+    __asm__ volatile(
+        "vmread %[field], %[val];"
+        VMX_ERR_CHECK(err)
+        : [err] "=r"(err)
+        : [field] "r"(field), [val] "m"(val)
+        : "cc");
 
     DEBUG_ASSERT(err == NO_ERROR);
-    return val;
-}
-
-static uint64_t vmread_unchecked(uint64_t field) {
-    uint64_t val = 0;
-
-    __asm__ volatile (
-        "vmread %[val], %[field];"
-        : [val] "=r"(val)
-        : [field] "r"(field)
-        : "cc", "memory");
-
     return val;
 }
 
@@ -112,10 +103,10 @@ static void vmwrite(uint64_t field, uint64_t val) {
 
     __asm__ volatile (
         "vmwrite %[val], %[field];"
-        "setna %[err];"     // Check CF and ZF for error.
+        VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         : [val] "r"(val), [field] "r"(field)
-        : "cc", "memory");
+        : "cc");
 
     DEBUG_ASSERT(err == NO_ERROR);
 }
@@ -644,7 +635,7 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context) {
         uint64_t error = vmread(VMCS_32_INSTRUCTION_ERROR);
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     } else {
-        uint64_t reason = vmread_unchecked(VMCS_32_EXIT_REASON);
+        uint64_t reason = vmread(VMCS_32_EXIT_REASON);
         dprintf(SPEW, "vmexit reason: %#" PRIx64 "\n", reason);
         uint64_t qualification = vmread(VMCS_XX_EXIT_QUALIFICATION);
         dprintf(SPEW, "vmexit qualification: %#" PRIx64 "\n", qualification);
