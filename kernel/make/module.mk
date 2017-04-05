@@ -36,7 +36,11 @@
 #
 # include make/module.mk
 
-MODULE_SRCDIR := $(MODULE)
+MODULE_SRCDIR := $(firstword $(subst .,$(SPACE),$(MODULE)))
+
+ifeq ($(wildcard $(MODULE_SRCDIR)/rules.mk),)
+$(error Module '$(MODULE)' missing $(MODULE_SRCDIR)/rules.mk)
+endif
 
 # all library deps go on the deps list
 _MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS)

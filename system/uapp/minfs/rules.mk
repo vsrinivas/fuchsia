@@ -40,7 +40,7 @@ include make/module.mk
 
 # host minfs tool
 
-MODULE := $(LOCAL_DIR)-host
+MODULE := $(LOCAL_DIR).host
 
 MODULE_NAME := minfs
 

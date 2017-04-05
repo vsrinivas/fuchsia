@@ -70,7 +70,7 @@ include make/module.mk
 # currently we compile in all the core drivers
 # these will migrate to shared libraries soon
 #
-MODULE := $(LOCAL_DIR)-host
+MODULE := $(LOCAL_DIR).host
 
 MODULE_NAME := devhost
 

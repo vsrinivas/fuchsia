@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR)-gen
+MODULE := $(LOCAL_DIR).gen
 
 MODULE_NAME := mdigen
 
@@ -19,7 +19,7 @@ MODULE_SRCS += \
 include make/module.mk
 
 
-MODULE := $(LOCAL_DIR)-dump
+MODULE := $(LOCAL_DIR).dump
 
 MODULE_NAME := mdidump
 

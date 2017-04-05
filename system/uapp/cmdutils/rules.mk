@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR)-env
+MODULE := $(LOCAL_DIR).env
 
 MODULE_TYPE := userapp
 

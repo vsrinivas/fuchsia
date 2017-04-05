@@ -17,7 +17,7 @@ MODULE_LIBS := ulib/magenta ulib/c
 
 include make/module.mk
 
-MODULE := $(LOCAL_DIR)-test
+MODULE := $(LOCAL_DIR).test
 
 MODULE_TYPE := usertest
 
@@ -31,7 +31,7 @@ MODULE_LIBS := ulib/unittest ulib/mxio ulib/c ulib/mxtl ulib/mxcpp
 
 include make/module.mk
 
-MODULE := $(LOCAL_DIR)-tftp-example
+MODULE := $(LOCAL_DIR).tftp-example
 
 MODULE_TYPE := hostapp
 

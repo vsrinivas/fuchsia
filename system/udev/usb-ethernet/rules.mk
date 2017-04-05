@@ -10,7 +10,7 @@ MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
-MODULE := $(LOCAL_DIR)-ax88772b
+MODULE := $(LOCAL_DIR).ax88772b
 
 MODULE_SRCS := $(LOCAL_DIR)/asix-88772b.c
 
@@ -23,7 +23,7 @@ MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/c
 
-MODULE := $(LOCAL_DIR)-ax88179
+MODULE := $(LOCAL_DIR).ax88179
 
 MODULE_SRCS := $(LOCAL_DIR)/asix-88179.c
 
@@ -35,7 +35,7 @@ MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump ulib/sync
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/c ulib/mxio
 
-MODULE := $(LOCAL_DIR)-lan9514
+MODULE := $(LOCAL_DIR).lan9514
 
 MODULE_SRCS := $(LOCAL_DIR)/smsc-lan9514.c
 

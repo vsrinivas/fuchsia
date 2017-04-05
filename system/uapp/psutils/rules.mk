@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR)-ps
+MODULE := $(LOCAL_DIR).ps
 
 MODULE_TYPE := userapp
 
@@ -16,7 +16,7 @@ MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk
 
-MODULE := $(LOCAL_DIR)-kill
+MODULE := $(LOCAL_DIR).kill
 
 MODULE_TYPE := userapp
 
@@ -28,7 +28,7 @@ MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk
 
-MODULE := $(LOCAL_DIR)-killall
+MODULE := $(LOCAL_DIR).killall
 
 MODULE_TYPE := userapp
 
@@ -40,7 +40,7 @@ MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk
 
-MODULE := $(LOCAL_DIR)-vmaps
+MODULE := $(LOCAL_DIR).vmaps
 
 MODULE_TYPE := userapp
 
@@ -52,7 +52,7 @@ MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk
 
-MODULE := $(LOCAL_DIR)-test
+MODULE := $(LOCAL_DIR).test
 
 MODULE_TYPE := usertest
 
