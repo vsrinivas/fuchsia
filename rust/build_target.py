@@ -53,6 +53,19 @@ directory = '%s'
         config_file.write(config)
 
 
+# Fixes the target path in the given depfile.
+def fix_depfile(depfile_path, base_path):
+    with open(depfile_path, "r+") as depfile:
+        content = depfile.read()
+        content_split = content.split(': ', 1)
+        target_path = content_split[0]
+        adjusted_target_path = os.path.relpath(target_path, start=base_path)
+        new_content = "%s: %s" % (adjusted_target_path, content_split[1])
+        depfile.seek(0)
+        depfile.write(new_content)
+        depfile.truncate()
+
+
 def main():
     parser = argparse.ArgumentParser("Compiles a Rust crate")
     parser.add_argument("--type",
@@ -67,6 +80,9 @@ def main():
                         required=True)
     parser.add_argument("--gen-dir",
                         help="Path to the target's generated source directory",
+                        required=True)
+    parser.add_argument("--root-out-dir",
+                        help="Path to the root output directory",
                         required=True)
     parser.add_argument("--root-gen-dir",
                         help="Path to the root gen directory",
@@ -200,6 +216,16 @@ def main():
     return_code = subprocess.call(call_args, env=env, cwd=args.gen_dir)
     if return_code != 0:
         return return_code
+
+    # Fix the depfile manually until a flag gets added to cargo to tweak the
+    # base path for targets.
+    # Note: out_dir already contains the "target.rust" directory.
+    output_name = args.name
+    if args.type == "lib":
+        output_name = "lib%s" % args.name
+    depfile_path = os.path.join(args.out_dir, args.target_triple, "debug",
+                                "%s.d" % output_name)
+    fix_depfile(depfile_path, args.root_out_dir)
 
     # Make binaries accessible from a standard location in the output directory.
     if args.type == "bin":

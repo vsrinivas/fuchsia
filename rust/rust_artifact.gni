@@ -53,15 +53,18 @@ template("rust_artifact") {
   # TODO(pylaligand): toggle debug/release depending on build type.
   assert(type == "bin" || type == "lib")
   if (type == "bin") {
-    output_file = "$target_out_dir/$target_triple/debug/$name"
+    output_file = "$target_out_dir/$target_name.rust/$target_triple/debug/$name"
+    output_depfile = "$output_file.d"
   } else if (type == "lib") {
-    output_file = "$target_out_dir/$target_triple/debug/lib$name.rlib"
+    output_base = "$target_out_dir/$target_name.rust/$target_triple/debug/lib$name"
+    output_file = "$output_base.rlib"
+    output_depfile = "$output_base.d"
   }
 
   action(target_name)  {
     script = "//build/rust/build_target.py"
 
-    depfile = "$output_file.d"
+    depfile = output_depfile
 
     inputs = [
       "${source_dir}/Cargo.toml",
@@ -72,7 +75,12 @@ template("rust_artifact") {
     ]
     if (type == "lib") {
       outputs += [
-        "${target_gen_dir}/${target_name}.rust/${target_name}.rust_name",
+        "$target_gen_dir/$target_name.rust/$target_name.rust_name",
+      ]
+    }
+    if (type == "bin") {
+      outputs += [
+        "$target_out_dir/$target_name.rust/$name",
       ]
     }
 
@@ -87,9 +95,11 @@ template("rust_artifact") {
       "--name",
       name,
       "--out-dir",
-      rebase_path("${target_out_dir}/${target_name}.rust"),
+      rebase_path("$target_out_dir/$target_name.rust"),
       "--gen-dir",
-      rebase_path("${target_gen_dir}/${target_name}.rust"),
+      rebase_path("$target_gen_dir/$target_name.rust"),
+      "--root-out-dir",
+      rebase_path(root_build_dir),
       "--root-gen-dir",
       rebase_path(root_gen_dir),
       "--crate-root",
