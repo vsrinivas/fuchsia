@@ -30,7 +30,7 @@ int Semaphore::Post() {
     return ret;
 }
 
-status_t Semaphore::Wait(lk_bigtime_t timeout) {
+status_t Semaphore::Wait(lk_bigtime_t deadline) {
     thread_t *current_thread = get_current_thread();
 
      // If there are no resources available then we need to
@@ -40,7 +40,7 @@ status_t Semaphore::Wait(lk_bigtime_t timeout) {
     current_thread->interruptable = true;
 
     if (unlikely(--count_ < 0)) {
-        ret = wait_queue_block(&waitq_, timeout);
+        ret = wait_queue_block(&waitq_, deadline);
         if (ret < NO_ERROR) {
             if ((ret == ERR_TIMED_OUT) || (ret == ERR_INTERRUPTED))
                 count_++;

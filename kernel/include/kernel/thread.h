@@ -188,7 +188,7 @@ void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t *);
 
 status_t thread_detach(thread_t *t);
-status_t thread_join(thread_t *t, int *retcode, lk_bigtime_t timeout);
+status_t thread_join(thread_t *t, int *retcode, lk_bigtime_t deadline);
 status_t thread_detach_and_resume(thread_t *t);
 status_t thread_set_real_time(thread_t *t);
 

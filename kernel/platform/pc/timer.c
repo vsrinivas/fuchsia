@@ -22,6 +22,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <platform.h>
+#include <pow2.h>
 #include <dev/interrupt.h>
 #include <platform/console.h>
 #include <platform/pc.h>
@@ -86,11 +87,13 @@ static enum clock_source calibration_clock;
 // APIC timer calibration values
 static bool use_tsc_deadline;
 static uint64_t apic_ticks_per_ms = 0;
+static struct fp_32_64 apic_ticks_per_ns;
 static uint8_t apic_divisor = 0;
 
 // TSC timer calibration values
 static uint64_t tsc_ticks_per_ms;
 static struct fp_32_64 ns_per_tsc;
+static struct fp_32_64 tsc_per_ns;
 
 // HPET calibration values
 static struct fp_32_64 ns_per_hpet;
@@ -335,6 +338,7 @@ static void calibrate_apic_timer(void)
     if (apic_freq != 0) {
         apic_ticks_per_ms = apic_freq / 1000;
         apic_divisor = 1;
+        fp_32_64_div_32_32(&apic_ticks_per_ns, apic_ticks_per_ms, 1000 * 1000);
         TRACEF("APIC frequency: %" PRIu64 " ticks/ms\n", apic_ticks_per_ms);
         return;
     }
@@ -403,6 +407,7 @@ outer:
 
         }
         apic_ticks_per_ms = (best_time[1] - best_time[0]) / (duration_ms[1] - duration_ms[0]);
+        fp_32_64_div_32_32(&apic_ticks_per_ns, apic_ticks_per_ms, 1000 * 1000);
         break;
     }
     ASSERT(apic_divisor != 0);
@@ -419,6 +424,7 @@ static void calibrate_tsc(void)
     if (tsc_freq != 0) {
         tsc_ticks_per_ms = tsc_freq / 1000;
         fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, tsc_ticks_per_ms);
+        fp_32_64_div_32_32(&tsc_per_ns, tsc_ticks_per_ms, 1000 * 1000);
         TRACEF("TSC frequency: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
         return;
     }
@@ -483,6 +489,7 @@ static void calibrate_tsc(void)
     LTRACEF("TSC calibrated: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
 
     fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, tsc_ticks_per_ms);
+    fp_32_64_div_32_32(&tsc_per_ns, tsc_ticks_per_ms, 1000 * 1000);
     LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
@@ -506,7 +513,7 @@ static void platform_init_timer(uint level)
 
     if (has_hpet) {
         calibration_clock = CLOCK_HPET;
-        fp_32_64_div_32_32(&ns_per_hpet, 1000 * 1000 * 1000, hpet_ticks_per_ms() * 1000);
+        fp_32_64_div_32_32(&ns_per_hpet, 1000 * 1000, hpet_ticks_per_ms());
     } else {
         calibration_clock = CLOCK_PIT;
     }
@@ -560,7 +567,7 @@ static void platform_init_timer(uint level)
 LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);
 
 status_t platform_set_oneshot_timer(platform_timer_callback callback,
-                                    void *arg, lk_bigtime_t interval)
+                                    void *arg, lk_bigtime_t deadline)
 {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu = arch_curr_cpu_num();
@@ -568,31 +575,42 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
     t_callback[cpu] = callback;
     callback_arg[cpu] = arg;
 
-    interval = discrete_time_roundup(interval);
-
-    if (interval > MAX_TIMER_INTERVAL)
-        interval = MAX_TIMER_INTERVAL;
-    if (interval < 1) interval = 1;
+    deadline = discrete_time_roundup(deadline);
 
     if (use_tsc_deadline) {
-        if (UINT64_MAX / interval < (tsc_ticks_per_ms / LK_MSEC(1))) {
+        if (UINT64_MAX / deadline < (tsc_ticks_per_ms / LK_MSEC(1))) {
             return ERR_INVALID_ARGS;
         }
 
-        const uint64_t tsc_interval = interval * tsc_ticks_per_ms / LK_MSEC(1);
-        uint64_t deadline = rdtsc() + tsc_interval;
-        LTRACEF("Scheduling oneshot timer: %" PRIu64 " deadline\n", deadline);
-        apic_timer_set_tsc_deadline(deadline, false /* unmasked */);
+        // We rounded up to the tick after above.
+        const uint64_t tsc_deadline = u64_mul_u64_fp32_64(deadline, tsc_per_ns);
+        LTRACEF("Scheduling oneshot timer: %" PRIu64 " deadline\n", tsc_deadline);
+        apic_timer_set_tsc_deadline(tsc_deadline, false /* unmasked */);
         return NO_ERROR;
     }
 
-    uint8_t extra_divisor = 1;
-    while (apic_ticks_per_ms / LK_MSEC(1) > UINT32_MAX / interval / extra_divisor) {
-        extra_divisor *= 2;
+    const lk_bigtime_t now = current_time_hires();
+    if (now >= deadline) {
+        // Deadline has already passed. We still need to schedule a timer so that
+        // the interrupt fires.
+        LTRACEF("Scheduling oneshot timer for min duration\n");
+        return apic_timer_set_oneshot(1, 1, false /* unmasked */);
     }
-    const uint64_t count_per_ms = (apic_ticks_per_ms / extra_divisor) * interval;
-    uint32_t count = (uint32_t)(count_per_ms / LK_MSEC(1));
-    uint32_t divisor = apic_divisor * extra_divisor;
+    const lk_bigtime_t interval = deadline - now;
+    DEBUG_ASSERT(interval != 0);
+
+    uint64_t apic_ticks_needed = u64_mul_u64_fp32_64(interval, apic_ticks_per_ns);
+    if (apic_ticks_needed == 0) {
+        apic_ticks_needed = 1;
+    }
+
+    // Find the shift needed for this timeout, since count is 32-bit.
+    const uint highest_set_bit = log2_ulong_floor(apic_ticks_needed);
+    const uint8_t extra_shift = (highest_set_bit <= 31) ? 0 : highest_set_bit - 31;
+
+    DEBUG_ASSERT((apic_ticks_needed >> extra_shift) <= UINT32_MAX);
+    uint32_t count = (uint32_t)apic_ticks_needed >> extra_shift;
+    uint32_t divisor = apic_divisor << extra_shift;
     ASSERT(divisor <= UINT8_MAX);
 
     // Make sure we're not underflowing
@@ -602,7 +620,6 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
     }
 
     LTRACEF("Scheduling oneshot timer: %u count, %u div\n", count, divisor);
-
     return apic_timer_set_oneshot(count, divisor, false /* unmasked */);
 }
 

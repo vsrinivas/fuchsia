@@ -54,7 +54,7 @@ struct fp_32_64 ns_per_cntpct;
 
 static uint64_t lk_bigtime_to_cntpct(lk_bigtime_t lk_time)
 {
-    return u64_mul_u32_fp32_64(lk_time, cntpct_per_ns);
+    return u64_mul_u64_fp32_64(lk_time, cntpct_per_ns);
 }
 
 static lk_bigtime_t cntpct_to_lk_bigtime(uint64_t cntpct)
@@ -217,17 +217,20 @@ static enum handler_return platform_tick(void *arg)
     }
 }
 
-status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg, lk_bigtime_t interval)
+status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg, lk_bigtime_t deadline)
 {
-    uint64_t cntpct_interval = lk_bigtime_to_cntpct(interval);
+    DEBUG_ASSERT(arch_ints_disabled());
+
+    // Add one to the deadline, since with very high probability the deadline
+    // straddles a counter tick.
+    const uint64_t cntpct_deadline = lk_bigtime_to_cntpct(deadline) + 1;
 
     ASSERT(arg == NULL);
 
     t_callback = callback;
-    if (cntpct_interval <= INT_MAX)
-        write_tval(cntpct_interval);
-    else
-        write_cval(read_ct() + cntpct_interval);
+    // Even if the deadline has already passed, the ARMv8-A timer will fire the
+    // interrupt.
+    write_cval(cntpct_deadline);
     write_ctl(1);
 
     return 0;
@@ -302,7 +305,7 @@ static void test_time_conversions(uint32_t cntfrq)
     test_lk_bigtime_to_cntpct(cntfrq, 60 * 60 * 24 * 365);
     test_lk_bigtime_to_cntpct(cntfrq, 60 * 60 * 24 * (365 * 10 + 2));
     test_lk_bigtime_to_cntpct(cntfrq, 60ULL * 60 * 24 * (365 * 100 + 2));
-    test_lk_bigtime_to_cntpct(cntfrq, ~0);
+    test_lk_bigtime_to_cntpct(cntfrq, 1ULL<<60);
     test_cntpct_to_lk_bigtime(cntfrq, 0);
     test_cntpct_to_lk_bigtime(cntfrq, 1);
     test_cntpct_to_lk_bigtime(cntfrq, 60 * 60 * 24);

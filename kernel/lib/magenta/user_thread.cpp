@@ -599,7 +599,7 @@ status_t UserThread::ExceptionHandlerExchange(
         exception_status_ = ExceptionStatus::UNPROCESSED;
     }
 
-    auto status = event_wait_timeout(&exception_event_, INFINITE_TIME, true);
+    auto status = event_wait_deadline(&exception_event_, INFINITE_TIME, true);
 
     AutoLock lock(&exception_wait_lock_);
 
@@ -610,7 +610,7 @@ status_t UserThread::ExceptionHandlerExchange(
         // It's critical that at this point the event no longer be armed.
         // Otherwise the next time we get an exception we'll fall right through
         // without waiting for an exception response.
-        // Note: The event could be signaled after event_wait_timeout returns
+        // Note: The event could be signaled after event_wait_deadline returns
         // if the thread was killed while the event was signaled.
         DEBUG_ASSERT(!event_signaled(&exception_event_));
         DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE &&

@@ -42,10 +42,10 @@ void wait_queue_destroy(wait_queue_t *);
 /*
  * block on a wait queue.
  * return status is whatever the caller of wait_queue_wake_*() specifies.
- * a timeout other than INFINITE_TIME will set abort after the specified time
- * and return ERR_TIMED_OUT. a timeout of 0 will immediately return.
+ * a deadline other than INFINITE_TIME will abort at the specified time
+ * and return ERR_TIMED_OUT. a deadline in the past will immediately return.
  */
-status_t wait_queue_block(wait_queue_t *, lk_bigtime_t timeout);
+status_t wait_queue_block(wait_queue_t *, lk_bigtime_t deadline);
 
 /*
  * release one or more threads from the wait queue.

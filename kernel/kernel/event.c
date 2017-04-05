@@ -72,18 +72,18 @@ void event_destroy(event_t *e)
  * If the event has already been signaled, this function
  * returns immediately.  Otherwise, the current thread
  * goes to sleep until the event object is signaled,
- * the timeout is reached, or the event object is destroyed
+ * the deadline is reached, or the event object is destroyed
  * by another thread.
  *
  * @param e        Event object
- * @param timeout  Timeout value, in ns
+ * @param deadline Deadline to abort at, in ns
  * @param interruptable  Allowed to interrupt if thread is signaled
  *
  * @return  0 on success, ERR_TIMED_OUT on timeout,
  *          other values depending on wait_result value
  *          when event_signal_etc is used.
  */
-status_t event_wait_timeout(event_t *e, lk_bigtime_t timeout, bool interruptable)
+status_t event_wait_deadline(event_t *e, lk_bigtime_t deadline, bool interruptable)
 {
     thread_t *current_thread = get_current_thread();
     status_t ret = NO_ERROR;
@@ -103,7 +103,7 @@ status_t event_wait_timeout(event_t *e, lk_bigtime_t timeout, bool interruptable
         }
     } else {
         /* unsignaled, block here */
-        ret = wait_queue_block(&e->wait, timeout);
+        ret = wait_queue_block(&e->wait, deadline);
     }
 
     current_thread->interruptable = false;
@@ -128,7 +128,7 @@ out:
  *                    waiting threads have been satisfied. If false,
  *                    waiting threads are placed at the head of the run
  *                    queue.
- * @param wait_result What status event_wait_timeout will return to the
+ * @param wait_result What status event_wait_deadline will return to the
  *                    thread or threads that are woken up.
  *
  * @return  Returns the number of threads that have been unblocked.

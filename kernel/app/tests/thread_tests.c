@@ -111,7 +111,7 @@ static int event_waiter(void *arg)
 
     while (count > 0) {
         printf("thread %p: waiting on event...\n", get_current_thread());
-        status_t err = event_wait_timeout(&e, INFINITE_TIME, true);
+        status_t err = event_wait_deadline(&e, INFINITE_TIME, true);
         if (err == ERR_INTERRUPTED) {
             printf("thread %p: killed\n");
             return -1;
@@ -502,9 +502,9 @@ static int waiter_kill_thread_infinite_wait(void *arg)
     thread_sleep(LK_MSEC(100));
 
     lk_bigtime_t t = current_time_hires();
-    status_t err = event_wait_timeout(e, INFINITE_TIME, true);
+    status_t err = event_wait_deadline(e, INFINITE_TIME, true);
     t = (current_time_hires() - t) / LK_MSEC(1);
-    TRACEF("event_wait_timeout returns %d after %" PRIu64" msecs\n", err, t);
+    TRACEF("event_wait_deadline returns %d after %" PRIu64" msecs\n", err, t);
 
     return 0;
 }
@@ -516,9 +516,9 @@ static int waiter_kill_thread(void *arg)
     thread_sleep(LK_MSEC(100));
 
     lk_bigtime_t t = current_time_hires();
-    status_t err = event_wait_timeout(e, LK_SEC(5), true);
+    status_t err = event_wait_deadline (e, t + LK_SEC(5), true);
     t = (current_time_hires() - t) / LK_MSEC(1);
-    TRACEF("event_wait_timeout with timeout returns %d after %" PRIu64" msecs\n", err, t);
+    TRACEF("event_wait_deadline with deadline returns %d after %" PRIu64" msecs\n", err, t);
 
     return 0;
 }

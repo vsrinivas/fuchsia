@@ -14,6 +14,7 @@
 #include <trace.h>
 
 #include <kernel/event.h>
+#include <platform.h>
 
 #include <magenta/handle.h>
 #include <magenta/message_packet.h>
@@ -231,11 +232,16 @@ status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t timeout,
                                                   mxtl::unique_ptr<MessagePacket>* reply) {
     canary_.Assert();
 
+    lk_bigtime_t lk_deadline = timeout;
+    if (timeout != MX_TIME_INFINITE && timeout != 0) {
+        lk_deadline += current_time_hires();
+    }
+
     auto waiter = UserThread::GetCurrent()->GetMessageWaiter();
 
     // (2) Wait for notification via waiter's event or
     // timeout to occur.
-    mx_status_t status = waiter->Wait(timeout);
+    mx_status_t status = waiter->Wait(lk_deadline);
     if (status == ERR_INTERRUPTED_RETRY) {
         // If we got interrupted, return out to usermode, but
         // do not clear the waiter.

@@ -33,8 +33,8 @@ public:
     // ERR_TIMED_OUT - time out expired
     // ERR_INTERRUPTED - thread killed
     // Or the |status| which the caller specified in WaitEvent::Signal(status)
-    status_t Wait(lk_bigtime_t timeout) {
-        return event_wait_timeout(&event_, timeout, true);
+    status_t Wait(lk_bigtime_t deadline) {
+        return event_wait_deadline(&event_, deadline, true);
     }
 
     // returns number of ready threads

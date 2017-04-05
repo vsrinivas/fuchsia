@@ -353,7 +353,7 @@ status_t thread_suspend(thread_t *t)
     return NO_ERROR;
 }
 
-status_t thread_join(thread_t *t, int *retcode, lk_bigtime_t timeout)
+status_t thread_join(thread_t *t, int *retcode, lk_bigtime_t deadline)
 {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
@@ -367,7 +367,7 @@ status_t thread_join(thread_t *t, int *retcode, lk_bigtime_t timeout)
 
     /* wait for the thread to die */
     if (t->state != THREAD_DEATH) {
-        status_t err = wait_queue_block(&t->retcode_wait_queue, timeout);
+        status_t err = wait_queue_block(&t->retcode_wait_queue, deadline);
         if (err < 0) {
             THREAD_UNLOCK(state);
             return err;
@@ -898,10 +898,10 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_bigtime_t now
 }
 
 /**
- * @brief  Put thread to sleep; delay specified in ms
+ * @brief  Put thread to sleep; delay specified in ns
  *
  * This function puts the current thread to sleep until the specified
- * delay in ms has expired.
+ * delay in ns has expired.
  *
  * Note that this function could sleep for longer than the specified delay if
  * other threads are running.  When the timer expires, this thread will
@@ -936,8 +936,9 @@ status_t thread_sleep_etc(lk_bigtime_t delay, bool interruptable)
     }
 
     if (delay != INFINITE_TIME) {
+        lk_bigtime_t deadline = current_time_hires() + delay;
         /* set a one shot timer to wake us up and reschedule */
-        timer_set_oneshot(&timer, delay, thread_sleep_handler, (void *)current_thread);
+        timer_set_oneshot(&timer, deadline, thread_sleep_handler, (void *)current_thread);
     }
     current_thread->state = THREAD_SLEEPING;
     current_thread->blocked_status = NO_ERROR;
@@ -1325,17 +1326,17 @@ static enum handler_return wait_queue_timeout_handler(timer_t *timer, lk_bigtime
  * up again.
  *
  * @param  wait     The wait queue to enter
- * @param  timeout  The maximum time, in ms, to wait
+ * @param  deadline The time at which to abort the wait
  *
- * If the timeout is zero, this function returns immediately with
- * ERR_TIMED_OUT.  If the timeout is INFINITE_TIME, this function
+ * If the deadline is zero, this function returns immediately with
+ * ERR_TIMED_OUT.  If the deadline is INFINITE_TIME, this function
  * waits indefinitely.  Otherwise, this function returns with
- * ERR_TIMED_OUT at the end of the timeout period.
+ * ERR_TIMED_OUT when the deadline occurs.
  *
  * @return ERR_TIMED_OUT on timeout, else returns the return
  * value specified when the queue was woken by wait_queue_wake_one().
  */
-status_t wait_queue_block(wait_queue_t *wait, lk_bigtime_t timeout)
+status_t wait_queue_block(wait_queue_t *wait, lk_bigtime_t deadline)
 {
     timer_t timer;
 
@@ -1346,7 +1347,7 @@ status_t wait_queue_block(wait_queue_t *wait, lk_bigtime_t timeout)
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    if (timeout == 0)
+    if (deadline <= current_time_hires())
         return ERR_TIMED_OUT;
 
     if (current_thread->interruptable && unlikely(current_thread->signals)) {
@@ -1363,16 +1364,16 @@ status_t wait_queue_block(wait_queue_t *wait, lk_bigtime_t timeout)
     current_thread->blocking_wait_queue = wait;
     current_thread->blocked_status = NO_ERROR;
 
-    /* if the timeout is nonzero or noninfinite, set a callback to yank us out of the queue */
-    if (timeout != INFINITE_TIME) {
+    /* if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue */
+    if (deadline != INFINITE_TIME) {
         timer_initialize(&timer);
-        timer_set_oneshot(&timer, timeout, wait_queue_timeout_handler, (void *)current_thread);
+        timer_set_oneshot(&timer, deadline, wait_queue_timeout_handler, (void *)current_thread);
     }
 
     sched_block();
 
     /* we don't really know if the timer fired or not, so it's better safe to try to cancel it */
-    if (timeout != INFINITE_TIME) {
+    if (deadline != INFINITE_TIME) {
         timer_cancel(&timer);
     }
 

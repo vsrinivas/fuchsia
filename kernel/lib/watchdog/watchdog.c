@@ -63,8 +63,9 @@ void watchdog_set_enabled(watchdog_t *dog, bool enabled)
         goto done;
 
     dog->enabled = enabled;
+    lk_bigtime_t deadline = current_time_hires() + dog->timeout;
     if (enabled)
-        timer_set_oneshot(&dog->expire_timer, dog->timeout, watchdog_timer_callback, dog);
+        timer_set_oneshot(&dog->expire_timer, deadline, watchdog_timer_callback, dog);
     else
         timer_cancel(&dog->expire_timer);
 
@@ -83,7 +84,8 @@ void watchdog_pet(watchdog_t *dog)
         goto done;
 
     timer_cancel(&dog->expire_timer);
-    timer_set_oneshot(&dog->expire_timer, dog->timeout, watchdog_timer_callback, dog);
+    lk_bigtime_t deadline = current_time_hires() + dog->timeout;
+    timer_set_oneshot(&dog->expire_timer, deadline, watchdog_timer_callback, dog);
 
 done:
     spin_unlock_irqrestore(&lock, state);

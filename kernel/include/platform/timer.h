@@ -15,7 +15,7 @@ typedef enum handler_return (*platform_timer_callback)(void *arg, lk_bigtime_t n
 status_t platform_set_periodic_timer(platform_timer_callback callback, void *arg, lk_bigtime_t interval);
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
-status_t platform_set_oneshot_timer (platform_timer_callback callback, void *arg, lk_bigtime_t interval);
+status_t platform_set_oneshot_timer (platform_timer_callback callback, void *arg, lk_bigtime_t deadline);
 void     platform_stop_timer(void);
 #endif
 

@@ -9,6 +9,7 @@
 #include <trace.h>
 
 #include <kernel/auto_lock.h>
+#include <platform.h>
 
 #include <lib/ktrace.h>
 #include <lib/user_copy/user_ptr.h>
@@ -62,11 +63,16 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
     ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)timeout, (uint32_t)(timeout >> 32));
 #endif
 
+    lk_bigtime_t lk_deadline = timeout;
+    if (timeout != MX_TIME_INFINITE && timeout != 0) {
+        lk_deadline += current_time_hires();
+    }
+
     // event_wait() will return NO_ERROR if already signaled,
     // even if timeout is 0.  It will return ERR_TIMED_OUT
     // after the timeout expires if the event has not been
     // signaled.
-    result = event.Wait(timeout);
+    result = event.Wait(lk_deadline);
 
     // Regardless of wait outcome, we must call End().
     auto signals_state = wait_state_observer.End();
@@ -143,11 +149,16 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
         return result;
     }
 
+    lk_bigtime_t lk_deadline = timeout;
+    if (timeout != MX_TIME_INFINITE && timeout != 0) {
+        lk_deadline += current_time_hires();
+    }
+
     // event_wait() will return NO_ERROR if already signaled,
     // even if timeout is 0.  It will return ERR_TIMED_OUT
     // after the timeout expires if the event has not been
     // signaled.
-    result = event.Wait(timeout);
+    result = event.Wait(lk_deadline);
 
     // Regardless of wait outcome, we must call End().
     mx_signals_t combined = 0;
