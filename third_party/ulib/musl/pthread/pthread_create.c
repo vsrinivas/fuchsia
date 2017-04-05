@@ -104,7 +104,6 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     }
 
     atomic_fetch_sub(&libc.thread_count, 1);
-    mxr_thread_destroy(&new->mxr_thread);
 fail_after_alloc:
     deallocate_region(&new->safe_stack_region);
     deallocate_region(&new->unsafe_stack_region);
