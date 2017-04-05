@@ -16,6 +16,7 @@
 
 #include "launch.h"
 
+#include <atomic>
 #include <magenta/types.h>
 #include <thread>
 
@@ -49,6 +50,7 @@ struct intel_i915_device_t {
     std::shared_ptr<MagmaSystemBuffer> console_framebuffer;
     std::shared_ptr<MagmaSystemBuffer> placeholder_framebuffer;
     std::mutex magma_mutex;
+    std::atomic_bool console_visible{true};
 };
 
 static int magma_start(intel_i915_device_t* dev);
@@ -105,7 +107,7 @@ static void intel_i915_flush(mx_device_t* dev)
 {
     intel_i915_device_t* device = get_i915_device(dev);
     // Don't incur overhead of flushing when console's not visible
-    if (!device->magma_system_device->page_flip_enabled())
+    if (device->console_visible)
         clflush_range(device->framebuffer_addr, device->framebuffer_size);
 }
 
@@ -119,6 +121,7 @@ static void intel_i915_acquire_or_release_display(mx_device_t* dev)
     if (device->magma_system_device->page_flip_enabled()) {
         DLOG("flipping to console");
         // Ensure any software writes to framebuffer are visible
+        device->console_visible = true;
         clflush_range(device->framebuffer_addr, device->framebuffer_size);
         magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
         auto last_framebuffer = device->magma_system_device->PageFlipAndEnable(
@@ -129,6 +132,7 @@ static void intel_i915_acquire_or_release_display(mx_device_t* dev)
         magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
         device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer, &image_desc,
                                                        true);
+        device->console_visible = false;
     }
 }
 
@@ -207,6 +211,7 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
                 magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
                 device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer,
                                                                &image_desc, true);
+                device->console_visible = false;
             }
 
             auto connection = MagmaSystemDevice::Open(device->magma_system_device,
