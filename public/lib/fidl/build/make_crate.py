@@ -13,13 +13,8 @@ import os
 import sys
 import zipfile
 
-# convert a directory corresponding to a GN-style label (ex apps/ledger/services/services)
-# to a crate name (ex apps_ledger_services).
-def label_to_crate(label):
-  parts = label.split('/')
-  if parts[-1] == parts[-2]:
-    parts.pop()
-  return '_'.join(parts)
+from label_to_crate import label_to_crate
+
 
 def make_crate(output, gen_dir, inputs, srcroot, dep_inputs):
   name = os.path.basename(output)
@@ -32,15 +27,6 @@ def make_crate(output, gen_dir, inputs, srcroot, dep_inputs):
   cargo_f.write('name = "%s"\n' % longname)
   cargo_f.write('version = "0.1.0"\n')
   cargo_f.write('\n')
-  cargo_f.write('[dependencies.fidl]\n')
-  cargo_f.write('path = "%s"\n' % os.path.relpath(srcroot + 'lib/fidl/rust/fidl', cargo_toml_dir))
-  cargo_f.write('\n')
-  cargo_f.write('[dependencies.magenta]\n')
-  cargo_f.write('path = "%s"\n' % os.path.relpath(srcroot + 'rust/magenta-rs', cargo_toml_dir))
-  for dep in dep_inputs:
-    cargo_f.write('\n')
-    cargo_f.write('[dependencies.%s]\n' % label_to_crate(dep))
-    cargo_f.write('path = "%s"\n' % os.path.relpath(dep, output))
 
 
   lib_fn = os.path.join(cargo_toml_dir, 'src', 'lib.rs')

@@ -8,6 +8,3 @@ repository = "https://fuchsia.googlesource.com/fidl/"
 
 [dependencies]
 byteorder = "0.5.3"
-
-[dependencies.magenta]
-path = "../../../../rust/magenta-rs"

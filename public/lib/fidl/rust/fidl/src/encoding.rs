@@ -707,12 +707,17 @@ macro_rules! impl_codable_handle {
     };
 }
 
+// Note: Add other handle types here as needed.
 impl_codable_handle!(Handle);
 impl_codable_handle!(::magenta::Channel);
-impl_codable_handle!(::magenta::Vmo);
+impl_codable_handle!(::magenta::Event);
 impl_codable_handle!(::magenta::EventPair);
+impl_codable_handle!(::magenta::Job);
+impl_codable_handle!(::magenta::Port);
+impl_codable_handle!(::magenta::Process);
 impl_codable_handle!(::magenta::Socket);
-// TODO(raph): add other basic handle types 
+impl_codable_handle!(::magenta::Thread);
+impl_codable_handle!(::magenta::Vmo);
 
 pub trait CodableUnion : Encodable + Decodable {
     // Encode the object as a pointer reference. Primarily used for nested unions.
