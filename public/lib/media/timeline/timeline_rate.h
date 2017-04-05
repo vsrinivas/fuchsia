@@ -95,7 +95,15 @@ class TimelineRate {
   // rate is zero.
   TimelineRate Inverse() const {
     FTL_DCHECK(subject_delta_ != 0);
-    return TimelineRate(reference_delta_, subject_delta_);
+
+    // Note: TimelineRates should be always be in their reduced form.  Because
+    // of this, we do not want to invoke the subject/reference constructor
+    // (which will attempt to reduce the ratio).  Instead, use the default
+    // constructor and just swap subject/reference.
+    TimelineRate ret;
+    ret.subject_delta_ = reference_delta_;
+    ret.reference_delta_ = subject_delta_;
+    return ret;
   }
 
   // Scales the value by this rate. Returns kOverflow on overflow.
