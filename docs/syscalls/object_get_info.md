@@ -263,6 +263,9 @@ The *depth* field of each entry describes its relationship to the nodes that
 come before it. Depth 0 is the root Aspace, depth 1 is the root VMAR, and all
 other entries have depth 2 or greater.
 
+See the `vmaps` command-line tool for an example user of this topic, and to dump
+the maps of arbitrary processes by koid.
+
 Additional errors:
 
 *   **ERR_ACCESS_DENIED**: If the appropriate rights are missing, or if a

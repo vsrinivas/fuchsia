@@ -40,6 +40,18 @@ MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
 
 include make/module.mk
 
+MODULE := $(LOCAL_DIR)-vmaps
+
+MODULE_TYPE := userapp
+
+MODULE_SRCS += $(LOCAL_DIR)/format.c $(LOCAL_DIR)/processes.c $(LOCAL_DIR)/vmaps.c
+
+MODULE_NAME := vmaps
+
+MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
+
+include make/module.mk
+
 MODULE := $(LOCAL_DIR)-test
 
 MODULE_TYPE := usertest
