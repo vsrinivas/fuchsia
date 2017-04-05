@@ -1,6 +1,6 @@
 # Modular integration tests
 
-Tests here are integration tests, run through the [Test Runner](test_runner)
+Tests here are integration tests, run through the [Test Runner][test_runner]
 framework in a fuchsia instance running on either the build host using QEMU or
 on a target device.
 
@@ -38,12 +38,12 @@ A new test must be added to [modular_tests.json](modular_tests.json) for it to
 be run by `test.sh`.
 
 All `test.sh` scripts require setting up the fuchsia environment by
-sourcing [scripts/env.sh](env_sh).
+sourcing [scripts/env.sh][env_sh].
 
 ## Starting the test suite directly under fuchisa
 
 `run_modular_tests` is a command that runs all of the Modular tests. It is based
-on the [Test Runner](test_runner) framework.
+on the [Test Runner][test_runner] framework.
 
 It can be run directly from the Magenta shell:
 
