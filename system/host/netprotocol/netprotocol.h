@@ -30,6 +30,10 @@ typedef struct device_info {
   uint16_t bootloader_port;
 } device_info_t;
 
+// Handle netboot command line options.
+int netboot_handle_getopt(int argc, char * const *argv);
+void netboot_usage(void);
+
 // Returns whether discovery should continue or not.
 typedef bool (*on_device_cb)(device_info_t* device, void* cookie);
 int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, void* cookie);

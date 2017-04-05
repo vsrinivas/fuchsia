@@ -17,6 +17,7 @@
 #include <sys/time.h>
 
 #include <fcntl.h>
+#include <getopt.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +28,8 @@
 #include <stdint.h>
 
 static uint32_t cookie = 0x12345678;
+static int netboot_timeout = 250;
+static bool netboot_wait = true;
 
 static struct timeval netboot_timeout_init(int msec) {
     struct timeval timeout_tv;
@@ -148,6 +151,40 @@ static bool netboot_receive_query(int socket, on_device_cb callback, void* data)
     return false;
 }
 
+static struct option longopts[] = {
+    {"help",    no_argument,       NULL, 'h'},
+    {"timeout", required_argument, NULL, 't'},
+    {"nowait",  no_argument,       NULL, 'n'},
+    {NULL,      0,                 NULL, 0}
+};
+
+int netboot_handle_getopt(int argc, char * const *argv) {
+    int ch;
+
+    while ((ch = getopt_long_only(argc, argv, "t:", longopts, NULL)) != -1) {
+        switch (ch) {
+            case 't':
+                netboot_timeout = atoi(optarg);
+                break;
+            case 'n':
+                netboot_wait = false;
+                break;
+            default:
+                return -1;
+        }
+    }
+    return optind;
+}
+
+void netboot_usage(void) {
+    fprintf(stderr, "options:\n");
+    fprintf(stderr, "    --help            Print this message.\n");
+    fprintf(stderr, "    --timeout=<msec>  Set discovery timeout to <msec>.\n");
+    fprintf(stderr, "    --nowait          Do not wait for first packet before timing out.\n");
+
+
+}
+
 int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, void* data) {
     if (!callback) {
         errno = EINVAL;
@@ -171,8 +208,9 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
     fds.fd = s;
     fds.events = POLLIN;
     bool received_packets = false;
+    bool first_wait = netboot_wait;
 
-    struct timeval end_tv = netboot_timeout_init(250);
+    struct timeval end_tv = netboot_timeout_init(first_wait ? 3600000 : netboot_timeout);
     do {
 
         int wait_ms = netboot_timeout_get_msec(&end_tv);
@@ -186,6 +224,10 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
         } else if (r < 0 && errno != EAGAIN && errno != EINTR) {
             fprintf(stderr, "poll returned error: %s\n", strerror(errno));
             return -1;
+        }
+        if (first_wait) {
+            end_tv = netboot_timeout_init(netboot_timeout);
+            first_wait = 0;
         }
     } while (!netboot_timer_is_expired(&end_tv));
 

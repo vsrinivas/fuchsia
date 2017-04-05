@@ -17,15 +17,28 @@
 
 static const char* appname;
 
+static void usage(void) {
+    fprintf(stderr, "usage: %s [options] <hostname> <command>\n", appname);
+    netboot_usage();
+}
+
 int main(int argc, char** argv) {
     appname = argv[0];
 
-    if (argc < 3) {
-        fprintf(stderr, "usage: %s <hostname> <command>\n", appname);
+    int index = netboot_handle_getopt(argc, argv);
+    if (index < 0) {
+        usage();
+        return -1;
+    }
+    argv += index;
+    argc -= index;
+
+    if (argc < 2) {
+        usage();
         return -1;
     }
 
-    const char* hostname = argv[1];
+    const char* hostname = argv[0];
     if (!strcmp(hostname, "-") || !strcmp(hostname, ":")) {
         hostname = "*";
     }
@@ -33,13 +46,13 @@ int main(int argc, char** argv) {
 
     char cmd[MAXSIZE];
     size_t cmd_len = 0;
-    while (argc > 2) {
-        size_t len = strlen(argv[2]);
+    while (argc > 1) {
+        size_t len = strlen(argv[1]);
         if (len > (MAXSIZE - cmd_len - 1)) {
             fprintf(stderr, "%s: command too long\n", appname);
             return -1;
         }
-        memcpy(cmd + cmd_len, argv[2], len);
+        memcpy(cmd + cmd_len, argv[1], len);
         cmd_len += len;
         cmd[cmd_len++] = ' ';
         argc--;

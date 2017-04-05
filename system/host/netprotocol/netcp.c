@@ -202,16 +202,29 @@ again:
     return 0;
 }
 
+static void usage(void) {
+    fprintf(stderr, "usage: %s [hostname:]src [hostname:]dst\n", appname);
+    netboot_usage();
+}
+
 int main(int argc, char** argv) {
     appname = argv[0];
 
-    if (argc != 3) {
-        fprintf(stderr, "usage: %s [hostname:]src [hostname:]dst\n", appname);
+    int index = netboot_handle_getopt(argc, argv);
+    if (index < 0) {
+        usage();
+        return -1;
+    }
+    argv += index;
+    argc -= index;
+
+    if (argc != 2) {
+        usage();
         return -1;
     }
 
-    const char* src = argv[1];
-    const char* dst = argv[2];
+    const char* src = argv[0];
+    const char* dst = argv[1];
 
     int push = -1;
     char* pos;

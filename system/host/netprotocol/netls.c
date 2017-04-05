@@ -22,6 +22,8 @@
 static device_info_t devices[MAX_DEVICES];
 static uint32_t devices_count = 0;
 
+static const char* appname;
+
 static bool has_device(const char* nodename) {
     for (uint32_t i = 0; i < devices_count; ++i) {
         if (!strncmp(devices[i].nodename, nodename, sizeof(devices[i].nodename))) {
@@ -96,7 +98,19 @@ static bool on_device(device_info_t* device, void* cookie) {
     return true;
 }
 
+static void usage(void) {
+    fprintf(stderr, "usage: %s [options]\n", appname);
+    netboot_usage();
+}
+
 int main(int argc, char** argv) {
+    appname = argv[0];
+    int index = netboot_handle_getopt(argc, argv);
+    if (index < 0) {
+        usage();
+        return -1;
+    }
+
     if (netboot_discover(NB_SERVER_PORT, NULL, on_device, NULL)) {
         fprintf(stderr, "Failed to discover\n");
         return 1;
