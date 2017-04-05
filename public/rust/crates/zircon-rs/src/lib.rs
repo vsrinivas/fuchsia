@@ -17,7 +17,11 @@ mod channel;
 mod event;
 mod eventpair;
 mod fifo;
+mod job;
+mod port;
+mod process;
 mod socket;
+mod thread;
 mod vmo;
 mod waitset;
 
@@ -25,7 +29,11 @@ pub use channel::{Channel, ChannelOpts, MessageBuf};
 pub use event::{Event, EventOpts};
 pub use eventpair::{EventPair, EventPairOpts};
 pub use fifo::{Fifo, FifoOpts};
+pub use job::Job;
+pub use port::Port;
+pub use process::Process;
 pub use socket::{Socket, SocketOpts, SocketReadOpts, SocketWriteOpts};
+pub use thread::Thread;
 pub use vmo::{Vmo, VmoOpts};
 pub use waitset::{WaitSet, WaitSetOpts};
 
