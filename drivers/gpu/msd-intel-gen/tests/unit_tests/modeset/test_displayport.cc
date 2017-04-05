@@ -355,9 +355,6 @@ private:
     magma::PlatformMmio* mmio_;
 };
 
-class TestDisplayPort {
-};
-
 TEST(DisplayPort, BitfieldHandling)
 {
     RegisterIo reg_io(MockMmio::Create(0x100000));
