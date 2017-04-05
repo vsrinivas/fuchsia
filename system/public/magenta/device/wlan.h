@@ -13,6 +13,16 @@
 
 __BEGIN_CDECLS
 
+#define IOCTL_WLAN_GET_CHANNEL \
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_WLAN, 0)
+
+// ssize_t ioctl_wlan_get_channel(int fd, mx_handle_t* out);
+IOCTL_WRAPPER_OUT(ioctl_wlan_get_channel, IOCTL_WLAN_GET_CHANNEL, mx_handle_t);
+
+// TODO(tkilbourn): wlan messages defined elsewhere
+
+// DEPRECATED: use IOCTL_WLAN_GET_CHANNEL and use request/response protocol on
+// the channel instead.
 //
 // All of these interfaces are unstable and subject to change without notice.
 //
@@ -22,7 +32,7 @@ __BEGIN_CDECLS
 //   in: wlan_start_scan_args
 //   out: mx_handle_t (channel)
 #define IOCTL_WLAN_START_SCAN \
-    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_WLAN, 0)
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_WLAN, 1)
 
 #define WLAN_SCANTYPE_PASSIVE 0
 #define WLAN_SCANTYPE_ACTIVE  1
