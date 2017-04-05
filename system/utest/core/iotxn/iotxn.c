@@ -18,7 +18,7 @@ static bool test_physmap_simple(void) {
     ASSERT_NONNULL(txn, "");
     iotxn_sg_t* sg;
     uint32_t sgl;
-    ASSERT_EQ(iotxn_physmap_sg(txn, &sg, &sgl), NO_ERROR, "");
+    ASSERT_EQ(iotxn_physmap(txn, &sg, &sgl), NO_ERROR, "");
     ASSERT_NONNULL(txn->sg, "");
     iotxn_release(txn);
     ASSERT_NONNULL(txn->sg, "returning txn to free list should not free txn->sg");

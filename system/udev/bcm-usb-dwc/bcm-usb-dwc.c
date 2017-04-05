@@ -1185,15 +1185,16 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
     // Certain characteristics must be special cased for Control Endpoints.
 
     if (usb_ep_type(&ep->desc) == USB_ENDPOINT_CONTROL) {
-        mx_paddr_t phys_addr;
+        iotxn_sg_t* sg;
+        uint32_t sgl;
 
         switch (req->ctrl_phase) {
         case CTRL_PHASE_SETUP:
             assert(req->setuptxn);
             characteristics.endpoint_direction = DWC_EP_OUT;
 
-            iotxn_physmap(req->setuptxn, &phys_addr);
-            data = (void*)phys_addr;
+            iotxn_physmap(req->setuptxn, &sg, &sgl);
+            data = (void*)sg->paddr;
 
             // Quick sanity check to make sure that we're actually tying to
             // transfer the correct number of bytes.
@@ -1207,8 +1208,8 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
             characteristics.endpoint_direction =
                 protocol_data->setup.bmRequestType >> 7;
 
-            iotxn_physmap(txn, &phys_addr);
-            data = ((void*)phys_addr) + req->bytes_transferred;
+            iotxn_physmap(txn, &sg, &sgl);
+            data = ((void*)sg->paddr) + req->bytes_transferred;
 
             transfer.size = txn->length - req->bytes_transferred;
 
@@ -1240,9 +1241,10 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
         characteristics.endpoint_direction =
             (ep->ep_address & USB_ENDPOINT_DIR_MASK) >> 7;
 
-        mx_paddr_t phys_addr;
-        iotxn_physmap(txn, &phys_addr);
-        data = ((void*)phys_addr) + req->bytes_transferred;
+        iotxn_sg_t* sg;
+        uint32_t sgl;
+        iotxn_physmap(txn, &sg, &sgl);
+        data = ((void*)sg->paddr) + req->bytes_transferred;
 
         transfer.size = txn->length - req->bytes_transferred;
         transfer.packet_id = req->next_data_toggle;

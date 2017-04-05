@@ -355,10 +355,10 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // This command has a data phase?
     if (cmd & SDMMC_RESP_DATA_PRESENT) {
-        mx_paddr_t paddr;
-        iotxn_physmap(txn, &paddr);
-        paddr += BCM_SDRAM_BUS_ADDR_BASE;
-        regs->arg2 = paddr;
+        iotxn_sg_t* sg;
+        uint32_t sgl;
+        iotxn_physmap(txn, &sg, &sgl);
+        regs->arg2 = sg->paddr + BCM_SDRAM_BUS_ADDR_BASE;
 
         iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, blkcnt * blksiz);
 

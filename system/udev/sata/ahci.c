@@ -265,7 +265,7 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
 
     iotxn_sg_t* sg;
     uint32_t sgl;
-    mx_status_t status = iotxn_physmap_sg(txn, &sg, &sgl);
+    mx_status_t status = iotxn_physmap(txn, &sg, &sgl);
     if (status != NO_ERROR) {
         iotxn_complete(txn, NO_ERROR, txn->length);
         completion_signal(&dev->worker_completion);

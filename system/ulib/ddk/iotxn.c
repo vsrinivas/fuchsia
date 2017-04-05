@@ -188,7 +188,7 @@ ssize_t iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offse
 #define ROUNDUP(a, b)   (((a) + ((b)-1)) & ~((b)-1))
 #define ROUNDDOWN(a, b) ((a) & ~((b)-1))
 
- mx_status_t iotxn_physmap_contiguous(iotxn_t* txn) {
+static mx_status_t iotxn_physmap_contiguous(iotxn_t* txn) {
     iotxn_sg_t* sg = malloc(sizeof(iotxn_sg_t));
     if (sg == NULL) {
         xprintf("iotxn_physmap_contiguous: out of memory\n");
@@ -269,16 +269,7 @@ static mx_status_t iotxn_physmap_paged(iotxn_t* txn) {
     return NO_ERROR;
 }
 
-mx_status_t iotxn_physmap(iotxn_t* txn, mx_paddr_t* addr) {
-    MX_DEBUG_ASSERT(txn->pflags & IOTXN_PFLAG_CONTIGUOUS);
-    mx_status_t status = iotxn_physmap_contiguous(txn);
-    if (status == NO_ERROR) {
-        *addr = txn->sg->paddr;
-    }
-    return status;
-}
-
-mx_status_t iotxn_physmap_sg(iotxn_t* txn, iotxn_sg_t** sg_out, uint32_t *sg_len) {
+mx_status_t iotxn_physmap(iotxn_t* txn, iotxn_sg_t** sg_out, uint32_t *sg_len) {
     if (txn->sg != NULL) {
         *sg_out = txn->sg;
         *sg_len = txn->sg_length;

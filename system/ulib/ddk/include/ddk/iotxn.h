@@ -152,15 +152,9 @@ ssize_t iotxn_copyfrom(iotxn_t* txn, void* data, size_t length, size_t offset);
 // Out of range operations are ignored.
 ssize_t iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offset);
 
-// iotxn_physmap() returns the physical start address of the memory backing an
-// iotxn's vm object.
-// This function is only valid for iotxn's backed by a contiguous vm object.
-// iotxn_physmap_sg() is preferred.
-mx_status_t iotxn_physmap(iotxn_t* txn, mx_paddr_t* addr);
-
 // iotxn_physmap_sg() returns a list of physical ranges of the memory backing
 // an iotxn's vm object.
-mx_status_t iotxn_physmap_sg(iotxn_t* txn, iotxn_sg_t** sg_out, uint32_t* sg_len);
+mx_status_t iotxn_physmap(iotxn_t* txn, iotxn_sg_t** sg_out, uint32_t* sg_len);
 
 // iotxn_mmap() maps the iotxn's vm object and returns the virtual address.
 // iotxn_copyfrom(), iotxn_copyto(), or iotxn_ physmap() are almost always a
