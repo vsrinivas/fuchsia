@@ -180,16 +180,13 @@ void PageDelegate::Delete(fidl::Array<uint8_t> key,
       }));
 }
 
-// CreateReference(uint64 size, handle<socket> data)
-//   => (Status status, Reference reference);
 void PageDelegate::CreateReference(
-    uint64_t size,
-    mx::socket data,
-    const Page::CreateReferenceCallback& callback) {
+    std::unique_ptr<storage::DataSource> data,
+    std::function<void(Status, ReferencePtr)> callback) {
   storage_->AddObjectFromLocal(
-      storage::DataSource::Create(std::move(data), size),
-      [callback = std::move(callback)](storage::Status status,
-                                       storage::ObjectId object_id) {
+      std::move(data), [callback = std::move(callback)](
+                           storage::Status status,
+                           storage::ObjectId object_id) {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status), nullptr);
           return;

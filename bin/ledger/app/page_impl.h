@@ -43,9 +43,14 @@ class PageImpl : public Page {
   void Delete(fidl::Array<uint8_t> key,
               const DeleteCallback& callback) override;
 
-  void CreateReference(uint64_t size,
-                       mx::socket data,
-                       const CreateReferenceCallback& callback) override;
+  void CreateReferenceFromSocket(
+      uint64_t size,
+      mx::socket data,
+      const CreateReferenceFromSocketCallback& callback) override;
+
+  void CreateReferenceFromVmo(
+      mx::vmo data,
+      const CreateReferenceFromVmoCallback& callback) override;
 
   void StartTransaction(const StartTransactionCallback& callback) override;
 

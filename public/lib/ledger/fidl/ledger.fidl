@@ -93,11 +93,12 @@ interface Page {
   //   successful status.
   // |Put()| and |PutWithPriority()| can be used for small values that fit
   // inside a FIDL message. If the value is bigger, a reference must be first
-  // created using |CreateReference()| and then |PutReference()| can be used.
-  // |PutWithPriority()| and |PutReference()| have an additional |priority|
-  // parameter managing the synchronization policy for this value. |Put()| uses
-  // a default priority of |Priority.EAGER|. For the list of available
-  // priorities and their definition, see |Priority|.
+  // created using |CreateReferenceFromSocket()| or |CreateReferenceFromVmo()|
+  // and then |PutReference()| can be used. |PutWithPriority()| and
+  // |PutReference()| have an additional |priority| parameter managing the
+  // synchronization policy for this value. |Put()| uses a default priority of
+  // |Priority.EAGER|. For the list of available priorities and their
+  // definition, see |Priority|.
   Put(array<uint8> key, array<uint8> value) => (Status status);
   PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
       => (Status status);
@@ -110,7 +111,12 @@ interface Page {
   // associated with a key using |PutReference()|. The content of the reference
   // will be the content of the socket. The content size must be equal to
   // |size|, otherwise the call will fail.
-  CreateReference(uint64 size, handle<socket> data)
+  CreateReferenceFromSocket(uint64 size, handle<socket> data)
+      => (Status status, Reference? reference);
+  // Creates a new reference. The object is not part of any commit. It must be
+  // associated with a key using |PutReference()|. The content of the reference
+  // will be the content of the vmo.
+  CreateReferenceFromVmo(handle<vmo> data)
       => (Status status, Reference? reference);
 
   // Transactions.

@@ -12,6 +12,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/strings.h"
 #include "mx/vmo.h"
 
 namespace ledger {
@@ -407,33 +408,69 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   EXPECT_TRUE(values[1].Equals(ToArray(entries[3]->value)));
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceWrongSize) {
+TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
   const std::string big_data(1'000'000, 'a');
 
   PagePtr page = GetTestPage();
 
-  page->CreateReference(123, StreamDataToSocket(big_data),
-                        [](Status status, ReferencePtr ref) {
-                          EXPECT_EQ(Status::IO_ERROR, status);
-                        });
+  page->CreateReferenceFromSocket(123, StreamDataToSocket(big_data),
+                                  [](Status status, ReferencePtr ref) {
+                                    EXPECT_EQ(Status::IO_ERROR, status);
+                                  });
   ASSERT_TRUE(page.WaitForIncomingResponse());
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReference) {
+TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   const std::string big_data(1'000'000, 'a');
 
   PagePtr page = GetTestPage();
 
   // Stream the data into the reference.
   ReferencePtr reference;
-  page->CreateReference(big_data.size(), StreamDataToSocket(big_data),
-                        [&reference](Status status, ReferencePtr ref) {
-                          EXPECT_EQ(Status::OK, status);
-                          reference = std::move(ref);
-                        });
+  page->CreateReferenceFromSocket(
+      big_data.size(), StreamDataToSocket(big_data),
+      [&reference](Status status, ReferencePtr ref) {
+        EXPECT_EQ(Status::OK, status);
+        reference = std::move(ref);
+      });
   ASSERT_TRUE(page.WaitForIncomingResponse());
 
-  // Set the reference uder a key.
+  // Set the reference under a key.
+  page->PutReference(convert::ToArray("big data"), std::move(reference),
+                     Priority::EAGER,
+                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ASSERT_TRUE(page.WaitForIncomingResponse());
+
+  // Get a snapshot and read the value.
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  mx::vmo value;
+  snapshot->Get(convert::ToArray("big data"),
+                [&value](Status status, mx::vmo v) {
+                  EXPECT_EQ(status, Status::OK);
+                  value = std::move(v);
+                });
+  ASSERT_TRUE(snapshot.WaitForIncomingResponse());
+
+  EXPECT_EQ(big_data, ToString(value));
+}
+
+TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
+  const std::string big_data(1'000'000, 'a');
+  mx::vmo vmo;
+  ASSERT_TRUE(mtl::VmoFromString(big_data, &vmo));
+
+  PagePtr page = GetTestPage();
+
+  // Stream the data into the reference.
+  ReferencePtr reference;
+  page->CreateReferenceFromVmo(std::move(vmo),
+                               [&reference](Status status, ReferencePtr ref) {
+                                 EXPECT_EQ(Status::OK, status);
+                                 reference = std::move(ref);
+                               });
+  ASSERT_TRUE(page.WaitForIncomingResponse());
+
+  // Set the reference under a key.
   page->PutReference(convert::ToArray("big data"), std::move(reference),
                      Priority::EAGER,
                      [](Status status) { EXPECT_EQ(Status::OK, status); });

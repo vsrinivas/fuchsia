@@ -73,14 +73,27 @@ void PageImpl::Delete(fidl::Array<uint8_t> key,
   delegate_->Delete(std::move(key), std::move(timed_callback));
 }
 
-// CreateReference(uint64 size, handle<socket> data)
+// CreateReferenceFromSocket(uint64 size, handle<socket> data)
 //   => (Status status, Reference reference);
-void PageImpl::CreateReference(uint64_t size,
-                               mx::socket data,
-                               const CreateReferenceCallback& callback) {
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "page_create_reference");
-  delegate_->CreateReference(size, std::move(data), std::move(timed_callback));
+void PageImpl::CreateReferenceFromSocket(
+    uint64_t size,
+    mx::socket data,
+    const CreateReferenceFromSocketCallback& callback) {
+  auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
+                                       "page_create_reference_from_socket");
+  delegate_->CreateReference(storage::DataSource::Create(std::move(data), size),
+                             std::move(timed_callback));
+}
+
+// CreateReferenceFromVmo(handle<vmo> data)
+//   => (Status status, Reference reference);
+void PageImpl::CreateReferenceFromVmo(
+    mx::vmo data,
+    const CreateReferenceFromSocketCallback& callback) {
+  auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
+                                       "page_create_reference_from_vmo");
+  delegate_->CreateReference(storage::DataSource::Create(std::move(data)),
+                             std::move(timed_callback));
 }
 
 // StartTransaction() => (Status status);

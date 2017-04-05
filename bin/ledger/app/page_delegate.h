@@ -15,6 +15,7 @@
 #include "apps/ledger/src/app/fidl/bound_interface.h"
 #include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/callback/operation_serializer.h"
+#include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -66,9 +67,8 @@ class PageDelegate {
 
   void Delete(fidl::Array<uint8_t> key, const Page::DeleteCallback& callback);
 
-  void CreateReference(uint64_t size,
-                       mx::socket data,
-                       const Page::CreateReferenceCallback& callback);
+  void CreateReference(std::unique_ptr<storage::DataSource> data,
+                       std::function<void(Status, ReferencePtr)> callback);
 
   void StartTransaction(const Page::StartTransactionCallback& callback);
 

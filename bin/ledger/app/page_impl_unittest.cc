@@ -435,12 +435,35 @@ TEST_F(PageImplTest, NoTransactionRollback) {
   EXPECT_FALSE(RunLoopWithTimeout());
 }
 
-TEST_F(PageImplTest, CreateReference) {
+TEST_F(PageImplTest, CreateReferenceFromSocket) {
   std::string value("a small value");
   Status status;
   ReferencePtr reference;
-  page_ptr_->CreateReference(
+  page_ptr_->CreateReferenceFromSocket(
       value.size(), mtl::WriteStringToSocket(value),
+      [this, &status, &reference](Status received_status,
+                                  ReferencePtr received_reference) {
+        status = received_status;
+        reference = std::move(received_reference);
+        message_loop_.PostQuitTask();
+      });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  auto objects = fake_storage_->GetObjects();
+  auto it = objects.find(reference->opaque_id);
+  ASSERT_NE(objects.end(), it);
+  ASSERT_EQ(value, it->second);
+}
+
+TEST_F(PageImplTest, CreateReferenceFromVmo) {
+  std::string value("a small value");
+  mx::vmo vmo;
+  ASSERT_TRUE(mtl::VmoFromString(value, &vmo));
+
+  Status status;
+  ReferencePtr reference;
+  page_ptr_->CreateReferenceFromVmo(
+      std::move(vmo),
       [this, &status, &reference](Status received_status,
                                   ReferencePtr received_reference) {
         status = received_status;
