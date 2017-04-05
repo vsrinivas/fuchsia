@@ -11,7 +11,7 @@ typedef void OnUserProviderReceived(UserProvider userProvider);
 typedef void OnDeviceContextReceived(DeviceContext deviceContext);
 
 /// Implements a DeviceShell for receiving the services a [DeviceShellFactory] needs to
-/// operate.  When [initialize] is called, the services it receives are routed
+/// operate.  When [create] is called, the services it receives are routed
 /// by this class to the various classes which need them.
 class DeviceShellFactoryImpl extends DeviceShellFactory {
   final DeviceContextProxy _deviceContextProxy = new DeviceContextProxy();

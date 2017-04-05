@@ -13,6 +13,8 @@ flutter_app("userpicker_device_shell") {
 
   manifest = "pubspec.yaml"
 
+  analysis_options = ".analysis_options"
+
   deps = [
     "//application/lib/app/dart",
     "//apps/modular/services/device:device_dart",
@@ -20,5 +22,6 @@ flutter_app("userpicker_device_shell") {
     "//apps/mozart/services/views:views_dart",
     "//lib/fidl/dart",
     "//lib/flutter/packages/flutter",
+    "//lib/widgets/packages/widgets:lib.widgets",
   ]
 }

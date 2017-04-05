@@ -7,37 +7,38 @@ import 'package:apps.modular.services.device/device_context.fidl.dart';
 import 'package:apps.modular.services.device/user_provider.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:apps.mozart.services.views/view_token.fidl.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import 'device_shell_impl.dart';
 import 'device_shell_factory_impl.dart';
+import 'device_shell_factory_model.dart';
 import 'device_shell_factory_widget.dart';
-import 'fuchsia_compatible_input_field.dart';
+import 'user_picker_screen.dart';
 import 'user_watcher_impl.dart';
 
-const String _kDefaultUserName = 'user1';
-const Color _kFuchsiaColor = const Color(0xFFFF00C0);
-const double _kButtonContentWidth = 180.0;
-const double _kButtonContentHeight = 80.0;
-
 void main() {
-  GlobalKey<_UserPickerScreenState> userPickerKey =
-      new GlobalKey<_UserPickerScreenState>();
+  DeviceShellFactoryModel deviceShellFactoryModel =
+      new DeviceShellFactoryModel();
+
   DeviceShellFactoryWidget deviceShellFactoryWidget =
       new DeviceShellFactoryWidget(
     applicationContext: new ApplicationContext.fromStartupInfo(),
     deviceShellFactory: new DeviceShellFactoryImpl(
       deviceShell: new DeviceShellImpl(),
       onUserProviderReceived: (UserProvider userProvider) {
-        userPickerKey.currentState.userProvider = userProvider;
+        deviceShellFactoryModel.userProvider = userProvider;
       },
       onDeviceContextReceived: (DeviceContext deviceContext) {
-        userPickerKey.currentState.deviceContext = deviceContext;
+        deviceShellFactoryModel.deviceContext = deviceContext;
       },
     ),
-    child: new _UserPickerScreen(key: userPickerKey),
+    child: new ScopedModel<DeviceShellFactoryModel>(
+      model: deviceShellFactoryModel,
+      child: new _ScreenManager(onLogout: deviceShellFactoryModel.onLogout),
+    ),
   );
 
   runApp(deviceShellFactoryWidget);
@@ -45,21 +46,20 @@ void main() {
   deviceShellFactoryWidget.advertise();
 }
 
-class _UserPickerScreen extends StatefulWidget {
-  _UserPickerScreen({Key key}) : super(key: key);
+class _ScreenManager extends StatefulWidget {
+  VoidCallback onLogout;
+
+  _ScreenManager({this.onLogout});
 
   @override
-  _UserPickerScreenState createState() => new _UserPickerScreenState();
+  _ScreenManagerState createState() => new _ScreenManagerState();
 }
 
-class _UserPickerScreenState extends State<_UserPickerScreen>
+class _ScreenManagerState extends State<_ScreenManager>
     with TickerProviderStateMixin {
   UserControllerProxy _userControllerProxy;
   UserWatcherImpl _userWatcherImpl;
 
-  DeviceContext _deviceContext;
-  UserProvider _userProvider;
-  List<String> _users;
   ChildViewConnection _childViewConnection;
 
   AnimationController _transitionAnimation;
@@ -72,8 +72,7 @@ class _UserPickerScreenState extends State<_UserPickerScreen>
     _userWatcherImpl = new UserWatcherImpl(onUserLogout: () {
       print('UserPickerDeviceShell: User logged out!');
       setState(() {
-        _users = null;
-        _loadUsers();
+        config.onLogout?.call();
         _transitionAnimation.reverse();
         // TODO(apwilson): Should need to remove the child view connection but
         // it causes a mozart deadlock in the compositor if you don't.
@@ -99,31 +98,28 @@ class _UserPickerScreenState extends State<_UserPickerScreen>
     _userControllerProxy.ctrl.close();
   }
 
-  set deviceContext(DeviceContext deviceContext) {
-    _deviceContext = deviceContext;
-  }
+  @override
+  Widget build(BuildContext context) => new AnimatedBuilder(
+        animation: _transitionAnimation,
+        builder: (BuildContext context, Widget child) =>
+            _childViewConnection == null
+                ? child
+                : new Stack(children: <Widget>[
+                    new ChildView(connection: _childViewConnection),
+                    new Opacity(
+                      opacity: 1.0 - _curvedTransitionAnimation.value,
+                      child: child,
+                    ),
+                  ]),
+        child: new UserPickerScreen(onLoginRequest: _login),
+      );
 
-  set userProvider(UserProvider userProvider) {
-    _userProvider = userProvider;
-    _loadUsers();
-  }
-
-  void _loadUsers() {
-    _userProvider.previousUsers((List<String> users) {
-      setState(() {
-        _users = users;
-      });
-    });
-  }
-
-  void _loginUser(String user) {
-    print('UserPickerDeviceShell: Logging in as $user!');
-
+  void _login(String user, UserProvider userProvider) {
     // Add the user first just in case.
-    _userProvider?.addUser(user, null, 'ledger.fuchsia.com');
+    userProvider?.addUser(user, null, 'ledger.fuchsia.com');
 
     final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
-    _userProvider?.login(
+    userProvider?.login(
       user,
       null,
       null,
@@ -146,143 +142,4 @@ class _UserPickerScreenState extends State<_UserPickerScreen>
       );
     });
   }
-
-  @override
-  Widget build(BuildContext context) => new AnimatedBuilder(
-      animation: _transitionAnimation,
-      builder: (BuildContext context, Widget child) {
-        final List<Widget> children = <Widget>[];
-        if (_users != null) {
-          if (_users.isNotEmpty) {
-            // Add list of previous users.
-            children.addAll(
-              _users.map((String user) {
-                return new Container(
-                  margin: const EdgeInsets.all(8.0),
-                  child: new RaisedButton(
-                    onPressed: () => _loginUser(user),
-                    child: new Text('Login as $user'),
-                  ),
-                );
-              }),
-            );
-          } else {
-            // Option to login as default user.
-            children.add(
-              new Container(
-                margin: const EdgeInsets.all(8.0),
-                child: new RaisedButton(
-                  onPressed: () => _loginUser(_kDefaultUserName),
-                  child: new Container(
-                    width: _kButtonContentWidth,
-                    height: _kButtonContentHeight,
-                    child: new Center(
-                      child: new Text(
-                        'Login as default user: $_kDefaultUserName',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-          // Option to enter a username.
-          children.add(
-            new Container(
-              decoration: new BoxDecoration(
-                backgroundColor: Colors.grey[300],
-                borderRadius: new BorderRadius.circular(2.0),
-              ),
-              margin: const EdgeInsets.all(8.0),
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: new Container(
-                width: _kButtonContentWidth,
-                height: _kButtonContentHeight,
-                child: new Overlay(initialEntries: <OverlayEntry>[
-                  new OverlayEntry(
-                    builder: (BuildContext context) => new Center(
-                          // TODO(apwilson): Use TextField ONCE WE HAVE A PROPER
-                          // IME ON FUCHSIA!
-                          child: new RawKeyboardTextField(
-                            decoration: new InputDecoration(
-                              hintText: 'Enter username',
-                            ),
-                            onSubmitted: _loginUser,
-                          ),
-                        ),
-                  ),
-                ]),
-              ),
-            ),
-          );
-        } else {
-          children.add(
-            new Container(
-              width: 64.0,
-              height: 64.0,
-              child: new CircularProgressIndicator(
-                valueColor: new AlwaysStoppedAnimation<Color>(_kFuchsiaColor),
-              ),
-            ),
-          );
-        }
-        List<Widget> stackChildren = <Widget>[
-          new Positioned.fill(
-            child: new Opacity(
-              opacity: 1.0 - _curvedTransitionAnimation.value,
-              child: new Material(
-                color: Colors.grey[900],
-                child: new Container(
-                  child: new Stack(
-                    children: [
-                      /// Add Fuchsia logo.
-                      new Align(
-                        alignment: FractionalOffset.bottomRight,
-                        child: new Container(
-                          margin: const EdgeInsets.only(
-                            right: 16.0,
-                            bottom: 8.0,
-                          ),
-                          child: new Image.asset(
-                            'packages/userpicker_device_shell/res/fuchsia.png',
-                            width: 256.0,
-                            height: 256.0,
-                          ),
-                        ),
-                      ),
-                      new Center(
-                        child: new Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: children,
-                        ),
-                      ),
-                      // Add shutdown button.
-                      new Align(
-                        alignment: FractionalOffset.bottomCenter,
-                        child: new Container(
-                          margin: const EdgeInsets.all(16.0),
-                          child: new RaisedButton(
-                            onPressed: () => _deviceContext?.shutdown(),
-                            child: new Text('Shutdown'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          )
-        ];
-
-        if (_childViewConnection != null) {
-          stackChildren.insert(
-            0,
-            new Positioned.fill(
-              child: new ChildView(connection: _childViewConnection),
-            ),
-          );
-        }
-        return new Stack(children: stackChildren);
-      });
 }

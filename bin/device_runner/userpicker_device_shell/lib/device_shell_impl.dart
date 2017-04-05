@@ -5,8 +5,7 @@
 import 'package:apps.modular.services.device/device_shell.fidl.dart';
 
 /// Implements a DeviceShell for receiving the services a [DeviceShell] needs to
-/// operate.  When [initialize] is called, the services it receives are routed
-/// by this class to the various classes which need them.
+/// operate.
 class DeviceShellImpl extends DeviceShell {
   @override
   void terminate(void done()) => done();
