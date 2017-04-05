@@ -203,8 +203,14 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
     vk::CompareOp depth_compare_op,
     vk::RenderPass render_pass,
     std::vector<vk::DescriptorSetLayout> descriptor_set_layouts,
+    const ModelPipelineSpec& spec,
     const MeshSpecImpl& mesh_spec_impl,
     vk::SampleCountFlagBits sample_count) {
+  // Depending on configuration, more dynamic states may be added later.
+  vk::PipelineDynamicStateCreateInfo dynamic_state_info;
+  std::vector<vk::DynamicState> dynamic_states{vk::DynamicState::eViewport,
+                                               vk::DynamicState::eScissor};
+
   vk::PipelineShaderStageCreateInfo vertex_stage_info;
   vertex_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
   vertex_stage_info.module = vertex_module;
@@ -235,7 +241,74 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   depth_stencil_info.depthWriteEnable = enable_depth_write;
   depth_stencil_info.depthCompareOp = depth_compare_op;
   depth_stencil_info.depthBoundsTestEnable = false;
-  depth_stencil_info.stencilTestEnable = false;
+  // Set the stencil state appropriately, depending on whether we (i.e. the
+  // escher::Object eventually rendered by this pipeline) is a clipper and/or
+  // a clippee.  See also ModelDisplayListBuilder, where these pipelines are
+  // used.
+  depth_stencil_info.stencilTestEnable = true;
+  auto& op_state = depth_stencil_info.front;
+  op_state.compareMask = 0xFF;
+  op_state.writeMask = 0xFF;
+  if (!spec.is_clippee) {
+    switch (spec.clipper_state) {
+      case ModelPipelineSpec::ClipperState::kNoClipChildren: {
+        // We neither clip nor are clipped, so we can disable the stencil test
+        // for this pipeline.
+        depth_stencil_info.stencilTestEnable = false;
+      } break;
+      case ModelPipelineSpec::ClipperState::kBeginClipChildren: {
+        // We are a top-level clipper that is not clipped by anyone else.
+        // Write to the stencil buffer to define where children are allowed
+        // to draw.
+        op_state.failOp = vk::StencilOp::eKeep;
+        op_state.passOp = vk::StencilOp::eReplace;
+        op_state.depthFailOp = vk::StencilOp::eReplace;
+        op_state.compareOp = vk::CompareOp::eAlways;
+        op_state.reference = 1;
+      } break;
+      case ModelPipelineSpec::ClipperState::kEndClipChildren: {
+        // We are a top-level clipper that is not clipped by anyone else.
+        // Clean up stencil buffer so that we do not clip subsequent objects.
+        op_state.failOp = vk::StencilOp::eKeep;
+        op_state.passOp = vk::StencilOp::eReplace;
+        op_state.depthFailOp = vk::StencilOp::eReplace;
+        op_state.compareOp = vk::CompareOp::eAlways;
+        op_state.reference = 0;
+      } break;
+    }
+  } else {
+    // In all cases where we are clipped by another object, we must be able
+    // to dynamically set the stencil reference value.
+    dynamic_states.push_back(vk::DynamicState::eStencilReference);
+
+    switch (spec.clipper_state) {
+      case ModelPipelineSpec::ClipperState::kNoClipChildren: {
+        // We are clipped by some other object, but do not clip any children.
+        // Therefore, test the stencil buffer, but do not update it.
+        op_state.failOp = vk::StencilOp::eKeep;
+        op_state.passOp = vk::StencilOp::eKeep;
+        op_state.depthFailOp = vk::StencilOp::eKeep;
+        op_state.compareOp = vk::CompareOp::eEqual;
+      } break;
+      case ModelPipelineSpec::ClipperState::kBeginClipChildren: {
+        // We are clipped by some other object, and also want to clip our
+        // children.  This is achieved by incrementing the stencil buffer.
+        // Therefore, test the stencil buffer, but do not update it.
+        op_state.failOp = vk::StencilOp::eKeep;
+        op_state.passOp = vk::StencilOp::eIncrementAndWrap;
+        op_state.depthFailOp = vk::StencilOp::eIncrementAndWrap;
+        op_state.compareOp = vk::CompareOp::eEqual;
+      } break;
+      case ModelPipelineSpec::ClipperState::kEndClipChildren: {
+        // We have finished clipping our children.  Revert the stencil buffer to
+        // its previous state so that we don't clip subsequent objects.
+        op_state.failOp = vk::StencilOp::eKeep;
+        op_state.passOp = vk::StencilOp::eDecrementAndWrap;
+        op_state.depthFailOp = vk::StencilOp::eDecrementAndWrap;
+        op_state.compareOp = vk::CompareOp::eEqual;
+      } break;
+    }
+  }
 
   // This is set dynamically during rendering.
   vk::Viewport viewport;
@@ -288,13 +361,6 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   color_blending.blendConstants[2] = 0.0f;
   color_blending.blendConstants[3] = 0.0f;
 
-  vk::PipelineDynamicStateCreateInfo dynamic_state;
-  const uint32_t kDynamicStateCount = 2;
-  vk::DynamicState dynamic_states[] = {vk::DynamicState::eViewport,
-                                       vk::DynamicState::eScissor};
-  dynamic_state.dynamicStateCount = kDynamicStateCount;
-  dynamic_state.pDynamicStates = dynamic_states;
-
   vk::PipelineLayoutCreateInfo pipeline_layout_info;
   pipeline_layout_info.setLayoutCount =
       static_cast<uint32_t>(descriptor_set_layouts.size());
@@ -303,6 +369,11 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
 
   vk::PipelineLayout pipeline_layout = ESCHER_CHECKED_VK_RESULT(
       device.createPipelineLayout(pipeline_layout_info, nullptr));
+
+  // All dynamic states have been accumulated, so finalize them.
+  dynamic_state_info.dynamicStateCount =
+      static_cast<uint32_t>(dynamic_states.size());
+  dynamic_state_info.pDynamicStates = dynamic_states.data();
 
   vk::GraphicsPipelineCreateInfo pipeline_info;
   pipeline_info.stageCount = fragment_module ? 2 : 1;
@@ -314,7 +385,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   pipeline_info.pDepthStencilState = &depth_stencil_info;
   pipeline_info.pMultisampleState = &multisampling;
   pipeline_info.pColorBlendState = &color_blending;
-  pipeline_info.pDynamicState = &dynamic_state;
+  pipeline_info.pDynamicState = &dynamic_state_info;
   pipeline_info.layout = pipeline_layout;
   pipeline_info.renderPass = render_pass;
   pipeline_info.subpass = 0;
@@ -385,7 +456,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
   auto pipeline_and_layout = NewPipelineHelper(
       device_, vertex_module, fragment_module, enable_depth_write,
       depth_compare_op, render_pass,
-      {model_data_->per_model_layout(), model_data_->per_object_layout()},
+      {model_data_->per_model_layout(), model_data_->per_object_layout()}, spec,
       mesh_spec_impl, SampleCountFlagBitsFromInt(spec.sample_count));
 
   device_.destroyShaderModule(vertex_module);

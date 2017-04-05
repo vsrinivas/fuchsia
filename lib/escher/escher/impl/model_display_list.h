@@ -6,8 +6,8 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/resource.h"
 #include "escher/impl/model_data.h"
+#include "escher/impl/resource.h"
 
 namespace escher {
 namespace impl {
@@ -18,6 +18,7 @@ class ModelDisplayList : public Resource {
     vk::DescriptorSet descriptor_sets[ModelData::PerObject::kDescriptorCount];
     ModelPipeline* pipeline;
     MeshPtr mesh;
+    uint32_t stencil_reference;
   };
 
   ModelDisplayList(vk::DescriptorSet stage_data,

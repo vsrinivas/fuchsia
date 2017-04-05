@@ -43,6 +43,8 @@ class ModelDisplayListBuilder {
  private:
   void PrepareUniformBufferForWriteOfSize(size_t size, size_t alignment);
   vk::DescriptorSet ObtainPerObjectDescriptorSet();
+  void UpdateDescriptorSetForObject(const Object& object,
+                                    vk::DescriptorSet descriptor_set);
 
   const vk::Device device_;
 
@@ -87,6 +89,7 @@ class ModelDisplayListBuilder {
   uint32_t per_object_descriptor_set_index_ = 0;
 
   ModelPipelineSpec pipeline_spec_;
+  uint32_t clip_depth_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ModelDisplayListBuilder);
 };

@@ -125,20 +125,58 @@ static size_t AlignedToNext(size_t position, size_t alignment) {
 void ModelDisplayListBuilder::AddObject(const Object& object) {
   PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerObject),
                                      kMinUniformBufferOffsetAlignment);
-  vk::DescriptorSet ds = ObtainPerObjectDescriptorSet();
+  vk::DescriptorSet descriptor_set = ObtainPerObjectDescriptorSet();
+  UpdateDescriptorSetForObject(object, descriptor_set);
+
+  const bool is_clipper = !object.clipped_children().empty();
+  const bool is_clippee = clip_depth_ > 0;
 
   // We can immediately create the display list item, even before we have
   // updated the descriptor set.
-  {
-    ModelDisplayList::Item item;
-    item.descriptor_sets[0] = ds;
-    item.mesh = renderer_->GetMeshForShape(object.shape());
+  ModelDisplayList::Item item;
+  item.descriptor_sets[0] = descriptor_set;
+  item.mesh = renderer_->GetMeshForShape(object.shape());
+  pipeline_spec_.mesh_spec = item.mesh->spec;
+  pipeline_spec_.shape_modifiers = object.shape().modifiers();
+  pipeline_spec_.is_clippee = is_clippee;
+  pipeline_spec_.clipper_state =
+      is_clipper ? ModelPipelineSpec::ClipperState::kBeginClipChildren
+                 : ModelPipelineSpec::ClipperState::kNoClipChildren;
+  item.pipeline = pipeline_cache_->GetPipeline(pipeline_spec_);
+  item.stencil_reference = clip_depth_;
+
+  if (is_clipper) {
+    // Drawing the item will increment the value in the stencil buffer.  Update
+    // |clip_depth_| so that children can test against the correct value.
+    items_.push_back(item);
+    ++clip_depth_;
+
+    // Recursively draw clipped children.
+    for (auto& o : object.clipped_children()) {
+      AddObject(o);
+    }
+
+    // Revert the stencil buffer to the previous state.
+    // TODO: if we knew that no subsequent children were to be clipped, we
+    // could avoid this.
     pipeline_spec_.mesh_spec = item.mesh->spec;
     pipeline_spec_.shape_modifiers = object.shape().modifiers();
+    pipeline_spec_.is_clippee = is_clippee;
+    pipeline_spec_.clipper_state =
+        ModelPipelineSpec::ClipperState::kEndClipChildren;
     item.pipeline = pipeline_cache_->GetPipeline(pipeline_spec_);
+    item.stencil_reference = clip_depth_;
+    items_.push_back(std::move(item));
+    --clip_depth_;
+  } else {
+    // Simply push the item.
     items_.push_back(std::move(item));
   }
+}
 
+void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
+    const Object& object,
+    vk::DescriptorSet descriptor_set) {
   auto per_object = reinterpret_cast<ModelData::PerObject*>(
       &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
   *per_object = ModelData::PerObject();  // initialize with default values
@@ -211,7 +249,7 @@ void ModelDisplayListBuilder::AddObject(const Object& object) {
     vk::WriteDescriptorSet writes[ModelData::PerObject::kDescriptorCount];
 
     auto& buffer_write = writes[0];
-    buffer_write.dstSet = ds;
+    buffer_write.dstSet = descriptor_set;
     buffer_write.dstBinding =
         ModelData::PerObject::kDescriptorSetUniformBinding;
     buffer_write.dstArrayElement = 0;
@@ -224,7 +262,7 @@ void ModelDisplayListBuilder::AddObject(const Object& object) {
     buffer_write.pBufferInfo = &buffer_info;
 
     auto& image_write = writes[1];
-    image_write.dstSet = ds;
+    image_write.dstSet = descriptor_set;
     image_write.dstBinding = ModelData::PerObject::kDescriptorSetSamplerBinding;
     image_write.dstArrayElement = 0;
     image_write.descriptorCount = 1;
@@ -259,8 +297,8 @@ ModelDisplayListPtr ModelDisplayListBuilder::Build(
             vk::PipelineStageFlagBits::eFragmentShader,
         vk::DependencyFlags(), 0, nullptr, 1, &barrier, 0, nullptr);
 
-    // The display list still needs to retain the buffer, and since it no longer
-    // needs special treatment, add it in with the other resources.
+    // The display list still needs to retain the buffer, and since it no
+    // longer needs special treatment, add it in with the other resources.
     resources_.push_back(std::move(uniform_buffer));
   }
   uniform_buffers_.clear();

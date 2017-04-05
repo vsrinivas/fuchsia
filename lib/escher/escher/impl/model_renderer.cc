@@ -158,6 +158,8 @@ void ModelRenderer::Draw(const Stage& stage,
 
   vk::Pipeline current_pipeline;
   vk::PipelineLayout current_pipeline_layout;
+  uint32_t current_stencil_reference = 0;
+  vk_command_buffer.setStencilReference(vk::StencilFaceFlagBits::eFront, 0);
   for (const ModelDisplayList::Item& item : display_list->items()) {
     // Bind new pipeline and PerModel descriptor set, if necessary.
     if (current_pipeline != item.pipeline->pipeline()) {
@@ -174,6 +176,12 @@ void ModelRenderer::Draw(const Stage& stage,
             vk::PipelineBindPoint::eGraphics, current_pipeline_layout,
             ModelData::PerModel::kDescriptorSetIndex, 1, &ds, 0, nullptr);
       }
+    }
+
+    if (current_stencil_reference != item.stencil_reference) {
+      current_stencil_reference = item.stencil_reference;
+      vk_command_buffer.setStencilReference(vk::StencilFaceFlagBits::eFront,
+                                            current_stencil_reference);
     }
 
     vk::DescriptorSet ds = item.descriptor_sets[0];
@@ -230,7 +238,7 @@ void ModelRenderer::CreateRenderPasses(vk::Format pre_pass_color_format,
 
   // Load/store ops and image layouts differ between passes; see below.
   depth_attachment.format = depth_format;
-  depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+  depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eClear;
   depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
 
   vk::AttachmentReference color_reference;

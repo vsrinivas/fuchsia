@@ -37,6 +37,7 @@ class WobblyRingsScene : public Scene {
   escher::MeshPtr ring_mesh3_;
   escher::MeshPtr wobbly_rect_mesh_;
   escher::MaterialPtr circle_color_;
+  escher::MaterialPtr clip_color_;
   escher::MaterialPtr ring1_color_;
   escher::MaterialPtr ring2_color_;
   escher::MaterialPtr ring3_color_;

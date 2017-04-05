@@ -48,7 +48,7 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
       image_cache_(escher->image_cache()),
       // TODO: perhaps cache depth_format_ in EscherImpl.
       depth_format_(ESCHER_CHECKED_VK_RESULT(
-          impl::GetSupportedDepthFormat(context_.physical_device))),
+          impl::GetSupportedDepthStencilFormat(context_.physical_device))),
       // TODO: could potentially share ModelData/PipelineCache/ModelRenderer
       // between multiple PaperRenderers.
       model_data_(std::make_unique<impl::ModelData>(context_.device,
@@ -238,7 +238,7 @@ void PaperRenderer::UpdateModelRenderer(vk::Format pre_pass_color_format,
         escher_, model_data_.get(), pre_pass_color_format,
         lighting_pass_color_format, kLightingPassSampleCount,
         ESCHER_CHECKED_VK_RESULT(
-            impl::GetSupportedDepthFormat(context_.physical_device)));
+            impl::GetSupportedDepthStencilFormat(context_.physical_device)));
   }
 }
 
@@ -442,8 +442,9 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     ImagePtr depth_image_multisampled = image_cache_->NewImage(info);
 
     FramebufferPtr multisample_fb = ftl::MakeRefCounted<Framebuffer>(
-        escher_, width, height, std::vector<ImagePtr>{color_image_multisampled,
-                                                      depth_image_multisampled},
+        escher_, width, height,
+        std::vector<ImagePtr>{color_image_multisampled,
+                              depth_image_multisampled},
         model_renderer_->lighting_pass());
 
     multisample_fb->KeepAlive(current_frame());

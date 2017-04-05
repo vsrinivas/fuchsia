@@ -36,12 +36,15 @@ WobblyRingsScene::WobblyRingsScene(Demo* demo,
   ring2_color_ = ftl::MakeRefCounted<escher::Material>();
   ring3_color_ = ftl::MakeRefCounted<escher::Material>();
   circle_color_ = ftl::MakeRefCounted<escher::Material>();
+  clip_color_ = ftl::MakeRefCounted<escher::Material>();
   checkerboard_material_ = ftl::MakeRefCounted<escher::Material>();
 
   ring1_color_->set_color(ring1_color);
   ring2_color_->set_color(ring2_color);
   ring3_color_->set_color(ring3_color);
   circle_color_->set_color(circle_color);
+  vec3 clip_color = circle_color * 0.8f;
+  clip_color_->set_color(clip_color);
   checkerboard_material_->set_color(checkerboard_color);
 }
 
@@ -112,9 +115,12 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   ring2.set_shape_modifier_data(wobble_data);
   ring3.set_shape_modifier_data(wobble_data);
 
+  Object clip_circle(Object::NewCircle(
+      center - vec2(x_pos_offset, y_pos_offset), 400.f, 2.f, clip_color_));
+
 // Create a wobbly rectangle
 #if 0
-  Object rectangle(wobbly_rect_mesh_, vec3(0.f, kRectYPos, 2.f),
+  Object rectangle(wobbly_rect_mesh_, vec3(0.f, kRectYPos, 0.f),
                    checkerboard_material_);
   rectangle.set_shape_modifiers(ShapeModifier::kWobble);
   rectangle.set_shape_modifier_data(wobble_data);
@@ -122,11 +128,12 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   Object rectangle(Object::NewRect(
       vec2(0.f, 0.f),
       vec2(stage->viewing_volume().width(), stage->viewing_volume().height()),
-      2.f, checkerboard_material_));
+      0.f, checkerboard_material_));
 #endif
 
-  std::vector<Object> objects{circle1,   circle2, circle3, circle4,
-                              rectangle, ring1,   ring2,   ring3};
+  clip_circle.set_clipped_children({ring1, ring2, ring3, circle1, circle2});
+
+  std::vector<Object> objects{clip_circle, circle3, circle4, rectangle};
 
   // Create the Model
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));

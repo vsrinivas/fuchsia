@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <unordered_map>
 #include <glm/glm.hpp>
+#include <unordered_map>
 
 #include "escher/material/material.h"
 #include "escher/scene/shape.h"
@@ -23,6 +23,8 @@ class Object {
          const vec3& position,
          MaterialPtr material,
          vec2 scale = vec2(1.f, 1.f));
+  Object(const Object& other);
+  Object(Object&& other);
   static Object NewRect(const vec2& position,
                         const vec2& size,
                         float z,
@@ -71,6 +73,14 @@ class Object {
   template <typename DataT>
   void set_shape_modifier_data(const DataT& data);
 
+  const std::vector<Object>& clipped_children() const {
+    return clipped_children_;
+  }
+
+  void set_clipped_children(std::vector<Object> clipped_children) {
+    clipped_children_ = std::move(clipped_children);
+  }
+
  private:
   Object(const Shape& shape, const MaterialPtr& material);
 
@@ -81,6 +91,7 @@ class Object {
   float rotation_;
   vec2 rotation_point_;
   std::unordered_map<ShapeModifier, std::vector<uint8_t>> shape_modifier_data_;
+  std::vector<Object> clipped_children_;
 };
 
 // Inline function definitions.

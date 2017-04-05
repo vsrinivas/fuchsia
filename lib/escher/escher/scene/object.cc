@@ -17,6 +17,26 @@ Object::Object(MeshPtr mesh,
       rotation_(0.f),
       rotation_point_(vec2(0.f, 0.f)) {}
 
+Object::Object(const Object& other)
+    : shape_(other.shape_),
+      material_(other.material_),
+      position_(other.position_),
+      size_(other.size_),
+      rotation_(other.rotation_),
+      rotation_point_(other.rotation_point_),
+      shape_modifier_data_(other.shape_modifier_data_),
+      clipped_children_(other.clipped_children_) {}
+
+Object::Object(Object&& other)
+    : shape_(std::move(other.shape_)),
+      material_(std::move(other.material_)),
+      position_(other.position_),
+      size_(other.size_),
+      rotation_(other.rotation_),
+      rotation_point_(other.rotation_point_),
+      shape_modifier_data_(std::move(other.shape_modifier_data_)),
+      clipped_children_(std::move(other.clipped_children_)) {}
+
 Object::Object(const Shape& shape, const MaterialPtr& material)
     : shape_(shape),
       material_(material),
