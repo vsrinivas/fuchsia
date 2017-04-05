@@ -20,6 +20,7 @@ namespace app {
 // to publish outgoing services back to its creator.
 class ApplicationContext {
  public:
+  // The constructor is normally called by CreateFromStartupInfo().
   ApplicationContext(fidl::InterfaceHandle<ApplicationEnvironment> environment,
                      fidl::InterfaceRequest<ServiceProvider> outgoing_services);
 
@@ -31,8 +32,16 @@ class ApplicationContext {
   // retrieve the handles supplied to the application by the application
   // manager.
   //
-  // The result is never null.
+  // This function will call FTL_CHECK and stack dump if the environment is
+  // null. However, a null environment services pointer is allowed.
+  //
+  // The returned unique_ptr is never null.
   static std::unique_ptr<ApplicationContext> CreateFromStartupInfo();
+
+  // Like CreateFromStartupInfo(), but allows both the environment and the
+  // environment services to be null so that callers can validate the values
+  // and provide meaningful error messages.
+  static std::unique_ptr<ApplicationContext> CreateFromStartupInfoNotChecked();
 
   // Gets the application's environment.
   //

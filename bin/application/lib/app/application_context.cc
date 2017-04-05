@@ -7,6 +7,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
+#include "lib/ftl/logging.h"
 
 namespace app {
 
@@ -25,11 +26,20 @@ ApplicationContext::~ApplicationContext() = default;
 
 std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfo() {
+  auto startup_info = CreateFromStartupInfoNotChecked();
+  FTL_CHECK(startup_info->environment().get() != nullptr) <<
+      "The ApplicationEnvironment is null. Usually this means you need to use "
+      "@boot on the Magenta command line. Otherwise, use "
+      "CreateFromStartupInfoNotChecked() to allow |environment| to be null.";
+  return startup_info;
+}
+
+std::unique_ptr<ApplicationContext>
+ApplicationContext::CreateFromStartupInfoNotChecked() {
   mx_handle_t environment =
       mx_get_startup_handle(MX_HND_TYPE_APPLICATION_ENVIRONMENT);
   mx_handle_t services =
       mx_get_startup_handle(MX_HND_TYPE_APPLICATION_SERVICES);
-  // It's legal for |environment| or |services| to be null.
 
   return std::make_unique<ApplicationContext>(
       fidl::InterfaceHandle<ApplicationEnvironment>(mx::channel(environment),
