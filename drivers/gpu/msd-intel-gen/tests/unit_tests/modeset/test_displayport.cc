@@ -9,7 +9,6 @@
 #include "registers_ddi.h"
 #include "registers_dpll.h"
 #include "gtest/gtest.h"
-#include <assert.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
@@ -213,10 +212,11 @@ public:
 
     void SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply)
     {
-        assert(request->size <= DpAuxMessage::kMaxTotalSize);
+        reply->size = 0;
+        ASSERT_LE(request->size, uint32_t{DpAuxMessage::kMaxTotalSize});
         // TODO(MA-150): Allow messages with an empty body, for which
         // request->size == 3 (because the body size field is omitted).
-        assert(request->size >= 4);
+        ASSERT_GE(request->size, 4u);
         uint32_t dp_cmd = request->data[0] >> 4;
         uint32_t addr =
             ((request->data[0] & 0xf) << 16) | (request->data[1] << 8) | request->data[2];
@@ -231,7 +231,7 @@ public:
 
         if (dp_cmd == DisplayPort::DP_REQUEST_I2C_WRITE ||
             dp_cmd == DisplayPort::DP_REQUEST_NATIVE_WRITE) {
-            assert(request->size == 4 + dp_size);
+            ASSERT_EQ(request->size, 4 + dp_size);
 
             if (dp_cmd == DisplayPort::DP_REQUEST_I2C_WRITE) {
                 ASSERT_TRUE(i2c_.I2cWrite(addr, &request->data[4], dp_size));
@@ -244,9 +244,9 @@ public:
         } else if (dp_cmd == DisplayPort::DP_REQUEST_I2C_READ ||
                    dp_cmd == DisplayPort::DP_REQUEST_NATIVE_READ) {
             // There should be no extra data in the input message.
-            assert(request->size == 4);
+            ASSERT_EQ(request->size, 4u);
             // This is the maximum amount we can read in a single I2C-read-over-DP.
-            assert(dp_size <= DpAuxMessage::kMaxBodySize);
+            ASSERT_LE(dp_size, uint32_t{DpAuxMessage::kMaxBodySize});
 
             if (dp_cmd == DisplayPort::DP_REQUEST_I2C_READ) {
                 ASSERT_TRUE(i2c_.I2cRead(addr, &reply->data[1], dp_size));
@@ -257,7 +257,7 @@ public:
             reply->size = 1 + dp_size;
             reply->data[0] = 0; // Header byte: indicates an ack
         } else {
-            assert(0);
+            FAIL() << "Unhandled DisplayPort Aux message type: " << dp_cmd;
         }
     }
 
@@ -311,14 +311,14 @@ public:
 
             // Read the request message from registers.
             request.size = control.message_size().get();
-            assert(request.size <= DpAuxMessage::kMaxTotalSize);
+            ASSERT_LE(request.size, uint32_t{DpAuxMessage::kMaxTotalSize});
             for (uint32_t offset = 0; offset < request.size; offset += 4) {
                 request.SetFromPackedWord(offset, mmio_->Read32(data_reg + offset));
             }
             dp_aux_[ddi_number]->SendDpAuxMsg(&request, &reply);
 
             // Write the reply message into registers.
-            assert(reply.size <= DpAuxMessage::kMaxTotalSize);
+            ASSERT_LE(reply.size, uint32_t{DpAuxMessage::kMaxTotalSize});
             for (uint32_t offset = 0; offset < reply.size; offset += 4) {
                 mmio_->Write32(data_reg + offset, reply.GetPackedWord(offset));
             }
