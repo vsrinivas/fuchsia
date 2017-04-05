@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <list.h>
 #include <arch/ops.h>
+#include <dev/hw_rng.h>
 #include <platform.h>
 #include <platform/debug.h>
 #include <kernel/spinlock.h>
@@ -42,6 +43,15 @@ void _panic(void *caller, void *frame, const char *fmt, ...)
 
 void __stack_chk_fail(void) {
     panic("stack canary corrupted!\n");
+}
+
+uintptr_t choose_stack_guard(void) {
+    uintptr_t guard;
+    if (hw_rng_get_entropy(&guard, sizeof(guard), true) != sizeof(guard)) {
+        // We can't get a random value, so use a randomish value.
+        guard = 0xdeadbeef00ff00ffUL ^ (uintptr_t)&guard;
+    }
+    return guard;
 }
 
 #if !DISABLE_DEBUG_OUTPUT

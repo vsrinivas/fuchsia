@@ -85,6 +85,8 @@ void _panic(void *caller, void *frame, const char *fmt, ...) __PRINTFLIKE(3, 4) 
 
 void __stack_chk_fail(void) __NO_RETURN;
 
+uintptr_t choose_stack_guard(void);
+
 /* spin the cpu for a period of (short) time */
 void spin(uint32_t usecs);
 

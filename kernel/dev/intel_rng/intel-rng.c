@@ -44,8 +44,7 @@ static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block);
  * Returns the number of bytes written to the buffer on success (potentially 0),
  * and a negative value on error.
  */
-__NO_SAFESTACK static ssize_t get_entropy_from_cpu(void* buf, size_t len,
-                                                   bool block) {
+static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
     /* TODO(security): Move this to a shared kernel/user lib, so we can write usermode
      * tests against this code */
 
@@ -66,8 +65,8 @@ __NO_SAFESTACK static ssize_t get_entropy_from_cpu(void* buf, size_t len,
 }
 
 __attribute__((target("rdrnd,rdseed")))
-__NO_SAFESTACK static bool instruction_step(enum entropy_instr instr,
-                                            unsigned long long int* val) {
+static bool instruction_step(enum entropy_instr instr,
+                             unsigned long long int* val) {
     switch (instr) {
         case ENTROPY_INSTR_RDRAND: return _rdrand64_step(val);
         case ENTROPY_INSTR_RDSEED: return _rdseed64_step(val);
@@ -75,8 +74,8 @@ __NO_SAFESTACK static bool instruction_step(enum entropy_instr instr,
     }
 }
 
-__NO_SAFESTACK static ssize_t get_entropy_from_instruction(
-    void* buf, size_t len, bool block, enum entropy_instr instr) {
+static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
+                                            enum entropy_instr instr) {
     size_t written = 0;
     while (written < len) {
         unsigned long long int val = 0;
@@ -96,13 +95,11 @@ __NO_SAFESTACK static ssize_t get_entropy_from_instruction(
     return (ssize_t)written;
 }
 
-__NO_SAFESTACK static ssize_t get_entropy_from_rdseed(void* buf, size_t len,
-                                                      bool block) {
+static ssize_t get_entropy_from_rdseed(void* buf, size_t len, bool block) {
     return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDSEED);
 }
 
-__NO_SAFESTACK static ssize_t get_entropy_from_rdrand(void* buf, size_t len,
-                                                      bool block) {
+static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block) {
     // TODO(security): This method is not compliant with Intel's "Digital Random
     // Number Generator (DRNG) Software Implementation Guide".  We are using
     // rdrand in a way that is explicitly against their recommendations.  This
@@ -112,7 +109,7 @@ __NO_SAFESTACK static ssize_t get_entropy_from_rdrand(void* buf, size_t len,
     return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDRAND);
 }
 
-__NO_SAFESTACK size_t hw_rng_get_entropy(void* buf, size_t len, bool block)
+size_t hw_rng_get_entropy(void* buf, size_t len, bool block)
 {
     if (!len) {
         return 0;
