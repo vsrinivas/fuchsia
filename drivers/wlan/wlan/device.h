@@ -10,6 +10,7 @@
 #include <ddk/protocol/wlan.h>
 #include <magenta/compiler.h>
 #include <magenta/syscalls/port.h>
+#include <mx/channel.h>
 #include <mx/port.h>
 
 #include <mutex>
@@ -25,9 +26,25 @@ class Device {
     mx_status_t Bind();
 
   private:
+    enum MsgKey : uint64_t {
+        kShutdown = 1,
+    };
+
+    struct LoopMessage {
+        explicit LoopMessage(MsgKey key, uint32_t extra = 0);
+
+        mx_packet_header_t hdr;
+        mx_packet_user_t data;
+    };
+    static_assert(std::is_standard_layout<LoopMessage>::value,
+            "wlan::Device::LoopMessage must have standard layout");
+    static_assert(sizeof(LoopMessage) <= sizeof(mx_port_packet_t),
+            "wlan::Device::LoopMessage must fit in an mx_port_packet_t");
+
     // ddk/device
     void Unbind();
     mx_status_t Release();
+    ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 
     // ddk/protocol/ethernet
     mx_status_t Query(uint32_t options, ethmac_info_t* info);
@@ -39,22 +56,12 @@ class Device {
     void MacStatus(uint32_t status);
     void Recv(void* data, size_t length, uint32_t flags);
 
-    enum MsgKey : uint64_t {
-        kShutdown = 1,
-    };
-    struct loop_message {
-        explicit loop_message(MsgKey key, uint32_t extra = 0);
-
-        mx_packet_header_t hdr;
-        mx_packet_user_t data;
-    };
-    static_assert(std::is_standard_layout<loop_message>::value,
-            "loop_message must have standard layout");
-    static_assert(sizeof(loop_message) <= sizeof(mx_port_packet_t),
-            "loop_message must fit in an mx_port_packet_t");
-
     void MainLoop();
+    void ProcessChannelPacketLocked(const mx_port_packet_t& pkt) __TA_REQUIRES(lock_);
+    mx_status_t RegisterChannelWaitLocked() __TA_REQUIRES(lock_);
     mx_status_t SendShutdown();
+
+    mx_status_t GetChannel(mx::channel* out) __TA_EXCLUDES(lock_);
 
     std::mutex lock_;
     std::thread work_thread_;
@@ -76,6 +83,8 @@ class Device {
     ethmac_info_t ethmac_info_ = {};
     ethmac_ifc_t* ethmac_ifc_ __TA_GUARDED(lock_) = nullptr;
     void* ethmac_cookie_ __TA_GUARDED(lock_) = nullptr;
+
+    mx::channel channel_ __TA_GUARDED(lock_);
 };
 
 }  // namespace wlan
