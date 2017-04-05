@@ -8,7 +8,7 @@
 #include <type_traits>
 
 #include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/callback/destruction_guard.h"
+#include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/logging.h"
 
 namespace callback {
@@ -25,7 +25,7 @@ class LambdaPostRunWrapper {
 
   template <typename... ArgType>
   auto operator()(ArgType&&... args) const {
-    auto call_on_exit = MakeDestructionGuard(std::move(callback_));
+    auto call_on_exit = ftl::MakeAutoCall(std::move(callback_));
     return func_(std::forward<ArgType>(args)...);
   }
 

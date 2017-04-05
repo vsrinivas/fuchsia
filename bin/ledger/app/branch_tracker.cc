@@ -9,8 +9,8 @@
 #include "apps/ledger/src/app/diff_utils.h"
 #include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/callback/destruction_guard.h"
 #include "apps/ledger/src/callback/waiter.h"
+#include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace ledger {
@@ -196,8 +196,7 @@ class BranchTracker::PageWatcherContainer {
             this, new_commit = std::move(new_commit),
             paginated_changes = std::move(paginated_changes)
           ](coroutine::CoroutineHandler * handler) mutable {
-            auto guard =
-                callback::MakeDestructionGuard([this] { handler_ = nullptr; });
+            auto guard = ftl::MakeAutoCall([this] { handler_ = nullptr; });
             FTL_DCHECK(!handler_);
             handler_ = handler;
             for (size_t i = 0; i < paginated_changes.size(); ++i) {

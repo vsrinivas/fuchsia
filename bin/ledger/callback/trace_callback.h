@@ -8,8 +8,8 @@
 #include <functional>
 #include <utility>
 
-#include "apps/ledger/src/callback/destruction_guard.h"
 #include "apps/tracing/lib/trace/event.h"
+#include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace callback {
@@ -59,7 +59,7 @@ class TracingLambda {
     FTL_DCHECK(!did_run_or_moved_out_);
     did_run_or_moved_out_ = true;
 
-    auto guard = MakeDestructionGuard([
+    auto guard = ftl::MakeAutoCall([
       trace_enabled = trace_enabled_, id = id_, category = category_,
       name = name_
     ] {
