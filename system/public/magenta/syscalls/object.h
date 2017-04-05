@@ -26,6 +26,7 @@ typedef enum {
     MX_INFO_THREAD                     = 10, // mx_info_thread_t[1]
     MX_INFO_THREAD_EXCEPTION_REPORT    = 11, // mx_exception_report_t[1]
     MX_INFO_TASK_STATS                 = 12, // mx_info_task_stats_t[1]
+    MX_INFO_PROCESS_MAPS               = 13, // mx_info_maps_t[n]
     MX_INFO_LAST
 } mx_object_info_topic_t;
 
@@ -125,6 +126,51 @@ typedef struct mx_info_vmar {
     // Length of the region, in bytes.
     size_t len;
 } mx_info_vmar_t;
+
+
+// Types and values used by MX_INFO_PROCESS_MAPS.
+
+// Describes a VM mapping.
+typedef struct mx_info_maps_mapping {
+    // MMU flags for the mapping.
+    // Bitwise OR of MX_VM_FLAG_PERM_{READ,WRITE,EXECUTE} values.
+    uint32_t mmu_flags;
+    // The number of PAGE_SIZE pages in the mapped region of the VMO
+    // that are backed by physical memory.
+    size_t committed_pages;
+} mx_info_maps_mapping_t;
+
+// Types of entries represented by mx_info_maps_t.
+// Can't use mx_obj_type_t because not all of these are
+// user-visible kernel object types.
+typedef enum mx_info_maps_type {
+    MX_INFO_MAPS_TYPE_NONE    = 0,
+    MX_INFO_MAPS_TYPE_ASPACE  = 1,
+    MX_INFO_MAPS_TYPE_VMAR    = 2,
+    MX_INFO_MAPS_TYPE_MAPPING = 3,
+    MX_INFO_MAPS_TYPE_LAST
+} mx_info_maps_type_t;
+
+// Describes a node in the aspace/vmar/mapping hierarchy for a user process.
+typedef struct mx_info_maps {
+    // Name if available; empty string otherwise.
+    char name[MX_MAX_NAME_LEN];
+    // Base address.
+    mx_vaddr_t base;
+    // Size in bytes.
+    size_t size;
+
+    // The depth of this node in the tree.
+    // Can be used for indentation, or to rebuild the tree from an array
+    // of mx_info_maps_t entries, which will be in depth-first pre-order.
+    size_t depth;
+    // The type of this entry; indicates which union entry is valid.
+    uint32_t type; // mx_info_maps_type_t
+    union {
+        mx_info_maps_mapping_t mapping;
+        // No additional fields for other types.
+    } u;
+} mx_info_maps_t;
 
 
 // Object properties.

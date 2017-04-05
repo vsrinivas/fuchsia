@@ -295,18 +295,6 @@ bool info_reflects_process_state() {
     END_TEST;
 }
 
-// Tests that MX_INFO_TASK_STATS seems to work.
-bool info_task_stats_smoke() {
-    BEGIN_TEST;
-    mx_info_task_stats_t info;
-    ASSERT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_TASK_STATS,
-                                 &info, sizeof(info), NULL, NULL),
-              NO_ERROR, "");
-    ASSERT_GT(info.mem_committed_bytes, 0, "");
-    ASSERT_GE(info.mem_mapped_bytes, info.mem_committed_bytes, "");
-    END_TEST;
-}
-
 } // namespace
 
 BEGIN_TEST_CASE(process_tests)
@@ -317,7 +305,6 @@ RUN_TEST(kill_process_via_vmar_destroy);
 RUN_TEST(kill_process_handle_cycle);
 RUN_TEST(kill_channel_handle_cycle);
 RUN_TEST(info_reflects_process_state);
-RUN_TEST(info_task_stats_smoke);
 END_TEST_CASE(process_tests)
 
 #ifndef BUILD_COMBINED_TESTS

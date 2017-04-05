@@ -228,6 +228,51 @@ Additional errors:
 
 *   **ERR_BAD_STATE**: If the target process is not currently running.
 
+### MX_INFO_PROCESS_MAPS
+
+*handle* type: **Process** other than your own, with **MX_RIGHT_READ**
+
+*buffer* type: **mx_info_maps_t[n]**
+
+The *mx_info_maps_t* array is a depth-first pre-order walk of the target
+process's Aspace/VMAR/Mapping tree.
+
+```
+typedef struct mx_info_maps {
+    // Name if available; empty string otherwise.
+    char name[MX_MAX_NAME_LEN];
+    // Base address.
+    mx_vaddr_t base;
+    // Size in bytes.
+    size_t size;
+
+    // The depth of this node in the tree.
+    // Can be used for indentation, or to rebuild the tree from an array
+    // of mx_info_maps_t entries, which will be in depth-first pre-order.
+    size_t depth;
+    // The type of this entry; indicates which union entry is valid.
+    uint32_t type; // mx_info_maps_type_t
+    union {
+        mx_info_maps_mapping_t mapping;
+        // No additional fields for other types.
+    } u;
+} mx_info_maps_t;
+```
+
+The *depth* field of each entry describes its relationship to the nodes that
+come before it. Depth 0 is the root Aspace, depth 1 is the root VMAR, and all
+other entries have depth 2 or greater.
+
+Additional errors:
+
+*   **ERR_ACCESS_DENIED**: If the appropriate rights are missing, or if a
+    process attempts to call this on a handle to itself. It's not safe to
+    examine yourself: *buffer* will live inside the Aspace being examined, and
+    the kernel can't safely fault in pages of the buffer while walking the
+    Aspace.
+*   **ERR_BAD_STATE**: If the target process is not currently running, or if
+    its address space has been destroyed.
+
 ## RETURN VALUE
 
 **mx_object_get_info**() returns **NO_ERROR** on success. In the event of
@@ -238,6 +283,9 @@ failure, a negative error value is returned.
 **ERR_BAD_HANDLE** *handle* is not a valid handle.
 
 **ERR_WRONG_TYPE** *handle* is not an appropriate type for *topic*
+
+**ERR_ACCESS_DENIED**: If *handle* does not have the necessary rights for the
+operation.
 
 **ERR_INVALID_ARGS** *buffer*, *actual*, or *avail* are invalid pointers.
 

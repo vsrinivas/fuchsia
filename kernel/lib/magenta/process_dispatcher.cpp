@@ -25,6 +25,7 @@
 #include <lib/crypto/global_prng.h>
 #include <lib/ktrace.h>
 
+#include <magenta/diagnostics.h>
 #include <magenta/futex_context.h>
 #include <magenta/handle_owner.h>
 #include <magenta/handle_reaper.h>
@@ -503,6 +504,16 @@ status_t ProcessDispatcher::GetStats(mx_info_task_stats_t* stats) {
     stats->mem_mapped_bytes = usage.mapped_pages * PAGE_SIZE;
     stats->mem_committed_bytes = usage.committed_pages * PAGE_SIZE;
     return NO_ERROR;
+}
+
+status_t ProcessDispatcher::GetAspaceMaps(
+    user_ptr<mx_info_maps_t> maps, size_t max,
+    size_t* actual, size_t* available) {
+    AutoLock lock(&state_lock_);
+    if (state_ != State::RUNNING) {
+        return ERR_BAD_STATE;
+    }
+    return GetVmAspaceMaps(aspace_, maps, max, actual, available);
 }
 
 status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread) {

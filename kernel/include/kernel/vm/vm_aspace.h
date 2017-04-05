@@ -43,6 +43,7 @@ public:
     // simple accessors
     vaddr_t base() const { return base_; }
     size_t size() const { return size_; }
+    const char* name() const { return name_; }
     arch_aspace_t& arch_aspace() { return arch_aspace_; }
     bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
     bool is_aslr_enabled() const { return aslr_enabled_; }
@@ -52,6 +53,9 @@ public:
 
     // destroy but not free the address space
     status_t Destroy();
+
+    // Returns true if the address space has been destroyed.
+    bool is_destroyed() const;
 
     // accessor for singleton kernel address space
     static VmAspace* kernel_aspace() { return kernel_aspace_; }

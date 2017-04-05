@@ -87,7 +87,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                                 user_ptr<size_t> _actual, user_ptr<size_t> _avail) {
     LTRACEF("handle %d topic %u\n", handle, topic);
 
-    auto up = ProcessDispatcher::GetCurrent();
+    ProcessDispatcher* up = ProcessDispatcher::GetCurrent();
 
     switch (topic) {
         case MX_INFO_HANDLE_VALID: {
@@ -328,6 +328,30 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (actual == 0)
                 return ERR_BUFFER_TOO_SMALL;
             return NO_ERROR;
+        }
+        case MX_INFO_PROCESS_MAPS: {
+            mxtl::RefPtr<ProcessDispatcher> process;
+            mx_status_t status =
+                up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &process);
+            if (status < 0)
+                return status;
+            if (process.get() == up) {
+                // Not safe to look at yourself: the user buffer will live
+                // inside the VmAspace we're examining, and we can't
+                // fault in the buffer's pages while the aspace lock is held.
+                return ERR_ACCESS_DENIED;
+            }
+
+            auto maps = _buffer.reinterpret<mx_info_maps_t>();
+            size_t count = buffer_size / sizeof(mx_info_maps_t);
+            size_t avail = 0;
+            status = process->GetAspaceMaps(maps, count, &count, &avail);
+
+            if (_actual && (_actual.copy_to_user(count) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            return status;
         }
         case MX_INFO_VMAR: {
             mxtl::RefPtr<VmAddressRegionDispatcher> vmar;

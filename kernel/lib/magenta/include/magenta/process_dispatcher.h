@@ -167,6 +167,10 @@ public:
     // Syscall helpers
     status_t GetInfo(mx_info_process_t* info);
     status_t GetStats(mx_info_task_stats_t* stats);
+    // NOTE: Code outside of the syscall layer should not typically know about
+    // user_ptrs; do not use this pattern as an example.
+    status_t GetAspaceMaps(user_ptr<mx_info_maps_t> maps, size_t max,
+                           size_t* actual, size_t* available);
 
     status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread);
 

@@ -243,6 +243,11 @@ status_t VmAspace::Destroy() {
     return NO_ERROR;
 }
 
+bool VmAspace::is_destroyed() const {
+    AutoLock guard(&lock_);
+    return aspace_destroyed_;
+}
+
 //
 //  Try to pick the spot within specified gap
 //

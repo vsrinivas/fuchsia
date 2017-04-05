@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/diagnostics.h>
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -293,6 +295,118 @@ status_t VmAspace::GetMemoryUsage(vm_usage_t* usage) {
         return ERR_INTERNAL;
     }
     *usage = vc.usage;
+    return NO_ERROR;
+}
+
+namespace {
+unsigned int arch_mmu_flags_to_vm_flags(unsigned int arch_mmu_flags) {
+    if (arch_mmu_flags & ARCH_MMU_FLAG_INVALID) {
+        return 0;
+    }
+    unsigned int ret = 0;
+    if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ) {
+        ret |= MX_VM_FLAG_PERM_READ;
+    }
+    if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
+        ret |= MX_VM_FLAG_PERM_WRITE;
+    }
+    if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
+        ret |= MX_VM_FLAG_PERM_EXECUTE;
+    }
+    return ret;
+}
+
+// Builds a description of an apsace/vmar/mapping hierarchy.
+class VmMapBuilder final : public VmEnumerator {
+public:
+    // NOTE: Code outside of the syscall layer should not typically know about
+    // user_ptrs; do not use this pattern as an example.
+    VmMapBuilder(user_ptr<mx_info_maps_t> maps, size_t max)
+        : maps_(maps), max_(max) {}
+
+    bool OnVmAddressRegion(const VmAddressRegion* vmar, uint depth) override {
+        available_++;
+        if (nelem_ < max_) {
+            mx_info_maps_t entry = {};
+            strncpy(entry.name, vmar->name(), sizeof(entry.name));
+            entry.base = vmar->base();
+            entry.size = vmar->size();
+            entry.depth = depth + 1; // The root aspace is depth 0.
+            entry.type = MX_INFO_MAPS_TYPE_VMAR;
+            if (maps_.copy_array_to_user(&entry, 1, nelem_) != NO_ERROR) {
+                return false;
+            }
+            nelem_++;
+        }
+        return true;
+    }
+
+    bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
+                     uint depth) override {
+        available_++;
+        if (nelem_ < max_) {
+            mx_info_maps_t entry = {};
+            strncpy(entry.name, map->name(), sizeof(entry.name));
+            entry.base = map->base();
+            entry.size = map->size();
+            entry.depth = depth + 1; // The root aspace is depth 0.
+            entry.type = MX_INFO_MAPS_TYPE_MAPPING;
+            mx_info_maps_mapping_t* u = &entry.u.mapping;
+            u->mmu_flags =
+                arch_mmu_flags_to_vm_flags(map->arch_mmu_flags());
+            u->committed_pages = map->vmo()->AllocatedPagesInRange(
+                map->object_offset(), map->size());
+            if (maps_.copy_array_to_user(&entry, 1, nelem_) != NO_ERROR) {
+                return false;
+            }
+            nelem_++;
+        }
+        return true;
+    }
+
+    size_t nelem() const { return nelem_; }
+    size_t available() const { return available_; }
+
+private:
+    // The caller must write an entry for the root VmAspace at index 0.
+    size_t nelem_ = 1;
+    size_t available_ = 1;
+    user_ptr<mx_info_maps_t> maps_;
+    size_t max_;
+};
+} // namespace
+
+// NOTE: Code outside of the syscall layer should not typically know about
+// user_ptrs; do not use this pattern as an example.
+status_t GetVmAspaceMaps(mxtl::RefPtr<VmAspace> aspace,
+                         user_ptr<mx_info_maps_t> maps, size_t max,
+                         size_t* actual, size_t* available) {
+    DEBUG_ASSERT(aspace != nullptr);
+    *actual = 0;
+    *available = 0;
+    if (aspace->is_destroyed()) {
+        return ERR_BAD_STATE;
+    }
+    if (max > 0) {
+        mx_info_maps_t entry = {};
+        strncpy(entry.name, aspace->name(), sizeof(entry.name));
+        entry.base = aspace->base();
+        entry.size = aspace->size();
+        entry.depth = 0;
+        entry.type = MX_INFO_MAPS_TYPE_ASPACE;
+        if (maps.copy_array_to_user(&entry, 1, 0) != NO_ERROR) {
+            return ERR_INVALID_ARGS;
+        }
+    }
+
+    VmMapBuilder b(maps, max);
+    if (!aspace->EnumerateChildren(&b)) {
+        // VmMapBuilder only returns false
+        // when it can't copy to the user pointer.
+        return ERR_INVALID_ARGS;
+    }
+    *actual = max > 0 ? b.nelem() : 0;
+    *available = b.available();
     return NO_ERROR;
 }
 
