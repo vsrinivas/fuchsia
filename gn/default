@@ -4,6 +4,7 @@
         "asio",
         "boringssl",
         "cmdutils",
+        "curl",
         "dart",
         "dashboard",
         "dropbear",
