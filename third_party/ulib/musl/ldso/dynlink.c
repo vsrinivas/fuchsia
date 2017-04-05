@@ -546,11 +546,11 @@ __NO_SAFESTACK static mx_status_t get_writable_vmo(mx_handle_t vmo,
     status = _mx_vmo_write(*writable_vmo, (void*)window, 0, data_size, &n);
     _mx_vmar_unmap(__magenta_vmar_root_self, window, data_size);
     if (status != NO_ERROR) {
-        mx_handle_close(*writable_vmo);
+        _mx_handle_close(*writable_vmo);
         return status;
     }
     if (n != data_size) {
-        mx_handle_close(*writable_vmo);
+        _mx_handle_close(*writable_vmo);
         return ERR_IO;
     }
     *off_start = 0;
@@ -912,10 +912,10 @@ __NO_SAFESTACK static void trace_load(struct dso* p) {
     static mx_koid_t pid = MX_KOID_INVALID;
     if (pid == MX_KOID_INVALID) {
         mx_info_handle_basic_t process_info;
-        if (mx_object_get_info(__magenta_process_self,
-                               MX_INFO_HANDLE_BASIC,
-                               &process_info, sizeof(process_info),
-                               NULL, NULL) == NO_ERROR) {
+        if (_mx_object_get_info(__magenta_process_self,
+                                MX_INFO_HANDLE_BASIC,
+                                &process_info, sizeof(process_info),
+                                NULL, NULL) == NO_ERROR) {
             pid = process_info.koid;
         } else {
             // No point in continually calling mx_object_get_info.

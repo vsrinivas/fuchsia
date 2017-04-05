@@ -60,7 +60,7 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
         struct setjmp_manglers setjmp_manglers;
     } randoms;
     static_assert(sizeof(randoms) <= MX_CPRNG_DRAW_MAX_LEN, "");
-    mx_status_t status = mx_cprng_draw(&randoms, sizeof(randoms), &actual);
+    mx_status_t status = _mx_cprng_draw(&randoms, sizeof(randoms), &actual);
     if (status != NO_ERROR || actual != sizeof(randoms))
         __builtin_trap();
     __stack_chk_guard = randoms.stack_guard;

@@ -57,9 +57,9 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
             mx_flags |= MX_VM_FLAG_SPECIFIC;
 
             mx_info_vmar_t info;
-            mx_status_t status = mx_object_get_info(_mx_vmar_root_self(),
-                                                    MX_INFO_VMAR, &info,
-                                                    sizeof(info), NULL, NULL);
+            mx_status_t status = _mx_object_get_info(_mx_vmar_root_self(),
+                                                     MX_INFO_VMAR, &info,
+                                                     sizeof(info), NULL, NULL);
             if (status < 0 || (uintptr_t)start < info.base) {
                 return MAP_FAILED;
             }
