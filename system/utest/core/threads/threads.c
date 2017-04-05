@@ -82,7 +82,6 @@ static bool test_basics(void) {
     ASSERT_EQ(mx_object_wait_one(mxr_thread_get_handle(&thread),
                                  MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "");
-    mxr_thread_destroy(&thread);
     END_TEST;
 }
 
@@ -197,9 +196,6 @@ static bool test_info_task_stats_fails(void) {
                "Just added thread support to info_task_status?");
     // If so, replace this with a real test; see example in process.cpp.
 
-    // Clean up the thread.
-    mxr_thread_destroy(&thread);
-
     END_TEST;
 }
 
@@ -227,7 +223,6 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(mx_object_signal(event, 0, MX_USER_SIGNAL_0), NO_ERROR, "");
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
     ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, MX_MSEC(100), NULL), NO_ERROR, "");
-    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
 
@@ -246,7 +241,6 @@ static bool test_kill_suspended(void) {
     ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
     mx_nanosleep(MX_MSEC(10));
     ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
-    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
 
@@ -278,8 +272,6 @@ static bool test_suspend_sleeping(void) {
     ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, 2 * sleep_time, NULL), NO_ERROR, "");
     mx_time_t elapsed = mx_time_get(MX_CLOCK_MONOTONIC) - now;
     ASSERT_GE(elapsed, sleep_time, "thread did not sleep long enough");
-
-    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
 
     END_TEST;
 }
@@ -375,7 +367,6 @@ static bool test_suspend_channel_call(void) {
     EXPECT_EQ(thread_arg.call_status, NO_ERROR, "");
     EXPECT_EQ(thread_arg.read_status, NO_ERROR, "");
 
-    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(channel), NO_ERROR, "");
 
     END_TEST;
@@ -418,7 +409,6 @@ static bool test_suspend_stops_thread(void) {
     }
 
     ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
-    ASSERT_EQ(mxr_thread_destroy(&thread), NO_ERROR, "");
 
     END_TEST;
 }
