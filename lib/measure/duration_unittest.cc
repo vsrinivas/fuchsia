@@ -151,6 +151,30 @@ TEST(MeasureDurationTest, EventMatchingByNameAndCategory) {
   EXPECT_EQ(std::vector<uint64_t>({4u}), results[43u]);
 }
 
+TEST(MeasureDurationTest, AsyncNested) {
+  std::vector<DurationSpec> specs = {
+      DurationSpec({42u, {"event_foo", "category_bar"}}),
+      DurationSpec({43u, {"event_baz", "category_bar"}})};
+
+  MeasureDuration measure(std::move(specs));
+  // Add a begin event for event_foo of id 0u.
+  measure.Process(test::AsyncBegin(0u, "event_foo", "category_bar", 10u));
+
+  // Add a begin event for event_baz of id 0u.
+  measure.Process(test::AsyncBegin(0u, "event_baz", "category_bar", 12u));
+
+  // Add an end event for id 1u.
+  measure.Process(test::AsyncEnd(0u, "event_foo", "category_bar", 14u));
+
+  // Add an end event for id 2u.
+  measure.Process(test::AsyncEnd(0u, "event_baz", "category_bar", 16u));
+
+  auto results = measure.results();
+  EXPECT_EQ(2u, results.size());
+  EXPECT_EQ(std::vector<uint64_t>({4u}), results[42u]);
+  EXPECT_EQ(std::vector<uint64_t>({4u}), results[43u]);
+}
+
 }  // namespace
 
 }  // namespace measure

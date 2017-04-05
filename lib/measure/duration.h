@@ -51,10 +51,11 @@ class MeasureDuration {
   std::vector<DurationSpec> specs_;
   std::unordered_map<uint64_t, std::vector<Ticks>> results_;
 
-  // Async event ids are scoped to categories. To match "end" events
+  // Async event ids are scoped to names. To match "end" events
   // with "begin" events, we keep a map of unmatched begin events.
   struct PendingAsyncKey {
     std::string category;
+    std::string name;
     uint64_t id;
 
     bool operator<(const PendingAsyncKey& other) const;

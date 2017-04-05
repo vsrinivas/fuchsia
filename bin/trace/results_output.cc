@@ -57,7 +57,7 @@ void OutputResults(std::ostream& out,
     if (result.samples.size() == 1) {
       OutputSamples(out, result.samples.front().values, result.unit);
       out << std::endl;
-      return;
+      continue;
     }
 
     out << std::endl;

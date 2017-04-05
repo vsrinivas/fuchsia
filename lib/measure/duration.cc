@@ -27,7 +27,8 @@ bool MeasureDuration::Process(const reader::Record::Event& event) {
 
 bool MeasureDuration::ProcessAsyncStart(const reader::Record::Event& event) {
   FTL_DCHECK(event.type() == EventType::kAsyncStart);
-  const PendingAsyncKey key = {event.category, event.data.GetAsyncBegin().id};
+  const PendingAsyncKey key = {event.category, event.name,
+                               event.data.GetAsyncBegin().id};
   if (pending_async_begins_.count(key)) {
     FTL_LOG(WARNING) << "Ignoring a trace event: duplicate async begin event";
     return false;
@@ -39,7 +40,8 @@ bool MeasureDuration::ProcessAsyncStart(const reader::Record::Event& event) {
 bool MeasureDuration::ProcessAsyncEnd(const reader::Record::Event& event) {
   FTL_DCHECK(event.type() == EventType::kAsyncEnd);
 
-  const PendingAsyncKey key = {event.category, event.data.GetAsyncEnd().id};
+  const PendingAsyncKey key = {event.category, event.name,
+                               event.data.GetAsyncEnd().id};
   if (pending_async_begins_.count(key) == 0) {
     FTL_LOG(WARNING)
         << "Ignoring a trace event: async end not preceded by async begin.";
@@ -97,6 +99,9 @@ bool MeasureDuration::PendingAsyncKey::operator<(
     const PendingAsyncKey& other) const {
   if (category != other.category) {
     return category < other.category;
+  }
+  if (name != other.name) {
+    return name < other.name;
   }
   return id < other.id;
 }
