@@ -93,7 +93,12 @@ mx_status_t Dnode::Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out
     }
     if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
         if (out != nullptr) {
+#ifdef NO_DOTDOT
+            // ".." --> "." when every directory is its own root.
+            *out = nullptr;
+#else
             *out = parent_;
+#endif
         }
         return NO_ERROR;
     }

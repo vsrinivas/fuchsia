@@ -10,12 +10,18 @@
 
 __BEGIN_CDECLS;
 
+// WARNING: These APIs are subject to change
+
+// __mxio_cleanpath cleans an input path, placing the output
+// in out, which is a buffer of at least "PATH_MAX" bytes.
+//
+// 'outlen' returns the length of the path placed in out, and 'is_dir'
+// is set to true if the returned path must be a directory.
+mx_status_t __mxio_cleanpath(const char* in, char* out, size_t* outlen, bool* is_dir);
+
 // WARNING: These interfaces exist to allow integration of mxio file
 // descriptors with handle-centric message loops.  If used incorrectly
 // they can seriously mess up the state of mxio, fds, etc.
-//
-// WARNING: These APIs are subject to change
-//
 
 typedef struct mxio mxio_t;
 

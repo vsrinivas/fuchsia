@@ -150,6 +150,8 @@ public:
     ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                   size_t out_len) final;
     mx_status_t Lookup(fs::Vnode** out, const char* name, size_t len) final;
+    // Lookup which can traverse '..'
+    mx_status_t LookupInternal(fs::Vnode** out, const char* name, size_t len);
 
     Minfs* fs_;
     uint32_t ino_;

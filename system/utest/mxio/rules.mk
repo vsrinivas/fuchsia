@@ -9,7 +9,9 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/mxio_handle_fd.c
+    $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/mxio_handle_fd.c \
+    $(LOCAL_DIR)/mxio_path_canonicalize.c
 
 MODULE_NAME := mxio-test
 

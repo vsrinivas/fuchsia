@@ -961,6 +961,18 @@ mx_status_t VnodeMinfs::Lookup(fs::Vnode** out, const char* name, size_t len) {
         error("not directory\n");
         return ERR_NOT_SUPPORTED;
     }
+
+#ifdef NO_DOTDOT
+    if (len == 2 && name[0] == '.' && name[1] == '.') {
+        // ".." --> "." when every directory is its own root.
+        len = 1;
+    }
+#endif
+
+    return LookupInternal(out, name, len);
+}
+
+mx_status_t VnodeMinfs::LookupInternal(fs::Vnode** out, const char* name, size_t len) {
     DirArgs args = DirArgs();
     args.name = name;
     args.len = len;
@@ -1320,7 +1332,7 @@ static mx_status_t check_not_subdirectory(VnodeMinfs* src, VnodeMinfs* newdir) {
         }
 
         fs::Vnode* out = nullptr;
-        if ((status = vn->Lookup(&out, "..", 2)) < 0) {
+        if ((status = vn->LookupInternal(&out, "..", 2)) < 0) {
             break;
         }
         vn->RefRelease();

@@ -21,6 +21,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <magenta/compiler.h>
 #include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -196,6 +197,103 @@ static mxio_t* mxio_iodir(const char** path, int dirfd) {
     return iodir;
 }
 
+#define IS_SEPARATOR(c) ((c) == '/' || (c) == 0)
+
+// Checks that if we increment this index forward, we'll
+// still have enough space for a null terminator within
+// PATH_MAX bytes.
+#define CHECK_CAN_INCREMENT(i)               \
+    if (unlikely((i) + 1 >= PATH_MAX - 1)) { \
+        return ERR_BAD_PATH;                 \
+    }
+
+// Cleans an input path, transforming it to out, according to the
+// rules defined by "Lexical File Names in Plan 9 or Getting Dot-Dot Right",
+// accessible at: https://9p.io/sys/doc/lexnames.html
+//
+// Code heavily inspired by Go's filepath.Clean function, from:
+// https://golang.org/src/path/filepath/path.go
+//
+// out is expected to be PATH_MAX bytes long.
+// Sets is_dir to 'true' if the path is a directory, and 'false' otherwise.
+mx_status_t __mxio_cleanpath(const char* in, char* out, size_t* outlen, bool* is_dir) {
+    if (in[0] == 0) {
+        strcpy(out, ".");
+        *outlen = 1;
+        *is_dir = true;
+        return NO_ERROR;
+    }
+
+    bool rooted = (in[0] == '/');
+    size_t in_index = 0; // Index of the next byte to read
+    size_t out_index = 0; // Index of the next byte to write
+
+    if (rooted) {
+        out[out_index++] = '/';
+        in_index++;
+        *is_dir = true;
+    }
+    size_t dotdot = out_index; // The output index at which '..' cannot be cleaned further.
+
+    while (in[in_index] != 0) {
+        *is_dir = true;
+        if (in[in_index] == '/') {
+            // 1. Reduce multiple slashes to a single slash
+            CHECK_CAN_INCREMENT(in_index);
+            in_index++;
+        } else if (in[in_index] == '.' && IS_SEPARATOR(in[in_index + 1])) {
+            // 2. Eliminate . path name elements (the current directory)
+            CHECK_CAN_INCREMENT(in_index);
+            in_index++;
+        } else if (in[in_index] == '.' && in[in_index + 1] == '.' &&
+                   IS_SEPARATOR(in[in_index + 2])) {
+            CHECK_CAN_INCREMENT(in_index + 1);
+            in_index += 2;
+            if (out_index > dotdot) {
+                // 3. Eliminate .. path elements (the parent directory) and the element that
+                // precedes them.
+                out_index--;
+                while (out_index > dotdot && out[out_index] != '/') { out_index--; }
+            } else if (rooted) {
+                // 4. Eliminate .. elements that begin a rooted path, that is, replace /.. by / at
+                // the beginning of a path.
+                continue;
+            } else if (!rooted) {
+                if (out_index > 0) {
+                    out[out_index++] = '/';
+                }
+                // 5. Leave intact .. elements that begin a non-rooted path.
+                out[out_index++] = '.';
+                out[out_index++] = '.';
+                dotdot = out_index;
+            }
+        } else {
+            *is_dir = false;
+            if ((rooted && out_index != 1) || (!rooted && out_index != 0)) {
+                // Add '/' before normal path component, for non-root components.
+                out[out_index++] = '/';
+            }
+
+            while (!IS_SEPARATOR(in[in_index])) {
+                CHECK_CAN_INCREMENT(in_index);
+                out[out_index++] = in[in_index++];
+            }
+        }
+    }
+
+    if (out_index == 0) {
+        strcpy(out, ".");
+        *outlen = 1;
+        *is_dir = true;
+        return NO_ERROR;
+    }
+
+    // Append null character
+    *outlen = out_index;
+    out[out_index++] = 0;
+    return NO_ERROR;
+}
+
 static mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int flags, uint32_t mode) {
     if (path == NULL) {
         return ERR_INVALID_ARGS;
@@ -209,9 +307,18 @@ static mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int 
         return ERR_BAD_HANDLE;
     }
 
-    mx_status_t r = iodir->ops->open(iodir, path, flags, mode, io);
+    char clean[PATH_MAX];
+    size_t outlen;
+    bool is_dir;
+    mx_status_t status = __mxio_cleanpath(path, clean, &outlen, &is_dir);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    flags |= (is_dir ? O_DIRECTORY : 0);
+
+    status = iodir->ops->open(iodir, clean, flags, mode, io);
     mxio_release(iodir);
-    return r;
+    return status;
 }
 
 mx_status_t __mxio_open(mxio_t** io, const char* path, int flags, uint32_t mode) {
@@ -282,9 +389,12 @@ wat:
     return;
 }
 
-// opens the directory containing path
-// returns the non-directory portion of the path as name on success
-static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const char* path, const char** _name) {
+// Opens the directory containing path
+//
+// Returns the non-directory portion of the path in 'out', which
+// must be a buffer that can fit [NAME_MAX + 1] characters.
+static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const char* path,
+                                                char* out) {
     if (path == NULL) {
         return ERR_INVALID_ARGS;
     }
@@ -294,49 +404,55 @@ static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const ch
         return ERR_BAD_HANDLE;
     }
 
-    char dirpath[PATH_MAX];
-
-    // Make 'path_end' the final index of the string without trailing '/' characters.
-    size_t path_end = strnlen(path, PATH_MAX - 1) - 1;
-    while ((path_end > 0) && (path[path_end] == '/')) {
-        path_end--;
-    }
-
-    // Find the last non-trailing '/'
-    const char* name = path + path_end;
-    while ((name > path) && (*name != '/')) {
-        name--;
-    }
-
-    if ((name == path) && (*name != '/')) {
-        // No '/' characters found
-        name = path;
-        dirpath[0] = '.';
-        dirpath[1] = 0;
-    } else {
-        // At least one '/' found
-        if ((name - path) > (ptrdiff_t)(sizeof(dirpath) - 1)) {
-            mxio_release(iodir);
-            return ERR_INVALID_ARGS;
-        }
-        memcpy(dirpath, path, name - path);
-        dirpath[name - path] = 0;
-        name++;
-    }
-    if (name[0] == 0) {
+    char clean[PATH_MAX];
+    size_t pathlen;
+    bool is_dir;
+    mx_status_t status = __mxio_cleanpath(path, clean, &pathlen, &is_dir);
+    if (status != NO_ERROR) {
         mxio_release(iodir);
-        return ERR_INVALID_ARGS;
+        return status;
     }
 
-    *_name = name;
-    mx_status_t r = iodir->ops->open(iodir, dirpath, O_DIRECTORY, 0, io);
+    // Find the last '/'; copy everything after it.
+    size_t i = 0;
+    for (i = pathlen - 1; i > 0; i--) {
+        if (clean[i] == '/') {
+            clean[i] = 0;
+            i++;
+            break;
+        }
+    }
 
+    // clean[i] is now the start of the name
+    size_t namelen = pathlen - i;
+    if (namelen + (is_dir ? 1 : 0) > NAME_MAX) {
+        mxio_release(iodir);
+        return ERR_BAD_PATH;
+    }
+
+    // Copy the trailing 'name' to out.
+    memcpy(out, clean + i, namelen);
+    if (is_dir) {
+        // TODO(smklein): Propagate this information without using
+        // the output name; it'll simplify server-side path parsing
+        // if all trailing slashes are replaced with "O_DIRECTORY".
+        out[namelen++] = '/';
+    }
+    out[namelen] = 0;
+
+    if (i == 0 && clean[i] != '/') {
+        clean[0] = '.';
+        clean[1] = 0;
+    }
+
+    mx_status_t r = iodir->ops->open(iodir, clean, O_DIRECTORY, 0, io);
     mxio_release(iodir);
     return r;
 }
 
-static mx_status_t __mxio_opendir_containing(mxio_t** io, const char* path, const char** _name) {
-    return __mxio_opendir_containing_at(io, AT_FDCWD, path, _name);
+// 'name' must be a user-provided buffer, at least NAME_MAX + 1 bytes long.
+static mx_status_t __mxio_opendir_containing(mxio_t** io, const char* path, char* name) {
+    return __mxio_opendir_containing_at(io, AT_FDCWD, path, name);
 }
 
 // hook into libc process startup
@@ -646,10 +762,10 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
 }
 
 int unlinkat(int dirfd, const char* path, int flags) {
-    const char* name;
+    char name[NAME_MAX + 1];
     mxio_t* io;
     mx_status_t r;
-    if ((r = __mxio_opendir_containing_at(&io, dirfd, path, &name)) < 0) {
+    if ((r = __mxio_opendir_containing_at(&io, dirfd, path, name)) < 0) {
         return ERROR(r);
     }
     r = io->ops->misc(io, MXRIO_UNLINK, 0, 0, (void*)name, strlen(name));
@@ -993,17 +1109,17 @@ int ftruncate(int fd, off_t len) {
 // allows these multi-path operations to mix absolute / relative paths and cross
 // mount points with ease.
 static int two_path_op(uint32_t op, const char* oldpath, const char* newpath) {
-    const char* oldname;
+    char oldname[NAME_MAX + 1];
     mxio_t* io_oldparent;
     mx_status_t status;
-    if ((status = __mxio_opendir_containing(&io_oldparent, oldpath, &oldname)) < 0) {
+    if ((status = __mxio_opendir_containing(&io_oldparent, oldpath, oldname)) < 0) {
         return ERROR(status);
     }
 
     int r;
-    const char* newname;
+    char newname[NAME_MAX + 1];
     mxio_t* io_newparent;
-    if ((status = __mxio_opendir_containing(&io_newparent, newpath, &newname)) < 0) {
+    if ((status = __mxio_opendir_containing(&io_newparent, newpath, newname)) < 0) {
         r = ERROR(status);
         goto oldparent_open;
     }

@@ -133,8 +133,3 @@ RUN_TEST(epoll_test);
 RUN_TEST(close_test);
 RUN_TEST(pipe_test);
 END_TEST_CASE(mxio_handle_fd_test)
-
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}
