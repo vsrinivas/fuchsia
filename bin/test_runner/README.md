@@ -11,11 +11,16 @@ integration tests).
 
 #### Prerequisites
 - An instance of magenta running (on qemu or real device), configured with
-networking. For example, see
-[networking configuration doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
+  networking. For example,
+  see
+  [networking configuration doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
+
 - A build configuration that runs `test_runner` at startup. For example,
-  `./package/gn/gen.py -m boot_test_modular`.
-  (Alternatively, you can run `@boot test_runner` from a magenta$ prompt.)
+  `./package/gn/gen.py -m boot_test_modular`. Alternatively, you can run `@boot
+  test_runner` from a `magenta$` prompt.
+
+- The `FUCHSIA_` environment variables used below are set by sourcing
+  `//scripts/env.sh`.
 
 #### Running the tests
 
@@ -57,9 +62,6 @@ Pass the device name to the `run_test` tool:
 $FUCHSIA_DIR/apps/test_runner/src/run_test --server rain-detour-glaze-donut ...
 ```
 
-- The environment variables above are set by sourcing `//scripts/env.sh`.
-
-
 #### Fuchsia test infrastructure
 
 For the Fuchsia automated test infrastructure, qemu is configured to
@@ -78,7 +80,7 @@ You can control the testing configuration by passing `run_test` the name of a
 JSON file with the `--test_file` parameter. For example:
 
 ```
-${FUCHSIA_DIR}/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
+$FUCHSIA_DIR/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
 ```
 
 The JSON file looks similar to this:
