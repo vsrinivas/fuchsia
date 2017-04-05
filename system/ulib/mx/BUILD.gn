@@ -28,7 +28,6 @@ static_library("mx") {
     "include/mx/time.h",
     "include/mx/vmar.h",
     "include/mx/vmo.h",
-    "include/mx/waitset.h",
     "job.cpp",
     "log.cpp",
     "port.cpp",
@@ -37,7 +36,6 @@ static_library("mx") {
     "thread.cpp",
     "vmar.cpp",
     "vmo.cpp",
-    "waitset.cpp",
   ]
 
   public_configs = [ ":mx_config" ]

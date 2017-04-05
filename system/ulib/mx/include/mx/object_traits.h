@@ -11,7 +11,6 @@ class eventpair;
 class log;
 class socket;
 class vmo;
-class waitset;
 
 // The default traits supports:
 // - event
@@ -48,12 +47,6 @@ template <> struct object_traits<socket> {
     static const bool supports_duplication = true;
     static const bool supports_user_signal = true;
     static const bool has_peer_handle = true;
-};
-
-template <> struct object_traits<waitset> {
-    static const bool supports_duplication = false;
-    static const bool supports_user_signal = true;
-    static const bool has_peer_handle = false;
 };
 
 } // namespace mx

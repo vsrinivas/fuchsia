@@ -21,7 +21,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/thread.cpp \
     $(LOCAL_DIR)/vmar.cpp \
     $(LOCAL_DIR)/vmo.cpp \
-    $(LOCAL_DIR)/waitset.cpp \
 
 MODULE_SO_NAME := libmx
 
