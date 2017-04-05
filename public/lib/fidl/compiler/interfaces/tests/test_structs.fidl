@@ -149,8 +149,7 @@ struct MapKeyTypes {
   map<uint32, uint32> f6;
   map<int64, int64> f7;
   map<uint64, uint64> f8;
-  map<float, float> f9;
-  map<double, double> f10;
+  // Maps with floats as keys removed, as they break Rust bindings.
   map<string, string> f11;
 };
 
