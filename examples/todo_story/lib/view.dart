@@ -22,7 +22,7 @@ class TodoListViewState extends State<TodoListView> {
   LinkConnector _linkConnector;
   final Generator _generator = new Generator();
   final List<TodoItem> _items = new List<TodoItem>();
-  TextEditingController _newTodo = new TextEditingController();
+  TextEditingController _newTodoController = new TextEditingController();
 
   TodoListViewState(this._linkConnector) {
     _linkConnector.setCallback((List<TodoItem> items) {
@@ -33,7 +33,7 @@ class TodoListViewState extends State<TodoListView> {
     });
   }
 
-  bool get _isComposing => _newTodo.text.length > 0;
+  bool get _isComposing => _newTodoController.text.isNotEmpty;
 
   /// Removes one item from the list and from the ledger.
   void _handleItemRemoved(TodoItem item) {
@@ -42,12 +42,12 @@ class TodoListViewState extends State<TodoListView> {
 
   /// Creates one item and adds it to the ledger.
   void _handleTodoCreated(String value) {
-    _newTodo.clear();
+    _newTodoController.clear();
     _linkConnector.addItem(value);
   }
 
   void _handleGenerateRandomTodo() {
-    _newTodo.text = _generator.makeContent();
+    _newTodoController.text = _generator.makeContent();
   }
 
   /// Creates the text field.
@@ -57,7 +57,7 @@ class TodoListViewState extends State<TodoListView> {
       new Row(children: <Widget>[
         new Flexible(
             child: new TextField(
-                controller: _newTodo,
+                controller: _newTodoController,
                 decoration: const InputDecoration(
                   hintText: 'Enter TODO',
                 ),
@@ -65,26 +65,28 @@ class TodoListViewState extends State<TodoListView> {
         new Container(
             margin: new EdgeInsets.symmetric(horizontal: 4.0),
             child: new AnimatedBuilder(
-              animation: _newTodo,
-              builder: (BuildContext context, Widget child) {
-                return new IconButton(
-                  icon: new Icon(Icons.send),
-                  onPressed:
-                      _isComposing ? () => _handleTodoCreated(_newTodo) : null,
-                  color: _isComposing
-                      ? themeData.accentColor
-                      : themeData.disabledColor);
-              }))
+                animation: _newTodoController,
+                builder: (BuildContext context, Widget child) {
+                  return new IconButton(
+                      icon: new Icon(Icons.send),
+                      onPressed: _isComposing
+                          ? () => _handleTodoCreated(_newTodoController.text)
+                          : null,
+                      color: _isComposing
+                          ? themeData.accentColor
+                          : themeData.disabledColor);
+                }))
       ]),
       new RaisedButton(
-          onPressed: _handleGenerateRandomTodo, child: new Text("Generate random TODO"))
+          onPressed: _handleGenerateRandomTodo,
+          child: new Text("Generate random TODO"))
     ]);
   }
 
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
-        appBar: new AppBar(title: new Text('Todo Example (link)')),
+        appBar: new AppBar(title: new Text('Todo Example (story)')),
         body: new Container(
             child: new Column(children: <Widget>[
           new Flexible(
