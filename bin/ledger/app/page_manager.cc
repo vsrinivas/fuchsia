@@ -15,12 +15,14 @@ PageManager::PageManager(
     Environment* environment,
     std::unique_ptr<storage::PageStorage> page_storage,
     std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context,
-    std::unique_ptr<MergeResolver> merge_resolver)
+    std::unique_ptr<MergeResolver> merge_resolver,
+    ftl::TimeDelta sync_timeout)
     : environment_(environment),
       page_storage_(std::move(page_storage)),
       page_sync_context_(std::move(page_sync_context)),
       merge_resolver_(std::move(merge_resolver)),
-      sync_backlog_downloaded_(false) {
+      sync_timeout_(sync_timeout),
+      weak_factory_(this) {
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
   if (page_sync_context) {
@@ -31,6 +33,15 @@ PageManager::PageManager(
     page_sync_context_->page_sync->SetOnBacklogDownloaded(
         [this] { OnSyncBacklogDownloaded(); });
     page_sync_context_->page_sync->Start();
+    environment_->main_runner()->PostDelayedTask(
+        [weak_this = weak_factory_.GetWeakPtr()]() {
+          if (weak_this && !weak_this->sync_backlog_downloaded_) {
+            FTL_LOG(WARNING) << "Timed out waiting for the initial sync, "
+                             << "using local data (might be stale or empty).";
+            weak_this->OnSyncBacklogDownloaded();
+          }
+        },
+        sync_timeout_);
   } else {
     sync_backlog_downloaded_ = true;
   }

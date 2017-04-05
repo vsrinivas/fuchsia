@@ -19,6 +19,8 @@
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/closure.h"
+#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace ledger {
 // Manages a ledger page.
@@ -37,7 +39,8 @@ class PageManager {
   PageManager(Environment* environment,
               std::unique_ptr<storage::PageStorage> page_storage,
               std::unique_ptr<cloud_sync::PageSyncContext> page_sync,
-              std::unique_ptr<MergeResolver> merge_resolver);
+              std::unique_ptr<MergeResolver> merge_resolver,
+              ftl::TimeDelta sync_timeout = ftl::TimeDelta::FromSeconds(5));
   ~PageManager();
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
@@ -61,13 +64,17 @@ class PageManager {
   std::unique_ptr<storage::PageStorage> page_storage_;
   std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_;
   std::unique_ptr<MergeResolver> merge_resolver_;
+  const ftl::TimeDelta sync_timeout_;
   callback::AutoCleanableSet<BoundInterface<PageSnapshot, PageSnapshotImpl>>
       snapshots_;
   callback::AutoCleanableSet<PageDelegate> pages_;
   ftl::Closure on_empty_callback_;
 
-  bool sync_backlog_downloaded_;
+  bool sync_backlog_downloaded_ = false;
   std::vector<fidl::InterfaceRequest<Page>> page_requests_;
+
+  // Must be the last member field.
+  ftl::WeakPtrFactory<PageManager> weak_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageManager);
 };
