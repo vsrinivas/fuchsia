@@ -34,8 +34,12 @@
 #define VMCS_16_VPID                                0x0000      /* Virtual processor ID */
 #define VMCS_16_GUEST_CS_SELECTOR                   0x0802      /* Guest CS selector */
 #define VMCS_16_GUEST_TR_SELECTOR                   0x080e      /* Guest TR selector */
+#define VMCS_16_HOST_ES_SELECTOR                    0x0c00      /* Host ES selector */
 #define VMCS_16_HOST_CS_SELECTOR                    0x0c02      /* Host CS selector */
 #define VMCS_16_HOST_SS_SELECTOR                    0x0c04      /* Host SS selector */
+#define VMCS_16_HOST_DS_SELECTOR                    0x0c06      /* Host DS selector */
+#define VMCS_16_HOST_FS_SELECTOR                    0x0c08      /* Host FS selector */
+#define VMCS_16_HOST_GS_SELECTOR                    0x0c0a      /* Host GS selector */
 #define VMCS_16_HOST_TR_SELECTOR                    0x0c0c      /* Host TR selector */
 
 #define VMCS_32_PINBASED_CTLS                       0x4000      /* Pin-based controls */

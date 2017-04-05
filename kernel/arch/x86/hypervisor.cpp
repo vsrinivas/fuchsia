@@ -439,9 +439,13 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               // exit. On VM exit CS.L, IA32_EFER.LME, and
                               // IA32_EFER.LMA is set to true.
                               VMCS_32_EXIT_CTLS_64BIT_MODE |
-                              // Load the IA32_PAT MSR on exit.
+                              // Save the guest IA32_PAT MSR on exit.
+                              VMCS_32_EXIT_CTLS_SAVE_IA32_PAT |
+                              // Load the host IA32_PAT MSR on exit.
                               VMCS_32_EXIT_CTLS_LOAD_IA32_PAT |
-                              // Load the IA32_EFER MSR on exit.
+                              // Save the guest IA32_EFER MSR on exit.
+                              VMCS_32_EXIT_CTLS_SAVE_IA32_EFER |
+                              // Load the host IA32_EFER MSR on exit.
                               VMCS_32_EXIT_CTLS_LOAD_IA32_EFER);
     if (status != NO_ERROR)
         return status;
@@ -452,7 +456,11 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS),
                               // After VM entry, logical processor is in IA-32e
                               // mode and IA32_EFER.LMA is set to true.
-                              VMCS_32_ENTRY_CTLS_IA32E_MODE);
+                              VMCS_32_ENTRY_CTLS_IA32E_MODE |
+                              // Load the guest IA32_PAT MSR on entry.
+                              VMCS_32_ENTRY_CTLS_LOAD_IA32_PAT |
+                              // Load the guest IA32_EFER MSR on entry.
+                              VMCS_32_ENTRY_CTLS_LOAD_IA32_EFER);
     if (status != NO_ERROR)
         return status;
 
@@ -504,8 +512,12 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmwrite(VMCS_64_HOST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
     vmwrite(VMCS_XX_HOST_CR0, x86_get_cr0());
     vmwrite(VMCS_XX_HOST_CR4, x86_get_cr4());
+    vmwrite(VMCS_16_HOST_ES_SELECTOR, 0);
     vmwrite(VMCS_16_HOST_CS_SELECTOR, CODE_64_SELECTOR);
     vmwrite(VMCS_16_HOST_SS_SELECTOR, DATA_SELECTOR);
+    vmwrite(VMCS_16_HOST_DS_SELECTOR, 0);
+    vmwrite(VMCS_16_HOST_FS_SELECTOR, 0);
+    vmwrite(VMCS_16_HOST_GS_SELECTOR, 0);
     vmwrite(VMCS_16_HOST_TR_SELECTOR, TSS_SELECTOR(percpu->cpu_num));
     vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
     vmwrite(VMCS_XX_HOST_GS_BASE, read_msr(X86_MSR_IA32_GS_BASE));
@@ -538,6 +550,9 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
         return ERR_BAD_STATE;
     }
     vmwrite(VMCS_XX_GUEST_CR4, cr4);
+
+    vmwrite(VMCS_64_GUEST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
+    vmwrite(VMCS_64_GUEST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
 
     vmwrite(VMCS_32_GUEST_CS_ACCESS_RIGHTS,
             VMCS_32_GUEST_XX_ACCESS_RIGHTS_TYPE_A |
