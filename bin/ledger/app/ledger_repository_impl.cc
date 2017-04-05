@@ -13,7 +13,7 @@
 namespace ledger {
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(const std::string& base_storage_dir,
-                                           ledger::Environment* environment)
+                                           Environment* environment)
     : base_storage_dir_(base_storage_dir), environment_(environment) {
   bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
@@ -53,8 +53,7 @@ void LedgerRepositoryImpl::GetLedger(
     auto result = ledger_managers_.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(name_as_string)),
-        std::forward_as_tuple(environment_->coroutine_service(),
-                              std::move(ledger_storage),
+        std::forward_as_tuple(environment_, std::move(ledger_storage),
                               std::move(ledger_sync)));
     FTL_DCHECK(result.second);
     it = result.first;

@@ -14,6 +14,7 @@
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
+#include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -33,7 +34,7 @@ class PageManager {
  public:
   // Both |page_storage| and |page_sync| are owned by PageManager and are
   // deleted when it goes away.
-  PageManager(coroutine::CoroutineService* coroutine_service,
+  PageManager(Environment* environment,
               std::unique_ptr<storage::PageStorage> page_storage,
               std::unique_ptr<cloud_sync::PageSyncContext> page_sync,
               std::unique_ptr<MergeResolver> merge_resolver);
@@ -56,7 +57,7 @@ class PageManager {
   void CheckEmpty();
   void OnSyncBacklogDownloaded();
 
-  coroutine::CoroutineService* coroutine_service_;
+  Environment* const environment_;
   std::unique_ptr<storage::PageStorage> page_storage_;
   std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_;
   std::unique_ptr<MergeResolver> merge_resolver_;

@@ -19,7 +19,7 @@ namespace ledger {
 class LedgerRepositoryImpl : public LedgerRepository {
  public:
   LedgerRepositoryImpl(const std::string& base_storage_dir,
-                       ledger::Environment* environment);
+                       Environment* environment);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(const ftl::Closure& on_empty_callback) {
@@ -42,7 +42,7 @@ class LedgerRepositoryImpl : public LedgerRepository {
   void CheckEmpty();
 
   const std::string base_storage_dir_;
-  ledger::Environment* const environment_;
+  Environment* const environment_;
   callback::AutoCleanableMap<std::string,
                              LedgerManager,
                              convert::StringViewComparator>

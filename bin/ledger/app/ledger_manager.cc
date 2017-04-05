@@ -87,10 +87,10 @@ class LedgerManager::PageManagerContainer {
   FTL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
 };
 
-LedgerManager::LedgerManager(coroutine::CoroutineService* coroutine_service,
+LedgerManager::LedgerManager(Environment* environment,
                              std::unique_ptr<storage::LedgerStorage> storage,
                              std::unique_ptr<cloud_sync::LedgerSync> sync)
-    : coroutine_service_(coroutine_service),
+    : environment_(environment),
       storage_(std::move(storage)),
       sync_(std::move(sync)),
       ledger_impl_(this) {}
@@ -185,7 +185,7 @@ std::unique_ptr<PageManager> LedgerManager::NewPageManager(
     });
   }
   return std::make_unique<PageManager>(
-      coroutine_service_, std::move(page_storage), std::move(page_sync_context),
+      environment_, std::move(page_storage), std::move(page_sync_context),
       merge_manager_.GetMergeResolver(page_storage.get()));
 }
 

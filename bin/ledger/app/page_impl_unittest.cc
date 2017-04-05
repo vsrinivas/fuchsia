@@ -14,6 +14,7 @@
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
+#include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
@@ -38,7 +39,8 @@ std::string ToString(const mx::vmo& vmo) {
 
 class PageImplTest : public test::TestWithMessageLoop {
  public:
-  PageImplTest() {}
+  PageImplTest()
+      : environment_(configuration::Configuration(), nullptr, nullptr) {}
   ~PageImplTest() override {}
 
  protected:
@@ -51,9 +53,8 @@ class PageImplTest : public test::TestWithMessageLoop {
     fake_storage_ = fake_storage.get();
     auto resolver = std::make_unique<MergeResolver>([] {}, fake_storage_);
 
-    manager_ = std::make_unique<PageManager>(&coroutine_service_,
-                                             std::move(fake_storage), nullptr,
-                                             std::move(resolver));
+    manager_ = std::make_unique<PageManager>(
+        &environment_, std::move(fake_storage), nullptr, std::move(resolver));
     manager_->BindPage(page_ptr_.NewRequest());
   }
 
@@ -132,7 +133,7 @@ class PageImplTest : public test::TestWithMessageLoop {
   std::unique_ptr<PageManager> manager_;
 
   PagePtr page_ptr_;
-  coroutine::CoroutineServiceImpl coroutine_service_;
+  Environment environment_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);

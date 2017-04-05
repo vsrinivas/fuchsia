@@ -14,6 +14,7 @@
 #include "apps/ledger/src/app/merging/ledger_merge_manager.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -29,7 +30,7 @@ namespace ledger {
 // deletes the LedgerImpl and tears down the storage.
 class LedgerManager : public LedgerImpl::Delegate {
  public:
-  LedgerManager(coroutine::CoroutineService* coroutine_service,
+  LedgerManager(Environment* environment,
                 std::unique_ptr<storage::LedgerStorage> storage,
                 std::unique_ptr<cloud_sync::LedgerSync> sync);
   ~LedgerManager();
@@ -67,7 +68,7 @@ class LedgerManager : public LedgerImpl::Delegate {
 
   void CheckEmpty();
 
-  coroutine::CoroutineService* coroutine_service_;
+  Environment* const environment_;
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<cloud_sync::LedgerSync> sync_;
   LedgerImpl ledger_impl_;

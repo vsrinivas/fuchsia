@@ -12,11 +12,11 @@
 namespace ledger {
 
 PageManager::PageManager(
-    coroutine::CoroutineService* coroutine_service,
+    Environment* environment,
     std::unique_ptr<storage::PageStorage> page_storage,
     std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context,
     std::unique_ptr<MergeResolver> merge_resolver)
-    : coroutine_service_(coroutine_service),
+    : environment_(environment),
       page_storage_(std::move(page_storage)),
       page_sync_context_(std::move(page_sync_context)),
       merge_resolver_(std::move(merge_resolver)),
@@ -42,7 +42,7 @@ PageManager::~PageManager() {}
 
 void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request) {
   if (sync_backlog_downloaded_) {
-    pages_.emplace(coroutine_service_, this, page_storage_.get(),
+    pages_.emplace(environment_->coroutine_service(), this, page_storage_.get(),
                    std::move(page_request));
   } else {
     page_requests_.push_back(std::move(page_request));

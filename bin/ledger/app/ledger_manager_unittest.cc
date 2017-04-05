@@ -114,7 +114,8 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
 
 class LedgerManagerTest : public test::TestWithMessageLoop {
  public:
-  LedgerManagerTest() {}
+  LedgerManagerTest()
+      : environment_(configuration::Configuration(), nullptr, nullptr) {}
 
   // test::TestWithMessageLoop:
   void SetUp() override {
@@ -126,12 +127,12 @@ class LedgerManagerTest : public test::TestWithMessageLoop {
         std::make_unique<FakeLedgerSync>(message_loop_.task_runner());
     sync_ptr = sync.get();
     ledger_manager_ = std::make_unique<LedgerManager>(
-        &coroutine_service_, std::move(storage), std::move(sync));
+        &environment_, std::move(storage), std::move(sync));
     ledger_manager_->BindLedger(ledger.NewRequest());
   }
 
  protected:
-  coroutine::CoroutineServiceImpl coroutine_service_;
+  ledger::Environment environment_;
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
   std::unique_ptr<LedgerManager> ledger_manager_;

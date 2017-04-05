@@ -11,6 +11,7 @@
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/cloud_sync/test/page_sync_empty_impl.h"
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
+#include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -42,7 +43,8 @@ class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
 
 class PageManagerTest : public test::TestWithMessageLoop {
  public:
-  PageManagerTest() {}
+  PageManagerTest()
+      : environment_(configuration::Configuration(), nullptr, nullptr) {}
   ~PageManagerTest() override {}
 
  protected:
@@ -53,7 +55,7 @@ class PageManagerTest : public test::TestWithMessageLoop {
   }
 
   storage::PageId page_id_;
-  coroutine::CoroutineServiceImpl coroutine_service_;
+  Environment environment_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageManagerTest);
@@ -63,7 +65,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   bool on_empty_called = false;
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
   auto merger = GetDummyResolver(storage.get());
-  PageManager page_manager(&coroutine_service_, std::move(storage), nullptr,
+  PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger));
   page_manager.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
@@ -101,7 +103,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
   auto merger = GetDummyResolver(storage.get());
   auto page_manager = std::make_unique<PageManager>(
-      &coroutine_service_, std::move(storage), nullptr, std::move(merger));
+      &environment_, std::move(storage), nullptr, std::move(merger));
 
   PagePtr page;
   page_manager->BindPage(page.NewRequest());
@@ -120,7 +122,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   bool on_empty_called = false;
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
   auto merger = GetDummyResolver(storage.get());
-  PageManager page_manager(&coroutine_service_, std::move(storage), nullptr,
+  PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger));
   page_manager.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
@@ -171,7 +173,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  PageManager page_manager(&coroutine_service_, std::move(storage),
+  PageManager page_manager(&environment_, std::move(storage),
                            std::move(page_sync_context), std::move(merger));
 
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
