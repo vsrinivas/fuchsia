@@ -52,8 +52,8 @@ $(call copy-dst-src,$(SG_SYSROOT_HEADER),$(SG_PUBLIC_HEADER))
 $(call copy-dst-src,$(SG_SYSROOT_RUST),$(SG_PUBLIC_RUST))
 
 ifeq ($(ENABLE_BUILD_SYSDEPS),true)
-	$(call sysroot-file,$(SG_SYSROOT_HEADER),$(SG_PUBLIC_HEADER))
-	$(call sysroot-file,$(SG_SYSROOT_RUST),$(SG_PUBLIC_RUST))
+$(call sysroot-file,$(SG_SYSROOT_HEADER),$(SG_PUBLIC_HEADER))
+$(call sysroot-file,$(SG_SYSROOT_RUST),$(SG_PUBLIC_RUST))
 endif
 
 SYSROOT_DEPS += $(SG_SYSROOT_HEADER) $(SG_SYSROOT_RUST)
