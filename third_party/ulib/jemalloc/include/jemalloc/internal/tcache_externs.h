@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_TCACHE_EXTERNS_H
 #define JEMALLOC_INTERNAL_TCACHE_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 extern bool	opt_tcache;
 extern ssize_t	opt_lg_tcache_max;
 
@@ -43,5 +45,7 @@ bool	tcaches_create(tsd_t *tsd, unsigned *r_ind);
 void	tcaches_flush(tsd_t *tsd, unsigned ind);
 void	tcaches_destroy(tsd_t *tsd, unsigned ind);
 bool	tcache_boot(tsdn_t *tsdn);
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_TCACHE_EXTERNS_H */

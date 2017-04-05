@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_PROF_EXTERNS_H
 #define JEMALLOC_INTERNAL_PROF_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 extern bool	opt_prof;
 extern bool	opt_prof_active;
 extern bool	opt_prof_thread_active_init;
@@ -80,5 +82,7 @@ void	prof_prefork1(tsdn_t *tsdn);
 void	prof_postfork_parent(tsdn_t *tsdn);
 void	prof_postfork_child(tsdn_t *tsdn);
 void	prof_sample_threshold_update(prof_tdata_t *tdata);
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_PROF_EXTERNS_H */

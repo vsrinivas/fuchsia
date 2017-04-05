@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_PAGES_EXTERNS_H
 #define JEMALLOC_INTERNAL_PAGES_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 static const bool pages_can_purge_lazy =
 #ifdef PAGES_CAN_PURGE_LAZY
     true
@@ -27,5 +29,7 @@ bool	pages_purge_forced(void *addr, size_t size);
 bool	pages_huge(void *addr, size_t size);
 bool	pages_nohuge(void *addr, size_t size);
 void	pages_boot(void);
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_PAGES_EXTERNS_H */

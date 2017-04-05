@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_EXTENT_EXTERNS_H
 #define JEMALLOC_INTERNAL_EXTENT_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 extern rtree_t			extents_rtree;
 extern const extent_hooks_t	extent_hooks_default;
 
@@ -56,5 +58,7 @@ bool	extent_merge_wrapper(tsdn_t *tsdn, arena_t *arena,
     extent_hooks_t **r_extent_hooks, extent_t *a, extent_t *b);
 
 bool	extent_boot(void);
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_EXTENT_EXTERNS_H */

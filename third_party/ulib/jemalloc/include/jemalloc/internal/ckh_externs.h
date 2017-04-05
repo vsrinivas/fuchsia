@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_CKH_EXTERNS_H
 #define JEMALLOC_INTERNAL_CKH_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 bool	ckh_new(tsd_t *tsd, ckh_t *ckh, size_t minitems, ckh_hash_t *hash,
     ckh_keycomp_t *keycomp);
 void	ckh_delete(tsd_t *tsd, ckh_t *ckh);
@@ -14,5 +16,7 @@ void	ckh_string_hash(const void *key, size_t r_hash[2]);
 bool	ckh_string_keycomp(const void *k1, const void *k2);
 void	ckh_pointer_hash(const void *key, size_t r_hash[2]);
 bool	ckh_pointer_keycomp(const void *k1, const void *k2);
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_CKH_EXTERNS_H */

@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_CTL_EXTERNS_H
 #define JEMALLOC_INTERNAL_CTL_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 int	ctl_byname(tsd_t *tsd, const char *name, void *oldp, size_t *oldlenp,
     void *newp, size_t newlen);
 int	ctl_nametomib(tsdn_t *tsdn, const char *name, size_t *mibp,
@@ -39,5 +41,7 @@ void	ctl_postfork_child(tsdn_t *tsdn);
 		abort();						\
 	}								\
 } while (0)
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_CTL_EXTERNS_H */

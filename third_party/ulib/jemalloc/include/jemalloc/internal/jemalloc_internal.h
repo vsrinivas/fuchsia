@@ -430,6 +430,8 @@ typedef unsigned szind_t;
 /* EXTERNS */
 /******************************************************************************/
 
+#pragma GCC visibility push(hidden)
+
 extern bool	opt_abort;
 extern const char	*opt_junk;
 extern bool	opt_junk_alloc;
@@ -1180,5 +1182,7 @@ ixalloc(tsdn_t *tsdn, extent_t *extent, void *ptr, size_t oldsize, size_t size,
 #ifdef __cplusplus
 }
 #endif
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_H */

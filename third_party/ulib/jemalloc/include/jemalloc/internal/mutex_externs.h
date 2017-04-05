@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_MUTEX_EXTERNS_H
 #define JEMALLOC_INTERNAL_MUTEX_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 #ifdef JEMALLOC_LAZY_LOCK
 extern bool isthreaded;
 #else
@@ -14,5 +16,7 @@ void	malloc_mutex_prefork(tsdn_t *tsdn, malloc_mutex_t *mutex);
 void	malloc_mutex_postfork_parent(tsdn_t *tsdn, malloc_mutex_t *mutex);
 void	malloc_mutex_postfork_child(tsdn_t *tsdn, malloc_mutex_t *mutex);
 bool	malloc_mutex_boot(void);
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_MUTEX_EXTERNS_H */

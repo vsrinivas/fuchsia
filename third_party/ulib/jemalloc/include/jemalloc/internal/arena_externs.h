@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_ARENA_EXTERNS_H
 #define JEMALLOC_INTERNAL_ARENA_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 static const size_t	large_pad =
 #ifdef JEMALLOC_CACHE_OBLIVIOUS
     PAGE
@@ -88,5 +90,7 @@ void	arena_prefork2(tsdn_t *tsdn, arena_t *arena);
 void	arena_prefork3(tsdn_t *tsdn, arena_t *arena);
 void	arena_postfork_parent(tsdn_t *tsdn, arena_t *arena);
 void	arena_postfork_child(tsdn_t *tsdn, arena_t *arena);
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_ARENA_EXTERNS_H */

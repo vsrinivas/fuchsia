@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_RTREE_EXTERNS_H
 #define JEMALLOC_INTERNAL_RTREE_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 bool rtree_new(rtree_t *rtree, unsigned bits);
 #ifdef JEMALLOC_JET
 typedef rtree_elm_t *(rtree_node_alloc_t)(tsdn_t *, rtree_t *, size_t);
@@ -19,5 +21,7 @@ void	rtree_elm_witness_access(tsdn_t *tsdn, const rtree_t *rtree,
     const rtree_elm_t *elm);
 void	rtree_elm_witness_release(tsdn_t *tsdn, const rtree_t *rtree,
     const rtree_elm_t *elm);
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_RTREE_EXTERNS_H */

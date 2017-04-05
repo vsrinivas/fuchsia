@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_UTIL_EXTERNS_H
 #define JEMALLOC_INTERNAL_UTIL_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 int	buferror(int err, char *buf, size_t buflen);
 uintmax_t	malloc_strtoumax(const char *restrict nptr,
     char **restrict endptr, int base);
@@ -19,5 +21,7 @@ void	malloc_vcprintf(void (*write_cb)(void *, const char *), void *cbopaque,
 void malloc_cprintf(void (*write)(void *, const char *), void *cbopaque,
     const char *format, ...) JEMALLOC_FORMAT_PRINTF(3, 4);
 void	malloc_printf(const char *format, ...) JEMALLOC_FORMAT_PRINTF(1, 2);
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_UTIL_EXTERNS_H */

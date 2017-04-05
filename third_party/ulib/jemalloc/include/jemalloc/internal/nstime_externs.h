@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_NSTIME_EXTERNS_H
 #define JEMALLOC_INTERNAL_NSTIME_EXTERNS_H
 
+#pragma GCC visibility push(hidden)
+
 void	nstime_init(nstime_t *time, uint64_t ns);
 void	nstime_init2(nstime_t *time, uint64_t sec, uint64_t nsec);
 uint64_t	nstime_ns(const nstime_t *time);
@@ -22,5 +24,7 @@ extern nstime_update_t *nstime_update;
 bool	nstime_monotonic(void);
 bool	nstime_update(nstime_t *time);
 #endif
+
+#pragma GCC visibility pop
 
 #endif /* JEMALLOC_INTERNAL_NSTIME_EXTERNS_H */
