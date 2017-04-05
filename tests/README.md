@@ -1,16 +1,34 @@
-This directory holds tests for the modular framework.
+# Modular integration tests
 
-Tests here are integration tests, run through the
-[test_runner](../src/test_runner/README.md) against a fully built fuchsia
-instance running on either the build host (using QEMU) or on a target
-device. The test runner discovers the running fuchsia instance automatically,
+Tests here are integration tests, run through
+the [test_runner](https://fuchsia.googlesource.com/test_runner/) in a fully
+built fuchsia instance running on either the build host using QEMU or on a
+target device.
+
+There are two ways to invoke the test suite, remotely from the build host or
+directly on the fuchsia device.
+
+## Starting tests remotely from the build host
+
+The test runner discovers the running fuchsia instance automatically,
 but may get confused if there is more than one.
 
-NOTE: In order to run tests, the test_runner must be run at startup time. You
-can either:
+In order to run tests from your workstation, the `test_runner` must be running
+under fuchsia. You can either:
 
-* Use a gn module to automatically start it: `./packages/gn/gen.py -m boot_test_modular`
-* or, run `@boot /system/apps/test_runner` at your `magenta$` prompt.
+* Use a gn module to automatically start it
+  using [boot_test.config](boot_test.config). At build time, do:
+
+```
+./packages/gn/gen.py -m boot_test_modular
+
+```
+
+* Run it after starting fuchsia. At your `magenta$` prompt, do:
+
+```
+@boot /system/apps/test_runner
+```
 
 Each subdirectory contains one integration test, which can be run by invoking
 its `test.sh` script.
@@ -21,4 +39,21 @@ be run by `test.sh`.
 
 All `test.sh` scripts require to set up the fuchsia environment by sourcing
 [scripts/env.sh](https://fuchsia.googlesource.com/scripts/+/master/env.sh).
+
+## Starting the test suite directly under fuchisa
+
+`run_modular_tests` is a command that runs all of the Modular tests. It is based
+on the [Test Runner](https://fuchsia.googlesource.com/test_runner/) framework.
+
+It can be run directly from the Magenta shell:
+
+```
+magenta$ @boot /system/test/run_modular_tests
+```
+
+Or from the fuchsia shell:
+
+```
+$ /system/test/run_modular_tests
+```
 

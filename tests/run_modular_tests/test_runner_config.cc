@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/test_runner/test_runner_config.h"
+#include "apps/modular/tests/run_modular_tests/test_runner_config.h"
 
 #include <rapidjson/document.h>
 #include <sys/socket.h>

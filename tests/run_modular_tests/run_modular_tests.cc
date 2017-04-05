@@ -11,7 +11,7 @@
 #include <magenta/status.h>
 #include <iostream>
 
-#include "apps/modular/src/test_runner/test_runner_config.h"
+#include "apps/modular/tests/run_modular_tests/test_runner_config.h"
 #include "apps/test_runner/lib/test_runner.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_printf.h"
