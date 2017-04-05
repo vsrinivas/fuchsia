@@ -19,10 +19,6 @@ static int __fflush_unlocked(FILE* f) {
     return 0;
 }
 
-/* stdout.c will override this if linked */
-static FILE* volatile dummy = 0;
-weak_alias(dummy, __stdout_used);
-
 int fflush(FILE* f) {
     int r;
 
@@ -33,7 +29,7 @@ int fflush(FILE* f) {
         return r;
     }
 
-    r = __stdout_used ? fflush(__stdout_used) : 0;
+    r = fflush(stdout);
 
     for (f = *__ofl_lock(); f; f = f->next) {
         FLOCK(f);

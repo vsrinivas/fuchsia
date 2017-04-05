@@ -13,4 +13,3 @@ static FILE f = {
     .lock = -1,
 };
 FILE* const stderr = &f;
-FILE* volatile __stderr_used = &f;

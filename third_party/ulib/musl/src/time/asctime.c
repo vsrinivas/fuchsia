@@ -1,6 +1,4 @@
-#include <time.h>
-
-char* __asctime(const struct tm*, char*);
+#include "time_impl.h"
 
 char* asctime(const struct tm* tm) {
     static char buf[26];

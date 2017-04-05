@@ -12,4 +12,3 @@ static FILE f = {
     .lock = -1,
 };
 FILE* const stdin = &f;
-FILE* volatile __stdin_used = &f;

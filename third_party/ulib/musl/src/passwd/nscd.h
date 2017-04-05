@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libc.h"
 #include <stdint.h>
 
 #define __NEED_FILE
@@ -43,4 +44,5 @@
 #define INITGRNGRPS 2
 #define INITGR_LEN 3
 
-FILE* __nscd_query(int32_t req, const char* key, int32_t* buf, size_t len, int* swap);
+FILE* __nscd_query(int32_t req, const char* key, int32_t* buf, size_t len,
+                   int* swap) ATTR_LIBC_VISIBILITY;

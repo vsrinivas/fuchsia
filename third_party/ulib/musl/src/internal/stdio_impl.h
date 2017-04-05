@@ -50,16 +50,16 @@ struct _IO_FILE {
     struct __locale_struct* locale;
 };
 
-size_t __stdio_read(FILE*, unsigned char*, size_t);
-size_t __stdio_write(FILE*, const unsigned char*, size_t);
-size_t __stdout_write(FILE*, const unsigned char*, size_t);
-off_t __stdio_seek(FILE*, off_t, int);
-int __stdio_close(FILE*);
+size_t __stdio_read(FILE*, unsigned char*, size_t) ATTR_LIBC_VISIBILITY;
+size_t __stdio_write(FILE*, const unsigned char*, size_t) ATTR_LIBC_VISIBILITY;
+size_t __stdout_write(FILE*, const unsigned char*, size_t) ATTR_LIBC_VISIBILITY;
+off_t __stdio_seek(FILE*, off_t, int) ATTR_LIBC_VISIBILITY;
+int __stdio_close(FILE*) ATTR_LIBC_VISIBILITY;
 
-size_t __string_read(FILE*, unsigned char*, size_t);
+size_t __string_read(FILE*, unsigned char*, size_t) ATTR_LIBC_VISIBILITY;
 
-int __toread(FILE*);
-int __towrite(FILE*);
+int __toread(FILE*) ATTR_LIBC_VISIBILITY;
+int __towrite(FILE*) ATTR_LIBC_VISIBILITY;
 
 #if defined(__PIC__) && (100 * __GNUC__ + __GNUC_MINOR__ >= 303)
 __attribute__((visibility("protected")))
@@ -68,19 +68,21 @@ int
 __overflow(FILE *, int),
     __uflow(FILE *);
 
-int __fseeko(FILE*, off_t, int);
-int __fseeko_unlocked(FILE*, off_t, int);
-off_t __ftello(FILE*);
-off_t __ftello_unlocked(FILE*);
-size_t __fwritex(const unsigned char*, size_t, FILE*);
-int __putc_unlocked(int, FILE*);
+int __fseeko(FILE*, off_t, int) ATTR_LIBC_VISIBILITY;
+int __fseeko_unlocked(FILE*, off_t, int) ATTR_LIBC_VISIBILITY;
+off_t __ftello(FILE*) ATTR_LIBC_VISIBILITY;
+off_t __ftello_unlocked(FILE*) ATTR_LIBC_VISIBILITY;
+size_t __fwritex(const unsigned char*, size_t, FILE*) ATTR_LIBC_VISIBILITY;
+int __putc_unlocked(int, FILE*) ATTR_LIBC_VISIBILITY;
 
-FILE* __fdopen(int, const char*);
-int __fmodeflags(const char*);
+FILE* __fdopen(int, const char*) ATTR_LIBC_VISIBILITY;
+int __fmodeflags(const char*) ATTR_LIBC_VISIBILITY;
 
-FILE* __ofl_add(FILE* f);
-FILE** __ofl_lock(void);
-void __ofl_unlock(void);
+FILE* __ofl_add(FILE* f) ATTR_LIBC_VISIBILITY;
+FILE** __ofl_lock(void) ATTR_LIBC_VISIBILITY;
+void __ofl_unlock(void) ATTR_LIBC_VISIBILITY;
+
+void __stdio_exit(void) ATTR_LIBC_VISIBILITY;
 
 #define feof(f) ((f)->flags & F_EOF)
 #define ferror(f) ((f)->flags & F_ERR)
@@ -92,5 +94,6 @@ void __ofl_unlock(void);
                                                                : __overflow((f), (c)))
 
 /* Caller-allocated FILE * operations */
-FILE* __fopen_rb_ca(const char*, FILE*, unsigned char*, size_t);
-int __fclose_ca(FILE*);
+FILE* __fopen_rb_ca(const char*, FILE*, unsigned char*, size_t)
+    ATTR_LIBC_VISIBILITY;
+int __fclose_ca(FILE*) ATTR_LIBC_VISIBILITY;

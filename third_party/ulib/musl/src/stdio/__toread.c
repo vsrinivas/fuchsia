@@ -12,9 +12,3 @@ int __toread(FILE* f) {
     f->rpos = f->rend = f->buf + f->buf_size;
     return (f->flags & F_EOF) ? EOF : 0;
 }
-
-void __stdio_exit_needed(void);
-
-void __toread_needs_stdio_exit(void) {
-    __stdio_exit_needed();
-}

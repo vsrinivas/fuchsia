@@ -13,4 +13,3 @@ static FILE f = {
     .lock = -1,
 };
 FILE* const stdout = &f;
-FILE* volatile __stdout_used = &f;

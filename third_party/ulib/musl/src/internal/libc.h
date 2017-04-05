@@ -44,6 +44,10 @@ extern char *__progname, *__progname_full;
 
 void __libc_start_init(void) ATTR_LIBC_VISIBILITY;
 
+void __funcs_on_exit(void) ATTR_LIBC_VISIBILITY;
+void __funcs_on_quick_exit(void) ATTR_LIBC_VISIBILITY;
+void __libc_exit_fini(void) ATTR_LIBC_VISIBILITY;
+
 void __dl_thread_cleanup(void) ATTR_LIBC_VISIBILITY;
 
 // Registers the handles that mx_get_startup_handle() will return.
