@@ -40,7 +40,7 @@ class DeviceMapImpl : DeviceMap, ledger::PageWatcher {
   fidl::BindingSet<DeviceMap> bindings_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
-  PageClient client_;
+  PageClient page_client_;
   OperationQueue operation_queue_;
 
   // Operations implemented here.

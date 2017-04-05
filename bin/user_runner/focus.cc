@@ -104,10 +104,10 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
 FocusHandler::FocusHandler(const fidl::String& device_name,
                            ledger::Page* const page)
     : page_(page),
-      client_("FocusHandler"),
+      page_client_("FocusHandler"),
       page_watcher_binding_(this),
       device_name_(device_name) {
-  page_->GetSnapshot(client_.NewRequest(), page_watcher_binding_.NewBinding(),
+  page_->GetSnapshot(page_client_.NewRequest(), page_watcher_binding_.NewBinding(),
                      [](ledger::Status status) {
                        if (status != ledger::Status::OK) {
                          FTL_LOG(ERROR)
@@ -129,7 +129,7 @@ void FocusHandler::AddControllerBinding(
 }
 
 void FocusHandler::Query(const QueryCallback& callback) {
-  new QueryCall(&operation_queue_, client_.page_snapshot(), callback);
+  new QueryCall(&operation_queue_, page_client_.page_snapshot(), callback);
 }
 
 void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
@@ -216,7 +216,7 @@ void FocusHandler::OnChange(ledger::PageChangePtr page,
       result_state != ledger::ResultState::PARTIAL_COMPLETED) {
     callback(nullptr);
   } else {
-    callback(client_.NewRequest());
+    callback(page_client_.NewRequest());
   }
 }
 

@@ -107,8 +107,8 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
     : device_name_(device_name),
       page_(page),
       page_watcher_binding_(this),
-      client_("DeviceMapImpl") {
-  page_->GetSnapshot(client_.NewRequest(), page_watcher_binding_.NewBinding(),
+      page_client_("DeviceMapImpl") {
+  page_->GetSnapshot(page_client_.NewRequest(), page_watcher_binding_.NewBinding(),
                      [](ledger::Status status) {
                        if (status != ledger::Status::OK) {
                          FTL_LOG(ERROR)
@@ -126,7 +126,7 @@ void DeviceMapImpl::AddBinding(fidl::InterfaceRequest<DeviceMap> request) {
 }
 
 void DeviceMapImpl::Query(const QueryCallback& callback) {
-  new QueryCall(&operation_queue_, client_.page_snapshot(), callback);
+  new QueryCall(&operation_queue_, page_client_.page_snapshot(), callback);
 }
 
 void DeviceMapImpl::OnChange(ledger::PageChangePtr page,
@@ -146,7 +146,7 @@ void DeviceMapImpl::OnChange(ledger::PageChangePtr page,
   // do this regardless of continuation state, because there might be
   // no keys we listen to in the last continuation.
   if (update) {
-    callback(client_.NewRequest());
+    callback(page_client_.NewRequest());
   } else {
     callback(nullptr);
   }

@@ -48,7 +48,7 @@ class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
                 const OnChangeCallback& callback) override;
 
   ledger::Page* const page_;
-  PageClient client_;
+  PageClient page_client_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
   const std::string device_name_;
