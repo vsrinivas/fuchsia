@@ -20,7 +20,8 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
                         uint16_t value, uint16_t index, void* data, size_t length) {
     iotxn_t* txn;
 
-    mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, length);
+    uint32_t flags = (length == 0 ? IOTXN_ALLOC_POOL : 0);
+    mx_status_t status = iotxn_alloc(&txn, flags, length);
     if (status != NO_ERROR) return status;
     txn->protocol = MX_PROTOCOL_USB;
 
@@ -166,7 +167,7 @@ size_t usb_get_max_transfer_size(mx_device_t* device, uint8_t ep_address) {
 iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size) {
     iotxn_t* txn;
 
-    mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, data_size);
+    mx_status_t status = iotxn_alloc(&txn, 0, data_size);
     if (status != NO_ERROR) {
         return NULL;
     }
