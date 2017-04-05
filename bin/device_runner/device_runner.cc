@@ -174,9 +174,20 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
  public:
   DeviceRunnerApp(const Settings& settings)
       : settings_(settings),
-        app_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        app_context_(
+            app::ApplicationContext::CreateFromStartupInfoNotChecked()),
         device_context_binding_(this),
         user_provider_binding_(this) {
+    // 0. Check if environment handle / services have been initialized.
+    if (!app_context_->launcher()) {
+      FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
+      exit(1);
+    }
+    if (!app_context_->environment_services()) {
+      FTL_LOG(ERROR) << "Services handle not set. Please use @boot.";
+      exit(1);
+    }
+
     // 1. Start the device shell. This also connects the root view of the device
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.
@@ -224,15 +235,6 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
       if (!Parse(serialized_users)) {
         return;
       }
-    }
-
-    if (!app_context_->launcher()) {
-      FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
-      exit(1);
-    }
-    if (!app_context_->environment_services()) {
-      FTL_LOG(ERROR) << "Services handle not set. Please use @boot.";
-      exit(1);
     }
 
     // 3. Start the ledger.
