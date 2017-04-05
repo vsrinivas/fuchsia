@@ -117,6 +117,14 @@ public:
         return mx_object_set_property(get(), property, value, size);
     }
 
+    mx_status_t get_cookie(mx_handle_t scope, uint64_t *cookie) const {
+        return mx_object_get_cookie(get(), scope, cookie);
+    }
+
+    mx_status_t set_cookie(mx_handle_t scope, uint64_t cookie) {
+        return mx_object_set_cookie(get(), scope, cookie);
+    }
+
     bool is_valid() const { return value_ != MX_HANDLE_INVALID; }
     explicit operator bool() const { return is_valid(); }
 
