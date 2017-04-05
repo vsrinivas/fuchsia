@@ -15,31 +15,81 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
+#include <mxtl/ref_ptr.h>
 #include <new.h>
+#include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-VmObject::VmObject() {
+VmObject::VmObject(mxtl::RefPtr<VmObject> parent)
+    : lock_(parent ? parent->lock_ref() : local_lock_),
+    parent_(mxtl::move(parent)) {
     LTRACEF("%p\n", this);
 }
 
 VmObject::~VmObject() {
+    canary_.Assert();
     LTRACEF("%p\n", this);
-    DEBUG_ASSERT(mapping_list_.is_empty());
 
-    // clear our magic value
-    magic_ = 0;
+    // remove ourself from our parent (if present)
+    if (parent_) {
+        LTRACEF("removing ourself from our parent %p\n", parent_.get());
+
+        // conditionally grab our shared lock with the parent, but only if it's
+        // not held. There are some destruction paths that may try to tear
+        // down the object with the parent locks held.
+        bool need_lock = !lock_.IsHeld();
+        if (need_lock)
+            lock_.Acquire();
+        parent_->RemoveChildLocked(this);
+        if (need_lock)
+            lock_.Release();
+    }
+
+    DEBUG_ASSERT(mapping_list_.is_empty());
+    DEBUG_ASSERT(children_list_.is_empty());
 }
 
 void VmObject::AddMappingLocked(VmMapping* r) TA_REQ(lock_) {
+    canary_.Assert();
+    DEBUG_ASSERT(lock_.IsHeld());
     mapping_list_.push_front(r);
 }
 
 void VmObject::RemoveMappingLocked(VmMapping* r) TA_REQ(lock_) {
+    canary_.Assert();
+    DEBUG_ASSERT(lock_.IsHeld());
     mapping_list_.erase(*r);
+}
+
+void VmObject::AddChildLocked(VmObject* o) TA_REQ(lock_) {
+    canary_.Assert();
+    DEBUG_ASSERT(lock_.IsHeld());
+    children_list_.push_front(o);
+}
+
+void VmObject::RemoveChildLocked(VmObject* o) TA_REQ(lock_) {
+    canary_.Assert();
+    DEBUG_ASSERT(lock_.IsHeld());
+    children_list_.erase(*o);
+}
+
+void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len) {
+    canary_.Assert();
+    DEBUG_ASSERT(lock_.IsHeld());
+
+    // other mappings may have covered this offset into the vmo, so unmap those ranges
+    for (auto& m : mapping_list_) {
+        m.UnmapVmoRangeLocked(offset, len);
+    }
+
+    // inform all our children this as well, so they can inform their mappings
+    for (auto& child : children_list_) {
+        child.RangeChangeUpdateFromParentLocked(offset, len);
+    }
 }
 
 static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {

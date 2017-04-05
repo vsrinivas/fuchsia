@@ -578,6 +578,294 @@ bool vmo_zero_page_test() {
     END_TEST;
 }
 
+// test set 1: create a few clones, close them
+bool vmo_clone_test_1() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    mx_handle_t clone_vmo[3];
+
+    // create a vmo
+    const size_t size = PAGE_SIZE * 4;
+    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+
+    // clone it
+    clone_vmo[0] = MX_HANDLE_INVALID;
+    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
+
+    // clone it a second time
+    clone_vmo[1] = MX_HANDLE_INVALID;
+    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[1]), "vm_clone");
+    EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[1], "vm_clone_handle");
+
+    // clone the clone
+    clone_vmo[2] = MX_HANDLE_INVALID;
+    EXPECT_EQ(NO_ERROR, mx_vmo_clone(clone_vmo[1], MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[2]), "vm_clone");
+    EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[2], "vm_clone_handle");
+
+    // close the original handle
+    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
+
+    // close the clone handles
+    for (auto h: clone_vmo)
+        EXPECT_EQ(NO_ERROR, mx_handle_close(h), "handle_close");
+
+    END_TEST;
+}
+
+// test set 2: create a clone, verify that it COWs via the read/write interface
+bool vmo_clone_test_2() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    mx_handle_t clone_vmo[1];
+    //uintptr_t ptr;
+    size_t bytes_handled;
+
+    // create a vmo
+    const size_t size = PAGE_SIZE * 4;
+    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+
+    // fill the original with stuff
+    for (size_t off = 0; off < size; off += sizeof(off)) {
+        mx_vmo_write(vmo, &off, off, sizeof(off), &bytes_handled);
+    }
+
+    // clone it
+    clone_vmo[0] = MX_HANDLE_INVALID;
+    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
+
+    // verify that the clone reads back as the same
+    for (size_t off = 0; off < size; off += sizeof(off)) {
+        size_t val;
+
+        mx_vmo_read(clone_vmo[0], &val, off, sizeof(val), &bytes_handled);
+
+        if (val != off) {
+            EXPECT_EQ(val, off, "vm_clone read back");
+            break;
+        }
+    }
+
+    // write to part of the clone
+    size_t val = 99;
+    mx_vmo_write(clone_vmo[0], &val, 0, sizeof(val), &bytes_handled);
+
+    // verify the clone was written to
+    EXPECT_EQ(NO_ERROR, mx_vmo_read(clone_vmo[0], &val, 0, sizeof(val), &bytes_handled), "writing to clone");
+
+    // verify it was written to
+    EXPECT_EQ(99, val, "reading back from clone");
+
+    // verify that the rest of the page it was written two was cloned
+    for (size_t off = sizeof(val); off < PAGE_SIZE; off += sizeof(off)) {
+        mx_vmo_read(clone_vmo[0], &val, off, sizeof(val), &bytes_handled);
+
+        if (val != off) {
+            EXPECT_EQ(val, off, "vm_clone read back");
+            break;
+        }
+    }
+
+    // verify that it didn't trash the original
+    for (size_t off = 0; off < size; off += sizeof(off)) {
+        mx_vmo_read(vmo, &val, off, sizeof(val), &bytes_handled);
+
+        if (val != off) {
+            EXPECT_EQ(val, off, "vm_clone read back of original");
+            break;
+        }
+    }
+
+    // write to the original in the part that is still visible to the clone
+    val = 99;
+    uint64_t offset = PAGE_SIZE * 2;
+    EXPECT_EQ(NO_ERROR, mx_vmo_write(vmo, &val, offset, sizeof(val), &bytes_handled), "writing to original");
+    EXPECT_EQ(NO_ERROR, mx_vmo_read(clone_vmo[0], &val, offset, sizeof(val), &bytes_handled), "reading back original from clone");
+    EXPECT_EQ(99, val, "checking value");
+
+    // close the clone handles
+    for (auto h: clone_vmo)
+        EXPECT_EQ(NO_ERROR, mx_handle_close(h), "handle_close");
+
+    // close the original handle
+    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
+
+    END_TEST;
+}
+
+// test set 3: test COW via a mapping
+bool vmo_clone_test_3() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    mx_handle_t clone_vmo[1];
+    uintptr_t ptr;
+    uintptr_t clone_ptr;
+    volatile uint32_t *p;
+    volatile uint32_t *cp;
+
+    // create a vmo
+    const size_t size = PAGE_SIZE * 4;
+    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+
+    // map it
+    EXPECT_EQ(NO_ERROR,
+            mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr),
+            "map");
+    EXPECT_NONNULL(ptr, "map address");
+    p = (volatile uint32_t *)ptr;
+
+    // clone it and map that
+    clone_vmo[0] = MX_HANDLE_INVALID;
+    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
+    EXPECT_EQ(NO_ERROR,
+            mx_vmar_map(mx_vmar_root_self(), 0, clone_vmo[0], 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &clone_ptr),
+            "map");
+    EXPECT_NONNULL(clone_ptr, "map address");
+    cp = (volatile uint32_t *)clone_ptr;
+
+    // read zeros from both
+    for (size_t off = 0; off < size / sizeof(off); off++) {
+        size_t val = p[off];
+
+        if (val != 0) {
+            EXPECT_EQ(0, val, "reading zeros from original");
+            break;
+        }
+    }
+    for (size_t off = 0; off < size / sizeof(off); off++) {
+        size_t val = cp[off];
+
+        if (val != 0) {
+            EXPECT_EQ(0, val, "reading zeros from original");
+            break;
+        }
+    }
+
+    // write to both sides and make sure it does a COW
+    p[0] = 99;
+    EXPECT_EQ(99, p[0], "wrote to original");
+    EXPECT_EQ(99, cp[0], "read back from clone");
+    cp[0] = 100;
+    EXPECT_EQ(100, cp[0], "read back from clone");
+    EXPECT_EQ(99, p[0], "read back from original");
+
+    // close the original handle
+    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
+
+    // close the clone handle
+    EXPECT_EQ(NO_ERROR, mx_handle_close(clone_vmo[0]), "handle_close");
+
+    // unmap
+    EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), ptr, size), "unmap");
+    EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), clone_ptr, size), "unmap");
+
+    END_TEST;
+}
+
+// test set 4: deal with clones with nonzero offsets and offsets that extend beyond the original
+bool vmo_clone_test_4() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    mx_handle_t clone_vmo[1];
+    uintptr_t ptr;
+    uintptr_t clone_ptr;
+    volatile size_t *p;
+    volatile size_t *cp;
+    size_t handled_bytes;
+
+    // create a vmo
+    const size_t size = PAGE_SIZE * 4;
+    EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+
+    // map it
+    EXPECT_EQ(NO_ERROR,
+            mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &ptr),
+            "map");
+    EXPECT_NONNULL(ptr, "map address");
+    p = (volatile size_t *)ptr;
+
+    // fill it with stuff
+    for (size_t off = 0; off < size / sizeof(off); off++)
+        p[off] = off;
+
+    // make sure that non page aligned clones do not work
+    clone_vmo[0] = MX_HANDLE_INVALID;
+    EXPECT_EQ(ERR_INVALID_ARGS, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 1, size, &clone_vmo[0]), "vm_clone");
+
+    // create a clone that extends beyond the parent by one page
+    clone_vmo[0] = MX_HANDLE_INVALID;
+    EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, PAGE_SIZE, size, &clone_vmo[0]), "vm_clone");
+
+    // map the clone
+    EXPECT_EQ(NO_ERROR,
+            mx_vmar_map(mx_vmar_root_self(), 0, clone_vmo[0], 0, size, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &clone_ptr),
+            "map");
+    EXPECT_NONNULL(clone_ptr, "map address");
+    cp = (volatile size_t *)clone_ptr;
+
+    // verify that it seems to be mapping the original at an offset
+    for (size_t off = 0; off < (size - PAGE_SIZE) / sizeof(off); off++) {
+        if (cp[off] != off + PAGE_SIZE / sizeof(off)) {
+            EXPECT_EQ(cp[off], off + PAGE_SIZE / sizeof(off), "reading from clone");
+            break;
+        }
+    }
+
+    // verify that the last page we have mapped is beyond the original and should return zeros
+    for (size_t off = (size - PAGE_SIZE) / sizeof(off); off < size / sizeof(off); off++) {
+        if (cp[off] != 0) {
+            EXPECT_EQ(cp[off], 0, "reading from clone");
+            break;
+        }
+    }
+
+    // resize the original
+    EXPECT_EQ(NO_ERROR, mx_vmo_set_size(vmo, size + PAGE_SIZE), "extend the vmo");
+
+    // verify that the last page we have mapped still returns zeros
+    for (size_t off = (size - PAGE_SIZE) / sizeof(off); off < size / sizeof(off); off++) {
+        if (cp[off] != 0) {
+            EXPECT_EQ(cp[off], 0, "reading from clone");
+            break;
+        }
+    }
+
+    // write to the new part of the original
+    size_t val = 99;
+    EXPECT_EQ(NO_ERROR, mx_vmo_write(vmo, &val, size, sizeof(val), &handled_bytes), "writing to original after extending");
+
+    // verify that it is reflected in the clone
+    EXPECT_EQ(99, cp[(size - PAGE_SIZE) / sizeof(*cp)], "modified newly exposed part of cow clone");
+
+    // resize the original again, completely extending it beyond he clone
+    EXPECT_EQ(NO_ERROR, mx_vmo_set_size(vmo, size + PAGE_SIZE * 2), "extend the vmo");
+
+    // resize the original to zero
+    EXPECT_EQ(NO_ERROR, mx_vmo_set_size(vmo, 0), "truncate the vmo");
+
+    // verify that the clone now reads completely zeros, since it never COWed
+    for (size_t off = 0; off < size / sizeof(off); off++) {
+        if (cp[off] != 0) {
+            EXPECT_EQ(cp[off], 0, "reading zeros from clone");
+            break;
+        }
+    }
+
+    // close and unmap
+    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "handle_close");
+    EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), ptr, size), "unmap");
+    EXPECT_EQ(NO_ERROR, mx_handle_close(clone_vmo[0]), "handle_close");
+    EXPECT_EQ(NO_ERROR, mx_vmar_unmap(mx_vmar_root_self(), clone_ptr, size), "unmap");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(vmo_tests)
 RUN_TEST(vmo_create_test);
 RUN_TEST(vmo_read_write_test);
@@ -588,6 +876,10 @@ RUN_TEST(vmo_rights_test);
 RUN_TEST(vmo_lookup_test);
 RUN_TEST(vmo_commit_test);
 RUN_TEST(vmo_zero_page_test);
+RUN_TEST(vmo_clone_test_1);
+RUN_TEST(vmo_clone_test_2);
+RUN_TEST(vmo_clone_test_3);
+RUN_TEST(vmo_clone_test_4);
 END_TEST_CASE(vmo_tests)
 
 int main(int argc, char** argv) {

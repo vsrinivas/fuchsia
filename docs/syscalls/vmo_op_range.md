@@ -74,6 +74,7 @@ value is returned.
 ## SEE ALSO
 
 [vmo_create](vmo_create.md),
+[vmo_clone](vmo_clone.md),
 [vmo_read](vmo_read.md),
 [vmo_write](vmo_write.md),
 [vmo_get_size](vmo_get_size.md),

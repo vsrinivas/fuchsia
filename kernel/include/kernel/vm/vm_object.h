@@ -14,6 +14,7 @@
 #include <list.h>
 #include <magenta/thread_annotations.h>
 #include <mxtl/array.h>
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
@@ -28,10 +29,12 @@ typedef status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, 
 //
 // Can be created without mapping and used as a container of data, or mappable
 // into an address space via VmAspace::MapObject
-class VmObject : public mxtl::RefCounted<VmObject> {
+class VmObject : public mxtl::RefCounted<VmObject>,
+                 public mxtl::DoublyLinkedListable<VmObject*> {
 public:
     // public API
     virtual status_t Resize(uint64_t size) { return ERR_NOT_SUPPORTED; }
+    virtual status_t ResizeLocked(uint64_t size) TA_REQ(lock_) { return ERR_NOT_SUPPORTED; }
 
     virtual uint64_t size() const { return 0; }
 
@@ -107,9 +110,31 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
+    // create a copy-on-write clone vmo at the page-aligned offset and length
+    // note: it's okay to start or extend past the size of the parent
+    virtual status_t CloneCOW(uint64_t offset, uint64_t size, mxtl::RefPtr<VmObject>* clone_vmo) {
+        return ERR_NOT_SUPPORTED;
+    }
+
+    // get a pointer to the page structure and/or physical address at the specified offset.
+    // valid flags are VMM_PF_FLAG_*
+    virtual status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t** page, paddr_t* pa) {
+        return ERR_NOT_SUPPORTED;
+    }
+
+    Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
+    Mutex& lock_ref() TA_RET_CAP(lock_) { return lock_; }
+
+    void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
+    void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
+
+    void AddChildLocked(VmObject* r) TA_REQ(lock_);
+    void RemoveChildLocked(VmObject* r) TA_REQ(lock_);
+
 protected:
     // private constructor (use Create())
-    VmObject();
+    explicit VmObject(mxtl::RefPtr<VmObject> parent);
+    VmObject() : VmObject(nullptr) { }
 
     // private destructor, only called from refptr
     virtual ~VmObject();
@@ -117,27 +142,34 @@ protected:
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 
-    // private apis used by the VmMapping class
-    // get a pointer to a page at a given offset
-    friend class VmMapping;
+    // inform all mappings and children that a range of this vmo's pages were added or removed.
+    void RangeChangeUpdateLocked(uint64_t offset, uint64_t len);
 
-    // get the physical address of a page at offset
-    virtual status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t** page, paddr_t* pa) TA_REQ(lock_) {
-        return ERR_NOT_SUPPORTED;
+    // above call but called from a parent
+    virtual void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len) {
+        RangeChangeUpdateLocked(offset, len);
     }
 
-    Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
-
-    void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
-    void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
-
     // magic value
-    static const uint32_t MAGIC = 0x564d4f5f; // VMO_
-    uint32_t magic_ = MAGIC;
+    mxtl::Canary<mxtl::magic("VMO_")> canary_;
 
     // members
-    mutable Mutex lock_;
-    mxtl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
+
+    // declare a local mutex and default to pointing at it
+    // if constructed with a parent vmo, point lock_ at the parent's lock
+private:
+    Mutex local_lock_;
+protected:
+    Mutex& lock_;
+
+    // list of every mapping
+    mxtl::DoublyLinkedList<VmMapping*> mapping_list_;
+
+    // list of every child
+    mxtl::DoublyLinkedList<VmObject*> children_list_;
+
+    // parent pointer (may be null)
+    mxtl::RefPtr<VmObject> parent_;
 };
 
 // the main VM object type, holding a list of pages
@@ -148,6 +180,7 @@ public:
     static mxtl::RefPtr<VmObject> CreateFromROData(const void* data, size_t size);
 
     status_t Resize(uint64_t size) override;
+    status_t ResizeLocked(uint64_t size) override;
 
     uint64_t size() const override { return size_; }
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
@@ -177,14 +210,20 @@ public:
     status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) override;
     status_t SyncCache(const uint64_t offset, const uint64_t len) override;
 
-    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t **, paddr_t *) override TA_REQ(lock_);
+    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t **, paddr_t *) override;
+
+    status_t CloneCOW(uint64_t offset, uint64_t size,
+                          mxtl::RefPtr<VmObject>* clone_vmo) override;
+
+    void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len) override;
 
 private:
     // private constructor (use Create())
-    explicit VmObjectPaged(uint32_t pmm_alloc_flags);
+    explicit VmObjectPaged(uint32_t pmm_alloc_flags, mxtl::RefPtr<VmObject> parent);
 
     // private destructor, only called from refptr
     ~VmObjectPaged() override;
+    friend mxtl::RefPtr<VmObjectPaged>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPaged);
 
@@ -194,6 +233,7 @@ private:
 
     // add a page to the object
     status_t AddPage(vm_page_t* p, uint64_t offset);
+    status_t AddPageLocked(vm_page_t* p, uint64_t offset) TA_REQ(lock_);
 
     // internal page list routine
     void AddPageToArray(size_t index, vm_page_t* p);
@@ -202,6 +242,9 @@ private:
     template <typename T>
     status_t ReadWriteInternal(uint64_t offset, size_t len, size_t* bytes_copied, bool write,
                                T copyfunc);
+
+    // set our offset within our parent
+    status_t SetParentOffsetLocked(uint64_t o);
 
 // constants
 #if _LP64
@@ -212,10 +255,11 @@ private:
 
     // members
     uint64_t size_ = 0;
+    uint64_t parent_offset_ = 0;
     uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
 
     // a tree of pages
-    VmPageList page_list_ TA_GUARDED(lock_);
+    VmPageList page_list_;
 };
 
 // VMO representing a physical range of memory
@@ -228,7 +272,7 @@ public:
 
     void Dump(uint depth, bool verbose) override;
 
-    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t **, paddr_t* pa) override TA_REQ(lock_);
+    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t **, paddr_t* pa) override;
 
 private:
     // private constructor (use Create())
@@ -236,6 +280,7 @@ private:
 
     // private destructor, only called from refptr
     ~VmObjectPhysical() override;
+    friend mxtl::RefPtr<VmObjectPhysical>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPhysical);
 

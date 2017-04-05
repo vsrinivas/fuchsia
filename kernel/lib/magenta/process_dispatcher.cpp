@@ -447,7 +447,8 @@ mx_status_t ProcessDispatcher::GetDispatcherInternal(mx_handle_t handle_value,
 
 mx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(mx_handle_t handle_value,
                                                                mx_rights_t desired_rights,
-                                                               mxtl::RefPtr<Dispatcher>* dispatcher_out) {
+                                                               mxtl::RefPtr<Dispatcher>* dispatcher_out,
+                                                               mx_rights_t* out_rights) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
@@ -457,6 +458,8 @@ mx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(mx_handle_t handl
         return ERR_ACCESS_DENIED;
 
     *dispatcher_out = handle->dispatcher();
+    if (out_rights)
+        *out_rights = handle->rights();
     return NO_ERROR;
 }
 

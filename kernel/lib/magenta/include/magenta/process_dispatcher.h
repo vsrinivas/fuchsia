@@ -126,20 +126,32 @@ public:
 
     // Get the dispatcher corresponding to this handle value, after
     // checking that this handle has the desired rights.
+    // Returns the rights the handle currently has.
     template <typename T>
     mx_status_t GetDispatcherWithRights(mx_handle_t handle_value,
                                         mx_rights_t desired_rights,
-                                        mxtl::RefPtr<T>* dispatcher) {
+                                        mxtl::RefPtr<T>* dispatcher,
+                                        mx_rights_t* out_rights) {
         mxtl::RefPtr<Dispatcher> generic_dispatcher;
         auto status = GetDispatcherWithRightsInternal(handle_value,
                                                       desired_rights,
-                                                      &generic_dispatcher);
+                                                      &generic_dispatcher,
+                                                      out_rights);
         if (status != NO_ERROR)
             return status;
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
             return BadHandle(handle_value, ERR_WRONG_TYPE);
         return NO_ERROR;
+    }
+
+    // Get the dispatcher corresponding to this handle value, after
+    // checking that this handle has the desired rights.
+    template <typename T>
+    mx_status_t GetDispatcherWithRights(mx_handle_t handle_value,
+                                        mx_rights_t desired_rights,
+                                        mxtl::RefPtr<T>* dispatcher) {
+        return GetDispatcherWithRights(handle_value, desired_rights, dispatcher, nullptr);
     }
 
     mx_koid_t GetKoidForHandle(mx_handle_t handle_value);
@@ -221,7 +233,8 @@ private:
                                       mx_rights_t* rights);
 
     mx_status_t GetDispatcherWithRightsInternal(mx_handle_t handle_value, mx_rights_t desired_rights,
-                                                mxtl::RefPtr<Dispatcher>* dispatcher_out);
+                                                mxtl::RefPtr<Dispatcher>* dispatcher_out,
+                                                mx_rights_t* out_rights);
 
     // Thread lifecycle support
     friend class UserThread;

@@ -209,6 +209,9 @@ typedef uint32_t mx_rights_t;
 #define MX_VMO_OP_CACHE_CLEAN            8u
 #define MX_VMO_OP_CACHE_CLEAN_INVALIDATE 9u
 
+// VM Object clone flags
+#define MX_VMO_CLONE_COPY_ON_WRITE       1u
+
 // Mapping flags to vmar routines
 #define MX_VM_FLAG_PERM_READ          (1u << 0)
 #define MX_VM_FLAG_PERM_WRITE         (1u << 1)

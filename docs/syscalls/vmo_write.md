@@ -50,6 +50,7 @@ value is returned.
 ## SEE ALSO
 
 [vmo_create](vmo_create.md),
+[vmo_clone](vmo_clone.md),
 [vmo_read](vmo_read.md),
 [vmo_get_size](vmo_get_size.md),
 [vmo_set_size](vmo_set_size.md),

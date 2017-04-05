@@ -34,6 +34,7 @@ public:
     mx_status_t SetSize(uint64_t);
     mx_status_t GetSize(uint64_t* size);
     mx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_ptr<void> buffer, size_t buffer_size);
+    mx_status_t Clone(uint32_t options, uint64_t offset, uint64_t size, mxtl::RefPtr<VmObject>* clone_vmo);
 
     mxtl::RefPtr<VmObject> vmo() const { return vmo_; }
 

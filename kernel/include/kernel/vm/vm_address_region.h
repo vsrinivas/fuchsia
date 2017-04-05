@@ -431,7 +431,7 @@ protected:
     friend mxtl::RefPtr<VmMapping>;
 
     // private apis from VmObject land
-    friend class VmObjectPaged;
+    friend class VmObject;
 
     // unmap any pages that map the passed in vmo range. May not intersect with this range
     status_t UnmapVmoRangeLocked(uint64_t start, uint64_t size) const;

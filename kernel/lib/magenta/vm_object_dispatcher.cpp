@@ -114,3 +114,17 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
             return ERR_INVALID_ARGS;
     }
 }
+
+mx_status_t VmObjectDispatcher::Clone(uint32_t options, uint64_t offset, uint64_t size,
+        mxtl::RefPtr<VmObject>* clone_vmo) {
+    canary_.Assert();
+
+    LTRACEF("options 0x%x offset %#" PRIx64 " size %#" PRIx64 "\n",
+            options, offset, size);
+
+    if (options & MX_VMO_CLONE_COPY_ON_WRITE) {
+        return vmo_->CloneCOW(offset, size, clone_vmo);
+    } else {
+        return ERR_INVALID_ARGS;
+    }
+}

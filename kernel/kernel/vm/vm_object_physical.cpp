@@ -29,7 +29,7 @@ VmObjectPhysical::VmObjectPhysical(paddr_t base, uint64_t size)
 }
 
 VmObjectPhysical::~VmObjectPhysical() {
-    DEBUG_ASSERT(magic_ == MAGIC);
+    canary_.Assert();
     LTRACEF("%p\n", this);
 }
 
@@ -52,10 +52,7 @@ mxtl::RefPtr<VmObject> VmObjectPhysical::Create(paddr_t base, uint64_t size) {
 }
 
 void VmObjectPhysical::Dump(uint depth, bool verbose) {
-    if (magic_ != MAGIC) {
-        printf("VmObjectPhysical at %p has bad magic\n", this);
-        return;
-    }
+    canary_.Assert();
 
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
@@ -65,6 +62,8 @@ void VmObjectPhysical::Dump(uint depth, bool verbose) {
 
 // get the physical address of a page at offset
 status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t** _page, paddr_t* _pa) TA_REQ(lock_) {
+    canary_.Assert();
+
     if (_page)
         *_page = nullptr;
 
@@ -82,7 +81,7 @@ status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, vm_page
 
 status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
                                       size_t buffer_size) {
-    DEBUG_ASSERT(magic_ == MAGIC);
+    canary_.Assert();
 
     if (unlikely(len == 0))
         return ERR_INVALID_ARGS;

@@ -158,3 +158,64 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
 
     return vmo->RangeOp(op, offset, size, _buffer, buffer_size);
 }
+
+mx_status_t sys_vmo_clone(mx_handle_t handle, uint32_t options, uint64_t offset, uint64_t size,
+        user_ptr<mx_handle_t>(_out_handle)) {
+    LTRACEF("handle %d options %#x offset %#" PRIx64 " size %#" PRIx64 "\n",
+            handle, options, offset, size);
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mx_status_t status;
+    mxtl::RefPtr<VmObject> clone_vmo;
+    mx_rights_t in_rights;
+
+    {
+        // lookup the dispatcher from handle, save a copy of the rights for later
+        mxtl::RefPtr<VmObjectDispatcher> vmo;
+        status = up->GetDispatcherWithRights(handle, MX_RIGHT_DUPLICATE | MX_RIGHT_READ, &vmo, &in_rights);
+        if (status != NO_ERROR)
+            return status;
+
+        // clone the vmo into a new one
+        status = vmo->Clone(options, offset, size, &clone_vmo);
+        if (status != NO_ERROR)
+            return status;
+
+        DEBUG_ASSERT(clone_vmo);
+    }
+
+    // create a Vm Object dispatcher
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    mx_rights_t default_rights;
+    mx_status_t result = VmObjectDispatcher::Create(mxtl::move(clone_vmo), &dispatcher, &default_rights);
+    if (result != NO_ERROR)
+        return result;
+
+    // set the rights to the new handle to no greater than the input handle + WRITE
+    mx_rights_t rights = in_rights;
+    if (options & MX_VMO_CLONE_COPY_ON_WRITE) {
+        rights |= MX_RIGHT_WRITE;
+
+        // HACK: set X and MAP bits to keep the user loader working
+        // will want to trim these so that the new clone doesn't have more permissions than
+        // the original.
+        rights |= MX_RIGHT_EXECUTE;
+        rights |= MX_RIGHT_MAP;
+    }
+
+    // make sure we're somehow not elevating rights beyond what a new vmo should have
+    DEBUG_ASSERT((default_rights & rights) == rights);
+
+    // create a handle and attach the dispatcher to it
+    HandleOwner clone_handle(MakeHandle(mxtl::move(dispatcher), rights));
+    if (!clone_handle)
+        return ERR_NO_MEMORY;
+
+    if (_out_handle.copy_to_user(up->MapHandleToValue(clone_handle)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    up->AddHandle(mxtl::move(clone_handle));
+
+    return NO_ERROR;
+}
