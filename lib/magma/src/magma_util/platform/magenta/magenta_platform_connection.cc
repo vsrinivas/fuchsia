@@ -6,15 +6,9 @@
 #include "platform_connection.h"
 
 #include "mx/channel.h"
-#include "mx/waitset.h"
 #include <list>
+#include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <map>
-#include <mutex>
-#include <thread>
-
-constexpr uint32_t kCookieChannel = 1;
-constexpr uint32_t kCookieShutdown = 2;
 
 namespace magma {
 
@@ -135,11 +129,10 @@ class MagentaPlatformConnection : public PlatformConnection,
                                   public std::enable_shared_from_this<MagentaPlatformConnection> {
 public:
     MagentaPlatformConnection(std::unique_ptr<Delegate> delegate, mx::channel local_endpoint,
-                              mx::channel remote_endpoint, mx::waitset waitset,
+                              mx::channel remote_endpoint,
                               std::unique_ptr<magma::PlatformEvent> shutdown_event)
         : magma::PlatformConnection(std::move(shutdown_event)), delegate_(std::move(delegate)),
-          local_endpoint_(std::move(local_endpoint)), remote_endpoint_(std::move(remote_endpoint)),
-          waitset_(std::move(waitset))
+          local_endpoint_(std::move(local_endpoint)), remote_endpoint_(std::move(remote_endpoint))
     {
     }
 
@@ -154,30 +147,27 @@ public:
         uint8_t bytes[num_bytes];
         mx_handle_t handles[kNumHandles];
 
-        mx_signals_t pending = 0;
+        auto shutdown_event = static_cast<MagentaPlatformEvent*>(ShutdownEvent().get());
 
-        uint32_t num_results = 2;
-        mx_waitset_result_t results[num_results];
+        constexpr uint32_t kIndexChannel = 0;
+        constexpr uint32_t kIndexShutdown = 1;
 
-        if (waitset_.wait(MX_TIME_INFINITE, results, &num_results) != NO_ERROR)
-            return DRETF(false, "waitset::wait failed");
+        constexpr uint32_t wait_item_count = 2;
+        mx_wait_item_t wait_items[wait_item_count];
+        wait_items[kIndexChannel] = {local_endpoint_.get(),
+                                      MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, 0};
+        wait_items[kIndexShutdown] = {shutdown_event->mx_handle(), shutdown_event->mx_signal(), 0};
 
-        for (uint32_t i = 0; i < num_results; i++) {
-            switch (results[i].cookie) {
-                case kCookieChannel:
-                    if (results[i].status != NO_ERROR)
-                        return DRETF(false, "error in waitset result: %d", results[i].status);
-                    pending = results[i].observed;
-                    break;
+        if (mx_object_wait_many(wait_items, wait_item_count, MX_TIME_INFINITE) != NO_ERROR)
+            return DRETF(false, "wait_many failed");
 
-                case kCookieShutdown:
-                    DASSERT(results[i].status == NO_ERROR);
-                    DASSERT(results[i].observed);
-                    return false;
-            }
-        }
+        if (wait_items[kIndexShutdown].pending & shutdown_event->mx_signal())
+            return DRETF(false, "shutdown event signalled");
 
-        if (pending & MX_CHANNEL_READABLE) {
+        if (wait_items[kIndexChannel].pending & MX_CHANNEL_PEER_CLOSED)
+            return DRETF(false, "remote endpoint closed");
+
+        if (wait_items[kIndexChannel].pending & MX_CHANNEL_READABLE) {
             auto status = local_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
                                                kNumHandles, &actual_handles);
             if (status != NO_ERROR)
@@ -236,13 +226,12 @@ public:
             }
 
             if (!success)
-                return DRETF(false, "failed to interperet message");
-        } else if (pending & MX_CHANNEL_PEER_CLOSED) {
-            DLOG("remote endpoint closed");
-            return false;
+                return DRETF(false, "failed to interpret message");
         }
+
         if (error_)
             return DRETF(false, "PlatformConnection encountered fatal error");
+
         return true;
     }
 
@@ -385,7 +374,6 @@ private:
     std::unique_ptr<Delegate> delegate_;
     mx::channel local_endpoint_;
     mx::channel remote_endpoint_;
-    mx::waitset waitset_;
     magma_status_t error_{};
 };
 
@@ -630,28 +618,12 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
     if (status != NO_ERROR)
         return DRETP(nullptr, "mx::channel::create failed");
 
-    mx::waitset waitset;
-    status = mx::waitset::create(0, &waitset);
-    if (status != NO_ERROR)
-        return DRETP(nullptr, "mx::waitset::create failed");
-
-    status = waitset.add(kCookieChannel, local_endpoint.get(),
-                         MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
-    if (status != NO_ERROR)
-        return DRETP(nullptr, "mx::waitset::add failed");
-
     auto shutdown_event = magma::PlatformEvent::Create();
     DASSERT(shutdown_event);
 
-    auto event = static_cast<MagentaPlatformEvent*>(shutdown_event.get());
-
-    status = waitset.add(kCookieShutdown, event->mx_handle(), event->mx_signal());
-    if (status != NO_ERROR)
-        return DRETP(nullptr, "mx::waitset::add failed");
-
-    return std::shared_ptr<MagentaPlatformConnection>(new MagentaPlatformConnection(
-        std::move(delegate), std::move(local_endpoint), std::move(remote_endpoint),
-        std::move(waitset), std::move(shutdown_event)));
+    return std::shared_ptr<MagentaPlatformConnection>(
+        new MagentaPlatformConnection(std::move(delegate), std::move(local_endpoint),
+                                      std::move(remote_endpoint), std::move(shutdown_event)));
 }
 
 } // namespace magma
