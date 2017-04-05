@@ -9,19 +9,11 @@
 #include <vector>
 
 #include "apps/maxwell/services/action_log/action_log.fidl.h"
+#include "apps/maxwell/src/action_log/action_log_data.h"
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {
-
-class ActionLogData {
- public:
-  void Append(std::string action);
-  // TODO(azani): Make the log readable somehow.
-
- private:
-  std::vector<std::string> log_;
-};
 
 class ActionLogFactoryImpl : public ActionLogFactory {
  public:
@@ -40,16 +32,13 @@ class ActionLogFactoryImpl : public ActionLogFactory {
 
 class ActionLogImpl : public ActionLog {
  public:
-  ActionLogImpl(const std::string module_url,
-      std::shared_ptr<ActionLogData> action_log)
-    : module_url_(module_url), action_log_(action_log) {}
+  ActionLogImpl(ActionLogger log_action) : log_action_(log_action) {}
 
   void LogAction(const fidl::String& method,
                  const fidl::String& params) override;
 
  private:
-  std::string module_url_;
-  std::shared_ptr<ActionLogData> action_log_;
+  ActionLogger log_action_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ActionLogImpl);
 };
