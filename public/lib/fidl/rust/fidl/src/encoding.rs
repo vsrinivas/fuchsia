@@ -4,9 +4,10 @@
 
 //! Support for serializing and deserializing to fidl wire format.
 
-use std::mem;
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::mem;
+use std::ptr;
 
 use DecodeBuf;
 use EncodeBuf;
@@ -506,13 +507,10 @@ impl<T: Decodable> DecodablePtr for Vec<T> {
 impl_encodable_ptr!((T: Encodable) Vec<T>);
 impl_decodable_ptr!((T: Decodable) Vec<T>);
 
-// We only implement fixed size arrays of copyable elements, because it's
-// difficult to move elements in and out safely. In practice, fixed sized
-// arrays are only used for primitives.
 macro_rules! impl_codable_for_fixed_array {
     ($($len:expr),*) => {
         $(
-        impl<T: Encodable + Copy> EncodablePtr for [T; $len] {
+        impl<T: Encodable> EncodablePtr for [T; $len] {
             fn body_size(&self) -> usize {
                 8 + T::vec_size($len)
             }
@@ -523,28 +521,37 @@ macro_rules! impl_codable_for_fixed_array {
 
             // TODO: specializing for u8 at least would be nice
             fn encode_body(self, buf: &mut EncodeBuf, base: usize) {
-                let mut offset = 0;
-                for item in &self {
-                    item.encode(buf, base, offset);
-                    offset += T::size();
+                // Copy into a Vec, because moving out of a fixed size array is hard
+                // TODO: figure out a more efficient way, or, alternatively, choose
+                // a different Rust type to map fixed-size arrays in fidl
+                let mut v: Vec<T> = Vec::with_capacity($len);
+                unsafe {
+                    ptr::copy_nonoverlapping(self.as_ptr(), v.as_mut_ptr(), $len);
+                    mem::forget(self);
+                    v.set_len($len);
                 }
+                v.encode_body(buf, base);
             }
         }
-        impl<T: Decodable + Copy + Default> DecodablePtr for [T; $len] {
+        impl<T: Decodable> DecodablePtr for [T; $len] {
             fn decode_body(buf: &mut DecodeBuf, size: u32, val: u32, base: usize) -> Result<Self> {
                 let len = val as usize;
                 if len != $len || size as usize != 8 + T::vec_size($len) {
                     return Err(Error::Invalid);
                 }
-                let mut result = [Default::default(); $len];
-                for i in 0..$len {
-                    result[i] = try!(T::decode(buf, base, i * T::size()));
+                // Decode into a Vec, then copy out. Similar reason and concerns as
+                // encode case.
+                let mut v = try!(Vec::<T>::decode_body(buf, size, val, base));
+                unsafe {
+                    let mut result: [T; $len] = mem::uninitialized();
+                    ptr::copy_nonoverlapping(v.as_ptr(), result.as_mut_ptr(), $len);
+                    v.set_len(0);
+                    Ok(result)
                 }
-                Ok(result)
             }
         }
-        impl_encodable_ptr!((T: Encodable + Copy) [T; $len]);
-        impl_decodable_ptr!((T: Decodable + Copy + Default) [T; $len]);
+        impl_encodable_ptr!((T: Encodable) [T; $len]);
+        impl_decodable_ptr!((T: Decodable) [T; $len]);
         )*
     };
 }
