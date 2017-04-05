@@ -224,6 +224,10 @@ typedef struct mx_info_task_stats {
 } mx_info_task_stats_t;
 ```
 
+Additional errors:
+
+*   **ERR_BAD_STATE**: If the target process is not currently running.
+
 ## RETURN VALUE
 
 **mx_object_get_info**() returns **NO_ERROR** on success. In the event of

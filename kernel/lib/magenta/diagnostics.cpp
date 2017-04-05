@@ -276,11 +276,9 @@ class VmCounter final : public VmEnumerator {
 public:
     bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
                      uint depth) override {
-        if (map->IsAliveLocked()) {
-            usage.mapped_pages += map->size() / PAGE_SIZE;
-            usage.committed_pages += map->vmo()->AllocatedPagesInRange(
-                map->object_offset(), map->size());
-        }
+        usage.mapped_pages += map->size() / PAGE_SIZE;
+        usage.committed_pages += map->vmo()->AllocatedPagesInRange(
+            map->object_offset(), map->size());
         return true;
     }
 

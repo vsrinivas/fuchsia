@@ -482,14 +482,19 @@ vaddr_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint a
 
 bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
     DEBUG_ASSERT(magic_ == kMagic);
+    DEBUG_ASSERT(ve != nullptr);
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     for (auto& child : subregions_) {
+        DEBUG_ASSERT(child.IsAliveLocked());
         if (child.is_mapping()) {
-            if (!ve->OnVmMapping(child.as_vm_mapping().get(), this, depth)) {
+            VmMapping* mapping = child.as_vm_mapping().get();
+            DEBUG_ASSERT(mapping != nullptr);
+            if (!ve->OnVmMapping(mapping, this, depth)) {
                 return false;
             }
         } else {
             VmAddressRegion* vmar = child.as_vm_address_region().get();
+            DEBUG_ASSERT(vmar != nullptr);
             if (!ve->OnVmAddressRegion(vmar, depth)) {
                 return false;
             }

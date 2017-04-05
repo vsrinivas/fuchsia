@@ -490,6 +490,11 @@ status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
 }
 
 status_t ProcessDispatcher::GetStats(mx_info_task_stats_t* stats) {
+    DEBUG_ASSERT(stats != nullptr);
+    AutoLock lock(&state_lock_);
+    if (state_ != State::RUNNING) {
+        return ERR_BAD_STATE;
+    }
     VmAspace::vm_usage_t usage;
     status_t s = aspace_->GetMemoryUsage(&usage);
     if (s != NO_ERROR) {

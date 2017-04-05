@@ -104,10 +104,6 @@ public:
     uint32_t flags() const { return flags_; }
     const mxtl::RefPtr<VmAspace>& aspace() const { return aspace_; }
 
-    // Returns true if the instance is alive and reporting information that
-    // reflects the address space layout. |aspace()->lock()| must be held.
-    bool IsAliveLocked() const;
-
     // Recursively compute the number of allocated pages within this region
     virtual size_t AllocatedPages() const;
 
@@ -155,6 +151,10 @@ protected:
         const size_t offset = base - base_;
         return base >= base_ && offset < size_ && size_ - offset >= size;
     }
+
+    // Returns true if the instance is alive and reporting information that
+    // reflects the address space layout. |aspace()->lock()| must be held.
+    bool IsAliveLocked() const;
 
     // Version of Destroy() that does not acquire the aspace lock
     virtual status_t DestroyLocked() = 0;
