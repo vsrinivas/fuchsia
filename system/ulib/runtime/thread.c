@@ -32,10 +32,7 @@ mx_status_t mxr_thread_destroy(mxr_thread_t* thread) {
 // to DONE, a caller of mxr_thread_join might complete and deallocate the
 // memory containing the thread descriptor.  Hence it's no longer safe to
 // touch *thread or read anything out of it.  Therefore we must extract the
-// thread handle beforehand.  There is no safe time to change thread->magic,
-// because before thread->state is changed to DONE, mxr_thread_join might be
-// doing CHECK_THREAD; and afterwards, touching *thread at all is unsafe.
-// So a joined threads' ->magic stays as VALID.
+// thread handle beforehand.
 static int begin_exit(mxr_thread_t* thread, mx_handle_t* out_handle) {
     *out_handle = thread->handle;
     thread->handle = MX_HANDLE_INVALID;
@@ -44,7 +41,6 @@ static int begin_exit(mxr_thread_t* thread, mx_handle_t* out_handle) {
 
 static _Noreturn void exit_joinable(mx_handle_t handle) {
     // A later mxr_thread_join call will complete immediately.
-    // The magic stays valid for mxr_thread_join to check.
     if (_mx_handle_close(handle) != NO_ERROR)
         __builtin_trap();
     // If there were no other handles to the thread, closing the handle
