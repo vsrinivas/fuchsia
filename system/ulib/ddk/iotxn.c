@@ -83,7 +83,7 @@ void iotxn_pages_to_sg(mx_paddr_t* pages, iotxn_sg_t* sg, uint32_t len, uint32_t
             sgl += PAGE_SIZE;
         } else {
             sg[sgi].paddr = last;
-            sg[sgi].length = sgl;
+            sg[sgi].length = sgl + PAGE_SIZE;
             sgi += 1;
             last = pages[pi + 1];
             sgl = 0;
@@ -261,7 +261,7 @@ static mx_status_t iotxn_physmap_paged(iotxn_t* txn) {
 
     // adjust for unaligned offset and length
     sg[0].paddr += offset_unaligned;
-    sg[0].length = PAGE_SIZE - offset_unaligned;
+    sg[0].length -= offset_unaligned;
     sg[sg_len - 1].length -= length_unaligned;
 
     txn->sg = sg;
