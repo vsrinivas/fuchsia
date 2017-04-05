@@ -147,7 +147,7 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
       }
 
       _addLabel(text, Colors.white, 20.0, to);
-      _addLabel(_leafAssetToPlay.toString(), Colors.grey[800], 15.0, to);
+      _addLabel(_leafAssetToPlay.uri.toString(), Colors.grey[800], 15.0, to);
     }
   }
 

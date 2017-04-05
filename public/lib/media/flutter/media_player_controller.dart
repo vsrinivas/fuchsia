@@ -56,6 +56,7 @@ class MediaPlayerController extends ChangeNotifier {
   MediaPlayerController(ServiceProvider services) {
     connectToService(services, _mediaService.ctrl);
     connectToService(services, _netMediaService.ctrl);
+    _close(); // Initialize stuff.
   }
 
   /// Opens a URI for playback. If there is no player or player proxy (because
@@ -299,7 +300,7 @@ class MediaPlayerController extends ChangeNotifier {
             new TimelineFunction.fromTransform(status.timelineTransform);
       }
 
-      _hasVideo = status.hasVideo;
+      _hasVideo = status.contentHasVideo;
       _ended = status.endOfStream;
       _playing = !ended &&
           _timelineFunction != null &&
