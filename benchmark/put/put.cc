@@ -20,6 +20,7 @@ namespace {
 constexpr ftl::StringView kStoragePath = "/data/benchmark/ledger/put";
 constexpr ftl::StringView kEntryCountFlag = "entry-count";
 constexpr ftl::StringView kValueSizeFlag = "value-size";
+constexpr ftl::StringView kTransactionFlag = "transaction";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
@@ -40,11 +41,12 @@ fidl::Array<uint8_t> MakeValue(int i, size_t size) {
 
 namespace benchmark {
 
-PutBenchmark::PutBenchmark(int entry_count, int value_size)
+PutBenchmark::PutBenchmark(int entry_count, int value_size, bool transaction)
     : tmp_dir_(kStoragePath),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
-      value_size_(value_size) {
+      value_size_(value_size),
+      transaction_(transaction) {
   FTL_DCHECK(entry_count > 0);
   FTL_DCHECK(value_size > 0);
   tracing::InitializeTracer(application_context_.get(),
@@ -54,16 +56,30 @@ PutBenchmark::PutBenchmark(int entry_count, int value_size)
 void PutBenchmark::Run() {
   ledger::LedgerPtr ledger = benchmark::GetLedger(
       application_context_.get(), &ledger_controller_, "put", tmp_dir_.path());
-  benchmark::GetRootPageEnsureInitialized(ledger.get(),
-                                          [this](ledger::PagePtr page) {
-                                            page_ = std::move(page);
-                                            RunSingle(0, entry_count_);
-                                          });
+  benchmark::GetRootPageEnsureInitialized(
+      ledger.get(), [this](ledger::PagePtr page) {
+        page_ = std::move(page);
+        if (transaction_) {
+          page_->StartTransaction([this](ledger::Status status) {
+            if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
+              return;
+            }
+            TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
+            RunSingle(0, entry_count_);
+          });
+        } else {
+          RunSingle(0, entry_count_);
+        }
+      });
 }
 
 void PutBenchmark::RunSingle(int i, int count) {
   if (i == count) {
-    ShutDown();
+    if (transaction_) {
+      CommitAndMeasure();
+    } else {
+      ShutDown();
+    }
     return;
   }
 
@@ -78,6 +94,18 @@ void PutBenchmark::RunSingle(int i, int count) {
                TRACE_ASYNC_END("benchmark", "put", i);
                RunSingle(i + 1, count);
              });
+}
+
+void PutBenchmark::CommitAndMeasure() {
+  TRACE_ASYNC_BEGIN("benchmark", "commit", 0);
+  page_->Commit([this](ledger::Status status) {
+    if (benchmark::QuitOnError(status, "Page::Commit")) {
+      return;
+    }
+    TRACE_ASYNC_END("benchmark", "commit", 0);
+    TRACE_ASYNC_END("benchmark", "transaction", 0);
+    ShutDown();
+  });
 }
 
 void PutBenchmark::ShutDown() {
@@ -96,6 +124,7 @@ int main(int argc, const char** argv) {
   int entry_count;
   std::string value_size_str;
   int value_size;
+  bool transaction = command_line.HasOption(kTransactionFlag.ToString());
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
       !ftl::StringToNumberWithError(entry_count_str, &entry_count) ||
@@ -109,7 +138,7 @@ int main(int argc, const char** argv) {
   }
 
   mtl::MessageLoop loop;
-  benchmark::PutBenchmark app(entry_count, value_size);
+  benchmark::PutBenchmark app(entry_count, value_size, transaction);
   loop.task_runner()->PostTask([&app] { app.Run(); });
   loop.Run();
   return 0;

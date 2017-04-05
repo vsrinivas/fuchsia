@@ -18,14 +18,16 @@ namespace benchmark {
 // Parameters:
 //   --entry-count=<int> the number of entries to be put
 //   --value-size=<int> the size of a single value in bytes
+//   --transaction whether puts should be bundled into a single transaction
 class PutBenchmark {
  public:
-  PutBenchmark(int entry_count, int value_size);
+  PutBenchmark(int entry_count, int value_size, bool transaction);
 
   void Run();
 
  private:
   void RunSingle(int i, int count);
+  void CommitAndMeasure();
 
   void ShutDown();
 
@@ -33,6 +35,7 @@ class PutBenchmark {
   std::unique_ptr<app::ApplicationContext> application_context_;
   const int entry_count_;
   const int value_size_;
+  const bool transaction_;
 
   app::ApplicationControllerPtr ledger_controller_;
   ledger::PagePtr page_;
