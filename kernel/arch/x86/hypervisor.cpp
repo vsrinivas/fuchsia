@@ -518,10 +518,11 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmwrite(VMCS_XX_HOST_RSP, reinterpret_cast<uint64_t>(&vmx_state_));
     vmwrite(VMCS_XX_HOST_RIP, reinterpret_cast<uint64_t>(vmx_exit_entry));
 
-    // Setup VMCS guest state.
+    vmx_state_.host_state.star = read_msr(X86_MSR_IA32_STAR);
+    vmx_state_.host_state.lstar = read_msr(X86_MSR_IA32_LSTAR);
+    vmx_state_.host_state.fmask = read_msr(X86_MSR_IA32_FMASK);
 
-    // For now, we're aiming for a basic 64-bit guest that's able to execute a couple of
-    // instructions and exit - we're not there yet.
+    // Setup VMCS guest state.
 
     uint64_t cr0 = X86_CR0_PE | // Enable protected mode
                    X86_CR0_PG | // Enable paging
@@ -602,6 +603,12 @@ void vmx_exit(VmxState* vmx_state) {
     // Reload the interrupt descriptor table in order to restore its limit. VMX
     // always restores it with a limit of 0xffff, which is too large.
     idt_load(idt_get_readonly());
+
+    // TODO(abdulla): Optimise this, and don't do it unconditionally.
+    write_msr(X86_MSR_IA32_STAR, vmx_state->host_state.star);
+    write_msr(X86_MSR_IA32_LSTAR, vmx_state->host_state.lstar);
+    write_msr(X86_MSR_IA32_FMASK, vmx_state->host_state.fmask);
+    write_msr(X86_MSR_IA32_KERNEL_GS_BASE, vmx_state->host_state.kernel_gs_base);
 }
 
 static void vmexit_handler(uint64_t reason) {
@@ -621,6 +628,9 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context) {
     vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
     // CR3 is used to maintain the virtual address space — save for this thread.
     vmwrite(VMCS_XX_HOST_CR3, x86_get_cr3());
+    // Kernel GS stores the user-space GS (within the kernel) — as the calling
+    // user-space thread may change, save this every time.
+    vmx_state_.host_state.kernel_gs_base = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
 
     if (do_resume_) {
         dprintf(SPEW, "re-entering guest\n");
