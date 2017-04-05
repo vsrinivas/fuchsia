@@ -98,10 +98,10 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
 StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
     : page_watcher_binding_(this),
       story_page_(story_page),
-      story_snapshot_("StoryStorageImpl") {
+      story_client_("StoryStorageImpl") {
   FTL_DCHECK(story_page_);
   story_page_->GetSnapshot(
-      story_snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
+      story_client_.NewRequest(), page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR)
@@ -115,8 +115,8 @@ StoryStorageImpl::~StoryStorageImpl() = default;
 
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
                                     const DataCallback& callback) {
-  new ReadLinkDataCall(&operation_queue_, story_snapshot_.shared_ptr(), link_id,
-                       callback);
+  new ReadLinkDataCall(&operation_queue_, story_client_.page_snapshot(),
+                       link_id, callback);
 }
 
 void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
@@ -162,7 +162,7 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
   //
   // For continued updates, we only request the snapshot once, in the
   // last OnChange() notification.
-  callback(story_snapshot_.Update(result_state));
+  callback(story_client_.Update(result_state));
 }
 
 }  // namespace modular

@@ -6,7 +6,6 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/fidl/page_snapshot.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/time/time_point.h"
@@ -108,8 +107,8 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
     : device_name_(device_name),
       page_(page),
       page_watcher_binding_(this),
-      snapshot_("DeviceMapImpl") {
-  page_->GetSnapshot(snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
+      client_("DeviceMapImpl") {
+  page_->GetSnapshot(client_.NewRequest(), page_watcher_binding_.NewBinding(),
                      [](ledger::Status status) {
                        if (status != ledger::Status::OK) {
                          FTL_LOG(ERROR)
@@ -127,7 +126,7 @@ void DeviceMapImpl::AddBinding(fidl::InterfaceRequest<DeviceMap> request) {
 }
 
 void DeviceMapImpl::Query(const QueryCallback& callback) {
-  new QueryCall(&operation_queue_, snapshot_.shared_ptr(), callback);
+  new QueryCall(&operation_queue_, client_.page_snapshot(), callback);
 }
 
 void DeviceMapImpl::OnChange(ledger::PageChangePtr page,
@@ -147,7 +146,7 @@ void DeviceMapImpl::OnChange(ledger::PageChangePtr page,
   // do this regardless of continuation state, because there might be
   // no keys we listen to in the last continuation.
   if (update) {
-    callback(snapshot_.NewRequest());
+    callback(client_.NewRequest());
   } else {
     callback(nullptr);
   }

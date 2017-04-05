@@ -34,8 +34,8 @@ source_set("json_xdr") {
 
 source_set("ledger") {
   sources = [
-    "page_snapshot.cc",
-    "page_snapshot.h",
+    "page_client.cc",
+    "page_client.h",
   ]
 
   deps = [

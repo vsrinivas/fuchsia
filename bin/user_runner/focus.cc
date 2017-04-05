@@ -6,7 +6,6 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/fidl/page_snapshot.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/time/time_point.h"
@@ -105,10 +104,10 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
 FocusHandler::FocusHandler(const fidl::String& device_name,
                            ledger::Page* const page)
     : page_(page),
-      snapshot_("FocusHandler"),
+      client_("FocusHandler"),
       page_watcher_binding_(this),
       device_name_(device_name) {
-  page_->GetSnapshot(snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
+  page_->GetSnapshot(client_.NewRequest(), page_watcher_binding_.NewBinding(),
                      [](ledger::Status status) {
                        if (status != ledger::Status::OK) {
                          FTL_LOG(ERROR)
@@ -130,7 +129,7 @@ void FocusHandler::AddControllerBinding(
 }
 
 void FocusHandler::Query(const QueryCallback& callback) {
-  new QueryCall(&operation_queue_, snapshot_.shared_ptr(), callback);
+  new QueryCall(&operation_queue_, client_.page_snapshot(), callback);
 }
 
 void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
@@ -217,7 +216,7 @@ void FocusHandler::OnChange(ledger::PageChangePtr page,
       result_state != ledger::ResultState::PARTIAL_COMPLETED) {
     callback(nullptr);
   } else {
-    callback(snapshot_.NewRequest());
+    callback(client_.NewRequest());
   }
 }
 

@@ -11,7 +11,7 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/fidl/page_snapshot.h"
+#include "apps/modular/lib/fidl/page_client.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"
@@ -58,7 +58,7 @@ class StoryStorageImpl : ledger::PageWatcher {
   ledger::Page* const story_page_;
 
   // The current snapshot of the page obtained by watching it.
-  PageSnapshot story_snapshot_;
+  PageClient story_client_;
 
   // All asynchronous operations are sequenced by this operation
   // queue.

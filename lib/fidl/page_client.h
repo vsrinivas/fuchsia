@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_FIDL_PAGE_SNAPSHOT_H_
-#define APPS_MODULAR_LIB_FIDL_PAGE_SNAPSHOT_H_
+#ifndef APPS_MODULAR_LIB_FIDL_PAGE_CLIENT_H_
+#define APPS_MODULAR_LIB_FIDL_PAGE_CLIENT_H_
 
 #include <string>
 
@@ -16,7 +16,7 @@ namespace modular {
 // A helper class that holds on to a page snapshot through a shared
 // pointer, hands out shared pointers to it, can replace the snapshot
 // by a new one, and registers a connection error handler on it. It
-// essentially wraps ledger::PageSnapshot, hence the name.
+// essentially wraps ledger::PageSnapshot.
 //
 // This is used by classes that hold onto a PageSnapshot and update it
 // in return calls from PageWatcher notifications, and use Operation
@@ -38,11 +38,11 @@ namespace modular {
 // The same behavior was with a shared_ptr could be accomplished with
 // a duplicate PageSnaphotPtr for each Operation instance that needs
 // one, but PageSnapshot doesn't have a duplicate method.
-class PageSnapshot {
+class PageClient {
  public:
   // Takes a context name as a label for the error messages it logs.
-  explicit PageSnapshot(const std::string& context);
-  ~PageSnapshot();
+  explicit PageClient(const std::string& context);
+  ~PageClient();
 
   // Replaces the previous page snapshot with a newly requested one.
   fidl::InterfaceRequest<ledger::PageSnapshot> NewRequest();
@@ -54,16 +54,16 @@ class PageSnapshot {
       ledger::ResultState result_state);
 
   // Returns the current page snapshot.
-  std::shared_ptr<ledger::PageSnapshotPtr> shared_ptr() {
+  std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot() {
     return page_snapshot_;
   }
 
  private:
   const std::string context_;
   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageSnapshot);
+  FTL_DISALLOW_COPY_AND_ASSIGN(PageClient);
 };
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_FIDL_PAGE_SNAPSHOT_H_
+#endif  // APPS_MODULAR_LIB_FIDL_PAGE_CLIENT_H_

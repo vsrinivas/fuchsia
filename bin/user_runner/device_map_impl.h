@@ -7,7 +7,7 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/fidl/page_snapshot.h"
+#include "apps/modular/lib/fidl/page_client.h"
 #include "apps/modular/services/user/device_map.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -40,7 +40,7 @@ class DeviceMapImpl : DeviceMap, ledger::PageWatcher {
   fidl::BindingSet<DeviceMap> bindings_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
-  PageSnapshot snapshot_;
+  PageClient client_;
   OperationQueue operation_queue_;
 
   // Operations implemented here.

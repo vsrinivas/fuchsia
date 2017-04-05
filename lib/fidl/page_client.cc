@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/fidl/page_snapshot.h"
+#include "apps/modular/lib/fidl/page_client.h"
 
 namespace modular {
 
-PageSnapshot::PageSnapshot(const std::string& context) : context_(context) {}
+PageClient::PageClient(const std::string& context) : context_(context) {}
 
-PageSnapshot::~PageSnapshot() = default;
+PageClient::~PageClient() = default;
 
-fidl::InterfaceRequest<ledger::PageSnapshot> PageSnapshot::NewRequest() {
+fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   page_snapshot_.reset(new ledger::PageSnapshotPtr);
   auto ret = (*page_snapshot_).NewRequest();
   (*page_snapshot_).set_connection_error_handler([this] {
@@ -20,7 +20,7 @@ fidl::InterfaceRequest<ledger::PageSnapshot> PageSnapshot::NewRequest() {
   return ret;
 }
 
-fidl::InterfaceRequest<ledger::PageSnapshot> PageSnapshot::Update(
+fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::Update(
     const ledger::ResultState result_state) {
   switch (result_state) {
     case ledger::ResultState::PARTIAL_CONTINUED:

@@ -11,7 +11,7 @@
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/fidl/page_snapshot.h"
+#include "apps/modular/lib/fidl/page_client.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -48,7 +48,7 @@ class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
                 const OnChangeCallback& callback) override;
 
   ledger::Page* const page_;
-  PageSnapshot snapshot_;
+  PageClient client_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
   const std::string device_name_;

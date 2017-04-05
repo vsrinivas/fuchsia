@@ -567,12 +567,12 @@ StoryProviderImpl::StoryProviderImpl(
       ledger_(ledger),
       root_page_(root_page),
       story_shell_(std::move(story_shell)),
-      root_snapshot_("StoryProviderImpl"),
+      root_client_("StoryProviderImpl"),
       page_watcher_binding_(this),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider) {
   root_page_->GetSnapshot(
-      root_snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
+      root_client_.NewRequest(), page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR)
@@ -586,7 +586,7 @@ StoryProviderImpl::StoryProviderImpl(
   // story. Hence we bind the interface request only after this call
   // completes.
   new PreviousStoriesCall(
-      &operation_queue_, root_snapshot_.shared_ptr(),
+      &operation_queue_, root_client_.page_snapshot(),
       [this](fidl::Array<fidl::String> stories) {
         for (auto& story_id : stories) {
           story_ids_.insert(story_id.get());
@@ -627,8 +627,8 @@ void StoryProviderImpl::Watch(
 void StoryProviderImpl::GetStoryData(
     const fidl::String& story_id,
     const std::function<void(StoryDataPtr)>& result) {
-  new GetStoryDataCall(&operation_queue_, root_snapshot_.shared_ptr(), story_id,
-                       result);
+  new GetStoryDataCall(&operation_queue_, root_client_.page_snapshot(),
+                       story_id, result);
 }
 
 ledger::PagePtr StoryProviderImpl::GetStoryPage(
@@ -683,7 +683,8 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 // |StoryProvider|
 void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
                                      const GetStoryInfoCallback& callback) {
-  new GetStoryDataCall(&operation_queue_, root_snapshot_.shared_ptr(), story_id,
+  new GetStoryDataCall(&operation_queue_, root_client_.page_snapshot(),
+                       story_id,
                        [this, callback](StoryDataPtr story_data) {
                          callback(story_data.is_null()
                                       ? nullptr
@@ -696,14 +697,14 @@ void StoryProviderImpl::GetController(
     const fidl::String& story_id,
     fidl::InterfaceRequest<StoryController> request) {
   new GetControllerCall(&operation_queue_, ledger_, root_page_,
-                        root_snapshot_.shared_ptr(), this, &story_controllers_,
-                        story_id, std::move(request));
+                        root_client_.page_snapshot(), this,
+                        &story_controllers_, story_id, std::move(request));
 }
 
 // |StoryProvider|
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
-  new PreviousStoriesCall(&operation_queue_, root_snapshot_.shared_ptr(),
+  new PreviousStoriesCall(&operation_queue_, root_client_.page_snapshot(),
                           callback);
 }
 
@@ -770,7 +771,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   //
   // For continued updates, we only request the snapshot once, in the
   // last OnChange() notification.
-  callback(root_snapshot_.Update(result_state));
+  callback(root_client_.Update(result_state));
 }
 
 }  // namespace modular

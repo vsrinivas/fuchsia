@@ -12,7 +12,7 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/fidl/page_snapshot.h"
+#include "apps/modular/lib/fidl/page_client.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
@@ -130,7 +130,7 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   std::unordered_set<std::string> story_ids_;
 
   // The last snapshot received from the root page.
-  PageSnapshot root_snapshot_;
+  PageClient root_client_;
 
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
