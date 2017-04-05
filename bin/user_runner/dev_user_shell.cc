@@ -41,10 +41,9 @@ class Settings {
   std::string story_id;
 };
 
-class DevUserShellApp
-    : modular::StoryWatcher,
-      maxwell::SuggestionListener,
-      modular::SingleServiceViewApp<modular::UserShell> {
+class DevUserShellApp : modular::StoryWatcher,
+                        maxwell::SuggestionListener,
+                        modular::SingleServiceViewApp<modular::UserShell> {
  public:
   explicit DevUserShellApp(const Settings& settings)
       : settings_(settings), story_watcher_binding_(this) {}

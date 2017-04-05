@@ -27,10 +27,8 @@ class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
   FocusHandler(const fidl::String& device_name, ledger::Page* page);
   ~FocusHandler() override;
 
-  void AddProviderBinding(
-      fidl::InterfaceRequest<FocusProvider> request);
-  void AddControllerBinding(
-      fidl::InterfaceRequest<FocusController> request);
+  void AddProviderBinding(fidl::InterfaceRequest<FocusProvider> request);
+  void AddControllerBinding(fidl::InterfaceRequest<FocusController> request);
 
  private:
   // |FocusProvider|

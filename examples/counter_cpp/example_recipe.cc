@@ -311,14 +311,14 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         });
 
     device_map_ = application_context()
-        ->ConnectToEnvironmentService<modular::DeviceMap>();
+                      ->ConnectToEnvironmentService<modular::DeviceMap>();
 
     device_map_->Query([](fidl::Array<fidl::String> devices) {
-        FTL_LOG(INFO) << "Known devices:";
-        for (auto& device : devices) {
-          FTL_LOG(INFO) << " - " << device;
-        }
-      });
+      FTL_LOG(INFO) << "Known devices:";
+      for (auto& device : devices) {
+        FTL_LOG(INFO) << " - " << device;
+      }
+    });
   }
 
   // |Module|

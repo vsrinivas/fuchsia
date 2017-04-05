@@ -58,11 +58,10 @@ class Settings {
   bool test{};
 };
 
-class DummyUserShellApp
-    : modular::StoryWatcher,
-      modular::StoryProviderWatcher,
-      modular::LinkWatcher,
-      modular::SingleServiceViewApp<modular::UserShell> {
+class DummyUserShellApp : modular::StoryWatcher,
+                          modular::StoryProviderWatcher,
+                          modular::LinkWatcher,
+                          modular::SingleServiceViewApp<modular::UserShell> {
  public:
   explicit DummyUserShellApp(const Settings& settings)
       : settings_(settings),
@@ -247,8 +246,7 @@ class DummyUserShellApp
     // Show the new story.
     view_->ConnectView(std::move(story_view));
 
-    story_controller_->AddModule("second",
-                                 settings_.second_module, "root2");
+    story_controller_->AddModule("second", settings_.second_module, "root2");
   }
 
   // Every five counter increments, we dehydrate and rehydrate the story.

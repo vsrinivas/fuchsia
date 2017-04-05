@@ -35,7 +35,7 @@ void WriteDeviceName(std::string device_name, ledger::Page* const page) {
   XdrWrite(&json, &device_name, XdrFilter<std::string>);
 
   std::string key{kDeviceKeyPrefix + device_name};
-  page->Put(to_array(key), to_array(json), [](ledger::Status){});
+  page->Put(to_array(key), to_array(json), [](ledger::Status) {});
 }
 
 }  // namespace
@@ -44,12 +44,10 @@ void WriteDeviceName(std::string device_name, ledger::Page* const page) {
 
 class DeviceMapImpl::QueryCall : Operation<fidl::Array<fidl::String>> {
  public:
-  QueryCall(
-      OperationContainer* const container,
-      std::shared_ptr<ledger::PageSnapshotPtr> const snapshot,
-      ResultCall result_call)
-      : Operation(container, std::move(result_call)),
-        snapshot_(snapshot) {
+  QueryCall(OperationContainer* const container,
+            std::shared_ptr<ledger::PageSnapshotPtr> const snapshot,
+            ResultCall result_call)
+      : Operation(container, std::move(result_call)), snapshot_(snapshot) {
     data_.resize(0);  // never return null
     Ready();
   }
@@ -58,45 +56,46 @@ class DeviceMapImpl::QueryCall : Operation<fidl::Array<fidl::String>> {
   void Run() override { GetEntries(nullptr); }
 
   void GetEntries(fidl::Array<uint8_t> continuation_token) {
-    (*snapshot_)->GetEntries(
-        to_array(kDeviceKeyPrefix), std::move(continuation_token),
-        [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
-               fidl::Array<uint8_t> continuation_token) {
-          if (status != ledger::Status::OK &&
-              status != ledger::Status::PARTIAL_RESULT) {
-            FTL_LOG(ERROR) << "Ledger status " << status << ".";
-            Done(std::move(data_));
-            return;
-          }
+    (*snapshot_)
+        ->GetEntries(
+            to_array(kDeviceKeyPrefix), std::move(continuation_token),
+            [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
+                   fidl::Array<uint8_t> continuation_token) {
+              if (status != ledger::Status::OK &&
+                  status != ledger::Status::PARTIAL_RESULT) {
+                FTL_LOG(ERROR) << "Ledger status " << status << ".";
+                Done(std::move(data_));
+                return;
+              }
 
-          if (entries.size() == 0) {
-            // No existing entries.
-            Done(std::move(data_));
-            return;
-          }
+              if (entries.size() == 0) {
+                // No existing entries.
+                Done(std::move(data_));
+                return;
+              }
 
-          for (const auto& entry : entries) {
-            std::string value;
-            if (!mtl::StringFromVmo(entry->value, &value)) {
-              FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
-                             << " couldn't be copied.";
-              continue;
-            }
+              for (const auto& entry : entries) {
+                std::string value;
+                if (!mtl::StringFromVmo(entry->value, &value)) {
+                  FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
+                                 << " couldn't be copied.";
+                  continue;
+                }
 
-            std::string device_name;
-            if (!XdrRead(value, &device_name, XdrFilter<std::string>)) {
-              continue;
-            }
+                std::string device_name;
+                if (!XdrRead(value, &device_name, XdrFilter<std::string>)) {
+                  continue;
+                }
 
-            data_.push_back(std::move(device_name));
-          }
+                data_.push_back(std::move(device_name));
+              }
 
-          if (status == ledger::Status::PARTIAL_RESULT) {
-            GetEntries(std::move(continuation_token));
-          } else {
-            Done(std::move(data_));
-          }
-        });
+              if (status == ledger::Status::PARTIAL_RESULT) {
+                GetEntries(std::move(continuation_token));
+              } else {
+                Done(std::move(data_));
+              }
+            });
   }
 
   std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
@@ -104,7 +103,8 @@ class DeviceMapImpl::QueryCall : Operation<fidl::Array<fidl::String>> {
   FTL_DISALLOW_COPY_AND_ASSIGN(QueryCall);
 };
 
-DeviceMapImpl::DeviceMapImpl(const std::string& device_name, ledger::Page* const page)
+DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
+                             ledger::Page* const page)
     : device_name_(device_name),
       page_(page),
       page_watcher_binding_(this),
@@ -112,7 +112,8 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name, ledger::Page* const
   page_->GetSnapshot(snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
                      [](ledger::Status status) {
                        if (status != ledger::Status::OK) {
-                         FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;
+                         FTL_LOG(ERROR)
+                             << "Page.GetSnapshot() status: " << status;
                        }
                      });
 

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <iostream>
 #include <magenta/device/devmgr.h>
 #include <magenta/syscalls.h>
-#include <memory>
 #include <unistd.h>
+#include <iostream>
+#include <memory>
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"

@@ -62,16 +62,14 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   // |UserShellContext|
   void GetDeviceName(const GetDeviceNameCallback& callback) override;
-  void GetStoryProvider(
-      fidl::InterfaceRequest<StoryProvider> request) override;
+  void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;
   void GetSuggestionProvider(
       fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override;
   void GetVisibleStoriesController(
       fidl::InterfaceRequest<VisibleStoriesController> request) override;
   void GetFocusController(
       fidl::InterfaceRequest<FocusController> request) override;
-  void GetFocusProvider(
-      fidl::InterfaceRequest<FocusProvider> request) override;
+  void GetFocusProvider(fidl::InterfaceRequest<FocusProvider> request) override;
   void GetLink(fidl::InterfaceRequest<Link> request) override;
 
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
@@ -125,8 +123,6 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };
-
-
 
 }  // namespace modular
 

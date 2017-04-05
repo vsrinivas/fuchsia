@@ -87,9 +87,8 @@ UserRunnerImpl::UserRunnerImpl(
       user_shell_context_binding_(this),
       ledger_repository_(
           ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
-      user_scope_(
-            std::move(application_environment),
-            std::string(kUserScopeLabelPrefix) + to_hex_string(user_id)),
+      user_scope_(std::move(application_environment),
+                  std::string(kUserScopeLabelPrefix) + to_hex_string(user_id)),
       token_provider_impl_(auth_token),
       device_name_(device_name) {
   binding_.set_connection_error_handler([this] { delete this; });
@@ -98,12 +97,11 @@ UserRunnerImpl::UserRunnerImpl(
       GetServiceProvider("file:///system/apps/resolver_main");
   user_scope_.AddService<resolver::Resolver>(
       ftl::MakeCopyable([resolver_service_provider =
-                         std::move(resolver_service_provider)](
-                             fidl::InterfaceRequest<resolver::Resolver>
-                             resolver_service_request) {
-                          ConnectToService(resolver_service_provider.get(),
-                                           std::move(resolver_service_request));
-                        }));
+                             std::move(resolver_service_provider)](
+          fidl::InterfaceRequest<resolver::Resolver> resolver_service_request) {
+        ConnectToService(resolver_service_provider.get(),
+                         std::move(resolver_service_request));
+      }));
 
   user_scope_.AddService<TokenProvider>(
       [this](fidl::InterfaceRequest<TokenProvider> request) {
@@ -114,28 +112,25 @@ UserRunnerImpl::UserRunnerImpl(
 
   // Open Ledger.
 
-  ledger_repository_->GetLedger(
-      to_array(kAppId), ledger_.NewRequest(), [](ledger::Status status) {
-        FTL_CHECK(status == ledger::Status::OK)
-            << "LedgerRepository.GetLedger() failed: "
-            << LedgerStatusToString(status);
-      });
+  ledger_repository_->GetLedger(to_array(kAppId), ledger_.NewRequest(),
+                                [](ledger::Status status) {
+                                  FTL_CHECK(status == ledger::Status::OK)
+                                      << "LedgerRepository.GetLedger() failed: "
+                                      << LedgerStatusToString(status);
+                                });
 
-  ledger_->GetRootPage(
-      root_page_.NewRequest(), [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
-              << "Ledger.GetRootPage() failed: "
-              << LedgerStatusToString(status);
-        }
-      });
+  ledger_->GetRootPage(root_page_.NewRequest(), [](ledger::Status status) {
+    if (status != ledger::Status::OK) {
+      FTL_LOG(ERROR) << "Ledger.GetRootPage() failed: "
+                     << LedgerStatusToString(status);
+    }
+  });
 
   ledger_->SetConflictResolverFactory(
       conflict_resolver_.AddBinding(), [](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
-              << "Ledger.SetConflictResolverFactory() failed: "
-              << LedgerStatusToString(status);
+          FTL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
+                         << LedgerStatusToString(status);
         }
       });
 
@@ -150,15 +145,14 @@ UserRunnerImpl::UserRunnerImpl(
   // Setup MessageQueueManager.
 
   ledger::PagePtr message_queue_page;
-  ledger_->GetPage(
-      to_array(kMessageQueuePageId), message_queue_page.NewRequest(),
-      [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
-              << "Ledger.GetPage(kMessageQueuePageId) failed: "
-              << LedgerStatusToString(status);
-        }
-      });
+  ledger_->GetPage(to_array(kMessageQueuePageId),
+                   message_queue_page.NewRequest(), [](ledger::Status status) {
+                     if (status != ledger::Status::OK) {
+                       FTL_LOG(ERROR)
+                           << "Ledger.GetPage(kMessageQueuePageId) failed: "
+                           << LedgerStatusToString(status);
+                     }
+                   });
   message_queue_manager_.reset(
       new MessageQueueManager(std::move(message_queue_page)));
 
@@ -184,8 +178,7 @@ UserRunnerImpl::UserRunnerImpl(
   //
   // A similar relationship holds between FocusHandler and
   // UserIntelligenceProvider.
-  auto intelligence_provider_request =
-      user_intelligence_provider_.NewRequest();
+  auto intelligence_provider_request = user_intelligence_provider_.NewRequest();
 
   fidl::InterfaceHandle<StoryProvider> story_provider;
   auto story_provider_request = story_provider.NewRequest();
@@ -200,15 +193,15 @@ UserRunnerImpl::UserRunnerImpl(
       user_scope_.GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), user_intelligence_provider_.get()));
 
-  ComponentContextInfo component_context_info{
-    message_queue_manager_.get(), agent_runner_.get(), ledger_repository_.get()};
+  ComponentContextInfo component_context_info{message_queue_manager_.get(),
+                                              agent_runner_.get(),
+                                              ledger_repository_.get()};
 
   maxwell_component_context_impl_.reset(
       new ComponentContextImpl(component_context_info, kMaxwellUrl));
 
-  maxwell_component_context_binding_.reset(
-      new fidl::Binding<ComponentContext>(
-          maxwell_component_context_impl_.get()));
+  maxwell_component_context_binding_.reset(new fidl::Binding<ComponentContext>(
+      maxwell_component_context_impl_.get()));
 
   auto maxwell_services = GetServiceProvider(kMaxwellUrl);
   auto maxwell_factory =
@@ -217,15 +210,13 @@ UserRunnerImpl::UserRunnerImpl(
 
   maxwell_factory->GetUserIntelligenceProvider(
       maxwell_component_context_binding_->NewBinding(),
-      std::move(story_provider),
-      std::move(focus_provider),
+      std::move(story_provider), std::move(focus_provider),
       std::move(visible_stories_provider),
       std::move(intelligence_provider_request));
   // End init maxwell.
 
   story_provider_impl_.reset(new StoryProviderImpl(
-      &user_scope_, ledger_.get(), root_page_.get(),
-      std::move(story_shell),
+      &user_scope_, ledger_.get(), root_page_.get(), std::move(story_shell),
       component_context_info, user_intelligence_provider_.get()));
   story_provider_impl_->AddBinding(std::move(story_provider_request));
 

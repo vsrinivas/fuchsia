@@ -646,8 +646,8 @@ ledger::PagePtr StoryProviderImpl::GetStoryPage(
 
 void StoryProviderImpl::WriteStoryData(StoryDataPtr story_data,
                                        std::function<void()> done) {
-  new WriteStoryDataCall(&operation_queue_, root_page_,
-                         std::move(story_data), done);
+  new WriteStoryDataCall(&operation_queue_, root_page_, std::move(story_data),
+                         done);
 }
 
 // |StoryProvider|
@@ -655,11 +655,9 @@ void StoryProviderImpl::CreateStory(const fidl::String& url,
                                     const CreateStoryCallback& callback) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   FTL_LOG(INFO) << "CreateStory() " << url;
-  new CreateStoryCall(&operation_queue_, ledger_, root_page_, this,
-                      url, story_id, FidlStringMap(), fidl::String(),
-                      [callback, story_id] {
-                        callback(story_id);
-                      });
+  new CreateStoryCall(&operation_queue_, ledger_, root_page_, this, url,
+                      story_id, FidlStringMap(), fidl::String(),
+                      [callback, story_id] { callback(story_id); });
 }
 
 // |StoryProvider|
@@ -670,20 +668,16 @@ void StoryProviderImpl::CreateStoryWithInfo(
     const CreateStoryWithInfoCallback& callback) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
-  new CreateStoryCall(&operation_queue_, ledger_, root_page_, this,
-                      url, story_id, std::move(extra_info),
-                      std::move(root_json),
-                      [callback, story_id] {
-                        callback(story_id);
-                      });
+  new CreateStoryCall(&operation_queue_, ledger_, root_page_, this, url,
+                      story_id, std::move(extra_info), std::move(root_json),
+                      [callback, story_id] { callback(story_id); });
 }
 
 // |StoryProvider|
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
                                     const DeleteStoryCallback& callback) {
-  new DeleteStoryCall(&operation_queue_, root_page_, story_id,
-                      &story_ids_, &story_controllers_, &pending_deletion_,
-                      callback);
+  new DeleteStoryCall(&operation_queue_, root_page_, story_id, &story_ids_,
+                      &story_controllers_, &pending_deletion_, callback);
 }
 
 // |StoryProvider|
@@ -763,9 +757,9 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
     if (pending_deletion_.first == story_id) {
       pending_deletion_.second->Complete();
     } else {
-      new DeleteStoryCall(&operation_queue_, root_page_, story_id,
-                          &story_ids_, &story_controllers_,
-                          nullptr /* pending_deletion */, [] {});
+      new DeleteStoryCall(&operation_queue_, root_page_, story_id, &story_ids_,
+                          &story_controllers_, nullptr /* pending_deletion */,
+                          [] {});
     }
   }
 

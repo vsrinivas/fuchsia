@@ -65,10 +65,9 @@ class MessageQueueManager {
       const std::string& queue_token);
 
   // Clears the |MessageQueueStorage| for the queue_token.
-  void ClearMessageQueueStorage(
-      const std::string& component_instance_id,
-      const std::string& queue_name,
-      const std::string& queue_token);
+  void ClearMessageQueueStorage(const std::string& component_instance_id,
+                                const std::string& queue_name,
+                                const std::string& queue_token);
 
   ledger::PagePtr page_;
 

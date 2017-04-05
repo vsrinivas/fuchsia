@@ -39,14 +39,14 @@ StoryImpl::StoryImpl(StoryDataPtr story_data,
     : story_id_(story_data->story_info->id),
       story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
-      story_page_(story_provider_impl_->GetStoryPage(story_data_->story_page_id)),
+      story_page_(
+          story_provider_impl_->GetStoryPage(story_data_->story_page_id)),
       story_storage_impl_(new StoryStorageImpl(story_page_.get())),
       story_scope_(story_provider_impl_->user_scope(),
                    kStoryScopeLabelPrefix + story_id_.get()),
       story_context_binding_(this) {
-  bindings_.set_on_empty_set_handler([this] {
-    story_provider_impl_->PurgeController(story_id_);
-  });
+  bindings_.set_on_empty_set_handler(
+      [this] { story_provider_impl_->PurgeController(story_id_); });
 
   story_scope_.AddService<StoryMarker>(
       [this](fidl::InterfaceRequest<StoryMarker> request) {

@@ -247,8 +247,7 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
  private:
   void Run() override {
     page_->GetSnapshot(
-        snapshot_.NewRequest(), nullptr,
-        [this](ledger::Status status) {
+        snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "Ledger.GetSnapshot() " << status;
             Done(std::move(nullptr));
@@ -259,35 +258,36 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
               [] { FTL_LOG(WARNING) << "Error on snapshot connection"; });
 
           key_ = MakeQueueTokenKey(component_instance_id_, queue_name_);
-          snapshot_->Get(to_array(key_), [this] (ledger::Status status, mx::vmo value) {
-              if (status == ledger::Status::KEY_NOT_FOUND) {
-                // Key wasn't found, that's not an error.
-                Done(nullptr);
-                return;
-              }
+          snapshot_->Get(
+              to_array(key_), [this](ledger::Status status, mx::vmo value) {
+                if (status == ledger::Status::KEY_NOT_FOUND) {
+                  // Key wasn't found, that's not an error.
+                  Done(nullptr);
+                  return;
+                }
 
-              if (status != ledger::Status::OK) {
-                FTL_LOG(ERROR) << "Failed to get key " << key_;
-                Done(nullptr);
-                return;
-              }
+                if (status != ledger::Status::OK) {
+                  FTL_LOG(ERROR) << "Failed to get key " << key_;
+                  Done(nullptr);
+                  return;
+                }
 
-              if (!value) {
-                FTL_LOG(ERROR) << "Key " << key_ << " has no value";
-                Done(nullptr);
-                return;
-              }
+                if (!value) {
+                  FTL_LOG(ERROR) << "Key " << key_ << " has no value";
+                  Done(nullptr);
+                  return;
+                }
 
-              std::string queue_token;
-              if (!mtl::StringFromVmo(value, &queue_token)) {
-                FTL_LOG(ERROR) << "VMO for key " << key_
-                               << " couldn't be copied.";
-                Done(nullptr);
-                return;
-              }
+                std::string queue_token;
+                if (!mtl::StringFromVmo(value, &queue_token)) {
+                  FTL_LOG(ERROR)
+                      << "VMO for key " << key_ << " couldn't be copied.";
+                  Done(nullptr);
+                  return;
+                }
 
-              Done(queue_token);
-            });
+                Done(queue_token);
+              });
         });
   }
 
@@ -305,8 +305,7 @@ struct ResolveTokenResult {
   std::string queue_name;
 
   bool complete() const {
-    return !component_instance_id.empty() &&
-        !queue_name.empty();
+    return !component_instance_id.empty() && !queue_name.empty();
   }
 };
 
@@ -335,12 +334,12 @@ class MessageQueueManager::ResolveTokenCall : Operation<ResolveTokenResult> {
           key_ = MakeQueueTokenPrefix(token_);
           snapshot_->GetEntries(
               to_array(key_), nullptr,
-              [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
+              [this](ledger::Status status,
+                     fidl::Array<ledger::EntryPtr> entries,
                      fidl::Array<uint8_t> continuation_token) {
                 if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR)
-                      << "Got ledger status " << status
-                      << " when requesting token prefix " << key_;
+                  FTL_LOG(ERROR) << "Got ledger status " << status
+                                 << " when requesting token prefix " << key_;
                   Done(std::move(result_));
                   return;
                 }
@@ -352,8 +351,8 @@ class MessageQueueManager::ResolveTokenCall : Operation<ResolveTokenResult> {
                 }
 
                 if (entries.size() != 2) {
-                  FTL_LOG(ERROR) << "Expected 2 entries with prefix "
-                                 << key_ << " got " << entries.size();
+                  FTL_LOG(ERROR) << "Expected 2 entries with prefix " << key_
+                                 << " got " << entries.size();
                   Done(std::move(result_));
                   return;
                 }
@@ -373,8 +372,8 @@ class MessageQueueManager::ResolveTokenCall : Operation<ResolveTokenResult> {
 
                   std::string value_string;
                   if (!mtl::StringFromVmo(i->value, &value_string)) {
-                    FTL_LOG(ERROR)
-                        << "VMO for key " << key_string << " couldn't be copied.";
+                    FTL_LOG(ERROR) << "VMO for key " << key_string
+                                   << " couldn't be copied.";
                     Done(std::move(result_));
                     return;
                   }
@@ -406,15 +405,15 @@ class MessageQueueManager::ResolveTokenCall : Operation<ResolveTokenResult> {
   FTL_DISALLOW_COPY_AND_ASSIGN(ResolveTokenCall);
 };
 
-class MessageQueueManager::GetMessageQueueStorageCall : Operation<MessageQueueStorage*> {
+class MessageQueueManager::GetMessageQueueStorageCall
+    : Operation<MessageQueueStorage*> {
  public:
-  GetMessageQueueStorageCall(
-      OperationContainer* const container,
-      MessageQueueManager* const message_queue_manager,
-      ledger::Page* const page,
-      const std::string& component_instance_id,
-      const std::string& queue_name,
-      ResultCall result_call)
+  GetMessageQueueStorageCall(OperationContainer* const container,
+                             MessageQueueManager* const message_queue_manager,
+                             ledger::Page* const page,
+                             const std::string& component_instance_id,
+                             const std::string& queue_name,
+                             ResultCall result_call)
       : Operation(container, std::move(result_call)),
         message_queue_manager_(message_queue_manager),
         page_(page),
@@ -426,10 +425,7 @@ class MessageQueueManager::GetMessageQueueStorageCall : Operation<MessageQueueSt
  private:
   void Run() override {
     new GetQueueTokenCall(
-        &operation_collection_,
-        page_,
-        component_instance_id_,
-        queue_name_,
+        &operation_collection_, page_, component_instance_id_, queue_name_,
         [this](fidl::String token) {
           if (token) {
             // Queue token was found in the ledger.
@@ -451,24 +447,24 @@ class MessageQueueManager::GetMessageQueueStorageCall : Operation<MessageQueueSt
                      to_array(component_instance_id_),
                      [](ledger::Status status) {});
 
-          page_->Put(to_array(MakeQueueNameKey(token_)),
-                     to_array(queue_name_), [](ledger::Status status) {});
+          page_->Put(to_array(MakeQueueNameKey(token_)), to_array(queue_name_),
+                     [](ledger::Status status) {});
 
           page_->Commit([this](ledger::Status status) {
-              if (status != ledger::Status::OK) {
-                FTL_LOG(ERROR) << "Error creating queue in ledger: " << status;
-                Done(nullptr);
-                return;
-              }
-              FTL_LOG(INFO) << "Created queue in ledger: " << token_;
-              Done(message_queue_manager_->GetMessageQueueStorage(
-                  component_instance_id_, queue_name_, token_));
-            });
+            if (status != ledger::Status::OK) {
+              FTL_LOG(ERROR) << "Error creating queue in ledger: " << status;
+              Done(nullptr);
+              return;
+            }
+            FTL_LOG(INFO) << "Created queue in ledger: " << token_;
+            Done(message_queue_manager_->GetMessageQueueStorage(
+                component_instance_id_, queue_name_, token_));
+          });
         });
   }
 
   MessageQueueManager* const message_queue_manager_;  // not owned
-  ledger::Page* const page_;  // not owned
+  ledger::Page* const page_;                          // not owned
   const std::string component_instance_id_;
   const std::string queue_name_;
   ledger::PageSnapshotPtr snapshot_;
@@ -486,7 +482,7 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
                          ledger::Page* const page,
                          const std::string& component_instance_id,
                          const std::string& queue_name)
-      : Operation(container, []{}),
+      : Operation(container, [] {}),
         message_queue_manager_(message_queue_manager),
         page_(page),
         component_instance_id_(component_instance_id),
@@ -497,16 +493,13 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
  private:
   void Run() override {
     new GetQueueTokenCall(
-        &operation_collection_,
-        page_,
-        component_instance_id_,
-        queue_name_,
+        &operation_collection_, page_, component_instance_id_, queue_name_,
         [this](fidl::String token) {
           if (!token) {
-            FTL_LOG(WARNING) << "Request to delete queue " << queue_name_
-                             << " for component instance "
-                             << component_instance_id_
-                             << " that wasn't found in the ledger";
+            FTL_LOG(WARNING)
+                << "Request to delete queue " << queue_name_
+                << " for component instance " << component_instance_id_
+                << " that wasn't found in the ledger";
             Done();
             return;
           }
@@ -527,18 +520,18 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
               component_instance_id_, queue_name_, token_);
 
           page_->Commit([this](ledger::Status status) {
-              if (status == ledger::Status::OK) {
-                FTL_LOG(INFO) << "Deleted queue from ledger: " << token_;
-              } else {
-                FTL_LOG(ERROR) << "Error deleting queue from ledger: " << status;
-              }
-              Done();
-            });
+            if (status == ledger::Status::OK) {
+              FTL_LOG(INFO) << "Deleted queue from ledger: " << token_;
+            } else {
+              FTL_LOG(ERROR) << "Error deleting queue from ledger: " << status;
+            }
+            Done();
+          });
         });
   }
 
   MessageQueueManager* const message_queue_manager_;  // not owned
-  ledger::Page* const page_;  // not owned
+  ledger::Page* const page_;                          // not owned
   const std::string component_instance_id_;
   const std::string queue_name_;
   ledger::PageSnapshotPtr snapshot_;
@@ -559,17 +552,14 @@ void MessageQueueManager::ObtainMessageQueue(
     const std::string& queue_name,
     fidl::InterfaceRequest<MessageQueue> request) {
   new GetMessageQueueStorageCall(
-      &operation_collection_,
-      this,
-      page_.get(),
-      component_instance_id,
+      &operation_collection_, this, page_.get(), component_instance_id,
       queue_name,
       ftl::MakeCopyable([request = std::move(request)](
           MessageQueueStorage* const mqs) mutable {
-                          if (mqs) {
-                            mqs->AddMessageQueueBinding(std::move(request));
-                          }
-                        }));
+        if (mqs) {
+          mqs->AddMessageQueueBinding(std::move(request));
+        }
+      }));
 }
 
 MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
@@ -615,11 +605,8 @@ void MessageQueueManager::ClearMessageQueueStorage(
 void MessageQueueManager::DeleteMessageQueue(
     const std::string& component_instance_id,
     const std::string& queue_name) {
-  new DeleteMessageQueueCall(&operation_collection_,
-                             this,
-                             page_.get(),
-                             component_instance_id,
-                             queue_name);
+  new DeleteMessageQueueCall(&operation_collection_, this, page_.get(),
+                             component_instance_id, queue_name);
 }
 
 void MessageQueueManager::GetMessageSender(
@@ -633,22 +620,18 @@ void MessageQueueManager::GetMessageSender(
   }
 
   new ResolveTokenCall(
-      &operation_collection_,
-      page_.get(),
-      queue_token,
+      &operation_collection_, page_.get(), queue_token,
       ftl::MakeCopyable([ this, queue_token, request = std::move(request) ](
           ResolveTokenResult result) mutable {
-                          if (!result.complete()) {
-                            FTL_LOG(WARNING) << "Queue token " << queue_token
-                                             << " not found in the ledger.";
-                            return;
-                          }
-                          GetMessageQueueStorage(
-                              result.component_instance_id,
-                              result.queue_name,
-                              queue_token)
-                              ->AddMessageSenderBinding(std::move(request));
-                        }));
+        if (!result.complete()) {
+          FTL_LOG(WARNING) << "Queue token " << queue_token
+                           << " not found in the ledger.";
+          return;
+        }
+        GetMessageQueueStorage(result.component_instance_id, result.queue_name,
+                               queue_token)
+            ->AddMessageSenderBinding(std::move(request));
+      }));
 }
 
 void MessageQueueManager::RegisterWatcher(

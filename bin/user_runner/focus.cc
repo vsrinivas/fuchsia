@@ -43,12 +43,10 @@ void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
 
 class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
  public:
-  QueryCall(
-      OperationContainer* const container,
-      std::shared_ptr<ledger::PageSnapshotPtr> const snapshot,
-      ResultCall result_call)
-      : Operation(container, std::move(result_call)),
-        snapshot_(snapshot) {
+  QueryCall(OperationContainer* const container,
+            std::shared_ptr<ledger::PageSnapshotPtr> const snapshot,
+            ResultCall result_call)
+      : Operation(container, std::move(result_call)), snapshot_(snapshot) {
     data_.resize(0);  // never return null
     Ready();
   }
@@ -57,45 +55,46 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
   void Run() override { GetEntries(nullptr); }
 
   void GetEntries(fidl::Array<uint8_t> continuation_token) {
-    (*snapshot_)->GetEntries(
-        to_array(kFocusKeyPrefix), std::move(continuation_token),
-        [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
-               fidl::Array<uint8_t> continuation_token) {
-          if (status != ledger::Status::OK &&
-              status != ledger::Status::PARTIAL_RESULT) {
-            FTL_LOG(ERROR) << "Ledger status " << status << ".";
-            Done(std::move(data_));
-            return;
-          }
+    (*snapshot_)
+        ->GetEntries(
+            to_array(kFocusKeyPrefix), std::move(continuation_token),
+            [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
+                   fidl::Array<uint8_t> continuation_token) {
+              if (status != ledger::Status::OK &&
+                  status != ledger::Status::PARTIAL_RESULT) {
+                FTL_LOG(ERROR) << "Ledger status " << status << ".";
+                Done(std::move(data_));
+                return;
+              }
 
-          if (entries.size() == 0) {
-            // No existing entries.
-            Done(std::move(data_));
-            return;
-          }
+              if (entries.size() == 0) {
+                // No existing entries.
+                Done(std::move(data_));
+                return;
+              }
 
-          for (const auto& entry : entries) {
-            std::string value;
-            if (!mtl::StringFromVmo(entry->value, &value)) {
-              FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
-                             << " couldn't be copied.";
-              continue;
-            }
+              for (const auto& entry : entries) {
+                std::string value;
+                if (!mtl::StringFromVmo(entry->value, &value)) {
+                  FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
+                                 << " couldn't be copied.";
+                  continue;
+                }
 
-            auto focus_info = FocusInfo::New();
-            if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
-              continue;
-            }
+                auto focus_info = FocusInfo::New();
+                if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
+                  continue;
+                }
 
-            data_.push_back(std::move(focus_info));
-          }
+                data_.push_back(std::move(focus_info));
+              }
 
-          if (status == ledger::Status::PARTIAL_RESULT) {
-            GetEntries(std::move(continuation_token));
-          } else {
-            Done(std::move(data_));
-          }
-        });
+              if (status == ledger::Status::PARTIAL_RESULT) {
+                GetEntries(std::move(continuation_token));
+              } else {
+                Done(std::move(data_));
+              }
+            });
   }
 
   std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
@@ -103,7 +102,8 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
   FTL_DISALLOW_COPY_AND_ASSIGN(QueryCall);
 };
 
-FocusHandler::FocusHandler(const fidl::String& device_name, ledger::Page* const page)
+FocusHandler::FocusHandler(const fidl::String& device_name,
+                           ledger::Page* const page)
     : page_(page),
       snapshot_("FocusHandler"),
       page_watcher_binding_(this),
@@ -111,7 +111,8 @@ FocusHandler::FocusHandler(const fidl::String& device_name, ledger::Page* const 
   page_->GetSnapshot(snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
                      [](ledger::Status status) {
                        if (status != ledger::Status::OK) {
-                         FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;
+                         FTL_LOG(ERROR)
+                             << "Page.GetSnapshot() status: " << status;
                        }
                      });
 }
@@ -159,9 +160,8 @@ void FocusHandler::Set(const fidl::String& story_id) {
   // Focus watchers are notified from the page watcher notification.
   std::string key{kFocusKeyPrefix + device_name_};
   page_->PutWithPriority(
-      to_array(key),
-      to_array(json),
-      ledger::Priority::EAGER, [this](ledger::Status status) {
+      to_array(key), to_array(json), ledger::Priority::EAGER,
+      [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
           return;

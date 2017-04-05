@@ -14,7 +14,6 @@ namespace modular {
 namespace {
 
 constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
-
 }
 
 class AgentContextImpl::InitializeCall : Operation<void> {
@@ -85,7 +84,7 @@ class AgentContextImpl::StopCall : Operation<void> {
     }
 
     if (terminating_ || (agent_controller_bindings_->size() == 0 &&
-                            *incomplete_task_count_ == 0)) {
+                         *incomplete_task_count_ == 0)) {
       Stop();
       return;
     }
