@@ -30,9 +30,15 @@ PageSnapshotPtr PageGetSnapshot(PagePtr* page);
 
 fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
                                                   fidl::Array<uint8_t> prefix);
+fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
+                                                  fidl::Array<uint8_t> prefix,
+                                                  int *num_queries);
 
 fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
                                          fidl::Array<uint8_t> prefix);
+fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
+                                         fidl::Array<uint8_t> prefix,
+                                         int *num_queries);
 
 std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot,
                                fidl::Array<uint8_t> key,
