@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// NOTE:
+/// This file is here for reference only, and is not currently used.
+
 module maxwell;
 
 // Exposes access to Context values, each of which are explicitly named. Each
