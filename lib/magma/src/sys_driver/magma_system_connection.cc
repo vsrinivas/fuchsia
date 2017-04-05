@@ -128,7 +128,7 @@ bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out)
     if (!device)
         return DRETF(false, "failed to lock device");
 
-    auto buf = device->GetBufferForHandle(handle);
+    auto buf = device->ImportBuffer(handle);
     if (!buf)
         return DRETF(false, "failed to get buffer for handle");
 

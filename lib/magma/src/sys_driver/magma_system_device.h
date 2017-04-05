@@ -54,7 +54,9 @@ public:
 
     bool page_flip_enabled() { return page_flip_enable_; }
 
-    std::shared_ptr<MagmaSystemBuffer> GetBufferForHandle(uint32_t handle);
+    // Takes ownership of handle and either wraps it up in new MagmaSystemBuffer or
+    // closes it and returns an existing MagmaSystemBuffer backed by the same memory
+    std::shared_ptr<MagmaSystemBuffer> ImportBuffer(uint32_t handle);
     void ReleaseBuffer(uint64_t id);
 
     // Called on driver thread

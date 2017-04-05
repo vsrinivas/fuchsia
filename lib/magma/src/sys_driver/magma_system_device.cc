@@ -90,11 +90,10 @@ void MagmaSystemDevice::PageFlip(std::shared_ptr<MagmaSystemBuffer> buf,
     last_flipped_buffer_ = buf;
 }
 
-std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::GetBufferForHandle(uint32_t handle)
+std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::ImportBuffer(uint32_t handle)
 {
-    uint64_t id;
-    if (!magma::PlatformObject::IdFromHandle(handle, &id))
-        return DRETP(nullptr, "invalid buffer handle");
+    auto platform_buf = magma::PlatformBuffer::Import(handle);
+    uint64_t id = platform_buf->id();
 
     std::unique_lock<std::mutex> lock(buffer_map_mutex_);
 
@@ -105,8 +104,7 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::GetBufferForHandle(uint32_
             return buf;
     }
 
-    std::shared_ptr<MagmaSystemBuffer> buf =
-        MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(handle));
+    std::shared_ptr<MagmaSystemBuffer> buf = MagmaSystemBuffer::Create(std::move(platform_buf));
     buffer_map_.insert(std::make_pair(id, buf));
     return buf;
 }
