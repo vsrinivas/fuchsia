@@ -645,8 +645,11 @@ endif
 # don't touch the file so gratuitous recompiles won't be triggered.
 $(GIT_VERSION_HEADER): scripts/git-version.sh FORCE
 	@echo generating $@
-	$(NOECHO)$(SHELLEXEC) $< $@.new
-	$(NOECHO)if cmp -s $@.new $@; then rm $@.new; else mv -f $@.new $@; fi
+	$(NOECHO)$(SHELLEXEC) $< $@.new; \
+	$(call TESTANDREPLACEFILE,$@.new,$@)
+
+GLOBAL_SRCDEPS += $(GIT_VERSION_HEADER)
+GENERATED += $(GIT_VERSION_HEADER)
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS
 $(ALLOBJS): $(GLOBAL_SRCDEPS)
