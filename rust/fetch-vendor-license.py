@@ -8,6 +8,7 @@
 
 # Should be run from top-level of third_party/rust-crates repository.
 
+import argparse
 import os
 import re
 import sys
@@ -16,8 +17,7 @@ import urllib2
 repo_re = re.compile('\s*repository\s*=\s*"(.*)"\s*$')
 
 def die(reason):
-    sys.stderr.write(reason + '\n')
-    sys.exit(1)
+    raise Exception(reason)
 
 def get_repo_path(subdir):
     # TODO: workarounds for missing repo; delete when crate is updated
@@ -32,7 +32,9 @@ def find_github_blob_path(path):
     if s[2] == 'github.com':
         s[2] = 'raw.githubusercontent.com'
     else:
-        die("don't know raw content path for " + path)
+        die('don\'t know raw content path for ' + path)
+    if s[-1] == '':
+        del s[-1]
     if s[-2] == 'tree':
         del s[-2]
     else:
@@ -41,8 +43,8 @@ def find_github_blob_path(path):
 
 def fetch_license(subdir):
     repo_path = get_repo_path(subdir)
-    print 'fetching license for ' + subdir + ': ' + repo_path
-    if repo_path is None: die("can't find repo path for " + subdir)
+    if repo_path is None:
+        die('can\'t find repo path for ' + subdir)
     baseurl = find_github_blob_path(repo_path)
     text = []
     for license_filename in ('LICENSE', 'LICENSE-APACHE', 'LICENSE-MIT'):
@@ -62,11 +64,32 @@ def fetch_license(subdir):
         license_out.write(''.join(text))
 
 def main():
+    parser = argparse.ArgumentParser(
+        'Verifies licenses for third-party Rust crates')
+    parser.add_argument('--directory',
+                        help='Directory containing the crates',
+                        default=os.getcwd())
+    args = parser.parse_args()
+    success = True
+    os.chdir(args.directory)
     for subdir in os.listdir(os.getcwd()):
-        if subdir.startswith('.') or not os.path.isdir(subdir): continue
-        license_files = [file for file in os.listdir(subdir) if file.startswith('LICENSE') or file.startswith('license')]
-        if not license_files:
+        if subdir.startswith('.') or not os.path.isdir(subdir):
+            continue
+        license_files = [file for file in os.listdir(subdir)
+                         if file.startswith('LICENSE') or
+                         file.startswith('license')]
+        if license_files:
+            print 'OK       %s' % subdir
+            continue
+        try:
             fetch_license(subdir)
+            print 'FETCH    %s' % subdir
+        except Exception as err:
+            print 'ERROR    %s (%s)' % (subdir, err.message)
+            success = False
+    if not success:
+        sys.exit(1)
+
 
 if __name__ == '__main__':
     main()
