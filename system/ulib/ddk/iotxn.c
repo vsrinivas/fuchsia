@@ -390,3 +390,32 @@ out:
 void iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     dev->ops->iotxn_queue(dev, txn);
 }
+
+// releases data for a statically allocated iotxn
+static void iotxn_release_static(iotxn_t* txn) {
+    uint32_t pflags = txn->pflags;
+
+    if (pflags & IOTXN_PFLAG_PHYSMAP) {
+        // only free the scatter list if we called physmap()
+        if (txn->sg != NULL) {
+            free(txn->sg);
+            txn->sg = NULL;
+        }
+    }
+    if (pflags & IOTXN_PFLAG_MMAP) {
+        // only unmap if we called mmap()
+        if (txn->virt) {
+            mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)txn->virt, txn->vmo_length);
+            txn->virt = NULL;
+        }
+    }
+}
+
+void iotxn_init(iotxn_t* txn, mx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length) {
+    memset(txn, 0, sizeof(*txn));
+    txn->vmo_handle = vmo_handle;
+    txn->vmo_offset = vmo_offset;
+    txn->vmo_length = length;
+    txn->length = length;
+    txn->release_cb = iotxn_release_static;
+}

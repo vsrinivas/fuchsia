@@ -133,6 +133,11 @@ void iotxn_pages_to_sg(mx_paddr_t* pages, iotxn_sg_t* sg, uint32_t len, uint32_t
 // create a new iotxn with payload space of data_size
 mx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size);
 
+// initializes a statically allocated iotxn based on provided VMO.
+// calling iotxn_release() on this iotxn will free any resources allocated by the iotxn
+// but not free the iotxn itself.
+void iotxn_init(iotxn_t* txn, mx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length);
+
 // queue an iotxn against a device
 void iotxn_queue(mx_device_t* dev, iotxn_t* txn);
 
