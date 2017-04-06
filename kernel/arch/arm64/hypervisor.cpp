@@ -12,6 +12,7 @@ status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
 }
 
 status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                           mxtl::RefPtr<FifoDispatcher> serial_fifo,
                            mxtl::unique_ptr<GuestContext>* context) {
     return ERR_NOT_SUPPORTED;
 }

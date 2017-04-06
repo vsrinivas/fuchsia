@@ -12,6 +12,8 @@
 #include <mxtl/unique_ptr.h>
 
 typedef struct vm_page vm_page_t;
+
+class FifoDispatcher;
 class VmObject;
 struct VmxInfo;
 class VmxonPerCpu;
@@ -53,7 +55,9 @@ private:
 
 class VmcsContext {
 public:
-    static status_t Create(mxtl::RefPtr<VmObject> vmo, mxtl::unique_ptr<VmcsContext>* context);
+    static status_t Create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                           mxtl::RefPtr<FifoDispatcher> serial_fifo,
+                           mxtl::unique_ptr<VmcsContext>* context);
 
     ~VmcsContext();
 
@@ -65,14 +69,17 @@ public:
     uintptr_t cr3() const { return cr3_; }
     status_t set_entry(uintptr_t guest_entry);
     uintptr_t entry() const {  return entry_; }
+    FifoDispatcher* serial_fifo() const { return serial_fifo_.get(); }
 
 private:
     uintptr_t cr3_ = UINTPTR_MAX;
     uintptr_t entry_ = UINTPTR_MAX;
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
+    mxtl::RefPtr<FifoDispatcher> serial_fifo_;
     mxtl::Array<VmcsPerCpu> per_cpus_;
 
-    explicit VmcsContext(mxtl::Array<VmcsPerCpu> per_cpus);
+    explicit VmcsContext(mxtl::RefPtr<FifoDispatcher> serial_fifo,
+                         mxtl::Array<VmcsPerCpu> per_cpus);
 };
 
 using HypervisorContext = VmxonContext;

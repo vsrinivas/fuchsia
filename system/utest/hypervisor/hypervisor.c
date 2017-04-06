@@ -48,17 +48,23 @@ static bool guest_start_test(void) {
         return true;
     ASSERT_EQ(status, NO_ERROR, "");
 
-    mx_handle_t vmo;
-    status = mx_vmo_create(kVmoSize, 0, &vmo);
+    mx_handle_t guest_phys_mem;
+    ASSERT_EQ(mx_vmo_create(kVmoSize, 0, &guest_phys_mem), NO_ERROR, "");
+
+    mx_handle_t out_fifo;
+    mx_handle_t serial_fifo;
+    ASSERT_EQ(mx_fifo_create(PAGE_SIZE, 1, 0, &out_fifo, &serial_fifo), NO_ERROR, "");
 
     mx_handle_t guest;
+    mx_handle_t create_args[2] = { guest_phys_mem, serial_fifo };
     ASSERT_EQ(mx_hypervisor_op(hypervisor, MX_HYPERVISOR_OP_GUEST_CREATE,
-                               &vmo, sizeof(vmo), &guest, sizeof(guest)),
+                               create_args, sizeof(create_args), &guest, sizeof(guest)),
               NO_ERROR, "");
 
     // Setup the guest.
     uintptr_t mapped_addr;
-    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, kVmoSize, kMapFlags, &mapped_addr),
+    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, guest_phys_mem, 0, kVmoSize, kMapFlags,
+                          &mapped_addr),
               NO_ERROR, "");
     uintptr_t guest_entry = 0;
 #if __x86_64__
@@ -77,9 +83,16 @@ static bool guest_start_test(void) {
               NO_ERROR, "");
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
               NO_ERROR, "");
+    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
+              NO_ERROR, "");
+
+    uint8_t buffer[PAGE_SIZE];
+    uint32_t num_entries_read;
+    ASSERT_EQ(mx_fifo_read(out_fifo, buffer, PAGE_SIZE, &num_entries_read), NO_ERROR, "");
+    ASSERT_EQ(memcmp(buffer, "mx", 2), 0, "");
 
     ASSERT_EQ(mx_handle_close(guest), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(guest_phys_mem), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(hypervisor), NO_ERROR, "");
 
     END_TEST;

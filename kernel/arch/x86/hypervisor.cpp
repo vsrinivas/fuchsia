@@ -23,6 +23,7 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <magenta/errors.h>
+#include <magenta/fifo_dispatcher.h>
 
 #include "hypervisor_priv.h"
 
@@ -30,6 +31,8 @@
     "setna %[" #var "];"     // Check CF and ZF for error.
 
 extern uint8_t _gdt[];
+
+static const int kUartIoPort = 0x3f8;
 
 static status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -625,22 +628,31 @@ void vmx_exit(VmxState* vmx_state) {
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, vmx_state->host_state.kernel_gs_base);
 }
 
-static void vmexit_handler(uint64_t reason, uint64_t next_rip) {
+static status_t vmexit_handler(uint64_t reason, uint64_t qualification, uint64_t next_rip,
+                               const VmxState& vmx_state, FifoDispatcher* serial_fifo) {
     switch (reason) {
+    case VMCS_32_EXIT_REASON_IO_INSTRUCTION: {
+        dprintf(SPEW, "handling IO instruction\n");
+        vmwrite(VMCS_XX_GUEST_RIP, next_rip);
+        uint16_t io_port = (qualification >> VMCS_XX_EXIT_QUALIFICATION_IO_PORT_SHIFT) &
+                           VMCS_XX_EXIT_QUALIFICATION_IO_PORT_MASK;
+        if (io_port != kUartIoPort)
+            return NO_ERROR;
+        uint8_t byte = vmx_state.guest_state.rax & 0xff;
+        uint32_t actual;
+        return serial_fifo->Write(&byte, 1, &actual);
+    }
     case VMCS_32_EXIT_REASON_EXTERNAL_INTERRUPT:
         dprintf(SPEW, "enabling interrupts for external interrupt\n");
         DEBUG_ASSERT(arch_ints_disabled());
         arch_enable_ints();
         arch_disable_ints();
         break;
-    case VMCS_32_EXIT_REASON_IO_INSTRUCTION:
-        dprintf(SPEW, "handling IO instruction\n");
-        vmwrite(VMCS_XX_GUEST_RIP, next_rip);
-        break;
     }
+    return NO_ERROR;
 }
 
-status_t VmcsPerCpu::Enter(const VmcsContext& context) {
+status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fifo) {
     AutoVmcsLoad vmcs_load(&page_);
     // FS is used for thread-local storage — save for this thread.
     vmwrite(VMCS_XX_HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
@@ -657,7 +669,6 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context) {
         vmwrite(VMCS_XX_GUEST_RIP, context.entry());
     }
 
-    dprintf(SPEW, "guest rax (pre-enter): %#" PRIx64 "\n", vmx_state_.guest_state.rax);
     status_t status = vmx_enter(&vmx_state_, do_resume_);
     if (status != NO_ERROR) {
         uint64_t error = vmread(VMCS_32_INSTRUCTION_ERROR);
@@ -686,9 +697,9 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context) {
         dprintf(SPEW, "guest rip: %#" PRIx64 "\n", rip);
 
         do_resume_ = true;
-        vmexit_handler(reason, rip + instruction_length);
+        status = vmexit_handler(reason, qualification, rip + instruction_length,
+                                vmx_state_, serial_fifo);
     }
-    dprintf(SPEW, "guest rax (post-enter): %#" PRIx64 "\n", vmx_state_.guest_state.rax);
     return status;
 }
 
@@ -700,6 +711,7 @@ static int vmcs_setup(void* arg) {
 
 // static
 status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                             mxtl::RefPtr<FifoDispatcher> serial_fifo,
                              mxtl::unique_ptr<VmcsContext>* context) {
     uint num_cpus = arch_max_num_cpus();
 
@@ -709,7 +721,7 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
         return ERR_NO_MEMORY;
 
     mxtl::Array<VmcsPerCpu> cpu_ctxs(ctxs, num_cpus);
-    mxtl::unique_ptr<VmcsContext> ctx(new (&ac) VmcsContext(mxtl::move(cpu_ctxs)));
+    mxtl::unique_ptr<VmcsContext> ctx(new (&ac) VmcsContext(serial_fifo, mxtl::move(cpu_ctxs)));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
@@ -730,8 +742,9 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
     return NO_ERROR;
 }
 
-VmcsContext::VmcsContext(mxtl::Array<VmcsPerCpu> per_cpus)
-    : per_cpus_(mxtl::move(per_cpus)) {}
+VmcsContext::VmcsContext(mxtl::RefPtr<FifoDispatcher> serial_fifo,
+                         mxtl::Array<VmcsPerCpu> per_cpus)
+    : serial_fifo_(serial_fifo), per_cpus_(mxtl::move(per_cpus)) {}
 
 static int vmcs_clear(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
@@ -769,7 +782,7 @@ status_t VmcsContext::set_entry(uintptr_t guest_entry) {
 static int vmcs_launch(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
-    return per_cpu->Enter(*context);
+    return per_cpu->Enter(*context, context->serial_fifo());
 }
 
 status_t VmcsContext::Enter() {
@@ -789,8 +802,9 @@ status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
 }
 
 status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                           mxtl::RefPtr<FifoDispatcher> serial_fifo,
                            mxtl::unique_ptr<GuestContext>* context) {
-    return VmcsContext::Create(guest_phys_mem, context);
+    return VmcsContext::Create(guest_phys_mem, serial_fifo, context);
 }
 
 status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context) {

@@ -11,9 +11,10 @@
 
 FUNCTION(guest_start)
     xor %rax, %rax
-increment:
-    inc %rax
     mov $UART_IO_PORT, %dx
+    mov $'m', %al
     out %al, %dx
-    jmp increment
+    mov $'x', %al
+    out %al, %dx
+    jmp .
 FUNCTION(guest_end)

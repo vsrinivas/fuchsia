@@ -143,6 +143,10 @@
 #define VMCS_32_EXIT_REASON_EXTERNAL_INTERRUPT      1u
 #define VMCS_32_EXIT_REASON_IO_INSTRUCTION          30u
 
+/* VMCS_XX_EXIT_QUALIFICATION values */
+#define VMCS_XX_EXIT_QUALIFICATION_IO_PORT_SHIFT    16
+#define VMCS_XX_EXIT_QUALIFICATION_IO_PORT_MASK     0xffff
+
 /* VMCS_32_GUEST_XX_ACCESS_RIGHTS flags */
 #define VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE     (1u << 16)
 // See Volume 3, Section 24.4.1 for access rights format.
@@ -217,7 +221,7 @@ class VmcsPerCpu : public PerCpu {
 public:
     status_t Clear();
     status_t Setup(paddr_t pml4_address);
-    status_t Enter(const VmcsContext& context);
+    status_t Enter(const VmcsContext& context, FifoDispatcher* serial_fifo);
 
 private:
     bool do_resume_ = false;
