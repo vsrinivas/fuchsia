@@ -111,8 +111,11 @@ def main():
     original_manifest = os.path.join(args.crate_root, "Cargo.toml")
     generated_manifest = os.path.join(args.gen_dir, "Cargo.toml")
     create_base_directory(generated_manifest)
+    package_name = None
     with open(original_manifest, "r") as manifest:
         config = toml.load(manifest)
+        package_name = config["package"]["name"]
+        default_name = package_name.replace("-", "_")
 
         # Update the path to the sources.
         base = None
@@ -120,7 +123,7 @@ def main():
             if "bin" not in config:
                 # Use the defaults.
                 config["bin"] = [{
-                    "name": config["package"]["name"],
+                    "name": default_name,
                     "path": "src/main.rs"
                 }]
             for bin in config["bin"]:
@@ -133,7 +136,7 @@ def main():
             if "lib" not in config:
                 # Use the defaults.
                 config["lib"] = {
-                    "name": config["package"]["name"],
+                    "name": default_name,
                     "path": "src/lib.rs"
                 }
             lib = config["lib"]
@@ -174,7 +177,7 @@ def main():
         name_path = os.path.join(args.gen_dir, "%s.rust_name" % target_name)
         create_base_directory(name_path)
         with open(name_path, "w") as name_file:
-            name_file.write(args.name)
+            name_file.write(package_name)
 
     # Write a config file to allow cargo to find the vendored crates.
     config_path = os.path.join(args.gen_dir, ".cargo", "config")
