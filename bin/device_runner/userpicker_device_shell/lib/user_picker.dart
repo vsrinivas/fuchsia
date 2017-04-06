@@ -9,7 +9,7 @@ import 'package:lib.widgets/hacks.dart' as hacks;
 import 'device_shell_factory_model.dart';
 
 const String _kDefaultUserName = 'user1';
-const Color _kFuchsiaColor = const Color(0xFFFF00C0);
+const Color _kFuchsiaColor = const Color(0xFFFF0080);
 const double _kButtonContentWidth = 180.0;
 const double _kButtonContentHeight = 80.0;
 
