@@ -13,9 +13,6 @@ MODULE_COMPILEFLAGS := -ffreestanding
 
 MODULE_HEADER_DEPS := lib/vdso
 
-MODULE_SRCDEPS := $(GIT_VERSION_HEADER)
-MODULE_COMPILEFLAGS += -I$(BUILDDIR)
-
 MODULE_SRCS := \
     $(LOCAL_DIR)/data.c \
     $(LOCAL_DIR)/mx_cache_flush.c \
@@ -48,5 +45,11 @@ MODULE_SO_INSTALL_NAME := -
 # does not need any writable data (except its caller's stack).
 # Make it use a simplified, hardened memory layout.
 MODULE_LDFLAGS := -T scripts/rodso.ld
+
+# Explicit dependency to make sure the file gets generated first.
+# MODULE_SRCDEPS is overkill for this since only one file uses it.
+$(BUILDDIR)/ulib/magenta/system/ulib/magenta/mx_system_get_version.c.o: \
+    $(BUILDDIR)/config-buildid.h
+MODULE_COMPILEFLAGS += -I$(BUILDDIR)
 
 include make/module.mk

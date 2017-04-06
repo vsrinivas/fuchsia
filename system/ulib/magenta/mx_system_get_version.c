@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <magenta/syscalls.h>
-#include "git-version.h"
+#include "config-buildid.h"
 
-static const char kMagentaVersion[] = MAGENTA_GIT_REV;
+static const char kMagentaVersion[] = BUILDID;
 
 mx_status_t _mx_system_get_version(char* version, uint32_t version_len) {
     if (version_len < sizeof(kMagentaVersion))
