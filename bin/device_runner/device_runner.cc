@@ -56,7 +56,7 @@ constexpr char kAuthConfigurationFile[] = "/system/data/email/config.json";
 // For polling minfs.
 constexpr ftl::StringView kPersistentFileSystem = "/data";
 constexpr ftl::StringView kMinFsName = "minfs";
-constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(5);
+constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
 
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
