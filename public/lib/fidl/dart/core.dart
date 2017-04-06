@@ -14,5 +14,6 @@ part 'src/core/channel.dart';
 part 'src/core/channel_reader.dart';
 part 'src/core/socket.dart';
 part 'src/core/socket_reader.dart';
+part 'src/core/vmo.dart';
 part 'src/core/errors.dart';
 part 'src/core/types.dart';

@@ -222,6 +222,9 @@ class Encoder {
   void encodeSocket(core.Socket value, int offset, bool nullable) =>
       encodeHandle(value != null ? value.handle : null, offset, nullable);
 
+  void encodeVmo(core.Vmo value, int offset, bool nullable) =>
+      encodeHandle(value != null ? value.handle : null, offset, nullable);
+
   void encodeNullPointer(int offset, bool nullable) {
     if (!nullable) {
       throw new FidlCodecError(
@@ -691,6 +694,9 @@ class Decoder {
 
   core.Socket decodeSocket(int offset, bool nullable) =>
       new core.Socket(decodeHandle(offset, nullable));
+
+  core.Socket decodeVmo(int offset, bool nullable) =>
+      new core.Vmo(decodeHandle(offset, nullable));
 
   Decoder decodePointer(int offset, bool nullable) {
     int basePosition = _base + offset;

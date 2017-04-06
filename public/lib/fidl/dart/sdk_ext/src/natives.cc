@@ -51,6 +51,11 @@ struct HandlePeer {
   V(MxSocket_Create, 1)            \
   V(MxSocket_Write, 5)             \
   V(MxSocket_Read, 5)              \
+  V(MxVmo_Create, 2)               \
+  V(MxVmo_GetSize, 1)              \
+  V(MxVmo_SetSize, 2)              \
+  V(MxVmo_Write, 5)                \
+  V(MxVmo_Read, 5)                 \
   V(MxTime_Get, 1)                 \
   V(MxHandle_Close, 1)             \
   V(MxHandle_RegisterFinalizer, 2) \
@@ -574,6 +579,170 @@ void MxSocket_Read(Dart_NativeArguments arguments) {
 
   mx_status_t rv = mx_socket_read(
       static_cast<mx_handle_t>(handle), options, bytes, blen, &blen);
+
+  // Release the data.
+  if (!Dart_IsNull(typed_data)) {
+    Dart_TypedDataReleaseData(typed_data);
+  }
+
+  Dart_Handle list = Dart_NewList(2);
+  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
+  Dart_ListSetAt(list, 1, Dart_NewInteger(blen));
+  Dart_SetReturnValue(arguments, list);
+}
+
+void MxVmo_Create(Dart_NativeArguments arguments) {
+  int64_t size = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &size, Null);
+  if (size < 0) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  int64_t options = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 1, &options, Null);
+
+  mx_handle_t vmo = MX_HANDLE_INVALID;
+  mx_status_t rv = mx_vmo_create(size, options, &vmo);
+
+  Dart_Handle list = Dart_NewList(2);
+  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
+  Dart_ListSetAt(list, 1, Dart_NewInteger(vmo));
+  Dart_SetReturnValue(arguments, list);
+}
+
+void MxVmo_GetSize(Dart_NativeArguments arguments) {
+  int64_t handle = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &handle, InvalidArgument);
+
+  uint64_t size;
+  mx_status_t rv = mx_vmo_get_size(static_cast<mx_handle_t>(handle), &size);
+
+  Dart_Handle list = Dart_NewList(2);
+  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
+  Dart_ListSetAt(list, 1, Dart_NewInteger(size));
+  Dart_SetReturnValue(arguments, list);
+}
+
+void MxVmo_SetSize(Dart_NativeArguments arguments) {
+  int64_t handle = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &handle, InvalidArgument);
+
+  int64_t size = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 1, &size, Null);
+  if (size < 0) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  mx_status_t rv = mx_vmo_set_size(static_cast<mx_handle_t>(handle), size);
+  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(rv));
+}
+
+void MxVmo_Write(Dart_NativeArguments arguments) {
+  int64_t handle = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &handle, InvalidArgument);
+
+  int64_t vmo_offset = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 1, &vmo_offset, InvalidArgument);
+  if (vmo_offset < 0) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  Dart_Handle typed_data = Dart_GetNativeArgument(arguments, 2);
+  if (!Dart_IsTypedData(typed_data) && !Dart_IsNull(typed_data)) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  int64_t data_offset = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 3, &data_offset, InvalidArgument);
+  if (data_offset < 0) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  int64_t num_bytes = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 4, &num_bytes, InvalidArgument);
+  if ((Dart_IsNull(typed_data) && (num_bytes != 0)) ||
+      (!Dart_IsNull(typed_data) && (num_bytes <= 0))) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+  size_t blen = static_cast<size_t>(num_bytes);
+
+  // Grab the data if there is any.
+  Dart_TypedData_Type typ;
+  void* bytes = nullptr;
+  intptr_t bdlen = 0;
+  if (!Dart_IsNull(typed_data)) {
+    Dart_TypedDataAcquireData(typed_data, &typ, &bytes, &bdlen);
+  }
+  bytes =
+      reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(bytes) + data_offset);
+
+  mx_status_t rv =
+      mx_vmo_write(static_cast<mx_handle_t>(handle),
+                   const_cast<const void*>(bytes), vmo_offset, blen, &blen);
+
+  // Release the data.
+  if (!Dart_IsNull(typed_data)) {
+    Dart_TypedDataReleaseData(typed_data);
+  }
+
+  Dart_Handle list = Dart_NewList(2);
+  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
+  Dart_ListSetAt(list, 1, Dart_NewInteger(blen));
+  Dart_SetReturnValue(arguments, list);
+}
+
+void MxVmo_Read(Dart_NativeArguments arguments) {
+  int64_t handle = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &handle, InvalidArgument);
+
+  int64_t vmo_offset = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 1, &vmo_offset, InvalidArgument);
+  if (vmo_offset < 0) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  Dart_Handle typed_data = Dart_GetNativeArgument(arguments, 2);
+  if (!Dart_IsTypedData(typed_data) && !Dart_IsNull(typed_data)) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  int64_t data_offset = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 3, &data_offset, InvalidArgument);
+  if (data_offset < 0) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  int64_t num_bytes = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 4, &num_bytes, InvalidArgument);
+  if ((Dart_IsNull(typed_data) && (num_bytes != 0)) ||
+      (!Dart_IsNull(typed_data) && (num_bytes <= 0))) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+  size_t blen = static_cast<size_t>(num_bytes);
+
+
+  // Grab the data if there is any.
+  Dart_TypedData_Type typ;
+  void* bytes = nullptr;
+  intptr_t bdlen = 0;
+  if (!Dart_IsNull(typed_data)) {
+    Dart_TypedDataAcquireData(typed_data, &typ, &bytes, &bdlen);
+  }
+  bytes =
+      reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(bytes) + data_offset);
+
+  mx_status_t rv = mx_vmo_read(
+      static_cast<mx_handle_t>(handle), bytes, vmo_offset, blen, &blen);
 
   // Release the data.
   if (!Dart_IsNull(typed_data)) {

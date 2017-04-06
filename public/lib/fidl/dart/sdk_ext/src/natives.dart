@@ -98,6 +98,20 @@ class MxSocket {
       int numBytes, int flags) native "MxSocket_Read";
 }
 
+class MxVmo {
+  static List create(int size, int flags) native "MxVmo_Create";
+
+  static List getSize(int handleToken) native "MxVmo_GetSize";
+
+  static int setSize(int handleToken, int size) native "MxVmo_SetSize";
+
+  static List write(int handleToken, int vmoOffset, ByteData data,
+      int dataOffset, int numBytes) native "MxVmo_Write";
+
+  static List read(int handleToken, int vmoOffset, ByteData data,
+      int dataOffset, int numBytes) native "MxVmo_Read";
+}
+
 int _environment;
 int _outgoingServices;
 
