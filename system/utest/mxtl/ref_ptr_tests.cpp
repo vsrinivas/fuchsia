@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <magenta/new.h>
+#include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/type_support.h>
 #include <stdio.h>
@@ -553,11 +554,25 @@ static bool ref_ptr_upcast_test() {
 
     END_TEST;
 }
+
 }  // namespace upcasting
+
+static bool ref_ptr_adopt_null_test() {
+    BEGIN_TEST;
+
+    class C : public mxtl::RefCounted<C> {
+    };
+
+    mxtl::RefPtr<C> ptr = mxtl::AdoptRef(static_cast<C*>(nullptr));
+    EXPECT_NULL(ptr, "");
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(ref_ptr_tests)
 RUN_NAMED_TEST("Ref Pointer", ref_ptr_test)
 RUN_NAMED_TEST("Ref Pointer Comparison", ref_ptr_compare_test)
 RUN_NAMED_TEST("Ref Pointer Upcast", upcasting::ref_ptr_upcast_test)
+RUN_NAMED_TEST("Ref Pointer Adopt null", ref_ptr_adopt_null_test)
 END_TEST_CASE(ref_ptr_tests);
