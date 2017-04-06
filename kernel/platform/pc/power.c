@@ -6,6 +6,7 @@
 //
 
 #include <stdio.h>
+#include <string.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
 #include <arch/x86/mp.h>
@@ -15,12 +16,11 @@
 
 #include <lib/capsule.h>
 #include <lib/console.h>
+#include <lib/version.h>
 
 #if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>
 #endif
-
-#include "git-version.h"
 
 static volatile int panic_started;
 
@@ -43,13 +43,13 @@ static void halt_other_cpus(void) {
 }
 
 #define CAPSULE_TAG_x86_64_CRASH 33
-#define CAPSULE_BULID_DIGITS 8
+#define CAPSULE_BUILD_DIGITS 8
 #define CAPSULE_TAG_MAGIC_x86 0x3e343658
 
 #pragma pack(push, 1)
 typedef struct x86_panic_capsule {
     uint32_t magic;
-    char build[CAPSULE_BULID_DIGITS];
+    char build[CAPSULE_BUILD_DIGITS];
     uint32_t count;
     uint32_t pc32[THREAD_BACKTRACE_DEPTH];
 } x86_panic_capsule_t;
@@ -67,9 +67,18 @@ static void store_panic_in_capsule(void) {
         .count = (uint32_t)count,
     };
 
-    for (int c = 0; c < CAPSULE_BULID_DIGITS; c++) {
-        capsule.build[c] = MAGENTA_GIT_REV[c];
+    const char *buildid = version.buildid;
+
+    // if the first part of the build string starts with GIT_, trim it off
+    if (memcmp(buildid, "GIT_", 4) == 0)
+        buildid += 4;
+
+    // zero out and copy the first part of the buildid string
+    memset(capsule.build, 0, CAPSULE_BUILD_DIGITS);
+    for (int c = 0; c < CAPSULE_BUILD_DIGITS && buildid[c] != '\0'; c++) {
+        capsule.build[c] = buildid[c];
     }
+
     for (int c = 0; c < THREAD_BACKTRACE_DEPTH; c++) {
         capsule.pc32[c] = (c < count) ?
             (uint32_t)((uintptr_t)bt.pc[c] & 0x00000000ffffffff) : 0u;
@@ -149,7 +158,7 @@ static int cmd_prevcrash(int argc, const cmd_args *argv, uint32_t flags) {
         return 0;
     }
     printf("panic capsule found\nbuild:");
-    for (int c = 0; c < CAPSULE_BULID_DIGITS; c++) {
+    for (int c = 0; c < CAPSULE_BUILD_DIGITS; c++) {
         printf("%c", capsule.build[c]);
     }
     printf("\nbacktrace:\n");

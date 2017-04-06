@@ -101,7 +101,6 @@ OUTLKELF := $(BUILDDIR)/$(LKNAME).elf
 GLOBAL_CONFIG_HEADER := $(BUILDDIR)/config-global.h
 KERNEL_CONFIG_HEADER := $(BUILDDIR)/config-kernel.h
 USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
-GIT_VERSION_HEADER := $(BUILDDIR)/git-version.h
 GLOBAL_INCLUDES := system/public system/private $(GENERATED_INCLUDES)
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
 GLOBAL_DEBUGFLAGS ?= -g
@@ -640,16 +639,6 @@ $(BUILDDIR)/deps.sysroot: FORCE
 EXTRA_BUILDDEPS += $(BUILDDIR)/deps.sysroot
 GENERATED += $(BUILDDIR)/deps.sysroot
 endif
-
-# Regenerate this every time, but if it comes out identical then
-# don't touch the file so gratuitous recompiles won't be triggered.
-$(GIT_VERSION_HEADER): scripts/git-version.sh FORCE
-	@echo generating $@
-	$(NOECHO)$(SHELLEXEC) $< $@.new; \
-	$(call TESTANDREPLACEFILE,$@.new,$@)
-
-GLOBAL_SRCDEPS += $(GIT_VERSION_HEADER)
-GENERATED += $(GIT_VERSION_HEADER)
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS
 $(ALLOBJS): $(GLOBAL_SRCDEPS)

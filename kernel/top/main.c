@@ -23,8 +23,6 @@
 #include <lk/init.h>
 #include <lk/main.h>
 
-#include "git-version.h"
-
 extern void (*const __init_array_start[])(void);
 extern void (*const __init_array_end[])(void);
 extern int __bss_start;
@@ -70,7 +68,6 @@ void lk_main(void)
 #else
     dprintf(INFO, "\nwelcome to lk\n\n");
 #endif
-    dprintf(INFO, "git revision [%s]\n", MAGENTA_GIT_REV);
 
     // bring up the kernel heap
     lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET_EARLY, LK_INIT_LEVEL_HEAP - 1);

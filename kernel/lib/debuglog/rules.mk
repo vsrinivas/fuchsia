@@ -12,4 +12,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS := \
     $(LOCAL_DIR)/debuglog.c \
 
+MODULE_DEPS := \
+    lib/version
+
 include make/module.mk

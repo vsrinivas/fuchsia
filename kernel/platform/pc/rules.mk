@@ -36,6 +36,7 @@ MODULE_DEPS += \
     lib/gfxconsole \
     lib/fixed_point \
     lib/pow2_range_allocator \
+    lib/version \
     dev/interrupt \
     dev/pcie \
 

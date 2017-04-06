@@ -12,11 +12,10 @@
 #include <kernel/thread.h>
 #include <lib/user_copy.h>
 #include <lib/io.h>
+#include <lib/version.h>
 #include <lk/init.h>
 #include <platform.h>
 #include <string.h>
-
-#include "git-version.h"
 
 #define DLOG_SIZE (128u * 1024u)
 #define DLOG_MASK (DLOG_SIZE - 1u)
@@ -308,7 +307,7 @@ void dlog_bluescreen_init(void) {
     // replay debug log?
 
     dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\nUPTIME: %" PRIu32 "ms\n", current_time());
-    dprintf(INFO, "GIT REVISION %s\n\n", MAGENTA_GIT_REV);
+    dprintf(INFO, "BUILDID %s\n\n", version.buildid);
 }
 
 static void dlog_init_hook(uint level) {
