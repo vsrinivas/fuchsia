@@ -119,7 +119,7 @@ private:
     bool RenderEngineInit();
     bool RenderEngineReset();
 
-    void ProcessDeviceRequests();
+    void ProcessDeviceRequests(std::list<std::unique_ptr<DeviceRequest>> list);
     void ProcessCompletedCommandBuffers();
     void SuspectedGpuHang();
 

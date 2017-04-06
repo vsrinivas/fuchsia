@@ -185,7 +185,7 @@ public:
             EXPECT_TRUE(ringbuffer_wrapped);
     }
 
-    void DeviceRequest()
+    void ProcessRequest()
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
@@ -214,8 +214,10 @@ public:
 
         auto processing_complete = std::make_shared<bool>(false);
 
-        device->EnqueueDeviceRequest(std::make_unique<TestRequest>(processing_complete));
-        device->ProcessDeviceRequests();
+        std::list<std::unique_ptr<DeviceRequest>> list;
+        list.push_back(std::make_unique<TestRequest>(processing_complete));
+
+        device->ProcessDeviceRequests(std::move(list));
 
         EXPECT_TRUE(processing_complete);
     }
@@ -292,10 +294,10 @@ TEST(MsdIntelDevice, WrapRingbuffer)
     test.BatchBuffer(true);
 }
 
-TEST(MsdIntelDevice, DeviceRequest)
+TEST(MsdIntelDevice, ProcessRequest)
 {
     TestMsdIntelDevice test;
-    test.DeviceRequest();
+    test.ProcessRequest();
 }
 
 TEST(MsdIntelDevice, MaxFreq)

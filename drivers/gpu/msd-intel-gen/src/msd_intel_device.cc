@@ -497,6 +497,8 @@ int MsdIntelDevice::DeviceThreadLoop()
 
     constexpr uint32_t kTimeoutMs = 100;
 
+    std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
+
     while (true) {
         if (progress_->work_outstanding()) {
             DLOG("waiting with timeout");
@@ -512,7 +514,10 @@ int MsdIntelDevice::DeviceThreadLoop()
             device_request_semaphore_->Wait();
         }
 
-        ProcessDeviceRequests();
+        lock.lock();
+        ProcessDeviceRequests(std::move(device_request_list_));
+        device_request_list_.clear();
+        lock.unlock();
 
         if (device_thread_quit_flag_)
             break;
@@ -536,24 +541,18 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers()
     progress_->Completed(sequence_number);
 }
 
-void MsdIntelDevice::ProcessDeviceRequests()
+void MsdIntelDevice::ProcessDeviceRequests(std::list<std::unique_ptr<DeviceRequest>> list)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
-    std::unique_lock<std::mutex> lock(device_request_mutex_);
+    while (list.size()) {
+        DLOG("list.size() %zu", list.size());
 
-    while (device_request_list_.size()) {
-        DLOG("device_request_list_.size() %zu", device_request_list_.size());
-
-        auto request = std::move(device_request_list_.front());
-        device_request_list_.pop_front();
-
-        lock.unlock();
+        auto request = std::move(list.front());
+        list.pop_front();
 
         DASSERT(request);
         request->ProcessAndReply(this);
-
-        lock.lock();
     }
 }
 
