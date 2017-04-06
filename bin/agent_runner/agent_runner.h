@@ -108,8 +108,8 @@ class AgentRunner {
   maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
 
   // A watcher for any changes happening to the trigger list on the ledger.
-  class PageWatcherImpl;
-  std::unique_ptr<PageWatcherImpl> trigger_list_watcher_;
+  class TriggerListWatcher;
+  std::unique_ptr<TriggerListWatcher> trigger_list_watcher_;
 
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;

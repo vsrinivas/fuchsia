@@ -67,16 +67,14 @@ rapidjson::Document CreateTriggerListKey(const std::string& agent_url,
 
 }  // namespace
 
-class AgentRunner::PageWatcherImpl : ledger::PageWatcher {
+class AgentRunner::TriggerListWatcher : ledger::PageWatcher {
  public:
-  PageWatcherImpl(
+  TriggerListWatcher(
+      AgentRunner* const agent_runner,
       ledger::LedgerRepository* const ledger_repository,
-      const std::string& ledger_name,
-      std::function<void(const std::string&, const std::string&)> added_entry,
-      std::function<void(const std::string&)> deleted_entry)
-      : binding_(this),
-        added_entry_(added_entry),
-        deleted_entry_(deleted_entry) {
+      const std::string& ledger_name)
+      : agent_runner_(agent_runner),
+        binding_(this) {
     auto error_handler = [](ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
@@ -115,7 +113,7 @@ class AgentRunner::PageWatcherImpl : ledger::PageWatcher {
               FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
               return;
             }
-            added_entry_(key, value);
+            agent_runner_->AddedTrigger(key, value);
           }
 
           // We don't use snapshot_ anymore.
@@ -156,25 +154,22 @@ class AgentRunner::PageWatcherImpl : ledger::PageWatcher {
         FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
         return;
       }
-      added_entry_(key, value);
+      agent_runner_->AddedTrigger(key, value);
     }
 
     for (auto& key : page->deleted_keys) {
-      deleted_entry_(to_string(key));
+      agent_runner_->DeletedTrigger(to_string(key));
     }
     callback(nullptr);
   }
 
+  AgentRunner* const agent_runner_;
   fidl::Binding<ledger::PageWatcher> binding_;
   ledger::LedgerPtr ledger_;
   ledger::PagePtr page_;
   ledger::PageSnapshotPtr snapshot_;
 
-  std::function<void(const std::string&, const std::string&)> const
-      added_entry_;
-  std::function<void(const std::string&)> const deleted_entry_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(PageWatcherImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(TriggerListWatcher);
 };
 
 AgentRunner::AgentRunner(
@@ -187,12 +182,8 @@ AgentRunner::AgentRunner(
       ledger_repository_(ledger_repository),
       user_intelligence_provider_(user_intelligence_provider),
       terminating_(std::make_shared<bool>(false)) {
-  trigger_list_watcher_.reset(new PageWatcherImpl(
-      ledger_repository, kTriggerListLedger,
-      [this](const std::string& key, const std::string& value) {
-        AddedTrigger(key, value);
-      },
-      [this](const std::string& key) { DeletedTrigger(key); }));
+  trigger_list_watcher_.reset(new TriggerListWatcher(
+      this, ledger_repository, kTriggerListLedger));
 }
 
 AgentRunner::~AgentRunner() = default;
