@@ -11,8 +11,8 @@ MODULE_TYPE := userlib
 MODULE_SRCS += $(LOCAL_DIR)/decompress.c
 
 MODULE_LIBS := \
-    ulib/lz4 \
-    ulib/magenta \
-    ulib/c
+    third_party/ulib/lz4 \
+    system/ulib/magenta \
+    system/ulib/c
 
 include make/module.mk

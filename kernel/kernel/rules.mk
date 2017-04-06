@@ -10,10 +10,10 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS := \
-	lib/debug \
-	lib/heap \
-	lib/libc \
-	lib/mxtl \
+	kernel/lib/debug \
+	kernel/lib/heap \
+	kernel/lib/libc \
+	kernel/lib/mxtl \
 
 
 MODULE_SRCS := \
@@ -27,6 +27,6 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/mp.c \
 	$(LOCAL_DIR)/cmdline.c \
 
-MODULE_DEPS += kernel/vm
+MODULE_DEPS += kernel/kernel/vm
 
 include make/module.mk

@@ -37,29 +37,29 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 # We don't have normal setup, so safe-stack is a non-starter.
 MODULE_COMPILEFLAGS += $(NO_SAFESTACK)
 
-# ulib/runtime is compiled without safe-stack.  We can't use any other
+# system/ulib/runtime is compiled without safe-stack.  We can't use any other
 # static libs, because they might be built with safe-stack or other
 # options that can't be supported in the constrained userboot context.
-MODULE_STATIC_LIBS := ulib/runtime
-MODULE_HEADER_DEPS := ulib/magenta
+MODULE_STATIC_LIBS := system/ulib/runtime
+MODULE_HEADER_DEPS := system/ulib/magenta
 
 # Fortunately, each of these libraries is just a single source file.
 # So we just use their sources directly rather than getting
 # clever with the build system somehow.
 
-MODULE_HEADER_DEPS += ulib/elfload
+MODULE_HEADER_DEPS += system/ulib/elfload
 MODULE_SRCS += system/ulib/elfload/elf-load.c
 
-MODULE_HEADER_DEPS += ulib/bootdata
+MODULE_HEADER_DEPS += system/ulib/bootdata
 MODULE_SRCS += system/ulib/bootdata/decompress.c
 
-MODULE_HEADER_DEPS += ulib/lz4
+MODULE_HEADER_DEPS += third_party/ulib/lz4
 MODULE_SRCS += third_party/ulib/lz4/lz4.c
 MODULE_COMPILEFLAGS += -Ithird_party/ulib/lz4/include/lz4 -DWITH_LZ4_NOALLOC
 
 # This generated header lists all the ABI symbols in the vDSO with their
 # addresses.  It's used to generate vdso-syms.ld, below.
-$(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h: $(BUILDDIR)/ulib/magenta/libmagenta.so
+$(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h: $(BUILDDIR)/system/ulib/magenta/libmagenta.so
 	@$(MKDIR)
 	@echo generating $@
 	$(NOECHO)$(SHELLEXEC) scripts/shlib-symbols -a '$(NM)' $< > $@

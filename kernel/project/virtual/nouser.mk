@@ -6,7 +6,7 @@
 # https://opensource.org/licenses/MIT
 
 MODULES += \
-    app/shell
+    kernel/app/shell
 
 # hard disable building of sysroot in a no userspace build
 ENABLE_BUILD_SYSROOT := false

@@ -23,8 +23,8 @@ MODULE_SRCS += \
 
 MODULE_NAME := textcon-test
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/gfx ulib/hid ulib/mxcpp ulib/mxtl
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/gfx system/ulib/hid system/ulib/mxcpp system/ulib/mxtl
 
-MODULE_LIBS := ulib/driver ulib/unittest ulib/mxio ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

@@ -17,6 +17,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := fsck-msdosfs
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

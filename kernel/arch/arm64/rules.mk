@@ -34,7 +34,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/uspace_entry.S
 
 MODULE_DEPS += \
-	lib/fdt \
+	third_party/lib/fdt \
 
 KERNEL_DEFINES += \
 	ARM64_CPU_$(ARM_CPU)=1 \

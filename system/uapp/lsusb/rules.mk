@@ -11,8 +11,8 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/lsusb.c
 
-MODULE_STATIC_LIBS := ulib/hexdump
+MODULE_STATIC_LIBS := system/ulib/hexdump
 
-MODULE_LIBS := ulib/mxio ulib/c
+MODULE_LIBS := system/ulib/mxio system/ulib/c
 
 include make/module.mk

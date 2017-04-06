@@ -8,7 +8,7 @@
 # Project file to build magenta + user space on top of qemu
 # for 64bit arm (cortex-a53)
 
-include project/virtual/test.mk
-include project/virtual/user.mk
-include project/target/qemu-virt-a53.mk
+include kernel/project/virtual/test.mk
+include kernel/project/virtual/user.mk
+include kernel/project/target/qemu-virt-a53.mk
 

@@ -16,14 +16,14 @@ MODULE_SRCS += \
 MODULE_NAME := merkle-test
 
 MODULE_LIBS := \
-    ulib/unittest \
-    ulib/merkle \
-    ulib/magenta \
-    ulib/c \
-    ulib/mxcpp \
-    ulib/mxtl \
-    ulib/mxio \
+    system/ulib/unittest \
+    system/ulib/merkle \
+    system/ulib/magenta \
+    system/ulib/c \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+    system/ulib/mxio \
 
-MODULE_STATIC_LIBS := ulib/cryptolib
+MODULE_STATIC_LIBS := third_party/ulib/cryptolib
 
 include make/module.mk

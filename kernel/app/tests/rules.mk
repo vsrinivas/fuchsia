@@ -25,11 +25,11 @@ MODULE_SRCS += \
 
 
 MODULE_DEPS += \
-    lib/crypto \
-    lib/header_tests \
-    lib/mxtl \
-    lib/safeint \
-    lib/unittest \
+    kernel/lib/crypto \
+    kernel/lib/header_tests \
+    kernel/lib/mxtl \
+    third_party/lib/safeint \
+    kernel/lib/unittest \
 
 MODULE_COMPILEFLAGS += -Wno-format -fno-builtin
 

@@ -17,7 +17,7 @@ MODULE_EXPORT := so
 MODULE_SO_NAME := hid
 
 MODULE_LIBS := \
-    ulib/magenta \
-    ulib/c
+    system/ulib/magenta \
+    system/ulib/c
 
 include make/module.mk

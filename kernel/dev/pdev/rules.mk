@@ -12,6 +12,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/pdev.c \
 
 MODULE_DEPS += \
-    lib/mdi \
+    kernel/lib/mdi \
 
 include make/module.mk

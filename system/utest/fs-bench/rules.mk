@@ -15,12 +15,12 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bench-basic.cpp \
 
 MODULE_LIBS := \
-    ulib/c \
-    ulib/mxcpp \
-    ulib/mxio \
-    ulib/mxtl \
-    ulib/fs-management \
-    ulib/magenta \
-    ulib/unittest \
+    system/ulib/c \
+    system/ulib/mxcpp \
+    system/ulib/mxio \
+    system/ulib/mxtl \
+    system/ulib/fs-management \
+    system/ulib/magenta \
+    system/ulib/unittest \
 
 include make/module.mk

@@ -12,6 +12,6 @@ MODULE_SRCS += $(LOCAL_DIR)/fifo.c
 
 MODULE_NAME := fifo-test
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

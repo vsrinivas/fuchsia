@@ -13,6 +13,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/debuglog.c \
 
 MODULE_DEPS := \
-    lib/version
+    kernel/lib/version
 
 include make/module.mk

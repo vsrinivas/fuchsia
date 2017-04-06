@@ -18,7 +18,7 @@ MODULE_SRCS += \
 MODULE_NAME := remoteio-test
 
 MODULE_DEPS := \
-    ulib/mxio ulib/magenta ulib/unittest ulib/c
+    system/ulib/mxio system/ulib/magenta system/ulib/unittest system/ulib/c
 
 include make/module.mk
 endif

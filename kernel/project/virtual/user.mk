@@ -10,11 +10,11 @@
 KERNEL_DEFINES += WITH_DEBUG_LINEBUFFER=1
 
 MODULES += \
-    lib/syscalls \
-    lib/userboot \
-    lib/debuglog \
-    lib/ktrace \
-    lib/mtrace \
+    kernel/lib/syscalls \
+    kernel/lib/userboot \
+    kernel/lib/debuglog \
+    kernel/lib/ktrace \
+    kernel/lib/mtrace \
 
 # include all core, uapp, udev, ulib and utest from system/...
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/core/*/rules.mk))
@@ -22,14 +22,12 @@ MODULES += $(patsubst %/rules.mk,%,$(wildcard system/uapp/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/udev/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/ulib/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/utest/*/rules.mk))
-MODULES := $(patsubst system/%,%,$(MODULES))
 
 # include all uapp, udev, ulib and utest from third_party/...
 MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/uapp/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/udev/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/ulib/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard third_party/utest/*/rules.mk))
-MODULES := $(patsubst third_party/%,%,$(MODULES))
 
 EXTRA_BUILDDEPS += $(USER_BOOTDATA)
 

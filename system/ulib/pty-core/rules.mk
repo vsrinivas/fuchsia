@@ -10,8 +10,8 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += $(LOCAL_DIR)/pty-core.c $(LOCAL_DIR)/pty-fifo.c
 
-MODULE_HEADER_DEPS := ulib/ddk
+MODULE_HEADER_DEPS := system/ulib/ddk
 
-MODULE_LIBS := ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/magenta system/ulib/c
 
 include make/module.mk

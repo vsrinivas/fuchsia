@@ -12,6 +12,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/dlog.c
 
 MODULE_LIBS := \
-    ulib/mxio ulib/magenta ulib/c
+    system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

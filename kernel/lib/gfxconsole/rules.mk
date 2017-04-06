@@ -10,8 +10,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS += \
-	lib/gfx \
-	lib/font
+	kernel/lib/gfx \
+	kernel/lib/font
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/gfxconsole.c

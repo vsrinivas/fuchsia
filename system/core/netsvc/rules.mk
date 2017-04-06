@@ -15,8 +15,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/netfile.c \
     $(LOCAL_DIR)/device_id.c
 
-MODULE_STATIC_LIBS := ulib/inet6
+MODULE_STATIC_LIBS := system/ulib/inet6
 
-MODULE_LIBS := ulib/mxio ulib/launchpad ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/mxio system/ulib/launchpad system/ulib/magenta system/ulib/c
 
 include make/module.mk

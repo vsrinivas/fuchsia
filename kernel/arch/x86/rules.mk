@@ -88,8 +88,8 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/user_copy.c
 
 MODULE_DEPS += \
-	lib/bitmap \
-	lib/hypervisor \
+	kernel/lib/bitmap \
+	kernel/lib/hypervisor \
 
 include $(LOCAL_DIR)/toolchain.mk
 

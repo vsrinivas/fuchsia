@@ -20,8 +20,8 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/pcie_upstream_node.cpp
 
 MODULE_DEPS += \
-    lib/mxtl \
-    lib/region-alloc
+    kernel/lib/mxtl \
+    kernel/lib/region-alloc
 
 MODULE_CPPFLAGS += -Wno-invalid-offsetof
 

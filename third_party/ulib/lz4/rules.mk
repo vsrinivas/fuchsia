@@ -10,7 +10,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/lz4hc.c \
     $(LOCAL_DIR)/xxhash.c
 
-MODULE_LIBS := ulib/c
+MODULE_LIBS := system/ulib/c
 
 MODULE_CFLAGS += -I$(LOCAL_DIR)/include/lz4 -O3 -DXXH_NAMESPACE=LZ4_
 

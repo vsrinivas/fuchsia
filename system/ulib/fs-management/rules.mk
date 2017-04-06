@@ -16,13 +16,13 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/ramdisk.c \
 
 MODULE_STATIC_LIBS := \
-    ulib/fs \
+    system/ulib/fs \
 
 MODULE_LIBS := \
-    ulib/launchpad \
-    ulib/magenta \
-    ulib/c \
-    ulib/mxio \
+    system/ulib/launchpad \
+    system/ulib/magenta \
+    system/ulib/c \
+    system/ulib/mxio \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := fs-management

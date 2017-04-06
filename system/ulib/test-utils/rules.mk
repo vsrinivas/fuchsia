@@ -15,14 +15,14 @@ MODULE_SO_NAME := test-utils
 
 # elfload, runtime are static as they currently aren't built as sos.
 MODULE_STATIC_LIBS := \
-    ulib/elfload \
-    ulib/runtime
+    system/ulib/elfload \
+    system/ulib/runtime
 
 MODULE_LIBS := \
-    ulib/unittest \
-    ulib/launchpad \
-    ulib/mxio \
-    ulib/c \
-    ulib/magenta
+    system/ulib/unittest \
+    system/ulib/launchpad \
+    system/ulib/mxio \
+    system/ulib/c \
+    system/ulib/magenta
 
 include make/module.mk

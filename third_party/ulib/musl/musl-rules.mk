@@ -1113,8 +1113,8 @@ MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
 MODULE_SRCS := $(LOCAL_SRCS)
 
-MODULE_LIBS := ulib/magenta
-MODULE_STATIC_LIBS := ulib/runtime
+MODULE_LIBS := system/ulib/magenta
+MODULE_STATIC_LIBS := system/ulib/runtime
 
 # At link time and in DT_SONAME, musl is known as libc.so.  But the
 # (only) place it needs to be installed at runtime is where the
@@ -1143,7 +1143,7 @@ MODULE_CFLAGS := $(LOCAL_CFLAGS)
 MODULE_SRCS := $(LOCAL_DIR)/arch/$(MUSL_ARCH)/crt1.S
 
 # where our object files will end up
-LOCAL_OUT := $(BUILDDIR)/ulib/c.crt/$(LOCAL_DIR)
+LOCAL_OUT := $(BUILDDIR)/system/ulib/c.crt/$(LOCAL_DIR)
 LOCAL_CRT1_OBJ := $(LOCAL_OUT)/arch/$(MUSL_ARCH)/crt1.S.o
 
 # install it globally

@@ -14,16 +14,16 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/blobstore.cpp
 
 MODULE_STATIC_LIBS := \
-    ulib/merkle \
-    ulib/cryptolib \
+    system/ulib/merkle \
+    third_party/ulib/cryptolib \
 
 MODULE_LIBS := \
-    ulib/mxio \
-    ulib/c \
-    ulib/fs-management \
-    ulib/magenta \
-    ulib/mxcpp \
-    ulib/mxtl \
-    ulib/unittest \
+    system/ulib/mxio \
+    system/ulib/c \
+    system/ulib/fs-management \
+    system/ulib/magenta \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+    system/ulib/unittest \
 
 include make/module.mk

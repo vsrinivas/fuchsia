@@ -11,8 +11,8 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/emmc.c
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/sync ulib/bcm
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/bcm
 
-MODULE_LIBS := ulib/driver ulib/c ulib/magenta ulib/mxio
+MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/magenta system/ulib/mxio
 
 include make/module.mk

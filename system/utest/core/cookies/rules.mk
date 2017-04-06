@@ -12,6 +12,6 @@ MODULE_SRCS += $(LOCAL_DIR)/cookies.c
 
 MODULE_NAME := cookies-test
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

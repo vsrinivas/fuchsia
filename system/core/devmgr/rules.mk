@@ -25,27 +25,27 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-memory.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp
 
-# userboot supports loading via the dynamic linker, so libc (ulib/c)
+# userboot supports loading via the dynamic linker, so libc (system/ulib/c)
 # can be linked dynamically.  But it doesn't support any means to look
 # up other shared libraries, so everything else must be linked statically.
 
 # ddk is needed only for ddk/device.h
 MODULE_HEADER_DEPS := \
-	ulib/ddk
+	system/ulib/ddk
 
 MODULE_STATIC_LIBS := \
-    ulib/gpt \
-    ulib/launchpad \
-    ulib/elfload \
-    ulib/mxcpp \
-    ulib/mxio \
-    ulib/mxtl \
-    ulib/fs \
-    ulib/fs-management \
-    ulib/bootdata \
-    ulib/lz4
+    system/ulib/gpt \
+    system/ulib/launchpad \
+    system/ulib/elfload \
+    system/ulib/mxcpp \
+    system/ulib/mxio \
+    system/ulib/mxtl \
+    system/ulib/fs \
+    system/ulib/fs-management \
+    system/ulib/bootdata \
+    third_party/ulib/lz4
 
-MODULE_LIBS := ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/magenta system/ulib/c
 
 MODULE_DEFINES := DEVMGR=1
 
@@ -58,7 +58,7 @@ MODULE_SRCS += \
 
 MODULE_DEFINES += DEVHOST_V2=1
 
-MODULE_STATIC_LIBS += ulib/acpisvc-client
+MODULE_STATIC_LIBS += system/ulib/acpisvc-client
 endif
 
 
@@ -89,9 +89,9 @@ MODULE_DEFINES += DEVHOST_V2=1
 MODULE_SRCS := \
 	$(LOCAL_DIR)/devhost-v2.c
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/sync
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/mxio ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 else
 MODULE_SRCS := \
     $(LOCAL_DIR)/acpi.c \
@@ -107,9 +107,9 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/driver-info.c \
     $(DRIVER_SRCS) \
 
-MODULE_STATIC_LIBS := ulib/acpisvc-client ulib/ddk ulib/sync
+MODULE_STATIC_LIBS := system/ulib/acpisvc-client system/ulib/ddk system/ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/mxio ulib/launchpad ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/launchpad system/ulib/magenta system/ulib/c
 endif
 
 include make/module.mk

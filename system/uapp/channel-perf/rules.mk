@@ -11,6 +11,6 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
 
-MODULE_LIBS := ulib/magenta ulib/mxio ulib/c ulib/mxcpp ulib/mxtl
+MODULE_LIBS := system/ulib/magenta system/ulib/mxio system/ulib/c system/ulib/mxcpp system/ulib/mxtl
 
 include make/module.mk

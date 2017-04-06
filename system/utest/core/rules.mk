@@ -17,9 +17,9 @@ MODULE_SRCS := \
 MODULE_NAME := core-tests
 
 MODULE_STATIC_LIBS := \
-    ulib/runtime ulib/ddk ulib/unittest ulib/hexdump ulib/mini-process ulib/sync
+    system/ulib/runtime system/ulib/ddk system/ulib/unittest system/ulib/hexdump system/ulib/mini-process system/ulib/sync
 
-MODULE_LIBS := ulib/magenta ulib/c ulib/driver
+MODULE_LIBS := system/ulib/magenta system/ulib/c system/ulib/driver
 
 MODULE_DEFINES := BUILD_COMBINED_TESTS=1
 

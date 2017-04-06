@@ -13,10 +13,10 @@ MODULE_SRCS += $(LOCAL_DIR)/exception.c
 MODULE_NAME := exception-test
 
 MODULE_LIBS := \
-    ulib/unittest \
-    ulib/test-utils \
-    ulib/launchpad \
-    ulib/magenta \
-    ulib/c
+    system/ulib/unittest \
+    system/ulib/test-utils \
+    system/ulib/launchpad \
+    system/ulib/magenta \
+    system/ulib/c
 
 include make/module.mk

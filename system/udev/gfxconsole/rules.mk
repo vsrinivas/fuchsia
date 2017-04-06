@@ -16,8 +16,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/textcon.cpp \
     $(LOCAL_DIR)/main.cpp \
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/gfx ulib/hid ulib/mxcpp
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/gfx system/ulib/hid system/ulib/mxcpp
 
-MODULE_LIBS := ulib/driver ulib/mxio ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := system/ulib/driver
+MODULE := $(LOCAL_DIR)
 
 MODULE_NAME := driver
 

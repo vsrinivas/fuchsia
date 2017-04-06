@@ -14,9 +14,9 @@ MODULE_SRCS += \
 MODULE_NAME := stack-test
 
 MODULE_LIBS := \
-    ulib/unittest ulib/mxio ulib/magenta ulib/c
+    system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
 
-MODULE_HEADER_DEPS := ulib/runtime
+MODULE_HEADER_DEPS := system/ulib/runtime
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 MODULE_COMPILEFLAGS += -fsanitize=safe-stack -fstack-protector-all

@@ -14,6 +14,7 @@ MODULE_SRCS += \
 MODULE_NAME := object-info-test
 
 MODULE_LIBS := \
-    ulib/mini-process ulib/unittest ulib/mxio ulib/magenta ulib/c
+    system/ulib/mini-process system/ulib/unittest \
+	system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

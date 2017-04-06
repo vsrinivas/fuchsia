@@ -11,7 +11,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS := \
     $(LOCAL_DIR)/pow2_tests.c \
 
-MODULE_DEPS = lib/unittest
+MODULE_DEPS = kernel/lib/unittest
 
 include make/module.mk
 

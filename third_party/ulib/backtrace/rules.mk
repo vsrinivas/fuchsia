@@ -21,7 +21,7 @@ MODULE_SRCS := \
 MODULE_SO_NAME := backtrace
 
 MODULE_LIBS := \
-    ulib/ngunwind ulib/magenta ulib/c
+    third_party/ulib/ngunwind system/ulib/magenta system/ulib/c
 
 # Compile this with frame pointers so that if we crash the crashlogger
 # the simplistic unwinder will work.

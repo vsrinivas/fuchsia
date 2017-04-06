@@ -12,8 +12,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
 MODULE_LIBS := \
-    ulib/c \
-    ulib/unittest \
-    ulib/blktest \
+    system/ulib/c \
+    system/ulib/unittest \
+    system/ulib/blktest \
 
 include make/module.mk

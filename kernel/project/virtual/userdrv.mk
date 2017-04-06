@@ -8,4 +8,4 @@
 # drivers in user space modules
 
 MODULES += \
-    uapp/userirq
+    kernel/uapp/userirq

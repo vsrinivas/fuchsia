@@ -16,7 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/io-buffer.c \
     $(LOCAL_DIR)/iotxn.c \
 
-MODULE_STATIC_LIBS := ulib/hexdump ulib/sync
+MODULE_STATIC_LIBS := system/ulib/hexdump system/ulib/sync
 
 MODULE_EXPORT := a
 

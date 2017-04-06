@@ -5,7 +5,7 @@ MODULE := $(LOCAL_DIR)
 KERNEL_INCLUDES += $(LOCAL_DIR)/source/include
 
 MODULE_SRCS += $(LOCAL_DIR)/safe_numerics_unittest.cpp
-MODULE_DEPS += lib/unittest
-MODULE_DEPS += lib/mxtl
+MODULE_DEPS += kernel/lib/unittest
+MODULE_DEPS += kernel/lib/mxtl
 
 include make/module.mk

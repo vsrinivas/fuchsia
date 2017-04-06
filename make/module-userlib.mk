@@ -9,10 +9,6 @@ ifneq ($(MODULE_DEPS),)
 $(error $(MODULE) $(MODULE_TYPE) modules must use MODULE_{LIBS,STATIC_LIBS}, not MODULE_DEPS)
 endif
 
-# ensure that library deps are short-name style
-$(foreach d,$(MODULE_LIBS),$(call modname-require-short,$(d)))
-$(foreach d,$(MODULE_STATIC_LIBS),$(call modname-require-short,$(d)))
-
 # Things that are library-like but not "userlib" do not
 # generate static libraries, nor do they cause shared
 # libraries to be exported to the sysroot
@@ -116,7 +112,7 @@ endif
 ifneq ($(MODULE_SO_INSTALL_NAME),-)
 USER_MANIFEST_LINES += $(MODULE_SO_INSTALL_NAME)=$(MODULE_LIBNAME).so.strip
 # These debug info files go in the bootfs image.
-ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(BOOTFS_DEBUG_MODULES)),$(MODULE_SHORTNAME)),yes),yes)
+ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(BOOTFS_DEBUG_MODULES)),$(MODULE)),yes),yes)
 USER_MANIFEST_DEBUG_INPUTS += $(MODULE_LIBNAME).so.debug
 endif
 endif

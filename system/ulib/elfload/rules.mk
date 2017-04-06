@@ -13,6 +13,6 @@ MODULE_SRCS := $(LOCAL_DIR)/elf-load.c
 # This library refers to Magenta system calls and so needs libmagenta
 # headers.  But the library itself has no dependencies, so users must
 # ensure that the libmagenta entry points are available.
-MODULE_LIBS := ulib/magenta
+MODULE_LIBS := system/ulib/magenta
 
 include make/module.mk

@@ -16,13 +16,13 @@ MODULE_SRCS += \
 MODULE_NAME := region-alloc-test
 
 MODULE_STATIC_LIBS := \
-    ulib/region-alloc \
+    system/ulib/region-alloc \
 
 MODULE_LIBS := \
-    ulib/c \
-    ulib/mxcpp \
-    ulib/mxtl \
-    ulib/mxio \
-    ulib/unittest
+    system/ulib/c \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+    system/ulib/mxio \
+    system/ulib/unittest
 
 include make/module.mk

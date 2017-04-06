@@ -36,29 +36,41 @@
 #
 # include make/module.mk
 
+# Remove any .postfix bits for submodules to find our source directory
 MODULE_SRCDIR := $(firstword $(subst .,$(SPACE),$(MODULE)))
 
+# If there's not a rules.mk that corresponds to our srcdir,
+# something fishy is going on
 ifeq ($(wildcard $(MODULE_SRCDIR)/rules.mk),)
 $(error Module '$(MODULE)' missing $(MODULE_SRCDIR)/rules.mk)
 endif
 
+# Catch the "defined a module twice" failure case as soon
+# as possible, so it's easier to understand.
+ifneq ($(filter $(MODULE),$(DUPMODULES)),)
+$(error Module '$(MODULE)' defined in multiple rules.mk files)
+endif
+DUPMODULES += $(MODULE)
+
 # all library deps go on the deps list
 _MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS)
+
+# Catch the depends on nonexistant module error case
+# here where we can tell you what module has the bad deps
+$(foreach mod,$(_MODULE_DEPS) $(MODULE_HEADER_DEPS),$(if $(wildcard $(mod)),,\
+$(error Module '$(MODULE)' depends on '$(mod)' which does not exist)))
 
 # all regular deps contribute to header deps list
 MODULE_HEADER_DEPS += $(_MODULE_DEPS)
 
-# expand deps to canonical paths, remove dups
-_MODULE_DEPS := $(sort $(foreach d,$(_MODULE_DEPS),$(call modname-make-canonical,$(d))))
-MODULE_HEADER_DEPS := $(sort $(foreach d,$(MODULE_HEADER_DEPS),$(call modname-make-canonical,$(strip $(d)))))
+# use sort to de-duplicate our deps list
+_MODULE_DEPS := $(sort $(_MODULE_DEPS))
+MODULE_HEADER_DEPS := $(sort $(MODULE_HEADER_DEPS))
 
 # add the module deps to the global list
 MODULES += $(_MODULE_DEPS)
 
-# compute our shortname, which has all of the build system prefix paths removed
-MODULE_SHORTNAME = $(call modname-make-short,$(MODULE))
-
-MODULE_BUILDDIR := $(call TOBUILDDIR,$(MODULE_SHORTNAME))
+MODULE_BUILDDIR := $(call TOBUILDDIR,$(MODULE))
 
 # MODULE_NAME is used to generate installed names
 # it defaults to being derived from the MODULE directory
@@ -84,7 +96,7 @@ else
 # kernel module
 # add a local include dir to the global include path for kernel code
 KERNEL_INCLUDES += $(MODULE_SRCDIR)/include
-KERNEL_DEFINES += $(addsuffix =1,$(addprefix WITH_,$(MODULE_SHORTNAME)))
+KERNEL_DEFINES += $(addsuffix =1,$(addprefix WITH_,$(patsubst third_party/%,%,$(patsubst kernel/%,%,$(MODULE)))))
 MODULE_SRCDEPS += $(KERNEL_CONFIG_HEADER)
 endif
 
@@ -183,7 +195,6 @@ endif
 
 # empty out any vars set here
 MODULE :=
-MODULE_SHORTNAME :=
 MODULE_SRCDIR :=
 MODULE_BUILDDIR :=
 MODULE_DEPS :=

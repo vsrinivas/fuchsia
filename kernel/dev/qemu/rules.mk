@@ -12,6 +12,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/qemu_pcie.cpp \
 
 MODULE_DEPS += \
-	dev/interrupt/arm_gicv2 \
+	kernel/dev/interrupt/arm_gicv2 \
 
 include make/module.mk

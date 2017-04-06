@@ -14,16 +14,16 @@ MODULE_SRCS += \
 MODULE_SO_NAME := blktest
 
 MODULE_STATIC_LIBS := \
-    ulib/block-client \
-    ulib/sync \
-    ulib/hexdump \
+    system/ulib/block-client \
+    system/ulib/sync \
+    system/ulib/hexdump \
 
 MODULE_LIBS := \
-    ulib/c \
-    ulib/magenta \
-    ulib/mxcpp \
-    ulib/mxio \
-    ulib/mxtl \
-    ulib/unittest \
+    system/ulib/c \
+    system/ulib/magenta \
+    system/ulib/mxcpp \
+    system/ulib/mxio \
+    system/ulib/mxtl \
+    system/ulib/unittest \
 
 include make/module.mk

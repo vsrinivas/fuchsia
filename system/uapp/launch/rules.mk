@@ -13,9 +13,9 @@ MODULE_SRCS := $(LOCAL_DIR)/launch.c
 MODULE_NAME := launch
 
 MODULE_LIBS := \
-    ulib/launchpad \
-    ulib/mxio \
-    ulib/magenta \
-    ulib/c
+    system/ulib/launchpad \
+    system/ulib/mxio \
+    system/ulib/magenta \
+    system/ulib/c
 
 include make/module.mk

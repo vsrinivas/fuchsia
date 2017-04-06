@@ -13,7 +13,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := mxr-mutex-test
 
-MODULE_STATIC_LIBS := ulib/runtime
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/c
+MODULE_STATIC_LIBS := system/ulib/runtime
+MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

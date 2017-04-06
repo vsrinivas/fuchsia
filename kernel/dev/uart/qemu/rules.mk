@@ -11,8 +11,8 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/uart.c
 
 MODULE_DEPS += \
-	dev/pdev \
-	dev/pdev/uart \
-	lib/mdi \
+	kernel/dev/pdev \
+	kernel/dev/pdev/uart \
+	kernel/lib/mdi \
 
 include make/module.mk

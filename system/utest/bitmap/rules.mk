@@ -16,12 +16,12 @@ MODULE_SRCS += \
 MODULE_NAME := bitmap-test
 
 MODULE_LIBS := \
-    ulib/magenta \
-    ulib/c \
-    ulib/mxcpp \
-    ulib/mxio \
-    ulib/mxtl \
-    ulib/bitmap \
-    ulib/unittest \
+    system/ulib/magenta \
+    system/ulib/c \
+    system/ulib/mxcpp \
+    system/ulib/mxio \
+    system/ulib/mxtl \
+    system/ulib/bitmap \
+    system/ulib/unittest \
 
 include make/module.mk

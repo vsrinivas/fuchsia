@@ -13,6 +13,6 @@ GLOBAL_DEFINES += \
 
 ENABLE_BUILD_LISTFILES:=true
 
-include project/virtual/user.mk
-include project/virtual/test.mk
-include project/target/msm-trapper.mk
+include kernel/project/virtual/user.mk
+include kernel/project/virtual/test.mk
+include kernel/project/target/msm-trapper.mk

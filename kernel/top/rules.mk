@@ -10,11 +10,11 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS := \
-	platform \
-	target \
-	app \
-	dev \
-	kernel
+	kernel/platform \
+	kernel/target \
+	kernel/app \
+	kernel/dev \
+	kernel/kernel
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/init.c \

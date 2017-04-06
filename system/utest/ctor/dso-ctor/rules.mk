@@ -11,7 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/dso-ctor.cpp
 
-MODULE_LIBS := ulib/unittest ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/c
 
 MODULE_SO_NAME := dso-ctor
 

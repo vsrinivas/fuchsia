@@ -18,16 +18,16 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/rpc.cpp \
 
 MODULE_STATIC_LIBS := \
-    ulib/fs \
-    ulib/merkle \
-    ulib/cryptolib \
+    system/ulib/fs \
+    system/ulib/merkle \
+    third_party/ulib/cryptolib \
 
 MODULE_LIBS := \
-    ulib/c \
-    ulib/magenta \
-    ulib/mxio \
-    ulib/bitmap \
-    ulib/mxcpp \
-    ulib/mxtl \
+    system/ulib/c \
+    system/ulib/magenta \
+    system/ulib/mxio \
+    system/ulib/bitmap \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
 
 include make/module.mk

@@ -14,7 +14,7 @@ MODULE_SRCS += \
 MODULE_NAME := threads-test
 
 MODULE_LIBS := \
-    ulib/unittest ulib/mxio ulib/magenta ulib/c
-MODULE_STATIC_LIBS := ulib/runtime
+    system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
+MODULE_STATIC_LIBS := system/ulib/runtime
 
 include make/module.mk

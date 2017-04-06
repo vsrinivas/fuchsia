@@ -10,6 +10,6 @@
 SUBARCH := x86-64
 MODULES +=
 
-include project/virtual/nouser.mk
-include project/virtual/test.mk
-include project/target/pc-x86.mk
+include kernel/project/virtual/nouser.mk
+include kernel/project/virtual/test.mk
+include kernel/project/target/pc-x86.mk

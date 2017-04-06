@@ -12,7 +12,7 @@ MODULE := $(LOCAL_DIR)
 CPU := generic
 
 MODULE_DEPS += \
-    lib/cbuf \
+    kernel/lib/cbuf \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
@@ -31,14 +31,14 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/watchdog.c \
 
 MODULE_DEPS += \
-    lib/acpica \
-    lib/capsule \
-    lib/gfxconsole \
-    lib/fixed_point \
-    lib/pow2_range_allocator \
-    lib/version \
-    dev/interrupt \
-    dev/pcie \
+    third_party/lib/acpica \
+    kernel/lib/capsule \
+    kernel/lib/gfxconsole \
+    kernel/lib/fixed_point \
+    kernel/lib/pow2_range_allocator \
+    kernel/lib/version \
+    kernel/dev/interrupt \
+    kernel/dev/pcie \
 
 KERNEL_DEFINES += \
     PLATFORM_SUPPORTS_PANIC_SHELL=1

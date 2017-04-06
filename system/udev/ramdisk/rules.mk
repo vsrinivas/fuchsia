@@ -10,9 +10,9 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/ramdisk.c
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/sync ulib/block-client
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/block-client
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/c ulib/mxcpp ulib/mxtl
+MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c system/ulib/mxcpp system/ulib/mxtl
 
 include make/module.mk
 

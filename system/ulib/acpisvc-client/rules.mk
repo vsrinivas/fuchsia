@@ -12,7 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/simple.c
 
 MODULE_LIBS := \
-	ulib/magenta \
-	ulib/c
+	system/ulib/magenta \
+	system/ulib/c
 
 include make/module.mk

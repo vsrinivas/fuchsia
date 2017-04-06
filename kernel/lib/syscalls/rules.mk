@@ -10,10 +10,10 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS := \
-    lib/console \
-    lib/crypto \
-    lib/magenta \
-    lib/user_copy \
+    kernel/lib/console \
+    kernel/lib/crypto \
+    kernel/lib/magenta \
+    kernel/lib/user_copy \
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls.cpp \

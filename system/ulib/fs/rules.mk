@@ -16,10 +16,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-rpc.cpp \
 
 MODULE_LIBS := \
-    ulib/c \
-    ulib/magenta \
-    ulib/mxcpp \
-    ulib/mxio \
-    ulib/mxtl \
+    system/ulib/c \
+    system/ulib/magenta \
+    system/ulib/mxcpp \
+    system/ulib/mxio \
+    system/ulib/mxtl \
 
 include make/module.mk

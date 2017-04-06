@@ -10,8 +10,8 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/usb-hub.c
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/sync
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
 
 include make/module.mk

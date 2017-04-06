@@ -11,11 +11,11 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
-MODULE_STATIC_LIBS := ulib/lz4
+MODULE_STATIC_LIBS := third_party/ulib/lz4
 
 MODULE_LIBS := \
-    ulib/magenta \
-    ulib/mxio \
-    ulib/c
+    system/ulib/magenta \
+    system/ulib/mxio \
+    system/ulib/c
 
 include make/module.mk

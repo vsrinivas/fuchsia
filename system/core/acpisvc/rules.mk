@@ -28,13 +28,13 @@ MODULE_SRCS += $(LOCAL_DIR)/dummy.c
 endif
 
 MODULE_STATIC_LIBS := \
-    ulib/acpisvc-client \
-    ulib/acpica \
-    ulib/ddk \
+    system/ulib/acpisvc-client \
+    third_party/ulib/acpica \
+    system/ulib/ddk \
 
 MODULE_LIBS := \
-    ulib/magenta \
-    ulib/c \
-    ulib/mxio \
+    system/ulib/magenta \
+    system/ulib/c \
+    system/ulib/mxio \
 
 include make/module.mk

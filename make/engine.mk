@@ -59,10 +59,6 @@ spotless:
 	rm -rf -- "$(BUILDROOT)"/build-*
 else
 
-ifndef LKROOT
-$(error please define LKROOT to the root of the $(LKNAME) build system)
-endif
-
 # If one of our goals (from the commandline) happens to have a
 # matching project/goal.mk, then we should re-invoke make with
 # that project name specified...
@@ -70,7 +66,7 @@ endif
 project-name := $(firstword $(MAKECMDGOALS))
 
 ifneq ($(project-name),)
-ifneq ($(strip $(foreach d,$(LKINC),$(wildcard $(d)/project/$(project-name).mk))),)
+ifneq ($(strip $(wildcard kernel/project/$(project-name).mk)),)
 do-nothing := 1
 $(MAKECMDGOALS) _all: make-make
 make-make:
@@ -123,7 +119,8 @@ GLOBAL_CFLAGS := --std=c11 -Werror-implicit-function-declaration -Wstrict-protot
 GLOBAL_CPPFLAGS := --std=c++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -Wconversion -Wno-sign-conversion
 #GLOBAL_CPPFLAGS += -Weffc++
 GLOBAL_ASMFLAGS := -DASSEMBLY
-GLOBAL_LDFLAGS := -nostdlib $(addprefix -L,$(LKINC))
+GLOBAL_LDFLAGS := -nostdlib
+# $(addprefix -L,$(LKINC)) XXX
 GLOBAL_MODULE_LDFLAGS :=
 
 # By default the sysroot is generated in "sysroot" under
@@ -155,7 +152,7 @@ sysroot-module-mdeps =
 endif
 
 # Kernel compile flags
-KERNEL_INCLUDES := $(BUILDDIR) $(addsuffix /include,$(LKINC))
+KERNEL_INCLUDES := $(BUILDDIR) kernel/include
 KERNEL_COMPILEFLAGS := -fno-pic -ffreestanding -include $(KERNEL_CONFIG_HEADER)
 KERNEL_COMPILEFLAGS += -Wformat=2
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
@@ -194,7 +191,7 @@ endif
 
 USER_COMPILEFLAGS += $(SAFESTACK)
 
-USER_CRT1_OBJ := $(BUILDDIR)/ulib/crt1.o
+USER_CRT1_OBJ := $(BUILDDIR)/system/ulib/crt1.o
 
 # Additional flags for building shared libraries (ld -shared).
 USERLIB_SO_LDFLAGS := $(USER_DYNAMIC_LDFLAGS) -z defs
@@ -282,6 +279,10 @@ PLATFORM :=
 ARCH :=
 ALLMODULES :=
 
+# this is the *true* allmodules, to check for duplicate modules
+# (since submodules do not contribute to ALLMODULES)
+DUPMODULES :=
+
 # add any external module dependencies
 MODULES := $(EXTERNAL_MODULES)
 
@@ -334,11 +335,6 @@ USER_MANIFEST_LINES :=
 # The contents of this are derived from BOOTFS_DEBUG_MODULES.
 USER_MANIFEST_DEBUG_INPUTS :=
 
-# construct a slightly prettier version of LKINC with . removed and trailing / added
-# used in module.mk
-LKPREFIXES := $(patsubst %,%/,$(filter-out .,$(LKINC)))
-LKPATTERNS := $(patsubst %,%/%,$(filter-out .,$(LKINC)))
-
 # if someone defines this, the build id will be pulled into lib/version
 BUILDID ?=
 
@@ -354,21 +350,21 @@ endif
 FORCE:
 
 # try to include the project file
--include project/$(PROJECT).mk
+-include kernel/project/$(PROJECT).mk
 ifndef TARGET
 $(error couldn't find project or project doesn't define target)
 endif
-include target/$(TARGET)/rules.mk
+include kernel/target/$(TARGET)/rules.mk
 ifndef PLATFORM
 $(error couldn't find target or target doesn't define platform)
 endif
-include platform/$(PLATFORM)/rules.mk
+include kernel/platform/$(PLATFORM)/rules.mk
 
 $(info PROJECT/PLATFORM/TARGET = $(PROJECT) / $(PLATFORM) / $(TARGET))
 
-include host/rules.mk
-include arch/$(ARCH)/rules.mk
-include top/rules.mk
+include system/host/rules.mk
+include kernel/arch/$(ARCH)/rules.mk
+include kernel/top/rules.mk
 include make/sysgen.mk
 
 # recursively include any modules in the MODULE variable, leaving a trail of included

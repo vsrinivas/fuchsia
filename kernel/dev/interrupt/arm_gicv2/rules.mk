@@ -15,10 +15,10 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/arm_gicv2m_msi.c \
 
 MODULE_DEPS += \
-	dev/interrupt \
-	dev/pdev \
-	dev/pdev/interrupt \
-	lib/mdi \
-	lib/pow2_range_allocator
+	kernel/dev/interrupt \
+	kernel/dev/pdev \
+	kernel/dev/pdev/interrupt \
+	kernel/lib/mdi \
+	kernel/lib/pow2_range_allocator
 
 include make/module.mk

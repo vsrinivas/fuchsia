@@ -12,14 +12,14 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/client.c \
 
 MODULE_STATIC_LIBS := \
-    ulib/fs \
-    ulib/sync \
+    system/ulib/fs \
+    system/ulib/sync \
 
 MODULE_LIBS := \
-    ulib/c \
-    ulib/magenta \
-    ulib/mxio \
+    system/ulib/c \
+    system/ulib/magenta \
+    system/ulib/mxio \
 
-MODULE_HEADER_DEPS := ulib/ddk
+MODULE_HEADER_DEPS := system/ulib/ddk
 
 include make/module.mk

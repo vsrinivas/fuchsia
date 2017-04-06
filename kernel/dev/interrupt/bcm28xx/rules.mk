@@ -13,8 +13,8 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/intc.c
 
 MODULE_DEPS += \
-	dev/interrupt \
-	dev/pdev \
-	dev/pdev/interrupt \
+	kernel/dev/interrupt \
+	kernel/dev/pdev \
+	kernel/dev/pdev/interrupt \
 
 include make/module.mk

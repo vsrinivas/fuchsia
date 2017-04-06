@@ -25,19 +25,19 @@ ARCH := arm64
 ARM_CPU := cortex-a53
 
 MODULE_DEPS += \
-	lib/cbuf \
-	lib/mdi \
-	dev/bcm28xx \
-	dev/pcie \
-	dev/pdev \
-	dev/timer/arm_generic \
-	dev/interrupt/arm_gicv2 \
-	dev/interrupt/arm_gicv3 \
-	dev/interrupt/bcm28xx \
-	dev/psci \
-	dev/qemu \
-	dev/uart/bcm28xx \
-	dev/uart/msm \
-	dev/uart/qemu \
+	kernel/lib/cbuf \
+	kernel/lib/mdi \
+	kernel/dev/bcm28xx \
+	kernel/dev/pcie \
+	kernel/dev/pdev \
+	kernel/dev/timer/arm_generic \
+	kernel/dev/interrupt/arm_gicv2 \
+	kernel/dev/interrupt/arm_gicv3 \
+	kernel/dev/interrupt/bcm28xx \
+	kernel/dev/psci \
+	kernel/dev/qemu \
+	kernel/dev/uart/bcm28xx \
+	kernel/dev/uart/msm \
+	kernel/dev/uart/qemu \
 
 include make/module.mk

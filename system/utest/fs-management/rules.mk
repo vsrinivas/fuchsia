@@ -14,10 +14,10 @@ MODULE_SRCS += \
 MODULE_NAME := fs-management-test
 
 MODULE_LIBS := \
-    ulib/fs-management \
-    ulib/magenta \
-    ulib/c \
-    ulib/mxio \
-    ulib/unittest \
+    system/ulib/fs-management \
+    system/ulib/magenta \
+    system/ulib/c \
+    system/ulib/mxio \
+    system/ulib/unittest \
 
 include make/module.mk

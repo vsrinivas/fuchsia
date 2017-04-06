@@ -8,7 +8,7 @@
 # main project for qemu-aarch64
 MODULES +=
 
-include project/virtual/nouser.mk
-include project/virtual/test.mk
-include project/target/qemu-virt-a53.mk
+include kernel/project/virtual/nouser.mk
+include kernel/project/virtual/test.mk
+include kernel/project/target/qemu-virt-a53.mk
 

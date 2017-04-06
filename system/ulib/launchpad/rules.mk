@@ -17,7 +17,7 @@ MODULE_SRCS += \
 MODULE_EXPORT := so
 
 MODULE_SO_NAME := launchpad
-MODULE_STATIC_LIBS := ulib/elfload
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
+MODULE_STATIC_LIBS := system/ulib/elfload
+MODULE_LIBS := system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

@@ -27,6 +27,6 @@ MODULE_SRCS += \
 MODULE_EXPORT := so
 
 MODULE_SO_NAME := mxio
-MODULE_LIBS := ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/magenta system/ulib/c
 
 include make/module.mk

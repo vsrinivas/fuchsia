@@ -14,10 +14,6 @@ ifeq ($(MODULE_INSTALL_PATH),)
 MODULE_INSTALL_PATH := bin
 endif
 
-# ensure that library deps are short-name style
-$(foreach d,$(MODULE_LIBS),$(call modname-require-short,$(d)))
-$(foreach d,$(MODULE_STATIC_LIBS),$(call modname-require-short,$(d)))
-
 MODULE_USERAPP_OBJECT := $(patsubst %.mod.o,%.elf,$(MODULE_OBJECT))
 ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)
@@ -25,7 +21,7 @@ ALLUSER_MODULES += $(MODULE)
 USER_MANIFEST_LINES += $(MODULE_INSTALL_PATH)/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
 
 # These debug info files go in the bootfs image.
-ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(BOOTFS_DEBUG_MODULES)),$(MODULE_SHORTNAME)),yes),yes)
+ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(BOOTFS_DEBUG_MODULES)),$(MODULE)),yes),yes)
 USER_MANIFEST_DEBUG_INPUTS += $(addsuffix .debug,$(MODULE_USERAPP_OBJECT))
 endif
 

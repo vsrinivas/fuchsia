@@ -11,6 +11,6 @@
 SUBARCH := x86-64
 MODULES +=
 
-include project/virtual/test.mk
-include project/virtual/user.mk
-include project/target/pc-x86.mk
+include kernel/project/virtual/test.mk
+include kernel/project/virtual/user.mk
+include kernel/project/target/pc-x86.mk

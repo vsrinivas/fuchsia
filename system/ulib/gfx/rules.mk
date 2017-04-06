@@ -11,8 +11,8 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_LIBS := \
-    ulib/magenta \
-    ulib/c \
+    system/ulib/magenta \
+    system/ulib/c \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/gfx.c \

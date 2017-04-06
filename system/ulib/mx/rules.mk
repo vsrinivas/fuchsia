@@ -24,7 +24,7 @@ MODULE_SRCS += \
 
 MODULE_SO_NAME := libmx
 
-MODULE_LIBS := ulib/magenta
+MODULE_LIBS := system/ulib/magenta
 
 MODULE_COMPILEFLAGS := $(NO_SAFESTACK)
 

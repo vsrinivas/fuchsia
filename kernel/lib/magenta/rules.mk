@@ -50,9 +50,9 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/wait_state_observer.cpp \
 
 MODULE_DEPS := \
-    lib/dpc \
-    lib/mxtl \
-    dev/interrupt \
-    dev/udisplay \
+    kernel/lib/dpc \
+    kernel/lib/mxtl \
+    kernel/dev/interrupt \
+    kernel/dev/udisplay \
 
 include make/module.mk

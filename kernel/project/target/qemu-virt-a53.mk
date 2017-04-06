@@ -9,6 +9,6 @@
 ARCH := arm64
 ARM_CPU := cortex-a53
 
-include project/target/qemu-virt.mk
+include kernel/project/target/qemu-virt.mk
 
 

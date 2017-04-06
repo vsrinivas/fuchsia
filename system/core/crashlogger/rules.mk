@@ -17,17 +17,17 @@ MODULE_SRCS += \
 
 MODULE_NAME := crashlogger
 
-MODULE_STATIC_LIBS := ulib/hexdump ulib/runtime
+MODULE_STATIC_LIBS := system/ulib/hexdump system/ulib/runtime
 
 MODULE_LIBS := \
-    ulib/backtrace \
-    ulib/ngunwind \
-    ulib/launchpad \
-    ulib/mxcpp \
-    ulib/mxtl \
-    ulib/mxio \
-    ulib/magenta \
-    ulib/c
+    third_party/ulib/backtrace \
+    third_party/ulib/ngunwind \
+    system/ulib/launchpad \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+    system/ulib/mxio \
+    system/ulib/magenta \
+    system/ulib/c
 
 # Compile this with frame pointers so that if we crash
 # the simplistic unwinder will work.

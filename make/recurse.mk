@@ -9,16 +9,15 @@
 # the current MODULE list. If as a byproduct of including the rules.mk
 # more stuff shows up on the MODULE list, recurse
 
-# Canonicalize module names so we never include one twice due
-# to two versions of the name resolving to the same rules.mk on disk
-MODULES := $(foreach d,$(strip $(MODULES)),$(call modname-make-canonical,$(strip $(d))))
+# Strip any .postfixes, as these refer to "sub-modules" defined in the
+# rules.mk file of the base module name.
+MODULES := $(foreach d,$(strip $(MODULES)),$(firstword $(subst .,$(SPACE),$(d))))
 
 # sort and filter out any modules that have already been included
 MODULES := $(sort $(MODULES))
 MODULES := $(filter-out $(ALLMODULES),$(MODULES))
 
 ifneq ($(MODULES),)
-
 ALLMODULES += $(MODULES)
 ALLMODULES := $(sort $(ALLMODULES))
 INCMODULES := $(MODULES)

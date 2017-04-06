@@ -13,6 +13,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := ctor-test
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/c utest/ctor/dso-ctor
+MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/c
+MODULE_LIBS += system/utest/ctor/dso-ctor
 
 include make/module.mk

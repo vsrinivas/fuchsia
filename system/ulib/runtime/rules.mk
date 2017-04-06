@@ -17,11 +17,11 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/sysinfo.c \
 
 MODULE_LIBS += \
-    ulib/magenta
+    system/ulib/magenta
 
 # for stdint.h
 MODULE_HEADER_DEPS += \
-    ulib/c
+    system/ulib/c
 
 # This code is used in early startup, where safe-stack setup is not ready yet.
 MODULE_COMPILEFLAGS += $(NO_SAFESTACK)

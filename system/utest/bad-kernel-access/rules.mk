@@ -16,8 +16,8 @@ MODULE_SRCS += \
 
 MODULE_NAME := bad-kernel-access-test-crashes
 
-MODULE_STATIC_LIBS := ulib/ddk
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
+MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_LIBS := system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk
 

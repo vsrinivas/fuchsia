@@ -14,7 +14,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := crasher
 
-MODULE_LIBS := ulib/mxio ulib/c ulib/mxcpp ulib/magenta
+MODULE_LIBS := system/ulib/mxio system/ulib/c system/ulib/mxcpp system/ulib/magenta
 
 MODULE_COMPILEFLAGS := -fstack-protector-all
 

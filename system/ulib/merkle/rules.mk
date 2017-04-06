@@ -13,11 +13,11 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/tree.cpp
 
 MODULE_SO_NAME := merkle
-MODULE_LIBS := ulib/mxcpp ulib/mxtl ulib/c
+MODULE_LIBS := system/ulib/mxcpp system/ulib/mxtl system/ulib/c
 
 # TODO(aarongreen): cryptolib is FAR too slow for general purpose use.  We'll
 # need to use it to bootstrap and verify libcrypto.so before switching to
 # BoringSSL's optimized digests.
-MODULE_STATIC_LIBS := ulib/cryptolib
+MODULE_STATIC_LIBS := third_party/ulib/cryptolib
 
 include make/module.mk

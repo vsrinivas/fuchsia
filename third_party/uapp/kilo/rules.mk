@@ -22,7 +22,7 @@ MODULE_SRCS += $(LOCAL_DIR)/kilo.c
 
 MODULE_NAME := kilo
 
-MODULE_LIBS := ulib/mxio ulib/c
+MODULE_LIBS := system/ulib/mxio system/ulib/c
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 MODULE_CFLAGS += -Wno-discarded-qualifiers

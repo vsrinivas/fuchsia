@@ -12,6 +12,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS += \
 	$(LOCAL_DIR)/intel-rng.c \
 
-MODULE_DEPS += dev/hw_rng
+MODULE_DEPS += kernel/dev/hw_rng
 
 include make/module.mk

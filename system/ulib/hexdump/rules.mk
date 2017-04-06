@@ -10,6 +10,6 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += $(LOCAL_DIR)/hexdump.c
 
-MODULE_LIBS += ulib/c
+MODULE_LIBS += system/ulib/c
 
 include make/module.mk

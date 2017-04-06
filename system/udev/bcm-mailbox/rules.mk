@@ -11,8 +11,8 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/mailbox.c \
 
-MODULE_STATIC_LIBS := ulib/ddk ulib/bcm
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/bcm
 
-MODULE_LIBS := ulib/driver ulib/c ulib/magenta
+MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/magenta
 
 include make/module.mk

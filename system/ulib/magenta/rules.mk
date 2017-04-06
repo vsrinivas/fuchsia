@@ -11,7 +11,7 @@ MODULE_TYPE := userlib
 # This library should not depend on libc.
 MODULE_COMPILEFLAGS := -ffreestanding
 
-MODULE_HEADER_DEPS := lib/vdso
+MODULE_HEADER_DEPS := kernel/lib/vdso
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/data.c \

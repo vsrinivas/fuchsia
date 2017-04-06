@@ -69,47 +69,6 @@ else
 BUILDCMD = $(NOECHO)$(1) $(2)
 endif
 
-# Tools to make module names canonical (expand to a full path relative
-# to LKROOT) and to ensure that canonical names exist and are non-ambigous.
-
-# Check that the expansion $(2) of a module name $(1) resolves to exactly
-# one canonical name, error out (differently) on 0 or >1 matches
-modname-check = $(if $(word 2,$(2)),$(error MODULE $(1): resolves to: $(2)),$(if $(strip $(2)),$(2),$(error MODULE $(1): unresolvable)))
-
-# First, check if the name resolves directly, in which case, take that.
-# Second, wildcard against each LKINC path as a .../ prefix and make
-# sure that there is only one match (via modname-check).  If there is
-# no match and the name ends in -static, then try canonicalizing the
-# name sans -static and then append -static to the canonicalized name.
-modname-make-canonical = \
-    $(call modname-check,$(1),$(call modname-find-canonical,$(1)))
-modname-find-canonical = \
-    $(or $(call modname-expand,$(1)),\
-         $(if $(filter %-static,$(1)),\
-	      $(addsuffix -static,$(call modname-expand,$(1:%-static=%)))))
-modname-expand = \
-    $(if $(wildcard $(1)),$(1),$(wildcard $(addsuffix /$(1),$(LKINC))))
-
-
-# Convert a canonical (full-path) module name to a short (as used
-# in the builddir) module name
-#
-# Recursively strips all the top level directory prefixes
-modname-make-short- = \
-    $(if $(strip $(2)),\
-        $(call modname-make-short-,\
-            $(patsubst $(firstword $(2))%,%,$(1)),\
-            $(wordlist 2,100,$(2))),\
-        $(1))
-
-modname-make-short = $(strip $(call modname-make-short-,$(1),$(LKPREFIXES)))
-
-# Verify that the module name is a short name by checking
-# for the presence of any of the top level directory prefixes
-modname-require-short = \
-    $(if $(filter $(LKPATTERNS),$(1)),\
-        $(error $(MODULE): full path module name $(1) is invalid here),)
-
 define generate-copy-dst-src
 $1: $2
 	@$$(MKDIR)

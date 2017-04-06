@@ -21,10 +21,10 @@ ifndef LK_HEAP_IMPLEMENTATION
 LK_HEAP_IMPLEMENTATION=miniheap
 endif
 ifeq ($(LK_HEAP_IMPLEMENTATION),miniheap)
-MODULE_DEPS := lib/heap/miniheap
+MODULE_DEPS := kernel/lib/heap/miniheap
 endif
 ifeq ($(LK_HEAP_IMPLEMENTATION),cmpctmalloc)
-MODULE_DEPS := lib/heap/cmpctmalloc
+MODULE_DEPS := kernel/lib/heap/cmpctmalloc
 endif
 
 KERNEL_DEFINES += LK_HEAP_IMPLEMENTATION=$(LK_HEAP_IMPLEMENTATION)

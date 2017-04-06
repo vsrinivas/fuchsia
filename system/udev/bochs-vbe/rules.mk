@@ -10,8 +10,8 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/bochs-vbe.c
 
-MODULE_STATIC_LIBS := ulib/ddk
+MODULE_STATIC_LIBS := system/ulib/ddk
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
 
 include make/module.mk

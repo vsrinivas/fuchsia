@@ -15,9 +15,9 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/main.c \
 
 MODULE_LIBS := \
-    ulib/fs-management \
-    ulib/magenta \
-    ulib/c \
-    ulib/mxio \
+    system/ulib/fs-management \
+    system/ulib/magenta \
+    system/ulib/c \
+    system/ulib/mxio \
 
 include make/module.mk

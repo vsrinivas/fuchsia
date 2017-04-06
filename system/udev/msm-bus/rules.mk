@@ -12,8 +12,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/fbuffer.c \
 
 
-MODULE_STATIC_LIBS := ulib/ddk
+MODULE_STATIC_LIBS := system/ulib/ddk
 
-MODULE_LIBS := ulib/driver ulib/c ulib/magenta
+MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/magenta
 
 include make/module.mk

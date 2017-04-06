@@ -188,10 +188,10 @@ endif
 MODULE_CFLAGS += -Wno-strict-aliasing -I$(SRC_DIR)/include/acpica
 
 MODULE_STATIC_LIBS := \
-    ulib/ddk \
-    ulib/magenta
+    system/ulib/ddk \
+    system/ulib/magenta
 
 MODULE_LIBS := \
-    ulib/c
+    system/ulib/c
 
 include make/module.mk

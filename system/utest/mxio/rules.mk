@@ -14,9 +14,9 @@ MODULE_SRCS += \
 MODULE_NAME := mxio-test
 
 MODULE_LIBS := \
-    ulib/magenta \
-    ulib/c \
-    ulib/mxio \
-    ulib/unittest \
+    system/ulib/magenta \
+    system/ulib/c \
+    system/ulib/mxio \
+    system/ulib/unittest \
 
 include make/module.mk

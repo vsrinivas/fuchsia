@@ -14,12 +14,12 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/debugger.c \
     $(LOCAL_DIR)/utils.c
 
-MODULE_STATIC_LIBS := ulib/runtime
+MODULE_STATIC_LIBS := system/ulib/runtime
 MODULE_LIBS := \
-    ulib/test-utils \
-    ulib/unittest \
-    ulib/launchpad \
-    ulib/magenta \
-    ulib/c
+    system/ulib/test-utils \
+    system/ulib/unittest \
+    system/ulib/launchpad \
+    system/ulib/magenta \
+    system/ulib/c
 
 include make/module.mk

@@ -12,8 +12,8 @@ MODULE_SRCS := $(LOCAL_DIR)/int-types.cpp
 
 MODULE_NAME := int-types-test
 
-MODULE_STATIC_LIBS := ulib/mxtl
+MODULE_STATIC_LIBS := system/ulib/mxtl
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/c
 
 include make/module.mk

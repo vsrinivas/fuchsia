@@ -13,9 +13,9 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/userboot.cpp \
     $(LOCAL_DIR)/userboot-image.S \
 
-MODULE_DEPS := lib/vdso
+MODULE_DEPS := kernel/lib/vdso
 
-userboot-filename := $(BUILDDIR)/core/userboot/libuserboot.so
+userboot-filename := $(BUILDDIR)/system/core/userboot/libuserboot.so
 
 # userboot-image.S embeds this file, so building depends on it.
 MODULE_SRCDEPS += $(userboot-filename).strip

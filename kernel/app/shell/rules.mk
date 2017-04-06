@@ -12,7 +12,7 @@ MODULE := $(LOCAL_DIR)
 GLOBAL_DEFINES += _MX_KERNEL_HAS_SHELL=1
 
 MODULE_DEPS += \
-	lib/console
+	kernel/lib/console
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/shell.c

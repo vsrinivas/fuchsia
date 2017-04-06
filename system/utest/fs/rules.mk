@@ -35,11 +35,11 @@ MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir
 MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink --wrap rmdir
 
 MODULE_LIBS := \
-    ulib/mxio \
-    ulib/c \
-    ulib/fs-management \
-    ulib/launchpad \
-    ulib/magenta \
-    ulib/unittest \
+    system/ulib/mxio \
+    system/ulib/c \
+    system/ulib/fs-management \
+    system/ulib/launchpad \
+    system/ulib/magenta \
+    system/ulib/unittest \
 
 include make/module.mk

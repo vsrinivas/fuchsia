@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := spinner
 
-MODULE_LIBS := ulib/mxio ulib/c
+MODULE_LIBS := system/ulib/mxio system/ulib/c
 
 include make/module.mk

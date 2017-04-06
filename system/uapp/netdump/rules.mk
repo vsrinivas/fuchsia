@@ -10,8 +10,8 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += $(LOCAL_DIR)/netdump.c
 
-MODULE_STATIC_LIBS := ulib/hexdump
+MODULE_STATIC_LIBS := system/ulib/hexdump
 
-MODULE_LIBS := ulib/mxio ulib/magenta ulib/c
+MODULE_LIBS := system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk

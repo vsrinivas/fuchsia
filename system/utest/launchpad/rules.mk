@@ -14,14 +14,14 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/launchpad.c
 
 MODULE_STATIC_LIBS := \
-    ulib/elfload \
-    ulib/runtime
+    system/ulib/elfload \
+    system/ulib/runtime
 
 MODULE_LIBS := \
-    ulib/unittest \
-    ulib/launchpad \
-    ulib/mxio \
-    ulib/magenta \
-    ulib/c
+    system/ulib/unittest \
+    system/ulib/launchpad \
+    system/ulib/mxio \
+    system/ulib/magenta \
+    system/ulib/c
 
 include make/module.mk

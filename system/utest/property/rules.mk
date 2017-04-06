@@ -13,11 +13,11 @@ MODULE_SRCS += $(LOCAL_DIR)/property.c
 MODULE_NAME := property-test
 
 MODULE_LIBS := \
-    ulib/unittest \
-    ulib/test-utils \
-    ulib/launchpad \
-    ulib/mxio \
-    ulib/magenta \
-    ulib/c
+    system/ulib/unittest \
+    system/ulib/test-utils \
+    system/ulib/launchpad \
+    system/ulib/mxio \
+    system/ulib/magenta \
+    system/ulib/c
 
 include make/module.mk

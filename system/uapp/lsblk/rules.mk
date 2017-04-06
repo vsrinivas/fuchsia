@@ -11,8 +11,8 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
-MODULE_STATIC_LIBS := ulib/gpt ulib/hexdump
+MODULE_STATIC_LIBS := system/ulib/gpt system/ulib/hexdump
 
-MODULE_LIBS := ulib/magenta ulib/mxio ulib/c
+MODULE_LIBS := system/ulib/magenta system/ulib/mxio system/ulib/c
 
 include make/module.mk

@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := exit-test
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/c
+MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/c
 
 include make/module.mk
