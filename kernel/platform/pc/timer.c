@@ -30,6 +30,8 @@
 #include <platform/timer.h>
 #include "platform_p.h"
 
+#define MSR_PLATFORM_INFO 0xCE
+
 // Current timer scheme:
 // The HPET is used to calibrate the local APIC timers and the TSC.  If the
 // HPET is not present, we will fallback to calibrating using the PIT.
@@ -85,7 +87,7 @@ static enum clock_source calibration_clock;
 
 // APIC timer calibration values
 static bool use_tsc_deadline;
-static volatile uint32_t apic_ticks_per_ms = 0;
+static uint64_t apic_ticks_per_ms = 0;
 static uint8_t apic_divisor = 0;
 
 // TSC timer calibration values
@@ -290,11 +292,64 @@ static inline void hpet_calibration_cycle_cleanup(void)
     hpet_disable();
 }
 
+static uint64_t lookup_core_crystal_freq(void) {
+    // The APIC frequency is the core crystal clock frequency if it is
+    // enumerated in the CPUID leaf 0x15, or the processor's bus clock
+    // frequency.
+    const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
+    if (tsc_leaf && tsc_leaf->c != 0) {
+        return tsc_leaf->c;
+    }
+
+    switch (x86_microarch) {
+        case X86_MICROARCH_INTEL_SKYLAKE:
+        case X86_MICROARCH_INTEL_KABYLAKE:
+            return 24u * 1000 * 1000;
+        case X86_MICROARCH_INTEL_SANDY_BRIDGE:
+        case X86_MICROARCH_INTEL_IVY_BRIDGE:
+        case X86_MICROARCH_INTEL_HASWELL:
+        case X86_MICROARCH_INTEL_BROADWELL: {
+            uint64_t platform_info;
+            if (read_msr_safe(MSR_PLATFORM_INFO, &platform_info) == NO_ERROR) {
+                uint64_t bus_freq_mult = (platform_info >> 8) & 0xf;
+                return bus_freq_mult * 100 * 1000 * 1000;
+            }
+            break;
+        }
+        case X86_MICROARCH_UNKNOWN:
+            break;
+    }
+
+    return 0;
+}
+
+static uint64_t lookup_tsc_freq(void) {
+    const uint32_t core_crystal_clock_freq = lookup_core_crystal_freq();
+
+    // If this leaf is present, then 18.18.3 (Determining the Processor Base
+    // Frequency) documents this as the nominal TSC frequency.
+    const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
+    if (tsc_leaf) {
+        return ((uint64_t)core_crystal_clock_freq * tsc_leaf->b) / tsc_leaf->a;
+    }
+
+    return 0;
+}
+
 static void calibrate_apic_timer(void)
 {
     ASSERT(arch_ints_disabled());
 
-    TRACEF("Calibrating APIC with %s\n", clock_name[calibration_clock]);
+    const uint64_t apic_freq = lookup_core_crystal_freq();
+    if (apic_freq != 0) {
+        apic_ticks_per_ms = apic_freq / 1000;
+        apic_divisor = 1;
+        TRACEF("APIC frequency: %" PRIu64 " ticks/ms\n", apic_ticks_per_ms);
+        return;
+    }
+
+    TRACEF("Could not find APIC frequency! Calibrating APIC with %s\n",
+           clock_name[calibration_clock]);
 
     apic_divisor = 1;
 outer:
@@ -361,7 +416,7 @@ outer:
     }
     ASSERT(apic_divisor != 0);
 
-    LTRACEF("APIC timer calibrated: %u ticks/ms, %d divisor\n",
+    LTRACEF("APIC timer calibrated: %" PRIu64 " ticks/ms, %d divisor\n",
             apic_ticks_per_ms, apic_divisor);
 }
 
@@ -369,7 +424,16 @@ static void calibrate_tsc(void)
 {
     ASSERT(arch_ints_disabled());
 
-    TRACEF("Calibrating TSC with %s\n", clock_name[calibration_clock]);
+    const uint64_t tsc_freq = lookup_tsc_freq();
+    if (tsc_freq != 0) {
+        tsc_ticks_per_ms = tsc_freq / 1000;
+        fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, tsc_ticks_per_ms);
+        TRACEF("TSC frequency: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
+        return;
+    }
+
+    TRACEF("Could not find TSC frequency! Calibrating TSC with %s\n",
+           clock_name[calibration_clock]);
 
     uint64_t best_time[2] = {UINT64_MAX, UINT64_MAX};
     const uint16_t duration_ms[2] = { 1, 2 };
@@ -427,7 +491,7 @@ static void calibrate_tsc(void)
 
     LTRACEF("TSC calibrated: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
 
-    fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000 * 1000, tsc_ticks_per_ms * 1000);
+    fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, tsc_ticks_per_ms);
     LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
