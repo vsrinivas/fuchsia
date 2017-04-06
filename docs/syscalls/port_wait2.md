@@ -75,12 +75,10 @@ typedef struct mx_packet_signal {
 } mx_packet_signal_t;
 ```
 
-+ **MX_WAIT_ASYNC_ONCE**: *trigger* is the signals used in the call to **object_wait_async**()
-    and *count* is a per object defined count of pending operations. Use *key* to track what
-    object this packet corresponds to and therefore match *count* with the operation.
-+ **MX_WAIT_ASYNC_REPEATING**: *trigger* is a single signal bit from the set of signal bits
-    specified in the call to **object_wait_async**() and *count* is always 1. Ordering of packets
-    with different *trigger* is not guaranteed.
+for **MX_WAIT_ASYNC_ONCE** and **MX_WAIT_ASYNC_REPEATING**: *trigger* is the signals
+used in the call to **object_wait_async**() and *count* is a per object defined count
+of pending operations. Use *key* to track what object this packet corresponds to and
+therefore match *count* with the operation.
 
 See [object_wait_async](object_wait_async.md) for more details.
 

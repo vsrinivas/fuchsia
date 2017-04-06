@@ -28,11 +28,11 @@ The *options* argument can be either:
 + **MX_WAIT_ASYNC_ONCE**: a single packet will be delivered when any of the specified *signals*
     are asserted on *handle*. To receive further packets **object_wait_async**() needs to be
     issued again.
-+ **MX_WAIT_ASYNC_REPEATING**: a single packet will be delivered every time any of the
-    specified *signals* are asserted. if *signals* specifies more than one signal the relative
-    ordering of the packets generated might not match the order of the object signal changes.
++ **MX_WAIT_ASYNC_REPEATING**: a single packet will be delivered when any of the
+    specified *signals* are asserted on *handle*. To receive further packets the previosly
+    enqueued packet needs to be dequeued via **port_wait**().
 
-To stop packet delivery on either mode, close *handle* or use **handle_cancel**(). For both
+To stop packet delivery on either mode, close *handle* or use **port_cancel**(). For both
 modes, if any of the specified signals are currently asserted on the object at the time of
 the **object_wait_async**() call, a packet (or packets) will be delivered immediately.
 

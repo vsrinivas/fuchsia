@@ -134,7 +134,7 @@ public:
 
     void on_zero_handles() final;
 
-    mx_status_t Queue(PortPacket* packet, uint64_t count);
+    mx_status_t Queue(PortPacket* port_packet, mx_signals_t observed, uint64_t count);
     mx_status_t QueueUser(const mx_port_packet_t& packet);
     mx_status_t DeQueue(mx_time_t timeout, mx_port_packet_t* packet);
 
@@ -148,8 +148,7 @@ public:
 
 private:
     PortDispatcherV2(uint32_t options);
-    bool UpdateSignalCountLocked(PortPacket* packet, uint64_t count) TA_REQ(lock_);
-    PortObserver* SnapCopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
+    PortObserver* CopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
 
     mxtl::Canary<mxtl::magic("POR2")> canary_;
     Mutex lock_;

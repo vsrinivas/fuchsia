@@ -265,43 +265,25 @@ static bool async_wait_event_test_repeat(void) {
         MX_EVENT_SIGNALED | MX_USER_SIGNAL_2, MX_WAIT_ASYNC_REPEATING);
     EXPECT_EQ(status, NO_ERROR, "");
 
+    mx_port_packet_t out = {};
+    uint64_t count[3] = {};
+
     for (int ix = 0; ix != 24; ++ix) {
         uint32_t ub = (ix % 2) ? 0u : MX_USER_SIGNAL_2;
-        status = mx_object_signal(ev, 0u, MX_EVENT_SIGNALED | ub);
-        status = mx_object_signal(ev, MX_EVENT_SIGNALED | ub, 0u);
-        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED | ub), NO_ERROR, "");
+        EXPECT_EQ(mx_object_signal(ev, MX_EVENT_SIGNALED | ub, 0u), NO_ERROR, "");
+
+        ASSERT_EQ(mx_port_wait(port, 0ull, &out, 0u), NO_ERROR, "");
+        ASSERT_EQ(out.type, MX_PKT_TYPE_SIGNAL_REP, "");
+        ASSERT_EQ(out.signal.count, 1u, "");
+        count[0] += (out.signal.observed & MX_EVENT_SIGNALED) ? 1 : 0;
+        count[1] += (out.signal.observed & MX_USER_SIGNAL_2) ? 1 : 0;
+        count[2] += (out.signal.observed & ~(MX_EVENT_SIGNALED|MX_USER_SIGNAL_2)) ? 1 : 0;
     }
 
-    const mx_port_packet_t in = {12ull, MX_PKT_TYPE_USER, 0, {{}}};
-    status = mx_port_queue(port, &in, 0u);
-    EXPECT_EQ(status, NO_ERROR, "");
-
-    mx_port_packet_t out = {};
-    uint64_t count[4] = {};
-
-    while (true) {
-        status = mx_port_wait(port, 0ull, &out, 0u);
-        if (status != NO_ERROR)
-            break;
-
-        if (out.type == MX_PKT_TYPE_USER) {
-            count[3] += 1;
-        } else {
-            ASSERT_EQ(out.type, MX_PKT_TYPE_SIGNAL_REP, "");
-            ASSERT_EQ(out.signal.count, 1u, "");
-            switch (out.signal.trigger) {
-            case MX_EVENT_SIGNALED: count[0] += out.signal.count; break;
-            case MX_USER_SIGNAL_2: count[1] += out.signal.count; break;
-            default: count[2] += out.signal.count; break;
-            }
-        }
-    }
-
-    EXPECT_EQ(status, ERR_TIMED_OUT, "");
     EXPECT_EQ(count[0], 24u, "");
     EXPECT_EQ(count[1], 12u, "");
     EXPECT_EQ(count[2], 0u, "");
-    EXPECT_EQ(count[3], 1u, "");
 
     status = mx_handle_close(port);
     EXPECT_EQ(status, NO_ERROR, "");
@@ -354,14 +336,8 @@ static bool pre_writes_channel_test(uint32_t mode) {
         EXPECT_NEQ(out.signal.count, 0u, "");
     }
 
-    if (mode == MX_WAIT_ASYNC_ONCE) {
-        EXPECT_EQ(wait_count, 1u, "");
-        EXPECT_EQ(out.signal.trigger, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, "");
-    } else {
-        // repeating gets 5 read packets and one closed packet.
-        EXPECT_EQ(wait_count, 6u, "");
-    }
-
+    EXPECT_EQ(wait_count, 1u, "");
+    EXPECT_EQ(out.signal.trigger, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, "");
     EXPECT_EQ(read_count, 5u, "");
 
     status = mx_handle_close(port);
@@ -420,12 +396,8 @@ static bool cancel_event(uint32_t wait_mode) {
         EXPECT_EQ(out.signal.observed, MX_EVENT_SIGNALED, "");
     }
 
-    int expected_count = (wait_mode == MX_WAIT_ASYNC_ONCE) ? 2 : 4;
-    uint64_t keysum = keys[0] + keys[2];
-    uint64_t expected_key_sum = (wait_mode == MX_WAIT_ASYNC_ONCE) ? keysum : (2u * keysum);
-
-    EXPECT_EQ(wait_count, expected_count, "");
-    EXPECT_EQ(key_sum, expected_key_sum, "");
+    EXPECT_EQ(wait_count, 2, "");
+    EXPECT_EQ(key_sum, keys[0] + keys[2], "");
 
     EXPECT_EQ(mx_handle_close(port), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(ev), NO_ERROR, "");

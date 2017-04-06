@@ -32,11 +32,6 @@ PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispa
       handle_(handle),
       port_(mxtl::move(port)) {
 
-    if (type_ == MX_PKT_TYPE_SIGNAL_REP) {
-        // only one signal bit supported as a trigger.
-        DEBUG_ASSERT(ispow2(trigger_));
-    }
-
     auto& packet = packet_.packet;
     packet.status = NO_ERROR;
     packet.key = key_;
@@ -93,9 +88,7 @@ void PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t count) {
     if ((trigger_ & new_state) == 0u)
         return;
 
-    packet_.packet.signal.observed |= new_state;
-
-    auto status = port_->Queue(&packet_, count);
+    auto status = port_->Queue(&packet_, new_state, count);
 
     if ((type_ == MX_PKT_TYPE_SIGNAL_ONE) || (status < 0))
         remove_ = true;
@@ -146,13 +139,15 @@ mx_status_t PortDispatcherV2::QueueUser(const mx_port_packet_t& packet) {
     port_packet->packet = packet;
     port_packet->packet.type = MX_PKT_TYPE_USER;
 
-    auto status = Queue(port_packet, 0u);
+    auto status = Queue(port_packet, 0u, 0u);
     if (status < 0)
         delete port_packet;
     return status;
 }
 
-mx_status_t PortDispatcherV2::Queue(PortPacket* packet, uint64_t count) {
+mx_status_t PortDispatcherV2::Queue(PortPacket* port_packet,
+                                    mx_signals_t observed,
+                                    uint64_t count) {
     canary_.Assert();
 
     int wake_count = 0;
@@ -161,9 +156,14 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* packet, uint64_t count) {
         if (zero_handles_)
             return ERR_BAD_STATE;
 
-        if (!UpdateSignalCountLocked(packet, count))
-            packets_.push_back(packet);
+        if (observed) {
+            if (port_packet->InContainer())
+                return NO_ERROR;
+            port_packet->packet.signal.observed = observed;
+            port_packet->packet.signal.count = count;
+        }
 
+        packets_.push_back(port_packet);
         wake_count = sema_.Post();
     }
 
@@ -171,18 +171,6 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* packet, uint64_t count) {
         thread_preempt(false);
 
     return NO_ERROR;
-}
-
-bool PortDispatcherV2::UpdateSignalCountLocked(PortPacket* port_packet, uint64_t count) {
-    if (port_packet->InContainer()) {
-        DEBUG_ASSERT(port_packet->type() == MX_PKT_TYPE_SIGNAL_REP);
-        port_packet->packet.signal.count += count;
-        return true;
-    }
-    // Not in container.
-    if (port_packet->type() != MX_PKT_TYPE_USER)
-        port_packet->packet.signal.count = count;
-    return false;
 }
 
 mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, mx_port_packet_t* packet) {
@@ -198,7 +186,7 @@ mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, mx_port_packet_t* packe
                 goto wait;
 
             port_packet = packets_.pop_front();
-            observer = SnapCopyLocked(port_packet, packet);
+            observer = CopyLocked(port_packet, packet);
         }
 
         if (observer)
@@ -214,22 +202,11 @@ wait:
     }
 }
 
-PortObserver* PortDispatcherV2::SnapCopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) {
+PortObserver* PortDispatcherV2::CopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) {
     if (packet)
         *packet = port_packet->packet;
-    // For non-repeating: queue only once, but the signal.count can be > 1.
-    if (port_packet->type() == MX_PKT_TYPE_SIGNAL_ONE)
-        return port_packet->observer;
-    // For repeating: requeue until the count is zero. signal.count is always 1.
-    if (port_packet->type() == MX_PKT_TYPE_SIGNAL_REP){
-        if (packet)
-            packet->signal.count = 1u;
-        if (--port_packet->packet.signal.count == 0u)
-            return port_packet->observer;
-        packets_.push_back(port_packet);
-    }
-    // For other packet types there is no observer controling the lifetime.
-    return nullptr;
+
+    return (port_packet->type() == MX_PKT_TYPE_USER) ? nullptr : port_packet->observer;
 }
 
 bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) {
@@ -255,41 +232,14 @@ mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
         return ERR_NOT_SUPPORTED;
 
     AllocChecker ac;
+    auto type = (options == MX_WAIT_ASYNC_ONCE) ?
+        MX_PKT_TYPE_SIGNAL_ONE : MX_PKT_TYPE_SIGNAL_REP;
 
-    if (options == MX_WAIT_ASYNC_ONCE) {
-        auto observer = new (&ac) PortObserver(MX_PKT_TYPE_SIGNAL_ONE,
+    auto observer = new (&ac) PortObserver(type,
             handle, mxtl::RefPtr<PortDispatcherV2>(this), key, signals);
-        if (!ac.check())
-            return ERR_NO_MEMORY;
-        dispatcher->add_observer(observer);
-    } else {
-        // In repeating mode we add an observer per signal bit.
-        PortObserver* observers[sizeof(mx_signals_t) * 8u] = {};
-        size_t scount = 0;
+    if (!ac.check())
+        return ERR_NO_MEMORY;
 
-        for (size_t ix = 0; ix != countof(observers); ++ix) {
-            // extract a single signal bit.
-            mx_signals_t one_signal = signals & (0x1u << ix);
-            if (!one_signal)
-                continue;
-
-            observers[scount] = new (&ac) PortObserver(MX_PKT_TYPE_SIGNAL_REP,
-                handle, mxtl::RefPtr<PortDispatcherV2>(this), key, one_signal);
-            if (!ac.check()) {
-                // Delete the pending observers and exit.
-                for (size_t jx = 0; jx != scount; ++jx) {
-                    delete observers[jx];
-                }
-                return ERR_NO_MEMORY;
-            }
-            ++scount;
-        }
-
-        for (size_t ix = 0; ix != scount; ++ix) {
-            __UNUSED auto status = dispatcher->add_observer(observers[ix]);
-            DEBUG_ASSERT(status == NO_ERROR);
-        }
-    }
-
+    dispatcher->add_observer(observer);
     return NO_ERROR;
 }
