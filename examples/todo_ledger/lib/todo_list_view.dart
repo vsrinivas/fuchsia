@@ -89,7 +89,9 @@ class TodoListViewState extends State<TodoListView> {
     return new Row(children: <Widget>[
       new Expanded(
           child:
-              new TextField(hintText: 'What would you like to achieve today?')),
+              new TextField(
+                  decoration: const InputDecoration(
+                      hintText: 'What would you like to achieve today?'))),
       new SizedBox(
           width: 72.0,
           child: new IconButton(icon: new Icon(Icons.add), onPressed: () {})),

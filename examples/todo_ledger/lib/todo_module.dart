@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.ledger.services.public/ledger.fidl.dart';
 import 'package:apps.modular.services.component/component_context.fidl.dart';
@@ -11,6 +12,7 @@ import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
+import 'package:lib.fidl.dart/core.dart';
 
 import 'generator.dart';
 
@@ -26,6 +28,26 @@ dynamic _handleResponse(String description) {
       _log("$description: $status");
     }
   };
+}
+
+String _vmoToString(Vmo vmo) {
+  var size_result = vmo.getSize();
+  if (size_result.status != NO_ERROR) {
+    _log("Unable to retrieve vmo size: ${size_result.status}");
+    return "";
+  }
+
+  var data = new Uint8List(size_result.size);
+  var read_result = vmo.read(new ByteData.view(data.buffer));
+  if (read_result.status != NO_ERROR) {
+    _log("Unable to read from vmo: ${read_result.status}");
+    return "";
+  }
+  if (read_result.bytesRead != size_result.size) {
+    _log("Unexpected count of bytes read.");
+    return "";
+  }
+  return UTF8.decode(data);
 }
 
 /// An implementation of the [Module] interface.
@@ -86,7 +108,12 @@ class TodoModule extends Module implements PageWatcher {
 
   /// Implementation of PageWatcher.onChange().
   @override
-  void onChange(PageChange pageChange, callback) {
+  void onChange(PageChange pageChange, ResultState resultState, callback) {
+    if (resultState != ResultState.completed &&
+        resultState != ResultState.partialStarted) {
+      callback(null);
+      return;
+    }
     PageSnapshotProxy snapshot = new PageSnapshotProxy();
     callback(snapshot.ctrl.request());
     _readItems(snapshot);
@@ -125,12 +152,12 @@ class TodoModule extends Module implements PageWatcher {
     snapshot.getEntries(null, token,
         (Status status, List<Entry> entries, List<int> nextToken) {
       if (status != Status.ok && status != Status.partialResult) {
-        callback(status, []);
+        callback(status, {});
         return;
       }
       if (entries != null) {
         for (final entry in entries) {
-          items[entry.key] = UTF8.decode(entry.value.bytes);
+          items[entry.key] = _vmoToString(entry.value);
         }
       }
       if (status == Status.ok) {
