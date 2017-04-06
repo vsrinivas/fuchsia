@@ -67,10 +67,8 @@ static platform_timer_callback t_callback[SMP_MAX_CPUS] = {NULL};
 static void *callback_arg[SMP_MAX_CPUS] = {NULL};
 
 // PIT time accounting info
-static uint64_t next_trigger_time;
-static uint64_t next_trigger_delta;
-static uint64_t timer_delta_time;
-static volatile uint64_t timer_current_time;
+static struct fp_32_64 us_per_pit;
+static volatile uint64_t pit_ticks;
 static uint16_t pit_divisor;
 
 // Whether or not we have an Invariant TSC (controls whether we use the PIT or
@@ -130,9 +128,7 @@ lk_bigtime_t current_time_hires(void)
             break;
         }
         case CLOCK_PIT: {
-            // XXX slight race
-            time = (lk_bigtime_t) ((timer_current_time >> 22) * 1000) >> 10;
-            time *= 1000;
+            time = u64_mul_u64_fp32_64(pit_ticks, us_per_pit) * 1000;
             break;
         }
         default:
@@ -140,6 +136,27 @@ lk_bigtime_t current_time_hires(void)
     }
 
     return time;
+}
+
+// Round up t to a clock tick, so that when the APIC timer fires, the wall time
+// will have elapsed.
+static lk_bigtime_t discrete_time_roundup(lk_bigtime_t t) {
+    switch (wall_clock) {
+        case CLOCK_TSC: {
+            // Add 1ns to conservatively deal with rounding
+            return t + u64_mul_u64_fp32_64(1, ns_per_tsc) + 1;
+        }
+        case CLOCK_HPET: {
+            // Add 1ns to conservatively deal with rounding
+            return t + u64_mul_u64_fp32_64(1, ns_per_hpet) + 1;
+        }
+        case CLOCK_PIT: {
+            // Add 1us to the PIT tick rate to dea lwith rounding
+            return t + (u64_mul_u64_fp32_64(1, us_per_pit) + 1) * 1000;
+        }
+        default:
+            panic("Invalid wall clock source\n");
+    }
 }
 
 uint64_t ticks_per_second(void)
@@ -150,7 +167,7 @@ uint64_t ticks_per_second(void)
 // The PIT timer will keep track of wall time if we aren't using the TSC
 static enum handler_return pit_timer_tick(void *arg)
 {
-    timer_current_time += timer_delta_time;
+    pit_ticks += 1;
     return INT_NO_RESCHEDULE;
 }
 
@@ -164,10 +181,7 @@ enum handler_return platform_handle_apic_timer_tick(void) {
     //printf_xy(71, 0, WHITE, "%08u", (uint32_t) time);
     //printf_xy(63, 1, WHITE, "%016llu", (uint64_t) btime);
 
-    if (t_callback[cpu] && timer_current_time >= next_trigger_time) {
-        lk_bigtime_t delta = timer_current_time - next_trigger_time;
-        next_trigger_time = timer_current_time + next_trigger_delta - delta;
-
+    if (t_callback[cpu]) {
         return t_callback[cpu](callback_arg[cpu], time);
     } else {
         return INT_NO_RESCHEDULE;
@@ -205,9 +219,8 @@ static void set_pit_frequency(uint32_t frequency)
      * funky math that i don't feel like explaining. essentially 32.32 fixed
      * point representation of the configured timer delta.
      */
-    timer_delta_time = (3685982306ULL * count) >> 10;
+    fp_32_64_div_32_32(&us_per_pit, 1000 * 1000 * 3 * count, INTERNAL_FREQ_3X);
 
-    //dprintf(DEBUG, "set_pit_frequency: dt=%016llx\n", timer_delta_time);
     //dprintf(DEBUG, "set_pit_frequency: pit_divisor=%04x\n", pit_divisor);
 
     /*
@@ -532,7 +545,6 @@ static void platform_init_timer(uint level)
 
             wall_clock = CLOCK_PIT;
 
-            timer_current_time = 0;
             set_pit_frequency(1000); // ~1ms granularity
 
             uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
@@ -555,6 +567,8 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
 
     t_callback[cpu] = callback;
     callback_arg[cpu] = arg;
+
+    interval = discrete_time_roundup(interval);
 
     if (interval > MAX_TIMER_INTERVAL)
         interval = MAX_TIMER_INTERVAL;
