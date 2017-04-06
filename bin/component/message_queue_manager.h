@@ -99,8 +99,8 @@ class MessageQueueManager {
 
   // Operations implemented here.
   class GetQueueTokenCall;
-  class ResolveTokenCall;
-  class GetMessageQueueStorageCall;
+  class GetMessageSenderCall;
+  class ObtainMessageQueueCall;
   class DeleteMessageQueueCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MessageQueueManager);

@@ -11,7 +11,6 @@
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/services/component/message_queue.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -291,15 +290,18 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetQueueTokenCall);
 };
 
-class MessageQueueManager::ResolveTokenCall : Operation<MessageQueueInfo> {
+class MessageQueueManager::GetMessageSenderCall : Operation<void> {
  public:
-  ResolveTokenCall(OperationContainer* const container,
-                   ledger::Page* const page,
-                   const std::string& token,
-                   ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+  GetMessageSenderCall(OperationContainer* const container,
+                       MessageQueueManager* const message_queue_manager,
+                       ledger::Page* const page,
+                       const std::string& token,
+                       fidl::InterfaceRequest<MessageSender> request)
+      : Operation(container, []{}),
+        message_queue_manager_(message_queue_manager),
         page_(page),
-        token_(token) {
+        token_(token),
+        request_(std::move(request)) {
     Ready();
   }
 
@@ -309,7 +311,7 @@ class MessageQueueManager::ResolveTokenCall : Operation<MessageQueueInfo> {
         snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "Failed to get snapshot for page";
-            Done(std::move(result_));
+            Done();
             return;
           }
 
@@ -321,10 +323,10 @@ class MessageQueueManager::ResolveTokenCall : Operation<MessageQueueInfo> {
                     // It's expected that the key is not found when the link
                     // is accessed for the first time. Don't log an error
                     // then.
-                    FTL_LOG(ERROR) << "ResolveTokenCall() " << token_
+                    FTL_LOG(ERROR) << "GetMessageSenderCall() " << token_
                                    << " PageSnapshot.Get() " << status;
                   }
-                  Done(std::move(result_));
+                  Done();
                   return;
                 }
 
@@ -332,44 +334,58 @@ class MessageQueueManager::ResolveTokenCall : Operation<MessageQueueInfo> {
                 if (value) {
                   if (!mtl::StringFromVmo(value, &value_as_string)) {
                     FTL_LOG(ERROR) << "Unable to extract data.";
-                    Done(std::move(result_));
+                    Done();
                     return;
                   }
                 }
 
                 if (!XdrRead(value_as_string, &result_, XdrMessageQueueInfo)) {
-                  Done(std::move(result_));
+                  Done();
                   return;
                 }
 
-                Done(std::move(result_));
+                if (!result_.is_complete()) {
+                  FTL_LOG(WARNING) << "Queue token " << result_.queue_token
+                                   << " not found in the ledger.";
+                  Done();
+                  return;
+                }
+
+                message_queue_manager_
+                    ->GetMessageQueueStorage(result_)
+                    ->AddMessageSenderBinding(std::move(request_));
+
+                Done();
               });
         });
   }
 
+  MessageQueueManager* const message_queue_manager_;  // not owned
   ledger::Page* const page_;  // not owned
   const std::string token_;
+  fidl::InterfaceRequest<MessageSender> request_;
 
   ledger::PageSnapshotPtr snapshot_;
   std::string key_;
 
   MessageQueueInfo result_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResolveTokenCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(GetMessageSenderCall);
 };
 
-class MessageQueueManager::GetMessageQueueStorageCall
-    : Operation<MessageQueueStorage*> {
+class MessageQueueManager::ObtainMessageQueueCall
+    : Operation<void> {
  public:
-  GetMessageQueueStorageCall(OperationContainer* const container,
-                             MessageQueueManager* const message_queue_manager,
-                             ledger::Page* const page,
-                             const std::string& component_instance_id,
-                             const std::string& queue_name,
-                             ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+  ObtainMessageQueueCall(OperationContainer* const container,
+                         MessageQueueManager* const message_queue_manager,
+                         ledger::Page* const page,
+                         const std::string& component_instance_id,
+                         const std::string& queue_name,
+                         fidl::InterfaceRequest<MessageQueue> request)
+      : Operation(container, []{}),
         message_queue_manager_(message_queue_manager),
-        page_(page) {
+        page_(page),
+        request_(std::move(request)) {
     message_queue_info_.component_instance_id = component_instance_id;
     message_queue_info_.queue_name = queue_name;
     Ready();
@@ -385,8 +401,7 @@ class MessageQueueManager::GetMessageQueueStorageCall
           if (token) {
             message_queue_info_.queue_token = token.get();
             // Queue token was found in the ledger.
-            Done(message_queue_manager_->GetMessageQueueStorage(
-                message_queue_info_));
+            Finish();
             return;
           }
 
@@ -419,25 +434,35 @@ class MessageQueueManager::GetMessageQueueStorageCall
           page_->Commit([this](ledger::Status status) {
             if (status != ledger::Status::OK) {
               FTL_LOG(ERROR) << "Error creating queue in ledger: " << status;
-              Done(nullptr);
+              Done();
               return;
             }
+
             FTL_LOG(INFO) << "Created queue in ledger: "
                           << message_queue_info_.queue_token;
-            Done(message_queue_manager_->GetMessageQueueStorage(
-                message_queue_info_));
+
+            Finish();
           });
         });
   }
 
+  void Finish() {
+    message_queue_manager_
+        ->GetMessageQueueStorage(message_queue_info_)
+        ->AddMessageQueueBinding(std::move(request_));
+    Done();
+  }
+
   MessageQueueManager* const message_queue_manager_;  // not owned
   ledger::Page* const page_;                          // not owned
+  fidl::InterfaceRequest<MessageQueue> request_;
+
   MessageQueueInfo message_queue_info_;
   ledger::PageSnapshotPtr snapshot_;
 
   OperationCollection operation_collection_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GetMessageQueueStorageCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ObtainMessageQueueCall);
 };
 
 class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
@@ -521,15 +546,9 @@ void MessageQueueManager::ObtainMessageQueue(
     const std::string& component_instance_id,
     const std::string& queue_name,
     fidl::InterfaceRequest<MessageQueue> request) {
-  new GetMessageQueueStorageCall(
+  new ObtainMessageQueueCall(
       &operation_collection_, this, page_.get(), component_instance_id,
-      queue_name,
-      ftl::MakeCopyable([request = std::move(request)](
-          MessageQueueStorage* const mqs) mutable {
-        if (mqs) {
-          mqs->AddMessageQueueBinding(std::move(request));
-        }
-      }));
+      queue_name, std::move(request));
 }
 
 MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
@@ -587,18 +606,9 @@ void MessageQueueManager::GetMessageSender(
     return;
   }
 
-  new ResolveTokenCall(
-      &operation_collection_, page_.get(), queue_token,
-      ftl::MakeCopyable([ this, request = std::move(request) ](
-          MessageQueueInfo result) mutable {
-          if (!result.is_complete()) {
-            FTL_LOG(WARNING) << "Queue token " << result.queue_token
-                             << " not found in the ledger.";
-            return;
-          }
-          GetMessageQueueStorage(result)
-              ->AddMessageSenderBinding(std::move(request));
-        }));
+  new GetMessageSenderCall(
+      &operation_collection_, this, page_.get(), queue_token,
+      std::move(request));
 }
 
 void MessageQueueManager::RegisterWatcher(
