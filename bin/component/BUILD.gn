@@ -14,6 +14,7 @@ source_set("component") {
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/services/component",
     "//apps/modular/src/agent_runner:public",

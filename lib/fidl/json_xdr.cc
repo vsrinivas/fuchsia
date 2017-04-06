@@ -33,6 +33,7 @@ const char* JsonTypeName(const rapidjson::Type type) {
 }
 }  // namespace
 
+// HACK(mesch): We should not need this, get rid of it.
 thread_local JsonValue XdrContext::null_ = JsonValue();
 
 XdrContext::XdrContext(const XdrOp op,

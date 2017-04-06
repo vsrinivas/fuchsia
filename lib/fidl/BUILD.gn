@@ -25,9 +25,12 @@ source_set("json_xdr") {
     "json_xdr.h",
   ]
 
-  deps = [
-    "//third_party/rapidjson",
+  # MUST be public lest clients don't pick up the defines from
+  # //third_party/rapidjson:rapidjson_config
+  public_deps = [
     "//apps/modular/lib/rapidjson",
+  ]
+  deps = [
     "//lib/fidl/cpp/bindings",
   ]
 }

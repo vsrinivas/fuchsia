@@ -23,6 +23,7 @@
 namespace modular {
 
 class MessageQueueStorage;
+class XdrContext;
 
 // Manages message queues for components. One MessageQueueManager
 // instance is used by all ComponentContextImpl instances, and manages
@@ -57,17 +58,17 @@ class MessageQueueManager {
                    const std::string& queue_name);
 
  private:
+  struct MessageQueueInfo;
+
+  static void XdrMessageQueueInfo(
+      XdrContext* const xdr, MessageQueueInfo* const data);
+
   // Returns the |MessageQueueStorage| for the queue_token. Creates it
   // if it doesn't exist yet.
-  MessageQueueStorage* GetMessageQueueStorage(
-      const std::string& component_instance_id,
-      const std::string& queue_name,
-      const std::string& queue_token);
+  MessageQueueStorage* GetMessageQueueStorage(const MessageQueueInfo& info);
 
   // Clears the |MessageQueueStorage| for the queue_token.
-  void ClearMessageQueueStorage(const std::string& component_instance_id,
-                                const std::string& queue_name,
-                                const std::string& queue_token);
+  void ClearMessageQueueStorage(const MessageQueueInfo& info);
 
   ledger::PagePtr page_;
 
@@ -82,14 +83,15 @@ class MessageQueueManager {
     std::size_t operator()(const std::pair<std::string, std::string>& p) const;
   };
 
-  // A map of component instance id and queue name to queue tokens. Entries will
-  // only be here while a |MessageQueueStorage| exists.
+  // A map of component instance id and queue name to queue tokens.
+  // Entries are only here while a |MessageQueueStorage| exists.
   std::unordered_map<ComponentQueuePair, std::string, StringPairHash>
       message_queue_tokens_;
 
-  // A map of component instance id and queue name to watcher callbacks. If a
-  // watcher is registered before a |MessageQueueStorage| exists then it is
-  // stashed here until a |MessageQueueStorage| is available.
+  // A map of component instance id and queue name to watcher
+  // callbacks. If a watcher is registered before a
+  // |MessageQueueStorage| exists then it is stashed here until a
+  // |MessageQueueStorage| is available.
   std::unordered_map<ComponentQueuePair, ftl::Closure, StringPairHash>
       pending_watcher_callbacks_;
 
