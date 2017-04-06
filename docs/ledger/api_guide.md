@@ -50,6 +50,12 @@ ledger.ctrl.error.then((ProxyError error) {
 ```
 |||---|||
 
+*** aside
+Note that the Ledger connection is provided through a FIDL *interface request*,
+so it can be immediately used to make requests, even before the callback is
+called.
+***
+
 ## Data organization
 
 Data stored in Ledger is grouped into separate independent key-value stores
