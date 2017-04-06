@@ -34,7 +34,7 @@ template("rust_artifact") {
   assert(current_cpu == "x64")
   assert(current_os == "mac" || current_os == "linux" || current_os == "fuchsia")
   if (current_os == "mac") {
-    target_triple = "x86_64-darwin-apple"
+    target_triple = "x86_64-apple-darwin"
   } else if (current_os == "linux") {
     target_triple = "x86_64-unknown-linux-gnu"
   } else if (current_os == "fuchsia") {
@@ -44,7 +44,7 @@ template("rust_artifact") {
   assert(host_cpu == "x64")
   assert(host_os == "mac" || host_os == "linux")
   if (host_os == "mac") {
-    host_triple = "x86_64-darwin-apple"
+    host_triple = "x86_64-apple-darwin"
   } else if (host_os == "linux") {
     host_triple = "x86_64-unknown-linux-gnu"
   }
