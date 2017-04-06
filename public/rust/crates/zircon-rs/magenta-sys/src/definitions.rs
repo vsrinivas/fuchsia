@@ -274,6 +274,10 @@ extern {
         options: u32
         ) -> mx_status_t;
 
+    pub fn mx_task_suspend(
+        task_handle: mx_handle_t
+        ) -> mx_status_t;
+
     pub fn mx_task_resume(
         task_handle: mx_handle_t,
         options: u32
@@ -360,6 +364,12 @@ extern {
         key: u64,
         source: mx_handle_t,
         signals: mx_signals_t
+        ) -> mx_status_t;
+
+    pub fn mx_port_cancel(
+        handle: mx_handle_t,
+        source: mx_handle_t,
+        key: u64
         ) -> mx_status_t;
 
     pub fn mx_vmo_create(
