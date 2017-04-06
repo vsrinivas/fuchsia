@@ -39,6 +39,10 @@
     ],
     "resources": [
         {
+            "file": "apps/ledger/benchmark/put/transaction.tspec",
+            "bootfs_path": "data/ledger/benchmark/transaction.tspec"
+        },
+        {
             "file": "apps/ledger/benchmark/put/put.tspec",
             "bootfs_path": "data/ledger/benchmark/put.tspec"
         },
