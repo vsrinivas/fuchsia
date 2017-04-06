@@ -178,7 +178,9 @@ pub struct mx_pci_init_arg_t {
     pub num_irqs: u32,
     pub irqs: [mx_irq_t; 32],
     pub ecam_window_count: u32,
-    pub ecam_windows: [mx_ecam_window_t],
+    // Note: the ecam_windows field is actually a variable size array.
+    // We use a fixed size array to match the C repr.
+    pub ecam_windows: [mx_ecam_window_t; 1],
 }
 
 #[repr(C)]
