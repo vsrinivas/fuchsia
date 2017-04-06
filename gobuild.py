@@ -37,13 +37,13 @@ def main():
         'apps': 'apps',
         'apps/amber': 'github.com/flynn/go-tuf',
         'apps/thinfs': 'fuchsia.googlesource.com/thinfs',
-        'third_party/go/src/vendor/golang_org/x/crypto/poly1305' : 'golang.org/x/crypto/poly1305',
+        'third_party/go/src/vendor/golang_org/x/crypto/poly1305': 'golang.org/x/crypto/poly1305',
         'third_party/golang/crypto': 'golang.org/x/crypto',
-        'third_party/golibs/github.com/dustin/go-humanize' : 'github.com/dustin/go-humanize',
-        'third_party/golibs/github.com/flynn/go-docopt' : 'github.com/flynn/go-docopt',
-        'third_party/golibs/github.com/golang/snappy' : 'github.com/golang/snappy',
-        'third_party/golibs/github.com/syndtr/goleveldb/leveldb' : 'github.com/syndtr/goleveldb/leveldb',
-        'third_party/golibs/github.com/tent/canonical-json-go' : 'github.com/tent/canonical-json-go',
+        'third_party/golibs/github.com/dustin/go-humanize': 'github.com/dustin/go-humanize',
+        'third_party/golibs/github.com/flynn/go-docopt': 'github.com/flynn/go-docopt',
+        'third_party/golibs/github.com/golang/snappy': 'github.com/golang/snappy',
+        'third_party/golibs/github.com/syndtr/goleveldb/leveldb': 'github.com/syndtr/goleveldb/leveldb',
+        'third_party/golibs/github.com/tent/canonical-json-go': 'github.com/tent/canonical-json-go',
         'third_party/netstack': 'github.com/google/netstack'
     }
 
