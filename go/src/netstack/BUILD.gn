@@ -32,6 +32,8 @@ copy("copy_selected_netstack") {
     outputs = [ "$root_out_dir/netstack" ]
 }
 
+if (!netstack2) {
+
 executable("netstack1") {
   sources = [
     "dispatcher.c",
@@ -82,6 +84,8 @@ executable("netstack1") {
   deps = [
     "//third_party/lwip",
   ]
+}
+
 }
 
 action("netstack2") {
