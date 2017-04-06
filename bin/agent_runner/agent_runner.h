@@ -8,7 +8,6 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"

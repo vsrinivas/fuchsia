@@ -4,7 +4,6 @@
 
 #include "apps/modular/src/agent_runner/agent_runner.h"
 
-#include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"

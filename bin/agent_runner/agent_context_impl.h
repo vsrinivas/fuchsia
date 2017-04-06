@@ -18,7 +18,6 @@
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
-#include "apps/modular/src/component/message_queue_manager.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
