@@ -85,13 +85,13 @@ static status_t vmclear(paddr_t pa) {
 
 static uint64_t vmread(uint64_t field) {
     uint8_t err;
-    uint64_t val = 0;
+    uint64_t val;
 
     __asm__ volatile(
         "vmread %[field], %[val];"
         VMX_ERR_CHECK(err)
-        : [err] "=r"(err)
-        : [field] "r"(field), [val] "m"(val)
+        : [err] "=r"(err), [val] "=m"(val)
+        : [field] "r"(field)
         : "cc");
 
     DEBUG_ASSERT(err == NO_ERROR);
