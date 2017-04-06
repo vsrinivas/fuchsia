@@ -259,75 +259,52 @@ public:
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.601
-class DisplayPlaneSurfaceAddress {
+class DisplayPlaneSurfaceAddress : public RegisterBase {
 public:
-    enum Plane { PIPE_A_PLANE_1 };
+    static constexpr uint32_t kBaseAddr = 0x7019C;
 
-    static constexpr uint32_t kOffsetPipeAPlane1 = 0x7019C;
+    // This field omits the lower 12 bits of the address, so the address
+    // must be 4k-aligned.
+    static constexpr uint32_t kPageShift = 12;
+    DEF_FIELD(31, 12, surface_base_address);
 
-    static uint32_t read(RegisterIo* reg_io, Plane plane)
+    DEF_BIT(3, ring_flip_source);
+
+    // Get the instance of this register for Plane 1 of the given pipe.
+    static auto Get(uint32_t pipe_number)
     {
-        switch (plane) {
-            case PIPE_A_PLANE_1:
-                return reg_io->Read32(kOffsetPipeAPlane1);
-        }
-    }
-
-    static void write(RegisterIo* reg_io, Plane plane, uint32_t gpu_addr_gtt)
-    {
-        switch (plane) {
-            case PIPE_A_PLANE_1:
-                reg_io->Write32(kOffsetPipeAPlane1, gpu_addr_gtt);
-                break;
-        }
+        DASSERT(pipe_number < Pipe::kPipeCount);
+        return RegisterAddr<DisplayPlaneSurfaceAddress>(kBaseAddr + 0x1000 * pipe_number);
     }
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.598
-class DisplayPlaneSurfaceStride {
+class DisplayPlaneSurfaceStride : public RegisterBase {
 public:
-    enum Plane { PIPE_A_PLANE_1 };
+    static constexpr uint32_t kBaseAddr = 0x70188;
 
-    static constexpr uint32_t kOffsetPipeAPlane1 = 0x70188;
+    DEF_FIELD(9, 0, stride);
 
-    static uint32_t read(RegisterIo* reg_io, Plane plane)
+    // Get the instance of this register for Plane 1 of the given pipe.
+    static auto Get(uint32_t pipe_number)
     {
-        switch (plane) {
-            case PIPE_A_PLANE_1:
-                return reg_io->Read32(kOffsetPipeAPlane1);
-        }
-    }
-
-    static void write(RegisterIo* reg_io, Plane plane, uint32_t stride)
-    {
-        switch (plane) {
-            case PIPE_A_PLANE_1:
-                reg_io->Write32(kOffsetPipeAPlane1, stride);
-                break;
-        }
+        DASSERT(pipe_number < Pipe::kPipeCount);
+        return RegisterAddr<DisplayPlaneSurfaceStride>(kBaseAddr + 0x1000 * pipe_number);
     }
 };
 
-class DisplayPlaneSurfaceSize {
+class DisplayPlaneSurfaceSize : public RegisterBase {
 public:
-    enum Plane { PIPE_A_PLANE_1 };
+    static constexpr uint32_t kBaseAddr = 0x70190;
 
-    static constexpr uint32_t kOffsetPipeAPlane1 = 0x70190;
-    static constexpr uint32_t kWidthMask = 0x1fff;
-    static constexpr uint32_t kHeightShift = 16;
-    static constexpr uint32_t kHeightMask = 0x1fff << kHeightShift;
+    DEF_FIELD(27, 16, height_minus_1);
+    DEF_FIELD(12, 0, width_minus_1);
 
-    // Returns width and height in pixels
-    static void read(RegisterIo* reg_io, Plane plane, uint32_t* width_out, uint32_t* height_out)
+    // Get the instance of this register for Plane 1 of the given pipe.
+    static auto Get(uint32_t pipe_number)
     {
-        uint32_t val;
-        switch (plane) {
-            case PIPE_A_PLANE_1:
-                val = reg_io->Read32(kOffsetPipeAPlane1);
-                break;
-        }
-        *width_out = (val & kWidthMask) + 1;
-        *height_out = ((val & kHeightMask) >> kHeightShift) + 1;
+        DASSERT(pipe_number < Pipe::kPipeCount);
+        return RegisterAddr<DisplayPlaneSurfaceSize>(kBaseAddr + 0x1000 * pipe_number);
     }
 };
 

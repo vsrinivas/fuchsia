@@ -666,9 +666,10 @@ magma::Status MsdIntelDevice::ProcessFlip(
     if (!mapping)
         return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't map buffer to gtt");
 
-    uint32_t width, height;
-    registers::DisplayPlaneSurfaceSize::read(
-        register_io(), registers::DisplayPlaneSurfaceSize::PIPE_A_PLANE_1, &width, &height);
+    uint32_t pipe_number = 0;
+    auto surface_size =
+        registers::DisplayPlaneSurfaceSize::Get(pipe_number).ReadFrom(register_io());
+    uint32_t width = surface_size.width_minus_1().get() + 1;
 
     // Controls whether the plane surface update happens immediately or on the next vblank.
     constexpr bool kUpdateOnVblank = true;
@@ -680,7 +681,6 @@ magma::Status MsdIntelDevice::ProcessFlip(
     // have the upper layers import/release display buffers.
     constexpr bool kWaitForFlip = MSD_INTEL_WAIT_FOR_FLIP ? true : false;
 
-    uint32_t pipe_number = 0;
     auto plane_control = registers::DisplayPlaneControl::Get(pipe_number).ReadFrom(register_io());
     plane_control.async_address_update_enable().set(!kUpdateOnVblank);
 
@@ -692,26 +692,26 @@ magma::Status MsdIntelDevice::ProcessFlip(
     constexpr uint32_t kCacheLineSize = 64;
     constexpr uint32_t kTileSize = 512;
 
+    uint32_t stride;
     if (image_desc.tiling == MAGMA_IMAGE_TILING_OPTIMAL) {
         // Stride must be an integer number of tiles
-        uint32_t stride = magma::round_up(width * sizeof(uint32_t), kTileSize) / kTileSize;
-        registers::DisplayPlaneSurfaceStride::write(
-            register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1, stride);
-
+        stride = magma::round_up(width * sizeof(uint32_t), kTileSize) / kTileSize;
         plane_control.tiled_surface().set(plane_control.TILING_X);
     } else {
         // Stride must be an integer number of cache lines
-        uint32_t stride =
-            magma::round_up(width * sizeof(uint32_t), kCacheLineSize) / kCacheLineSize;
-        registers::DisplayPlaneSurfaceStride::write(
-            register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1, stride);
-
+        stride = magma::round_up(width * sizeof(uint32_t), kCacheLineSize) / kCacheLineSize;
         plane_control.tiled_surface().set(plane_control.TILING_NONE);
     }
     plane_control.WriteTo(register_io());
 
-    registers::DisplayPlaneSurfaceAddress::write(
-        register_io(), registers::DisplayPlaneSurfaceAddress::PIPE_A_PLANE_1, mapping->gpu_addr());
+    auto stride_reg = registers::DisplayPlaneSurfaceStride::Get(pipe_number).FromValue(0);
+    stride_reg.stride().set(stride);
+    stride_reg.WriteTo(register_io());
+
+    auto addr_reg = registers::DisplayPlaneSurfaceAddress::Get(pipe_number).FromValue(0);
+    DASSERT((mapping->gpu_addr() & ((1 << addr_reg.kPageShift) - 1)) == 0);
+    addr_reg.surface_base_address().set(mapping->gpu_addr() >> addr_reg.kPageShift);
+    addr_reg.WriteTo(register_io());
 
     if (kWaitForFlip) {
         constexpr uint32_t kRetryMsMax = 100;
