@@ -110,6 +110,7 @@ class AgentContextImpl : AgentContext, AgentController {
 
   OperationQueue operation_queue_;
 
+  // Operations implemented here.
   class InitializeCall;
   class StopCall;
 
