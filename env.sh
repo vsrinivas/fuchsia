@@ -582,21 +582,21 @@ function fbuild() {
 }
 
 function fbuild-sync() {
-  local stamp userfs_path build_path
+  local stamp status_file userfs_path build_path
 
   stamp="${FUCHSIA_BUILD_DIR}/.fbuild-sync-stamp"
-  status="${FUCHSIA_BUILD_DIR}/.fbuild-sync-status"
+  status_file="${FUCHSIA_BUILD_DIR}/.fbuild-sync-status"
 
-  touch $status
+  touch $status_file
 
-  if [[ "$(cat $status)" != "failed" ]]; then
+  if [[ "$(cat $status_file)" != "failed" ]]; then
     touch $stamp
   fi
 
   fbuild $*
 
   if [ $? -ne 0 ]; then
-    echo failed > $status
+    echo failed > $status_file
     return 1
   fi
 
@@ -613,14 +613,14 @@ function fbuild-sync() {
       netcp $build_path :${device_path}
 
       if [ $? -ne 0 ]; then
-        echo failed > $status
-	return 1
+        echo failed > $status_file
+        return 1
       fi
     fi
   done < "${FUCHSIA_BUILD_DIR}/gen/packages/gn/user.bootfs.manifest"
 
   rm $stamp
-  rm $status
+  rm $status_file
 }
 
 ### fboot: run fuchsia bootserver
