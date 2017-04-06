@@ -4,20 +4,20 @@
 
 import 'package:flutter/material.dart';
 
-import 'device_shell_factory_model.dart';
+import 'user_picker_device_shell_factory_model.dart';
 
 class ShutdownButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
-      new ScopedModelDescendant<DeviceShellFactoryModel>(
+      new ScopedModelDescendant<UserPickerDeviceShellFactoryModel>(
         builder: (
           BuildContext context,
           Widget child,
-          DeviceShellFactoryModel deviceShellFactoryModel,
+          UserPickerDeviceShellFactoryModel userPickerDeviceShellFactoryModel,
         ) =>
             new RaisedButton(
               onPressed: () =>
-                  deviceShellFactoryModel.deviceContext?.shutdown(),
+                  userPickerDeviceShellFactoryModel.deviceContext?.shutdown(),
               child: child,
             ),
         child: new Text('Shutdown'),

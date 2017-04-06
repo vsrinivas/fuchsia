@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:application.lib.app.dart/app.dart';
-import 'package:apps.modular.services.device/device_context.fidl.dart';
 import 'package:apps.modular.services.device/user_provider.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:apps.mozart.services.views/view_token.fidl.dart';
@@ -11,33 +9,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lib.fidl.dart/bindings.dart';
+import 'package:lib.widgets/modular.dart';
 
-import 'device_shell_impl.dart';
-import 'device_shell_factory_impl.dart';
-import 'device_shell_factory_model.dart';
-import 'device_shell_factory_widget.dart';
+import 'user_picker_device_shell_factory_model.dart';
 import 'user_picker_screen.dart';
 import 'user_watcher_impl.dart';
 
 void main() {
-  DeviceShellFactoryModel deviceShellFactoryModel =
-      new DeviceShellFactoryModel();
+  UserPickerDeviceShellFactoryModel userPickerDeviceShellFactoryModel =
+      new UserPickerDeviceShellFactoryModel();
 
-  DeviceShellFactoryWidget deviceShellFactoryWidget =
-      new DeviceShellFactoryWidget(
-    applicationContext: new ApplicationContext.fromStartupInfo(),
-    deviceShellFactory: new DeviceShellFactoryImpl(
-      deviceShell: new DeviceShellImpl(),
-      onUserProviderReceived: (UserProvider userProvider) {
-        deviceShellFactoryModel.userProvider = userProvider;
-      },
-      onDeviceContextReceived: (DeviceContext deviceContext) {
-        deviceShellFactoryModel.deviceContext = deviceContext;
-      },
-    ),
-    child: new ScopedModel<DeviceShellFactoryModel>(
-      model: deviceShellFactoryModel,
-      child: new _ScreenManager(onLogout: deviceShellFactoryModel.onLogout),
+  DeviceShellFactoryWidget<UserPickerDeviceShellFactoryModel>
+      deviceShellFactoryWidget =
+      new DeviceShellFactoryWidget<UserPickerDeviceShellFactoryModel>(
+    deviceShellFactoryModel: userPickerDeviceShellFactoryModel,
+    child: new _ScreenManager(
+      onLogout: userPickerDeviceShellFactoryModel.onLogout,
     ),
   );
 

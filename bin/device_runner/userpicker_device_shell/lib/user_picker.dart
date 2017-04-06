@@ -6,7 +6,7 @@ import 'package:apps.modular.services.device/user_provider.fidl.dart';
 import 'package:flutter/material.dart';
 import 'package:lib.widgets/hacks.dart' as hacks;
 
-import 'device_shell_factory_model.dart';
+import 'user_picker_device_shell_factory_model.dart';
 
 const String _kDefaultUserName = 'user1';
 const Color _kFuchsiaColor = const Color(0xFFFF0080);
@@ -22,23 +22,23 @@ class UserPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      new ScopedModelDescendant<DeviceShellFactoryModel>(builder: (
+      new ScopedModelDescendant<UserPickerDeviceShellFactoryModel>(builder: (
         BuildContext context,
         Widget child,
-        DeviceShellFactoryModel deviceShellFactoryModel,
+        UserPickerDeviceShellFactoryModel userPickerDeviceShellFactoryModel,
       ) {
         final List<Widget> children = <Widget>[];
-        if (deviceShellFactoryModel.users != null) {
-          if (deviceShellFactoryModel.users.isNotEmpty) {
+        if (userPickerDeviceShellFactoryModel.users != null) {
+          if (userPickerDeviceShellFactoryModel.users.isNotEmpty) {
             // Add list of previous users.
             children.addAll(
-              deviceShellFactoryModel.users.map((String user) {
+              userPickerDeviceShellFactoryModel.users.map((String user) {
                 return new Container(
                   margin: const EdgeInsets.all(8.0),
                   child: new RaisedButton(
                     onPressed: () => _loginUser(
                           user,
-                          deviceShellFactoryModel,
+                          userPickerDeviceShellFactoryModel,
                         ),
                     child: new Text('Login as $user'),
                   ),
@@ -53,7 +53,7 @@ class UserPicker extends StatelessWidget {
                 child: new RaisedButton(
                   onPressed: () => _loginUser(
                         _kDefaultUserName,
-                        deviceShellFactoryModel,
+                        userPickerDeviceShellFactoryModel,
                       ),
                   child: new Container(
                     width: _kButtonContentWidth,
@@ -91,7 +91,7 @@ class UserPicker extends StatelessWidget {
                             ),
                             onSubmitted: (String user) => _loginUser(
                                   user,
-                                  deviceShellFactoryModel,
+                                  userPickerDeviceShellFactoryModel,
                                 ),
                           ),
                         ),
@@ -120,9 +120,9 @@ class UserPicker extends StatelessWidget {
 
   void _loginUser(
     String user,
-    DeviceShellFactoryModel deviceShellFactoryModel,
+    UserPickerDeviceShellFactoryModel userPickerDeviceShellFactoryModel,
   ) {
     print('UserPicker: Logging in as $user!');
-    onLoginRequest?.call(user, deviceShellFactoryModel.userProvider);
+    onLoginRequest?.call(user, userPickerDeviceShellFactoryModel.userProvider);
   }
 }
