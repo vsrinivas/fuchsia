@@ -267,9 +267,17 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     uint32_t sgl;
     mx_status_t status = iotxn_physmap(txn, &sg, &sgl);
     if (status != NO_ERROR) {
-        iotxn_complete(txn, NO_ERROR, txn->length);
+        iotxn_complete(txn, status, 0);
         completion_signal(&dev->worker_completion);
+        return status;
     }
+    if (sgl != 1) {
+        printf("%s scatter/gather not implemented yet\n", __FUNCTION__);
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        completion_signal(&dev->worker_completion);
+        return ERR_INVALID_ARGS;
+    }
+    mx_paddr_t phys = sg->paddr;
 
     if (dev->cap & AHCI_CAP_NCQ) {
         if (pdata->cmd == SATA_CMD_READ_DMA_EXT) {
@@ -328,14 +336,17 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     }
 
     ahci_prd_t* prd = NULL;
+    uint64_t length = txn->length;
     for (int i = 0; i < cl->prdtl; i++) {
         // TODO split this transaction
         MX_DEBUG_ASSERT(sg[i].length <= AHCI_PRD_MAX_SIZE);
 
         prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t)) + i;
-        prd->dba = LO32(sg[i].paddr);
-        prd->dbau = HI32(sg[i].paddr);
-        prd->dbc = ((sg[i].length - 1) & 0x3fffff); // 0-based byte count
+        prd->dba = LO32(phys);
+        prd->dbau = HI32(phys);
+        prd->dbc = ((length - 1) & 0x3fffff); // 0-based byte count
+        phys += AHCI_PRD_MAX_SIZE;
+        length -= AHCI_PRD_MAX_SIZE;
     }
 
     port->running |= (1 << slot);
