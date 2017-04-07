@@ -42,6 +42,9 @@ def main():
     parser.add_argument("--out",
                         help="Build output directory for host",
                         default="out/debug-x86-64/host_x64")
+    parser.add_argument("--cargo-vendor",
+                        help="Path to the cargo-vendor command",
+                        required=True)
     args = parser.parse_args()
 
     # Use the root of the tree as the working directory. Ideally a temporary
@@ -72,15 +75,12 @@ members = [%s]
         call_or_exit(lockfile_args, base_dir)
 
         # Populate the vendor directory.
-        cargo_vendor_bin = os.path.join(paths.FUCHSIA_ROOT, args.out, "obj",
-                                        "third_party", "rust-crates", "manual",
-                                        "cargo-vendor", "cargo-vendor")
         vendor_args = [
-            cargo_bin,
-            "vendor",
+            args.cargo_vendor,
             "-x",
             "--sync",
             lock_path,
+            "vendor",
         ]
         call_or_exit(vendor_args, base_dir)
     finally:
