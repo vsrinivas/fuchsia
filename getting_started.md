@@ -37,6 +37,8 @@ script, which provides helpful shell functions for Fuchsia
 development. The following command also changes the command prompt and
 sets up for a x86-64 build.
 
+(If you don't want to change your command prompt, omit `envprompt`.)
+
 ```
 source scripts/env.sh && envprompt && fset x86-64
 ```
@@ -62,17 +64,24 @@ function fuchsia() {
 By default you will get a x86-64 debug build. You can skip this section unless
 you want something else.
 
-[Googlers only: If you have `goma` installed, it will also be used by default.
-Prefer `goma` over `ccache`. Note: to use `ccache` or `goma` you must install
-them first.]
+`ccache` accelerates builds by caching artifacts from previous builds.
+`ccache` will be enabled automatically by default if the `CCACHE_DIR`
+environment variable is set and refers to a directory that exists.
+To disable `ccache`, specify `--no-ccache`.
+
+[Googlers only: `goma` accelerates builds by distributing compilation
+across many machines.  If you have `goma` installed in `~/goma`, it will used
+by default in preference to `ccache`.  To disable `goma`, specify `--no-goma`.]
 
 Run `fset-usage` to see a list of build options. Some examples:
 
 ```
-fset x86-64           # x86-64 debug build, no goma, no ccache
-fset arm64            # arm64 debug build, no goma, no ccache
-fset x86-64 --release # x86-64 release build, no goma, no ccache
-fset x86-64 --ccache  # x86-64 debug build, ccache enabled
+fset x86-64              # x86-64 debug build
+fset arm64               # arm64 debug build
+fset x86-64 --release    # x86-64 release build
+fset x86-64 --ccache     # x86-64 debug build, force use of ccache even if goma is available
+fset x86-64 --no-goma    # x86-64 debug build, disable use of goma
+fset x86-64 --no-ccache  # x86-64 debug build, disable use of ccache
 ```
 
 ### Start the build
