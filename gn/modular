@@ -44,8 +44,8 @@
             "bootfs_path": "apps/device_runner"
         },
         {
-            "binary": "dummy_device_shell",
-            "bootfs_path": "apps/dummy_device_shell"
+            "binary": "dev_device_shell",
+            "bootfs_path": "apps/dev_device_shell"
         },
         {
             "binary": "dummy_story_shell",
