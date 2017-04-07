@@ -143,15 +143,15 @@ class Service {
  public:
   Service(int port, int argc, const char** argv)
       : port_(port), argc_(argc), argv_(argv) {
-    sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    sock_ = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
     if (sock_ < 0) {
       FTL_LOG(FATAL) << "Failed to create socket: " << strerror(errno);
     }
 
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port_);
-    addr.sin_addr.s_addr = INADDR_ANY;
+    struct sockaddr_in6 addr;
+    addr.sin6_family = AF_INET6;
+    addr.sin6_port = htons(port_);
+    addr.sin6_addr = in6addr_any;
     if (bind(sock_, (struct sockaddr*)&addr, sizeof addr) < 0) {
       FTL_LOG(FATAL) << "Failed to bind to " << port_ << ": "
                      << strerror(errno);
