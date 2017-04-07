@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <new.h>
+#include <string.h>
 
 #include <kernel/auto_lock.h>
 #include <lib/user_copy/user_ptr.h>
@@ -89,7 +90,38 @@ void FifoDispatcher::OnPeerZeroHandles() {
     state_tracker_.UpdateState(MX_FIFO_WRITABLE, MX_FIFO_PEER_CLOSED);
 }
 
-mx_status_t FifoDispatcher::Write(const uint8_t* ptr, size_t len, uint32_t* actual) {
+mx_status_t FifoDispatcher::Write(const uint8_t* src, size_t len, uint32_t* actual) {
+    auto copy_from_fn = [](const uint8_t* src, uint8_t* data, size_t len) -> mx_status_t {
+        memcpy(data, src, len);
+        return NO_ERROR;
+    };
+    return Write(src, len, actual, copy_from_fn);
+}
+
+mx_status_t FifoDispatcher::Read(uint8_t* dst, size_t len, uint32_t* actual) {
+    auto copy_to_fn = [](uint8_t* dst, const uint8_t* data, size_t len) -> mx_status_t {
+        memcpy(dst, data, len);
+        return NO_ERROR;
+    };
+    return Read(dst, len, actual, copy_to_fn);
+}
+
+mx_status_t FifoDispatcher::WriteFromUser(const uint8_t* src, size_t len, uint32_t* actual) {
+    auto copy_from_fn = [](const uint8_t* src, uint8_t* data, size_t len) -> mx_status_t {
+        return make_user_ptr(src).copy_array_from_user(data, len);
+    };
+    return Write(src, len, actual, copy_from_fn);
+}
+
+mx_status_t FifoDispatcher::ReadToUser(uint8_t* dst, size_t len, uint32_t* actual) {
+    auto copy_to_fn = [](uint8_t* dst, const uint8_t* data, size_t len) -> mx_status_t {
+        return make_user_ptr(dst).copy_array_to_user(data, len);
+    };
+    return Read(dst, len, actual, copy_to_fn);
+}
+
+mx_status_t FifoDispatcher::Write(const uint8_t* ptr, size_t len, uint32_t* actual,
+                                  fifo_copy_from_fn_t copy_from_fn) {
     canary_.Assert();
 
     mxtl::RefPtr<FifoDispatcher> other;
@@ -100,10 +132,11 @@ mx_status_t FifoDispatcher::Write(const uint8_t* ptr, size_t len, uint32_t* actu
         other = other_;
     }
 
-    return other->WriteSelf(ptr, len, actual);
+    return other->WriteSelf(ptr, len, actual, copy_from_fn);
 }
 
-mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32_t* actual) {
+mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32_t* actual,
+                                      fifo_copy_from_fn_t copy_from_fn) {
     canary_.Assert();
 
     size_t count = bytelen / elem_size_;
@@ -134,7 +167,8 @@ mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
         // number of slots we can actually copy
         size_t to_copy = (count > n) ? n : count;
 
-        if (make_user_ptr(ptr).copy_array_from_user(data_ + offset * elem_size_, to_copy * elem_size_) != NO_ERROR) {
+        mx_status_t status = copy_from_fn(ptr, data_ + offset * elem_size_, to_copy * elem_size_);
+        if (status != NO_ERROR) {
             // roll back, in case this is the second copy
             head_ = old_head;
             return ERR_INVALID_ARGS;
@@ -159,7 +193,8 @@ mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
     return NO_ERROR;
 }
 
-mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual) {
+mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual,
+                                 fifo_copy_to_fn_t copy_to_fn) {
     canary_.Assert();
 
     size_t count = bytelen / elem_size_;
@@ -190,7 +225,8 @@ mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual)
         // number of slots we can actually copy
         size_t to_copy = (count > n) ? n : count;
 
-        if (make_user_ptr(ptr).copy_array_to_user(data_ + offset * elem_size_, to_copy * elem_size_) != NO_ERROR) {
+        mx_status_t status = copy_to_fn(ptr, data_ + offset * elem_size_, to_copy * elem_size_);
+        if (status != NO_ERROR) {
             // roll back, in case this is the second copy
             tail_ = old_tail;
             return ERR_INVALID_ARGS;

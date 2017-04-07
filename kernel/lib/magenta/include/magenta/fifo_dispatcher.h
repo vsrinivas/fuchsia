@@ -17,6 +17,9 @@
 #include <mxtl/canary.h>
 #include <mxtl/ref_counted.h>
 
+typedef mx_status_t (*fifo_copy_from_fn_t)(const uint8_t* ptr, uint8_t* data, size_t len);
+typedef mx_status_t (*fifo_copy_to_fn_t)(uint8_t* ptr, const uint8_t* data, size_t len);
+
 class FifoDispatcher final : public Dispatcher {
 public:
     static status_t Create(uint32_t elem_count, uint32_t elem_size, uint32_t options,
@@ -31,13 +34,21 @@ public:
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
 
-    mx_status_t Write(const uint8_t* ptr, size_t len, uint32_t* actual);
+    mx_status_t Write(const uint8_t* src, size_t len, uint32_t* actual);
     mx_status_t Read(uint8_t* dst, size_t len, uint32_t* actual);
+
+    mx_status_t WriteFromUser(const uint8_t* src, size_t len, uint32_t* actual);
+    mx_status_t ReadToUser(uint8_t* dst, size_t len, uint32_t* actual);
 
 private:
     FifoDispatcher(uint32_t elem_count, uint32_t elem_size, uint32_t options);
     mx_status_t Init(mxtl::RefPtr<FifoDispatcher> other);
-    mx_status_t WriteSelf(const uint8_t* ptr, size_t len, uint32_t* actual);
+    mx_status_t Write(const uint8_t* ptr, size_t len, uint32_t* actual,
+                      fifo_copy_from_fn_t copy_from_fn);
+    mx_status_t WriteSelf(const uint8_t* ptr, size_t len, uint32_t* actual,
+                          fifo_copy_from_fn_t copy_from_fn);
+    mx_status_t Read(uint8_t* ptr, size_t len, uint32_t* actual,
+                     fifo_copy_to_fn_t copy_to_fn);
 
     void OnPeerZeroHandles();
 

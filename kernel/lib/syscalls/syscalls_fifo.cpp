@@ -66,7 +66,8 @@ mx_status_t sys_fifo_write(mx_handle_t handle, user_ptr<const void> entries,
 
     uint32_t actual;
     // TODO(andymutton): Change FifoDispatcher to accept user_ptr
-    if ((status = fifo->Write(reinterpret_cast<const uint8_t*>(entries.get()), len, &actual)) != NO_ERROR)
+    status = fifo->WriteFromUser(reinterpret_cast<const uint8_t*>(entries.get()), len, &actual);
+    if (status != NO_ERROR)
         return status;
 
     if (_actual.copy_to_user(actual) != NO_ERROR)
@@ -85,7 +86,8 @@ mx_status_t sys_fifo_read(mx_handle_t handle, user_ptr<void> entries, size_t len
 
     uint32_t actual;
     // TODO(andymutton): Change FifoDispatcher to accept user_ptr
-    if ((status = fifo->Read(reinterpret_cast<uint8_t*>(entries.get()), len, &actual)) != NO_ERROR)
+    status = fifo->ReadToUser(reinterpret_cast<uint8_t*>(entries.get()), len, &actual);
+    if (status != NO_ERROR)
         return status;
 
     if (_actual.copy_to_user(actual) != NO_ERROR)
