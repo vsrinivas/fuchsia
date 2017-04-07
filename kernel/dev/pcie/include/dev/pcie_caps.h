@@ -107,6 +107,31 @@ enum pcie_device_type_t : uint8_t {
 #define PCS_DEV_CAPS_CAP_SLOT_PWR_LIMIT_SCALE(val) (((val) >> 26) & 0x03)
 #define PCS_DEV_CAPS_FUNC_LEVEL_RESET(val)         (((val) >> 28) & 0x01)
 
+// Section 7.8.4 Table 7-14
+constexpr uint16_t PCS_DEV_CTRL_ENB_CORR_ERR_REP        = (1 << 0);
+constexpr uint16_t PCS_DEV_CTRL_ENB_NONFATAL_ERR_REP    = (1 << 1);
+constexpr uint16_t PCS_DEV_CTRL_ENB_FATAL_ERR_REP       = (1 << 2);
+constexpr uint16_t PCS_DEV_CTRL_ENB_UNSUPP_REQ_ERR_REP  = (1 << 3);
+constexpr uint16_t PCS_DEV_CTRL_ENB_RELAXED_ORDERING    = (1 << 4);
+// TODO(johngro) define a constexpr func for the MAX_PAYLOAD_SIZE field of the
+// device control register.
+constexpr uint16_t PCS_DEV_CTRL_ENB_EXT_TAG_FIELD       = (1 << 8);
+constexpr uint16_t PCS_DEV_CTRL_ENB_PHANTOM_FUNCTIONS   = (1 << 9);
+constexpr uint16_t PCS_DEV_CTRL_ENB_AUX_POWER_PM        = (1 << 10);
+constexpr uint16_t PCS_DEV_CTRL_ENB_NO_SNOOP            = (1 << 11);
+// TODO(johngro) define a constexpr func for the MAX_READ_REQ_SIZE field of the
+// device control register.
+constexpr uint16_t PCS_DEV_CTRL_ENB_BRIDGE_CFG_RETRY    = (1 << 15);
+constexpr uint16_t PCS_DEV_CTRL_INITIATE_FLR            = (1 << 15);
+
+// Section 7.8.5 Table 7-15
+constexpr uint16_t PCS_DEV_STS_CORR_ERR_DETECTED        = (1 << 0);
+constexpr uint16_t PCS_DEV_STS_NONFATAL_ERR_DETECTED    = (1 << 1);
+constexpr uint16_t PCS_DEV_STS_FATAL_ERR_DETECTED       = (1 << 2);
+constexpr uint16_t PCS_DEV_STS_UNSUPPORTED_REQ_DETECTED = (1 << 3);
+constexpr uint16_t PCS_DEV_STS_AUX_POWER_DETECTED       = (1 << 4);
+constexpr uint16_t PCS_DEV_STS_TRANSACTIONS_PENDING     = (1 << 5);
+
 #define PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(val)   ((((val) >> 1) & 0x01) != 0)
 #define PCS_ADVCAPS_CAP_HAS_TRANS_PENDING(val)      ((((val) >> 0) & 0x01) != 0)
 #define PCS_ADVCAPS_CTRL_INITIATE_FLR               (0x01)
