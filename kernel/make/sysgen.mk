@@ -28,7 +28,7 @@ SG_SYSCALLS := $(SG_MAGENTA)/syscalls
 SG_PUBLIC_HEADER := $(SG_SYSCALLS)/definitions.h
 SG_PUBLIC_RUST := $(SG_SYSCALLS)/definitions.rs
 
-SG_SYSROOT_MAGENTA := $(BUILDDIR)/sysroot/include/magenta
+SG_SYSROOT_MAGENTA := $(BUILDSYSROOT)/include/magenta
 SG_SYSROOT_HEADER := $(SG_SYSROOT_MAGENTA)/syscalls/definitions.h
 SG_SYSROOT_RUST := $(SG_SYSROOT_MAGENTA)/syscalls/definitions.rs
 

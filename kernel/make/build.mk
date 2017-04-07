@@ -117,8 +117,6 @@ GENERATED += $(USER_MANIFEST)
 # to generate dependencies
 USER_MANIFEST_DEPS := $(foreach x,$(USER_MANIFEST_LINES),$(lastword $(subst =,$(SPACE),$(strip $(x)))))
 
-$(info MKBOOTFS $(MKBOOTFS))
-
 $(USER_BOOTDATA): $(MKBOOTFS) $(USER_MANIFEST) $(USER_MANIFEST_DEPS) $(ADDITIONAL_BOOTDATA_ITEMS)
 	@echo generating $@
 	@$(MKDIR)

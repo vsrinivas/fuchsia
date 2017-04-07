@@ -35,6 +35,7 @@ LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
 USE_LINKER_GC ?= true
 
+
 # If no build directory suffix has been explicitly supplied by the environment,
 # generate a default based on build options.  Start with no suffix, then add
 # "-clang" if we are building with clang, and "-release" if we are building with
@@ -124,6 +125,15 @@ GLOBAL_CPPFLAGS := --std=c++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics
 GLOBAL_ASMFLAGS := -DASSEMBLY
 GLOBAL_LDFLAGS := -nostdlib $(addprefix -L,$(LKINC))
 GLOBAL_MODULE_LDFLAGS :=
+
+# By default the sysroot is generated in "sysroot" under
+# the build directory, but this is overrideable
+ifeq ($(BUILDSYSROOT),)
+BUILDSYSROOT := $(BUILDDIR)/sysroot
+else
+# be noisy if we are
+$(info BUILDSYSROOT = $(BUILDSYSROOT))
+endif
 
 # Mechanism to generate exported dependency info for sysroot
 # $(call sysroot-module,MODULE-IN-SYSROOT)
@@ -354,9 +364,7 @@ $(error couldn't find target or target doesn't define platform)
 endif
 include platform/$(PLATFORM)/rules.mk
 
-$(info PROJECT = $(PROJECT))
-$(info PLATFORM = $(PLATFORM))
-$(info TARGET = $(TARGET))
+$(info PROJECT/PLATFORM/TARGET = $(PROJECT) / $(PLATFORM) / $(TARGET))
 
 include host/rules.mk
 include arch/$(ARCH)/rules.mk
@@ -384,15 +392,15 @@ endif
 ifeq ($(ENABLE_BUILD_SYSROOT),true)
 # identify global headers to copy to the sysroot
 GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc)
-SYSROOT_HEADERS := $(patsubst system/public/%,$(BUILDDIR)/sysroot/include/%,$(GLOBAL_HEADERS))
+SYSROOT_HEADERS := $(patsubst system/public/%,$(BUILDSYSROOT)/include/%,$(GLOBAL_HEADERS))
 
 # generate rule to copy them
-$(call copy-dst-src,$(BUILDDIR)/sysroot/include/%.h,system/public/%.h)
-$(call copy-dst-src,$(BUILDDIR)/sysroot/include/%.inc,system/public/%.inc)
+$(call copy-dst-src,$(BUILDSYSROOT)/include/%.h,system/public/%.h)
+$(call copy-dst-src,$(BUILDSYSROOT)/include/%.inc,system/public/%.inc)
 
 ifeq ($(ENABLE_BUILD_SYSDEPS),true)
 $(foreach hdr,$(GLOBAL_HEADERS),\
-	$(call sysroot-file,$(patsubst system/public/%,$(BUILDDIR)/sysroot/include/%,$(hdr)),$(hdr)))
+	$(call sysroot-file,$(patsubst system/public/%,$(BUILDSYSROOT)/include/%,$(hdr)),$(hdr)))
 endif
 
 SYSROOT_DEPS += $(SYSROOT_HEADERS)
@@ -400,9 +408,9 @@ GENERATED += $(SYSROOT_HEADERS)
 
 # copy crt*.o files to the sysroot
 # crt1.o is temporary as we'll stop supporting fully static linking
-SYSROOT_CRT1 := $(BUILDDIR)/sysroot/lib/crt1.o
+SYSROOT_CRT1 := $(BUILDSYSROOT)/lib/crt1.o
 $(call copy-dst-src,$(SYSROOT_CRT1),$(USER_CRT1_OBJ))
-SYSROOT_SCRT1 := $(BUILDDIR)/sysroot/lib/Scrt1.o
+SYSROOT_SCRT1 := $(BUILDSYSROOT)/lib/Scrt1.o
 $(call copy-dst-src,$(SYSROOT_SCRT1),$(USER_CRT1_OBJ))
 SYSROOT_DEPS += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
 GENERATED += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
@@ -411,33 +419,33 @@ $(call sysroot-file,$(SYSROOT_CRT1),[third_party/ulib/musl])
 $(call sysroot-file,$(SYSROOT_SCRT1),[third_party/ulib/musl])
 
 # generate empty compatibility libs
-$(BUILDDIR)/sysroot/lib/libm.so: third_party/ulib/musl/lib.ld
+$(BUILDSYSROOT)/lib/libm.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
 	$(NOECHO)cp $< $@
-$(BUILDDIR)/sysroot/lib/libdl.so: third_party/ulib/musl/lib.ld
+$(BUILDSYSROOT)/lib/libdl.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
 	$(NOECHO)cp $< $@
-$(BUILDDIR)/sysroot/lib/libpthread.so: third_party/ulib/musl/lib.ld
+$(BUILDSYSROOT)/lib/libpthread.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
 	$(NOECHO)cp $< $@
 
-$(call sysroot-file,$(BUILDDIR)/sysroot/lib/libm.so,[third_party/ulib/musl])
-$(call sysroot-file,$(BUILDDIR)/sysroot/lib/libdl.so,[third_party/ulib/musl])
-$(call sysroot-file,$(BUILDDIR)/sysroot/lib/libpthread.so,[third_party/ulib/musl])
+$(call sysroot-file,$(BUILDSYSROOT)/lib/libm.so,[third_party/ulib/musl])
+$(call sysroot-file,$(BUILDSYSROOT)/lib/libdl.so,[third_party/ulib/musl])
+$(call sysroot-file,$(BUILDSYSROOT)/lib/libpthread.so,[third_party/ulib/musl])
 
-SYSROOT_DEPS += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
-GENERATED += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
+SYSROOT_DEPS += $(BUILDSYSROOT)/lib/libm.so $(BUILDSYSROOT)/lib/libdl.so $(BUILDSYSROOT)/lib/libpthread.so
+GENERATED += $(BUILDSYSROOT)/lib/libm.so $(BUILDSYSROOT)/lib/libdl.so $(BUILDSYSROOT)/lib/libpthread.so
 
 # GDB specifically looks for ld.so.1, so we create that as a symlink.
-$(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP): FORCE
+$(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP): FORCE
 	@$(MKDIR)
 	$(NOECHO)rm -f $@
 	$(NOECHO)ln -s libc.so $@
 
-$(call sysroot-file,$(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP),[third_party/ulib/musl])
+$(call sysroot-file,$(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP),[third_party/ulib/musl])
 
-SYSROOT_DEPS += $(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP)
-GENERATED += $(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP)
+SYSROOT_DEPS += $(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP)
+GENERATED += $(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP)
 endif
 
 EXTRA_BUILDDEPS += $(SYSROOT_DEPS)

@@ -134,7 +134,7 @@ ifeq ($(MODULE_TYPE),userlib)
 ifneq ($(filter so,$(MODULE_EXPORT)),)
 ifneq ($(MODULE_SO_NAME),)
 #$(info EXPORT $(MODULE) shared)
-MODULE_TEMP_NAME := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
+MODULE_TEMP_NAME := $(BUILDSYSROOT)/lib/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so.abi)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
@@ -144,7 +144,7 @@ $(call sysroot-file,$(MODULE_TEMP_NAME),[$(MODULE)])
 # These files live on the development host, not the target.
 # There's no point in saving separate debug info here (at least not yet),
 # we just make a copy of the unstripped file.
-MODULE_TEMP_NAME := $(BUILDDIR)/sysroot/debug-info/lib$(MODULE_SO_NAME).so
+MODULE_TEMP_NAME := $(BUILDSYSROOT)/debug-info/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
@@ -154,7 +154,7 @@ endif
 
 ifneq ($(filter a,$(MODULE_EXPORT)),)
 #$(info EXPORT $(MODULE) static)
-MODULE_TEMP_NAME := $(BUILDDIR)/sysroot/lib/lib$(MODULE_NAME).a
+MODULE_TEMP_NAME := $(BUILDSYSROOT)/lib/lib$(MODULE_NAME).a
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).a)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
@@ -166,7 +166,7 @@ ifneq ($(MODULE_EXPORT),)
 #$(info EXPORT $(MODULE) include)
 # for now, unify all headers in one pile
 # TODO: ddk, etc should be packaged separately
-MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include
+MODULE_INSTALL_HEADERS := $(BUILDSYSROOT)/include
 
 # Hack to work around libc/libmusl aliasing
 # TODO(swetland): a long-term fix
