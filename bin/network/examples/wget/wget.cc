@@ -80,8 +80,8 @@ class WGetApp {
     context_->launcher()->CreateApplication(std::move(launch_info),
                                             fidl::GetProxy(&app_controller_));
 
-    modular::ConnectToService(network_service_provider_.get(),
-                              fidl::GetProxy(&network_service_));
+    app::ConnectToService(network_service_provider_.get(),
+                          fidl::GetProxy(&network_service_));
 #endif
     FTL_DCHECK(network_service_);
   }
@@ -112,7 +112,7 @@ class WGetApp {
  private:
   std::unique_ptr<app::ApplicationContext> context_;
 #if !USE_ENVIRONMENT_SERVICE
-  modular::ApplicationControllerPtr app_controller_;
+  app::ApplicationControllerPtr app_controller_;
   app::ServiceProviderPtr network_service_provider_;
 #endif
 
