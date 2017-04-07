@@ -109,6 +109,12 @@ template("rust_artifact") {
     if (defined(invoker.non_rust_deps)) {
       deps += invoker.non_rust_deps
     }
+    if (is_fuchsia) {
+      clang_wrapper_target = "//rust/magenta-rs/tools:clang_wrapper($host_toolchain)"
+      deps += [
+        clang_wrapper_target,
+      ]
+    }
 
     args = [
       "--type",
@@ -141,9 +147,10 @@ template("rust_artifact") {
     ] + rust_deps
 
     if (is_fuchsia) {
+      wrapper_dir = get_label_info(clang_wrapper_target, "root_out_dir")
       args += [
         "--linker",
-        rebase_path("//rust/magenta-rs/tools/$target_triple-cc"),
+        rebase_path("$wrapper_dir/$target_triple-cc"),
       ]
     }
   }
