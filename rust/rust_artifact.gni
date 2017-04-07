@@ -61,13 +61,33 @@ template("rust_artifact") {
   if (type == "bin") {
     output_file = "$target_out_dir/$target_name.rust/$target_triple/debug/$name"
     output_depfile = "$output_file.d"
+    build_target_name = "${target_name}_build"
   } else if (type == "lib") {
     output_base = "$target_out_dir/$target_name.rust/$target_triple/debug/lib$name"
     output_file = "$output_base.rlib"
     output_depfile = "$output_base.d"
+    build_target_name = target_name
   }
 
-  action(target_name)  {
+  main_target_name = target_name
+
+  if (type == "bin") {
+    copy(target_name) {
+      sources = [
+        output_file
+      ]
+
+      outputs = [
+        "$root_out_dir/$name",
+      ]
+
+      deps = [
+        ":$build_target_name",
+      ]
+    }
+  }
+
+  action(build_target_name) {
     script = "//build/rust/build_target.py"
 
     depfile = output_depfile
@@ -81,12 +101,7 @@ template("rust_artifact") {
     ]
     if (type == "lib") {
       outputs += [
-        "$target_gen_dir/$target_name.rust/$target_name.rust_name",
-      ]
-    }
-    if (type == "bin") {
-      outputs += [
-        "$target_out_dir/$target_name.rust/$name",
+        "$target_gen_dir/$main_target_name.rust/$main_target_name.rust_name",
       ]
     }
 
@@ -101,9 +116,9 @@ template("rust_artifact") {
       "--name",
       name,
       "--out-dir",
-      rebase_path("$target_out_dir/$target_name.rust"),
+      rebase_path("$target_out_dir/$main_target_name.rust"),
       "--gen-dir",
-      rebase_path("$target_gen_dir/$target_name.rust"),
+      rebase_path("$target_gen_dir/$main_target_name.rust"),
       "--root-out-dir",
       rebase_path(root_build_dir),
       "--root-gen-dir",

@@ -227,15 +227,6 @@ def main():
                                 "%s.d" % output_name)
     fix_depfile(depfile_path, args.root_out_dir)
 
-    # Make binaries accessible from a standard location in the output directory.
-    if args.type == "bin":
-        symlink = os.path.join(args.out_dir, args.name)
-        # TODO(pylaligand): adjust debug/release when necessary.
-        bin = os.path.join(args.out_dir, args.target_triple, "debug", args.name)
-        if os.path.islink(symlink):
-            os.unlink(symlink)
-        os.symlink(bin, symlink)
-
     return 0
 
 
