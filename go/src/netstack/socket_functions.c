@@ -886,10 +886,10 @@ mx_status_t do_write_dgram(mxrio_msg_t* msg, iostate_t* ios, int events,
     debug_alloc("do_write_dgram: get wbuf %p\n", ios->wbuf);
     assert(ios->wbuf);
   }
-  size_t nread;
+  uint32_t nread;
   mx_status_t r = mx_channel_read(ios->data_h, 0u, ios->wbuf->data, RWBUF_SIZE,
-                                  (uint32_t*)&nread, NULL, 0, NULL);
-  debug_socket("mx_channel_read => %d (%lu)\n", r, nread);
+                                  &nread, NULL, 0, NULL);
+  debug_socket("mx_channel_read => %d (%u)\n", r, nread);
   if (r == ERR_SHOULD_WAIT) {
     if (signals & MX_SOCKET_PEER_CLOSED) {
       debug_socket("do_write_dgram: handle_close (channel is closed)\n");
@@ -909,7 +909,7 @@ mx_status_t do_write_dgram(mxrio_msg_t* msg, iostate_t* ios, int events,
 
   mxio_socket_msg_t* m = (mxio_socket_msg_t*)ios->wbuf->data;
   if (nread > MXIO_SOCKET_MSG_HEADER_SIZE) {
-    debug("m->addrlen=%d, nread=%lu\n", m->addrlen, nread);
+    debug("m->addrlen=%d, nread=%u\n", m->addrlen, nread);
 
     struct sockaddr* addr =
         (m->addrlen == 0) ? NULL : (struct sockaddr*)&m->addr;
