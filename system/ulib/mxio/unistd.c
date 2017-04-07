@@ -497,6 +497,16 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
     return r;
 }
 
+mx_status_t mxio_get_vmo(int fd, mx_handle_t* vmo, size_t* off, size_t* len) {
+    mxio_t* io;
+    if ((io = fd_to_io(fd)) == NULL) {
+        return ERR_BAD_HANDLE;
+    }
+    mx_status_t r = io->ops->get_vmo(io, vmo, off, len);
+    mxio_release(io);
+    return r;
+}
+
 mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* _pending, mx_time_t timeout) {
     mx_status_t r = NO_ERROR;
     mxio_t* io;
