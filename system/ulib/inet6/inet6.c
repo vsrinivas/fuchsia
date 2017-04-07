@@ -46,17 +46,10 @@ void ll6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
     ip[0] = 0xFE;
     ip[1] = 0x80;
     memset(ip + 2, 0, 6);
-#if INET6_COEXIST_WITH_NETSTACK
-    // Force the globally-unique bit to false,
-    // Since our coexist variant address is
-    // effectively "locally administered".
-    ip[8] = mac[0] & (~2);
-#else
     // Flip the globally-unique bit from the MAC
     // since the sense of this is backwards in
     // IPv6 Interface Identifiers.
     ip[8] = mac[0] ^ 2;
-#endif
     ip[9] = mac[1];
     ip[10] = mac[2];
 #if INET6_COEXIST_WITH_NETSTACK
