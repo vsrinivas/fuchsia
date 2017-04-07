@@ -65,103 +65,6 @@ rapidjson::Document CreateTriggerListKey(const std::string& agent_url,
 
 }  // namespace
 
-class AgentRunner::TriggerListWatcher : ledger::PageWatcher {
- public:
-  TriggerListWatcher(AgentRunner* const agent_runner, ledger::PagePtr page)
-      : agent_runner_(agent_runner),
-        page_(std::move(page)),
-        binding_(this) {
-    page_->GetSnapshot(
-        snapshot_.NewRequest(), binding_.NewBinding(),
-        [](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-          }
-        });
-
-    snapshot_->GetEntries(
-        nullptr, nullptr,
-        [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
-               fidl::Array<uint8_t> continuation_token) {
-          // TODO(alhaad): It is possible that entries in ledger snapshot are
-          // played in multiple runs. Handle it!
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "Ledger status " << status << "."
-                           << "This maybe because of the TODO above";
-            return;
-          }
-
-          if (entries.size() == 0) {
-            // No existing entries.
-            return;
-          }
-
-          for (const auto& entry : entries) {
-            std::string key(reinterpret_cast<const char*>(entry->key.data()),
-                            entry->key.size());
-            std::string value;
-            if (!mtl::StringFromVmo(entry->value, &value)) {
-              FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
-              return;
-            }
-            agent_runner_->AddedTrigger(key, value);
-          }
-
-          // We don't use snapshot_ anymore.
-          snapshot_.reset();
-        });
-  }
-
-  void Add(const std::string& key, const std::string& value) {
-    page_->PutWithPriority(
-        to_array(key), to_array(value), ledger::Priority::EAGER,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-          }
-        });
-  }
-
-  void Remove(const std::string& key) {
-    page_->Delete(to_array(key), [this](ledger::Status status) {
-      // ledger::Status::INVALID_TOKEN is okay because we might have gotten a
-      // request to delete a token which does not exist. This is okay.
-      if (status != ledger::Status::OK &&
-          status != ledger::Status::INVALID_TOKEN) {
-        FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-      }
-    });
-  }
-
- private:
-  void OnChange(ledger::PageChangePtr page,
-                ledger::ResultState result_state,
-                const OnChangeCallback& callback) override {
-    for (auto& entry : page->changes) {
-      std::string key(reinterpret_cast<const char*>(entry->key.data()),
-                      entry->key.size());
-      std::string value;
-      if (!mtl::StringFromVmo(entry->value, &value)) {
-        FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
-        return;
-      }
-      agent_runner_->AddedTrigger(key, value);
-    }
-
-    for (auto& key : page->deleted_keys) {
-      agent_runner_->DeletedTrigger(to_string(key));
-    }
-    callback(nullptr);
-  }
-
-  AgentRunner* const agent_runner_;
-  ledger::PagePtr page_;
-  fidl::Binding<ledger::PageWatcher> binding_;
-  ledger::PageSnapshotPtr snapshot_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(TriggerListWatcher);
-};
-
 AgentRunner::AgentRunner(
     app::ApplicationLauncher* const application_launcher,
     MessageQueueManager* const message_queue_manager,
@@ -171,9 +74,55 @@ AgentRunner::AgentRunner(
     : application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
+      page_(std::move(page)),
       user_intelligence_provider_(user_intelligence_provider),
+      watcher_binding_(this),
       terminating_(std::make_shared<bool>(false)) {
-  trigger_list_watcher_.reset(new TriggerListWatcher(this, std::move(page)));
+  page_->GetSnapshot(
+      snapshot_.NewRequest(), watcher_binding_.NewBinding(),
+      [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
+        }
+      });
+
+  // TODO(mesch): Ben points out there is a race here between getting
+  // the entries from this snapshot, and receiving updates in the
+  // watcher. Converting to an operation queue would address this too.
+  // Also, we want to bind the watcher interface request to the
+  // implementation on our side only *after* the GetEntries operation
+  // completes.
+  snapshot_->GetEntries(
+      nullptr, nullptr,
+      [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
+             fidl::Array<uint8_t> continuation_token) {
+        // TODO(alhaad): It is possible that entries in ledger snapshot are
+        // played in multiple runs. Handle it!
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "Ledger status " << status << "."
+                         << "This maybe because of the TODO above";
+          return;
+        }
+
+        if (entries.size() == 0) {
+          // No existing entries.
+          return;
+        }
+
+        for (const auto& entry : entries) {
+          std::string key(reinterpret_cast<const char*>(entry->key.data()),
+                          entry->key.size());
+          std::string value;
+          if (!mtl::StringFromVmo(entry->value, &value)) {
+            FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
+            return;
+          }
+          AddedTrigger(key, value);
+        }
+
+        // We don't use snapshot_ anymore. TODO(mesch): Change to an Operation.
+        snapshot_.reset();
+      });
 }
 
 AgentRunner::~AgentRunner() = default;
@@ -248,8 +197,15 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
     FTL_NOTREACHED();
   }
 
-  trigger_list_watcher_->Add(modular::JsonValueToString(key_doc),
-                             modular::JsonValueToString(value_doc));
+  page_->PutWithPriority(
+      to_array(modular::JsonValueToString(key_doc)),
+      to_array(modular::JsonValueToString(value_doc)),
+      ledger::Priority::EAGER,
+      [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
+        }
+      });
 }
 
 void AgentRunner::AddedTrigger(const std::string& key,
@@ -399,7 +355,15 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
                              const std::string& task_id) {
   const auto& key =
       modular::JsonValueToString(CreateTriggerListKey(agent_url, task_id));
-  trigger_list_watcher_->Remove(key);
+
+  page_->Delete(to_array(key), [this](ledger::Status status) {
+      // ledger::Status::INVALID_TOKEN is okay because we might have gotten a
+      // request to delete a token which does not exist. This is okay.
+      if (status != ledger::Status::OK &&
+          status != ledger::Status::INVALID_TOKEN) {
+        FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
+      }
+    });
 }
 
 AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
@@ -416,6 +380,27 @@ AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
   }
 
   return found_it->second.get();
+}
+
+void AgentRunner::OnChange(ledger::PageChangePtr page,
+                           ledger::ResultState result_state,
+                           const OnChangeCallback& callback) {
+  for (auto& entry : page->changes) {
+    std::string key(reinterpret_cast<const char*>(entry->key.data()),
+                    entry->key.size());
+    std::string value;
+    if (!mtl::StringFromVmo(entry->value, &value)) {
+      FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
+      continue;
+    }
+    AddedTrigger(key, value);
+  }
+
+  for (auto& key : page->deleted_keys) {
+    DeletedTrigger(to_string(key));
+  }
+
+  callback(nullptr);
 }
 
 }  // namespace modular

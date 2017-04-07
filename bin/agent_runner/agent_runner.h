@@ -16,6 +16,7 @@
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
@@ -25,7 +26,7 @@ class MessageQueueManager;
 
 // This class provides a way for components to connect to agents and manages the
 // life time of a running agent.
-class AgentRunner {
+class AgentRunner : ledger::PageWatcher {
  public:
   AgentRunner(app::ApplicationLauncher* application_launcher,
               MessageQueueManager* message_queue_manager,
@@ -84,9 +85,6 @@ class AgentRunner {
                                 const std::string& queue_name);
   void DeleteMessageQueueTask(const std::string& agent_url,
                               const std::string& task_id);
-  // agent URL -> { task id -> queue name }
-  std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
-      watched_queues_;
 
   // For triggers based on alarms.
   void ScheduleAlarmTask(const std::string& agent_url,
@@ -95,6 +93,16 @@ class AgentRunner {
                          bool is_new_request);
   void DeleteAlarmTask(const std::string& agent_url,
                        const std::string& task_id);
+
+  // |PageWatcher|
+  void OnChange(ledger::PageChangePtr page,
+                ledger::ResultState result_state,
+                const OnChangeCallback& callback) override;
+
+  // agent URL -> { task id -> queue name }
+  std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
+      watched_queues_;
+
   // agent URL -> { task id -> alarm in seconds }
   std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>>
       running_alarms_;
@@ -106,11 +114,12 @@ class AgentRunner {
   app::ApplicationLauncher* const application_launcher_;
   MessageQueueManager* const message_queue_manager_;
   ledger::LedgerRepository* const ledger_repository_;
+  ledger::PagePtr page_;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
 
   // A watcher for any changes happening to the trigger list on the ledger.
-  class TriggerListWatcher;
-  std::unique_ptr<TriggerListWatcher> trigger_list_watcher_;
+  fidl::Binding<ledger::PageWatcher> watcher_binding_;
+  ledger::PageSnapshotPtr snapshot_;
 
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;
