@@ -15,6 +15,9 @@ executable("clang_wrapper_bin") {
   sources = [
     "clang_wrapper.cc",
   ]
+  ldflags = [
+    "-pthread"
+  ]
 }
 
 template("copy_wrapper") {
