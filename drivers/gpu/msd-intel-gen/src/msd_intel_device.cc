@@ -678,7 +678,7 @@ magma::Status MsdIntelDevice::ProcessFlip(
     // Note, if not waiting for flip complete you need to be careful of mapping lifetime.
     // For simplicity we just maintain all display buffer mappings forever but we should
     // have the upper layers import/release display buffers.
-    constexpr bool kWaitForFlip = true;
+    constexpr bool kWaitForFlip = MSD_INTEL_WAIT_FOR_FLIP ? true : false;
 
     uint32_t pipe_number = 0;
     auto plane_control = registers::DisplayPlaneControl::Get(pipe_number).ReadFrom(register_io());
