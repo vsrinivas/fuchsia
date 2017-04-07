@@ -198,4 +198,15 @@ struct x86_model_info {
 
 const struct x86_model_info * x86_get_model(void);
 
+enum x86_microarch_list {
+    X86_MICROARCH_UNKNOWN,
+    X86_MICROARCH_INTEL_SANDY_BRIDGE,
+    X86_MICROARCH_INTEL_IVY_BRIDGE,
+    X86_MICROARCH_INTEL_BROADWELL,
+    X86_MICROARCH_INTEL_HASWELL,
+    X86_MICROARCH_INTEL_SKYLAKE,
+    X86_MICROARCH_INTEL_KABYLAKE,
+};
+extern enum x86_microarch_list x86_microarch;
+
 __END_CDECLS

@@ -22,10 +22,13 @@ uint32_t max_cpuid = 0;
 uint32_t max_ext_cpuid = 0;
 
 enum x86_vendor_list x86_vendor;
+enum x86_microarch_list x86_microarch;
 
 static struct x86_model_info model_info;
 
 static int initialized = 0;
+
+static enum x86_microarch_list get_microarch(struct x86_model_info* info);
 
 __NO_SAFESTACK void x86_feature_init(void)
 {
@@ -94,7 +97,40 @@ __NO_SAFESTACK void x86_feature_init(void)
         if (model_info.family == 0xf || model_info.family == 0x6) {
             model_info.display_model += BITS_SHIFT(leaf->a, 19, 16) << 4;
         }
+
+        x86_microarch = get_microarch(&model_info);
     }
+}
+
+static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
+    if (x86_vendor == X86_VENDOR_INTEL && info->family == 0x6) {
+        switch (info->display_model) {
+            case 0x2a: /* Sandy Bridge */
+            case 0x2d: /* Sandy Bridge EP */
+                return X86_MICROARCH_INTEL_SANDY_BRIDGE;
+            case 0x3a: /* Ivy Bridge */
+            case 0x3e: /* Ivy Bridge EP */
+                return X86_MICROARCH_INTEL_IVY_BRIDGE;
+            case 0x3c: /* Haswell DT */
+            case 0x3f: /* Haswell MB */
+            case 0x45: /* Haswell ULT */
+            case 0x46: /* Haswell ULX */
+                return X86_MICROARCH_INTEL_HASWELL;
+            case 0x3d: /* Broadwell */
+            case 0x47: /* Broadwell H */
+            case 0x56: /* Broadwell EP */
+            case 0x4f: /* Broadwell EX */
+                return X86_MICROARCH_INTEL_BROADWELL;
+            case 0x4e: /* Skylake Y/U */
+            case 0x5e: /* Skylake H/S */
+            case 0x55: /* Skylake E */
+                return X86_MICROARCH_INTEL_SKYLAKE;
+            case 0x8e: /* Kabylake Y/U */
+            case 0x9e: /* Kabylake H/S */
+                return X86_MICROARCH_INTEL_KABYLAKE;
+        }
+    }
+    return X86_MICROARCH_UNKNOWN;
 }
 
 bool x86_get_cpuid_subleaf(
@@ -178,6 +214,7 @@ void x86_feature_debug(void)
         case X86_VENDOR_AMD: vendor_string = "AMD"; break;
     }
     printf("Vendor: %s\n", vendor_string);
+    printf("Microarch: %u\n", x86_microarch);
 
     printf("Features: ");
     uint col = 0;
