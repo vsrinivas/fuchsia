@@ -27,16 +27,16 @@ class Settings {
   std::string user;
 };
 
-class DummyDeviceShellApp
+class DevDeviceShellApp
     : modular::SingleServiceViewApp<modular::DeviceShellFactory>,
       modular::DeviceShell,
       modular::UserWatcher {
  public:
-  DummyDeviceShellApp(const Settings& settings)
+  DevDeviceShellApp(const Settings& settings)
       : settings_(settings),
         device_shell_binding_(this),
         user_watcher_binding_(this) {}
-  ~DummyDeviceShellApp() override = default;
+  ~DevDeviceShellApp() override = default;
 
  private:
   // |SingleServiceViewApp|
@@ -91,7 +91,7 @@ class DummyDeviceShellApp
   modular::DeviceContextPtr device_context_;
   modular::UserControllerPtr user_controller_;
   modular::UserProviderPtr user_provider_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(DummyDeviceShellApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(DevDeviceShellApp);
 };
 
 }  // namespace
@@ -101,7 +101,7 @@ int main(int argc, const char** argv) {
   Settings settings(command_line);
 
   mtl::MessageLoop loop;
-  DummyDeviceShellApp app(settings);
+  DevDeviceShellApp app(settings);
   loop.Run();
   return 0;
 }

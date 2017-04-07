@@ -108,7 +108,7 @@ class Settings {
       --user_auth_config_file
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
-                Defaults to "file:///system/apps/dummy_device_shell".
+                Defaults to "file:///system/apps/userpicker_device_shell".
     USER_RUNNER: URL of the user runner implementation to run.
                 Defaults to "file:///system/apps/user_runner"
     USER_SHELL: URL of the user shell to run.
