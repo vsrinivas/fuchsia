@@ -37,6 +37,7 @@ source_set("public") {
   deps = [
     "//application/services",
     "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
     "//apps/maxwell/services/user",
     "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",

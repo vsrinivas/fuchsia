@@ -42,6 +42,7 @@ constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePageId[] = "MessageQueuePage";  // 16 chars
+constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";  // 16 chars
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -189,9 +190,20 @@ UserRunnerImpl::UserRunnerImpl(
   fidl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
+  ledger::PagePtr agent_runner_page;
+  ledger_->GetPage(to_array(kAgentRunnerPageId),
+                   agent_runner_page.NewRequest(), [](ledger::Status status) {
+                     if (status != ledger::Status::OK) {
+                       FTL_LOG(ERROR)
+                           << "Ledger.GetPage(kAgentRunnerPageId) failed: "
+                           << LedgerStatusToString(status);
+                     }
+                   });
+
   agent_runner_.reset(new AgentRunner(
       user_scope_.GetLauncher(), message_queue_manager_.get(),
-      ledger_repository_.get(), user_intelligence_provider_.get()));
+      ledger_repository_.get(), std::move(agent_runner_page),
+      user_intelligence_provider_.get()));
 
   ComponentContextInfo component_context_info{message_queue_manager_.get(),
                                               agent_runner_.get(),

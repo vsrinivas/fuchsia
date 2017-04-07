@@ -14,8 +14,6 @@ namespace modular {
 
 namespace {
 
-constexpr char kTriggerListLedger[] = "message_queue_trigger_registry";
-
 constexpr char kTriggerEntryUrl[] = "url";
 constexpr char kTriggerEntryTaskId[] = "task_id";
 constexpr char kTriggerEntryTaskType[] = "task_type";
@@ -69,24 +67,17 @@ rapidjson::Document CreateTriggerListKey(const std::string& agent_url,
 
 class AgentRunner::TriggerListWatcher : ledger::PageWatcher {
  public:
-  TriggerListWatcher(
-      AgentRunner* const agent_runner,
-      ledger::LedgerRepository* const ledger_repository,
-      const std::string& ledger_name)
+  TriggerListWatcher(AgentRunner* const agent_runner, ledger::PagePtr page)
       : agent_runner_(agent_runner),
+        page_(std::move(page)),
         binding_(this) {
-    auto error_handler = [](ledger::Status status) {
-      if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-      }
-    };
-
-    ledger_repository->GetLedger(to_array(ledger_name), ledger_.NewRequest(),
-                                 error_handler);
-    ledger_->GetRootPage(page_.NewRequest(), error_handler);
-
-    page_->GetSnapshot(snapshot_.NewRequest(), binding_.NewBinding(),
-                       error_handler);
+    page_->GetSnapshot(
+        snapshot_.NewRequest(), binding_.NewBinding(),
+        [](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
+          }
+        });
 
     snapshot_->GetEntries(
         nullptr, nullptr,
@@ -164,9 +155,8 @@ class AgentRunner::TriggerListWatcher : ledger::PageWatcher {
   }
 
   AgentRunner* const agent_runner_;
-  fidl::Binding<ledger::PageWatcher> binding_;
-  ledger::LedgerPtr ledger_;
   ledger::PagePtr page_;
+  fidl::Binding<ledger::PageWatcher> binding_;
   ledger::PageSnapshotPtr snapshot_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TriggerListWatcher);
@@ -176,14 +166,14 @@ AgentRunner::AgentRunner(
     app::ApplicationLauncher* const application_launcher,
     MessageQueueManager* const message_queue_manager,
     ledger::LedgerRepository* const ledger_repository,
+    ledger::PagePtr page,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
     : application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
       user_intelligence_provider_(user_intelligence_provider),
       terminating_(std::make_shared<bool>(false)) {
-  trigger_list_watcher_.reset(new TriggerListWatcher(
-      this, ledger_repository, kTriggerListLedger));
+  trigger_list_watcher_.reset(new TriggerListWatcher(this, std::move(page)));
 }
 
 AgentRunner::~AgentRunner() = default;
