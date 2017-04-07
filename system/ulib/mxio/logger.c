@@ -92,6 +92,7 @@ static mxio_ops_t log_io_ops = {
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,
     .posix_ioctl = mxio_default_posix_ioctl,
+    .get_vmo = mxio_default_get_vmo,
 };
 
 mxio_t* mxio_logger_create(mx_handle_t handle) {

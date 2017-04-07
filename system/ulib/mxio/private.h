@@ -42,6 +42,7 @@ typedef struct mxio_ops {
     void (*wait_end)(mxio_t* io, mx_signals_t signals, uint32_t* events);
     ssize_t (*ioctl)(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
     ssize_t (*posix_ioctl)(mxio_t* io, int req, va_list va);
+    mx_status_t (*get_vmo)(mxio_t* io, mx_handle_t* out, size_t* off, size_t* len);
 } mxio_ops_t;
 
 // mxio_t flags
@@ -170,6 +171,7 @@ void mxio_default_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
 void mxio_default_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events);
 mx_status_t mxio_default_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* types);
 ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, va_list va);
+mx_status_t mxio_default_get_vmo(mxio_t* io, mx_handle_t* out, size_t* off, size_t* len);
 
 void __mxio_startup_handles_init(uint32_t num, mx_handle_t handles[],
                                  uint32_t handle_info[])

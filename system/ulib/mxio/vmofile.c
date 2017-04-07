@@ -135,6 +135,18 @@ static mx_status_t vmofile_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t m
     }
 }
 
+mx_status_t vmofile_get_vmo(mxio_t* io, mx_handle_t* out, size_t* off, size_t* len) {
+    vmofile_t* vf = (vmofile_t*)io;
+
+    if ((out == NULL) || (off == NULL) || (len == NULL)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    *off = vf->off;
+    *len = vf->end - vf->off;
+    return mx_handle_duplicate(vf->vmo, MX_RIGHT_SAME_RIGHTS, out);
+}
+
 static mxio_ops_t vmofile_ops = {
     .read = vmofile_read,
     .read_at = vmofile_read_at,
@@ -152,6 +164,7 @@ static mxio_ops_t vmofile_ops = {
     .wait_end = mxio_default_wait_end,
     .unwrap = mxio_default_unwrap,
     .posix_ioctl = mxio_default_posix_ioctl,
+    .get_vmo = vmofile_get_vmo,
 };
 
 mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len) {

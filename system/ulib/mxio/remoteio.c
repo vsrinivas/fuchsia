@@ -729,6 +729,7 @@ static mxio_ops_t mx_remote_ops = {
     .wait_end = mxrio_wait_end,
     .unwrap = mxrio_unwrap,
     .posix_ioctl = mxio_default_posix_ioctl,
+    .get_vmo = mxio_default_get_vmo,
 };
 
 mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
@@ -1176,6 +1177,7 @@ static mxio_ops_t mxio_socket_stream_ops = {
     .wait_end = mxsio_wait_end_stream,
     .unwrap = mxio_default_unwrap,
     .posix_ioctl = mxsio_posix_ioctl_stream,
+    .get_vmo = mxio_default_get_vmo,
 };
 
 static mxio_ops_t mxio_socket_dgram_ops = {
@@ -1193,6 +1195,7 @@ static mxio_ops_t mxio_socket_dgram_ops = {
     .wait_end = mxsio_wait_end_dgram,
     .unwrap = mxio_default_unwrap,
     .posix_ioctl = mxio_default_posix_ioctl, // not supported
+    .get_vmo = mxio_default_get_vmo,
 };
 
 mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s) {

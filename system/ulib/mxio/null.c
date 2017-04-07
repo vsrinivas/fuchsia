@@ -76,6 +76,10 @@ ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, va_list va) {
     return ERR_NOT_SUPPORTED;
 }
 
+mx_status_t mxio_default_get_vmo(mxio_t* io, mx_handle_t* out, size_t* off, size_t* len) {
+    return ERR_NOT_SUPPORTED;
+}
+
 static mxio_ops_t mx_null_ops = {
     .read = mxio_default_read,
     .write = mxio_default_write,
@@ -91,6 +95,7 @@ static mxio_ops_t mx_null_ops = {
     .wait_end = mxio_default_wait_end,
     .unwrap = mxio_default_unwrap,
     .posix_ioctl = mxio_default_posix_ioctl,
+    .get_vmo = mxio_default_get_vmo,
 };
 
 mxio_t* mxio_null_create(void) {

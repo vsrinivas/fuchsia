@@ -51,4 +51,8 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
 // for transport to another process
 mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type);
 
+// If fd is a vmo-backed-file, return a read-only vmo containing
+// the contents of the file, at offset off, of length len.
+mx_status_t mxio_get_vmo(int fd, mx_handle_t* vmo, size_t* off, size_t* len);
+
 __END_CDECLS

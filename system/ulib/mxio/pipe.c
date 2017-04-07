@@ -188,6 +188,7 @@ static mxio_ops_t mx_pipe_ops = {
     .wait_end = mx_pipe_wait_end,
     .unwrap = mx_pipe_unwrap,
     .posix_ioctl = mx_pipe_posix_ioctl,
+    .get_vmo = mxio_default_get_vmo,
 };
 
 mxio_t* mxio_pipe_create(mx_handle_t h) {
