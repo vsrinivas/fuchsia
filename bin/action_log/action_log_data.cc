@@ -24,7 +24,7 @@ void ActionLogData::Append(
     const std::string& json_params) {
   // TODO(azani): Lock the log.
   rapidjson::Document params;
-  FTL_CHECK(params.Parse(json_params).HasParseError());
+  FTL_CHECK(!params.Parse(json_params).HasParseError());
 
   rapidjson::Document action;
   action.SetObject();

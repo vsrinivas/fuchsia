@@ -21,11 +21,11 @@ ActionLogFactoryImpl::ActionLogFactoryImpl() {
 void ActionLogFactoryImpl::GetActionLog(
     const fidl::String& module_url,
     fidl::InterfaceRequest<ActionLog> action_log_request) {
-  ActionLogImpl *module_action_log_impl = new ActionLogImpl(
-      action_log_->GetActionLogger(module_url));
+  std::unique_ptr<ActionLogImpl> module_action_log_impl(new ActionLogImpl(
+      action_log_->GetActionLogger(module_url)));
 
   module_action_log_bindings_.AddBinding(
-      module_action_log_impl, std::move(action_log_request));
+      std::move(module_action_log_impl), std::move(action_log_request));
 }
 
 void ActionLogImpl::LogAction(const fidl::String& method,

@@ -11,7 +11,8 @@
 
 namespace maxwell {
 
-typedef std::function<void(const std::string& method, const std::string& params)> ActionLogger;
+using ActionLogger
+  = std::function<void(const std::string& method, const std::string& params)>;
 
 class ActionLogData {
  public:

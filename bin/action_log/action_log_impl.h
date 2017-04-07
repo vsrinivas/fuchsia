@@ -25,7 +25,7 @@ class ActionLogFactoryImpl : public ActionLogFactory {
 
  private:
   std::shared_ptr<ActionLogData> action_log_;
-  fidl::BindingSet<ActionLog> module_action_log_bindings_;
+  fidl::BindingSet<ActionLog, std::unique_ptr<ActionLog>> module_action_log_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ActionLogFactoryImpl);
 };
@@ -38,7 +38,7 @@ class ActionLogImpl : public ActionLog {
                  const fidl::String& params) override;
 
  private:
-  ActionLogger log_action_;
+  const ActionLogger log_action_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ActionLogImpl);
 };
