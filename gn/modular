@@ -52,10 +52,6 @@
             "bootfs_path": "apps/dummy_story_shell"
         },
         {
-            "binary": "dummy_user_shell",
-            "bootfs_path": "apps/dummy_user_shell"
-        },
-        {
             "binary": "example_flutter_counter_child.flx",
             "bootfs_path": "apps/example_flutter_counter_child"
         },
@@ -154,6 +150,10 @@
         {
             "binary": "swap_recipe",
             "bootfs_path": "apps/swap_recipe"
+        },
+        {
+            "binary": "test_user_shell",
+            "bootfs_path": "apps/test_user_shell"
         },
         {
             "binary": "trigger_test_agent",
