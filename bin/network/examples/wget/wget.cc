@@ -48,6 +48,9 @@ class ResponsePrinter {
       if (result == ERR_SHOULD_WAIT) {
         body.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                       MX_TIME_INFINITE, nullptr);
+      } else if (result == ERR_REMOTE_CLOSED) {
+        // not an error
+        break;
       } else if (result == NO_ERROR) {
         if (fwrite(buf, num_bytes, 1, stdout) != 1) {
           printf("\nUnexpected error writing to file\n");
