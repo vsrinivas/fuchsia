@@ -1,11 +1,11 @@
 {
     "labels": [
-        "//rust/magenta-rs",
-        "//apps/xi"
+        "//apps/xi",
+        "//rust/magenta-rs/examples"
     ],
     "binaries": [
         {
-            "binary": "example_mx_toy",
+            "binary": "mx_toy",
             "bootfs_path": "bin/example_mx_toy"
         },
         {
