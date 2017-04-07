@@ -6,6 +6,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/x86/mp.h>
+#include <err.h>
 
 .text
 
@@ -31,3 +33,37 @@ FUNCTION(arch_idle)
 1:
     ret
 
+
+/* status_t read_msr_safe(uint32_t msr_id, uint64_t *val); */
+FUNCTION(read_msr_safe)
+    # Set up MSR index
+    mov %rdi, %rcx
+
+    # Disable interrupts before touching percpu state
+    pushfq
+    cli
+
+    # Set up the GPF handler, in case the MSR doesn't exist
+    movq $.Lgpf_handler, %gs:PERCPU_GPF_RETURN_OFFSET
+    rdmsr
+
+    # Cleanup the GPF handler
+    movq $0, %gs:PERCPU_GPF_RETURN_OFFSET
+    # Restore interrupts if they were on before
+    popfq
+
+    # rdmsr returns value via edx:eax
+    shl $32, %rdx
+    or %rax, %rdx
+    mov %rdx, (%rsi)
+
+    mov $NO_ERROR, %rax
+    ret
+.Lgpf_handler:
+    # Cleanup GPF handler
+    movq $0, %gs:PERCPU_GPF_RETURN_OFFSET
+    # Restore interrupts if they were on before
+    popfq
+
+    mov $ERR_NOT_SUPPORTED, %rax
+    ret

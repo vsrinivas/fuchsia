@@ -341,6 +341,8 @@ static inline uint64_t read_msr (uint32_t msr_id)
     return ((uint64_t)msr_read_val_hi << 32) | msr_read_val_lo;
 }
 
+status_t read_msr_safe(uint32_t msr_id, uint64_t *val);
+
 static inline void write_msr (uint32_t msr_id, uint64_t msr_write_val)
 {
     __asm__ __volatile__ (

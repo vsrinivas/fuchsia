@@ -114,6 +114,19 @@ static void x86_breakpoint_handler(x86_iframe_t *frame)
 
 static void x86_gpf_handler(x86_iframe_t *frame)
 {
+    DEBUG_ASSERT(arch_ints_disabled());
+
+    // Check if we were doing a GPF test, e.g. to check if an MSR exists.
+    struct x86_percpu *percpu = x86_get_percpu();
+    if (unlikely(percpu->gpf_return_target)) {
+        ASSERT(SELECTOR_PL(frame->cs) == 0);
+
+        // Set up return to new address
+        frame->ip = percpu->gpf_return_target;
+        percpu->gpf_return_target = 0;
+        return;
+    }
+
 #if WITH_LIB_MAGENTA
     if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
         return;
