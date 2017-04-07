@@ -4,6 +4,7 @@
 
 module maxwell;
 
+import "apps/maxwell/services/action_log/action_log.fidl";
 import "apps/maxwell/services/context/context_subscriber.fidl";
 import "apps/maxwell/services/context/context_publisher.fidl";
 import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
@@ -18,4 +19,5 @@ interface IntelligenceServices {
   GetContextPublisher(ContextPublisher& context_publisher);
 
   GetProposalPublisher(ProposalPublisher& proposal_publisher);
+  GetActionLog(ActionLog& action_log);
 };

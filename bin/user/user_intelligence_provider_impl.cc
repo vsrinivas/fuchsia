@@ -5,6 +5,7 @@
 #include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
 
 #include "application/lib/app/connect.h"
+#include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/src/user/intelligence_services_impl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/files/file.h"
@@ -62,6 +63,11 @@ void UserIntelligenceProviderImpl::GetSuggestionProvider(
     fidl::InterfaceRequest<SuggestionProvider> request) {
   app::ConnectToService<SuggestionProvider>(suggestion_services_.get(),
                                             std::move(request));
+}
+
+void UserIntelligenceProviderImpl::GetResolver(
+    fidl::InterfaceRequest<resolver::Resolver> request) {
+  // TODO(azani): Implement!
 }
 
 app::ServiceProviderPtr UserIntelligenceProviderImpl::startServiceProviderApp(

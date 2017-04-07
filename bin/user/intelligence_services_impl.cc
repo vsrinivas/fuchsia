@@ -4,6 +4,7 @@
 
 #include "apps/maxwell/src/user/intelligence_services_impl.h"
 
+#include "apps/maxwell/services/action_log/action_log.fidl.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 
@@ -30,6 +31,11 @@ void IntelligenceServicesImpl::GetContextPublisher(
 void IntelligenceServicesImpl::GetProposalPublisher(
     fidl::InterfaceRequest<ProposalPublisher> request) {
   suggestion_engine_->RegisterPublisher(component_id_, std::move(request));
+}
+
+void IntelligenceServicesImpl::GetActionLog(
+    fidl::InterfaceRequest<ActionLog> request) {
+  // TODO(azani): Implement!
 }
 
 }  // namespace maxwell

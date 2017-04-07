@@ -6,6 +6,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
+#include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/maxwell/src/user/agent_launcher.h"
@@ -31,6 +32,9 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
 
   void GetSuggestionProvider(
       fidl::InterfaceRequest<SuggestionProvider> request) override;
+
+  void GetResolver(
+      fidl::InterfaceRequest<resolver::Resolver> request) override;
 
  private:
   app::ServiceProviderPtr startServiceProviderApp(const std::string& url);

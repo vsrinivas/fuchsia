@@ -11,7 +11,9 @@ fidl("user") {
   ]
 
   deps = [
+    "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/services/component",
     "//apps/modular/services/story",

@@ -34,6 +34,7 @@ source_set("user_intelligence_provider") {
     ":intelligence_services",
     "//application/lib/app",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/services/user",
     "//apps/network/services",
@@ -47,6 +48,7 @@ source_set("intelligence_services") {
   ]
 
   deps = [
+    "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/user",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",

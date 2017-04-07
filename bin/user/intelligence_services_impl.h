@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "apps/maxwell/services/action_log/action_log.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 
 namespace maxwell {
@@ -28,6 +29,8 @@ class IntelligenceServicesImpl : public IntelligenceServices {
 
   void GetProposalPublisher(
       fidl::InterfaceRequest<ProposalPublisher> request) override;
+
+  void GetActionLog(fidl::InterfaceRequest<ActionLog> request) override;
 
  private:
   const std::string story_id_;
