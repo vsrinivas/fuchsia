@@ -55,11 +55,6 @@ typedef struct iotxn iotxn_t;
 typedef uint64_t iotxn_proto_data_t[6];
 typedef uint64_t iotxn_extra_data_t[6];
 
-typedef struct iotxn_sg {
-    mx_paddr_t paddr;
-    uint64_t length;
-} iotxn_sg_t;
-
 struct iotxn {
     // basic request data
     // (filled in by requestor, read by processor)
@@ -81,15 +76,21 @@ struct iotxn {
     uint64_t vmo_offset;  // offset into the vmo to use for the buffer
     uint64_t vmo_length;  // buffer size starting at offset
 
-    // TODO remove this after removing mmap()
+    // optional virtual address
+    // the current "owner" of the iotxn may set this to specify a virtual
+    // mapping of the vmo. this field is also set by iotxn_mmap()
     void* virt;           // mapped address of vmo
 
-    // optional scatter list
+    // optional physical pages list
     // the current "owner" of the iotxn may set these to specify physical
-    // ranges backing the data payload. this field is also set by
-    // iotxn_physmap() and iotxn_physmap_sg()
-    iotxn_sg_t* sg;
-    uint64_t sg_length;  // number of entries in scatter list
+    // pages backing the data payload. this field is also set by
+    // iotxn_physmap()
+    // each entry in the list represents a whole page, and phys_offset
+    // may be different than vmo_offset.
+    mx_paddr_t* phys;
+    uint64_t phys_offset;  // the offset from the beginning of the vmo the first
+                           // entry in 'phys' corresponds to
+    uint64_t phys_length;  // number of entries in phys list
 
     // protocol specific extra data
     // (filled in by requestor, read by processor, type identified by 'protocol')
@@ -120,11 +121,6 @@ struct iotxn {
 };
 
 #define iotxn_pdata(txn, type) ((type*) (txn)->protocol_data)
-
-// convenience function to convert an array of physical page addresses to
-// iotxn_sg_t. 'len' is the number of entries in 'pages' and the 'sg' buffer
-// must be at least 'len' entries long.
-void iotxn_pages_to_sg(mx_paddr_t* pages, iotxn_sg_t* sg, uint32_t len, uint32_t* sg_len);
 
 // flags for iotxn_alloc
 #define IOTXN_ALLOC_CONTIGUOUS (1 << 0)    // allocate a contiguous vmo
@@ -157,9 +153,14 @@ ssize_t iotxn_copyfrom(iotxn_t* txn, void* data, size_t length, size_t offset);
 // Out of range operations are ignored.
 ssize_t iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offset);
 
-// iotxn_physmap_sg() returns a list of physical ranges of the memory backing
-// an iotxn's vm object.
-mx_status_t iotxn_physmap(iotxn_t* txn, iotxn_sg_t** sg_out, uint32_t* sg_len);
+// iotxn_physmap() looks up the physical pages backing this iotxn's vm object.
+// the 'phys', 'phys_offset' and 'phys_length' fields are set if this function
+// succeeds.
+mx_status_t iotxn_physmap(iotxn_t* txn);
+
+// convenience macro to get the physical address for a contiguous buffer,
+// taking into account 'vmo_offset'
+#define iotxn_phys_contiguous(txn) ((txn)->phys[0] + ((txn)->vmo_offset - (txn)->phys_offset))
 
 // iotxn_mmap() maps the iotxn's vm object and returns the virtual address.
 // iotxn_copyfrom(), iotxn_copyto(), or iotxn_ physmap() are almost always a

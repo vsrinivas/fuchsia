@@ -278,11 +278,9 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     /* set up the descriptor pointing to the buffer */
     desc = vring_.DescFromIndex(desc->next);
 
-    iotxn_sg_t* sg;
-    uint32_t sgl;
-    iotxn_physmap(txn, &sg, &sgl);
+    iotxn_physmap(txn);
 
-    desc->addr = (uint64_t)sg->paddr;
+    desc->addr = (uint64_t)iotxn_phys_contiguous(txn);
     desc->len = (uint32_t)txn->length;
 
     if (!write)

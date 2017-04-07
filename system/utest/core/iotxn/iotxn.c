@@ -14,58 +14,87 @@
 static bool test_physmap_simple(void) {
     BEGIN_TEST;
     iotxn_t* txn;
-    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE), NO_ERROR, "");
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), NO_ERROR, "");
     ASSERT_NONNULL(txn, "");
-    iotxn_sg_t* sg;
-    uint32_t sgl;
-    ASSERT_EQ(iotxn_physmap(txn, &sg, &sgl), NO_ERROR, "");
-    ASSERT_NONNULL(txn->sg, "");
+    ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
+    ASSERT_NONNULL(txn->phys, "expected phys to be set");
+    ASSERT_EQ(txn->phys_offset, 0u, "unexpected phys_offset");
+    ASSERT_EQ(txn->phys_length, 3u, "unexpected phys_length");
     iotxn_release(txn);
-    ASSERT_NONNULL(txn->sg, "returning txn to free list should not free txn->sg");
     END_TEST;
 }
 
-static bool test_pages_to_sg_simple(void) {
+static bool test_physmap_clone(void) {
     BEGIN_TEST;
-    mx_paddr_t paddr = PAGE_SIZE;
-    iotxn_sg_t sg;
-    uint32_t sg_len;
-    iotxn_pages_to_sg(&paddr, &sg, 1, &sg_len);
-    ASSERT_EQ(sg_len, 1u, "unexpected sg_len");
-    ASSERT_EQ(sg.paddr, paddr, "unexpected address in sg entry");
-    ASSERT_EQ(sg.length, (uint64_t)PAGE_SIZE, "unexpected length in sg entry");
+    iotxn_t* txn;
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), NO_ERROR, "");
+    ASSERT_NONNULL(txn, "");
+    ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
+    ASSERT_NONNULL(txn->phys, "expected phys to be set");
+    ASSERT_EQ(txn->phys_offset, 0u, "unexpected phys_offset");
+    ASSERT_EQ(txn->phys_length, 3u, "unexpected phys_length");
+
+    iotxn_t* clone;
+    ASSERT_EQ(iotxn_clone(txn, &clone), NO_ERROR, "");
+    ASSERT_EQ(txn->phys, clone->phys, "expected clone to point to the same phys");
+    ASSERT_EQ(txn->phys_offset, clone->phys_offset, "unexpected clone phys_offset");
+    ASSERT_EQ(txn->phys_length, clone->phys_length, "unexpected clone phys_length");
+    iotxn_release(txn);
+    iotxn_release(clone);
     END_TEST;
 }
 
-static bool test_pages_to_sg_contiguous(void) {
+static bool test_physmap_aligned_offset(void) {
     BEGIN_TEST;
-    mx_paddr_t paddrs[2] = {PAGE_SIZE, PAGE_SIZE * 2};
-    iotxn_sg_t sg;
-    uint32_t sg_len;
-    iotxn_pages_to_sg(paddrs, &sg, sizeof(paddrs) / sizeof(mx_paddr_t), &sg_len);
-    ASSERT_EQ(sg_len, 1u, "unexpected sg_len");
-    ASSERT_EQ(sg.paddr, paddrs[0], "unexpected address in sg entry");
-    ASSERT_EQ(sg.length, (uint64_t)(PAGE_SIZE * 2), "unexpected length in sg entry");
+    iotxn_t* txn;
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), NO_ERROR, "");
+    ASSERT_NONNULL(txn, "");
+    txn->vmo_offset = PAGE_SIZE;
+    txn->vmo_length = PAGE_SIZE * 2;
+    ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
+    ASSERT_NONNULL(txn->phys, "expected phys to be set");
+    ASSERT_EQ(txn->phys_offset, (uint64_t)PAGE_SIZE, "unexpected phys_offset");
+    ASSERT_EQ(txn->phys_length, 2u, "unexpected phys_length");
+    iotxn_release(txn);
     END_TEST;
 }
 
-static bool test_pages_to_sg_aligned(void) {
+static bool test_physmap_unaligned_offset(void) {
     BEGIN_TEST;
-    mx_paddr_t paddrs[2] = {PAGE_SIZE, PAGE_SIZE * 2};
-    iotxn_sg_t sg;
-    uint32_t sg_len;
-    iotxn_pages_to_sg(paddrs, &sg, sizeof(paddrs) / sizeof(mx_paddr_t), &sg_len);
-    ASSERT_EQ(sg_len, 1u, "unexpected sg_len");
-    ASSERT_EQ(sg.paddr, paddrs[0], "unexpected address in sg entry");
-    ASSERT_EQ(sg.length, (uint64_t)(PAGE_SIZE * 2), "unexpected length in sg entry");
+    iotxn_t* txn;
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), NO_ERROR, "");
+    ASSERT_NONNULL(txn, "");
+    txn->vmo_offset = PAGE_SIZE / 2;
+    txn->vmo_length = PAGE_SIZE * 2;
+    ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
+    ASSERT_NONNULL(txn->phys, "expected phys to be set");
+    ASSERT_EQ(txn->phys_offset, 0u, "unexpected phys_offset");
+    ASSERT_EQ(txn->phys_length, 3u, "unexpected phys_length");
+    iotxn_release(txn);
+    END_TEST;
+}
+
+static bool test_physmap_unaligned_offset2(void) {
+    BEGIN_TEST;
+    iotxn_t* txn;
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 4), NO_ERROR, "");
+    ASSERT_NONNULL(txn, "");
+    txn->vmo_offset = PAGE_SIZE - (PAGE_SIZE / 4);
+    txn->vmo_length = (PAGE_SIZE * 2) + (PAGE_SIZE / 2);
+    ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
+    ASSERT_NONNULL(txn->phys, "expected phys to be set");
+    ASSERT_EQ(txn->phys_offset, 0u, "unexpected phys_offset");
+    ASSERT_EQ(txn->phys_length, 4u, "unexpected phys_length");
+    iotxn_release(txn);
     END_TEST;
 }
 
 BEGIN_TEST_CASE(iotxn_tests)
 RUN_TEST(test_physmap_simple)
-RUN_TEST(test_pages_to_sg_simple)
-RUN_TEST(test_pages_to_sg_contiguous)
-RUN_TEST(test_pages_to_sg_aligned)
+RUN_TEST(test_physmap_clone)
+RUN_TEST(test_physmap_aligned_offset)
+RUN_TEST(test_physmap_unaligned_offset)
+RUN_TEST(test_physmap_unaligned_offset2)
 END_TEST_CASE(iotxn_tests)
 
 #ifndef BUILD_COMBINED_TESTS

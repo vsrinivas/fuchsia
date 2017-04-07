@@ -15,6 +15,7 @@
 #include <ddk/protocol/display.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/assert.h>
 
 #include <bcm/bcm28xx.h>
 
@@ -171,17 +172,17 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
         if (ret < 0)
             return ret;
 
-        iotxn_sg_t *sg;
-        uint32_t sgl;
-        iotxn_physmap(txn, &sg, &sgl);
+        iotxn_physmap(txn);
+        MX_DEBUG_ASSERT(txn->phys_length == 1);
+        mx_paddr_t phys = iotxn_phys_contiguous(txn);
 
         // calculate offset in buffer that will provide 16 byte alignment (physical)
-        uint32_t offset = (16 - (sg->paddr % 16)) % 16;
+        uint32_t offset = (16 - (phys % 16)) % 16;
 
         iotxn_copyto(txn, fb_desc, sizeof(bcm_fb_desc_t), offset);
         iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, txnsize);
 
-        ret = mailbox_write(ch_framebuffer, (sg->paddr + offset + BCM_SDRAM_BUS_ADDR_BASE));
+        ret = mailbox_write(ch_framebuffer, (phys + offset + BCM_SDRAM_BUS_ADDR_BASE));
         if (ret != NO_ERROR)
             return ret;
 
@@ -259,9 +260,9 @@ static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
     if (ret != 0)
         return ret;
 
-    iotxn_sg_t* sg;
-    uint32_t sgl;
-    iotxn_physmap(txn, &sg, &sgl);
+    iotxn_physmap(txn);
+    MX_DEBUG_ASSERT(txn->phys_length == 1);
+    mx_paddr_t phys = iotxn_phys_contiguous(txn);
 
     uint32_t offset = 0;
 
@@ -274,7 +275,7 @@ static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
     iotxn_copyto(txn, &endtag, sizeof(endtag), offset);
     iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, header.buff_size);
 
-    ret = mailbox_write(ch_propertytags_tovc, (sg->paddr + BCM_SDRAM_BUS_ADDR_BASE));
+    ret = mailbox_write(ch_propertytags_tovc, (phys + BCM_SDRAM_BUS_ADDR_BASE));
     if (ret != NO_ERROR) {
         goto cleanup_and_exit;
     }
