@@ -68,10 +68,14 @@ VnodeWatcher::~VnodeWatcher() {
 
 void VnodeDir::NotifyAdd(const char* name, size_t len) TA_REQ(vfs_lock) {
     xprintf("devfs: notify vn=%p name='%.*s'\n", this, (int)len, name);
-    for (auto &watcher : watch_list_) {
+    for (auto it = watch_list_.begin(); it != watch_list_.end();) {
         mx_status_t status;
-        if ((status = mx_channel_write(watcher.h, 0, name, static_cast<uint32_t>(len), nullptr, 0)) < 0) {
-            watch_list_.erase(watcher);
+        if ((status = mx_channel_write(it->h, 0, name, static_cast<uint32_t>(len), nullptr, 0)) < 0) {
+            auto to_remove = it;
+            ++it;
+            watch_list_.erase(to_remove);
+        } else {
+            ++it;
         }
     }
 }
