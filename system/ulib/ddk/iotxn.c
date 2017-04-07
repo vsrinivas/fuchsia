@@ -109,6 +109,7 @@ static void iotxn_release_free_list(iotxn_t* txn) {
     }
 
     txn->pflags |= IOTXN_PFLAG_FREE;
+    txn->release_cb = iotxn_release_free_list;
 
     mtx_lock(&free_list_mutex);
     list_add_head(&free_list, &txn->node);
