@@ -72,6 +72,7 @@
 + [port_queue](syscalls/port_queue.md) - send a packet to a port
 + [port_wait](syscalls/port_wait.md) - wait for packets to arrive on a port
 + [port_bind](syscalls/port_bind.md) - bind an object to a port
++ [port_cancel](syscalls/port_cancel.md) - cancel notificaitons from async_wait
 
 ## Futexes
 + [futex_wait](syscalls/futex_wait.md)

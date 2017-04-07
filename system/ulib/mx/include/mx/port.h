@@ -40,6 +40,10 @@ public:
                      mx_signals_t signals) const {
         return mx_port_bind(get(), key, source, signals);
     }
+
+    mx_status_t cancel(mx_handle_t source, uint64_t key) {
+        return mx_port_cancel(get(), source, key);
+    }
 };
 
 } // namespace mx
