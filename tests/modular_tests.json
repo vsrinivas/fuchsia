@@ -1,8 +1,13 @@
 {
   "tests":[
     {
-      "name":"dummy_user_shell",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_user_shell --user_shell=dummy_user_shell"
+      "name":"user_shell",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=test_user_shell",
+      "copy":{
+        "/system/apps":[
+          "test_user_shell"
+        ]
+      }
     },
     {
       "name":"parent_child",

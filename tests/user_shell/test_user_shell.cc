@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Implementation of a dummy User shell.
-// This takes |recipe_url| as a command line argument and passes it to the
-// Story Manager.
-
 #include <memory>
 
 #include "application/lib/app/connect.h"
@@ -32,14 +28,17 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+// TODO(alhaad): Convert this to a proper test which checks the user shell
+// interfaces.
+
 namespace {
 
 constexpr char kUserShell[] =
     "https://fuchsia.googlesource.com/modular/"
     "services/user/user_shell.fidl#modular.UserShell";
-constexpr char kDummyUserShell[] =
+constexpr char kTestUserShell[] =
     "https://fuchsia.googlesource.com/modular/"
-    "src/user_runner/dummy_user_shell.cc";
+    "tests/user_shell/test_user_shell.cc";
 
 class Settings {
  public:
@@ -58,12 +57,12 @@ class Settings {
   bool test{};
 };
 
-class DummyUserShellApp : modular::StoryWatcher,
+class TestUserShellApp : modular::StoryWatcher,
                           modular::StoryProviderWatcher,
                           modular::LinkWatcher,
                           modular::SingleServiceViewApp<modular::UserShell> {
  public:
-  explicit DummyUserShellApp(const Settings& settings)
+  explicit TestUserShellApp(const Settings& settings)
       : settings_(settings),
         story_provider_watcher_binding_(this),
         story_watcher_binding_(this),
@@ -72,7 +71,7 @@ class DummyUserShellApp : modular::StoryWatcher,
       modular::testing::Init(application_context(), __FILE__);
     }
   }
-  ~DummyUserShellApp() override = default;
+  ~TestUserShellApp() override = default;
 
  private:
   // |SingleServiceViewApp|
@@ -144,12 +143,12 @@ class DummyUserShellApp : modular::StoryWatcher,
 
   // |StoryProviderWatcher|
   void OnDelete(const ::fidl::String& story_id) override {
-    FTL_VLOG(1) << "DummyUserShellApp::OnDelete() " << story_id;
+    FTL_VLOG(1) << "TestUserShellApp::OnDelete() " << story_id;
   }
 
   // |StoryProviderWatcher|
   void OnChange(modular::StoryInfoPtr story_info) override {
-    FTL_VLOG(1) << "DummyUserShellApp::OnChange() "
+    FTL_VLOG(1) << "TestUserShellApp::OnChange() "
                 << " id " << story_info->id << " is_running "
                 << story_info->is_running << " state " << story_info->state
                 << " url " << story_info->url;
@@ -161,7 +160,7 @@ class DummyUserShellApp : modular::StoryWatcher,
       return;
     }
 
-    FTL_LOG(INFO) << "DummyUserShell DONE";
+    FTL_LOG(INFO) << "TestUserShell DONE";
     story_controller_->Stop([this] {
       TearDownStoryController();
 
@@ -197,16 +196,16 @@ class DummyUserShellApp : modular::StoryWatcher,
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_->GetInfo([this, keep](modular::StoryInfoPtr story_info) {
       story_info_ = std::move(story_info);
-      FTL_LOG(INFO) << "DummyUserShell START " << story_info_->id << " "
+      FTL_LOG(INFO) << "TestUserShell START " << story_info_->id << " "
                     << story_info_->url;
       InitStory();
 
       if (!keep) {
         mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
             [this] {
-              FTL_LOG(INFO) << "DummyUserShell DELETE " << story_info_->id;
+              FTL_LOG(INFO) << "TestUserShell DELETE " << story_info_->id;
               story_provider_->DeleteStory(story_info_->id, [this]() {
-                FTL_LOG(INFO) << "DummyUserShell DELETE STORY DONE";
+                FTL_LOG(INFO) << "TestUserShell DELETE STORY DONE";
                 user_context_->Logout();
               });
             },
@@ -216,7 +215,7 @@ class DummyUserShellApp : modular::StoryWatcher,
   }
 
   void GetController() {
-    FTL_LOG(INFO) << "DummyUserShell RESUME";
+    FTL_LOG(INFO) << "TestUserShell RESUME";
     story_provider_->GetController(story_info_->id,
                                    story_controller_.NewRequest());
     InitStory();
@@ -230,7 +229,7 @@ class DummyUserShellApp : modular::StoryWatcher,
     std::vector<std::string> segments{"startup", "stories",
                                       story_info_->url.get(), kUserShell};
     root_->Set(fidl::Array<fidl::String>::From(segments),
-               modular::JsonValueToString(modular::JsonValue(kDummyUserShell)));
+               modular::JsonValueToString(modular::JsonValue(kTestUserShell)));
 
     // NOTE(mesch): Both watchers below fire right after they are
     // registered. Make sure the link data watcher doesn't stop us
@@ -251,15 +250,15 @@ class DummyUserShellApp : modular::StoryWatcher,
 
   // Every five counter increments, we dehydrate and rehydrate the story.
   void StopExampleStory() {
-    FTL_LOG(INFO) << "DummyUserShell STOP";
+    FTL_LOG(INFO) << "TestUserShell STOP";
 
     story_provider_->GetStoryInfo(
         story_info_->id, [this](modular::StoryInfoPtr story_info) {
-          FTL_LOG(INFO) << "DummyUserShell STOP got story info";
+          FTL_LOG(INFO) << "TestUserShell STOP got story info";
           FTL_DCHECK(!story_info.is_null());
           FTL_DCHECK(story_info->is_running == true);
           story_controller_->Stop([this] {
-            FTL_LOG(INFO) << "DummyUserShell STOP done";
+            FTL_LOG(INFO) << "TestUserShell STOP done";
             TearDownStoryController();
 
             // When the story stops, we start it again.
@@ -298,7 +297,7 @@ class DummyUserShellApp : modular::StoryWatcher,
   modular::StoryInfoPtr story_info_;
   int data_count_{0};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(TestUserShellApp);
 };
 
 }  // namespace
@@ -308,7 +307,7 @@ int main(int argc, const char** argv) {
   Settings settings(command_line);
 
   mtl::MessageLoop loop;
-  DummyUserShellApp app(settings);
+  TestUserShellApp app(settings);
   loop.Run();
   return 0;
 }

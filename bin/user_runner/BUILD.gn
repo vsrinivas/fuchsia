@@ -5,7 +5,6 @@
 group("all") {
   deps = [
     ":dev_user_shell",
-    ":dummy_user_shell",
     ":user_runner",
   ]
 }
@@ -69,30 +68,6 @@ executable("dev_user_shell") {
     "//apps/modular/services/user",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
-    "//lib/mtl",
-    "//lib/mtl/tasks",
-  ]
-}
-
-executable("dummy_user_shell") {
-  sources = [
-    "dummy_user_shell.cc",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:single_service_view_app",
-    "//apps/modular/lib/fidl:view_host",
-    "//apps/modular/lib/rapidjson",
-    "//apps/modular/lib/testing",
-    "//apps/modular/services/device:device_context",
-    "//apps/modular/services/user",
-    "//apps/mozart/lib/view_framework",
-    "//apps/mozart/services/views",
-    "//apps/test_runner/services:test_runner",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",

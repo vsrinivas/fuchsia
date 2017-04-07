@@ -12,6 +12,7 @@ group("tests") {
     "run_modular_tests",
     "suggestion",
     "triggers",
+    "user_shell",
   ]
 }
 
