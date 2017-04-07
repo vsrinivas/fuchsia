@@ -12,6 +12,7 @@
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
 
+namespace maxwell {
 namespace {
 
 struct ProposalContent {
@@ -21,14 +22,14 @@ struct ProposalContent {
   std::string icon;
 };
 
-const std::unordered_map<std::string, ProposalContent> kNextStories(
-    {{"Open Mail",
-      {"file:///system/apps/email_story", 0xff4285f4 /*Blue from Inbox*/, "",
-       ""}},
-     {"Video Player",
-      {"file:///system/apps/media_player_flutter", 0xff9575cd /*Deep Purple 300*/, "",
-       ""}},
-      });
+const std::unordered_map<std::string, ProposalContent> kNextStories({
+    {"Open Mail",
+     {"file:///system/apps/email_story", 0xff4285f4 /*Blue from Inbox*/, "",
+      ""}},
+    {"Video Player",
+     {"file:///system/apps/media_player_flutter",
+      0xff9575cd /*Deep Purple 300*/, "", ""}},
+});
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
     {{"Terminal",
@@ -61,12 +62,12 @@ const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
      {"Green 500",
       {"file:///system/apps/color", 0xff4caf50, "0xFF4CAF50", ""}}});
 
-maxwell::ProposalPtr MkProposal(const std::string& label,
-                                const ProposalContent& content) {
-  auto p = maxwell::Proposal::New();
+ProposalPtr MkProposal(const std::string& label,
+                       const ProposalContent& content) {
+  auto p = Proposal::New();
 
   p->id = label;
-  auto create_story = maxwell::CreateStory::New();
+  auto create_story = CreateStory::New();
   create_story->module_id = content.url;
   const auto& data = content.module_data;
   if (data.size() > 0) {
@@ -78,44 +79,46 @@ maxwell::ProposalPtr MkProposal(const std::string& label,
     pointer.Set(doc, data);
     create_story->initial_data = modular::JsonValueToString(doc);
   }
-  auto action = maxwell::Action::New();
+  auto action = Action::New();
   action->set_create_story(std::move(create_story));
   p->on_selected.push_back(std::move(action));
-  auto d = maxwell::SuggestionDisplay::New();
+  auto d = SuggestionDisplay::New();
   d->headline = label;
   d->subheadline = "";
   d->details = "";
   d->color = content.color;
   d->icon_urls.push_back("");
   d->image_url = content.icon;
-  d->image_type = maxwell::SuggestionImageType::OTHER;
+  d->image_type = SuggestionImageType::OTHER;
   p->display = std::move(d);
 
   return p;
 }
 
-class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
-                                public maxwell::AskHandler {
+class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
  public:
   ModuleSuggesterAgentApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        maxwell_context_(
-            app_context_
-                ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
-        in_(this),
-        out_(app_context_
-                 ->ConnectToEnvironmentService<maxwell::ProposalPublisher>()),
+        subscriber_(
+            app_context_->ConnectToEnvironmentService<ContextSubscriber>()),
+        binding_(this),
+        out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()),
         ask_(this) {
-    fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
-    in_.Bind(&in_handle);
-    maxwell_context_->Subscribe("/modular_state", std::move(in_handle));
-    fidl::InterfaceHandle<maxwell::AskHandler> ask_handle;
+    fidl::InterfaceHandle<ContextListener> listener_handle;
+    binding_.Bind(&listener_handle);
+
+    auto query = ContextQuery::New();
+    query->topics.push_back("/modular_state");
+    subscriber_->Subscribe(std::move(query), std::move(listener_handle));
+
+    fidl::InterfaceHandle<AskHandler> ask_handle;
     ask_.Bind(&ask_handle);
     out_->RegisterAskHandler(std::move(ask_handle));
   }
 
-  void OnUpdate(maxwell::ContextUpdatePtr update) override {
-    const int modular_state = std::stoi(update->json_value.data());
+  void OnUpdate(ContextUpdatePtr update) override {
+    const int modular_state =
+        std::stoi(update->values["/modular_state"].data());
     if (modular_state == 0) {
       for (const auto& entry : kNextStories) {
         out_->Propose(MkProposal(entry.first, entry.second));
@@ -127,7 +130,7 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
     }
   }
 
-  void Ask(maxwell::UserInputPtr query, const AskCallback& callback) override {
+  void Ask(UserInputPtr query, const AskCallback& callback) override {
     if (query->is_text() && query->get_text() != "") {
       // Propose everything; let the Next filter do the filtering
       // HACK(rosswang)
@@ -140,23 +143,24 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
       }
     }
 
-    callback(fidl::Array<maxwell::ProposalPtr>::New(0));  // TODO(rosswang)
+    callback(fidl::Array<ProposalPtr>::New(0));  // TODO(rosswang)
   }
 
  private:
   std::unique_ptr<app::ApplicationContext> app_context_;
 
-  maxwell::ContextSubscriberPtr maxwell_context_;
-  fidl::Binding<maxwell::ContextSubscriberLink> in_;
-  maxwell::ProposalPublisherPtr out_;
-  fidl::Binding<maxwell::AskHandler> ask_;
+  ContextSubscriberPtr subscriber_;
+  fidl::Binding<ContextListener> binding_;
+  ProposalPublisherPtr out_;
+  fidl::Binding<AskHandler> ask_;
 };
 
 }  // namespace
+}  // namespace maxwell
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  ModuleSuggesterAgentApp app;
+  maxwell::ModuleSuggesterAgentApp app;
   loop.Run();
   return 0;
 }

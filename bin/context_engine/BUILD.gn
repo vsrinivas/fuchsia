@@ -40,6 +40,7 @@ source_set("context_repository") {
   ]
 
   deps = [
+    "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src:bound_set",
   ]

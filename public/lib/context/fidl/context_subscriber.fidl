@@ -4,20 +4,44 @@
 
 module maxwell;
 
-// Client that should be requested by context subscribers.
+// Exposes access to Context values, each of which are explicitly named by a
+// 'topic'. Each topic has a known/pre-defined value representation.
+//
+// This interface is meant to be used in the scope of a single Fuchsia
+// component.
 [ServiceName="maxwell.ContextSubscriber"]
 interface ContextSubscriber {
-  // Registers a listener to a context topic.
-  Subscribe(string topic, ContextSubscriberLink link);
+  // When any of the conditions in |query| change, a ContextUpdate is sent to
+  // |listener|.
+  //
+  // If current context values match the query, a result is sent immediately.
+  //
+  // The query will continue to stay active as long as the |listener| handle is
+  // not closed.
+  Subscribe(ContextQuery query, ContextListener listener);
 };
 
-// An attributed link that listens to updates to a context label.
-interface ContextSubscriberLink {
+interface ContextListener {
   // Receives an update for a context label.
-  OnUpdate(ContextUpdate update);
+  OnUpdate(ContextUpdate result);
 };
 
 struct ContextUpdate {
-  // This may be null, indicating that the value was deleted.
-  string? json_value;
+  // A map of the latest values of each topic specified in the ContextQuery's
+  // |topics| field that was issued during |Subscribe()|.
+  //
+  // Topics that don't have a current value are not present in |values|.
+  map<string, string> values;
+};
+
+struct ContextQuery {
+  // A set of topics to include in the ContextUpdate when the following
+  // conditions match.
+  //
+  // If no conditions are given below, the query will match whenever any
+  // of |topics| changes.
+  //
+  // TODO(thatguy): Eventually add more useful query/trigger conditions here.
+  // For now, this is all we will need for a while going forward.
+  array<string> topics;
 };

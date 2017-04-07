@@ -13,27 +13,25 @@
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
+namespace maxwell {
 namespace {
 
-class IdeasAgentApp : public maxwell::agents::IdeasAgent,
-                      public maxwell::ContextSubscriberLink {
+class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
  public:
   IdeasAgentApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        maxwell_context_(
-            app_context_
-                ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
-        in_(this),
-        out_(app_context_
-                 ->ConnectToEnvironmentService<maxwell::ProposalPublisher>()) {
-    fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
-    in_.Bind(&in_handle);
-    maxwell_context_->Subscribe("/location/region", std::move(in_handle));
+        subscriber_(
+            app_context_->ConnectToEnvironmentService<ContextSubscriber>()),
+        binding_(this),
+        out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()) {
+    auto query = ContextQuery::New();
+    query->topics.push_back("/location/region");
+    subscriber_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
-  void OnUpdate(maxwell::ContextUpdatePtr update) override {
+  void OnUpdate(ContextUpdatePtr update) override {
     rapidjson::Document d;
-    d.Parse(update->json_value.data());
+    d.Parse(update->values["/location/region"].data());
 
     if (d.IsString()) {
       const std::string region = d.GetString();
@@ -50,10 +48,10 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
       if (idea.empty()) {
         out_->Remove(kIdeaId);
       } else {
-        auto p = maxwell::Proposal::New();
+        auto p = Proposal::New();
         p->id = kIdeaId;
-        p->on_selected = fidl::Array<maxwell::ActionPtr>::New(0);
-        auto d = maxwell::SuggestionDisplay::New();
+        p->on_selected = fidl::Array<ActionPtr>::New(0);
+        auto d = SuggestionDisplay::New();
 
         d->headline = idea;
         d->subheadline = "";
@@ -62,7 +60,7 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
         d->icon_urls = fidl::Array<fidl::String>::New(1);
         d->icon_urls[0] = "";
         d->image_url = "";
-        d->image_type = maxwell::SuggestionImageType::PERSON;
+        d->image_type = SuggestionImageType::PERSON;
 
         p->display = std::move(d);
 
@@ -74,16 +72,17 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
  private:
   std::unique_ptr<app::ApplicationContext> app_context_;
 
-  maxwell::ContextSubscriberPtr maxwell_context_;
-  fidl::Binding<maxwell::ContextSubscriberLink> in_;
-  maxwell::ProposalPublisherPtr out_;
+  ContextSubscriberPtr subscriber_;
+  fidl::Binding<ContextListener> binding_;
+  ProposalPublisherPtr out_;
 };
 
 }  // namespace
+}  // namespace maxwell
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  IdeasAgentApp app;
+  maxwell::IdeasAgentApp app;
   loop.Run();
   return 0;
 }

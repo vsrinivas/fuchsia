@@ -18,28 +18,28 @@ constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
 using modular::StoryProviderMock;
 
+namespace maxwell {
 namespace {
 
 // context agent that publishes an int n
 class NPublisher {
  public:
-  NPublisher(maxwell::ContextEngine* context_engine) {
+  NPublisher(ContextEngine* context_engine) {
     context_engine->RegisterPublisher("NPublisher", pub_.NewRequest());
   }
 
   void Publish(int n) { pub_->Publish("n", std::to_string(n)); }
 
  private:
-  maxwell::ContextPublisherPtr pub_;
+  ContextPublisherPtr pub_;
 };
 
-maxwell::ProposalPtr CreateProposal(const std::string& id,
-                                    const std::string& headline,
-                                    fidl::Array<maxwell::ActionPtr> actions) {
-  auto p = maxwell::Proposal::New();
+ProposalPtr CreateProposal(const std::string& id, const std::string& headline,
+                           fidl::Array<ActionPtr> actions) {
+  auto p = Proposal::New();
   p->id = id;
   p->on_selected = std::move(actions);
-  auto d = maxwell::SuggestionDisplay::New();
+  auto d = SuggestionDisplay::New();
 
   d->headline = headline;
   d->subheadline = "";
@@ -48,7 +48,7 @@ maxwell::ProposalPtr CreateProposal(const std::string& id,
   d->icon_urls = fidl::Array<fidl::String>::New(1);
   d->icon_urls[0] = "";
   d->image_url = "";
-  d->image_type = maxwell::SuggestionImageType::PERSON;
+  d->image_type = SuggestionImageType::PERSON;
 
   p->display = std::move(d);
   return p;
@@ -56,23 +56,21 @@ maxwell::ProposalPtr CreateProposal(const std::string& id,
 
 class Proposinator {
  public:
-  Proposinator(maxwell::SuggestionEngine* suggestion_engine,
+  Proposinator(SuggestionEngine* suggestion_engine,
                const fidl::String& url = "Proposinator") {
     suggestion_engine->RegisterPublisher("Proposinator", out_.NewRequest());
   }
 
   virtual ~Proposinator() = default;
 
-  void Propose(const std::string& id,
-               fidl::Array<maxwell::ActionPtr> actions =
-                   fidl::Array<maxwell::ActionPtr>::New(0)) {
+  void Propose(const std::string& id, fidl::Array<ActionPtr> actions =
+                                          fidl::Array<ActionPtr>::New(0)) {
     Propose(id, id, std::move(actions));
   }
 
-  void Propose(const std::string& id,
-               const std::string& headline,
-               fidl::Array<maxwell::ActionPtr> actions =
-                   fidl::Array<maxwell::ActionPtr>::New(0)) {
+  void Propose(
+      const std::string& id, const std::string& headline,
+      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
     out_->Propose(CreateProposal(id, headline, std::move(actions)));
   }
 
@@ -81,25 +79,23 @@ class Proposinator {
   void KillPublisher() { out_.reset(); }
 
  protected:
-  maxwell::ProposalPublisherPtr out_;
+  ProposalPublisherPtr out_;
 };
 
 // maintains the number of proposals specified by the context field "n"
-class NProposals : public Proposinator, public maxwell::ContextSubscriberLink {
+class NProposals : public Proposinator, public ContextListener {
  public:
-  NProposals(maxwell::ContextEngine* context_engine,
-             maxwell::SuggestionEngine* suggestion_engine)
-      : Proposinator(suggestion_engine, "NProposals"), link_binding_(this) {
-    context_engine->RegisterSubscriber("NProposals",
-                                       context_client_.NewRequest());
+  NProposals(ContextEngine* context_engine, SuggestionEngine* suggestion_engine)
+      : Proposinator(suggestion_engine, "NProposals"), listener_binding_(this) {
+    context_engine->RegisterSubscriber("NProposals", subscriber_.NewRequest());
 
-    fidl::InterfaceHandle<maxwell::ContextSubscriberLink> link_handle;
-    link_binding_.Bind(&link_handle);
-    context_client_->Subscribe("n", std::move(link_handle));
+    auto query = ContextQuery::New();
+    query->topics.push_back("n");
+    subscriber_->Subscribe(std::move(query), listener_binding_.NewBinding());
   }
 
-  void OnUpdate(maxwell::ContextUpdatePtr update) override {
-    int n = std::stoi(update->json_value);
+  void OnUpdate(ContextUpdatePtr update) override {
+    int n = std::stoi(update->values["n"]);
 
     for (int i = n_; i < n; i++)
       Propose(std::to_string(i));
@@ -110,8 +106,8 @@ class NProposals : public Proposinator, public maxwell::ContextSubscriberLink {
   }
 
  private:
-  maxwell::ContextSubscriberPtr context_client_;
-  fidl::Binding<maxwell::ContextSubscriberLink> link_binding_;
+  ContextSubscriberPtr subscriber_;
+  fidl::Binding<ContextListener> listener_binding_;
 
   int n_ = 0;
 };
@@ -121,10 +117,10 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   SuggestionEngineTest() : story_provider_binding_(&story_provider_) {
     app::ServiceProviderPtr suggestion_services =
         StartServiceProvider("file:///system/apps/suggestion_engine");
-    suggestion_engine_ = app::ConnectToService<maxwell::SuggestionEngine>(
-        suggestion_services.get());
-    suggestion_provider_ = app::ConnectToService<maxwell::SuggestionProvider>(
-        suggestion_services.get());
+    suggestion_engine_ =
+        app::ConnectToService<SuggestionEngine>(suggestion_services.get());
+    suggestion_provider_ =
+        app::ConnectToService<SuggestionProvider>(suggestion_services.get());
 
     // Initialize the SuggestionEngine.
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
@@ -138,51 +134,47 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   }
 
  protected:
-  maxwell::SuggestionEngine* suggestion_engine() {
-    return suggestion_engine_.get();
-  }
+  SuggestionEngine* suggestion_engine() { return suggestion_engine_.get(); }
 
-  maxwell::SuggestionProvider* suggestion_provider() {
+  SuggestionProvider* suggestion_provider() {
     return suggestion_provider_.get();
   }
 
   StoryProviderMock* story_provider() { return &story_provider_; }
 
   void StartSuggestionAgent(const std::string& url) {
-    auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
-        root_environment);
-    agent_host->AddService<maxwell::ContextSubscriber>(
-        [this,
-         url](fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
+    auto agent_host =
+        std::make_unique<ApplicationEnvironmentHostImpl>(root_environment);
+    agent_host->AddService<ContextSubscriber>(
+        [this, url](fidl::InterfaceRequest<ContextSubscriber> request) {
           context_engine()->RegisterSubscriber(url, std::move(request));
         });
-    agent_host->AddService<maxwell::ProposalPublisher>(
-        [this,
-         url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
+    agent_host->AddService<ProposalPublisher>(
+        [this, url](fidl::InterfaceRequest<ProposalPublisher> request) {
           suggestion_engine_->RegisterPublisher(url, std::move(request));
         });
     StartAgent(url, std::move(agent_host));
   }
 
   void AcceptSuggestion(const std::string& suggestion_id) {
-    Interact(suggestion_id, maxwell::InteractionType::SELECTED);
+    Interact(suggestion_id, InteractionType::SELECTED);
   }
 
   void DismissSuggestion(const std::string& suggestion_id) {
-    Interact(suggestion_id, maxwell::InteractionType::DISMISSED);
+    Interact(suggestion_id, InteractionType::DISMISSED);
   }
 
  private:
   void Interact(const std::string& suggestion_id,
-                maxwell::InteractionType interaction_type) {
-    auto interaction = maxwell::Interaction::New();
+                InteractionType interaction_type) {
+    auto interaction = Interaction::New();
     interaction->type = interaction_type;
     suggestion_provider_->NotifyInteraction(suggestion_id,
                                             std::move(interaction));
   }
 
-  maxwell::SuggestionEnginePtr suggestion_engine_;
-  maxwell::SuggestionProviderPtr suggestion_provider_;
+  SuggestionEnginePtr suggestion_engine_;
+  SuggestionProviderPtr suggestion_provider_;
 
   StoryProviderMock story_provider_;
   fidl::Binding<modular::StoryProvider> story_provider_binding_;
@@ -201,7 +193,7 @@ class NextTest : public virtual SuggestionEngineTest {
   void SetResultCount(int count) { ctl_->SetResultCount(count); }
 
   int suggestion_count() const { return listener_.suggestion_count(); }
-  const maxwell::Suggestion* GetOnlySuggestion() const {
+  const Suggestion* GetOnlySuggestion() const {
     return listener_.GetOnlySuggestion();
   }
 
@@ -209,8 +201,8 @@ class NextTest : public virtual SuggestionEngineTest {
 
  private:
   TestSuggestionListener listener_;
-  fidl::Binding<maxwell::SuggestionListener> listener_binding_;
-  maxwell::NextControllerPtr ctl_;
+  fidl::Binding<SuggestionListener> listener_binding_;
+  NextControllerPtr ctl_;
 };
 
 class ResultCountTest : public NextTest {
@@ -293,14 +285,14 @@ TEST_F(ResultCountTest, MultiRemove) {
 // duplicate suggestion. Test that given two such ideas (via two GPS locations),
 // only the latest is kept.
 TEST_F(NextTest, Dedup) {
-  maxwell::acquirers::MockGps gps(context_engine());
+  acquirers::MockGps gps(context_engine());
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");
   StartSuggestionAgent("file:///system/apps/agents/ideas");
 
   SetResultCount(10);
   gps.Publish(90, 0);
   CHECK_RESULT_COUNT(1);
-  const maxwell::Suggestion* suggestion = GetOnlySuggestion();
+  const Suggestion* suggestion = GetOnlySuggestion();
   const std::string uuid1 = suggestion->uuid;
   const std::string headline1 = suggestion->display->headline;
   gps.Publish(-90, 0);
@@ -314,7 +306,7 @@ TEST_F(NextTest, Dedup) {
 // proposals). One agent is the agents/ideas process while the other is the test
 // itself (maxwell_test).
 TEST_F(NextTest, NamespacingPerAgent) {
-  maxwell::acquirers::MockGps gps(context_engine());
+  acquirers::MockGps gps(context_engine());
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");
   StartSuggestionAgent("file:///system/apps/agents/ideas");
   Proposinator conflictinator(suggestion_engine());
@@ -323,7 +315,7 @@ TEST_F(NextTest, NamespacingPerAgent) {
   gps.Publish(90, 0);
   // Spoof the idea agent's proposal ID (well, not really spoofing since they
   // are namespaced by component).
-  conflictinator.Propose(maxwell::agents::IdeasAgent::kIdeaId);
+  conflictinator.Propose(agents::IdeasAgent::kIdeaId);
   CHECK_RESULT_COUNT(2);
 }
 
@@ -403,11 +395,11 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   Proposinator p(suggestion_engine());
   SetResultCount(10);
 
-  auto create_story = maxwell::CreateStory::New();
+  auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
-  auto action = maxwell::Action::New();
+  auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  fidl::Array<maxwell::ActionPtr> actions;
+  fidl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -421,16 +413,16 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   Proposinator p(suggestion_engine());
   SetResultCount(10);
 
-  auto create_story = maxwell::CreateStory::New();
+  auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
-  auto action = maxwell::Action::New();
+  auto action = Action::New();
 
   rapidjson::Document doc;
   rapidjson::Pointer("/foo/bar").Set(doc, "some_data");
   create_story->initial_data = modular::JsonValueToString(doc);
 
   action->set_create_story(std::move(create_story));
-  fidl::Array<maxwell::ActionPtr> actions;
+  fidl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -452,7 +444,7 @@ class AskTest : public virtual SuggestionEngineTest {
   void KillListener() { binding_.Close(); }
 
   void SetQuery(const std::string& query) {
-    auto input = maxwell::UserInput::New();
+    auto input = UserInput::New();
     input->set_text(query);
     ctl_->SetUserInput(std::move(input));
   }
@@ -465,8 +457,8 @@ class AskTest : public virtual SuggestionEngineTest {
 
  private:
   TestSuggestionListener listener_;
-  fidl::Binding<maxwell::SuggestionListener> binding_;
-  maxwell::AskControllerPtr ctl_;
+  fidl::Binding<SuggestionListener> binding_;
+  AskControllerPtr ctl_;
 };
 
 TEST_F(AskTest, DefaultAsk) {
@@ -675,9 +667,9 @@ TEST_F(AskTest, AskRanking) {
   HEADLINE_EQ("Compose E-mail", 0);
 }
 
-class AskProposinator : public Proposinator, public maxwell::AskHandler {
+class AskProposinator : public Proposinator, public AskHandler {
  public:
-  AskProposinator(maxwell::SuggestionEngine* suggestion_engine,
+  AskProposinator(SuggestionEngine* suggestion_engine,
                   const fidl::String& url = "AskProposinator")
       : Proposinator(suggestion_engine, url), ask_binding_(this) {
     fidl::InterfaceHandle<AskHandler> ask_handle;
@@ -685,7 +677,7 @@ class AskProposinator : public Proposinator, public maxwell::AskHandler {
     out_->RegisterAskHandler(std::move(ask_handle));
   }
 
-  void Ask(maxwell::UserInputPtr query, const AskCallback& callback) override {
+  void Ask(UserInputPtr query, const AskCallback& callback) override {
     query_ = std::move(query);
     ask_callback_ = callback;
     ask_proposals_.resize(0);
@@ -695,23 +687,22 @@ class AskProposinator : public Proposinator, public maxwell::AskHandler {
 
   fidl::String query() const { return query_ ? query_->get_text() : NULL; }
 
-  void ProposeForAsk(const std::string& id,
-                     fidl::Array<maxwell::ActionPtr> actions =
-                         fidl::Array<maxwell::ActionPtr>::New(0)) {
+  void ProposeForAsk(
+      const std::string& id,
+      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
     ProposeForAsk(id, id, std::move(actions));
   }
 
-  void ProposeForAsk(const std::string& id,
-                     const std::string& headline,
-                     fidl::Array<maxwell::ActionPtr> actions =
-                         fidl::Array<maxwell::ActionPtr>::New(0)) {
+  void ProposeForAsk(
+      const std::string& id, const std::string& headline,
+      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
     ask_proposals_.push_back(CreateProposal(id, headline, std::move(actions)));
   }
 
  private:
   fidl::Binding<AskHandler> ask_binding_;
-  maxwell::UserInputPtr query_;
-  fidl::Array<maxwell::ProposalPtr> ask_proposals_;
+  UserInputPtr query_;
+  fidl::Array<ProposalPtr> ask_proposals_;
   AskCallback ask_callback_;
 };
 
@@ -793,11 +784,11 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   Proposinator p(suggestion_engine());
   SetResultCount(10);
 
-  auto create_story = maxwell::CreateStory::New();
+  auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
-  auto action = maxwell::Action::New();
+  auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  fidl::Array<maxwell::ActionPtr> actions;
+  fidl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -820,11 +811,11 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info));
 
-  auto create_story = maxwell::CreateStory::New();
+  auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
-  auto action = maxwell::Action::New();
+  auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  fidl::Array<maxwell::ActionPtr> actions;
+  fidl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -847,11 +838,11 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info));
 
-  auto create_story = maxwell::CreateStory::New();
+  auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
-  auto action = maxwell::Action::New();
+  auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  fidl::Array<maxwell::ActionPtr> actions;
+  fidl::Array<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   p.Propose("2");
@@ -872,11 +863,11 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
   story_provider()->NotifyStoryChanged(std::move(story_info));
 
   for (int i = 0; i < 2; i++) {
-    auto create_story = maxwell::CreateStory::New();
+    auto create_story = CreateStory::New();
     create_story->module_id = "foo://bar";
-    auto action = maxwell::Action::New();
+    auto action = Action::New();
     action->set_create_story(std::move(create_story));
-    fidl::Array<maxwell::ActionPtr> actions;
+    fidl::Array<ActionPtr> actions;
     actions.push_back(std::move(action));
 
     p.Propose("1", std::move(actions));
@@ -887,3 +878,5 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
 
   CHECK_RESULT_COUNT(1);
 }
+
+}  // namespace maxwell

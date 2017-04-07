@@ -32,7 +32,7 @@ void connectSubscriber(ApplicationContext appContext) {
 typedef void PublishFn(String topic, String json_value);
 
 typedef void SubscribeFn(
-    String label, InterfaceHandle<ContextSubscriberLink> link);
+    ContextQuery query, InterfaceHandle<ContextListener> listener);
 
 /// Publish a value using the globally bound [ContextPublisher].
 PublishFn get publish => _contextPublisher.publish;
@@ -40,13 +40,13 @@ PublishFn get publish => _contextPublisher.publish;
 /// Registers a subscriber link using the globally bound [ContextSubscriber].
 SubscribeFn get subscribe => _contextSubscriber.subscribe;
 
-/// Convenience function that subscribes to a label with a handler callback.
-/// The returned [ContextSubscriberLinkImpl] should be closed once unneeded.
-ContextSubscriberLinkImpl subscriberLink(
-    String label, Function handler) {
-  final sub = new ContextSubscriberLinkImpl(handler);
-  subscribe(label, sub.getHandle());
-  return sub;
+/// Convenience function that subscribes to a query with a handler callback.
+/// The returned [ContextListenerImpl] should be closed once unneeded.
+ContextListenerImpl subscribe(
+    ContextQuery query, Function handler) {
+  final listener = new ContextListenerImpl(handler);
+  subscribe(query, listener.getHandle());
+  return listener;
 }
 
 /// Closes any bound global FIDL handles. This should be called on app cleanup.

@@ -25,8 +25,6 @@ source_set("context_engine_test") {
     "//application/lib/app",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
-    "//apps/maxwell/src/acquirers/mock:gps",
-    "//apps/maxwell/src/agents:carmen_sandiego",
   ]
 }
 

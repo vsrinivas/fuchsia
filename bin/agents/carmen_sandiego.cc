@@ -11,32 +11,30 @@
 
 constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
 
+namespace maxwell {
 namespace {
 
-class CarmenSandiegoApp : public maxwell::ContextSubscriberLink {
+class CarmenSandiegoApp : public ContextListener {
  public:
   CarmenSandiegoApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         publisher_(
-            app_context_
-                ->ConnectToEnvironmentService<maxwell::ContextPublisher>()),
+            app_context_->ConnectToEnvironmentService<ContextPublisher>()),
         subscriber_(
-            app_context_
-                ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
-        in_(this) {
-    fidl::InterfaceHandle<ContextSubscriberLink> in_handle;
-    in_.Bind(&in_handle);
-    subscriber_->Subscribe(maxwell::acquirers::GpsAcquirer::kLabel,
-                           std::move(in_handle));
+            app_context_->ConnectToEnvironmentService<ContextSubscriber>()),
+        binding_(this) {
+    auto query = ContextQuery::New();
+    query->topics.push_back(acquirers::GpsAcquirer::kLabel);
+    subscriber_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
-  // |ContextSubscriberLink|
-  void OnUpdate(maxwell::ContextUpdatePtr update) override {
+  // |ContextListener|
+  void OnUpdate(ContextUpdatePtr update) override {
     std::string hlloc = "somewhere";
 
     rapidjson::Document d;
-    d.Parse(update->json_value.data());
+    d.Parse(update->values[acquirers::GpsAcquirer::kLabel].data());
 
     if (d.IsObject()) {
       const float latitude = d["lat"].GetFloat(),
@@ -60,16 +58,17 @@ class CarmenSandiegoApp : public maxwell::ContextSubscriberLink {
 
   std::unique_ptr<app::ApplicationContext> app_context_;
 
-  maxwell::ContextPublisherPtr publisher_;
-  maxwell::ContextSubscriberPtr subscriber_;
-  fidl::Binding<maxwell::ContextSubscriberLink> in_;
+  ContextPublisherPtr publisher_;
+  ContextSubscriberPtr subscriber_;
+  fidl::Binding<ContextListener> binding_;
 };
 
 }  // namespace
+}  // namespace maxwell
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  CarmenSandiegoApp app;
+  maxwell::CarmenSandiegoApp app;
   loop.Run();
   return 0;
 }

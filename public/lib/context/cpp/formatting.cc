@@ -5,9 +5,20 @@
 #include "apps/maxwell/lib/context/formatting.h"
 
 namespace maxwell {
+std::ostream& operator<<(std::ostream& os, const ContextUpdate& update) {
+  os << "{";
+  for (auto it = update.values.cbegin(); it != update.values.cend(); ++it) {
+    os << " " << it.GetKey() << ": " << it.GetValue() << ",";
+  }
+  return os << "}";
+}
 
-std::ostream& operator<<(std::ostream& os, const ContextUpdate& o) {
-  return os << "{ json_value: " << o.json_value << "}";
+std::ostream& operator<<(std::ostream& os, const ContextQuery& query) {
+  os << "{ topics: [";
+  for (auto it = query.topics.begin(); it != query.topics.end(); ++it) {
+    os << " " << *it << ", ";
+  }
+  return os << "] }";
 }
 
 }  // namespace maxwell

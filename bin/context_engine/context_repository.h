@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include <optional>
+#include <list>
 #include <unordered_map>
 
 #include "apps/maxwell/services/context/context_subscriber.fidl.h"
-#include "apps/maxwell/src/bound_set.h"
 
 namespace maxwell {
 
@@ -17,21 +16,29 @@ namespace maxwell {
 // changes value.
 class ContextRepository {
  public:
-  ContextRepository() {}
+  ContextRepository();
+  ~ContextRepository();
 
   void Set(const std::string& topic, const std::string& json_value);
   void Remove(const std::string& topic);
 
-  void AddSubscription(const std::string& topic,
-                       ContextSubscriberLinkPtr subscriber);
+  void AddSubscription(ContextQueryPtr query, ContextListenerPtr listener);
 
  private:
   void SetInternal(const std::string& topic, const std::string* json_value);
+  ContextUpdatePtr BuildContextUpdate(const ContextQueryPtr& query);
 
   // Keyed by context topic.
   std::unordered_map<std::string, std::string> values_;
-  std::unordered_map<std::string, BoundPtrSet<ContextSubscriberLink>>
-      subscriptions_;
+
+  struct Subscription {
+    ContextQueryPtr query;
+    ContextListenerPtr listener;
+  };
+  // We use a std::list<> here instead of a std::vector<> since we capture
+  // iterators in |subscriptions_| for removing elements in our connection
+  // error handler.
+  std::list<Subscription> subscriptions_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextRepository);
 };

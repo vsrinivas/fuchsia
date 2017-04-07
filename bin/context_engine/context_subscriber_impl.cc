@@ -13,11 +13,10 @@ ContextSubscriberImpl::ContextSubscriberImpl(ContextRepository* repository)
 ContextSubscriberImpl::~ContextSubscriberImpl() = default;
 
 void ContextSubscriberImpl::Subscribe(
-    const fidl::String& topic,
-    fidl::InterfaceHandle<ContextSubscriberLink> link_handle) {
-  ContextSubscriberLinkPtr link =
-      ContextSubscriberLinkPtr::Create(std::move(link_handle));
-  repository_->AddSubscription(topic, std::move(link));
+    ContextQueryPtr query, fidl::InterfaceHandle<ContextListener> listener) {
+  ContextListenerPtr listener_ptr =
+      ContextListenerPtr::Create(std::move(listener));
+  repository_->AddSubscription(std::move(query), std::move(listener_ptr));
 }
 
 }  // namespace maxwell

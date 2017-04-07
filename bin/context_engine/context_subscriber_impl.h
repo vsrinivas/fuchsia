@@ -15,9 +15,8 @@ class ContextSubscriberImpl : public ContextSubscriber {
 
  private:
   // |ContextSubscriber|
-  void Subscribe(
-      const fidl::String& label,
-      fidl::InterfaceHandle<ContextSubscriberLink> link_handle) override;
+  void Subscribe(ContextQueryPtr query,
+                 fidl::InterfaceHandle<ContextListener> listener) override;
 
   ContextRepository* repository_;
 

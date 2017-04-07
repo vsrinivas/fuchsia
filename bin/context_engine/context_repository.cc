@@ -4,9 +4,24 @@
 
 #include "apps/maxwell/src/context_engine/context_repository.h"
 
+#include "apps/maxwell/lib/context/formatting.h"
+
 namespace maxwell {
 
-void ContextRepository::Set(const std::string& topic, const std::string& json_value) {
+namespace {
+
+bool QueryMatches(const std::string& updated_topic,
+                  const ContextQueryPtr& query) {
+  return query->topics.To<std::set<std::string>>().count(updated_topic) > 0;
+}
+
+}  // namespace
+
+ContextRepository::ContextRepository() = default;
+ContextRepository::~ContextRepository() = default;
+
+void ContextRepository::Set(const std::string& topic,
+                            const std::string& json_value) {
   SetInternal(topic, &json_value);
 }
 
@@ -14,39 +29,61 @@ void ContextRepository::Remove(const std::string& topic) {
   SetInternal(topic, nullptr);
 }
 
-void ContextRepository::SetInternal(const std::string& topic,
-                       const std::string* json_value) {
-  ContextUpdate update;
-  // update.source = component_->url;
+void ContextRepository::AddSubscription(ContextQueryPtr query,
+                                        ContextListenerPtr listener) {
+  // If we already have a value for any topics in |query|, notify the
+  // listener immediately.
+  auto result = BuildContextUpdate(query);
+  if (result) {
+    listener->OnUpdate(std::move(result));
+  }
 
+  // Add the subscription to our list.
+  Subscription subscription{std::move(query), std::move(listener)};
+  auto it =
+      subscriptions_.emplace(subscriptions_.begin(), std::move(subscription));
+  it->listener.set_connection_error_handler([this, it] {
+    // Remove this subscription when it has an error.
+    subscriptions_.erase(it);
+  });
+}
+
+void ContextRepository::SetInternal(const std::string& topic,
+                                    const std::string* json_value) {
+  FTL_VLOG(1) << "SetInternal(): " << topic << " = " << json_value;
   if (json_value != nullptr) {
     values_[topic] = *json_value;
-    update.json_value = *json_value;
   } else {
     values_.erase(topic);
   }
 
-  // Notify any subscriptions watching this topic.
-  auto it = subscriptions_.find(topic);
-  if (it == subscriptions_.end())
-    return;
-
-  for (auto& subscriber_link : it->second) {
-    subscriber_link->OnUpdate(update.Clone());
+  // Find any queries matching this updated topic and notify their respective
+  // listeners.
+  //
+  // TODO(thatguy): This evaluation won't scale. Change it when it becomes a
+  // bottleneck.
+  for (const auto& subscription : subscriptions_) {
+    if (QueryMatches(topic, subscription.query)) {
+      auto result = BuildContextUpdate(subscription.query);
+      subscription.listener->OnUpdate(std::move(result));
+    }
   }
 }
 
-void ContextRepository::AddSubscription(const std::string& topic,
-                           ContextSubscriberLinkPtr subscriber) {
-  // If we already have a value for |topic|, notify the subscriber immediately.
-  auto it = values_.find(topic);
-  if (it != values_.end()) {
-    auto update = ContextUpdate::New();
-    update->json_value = it->second;
-    subscriber->OnUpdate(std::move(update));
+ContextUpdatePtr ContextRepository::BuildContextUpdate(
+    const ContextQueryPtr& query) {
+  ContextUpdatePtr result;  // Null by default.
+
+  for (const auto& topic : query->topics) {
+    auto it = values_.find(topic);
+    if (it != values_.end()) {
+      if (!result) result = ContextUpdate::New();
+
+      result->values[topic] = it->second;
+    }
   }
 
-  subscriptions_[topic].emplace(std::move(subscriber));
+  return result;
 }
 
 }  // namespace maxwell

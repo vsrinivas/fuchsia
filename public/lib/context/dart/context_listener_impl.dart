@@ -8,17 +8,17 @@ import 'package:lib.fidl.dart/bindings.dart';
 /// Signature for callbacks that handle context updates.
 typedef void UpdateCallback(ContextUpdate value);
 
-/// Functional wrapper class for [ContextSubscriberLink], using callbacks to
+/// Functional wrapper class for [ContextListener], using callbacks to
 /// implement interface methods.
-class ContextSubscriberLinkImpl extends ContextSubscriberLink {
-  final _binding = new ContextSubscriberLinkBinding();
+class ContextListenerImpl extends ContextListener {
+  final _binding = new ContextListenerBinding();
   final UpdateCallback _onUpdate;
 
-  ContextSubscriberLinkImpl(this._onUpdate);
+  ContextListenerImpl(this._onUpdate);
 
-  /// Gets the [InterfaceHandle] for this [ContextSubscriberLink]
+  /// Gets the [InterfaceHandle] for this [ContextListener]
   /// implementation. The returned handle should only be used once.
-  InterfaceHandle<ContextSubscriberLink> getHandle() => _binding.wrap(this);
+  InterfaceHandle<ContextListener> getHandle() => _binding.wrap(this);
 
   @override
   void onUpdate(ContextUpdate update) => _onUpdate(update);
