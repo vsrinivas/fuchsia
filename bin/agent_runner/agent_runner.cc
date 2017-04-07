@@ -8,55 +8,12 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
-
-namespace {
-
-// All agent trigger information is stored in one page. The entries in
-// the page are:
-//
-// * Trigger/agent_url/task_id.
-
-constexpr char kTriggerKeyPrefix[] = "Trigger/";
-constexpr uint8_t kSeparator = '/';
-constexpr uint8_t kEscape = '\\';
-
-// TODO(mesch): Duplicate from message_queue_manager.cc, vardhan moves
-// this to lib/.
-void AppendEscaped(std::string* key, const std::string& data) {
-  // TODO(mesch): We never read the value back from the key, rather
-  // the values used for the key are also contained in the value. So
-  // we could use hashes here.
-  for (uint8_t c : data) {
-    if (c == kSeparator) {
-      key->push_back(kEscape);
-    } else if (c == kEscape) {
-      key->push_back(kEscape);
-    }
-    key->push_back(c);
-  }
-}
-
-// TODO(mesch): Duplicate from message_queue_manager.cc, vardhan moves
-// this to lib/.
-void AppendSeparator(std::string* const key) {
-  key->push_back(kSeparator);
-}
-
-std::string MakeTriggerKey(const std::string& agent_url,
-                           const std::string& task_id) {
-  std::string key{kTriggerKeyPrefix};
-  AppendEscaped(&key, agent_url);
-  AppendSeparator(&key);
-  AppendEscaped(&key, task_id);
-  return key;
-}
-
-}  // namespace
 
 struct AgentRunner::TriggerInfo {
   std::string agent_url;
@@ -340,7 +297,8 @@ void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url,
     return;
   }
 
-  message_queue_manager_->DropWatcher(agent_url, task_id_it->second);
+  message_queue_manager_->DropWatcher(kAgentComponentNamespace, agent_url,
+                                      task_id_it->second);
   watched_queues_[agent_url].erase(task_id);
   if (watched_queues_[agent_url].size() == 0) {
     watched_queues_.erase(agent_url);
@@ -378,9 +336,9 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
         return;
       }
 
-      // We were watching some other queue for this task_id. Stop
-      // watching.
-      message_queue_manager_->DropWatcher(agent_url, found_it->second[task_id]);
+      // We were watching some other queue for this task_id. Stop watching.
+      message_queue_manager_->DropWatcher(kAgentComponentNamespace, agent_url,
+                                          found_it->second[task_id]);
     }
 
   } else {
@@ -393,7 +351,8 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
   found_it->second[task_id] = queue_name;
   auto terminating = terminating_;
   message_queue_manager_->RegisterWatcher(
-      agent_url, queue_name, [this, agent_url, task_id, terminating] {
+      kAgentComponentNamespace, agent_url, queue_name,
+      [this, agent_url, task_id, terminating] {
         // If agent runner is terminating, do not run any new tasks.
         if (*terminating) {
           return;

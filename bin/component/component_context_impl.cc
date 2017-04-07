@@ -10,12 +10,15 @@
 
 namespace modular {
 
-ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
-                                           const std::string& component_id)
+ComponentContextImpl::ComponentContextImpl(
+    const ComponentContextInfo& info,
+    const std::string& component_namespace,
+    const std::string& component_instance_id)
     : message_queue_manager_(info.message_queue_manager),
       agent_runner_(info.agent_runner),
       ledger_repository_(info.ledger_repository),
-      component_id_(component_id) {
+      component_namespace_(component_namespace),
+      component_instance_id_(component_instance_id) {
   FTL_DCHECK(message_queue_manager_);
   FTL_DCHECK(agent_runner_);
   FTL_DCHECK(ledger_repository_);
@@ -26,28 +29,28 @@ ComponentContextImpl::~ComponentContextImpl() = default;
 void ComponentContextImpl::GetLedger(
     fidl::InterfaceRequest<ledger::Ledger> request,
     const GetLedgerCallback& result) {
-  ledger_repository_->GetLedger(to_array(component_id_), std::move(request),
-                                result);
+  ledger_repository_->GetLedger(to_array(component_instance_id_),
+                                std::move(request), result);
 }
 
 void ComponentContextImpl::ConnectToAgent(
     const fidl::String& url,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
-  agent_runner_->ConnectToAgent(component_id_, url,
+  agent_runner_->ConnectToAgent(component_instance_id_, url,
                                 std::move(incoming_services_request),
                                 std::move(agent_controller_request));
 }
 
 void ComponentContextImpl::ObtainMessageQueue(
-    const fidl::String& name,
-    fidl::InterfaceRequest<MessageQueue> request) {
-  message_queue_manager_->ObtainMessageQueue(component_id_, name,
-                                             std::move(request));
+    const fidl::String& name, fidl::InterfaceRequest<MessageQueue> request) {
+  message_queue_manager_->ObtainMessageQueue(
+      component_namespace_, component_instance_id_, name, std::move(request));
 }
 
 void ComponentContextImpl::DeleteMessageQueue(const fidl::String& name) {
-  message_queue_manager_->DeleteMessageQueue(component_id_, name);
+  message_queue_manager_->DeleteMessageQueue(component_namespace_,
+                                             component_instance_id_, name);
 }
 
 void ComponentContextImpl::GetMessageSender(

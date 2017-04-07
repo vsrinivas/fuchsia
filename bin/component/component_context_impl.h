@@ -31,12 +31,19 @@ struct ComponentContextInfo {
 // bindings into the class.
 class ComponentContextImpl : public ComponentContext {
  public:
+  // * A component namespace identifies components whose lifetimes are related,
+  //   where all of their persisted information will live together; for modules
+  //   this is the story id, for agents it is kAgentComponentNamespace, etc.
+  // * A component instance ID identifies a particular instance of a component;
+  //   for modules, this is the module path in their story. For agents, it is
+  //   the agent URL.
   explicit ComponentContextImpl(const ComponentContextInfo& info,
+                                const std::string& component_namespace,
                                 const std::string& component_instance_id);
 
   ~ComponentContextImpl() override;
 
-  const std::string& component_id() { return component_id_; }
+  const std::string& component_instance_id() { return component_instance_id_; }
 
  private:
   // |ComponentContext|
@@ -66,14 +73,8 @@ class ComponentContextImpl : public ComponentContext {
   AgentRunner* const agent_runner_;
   ledger::LedgerRepository* const ledger_repository_;
 
-  // TODO(mesch,vardhan): This component ID is used both as the
-  // component ID in order to obtain the ledger for this component, as
-  // well as as the component *instance* ID when accessing message
-  // queue manager. In the case og Agents, this makes no difference
-  // (because Agents are singletons), but it's wrong in the case of
-  // Modules, for which the ledger is per Module, but the message
-  // queues are per instance.
-  const std::string component_id_;
+  const std::string component_namespace_;
+  const std::string component_instance_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
 };

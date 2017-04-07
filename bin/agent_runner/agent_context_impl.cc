@@ -123,7 +123,8 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       application_launcher_(info.app_launcher),
       agent_context_binding_(this),
       agent_runner_(info.component_context_info.agent_runner),
-      component_context_impl_(info.component_context_info, url),
+      component_context_impl_(info.component_context_info,
+                              kAgentComponentNamespace, url),
       user_intelligence_provider_(info.user_intelligence_provider) {}
 
 AgentContextImpl::~AgentContextImpl() = default;

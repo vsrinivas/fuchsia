@@ -26,6 +26,10 @@
 
 namespace modular {
 
+// This is the component namespace we give to all agents; used for namespacing
+// storage between different component types.
+constexpr char kAgentComponentNamespace[] = "agents";
+
 class AgentContextImpl;
 class MessageQueueManager;
 class XdrContext;

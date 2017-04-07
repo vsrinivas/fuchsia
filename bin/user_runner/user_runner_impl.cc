@@ -40,6 +40,7 @@ namespace modular {
 namespace {
 
 constexpr char kAppId[] = "modular_user_runner";
+constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePageId[] = "MessageQueuePage";  // 16 chars
@@ -200,8 +201,8 @@ UserRunnerImpl::UserRunnerImpl(
                                               agent_runner_.get(),
                                               ledger_repository_.get()};
 
-  maxwell_component_context_impl_.reset(
-      new ComponentContextImpl(component_context_info, kMaxwellUrl));
+  maxwell_component_context_impl_.reset(new ComponentContextImpl(
+      component_context_info, kMaxwellComponentNamespace, kMaxwellUrl));
 
   maxwell_component_context_binding_.reset(new fidl::Binding<ComponentContext>(
       maxwell_component_context_impl_.get()));

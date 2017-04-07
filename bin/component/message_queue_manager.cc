@@ -9,56 +9,13 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/services/component/message_queue.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
-
-namespace {
-
-// All message queue information is stored in one page. The entries in
-// the page are:
-//
-// * MessageQueue/queue_token contains the MessageQueueInfo for the
-//   message queue.
-//
-// * MessageQueueToken/component_instance_id/queue_name just maps to
-//   the corresponding token.
-
-constexpr char kMessageQueueKeyPrefix[] = "MessageQueue/";
-constexpr char kMessageQueueTokenKeyPrefix[] = "MessageQueueToken/";
-constexpr uint8_t kSeparator = '/';
-
-void AppendEscaped(std::string* key, const std::string& data) {
-  for (uint8_t c : data) {
-    if (c == kSeparator) {
-      // If the separator exists in the string, send it twice.
-      key->push_back(kSeparator);
-    }
-    key->push_back(c);
-  }
-}
-
-void AppendSeparator(std::string* const key) {
-  key->push_back(kSeparator);
-}
-
-std::string MakeMessageQueueTokenKey(const std::string& component_instance_id,
-                                     const std::string& queue_name) {
-  std::string key{kMessageQueueTokenKeyPrefix};
-  AppendEscaped(&key, component_instance_id);
-  AppendSeparator(&key);
-  AppendEscaped(&key, queue_name);
-  return key;
-}
-
-std::string MakeMessageQueueKey(const std::string& queue_token) {
-  return kMessageQueueKeyPrefix + queue_token;
-}
-
-}  // namespace
 
 class MessageQueueStorage;
 
@@ -211,6 +168,7 @@ std::string GenerateQueueToken() {
 }  // namespace
 
 struct MessageQueueManager::MessageQueueInfo {
+  std::string component_namespace;
   std::string component_instance_id;
   std::string queue_name;
   std::string queue_token;
@@ -224,11 +182,13 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
  public:
   GetQueueTokenCall(OperationContainer* const container,
                     ledger::Page* const page,
+                    const std::string& component_namespace,
                     const std::string& component_instance_id,
                     const std::string& queue_name,
                     ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
+        component_namespace_(component_namespace),
         component_instance_id_(component_instance_id),
         queue_name_(queue_name) {
     Ready();
@@ -247,7 +207,8 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
           snapshot_.set_connection_error_handler(
               [] { FTL_LOG(WARNING) << "Error on snapshot connection"; });
 
-          key_ = MakeMessageQueueTokenKey(component_instance_id_, queue_name_);
+          key_ = MakeMessageQueueTokenKey(component_namespace_,
+                                          component_instance_id_, queue_name_);
           snapshot_->Get(
               to_array(key_), [this](ledger::Status status, mx::vmo value) {
                 if (status == ledger::Status::KEY_NOT_FOUND) {
@@ -282,6 +243,7 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
   }
 
   ledger::Page* const page_;  // not owned
+  const std::string component_namespace_;
   const std::string component_instance_id_;
   const std::string queue_name_;
   ledger::PageSnapshotPtr snapshot_;
@@ -377,6 +339,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<void> {
   ObtainMessageQueueCall(OperationContainer* const container,
                          MessageQueueManager* const message_queue_manager,
                          ledger::Page* const page,
+                         const std::string& component_namespace,
                          const std::string& component_instance_id,
                          const std::string& queue_name,
                          fidl::InterfaceRequest<MessageQueue> request)
@@ -384,6 +347,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<void> {
         message_queue_manager_(message_queue_manager),
         page_(page),
         request_(std::move(request)) {
+    message_queue_info_.component_namespace = component_namespace;
     message_queue_info_.component_instance_id = component_instance_id;
     message_queue_info_.queue_name = queue_name;
     Ready();
@@ -393,6 +357,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<void> {
   void Run() override {
     new GetQueueTokenCall(
         &operation_collection_, page_,
+        message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
         message_queue_info_.queue_name, [this](fidl::String token) {
           if (token) {
@@ -412,6 +377,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<void> {
           page_->StartTransaction([](ledger::Status status) {});
 
           std::string message_queue_token_key = MakeMessageQueueTokenKey(
+              message_queue_info_.component_namespace,
               message_queue_info_.component_instance_id,
               message_queue_info_.queue_name);
 
@@ -463,11 +429,13 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
   DeleteMessageQueueCall(OperationContainer* const container,
                          MessageQueueManager* const message_queue_manager,
                          ledger::Page* const page,
+                         const std::string& component_namespace,
                          const std::string& component_instance_id,
                          const std::string& queue_name)
       : Operation(container, [] {}),
         message_queue_manager_(message_queue_manager),
         page_(page) {
+    message_queue_info_.component_namespace = component_namespace;
     message_queue_info_.component_instance_id = component_instance_id;
     message_queue_info_.queue_name = queue_name;
     Ready();
@@ -477,6 +445,7 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
   void Run() override {
     new GetQueueTokenCall(
         &operation_collection_, page_,
+        message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
         message_queue_info_.queue_name, [this](fidl::String token) {
           if (!token) {
@@ -495,6 +464,7 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
               MakeMessageQueueKey(message_queue_info_.queue_token);
 
           std::string message_queue_token_key = MakeMessageQueueTokenKey(
+              message_queue_info_.component_namespace,
               message_queue_info_.component_instance_id,
               message_queue_info_.queue_name);
 
@@ -537,12 +507,43 @@ MessageQueueManager::MessageQueueManager(ledger::PagePtr page)
 MessageQueueManager::~MessageQueueManager() = default;
 
 void MessageQueueManager::ObtainMessageQueue(
+    const std::string& component_namespace,
     const std::string& component_instance_id,
     const std::string& queue_name,
     fidl::InterfaceRequest<MessageQueue> request) {
   new ObtainMessageQueueCall(&operation_collection_, this, page_.get(),
-                             component_instance_id, queue_name,
-                             std::move(request));
+                             component_namespace, component_instance_id,
+                             queue_name, std::move(request));
+}
+
+template <typename ValueType>
+const ValueType* MessageQueueManager::FindQueueName(
+    const ComponentQueueNameMap<ValueType>& queue_map,
+    const MessageQueueInfo& info) {
+  auto it1 = queue_map.find(info.component_namespace);
+  if (it1 != queue_map.end()) {
+    auto it2 = it1->second.find(info.component_instance_id);
+    if (it2 != it1->second.end()) {
+      auto it3 = it2->second.find(info.queue_name);
+      if (it3 != it2->second.end()) {
+        return &(it3->second);
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+template <typename ValueType>
+void MessageQueueManager::EraseQueueName(
+    ComponentQueueNameMap<ValueType>& queue_map, const MessageQueueInfo& info) {
+  auto it1 = queue_map.find(info.component_namespace);
+  if (it1 != queue_map.end()) {
+    auto it2 = it1->second.find(info.component_instance_id);
+    if (it2 != it1->second.end()) {
+      it2->second.erase(info.queue_name);
+    }
+  }
 }
 
 MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
@@ -556,13 +557,15 @@ MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
         std::make_pair(info.queue_token, std::move(new_queue)));
     FTL_DCHECK(inserted);
 
-    auto queue_pair =
-        std::make_pair(info.component_instance_id, info.queue_name);
-    message_queue_tokens_[queue_pair] = info.queue_token;
-    auto watcher_it = pending_watcher_callbacks_.find(queue_pair);
-    if (watcher_it != pending_watcher_callbacks_.end()) {
-      it->second.get()->RegisterWatcher(watcher_it->second);
-      pending_watcher_callbacks_.erase(watcher_it);
+    message_queue_tokens_[info.component_namespace]
+                         [info.component_instance_id]
+                         [info.queue_name] = info.queue_token;
+
+    const ftl::Closure* watcher =
+        FindQueueName(pending_watcher_callbacks_, info);
+    if (watcher) {
+      it->second.get()->RegisterWatcher(*watcher);
+      EraseQueueName(pending_watcher_callbacks_, info);
     }
   }
   return it->second.get();
@@ -577,16 +580,16 @@ void MessageQueueManager::ClearMessageQueueStorage(
 
   // Clear entries in message_queue_tokens_ and
   // pending_watcher_callbacks_.
-  auto queue_pair = std::make_pair(info.component_instance_id, info.queue_name);
-  message_queue_tokens_.erase(queue_pair);
-  pending_watcher_callbacks_.erase(queue_pair);
+  EraseQueueName(pending_watcher_callbacks_, info);
+  EraseQueueName(message_queue_tokens_, info);
 }
 
 void MessageQueueManager::DeleteMessageQueue(
-    const std::string& component_instance_id,
-    const std::string& queue_name) {
+    const std::string& component_namespace,
+    const std::string& component_instance_id, const std::string& queue_name) {
   new DeleteMessageQueueCall(&operation_collection_, this, page_.get(),
-                             component_instance_id, queue_name);
+                             component_namespace, component_instance_id,
+                             queue_name);
 }
 
 void MessageQueueManager::GetMessageSender(
@@ -604,35 +607,40 @@ void MessageQueueManager::GetMessageSender(
 }
 
 void MessageQueueManager::RegisterWatcher(
+    const std::string& component_namespace,
     const std::string& component_instance_id,
     const std::string& queue_name,
     const std::function<void()>& watcher) {
-  auto queue_pair = std::make_pair(component_instance_id, queue_name);
-
-  auto token_it = message_queue_tokens_.find(queue_pair);
-  if (token_it == message_queue_tokens_.end()) {
-    // The |MessageQueueStorage| doesn't exist yet. Stash the watcher.
-    pending_watcher_callbacks_[queue_pair] = watcher;
+  const std::string* token = FindQueueName(
+      message_queue_tokens_,
+      MessageQueueInfo{
+          component_namespace, component_instance_id, queue_name, ""
+      });
+  if (token) {
+    pending_watcher_callbacks_[component_namespace][component_instance_id]
+                              [queue_name] = watcher;
     return;
   }
 
-  auto msq_it = message_queues_.find(token_it->second);
+  auto msq_it = message_queues_.find(*token);
   FTL_DCHECK(msq_it != message_queues_.end());
   msq_it->second->RegisterWatcher(watcher);
 }
 
-void MessageQueueManager::DropWatcher(const std::string& component_instance_id,
+void MessageQueueManager::DropWatcher(const std::string& component_namespace,
+                                      const std::string& component_instance_id,
                                       const std::string& queue_name) {
-  auto queue_pair = std::make_pair(component_instance_id, queue_name);
+  auto queue_info = MessageQueueInfo{
+    component_namespace, component_instance_id, queue_name,""};
 
-  auto token_it = message_queue_tokens_.find(queue_pair);
-  if (token_it == message_queue_tokens_.end()) {
+  const std::string* token = FindQueueName(message_queue_tokens_, queue_info);
+  if (token) {
     // The |MessageQueueStorage| doesn't exist yet.
-    pending_watcher_callbacks_.erase(queue_pair);
+    EraseQueueName(message_queue_tokens_, queue_info);
     return;
   }
 
-  auto msq_it = message_queues_.find(token_it->second);
+  auto msq_it = message_queues_.find(*token);
   if (msq_it == message_queues_.end()) {
     FTL_LOG(WARNING) << "Asked to DropWatcher for a queue that doesn't exist";
     return;
@@ -642,18 +650,10 @@ void MessageQueueManager::DropWatcher(const std::string& component_instance_id,
 
 void MessageQueueManager::XdrMessageQueueInfo(XdrContext* const xdr,
                                               MessageQueueInfo* const data) {
+  xdr->Field("component_namespace", &data->component_namespace);
   xdr->Field("component_instance_id", &data->component_instance_id);
   xdr->Field("queue_name", &data->queue_name);
   xdr->Field("queue_token", &data->queue_token);
-}
-
-std::size_t MessageQueueManager::StringPairHash::operator()(
-    const std::pair<std::string, std::string>& p) const {
-  std::string s;
-  s.append(p.first);
-  s.push_back('\0');
-  s.append(p.second);
-  return std::hash<std::string>{}(s);
 }
 
 }  // namespace modular

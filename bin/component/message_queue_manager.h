@@ -35,11 +35,13 @@ class MessageQueueManager {
   MessageQueueManager(ledger::PagePtr page);
   ~MessageQueueManager();
 
-  void ObtainMessageQueue(const std::string& component_instance_id,
+  void ObtainMessageQueue(const std::string& component_namespace,
+                          const std::string& component_instance_id,
                           const std::string& queue_name,
                           fidl::InterfaceRequest<MessageQueue> request);
 
-  void DeleteMessageQueue(const std::string& component_instance_id,
+  void DeleteMessageQueue(const std::string& component_namespace,
+                          const std::string& component_instance_id,
                           const std::string& queue_name);
 
   void GetMessageSender(const std::string& queue_token,
@@ -47,18 +49,28 @@ class MessageQueueManager {
 
   // Used by AgentRunner to look for new messages on queues which have
   // a trigger associated with it. If a queue corresponding to
-  // |component_instance_id| x |queue_name| does not exist, a new one
-  // is created.
+  // |component_namespace| x |component_instance_id| x |queue_name| does not
+  // exist, a new one is created.
   //
   // Registering a new watcher stomps over any existing watcher.
-  void RegisterWatcher(const std::string& component_instance_id,
+  void RegisterWatcher(const std::string& component_namespace,
+                       const std::string& component_instance_id,
                        const std::string& queue_name,
                        const std::function<void()>& watcher);
-  void DropWatcher(const std::string& component_instance_id,
+  void DropWatcher(const std::string& component_namespace,
+                   const std::string& component_instance_id,
                    const std::string& queue_name);
 
  private:
   struct MessageQueueInfo;
+  using ComponentNamespace = std::string;
+  using ComponentInstanceId = std::string;
+  using ComponentQueueName = std::string;
+  template <typename Value>
+  using ComponentQueueNameMap = std::unordered_map<
+      ComponentNamespace,
+      std::unordered_map<ComponentInstanceId,
+                         std::unordered_map<ComponentQueueName, Value>>>;
 
   static void XdrMessageQueueInfo(XdrContext* const xdr,
                                   MessageQueueInfo* const data);
@@ -70,30 +82,34 @@ class MessageQueueManager {
   // Clears the |MessageQueueStorage| for the queue_token.
   void ClearMessageQueueStorage(const MessageQueueInfo& info);
 
+  // |FindQueueName()| and |EraseQueueName()| are helpers used to operate on
+  // component (namespace, id, queue name) mappings.
+  // If the given message queue |info| is found the stored pointer value, or
+  // nullptr otherwise.
+  template <typename ValueType>
+  const ValueType* FindQueueName(
+      const ComponentQueueNameMap<ValueType>& queue_map,
+      const MessageQueueInfo& info);
+
+  template <typename ValueType>
+  void EraseQueueName(ComponentQueueNameMap<ValueType>& queue_map,
+                      const MessageQueueInfo& info);
+
   ledger::PagePtr page_;
 
   // A map of queue_token to |MessageStorageQueue|.
   std::unordered_map<std::string, std::unique_ptr<MessageQueueStorage>>
       message_queues_;
 
-  using ComponentQueuePair = std::pair<std::string, std::string>;
-
-  class StringPairHash {
-   public:
-    std::size_t operator()(const std::pair<std::string, std::string>& p) const;
-  };
-
   // A map of component instance id and queue name to queue tokens.
   // Entries are only here while a |MessageQueueStorage| exists.
-  std::unordered_map<ComponentQueuePair, std::string, StringPairHash>
-      message_queue_tokens_;
+  ComponentQueueNameMap<std::string> message_queue_tokens_;
 
   // A map of component instance id and queue name to watcher
   // callbacks. If a watcher is registered before a
   // |MessageQueueStorage| exists then it is stashed here until a
   // |MessageQueueStorage| is available.
-  std::unordered_map<ComponentQueuePair, ftl::Closure, StringPairHash>
-      pending_watcher_callbacks_;
+  ComponentQueueNameMap<ftl::Closure> pending_watcher_callbacks_;
 
   OperationCollection operation_collection_;
 

@@ -9,30 +9,12 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/util/string_escape.h"
 #include "lib/ftl/strings/join_strings.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
-namespace {
-
-std::string LinkNameToLedgerKey(const fidl::Array<fidl::String>& path,
-                                const fidl::String& link_id) {
-  std::vector<std::string> escaped_path;
-  escaped_path.reserve(path.size());
-
-  // Escape both '/' and ':':
-  //  - / is used to separate the module path components
-  //  - : is used to separate module path components and the link name
-  for (const auto& item : path) {
-    escaped_path.push_back(StringEscape(item.get(), "/:", '\\'));
-  }
-
-  return ftl::JoinStrings(escaped_path, "/") + ":" +
-         StringEscape(link_id.get(), "/:", '\\');
-}
-
-}  // namespace
 
 class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
  public:
@@ -43,7 +25,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
                    ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_snapshot_(std::move(page_snapshot)),
-        link_path_(LinkNameToLedgerKey(module_path, link_id)),
+        link_path_(MakeLinkKey(module_path, link_id)),
         link_id_(link_id) {
     Ready();
   }
@@ -51,33 +33,33 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
  private:
   void Run() override {
     FTL_LOG(INFO) << "ReadLinkDataCall, link_path_ = " << link_path_;
-    std::string key{kLinkKeyPrefix + link_path_};
     (*page_snapshot_)
-        ->Get(to_array(key), [this](ledger::Status status, mx::vmo value) {
-          if (status != ledger::Status::OK) {
-            if (status != ledger::Status::KEY_NOT_FOUND) {
-              // It's expected that the key is not found when the link
-              // is accessed for the first time. Don't log an error
-              // then.
-              FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
-                             << " PageSnapshot.Get() " << status;
-            }
-            Done(fidl::String());
-            return;
-          }
+        ->Get(to_array(link_path_),
+              [this](ledger::Status status, mx::vmo value) {
+                if (status != ledger::Status::OK) {
+                  if (status != ledger::Status::KEY_NOT_FOUND) {
+                    // It's expected that the key is not found when the link
+                    // is accessed for the first time. Don't log an error
+                    // then.
+                    FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
+                                   << " PageSnapshot.Get() " << status;
+                  }
+                  Done(fidl::String());
+                  return;
+                }
 
-          std::string value_as_string;
-          if (value) {
-            if (!mtl::StringFromVmo(value, &value_as_string)) {
-              FTL_LOG(ERROR) << "Unable to extract data.";
-              Done(nullptr);
-              return;
-            }
-          }
-          fidl::String result;
-          result.Swap(&value_as_string);
-          Done(result);
-        });
+                std::string value_as_string;
+                if (value) {
+                  if (!mtl::StringFromVmo(value, &value_as_string)) {
+                    FTL_LOG(ERROR) << "Unable to extract data.";
+                    Done(nullptr);
+                    return;
+                  }
+                }
+                fidl::String result;
+                result.Swap(&value_as_string);
+                Done(result);
+              });
   }
 
   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
@@ -97,7 +79,7 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
                     ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
-        link_path_(LinkNameToLedgerKey(module_path, link_id)),
+        link_path_(MakeLinkKey(module_path, link_id)),
         link_id_(std::move(link_id)),
         data_(std::move(data)) {
     Ready();
@@ -106,14 +88,15 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
  private:
   void Run() override {
     FTL_LOG(INFO) << "WriteLinkDataCall, link_path_ = " << link_path_;
-    std::string key{kLinkKeyPrefix + link_path_};
-    page_->Put(to_array(key), to_array(data_), [this](ledger::Status status) {
-      if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "WriteLinkDataCall() " << link_id_ << " Page.Put() "
-                       << status;
-      }
-      Done();
-    });
+    page_->Put(to_array(link_path_), to_array(data_),
+               [this](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR)
+                       << "WriteLinkDataCall() link_path_=" << link_path_
+                       << ", link_id_=" << link_id_ << " Page.Put() " << status;
+                 }
+                 Done();
+               });
   }
 
   ledger::Page* const page_;  // not owned
