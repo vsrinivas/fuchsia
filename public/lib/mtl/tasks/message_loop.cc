@@ -123,7 +123,7 @@ void MessageLoop::CancelHandlers(std::vector<HandlerKey> keys,
       continue;
 
     mx_handle_t handle = it->second.handle;
-    mx_handle_cancel(handle, key, MX_CANCEL_KEY);
+    port_.cancel(handle, key);
     MessageLoopHandler* handler = it->second.handler;
     handler_data_.erase(it);
     handler->OnHandleError(handle, error);
