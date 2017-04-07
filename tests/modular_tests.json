@@ -11,7 +11,7 @@
     },
     {
       "name":"parent_child",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_user_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
       "copy":{
         "/system/apps/modular_tests":[
           "parent_module",
@@ -21,7 +21,7 @@
     },
     {
       "name":"component_context",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_user_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test",
       "copy":{
         "/system/apps/modular_tests":[
           "component_context_test",
@@ -32,7 +32,7 @@
     },
     {
       "name":"suggestion",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_user_shell --user_shell=suggestion_test_user_shell",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=suggestion_test_user_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "suggestion_proposal_test_module"
@@ -44,7 +44,7 @@
     },
     {
       "name":"triggers",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_user_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test",
       "copy":{
         "/system/apps/modular_tests":[
           "agent_trigger_test",
