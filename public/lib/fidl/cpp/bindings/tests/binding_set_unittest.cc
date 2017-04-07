@@ -19,6 +19,7 @@ class MinimalInterfaceImpl : public MinimalInterface {
  public:
   MinimalInterfaceImpl() {}
 
+  // |MinimalInterface|
   void Message() override { call_count_++; }
 
   int call_count() const { return call_count_; }
@@ -104,6 +105,29 @@ TEST(BindingSetTest, FullLifeCycle) {
     int expected = (i < kNumObjects / 2 ? 1 : 2);
     EXPECT_EQ(expected, impls[i].call_count());
   }
+}
+
+// Tests iterator behavior of BindingSet.
+// NOTE: This test assumes ordered storage within BindingSet.
+TEST(BindingSetTest, Iterator) {
+  const size_t kNumObjects = 2;
+  InterfacePtr<MinimalInterface> interface_pointers[kNumObjects];
+  MinimalInterfaceImpl impls[kNumObjects];
+
+  BindingSet<MinimalInterface> binding_set;
+  for (size_t i = 0; i < kNumObjects; i++) {
+    interface_pointers[i] =
+        fidl::InterfacePtr<MinimalInterface>::Create(
+            binding_set.AddBinding(&impls[i]));
+  }
+  EXPECT_EQ(kNumObjects, binding_set.size());
+
+  auto it = binding_set.begin();
+  EXPECT_EQ((*it)->impl(), &impls[0]);
+  ++it;
+  EXPECT_EQ((*it)->impl(), &impls[1]);
+  ++it;
+  EXPECT_EQ(it, binding_set.end());
 }
 
 }  // namespace

@@ -27,6 +27,10 @@ template <typename Interface, typename ImplPtr = Interface*>
 class BindingSet {
  public:
   using Binding = ::fidl::Binding<Interface, ImplPtr>;
+  using StorageType = std::vector<std::unique_ptr<Binding>>;
+
+  using iterator = typename StorageType::iterator;
+  using const_iterator = typename StorageType::const_iterator;
 
   BindingSet() {}
   ~BindingSet() { CloseAllBindings(); }
@@ -68,6 +72,20 @@ class BindingSet {
     on_empty_set_handler_ = on_empty_set_handler;
   }
 
+  // NOTE: These iterators return a ref to a std::unique_ptr<fidl::Binding<>>.
+  // The ImplPtr type is available by calling fidl::Binding<>::impl(). For
+  // example:
+  //
+  // auto impl_ptr = (*it)->impl();
+  //
+  // Iterators may be invalidated when a Binding in the set encounters a
+  // connection error, as that causes removal from internal storage which is
+  // backed by a std::vector<>.
+  iterator begin() { return bindings_.begin(); }
+  const_iterator begin() const { return bindings_.begin(); }
+  iterator end() { return bindings_.end(); }
+  const_iterator end() const { return bindings_.end(); }
+
  private:
   void RemoveOnError(Binding* binding) {
     auto it = std::find_if(bindings_.begin(), bindings_.end(),
@@ -80,7 +98,7 @@ class BindingSet {
       on_empty_set_handler_();
   }
 
-  std::vector<std::unique_ptr<Binding>> bindings_;
+  StorageType bindings_;
   ftl::Closure on_empty_set_handler_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BindingSet);
