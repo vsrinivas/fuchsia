@@ -66,6 +66,7 @@ static bool blkdev_test_simple(void) {
     ASSERT_EQ(read(fd, out, sizeof(out)), (ssize_t) sizeof(out), "");
     ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0, "");
 
+    close(fd);
     END_TEST;
 }
 
@@ -101,6 +102,7 @@ bool blkdev_test_bad_requests(void) {
     ASSERT_EQ(write(fd, buf, blk_size), 0, "");
     ASSERT_EQ(read(fd, buf, blk_size), 0, "");
 
+    close(fd);
     END_TEST;
 }
 
