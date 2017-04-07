@@ -102,9 +102,7 @@ func (s *socketServer) getNICData(nicid tcpip.NICID) *nicData {
 		return d
 	}
 
-	s.nicData[nicid] = &nicData{
-		ready: make(chan struct{}),
-	}
+	s.nicData[nicid] = &nicData{}
 	return s.nicData[nicid]
 }
 
@@ -113,12 +111,10 @@ func (s *socketServer) setAddr(nicid tcpip.NICID, addr tcpip.Address) {
 	defer s.mu.Unlock()
 
 	d := s.getNICData(nicid)
-	close(d.ready)
 	d.addr = addr
 
 	if s.dnsClient == nil {
-		// TODO(mpcomplete): Which NIC should we use for DNS requests?
-		s.dnsClient = dns.NewClient(s.stack, defaultNIC)
+		s.dnsClient = dns.NewClient(s.stack, 0)
 	}
 }
 
@@ -528,7 +524,6 @@ type socketServer struct {
 }
 
 type nicData struct {
-	ready chan struct{}
 	addr  tcpip.Address
 }
 
@@ -900,21 +895,16 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 		log.Printf("getaddrinfo node=%q, service=%q", node, service)
 	}
 
-	// TODO(mpcomplete): Which NIC should we use for DNS requests?
 	s.mu.Lock()
-	nicData := s.getNICData(defaultNIC)
-	select {
-	case <-nicData.ready:
-	default:
-		s.mu.Unlock()
+	dnsClient := s.dnsClient
+	s.mu.Unlock()
 
+	if dnsClient == nil {
 		const EAI_FAIL = -4
 		rep := c_mxrio_gai_reply{retval: EAI_FAIL}
 		rep.Encode(msg)
 		return mx.ErrOk
 	}
-	dnsClient := s.dnsClient
-	s.mu.Unlock()
 
 	if hints.ai_socktype == 0 {
 		hints.ai_socktype = SOCK_STREAM
