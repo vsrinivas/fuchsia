@@ -30,6 +30,8 @@ typedef struct device_info {
   uint16_t bootloader_port;
 } device_info_t;
 
+extern bool netboot_wait;
+
 // Handle netboot command line options.
 int netboot_handle_getopt(int argc, char * const *argv);
 void netboot_usage(void);

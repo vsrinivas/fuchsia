@@ -29,7 +29,7 @@
 
 static uint32_t cookie = 0x12345678;
 static int netboot_timeout = 250;
-static bool netboot_wait = true;
+bool netboot_wait = true;
 
 static struct timeval netboot_timeout_init(int msec) {
     struct timeval timeout_tv;

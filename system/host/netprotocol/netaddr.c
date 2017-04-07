@@ -19,16 +19,64 @@
 
 #include "netprotocol.h"
 
-static bool fuchsia_address = false;
 static const char* hostname;
+static struct sockaddr_in6 addr;
+static bool found = false;
 
 static bool on_device(device_info_t* device, void* cookie) {
     if (hostname != NULL && strcmp(hostname, device->nodename)) {
         // Asking for a specific address and this isn't it.
-        return false;
+        return true;
     }
 
-    struct sockaddr_in6 addr = device->inet6_addr;
+    if (found) {
+        fprintf(stderr, "Multiple devices found. Specify a hostname.\n");
+        exit(1);
+    }
+
+    addr = device->inet6_addr;
+    found = true;
+    return true;
+}
+
+static struct option longopts[] = {
+    {"help", no_argument, NULL, 'h'},
+    {"fuchsia", no_argument, NULL, 'f'},
+    {NULL, 0, NULL, 0},
+};
+
+static void usage(const char* argv0) {
+  fprintf(stderr, "%s [--fuchsia] [hostname]\n", argv0);
+  exit(1);
+}
+
+int main(int argc, char** argv) {
+    bool fuchsia_address = false;
+    int ch;
+    while ((ch = getopt_long_only(argc, argv, "hf", longopts, NULL)) != -1) {
+        switch (ch) {
+        case 'f':
+            fuchsia_address = true;
+            break;
+        default:
+            usage(argv[0]);
+            break;
+        }
+    }
+
+    if (optind + 1 == argc) {
+        hostname = argv[optind];
+    } else if (optind != argc) {
+        usage(argv[0]);
+    }
+
+    netboot_wait = false;
+
+    if (netboot_discover(NB_SERVER_PORT, NULL, on_device, NULL) || !found) {
+        fprintf(stderr, "Failed to discover %s\n", hostname?hostname:"");
+        return 1;
+    }
+
     if (fuchsia_address) {
         // Make it a valid link-local address by fiddling some bits.
         addr.sin6_addr.s6_addr[11] = 0xFF;
@@ -43,33 +91,5 @@ static bool on_device(device_info_t* device, void* cookie) {
     if_indextoname(addr.sin6_scope_id, ifname);
     fprintf(stdout, "%s%%%s\n", addr_s, ifname);
 
-    exit(0);
-}
-
-static struct option longopts[] = {
-    {"help", no_argument, NULL, 'h'},
-    {"fuchsia", no_argument, NULL, 'f'},
-    {NULL, 0, NULL, 0},
-};
-
-int main(int argc, char** argv) {
-    int ch;
-    while ((ch = getopt_long_only(argc, argv, "hf", longopts, NULL)) != -1) {
-        switch (ch) {
-        case 'f':
-            fuchsia_address = true;
-            break;
-        default:
-            fprintf(stderr, "%s [--fuchsia] [hostname]\n", argv[0]);
-            return 1;
-        }
-    }
-
-    if (optind < argc) {
-        hostname = argv[optind];
-    }
-
-    netboot_discover(NB_SERVER_PORT, NULL, on_device, NULL);
-    fprintf(stderr, "Failed to discover %s\n", hostname?hostname:"");
-    return 1;
+    return 0;
 }
