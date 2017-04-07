@@ -5,7 +5,7 @@
 #include "apps/modular/src/agent_runner/agent_runner.h"
 
 #include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -14,56 +14,82 @@ namespace modular {
 
 namespace {
 
-constexpr char kTriggerEntryUrl[] = "url";
-constexpr char kTriggerEntryTaskId[] = "task_id";
-constexpr char kTriggerEntryTaskType[] = "task_type";
-constexpr char kTriggerEntryMessageQueue[] = "message_queue";
-constexpr char kTriggerEntryQueueName[] = "queue_name";
-constexpr char kTriggerEntryAlarm[] = "alarm";
-constexpr char kTriggerEntryAlarmSeconds[] = "alarm_in_seconds";
+// All agent trigger information is stored in one page. The entries in
+// the page are:
+//
+// * Trigger/agent_url/task_id.
 
-rapidjson::Document ParseTriggerListKey(const std::string& key) {
-  rapidjson::Document key_doc;
-  key_doc.Parse(key);
-  FTL_DCHECK(key_doc.HasMember(kTriggerEntryUrl));
-  FTL_DCHECK(key_doc[kTriggerEntryUrl].IsString());
-  FTL_DCHECK(key_doc.HasMember(kTriggerEntryTaskId));
-  FTL_DCHECK(key_doc[kTriggerEntryTaskId].IsString());
-  return key_doc;
-}
+constexpr char kTriggerKeyPrefix[] = "Trigger/";
+constexpr uint8_t kSeparator = '/';
+constexpr uint8_t kEscape = '\\';
 
-rapidjson::Document ParseTriggerListValue(const std::string& value) {
-  rapidjson::Document value_doc;
-  value_doc.Parse(value);
-  FTL_DCHECK(value_doc.HasMember(kTriggerEntryTaskType));
-  FTL_DCHECK(value_doc[kTriggerEntryTaskType].IsString());
-  if (value_doc[kTriggerEntryTaskType] == kTriggerEntryMessageQueue) {
-    FTL_DCHECK(value_doc.HasMember(kTriggerEntryQueueName));
-    FTL_DCHECK(value_doc[kTriggerEntryQueueName].IsString());
-  } else if (value_doc[kTriggerEntryTaskType] == kTriggerEntryAlarm) {
-    FTL_DCHECK(value_doc.HasMember(kTriggerEntryAlarmSeconds));
-    FTL_DCHECK(value_doc[kTriggerEntryAlarmSeconds].IsUint());
-  } else {
-    // There are only 2 trigger conditions.
-    FTL_NOTREACHED();
+// TODO(mesch): Duplicate from message_queue_manager.cc, vardhan moves
+// this to lib/.
+void AppendEscaped(std::string* key, const std::string& data) {
+  // TODO(mesch): We never read the value back from the key, rather
+  // the values used for the key are also contained in the value. So
+  // we could use hashes here.
+  for (uint8_t c : data) {
+    if (c == kSeparator) {
+      key->push_back(kEscape);
+    } else if (c == kEscape) {
+      key->push_back(kEscape);
+    }
+    key->push_back(c);
   }
-
-  return value_doc;
 }
 
-rapidjson::Document CreateTriggerListKey(const std::string& agent_url,
-                                         const std::string& task_id) {
-  rapidjson::Document key_doc;
-  auto& allocator = key_doc.GetAllocator();
-  key_doc.SetObject();
-  key_doc.AddMember(kTriggerEntryUrl, rapidjson::Value(agent_url, allocator),
-                    allocator);
-  key_doc.AddMember(kTriggerEntryTaskId, rapidjson::Value(task_id, allocator),
-                    allocator);
-  return key_doc;
+// TODO(mesch): Duplicate from message_queue_manager.cc, vardhan moves
+// this to lib/.
+void AppendSeparator(std::string* const key) {
+  key->push_back(kSeparator);
+}
+
+std::string MakeTriggerKey(const std::string& agent_url,
+                           const std::string& task_id) {
+  std::string key{kTriggerKeyPrefix};
+  AppendEscaped(&key, agent_url);
+  AppendSeparator(&key);
+  AppendEscaped(&key, task_id);
+  return key;
 }
 
 }  // namespace
+
+struct AgentRunner::TriggerInfo {
+  std::string agent_url;
+  std::string task_id;
+
+  // NOTE(mesch): We could include the TaskInfo fidl struct here
+  // directly, but it contains a union, and dealing with a fidl union
+  // in XDR is still rather complicated if we don't want to serialize
+  // the union tag enum value directly.
+  enum TaskType {
+    TYPE_ALARM = 0,
+    TYPE_QUEUE = 1,
+  };
+
+  TaskType task_type{};
+
+  std::string queue_name;
+  uint32_t alarm_in_seconds{};
+};
+
+void AgentRunner::XdrTriggerInfo(
+    XdrContext* const xdr, TriggerInfo* const data) {
+  xdr->Field("agent_url", &data->agent_url);
+  xdr->Field("task_id", &data->task_id);
+  xdr->Field("task_type", &data->task_type);
+
+  switch (data->task_type) {
+    case TriggerInfo::TYPE_ALARM:
+      xdr->Field("alarm_in_seconds", &data->alarm_in_seconds);
+      break;
+    case TriggerInfo::TYPE_QUEUE:
+      xdr->Field("queue_name", &data->queue_name);
+      break;
+  }
+}
 
 AgentRunner::AgentRunner(
     app::ApplicationLauncher* const application_launcher,
@@ -117,7 +143,7 @@ AgentRunner::AgentRunner(
             FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
             return;
           }
-          AddedTrigger(key, value);
+          AddedTrigger(key, std::move(value));
         }
 
         // We don't use snapshot_ anymore. TODO(mesch): Change to an Operation.
@@ -169,37 +195,31 @@ void AgentRunner::RemoveAgent(const std::string& agent_url) {
 
 void AgentRunner::ScheduleTask(const std::string& agent_url,
                                TaskInfoPtr task_info) {
-  auto key_doc = CreateTriggerListKey(agent_url, task_info->task_id);
+  std::string key = MakeTriggerKey(agent_url, task_info->task_id);
 
-  rapidjson::Document value_doc;
-  auto& allocator2 = key_doc.GetAllocator();
-  value_doc.SetObject();
+  TriggerInfo data;
+  data.agent_url = agent_url;
+  data.task_id = task_info->task_id.get();
+
   if (task_info->trigger_condition->is_queue_name()) {
-    value_doc.AddMember(kTriggerEntryTaskType,
-                        rapidjson::Value(kTriggerEntryMessageQueue, allocator2),
-                        allocator2);
-    value_doc.AddMember(
-        kTriggerEntryQueueName,
-        rapidjson::Value(task_info->trigger_condition->get_queue_name(),
-                         allocator2),
-        allocator2);
+    data.task_type = TriggerInfo::TYPE_QUEUE;
+    data.queue_name = task_info->trigger_condition->get_queue_name().get();
+
   } else if (task_info->trigger_condition->is_alarm_in_seconds()) {
-    value_doc.AddMember(kTriggerEntryTaskType,
-                        rapidjson::Value(kTriggerEntryAlarm, allocator2),
-                        allocator2);
-    value_doc.AddMember(
-        kTriggerEntryAlarmSeconds,
-        rapidjson::Value().SetUint(
-            task_info->trigger_condition->get_alarm_in_seconds()),
-        allocator2);
+    data.task_type = TriggerInfo::TYPE_ALARM;
+    data.alarm_in_seconds = task_info->trigger_condition->get_alarm_in_seconds();
+
   } else {
     // Not a defined trigger condition.
     FTL_NOTREACHED();
   }
 
+  std::string value;
+  XdrWrite(&value, &data, XdrTriggerInfo);
+
   page_->PutWithPriority(
-      to_array(modular::JsonValueToString(key_doc)),
-      to_array(modular::JsonValueToString(value_doc)),
+      to_array(key),
+      to_array(value),
       ledger::Priority::EAGER,
       [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
@@ -208,31 +228,37 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
       });
 }
 
-void AgentRunner::AddedTrigger(const std::string& key,
-                               const std::string& value) {
-  auto key_doc = ParseTriggerListKey(key);
-  auto value_doc = ParseTriggerListValue(value);
-
-  if (value_doc[kTriggerEntryTaskType] == kTriggerEntryMessageQueue) {
-    ScheduleMessageQueueTask(key_doc[kTriggerEntryUrl].GetString(),
-                             key_doc[kTriggerEntryTaskId].GetString(),
-                             value_doc[kTriggerEntryQueueName].GetString());
-  } else if (value_doc[kTriggerEntryTaskType] == kTriggerEntryAlarm) {
-    ScheduleAlarmTask(key_doc[kTriggerEntryUrl].GetString(),
-                      key_doc[kTriggerEntryTaskId].GetString(),
-                      value_doc[kTriggerEntryAlarmSeconds].GetUint(), true);
-  } else {
-    // Not a defined trigger condition.
-    FTL_NOTREACHED();
+void AgentRunner::AddedTrigger(const std::string& key, std::string value) {
+  TriggerInfo data;
+  if (!XdrRead(value, &data, XdrTriggerInfo)) {
+    return;
   }
+
+  switch (data.task_type) {
+    case TriggerInfo::TYPE_QUEUE:
+      ScheduleMessageQueueTask(
+          data.agent_url, data.task_id, data.queue_name);
+      break;
+    case TriggerInfo::TYPE_ALARM:
+      ScheduleAlarmTask(
+          data.agent_url, data.task_id, data.alarm_in_seconds, true);
+      break;
+  }
+
+  task_by_ledger_key_[key] = std::make_pair(data.agent_url, data.task_id);
 }
 
 void AgentRunner::DeletedTrigger(const std::string& key) {
-  auto key_doc = ParseTriggerListKey(key);
-  DeleteMessageQueueTask(key_doc[kTriggerEntryUrl].GetString(),
-                         key_doc[kTriggerEntryTaskId].GetString());
-  DeleteAlarmTask(key_doc[kTriggerEntryUrl].GetString(),
-                  key_doc[kTriggerEntryTaskId].GetString());
+  auto data = task_by_ledger_key_.find(key);
+  if (data == task_by_ledger_key_.end()) {
+    // Never scheduled, nothing to delete.
+    return;
+  }
+
+  DeleteMessageQueueTask(data->second.first, data->second.second);
+  DeleteAlarmTask(data->second.first, data->second.second);
+
+  task_by_ledger_key_.erase(key);
 }
 
 void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url,
@@ -280,14 +306,17 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
   auto found_it = watched_queues_.find(agent_url);
   if (found_it != watched_queues_.end()) {
     if (found_it->second.count(task_id) != 0) {
-      // This means that we are already watching the message queue.
       if (found_it->second[task_id] == queue_name) {
-        // We are already watching this queue. Do nothing.
+        // This means that we are already watching the message queue.
+        // Do nothing.
         return;
       }
-      // We were watching some other queue for this task_id. Stop watching.
+
+      // We were watching some other queue for this task_id. Stop
+      // watching.
       message_queue_manager_->DropWatcher(agent_url, found_it->second[task_id]);
     }
+
   } else {
     bool inserted = false;
     std::tie(found_it, inserted) = watched_queues_.emplace(
@@ -315,8 +344,8 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
   auto found_it = running_alarms_.find(agent_url);
   if (found_it != running_alarms_.end()) {
     if (found_it->second.count(task_id) != 0 && is_new_request) {
-      // We are already running a task with the same task_id. We might just have
-      // to update the alarm frequency.
+      // We are already running a task with the same task_id. We might
+      // just have to update the alarm frequency.
       found_it->second[task_id] = alarm_in_seconds;
       return;
     }
@@ -353,9 +382,7 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
 
 void AgentRunner::DeleteTask(const std::string& agent_url,
                              const std::string& task_id) {
-  const auto& key =
-      modular::JsonValueToString(CreateTriggerListKey(agent_url, task_id));
-
+  std::string key = MakeTriggerKey(agent_url, task_id);
   page_->Delete(to_array(key), [this](ledger::Status status) {
       // ledger::Status::INVALID_TOKEN is okay because we might have gotten a
       // request to delete a token which does not exist. This is okay.

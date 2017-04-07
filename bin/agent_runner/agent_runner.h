@@ -23,9 +23,10 @@ namespace modular {
 
 class AgentContextImpl;
 class MessageQueueManager;
+class XdrContext;
 
-// This class provides a way for components to connect to agents and manages the
-// life time of a running agent.
+// This class provides a way for components to connect to agents and
+// manages the life time of a running agent.
 class AgentRunner : ledger::PageWatcher {
  public:
   AgentRunner(app::ApplicationLauncher* application_launcher,
@@ -62,21 +63,14 @@ class AgentRunner : ledger::PageWatcher {
   void DeleteTask(const std::string& agent_url, const std::string& task_id);
 
  private:
+  struct TriggerInfo;
+
+  static void XdrTriggerInfo(
+      XdrContext* const xdr, TriggerInfo* const data);
+
   AgentContextImpl* MaybeRunAgent(const std::string& agent_url);
 
-  // These methods get called when a trigger gets added / deleted from the
-  // ledger. This includes local adds / deletes.
-  // |key| is a serialized JSON string of the format:
-  // {
-  //   "url": <agent_url>
-  //   "task_id": <agent_provided_string>
-  // }
-  //|value| is a serialized JSON string of the format:
-  //{
-  //  "task_type": <alarm | message_queue>
-  //  <a trigger specific field(s)>
-  //}
-  void AddedTrigger(const std::string& key, const std::string& value);
+  void AddedTrigger(const std::string& key, std::string value);
   void DeletedTrigger(const std::string& key);
 
   // For triggers based on message queues.
@@ -110,6 +104,16 @@ class AgentRunner : ledger::PageWatcher {
   // agent URL -> modular.AgentContext
   std::unordered_map<std::string, std::unique_ptr<AgentContextImpl>>
       running_agents_;
+
+  // ledger key -> [agent URL, task ID]
+  //
+  // Used to delete entries from the maps above when a ledger key is
+  // deleted. This saves us from having to parse a legder key, which
+  // becomes impossible once we use hashes to construct it, or from
+  // having to read the value from the previous snapshot, which would
+  // be nifty but is easy only once we have Operations.
+  std::unordered_map<std::string, std::pair<std::string, std::string>>
+      task_by_ledger_key_;
 
   app::ApplicationLauncher* const application_launcher_;
   MessageQueueManager* const message_queue_manager_;

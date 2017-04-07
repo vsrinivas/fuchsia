@@ -18,8 +18,8 @@ namespace modular {
 
 namespace {
 
-// All message queue information is stored in one page. There are two
-// types of entries:
+// All message queue information is stored in one page. The entries in
+// the page are:
 //
 // * MessageQueue/queue_token contains the MessageQueueInfo for the
 //   message queue.
