@@ -33,3 +33,13 @@ MODULE_SRCS += $(LOCAL_DIR)/netls.c $(LOCAL_DIR)/netprotocol.c
 MODULE_NAME := netls
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR)-netaddr
+
+MODULE_TYPE := hostapp
+
+MODULE_SRCS += $(LOCAL_DIR)/netaddr.c $(LOCAL_DIR)/netprotocol.c
+
+MODULE_NAME := netaddr
+
+include make/module.mk
