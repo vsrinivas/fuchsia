@@ -11,7 +11,6 @@
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/util/string_escape.h"
 #include "lib/ftl/strings/join_strings.h"
-#include "lib/ftl/strings/escape.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
