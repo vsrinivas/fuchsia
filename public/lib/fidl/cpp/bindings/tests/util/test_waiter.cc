@@ -53,7 +53,7 @@ FidlAsyncWaitID AsyncWait(mx_handle_t handle,
 void CancelWait(FidlAsyncWaitID wait_id) {
   FTL_DCHECK(g_port);
   auto* holder = g_holders[wait_id];
-  auto result = mx_handle_cancel(holder->handle, wait_id, MX_CANCEL_KEY);
+  auto result = g_port->cancel(holder->handle, wait_id);
   FTL_CHECK(result == NO_ERROR);
   g_holders.erase(wait_id);
   delete holder;
@@ -96,7 +96,7 @@ void ClearAsyncWaiter() {
   for (const auto& entry : g_holders) {
     FidlAsyncWaitID wait_id = entry.first;
     auto* holder = entry.second;
-    auto result = mx_handle_cancel(holder->handle, wait_id, MX_CANCEL_KEY);
+    auto result = g_port->cancel(holder->handle, wait_id);
     FTL_CHECK(result == NO_ERROR) << result;
     delete holder;
   }
