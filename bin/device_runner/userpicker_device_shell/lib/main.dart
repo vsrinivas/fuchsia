@@ -6,16 +6,22 @@ import 'package:apps.modular.services.device/user_provider.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:apps.mozart.services.views/view_token.fidl.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 import 'package:lib.widgets/modular.dart';
 
+import 'child_constraints_changer.dart';
+import 'constraints_model.dart';
 import 'user_picker_device_shell_factory_model.dart';
 import 'user_picker_screen.dart';
 import 'user_watcher_impl.dart';
 
 void main() {
+  GlobalKey screenManagerKey = new GlobalKey();
+  ConstraintsModel constraintsModel = new ConstraintsModel();
+
   UserPickerDeviceShellFactoryModel userPickerDeviceShellFactoryModel =
       new UserPickerDeviceShellFactoryModel();
 
@@ -23,20 +29,25 @@ void main() {
       deviceShellFactoryWidget =
       new DeviceShellFactoryWidget<UserPickerDeviceShellFactoryModel>(
     deviceShellFactoryModel: userPickerDeviceShellFactoryModel,
-    child: new _ScreenManager(
-      onLogout: userPickerDeviceShellFactoryModel.onLogout,
+    child: new ChildConstraintsChanger(
+      constraintsModel: constraintsModel,
+      child: new _ScreenManager(
+        key: screenManagerKey,
+        onLogout: userPickerDeviceShellFactoryModel.onLogout,
+      ),
     ),
   );
 
   runApp(deviceShellFactoryWidget);
 
+  constraintsModel.load(rootBundle);
   deviceShellFactoryWidget.advertise();
 }
 
 class _ScreenManager extends StatefulWidget {
   VoidCallback onLogout;
 
-  _ScreenManager({this.onLogout});
+  _ScreenManager({Key key, this.onLogout}) : super(key: key);
 
   @override
   _ScreenManagerState createState() => new _ScreenManagerState();
