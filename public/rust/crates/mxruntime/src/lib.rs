@@ -26,6 +26,7 @@ pub enum HandleType {
     ApplicationLauncher = mxruntime_sys::MX_HND_TYPE_APPLICATION_LAUNCHER,
     IncomingServices = mxruntime_sys::MX_HND_TYPE_INCOMING_SERVICES,
     OutgoingServices = mxruntime_sys::MX_HND_TYPE_OUTGOING_SERVICES,
+    User0 = mxruntime_sys::MX_HND_TYPE_USER0,
 }
 
 /// Get a startup handle of the given type, if available.
