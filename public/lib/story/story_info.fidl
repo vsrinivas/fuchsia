@@ -42,7 +42,7 @@ struct StoryInfo {
 //
 // TODO(mesch): We should be able to distinguish the STOPPED state
 // reached from DONE from the STOPPED state reached from RUNNING, as a
-// story in the former doesn't make sense to start again, whileas a
+// story in the former doesn't make sense to start again, whereas a
 // story in the latter state does. Presumably the states should be
 // PAUSED vs. FINISHED.
 enum StoryState {

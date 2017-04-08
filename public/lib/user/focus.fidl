@@ -22,7 +22,7 @@ module modular;
 // Implemented by user runner. Given to user shell in UserShell.Initialize().
 interface FocusController {
   // Sets the focus on this device.
-  Set(string? focussed_story_id);
+  Set(string? focused_story_id);
   WatchRequest(FocusRequestWatcher watcher);
 };
 
@@ -59,10 +59,10 @@ interface FocusProvider {
  Duplicate(FocusProvider& provider);
 };
 
-// Implemented by anyone (maxwell) who is interested in getting
-// updates when focus changes.
+// Implemented by anyone who is interested in getting updates when focus
+// changes.
 interface FocusWatcher {
-  OnFocusChange(FocusInfo? focused_stories);
+  OnFocusChange(FocusInfo? focus_info);
 };
 
 // Specifies the focused story of a device.
