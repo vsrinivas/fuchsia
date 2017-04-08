@@ -151,10 +151,6 @@ typedef uint32_t mx_signals_t;
 #define MX_PROCESS_SIGNALED         MX_PROCESS_TERMINATED
 #define MX_THREAD_SIGNALED          MX_THREAD_TERMINATED
 
-// Cancellation options
-#define MX_CANCEL_ANY           0u
-#define MX_CANCEL_KEY           1u
-
 // global kernel object id.
 typedef uint64_t mx_koid_t;
 #define MX_KOID_INVALID ((uint64_t) 0)

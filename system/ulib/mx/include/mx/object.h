@@ -71,10 +71,6 @@ public:
         return mx_object_wait_async(value_, port.get(), key, signals, options);
     }
 
-    mx_status_t wait_cancel(uint64_t key, uint32_t options) {
-        return mx_handle_cancel(value_, key, options);
-    }
-
     static mx_status_t wait_many(mx_wait_item_t* wait_items, uint32_t count, mx_time_t timeout) {
         return mx_object_wait_many(wait_items, count, timeout);
     }

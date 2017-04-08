@@ -186,31 +186,3 @@ mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_han
         return port->MakeObservers(options, handle, key, signals);
     }
 }
-
-mx_status_t sys_handle_cancel(mx_handle_t handle_value, uint64_t key, uint32_t options) {
-    if ((options != MX_CANCEL_KEY) && (options != MX_CANCEL_ANY))
-        return ERR_INVALID_ARGS;
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    {
-        AutoLock lock(up->handle_table_lock());
-        Handle* handle = up->GetHandleLocked(handle_value);
-        if (!handle)
-            return up->BadHandle(handle_value, ERR_BAD_HANDLE);
-        if (!magenta_rights_check(handle, MX_RIGHT_WRITE))
-            return ERR_ACCESS_DENIED;
-
-        auto state_tracker = handle->dispatcher()->get_state_tracker();
-        if (!state_tracker)
-            return ERR_NOT_SUPPORTED;
-
-        if (options == MX_CANCEL_ANY) {
-            state_tracker->Cancel(handle);
-        } else {
-            state_tracker->CancelByKey(handle, nullptr, key);
-        }
-    }
-
-    return NO_ERROR;
-}

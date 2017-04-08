@@ -68,10 +68,6 @@ syscall cache_flush vdsocall
 
 # Generic handle operations
 
-syscall handle_cancel
-    (handle: mx_handle_t, key: uint64_t, options: uint32_t)
-    returns (mx_status_t);
-
 syscall handle_close
     (handle: mx_handle_t)
     returns (mx_status_t);
