@@ -38,7 +38,10 @@ LogMessage::LogMessage(LogSeverity severity,
     stream_ << GetNameForLogSeverity(severity);
   else
     stream_ << "VERBOSE" << -severity;
-  stream_ << ":" << file_ << "(" << line_ << ")] ";
+  if (GetMinLogLevel() < LOG_INFO)
+    stream_ << ":" << file_ << "(" << line_ << ")";
+  stream_ << "] ";
+
   if (condition)
     stream_ << "Check failed: " << condition << ". ";
 }
