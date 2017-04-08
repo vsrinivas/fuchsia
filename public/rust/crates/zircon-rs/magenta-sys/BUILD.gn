@@ -5,5 +5,4 @@
 import("//build/rust/rust_library.gni")
 
 rust_library("magenta-sys") {
-  name = "magenta_sys"
 }
