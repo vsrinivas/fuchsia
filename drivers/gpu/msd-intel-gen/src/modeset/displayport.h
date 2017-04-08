@@ -70,8 +70,9 @@ public:
 
 private:
     // Send a DisplayPort Aux message and receive the synchronous reply
-    // message.
-    bool SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply);
+    // message.  Returns whether this was successful.  On failure,
+    // |*timeout_result| indicates whether the hardware reported a timeout.
+    bool SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply, bool* timeout_result);
     // This is like SendDpAuxMsg(), but it also checks the header field in
     // the reply for whether the request was successful, and it retries the
     // request if the sink device returns an AUX_DEFER reply.

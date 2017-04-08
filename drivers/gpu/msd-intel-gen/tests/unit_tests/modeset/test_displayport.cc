@@ -210,9 +210,13 @@ class DpAux {
 public:
     DpAux(magma::PlatformMmio* mmio, uint32_t ddi_number) : dpcd_(mmio, ddi_number) {}
 
-    void SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply)
+    // On return, |*timeout_result| indicates whether the response to this
+    // request is a timeout.
+    void SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply, bool* timeout_result)
     {
         reply->size = 0;
+        *timeout_result = false;
+
         ASSERT_LE(request->size, uint32_t{DpAuxMessage::kMaxTotalSize});
         // TODO(MA-150): Allow messages with an empty body, for which
         // request->size == 3 (because the body size field is omitted).
@@ -222,6 +226,10 @@ public:
             ((request->data[0] & 0xf) << 16) | (request->data[1] << 8) | request->data[2];
         uint32_t dp_size = request->data[3] + 1;
 
+        if (ShouldSendTimeout()) {
+            *timeout_result = true;
+            return;
+        }
         if (ShouldSendDefer()) {
             // Send an AUX_DEFER reply to exercise handling of them.
             reply->size = 1;
@@ -268,6 +276,17 @@ private:
     // non-defer reply.
     static constexpr unsigned kDefersToSend = 7;
 
+    bool ShouldSendTimeout()
+    {
+        // Generate one timeout in response to a request before giving
+        // non-timeout replies.  This mimics one DisplayPort monitor that
+        // I've tested on.
+        if (timeout_sent_)
+            return false;
+        timeout_sent_ = true;
+        return true;
+    }
+
     bool ShouldSendDefer()
     {
         if (defer_count_ == kDefersToSend) {
@@ -280,6 +299,7 @@ private:
 
     DdcI2cBus i2c_;
     Dpcd dpcd_;
+    bool timeout_sent_ = false;
     // Number of AUX DEFER replies sent since the last non-defer reply (or
     // since the start).
     unsigned defer_count_ = 0;
@@ -301,6 +321,21 @@ public:
     {
         auto control = registers::DdiAuxControl::Get(ddi_number).FromValue(value);
 
+        // This mimics what the hardware does.  Counterintuitively, writing
+        // 1 to this timeout bit tells the hardware to reset this bit to 0.
+        // If we write 0 into the timeout bit, the hardware ignores that
+        // and leaves the bit's value unchanged.
+        if (control.timeout().get()) {
+            control.timeout().set(0);
+        } else {
+            // Restore the previous value of the timeout bit (from before
+            // the register write that we are handling).  Note that this is
+            // necessary because the RegisterIo class's hook facility
+            // currently doesn't allow us to intercept this write before it
+            // is applied to the PlatformMmio object (mmio_).
+            control.timeout().set(prev_timeout_bit_[ddi_number]);
+        }
+
         if (control.send_busy().get()) {
             ASSERT_EQ(control.sync_pulse_count().get(), 31U);
 
@@ -315,21 +350,29 @@ public:
             for (uint32_t offset = 0; offset < request.size; offset += 4) {
                 request.SetFromPackedWord(offset, mmio_->Read32(data_reg + offset));
             }
-            dp_aux_[ddi_number]->SendDpAuxMsg(&request, &reply);
+            bool got_timeout = false;
+            dp_aux_[ddi_number]->SendDpAuxMsg(&request, &reply, &got_timeout);
 
-            // Write the reply message into registers.
-            ASSERT_LE(reply.size, uint32_t{DpAuxMessage::kMaxTotalSize});
-            for (uint32_t offset = 0; offset < reply.size; offset += 4) {
-                mmio_->Write32(data_reg + offset, reply.GetPackedWord(offset));
+            control.timeout().set(got_timeout);
+
+            if (!got_timeout) {
+                // Write the reply message into registers.
+                ASSERT_LE(reply.size, uint32_t{DpAuxMessage::kMaxTotalSize});
+                for (uint32_t offset = 0; offset < reply.size; offset += 4) {
+                    mmio_->Write32(data_reg + offset, reply.GetPackedWord(offset));
+                }
+                control.message_size().set(reply.size);
             }
 
             // Update the register to mark the transaction as completed.
             // (Note that since we do this immediately, we are not
             // exercising the polling logic in the software-under-test.)
             control.send_busy().set(0);
-            control.message_size().set(reply.size);
-            control.WriteTo(mmio_);
         }
+
+        control.WriteTo(mmio_);
+        // Save the timeout bit for next time.
+        prev_timeout_bit_[ddi_number] = control.timeout().get();
     }
 
     void Write32(uint32_t offset, uint32_t value)
@@ -352,6 +395,7 @@ public:
 
 private:
     std::unique_ptr<DpAux> dp_aux_[registers::Ddi::kDdiCount];
+    bool prev_timeout_bit_[registers::Ddi::kDdiCount] = {};
     magma::PlatformMmio* mmio_;
 };
 

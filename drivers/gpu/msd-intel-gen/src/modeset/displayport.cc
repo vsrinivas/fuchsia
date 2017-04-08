@@ -48,8 +48,10 @@ bool SetDpAuxHeader(DpAuxMessage* msg, uint32_t addr, uint32_t dp_cmd, uint32_t 
 
 } // namespace
 
-bool DpAuxChannel::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply)
+bool DpAuxChannel::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply,
+                                bool* timeout_result)
 {
+    *timeout_result = false;
     uint32_t data_reg = registers::DdiAuxData::GetOffset(ddi_number_);
 
     // Write the outgoing message to the hardware.
@@ -61,6 +63,10 @@ bool DpAuxChannel::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
     auto status = registers::DdiAuxControl::Get(ddi_number_).FromValue(0);
     status.sync_pulse_count().set(31);
     status.message_size().set(request->size);
+    // Counterintuitively, writing 1 to this timeout bit tells the hardware
+    // to reset the bit's value to 0.  (If we write 0 into the timeout bit,
+    // the hardware ignores that and leaves the bit's value unchanged.)
+    status.timeout().set(1);
     // Setting the send_busy bit initiates the transaction.
     status.send_busy().set(1);
     status.WriteTo(reg_io_);
@@ -70,9 +76,10 @@ bool DpAuxChannel::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
     for (int tries = 0; tries < kNumTries; ++tries) {
         auto status = registers::DdiAuxControl::Get(ddi_number_).ReadFrom(reg_io_);
         if (!status.send_busy().get()) {
-            // TODO(MA-150): Test for handling of timeout errors
-            if (status.timeout().get())
-                return DRETF(false, "DP aux: Got timeout error");
+            if (status.timeout().get()) {
+                *timeout_result = true;
+                return false;
+            }
             reply->size = status.message_size().get();
             if (reply->size > DpAuxMessage::kMaxTotalSize)
                 return DRETF(false, "DP aux: Invalid reply size");
@@ -96,12 +103,27 @@ bool DpAuxChannel::SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessa
     // transaction", from section 2.7.7.1.5.6.1 in v1.3.  (AUX_DEFER
     // replies were in earlier versions, but v1.3 clarified the number of
     // retries required.)
-    const int kNumTries = 8;
+    const int kMaxDefers = 8;
 
-    for (int tries = 0; tries < kNumTries; ++tries) {
-        if (!SendDpAuxMsg(request, reply)) {
-            // We do not retry if sending the raw message fails with a
-            // reason such as a timeout.
+    // Some DisplayPort sink devices time out on the first DP aux request
+    // but succeed on later requests, so we need to retry for some timeouts
+    // at least.
+    const int kMaxTimeouts = 2;
+
+    unsigned defers_seen = 0;
+    unsigned timeouts_seen = 0;
+
+    for (;;) {
+        bool timeout_result;
+        if (!SendDpAuxMsg(request, reply, &timeout_result)) {
+            if (timeout_result) {
+                if (++timeouts_seen == kMaxTimeouts)
+                    return DRETF(false, "DP aux: Got too many timeouts (%d)", kMaxTimeouts);
+                // Retry on timeout.
+                continue;
+            }
+            // We do not retry if sending the raw message failed for
+            // an unexpected reason.
             return false;
         }
 
@@ -127,6 +149,8 @@ bool DpAuxChannel::SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessa
                 // The AUX_ACK implies that we got an I2C ACK too.
                 return true;
             case DisplayPort::DP_REPLY_AUX_DEFER:
+                if (++defers_seen == kMaxDefers)
+                    return DRETF(false, "DP aux: Received too many AUX DEFERs (%d)", kMaxDefers);
                 // Go around the loop again to retry.
                 continue;
             case DisplayPort::DP_REPLY_AUX_NACK:
@@ -141,7 +165,6 @@ bool DpAuxChannel::SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessa
                 return DRETF(false, "DP aux: Unrecognized reply (header byte: 0x%x)", header_byte);
         }
     }
-    return DRETF(false, "DP aux: Received too many AUX DEFERs (%d)", kNumTries);
 }
 
 bool DpAuxChannel::I2cRead(uint32_t addr, uint8_t* buf, uint32_t size)
