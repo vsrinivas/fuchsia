@@ -10,7 +10,9 @@ template("rust_artifact") {
   if (defined(invoker.name)) {
     name = invoker.name
   } else {
-    name = target_name
+    name = exec_script("//build/rust/sanitize_target_name.py",
+                       [ target_name ],
+                       "trim string")
   }
 
   if (defined(invoker.type)) {
