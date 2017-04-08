@@ -23,7 +23,7 @@ CONFIGS = [
 def get_cargo_bin():
     host_os = platform.system()
     if host_os == "Darwin":
-        host_triple = "x86_64-darwin-apple"
+        host_triple = "x86_64-apple-darwin"
     elif host_os == "Linux":
         host_triple = "x86_64-unknown-linux-gnu"
     else:
@@ -39,12 +39,12 @@ def call_or_exit(args, dir):
 
 def main():
     parser = argparse.ArgumentParser("Updates third-party Rust crates")
-    parser.add_argument("--out",
-                        help="Build output directory for host",
-                        default="out/debug-x86-64/host_x64")
     parser.add_argument("--cargo-vendor",
                         help="Path to the cargo-vendor command",
                         required=True)
+    parser.add_argument("--debug",
+                        help="Debug mode",
+                        action="store_true")
     args = parser.parse_args()
 
     # Use the root of the tree as the working directory. Ideally a temporary
@@ -84,8 +84,9 @@ members = [%s]
         ]
         call_or_exit(vendor_args, base_dir)
     finally:
-        os.remove(toml_path)
-        os.remove(lock_path)
+        if not args.debug:
+            os.remove(toml_path)
+            os.remove(lock_path)
 
     vendor_dir = os.path.join(paths.FUCHSIA_ROOT, "third_party", "rust-crates",
                               "vendor")
