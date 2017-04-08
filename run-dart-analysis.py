@@ -62,6 +62,10 @@ Extra flags will be passed to the analyzer.
         default='*')
     args, extras = parser.parse_known_args()
 
+    if not os.path.isdir(os.path.join(paths.FUCHSIA_ROOT, args.out)):
+        print 'Invalid output directory: %s' % args.out
+        return 1
+
     # Ask gn about all the dart analyzer scripts.
     scripts = []
     targets = gn_describe(args.out, args.tree)
