@@ -51,13 +51,8 @@
 #define ahci_read(reg)       pcie_read32(reg)
 #define ahci_write(reg, val) pcie_write32(reg, val)
 
-#ifdef IS_64BIT
 #define HI32(val) (((val) >> 32) & 0xffffffff)
 #define LO32(val) ((val) & 0xffffffff)
-#else
-#define HI32(val) 0
-#define LO32(val) (val)
-#endif
 
 #define AHCI_PORT_FLAG_IMPLEMENTED (1 << 0)
 #define AHCI_PORT_FLAG_PRESENT     (1 << 1)
