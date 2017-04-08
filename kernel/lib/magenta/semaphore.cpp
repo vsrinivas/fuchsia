@@ -31,17 +31,22 @@ int Semaphore::Post() {
 }
 
 status_t Semaphore::Wait(lk_time_t timeout) {
+    thread_t *current_thread = get_current_thread();
      // If there are no resources available then we need to
      // sit in the wait queue until sem_post adds some.
     status_t ret = NO_ERROR;
     THREAD_LOCK(state);
+    current_thread->interruptable = true;
+
     if (unlikely(--count_ < 0)) {
         ret = wait_queue_block(&waitq_, timeout);
         if (ret < NO_ERROR) {
-            if (ret == ERR_TIMED_OUT)
+            if ((ret == ERR_TIMED_OUT) || (ret == ERR_INTERRUPTED))
                 count_++;
         }
     }
+
+    current_thread->interruptable = false;
     THREAD_UNLOCK(state);
     return ret;
 }
