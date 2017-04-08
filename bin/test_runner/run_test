@@ -47,9 +47,8 @@ def is_ipv4_address(address):
 def magenta_ipv6_to_fuchsia(mac):
   parts = mac.split(":")
 
-  # Magenta uses 4d:fe. Link local is ff:fe and invert the "local" bit.
+  # Magenta uses 4d:fe. Link local is ff:fe.
   parts[3] = parts[3][:2] + "ff"
-  parts[2] = "%x" % (int(parts[2], 16) ^ (1 << 9))
 
   return ":".join(parts)
 
