@@ -15,6 +15,8 @@
 #include <cstdio>
 #include <string>
 
+constexpr bool kWaitForFlip = MSD_INTEL_WAIT_FOR_FLIP ? true : false;
+
 class MsdIntelDevice::CommandBufferRequest : public DeviceRequest {
 public:
     CommandBufferRequest(std::unique_ptr<CommandBuffer> command_buffer)
@@ -236,6 +238,11 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
+    if (kWaitForFlip) {
+        flip_ready_semaphore_ = magma::PlatformSemaphore::Create();
+        flip_ready_semaphore_->Signal();
+    }
+
     semaphore_port_ = magma::SemaphorePort::Create();
 
     scratch_buffer_ =
@@ -436,6 +443,9 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
     DASSERT(buffer);
 
+    if (kWaitForFlip)
+        wait_semaphores.push_back(flip_ready_semaphore_);
+
     auto request = std::make_unique<FlipRequest>(buffer, image_desc, std::move(wait_semaphores),
                                                  std::move(signal_semaphores));
 
@@ -561,9 +571,8 @@ void MsdIntelDevice::ProcessDeviceRequests(std::list<std::unique_ptr<DeviceReque
 
 magma::Status MsdIntelDevice::ProcessInterrupts()
 {
-    DLOG("ProcessInterrupts");
-
     uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
+    DLOG("ProcessInterrupts 0x%08x", master_interrupt_control);
 
     registers::MasterInterruptControl::write(register_io_.get(), false);
 
@@ -592,8 +601,17 @@ magma::Status MsdIntelDevice::ProcessInterrupts()
         } else {
             DASSERT(false);
         }
-    } else {
-        DASSERT(false);
+    }
+
+    if (master_interrupt_control &
+        registers::MasterInterruptControl::kDisplayEnginePipeAInterruptsPendingBit) {
+        bool flip_done = false;
+        registers::DisplayPipeInterrupt::process_identity_bits(
+            register_io(), registers::DisplayPipeInterrupt::PIPE_A,
+            registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, &flip_done);
+        DASSERT(flip_done);
+
+        ProcessFlipComplete();
     }
 
     interrupt_->Complete();
@@ -677,20 +695,17 @@ magma::Status MsdIntelDevice::ProcessFlip(
     // Controls whether the plane surface update happens immediately or on the next vblank.
     constexpr bool kUpdateOnVblank = true;
 
-    // Controls whether we wait for the flip to complete.
-    // Waiting for flip completion seems to imply waiting for the vsync/vblank as well.
-    // Note, if not waiting for flip complete you need to be careful of mapping lifetime.
-    // For simplicity we just maintain all display buffer mappings forever but we should
-    // have the upper layers import/release display buffers.
-    constexpr bool kWaitForFlip = MSD_INTEL_WAIT_FOR_FLIP ? true : false;
-
     auto plane_control = registers::DisplayPlaneControl::Get(pipe_number).ReadFrom(register_io());
     plane_control.async_address_update_enable().set(!kUpdateOnVblank);
 
-    if (kWaitForFlip)
-        registers::DisplayPipeInterrupt::update_mask_bits(
+    if (kWaitForFlip) {
+        registers::DisplayPipeInterrupt::write_mask(
             register_io(), registers::DisplayPipeInterrupt::PIPE_A,
             registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, true);
+        registers::DisplayPipeInterrupt::write_enable(
+            register_io(), registers::DisplayPipeInterrupt::PIPE_A,
+            registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, true);
+    }
 
     constexpr uint32_t kCacheLineSize = 64;
     constexpr uint32_t kTileSize = 512;
@@ -716,41 +731,26 @@ magma::Status MsdIntelDevice::ProcessFlip(
     addr_reg.surface_base_address().set(mapping->gpu_addr() >> addr_reg.kPageShift);
     addr_reg.WriteTo(register_io());
 
-    if (kWaitForFlip) {
-        constexpr uint32_t kRetryMsMax = 100;
+    saved_display_mapping_[1] = std::move(mapping);
+    signal_semaphores_[1] = std::move(signal_semaphores);
 
-        auto start = std::chrono::high_resolution_clock::now();
+    if (!kWaitForFlip)
+        ProcessFlipComplete();
 
-        while (true) {
-            bool flip_done = false;
+    return status;
+}
 
-            registers::DisplayPipeInterrupt::process_identity_bits(
-                register_io(), registers::DisplayPipeInterrupt::PIPE_A,
-                registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, &flip_done);
-            if (flip_done)
-                break;
-            auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double, std::milli> elapsed = end - start;
-            if (elapsed.count() > kRetryMsMax)
-                return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Timeout waiting for page flip event");
-
-            std::this_thread::yield();
-        }
-
-        registers::DisplayPipeInterrupt::update_mask_bits(
-            register_io(), registers::DisplayPipeInterrupt::PIPE_A,
-            registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, false);
-    }
-
-    for (auto& semaphore : signal_semaphores_) {
+void MsdIntelDevice::ProcessFlipComplete()
+{
+    for (auto& semaphore : signal_semaphores_[0]) {
         DLOG("signalling flip semaphore 0x%" PRIx64 "\n", semaphore->id());
         semaphore->Signal();
     }
+    signal_semaphores_[0] = std::move(signal_semaphores_[1]);
+    saved_display_mapping_[0] = std::move(saved_display_mapping_[1]);
 
-    signal_semaphores_ = std::move(signal_semaphores);
-    saved_display_mapping_ = std::move(mapping);
-
-    return status;
+    if (kWaitForFlip)
+        flip_ready_semaphore_->Signal();
 }
 
 bool MsdIntelDevice::WaitIdle()

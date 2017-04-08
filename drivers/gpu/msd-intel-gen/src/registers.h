@@ -352,9 +352,10 @@ public:
 
     static constexpr uint32_t kMaskOffsetPipeA = 0x44404;
     static constexpr uint32_t kIdentityOffsetPipeA = 0x44408;
+    static constexpr uint32_t kEnableOffsetPipeA = 0x4440C;
     static constexpr uint32_t kPlane1FlipDoneBit = 1 << 3;
 
-    static void update_mask_bits(RegisterIo* reg_io, Pipe pipe, uint32_t bits, bool enable)
+    static void write_mask(RegisterIo* reg_io, Pipe pipe, uint32_t bits, bool enable)
     {
         uint32_t offset, val;
         switch (pipe) {
@@ -365,6 +366,20 @@ public:
 
         val = reg_io->Read32(offset);
         val = enable ? (val & ~bits) : val | bits;
+        reg_io->Write32(offset, val);
+    }
+
+    static void write_enable(RegisterIo* reg_io, Pipe pipe, uint32_t bits, bool enable)
+    {
+        uint32_t offset, val;
+        switch (pipe) {
+            case PIPE_A:
+                offset = kEnableOffsetPipeA;
+                break;
+        }
+
+        val = reg_io->Read32(offset);
+        val = enable ? (val | bits) : (val & ~bits);
         reg_io->Write32(offset, val);
     }
 
@@ -471,6 +486,7 @@ class MasterInterruptControl {
 public:
     static constexpr uint32_t kOffset = 0x44200;
     static constexpr uint32_t kRenderInterruptsPendingBitMask = 1 << 0;
+    static constexpr uint32_t kDisplayEnginePipeAInterruptsPendingBit = 1 << 16;
     static constexpr uint32_t kEnableBitMask = 1 << 31;
 
     static void write(RegisterIo* register_io, bool enable)

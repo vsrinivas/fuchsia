@@ -135,6 +135,7 @@ private:
     magma::Status ProcessDumpStatusToLog();
 
     void ProcessPendingFlip();
+    void ProcessFlipComplete();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
 
     bool WaitIdle();
@@ -186,8 +187,9 @@ private:
     std::unique_ptr<magma::SemaphorePort> semaphore_port_;
 
     // page flipping
-    std::shared_ptr<GpuMapping> saved_display_mapping_;
-    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
+    std::shared_ptr<magma::PlatformSemaphore> flip_ready_semaphore_;
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_[2];
+    std::shared_ptr<GpuMapping> saved_display_mapping_[2];
 
     class CommandBufferRequest;
     class FlipRequest;
