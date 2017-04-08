@@ -19,12 +19,10 @@
 
 namespace wlan {
 
-#define WLAN_DEV(d) static_cast<Device*>(d)
-
 Device::Device(mx_driver_t* driver, mx_device_t* device, wlanmac_protocol_t* wlanmac_ops)
-  : driver_(driver), wlanmac_device_(device), wlanmac_ops_(wlanmac_ops) {
+  : WlanBaseDevice("wlan", driver),
+    wlanmac_proxy_(wlanmac_ops, device) {
     debugfn();
-    MX_DEBUG_ASSERT(driver_ && wlanmac_device_ && wlanmac_ops_);
 }
 
 Device::~Device() {
@@ -35,34 +33,10 @@ Device::~Device() {
 mx_status_t Device::Bind() {
     debugfn();
 
-    device_ops_.version = DEVICE_OPS_VERSION;
-    device_ops_.unbind = [](void* ctx){ WLAN_DEV(ctx)->Unbind(); };
-    device_ops_.release = [](void* ctx) { WLAN_DEV(ctx)->Release(); };
-    device_ops_.ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len, size_t* out_actual) {
-        return WLAN_DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-    };
-
-    auto status = wlanmac_ops_->query(wlanmac_device_, 0u, &ethmac_info_);
+    auto status = wlanmac_proxy_.Query(0, &ethmac_info_);
     if (status != NO_ERROR) {
         warnf("could not query wlan mac device: %d\n", status);
     }
-
-    ethmac_ops_.query = [](mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
-        return WLAN_DEV(dev->ctx)->Query(options, info);
-    };
-    ethmac_ops_.stop = [](mx_device_t* dev) { WLAN_DEV(dev->ctx)->Stop(); };
-    ethmac_ops_.start = [](mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
-        return WLAN_DEV(dev->ctx)->Start(ifc, cookie);
-    };
-    ethmac_ops_.send = [](mx_device_t* dev, uint32_t options, void* data, size_t length) {
-        WLAN_DEV(dev->ctx)->Send(options, data, length);
-    };
-
-    wlanmac_ifc_.status = [](void* cookie, uint32_t status) { WLAN_DEV(cookie)->MacStatus(status); };
-    wlanmac_ifc_.recv = [](void* cookie, void* data, size_t length, uint32_t flags) {
-        WLAN_DEV(cookie)->Recv(data, length, flags);
-    };
 
     status = mx::port::create(MX_PORT_OPT_V2, &port_);
     if (status != NO_ERROR) {
@@ -71,16 +45,7 @@ mx_status_t Device::Bind() {
     }
     work_thread_ = std::thread(&Device::MainLoop, this);
 
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "wlan";
-    args.ctx = this;
-    args.driver = driver_;
-    args.ops = &device_ops_;
-    args.proto_id = MX_PROTOCOL_ETHERMAC;
-    args.proto_ops = &ethmac_ops_;
-
-    status = device_add(wlanmac_device_, &args, &device_);
+    status = Add(wlanmac_proxy_.device());
     if (status != NO_ERROR) {
         errorf("could not add device err=%d\n", status);
         auto shutdown_status = SendShutdown();
@@ -97,12 +62,12 @@ mx_status_t Device::Bind() {
     return status;
 }
 
-void Device::Unbind() {
+void Device::DdkUnbind() {
     debugfn();
-    device_remove(device_);
+    device_remove(mxdev());
 }
 
-void Device::Release() {
+void Device::DdkRelease() {
     debugfn();
     if (port_.is_valid()) {
         auto status = SendShutdown();
@@ -116,8 +81,8 @@ void Device::Release() {
     delete this;
 }
 
-mx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                          size_t out_len, size_t* out_actual) {
+mx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                             size_t out_len, size_t* out_actual) {
     debugfn();
     if (op != IOCTL_WLAN_GET_CHANNEL) {
         return ERR_NOT_SUPPORTED;
@@ -138,7 +103,7 @@ mx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
     return NO_ERROR;
 }
 
-mx_status_t Device::Query(uint32_t options, ethmac_info_t* info) {
+mx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     debugfn();
     if (info == nullptr) return ERR_INVALID_ARGS;
 
@@ -149,46 +114,45 @@ mx_status_t Device::Query(uint32_t options, ethmac_info_t* info) {
     return NO_ERROR;
 }
 
-mx_status_t Device::Start(ethmac_ifc_t* ifc, void* cookie) {
+mx_status_t Device::EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
     debugfn();
-    MX_DEBUG_ASSERT(ifc != nullptr);
+    MX_DEBUG_ASSERT(proxy != nullptr);
 
     std::lock_guard<std::mutex> lock(lock_);
-    if (ethmac_ifc_ != nullptr) {
+    if (ethmac_proxy_ != nullptr) {
         return ERR_ALREADY_BOUND;
     }
 
-    ethmac_ifc_ = ifc;
-    ethmac_cookie_ = cookie;
-    auto status = wlanmac_ops_->start(wlanmac_device_, &wlanmac_ifc_, this);
+    auto status = wlanmac_proxy_.Start(this);
     if (status != NO_ERROR) {
         errorf("could not start wlanmac: %d\n", status);
-        ethmac_ifc_ = nullptr;
-        ethmac_cookie_ = nullptr;
+    } else {
+        ethmac_proxy_.swap(proxy);
+        // TODO: queue a packet on the port to signal the start?
     }
     return status;
 }
 
-void Device::Stop() {
+void Device::EthmacStop() {
     debugfn();
 
     std::lock_guard<std::mutex> lock(lock_);
-    if (ethmac_ifc_ == nullptr) {
-        warnf("ethmac already stopped\n");
+    if (ethmac_proxy_ == nullptr) {
+        warnf("ethmac not started\n");
     }
-    ethmac_ifc_ = nullptr;
-    ethmac_cookie_ = nullptr;
+    ethmac_proxy_.reset();
+    // TODO: queue a packet on the port to signal the stop
 }
 
-void Device::Send(uint32_t options, void* data, size_t length) {
+void Device::EthmacSend(uint32_t options, void* data, size_t length) {
     // no debugfn() because it's too noisy
 }
 
-void Device::MacStatus(uint32_t status) {
-    debugfn();
+void Device::WlanmacStatus(uint32_t status) {
+    debugf("WlanmacStatus %u\n", status);
 }
 
-void Device::Recv(void* data, size_t length, uint32_t flags) {
+void Device::WlanmacRecv(void* data, size_t length, uint32_t flags) {
     // no debugfn() because it's too noisy
 }
 
@@ -242,6 +206,7 @@ void Device::MainLoop() {
 
     infof("exiting MainLoop\n");
     std::lock_guard<std::mutex> lock(lock_);
+    ethmac_proxy_.reset();
     port_.reset();
     channel_.reset();
 }
@@ -315,7 +280,5 @@ mx_status_t Device::GetChannel(mx::channel* out) {
     infof("channel opened\n");
     return NO_ERROR;
 }
-
-#undef WLAN_DEV
 
 }  // namespace wlan

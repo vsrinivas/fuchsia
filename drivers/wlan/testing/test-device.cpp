@@ -10,70 +10,37 @@ namespace wlan {
 namespace testing {
 
 Device::Device(mx_driver_t* driver, mx_device_t* device, test_protocol_t* test_ops)
-  : driver_(driver), test_device_(device), test_ops_(test_ops) {}
+  : TestBaseDevice("wlan-test", driver),
+    test_proxy_(test_ops, device) {}
 
 mx_status_t Device::Bind() {
     std::printf("wlan::testing::Device::Bind()\n");
-    device_ops_.version = DEVICE_OPS_VERSION;
-    device_ops_.unbind = [](void* ctx) {
-        static_cast<Device*>(ctx)->Unbind();
-    };
-    device_ops_.release = [](void* ctx) {
-        static_cast<Device*>(ctx)->Release();
-    };
-    device_ops_.ioctl = [](void* ctx, uint32_t ops, const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len, size_t* out_actual) -> mx_status_t {
-        return static_cast<Device*>(ctx)->Ioctl(ops, in_buf, in_len, out_buf, out_len, out_actual);
-    };
 
-    wlanmac_ops_.query = [](mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
-        return static_cast<Device*>(dev->ctx)->Query(options, info);
-    };
-    wlanmac_ops_.stop = [](mx_device_t* dev) {
-        static_cast<Device*>(dev->ctx)->Stop();
-    };
-    wlanmac_ops_.start = [](mx_device_t* dev, wlanmac_ifc_t* ifc, void* cookie) {
-        return static_cast<Device*>(dev->ctx)->Start(ifc, cookie);
-    };
-    wlanmac_ops_.tx = [](mx_device_t* dev, uint32_t options, void* data, size_t length) {
-        static_cast<Device*>(dev->ctx)->Send(options, data, length);
-    };
-    wlanmac_ops_.set_channel = [](mx_device_t* dev, uint32_t options, wlan_channel_t* chan) {
-        return static_cast<Device*>(dev->ctx)->SetChannel(options, chan);
-    };
-
-    // squash unused member error
-    // TODO: use test_ops_ for setting up output and control handles
-    (void)test_ops_;
-
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "wlan-test";
-    args.ctx = this;
-    args.driver = driver_;
-    args.ops = &device_ops_;
-    args.proto_id = MX_PROTOCOL_WLANMAC;
-    args.proto_ops = &wlanmac_ops_;
-
-    return device_add(test_device_, &args, &device_);
+    auto status = Add(test_proxy_.device());
+    if (status != NO_ERROR) {
+        std::printf("wlan-test: could not add test device: %d\n", status);
+    }
+    return status;
 }
 
-void Device::Unbind() {
+void Device::DdkUnbind() {
     std::printf("wlan::testing::Device::Unbind()\n");
-    device_remove(device_);
+    SetAndClearState(DEV_STATE_HANGUP, DEV_STATE_READABLE | DEV_STATE_WRITABLE);
+    device_remove(mxdev());
 }
 
-void Device::Release() {
+void Device::DdkRelease() {
     std::printf("wlan::testing::Device::Release()\n");
     delete this;
 }
 
-mx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                          size_t out_len, size_t* out_actual) {
+mx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                             size_t out_len, size_t* out_actual) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t Device::Query(uint32_t options, ethmac_info_t* info) {
+mx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
+    std::printf("wlan::testing::Device::WlanmacQuery()\n");
     static uint8_t mac[ETH_MAC_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
     info->features = ETHMAC_FEATURE_WLAN;
     info->mtu = 1500;
@@ -81,28 +48,30 @@ mx_status_t Device::Query(uint32_t options, ethmac_info_t* info) {
     return NO_ERROR;
 }
 
-void Device::Stop() {
+void Device::WlanmacStop() {
+    std::printf("wlan::testing::Device::WlanmacStop()\n");
     std::lock_guard<std::mutex> lock(lock_);
-    ifc_ = nullptr;
-    cookie_ = nullptr;
+    ClearState(DEV_STATE_READABLE | DEV_STATE_WRITABLE);
+    wlanmac_proxy_.reset();
 }
 
-mx_status_t Device::Start(wlanmac_ifc_t* ifc, void* cookie) {
+mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+    std::printf("wlan::testing::Device::WlanmacStart()\n");
     std::lock_guard<std::mutex> lock(lock_);
-    if (ifc_) {
+    SetState(DEV_STATE_READABLE | DEV_STATE_WRITABLE);
+    if (wlanmac_proxy_ != nullptr) {
         return ERR_ALREADY_BOUND;
     } else {
-        ifc_ = ifc;
-        cookie_ = cookie;
+        wlanmac_proxy_.swap(proxy);
     }
     return NO_ERROR;
 }
 
-void Device::Send(uint32_t options, void* data, size_t length) {
+void Device::WlanmacTx(uint32_t options, void* data, size_t length) {
 
 }
 
-mx_status_t Device::SetChannel(uint32_t options, wlan_channel_t* chan) {
+mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     return NO_ERROR;
 }
 

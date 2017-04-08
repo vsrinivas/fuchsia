@@ -19,6 +19,7 @@ static_library("libwlan") {
 
   deps = [
     "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxtl",
   ]
 
   libs = [ "driver" ]
