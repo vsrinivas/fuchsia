@@ -4,7 +4,7 @@
 
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
-#include "apps/maxwell/services/context/context_subscriber.fidl.h"
+#include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
@@ -17,21 +17,21 @@ class ContextEngineImpl : public ContextEngine {
 
  private:
   // |ContextEngine|
-  void RegisterPublisher(
+  void GetPublisher(
       const fidl::String& url,
       fidl::InterfaceRequest<ContextPublisher> request) override;
 
   // |ContextEngine|
-  void RegisterSubscriber(
+  void GetProvider(
       const fidl::String& url,
-      fidl::InterfaceRequest<ContextSubscriber> request) override;
+      fidl::InterfaceRequest<ContextProvider> request) override;
 
   ContextRepository repository_;
 
   fidl::BindingSet<ContextPublisher, std::unique_ptr<ContextPublisher>>
       publisher_bindings_;
-  fidl::BindingSet<ContextSubscriber, std::unique_ptr<ContextSubscriber>>
-      subscriber_bindings_;
+  fidl::BindingSet<ContextProvider, std::unique_ptr<ContextProvider>>
+      provider_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextEngineImpl);
 };

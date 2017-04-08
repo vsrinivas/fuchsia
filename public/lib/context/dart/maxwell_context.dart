@@ -4,14 +4,14 @@
 
 import 'dart:async';
 import 'package:application.lib.app.dart/app.dart';
-import 'package:apps.maxwell.lib.context.dart/subscriber_link_impl.dart';
+import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
 import 'package:apps.maxwell.services.context/context_publisher.fidl.dart';
-import 'package:apps.maxwell.services.context/context_subscriber.fidl.dart';
+import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 import 'package:meta/meta.dart';
 
 final _contextPublisher = new ContextPublisherProxy();
-final _contextSubscriber = new ContextSubscriberProxy();
+final _contextProvider = new ContextProviderProxy();
 
 /// Connects to the environment's [ContextPublisher]. This should typically be
 /// called from an app's [main] function, accompanied by a call to
@@ -21,12 +21,12 @@ void connectPublisher(ApplicationContext appContext) {
   assert(_contextPublisher.ctrl.isBound);
 }
 
-/// Connects to the environment's [ContextSubscriber]. This should typically be
+/// Connects to the environment's [ContextProvider]. This should typically be
 /// called from an app's [main] function, accompanied by a call to
 /// [closeGlobals] prior to shutdown.
-void connectSubscriber(ApplicationContext appContext) {
-  connectToService(appContext.environmentServices, _contextSubscriber.ctrl);
-  assert(_contextSubscriber.ctrl.isBound);
+void connectProvider(ApplicationContext appContext) {
+  connectToService(appContext.environmentServices, _contextProvider.ctrl);
+  assert(_contextProvider.ctrl.isBound);
 }
 
 typedef void PublishFn(String topic, String json_value);
@@ -37,8 +37,8 @@ typedef void SubscribeFn(
 /// Publish a value using the globally bound [ContextPublisher].
 PublishFn get publish => _contextPublisher.publish;
 
-/// Registers a subscriber link using the globally bound [ContextSubscriber].
-SubscribeFn get subscribe => _contextSubscriber.subscribe;
+/// Registers a [ContextListener] using the globally bound [ContextProvider].
+SubscribeFn get subscribe => _contextProvider.subscribe;
 
 /// Convenience function that subscribes to a query with a handler callback.
 /// The returned [ContextListenerImpl] should be closed once unneeded.
@@ -52,5 +52,5 @@ ContextListenerImpl subscribe(
 /// Closes any bound global FIDL handles. This should be called on app cleanup.
 void closeGlobals() {
   _contextPublisher.ctrl.close();
-  _contextSubscriber.ctrl.close();
+  _contextProvider.ctrl.close();
 }

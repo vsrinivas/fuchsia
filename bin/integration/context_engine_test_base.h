@@ -18,11 +18,11 @@ class ContextEngineTestBase : public MaxwellTestBase {
         root_environment);
     agent_host->AddService<maxwell::ContextPublisher>(
         [this, url](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
-          context_engine_->RegisterPublisher(url, std::move(request));
+          context_engine_->GetPublisher(url, std::move(request));
         });
-    agent_host->AddService<maxwell::ContextSubscriber>(
-        [this, url](fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
-          context_engine_->RegisterSubscriber(url, std::move(request));
+    agent_host->AddService<maxwell::ContextProvider>(
+        [this, url](fidl::InterfaceRequest<maxwell::ContextProvider> request) {
+          context_engine_->GetProvider(url, std::move(request));
         });
     StartAgent(url, std::move(agent_host));
   }

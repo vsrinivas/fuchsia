@@ -8,6 +8,6 @@ fidl("context") {
   sources = [
     "context_engine.fidl",
     "context_publisher.fidl",
-    "context_subscriber.fidl",
+    "context_provider.fidl",
   ]
 }

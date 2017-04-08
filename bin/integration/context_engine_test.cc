@@ -40,14 +40,14 @@ class TestListener : public ContextListener {
 class ContextEngineTest : public ContextEngineTestBase {
  public:
   ContextEngineTest() : ContextEngineTestBase() {
-    context_engine()->RegisterSubscriber("ContextEngineTest",
-                                         subscriber_.NewRequest());
-    context_engine()->RegisterPublisher("ContextEngineTest",
+    context_engine()->GetProvider("ContextEngineTest",
+                                         provider_.NewRequest());
+    context_engine()->GetPublisher("ContextEngineTest",
                                         publisher_.NewRequest());
   }
 
  protected:
-  ContextSubscriberPtr subscriber_;
+  ContextProviderPtr provider_;
   ContextPublisherPtr publisher_;
 };
 
@@ -69,7 +69,7 @@ TEST_F(ContextEngineTest, CorrectValues) {
   publisher_->Publish("a_different_topic", "baz");
 
   TestListener listener;
-  subscriber_->Subscribe(CreateQuery("topic"), listener.GetHandle());
+  provider_->Subscribe(CreateQuery("topic"), listener.GetHandle());
   listener.WaitForUpdate();
 
   ContextUpdatePtr update;
@@ -84,7 +84,7 @@ TEST_F(ContextEngineTest, PublishAfterSubscribe) {
   // Show that a subscription made before a value is published will cause the
   // subscriber's callback to be called the moment a value is published.
   TestListener listener;
-  subscriber_->Subscribe(CreateQuery("topic"), listener.GetHandle());
+  provider_->Subscribe(CreateQuery("topic"), listener.GetHandle());
   Sleep();
 
   publisher_->Publish("topic", "foobar");
@@ -99,8 +99,8 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
   // should be notified of new values.
   TestListener listener1;
   TestListener listener2;
-  subscriber_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
-  subscriber_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
+  provider_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
+  provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
 
   publisher_->Publish("topic", "flkjsd");
   WAIT_UNTIL(listener1.PopLast());

@@ -7,14 +7,14 @@
 #include "application/lib/app/application_context.h"
 #include "apps/maxwell/src/context_engine/context_publisher_impl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
-#include "apps/maxwell/src/context_engine/context_subscriber_impl.h"
+#include "apps/maxwell/src/context_engine/context_provider_impl.h"
 
 namespace maxwell {
 
 ContextEngineImpl::ContextEngineImpl() {}
 ContextEngineImpl::~ContextEngineImpl() = default;
 
-void ContextEngineImpl::RegisterPublisher(
+void ContextEngineImpl::GetPublisher(
     const fidl::String& url,
     fidl::InterfaceRequest<ContextPublisher> request) {
   publisher_bindings_.AddBinding(
@@ -22,11 +22,11 @@ void ContextEngineImpl::RegisterPublisher(
       std::move(request));
 }
 
-void ContextEngineImpl::RegisterSubscriber(
+void ContextEngineImpl::GetProvider(
     const fidl::String& url,
-    fidl::InterfaceRequest<ContextSubscriber> request) {
-  subscriber_bindings_.AddBinding(
-      std::make_unique<ContextSubscriberImpl>(&repository_),
+    fidl::InterfaceRequest<ContextProvider> request) {
+  provider_bindings_.AddBinding(
+      std::make_unique<ContextProviderImpl>(&repository_),
       std::move(request));
 }
 

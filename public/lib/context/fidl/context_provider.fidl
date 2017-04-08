@@ -1,52 +1,47 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// NOTE:
-/// This file is here for reference only, and is not currently used.
-
 module maxwell;
 
-// Exposes access to Context values, each of which are explicitly named. Each
-// named Context value has a known/pre-defined value representation.
+// Exposes access to Context values, each of which are explicitly named by a
+// 'topic'. Each topic has a known/pre-defined value representation.
 //
 // This interface is meant to be used in the scope of a single Fuchsia
 // component.
-//
-// TODO(thatguy): There are no access controls as of yet.
+[ServiceName="maxwell.ContextProvider"]
 interface ContextProvider {
-  // When any of the conditions in 'query' change, a serialized ContextResult
-  // is sent to the MessageQueue identified by 'message_queue_token'.
+  // When any of the conditions in |query| change, a ContextUpdate is sent to
+  // |listener|.
   //
-  // If current context values match the query, a result is immediately sent
-  // to the specified MessageQueue.
-  // 
-  // The query will continue to stay active as long as the MessageQueue is
-  // not deleted.
+  // If current context values match the query, a result is sent immediately.
   //
-  // TODO(thatguy): Revisit serializing the ContextResult: we really shouldn't
-  // be serializing FIDL structs; it's just so convenient and there are no
-  // better options.
-  // TODO(thatguy): Add ACL checking for the Component scope in which this
-  // ContextProvider was created. Return errors here immediately, or in
-  // ContextResult if ACLs change after a valid Query() is started.
-  Subscribe(ContextQuery query, string message_queue_token);
+  // The query will continue to stay active as long as the |listener| handle is
+  // not closed.
+  Subscribe(ContextQuery query, ContextListener listener);
 };
 
-struct ContextResult {
-  // A map of the latest values of each label specified in the original
-  // ContextQuery.
-  map<string, string> results;
+interface ContextListener {
+  // Receives an update for a context label.
+  OnUpdate(ContextUpdate result);
+};
 
-  // TODO(thatguy): Eventually, add status information about, e.g., access
-  // control violations, etc.
+struct ContextUpdate {
+  // A map of the latest values of each topic specified in the ContextQuery's
+  // |topics| field that was issued during |Subscribe()|.
+  //
+  // Topics that don't have a current value are not present in |values|.
+  map<string, string> values;
 };
 
 struct ContextQuery {
-  // A list of labels. When the value for any of these context labels changes,
-  // the new values will be sent to the client.
-  array<string> on_any_change;
-
-  // TODO(thatguy): Eventually add more powerful query/trigger conditions here.
+  // A set of topics to include in the ContextUpdate when the following
+  // conditions match.
+  //
+  // If no conditions are given below, the query will match whenever any
+  // of |topics| changes.
+  //
+  // TODO(thatguy): Eventually add more useful query/trigger conditions here.
   // For now, this is all we will need for a while going forward.
+  array<string> topics;
 };

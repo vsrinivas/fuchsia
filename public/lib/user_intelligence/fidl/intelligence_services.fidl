@@ -5,7 +5,7 @@
 module maxwell;
 
 import "apps/maxwell/services/action_log/action_log.fidl";
-import "apps/maxwell/services/context/context_subscriber.fidl";
+import "apps/maxwell/services/context/context_provider.fidl";
 import "apps/maxwell/services/context/context_publisher.fidl";
 import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
 
@@ -14,8 +14,7 @@ import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
 interface IntelligenceServices {
   // These are just here for illustrative purposes, and are not a complete
   // list.
-  // TODO(thatguy): Switch this over to ContextProvider from ContextSubscriber.
-  GetContextProvider(ContextSubscriber& context_subscriber);
+  GetContextProvider(ContextProvider& context_provider);
   GetContextPublisher(ContextPublisher& context_publisher);
 
   GetProposalPublisher(ProposalPublisher& proposal_publisher);

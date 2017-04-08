@@ -19,13 +19,13 @@ IntelligenceServicesImpl::IntelligenceServicesImpl(
       suggestion_engine_(suggestion_engine) {}
 
 void IntelligenceServicesImpl::GetContextProvider(
-    fidl::InterfaceRequest<ContextSubscriber> request) {
-  context_engine_->RegisterSubscriber(component_id_, std::move(request));
+    fidl::InterfaceRequest<ContextProvider> request) {
+  context_engine_->GetProvider(component_id_, std::move(request));
 }
 
 void IntelligenceServicesImpl::GetContextPublisher(
     fidl::InterfaceRequest<ContextPublisher> request) {
-  context_engine_->RegisterPublisher(component_id_, std::move(request));
+  context_engine_->GetPublisher(component_id_, std::move(request));
 }
 
 void IntelligenceServicesImpl::GetProposalPublisher(

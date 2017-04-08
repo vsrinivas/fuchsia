@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/context_subscriber.fidl.h"
+#include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -99,8 +99,8 @@ class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
  public:
   ModuleSuggesterAgentApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        subscriber_(
-            app_context_->ConnectToEnvironmentService<ContextSubscriber>()),
+        provider_(
+            app_context_->ConnectToEnvironmentService<ContextProvider>()),
         binding_(this),
         out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()),
         ask_(this) {
@@ -109,7 +109,7 @@ class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
 
     auto query = ContextQuery::New();
     query->topics.push_back("/modular_state");
-    subscriber_->Subscribe(std::move(query), std::move(listener_handle));
+    provider_->Subscribe(std::move(query), std::move(listener_handle));
 
     fidl::InterfaceHandle<AskHandler> ask_handle;
     ask_.Bind(&ask_handle);
@@ -149,7 +149,7 @@ class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
  private:
   std::unique_ptr<app::ApplicationContext> app_context_;
 
-  ContextSubscriberPtr subscriber_;
+  ContextProviderPtr provider_;
   fidl::Binding<ContextListener> binding_;
   ProposalPublisherPtr out_;
   fidl::Binding<AskHandler> ask_;

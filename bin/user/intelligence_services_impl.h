@@ -22,7 +22,7 @@ class IntelligenceServicesImpl : public IntelligenceServices {
                            SuggestionEngine* suggestion_engine);
 
   void GetContextProvider(
-      fidl::InterfaceRequest<ContextSubscriber> request) override;
+      fidl::InterfaceRequest<ContextProvider> request) override;
 
   void GetContextPublisher(
       fidl::InterfaceRequest<ContextPublisher> request) override;

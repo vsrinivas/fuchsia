@@ -10,7 +10,7 @@ namespace acquirers {
 constexpr char GpsAcquirer::kLabel[];
 
 MockGps::MockGps(ContextEngine* context_engine) {
-  context_engine->RegisterPublisher("MockGps", publisher_.NewRequest());
+  context_engine->GetPublisher("MockGps", publisher_.NewRequest());
 }
 
 void MockGps::Publish(float latitude, float longitude) {

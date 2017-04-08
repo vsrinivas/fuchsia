@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/services/context/context_subscriber.fidl.h"
+#include "apps/maxwell/services/context/context_provider.fidl.h"
 
 namespace maxwell {
 
 class ContextRepository;
 
-class ContextSubscriberImpl : public ContextSubscriber {
+class ContextProviderImpl : public ContextProvider {
  public:
-  ContextSubscriberImpl(ContextRepository* repository);
-  ~ContextSubscriberImpl() override;
+  ContextProviderImpl(ContextRepository* repository);
+  ~ContextProviderImpl() override;
 
  private:
-  // |ContextSubscriber|
+  // |ContextProvider|
   void Subscribe(ContextQueryPtr query,
                  fidl::InterfaceHandle<ContextListener> listener) override;
 
   ContextRepository* repository_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextSubscriberImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ContextProviderImpl);
 };
 
 }  // namespace maxwell

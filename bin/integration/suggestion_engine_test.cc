@@ -25,7 +25,7 @@ namespace {
 class NPublisher {
  public:
   NPublisher(ContextEngine* context_engine) {
-    context_engine->RegisterPublisher("NPublisher", pub_.NewRequest());
+    context_engine->GetPublisher("NPublisher", pub_.NewRequest());
   }
 
   void Publish(int n) { pub_->Publish("n", std::to_string(n)); }
@@ -87,11 +87,11 @@ class NProposals : public Proposinator, public ContextListener {
  public:
   NProposals(ContextEngine* context_engine, SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), listener_binding_(this) {
-    context_engine->RegisterSubscriber("NProposals", subscriber_.NewRequest());
+    context_engine->GetProvider("NProposals", provider_.NewRequest());
 
     auto query = ContextQuery::New();
     query->topics.push_back("n");
-    subscriber_->Subscribe(std::move(query), listener_binding_.NewBinding());
+    provider_->Subscribe(std::move(query), listener_binding_.NewBinding());
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
@@ -106,7 +106,7 @@ class NProposals : public Proposinator, public ContextListener {
   }
 
  private:
-  ContextSubscriberPtr subscriber_;
+  ContextProviderPtr provider_;
   fidl::Binding<ContextListener> listener_binding_;
 
   int n_ = 0;
@@ -145,9 +145,9 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   void StartSuggestionAgent(const std::string& url) {
     auto agent_host =
         std::make_unique<ApplicationEnvironmentHostImpl>(root_environment);
-    agent_host->AddService<ContextSubscriber>(
-        [this, url](fidl::InterfaceRequest<ContextSubscriber> request) {
-          context_engine()->RegisterSubscriber(url, std::move(request));
+    agent_host->AddService<ContextProvider>(
+        [this, url](fidl::InterfaceRequest<ContextProvider> request) {
+          context_engine()->GetProvider(url, std::move(request));
         });
     agent_host->AddService<ProposalPublisher>(
         [this, url](fidl::InterfaceRequest<ProposalPublisher> request) {

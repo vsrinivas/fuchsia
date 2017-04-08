@@ -7,7 +7,7 @@
 #include <rapidjson/document.h>
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/context_subscriber.fidl.h"
+#include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -20,13 +20,13 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
  public:
   IdeasAgentApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        subscriber_(
-            app_context_->ConnectToEnvironmentService<ContextSubscriber>()),
+        provider_(
+            app_context_->ConnectToEnvironmentService<ContextProvider>()),
         binding_(this),
         out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()) {
     auto query = ContextQuery::New();
     query->topics.push_back("/location/region");
-    subscriber_->Subscribe(std::move(query), binding_.NewBinding());
+    provider_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
@@ -72,7 +72,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
  private:
   std::unique_ptr<app::ApplicationContext> app_context_;
 
-  ContextSubscriberPtr subscriber_;
+  ContextProviderPtr provider_;
   fidl::Binding<ContextListener> binding_;
   ProposalPublisherPtr out_;
 };

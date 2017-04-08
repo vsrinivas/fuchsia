@@ -4,7 +4,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
-#include "apps/maxwell/services/context/context_subscriber.fidl.h"
+#include "apps/maxwell/services/context/context_provider.fidl.h"
 #include "apps/maxwell/src/acquirers/gps.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -20,12 +20,12 @@ class CarmenSandiegoApp : public ContextListener {
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         publisher_(
             app_context_->ConnectToEnvironmentService<ContextPublisher>()),
-        subscriber_(
-            app_context_->ConnectToEnvironmentService<ContextSubscriber>()),
+        provider_(
+            app_context_->ConnectToEnvironmentService<ContextProvider>()),
         binding_(this) {
     auto query = ContextQuery::New();
     query->topics.push_back(acquirers::GpsAcquirer::kLabel);
-    subscriber_->Subscribe(std::move(query), binding_.NewBinding());
+    provider_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
@@ -59,7 +59,7 @@ class CarmenSandiegoApp : public ContextListener {
   std::unique_ptr<app::ApplicationContext> app_context_;
 
   ContextPublisherPtr publisher_;
-  ContextSubscriberPtr subscriber_;
+  ContextProviderPtr provider_;
   fidl::Binding<ContextListener> binding_;
 };
 

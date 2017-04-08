@@ -7,7 +7,7 @@
 #include <list>
 #include <unordered_map>
 
-#include "apps/maxwell/services/context/context_subscriber.fidl.h"
+#include "apps/maxwell/services/context/context_provider.fidl.h"
 
 namespace maxwell {
 

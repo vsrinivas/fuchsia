@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/context_engine/context_subscriber_impl.h"
+#include "apps/maxwell/src/context_engine/context_provider_impl.h"
 
 #include "apps/maxwell/src/context_engine/context_repository.h"
 
 namespace maxwell {
 
-ContextSubscriberImpl::ContextSubscriberImpl(ContextRepository* repository)
+ContextProviderImpl::ContextProviderImpl(ContextRepository* repository)
     : repository_(repository) {}
-ContextSubscriberImpl::~ContextSubscriberImpl() = default;
+ContextProviderImpl::~ContextProviderImpl() = default;
 
-void ContextSubscriberImpl::Subscribe(
+void ContextProviderImpl::Subscribe(
     ContextQueryPtr query, fidl::InterfaceHandle<ContextListener> listener) {
   ContextListenerPtr listener_ptr =
       ContextListenerPtr::Create(std::move(listener));
