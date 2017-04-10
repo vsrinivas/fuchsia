@@ -137,6 +137,15 @@ int FN(rename)(const char* oldpath, const char* newpath) {
     DO_REAL(rename, real_oldpath, real_newpath);
 }
 
+int FL(renameat)(int olddirfd, const char* oldpath, int newdirfd, const char* newpath);
+int FN(renameat)(int olddirfd, const char* oldpath, int newdirfd, const char* newpath) {
+    char real_oldpath[WPATH_MAX];
+    char real_newpath[WPATH_MAX];
+    PATH_WRAP(oldpath, real_oldpath);
+    PATH_WRAP(newpath, real_newpath);
+    DO_REAL(renameat, olddirfd, real_oldpath, newdirfd, real_newpath);
+}
+
 int FL(link)(const char* oldpath, const char* newpath);
 int FN(link)(const char* oldpath, const char* newpath) {
     char real_oldpath[WPATH_MAX];

@@ -1108,18 +1108,19 @@ int ftruncate(int fd, off_t len) {
 // Using magenta kernel primitives (cookies) to authenticate the vnode token, this
 // allows these multi-path operations to mix absolute / relative paths and cross
 // mount points with ease.
-static int two_path_op(uint32_t op, const char* oldpath, const char* newpath) {
+static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
+                          int newdirfd, const char* newpath) {
     char oldname[NAME_MAX + 1];
     mxio_t* io_oldparent;
     mx_status_t status;
-    if ((status = __mxio_opendir_containing(&io_oldparent, oldpath, oldname)) < 0) {
+    if ((status = __mxio_opendir_containing_at(&io_oldparent, olddirfd, oldpath, oldname)) < 0) {
         return ERROR(status);
     }
 
     int r;
     char newname[NAME_MAX + 1];
     mxio_t* io_newparent;
-    if ((status = __mxio_opendir_containing(&io_newparent, newpath, newname)) < 0) {
+    if ((status = __mxio_opendir_containing_at(&io_newparent, newdirfd, newpath, newname)) < 0) {
         r = ERROR(status);
         goto oldparent_open;
     }
@@ -1135,11 +1136,8 @@ static int two_path_op(uint32_t op, const char* oldpath, const char* newpath) {
     char name[MXIO_CHUNK_SIZE];
     size_t oldlen = strlen(oldname);
     size_t newlen = strlen(newname);
-    if (oldlen + newlen + 2 > sizeof(name)) {
-        r = ERRNO(EINVAL);
-        goto token_open;
-    }
-
+    static_assert(sizeof(oldname) + sizeof(newname) + 2 < sizeof(name),
+                  "Dual-path operation names should fit in MXIO name buffer");
     memcpy(name, oldname, oldlen);
     name[oldlen] = '\0';
     memcpy(name + oldlen + 1, newname, newlen);
@@ -1147,10 +1145,7 @@ static int two_path_op(uint32_t op, const char* oldpath, const char* newpath) {
     status = io_oldparent->ops->misc(io_oldparent, op, token, 0,
                                      (void*)name, oldlen + newlen + 2);
     r = STATUS(status);
-    // Token transferred through misc; no longer needs to be closed.
     goto newparent_open;
-token_open:
-    mx_handle_close(token);
 newparent_open:
     io_newparent->ops->close(io_newparent);
     mxio_release(io_newparent);
@@ -1160,12 +1155,16 @@ oldparent_open:
     return r;
 }
 
+int renameat(int olddirfd, const char* oldpath, int newdirfd, const char* newpath) {
+    return two_path_op_at(MXRIO_RENAME, olddirfd, oldpath, newdirfd, newpath);
+}
+
 int rename(const char* oldpath, const char* newpath) {
-    return two_path_op(MXRIO_RENAME, oldpath, newpath);
+    return two_path_op_at(MXRIO_RENAME, AT_FDCWD, oldpath, AT_FDCWD, newpath);
 }
 
 int link(const char* oldpath, const char* newpath) {
-    return two_path_op(MXRIO_LINK, oldpath, newpath);
+    return two_path_op_at(MXRIO_LINK, AT_FDCWD, oldpath, AT_FDCWD, newpath);
 }
 
 int unlink(const char* path) {

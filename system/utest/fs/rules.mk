@@ -36,7 +36,7 @@ MODULE_SRCS := \
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
 MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir
 MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink --wrap rmdir
-MODULE_LDFLAGS += --wrap chdir
+MODULE_LDFLAGS += --wrap chdir --wrap renameat
 
 MODULE_LIBS := \
     system/ulib/mxio \

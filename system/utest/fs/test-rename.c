@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -175,8 +176,75 @@ bool test_rename_absolute_relative(void) {
     END_TEST;
 }
 
+bool test_rename_at(void) {
+    BEGIN_TEST;
+
+    ASSERT_EQ(mkdir("::foo", 0755), 0, "");
+    ASSERT_EQ(mkdir("::foo/baz", 0755), 0, "");
+    ASSERT_EQ(mkdir("::bar", 0755), 0, "");
+
+    // Normal case of renameat, from one directory to another
+    int foofd = open("::foo", O_RDWR | O_DIRECTORY, 0644);
+    ASSERT_GT(foofd, 0, "");
+    int barfd = open("::bar", O_RDWR | O_DIRECTORY, 0644);
+    ASSERT_GT(barfd, 0, "");
+
+    ASSERT_EQ(renameat(foofd, "baz", barfd, "zab"), 0, "");
+
+    expected_dirent_t empty_contents[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+    };
+    ASSERT_TRUE(check_dir_contents("::foo", empty_contents, countof(empty_contents)), "");
+    expected_dirent_t contains_zab[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+        {false, "zab", DT_DIR},
+    };
+    ASSERT_TRUE(check_dir_contents("::bar", contains_zab, countof(contains_zab)), "");
+
+    // Alternate case of renameat, where an absolute path ignores
+    // the file descriptor.
+    //
+    // Here, barfd is used (in the first argument) but ignored (in the second argument).
+    ASSERT_EQ(renameat(barfd, "zab", barfd, "::foo/baz"), 0, "");
+    expected_dirent_t contains_baz[] = {
+        {false, ".", DT_DIR},
+        {false, "..", DT_DIR},
+        {false, "baz", DT_DIR},
+    };
+    ASSERT_TRUE(check_dir_contents("::foo", contains_baz, countof(contains_baz)), "");
+    ASSERT_TRUE(check_dir_contents("::bar", empty_contents, countof(empty_contents)), "");
+
+    // The 'absolute-path-ignores-fd' case should also work with invalid fds.
+    ASSERT_EQ(renameat(-1, "::foo/baz", -1, "::bar/baz"), 0, "");
+    ASSERT_TRUE(check_dir_contents("::foo", empty_contents, countof(empty_contents)), "");
+    ASSERT_TRUE(check_dir_contents("::bar", contains_baz, countof(contains_baz)), "");
+
+    // However, relative paths should not be allowed with invalid fds.
+    ASSERT_EQ(renameat(-1, "baz", foofd, "baz"), -1, "");
+    ASSERT_EQ(errno, EBADF, "");
+
+    // Additionally, we shouldn't be able to renameat to a file.
+    int fd = openat(barfd, "filename", O_CREAT | O_RDWR | O_EXCL);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(renameat(foofd, "baz", fd, "baz"), -1, "");
+    // NOTE: not checking for "ENOTDIR", since ENOTSUPPORTED might be returned instead.
+
+    // Clean up
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink("::bar/filename"), 0, "");
+    ASSERT_EQ(rmdir("::bar/baz"), 0, "");
+    ASSERT_EQ(close(foofd), 0, "");
+    ASSERT_EQ(close(barfd), 0, "");
+    ASSERT_EQ(rmdir("::foo"), 0, "");
+    ASSERT_EQ(rmdir("::bar"), 0, "");
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(rename_tests,
     RUN_TEST_MEDIUM(test_rename_basic)
     RUN_TEST_MEDIUM(test_rename_with_children)
     RUN_TEST_MEDIUM(test_rename_absolute_relative)
+    RUN_TEST_MEDIUM(test_rename_at)
 )
