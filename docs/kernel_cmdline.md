@@ -13,9 +13,9 @@ The kernel commandline is passed from the kernel to the userboot process
 and the device manager, so some of the options described below apply to
 those userspace processes, not the kernel itself.
 
-## aslr.enable
+## aslr.disable
 
-If this option is set, the system will use Address Space Layout
+If this option is set, the system will not use Address Space Layout
 Randomization.
 
 ## crashlogger.disable
