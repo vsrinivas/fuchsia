@@ -129,6 +129,15 @@ static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
             case 0x9e: /* Kabylake H/S */
                 return X86_MICROARCH_INTEL_KABYLAKE;
         }
+    } else if (x86_vendor == X86_VENDOR_AMD && info->family == 0xf) {
+        switch (info->display_family) { // zen
+            case 0x15: /* Bulldozer */
+                return X86_MICROARCH_AMD_BULLDOZER;
+            case 0x16: /* Jaguar */
+                return X86_MICROARCH_AMD_JAGUAR;
+            case 0x17: /* Zen */
+                return X86_MICROARCH_AMD_ZEN;
+        }
     }
     return X86_MICROARCH_UNKNOWN;
 }
@@ -206,15 +215,28 @@ void x86_feature_debug(void)
         { X86_FEATURE_PT, "pt" },
     };
 
-    const char *vendor_string;
+    const char *vendor_string = NULL;
     switch (x86_vendor) {
-        default:
         case X86_VENDOR_UNKNOWN: vendor_string = "unknown"; break;
         case X86_VENDOR_INTEL: vendor_string = "Intel"; break;
         case X86_VENDOR_AMD: vendor_string = "AMD"; break;
     }
     printf("Vendor: %s\n", vendor_string);
-    printf("Microarch: %u\n", x86_microarch);
+
+    const char *microarch_string = NULL;
+    switch (x86_microarch) {
+        case X86_MICROARCH_UNKNOWN: microarch_string = "unknown"; break;
+        case X86_MICROARCH_INTEL_SANDY_BRIDGE: microarch_string = "Sandy Bridge"; break;
+        case X86_MICROARCH_INTEL_IVY_BRIDGE: microarch_string = "Ivy Bridge"; break;
+        case X86_MICROARCH_INTEL_BROADWELL: microarch_string = "Broadwell"; break;
+        case X86_MICROARCH_INTEL_HASWELL: microarch_string = "Haswell"; break;
+        case X86_MICROARCH_INTEL_SKYLAKE: microarch_string = "Skylake"; break;
+        case X86_MICROARCH_INTEL_KABYLAKE: microarch_string = "Kaby Lake"; break;
+        case X86_MICROARCH_AMD_BULLDOZER: microarch_string = "Bulldozer"; break;
+        case X86_MICROARCH_AMD_JAGUAR: microarch_string = "Jaguar"; break;
+        case X86_MICROARCH_AMD_ZEN: microarch_string = "Zen"; break;
+    }
+    printf("Microarch: %s\n", microarch_string);
 
     printf("Features: ");
     uint col = 0;

@@ -316,6 +316,11 @@ static uint64_t lookup_core_crystal_freq(void) {
             }
             break;
         }
+        case X86_MICROARCH_AMD_BULLDOZER:
+        case X86_MICROARCH_AMD_JAGUAR:
+        case X86_MICROARCH_AMD_ZEN:
+            // TODO: figure out how to look up frequency
+            break;
         case X86_MICROARCH_UNKNOWN:
             break;
     }
