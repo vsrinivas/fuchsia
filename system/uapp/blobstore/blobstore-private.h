@@ -103,6 +103,8 @@ private:
     // Otherwise, returns size of the handle.
     mx_status_t GetReadableEvent(mx_handle_t* out);
 
+    mx_status_t CopyVmo(mx_rights_t rights, mx_handle_t* out);
+
     void QueueUnlink();
 
     // If successful, allocates Blob Node and Blocks (in-memory)
@@ -129,6 +131,7 @@ private:
     mx_status_t Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len,
                        uint32_t mode) final;
     mx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;
+    mx_status_t Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) final;
     mx_status_t Sync() final;
 
     // Read both VMOs into memory, if we haven't already.

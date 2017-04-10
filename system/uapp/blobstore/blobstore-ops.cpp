@@ -173,6 +173,20 @@ mx_status_t VnodeBlob::Unlink(const char* name, size_t len, bool must_be_dir) {
     return NO_ERROR;
 }
 
+mx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) {
+    if (IsDirectory()) {
+        return ERR_NOT_SUPPORTED;
+    }
+    if (flags & MXIO_MMAP_FLAG_WRITE) {
+        return ERR_NOT_SUPPORTED;
+    }
+
+    mx_rights_t rights = MX_RIGHT_TRANSFER | MX_RIGHT_MAP;
+    rights |= (flags & MXIO_MMAP_FLAG_READ) ? MX_RIGHT_READ : 0;
+    rights |= (flags & MXIO_MMAP_FLAG_EXEC) ? MX_RIGHT_EXECUTE : 0;
+    return CopyVmo(rights, out);
+}
+
 mx_status_t VnodeBlob::Sync() {
     // TODO(smklein): For now, this is a no-op, but it will change
     // once the kBlobFlagSync flag is in use.

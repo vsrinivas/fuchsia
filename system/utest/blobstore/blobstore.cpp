@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <threads.h>
@@ -245,6 +246,35 @@ static bool TestBasic(void) {
 
         ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
 
+        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(unlink(info->path), 0, "");
+    }
+
+    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    END_TEST;
+}
+
+static bool TestMmap(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+
+    for (size_t i = 10; i < 16; i++) {
+        mxtl::unique_ptr<blob_info_t> info;
+        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+
+        int fd;
+        ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
+                             info->data.get(), info->size_data, &fd), "");
+        ASSERT_EQ(close(fd), 0, "");
+        fd = open(info->path, O_RDWR);
+        ASSERT_GT(fd, 0, "Failed to-reopen blob");
+
+        void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_SHARED,
+                          fd, 0);
+        ASSERT_NEQ(addr, MAP_FAILED, "Could not mmap blob");
+        ASSERT_EQ(memcmp(addr, info->data.get(), info->size_data), 0, "Mmap data invalid");
+        ASSERT_EQ(munmap(addr, info->size_data), 0, "Could not unmap blob");
         ASSERT_EQ(close(fd), 0, "");
         ASSERT_EQ(unlink(info->path), 0, "");
     }
@@ -1120,21 +1150,22 @@ static bool RootDirectory(void) {
 }
 
 BEGIN_TEST_CASE(blobstore_tests)
-RUN_TEST(TestBasic)
-RUN_TEST(UseAfterUnlink)
-RUN_TEST(WriteAfterRead)
-RUN_TEST(BadAllocation)
-RUN_TEST(CorruptedMerkleTree)
-RUN_TEST(CorruptedBlob)
-RUN_TEST(CorruptedDigest)
-RUN_TEST(EdgeAllocation)
-RUN_TEST(CreateUmountRemountSmall)
-RUN_TEST(EarlyRead)
-RUN_TEST(WaitForRead)
-RUN_TEST(WriteSeekIgnored)
-RUN_TEST(UnlinkTiming)
-RUN_TEST(InvalidOps)
-RUN_TEST(RootDirectory)
+RUN_TEST_MEDIUM(TestBasic)
+RUN_TEST_MEDIUM(TestMmap)
+RUN_TEST_MEDIUM(UseAfterUnlink)
+RUN_TEST_MEDIUM(WriteAfterRead)
+RUN_TEST_MEDIUM(BadAllocation)
+RUN_TEST_MEDIUM(CorruptedMerkleTree)
+RUN_TEST_MEDIUM(CorruptedBlob)
+RUN_TEST_MEDIUM(CorruptedDigest)
+RUN_TEST_MEDIUM(EdgeAllocation)
+RUN_TEST_MEDIUM(CreateUmountRemountSmall)
+RUN_TEST_MEDIUM(EarlyRead)
+RUN_TEST_MEDIUM(WaitForRead)
+RUN_TEST_MEDIUM(WriteSeekIgnored)
+RUN_TEST_MEDIUM(UnlinkTiming)
+RUN_TEST_MEDIUM(InvalidOps)
+RUN_TEST_MEDIUM(RootDirectory)
 RUN_TEST_LARGE(CreateUmountRemountLargeMultithreaded)
 RUN_TEST_LARGE(CreateUmountRemountLarge)
 RUN_TEST_LARGE(NoSpace)

@@ -492,6 +492,35 @@ mx_status_t VnodeBlob::GetReadableEvent(mx_handle_t* out) {
     return sizeof(mx_handle_t);
 }
 
+mx_status_t VnodeBlob::CopyVmo(mx_rights_t rights, mx_handle_t* out) {
+    if (GetState() != kBlobStateReadable) {
+        return ERR_BAD_STATE;
+    }
+    mx_status_t status = InitVmos();
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    // TODO(smklein): We could lazily verify more of the VMO if:
+    // 1) We could fault in pages on-demand, or
+    // 2) We could create a COW subsection of the original VMO.
+    //
+    // For now, we aggressively verify the entire VMO up front.
+    merkle::Tree mt;
+    merkle::Digest d;
+    d = ((const uint8_t*) &digest_[0]);
+    auto inode = &blobstore_->node_map_[map_index_];
+    uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
+    status = mt.Verify((const void*)vmo_blob_addr_, inode->blob_size,
+                       (const void*)vmo_merkle_tree_addr_, size_merkle,
+                       0, inode->blob_size, d);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    return mx_handle_duplicate(vmo_blob_, rights, out);
+}
+
 mx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
     if (GetState() != kBlobStateReadable) {
         return ERR_BAD_STATE;
