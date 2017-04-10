@@ -29,7 +29,7 @@ def main():
                         action="store_true")
     parser.add_argument("--omit-tests", help="omit tests from the output",
                         action="store_true")
-    parser.add_argument("--flutter-enable-vulkan", help="enable vulkan in flutter content handler",
+    parser.add_argument("--fuchsia-enable-vulkan", help="enable Vulkan in Mozart, Skia, and Flutter",
                         action="store_true", default=False)
     parser.add_argument("--autorun", help="path to autorun script")
     (args, passthrough) = parser.parse_known_args()
@@ -46,13 +46,15 @@ def main():
     cpu_map = {"x86-64":"x64", "aarch64":"arm64"}
     gn_args = "--args=target_cpu=\"" + cpu_map[args.target_cpu]  + "\""
 
-    if args.flutter_enable_vulkan:
+    if args.fuchsia_enable_vulkan:
         # Enable Vulkan in the content handler.
         gn_args += " flutter_enable_vulkan=true"
         # Enable & configure Vulkan in Skia.
         gn_args += " skia_use_vulkan=true"
         gn_args += " skia_link_with_vulkan=false"
         gn_args += " skia_vulkan_headers_path =\"//third_party/vulkan_loader_and_validation_layers/include\""
+        # Enable Vulkan in Mozart
+        gn_args += " mozart_use_vulkan=true"
 
     gn_args += " modules=\"" + args.modules + "\""
 
