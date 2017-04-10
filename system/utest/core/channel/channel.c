@@ -448,9 +448,11 @@ static uint32_t call_test_done = 0;
 static mtx_t call_test_lock;
 static cnd_t call_test_cvar;
 
+// we use txid_t for cmd here so that the test
+// works with both 32bit and 64bit txids
 typedef struct {
     mx_txid_t txid;
-    uint32_t cmd;
+    mx_txid_t cmd;
     uint32_t bit;
     unsigned action;
     mx_status_t expect;
@@ -473,7 +475,7 @@ static int call_client(void* _args) {
     ccargs_t* ccargs = _args;
     mx_channel_call_args_t args;
 
-    uint32_t data[2];
+    mx_txid_t data[2];
     mx_handle_t txhandle = 0;
     mx_handle_t rxhandle = 0;
 
@@ -612,13 +614,13 @@ static int call_server(void* ptr) {
             continue;
         }
 
-        uint32_t data[4];
+        mx_txid_t data[4];
         data[0] = m->txid;
         data[1] = m->txid * 31337;
         data[2] = 0x22222222;
         data[3] = 0x33333333;
 
-        uint32_t bytes = (m->action & SRV_SEND_DATA) ? 16 : 8;
+        uint32_t bytes = sizeof(mx_txid_t) * ((m->action & SRV_SEND_DATA) ? 4 : 2);
         uint32_t handles = (m->action & SRV_SEND_HANDLE) ? 1 : 0;
         mx_handle_t handle = 0;
         if (handles) {

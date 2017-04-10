@@ -285,8 +285,8 @@ struct channel_call_suspend_test_arg {
 __NO_SAFESTACK static void test_channel_call_thread_fn(void* arg_) {
     struct channel_call_suspend_test_arg* arg = arg_;
 
-    uint8_t send_buf[8] = "abcdefgh";
-    uint8_t recv_buf[8];
+    uint8_t send_buf[9] = "abcdefghi";
+    uint8_t recv_buf[9];
     uint32_t actual_bytes, actual_handles;
 
     mx_channel_call_args_t call_args = {
@@ -306,7 +306,7 @@ __NO_SAFESTACK static void test_channel_call_thread_fn(void* arg_) {
 
     if (arg->call_status == NO_ERROR) {
         arg->read_status = NO_ERROR;
-        if (actual_bytes != sizeof(recv_buf) || memcmp(recv_buf, "abcdefgi", sizeof(recv_buf))) {
+        if (actual_bytes != sizeof(recv_buf) || memcmp(recv_buf, "abcdefghj", sizeof(recv_buf))) {
             arg->call_status = ERR_BAD_STATE;
         }
     }
@@ -337,15 +337,15 @@ static bool test_suspend_channel_call(void) {
     // we receive it.
 
     // Read the message
-    uint8_t buf[8];
+    uint8_t buf[9];
     uint32_t actual_bytes;
     ASSERT_EQ(mx_channel_read(channel, 0, buf, sizeof(buf), &actual_bytes, NULL, 0, NULL),
               NO_ERROR, "");
     ASSERT_EQ(actual_bytes, sizeof(buf), "");
-    ASSERT_EQ(memcmp(buf, "abcdefgh", sizeof(buf)), 0, "");
+    ASSERT_EQ(memcmp(buf, "abcdefghi", sizeof(buf)), 0, "");
 
     // Write a reply
-    buf[7] = 'i';
+    buf[8] = 'j';
     ASSERT_EQ(mx_channel_write(channel, 0, buf, sizeof(buf), NULL, 0), NO_ERROR, "");
 
     // Make sure the remote channel didn't get signaled
