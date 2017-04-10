@@ -26,5 +26,5 @@ constexpr int kLogLevel = kLogInfo;
 #define warnf(args...) logf(kLogWarning, "[W] ", args)
 #define infof(args...) logf(kLogInfo, "[I] ", args)
 #define debugf(args...) logf(kLogDebug, "[D] ", args)
-#define debugfn() debugf("%s\n", __func__)
+#define debugfn() debugf("%s\n", __PRETTY_FUNCTION__)
 }  // namespace wlan

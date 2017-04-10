@@ -11,6 +11,10 @@ driver_module("wlan") {
     "device.h",
     "driver.cpp",
     "logging.h",
+    "mlme.cpp",
+    "mlme.h",
+    "packet.cpp",
+    "packet.h",
   ]
 
   defines = [
@@ -20,6 +24,7 @@ driver_module("wlan") {
   cflags = [ "-Wthread-safety" ]
 
   deps = [
+    "//apps/wlan/services:mlme_data_only",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
   ]

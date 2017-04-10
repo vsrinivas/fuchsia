@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <ddk/device.h>
+#include "mlme.h"
+#include "packet.h"
+
 #include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/wlan.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
 #include <ddktl/protocol/wlan.h>
@@ -15,6 +15,8 @@
 #include <magenta/syscalls/port.h>
 #include <mx/channel.h>
 #include <mx/port.h>
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/slab_allocator.h>
 #include <mxtl/unique_ptr.h>
 
 #include <mutex>
@@ -50,6 +52,7 @@ class Device : public WlanBaseDevice,
   private:
     enum MsgKey : uint64_t {
         kShutdown = 1,
+        kPacketQueued,
     };
 
     struct LoopMessage {
@@ -63,23 +66,32 @@ class Device : public WlanBaseDevice,
     static_assert(sizeof(LoopMessage) <= sizeof(mx_port_packet_t),
             "wlan::Device::LoopMessage must fit in an mx_port_packet_t");
 
+    mx_status_t QueuePacket(const void* data, size_t length, Packet::Source src)
+        __TA_EXCLUDES(packet_queue_lock_);
+
     void MainLoop();
-    void ProcessChannelPacketLocked(const mx_port_packet_t& pkt) __TA_REQUIRES(lock_);
+    bool ProcessChannelPacketLocked(const mx_port_packet_t& pkt) __TA_REQUIRES(lock_);
     mx_status_t RegisterChannelWaitLocked() __TA_REQUIRES(lock_);
     mx_status_t SendShutdown();
 
     mx_status_t GetChannel(mx::channel* out) __TA_EXCLUDES(lock_);
 
+    mx_device_t* parent_;
     std::mutex lock_;
     std::thread work_thread_;
     mx::port port_;
 
-    ddk::WlanmacProtocolProxy wlanmac_proxy_;
-    mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_ __TA_GUARDED(lock_);
-
-    ethmac_info_t ethmac_info_ = {};
+    Mlme mlme_ __TA_GUARDED(lock_);
 
     mx::channel channel_ __TA_GUARDED(lock_);
+
+    // TODO(tkilbourn): evaluate whether an instance or a static slab allocator makes more sense
+    static constexpr size_t kNumSlabs = 2;
+    mxtl::SlabAllocator<BufferAllocatorTraits> buffer_alloc_;
+
+    std::mutex packet_queue_lock_;
+    mxtl::DoublyLinkedList<mxtl::unique_ptr<Packet>> packet_queue_
+        __TA_GUARDED(packet_queue_lock_);
 };
 
 }  // namespace wlan

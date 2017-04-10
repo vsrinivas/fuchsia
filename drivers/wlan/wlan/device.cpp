@@ -6,22 +6,27 @@
 #include "logging.h"
 
 #include <magenta/assert.h>
+#include <magenta/compiler.h>
 #include <magenta/device/wlan.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
+#include <mx/time.h>
 
 #include <cinttypes>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <utility>
 
 
 namespace wlan {
 
 Device::Device(mx_driver_t* driver, mx_device_t* device, wlanmac_protocol_t* wlanmac_ops)
   : WlanBaseDevice("wlan", driver),
-    wlanmac_proxy_(wlanmac_ops, device) {
+    parent_(device),
+    mlme_(ddk::WlanmacProtocolProxy(wlanmac_ops, device)),
+    buffer_alloc_(kNumSlabs, true) {
     debugfn();
 }
 
@@ -30,12 +35,15 @@ Device::~Device() {
     MX_DEBUG_ASSERT(!work_thread_.joinable());
 }
 
-mx_status_t Device::Bind() {
+// Disable thread safety analysis, as this is a part of device initialization. All thread-unsafe
+// work should occur before multiple threads are possible (e.g., before MainLoop is started and
+// before Add() is called), or locks should be held.
+mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     debugfn();
 
-    auto status = wlanmac_proxy_.Query(0, &ethmac_info_);
+    mx_status_t status = mlme_.Init();
     if (status != NO_ERROR) {
-        warnf("could not query wlan mac device: %d\n", status);
+        warnf("could not initialize mlme: %d\n", status);
     }
 
     status = mx::port::create(MX_PORT_OPT_V2, &port_);
@@ -45,7 +53,7 @@ mx_status_t Device::Bind() {
     }
     work_thread_ = std::thread(&Device::MainLoop, this);
 
-    status = Add(wlanmac_proxy_.device());
+    status = Add(parent_);
     if (status != NO_ERROR) {
         errorf("could not add device err=%d\n", status);
         auto shutdown_status = SendShutdown();
@@ -62,6 +70,31 @@ mx_status_t Device::Bind() {
     return status;
 }
 
+mx_status_t Device::QueuePacket(const void* data, size_t length, Packet::Source src) {
+    if (length > kBufferSize) {
+        return ERR_BUFFER_TOO_SMALL;
+    }
+    auto buffer = buffer_alloc_.New();
+    if (buffer == nullptr) {
+        return ERR_NO_RESOURCES;
+    }
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), length));
+    packet->SetSrc(src);
+    packet->CopyFrom(data, length, 0);
+    {
+        std::lock_guard<std::mutex> lock(packet_queue_lock_);
+        packet_queue_.push_front(std::move(packet));
+        LoopMessage msg(kPacketQueued);
+        mx_status_t status = port_.queue(&msg, 0);
+        if (status != NO_ERROR) {
+            warnf("could not send packet queued msg err=%d\n", status);
+            packet_queue_.pop_front();
+            return status;
+        }
+    }
+    return NO_ERROR;
+}
+
 void Device::DdkUnbind() {
     debugfn();
     device_remove(mxdev());
@@ -70,7 +103,7 @@ void Device::DdkUnbind() {
 void Device::DdkRelease() {
     debugfn();
     if (port_.is_valid()) {
-        auto status = SendShutdown();
+        mx_status_t status = SendShutdown();
         if (status != NO_ERROR) {
             MX_PANIC("wlan: could not send shutdown loop message: %d\n", status);
         }
@@ -92,7 +125,7 @@ mx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
     }
 
     mx::channel out;
-    auto status = GetChannel(&out);
+    mx_status_t status = GetChannel(&out);
     if (status != NO_ERROR) {
         return status;
     }
@@ -107,10 +140,8 @@ mx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     debugfn();
     if (info == nullptr) return ERR_INVALID_ARGS;
 
-    // Make sure this device is reported as a wlan device
-    info->features = ethmac_info_.features | ETHMAC_FEATURE_WLAN;
-    info->mtu = ethmac_info_.mtu;
-    std::memcpy(info->mac, ethmac_info_.mac, ETH_MAC_SIZE);
+    std::lock_guard<std::mutex> lock(lock_);
+    mlme_.GetDeviceInfo(info);
     return NO_ERROR;
 }
 
@@ -119,33 +150,22 @@ mx_status_t Device::EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
     MX_DEBUG_ASSERT(proxy != nullptr);
 
     std::lock_guard<std::mutex> lock(lock_);
-    if (ethmac_proxy_ != nullptr) {
-        return ERR_ALREADY_BOUND;
-    }
-
-    auto status = wlanmac_proxy_.Start(this);
-    if (status != NO_ERROR) {
-        errorf("could not start wlanmac: %d\n", status);
-    } else {
-        ethmac_proxy_.swap(proxy);
-        // TODO: queue a packet on the port to signal the start?
-    }
-    return status;
+    return mlme_.Start(mxtl::move(proxy), this);
 }
 
 void Device::EthmacStop() {
     debugfn();
 
     std::lock_guard<std::mutex> lock(lock_);
-    if (ethmac_proxy_ == nullptr) {
-        warnf("ethmac not started\n");
-    }
-    ethmac_proxy_.reset();
-    // TODO: queue a packet on the port to signal the stop
+    mlme_.Stop();
 }
 
 void Device::EthmacSend(uint32_t options, void* data, size_t length) {
     // no debugfn() because it's too noisy
+    mx_status_t status = QueuePacket(data, length, Packet::Source::kEthernet);
+    if (status != NO_ERROR) {
+        warnf("could not queue outbound packet err=%d\n", status);
+    }
 }
 
 void Device::WlanmacStatus(uint32_t status) {
@@ -154,6 +174,10 @@ void Device::WlanmacStatus(uint32_t status) {
 
 void Device::WlanmacRecv(void* data, size_t length, uint32_t flags) {
     // no debugfn() because it's too noisy
+    mx_status_t status = QueuePacket(data, length, Packet::Source::kWlan);
+    if (status != NO_ERROR) {
+        warnf("could not queue inbound packet err=%d\n", status);
+    }
 }
 
 Device::LoopMessage::LoopMessage(MsgKey key, uint32_t extra) {
@@ -166,11 +190,19 @@ void Device::MainLoop() {
     infof("starting MainLoop\n");
     mx_port_packet_t pkt;
     uint64_t this_key = reinterpret_cast<uint64_t>(this);
+    mx_time_t timeout = mx::deadline_after(MX_SEC(5));
     bool running = true;
     while (running) {
-        auto status = port_.wait(MX_TIME_INFINITE, &pkt, 0);
+        mx_status_t status = port_.wait(timeout, &pkt, 0);
         std::lock_guard<std::mutex> lock(lock_);
-        if (status != NO_ERROR) {
+        if (status == ERR_TIMED_OUT) {
+            mx_status_t status = mlme_.HandleTimeout(&timeout);
+            if (status != NO_ERROR) {
+                errorf("could not handle timeout err=%d\n", status);
+                // TODO: decide whether to continue
+            }
+            continue;
+        } else if (status != NO_ERROR) {
             if (status == ERR_BAD_HANDLE) {
                 debugf("port closed, exiting\n");
             } else {
@@ -179,12 +211,16 @@ void Device::MainLoop() {
             break;
         }
 
+        bool todo = false;
         switch (pkt.type) {
         case MX_PKT_TYPE_USER:
             switch (pkt.key) {
             case kShutdown:
                 running = false;
                 continue;
+            case kPacketQueued:
+                todo = true;
+                break;
             default:
                 errorf("unknown user port key: %" PRIu64 "\n", pkt.key);
                 break;
@@ -196,24 +232,41 @@ void Device::MainLoop() {
                         pkt.key, this_key);
                 break;
             }
-            ProcessChannelPacketLocked(pkt);
+            if (ProcessChannelPacketLocked(pkt)) {
+                todo = true;
+            }
             break;
         default:
             errorf("unknown port packet type: %u\n", pkt.type);
             break;
         }
+
+        if (todo) {
+            mxtl::unique_ptr<Packet> packet;
+            {
+                std::lock_guard<std::mutex> lock(packet_queue_lock_);
+                packet = packet_queue_.pop_back();
+                MX_DEBUG_ASSERT(packet != nullptr);
+            }
+            mx_status_t status = mlme_.HandlePacket(packet.get(), &timeout);
+            if (status != NO_ERROR) {
+                errorf("could not handle packet err=%d\n", status);
+            }
+        }
     }
 
     infof("exiting MainLoop\n");
     std::lock_guard<std::mutex> lock(lock_);
-    ethmac_proxy_.reset();
+    mlme_.Stop();
     port_.reset();
     channel_.reset();
 }
 
-void Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
+bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
     debugf("%s pkt{key=%" PRIu64 ", type=%u, status=%d\n",
             __func__, pkt.key, pkt.type, pkt.status);
+
+    bool packet_queued = false;
     const auto& sig = pkt.signal;
     debugf("signal trigger=%u observed=%u count=%" PRIu64 "\n", sig.trigger, sig.observed,
             sig.count);
@@ -221,23 +274,37 @@ void Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         infof("channel closed\n");
         channel_.reset();
     } else if (sig.observed & MX_CHANNEL_READABLE) {
-        uint8_t buf[1024];  // how big should this be?
+        auto buffer = buffer_alloc_.New();
+        if (buffer == nullptr) {
+            errorf("no free buffers available!\n");
+            // TODO: reply on the channel
+            return packet_queued;
+        }
         uint32_t read = 0;
-        auto status = channel_.read(0, buf, sizeof(buf), &read, nullptr, 0, nullptr);
+        mx_status_t status =
+            channel_.read(0, buffer->data, sizeof(buffer->data), &read, nullptr, 0, nullptr);
         if (status != NO_ERROR) {
             errorf("could not read channel: %d\n", status);
             channel_.reset();
-            return;
+            return packet_queued;
         }
         debugf("read %u bytes from channel_\n", read);
+
+        auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), read));
+        packet->SetSrc(Packet::Source::kService);
+        {
+            std::lock_guard<std::mutex> lock(packet_queue_lock_);
+            packet_queue_.push_front(std::move(packet));
+        }
+        packet_queued = true;
 
         status = RegisterChannelWaitLocked();
         if (status != NO_ERROR) {
             errorf("could not wait on channel: %d\n", status);
             channel_.reset();
-            return;
         }
     }
+    return packet_queued;
 }
 
 mx_status_t Device::RegisterChannelWaitLocked() {
@@ -263,7 +330,7 @@ mx_status_t Device::GetChannel(mx::channel* out) {
         return ERR_ALREADY_BOUND;
     }
 
-    auto status = mx::channel::create(0, &channel_, out);
+    mx_status_t status = mx::channel::create(0, &channel_, out);
     if (status != NO_ERROR) {
         errorf("could not create channel: %d\n", status);
         return status;
