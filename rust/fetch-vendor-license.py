@@ -69,6 +69,9 @@ def main():
     parser.add_argument('--directory',
                         help='Directory containing the crates',
                         default=os.getcwd())
+    parser.add_argument('--verify',
+                        help='Simply check whether licenses are up-to-date',
+                        action='store_true')
     args = parser.parse_args()
     success = True
     os.chdir(args.directory)
@@ -80,6 +83,10 @@ def main():
                          file.startswith('license')]
         if license_files:
             print 'OK       %s' % subdir
+            continue
+        if args.verify:
+            print 'MISSING  %s' % subdir
+            success = False
             continue
         try:
             fetch_license(subdir)
