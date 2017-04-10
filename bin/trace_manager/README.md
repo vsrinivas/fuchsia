@@ -33,12 +33,13 @@ trace [options] command [command-specific options]
 ```
 Any remaining arguments are interpreted as a program to run.
 
-An example invocation for tracing to `/tmp/trace.json` for 15 seconds,
+An example invocation for tracing for 15 seconds,
 capturing only categories `gfx` and `flutter` looks like:
 ```
-trace record --trace-file=/tmp/trace.json --duration=15 --categories=gfx,flutter launch noodles_view
+trace record --duration=15 --categories=gfx,flutter launch noodles_view
 ```
 
+The default output file is `/tmp/trace.json`.
 Assuming that networking is configured correctly (see [Getting Started](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md)),
 the resulting trace can then be retrieved from the device with `netcp` as in:
 ```
