@@ -61,6 +61,21 @@ bool RspServer::Run() {
       exception_port_.Quit();
     });
 
+  // If we're to attach to a running process at start-up, do so here.
+  // This needs to be done after |exception_port_| is set up.
+  auto inferior = current_process();
+  if (inferior->attached_running()) {
+    FTL_DCHECK(!inferior->IsAttached());
+    if (!inferior->Attach()) {
+      FTL_LOG(ERROR) << "Failed to attach to inferior";
+      return false;
+    }
+    FTL_DCHECK(inferior->IsAttached());
+    // It's Attach()'s job to mark the process as live, since it knows we just
+    // attached to an already running program.
+    FTL_DCHECK(inferior->IsLive());
+  }
+
   // TODO(dje): Continually re-listen for connections when debugger goes
   // away, with new option to control this (--listen=once|loop or whatever).
 

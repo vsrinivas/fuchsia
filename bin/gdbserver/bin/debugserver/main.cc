@@ -22,9 +22,13 @@ namespace {
 
 constexpr char kUsageString[] =
     "Usage: debugserver [options] port [program [args...]]\n"
+    "       debugserver [options] [--attach=pid] port\n"
     "\n"
     "  port    - TCP port\n"
     "  program - the path to the executable to run\n"
+    "  pid     - process id (koid) of the process to attach to\n"
+    "\n"
+    "Note that only one of program or --attach=pid may be specified.\n"
     "\n"
     "e.g. debugserver 2345 /path/to/executable\n"
     "\n"
@@ -65,6 +69,16 @@ int main(int argc, char* argv[]) {
   if (!ftl::SetLogSettingsFromCommandLine(cl))
     return EXIT_FAILURE;
 
+  std::string attach_pid_str;
+  mx_koid_t attach_pid = MX_KOID_INVALID;
+  if (cl.GetOptionValue("attach", &attach_pid_str)) {
+    if (!ftl::StringToNumberWithError<mx_koid_t>(attach_pid_str,
+                                                 &attach_pid)) {
+      FTL_LOG(ERROR) << "Not a valid process id: " << attach_pid_str;
+      return EXIT_FAILURE;
+    }
+  }
+
   uint16_t port;
   if (!ftl::StringToNumberWithError<uint16_t>(cl.positional_args()[0], &port)) {
     FTL_LOG(ERROR) << "Not a valid port number: " << cl.positional_args()[0];
@@ -81,12 +95,29 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
                                          cl.positional_args().end());
   auto inferior = new debugserver::Process(&server, &server);
-  inferior->set_argv(inferior_argv);
+
+  // Are we passed a pid or a program?
+  if (attach_pid != MX_KOID_INVALID && inferior_argv.size() != 0) {
+    FTL_LOG(ERROR) << "Cannot specify both --attach=pid and a program";
+    return EXIT_FAILURE;
+  }
+
+  if (attach_pid != MX_KOID_INVALID) {
+    if (!inferior->Initialize(attach_pid)) {
+      FTL_LOG(ERROR) << "Failed to set up inferior";
+      return EXIT_FAILURE;
+    }
+    // Note: We're not attached yet, that happens later.
+  } else {
+    // inferior_argv can be empty here, in which case it must be supplied by
+    // the debugger.
+    inferior->set_argv(inferior_argv);
+  }
 
   // It's simpler to set the current process here since we don't support
-  // multiple processes yet. The process is not live yet however, it does not
-  // exist to the kernel yet. Calling Process::Initialize() is left to the
-  // vRun command.
+  // multiple processes yet. If running a program, the process is not live yet
+  // however, it does not exist to the kernel yet. Calling
+  // Process::Initialize() is left to the vRun command.
   server.set_current_process(inferior);
 
   bool status = server.Run();
