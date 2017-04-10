@@ -1,0 +1,16 @@
+{
+    "labels": [
+        "//apps/amber:go-tuf",
+        "//apps/amber:go-tuf-client"
+    ],
+    "binaries": [
+        {
+            "binary": "go-tuf",
+            "bootfs_path": "bin/go-tuf"
+        },
+        {
+            "binary": "go-tuf-client",
+            "bootfs_path": "bin/go-tuf-client"
+        }
+    ]
+}
