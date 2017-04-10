@@ -15,6 +15,7 @@
 
 #define BCM_SDRAM_BUS_ADDR_BASE_NO_L2 0xc0000000
 #define BCM_SDRAM_BUS_ADDR_BASE (BCM_SDRAM_BUS_ADDR_BASE_NO_L2)
+#define BCM_PHYS_ADDR_MASK      (0x3fffffff)
 
 /* pointer to 'local' peripherals at 0x40000000 */
 #define BCM_LOCAL_PERIPH_BASE_VIRT (BCM_PERIPH_BASE_PHYS + 0x01000000)
