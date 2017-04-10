@@ -513,7 +513,7 @@ typedef struct {
 typedef struct {
     _Atomic(int) _b_lock;
     _Atomic(int) _b_waiters;
-    int _b_limit;
+    unsigned int _b_limit;
     _Atomic(int) _b_count;
     _Atomic(int) _b_waiters2;
     void* _b_inst;
