@@ -6,6 +6,7 @@
 #define APPS_MODULAR_SRC_USER_RUNNER_CONFLICT_RESOLVER_IMPL_H_
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/lib/fidl/operation.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/ftl/logging.h"
@@ -34,11 +35,14 @@ class ConflictResolverImpl : ledger::ConflictResolverFactory,
 
   // |ConflictResolver|
   void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
-               ledger::PageChangePtr change_left,
                fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
-               ledger::PageChangePtr change_right,
                fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
-               const ResolveCallback& callback) override;
+               fidl::InterfaceHandle<ledger::MergeResultProvider>
+                   result_provider) override;
+
+  OperationQueue operation_queue_;
+
+  class LogConflictDiffCall;
 
   fidl::BindingSet<ledger::ConflictResolverFactory> factory_bindings_;
   fidl::BindingSet<ledger::ConflictResolver> bindings_;

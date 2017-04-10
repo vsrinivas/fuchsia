@@ -27,6 +27,56 @@ bool IsRootPageId(const fidl::Array<uint8_t>& id) {
 
 }  // namespace
 
+class ConflictResolverImpl::LogConflictDiffCall : Operation<void> {
+ public:
+  LogConflictDiffCall(OperationContainer* const container,
+                      ledger::MergeResultProviderPtr result_provider)
+      : Operation(container, [] {}),
+        result_provider_(std::move(result_provider)) {
+    Ready();
+  }
+
+ private:
+  void Run() override { GetDiff(nullptr); }
+
+  void GetDiff(fidl::Array<uint8_t> continuation_token) {
+    result_provider_->GetDiff(
+        std::move(continuation_token),
+        [this](ledger::Status status, ledger::PageChangePtr change_left,
+               ledger::PageChangePtr change_right,
+               fidl::Array<uint8_t> next_token) {
+          if (status != ledger::Status::OK &&
+              status != ledger::Status::PARTIAL_RESULT) {
+            FTL_LOG(INFO) << "MergeResultProvider::GetDiff failed with status "
+                          << status;
+            return;
+          }
+          for (auto& change : change_left->changes) {
+            FTL_LOG(INFO) << "changed right " << to_string(change->key);
+          }
+
+          for (auto& change : change_right->changes) {
+            FTL_LOG(INFO) << "changed left " << to_string(change->key);
+          }
+          if (status == ledger::Status::PARTIAL_RESULT) {
+            GetDiff(std::move(next_token));
+          } else {
+            result_provider_->Done([this](ledger::Status status) {
+              if (status != ledger::Status::OK) {
+                FTL_LOG(INFO) << "MergeResultProvider::Done failed with status "
+                              << status;
+              }
+              Done();
+            });
+          }
+        });
+  }
+
+  ledger::MergeResultProviderPtr result_provider_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(LogConflictDiffCall);
+};
+
 ConflictResolverImpl::ConflictResolverImpl() = default;
 
 ConflictResolverImpl::~ConflictResolverImpl() = default;
@@ -54,24 +104,14 @@ void ConflictResolverImpl::NewConflictResolver(
 
 void ConflictResolverImpl::Resolve(
     fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
-    ledger::PageChangePtr change_left,
     fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
-    ledger::PageChangePtr change_right,
     fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
-    const ResolveCallback& callback) {
+    fidl::InterfaceHandle<ledger::MergeResultProvider> result_provider) {
   FTL_LOG(WARNING) << "Conflict in root page. Doing nothing.";
 
-  for (auto& change : change_left->changes) {
-    FTL_LOG(INFO) << "changed right " << to_string(change->key);
-  }
-
-  for (auto& change : change_right->changes) {
-    FTL_LOG(INFO) << "changed left " << to_string(change->key);
-  }
-
-  fidl::Array<ledger::MergedValuePtr> ret;
-  ret.resize(0);
-  callback(std::move(ret));
+  ledger::MergeResultProviderPtr result_provider_ptr =
+      ledger::MergeResultProviderPtr::Create(std::move(result_provider));
+  new LogConflictDiffCall(&operation_queue_, std::move(result_provider_ptr));
 }
 
 }  // namespace modular
