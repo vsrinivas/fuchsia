@@ -9,6 +9,8 @@
 #define SDRAM_BASE 0
 /* Note: BCM2836/BCM2837 use different peripheral base than BCM2835 */
 #define BCM_PERIPH_BASE_PHYS    (0x3f000000U)
+#define BCM_PERIPH_ADDR_MASK    (0x00ffffffULL)
+#define BCM_PERIPH_BASE_BUS     (0x7e000000ULL)
 #define BCM_PERIPH_SIZE         (0x40000000U)
 
 #define MEMORY_APERTURE_SIZE    (30ULL * 1024 * 1024 * 1024)
@@ -26,6 +28,7 @@
 #define DMA_BASE                (BCM_PERIPH_BASE_PHYS + 0x7000)
 #define ARM_BASE                (BCM_PERIPH_BASE_PHYS + 0xB000)
 #define PM_BASE                 (BCM_PERIPH_BASE_PHYS + 0x100000)
+#define BCM_CM_BASE             (BCM_PERIPH_BASE_PHYS + 0x101000)
 #define PCM_CLOCK_BASE          (BCM_PERIPH_BASE_PHYS + 0x101098)
 #define RNG_BASE                (BCM_PERIPH_BASE_PHYS + 0x104000)
 #define GPIO_BASE               (BCM_PERIPH_BASE_PHYS + 0x200000)
