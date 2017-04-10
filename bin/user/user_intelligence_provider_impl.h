@@ -46,6 +46,8 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   ContextEnginePtr context_engine_;
   app::ServiceProviderPtr suggestion_services_;
   SuggestionEnginePtr suggestion_engine_;
+  app::ServiceProviderPtr action_log_services_;
+  ActionLogFactoryPtr action_log_factory_;
 
   fidl::InterfacePtr<modular::FocusController> focus_controller_;
 

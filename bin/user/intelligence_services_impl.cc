@@ -12,11 +12,13 @@ namespace maxwell {
 
 IntelligenceServicesImpl::IntelligenceServicesImpl(
     const std::string& story_id, const std::string& component_id,
-    ContextEngine* context_engine, SuggestionEngine* suggestion_engine)
+    ContextEngine* context_engine, SuggestionEngine* suggestion_engine,
+    ActionLogFactory* action_log_factory)
     : story_id_(story_id),
       component_id_(component_id),
       context_engine_(context_engine),
-      suggestion_engine_(suggestion_engine) {}
+      suggestion_engine_(suggestion_engine),
+      action_log_factory_(action_log_factory) {}
 
 void IntelligenceServicesImpl::GetContextProvider(
     fidl::InterfaceRequest<ContextProvider> request) {
@@ -35,7 +37,7 @@ void IntelligenceServicesImpl::GetProposalPublisher(
 
 void IntelligenceServicesImpl::GetActionLog(
     fidl::InterfaceRequest<ActionLog> request) {
-  // TODO(azani): Implement!
+  action_log_factory_->GetActionLog(component_id_, std::move(request));
 }
 
 }  // namespace maxwell

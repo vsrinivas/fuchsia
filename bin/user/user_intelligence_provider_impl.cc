@@ -37,6 +37,11 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   suggestion_engine_->Initialize(std::move(story_provider),
                                  std::move(focus_provider));
 
+  action_log_services_ =
+      startServiceProviderApp("file:///system/apps/action_log");
+  action_log_factory_ = app::ConnectToService<maxwell::ActionLogFactory>(
+      action_log_services_.get());
+
   // TODO(rosswang): Search the ComponentIndex and iterate through results.
   startAgent("file:///system/apps/acquirers/focus");
   startAgent("file:///system/apps/agents/module_suggester");
@@ -55,7 +60,8 @@ void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
   intelligence_services_bindings_.AddBinding(
       std::make_unique<IntelligenceServicesImpl>(story_id, component_id,
                                                  context_engine_.get(),
-                                                 suggestion_engine_.get()),
+                                                 suggestion_engine_.get(),
+                                                 action_log_factory_.get()),
       std::move(request));
 }
 

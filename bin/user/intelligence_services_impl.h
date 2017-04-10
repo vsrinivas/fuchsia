@@ -19,7 +19,8 @@ class IntelligenceServicesImpl : public IntelligenceServices {
   IntelligenceServicesImpl(const std::string& story_id,
                            const std::string& component_id,
                            ContextEngine* context_engine,
-                           SuggestionEngine* suggestion_engine);
+                           SuggestionEngine* suggestion_engine,
+                           ActionLogFactory* action_log_factory);
 
   void GetContextProvider(
       fidl::InterfaceRequest<ContextProvider> request) override;
@@ -37,6 +38,7 @@ class IntelligenceServicesImpl : public IntelligenceServices {
   const std::string component_id_;
   ContextEngine* const context_engine_;        // Not owned.
   SuggestionEngine* const suggestion_engine_;  // Not owned.
+  ActionLogFactory* const action_log_factory_; // Not owned.
 };
 
 }  // namespace maxwell
