@@ -99,7 +99,7 @@ class Vmo {
   }
 
   VmoReadResult read(ByteData data,
-      [int dataOffset = 0, int numBytes = -1, int flags = 0]) {
+      [int vmoOffset = 0, int dataOffset = 0, int numBytes = -1]) {
     if (handle == null)
       return new VmoReadResult(ERR_INVALID_ARGS, 0);
 
@@ -115,7 +115,7 @@ class Vmo {
     }
 
     List result = MxVmo.read(
-        handle.h, data, dataOffset, dataNumBytes, flags);
+        handle.h, vmoOffset, data, dataOffset, dataNumBytes);
 
     if (result == null)
       return new VmoReadResult(ERR_INVALID_ARGS, 0);

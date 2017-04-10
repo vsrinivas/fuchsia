@@ -695,7 +695,7 @@ class Decoder {
   core.Socket decodeSocket(int offset, bool nullable) =>
       new core.Socket(decodeHandle(offset, nullable));
 
-  core.Socket decodeVmo(int offset, bool nullable) =>
+  core.Vmo decodeVmo(int offset, bool nullable) =>
       new core.Vmo(decodeHandle(offset, nullable));
 
   Decoder decodePointer(int offset, bool nullable) {
