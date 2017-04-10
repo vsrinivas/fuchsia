@@ -16,11 +16,11 @@ static int thread_sleep_test(void)
     int early = 0;
     for (int i = 0; i < 5; i++) {
         lk_bigtime_t now = current_time_hires();
-        thread_sleep(LK_MSEC(500));
+        thread_sleep_relative(LK_MSEC(500));
         lk_bigtime_t actual_delay = current_time_hires() - now;
         if (actual_delay < LK_MSEC(500)) {
             early = 1;
-            printf("thread_sleep(LK_MSEC(500)) returned after %" PRIu64 " ns\n", actual_delay);
+            printf("thread_sleep_relative(LK_MSEC(500)) returned after %" PRIu64 " ns\n", actual_delay);
         }
     }
     return early;

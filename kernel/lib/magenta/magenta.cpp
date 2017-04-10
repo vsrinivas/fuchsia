@@ -31,6 +31,8 @@
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/type_support.h>
 
+#include <platform.h>
+
 #define LOCAL_TRACE 0
 
 // The number of possible handles in the arena.
@@ -244,10 +246,13 @@ bool magenta_rights_check(const Handle* handle, mx_rights_t desired) {
 }
 
 mx_status_t magenta_sleep(mx_time_t nanoseconds) {
-    lk_bigtime_t t = nanoseconds;
+    lk_bigtime_t deadline = nanoseconds;
+    if (deadline != INFINITE_TIME) {
+        deadline += current_time_hires();
+    }
 
     /* sleep with interruptable flag set */
-    return thread_sleep_etc(t, true);
+    return thread_sleep_etc(deadline, true);
 }
 
 mx_status_t validate_resource_handle(mx_handle_t handle) {

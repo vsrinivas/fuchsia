@@ -437,7 +437,7 @@ void DumpProcessMemoryUsage(const char* prefix, size_t limit) {
 
 static int mwd_thread(void* arg) {
     for (;;) {
-        thread_sleep(LK_SEC(1));
+        thread_sleep_relative(LK_SEC(1));
         DumpProcessMemoryUsage("MemoryHog! ", mwd_limit);
     }
 }

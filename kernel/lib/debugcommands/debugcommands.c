@@ -306,7 +306,7 @@ static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags)
             t *= 1000;
     }
 
-    thread_sleep(t);
+    thread_sleep_relative(t);
 
     return 0;
 }
@@ -348,7 +348,7 @@ static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags)
         uint8_t death[i];
 
         memset(death, 0xaa, i);
-        thread_sleep(LK_USEC(1));
+        thread_sleep_relative(LK_USEC(1));
     }
 
     printf("survived.\n");

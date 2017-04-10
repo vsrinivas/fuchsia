@@ -898,19 +898,19 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_bigtime_t now
 }
 
 /**
- * @brief  Put thread to sleep; delay specified in ns
+ * @brief  Put thread to sleep; deadline specified in ns
  *
  * This function puts the current thread to sleep until the specified
- * delay in ns has expired.
+ * deadline has expired.
  *
- * Note that this function could sleep for longer than the specified delay if
- * other threads are running.  When the timer expires, this thread will
+ * Note that this function could continue to sleep after the specified deadline
+ * if other threads are running.  When the deadline expires, this thread will
  * be placed at the head of the run queue.
  *
  * interruptable argument allows this routine to return early if the thread was signaled
  * for something.
  */
-status_t thread_sleep_etc(lk_bigtime_t delay, bool interruptable)
+status_t thread_sleep_etc(lk_bigtime_t deadline, bool interruptable)
 {
     thread_t *current_thread = get_current_thread();
     status_t blocked_status;
@@ -935,8 +935,7 @@ status_t thread_sleep_etc(lk_bigtime_t delay, bool interruptable)
         goto out;
     }
 
-    if (delay != INFINITE_TIME) {
-        lk_bigtime_t deadline = current_time_hires() + delay;
+    if (deadline != INFINITE_TIME) {
         /* set a one shot timer to wake us up and reschedule */
         timer_set_oneshot(&timer, deadline, thread_sleep_handler, (void *)current_thread);
     }
@@ -949,7 +948,7 @@ status_t thread_sleep_etc(lk_bigtime_t delay, bool interruptable)
 
     blocked_status = current_thread->blocked_status;
 
-    if (delay != INFINITE_TIME) {
+    if (deadline != INFINITE_TIME) {
         /* always cancel the timer, since we may be racing with the timer tick on other cpus */
         timer_cancel(&timer);
     }
@@ -958,6 +957,13 @@ out:
     THREAD_UNLOCK(state);
 
     return blocked_status;
+}
+
+status_t thread_sleep_relative(lk_bigtime_t delay) {
+    if (delay != INFINITE_TIME) {
+        delay += current_time_hires();
+    }
+    return thread_sleep(delay);
 }
 
 /**

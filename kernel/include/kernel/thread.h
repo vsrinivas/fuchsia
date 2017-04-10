@@ -209,13 +209,18 @@ static inline bool thread_stopped_in_exception(const thread_t* thread)
     return !!thread->exception_context;
 }
 
-/* wait for at least delay amount of time. interruptable may return early with ERR_INTERRUPTED
- * if thread is signaled for kill.
+/* wait until after the specified deadline. interruptable may return early with
+ * ERR_INTERRUPTED if thread is signaled for kill.
  */
-status_t thread_sleep_etc(lk_bigtime_t delay, bool interruptable);
+status_t thread_sleep_etc(lk_bigtime_t deadline, bool interruptable);
 
 /* non interruptable version of thread_sleep_etc */
-static inline status_t thread_sleep(lk_bigtime_t delay) { return thread_sleep_etc(delay, false); }
+static inline status_t thread_sleep(lk_bigtime_t deadline) {
+    return thread_sleep_etc(deadline, false);
+}
+
+/* non-interruptable relative delay version of thread_sleep */
+status_t thread_sleep_relative(lk_bigtime_t delay);
 
 /* return the number of nanoseconds a thread has been running for */
 lk_bigtime_t thread_runtime(const thread_t *t);

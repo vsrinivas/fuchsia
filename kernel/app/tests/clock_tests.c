@@ -20,7 +20,7 @@ void clock_tests(void)
     uint64_t c;
     lk_bigtime_t t2;
 
-    thread_sleep(LK_MSEC(100));
+    thread_sleep_relative(LK_MSEC(100));
     c = arch_cycle_count();
     current_time_hires();
     c = arch_cycle_count() - c;
@@ -47,7 +47,7 @@ void clock_tests(void)
 
     printf("counting to 5, in one second intervals\n");
     for (int i = 0; i < 5; i++) {
-        thread_sleep(LK_SEC(1));
+        thread_sleep_relative(LK_SEC(1));
         printf("%d\n", i + 1);
     }
 

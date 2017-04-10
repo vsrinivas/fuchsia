@@ -301,7 +301,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
                 ret = NO_ERROR;
                 break;
             }
-            thread_sleep(LK_MSEC(1));
+            thread_sleep_relative(LK_MSEC(1));
         } while ((current_time_hires() - start) < LK_SEC(5));
 
         if (ret != NO_ERROR) {
@@ -319,7 +319,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
             cfg_->Write(pci_af_->af_ctrl(), PCS_ADVCAPS_CTRL_INITIATE_FLR);
 
             // 5) Software waits 100mSec
-            thread_sleep(LK_MSEC(100));
+            thread_sleep_relative(LK_MSEC(100));
         }
 
         // NOTE: Even though the spec says that the reset operation is supposed
@@ -335,7 +335,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
                 ret = NO_ERROR;
                 break;
             }
-            thread_sleep(LK_MSEC(1));
+            thread_sleep_relative(LK_MSEC(1));
         } while ((current_time_hires() - start) < LK_SEC(5));
 
         if (ret == NO_ERROR) {
