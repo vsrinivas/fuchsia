@@ -75,14 +75,14 @@ bool test_find_partition_entries(void) {
     uint16_t found_idx = TABLE_SIZE;
     uint16_t targ_idx = test_indices[idx];
     mx_status_t rc = find_partition_entries(
-        part_entry_ptrs, part_entries[targ_idx].type, TABLE_SIZE, &found_idx);
+        part_entry_ptrs, &part_entries[targ_idx].type, TABLE_SIZE, &found_idx);
     ASSERT_EQ(rc, NO_ERROR, "");
   }
 
   uint8_t random_guid[16];
   generate_guid(random_guid);
   uint16_t found_idx = TABLE_SIZE;
-  mx_status_t rc = find_partition_entries(part_entry_ptrs, random_guid,
+  mx_status_t rc = find_partition_entries(part_entry_ptrs, &random_guid,
                                           TABLE_SIZE, &found_idx);
   ASSERT_EQ(rc, ERR_NOT_FOUND, "");
   END_TEST;
@@ -108,7 +108,7 @@ bool test_find_partition(void) {
     uint16_t found_idx = TABLE_SIZE;
     gpt_partition_t *part_info;
     mx_status_t rc = find_partition(
-        part_entry_ptrs, part_entry_ptrs[targ_idx]->type, part_size, block_size,
+        part_entry_ptrs, &part_entry_ptrs[targ_idx]->type, part_size, block_size,
         "TEST", TABLE_SIZE, &found_idx, &part_info);
     ASSERT_EQ(rc, NO_ERROR, "");
     ASSERT_EQ(targ_idx, found_idx, "");
@@ -120,7 +120,7 @@ bool test_find_partition(void) {
   uint16_t found_idx = TABLE_SIZE;
   gpt_partition_t *part_info = NULL;
   mx_status_t rc =
-      find_partition(part_entry_ptrs, part_entry_ptrs[0]->type, part_size + 1,
+      find_partition(part_entry_ptrs, &part_entry_ptrs[0]->type, part_size + 1,
                      block_size, "TEST", TABLE_SIZE, &found_idx, &part_info);
 
   ASSERT_EQ(rc, ERR_NOT_FOUND, "");
