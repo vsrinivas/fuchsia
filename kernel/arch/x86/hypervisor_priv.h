@@ -143,10 +143,6 @@
 #define VMCS_32_EXIT_REASON_EXTERNAL_INTERRUPT      1u
 #define VMCS_32_EXIT_REASON_IO_INSTRUCTION          30u
 
-/* VMCS_XX_EXIT_QUALIFICATION values */
-#define VMCS_XX_EXIT_QUALIFICATION_IO_PORT_SHIFT    16
-#define VMCS_XX_EXIT_QUALIFICATION_IO_PORT_MASK     0xffff
-
 /* VMCS_32_GUEST_XX_ACCESS_RIGHTS flags */
 #define VMCS_32_GUEST_XX_ACCESS_RIGHTS_UNUSABLE     (1u << 16)
 // See Volume 3, Section 24.4.1 for access rights format.
@@ -162,7 +158,7 @@
 #define VMCS_32_GUEST_TR_ACCESS_RIGHTS_TSS_BUSY     (11u << 0)
 
 
-/* Stores VMX info from the VMX basic MSR. */
+/* Stores VMX info from the IA32_VMX_BASIC MSR. */
 struct VmxInfo {
     uint32_t revision_id;
     uint16_t region_size;
@@ -173,6 +169,7 @@ struct VmxInfo {
     VmxInfo();
 };
 
+/* Stores EPT info from the IA32_VMX_EPT_VPID_CAP MSR. */
 struct EptInfo {
     bool page_walk_4;
     bool write_back;
@@ -183,6 +180,17 @@ struct EptInfo {
     bool invept;
 
     EptInfo();
+};
+
+/* Stores IO instruction info from the VMCS exit qualification field. */
+struct IoInfo {
+    uint8_t bytes;
+    bool input;
+    bool string;
+    bool repeat;
+    uint16_t port;
+
+    IoInfo(uint64_t qualification);
 };
 
 /* VMX region to be used with both VMXON and VMCS. */

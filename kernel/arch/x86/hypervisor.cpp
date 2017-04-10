@@ -162,6 +162,14 @@ EptInfo::EptInfo() {
         BIT_SHIFT(ept_info, 26);
 }
 
+IoInfo::IoInfo(uint64_t qualification) {
+    bytes = static_cast<uint8_t>(BITS(qualification, 2, 0) + 1);
+    input = BIT_SHIFT(qualification, 3);
+    string = BIT_SHIFT(qualification, 4);
+    repeat = BIT_SHIFT(qualification, 5);
+    port = static_cast<uint16_t>(BITS_SHIFT(qualification, 31, 16));
+}
+
 VmxPage::~VmxPage() {
     vm_page_t* page = paddr_to_vm_page(pa_);
     if (page != nullptr)
@@ -638,13 +646,12 @@ static status_t vmexit_handler(uint64_t reason, uint64_t qualification, uint64_t
         dprintf(SPEW, "handling IO instruction\n");
         vmwrite(VMCS_XX_GUEST_RIP, next_rip);
 #if WITH_LIB_MAGENTA
-        uint16_t io_port = (qualification >> VMCS_XX_EXIT_QUALIFICATION_IO_PORT_SHIFT) &
-                           VMCS_XX_EXIT_QUALIFICATION_IO_PORT_MASK;
-        if (io_port != kUartIoPort)
+        IoInfo io_info(qualification);
+        if (io_info.input || io_info.string || io_info.repeat || io_info.port != kUartIoPort)
             return NO_ERROR;
-        uint8_t byte = vmx_state.guest_state.rax & 0xff;
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(&vmx_state.guest_state.rax);
         uint32_t actual;
-        return serial_fifo->Write(&byte, 1, &actual);
+        return serial_fifo->Write(data, io_info.bytes, &actual);
 #else // WITH_LIB_MAGENTA
         return NO_ERROR;
 #endif // WITH_LIB_MAGENTA
