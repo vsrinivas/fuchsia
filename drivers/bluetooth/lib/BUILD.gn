@@ -2,19 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("hcitool") {
-  output_name = "bluetooth_hcitool"
-
-  sources = [
-    "command_dispatcher.cc",
-    "command_dispatcher.h",
-    "commands.cc",
-    "commands.h",
-    "main.cc",
-  ]
-
+group("lib") {
   deps = [
+    "//apps/bluetooth/lib/common",
     "//apps/bluetooth/lib/gap",
     "//apps/bluetooth/lib/hci",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//apps/bluetooth/lib/common:tests",
+    "//apps/bluetooth/lib/gap:tests",
+    "//apps/bluetooth/lib/hci:tests",
   ]
 }

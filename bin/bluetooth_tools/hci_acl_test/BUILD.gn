@@ -12,6 +12,6 @@ executable("hci_acl_test") {
   ]
 
   deps = [
-    "//apps/bluetooth/hci",
+    "//apps/bluetooth/lib/hci",
   ]
 }

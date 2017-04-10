@@ -10,9 +10,7 @@ executable("bluetooth_unittests") {
   ]
 
   deps = [
-    "//apps/bluetooth/common:tests",
-    "//apps/bluetooth/gap:tests",
-    "//apps/bluetooth/hci:tests",
+    "//apps/bluetooth/lib:tests",
     "//third_party/gtest",
   ]
 }

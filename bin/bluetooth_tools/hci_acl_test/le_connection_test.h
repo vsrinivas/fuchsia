@@ -7,11 +7,11 @@
 #include <memory>
 #include <unordered_map>
 
-#include "apps/bluetooth/common/device_address.h"
-#include "apps/bluetooth/hci/command_channel.h"
-#include "apps/bluetooth/hci/connection.h"
-#include "apps/bluetooth/hci/hci.h"
-#include "apps/bluetooth/hci/transport.h"
+#include "apps/bluetooth/lib/common/device_address.h"
+#include "apps/bluetooth/lib/hci/command_channel.h"
+#include "apps/bluetooth/lib/hci/connection.h"
+#include "apps/bluetooth/lib/hci/hci.h"
+#include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"

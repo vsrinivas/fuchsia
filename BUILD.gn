@@ -4,9 +4,7 @@
 
 group("bluetooth") {
   deps = [
-    "//apps/bluetooth/common",
-    "//apps/bluetooth/gap",
-    "//apps/bluetooth/hci",
+    "//apps/bluetooth/lib",
     "//apps/bluetooth/tools",
   ]
 }

@@ -6,9 +6,9 @@
 
 #include <mx/channel.h>
 
-#include "apps/bluetooth/common/bt_snoop_logger.h"
-#include "apps/bluetooth/hci/hci.h"
-#include "apps/bluetooth/hci/hci_constants.h"
+#include "apps/bluetooth/lib/common/bt_snoop_logger.h"
+#include "apps/bluetooth/lib/hci/hci.h"
+#include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

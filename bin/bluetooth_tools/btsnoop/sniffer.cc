@@ -12,7 +12,7 @@
 #include <magenta/device/bt-hci.h>
 #include <magenta/status.h>
 
-#include "apps/bluetooth/common/byte_buffer.h"
+#include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "lib/ftl/logging.h"
 
 namespace btsnoop {

@@ -1,0 +1,29 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("gap") {
+  sources = [
+    "advertising_data.cc",
+    "advertising_data.h",
+    "gap.h",
+  ]
+
+  public_deps = [
+    "//apps/bluetooth/lib/common",
+    "//lib/ftl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "advertising_data_unittest.cc",
+  ]
+
+  deps = [
+    ":gap",
+    "//third_party/gtest",
+  ]
+}

@@ -1,0 +1,51 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("hci") {
+  sources = [
+    "acl_data_channel.cc",
+    "acl_data_channel.h",
+    "acl_data_packet.cc",
+    "acl_data_packet.h",
+    "advertising_report_parser.cc",
+    "advertising_report_parser.h",
+    "command_channel.cc",
+    "command_channel.h",
+    "command_packet.cc",
+    "command_packet.h",
+    "connection.cc",
+    "connection.h",
+    "defaults.h",
+    "event_packet.cc",
+    "event_packet.h",
+    "le_connection_params.cc",
+    "le_connection_params.h",
+    "transport.cc",
+    "transport.h",
+  ]
+
+  public_deps = [
+    "//apps/bluetooth/lib/common",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "acl_data_channel_unittest.cc",
+    "advertising_report_parser_unittest.cc",
+    "command_channel_unittest.cc",
+    "fake_controller.cc",
+    "fake_controller.h",
+    "packet_unittest.cc",
+  ]
+
+  deps = [
+    ":hci",
+    "//third_party/gtest",
+  ]
+}

@@ -6,8 +6,8 @@
 
 #include <endian.h>
 
-#include "apps/bluetooth/hci/command_packet.h"
-#include "apps/bluetooth/hci/defaults.h"
+#include "apps/bluetooth/lib/hci/command_packet.h"
+#include "apps/bluetooth/lib/hci/defaults.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 

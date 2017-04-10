@@ -9,12 +9,12 @@
 #include <cstring>
 #include <iostream>
 
-#include "apps/bluetooth/common/manufacturer_names.h"
-#include "apps/bluetooth/gap/advertising_data.h"
-#include "apps/bluetooth/hci/advertising_report_parser.h"
-#include "apps/bluetooth/hci/command_channel.h"
-#include "apps/bluetooth/hci/command_packet.h"
-#include "apps/bluetooth/hci/event_packet.h"
+#include "apps/bluetooth/lib/common/manufacturer_names.h"
+#include "apps/bluetooth/lib/gap/advertising_data.h"
+#include "apps/bluetooth/lib/hci/advertising_report_parser.h"
+#include "apps/bluetooth/lib/hci/command_channel.h"
+#include "apps/bluetooth/lib/hci/command_packet.h"
+#include "apps/bluetooth/lib/hci/event_packet.h"
 #include "lib/ftl/strings/join_strings.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
