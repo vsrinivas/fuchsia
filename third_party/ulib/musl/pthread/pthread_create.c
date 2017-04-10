@@ -153,14 +153,6 @@ _Noreturn void pthread_exit(void* result) {
         exit(0);
     }
 
-    /* TODO(kulakowski): Pthread robust mutex processing used to occur
-     * inside this vm lock/unlock pair. I don't if there is also
-     * implicitly a need to synchronize on this lock in this function
-     * in any case, so I'm leaving the lock/unlock pair.
-     */
-    __vm_lock();
-    __vm_unlock();
-
     __dl_thread_cleanup();
 
     // Switch off the thread's normal stack so it can be freed.  The TCB

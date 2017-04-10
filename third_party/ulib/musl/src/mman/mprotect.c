@@ -5,12 +5,7 @@
 #include <magenta/types.h>
 #include <sys/mman.h>
 
-static void dummy(void) {}
-weak_alias(dummy, __vm_wait);
-
 int __mprotect(void* addr, size_t len, int prot) {
-    __vm_wait();
-
     uintptr_t ptr = (uintptr_t)addr;
     uint32_t mx_prot = 0;
     mx_prot |= (prot & PROT_READ) ? MX_VM_FLAG_PERM_READ : 0;

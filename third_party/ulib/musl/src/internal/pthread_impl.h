@@ -146,10 +146,6 @@ void __private_cond_signal(void* condvar, int n);
 int __libc_sigaction(int, const struct sigaction*, struct sigaction*);
 int __libc_sigprocmask(int, const sigset_t*, sigset_t*);
 
-void __vm_wait(void) ATTR_LIBC_VISIBILITY;
-void __vm_lock(void) ATTR_LIBC_VISIBILITY;
-void __vm_unlock(void) ATTR_LIBC_VISIBILITY;
-
 // This is guaranteed to only return 0, EINVAL, or ETIMEDOUT.
 int __timedwait(atomic_int*, int, clockid_t, const struct timespec*)
     ATTR_LIBC_VISIBILITY;

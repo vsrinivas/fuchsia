@@ -9,9 +9,6 @@
 
 #include "pthread_impl.h"
 
-static void dummy(void) {}
-weak_alias(dummy, __vm_wait);
-
 void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
     if (off & (PAGE_SIZE - 1)) {
         errno = EINVAL;
@@ -24,9 +21,6 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
     if (len >= PTRDIFF_MAX) {
         errno = ENOMEM;
         return MAP_FAILED;
-    }
-    if (flags & MAP_FIXED) {
-        __vm_wait();
     }
     if (prot == 0) {
         // PROT_NONE is not supported (yet?)

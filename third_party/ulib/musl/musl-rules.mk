@@ -869,7 +869,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/thread/tss_create.c \
     $(LOCAL_DIR)/src/thread/tss_delete.c \
     $(LOCAL_DIR)/src/thread/tss_set.c \
-    $(LOCAL_DIR)/src/thread/vmlock.c \
     $(LOCAL_DIR)/src/time/__asctime.c \
     $(LOCAL_DIR)/src/time/__map_file.c \
     $(LOCAL_DIR)/src/time/__month_to_secs.c \
