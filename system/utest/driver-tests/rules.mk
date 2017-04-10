@@ -9,11 +9,10 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/iotxn.c \
+    $(LOCAL_DIR)/main.c
 
-MODULE_NAME := iotxn-test
+MODULE_NAME := driver-tests
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
-MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/driver system/ulib/magenta system/ulib/c
+MODULE_LIBS := system/ulib/mxio system/ulib/c
 
 include make/module.mk

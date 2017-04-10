@@ -412,6 +412,20 @@ void unittest_register_test_case(struct test_case_element* elem);
 bool unittest_run_all_tests(int argc, char** argv);
 
 /*
+ * Struct to store test results
+ */
+struct test_result {
+    unsigned int n_tests;
+    unsigned int n_success;
+    unsigned int n_failed;
+};
+
+/*
+ * Runs all registered test cases and return results.
+ */
+bool unittest_run_all_tests_etc(test_type_t type, struct test_result* result);
+
+/*
  * Returns false if expected does not equal actual and prints msg and a hexdump8
  * of the input buffers.
  */

@@ -21,3 +21,28 @@ MODULE_STATIC_LIBS := system/ulib/hexdump system/ulib/sync
 MODULE_EXPORT := a
 
 include make/module.mk
+
+
+#
+# iotxn-test - iotxn tests
+#
+MODULE := $(LOCAL_DIR).iotxn-test
+
+MODULE_NAME := iotxn-test
+
+MODULE_TYPE := driver
+
+LOCAL_DIR := $(LOCAL_DIR)/test
+
+MODULE_SRCS := $(LOCAL_DIR)/iotxn-test.c
+
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+
+MODULE_LIBS := \
+    system/ulib/unittest \
+    system/ulib/mxio \
+    system/ulib/driver \
+    system/ulib/magenta \
+    system/ulib/c
+
+include make/module.mk

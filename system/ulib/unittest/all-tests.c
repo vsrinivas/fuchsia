@@ -16,33 +16,12 @@ void unittest_register_test_case(struct test_case_element* elem) {
     test_case_list = elem;
 }
 
-/*
- * Runs all registered test cases.
- */
-bool unittest_run_all_tests(int argc, char** argv) {
+bool unittest_run_all_tests_etc(test_type_t type, struct test_result* result) {
     unsigned int n_tests = 0;
     unsigned int n_success = 0;
     unsigned int n_failed = 0;
 
-    int prev_verbosity_level = -1;
-
-    int i = 1;
-    while (i < argc) {
-        if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] == '=')) {
-            prev_verbosity_level = unittest_set_verbosity_level(argv[i][2] - '0');
-        }
-        i++;
-    }
-
-    // Rely on the TEST_ENV_NAME environment variable to tell us which
-    // classes of tests we should execute.
-    const char* test_type_str = getenv(TEST_ENV_NAME);
-    if (test_type_str == NULL) {
-        // If we cannot access the environment variable, run all tests
-        utest_test_type = TEST_ALL;
-    } else {
-        utest_test_type = atoi(test_type_str);
-    }
+    utest_test_type = type;
 
     bool all_success = true;
     struct test_case_element* current = test_case_list;
@@ -55,9 +34,6 @@ bool unittest_run_all_tests(int argc, char** argv) {
         current = current->next;
         n_tests++;
     }
-
-    if (prev_verbosity_level >= 0)
-        unittest_set_verbosity_level(prev_verbosity_level);
 
     if (all_success) {
         n_success = n_tests;
@@ -75,10 +51,50 @@ bool unittest_run_all_tests(int argc, char** argv) {
         failed_test_case_list = NULL;
     }
 
-    unittest_printf_critical("\n====================================================\n");
-    unittest_printf_critical("    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ",
-                             n_tests, n_success, n_failed);
-    unittest_printf_critical("\n====================================================\n");
+    result->n_tests = n_tests;
+    result->n_success = n_success;
+    result->n_failed = n_failed;
+
+    return all_success;
+}
+
+/*
+ * Runs all registered test cases.
+ */
+bool unittest_run_all_tests(int argc, char** argv) {
+    int prev_verbosity_level = -1;
+
+    int i = 1;
+    while (i < argc) {
+        if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] == '=')) {
+            prev_verbosity_level = unittest_set_verbosity_level(argv[i][2] - '0');
+        }
+        i++;
+    }
+
+    // Rely on the TEST_ENV_NAME environment variable to tell us which
+    // classes of tests we should execute.
+    const char* test_type_str = getenv(TEST_ENV_NAME);
+    test_type_t test_type;
+    if (test_type_str == NULL) {
+        // If we cannot access the environment variable, run all tests
+        test_type = TEST_ALL;
+    } else {
+        test_type = atoi(test_type_str);
+    }
+
+    if (prev_verbosity_level >= 0)
+        unittest_set_verbosity_level(prev_verbosity_level);
+
+    struct test_result result;
+    bool all_success = unittest_run_all_tests_etc(test_type, &result);
+
+    unittest_printf_critical(
+            "\n====================================================\n");
+    unittest_printf_critical(
+            "    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ", result.n_tests, result.n_success, result.n_failed);
+    unittest_printf_critical(
+            "\n====================================================\n");
 
     return all_success;
 }

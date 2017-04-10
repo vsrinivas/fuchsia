@@ -37,5 +37,6 @@ DDK_PROTOCOL_DEF(BATTERY,        'pBAT', "battery")
 DDK_PROTOCOL_DEF(PTY,            'pPTY', "pty")
 DDK_PROTOCOL_DEF(IHDA,           'pHDA', "intel-hda")
 DDK_PROTOCOL_DEF(IHDA_CODEC,     'pIHC', "intel-hda-codec")
+DDK_PROTOCOL_DEF(TEST,           'pTST', "test")
 #undef DDK_PROTOCOL_DEF
 #endif

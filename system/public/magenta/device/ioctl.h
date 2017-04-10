@@ -31,6 +31,7 @@
 #define IOCTL_FAMILY_DEVICE         0x01
 #define IOCTL_FAMILY_DEVMGR         0x02
 #define IOCTL_FAMILY_DMCTL          0x03
+#define IOCTL_FAMILY_TEST           0x04
 
 // device protocol families
 #define IOCTL_FAMILY_CONSOLE        0x10
