@@ -13,12 +13,40 @@
 
 # Ledger
 
-Ledger is a distributed storage system for Fuchsia. See [docs](docs/README.md)
-for documentation.
+[TOC]
 
-## Contents
+## What is Ledger?
+
+Ledger is a distributed storage system for Fuchsia.
+
+Each application (or more precisely, each [component]) running on behalf of a
+particular user has a separate data store provided and managed by Ledger, and
+vended to a client application by Fuchsia [framework] through its [component
+context].
+
+The data store for the particular component/user combination is private - not
+accessible to other apps of the same user, and not accessible to other users of
+the same app.
+
+Each data store is transparently **synchronized** across devices of its user
+through a [cloud provider]. Any data operations are made **offline-first** with
+no coordination with the cloud. If concurrent modifications result in a data
+conflict, the conflict is resolved using an app-configurable merge policy.
+
+Each data store is organized into collections exposing a **key-value store** API
+called *pages*. Page API supports storing data of arbitrary size, atomic changes
+across multiple keys, snapshots and modification observers.
+
+See [docs](docs/README.md) for documentation.
+
+## Repository contents
 
  - [benchmark](benchmark) - benchmarks
  - [docs](docs) - documentation
- - [services](services) - fidl API
+ - [services](services) - FIDL API
  - [src](src) - implementation
+
+[cloud_provider]: src/cloud_provider/public
+[component]: https://fuchsia.googlesource.com/modular/+/master/services/component
+[component context]: https://fuchsia.googlesource.com/modular/+/master/services/component/component_context.fidl
+[framework]: https://fuchsia.googlesource.com/modular
