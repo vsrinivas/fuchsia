@@ -9,11 +9,15 @@
 # Use this to start magenta with a handy magenta.bin sitting in the file system.
 # This makes running mom a trivial case of... "mom /boot/data/magenta.bin"
 
-MAG_X86="${MAG_X86:-build-magenta-pc-x86-64}"
+BUILDDIR="${BUILDDIR:-build-magenta-pc-x86-64}"
 
-echo "data/magenta.bin=$MAG_X86/magenta.bin" > /tmp/mom.manifest
-$MAG_X86/tools/mkbootfs --target=boot -o $MAG_X86/bootdata-with-magenta.bin \
-                        $MAG_X86/bootdata.bin /tmp/mom.manifest
+echo "data/magenta.bin=$BUILDDIR/magenta.bin" > /tmp/mom.manifest
+$BUILDDIR/tools/mkbootfs \
+    --target=boot \
+    -o $BUILDDIR/bootdata-with-magenta.bin \
+    $BUILDDIR/bootdata.bin \
+    /tmp/mom.manifest
 
-killall bootserver
-$MAG_X86/tools/bootserver $MAG_X86/magenta.bin $MAG_X86/bootdata-with-magenta.bin
+exec $BUILDDIR/tools/bootserver \
+    $BUILDDIR/magenta.bin \
+    $BUILDDIR/bootdata-with-magenta.bin

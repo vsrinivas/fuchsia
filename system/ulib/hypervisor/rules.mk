@@ -6,17 +6,15 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/mom.c \
+    $(LOCAL_DIR)/guest.c
 
-MODULE_NAME := mom
-
+MODULE_SO_NAME := hypervisor
 MODULE_LIBS := \
 	system/ulib/c \
-	system/ulib/hypervisor \
-	system/ulib/magenta \
-	system/ulib/mxio \
+    system/ulib/magenta \
+    system/ulib/mxio \
 
 include make/module.mk
