@@ -14,6 +14,7 @@ import 'package:lib.widgets/modular.dart';
 
 import 'child_constraints_changer.dart';
 import 'constraints_model.dart';
+import 'user_picker.dart';
 import 'user_picker_device_shell_factory_model.dart';
 import 'user_picker_screen.dart';
 import 'user_watcher_impl.dart';
@@ -55,6 +56,12 @@ class _ScreenManager extends StatefulWidget {
 
 class _ScreenManagerState extends State<_ScreenManager>
     with TickerProviderStateMixin {
+  final TextEditingController _userNameController = new TextEditingController();
+  final TextEditingController _deviceNameController =
+      new TextEditingController();
+  final TextEditingController _serverNameController =
+      new TextEditingController();
+
   UserControllerProxy _userControllerProxy;
   UserWatcherImpl _userWatcherImpl;
 
@@ -72,7 +79,7 @@ class _ScreenManagerState extends State<_ScreenManager>
       setState(() {
         config.onLogout?.call();
         _transitionAnimation.reverse();
-        // TODO(apwilson): Should need to remove the child view connection but
+        // TODO(apwilson): Should not need to remove the child view connection but
         // it causes a mozart deadlock in the compositor if you don't.
         _childViewConnection = null;
       });
@@ -109,13 +116,17 @@ class _ScreenManagerState extends State<_ScreenManager>
                       child: child,
                     ),
                   ]),
-        child: new UserPickerScreen(onLoginRequest: _login),
+        child: new UserPickerScreen(
+          userPicker: new UserPicker(
+            onLoginRequest: _login,
+            userNameController: _userNameController,
+            deviceNameController: _deviceNameController,
+            serverNameController: _serverNameController,
+          ),
+        ),
       );
 
   void _login(String user, UserProvider userProvider) {
-    // Add the user first just in case.
-    userProvider?.addUser(user, null, 'magenta', 'ledger.fuchsia.com');
-
     final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
     userProvider?.login(
       user,
@@ -135,7 +146,11 @@ class _ScreenManagerState extends State<_ScreenManager>
         },
         onUnavailable: (ChildViewConnection connection) {
           print('UserPickerDeviceShell: Child view connection unavailable!');
+          config.onLogout?.call();
           _transitionAnimation.reverse();
+          // TODO(apwilson): Should not need to remove the child view connection but
+          // it causes a mozart deadlock in the compositor if you don't.
+          _childViewConnection = null;
         },
       );
     });

@@ -8,9 +8,9 @@ import 'shutdown_button.dart';
 import 'user_picker.dart';
 
 class UserPickerScreen extends StatelessWidget {
-  final OnLoginRequest onLoginRequest;
+  final UserPicker userPicker;
 
-  UserPickerScreen({this.onLoginRequest});
+  UserPickerScreen({this.userPicker});
 
   @override
   Widget build(BuildContext context) => new Material(
@@ -33,7 +33,7 @@ class UserPickerScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              new Center(child: new UserPicker(onLoginRequest: onLoginRequest)),
+              new Center(child: userPicker),
               // Add shutdown button.
               new Align(
                 alignment: FractionalOffset.bottomCenter,

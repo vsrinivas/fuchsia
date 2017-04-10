@@ -9,6 +9,8 @@ import 'package:lib.widgets/hacks.dart' as hacks;
 import 'user_picker_device_shell_factory_model.dart';
 
 const String _kDefaultUserName = 'user1';
+const String _kDefaultDeviceName = 'fuchsia';
+const String _kDefaultServerName = 'ledger.fuchsia.com';
 const Color _kFuchsiaColor = const Color(0xFFFF0080);
 const double _kButtonContentWidth = 180.0;
 const double _kButtonContentHeight = 80.0;
@@ -17,8 +19,16 @@ typedef void OnLoginRequest(String user, UserProvider userProvider);
 
 class UserPicker extends StatelessWidget {
   final OnLoginRequest onLoginRequest;
+  final TextEditingController userNameController;
+  final TextEditingController deviceNameController;
+  final TextEditingController serverNameController;
 
-  UserPicker({this.onLoginRequest});
+  UserPicker({
+    this.onLoginRequest,
+    this.userNameController,
+    this.deviceNameController,
+    this.serverNameController,
+  });
 
   @override
   Widget build(BuildContext context) =>
@@ -40,7 +50,7 @@ class UserPicker extends StatelessWidget {
                           user,
                           userPickerDeviceShellFactoryModel,
                         ),
-                    child: new Text('Login as $user'),
+                    child: new Text('Log in as $user'),
                   ),
                 );
               }),
@@ -51,8 +61,10 @@ class UserPicker extends StatelessWidget {
               new Container(
                 margin: const EdgeInsets.all(8.0),
                 child: new RaisedButton(
-                  onPressed: () => _loginUser(
+                  onPressed: () => _createAndLoginUser(
                         _kDefaultUserName,
+                        _kDefaultDeviceName,
+                        _kDefaultServerName,
                         userPickerDeviceShellFactoryModel,
                       ),
                   child: new Container(
@@ -60,7 +72,7 @@ class UserPicker extends StatelessWidget {
                     height: _kButtonContentHeight,
                     child: new Center(
                       child: new Text(
-                        'Login as default user: $_kDefaultUserName',
+                        'Log in as default user: $_kDefaultUserName',
                       ),
                     ),
                   ),
@@ -79,20 +91,55 @@ class UserPicker extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: new Container(
                 width: _kButtonContentWidth,
-                height: _kButtonContentHeight,
                 child: new Overlay(initialEntries: <OverlayEntry>[
                   new OverlayEntry(
                     builder: (BuildContext context) => new Center(
                           // TODO(apwilson): Use TextField ONCE WE HAVE A PROPER
                           // IME ON FUCHSIA!
-                          child: new hacks.RawKeyboardTextField(
-                            decoration: new InputDecoration(
-                              hintText: 'Enter username',
-                            ),
-                            onSubmitted: (String user) => _loginUser(
-                                  user,
-                                  userPickerDeviceShellFactoryModel,
+                          child: new Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              new hacks.RawKeyboardTextField(
+                                decoration: new InputDecoration(
+                                  hintText: 'Enter user name',
                                 ),
+                                controller: userNameController,
+                              ),
+                              new hacks.RawKeyboardTextField(
+                                decoration: new InputDecoration(
+                                  hintText: 'Enter device name',
+                                ),
+                                controller: deviceNameController,
+                              ),
+                              new hacks.RawKeyboardTextField(
+                                decoration: new InputDecoration(
+                                  hintText: 'Enter server name',
+                                ),
+                                controller: serverNameController,
+                              ),
+                              new Container(
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 16.0,
+                                ),
+                                child: new RaisedButton(
+                                  onPressed: () => _createAndLoginUser(
+                                        userNameController.text,
+                                        deviceNameController.text,
+                                        serverNameController.text,
+                                        userPickerDeviceShellFactoryModel,
+                                      ),
+                                  child: new Container(
+                                    width: _kButtonContentWidth - 32.0,
+                                    height: _kButtonContentHeight,
+                                    child: new Center(
+                                      child: new Text(
+                                        'Create and Log in',
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                   ),
@@ -117,6 +164,42 @@ class UserPicker extends StatelessWidget {
           children: children,
         );
       });
+
+  void _createAndLoginUser(
+    String user,
+    String deviceName,
+    String serverName,
+    UserPickerDeviceShellFactoryModel userPickerDeviceShellFactoryModel,
+  ) {
+    // Add the user if it doesn't already exist.
+    if (!(userPickerDeviceShellFactoryModel.users?.contains(user) ?? false)) {
+      if (user?.isEmpty ?? true) {
+        print('Not creating user: User name needs to be set!');
+        return;
+      }
+      if (deviceName?.isEmpty ?? true) {
+        print('Not creating user: Device name needs to be set!');
+        return;
+      }
+      if (serverName?.isEmpty ?? true) {
+        print('Not creating user: Server name needs to be set!');
+        return;
+      }
+      print(
+          'UserPicker: Creating user $user with device $deviceName and server $serverName!');
+      userPickerDeviceShellFactoryModel.userProvider?.addUser(
+        user,
+        null,
+        deviceName,
+        serverName,
+      );
+    }
+
+    _loginUser(
+      user,
+      userPickerDeviceShellFactoryModel,
+    );
+  }
 
   void _loginUser(
     String user,
