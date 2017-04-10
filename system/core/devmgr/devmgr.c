@@ -108,9 +108,12 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
             options->readonly = true;
             options->wait_until_ready = true;
 
-            mount(fd, "/system", DISK_FORMAT_MINFS, options, launch_minfs);
-
-            devmgr_start_system_init(NULL);
+            mx_status_t st = mount(fd, "/system", DISK_FORMAT_MINFS, options, launch_minfs);
+            if (st != NO_ERROR) {
+                printf("devmgr: failed to mount /system, retcode = %d\n", st);
+            } else {
+                devmgr_start_system_init(NULL);
+            }
 
             return NO_ERROR;
         } else if (!memcmp(type_guid, data_guid, GPT_GUID_LEN)) {
@@ -120,7 +123,10 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
             data_mounted = true;
             options->wait_until_ready = true;
 
-            mount(fd, "/data", DISK_FORMAT_MINFS, options, launch_minfs);
+            mx_status_t st = mount(fd, "/data", DISK_FORMAT_MINFS, options, launch_minfs);
+            if (st != NO_ERROR) {
+                printf("devmgr: failed to mount /data, retcode = %d\n", st);
+            }
 
             return NO_ERROR;
         }
