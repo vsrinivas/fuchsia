@@ -21,9 +21,12 @@ namespace {
 class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
+    device_name =
+        command_line.GetOptionValueWithDefault("device_name", "magenta");
     user = command_line.GetOptionValueWithDefault("user", "user1");
   }
 
+  std::string device_name;
   std::string user;
 };
 
@@ -76,7 +79,8 @@ class DevDeviceShellApp
 
   void Connect() {
     if (user_provider_ && view_owner_request_) {
-      user_provider_->AddUser(settings_.user, nullptr, "ledger.fuchsia.com");
+      user_provider_->AddUser(settings_.user, nullptr, settings_.device_name,
+                              "ledger.fuchsia.com");
       user_provider_->Login(settings_.user, nullptr, nullptr,
                             std::move(view_owner_request_),
                             user_controller_.NewRequest());

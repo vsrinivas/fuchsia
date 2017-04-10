@@ -17,8 +17,10 @@ import "apps/mozart/services/views/view_token.fidl";
 interface UserProvider {
   // Adds authentication information of a Ledger user to this device.
   // |password| is nullable for ease of development.
+  // |devicename| is the user provided name for this device.
   // |servername| is the remote server used to sync a user's Ledger.
-  AddUser(string username, string? password, string servername);
+  AddUser(string username, string? password, string devicename,
+          string servername);
 
   // Passes in the user authentication information from the lockscreen or shell.
   // |view_owner| is the view given to the UserShell.

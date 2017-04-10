@@ -65,8 +65,6 @@ constexpr char kUsersConfigurationFile[] = "/data/modular/device/users.db";
 class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
-    device_name =
-        command_line.GetOptionValueWithDefault("device_name", "magenta");
     user_runner = command_line.GetOptionValueWithDefault(
         "user_runner", "file:///system/apps/user_runner");
 
@@ -96,7 +94,6 @@ class Settings {
 
   static std::string GetUsage() {
     return R"USAGE(device_runner
-      --device_name=DEVICE_NAME
       --device_shell=DEVICE_SHELL
       --device_shell_args=SHELL_ARGS
       --user_runner=USER_RUNNER
@@ -119,7 +116,6 @@ class Settings {
     SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.)USAGE";
   }
 
-  std::string device_name;
   AppConfig device_shell;
 
   std::string user_runner;
@@ -275,12 +271,12 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserController> user_controller_request) override {
     // Check username and password before logging in.
-    bool found_user = false;
+    const UserStorage* found_user = nullptr;
     if (users_storage_) {
       for (const auto* user : *users_storage_->users()) {
         if (user->username()->str() == username &&
             CheckPassword(password, user->password_hash()->str())) {
-          found_user = true;
+          found_user = user;
           break;
         }
       }
@@ -334,7 +330,7 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
     }
 
     user_controller_impl_.reset(new UserControllerImpl(
-        app_context_, settings_.device_name, settings_.user_runner,
+        app_context_, found_user->device_name()->str(), settings_.user_runner,
         settings_.user_shell, settings_.story_shell, ret_auth_token,
         std::move(user_id), std::move(ledger_repository),
         std::move(view_owner_request), std::move(user_controller_request),
@@ -355,6 +351,7 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
   // |UserProvider|
   void AddUser(const fidl::String& username,
                const fidl::String& password,
+               const fidl::String& devicename,
                const fidl::String& servername) override {
     flatbuffers::FlatBufferBuilder builder;
     std::vector<flatbuffers::Offset<modular::UserStorage>> users;
@@ -370,6 +367,7 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
         users.push_back(modular::CreateUserStorage(
             builder, builder.CreateString(user->username()),
             builder.CreateString(user->password_hash()),
+            builder.CreateString(user->device_name()),
             builder.CreateString(user->server_name())));
       }
     }
@@ -382,6 +380,7 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
     users.push_back(modular::CreateUserStorage(
         builder, builder.CreateString(std::move(username)),
         builder.CreateString(std::move(password_hash)),
+        builder.CreateString(std::move(devicename)),
         builder.CreateString(std::move(servername))));
 
     builder.Finish(modular::CreateUsersStorage(

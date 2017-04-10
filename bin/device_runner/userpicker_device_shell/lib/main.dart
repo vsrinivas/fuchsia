@@ -114,7 +114,7 @@ class _ScreenManagerState extends State<_ScreenManager>
 
   void _login(String user, UserProvider userProvider) {
     // Add the user first just in case.
-    userProvider?.addUser(user, null, 'ledger.fuchsia.com');
+    userProvider?.addUser(user, null, 'magenta', 'ledger.fuchsia.com');
 
     final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
     userProvider?.login(
