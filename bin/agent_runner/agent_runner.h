@@ -14,6 +14,8 @@
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/fidl/page_client.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -65,8 +67,7 @@ class AgentRunner : ledger::PageWatcher {
  private:
   struct TriggerInfo;
 
-  static void XdrTriggerInfo(
-      XdrContext* const xdr, TriggerInfo* const data);
+  static void XdrTriggerInfo(XdrContext* const xdr, TriggerInfo* const data);
 
   AgentContextImpl* MaybeRunAgent(const std::string& agent_url);
 
@@ -123,10 +124,16 @@ class AgentRunner : ledger::PageWatcher {
 
   // A watcher for any changes happening to the trigger list on the ledger.
   fidl::Binding<ledger::PageWatcher> watcher_binding_;
-  ledger::PageSnapshotPtr snapshot_;
+  PageClient page_client_;
 
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;
+
+  OperationQueue operation_queue_;
+
+  // Operations implemented here.
+  class InitializeCall;
+  class UpdateCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
 };

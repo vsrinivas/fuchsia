@@ -75,8 +75,8 @@ struct AgentRunner::TriggerInfo {
   uint32_t alarm_in_seconds{};
 };
 
-void AgentRunner::XdrTriggerInfo(
-    XdrContext* const xdr, TriggerInfo* const data) {
+void AgentRunner::XdrTriggerInfo(XdrContext* const xdr,
+                                 TriggerInfo* const data) {
   xdr->Field("agent_url", &data->agent_url);
   xdr->Field("task_id", &data->task_id);
   xdr->Field("task_type", &data->task_type);
@@ -91,6 +91,101 @@ void AgentRunner::XdrTriggerInfo(
   }
 }
 
+// Asynchronous operations of this service.
+
+class AgentRunner::InitializeCall : Operation<void> {
+ public:
+  InitializeCall(OperationContainer* const container,
+                 AgentRunner* const agent_runner,
+                 std::shared_ptr<ledger::PageSnapshotPtr> const snapshot)
+      : Operation(container, [] {}),
+        agent_runner_(agent_runner),
+        snapshot_(snapshot) {
+    Ready();
+  }
+
+ private:
+  void Run() override { GetEntries(nullptr); }
+
+  void GetEntries(fidl::Array<uint8_t> continuation_token) {
+    (*snapshot_)
+        ->GetEntries(
+            nullptr, std::move(continuation_token),
+            [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
+                   fidl::Array<uint8_t> continuation_token) {
+              if (status != ledger::Status::OK &&
+                  status != ledger::Status::PARTIAL_RESULT) {
+                FTL_LOG(ERROR) << "Ledger status " << status << ".";
+                Done();
+                return;
+              }
+
+              if (entries.size() == 0) {
+                // No existing entries.
+                Done();
+                return;
+              }
+              for (const auto& entry : entries) {
+                std::string key(
+                    reinterpret_cast<const char*>(entry->key.data()),
+                    entry->key.size());
+                std::string value;
+                if (!mtl::StringFromVmo(entry->value, &value)) {
+                  FTL_LOG(ERROR)
+                      << "VMO for key " << key << " couldn't be copied.";
+                  return;
+                }
+                agent_runner_->AddedTrigger(key, std::move(value));
+              }
+
+              if (status == ledger::Status::PARTIAL_RESULT) {
+                GetEntries(std::move(continuation_token));
+              } else {
+                Done();
+              }
+            });
+  }
+
+  AgentRunner* const agent_runner_;
+  std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
+};
+
+class AgentRunner::UpdateCall : Operation<void> {
+ public:
+  UpdateCall(OperationContainer* const container,
+             AgentRunner* const agent_runner,
+             ledger::PageChangePtr page,
+             ResultCall result_call)
+      : Operation(container, std::move(result_call)),
+        agent_runner_(agent_runner),
+        page_(std::move(page)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    for (auto& entry : page_->changes) {
+      std::string key(reinterpret_cast<const char*>(entry->key.data()),
+                      entry->key.size());
+      std::string value;
+      if (!mtl::StringFromVmo(entry->value, &value)) {
+        FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
+        continue;
+      }
+      agent_runner_->AddedTrigger(key, value);
+    }
+
+    for (auto& key : page_->deleted_keys) {
+      agent_runner_->DeletedTrigger(to_string(key));
+    }
+  }
+
+  AgentRunner* const agent_runner_;
+  ledger::PageChangePtr page_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(UpdateCall);
+};
+
 AgentRunner::AgentRunner(
     app::ApplicationLauncher* const application_launcher,
     MessageQueueManager* const message_queue_manager,
@@ -103,52 +198,16 @@ AgentRunner::AgentRunner(
       page_(std::move(page)),
       user_intelligence_provider_(user_intelligence_provider),
       watcher_binding_(this),
+      page_client_("AgentRunner"),
       terminating_(std::make_shared<bool>(false)) {
-  page_->GetSnapshot(
-      snapshot_.NewRequest(), watcher_binding_.NewBinding(),
-      [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-        }
-      });
-
-  // TODO(mesch): Ben points out there is a race here between getting
-  // the entries from this snapshot, and receiving updates in the
-  // watcher. Converting to an operation queue would address this too.
-  // Also, we want to bind the watcher interface request to the
-  // implementation on our side only *after* the GetEntries operation
-  // completes.
-  snapshot_->GetEntries(
-      nullptr, nullptr,
-      [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
-             fidl::Array<uint8_t> continuation_token) {
-        // TODO(alhaad): It is possible that entries in ledger snapshot are
-        // played in multiple runs. Handle it!
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "Ledger status " << status << "."
-                         << "This maybe because of the TODO above";
-          return;
-        }
-
-        if (entries.size() == 0) {
-          // No existing entries.
-          return;
-        }
-
-        for (const auto& entry : entries) {
-          std::string key(reinterpret_cast<const char*>(entry->key.data()),
-                          entry->key.size());
-          std::string value;
-          if (!mtl::StringFromVmo(entry->value, &value)) {
-            FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
-            return;
-          }
-          AddedTrigger(key, std::move(value));
-        }
-
-        // We don't use snapshot_ anymore. TODO(mesch): Change to an Operation.
-        snapshot_.reset();
-      });
+  page_->GetSnapshot(page_client_.NewRequest(), watcher_binding_.NewBinding(),
+                     [](ledger::Status status) {
+                       if (status != ledger::Status::OK) {
+                         FTL_LOG(ERROR)
+                             << "Ledger operation returned status: " << status;
+                       }
+                     });
+  new InitializeCall(&operation_queue_, this, page_client_.page_snapshot());
 }
 
 AgentRunner::~AgentRunner() = default;
@@ -207,7 +266,8 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
 
   } else if (task_info->trigger_condition->is_alarm_in_seconds()) {
     data.task_type = TriggerInfo::TYPE_ALARM;
-    data.alarm_in_seconds = task_info->trigger_condition->get_alarm_in_seconds();
+    data.alarm_in_seconds =
+        task_info->trigger_condition->get_alarm_in_seconds();
 
   } else {
     // Not a defined trigger condition.
@@ -218,9 +278,7 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
   XdrWrite(&value, &data, XdrTriggerInfo);
 
   page_->PutWithPriority(
-      to_array(key),
-      to_array(value),
-      ledger::Priority::EAGER,
+      to_array(key), to_array(value), ledger::Priority::EAGER,
       [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
@@ -236,12 +294,11 @@ void AgentRunner::AddedTrigger(const std::string& key, std::string value) {
 
   switch (data.task_type) {
     case TriggerInfo::TYPE_QUEUE:
-      ScheduleMessageQueueTask(
-          data.agent_url, data.task_id, data.queue_name);
+      ScheduleMessageQueueTask(data.agent_url, data.task_id, data.queue_name);
       break;
     case TriggerInfo::TYPE_ALARM:
-      ScheduleAlarmTask(
-          data.agent_url, data.task_id, data.alarm_in_seconds, true);
+      ScheduleAlarmTask(data.agent_url, data.task_id, data.alarm_in_seconds,
+                        true);
       break;
   }
 
@@ -384,13 +441,13 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
                              const std::string& task_id) {
   std::string key = MakeTriggerKey(agent_url, task_id);
   page_->Delete(to_array(key), [this](ledger::Status status) {
-      // ledger::Status::INVALID_TOKEN is okay because we might have gotten a
-      // request to delete a token which does not exist. This is okay.
-      if (status != ledger::Status::OK &&
-          status != ledger::Status::INVALID_TOKEN) {
-        FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-      }
-    });
+    // ledger::Status::INVALID_TOKEN is okay because we might have gotten a
+    // request to delete a token which does not exist. This is okay.
+    if (status != ledger::Status::OK &&
+        status != ledger::Status::INVALID_TOKEN) {
+      FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
+    }
+  });
 }
 
 AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
@@ -412,22 +469,8 @@ AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
 void AgentRunner::OnChange(ledger::PageChangePtr page,
                            ledger::ResultState result_state,
                            const OnChangeCallback& callback) {
-  for (auto& entry : page->changes) {
-    std::string key(reinterpret_cast<const char*>(entry->key.data()),
-                    entry->key.size());
-    std::string value;
-    if (!mtl::StringFromVmo(entry->value, &value)) {
-      FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
-      continue;
-    }
-    AddedTrigger(key, value);
-  }
-
-  for (auto& key : page->deleted_keys) {
-    DeletedTrigger(to_string(key));
-  }
-
-  callback(nullptr);
+  new UpdateCall(&operation_queue_, this, std::move(page),
+                 [callback] { callback(nullptr); });
 }
 
 }  // namespace modular
