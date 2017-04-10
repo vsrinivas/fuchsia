@@ -65,6 +65,12 @@ static mx_status_t bcm_write_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
             return ERR_TIMED_OUT;
         }
     }
+
+    if (ctx->control_regs->status & BCM_BSC_STATUS_ERR) {
+        ctx->control_regs->status |= (BCM_BSC_STATUS_ERR | BCM_BSC_STATUS_DONE);
+        return ERR_TIMED_OUT;
+    }
+
     ctx->control_regs->status |= BCM_BSC_STATUS_DONE;   //clear the done status
 
     return NO_ERROR;
@@ -87,7 +93,15 @@ static mx_status_t bcm_read_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
             return ERR_TIMED_OUT;
         }
     }
+    if (ctx->control_regs->status & BCM_BSC_STATUS_ERR) {
+        for (uint32_t i = 0; i < len; i++)
+            data[i] = (uint8_t)0;
+        ctx->control_regs->status |= (BCM_BSC_STATUS_ERR | BCM_BSC_STATUS_DONE);
+        return ERR_TIMED_OUT;
+    }
+
     ctx->control_regs->status |= BCM_BSC_STATUS_DONE;   //clear the done status
+
 
     for (uint32_t i = 0; i < len; i++)
         data[i] = (uint8_t)ctx->control_regs->fifo;
@@ -158,7 +172,6 @@ static mx_status_t bcm_i2c_slave_transfer(bcm_i2c_t* ctx, const void* in_buf, si
         }
     }
 
-    printf("wrote %u bytes, read %u bytes\n",num_writes,num_reads);
     return NO_ERROR;
 }
 

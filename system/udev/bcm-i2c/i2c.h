@@ -21,6 +21,7 @@ typedef volatile struct {
 #define     BCM_BSC_FIFO_SIZE           (uint32_t)16
 
 #define     BCM_BSC_STATUS_DONE         (uint32_t)(1 << 1)
+#define     BCM_BSC_STATUS_ERR          (uint32_t)(1 << 8)
 
 #define     BCM_BSC_CONTROL_READ        (uint32_t)0x00000001
 #define     BCM_BSC_CONTROL_ENABLE      (uint32_t)(1 << 15)
