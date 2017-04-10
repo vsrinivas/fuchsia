@@ -76,7 +76,7 @@ static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler, bool n
     destroy_handler(md, handler, need_close_cb);
 #else
     // Cancel the async wait operations.
-    mx_status_t r = mx_handle_cancel(handler->h, (uint64_t)(uintptr_t)handler, MX_CANCEL_KEY);
+    mx_status_t r = mx_port_cancel(md->ioport, handler->h, (uint64_t)(uintptr_t)handler);
     if (r) {
         printf("dispatcher: CANCEL FAILED %d\n", r);
     }
