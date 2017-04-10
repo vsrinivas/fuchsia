@@ -30,6 +30,8 @@ When this call succeeds no new packets from the object pointed by
 
 **ERR_BAD_HANDLE**  *handle* or *port* is not a valid handle.
 
+**ERR_WRONG_TYPE**  *port* is not a port handle.
+
 **ERR_ACCESS_DENIED**  *handle* or *port* does not have **MX_RIGHT_WRITE**.
 
 **ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on.
