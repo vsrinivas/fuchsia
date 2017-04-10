@@ -11,7 +11,7 @@ source_set("sdk_ext") {
   ]
 
   deps = [
-    "//dart/runtime:libdart",
+    "//dart/runtime:dart_api",
     "//lib/fidl/c/waiter",
     "//lib/fidl/cpp/waiter",
     "//lib/ftl",
