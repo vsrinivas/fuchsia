@@ -124,5 +124,12 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
     } while (status == NO_ERROR);
 
     mxio_watcher_destroy(watcher);
+
+    // If cb returns a positive value because it wants us to stop polling, then
+    // we translate that to NO_ERROR for the caller.
+    if (status >= NO_ERROR) {
+        return NO_ERROR;
+    }
+
     return status;
 }
