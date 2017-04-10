@@ -23,7 +23,10 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <magenta/errors.h>
+
+#if WITH_LIB_MAGENTA
 #include <magenta/fifo_dispatcher.h>
+#endif // WITH_LIB_MAGENTA
 
 #include "hypervisor_priv.h"
 
@@ -634,6 +637,7 @@ static status_t vmexit_handler(uint64_t reason, uint64_t qualification, uint64_t
     case VMCS_32_EXIT_REASON_IO_INSTRUCTION: {
         dprintf(SPEW, "handling IO instruction\n");
         vmwrite(VMCS_XX_GUEST_RIP, next_rip);
+#if WITH_LIB_MAGENTA
         uint16_t io_port = (qualification >> VMCS_XX_EXIT_QUALIFICATION_IO_PORT_SHIFT) &
                            VMCS_XX_EXIT_QUALIFICATION_IO_PORT_MASK;
         if (io_port != kUartIoPort)
@@ -641,6 +645,9 @@ static status_t vmexit_handler(uint64_t reason, uint64_t qualification, uint64_t
         uint8_t byte = vmx_state.guest_state.rax & 0xff;
         uint32_t actual;
         return serial_fifo->Write(&byte, 1, &actual);
+#else // WITH_LIB_MAGENTA
+        return NO_ERROR;
+#endif // WITH_LIB_MAGENTA
     }
     case VMCS_32_EXIT_REASON_EXTERNAL_INTERRUPT:
         dprintf(SPEW, "enabling interrupts for external interrupt\n");
