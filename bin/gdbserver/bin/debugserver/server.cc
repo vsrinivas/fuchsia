@@ -15,6 +15,7 @@
 
 #include "debugger-utils/util.h"
 
+#include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
@@ -49,17 +50,26 @@ RspServer::RspServer(uint16_t port)
 bool RspServer::Run() {
   FTL_DCHECK(!io_loop_);
 
+  if (!exception_port_.Run()) {
+    FTL_LOG(ERROR) << "Failed to initialize exception port!";
+    return false;
+  }
+
+  auto cleanup_exception_port = ftl::MakeAutoCall([&]() {
+      // Tell the exception port to quit and wait for it to finish.
+      FTL_VLOG(2) << "Quitting exception port thread.";
+      exception_port_.Quit();
+    });
+
+  // TODO(dje): Continually re-listen for connections when debugger goes
+  // away, with new option to control this (--listen=once|loop or whatever).
+
   // Listen for an incoming connection.
   if (!Listen())
     return false;
 
   // |client_sock_| should be ready to be consumed now.
   FTL_DCHECK(client_sock_.is_valid());
-
-  if (!exception_port_.Run()) {
-    FTL_LOG(ERROR) << "Failed to initialize exception port!";
-    return false;
-  }
 
   io_loop_ = std::make_unique<RspIOLoop>(client_sock_.get(), this);
   io_loop_->Run();
@@ -71,9 +81,6 @@ bool RspServer::Run() {
 
   // Tell the I/O loop to quit its message loop and wait for it to finish.
   io_loop_->Quit();
-
-  // Tell the exception port to quit and wait for it to finish.
-  exception_port_.Quit();
 
   return run_status_;
 }
