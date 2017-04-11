@@ -73,17 +73,6 @@ class _ScreenManagerState extends State<_ScreenManager>
   @override
   void initState() {
     super.initState();
-    _userControllerProxy = new UserControllerProxy();
-    _userWatcherImpl = new UserWatcherImpl(onUserLogout: () {
-      print('UserPickerDeviceShell: User logged out!');
-      setState(() {
-        config.onLogout?.call();
-        _transitionAnimation.reverse();
-        // TODO(apwilson): Should not need to remove the child view connection but
-        // it causes a mozart deadlock in the compositor if you don't.
-        _childViewConnection = null;
-      });
-    });
     _transitionAnimation = new AnimationController(
       value: 0.0,
       duration: const Duration(seconds: 1),
@@ -99,8 +88,10 @@ class _ScreenManagerState extends State<_ScreenManager>
   @override
   void dispose() {
     super.dispose();
-    _userWatcherImpl.close();
-    _userControllerProxy.ctrl.close();
+    _userWatcherImpl?.close();
+    _userWatcherImpl = null;
+    _userControllerProxy?.ctrl?.close();
+    _userControllerProxy = null;
   }
 
   @override
@@ -127,6 +118,20 @@ class _ScreenManagerState extends State<_ScreenManager>
       );
 
   void _login(String user, UserProvider userProvider) {
+    _userControllerProxy?.ctrl?.close();
+    _userControllerProxy = new UserControllerProxy();
+    _userWatcherImpl?.close();
+    _userWatcherImpl = new UserWatcherImpl(onUserLogout: () {
+      print('UserPickerDeviceShell: User logged out!');
+      setState(() {
+        config.onLogout?.call();
+        _transitionAnimation.reverse();
+        // TODO(apwilson): Should not need to remove the child view connection but
+        // it causes a mozart deadlock in the compositor if you don't.
+        _childViewConnection = null;
+      });
+    });
+
     final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
     userProvider?.login(
       user,
@@ -148,8 +153,9 @@ class _ScreenManagerState extends State<_ScreenManager>
           print('UserPickerDeviceShell: Child view connection unavailable!');
           config.onLogout?.call();
           _transitionAnimation.reverse();
-          // TODO(apwilson): Should not need to remove the child view connection but
-          // it causes a mozart deadlock in the compositor if you don't.
+          // TODO(apwilson): Should not need to remove the child view
+          // connection but it causes a mozart deadlock in the compositor if you
+          // don't.
           _childViewConnection = null;
         },
       );
