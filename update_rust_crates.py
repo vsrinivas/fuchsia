@@ -14,6 +14,7 @@ import tempfile
 
 
 CONFIGS = [
+    "apps/xi/modules/xi-core",
     "lib/fidl/rust/fidl",
     "rust/magenta-rs",
     "rust/magenta-rs/magenta-sys",
