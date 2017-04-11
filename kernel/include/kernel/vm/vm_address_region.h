@@ -404,6 +404,10 @@ public:
     uint64_t object_offset() const { return object_offset_; }
     mxtl::RefPtr<VmObject> vmo() const { return object_; };
 
+    // Convenience wrapper for vmo()->DecommitRange() with the necessary
+    // offset modification and locking.
+    status_t DecommitRange(size_t offset, size_t len, size_t* decommitted);
+
     // Map in pages from the underlying vm object, optionally committing pages as it goes
     status_t MapRange(size_t offset, size_t len, bool commit);
 

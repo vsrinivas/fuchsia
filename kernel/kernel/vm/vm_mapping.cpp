@@ -430,6 +430,24 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     return NO_ERROR;
 }
 
+status_t VmMapping::DecommitRange(size_t offset, size_t len,
+                                  size_t* decommitted) {
+    DEBUG_ASSERT(magic_ == kMagic);
+    LTRACEF("%p '%s' [%#zx+%#zx], offset %#zx, len %#zx\n",
+            this, name_, base_, size_, offset, len);
+
+    AutoLock guard(aspace_->lock());
+    if (state_ != LifeCycleState::ALIVE) {
+        return ERR_BAD_STATE;
+    }
+    if (offset + len < offset || offset + len > size_) {
+      return ERR_OUT_OF_RANGE;
+    }
+    // VmObject::DecommitRange will typically call back into our instance's
+    // VmMapping::UnmapVmoRangeLocked.
+    return object_->DecommitRange(object_offset_ + offset, len, decommitted);
+}
+
 status_t VmMapping::DestroyLocked() {
     DEBUG_ASSERT(magic_ == kMagic);
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
