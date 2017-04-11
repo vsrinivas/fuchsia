@@ -53,3 +53,9 @@ mx_status_t validate_resource_handle(mx_handle_t handle);
 mx_status_t get_process(ProcessDispatcher* up,
                         mx_handle_t proc_handle,
                         mxtl::RefPtr<ProcessDispatcher>* proc);
+
+namespace internal {
+    // Dumps internal details of the handle table using printf().
+    // Should only be called by diagnostics.cpp.
+    void DumpHandleTableInfo();
+} // namespace internal

@@ -42,6 +42,7 @@ public:
     void* end() const { return data_.end(); }
 
     // Dumps information about the Arena using printf().
+    // TIP: Use "k mx htinfo" to dump the handle table at runtime.
     void Dump() const;
 
 private:

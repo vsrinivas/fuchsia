@@ -218,6 +218,11 @@ Handle* MapU32ToHandle(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
     return handle->base_value() == value ? handle : nullptr;
 }
 
+void internal::DumpHandleTableInfo() {
+    AutoLock lock(&handle_mutex);
+    handle_arena.Dump();
+}
+
 mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::SYSTEM);
 

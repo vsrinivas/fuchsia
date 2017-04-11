@@ -455,6 +455,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         printf("%s jb   <pid> : list job tree\n", argv[0].str);
         printf("%s kill <pid> : kill process\n", argv[0].str);
         printf("%s asd  <pid> : dump process address space\n", argv[0].str);
+        printf("%s htinfo     : handle table info\n", argv[0].str);
         return -1;
     }
 
@@ -491,6 +492,10 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         if (argc < 3)
             goto usage;
         DumpProcessAddressSpace(argv[2].u);
+    } else if (strcmp(argv[1].str, "htinfo") == 0) {
+        if (argc != 2)
+            goto usage;
+        internal::DumpHandleTableInfo();
     } else {
         printf("unrecognized subcommand\n");
         goto usage;
