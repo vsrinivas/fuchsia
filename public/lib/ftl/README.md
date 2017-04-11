@@ -5,5 +5,4 @@ reference counting.
 
 This library builds for both host (this includes Linux, Windows, and
 macOS) as well as target (i.e., Fuchsia) platforms and is not source
-or binary stable. When building for host platforms, we currently build
-with C++11, which means this library needs to build with C++11.
+or binary stable. On both host and target, we build with C++14.
