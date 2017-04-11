@@ -166,8 +166,8 @@ pub struct mx_waitset_result_t {
 
 #[repr(C)]
 pub struct mx_channel_call_args_t {
-    pub wr_bytes: *mut u8,
-    pub wr_handles: *mut mx_handle_t,
+    pub wr_bytes: *const u8,
+    pub wr_handles: *const mx_handle_t,
     pub rd_bytes: *mut u8,
     pub rd_handles: *mut mx_handle_t,
     pub wr_num_bytes: u32,

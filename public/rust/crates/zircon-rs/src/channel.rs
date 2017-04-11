@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta channel objects.
 
-use {HandleBase, Handle, HandleRef, INVALID_HANDLE, Peered, Status};
+use {HandleBase, Handle, HandleRef, INVALID_HANDLE, Peered, Status, Time};
 use {sys, handle_drop, into_result, size_to_u32_sat};
 use conv::{ValueInto};
 use std::mem;
@@ -109,6 +109,64 @@ impl Channel {
             })
         }
     }
+
+    /// Send a message consisting of the given bytes and handles to a channel and await a reply. The
+    /// bytes should start with a four byte 'txid' which is used to identify the matching reply.
+    ///
+    /// Wraps the
+    /// [mx_channel_call](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_call.md)
+    /// syscall.
+    ///
+    /// Note that unlike [`read`][read], the caller must ensure that the MessageBuf has enough
+    /// capacity for the bytes and handles which will be received, as replies which are too large
+    /// are discarded.
+    ///
+    /// On failure returns the both the main and read status.
+    ///
+    /// [read]: struct.Channel.html#method.read
+    pub fn call(&self, options: u32, timeout: Time, bytes: &[u8], handles: &mut Vec<Handle>,
+        buf: &mut MessageBuf) -> Result<(), (Status, Status)>
+    {
+        let write_num_bytes = try!(bytes.len().value_into().map_err(
+            |_| (Status::ErrOutOfRange, Status::NoError)));
+        let write_num_handles = try!(handles.len().value_into().map_err(
+            |_| (Status::ErrOutOfRange, Status::NoError)));
+        buf.reset_handles();
+        let read_num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
+        let read_num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
+        let args = sys::mx_channel_call_args_t {
+            wr_bytes: bytes.as_ptr(),
+            wr_handles: handles.as_ptr() as *const sys::mx_handle_t,
+            rd_bytes: buf.bytes.as_mut_ptr(),
+            rd_handles: buf.handles.as_mut_ptr(),
+            wr_num_bytes: write_num_bytes,
+            wr_num_handles: write_num_handles,
+            rd_num_bytes: read_num_bytes,
+            rd_num_handles: read_num_handles,
+        };
+        let mut actual_read_bytes: u32 = 0;
+        let mut actual_read_handles: u32 = 0;
+        let mut read_status = sys::NO_ERROR;
+        let status = unsafe {
+            sys::mx_channel_call(self.raw_handle(), options, timeout, &args, &mut actual_read_bytes,
+                &mut actual_read_handles, &mut read_status)
+        };
+        if status == sys::NO_ERROR || status == sys::ERR_TIMED_OUT || status == sys::ERR_CALL_FAILED
+        {
+            // Handles were successfully transferred, even if we didn't get a response, so forget
+            // them on the sender side.
+            unsafe { handles.set_len(0); }
+        }
+        unsafe {
+            buf.bytes.set_len(actual_read_bytes as usize);
+            buf.handles.set_len(actual_read_handles as usize);
+        }
+        if status == sys::NO_ERROR {
+            Ok(())
+        } else {
+            Err((Status::from_raw(status), Status::from_raw(read_status)))
+        }
+    }
 }
 
 /// Options for creating a channel.
@@ -208,7 +266,9 @@ fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {MX_RIGHT_SAME_RIGHTS, Vmo, VmoOpts};
+    use {Duration, MX_CHANNEL_READABLE, MX_CHANNEL_WRITABLE, MX_RIGHT_SAME_RIGHTS, Vmo, VmoOpts};
+    use deadline_after;
+    use std::thread;
 
     #[test]
     fn channel_basic() {
@@ -269,5 +329,61 @@ mod tests {
         let mut read_vec = vec![0; hello_length];
         assert_eq!(vmo.read(&mut read_vec, 0).unwrap(), hello_length);
         assert_eq!(read_vec, b"hello");
+    }
+
+    #[test]
+    fn channel_call_timeout() {
+        let ten_ms: Duration = 10_000_000;
+
+        // Create a pair of channels and a virtual memory object.
+        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
+        let vmo = Vmo::create(0 as u64, VmoOpts::Default).unwrap();
+
+        // Duplicate VMO handle and send it along with the call.
+        let duplicate_vmo_handle = vmo.duplicate(MX_RIGHT_SAME_RIGHTS).unwrap().into_handle();
+        let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
+        let mut buf = MessageBuf::new();
+        assert_eq!(p1.call(0, deadline_after(ten_ms), b"call", &mut handles_to_send, &mut buf),
+            Err((Status::ErrTimedOut, Status::NoError)));
+        // Handle should be removed from vector even though we didn't get a response, as it was
+        // still sent over the channel.
+        assert!(handles_to_send.is_empty());
+
+        // Should be able to read call even though it timed out waiting for a response.
+        let mut buf = MessageBuf::new();
+        assert!(p2.read(0, &mut buf).is_ok());
+        assert_eq!(buf.bytes(), b"call");
+        assert_eq!(buf.n_handles(), 1);
+    }
+
+    #[test]
+    fn channel_call() {
+        let hundred_ms: Duration = 100_000_000;
+
+        // Create a pair of channels
+        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
+
+        // Start a new thread to respond to the call.
+        let server = thread::spawn(move || {
+            assert_eq!(p2.wait(MX_CHANNEL_READABLE, deadline_after(hundred_ms)),
+                Ok(MX_CHANNEL_READABLE | MX_CHANNEL_WRITABLE));
+            let mut buf = MessageBuf::new();
+            assert_eq!(p2.read(0, &mut buf), Ok(()));
+            assert_eq!(buf.bytes(), b"txidcall");
+            assert_eq!(buf.n_handles(), 0);
+            let mut empty = vec![];
+            assert_eq!(p2.write(b"txidresponse", &mut empty, 0), Ok(()));
+        });
+
+        // Make the call.
+        let mut empty = vec![];
+        let mut buf = MessageBuf::new();
+        buf.ensure_capacity_bytes(12);
+        assert_eq!(p1.call(0, deadline_after(hundred_ms), b"txidcall", &mut empty, &mut buf),
+            Ok(()));
+        assert_eq!(buf.bytes(), b"txidresponse");
+        assert_eq!(buf.n_handles(), 0);
+
+        assert!(server.join().is_ok());
     }
 }
