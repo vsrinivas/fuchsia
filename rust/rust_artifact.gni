@@ -7,18 +7,23 @@
 # Only for internal use, supporting rust_library and rust_binary.
 template("rust_artifact") {
 
+  if (defined(invoker.type)) {
+    type = invoker.type
+    assert(type == "bin" || type == "lib")
+  } else {
+    assert(false, "Must specify an artifact type")
+  }
+
   if (defined(invoker.name)) {
     name = invoker.name
   } else {
-    name = exec_script("//build/rust/sanitize_target_name.py",
-                       [ target_name ],
-                       "trim string")
-  }
-
-  if (defined(invoker.type)) {
-    type = invoker.type
-  } else {
-    assert(false, "Must specify an artifact type")
+    if (type == "lib") {
+      name = exec_script("//build/rust/sanitize_target_name.py",
+                         [ target_name ],
+                         "trim string")
+    } else {
+      name = target_name
+    }
   }
 
   rust_deps = []
@@ -59,7 +64,6 @@ template("rust_artifact") {
   rust_base = "//buildtools/rust/rust-$host_triple"
 
   # TODO(pylaligand): toggle debug/release depending on build type.
-  assert(type == "bin" || type == "lib")
   if (type == "bin") {
     output_file = "$target_out_dir/$target_name.rust/$target_triple/debug/$name"
     output_depfile = "$output_file.d"

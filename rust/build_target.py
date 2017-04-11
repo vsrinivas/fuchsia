@@ -139,7 +139,7 @@ def main():
             if "bin" not in config:
                 # Use the defaults.
                 config["bin"] = [{
-                    "name": default_name,
+                    "name": package_name,
                     "path": "src/main.rs"
                 }]
             for bin in config["bin"]:
