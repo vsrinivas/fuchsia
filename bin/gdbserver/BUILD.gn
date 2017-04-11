@@ -11,6 +11,7 @@ group("gdbserver") {
     "bin/ipt",
     "lib/debugger-utils",
     "lib/inferior-control",
+    "lib/intel-pt-decode($host_toolchain)",
   ]
 }
 
