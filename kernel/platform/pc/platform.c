@@ -131,11 +131,9 @@ static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
         return;
     }
 
-    printf("bootdata: @ %p (%u bytes)\n", hdr, hdr->length);
-        uint32_t* fb = (void*) X86_PHYS_TO_VIRT(0xC0000000);
-        for (unsigned n = 0; n < (1920*8); n++) {
-            fb[n] = 0x0000FFFF;
-        }
+    size_t total_len = hdr->length + sizeof(*hdr);
+
+    printf("bootdata: @ %p (%zu bytes)\n", hdr, total_len);
 
     bootdata_t* bd = hdr + 1;
     uint32_t remain = hdr->length;
@@ -154,9 +152,9 @@ static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
         remain -= len;
     }
 
-    boot_alloc_reserve(phys, hdr->length);
+    boot_alloc_reserve(phys, total_len);
     bootloader.ramdisk_base = phys;
-    bootloader.ramdisk_size = hdr->length;
+    bootloader.ramdisk_size = total_len;
 }
 
 static void platform_save_bootloader_data(void) {
@@ -214,7 +212,7 @@ static void platform_preserve_ramdisk(void) {
         return;
     }
     struct list_node list = LIST_INITIAL_VALUE(list);
-    size_t pages = (bootloader.ramdisk_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    size_t pages = ROUNDUP_PAGE_SIZE(bootloader.ramdisk_size) / PAGE_SIZE;
     size_t actual = pmm_alloc_range(bootloader.ramdisk_base, pages, &list);
     if (actual != pages) {
         panic("unable to reserve ramdisk memory range\n");
