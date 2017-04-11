@@ -496,7 +496,7 @@ void AgentRunner::UpdateWatchers() {
   }
 
   agent_provider_watchers_.ForAllPtrs([agent_urls = std::move(agent_urls)](
-      AgentProviderWatcher* watcher) {
+      AgentProviderWatcher * watcher) {
     watcher->OnUpdate(agent_urls.Clone());
   });
 }

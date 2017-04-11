@@ -142,16 +142,19 @@ StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
 
 StoryStorageImpl::~StoryStorageImpl() = default;
 
-void StoryStorageImpl::ReadLinkData(const fidl::Array<fidl::String>& module_path,
-                                    const fidl::String& link_id,
-                                    const DataCallback& callback) {
+void StoryStorageImpl::ReadLinkData(
+    const fidl::Array<fidl::String>& module_path,
+    const fidl::String& link_id,
+    const DataCallback& callback) {
   new ReadLinkDataCall(&operation_queue_, story_client_.page_snapshot(),
                        module_path, link_id, callback);
 }
 
 void StoryStorageImpl::WriteLinkData(
-    const fidl::Array<fidl::String>& module_path, const fidl::String& link_id,
-    const fidl::String& data, const SyncCallback& callback) {
+    const fidl::Array<fidl::String>& module_path,
+    const fidl::String& link_id,
+    const fidl::String& data,
+    const SyncCallback& callback) {
   new WriteLinkDataCall(&operation_queue_, story_page_, module_path, link_id,
                         data, callback);
 }

@@ -107,13 +107,13 @@ FocusHandler::FocusHandler(const fidl::String& device_name,
       page_client_("FocusHandler"),
       page_watcher_binding_(this),
       device_name_(device_name) {
-  page_->GetSnapshot(page_client_.NewRequest(), page_watcher_binding_.NewBinding(),
-                     [](ledger::Status status) {
-                       if (status != ledger::Status::OK) {
-                         FTL_LOG(ERROR)
-                             << "Page.GetSnapshot() status: " << status;
-                       }
-                     });
+  page_->GetSnapshot(
+      page_client_.NewRequest(), page_watcher_binding_.NewBinding(),
+      [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;
+        }
+      });
 }
 
 FocusHandler::~FocusHandler() = default;

@@ -237,8 +237,8 @@ void StoryImpl::StartRootModule(const fidl::String& module_name,
   CreateLink(nullptr, link_name, link.NewRequest());
 
   ModuleControllerPtr module_controller;
-  StartModuleInShell(nullptr, module_name, url, std::move(link),
-                     nullptr, nullptr, module_controller.NewRequest(), 0L, "");
+  StartModuleInShell(nullptr, module_name, url, std::move(link), nullptr,
+                     nullptr, module_controller.NewRequest(), 0L, "");
 
   module_controller->Watch(module_watcher_bindings_.AddBinding(this));
   module_controllers_.emplace_back(std::move(module_controller));

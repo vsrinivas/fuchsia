@@ -14,8 +14,8 @@
 #include "apps/modular/lib/auth/token_provider_impl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
-#include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/agent/agent_provider.fidl.h"
+#include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
@@ -43,7 +43,7 @@ constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePageId[] = "MessageQueuePage";  // 16 chars
-constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";  // 16 chars
+constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";   // 16 chars
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -192,8 +192,8 @@ UserRunnerImpl::UserRunnerImpl(
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
   ledger::PagePtr agent_runner_page;
-  ledger_->GetPage(to_array(kAgentRunnerPageId),
-                   agent_runner_page.NewRequest(), [](ledger::Status status) {
+  ledger_->GetPage(to_array(kAgentRunnerPageId), agent_runner_page.NewRequest(),
+                   [](ledger::Status status) {
                      if (status != ledger::Status::OK) {
                        FTL_LOG(ERROR)
                            << "Ledger.GetPage(kAgentRunnerPageId) failed: "
@@ -201,10 +201,10 @@ UserRunnerImpl::UserRunnerImpl(
                      }
                    });
 
-  agent_runner_.reset(new AgentRunner(
-      user_scope_.GetLauncher(), message_queue_manager_.get(),
-      ledger_repository_.get(), std::move(agent_runner_page),
-      user_intelligence_provider_.get()));
+  agent_runner_.reset(
+      new AgentRunner(user_scope_.GetLauncher(), message_queue_manager_.get(),
+                      ledger_repository_.get(), std::move(agent_runner_page),
+                      user_intelligence_provider_.get()));
 
   ComponentContextInfo component_context_info{message_queue_manager_.get(),
                                               agent_runner_.get(),
@@ -300,7 +300,8 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   }
 
   link_storage_.reset(new StoryStorageImpl(root_page_.get()));
-  user_shell_link_.reset(new LinkImpl(link_storage_.get(), nullptr, kUserShellKey));
+  user_shell_link_.reset(
+      new LinkImpl(link_storage_.get(), nullptr, kUserShellKey));
   user_shell_link_->Connect(std::move(request));
 }
 

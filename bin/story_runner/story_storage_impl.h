@@ -35,7 +35,8 @@ class StoryStorageImpl : ledger::PageWatcher {
   ~StoryStorageImpl() override;
 
   void ReadLinkData(const fidl::Array<fidl::String>& module_path,
-                    const fidl::String& link_id, const DataCallback& callback);
+                    const fidl::String& link_id,
+                    const DataCallback& callback);
   void WriteLinkData(const fidl::Array<fidl::String>& module_path,
                      const fidl::String& link_id,
                      const fidl::String& data,

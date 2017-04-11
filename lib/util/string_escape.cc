@@ -8,7 +8,8 @@ using ftl::StringView;
 
 namespace modular {
 
-std::string StringEscape(StringView input, StringView chars_to_escape,
+std::string StringEscape(StringView input,
+                         StringView chars_to_escape,
                          char escape_char) {
   std::string output;
   output.reserve(input.size());
@@ -53,7 +54,7 @@ std::vector<StringView> SplitEscapedString(StringView input,
 
     if (input[i] == split_char) {
       output.push_back(input.substr(last_pos, i - last_pos));
-      last_pos = i+1;
+      last_pos = i + 1;
       continue;
     }
   }

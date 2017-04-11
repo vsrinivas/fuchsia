@@ -60,8 +60,8 @@ class MessageQueueManager {
  private:
   struct MessageQueueInfo;
 
-  static void XdrMessageQueueInfo(
-      XdrContext* const xdr, MessageQueueInfo* const data);
+  static void XdrMessageQueueInfo(XdrContext* const xdr,
+                                  MessageQueueInfo* const data);
 
   // Returns the |MessageQueueStorage| for the queue_token. Creates it
   // if it doesn't exist yet.

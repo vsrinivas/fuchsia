@@ -683,8 +683,7 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
                                      const GetStoryInfoCallback& callback) {
   new GetStoryDataCall(&operation_queue_, root_client_.page_snapshot(),
-                       story_id,
-                       [this, callback](StoryDataPtr story_data) {
+                       story_id, [this, callback](StoryDataPtr story_data) {
                          callback(story_data.is_null()
                                       ? nullptr
                                       : std::move(story_data->story_info));
@@ -696,8 +695,8 @@ void StoryProviderImpl::GetController(
     const fidl::String& story_id,
     fidl::InterfaceRequest<StoryController> request) {
   new GetControllerCall(&operation_queue_, ledger_, root_page_,
-                        root_client_.page_snapshot(), this,
-                        &story_controllers_, story_id, std::move(request));
+                        root_client_.page_snapshot(), this, &story_controllers_,
+                        story_id, std::move(request));
 }
 
 // |StoryProvider|

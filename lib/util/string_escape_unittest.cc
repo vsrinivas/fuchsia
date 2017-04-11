@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
 #include "apps/modular/lib/util/string_escape.h"
+#include "gtest/gtest.h"
 
 using ftl::StringView;
 

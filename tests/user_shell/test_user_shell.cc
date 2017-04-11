@@ -58,9 +58,9 @@ class Settings {
 };
 
 class TestUserShellApp : modular::StoryWatcher,
-                          modular::StoryProviderWatcher,
-                          modular::LinkWatcher,
-                          modular::SingleServiceViewApp<modular::UserShell> {
+                         modular::StoryProviderWatcher,
+                         modular::LinkWatcher,
+                         modular::SingleServiceViewApp<modular::UserShell> {
  public:
   explicit TestUserShellApp(const Settings& settings)
       : settings_(settings),
