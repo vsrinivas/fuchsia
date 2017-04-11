@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magenta/status.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 
@@ -119,7 +120,14 @@ void print_table(task_table_t* table) {
 }
 
 int main(int argc, char** argv) {
-    walk_process_tree(job_callback, process_callback);
+    int ret = 0;
+    mx_status_t status = walk_process_tree(job_callback, process_callback);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "WARNING: walk_process_tree failed: %s (%d)\n",
+                mx_status_get_string(status), status);
+        ret = 1;
+    }
     print_table(&tasks);
     free(tasks.entries);
+    return ret;
 }

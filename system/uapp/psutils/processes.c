@@ -4,26 +4,39 @@
 
 #include "processes.h"
 
+#include <magenta/device/sysinfo.h>
+#include <magenta/status.h>
+
 #include <errno.h>
-#include <inttypes.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <magenta/device/sysinfo.h>
+static mx_status_t walk_process_tree_internal(
+    job_callback_t job_callback, process_callback_t process_callback,
+    mx_handle_t job, mx_koid_t job_koid, int depth) {
 
-static mx_status_t walk_process_tree_internal(job_callback_t job_callback, process_callback_t process_callback, mx_handle_t job, int depth) {
     mx_koid_t koids[128];
     size_t actual;
     size_t avail;
     mx_status_t status;
 
     // get the list of processes under this job
-    status = mx_object_get_info(job, MX_INFO_JOB_PROCESSES, koids, sizeof(koids), &actual, &avail);
+    status = mx_object_get_info(job, MX_INFO_JOB_PROCESSES,
+                                koids, sizeof(koids), &actual, &avail);
     // TODO: allocate a larger koids if 128 is not enough
     if (status != NO_ERROR) {
+        fprintf(stderr, "ERROR: mx_object_get_info(%" PRIu64
+                ", MX_INFO_JOB_PROCESSES, ...) failed: %s (%d)\n",
+                job_koid, mx_status_get_string(status), status);
         return status;
+    }
+    if (actual < avail) {
+        fprintf(stderr, "WARNING: mx_object_get_info(%" PRIu64
+                ", MX_INFO_JOB_PROCESSES, ...) truncated %zu/%zu results\n",
+                job_koid, avail - actual, avail);
     }
 
     for (size_t n = 0; n < actual; n++) {
@@ -40,14 +53,27 @@ static mx_status_t walk_process_tree_internal(job_callback_t job_callback, proce
             }
 
             mx_handle_close(child);
+        } else {
+            fprintf(stderr, "WARNING: mx_object_get_child(%" PRIu64
+                    ", (proc)%" PRIu64 ", ...) failed: %s (%d)\n",
+                    job_koid, koids[n], mx_status_get_string(status), status);
         }
     }
 
     // get a list of child jobs for this job
-    status = mx_object_get_info(job, MX_INFO_JOB_CHILDREN, koids, sizeof(koids), &actual, &avail);
+    status = mx_object_get_info(job, MX_INFO_JOB_CHILDREN, koids, sizeof(koids),
+                                &actual, &avail);
     // TODO: allocate a larger koids if 128 is not enough
     if (status != NO_ERROR) {
+        fprintf(stderr, "ERROR: mx_object_get_info(%" PRIu64
+                ", MX_INFO_JOB_CHILDREN, ...) failed: %s (%d)\n",
+                job_koid, mx_status_get_string(status), status);
         return status;
+    }
+    if (actual < avail) {
+        fprintf(stderr, "WARNING: mx_object_get_info(%" PRIu64
+                ", MX_INFO_JOB_CHILDREN, ...) truncated %zu/%zu results\n",
+                job_koid, avail - actual, avail);
     }
 
     // drill down into the job tree
@@ -65,18 +91,23 @@ static mx_status_t walk_process_tree_internal(job_callback_t job_callback, proce
             }
 
             // recurse to its children
-            status = walk_process_tree_internal(job_callback, process_callback, child, depth+1);
+            status = walk_process_tree_internal(
+                job_callback, process_callback, child, koids[n], depth + 1);
             // abort on failure
             if (status != NO_ERROR) {
                 return status;
             }
 
             mx_handle_close(child);
+        } else {
+            fprintf(stderr,
+                    "WARNING: mx_object_get_child(%" PRIu64 ", (job)%" PRIu64
+                    ", ...) failed: %s (%d)\n",
+                    job_koid, koids[n], mx_status_get_string(status), status);
         }
     }
 
     return NO_ERROR;
-
 }
 
 mx_status_t walk_process_tree(job_callback_t job_callback, process_callback_t process_callback) {
@@ -92,7 +123,7 @@ mx_status_t walk_process_tree(job_callback_t job_callback, process_callback_t pr
     }
     close(fd);
 
-    return walk_process_tree_internal(job_callback, process_callback, root_job, 0);
+    return walk_process_tree_internal(job_callback, process_callback, root_job, 0, 0);
 
     mx_handle_close(root_job);
 }
