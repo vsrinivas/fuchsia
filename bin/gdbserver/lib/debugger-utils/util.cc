@@ -6,6 +6,7 @@
 
 #include <cctype>
 #include <cinttypes>
+#include <cstring>
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
@@ -134,9 +135,12 @@ void LogError(const std::string& message) {
   FTL_LOG(ERROR) << message;
 }
 
+std::string ErrnoString(int err) {
+  return ftl::StringPrintf("%s(%d)", strerror(err), err);
+}
+
 void LogErrorWithErrno(const std::string& message) {
-  FTL_LOG(ERROR) << message << " (errno = " << errno << ", \""
-                 << strerror(errno) << "\")";
+  FTL_LOG(ERROR) << message << ", " << ErrnoString(errno);
 }
 
 size_t JoinStrings(const std::deque<std::string>& strings,

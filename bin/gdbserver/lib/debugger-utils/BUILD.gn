@@ -8,6 +8,8 @@
 # TODO(dje): Living in bin/foo is suboptimal.
 static_library("debugger-utils") {
   sources = [
+    "build-ids.cc",
+    "build-ids.h",
     "elf-reader.cc",
     "elf-reader.h",
     "elf-symtab.cc",
