@@ -66,13 +66,15 @@ bool LEConnectionTest::Run(ftl::UniqueFD hci_dev, const common::DeviceAddress& d
   // Read Buffer Size
   hci::CommandPacket cmd(hci::kReadBufferSize, &buffer, 0);
   cmd.EncodeHeader();
-  hci_->command_channel()->SendCommand(cmd, GetStatusCallback("Read Buffer Size"), read_buf_size_cb,
+  hci_->command_channel()->SendCommand(common::DynamicByteBuffer(buffer),
+                                       GetStatusCallback("Read Buffer Size"), read_buf_size_cb,
                                        message_loop_.task_runner());
 
   // LE Read Buffer Size
   cmd = hci::CommandPacket(hci::kLEReadBufferSize, &buffer, 0);
   cmd.EncodeHeader();
-  hci_->command_channel()->SendCommand(cmd, GetStatusCallback("LE Read Buffer Size"),
+  hci_->command_channel()->SendCommand(common::DynamicByteBuffer(buffer),
+                                       GetStatusCallback("LE Read Buffer Size"),
                                        le_read_buf_size_cb, message_loop_.task_runner());
 
   message_loop_.Run();
@@ -196,9 +198,9 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(size_t max_data_
   FTL_LOG(INFO) << "Sending LE connection request";
 
   // The status callback will never get called but we pass one in anyway.
-  hci_->command_channel()->SendCommand(cmd, GetStatusCallback("LE Create Connection"),
-                                       le_conn_status_cb, message_loop_.task_runner(),
-                                       hci::kCommandStatusEventCode);
+  hci_->command_channel()->SendCommand(common::DynamicByteBuffer(buffer),
+                                       GetStatusCallback("LE Create Connection"), le_conn_status_cb,
+                                       message_loop_.task_runner(), hci::kCommandStatusEventCode);
 }
 
 void LEConnectionTest::SendNotifications() {

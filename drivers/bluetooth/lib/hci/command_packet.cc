@@ -16,6 +16,13 @@ CommandPacket::CommandPacket(OpCode opcode, common::MutableByteBuffer* buffer, s
   FTL_DCHECK(GetPayloadSize() <= kMaxCommandPacketPayloadSize);
 }
 
+CommandPacket::CommandPacket(common::MutableByteBuffer* buffer)
+    : common::MutablePacket<CommandHeader>(buffer, buffer->GetSize() - sizeof(CommandHeader)) {
+  FTL_DCHECK(buffer->GetSize() >= sizeof(CommandHeader));
+  FTL_DCHECK(GetPayloadSize() <= kMaxCommandPacketPayloadSize);
+  opcode_ = le16toh(GetHeader().opcode);
+}
+
 void CommandPacket::EncodeHeader() {
   FTL_DCHECK(GetPayloadSize() <= kMaxCommandPacketPayloadSize);
   GetMutableHeader()->opcode = htole16(opcode_);

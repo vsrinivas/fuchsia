@@ -110,6 +110,9 @@ class DynamicByteBuffer : public MutableByteBuffer {
   // Allocates a new buffer with |buffer_size| bytes.
   explicit DynamicByteBuffer(size_t buffer_size);
 
+  // Copies the contents of |buffer|.
+  explicit DynamicByteBuffer(const ByteBuffer& buffer);
+
   // Takes ownership of |buffer| and avoids allocating a new buffer. Since this
   // constructor performs a simple assignment, the caller must make sure that
   // the buffer pointed to by |buffer| actually contains |buffer_size| bytes.

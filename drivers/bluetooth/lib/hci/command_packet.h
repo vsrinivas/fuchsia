@@ -20,6 +20,9 @@ class CommandPacket : public ::bluetooth::common::MutablePacket<CommandHeader> {
  public:
   CommandPacket(OpCode opcode, common::MutableByteBuffer* buffer, size_t payload_size = 0u);
 
+  // Constructs a CommandPacket from an already encoded buffer.
+  explicit CommandPacket(common::MutableByteBuffer* buffer);
+
   // Returns the HCI command opcode for this packet.
   OpCode opcode() const { return opcode_; }
 

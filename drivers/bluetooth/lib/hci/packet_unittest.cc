@@ -52,6 +52,24 @@ TEST(HCIPacketTest, CommandPacket) {
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 }
 
+TEST(HCIPacketTest, CommandPacketFromBuffer) {
+  constexpr size_t kPayloadSize = sizeof(TestPayload);
+  constexpr size_t kBufferSize = CommandPacket::GetMinBufferSize(kPayloadSize);
+  StaticByteBuffer<kBufferSize> buffer;
+
+  CommandPacket packet(kTestOpCode, &buffer, kPayloadSize);
+
+  EXPECT_EQ(kTestOpCode, packet.opcode());
+  EXPECT_EQ(kPayloadSize, packet.GetPayloadSize());
+
+  packet.EncodeHeader();
+
+  CommandPacket packet0(&buffer);
+
+  EXPECT_EQ(kTestOpCode, packet.opcode());
+  EXPECT_EQ(kPayloadSize, packet.GetPayloadSize());
+}
+
 TEST(HCIPacketTest, EventPacket) {
   constexpr size_t kPayloadSize = sizeof(TestPayload);
   auto bytes = common::CreateStaticByteBuffer(

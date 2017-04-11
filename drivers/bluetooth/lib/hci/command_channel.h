@@ -28,7 +28,6 @@
 namespace bluetooth {
 namespace hci {
 
-class CommandPacket;
 class Transport;
 
 // Represents the HCI Bluetooth command channel. Manages HCI command and event
@@ -65,9 +64,8 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // a transaction ID. The given callbacks will be posted on |task_runner| to be
   // processed on the appropriate thread requested by the caller.
   //
-  // The contents of the given |command_packet| and the underlying buffer will
-  // be undefined after this function exits successfully, as the underlying
-  // buffer may be moved for efficient queuing of packet contents.
+  // This call will take ownership of the contents of |command_packet|. |command_packet| MUST
+  // represent a valid HCI command packet.
   //
   // |status_callback| will be called if the controller responds to the command
   // with a CommandStatus HCI event.
@@ -84,7 +82,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   //
   // See Bluetooth Core Spec v5.0, Volume 2, Part E, Section 4.4 "Command Flow
   // Control" for more information about the HCI command flow control.
-  TransactionId SendCommand(const CommandPacket& command_packet,
+  TransactionId SendCommand(common::DynamicByteBuffer command_packet,
                             const CommandStatusCallback& status_callback,
                             const CommandCompleteCallback& complete_callback,
                             ftl::RefPtr<ftl::TaskRunner> task_runner,
@@ -156,7 +154,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
 
   // Represents a queued command packet.
   struct QueuedCommand {
-    QueuedCommand(TransactionId id, const CommandPacket& command_packet,
+    QueuedCommand(TransactionId id, common::DynamicByteBuffer command_packet,
                   const CommandStatusCallback& status_callback,
                   const CommandCompleteCallback& complete_callback,
                   ftl::RefPtr<ftl::TaskRunner> task_runner, EventCode complete_event_code);

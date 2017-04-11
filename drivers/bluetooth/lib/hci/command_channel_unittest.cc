@@ -106,7 +106,7 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
   CommandPacket reset(kReset, &buffer);
   reset.EncodeHeader();
   CommandChannel::TransactionId id = cmd_channel()->SendCommand(
-      reset, NOP_STATUS_CB(),
+      common::DynamicByteBuffer(buffer), NOP_STATUS_CB(),
       [&id, this](CommandChannel::TransactionId callback_id, const EventPacket& event) {
         EXPECT_EQ(id, callback_id);
         EXPECT_EQ(kCommandCompleteEventCode, event.event_code());
@@ -169,7 +169,8 @@ TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
   common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
   CommandPacket reset(kReset, &buffer);
   reset.EncodeHeader();
-  id = cmd_channel()->SendCommand(reset, status_cb, complete_cb, message_loop()->task_runner());
+  id = cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), status_cb, complete_cb,
+                                  message_loop()->task_runner());
   RunMessageLoop();
   EXPECT_EQ(1, status_cb_count);
 }
@@ -211,8 +212,8 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
   common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
   CommandPacket reset(kReset, &buffer);
   reset.EncodeHeader();
-  id = cmd_channel()->SendCommand(reset, status_cb, complete_cb, message_loop()->task_runner(),
-                                  kCommandStatusEventCode);
+  id = cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), status_cb, complete_cb,
+                                  message_loop()->task_runner(), kCommandStatusEventCode);
   RunMessageLoop();
 
   // |status_cb| shouldn't have been called since it was used as the completion
@@ -291,10 +292,11 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
   common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
   CommandPacket reset(kReset, &buffer);
   reset.EncodeHeader();
-  id0 = cmd_channel()->SendCommand(reset, status_cb, complete_cb, message_loop()->task_runner());
+  id0 = cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), status_cb, complete_cb,
+                                   message_loop()->task_runner());
   CommandPacket read_bdaddr(kReadBDADDR, &buffer);
   read_bdaddr.EncodeHeader();
-  id1 = cmd_channel()->SendCommand(read_bdaddr, status_cb, complete_cb,
+  id1 = cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), status_cb, complete_cb,
                                    message_loop()->task_runner());
   RunMessageLoop();
   EXPECT_EQ(2, status_cb_count);
@@ -418,7 +420,7 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
   CommandPacket reset(kReset, &buffer);
   reset.EncodeHeader();
-  cmd_channel()->SendCommand(reset, NOP_STATUS_CB(), NOP_COMPLETE_CB(),
+  cmd_channel()->SendCommand(common::DynamicByteBuffer(buffer), NOP_STATUS_CB(), NOP_COMPLETE_CB(),
                              message_loop()->task_runner(), kTestEventCode);
 
   RunMessageLoop();

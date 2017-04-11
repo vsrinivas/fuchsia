@@ -40,8 +40,9 @@ void StatusCallback(ftl::Closure complete_cb, bluetooth::hci::CommandChannel::Tr
 hci::CommandChannel::TransactionId SendCommand(
     const CommandDispatcher& owner, const hci::CommandPacket& packet,
     const hci::CommandChannel::CommandCompleteCallback& cb, const ftl::Closure& complete_cb) {
-  return owner.cmd_channel()->SendCommand(packet, std::bind(&StatusCallback, complete_cb, _1, _2),
-                                          cb, owner.task_runner());
+  return owner.cmd_channel()->SendCommand(common::DynamicByteBuffer(*packet.buffer()),
+                                          std::bind(&StatusCallback, complete_cb, _1, _2), cb,
+                                          owner.task_runner());
 }
 
 void LogCommandComplete(hci::Status status, hci::CommandChannel::TransactionId id) {

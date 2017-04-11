@@ -76,6 +76,15 @@ TEST(ByteBufferTest, DynamicByteBuffer) {
   EXPECT_EQ(buffer.cbegin(), buffer.cend());
 }
 
+TEST(ByteBufferTest, DynamicByteBufferConstructFromBuffer) {
+  constexpr size_t kBufferSize = 3;
+  StaticByteBuffer<kBufferSize> buffer({1, 2, 3});
+
+  DynamicByteBuffer dyn_buffer(buffer);
+  EXPECT_EQ(kBufferSize, dyn_buffer.GetSize());
+  EXPECT_TRUE(ContainersEqual(buffer, dyn_buffer));
+}
+
 TEST(ByteBufferTest, DynamicByteBufferConstructFromBytes) {
   constexpr size_t kBufferSize = 3;
   std::array<uint8_t, kBufferSize> kExpected{{0, 1, 2}};

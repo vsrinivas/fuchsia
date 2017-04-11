@@ -18,20 +18,21 @@
 namespace bluetooth {
 namespace hci {
 
-CommandChannel::QueuedCommand::QueuedCommand(TransactionId id, const CommandPacket& command_packet,
+CommandChannel::QueuedCommand::QueuedCommand(TransactionId id,
+                                             common::DynamicByteBuffer command_packet,
                                              const CommandStatusCallback& status_callback,
                                              const CommandCompleteCallback& complete_callback,
                                              ftl::RefPtr<ftl::TaskRunner> task_runner,
                                              const EventCode complete_event_code) {
+  packet_data = std::move(command_packet);
   transaction_data.id = id;
-  transaction_data.opcode = command_packet.opcode();
   transaction_data.complete_event_code = complete_event_code;
   transaction_data.status_callback = status_callback;
   transaction_data.complete_callback = complete_callback;
   transaction_data.task_runner = task_runner;
 
-  packet_data = common::DynamicByteBuffer(command_packet.size(),
-                                          command_packet.mutable_buffer()->CopyContents());
+  CommandPacket cmd(&packet_data);
+  transaction_data.opcode = cmd.opcode();
 }
 
 CommandChannel::CommandChannel(Transport* transport, mx::channel hci_command_channel)
@@ -110,7 +111,7 @@ void CommandChannel::ShutDown() {
 }
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
-    const CommandPacket& command_packet, const CommandStatusCallback& status_callback,
+    common::DynamicByteBuffer command_packet, const CommandStatusCallback& status_callback,
     const CommandCompleteCallback& complete_callback, ftl::RefPtr<ftl::TaskRunner> task_runner,
     const EventCode complete_event_code) {
   if (!is_initialized_) {
@@ -123,7 +124,7 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
   // TODO(armansito): Make this more robust.
   if (next_transaction_id_ == 0u) next_transaction_id_++;
   TransactionId id = next_transaction_id_++;
-  QueuedCommand cmd(id, command_packet, status_callback, complete_callback, task_runner,
+  QueuedCommand cmd(id, std::move(command_packet), status_callback, complete_callback, task_runner,
                     complete_event_code);
 
   std::lock_guard<std::mutex> lock(send_queue_mutex_);
