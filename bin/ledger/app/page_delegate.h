@@ -14,6 +14,7 @@
 #include "apps/ledger/src/app/branch_tracker.h"
 #include "apps/ledger/src/app/fidl/bound_interface.h"
 #include "apps/ledger/src/app/page_impl.h"
+#include "apps/ledger/src/callback/operation_serializer.h"
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -121,7 +122,7 @@ class PageDelegate {
 
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;
-  std::queue<ftl::Closure> queued_operations_;
+  callback::OperationSerializer<Status> operation_serializer_;
   std::vector<std::unique_ptr<storage::Journal>> in_progress_journals_;
   // |storage_| might outlive this PageDelegate, so asynchronous operations on
   // PageStorage that capture |this| could fail while executing the callback.

@@ -13,6 +13,7 @@ source_set("callback") {
     "capture.h",
     "destruction_sentinel.cc",
     "destruction_sentinel.h",
+    "operation_serializer.h",
     "trace_callback.h",
     "waiter.h",
   ]

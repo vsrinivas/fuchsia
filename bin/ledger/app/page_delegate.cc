@@ -169,55 +169,58 @@ void PageDelegate::CreateReference(
 // StartTransaction() => (Status status);
 void PageDelegate::StartTransaction(
     const Page::StartTransactionCallback& callback) {
-  SerializeOperation(std::move(callback), [this](StatusCallback callback) {
-    if (journal_) {
-      callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
-      return;
-    }
-    storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-    storage::Status status = storage_->StartCommit(
-        commit_id, storage::JournalType::EXPLICIT, &journal_);
-    if (status != storage::Status::OK) {
-      callback(PageUtils::ConvertStatus(status));
-      return;
-    }
-    journal_parent_commit_ = commit_id;
-    branch_tracker_.StartTransaction([callback = std::move(callback)]() {
-      callback(Status::OK);
-    });
-  });
+  operation_serializer_.Serialize(
+      std::move(callback), [this](StatusCallback callback) {
+        if (journal_) {
+          callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
+          return;
+        }
+        storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
+        storage::Status status = storage_->StartCommit(
+            commit_id, storage::JournalType::EXPLICIT, &journal_);
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status));
+          return;
+        }
+        journal_parent_commit_ = commit_id;
+        branch_tracker_.StartTransaction([callback = std::move(callback)]() {
+          callback(Status::OK);
+        });
+      });
 }
 
 // Commit() => (Status status);
 void PageDelegate::Commit(const Page::CommitCallback& callback) {
-  SerializeOperation(std::move(callback), [this](StatusCallback callback) {
-    if (!journal_) {
-      callback(Status::NO_TRANSACTION_IN_PROGRESS);
-      return;
-    }
-    journal_parent_commit_.clear();
-    CommitJournal(std::move(journal_), [
-      this, callback = std::move(callback)
-    ](Status status, std::unique_ptr<const storage::Commit> commit) {
-      branch_tracker_.StopTransaction(std::move(commit));
-      callback(status);
-    });
-  });
+  operation_serializer_.Serialize(
+      std::move(callback), [this](StatusCallback callback) {
+        if (!journal_) {
+          callback(Status::NO_TRANSACTION_IN_PROGRESS);
+          return;
+        }
+        journal_parent_commit_.clear();
+        CommitJournal(std::move(journal_), [
+          this, callback = std::move(callback)
+        ](Status status, std::unique_ptr<const storage::Commit> commit) {
+          branch_tracker_.StopTransaction(std::move(commit));
+          callback(status);
+        });
+      });
 }
 
 // Rollback() => (Status status);
 void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
-  SerializeOperation(std::move(callback), [this](StatusCallback callback) {
-    if (!journal_) {
-      callback(Status::NO_TRANSACTION_IN_PROGRESS);
-      return;
-    }
-    storage::Status status = journal_->Rollback();
-    journal_.reset();
-    journal_parent_commit_.clear();
-    callback(PageUtils::ConvertStatus(status));
-    branch_tracker_.StopTransaction(nullptr);
-  });
+  operation_serializer_.Serialize(
+      std::move(callback), [this](StatusCallback callback) {
+        if (!journal_) {
+          callback(Status::NO_TRANSACTION_IN_PROGRESS);
+          return;
+        }
+        storage::Status status = journal_->Rollback();
+        journal_.reset();
+        journal_parent_commit_.clear();
+        callback(PageUtils::ConvertStatus(status));
+        branch_tracker_.StopTransaction(nullptr);
+      });
 }
 
 const storage::CommitId& PageDelegate::GetCurrentCommitId() {
@@ -246,7 +249,7 @@ void PageDelegate::PutInCommit(fidl::Array<uint8_t> key,
 void PageDelegate::RunInTransaction(
     std::function<Status(storage::Journal* journal)> runnable,
     std::function<void(Status)> callback) {
-  SerializeOperation(
+  operation_serializer_.Serialize(
       std::move(callback),
       [ this, runnable = std::move(runnable) ](StatusCallback callback) {
         if (journal_) {
@@ -307,26 +310,6 @@ void PageDelegate::CommitJournal(
   });
 }
 
-void PageDelegate::SerializeOperation(
-    StatusCallback callback,
-    std::function<void(StatusCallback)> operation) {
-  auto closure = [
-    this, callback = std::move(callback), operation = std::move(operation)
-  ] {
-    operation([ this, callback = std::move(callback) ](Status status) {
-      callback(status);
-      this->queued_operations_.pop();
-      if (!this->queued_operations_.empty()) {
-        queued_operations_.front()();
-      }
-    });
-  };
-  queued_operations_.emplace(std::move(closure));
-  if (queued_operations_.size() == 1) {
-    queued_operations_.front()();
-  }
-}
-
 std::function<void(Status)> PageDelegate::TrackCallback(
     StatusCallback callback) {
   ++in_progress_storage_operations_;
@@ -341,7 +324,7 @@ std::function<void(Status)> PageDelegate::TrackCallback(
 
 void PageDelegate::CheckEmpty() {
   if (on_empty_callback_ && !interface_.is_bound() &&
-      branch_tracker_.IsEmpty() && queued_operations_.empty() &&
+      branch_tracker_.IsEmpty() && operation_serializer_.empty() &&
       !in_progress_storage_operations_) {
     on_empty_callback_();
   }
