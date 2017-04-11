@@ -12,4 +12,14 @@ RawPrinter::Config CommandLineSettings::ToRawPrinterConfig() const {
   return config;
 };
 
+CallPrinter::Config CommandLineSettings::ToCallPrinterConfig() const {
+  CallPrinter::Config config;
+  config.output_file_name = output_file_name;
+  config.abstime = abstime;
+  config.report_lost_mtc_cyc = report_lost_mtc_cyc;
+  config.dump_pc = dump_pc;
+  config.dump_insn = dump_insn;
+  return config;
+};
+
 }  // namespace intel_processor_trace

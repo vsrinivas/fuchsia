@@ -362,6 +362,14 @@ int main(int argc, char** argv) {
       return EXIT_FAILURE;
     }
     total_insns = printer->PrintFiles();
+  } else if (printer_config.output_format == OutputFormat::kCalls) {
+    auto printer = CallPrinter::Create(decoder.get(),
+                                       printer_config.ToCallPrinterConfig());
+    if (!printer) {
+      FTL_LOG(ERROR) << "Error creating printer";
+      return EXIT_FAILURE;
+    }
+    total_insns = printer->PrintFiles();
   } else {
     FTL_LOG(ERROR) << "Invalid output format\n";
     return EXIT_FAILURE;

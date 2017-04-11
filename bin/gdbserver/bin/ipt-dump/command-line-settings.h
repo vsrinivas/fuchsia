@@ -6,13 +6,18 @@
 
 #include <string>
 
+#include "bin/gdbserver/third_party/simple-pt/call-printer.h"
+
 #include "printer-config.h"
 #include "raw-printer.h"
 
 namespace intel_processor_trace {
 
+using CallPrinter = simple_pt::CallPrinter;
+
 struct CommandLineSettings {
   RawPrinter::Config ToRawPrinterConfig() const;
+  CallPrinter::Config ToCallPrinterConfig() const;
 
   OutputFormat output_format = OutputFormat::kCalls;
 
