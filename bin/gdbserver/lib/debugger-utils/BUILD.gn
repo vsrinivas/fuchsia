@@ -10,6 +10,8 @@ static_library("debugger-utils") {
   sources = [
     "elf-reader.cc",
     "elf-reader.h",
+    "elf-symtab.cc",
+    "elf-symtab.h",
     "ktrace-reader.cc",
     "ktrace-reader.h",
     "memory.h",

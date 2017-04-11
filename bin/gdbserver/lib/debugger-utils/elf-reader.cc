@@ -29,10 +29,11 @@ const char* ErrorName(Error err) {
   }
 }
 
-Error Reader::Create(const util::Memory& reader, uint32_t options,
-                     uintptr_t base, std::unique_ptr<Reader>* out) {
+Error Reader::Create(const std::string& file_name,
+                     const util::Memory& reader, uint32_t options,
+                     uint64_t base, std::unique_ptr<Reader>* out) {
   FTL_DCHECK(options == 0);
-  Reader* er = new Reader(reader, base);
+  Reader* er = new Reader(file_name, reader, base);
   if (!ReadHeader(reader, base, &er->header_)) {
     delete er;
     return Error::IO;
@@ -45,8 +46,10 @@ Error Reader::Create(const util::Memory& reader, uint32_t options,
   return Error::OK;
 }
 
-Reader::Reader(const util::Memory& reader, uintptr_t base)
-  : reader_(reader),
+Reader::Reader(const std::string& file_name, const util::Memory& reader,
+               uint64_t base)
+  : file_name_(file_name),
+    reader_(reader),
     base_(base) {
 }
 
@@ -56,7 +59,7 @@ Reader::~Reader() {
 }
 
 // static
-bool Reader::ReadHeader(const util::Memory& m, uintptr_t base, Header* hdr) {
+bool Reader::ReadHeader(const util::Memory& m, uint64_t base, Header* hdr) {
   return m.Read(base, hdr, sizeof(*hdr));
 }
 
@@ -127,6 +130,16 @@ const SectionHeader& Reader::GetSectionHeader(size_t section_number) {
   return section_headers_[section_number];
 }
 
+const SectionHeader* Reader::GetSectionHeaderByType(unsigned type) {
+  size_t num_sections = GetNumSections();
+  for (size_t i = 0; i < num_sections; ++i) {
+    const SectionHeader& shdr = GetSectionHeader(i);
+    if (shdr.sh_type == type)
+      return &shdr;
+  }
+  return nullptr;
+}
+
 Error Reader::GetSectionContents(
     const SectionHeader& sh,
     std::unique_ptr<SectionContents>* out_contents) {
@@ -148,7 +161,7 @@ Error Reader::GetSectionContents(
 }
 
 Error Reader::ReadBuildId(char* buf, size_t buf_size) {
-  uintptr_t vaddr = base_;
+  uint64_t vaddr = base_;
 
   FTL_DCHECK(buf_size >= kMaxBuildIdSize * 2 + 1);
 
@@ -176,7 +189,7 @@ Error Reader::ReadBuildId(char* buf, size_t buf_size) {
       size_t payload_size = (note.hdr.n_descsz + 3) & -4;
       offset += header_size;
       size -= header_size;
-      uintptr_t payload_vaddr = vaddr + offset;
+      uint64_t payload_vaddr = vaddr + offset;
       offset += payload_size;
       size -= payload_size;
       if (note.hdr.n_type != NT_GNU_BUILD_ID ||
@@ -225,12 +238,12 @@ size_t SectionContents::GetNumEntries() const {
   return header_.sh_size / header_.sh_entsize;
 }
 
-const Symbol& SectionContents::GetSymbolEntry(size_t entry_number) {
+const RawSymbol& SectionContents::GetSymbolEntry(size_t entry_number) {
   FTL_DCHECK(header_.sh_type == SHT_SYMTAB || header_.sh_type == SHT_DYNSYM);
   FTL_DCHECK(entry_number < GetNumEntries());
   auto buf = reinterpret_cast<const char*>(contents_);
   auto sym = buf + entry_number * header_.sh_entsize;
-  return *reinterpret_cast<const Symbol*>(sym);
+  return *reinterpret_cast<const RawSymbol*>(sym);
 }
 
 }  // namespace elf

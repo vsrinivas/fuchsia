@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <climits>
 #include <cstddef>
 #include <cstdint>
-#include <climits>
 #ifdef __APPLE__
 // TODO(dje): Private copy until available on osx.
 #include <bin/gdbserver/third_party/musl/include/elf.h>
@@ -14,6 +14,7 @@
 #include <elf.h>
 #endif
 #include <memory>
+#include <string>
 
 #include "memory.h"
 
@@ -27,14 +28,14 @@ namespace elf {
 using Header = Elf32_Ehdr;
 using SegmentHeader = Elf32_Phdr;
 using SectionHeader = Elf32_Shdr;
-using Symbol = Elf32_Sym;
+using RawSymbol = Elf32_Sym;
 
 #else
 
 using Header = Elf64_Ehdr;
 using SegmentHeader = Elf64_Phdr;
 using SectionHeader = Elf64_Shdr;
-using Symbol = Elf64_Sym;
+using RawSymbol = Elf64_Sym;
 
 #endif
 
@@ -68,7 +69,7 @@ class SectionContents {
   // [We don't byteswap today, but when we do that is how this will work.
   // Symbols are generally used to create internal symbol tables and thus
   // are generally discarded immediately after use.]
-  const Symbol& GetSymbolEntry(size_t entry_number);
+  const RawSymbol& GetSymbolEntry(size_t entry_number);
 
   const SectionHeader& header() const { return header_; }
 
@@ -92,14 +93,18 @@ class SectionContents {
 
 class Reader {
  public:
-  static Error Create(const util::Memory& reader,
-                      uint32_t options, uintptr_t base,
+  static Error Create(const std::string& file_name,
+                      const util::Memory& reader,
+                      uint32_t options,
+                      uint64_t base,
                       std::unique_ptr<Reader>* out);
   ~Reader();
 
+  const std::string& file_name() const { return file_name_; }
+
   // Read the ELF header at offset |base| in |m|.
   // The header is written in to |hdr|.
-  static bool ReadHeader(const util::Memory& m, uintptr_t base, Header* hdr);
+  static bool ReadHeader(const util::Memory& m, uint64_t base, Header* hdr);
 
   // Return true if |hdr| is a valid ELF header.
   static bool VerifyHeader(const Header* hdr);
@@ -138,6 +143,10 @@ class Reader {
   // already been called.
   const SectionHeader& GetSectionHeader(size_t section_number);
 
+  // Return the section header with type |type|, an SHT_* value.
+  // Returns nullptr if not found.
+  const SectionHeader* GetSectionHeaderByType(unsigned type);
+
   // Fetch the contents of |sh|.
   // This version malloc's space for the section, reads the contents into
   // the buffer, and assigns it to SectionContents.
@@ -156,17 +165,22 @@ class Reader {
 
   // Read |length| bytes at |address| in the ELF object an store in |buffer|.
   // |address| is the offset from the beginning of the ELF object.
-  bool Read(uintptr_t address, void* buffer, size_t length) const;
+  bool Read(uint64_t address, void* buffer, size_t length) const;
 
  private:
-  Reader(const util::Memory& reader, uintptr_t base);
+  Reader(const std::string& file_name,
+         const util::Memory& reader,
+         uint64_t base);
+
+  // For debugging/informational purposes only.
+  const std::string file_name_;
 
   // This is the API to read/write from wherever the ELF object lives.
   // It could be in process memory, or in a file, or wherever.
   const util::Memory& reader_;
 
   // The offset in |reader_| of the start of the ELF object.
-  const uintptr_t base_;
+  const uint64_t base_;
 
   Header header_;
 

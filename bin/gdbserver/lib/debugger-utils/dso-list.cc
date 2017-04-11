@@ -75,11 +75,12 @@ dsoinfo_t* dso_fetch_list(const Memory& m, mx_vaddr_t lmap_addr,
                     sizeof(dsoname)))
       break;
 
-    dsoinfo_t* dso =
-        dsolist_add(&dsolist, dsoname[0] ? dsoname : name, lmap.l_addr);
+    const char* file_name = dsoname[0] ? dsoname : name;
+    dsoinfo_t* dso = dsolist_add(&dsolist, file_name, lmap.l_addr);
 
     std::unique_ptr<elf::Reader> elf_reader;
-    elf::Error rc = elf::Reader::Create(m, 0, dso->base, &elf_reader);
+    elf::Error rc = elf::Reader::Create(file_name, m, 0, dso->base,
+                                        &elf_reader);
     if (rc != elf::Error::OK) {
       FTL_LOG(ERROR) << "Unable to read ELF file: " << elf::ErrorName(rc);
       break;
