@@ -44,10 +44,6 @@ LOCAL_COMPILEFLAGS += -fno-stack-protector
 # arguments would only be added to C or C++ targets.
 LOCAL_COMPILEFLAGS += -Qunused-arguments
 
-else
-LOCAL_CFLAGS += \
-    -Wno-discarded-qualifiers \
-    -Wno-unused-but-set-variable
 endif
 
 # The upstream musl build uses this too.  It's necessary to avoid the
