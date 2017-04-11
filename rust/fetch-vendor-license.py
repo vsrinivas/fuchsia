@@ -20,8 +20,6 @@ def die(reason):
     raise Exception(reason)
 
 def get_repo_path(subdir):
-    # TODO: workarounds for missing repo; delete when crate is updated
-    if subdir == 'xi-core-lib-0.1.0': return 'https://github.com/google/xi-editor'
     for line in open(os.path.join(subdir, 'Cargo.toml')):
         m = repo_re.match(line)
         if m:
