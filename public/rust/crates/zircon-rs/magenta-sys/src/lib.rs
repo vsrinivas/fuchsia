@@ -241,6 +241,9 @@ pub struct mx_packet_signal_t {
     pub count: u64,
 }
 
+pub const MX_WAIT_ASYNC_ONCE: u32 = 0;
+pub const MX_WAIT_ASYNC_REPEATING: u32 = 1;
+
 // Actually a union of different integer types, but this should be good enough.
 pub type mx_packet_user_t = [u8; 32];
 

@@ -30,7 +30,7 @@ pub use event::{Event, EventOpts};
 pub use eventpair::{EventPair, EventPairOpts};
 pub use fifo::{Fifo, FifoOpts};
 pub use job::Job;
-pub use port::{Packet, PacketSignal, PacketType, PacketUser, Port, PortOpts};
+pub use port::{Packet, PacketSignal, PacketType, PacketUser, Port, PortOpts, WaitAsyncOpts};
 pub use process::Process;
 pub use socket::{Socket, SocketOpts, SocketReadOpts, SocketWriteOpts};
 pub use thread::Thread;
@@ -311,6 +311,16 @@ impl<'a> HandleRef<'a> {
         };
         into_result(status, || pending)
     }
+
+    fn wait_async(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
+        -> Result<(), Status>
+    {
+        let handle = self.handle;
+        let status = unsafe {
+            sys::mx_object_wait_async(handle, port.raw_handle(), key, signals, options as u32)
+        };
+        into_result(status, || ())
+    }
 }
 
 /// A trait implemented by all handle objects.
@@ -355,10 +365,19 @@ pub trait HandleBase: Sized {
     }
 
     /// Waits on a handle. Wraps the
-    /// [object_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_one.md)
+    /// [mx_object_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_one.md)
     /// syscall.
     fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
         self.get_ref().wait(signals, timeout)
+    }
+
+    /// Causes packet delivery on the given port when the object changes state and matches signals.
+    /// [mx_object_wait_async](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_async.md)
+    /// syscall.
+    fn wait_async(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
+        -> Result<(), Status>
+    {
+        self.get_ref().wait_async(port, key, signals, options)
     }
 
     /// A method for converting an untyped `Handle` into a more specific reference.
