@@ -106,34 +106,15 @@ static int mem_arena_init(boot_addr_range_t *range)
             size -= adjust;
         }
 
-        while (size && used < PMM_ARENAS) {
-            pmm_arena_info_t *arena = &mem_arenas[used];
+        pmm_arena_info_t *arena = &mem_arenas[used];
+        arena->base = base;
+        arena->size = size;
+        arena->name = "memory";
+        arena->priority = 1;
+        arena->flags = PMM_ARENA_FLAG_KMAP;
+        used++;
 
-            arena->base = base;
-            arena->size = size;
-
-            if ((uint64_t)arena->base != base) {
-                LTRACEF("Range base %#" PRIx64 " is too high.\n", base);
-                break;
-            }
-            if ((uint64_t)arena->size != size) {
-                LTRACEF("Range size %#" PRIx64 " is too large, splitting it.\n",
-                        size);
-                arena->size = -PAGE_SIZE;
-            }
-
-            size -= arena->size;
-            base += arena->size;
-
-            LTRACEF("Adding pmm range at %#" PRIxPTR " of %#zx bytes.\n",
-                    arena->base, arena->size);
-
-            arena->name = "memory";
-            arena->priority = 1;
-            arena->flags = PMM_ARENA_FLAG_KMAP;
-
-            used++;
-        }
+        LTRACEF("Adding pmm range at %#" PRIxPTR " of %#zx bytes.\n", arena->base, arena->size);
     }
 
     return used;
