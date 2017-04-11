@@ -10,7 +10,7 @@
 */
 
 
-ENTRY(_protected_start)
+ENTRY(_multiboot_start)
 SECTIONS
 {
     . = %MEMBASE% + %HEADER_LOAD_OFFSET%;

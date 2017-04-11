@@ -35,7 +35,6 @@
 
 #define LOCAL_TRACE 0
 
-extern void *_zero_page_boot_params;
 extern multiboot_info_t* _multiboot_info;
 extern bootdata_t* _bootdata_base;
 
@@ -158,7 +157,6 @@ static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
 }
 
 static void platform_save_bootloader_data(void) {
-#if ENABLE_NEW_BOOT
     if (_multiboot_info != NULL) {
         multiboot_info_t* mi = (multiboot_info_t*) X86_PHYS_TO_VIRT(_multiboot_info);
         printf("multiboot: info @ %p\n", mi);
@@ -180,25 +178,6 @@ static void platform_save_bootloader_data(void) {
         bootdata_t* bd = (bootdata_t*) X86_PHYS_TO_VIRT(_bootdata_base);
         process_bootdata(bd, (uintptr_t) _bootdata_base);
     }
-#else
-    uint32_t *zp = (void*) ((uintptr_t)_zero_page_boot_params + KERNEL_BASE);
-
-    bootloader.ramdisk_base = zp[0x218 / 4];
-    bootloader.ramdisk_size = zp[0x21C / 4];
-
-    if (zp[0x228/4] != 0) {
-        cmdline_init((void*) X86_PHYS_TO_VIRT(zp[0x228/4]));
-    }
-
-    if (zp[0x220 / 4] == 0xDBC64323) {
-        bootloader.acpi_rsdp = zp[0x80 / 4];
-        bootloader.fb_base = zp[0x90 / 4];
-        bootloader.fb_width = zp[0x94 / 4];
-        bootloader.fb_height = zp[0x98 / 4];
-        bootloader.fb_stride = zp[0x9C / 4];
-        bootloader.fb_format = zp[0xA0 / 4];
-    }
-#endif
 }
 
 static void* ramdisk_base;
@@ -325,7 +304,7 @@ void platform_early_init(void)
     platform_init_console();
 #endif
 
-    /* extract "zero page" data while still accessible */
+    /* extract bootloader data while still accessible */
     platform_save_bootloader_data();
 
     /* if the bootloader has framebuffer info, use it for early console */

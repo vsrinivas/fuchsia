@@ -72,11 +72,7 @@ struct mtrrs {
     uint64_t mtrr_fix64k;
     uint64_t mtrr_fix16k[IA32_MTRR_NUM_FIX16K];
     uint64_t mtrr_fix4k[IA32_MTRR_NUM_FIX4K];
-#if ENABLE_NEW_BOOT
     struct variable_mtrr mtrr_var[MTRRCAP_VCNT_MAX];
-#else
-    struct variable_mtrr mtrr_var[];
-#endif
 };
 
 static struct mtrrs THE_MTRRS;
@@ -97,12 +93,6 @@ void x86_mmu_mem_type_init(void)
     num_variable = MTRRCAP_VCNT(caps);
     supports_fixed_range = MTRRCAP_FIX(caps);
     supports_wc = MTRRCAP_WC(caps);
-
-#if !ENABLE_NEW_BOOT
-    target_mtrrs = boot_alloc_mem(
-            sizeof(struct mtrrs) + sizeof(struct variable_mtrr) * num_variable);
-    ASSERT(target_mtrrs);
-#endif
 
     target_mtrrs->mtrr_def = read_msr(IA32_MTRR_DEF_TYPE);
     target_mtrrs->mtrr_fix64k = read_msr(IA32_MTRR_FIX64K_00000);

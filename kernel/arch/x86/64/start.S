@@ -86,15 +86,6 @@
 
 .section .text.boot, "ax", @progbits
 .code32
-FUNCTION(_protected_start)
-    /* attempt to detect if %esi points to a zero page structure */
-    cmp $0, %esi
-    je .Lcommon_boot
-    cmpl $0x53726448, 0x202(%esi)
-    jne .Lcommon_boot
-    mov %esi, PHYS(_zero_page_boot_params)
-    jmp .Lcommon_boot
-
 FUNCTION(_multiboot_start)
     cmpl $MULTIBOOT_BOOTLOADER_MAGIC, %eax
     jne .Lcommon_boot
@@ -214,15 +205,8 @@ high_entry:
 
     /* 64bit entry point from a secondary loader */
 .align 8
-#if ENABLE_NEW_BOOT
 FUNCTION(_entry64)
     mov %esi, PHYS(_bootdata_base)
-#else
-.org 0x200
-FUNCTION(_entry64)
-    mov %esi, PHYS(_zero_page_boot_params)
-#endif
-
     /* ensure the stack pointer is sane */
 
     /* This is enough space for the 2x push + lretq below.

@@ -43,9 +43,6 @@ uint8_t _kstack[PAGE_SIZE] __ALIGNED(16);
 /* make sure it lives in .data to avoid it being wiped out by bss clearing */
 __SECTION(".data") void *_multiboot_info;
 
-/* also save a pointer to the boot_params structure */
-__SECTION(".data") void *_zero_page_boot_params;
-
 /* save a pointer to the bootdata, if present */
 __SECTION(".data") void *_bootdata_base;
 
