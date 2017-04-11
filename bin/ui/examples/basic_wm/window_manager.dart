@@ -115,9 +115,9 @@ class _WindowFrameState extends State<WindowFrame> {
   @override
   void initState() {
     super.initState();
-    if (config.initialRect != null) {
-      _offset = config.initialRect.topLeft;
-      _size = config.initialRect.size;
+    if (widget.initialRect != null) {
+      _offset = widget.initialRect.topLeft;
+      _size = widget.initialRect.size;
     }
   }
 
@@ -138,11 +138,11 @@ class _WindowFrameState extends State<WindowFrame> {
   }
 
   void _handleClose() {
-    WindowManager.of(context)?.removeWindow(config);
+    WindowManager.of(context)?.removeWindow(widget);
   }
 
   void _handleActive() {
-    WindowManager.of(context)?.activateWindow(config);
+    WindowManager.of(context)?.activateWindow(widget);
   }
 
   @override
@@ -165,12 +165,12 @@ class _WindowFrameState extends State<WindowFrame> {
             child: new Column(
               children: <Widget>[
                 new WindowTitleBar(
-                  title: config.title,
+                  title: widget.title,
                   onActivate: _handleActive,
                   onClosed: _handleClose,
                   onMoved: _handleMove,
                 ),
-                new Expanded(child: config.child),
+                new Expanded(child: widget.child),
               ],
             ),
           ),
@@ -206,7 +206,7 @@ class WindowManagerState extends State<WindowManager> {
   @override
   void initState() {
     super.initState();
-    _windows.addAll(config.initialWindows);
+    _windows.addAll(widget.initialWindows);
   }
 
   @override
@@ -245,8 +245,8 @@ class WindowManagerState extends State<WindowManager> {
   @override
   Widget build(BuildContext context) {
     List<Widget> children = <Widget>[];
-    if (config.wallpaper != null)
-      children.add(config.wallpaper);
+    if (widget.wallpaper != null)
+      children.add(widget.wallpaper);
     children.addAll(_windows);
     return new Stack(children: children);
   }
