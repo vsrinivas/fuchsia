@@ -36,17 +36,17 @@ magma_status_t magma_get_error(magma_connection_t* connection)
     return magma::PlatformIpcConnection::cast(connection)->GetError();
 }
 
-// Returns the device id.  0 is an invalid device id.
-uint32_t magma_get_device_id(int fd)
+magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out)
 {
-    uint32_t device_id;
-    int ioctl_ret =
-        mxio_ioctl(fd, IOCTL_MAGMA_GET_DEVICE_ID, NULL, 0, &device_id, sizeof(device_id));
-    if (ioctl_ret < 0) {
-        DLOG("mxio_ioctl failed: %d", ioctl_ret);
-        return 0;
-    }
-    return device_id;
+    if (!value_out)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad value_out address");
+
+    int ret = mxio_ioctl(fd, IOCTL_MAGMA_QUERY, &id, sizeof(uint64_t), value_out, sizeof(uint64_t));
+    if (ret < 0)
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "mxio_ioctl failed: %d", ret);
+
+    DLOG("magma_query id %" PRIu64 " returned 0x%" PRIx64, id, *value_out);
+    return MAGMA_STATUS_OK;
 }
 
 void magma_create_context(magma_connection_t* connection, uint32_t* context_id_out)

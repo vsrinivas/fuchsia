@@ -22,8 +22,10 @@ void magma_close(struct magma_connection_t* connection);
 // Clears the recorded error.
 magma_status_t magma_get_error(struct magma_connection_t* connection);
 
-// Returns the device id.  0 is an invalid device id.
-uint32_t magma_get_device_id(int fd);
+// Performs a query.
+// |id| is one of MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from
+// MAGMA_QUERY_FIRST_VENDOR_ID.
+magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out);
 
 void magma_create_context(struct magma_connection_t* connection, uint32_t* context_id_out);
 void magma_destroy_context(struct magma_connection_t* connection, uint32_t context_id);

@@ -70,6 +70,11 @@ public:
 
     void DumpStatus() { msd_device_dump_status(msd_dev()); }
 
+    magma::Status Query(uint32_t id, uint64_t* value_out)
+    {
+        return msd_device_query(msd_dev(), id, value_out);
+    }
+
 private:
     msd_device_unique_ptr_t msd_dev_;
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;

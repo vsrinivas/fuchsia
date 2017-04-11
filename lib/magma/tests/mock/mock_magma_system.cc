@@ -26,8 +26,18 @@ void magma_close(magma_connection_t* connection)
 
 magma_status_t magma_get_error(magma_connection_t* connection) { return 0; }
 
-// Returns the device id.  0 is an invalid device id.
-uint32_t magma_get_device_id(int32_t fd) { return 0x1916; }
+magma_status_t magma_query(int32_t fd, uint64_t id, uint64_t* value_out)
+{
+    switch (id) {
+        case MAGMA_QUERY_DEVICE_ID:
+            *value_out = 0x1916;
+            return MAGMA_STATUS_OK;
+        case MAGMA_QUERY_VENDOR_PARAM_0:
+            *value_out = (23l << 32) | 8;
+            return MAGMA_STATUS_OK;
+    }
+    return MAGMA_STATUS_INVALID_ARGS;
+}
 
 void magma_create_context(magma_connection_t* connection, uint32_t* context_id_out)
 {

@@ -25,8 +25,6 @@ public:
 
     ~TestBase() { close(fd_); }
 
-    void GetDeviceId() { EXPECT_NE(magma_get_device_id(fd_), 0u); }
-
 private:
     int fd_;
 };
@@ -47,6 +45,14 @@ public:
 
         if (connection_)
             magma_close(connection_);
+    }
+
+    bool is_intel_gen()
+    {
+        uint64_t device_id;
+        if (magma_query(fd(), MAGMA_QUERY_DEVICE_ID, &device_id) != MAGMA_STATUS_OK)
+            device_id = 0;
+        return TestPlatformDevice::is_intel_gen(device_id);
     }
 
     enum How { NORMAL, FAULT, HANG };
@@ -97,7 +103,7 @@ public:
 
     bool InitBatchBuffer(void* vaddr, uint64_t size, bool hang)
     {
-        if (!TestPlatformDevice::is_intel_gen(magma_get_device_id(fd())))
+        if (!is_intel_gen())
             return DRETF(false, "not an intel gen9 device");
 
         memset(vaddr, 0, size);

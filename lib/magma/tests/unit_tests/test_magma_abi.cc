@@ -17,7 +17,12 @@ public:
 
     ~TestBase() { close(fd_); }
 
-    void GetDeviceId() { EXPECT_NE(magma_get_device_id(fd_), 0u); }
+    void GetDeviceId()
+    {
+        uint64_t device_id = 0;
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_query(fd_, MAGMA_QUERY_DEVICE_ID, &device_id));
+        EXPECT_NE(0u, device_id);
+    }
 
 private:
     int fd_;

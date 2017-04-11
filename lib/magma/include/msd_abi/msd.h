@@ -26,6 +26,9 @@ struct msd_device_t* msd_driver_create_device(struct msd_driver_t* drv, void* de
 // Destroys a device at system shutdown.
 void msd_device_destroy(struct msd_device_t* dev);
 
+// Returns a value associated with the given id.
+magma_status_t msd_device_query(struct msd_device_t* device, uint64_t id, uint64_t* value_out);
+
 // Returns the device id.  0 is an invalid device id.
 uint32_t msd_device_get_id(struct msd_device_t* dev);
 

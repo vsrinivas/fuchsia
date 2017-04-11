@@ -186,13 +186,24 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
     ssize_t result = ERR_NOT_SUPPORTED;
 
     switch (op) {
-        case IOCTL_MAGMA_GET_DEVICE_ID: {
-            DLOG("IOCTL_MAGMA_GET_DEVICE_ID");
-            auto device_id_out = reinterpret_cast<uint32_t*>(out_buf);
-            if (!out_buf || out_len < sizeof(*device_id_out))
-                return ERR_INVALID_ARGS;
-            *device_id_out = device->magma_system_device->GetDeviceId();
-            result = sizeof(*device_id_out);
+        case IOCTL_MAGMA_QUERY: {
+            DLOG("IOCTL_MAGMA_QUERY");
+            const uint64_t* param = reinterpret_cast<const uint64_t*>(in_buf);
+            if (!in_buf || in_len < sizeof(*param))
+                return DRET_MSG(ERR_INVALID_ARGS, "bad in_buf");
+            uint64_t* value_out = reinterpret_cast<uint64_t*>(out_buf);
+            if (!out_buf || out_len < sizeof(*value_out))
+                return DRET_MSG(ERR_INVALID_ARGS, "bad out_buf");
+            switch (*param) {
+                case MAGMA_QUERY_DEVICE_ID:
+                    *value_out = device->magma_system_device->GetDeviceId();
+                    break;
+                default:
+                    if (!device->magma_system_device->Query(*param, value_out))
+                        return DRET_MSG(ERR_INVALID_ARGS, "unhandled param 0x%" PRIx64, *value_out);
+            }
+            DLOG("query param 0x%" PRIx64 " returning 0x%" PRIx64, *param, *value_out);
+            result = sizeof(*value_out);
             break;
         }
         case IOCTL_MAGMA_CONNECT: {
