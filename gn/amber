@@ -5,11 +5,11 @@
     ],
     "binaries": [
         {
-            "binary": "go-tuf",
+            "binary": "tuf",
             "bootfs_path": "bin/go-tuf"
         },
         {
-            "binary": "go-tuf-client",
+            "binary": "tuf-client",
             "bootfs_path": "bin/go-tuf-client"
         }
     ]
