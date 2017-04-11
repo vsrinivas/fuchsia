@@ -15,19 +15,37 @@
 namespace bluetooth {
 namespace hci {
 
+// static
+ftl::RefPtr<Transport> Transport::Create(ftl::UniqueFD device_fd) {
+  return AdoptRef(new Transport(std::move(device_fd)));
+}
+
+// static
+ftl::RefPtr<Transport> Transport::Create() {
+  return AdoptRef(new Transport());
+}
+
 Transport::Transport(ftl::UniqueFD device_fd)
     : device_fd_(std::move(device_fd)),
-      is_running_(false),
+      is_initialized_(false),
+      cmd_channel_handler_key_(0u),
+      acl_channel_handler_key_(0u) {}
+
+Transport::Transport()
+    : is_initialized_(false),
       cmd_channel_handler_key_(0u),
       acl_channel_handler_key_(0u) {}
 
 Transport::~Transport() {
-  if (is_running_) ShutDown();
+  if (IsInitialized()) ShutDown();
 }
 
 bool Transport::Initialize() {
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FTL_DCHECK(device_fd_.get());
-  FTL_DCHECK(!is_running_);
+  FTL_DCHECK(!command_channel_);
+  FTL_DCHECK(!acl_data_channel_);
+  FTL_DCHECK(!IsInitialized());
 
   // Obtain command channel handle.
   mx_handle_t handle = MX_HANDLE_INVALID;
@@ -39,7 +57,6 @@ bool Transport::Initialize() {
   }
 
   FTL_DCHECK(handle != MX_HANDLE_INVALID);
-  is_running_ = true;
   io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-transport");
 
   // We watch for handle errors and closures to perform the necessary clean up.
@@ -52,6 +69,8 @@ bool Transport::Initialize() {
   command_channel_ = std::make_unique<CommandChannel>(this, std::move(channel));
   command_channel_->Initialize();
 
+  is_initialized_ = true;
+
   return true;
 }
 
@@ -61,7 +80,7 @@ bool Transport::InitializeACLDataChannel(
     const ACLDataChannel::DataReceivedCallback& rx_callback,
     ftl::RefPtr<ftl::TaskRunner> rx_task_runner) {
   FTL_DCHECK(device_fd_.get());
-  FTL_DCHECK(is_running_);
+  FTL_DCHECK(IsInitialized());
 
   // Obtain ACL data channel handle.
   mx_handle_t handle = MX_HANDLE_INVALID;
@@ -100,9 +119,9 @@ void Transport::SetTransportClosedCallback(const ftl::Closure& callback,
 void Transport::InitializeForTesting(std::unique_ptr<CommandChannel> cmd_channel,
                                      std::unique_ptr<ACLDataChannel> acl_data_channel) {
   FTL_DCHECK(cmd_channel);
-  FTL_DCHECK(!is_running_);
+  FTL_DCHECK(!IsInitialized());
 
-  is_running_ = true;
+  is_initialized_ = true;
   io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-transport-test");
 
   command_channel_ = std::move(cmd_channel);
@@ -120,7 +139,8 @@ void Transport::InitializeForTesting(std::unique_ptr<CommandChannel> cmd_channel
 }
 
 void Transport::ShutDown() {
-  FTL_DCHECK(is_running_);
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FTL_DCHECK(IsInitialized());
 
   FTL_LOG(INFO) << "hci: Transport: shutting down";
 
@@ -137,12 +157,21 @@ void Transport::ShutDown() {
 
   if (io_thread_.joinable()) io_thread_.join();
 
-  acl_data_channel_ = nullptr;
-  command_channel_ = nullptr;
-  is_running_ = false;
+  // We avoid deallocating the channels here as they *could* still be accessed by other threads.
+  // It's OK to clear |io_task_runner_| as the channels hold their own references to it.
+  //
+  // Once |io_thread_| joins above, |io_task_runner_| will be defunct. However, the channels are
+  // allowed to keep posting tasks on it (which will never execute).
+
   io_task_runner_ = nullptr;
 
+  is_initialized_ = false;
+
   FTL_LOG(INFO) << "hci: Transport I/O loop exited";
+}
+
+bool Transport::IsInitialized() const {
+  return is_initialized_;
 }
 
 void Transport::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {

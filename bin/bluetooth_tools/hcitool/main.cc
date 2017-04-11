@@ -63,11 +63,11 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  hci::Transport hci(std::move(hci_dev));
-  hci.Initialize();
+  auto hci = hci::Transport::Create(std::move(hci_dev));
+  hci->Initialize();
   mtl::MessageLoop message_loop;
 
-  hcitool::CommandDispatcher handler_map(hci.command_channel(), message_loop.task_runner());
+  hcitool::CommandDispatcher handler_map(hci->command_channel(), message_loop.task_runner());
   RegisterCommands(&handler_map);
 
   if (cl.positional_args().empty() || cl.positional_args()[0] == "help") {

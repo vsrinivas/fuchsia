@@ -51,7 +51,7 @@ class CommandChannelTest : public ::testing::Test {
     mx_status_t status = mx::channel::create(0, &endpoint0, &endpoint1);
     ASSERT_EQ(NO_ERROR, status);
 
-    transport_ = std::make_unique<Transport>();
+    transport_ = hci::Transport::Create();
 
     auto cmd_channel = std::make_unique<CommandChannel>(transport_.get(), std::move(endpoint0));
     fake_controller_ = std::make_unique<FakeController>(std::move(endpoint1), std::move(dummy_acl));
@@ -79,7 +79,7 @@ class CommandChannelTest : public ::testing::Test {
   mtl::MessageLoop* message_loop() { return &message_loop_; }
 
  private:
-  std::unique_ptr<Transport> transport_;
+  ftl::RefPtr<Transport> transport_;
   std::unique_ptr<FakeController> fake_controller_;
   mtl::MessageLoop message_loop_;
 };

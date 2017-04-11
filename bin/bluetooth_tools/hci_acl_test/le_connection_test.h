@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <memory>
 #include <unordered_map>
 
 #include "apps/bluetooth/lib/common/device_address.h"
@@ -58,7 +57,7 @@ class LEConnectionTest final {
                       bluetooth::hci::CommandChannel::TransactionId id,
                       bluetooth::hci::Status status);
 
-  std::unique_ptr<bluetooth::hci::Transport> hci_;
+  ftl::RefPtr<bluetooth::hci::Transport> hci_;
   mtl::MessageLoop message_loop_;
   bluetooth::common::DeviceAddress dst_addr_;
   bluetooth::hci::CommandChannel::EventHandlerId le_conn_complete_handler_id_;

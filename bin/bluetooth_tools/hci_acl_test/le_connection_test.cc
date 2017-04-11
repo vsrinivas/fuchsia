@@ -23,7 +23,7 @@ LEConnectionTest::LEConnectionTest() : le_conn_complete_handler_id_(0u), disconn
 bool LEConnectionTest::Run(ftl::UniqueFD hci_dev, const common::DeviceAddress& dst_addr) {
   FTL_DCHECK(hci_dev.is_valid());
 
-  hci_ = std::make_unique<hci::Transport>(std::move(hci_dev));
+  hci_ = hci::Transport::Create(std::move(hci_dev));
   if (!hci_->Initialize()) {
     FTL_LOG(ERROR) << "Failed to initialize HCI transport";
     return false;

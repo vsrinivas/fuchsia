@@ -33,7 +33,7 @@ class ACLDataChannelTest : public ::testing::Test {
     status = mx::channel::create(0, &acl0, &acl1);
     ASSERT_EQ(NO_ERROR, status);
 
-    transport_ = std::make_unique<Transport>();
+    transport_ = hci::Transport::Create();
 
     auto cmd_channel = std::make_unique<CommandChannel>(transport_.get(), std::move(cmd0));
     auto acl_channel = std::make_unique<ACLDataChannel>(
@@ -101,7 +101,7 @@ class ACLDataChannelTest : public ::testing::Test {
  private:
   ACLDataChannel::DataReceivedCallback data_received_cb_;
   std::unordered_map<ConnectionHandle, ftl::RefPtr<Connection>> conn_map_;
-  std::unique_ptr<Transport> transport_;
+  ftl::RefPtr<Transport> transport_;
   std::unique_ptr<FakeController> fake_controller_;
   mtl::MessageLoop message_loop_;
 

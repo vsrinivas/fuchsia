@@ -12,7 +12,10 @@
 #include "apps/bluetooth/lib/hci/command_channel.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/memory/ref_ptr.h"
+#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/ftl/synchronization/thread_checker.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
@@ -23,21 +26,31 @@ namespace hci {
 // Represents the HCI transport layer. This object owns the HCI command, ACL,
 // and SCO channels and provides the necessary control-flow mechanisms to send
 // and receive HCI packets from the underlying Bluetooth controller.
-class Transport final : public ::mtl::MessageLoopHandler {
+//
+// Transport expects to be initialized and shut down (via Initialize() and ShutDown()) on the thread
+// it was created on. Initialize()/ShutDown() are NOT thread-safe.
+//
+// TODO(armansito): This class is ref-counted to prevent potential use-after-free errors though
+// vending weak ptrs would have been more suitable since this class is intended to be uniquely owned
+// by its creator. ftl::WeakPtr is not thread-safe which is why we use ftl::RefCountedThreadSafe.
+// Consider making ftl::WeakPtr thread-safe.
+class Transport final : public ::mtl::MessageLoopHandler,
+                        public ftl::RefCountedThreadSafe<Transport> {
  public:
   // |device_fd| must be a valid file descriptor to a Bluetooth HCI device.
-  explicit Transport(ftl::UniqueFD device_fd);
-  Transport() = default;
-  ~Transport() override;
+  static ftl::RefPtr<Transport> Create(ftl::UniqueFD device_fd);
+
+  // Default constructor used only from tests.
+  static ftl::RefPtr<Transport> Create();
 
   // Initializes the HCI command channel, starts the I/O event loop, and kicks off a new I/O thread
-  // for transactions with the HCI driver. Care must be taken such that the public methods of this
+  // for transactions with the HCI driver. The ACLDataChannel will be left uninitialized. The
+  // ACLDataChannel must be initialized after available data buffer information has been obtained
+  // from the controller (via HCI_Read_Buffer_Size and HCI_LE_Read_Buffer_Size).
+  //
+  // This method is NOT thread-safe! Care must be taken such that the public methods of this
   // class and those of the individual channel classes are not called in a manner that would race
   // with the execution of Initialize().
-  //
-  // The ACLDataChannel will be left uninitialized. The ACLDataChannel must be initialized after
-  // available data buffer information has been obtained from the controller (via
-  // HCI_Read_Buffer_Size and HCI_LE_Read_Buffer_Size).
   bool Initialize();
 
   // Initializes the ACL data channel with the given parameters. Returns false if an error occurs
@@ -49,11 +62,16 @@ class Transport final : public ::mtl::MessageLoopHandler {
                                 const ACLDataChannel::DataReceivedCallback& rx_callback,
                                 ftl::RefPtr<ftl::TaskRunner> rx_task_runner);
 
-  // Cleans up all transport channels, stops the I/O event loop, and joins the I/O thread.
+  // Cleans up all transport channels, stops the I/O event loop, and joins the I/O thread. Once a
+  // Transport has been shut down, it cannot be re-initialized.
+  //
   // NOTE: Care must be taken such that this method is not called from a thread that would race with
   // a call to Initialize(). ShutDown() is not thread-safe; Initialize(),
   // InitializeACLDataChannel(), and ShutDown() MUST be called on the same thread.
   void ShutDown();
+
+  // Returns true if this Transport has been fully initialized and running.
+  bool IsInitialized() const;
 
   // Returns a pointer to the HCI command and event flow control handler.
   CommandChannel* command_channel() const { return command_channel_.get(); }
@@ -84,6 +102,12 @@ class Transport final : public ::mtl::MessageLoopHandler {
                             std::unique_ptr<ACLDataChannel> acl_data_channel);
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(Transport);
+
+  explicit Transport(ftl::UniqueFD device_fd);
+  Transport();
+  ~Transport() override;
+
   // ::mtl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
@@ -91,11 +115,14 @@ class Transport final : public ::mtl::MessageLoopHandler {
   // Notifies the closed callback.
   void NotifyClosedCallback();
 
+  // Used to assert that certain public functions are only called on the creation thread.
+  ftl::ThreadChecker thread_checker_;
+
   // The Bluetooth HCI device file descriptor.
   ftl::UniqueFD device_fd_;
 
-  // True if the I/O event loop is currently running.
-  std::atomic_bool is_running_;
+  // The state of the initialization sequence.
+  std::atomic_bool is_initialized_;
 
   // The thread that performs all HCI I/O operations.
   std::thread io_thread_;
