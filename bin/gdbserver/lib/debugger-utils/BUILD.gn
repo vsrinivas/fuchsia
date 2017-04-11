@@ -16,6 +16,8 @@ static_library("debugger-utils") {
     "elf-symtab.h",
     "ktrace-reader.cc",
     "ktrace-reader.h",
+    "load-maps.cc",
+    "load-maps.h",
     "memory.h",
     "memory-file.cc",
     "memory-file.h",
