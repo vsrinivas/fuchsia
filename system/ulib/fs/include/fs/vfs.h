@@ -6,7 +6,6 @@
 
 #include "trace.h"
 
-#include <mxio/debug.h>
 #include <mxio/remoteio.h>
 
 #include <stdlib.h>
@@ -22,8 +21,6 @@
 
 #include <mxio/vfs.h>
 #include <mxio/dispatcher.h>
-
-#define MXDEBUG 0
 
 // VFS Helpers (vfs.c)
 #define V_FLAG_DEVICE                 1

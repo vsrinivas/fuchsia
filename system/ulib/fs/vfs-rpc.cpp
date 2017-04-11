@@ -20,6 +20,8 @@
 
 #include "vfs-internal.h"
 
+#define MXDEBUG 0
+
 namespace fs {
 namespace {
 
