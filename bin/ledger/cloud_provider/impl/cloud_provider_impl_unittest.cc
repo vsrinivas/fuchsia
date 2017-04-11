@@ -40,16 +40,16 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   ~CloudProviderImplTest() override {}
 
   // gcs::CloudStorage:
-  void UploadFile(const std::string& key,
-                  mx::vmo data,
-                  const std::function<void(gcs::Status)>& callback) override {
+  void UploadObject(const std::string& key,
+                    mx::vmo data,
+                    const std::function<void(gcs::Status)>& callback) override {
     upload_keys_.push_back(key);
     upload_data_.push_back(std::move(data));
     message_loop_.task_runner()->PostTask(
         [callback] { callback(gcs::Status::OK); });
   }
 
-  void DownloadFile(
+  void DownloadObject(
       const std::string& key,
       const std::function<
           void(gcs::Status status, uint64_t size, mx::socket data)>& callback)

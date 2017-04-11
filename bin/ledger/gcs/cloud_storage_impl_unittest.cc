@@ -84,7 +84,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
 
   SetResponse("", 0, 200);
   Status status;
-  gcs_.UploadFile(
+  gcs_.UploadObject(
       "hello-world", std::move(data),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -124,7 +124,7 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   SetResponse("", 0, 412);
 
   Status status;
-  gcs_.UploadFile(
+  gcs_.UploadObject(
       "hello-world", std::move(data),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -139,9 +139,9 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   Status status;
   uint64_t size;
   mx::socket data;
-  gcs_.DownloadFile("hello-world",
-                    callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &status, &size, &data));
+  gcs_.DownloadObject(
+      "hello-world", callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                       &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -163,9 +163,9 @@ TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
   Status status;
   uint64_t size;
   mx::socket data;
-  gcs_.DownloadFile("whoa",
-                    callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &status, &size, &data));
+  gcs_.DownloadObject(
+      "whoa", callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NOT_FOUND, status);
@@ -183,9 +183,9 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   Status status;
   uint64_t size;
   mx::socket data;
-  gcs_.DownloadFile("hello-world",
-                    callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &status, &size, &data));
+  gcs_.DownloadObject(
+      "hello-world", callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                       &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   std::string downloaded_content;

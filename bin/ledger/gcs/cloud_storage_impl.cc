@@ -45,9 +45,9 @@ network::HttpHeaderPtr GetHeader(
   return nullptr;
 }
 
-void RunUploadFileCallback(const std::function<void(Status)>& callback,
-                           Status status,
-                           network::URLResponsePtr response) {
+void RunUploadObjectCallback(const std::function<void(Status)>& callback,
+                             Status status,
+                             network::URLResponsePtr response) {
   // A precondition failure means the object already exist.
   if (response->status_code == 412) {
     callback(Status::OBJECT_ALREADY_EXISTS);
@@ -74,9 +74,10 @@ CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
 
 CloudStorageImpl::~CloudStorageImpl() {}
 
-void CloudStorageImpl::UploadFile(const std::string& key,
-                                  mx::vmo data,
-                                  const std::function<void(Status)>& callback) {
+void CloudStorageImpl::UploadObject(
+    const std::string& key,
+    mx::vmo data,
+    const std::function<void(Status)>& callback) {
   std::string url = GetUploadUrl(key);
 
   uint64_t data_size;
@@ -119,12 +120,12 @@ void CloudStorageImpl::UploadFile(const std::string& key,
 
   Request(std::move(request_factory),
           [callback](Status status, network::URLResponsePtr response) {
-            RunUploadFileCallback(std::move(callback), status,
-                                  std::move(response));
+            RunUploadObjectCallback(std::move(callback), status,
+                                    std::move(response));
           });
 }
 
-void CloudStorageImpl::DownloadFile(
+void CloudStorageImpl::DownloadObject(
     const std::string& key,
     const std::function<void(Status status, uint64_t size, mx::socket data)>&
         callback) {
