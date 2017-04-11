@@ -102,6 +102,9 @@ def main():
     parser.add_argument("--target-triple",
                         help="Compilation target",
                         required=True)
+    parser.add_argument("--release",
+                        help="Build in release mode",
+                        action="store_true")
     parser.add_argument("--label",
                         help="Label of the target to build",
                         required=True)
@@ -209,6 +212,8 @@ def main():
         # "--frozen",  # Prohibit network access.
         "-q",  # Silence stdout.
     ]
+    if args.release:
+        call_args.append("--release")
     if args.type == "lib":
         call_args.append("--lib")
     if args.type == "bin":
@@ -223,7 +228,8 @@ def main():
     output_name = args.name
     if args.type == "lib":
         output_name = "lib%s" % args.name
-    depfile_path = os.path.join(args.out_dir, args.target_triple, "debug",
+    build_type = "release" if args.release else "debug"
+    depfile_path = os.path.join(args.out_dir, args.target_triple, build_type,
                                 "%s.d" % output_name)
     fix_depfile(depfile_path, args.root_out_dir)
 

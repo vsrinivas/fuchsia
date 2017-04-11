@@ -63,13 +63,18 @@ template("rust_artifact") {
   }
   rust_base = "//buildtools/rust/rust-$host_triple"
 
-  # TODO(pylaligand): toggle debug/release depending on build type.
+  if (is_debug) {
+    build_type = "debug"
+  } else {
+    build_type = "release"
+  }
+
   if (type == "bin") {
-    output_file = "$target_out_dir/$target_name.rust/$target_triple/debug/$name"
+    output_file = "$target_out_dir/$target_name.rust/$target_triple/$build_type/$name"
     output_depfile = "$output_file.d"
     build_target_name = "${target_name}_build"
   } else if (type == "lib") {
-    output_base = "$target_out_dir/$target_name.rust/$target_triple/debug/lib$name"
+    output_base = "$target_out_dir/$target_name.rust/$target_triple/$build_type/lib$name"
     output_file = "$output_base.rlib"
     output_depfile = "$output_base.d"
     build_target_name = target_name
@@ -151,6 +156,12 @@ template("rust_artifact") {
       rebase_path("//third_party/rust-crates/vendor"),
       "--deps",
     ] + rust_deps
+
+    if (!is_debug) {
+      args += [
+        "--release",
+      ]
+    }
 
     if (is_fuchsia) {
       wrapper_dir = get_label_info(clang_wrapper_target, "root_out_dir")
