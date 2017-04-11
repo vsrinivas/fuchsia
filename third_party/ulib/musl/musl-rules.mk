@@ -32,7 +32,6 @@ LOCAL_CFLAGS := \
     -Wno-sign-compare \
     -Wno-parentheses \
     -Wno-missing-braces \
-    -Wno-type-limits \
     -Werror=strict-prototypes \
     -Werror=incompatible-pointer-types \
 
