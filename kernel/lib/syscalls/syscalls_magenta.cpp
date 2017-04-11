@@ -30,7 +30,6 @@
 #include <magenta/syscalls/policy.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_thread.h>
-#include <magenta/wait_set_dispatcher.h>
 
 #include <mxalloc/new.h>
 #include <mxtl/atomic.h>
@@ -42,8 +41,6 @@
 
 constexpr size_t kMaxCPRNGDraw = MX_CPRNG_DRAW_MAX_LEN;
 constexpr size_t kMaxCPRNGSeed = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
-
-constexpr uint32_t kMaxWaitSetWaitResults = 1024u;
 
 mx_status_t sys_nanosleep(mx_time_t deadline) {
     LTRACEF("nseconds %" PRIu64 "\n", deadline);
@@ -277,122 +274,4 @@ mx_status_t sys_cprng_add_entropy(user_ptr<const void> _buffer, size_t len) {
     memset(kernel_buf, 0, sizeof(kernel_buf));
 
     return MX_OK;
-}
-
-mx_status_t sys_waitset_create(uint32_t options, user_ptr<mx_handle_t> _out) {
-    if (options != 0)
-        return MX_ERR_INVALID_ARGS;
-
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
-    mx_status_t result = WaitSetDispatcher::Create(&dispatcher, &rights);
-    if (result != MX_OK)
-        return result;
-
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
-    if (!handle)
-        return MX_ERR_NO_MEMORY;
-
-    auto up = ProcessDispatcher::GetCurrent();
-    if (_out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
-        return MX_ERR_INVALID_ARGS;
-    up->AddHandle(mxtl::move(handle));
-
-    return MX_OK;
-}
-
-mx_status_t sys_waitset_add(mx_handle_t ws_handle_value,
-                            uint64_t cookie,
-                            mx_handle_t handle_value,
-                            mx_signals_t signals) {
-    LTRACEF("wait set handle %d, handle %d\n", ws_handle_value, handle_value);
-
-    mxtl::unique_ptr<WaitSetDispatcher::Entry> entry;
-    mx_status_t result = WaitSetDispatcher::Entry::Create(signals, cookie, &entry);
-    if (result != MX_OK)
-        return result;
-
-    // TODO(vtl): Obviously, we need to get two handles under the handle table lock. We also call
-    // WaitSetDispatcher::AddEntry() under it, which is quite terrible. However, it'd be quite
-    // tricky to do it correctly otherwise.
-    auto up = ProcessDispatcher::GetCurrent();
-    AutoLock lock(up->handle_table_lock());
-
-    Handle* ws_handle = up->GetHandleLocked(ws_handle_value);
-    if (!ws_handle)
-        return MX_ERR_BAD_HANDLE;
-    if (ws_handle->dispatcher()->get_type() != DispatchTag<WaitSetDispatcher>::ID)
-        return MX_ERR_WRONG_TYPE;
-    // No need to take a ref to the dispatcher, since we're under the handle table lock. :-/
-    auto ws_dispatcher = static_cast<WaitSetDispatcher*>(ws_handle->dispatcher().get());
-    if (!magenta_rights_check(ws_handle, MX_RIGHT_WRITE))
-        return MX_ERR_ACCESS_DENIED;
-
-    Handle* handle = up->GetHandleLocked(handle_value);
-    if (!handle)
-        return MX_ERR_BAD_HANDLE;
-    if (!magenta_rights_check(handle, MX_RIGHT_READ))
-        return MX_ERR_ACCESS_DENIED;
-
-    return ws_dispatcher->AddEntry(mxtl::move(entry), handle);
-}
-
-mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
-    LTRACEF("wait set handle %d\n", ws_handle);
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<WaitSetDispatcher> ws_dispatcher;
-    mx_status_t status =
-        up->GetDispatcherWithRights(ws_handle, MX_RIGHT_WRITE, &ws_dispatcher);
-    if (status != MX_OK)
-        return status;
-
-    return ws_dispatcher->RemoveEntry(cookie);
-}
-
-mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
-                             mx_time_t deadline,
-                             user_ptr<mx_waitset_result_t> _results,
-                             user_ptr<uint32_t> _count) {
-    LTRACEF("wait set handle %d\n", ws_handle);
-
-    uint32_t count;
-    if (_count.copy_from_user(&count) != MX_OK)
-        return MX_ERR_INVALID_ARGS;
-
-    //TODO: use inline array here
-    mxtl::unique_ptr<mx_waitset_result_t[]> results;
-    if (count > 0u) {
-        if (count > kMaxWaitSetWaitResults)
-            return MX_ERR_OUT_OF_RANGE;
-
-        // TODO(vtl): It kind of sucks that we always have to allocate the indicated maximum size
-        // here (namely, |count|).
-        AllocChecker ac;
-        results.reset(new (&ac) mx_waitset_result_t[count]);
-        if (!ac.check())
-            return MX_ERR_NO_MEMORY;
-    }
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<WaitSetDispatcher> ws_dispatcher;
-    mx_status_t status =
-        up->GetDispatcherWithRights(ws_handle, MX_RIGHT_READ, &ws_dispatcher);
-    if (status != MX_OK)
-        return status;
-
-    uint32_t max_results = 0u;
-    mx_status_t result = ws_dispatcher->Wait(deadline, &count, results.get(), &max_results);
-    if (result == MX_OK) {
-        if (_count.copy_to_user(count) != MX_OK)
-            return MX_ERR_INVALID_ARGS;
-        if (count > 0u) {
-            if (_results.copy_array_to_user(results.get(), count) != MX_OK)
-                return MX_ERR_INVALID_ARGS;
-        }
-    }
-
-    return result;
 }

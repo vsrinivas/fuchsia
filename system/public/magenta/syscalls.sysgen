@@ -282,26 +282,6 @@ syscall futex_requeue
         requeue_ptr: mx_futex_t[1] INOUT, requeue_count: uint32_t)
     returns (mx_status_t);
 
-# Wait sets
-
-syscall waitset_create deprecated
-    (options: uint32_t)
-    returns (mx_status_t, out: mx_handle_t);
-
-syscall waitset_add deprecated
-    (waitset_handle: mx_handle_t, cookie: uint64_t,
-        handle: mx_handle_t, signals: mx_signals_t)
-    returns (mx_status_t);
-
-syscall waitset_remove deprecated
-    (waitset_handle: mx_handle_t, cookie: uint64_t)
-    returns (mx_status_t);
-
-syscall waitset_wait blocking deprecated
-    (waitset_handle: mx_handle_t, deadline: mx_time_t,
-        results: mx_waitset_result_t[count] OUT, count: uint32_t[1] INOUT)
-    returns (mx_status_t);
-
 # Ports
 
 syscall port_create

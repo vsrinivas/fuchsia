@@ -15,7 +15,6 @@
 + [futex](objects/futex.md)
 
 ## Waiting
-+ [waitset](objects/waitset.md)
 + [port](objects/port.md)
 
 ## Tasks

@@ -129,10 +129,6 @@ typedef uint32_t mx_signals_t;
 #define MX_FIFO_WRITABLE            __MX_OBJECT_WRITABLE
 #define MX_FIFO_PEER_CLOSED         __MX_OBJECT_PEER_CLOSED
 
-// Waitset
-#define MX_WAITSET_READABLE         __MX_OBJECT_READABLE
-#define MX_WAITSET_PEER_CLOSED      __MX_OBJECT_PEER_CLOSED
-
 // Task signals (process, thread, job)
 #define MX_TASK_TERMINATED          __MX_OBJECT_SIGNALED
 
@@ -183,13 +179,6 @@ typedef struct {
     mx_signals_t waitfor;
     mx_signals_t pending;
 } mx_wait_item_t;
-
-// Structure for mx_waitset_*():
-typedef struct mx_waitset_result {
-    uint64_t cookie;
-    mx_status_t status;
-    mx_signals_t observed;
-} mx_waitset_result_t;
 
 typedef uint32_t mx_rights_t;
 #define MX_RIGHT_NONE             ((mx_rights_t)0u)

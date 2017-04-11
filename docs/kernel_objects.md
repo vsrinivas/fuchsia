@@ -33,7 +33,6 @@ Magenta actively manages the following resources:
 + [Virtual Memory Address Region](objects/vm_address_region.md)
 
 + [Port](objects/port.md)
-+ [Waitset](objects/waitset.md)
 
 ## Kernel objects for drivers
 

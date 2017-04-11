@@ -60,12 +60,6 @@
 + [event_create](syscalls/event_create.md) - create an event
 + [eventpair_create](syscalls/eventpair_create.md) - create a connected pair of events
 
-## Wait Sets
-+ [waitset_create](syscalls/waitset_create.md) - create a new waitset
-+ [waitset_add](syscalls/waitset_add.md) - add an entry to a waitset
-+ [waitset_remove](syscalls/waitset_remove.md) - remove an entry from a waitset
-+ [waitset_wait](syscalls/waitset_wait.md) - wait for one or more entries to be signalled
-
 ## Ports
 + [port_create](syscalls/port_create.md) - create a port
 + [port_queue](syscalls/port_queue.md) - send a packet to a port
