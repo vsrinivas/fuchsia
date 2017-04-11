@@ -5,6 +5,7 @@
 // for S_IF*
 #define _XOPEN_SOURCE
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -83,11 +84,13 @@ int FN(open)(const char* path, int flags, mode_t mode) {
     DO_REAL(open, real_path, flags, mode);
 }
 
-int FL(opendir)(const char* path);
-int FN(opendir)(const char* path) {
+DIR* FL(opendir)(const char* path);
+DIR* FN(opendir)(const char* path) {
     char real_path[WPATH_MAX];
-    PATH_WRAP(path, real_path);
-    DO_REAL(opendir, real_path);
+    if (wrap_path(path, real_path)) {
+        return NULL;
+    }
+    return __real_opendir(real_path);
 }
 
 int FL(mkdir)(const char* path, mode_t mode);
