@@ -62,6 +62,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   // |UserShellContext|
   void GetDeviceName(const GetDeviceNameCallback& callback) override;
+  void GetAgentProvider(fidl::InterfaceRequest<AgentProvider> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;
   void GetSuggestionProvider(
       fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override;

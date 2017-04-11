@@ -5,6 +5,7 @@
 module modular;
 
 import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
+import "apps/modular/services/agent/agent_provider.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/story/story_provider.fidl";
 import "apps/modular/services/user/focus.fidl";
@@ -24,6 +25,7 @@ interface UserShell {
 
 interface UserShellContext {
   GetDeviceName() => (string device_name);
+  GetAgentProvider(AgentProvider& request);
   GetStoryProvider(StoryProvider& request);
   GetSuggestionProvider(maxwell.SuggestionProvider& request);
   GetVisibleStoriesController(VisibleStoriesController& request);

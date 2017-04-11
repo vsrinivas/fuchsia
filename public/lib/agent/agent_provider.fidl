@@ -1,0 +1,23 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// UserRunner creates an instance of this service and passes it to the
+// UserShell so it can observe Agents for the user.
+//
+// TODO(alhaad): Add interfaces for modifying Agents for the user.
+interface AgentProvider {
+  // Registers a listener for changes in the list of agents.
+  Watch(AgentProviderWatcher watcher);
+};
+
+// This interface is implemented by clients of AgentProvider and is updated
+// whenever there is a change to the list of users.
+interface AgentProviderWatcher {
+  // Gives a full list of all agents that are running or scheduled to run.
+  // TODO(alhaad): This currently only contains the URL of the agents. It should
+  // contain more state information.
+  OnUpdate(array<string> agent_urls);
+};

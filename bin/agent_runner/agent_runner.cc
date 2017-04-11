@@ -4,6 +4,8 @@
 
 #include "apps/modular/src/agent_runner/agent_runner.h"
 
+#include <unordered_set>
+
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
@@ -212,6 +214,10 @@ AgentRunner::AgentRunner(
 
 AgentRunner::~AgentRunner() = default;
 
+void AgentRunner::AddBinding(fidl::InterfaceRequest<AgentProvider> request) {
+  agent_provider_bindings_.AddBinding(this, std::move(request));
+}
+
 void AgentRunner::Teardown(const std::function<void()>& callback) {
   // No new agents will be scheduled to run.
   *terminating_ = true;
@@ -250,6 +256,7 @@ void AgentRunner::ConnectToAgent(
 
 void AgentRunner::RemoveAgent(const std::string& agent_url) {
   running_agents_.erase(agent_url);
+  UpdateWatchers();
 }
 
 void AgentRunner::ScheduleTask(const std::string& agent_url,
@@ -303,6 +310,7 @@ void AgentRunner::AddedTrigger(const std::string& key, std::string value) {
   }
 
   task_by_ledger_key_[key] = std::make_pair(data.agent_url, data.task_id);
+  UpdateWatchers();
 }
 
 void AgentRunner::DeletedTrigger(const std::string& key) {
@@ -316,6 +324,7 @@ void AgentRunner::DeletedTrigger(const std::string& key) {
   DeleteAlarmTask(data->second.first, data->second.second);
 
   task_by_ledger_key_.erase(key);
+  UpdateWatchers();
 }
 
 void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url,
@@ -461,9 +470,40 @@ AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
     std::tie(found_it, inserted) = running_agents_.emplace(
         agent_url, std::make_unique<AgentContextImpl>(info, agent_url));
     FTL_DCHECK(inserted);
+
+    UpdateWatchers();
   }
 
   return found_it->second.get();
+}
+
+void AgentRunner::UpdateWatchers() {
+  // A set of all agents that are either running or scheduled to be run.
+  std::unordered_set<std::string> agents;
+  for (auto const& it : running_agents_) {
+    agents.insert(it.first);
+  }
+  for (auto const& it : watched_queues_) {
+    agents.insert(it.first);
+  }
+  for (auto const& it : running_alarms_) {
+    agents.insert(it.first);
+  }
+
+  fidl::Array<fidl::String> agent_urls;
+  for (auto const& it : agents) {
+    agent_urls.push_back(it);
+  }
+
+  agent_provider_watchers_.ForAllPtrs([agent_urls = std::move(agent_urls)](
+      AgentProviderWatcher* watcher) {
+    watcher->OnUpdate(agent_urls.Clone());
+  });
+}
+
+void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
+  agent_provider_watchers_.AddInterfacePtr(
+      AgentProviderWatcherPtr::Create(std::move(watcher)));
 }
 
 void AgentRunner::OnChange(ledger::PageChangePtr page,

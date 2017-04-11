@@ -15,6 +15,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/config/config.fidl.h"
+#include "apps/modular/services/agent/agent_provider.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
@@ -260,6 +261,11 @@ void UserRunnerImpl::Terminate(const TerminateCallback& done) {
 
 void UserRunnerImpl::GetDeviceName(const GetDeviceNameCallback& callback) {
   callback(device_name_);
+}
+
+void UserRunnerImpl::GetAgentProvider(
+    fidl::InterfaceRequest<AgentProvider> request) {
+  agent_runner_->AddBinding(std::move(request));
 }
 
 void UserRunnerImpl::GetStoryProvider(

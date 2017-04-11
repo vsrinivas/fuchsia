@@ -18,7 +18,10 @@
 #include "apps/modular/lib/fidl/page_client.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
+#include "apps/modular/services/agent/agent_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
@@ -29,7 +32,7 @@ class XdrContext;
 
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.
-class AgentRunner : ledger::PageWatcher {
+class AgentRunner : AgentProvider, ledger::PageWatcher {
  public:
   AgentRunner(app::ApplicationLauncher* application_launcher,
               MessageQueueManager* message_queue_manager,
@@ -37,6 +40,8 @@ class AgentRunner : ledger::PageWatcher {
               ledger::PagePtr page,
               maxwell::UserIntelligenceProvider* user_intelligence_provider);
   ~AgentRunner();
+
+  void AddBinding(fidl::InterfaceRequest<AgentProvider> request);
 
   // |callback| is called after - (1) all agents have been shutdown and (2)
   // no new tasks are scheduled to run.
@@ -89,6 +94,11 @@ class AgentRunner : ledger::PageWatcher {
   void DeleteAlarmTask(const std::string& agent_url,
                        const std::string& task_id);
 
+  void UpdateWatchers();
+
+  // |AgentProvider|
+  void Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) override;
+
   // |PageWatcher|
   void OnChange(ledger::PageChangePtr page,
                 ledger::ResultState result_state,
@@ -121,6 +131,9 @@ class AgentRunner : ledger::PageWatcher {
   ledger::LedgerRepository* const ledger_repository_;
   ledger::PagePtr page_;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
+
+  fidl::BindingSet<AgentProvider> agent_provider_bindings_;
+  fidl::InterfacePtrSet<AgentProviderWatcher> agent_provider_watchers_;
 
   // A watcher for any changes happening to the trigger list on the ledger.
   fidl::Binding<ledger::PageWatcher> watcher_binding_;

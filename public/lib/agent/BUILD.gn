@@ -8,6 +8,7 @@ fidl("agent") {
   sources = [
     "agent.fidl",
     "agent_context.fidl",
+    "agent_provider.fidl",
   ]
 
   deps = [
