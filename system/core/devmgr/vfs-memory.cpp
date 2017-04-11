@@ -157,20 +157,6 @@ ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
     return actual;
 }
 
-ssize_t VnodeVmo::Write(const void* data, size_t len, size_t off) {
-    size_t rlen;
-    if (off+len > length_) {
-        // TODO(orr): grow vmo to support extending length
-        return ERR_NOT_SUPPORTED;
-    }
-    mx_status_t r = mx_vmo_write(vmo_, data, offset_ + off, len, &rlen);
-    if (r < 0) {
-        return r;
-    }
-    modify_time_ = mx_time_get(MX_CLOCK_UTC);
-    return rlen;
-}
-
 mx_status_t VnodeDir::Lookup(fs::Vnode** out, const char* name, size_t len) {
     if (!IsDirectory()) {
         return ERR_NOT_FOUND;
@@ -193,7 +179,7 @@ mx_status_t VnodeDir::Lookup(fs::Vnode** out, const char* name, size_t len) {
 
 mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
-    attr->mode = V_TYPE_FILE | V_IRUSR;
+    attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR;
     attr->size = length_;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
@@ -213,11 +199,7 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
 
 mx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
-    if (!IsDirectory()) {
-        attr->mode = V_TYPE_FILE | V_IRUSR;
-    } else {
-        attr->mode = V_TYPE_DIR | V_IRUSR;
-    }
+    attr->mode = V_TYPE_FILE | V_IRUSR;
     attr->size = length_;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
