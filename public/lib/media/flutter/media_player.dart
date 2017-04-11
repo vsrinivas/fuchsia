@@ -32,8 +32,8 @@ class _MediaPlayerState extends State<MediaPlayer> {
 
   @override
   void initState() {
-    assert(config.controller != null);
-    config.controller.addListener(_handleControllerChanged);
+    assert(widget.controller != null);
+    widget.controller.addListener(_handleControllerChanged);
     if (_shouldShowControlOverlay()) {
       _ensureProgressTimer();
     } else {
@@ -46,16 +46,16 @@ class _MediaPlayerState extends State<MediaPlayer> {
   void dispose() {
     _ensureNoProgressTimer();
     _hideTimer?.cancel();
-    config.controller.removeListener(_handleControllerChanged);
+    widget.controller.removeListener(_handleControllerChanged);
     super.dispose();
   }
 
   @override
-  void didUpdateConfig(MediaPlayer oldConfig) {
-    super.didUpdateConfig(oldConfig);
-    if (oldConfig.controller != config.controller) {
-      oldConfig.controller.removeListener(_handleControllerChanged);
-      config.controller.addListener(_handleControllerChanged);
+  void didUpdateWidget(MediaPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleControllerChanged);
+      widget.controller.addListener(_handleControllerChanged);
     }
   }
 
@@ -72,7 +72,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
 
   /// Determines of the control overlay should be shown.
   bool _shouldShowControlOverlay() {
-    return !config.controller.hasVideo || !config.controller.playing ||
+    return !widget.controller.hasVideo || !widget.controller.playing ||
       _hideTimer != null;
   }
 
@@ -134,31 +134,31 @@ class _MediaPlayerState extends State<MediaPlayer> {
 
   /// Returns progress as a value from 0.0 to 1.0 inclusive.
   double get _unitProgress {
-    int durationInMicroseconds = config.controller.duration.inMicroseconds;
+    int durationInMicroseconds = widget.controller.duration.inMicroseconds;
 
     if (durationInMicroseconds == 0) {
       return 0.0;
     }
 
-    return config.controller.progress.inMicroseconds / durationInMicroseconds;
+    return widget.controller.progress.inMicroseconds / durationInMicroseconds;
   }
 
   /// Seeks to a position given as a value from 0.0 to 1.0 inclusive.
   void _unitSeek(double unitPosition) {
-    int durationInMicroseconds = config.controller.duration.inMicroseconds;
+    int durationInMicroseconds = widget.controller.duration.inMicroseconds;
 
     if (durationInMicroseconds == 0) {
       return;
     }
 
-    config.controller.seek(new Duration(
+    widget.controller.seek(new Duration(
       microseconds: (unitPosition * durationInMicroseconds).round()
     ));
   }
 
   /// Gets the desired size of this widget.
   Size get _layoutSize {
-    Size size = config.controller.videoPhysicalSize;
+    Size size = widget.controller.videoPhysicalSize;
 
     if (size.width == 0) {
       size = const Size(320.0, 45.0);
@@ -177,19 +177,19 @@ class _MediaPlayerState extends State<MediaPlayer> {
       children: <Widget>[
         new Center(
           child: new IconButton(
-            icon: config.controller.problem != null ?
+            icon: widget.controller.problem != null ?
               new Icon(Icons.error_outline) :
-              config.controller.loading ?
+              widget.controller.loading ?
                 new Icon(Icons.hourglass_empty) :
-                config.controller.playing ?
+                widget.controller.playing ?
                   new Icon(Icons.pause) :
                   new Icon(Icons.play_arrow),
             iconSize: 60.0,
             onPressed: () {
-              if (config.controller.playing) {
-                config.controller.pause();
+              if (widget.controller.playing) {
+                widget.controller.pause();
               } else {
-                config.controller.play();
+                widget.controller.play();
               }
             },
             color: Colors.white,
@@ -198,7 +198,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
         new Positioned(
           left: 10.0,
           bottom: 9.0,
-          child: new Text(_durationToString(config.controller.progress),
+          child: new Text(_durationToString(widget.controller.progress),
             style: new TextStyle(color: Colors.white),
           ),
         ),
@@ -217,7 +217,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
         new Positioned(
           right: 10.0,
           bottom: 9.0,
-          child: new Text(_durationToString(config.controller.duration),
+          child: new Text(_durationToString(widget.controller.duration),
             style: new TextStyle(color: Colors.white),
           ),
         ),
@@ -234,7 +234,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
           new GestureDetector(
             onTap: _brieflyShowControlOverlay,
             child:
-              new ChildView(connection: config.controller.videoViewConnection),
+              new ChildView(connection: widget.controller.videoViewConnection),
           ),
           new Offstage(
             offstage: !_shouldShowControlOverlay(),
