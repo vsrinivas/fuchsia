@@ -121,7 +121,7 @@ bool ClientApp::Initialize() {
                          "cloud_sync_user", "cloud_sync_client");
   cloud_storage_ = std::make_unique<gcs::CloudStorageImpl>(
       mtl::MessageLoop::GetCurrent()->task_runner(), network_service_.get(),
-      configuration_.sync_params.gcs_bucket,
+      configuration_.sync_params.firebase_id,
       GetGcsPrefixForPage(app_gcs_prefix, RandomString()));
   cloud_provider_ = std::make_unique<cloud_provider::CloudProviderImpl>(
       firebase_.get(), cloud_storage_.get());

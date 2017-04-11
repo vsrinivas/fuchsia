@@ -37,7 +37,6 @@ TEST_F(ConfigurationEncoderTest, EncodeWithSync) {
 
   Configuration expected_config;
   expected_config.use_sync = true;
-  expected_config.sync_params.gcs_bucket = "mybucket.appspot.example.com";
   expected_config.sync_params.firebase_id = "example";
   expected_config.sync_params.cloud_prefix = "/testing/";
 

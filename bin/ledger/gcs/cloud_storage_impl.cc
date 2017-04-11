@@ -30,6 +30,10 @@ namespace {
 
 const char kContentLengthHeader[] = "content-length";
 
+constexpr ftl::StringView kApiEndpoint =
+    "https://firebasestorage.googleapis.com/v0/b/";
+constexpr ftl::StringView kBucketNameSuffix = ".appspot.com";
+
 network::HttpHeaderPtr GetHeader(
     const fidl::Array<network::HttpHeaderPtr>& headers,
     const std::string& header_name) {
@@ -52,23 +56,21 @@ void RunUploadFileCallback(const std::function<void(Status)>& callback,
   callback(status);
 }
 
-constexpr ftl::StringView kApiEndpoint =
-    "https://firebasestorage.googleapis.com/v0/b/";
-
-std::string GetUrlPrefix(const std::string& bucket_name,
+std::string GetUrlPrefix(const std::string& firebase_id,
                          const std::string& cloud_prefix) {
-  return ftl::Concatenate({kApiEndpoint, bucket_name, "/o/", cloud_prefix});
+  return ftl::Concatenate(
+      {kApiEndpoint, firebase_id, kBucketNameSuffix, "/o/", cloud_prefix});
 }
 
 }  // namespace
 
 CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                    ledger::NetworkService* network_service,
-                                   const std::string& bucket_name,
+                                   const std::string& firebase_id,
                                    const std::string& cloud_prefix)
     : task_runner_(std::move(task_runner)),
       network_service_(network_service),
-      url_prefix_(GetUrlPrefix(bucket_name, cloud_prefix)) {}
+      url_prefix_(GetUrlPrefix(firebase_id, cloud_prefix)) {}
 
 CloudStorageImpl::~CloudStorageImpl() {}
 

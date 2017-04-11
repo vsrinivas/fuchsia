@@ -18,7 +18,6 @@ namespace configuration {
 namespace {
 const char kSynchronization[] = "synchronization";
 const char kUseSync[] = "use_sync";
-const char kGcsBucket[] = "gcs_bucket";
 const char kFirebaseId[] = "firebase_id";
 const char kCloudPrefix[] = "cloud_prefix";
 const char kDeprecatedUserPrefix[] = "user_prefix";
@@ -72,16 +71,6 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
   }
 
   auto sync_config = document[kSynchronization].GetObject();
-
-  if (!sync_config.HasMember(kGcsBucket) ||
-      !sync_config[kGcsBucket].IsString()) {
-    FTL_LOG(ERROR) << "The " << kGcsBucket
-                   << " parameter must be specified inside " << kSynchronization
-                   << ".";
-    return false;
-  }
-  new_configuration.sync_params.gcs_bucket =
-      sync_config[kGcsBucket].GetString();
 
   if (!sync_config.HasMember(kFirebaseId) ||
       !sync_config[kFirebaseId].IsString()) {
@@ -145,11 +134,6 @@ std::string ConfigurationEncoder::EncodeToString(
       {
         writer.Key(kUseSync);
         writer.Bool(configuration.use_sync);
-      }
-      {
-        writer.Key(kGcsBucket);
-        writer.String(configuration.sync_params.gcs_bucket.c_str(),
-                      configuration.sync_params.gcs_bucket.size());
       }
       {
         writer.Key(kFirebaseId);

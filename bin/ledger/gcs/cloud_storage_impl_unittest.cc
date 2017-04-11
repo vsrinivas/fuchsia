@@ -41,7 +41,7 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
       : fake_network_service_(message_loop_.task_runner()),
         gcs_(message_loop_.task_runner(),
              &fake_network_service_,
-             "bucket",
+             "project",
              "prefix") {}
   ~CloudStorageImplTest() override {}
 
@@ -92,7 +92,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(
       "https://firebasestorage.googleapis.com"
-      "/v0/b/bucket/o/prefixhello-world",
+      "/v0/b/project.appspot.com/o/prefixhello-world",
       fake_network_service_.GetRequest()->url);
   EXPECT_EQ("POST", fake_network_service_.GetRequest()->method);
   EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_buffer());
@@ -147,7 +147,7 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(
       "https://firebasestorage.googleapis.com"
-      "/v0/b/bucket/o/prefixhello-world?alt=media",
+      "/v0/b/project.appspot.com/o/prefixhello-world?alt=media",
       fake_network_service_.GetRequest()->url);
   EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
 
@@ -171,7 +171,7 @@ TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
   EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_EQ(
       "https://firebasestorage.googleapis.com"
-      "/v0/b/bucket/o/prefixwhoa?alt=media",
+      "/v0/b/project.appspot.com/o/prefixwhoa?alt=media",
       fake_network_service_.GetRequest()->url);
   EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
 }

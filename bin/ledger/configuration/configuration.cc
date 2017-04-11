@@ -28,8 +28,7 @@ bool operator!=(const Configuration& lhs, const Configuration& rhs) {
 
 bool operator==(const Configuration::SyncParams& lhs,
                 const Configuration::SyncParams& rhs) {
-  return lhs.gcs_bucket == rhs.gcs_bucket &&
-         lhs.firebase_id == rhs.firebase_id &&
+  return lhs.firebase_id == rhs.firebase_id &&
          lhs.cloud_prefix == rhs.cloud_prefix;
 }
 

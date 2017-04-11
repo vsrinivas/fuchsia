@@ -32,8 +32,6 @@ struct Configuration {
 
   // Cloud Sync parameters.
   struct SyncParams {
-    // Name of the Google Cloud Storage bucket.
-    std::string gcs_bucket;
     // ID of the firebase instance.
     std::string firebase_id;
     // Prefix to use for firebase keys and GCS objects.

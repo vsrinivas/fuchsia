@@ -18,7 +18,6 @@
 namespace {
 const char kHelpArg[] = "help";
 const char kConfigPathArg[] = "config_path";
-const char kGcsBucketArg[] = "gcs_bucket";
 const char kFirebaseIdArg[] = "firebase_id";
 const char kCloudPrefixArg[] = "cloud_prefix";
 const char kSyncArg[] = "sync";
@@ -34,7 +33,6 @@ void PrintHelp() {
   printf("Cloud Sync configuration:\n");
   printf("  (passing any implies --sync unless --nosync is passed)\n");
   printf("  --firebase_id=<NAME_OF_FIREBASE_INSTANCE>\n");
-  printf("  --gcs_bucket=<NAME_OF_GCS_BUCKET>\n");
   printf("  --cloud_prefix=<CLOUD_PREFIX>\n");
   printf("Toggle Cloud Sync off and on:\n");
   printf("  --sync\n");
@@ -51,7 +49,7 @@ int main(int argc, const char** argv) {
   }
 
   const std::unordered_set<std::string> known_options = {
-      kHelpArg,        kConfigPathArg, kGcsBucketArg, kFirebaseIdArg,
+      kHelpArg,        kConfigPathArg, kFirebaseIdArg,
       kCloudPrefixArg, kSyncArg,       kNoSyncArg,
   };
 
@@ -92,15 +90,6 @@ int main(int argc, const char** argv) {
     config.use_sync = true;
     bool ret = command_line.GetOptionValue(kFirebaseIdArg,
                                            &config.sync_params.firebase_id);
-    FTL_CHECK(ret);
-    config.sync_params.gcs_bucket =
-        config.sync_params.firebase_id + ".appspot.com";
-  }
-
-  if (command_line.HasOption(kGcsBucketArg)) {
-    config.use_sync = true;
-    bool ret = command_line.GetOptionValue(kGcsBucketArg,
-                                           &config.sync_params.gcs_bucket);
     FTL_CHECK(ret);
   }
 

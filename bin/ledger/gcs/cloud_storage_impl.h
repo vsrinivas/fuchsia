@@ -17,11 +17,13 @@
 
 namespace gcs {
 
+// Implementation of the CloudStorage interface that uses Firebase Storage as
+// the backend.
 class CloudStorageImpl : public CloudStorage {
  public:
   CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                    ledger::NetworkService* network_service,
-                   const std::string& bucket_name,
+                   const std::string& firebase_id,
                    const std::string& prefix);
   ~CloudStorageImpl() override;
 

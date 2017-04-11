@@ -78,7 +78,7 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
       GetFirebasePathForPage(app_firebase_path_, page_storage->GetId()));
   result->cloud_storage = std::make_unique<gcs::CloudStorageImpl>(
       environment_->main_runner(), environment_->network_service(),
-      environment_->configuration().sync_params.gcs_bucket,
+      environment_->configuration().sync_params.firebase_id,
       GetGcsPrefixForPage(app_gcs_prefix_, page_storage->GetId()));
   result->cloud_provider = std::make_unique<cloud_provider::CloudProviderImpl>(
       result->firebase.get(), result->cloud_storage.get());
