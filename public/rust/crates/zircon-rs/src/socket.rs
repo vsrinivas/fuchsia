@@ -104,18 +104,17 @@ impl Socket {
     ///
     /// Wraps
     /// [mx_socket_read](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/socket_read.md).
-    pub fn read(&self, opts: SocketReadOpts, bytes: &mut Vec<u8>) -> Result<usize, Status> {
+    pub fn read(&self, opts: SocketReadOpts, bytes: &mut [u8]) -> Result<usize, Status> {
         let mut actual = 0;
         let status = unsafe {
             sys::mx_socket_read(self.raw_handle(), opts as u32, bytes.as_mut_ptr(),
-                bytes.capacity(), &mut actual)
+                bytes.len(), &mut actual)
         };
         if status != sys::NO_ERROR {
             // If an error is returned then actual is undefined, so to be safe we set it to 0 and
             // ignore any data that is set in bytes.
             actual = 0;
         }
-        unsafe { bytes.set_len(actual) };
         into_result(status, || actual)
     }
 
