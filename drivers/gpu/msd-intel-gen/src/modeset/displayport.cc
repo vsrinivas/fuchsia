@@ -453,8 +453,8 @@ void DisplayPort::PartiallyBringUpDisplays(RegisterIo* reg_io)
 {
     if (!MSD_INTEL_ENABLE_MODESETTING) {
         magma::log(magma::LOG_INFO, "Modesetting code is disabled; "
-                   "build with \"packages/gn/gen.py ... "
-                   "--args msd_intel_enable_modesetting=true\" to enable");
+                                    "build with \"packages/gn/gen.py ... "
+                                    "--args msd_intel_enable_modesetting=true\" to enable");
         return;
     }
 

@@ -27,7 +27,7 @@ private:
     cache_list_t cache_;
     std::unordered_map<GpuMapping*, cache_list_t::iterator> cache_iterator_map_;
 
-    // Memory footprint management
+// Memory footprint management
 #if defined(MSD_INTEL_ENABLE_MAPPING_CACHE)
     static constexpr uint64_t kDefaultMemoryCap = 512 * 1024 * 1024;
 #else

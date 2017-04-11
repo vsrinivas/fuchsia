@@ -106,7 +106,7 @@ magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> 
     if (!connection)
         return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "couldn't lock reference to connection");
 
-    if(connection->context_killed())
+    if (connection->context_killed())
         return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
     return connection->SubmitCommandBuffer(std::move(cmd_buf));

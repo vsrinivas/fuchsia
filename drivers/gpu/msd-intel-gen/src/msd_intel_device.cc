@@ -799,7 +799,7 @@ void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_t
                                              &subslice_enable_mask);
 
     DLOG("slice_enable_mask 0x%x subslice_enable_mask 0x%x", slice_enable_mask,
-           subslice_enable_mask);
+         subslice_enable_mask);
 
     std::bitset<registers::MirrorEuDisable::kMaxSliceCount> slice_bitset(slice_enable_mask);
     std::bitset<registers::MirrorEuDisable::kMaxSubsliceCount> subslice_bitset(

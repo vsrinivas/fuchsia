@@ -8,7 +8,9 @@
 #include "msd.h"
 
 MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
-    : platform_buf_(std::move(platform_buf)) {}
+    : platform_buf_(std::move(platform_buf))
+{
+}
 
 std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Import(uint32_t handle)
 {
