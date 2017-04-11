@@ -358,7 +358,7 @@ static void arena_dump(bool is_panic) TA_NO_THREAD_SAFETY_ANALYSIS {
         arena_lock.Acquire();
     }
     for (auto& a : arena_list) {
-        a.Dump(false);
+        a.Dump(false, false);
     }
     if (!is_panic) {
         arena_lock.Release();

@@ -230,7 +230,7 @@ status_t PmmArena::FreePage(vm_page_t* page) {
     return NO_ERROR;
 }
 
-void PmmArena::Dump(bool dump_pages) {
+void PmmArena::Dump(bool dump_pages, bool dump_free_ranges) {
     printf("arena %p: name '%s' base %#" PRIxPTR " size 0x%zx priority %u flags 0x%x\n", this, name(), base(),
            size(), priority(), flags());
     printf("\tpage_array %p, free_count %zu\n", page_array_, free_count_);
@@ -255,23 +255,25 @@ void PmmArena::Dump(bool dump_pages) {
     }
 
     /* dump the free pages */
-    printf("\tfree ranges:\n");
-    ssize_t last = -1;
-    for (size_t i = 0; i < size() / PAGE_SIZE; i++) {
-        if (page_is_free(&page_array_[i])) {
-            if (last == -1) {
-                last = i;
+    if (dump_free_ranges) {
+        printf("\tfree ranges:\n");
+        ssize_t last = -1;
+        for (size_t i = 0; i < size() / PAGE_SIZE; i++) {
+            if (page_is_free(&page_array_[i])) {
+                if (last == -1) {
+                    last = i;
+                }
+            } else {
+                if (last != -1) {
+                    printf("\t\t%#" PRIxPTR " - %#" PRIxPTR "\n", base() + last * PAGE_SIZE,
+                           base() + i * PAGE_SIZE);
+                }
+                last = -1;
             }
-        } else {
-            if (last != -1) {
-                printf("\t\t%#" PRIxPTR " - %#" PRIxPTR "\n", base() + last * PAGE_SIZE,
-                       base() + i * PAGE_SIZE);
-            }
-            last = -1;
         }
-    }
 
-    if (last != -1) {
-        printf("\t\t%#" PRIxPTR " - %#" PRIxPTR "\n", base() + last * PAGE_SIZE, base() + size());
+        if (last != -1) {
+            printf("\t\t%#" PRIxPTR " - %#" PRIxPTR "\n", base() + last * PAGE_SIZE, base() + size());
+        }
     }
 }
