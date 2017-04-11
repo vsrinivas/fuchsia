@@ -111,7 +111,7 @@ static bool async_wait_channel_test(void) {
         EXPECT_EQ(out.signal.count, 1u, "");
 
         status = mx_channel_read(ch[1], MX_CHANNEL_READ_MAY_DISCARD,
-                                 nullptr, 0u, nullptr, nullptr, 0, nullptr);
+                                 nullptr, nullptr, 0u, 0, nullptr, nullptr);
         EXPECT_EQ(status, ERR_BUFFER_TOO_SMALL, "");
     }
 

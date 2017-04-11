@@ -36,12 +36,12 @@ bool serve_echo_request(mx_handle_t handle) {
     // Try to read a message from |in_handle|.
     // First, figure out size.
     uint32_t in_msg_size = 0u;
-    mx_status_t read_status = mx_channel_read(handle, 0u, NULL, 0, &in_msg_size, NULL, 0, NULL);
+    mx_status_t read_status = mx_channel_read(handle, 0u, NULL, NULL, 0, 0, &in_msg_size, NULL);
     ASSERT_NEQ(read_status, ERR_NO_MEMORY, "unexpected sizing read status");
 
     unittest_printf("reading message of size %u\n", in_msg_size);
     void* in_msg_buf = calloc(in_msg_size, 1u);
-    read_status = mx_channel_read(handle, 0u, in_msg_buf, in_msg_size, &in_msg_size, NULL, 0, NULL);
+    read_status = mx_channel_read(handle, 0u, in_msg_buf, NULL, in_msg_size, 0, &in_msg_size, NULL);
     ASSERT_EQ(read_status, NO_ERROR, "read failed with status");
 
     // Try to parse message data.

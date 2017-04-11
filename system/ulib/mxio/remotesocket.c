@@ -278,8 +278,8 @@ static ssize_t mxsio_rx_dgram(mxio_t* io, void* buf, size_t buflen) {
         ssize_t r;
         mxrio_t* rio = (mxrio_t*)io;
         // TODO: if mx_socket support dgram mode, we'll switch to it
-        if ((r = mx_channel_read(rio->h2, 0, buf, buflen, (uint32_t*)&n,
-                                 NULL, 0, NULL)) == NO_ERROR) {
+        if ((r = mx_channel_read(rio->h2, 0, buf, NULL, buflen,
+                                 0, (uint32_t*)&n, NULL)) == NO_ERROR) {
             return n;
         }
         if (r == ERR_PEER_CLOSED) {

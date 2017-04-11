@@ -215,9 +215,7 @@ bool run_parser(P* parser, const Dispatch<P>* table, const char* input, bool ver
 
 // ====================== sysgen specific parsing and generation =================================
 
-// TODO(cpu): put the 2 and 8 below as pragmas on the file?
-constexpr size_t kMaxReturnArgs = 2;
-constexpr size_t kMaxInputArgs = 8;
+constexpr size_t kMaxArgs = 8;
 
 constexpr char kAuthors[] = "The Fuchsia Authors";
 
@@ -401,39 +399,47 @@ struct Syscall {
         return has_attribute("blocking", attributes);
     }
 
+    size_t num_kernel_args() const {
+        return is_noreturn() ? arg_spec.size() : arg_spec.size() + ret_spec.size() - 1;
+    }
+
+    void for_each_kernel_arg(const std::function<void(const TypeSpec&)>& cb) const {
+        std::for_each(arg_spec.begin(), arg_spec.end(), cb);
+        if (ret_spec.size() > 1) {
+            std::for_each(ret_spec.begin() + 1, ret_spec.end(), cb);
+        }
+    }
+
     bool validate() const {
         if (ret_spec.size() > 0 && is_noreturn()) {
             print_error("noreturn should have zero return arguments");
             return false;
-        } else if (ret_spec.size() > kMaxReturnArgs) {
-            print_error("invalid number of return arguments");
+        } else if (num_kernel_args() > kMaxArgs) {
+            print_error("invalid number of arguments");
             return false;
-        } else if (ret_spec.size() == 1 && !ret_spec[0].name.empty()) {
-            print_error("single return arguments cannot be named");
+        } else if (ret_spec.size() >= 1 && !ret_spec[0].name.empty()) {
+            print_error("the first return argument cannot be named, yet...");
             return false;
         } else if (is_blocking() &&
                    (ret_spec.size() == 0 || ret_spec[0].type != "mx_status_t")) {
             print_error("blocking must have first return be of type mx_status_t");
             return false;
         }
-        if (arg_spec.size() > kMaxInputArgs) {
-            print_error("invalid number of input arguments");
-            return false;
-        }
-        for (const auto& arg : arg_spec) {
+        bool valid_args = true;
+        for_each_kernel_arg([this, &valid_args](const TypeSpec& arg) {
             if (arg.name.empty()) {
-                print_error("all input arguments need to be named");
-                return false;
+                print_error("all arguments need to be named, except the first return");
+                valid_args = false;
             }
             if (arg.arr_spec) {
                 if (!valid_array_count(arg)) {
                     std::string err = "invalid array spec for " + arg.name;
                     print_error(err.c_str());
-                    return false;
+                    valid_args = false;
                 }
             }
-        }
-        return true;
+        });
+        return valid_args;
     }
 
     void assign_index(int* next_index) {
@@ -672,16 +678,18 @@ bool generate_legacy_header(std::ofstream& os, const Syscall& sc,
         // writes "[return-type] prefix_[syscall-name]("
         os << sc.return_type() << " " << syscall_name << "(";
 
-        // Writes all arguments.
-        for (const auto& arg : sc.arg_spec) {
-            if (!os.good())
-                return false;
+       // Writes all arguments.
+        sc.for_each_kernel_arg([&](const TypeSpec& arg) {
             os << "\n" << string(indent_spaces, ' ')
                << arg.as_cpp_declaration(
                         allow_pointer_wrapping && !sc.is_no_wrap() && !sc.is_vdso()) << ",";
+        });
+
+        if (!os.good()) {
+            return false;
         }
 
-        if (!sc.arg_spec.empty()) {
+        if (sc.num_kernel_args() > 0) {
             // remove the comma.
             os.seekp(-1, std::ios_base::end);
         } else {
@@ -711,13 +719,16 @@ bool generate_rust_bindings(std::ofstream& os, const Syscall& sc) {
     os << "    pub fn mx_" << sc.name << "(";
 
     // Writes all arguments.
-    for (const auto& arg : sc.arg_spec) {
-        if (!os.good())
-            return false;
+    sc.for_each_kernel_arg([&](const TypeSpec& arg) {
         os << "\n        "
             << arg.as_rust_declaration() << ",";
+    });
+
+    if (!os.good()) {
+        return false;
     }
-    if (!sc.arg_spec.empty()) {
+
+    if (sc.num_kernel_args() > 0) {
         // remove the comma.
         os.seekp(-1, std::ios_base::end);
     }
@@ -786,13 +797,20 @@ bool generate_kernel_code(std::ofstream& os, const Syscall& sc,
     string close_invocation = invocation(os, return_var, return_type, syscall_name, sc);
 
     // Writes all arguments.
-    for (int i = 0; i < sc.arg_spec.size(); ++i) {
-        if (!os.good())
-            return false;
+    int arg_index = 1;
+    sc.for_each_kernel_arg([&](const TypeSpec& arg) {
         os << "\n" << arg_sp
-           << sc.maybe_wrap(sc.arg_spec[i].as_cpp_cast(arg_prefix + std::to_string(i + 1)));
-        if (i < sc.arg_spec.size() - 1)
-            os << ",";
+           << sc.maybe_wrap(arg.as_cpp_cast(arg_prefix + std::to_string(arg_index++)))
+           << ",";
+    });
+
+    if (!os.good()) {
+        return false;
+    }
+
+    if (sc.num_kernel_args() > 0) {
+        // remove the comma.
+        os.seekp(-1, std::ios_base::end);
     }
 
     os << close_invocation;
@@ -819,7 +837,7 @@ bool generate_legacy_assembly_x64(
     if (sc.is_vdso())
         return true;
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs64, mx_##name, n
-    os << syscall_macro << " " << sc.arg_spec.size() << " "
+    os << syscall_macro << " " << sc.num_kernel_args() << " "
        << name_prefix << sc.name << " " << sc.index << "\n";
     return os.good();
 }
@@ -845,7 +863,7 @@ bool generate_trace_info(std::ofstream& os, const Syscall& sc) {
     if (sc.is_vdso())
         return true;
     // Can be injected as an array of structs or into a tuple-like C++ container.
-    os << "{" << sc.index << ", " << sc.arg_spec.size() << ", "
+    os << "{" << sc.index << ", " << sc.num_kernel_args() << ", "
        << '"' << sc.name << "\"},\n";
 
     return os.good();
@@ -1042,8 +1060,15 @@ bool process_syscall(SysgenGenerator* parser, TokenStream& ts) {
     if (return_spec == "returns") {
         ts.next();
 
-        if (!parse_argpack(&ts, &syscall.ret_spec))
+        if (!parse_argpack(&ts, &syscall.ret_spec)) {
             return false;
+        }
+        if (syscall.ret_spec.size() > 1) {
+            std::for_each(syscall.ret_spec.begin() + 1, syscall.ret_spec.end(),
+                          [](TypeSpec& type_spec) {
+                type_spec.arr_spec = new ArraySpec {ArraySpec::OUT, 1, ""};
+            });
+        }
     } else if (return_spec != ";") {
         ts.filectx().print_error("expected", ";");
         return false;

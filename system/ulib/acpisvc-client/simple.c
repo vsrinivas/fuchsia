@@ -35,8 +35,8 @@ static mx_status_t wait_for_message(
     if (pending & MX_CHANNEL_READABLE) {
         uint32_t rsp_len = 0;
         uint32_t num_handles_returned = 0;
-        status = mx_channel_read(h, 0, NULL, rsp_len, &rsp_len,
-                NULL, num_handles_returned, &num_handles_returned);
+        status = mx_channel_read(h, 0, NULL, NULL, rsp_len,
+                num_handles_returned, &rsp_len, &num_handles_returned);
         if (status != ERR_BUFFER_TOO_SMALL) {
             return status;
         }
@@ -53,8 +53,8 @@ static mx_status_t wait_for_message(
         }
 
         mx_handle_t handles_returned[MAX_RETURNED_HANDLES];
-        status = mx_channel_read(h, 0, rsp, rsp_len, &rsp_len,
-                handles_returned, num_handles_returned, &num_handles_returned);
+        status = mx_channel_read(h, 0, rsp, handles_returned, rsp_len,
+                num_handles_returned, &rsp_len, &num_handles_returned);
         if (status != NO_ERROR) {
             free(rsp);
             return status;

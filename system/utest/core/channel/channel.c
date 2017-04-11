@@ -54,13 +54,13 @@ static int reader_thread(void* arg) {
         uint32_t data;
         uint32_t num_bytes = sizeof(uint32_t);
         if (items[0].pending & MX_CHANNEL_READABLE) {
-            status = mx_channel_read(channel[0], 0u, &data, num_bytes, &num_bytes,
-                                     NULL, 0, NULL);
+            status = mx_channel_read(channel[0], 0u, &data, NULL,
+                                     num_bytes, 0, &num_bytes, NULL);
             assert(status == NO_ERROR);
             packets[0] += 1;
         } else if (items[1].pending & MX_CHANNEL_READABLE) {
-            status = mx_channel_read(channel[1], 0u, &data, num_bytes, &num_bytes,
-                                     NULL, 0, NULL);
+            status = mx_channel_read(channel[1], 0u, &data, NULL,
+                                     num_bytes, 0, &num_bytes, NULL);
             assert(status == NO_ERROR);
             packets[1] += 1;
         } else {
@@ -154,7 +154,7 @@ static bool channel_read_error_test(void) {
     ASSERT_EQ(status, NO_ERROR, "error in channel create");
 
     // Read from an empty channel.
-    status = mx_channel_read(channel[0], 0u, NULL, 0, NULL, NULL, 0, NULL);
+    status = mx_channel_read(channel[0], 0u, NULL, NULL, 0, 0, NULL, NULL);
     ASSERT_EQ(status, ERR_SHOULD_WAIT, "read on empty non-closed channel produced incorrect error");
 
     char data = 'x';
@@ -166,14 +166,14 @@ static bool channel_read_error_test(void) {
     // Read a message with the peer closed, should yield the message.
     char read_data = '\0';
     uint32_t read_data_size = 1u;
-    status = mx_channel_read(channel[0], 0u, &read_data, read_data_size, &read_data_size,
-                             NULL, 0, NULL);
+    status = mx_channel_read(channel[0], 0u, &read_data, NULL,
+                             read_data_size, 0, &read_data_size, NULL);
     ASSERT_EQ(status, NO_ERROR, "read failed with peer closed but message in the channel");
     ASSERT_EQ(read_data_size, 1u, "read returned incorrect number of bytes");
     ASSERT_EQ(read_data, 'x', "read returned incorrect data");
 
     // Read from an empty channel with a closed peer, should yield a channel closed error.
-    status = mx_channel_read(channel[0], 0u, NULL, 0, NULL, NULL, 0, NULL);
+    status = mx_channel_read(channel[0], 0u, NULL, NULL, 0, 0, NULL, NULL);
     ASSERT_EQ(status, ERR_PEER_CLOSED, "read on empty closed channel produced incorrect error");
 
     END_TEST;
@@ -279,8 +279,8 @@ static int multithread_reader(void* arg) {
     for (uint32_t i = 0; i < multithread_read_num_messages / 2; i++) {
         uint32_t msg = MSG_UNSET;
         uint32_t msg_size = sizeof(msg);
-        mx_status_t status = mx_channel_read(_channel[0], 0u, &msg, msg_size, &msg_size,
-                                             NULL, 0, NULL);
+        mx_status_t status = mx_channel_read(_channel[0], 0u, &msg, NULL,
+                                             msg_size, 0, &msg_size, NULL);
         if (status != NO_ERROR) {
             ((uint32_t*)arg)[i] = MSG_READ_FAILED;
             break;
@@ -392,7 +392,7 @@ static bool channel_may_discard(void) {
     EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
 
     write_test_message(channel[0], event, 10u, 0u);
-    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, NULL, 0, NULL, NULL, 0, NULL),
+    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, NULL, NULL, 0, 0, NULL, NULL),
               ERR_BUFFER_TOO_SMALL, "");
 
     EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
@@ -402,7 +402,7 @@ static bool channel_may_discard(void) {
 
     write_test_message(channel[0], event, 100u, 0u);
     size = 10u;
-    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, size, &size, NULL, 0, NULL),
+    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, NULL, size, 0, &size, NULL),
               ERR_BUFFER_TOO_SMALL, "");
     EXPECT_EQ(size, 100u, "wrong size");
 
@@ -414,8 +414,8 @@ static bool channel_may_discard(void) {
     write_test_message(channel[0], event, 0u, 5u);
     size = 10u;
     num_handles = 1u;
-    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, size, &size,
-                              handles, num_handles, &num_handles),
+    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, handles,
+                              size, num_handles, &size, &num_handles),
               ERR_BUFFER_TOO_SMALL, "");
     EXPECT_EQ(size, 0u, "wrong size");
     EXPECT_EQ(num_handles, 5u, "wrong number of handles");
@@ -425,8 +425,8 @@ static bool channel_may_discard(void) {
     write_test_message(channel[0], event, 100u, 5u);
     size = 10u;
     num_handles = 1u;
-    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, size, &size,
-                              handles, num_handles, &num_handles),
+    EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, handles,
+                              size, num_handles, &size, &num_handles),
               ERR_BUFFER_TOO_SMALL, "");
     EXPECT_EQ(size, 100u, "wrong size");
     EXPECT_EQ(num_handles, 5u, "wrong number of handles");
@@ -598,7 +598,7 @@ static int call_server(void* ptr) {
         uint32_t bytes = sizeof(msg[0]);
         uint32_t handles = 1;
         mx_handle_t handle = 0;
-        if (mx_channel_read(h, 0, &msg[n], bytes, &bytes, &handle, handles, &handles) != NO_ERROR) {
+        if (mx_channel_read(h, 0, &msg[n], &handle, bytes, handles, &bytes, &handles) != NO_ERROR) {
             fprintf(stderr, "call_server() read failed\n");
             break;
         }

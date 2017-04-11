@@ -23,8 +23,8 @@ mx_status_t mxr_processargs_read(mx_handle_t bootstrap,
 
     uint32_t got_bytes = 0;
     uint32_t got_handles = 0;
-    mx_status_t status = _mx_channel_read(bootstrap, 0, buffer, nbytes, &got_bytes,
-                                          handles, nhandles, &got_handles);
+    mx_status_t status = _mx_channel_read(bootstrap, 0, buffer, handles, nbytes,
+                                          nhandles, &got_bytes, &got_handles);
     if (status != NO_ERROR)
         return status;
     if (got_bytes != nbytes || got_handles != nhandles)

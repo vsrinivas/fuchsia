@@ -28,8 +28,8 @@ int main(void) {
     uint32_t bytes = sizeof(data);
     mx_handle_t handles[2];
     uint32_t nhandles = countof(handles);
-    mx_status_t status = mx_channel_read(h, 0, &data, bytes, &bytes,
-                                         handles, nhandles, &nhandles);
+    mx_status_t status = mx_channel_read(h, 0, &data, handles, bytes,
+                                         nhandles, &bytes, &nhandles);
     if (status != NO_ERROR) {
         fprintf(stderr, "mx_channel_read: %d\n", status);
         return 1;

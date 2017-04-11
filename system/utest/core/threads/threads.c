@@ -406,7 +406,7 @@ static bool test_suspend_channel_call(void) {
     // Read the message
     uint8_t buf[9];
     uint32_t actual_bytes;
-    ASSERT_EQ(mx_channel_read(channel, 0, buf, sizeof(buf), &actual_bytes, NULL, 0, NULL),
+    ASSERT_EQ(mx_channel_read(channel, 0, buf, NULL, sizeof(buf), 0, &actual_bytes, NULL),
               NO_ERROR, "");
     ASSERT_EQ(actual_bytes, sizeof(buf), "");
     ASSERT_EQ(memcmp(buf, "abcdefghi", sizeof(buf)), 0, "");
@@ -421,8 +421,8 @@ static bool test_suspend_channel_call(void) {
 
     // Make sure we can't read from the remote channel (the message should have
     // been reserved for the other thread, even though it is suspended).
-    EXPECT_EQ(mx_channel_read(thread_arg.channel, 0, buf, sizeof(buf), &actual_bytes, NULL, 0,
-                              NULL),
+    EXPECT_EQ(mx_channel_read(thread_arg.channel, 0, buf, NULL, sizeof(buf), 0,
+                              &actual_bytes, NULL),
               ERR_SHOULD_WAIT, "");
 
     // Wake the suspended thread

@@ -81,8 +81,8 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
 
             uint32_t r_size = test_args.size;
             uint32_t r_handles = test_args.handles;
-            status = mx_channel_read(mp[1], 0u, data.get(), r_size, &r_size,
-                                     handles.get(), r_handles, &r_handles);
+            status = mx_channel_read(mp[1], 0u, data.get(), handles.get(), r_size,
+                                     r_handles, &r_size, &r_handles);
             assert(status == NO_ERROR);
             assert(r_size == test_args.size);
             assert(r_handles == test_args.handles);

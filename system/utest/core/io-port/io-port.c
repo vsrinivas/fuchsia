@@ -294,7 +294,7 @@ static bool bind_channels_test(void)
     for (int ix = 0; ix != countof(order); ++ix) {
         status = mx_object_wait_one(recv_channel, MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL);
         EXPECT_EQ(status, NO_ERROR, "failed to wait for channel");
-        status = mx_channel_read(recv_channel, 0u, &report, bytes, &bytes, NULL, 0, NULL);
+        status = mx_channel_read(recv_channel, 0u, &report, NULL, bytes, 0, &bytes, NULL);
         EXPECT_EQ(status, NO_ERROR, "expected valid message");
         EXPECT_EQ(report.signals, MX_CHANNEL_READABLE, "invalid signal");
         EXPECT_EQ(report.type, MX_PORT_PKT_TYPE_IOSN, "invalid type");
@@ -366,7 +366,7 @@ static bool bind_sockets_test(void)
     for (int ix = 0; ix != 2; ++ix) {
         status = mx_object_wait_one(channel[0], MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL);
         EXPECT_EQ(status, NO_ERROR, "");
-        status = mx_channel_read(channel[0], 0u, &report, bytes, &bytes, NULL, 0, NULL);
+        status = mx_channel_read(channel[0], 0u, &report, NULL, bytes, 0, &bytes, NULL);
         EXPECT_EQ(status, NO_ERROR, "");
         EXPECT_EQ(report.signals, MX_CHANNEL_READABLE, "");
         EXPECT_EQ(report.type, MX_PORT_PKT_TYPE_IOSN, "");

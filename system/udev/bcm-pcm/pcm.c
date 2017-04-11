@@ -519,7 +519,7 @@ static int pcm_port_thread(void* arg) {
 
         if (port_out.signals == MX_CHANNEL_READABLE) {
 
-            status = mx_channel_read(channel, 0, &req, sizeof(req), &req_size, NULL, 0, NULL);
+            status = mx_channel_read(channel, 0, &req, NULL, sizeof(req), 0, &req_size, NULL);
             if (status != NO_ERROR) {
                 if (channel == ctx->buffer_ch) {
                     xprintf("error reading buffer channel...\n");

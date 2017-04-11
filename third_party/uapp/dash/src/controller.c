@@ -50,8 +50,8 @@ void controller_init() {
   mx_handle_t history_vmo;
   uint32_t read_bytes = 0;
   uint32_t read_handles = 0;
-  status = mx_channel_read(ctrl_channel, 0, NULL, 0, &read_bytes,
-                           &history_vmo, 1, &read_handles);
+  status = mx_channel_read(ctrl_channel, 0, NULL, &history_vmo, 0,
+                           1, &read_bytes, &read_handles);
   if (status != NO_ERROR) {
     fprintf(stderr,
             "Failed to read the ctrl response to the get_history command.\n");
@@ -129,8 +129,8 @@ void controller_pull_remote_entries() {
 
   while(true) {
     uint32_t read_bytes = 0;
-    mx_status_t status = mx_channel_read(ctrl_channel, 0, buffer, sizeof(buffer) - 1, &read_bytes,
-                                         NULL, 0, NULL);
+    mx_status_t status = mx_channel_read(ctrl_channel, 0, buffer, NULL,
+                                         sizeof(buffer) - 1, 0, &read_bytes, NULL);
     if (status == NO_ERROR) {
       if (strncmp(buffer, kAddRemoteEntryCommand, kAddRemoteEntryCommandLen) != 0) {
         fprintf(stderr, "Unrecognized shell controller command.\n");

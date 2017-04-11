@@ -126,7 +126,7 @@ static bool recv_msg(mx_handle_t handle, enum message* msg) {
 
     uint32_t num_bytes = sizeof(data);
 
-    ASSERT_GE(mx_channel_read(handle, 0, &data, num_bytes, &num_bytes, NULL, 0, NULL), 0,
+    ASSERT_GE(mx_channel_read(handle, 0, &data, NULL, num_bytes, 0, &num_bytes, NULL), 0,
               "Error while reading message");
     EXPECT_EQ(num_bytes, sizeof(data), "unexpected message size");
     if (num_bytes != sizeof(data)) {

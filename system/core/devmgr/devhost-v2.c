@@ -168,8 +168,8 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
     uint32_t hcount = 2;
 
     mx_status_t r;
-    if ((r = mx_channel_read(h, 0, &msg, msize, &msize,
-                             hin, hcount, &hcount)) < 0) {
+    if ((r = mx_channel_read(h, 0, &msg, hin, msize,
+                             hcount, &msize, &hcount)) < 0) {
         return r;
     }
 

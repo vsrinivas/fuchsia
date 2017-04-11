@@ -108,7 +108,7 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
 
     uint32_t num_bytes = 0;
     uint32_t num_handles = 0;
-    mx_status_t status = mx_channel_read(h, 0, NULL, 0, &num_bytes, NULL, 0, &num_handles);
+    mx_status_t status = mx_channel_read(h, 0, NULL, NULL, 0, 0, &num_bytes, &num_handles);
     if (status == ERR_BAD_STATE) {
         return ERR_DISPATCHER_NO_WORK;
     } else if (status != ERR_BUFFER_TOO_SMALL ||
@@ -120,8 +120,8 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
 
     mx_handle_t cmd_handle = 0;
     uint8_t buf[ACPI_MAX_REQUEST_SIZE];
-    status = mx_channel_read(h, 0, buf, num_bytes, &num_bytes, &cmd_handle,
-            num_handles, &num_handles);
+    status = mx_channel_read(h, 0, buf, &cmd_handle, num_bytes,
+            num_handles, &num_bytes, &num_handles);
     if (status != NO_ERROR) {
         goto cleanup;
     }

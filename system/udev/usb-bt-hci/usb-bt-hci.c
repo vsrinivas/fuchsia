@@ -262,7 +262,7 @@ static bool hci_handle_cmd_read_events(hci_t* hci, mx_wait_item_t* cmd_item) {
         uint8_t buf[CMD_BUF_SIZE];
         uint32_t length = sizeof(buf);
         mx_status_t status =
-            mx_channel_read(cmd_item->handle, 0, buf, length, &length, NULL, 0, NULL);
+            mx_channel_read(cmd_item->handle, 0, buf, NULL, length, 0, &length, NULL);
         if (status < 0) {
             printf("hci_read_thread: failed to read from command channel %s\n",
                    mx_status_get_string(status));
@@ -304,7 +304,7 @@ static bool hci_handle_acl_read_events(hci_t* hci, mx_wait_item_t* acl_item) {
         uint8_t buf[BT_HCI_MAX_FRAME_SIZE];
         uint32_t length = sizeof(buf);
         mx_status_t status =
-            mx_channel_read(acl_item->handle, 0, buf, length, &length, NULL, 0, NULL);
+            mx_channel_read(acl_item->handle, 0, buf, NULL, length, 0, &length, NULL);
         if (status < 0) {
             printf("hci_read_thread: failed to read from ACL channel %s\n",
                    mx_status_get_string(status));

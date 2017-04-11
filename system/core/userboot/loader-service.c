@@ -35,7 +35,7 @@ static bool handle_loader_rpc(mx_handle_t log, struct bootfs* bootfs,
 
     uint32_t size;
     mx_status_t status = mx_channel_read(
-        channel, 0, &msgbuf, sizeof(msgbuf), &size, NULL, 0, NULL);
+        channel, 0, &msgbuf, NULL, sizeof(msgbuf), 0, &size, NULL);
 
     // This is the normal error for the other end going away,
     // which happens when the process dies.

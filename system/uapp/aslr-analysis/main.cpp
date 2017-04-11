@@ -180,7 +180,7 @@ int GatherReports(const char* test_bin, mxtl::Array<ReportInfo>* reports) {
         ReportInfo* report = &(*reports)[run];
 
         uint32_t len = sizeof(*report);
-        status = mx_channel_read(handles[0], 0, report, len, &len, NULL, 0, NULL);
+        status = mx_channel_read(handles[0], 0, report, NULL, len, 0, &len, NULL);
         if (status != 0 || len != sizeof(*report)) {
             printf("Failed to read report: status %d, len %u\n", status, len);
             mx_handle_close(handles[0]);

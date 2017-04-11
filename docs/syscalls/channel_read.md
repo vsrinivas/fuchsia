@@ -10,10 +10,9 @@ channel_read - read a message from a channel
 #include <magenta/syscalls.h>
 
 mx_status_t mx_channel_read(mx_handle_t handle, uint32_t options,
-                            void* bytes,
-                            uint32_t num_bytes, uint32_t* actual_bytes
-                            mx_handle_t* handles,
-                            uint32_t num_handles, uint32_t* actual_handles);
+                            void* bytes, mx_handle_t* handles,
+                            uint32_t num_bytes, uint32_t num_handles,
+                            uint32_t* actual_bytes, uint32_t* actual_handles);
 ```
 
 ## DESCRIPTION

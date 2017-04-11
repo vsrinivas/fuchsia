@@ -32,8 +32,8 @@ public:
     mx_status_t read(uint32_t flags, void* bytes, uint32_t num_bytes,
                      uint32_t* actual_bytes, mx_handle_t* handles,
                      uint32_t num_handles, uint32_t* actual_handles) const {
-        return mx_channel_read(get(), flags, bytes, num_bytes, actual_bytes,
-                               handles, num_handles, actual_handles);
+        return mx_channel_read(get(), flags, bytes, handles, num_bytes,
+                               num_handles, actual_bytes, actual_handles);
     }
 
     mx_status_t write(uint32_t flags, const void* bytes, uint32_t num_bytes,

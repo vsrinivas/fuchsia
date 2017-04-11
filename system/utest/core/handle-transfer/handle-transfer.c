@@ -46,7 +46,7 @@ bool handle_transfer_test(void) {
     mx_handle_t H;
     uint32_t num_bytes = 0u;
     uint32_t num_handles = 1u;
-    status = mx_channel_read(B[1], 0u, NULL, 0, &num_bytes, &H, num_handles, &num_handles);
+    status = mx_channel_read(B[1], 0u, NULL, &H, 0, num_handles, &num_bytes, &num_handles);
     snprintf(msg, sizeof(msg), "failed to read message from B1: %u\n", status);
     EXPECT_EQ(status, NO_ERROR, msg);
 
@@ -61,7 +61,7 @@ bool handle_transfer_test(void) {
         char buf[1];
         num_bytes = 1u;
         num_handles = 0u;
-        status = mx_channel_read(H, 0u, buf, num_bytes, &num_bytes, NULL, 0, &num_handles);
+        status = mx_channel_read(H, 0u, buf, NULL, num_bytes, 0, &num_bytes, &num_handles);
         snprintf(msg, sizeof(msg), "failed to read message from H: %u\n", status);
         EXPECT_EQ(status, NO_ERROR, msg);
         unittest_printf("read message: %c\n", buf[0]);
@@ -97,7 +97,7 @@ static int thread(void* arg) {
     // Read from B0 into H, thus canceling any waits on A0.
     mx_handle_t H;
     uint32_t num_handles = 1;
-    status = mx_channel_read(B[0], 0, NULL, 0, NULL, &H, num_handles, &num_handles);
+    status = mx_channel_read(B[0], 0, NULL, &H, 0, num_handles, NULL, &num_handles);
     if (status != NO_ERROR || num_handles < 1) {
         UNITTEST_TRACEF("failed to read message handle H from B0: %d\n", status);
     }

@@ -101,7 +101,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
     mx_loader_svc_msg_t* msg = (void*) data;
     uint32_t sz = sizeof(data);
     mx_status_t r;
-    if ((r = mx_channel_read(h, 0, msg, sz, &sz, NULL, 0, NULL)) < 0) {
+    if ((r = mx_channel_read(h, 0, msg, NULL, sz, 0, &sz, NULL)) < 0) {
         // This is the normal error for the other end going away,
         // which happens when the process dies.
         if (r != ERR_PEER_CLOSED)

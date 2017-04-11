@@ -218,7 +218,7 @@ mx_status_t coordinator_handler(mx_handle_t h, void* cb, void* cookie) {
 
     uint32_t dsz = sizeof(msg);
     uint32_t hcount = 2;
-    if ((status = mx_channel_read(h, 0, &msg, dsz, &dsz, handles, hcount, &hcount)) < 0) {
+    if ((status = mx_channel_read(h, 0, &msg, handles, dsz, hcount, &dsz, &hcount)) < 0) {
         if (status == ERR_BAD_STATE) {
             return ERR_DISPATCHER_NO_WORK;
         }

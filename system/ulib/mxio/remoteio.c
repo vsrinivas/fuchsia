@@ -96,7 +96,7 @@ mx_status_t mxrio_handle_rpc(mx_handle_t h, mxrio_cb_t cb, void* cookie) {
 
     msg.hcount = MXIO_MAX_HANDLES;
     uint32_t dsz = sizeof(msg);
-    if ((r = mx_channel_read(h, 0, &msg, dsz, &dsz, msg.handle, msg.hcount, &msg.hcount)) < 0) {
+    if ((r = mx_channel_read(h, 0, &msg, msg.handle, dsz, msg.hcount, &dsz, &msg.hcount)) < 0) {
         if (r == ERR_SHOULD_WAIT) {
             return ERR_DISPATCHER_NO_WORK;
         }
@@ -492,8 +492,8 @@ static mx_status_t mxrio_reply_channel_call(mx_handle_t rio_h, mxrio_msg_t* msg,
     memset(info, 0xfe, sizeof(*info));
     uint32_t dsize = MXRIO_OBJECT_MAXSIZE;
     info->hcount = MXIO_MAX_HANDLES;
-    r = mx_channel_read(h, 0, info, dsize, &dsize, &info->handle[1],
-                        info->hcount, &info->hcount);
+    r = mx_channel_read(h, 0, info, &info->handle[1], dsize,
+                        info->hcount, &dsize, &info->hcount);
     if (r < 0) {
         mx_handle_close(h);
         return r;

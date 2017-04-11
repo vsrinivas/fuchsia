@@ -40,7 +40,7 @@ mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, char name[MXIO_MAX_FILENA
     for (;;) {
         mx_status_t status;
         uint32_t sz = MXIO_MAX_FILENAME;
-        if ((status = mx_channel_read(watcher->h, 0, name, sz, &sz, NULL, 0, NULL)) < 0) {
+        if ((status = mx_channel_read(watcher->h, 0, name, NULL, sz, 0, &sz, NULL)) < 0) {
             if (status != ERR_SHOULD_WAIT) {
                 return status;
             }

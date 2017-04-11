@@ -94,10 +94,9 @@ void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
 }
 
 mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
-                             user_ptr<void> _bytes,
-                             uint32_t num_bytes, user_ptr<uint32_t> _num_bytes,
-                             user_ptr<mx_handle_t> _handles,
-                             uint32_t num_handles, user_ptr<uint32_t> _num_handles) {
+                             user_ptr<void> _bytes, user_ptr<mx_handle_t> _handles,
+                             uint32_t num_bytes, uint32_t num_handles,
+                             user_ptr<uint32_t> _num_bytes, user_ptr<uint32_t> _num_handles) {
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p",
             handle_value, _bytes.get(), _num_bytes.get(), _handles.get(), _num_handles.get());
 
