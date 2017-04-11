@@ -1,0 +1,81 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+package("time-service") {
+  deps = [
+    ":time_service",
+  ]
+
+  binaries = [ {
+        name = "time_service"
+      } ]
+  resources = [ {
+        path = rebase_path("roughtime-servers.json")
+        dest = "time-service/roughtime-servers.json"
+      } ]
+}
+
+package("time-service-tests") {
+  testonly = true
+  deps = [
+    ":tests",
+  ]
+
+  tests = [ {
+        name = "time_service_tests"
+      } ]
+}
+
+config("ts_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+source_set("time_service_src") {
+  sources = [
+    "src/roughtime_server.cc",
+    "src/time_server_config.cc",
+    "src/time_service.cc",
+  ]
+  public_configs = [ ":ts_config" ]
+  deps = [
+    "//lib/ftl",
+    "//third_party/boringssl",
+    "//third_party/rapidjson",
+    "//third_party/roughtime:client_lib",
+  ]
+}
+
+executable("time_service") {
+  sources = [
+    "src/main.cc",
+  ]
+  public_configs = [ ":ts_config" ]
+  deps = [
+    ":time_service_src",
+    "//lib/ftl",
+  ]
+}
+
+executable("tests") {
+  output_name = "time_service_tests"
+
+  testonly = true
+
+  sources = [
+    "test/roughtime_server_test.cc",
+    "test/time_server_config_test.cc",
+  ]
+
+  deps = [
+    ":time_service_src",
+    "//apps/test_runner/src:gtest_main",
+    "//lib/ftl",
+    "//third_party/boringssl",
+    "//third_party/gtest",
+    "//third_party/roughtime:client_lib",
+  ]
+}

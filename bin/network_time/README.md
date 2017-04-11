@@ -1,5 +1,7 @@
-Fuchsia Open Source Template Repository
+Time-Service
 =======================================
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This service uses roughtime service to set the time of the machine at startup.
+
+It tries to get and update system time 3 times (sleeping for 10 seconds between
+re-tries) and exits.
