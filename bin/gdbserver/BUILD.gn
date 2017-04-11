@@ -9,6 +9,7 @@ group("gdbserver") {
   deps = [
     "bin/debugserver",
     "bin/ipt",
+    "bin/ipt-dump($host_toolchain)",
     "lib/debugger-utils",
     "lib/inferior-control",
   ]
