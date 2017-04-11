@@ -130,6 +130,38 @@ static mx_status_t vmofile_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t m
         memcpy(ptr, &attr, sizeof(attr));
         return sizeof(attr);
     }
+    case MXRIO_MMAP: {
+        if (len != sizeof(mxrio_mmap_data_t) || maxreply < sizeof(mxrio_mmap_data_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        mxrio_mmap_data_t* data = ptr;
+        mx_rights_t rights = MX_RIGHT_TRANSFER | MX_RIGHT_MAP |
+                             MX_RIGHT_DUPLICATE | MX_RIGHT_GET_PROPERTY;
+        if (data->flags & MXIO_MMAP_FLAG_WRITE) {
+            return ERR_ACCESS_DENIED;
+        }
+        rights |= (data->flags & MXIO_MMAP_FLAG_READ) ? MX_RIGHT_READ : 0;
+        rights |= (data->flags & MXIO_MMAP_FLAG_EXEC) ? MX_RIGHT_EXECUTE : 0;
+
+        // Make a tiny clone of the portion of the portion of the VMO representing this file
+        mx_handle_t h;
+        // TODO(smklein): In the future, "vf->vmo" will already be a cloned vmo
+        // representing this file (logically, making "vf->off" always zero), and
+        // nothing past "vf->end". As a consequence, we will be able to
+        // duplicate "vf->vmo" instead of cloning it.
+        mx_status_t status = mx_vmo_clone(vf->vmo, MX_VMO_CLONE_COPY_ON_WRITE,
+                                          vf->off, vf->end - vf->off, &h);
+        if (status != NO_ERROR) {
+            return status;
+        }
+        // Only return this clone with the requested rights
+        mx_handle_t out;
+        if ((status = mx_handle_replace(h, rights, &out)) != NO_ERROR) {
+            mx_handle_close(h);
+            return status;
+        }
+        return out;
+    }
     default:
         return ERR_INVALID_ARGS;
     }
