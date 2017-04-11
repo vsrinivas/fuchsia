@@ -287,7 +287,6 @@ status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked) {
         goto cleanup;
     }
     *LVT_TIMER_ADDR = timer_config;
-    mb();
     *INIT_COUNT_ADDR = count;
 cleanup:
     arch_interrupt_restore(state, 0);
@@ -345,7 +344,6 @@ status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor) {
         goto cleanup;
     }
     *LVT_TIMER_ADDR = LVT_VECTOR(X86_INT_APIC_TIMER) | LVT_TIMER_MODE_PERIODIC;
-    mb();
     *INIT_COUNT_ADDR = count;
 cleanup:
     arch_interrupt_restore(state, 0);
