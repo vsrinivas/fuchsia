@@ -75,7 +75,7 @@ MODULE_BUILDDIR := $(call TOBUILDDIR,$(MODULE))
 # MODULE_NAME is used to generate installed names
 # it defaults to being derived from the MODULE directory
 ifeq ($(MODULE_NAME),)
-MODULE_NAME := $(basename $(notdir $(MODULE)))
+MODULE_NAME := $(lastword $(subst /,$(SPACE),$(MODULE)))
 endif
 
 # Introduce local, libc and dependency include paths
