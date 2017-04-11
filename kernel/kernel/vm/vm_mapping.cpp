@@ -405,8 +405,14 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
         paddr_t pa;
         status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, &pa);
         if (status < 0) {
-            // no page to map, skip ahead
-            continue;
+            // no page to map
+            if (commit) {
+                // fail when we can't commit every requested page
+                return status;
+            } else {
+                // skip ahead
+                continue;
+            }
         }
 
         vaddr_t va = base_ + o;
