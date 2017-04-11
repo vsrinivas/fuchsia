@@ -83,3 +83,7 @@ int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid);
 
 void uint8_to_guid_string(char* dst, const uint8_t* src);
 // converts GUID to a string
+
+void gpt_device_get_header_guid(gpt_device_t* dev,
+                                uint8_t (*disk_guid_out)[GPT_GUID_LEN]);
+// given a gpt device, get the GUID for the disk
