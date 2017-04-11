@@ -92,7 +92,7 @@ void MessageLoop::RemoveHandler(HandlerKey key) {
   auto it = handler_data_.find(key);
   if (it == handler_data_.end())
     return;
-  mx_handle_cancel(it->second.handle, key, MX_CANCEL_KEY);
+  port_.cancel(it->second.handle, key);
   handler_data_.erase(it);
 }
 
