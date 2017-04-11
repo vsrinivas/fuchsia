@@ -16,9 +16,16 @@
 
 namespace compositor {
 
+namespace {
+
+enum FramebufferType { kVirtualConsole, kDisplay };
+
+}  // namespace
+
 class Framebuffer {
  public:
-  static std::unique_ptr<Framebuffer> Open();
+  static std::unique_ptr<Framebuffer> OpenFromDisplay();
+  static std::unique_ptr<Framebuffer> OpenFromVirtualConsole();
 
   ~Framebuffer();
 
@@ -28,12 +35,15 @@ class Framebuffer {
   bool Flush();
 
  private:
-  explicit Framebuffer(ftl::UniqueFD fd);
+  static std::unique_ptr<Framebuffer> Open(FramebufferType type);
+
+  explicit Framebuffer(ftl::UniqueFD fd, FramebufferType framebuffer_type);
   bool Initialize();
 
   ftl::UniqueFD fd_;
   mx::vmo vmo_;
   mx_display_info_t info_ = {};
+  FramebufferType type_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Framebuffer);
 };

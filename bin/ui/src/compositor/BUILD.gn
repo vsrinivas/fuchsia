@@ -8,7 +8,11 @@ source_set("common") {
   sources = [
     "backend/framebuffer.cc",
     "backend/framebuffer.h",
+    "backend/framebuffer_output.cc",
+    "backend/framebuffer_output.h",
     "backend/output.h",
+    "backend/software_rasterizer.cc",
+    "backend/software_rasterizer.h",
     "compositor_app.cc",
     "compositor_app.h",
     "compositor_engine.cc",
@@ -70,18 +74,13 @@ source_set("common") {
   if (mozart_use_vulkan) {
     defines = [ "MOZART_USE_VULKAN" ]
     sources += [
-      "backend/framebuffer_output_vulkan.cc",
-      "backend/framebuffer_output_vulkan.h",
+      "backend/vulkan_rasterizer.cc",
+      "backend/vulkan_rasterizer.h",
     ]
     deps = [
       "//flutter/vulkan",
       "//magma:vulkan",
       "//third_party/skia:gpu",
-    ]
-  } else {
-    sources += [
-      "backend/framebuffer_output_cpu.cc",
-      "backend/framebuffer_output_cpu.h",
     ]
   }
 }

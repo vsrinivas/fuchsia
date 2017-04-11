@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_VULKAN_H_
-#define APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_VULKAN_H_
+#ifndef APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
+#define APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
+
+#include <magenta/device/display.h>
 
 #include "apps/mozart/src/compositor/backend/output.h"
 #include "lib/ftl/macros.h"
@@ -12,6 +14,7 @@
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
+#include "lib/mtl/io/device_watcher.h"
 #include "lib/mtl/threading/thread.h"
 
 namespace mtl {
@@ -24,11 +27,23 @@ class VulkanWindow;
 
 namespace compositor {
 
-// Renderer backed by a Magma surface. Uses Skia Vulkan backend.
-class FramebufferOutputVulkan : public Output {
+class Rasterizer;
+
+class FramebufferOutput : public Output {
+  enum RasterizerType {
+    kSoftware,
+#ifdef MOZART_USE_VULKAN
+    kVulkan
+#endif
+  };
+  friend class SoftwareRasterizer;
+#ifdef MOZART_USE_VULKAN
+  friend class VulkanRasterizer;
+#endif
+
  public:
-  FramebufferOutputVulkan();
-  ~FramebufferOutputVulkan() override;
+  FramebufferOutput();
+  ~FramebufferOutput() override;
 
   void Initialize(ftl::Closure error_callback);
 
@@ -38,16 +53,19 @@ class FramebufferOutputVulkan : public Output {
   void SubmitFrame(ftl::RefPtr<RenderFrame> frame) override;
 
  private:
-  class Rasterizer;
+  bool InitializeRasterizer(RasterizerType rasterizer_type,
+                            mx_display_info_t* display_info);
+#ifdef MOZART_USE_VULKAN
+  void WaitForDisplayDevice();
+  void DisplayDeviceReady();
+#endif
+  void WaitForVirtualConsole();
+  void VirtualConsoleReady();
+  void OnDisplayReady(mx_display_info_t mx_display_info);
 
-  static std::unique_ptr<vulkan::VulkanWindow> InitializeVulkanWindow(
-      int32_t surface_width,
-      int32_t surface_height);
-
-  void PostErrorCallback();
   void PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame);
 
-  void OnDisplayReady(mozart::DisplayInfoPtr display_info);
+  void DispatchDisplayReady(mozart::DisplayInfoPtr display_info);
 
   void OnFrameFinished(uint32_t frame_number,
                        ftl::TimePoint submit_time,
@@ -56,6 +74,8 @@ class FramebufferOutputVulkan : public Output {
   void PrepareNextFrame();
   void RunScheduledFrameCallback();
   void TracePendingFrames();
+
+  void PostErrorCallback();
 
   ftl::RefPtr<ftl::TaskRunner> compositor_task_runner_;
   ftl::Closure error_callback_;
@@ -77,11 +97,13 @@ class FramebufferOutputVulkan : public Output {
   mozart::DisplayInfoPtr display_info_;
   std::vector<DisplayCallback> display_callbacks_;
 
-  ftl::WeakPtrFactory<FramebufferOutputVulkan> weak_ptr_factory_;
+  std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FramebufferOutputVulkan);
+  ftl::WeakPtrFactory<FramebufferOutput> weak_ptr_factory_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(FramebufferOutput);
 };
 
 }  // namespace compositor
 
-#endif  // APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_VULKAN_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
