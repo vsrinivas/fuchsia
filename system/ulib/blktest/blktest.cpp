@@ -732,9 +732,11 @@ bool blkdev_test_fifo_bad_client_unaligned_request(void) {
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
-    // Create a vmo
+    // Create a vmo of at least size "kBlockSize * 2", since we'll
+    // be reading "kBlockSize" bytes from an offset below, and we want it
+    // to fit within the bounds of the VMO.
     test_vmo_object_t obj;
-    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize), "");
+    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize * 2), "");
 
     block_fifo_request_t request;
     request.txnid      = txnid;
