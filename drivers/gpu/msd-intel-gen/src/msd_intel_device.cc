@@ -201,6 +201,8 @@ bool MsdIntelDevice::Init(void* device_handle)
     // Clear faults
     registers::AllEngineFault::clear(register_io_.get());
 
+    QuerySliceInfo(&subslice_total_, &eu_total_);
+
     interrupt_ = platform_device_->RegisterInterrupt();
     if (!interrupt_)
         return DRETF(false, "failed to register interrupt");
@@ -843,6 +845,17 @@ msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id client_id)
 void msd_device_destroy(msd_device_t* dev) { delete MsdIntelDevice::cast(dev); }
 
 uint32_t msd_device_get_id(msd_device_t* dev) { return MsdIntelDevice::cast(dev)->device_id(); }
+
+magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out)
+{
+    switch (id) {
+        case MAGMA_QUERY_VENDOR_PARAM_0:
+            *value_out = MsdIntelDevice::cast(device)->subslice_total();
+            *value_out = (*value_out << 32) | MsdIntelDevice::cast(device)->eu_total();
+            return MAGMA_STATUS_OK;
+    }
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
+}
 
 void msd_device_dump_status(msd_device_t* device)
 {

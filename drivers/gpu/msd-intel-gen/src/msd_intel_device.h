@@ -40,6 +40,8 @@ public:
     std::unique_ptr<MsdIntelConnection> Open(msd_client_id client_id);
 
     uint32_t device_id() { return device_id_; }
+    uint32_t subslice_total() { return subslice_total_; }
+    uint32_t eu_total() { return eu_total_; }
 
     static MsdIntelDevice* cast(msd_device_t* dev)
     {
@@ -160,6 +162,8 @@ private:
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
+    uint32_t subslice_total_{};
+    uint32_t eu_total_{};
 
     std::thread device_thread_;
     std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
