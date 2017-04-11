@@ -90,7 +90,7 @@ Sections will be populated over time.
 
  - Building
  - Testing
- - Debugging
+ - [Debugging](debugging.md)
  - Tracing
  - [Toolchain](toolchain.md)
 
