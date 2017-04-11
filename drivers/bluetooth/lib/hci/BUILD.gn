@@ -21,6 +21,8 @@ static_library("hci") {
     "event_packet.h",
     "le_connection_params.cc",
     "le_connection_params.h",
+    "sequential_command_runner.cc",
+    "sequential_command_runner.h",
     "transport.cc",
     "transport.h",
   ]

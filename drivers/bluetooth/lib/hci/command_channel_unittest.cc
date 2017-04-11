@@ -12,6 +12,7 @@
 #include "apps/bluetooth/lib/hci/command_packet.h"
 #include "apps/bluetooth/lib/hci/fake_controller.h"
 #include "apps/bluetooth/lib/hci/hci.h"
+#include "apps/bluetooth/lib/hci/sequential_command_runner.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -73,7 +74,7 @@ class CommandChannelTest : public ::testing::Test {
     message_loop_.Run();
   }
 
-  Transport* transport() const { return transport_.get(); }
+  ftl::RefPtr<Transport> transport() const { return transport_; }
   CommandChannel* cmd_channel() const { return transport_->command_channel(); }
   FakeController* fake_controller() const { return fake_controller_.get(); }
   mtl::MessageLoop* message_loop() { return &message_loop_; }
@@ -505,6 +506,162 @@ TEST_F(CommandChannelTest, TransportClosedCallback) {
   message_loop()->task_runner()->PostTask([this] { fake_controller()->CloseCommandChannel(); });
   RunMessageLoop();
   EXPECT_TRUE(closed_cb_called);
+}
+
+TEST_F(CommandChannelTest, SequentialCommandRunner) {
+  // HCI_Reset
+  auto reset_bytes = common::CreateStaticByteBuffer(
+      LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
+      0x00                                   // parameter_total_size
+      );
+  auto reset_status_error_bytes = common::CreateStaticByteBuffer(
+      kCommandStatusEventCode,
+      0x04,  // parameter_total_size (4 byte payload)
+      Status::kHardwareFailure, kNumHCICommandPackets, LowerBits(kReset),
+      UpperBits(kReset)  // HCI_Reset opcode
+      );
+  auto reset_cmpl_error_bytes = common::CreateStaticByteBuffer(
+      kCommandCompleteEventCode,
+      0x04,  // parameter_total_size (4 byte payload)
+      kNumHCICommandPackets, LowerBits(kReset),
+      UpperBits(kReset),  // HCI_Reset opcode
+      Status::kHardwareFailure);
+  auto reset_cmpl_success_bytes = common::CreateStaticByteBuffer(
+      kCommandCompleteEventCode,
+      0x04,  // parameter_total_size (4 byte payload)
+      kNumHCICommandPackets, LowerBits(kReset),
+      UpperBits(kReset),  // HCI_Reset opcode
+      Status::kSuccess);
+
+  // Here we perform multiple test sequences where we queue up several HCI_Reset commands in each
+  // sequence. We expect each sequence to terminate differently after the following HCI
+  // transactions:
+  //
+  // Sequence 1 (HCI packets)
+  //    -> Reset; <- error status
+  fake_controller()->QueueCommandTransaction(
+      CommandTransaction(reset_bytes, {&reset_status_error_bytes}));
+
+  // Sequence 2 (HCI packets)
+  //    -> Reset; <- error complete
+  fake_controller()->QueueCommandTransaction(
+      CommandTransaction(reset_bytes, {&reset_cmpl_error_bytes}));
+
+  // Sequence 3 (HCI packets)
+  //    -> Reset; <- success complete
+  //    -> Reset; <- error complete
+  fake_controller()->QueueCommandTransaction(
+      CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
+  fake_controller()->QueueCommandTransaction(
+      CommandTransaction(reset_bytes, {&reset_cmpl_error_bytes}));
+
+  // Sequence 4 (HCI packets)
+  //    -> Reset; <- success complete
+  //    -> Reset; <- success complete
+  fake_controller()->QueueCommandTransaction(
+      CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
+  fake_controller()->QueueCommandTransaction(
+      CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
+
+  // Sequence 5 (HCI packets)
+  //    -> Reset; <- success complete
+  //    -> Reset; <- success complete
+  fake_controller()->QueueCommandTransaction(
+      CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
+  fake_controller()->QueueCommandTransaction(
+      CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
+
+  fake_controller()->Start();
+
+  bool result;
+  auto result_cb = [&, this](bool cb_result) {
+    result = cb_result;
+    message_loop()->QuitNow();
+  };
+
+  int cb_called = 0;
+  auto cb = [&](const EventPacket& event) { cb_called++; };
+
+  // Sequence 1 (test)
+  SequentialCommandRunner cmd_runner(message_loop()->task_runner(), transport());
+  EXPECT_FALSE(cmd_runner.HasQueuedCommands());
+
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);  // <-- Will not run
+
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_TRUE(cmd_runner.HasQueuedCommands());
+
+  cmd_runner.RunCommands(result_cb);
+  EXPECT_FALSE(cmd_runner.IsReady());
+  RunMessageLoop();
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_FALSE(cmd_runner.HasQueuedCommands());
+  EXPECT_EQ(0, cb_called);
+  EXPECT_FALSE(result);
+
+  // Sequence 2 (test)
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);  // <-- Will not run
+
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_TRUE(cmd_runner.HasQueuedCommands());
+
+  cmd_runner.RunCommands(result_cb);
+  EXPECT_FALSE(cmd_runner.IsReady());
+  RunMessageLoop();
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_FALSE(cmd_runner.HasQueuedCommands());
+  EXPECT_EQ(0, cb_called);
+  EXPECT_FALSE(result);
+
+  // Sequence 3 (test)
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);  // <-- Will not run
+
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_TRUE(cmd_runner.HasQueuedCommands());
+
+  cmd_runner.RunCommands(result_cb);
+  EXPECT_FALSE(cmd_runner.IsReady());
+  RunMessageLoop();
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_FALSE(cmd_runner.HasQueuedCommands());
+  EXPECT_EQ(1, cb_called);
+  EXPECT_FALSE(result);
+  cb_called = 0;
+
+  // Sequence 4 (test)
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
+
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_TRUE(cmd_runner.HasQueuedCommands());
+
+  cmd_runner.RunCommands(result_cb);
+  EXPECT_FALSE(cmd_runner.IsReady());
+  RunMessageLoop();
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_FALSE(cmd_runner.HasQueuedCommands());
+  EXPECT_EQ(2, cb_called);
+  EXPECT_TRUE(result);
+  cb_called = 0;
+
+  // Sequence 5 (test) (no callback passed to QueueCommand)
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes));
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes));
+
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_TRUE(cmd_runner.HasQueuedCommands());
+
+  cmd_runner.RunCommands(result_cb);
+  EXPECT_FALSE(cmd_runner.IsReady());
+  RunMessageLoop();
+  EXPECT_TRUE(cmd_runner.IsReady());
+  EXPECT_FALSE(cmd_runner.HasQueuedCommands());
+  EXPECT_EQ(0, cb_called);
+  EXPECT_TRUE(result);
 }
 
 }  // namespace
