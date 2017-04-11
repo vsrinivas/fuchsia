@@ -46,7 +46,7 @@ def main():
         'third_party/netstack': 'github.com/google/netstack'
     }
 
-    go_binary = os.path.join(args.fuchsia_root, "third_party/go/bin/go")
+    go_binary = os.path.join(args.root_out_dir, "gen/goroot/bin/go")
     gopath = args.root_out_dir
     for src in sympaths:
         dst = os.path.join(gopath, "src", sympaths[src])
@@ -78,9 +78,8 @@ def main():
     if 'GOROOT' in os.environ:
         del os.environ['GOROOT']
     godepfile = os.path.join(args.fuchsia_root, 'buildtools/godepfile')
-    pkgdir = os.path.join(args.root_out_dir, 'pkg')
 
-    retcode = subprocess.call([go_binary, 'install', '-pkgdir', pkgdir, args.package],
+    retcode = subprocess.call([go_binary, 'install', '-a', args.package],
                               env=os.environ)
     if retcode == 0:
         binname = os.path.basename(args.package)
