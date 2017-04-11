@@ -60,6 +60,6 @@ does not have **MX_RIGHT_WRITE**.
 
 ## SEE ALSO
 
-[handle_cancel](handle_cancel.md).
+[port_cancel](port_cancel.md).
 [port_queue](port_queue.md).
 [port_wait](port_wait2.md).
