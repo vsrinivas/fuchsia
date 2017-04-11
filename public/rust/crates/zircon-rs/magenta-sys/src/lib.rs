@@ -9,6 +9,8 @@ extern crate core;
 #[macro_use]
 extern crate bitflags;
 
+use std::mem;
+
 pub type mx_handle_t = i32;
 
 pub type mx_status_t = i32;
@@ -213,5 +215,90 @@ pub struct mx_pcie_get_nth_info_t {
 
 // TODO: Actually a union
 pub type mx_rrec_t = [u8; 64];
+
+pub const MX_PORT_OPT_V1: u32 = 0;
+pub const MX_PORT_OPT_V2: u32 = 1;
+
+// Ports V2
+#[repr(u32)]
+#[derive(Debug, Eq, PartialEq)]
+pub enum mx_packet_type_t {
+    MX_PKT_TYPE_USER = 0,
+    MX_PKT_TYPE_SIGNAL_ONE = 1,
+    MX_PKT_TYPE_SIGNAL_REP = 2,
+}
+
+impl Default for mx_packet_type_t {
+    fn default() -> Self {
+        mx_packet_type_t::MX_PKT_TYPE_USER
+    }
+}
+
+#[repr(C)]
+pub struct mx_packet_signal_t {
+    pub trigger: mx_signals_t,
+    pub observed: mx_signals_t,
+    pub count: u64,
+}
+
+// Actually a union of different integer types, but this should be good enough.
+pub type mx_packet_user_t = [u8; 32];
+
+#[repr(C)]
+#[derive(Debug, Default, Eq, PartialEq)]
+pub struct mx_port_packet_t {
+    pub key: u64,
+    pub packet_type: mx_packet_type_t,
+    pub status: u32,
+    union: [u8; 32],
+}
+
+impl mx_port_packet_t {
+    pub fn new(key: u64, packet_type: mx_packet_type_t, status: u32, user: mx_packet_user_t)
+        -> mx_port_packet_t
+    {
+        mx_port_packet_t {
+            key: key,
+            packet_type: packet_type,
+            status: status,
+            union: user,
+        }
+    }
+
+    pub fn new_signal(key: u64, packet_type: mx_packet_type_t, status: u32,
+        signal: mx_packet_signal_t) -> mx_port_packet_t
+    {
+        let mut union = [0; 32];
+        unsafe {
+            union[0..16].copy_from_slice(&mem::transmute::<mx_packet_signal_t, [u8; 16]>(signal));
+        }
+        mx_port_packet_t {
+            key: key,
+            packet_type: packet_type,
+            status: status,
+            union: union,
+        }
+    }
+
+    pub fn user(&self) -> Option<mx_packet_user_t> {
+        if self.packet_type == mx_packet_type_t::MX_PKT_TYPE_USER {
+            Some(self.union)
+        } else {
+            None
+        }
+    }
+
+    pub fn signal(&self) -> Option<mx_packet_signal_t> {
+        if self.packet_type == mx_packet_type_t::MX_PKT_TYPE_SIGNAL_ONE
+            || self.packet_type == mx_packet_type_t::MX_PKT_TYPE_SIGNAL_REP
+        {
+            unsafe {
+                mem::transmute_copy(&self.union)
+            }
+        } else {
+            None
+        }
+    }
+}
 
 include!("definitions.rs");
