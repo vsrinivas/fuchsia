@@ -98,9 +98,9 @@ impl Channel {
     pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
             -> Result<(), Status>
     {
+        let n_bytes = try!(bytes.len().value_into().map_err(|_| Status::ErrOutOfRange));
+        let n_handles = try!(handles.len().value_into().map_err(|_| Status::ErrOutOfRange));
         unsafe {
-            let n_bytes = try!(bytes.len().value_into().map_err(|_| Status::ErrOutOfRange));
-            let n_handles = try!(handles.len().value_into().map_err(|_| Status::ErrOutOfRange));
             let status = sys::mx_channel_write(self.raw_handle(), opts, bytes.as_ptr(), n_bytes,
                 handles.as_ptr() as *const sys::mx_handle_t, n_handles);
             into_result(status, || {
