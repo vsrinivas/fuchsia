@@ -478,15 +478,13 @@ static int vc_battery_poll_thread(void* arg) {
     int battery_fd = static_cast<int>(reinterpret_cast<uintptr_t>(arg));
     char str[16];
     for (;;) {
-        ssize_t r = read(battery_fd, str, sizeof(str));
-        if (r < 0) {
-            break;
-        }
+        ssize_t length = read(battery_fd, str, sizeof(str) - 1);
         mtx_lock(&g_vc_lock);
-        if (str[0] == 'e') {
+        if (length < 1 || str[0] == 'e') {
             g_battery_info.state = ERROR;
             g_battery_info.pct = -1;
         } else {
+            str[length] = '\0';
             if (str[0] == 'c') {
                 g_battery_info.state = CHARGING;
                 g_battery_info.pct = atoi(&str[1]);
@@ -499,6 +497,12 @@ static int vc_battery_poll_thread(void* arg) {
         if (g_active_vc) {
             vc_device_write_status(g_active_vc);
             vc_gfx_invalidate_status(g_active_vc);
+        }
+
+        if (length <= 0) {
+            printf("vc: read() on battery device returned %d\n",
+                   static_cast<int>(length));
+            break;
         }
         mx_nanosleep(MX_MSEC(1000));
     }
