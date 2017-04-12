@@ -245,10 +245,10 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
 
     // Otherwise, create a node of the right level that contains only entry.
     std::vector<Entry> entries;
+    uint8_t level = node_level_calculator->GetNodeLevel(change.entry.key);
     entries.push_back(std::move(change.entry));
-    *this = NodeBuilder::CreateNewBuilder(
-        node_level_calculator->GetNodeLevel(change.entry.key),
-        std::move(entries), std::vector<NodeBuilder>(2));
+    *this = NodeBuilder::CreateNewBuilder(level, std::move(entries),
+                                          std::vector<NodeBuilder>(2));
     *did_mutate = true;
     return Status::OK;
   }
@@ -533,8 +533,6 @@ Status NodeBuilder::Split(SynchronousStorage* page_storage,
 }
 
 Status NodeBuilder::Merge(SynchronousStorage* page_storage, NodeBuilder other) {
-  FTL_DCHECK(level_ == other.level_);
-
   if (!other) {
     return Status::OK;
   }
@@ -543,6 +541,10 @@ Status NodeBuilder::Merge(SynchronousStorage* page_storage, NodeBuilder other) {
     *this = std::move(other);
     return Status::OK;
   }
+
+  // |NULL_NODE|s do not have the level_ assigned. Only check the level if both
+  // are non-null.
+  FTL_DCHECK(level_ == other.level_);
 
   RETURN_ON_ERROR(ComputeContent(page_storage));
   RETURN_ON_ERROR(other.ComputeContent(page_storage));
