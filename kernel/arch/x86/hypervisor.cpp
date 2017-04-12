@@ -232,7 +232,7 @@ VmxPage::~VmxPage() {
         pmm_free_page(page);
 }
 
-status_t VmxPage::Alloc(const VmxInfo& vmx_info) {
+status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
     // From Volume 3, Appendix A.1: Bits 44:32 report the number of bytes that
     // software should allocate for the VMXON region and any VMCS region. It is
     // a value greater than 0 and at most 4096 (bit 44 is set if and only if
@@ -250,7 +250,7 @@ status_t VmxPage::Alloc(const VmxInfo& vmx_info) {
         return ERR_NO_MEMORY;
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(pa_));
-    memset(VirtualAddress(), 0, PAGE_SIZE);
+    memset(VirtualAddress(), fill, PAGE_SIZE);
     return NO_ERROR;
 }
 
@@ -332,7 +332,7 @@ static int vmx_enable(void* arg) {
 }
 
 status_t PerCpu::Init(const VmxInfo& info) {
-    status_t status = page_.Alloc(info);
+    status_t status = page_.Alloc(info, 0);
     if (status != NO_ERROR)
         return status;
 
@@ -416,6 +416,23 @@ AutoVmcsLoad::~AutoVmcsLoad() {
     arch_enable_ints();
 }
 
+status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
+    status_t status = PerCpu::Init(vmx_info);
+    if (status != NO_ERROR)
+        return status;
+
+    status = msr_bitmaps_page_.Alloc(vmx_info, 0xff);
+    if (status != NO_ERROR)
+        return status;
+
+    memset(&vmx_state_, 0, sizeof(vmx_state_));
+    return NO_ERROR;
+}
+
+status_t VmcsPerCpu::Clear() {
+    return page_.IsAllocated() ? vmclear(page_.PhysicalAddress()) : NO_ERROR;
+}
+
 static status_t set_vmcs_control(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
                                  uint32_t set, uint32_t clear) {
     uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
@@ -444,10 +461,6 @@ static status_t set_vmcs_control(VmcsField32 controls, uint64_t true_msr, uint64
     return NO_ERROR;
 }
 
-status_t VmcsPerCpu::Clear() {
-    return page_.IsAllocated() ? vmclear(page_.PhysicalAddress()) : NO_ERROR;
-}
-
 static uint64_t ept_pointer(paddr_t pml4_address) {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(pml4_address));
     return
@@ -459,6 +472,24 @@ static uint64_t ept_pointer(paddr_t pml4_address) {
         3u << 3 |
         // Accessed and dirty flags are enabled.
         1u << 6;
+}
+
+static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
+    // See Volume 3, Section 24.6.9: MSR-Bitmap Address.
+    uint8_t* msr_bitmaps = msr_bitmaps_page->VirtualAddress<uint8_t>();
+    if (msr >= 0xc0000000)
+        msr_bitmaps += 1 << 10;
+
+    uint16_t msr_low = msr & 0x1fff;
+    uint16_t msr_byte = msr_low / 8;
+    uint8_t msr_bit = msr_low % 8;
+
+    // Ignore reads to the MSR.
+    msr_bitmaps[msr_byte] &= (uint8_t)~(1 << msr_bit);
+
+    // Ignore writes to the MSR.
+    msr_bitmaps += 2 << 10;
+    msr_bitmaps[msr_byte] &= (uint8_t)~(1 << msr_bit);
 }
 
 status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
@@ -503,6 +534,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS),
                               // Enable VM exit on IO instructions.
                               PROCBASED_CTLS_IO_EXITING |
+                              // Enable use of MSR bitmaps.
+                              PROCBASED_CTLS_MSR_BITMAPS |
                               // Enable secondary processor-based controls.
                               PROCBASED_CTLS_PROCBASED_CTLS2,
                               // Disable VM exit on CR3 load.
@@ -586,6 +619,11 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     // translated by traversing a set of EPT paging structures to produce
     // physical addresses that are used to access memory.
     vmcs_write(VmcsField64::EPT_POINTER, ept_pointer(pml4_address));
+
+    // Setup MSR handling.
+    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
+    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
+    vmcs_write(VmcsField64::MSR_BITMAPS, msr_bitmaps_page_.PhysicalAddress());
 
     // Setup VMCS host state.
     //
@@ -707,29 +745,37 @@ void vmx_exit(VmxState* vmx_state) {
     write_msr(X86_MSR_IA32_LSTAR, vmx_state->host_state.lstar);
     write_msr(X86_MSR_IA32_FMASK, vmx_state->host_state.fmask);
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, vmx_state->host_state.kernel_gs_base);
+    vmx_state->guest_state.kernel_gs_base = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
+    vmx_state->guest_state.gs_base = read_msr(X86_MSR_IA32_GS_BASE);
+}
+
+static void next_rip(const ExitInfo& exit_info) {
+    vmcs_write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.instruction_length);
 }
 
 static status_t vmexit_handler(const VmxState& vmx_state, FifoDispatcher* serial_fifo) {
     ExitInfo exit_info;
 
     switch (exit_info.exit_reason) {
+    case EXIT_REASON_WRMSR:
+        dprintf(SPEW, "handling write of MSR\n\n");
+        return ERR_NOT_SUPPORTED;
     case EXIT_REASON_IO_INSTRUCTION: {
         dprintf(SPEW, "handling IO instruction\n\n");
-        uint64_t next_rip = exit_info.guest_rip + exit_info.instruction_length;
-        vmcs_write(VmcsFieldXX::GUEST_RIP, next_rip);
+        next_rip(exit_info);
 #if WITH_LIB_MAGENTA
         IoInfo io_info(exit_info.exit_qualification);
         if (io_info.input || io_info.string || io_info.repeat || io_info.port != kUartIoPort)
-            return NO_ERROR;
+            break;
         const uint8_t* data = reinterpret_cast<const uint8_t*>(&vmx_state.guest_state.rax);
         uint32_t actual;
         return serial_fifo->Write(data, io_info.bytes, &actual);
 #else // WITH_LIB_MAGENTA
-        return NO_ERROR;
+        break;
 #endif // WITH_LIB_MAGENTA
     }
     case EXIT_REASON_EXTERNAL_INTERRUPT:
-        dprintf(SPEW, "enabling interrupts for external interrupt\n\n");
+        dprintf(SPEW, "handling external interrupt\n\n");
         DEBUG_ASSERT(arch_ints_disabled());
         arch_enable_ints();
         arch_disable_ints();
@@ -748,6 +794,10 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fi
     // Kernel GS stores the user-space GS (within the kernel) — as the calling
     // user-space thread may change, save this every time.
     vmx_state_.host_state.kernel_gs_base = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
+
+    // Restore guest MSRs.
+    write_msr(X86_MSR_IA32_KERNEL_GS_BASE, vmx_state_.guest_state.kernel_gs_base);
+    write_msr(X86_MSR_IA32_GS_BASE, vmx_state_.guest_state.gs_base);
 
     if (do_resume_) {
         dprintf(SPEW, "re-entering guest\n");

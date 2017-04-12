@@ -30,7 +30,7 @@ class VmxPage {
 public:
     ~VmxPage();
 
-    status_t Alloc(const VmxInfo& info);
+    status_t Alloc(const VmxInfo& info, uint8_t fill);
     paddr_t PhysicalAddress();
     void* VirtualAddress();
 

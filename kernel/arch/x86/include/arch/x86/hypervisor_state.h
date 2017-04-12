@@ -79,8 +79,12 @@ struct GuestState {
     uint64_t r14;
     uint64_t r15;
 
-    // Page fault address.
+    // CRs.
     uint64_t cr2;
+
+    // MSRs.
+    uint64_t kernel_gs_base;
+    uint64_t gs_base;
 };
 
 struct VmxState {

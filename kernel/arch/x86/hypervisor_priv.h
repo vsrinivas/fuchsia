@@ -45,6 +45,7 @@ enum class VmcsField16 : uint64_t {
 };
 
 enum class VmcsField64 : uint64_t {
+    MSR_BITMAPS                     = 0x2004,   /* Address of MSR bitmaps */
     EPT_POINTER                     = 0x201a,   /* EPT pointer */
     GUEST_PHYSICAL_ADDRESS          = 0x2400,   /* Guest physical address */
     LINK_POINTER                    = 0x2800,   /* VMCS link pointer */
@@ -123,6 +124,7 @@ enum class VmcsFieldXX : uint64_t {
 #define PROCBASED_CTLS_CR3_LOAD_EXITING     (1u << 15)
 #define PROCBASED_CTLS_CR3_STORE_EXITING    (1u << 16)
 #define PROCBASED_CTLS_IO_EXITING           (1u << 24)
+#define PROCBASED_CTLS_MSR_BITMAPS          (1u << 28)
 #define PROCBASED_CTLS_PROCBASED_CTLS2      (1u << 31)
 
 /* PINBASED_CTLS flags */
@@ -152,6 +154,7 @@ enum class VmcsFieldXX : uint64_t {
 #define EXIT_REASON_BASIC_MASK              0xffff
 #define EXIT_REASON_EXTERNAL_INTERRUPT      1u
 #define EXIT_REASON_IO_INSTRUCTION          30u
+#define EXIT_REASON_WRMSR                   32u
 
 /* GUEST_XX_ACCESS_RIGHTS flags */
 #define GUEST_XX_ACCESS_RIGHTS_UNUSABLE     (1u << 16)
@@ -253,12 +256,14 @@ struct AutoVmcsLoad {
 /* Creates a VMCS CPU context to initialize a VM. */
 class VmcsPerCpu : public PerCpu {
 public:
+    status_t Init(const VmxInfo& vmx_info) override;
     status_t Clear();
     status_t Setup(paddr_t pml4_address);
     status_t Enter(const VmcsContext& context, FifoDispatcher* serial_fifo);
 
 private:
     bool do_resume_ = false;
+    VmxPage msr_bitmaps_page_;
     VmxState vmx_state_;
 };
 
