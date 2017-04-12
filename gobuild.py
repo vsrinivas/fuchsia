@@ -37,6 +37,7 @@ def main():
         'apps': 'apps',
         'apps/amber': 'github.com/flynn/go-tuf',
         'apps/thinfs': 'fuchsia.googlesource.com/thinfs',
+        'lib/fidl/go/src/fidl' : 'fidl',
         'third_party/golang/crypto': 'golang.org/x/crypto',
         'third_party/golibs/github.com/dustin/go-humanize': 'github.com/dustin/go-humanize',
         'third_party/golibs/github.com/flynn/go-docopt': 'github.com/flynn/go-docopt',
@@ -66,6 +67,8 @@ def main():
             else:
                 print("could not link: ", src, ": ", e)
                 return 1
+
+    gopath = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
 
     os.environ['CGO_ENABLED'] = '1'
     os.environ['GOPATH'] = gopath
