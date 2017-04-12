@@ -61,6 +61,32 @@ def fetch_license(subdir):
         license_out = open(os.path.join(subdir, 'LICENSE'), 'w')
         license_out.write(''.join(text))
 
+
+def check_licenses(directory, verify=False):
+    success = True
+    os.chdir(directory)
+    for subdir in os.listdir(os.getcwd()):
+        if subdir.startswith('.') or not os.path.isdir(subdir):
+            continue
+        license_files = [file for file in os.listdir(subdir)
+                         if file.startswith('LICENSE') or
+                         file.startswith('license')]
+        if license_files:
+            print 'OK       %s' % subdir
+            continue
+        if verify:
+            print 'MISSING  %s' % subdir
+            success = False
+            continue
+        try:
+            fetch_license(subdir)
+            print 'FETCH    %s' % subdir
+        except Exception as err:
+            print 'ERROR    %s (%s)' % (subdir, err.message)
+            success = False
+    return success
+
+
 def main():
     parser = argparse.ArgumentParser(
         'Verifies licenses for third-party Rust crates')
@@ -71,28 +97,7 @@ def main():
                         help='Simply check whether licenses are up-to-date',
                         action='store_true')
     args = parser.parse_args()
-    success = True
-    os.chdir(args.directory)
-    for subdir in os.listdir(os.getcwd()):
-        if subdir.startswith('.') or not os.path.isdir(subdir):
-            continue
-        license_files = [file for file in os.listdir(subdir)
-                         if file.startswith('LICENSE') or
-                         file.startswith('license')]
-        if license_files:
-            print 'OK       %s' % subdir
-            continue
-        if args.verify:
-            print 'MISSING  %s' % subdir
-            success = False
-            continue
-        try:
-            fetch_license(subdir)
-            print 'FETCH    %s' % subdir
-        except Exception as err:
-            print 'ERROR    %s (%s)' % (subdir, err.message)
-            success = False
-    if not success:
+    if not check_licenses(args.directory, verify=args.verify):
         sys.exit(1)
 
 

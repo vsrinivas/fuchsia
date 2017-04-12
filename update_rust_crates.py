@@ -12,6 +12,8 @@ import subprocess
 import sys
 import tempfile
 
+from check_rust_licenses import check_licenses
+
 
 CONFIGS = [
     "apps/xi/modules/xi-core",
@@ -58,6 +60,10 @@ def main():
     lock_path = os.path.join(base_dir, "Cargo.lock")
 
     try:
+        print("Downloading dependencies for:")
+        for config in CONFIGS:
+            print(" - %s" % config)
+
         # Create Cargo.toml.
         def mapper(p): return "\"%s\"" % os.path.join(paths.FUCHSIA_ROOT, p)
         config = '''[workspace]
@@ -93,6 +99,13 @@ members = [%s]
                               "vendor")
     shutil.rmtree(vendor_dir)
     shutil.move(os.path.join(paths.FUCHSIA_ROOT, "vendor"), vendor_dir)
+
+    print("Verifying licenses...")
+    if not check_licenses(vendor_dir):
+        print("Some licenses are missing!")
+        return 1
+
+    print("Vendor directory updated at %s" % vendor_dir)
 
 
 if __name__ == '__main__':
