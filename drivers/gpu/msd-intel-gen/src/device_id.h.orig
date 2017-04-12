@@ -1,0 +1,29 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef DEVICE_ID_H
+#define DEVICE_ID_H
+
+#include <stdint.h>
+
+class DeviceId {
+public:
+    static bool is_gen8(uint32_t device_id) { return device_id == 0x1616; }
+<<<<<<< HEAD
+
+    static bool is_gen9(uint32_t device_id)
+    {
+        switch (device_id) {
+            case 0x1916: // Intel(R) HD Graphics 520 (Skylake GT2)
+            case 0x5916: // Intel(R) HD Graphics 620 (Kabylake GT2)
+                return true;
+        }
+        return false;
+    }
+=======
+    static bool is_gen9(uint32_t device_id) { return device_id == 0x1916 || device_id == 0x1912; }
+>>>>>>> 3a52209... Add support for HD530
+};
+
+#endif // DEVICE_ID_H

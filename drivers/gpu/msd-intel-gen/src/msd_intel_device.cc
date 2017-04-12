@@ -194,7 +194,8 @@ bool MsdIntelDevice::Init(void* device_handle)
         ForceWake::reset(register_io_.get(), registers::ForceWake::GEN9_RENDER);
         ForceWake::request(register_io_.get(), registers::ForceWake::GEN9_RENDER);
     } else {
-        DASSERT(false);
+        magma::log(magma::LOG_WARNING, "Unrecognized graphics PCI device id 0x%x", device_id_);
+        return false;
     }
 
     // Clear faults
