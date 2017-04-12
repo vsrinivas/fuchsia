@@ -251,9 +251,13 @@ int service_starter(void* arg) {
                       NULL, -1, NULL, NULL, 0);
     }
 
-    devmgr_launch(svcs_job_handle, "sh:autorun0",
-                  countof(argv_autorun0), argv_autorun0,
-                  NULL, -1, NULL, NULL, 0);
+    struct stat s;
+    if (stat(argv_autorun0[1], &s) == 0) {
+        printf("devmgr: starting /boot/autorun ...\n");
+        devmgr_launch(svcs_job_handle, "sh:autorun0",
+                      countof(argv_autorun0), argv_autorun0,
+                      NULL, -1, NULL, NULL, 0);
+    }
 
     int dirfd;
     if ((dirfd = open("/dev/class/block", O_DIRECTORY|O_RDONLY)) >= 0) {
