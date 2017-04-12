@@ -135,40 +135,6 @@ static mx_status_t choose_load_bias(mx_handle_t root_vmar,
     return status;
 }
 
-// TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
-// This will go away when we have copy-on-write.
-static mx_status_t get_writable_vmo(mx_handle_t vmar_self,
-                                    mx_handle_t vmo, size_t data_size,
-                                    uintptr_t* file_start,
-                                    uintptr_t* file_end,
-                                    mx_handle_t* copy_vmo) {
-    mx_status_t status = mx_vmo_create(data_size, 0, copy_vmo);
-    if (status != NO_ERROR)
-        return status;
-    uintptr_t window = 0;
-    status = mx_vmar_map(vmar_self, 0, vmo,
-                         *file_start, data_size, MX_VM_FLAG_PERM_READ,
-                         &window);
-    if (status != NO_ERROR) {
-        mx_handle_close(*copy_vmo);
-        return status;
-    }
-    size_t n;
-    status = mx_vmo_write(*copy_vmo, (void*)window, 0, data_size, &n);
-    mx_vmar_unmap(vmar_self, window, data_size);
-    if (status != NO_ERROR) {
-        mx_handle_close(*copy_vmo);
-        return status;
-    }
-    if (n != data_size) {
-        mx_handle_close(*copy_vmo);
-        return ERR_IO;
-    }
-    *file_end -= *file_start;
-    *file_start = 0;
-    return NO_ERROR;
-}
-
 static mx_status_t finish_load_segment(
     mx_handle_t vmar, mx_handle_t vmo, const elf_phdr_t* ph,
     size_t start_offset, size_t size,
@@ -269,13 +235,11 @@ static mx_status_t load_segment(mx_handle_t vmar_self,
 
     // For a writable segment, we need a writable VMO.
     mx_handle_t writable_vmo;
-    mx_status_t status = get_writable_vmo(vmar_self, vmo, data_size,
-                                          &file_start, &file_end,
-                                          &writable_vmo);
+    mx_status_t status = mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE,
+                                      file_start, data_size, &writable_vmo);
     if (status == NO_ERROR) {
-        status = finish_load_segment(vmar, writable_vmo, ph,
-                                     start, size, file_start,
-                                     file_end, partial_page);
+        status = finish_load_segment(vmar, writable_vmo, ph, start, size,
+                                     0, file_end - file_start, partial_page);
         mx_handle_close(writable_vmo);
     }
     return status;
