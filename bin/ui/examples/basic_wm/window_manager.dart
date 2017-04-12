@@ -116,7 +116,7 @@ class _WindowFrameState extends State<WindowFrame> {
   void initState() {
     super.initState();
     if (config.initialRect != null) {
-      _offset = config.initialRect.topLeft.toOffset();
+      _offset = config.initialRect.topLeft;
       _size = config.initialRect.size;
     }
   }
