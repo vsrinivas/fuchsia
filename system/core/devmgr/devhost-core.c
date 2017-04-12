@@ -155,6 +155,7 @@ void dev_ref_release(mx_device_t* dev) {
     }
 }
 
+#if !DEVHOST_V2
 static mx_status_t devhost_device_probe(mx_device_t* dev, mx_driver_t* drv, bool autobind) {
     mx_status_t status;
 
@@ -223,6 +224,7 @@ static void devhost_device_probe_all(mx_device_t* dev, bool autobind) {
         list_add_tail(&unmatched_device_list, &dev->unode);
     }
 }
+#endif
 
 void devhost_device_init(mx_device_t* dev, mx_driver_t* driver,
                         const char* name, mx_protocol_device_t* ops) {
@@ -290,12 +292,16 @@ static mx_status_t device_validate(mx_device_t* dev) {
     if (dev->protocol_id == MX_PROTOCOL_MISC_PARENT) {
         // This protocol is only allowed for the special
         // singleton misc parent device.
+#if DEVHOST_V2
+        return ERR_INVALID_ARGS;
+#else
         if (dev != driver_get_misc_device()) {
             return ERR_INVALID_ARGS;
         }
         // We do not limit binding to a single child
         // on the misc parent device.
         dev->flags |= DEV_FLAG_MULTI_BIND;
+#endif
     }
     // devices which do not declare a primary protocol
     // are implied to be misc devices
@@ -390,8 +396,10 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         }
     }
 
+#if !DEVHOST_V2
     // probe the device
     devhost_device_probe_all(dev, true);
+#endif
 
     dev->flags &= (~DEV_FLAG_BUSY);
     return NO_ERROR;
@@ -484,6 +492,7 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
     return NO_ERROR;
 }
 
+#if !DEVHOST_V2
 mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_name) {
     if (device_is_bound(dev)) {
         return ERR_INVALID_ARGS;
@@ -534,6 +543,7 @@ mx_status_t devhost_device_rebind(mx_device_t* dev) {
     dev->flags &= ~DEV_FLAG_REBIND;
     return NO_ERROR;
 }
+#endif
 
 mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
     if (dev->flags & DEV_FLAG_DEAD) {
@@ -574,6 +584,7 @@ mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags) {
     return r;
 }
 
+#if !DEVHOST_V2
 mx_status_t devhost_driver_add(mx_driver_t* drv) {
     xprintf("driver add: %p(%s)\n", drv, drv->name);
 
@@ -593,6 +604,7 @@ mx_status_t devhost_driver_remove(mx_driver_t* drv) {
     // TODO: implement
     return ERR_NOT_SUPPORTED;
 }
+#endif
 
 mx_status_t devhost_driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     if (dev->owner != drv) {

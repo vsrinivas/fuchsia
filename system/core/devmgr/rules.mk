@@ -118,6 +118,8 @@ MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1
 
 MODULE_DEFINES += DEVHOST_V2=1
 MODULE_SRCS := \
+    $(LOCAL_DIR)/devhost-api.c \
+    $(LOCAL_DIR)/devhost-core.c \
     $(LOCAL_DIR)/devhost-v2.c \
     $(LOCAL_DIR)/devhost-shared.c \
 

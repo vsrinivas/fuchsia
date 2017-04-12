@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <driver/driver-api.h>
+
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -109,15 +111,41 @@ static void devhost_io_init(void) {
     dup2(1, 2);
 }
 
+
+mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t devhost_remove(mx_device_t* dev) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t devhost_device_rebind(mx_device_t* dev) {
+    return ERR_NOT_SUPPORTED;
+}
+
+extern driver_api_t devhost_api;
+
+mx_handle_t root_resource_handle;
+
+
+
 int main(int argc, char** argv) {
     devhost_io_init();
 
     printf("devhost: main()\n");
 
+    driver_api_init(&devhost_api);
+
     devhost_handler.handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
     if (devhost_handler.handle == MX_HANDLE_INVALID) {
         printf("devhost: rpc handle invalid\n");
         return -1;
+    }
+
+    root_resource_handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
+    if (root_resource_handle == MX_HANDLE_INVALID) {
+        printf("devhost: no root resource handle!\n");
     }
 
     mx_status_t r;
