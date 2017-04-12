@@ -6,6 +6,22 @@
 set -e
 
 readonly SCRIPT_ROOT="$(cd $(dirname ${BASH_SOURCE[0]} ) && pwd)"
-readonly TOOL_NAME="go/bin/go"
 
-source "${SCRIPT_ROOT}/exec_tool.sh"
+case "$(uname -s)" in
+  Darwin)
+    readonly HOST_PLATFORM="mac"
+    ;;
+  Linux)
+    readonly HOST_PLATFORM="linux64"
+    ;;
+  *)
+    echo "Unknown operating system. Cannot run go."
+    exit 1
+    ;;
+esac
+
+# Setting GOROOT is a workaround for https://golang.org/issue/18678.
+# Remove this (and switch to exec_tool.sh) when Go 1.9 is released.
+export GOROOT="$SCRIPT_ROOT/$HOST_PLATFORM/go"
+
+exec "$GOROOT/bin/go" "$@"
