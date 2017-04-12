@@ -4,13 +4,11 @@
 
 #pragma once
 
-#include <mxtl/ref_ptr.h>
 #include <set>
 
 #include "apps/media/services/media_result.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/src/audio_server/audio_output.h"
-#include "apps/media/src/audio_server/audio_plug_detector.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
 
 namespace media {
@@ -49,14 +47,13 @@ class AudioOutputManager {
   // Schedule a closure to run on our encapsulating server's main message loop.
   void ScheduleMessageLoopTask(const ftl::Closure& task);
 
-  // Attempt to initialize an output and add it to the set of active outputs.
-  MediaResult AddOutput(AudioOutputPtr output);
-
   // Shutdown the specified audio output and remove it from the set of active
   // outputs.
   void ShutdownOutput(AudioOutputPtr output);
 
  private:
+  void CreateAlsaOutputs();
+
   // A pointer to the server which encapsulates us.  It is not possible for this
   // pointer to be bad while we still exist.
   AudioServerImpl* server_;
@@ -66,9 +63,6 @@ class AudioOutputManager {
   // Contents of the output set must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
   AudioOutputSet outputs_;
-
-  // A helper class we will use to detect plug/unplug events for audio devices
-  mxtl::RefPtr<AudioPlugDetector> plug_detector_;
 };
 
 }  // namespace audio

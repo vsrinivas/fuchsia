@@ -139,13 +139,14 @@ void AudioOutput::ProcessThunk(AudioOutputWeakPtr weak_output) {
 MediaResult AudioOutput::Init(const AudioOutputPtr& self) {
   FTL_DCHECK(this == self.get());
 
-  // If our derived class failed to initialize, Just get out.  We are being
-  // called by the output manager, and they will remove us from the set of
-  // active outputs as a result of us failing to initialize.
+  // If our derived class failed to initialize, don't bother to hold onto the
+  // state we will need drive our callback engine.  Begin the process of
+  // shutting ourselves down, the output manager will eventually finish the job
+  // for us.
   MediaResult res = Init();
   if (res != MediaResult::OK) {
     ftl::MutexLocker locker(&mutex_);
-    shutting_down_ = true;
+    ShutdownSelf();
     return res;
   }
 
@@ -195,7 +196,8 @@ void AudioOutput::Shutdown() {
   }
 
   // Unlink ourselves from all of our renderers.  Then go ahead and clear the
-  // renderer set.
+  // renderer
+  // set.
   for (const auto& link : links_) {
     FTL_DCHECK(link);
     AudioRendererImplPtr renderer = link->GetRenderer();

@@ -14,7 +14,7 @@ namespace audio {
 
 class UsbOutput : public StandardOutputBase {
  public:
-  static AudioOutputPtr Create(ftl::UniqueFD dev_node,
+  static AudioOutputPtr Create(const std::string device_path,
                                AudioOutputManager* manager);
 
   ~UsbOutput();
@@ -37,7 +37,7 @@ class UsbOutput : public StandardOutputBase {
       AudioSampleFormat::SIGNED_16;
   static constexpr uint32_t kMixesPerSecond = 100;
 
-  UsbOutput(ftl::UniqueFD dev_node, AudioOutputManager* manager);
+  UsbOutput(ftl::UniqueFD fd, AudioOutputManager* manager);
 
   ftl::UniqueFD fd_;
   bool started_ = false;

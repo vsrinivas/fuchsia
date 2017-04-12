@@ -16,13 +16,19 @@ namespace media {
 namespace audio {
 
 // static
-AudioOutputPtr UsbOutput::Create(ftl::UniqueFD dev_node,
+AudioOutputPtr UsbOutput::Create(const std::string device_path,
                                  AudioOutputManager* manager) {
-  return AudioOutputPtr(new UsbOutput(std::move(dev_node), manager));
+  ftl::UniqueFD fd(open(device_path.c_str(), O_RDWR));
+  if (!fd.is_valid()) {
+    FTL_DLOG(ERROR) << "Failed to open audio device " << device_path;
+    return AudioOutputPtr(nullptr);
+  }
+
+  return AudioOutputPtr(new UsbOutput(std::move(fd), manager));
 }
 
-UsbOutput::UsbOutput(ftl::UniqueFD dev_node, AudioOutputManager* manager)
-    : StandardOutputBase(manager), fd_(std::move(dev_node)) {
+UsbOutput::UsbOutput(ftl::UniqueFD fd, AudioOutputManager* manager)
+    : StandardOutputBase(manager), fd_(std::move(fd)) {
   FTL_DCHECK(fd_.is_valid());
 }
 

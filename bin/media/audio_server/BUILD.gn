@@ -7,7 +7,6 @@ executable("audio_server") {
     "audio_output.cc",
     "audio_output_manager.cc",
     "audio_pipe.cc",
-    "audio_plug_detector.cc",
     "audio_renderer_impl.cc",
     "audio_renderer_to_output_link.cc",
     "audio_server_impl.cc",
@@ -22,6 +21,8 @@ executable("audio_server") {
     "platform/generic/throttle_output.cc",
     "platform/usb/usb_output.cc",
     "platform/usb/usb_output.h",
+    "platform/usb/usb_output_enum.cc",
+    "platform/usb/usb_output_enum.h",
   ]
 
   deps = [
@@ -32,10 +33,7 @@ executable("audio_server") {
     "//apps/media/services",
     "//apps/media/src/audio",
     "//apps/media/src/util",
-    "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
     "//lib/ftl",
     "//lib/mtl",
-    "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxtl",
   ]
 }
