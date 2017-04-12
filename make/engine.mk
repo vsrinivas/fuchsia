@@ -20,10 +20,8 @@ BUILDROOT ?= .
 DEBUG ?= 2
 ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
-ENABLE_BUILD_SYSDEPS ?= false
 ENABLE_BUILD_LISTFILES := $(call TOBOOL,$(ENABLE_BUILD_LISTFILES))
 ENABLE_BUILD_SYSROOT := $(call TOBOOL,$(ENABLE_BUILD_SYSROOT))
-ENABLE_BUILD_SYSDEPS := $(call TOBOOL,$(ENABLE_BUILD_SYSDEPS))
 USE_CLANG ?= false
 USE_LLD ?= false
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
@@ -130,25 +128,6 @@ BUILDSYSROOT := $(BUILDDIR)/sysroot
 else
 # be noisy if we are
 $(info BUILDSYSROOT = $(BUILDSYSROOT))
-endif
-
-# Mechanism to generate exported dependency info for sysroot
-# $(call sysroot-module,MODULE-IN-SYSROOT)
-# $(call sysroot-file,FILE-IN-SYSROOT,DEPS)
-# $(call sysroot-header,PATTERN-IN-SYSROOT,PATTERN-IN-SOURCE)
-#
-SYSROOT_MODULES :=
-SYSROOT_EXPORTS :=
-ifeq ($(ENABLE_BUILD_SYSDEPS),true)
-sysroot-module = $(eval SYSROOT_MODULES += $(1))
-sysroot-file = $(eval SYSROOT_EXPORTS += $(1))$(eval SYSROOT_$(strip $(1))_DEPS := $(2))
-sysroot-module-odeps = $(eval MODULE_$(strip $(1))_ODEPS := $(sort $(2)))
-sysroot-module-mdeps = $(eval MODULE_$(strip $(1))_MDEPS := $(sort $(2)))
-else
-sysroot-module =
-sysroot-file =
-sysroot-module-odeps =
-sysroot-module-mdeps =
 endif
 
 # Kernel compile flags
@@ -394,11 +373,6 @@ SYSROOT_HEADERS := $(patsubst system/public/%,$(BUILDSYSROOT)/include/%,$(GLOBAL
 $(call copy-dst-src,$(BUILDSYSROOT)/include/%.h,system/public/%.h)
 $(call copy-dst-src,$(BUILDSYSROOT)/include/%.inc,system/public/%.inc)
 
-ifeq ($(ENABLE_BUILD_SYSDEPS),true)
-$(foreach hdr,$(GLOBAL_HEADERS),\
-	$(call sysroot-file,$(patsubst system/public/%,$(BUILDSYSROOT)/include/%,$(hdr)),$(hdr)))
-endif
-
 SYSROOT_DEPS += $(SYSROOT_HEADERS)
 GENERATED += $(SYSROOT_HEADERS)
 
@@ -411,9 +385,6 @@ $(call copy-dst-src,$(SYSROOT_SCRT1),$(USER_CRT1_OBJ))
 SYSROOT_DEPS += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
 GENERATED += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
 
-$(call sysroot-file,$(SYSROOT_CRT1),[third_party/ulib/musl])
-$(call sysroot-file,$(SYSROOT_SCRT1),[third_party/ulib/musl])
-
 # generate empty compatibility libs
 $(BUILDSYSROOT)/lib/libm.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
@@ -425,10 +396,6 @@ $(BUILDSYSROOT)/lib/libpthread.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
 	$(NOECHO)cp $< $@
 
-$(call sysroot-file,$(BUILDSYSROOT)/lib/libm.so,[third_party/ulib/musl])
-$(call sysroot-file,$(BUILDSYSROOT)/lib/libdl.so,[third_party/ulib/musl])
-$(call sysroot-file,$(BUILDSYSROOT)/lib/libpthread.so,[third_party/ulib/musl])
-
 SYSROOT_DEPS += $(BUILDSYSROOT)/lib/libm.so $(BUILDSYSROOT)/lib/libdl.so $(BUILDSYSROOT)/lib/libpthread.so
 GENERATED += $(BUILDSYSROOT)/lib/libm.so $(BUILDSYSROOT)/lib/libdl.so $(BUILDSYSROOT)/lib/libpthread.so
 
@@ -437,8 +404,6 @@ $(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP): FORCE
 	@$(MKDIR)
 	$(NOECHO)rm -f $@
 	$(NOECHO)ln -s libc.so $@
-
-$(call sysroot-file,$(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP),[third_party/ulib/musl])
 
 SYSROOT_DEPS += $(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP)
 GENERATED += $(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP)
@@ -615,33 +580,6 @@ USER_DEFINES += USER_ASMFLAGS=\"$(subst $(SPACE),_,$(USER_ASMFLAGS))\"
 # This needs to be after CC et al are set above.
 ifeq ($(ARCH),x86)
 include bootloader/build.mk
-endif
-
-# Generate sysroot exported dependencies
-ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSDEPS)),true)
-#$(info SYSROOT_MODULES $(SYSROOT_MODULES))
-
-# recursively expand deps
-sys-expand = $(m) $(foreach m,$(1),$(call sys-expand,$(MODULE_$(m)_MDEPS)))
-SYSROOT_MODULES += $(foreach m,$(SYSROOT_MODULES),$(call sys-expand,$(m)))
-
-# filter out duplicates
-SYSROOT_MODULES := $(sort $(SYSROOT_MODULES))
-
-gen-sys-mdep = \n[$(1)]: $(foreach m,$(MODULE_$(m)_MDEPS),[$(m)]) $(patsubst ./%,%,$(MODULE_$(m)_ODEPS))
-gen-sys-mdeps = $(foreach m,$(SYSROOT_MODULES),$(call gen-sys-mdep,$(m)))
-
-gen-sys-edep = \n$(patsubst ./%,%,$(e)): $(SYSROOT_$(e)_DEPS)
-gen-sys-edeps = $(foreach e,$(SYSROOT_EXPORTS),$(call gen-sys-edep,$(e)))
-
-$(BUILDDIR)/deps.sysroot: FORCE
-	@$(MKDIR)
-	@echo generating $@
-	@printf "$(call gen-sys-edeps)" > $@
-	@printf "$(call gen-sys-mdeps)" >> $@
-
-EXTRA_BUILDDEPS += $(BUILDDIR)/deps.sysroot
-GENERATED += $(BUILDDIR)/deps.sysroot
 endif
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS

@@ -14,11 +14,6 @@ MODULE_CPPOBJS := $(call TOMODULEDIR,$(patsubst %.cpp,%.cpp.o,$(MODULE_CPPSRCS))
 
 MODULE_OBJS := $(MODULE_COBJS) $(MODULE_CPPOBJS)
 
-ifeq ($(ENABLE_BUILD_SYSDEPS),true)
-$(call sysroot-module-odeps,$(MODULE),\
-	$(MODULE_CSRCS) $(MODULE_CPPSRCS) $(MODULE_ASMSRCS) $(MODULE_OBJS))
-endif
-
 #$(info MODULE_SRCS = $(MODULE_SRCS))
 #$(info MODULE_CSRCS = $(MODULE_CSRCS))
 #$(info MODULE_CPPSRCS = $(MODULE_CPPSRCS))

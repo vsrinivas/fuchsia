@@ -134,7 +134,6 @@ MODULE_TEMP_NAME := $(BUILDSYSROOT)/lib/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so.abi)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
-$(call sysroot-file,$(MODULE_TEMP_NAME),[$(MODULE)])
 
 # Install debug info for exported libraries for debuggers to find.
 # These files live on the development host, not the target.
@@ -144,7 +143,6 @@ MODULE_TEMP_NAME := $(BUILDSYSROOT)/debug-info/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
-$(call sysroot-file,$(MODULE_TEMP_NAME),[$(MODULE)])
 endif
 endif
 
@@ -154,7 +152,6 @@ MODULE_TEMP_NAME := $(BUILDSYSROOT)/lib/lib$(MODULE_NAME).a
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).a)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
-$(call sysroot-file,$(MODULE_TEMP_NAME),[$(MODULE)])
 endif
 
 # only install headers for exported libraries
@@ -182,12 +179,6 @@ $(patsubst $(MODULE_SRCDIR)/include/%,$(MODULE_INSTALL_HEADERS)/%,$(MODULE_PUBLI
 # generate rules to copy them
 $(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.h,$(MODULE_SRCDIR)/include/%.h)
 $(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.inc,$(MODULE_SRCDIR)/include/%.inc)
-
-ifeq ($(ENABLE_BUILD_SYSDEPS),true)
-$(call sysroot-module,$(MODULE))
-$(foreach hdr,$(MODULE_PUBLIC_HEADERS),\
-	$(call sysroot-file,$(patsubst $(MODULE_SRCDIR)/include/%,$(MODULE_INSTALL_HEADERS)/%,$(hdr)),$(hdr)))
-endif
 
 SYSROOT_DEPS += $(MODULE_SYSROOT_HEADERS)
 GENERATED += $(MODULE_SYSROOT_HEADERS)

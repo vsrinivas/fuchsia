@@ -152,9 +152,6 @@ endif
 # MODULE_OBJS is passed back from *compile.mk
 #$(info MODULE_OBJS = $(MODULE_OBJS))
 
-# record the module-level dependencies of this module
-$(call sysroot-module-mdeps,$(MODULE),$(_MODULE_DEPS))
-
 # track all of the source files compiled
 ALLSRCS += $(MODULE_SRCS)
 
