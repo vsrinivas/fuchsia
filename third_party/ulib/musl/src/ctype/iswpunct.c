@@ -9,7 +9,3 @@ int iswpunct(wint_t wc) {
         return (table[table[wc >> 8] * 32 + ((wc & 255) >> 3)] >> (wc & 7)) & 1;
     return 0;
 }
-
-int iswpunct_l(wint_t c, locale_t l) {
-    return iswpunct(c);
-}

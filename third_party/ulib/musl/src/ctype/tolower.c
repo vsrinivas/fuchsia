@@ -5,7 +5,3 @@ int tolower(int c) {
         return c | 32;
     return c;
 }
-
-int tolower_l(int c, locale_t l) {
-    return tolower(c);
-}

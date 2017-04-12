@@ -3,7 +3,3 @@
 int iswalnum(wint_t wc) {
     return iswdigit(wc) || iswalpha(wc);
 }
-
-int iswalnum_l(wint_t c, locale_t l) {
-    return iswalnum(c);
-}

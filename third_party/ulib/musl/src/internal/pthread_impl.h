@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
+#include <locale.h>
 #include <pthread.h>
 #include <signal.h>
 #include <sys/uio.h>

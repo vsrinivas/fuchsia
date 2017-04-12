@@ -1,15 +1,13 @@
 #include "libc.h"
-#include "locale_impl.h"
 #include "time_impl.h"
 #include <langinfo.h>
 #include <limits.h>
-#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-const char* __nl_langinfo_l(nl_item, locale_t);
+const char* __nl_langinfo(nl_item);
 
 static int is_leap(int y) {
     /* Avoid overflow */
@@ -45,10 +43,8 @@ static int week_num(const struct tm* tm) {
 }
 
 const char* __tm_to_tzname(const struct tm*);
-size_t __strftime_l(char* restrict, size_t, const char* restrict, const struct tm* restrict,
-                    locale_t);
 
-const char* __strftime_fmt_1(char (*s)[100], size_t* l, int f, const struct tm* tm, locale_t loc) {
+const char* __strftime_fmt_1(char (*s)[100], size_t* l, int f, const struct tm* tm) {
     nl_item item;
     long long val;
     const char* fmt = "-";
@@ -210,21 +206,20 @@ number:
     *l = snprintf(*s, sizeof *s, "%0*lld", width, val);
     return *s;
 nl_strcat:
-    fmt = __nl_langinfo_l(item, loc);
+    fmt = __nl_langinfo(item);
 string:
     *l = strlen(fmt);
     return fmt;
 nl_strftime:
-    fmt = __nl_langinfo_l(item, loc);
+    fmt = __nl_langinfo(item);
 recu_strftime:
-    *l = __strftime_l(*s, sizeof *s, fmt, tm, loc);
+    *l = strftime(*s, sizeof *s, fmt, tm);
     if (!*l)
         return 0;
     return *s;
 }
 
-size_t __strftime_l(char* restrict s, size_t n, const char* restrict f,
-                    const struct tm* restrict tm, locale_t loc) {
+size_t strftime(char* restrict s, size_t n, const char* restrict f, const struct tm* restrict tm) {
     size_t l, k;
     char buf[100];
     char* p;
@@ -253,7 +248,7 @@ size_t __strftime_l(char* restrict s, size_t n, const char* restrict f,
         f = p;
         if (*f == 'E' || *f == 'O')
             f++;
-        t = __strftime_fmt_1(&buf, &k, *f, tm, loc);
+        t = __strftime_fmt_1(&buf, &k, *f, tm);
         if (!t)
             break;
         if (width) {
@@ -281,9 +276,3 @@ size_t __strftime_l(char* restrict s, size_t n, const char* restrict f,
     }
     return 0;
 }
-
-size_t strftime(char* restrict s, size_t n, const char* restrict f, const struct tm* restrict tm) {
-    return __strftime_l(s, n, f, tm, CURRENT_LOCALE);
-}
-
-weak_alias(__strftime_l, strftime_l);

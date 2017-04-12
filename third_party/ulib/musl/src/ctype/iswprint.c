@@ -16,7 +16,3 @@ int iswprint(wint_t wc) {
         return 0;
     return 1;
 }
-
-int iswprint_l(wint_t c, locale_t l) {
-    return iswprint(c);
-}

@@ -22,7 +22,6 @@ extern "C" {
 #define __NEED_clockid_t
 #define __NEED_timer_t
 #define __NEED_pid_t
-#define __NEED_locale_t
 #endif
 
 #include <bits/alltypes.h>
@@ -63,9 +62,6 @@ int timespec_get(struct timespec*, int);
 
 #if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
     defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
-
-size_t strftime_l(char* __restrict, size_t, const char* __restrict, const struct tm* __restrict,
-                  locale_t);
 
 struct tm* gmtime_r(const time_t* __restrict, struct tm* __restrict);
 struct tm* localtime_r(const time_t* __restrict, struct tm* __restrict);

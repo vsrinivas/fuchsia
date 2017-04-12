@@ -65,11 +65,3 @@ wctype_t wctype(const char* s) {
             return i;
     return 0;
 }
-
-int iswctype_l(wint_t c, wctype_t t, locale_t l) {
-    return iswctype(c, t);
-}
-
-wctype_t wctype_l(const char* s, locale_t l) {
-    return wctype(s);
-}

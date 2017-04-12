@@ -13,10 +13,6 @@ extern "C" {
 #endif
 
 #define __NEED_size_t
-#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || \
-    defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
-#define __NEED_locale_t
-#endif
 
 #include <bits/alltypes.h>
 
@@ -65,9 +61,6 @@ size_t strnlen(const char*, size_t);
 char* strdup(const char*);
 char* strndup(const char*, size_t);
 char* strsignal(int);
-char* strerror_l(int, locale_t);
-int strcoll_l(const char*, const char*, locale_t);
-size_t strxfrm_l(char* __restrict, const char* __restrict, size_t, locale_t);
 #endif
 
 #if defined(_XOPEN_SOURCE) || defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
@@ -83,8 +76,6 @@ size_t strlcpy(char*, const char*, size_t);
 #ifdef _GNU_SOURCE
 #define strdupa(x) strcpy(alloca(strlen(x) + 1), x)
 int strverscmp(const char*, const char*);
-int strcasecmp_l(const char*, const char*, locale_t);
-int strncasecmp_l(const char*, const char*, size_t, locale_t);
 char* strchrnul(const char*, int);
 char* strcasestr(const char*, const char*);
 void* memmem(const void*, size_t, const void*, size_t);

@@ -11,7 +11,3 @@ int iswalpha(wint_t wc) {
         return 1;
     return 0;
 }
-
-int iswalpha_l(wint_t c, locale_t l) {
-    return iswalpha(c);
-}

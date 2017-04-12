@@ -11,7 +11,3 @@ int iswspace(wint_t wc) {
                                      0x200a, 0x2028, 0x2029, 0x205f, 0x3000, 0};
     return wc && wcschr(spaces, wc);
 }
-
-int iswspace_l(wint_t c, locale_t l) {
-    return iswspace(c);
-}

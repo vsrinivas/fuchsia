@@ -43,7 +43,6 @@ LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/wcpcpy.c \
     $(GET_LOCAL_DIR)/wcpncpy.c \
     $(GET_LOCAL_DIR)/wcscasecmp.c \
-    $(GET_LOCAL_DIR)/wcscasecmp_l.c \
     $(GET_LOCAL_DIR)/wcscat.c \
     $(GET_LOCAL_DIR)/wcschr.c \
     $(GET_LOCAL_DIR)/wcscmp.c \
@@ -52,7 +51,6 @@ LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/wcsdup.c \
     $(GET_LOCAL_DIR)/wcslen.c \
     $(GET_LOCAL_DIR)/wcsncasecmp.c \
-    $(GET_LOCAL_DIR)/wcsncasecmp_l.c \
     $(GET_LOCAL_DIR)/wcsncat.c \
     $(GET_LOCAL_DIR)/wcsncmp.c \
     $(GET_LOCAL_DIR)/wcsncpy.c \

@@ -258,11 +258,3 @@ wint_t towupper(wint_t wc) {
 wint_t towlower(wint_t wc) {
     return __towcase(wc, 1);
 }
-
-wint_t towupper_l(wint_t c, locale_t l) {
-    return towupper(c);
-}
-
-wint_t towlower_l(wint_t c, locale_t l) {
-    return towlower(c);
-}
