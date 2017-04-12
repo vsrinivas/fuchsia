@@ -13,7 +13,6 @@ executable("audio_server") {
     "audio_server_impl.cc",
     "gain.cc",
     "main.cc",
-    "platform/magenta/magenta_output.cc",
     "platform/generic/mixer.cc",
     "platform/generic/mixers/linear_sampler.cc",
     "platform/generic/mixers/no_op.cc",
