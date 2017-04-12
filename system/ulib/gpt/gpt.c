@@ -4,6 +4,7 @@
 
 #include <gpt/gpt.h>
 #include <lib/cksum.h>
+#include <magenta/syscalls.h> // for mx_cprng_draw
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -256,6 +257,11 @@ int gpt_device_sync(gpt_device_t* dev) {
         // backup gpt is in the last block
         header.backup = priv->blocks - 1;
         // generate a guid
+        size_t sz;
+        if (mx_cprng_draw(header.guid, GPT_GUID_LEN, &sz) != NO_ERROR ||
+            sz != GPT_GUID_LEN) {
+            return -1;
+        }
     }
 
     // always write 128 entries in partition table
