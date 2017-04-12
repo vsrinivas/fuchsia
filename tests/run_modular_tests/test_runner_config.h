@@ -15,8 +15,7 @@ namespace testing {
 
 class TestRunnerConfig {
  public:
-  TestRunnerConfig() {}
-  TestRunnerConfig(const std::string& json_path);
+  explicit TestRunnerConfig(const std::string& json_path);
 
   const std::vector<std::string>& test_names() const { return test_names_; }
 

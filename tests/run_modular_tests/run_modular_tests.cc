@@ -13,6 +13,7 @@
 
 #include "apps/modular/tests/run_modular_tests/test_runner_config.h"
 #include "apps/test_runner/lib/test_runner.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -32,13 +33,6 @@ class ModularTestRunObserver : public test_runner::TestRunObserver {
   void Teardown(const std::string& test_id, bool success) override {
     FTL_CHECK(test_id == test_id_);
     success_ = success;
-
-    // LEAVE THIS LOG HERE, EXACTLY AS IT IS.
-    //
-    // Currently, tests launched from host (e.g. Linux) grep for this text to
-    // figure out the amount of the log to associate with the test.
-    FTL_LOG(INFO) << "test_runner: teardown " << test_id;
-
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
@@ -65,13 +59,37 @@ bool RunTest(std::shared_ptr<app::ApplicationContext> app_context,
   return observer.success();
 }
 
+void PrintKnownTests(const modular::testing::TestRunnerConfig& config) {
+  std::cerr << "Known tests are:" << std::endl;
+  for (auto& test_name : config.test_names()) {
+    std::cerr << " " << test_name << std::endl;
+  }
+}
+
 int main(int argc, char** argv) {
   mtl::MessageLoop loop;
-  modular::testing::TestRunnerConfig config(kModularTestsJson);
+  ftl::CommandLine settings = ftl::CommandLineFromArgcArgv(argc, argv);
+  modular::testing::TestRunnerConfig config(
+      settings.GetOptionValueWithDefault("test_file", kModularTestsJson));
+
+  if (settings.HasOption("help")) {
+    std::cerr << R"USAGE(test runner [TEST NAME]
+  --test_file <file path>    The json file defining all the tests. [DEFAULT:
+                             /system/apps/modular_tests/modular_tests.json]
+  --help                     This message.
+
+  If a [TEST NAME] which is listed in --test_file is provided, it is run.
+  Otherwise, all tests from --test_file are run.
+)USAGE";
+
+    PrintKnownTests(config);
+    return 0;
+  }
+
   std::shared_ptr<app::ApplicationContext> app_context =
       app::ApplicationContext::CreateFromStartupInfo();
 
-  std::vector<std::string> test_names(argv + 1, argv + argc);
+  std::vector<std::string> test_names = settings.positional_args();
   if (test_names.empty()) {
     // If no tests were specified, run all tests.
     test_names = config.test_names();
@@ -117,10 +135,7 @@ int main(int argc, char** argv) {
     for (auto& test_name : unknown) {
       std::cerr << " " << test_name << std::endl;
     }
-    std::cerr << "Known tests are:" << std::endl;
-    for (auto& test_name : config.test_names()) {
-      std::cerr << " " << test_name << std::endl;
-    }
+    PrintKnownTests(config);
   }
 
   if (failed.empty() && unknown.empty()) {

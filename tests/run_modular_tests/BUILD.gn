@@ -10,6 +10,7 @@ executable("run_modular_tests") {
   ]
   deps = [
     "//apps/test_runner/lib",
+    "//lib/ftl",
     "//third_party/rapidjson",
   ]
 }
