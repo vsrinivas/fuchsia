@@ -190,6 +190,7 @@ public:
     // TODO(smklein): Encapsulate the "remote_" flag more, here and in "GetHandles",
     // so we can avoid leaking information outside the Vnode / Vfs classes.
     mx_handle_t WaitForRemote();
+    mx_handle_t GetRemote() const { return remote_; }
 protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
     Vnode() : flags_(0), remote_(MX_HANDLE_INVALID), refcount_(1) {};

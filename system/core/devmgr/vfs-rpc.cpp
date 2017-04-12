@@ -34,17 +34,6 @@ namespace memfs {
 
 static VnodeMemfs* global_vfs_root;
 
-mx_status_t VnodeDevice::GetHandles(uint32_t flags, mx_handle_t* hnds,
-                                    uint32_t* type, void* extra, uint32_t* esize) {
-    if (IsDevice() && !(flags & O_DIRECTORY)) {
-        *type = 0;
-        hnds[0] = remote_;
-        return 1;
-    } else {
-        return VnodeMemfs::GetHandles(flags, hnds, type, extra, esize);
-    }
-}
-
 mx_status_t VnodeMemfs::GetHandles(uint32_t flags, mx_handle_t* hnds, uint32_t* type, void* extra,
                                    uint32_t* esize) {
     // local vnode or device as a directory, we will create the handles

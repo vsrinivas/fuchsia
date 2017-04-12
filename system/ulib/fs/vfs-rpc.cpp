@@ -72,11 +72,8 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* p
     if (r < 0) {
         xprintf("vfs: open: r=%d\n", r);
         goto done;
-    }
-    if (r > 0) {
-        //TODO: unify remote vnodes and remote devices
-        //      eliminate vfs_get_handles() and the other
-        //      reply pipe path
+    } else if (r > 0) {
+        // Remote handoff, either to a remote device or a remote filesystem node.
         txn_handoff_open(r, rh, path, flags, mode);
         return;
     }
@@ -86,15 +83,8 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* p
         vn->Close();
         goto done;
     }
-    if (obj.type == 0) {
-        // device is non-local, handle is the server that
-        // can clone it for us, redirect the rpc to there
-        txn_handoff_open(obj.handle[0], rh, ".", flags, mode);
-        vn->RefRelease();
-        return;
-    }
 
-    // drop the ref from VfsOpen
+    // drop the ref from Vfs::Open
     // the backend behind get_handles holds the on-going ref
     vn->RefRelease();
     obj.hcount = r;

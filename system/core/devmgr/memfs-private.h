@@ -133,8 +133,6 @@ public:
 private:
     void Release() final;
     mx_status_t Getattr(vnattr_t* a) final;
-    mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
-                           uint32_t* type, void* extra, uint32_t* esize) final;
 };
 
 class VnodeVmo final : public VnodeMemfs {

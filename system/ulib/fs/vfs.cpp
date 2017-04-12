@@ -148,14 +148,15 @@ mx_status_t Vfs::Open(Vnode* vndir, Vnode** out, const char* path,
         if (r < 0) {
             return r;
         }
-        if (flags & O_TRUNC) {
-            if ((r = vn->Truncate(0)) < 0) {
-                if (r != ERR_NOT_SUPPORTED) {
-                    // devfs does not support this, but we should not fail
-                    vn->RefRelease();
-                    return r;
-                }
-            }
+        if (vn->IsDevice() && !(flags & O_DIRECTORY)) {
+            *pathout = ".";
+            r = vn->GetRemote();
+            vn->RefRelease();
+            return r;
+        }
+        if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
+            vn->RefRelease();
+            return r;
         }
     }
     trace(VFS, "VfsOpen: vn=%p\n", vn);
