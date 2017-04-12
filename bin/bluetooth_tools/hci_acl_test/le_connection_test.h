@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "apps/bluetooth/lib/common/device_address.h"
+#include "apps/bluetooth/lib/hci/acl_data_channel.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/hci.h"
@@ -34,8 +35,9 @@ class LEConnectionTest final {
  private:
   // Initializes the data channel and sends a LE connection request to |dst_addr_|. Exits the
   // run loop if an error occurs.
-  void InitializeDataChannelAndCreateConnection(size_t max_data_len, size_t max_num_packets,
-                                                size_t le_max_data_len, size_t le_max_num_packets);
+  void InitializeDataChannelAndCreateConnection(
+      const bluetooth::hci::DataBufferInfo& bredr_buffer_info,
+      const bluetooth::hci::DataBufferInfo& le_buffer_info);
 
   // Called after the connection has been successfully established. Sends 3 times the maximum number
   // of LE packets that can be stored in the controller's buffers. Sends ATT protocol Handle-Value

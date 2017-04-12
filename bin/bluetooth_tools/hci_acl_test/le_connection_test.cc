@@ -31,9 +31,9 @@ bool LEConnectionTest::Run(ftl::UniqueFD hci_dev, const common::DeviceAddress& d
 
   dst_addr_ = dst_addr;
 
-  // Controller data buffer parameters. We can pass these by reference to the callbacks below since
-  // the MessageLoop is run within this scope and hence these variables will remain in scope.
-  size_t max_data_len, max_num_packets, le_max_data_len, le_max_num_packets;
+  // We can pass this by reference to the callbacks below since the MessageLoop is run within this
+  // scope and hence these variables will remain in scope.
+  hci::DataBufferInfo bredr_buffer_info;
 
   auto read_buf_size_cb = [&](hci::CommandChannel::TransactionId id,
                               const hci::EventPacket& reply) {
@@ -43,8 +43,8 @@ bool LEConnectionTest::Run(ftl::UniqueFD hci_dev, const common::DeviceAddress& d
       return;
     }
 
-    max_data_len = le16toh(return_params->hc_acl_data_packet_length);
-    max_num_packets = le16toh(return_params->hc_total_num_acl_data_packets);
+    bredr_buffer_info = hci::DataBufferInfo(le16toh(return_params->hc_acl_data_packet_length),
+                                            le16toh(return_params->hc_total_num_acl_data_packets));
   };
   auto le_read_buf_size_cb = [&, this](hci::CommandChannel::TransactionId id,
                                        const hci::EventPacket& reply) {
@@ -54,11 +54,10 @@ bool LEConnectionTest::Run(ftl::UniqueFD hci_dev, const common::DeviceAddress& d
       return;
     }
 
-    le_max_data_len = le16toh(return_params->hc_le_acl_data_packet_length);
-    le_max_num_packets = le16toh(return_params->hc_total_num_le_acl_data_packets);
+    hci::DataBufferInfo le_buffer_info(le16toh(return_params->hc_le_acl_data_packet_length),
+                                       le16toh(return_params->hc_total_num_le_acl_data_packets));
 
-    InitializeDataChannelAndCreateConnection(max_data_len, max_num_packets, le_max_data_len,
-                                             le_max_num_packets);
+    InitializeDataChannelAndCreateConnection(bredr_buffer_info, le_buffer_info);
   };
 
   common::StaticByteBuffer<hci::CommandPacket::GetMinBufferSize(0)> buffer;
@@ -82,22 +81,21 @@ bool LEConnectionTest::Run(ftl::UniqueFD hci_dev, const common::DeviceAddress& d
   return true;
 }
 
-void LEConnectionTest::InitializeDataChannelAndCreateConnection(size_t max_data_len,
-                                                                size_t max_num_packets,
-                                                                size_t le_max_data_len,
-                                                                size_t le_max_num_packets) {
+void LEConnectionTest::InitializeDataChannelAndCreateConnection(
+    const bluetooth::hci::DataBufferInfo& bredr_buffer_info,
+    const bluetooth::hci::DataBufferInfo& le_buffer_info) {
   auto conn_lookup_cb = [this](hci::ConnectionHandle handle) -> ftl::RefPtr<hci::Connection> {
     auto iter = conn_map_.find(handle);
     if (iter == conn_map_.end()) return nullptr;
     return iter->second;
   };
-  if (!hci_->InitializeACLDataChannel(
-          max_data_len, le_max_data_len, max_num_packets, le_max_num_packets, conn_lookup_cb,
-          std::bind(&LEConnectionTest::ACLDataRxCallback, this, _1), message_loop_.task_runner())) {
+  if (!hci_->InitializeACLDataChannel(bredr_buffer_info, le_buffer_info, conn_lookup_cb)) {
     FTL_LOG(ERROR) << "Failed to initialize ACL data channel";
     message_loop_.QuitNow();
     return;
   }
+  hci_->acl_data_channel()->SetDataRxHandler(
+      std::bind(&LEConnectionTest::ACLDataRxCallback, this, _1), message_loop_.task_runner());
 
   // Connection parameters with reasonable defaults.
   hci::LEConnectionParams conn_params(hci::LEPeerAddressType::kPublic, dst_addr_);
@@ -208,7 +206,8 @@ void LEConnectionTest::SendNotifications() {
   //    - 4-octet L2CAP header.
   //    - 4-octet ATT protocol Handle-Value Notification.
   constexpr size_t kDataLength = 8;
-  for (unsigned int i = 0; i < hci_->acl_data_channel()->GetLEMaxNumberOfPackets() * 3; ++i) {
+  for (unsigned int i = 0; i < hci_->acl_data_channel()->GetLEBufferInfo().max_num_packets() * 3;
+       ++i) {
     common::DynamicByteBuffer rsp_bytes(hci::ACLDataTxPacket::GetMinBufferSize(kDataLength));
     hci::ACLDataTxPacket rsp(conn_map_.begin()->first,
                              hci::ACLPacketBoundaryFlag::kFirstNonFlushable,

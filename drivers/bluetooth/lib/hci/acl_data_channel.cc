@@ -17,45 +17,44 @@
 namespace bluetooth {
 namespace hci {
 
+DataBufferInfo::DataBufferInfo(size_t max_data_length, size_t max_num_packets)
+    : max_data_length_(max_data_length), max_num_packets_(max_num_packets) {
+  FTL_DCHECK(max_data_length_);
+  FTL_DCHECK(max_num_packets_);
+}
+
+DataBufferInfo::DataBufferInfo() : max_data_length_(0u), max_num_packets_(0u) {}
+
+bool DataBufferInfo::operator==(const DataBufferInfo& other) const {
+  return max_data_length_ == other.max_data_length_ && max_num_packets_ == other.max_num_packets_;
+}
+
 ACLDataChannel::ACLDataChannel(Transport* transport, mx::channel hci_acl_channel,
-                               const ConnectionLookupCallback& conn_lookup_cb,
-                               const DataReceivedCallback& rx_callback,
-                               ftl::RefPtr<ftl::TaskRunner> rx_task_runner)
+                               const ConnectionLookupCallback& conn_lookup_cb)
     : transport_(transport),
       channel_(std::move(hci_acl_channel)),
       conn_lookup_cb_(conn_lookup_cb),
       is_initialized_(false),
       event_handler_id_(0u),
       io_handler_key_(0u),
-      rx_callback_(rx_callback),
-      rx_task_runner_(rx_task_runner),
-      max_data_len_(0u),
-      le_max_data_len_(0u),
-      max_num_packets_(0u),
-      le_max_num_packets_(0u),
       num_sent_packets_(0u),
       le_num_sent_packets_(0u) {
   FTL_DCHECK(transport_), FTL_DCHECK(channel_.is_valid());
   FTL_DCHECK(conn_lookup_cb_);
-  FTL_DCHECK(rx_callback);
-  FTL_DCHECK(rx_task_runner_);
 }
 
 ACLDataChannel::~ACLDataChannel() {
   ShutDown();
 }
 
-void ACLDataChannel::Initialize(size_t max_data_len, size_t le_max_data_len, size_t max_num_packets,
-                                size_t le_max_num_packets) {
+void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
+                                const DataBufferInfo& le_buffer_info) {
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FTL_DCHECK(!is_initialized_);
-  FTL_DCHECK(max_data_len);
-  FTL_DCHECK(max_num_packets);
+  FTL_DCHECK(bredr_buffer_info.IsAvailable() || le_buffer_info.IsAvailable());
 
-  max_data_len_ = max_data_len;
-  le_max_data_len_ = le_max_data_len;
-  max_num_packets_ = max_num_packets;
-  le_max_num_packets_ = le_max_num_packets;
+  bredr_buffer_info_ = bredr_buffer_info;
+  le_buffer_info_ = le_buffer_info;
 
   // We make sure that this method blocks until the I/O handler registration task has run.
   std::mutex init_mutex;
@@ -114,24 +113,17 @@ void ACLDataChannel::ShutDown() {
   io_task_runner_ = nullptr;
   io_handler_key_ = 0u;
   event_handler_id_ = 0u;
-  rx_callback_ = DataReceivedCallback();
-  rx_task_runner_ = nullptr;
+  SetDataRxHandler(nullptr, nullptr);
 }
 
-size_t ACLDataChannel::GetMaxDataLength() const {
-  return max_data_len_;
-}
+void ACLDataChannel::SetDataRxHandler(const DataReceivedCallback& rx_callback,
+                                      ftl::RefPtr<ftl::TaskRunner> rx_task_runner) {
+  // Make sure that if |rx_callback| is null, so is |rx_task_runner|.
+  FTL_DCHECK(!!rx_callback == !!rx_task_runner);
 
-size_t ACLDataChannel::GetLEMaxDataLength() const {
-  return le_max_data_len_ ? le_max_data_len_ : max_data_len_;
-}
-
-size_t ACLDataChannel::GetMaxNumberOfPackets() const {
-  return max_num_packets_;
-}
-
-size_t ACLDataChannel::GetLEMaxNumberOfPackets() const {
-  return le_max_num_packets_ ? le_max_num_packets_ : max_num_packets_;
+  std::lock_guard<std::mutex> lock(rx_mutex_);
+  rx_callback_ = rx_callback;
+  rx_task_runner_ = rx_task_runner;
 }
 
 bool ACLDataChannel::SendPacket(common::DynamicByteBuffer data_packet) {
@@ -150,9 +142,7 @@ bool ACLDataChannel::SendPacket(common::DynamicByteBuffer data_packet) {
     return false;
   }
 
-  size_t mtu =
-      (conn->type() == Connection::LinkType::kLE) ? GetLEMaxDataLength() : GetMaxDataLength();
-  if (acl_packet.GetPayloadSize() > mtu) {
+  if (acl_packet.GetPayloadSize() > GetBufferMTU(*conn)) {
     FTL_LOG(ERROR) << "ACL data packet too large!";
     return false;
   }
@@ -168,6 +158,20 @@ bool ACLDataChannel::SendPacket(common::DynamicByteBuffer data_packet) {
   io_task_runner_->PostTask(std::bind(&ACLDataChannel::TrySendNextQueuedPackets, this));
 
   return true;
+}
+
+const DataBufferInfo& ACLDataChannel::GetBufferInfo() const {
+  return bredr_buffer_info_;
+}
+
+const DataBufferInfo& ACLDataChannel::GetLEBufferInfo() const {
+  return le_buffer_info_.IsAvailable() ? le_buffer_info_ : bredr_buffer_info_;
+}
+
+size_t ACLDataChannel::GetBufferMTU(const Connection& connection) {
+  if (connection.type() != Connection::LinkType::kLE) return bredr_buffer_info_.max_data_length();
+
+  return GetLEBufferInfo().max_data_length();
 }
 
 void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) {
@@ -266,15 +270,15 @@ void ACLDataChannel::TrySendNextQueuedPackets() {
 }
 
 size_t ACLDataChannel::GetNumFreeBREDRPacketsLocked() const {
-  FTL_DCHECK(max_num_packets_ >= num_sent_packets_);
-  return max_num_packets_ - num_sent_packets_;
+  FTL_DCHECK(bredr_buffer_info_.max_num_packets() >= num_sent_packets_);
+  return bredr_buffer_info_.max_num_packets() - num_sent_packets_;
 }
 
 size_t ACLDataChannel::GetNumFreeLEPacketsLocked() const {
-  if (!le_max_num_packets_) return GetNumFreeBREDRPacketsLocked();
+  if (!le_buffer_info_.IsAvailable()) return GetNumFreeBREDRPacketsLocked();
 
-  FTL_DCHECK(le_max_num_packets_ >= le_num_sent_packets_);
-  return le_max_num_packets_ - le_num_sent_packets_;
+  FTL_DCHECK(le_buffer_info_.max_num_packets() >= le_num_sent_packets_);
+  return le_buffer_info_.max_num_packets() - le_num_sent_packets_;
 }
 
 void ACLDataChannel::DecrementTotalNumPacketsLocked(size_t count) {
@@ -283,7 +287,7 @@ void ACLDataChannel::DecrementTotalNumPacketsLocked(size_t count) {
 }
 
 void ACLDataChannel::DecrementLETotalNumPacketsLocked(size_t count) {
-  if (!le_max_num_packets_) {
+  if (!le_buffer_info_.IsAvailable()) {
     DecrementTotalNumPacketsLocked(count);
     return;
   }
@@ -293,33 +297,40 @@ void ACLDataChannel::DecrementLETotalNumPacketsLocked(size_t count) {
 }
 
 void ACLDataChannel::IncrementTotalNumPacketsLocked(size_t count) {
-  FTL_DCHECK(num_sent_packets_ + count <= max_num_packets_);
+  FTL_DCHECK(num_sent_packets_ + count <= bredr_buffer_info_.max_num_packets());
   num_sent_packets_ += count;
 }
 
 void ACLDataChannel::IncrementLETotalNumPacketsLocked(size_t count) {
-  if (!le_max_num_packets_) {
+  if (!le_buffer_info_.IsAvailable()) {
     IncrementTotalNumPacketsLocked(count);
     return;
   }
 
-  FTL_DCHECK(le_num_sent_packets_ + count <= le_max_num_packets_);
+  FTL_DCHECK(le_num_sent_packets_ + count <= le_buffer_info_.max_num_packets());
   le_num_sent_packets_ += count;
 }
 
 bool ACLDataChannel::MaxNumPacketsReachedLocked() const {
-  return num_sent_packets_ == max_num_packets_;
+  return num_sent_packets_ == bredr_buffer_info_.max_num_packets();
 }
 
 bool ACLDataChannel::MaxLENumPacketsReachedLocked() const {
-  if (!le_max_num_packets_) return MaxNumPacketsReachedLocked();
-  return le_num_sent_packets_ == le_max_num_packets_;
+  if (!le_buffer_info_.IsAvailable()) return MaxNumPacketsReachedLocked();
+  return le_num_sent_packets_ == le_buffer_info_.max_num_packets();
 }
 
 void ACLDataChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+  if (!is_initialized_) return;
+
   FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FTL_DCHECK(handle == channel_.get());
   FTL_DCHECK(pending & MX_CHANNEL_READABLE);
+
+  std::lock_guard<std::mutex> lock(rx_mutex_);
+  if (!rx_callback_) return;
+
+  FTL_DCHECK(rx_task_runner_);
 
   uint32_t read_size;
   mx_status_t status = channel_.read(0u, rx_buffer_.GetMutableData(), rx_buffer_.GetSize(),

@@ -75,10 +75,8 @@ bool Transport::Initialize() {
 }
 
 bool Transport::InitializeACLDataChannel(
-    size_t max_data_len, size_t le_max_data_len, size_t max_num_packets, size_t le_max_num_packets,
-    const ACLDataChannel::ConnectionLookupCallback& conn_lookup_cb,
-    const ACLDataChannel::DataReceivedCallback& rx_callback,
-    ftl::RefPtr<ftl::TaskRunner> rx_task_runner) {
+    const DataBufferInfo& bredr_buffer_info, const DataBufferInfo& le_buffer_info,
+    const ACLDataChannel::ConnectionLookupCallback& conn_lookup_cb) {
   FTL_DCHECK(device_fd_.get());
   FTL_DCHECK(IsInitialized());
 
@@ -98,9 +96,8 @@ bool Transport::InitializeACLDataChannel(
   });
 
   mx::channel channel(handle);
-  acl_data_channel_ = std::make_unique<ACLDataChannel>(this, std::move(channel), conn_lookup_cb,
-                                                       rx_callback, rx_task_runner);
-  acl_data_channel_->Initialize(max_data_len, le_max_data_len, max_num_packets, le_max_num_packets);
+  acl_data_channel_ = std::make_unique<ACLDataChannel>(this, std::move(channel), conn_lookup_cb);
+  acl_data_channel_->Initialize(bredr_buffer_info, le_buffer_info);
 
   return true;
 }

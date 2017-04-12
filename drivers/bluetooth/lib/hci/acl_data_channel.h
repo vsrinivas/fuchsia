@@ -26,6 +26,36 @@ class Connection;
 class EventPacket;
 class Transport;
 
+// Represents the controller data buffer settings for the BR/EDR or LE transports.
+class DataBufferInfo {
+ public:
+  // Initialize fields to non-zero values.
+  DataBufferInfo(size_t max_data_length, size_t max_num_packets);
+
+  // The default constructor sets all fields to zero. This can be used to represent a data buffer
+  // that does not exist (e.g. the controller has a single shared buffer and no dedicated LE buffer.
+  DataBufferInfo();
+
+  // The maximum length (in octets) of the data portion of each HCI ACL data packet that the
+  // controller is able to accept.
+  size_t max_data_length() const { return max_data_length_; }
+
+  // Returns the total number of HCI ACL data packets that can be stored in the data buffer
+  // reprented by this object.
+  size_t max_num_packets() const { return max_num_packets_; }
+
+  // Returns true if both fields are set to zero.
+  bool IsAvailable() const { return max_data_length_ && max_num_packets_; }
+
+  // Comparison operators.
+  bool operator==(const DataBufferInfo& other) const;
+  bool operator!=(const DataBufferInfo& other) const { return !(*this == other); }
+
+ private:
+  size_t max_data_length_;
+  size_t max_num_packets_;
+};
+
 // Represents the Bluetooth ACL Data channel and manages the Host<->Controller ACL data flow
 // control.
 //
@@ -39,40 +69,36 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   //       to avoid causing a potential deadlock.
   using ConnectionLookupCallback = std::function<ftl::RefPtr<Connection>(ConnectionHandle)>;
 
-  // Callback invoked when there is a new ACL data packet from the controller. The ownership of the
-  // |acl_data_packet| is passed to the callback implementation.
-  using DataReceivedCallback = std::function<void(common::DynamicByteBuffer acl_data_packet)>;
-
   ACLDataChannel(Transport* transport, mx::channel hci_acl_channel,
-                 const ConnectionLookupCallback& conn_lookup_cb,
-                 const DataReceivedCallback& rx_callback,
-                 ftl::RefPtr<ftl::TaskRunner> rx_task_runner);
+                 const ConnectionLookupCallback& conn_lookup_cb);
   ~ACLDataChannel() override;
 
   // Starts listening on the HCI ACL data channel and starts handling data flow control.
-  void Initialize(size_t max_data_len, size_t le_max_data_len, size_t max_num_packets,
-                  size_t le_max_num_packets);
+  // |bredr_buffer_info| represents the controller's data buffering capacity for the
+  // BR/EDR transport and the |le_buffer_info| represents Low Energy buffers. At least one of these
+  // (BR/EDR vs LE) must contain non-zero values. Generally rules of thumb:
+  //
+  //   - A LE only controller will have LE buffers only.
+  //   - A BR/EDR-only controller will have BR/EDR buffers only.
+  //   - A dual-mode controller will have BR/EDR buffers and MAY have LE buffers if the BR/EDR
+  //     buffer is not shared between the transports.
+  //
+  // As this class is intended to support flow-control for both, this function should be called
+  // based on what is reported by the controller.
+  void Initialize(const DataBufferInfo& bredr_buffer_info, const DataBufferInfo& le_buffer_info);
 
   // Unregisters event handlers and cleans up.
   // NOTE: Initialize() and ShutDown() MUST be called on the same thread. These methods are not
   // thread-safe.
   void ShutDown();
 
-  // Returns the maximum length (in octets) of the data portion of each HCI ACL Data Packet that the
-  // Controller is able to accept to be sent over a BR/EDR link.
-  size_t GetMaxDataLength() const;
+  // Callback invoked when there is a new ACL data packet from the controller. The ownership of the
+  // |acl_data_packet| is passed to the callback implementation.
+  using DataReceivedCallback = std::function<void(common::DynamicByteBuffer acl_data_packet)>;
 
-  // Returns the maximum length (in octets) of the data portion of each HCI ACL Data Packet that the
-  // Controller is able to accept to be sent over a LE link.
-  size_t GetLEMaxDataLength() const;
-
-  // Returns the total number of HCI ACL Data Packets that can be stored in the data buffers of the
-  // Controller for BR/EDR.
-  size_t GetMaxNumberOfPackets() const;
-
-  // Returns the total number of HCI ACL Data Packets that can be stored in the data buffers of the
-  // Controller for LE.
-  size_t GetLEMaxNumberOfPackets() const;
+  // Assigns a handler callback for received ACL data packets.
+  void SetDataRxHandler(const DataReceivedCallback& rx_callback,
+                        ftl::RefPtr<ftl::TaskRunner> rx_task_runner);
 
   // Queues the given ACL data packet to be sent to the controller. Returns false if the packet
   // cannot be queued up, e.g. if |data_packet| does not correspond to a known link layer
@@ -84,6 +110,13 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
 
   // Returns the underlying channel handle.
   const mx::channel& channel() const { return channel_; }
+
+  // Returns the BR/EDR buffer information that the channel was initialized with.
+  const DataBufferInfo& GetBufferInfo() const;
+
+  // Returns the LE buffer information that the channel was initialized with. This defaults to the
+  // BR/EDR buffers if the controller does not have a dedicated LE buffer.
+  const DataBufferInfo& GetLEBufferInfo() const;
 
  private:
   // Represents a queued ACL data packet.
@@ -97,6 +130,9 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
     // initially only supporting fixed-channel LE L2CAP.
     common::DynamicByteBuffer bytes;
   };
+
+  // Returns the data buffer MTU for the given connection.
+  size_t GetBufferMTU(const Connection& connection);
 
   // Handler for the HCI Number of Completed Packets Event, used for packet-based data flow control.
   void NumberOfCompletedPacketsCallback(const EventPacket& event);
@@ -165,26 +201,22 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   ftl::RefPtr<ftl::TaskRunner> io_task_runner_;
 
   // The current handler for incoming data and the task runner on which to run it.
-  DataReceivedCallback rx_callback_;
-  ftl::RefPtr<ftl::TaskRunner> rx_task_runner_;
+  std::mutex rx_mutex_;
+  DataReceivedCallback rx_callback_ __TA_GUARDED(rx_mutex_);
+  ftl::RefPtr<ftl::TaskRunner> rx_task_runner_ __TA_GUARDED(rx_mutex_);
 
   // The buffer we use to temporarily write incoming data packets.
   // TODO(armansito): It might be better to initialize this dynamically based on the MTU reported by
   // the controller.
   common::StaticByteBuffer<ACLDataTxPacket::GetMinBufferSize(kMaxACLPayloadSize)> rx_buffer_;
 
-  // Maximum length (in octets) of the data portion of each HCI ACL Data Packet that the Controller
-  // is able to accept. If the controller maintains separate buffers for LE and BR/EDR then each
-  // value will be non-zero. If the controller maintains a single buffer for both, then
-  // |le_max_acl_data_len_| will be zero.
-  size_t max_data_len_;
-  size_t le_max_data_len_;
+  // BR/EDR data buffer information. This buffer will not be available on LE-only controllers.
+  DataBufferInfo bredr_buffer_info_;
 
-  // Total number of HCI ACL Data Packets that can be stored in the data buffers of the Controller.
-  // |le_max_num_packets_| will be non-zero if the controller maintains separate buffers for LE
-  // and BR/EDR.
-  size_t max_num_packets_;
-  size_t le_max_num_packets_;
+  // LE data buffer information. This buffer will not be available on BR/EDR-only controllers (which
+  // we do not support) and MAY be available on dual-mode controllers. We maintain that if this
+  // buffer is not available, then the BR/EDR buffer MUST be available.
+  DataBufferInfo le_buffer_info_;
 
   // Mutex that guards access to data transmission related members below.
   std::mutex send_mutex_;
