@@ -15,11 +15,14 @@ mx_status_t mx_object_get_cookie(mx_handle_t handle, mx_handle_t scope, uint64_t
 
 ## DESCRIPTION
 
-Some objects (Events, Resources, VMOs) may have a cookie attached, which is
-a 64bit opaque value.  Initially the cookie is undefined and not readable.
+Some objects (Events, Event pairs, Resources, VMOs) may have a cookie attached,
+which is a 64bit opaque value.  Initially the cookie is undefined and not readable.
 
 If the cookie has been set on an object, **mx_object_get_cookie**() may be
 called, using the same object as *scope* to obtain the cookie.
+
+Event pairs are special.  If one side of the pair is closed, the other side's
+cookie is invalidated. An invalidated cookie is not get-able or set-able with any scope.
 
 Cookies are useful for objects that will be passed to another process and
 later returned.  By setting the cookie with **mx_object_set_cookie**(),

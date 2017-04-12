@@ -63,6 +63,7 @@ public:
     // cookie-capable have state trackers)
     mx_status_t SetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t cookie);
     mx_status_t GetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t* cookie);
+    mx_status_t InvalidateCookie(CookieJar *cookiejar);
 
 private:
     mxtl::Canary<mxtl::magic("STRK")> canary_;

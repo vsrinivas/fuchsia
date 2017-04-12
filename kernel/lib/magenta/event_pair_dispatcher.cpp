@@ -50,6 +50,7 @@ void EventPairDispatcher::on_zero_handles() {
     AutoLock locker(&lock_);
     DEBUG_ASSERT(other_);
 
+    other_->state_tracker_.InvalidateCookie(other_->get_cookie_jar());
     other_->state_tracker_.UpdateState(0u, MX_EPAIR_PEER_CLOSED);
     other_.reset();
 }

@@ -186,3 +186,13 @@ mx_status_t StateTracker::GetCookie(CookieJar* cookiejar, mx_koid_t scope, uint6
 
     return ERR_ACCESS_DENIED;
 }
+
+mx_status_t StateTracker::InvalidateCookie(CookieJar* cookiejar) {
+    if (cookiejar == nullptr)
+        return ERR_NOT_SUPPORTED;
+
+    AutoLock lock(&lock_);
+
+    cookiejar->scope_ = MX_KOID_KERNEL;
+    return NO_ERROR;
+}
