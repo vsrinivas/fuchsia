@@ -45,9 +45,6 @@ typedef struct acpi_battery_device {
 #define get_acpi_battery_device(dev) containerof(dev, acpi_battery_device_t, device)
 
 static ssize_t acpi_battery_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    if (off > 0) {
-        return 0;
-    }
     acpi_battery_device_t* device = get_acpi_battery_device(dev);
     mtx_lock(&device->lock);
     ssize_t rc = 0;
