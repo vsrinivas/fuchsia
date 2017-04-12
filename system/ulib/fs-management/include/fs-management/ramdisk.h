@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <inttypes.h>
 #include <stdlib.h>
 
 #include <magenta/compiler.h>
