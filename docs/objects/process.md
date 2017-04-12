@@ -36,7 +36,7 @@ its execution begins with `sys_process_start()`.
 
 [process_create](../syscalls/process_create.md),
 [process_start](../syscalls/process_start.md),
-[process_map_vm](../syscalls/process_map_vm.md),
-[process_unmap_vm](../syscalls/process_unmap_vm.md),
-[process_protect_vm](../syscalls/process_protect_vm.md),
-[job_create](../syscalls/job_create.md).
+[job_create](../syscalls/job_create.md),
+[vmar_map](../syscalls/vmar_map.md),
+[vmar_protect](../syscalls/vmar_protect.md),
+[vmar_unmap](../syscalls/vmar_unmap.md).
