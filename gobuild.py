@@ -68,10 +68,8 @@ def main():
                 print("could not link: ", src, ": ", e)
                 return 1
 
-    gopath = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
-
     os.environ['CGO_ENABLED'] = '1'
-    os.environ['GOPATH'] = gopath
+    os.environ['GOPATH'] = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
     # TODO(crawshaw): remove when clangwrap.sh/gccwrap.sh is clever.
     os.environ['MAGENTA'] = os.path.join(args.fuchsia_root, 'magenta')
     os.environ['GOOS'] = 'fuchsia'
