@@ -56,7 +56,12 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   // TODO(jwnichols): Uncomment this when the dashboard is more functional
   // startAgent("file:///system/apps/agents/mi_dashboard.dartx");
 
+// Toggle using the "kronk_dev" gn arg (see README).
+#ifdef KRONK_DEV
+  startAgent("https://storage.googleapis.com/maxwell-agents/kronk-dev");
+#else
   startAgent("https://storage.googleapis.com/maxwell-agents/kronk");
+#endif
 }
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(

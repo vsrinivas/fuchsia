@@ -2,9 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # if true, uses the "kronk-dev" agent, which is the unstable,
+  # under-development version
+  kronk_dev = false
+}
+
 source_set("user") {
   deps = [
-    ":maxwell_main"
+    ":maxwell_main",
   ]
 }
 
@@ -39,6 +45,10 @@ source_set("user_intelligence_provider") {
     "//apps/maxwell/services/user",
     "//apps/network/services",
   ]
+
+  if (kronk_dev) {
+    defines = [ "KRONK_DEV" ]
+  }
 }
 
 source_set("intelligence_services") {
@@ -49,9 +59,9 @@ source_set("intelligence_services") {
 
   deps = [
     "//apps/maxwell/services/action_log",
-    "//apps/maxwell/services/user",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/user",
   ]
 }
 
