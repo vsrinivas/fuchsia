@@ -48,3 +48,15 @@ interface TextInputService {
                        InputMethodEditorClient client,
                        InputMethodEditor& editor);
 };
+
+// The service provided by an IME
+// TODO: probably migrate this into its own fidl file
+[ServiceName="mozart::ImeService"]
+interface ImeService {
+  GetInputMethodEditor(KeyboardType keyboard_type,
+                       TextInputState initial_state,
+                       InputMethodEditorClient client,
+                       InputMethodEditor& editor);
+
+  InjectInput(InputEvent event);
+};
