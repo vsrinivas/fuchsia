@@ -33,8 +33,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   void GetSuggestionProvider(
       fidl::InterfaceRequest<SuggestionProvider> request) override;
 
-  void GetResolver(
-      fidl::InterfaceRequest<resolver::Resolver> request) override;
+  void GetResolver(fidl::InterfaceRequest<resolver::Resolver> request) override;
 
  private:
   app::ServiceProviderPtr startServiceProviderApp(const std::string& url);
@@ -42,12 +41,11 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
 
   app::ApplicationContext* app_context_;  // Not owned.
 
-  app::ServiceProviderPtr context_services_;
   ContextEnginePtr context_engine_;
   app::ServiceProviderPtr suggestion_services_;
   SuggestionEnginePtr suggestion_engine_;
-  app::ServiceProviderPtr action_log_services_;
   ActionLogFactoryPtr action_log_factory_;
+  app::ServiceProviderPtr resolver_services_;
 
   fidl::InterfacePtr<modular::FocusController> focus_controller_;
 
