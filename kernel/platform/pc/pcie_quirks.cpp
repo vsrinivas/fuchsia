@@ -46,6 +46,15 @@ static void pcie_tolud_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
 
         // Intel 6th Generation Core Family (Skylake)
         { .match = 0x80861900, .mask = 0xFFFFFF00, .offset = 0xBC },
+
+        // Intel 7th Generation Core Family (Kaby Lake)
+        //
+        // TODO(johngro) : Get confirmation of this.  Intel's public docs claim
+        // that the DID is 0x19xx, like Skylake.  Hardware I have seen
+        // (i3-7100u), as well as HW that people have talked about online
+        // (i5-7500u, as well as some desktop SKUs), however, all seem to use
+        // 0x59xx.
+        { .match = 0x80865900, .mask = 0xFFFFFF00, .offset = 0xBC },
     };
 
     static bool found_chipset_device = false;
