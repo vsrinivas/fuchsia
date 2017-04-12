@@ -184,7 +184,6 @@ def main():
     bt_with_offset_re = re.compile(full_prefix +
         "bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \((\S+),(0x[0-9a-f]+)\)$")
     bt_end_re = re.compile(full_prefix + "bt#(\d+): end")
-    magenta_end_re = re.compile("^Halted$");
     arch_re = re.compile(full_prefix + "arch: ([\\S]+)$")
     build_id_re = re.compile(full_prefix +
         "dso: id=([0-9a-z]+) base=(0x[0-9a-f]+) name=([\\S]+)$")
@@ -208,7 +207,7 @@ def main():
         # Strip any trailing carriage return character ("\r"), since
         # these appear in the serial console output from QEMU.
         line = line.rstrip()
-        if bt_end_re.match(line) or magenta_end_re.match(line):
+        if bt_end_re.match(line) or magenta_end_re.match(line) or (magenta_bt and line == ''):
             if len(processed_lines) != 0:
                 writeline("\nstart of symbolized stack:\n")
                 writelines(processed_lines)
@@ -229,6 +228,7 @@ def main():
                 name_to_buildid = {}
                 total_stack_size = 0
                 prev_sp = None
+                magenta_bt = False
             if end_of_file:
                 break
         m = arch_re.match(line)
