@@ -417,22 +417,28 @@ AutoVmcsLoad::~AutoVmcsLoad() {
 }
 
 static status_t set_vmcs_control(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
-                                 uint32_t set) {
+                                 uint32_t set, uint32_t clear) {
     uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
     uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
     if ((allowed_1 & set) != set) {
         dprintf(SPEW, "can not set vmcs controls %#x\n", static_cast<uint>(controls));
         return ERR_NOT_SUPPORTED;
     }
+    if ((~allowed_0 & clear) != clear) {
+        dprintf(SPEW, "can not clear vmcs controls %#x\n", static_cast<uint>(controls));
+        return ERR_NOT_SUPPORTED;
+    }
+    if ((set & clear) != 0) {
+        dprintf(SPEW, "can not set and clear the same vmcs controls %#x\n",
+                static_cast<uint>(controls));
+        return ERR_INVALID_ARGS;
+    }
 
     // Reference Volume 3, Section 31.5.1, Algorithm 3, Part C. If the control
     // can be either 0 or 1 (flexible), and the control is unknown, then refer
     // to the old MSR to find the default value.
-    //
-    // NOTE: We do not explicitly clear any controls, otherwise unknown would be
-    // defined as the complement of the union of what is set and cleared.
     uint32_t flexible = allowed_0 ^ allowed_1;
-    uint32_t unknown = flexible & ~set;
+    uint32_t unknown = flexible & ~(set | clear);
     uint32_t defaults = unknown & BITS(old_msr, 31, 0);
     vmcs_write(controls, allowed_0 | defaults | set);
     return NO_ERROR;
@@ -474,7 +480,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               // addresses with a virtual processor ID.
                               PROCBASED_CTLS2_VPID |
                               // Enable use of XSAVES and XRSTORS instructions.
-                              PROCBASED_CTLS2_XSAVES_XRSTORS);
+                              PROCBASED_CTLS2_XSAVES_XRSTORS,
+                              0);
     if (status != NO_ERROR)
         return status;
 
@@ -485,7 +492,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               // External interrupts cause a VM exit.
                               PINBASED_CTLS_EXTINT_EXITING |
                               // Non-maskable interrupts cause a VM exit.
-                              PINBASED_CTLS_NMI_EXITING);
+                              PINBASED_CTLS_NMI_EXITING,
+                              0);
     if (status != NO_ERROR)
         return status;
 
@@ -493,10 +501,14 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     status = set_vmcs_control(VmcsField32::PROCBASED_CTLS,
                               read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
                               read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS),
-                              // IO instructions cause a VM exit.
+                              // Enable VM exit on IO instructions.
                               PROCBASED_CTLS_IO_EXITING |
                               // Enable secondary processor-based controls.
-                              PROCBASED_CTLS_PROCBASED_CTLS2);
+                              PROCBASED_CTLS_PROCBASED_CTLS2,
+                              // Disable VM exit on CR3 load.
+                              PROCBASED_CTLS_CR3_LOAD_EXITING |
+                              // Disable VM exit on CR3 store.
+                              PROCBASED_CTLS_CR3_STORE_EXITING);
     if (status != NO_ERROR)
         return status;
 
@@ -515,7 +527,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               // Save the guest IA32_EFER MSR on exit.
                               EXIT_CTLS_SAVE_IA32_EFER |
                               // Load the host IA32_EFER MSR on exit.
-                              EXIT_CTLS_LOAD_IA32_EFER);
+                              EXIT_CTLS_LOAD_IA32_EFER,
+                              0);
     if (status != NO_ERROR)
         return status;
 
@@ -529,7 +542,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               // Load the guest IA32_PAT MSR on entry.
                               ENTRY_CTLS_LOAD_IA32_PAT |
                               // Load the guest IA32_EFER MSR on entry.
-                              ENTRY_CTLS_LOAD_IA32_EFER);
+                              ENTRY_CTLS_LOAD_IA32_EFER,
+                              0);
     if (status != NO_ERROR)
         return status;
 

@@ -10,11 +10,14 @@
 .text
 
 FUNCTION(guest_start)
-    xor %rax, %rax
     mov $UART_IO_PORT, %dx
     mov $'m', %al
     out %al, %dx
     mov $'x', %al
     out %al, %dx
+
+    xor %rax, %rax
+    mov %rax, %cr3
+
     jmp .
 FUNCTION(guest_end)

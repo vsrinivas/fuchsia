@@ -120,6 +120,8 @@ enum class VmcsFieldXX : uint64_t {
 #define PROCBASED_CTLS2_XSAVES_XRSTORS      (1u << 20)
 
 /* PROCBASED_CTLS flags */
+#define PROCBASED_CTLS_CR3_LOAD_EXITING     (1u << 15)
+#define PROCBASED_CTLS_CR3_STORE_EXITING    (1u << 16)
 #define PROCBASED_CTLS_IO_EXITING           (1u << 24)
 #define PROCBASED_CTLS_PROCBASED_CTLS2      (1u << 31)
 
