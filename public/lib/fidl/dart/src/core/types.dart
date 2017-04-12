@@ -16,23 +16,27 @@ typedef void VoidCallback();
 const int NO_ERROR = 0;
 const int ERR_INTERNAL = -1;
 const int ERR_NOT_SUPPORTED = -2;
-const int ERR_NO_RESOURCES = -5;
+const int ERR_NO_RESOURCES = -3;
 const int ERR_NO_MEMORY = -4;
+const int ERR_CALL_FAILED = -5;
+const int ERR_INTERRUPTED_RETRY = -6;
 const int ERR_INVALID_ARGS = -10;
-const int ERR_WRONG_TYPE = -54;
-const int ERR_BAD_SYSCALL = -11;
-const int ERR_BAD_HANDLE = -12;
-const int ERR_OUT_OF_RANGE = -13;
-const int ERR_BUFFER_TOO_SMALL = -14;
+const int ERR_BAD_HANDLE = -11;
+const int ERR_WRONG_TYPE = -12;
+const int ERR_BAD_SYSCALL = -13;
+const int ERR_OUT_OF_RANGE = -14;
+const int ERR_BUFFER_TOO_SMALL = -15;
 const int ERR_BAD_STATE = -20;
-const int ERR_NOT_FOUND = -3;
-const int ERR_ALREADY_EXISTS = -15;
-const int ERR_ALREADY_BOUND = -16;
-const int ERR_TIMED_OUT = -23;
-const int ERR_HANDLE_CLOSED = -24;
-const int ERR_REMOTE_CLOSED = -25;
-const int ERR_UNAVAILABLE = -26;
-const int ERR_SHOULD_WAIT = -27;
+const int ERR_TIMED_OUT = -21;
+const int ERR_SHOULD_WAIT = -22;
+const int ERR_HANDLE_CLOSED = -23;
+const int ERR_CANCELED = -23;
+const int ERR_REMOTE_CLOSED = -24;
+const int ERR_PEER_CLOSED = -24;
+const int ERR_NOT_FOUND = -25;
+const int ERR_ALREADY_EXISTS = -26;
+const int ERR_ALREADY_BOUND = -27;
+const int ERR_UNAVAILABLE = -28;
 const int ERR_ACCESS_DENIED = -30;
 const int ERR_IO = -40;
 const int ERR_IO_REFUSED = -41;
@@ -41,6 +45,8 @@ const int ERR_IO_DATA_LOSS = -43;
 const int ERR_BAD_PATH = -50;
 const int ERR_NOT_DIR = -51;
 const int ERR_NOT_FILE = -52;
+const int ERR_FILE_BIG = -53;
+const int ERR_NO_SPACE = -54;
 
 String getStringForStatus(int status) {
   switch (status) {
@@ -54,36 +60,40 @@ String getStringForStatus(int status) {
       return 'ERR_NO_RESOURCES';
     case ERR_NO_MEMORY:
       return 'ERR_NO_MEMORY';
+    case ERR_CALL_FAILED:
+      return 'ERR_CALL_FAILED';
+    case ERR_INTERRUPTED_RETRY:
+      return 'ERR_INTERRUPTED_RETRY';
     case ERR_INVALID_ARGS:
       return 'ERR_INVALID_ARGS';
+    case ERR_BAD_HANDLE:
+      return 'ERR_BAD_HANDLE';
     case ERR_WRONG_TYPE:
       return 'ERR_WRONG_TYPE';
     case ERR_BAD_SYSCALL:
       return 'ERR_BAD_SYSCALL';
-    case ERR_BAD_HANDLE:
-      return 'ERR_BAD_HANDLE';
     case ERR_OUT_OF_RANGE:
       return 'ERR_OUT_OF_RANGE';
     case ERR_BUFFER_TOO_SMALL:
       return 'ERR_BUFFER_TOO_SMALL';
     case ERR_BAD_STATE:
       return 'ERR_BAD_STATE';
+    case ERR_TIMED_OUT:
+      return 'ERR_TIMED_OUT';
+    case ERR_SHOULD_WAIT:
+      return 'ERR_SHOULD_WAIT';
+    case ERR_CANCELED:
+      return 'ERR_CANCELED';
+    case ERR_PEER_CLOSED:
+      return 'ERR_PEER_CLOSED';
     case ERR_NOT_FOUND:
       return 'ERR_NOT_FOUND';
     case ERR_ALREADY_EXISTS:
       return 'ERR_ALREADY_EXISTS';
     case ERR_ALREADY_BOUND:
       return 'ERR_ALREADY_BOUND';
-    case ERR_TIMED_OUT:
-      return 'ERR_TIMED_OUT';
-    case ERR_HANDLE_CLOSED:
-      return 'ERR_HANDLE_CLOSED';
-    case ERR_REMOTE_CLOSED:
-      return 'ERR_REMOTE_CLOSED';
     case ERR_UNAVAILABLE:
       return 'ERR_UNAVAILABLE';
-    case ERR_SHOULD_WAIT:
-      return 'ERR_SHOULD_WAIT';
     case ERR_ACCESS_DENIED:
       return 'ERR_ACCESS_DENIED';
     case ERR_IO:
@@ -100,6 +110,10 @@ String getStringForStatus(int status) {
       return 'ERR_NOT_DIR';
     case ERR_NOT_FILE:
       return 'ERR_NOT_FILE';
+    case ERR_FILE_BIG = -53:
+      return 'ERR_FILE_BIG';
+    case ERR_NO_SPACE:
+      return 'ERR_NO_SPACE';
     default:
       return '(unknown: $status)';
   }
