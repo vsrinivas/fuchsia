@@ -95,16 +95,6 @@ UserRunnerImpl::UserRunnerImpl(
       device_name_(device_name) {
   binding_.set_connection_error_handler([this] { delete this; });
 
-  auto resolver_service_provider =
-      GetServiceProvider("file:///system/apps/resolver_main");
-  user_scope_.AddService<resolver::Resolver>(
-      ftl::MakeCopyable([resolver_service_provider =
-                             std::move(resolver_service_provider)](
-          fidl::InterfaceRequest<resolver::Resolver> resolver_service_request) {
-        ConnectToService(resolver_service_provider.get(),
-                         std::move(resolver_service_request));
-      }));
-
   user_scope_.AddService<TokenProvider>(
       [this](fidl::InterfaceRequest<TokenProvider> request) {
         token_provider_impl_.AddBinding(std::move(request));
@@ -226,6 +216,10 @@ UserRunnerImpl::UserRunnerImpl(
       std::move(story_provider), std::move(focus_provider),
       std::move(visible_stories_provider),
       std::move(intelligence_provider_request));
+
+  user_scope_.AddService<resolver::Resolver>(
+      std::bind(&maxwell::UserIntelligenceProvider::GetResolver,
+                user_intelligence_provider_.get(), std::placeholders::_1));
   // End init maxwell.
 
   story_provider_impl_.reset(new StoryProviderImpl(
