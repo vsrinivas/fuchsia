@@ -73,7 +73,8 @@ Status PageUtils::ConvertStatus(storage::Status status,
     case storage::Status::NOT_CONNECTED_ERROR:
       return Status::NETWORK_ERROR;
     default:
-      FTL_DCHECK(false);
+      FTL_DCHECK(false) << "Internal error in Ledger storage. Status: "
+                        << status;
       return Status::INTERNAL_ERROR;
   }
 }
