@@ -89,9 +89,9 @@ static inline void arch_spinloop_signal(void)
 #define smp_rmb()   CF
 #endif
 
-static inline uint32_t arch_cycle_count(void)
+static inline uint64_t arch_cycle_count(void)
 {
-    return (uint32_t)ARM64_READ_SYSREG(pmccntr_el0);
+    return ARM64_READ_SYSREG(pmccntr_el0);
 }
 
 static inline uint32_t arch_dcache_line_size(void) {

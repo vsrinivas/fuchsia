@@ -202,19 +202,19 @@ static event_t context_switch_done_event;
 static int context_switch_tester(void *arg)
 {
     int i;
-    uint total_count = 0;
+    uint64_t total_count = 0;
     const int iter = 100000;
     int thread_count = (intptr_t)arg;
 
     event_wait(&context_switch_event);
 
-    uint count = arch_cycle_count();
+    uint64_t count = arch_cycle_count();
     for (i = 0; i < iter; i++) {
         thread_yield();
     }
     total_count += arch_cycle_count() - count;
     thread_sleep(LK_SEC(1));
-    printf("took %u cycles to yield %d times, %u per yield, %u per yield per thread\n",
+    printf("took %" PRIu64 " cycles to yield %d times, %" PRIu64 " per yield, %" PRIu64 " per yield per thread\n",
            total_count, iter, total_count / iter, total_count / iter / thread_count);
 
     event_signal(&context_switch_done_event, true);
@@ -453,14 +453,14 @@ static void spinlock_test(void)
     printf("seems to work\n");
 
 #define COUNT (1024*1024)
-    uint32_t c = arch_cycle_count();
+    uint64_t c = arch_cycle_count();
     for (uint i = 0; i < COUNT; i++) {
         spin_lock(&lock);
         spin_unlock(&lock);
     }
     c = arch_cycle_count() - c;
 
-    printf("%u cycles to acquire/release lock %u times (%u cycles per)\n", c, COUNT, c / COUNT);
+    printf("%" PRIu64 " cycles to acquire/release lock %u times (%" PRIu64 " cycles per)\n", c, COUNT, c / COUNT);
 
     c = arch_cycle_count();
     for (uint i = 0; i < COUNT; i++) {
@@ -469,7 +469,7 @@ static void spinlock_test(void)
     }
     c = arch_cycle_count() - c;
 
-    printf("%u cycles to acquire/release lock w/irqsave %u times (%u cycles per)\n", c, COUNT, c / COUNT);
+    printf("%" PRIu64 " cycles to acquire/release lock w/irqsave %u times (%" PRIu64 " cycles per)\n", c, COUNT, c / COUNT);
 #undef COUNT
 }
 

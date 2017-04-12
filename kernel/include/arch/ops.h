@@ -29,7 +29,7 @@ static void arch_disable_ints(void);
 static bool arch_ints_disabled(void);
 static bool arch_in_int_handler(void);
 
-static uint32_t arch_cycle_count(void);
+static uint64_t arch_cycle_count(void);
 
 static uint arch_curr_cpu_num(void);
 static uint arch_max_num_cpus(void);

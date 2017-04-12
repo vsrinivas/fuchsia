@@ -17,14 +17,14 @@
 
 void clock_tests(void)
 {
-    uint32_t c;
+    uint64_t c;
     lk_bigtime_t t2;
 
     thread_sleep(LK_MSEC(100));
     c = arch_cycle_count();
     current_time_hires();
     c = arch_cycle_count() - c;
-    printf("%u cycles per current_time_hires()\n", c);
+    printf("%" PRIu64 " cycles per current_time_hires()\n", c);
 
     printf("making sure time never goes backwards\n");
     {
@@ -53,11 +53,11 @@ void clock_tests(void)
 
     printf("measuring cpu clock against current_time_hires()\n");
     for (int i = 0; i < 5; i++) {
-        uint cycles = arch_cycle_count();
+        uint64_t cycles = arch_cycle_count();
         lk_bigtime_t start = current_time_hires();
         while ((current_time_hires() - start) < LK_SEC(1))
             ;
         cycles = arch_cycle_count() - cycles;
-        printf("%u cycles per second\n", cycles);
+        printf("%" PRIu64 " cycles per second\n", cycles);
     }
 }

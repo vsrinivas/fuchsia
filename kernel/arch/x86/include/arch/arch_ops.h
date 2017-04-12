@@ -43,9 +43,9 @@ static inline bool arch_ints_disabled(void)
     return !(state & (1<<9));
 }
 
-static inline uint32_t arch_cycle_count(void)
+static inline uint64_t arch_cycle_count(void)
 {
-    return (rdtsc() & 0xffffffff);
+    return rdtsc();
 }
 
 static inline void arch_spinloop_pause(void)
