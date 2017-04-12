@@ -48,7 +48,7 @@ MODULE_LDFLAGS := -T scripts/rodso.ld
 
 # Explicit dependency to make sure the file gets generated first.
 # MODULE_SRCDEPS is overkill for this since only one file uses it.
-$(BUILDDIR)/ulib/magenta/system/ulib/magenta/mx_system_get_version.c.o: \
+$(BUILDDIR)/$(LOCAL_DIR)/$(LOCAL_DIR)/mx_system_get_version.c.o: \
     $(BUILDDIR)/config-buildid.h
 MODULE_COMPILEFLAGS += -I$(BUILDDIR)
 
