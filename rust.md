@@ -63,17 +63,17 @@ To be able to run the update script, you first need to build the
 scripts/build_cargo_vendor.sh
 ```
 
-To update these crates, run the following commands:
+To update these crates, run the following command:
 ```
-scripts/update_rust_packages.py --cargo-vendor third_party/rust-crates/manual/cargo-vendor/target/debug/cargo-vendor
-build/rust/fetch-vendor-license.py --directory third_party/rust-crates/vendor
+scripts/update_rust_crates.py --cargo-vendor third_party/rust-crates/manual/cargo-vendor/target/debug/cargo-vendor
 ```
+
 The configurations used as a reference to generate the set of required crates
-are listed in the [`update_rust_packages.py`][update-script] script.
+are listed in the [`update_rust_crates.py`][update-script] script.
 
 ### Adding a new third-party dependency
 
-If a crate is not avalable in the vendor directory, it needs to be added with the following steps.
+If a crate is not available in the vendor directory, it needs to be added with the following steps.
 
 1. Create your crate's manifest file and reference the crates you need;
 1. Add your crate root to `CONFIGS` in the [update script][update-script];
