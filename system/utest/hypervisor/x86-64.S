@@ -16,7 +16,7 @@ FUNCTION(guest_start)
     mov $'x', %al
     out %al, %dx
 
-    xor %rax, %rax
+    mov %cr3, %rax
     mov %rax, %cr3
 
     jmp .
