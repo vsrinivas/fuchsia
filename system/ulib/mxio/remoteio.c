@@ -508,14 +508,14 @@ static mx_status_t mxrio_reply_channel_call(mxrio_t* rio, mxrio_msg_t* msg,
     memset(info, 0xfe, sizeof(*info));
     uint32_t dsize = MXRIO_OBJECT_MAXSIZE;
     info->hcount = MXIO_MAX_HANDLES;
-    r = mx_channel_read(h, 0, info, dsize, &dsize, info->handle,
+    r = mx_channel_read(h, 0, info, dsize, &dsize, &info->handle[1],
                         info->hcount, &info->hcount);
-
-    mx_handle_close(h);
-
     if (r < 0) {
+        mx_handle_close(h);
         return r;
     }
+    info->handle[0] = h;
+    info->hcount++;
     if (dsize < MXRIO_OBJECT_MINSIZE) {
         r = ERR_IO;
     } else {
@@ -603,11 +603,13 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
         break;
     case MXIO_PROTOCOL_VMOFILE: {
         mx_off_t* args = extra;
-        if ((hcount != 1) || (esize != (sizeof(mx_off_t) * 2))) {
+        if ((hcount != 2) || (esize != (sizeof(mx_off_t) * 2))) {
             r = ERR_INVALID_ARGS;
-        } else if ((*out = mxio_vmofile_create(handles[0], args[0], args[1])) == NULL) {
+        } else if ((*out = mxio_vmofile_create(handles[1], args[0], args[1])) == NULL) {
             r = ERR_NO_RESOURCES;
         } else {
+            // Currently, VMO Files don't use a client-side control channel.
+            mx_handle_close(handles[0]);
             return NO_ERROR;
         }
         break;

@@ -26,21 +26,17 @@ mtx_t vfs_lock = MTX_INIT;
 
 namespace blobstore {
 
-mx_status_t VnodeBlob::GetHandles(uint32_t flags, mx_handle_t* hnds, uint32_t* type,
-                                  void* extra, uint32_t* esize) {
-    mx_status_t r = Serve(flags, hnds, type);
-    if (r < 0) {
-        return r;
-    }
+mx_status_t VnodeBlob::GetHandles(uint32_t flags, mx_handle_t* hnds,
+                                  uint32_t* type, void* extra, uint32_t* esize) {
+    *type = MXIO_PROTOCOL_REMOTE;
     if (blob == nullptr) {
-        return 1;
+        return 0;
     }
-    r = blob->GetReadableEvent(&hnds[1]);
+    mx_status_t r = blob->GetReadableEvent(&hnds[0]);
     if (r < 0) {
-        mx_handle_close(hnds[0]);
         return r;
     }
-    return 2;
+    return 1;
 }
 
 }

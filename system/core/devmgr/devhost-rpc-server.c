@@ -53,24 +53,16 @@ mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h) {
 
 mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
-static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
-                                       uint32_t flags, mx_handle_t* handles,
-                                       uint32_t* ids) {
+static mx_status_t devhost_get_handles(mx_handle_t rh, mx_device_t* dev,
+                                       const char* path, uint32_t flags) {
     mx_status_t r;
+    mxrio_object_t obj;
     devhost_iostate_t* newios;
 
     if ((newios = create_devhost_iostate(dev)) == NULL) {
         return ERR_NO_MEMORY;
     }
     newios->flags = flags;
-
-    mx_handle_t h0, h1;
-    if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
-        free(newios);
-        return r;
-    }
-    handles[0] = h0;
-    ids[0] = MX_HND_TYPE_MXIO_REMOTE;
 
     if ((r = device_openat(dev, &dev, path, flags)) < 0) {
         printf("devhost_get_handles(%p:%s) open path='%s', r=%d\n",
@@ -81,33 +73,39 @@ static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
 
     if (dev->event > 0) {
         //TODO: read only?
-        if ((r = mx_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS, &handles[1])) < 0) {
+        if ((r = mx_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS, &obj.handle[0])) < 0) {
             goto fail2;
         }
-        ids[1] = MX_HND_TYPE_MXIO_REMOTE;
-        r = 2;
-    } else {
         r = 1;
+    } else {
+        r = 0;
     }
-
-    if (devhost_start_iostate(newios, h1) < 0) {
-        printf("devhost_get_handles: failed to start iostate\n");
-        while (r > 0) {
-            mx_handle_close(handles[--r]);
-        }
-        free(newios);
-        device_close(dev, flags);
-        return ERR_INTERNAL;
-    }
-    return r;
-
+    goto done;
 fail2:
     device_close(dev, flags);
 fail1:
-    mx_handle_close(h0);
-    mx_handle_close(h1);
     free(newios);
-    return r;
+done:
+    if (r < 0) {
+        obj.status = r;
+        obj.hcount = 0;
+    } else {
+        obj.status = NO_ERROR;
+        obj.type = MXIO_PROTOCOL_REMOTE;
+        obj.hcount = r;
+    }
+    // Response is written to the provided handle.
+    // If that fails there's no further useful action we can take
+    // (it should only fail when the caller closes its side first
+    // in which case it is no longer around to hear about a failure).
+    mx_channel_write(rh, 0, &obj, MXRIO_OBJECT_MINSIZE, obj.handle, obj.hcount);
+
+    if (r < 0) {
+        mx_handle_close(rh);
+        return r;
+    }
+    mxio_dispatcher_add(devhost_rio_dispatcher, rh, devhost_rio_handler, newios);
+    return NO_ERROR;
 }
 
 void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
@@ -254,8 +252,6 @@ mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
         msg->data[len] = 0;
         // fallthrough
     case MXRIO_CLONE: {
-        uint32_t ids[VFS_MAX_HANDLES];
-        mx_status_t r;
         char* path = NULL;
         uint32_t flags = arg;
         if (MXRIO_OP(msg->op) == MXRIO_OPEN) {
@@ -268,22 +264,7 @@ mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
             xprintf("devhost_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
             flags = ios->flags;
         }
-        mxrio_object_t obj;
-        r = devhost_get_handles(dev, path, flags, obj.handle, ids);
-        if (r < 0) {
-            obj.status = r;
-            obj.hcount = 0;
-        } else {
-            obj.status = NO_ERROR;
-            obj.type = MXIO_PROTOCOL_REMOTE;
-            obj.hcount = r;
-        }
-        // Response is written to the provided handle.
-        // If that fails there's no further useful action we can take
-        // (it should only fail when the caller closes its side first
-        // in which case it is no longer around to hear about a failure).
-        mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE, obj.handle, obj.hcount);
-        mx_handle_close(msg->handle[0]);
+        devhost_get_handles(msg->handle[0], dev, path, flags);
         return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_READ: {

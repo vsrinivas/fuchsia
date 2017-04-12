@@ -10,9 +10,6 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#ifdef __Fuchsia__
-#include <threads.h>
-#endif
 #include <sys/types.h>
 
 #include <magenta/assert.h>
@@ -21,6 +18,11 @@
 
 #include <mxio/dispatcher.h>
 #include <mxio/vfs.h>
+
+#ifdef __Fuchsia__
+#include <threads.h>
+#include <mxio/io.h>
+#endif
 
 #define NO_DOTDOT true
 
@@ -51,17 +53,19 @@ public:
     void RefRelease();
 
 #ifdef __Fuchsia__
-    // Allocate iostate, create a channel, register it with the dispatcher
-    // and return the other end.
+    // Allocate iostate and register the transferred handle with a dispatcher.
     // Allows Vnode to act as server.
-    mx_status_t Serve(uint32_t flags, mx_handle_t* out, uint32_t* type);
+    //
+    // Serve ALWAYS consumes 'h'.
+    virtual mx_status_t Serve(mx_handle_t h, uint32_t flags);
 
     // Extract handle(s), type, and extra info from a vnode.
-    //  - type == '0' means the vn represents a non-local device.
-    //  - If the vnode can be acquired, it is acquired by this function.
-    //  - Returns the number of handles acquired.
+    // Returns the number of handles which should be returned on the requesting handle.
     virtual mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
-                                   uint32_t* type, void* extra, uint32_t* esize) = 0;
+                                   uint32_t* type, void* extra, uint32_t* esize) {
+        *type = MXIO_PROTOCOL_REMOTE;
+        return 0;
+    }
 #endif
 
     virtual mx_status_t IoctlWatchDir(const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {

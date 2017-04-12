@@ -59,9 +59,6 @@ void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
 // Initializes io state for a vnode and attaches it to a dispatcher.
 void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* path, uint32_t flags,
                   uint32_t mode) {
-    mxrio_object_t obj;
-    memset(&obj, 0, sizeof(obj));
-
     mx_status_t r;
 
     {
@@ -69,6 +66,8 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* p
         r = Vfs::Open(vn, &vn, path, &path, flags, mode);
     }
 
+    mxrio_object_t obj;
+    memset(&obj, 0, sizeof(obj));
     if (r < 0) {
         xprintf("vfs: open: r=%d\n", r);
         goto done;
@@ -78,24 +77,29 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* p
         return;
     }
 
-    obj.esize = 0;
+    // Acquire the handles to the VFS object
     if ((r = vn->GetHandles(flags, obj.handle, &obj.type, obj.extra, &obj.esize)) < 0) {
         vn->Close();
         goto done;
     }
 
-    // drop the ref from Vfs::Open
-    // the backend behind get_handles holds the on-going ref
-    vn->RefRelease();
-    obj.hcount = r;
-    r = NO_ERROR;
-
 done:
-    obj.status = r;
-    xprintf("vfs: open: r=%d h=%x\n", r, obj.handle[0]);
+    // If r >= 0, then we hold a reference to vn from open.
+    // Otherwise, vn is closed, and we're simply responding to the client.
+
+    // Describe the VFS object to the caller
+    obj.status = (r < 0) ? r : NO_ERROR;
+    obj.hcount = (r > 0) ? r : 0;
     mx_channel_write(rh, 0, &obj, static_cast<uint32_t>(MXRIO_OBJECT_MINSIZE + obj.esize),
                      obj.handle, obj.hcount);
-    mx_handle_close(rh);
+    if (obj.status < 0) {
+        mx_handle_close(rh);
+    } else {
+        vn->Serve(rh, flags);
+        // Drop the ref from Vfs::Open.
+        // Serve holds the on-going ref.
+        vn->RefRelease();
+    }
 }
 
 // Consumes rh.
@@ -110,32 +114,25 @@ void mxrio_reply_channel_status(mx_handle_t rh, mx_status_t status) {
 
 } // namespace anonymous
 
-mx_status_t Vnode::Serve(uint32_t flags, mx_handle_t* out, uint32_t* type) {
-    mx_handle_t h[2];
+mx_status_t Vnode::Serve(mx_handle_t h, uint32_t flags) {
     mx_status_t r;
     vfs_iostate_t* ios;
 
     if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
+        mx_handle_close(h);
         return ERR_NO_MEMORY;
     }
     ios->vn = this;
     ios->io_flags = flags;
 
-    if ((r = mx_channel_create(0, &h[0], &h[1])) < 0) {
-        free(ios);
-        return r;
-    }
-    if ((r = AddDispatcher(h[0], ios)) < 0) {
-        mx_handle_close(h[0]);
-        mx_handle_close(h[1]);
+    if ((r = AddDispatcher(h, ios)) < 0) {
+        mx_handle_close(h);
         free(ios);
         return r;
     }
     // take a ref for the dispatcher
     RefAcquire();
-    out[0] = h[1];
-    type[0] = MXIO_PROTOCOL_REMOTE;
-    return 1;
+    return NO_ERROR;
 }
 
 } // namespace fs
@@ -218,10 +215,10 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iost
         return NO_ERROR;
     case MXRIO_CLONE: {
         mxrio_object_t obj;
-        obj.status = vn->Serve(ios->io_flags, obj.handle, &obj.type);
-        mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE,
-                         obj.handle, (obj.status < 0) ? 0 : 1);
-        mx_handle_close(msg->handle[0]);
+        memset(&obj, 0, MXRIO_OBJECT_MINSIZE);
+        obj.type = MXIO_PROTOCOL_REMOTE;
+        mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE, 0, 0);
+        vn->Serve(msg->handle[0], ios->io_flags);
         return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_READ: {

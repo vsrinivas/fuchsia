@@ -245,8 +245,6 @@ mx_status_t blobstore_mount(VnodeBlob** out, int blockfd);
 mx_status_t readblk(int fd, uint64_t bno, void* data);
 mx_status_t writeblk(int fd, uint64_t bno, const void* data);
 
-mx_handle_t vfs_rpc_server(VnodeBlob* vn);
-
 class VnodeBlob final : public fs::Vnode {
 public:
     VnodeBlob(mxtl::RefPtr<Blob> b, mxtl::RefPtr<Blobstore> bs) :

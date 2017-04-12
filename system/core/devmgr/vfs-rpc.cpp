@@ -34,12 +34,6 @@ namespace memfs {
 
 static VnodeMemfs* global_vfs_root;
 
-mx_status_t VnodeMemfs::GetHandles(uint32_t flags, mx_handle_t* hnds, uint32_t* type, void* extra,
-                                   uint32_t* esize) {
-    // local vnode or device as a directory, we will create the handles
-    return Serve(flags, hnds, type);
-}
-
 VnodeWatcher::VnodeWatcher() : h(MX_HANDLE_INVALID) {}
 
 VnodeWatcher::~VnodeWatcher() {
@@ -107,12 +101,18 @@ mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
     if ((r = vn->Open(O_DIRECTORY)) < 0) {
         return r;
     }
-    mx_handle_t h;
-    uint32_t type;
-    if ((r = vn->Serve(0, &h, &type)) < 0) {
+    mx_handle_t h1, h2;
+    if ((r = mx_channel_create(0, &h1, &h2)) < 0) {
+        vn->Close();
         return r;
     }
-    return h;
+
+    if ((r = vn->Serve(h1, 0)) < 0) { // Consumes 'h1'
+        vn->Close();
+        mx_handle_close(h2);
+        return r;
+    }
+    return h2;
 }
 
 // Initialize the global root VFS node and dispatcher

@@ -22,6 +22,11 @@
 
 namespace memfs {
 
+mx_status_t VnodeVmo::Serve(mx_handle_t h, uint32_t flags) {
+    mx_handle_close(h);
+    return NO_ERROR;
+}
+
 mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
                                  uint32_t* type, void* extra, uint32_t* esize) {
     mx_off_t* off = static_cast<mx_off_t*>(extra);

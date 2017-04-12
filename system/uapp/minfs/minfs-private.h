@@ -209,8 +209,6 @@ private:
 
     // The following functionality interacts with handles directly, and are not applicable outside
     // Fuchsia (since there is no "handle-equivalent" in host-side tools).
-    mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
-                           uint32_t* type, void* extra, uint32_t* esize) final;
 
     // TODO(smklein): When we have can register MinFS as a pager service, and
     // it can properly handle pages faults on a vnode's contents, then we can
@@ -234,8 +232,5 @@ mx_status_t minfs_check(Bcache* bc);
 mx_status_t minfs_mount(VnodeMinfs** root_out, Bcache* bc);
 
 void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent);
-
-// vfs dispatch
-mx_handle_t vfs_rpc_server(VnodeMinfs* vn);
 
 } // namespace minfs
