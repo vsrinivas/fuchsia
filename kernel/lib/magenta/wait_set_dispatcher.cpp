@@ -291,17 +291,13 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
     return NO_ERROR;
 }
 
-status_t WaitSetDispatcher::Wait(mx_time_t timeout,
+status_t WaitSetDispatcher::Wait(mx_time_t deadline,
                                  uint32_t* num_results,
                                  mx_waitset_result_t* results,
                                  uint32_t* max_results) {
     canary_.Assert();
 
-    lk_bigtime_t lk_deadline = timeout;
-    if (timeout != MX_TIME_INFINITE && timeout != 0) {
-        lk_deadline += current_time_hires();
-    }
-    status_t result = event_wait_deadline(&event_, lk_deadline, true);
+    status_t result = event_wait_deadline(&event_, deadline, true);
 
     if (result != NO_ERROR && result != ERR_TIMED_OUT) {
         DEBUG_ASSERT(result == ERR_INTERRUPTED);

@@ -190,7 +190,7 @@ status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
 }
 
 status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
-                                 mx_time_t timeout, bool* return_handles,
+                                 mx_time_t deadline, bool* return_handles,
                                  mxtl::unique_ptr<MessagePacket>* reply) {
 
     canary_.Assert();
@@ -225,23 +225,18 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
 
     // Reuse the code from the half-call used for retrying a Call after thread
     // suspend.
-    return ResumeInterruptedCall(timeout, reply);
+    return ResumeInterruptedCall(deadline, reply);
 }
 
-status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t timeout,
+status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t deadline,
                                                   mxtl::unique_ptr<MessagePacket>* reply) {
     canary_.Assert();
 
-    lk_bigtime_t lk_deadline = timeout;
-    if (timeout != MX_TIME_INFINITE && timeout != 0) {
-        lk_deadline += current_time_hires();
-    }
-
     auto waiter = UserThread::GetCurrent()->GetMessageWaiter();
 
-    // (2) Wait for notification via waiter's event or
-    // timeout to occur.
-    mx_status_t status = waiter->Wait(lk_deadline);
+    // (2) Wait for notification via waiter's event or for the
+    // deadline to hit.
+    mx_status_t status = waiter->Wait(deadline);
     if (status == ERR_INTERRUPTED_RETRY) {
         // If we got interrupted, return out to usermode, but
         // do not clear the waiter.
@@ -251,7 +246,7 @@ status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t timeout,
     // (3) see (3A), (3B) above or (3C) below for paths where
     // the waiter could be signaled and removed from the list.
     //
-    // If the timeout expires, the waiter is not removed
+    // If the deadline hits, the waiter is not removed
     // from the list *but* another thread could still
     // cause (3A), (3B), or (3C) before the lock below.
     {

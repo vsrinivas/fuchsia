@@ -7,9 +7,7 @@
 #include "private.h"
 
 mx_time_t _mx_deadline_after(mx_duration_t nanoseconds) {
-    // TODO(teisenbe): Once we switch all syscalls to taking deadlines,
-    // replace this with a real implementation.
-    return nanoseconds;
+    return nanoseconds + VDSO_mx_time_get(MX_CLOCK_MONOTONIC);
 }
 
 __typeof(mx_deadline_after) mx_deadline_after

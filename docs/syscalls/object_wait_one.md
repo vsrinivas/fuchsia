@@ -11,7 +11,7 @@ object_wait_one - wait for signals on an object
 
 mx_status_t mx_object_wait_one(mx_handle_t handle,
                                mx_signals_t signals,
-                               mx_time timeout,
+                               mx_time deadline,
                                mx_signals_t* observed);
 ```
 
@@ -19,7 +19,7 @@ mx_status_t mx_object_wait_one(mx_handle_t handle,
 
 **object_wait_one**() is a blocking syscall which causes the caller to
 wait until at least one of the specified *signals* has been observed on
-the object *handle* refers to or *timeout* elapses.
+the object *handle* refers to or *deadline* passes.
 
 Upon return, if non-NULL, *observed* is a bitmap of *all* of the
 signals which were observed asserted on that object while waiting.
@@ -29,16 +29,16 @@ signals if the state of the object was modified by another thread or
 process.  (For example, a Channel ceases asserting **MX_CHANNEL_READABLE**
 once the last message in its queue is read).
 
-The *timeout* parameter specifies a relative timeout (from now) in nanoseconds,
-ranging from **0** (do not wait at all) to **MX_TIME_INFINITE** (wait forever).
+The *deadline* parameter specifies a deadline with respect to
+**MX_CLOCK_MONOTONIC**.  **MX_TIME_INFINITE** is a special value meaning wait forever.
 
 ## RETURN VALUE
 
 **object_wait_one**() returns **NO_ERROR** if any of *signals* were observed
-on the object before *timeout* expires.
+on the object before *deadline* passes.
 
 In the event of **ERR_TIMED_OUT**, *observed* may reflect state changes
-that occurred after the timeout expired, but before the syscall returned.
+that occurred after the deadline passed, but before the syscall returned.
 
 For any other return value, *observed* is undefined.
 
@@ -53,16 +53,11 @@ not be waited upon.
 
 **ERR_CANCELED**  *handle* was invalidated (e.g., closed) during the wait.
 
-**ERR_TIMED_OUT**  The specified timeout elapsed (or was 0 to begin
-with) before any of the specified *signals* are observed on
-*handle*.
+**ERR_TIMED_OUT**  The specified deadline passed before any of the specified
+*signals* are observed on *handle*.
 
 **ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on
 (for example, a Port handle).
-
-## BUGS
-
-Currently *timeout* is rounded down to the nearest millisecond interval.
 
 ## SEE ALSO
 

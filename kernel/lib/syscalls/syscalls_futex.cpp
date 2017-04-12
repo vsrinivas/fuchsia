@@ -12,11 +12,11 @@
 
 #define LOCAL_TRACE 0
 
-mx_status_t sys_futex_wait(user_ptr<mx_futex_t> value_ptr, int current_value, mx_time_t timeout) {
+mx_status_t sys_futex_wait(user_ptr<mx_futex_t> value_ptr, int current_value, mx_time_t deadline) {
     LTRACEF("futex %p current %d\n", value_ptr.get(), current_value);
 
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(
-        value_ptr, current_value, timeout);
+        value_ptr, current_value, deadline);
 }
 
 mx_status_t sys_futex_wake(user_ptr<const mx_futex_t> value_ptr, uint32_t count) {

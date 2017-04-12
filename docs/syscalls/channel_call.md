@@ -21,7 +21,7 @@ typedef struct {
 } mx_channel_call_args_t;
 
 mx_status_t mx_channel_call(mx_handle_t handle, uint32_t options,
-                            mx_time_t timeout, mx_channel_call_args_t* args,
+                            mx_time_t deadline, mx_channel_call_args_t* args,
                             uint32_t* actual_bytes, uint32_t* actual_handles,
                             mx_status_t* read_status);
 ```
@@ -45,11 +45,11 @@ are fewer than four bytes, the txid is considered to be zero.
 When the outbound message is written, simultaneously an interest is registered
 for inbound messages of the matching txid.
 
-While *timeout* has not expired, if an inbound message arrives with a matching txid,
+While *deadline* has not passed, if an inbound message arrives with a matching txid,
 instead of being added to the tail of the general inbound message queue, it is delivered
 directly to the thread waiting in **mx_channel_call**().
 
-If such a reply arrives after *timeout* has expired, it will arrive in the general
+If such a reply arrives after *deadline* has passed, it will arrive in the general
 inbound message queue, cause **MX_CHANNEL_READABLE** to be signaled, etc.
 
 Inbound messages that are too large to fit in *rd_num_bytes* and *rd_num_handles*

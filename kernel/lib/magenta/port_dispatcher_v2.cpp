@@ -169,13 +169,8 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* port_packet,
     return NO_ERROR;
 }
 
-mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, mx_port_packet_t* packet) {
+mx_status_t PortDispatcherV2::DeQueue(mx_time_t deadline, mx_port_packet_t* packet) {
     canary_.Assert();
-
-    lk_bigtime_t lk_deadline = timeout;
-    if (timeout != MX_TIME_INFINITE && timeout != 0) {
-        lk_deadline += current_time_hires();
-    }
 
     PortPacket* port_packet = nullptr;
     PortObserver* observer = nullptr;
@@ -197,7 +192,7 @@ mx_status_t PortDispatcherV2::DeQueue(mx_time_t timeout, mx_port_packet_t* packe
         return NO_ERROR;
 
 wait:
-        status_t st = sema_.Wait(lk_deadline);
+        status_t st = sema_.Wait(deadline);
         if (st != NO_ERROR)
             return st;
     }

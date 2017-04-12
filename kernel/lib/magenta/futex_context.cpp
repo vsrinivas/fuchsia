@@ -27,7 +27,7 @@ FutexContext::~FutexContext() {
     DEBUG_ASSERT(futex_table_.is_empty());
 }
 
-status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_time_t timeout) {
+status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_time_t deadline) {
     LTRACE_ENTRY;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
@@ -63,7 +63,7 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     QueueNodesLocked(node);
 
     // Block current thread.  This releases lock_ and does not reacquire it.
-    result = node->BlockThread(&lock_, timeout);
+    result = node->BlockThread(&lock_, deadline);
     if (result == NO_ERROR) {
         // Fix/workaround for MG-624:
         // We must re-acquire the lock here to force this thread to wait until
@@ -77,13 +77,13 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     }
 
     AutoLock lock(&lock_);
-    // If we got a timeout, we need to remove the thread's node from the
+    // If we hit the deadline, we need to remove the thread's node from the
     // wait queue, since FutexWake() didn't do that.
     if (UnqueueNodeLocked(node)) {
         return ERR_TIMED_OUT;
     }
     // The current thread was not found on the wait queue.  This means
-    // that, although we got a timeout, we were *also* woken by FutexWake()
+    // that, although we hit the deadline, we were *also* woken by FutexWake()
     // (which removed the thread from the wait queue) -- the two raced
     // together.
     //
@@ -95,7 +95,7 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     // If that property is broken, it can lead to missed wakeups in
     // concurrency constructs that are built on top of futexes.  For
     // example, suppose a FutexWake() call from pthread_mutex_unlock()
-    // races with a FutexWait() timeout from pthread_mutex_timedlock().  A
+    // races with a FutexWait() deadline from pthread_mutex_timedlock(). A
     // typical implementation of pthread_mutex_timedlock() will return
     // immediately without trying again to claim the mutex if this
     // FutexWait() call returns a timeout status.  If that happens, and if

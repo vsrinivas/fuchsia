@@ -49,12 +49,12 @@ public:
     // Write to the opposing endpoint's message queue.
     status_t Write(mxtl::unique_ptr<MessagePacket> msg);
     status_t Call(mxtl::unique_ptr<MessagePacket> msg,
-                  mx_time_t timeout, bool* return_handles,
+                  mx_time_t deadline, bool* return_handles,
                   mxtl::unique_ptr<MessagePacket>* reply);
 
     // Performs the wait-then-read half of Call.  This is meant for retrying
     // after an interruption caused by suspending.
-    status_t ResumeInterruptedCall(mx_time_t timeout, mxtl::unique_ptr<MessagePacket>* reply);
+    status_t ResumeInterruptedCall(mx_time_t deadline, mxtl::unique_ptr<MessagePacket>* reply);
 
     // MessageWaiter's state is guarded by the lock of the
     // owning ChannelDispatcher, and Deliver(), Signal(), Cancel(),

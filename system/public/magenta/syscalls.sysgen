@@ -35,7 +35,7 @@ syscall time_get
     returns (mx_time_t);
 
 syscall nanosleep blocking
-    (nanoseconds: mx_time_t)
+    (deadline: mx_time_t)
     returns (mx_status_t);
 
 syscall ticks_get vdsocall
@@ -87,12 +87,12 @@ syscall handle_replace
 # Generic object operations
 
 syscall object_wait_one blocking
-    (handle: mx_handle_t, waitfor: mx_signals_t, timeout: mx_time_t,
+    (handle: mx_handle_t, waitfor: mx_signals_t, deadline: mx_time_t,
         observed: mx_signals_t[1] OUT)
     returns (mx_status_t);
 
 syscall object_wait_many blocking
-    (items: mx_wait_item_t[count] INOUT, count: uint32_t, timeout: mx_time_t)
+    (items: mx_wait_item_t[count] INOUT, count: uint32_t, deadline: mx_time_t)
     returns (mx_status_t);
 
 syscall object_wait_async
@@ -155,7 +155,7 @@ syscall channel_write
     returns (mx_status_t);
 
 syscall channel_call
-    (handle: mx_handle_t, options: uint32_t, timeout: mx_time_t,
+    (handle: mx_handle_t, options: uint32_t, deadline: mx_time_t,
         args: mx_channel_call_args_t[1] IN,
         actual_bytes: uint32_t[1] OUT, actual_handles: uint32_t[1] OUT,
         read_status: mx_status_t[1] OUT)
@@ -263,7 +263,7 @@ syscall eventpair_create
     returns (mx_status_t);
 
 syscall futex_wait blocking
-    (value_ptr: mx_futex_t[1] INOUT, current_value: int, timeout: mx_time_t)
+    (value_ptr: mx_futex_t[1] INOUT, current_value: int, deadline: mx_time_t)
     returns (mx_status_t);
 
 syscall futex_wake
@@ -291,7 +291,7 @@ syscall waitset_remove deprecated
     returns (mx_status_t);
 
 syscall waitset_wait blocking deprecated
-    (waitset_handle: mx_handle_t, timeout: mx_time_t,
+    (waitset_handle: mx_handle_t, deadline: mx_time_t,
         results: mx_waitset_result_t[count] OUT, count: uint32_t[1] INOUT)
     returns (mx_status_t);
 
@@ -306,7 +306,7 @@ syscall port_queue
     returns (mx_status_t);
 
 syscall port_wait blocking
-    (handle: mx_handle_t, timeout: mx_time_t, packet: any[size] OUT, size: size_t)
+    (handle: mx_handle_t, deadline: mx_time_t, packet: any[size] OUT, size: size_t)
     returns (mx_status_t);
 
 syscall port_bind

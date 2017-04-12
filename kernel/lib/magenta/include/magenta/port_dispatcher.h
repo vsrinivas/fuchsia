@@ -84,7 +84,7 @@ public:
     mx_status_t Queue(IOP_Packet* packet);
     void* Signal(void* cookie, uint64_t key, mx_signals_t signal);
 
-    mx_status_t Wait(mx_time_t timeout, IOP_Packet** packet);
+    mx_status_t Wait(mx_time_t deadline, IOP_Packet** packet);
 
 private:
     friend class ExceptionPort;

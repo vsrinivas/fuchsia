@@ -44,15 +44,15 @@ constexpr size_t kMaxCPRNGSeed = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
 
 constexpr uint32_t kMaxWaitSetWaitResults = 1024u;
 
-mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
-    LTRACEF("nseconds %" PRIu64 "\n", nanoseconds);
+mx_status_t sys_nanosleep(mx_time_t deadline) {
+    LTRACEF("nseconds %" PRIu64 "\n", deadline);
 
-    if (nanoseconds == 0ull) {
+    if (deadline == 0ull) {
         thread_yield();
         return NO_ERROR;
     }
 
-    return magenta_sleep(nanoseconds);
+    return magenta_sleep(deadline);
 }
 
 // This must be accessed atomically from any given thread.
@@ -341,7 +341,7 @@ mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
 }
 
 mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
-                             mx_time_t timeout,
+                             mx_time_t deadline,
                              user_ptr<mx_waitset_result_t> _results,
                              user_ptr<uint32_t> _count) {
     LTRACEF("wait set handle %d\n", ws_handle);
@@ -373,7 +373,7 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
         return status;
 
     uint32_t max_results = 0u;
-    mx_status_t result = ws_dispatcher->Wait(timeout, &count, results.get(), &max_results);
+    mx_status_t result = ws_dispatcher->Wait(deadline, &count, results.get(), &max_results);
     if (result == NO_ERROR) {
         if (_count.copy_to_user(count) != NO_ERROR)
             return ERR_INVALID_ARGS;

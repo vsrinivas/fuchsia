@@ -30,10 +30,10 @@ public:
 
     // FutexWait first verifies that the integer pointed to by |value_ptr|
     // still equals |current_value|. If the test fails, FutexWait returns FAILED_PRECONDITION.
-    // Otherwise it will block the current thread for up to |timeout| nanoseconds,
+    // Otherwise it will block the current thread until the |deadline| passes,
     // or until the thread is woken by a FutexWake or FutexRequeue operation
     // on the same |value_ptr| futex.
-    status_t FutexWait(user_ptr<int> value_ptr, int current_value, mx_time_t timeout);
+    status_t FutexWait(user_ptr<int> value_ptr, int current_value, mx_time_t deadline);
 
     // FutexWake will wake up to |count| number of threads blocked on the |value_ptr| futex.
     status_t FutexWake(user_ptr<const int> value_ptr, uint32_t count);

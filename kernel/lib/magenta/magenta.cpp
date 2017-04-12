@@ -261,12 +261,7 @@ bool magenta_rights_check(const Handle* handle, mx_rights_t desired) {
     return false;
 }
 
-mx_status_t magenta_sleep(mx_time_t nanoseconds) {
-    lk_bigtime_t deadline = nanoseconds;
-    if (deadline != INFINITE_TIME) {
-        deadline += current_time_hires();
-    }
-
+mx_status_t magenta_sleep(mx_time_t deadline) {
     /* sleep with interruptable flag set */
     return thread_sleep_etc(deadline, true);
 }

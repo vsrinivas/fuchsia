@@ -10,7 +10,7 @@ waitset_wait - wait on (the entries of) a wait set
 #include <magenta/syscalls.h>
 
 mx_status_t mx_waitset_wait(mx_handle_t waitset_handle,
-                             mx_time_t timeout,
+                             mx_time_t deadline,
                              mx_waitset_result_t* results,
                              uint32_t* count);
 ```
@@ -19,7 +19,7 @@ mx_status_t mx_waitset_wait(mx_handle_t waitset_handle,
 
 **waitset_wait**() waits until one of its entries has a result to report
 (waited for bits are pending or the handle was closed) or the specified
-*timeout* has elapsed.
+*deadline* has passed.
 
 *waitset_handle* must have the **MX_RIGHT_READ** right.
 
@@ -47,14 +47,14 @@ to the entry's handle's observed signals at some point shortly before
 ## RETURN VALUE
 
 **waitset_wait**() returns **NO_ERROR** if there was a result
-to report from one of the wait set's entries before the timeout elapsed. Only on
+to report from one of the wait set's entries before the deadline passed. Only on
 success are *count* and *results* written to.
 
 It is possible for *count* to be 0 on success if the condition that woke the
 waiter becomes untrue during a very small window.
 
 On failure, an error value is returned. In particular, **ERR_TIMED_OUT** is
-returned if *timeout* elapses with no results to report.
+returned if *deadline* passes with no results to report.
 
 ## ERRORS
 
@@ -71,7 +71,7 @@ returned if *timeout* elapses with no results to report.
 **ERR_ACCESS_DENIED**  *waitset_handle* does not have the **MX_RIGHT_READ**
 right.
 
-**ERR_TIMED_OUT**  The specified timeout elapsed before any results were
+**ERR_TIMED_OUT**  The specified deadline passed before any results were
 available.
 
 ## SEE ALSO

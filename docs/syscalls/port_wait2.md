@@ -10,7 +10,7 @@ port_wait - wait for a packet arrival in a port, version 2.
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
 
-mx_status_t mx_port_wait(mx_handle_t handle, mx_time_t timeout, void* packet, size_t size);
+mx_status_t mx_port_wait(mx_handle_t handle, mx_time_t deadline, void* packet, size_t size);
 ```
 
 ## DESCRIPTION
@@ -24,10 +24,11 @@ available packet data.
 The **size** argument should be set to zero and the **packet** argument should be memory of at
 least ```sizeof(mx_port_packet_t)``` bytes.
 
-The *timeout* indicates how long to wait for a packet.  If no packet has arrived by the
-*timeout* deadline, **ERR_TIMED_OUT** is returned.  The value **MX_TIME_INFINITE** will
-result in waiting forever.  The value 0 will result in an immediate timeout, unless
-a packet is already available for reading.
+The *deadline* indicates when to stop waiting for a packet (with respect to
+**MX_CLOCK_MONOTONIC**).  If no packet has arrived by the deadline,
+**ERR_TIMED_OUT** is returned.  The value **MX_TIME_INFINITE** will
+result in waiting forever.  A value in the past will result in an immediate
+timeout, unless a packet is already available for reading.
 
 Unlike **mx_wait_one**() and **mx_wait_many**() only one waiting thread is
 released (per available packet) which makes ports amenable to be serviced
@@ -96,7 +97,7 @@ pointer or *size* is an invalid packet size.
 **ERR_ACCESS_DENIED** *handle* does not have **MX_RIGHT_WRITE** and may
 not be waited upon.
 
-**ERR_TIMED_OUT** *timeout* nanoseconds have elapsed and no packet was available.
+**ERR_TIMED_OUT** *deadline* passed and no packet was available.
 
 ## SEE ALSO
 

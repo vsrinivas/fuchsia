@@ -245,7 +245,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
 }
 
 mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
-                             mx_time_t timeout, user_ptr<const mx_channel_call_args_t> _args,
+                             mx_time_t deadline, user_ptr<const mx_channel_call_args_t> _args,
                              user_ptr<uint32_t> actual_bytes, user_ptr<uint32_t> actual_handles,
                              user_ptr<mx_status_t> read_status) {
     mx_channel_call_args_t args;
@@ -289,10 +289,10 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
             return result;
     }
 
-    // Write message and wait for reply, timeout, or cancelation
+    // Write message and wait for reply, deadline, or cancelation
     bool return_handles = false;
     mxtl::unique_ptr<MessagePacket> reply;
-    if ((result = channel->Call(mxtl::move(msg), timeout, &return_handles, &reply)) != NO_ERROR) {
+    if ((result = channel->Call(mxtl::move(msg), deadline, &return_handles, &reply)) != NO_ERROR) {
         if (return_handles) {
             // Write phase failed:
             // 1. Put back the handles into this process.
@@ -312,7 +312,7 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
         // VDSO.
         while (result == ERR_INTERRUPTED_RETRY) {
             thread_process_pending_signals();
-            result = channel->ResumeInterruptedCall(timeout, &reply);
+            result = channel->ResumeInterruptedCall(deadline, &reply);
         }
 
         // Timeout is always returned directly.

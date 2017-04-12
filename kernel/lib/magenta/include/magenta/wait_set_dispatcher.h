@@ -131,7 +131,7 @@ public:
     status_t RemoveEntry(uint64_t cookie);
 
     // Waits on the wait set. Note: This blocks.
-    status_t Wait(mx_time_t timeout,
+    status_t Wait(mx_time_t deadline,
                   uint32_t* num_results,
                   mx_waitset_result_t* results,
                   uint32_t* max_results);

@@ -200,13 +200,8 @@ void* PortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
     return node;
 }
 
-mx_status_t PortDispatcher::Wait(mx_time_t timeout, IOP_Packet** packet) {
+mx_status_t PortDispatcher::Wait(mx_time_t deadline, IOP_Packet** packet) {
     canary_.Assert();
-
-    lk_bigtime_t lk_deadline = timeout;
-    if (timeout != MX_TIME_INFINITE && timeout != 0) {
-        lk_deadline += current_time_hires();
-    }
 
     while (true) {
         {
@@ -237,10 +232,7 @@ mx_status_t PortDispatcher::Wait(mx_time_t timeout, IOP_Packet** packet) {
 
         }
 
-        if (timeout == 0ull)
-            return ERR_TIMED_OUT;
-
-        status_t st = event_wait_deadline(&event_, lk_deadline, true);
+        status_t st = event_wait_deadline(&event_, deadline, true);
         if (st != NO_ERROR)
             return st;
     }

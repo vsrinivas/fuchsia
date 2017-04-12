@@ -136,7 +136,7 @@ public:
 
     mx_status_t Queue(PortPacket* port_packet, mx_signals_t observed, uint64_t count);
     mx_status_t QueueUser(const mx_port_packet_t& packet);
-    mx_status_t DeQueue(mx_time_t timeout, mx_port_packet_t* packet);
+    mx_status_t DeQueue(mx_time_t deadline, mx_port_packet_t* packet);
 
     // Decides who is going to destroy the observer. If it returns |true| it
     // is the duty of the caller. If it is false it is the duty of the port.

@@ -39,7 +39,7 @@ public:
                                      uintptr_t new_hash_key);
 
     // This must be called with |mutex| held and returns without |mutex| held.
-    status_t BlockThread(Mutex* mutex, mx_time_t timeout) TA_REL(mutex);
+    status_t BlockThread(Mutex* mutex, mx_time_t deadline) TA_REL(mutex);
 
     // wakes the list of threads starting with node |head|
     static void WakeThreads(FutexNode* head);

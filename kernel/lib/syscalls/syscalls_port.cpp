@@ -100,7 +100,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> _packet, siz
     return port->Queue(iopk);
 }
 
-mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, user_ptr<void> _packet) {
+mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t deadline, user_ptr<void> _packet) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcherV2> port;
@@ -109,7 +109,7 @@ mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, user_ptr<void>
         return status;
 
     mx_port_packet_t pp;
-    mx_status_t st = port->DeQueue(timeout, &pp);
+    mx_status_t st = port->DeQueue(deadline, &pp);
     if (st != NO_ERROR)
         return st;
 
@@ -118,7 +118,7 @@ mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, user_ptr<void>
     return NO_ERROR;
 }
 
-mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
+mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
                           user_ptr<void> _packet, size_t size) {
     LTRACEF("handle %d\n", handle);
 
@@ -130,13 +130,13 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
     mxtl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &port);
     if (status != NO_ERROR) {
-        return (size == 0u) ? sys_port_wait2(handle, timeout, _packet) : status;
+        return (size == 0u) ? sys_port_wait2(handle, deadline, _packet) : status;
     }
 
     ktrace(TAG_PORT_WAIT, (uint32_t)port->get_koid(), 0, 0, 0);
 
     IOP_Packet* iopk = nullptr;
-    status = port->Wait(timeout, &iopk);
+    status = port->Wait(deadline, &iopk);
 
     ktrace(TAG_PORT_WAIT_DONE, (uint32_t)port->get_koid(), status, 0, 0);
     if (status < 0)
