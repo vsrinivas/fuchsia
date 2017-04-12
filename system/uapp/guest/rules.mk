@@ -9,9 +9,9 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userapp
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/mom.c \
+    $(LOCAL_DIR)/guest.c \
 
-MODULE_NAME := mom
+MODULE_NAME := guest
 
 MODULE_LIBS := \
 	system/ulib/c \

@@ -9,9 +9,9 @@
 BUILDDIR="${1:-build-magenta-pc-x86-64}"
 KERNEL="${2:-$BUILDDIR/magenta.bin}"
 
-echo "data/kernel.bin=$KERNEL" > /tmp/mom.manifest
+echo "data/kernel.bin=$KERNEL" > /tmp/guest.manifest
 $BUILDDIR/tools/mkbootfs \
     --target=boot \
     -o $BUILDDIR/bootdata-with-kernel.bin \
     $BUILDDIR/bootdata.bin \
-    /tmp/mom.manifest
+    /tmp/guest.manifest
