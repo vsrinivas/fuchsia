@@ -29,9 +29,8 @@ std::string StringUnescape(StringView input, char escape_char) {
 
   for (size_t i = 0; i < input.size(); i++) {
     if (input[i] == escape_char) {
-      if (i == input.size() - 1) {
-        FTL_DCHECK(false) << "StringUnescape: unescapable string: " << input;
-      }
+      FTL_DCHECK(i != input.size() - 1)
+        << "StringUnescape: unescapable string: " << input;
       i++;
     }
     output.push_back(input[i]);
