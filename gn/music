@@ -4,8 +4,8 @@
     ],
     "binaries": [
         {
-            "binary": "music.flx",
-            "bootfs_path": "apps/music"
+            "binary": "music_album.flx",
+            "bootfs_path": "apps/music_album"
         }
     ]
 }
