@@ -49,7 +49,7 @@ void SocketDrainer::ReadData() {
     WaitForData();
   } else if (rv == ERR_SHOULD_WAIT) {
     WaitForData();
-  } else if (rv == ERR_REMOTE_CLOSED) {
+  } else if (rv == ERR_PEER_CLOSED) {
     client_->OnDataComplete();
   } else {
     FTL_DCHECK(false) << "Unhandled mx_status_t: " << rv;

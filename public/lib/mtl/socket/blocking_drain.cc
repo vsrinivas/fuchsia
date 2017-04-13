@@ -33,9 +33,9 @@ bool BlockingDrainFrom(
                                MX_TIME_INFINITE, nullptr);
       if (result != NO_ERROR) {
         // If the socket was closed, then treat as EOF.
-        return result == ERR_REMOTE_CLOSED;
+        return result == ERR_PEER_CLOSED;
       }
-    } else if (result == ERR_REMOTE_CLOSED) {
+    } else if (result == ERR_PEER_CLOSED) {
       // If the socket was closed, then treat as EOF.
       return true;
     } else {

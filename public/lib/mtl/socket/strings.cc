@@ -38,11 +38,11 @@ bool BlockingCopyFromString(ftl::StringView source,
                                     MX_TIME_INFINITE, nullptr);
       if (result != NO_ERROR) {
         // If the socket was closed, then treat as EOF.
-        return result == ERR_REMOTE_CLOSED;
+        return result == ERR_PEER_CLOSED;
       }
     } else {
       // If the socket was closed, then treat as EOF.
-      return result == ERR_REMOTE_CLOSED;
+      return result == ERR_PEER_CLOSED;
     }
   }
 }

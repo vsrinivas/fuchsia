@@ -87,7 +87,7 @@ void CopyToFileHandler::OnHandleReady(mx_status_t result) {
       return;
     }
   }
-  if (result == ERR_REMOTE_CLOSED) {
+  if (result == ERR_PEER_CLOSED) {
     SendCallback(true);
     return;
   }
