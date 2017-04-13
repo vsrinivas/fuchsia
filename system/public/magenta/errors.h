@@ -71,7 +71,7 @@
 // Example: Attempting to read from a channel that has no
 // messages waiting but has an open remote will return ERR_SHOULD_WAIT.
 // Attempting to read from a channel that has no messages waiting
-// and has a closed remote end will return ERR_REMOTE_CLOSED.
+// and has a closed remote end will return ERR_PEER_CLOSED.
 #define ERR_SHOULD_WAIT (-22)
 
 // deprecated: ERR_HANDLE_CLOSED: a handle being waited on was closed
@@ -81,9 +81,8 @@
 // canceled.
 #define ERR_CANCELED (-23)
 
-// ERR_REMOTE_CLOSED: The operation failed because the remote end
-// of the subject of the operation was closed.
-#define ERR_REMOTE_CLOSED (-24)
+// ERR_PEER_CLOSED: The operation failed because the remote end of the
+// subject of the operation was closed.
 #define ERR_PEER_CLOSED (-24)
 
 // ERR_NOT_FOUND: The requested entity is not found.
