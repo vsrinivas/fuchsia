@@ -202,9 +202,16 @@ def main():
     config_path = os.path.join(args.gen_dir, ".cargo", "config")
     write_cargo_config(config_path, args.vendor_directory)
 
+    if args.type == "lib":
+        # Since the generated .rlib artifact won't actually be used (for now),
+        # just do syntax checking and avoid generating it.
+        build_command = "check"
+    else:
+        build_command = "build"
+
     call_args = [
         args.cargo,
-        "build",
+        build_command,
         "--target=%s" % args.target_triple,
         # Unfortunately, this option also freezes the lockfile meaning it cannot
         # be generated.
