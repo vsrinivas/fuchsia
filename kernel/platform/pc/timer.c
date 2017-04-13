@@ -606,12 +606,23 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
 
     // Find the shift needed for this timeout, since count is 32-bit.
     const uint highest_set_bit = log2_ulong_floor(apic_ticks_needed);
-    const uint8_t extra_shift = (highest_set_bit <= 31) ? 0 : highest_set_bit - 31;
+    uint8_t extra_shift = (highest_set_bit <= 31) ? 0 : highest_set_bit - 31;
+    if (extra_shift > 8) {
+        extra_shift = 8;
+    }
 
-    DEBUG_ASSERT((apic_ticks_needed >> extra_shift) <= UINT32_MAX);
-    uint32_t count = (uint32_t)apic_ticks_needed >> extra_shift;
     uint32_t divisor = apic_divisor << extra_shift;
-    ASSERT(divisor <= UINT8_MAX);
+    uint32_t count;
+    // If the divisor is too large, we're at our maximum timeout.  Saturate the
+    // timer.  It'll fire earlier than requested, but the scheduler will notice
+    // and ask us to set the timer up again.
+    if (divisor <= 128) {
+        count = (uint32_t)(apic_ticks_needed >> extra_shift);
+        DEBUG_ASSERT((apic_ticks_needed >> extra_shift) <= UINT32_MAX);
+    } else {
+        divisor = 128;
+        count = UINT32_MAX;
+    }
 
     // Make sure we're not underflowing
     if (count == 0) {
