@@ -704,7 +704,7 @@ mx_status_t do_read_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
       mx_status_t r =
           mx_socket_write(ios->data_h, MX_SOCKET_HALF_CLOSE, NULL, 0u, NULL);
       if (r < 0) {
-        if (r != ERR_REMOTE_CLOSED) {
+        if (r != ERR_PEER_CLOSED) {
           error("do_read: MX_SOCKET_HALF_CLOSE failed (status=%d)\n", r);
           return r;
         }
@@ -836,7 +836,7 @@ mx_status_t do_write_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
       socket_signals_set(ios, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED |
                          MXSIO_SIGNAL_HALFCLOSED);
       return PENDING_SOCKET;
-    } else if (r == ERR_REMOTE_CLOSED) {
+    } else if (r == ERR_PEER_CLOSED) {
       handle_request_close(ios, signals);
       return NO_ERROR;
     } else if (r < 0) {
@@ -898,7 +898,7 @@ mx_status_t do_write_dgram(mxrio_msg_t* msg, iostate_t* ios, int events,
     }
     socket_signals_set(ios, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED);
     return PENDING_SOCKET;
-  } else if (r == ERR_REMOTE_CLOSED) {
+  } else if (r == ERR_PEER_CLOSED) {
     handle_request_close(ios, signals);
     return NO_ERROR;
   } else if (r < 0) {

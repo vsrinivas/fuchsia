@@ -153,7 +153,7 @@ mx_status_t eth_complete_rx(
 }
 
 // Wait for completed rx packets
-// ERR_REMOTE_CLOSED - far side disconnected
+// ERR_PEER_CLOSED - far side disconnected
 // ERR_TIMED_OUT - timeout expired
 // NO_ERROR - completed packets are available
 mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t timeout) {
@@ -166,7 +166,7 @@ mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t timeout) {
     return status;
   }
   if (signals & MX_FIFO_PEER_CLOSED) {
-    return ERR_REMOTE_CLOSED;
+    return ERR_PEER_CLOSED;
   }
   return NO_ERROR;
 }
