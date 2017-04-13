@@ -12,6 +12,7 @@
 #define X86_MSR_IA32_VMX_PROCBASED_CTLS             0x0482      /* Primary processor-based controls */
 #define X86_MSR_IA32_VMX_EXIT_CTLS                  0x0483      /* VM-exit controls */
 #define X86_MSR_IA32_VMX_ENTRY_CTLS                 0x0484      /* VM-entry controls */
+#define X86_MSR_IA32_VMX_MISC                       0x0485      /* Miscellaneous info */
 #define X86_MSR_IA32_VMX_CR0_FIXED0                 0x0486      /* CR0 bits that must be 0 to enter VMX */
 #define X86_MSR_IA32_VMX_CR0_FIXED1                 0x0487      /* CR0 bits that must be 1 to enter VMX */
 #define X86_MSR_IA32_VMX_CR4_FIXED0                 0x0488      /* CR4 bits that must be 0 to enter VMX */
@@ -45,7 +46,10 @@ enum class VmcsField16 : uint64_t {
 };
 
 enum class VmcsField64 : uint64_t {
-    MSR_BITMAPS                     = 0x2004,   /* Address of MSR bitmaps */
+    MSR_BITMAPS_ADDRESS             = 0x2004,   /* Address of MSR bitmaps */
+    EXIT_MSR_STORE_ADDRESS          = 0x2006,   /* VM-exit MSR-store address */
+    EXIT_MSR_LOAD_ADDRESS           = 0x2008,   /* VM-exit MSR-load address */
+    ENTRY_MSR_LOAD_ADDRESS          = 0x200a,   /* VM-entry MSR-load address */
     EPT_POINTER                     = 0x201a,   /* EPT pointer */
     GUEST_PHYSICAL_ADDRESS          = 0x2400,   /* Guest physical address */
     LINK_POINTER                    = 0x2800,   /* VMCS link pointer */
@@ -62,7 +66,10 @@ enum class VmcsField32 : uint64_t {
     PAGEFAULT_ERRORCODE_MASK        = 0x4006,   /* Page-fault error-code mask */
     PAGEFAULT_ERRORCODE_MATCH       = 0x4008,   /* Page-fault error-code match */
     EXIT_CTLS                       = 0x400c,   /* VM-exit controls */
+    EXIT_MSR_STORE_COUNT            = 0x400e,   /* VM-exit MSR-store count */
+    EXIT_MSR_LOAD_COUNT             = 0x4010,   /* VM-exit MSR-load count */
     ENTRY_CTLS                      = 0x4012,   /* VM-entry controls */
+    ENTRY_MSR_LOAD_COUNT            = 0x4014,   /* VM-entry MSR-load count */
     PROCBASED_CTLS2                 = 0x401e,   /* Secondary processor-based controls */
     VM_INSTRUCTION_ERROR            = 0x4400,   /* VM instruction error */
     EXIT_REASON                     = 0x4402,   /* Exit reason */
@@ -184,6 +191,13 @@ struct VmxInfo {
     VmxInfo();
 };
 
+struct MiscInfo {
+    bool wait_for_sipi;
+    uint32_t msr_list_limit;
+
+    MiscInfo();
+};
+
 /* Stores EPT info from the IA32_VMX_EPT_VPID_CAP MSR. */
 struct EptInfo {
     bool page_walk_4;
@@ -266,6 +280,8 @@ public:
 private:
     bool do_resume_ = false;
     VmxPage msr_bitmaps_page_;
+    VmxPage host_msr_page_;
+    VmxPage guest_msr_page_;
     VmxState vmx_state_;
 };
 

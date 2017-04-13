@@ -18,7 +18,7 @@
 #define HS_R15     (HS_R14 + 8)
 #define HS_RFLAGS  (HS_R15 + 8)
 
-#define GS_RAX     (HS_RFLAGS + 40)
+#define GS_RAX     (HS_RFLAGS + 8)
 #define GS_RBX     (GS_RAX + 8)
 #define GS_RCX     (GS_RBX + 8)
 #define GS_RDX     (GS_RCX + 8)
@@ -53,12 +53,6 @@ struct HostState {
 
     // Processor flags.
     uint64_t rflags;
-
-    // MSRs.
-    uint64_t star;
-    uint64_t lstar;
-    uint64_t fmask;
-    uint64_t kernel_gs_base;
 };
 
 struct GuestState {
@@ -81,10 +75,6 @@ struct GuestState {
 
     // CRs.
     uint64_t cr2;
-
-    // MSRs.
-    uint64_t kernel_gs_base;
-    uint64_t gs_base;
 };
 
 struct VmxState {

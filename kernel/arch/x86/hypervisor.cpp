@@ -176,6 +176,13 @@ VmxInfo::VmxInfo() {
     vmx_controls = BIT_SHIFT(basic_info, 55);
 }
 
+MiscInfo::MiscInfo() {
+    // From Volume 3, Appendix A.6.
+    uint64_t misc_info = read_msr(X86_MSR_IA32_VMX_MISC);
+    wait_for_sipi = BIT_SHIFT(misc_info, 8);
+    msr_list_limit = static_cast<uint32_t>(BITS_SHIFT(misc_info, 27, 25) + 1) * 512;
+}
+
 EptInfo::EptInfo() {
     // From Volume 3, Appendix A.10.
     uint64_t ept_info = read_msr(X86_MSR_IA32_VMX_EPT_VPID_CAP);
@@ -298,6 +305,11 @@ static int vmx_enable(void* arg) {
 
     // Check that the INVEPT instruction is supported.
     if (!ept_info.invept)
+        return ERR_NOT_SUPPORTED;
+
+    // Check that wait for startup IPI is a supported activity state.
+    MiscInfo misc_info;
+    if (!misc_info.wait_for_sipi)
         return ERR_NOT_SUPPORTED;
 
     // Enable VMXON, if required.
@@ -425,6 +437,14 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
     if (status != NO_ERROR)
         return status;
 
+    status = host_msr_page_.Alloc(vmx_info, 0);
+    if (status != NO_ERROR)
+        return status;
+
+    status = guest_msr_page_.Alloc(vmx_info, 0);
+    if (status != NO_ERROR)
+        return status;
+
     memset(&vmx_state_, 0, sizeof(vmx_state_));
     return NO_ERROR;
 }
@@ -475,7 +495,7 @@ static uint64_t ept_pointer(paddr_t pml4_address) {
 }
 
 static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
-    // See Volume 3, Section 24.6.9: MSR-Bitmap Address.
+    // From Volume 3, Section 24.6.9.
     uint8_t* msr_bitmaps = msr_bitmaps_page->VirtualAddress<uint8_t>();
     if (msr >= 0xc0000000)
         msr_bitmaps += 1 << 10;
@@ -490,6 +510,32 @@ static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
     // Ignore writes to the MSR.
     msr_bitmaps += 2 << 10;
     msr_bitmaps[msr_byte] &= (uint8_t)~(1 << msr_bit);
+}
+
+struct MsrListEntry {
+    uint32_t msr;
+    uint32_t reserved;
+    uint64_t value;
+} __PACKED;
+
+static void edit_msr_list(VmxPage* msr_list_page, uint index, uint32_t msr, uint64_t value) {
+    // From Volume 3, Section 24.7.2.
+
+    // From Volume 3, Appendix A.6: Specifically, if the value bits 27:25 of
+    // IA32_VMX_MISC is N, then 512 * (N + 1) is the recommended maximum number
+    // of MSRs to be included in each list.
+    //
+    // From Volume 3, Section 24.7.2: This field specifies the number of MSRs to
+    // be stored on VM exit. It is recommended that this count not exceed 512
+    // bytes.
+    //
+    // Since these two statements conflict, we are taking the conservative
+    // minimum and asserting that: index < (512 bytes / size of MsrListEntry).
+    ASSERT(index < (512 / sizeof(MsrListEntry)));
+
+    MsrListEntry* entry = msr_list_page->VirtualAddress<MsrListEntry>() + index;
+    entry->msr = msr;
+    entry->value = value;
 }
 
 status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
@@ -623,7 +669,20 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     // Setup MSR handling.
     ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
     ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
-    vmcs_write(VmcsField64::MSR_BITMAPS, msr_bitmaps_page_.PhysicalAddress());
+    vmcs_write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_page_.PhysicalAddress());
+
+    edit_msr_list(&host_msr_page_, 0, X86_MSR_IA32_STAR, read_msr(X86_MSR_IA32_STAR));
+    edit_msr_list(&host_msr_page_, 1, X86_MSR_IA32_LSTAR, read_msr(X86_MSR_IA32_LSTAR));
+    edit_msr_list(&host_msr_page_, 2, X86_MSR_IA32_FMASK, read_msr(X86_MSR_IA32_FMASK));
+    // NOTE(abdulla): Index 3, X86_MSR_IA32_KERNEL_GS_BASE, is handled below.
+    vmcs_write(VmcsField64::EXIT_MSR_LOAD_ADDRESS, host_msr_page_.PhysicalAddress());
+    vmcs_write(VmcsField32::EXIT_MSR_LOAD_COUNT, 4);
+
+    edit_msr_list(&guest_msr_page_, 0, X86_MSR_IA32_KERNEL_GS_BASE, 0);
+    vmcs_write(VmcsField64::EXIT_MSR_STORE_ADDRESS, guest_msr_page_.PhysicalAddress());
+    vmcs_write(VmcsField32::EXIT_MSR_STORE_COUNT, 1);
+    vmcs_write(VmcsField64::ENTRY_MSR_LOAD_ADDRESS, guest_msr_page_.PhysicalAddress());
+    vmcs_write(VmcsField32::ENTRY_MSR_LOAD_COUNT, 1);
 
     // Setup VMCS host state.
     //
@@ -650,10 +709,6 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmcs_write(VmcsField32::HOST_IA32_SYSENTER_CS, 0);
     vmcs_write(VmcsFieldXX::HOST_RSP, reinterpret_cast<uint64_t>(&vmx_state_));
     vmcs_write(VmcsFieldXX::HOST_RIP, reinterpret_cast<uint64_t>(vmx_exit_entry));
-
-    vmx_state_.host_state.star = read_msr(X86_MSR_IA32_STAR);
-    vmx_state_.host_state.lstar = read_msr(X86_MSR_IA32_LSTAR);
-    vmx_state_.host_state.fmask = read_msr(X86_MSR_IA32_FMASK);
 
     // Setup VMCS guest state.
 
@@ -739,14 +794,6 @@ void vmx_exit(VmxState* vmx_state) {
     // Reload the interrupt descriptor table in order to restore its limit. VMX
     // always restores it with a limit of 0xffff, which is too large.
     idt_load(idt_get_readonly());
-
-    // TODO(abdulla): Optimise this, and don't do it unconditionally.
-    write_msr(X86_MSR_IA32_STAR, vmx_state->host_state.star);
-    write_msr(X86_MSR_IA32_LSTAR, vmx_state->host_state.lstar);
-    write_msr(X86_MSR_IA32_FMASK, vmx_state->host_state.fmask);
-    write_msr(X86_MSR_IA32_KERNEL_GS_BASE, vmx_state->host_state.kernel_gs_base);
-    vmx_state->guest_state.kernel_gs_base = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
-    vmx_state->guest_state.gs_base = read_msr(X86_MSR_IA32_GS_BASE);
 }
 
 static void next_rip(const ExitInfo& exit_info) {
@@ -811,11 +858,7 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fi
     vmcs_write(VmcsFieldXX::HOST_CR3, x86_get_cr3());
     // Kernel GS stores the user-space GS (within the kernel) — as the calling
     // user-space thread may change, save this every time.
-    vmx_state_.host_state.kernel_gs_base = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
-
-    // Restore guest MSRs.
-    write_msr(X86_MSR_IA32_KERNEL_GS_BASE, vmx_state_.guest_state.kernel_gs_base);
-    write_msr(X86_MSR_IA32_GS_BASE, vmx_state_.guest_state.gs_base);
+    edit_msr_list(&host_msr_page_, 3, X86_MSR_IA32_KERNEL_GS_BASE, read_msr(X86_MSR_IA32_KERNEL_GS_BASE));
 
     if (do_resume_) {
         dprintf(SPEW, "re-entering guest\n");
