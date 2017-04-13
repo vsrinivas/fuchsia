@@ -63,7 +63,7 @@ class AgentRunner : AgentProvider, ledger::PageWatcher {
   void RemoveAgent(const std::string& agent_url);
 
   // Agent at |agent_url| is run (if not already running) and Agent.RunTask() is
-  // called with |task_id| as the agent specified identfier for the task when a
+  // called with |task_id| as the agent specified identifier for the task when a
   // trigger condition specified in |task_info| is satisfied. The trigger
   // condition is also replicated to the ledger and the task my get scheduled on
   // other user devices too.
@@ -123,7 +123,7 @@ class AgentRunner : AgentProvider, ledger::PageWatcher {
   // ledger key -> [agent URL, task ID]
   //
   // Used to delete entries from the maps above when a ledger key is
-  // deleted. This saves us from having to parse a legder key, which
+  // deleted. This saves us from having to parse a ledger key, which
   // becomes impossible once we use hashes to construct it, or from
   // having to read the value from the previous snapshot, which would
   // be nifty but is easy only once we have Operations.

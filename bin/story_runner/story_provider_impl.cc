@@ -431,7 +431,7 @@ class StoryProviderImpl::GetControllerCall : Operation<void> {
     // have a story controller found in the section above, and
     // we would never get here. But if the user runner was
     // previously killed while the story was running, the story
-    // would be recorded in the ledger as running even thoug it
+    // would be recorded in the ledger as running even though it
     // isn't, and the user shell is then unable to actually
     // start it (cf. StoryImpl::Start()).
     //

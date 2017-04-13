@@ -15,7 +15,7 @@ import "apps/modular/services/component/message_queue.fidl";
 interface ComponentContext {
   // Gets the Ledger associated with this component. This ledger instance
   // is unique to this component under this user.
-  GetLedger(ledger.Ledger& module_ledger) => (ledger.Status status);
+  GetLedger(ledger.Ledger& request) => (ledger.Status status);
 
   // Used to start a new agent in the user scope and connect to it.
   ConnectToAgent(string url, app.ServiceProvider& incoming_services,
