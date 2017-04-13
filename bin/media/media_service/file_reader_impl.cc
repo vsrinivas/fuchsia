@@ -156,7 +156,7 @@ void FileReaderImpl::WriteToSocket() {
       return;
     }
 
-    if (status == ERR_REMOTE_CLOSED) {
+    if (status == ERR_PEER_CLOSED) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
       socket_.reset();
