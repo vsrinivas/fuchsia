@@ -619,8 +619,8 @@ function fbuild-sync() {
     fi
   done < "${FUCHSIA_BUILD_DIR}/gen/packages/gn/user.bootfs.manifest"
 
-  rm $stamp
-  rm $status_file
+  rm -f "$stamp"
+  rm -f "$status_file"
 }
 
 ### fboot: run fuchsia bootserver
