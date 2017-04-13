@@ -31,13 +31,11 @@ class Settings {
 };
 
 class DevDeviceShellApp
-    : modular::SingleServiceViewApp<modular::DeviceShellFactory>,
-      modular::DeviceShell,
+    : modular::SingleServiceViewApp<modular::DeviceShell>,
       modular::UserWatcher {
  public:
   DevDeviceShellApp(const Settings& settings)
       : settings_(settings),
-        device_shell_binding_(this),
         user_watcher_binding_(this) {}
   ~DevDeviceShellApp() override = default;
 
@@ -50,16 +48,13 @@ class DevDeviceShellApp
     Connect();
   }
 
-  // |DeviceShellFactory|
-  void Create(fidl::InterfaceHandle<modular::DeviceContext> device_context,
-              fidl::InterfaceHandle<modular::UserProvider> user_provider,
-              fidl::InterfaceRequest<modular::DeviceShell> device_shell_request)
+  // |DeviceShell|
+  void Initialize(fidl::InterfaceHandle<modular::DeviceContext> device_context,
+                  fidl::InterfaceHandle<modular::UserProvider> user_provider)
       override {
     user_provider_.Bind(std::move(user_provider));
     device_context_.Bind(std::move(device_context));
 
-    FTL_DCHECK(!device_shell_binding_.is_bound());
-    device_shell_binding_.Bind(std::move(device_shell_request));
 
     Connect();
   }
@@ -89,7 +84,6 @@ class DevDeviceShellApp
   }
 
   const Settings settings_;
-  fidl::Binding<modular::DeviceShell> device_shell_binding_;
   fidl::Binding<modular::UserWatcher> user_watcher_binding_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   modular::DeviceContextPtr device_context_;

@@ -201,18 +201,16 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
     ConnectToService(device_shell_services.get(),
                      device_shell_view_provider.NewRequest());
 
-    DeviceShellFactoryPtr device_shell_factory;
     ConnectToService(device_shell_services.get(),
-                     device_shell_factory.NewRequest());
+                     device_shell_.NewRequest());
 
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
-    device_shell_factory->Create(device_context_binding_.NewBinding(),
-                                 user_provider_binding_.NewBinding(),
-                                 device_shell_.NewRequest());
+    device_shell_->Initialize(device_context_binding_.NewBinding(),
+                              user_provider_binding_.NewBinding());
 
     // 2. Get login data for users of the device.
     // There might not be a file of users persisted. If config file doesn't

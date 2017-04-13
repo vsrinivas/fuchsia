@@ -7,17 +7,11 @@ module modular;
 import "apps/modular/services/device/device_context.fidl";
 import "apps/modular/services/device/user_provider.fidl";
 
-// This interface is meant to be implemented by a Device Shell so that
-// |DeviceRunner| could be passed to it on startup.
-[ServiceName="modular.DeviceShellFactory"]
-interface DeviceShellFactory {
-  Create(DeviceContext device_context, UserProvider user_provider,
-         DeviceShell& device_shell);
-};
-
-// This interface allows a DeviceShellFactory's client (i.e. DeviceRunner) to
-// monitor and control the life cycle of the DeviceShell.
+// This interface is meant to be implemented by a Device Shell.
+[ServiceName="modular.DeviceShell"]
 interface DeviceShell {
+  Initialize(DeviceContext device_context, UserProvider user_provider);
+
   // This signals DeviceShell to teardown itself. Upon response, the caller may
   // terminate DeviceShell process if it hasn't done so already.
   Terminate() => ();
