@@ -145,8 +145,7 @@ static mx_status_t find_partition_path(gpt_partition_t *const *part_info,
         }
       }
     } else {
-      fprintf(stderr, "ioctl failed getting GUID for %s, error:(%zi) \
-                    '%s'\n",
+      fprintf(stderr, "Warning: ioctl failed getting GUID for %s, error:(%zi) '%s'\n",
               entry->d_name, rc, strerror(errno));
     }
 
@@ -300,15 +299,13 @@ static mx_status_t unmount_all(void) {
   const char *static_paths[2] = {"/data", "/system"};
   mx_status_t result = NO_ERROR;
   for (uint16_t idx = 0; idx < countof(static_paths); idx++) {
-    printf("Unmounting filesystem at %s...", static_paths[idx]);
     mx_status_t rc = umount(static_paths[idx]);
     if (rc != NO_ERROR && rc != ERR_NOT_FOUND) {
       // why not return failure? we're just making a best effort attempt,
       // the system can return an error from this unmount call
-      printf("FAILURE\n");
       result = rc;
-    } else {
-      printf("SUCCESS\n");
+      printf("Warning: Unmounting filesystem at %s failed.\n",
+             static_paths[idx]);
     }
   }
 
@@ -331,12 +328,9 @@ static mx_status_t unmount_all(void) {
     }
     strncpy(path + path_len, entry->d_name, PATH_MAX - path_len);
 
-    printf("Unmounting filesystem at %s...", path);
     mx_status_t rc = umount(path);
     if (rc != NO_ERROR) {
-      printf("FAILURE\n");
-    } else {
-      printf("SUCCESS\n");
+      printf("Warning: Unmounting filesystem at %s failed.\n", path);
     }
     if (result == NO_ERROR && rc != NO_ERROR) {
       result = rc;
@@ -506,9 +500,6 @@ mx_status_t find_install_device(DIR *dir, const char *dir_path,
     if (install_dev != NULL && install_dev->valid) {
       *unfound_parts_out = find_install_partitions(
           install_dev, block_size, requested_parts, PATH_MAX, part_paths_out);
-
-      printf("Ready for install on %s? 0x%x\n", dev_path_out,
-             *unfound_parts_out);
       if (*unfound_parts_out != 0) {
         gpt_device_release(install_dev);
         install_dev = NULL;
@@ -568,14 +559,16 @@ mx_status_t write_install_data(partition_flags parts_requested,
     size_t bytes_written;
     int fd_dst = open(paths_dest[part_idx], O_RDWR);
     if (fd_dst == -1) {
-      fprintf(stderr, "Error opening output device, %s\n", strerror(errno));
+      fprintf(stderr, "ERROR: Could not open output device for writing, %s\n",
+              strerror(errno));
       return ERR_IO;
     }
 
     printf("writing content to '%s'\n", paths_dest[part_idx]);
     int fd_src = open(paths_src[idx], O_RDONLY);
     if (fd_src == -1) {
-      fprintf(stderr, "Error opening disk image file, %s\n", strerror(errno));
+      fprintf(stderr, "ERROR: Could not open disk image, %s\n",
+              strerror(errno));
       close(fd_dst);
       return ERR_IO;
     }
@@ -592,7 +585,7 @@ mx_status_t write_install_data(partition_flags parts_requested,
     close(fd_src);
 
     if (rc != NO_ERROR) {
-      fprintf(stderr, "Error %i writing partition\n", rc);
+      fprintf(stderr, "ERROR: Problem writing partition code: %i\n", rc);
       return rc;
     }
   }
@@ -1254,6 +1247,21 @@ static bool ask_for_space(void) {
   return result;
 }
 
+static int print_summary(bool install_dev_found, bool req_data_written,
+                         bool part_data_avail, bool part_blob_avail) {
+  bool total_success = install_dev_found && req_data_written &&
+      part_data_avail && part_blob_avail;
+
+  printf("\n===================================\n");
+  printf("INSTALL SUMMARY:      %s\n", (total_success ? "SUCCESS" : "FAILURE"));
+  printf("    Drive found?      %s\n", (install_dev_found ? "YES" : "NO"));
+  printf("    ESP+SYS written?  %s\n", (req_data_written ? "YES" : "NO"));
+  printf("    /data ready?      %s\n", (part_data_avail ? "YES" : "NO"));
+  printf("    /blobstore ready? %s\n", (part_blob_avail ? "YES" : "NO"));
+
+  return total_success ? 0 : -1;
+}
+
 int main(int argc, char **argv) {
   static_assert(NUM_INSTALL_PARTS == 2,
                 "Install partition count is unexpected, expected 2.");
@@ -1280,6 +1288,12 @@ int main(int argc, char **argv) {
   partition_flags requested_parts = PART_EFI | PART_SYSTEM;
   uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
   uint8_t blobfs_guid[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
+  bool install_dev_found = false;
+  bool req_data_written = false;
+  bool part_data_avail = false;
+  bool part_blob_avail = false;
+
+  printf("Messages tagged \"ERROR\" are fatal, others are informational.\n");
 
   // the dirty bit is set to true whenever the devices directory is in a
   // state where it it unknown if installation can proceed
@@ -1292,7 +1306,8 @@ int main(int argc, char **argv) {
     if (dir == NULL) {
       fprintf(stderr, "Open failed for directory: '%s' with error %s\n",
               PATH_BLOCKDEVS, strerror(errno));
-      return -1;
+      return print_summary(install_dev_found, req_data_written, part_data_avail,
+                           part_blob_avail);
     }
 
     char disk_path[PATH_MAX];
@@ -1302,6 +1317,7 @@ int main(int argc, char **argv) {
     closedir(dir);
 
     if (rc == NO_ERROR && install_dev->valid) {
+      install_dev_found = true;
       rc = write_install_data(requested_parts, ready_for_install,
                               disk_img_paths, part_paths);
 
@@ -1309,6 +1325,7 @@ int main(int argc, char **argv) {
       // Having these partitions is highly desireable, but we can live
       // without it if needed
       if (rc == NO_ERROR) {
+        req_data_written = true;
         // store the guid of the disk we're using
         uint8_t disk_guid[GPT_GUID_LEN];
         gpt_device_get_header_guid(install_dev, &disk_guid);
@@ -1317,6 +1334,8 @@ int main(int argc, char **argv) {
                                  PREFERRED_SIZE_DATA, MIN_SIZE_DATA,
                                  DISK_FORMAT_MINFS, "data") != NO_ERROR) {
           printf("WARNING: Problem locating or creating data partition.\n");
+        } else {
+          part_data_avail = true;
         }
 
         // find the device path of the disk we're using, it will have changed
@@ -1327,7 +1346,8 @@ int main(int argc, char **argv) {
         if (dir == NULL) {
           printf("Unable to re-open block device directory, can not make\
                  blobfs partition");
-          return 0;
+          return print_summary(install_dev_found, req_data_written,
+                               part_data_avail, part_blob_avail);
         }
         gpt_device_release(install_dev);
         find_disk_by_guid(dir, path_buffer, &disk_guid, &install_dev, disk_path,
@@ -1339,23 +1359,28 @@ int main(int argc, char **argv) {
                                  PREFERRED_SIZE_DATA, MIN_SIZE_DATA,
                                  DISK_FORMAT_BLOBFS, "blobfs") != NO_ERROR) {
           printf("WARNING: Problem locating or creating blobfs partition.\n");
+        } else {
+          part_blob_avail = true;
         }
       } else {
         gpt_device_release(install_dev);
         fprintf(stderr, "Failure writing install data, aborting.\n");
-        return -1;
+        return print_summary(install_dev_found, req_data_written,
+                             part_data_avail, part_blob_avail);
       }
 
       gpt_device_release(install_dev);
       // we ignore whether or not we could make the data partition since
       // it is desired, but not required
-      return 0;
+      return print_summary(install_dev_found, req_data_written, part_data_avail,
+                           part_blob_avail);
     } else {
       dir = opendir(PATH_BLOCKDEVS);
       if (dir == NULL) {
         fprintf(stderr, "Open failed for directory: '%s' with error %s\n",
                 PATH_BLOCKDEVS, strerror(errno));
-        return -1;
+        return print_summary(install_dev_found, req_data_written,
+                             part_data_avail, part_blob_avail);
       }
 
       strcpy(path_buffer, PATH_BLOCKDEVS);
@@ -1383,4 +1408,7 @@ int main(int argc, char **argv) {
       }
     }
   } while (retry);
+
+  return print_summary(install_dev_found, req_data_written, part_data_avail,
+                       part_blob_avail);
 }

@@ -347,7 +347,19 @@ gpt_device_t *read_gpt(int fd, uint64_t *blocksize_out) {
 
   blocks /= *blocksize_out;
   gpt_device_t *gpt;
+
+  // gpt_device_init produces output we want to suppress, so kidnap stdout
+  // TODO(jmatt) Remove this hyjinx when lib-gpt stops writing to stdout
+  int backup = dup(1);
+  close(1);
+
   rc = gpt_device_init(fd, *blocksize_out, blocks, &gpt);
+
+  // restore stdout
+  fflush(stdout);
+  dup2(backup, 1);
+  close(backup);
+
   if (rc < 0) {
     fprintf(stderr, "error reading GPT, result code: %zd \n", rc);
     return NULL;
