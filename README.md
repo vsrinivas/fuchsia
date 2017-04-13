@@ -25,6 +25,10 @@ This repository contains documentation for Fuchsia.
 
 + [How do I write a flutter module?][flutter_module]
 
+# Reference Material
+
++ [The Fuchsia Book](book.md)
+
 
 [magenta]: https://fuchsia.googlesource.com/magenta/+/master/README.md "Magenta"
 [getting_started]: getting_started.md "Getting started"
