@@ -108,7 +108,7 @@ void ChannelDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
         // Remove waiter from list.
         while (!waiters_.is_empty()) {
             auto waiter = waiters_.pop_front();
-            waiter->Cancel(ERR_HANDLE_CLOSED);
+            waiter->Cancel(ERR_CANCELED);
         }
     }
 

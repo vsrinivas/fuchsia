@@ -81,7 +81,7 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
     }
 
     if (signals_state & MX_SIGNAL_HANDLE_CLOSED)
-        return ERR_HANDLE_CLOSED;
+        return ERR_CANCELED;
 
     return result;
 }
@@ -159,7 +159,7 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
         return ERR_INVALID_ARGS;
 
     if (combined & MX_SIGNAL_HANDLE_CLOSED)
-        return ERR_HANDLE_CLOSED;
+        return ERR_CANCELED;
 
     return result;
 }

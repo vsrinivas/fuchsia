@@ -40,7 +40,7 @@ typedef struct mx_waitset_result {
 to **waitset_add**()); each entry yields at most one result. *status* is
 **NO_ERROR** if the watched signals provided to **waitset_add**() were
 satisfied, **ERR_BAD_STATE** if the watched signals became unsatisfiable, or
-**ERR_HANDLE_CLOSED** if the entry's handle was closed. **observed** is set
+**ERR_CANCELED** if the entry's handle was closed. **observed** is set
 to the entry's handle's observed signals at some point shortly before
 **waitset_wait**() returned.
 
@@ -62,7 +62,7 @@ returned if *timeout* elapses with no results to report.
 
 **ERR_BAD_HANDLE**  *waitset_handle* is not a valid handle.
 
-**ERR_HANDLE_CLOSED** The *waitset_handle* was closed while waiting on it.
+**ERR_CANCELED** The *waitset_handle* was closed while waiting on it.
 
 **ERR_WRONG_TYPE**  *waitset_handle* is not a handle to a wait set.
 

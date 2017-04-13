@@ -22,7 +22,7 @@ const char* _mx_status_get_string(mx_status_t status) {
     case ERR_ALREADY_EXISTS: return "ERR_ALREADY_EXISTS";
     case ERR_ALREADY_BOUND: return "ERR_ALREADY_BOUND";
     case ERR_TIMED_OUT: return "ERR_TIMED_OUT";
-    case ERR_HANDLE_CLOSED: return "ERR_HANDLE_CLOSED";
+    case ERR_CANCELED: return "ERR_CANCELED";
     case ERR_PEER_CLOSED: return "ERR_PEER_CLOSED";
     case ERR_UNAVAILABLE: return "ERR_UNAVAILABLE";
     case ERR_SHOULD_WAIT: return "ERR_SHOULD_WAIT";

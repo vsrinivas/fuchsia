@@ -93,7 +93,7 @@ any of *handles* do not have **MX_RIGHT_TRANSFER**.
 **ERR_PEER_CLOSED**  The other side of the channel was closed or became
 closed while waiting for the reply.
 
-**ERR_HANDLE_CLOSED**  *handle* was closed while waiting for a reply.
+**ERR_CANCELED**  *handle* was closed while waiting for a reply.
 
 **ERR_CALL_FAILED**  The write phase of the call succeeded, but an error occured
 while or after waiting for the response.  The specific error is returned via

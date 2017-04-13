@@ -57,7 +57,7 @@ For any other return value, the *pending* fields of *items* are undefined.
 **ERR_ACCESS_DENIED**  One or more of the provided *handles* does not
 have **MX_RIGHT_READ** and may not be waited upon.
 
-**ERR_HANDLE_CLOSED**  One or more of the provided *handles* was invalidated
+**ERR_CANCELED**  One or more of the provided *handles* was invalidated
 (e.g., closed) during the wait.
 
 **ERR_TIMED_OUT**  The specified timeout elapsed (or was 0 to begin

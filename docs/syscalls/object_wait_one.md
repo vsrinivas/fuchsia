@@ -51,7 +51,7 @@ For any other return value, *observed* is undefined.
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** and may
 not be waited upon.
 
-**ERR_HANDLE_CLOSED**  *handle* was invalidated (e.g., closed) during the wait.
+**ERR_CANCELED**  *handle* was invalidated (e.g., closed) during the wait.
 
 **ERR_TIMED_OUT**  The specified timeout elapsed (or was 0 to begin
 with) before any of the specified *signals* are observed on

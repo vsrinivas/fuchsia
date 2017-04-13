@@ -309,7 +309,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
 
     // Always prefer to give results over timed out, but prefer "cancelled" over everything.
     if (cancelled_)
-        return ERR_HANDLE_CLOSED;
+        return ERR_CANCELED;
 
     if (!num_triggered_entries_) {
         // It's *possible* that we woke due to something triggering
@@ -334,7 +334,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
             results[i].observed = it->GetSignalsStateLocked();
         } else {
             // Cancelled.
-            results[i].status = ERR_HANDLE_CLOSED;
+            results[i].status = ERR_CANCELED;
             results[i].observed = 0;
         }
     }
