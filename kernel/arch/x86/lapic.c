@@ -312,25 +312,6 @@ void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
     mb();
     write_msr(IA32_TSC_DEADLINE_MSR, deadline);
 
-    // Serialize the instruction stream to ensure the rdtsc happens after the
-    // write_msr
-    uint32_t ignored;
-    cpuid(0, &ignored, &ignored, &ignored, &ignored);
-
-    const uint64_t now = rdtsc();
-
-    // Serialize the instruction stream to ensure the rdtsc happens before the
-    // read_msr
-    cpuid(0, &ignored, &ignored, &ignored, &ignored);
-
-    uint64_t cur_deadline = read_msr(IA32_TSC_DEADLINE_MSR);
-    if (cur_deadline != 0 && cur_deadline < now) {
-        // If we wrote a deadline that was already past, clear the timer
-        // and simulate the interrupt.
-        write_msr(IA32_TSC_DEADLINE_MSR, 0);
-        apic_send_self_ipi(X86_INT_APIC_TIMER, DELIVERY_MODE_FIXED);
-    }
-
     arch_interrupt_restore(state, 0);
 }
 
