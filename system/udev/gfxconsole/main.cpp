@@ -24,6 +24,7 @@
 
 #include <mxio/io.h>
 #include <mxio/watcher.h>
+#include <mxtl/auto_lock.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/log.h>
@@ -144,7 +145,8 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
         return;
 
     // TODO: ensure active vc can't change while this is going on
-    mtx_lock(&g_active_vc->fifo.lock);
+    mxtl::AutoLock lock(&g_active_vc->fifo.lock);
+
     if (mx_hid_fifo_size(&g_active_vc->fifo) == 0) {
         g_active_vc->flags |= VC_FLAG_RESETSCROLL;
     }
@@ -161,7 +163,6 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
 
         device_state_set(&g_active_vc->device, DEV_STATE_READABLE);
     }
-    mtx_unlock(&g_active_vc->fifo.lock);
 }
 
 static int vc_watch_for_keyboard_devices_thread(void* arg) {
@@ -185,18 +186,18 @@ mx_status_t vc_set_console_to_active(vc_device_t* dev) {
 
     unsigned i = 0;
     vc_device_t* device = NULL;
-    mtx_lock(&g_vc_lock);
-    list_for_every_entry (&g_vc_list, device, vc_device_t, node) {
-        if (device == dev)
-            break;
-        i++;
+    {
+        mxtl::AutoLock lock(&g_vc_lock);
+        list_for_every_entry (&g_vc_list, device, vc_device_t, node) {
+            if (device == dev)
+                break;
+            i++;
+        }
+        if (i == g_vc_count) {
+            return ERR_INVALID_ARGS;
+        }
+        __vc_set_active(dev, i);
     }
-    if (i == g_vc_count) {
-        mtx_unlock(&g_vc_lock);
-        return ERR_INVALID_ARGS;
-    }
-    __vc_set_active(dev, i);
-    mtx_unlock(&g_vc_lock);
     vc_device_render(g_active_vc);
     return NO_ERROR;
 }
@@ -207,18 +208,18 @@ mx_status_t vc_set_active_console(unsigned console) {
 
     unsigned i = 0;
     vc_device_t* device = NULL;
-    mtx_lock(&g_vc_lock);
-    list_for_every_entry (&g_vc_list, device, vc_device_t, node) {
-        if (i == console)
-            break;
-        i++;
+    {
+        mxtl::AutoLock lock(&g_vc_lock);
+        list_for_every_entry (&g_vc_list, device, vc_device_t, node) {
+            if (i == console)
+                break;
+            i++;
+        }
+        if (device == g_active_vc) {
+            return NO_ERROR;
+        }
+        __vc_set_active(device, console);
     }
-    if (device == g_active_vc) {
-        mtx_unlock(&g_vc_lock);
-        return NO_ERROR;
-    }
-    __vc_set_active(device, console);
-    mtx_unlock(&g_vc_lock);
     vc_device_render(g_active_vc);
     return NO_ERROR;
 }
@@ -228,7 +229,7 @@ void vc_get_status_line(char* str, int n) {
     char* ptr = str;
     unsigned i = 0;
     // TODO add process name, etc.
-    mtx_lock(&g_vc_lock);
+    mxtl::AutoLock lock(&g_vc_lock);
     list_for_every_entry (&g_vc_list, device, vc_device_t, node) {
         if (n <= 0) {
             break;
@@ -246,13 +247,11 @@ void vc_get_status_line(char* str, int n) {
         n -= chars;
         i++;
     }
-    mtx_unlock(&g_vc_lock);
 }
 
 void vc_get_battery_info(vc_battery_info_t* info) {
-    mtx_lock(&g_vc_lock);
+    mxtl::AutoLock lock(&g_vc_lock);
     memcpy(info, &g_battery_info, sizeof(vc_battery_info_t));
-    mtx_unlock(&g_vc_lock);
 }
 
 // implement device protocol:
@@ -260,35 +259,36 @@ void vc_get_battery_info(vc_battery_info_t* info) {
 static mx_status_t vc_device_release(mx_device_t* dev) {
     vc_device_t* vc = get_vc_device(dev);
 
-    mtx_lock(&g_vc_lock);
-    list_delete(&vc->node);
-    g_vc_count -= 1;
+    {
+        mxtl::AutoLock lock(&g_vc_lock);
+        list_delete(&vc->node);
+        g_vc_count -= 1;
 
-    if (vc->active) {
-        g_active_vc = NULL;
-        if (g_active_vc_index >= g_vc_count) {
-            g_active_vc_index = g_vc_count - 1;
-        }
-    }
-
-    // need to fixup g_active_vc and g_active_vc_index after deletion
-    vc_device_t* d = NULL;
-    unsigned i = 0;
-    list_for_every_entry (&g_vc_list, d, vc_device_t, node) {
-        if (g_active_vc) {
-            if (d == g_active_vc) {
-                g_active_vc_index = i;
-                break;
-            }
-        } else {
-            if (i == g_active_vc_index) {
-                __vc_set_active(d, i);
-                break;
+        if (vc->active) {
+            g_active_vc = NULL;
+            if (g_active_vc_index >= g_vc_count) {
+                g_active_vc_index = g_vc_count - 1;
             }
         }
-        i++;
+
+        // need to fixup g_active_vc and g_active_vc_index after deletion
+        vc_device_t* d = NULL;
+        unsigned i = 0;
+        list_for_every_entry (&g_vc_list, d, vc_device_t, node) {
+            if (g_active_vc) {
+                if (d == g_active_vc) {
+                    g_active_vc_index = i;
+                    break;
+                }
+            } else {
+                if (i == g_active_vc_index) {
+                    __vc_set_active(d, i);
+                    break;
+                }
+            }
+            i++;
+        }
     }
-    mtx_unlock(&g_vc_lock);
 
     vc_device_free(vc);
 
@@ -302,12 +302,12 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
 static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
 
-    mtx_lock(&vc->fifo.lock);
+    mxtl::AutoLock lock(&vc->fifo.lock);
+
     ssize_t result = mx_hid_fifo_read(&vc->fifo, buf, count);
     if (mx_hid_fifo_size(&vc->fifo) == 0) {
         device_state_clr(dev, DEV_STATE_READABLE);
     }
-    mtx_unlock(&vc->fifo.lock);
 
     if (result == 0)
         result = ERR_SHOULD_WAIT;
@@ -316,7 +316,9 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
 
 ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
-    mtx_lock(&vc->lock);
+
+    mxtl::AutoLock lock(&vc->lock);
+
     vc->invy0 = vc_device_rows(vc) + 1;
     vc->invy1 = -1;
     const uint8_t* str = (const uint8_t*)buf;
@@ -331,7 +333,6 @@ ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_
         vc_device_write_status(vc);
         vc_gfx_invalidate_status(vc);
     }
-    mtx_unlock(&vc->lock);
     return count;
 }
 
@@ -420,10 +421,11 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
     }
 
     // add to the vc list
-    mtx_lock(&g_vc_lock);
-    list_add_tail(&g_vc_list, &device->node);
-    g_vc_count++;
-    mtx_unlock(&g_vc_lock);
+    {
+        mxtl::AutoLock lock(&g_vc_lock);
+        list_add_tail(&g_vc_list, &device->node);
+        g_vc_count++;
+    }
 
     // make this the active vc if it's the first one
     if (!g_active_vc) {
@@ -479,21 +481,22 @@ static int vc_battery_poll_thread(void* arg) {
     char str[16];
     for (;;) {
         ssize_t length = read(battery_fd, str, sizeof(str) - 1);
-        mtx_lock(&g_vc_lock);
-        if (length < 1 || str[0] == 'e') {
-            g_battery_info.state = ERROR;
-            g_battery_info.pct = -1;
-        } else {
-            str[length] = '\0';
-            if (str[0] == 'c') {
-                g_battery_info.state = CHARGING;
-                g_battery_info.pct = atoi(&str[1]);
+        {
+            mxtl::AutoLock lock(&g_vc_lock);
+            if (length < 1 || str[0] == 'e') {
+                g_battery_info.state = ERROR;
+                g_battery_info.pct = -1;
             } else {
-                g_battery_info.state = NOT_CHARGING;
-                g_battery_info.pct = atoi(str);
+                str[length] = '\0';
+                if (str[0] == 'c') {
+                    g_battery_info.state = CHARGING;
+                    g_battery_info.pct = atoi(&str[1]);
+                } else {
+                    g_battery_info.state = NOT_CHARGING;
+                    g_battery_info.pct = atoi(str);
+                }
             }
         }
-        mtx_unlock(&g_vc_lock);
         if (g_active_vc) {
             vc_device_write_status(g_active_vc);
             vc_gfx_invalidate_status(g_active_vc);

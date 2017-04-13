@@ -8,6 +8,7 @@
 #include <sys/param.h>
 
 #include <magenta/process.h>
+#include <mxtl/auto_lock.h>
 
 #define VCDEBUG 0
 
@@ -372,18 +373,19 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
 }
 
 void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {
-    mtx_lock(&dev->lock);
-    unsigned flags;
-    if (fullscreen) {
-        flags = dev->flags | VC_FLAG_FULLSCREEN;
-    } else {
-        flags = dev->flags & ~VC_FLAG_FULLSCREEN;
+    {
+        mxtl::AutoLock(&dev->lock);
+        unsigned flags;
+        if (fullscreen) {
+            flags = dev->flags | VC_FLAG_FULLSCREEN;
+        } else {
+            flags = dev->flags & ~VC_FLAG_FULLSCREEN;
+        }
+        if (flags != dev->flags) {
+            dev->flags = flags;
+            tc_seth(&dev->textcon, vc_device_rows(dev));
+        }
     }
-    if (flags != dev->flags) {
-        dev->flags = flags;
-        tc_seth(&dev->textcon, vc_device_rows(dev));
-    }
-    mtx_unlock(&dev->lock);
     vc_device_render(dev);
 }
 
