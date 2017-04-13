@@ -81,16 +81,10 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     if (result != NO_ERROR)
         return result;
 
-    // create the thread object
-    mxtl::RefPtr<UserThread> user_thread;
-    result = process->CreateUserThread(sp.data(), options, &user_thread);
-    if (result != NO_ERROR)
-        return result;
-
     // create the thread dispatcher
     mxtl::RefPtr<Dispatcher> thread_dispatcher;
     mx_rights_t thread_rights;
-    result = ThreadDispatcher::Create(mxtl::move(user_thread), &thread_dispatcher, &thread_rights);
+    result = process->CreateUserThread(sp.data(), options, &thread_dispatcher, &thread_rights);
     if (result != NO_ERROR)
         return result;
 

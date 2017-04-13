@@ -516,7 +516,9 @@ status_t ProcessDispatcher::GetAspaceMaps(
     return GetVmAspaceMaps(aspace_, maps, max, actual, available);
 }
 
-status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread) {
+status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t flags,
+                                             mxtl::RefPtr<Dispatcher>* out_thread,
+                                             mx_rights_t* out_rights) {
     AllocChecker ac;
     auto ut = mxtl::AdoptRef(new (&ac) UserThread(mxtl::WrapRefPtr(this),
                                                   flags));
@@ -527,7 +529,14 @@ status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t fl
     if (result != NO_ERROR)
         return result;
 
-    *user_thread = mxtl::move(ut);
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    mx_rights_t rights;
+    result = ThreadDispatcher::Create(mxtl::move(ut), &dispatcher, &rights);
+    if (result != NO_ERROR)
+        return result;
+
+    *out_thread = mxtl::move(dispatcher);
+    *out_rights = rights;
     return NO_ERROR;
 }
 

@@ -172,7 +172,9 @@ public:
     status_t GetAspaceMaps(user_ptr<mx_info_maps_t> maps, size_t max,
                            size_t* actual, size_t* available);
 
-    status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread);
+    status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags,
+                              mxtl::RefPtr<Dispatcher>* out_dispatcher,
+                              mx_rights_t* out_rights);
 
     status_t GetThreads(mxtl::Array<mx_koid_t>* threads);
 
