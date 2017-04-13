@@ -21,7 +21,7 @@ void Init(app::ApplicationContext* app_context, const std::string& identity) {
   g_test_runner =
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
   g_test_runner.set_connection_error_handler([] {
-    FTL_LOG(FATAL) << "Could not connect to TestRunner. Make sure the test is"
+    FTL_LOG(FATAL) << "Could not connect to TestRunner. Make sure the test is "
                       "running under a TestRunner environment.";
   });
   g_test_runner->Identify(identity);

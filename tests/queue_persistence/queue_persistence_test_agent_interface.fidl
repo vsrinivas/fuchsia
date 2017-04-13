@@ -1,0 +1,11 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular.testing;
+
+// An interface implemented by test_agent.cc which the root module uses.
+[ServiceName="modular.testing.QueuePersistenceAgentInterface"]
+interface QueuePersistenceAgentInterface {
+  GetMessageQueueToken() => (string message_queue_token);
+};

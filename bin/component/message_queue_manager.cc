@@ -11,6 +11,7 @@
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/services/component/message_queue.fidl.h"
+#include "apps/modular/src/component/persistent_queue.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/vmo/strings.h"
@@ -45,18 +46,17 @@ class MessageQueueConnection : public MessageQueue {
 // manipulate the message queue. Owned by |MessageQueueManager|.
 class MessageQueueStorage : MessageSender {
  public:
-  MessageQueueStorage(const std::string& queue_token)
-      : queue_token_(queue_token) {}
+  MessageQueueStorage(const std::string& queue_token, const std::string& file_name_)
+      : queue_token_(queue_token), queue_data_(file_name_) {}
 
-  ~MessageQueueStorage() override {}
+  ~MessageQueueStorage() override = default;
 
   // We store |Receive()| callbacks if the queue is empty. We drop these
   // callbacks if the relevant |MessageQueue| interface dies.
   void Receive(const MessageQueueConnection* const conn,
                const MessageQueue::ReceiveCallback& callback) {
-    if (!queue_data_.empty()) {
-      callback(queue_data_.front());
-      queue_data_.pop_front();
+    if (!queue_data_.IsEmpty()) {
+      callback(queue_data_.Dequeue());
     } else {
       receive_callback_queue_.push_back(make_pair(conn, callback));
     }
@@ -101,7 +101,7 @@ class MessageQueueStorage : MessageSender {
       receive_item.second(message);
       receive_callback_queue_.pop_front();
     } else {
-      queue_data_.push_back(message);
+      queue_data_.Enqueue(message);
     }
 
     if (watcher_) {
@@ -113,7 +113,7 @@ class MessageQueueStorage : MessageSender {
 
   std::function<void()> watcher_;
 
-  std::deque<std::string> queue_data_;
+  PersistentQueue queue_data_;
 
   using ReceiveCallbackQueueItem =
       std::pair<const MessageQueueConnection*, MessageQueue::ReceiveCallback>;
@@ -499,8 +499,8 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteMessageQueueCall);
 };
 
-MessageQueueManager::MessageQueueManager(ledger::PagePtr page)
-    : page_(std::move(page)) {}
+MessageQueueManager::MessageQueueManager(ledger::PagePtr page, const std::string& local_path)
+    : page_(std::move(page)), local_path_(local_path) {}
 
 MessageQueueManager::~MessageQueueManager() = default;
 
@@ -551,7 +551,11 @@ MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
   if (it == message_queues_.end()) {
     // Not found, create one.
     bool inserted;
-    auto new_queue = std::make_unique<MessageQueueStorage>(info.queue_token);
+    std::string path = local_path_;
+    path.push_back('/');
+    path.append(info.queue_token);
+    path.append(".json");
+    auto new_queue = std::make_unique<MessageQueueStorage>(info.queue_token, std::move(path));
     std::tie(it, inserted) = message_queues_.insert(
         std::make_pair(info.queue_token, std::move(new_queue)));
     FTL_DCHECK(inserted);

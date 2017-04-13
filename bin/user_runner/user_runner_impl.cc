@@ -31,6 +31,7 @@
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/files/directory.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -44,6 +45,7 @@ constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
+constexpr char kMessageQueuePath[] = "/data/framework/message-queues/v1/";
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -147,8 +149,14 @@ UserRunnerImpl::UserRunnerImpl(
                            << LedgerStatusToString(status);
                      }
                    });
-  message_queue_manager_.reset(
-      new MessageQueueManager(std::move(message_queue_page)));
+  std::string message_queue_path = kMessageQueuePath;
+  message_queue_path.append(to_hex_string(user_id));
+  if (!files::CreateDirectory(message_queue_path)) {
+    FTL_LOG(FATAL) << "Failed to create message queue directory: "
+                   << message_queue_path;
+  }
+  message_queue_manager_.reset(new MessageQueueManager(
+      std::move(message_queue_page), std::move(message_queue_path)));
 
   // Begin init maxwell.
   //

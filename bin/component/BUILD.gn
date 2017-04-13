@@ -8,6 +8,8 @@ source_set("component") {
     "component_context_impl.h",
     "message_queue_manager.cc",
     "message_queue_manager.h",
+    "persistent_queue.cc",
+    "persistent_queue.h",
   ]
 
   deps = [

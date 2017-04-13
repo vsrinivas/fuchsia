@@ -32,7 +32,7 @@ class XdrContext;
 // queues it has created, otherwise they are persisted.
 class MessageQueueManager {
  public:
-  MessageQueueManager(ledger::PagePtr page);
+  MessageQueueManager(ledger::PagePtr page, const std::string& local_path);
   ~MessageQueueManager();
 
   void ObtainMessageQueue(const std::string& component_namespace,
@@ -96,6 +96,7 @@ class MessageQueueManager {
                       const MessageQueueInfo& info);
 
   ledger::PagePtr page_;
+  const std::string local_path_;
 
   // A map of queue_token to |MessageStorageQueue|.
   std::unordered_map<std::string, std::unique_ptr<MessageQueueStorage>>

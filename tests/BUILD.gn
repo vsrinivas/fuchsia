@@ -9,6 +9,7 @@ group("tests") {
     ":modular_tests.json",
     "component_context",
     "parent_child",
+    "queue_persistence",
     "run_modular_tests",
     "suggestion",
     "triggers",
