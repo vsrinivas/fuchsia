@@ -6,6 +6,10 @@
         {
             "binary": "music_album.flx",
             "bootfs_path": "apps/music_album"
+        },
+        {
+            "binary": "music_artist.flx",
+            "bootfs_path": "apps/music_artist"
         }
     ]
 }
