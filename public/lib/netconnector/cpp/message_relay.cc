@@ -59,7 +59,7 @@ void MessageRelayBase::ReadChannelMessages() {
       return;
     }
 
-    if (status == ERR_REMOTE_CLOSED) {
+    if (status == ERR_PEER_CLOSED) {
       // Remote end of the channel closed.
       CloseChannel();
       return;
@@ -114,7 +114,7 @@ void MessageRelayBase::WriteChannelMessages() {
       return;
     }
 
-    if (status == ERR_REMOTE_CLOSED) {
+    if (status == ERR_PEER_CLOSED) {
       // Remote end of the channel closed.
       CloseChannel();
       return;
