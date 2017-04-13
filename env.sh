@@ -132,8 +132,6 @@ function mset() {
 
   # add tools to path, removing prior tools directory if any
   export PATH="${PATH//:${MAGENTA_DIR}\/build-*\/tools}:${MAGENTA_TOOLS_DIR}"
-  # add go tools to path, removing any prior repeated entry
-  export PATH="${FUCHSIA_DIR}/third_party/go/bin:${PATH//${FUCHSIA_DIR}\/third_party\/go\/bin:}"
 }
 
 ### mcheck: checks whether mset was run
@@ -763,6 +761,14 @@ function fmkbootloader() {
     echo "Bootloader loaded to $1"
 }
 
+go() {
+	if [[ "$GOOS" == "fuchsia" ]]; then
+		"$FUCHSIA_OUT_DIR/gen/goroot/bin/go" "$@"
+	else
+		# /usr/bin/which avoids cross-shell subtleties, exists on linux & osx.
+		"$(/usr/bin/which go)" "$@"
+	fi
+}
 
 if [[ -n "${ZSH_VERSION}" ]]; then
   ### Zsh Completion
