@@ -48,6 +48,15 @@ extern "C" {
 #include <vulkan/vulkan.h>
 #endif
 
+#include "platform_trace.h"
+
+#ifdef MAGMA_ENABLE_TRACING
+#include "apps/tracing/lib/trace/provider.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "magma_util/application_context/application_context.h"
+#include <thread>
+#endif
+
 //#include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
 
@@ -424,7 +433,7 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
 
     free(message);
 
-    //clang-format on
+    // clang-format on
 
     /*
     * false indicates that layer should not bail-out of an
@@ -699,6 +708,9 @@ static void demo_draw(struct demo *demo) {
     vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
     vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
 
+    TRACE_NONCE_DECLARE(nonce);
+    TRACE_ASYNC_BEGIN("cube", "acquire next image", nonce);
+
     while (true) {
         // Get the index of the next available swapchain image:
         err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, 5000,
@@ -725,6 +737,7 @@ static void demo_draw(struct demo *demo) {
             break;
         }
     }
+    TRACE_ASYNC_END("cube", "acquire next image", nonce);
 
     // Wait for the image acquired semaphore to be signaled to ensure
     // that the image won't be rendered to until the presentation
@@ -2983,10 +2996,34 @@ int cube_main(int argc, char **argv) {
     return validation_error;
 }
 
+void TraceInit()
+{
+#if defined(MAGMA_ENABLE_TRACING)
+    std::thread trace_thread = std::thread([] {
+        mtl::MessageLoop loop;
+
+        auto app_context = faux::ApplicationContext::CreateFromStartupInfo();
+        if (!app_context) {
+            printf("vkcube: no app context environment, can't trace\n");
+            return;
+        }
+
+        tracing::TraceSettings settings = {"vkcube"};
+        InitializeTracer(app_context->ConnectToEnvironmentService<tracing::TraceRegistry>(),
+                         settings);
+
+        loop.Run();
+        printf("vkcube: trace thread exiting\n");
+    });
+    trace_thread.detach();
+#endif
+}
+
 int test_vk_cube(int argc, char** argv)
 {
 #if defined(MAGMA_USE_SHIM)
     VulkanShimInit();
 #endif
+    TraceInit();
     return cube_main(argc, argv);
 }

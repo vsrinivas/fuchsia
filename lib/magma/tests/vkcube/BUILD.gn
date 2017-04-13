@@ -18,7 +18,12 @@ executable("vkcube") {
 
   deps = [
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:trace",
   ]
+
+  if (magma_enable_tracing) {
+    deps += [ "$magma_build_root/src/magma_util/application_context" ]
+  }
 
   if (use_vulkan_loader) {
     deps += [ "$magma_build_root:vulkan" ]
