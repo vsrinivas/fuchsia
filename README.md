@@ -3,13 +3,6 @@ Fuchsia Documentation
 
 This repository contains documentation for Fuchsia.
 
-# Individual Project Documentation
-
-+ [Magenta][magenta]
-
-    Magenta is the microkernel underlying the rest of Fuchsia. Magenta
-    also provides core drivers and Fuchsia's libc implementation.
-
 # How do I?
 
 + [How do I get started with Fuchsia?][getting_started]
@@ -24,6 +17,13 @@ This repository contains documentation for Fuchsia.
   + [Raspberry Pi 3?][rpi3]
 
 + [How do I write a flutter module?][flutter_module]
+
+# Individual Project Documentation
+
++ [Magenta][magenta]
+
+    Magenta is the microkernel underlying the rest of Fuchsia. Magenta
+    also provides core drivers and Fuchsia's libc implementation.
 
 # Reference Material
 
