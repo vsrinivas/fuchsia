@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <magenta/types.h>
+#include <magenta/listnode.h>
 
 typedef struct port_handler port_handler_t;
 
@@ -43,6 +44,7 @@ typedef struct device_ctx {
     mx_handle_t hrsrc;
     port_handler_t ph;
     devhost_ctx_t* host;
+    list_node_t node;
 #endif
     uint32_t flags;
     uint32_t protocol_id;
@@ -52,12 +54,28 @@ typedef struct device_ctx {
     mx_device_prop_t props[];
 } device_ctx_t;
 
+// This device is never destroyed
+#define DEV_CTX_IMMORTAL   1
+
+// This device is a bus device
+// (a devhost will be created to contain its children)
+#define DEV_CTX_BUSDEV     2
+
+// This device may be bound multiple times
+#define DEV_CTX_MULTI_BIND 4
+
+// This device is bound and not eligible for binding
+// again until unbound.  Not allowed on MULTI_BIND ctx.
+#define DEV_CTX_BOUND      8
+
 typedef struct {
     mx_driver_t drv;
     struct list_node node;
     const char* libname;
     uint32_t flags;
 } driver_ctx_t;
+
+#define DRIVER_NAME_LEN_MAX 64
 
 mx_status_t do_publish(device_ctx_t* parent, device_ctx_t* ctx);
 void do_unpublish(device_ctx_t* dev);
@@ -68,6 +86,10 @@ void coordinator(void);
 void coordinator_new_driver(driver_ctx_t* ctx);
 
 void enumerate_drivers(void);
+
+bool dc_is_bindable(mx_driver_t* drv, uint32_t protocol_id,
+                    mx_device_prop_t* props, size_t prop_count,
+                    mx_device_t* dev, bool autobind);
 #endif
 
 #if DEVHOST_V2

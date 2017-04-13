@@ -9,12 +9,22 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 
+#include <ddk/driver.h>
 #include "devcoordinator.h"
 
 static mx_handle_t devhost_job;
 static port_t dc_port;
 static list_node_t driver_list = LIST_INITIAL_VALUE(driver_list);
-static device_ctx_t root_device;
+
+static device_ctx_t root_device = {
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
+    .name = "root",
+};
+static device_ctx_t misc_device = {
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
+    .protocol_id = MX_PROTOCOL_MISC_PARENT,
+    .name = "misc",
+};
 
 static const char* devhost_bin = "/boot/bin/devhost2";
 
@@ -74,14 +84,14 @@ static mx_status_t dc_new_devhost(const char* name, devhost_ctx_t** out) {
     return NO_ERROR;
 }
 
-static mx_status_t dc_handle_device_read(device_ctx_t* dc) {
+static mx_status_t dc_handle_device_read(device_ctx_t* dev) {
     dc_msg_t msg;
     mx_handle_t hin[2];
     uint32_t msize = sizeof(msg);
     uint32_t hcount = 2;
 
     mx_status_t r;
-    if ((r = mx_channel_read(dc->hdevice, 0, &msg, msize, &msize,
+    if ((r = mx_channel_read(dev->hdevice, 0, &msg, msize, &msize,
                              hin, hcount, &hcount)) < 0) {
         return r;
     }
@@ -114,13 +124,13 @@ fail:
     return r;
 }
 
-#define dctx_from_ph(ph) containerof(ph, device_ctx_t, ph)
+#define dev_from_ph(ph) containerof(ph, device_ctx_t, ph)
 
 mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals) {
-    device_ctx_t* dctx = dctx_from_ph(ph);
+    device_ctx_t* dev = dev_from_ph(ph);
 
     if (signals & MX_CHANNEL_READABLE) {
-        mx_status_t r = dc_handle_device_read(dctx);
+        mx_status_t r = dc_handle_device_read(dev);
         if (r != NO_ERROR) {
             free(ph);
         }
@@ -135,9 +145,97 @@ mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals) {
 }
 
 
+static mx_status_t dh_create_device(device_ctx_t* dev, devhost_ctx_t* dh) {
+    dc_msg_t msg;
+    uint32_t mlen;
+
+    mx_status_t r;
+
+    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, dev->name, NULL)) < 0) {
+        return r;
+    }
+
+    mx_handle_t h0, h1;
+    if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
+        return r;
+    }
+
+    msg.txid = 0;
+    msg.op = DC_OP_CREATE_DEVICE;
+    msg.protocol_id = dev->protocol_id;
+
+    if ((r = mx_channel_write(dh->hrpc, 0, &msg, mlen, &h1, 1)) < 0) {
+        mx_handle_close(h0);
+        mx_handle_close(h1);
+        return r;
+    }
+
+    dev->hdevice = h0;
+    //TODO: port_watch
+    return NO_ERROR;
+}
+
+static mx_status_t dh_bind_driver(device_ctx_t* dev, const char* libname) {
+    dc_msg_t msg;
+    uint32_t mlen;
+
+    mx_status_t r;
+
+    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, NULL)) < 0) {
+        return r;
+    }
+
+    msg.txid = 0;
+    msg.op = DC_OP_BIND_DRIVER;
+
+    if ((r = mx_channel_write(dev->hdevice, 0, &msg, mlen, NULL, 0)) < 0) {
+        return r;
+    }
+
+    return NO_ERROR;
+}
+
+static void dc_attempt_bind(driver_ctx_t* drv, device_ctx_t* dev) {
+    // cannot bind driver to already bound device
+    if (dev->flags & DEV_CTX_BOUND) {
+        return;
+    }
+
+    // if this device has no devhost, first instantiate it
+    if (dev->host == NULL) {
+        mx_status_t r;
+        if ((r = dc_new_devhost("devhost:misc", &dev->host)) < 0) {
+            printf("devmgr: dh_new_devhost: %d\n", r);
+            return;
+        }
+        if ((r = dh_create_device(dev, dev->host)) < 0) {
+            printf("devmgr: dh_create_device: %d\n", r);
+            return;
+        }
+    }
+
+    dh_bind_driver(dev, drv->libname);
+}
+
+// device binding program that pure (parentless)
+// misc devices use to get published in the
+// primary devhost
+static struct mx_bind_inst misc_device_binding =
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT);
+
+static bool is_misc_driver(mx_driver_t* drv) {
+    return (drv->binding_size == sizeof(misc_device_binding)) &&
+        (memcmp(&misc_device_binding, drv->binding, sizeof(misc_device_binding)) == 0);
+}
+
 void coordinator_new_driver(driver_ctx_t* ctx) {
-    printf("driver: %s @ %s\n", ctx->drv.name, ctx->libname);
+    //printf("driver: %s @ %s\n", ctx->drv.name, ctx->libname);
     list_add_tail(&driver_list, &ctx->node);
+
+    if (is_misc_driver(&ctx->drv)) {
+        printf("driver: %s @ %s is MISC\n", ctx->drv.name, ctx->libname);
+        dc_attempt_bind(ctx, &misc_device);
+    }
 }
 
 void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job) {
@@ -152,24 +250,6 @@ void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job) {
     root_device.vnode = vnroot;
 
     port_init(&dc_port);
-}
-
-
-void dh_create_device(devhost_ctx_t* dh, const char* name) {
-    dc_msg_t msg;
-    uint32_t mlen;
-
-    mx_status_t r = dc_msg_pack(&msg, &mlen, NULL, 0, name, NULL);
-    if (r) {
-        printf("msgpack: %d\n", r);
-        return;
-    }
-
-    msg.txid = 0;
-    msg.op = DC_OP_CREATE_DEVICE;
-    msg.protocol_id = 0;
-
-    mx_channel_write(dh->hrpc, 0, &msg, mlen, NULL, 0);
 }
 
 //TODO: The acpisvc needs to become the acpi bus device
@@ -189,18 +269,12 @@ static void acpi_init(void) {
 }
 
 void coordinator(void) {
-    printf("coordinator()\n");
+    printf("devmgr: coordinator()\n");
     acpi_init();
+
+    do_publish(&root_device, &misc_device);
+
     enumerate_drivers();
-
-    device_ctx_t* ctx = calloc(1, sizeof(device_ctx_t));
-    memcpy(ctx->name, "misc", 5);
-    do_publish(&root_device, ctx);
-
-    devhost_ctx_t* dh;
-    if (dc_new_devhost("devhost:misc", &dh) == NO_ERROR) {
-        dh_create_device(dh, "misc");
-    }
 
     mx_status_t status = port_dispatch(&dc_port);
     printf("coordinator: port dispatch ended: %d\n", status);

@@ -148,3 +148,17 @@ bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev, bool autobind) 
     return is_bindable(&ctx);
 }
 
+bool dc_is_bindable(mx_driver_t* drv, uint32_t protocol_id,
+                    mx_device_prop_t* props, size_t prop_count,
+                    mx_device_t* dev, bool autobind) {
+    bpctx_t ctx;
+    ctx.props = props;
+    ctx.end = props + prop_count;
+    ctx.protocol_id = protocol_id;
+    ctx.binding = drv->binding;
+    ctx.binding_size = drv->binding_size;
+    ctx.name = drv->name;
+    ctx.autobind = autobind ? 1 : 0;
+    return is_bindable(&ctx);
+}
+

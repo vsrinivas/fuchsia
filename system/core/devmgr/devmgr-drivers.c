@@ -11,9 +11,6 @@
 #include "devcoordinator.h"
 #include "driver-info.h"
 
-
-#define DRIVER_NAME_LEN_MAX 64
-
 static bool is_driver_disabled(const char* name) {
     // driver.<driver_name>.disable
     char opt[16 + DRIVER_NAME_LEN_MAX];

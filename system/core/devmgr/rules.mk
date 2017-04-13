@@ -53,6 +53,7 @@ ifeq ($(ENABLE_DEVHOST_V2),true)
 MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr-coordinator-v2.c \
     $(LOCAL_DIR)/devmgr-drivers.c \
+    $(LOCAL_DIR)/devhost-binding.c \
     $(LOCAL_DIR)/devhost-shared.c \
     $(LOCAL_DIR)/driver-info.c \
     $(LOCAL_DIR)/acpi.c
