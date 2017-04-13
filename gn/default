@@ -9,6 +9,7 @@
         "dart",
         "dashboard",
         "drivers",
+        "escher",
         "fidl",
         "flutter",
         "fonts",
