@@ -73,7 +73,7 @@ class Settings {
     user_shell.url = command_line.GetOptionValueWithDefault(
         "user_shell", "file:///system/apps/armadillo_user_shell");
     story_shell.url = command_line.GetOptionValueWithDefault(
-        "story_shell", "file:///system/apps/dummy_story_shell");
+        "story_shell", "file:///system/apps/mondrian");
 
     ledger_repository_for_testing =
         command_line.HasOption("ledger_repository_for_testing");
