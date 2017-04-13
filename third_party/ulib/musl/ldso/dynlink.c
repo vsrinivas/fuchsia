@@ -525,39 +525,6 @@ __NO_SAFESTACK static void unmap_library(struct dso* dso) {
     }
 }
 
-// TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
-// This will go away when we have copy-on-write.
-__NO_SAFESTACK static mx_status_t get_writable_vmo(mx_handle_t vmo,
-                                                   size_t data_size,
-                                                   size_t* off_start,
-                                                   size_t* map_size,
-                                                   mx_handle_t* writable_vmo) {
-    mx_status_t status = _mx_vmo_create(data_size, 0, writable_vmo);
-    if (status != NO_ERROR)
-        return status;
-    uintptr_t window = 0;
-    status = _mx_vmar_map(__magenta_vmar_root_self, 0, vmo, *off_start,
-                          data_size, MX_VM_FLAG_PERM_READ, &window);
-    if (status != NO_ERROR) {
-        _mx_handle_close(*writable_vmo);
-        return status;
-    }
-    size_t n;
-    status = _mx_vmo_write(*writable_vmo, (void*)window, 0, data_size, &n);
-    _mx_vmar_unmap(__magenta_vmar_root_self, window, data_size);
-    if (status != NO_ERROR) {
-        _mx_handle_close(*writable_vmo);
-        return status;
-    }
-    if (n != data_size) {
-        _mx_handle_close(*writable_vmo);
-        return ERR_IO;
-    }
-    *off_start = 0;
-    *map_size = data_size;
-    return NO_ERROR;
-}
-
 __NO_SAFESTACK static mx_status_t map_library(mx_handle_t vmo,
                                               struct dso* dso) {
     struct {
@@ -678,15 +645,36 @@ __NO_SAFESTACK static mx_status_t map_library(mx_handle_t vmo,
 
         mx_status_t status;
         if (ph->p_flags & PF_W) {
+            // TODO(mcgrathr,MG-698): When MG-698 is fixed, we can clone to
+            // a size that's not whole pages, and then extending it with
+            // set_size will do the partial-page zeroing for us implicitly.
             size_t data_size =
                 ((ph->p_vaddr + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE) -
                 this_min;
-            if (data_size > 0) {
-                status = get_writable_vmo(vmo, data_size,
-                                          &off_start, &map_size, &map_vmo);
-                if (status != NO_ERROR)
-                    goto error;
+            if (data_size == 0) {
+                // This segment is purely zero-fill.
+                status = _mx_vmo_create(map_size, 0, &map_vmo);
+            } else {
+                // Get a writable (lazy) copy of the portion of the file VMO.
+                status = _mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE,
+                                       off_start, data_size, &map_vmo);
+                if (status == NO_ERROR && map_size > data_size) {
+                    // Extend the writable VMO to cover the .bss pages too.
+                    // These pages will be zero-filled, not copied from the
+                    // file VMO.
+                    status = _mx_vmo_set_size(map_vmo, map_size);
+                    if (status != NO_ERROR) {
+                        _mx_handle_close(map_vmo);
+                        goto error;
+                    }
+                }
             }
+            if (status != NO_ERROR)
+                goto error;
+            off_start = 0;
+        } else if (ph->p_memsz > ph->p_filesz) {
+            // Read-only .bss is not a thing.
+            goto noexec;
         }
 
         status = _mx_vmar_map(dso->vmar, mapaddr - vmar_base, map_vmo,
@@ -697,23 +685,13 @@ __NO_SAFESTACK static mx_status_t map_library(mx_handle_t vmo,
             goto error;
 
         if (ph->p_memsz > ph->p_filesz) {
-            size_t brk = (size_t)base + ph->p_vaddr + ph->p_filesz;
-            size_t pgbrk = brk + PAGE_SIZE - 1 & -PAGE_SIZE;
-            memset((void*)brk, 0, pgbrk - brk & PAGE_SIZE - 1);
-            if (pgbrk - (size_t)base < this_max) {
-                size_t bss_len = (size_t)base + this_max - pgbrk;
-                mx_handle_t bss_vmo;
-                status = _mx_vmo_create(bss_len, 0, &bss_vmo);
-                if (status != NO_ERROR)
-                    goto error;
-                uintptr_t bss_mapaddr = 0;
-                status = _mx_vmar_map(dso->vmar, pgbrk - vmar_base,
-                                      bss_vmo, 0, bss_len, mx_flags,
-                                      &bss_mapaddr);
-                _mx_handle_close(bss_vmo);
-                if (status != NO_ERROR)
-                    goto error;
-            }
+            // The final partial page of data from the file is followed by
+            // whatever the file's contents there are, but in the memory
+            // image that partial page should be all zero.
+            uintptr_t file_end = (uintptr_t)base + ph->p_vaddr + ph->p_filesz;
+            uintptr_t map_end = mapaddr + map_size;
+            if (map_end > file_end)
+                memset((void*)file_end, 0, map_end - file_end);
         }
     }
 
