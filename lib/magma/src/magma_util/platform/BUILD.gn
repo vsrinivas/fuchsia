@@ -8,6 +8,12 @@ config("platform_include_config") {
   include_dirs = [ "." ]
 }
 
+config("tracing") {
+  if (magma_enable_tracing) {
+    defines = [ "MAGMA_ENABLE_TRACING" ]
+  }
+}
+
 source_set("buffer") {
   public_configs = [ ":platform_include_config" ]
 
@@ -133,4 +139,25 @@ source_set("port") {
     ":object",
     "magenta:port",
   ]
+}
+
+source_set("trace") {
+  public_configs = [
+    ":platform_include_config",
+    ":tracing",
+  ]
+
+  sources = [
+    "platform_trace.h",
+  ]
+
+  deps = [
+    "magenta:trace",
+  ]
+
+  if (magma_enable_tracing) {
+    public_deps = [
+      "//apps/tracing/lib/trace",
+    ]
+  }
 }

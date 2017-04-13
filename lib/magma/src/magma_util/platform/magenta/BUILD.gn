@@ -157,3 +157,36 @@ source_set("launcher") {
 
   libs = [ "launchpad" ]
 }
+
+source_set("trace") {
+  configs += [
+    "..:platform_include_config",
+    "..:tracing",
+  ]
+
+  sources = [
+    "magenta_platform_trace.cc",
+  ]
+
+  deps = [
+    ":launcher",
+    "$magenta_build_root/system/ulib/mx",
+    "$magma_build_root/src/magma_util",
+  ]
+
+  if (magma_enable_tracing) {
+    deps += [
+      "//apps/tracing",
+      "//apps/tracing/lib/trace:provider",
+      "//apps/tracing/services",
+      "//lib/mtl/tasks:tasks",
+    ]
+  }
+
+  libs = [
+    "mxio",
+    "driver",
+    "ddk",
+    "magenta",
+  ]
+}

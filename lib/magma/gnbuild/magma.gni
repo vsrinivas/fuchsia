@@ -19,4 +19,7 @@ declare_args() {
   # These tests are run when the test driver is configured to
   # build and run unit tests.
   msd_gtest_target = "$msd_intel_gen_build_root:gtest"
+
+  # Enable this to include fuchsia tracing capability
+  magma_enable_tracing = false
 }

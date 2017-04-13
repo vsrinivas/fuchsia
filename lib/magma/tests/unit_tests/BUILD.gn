@@ -63,6 +63,7 @@ source_set("magma_ioctl_tests") {
   ]
 
   deps = [
+    "$magma_build_root/src/magma_util",
     "//third_party/gtest",
   ]
 }

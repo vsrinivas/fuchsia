@@ -4,12 +4,13 @@
 
 #include "gtest/gtest.h"
 
+#include "magma_util/platform/magenta/magenta_platform_ioctl.h"
 #include <magenta/device/display.h>
 #include <mxio/io.h>
 
 constexpr char kDisplayPath[] = "/dev/class/display/000";
 
-TEST(MagmaIOCTL, DISPLAY_GET_FB)
+TEST(MagmaIoctl, DISPLAY_GET_FB)
 {
     int fd = open(kDisplayPath, O_RDWR);
     ASSERT_GE(fd, 0);
@@ -21,4 +22,17 @@ TEST(MagmaIOCTL, DISPLAY_GET_FB)
     EXPECT_GE(description.info.height, 0u);
 
     close(fd);
+}
+
+TEST(MagmaIoctl, GET_TRACE_MANAGER_CHANNEL)
+{
+    int fd = open(kDisplayPath, O_RDWR);
+    ASSERT_GE(fd, 0);
+
+    mx_handle_t handle = MX_HANDLE_INVALID;
+    int ret =
+        mxio_ioctl(fd, IOCTL_MAGMA_GET_TRACE_MANAGER_CHANNEL, nullptr, 0, &handle, sizeof(handle));
+    close(fd);
+    EXPECT_EQ(ret, 4);
+    EXPECT_NE(0, handle);
 }

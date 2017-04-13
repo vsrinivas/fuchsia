@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mx/channel.h"
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -22,6 +23,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/platform/magenta/magenta_platform_ioctl.h"
 #include "magma_util/platform/magenta/magenta_platform_launcher.h"
+#include "magma_util/platform/magenta/magenta_platform_trace.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_buffer.h"
 
@@ -186,6 +188,18 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
     ssize_t result = ERR_NOT_SUPPORTED;
 
     switch (op) {
+        case IOCTL_MAGMA_GET_TRACE_MANAGER_CHANNEL: {
+            DLOG("IOCTL_MAGMA_GET_TRACE_MANAGER_CHANNEL");
+            mx::channel local, remote;
+            mx::channel::create(0, &local, &remote);
+            *reinterpret_cast<uint32_t*>(out_buf) = remote.release();
+            auto platform_trace =
+                static_cast<magma::MagentaPlatformTrace*>(magma::PlatformTrace::GetInstance());
+            platform_trace->ConnectToService(std::move(local));
+            return sizeof(uint32_t);
+            break;
+        }
+
         case IOCTL_MAGMA_QUERY: {
             DLOG("IOCTL_MAGMA_QUERY");
             const uint64_t* param = reinterpret_cast<const uint64_t*>(in_buf);
@@ -400,6 +414,8 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
 
         magma_start(device);
     }
+
+    magma::PlatformTrace::Initialize();
 
     return NO_ERROR;
 }
