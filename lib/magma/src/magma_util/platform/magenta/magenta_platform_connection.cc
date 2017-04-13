@@ -588,7 +588,7 @@ private:
         switch (status) {
             case NO_ERROR:
                 return MAGMA_STATUS_OK;
-            case ERR_REMOTE_CLOSED:
+            case ERR_PEER_CLOSED:
                 return MAGMA_STATUS_CONNECTION_LOST;
             default:
                 return MAGMA_STATUS_INTERNAL_ERROR;
