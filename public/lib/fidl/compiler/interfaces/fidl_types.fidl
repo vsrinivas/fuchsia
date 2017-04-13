@@ -84,11 +84,14 @@ struct HandleType {
   enum Kind {
     UNSPECIFIED,
     CHANNEL,
-    VMO,
+    VMO = 4,
     PROCESS,
     THREAD,
     EVENT,
     PORT,
+    JOB,
+    SOCKET,
+    EVENTPAIR,
   };
 
   bool nullable;

@@ -349,3 +349,4 @@ class LiteralValue(object):
       _descriptor.SingleFieldGroup('uint64_value', _descriptor.TYPE_UINT64, 11, 0),
     ],
    }
+
