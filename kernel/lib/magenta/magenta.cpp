@@ -137,27 +137,38 @@ void internal::TearDownHandle(Handle *handle) TA_EXCL(handle_mutex) {
 static void high_handle_count(size_t count) {
     // TODO: Avoid calling this for every handle after kHighHandleCount;
     // printfs are slow and |handle_mutex| is held by our caller.
-    printf("warning!! high handle count: %zu handles\n", count);
+    printf("WARNING: High handle count: %zu handles\n", count);
 }
 
 Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
     AutoLock lock(&handle_mutex);
+    void* addr = handle_arena.Alloc();
+    if (addr == nullptr) {
+        const auto oh = outstanding_handles;
+        lock.release();
+        printf("WARNING: Could not allocate new handle (%zu outstanding)\n",
+               oh);
+        return nullptr;
+    }
     if (++outstanding_handles > kHighHandleCount)
         high_handle_count(outstanding_handles);
-    void* addr = handle_arena.Alloc();
-    if (addr == nullptr)
-        return nullptr;
     uint32_t base_value = GetNewHandleBaseValue(addr);
     return new (addr) Handle(mxtl::move(dispatcher), rights, base_value);
 }
 
 Handle* DupHandle(Handle* source, mx_rights_t rights) {
     AutoLock lock(&handle_mutex);
+    void* addr = handle_arena.Alloc();
+    if (addr == nullptr) {
+        const auto oh = outstanding_handles;
+        lock.release();
+        printf(
+            "WARNING: Could not allocate duplicate handle (%zu outstanding)\n",
+            oh);
+        return nullptr;
+    }
     if (++outstanding_handles > kHighHandleCount)
         high_handle_count(outstanding_handles);
-    void* addr = handle_arena.Alloc();
-    if (addr == nullptr)
-        return nullptr;
     uint32_t base_value = GetNewHandleBaseValue(addr);
     return new (addr) Handle(source, rights, base_value);
 }
