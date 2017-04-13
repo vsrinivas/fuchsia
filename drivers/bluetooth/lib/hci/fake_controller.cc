@@ -145,7 +145,7 @@ void FakeController::HandleCommandPacket() {
   uint32_t read_size;
   mx_status_t status = cmd_channel_.read(0u, buffer.GetMutableData(), kMaxCommandPacketPayloadSize,
                                          &read_size, nullptr, 0, nullptr);
-  ASSERT_TRUE(status == NO_ERROR || status == ERR_REMOTE_CLOSED);
+  ASSERT_TRUE(status == NO_ERROR || status == ERR_PEER_CLOSED);
   if (status < 0) {
     FTL_LOG(ERROR) << "Failed to read on cmd channel: " << mx_status_get_string(status);
     return;
@@ -172,7 +172,7 @@ void FakeController::HandleACLPacket() {
   uint32_t read_size;
   mx_status_t status = acl_channel_.read(0u, buffer.GetMutableData(), buffer.GetSize(), &read_size,
                                          nullptr, 0, nullptr);
-  ASSERT_TRUE(status == NO_ERROR || status == ERR_REMOTE_CLOSED);
+  ASSERT_TRUE(status == NO_ERROR || status == ERR_PEER_CLOSED);
   if (status < 0) {
     FTL_LOG(ERROR) << "Failed to read on acl channel: " << mx_status_get_string(status);
     return;
