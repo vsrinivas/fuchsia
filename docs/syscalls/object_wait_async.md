@@ -29,7 +29,7 @@ The *options* argument can be either:
     are asserted on *handle*. To receive further packets **object_wait_async**() needs to be
     issued again.
 + **MX_WAIT_ASYNC_REPEATING**: a single packet will be delivered when any of the
-    specified *signals* are asserted on *handle*. To receive further packets the previosly
+    specified *signals* are asserted on *handle*. To receive further packets the previously
     enqueued packet needs to be dequeued via **port_wait**().
 
 To stop packet delivery on either mode, close *handle* or use **port_cancel**(). For both
