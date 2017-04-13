@@ -88,7 +88,7 @@ void Tracer::DrainSocket() {
       return;
 
     if (status || actual == 0) {
-      if (status != ERR_REMOTE_CLOSED) {
+      if (status != ERR_PEER_CLOSED) {
         FTL_LOG(ERROR) << "Failed to read data from socket: status=" << status;
       }
       Done();
