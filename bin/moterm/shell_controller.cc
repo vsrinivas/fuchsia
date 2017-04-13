@@ -145,7 +145,7 @@ void ShellController::ReadCommand() {
   } else if (rv == ERR_BUFFER_TOO_SMALL) {
     // Ignore the command.
     FTL_LOG(WARNING) << "The command sent by shell didn't fit in the buffer.";
-  } else if (rv == ERR_REMOTE_CLOSED) {
+  } else if (rv == ERR_PEER_CLOSED) {
     channel_.reset();
     return;
   } else {
