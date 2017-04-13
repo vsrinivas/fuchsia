@@ -25,5 +25,8 @@ FUNCTION(guest_start)
     mov $IA32_GS_BASE, %ecx
     wrmsr
 
+    xor %eax, %eax
+    cpuid
+
     jmp .
 FUNCTION(guest_end)

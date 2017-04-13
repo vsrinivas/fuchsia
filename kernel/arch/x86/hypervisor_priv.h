@@ -151,10 +151,12 @@ enum class VmcsFieldXX : uint64_t {
 #define LINK_POINTER_INVALIDATE             0xffffffffffffffff
 
 /* EXIT_REASON values */
-#define EXIT_REASON_BASIC_MASK              0xffff
-#define EXIT_REASON_EXTERNAL_INTERRUPT      1u
-#define EXIT_REASON_IO_INSTRUCTION          30u
-#define EXIT_REASON_WRMSR                   32u
+enum class ExitReason : uint32_t {
+    EXTERNAL_INTERRUPT  = 1u,
+    CPUID               = 10u,
+    IO_INSTRUCTION      = 30u,
+    WRMSR               = 32u,
+};
 
 /* GUEST_XX_ACCESS_RIGHTS flags */
 #define GUEST_XX_ACCESS_RIGHTS_UNUSABLE     (1u << 16)
@@ -197,7 +199,7 @@ struct EptInfo {
 
 /* Stores VM exit info from VMCS fields. */
 struct ExitInfo {
-    uint32_t exit_reason;
+    ExitReason exit_reason;
     uint64_t exit_qualification;
     uint32_t interruption_information;
     uint32_t interruption_error_code;

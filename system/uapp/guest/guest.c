@@ -116,11 +116,10 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0);
-    if (status != NO_ERROR) {
-        fprintf(stderr, "Failed to enter guest\n");
-        return status;
-    }
-
-    return NO_ERROR;
+    do {
+        status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0);
+        // TODO(abdulla): Print serial FIFO.
+    } while(status == NO_ERROR);
+    fprintf(stderr, "Failed to enter guest %d\n", status);
+    return status;
 }

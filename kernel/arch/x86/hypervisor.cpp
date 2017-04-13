@@ -195,7 +195,7 @@ EptInfo::EptInfo() {
 }
 
 ExitInfo::ExitInfo() {
-        exit_reason = vmcs_read(VmcsField32::EXIT_REASON);
+        exit_reason = static_cast<ExitReason>(vmcs_read(VmcsField32::EXIT_REASON));
         exit_qualification = vmcs_read(VmcsFieldXX::EXIT_QUALIFICATION);
         interruption_information = vmcs_read(VmcsField32::INTERRUPTION_INFORMATION);
         interruption_error_code = vmcs_read(VmcsField32::INTERRUPTION_ERROR_CODE);
@@ -206,7 +206,7 @@ ExitInfo::ExitInfo() {
         guest_interruptibility_state = vmcs_read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE);
         guest_rip = vmcs_read(VmcsFieldXX::GUEST_RIP);
 
-        dprintf(SPEW, "exit reason: %#" PRIx32 "\n", exit_reason);
+        dprintf(SPEW, "exit reason: %#" PRIx32 "\n", static_cast<uint32_t>(exit_reason));
         dprintf(SPEW, "exit qualification: %#" PRIx64 "\n", exit_qualification);
         dprintf(SPEW, "interruption information: %#" PRIx32 "\n", interruption_information);
         dprintf(SPEW, "interruption error code: %#" PRIx32 "\n", interruption_error_code);
@@ -753,36 +753,54 @@ static void next_rip(const ExitInfo& exit_info) {
     vmcs_write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.instruction_length);
 }
 
-static status_t vmexit_handler(const VmxState& vmx_state, FifoDispatcher* serial_fifo) {
+static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state) {
+    switch (guest_state->rax) {
+    case X86_CPUID_BASE:
+        next_rip(exit_info);
+        cpuid(X86_CPUID_BASE, (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
+              (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
+        // Maximum input value for basic CPUID information.
+        guest_state->rax = 0;
+        return NO_ERROR;
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
+static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_state, FifoDispatcher* serial_fifo) {
     ExitInfo exit_info;
 
     switch (exit_info.exit_reason) {
-    case EXIT_REASON_WRMSR:
-        dprintf(SPEW, "handling write of MSR\n\n");
-        return ERR_NOT_SUPPORTED;
-    case EXIT_REASON_IO_INSTRUCTION: {
+    case ExitReason::EXTERNAL_INTERRUPT:
+        dprintf(SPEW, "handling external interrupt\n\n");
+        DEBUG_ASSERT(arch_ints_disabled());
+        arch_enable_ints();
+        arch_disable_ints();
+        return NO_ERROR;
+    case ExitReason::CPUID:
+        dprintf(SPEW, "handling CPUID instruction\n\n");
+        return handle_cpuid(exit_info, guest_state);
+    case ExitReason::IO_INSTRUCTION: {
         dprintf(SPEW, "handling IO instruction\n\n");
         next_rip(exit_info);
 #if WITH_LIB_MAGENTA
         IoInfo io_info(exit_info.exit_qualification);
         if (io_info.input || io_info.string || io_info.repeat || io_info.port != kUartIoPort)
-            break;
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(&vmx_state.guest_state.rax);
+            return NO_ERROR;
+        uint8_t* data = reinterpret_cast<uint8_t*>(&guest_state->rax);
         uint32_t actual;
         return serial_fifo->Write(data, io_info.bytes, &actual);
 #else // WITH_LIB_MAGENTA
-        break;
+        return NO_ERROR;
 #endif // WITH_LIB_MAGENTA
     }
-    case EXIT_REASON_EXTERNAL_INTERRUPT:
-        dprintf(SPEW, "handling external interrupt\n\n");
-        DEBUG_ASSERT(arch_ints_disabled());
-        arch_enable_ints();
-        arch_disable_ints();
-        break;
+    case ExitReason::WRMSR:
+        dprintf(SPEW, "handling WRMSR instruction\n\n");
+        return ERR_NOT_SUPPORTED;
+    default:
+        dprintf(SPEW, "unhandled VM exit %u\n\n", static_cast<uint32_t>(exit_info.exit_reason));
+        return ERR_NOT_SUPPORTED;
     }
-
-    return NO_ERROR;
 }
 
 status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fifo) {
@@ -812,7 +830,7 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fi
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     } else {
         do_resume_ = true;
-        status = vmexit_handler(vmx_state_, serial_fifo);
+        status = vmexit_handler(vmx_state_, &vmx_state_.guest_state, serial_fifo);
     }
     return status;
 }
