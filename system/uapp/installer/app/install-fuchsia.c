@@ -26,7 +26,6 @@
 #include <installer/installer.h>
 
 #define DEFAULT_BLOCKDEV "/dev/class/block/000"
-#define PATH_BLOCKDEVS "/dev/class/block"
 
 #define CHECK_BIT(var, pos) ((var) & (1 << (pos)))
 
@@ -67,43 +66,6 @@ typedef struct disk_rec {
 static const uint8_t guid_system_part[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
 static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
 
-/*
- * Read the next entry out of the directory and place copy it into name_out.
- *
- * Return the difference between the length of the name and the number of bytes
- * we did or would be able to copy.
- *  * -1 if there are no more entries
- *  * 0 if an entry is successfully read and all its bytes were copied into
- *      name_out
- *  * A positive value, which is the amount by which copying the directory name
- *      would exceed the limit expressed by max_name_len.
- */
-static ssize_t get_next_file_path(DIR *dfd, size_t max_name_len,
-                                  char *name_out) {
-  assert(name_out != NULL);
-  struct dirent *entry;
-
-  // skip and '.' or '..' entries
-  while ((entry = readdir(dfd)) != NULL &&
-         (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")))
-    ;
-
-  if (entry == NULL) {
-    return -1;
-  } else {
-    size_t len_d_name = strlen(entry->d_name);
-    ssize_t overrun = len_d_name - max_name_len + 1;
-    if (overrun > 0) {
-      assert(overrun <= SSIZE_MAX);
-      return overrun;
-    } else {
-      // copy the string, including the null terminator
-      memcpy(name_out, entry->d_name, len_d_name + 1);
-      return 0;
-    }
-  }
-}
-
 static uint16_t count_partitions(gpt_device_t *device) {
   assert(device != NULL);
 
@@ -115,59 +77,6 @@ static uint16_t count_partitions(gpt_device_t *device) {
   for (counter = 0; device->partitions[counter] != NULL; counter++)
     ;
   return counter;
-}
-
-/*
- * Attempt to open the given path. If successful, returns the file descriptor
- * associated with the opened path in read only mode.
- */
-static int open_device_ro(const char *dev_path) {
-  int fd = open(dev_path, O_RDONLY);
-  if (fd < 0) {
-    fprintf(stderr, "Could not read device at %s, open reported error:%s\n",
-            dev_path, strerror(errno));
-  }
-
-  return fd;
-}
-
-/*
- * Attempt to read a GPT from the file descriptor. If successful the returned
- * pointer points to the populated gpt_device_t struct, otherwise NULL is
- * returned.
- */
-static gpt_device_t *read_gpt(int fd, uint64_t *blocksize_out) {
-  assert(blocksize_out != NULL);
-  ssize_t rc = ioctl_block_get_blocksize(fd, blocksize_out);
-  if (rc < 0) {
-    fprintf(stderr, "error getting block size, ioctl result code: %zd\n", rc);
-    return NULL;
-  }
-
-  if (*blocksize_out < 1) {
-    fprintf(stderr, "Device reports block size of %" PRIu64 ", abort!\n",
-            *blocksize_out);
-    return NULL;
-  }
-
-  uint64_t blocks;
-  rc = ioctl_block_get_size(fd, &blocks);
-  if (rc < 0) {
-    fprintf(stderr, "error getting device size, ioctl result code: %zd\n", rc);
-    return NULL;
-  }
-
-  blocks /= *blocksize_out;
-  gpt_device_t *gpt;
-  rc = gpt_device_init(fd, *blocksize_out, blocks, &gpt);
-  if (rc < 0) {
-    fprintf(stderr, "error reading GPT, result code: %zd \n", rc);
-    return NULL;
-  } else if (!gpt->valid) {
-    return NULL;
-  }
-
-  return gpt;
 }
 
 /*
@@ -294,7 +203,6 @@ static partition_flags find_install_partitions(gpt_device_t *gpt_data,
 
   uint16_t part_id = 0;
   if (part_flags & PART_EFI) {
-
     // look for a match until we exhaust partitions
     mx_status_t rc = NO_ERROR;
     while (part_info[parts_requested] == NULL && rc == NO_ERROR) {
@@ -825,9 +733,8 @@ static mx_status_t check_for_partition(int device_fd,
 
   uint16_t part_count = count_partitions(gpt_edit);
   uint16_t part_idx = 0;
-  mx_status_t rc =
-      find_partition_entries((gpt_partition_t **)&gpt_edit->partitions, guid,
-                             part_count, &part_idx);
+  mx_status_t rc = find_partition_entries(
+      (gpt_partition_t **)&gpt_edit->partitions, guid, part_count, &part_idx);
   return rc;
 }
 
@@ -876,8 +783,8 @@ static mx_status_t get_part_size(gpt_device_t *dev, int device_fd,
  * supplied label.
  */
 static mx_status_t make_part(int device_fd, size_t offset, size_t length,
-                             uint8_t (*guid)[GPT_GUID_LEN], disk_format_t format,
-                             const char *label) {
+                             uint8_t (*guid)[GPT_GUID_LEN],
+                             disk_format_t format, const char *label) {
   uint64_t block_size;
 
   // add the data partition of the requested size that the requested location
@@ -1345,49 +1252,6 @@ static bool ask_for_space(void) {
   close(device_fd);
   release_disk_list(&disk_list);
   return result;
-}
-
-static mx_status_t find_disk_by_guid(DIR *dir, char* dir_path,
-                                     uint8_t (*disk_guid)[GPT_GUID_LEN],
-                                     gpt_device_t **install_dev_out,
-                                     char *disk_path_out, ssize_t max_len) {
-  strcpy(disk_path_out, dir_path);
-  const size_t base_len = strlen(disk_path_out);
-  const size_t buffer_remaining = max_len - base_len - 1;
-  uint64_t block_size;
-  gpt_device_t *install_dev = NULL;
-  uint8_t guid_targ[GPT_GUID_LEN];
-  *install_dev_out = NULL;
-
-  for (ssize_t rc =
-           get_next_file_path(dir, buffer_remaining, &disk_path_out[base_len]);
-       rc >= 0; rc = get_next_file_path(dir, buffer_remaining,
-                                        &disk_path_out[base_len])) {
-    if (rc > 0) {
-      fprintf(stderr, "Device path length overrun by %zd characters\n", rc);
-      continue;
-    }
-    // open device read-only
-    int fd = open_device_ro(disk_path_out);
-    if (fd < 0) {
-      continue;
-    }
-
-    install_dev = read_gpt(fd, &block_size);
-    close(fd);
-
-    if (install_dev != NULL) {
-      gpt_device_get_header_guid(install_dev, &guid_targ);
-      if (!memcmp(guid_targ, disk_guid, GPT_GUID_LEN)) {
-        *install_dev_out = install_dev;
-        return NO_ERROR;
-      }
-      gpt_device_release(install_dev);
-    }
-  }
-
-  strcpy(disk_path_out, "");
-  return ERR_NOT_FOUND;
 }
 
 int main(int argc, char **argv) {

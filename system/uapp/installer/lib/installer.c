@@ -3,11 +3,17 @@
 // in the LICENSE file.
 
 #include <assert.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
+#include <magenta/device/block.h>
 #include <magenta/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "include/installer/installer.h"
 
@@ -24,8 +30,7 @@
  */
 mx_status_t find_partition_entries(gpt_partition_t **gpt_table,
                                    const uint8_t (*guid)[GPT_GUID_LEN],
-                                   uint16_t table_size,
-                                   uint16_t *part_id_out) {
+                                   uint16_t table_size, uint16_t *part_id_out) {
   assert(gpt_table != NULL);
   assert(guid != NULL);
   assert(part_id_out != NULL);
@@ -287,4 +292,125 @@ void find_available_space(gpt_device_t *device, size_t blocks_req,
   }
 
   return;
+}
+
+ssize_t get_next_file_path(DIR *dfd, size_t max_name_len, char *name_out) {
+  assert(name_out != NULL);
+  struct dirent *entry;
+
+  // skip and '.' or '..' entries
+  while ((entry = readdir(dfd)) != NULL &&
+         (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")))
+    ;
+
+  if (entry == NULL) {
+    return -1;
+  } else {
+    size_t len_d_name = strlen(entry->d_name);
+    ssize_t overrun = len_d_name - max_name_len + 1;
+    if (overrun > 0) {
+      assert(overrun <= SSIZE_MAX);
+      return overrun;
+    } else {
+      // copy the string, including the null terminator
+      memcpy(name_out, entry->d_name, len_d_name + 1);
+      return 0;
+    }
+  }
+}
+
+/*
+ * Attempt to read a GPT from the file descriptor. If successful the returned
+ * pointer points to the populated gpt_device_t struct, otherwise NULL is
+ * returned.
+ */
+gpt_device_t *read_gpt(int fd, uint64_t *blocksize_out) {
+  assert(blocksize_out != NULL);
+  ssize_t rc = ioctl_block_get_blocksize(fd, blocksize_out);
+  if (rc < 0) {
+    fprintf(stderr, "error getting block size, ioctl result code: %zd\n", rc);
+    return NULL;
+  }
+
+  if (*blocksize_out < 1) {
+    fprintf(stderr, "Device reports block size of %" PRIu64 ", abort!\n",
+            *blocksize_out);
+    return NULL;
+  }
+
+  uint64_t blocks;
+  rc = ioctl_block_get_size(fd, &blocks);
+  if (rc < 0) {
+    fprintf(stderr, "error getting device size, ioctl result code: %zd\n", rc);
+    return NULL;
+  }
+
+  blocks /= *blocksize_out;
+  gpt_device_t *gpt;
+  rc = gpt_device_init(fd, *blocksize_out, blocks, &gpt);
+  if (rc < 0) {
+    fprintf(stderr, "error reading GPT, result code: %zd \n", rc);
+    return NULL;
+  } else if (!gpt->valid) {
+    return NULL;
+  }
+
+  return gpt;
+}
+
+/*
+ * Attempt to open the given path. If successful, returns the file descriptor
+ * associated with the opened path in read only mode.
+ */
+int open_device_ro(const char *dev_path) {
+  int fd = open(dev_path, O_RDONLY);
+  if (fd < 0) {
+    fprintf(stderr, "Could not read device at %s, open reported error:%s\n",
+            dev_path, strerror(errno));
+  }
+
+  return fd;
+}
+
+mx_status_t find_disk_by_guid(DIR *dir, const char *dir_path,
+                              uint8_t (*disk_guid)[GPT_GUID_LEN],
+                              gpt_device_t **install_dev_out,
+                              char *disk_path_out, ssize_t max_len) {
+  strcpy(disk_path_out, dir_path);
+  const size_t base_len = strlen(disk_path_out);
+  const size_t buffer_remaining = max_len - base_len - 1;
+  uint64_t block_size;
+  gpt_device_t *install_dev = NULL;
+  uint8_t guid_targ[GPT_GUID_LEN];
+  *install_dev_out = NULL;
+
+  for (ssize_t rc =
+           get_next_file_path(dir, buffer_remaining, &disk_path_out[base_len]);
+       rc >= 0; rc = get_next_file_path(dir, buffer_remaining,
+                                        &disk_path_out[base_len])) {
+    if (rc > 0) {
+      fprintf(stderr, "Device path length overrun by %zd characters\n", rc);
+      continue;
+    }
+    // open device read-only
+    int fd = open_device_ro(disk_path_out);
+    if (fd < 0) {
+      continue;
+    }
+
+    install_dev = read_gpt(fd, &block_size);
+    close(fd);
+
+    if (install_dev != NULL) {
+      gpt_device_get_header_guid(install_dev, &guid_targ);
+      if (!memcmp(guid_targ, disk_guid, GPT_GUID_LEN)) {
+        *install_dev_out = install_dev;
+        return NO_ERROR;
+      }
+      gpt_device_release(install_dev);
+    }
+  }
+
+  strcpy(disk_path_out, "");
+  return ERR_NOT_FOUND;
 }

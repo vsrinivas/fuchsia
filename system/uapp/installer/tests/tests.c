@@ -1,10 +1,15 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // User of this source code is governed by a BSD-style license that be be found
 // in the LICENSE file.
+#include <errno.h>
+#include <fcntl.h>
+#include <fs-management/ramdisk.h>
 #include <gpt/gpt.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <magenta/compiler.h>
+#include <magenta/device/block.h>
+#include <magenta/device/ramdisk.h>
 #include <magenta/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +21,43 @@
 #include <installer/installer.h>
 
 #define TABLE_SIZE 6
+#define RAMCTL_PATH "/dev/misc/ramctl"
+#define RAMDISK_STEM "install"
+#define BLOCK_SIZE (uint64_t)512
+#define DEV_DIR_PATH (PATH_BLOCKDEVS "/")
+
+static uint16_t disk_count = 1;
+
+static int create_test_ramdisk(uint64_t size, char **disk_path_out) {
+  char name[PATH_MAX];
+  char *disk_path = malloc(sizeof(char) * PATH_MAX);
+  if (disk_path == NULL) {
+    fprintf(stderr, "No memory to store disk path\n");
+    return -1;
+  }
+
+  if (sprintf(name, "%s%u", RAMDISK_STEM, disk_count++) < 0) {
+    fprintf(stderr, "Error creating RAM disk name\n");
+    free(disk_path);
+    return -1;
+  }
+
+  if (create_ramdisk(name, disk_path, BLOCK_SIZE, size / BLOCK_SIZE) < 0) {
+    fprintf(stderr, "RAM disk could not be created.\n");
+    free(disk_path);
+    return -1;
+  }
+
+  int fd = open(disk_path, O_RDWR);
+  if (fd < 0) {
+    fprintf(stderr, "Could not open new RAM disk\n");
+    free(disk_path);
+    return -1;
+  }
+
+  *disk_path_out = disk_path;
+  return fd;
+}
 
 /*
  * Generate a "random" GUID. Note that you should seed srand() before
@@ -23,16 +65,9 @@
  * generated.
  */
 static void generate_guid(uint8_t *guid_out) {
-  static_assert(RAND_MAX == INT_MAX, "Rand max doesn't match int max");
-  for (int gen = 0; gen < 16; gen += sizeof(int)) {
-    int rand_val = rand();
-    if (rand_val > RAND_MAX / 2) {
-      rand_val = rand_val - RAND_MAX;
-      rand_val *= 2;
-    }
-    memcpy(guid_out, &rand_val, sizeof(int));
-    guid_out += sizeof(int);
-  }
+  size_t sz;
+  mx_cprng_draw(guid_out, GPT_GUID_LEN, &sz);
+  assert(sz == GPT_GUID_LEN);
 }
 
 static void create_partition_table(gpt_partition_t *part_entries_out,
@@ -55,6 +90,180 @@ static void create_partition_table(gpt_partition_t *part_entries_out,
   *total_size_out = num_entries * part_size + 2 * blocks_reserved;
 }
 
+static gpt_device_t *init_gpt(const char *dev, bool warn, int *out_fd) {
+  int fd = open(dev, O_RDWR);
+  if (fd < 0) {
+    printf("error opening %s %i %s\n", dev, fd, strerror(errno));
+    return NULL;
+  }
+
+  uint64_t blocksize;
+  ssize_t rc = ioctl_block_get_blocksize(fd, &blocksize);
+  if (rc < 0) {
+    printf("error getting block size\n");
+    close(fd);
+    return NULL;
+  }
+
+  uint64_t blocks;
+  rc = ioctl_block_get_size(fd, &blocks);
+  if (rc < 0) {
+    printf("error getting device size\n");
+    close(fd);
+    return NULL;
+  }
+  blocks /= blocksize;
+
+  gpt_device_t *gpt;
+  rc = gpt_device_init(fd, blocksize, blocks, &gpt);
+  if (rc < 0) {
+    printf("error initializing GPT\n");
+    close(fd);
+    return NULL;
+  }
+
+  *out_fd = fd;
+  return gpt;
+}
+
+#define check_outputs(rc, dev, path, guid_targ, dir, success)                  \
+  ({                                                                           \
+    if (success) {                                                             \
+      ASSERT_EQ(rc, NO_ERROR, "Disk not found when it was expected");          \
+      ASSERT_NEQ(dev, NULL, "Disk found, but gpt_device_t not set.");          \
+      ASSERT_NEQ(strcmp(path, ""), 0, "Disk found, but path not set");         \
+      uint8_t guid_actual[GPT_GUID_LEN];                                       \
+      gpt_device_get_header_guid(dev, &guid_actual);                           \
+      ASSERT_EQ(memcmp(guid_targ, guid_actual, GPT_GUID_LEN), 0,               \
+                "Disk found, but GUID does not match target.");                \
+      gpt_device_release(dev);                                                 \
+      dev = NULL;                                                              \
+    } else {                                                                   \
+      ASSERT_EQ(rc, ERR_NOT_FOUND, "Disk found, but was not expected");        \
+      ASSERT_EQ(dev, NULL, "Disk not found, but gpt_device_t is set.");        \
+      ASSERT_EQ(strcmp(path, ""), 0, "Disk not found, but path is set");       \
+    }                                                                          \
+    rewinddir(dir);                                                            \
+  })
+
+/*
+ * This test goes through a number of phases, each building on the last. First
+ * it generates a random GUID and a RAM disk with no GPT. We then verify that
+ * a search for our random GUID fails. Next we create a second disk and run
+ * the search again. Then we destroy the second disk and add a GPT to the first
+ * disk. Now the first disk should have a GUID in its GPT header, which should
+ * not match our random GUID, we search for the random GUID again to verify it
+ * isn't found. Next we read the GUID of the first disk and search for it,
+ * verifying it is found. Then we create a second RAM disk, add a GPT, and
+ * validate the first disk is found when searching for it. Finally we read the
+ * GUID of the second disk and search for it, verifying it is found.
+ *
+ * In all conditions where the disk is not found, we validate that the
+ * gpt_device_t out pointer is not set. In all conditions where the disk is
+ * found we validate that the device pointer is set and by freeing the device
+ * that it hasn't already been freed. In all conditions where the disk is found
+ * we validate that the header GUID of the found device matches the requested
+ * GUID.
+ */
+bool test_find_disk_by_guid(void) {
+  BEGIN_TEST;
+  DIR *dir = opendir(DEV_DIR_PATH);
+
+  ASSERT_NEQ(dir, NULL, "Could not open block devices path");
+
+  char disk_path[PATH_MAX];
+  strcpy(disk_path, "");
+  gpt_device_t *target;
+  uint8_t guid_rand[GPT_GUID_LEN];
+
+  // create a random GUID that we'll look for, the chances of random collision
+  // are such that if it happens, we should probably look at the PRNG
+  generate_guid(guid_rand);
+
+  // presumably we have no disks attached, although even if we do, we expect
+  // not to find a match
+  mx_status_t rc = find_disk_by_guid(dir, DEV_DIR_PATH, &guid_rand, &target,
+                                     disk_path, PATH_MAX);
+  check_outputs(rc, target, disk_path, guid_rand, dir, false);
+
+  // create a RAM disk w/o a GPT and search again, should not find
+  char *disk1;
+  int fd1 = create_test_ramdisk(((uint64_t)512) * 20000, &disk1);
+  ASSERT_GT(fd1, -1, "");
+  close(fd1);
+  rc = find_disk_by_guid(dir, DEV_DIR_PATH, &guid_rand, &target, disk_path,
+                         PATH_MAX);
+  check_outputs(rc, target, disk_path, guid_rand, dir, false);
+
+  // create a second RAM disk w/o GPT and search again, should not find
+  char *disk2;
+  int fd2 = create_test_ramdisk(((uint64_t)512) * 200000, &disk2);
+  sleep(1);
+  ASSERT_GT(fd2, -1, "");
+  close(fd2);
+  rc = find_disk_by_guid(dir, DEV_DIR_PATH, &guid_rand, &target, disk_path,
+                         PATH_MAX);
+  check_outputs(rc, target, disk_path, guid_rand, dir, false);
+
+  // kill the second RAM disk to run checks when a single disk has a GPT
+  destroy_ramdisk(disk2);
+  free(disk2);
+  sleep(1);
+
+  // add a GPT to the single attached disk
+  gpt_device_t *gpt1 = init_gpt(disk1, true, &fd1);
+
+  ASSERT_NEQ(gpt1, NULL, "GPT initialization failed");
+  ASSERT_GT(fd1, 0, "Invalid file descriptor returned from GPT init");
+  ASSERT_EQ(gpt_device_sync(gpt1), 0, "Error writing out new GPT");
+  ASSERT_EQ(ioctl_block_rr_part(fd1), 0, "Error rebinding device");
+  sleep(1);
+
+  // check that the new disk is not found when search for our random GUID
+  rc = find_disk_by_guid(dir, DEV_DIR_PATH, &guid_rand, &target, disk_path,
+                         PATH_MAX);
+  check_outputs(rc, target, disk_path, guid_rand, dir, false);
+
+  // read the disk's GUID and then search for it, it should be found
+  uint8_t guid_known[GPT_GUID_LEN];
+  gpt_device_get_header_guid(gpt1, &guid_known);
+  rc = find_disk_by_guid(dir, DEV_DIR_PATH, &guid_known, &target, disk_path,
+                         PATH_MAX);
+  check_outputs(rc, target, disk_path, guid_known, dir, true);
+
+  // create a second disk
+  fd2 = create_test_ramdisk(((uint64_t)512) * 200000, &disk2);
+  ASSERT_GT(fd2, -1, "");
+  close(fd2);
+  gpt_device_t *gpt2 = init_gpt(disk2, true, &fd2);
+  ASSERT_NEQ(gpt2, NULL, "GPT initialization failed");
+  ASSERT_GT(fd2, 0, "Invalid file descriptor returned from GPT init");
+  ASSERT_EQ(gpt_device_sync(gpt2), 0, "Error writing out new GPT");
+  ASSERT_EQ(ioctl_block_rr_part(fd2), 0, "Error rebinding device");
+  sleep(1);
+
+  // check that no disk is found when searching for the random GUID
+  rc = find_disk_by_guid(dir, DEV_DIR_PATH, &guid_rand, &target, disk_path,
+                         PATH_MAX);
+  check_outputs(rc, target, disk_path, guid_rand, dir, false);
+
+  // check that the first disk can be found by GUID
+  rc = find_disk_by_guid(dir, DEV_DIR_PATH, &guid_known, &target, disk_path,
+                         PATH_MAX);
+  check_outputs(rc, target, disk_path, guid_known, dir, true);
+
+  // read the second disk's GUID and verify it can be found
+  gpt_device_get_header_guid(gpt2, &guid_known);
+  rc = find_disk_by_guid(dir, DEV_DIR_PATH, &guid_known, &target, disk_path,
+                         PATH_MAX);
+  check_outputs(rc, target, disk_path, guid_known, dir, true);
+
+  closedir(dir);
+  free(disk1);
+  free(disk2);
+  END_TEST;
+}
+
 bool test_find_partition_entries(void) {
   gpt_partition_t *part_entry_ptrs[TABLE_SIZE];
   gpt_partition_t part_entries[TABLE_SIZE];
@@ -71,6 +280,7 @@ bool test_find_partition_entries(void) {
   uint16_t test_indices[3] = {0, TABLE_SIZE - 1, TABLE_SIZE / 2};
 
   BEGIN_TEST;
+
   for (uint16_t idx = 0; idx < countof(test_indices); idx++) {
     uint16_t found_idx = TABLE_SIZE;
     uint16_t targ_idx = test_indices[idx];
@@ -108,8 +318,8 @@ bool test_find_partition(void) {
     uint16_t found_idx = TABLE_SIZE;
     gpt_partition_t *part_info;
     mx_status_t rc = find_partition(
-        part_entry_ptrs, &part_entry_ptrs[targ_idx]->type, part_size, block_size,
-        "TEST", TABLE_SIZE, &found_idx, &part_info);
+        part_entry_ptrs, &part_entry_ptrs[targ_idx]->type, part_size,
+        block_size, "TEST", TABLE_SIZE, &found_idx, &part_info);
     ASSERT_EQ(rc, NO_ERROR, "");
     ASSERT_EQ(targ_idx, found_idx, "");
     ASSERT_BYTES_EQ((uint8_t *)part_entry_ptrs[targ_idx], (uint8_t *)part_info,
@@ -268,6 +478,7 @@ RUN_TEST(test_find_partition_entries)
 RUN_TEST(test_find_partition)
 RUN_TEST(test_sort)
 RUN_TEST(test_find_available_space)
+RUN_TEST(test_find_disk_by_guid)
 END_TEST_CASE(installer_tests)
 
 int main(int argc, char **argv) {
