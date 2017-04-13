@@ -15,9 +15,13 @@ namespace intel_hda {
 
 // TODO(johngro) : Don't define this here.  Fetch this information from the
 // system using a syscall when we can.
-static constexpr uint32_t PAGE_SHIFT = 12;
-static constexpr size_t   PAGE_SIZE = static_cast<size_t>(1) << PAGE_SHIFT;
-static constexpr size_t   PAGE_MASK = PAGE_SIZE - 1;
+static constexpr uint32_t IHDA_PAGE_SHIFT = 12;
+static constexpr size_t   IHDA_PAGE_SIZE = static_cast<size_t>(1) << IHDA_PAGE_SHIFT;
+static constexpr size_t   IHDA_PAGE_MASK = IHDA_PAGE_SIZE - 1;
+
+#ifdef PAGE_SIZE
+static_assert(IHDA_PAGE_SIZE == PAGE_SIZE, "PAGE_SIZE assumption mismatch!!");
+#endif  // PAGE_SIZE
 
 namespace {
 mx_status_t GetDevProperty(const mx_device_t* dev, uint16_t prop_id, uint32_t* out) {
@@ -96,7 +100,7 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
     memset(regions_out, 0, sizeof(*regions_out) * num_regions);
 
     constexpr size_t   PAGES_PER_VMO_OP = 32;   // 256 bytes on the stack
-    constexpr uint64_t BYTES_PER_VMO_OP = PAGES_PER_VMO_OP << PAGE_SHIFT;
+    constexpr uint64_t BYTES_PER_VMO_OP = PAGES_PER_VMO_OP << IHDA_PAGE_SHIFT;
 
     mx_paddr_t page_addrs[PAGES_PER_VMO_OP];
     uint64_t offset = 0;
@@ -104,7 +108,7 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
 
     while ((offset < vmo_size) && (region < num_regions)) {
         uint64_t todo = mxtl::min(vmo_size - offset, BYTES_PER_VMO_OP);
-        uint32_t todo_pages = static_cast<uint32_t>((todo + PAGE_MASK) >> PAGE_SHIFT);
+        uint32_t todo_pages = static_cast<uint32_t>((todo + IHDA_PAGE_MASK) >> IHDA_PAGE_SHIFT);
 
         memset(page_addrs, 0, sizeof(page_addrs));
         res = vmo.op_range(MX_VMO_OP_LOOKUP,
@@ -115,11 +119,11 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
 
         for (uint32_t i = 0; (i < todo_pages) && (region < num_regions); ++i) {
             // Physical addresses must be page aligned and may not be 0.
-            if ((page_addrs[i] & PAGE_MASK) || (page_addrs[i] == 0))
+            if ((page_addrs[i] & IHDA_PAGE_MASK) || (page_addrs[i] == 0))
                 return ERR_INTERNAL;
 
             bool     merged = false;
-            uint64_t region_size = mxtl::min(vmo_size - offset, PAGE_SIZE);
+            uint64_t region_size = mxtl::min(vmo_size - offset, IHDA_PAGE_SIZE);
 
             if (region > 0) {
                 auto& prev = regions_out[region - 1];
@@ -155,7 +159,7 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
 }
 
 mx_status_t ContigPhysMem::Allocate(size_t size) {
-    static_assert(mxtl::is_pow2(PAGE_SIZE),
+    static_assert(mxtl::is_pow2(IHDA_PAGE_SIZE),
                   "In what universe is your page size not a power of 2?  Seriously!?");
 
     if (!size)
@@ -170,7 +174,7 @@ mx_status_t ContigPhysMem::Allocate(size_t size) {
     MX_DEBUG_ASSERT(!phys_);
 
     size_ = size;
-    actual_size_ = mxtl::roundup(size_, PAGE_SIZE);
+    actual_size_ = mxtl::roundup(size_, IHDA_PAGE_SIZE);
 
     // Allocate a page aligned contiguous buffer.
     mx::vmo     vmo;
@@ -182,7 +186,7 @@ mx_status_t ContigPhysMem::Allocate(size_t size) {
 
     // Now fetch its physical address, so we can tell hardware about it.
     res = vmo.op_range(MX_VMO_OP_LOOKUP, 0,
-                       mxtl::min(actual_size(), PAGE_SIZE),
+                       mxtl::min(actual_size(), IHDA_PAGE_SIZE),
                        &phys_, sizeof(phys_));
 
 finished:
