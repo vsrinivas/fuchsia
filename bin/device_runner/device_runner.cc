@@ -15,7 +15,6 @@
 #include "application/services/service_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/config/config.fidl.h"
-#include "apps/modular/services/device/device_context.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -166,14 +165,13 @@ class Settings {
 
 // TODO(vardhan): A running user's state is starting to grow, so break it
 // outside of DeviceRunnerApp.
-class DeviceRunnerApp : UserProvider, DeviceContext {
+class DeviceRunnerApp : DeviceShellContext, UserProvider {
  public:
   DeviceRunnerApp(const Settings& settings)
       : settings_(settings),
         app_context_(
             app::ApplicationContext::CreateFromStartupInfoNotChecked()),
-        device_context_binding_(this),
-        user_provider_binding_(this) {
+        device_shell_context_binding_(this) {
     // 0. Check if environment handle / services have been initialized.
     if (!app_context_->launcher()) {
       FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
@@ -209,8 +207,7 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
     app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
-    device_shell_->Initialize(device_context_binding_.NewBinding(),
-                              user_provider_binding_.NewBinding());
+    device_shell_->Initialize(device_shell_context_binding_.NewBinding());
 
     // 2. Get login data for users of the device.
     // There might not be a file of users persisted. If config file doesn't
@@ -246,10 +243,15 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
   }
 
  private:
-  // |DeviceContext|
+  // |DeviceShellContext|
+  void GetUserProvider(fidl::InterfaceRequest<UserProvider> request) override {
+    user_provider_bindings_.AddBinding(this, std::move(request));
+  }
+
+  // |DeviceShellContext|
   // TODO(vardhan): Signal the ledger application to tear down.
   void Shutdown() override {
-    FTL_LOG(INFO) << "DeviceContext::Shutdown()";
+    FTL_LOG(INFO) << "DeviceShellContext::Shutdown()";
     auto cont = [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); };
     if ((bool)user_controller_impl_) {
       // This will tear down the user runner altogether, and call us back to
@@ -441,8 +443,8 @@ class DeviceRunnerApp : UserProvider, DeviceContext {
   const modular::UsersStorage* users_storage_ = nullptr;
 
   std::shared_ptr<app::ApplicationContext> app_context_;
-  fidl::Binding<DeviceContext> device_context_binding_;
-  fidl::Binding<UserProvider> user_provider_binding_;
+  fidl::Binding<DeviceShellContext> device_shell_context_binding_;
+  fidl::BindingSet<UserProvider> user_provider_bindings_;
 
   app::ApplicationControllerPtr device_shell_controller_;
   DeviceShellPtr device_shell_;

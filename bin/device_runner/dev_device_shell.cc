@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/services/device/device_context.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "lib/ftl/command_line.h"
@@ -49,12 +48,10 @@ class DevDeviceShellApp
   }
 
   // |DeviceShell|
-  void Initialize(fidl::InterfaceHandle<modular::DeviceContext> device_context,
-                  fidl::InterfaceHandle<modular::UserProvider> user_provider)
+  void Initialize(fidl::InterfaceHandle<modular::DeviceShellContext> device_shell_context)
       override {
-    user_provider_.Bind(std::move(user_provider));
-    device_context_.Bind(std::move(device_context));
-
+    device_shell_context_.Bind(std::move(device_shell_context));
+    device_shell_context_->GetUserProvider(user_provider_.NewRequest());
 
     Connect();
   }
@@ -69,7 +66,7 @@ class DevDeviceShellApp
   // |UserWatcher|
   void OnLogout() override {
     FTL_LOG(INFO) << "UserWatcher::OnLogout()";
-    device_context_->Shutdown();
+    device_shell_context_->Shutdown();
   }
 
   void Connect() {
@@ -86,7 +83,7 @@ class DevDeviceShellApp
   const Settings settings_;
   fidl::Binding<modular::UserWatcher> user_watcher_binding_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
-  modular::DeviceContextPtr device_context_;
+  modular::DeviceShellContextPtr device_shell_context_;
   modular::UserControllerPtr user_controller_;
   modular::UserProviderPtr user_provider_;
   FTL_DISALLOW_COPY_AND_ASSIGN(DevDeviceShellApp);

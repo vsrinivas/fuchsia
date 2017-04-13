@@ -4,15 +4,21 @@
 
 module modular;
 
-import "apps/modular/services/device/device_context.fidl";
 import "apps/modular/services/device/user_provider.fidl";
 
 // This interface is meant to be implemented by a Device Shell.
 [ServiceName="modular.DeviceShell"]
 interface DeviceShell {
-  Initialize(DeviceContext device_context, UserProvider user_provider);
+  Initialize(DeviceShellContext device_shell_context);
 
   // This signals DeviceShell to teardown itself. Upon response, the caller may
   // terminate DeviceShell process if it hasn't done so already.
   Terminate() => ();
+};
+
+interface DeviceShellContext {
+  GetUserProvider(UserProvider& request);
+
+  // This requests the shutdown of the device.
+  Shutdown();
 };
