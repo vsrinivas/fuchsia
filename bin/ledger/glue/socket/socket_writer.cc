@@ -64,7 +64,7 @@ void SocketWriter::WriteData(ftl::StringView data) {
 
   FTL_DCHECK(!data.empty());
 
-  if (status == ERR_REMOTE_CLOSED) {
+  if (status == ERR_PEER_CLOSED) {
     Done();
     return;
   }
