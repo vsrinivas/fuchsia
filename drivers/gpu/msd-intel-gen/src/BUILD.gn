@@ -32,6 +32,8 @@ source_set("src") {
     "gtt.h",
     "modeset/displayport.cc",
     "modeset/displayport.h",
+    "modeset/edid.cc",
+    "modeset/edid.h",
     "msd_intel_buffer.cc",
     "msd_intel_buffer.h",
     "msd_intel_connection.cc",

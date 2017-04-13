@@ -28,4 +28,5 @@ The following terms and abbreviations are used in this codebase:
   bytes.
 
 * EDID: Extended Display Identification Data, a standard for data
-  describing a display.
+  describing a display.  This data is provided by a display over the DDC
+  protocol.

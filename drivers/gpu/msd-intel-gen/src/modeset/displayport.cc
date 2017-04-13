@@ -4,6 +4,7 @@
 
 #include "modeset/displayport.h"
 #include "magma_util/macros.h"
+#include "modeset/edid.h"
 #include "register_io.h"
 #include "registers.h"
 #include "registers_ddi.h"
@@ -461,14 +462,18 @@ void DisplayPort::PartiallyBringUpDisplays(RegisterIo* reg_io)
     uint32_t logged_count = 0;
 
     for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {
-        // Read enough just to test that we got the correct header.
-        uint8_t buf[32];
-        if (!FetchEdidData(reg_io, ddi_number, buf, sizeof(buf)))
+        BaseEdid edid;
+        // The following cast should be safe from C++ strict aliasing
+        // problems because FetchEdidData() should act as if it writes its
+        // results byte by byte.
+        if (!FetchEdidData(reg_io, ddi_number, reinterpret_cast<uint8_t*>(&edid), sizeof(edid)))
             continue;
 
-        static const uint8_t kEdidHeader[8] = {0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0};
-        if (memcmp(buf, kEdidHeader, sizeof(kEdidHeader)) != 0) {
+        if (!edid.valid_header()) {
             magma::log(magma::LOG_WARNING, "DDI %d: EDID: Read EDID data, but got bad header",
+                       ddi_number);
+        } else if (!edid.valid_checksum()) {
+            magma::log(magma::LOG_WARNING, "DDI %d: EDID: Read EDID data, but got bad checksum",
                        ddi_number);
         } else {
             magma::log(magma::LOG_INFO,

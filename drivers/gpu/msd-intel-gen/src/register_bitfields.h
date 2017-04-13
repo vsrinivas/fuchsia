@@ -141,9 +141,9 @@ private:
     uint32_t reg_addr_;
 };
 
-class BitfieldRef {
+template <class IntType> class BitfieldRef {
 public:
-    BitfieldRef(uint32_t* value_ptr, uint32_t bit_high_incl, uint32_t bit_low)
+    BitfieldRef(IntType* value_ptr, uint32_t bit_high_incl, uint32_t bit_low)
         : value_ptr_(value_ptr), shift_(bit_low), mask_((1 << (bit_high_incl - bit_low + 1)) - 1)
     {
     }
@@ -158,7 +158,7 @@ public:
     }
 
 private:
-    uint32_t* value_ptr_;
+    IntType* value_ptr_;
     uint32_t shift_;
     uint32_t mask_;
 };
@@ -166,14 +166,25 @@ private:
 #define DEF_FIELD(BIT_HIGH, BIT_LOW, NAME)                                                         \
     static_assert((BIT_HIGH) > (BIT_LOW), "Upper bit goes before lower bit");                      \
     static_assert((BIT_HIGH) < 32, "Upper bit is out of range");                                   \
-    registers::BitfieldRef NAME()                                                                  \
+    registers::BitfieldRef<uint32_t> NAME()                                                        \
     {                                                                                              \
-        return registers::BitfieldRef(reg_value_ptr(), (BIT_HIGH), (BIT_LOW));                     \
+        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW));           \
     }
 
 #define DEF_BIT(BIT, NAME)                                                                         \
     static_assert((BIT) < 32, "Bit is out of range");                                              \
-    registers::BitfieldRef NAME() { return registers::BitfieldRef(reg_value_ptr(), (BIT), (BIT)); }
+    registers::BitfieldRef<uint32_t> NAME()                                                        \
+    {                                                                                              \
+        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT), (BIT));                    \
+    }
+
+// This defines an accessor (named SUBFIELD_NAME) for a bit range of a
+// field (named COMBINED_FIELD) in a struct.
+#define DEF_SUBFIELD(COMBINED_FIELD, BIT_HIGH, BIT_LOW, SUBFIELD_NAME)                             \
+    registers::BitfieldRef<uint8_t> SUBFIELD_NAME()                                                \
+    {                                                                                              \
+        return registers::BitfieldRef<uint8_t>(&COMBINED_FIELD, (BIT_HIGH), (BIT_LOW));            \
+    }
 
 } // namespace registers
 
