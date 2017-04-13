@@ -60,10 +60,10 @@ then
   exit 1
 fi
 
-if [[ $DARWIN == false ]]
+if [[ $DARWIN == false && $(pidof NetworkManager) ]]
 then
-  if [[ $(pidof NetworkManager) &&
-      $(nmcli d status | awk "/$INTERFACE/ { print \$3 }") != unmanaged ]]; then
+  nmstat=$(nmcli d status | awk "/$INTERFACE/ { print \$3 }")
+  if [[ -n $nmstat && $nmstat != unmanaged ]]; then
     echo "$INTERFACE is managed by NetworkManager so can't be configured by this script."
     echo ""
     echo "If you DON'T want this, create a file /etc/network/interfaces.d/$INTERFACE containing:"
