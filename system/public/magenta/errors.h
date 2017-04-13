@@ -132,11 +132,42 @@
 // Example: A disk block is irrecoverably damaged.
 #define ERR_IO_DATA_LOSS (-43)
 
-// Filesystem specific errors
+
+// ======== Filesystem Errors ========
+// ERR_BAD_PATH: Path name is too long.
 #define ERR_BAD_PATH (-50)
+
+// ERR_NOT_DIR: Object is not a directory or does not support
+// directory operations.
+// Example: Attempted to open a file as a directory or
+// attempted to do directory operations on a file.
 #define ERR_NOT_DIR (-51)
+
+// ERR_NOT_FILE: Object is not a regular file.
 #define ERR_NOT_FILE (-52)
-// ERR_FILE_BIG: A file exceeds a filesystem-specific size limit.
+
+// ERR_FILE_BIG: This operation would cause a file to exceed a
+// filesystem-specific size limit
 #define ERR_FILE_BIG (-53)
+
 // ERR_NO_SPACE: Filesystem or device space is exhausted.
 #define ERR_NO_SPACE (-54)
+
+
+// ======== Flow Control ========
+// These are not errors, as such, and will never be returned
+// by a syscall or public API.  They exist to allow callbacks
+// to request changes in operation.
+//
+// ERR_STOP: Do not call again.
+// Example: A notification callback will be called on every
+// event until it returns something other than NO_ERROR.
+// This status allows differentiation between "stop due to
+// an error" and "stop because the work is done."
+#define ERR_STOP (-60)
+
+// ERR_NEXT: Advance to the next item.
+// Example: A notification callback will use this response
+// to indicate it did not "consume" an item passed to it,
+// but by choice, not due to an error condition.
+#define ERR_NEXT (-61)
