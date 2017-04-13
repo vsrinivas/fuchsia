@@ -357,8 +357,8 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // This command has a data phase?
     if (cmd & SDMMC_RESP_DATA_PRESENT) {
         iotxn_physmap(txn);
-        MX_DEBUG_ASSERT(txn->phys_length == 1);
-        regs->arg2 = iotxn_phys_contiguous(txn) + BCM_SDRAM_BUS_ADDR_BASE;
+        MX_DEBUG_ASSERT(txn->phys_count == 1);
+        regs->arg2 = iotxn_phys(txn) + BCM_SDRAM_BUS_ADDR_BASE;
 
         iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, blkcnt * blksiz);
 

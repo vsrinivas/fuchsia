@@ -85,6 +85,10 @@ void device_set_bindable(mx_device_t* dev, bool bindable);
 
 void driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 
+#define ROUNDUP(a, b)   (((a) + ((b)-1)) & ~((b)-1))
+#define ROUNDDOWN(a, b) ((a) & ~((b)-1))
+#define ALIGN(a, b) ROUNDUP(a, b)
+
 // temporary accessor for root resource handle
 mx_handle_t get_root_resource(void);
 

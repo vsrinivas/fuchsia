@@ -29,10 +29,6 @@
 #  define xprintf(args...)
 #endif
 
-// borrowed from LK/magenta stdlib.h
-#define ROUNDUP(a, b) (((a)+ ((b)-1)) & ~((b)-1))
-#define ALIGN(a, b) ROUNDUP(a, b)
-
 #define READ_REQ_COUNT 8
 #define WRITE_REQ_COUNT 4
 #define USB_BUF_SIZE 24576

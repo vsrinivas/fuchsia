@@ -97,7 +97,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     mx_paddr_t paddr = 0;
     if (length > 0) {
         iotxn_physmap(txn);
-        paddr = iotxn_phys_contiguous(txn);
+        paddr = iotxn_phys(txn);
     }
     uint64_t frame = proto_data->frame;
     uint8_t direction;

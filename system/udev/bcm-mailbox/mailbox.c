@@ -173,8 +173,8 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
             return ret;
 
         iotxn_physmap(txn);
-        MX_DEBUG_ASSERT(txn->phys_length == 1);
-        mx_paddr_t phys = iotxn_phys_contiguous(txn);
+        MX_DEBUG_ASSERT(txn->phys_count == 1);
+        mx_paddr_t phys = iotxn_phys(txn);
 
         // calculate offset in buffer that will provide 16 byte alignment (physical)
         uint32_t offset = (16 - (phys % 16)) % 16;
@@ -261,8 +261,8 @@ static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
         return ret;
 
     iotxn_physmap(txn);
-    MX_DEBUG_ASSERT(txn->phys_length == 1);
-    mx_paddr_t phys = iotxn_phys_contiguous(txn);
+    MX_DEBUG_ASSERT(txn->phys_count == 1);
+    mx_paddr_t phys = iotxn_phys(txn);
 
     uint32_t offset = 0;
 

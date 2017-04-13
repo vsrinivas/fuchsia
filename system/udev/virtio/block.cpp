@@ -280,7 +280,7 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
 
     iotxn_physmap(txn);
 
-    desc->addr = (uint64_t)iotxn_phys_contiguous(txn);
+    desc->addr = (uint64_t)iotxn_phys(txn);
     desc->len = (uint32_t)txn->length;
 
     if (!write)

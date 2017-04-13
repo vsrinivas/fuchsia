@@ -78,8 +78,7 @@ static void iotxn_release_free_list(iotxn_t* txn) {
     uint64_t vmo_length = txn->vmo_length;
     void* virt = txn->virt;
     mx_paddr_t* phys = txn->phys;
-    uint64_t phys_offset = txn->phys_offset;
-    uint64_t phys_length = txn->phys_length;
+    uint64_t phys_count = txn->phys_count;
     uint32_t pflags = txn->pflags;
 
     memset(txn, 0, sizeof(iotxn_t));
@@ -91,8 +90,7 @@ static void iotxn_release_free_list(iotxn_t* txn) {
         txn->vmo_length = vmo_length;
         txn->virt = virt;
         txn->phys = phys;
-        txn->phys_offset = phys_offset;
-        txn->phys_length = phys_length;
+        txn->phys_count = phys_count;
         txn->pflags = pflags;
     } else {
         if (do_free_phys(pflags)) {
@@ -145,8 +143,7 @@ static void iotxn_release_static(iotxn_t* txn) {
         if (txn->phys != NULL) {
             free(txn->phys);
             txn->phys = NULL;
-            txn->phys_offset = 0;
-            txn->phys_length = 0;
+            txn->phys_count = 0;
         }
     }
     if (pflags & IOTXN_PFLAG_MMAP) {
@@ -183,9 +180,6 @@ ssize_t iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offse
     return (status == NO_ERROR) ? (ssize_t)actual : status;
 }
 
-#define ROUNDUP(a, b)   (((a) + ((b)-1)) & ~((b)-1))
-#define ROUNDDOWN(a, b) ((a) & ~((b)-1))
-
 static mx_status_t iotxn_physmap_contiguous(iotxn_t* txn) {
     txn->phys = malloc(sizeof(mx_paddr_t));
     if (txn->phys == NULL) {
@@ -205,8 +199,7 @@ static mx_status_t iotxn_physmap_contiguous(iotxn_t* txn) {
         return status;
     }
 
-    txn->phys_offset = ROUNDDOWN(txn->vmo_offset, PAGE_SIZE);
-    txn->phys_length = 1;
+    txn->phys_count = 1;
     return NO_ERROR;
 }
 
@@ -240,13 +233,12 @@ static mx_status_t iotxn_physmap_paged(iotxn_t* txn) {
     }
 
     txn->phys = paddrs;
-    txn->phys_offset = page_offset;
-    txn->phys_length = pages;
+    txn->phys_count = pages;
     return NO_ERROR;
 }
 
 mx_status_t iotxn_physmap(iotxn_t* txn) {
-    if (txn->phys_length > 0) {
+    if (txn->phys_count > 0) {
         return NO_ERROR;
     }
     if (txn->vmo_length == 0) {
@@ -281,11 +273,16 @@ mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out) {
     // TODO if out is set, init into out
     // need to check the contiguous flag because they have preallocated space
     // for phys
-    iotxn_t* clone = find_in_free_list(txn->pflags & IOTXN_PFLAG_CONTIGUOUS, 0);
-    if (clone == NULL) {
-        clone = calloc(1, sizeof(iotxn_t));
+    iotxn_t* clone = NULL;
+    if (*out != NULL) {
+        clone = *out;
+    } else {
+        clone = find_in_free_list(txn->pflags & IOTXN_PFLAG_CONTIGUOUS, 0);
         if (clone == NULL) {
-            return ERR_NO_MEMORY;
+            clone = calloc(1, sizeof(iotxn_t));
+            if (clone == NULL) {
+                return ERR_NO_MEMORY;
+            }
         }
     }
 
@@ -297,6 +294,60 @@ mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out) {
     clone->release_cb = iotxn_release_free_list;
 
     *out = clone;
+    return NO_ERROR;
+}
+
+mx_status_t iotxn_clone_partial(iotxn_t* txn, uint64_t vmo_offset, mx_off_t length, iotxn_t** out) {
+    xprintf("iotxn_clone_partial txn %p\n", txn);
+    if (vmo_offset < txn->vmo_offset) {
+        return ERR_INVALID_ARGS;
+    }
+    if (length > txn->length) {
+        return ERR_INVALID_ARGS;
+    }
+    if ((vmo_offset - txn->vmo_offset) > (length - txn->length)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    mx_status_t status = iotxn_clone(txn, out);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    iotxn_t* clone = *out;
+    uint64_t offd = vmo_offset - txn->vmo_offset;
+    clone->vmo_offset = vmo_offset;
+    clone->vmo_length -= offd;
+    clone->length = length;
+    if (clone->virt) {
+        clone->virt += offd;
+    }
+    if (clone->phys) {
+        uint64_t page_offset = ROUNDDOWN(txn->vmo_offset, PAGE_SIZE);
+        uint64_t new_page_offset = ROUNDDOWN(clone->vmo_offset, PAGE_SIZE);
+        if (page_offset != new_page_offset) {
+            if (txn->pflags & IOTXN_PFLAG_CONTIGUOUS) {
+                clone->phys = malloc(sizeof(mx_paddr_t));
+                if (!clone->phys) {
+                    iotxn_release(clone);
+                    return ERR_NO_MEMORY;
+                }
+                // need to free allocated phys on release
+                clone->pflags |= IOTXN_PFLAG_PHYSMAP;
+                clone->phys[0] = txn->phys[0] + new_page_offset - page_offset;
+            } else {
+                uint64_t pages = (new_page_offset - page_offset) / PAGE_SIZE;
+                if (pages >= clone->phys_count) {
+                    iotxn_release(clone);
+                    return ERR_INVALID_ARGS;
+                }
+                clone->phys += pages;
+                clone->phys_count -= pages;
+                MX_DEBUG_ASSERT(clone->phys_count > 0);
+            }
+        }
+    }
+    MX_DEBUG_ASSERT(clone->release_cb == iotxn_release_free_list);
     return NO_ERROR;
 }
 
@@ -330,7 +381,6 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size)
         if (alloc_flags & IOTXN_ALLOC_CONTIGUOUS) {
             status = mx_vmo_create_contiguous(get_root_resource(), data_size, 0, &txn->vmo_handle);
             txn->pflags |= IOTXN_PFLAG_CONTIGUOUS;
-            // point phys to the extra space
         } else {
             status = mx_vmo_create(data_size, 0, &txn->vmo_handle);
         }

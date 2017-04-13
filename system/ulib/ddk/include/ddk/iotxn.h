@@ -9,6 +9,7 @@
 #include <magenta/listnode.h>
 #include <ddk/driver.h>
 #include <sys/types.h>
+#include <limits.h>
 
 __BEGIN_CDECLS;
 
@@ -74,9 +75,10 @@ struct iotxn {
     // data payload
     mx_handle_t vmo_handle;
     uint64_t vmo_offset;  // offset into the vmo to use for the buffer
-    uint64_t vmo_length;  // buffer size starting at offset
+                          // it is invalid to modify this value after initialization
+    uint64_t vmo_length;  // buffer size starting at vmo_offset
 
-    // optional virtual address
+    // optional virtual address pointing to vmo_offset
     // the current "owner" of the iotxn may set this to specify a virtual
     // mapping of the vmo. this field is also set by iotxn_mmap()
     void* virt;           // mapped address of vmo
@@ -85,18 +87,19 @@ struct iotxn {
     // the current "owner" of the iotxn may set these to specify physical
     // pages backing the data payload. this field is also set by
     // iotxn_physmap()
-    // each entry in the list represents a whole page, and phys_offset
-    // may be different than vmo_offset.
+    // each entry in the list represents a whole page and the first entry
+    // points to the page containing 'vmo_offset'.
+    // NOTE: if phys_count == 1, the buffer is physically contiguous.
     mx_paddr_t* phys;
-    uint64_t phys_offset;  // the offset from the beginning of the vmo the first
-                           // entry in 'phys' corresponds to
-    uint64_t phys_length;  // number of entries in phys list
+    uint64_t phys_count;  // number of entries in phys list
 
     // protocol specific extra data
     // (filled in by requestor, read by processor, type identified by 'protocol')
+    // this field may be modified by any intermediate processors.
     iotxn_proto_data_t protocol_data;
 
     // extra requestor data
+    // this field may not be modified by anyone except the requestor
     iotxn_extra_data_t extra;
 
     // list node and context
@@ -112,6 +115,7 @@ struct iotxn {
     // the processor upon completion of the io operation.
     void (*complete_cb)(iotxn_t* txn, void* cookie);
     // Set by requestor for passing data to complete_cb callback
+    // May not be modified by anyone other than the requestor.
     void* cookie;
 
     // The release_cb() callback is set by the allocator and is
@@ -158,9 +162,17 @@ ssize_t iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offse
 // succeeds.
 mx_status_t iotxn_physmap(iotxn_t* txn);
 
-// convenience macro to get the physical address for a contiguous buffer,
-// taking into account 'vmo_offset'
-#define iotxn_phys_contiguous(txn) ((txn)->phys[0] + ((txn)->vmo_offset - (txn)->phys_offset))
+// convenience function to get the physical address of iotxn, taking into
+// account 'vmo_offset', For contiguous buffers this will return the physical
+// address of the buffer. For noncontiguous buffers this will return the
+// physical address of the first page.
+static inline mx_paddr_t iotxn_phys(iotxn_t* txn) {
+    if (!txn->phys) {
+        return 0;
+    }
+    uint64_t unaligned = (txn->vmo_offset & (PAGE_SIZE - 1));
+    return txn->phys[0] + unaligned;
+}
 
 // iotxn_mmap() maps the iotxn's vm object and returns the virtual address.
 // iotxn_copyfrom(), iotxn_copyto(), or iotxn_ physmap() are almost always a
@@ -173,8 +185,15 @@ void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length);
 
 // iotxn_clone() creates a new iotxn which shares the vm object with this one,
 // suitable for a driver to use to make a request of a driver it is stacked on
-// top of.
+// top of. initializes the iotxn pointed to by 'out' if it is not null, and
+// allocates a new one otherwise.
 mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out);
+
+// iotxn_clone_partial() is similar to iotxn_clone(), but the cloned
+// iotxn will have an updated vmo_offset and length. The new vmo_offset
+// must be greater than or equal to the original's vmo_offset. The new
+// length must be less than or equal to the original's length.
+mx_status_t iotxn_clone_partial(iotxn_t* txn, uint64_t vmo_offset, mx_off_t length, iotxn_t** out);
 
 // free the iotxn -- should be called only by the entity that allocated it
 void iotxn_release(iotxn_t* txn);

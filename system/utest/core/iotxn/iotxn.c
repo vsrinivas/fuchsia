@@ -18,8 +18,7 @@ static bool test_physmap_simple(void) {
     ASSERT_NONNULL(txn, "");
     ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
-    ASSERT_EQ(txn->phys_offset, 0u, "unexpected phys_offset");
-    ASSERT_EQ(txn->phys_length, 3u, "unexpected phys_length");
+    ASSERT_EQ(txn->phys_count, 3u, "unexpected phys_count");
     iotxn_release(txn);
     END_TEST;
 }
@@ -31,14 +30,12 @@ static bool test_physmap_clone(void) {
     ASSERT_NONNULL(txn, "");
     ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
-    ASSERT_EQ(txn->phys_offset, 0u, "unexpected phys_offset");
-    ASSERT_EQ(txn->phys_length, 3u, "unexpected phys_length");
+    ASSERT_EQ(txn->phys_count, 3u, "unexpected phys_count");
 
     iotxn_t* clone;
     ASSERT_EQ(iotxn_clone(txn, &clone), NO_ERROR, "");
     ASSERT_EQ(txn->phys, clone->phys, "expected clone to point to the same phys");
-    ASSERT_EQ(txn->phys_offset, clone->phys_offset, "unexpected clone phys_offset");
-    ASSERT_EQ(txn->phys_length, clone->phys_length, "unexpected clone phys_length");
+    ASSERT_EQ(txn->phys_count, clone->phys_count, "unexpected clone phys_count");
     iotxn_release(txn);
     iotxn_release(clone);
     END_TEST;
@@ -53,8 +50,7 @@ static bool test_physmap_aligned_offset(void) {
     txn->vmo_length = PAGE_SIZE * 2;
     ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
-    ASSERT_EQ(txn->phys_offset, (uint64_t)PAGE_SIZE, "unexpected phys_offset");
-    ASSERT_EQ(txn->phys_length, 2u, "unexpected phys_length");
+    ASSERT_EQ(txn->phys_count, 2u, "unexpected phys_count");
     iotxn_release(txn);
     END_TEST;
 }
@@ -68,8 +64,7 @@ static bool test_physmap_unaligned_offset(void) {
     txn->vmo_length = PAGE_SIZE * 2;
     ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
-    ASSERT_EQ(txn->phys_offset, 0u, "unexpected phys_offset");
-    ASSERT_EQ(txn->phys_length, 3u, "unexpected phys_length");
+    ASSERT_EQ(txn->phys_count, 3u, "unexpected phys_count");
     iotxn_release(txn);
     END_TEST;
 }
@@ -83,8 +78,7 @@ static bool test_physmap_unaligned_offset2(void) {
     txn->vmo_length = (PAGE_SIZE * 2) + (PAGE_SIZE / 2);
     ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
-    ASSERT_EQ(txn->phys_offset, 0u, "unexpected phys_offset");
-    ASSERT_EQ(txn->phys_length, 4u, "unexpected phys_length");
+    ASSERT_EQ(txn->phys_count, 4u, "unexpected phys_count");
     iotxn_release(txn);
     END_TEST;
 }

@@ -1192,7 +1192,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
             characteristics.endpoint_direction = DWC_EP_OUT;
 
             iotxn_physmap(req->setuptxn);
-            data = (void*)iotxn_phys_contiguous(req->setuptxn);
+            data = (void*)iotxn_phys(req->setuptxn);
 
             // Quick sanity check to make sure that we're actually tying to
             // transfer the correct number of bytes.
@@ -1207,7 +1207,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
                 protocol_data->setup.bmRequestType >> 7;
 
             iotxn_physmap(txn);
-            data = ((void*)iotxn_phys_contiguous(txn)) + req->bytes_transferred;
+            data = ((void*)iotxn_phys(txn)) + req->bytes_transferred;
 
             transfer.size = txn->length - req->bytes_transferred;
 
@@ -1240,7 +1240,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
             (ep->ep_address & USB_ENDPOINT_DIR_MASK) >> 7;
 
         iotxn_physmap(txn);
-        data = ((void*)iotxn_phys_contiguous(txn)) + req->bytes_transferred;
+        data = ((void*)iotxn_phys(txn)) + req->bytes_transferred;
 
         transfer.size = txn->length - req->bytes_transferred;
         transfer.packet_id = req->next_data_toggle;
