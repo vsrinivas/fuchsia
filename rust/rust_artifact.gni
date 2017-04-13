@@ -75,7 +75,7 @@ template("rust_artifact") {
     build_target_name = "${target_name}_build"
   } else if (type == "lib") {
     output_base = "$target_out_dir/$target_name.rust/$target_triple/$build_type/lib$name"
-    output_file = "$output_base.rlib"
+    output_file = "$output_base.rmeta"
     output_depfile = "$output_base.d"
     build_target_name = target_name
   }
