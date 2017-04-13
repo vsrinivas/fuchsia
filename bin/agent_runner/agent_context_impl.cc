@@ -188,8 +188,12 @@ void AgentContextImpl::GetComponentContext(
 
 void AgentContextImpl::GetIntelligenceServices(
     fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+  auto agent_scope = maxwell::AgentScope::New();
+  agent_scope->url = url_;
+  auto scope = maxwell::ComponentScope::New();
+  scope->set_agent_scope(std::move(agent_scope));
   user_intelligence_provider_->GetComponentIntelligenceServices(
-      nullptr, url_, std::move(request));
+      std::move(scope), std::move(request));
 }
 
 void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {

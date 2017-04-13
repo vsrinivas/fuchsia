@@ -74,8 +74,13 @@ void ModuleContextImpl::GetComponentContext(
 
 void ModuleContextImpl::GetIntelligenceServices(
     fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+  auto module_scope = maxwell::ModuleScope::New();
+  module_scope->url = module_url_;
+  module_scope->story_id = story_impl_->GetStoryId();
+  auto scope = maxwell::ComponentScope::New();
+  scope->set_module_scope(std::move(module_scope));
   user_intelligence_provider_->GetComponentIntelligenceServices(
-      story_impl_->GetStoryId(), module_url_, std::move(request));
+      std::move(scope), std::move(request));
 }
 
 void ModuleContextImpl::GetStoryId(const GetStoryIdCallback& callback) {
