@@ -5,6 +5,8 @@
 #include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
 
 #include "application/lib/app/connect.h"
+#include "apps/maxwell/services/resolver/resolver.fidl.h"
+#include "apps/maxwell/services/user/scope.fidl.h"
 #include "apps/maxwell/src/user/intelligence_services_impl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/files/file.h"
@@ -53,8 +55,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   startAgent("file:///system/apps/agents/module_suggester");
   startAgent("file:///system/apps/agents/module_suggester.dartx");
 
-  // TODO(jwnichols): Uncomment this when the dashboard is more functional
-  // startAgent("file:///system/apps/agents/mi_dashboard.dartx");
+// TODO(jwnichols): Uncomment this when the dashboard is more functional
+// startAgent("file:///system/apps/agents/mi_dashboard.dartx");
 
 // Toggle using the "kronk_dev" gn arg (see README).
 #ifdef KRONK_DEV
@@ -65,13 +67,12 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 }
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
-    const fidl::String& story_id,
-    const fidl::String& component_id,
+    ComponentScopePtr scope,
     fidl::InterfaceRequest<IntelligenceServices> request) {
   intelligence_services_bindings_.AddBinding(
       std::make_unique<IntelligenceServicesImpl>(
-          story_id, component_id, context_engine_.get(),
-          suggestion_engine_.get(), action_log_factory_.get()),
+          std::move(scope), context_engine_.get(), suggestion_engine_.get(),
+          action_log_factory_.get()),
       std::move(request));
 }
 
@@ -103,11 +104,19 @@ void UserIntelligenceProviderImpl::startAgent(const std::string& url) {
 
   agent_host->AddService<maxwell::ContextPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
-        context_engine_->GetPublisher(url, std::move(request));
+        auto scope = ComponentScope::New();
+        auto agent_scope = AgentScope::New();
+        agent_scope->url = url;
+        scope->set_agent_scope(std::move(agent_scope));
+        context_engine_->GetPublisher(std::move(scope), std::move(request));
       });
   agent_host->AddService<maxwell::ContextProvider>(
       [this, url](fidl::InterfaceRequest<maxwell::ContextProvider> request) {
-        context_engine_->GetProvider(url, std::move(request));
+        auto scope = ComponentScope::New();
+        auto agent_scope = AgentScope::New();
+        agent_scope->url = url;
+        scope->set_agent_scope(std::move(agent_scope));
+        context_engine_->GetProvider(std::move(scope), std::move(request));
       });
   agent_host->AddService<maxwell::ProposalPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {

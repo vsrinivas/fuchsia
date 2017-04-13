@@ -11,6 +11,7 @@ import "apps/modular/services/story/story_provider.fidl";
 import "apps/modular/services/user/focus.fidl";
 
 import "intelligence_services.fidl";
+import "scope.fidl";
 
 [ServiceName="maxwell.UserIntelligenceProviderFactory"]
 interface UserIntelligenceProviderFactory {
@@ -30,8 +31,7 @@ interface UserIntelligenceProviderFactory {
 
 interface UserIntelligenceProvider {
   // Creates an |IntelligenceServices| scoped to a specific Component,
-  // identified by |component_id|. If the Component itself is scoped to a
-  // specific Story, |story_id| must be supplied.
+  // identified by |scope|.
   //
   // NOTE: Eventually |component_id| will become more complex, specifying
   // information needed to evaluate access-control policies for downstream
@@ -41,8 +41,7 @@ interface UserIntelligenceProvider {
   // to put any and all services that are to be exposed to Agents and Modules.
   // Once our understanding of the needs of Agents/Modules is clearer, we
   // should break the bucket apart.
-  GetComponentIntelligenceServices(string? story_id,
-                                   string component_id,
+  GetComponentIntelligenceServices(ComponentScope scope,
                                    IntelligenceServices& services);
 
   GetSuggestionProvider(SuggestionProvider& suggestion_provider);

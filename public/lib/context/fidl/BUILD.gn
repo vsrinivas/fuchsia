@@ -10,4 +10,8 @@ fidl("context") {
     "context_publisher.fidl",
     "context_provider.fidl",
   ]
+
+  deps = [
+    "//apps/maxwell/services/user:scope",
+  ]
 }

@@ -13,6 +13,7 @@ source_set("gps") {
   deps = [
     "//application/lib/app",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user:scope",
     "//apps/maxwell/src/acquirers:gps",
     "//lib/mtl",
   ]

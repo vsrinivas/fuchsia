@@ -8,6 +8,7 @@
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
+#include "apps/maxwell/services/user/scope.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/maxwell/src/user/agent_launcher.h"
 
@@ -26,8 +27,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   ~UserIntelligenceProviderImpl() override = default;
 
   void GetComponentIntelligenceServices(
-      const fidl::String& story_id,
-      const fidl::String& component_id,
+      ComponentScopePtr scope,
       fidl::InterfaceRequest<IntelligenceServices> request) override;
 
   void GetSuggestionProvider(

@@ -40,10 +40,10 @@ class TestListener : public ContextListener {
 class ContextEngineTest : public ContextEngineTestBase {
  public:
   ContextEngineTest() : ContextEngineTestBase() {
-    context_engine()->GetProvider("ContextEngineTest",
-                                         provider_.NewRequest());
-    context_engine()->GetPublisher("ContextEngineTest",
-                                        publisher_.NewRequest());
+    ComponentScopePtr scope = ComponentScope::New();
+    scope->set_global_scope(GlobalScope::New());
+    context_engine()->GetProvider(std::move(scope), provider_.NewRequest());
+    context_engine()->GetPublisher(std::move(scope), publisher_.NewRequest());
   }
 
  protected:

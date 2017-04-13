@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/maxwell/services/user/scope.fidl.h"
+
 #include "apps/maxwell/src/acquirers/mock/mock_gps.h"
 
 namespace maxwell {
@@ -10,7 +12,11 @@ namespace acquirers {
 constexpr char GpsAcquirer::kLabel[];
 
 MockGps::MockGps(ContextEngine* context_engine) {
-  context_engine->GetPublisher("MockGps", publisher_.NewRequest());
+  auto scope = ComponentScope::New();
+  auto agent_scope = AgentScope::New();
+  agent_scope->url = "MockGps";
+  scope->set_agent_scope(std::move(agent_scope));
+  context_engine->GetPublisher(std::move(scope), publisher_.NewRequest());
 }
 
 void MockGps::Publish(float latitude, float longitude) {

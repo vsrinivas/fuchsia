@@ -6,6 +6,7 @@
 
 #include "apps/maxwell/services/action_log/action_log.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
+#include "apps/maxwell/services/user/scope.fidl.h"
 
 namespace maxwell {
 
@@ -16,8 +17,7 @@ class IntelligenceServicesImpl : public IntelligenceServices {
  public:
   // |context_engine| and |suggestion_engine| are not owned and must outlive
   // this instance.
-  IntelligenceServicesImpl(const std::string& story_id,
-                           const std::string& component_id,
+  IntelligenceServicesImpl(ComponentScopePtr scope,
                            ContextEngine* context_engine,
                            SuggestionEngine* suggestion_engine,
                            ActionLogFactory* action_log_factory);
@@ -34,8 +34,7 @@ class IntelligenceServicesImpl : public IntelligenceServices {
   void GetActionLog(fidl::InterfaceRequest<ActionLog> request) override;
 
  private:
-  const std::string story_id_;
-  const std::string component_id_;
+  ComponentScopePtr scope_;
   ContextEngine* const context_engine_;        // Not owned.
   SuggestionEngine* const suggestion_engine_;  // Not owned.
   ActionLogFactory* const action_log_factory_; // Not owned.

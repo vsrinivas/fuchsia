@@ -5,6 +5,7 @@
 #include <string>
 
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/user/scope.fidl.h"
 
 namespace maxwell {
 
@@ -12,7 +13,7 @@ class ContextRepository;
 
 class ContextPublisherImpl : public ContextPublisher {
  public:
-  ContextPublisherImpl(const std::string& source_url,
+  ContextPublisherImpl(ComponentScopePtr scope,
                        ContextRepository* repository);
   ~ContextPublisherImpl() override;
 

@@ -25,7 +25,9 @@ namespace {
 class NPublisher {
  public:
   NPublisher(ContextEngine* context_engine) {
-    context_engine->GetPublisher("NPublisher", pub_.NewRequest());
+    auto scope = ComponentScope::New();
+    scope->set_global_scope(GlobalScope::New());
+    context_engine->GetPublisher(std::move(scope), pub_.NewRequest());
   }
 
   void Publish(int n) { pub_->Publish("n", std::to_string(n)); }
@@ -87,7 +89,9 @@ class NProposals : public Proposinator, public ContextListener {
  public:
   NProposals(ContextEngine* context_engine, SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), listener_binding_(this) {
-    context_engine->GetProvider("NProposals", provider_.NewRequest());
+    auto scope = ComponentScope::New();
+    scope->set_global_scope(GlobalScope::New());
+    context_engine->GetProvider(std::move(scope), provider_.NewRequest());
 
     auto query = ContextQuery::New();
     query->topics.push_back("n");
@@ -147,7 +151,11 @@ class SuggestionEngineTest : public ContextEngineTestBase {
         std::make_unique<ApplicationEnvironmentHostImpl>(root_environment);
     agent_host->AddService<ContextProvider>(
         [this, url](fidl::InterfaceRequest<ContextProvider> request) {
-          context_engine()->GetProvider(url, std::move(request));
+          auto scope = ComponentScope::New();
+          auto agent_scope = AgentScope::New();
+          agent_scope->url = url;
+          scope->set_agent_scope(std::move(agent_scope));
+          context_engine()->GetProvider(std::move(scope), std::move(request));
         });
     agent_host->AddService<ProposalPublisher>(
         [this, url](fidl::InterfaceRequest<ProposalPublisher> request) {

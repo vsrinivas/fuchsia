@@ -63,6 +63,7 @@ source_set("common") {
   deps = [
     "//application/lib/app",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user:scope",
     "//apps/maxwell/src:application_environment_host_impl",
     "//apps/maxwell/src/user:agent_launcher",
     "//lib/mtl",

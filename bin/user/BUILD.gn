@@ -43,6 +43,7 @@ source_set("user_intelligence_provider") {
     "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/services/user",
+    "//apps/maxwell/services/user:scope",
     "//apps/network/services",
   ]
 
@@ -62,6 +63,7 @@ source_set("intelligence_services") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/services/user",
+    "//apps/maxwell/services/user:scope",
   ]
 }
 

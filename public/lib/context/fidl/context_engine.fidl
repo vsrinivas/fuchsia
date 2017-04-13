@@ -1,19 +1,20 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 module maxwell;
 
-import "context_publisher.fidl";
 import "context_provider.fidl";
+import "context_publisher.fidl";
+import "../user/scope.fidl";
 
 // Top-level service provider interface that vends services to read and write
 // context data.
 [ServiceName="maxwell.ContextEngine"]
 interface ContextEngine {
   // Gets a service that allows clients to publish context data.
-  GetPublisher(string url, ContextPublisher& request);
+  GetPublisher(ComponentScope scope, ContextPublisher& request);
 
   // Gets a service that allows clients to read context data.
-  GetProvider(string url, ContextProvider& request);
+  GetProvider(ComponentScope scope, ContextProvider& request);
 };

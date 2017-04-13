@@ -4,6 +4,12 @@
 
 import("//lib/fidl/fidl.gni")
 
+fidl("scope") {
+  sources = [
+    "scope.fidl",
+  ]
+}
+
 fidl("user") {
   sources = [
     "intelligence_services.fidl",
@@ -11,6 +17,7 @@ fidl("user") {
   ]
 
   deps = [
+    ":scope",
     "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/resolver",

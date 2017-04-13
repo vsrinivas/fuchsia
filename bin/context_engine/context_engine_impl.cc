@@ -5,9 +5,9 @@
 #include "apps/maxwell/src/context_engine/context_engine_impl.h"
 
 #include "application/lib/app/application_context.h"
+#include "apps/maxwell/src/context_engine/context_provider_impl.h"
 #include "apps/maxwell/src/context_engine/context_publisher_impl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
-#include "apps/maxwell/src/context_engine/context_provider_impl.h"
 
 namespace maxwell {
 
@@ -15,19 +15,18 @@ ContextEngineImpl::ContextEngineImpl() {}
 ContextEngineImpl::~ContextEngineImpl() = default;
 
 void ContextEngineImpl::GetPublisher(
-    const fidl::String& url,
+    ComponentScopePtr scope,
     fidl::InterfaceRequest<ContextPublisher> request) {
   publisher_bindings_.AddBinding(
-      std::make_unique<ContextPublisherImpl>(url, &repository_),
+      std::make_unique<ContextPublisherImpl>(std::move(scope), &repository_),
       std::move(request));
 }
 
 void ContextEngineImpl::GetProvider(
-    const fidl::String& url,
+    ComponentScopePtr scope,
     fidl::InterfaceRequest<ContextProvider> request) {
   provider_bindings_.AddBinding(
-      std::make_unique<ContextProviderImpl>(&repository_),
-      std::move(request));
+      std::make_unique<ContextProviderImpl>(&repository_), std::move(request));
 }
 
 }  // namespace maxwell

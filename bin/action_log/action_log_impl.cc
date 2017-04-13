@@ -19,13 +19,19 @@ ActionLogFactoryImpl::ActionLogFactoryImpl() {
 }
 
 void ActionLogFactoryImpl::GetActionLog(
-    const fidl::String& module_url,
+    ComponentScopePtr scope,
     fidl::InterfaceRequest<ActionLog> action_log_request) {
-  std::unique_ptr<ActionLogImpl> module_action_log_impl(new ActionLogImpl(
-      action_log_->GetActionLogger(module_url)));
+  std::string module_url;
+  if (scope->is_agent_scope()) {
+    module_url = scope->get_agent_scope()->url;
+  } else if (scope->is_module_scope()) {
+    module_url = scope->get_module_scope()->url;
+  }
+  std::unique_ptr<ActionLogImpl> module_action_log_impl(
+      new ActionLogImpl(action_log_->GetActionLogger(module_url)));
 
-  module_action_log_bindings_.AddBinding(
-      std::move(module_action_log_impl), std::move(action_log_request));
+  module_action_log_bindings_.AddBinding(std::move(module_action_log_impl),
+                                         std::move(action_log_request));
 }
 
 void ActionLogImpl::LogAction(const fidl::String& method,
@@ -39,4 +45,4 @@ void ActionLogImpl::LogAction(const fidl::String& method,
   log_action_(method, json_params);
 }
 
-}
+}  // namespace maxwell

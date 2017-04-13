@@ -8,4 +8,8 @@ fidl("action_log") {
   sources = [
     "action_log.fidl",
   ]
+
+  deps = [
+    "//apps/maxwell/services/user:scope",
+  ]
 }

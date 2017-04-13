@@ -18,12 +18,12 @@ class ContextEngineImpl : public ContextEngine {
  private:
   // |ContextEngine|
   void GetPublisher(
-      const fidl::String& url,
+      ComponentScopePtr scope,
       fidl::InterfaceRequest<ContextPublisher> request) override;
 
   // |ContextEngine|
   void GetProvider(
-      const fidl::String& url,
+      ComponentScopePtr scope,
       fidl::InterfaceRequest<ContextProvider> request) override;
 
   ContextRepository repository_;

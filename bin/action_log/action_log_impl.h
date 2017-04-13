@@ -19,13 +19,15 @@ class ActionLogFactoryImpl : public ActionLogFactory {
  public:
   ActionLogFactoryImpl();
 
+ private:
+  // |ActionLogFactory|
   void GetActionLog(
-      const fidl::String& module_url,
+      ComponentScopePtr scope,
       fidl::InterfaceRequest<ActionLog> action_log_request) override;
 
- private:
   std::shared_ptr<ActionLogData> action_log_;
-  fidl::BindingSet<ActionLog, std::unique_ptr<ActionLog>> module_action_log_bindings_;
+  fidl::BindingSet<ActionLog, std::unique_ptr<ActionLog>>
+      module_action_log_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ActionLogFactoryImpl);
 };
@@ -42,4 +44,4 @@ class ActionLogImpl : public ActionLog {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ActionLogImpl);
 };
-} // namespace maxwell
+}  // namespace maxwell

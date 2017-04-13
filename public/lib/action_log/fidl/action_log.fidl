@@ -4,9 +4,11 @@
 
 module maxwell;
 
+import "../user/scope.fidl";
+
 [ServiceName="maxwell.ActionLogFactory"]
 interface ActionLogFactory {
-  GetActionLog(string module_url, ActionLog& action_log);
+  GetActionLog(ComponentScope scope, ActionLog& action_log);
 };
 
 interface ActionLog {

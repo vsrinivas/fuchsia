@@ -8,7 +8,7 @@
 
 namespace maxwell {
 
-ContextPublisherImpl::ContextPublisherImpl(const std::string& /* source_url */,
+ContextPublisherImpl::ContextPublisherImpl(ComponentScopePtr /* scope */,
                                            ContextRepository* repository)
     : /* source_url_(source_url), */ repository_(repository) {}
 ContextPublisherImpl::~ContextPublisherImpl() = default;

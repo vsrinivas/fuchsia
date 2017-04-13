@@ -18,6 +18,7 @@ source_set("context_publisher_impl") {
   deps = [
     ":context_repository",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user:scope",
   ]
 }
 

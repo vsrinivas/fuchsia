@@ -11,33 +11,42 @@
 namespace maxwell {
 
 IntelligenceServicesImpl::IntelligenceServicesImpl(
-    const std::string& story_id, const std::string& component_id,
-    ContextEngine* context_engine, SuggestionEngine* suggestion_engine,
+    ComponentScopePtr scope,
+    ContextEngine* context_engine,
+    SuggestionEngine* suggestion_engine,
     ActionLogFactory* action_log_factory)
-    : story_id_(story_id),
-      component_id_(component_id),
+    : scope_(std::move(scope)),
       context_engine_(context_engine),
       suggestion_engine_(suggestion_engine),
       action_log_factory_(action_log_factory) {}
 
 void IntelligenceServicesImpl::GetContextProvider(
     fidl::InterfaceRequest<ContextProvider> request) {
-  context_engine_->GetProvider(component_id_, std::move(request));
+  context_engine_->GetProvider(scope_->Clone(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetContextPublisher(
     fidl::InterfaceRequest<ContextPublisher> request) {
-  context_engine_->GetPublisher(component_id_, std::move(request));
+  context_engine_->GetPublisher(scope_->Clone(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetProposalPublisher(
     fidl::InterfaceRequest<ProposalPublisher> request) {
-  suggestion_engine_->RegisterPublisher(component_id_, std::move(request));
+  fidl::String component_id;
+  if (scope_->is_agent_scope()) {
+    component_id = scope_->get_agent_scope()->url;
+  } else if (scope_->is_module_scope()) {
+    component_id = scope_->get_module_scope()->url;
+  } else {  // scope_->is_global_scope()
+    component_id = "global";
+  }
+
+  suggestion_engine_->RegisterPublisher(component_id, std::move(request));
 }
 
 void IntelligenceServicesImpl::GetActionLog(
     fidl::InterfaceRequest<ActionLog> request) {
-  action_log_factory_->GetActionLog(component_id_, std::move(request));
+  action_log_factory_->GetActionLog(scope_->Clone(), std::move(request));
 }
 
 }  // namespace maxwell
