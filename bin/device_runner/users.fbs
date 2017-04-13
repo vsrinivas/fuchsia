@@ -4,9 +4,12 @@
 
 namespace modular;
 
+enum IdentityProvider : byte { DEV, GOOGLE }
+
 table UserStorage {
-  username: string;
-  password_hash: string;
+  id: string;
+  identity_provider: IdentityProvider;
+  display_name: string;
   device_name: string;
   server_name: string;
 }

@@ -13,7 +13,6 @@
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
-#include "apps/modular/lib/auth/token_provider_impl.h"
 #include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
@@ -46,12 +45,12 @@ class UserRunnerImpl : UserRunner, UserShellContext {
  public:
   UserRunnerImpl(
       app::ApplicationEnvironmentPtr application_environment,
-      fidl::Array<uint8_t> user_id,
+      const fidl::String& user_id,
       const fidl::String& device_name,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
-      const fidl::String& auth_token,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
+      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserRunner> user_runner_request);
@@ -96,7 +95,6 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<AgentRunner> agent_runner_;
   std::unique_ptr<DeviceInfoImpl> device_info_impl_;
   std::unique_ptr<DeviceMapImpl> device_map_impl_;
-  TokenProviderImpl token_provider_impl_;
   std::string device_name_;
 
   // This component context is supplied to the user intelligence

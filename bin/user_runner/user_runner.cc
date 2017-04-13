@@ -28,23 +28,24 @@ class UserRunnerApp : UserRunnerFactory {
 
  private:
   // |UserRunnerFactory|
-  void Create(fidl::Array<uint8_t> user_id,
-              const fidl::String& device_name,
-              AppConfigPtr user_shell,
-              AppConfigPtr story_shell,
-              const fidl::String& auth_token,
-              fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
-              fidl::InterfaceHandle<UserContext> user_context,
-              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-              fidl::InterfaceRequest<UserRunner> user_runner_request) override {
+  void Create(
+      const fidl::String& user_id,
+      const fidl::String& device_name,
+      AppConfigPtr user_shell,
+      AppConfigPtr story_shell,
+      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+      fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
+      fidl::InterfaceHandle<UserContext> user_context,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<UserRunner> user_runner_request) override {
     app::ApplicationEnvironmentPtr env;
     application_context_->environment()->Duplicate(env.NewRequest());
     // Deleted in UserRunnerImpl::Terminate().
-    new UserRunnerImpl(std::move(env), std::move(user_id), device_name,
-                       std::move(user_shell), std::move(story_shell),
-                       auth_token, std::move(ledger_repository),
-                       std::move(user_context), std::move(view_owner_request),
-                       std::move(user_runner_request));
+    new UserRunnerImpl(
+        std::move(env), user_id, device_name, std::move(user_shell),
+        std::move(story_shell), std::move(ledger_repository),
+        std::move(token_provider_factory), std::move(user_context),
+        std::move(view_owner_request), std::move(user_runner_request));
   }
 
   std::shared_ptr<app::ApplicationContext> application_context_;

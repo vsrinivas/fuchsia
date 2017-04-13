@@ -126,6 +126,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       component_context_impl_(info.component_context_info,
                               kAgentComponentNamespace,
                               url),
+      token_provider_factory_(info.token_provider_factory),
       user_intelligence_provider_(info.user_intelligence_provider) {}
 
 AgentContextImpl::~AgentContextImpl() = default;
@@ -188,6 +189,11 @@ void AgentContextImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> request) {
   component_context_bindings_.AddBinding(&component_context_impl_,
                                          std::move(request));
+}
+
+void AgentContextImpl::GetTokenProvider(
+    fidl::InterfaceRequest<auth::TokenProvider> request) {
+  token_provider_factory_->GetTokenProvider(url_, std::move(request));
 }
 
 void AgentContextImpl::GetIntelligenceServices(

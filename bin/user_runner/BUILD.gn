@@ -30,7 +30,6 @@ executable("user_runner") {
     "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/services/user",
-    "//apps/modular/lib/auth:token_provider_impl",
     "//apps/modular/lib/device_info",
     "//apps/modular/lib/fidl:app_client",
     "//apps/modular/lib/fidl:array_to_string",

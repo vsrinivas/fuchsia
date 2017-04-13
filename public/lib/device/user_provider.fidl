@@ -4,6 +4,7 @@
 
 module modular;
 
+import "apps/modular/services/auth/account/account.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // Given by the |DeviceRunner| to the |DeviceShell| at Initialize() so the
@@ -11,36 +12,41 @@ import "apps/mozart/services/views/view_token.fidl";
 // |DeviceRunner|, and act on the provided information (including extending the
 // user database).
 interface UserProvider {
-  // Adds authentication information of a user to this device, which is enough
-  // to authorize this device to access the user's Ledger once the user is
-  // authenticated by Login().
+  // Adds information of a user that can be used to authenticate her/him to this
+  // device. Once successfully added, the user can login to the same device via
+  // Login().
   //
-  // |password| is nullable for ease of development.
+  // |identity_provider| is the identity provider to use for identification.
   //
-  // |devicename| is the user provided name for this device.
+  // |display_name| is the name which is displayed to the user. Ideally it
+  // should be fetched from the identity provider.
   //
-  // |servername| is the cloud location used to sync the user's Ledger.
-  AddUser(string username, string? password, string devicename,
-          string servername);
+  // |server_name| is the cloud location used to sync the user's Ledger from.
+  //
+  // |account| is NULL if there was an error during identification and
+  // |error_code| is set.
+  AddUser(auth.IdentityProvider identity_provider, string display_name,
+          string device_name, string server_name) =>
+      (auth.Account? account, string? error_code);
 
-  // Authenticates a user and authorizes this device to access the user's
-  // Ledger. The authentication information is usually obtained from a login
-  // dialog presented by the |DeviceShell|, or, in development, from command
-  // line arguments passed to a development specific implementation of
-  // |DeviceShell|.
+  // Uses the credentials provided in AddUser() to start a user session. This
+  // would mean syncing with the user's ledger instance and displaying a user
+  // shell with all of the user's stories.
+  //
+  // |account_id| is received from either AddUser() or PreviousUsers(). It
+  // can be NULL which means logging-in in an incognito mode.
   //
   // |view_owner| is the view given to the |UserShell| started for the newly
-  // authenticated user.
+  // logged-in user.
   //
-  // If authentication fails, |user_controller| is closed.
-  //
-  // NOTE: |auth_token| is a temporary way to provide authentication tokens to
-  // email agent.
-  Login(string username, string? password, string? auth_token,
-        mozart.ViewOwner& view_owner, UserController& user_controller);
+  // If login fails, |user_controller| is closed.
+  // TODO(alhaad): In the future, we want to protect Login() with a password,
+  // Android lock pattern, etc.
+  Login(string? account_id, mozart.ViewOwner& view_owner,
+        UserController& user_controller);
 
   // List of all users who have authenticated to this device in the past.
-  PreviousUsers() => (array<string> users);
+  PreviousUsers() => (array<auth.Account> accounts);
 };
 
 // Provided by the |DeviceRunner| to the |DeviceShell| when it authenticates a

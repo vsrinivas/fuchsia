@@ -1,0 +1,45 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular.auth;
+
+import "apps/modular/services/auth/account/account.fidl";
+import "apps/modular/services/auth/token_provider.fidl";
+import "apps/modular/services/device/device_shell.fidl";
+
+// This is only meant to be used by the Framework.
+// An interface that allows the Framework to talk to the token manager service
+// to add new accounts or be able to get a |TokenProviderFactory| that can
+// be used to provide specialized instances of |TokenProvider| to third party
+// agents.
+[ServiceName="modular.auth.AccountProvider"]
+interface AccountProvider {
+  // Called by the Framework once, right after starting up a token manager
+  // application.
+  Initialize(AccountProviderContext account_provider_context);
+
+  // Adds a new user account. This involves talking to the identity provider.
+  // |display_name| is a *temporary* field to associate a human-readable name
+  // with an account. In the future we want to get this from the identity
+  // provider.
+  AddAccount(IdentityProvider identity_provider, string? display_name)
+       => (Account? account, string? error_code);
+
+  // Get a |TokenProviderFactory| associated with an |account_id|. It is used
+  // by the Framework to provide a specialized instances of |TokenProvider| to
+  // third party agents.
+  GetTokenProviderFactory(string account_id,
+                          TokenProviderFactory& request);
+};
+
+// Implemented by device runner and provided to AccountProvider.Initialize().
+// It is used by the token mangager application to request the Framework to
+// display a view to the user.
+interface AccountProviderContext {
+  GetAuthenticationContext(string account_id, AuthenticationContext& request);
+};
+
+interface TokenProviderFactory {
+  GetTokenProvider(string application_url, TokenProvider& request);
+};

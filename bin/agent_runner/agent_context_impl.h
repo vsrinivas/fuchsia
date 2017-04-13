@@ -16,6 +16,7 @@
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
+#include "apps/modular/services/auth/account_provider.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -31,6 +32,7 @@ class AgentRunner;
 struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
   app::ApplicationLauncher* const app_launcher;
+  auth::TokenProviderFactory* const token_provider_factory;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider;
 };
 
@@ -63,6 +65,9 @@ class AgentContextImpl : AgentContext, AgentController {
   // |AgentContext|
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> request) override;
+  // |AgentContext|
+  void GetTokenProvider(
+      fidl::InterfaceRequest<auth::TokenProvider> token_provider) override;
   // |AgentContext|
   void ScheduleTask(TaskInfoPtr task_info) override;
   // |AgentContext|
@@ -98,6 +103,7 @@ class AgentContextImpl : AgentContext, AgentController {
   ComponentContextImpl component_context_impl_;
   fidl::BindingSet<ComponentContext> component_context_bindings_;
 
+  auth::TokenProviderFactory* const token_provider_factory_;  // Not owned.
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.
 

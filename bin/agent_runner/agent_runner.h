@@ -19,6 +19,7 @@
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "apps/modular/services/agent/agent_provider.fidl.h"
+#include "apps/modular/services/auth/account_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -38,11 +39,13 @@ class XdrContext;
 // manages the life time of a running agent.
 class AgentRunner : AgentProvider, PageClient {
  public:
-  AgentRunner(app::ApplicationLauncher* application_launcher,
-              MessageQueueManager* message_queue_manager,
-              ledger::LedgerRepository* ledger_repository,
-              ledger::PagePtr page,
-              maxwell::UserIntelligenceProvider* user_intelligence_provider);
+  AgentRunner(
+      app::ApplicationLauncher* application_launcher,
+      MessageQueueManager* message_queue_manager,
+      ledger::LedgerRepository* ledger_repository,
+      ledger::PagePtr page,
+      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+      maxwell::UserIntelligenceProvider* user_intelligence_provider);
   ~AgentRunner();
 
   void Connect(fidl::InterfaceRequest<AgentProvider> request);
@@ -136,6 +139,7 @@ class AgentRunner : AgentProvider, PageClient {
   MessageQueueManager* const message_queue_manager_;
   ledger::LedgerRepository* const ledger_repository_;
   ledger::PagePtr page_;
+  auth::TokenProviderFactoryPtr token_provider_factory_;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
 
   fidl::BindingSet<AgentProvider> agent_provider_bindings_;

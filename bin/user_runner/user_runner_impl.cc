@@ -11,7 +11,6 @@
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
-#include "apps/modular/lib/auth/token_provider_impl.h"
 #include "apps/modular/lib/device_info/device_info.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
@@ -81,12 +80,12 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 UserRunnerImpl::UserRunnerImpl(
     app::ApplicationEnvironmentPtr application_environment,
-    fidl::Array<uint8_t> user_id,
+    const fidl::String& user_id,
     const fidl::String& device_name,
     AppConfigPtr user_shell,
     AppConfigPtr story_shell,
-    const fidl::String& auth_token,
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
+    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     fidl::InterfaceRequest<UserRunner> user_runner_request)
@@ -95,9 +94,8 @@ UserRunnerImpl::UserRunnerImpl(
       ledger_repository_(
           ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
       user_scope_(std::move(application_environment),
-                  std::string(kUserScopeLabelPrefix) + to_hex_string(user_id)),
+                  std::string(kUserScopeLabelPrefix) + user_id.data()),
       user_shell_(user_scope_.GetLauncher(), std::move(user_shell)),
-      token_provider_impl_(auth_token),
       device_name_(device_name) {
   binding_->set_connection_error_handler([this] { Terminate([]{}); });
 
@@ -106,11 +104,6 @@ UserRunnerImpl::UserRunnerImpl(
   mozart::ViewProviderPtr view_provider;
   ConnectToService(user_shell_.services(), view_provider.NewRequest());
   view_provider->CreateView(std::move(view_owner_request), nullptr);
-
-  user_scope_.AddService<TokenProvider>(
-      [this](fidl::InterfaceRequest<TokenProvider> request) {
-        token_provider_impl_.AddBinding(std::move(request));
-      });
 
   // Open Ledger.
 
@@ -139,7 +132,7 @@ UserRunnerImpl::UserRunnerImpl(
   });
 
   // DeviceInfo service
-  std::string device_id = LoadDeviceID(to_hex_string(user_id));
+  std::string device_id = LoadDeviceID(user_id);
   std::string device_profile = LoadDeviceProfile();
 
   device_info_impl_.reset(
@@ -170,7 +163,7 @@ UserRunnerImpl::UserRunnerImpl(
                      }
                    });
   std::string message_queue_path = kMessageQueuePath;
-  message_queue_path.append(to_hex_string(user_id));
+  message_queue_path.append(user_id);
   if (!files::CreateDirectory(message_queue_path)) {
     FTL_LOG(FATAL) << "Failed to create message queue directory: "
                    << message_queue_path;
@@ -221,10 +214,10 @@ UserRunnerImpl::UserRunnerImpl(
                      }
                    });
 
-  agent_runner_.reset(
-      new AgentRunner(user_scope_.GetLauncher(), message_queue_manager_.get(),
-                      ledger_repository_.get(), std::move(agent_runner_page),
-                      user_intelligence_provider_.get()));
+  agent_runner_.reset(new AgentRunner(
+      user_scope_.GetLauncher(), message_queue_manager_.get(),
+      ledger_repository_.get(), std::move(agent_runner_page),
+      std::move(token_provider_factory), user_intelligence_provider_.get()));
 
   ComponentContextInfo component_context_info{message_queue_manager_.get(),
                                               agent_runner_.get(),

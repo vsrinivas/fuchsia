@@ -158,12 +158,15 @@ AgentRunner::AgentRunner(
     MessageQueueManager* const message_queue_manager,
     ledger::LedgerRepository* const ledger_repository,
     ledger::PagePtr page,
+    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
     : PageClient("AgentRunner", page.get(), nullptr),
       application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
       page_(std::move(page)),
+      token_provider_factory_(auth::TokenProviderFactoryPtr::Create(
+          std::move(token_provider_factory))),
       user_intelligence_provider_(user_intelligence_provider),
       terminating_(std::make_shared<bool>(false)) {
   new InitializeCall(&operation_queue_, this, page_snapshot());
@@ -427,6 +430,7 @@ AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
     ComponentContextInfo component_info = {message_queue_manager_, this,
                                            ledger_repository_};
     AgentContextInfo info = {component_info, application_launcher_,
+                             token_provider_factory_.get(),
                              user_intelligence_provider_};
     std::tie(found_it, inserted) = running_agents_.emplace(
         agent_url, std::make_unique<AgentContextImpl>(info, agent_url));

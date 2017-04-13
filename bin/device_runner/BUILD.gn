@@ -12,18 +12,6 @@ group("all") {
   ]
 }
 
-source_set("password_hash") {
-  sources = [
-    "password_hash.cc",
-    "password_hash.h",
-  ]
-
-  deps = [
-    "//lib/ftl",
-    "//third_party/boringssl",
-  ]
-}
-
 flatbuffer("users") {
   sources = [
     "users.fbs",
@@ -38,7 +26,6 @@ executable("device_runner") {
   ]
 
   deps = [
-    ":password_hash",
     ":users",
     "//application/lib/app",
     "//application/services",
@@ -47,6 +34,7 @@ executable("device_runner") {
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:scope",
     "//apps/modular/lib/util:filesystem",
+    "//apps/modular/services/auth",
     "//apps/modular/services/config",
     "//apps/modular/services/device",
     "//apps/modular/services/user:private",
@@ -82,19 +70,5 @@ executable("dev_device_shell") {
     "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-  ]
-}
-
-source_set("unittests") {
-  testonly = true
-
-  sources = [
-    "password_hash_unittests.cc",
-  ]
-
-  deps = [
-    ":password_hash",
-    "//third_party/boringssl",
-    "//third_party/gtest",
   ]
 }

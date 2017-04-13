@@ -77,12 +77,39 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
 
   void Connect() {
     if (user_provider_ && view_owner_request_) {
-      user_provider_->AddUser(settings_.user, nullptr, settings_.device_name,
-                              "ledger.fuchsia.com");
-      user_provider_->Login(settings_.user, nullptr, nullptr,
-                            std::move(view_owner_request_),
-                            user_controller_.NewRequest());
-      user_controller_->Watch(user_watcher_binding_.NewBinding());
+      user_provider_->PreviousUsers(
+          [this](fidl::Array<modular::auth::AccountPtr> accounts) {
+            FTL_LOG(INFO) << "Found " << accounts.size()
+                          << " users in the user "
+                          << "database";
+
+            if (!settings_.user.empty()) {
+              // Not running in incognito mode. Add the user if not already
+              // added.
+              bool account_found = false;
+              for (const auto& account : accounts) {
+                if (account->id == settings_.user) {
+                  account_found = true;
+                  break;
+                }
+              }
+              if (!account_found) {
+                user_provider_->AddUser(
+                    modular::auth::IdentityProvider::DEV, settings_.user,
+                    settings_.device_name, "" /* servername */,
+                    [this](modular::auth::AccountPtr account,
+                           const fidl::String& status) {
+
+                    });
+              }
+            }
+
+            user_provider_->Login(std::move(settings_.user),
+                                  std::move(view_owner_request_),
+                                  user_controller_.NewRequest());
+            user_controller_->Watch(user_watcher_binding_.NewBinding());
+
+          });
     }
   }
 

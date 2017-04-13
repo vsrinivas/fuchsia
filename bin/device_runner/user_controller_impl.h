@@ -9,6 +9,7 @@
 #include "application/services/application_environment.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/lib/fidl/scope.h"
+#include "apps/modular/services/auth/account_provider.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -62,8 +63,8 @@ class UserControllerImpl : UserController {
       const std::string& user_runner,
       const AppConfig& user_shell,
       const AppConfig& story_shell,
-      const std::string& auth_token,
-      fidl::Array<uint8_t> user_id,
+      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+      const std::string& user_id,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserController> user_controller,

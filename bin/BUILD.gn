@@ -10,18 +10,9 @@ group("src") {
     "component_manager",
     "device_info",
     "device_runner:all",
+    "oauth_token_manager:all",
     "run_component",
     "story_runner:all",
     "user_runner:all",
-    "test",
-  ]
-}
-
-executable ("modular_unittests") {
-  testonly = true
-
-  deps = [
-    "device_runner:unittests",
-    "test:main",
   ]
 }

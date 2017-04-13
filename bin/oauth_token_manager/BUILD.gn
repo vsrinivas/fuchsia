@@ -1,0 +1,28 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  deps = [
+    ":oauth_token_manager",
+  ]
+}
+
+executable("oauth_token_manager") {
+  sources = [
+    "oauth_token_manager.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/modular/lib/fidl:operation",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/auth",
+    "//apps/network/services",
+    "//apps/web_runner/services",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//lib/mtl/tasks",
+  ]
+}

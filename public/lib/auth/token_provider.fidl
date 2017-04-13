@@ -2,12 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+module modular.auth;
 
-// This service is included in the ApplicationEnvironment of all applications
-// running in the user scope. Currently, |auth_token| contains a JSON string
-// (see //apps/modules/email/config.json) and will evolve based on requirement.
-[ServiceName="modular.TokenProvider"]
+// This interface provides tokens for the currently logged-in user.
+// This service can be obtained by agents via AgentContext.GetTokenProvider().
 interface TokenProvider {
-  GetAuthToken() => (string? auth_token);
+  // Gets the access token (with pre-defined scopes) for this user. NULL is
+  // returned if running in incognito mode). Current implementation refreshes
+  // the access token every time before returning it.
+  GetAccessToken() => (string? access_token);
+  GetIdToken() => (string? id_token);
+
+  // Returns the client id used to fetch the above tokens.
+  GetClientId() => (string? client_id);
 };
+
+
