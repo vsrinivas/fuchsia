@@ -15,10 +15,6 @@
             "bootfs_path": "bin/sftp-server"
         },
         {
-            "binary": "ssh",
-            "bootfs_path": "bin/ssh"
-        },
-        {
             "binary": "sshd",
             "bootfs_path": "bin/sshd"
         },
