@@ -360,9 +360,9 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendStreamedBody() {
           continue;  // retry now that the socket is ready
       }
       if (result != NO_ERROR) {
-        // If the other end closes the socket, ERR_REMOTE_CLOSED
+        // If the other end closes the socket, ERR_PEER_CLOSED
         // can happen.
-        if (result != ERR_REMOTE_CLOSED)
+        if (result != ERR_PEER_CLOSED)
           FTL_LOG(ERROR) << "SendStreamedBody: result=" << result;
         return result;
       }

@@ -30,8 +30,8 @@ mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
 
     if (result != NO_ERROR) {
       // If the other end closes the socket,
-      // we get ERR_REMOTE_CLOSED.
-      if (result == ERR_REMOTE_CLOSED) {
+      // we get ERR_PEER_CLOSED.
+      if (result == ERR_PEER_CLOSED) {
         result = NO_ERROR;
         break;
       }

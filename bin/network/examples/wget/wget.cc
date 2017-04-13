@@ -48,7 +48,7 @@ class ResponsePrinter {
       if (result == ERR_SHOULD_WAIT) {
         body.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                       MX_TIME_INFINITE, nullptr);
-      } else if (result == ERR_REMOTE_CLOSED) {
+      } else if (result == ERR_PEER_CLOSED) {
         // not an error
         break;
       } else if (result == NO_ERROR) {
