@@ -60,9 +60,6 @@ typedef struct {
     list_node_t free_acl_read_reqs;
     list_node_t free_acl_write_reqs;
 
-    // thread we use to process packets we receive on the channels.
-    thrd_t read_thread;
-
     mtx_t mutex;
 } hci_t;
 #define get_hci(dev) containerof(dev, hci_t, device)
@@ -84,19 +81,22 @@ static void queue_interrupt_requests_locked(hci_t* hci) {
 }
 
 static void cmd_channel_cleanup_locked(hci_t* hci) {
-    assert(hci->cmd_channel != MX_HANDLE_INVALID);
+    if (hci->cmd_channel == MX_HANDLE_INVALID) return;
+
     mx_handle_close(hci->cmd_channel);
     hci->cmd_channel = MX_HANDLE_INVALID;
 }
 
 static void acl_channel_cleanup_locked(hci_t* hci) {
-    assert(hci->acl_channel != MX_HANDLE_INVALID);
+    if (hci->acl_channel == MX_HANDLE_INVALID) return;
+
     mx_handle_close(hci->acl_channel);
     hci->acl_channel = MX_HANDLE_INVALID;
 }
 
 static void snoop_channel_cleanup_locked(hci_t* hci) {
-    assert(hci->snoop_channel != MX_HANDLE_INVALID);
+    if (hci->snoop_channel == MX_HANDLE_INVALID) return;
+
     mx_handle_close(hci->snoop_channel);
     hci->snoop_channel = MX_HANDLE_INVALID;
 }
@@ -386,6 +386,8 @@ done:
     hci->read_thread_running = false;
     mtx_unlock(&hci->mutex);
 
+    printf("hci_read_thread: exiting\n");
+
     return 0;
 }
 
@@ -467,15 +469,14 @@ static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, s
         result = sizeof(*reply);
     }
 
-    // TODO(armansito): Put the IOCTL for ACL back in when it's ready to test.
-
     hci_build_read_wait_items_locked(hci);
 
     // Kick off the hci_read_thread if it's not already running.
     if (result >= 0 && !hci->read_thread_running) {
-        thrd_create_with_name(&hci->read_thread, hci_read_thread, hci, "hci_read_thread");
+        thrd_t read_thread;
+        thrd_create_with_name(&read_thread, hci_read_thread, hci, "hci_read_thread");
         hci->read_thread_running = true;
-        thrd_detach(hci->read_thread);
+        thrd_detach(read_thread);
     }
 
 done:
@@ -485,6 +486,16 @@ done:
 
 static void hci_unbind(mx_device_t* device) {
     hci_t* hci = get_hci(device);
+
+    // Close the transport channels so that the host stack is notified of device removal.
+    mtx_lock(&hci->mutex);
+
+    cmd_channel_cleanup_locked(hci);
+    acl_channel_cleanup_locked(hci);
+    snoop_channel_cleanup_locked(hci);
+
+    mtx_unlock(&hci->mutex);
+
     device_remove(&hci->device);
 }
 
@@ -504,20 +515,9 @@ static mx_status_t hci_release(mx_device_t* device) {
         iotxn_release(txn);
     }
 
-    if (hci->cmd_channel != MX_HANDLE_INVALID)
-        cmd_channel_cleanup_locked(hci);
-
-    if (hci->acl_channel != MX_HANDLE_INVALID)
-        acl_channel_cleanup_locked(hci);
-
-    if (hci->snoop_channel != MX_HANDLE_INVALID)
-        snoop_channel_cleanup_locked(hci);
-
     mtx_unlock(&hci->mutex);
 
-    thrd_join(hci->read_thread, NULL);
     mtx_destroy(&hci->mutex);
-
     free(hci);
 
     return NO_ERROR;
