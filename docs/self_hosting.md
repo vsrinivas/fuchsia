@@ -35,19 +35,8 @@ By default, this will leave the compiler in the
 git clone https://fuchsia.googlesource.com/third_party/make
 ```
 
-* In a new build directory, configure and build. This step requires a
-Linux-to-Fuchsia cross-compiler, but fortunately that compiler was built as an
-intermediate step in building the Fuchsia native tools. It can be found in the
-`gcc_none_toolchains` installation directory (which is the same as the source
-directory, by default), in the `x86_64-fuchsia-<gcc-ver>-Linux-x86_64`
-subdirectory.
-```bash
-mkdir <build-dir>
-cd <build-dir>
-<path-to-make-src>/configure \
-	--host=x86_64-fuchsia \
-	CC=<path-to-host-to-fuchsia-compiler>/bin/x86_64-fuchsia-gcc
-```
+* Follow the instructions provided in README.md of the GNU make sources
+to build a Fuchsia-hosted version of make.
 
 ## Build utilities (Shouldn't be necessary)
 The following utilities are required by the build scripts. As long as your
