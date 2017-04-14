@@ -2,10 +2,7 @@
     "imports": [
         "audio",
         "init",
-        "magma"
-    ],
-    "labels": [
-    ],
-    "binaries": [
+        "magma",
+        "wlan"
     ]
 }
