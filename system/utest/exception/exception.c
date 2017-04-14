@@ -152,6 +152,11 @@ static bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
 {
     ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), NO_ERROR, "mx_port_wait failed");
     ASSERT_EQ(packet->hdr.key, 0u, "bad report key");
+    const mx_exception_report_t* report = &packet->report;
+    unittest_printf("exception received: pid %"
+                    PRIu64 ", tid %" PRIu64 ", type %d\n",
+                    report->context.pid, report->context.tid,
+                    report->header.type);
     return true;
 }
 
@@ -168,11 +173,6 @@ static bool verify_exception(const mx_exception_packet_t* packet,
                              mx_koid_t* tid)
 {
     const mx_exception_report_t* report = &packet->report;
-
-    unittest_printf("%s: exception received: pid %"
-                    PRIu64 ", tid %" PRIu64 ", kind %d\n",
-                    kind, report->context.pid, report->context.tid,
-                    report->header.type);
 
     EXPECT_EQ(report->header.type, expected_type, "unexpected exception type");
 
