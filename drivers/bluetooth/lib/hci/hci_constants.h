@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
 // This file contains constants and numbers used in HCI packet payloads.
 
@@ -123,6 +124,56 @@ enum Status : uint8_t {
   kUnknownAdvertisingIdentifier                 = 0x42,
   kLimitReached                                 = 0x43,
   kOperationCancelledByHost                     = 0x44,
+};
+
+// Bitmask values for the 8-octet Local Supported LMP Features bit-field. See Core Spec
+// v5.0, Volume 2, Part C, Section 3.3 "Feature Mask Definition".
+enum class LMPFeature : uint64_t {
+  // Octet 0
+  k3SlotPackets   = (1 << 0),
+  k5SlotPackets   = (1 << 1),
+  kEncryption     = (1 << 2),
+  kSlotOffset     = (1 << 3),
+  kTimingAccuracy = (1 << 4),
+  kRoleSwitch     = (1 << 5),
+  kHoldMode       = (1 << 6),
+  kSniffMode      = (1 << 7),
+
+  // Octet 1
+  // Reserved (1 << 0 + 8)
+  // TODO(armansito): Add definitions
+
+  // Octet 2
+  // TODO(armansito): Add definitions
+
+  // Octet 3
+  // TODO(armansito): Add definitions
+
+  // Octet 4
+  kEV4Packets         = (1ull << 32),
+  kEV5Packets         = (1ull << 33),
+  // Reserved
+  kAFHCapableSlave    = (1ull << 35),
+  kAFHClassSlave      = (1ull << 36),
+  kBREDRNotSupported  = (1ull << 37),
+  kLESupported        = (1ull << 38),
+  k3SlotEDRACLPackets = (1ull << 39),
+
+  // Octet 5
+  // TODO(armansito): Add definitions
+
+  // Octet 6
+  // TODO(armansito): Add definitions
+
+  // Octet 7
+  kLinkSupervisionTimeoutChangedEvent = (1ull << 56),
+  kInquiryTxPowerLevel                = (1ull << 57),
+  kEnhancedPowerControl               = (1ull << 58),
+  // Reserved
+  // Reserved
+  // Reserved
+  // Reserved
+  kExtendedFeatures                   = (1ull << 63),
 };
 
 // Bitmask values for the 64-octet Supported Commands bit-field. See Core Spec

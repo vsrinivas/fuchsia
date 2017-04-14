@@ -396,8 +396,8 @@ struct ReadLocalSupportedFeaturesReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // Bit Mask List of LMP features. For details see Core Spec v4.2, Volume 2,
-  // Part C, Link Manager Protocol Specification.
+  // Bit Mask List of LMP features. See enum class LMPFeature in hci_constants.h for how to
+  // interpret this bitfield.
   uint64_t lmp_features;
 } __PACKED;
 
@@ -1202,7 +1202,7 @@ struct LEReadLocalSupportedFeaturesReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  // Bit Mask List of supported LE features. See enum class LEFeatures in
+  // Bit Mask List of supported LE features. See enum class LESupportedFeature in
   // hci_constants.h.
   uint64_t le_features;
 } __PACKED;
@@ -2554,6 +2554,14 @@ struct LESetPrivacyModeCommandParams {
   // The privacy mode to be used for the given entry on the resolving list.
   LEPrivacyMode privacy_mode;
 } __PACKED;
+
+// ======= Vendor Command =======
+// The OGF of 0x3F is reserved for vendor-specific debug commands (see Core Spec v5.0, Vol 2, Part
+// E, Section 5.4.1).
+constexpr uint8_t kVendorOGF = 0x3F;
+constexpr OpCode VendorOpCode(const uint8_t ocf) {
+  return DefineOpCode(kVendorOGF, ocf);
+}
 
 }  // namespace hci
 }  // namespace bluetooth
