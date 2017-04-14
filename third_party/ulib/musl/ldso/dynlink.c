@@ -1246,11 +1246,7 @@ weak_alias(dl_debug_state, _dl_debug_state);
 __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
     pthread_t self = __pthread_self();
 
-    /* Block signals to make accessing new TLS async-signal-safe */
-    sigset_t set;
-    __block_all_sigs(&set);
     if (v[0] <= (size_t)self->head.dtv[0]) {
-        __restore_sigs(&set);
         return (char*)self->head.dtv[v[0]] + v[1] + DTP_OFFSET;
     }
 
@@ -1282,7 +1278,6 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
         if (p->tls_id == v[0])
             break;
     }
-    __restore_sigs(&set);
     return mem + v[1] + DTP_OFFSET;
 }
 

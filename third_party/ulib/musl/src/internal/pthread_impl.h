@@ -162,10 +162,6 @@ int __timedwait(atomic_int*, int, clockid_t, const struct timespec*)
 void __thread_allocation_inhibit(void) ATTR_LIBC_VISIBILITY;
 void __thread_allocation_release(void) ATTR_LIBC_VISIBILITY;
 
-void __block_all_sigs(void*) ATTR_LIBC_VISIBILITY;
-void __block_app_sigs(void*) ATTR_LIBC_VISIBILITY;
-void __restore_sigs(void*) ATTR_LIBC_VISIBILITY;
-
 void __pthread_tsd_run_dtors(void) ATTR_LIBC_VISIBILITY;
 
 static inline int __sigaltstack(const stack_t* restrict ss, stack_t* restrict old) {

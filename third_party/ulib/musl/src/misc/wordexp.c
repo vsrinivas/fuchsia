@@ -2,7 +2,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,7 +40,6 @@ int wordexp(const char* s, wordexp_t* we, int flags) {
     char** wv = 0;
     int p[2];
     pid_t pid;
-    sigset_t set;
 
     if (flags & WRDE_REUSE)
         wordfree(we);
@@ -113,9 +111,7 @@ int wordexp(const char* s, wordexp_t* we, int flags) {
 
     if (pipe2(p, O_CLOEXEC) < 0)
         goto nospace;
-    __block_all_sigs(&set);
     pid = fork();
-    __restore_sigs(&set);
     if (pid < 0) {
         close(p[0]);
         close(p[1]);

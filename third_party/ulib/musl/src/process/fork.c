@@ -1,6 +1,5 @@
 #include "libc.h"
 #include "pthread_impl.h"
-#include <signal.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -10,9 +9,7 @@ weak_alias(dummy, __fork_handler);
 
 pid_t fork(void) {
     pid_t ret;
-    sigset_t set;
     __fork_handler(-1);
-    __block_all_sigs(&set);
     // TODO(kulakowski) Some level of fork emulation.
     ret = ENOSYS;
 
@@ -24,7 +21,6 @@ pid_t fork(void) {
         if (self == NULL)
             __builtin_trap();
     }
-    __restore_sigs(&set);
     __fork_handler(!ret);
     return ret;
 }

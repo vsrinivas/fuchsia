@@ -15,15 +15,6 @@
 
 static void start_pthread(void* arg) {
     pthread_t self = arg;
-    // TODO(kulakowski) Signals?
-    // if (self->startlock[0]) {
-    //     __wait(self->startlock, 0, 1, 1);
-    //     if (self->startlock[0]) {
-    //         self->detached = 2;
-    //         pthread_exit(0);
-    //     }
-    //     __restore_sigs(self->sigmask);
-    // }
     mxr_tp_set(mxr_thread_get_handle(&self->mxr_thread), pthread_to_tp(self));
     pthread_exit(self->start(self->start_arg));
 }
@@ -63,32 +54,10 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     new->start = entry;
     new->start_arg = arg;
 
-    // TODO(kulakowski) Signals?
-    // int do_sched = 0;
-    // if (attr._a_sched) {
-    //     do_sched = new->startlock[0] = 1;
-    //     __block_app_sigs(new->sigmask);
-    // }
-
     atomic_fetch_add(&libc.thread_count, 1);
     status = mxr_thread_start(&new->mxr_thread,
                               (uintptr_t)new->safe_stack.iov_base,
                               new->safe_stack.iov_len, start, new);
-
-    // TODO(kulakowski) Signals?
-    // if (do_sched) {
-    //     __restore_sigs(new->sigmask);
-    // }
-
-    // TODO(kulakowski)
-    // if (do_sched) {
-    //     ret = __syscall(SYS_sched_setscheduler, new->tid,
-    //                     attr._a_policy, &attr._a_prio);
-    //     atomic_store(new->startlock, ret < 0 ? 2 : 0);
-    //     __wake(new->startlock, 1, 1);
-    //     if (ret < 0)
-    //         return -ret;
-    // }
 
     if (status == NO_ERROR) {
         *res = new;
@@ -128,13 +97,6 @@ _Noreturn void pthread_exit(void* result) {
 
     __pthread_tsd_run_dtors();
 
-    /* Block all signals before decrementing the live thread count.
-     * This is important to ensure that dynamically allocated TLS
-     * is not under-allocated/over-committed, and possibly for other
-     * reasons as well. */
-    // TODO(kulakowski) Signals?
-    // __block_all_sigs(&set);
-
     /* It's impossible to determine whether this is "the last thread"
      * until performing the atomic decrement, since multiple threads
      * could exit at the same time. For the last thread, revert the
@@ -142,8 +104,6 @@ _Noreturn void pthread_exit(void* result) {
      * stdio cleanup code a consistent state. */
     if (atomic_fetch_sub(&libc.thread_count, 1) == -1) {
         atomic_store(&libc.thread_count, 0);
-        // TODO(kulakowski) Signals.
-        // __restore_sigs(&set);
         exit(0);
     }
 

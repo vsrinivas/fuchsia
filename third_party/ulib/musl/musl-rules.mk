@@ -646,7 +646,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/sched/sched_yield.c \
     $(LOCAL_DIR)/src/setjmp/longjmp.c \
     $(LOCAL_DIR)/src/setjmp/setjmp.c \
-    $(LOCAL_DIR)/src/signal/block.c \
     $(LOCAL_DIR)/src/signal/getitimer.c \
     $(LOCAL_DIR)/src/signal/kill.c \
     $(LOCAL_DIR)/src/signal/killpg.c \
