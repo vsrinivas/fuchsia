@@ -11,6 +11,7 @@
 #include <hid/hid.h>
 #include <mxio/vfs.h>
 #include <magenta/listnode.h>
+#include <magenta/thread_annotations.h>
 #include <stdbool.h>
 #include <threads.h>
 
@@ -94,11 +95,13 @@ typedef struct vc_device {
 #define VC_FLAG_RESETSCROLL (1 << 1)
 #define VC_FLAG_FULLSCREEN  (1 << 2)
 
+extern mtx_t g_vc_lock;
+
 const gfx_font* vc_get_font();
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev);
 void vc_device_free(vc_device_t* dev);
 
-void vc_get_status_line(char* str, int n);
+void vc_get_status_line(char* str, int n) TA_REQ(g_vc_lock);
 
 enum vc_battery_state {
     UNAVAILABLE = 0, NOT_CHARGING, CHARGING, ERROR
@@ -108,14 +111,15 @@ typedef struct vc_battery_info {
     enum vc_battery_state state;
     int pct;
 } vc_battery_info_t;
-void vc_get_battery_info(vc_battery_info_t* info);
+void vc_get_battery_info(vc_battery_info_t* info) TA_REQ(g_vc_lock);
 
-void vc_device_write_status(vc_device_t* dev);
-void vc_device_render(vc_device_t* dev);
+void vc_device_write_status(vc_device_t* dev) TA_REQ(g_vc_lock);
+void vc_device_render(vc_device_t* dev) TA_REQ(g_vc_lock);
 void vc_device_invalidate_all_for_testing(vc_device_t* dev);
 int vc_device_get_scrollback_lines(vc_device_t* dev);
-void vc_device_scroll_viewport(vc_device_t* dev, int dir);
-void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen);
+void vc_device_scroll_viewport(vc_device_t* dev, int dir) TA_REQ(g_vc_lock);
+void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen)
+    TA_REQ(g_vc_lock);
 
 ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count,
                         mx_off_t off);
