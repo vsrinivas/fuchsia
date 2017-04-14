@@ -1,6 +1,8 @@
 <html>
 <head>
   <title>MI Dashboard</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js">
+  </script>
 </head>
 <body>
   <h1>Machine Intelligence Dashboard</h1>
@@ -9,5 +11,25 @@
     below this paragraph.
   </p>
   <img src="snooty-badge.jpg"/>
+  <p>
+    Modular State: <span id="modular_state"></span>
+  </p>
+  <script>
+    // this is a quick test of the data URLs from the server
+    // will be removed in favor of however we decide to do this in the end
+    $(function() {
+      // every 1s
+      setInterval(function() {
+        // load the modular_state context value from the server and
+        // update it on the page
+        $.ajax({
+          url: "/data/context/modular_state",
+          success: function( result ) {
+            $( "#modular_state" ).html( result );
+          }
+      }, 1000);
+    })
+});
+  </script>
 </body>
 </html>
