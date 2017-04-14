@@ -151,8 +151,6 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
     if (vc_handle_control_keys(keycode, modifiers))
         return;
 
-    mxtl::AutoLock lock2(&g_active_vc->fifo.lock);
-
     if (mx_hid_fifo_size(&g_active_vc->fifo) == 0) {
         g_active_vc->flags |= VC_FLAG_RESETSCROLL;
     }
@@ -299,7 +297,7 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
 static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
 
-    mxtl::AutoLock lock(&vc->fifo.lock);
+    mxtl::AutoLock lock(&g_vc_lock);
 
     ssize_t result = mx_hid_fifo_read(&vc->fifo, buf, count);
     if (mx_hid_fifo_size(&vc->fifo) == 0) {
@@ -315,7 +313,6 @@ ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_
     vc_device_t* vc = get_vc_device(dev);
 
     mxtl::AutoLock lock(&g_vc_lock);
-    mxtl::AutoLock lock2(&vc->lock);
 
     vc->invy0 = vc_device_rows(vc) + 1;
     vc->invy1 = -1;

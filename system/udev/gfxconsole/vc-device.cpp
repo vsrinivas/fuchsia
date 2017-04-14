@@ -47,8 +47,6 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
     assert(dev->gfx);
     assert(dev->hw_gfx);
 
-    mtx_init(&dev->lock, mtx_plain);
-
     // calculate how many rows/columns we have
     dev->rows = dev->gfx->height / dev->charh;
     dev->columns = dev->gfx->width / dev->charw;
@@ -380,18 +378,15 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
 }
 
 void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {
-    {
-        mxtl::AutoLock(&dev->lock);
-        unsigned flags;
-        if (fullscreen) {
-            flags = dev->flags | VC_FLAG_FULLSCREEN;
-        } else {
-            flags = dev->flags & ~VC_FLAG_FULLSCREEN;
-        }
-        if (flags != dev->flags) {
-            dev->flags = flags;
-            tc_seth(&dev->textcon, vc_device_rows(dev));
-        }
+    unsigned flags;
+    if (fullscreen) {
+        flags = dev->flags | VC_FLAG_FULLSCREEN;
+    } else {
+        flags = dev->flags & ~VC_FLAG_FULLSCREEN;
+    }
+    if (flags != dev->flags) {
+        dev->flags = flags;
+        tc_seth(&dev->textcon, vc_device_rows(dev));
     }
     vc_device_render(dev);
 }

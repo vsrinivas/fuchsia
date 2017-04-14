@@ -29,10 +29,6 @@ typedef uint16_t vc_char_t;
 typedef struct vc_device {
     mx_device_t device;
 
-    mtx_t lock;
-    // protect output state of the vc
-    // fifo.lock below protects input state
-
     char title[8];
     // vc title, shown in status bar
     bool active;
