@@ -113,6 +113,18 @@ import "package:foo.bar.blah/baz.dart";
 
 ## IDEs
 
+### Atom
+
+The Dart SDK built in the Fuchsia tree has a version of the analysis service
+which understands the structure of the Fuchsia directory. In the `dartlang` Atom
+plugin, set the Dart SDK as `out/<build-type>/<host-flavor>/dart-sdk` (e.g.
+`out/debug-x86-64/host_x64/dart-sdk`). Packages and apps with build targets
+should now be error-free.
+Note that in order for the plugin to locate a Dart package, it needs a marker:
+add an empty `pubspec.yaml` file at the root of the package.
+
+### Others
+
 Most IDEs need to find a `.packages` file at the package root in order to be
 able to resolve packages. On Fuchsia, those files are placed in the `out/`
 directory. As a temporary workaround, run `//scripts/symlink-dot-packages.py` to
@@ -122,14 +134,6 @@ scripts/symlink-dot-packages.py --tree //apps/sysui/*
 ```
 You may also want to update your project's `.gitignore` file to ignore these
 symlinks.
-
-### Atom
-
-The Dart SDK built in the Fuchsia tree has a version of the analysis service
-which understands the structure of the Fuchsia directory. In the `dartlang` Atom
-plugin, set the Dart SDK as `out/<build-type>/<host-flavor>/dart-sdk` (e.g.
-`out/debug-x86-64/host_x64/dart-sdk`). Packages and apps with build targets
-should now be error-free.
 
 
 ## Known issues
