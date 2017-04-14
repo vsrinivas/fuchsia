@@ -37,7 +37,6 @@ pub const ERR_TIMED_OUT         : mx_status_t = -21;
 pub const ERR_SHOULD_WAIT       : mx_status_t = -22;
 pub const ERR_HANDLE_CLOSED     : mx_status_t = -23;
 pub const ERR_CANCELED          : mx_status_t = -23;
-pub const ERR_REMOTE_CLOSED     : mx_status_t = -24;
 pub const ERR_PEER_CLOSED       : mx_status_t = -24;
 pub const ERR_NOT_FOUND         : mx_status_t = -25;
 pub const ERR_ALREADY_EXISTS    : mx_status_t = -26;
