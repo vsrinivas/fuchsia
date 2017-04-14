@@ -12,6 +12,7 @@ executable("magma_sys_unit_tests") {
   ]
 
   deps = [
+    ":magma_ioctl_tests",
     ":magma_system_tests",
     ":magma_util_tests",
     "//third_party/gtest",
@@ -50,6 +51,18 @@ source_set("magma_util_tests") {
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:port",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("magma_ioctl_tests") {
+  testonly = true
+
+  sources = [
+    "test_ioctl.cc",
+  ]
+
+  deps = [
     "//third_party/gtest",
   ]
 }

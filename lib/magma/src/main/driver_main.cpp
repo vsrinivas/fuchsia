@@ -248,6 +248,18 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
             break;
         }
 
+        case IOCTL_DISPLAY_GET_FB: {
+            DLOG("MAGMA IOCTL_DISPLAY_GET_FB");
+            if (out_len < sizeof(ioctl_display_get_fb_t))
+                return DRET(ERR_INVALID_ARGS);
+            ioctl_display_get_fb_t* description = static_cast<ioctl_display_get_fb_t*>(out_buf);
+            device->console_buffer->duplicate_handle(
+                reinterpret_cast<uint32_t*>(&description->vmo));
+            description->info = device->info;
+            result = sizeof(ioctl_display_get_fb_t);
+            break;
+        }
+
 #if MAGMA_INDRIVER_TEST
         case IOCTL_MAGMA_TEST_RESTART: {
             DLOG("IOCTL_MAGMA_TEST_RESTART");
@@ -258,9 +270,9 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
             result = magma_start(device);
             break;
         }
+#endif
         default:
             DLOG("intel_i915_ioctl unhandled op 0x%x", op);
-#endif
     }
 
     return result;
