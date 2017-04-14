@@ -56,6 +56,8 @@ static unsigned g_active_vc_index;
 static vc_battery_info_t g_battery_info;
 static mtx_t g_vc_lock = MTX_INIT;
 
+static mx_status_t vc_set_active_console(unsigned console);
+
 static void vc_device_toggle_framebuffer(void)
 {
     if (g_fb_display_protocol->acquire_or_release_display)
@@ -180,7 +182,7 @@ static void __vc_set_active(vc_device_t* dev, unsigned index) {
     g_active_vc_index = index;
 }
 
-mx_status_t vc_set_console_to_active(vc_device_t* dev) {
+static mx_status_t vc_set_console_to_active(vc_device_t* dev) {
     if (dev == NULL)
         return ERR_INVALID_ARGS;
 
@@ -202,7 +204,7 @@ mx_status_t vc_set_console_to_active(vc_device_t* dev) {
     return NO_ERROR;
 }
 
-mx_status_t vc_set_active_console(unsigned console) {
+static mx_status_t vc_set_active_console(unsigned console) {
     if (console >= g_vc_count)
         return ERR_INVALID_ARGS;
 

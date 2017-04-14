@@ -98,7 +98,6 @@ const gfx_font* vc_get_font();
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev);
 void vc_device_free(vc_device_t* dev);
 
-mx_status_t vc_set_active_console(unsigned console);
 void vc_get_status_line(char* str, int n);
 
 enum vc_battery_state {
