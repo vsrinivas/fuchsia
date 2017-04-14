@@ -1098,6 +1098,7 @@ static bool unbind_rebind_while_stopped_test(void)
     status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
     if (status < 0)
         tu_fatal("mx_object_get_info(MX_INFO_THREAD)", status);
+    EXPECT_EQ(info.state, MX_THREAD_STATE_BLOCKED, "unexpected thread state");
     EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_DEBUGGER, "wrong exception port type");
 
     // Verify exception report matches current exception.
@@ -1124,6 +1125,7 @@ static bool unbind_rebind_while_stopped_test(void)
     status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
     if (status < 0)
         tu_fatal("mx_object_get_info(MX_INFO_THREAD)", status);
+    EXPECT_EQ(info.state, MX_THREAD_STATE_DEAD, "unexpected thread state");
     EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_NONE, "wrong exception port type at thread exit");
 
     tu_handle_close(thread);

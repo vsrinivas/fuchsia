@@ -8,6 +8,7 @@
 
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <magenta/syscalls/port.h>
 
 #include <unittest/unittest.h>
@@ -234,6 +235,12 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
     ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, mx_deadline_after(MX_MSEC(100)), NULL), ERR_TIMED_OUT, "");
     // TODO: Use an exception port to wait for the suspend to take effect
+
+    mx_info_thread_t info;
+    ASSERT_EQ(mx_object_get_info(thread_h, MX_INFO_THREAD,
+                                 &info, sizeof(info), NULL, NULL),
+              NO_ERROR, "");
+    ASSERT_EQ(info.state, MX_THREAD_STATE_SUSPENDED, "");
 
     // Since the thread is suspended the signaling should not take effect.
     ASSERT_EQ(mx_object_signal(event, 0, MX_USER_SIGNAL_0), NO_ERROR, "");
