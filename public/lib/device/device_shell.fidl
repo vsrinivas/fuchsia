@@ -15,6 +15,15 @@ interface DeviceShell {
   // invocation of DeviceShellContext.Shutdown(), or because of some other
   // condition such as the device being powered off.
   Terminate() => ();
+
+  // This method may be invoked by the device runner to request an
+  // AuthenticationContext associated with |username|. |request| will then be
+  // used to request the device shell to show login screen during a
+  // UserProvider.AddUser() or if a token needs to be refreshed.
+  // Note that a |request| is tied to a |username| since the TQ Framework allows
+  // multiple users to be logged in at the same time.
+  GetAuthenticationContext(string username,
+                           AuthenticationContext& request);
 };
 
 interface DeviceShellContext {
@@ -22,4 +31,16 @@ interface DeviceShellContext {
 
   // This requests the shutdown of the device.
   Shutdown();
+};
+
+// This interface is implemented by device shell. It is used to notify the
+// device shell that a view for login needs to be started / stopped.
+interface AuthenticationContext {
+  // Requests device shell to display |view_owner| for authentication. Note that
+  // another call to StartOverlay() will not be made until StopOverlay() has
+  // been called.
+  StartOverlay(mozart.ViewOwner view_owner);
+
+  // Requests device shell to stop displaying the auth view.
+  StopOverlay();
 };

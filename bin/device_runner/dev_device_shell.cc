@@ -29,13 +29,11 @@ class Settings {
   std::string user;
 };
 
-class DevDeviceShellApp
-    : modular::SingleServiceViewApp<modular::DeviceShell>,
-      modular::UserWatcher {
+class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
+                          modular::UserWatcher {
  public:
   DevDeviceShellApp(const Settings& settings)
-      : settings_(settings),
-        user_watcher_binding_(this) {}
+      : settings_(settings), user_watcher_binding_(this) {}
   ~DevDeviceShellApp() override = default;
 
  private:
@@ -48,8 +46,8 @@ class DevDeviceShellApp
   }
 
   // |DeviceShell|
-  void Initialize(fidl::InterfaceHandle<modular::DeviceShellContext> device_shell_context)
-      override {
+  void Initialize(fidl::InterfaceHandle<modular::DeviceShellContext>
+                      device_shell_context) override {
     device_shell_context_.Bind(std::move(device_shell_context));
     device_shell_context_->GetUserProvider(user_provider_.NewRequest());
 
@@ -61,6 +59,13 @@ class DevDeviceShellApp
     FTL_LOG(INFO) << "DeviceShell::Terminate()";
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     done();
+  }
+
+  // |DeviceShell|
+  void GetAuthenticationContext(
+      const fidl::String& username,
+      fidl::InterfaceRequest<modular::AuthenticationContext> request) override {
+    FTL_LOG(INFO) << "DeviceShell::GetAuthenticationContext() is unimplemented.";
   }
 
   // |UserWatcher|
