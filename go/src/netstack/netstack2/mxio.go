@@ -442,35 +442,25 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 	}
 }
 
-func (s *socketServer) newIostate(transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (ios *iostate, peerH, peerS mx.Handle, reterr error) {
-	h0, h1, err := mx.NewChannel(0)
-	if err != nil {
-		return nil, 0, 0, err
-	}
-	defer func() {
-		if reterr != nil {
-			h0.Close()
-			h1.Close()
-		}
-	}()
-
+func (s *socketServer) newIostate(h mx.Handle, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (ios *iostate, reterr error) {
 	ios = &iostate{
 		transProto: transProto,
 		wq:         wq,
 		ep:         ep,
 	}
+	var peerS mx.Handle
 	switch transProto {
 	case tcp.ProtocolNumber:
 		s0, s1, err := mx.NewSocket(0)
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, err
 		}
 		ios.dataHandle = mx.Handle(s0)
 		peerS = mx.Handle(s1)
 	case udp.ProtocolNumber:
 		c0, c1, err := mx.NewChannel(0)
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, err
 		}
 		ios.dataHandle = c0.Handle
 		peerS = c1.Handle
@@ -490,12 +480,26 @@ func (s *socketServer) newIostate(transProto tcpip.TransportProtocolNumber, wq *
 	s.io[ios.cookie] = ios
 	s.mu.Unlock()
 
-	if err := s.dispatcher.AddHandler(h0.Handle, rio.ServerHandler(s.mxioHandler), int64(ios.cookie)); err != nil {
+	// Before we add a dispatcher for this iostate, respond to the client describing what
+	// kind of object this is.
+	ro := rio.RioObject{
+		RioObjectHeader: rio.RioObjectHeader{
+			Status: errStatus(nil),
+			Type:   uint32(mxio.ProtocolSocket),
+		},
+		Esize: 0,
+	}
+	if peerS != 0 {
+		ro.Handle[0] = peerS
+		ro.Hcount = 1
+	}
+	ro.Write(h, 0)
+
+	if err := s.dispatcher.AddHandler(h, rio.ServerHandler(s.mxioHandler), int64(ios.cookie)); err != nil {
 		s.mu.Lock()
 		delete(s.io, ios.cookie)
 		s.mu.Unlock()
-
-		return nil, 0, 0, err
+		h.Close()
 	}
 
 	switch transProto {
@@ -509,7 +513,7 @@ func (s *socketServer) newIostate(transProto tcpip.TransportProtocolNumber, wq *
 		go ios.loopDgramWrite(s.stack)
 	}
 
-	return ios, h1.Handle, peerS, nil
+	return ios, nil
 }
 
 type socketServer struct {
@@ -527,10 +531,10 @@ type nicData struct {
 	addr tcpip.Address
 }
 
-func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH, peerS mx.Handle, err error) {
+func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *rio.Msg, path string) (err error) {
 	var domain, typ, protocol int
 	if n, _ := fmt.Sscanf(path, "socket/%d/%d/%d\x00", &domain, &typ, &protocol); n != 3 {
-		return 0, 0, mxerror.Errorf(mx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
+		return mxerror.Errorf(mx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
 	}
 
 	var n tcpip.NetworkProtocolNumber
@@ -540,12 +544,12 @@ func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH,
 	case AF_INET6:
 		n = ipv6.ProtocolNumber
 	default:
-		return 0, 0, mxerror.Errorf(mx.ErrNotSupported, "socket: unknown network protocol: %d", domain)
+		return mxerror.Errorf(mx.ErrNotSupported, "socket: unknown network protocol: %d", domain)
 	}
 
 	transProto, err := sockProto(typ, protocol)
 	if err != nil {
-		return 0, 0, err
+		return err
 	}
 
 	wq := new(waiter.Queue)
@@ -554,22 +558,22 @@ func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH,
 		if debug {
 			log.Printf("socket: new endpoint: %v", err)
 		}
-		return 0, 0, err
+		return err
 	}
 	if n == ipv6.ProtocolNumber {
 		if err := ep.SetSockOpt(tcpip.V6OnlyOption(0)); err != nil {
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	ios, peerH, peerS, err = s.newIostate(transProto, wq, ep)
+	ios, err = s.newIostate(h, transProto, wq, ep)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
 		}
-		return 0, 0, err
+		return err
 	}
 
-	return peerH, peerS, nil
+	return nil
 }
 
 func sockProto(typ, protocol int) (t tcpip.TransportProtocolNumber, err error) {
@@ -594,13 +598,13 @@ func sockProto(typ, protocol int) (t tcpip.TransportProtocolNumber, err error) {
 
 var errShouldWait = mx.Error{Status: mx.ErrShouldWait, Text: "netstack"}
 
-func (s *socketServer) opAccept(ios *iostate, msg *rio.Msg, path string) (peerH, peerS mx.Handle, err error) {
+func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *rio.Msg, path string) (err error) {
 	if ios.ep == nil {
-		return 0, 0, mxerror.Errorf(mx.ErrBadState, "accept: no socket")
+		return mxerror.Errorf(mx.ErrBadState, "accept: no socket")
 	}
 	newep, newwq, err := ios.ep.Accept()
 	if err == tcpip.ErrWouldBlock {
-		return 0, 0, errShouldWait
+		return errShouldWait
 	}
 	if ios.ep.Readiness(waiter.EventIn) == 0 {
 		// If we just accepted the only queued incoming connection,
@@ -622,12 +626,12 @@ func (s *socketServer) opAccept(ios *iostate, msg *rio.Msg, path string) (peerH,
 		if debug {
 			log.Printf("accept: %v", err)
 		}
-		return 0, 0, err
+		return err
 	}
 
-	newios, peerH, peerS, err := s.newIostate(ios.transProto, newwq, newep)
+	newios, err := s.newIostate(h, ios.transProto, newwq, newep)
 	go newios.loopRead(s.stack)
-	return peerH, peerS, err
+	return err
 }
 
 func errStatus(err error) mx.Status {
@@ -1022,34 +1026,31 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 	case rio.OpOpen:
 		path := string(msg.Data[:msg.Datalen])
 		var err error
-		var peerH, peerS mx.Handle
 		switch {
 		case strings.HasPrefix(path, "none"): // MXRIO_SOCKET_DIR_NONE
-			_, peerH, peerS, err = s.newIostate(tcp.ProtocolNumber, nil, nil)
+			_, err = s.newIostate(msg.Handle[0], tcp.ProtocolNumber, nil, nil)
 		case strings.HasPrefix(path, "socket/"): // MXRIO_SOCKET_DIR_SOCKET
-			peerH, peerS, err = s.opSocket(ios, msg, path)
+			err = s.opSocket(msg.Handle[0], ios, msg, path)
 		case strings.HasPrefix(path, "accept"): // MXRIO_SOCKET_DIR_ACCEPT
-			peerH, peerS, err = s.opAccept(ios, msg, path)
+			err = s.opAccept(msg.Handle[0], ios, msg, path)
 		default:
 			if debug2 {
 				log.Printf("open: unknown path=%q", path)
 			}
-			return mx.ErrNotSupported
+			err = mxerror.Errorf(mx.ErrNotSupported, "open: unknown path=%q", path)
 		}
-		ro := rio.RioObject{
-			RioObjectHeader: rio.RioObjectHeader{
-				Status: errStatus(err),
-				Type:   uint32(mxio.ProtocolSocket),
-			},
-			Esize: 0,
+
+		if err != nil {
+			ro := rio.RioObject{
+				RioObjectHeader: rio.RioObjectHeader{
+					Status: errStatus(err),
+					Type:   uint32(mxio.ProtocolSocket),
+				},
+				Esize: 0,
+			}
+			ro.Write(msg.Handle[0], 0)
+			msg.Handle[0].Close()
 		}
-		if peerH != 0 && peerS != 0 {
-			ro.Handle[0] = peerH
-			ro.Handle[1] = peerS
-			ro.Hcount = 2
-		}
-		ro.Write(msg.Handle[0], 0)
-		msg.Handle[0].Close()
 		return dispatcher.ErrIndirect.Status
 
 	case rio.OpConnect:
