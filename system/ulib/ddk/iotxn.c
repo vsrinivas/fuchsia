@@ -392,16 +392,16 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size)
         txn->vmo_offset = 0;
         txn->vmo_length = data_size;
         txn->pflags |= IOTXN_PFLAG_ALLOC;
-        if (alloc_flags & IOTXN_ALLOC_POOL) {
-            txn->release_cb = iotxn_release_free_list;
-        } else {
-            txn->release_cb = iotxn_release_free;
-        }
     }
 
 out:
     MX_DEBUG_ASSERT(txn != NULL);
     MX_DEBUG_ASSERT(!(txn->pflags & IOTXN_PFLAG_FREE));
+    if (alloc_flags & IOTXN_ALLOC_POOL) {
+        txn->release_cb = iotxn_release_free_list;
+    } else {
+        txn->release_cb = iotxn_release_free;
+    }
     *out = txn;
     return NO_ERROR;
 }

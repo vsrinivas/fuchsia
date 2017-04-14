@@ -32,7 +32,7 @@ static bool test_physmap_clone(void) {
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
     ASSERT_EQ(txn->phys_count, 3u, "unexpected phys_count");
 
-    iotxn_t* clone;
+    iotxn_t* clone = NULL;
     ASSERT_EQ(iotxn_clone(txn, &clone), NO_ERROR, "");
     ASSERT_EQ(txn->phys, clone->phys, "expected clone to point to the same phys");
     ASSERT_EQ(txn->phys_count, clone->phys_count, "unexpected clone phys_count");
