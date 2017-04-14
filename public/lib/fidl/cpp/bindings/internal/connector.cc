@@ -134,7 +134,7 @@ void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
     if (!ReadSingleMessage(&rv))
       return;
 
-    // If we get ERR_REMOTE_CLOSED (or another error), we'll already have
+    // If we get ERR_PEER_CLOSED (or another error), we'll already have
     // notified the error and likely been destroyed.
     FTL_DCHECK(rv == NO_ERROR || rv == ERR_SHOULD_WAIT);
     WaitToReadMore();
