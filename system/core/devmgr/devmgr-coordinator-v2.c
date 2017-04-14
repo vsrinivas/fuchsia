@@ -138,7 +138,7 @@ mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals) {
     }
     if (signals & MX_CHANNEL_PEER_CLOSED) {
         printf("devcoord: device disconnected!\n");
-        return ERR_REMOTE_CLOSED;
+        return ERR_PEER_CLOSED;
     }
     printf("devcoord: no work? %08x\n", signals);
     return NO_ERROR;
