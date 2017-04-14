@@ -22,6 +22,6 @@ Cloud bucket. Normally, Maxwell launches the stable release version of this
 agent. For development, set the following in your `fgen` to use the HEAD
 unstable version:
 
-    fgen --args "kronk_dev=true"
+    fgen --args kronk_dev=true
 
 (and then rebuild)
