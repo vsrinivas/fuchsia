@@ -524,7 +524,7 @@ type socketServer struct {
 }
 
 type nicData struct {
-	addr  tcpip.Address
+	addr tcpip.Address
 }
 
 func (s *socketServer) opSocket(ios *iostate, msg *rio.Msg, path string) (peerH, peerS mx.Handle, err error) {
@@ -900,7 +900,6 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	s.mu.Unlock()
 
 	if dnsClient == nil {
-		const EAI_FAIL = -4
 		rep := c_mxrio_gai_reply{retval: EAI_FAIL}
 		rep.Encode(msg)
 		return mx.ErrOk
@@ -927,6 +926,18 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 			log.Printf("getAddrInfo: %v", err)
 			return mx.ErrNotSupported
 		}
+	}
+
+	if val.node_is_null == 1 {
+		rep := c_mxrio_gai_reply{}
+		rep.res[0].ai.ai_family = AF_INET
+		rep.res[0].ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
+		sockaddr := c_sockaddr_in{sin_family: AF_INET}
+		sockaddr.sin_port.setPort(port)
+		writeSockaddrStorage4(&rep.res[0].addr, &sockaddr)
+		rep.nres = 1
+		rep.Encode(msg)
+		return mx.ErrOk
 	}
 
 	var addr tcpip.Address
@@ -960,7 +971,11 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	// adjust ai_addr with the value passed below.
 	rep.res[0].ai.ai_addr = 0xdeadbeef
 	switch len(addr) {
-	case 0, 4:
+	case 0:
+		rep := c_mxrio_gai_reply{retval: EAI_NONAME}
+		rep.Encode(msg)
+		return mx.ErrOk
+	case 4:
 		rep.res[0].ai.ai_family = AF_INET
 		rep.res[0].ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
 		sockaddr := c_sockaddr_in{sin_family: AF_INET}

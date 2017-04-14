@@ -147,6 +147,17 @@ const TCP_WINDOW_CLAMP = 10
 const TCP_INFO = 11
 const TCP_QUICKACK = 12
 
+const EAI_BADFLAGS = -1
+const EAI_NONAME = -2
+const EAI_AGAIN = -3
+const EAI_FAIL = -4
+const EAI_FAMILY = -6
+const EAI_SOCKTYPE = -7
+const EAI_SERVICE = -8
+const EAI_MEMORY = -10
+const EAI_SYSTEM = -11
+const EAI_OVERFLOW = -12
+
 type c_socklen uint32
 type c_in_port [2]byte // uint16 in C, but stored in network order
 type c_sa_family uint16
