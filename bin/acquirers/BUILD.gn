@@ -3,6 +3,10 @@
 # found in the LICENSE file.
 
 group("acquirers") {
+  deps = [
+    ":focus",
+    "story_info",
+  ]
 }
 
 executable("focus") {
