@@ -93,7 +93,8 @@ LedgerManager::LedgerManager(Environment* environment,
     : environment_(environment),
       storage_(std::move(storage)),
       sync_(std::move(sync)),
-      ledger_impl_(this) {}
+      ledger_impl_(this),
+      merge_manager_(environment_) {}
 
 LedgerManager::~LedgerManager() {}
 

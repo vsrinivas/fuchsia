@@ -13,6 +13,11 @@
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 
 namespace ledger {
+LedgerMergeManager::LedgerMergeManager(Environment* environment)
+    : environment_(environment) {}
+
+LedgerMergeManager::~LedgerMergeManager() {}
+
 void LedgerMergeManager::SetFactory(
     fidl::InterfaceHandle<ConflictResolverFactory> factory) {
   conflict_resolver_factory_ =
@@ -37,7 +42,7 @@ std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(
     storage::PageStorage* storage) {
   storage::PageId page_id = storage->GetId();
   std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
-      [this, page_id]() { RemoveResolver(page_id); }, storage);
+      [this, page_id]() { RemoveResolver(page_id); }, environment_, storage);
   resolvers_[page_id] = resolver.get();
   GetResolverStrategyForPage(
       page_id,

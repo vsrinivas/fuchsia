@@ -51,7 +51,8 @@ class PageImplTest : public test::TestWithMessageLoop {
     auto fake_storage =
         std::make_unique<storage::fake::FakePageStorage>(page_id1_);
     fake_storage_ = fake_storage.get();
-    auto resolver = std::make_unique<MergeResolver>([] {}, fake_storage_);
+    auto resolver =
+        std::make_unique<MergeResolver>([] {}, &environment_, fake_storage_);
 
     manager_ = std::make_unique<PageManager>(
         &environment_, std::move(fake_storage), nullptr, std::move(resolver));

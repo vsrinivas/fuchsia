@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
@@ -21,7 +22,9 @@ class MergeStrategy;
 // provided merge strategy.
 class MergeResolver : public storage::CommitWatcher {
  public:
-  MergeResolver(ftl::Closure on_destroyed, storage::PageStorage* storage);
+  MergeResolver(ftl::Closure on_destroyed,
+                Environment* environment,
+                storage::PageStorage* storage);
   ~MergeResolver();
 
   void set_on_empty(ftl::Closure on_empty_callback);
@@ -45,6 +48,7 @@ class MergeResolver : public storage::CommitWatcher {
   void ResolveConflicts(std::vector<storage::CommitId> heads);
 
   storage::PageStorage* const storage_;
+  Environment* const environment_;
   PageManager* page_manager_ = nullptr;
   std::unique_ptr<MergeStrategy> strategy_;
   std::unique_ptr<MergeStrategy> next_strategy_;

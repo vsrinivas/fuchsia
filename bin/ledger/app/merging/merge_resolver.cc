@@ -52,8 +52,12 @@ class MergeInProgress {
 }  // namespace
 
 MergeResolver::MergeResolver(ftl::Closure on_destroyed,
+                             Environment* environment,
                              storage::PageStorage* storage)
-    : storage_(storage), on_destroyed_(on_destroyed), weak_ptr_factory_(this) {
+    : storage_(storage),
+      environment_(environment),
+      on_destroyed_(on_destroyed),
+      weak_ptr_factory_(this) {
   storage_->AddCommitWatcher(this);
   PostCheckConflicts();
 }
@@ -149,7 +153,7 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
     auto head1 = std::move(commits[0]);
     auto head2 = std::move(commits[1]);
     FindCommonAncestor(
-        storage_, head1->Clone(), head2->Clone(),
+        environment_->main_runner(), storage_, head1->Clone(), head2->Clone(),
         ftl::MakeCopyable([
           this, head1 = std::move(head1), head2 = std::move(head2),
           merge_token = std::move(merge_token)

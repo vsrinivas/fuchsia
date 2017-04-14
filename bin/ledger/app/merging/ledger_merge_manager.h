@@ -21,8 +21,8 @@ namespace ledger {
 // |LedgerMergeManager| must outlive all MergeResolver it provides.
 class LedgerMergeManager {
  public:
-  LedgerMergeManager() {}
-  ~LedgerMergeManager() {}
+  LedgerMergeManager(Environment* environment);
+  ~LedgerMergeManager();
 
   void SetFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory);
 
@@ -36,6 +36,7 @@ class LedgerMergeManager {
       std::function<void(std::unique_ptr<MergeStrategy>)> strategy);
   void ResetStrategyForPage(storage::PageId page_id);
 
+  Environment* const environment_;
   ConflictResolverFactoryPtr conflict_resolver_factory_;
 
   std::unordered_map<storage::PageId, MergeResolver*> resolvers_;

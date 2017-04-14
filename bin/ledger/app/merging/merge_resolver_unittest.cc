@@ -47,14 +47,18 @@ std::function<void(storage::Journal*)> DeleteKeyFromJournal(
 
 class MergeResolverTest : public test::TestWithMessageLoop {
  public:
-  MergeResolverTest() {}
+  MergeResolverTest()
+      : environment_(configuration::Configuration(),
+                     message_loop_.task_runner(),
+                     nullptr,
+                     message_loop_.task_runner()) {}
   ~MergeResolverTest() override {}
 
  protected:
   void SetUp() override {
     ::testing::Test::SetUp();
     page_storage_.reset(new storage::PageStorageImpl(
-        message_loop_.task_runner(), message_loop_.task_runner(),
+        environment_.main_runner(), environment_.main_runner(),
         &coroutine_service_, tmp_dir_.path(), kRootPageId.ToString()));
     storage::Status status;
     page_storage_->Init(
@@ -99,6 +103,7 @@ class MergeResolverTest : public test::TestWithMessageLoop {
 
   coroutine::CoroutineServiceImpl coroutine_service_;
   std::unique_ptr<storage::PageStorageImpl> page_storage_;
+  Environment environment_;
 
  private:
   files::ScopedTempDir tmp_dir_;
@@ -112,7 +117,7 @@ TEST_F(MergeResolverTest, Empty) {
   CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "baz"));
   std::unique_ptr<LastOneWinsMergeStrategy> strategy =
       std::make_unique<LastOneWinsMergeStrategy>();
-  MergeResolver resolver([] {}, page_storage_.get());
+  MergeResolver resolver([] {}, &environment_, page_storage_.get());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
   std::vector<storage::CommitId> ids;
@@ -193,7 +198,7 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   std::unique_ptr<VerifyingMergeStrategy> strategy =
       std::make_unique<VerifyingMergeStrategy>(message_loop_.task_runner(),
                                                commit_5, commit_3, commit_2);
-  MergeResolver resolver([] {}, page_storage_.get());
+  MergeResolver resolver([] {}, &environment_, page_storage_.get());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty([this] { message_loop_.QuitNow(); });
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -226,7 +231,7 @@ TEST_F(MergeResolverTest, LastOneWins) {
 
   std::unique_ptr<LastOneWinsMergeStrategy> strategy =
       std::make_unique<LastOneWinsMergeStrategy>();
-  MergeResolver resolver([] {}, page_storage_.get());
+  MergeResolver resolver([] {}, &environment_, page_storage_.get());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
 
@@ -275,7 +280,7 @@ TEST_F(MergeResolverTest, None) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
-  MergeResolver resolver([] {}, page_storage_.get());
+  MergeResolver resolver([] {}, &environment_, page_storage_.get());
   resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
 
   EXPECT_TRUE(RunLoopWithTimeout());
