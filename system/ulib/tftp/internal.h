@@ -58,6 +58,7 @@ typedef struct tftp_options_t {
 } tftp_options;
 
 /**
+TODO: update this after refactoring
  Sender
  NONE -(tftp_generate_write_request)-> WRITE_REQUESTED
  WRITE_REQUESTED -(tftp_handle_msg = OPCODE_OACK)-> TRANSMITTING
@@ -95,7 +96,6 @@ typedef enum {
 struct tftp_session_t {
     tftp_options options;
     tftp_state state;
-    uint8_t* data;
     size_t offset;
 
     uint32_t block_number;
@@ -110,11 +110,12 @@ struct tftp_session_t {
 
     // Callbacks
     tftp_open_file open_fn;
-    tftp_send_message send_fn;
+    tftp_read read_fn;
+    tftp_write write_fn;
 };
 
 // Internal handlers
-tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen);
+tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, void* cookie);
 tftp_status tftp_handle_rrq(tftp_session* session,
                             tftp_msg* rrq,
                             size_t rrq_len,
