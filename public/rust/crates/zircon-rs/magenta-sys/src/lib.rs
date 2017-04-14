@@ -55,6 +55,7 @@ pub const ERR_FILE_BIG          : mx_status_t = -53;
 pub const ERR_NO_SPACE          : mx_status_t = -54;
 
 pub type mx_time_t = u64;
+pub type mx_duration_t = u64;
 pub const MX_TIME_INFINITE : mx_time_t = core::u64::MAX;
 
 bitflags! {

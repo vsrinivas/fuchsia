@@ -8,7 +8,7 @@ extern {
         ) -> mx_time_t;
 
     pub fn mx_nanosleep(
-        nanoseconds: mx_time_t
+        deadline: mx_time_t
         ) -> mx_status_t;
 
     pub fn mx_ticks_get(
@@ -16,6 +16,10 @@ extern {
 
     pub fn mx_ticks_per_second(
         ) -> u64;
+
+    pub fn mx_deadline_after(
+        nanoseconds: mx_duration_t
+        ) -> mx_time_t;
 
     pub fn mx_system_get_num_cpus(
         ) -> u32;
@@ -31,12 +35,6 @@ extern {
     pub fn mx_cache_flush(
         addr: *const u8,
         len: usize,
-        options: u32
-        ) -> mx_status_t;
-
-    pub fn mx_handle_cancel(
-        handle: mx_handle_t,
-        key: u64,
         options: u32
         ) -> mx_status_t;
 
@@ -59,14 +57,14 @@ extern {
     pub fn mx_object_wait_one(
         handle: mx_handle_t,
         waitfor: mx_signals_t,
-        timeout: mx_time_t,
+        deadline: mx_time_t,
         observed: *mut mx_signals_t
         ) -> mx_status_t;
 
     pub fn mx_object_wait_many(
         items: *mut mx_wait_item_t,
         count: u32,
-        timeout: mx_time_t
+        deadline: mx_time_t
         ) -> mx_status_t;
 
     pub fn mx_object_wait_async(
@@ -160,7 +158,7 @@ extern {
     pub fn mx_channel_call(
         handle: mx_handle_t,
         options: u32,
-        timeout: mx_time_t,
+        deadline: mx_time_t,
         args: *const mx_channel_call_args_t,
         actual_bytes: *mut u32,
         actual_handles: *mut u32,
@@ -301,7 +299,7 @@ extern {
     pub fn mx_futex_wait(
         value_ptr: *mut mx_futex_t,
         current_value: isize,
-        timeout: mx_time_t
+        deadline: mx_time_t
         ) -> mx_status_t;
 
     pub fn mx_futex_wake(
@@ -336,7 +334,7 @@ extern {
 
     pub fn mx_waitset_wait(
         waitset_handle: mx_handle_t,
-        timeout: mx_time_t,
+        deadline: mx_time_t,
         results: *mut mx_waitset_result_t,
         count: *mut u32
         ) -> mx_status_t;
@@ -354,7 +352,7 @@ extern {
 
     pub fn mx_port_wait(
         handle: mx_handle_t,
-        timeout: mx_time_t,
+        deadline: mx_time_t,
         packet: *mut u8,
         size: usize
         ) -> mx_status_t;

@@ -39,6 +39,7 @@ pub use waitset::{WaitSet, WaitSetOpts};
 
 use magenta_sys as sys;
 
+type Duration = sys::mx_duration_t;
 type Time = sys::mx_time_t;
 pub use magenta_sys::MX_TIME_INFINITE;
 
@@ -260,13 +261,23 @@ pub fn time_get(clock_id: ClockId) -> Time {
     unsafe { sys::mx_time_get(clock_id as u32) }
 }
 
-/// Sleep the given number of nanoseconds.
+
+/// Compute a deadline for the time in the future that is the given `Duration` away.
+///
+/// Wraps the
+/// [mx_deadline_after](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/deadline_after.md)
+/// syscall.
+pub fn deadline_after(nanos: Duration) -> Time {
+    unsafe { sys::mx_deadline_after(nanos) }
+}
+
+/// Sleep until the given deadline.
 ///
 /// Wraps the
 /// [mx_nanosleep](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/nanosleep.md)
 /// syscall.
-pub fn nanosleep(time: Time) {
-    unsafe { sys::mx_nanosleep(time); }
+pub fn nanosleep(deadline: Time) {
+    unsafe { sys::mx_nanosleep(deadline); }
 }
 
 fn into_result<T, F>(status: sys::mx_status_t, f: F) -> Result<T, Status>
@@ -508,7 +519,7 @@ mod tests {
     fn sleep() {
         let sleep_ns = 1_000_000;  // 1ms
         let time1 = time_get(ClockId::Monotonic);
-        nanosleep(sleep_ns);
+        nanosleep(deadline_after(sleep_ns));
         let time2 = time_get(ClockId::Monotonic);
         assert!(time2 > time1 + sleep_ns);
     }
@@ -557,26 +568,26 @@ mod tests {
     #[test]
     fn wait_and_signal() {
         let event = Event::create(EventOpts::Default).unwrap();
-        let ten_ms: Time = 10_000_000;
+        let ten_ms: Duration = 10_000_000;
 
         // Waiting on it without setting any signal should time out.
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // If we set a signal, we should be able to wait for it.
         assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms).unwrap(), MX_USER_SIGNAL_0);
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(), MX_USER_SIGNAL_0);
 
         // Should still work, signals aren't automatically cleared.
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms).unwrap(), MX_USER_SIGNAL_0);
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(), MX_USER_SIGNAL_0);
 
         // Now clear it, and waiting should time out again.
         assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, ten_ms), Err(Status::ErrTimedOut));
+        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
     }
 
     #[test]
     fn wait_many_and_signal() {
-        let ten_ms: Time = 10_000_000;
+        let ten_ms: Duration = 10_000_000;
         let e1 = Event::create(EventOpts::Default).unwrap();
         let e2 = Event::create(EventOpts::Default).unwrap();
 
@@ -585,26 +596,26 @@ mod tests {
           WaitItem { handle: e1.get_ref(), waitfor: MX_USER_SIGNAL_0, pending: MX_SIGNAL_NONE },
           WaitItem { handle: e2.get_ref(), waitfor: MX_USER_SIGNAL_1, pending: MX_SIGNAL_NONE },
         ];
-        assert_eq!(object_wait_many(&mut items, ten_ms), Err(Status::ErrTimedOut));
+        assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
         assert_eq!(items[0].pending, MX_SIGNAL_NONE);
         assert_eq!(items[1].pending, MX_SIGNAL_NONE);
 
         // Signal one object and it should return success.
         assert!(e1.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert!(object_wait_many(&mut items, ten_ms).is_ok());
+        assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
         assert_eq!(items[0].pending, MX_USER_SIGNAL_0);
         assert_eq!(items[1].pending, MX_SIGNAL_NONE);
 
         // Signal the other and it should return both.
         assert!(e2.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_1).is_ok());
-        assert!(object_wait_many(&mut items, ten_ms).is_ok());
+        assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
         assert_eq!(items[0].pending, MX_USER_SIGNAL_0);
         assert_eq!(items[1].pending, MX_USER_SIGNAL_1);
 
         // Clear signals on both; now it should time out again.
         assert!(e1.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
         assert!(e2.signal(MX_USER_SIGNAL_1, MX_SIGNAL_NONE).is_ok());
-        assert_eq!(object_wait_many(&mut items, ten_ms), Err(Status::ErrTimedOut));
+        assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
         assert_eq!(items[0].pending, MX_SIGNAL_NONE);
         assert_eq!(items[1].pending, MX_SIGNAL_NONE);
     }
