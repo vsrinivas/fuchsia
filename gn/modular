@@ -45,6 +45,10 @@
             "bootfs_path": "apps/device_runner"
         },
         {
+            "binary": "device_runner_monitor",
+            "bootfs_path": "apps/device_runner_monitor"
+        },
+        {
             "binary": "dev_device_shell",
             "bootfs_path": "apps/dev_device_shell"
         },
