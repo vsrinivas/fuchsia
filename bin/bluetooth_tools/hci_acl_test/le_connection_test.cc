@@ -8,6 +8,7 @@
 
 #include "apps/bluetooth/lib/hci/command_packet.h"
 #include "apps/bluetooth/lib/hci/defaults.h"
+#include "apps/bluetooth/lib/hci/device_wrapper.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
@@ -20,9 +21,10 @@ namespace hci_acl_test {
 
 LEConnectionTest::LEConnectionTest() : le_conn_complete_handler_id_(0u), disconn_handler_id_(0u) {}
 
-bool LEConnectionTest::Run(ftl::UniqueFD hci_dev, const common::DeviceAddress& dst_addr) {
-  FTL_DCHECK(hci_dev.is_valid());
+bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress& dst_addr) {
+  FTL_DCHECK(hci_dev_fd.is_valid());
 
+  auto hci_dev = std::make_unique<hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));
   hci_ = hci::Transport::Create(std::move(hci_dev));
   if (!hci_->Initialize()) {
     FTL_LOG(ERROR) << "Failed to initialize HCI transport";

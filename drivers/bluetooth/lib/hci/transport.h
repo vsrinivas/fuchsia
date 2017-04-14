@@ -10,7 +10,6 @@
 
 #include "apps/bluetooth/lib/hci/acl_data_channel.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
-#include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/memory/ref_ptr.h"
@@ -22,6 +21,8 @@
 
 namespace bluetooth {
 namespace hci {
+
+class DeviceWrapper;
 
 // Represents the HCI transport layer. This object owns the HCI command, ACL,
 // and SCO channels and provides the necessary control-flow mechanisms to send
@@ -37,11 +38,7 @@ namespace hci {
 class Transport final : public ::mtl::MessageLoopHandler,
                         public ftl::RefCountedThreadSafe<Transport> {
  public:
-  // |device_fd| must be a valid file descriptor to a Bluetooth HCI device.
-  static ftl::RefPtr<Transport> Create(ftl::UniqueFD device_fd);
-
-  // Default constructor used only from tests.
-  static ftl::RefPtr<Transport> Create();
+  static ftl::RefPtr<Transport> Create(std::unique_ptr<DeviceWrapper> hci_device);
 
   // Initializes the HCI command channel, starts the I/O event loop, and kicks off a new I/O thread
   // for transactions with the HCI driver. The ACLDataChannel will be left uninitialized. The
@@ -91,19 +88,10 @@ class Transport final : public ::mtl::MessageLoopHandler,
   void SetTransportClosedCallback(const ftl::Closure& callback,
                                   ftl::RefPtr<ftl::TaskRunner> task_runner);
 
-  // Initialize function called from tests. |cmd_channel| cannot be nullptr. |acl_data_channel| can
-  // be nullptr if it is not needed by a test.
-  //
-  // This simply spawns the I/O thread and takes ownership of the provided channels. The channels
-  // themselves should be initialized explicitly after calling this function.
-  void InitializeForTesting(std::unique_ptr<CommandChannel> cmd_channel,
-                            std::unique_ptr<ACLDataChannel> acl_data_channel);
-
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Transport);
 
-  explicit Transport(ftl::UniqueFD device_fd);
-  Transport();
+  explicit Transport(std::unique_ptr<DeviceWrapper> hci_device);
   ~Transport() override;
 
   // ::mtl::MessageLoopHandler overrides:
@@ -117,7 +105,7 @@ class Transport final : public ::mtl::MessageLoopHandler,
   ftl::ThreadChecker thread_checker_;
 
   // The Bluetooth HCI device file descriptor.
-  ftl::UniqueFD device_fd_;
+  std::unique_ptr<DeviceWrapper> hci_device_;
 
   // The state of the initialization sequence.
   std::atomic_bool is_initialized_;

@@ -16,6 +16,8 @@ static_library("hci") {
     "command_packet.h",
     "connection.cc",
     "connection.h",
+    "device_wrapper.cc",
+    "device_wrapper.h",
     "defaults.h",
     "event_packet.cc",
     "event_packet.h",

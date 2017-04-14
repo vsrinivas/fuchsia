@@ -30,7 +30,7 @@ namespace hci_acl_test {
 class LEConnectionTest final {
  public:
   LEConnectionTest();
-  bool Run(ftl::UniqueFD hci_dev, const bluetooth::common::DeviceAddress& dst_addr);
+  bool Run(ftl::UniqueFD hci_dev_fd, const bluetooth::common::DeviceAddress& dst_addr);
 
  private:
   // Initializes the data channel and sends a LE connection request to |dst_addr_|. Exits the

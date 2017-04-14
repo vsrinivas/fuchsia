@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/hci/command_packet.h"
+#include "apps/bluetooth/lib/hci/device_wrapper.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/command_line.h"
@@ -57,12 +57,13 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  ftl::UniqueFD hci_dev(open(hci_dev_path.c_str(), O_RDWR));
-  if (!hci_dev.is_valid()) {
+  ftl::UniqueFD hci_dev_fd(open(hci_dev_path.c_str(), O_RDWR));
+  if (!hci_dev_fd.is_valid()) {
     std::perror("Failed to open HCI device");
     return EXIT_FAILURE;
   }
 
+  auto hci_dev = std::make_unique<hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));
   auto hci = hci::Transport::Create(std::move(hci_dev));
   hci->Initialize();
   mtl::MessageLoop message_loop;

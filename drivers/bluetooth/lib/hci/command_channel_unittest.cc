@@ -10,6 +10,7 @@
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/command_packet.h"
+#include "apps/bluetooth/lib/hci/device_wrapper.h"
 #include "apps/bluetooth/lib/hci/fake_controller.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
@@ -48,17 +49,16 @@ class CommandChannelTest : public ::testing::Test {
  protected:
   // ::testing::Test overrides:
   void SetUp() override {
-    mx::channel endpoint0, endpoint1, dummy_acl;
-    mx_status_t status = mx::channel::create(0, &endpoint0, &endpoint1);
+    mx::channel cmd0, cmd1;
+    mx_status_t status = mx::channel::create(0, &cmd0, &cmd1);
     ASSERT_EQ(NO_ERROR, status);
 
-    transport_ = hci::Transport::Create();
+    auto hci_dev = std::make_unique<DummyDeviceWrapper>(std::move(cmd0), mx::channel());
+    transport_ = hci::Transport::Create(std::move(hci_dev));
 
-    auto cmd_channel = std::make_unique<CommandChannel>(transport_.get(), std::move(endpoint0));
-    fake_controller_ = std::make_unique<FakeController>(std::move(endpoint1), std::move(dummy_acl));
+    fake_controller_ = std::make_unique<FakeController>(std::move(cmd1), mx::channel());
 
-    transport_->InitializeForTesting(std::move(cmd_channel), nullptr);
-    transport_->command_channel()->Initialize();
+    transport_->Initialize();
   }
 
   void TearDown() override {
@@ -587,7 +587,7 @@ TEST_F(CommandChannelTest, SequentialCommandRunner) {
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
   cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);  // <-- Will not run
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);  // <-- Should not run
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
@@ -602,7 +602,7 @@ TEST_F(CommandChannelTest, SequentialCommandRunner) {
 
   // Sequence 2 (test)
   cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);  // <-- Will not run
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);  // <-- Should not run
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
@@ -618,7 +618,7 @@ TEST_F(CommandChannelTest, SequentialCommandRunner) {
   // Sequence 3 (test)
   cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
   cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);
-  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);  // <-- Will not run
+  cmd_runner.QueueCommand(common::DynamicByteBuffer(reset_bytes), cb);  // <-- Should not run
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());

@@ -4,37 +4,29 @@
 
 #include "transport.h"
 
-#include <magenta/device/bt-hci.h>
 #include <magenta/status.h>
-#include <magenta/types.h>
 #include <mx/channel.h>
 
 #include "lib/ftl/logging.h"
 #include "lib/mtl/threading/create_thread.h"
 
+#include "device_wrapper.h"
+
 namespace bluetooth {
 namespace hci {
 
 // static
-ftl::RefPtr<Transport> Transport::Create(ftl::UniqueFD device_fd) {
-  return AdoptRef(new Transport(std::move(device_fd)));
+ftl::RefPtr<Transport> Transport::Create(std::unique_ptr<DeviceWrapper> hci_device) {
+  return AdoptRef(new Transport(std::move(hci_device)));
 }
 
-// static
-ftl::RefPtr<Transport> Transport::Create() {
-  return AdoptRef(new Transport());
-}
-
-Transport::Transport(ftl::UniqueFD device_fd)
-    : device_fd_(std::move(device_fd)),
+Transport::Transport(std::unique_ptr<DeviceWrapper> hci_device)
+    : hci_device_(std::move(hci_device)),
       is_initialized_(false),
       cmd_channel_handler_key_(0u),
-      acl_channel_handler_key_(0u) {}
-
-Transport::Transport()
-    : is_initialized_(false),
-      cmd_channel_handler_key_(0u),
-      acl_channel_handler_key_(0u) {}
+      acl_channel_handler_key_(0u) {
+  FTL_DCHECK(hci_device_);
+}
 
 Transport::~Transport() {
   if (IsInitialized()) ShutDown();
@@ -42,30 +34,26 @@ Transport::~Transport() {
 
 bool Transport::Initialize() {
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FTL_DCHECK(device_fd_.get());
+  FTL_DCHECK(hci_device_);
   FTL_DCHECK(!command_channel_);
   FTL_DCHECK(!acl_data_channel_);
   FTL_DCHECK(!IsInitialized());
 
   // Obtain command channel handle.
-  mx_handle_t handle = MX_HANDLE_INVALID;
-  ssize_t ioctl_status = ioctl_bt_hci_get_command_channel(device_fd_.get(), &handle);
-  if (ioctl_status < 0) {
-    FTL_LOG(ERROR) << "hci: Failed to obtain command channel handle: "
-                   << mx_status_get_string(ioctl_status);
+  mx::channel channel = hci_device_->GetCommandChannel();
+  if (!channel.is_valid()) {
+    FTL_LOG(ERROR) << "hci: Transport: Failed to obtain command channel handle";
     return false;
   }
 
-  FTL_DCHECK(handle != MX_HANDLE_INVALID);
   io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-transport");
 
   // We watch for handle errors and closures to perform the necessary clean up.
-  io_task_runner_->PostTask([handle, this] {
+  io_task_runner_->PostTask([ handle = channel.get(), this ] {
     cmd_channel_handler_key_ =
         mtl::MessageLoop::GetCurrent()->AddHandler(this, handle, MX_CHANNEL_PEER_CLOSED);
   });
 
-  mx::channel channel(handle);
   command_channel_ = std::make_unique<CommandChannel>(this, std::move(channel));
   command_channel_->Initialize();
 
@@ -77,25 +65,22 @@ bool Transport::Initialize() {
 bool Transport::InitializeACLDataChannel(
     const DataBufferInfo& bredr_buffer_info, const DataBufferInfo& le_buffer_info,
     const ACLDataChannel::ConnectionLookupCallback& conn_lookup_cb) {
-  FTL_DCHECK(device_fd_.get());
+  FTL_DCHECK(hci_device_);
   FTL_DCHECK(IsInitialized());
 
   // Obtain ACL data channel handle.
-  mx_handle_t handle = MX_HANDLE_INVALID;
-  ssize_t ioctl_status = ioctl_bt_hci_get_acl_data_channel(device_fd_.get(), &handle);
-  if (ioctl_status < 0) {
-    FTL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
-                   << mx_status_get_string(ioctl_status);
+  mx::channel channel = hci_device_->GetACLDataChannel();
+  if (!channel.is_valid()) {
+    FTL_LOG(ERROR) << "hci: Transport: Failed to obtain ACL data channel handle";
     return false;
   }
 
   // We watch for handle errors and closures to perform the necessary clean up.
-  io_task_runner_->PostTask([handle, this] {
+  io_task_runner_->PostTask([ handle = channel.get(), this ] {
     acl_channel_handler_key_ =
         mtl::MessageLoop::GetCurrent()->AddHandler(this, handle, MX_CHANNEL_PEER_CLOSED);
   });
 
-  mx::channel channel(handle);
   acl_data_channel_ = std::make_unique<ACLDataChannel>(this, std::move(channel), conn_lookup_cb);
   acl_data_channel_->Initialize(bredr_buffer_info, le_buffer_info);
 
@@ -111,28 +96,6 @@ void Transport::SetTransportClosedCallback(const ftl::Closure& callback,
 
   closed_cb_ = callback;
   closed_cb_task_runner_ = task_runner;
-}
-
-void Transport::InitializeForTesting(std::unique_ptr<CommandChannel> cmd_channel,
-                                     std::unique_ptr<ACLDataChannel> acl_data_channel) {
-  FTL_DCHECK(cmd_channel);
-  FTL_DCHECK(!IsInitialized());
-
-  is_initialized_ = true;
-  io_thread_ = mtl::CreateThread(&io_task_runner_, "hci-transport-test");
-
-  command_channel_ = std::move(cmd_channel);
-  if (acl_data_channel) acl_data_channel_ = std::move(acl_data_channel);
-
-  // We watch for handle errors and closures to perform the necessary clean up.
-  io_task_runner_->PostTask([this] {
-    cmd_channel_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-        this, command_channel()->channel().get(), MX_CHANNEL_PEER_CLOSED);
-    if (this->acl_data_channel()) {
-      acl_channel_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-          this, this->acl_data_channel()->channel().get(), MX_CHANNEL_PEER_CLOSED);
-    }
-  });
 }
 
 void Transport::ShutDown() {
