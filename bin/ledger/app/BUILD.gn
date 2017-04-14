@@ -48,6 +48,8 @@ source_set("lib") {
     "ledger_repository_impl.h",
     "merging/auto_merge_strategy.cc",
     "merging/auto_merge_strategy.h",
+    "merging/common_ancestor.cc",
+    "merging/common_ancestor.h",
     "merging/conflict_resolver_client.cc",
     "merging/conflict_resolver_client.h",
     "merging/custom_merge_strategy.cc",

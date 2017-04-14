@@ -43,11 +43,6 @@ class MergeResolver : public storage::CommitWatcher {
   void PostCheckConflicts();
   void CheckConflicts();
   void ResolveConflicts(std::vector<storage::CommitId> heads);
-  void FindCommonAncestor(
-      std::unique_ptr<const storage::Commit> head1,
-      std::unique_ptr<const storage::Commit> head2,
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback);
 
   storage::PageStorage* const storage_;
   PageManager* page_manager_ = nullptr;
