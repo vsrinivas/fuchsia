@@ -1,0 +1,1 @@
+<project name="tracing" path="apps/tracing" remote="https://fuchsia.googlesource.com/tracing" revision="34adc6dd3f7ee048fd83106c72ddc1ef125f66be" gerrithost="https://fuchsia-review.googlesource.com" githooks="manifest/git-hooks"/>
