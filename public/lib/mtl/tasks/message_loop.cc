@@ -6,6 +6,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
+#include <mx/time.h>
 
 #include <utility>
 
@@ -155,26 +156,28 @@ void MessageLoop::Run() {
 
 ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
                                  ftl::TimePoint next_run_time) {
-  mx_time_t timeout = 0;
+  mx_time_t deadline = 0;
   if (next_run_time == ftl::TimePoint::Max()) {
-    timeout = MX_TIME_INFINITE;
+    deadline = MX_TIME_INFINITE;
   } else if (next_run_time > now) {
-    timeout = (next_run_time - now).ToNanoseconds();
+    // TODO(teisenbe): Once we switch to real deadlines, make this a simple
+    // assignment.
+    deadline = mx::deadline_after((next_run_time - now).ToNanoseconds());
   }
 
   // TODO(abarth): Use a priority queue to track the nearest deadlines.
   for (const auto& entry : handler_data_) {
     const HandlerData& handler_data = entry.second;
     if (handler_data.deadline <= now) {
-      timeout = 0;
+      deadline = 0;
     } else if (handler_data.deadline != ftl::TimePoint::Max()) {
-      mx_time_t handle_timeout = (handler_data.deadline - now).ToNanoseconds();
-      timeout = std::min(timeout, handle_timeout);
+      mx_time_t handle_deadline = mx::deadline_after((handler_data.deadline - now).ToNanoseconds());
+      deadline = std::min(deadline , handle_deadline);
     }
   }
 
   mx_port_packet_t packet;
-  const mx_status_t wait_status = port_.wait(timeout, &packet, 0);
+  const mx_status_t wait_status = port_.wait(deadline, &packet, 0);
 
   // Update now after waiting.
   now = ftl::TimePoint::Now();
