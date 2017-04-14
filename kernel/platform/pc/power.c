@@ -22,6 +22,14 @@
 #include <lib/debuglog.h>
 #endif
 
+static void reboot(void) {
+    // Try legacy reboot path first
+    pc_keyboard_reboot();
+
+    // Try 100-Series Chipset Reset Control Register: Hard Reset
+    outp(0xCF9, 0x0E);
+}
+
 static volatile int panic_started;
 
 static void halt_other_cpus(void) {
@@ -104,6 +112,8 @@ void platform_panic_start(void) {
     halt_other_cpus();
 }
 
+bool halt_on_panic = false;
+
 void platform_halt(
         platform_halt_action suggested_action,
         platform_halt_reason reason)
@@ -118,12 +128,11 @@ void platform_halt(
             break;
         case HALT_ACTION_REBOOT:
             printf("Rebooting...\n");
-            pc_keyboard_reboot();
+            reboot();
             printf("Reboot failed, halting\n");
             break;
         case HALT_ACTION_HALT:
             printf("Halting...\n");
-
             halt_other_cpus();
             break;
     }
@@ -135,6 +144,11 @@ void platform_halt(
 #endif
     dlog_bluescreen_halt();
 #endif
+
+    if (!halt_on_panic) {
+        printf("Rebooting...\n");
+        reboot();
+    }
 
     printf("Halted\n");
 

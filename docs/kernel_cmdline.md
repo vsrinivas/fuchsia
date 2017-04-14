@@ -56,6 +56,10 @@ Provides entropy to be mixed into the kernel's CPRNG.
 If this option is set (disabled by default), the system will attempt
 to detect hangs/crashes and reboot upon detection.
 
+## kernel.halt_on_panic=\<bool>
+If this option is set (disabled by default), the system will halt on
+a kernel panic instead of rebooting.
+
 ## gfxconsole.early=\<bool>
 
 This option (disabled by default) requests that the kernel start a graphics

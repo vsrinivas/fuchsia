@@ -156,6 +156,8 @@ static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
     bootloader.ramdisk_size = total_len;
 }
 
+extern bool halt_on_panic;
+
 static void platform_save_bootloader_data(void) {
     if (_multiboot_info != NULL) {
         multiboot_info_t* mi = (multiboot_info_t*) X86_PHYS_TO_VIRT(_multiboot_info);
@@ -178,6 +180,8 @@ static void platform_save_bootloader_data(void) {
         bootdata_t* bd = (bootdata_t*) X86_PHYS_TO_VIRT(_bootdata_base);
         process_bootdata(bd, (uintptr_t) _bootdata_base);
     }
+
+    halt_on_panic = cmdline_get_bool("kernel.halt_on_panic", false);
 }
 
 static void* ramdisk_base;
