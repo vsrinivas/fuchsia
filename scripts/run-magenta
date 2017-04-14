@@ -171,20 +171,15 @@ fi
 
 if [ "$DISK" -eq 1 ]; then
     ARGS+=" -drive file=${DISKFILE},format=raw,if=none,id=mydisk"
-    if [ "$ARCH" == "x86-64" ]; then
-        if [ "$DISKTYPE" == "virtio" ]; then
-            ARGS+=" -device virtio-blk-pci,disable-modern=true,drive=mydisk"
-        elif [ "$DISKTYPE" == "ahci" ]; then
-            ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
-        elif [ "$DISKTYPE" == "nvme" ]; then
-            ARGS+=" -device nvme,drive=mydisk,serial=magenta"
-        else
-            echo unrecognized disk type \"$DISKTYPE\"
-            exit
-        fi
-    else
-        # virtio based block device, pci, transitional
+    if [ "$DISKTYPE" == "virtio" ]; then
         ARGS+=" -device virtio-blk-pci,disable-modern=true,drive=mydisk"
+    elif [ "$DISKTYPE" == "ahci" ]; then
+        ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
+    elif [ "$DISKTYPE" == "nvme" ]; then
+        ARGS+=" -device nvme,drive=mydisk,serial=magenta"
+    else
+        echo unrecognized disk type \"$DISKTYPE\"
+        exit
     fi
 fi
 
