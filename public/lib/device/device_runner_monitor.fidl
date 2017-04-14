@@ -1,0 +1,25 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// This service is provided to the boot environment by the
+// device_runner_monitor app. When device_runner starts it connects to
+// this service in its environment and asks it for the number of
+// connections it current has. If the number is not one, or the
+// connection cannot be made, device_runner exits.
+//
+// Later we can use this service to send device runner remote control
+// commands from a terminal, such as asking it to change its user
+// shell. It could also be folded into application_manager or
+// bootstrap. We play with it a bit first.
+//
+// We use :: in the service name because it's more usual in
+// bootstrap/services.conf.
+[ServiceName="modular::DeviceRunnerMonitor"]
+interface DeviceRunnerMonitor {
+  // Returns the number of connection requests the service has
+  // received, including this one.
+  GetConnectionCount() => (uint32 count);
+};

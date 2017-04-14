@@ -6,6 +6,7 @@ import("//lib/fidl/fidl.gni")
 
 fidl("device") {
   sources = [
+    "device_runner_monitor.fidl",
     "device_shell.fidl",
     "user_provider.fidl",
   ]
@@ -14,3 +15,4 @@ fidl("device") {
     "//apps/mozart/services/views"
   ]
 }
+

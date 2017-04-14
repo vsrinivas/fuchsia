@@ -7,6 +7,7 @@ import("//third_party/flatbuffers/flatbuffer.gni")
 group("all") {
   deps = [
     ":device_runner",
+    ":device_runner_monitor",
     ":dev_device_shell",
   ]
 }
@@ -50,6 +51,20 @@ executable("device_runner") {
     "//apps/modular/services/user:private",
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
+executable("device_runner_monitor") {
+  sources = [
+    "device_runner_monitor.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//application/services",
+    "//apps/modular/services/device",
     "//lib/ftl",
     "//lib/mtl",
   ]

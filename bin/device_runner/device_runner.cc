@@ -15,6 +15,7 @@
 #include "application/services/service_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/config/config.fidl.h"
+#include "apps/modular/services/device/device_runner_monitor.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -77,6 +78,7 @@ class Settings {
     ledger_repository_for_testing =
         command_line.HasOption("ledger_repository_for_testing");
     user_auth_config_file = command_line.HasOption("user_auth_config_file");
+    ignore_monitor = command_line.HasOption("ignore_monitor");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("device_shell_args", ""),
@@ -102,6 +104,7 @@ class Settings {
       --story_shell_args=SHELL_ARGS
       --ledger_repository_for_testing
       --user_auth_config_file
+      --ignore_monitor
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to "file:///system/apps/userpicker_device_shell".
@@ -124,6 +127,7 @@ class Settings {
 
   bool ledger_repository_for_testing;
   bool user_auth_config_file;
+  bool ignore_monitor;
 
  private:
   void ParseShellArgs(const std::string& value,
@@ -172,7 +176,7 @@ class DeviceRunnerApp : DeviceShellContext, UserProvider {
         app_context_(
             app::ApplicationContext::CreateFromStartupInfoNotChecked()),
         device_shell_context_binding_(this) {
-    // 0. Check if environment handle / services have been initialized.
+    // 0a. Check if environment handle / services have been initialized.
     if (!app_context_->launcher()) {
       FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
       exit(1);
@@ -182,6 +186,35 @@ class DeviceRunnerApp : DeviceShellContext, UserProvider {
       exit(1);
     }
 
+    // 0b. Connect to the device runner monitor and check this
+    // instance is the only one running, unless the command line asks
+    // to ignore the monitor check.
+    if (settings.ignore_monitor) {
+      Start();
+
+    } else {
+      app_context_->ConnectToEnvironmentService(monitor_.NewRequest());
+
+      monitor_.set_connection_error_handler([]{
+          FTL_LOG(ERROR) << "No device runner monitor found. "
+                         << " Please use @boot.";
+          exit(1);
+        });
+
+      monitor_->GetConnectionCount([this](uint32_t count) {
+          if (count != 1) {
+            FTL_LOG(ERROR) << "Another device runner is running."
+                           << " Please use that one, or shut it down first.";
+            exit(1);
+          }
+
+          Start();
+        });
+    }
+  }
+
+ private:
+  void Start() {
     // 1. Start the device shell. This also connects the root view of the device
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.
@@ -242,7 +275,6 @@ class DeviceRunnerApp : DeviceShellContext, UserProvider {
                      ledger_repository_factory_.NewRequest());
   }
 
- private:
   // |DeviceShellContext|
   void GetUserProvider(fidl::InterfaceRequest<UserProvider> request) override {
     user_provider_bindings_.AddBinding(this, std::move(request));
@@ -443,6 +475,8 @@ class DeviceRunnerApp : DeviceShellContext, UserProvider {
   const modular::UsersStorage* users_storage_ = nullptr;
 
   std::shared_ptr<app::ApplicationContext> app_context_;
+  DeviceRunnerMonitorPtr monitor_;
+
   fidl::Binding<DeviceShellContext> device_shell_context_binding_;
   fidl::BindingSet<UserProvider> user_provider_bindings_;
 
