@@ -108,9 +108,9 @@ static_assert(sizeof(scsi_read_capacity_10_t) == 8, "");
 // This is big endian
 typedef struct {
     uint64_t    lba;
-    uint64_t    block_length;
+    uint32_t    block_length;
     uint8_t     ptype_prot_en;  // bit 0: PROT_EN, bits 1-3: P_TYPE
-    uint8_t     resesrved[15];
+    uint8_t     resesrved[19];
 } __PACKED scsi_read_capacity_16_t;
 static_assert(sizeof(scsi_read_capacity_16_t) == 32, "");
 

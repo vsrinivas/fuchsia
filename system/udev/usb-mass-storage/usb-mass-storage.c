@@ -620,8 +620,7 @@ static int ums_worker_thread(void* arg) {
         goto fail;
     }
 
-    // +1 because this returns the address of the final block, and blocks are zero indexed
-    msd->total_blocks = betoh32(data.lba) + 1;
+    msd->total_blocks = betoh32(data.lba);
     msd->block_size = betoh32(data.block_length);
 
     if (msd->total_blocks == 0xFFFFFFFF) {
@@ -632,10 +631,17 @@ static int ums_worker_thread(void* arg) {
             goto fail;
         }
 
-        // +1 because this returns the address of the final block, and blocks are zero indexed
-        msd->total_blocks = betoh64(data.lba) + 1;
-        msd->block_size = betoh64(data.block_length);
+        msd->total_blocks = betoh64(data.lba);
+        msd->block_size = betoh32(data.block_length);
     }
+    if (msd->block_size == 0) {
+        printf("UMS zero block size\n");
+        status = ERR_INVALID_ARGS;
+        goto fail;
+    }
+
+    // +1 because this returns the address of the final block, and blocks are zero indexed
+    msd->total_blocks++;
 
     // Need to use READ16/WRITE16 if block addresses are greater than 32 bit
     msd->use_read_write_16 = msd->total_blocks > UINT32_MAX;
