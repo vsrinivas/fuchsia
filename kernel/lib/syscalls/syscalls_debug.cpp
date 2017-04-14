@@ -70,9 +70,7 @@ mx_status_t sys_debug_write(const void* ptr, uint32_t len) {
     if (magenta_copy_from_user(ptr, buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    for (uint32_t i = 0; i < len; i++) {
-        platform_dputc(buf[i]);
-    }
+    platform_dputs(buf, len);
     return len;
 }
 
