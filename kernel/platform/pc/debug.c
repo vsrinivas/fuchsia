@@ -83,7 +83,7 @@ void platform_init_debug_early(void)
     outp(uart_io_port + 0, divisor & 0xff); // lsb
     outp(uart_io_port + 1, divisor >> 8); // msb
     outp(uart_io_port + 3, 3); // 8N1
-    outp(uart_io_port + 2, 0x07); // enable FIFO, clear, 14-byte threshold
+    outp(uart_io_port + 2, 0xc7); // enable FIFO, clear, 14-byte threshold
 
     output_enabled = true;
 }
@@ -98,6 +98,10 @@ void platform_init_debug(void)
     unmask_interrupt(irq);
 
     outp(uart_io_port + 1, 0x1); // enable receive data available interrupt
+
+    // modem control register: Axiliary Output 2 is another IRQ enable bit
+    const uint8_t mcr = inp(uart_io_port + 4);
+    outp(uart_io_port + 4, mcr | 0x8);
 
     if (cmdline_get_bool("kernel.debug_uart_poll", false)) {
         platform_debug_start_uart_timer();
