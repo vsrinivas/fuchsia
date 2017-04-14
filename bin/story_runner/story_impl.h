@@ -171,7 +171,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   };
   std::vector<Connection> connections_;
   std::vector<std::unique_ptr<LinkImpl>> links_;
-  uint64_t next_module_instance_id_{};
+  uint64_t next_module_instance_id_{1};
 
   // A dummy service that allows applications that can run both as
   // modules in a story and standalone from the shell to determine
