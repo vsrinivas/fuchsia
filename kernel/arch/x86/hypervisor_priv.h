@@ -159,10 +159,13 @@ enum class VmcsFieldXX : uint64_t {
 
 /* EXIT_REASON values */
 enum class ExitReason : uint32_t {
-    EXTERNAL_INTERRUPT  = 1u,
-    CPUID               = 10u,
-    IO_INSTRUCTION      = 30u,
-    WRMSR               = 32u,
+    EXTERNAL_INTERRUPT          = 1u,
+    CPUID                       = 10u,
+    IO_INSTRUCTION              = 30u,
+    RDMSR                       = 31u,
+    WRMSR                       = 32u,
+    ENTRY_FAILURE_GUEST_STATE   = 33u,
+    ENTRY_FAILURE_MSR_LOADING   = 34u,
 };
 
 /* GUEST_XX_ACCESS_RIGHTS flags */

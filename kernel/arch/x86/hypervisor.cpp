@@ -674,7 +674,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     edit_msr_list(&host_msr_page_, 0, X86_MSR_IA32_STAR, read_msr(X86_MSR_IA32_STAR));
     edit_msr_list(&host_msr_page_, 1, X86_MSR_IA32_LSTAR, read_msr(X86_MSR_IA32_LSTAR));
     edit_msr_list(&host_msr_page_, 2, X86_MSR_IA32_FMASK, read_msr(X86_MSR_IA32_FMASK));
-    // NOTE(abdulla): Index 3, X86_MSR_IA32_KERNEL_GS_BASE, is handled below.
+    // NOTE: Host X86_MSR_IA32_KERNEL_GS_BASE, is set in a separate function.
     vmcs_write(VmcsField64::EXIT_MSR_LOAD_ADDRESS, host_msr_page_.PhysicalAddress());
     vmcs_write(VmcsField32::EXIT_MSR_LOAD_COUNT, 4);
 
@@ -803,11 +803,18 @@ static void next_rip(const ExitInfo& exit_info) {
 static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state) {
     switch (guest_state->rax) {
     case X86_CPUID_BASE:
+    case X86_CPUID_EXT_BASE:
         next_rip(exit_info);
-        cpuid(X86_CPUID_BASE, (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
+        cpuid((uint32_t)guest_state->rax,
+              (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
               (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
-        // Maximum input value for basic CPUID information.
-        guest_state->rax = 0;
+        return NO_ERROR;
+    case X86_CPUID_BASE + 1 ... MAX_SUPPORTED_CPUID:
+    case X86_CPUID_EXT_BASE + 1 ... MAX_SUPPORTED_CPUID_EXT:
+        next_rip(exit_info);
+        cpuid_c((uint32_t)guest_state->rax, (uint32_t)guest_state->rcx,
+                (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
+                (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
         return NO_ERROR;
     default:
         return ERR_NOT_SUPPORTED;
@@ -841,9 +848,14 @@ static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_stat
         return NO_ERROR;
 #endif // WITH_LIB_MAGENTA
     }
+    case ExitReason::RDMSR:
     case ExitReason::WRMSR:
-        dprintf(SPEW, "handling WRMSR instruction\n\n");
+        dprintf(SPEW, "handling RDMSR/WRMSR instruction\n\n");
         return ERR_NOT_SUPPORTED;
+    case ExitReason::ENTRY_FAILURE_GUEST_STATE:
+    case ExitReason::ENTRY_FAILURE_MSR_LOADING:
+        dprintf(SPEW, "handling VM entry failure\n\n");
+        return ERR_BAD_STATE;
     default:
         dprintf(SPEW, "unhandled VM exit %u\n\n", static_cast<uint32_t>(exit_info.exit_reason));
         return ERR_NOT_SUPPORTED;
