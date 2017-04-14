@@ -80,6 +80,8 @@ typedef struct {
 
     // list of active ums_sync_node_t
     list_node_t sync_nodes;
+    // current iotxn being processed (needed for IOCTL_DEVICE_SYNC)
+    iotxn_t* curr_txn;
 } ums_t;
 #define get_ums(dev) containerof(dev, ums_t, device)
 
@@ -545,12 +547,16 @@ static ssize_t ums_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
         ums_sync_node_t node;
 
         mtx_lock(&msd->iotxn_lock);
-        if (list_is_empty(&msd->queued_iotxns)) {
+        iotxn_t* txn = list_peek_tail_type(&msd->queued_iotxns, iotxn_t, node);
+        if (!txn) {
+            txn = msd->curr_txn;
+        }
+        if (!txn) {
             mtx_unlock(&msd->iotxn_lock);
             return NO_ERROR;
         }
         // queue a stack allocated sync node on ums_t.sync_nodes
-        node.iotxn = list_peek_tail_type(&msd->queued_iotxns, iotxn_t, node);
+        node.iotxn = txn;
         completion_reset(&node.completion);
         list_add_head(&msd->sync_nodes, &node.node);
         mtx_unlock(&msd->iotxn_lock);
@@ -665,8 +671,9 @@ static int ums_worker_thread(void* arg) {
             return 0;
         }
         completion_reset(&msd->iotxn_completion);
-        iotxn_t* txn = list_peek_head_type(&msd->queued_iotxns, iotxn_t, node);
+        iotxn_t* txn = list_remove_head_type(&msd->queued_iotxns, iotxn_t, node);
         MX_DEBUG_ASSERT(txn != NULL);
+        msd->curr_txn = txn;
         mtx_unlock(&msd->iotxn_lock);
 
         mx_status_t status;
@@ -679,17 +686,16 @@ static int ums_worker_thread(void* arg) {
         }
 
         mtx_lock(&msd->iotxn_lock);
-        __UNUSED iotxn_t* removed_txn = list_remove_head_type(&msd->queued_iotxns, iotxn_t, node);
-        MX_DEBUG_ASSERT(removed_txn == txn);
-
         // unblock calls to IOCTL_DEVICE_SYNC that are waiting for curr_txn to complete
         ums_sync_node_t* sync_node;
-        list_for_every_entry(&msd->sync_nodes, sync_node, ums_sync_node_t, node) {
+        ums_sync_node_t* temp;
+        list_for_every_entry_safe(&msd->sync_nodes, sync_node, temp, ums_sync_node_t, node) {
             if (sync_node->iotxn == txn) {
                 list_delete(&sync_node->node);
                 completion_signal(&sync_node->completion);
             }
         }
+        msd->curr_txn = NULL;
         mtx_unlock(&msd->iotxn_lock);
 
         if (status >= 0) {
