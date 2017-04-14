@@ -106,7 +106,9 @@ bool DdiClockIsConfigured(magma::PlatformMmio* reg_io, uint32_t ddi_number)
 bool DdiIsSendingLinkTrainingPattern(magma::PlatformMmio* reg_io, uint32_t ddi_number,
                                      int which_pattern)
 {
-    auto dp_tp = registers::DdiDpTransportControl::Get(ddi_number).ReadFrom(reg_io);
+    registers::DdiRegs ddi(ddi_number);
+
+    auto dp_tp = ddi.DdiDpTransportControl().ReadFrom(reg_io);
     if (!dp_tp.transport_enable().get())
         return DRETF(false, "DDI not enabled");
     if (which_pattern == 1) {
@@ -120,7 +122,7 @@ bool DdiIsSendingLinkTrainingPattern(magma::PlatformMmio* reg_io, uint32_t ddi_n
 
     uint32_t dp_lane_count = 2;
 
-    auto buf_ctl = registers::DdiBufControl::Get(ddi_number).ReadFrom(reg_io);
+    auto buf_ctl = ddi.DdiBufControl().ReadFrom(reg_io);
     if (!buf_ctl.ddi_buffer_enable().get())
         return DRETF(false, "DDI buffer not enabled");
     if (buf_ctl.dp_port_width_selection().get() != dp_lane_count - 1)
@@ -319,7 +321,8 @@ public:
 
     void WriteDdiAuxControl(uint32_t ddi_number, uint32_t value)
     {
-        auto control = registers::DdiAuxControl::Get(ddi_number).FromValue(value);
+        registers::DdiRegs ddi(ddi_number);
+        auto control = ddi.DdiAuxControl().FromValue(value);
 
         // This mimics what the hardware does.  Counterintuitively, writing
         // 1 to this timeout bit tells the hardware to reset this bit to 0.
@@ -342,7 +345,7 @@ public:
             DpAuxMessage request;
             DpAuxMessage reply;
 
-            uint32_t data_reg = registers::DdiAuxData::GetOffset(ddi_number);
+            uint32_t data_reg = ddi.DdiAuxData().addr();
 
             // Read the request message from registers.
             request.size = control.message_size().get();
@@ -378,7 +381,8 @@ public:
     void Write32(uint32_t offset, uint32_t value)
     {
         for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {
-            if (offset == registers::DdiAuxControl::Get(ddi_number).addr()) {
+            registers::DdiRegs ddi(ddi_number);
+            if (offset == ddi.DdiAuxControl().addr()) {
                 WriteDdiAuxControl(ddi_number, value);
             }
         }
@@ -404,19 +408,21 @@ TEST(DisplayPort, BitfieldHandling)
     RegisterIo reg_io(MockMmio::Create(0x100000));
 
     uint32_t ddi_number = 2;
+    registers::DdiRegs ddi(ddi_number);
+
     uint32_t addr = 0x64010 + 0x100 * ddi_number;
     EXPECT_EQ(reg_io.Read32(addr), 0U);
     reg_io.Write32(addr, 0x100089);
 
     // Using ReadFrom() should preserve the value 0x89 in the lower bits.
-    auto reg1 = registers::DdiAuxControl::Get(ddi_number).ReadFrom(&reg_io);
+    auto reg1 = ddi.DdiAuxControl().ReadFrom(&reg_io);
     reg1.message_size().set(6);
     reg1.WriteTo(&reg_io);
     EXPECT_EQ(reg_io.Read32(addr), 0x600089U);
 
     // The following will ignore the existing value and zero out the value
     // in the lower bits.
-    auto reg2 = registers::DdiAuxControl::Get(ddi_number).FromValue(0);
+    auto reg2 = ddi.DdiAuxControl().FromValue(0);
     reg2.message_size().set(5);
     reg2.WriteTo(&reg_io);
     EXPECT_EQ(reg_io.Read32(addr), 0x500000U);

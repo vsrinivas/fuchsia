@@ -21,34 +21,28 @@ public:
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
 class DdiAuxControl : public RegisterBase {
 public:
+    static constexpr uint32_t kBaseAddr = 0x64010;
+
     DEF_BIT(31, send_busy);
     DEF_BIT(28, timeout);
     DEF_FIELD(24, 20, message_size);
     DEF_FIELD(4, 0, sync_pulse_count);
-
-    static auto Get(uint32_t ddi_number)
-    {
-        DASSERT(ddi_number < Ddi::kDdiCount);
-        return RegisterAddr<DdiAuxControl>(0x64010 + 0x100 * ddi_number);
-    }
 };
 
 // DDI_AUX_DATA: Message contents for DisplayPort Aux messages
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
-class DdiAuxData {
+class DdiAuxData : public RegisterBase {
 public:
-    // There are 5 32-bit words at this offset.
-    static uint32_t GetOffset(uint32_t ddi_number)
-    {
-        DASSERT(ddi_number < Ddi::kDdiCount);
-        return 0x64014 + 0x100 * ddi_number;
-    }
+    // There are 5 32-bit words at this register's address.
+    static constexpr uint32_t kBaseAddr = 0x64014;
 };
 
 // DDI_BUF_CTL: DDI buffer control.
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
 class DdiBufControl : public RegisterBase {
 public:
+    static constexpr uint32_t kBaseAddr = 0x64000;
+
     DEF_BIT(31, ddi_buffer_enable);
     DEF_FIELD(27, 24, dp_vswing_emp_sel);
     DEF_BIT(16, port_reversal);
@@ -56,18 +50,14 @@ public:
     DEF_BIT(4, ddi_a_lane_capability_control);
     DEF_FIELD(3, 1, dp_port_width_selection);
     DEF_BIT(0, init_display_detected);
-
-    static auto Get(uint32_t ddi_number)
-    {
-        DASSERT(ddi_number < Ddi::kDdiCount);
-        return RegisterAddr<DdiBufControl>(0x64000 + 0x100 * ddi_number);
-    }
 };
 
 // DP_TP_CTL: DisplayPort transport control.
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
 class DdiDpTransportControl : public RegisterBase {
 public:
+    static constexpr uint32_t kBaseAddr = 0x64040;
+
     DEF_BIT(31, transport_enable);
     DEF_BIT(27, transport_mode_select);
     DEF_BIT(25, force_act);
@@ -80,12 +70,25 @@ public:
     static constexpr int kSendPixelData = 3;
 
     DEF_BIT(6, alternate_sr_enable);
+};
 
-    static auto Get(uint32_t ddi_number)
+// An instance of DdiRegs represents the registers for a particular DDI.
+class DdiRegs {
+public:
+    DdiRegs(uint32_t ddi_number) : ddi_number_(ddi_number) { DASSERT(ddi_number < Ddi::kDdiCount); }
+
+    auto DdiAuxControl() { return GetReg<registers::DdiAuxControl>(); }
+    auto DdiAuxData() { return GetReg<registers::DdiAuxData>(); }
+    auto DdiBufControl() { return GetReg<registers::DdiBufControl>(); }
+    auto DdiDpTransportControl() { return GetReg<registers::DdiDpTransportControl>(); }
+
+private:
+    template <class RegType> RegisterAddr<RegType> GetReg()
     {
-        DASSERT(ddi_number < Ddi::kDdiCount);
-        return RegisterAddr<DdiDpTransportControl>(0x64040 + 0x100 * ddi_number);
+        return RegisterAddr<RegType>(RegType::kBaseAddr + 0x100 * ddi_number_);
     }
+
+    uint32_t ddi_number_;
 };
 
 } // namespace

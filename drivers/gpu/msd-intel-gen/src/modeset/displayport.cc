@@ -53,7 +53,9 @@ bool DpAuxChannel::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
                                 bool* timeout_result)
 {
     *timeout_result = false;
-    uint32_t data_reg = registers::DdiAuxData::GetOffset(ddi_number_);
+
+    registers::DdiRegs ddi(ddi_number_);
+    uint32_t data_reg = ddi.DdiAuxData().addr();
 
     // Write the outgoing message to the hardware.
     DASSERT(request->size <= DpAuxMessage::kMaxTotalSize);
@@ -61,7 +63,7 @@ bool DpAuxChannel::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
         reg_io_->Write32(data_reg + offset, request->GetPackedWord(offset));
     }
 
-    auto status = registers::DdiAuxControl::Get(ddi_number_).FromValue(0);
+    auto status = ddi.DdiAuxControl().FromValue(0);
     status.sync_pulse_count().set(31);
     status.message_size().set(request->size);
     // Counterintuitively, writing 1 to this timeout bit tells the hardware
@@ -75,7 +77,7 @@ bool DpAuxChannel::SendDpAuxMsg(const DpAuxMessage* request, DpAuxMessage* reply
     // Poll for the reply message.
     const int kNumTries = 10000;
     for (int tries = 0; tries < kNumTries; ++tries) {
-        auto status = registers::DdiAuxControl::Get(ddi_number_).ReadFrom(reg_io_);
+        auto status = ddi.DdiAuxControl().ReadFrom(reg_io_);
         if (!status.send_busy().get()) {
             if (status.timeout().get()) {
                 *timeout_result = true;
@@ -303,12 +305,13 @@ bool DpcdReadLaneStatus(DpAuxChannel* dp_aux, dpcd::Lane01Status* status)
 bool LinkTrainingBody(RegisterIo* reg_io, int32_t ddi_number)
 {
     DpAuxChannel dp_aux(reg_io, ddi_number);
+    registers::DdiRegs ddi(ddi_number);
 
     // For now, we only support 2 DisplayPort lanes.
     // TODO(MA-150): We should also handle using 1 or 4 lanes.
     uint32_t dp_lane_count = 2;
 
-    auto buf_ctl = registers::DdiBufControl::Get(ddi_number).FromValue(0);
+    auto buf_ctl = ddi.DdiBufControl().FromValue(0);
     buf_ctl.ddi_buffer_enable().set(1);
     buf_ctl.dp_port_width_selection().set(dp_lane_count - 1);
     buf_ctl.WriteTo(reg_io);
@@ -316,7 +319,7 @@ bool LinkTrainingBody(RegisterIo* reg_io, int32_t ddi_number)
     // Link training stage 1.
 
     // Tell the source device to emit the training pattern.
-    auto dp_tp = registers::DdiDpTransportControl::Get(ddi_number).FromValue(0);
+    auto dp_tp = ddi.DdiDpTransportControl().FromValue(0);
     dp_tp.transport_enable().set(1);
     dp_tp.enhanced_framing_enable().set(1);
     dp_tp.dp_link_training_pattern().set(dp_tp.kTrainingPattern1);
