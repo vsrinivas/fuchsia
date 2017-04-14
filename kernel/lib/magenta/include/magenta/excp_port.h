@@ -22,7 +22,7 @@ class PortDispatcher;
 class ExceptionPort : public mxtl::DoublyLinkedListable<mxtl::RefPtr<ExceptionPort>>
                     , public mxtl::RefCounted<ExceptionPort> {
 public:
-    enum class Type { DEBUGGER, THREAD, PROCESS, SYSTEM };
+    enum class Type { NONE, DEBUGGER, THREAD, PROCESS, SYSTEM };
 
     static mx_status_t Create(Type type, mxtl::RefPtr<PortDispatcher> port,
                               uint64_t port_key,

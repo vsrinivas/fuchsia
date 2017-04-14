@@ -128,16 +128,15 @@ public:
     // exception processing as if the exception port had not been installed.
     void OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport);
     // Return true if waiting for an exception response.
-    // The kind of exception port the thread is waiting for a response from
-    // is returned in |*type|.
-    bool InException(ExceptionPort::Type* type);
-    // Return true if waiting for an exception response.
     // |exception_wait_lock_| must be held.
     bool InExceptionLocked();
     // Assuming the thread is stopped waiting for an exception response,
     // fill in |*report| with the exception report.
     // Returns ERR_BAD_STATE if not in an exception.
     status_t GetExceptionReport(mx_exception_report_t* report);
+
+    // Fetch the state of the thread for userspace tools.
+    void GetInfoForUserspace(mx_info_thread_t* info);
 
     // For debugger usage.
     // TODO(dje): The term "state" here conflicts with "state tracker".

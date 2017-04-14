@@ -49,31 +49,7 @@ ThreadDispatcher::~ThreadDispatcher() {
 status_t ThreadDispatcher::GetInfo(mx_info_thread_t* info) {
     canary_.Assert();
 
-    memset(info, 0, sizeof(*info));
-    ExceptionPort::Type excp_port_type;
-    if (thread_->InException(&excp_port_type)) {
-        switch (excp_port_type) {
-        case ExceptionPort::Type::DEBUGGER:
-            info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_DEBUGGER;
-            break;
-        case ExceptionPort::Type::THREAD:
-            info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_THREAD;
-            break;
-        case ExceptionPort::Type::PROCESS:
-            info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_PROCESS;
-            break;
-        case ExceptionPort::Type::SYSTEM:
-            info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_SYSTEM;
-            break;
-        default:
-            DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d",
-                             static_cast<int>(excp_port_type));
-            break;
-        }
-    } else {
-        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_NONE;
-    }
-
+    thread_->GetInfoForUserspace(info);
     return NO_ERROR;
 }
 

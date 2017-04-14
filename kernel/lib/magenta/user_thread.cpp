@@ -690,16 +690,82 @@ bool UserThread::InExceptionLocked() {
     return thread_stopped_in_exception(&thread_);
 }
 
-bool UserThread::InException(ExceptionPort::Type* type) {
+void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(&exception_wait_lock_);
-    if (!InExceptionLocked())
-        return false;
-    DEBUG_ASSERT(exception_wait_port_ != nullptr);
-    *type = exception_wait_port_->type();
-    return true;
+    memset(info, 0, sizeof(*info));
+
+    UserThread::State state;
+    enum thread_state lk_state;
+    ExceptionPort::Type excp_port_type;
+    // We need to fetch all these values under lock, but once we have them
+    // we no longer need the lock.
+    {
+        // N.B. Keep the order of obtaining these locks consistent.
+        AutoLock state_lock(&state_lock_);
+        AutoLock lock(&exception_wait_lock_);
+        state = state_;
+        lk_state = thread_.state;
+        if (InExceptionLocked()) {
+            DEBUG_ASSERT(exception_wait_port_ != nullptr);
+            excp_port_type = exception_wait_port_->type();
+        } else {
+            excp_port_type = ExceptionPort::Type::NONE;
+        }
+    }
+
+    switch (state) {
+    case UserThread::State::INITIAL:
+    case UserThread::State::INITIALIZED:
+        info->state = MX_THREAD_STATE_NEW;
+        break;
+    case UserThread::State::RUNNING:
+        // The thread may be "running" but be blocked in a syscall or
+        // exception handler.
+        switch (lk_state) {
+        case THREAD_BLOCKED:
+            info->state = MX_THREAD_STATE_BLOCKED;
+            break;
+        default:
+            info->state = MX_THREAD_STATE_RUNNING;
+            break;
+        }
+        break;
+    case UserThread::State::SUSPENDED:
+        info->state = MX_THREAD_STATE_SUSPENDED;
+        break;
+    case UserThread::State::DYING:
+    case UserThread::State::DEAD:
+        info->state = MX_THREAD_STATE_DEAD;
+        break;
+    default:
+        DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d",
+                         static_cast<int>(excp_port_type));
+        break;
+    }
+
+    switch (excp_port_type) {
+    case ExceptionPort::Type::NONE:
+        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_NONE;
+        break;
+    case ExceptionPort::Type::DEBUGGER:
+        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_DEBUGGER;
+        break;
+    case ExceptionPort::Type::THREAD:
+        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_THREAD;
+        break;
+    case ExceptionPort::Type::PROCESS:
+        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_PROCESS;
+        break;
+    case ExceptionPort::Type::SYSTEM:
+        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_SYSTEM;
+        break;
+    default:
+        DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d",
+                         static_cast<int>(excp_port_type));
+        break;
+    }
 }
 
 status_t UserThread::GetExceptionReport(mx_exception_report_t* report) {
