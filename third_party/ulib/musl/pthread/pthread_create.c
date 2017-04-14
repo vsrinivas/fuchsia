@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include "futex_impl.h"
 #include "libc.h"
 #include "pthread_impl.h"
