@@ -20,8 +20,10 @@ bool PlatformFutex::Wake(uint32_t* value_ptr, int32_t wake_count)
 bool PlatformFutex::Wait(uint32_t* value_ptr, int32_t current_value, uint64_t timeout_ns,
                          WaitResult* result_out)
 {
+    const mx_time_t deadline = (timeout_ns != MX_TIME_INFINITE) ? mx_deadline_after(timeout_ns) :
+            MX_TIME_INFINITE;
     mx_status_t status =
-        mx_futex_wait(reinterpret_cast<mx_futex_t*>(value_ptr), current_value, timeout_ns);
+        mx_futex_wait(reinterpret_cast<mx_futex_t*>(value_ptr), current_value, deadline);
     switch (status) {
         case NO_ERROR:
             *result_out = AWOKE;
