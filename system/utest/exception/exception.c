@@ -425,7 +425,7 @@ static int watchdog_thread_func(void* arg)
         if (atomic_load(&done_tests))
             return 0;
     }
-    unittest_printf("WATCHDOG TIMER FIRED\n");
+    unittest_printf_critical("\n\n*** WATCHDOG TIMER FIRED ***\n");
     // This should *cleanly* kill the entire process, not just this thread.
     exit(5);
 }
