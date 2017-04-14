@@ -37,7 +37,7 @@ enum handler_return platform_irq(x86_iframe_t *frame);
 struct arch_exception_context {
     bool is_page_fault;
     x86_iframe_t *frame;
-    uint32_t cr2;
+    uint64_t cr2;
 };
 
 struct x86_64_context_switch_frame {
