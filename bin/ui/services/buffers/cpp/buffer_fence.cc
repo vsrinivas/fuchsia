@@ -4,6 +4,7 @@
 
 #include "apps/mozart/services/buffers/cpp/buffer_fence.h"
 
+#include <mx/time.h>
 #include "lib/ftl/logging.h"
 
 namespace mozart {
@@ -22,22 +23,22 @@ BufferFence::~BufferFence() {
 }
 
 bool BufferFence::WaitReady(ftl::TimeDelta timeout) {
-  mx_time_t mx_timeout;
+  mx_time_t mx_deadline;
   if (timeout <= ftl::TimeDelta::Zero())
-    mx_timeout = 0u;
+    mx_deadline = 0u;
   else if (timeout == ftl::TimeDelta::Max())
-    mx_timeout = MX_TIME_INFINITE;
+    mx_deadline = MX_TIME_INFINITE;
   else
-    mx_timeout = timeout.ToNanoseconds();
+    mx_deadline = mx::deadline_after(timeout.ToNanoseconds());
 
   mx_signals_t pending = 0u;
   while (!ready_) {
     mx_status_t status =
-        fence_.wait_one(kSignaledOrClosed, mx_timeout, &pending);
+        fence_.wait_one(kSignaledOrClosed, mx_deadline, &pending);
     FTL_DCHECK(status == NO_ERROR || status == ERR_TIMED_OUT);
     if (pending & kSignaledOrClosed)
       ready_ = true;
-    if (mx_timeout != MX_TIME_INFINITE)
+    if (mx_deadline != MX_TIME_INFINITE)
       break;
   }
   return ready_;
