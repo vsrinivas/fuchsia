@@ -20,4 +20,8 @@ mx_status_t nanosleep(uint64_t nanoseconds) {
     return mx_nanosleep(nanoseconds);
 }
 
+mx_time_t deadline_after(mx_duration_t nanoseconds) {
+    return mx_deadline_after(nanoseconds);
+}
+
 } // namespace mx

@@ -11,6 +11,7 @@
 #include <mx/handle.h>
 #include <mx/port.h>
 #include <mx/socket.h>
+#include <mx/time.h>
 #include <mx/vmar.h>
 
 #include <mxtl/type_support.h>
@@ -172,6 +173,15 @@ static bool port_v2_test() {
     END_TEST;
 }
 
+static bool time_test() {
+    BEGIN_TEST;
+
+    // Just a smoke test
+    ASSERT_GE(mx::deadline_after(10), 10, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(libmx_tests)
 RUN_TEST(handle_invalid_test)
 RUN_TEST(handle_close_test)
@@ -185,6 +195,7 @@ RUN_TEST(socket_test)
 RUN_TEST(eventpair_test)
 RUN_TEST(vmar_test)
 RUN_TEST(port_v2_test)
+RUN_TEST(time_test)
 END_TEST_CASE(libmx_tests)
 
 int main(int argc, char** argv) {
