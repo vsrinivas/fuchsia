@@ -46,6 +46,7 @@
         "thinfs",
         "tracing",
         "url",
-        "vim"
+        "vim",
+        "wlanstack"
     ]
 }

@@ -1,13 +1,8 @@
 {
     "labels": [
-        "//apps/wlan",
         "//drivers/wifi/wlan"
     ],
     "binaries": [
-        {
-            "binary": "wlanstack",
-            "bootfs_path": "bin/wlanstack"
-        },
         {
             "binary": "libwlan.so",
             "bootfs_path": "lib/driver/wlan.so"

@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/wlan"
+    ],
+    "binaries": [
+        {
+            "binary": "wlanstack",
+            "bootfs_path": "bin/wlanstack"
+        }
+    ]
+}
