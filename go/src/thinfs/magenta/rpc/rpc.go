@@ -77,23 +77,18 @@ func StartServer(filesys fs.FileSystem) error {
 	return nil
 }
 
-// Makes a new pipe, registering one end with the 'mxioServer', and returning the other end
-func (vfs *ThinVFS) CreateHandles(obj interface{}) ([]mx.Handle, error) {
-	h0, h1, err := mx.NewChannel(0)
-	if err != nil {
-		return nil, err
-	}
-
+// AddHandler uses the given handle and cookie as the primary mechanism to communicate with the VFS
+// object, and returns any additional handles required to interact with the object.  (at the moment,
+// no additional handles are supported).
+func (vfs *ThinVFS) AddHandler(h mx.Handle, obj interface{}) error {
 	var serverHandler rio.ServerHandler = mxioServer
 	cookie := vfs.allocateCookie(obj)
-	if err := vfs.dispatcher.AddHandler(h0.Handle, serverHandler, int64(cookie)); err != nil {
+	if err := vfs.dispatcher.AddHandler(h, serverHandler, int64(cookie)); err != nil {
 		vfs.freeCookie(cookie)
-		h0.Close()
-		h1.Close()
-		return nil, err
+		return err
 	}
 
-	return []mx.Handle{h1.Handle}, nil
+	return nil
 }
 
 func (dw *directoryWrapper) GetToken(cookie int64) (mx.Handle, error) {
@@ -227,20 +222,18 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return rio.IndirectError(msg.Handle[0], mxErr)
 		}
-		handles, err := vfs.CreateHandles(f2)
-		if err != nil {
-			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
-		}
 		ro := &rio.RioObject{
 			RioObjectHeader: rio.RioObjectHeader{
 				Status: mx.ErrOk,
 				Type:   uint32(mxio.ProtocolRemote),
 			},
 			Esize:  0,
-			Hcount: 1,
+			Hcount: 0,
 		}
-		ro.Handle[0] = handles[0]
 		ro.Write(msg.Handle[0], 0)
+		if err := vfs.AddHandler(msg.Handle[0], f2); err != nil {
+			f2.Close()
+		}
 		return dispatcher.ErrIndirect.Status
 	case rio.OpClose:
 		err := f.Close()
@@ -358,32 +351,22 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 				Type:   uint32(mxio.ProtocolRemote),
 			},
 			Esize:  0,
-			Hcount: 1,
+			Hcount: 0,
 		}
-
-		handles, err := vfs.CreateHandles(obj)
-
-		if err != nil {
+		ro.Write(msg.Handle[0], 0)
+		if err := vfs.AddHandler(msg.Handle[0], obj); err != nil {
 			println("Failed to create a handle")
 			if f != nil {
 				f.Close()
 			} else {
 				d.Close()
 			}
-			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
 		}
-		ro.Handle[0] = handles[0]
-		ro.Write(msg.Handle[0], 0)
 		return dispatcher.ErrIndirect.Status
 	case rio.OpClone:
 		d2, err := dir.Dup()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return rio.IndirectError(msg.Handle[0], mxErr)
-		}
-		handles, err := vfs.CreateHandles(&directoryWrapper{d: d2})
-		if err != nil {
-			println("dir clone createhandle err: ", err.Error())
-			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
 		}
 		ro := &rio.RioObject{
 			RioObjectHeader: rio.RioObjectHeader{
@@ -391,10 +374,12 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 				Type:   uint32(mxio.ProtocolRemote),
 			},
 			Esize:  0,
-			Hcount: 1,
+			Hcount: 0,
 		}
-		ro.Handle[0] = handles[0]
 		ro.Write(msg.Handle[0], 0)
+		if err := vfs.AddHandler(msg.Handle[0], &directoryWrapper{d: d2}); err != nil {
+			d2.Close()
+		}
 		return dispatcher.ErrIndirect.Status
 	case rio.OpClose:
 		err := dir.Close()
