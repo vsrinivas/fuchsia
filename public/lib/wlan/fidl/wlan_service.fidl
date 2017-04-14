@@ -1,11 +1,11 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 module wlan;
 
 // Stub interface; eventually to be replaced by something based on the 802.11
-// SME
+// SME / MSGCF.
 interface Wlan {
   Scan(string ssid) => (string response);
 };

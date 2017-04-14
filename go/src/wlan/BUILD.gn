@@ -14,7 +14,7 @@ group("wlan") {
 go_binary("wlanstack") {
   gopackage = "apps/wlan/wlanstack"
   deps = [
-    "//apps/wlan/services",
     "//apps/netstack",
+    "//apps/wlan/services:mlme",
   ]
 }

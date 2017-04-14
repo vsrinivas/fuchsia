@@ -6,30 +6,10 @@ package main
 
 import (
 	"apps/netstack/watcher"
-	"encoding/binary"
-	"fmt"
+	"apps/wlan/wlan"
+
 	"log"
-	"os"
-	"syscall"
-	"syscall/mx/mxio"
 )
-
-// TODO(tkilbourn): reuse netstack2's ethernet client lib (NET-33)
-type ethinfo struct {
-	features uint32
-	mtu      uint32
-	mac      [6]byte
-	_        [2]byte
-	_        [12]uint32
-}
-
-const ioctlKind = mxio.IoctlKindDefault
-const ioctlFamilyETH = 0x20
-const (
-	ioctlOpGetInfo = 0
-)
-
-const ethFeatureWlan = 0x01
 
 func main() {
 	log.SetFlags(0)
@@ -54,26 +34,14 @@ func main() {
 func tryAddEth(path string) error {
 	log.Printf("trying ethernet device %q", path)
 
-	f, err := os.Open(path)
+	w, err := wlan.NewClient(path)
 	if err != nil {
-		return fmt.Errorf("wlan: client open: %v", err)
+		return err
 	}
-	m := syscall.MXIOForFD(int(f.Fd()))
-
-	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpGetInfo)
-	res := make([]byte, 64)
-	if _, err := m.Ioctl(num, nil, res); err != nil {
-		return fmt.Errorf("IOCTL_ETHERNET_GET_INFO: %v", err)
-	}
-
-	info := ethinfo{
-		features: binary.LittleEndian.Uint32(res),
-		mtu:      binary.LittleEndian.Uint32(res[4:]),
-	}
-	copy(info.mac[:], res[8:])
-
-	if info.features&ethFeatureWlan != 0 {
+	if w != nil {
 		log.Printf("found wlan device %q", path)
+		go w.Scan()
 	}
+
 	return nil
 }

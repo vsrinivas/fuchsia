@@ -9,3 +9,9 @@ fidl("services") {
     "wlan_service.fidl",
   ]
 }
+
+fidl("mlme") {
+  sources = [
+    "wlan_mlme.fidl",
+  ]
+}

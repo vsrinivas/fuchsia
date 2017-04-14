@@ -1,0 +1,72 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module wlan;
+
+// Stub types for communicating between the wlan service and the MLME drivers. Based on the 802.11
+// MLME SAP interface (IEEE Std 802.11-2016 section 6.3).
+
+
+// MLME-SCAN.request (IEEE Std 802.11-2016 6.3.3.2)
+
+enum BSSTypes {
+    INFRASTRUCTURE,
+    PERSONAL,
+    INDEPENDENT,
+    MESH,
+    ANY_BSS,
+    LAST = ANY_BSS,
+};
+
+enum ScanTypes {
+    ACTIVE,
+    PASSIVE,
+    LAST = PASSIVE,
+};
+
+struct ScanRequest {
+    BSSTypes bss_type;
+    array<uint8, 6> bssid;
+    string ssid;
+    ScanTypes scan_type;
+    uint32 probe_delay;
+    array<uint16>? channel_list;
+    uint32 min_channel_time;
+    uint32 max_channel_time;
+    array<string>? ssid_list;
+    // etc
+};
+
+
+// MLME-SCAN.confirm (IEEE Std 802.11-2016 6.3.3.3)
+
+struct BSSDescription {
+    array<uint8, 6> bssid;
+    string ssid;
+    BSSTypes bss_type;
+    uint32 beacon_period;
+    uint32 dtim_period;
+    uint64 timestamp;
+    uint64 local_time;
+    // etc
+};
+
+enum ResultCodes {
+    SUCCESS,
+    NOT_SUPPORTED,
+    LAST = NOT_SUPPORTED,
+};
+
+struct ScanResponse {
+    array<BSSDescription> bss_description_set;
+    // BSSDescriptionFromMeasurementPilotSet
+    ResultCodes result_code;
+};
+
+// Method ordinals
+// To be replaced once FIDL interfaces are available for Go
+enum Method {
+    SCAN,
+    LAST = SCAN,
+};
