@@ -8,9 +8,10 @@
 
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/port.h>
+
 #include <unittest/unittest.h>
 #include <runtime/thread.h>
-
 
 static const char kThreadName[] = "test-thread";
 
@@ -24,11 +25,12 @@ __NO_SAFESTACK static void test_sleep_thread_fn(void* arg) {
 __NO_SAFESTACK static void test_wait_thread_fn(void* arg) {
     mx_handle_t event = *(mx_handle_t*)arg;
     mx_object_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
+    mx_object_signal(event, 0u, MX_USER_SIGNAL_1);
     mx_thread_exit();
 }
 
 __NO_SAFESTACK static void busy_thread_fn(void* arg) {
-    volatile uint64_t i = 0;
+    volatile uint64_t i = 0u;
     while (true) {
         ++i;
     }
@@ -44,6 +46,15 @@ __NO_SAFESTACK static void wait_thread_fn(void* arg) {
     mx_handle_t event = *(mx_handle_t*)arg;
     mx_object_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
     __builtin_trap();
+}
+
+__NO_SAFESTACK static void test_port_thread_fn(void* arg) {
+    mx_handle_t* port = (mx_handle_t*)arg;
+    mx_port_packet_t packet = {};
+    mx_port_wait(port[0], MX_TIME_INFINITE, &packet, 0u);
+    packet.key += 5u;
+    mx_port_queue(port[1], &packet, 0u);
+    mx_thread_exit();
 }
 
 static bool start_thread(mxr_thread_entry_t entry, void* arg,
@@ -198,6 +209,7 @@ static bool test_info_task_stats_fails(void) {
                "Just added thread support to info_task_status?");
     // If so, replace this with a real test; see example in process.cpp.
 
+    ASSERT_EQ(mx_handle_close(thandle), NO_ERROR, "");
     END_TEST;
 }
 
@@ -220,15 +232,21 @@ static bool test_resume_suspended(void) {
     // Check that signaling the event while suspended results in the expected
     // behavior
     ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
+    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, MX_MSEC(100), NULL), ERR_TIMED_OUT, "");
     // TODO: Use an exception port to wait for the suspend to take effect
-    mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
 
+    // Since the thread is suspended the signaling should not take effect.
     ASSERT_EQ(mx_object_signal(event, 0, MX_USER_SIGNAL_0), NO_ERROR, "");
+    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, MX_MSEC(100), NULL), ERR_TIMED_OUT, "");
+
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
-    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, mx_deadline_after(MX_MSEC(100)),
-                                 NULL), NO_ERROR, "");
+
+    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+    ASSERT_EQ(mx_object_wait_one(
+        thread_h, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
 
     END_TEST;
 }
@@ -246,7 +264,14 @@ static bool test_kill_suspended(void) {
     mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
     ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
 
+    ASSERT_EQ(mx_object_wait_one(
+        thread_h, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+
+    // make sure the thread did not execute more user code.
+    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, MX_MSEC(100), NULL), ERR_TIMED_OUT, "");
+
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
 
     END_TEST;
 }
@@ -267,6 +292,7 @@ static bool test_suspend_sleeping(void) {
 
     // TODO(teisenbe): Once we wire in exceptions for suspend, check here that
     // we receive it.
+    mx_nanosleep(sleep_deadline - MX_MSEC(50));
 
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
 
@@ -276,6 +302,7 @@ static bool test_suspend_sleeping(void) {
     const mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
     ASSERT_GE(now, sleep_deadline, "thread did not sleep long enough");
 
+    ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
     END_TEST;
 }
 
@@ -375,6 +402,47 @@ static bool test_suspend_channel_call(void) {
     END_TEST;
 }
 
+static bool test_suspend_port_call(void) {
+    BEGIN_TEST;
+
+    mxr_thread_t thread;
+    mx_handle_t port[2];
+    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, &port[0]), NO_ERROR, "");
+    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, &port[1]), NO_ERROR, "");
+
+    ASSERT_TRUE(start_thread(test_port_thread_fn, port, &thread), "");
+    mx_handle_t thread_h = mxr_thread_get_handle(&thread);
+
+    mx_nanosleep(MX_MSEC(100));
+    ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
+
+    mx_port_packet_t packet1 = { 100ull, MX_PKT_TYPE_USER, 0u, {} };
+    mx_port_packet_t packet2 = { 300ull, MX_PKT_TYPE_USER, 0u, {} };
+
+    ASSERT_EQ(mx_port_queue(port[0], &packet1, 0u), NO_ERROR, "");
+    ASSERT_EQ(mx_port_queue(port[0], &packet2, 0u), NO_ERROR, "");
+
+    mx_port_packet_t packet;
+    ASSERT_EQ(mx_port_wait(port[1], MX_MSEC(100), &packet, 0u), ERR_TIMED_OUT, "");
+
+    ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
+
+    ASSERT_EQ(mx_port_wait(port[1], MX_TIME_INFINITE, &packet, 0u), NO_ERROR, "");
+    EXPECT_EQ(packet.key, 105ull, "");
+
+    ASSERT_EQ(mx_port_wait(port[0], MX_TIME_INFINITE, &packet, 0u), NO_ERROR, "");
+    EXPECT_EQ(packet.key, 300ull, "");
+
+    ASSERT_EQ(mx_object_wait_one(
+        thread_h, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+
+    ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(port[0]), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(port[1]), NO_ERROR, "");
+
+    END_TEST;
+}
+
 struct test_writing_thread_arg {
     volatile int v;
 };
@@ -393,7 +461,6 @@ static bool test_suspend_stops_thread(void) {
     mxr_thread_t thread;
 
     struct test_writing_thread_arg arg;
-
     ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread), "");
     mx_handle_t thread_h = mxr_thread_get_handle(&thread);
 
@@ -412,7 +479,7 @@ static bool test_suspend_stops_thread(void) {
     }
 
     ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
-
+    ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
     END_TEST;
 }
 
@@ -429,6 +496,7 @@ RUN_TEST(test_resume_suspended)
 RUN_TEST(test_kill_suspended)
 RUN_TEST(test_suspend_sleeping)
 RUN_TEST(test_suspend_channel_call)
+RUN_TEST(test_suspend_port_call)
 RUN_TEST(test_suspend_stops_thread)
 END_TEST_CASE(threads_tests)
 
