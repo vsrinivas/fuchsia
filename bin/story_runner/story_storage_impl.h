@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/page_client.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -30,6 +31,7 @@ class StoryStorageImpl : ledger::PageWatcher {
  public:
   using DataCallback = std::function<void(const fidl::String&)>;
   using SyncCallback = std::function<void()>;
+  using ModuleDataCallback = std::function<void(fidl::Array<ModuleDataPtr>)>;
 
   StoryStorageImpl(ledger::Page* story_page);
   ~StoryStorageImpl() override;
@@ -41,6 +43,14 @@ class StoryStorageImpl : ledger::PageWatcher {
                      const fidl::String& link_id,
                      const fidl::String& data,
                      const SyncCallback& callback);
+
+  void ReadModuleData(const ModuleDataCallback& callback);
+  void WriteModuleData(
+      const fidl::String& module_name,
+      const fidl::String& module_url,
+      const fidl::String& link_name,
+      const SyncCallback& callback);
+
   void WatchLink(const fidl::String& link_id, const DataCallback& watcher);
   void Sync(const SyncCallback& callback);
 
@@ -70,6 +80,8 @@ class StoryStorageImpl : ledger::PageWatcher {
   // Operations implemented here.
   class ReadLinkDataCall;
   class WriteLinkDataCall;
+  class ReadModuleDataCall;
+  class WriteModuleDataCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };

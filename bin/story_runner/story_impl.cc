@@ -12,6 +12,7 @@
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/module/module_context.fidl.h"
+#include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/module_context_impl.h"
@@ -30,13 +31,12 @@ namespace modular {
 
 constexpr char kStoryScopeLabelPrefix[] = "story-";
 
-StoryImpl::StoryImpl(StoryDataPtr story_data,
+StoryImpl::StoryImpl(const fidl::String& story_id,
+                     ledger::PagePtr story_page,
                      StoryProviderImpl* const story_provider_impl)
-    : story_id_(story_data->story_info->id),
-      story_data_(std::move(story_data)),
+    : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
-      story_page_(
-          story_provider_impl_->GetStoryPage(story_data_->story_page_id)),
+      story_page_(std::move(story_page)),
       story_storage_impl_(new StoryStorageImpl(story_page_.get())),
       story_scope_(story_provider_impl_->user_scope(),
                    kStoryScopeLabelPrefix + story_id_.get()),
@@ -79,28 +79,29 @@ void StoryImpl::GetInfo(const GetInfoCallback& callback) {
     return;
   }
 
-  story_provider_impl_->GetStoryData(
-      story_data_->story_info->id, [this, callback](StoryDataPtr story_data) {
-        // TODO(mesch): It should not be necessary to read the data
-        // from ledger again. Updates from the ledger should be
-        // propagated to here and processed, and any change that
-        // happens here should be written to the ledger such that it
-        // can't be read again before it's written.
-        story_data_ = std::move(story_data);
-        callback(story_data_->story_info->Clone());
-      });
+  story_provider_impl_->GetStoryInfo(story_id_, callback);
 }
 
 // |StoryController|
 void StoryImpl::SetInfoExtra(const fidl::String& name,
                              const fidl::String& value,
                              const SetInfoExtraCallback& callback) {
-  story_data_->story_info->extra[name] = value;
+  if (deleted_) {
+    FTL_LOG(INFO) << "StoryImpl::SetInfoExtra() during delete: ignored.";
+    return;
+  }
 
-  // Callback is serialized after WriteStoryData. This means that
-  // after the callback returns, story info can be read from the
-  // ledger and will have it.
-  WriteStoryData(callback);
+  story_provider_impl_->SetStoryInfoExtra(story_id_, name, value, callback);
+}
+
+void StoryImpl::AddModuleAndSync(const fidl::String& module_name,
+                                 const fidl::String& module_url,
+                                 const fidl::String& link_name,
+                                 const std::function<void()>& done) {
+  story_storage_impl_->WriteModuleData(
+      module_name,
+      module_url,
+      link_name, done);
 }
 
 // |StoryController|
@@ -112,19 +113,13 @@ void StoryImpl::AddModule(const fidl::String& module_name,
     return;
   }
 
-  auto module = ModuleData::New();
-  module->url = module_url;
-  module->module_path = fidl::Array<fidl::String>::New(0);
-  module->module_path.push_back(module_name);
-  module->link = link_name;
-
-  story_data_->modules.push_back(std::move(module));
-
-  WriteStoryData([] {});
-
-  if (!module_controllers_.empty()) {
-    StartRootModule(module_name, module_url, link_name);
-  }
+  AddModuleAndSync(
+      module_name, module_url, link_name,
+      [this, module_name, module_url, link_name] {
+        if (running_) {
+          StartRootModule(module_name, module_url, link_name);
+        }
+      });
 }
 
 // |StoryController|
@@ -145,7 +140,7 @@ void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
 
   // If the story is running, we do nothing and close the view owner
   // request.
-  if (story_data_->story_info->is_running) {
+  if (running_) {
     FTL_LOG(INFO) << "StoryImpl::Start() while already running: ignored.";
     return;
   }
@@ -171,23 +166,27 @@ void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
       //
       // Start *all* the root modules, not just the first one, with
       // their respective links.
-      for (auto& module_data : story_data_->modules) {
-        StartRootModule(module_data->module_path[0], module_data->url,
-                        module_data->link);
-      }
+      story_storage_impl_->ReadModuleData(
+          [this](fidl::Array<ModuleDataPtr> data) {
+            for (auto& module_data : data) {
+              if (module_data->module_path.size() == 1) {
+                StartRootModule(module_data->module_path[0], module_data->url,
+                                module_data->link);
+              }
+            }
 
-      story_data_->story_info->is_running = true;
-      story_data_->story_info->state = StoryState::STARTING;
-      WriteStoryData([] {});
+            running_ = true;
+            state_ = StoryState::STARTING;
 
-      NotifyStateChange();
-    }
+            NotifyStateChange();
 
-    // In case we didn't use the start request, we close it here,
-    start_request_ = nullptr;
+            // In case we didn't use the start request, we close it here,
+            start_request_ = nullptr;
 
-    if (deleted_) {
-      FTL_LOG(INFO) << "StoryImpl::Start() callback during delete: ignored.";
+            if (deleted_) {
+              FTL_LOG(INFO) << "StoryImpl::Start() callback during delete: ignored.";
+            }
+          });
     }
   };
 
@@ -243,8 +242,7 @@ void StoryImpl::StartRootModule(const fidl::String& module_name,
 // |StoryController|
 void StoryImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
   auto ptr = StoryWatcherPtr::Create(std::move(watcher));
-  const StoryState state = story_data_->story_info->state;
-  ptr->OnStateChange(state);
+  ptr->OnStateChange(state_);
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
@@ -252,41 +250,35 @@ void StoryImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
 void StoryImpl::OnStateChange(const ModuleState state) {
   switch (state) {
     case ModuleState::STARTING:
-      story_data_->story_info->state = StoryState::STARTING;
+      state_ = StoryState::STARTING;
       break;
     case ModuleState::RUNNING:
     case ModuleState::UNLINKED:
-      story_data_->story_info->state = StoryState::RUNNING;
+      state_ = StoryState::RUNNING;
       break;
     case ModuleState::STOPPED:
-      story_data_->story_info->state = StoryState::STOPPED;
+      state_ = StoryState::STOPPED;
       break;
     case ModuleState::DONE:
-      story_data_->story_info->state = StoryState::DONE;
+      state_ = StoryState::DONE;
       break;
     case ModuleState::ERROR:
-      story_data_->story_info->state = StoryState::ERROR;
+      state_ = StoryState::ERROR;
       break;
   }
 
-  WriteStoryData([] {});
   NotifyStateChange();
 }
 
-void StoryImpl::WriteStoryData(std::function<void()> callback) {
-  // If the story controller is deleted, we do not write story data
-  // anymore, because that would undelete it again.
-  if (!deleted_) {
-    story_provider_impl_->WriteStoryData(story_data_->Clone(), callback);
-  } else {
-    callback();
-  }
-}
-
 void StoryImpl::NotifyStateChange() {
-  const StoryState state = story_data_->story_info->state;
   watchers_.ForAllPtrs(
-      [state](StoryWatcher* const watcher) { watcher->OnStateChange(state); });
+      [this](StoryWatcher* const watcher) { watcher->OnStateChange(state_); });
+
+  if (!deleted_) {
+    // If the story controller is deleted, we do not write story data
+    // anymore, because that would undelete it again.
+    story_provider_impl_->SetStoryState(story_id_, running_, state_);
+  }
 }
 
 LinkPtr& StoryImpl::EnsureRoot() {
@@ -432,8 +424,8 @@ void StoryImpl::StartModuleInShell(
                             view_type);
 }
 
-const std::string& StoryImpl::GetStoryId() {
-  return story_data_->story_info->id;
+const fidl::String& StoryImpl::GetStoryId() const {
+  return story_id_;
 }
 
 // A variant of Stop() that stops the controller because the story was
@@ -537,29 +529,27 @@ void StoryImpl::StopLinks() {
 }
 
 void StoryImpl::StopFinish() {
-  story_data_->story_info->is_running = false;
-  story_data_->story_info->state = StoryState::STOPPED;
+  running_ = false;
+  state_ = StoryState::STOPPED;
 
   module_controllers_.clear();
   root_.reset();
 
-  WriteStoryData([this] {
-    NotifyStateChange();
+  NotifyStateChange();
 
-    // Done callbacks might delete |this| as well as objects provided
-    // exclusively to |this| without ownership, and they are not
-    // necessarily run through the runloop because they come in
-    // through a non-fidl method. If the callbacks would be invoked
-    // directly, |this| could be deleted not just for the remainder of
-    // this function here, but also for the remainder of all functions
-    // above us in the callstack, including functions that run as
-    // methods of other objects owned by |this| or provided to |this|.
-    // Therefore, to avoid such problems, all done callbacks are
-    // invoked through the run loop.
-    for (auto& done : teardown_) {
-      mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(done);
-    }
-  });
+  // Done callbacks might delete |this| as well as objects provided
+  // exclusively to |this| without ownership, and they are not
+  // necessarily run through the runloop because they come in
+  // through a non-fidl method. If the callbacks would be invoked
+  // directly, |this| could be deleted not just for the remainder of
+  // this function here, but also for the remainder of all functions
+  // above us in the callstack, including functions that run as
+  // methods of other objects owned by |this| or provided to |this|.
+  // Therefore, to avoid such problems, all done callbacks are
+  // invoked through the run loop.
+  for (auto& done : teardown_) {
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(done);
+  }
 }
 
 StoryImpl::StoryMarkerImpl::StoryMarkerImpl() = default;

@@ -6,6 +6,7 @@ module modular;
 
 import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/story/story_info.fidl";
+import "apps/modular/services/story/story_state.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // Used by the clients of StoryProvider (UserShell) to interact with a
@@ -29,9 +30,10 @@ interface StoryController {
   // Gets a connection to the root Link.
   GetLink(Link& link);
 
-  // Gets a connection to the named Link in the story. The name of the root link
-  // is "root", and it's implicitly created when the story is created. Any other
-  // link, if it doesn't exist yet, is implicitly created.
+  // Gets a connection to the named Link in the story. The name of the
+  // root link is "root", and it's implicitly created when the story
+  // is created. Any other link, if it doesn't exist yet, is
+  // implicitly created.
   GetNamedLink(string name, Link& link);
 
   // Stops this story if it is running, else does nothing. Returns
@@ -41,14 +43,15 @@ interface StoryController {
   // Registers a listener for changes of the story state.
   Watch(StoryWatcher watcher);
 
-  // Adds and starts a top level module to the story. The view of this module is
-  // sent to the story shell. The module |name| is used to reinflate component
-  // message queues and Links on subsequent runs of the story. The Link to be
-  // used for the module is identified by its name as used in calls to
-  // GetNamedLink(); using that method, the link can be configured with data
-  // before running the module. The implicit name of the link obtained from
-  // GetLink() is "root". This |link_name| is  scoped to the story controller,
-  // and not the module. TODO(mesch): Some form of ModuleController might be
+  // Adds and starts a top level module to the story. The view of this
+  // module is sent to the story shell. The module |name| is used to
+  // reinflate component message queues and Links on subsequent runs
+  // of the story. The Link to be used for the module is identified by
+  // its name as used in calls to GetNamedLink(); using that method,
+  // the link can be configured with data before running the module.
+  // The implicit name of the link obtained from GetLink() is "root".
+  // This |link_name| is scoped to the story controller, and not the
+  // module. TODO(mesch): Some form of ModuleController might be
   // useful here, e.g. for status notifications.
   AddModule(string name, string url, string link_name);
 };

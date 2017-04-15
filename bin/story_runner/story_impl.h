@@ -50,7 +50,9 @@ constexpr char kRootModuleName[] = "root";
 // instance.
 class StoryImpl : StoryController, StoryContext, ModuleWatcher {
  public:
-  StoryImpl(StoryDataPtr story_data, StoryProviderImpl* story_provider_impl);
+  StoryImpl(const fidl::String& story_id,
+            ledger::PagePtr story_page,
+            StoryProviderImpl* story_provider_impl);
   ~StoryImpl() override;
 
   // Called by ModuleContextImpl.
@@ -84,7 +86,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
       const fidl::String& view_type);
 
   // Called by ModuleContextImpl.
-  const std::string& GetStoryId();
+  const fidl::String& GetStoryId() const;
 
   // Releases ownership of |controller|.
   void ReleaseModule(ModuleControllerImpl* controller);
@@ -94,6 +96,10 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   void StopForDelete(const StopCallback& callback);
   void AddLinkDataAndSync(const fidl::String& json,
                           const std::function<void()>& callback);
+  void AddModuleAndSync(const fidl::String& module_name,
+                        const fidl::String& url,
+                        const fidl::String& link_name,
+                        const std::function<void()>& callback);
 
  private:
   // |StoryController|
@@ -127,20 +133,16 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   void OnStateChange(ModuleState new_state) override;
 
   // Misc internal helpers.
-  void WriteStoryData(std::function<void()> callback);
   void NotifyStateChange();
   void DisposeLink(LinkImpl* link);
   LinkPtr& EnsureRoot();
 
-  // The ID of the story. It cannot possibly change during the
-  // lifetime of the story.
+  // The ID of the story, its state and the context to obtain it from
+  // and persist it to.
   const fidl::String story_id_;
-
-  // The state of a Story and the context to obtain it from and
-  // persist it to.
-  StoryDataPtr story_data_;
+  bool running_{false};
+  StoryState state_{StoryState::INITIAL};
   StoryProviderImpl* const story_provider_impl_;
-
   ledger::PagePtr story_page_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
 

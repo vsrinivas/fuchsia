@@ -54,13 +54,6 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   // corresponding entry.
   void PurgeController(const std::string& story_id);
 
-  // Obtains the StoryData for an existing story from the ledger.
-  void GetStoryData(const fidl::String& story_id,
-                    const std::function<void(StoryDataPtr)>& result);
-
-  // Used by CreateStory() to write story meta-data to the ledger.
-  void WriteStoryData(StoryDataPtr story_data, std::function<void()> done);
-
   // Used by StoryImpl.
   const Scope* user_scope() const { return user_scope_; }
   const ComponentContextInfo& component_context_info() {
@@ -69,12 +62,24 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   maxwell::UserIntelligenceProvider* user_intelligence_provider() {
     return user_intelligence_provider_;
   }
-  ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
   const AppConfig& story_shell() const { return *story_shell_; }
 
-  using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
+  void SetStoryInfoExtra(const fidl::String& story_id,
+                         const fidl::String& name,
+                         const fidl::String& value,
+                         const std::function<void()>& callback);
+
+  void SetStoryState(const fidl::String& story_id,
+                     bool running,
+                     StoryState state);
+
+  // |StoryProvider|, also used by StoryImpl.
+  void GetStoryInfo(const fidl::String& story_id,
+                    const GetStoryInfoCallback& callback) override;
 
  private:
+  using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
+
   // |StoryProvider|
   void CreateStory(const fidl::String& url,
                    const CreateStoryCallback& callback) override;
@@ -89,10 +94,6 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   // |StoryProvider|
   void DeleteStory(const fidl::String& story_id,
                    const DeleteStoryCallback& callback) override;
-
-  // |StoryProvider|
-  void GetStoryInfo(const fidl::String& story_id,
-                    const GetStoryInfoCallback& callback) override;
 
   // |StoryProvider|
   void GetController(const fidl::String& story_id,
@@ -170,6 +171,8 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   // Operations implemented here.
   class GetStoryDataCall;
   class WriteStoryDataCall;
+  class SetStoryInfoExtraCall;
+  class SetStoryStateCall;
   class CreateStoryCall;
   class DeleteStoryCall;
   class GetControllerCall;

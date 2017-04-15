@@ -4,10 +4,12 @@
 
 module modular;
 
+import "apps/modular/services/story/story_state.fidl";
+
 // Information about a story as provided to the UserShell.
 struct StoryInfo {
-  // URL of the first application run in this story. This application
-  // is free to run more applications in the story.
+  // URL of the first module run in this story. This module is free to
+  // run more modules in the story. Used for display purposes only.
   string url;
 
   // The ID of the Story, used to reference it in method arguments.
@@ -23,39 +25,4 @@ struct StoryInfo {
   // Data the UserShell wants to keep associated with this Story, like
   // title, a color, or a display rank.
   map<string, string> extra;
-};
-
-// State of a Story. It mostly, but not entirely, mirrors (for now)
-// the ModuleState of the root module in the story. Cf. ModuleState in
-// module.fidl. The values are, in fact, the same. However, we keep
-// the two separate because we expect them to diverge more.
-//
-// Currently possible state transitions are:
-//
-//   INITIAL  -> STARTING
-//   STARTING -> RUNNING
-//   RUNNING  -> DONE
-//   RUNNING  -> STOPPED
-//   DONE     -> STOPPED
-//   STARTING -> ERROR
-//   STOPPED  -> STARTING
-//
-// TODO(mesch): We should be able to distinguish the STOPPED state
-// reached from DONE from the STOPPED state reached from RUNNING, as a
-// story in the former doesn't make sense to start again, whereas a
-// story in the latter state does. Presumably the states should be
-// PAUSED vs. FINISHED.
-enum StoryState {
-  // Story was created but never before started.
-  INITIAL = 0,
-  // Story was started by calling Start() but is not yet ready.
-  STARTING = 1,
-  // Story ready after its root module called Ready().
-  RUNNING = 2,
-  // Story done but not yet stopped after its root module called Done().
-  DONE = 3,
-  // Story stopped after Story.Stop() was called.
-  STOPPED = 4,
-  // The application of the root module could not be started.
-  ERROR = 5,
 };

@@ -1,0 +1,40 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// State of a Story. It mostly, but not entirely, mirrors (for now)
+// the ModuleState of the root module in the story. Cf. ModuleState in
+// module.fidl. The values are, in fact, the same. However, we keep
+// the two separate because we expect them to diverge more.
+//
+// Currently possible state transitions are:
+//
+//   INITIAL  -> STARTING
+//   STARTING -> RUNNING
+//   RUNNING  -> DONE
+//   RUNNING  -> STOPPED
+//   DONE     -> STOPPED
+//   STARTING -> ERROR
+//   STOPPED  -> STARTING
+//
+// TODO(mesch): We should be able to distinguish the STOPPED state
+// reached from DONE from the STOPPED state reached from RUNNING, as a
+// story in the former doesn't make sense to start again, whereas a
+// story in the latter state does. Presumably the states should be
+// PAUSED vs. FINISHED.
+enum StoryState {
+  // Story exists but was not yet started.
+  INITIAL = 0,
+  // Story was started by calling Start() but is not yet ready.
+  STARTING = 1,
+  // Story ready after its root module called Ready().
+  RUNNING = 2,
+  // Story done but not yet stopped after its root module called Done().
+  DONE = 3,
+  // Story stopped after Story.Stop() was called.
+  STOPPED = 4,
+  // The application of the root module could not be started.
+  ERROR = 5,
+};

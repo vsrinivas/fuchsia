@@ -1,0 +1,23 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Information about modules in a Story.
+//
+// TODO(mesch): This is currently used only for root modules. Soon we use this
+// struct to keep information about all modules in the story page. In order to
+// support this, we must support to store a link name with a non-empty module
+// path.
+struct ModuleData {
+  // The URL of the module application.
+  string url;
+
+  // The named path leading up to this module. The last name in this array is
+  // this module's name.
+  array<string> module_path;
+
+  // The name of the link the module was started with.
+  string link;
+};
