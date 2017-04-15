@@ -5,12 +5,12 @@
 #include <iostream>
 #include <ostream>
 
-#include "apps/tracing/src/trace/app.h"
+#include "app.h"
 
-#include "apps/tracing/src/trace/commands/dump_provider.h"
-#include "apps/tracing/src/trace/commands/list_categories.h"
-#include "apps/tracing/src/trace/commands/list_providers.h"
-#include "apps/tracing/src/trace/commands/record.h"
+#include "commands/dump_provider.h"
+#include "commands/list_categories.h"
+#include "commands/list_providers.h"
+#include "commands/record.h"
 
 namespace tracing {
 

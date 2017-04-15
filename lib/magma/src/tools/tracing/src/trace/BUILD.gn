@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 executable("trace") {
+  output_name = "magma_trace"
   sources = [
     "main.cc",
   ]

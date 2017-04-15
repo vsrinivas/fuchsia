@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/src/trace/app.h"
+#include "app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/mtl/tasks/message_loop.h"

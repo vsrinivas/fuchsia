@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "apps/tracing/src/trace/command.h"
+#include "command.h"
 
 namespace tracing {
 

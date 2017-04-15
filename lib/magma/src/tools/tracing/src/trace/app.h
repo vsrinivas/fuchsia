@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/tracing/src/trace/command.h"
+#include "command.h"
 #include "lib/ftl/macros.h"
 
 namespace tracing {

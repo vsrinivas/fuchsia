@@ -6,7 +6,7 @@
 
 #include <mx/socket.h>
 
-#include "apps/tracing/src/trace/commands/dump_provider.h"
+#include "dump_provider.h"
 
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/time/time_delta.h"

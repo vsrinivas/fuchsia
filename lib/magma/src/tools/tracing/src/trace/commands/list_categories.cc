@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "apps/tracing/src/trace/commands/list_categories.h"
+#include "list_categories.h"
 
 #include "lib/mtl/tasks/message_loop.h"
 

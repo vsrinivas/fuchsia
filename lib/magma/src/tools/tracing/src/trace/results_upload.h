@@ -11,7 +11,7 @@
 
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/lib/measure/results.h"
-#include "apps/tracing/src/trace/spec.h"
+#include "spec.h"
 #include "lib/ftl/functional/closure.h"
 
 namespace tracing {

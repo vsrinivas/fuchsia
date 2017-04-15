@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "apps/tracing/lib/measure/results.h"
-#include "apps/tracing/src/trace/spec.h"
+#include "spec.h"
 
 namespace tracing {
 

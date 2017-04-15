@@ -7,8 +7,8 @@
 #include <unordered_set>
 
 #include "apps/network/services/network_service.fidl.h"
-#include "apps/tracing/src/trace/commands/record.h"
-#include "apps/tracing/src/trace/results_output.h"
+#include "record.h"
+#include "../results_output.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"

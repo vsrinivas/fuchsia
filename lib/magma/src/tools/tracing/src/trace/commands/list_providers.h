@@ -5,7 +5,7 @@
 #ifndef APPS_TRACING_SRC_TRACE_COMMANDS_LIST_PROVIDERS_H_
 #define APPS_TRACING_SRC_TRACE_COMMANDS_LIST_PROVIDERS_H_
 
-#include "apps/tracing/src/trace/command.h"
+#include "../command.h"
 
 namespace tracing {
 
