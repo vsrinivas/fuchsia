@@ -53,17 +53,17 @@ mx_status_t MagentaDevice::CallDevice(const mx_channel_call_args_t& args, uint64
     mx_status_t read_status;
     uint32_t resp_size;
     uint32_t resp_handles;
-    mx_time_t timeout;
+    mx_time_t deadline;
 
     if (timeout_msec == MX_TIME_INFINITE) {
-        timeout = MX_TIME_INFINITE;
+        deadline = MX_TIME_INFINITE;
     } else if (timeout_msec >= mxtl::numeric_limits<mx_time_t>::max() / MX_MSEC(1)) {
         return ERR_INVALID_ARGS;
     } else {
-        timeout = MX_MSEC(timeout_msec);
+        deadline = mx_deadline_after(MX_MSEC(timeout_msec));
     }
 
-    res = mx_channel_call(dev_channel_, 0, timeout,
+    res = mx_channel_call(dev_channel_, 0, deadline,
                           &args, &resp_size, &resp_handles, &read_status);
 
     return (res == ERR_CALL_FAILED) ? read_status : res;
