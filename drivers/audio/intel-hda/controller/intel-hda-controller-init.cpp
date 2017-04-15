@@ -14,11 +14,11 @@ namespace audio {
 namespace intel_hda {
 
 namespace {
-static constexpr mx_time_t INTEL_HDA_RESET_HOLD_TIME_NSEC        = 100000;   // Section 5.5.1.2
-static constexpr mx_time_t INTEL_HDA_RESET_TIMEOUT_NSEC          = 1000000;  // 1mS Arbitrary
-static constexpr mx_time_t INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC = 1000000;  // 1mS Arbitrary
-static constexpr mx_time_t INTEL_HDA_RESET_POLL_TIMEOUT_NSEC     = 10000;    // 10uS Arbitrary
-static constexpr mx_time_t INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC   = 521000;   // Section 4.3
+static constexpr mx_time_t INTEL_HDA_RESET_HOLD_TIME_NSEC        = MX_USEC(100); // Section 5.5.1.2
+static constexpr mx_time_t INTEL_HDA_RESET_TIMEOUT_NSEC          = MX_MSEC(1);   // 1mS Arbitrary
+static constexpr mx_time_t INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC = MX_MSEC(1);   // 1mS Arbitrary
+static constexpr mx_time_t INTEL_HDA_RESET_POLL_TIMEOUT_NSEC     = MX_USEC(10);  // 10uS Arbitrary
+static constexpr mx_time_t INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC   = MX_USEC(521); // Section 4.3
 static constexpr size_t CMD_BUFFER_SIZE = 4096;
 }  // anon namespace
 
@@ -43,7 +43,7 @@ mx_status_t IntelHDAController::ResetControllerHW() {
     }
 
     // Wait the spec mandated hold time.
-    mx_nanosleep(INTEL_HDA_RESET_HOLD_TIME_NSEC);
+    mx_nanosleep(mx_deadline_after(INTEL_HDA_RESET_HOLD_TIME_NSEC));
 
     // Deassert the reset signal and wait for the controller to ack.
     REG_SET_BITS<uint32_t>(&regs_->gctl, HDA_REG_GCTL_HWINIT);
@@ -63,7 +63,7 @@ mx_status_t IntelHDAController::ResetControllerHW() {
     }
 
     // Wait the spec mandated discovery time.
-    mx_nanosleep(INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC);
+    mx_nanosleep(mx_deadline_after(INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC));
     return res;
 }
 

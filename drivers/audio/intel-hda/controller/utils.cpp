@@ -76,7 +76,7 @@ mx_status_t WaitCondition(mx_time_t timeout,
         if (poll_interval < sleep_time)
             sleep_time = poll_interval;
 
-        mx_nanosleep(sleep_time);
+        mx_nanosleep(mx_deadline_after(sleep_time));
     }
 
     return NO_ERROR;
