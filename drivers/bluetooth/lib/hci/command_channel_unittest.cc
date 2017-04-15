@@ -11,9 +11,9 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/command_packet.h"
 #include "apps/bluetooth/lib/hci/device_wrapper.h"
-#include "apps/bluetooth/lib/hci/fake_controller.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
+#include "apps/bluetooth/lib/hci/test_controller.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -56,14 +56,14 @@ class CommandChannelTest : public ::testing::Test {
     auto hci_dev = std::make_unique<DummyDeviceWrapper>(std::move(cmd0), mx::channel());
     transport_ = hci::Transport::Create(std::move(hci_dev));
 
-    fake_controller_ = std::make_unique<FakeController>(std::move(cmd1), mx::channel());
+    test_controller_ = std::make_unique<TestController>(std::move(cmd1), mx::channel());
 
     transport_->Initialize();
   }
 
   void TearDown() override {
     transport_ = nullptr;
-    fake_controller_ = nullptr;
+    test_controller_ = nullptr;
   }
 
   void RunMessageLoop() {
@@ -76,12 +76,12 @@ class CommandChannelTest : public ::testing::Test {
 
   ftl::RefPtr<Transport> transport() const { return transport_; }
   CommandChannel* cmd_channel() const { return transport_->command_channel(); }
-  FakeController* fake_controller() const { return fake_controller_.get(); }
+  TestController* test_controller() const { return test_controller_.get(); }
   mtl::MessageLoop* message_loop() { return &message_loop_; }
 
  private:
   ftl::RefPtr<Transport> transport_;
-  std::unique_ptr<FakeController> fake_controller_;
+  std::unique_ptr<TestController> test_controller_;
   mtl::MessageLoop message_loop_;
 };
 
@@ -99,8 +99,8 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
       kNumHCICommandPackets, LowerBits(kReset),
       UpperBits(kReset),  // HCI_Reset opcode
       Status::kHardwareFailure);
-  fake_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
-  fake_controller()->Start();
+  test_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
+  test_controller()->Start();
 
   // Send a HCI_Reset command.
   common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
@@ -145,8 +145,8 @@ TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
       kNumHCICommandPackets, LowerBits(kReset),
       UpperBits(kReset),  // HCI_Reset opcode
       Status::kSuccess);
-  fake_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp0, &rsp1}));
-  fake_controller()->Start();
+  test_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp0, &rsp1}));
+  test_controller()->Start();
 
   // Send HCI_Reset
   CommandChannel::TransactionId id;
@@ -190,8 +190,8 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
       Status::kSuccess, kNumHCICommandPackets, LowerBits(kReset),
       UpperBits(kReset)  // HCI_Reset opcode
       );
-  fake_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
-  fake_controller()->Start();
+  test_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
+  test_controller()->Start();
 
   // Send HCI_Reset
   CommandChannel::TransactionId id;
@@ -256,9 +256,9 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
       kNumHCICommandPackets, LowerBits(kReadBDADDR), UpperBits(kReadBDADDR),
       Status::kSuccess, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06  // BD_ADDR
       );
-  fake_controller()->QueueCommandTransaction(CommandTransaction(req0, {&rsp0}));
-  fake_controller()->QueueCommandTransaction(CommandTransaction(req1, {&rsp1, &rsp2}));
-  fake_controller()->Start();
+  test_controller()->QueueCommandTransaction(CommandTransaction(req0, {&rsp0}));
+  test_controller()->QueueCommandTransaction(CommandTransaction(req1, {&rsp1, &rsp2}));
+  test_controller()->Start();
 
   // Begin transactions:
   CommandChannel::TransactionId id0, id1;
@@ -343,16 +343,16 @@ TEST_F(CommandChannelTest, EventHandlerBasic) {
   id1 = cmd_channel()->AddEventHandler(kTestEventCode1, event_cb1, message_loop()->task_runner());
   EXPECT_NE(0u, id1);
 
-  fake_controller()->Start();
-  fake_controller()->SendCommandChannelPacket(cmd_status);
-  fake_controller()->SendCommandChannelPacket(cmd_complete);
-  fake_controller()->SendCommandChannelPacket(event1);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(cmd_complete);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(cmd_status);
-  fake_controller()->SendCommandChannelPacket(event1);
+  test_controller()->Start();
+  test_controller()->SendCommandChannelPacket(cmd_status);
+  test_controller()->SendCommandChannelPacket(cmd_complete);
+  test_controller()->SendCommandChannelPacket(event1);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(cmd_complete);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(cmd_status);
+  test_controller()->SendCommandChannelPacket(event1);
 
   RunMessageLoop();
 
@@ -364,15 +364,15 @@ TEST_F(CommandChannelTest, EventHandlerBasic) {
 
   // Remove the first event handler.
   cmd_channel()->RemoveEventHandler(id0);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(event1);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(event0);
-  fake_controller()->SendCommandChannelPacket(event1);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(event1);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(event0);
+  test_controller()->SendCommandChannelPacket(event1);
 
   RunMessageLoop();
 
@@ -401,9 +401,9 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   // We will send the HCI_Reset command with kTestEventCode as the completion
   // event. The event handler we register below should only get invoked once and
   // after the pending transaction completes.
-  fake_controller()->QueueCommandTransaction(
+  test_controller()->QueueCommandTransaction(
       CommandTransaction(req, {&cmd_status, &event0, &event1}));
-  fake_controller()->Start();
+  test_controller()->Start();
 
   int event_count = 0;
   auto event_cb = [&event_count, kTestEventCode, this](const EventPacket& event) {
@@ -467,34 +467,34 @@ TEST_F(CommandChannelTest, LEMetaEventHandler) {
                                              message_loop()->task_runner());
   EXPECT_NE(0u, id1);
 
-  fake_controller()->Start();
+  test_controller()->Start();
 
-  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes0);
+  test_controller()->SendCommandChannelPacket(le_meta_event_bytes0);
   RunMessageLoop();
   EXPECT_EQ(1, event_count0);
   EXPECT_EQ(0, event_count1);
 
-  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes0);
+  test_controller()->SendCommandChannelPacket(le_meta_event_bytes0);
   RunMessageLoop();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(0, event_count1);
 
-  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes1);
+  test_controller()->SendCommandChannelPacket(le_meta_event_bytes1);
   RunMessageLoop();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(1, event_count1);
 
   // Remove the first event handler.
   cmd_channel()->RemoveEventHandler(id0);
-  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes0);
-  fake_controller()->SendCommandChannelPacket(le_meta_event_bytes1);
+  test_controller()->SendCommandChannelPacket(le_meta_event_bytes0);
+  test_controller()->SendCommandChannelPacket(le_meta_event_bytes1);
   RunMessageLoop();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(2, event_count1);
 }
 
 TEST_F(CommandChannelTest, TransportClosedCallback) {
-  fake_controller()->Start();
+  test_controller()->Start();
 
   bool closed_cb_called = false;
   auto closed_cb = [&closed_cb_called, this] {
@@ -503,7 +503,7 @@ TEST_F(CommandChannelTest, TransportClosedCallback) {
   };
   transport()->SetTransportClosedCallback(closed_cb, message_loop()->task_runner());
 
-  message_loop()->task_runner()->PostTask([this] { fake_controller()->CloseCommandChannel(); });
+  message_loop()->task_runner()->PostTask([this] { test_controller()->CloseCommandChannel(); });
   RunMessageLoop();
   EXPECT_TRUE(closed_cb_called);
 }
@@ -539,39 +539,39 @@ TEST_F(CommandChannelTest, SequentialCommandRunner) {
   //
   // Sequence 1 (HCI packets)
   //    -> Reset; <- error status
-  fake_controller()->QueueCommandTransaction(
+  test_controller()->QueueCommandTransaction(
       CommandTransaction(reset_bytes, {&reset_status_error_bytes}));
 
   // Sequence 2 (HCI packets)
   //    -> Reset; <- error complete
-  fake_controller()->QueueCommandTransaction(
+  test_controller()->QueueCommandTransaction(
       CommandTransaction(reset_bytes, {&reset_cmpl_error_bytes}));
 
   // Sequence 3 (HCI packets)
   //    -> Reset; <- success complete
   //    -> Reset; <- error complete
-  fake_controller()->QueueCommandTransaction(
+  test_controller()->QueueCommandTransaction(
       CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
-  fake_controller()->QueueCommandTransaction(
+  test_controller()->QueueCommandTransaction(
       CommandTransaction(reset_bytes, {&reset_cmpl_error_bytes}));
 
   // Sequence 4 (HCI packets)
   //    -> Reset; <- success complete
   //    -> Reset; <- success complete
-  fake_controller()->QueueCommandTransaction(
+  test_controller()->QueueCommandTransaction(
       CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
-  fake_controller()->QueueCommandTransaction(
+  test_controller()->QueueCommandTransaction(
       CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
 
   // Sequence 5 (HCI packets)
   //    -> Reset; <- success complete
   //    -> Reset; <- success complete
-  fake_controller()->QueueCommandTransaction(
+  test_controller()->QueueCommandTransaction(
       CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
-  fake_controller()->QueueCommandTransaction(
+  test_controller()->QueueCommandTransaction(
       CommandTransaction(reset_bytes, {&reset_cmpl_success_bytes}));
 
-  fake_controller()->Start();
+  test_controller()->Start();
 
   bool result;
   auto result_cb = [&, this](bool cb_result) {

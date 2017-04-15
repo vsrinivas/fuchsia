@@ -45,8 +45,10 @@ source_set("tests") {
     "acl_data_channel_unittest.cc",
     "advertising_report_parser_unittest.cc",
     "command_channel_unittest.cc",
-    "fake_controller.cc",
-    "fake_controller.h",
+    "fake_controller_base.cc",
+    "fake_controller_base.h",
+    "test_controller.cc",
+    "test_controller.h",
     "packet_unittest.cc",
   ]
 
