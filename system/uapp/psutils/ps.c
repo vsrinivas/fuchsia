@@ -4,10 +4,12 @@
 
 #include <magenta/status.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/object.h>
 
 #include <inttypes.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,14 +17,16 @@
 #include "format.h"
 #include "processes.h"
 
+#define MAX_STATE_LEN (7 + 1)  // +1 for trailing NUL
+
 // A single task (job or process).
 typedef struct {
-    char type; // 'j' (job) or 'p' (process)
-    mx_koid_t koid;
+    char type; // 'j' (job), 'p' (process), or 't' (thread)
     char koid_str[sizeof("18446744073709551616")]; // 1<<64 + NUL
     int depth;
     char name[MX_MAX_NAME_LEN];
     char mapped_bytes_str[MAX_FORMAT_SIZE_LEN];
+    char state_str[MAX_STATE_LEN];
     char allocated_bytes_str[MAX_FORMAT_SIZE_LEN];
 } task_entry_t;
 
@@ -85,12 +89,58 @@ static mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t ko
     return NO_ERROR;
 }
 
-void print_header(int id_w) {
-    printf("%*s %7s %7s %s\n", -id_w, "TASK", "VIRT", "RES", "NAME");
+// Return text representation of thread state.
+static const char* state_string(const mx_info_thread_t* info) {
+    if (info->wait_exception_port_type != MX_EXCEPTION_PORT_TYPE_NONE) {
+        return "excp";
+    } else {
+        switch (info->state) {
+            case MX_THREAD_STATE_NEW:
+                return "new";
+            case MX_THREAD_STATE_RUNNING:
+                return "running";
+            case MX_THREAD_STATE_SUSPENDED:
+                return "susp";
+            case MX_THREAD_STATE_BLOCKED:
+                return "blocked";
+            case MX_THREAD_STATE_DEAD:
+                return "dead";
+            default:
+                return "???";
+        }
+    }
+}
+
+// Adds a thread's information to |tasks|.
+static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid) {
+    task_entry_t e = {.type = 't', .depth = depth};
+    mx_status_t status =
+        mx_object_get_property(thread, MX_PROP_NAME, e.name, sizeof(e.name));
+    if (status != NO_ERROR) {
+        return status;
+    }
+    mx_info_thread_t info;
+    status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    // TODO: Print thread stack size in one of the memory usage fields?
+    snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
+    snprintf(e.state_str, sizeof(e.state_str), "%s", state_string(&info));
+    add_entry(&tasks, &e);
+    return NO_ERROR;
+}
+
+void print_header(int id_w, bool with_threads) {
+    if (with_threads) {
+        printf("%*s %7s %7s %7s %s\n", -id_w, "TASK", "VIRT", "RES", "STATE", "NAME");
+    } else {
+        printf("%*s %7s %7s %s\n", -id_w, "TASK", "VIRT", "RES", "NAME");
+    }
 }
 
 // Prints the contents of |table| to stdout.
-void print_table(task_table_t* table) {
+void print_table(task_table_t* table, bool with_threads) {
     if (table->num_entries == 0) {
         return;
     }
@@ -106,28 +156,62 @@ void print_table(task_table_t* table) {
         }
     }
 
-    print_header(id_w);
+    print_header(id_w, with_threads);
     char* idbuf = (char*)malloc(id_w + 1);
     for (size_t i = 0; i < table->num_entries; i++) {
         const task_entry_t* e = table->entries + i;
+        if (e->type == 't' && !with_threads) {
+            continue;
+        }
         snprintf(idbuf, id_w + 1,
                  "%*s%c:%s", e->depth * 2, "", e->type, e->koid_str);
-        printf("%*s %7s %7s %s\n",
-               -id_w, idbuf,
-               e->mapped_bytes_str, e->allocated_bytes_str, e->name);
+        if (with_threads) {
+            printf("%*s %7s %7s %7s %s\n",
+                   -id_w, idbuf,
+                   e->mapped_bytes_str, e->allocated_bytes_str, e->state_str, e->name);
+        } else {
+            printf("%*s %7s %7s %s\n",
+                   -id_w, idbuf,
+                   e->mapped_bytes_str, e->allocated_bytes_str, e->name);
+        }
     }
-    print_header(id_w);
+    free(idbuf);
+    print_header(id_w, with_threads);
+}
+
+static void print_help(FILE* f) {
+    fprintf(f, "Usage: ps [options]\n");
+    fprintf(f, "Options:\n");
+    // -T for compatibility with linux ps
+    fprintf(f, " -T  Include threads in the output\n");
 }
 
 int main(int argc, char** argv) {
+    bool with_threads = false;
+    for (int i = 1; i < argc; ++i) {
+        const char* arg = argv[i];
+        if (!strcmp(arg, "--help")) {
+            print_help(stdout);
+            return 0;
+        }
+        if (!strcmp(arg, "-T")) {
+            with_threads = true;
+        } else {
+            fprintf(stderr, "Unknown option: %s\n", arg);
+            print_help(stderr);
+            return 1;
+        }
+    }
+
     int ret = 0;
-    mx_status_t status = walk_process_tree(job_callback, process_callback, NULL);
+    mx_status_t status = walk_process_tree(job_callback, process_callback,
+                                           with_threads ? thread_callback : NULL);
     if (status != NO_ERROR) {
         fprintf(stderr, "WARNING: walk_process_tree failed: %s (%d)\n",
                 mx_status_get_string(status), status);
         ret = 1;
     }
-    print_table(&tasks);
+    print_table(&tasks, with_threads);
     free(tasks.entries);
     return ret;
 }
