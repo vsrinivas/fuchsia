@@ -13,7 +13,7 @@ class ListProviders : public CommandWithTraceController {
  public:
   static Info Describe();
 
-  explicit ListProviders(app::ApplicationContext* context);
+  explicit ListProviders(faux::ApplicationContext* context);
   void Run(const ftl::CommandLine&) override;
 };
 

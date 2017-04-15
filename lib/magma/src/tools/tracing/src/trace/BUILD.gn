@@ -47,6 +47,7 @@ source_set("trace_app") {
     "//apps/tracing/services",
     "//lib/ftl",
     "//lib/mtl",
+    "//magma/src/magma_util/application_context",
   ]
 
   deps = [

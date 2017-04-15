@@ -17,7 +17,7 @@ namespace tracing {
 
 class App : public Command {
  public:
-  App(app::ApplicationContext* context);
+  App(faux::ApplicationContext* context);
   ~App();
 
   void Run(const ftl::CommandLine& command_line) override;

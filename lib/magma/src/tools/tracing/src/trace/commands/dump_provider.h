@@ -13,7 +13,7 @@ class DumpProvider : public CommandWithTraceController {
  public:
   static Info Describe();
 
-  explicit DumpProvider(app::ApplicationContext* context);
+  explicit DumpProvider(faux::ApplicationContext* context);
   void Run(const ftl::CommandLine& command_line) override;
 };
 

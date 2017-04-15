@@ -204,7 +204,7 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
 
 Command::Info Record::Describe() {
   return Command::Info{
-      [](app::ApplicationContext* context) {
+      [](faux::ApplicationContext* context) {
         return std::make_unique<Record>(context);
       },
       "record",
@@ -229,7 +229,7 @@ Command::Info Record::Describe() {
         "tracing ends unless --detach is specified"}}};
 }
 
-Record::Record(app::ApplicationContext* context)
+Record::Record(faux::ApplicationContext* context)
     : CommandWithTraceController(context), weak_ptr_factory_(this) {}
 
 void Record::Run(const ftl::CommandLine& command_line) {
@@ -351,20 +351,21 @@ void Record::DoneTrace() {
 }
 
 void Record::LaunchApp() {
-  auto launch_info = app::ApplicationLaunchInfo::New();
-  launch_info->url = fidl::String::From(options_.app);
-  launch_info->arguments = fidl::Array<fidl::String>::From(options_.args);
+  printf("This tracer can't launch apps\n");
+  // auto launch_info = app::ApplicationLaunchInfo::New();
+  // launch_info->url = fidl::String::From(options_.app);
+  // launch_info->arguments = fidl::Array<fidl::String>::From(options_.args);
 
-  out() << "Launching " << launch_info->url << std::endl;
-  context()->launcher()->CreateApplication(std::move(launch_info),
-                                           GetProxy(&application_controller_));
-  application_controller_.set_connection_error_handler([this] {
-    out() << "Application terminated" << std::endl;
-    if (!options_.decouple)
-      StopTrace();
-  });
-  if (options_.detach)
-    application_controller_->Detach();
+  // out() << "Launching " << launch_info->url << std::endl;
+  // context()->launcher()->CreateApplication(std::move(launch_info),
+  //                                          GetProxy(&application_controller_));
+  // application_controller_.set_connection_error_handler([this] {
+  //   out() << "Application terminated" << std::endl;
+  //   if (!options_.decouple)
+  //     StopTrace();
+  // });
+  // if (options_.detach)
+  //   application_controller_->Detach();
 }
 
 void Record::StartTimer() {

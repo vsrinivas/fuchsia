@@ -11,7 +11,7 @@
 #include <memory>
 #include <string>
 
-#include "application/lib/app/application_context.h"
+#include "magma_util/application_context/application_context.h"
 #include "apps/tracing/services/trace_controller.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
@@ -22,7 +22,7 @@ class Command {
  public:
   struct Info {
     using CommandFactory =
-        std::function<std::unique_ptr<Command>(app::ApplicationContext*)>;
+        std::function<std::unique_ptr<Command>(faux::ApplicationContext*)>;
 
     CommandFactory factory;
     std::string name;
@@ -39,25 +39,25 @@ class Command {
   static std::ostream& out();
   static std::ostream& err();
 
-  explicit Command(app::ApplicationContext* context);
+  explicit Command(faux::ApplicationContext* context);
 
-  app::ApplicationContext* context();
-  app::ApplicationContext* context() const;
+  faux::ApplicationContext* context();
+  faux::ApplicationContext* context() const;
 
  private:
-  app::ApplicationContext* context_;
+  faux::ApplicationContext* context_;
   FTL_DISALLOW_COPY_AND_ASSIGN(Command);
 };
 
 class CommandWithTraceController : public Command {
  protected:
-  explicit CommandWithTraceController(app::ApplicationContext* context);
+  explicit CommandWithTraceController(faux::ApplicationContext* context);
 
   TraceControllerPtr& trace_controller();
   const TraceControllerPtr& trace_controller() const;
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<faux::ApplicationContext> context_;
   TraceControllerPtr trace_controller_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CommandWithTraceController);

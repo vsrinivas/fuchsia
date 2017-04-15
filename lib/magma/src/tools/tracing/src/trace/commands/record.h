@@ -44,7 +44,7 @@ class Record : public CommandWithTraceController {
 
   static Info Describe();
 
-  explicit Record(app::ApplicationContext* context);
+  explicit Record(faux::ApplicationContext* context);
   void Run(const ftl::CommandLine& command_line) override;
 
  private:
