@@ -87,6 +87,7 @@ func TestUpdate(t *testing.T) {
 		},
 	}
 
+
 	alignment := physicalBlockSize / logicalBlockSize
 
 	if err := g.Update(logicalBlockSize, physicalBlockSize, optimalTransferLengthGranularity, exampleDiskSize); err != nil {
@@ -101,7 +102,7 @@ func TestUpdate(t *testing.T) {
 	})
 
 	t.Run("Optimal Transfer Alignment", func(t *testing.T) {
-		optimalTransferLengthGranularity = 65536
+		optimalTransferLengthGranularity = 8192
 		alignment = optimalTransferLengthGranularity / logicalBlockSize
 
 		if err := g.Update(logicalBlockSize, physicalBlockSize, optimalTransferLengthGranularity, exampleDiskSize); err != nil {
@@ -218,7 +219,10 @@ func TestValidateGPT(t *testing.T) {
 
 func TestGUID(t *testing.T) {
 	want := "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
-	g := NewGUID(want)
+	g, err := NewGUID(want)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got := g.String(); got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -230,7 +234,11 @@ func TestGUID(t *testing.T) {
 		0xbb, 0x4c,
 		0xb6, 0xda, 0x17, 0xe7, 0xce, 0x1c, 0xa4, 0x5d}
 
-	g = NewGUID(s)
+	g, err = NewGUID(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	var buf bytes.Buffer
 	binary.Write(&buf, binary.LittleEndian, &g)
 	if !bytes.Equal(b, buf.Bytes()) {
@@ -252,7 +260,10 @@ func TestGUID(t *testing.T) {
 	// this guid is a non-named guid, assert that it is returned by name() as a
 	// fallback.
 	s = "99999999-9999-9999-9999-999999999999"
-	g = NewGUID(s)
+	g, err = NewGUID(s)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if g.Name() != s {
 		t.Errorf("got %x, want %x", g.Name(), s)
 	}
@@ -306,6 +317,50 @@ func TestSizes(t *testing.T) {
 	}
 	if want := byteSizeOf(Header{}); HeaderSize != want {
 		t.Errorf("HeaderSize: got %d, want %d", HeaderSize, want)
+	}
+}
+
+func TestNextAlignedLBA(t *testing.T) {
+	examples := []struct {
+		in   [4]uint64
+		want uint64
+	}{
+		{[4]uint64{0, 512, 0, 0}, 0},
+		{[4]uint64{1, 512, 0, 0}, 1},
+		{[4]uint64{2, 512, 0, 0}, 2},
+		{[4]uint64{1, 512, 4096, 0}, 8},
+		{[4]uint64{1, 512, 4096, 65536}, 128},
+		{[4]uint64{50, 512, 4096, 0}, 56},
+		{[4]uint64{150, 512, 4096, 65536}, 256},
+	}
+	for _, ex := range examples {
+		if got, want := NextAlignedLBA(ex.in[0], ex.in[1], ex.in[2], ex.in[3]), ex.want; got != want {
+			t.Errorf("got %d, want %d, for %v", got, want, ex.in)
+		}
+	}
+}
+
+func TestAlignedRange(t *testing.T) {
+	examples := []struct {
+		in   [5]uint64
+		want [2]uint64
+	}{
+		{[5]uint64{0, 1024, 512, 0, 0}, [2]uint64{0, 2}},
+		{[5]uint64{1, 1024, 512, 0, 0}, [2]uint64{1, 3}},
+		{[5]uint64{2, 1024, 512, 0, 0}, [2]uint64{2, 4}},
+		{[5]uint64{1, 1024, 512, 4096, 0}, [2]uint64{8, 15}},
+		{[5]uint64{1, 1024, 512, 4096, 65536}, [2]uint64{128, 255}},
+		{[5]uint64{50, 1024, 512, 4096, 0}, [2]uint64{56, 63}},
+		{[5]uint64{150, 1024, 512, 4096, 65536}, [2]uint64{256, 383}},
+		{[5]uint64{256, 65536 - 512, 512, 4096, 65536}, [2]uint64{256, 383}},
+		{[5]uint64{256, 65536, 512, 4096, 65536}, [2]uint64{256, 511}},
+	}
+	for _, ex := range examples {
+		gs, ge := AlignedRange(ex.in[0], ex.in[1], ex.in[2], ex.in[3], ex.in[4])
+		ws, we := ex.want[0], ex.want[1]
+		if gs != ws || ge != we {
+			t.Errorf("got [%d,%d], want [%d,%d], for %v", gs, ge, ws, we, ex.in)
+		}
 	}
 }
 
@@ -370,7 +425,7 @@ func exampleGPT() GPT {
 	}
 	pe := PartitionEntry{
 		PartitionTypeGUID:   GUIDAppleHFSPlus,
-		UniquePartitionGUID: NewGUID("080CF2D4-E062-42CF-BF54-BF3400B4894D"),
+		UniquePartitionGUID: mustNewGUID("080CF2D4-E062-42CF-BF54-BF3400B4894D"),
 		StartingLBA:         uint64(40),
 		EndingLBA:           uint64(63),
 		Attributes:          uint64(0),
@@ -399,7 +454,7 @@ func exampleGPT() GPT {
 				AlternateLBA:             uint64(exampleDiskSize/512 - 1),
 				FirstUsableLBA:           34,
 				LastUsableLBA:            uint64((exampleDiskSize - 512 - 16384 - 512) / 512),
-				DiskGUID:                 NewGUID("1A91465A-BA61-4CAF-9991-B7D6E491ED50"),
+				DiskGUID:                 mustNewGUID("1A91465A-BA61-4CAF-9991-B7D6E491ED50"),
 				PartitionEntryLBA:        uint64(2),
 				NumberOfPartitionEntries: uint32(128),
 				SizeOfPartitionEntry:     uint32(128),
@@ -417,7 +472,7 @@ func exampleGPT() GPT {
 				AlternateLBA:             1,
 				FirstUsableLBA:           34,
 				LastUsableLBA:            uint64((exampleDiskSize - 512 - 16384 - 512) / 512),
-				DiskGUID:                 NewGUID("1A91465A-BA61-4CAF-9991-B7D6E491ED50"),
+				DiskGUID:                 mustNewGUID("1A91465A-BA61-4CAF-9991-B7D6E491ED50"),
 				PartitionEntryLBA:        uint64(67),
 				NumberOfPartitionEntries: uint32(128),
 				SizeOfPartitionEntry:     uint32(128),

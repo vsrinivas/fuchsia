@@ -15,12 +15,10 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"math"
 	"os"
-	"runtime"
 	"strings"
-	"syscall"
 	"unicode/utf16"
-	"unsafe"
 
 	"fuchsia.googlesource.com/thinfs/mbr"
 )
@@ -61,23 +59,18 @@ type GUID struct {
 }
 
 // NewGUID constructs a GUID from a string in hexidecimal form, with arbitrary
-// splits containing hyphens. It will panic for invalid hex characters.
-func NewGUID(s string) GUID {
+// splits containing hyphens.
+func NewGUID(s string) (GUID, error) {
 	h := strings.Join(strings.Split(s, "-"), "")
 
 	b := make([]byte, 16)
 	_, err := hex.Decode(b, []byte(h))
 	if err != nil {
-		panic("gpt: invalid GUID: " + err.Error())
+		return GUID{}, err
 	}
 
 	var g GUID
-
-	if err := binary.Read(bytes.NewReader(b), binary.BigEndian, &g); err != nil {
-		panic("gpt: invalid GUID: " + err.Error())
-	}
-
-	return g
+	return g, binary.Read(bytes.NewReader(b), binary.BigEndian, &g)
 }
 
 // NewRandomGUID generates a new entirely random GUID
@@ -281,25 +274,32 @@ const (
 	MicrosoftNoDriveLetter = 63
 )
 
+func mustNewGUID(s string) GUID {
+	g, err := NewGUID(s)
+	if err != nil {
+		panic(err)
+	}
+	return g
+}
+
 // PartitionGUIDs:
 var (
-	GUIDUnused           = NewGUID("00000000-0000-0000-0000-000000000000")
-	GUIDMBR              = NewGUID("024DEE41-33E7-11D3-9D69-0008C781F39F")
-	GUIDEFI              = NewGUID("C12A7328-F81F-11D2-BA4B-00A0C93EC93B")
-	GUIDBIOS             = NewGUID("21686148-6449-6E6F-744E-656564454649")
-	GUIDIntelFastFlash   = NewGUID("D3BFE2DE-3DAF-11DF-BA40-E3A556D89593")
-	GUIDSonyBoot         = NewGUID("F4019732-066E-4E12-8273-346C5641494F")
-	GUIDLenovoBoot       = NewGUID("BFBFAFE7-A34F-448A-9A5B-6213EB736C22")
-	GUIDAppleHFSPlus     = NewGUID("48465300-0000-11AA-AA11-00306543ECAC")
-	GUIDAppleUFS         = NewGUID("55465300-0000-11AA-AA11-00306543ECAC")
-	GUIDAppleBoot        = NewGUID("426F6F74-0000-11AA-AA11-00306543ECAC")
-	GUIDAppleRaid        = NewGUID("52414944-0000-11AA-AA11-00306543ECAC")
-	GUIDAppleOfflineRAID = NewGUID("52414944-5F4F-11AA-AA11-00306543ECAC")
-	GUIDAppleLabel       = NewGUID("4C616265-6C00-11AA-AA11-00306543ECAC")
-
-	GUIDFuchsiaSystem = NewGUID("606B000B-B7C7-4653-A7D5-B737332C899D")
-	GUIDFuchsiaData   = NewGUID("08185F0C-892D-428A-A789-DBEEC8F55E6A")
-	GUIDFuchsiaBlob   = NewGUID("2967380E-134C-4CBB-B6DA-17E7CE1CA45D")
+	GUIDUnused           = mustNewGUID("00000000-0000-0000-0000-000000000000")
+	GUIDMBR              = mustNewGUID("024DEE41-33E7-11D3-9D69-0008C781F39F")
+	GUIDEFI              = mustNewGUID("C12A7328-F81F-11D2-BA4B-00A0C93EC93B")
+	GUIDBIOS             = mustNewGUID("21686148-6449-6E6F-744E-656564454649")
+	GUIDIntelFastFlash   = mustNewGUID("D3BFE2DE-3DAF-11DF-BA40-E3A556D89593")
+	GUIDSonyBoot         = mustNewGUID("F4019732-066E-4E12-8273-346C5641494F")
+	GUIDLenovoBoot       = mustNewGUID("BFBFAFE7-A34F-448A-9A5B-6213EB736C22")
+	GUIDAppleHFSPlus     = mustNewGUID("48465300-0000-11AA-AA11-00306543ECAC")
+	GUIDAppleUFS         = mustNewGUID("55465300-0000-11AA-AA11-00306543ECAC")
+	GUIDAppleBoot        = mustNewGUID("426F6F74-0000-11AA-AA11-00306543ECAC")
+	GUIDAppleRaid        = mustNewGUID("52414944-0000-11AA-AA11-00306543ECAC")
+	GUIDAppleOfflineRAID = mustNewGUID("52414944-5F4F-11AA-AA11-00306543ECAC")
+	GUIDAppleLabel       = mustNewGUID("4C616265-6C00-11AA-AA11-00306543ECAC")
+	GUIDFuchsiaSystem    = mustNewGUID("606B000B-B7C7-4653-A7D5-B737332C899D")
+	GUIDFuchsiaData      = mustNewGUID("08185F0C-892D-428A-A789-DBEEC8F55E6A")
+	GUIDFuchsiaBlob      = mustNewGUID("2967380E-134C-4CBB-B6DA-17E7CE1CA45D")
 )
 
 // GUIDS contains a map of known GUIDS to their names.
@@ -667,7 +667,9 @@ func (g GPT) String() string {
 // already present in g to update the geometry and CRC fields for the tables and
 // partitions in g. If the changes make laying out the partitions impossible, an
 // error is returned. Subsequent calls to WriteTo will use the given values if
-// non-zero.
+// non-zero. Note that partition re-alignment will only move partition starts
+// forward, it will not preserve size, so callers must set partition starting
+// positions appropriately using NextAlignedLBA to avoid this.
 func (g *GPT) Update(blockSize, physicalBlockSize, optimalTransferLengthGranularity, diskSize uint64) error {
 	g.logical = blockSize
 	g.physical = physicalBlockSize
@@ -709,18 +711,6 @@ func (g *GPT) Update(blockSize, physicalBlockSize, optimalTransferLengthGranular
 		g.Primary.DiskGUID = NewRandomGUID()
 	}
 
-	// GPT partitions should be aligned to the larger of:
-	// a) the physical block boundary
-	// b) the optimal transfer length granularity
-	alignTo := uint64(blockSize)
-	if physicalBlockSize > alignTo {
-		alignTo = physicalBlockSize
-	}
-	if optimalTransferLengthGranularity > alignTo {
-		alignTo = optimalTransferLengthGranularity
-	}
-	alignTo = alignTo / uint64(blockSize)
-
 	nextUsableLBA := g.Primary.FirstUsableLBA
 	for i := range g.Primary.Partitions {
 		var p = &g.Primary.Partitions[i]
@@ -728,13 +718,21 @@ func (g *GPT) Update(blockSize, physicalBlockSize, optimalTransferLengthGranular
 		if p.IsZero() {
 			continue
 		}
-		if d := nextUsableLBA % alignTo; d != 0 {
-			nextUsableLBA = nextUsableLBA + alignTo - d
+
+		if p.StartingLBA == 0 {
+			p.StartingLBA = nextUsableLBA
 		}
-		size := p.EndingLBA - p.StartingLBA
-		p.StartingLBA = nextUsableLBA
-		p.EndingLBA = nextUsableLBA + size
-		nextUsableLBA = p.EndingLBA
+
+		p.StartingLBA = NextAlignedLBA(p.StartingLBA, blockSize, physicalBlockSize, optimalTransferLengthGranularity)
+
+		if p.EndingLBA <= p.StartingLBA {
+			return fmt.Errorf("partition %s has invalid geometry after alignment", p)
+		}
+		if p.EndingLBA > diskSize/blockSize {
+			return fmt.Errorf("partition %s extends beyond disk geometry", p)
+		}
+
+		nextUsableLBA = p.EndingLBA + 1
 	}
 
 	// Copy the updated primary data and partition entries to backup
@@ -751,6 +749,42 @@ func (g *GPT) Update(blockSize, physicalBlockSize, optimalTransferLengthGranular
 	}
 
 	return nil
+}
+
+// NextAlignedLBA takes a starting LBA, the logical, physical and optimal block
+// sizes, and returns the next LBA that conforms the UEFI alignment
+// specifications. Unknown values may be passed as 0, but logcal must have a
+// reasonable value.
+func NextAlignedLBA(nextLBA, logical, physical, optimal uint64) uint64 {
+	alignTo := logical
+	if physical > alignTo {
+		alignTo = physical
+	}
+	if optimal > alignTo {
+		alignTo = optimal
+	}
+	alignTo = alignTo / logical
+
+	if d := nextLBA % alignTo; d != 0 {
+		nextLBA = nextLBA + (alignTo - d)
+	}
+
+	return nextLBA
+}
+
+// AlignedRange takes a starting lba, size (in bytes), logical, physical and
+// optimal block sizes and computes a well-aligned maximal range of block
+// addresses starting after nextLBA, and ending to be at most one block larger
+// than the requested size.
+func AlignedRange(nextLBA, size, logical, physical, optimal uint64) (uint64, uint64) {
+	start := NextAlignedLBA(nextLBA, logical, physical, optimal)
+	end := NextAlignedLBA(start+upDiv(size, logical)+1, logical, physical, optimal) - 1
+	return start, end
+}
+
+// upDiv divides two uints, always rounding up.
+func upDiv(a, b uint64) uint64 {
+	return uint64(math.Ceil(float64(a) / float64(b)))
 }
 
 // Validate runs a set of validation operations on the entire GPT, and if errors
@@ -804,94 +838,16 @@ const FallbackPhysicalBlockSize = 4096
 // GetLogicalBlockSize as a sensible default assumption.
 const FallbackLogicalBlockSize = 512
 
-const (
-	// BLKBSZGET is the linux ioctl flag for physical block size
-	BLKBSZGET = 2148012656
-	// DKIOCGETPHYSICALBLOCKSIZE is the darwin ioctl flag for physical block size
-	DKIOCGETPHYSICALBLOCKSIZE = 1074029645
-
-	// BLKSSZGET is the linux ioctl flag for logical block size
-	BLKSSZGET = 4712
-	// DKIOCGETBLOCKSIZE is the darwin ioctl flag for logical block size
-	DKIOCGETBLOCKSIZE = 1074029592
-
-	// BLKGETSIZE is the linux ioctl flag for getting disk block count
-	BLKGETSIZE = 4704
-	// DKIOCGETBLOCKCOUNT is the darwin ioctl flag for disk block count
-	DKIOCGETBLOCKCOUNT = 1074291737
-)
-
-// GetPhysicalBlockSize fetches the physical block size of the given file. It
-// requires elevated process priviliges to execute on most platforms. Currently
-// only supported on Linux and Darwin.
-func GetPhysicalBlockSize(f *os.File) (uint64, error) {
-	var ioctl uintptr
-	switch runtime.GOOS {
-	case "linux":
-		ioctl = BLKBSZGET
-	case "darwin":
-		ioctl = DKIOCGETPHYSICALBLOCKSIZE
-	default:
-		return FallbackPhysicalBlockSize, ErrUnsupportedPlatform
-	}
-
-	var sz uint32
-	var err error
-	_, _, er := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), ioctl, uintptr(unsafe.Pointer(&sz)))
-	if er != 0 {
-		err = os.NewSyscallError("ioctl", er)
-		sz = FallbackPhysicalBlockSize
-	}
-	return uint64(sz), err
-}
-
-// GetLogicalBlockSize fetches the physical block size of the given file. It
-// requires elevated process priviliges to execute on most platforms. Currently
-// only supported on Linux and Darwin.
-func GetLogicalBlockSize(f *os.File) (uint64, error) {
-	var ioctl uintptr
-	switch runtime.GOOS {
-	case "linux":
-		ioctl = BLKSSZGET
-	case "darwin":
-		ioctl = DKIOCGETBLOCKSIZE
-	default:
-		return FallbackLogicalBlockSize, ErrUnsupportedPlatform
-	}
-
-	var sz uint32
-	var err error
-	_, _, er := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), ioctl, uintptr(unsafe.Pointer(&sz)))
-	if er != 0 {
-		err = os.NewSyscallError("ioctl", er)
-		sz = FallbackLogicalBlockSize
-	}
-	return uint64(sz), err
-}
-
-// GetDiskSize fetches the byte size of the given disk.
-func GetDiskSize(f *os.File) (uint64, error) {
-	var ioctl uintptr
-	switch runtime.GOOS {
-	case "linux":
-		ioctl = BLKGETSIZE
-	case "darwin":
-		ioctl = DKIOCGETBLOCKCOUNT
-	default:
-		return 0, ErrUnsupportedPlatform
-	}
-
-	var sz uint64
-	var err error
-	_, _, er := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), ioctl, uintptr(unsafe.Pointer(&sz)))
-	if er != 0 {
-		err = os.NewSyscallError("ioctl", er)
-	}
-
-	lbs, err := GetLogicalBlockSize(f)
+// regularSize tries to stat the file, if the stat succeeds and the file is a
+// regular file, it returns the files size, and true, otherwise 0 and false.
+func regularSize(f *os.File) (int64, bool) {
+	info, err := f.Stat()
 	if err != nil {
-		return 0, err
+		return 0, false
 	}
 
-	return uint64(lbs) * sz, err
+	if info.Mode().IsRegular() {
+		return info.Size(), true
+	}
+	return 0, false
 }

@@ -28,9 +28,9 @@ const (
 )
 
 // Signature is an MBR Signature as two bytes in little endian.
-//go:generate stringer -type=Signature
 type Signature uint16
 
+//go:generate stringer -type=Signature
 const (
 	// GPTSignature is the partition signature of a protective MBR partition
 	GPTSignature Signature = 0xAA55
@@ -74,7 +74,7 @@ func (m *MBR) WriteTo(w io.Writer) (int64, error) {
 func (m MBR) String() string {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "Disk Signature: 0x%X\nSignature: %s\n",
-		m.UniqueMBRDiskSignature, m.Signature.String())
+		m.UniqueMBRDiskSignature, m.Signature)
 	for i, p := range m.PartitionRecord {
 		if p.OSType == OSType(0) && p.StartingLBA == 0 {
 			continue
@@ -84,7 +84,7 @@ func (m MBR) String() string {
 
 		fmt.Fprintf(&b,
 			"Boot Indicator: 0x%X\nOS Type: %s\nStarting LBA: 0x%X\nSize In LBA: 0x%X (%d)",
-			p.BootIndicator, p.OSType.String(), p.StartingLBA, p.SizeInLBA, p.SizeInLBA)
+			p.BootIndicator, p.OSType, p.StartingLBA, p.SizeInLBA, p.SizeInLBA)
 	}
 	return b.String()
 }
