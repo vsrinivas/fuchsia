@@ -4,7 +4,7 @@
     ],
     "binaries": [
         {
-            "binary": "calendar.flx",
+            "binary": "gen/apps/modules/calendar/modules/calendar/calendar.flx",
             "bootfs_path": "apps/calendar"
         }
     ]

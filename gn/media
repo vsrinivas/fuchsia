@@ -41,7 +41,7 @@
             "bootfs_path": "apps/media_player"
         },
         {
-            "binary": "media_player_flutter.flx",
+            "binary": "gen/apps/media/examples/media_player_flutter/media_player_flutter.flx",
             "bootfs_path": "apps/media_player_flutter"
         },
         {

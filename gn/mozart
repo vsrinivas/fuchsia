@@ -20,7 +20,7 @@
             "bootfs_path": "apps/hello_compositor"
         },
         {
-            "binary": "hello_material.flx",
+            "binary": "gen/apps/mozart/examples/hello_material/hello_material.flx",
             "bootfs_path": "apps/hello_material"
         },
         {
@@ -28,7 +28,7 @@
             "bootfs_path": "apps/input_manager_service"
         },
         {
-            "binary": "basic_wm.flx",
+            "binary": "gen/apps/mozart/examples/basic_wm/basic_wm.flx",
             "bootfs_path": "apps/basic_wm"
         },
         {

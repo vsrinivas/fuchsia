@@ -8,23 +8,23 @@
       "bootfs_path": "apps/email_content_provider"
     },
     {
-      "binary": "nav.flx",
+      "binary": "gen/apps/modules/email/modules/nav/nav.flx",
       "bootfs_path": "apps/email_nav"
     },
     {
-      "binary": "session.flx",
+      "binary": "gen/apps/modules/email/modules/session/session.flx",
       "bootfs_path": "apps/email_session"
     },
     {
-      "binary": "story.flx",
+      "binary": "gen/apps/modules/email/modules/story/story.flx",
       "bootfs_path": "apps/email_story"
     },
     {
-      "binary": "thread.flx",
+      "binary": "gen/apps/modules/email/modules/thread/thread.flx",
       "bootfs_path": "apps/email_thread"
     },
     {
-      "binary": "thread_list.flx",
+      "binary": "gen/apps/modules/email/modules/thread_list/thread_list.flx",
       "bootfs_path": "apps/email_thread_list"
     }
   ],

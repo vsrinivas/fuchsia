@@ -18,15 +18,15 @@
             "bootfs_path": "apps/flutter_aot_runner"
         },
         {
-            "binary": "hello_flutter.flx",
+            "binary": "gen/flutter/examples/hello_flutter/hello_flutter.flx",
             "bootfs_path": "apps/hello_flutter"
         },
         {
-            "binary": "flutter_gallery.flx",
+            "binary": "gen/lib/flutter/examples/flutter_gallery/flutter_gallery.flx",
             "bootfs_path": "apps/flutter_gallery"
         },
         {
-            "binary": "spinning_square.flx",
+            "binary": "gen/flutter/examples/spinning_square/spinning_square.flx",
             "bootfs_path": "apps/spinning_square"
         }
     ]

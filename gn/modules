@@ -11,43 +11,43 @@
     ],
     "binaries": [
         {
-            "binary": "chess.flx",
+            "binary": "gen/apps/modules/common/modules/chess/chess.flx",
             "bootfs_path": "apps/chess"
         },
         {
-            "binary": "color.flx",
+            "binary": "gen/apps/modules/common/modules/color/color.flx",
             "bootfs_path": "apps/color"
         },
         {
-            "binary": "gallery.flx",
+            "binary": "gen/apps/modules/common/modules/gallery/gallery.flx",
             "bootfs_path": "apps/gallery"
         },
         {
-            "binary": "interactive_receipt.flx",
+            "binary": "gen/apps/modules/common/modules/interactive_receipt/interactive_receipt.flx",
             "bootfs_path": "apps/interactive_receipt"
         },
         {
-            "binary": "map.flx",
+            "binary": "gen/apps/modules/common/modules/map/map.flx",
             "bootfs_path": "apps/map"
         },
         {
-            "binary": "usps.flx",
+            "binary": "gen/apps/modules/common/modules/usps/usps.flx",
             "bootfs_path": "apps/usps"
         },
         {
-            "binary": "youtube_related_videos.flx",
+            "binary": "gen/apps/modules/common/modules/youtube_related_videos/youtube_related_videos.flx",
             "bootfs_path": "apps/youtube_related_videos"
         },
         {
-            "binary": "youtube_story.flx",
+            "binary": "gen/apps/modules/common/modules/youtube_story/youtube_story.flx",
             "bootfs_path": "apps/youtube_story"
         },
         {
-            "binary": "youtube_thumbnail.flx",
+            "binary": "gen/apps/modules/common/modules/youtube_thumbnail/youtube_thumbnail.flx",
             "bootfs_path": "apps/youtube_thumbnail"
         },
         {
-            "binary": "youtube_video.flx",
+            "binary": "gen/apps/modules/common/modules/youtube_video/youtube_video.flx",
             "bootfs_path": "apps/youtube_video"
         }
   ],

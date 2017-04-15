@@ -57,23 +57,23 @@
             "bootfs_path": "apps/dummy_story_shell"
         },
         {
-            "binary": "example_flutter_counter_child.flx",
+            "binary": "gen/apps/modular/examples/counter_flutter/child/example_flutter_counter_child.flx",
             "bootfs_path": "apps/example_flutter_counter_child"
         },
         {
-            "binary": "example_flutter_counter_parent.flx",
+            "binary": "gen/apps/modular/examples/counter_flutter/parent/example_flutter_counter_parent.flx",
             "bootfs_path": "apps/example_flutter_counter_parent"
         },
         {
-            "binary": "example_flutter_hello_world.flx",
+            "binary": "gen/apps/modular/examples/hello_world_flutter/example_flutter_hello_world.flx",
             "bootfs_path": "apps/example_flutter_hello_world"
         },
         {
-            "binary": "example_flutter_https.flx",
+            "binary": "gen/apps/modular/examples/https_flutter/example_flutter_https.flx",
             "bootfs_path": "apps/example_flutter_https"
         },
         {
-            "binary": "example_flutter_story_shell.flx",
+            "binary": "gen/apps/modular/examples/story_shell_flutter/example_flutter_story_shell.flx",
             "bootfs_path": "apps/example_flutter_story_shell"
         },
         {
@@ -93,11 +93,11 @@
             "bootfs_path": "apps/example_todo_headless"
         },
         {
-            "binary": "example_todo_ledger.flx",
+            "binary": "gen/apps/modular/examples/todo_ledger/example_todo_ledger.flx",
             "bootfs_path": "apps/example_todo_ledger"
         },
         {
-            "binary": "example_todo_story.flx",
+            "binary": "gen/apps/modular/examples/todo_story/example_todo_story.flx",
             "bootfs_path": "apps/example_todo_story"
         },
         {
@@ -141,7 +141,7 @@
             "bootfs_path": "apps/suggest_shell_controller"
         },
         {
-            "binary": "suggest_shell_view.flx",
+            "binary": "gen/apps/modular/examples/suggest_shell/view/suggest_shell_view.flx",
             "bootfs_path": "apps/suggest_shell_view"
         },
         {
@@ -173,7 +173,7 @@
             "bootfs_path": "apps/user_runner"
         },
         {
-            "binary": "userpicker_device_shell.flx",
+            "binary": "gen/apps/sysui/userpicker_device_shell/userpicker_device_shell.flx",
             "bootfs_path": "apps/userpicker_device_shell"
         }
     ],

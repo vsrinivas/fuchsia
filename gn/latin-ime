@@ -4,7 +4,7 @@
     ],
     "binaries": [
         {
-            "binary": "latin-ime.flx",
+            "binary": "gen/apps/latin-ime/latin-ime.flx",
             "bootfs_path": "apps/latin-ime"
         }
     ]

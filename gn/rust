@@ -13,7 +13,7 @@
             "bootfs_path": "apps/xi-core"
         },
         {
-            "binary": "xi_app.flx",
+            "binary": "gen/apps/xi/modules/xi_app/xi_app.flx",
             "bootfs_path": "apps/xi_app"
         }
     ]
