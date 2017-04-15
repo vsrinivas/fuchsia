@@ -19,6 +19,7 @@ namespace maxwell {
 //
 // /story/focused_id = ID of currently focused story, or null
 // /story/visible_count = number of visible stories
+// /story/visible_ids = JSON array of story IDs that are visible
 //
 // /story/id/<id>/visible = 1 or 0
 // /story/id/<id>/url = URL of root Module
@@ -70,6 +71,8 @@ class StoryInfoAcquirer : public modular::Agent,
   fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
 
   app::ServiceProviderImpl agent_services_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryInfoAcquirer);
 };
 
 }  // namespace maxwell

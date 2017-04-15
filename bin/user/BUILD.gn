@@ -44,6 +44,7 @@ source_set("user_intelligence_provider") {
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/services/user",
     "//apps/maxwell/services/user:scope",
+    "//apps/maxwell/src/acquirers/story_info:initializer",
     "//apps/network/services",
   ]
 

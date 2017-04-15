@@ -24,6 +24,8 @@ class StoryInfoApp {
  private:
   StoryInfoAcquirer story_info_acquirer_;
   fidl::Binding<modular::Agent> agent_binding_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryInfoApp);
 };
 
 }  // namespace maxwell

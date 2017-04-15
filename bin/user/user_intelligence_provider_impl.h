@@ -47,14 +47,17 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   ActionLogFactoryPtr action_log_factory_;
   app::ServiceProviderPtr resolver_services_;
 
-  fidl::InterfacePtr<modular::FocusController> focus_controller_;
-
   AgentLauncher agent_launcher_;
 
   fidl::BindingSet<IntelligenceServices, std::unique_ptr<IntelligenceServices>>
       intelligence_services_bindings_;
 
+  fidl::InterfacePtr<modular::ComponentContext> component_context_;
   fidl::InterfacePtr<modular::VisibleStoriesProvider> visible_stories_provider_;
+
+  // Framework Agent controllers. Hanging onto these tells the Framework we
+  // want the Agents to keep running.
+  std::vector<modular::AgentControllerPtr> agent_controllers_;
 };
 
 class UserIntelligenceProviderFactoryImpl

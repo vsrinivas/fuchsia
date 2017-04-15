@@ -8,21 +8,60 @@
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/user/scope.fidl.h"
 #include "apps/maxwell/src/user/intelligence_services_impl.h"
+#include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/files/file.h"
 
 namespace maxwell {
 
-UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    app::ApplicationContext* app_context,
-    fidl::InterfaceHandle<modular::ComponentContext> component_context,
+namespace {
+
+// Calls Duplicate() on an InterfacePtr<> and returns the newly bound
+// InterfaceHandle<>.
+template <class T>
+fidl::InterfaceHandle<T> Duplicate(const fidl::InterfacePtr<T>& ptr) {
+  fidl::InterfaceHandle<T> handle;
+  ptr->Duplicate(handle.NewRequest());
+  return handle;
+}
+
+modular::AgentControllerPtr startStoryInfoAgent(
+    modular::ComponentContext* component_context,
     fidl::InterfaceHandle<modular::StoryProvider> story_provider,
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
     fidl::InterfaceHandle<modular::VisibleStoriesProvider>
-        visible_stories_provider)
+        visible_stories_provider) {
+  app::ServiceProviderPtr agent_services;
+  modular::AgentControllerPtr controller;
+  component_context->ConnectToAgent("file:///system/apps/acquirers/story_info_main",
+      agent_services.NewRequest(), controller.NewRequest());
+
+  auto initializer = app::ConnectToService<StoryInfoInitializer>(
+      agent_services.get());
+  initializer->Initialize(
+      std::move(story_provider), std::move(focus_provider),
+      std::move(visible_stories_provider));
+
+  return controller;
+}
+
+}  // namespace
+
+UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
+    app::ApplicationContext* app_context,
+    fidl::InterfaceHandle<modular::ComponentContext> component_context_handle,
+    fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle,
+    fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle,
+    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+        visible_stories_provider_handle)
     : app_context_(app_context),
       agent_launcher_(app_context_->environment().get()) {
-  visible_stories_provider_.Bind(std::move(visible_stories_provider));
+  component_context_.Bind(std::move(component_context_handle));
+  auto story_provider =
+      modular::StoryProviderPtr::Create(std::move(story_provider_handle));
+  auto focus_provider =
+      modular::FocusProviderPtr::Create(std::move(focus_provider_handle));
+  visible_stories_provider_.Bind(std::move(visible_stories_provider_handle));
 
   // Start dependent processes. We get some component-scope services from
   // these processes.
@@ -37,8 +76,9 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   suggestion_engine_ = app::ConnectToService<maxwell::SuggestionEngine>(
       suggestion_services_.get());
 
-  suggestion_engine_->Initialize(std::move(story_provider),
-                                 std::move(focus_provider));
+  // Initialize the SuggestionEngine.
+  suggestion_engine_->Initialize(Duplicate(story_provider),
+                                 Duplicate(focus_provider));
 
   {
     app::ServiceProviderPtr action_log_services_ =
@@ -64,6 +104,14 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 #else
   startAgent("https://storage.googleapis.com/maxwell-agents/kronk");
 #endif
+
+  // Start privileged local Framework-style Agents.
+  {
+    auto controller = startStoryInfoAgent(
+        component_context_.get(), Duplicate(story_provider),
+        Duplicate(focus_provider), Duplicate(visible_stories_provider_));
+    agent_controllers_.push_back(std::move(controller));
+  }
 }
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(

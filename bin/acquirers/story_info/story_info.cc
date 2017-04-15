@@ -42,6 +42,7 @@ void StoryInfoAcquirer::Initialize(
   IntelligenceServicesPtr intelligence_services;
   agent_context->GetIntelligenceServices(intelligence_services.NewRequest());
   intelligence_services->GetContextPublisher(context_publisher_.NewRequest());
+  callback();
 }
 
 void StoryInfoAcquirer::Connect(
@@ -81,8 +82,6 @@ void StoryInfoAcquirer::Initialize(
 
 void StoryInfoAcquirer::OnVisibleStoriesChange(fidl::Array<fidl::String> ids) {
   for (std::string id : ids) {
-    auto key = CreateKey(id, "visible");  // remove
-    FTL_LOG(INFO) << key << " = 1";       // remove
     context_publisher_->Publish(CreateKey(id, "visible"), "1");
   }
 }
