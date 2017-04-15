@@ -51,6 +51,7 @@ static void build_exception_report(mx_exception_report_t* report,
                                    uint exception_type,
                                    const arch_exception_context_t* arch_context,
                                    ulong ip) {
+    // TODO(dje): Move to ExceptionPort::BuildArchExceptionReport.
     memset(report, 0, sizeof(*report));
     // TODO(dje): wip, just make all reports the same maximum size for now
     report->header.size = sizeof(*report);

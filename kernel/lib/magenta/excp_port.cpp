@@ -9,6 +9,7 @@
 #include <new.h>
 #include <string.h>
 
+#include <magenta/exception.h>
 #include <magenta/excp_port.h>
 #include <magenta/magenta.h>
 #include <magenta/port_dispatcher.h>
@@ -233,6 +234,16 @@ void ExceptionPort::BuildReport(mx_exception_report_t* report, uint32_t type,
     report->context.tid = tid;
 }
 
+void ExceptionPort::BuildSuspendResumeReport(mx_exception_report_t* report,
+                                             uint32_t type,
+                                             UserThread* thread) {
+    mx_koid_t pid = thread->process()->get_koid();
+    mx_koid_t tid = thread->get_koid();
+    BuildReport(report, MX_EXCP_THREAD_SUSPENDING, pid, tid);
+    // TODO(dje): IWBN to fill in pc
+    arch_fill_in_suspension_context(report);
+}
+
 void ExceptionPort::OnThreadStart(UserThread* thread) {
     canary_.Assert();
 
@@ -253,6 +264,32 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
         // killed (status == ERR_INTERRUPTED), the kernel will kill the
         // thread shortly.
     }
+}
+
+void ExceptionPort::OnThreadSuspending(UserThread* thread) {
+    canary_.Assert();
+
+    mx_koid_t pid = thread->process()->get_koid();
+    mx_koid_t tid = thread->get_koid();
+    LTRACEF("thread %" PRIu64 ".%" PRIu64 " suspending\n", pid, tid);
+
+    mx_exception_report_t report;
+    BuildSuspendResumeReport(&report, MX_EXCP_THREAD_SUSPENDING, thread);
+    // The result is ignored, not much else we can do.
+    SendReport(&report);
+}
+
+void ExceptionPort::OnThreadResuming(UserThread* thread) {
+    canary_.Assert();
+
+    mx_koid_t pid = thread->process()->get_koid();
+    mx_koid_t tid = thread->get_koid();
+    LTRACEF("thread %" PRIu64 ".%" PRIu64 " resuming\n", pid, tid);
+
+    mx_exception_report_t report;
+    BuildSuspendResumeReport(&report, MX_EXCP_THREAD_RESUMING, thread);
+    // The result is ignored, not much else we can do.
+    SendReport(&report);
 }
 
 // This isn't called for every process's destruction, only for processes that

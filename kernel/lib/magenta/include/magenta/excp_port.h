@@ -35,6 +35,9 @@ public:
 
     void OnThreadStart(UserThread* thread);
 
+    void OnThreadSuspending(UserThread* thread);
+    void OnThreadResuming(UserThread* thread);
+
     void OnProcessExit(ProcessDispatcher* process);
     void OnThreadExit(UserThread* thread);
     void OnThreadExitForDebugger(UserThread* thread);
@@ -75,7 +78,11 @@ private:
         return bound_to_system_ || (target_ != nullptr);
     }
 
-    void BuildReport(mx_exception_report_t* report, uint32_t type, mx_koid_t pid, mx_koid_t tid);
+    static void BuildReport(mx_exception_report_t* report, uint32_t type,
+                            mx_koid_t pid, mx_koid_t tid);
+
+    static void BuildSuspendResumeReport(mx_exception_report_t* report,
+                                         uint32_t type, UserThread* thread);
 
     mxtl::Canary<mxtl::magic("EXCP")> canary_;
 

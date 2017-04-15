@@ -395,4 +395,12 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
         mx_context->arch.u.arm_64.far = 0;
     }
 }
+
+void arch_fill_in_suspension_context(mx_exception_report_t *report)
+{
+    mx_exception_context_t *mx_context = &report->context;
+
+    mx_context->arch_id = ARCH_ID_ARM_64;
+}
+
 #endif

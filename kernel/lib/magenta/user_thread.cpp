@@ -420,11 +420,25 @@ void UserThread::Exiting() {
 void UserThread::Suspending() {
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&state_lock_);
+    // Notify debugger if attached.
+    // This is done by first obtaining our own reference to the port so the
+    // test can be done safely.
+    // TODO(dje): Allow debugger to say whether it wants these.
+    // TODO(dje): Is the locking sufficient here?
+    {
+        mxtl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
+        if (debugger_port) {
+            debugger_port->OnThreadSuspending(this);
+        }
+    }
 
-    DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
-    if (state_ == State::RUNNING) {
-        SetState(State::SUSPENDED);
+    {
+        AutoLock lock(&state_lock_);
+
+        DEBUG_ASSERT(state_ == State::RUNNING || state_ == State::DYING);
+        if (state_ == State::RUNNING) {
+            SetState(State::SUSPENDED);
+        }
     }
 
     LTRACE_EXIT_OBJ;
@@ -433,11 +447,27 @@ void UserThread::Suspending() {
 void UserThread::Resuming() {
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&state_lock_);
+    {
+        AutoLock lock(&state_lock_);
 
-    DEBUG_ASSERT(state_ == State::SUSPENDED || state_ == State::DYING);
-    if (state_ == State::SUSPENDED) {
-        SetState(State::RUNNING);
+        DEBUG_ASSERT(state_ == State::SUSPENDED || state_ == State::DYING);
+        if (state_ == State::SUSPENDED) {
+            SetState(State::RUNNING);
+        }
+    }
+
+    // TODO(dje): Add support for modifying userspace regs from the debugger.
+
+    // Notify debugger if attached.
+    // This is done by first obtaining our own reference to the port so the
+    // test can be done safely.
+    // TODO(dje): Allow debugger to say whether it wants these.
+    // TODO(dje): Is the locking sufficient here?
+    {
+        mxtl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
+        if (debugger_port) {
+            debugger_port->OnThreadResuming(this);
+        }
     }
 
     LTRACE_EXIT_OBJ;
@@ -587,7 +617,7 @@ status_t UserThread::ExceptionHandlerExchange(
             return NO_ERROR;
         }
 
-        // So the handler can read/write our general registers.
+        // Mark that we're in an exception.
         thread_.exception_context = arch_context;
 
         // For GetExceptionReport.
