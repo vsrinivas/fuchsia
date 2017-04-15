@@ -49,6 +49,9 @@ interface StoryProvider {
 
   // Registers a listener for changes in the story collection.
   Watch(StoryProviderWatcher watcher);
+
+  // Creates a duplicate handle for this StoryProvider.
+  Duplicate(StoryProvider& request);
 };
 
 // This interface is implemented by clients of StoryProvider.

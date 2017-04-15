@@ -104,6 +104,9 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   // |StoryProvider|
   void Watch(fidl::InterfaceHandle<StoryProviderWatcher> watcher) override;
 
+  // |StoryProvider|
+  void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override;
+
   // |PageWatcher|
   void OnChange(ledger::PageChangePtr page,
                 ledger::ResultState result_state,

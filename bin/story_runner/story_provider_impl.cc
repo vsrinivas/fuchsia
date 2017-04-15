@@ -623,6 +623,12 @@ void StoryProviderImpl::Watch(
       StoryProviderWatcherPtr::Create(std::move(watcher)));
 }
 
+// |StoryProvider|
+void StoryProviderImpl::Duplicate(
+    fidl::InterfaceRequest<StoryProvider> request) {
+  AddBinding(std::move(request));
+}
+
 void StoryProviderImpl::GetStoryData(
     const fidl::String& story_id,
     const std::function<void(StoryDataPtr)>& result) {

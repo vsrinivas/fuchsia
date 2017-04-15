@@ -71,6 +71,11 @@ class StoryProviderMock : public StoryProvider {
     callback(fidl::Array<fidl::String>::New(0));
   }
 
+  // |StoryProvider|
+  void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override {
+    FTL_LOG(FATAL) << "StoryProviderMock::Duplicate() not implemented.";
+  }
+
   std::string last_created_story_;
   fidl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
 };
