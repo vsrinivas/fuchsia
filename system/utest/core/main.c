@@ -46,6 +46,10 @@ void __libc_extensions_init(uint32_t count, mx_handle_t handle[], uint32_t info[
     }
 }
 
+mx_handle_t get_root_resource(void) {
+    return root_resource;
+}
+
 ssize_t write(int fd, const void* data, size_t count) {
     if ((fd == 1) || (fd == 2)) {
         log_write(data, count);
