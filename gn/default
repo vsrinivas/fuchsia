@@ -26,6 +26,7 @@
         "libc-tests",
         "lua",
         "magenta_benchmarks",
+        "maxwell",
         "media",
         "modular",
         "modules",

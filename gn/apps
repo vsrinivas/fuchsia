@@ -2,39 +2,9 @@
     "labels": [
         "//apps/dart_content_handler",
         "//apps/dart_content_handler/examples",
-        "//apps/dart_content_handler/integration",
-        "//apps/maxwell",
-        "//apps/maxwell/src/integration"
+        "//apps/dart_content_handler/integration"
     ],
     "binaries": [
-        {
-            "binary": "acquirers/focus",
-            "bootfs_path": "apps/acquirers/focus"
-        },
-        {
-            "binary": "action_log",
-            "bootfs_path": "apps/action_log"
-        },
-        {
-            "binary": "agents/carmen_sandiego",
-            "bootfs_path": "apps/agents/carmen_sandiego"
-        },
-        {
-            "binary": "agents/ideas",
-            "bootfs_path": "apps/agents/ideas"
-        },
-        {
-            "binary": "agents/module_suggester",
-            "bootfs_path": "apps/agents/module_suggester"
-        },
-        {
-            "binary": "agents/module_suggester.dartx",
-            "bootfs_path": "apps/agents/module_suggester.dartx"
-        },
-        {
-            "binary": "context_engine",
-            "bootfs_path": "apps/context_engine"
-        },
         {
             "binary": "dart_content_handler",
             "bootfs_path": "apps/dart_content_handler"
@@ -50,26 +20,6 @@
         {
             "binary": "hello_dart.dartx",
             "bootfs_path": "apps/hello_dart.dartx"
-        },
-        {
-            "binary": "maxwell",
-            "bootfs_path": "apps/maxwell"
-        },
-        {
-            "binary": "maxwell_test",
-            "bootfs_path": "test/maxwell_test"
-        },
-        {
-            "binary": "resolver_main",
-            "bootfs_path": "apps/resolver_main"
-        },
-        {
-            "binary": "resolver_test",
-            "bootfs_path": "test/resolver_test"
-        },
-        {
-            "binary": "suggestion_engine",
-            "bootfs_path": "apps/suggestion_engine"
         }
     ]
 }
