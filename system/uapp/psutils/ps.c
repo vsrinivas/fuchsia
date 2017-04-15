@@ -121,7 +121,7 @@ void print_table(task_table_t* table) {
 
 int main(int argc, char** argv) {
     int ret = 0;
-    mx_status_t status = walk_process_tree(job_callback, process_callback);
+    mx_status_t status = walk_process_tree(job_callback, process_callback, NULL);
     if (status != NO_ERROR) {
         fprintf(stderr, "WARNING: walk_process_tree failed: %s (%d)\n",
                 mx_status_get_string(status), status);

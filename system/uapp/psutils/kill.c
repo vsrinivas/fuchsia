@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 
     task_id = atoll(argv[1]);
 
-    mx_status_t status = walk_process_tree(callback, callback);
+    mx_status_t status = walk_process_tree(callback, callback, NULL);
     if (status == NO_ERROR) {
         fprintf(stderr, "no task found\n");
         return -1;

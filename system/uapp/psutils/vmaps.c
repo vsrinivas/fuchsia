@@ -184,7 +184,7 @@ mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t koid) {
 mx_status_t get_process(mx_koid_t koid, mx_handle_t* out) {
     desired_koid = koid;
     found_handle = MX_HANDLE_INVALID;
-    mx_status_t s = walk_process_tree(job_callback, process_callback);
+    mx_status_t s = walk_process_tree(job_callback, process_callback, NULL);
     if (s == NO_ERROR || s == VMAPS_FOUND_KOID) {
         desired_koid = 0;
         *out = found_handle;

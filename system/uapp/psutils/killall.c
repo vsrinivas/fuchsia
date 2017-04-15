@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
 
     kill_name = argv[1];
 
-    walk_process_tree(NULL, process_callback);
+    walk_process_tree(NULL, process_callback, NULL);
     if (killed == 0) {
         fprintf(stderr, "no tasks found\n");
         return -1;
