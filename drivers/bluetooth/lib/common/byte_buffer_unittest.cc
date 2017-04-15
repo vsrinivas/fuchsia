@@ -111,6 +111,30 @@ TEST(ByteBufferTest, BufferViewTest) {
   EXPECT_EQ(kBufferSize, view.GetSize());
 }
 
+TEST(ByteBufferTest, MutableBufferViewTest) {
+  constexpr size_t kBufferSize = 5;
+  constexpr size_t kViewSize = 3;
+  DynamicByteBuffer buffer(kBufferSize);
+
+  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  buffer.SetToZeros();
+
+  MutableBufferView view(buffer.GetMutableData(), kViewSize);
+  view.GetMutableData()[0] = 0x01;
+  EXPECT_EQ(0x01, buffer.GetData()[0]);
+  EXPECT_EQ(0x01, view.GetData()[0]);
+  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_EQ(kViewSize, view.GetSize());
+
+  MutableBufferView view2(view);
+  view2.GetMutableData()[0] = 0x00;
+  EXPECT_EQ(0x00, buffer.GetData()[0]);
+  EXPECT_EQ(0x00, view.GetData()[0]);
+  EXPECT_EQ(0x00, view2.GetData()[0]);
+  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_EQ(kViewSize, view.GetSize());
+}
+
 TEST(ByteBufferTest, AsString) {
   auto buffer = common::CreateStaticByteBuffer('T', 'e', 's', 't');
   EXPECT_EQ("Test", buffer.AsString());

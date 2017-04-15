@@ -80,14 +80,14 @@ ByteBuffer::const_iterator DynamicByteBuffer::cend() const {
   return buffer_.get() + buffer_size_;
 }
 
-BufferView::BufferView(const uint8_t* bytes, size_t size) : size_(size), bytes_(bytes) {
-  // If |size| non-zero then |bytes| cannot be nullptr.
-  FTL_DCHECK(!size_ || bytes_) << "|bytes_| cannot be nullptr if |size_| > 0";
-}
-
 BufferView::BufferView(const ByteBuffer& buffer) {
   size_ = buffer.GetSize();
   bytes_ = buffer.GetData();
+}
+
+BufferView::BufferView(const uint8_t* bytes, size_t size) : size_(size), bytes_(bytes) {
+  // If |size| non-zero then |bytes| cannot be nullptr.
+  FTL_DCHECK(!size_ || bytes_) << "|bytes_| cannot be nullptr if |size_| > 0";
 }
 
 BufferView::BufferView() : size_(0u), bytes_(nullptr) {}
@@ -106,6 +106,43 @@ ByteBuffer::const_iterator BufferView::cbegin() const {
 
 ByteBuffer::const_iterator BufferView::cend() const {
   return bytes_ + size_;
+}
+
+MutableBufferView::MutableBufferView(MutableByteBuffer* buffer) {
+  FTL_DCHECK(buffer);
+  size_ = buffer->GetSize();
+  bytes_ = buffer->GetMutableData();
+}
+
+MutableBufferView::MutableBufferView(uint8_t* bytes, size_t size) : size_(size), bytes_(bytes) {
+  // If |size| non-zero then |bytes| cannot be nullptr.
+  FTL_DCHECK(!size_ || bytes_) << "|bytes_| cannot be nullptr if |size_| > 0";
+}
+
+MutableBufferView::MutableBufferView() : size_(0u), bytes_(nullptr) {}
+
+const uint8_t* MutableBufferView::GetData() const {
+  return bytes_;
+}
+
+size_t MutableBufferView::GetSize() const {
+  return size_;
+}
+
+ByteBuffer::const_iterator MutableBufferView::cbegin() const {
+  return bytes_;
+}
+
+ByteBuffer::const_iterator MutableBufferView::cend() const {
+  return bytes_ + size_;
+}
+
+uint8_t* MutableBufferView::GetMutableData() {
+  return bytes_;
+}
+
+void MutableBufferView::SetToZeros() {
+  memset(bytes_, 0, size_);
 }
 
 }  // namespace common

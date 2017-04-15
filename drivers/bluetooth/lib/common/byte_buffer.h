@@ -161,5 +161,30 @@ class BufferView : public ByteBuffer {
   const uint8_t* bytes_;
 };
 
+// A ByteBuffer that does not own the memory that it points to but rather
+// provides an mutable view over it.
+class MutableBufferView : public MutableByteBuffer {
+ public:
+  explicit MutableBufferView(MutableByteBuffer* buffer);
+  MutableBufferView(uint8_t* bytes, size_t size);
+
+  // The default constructor initializes this to an empty buffer.
+  MutableBufferView();
+
+  // ByteBuffer overrides:
+  const uint8_t* GetData() const override;
+  size_t GetSize() const override;
+  const_iterator cbegin() const override;
+  const_iterator cend() const override;
+
+  // MutableByteBuffer overrides:
+  uint8_t* GetMutableData() override;
+  void SetToZeros() override;
+
+ private:
+  size_t size_;
+  uint8_t* bytes_;
+};
+
 }  // namespace common
 }  // namespace bluetooth
