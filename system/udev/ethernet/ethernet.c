@@ -242,7 +242,9 @@ static int eth_tx_thread(void* arg) {
                 if ((status = mx_object_wait_one(edev->tx_fifo,
                                                  MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
                                                  MX_TIME_INFINITE, NULL)) < 0) {
-                    printf("eth: tx_fifo: error waiting: %d\n", status);
+                    if (status != ERR_CANCELED) {
+                        printf("eth: tx_fifo: error waiting: %d\n", status);
+                    }
                     break;
                 }
                 continue;
