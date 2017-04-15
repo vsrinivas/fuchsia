@@ -16,6 +16,10 @@
 
 static mx_status_t walk_process_tree_internal(
     job_callback_t job_callback, process_callback_t process_callback,
+    mx_handle_t job, mx_koid_t job_koid, int depth);
+
+static mx_status_t do_processes(
+    process_callback_t process_callback,
     mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     mx_koid_t koids[128];
@@ -60,6 +64,19 @@ static mx_status_t walk_process_tree_internal(
         }
     }
 
+    return NO_ERROR;
+}
+
+static mx_status_t do_jobs(
+    job_callback_t job_callback,
+    process_callback_t process_callback,
+    mx_handle_t job, mx_koid_t job_koid, int depth) {
+
+    mx_koid_t koids[128];
+    size_t actual;
+    size_t avail;
+    mx_status_t status;
+
     // get a list of child jobs for this job
     status = mx_object_get_info(job, MX_INFO_JOB_CHILDREN, koids, sizeof(koids),
                                 &actual, &avail);
@@ -92,7 +109,8 @@ static mx_status_t walk_process_tree_internal(
 
             // recurse to its children
             status = walk_process_tree_internal(
-                job_callback, process_callback, child, koids[n], depth + 1);
+                job_callback, process_callback,
+                child, koids[n], depth + 1);
             // abort on failure
             if (status != NO_ERROR) {
                 return status;
@@ -108,6 +126,20 @@ static mx_status_t walk_process_tree_internal(
     }
 
     return NO_ERROR;
+}
+
+static mx_status_t walk_process_tree_internal(
+    job_callback_t job_callback, process_callback_t process_callback,
+    mx_handle_t job, mx_koid_t job_koid, int depth) {
+
+    mx_status_t status;
+
+    status = do_processes(process_callback, job, job_koid, depth);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    return do_jobs(job_callback, process_callback, job, job_koid, depth);
 }
 
 mx_status_t walk_process_tree(job_callback_t job_callback, process_callback_t process_callback) {
