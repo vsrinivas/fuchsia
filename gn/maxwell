@@ -9,6 +9,10 @@
             "bootfs_path": "apps/acquirers/focus"
         },
         {
+            "binary": "acquirers/story_info_main",
+            "bootfs_path": "apps/acquirers/story_info_main"
+        },
+        {
             "binary": "action_log",
             "bootfs_path": "apps/action_log"
         },
