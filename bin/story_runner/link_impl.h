@@ -31,24 +31,24 @@ class LinkConnection;
 // A Link is a mutable and observable value shared between modules.
 //
 // When a module requests to run more modules using
-// Story::StartModule(), a Link instance is associated with each such
-// request, i.e. a Link instance is shared between at least two
-// modules. The same Link instance can be used in multiple
+// ModuleContext::StartModule(), a Link instance is associated with
+// each such request, i.e. a Link instance is shared between at least
+// two modules. The same Link instance can be used in multiple
 // StartModule() requests, so it can be shared between more than two
 // modules. The Dup() method allows to obtain more handles of the same
 // Link instance.
 //
 // If a watcher is registered through one handle using the Watch()
 // method, it only receives notifications for changes by requests
-// through other handles. To make this possible, each connection bound
-// to a separate LinkConnection instance rather than to LinkImpl
+// through other handles. To make this possible, each connection is
+// bound to a separate LinkConnection instance rather than to LinkImpl
 // directly, and LinkImpl owns all its LinkConnection instances.
 class LinkImpl {
  public:
-  // Connects a new LinkConnection object on the heap for the given
-  // Link interface request. The |module_path| is the series of module names
-  // (where the last element is the module that created this Link) that this
-  // Link will be namespaced under.
+  // Connects a new LinkConnection object for the given Link interface
+  // request. The |module_path| is the series of module names (where
+  // the last element is the module that created this Link) that this
+  // Link is namespaced under.
   LinkImpl(StoryStorageImpl* story_storage,
            const fidl::Array<fidl::String>& module_path,
            const fidl::String& name);
@@ -57,8 +57,8 @@ class LinkImpl {
 
   // Creates a new LinkConnection for the given request.
   // LinkConnection instances are deleted when their connections
-  // close, and they are all deleted (and close their connections)
-  // when LinkImpl is destroyed.
+  // close, and they are all deleted and close their connections when
+  // LinkImpl is destroyed.
   void Connect(fidl::InterfaceRequest<Link> request);
 
   // Used by LinkConnection.

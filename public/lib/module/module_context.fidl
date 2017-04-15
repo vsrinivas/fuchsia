@@ -15,41 +15,36 @@ import "apps/mozart/services/views/view_token.fidl";
 // create Link instances and run Module instances.
 interface ModuleContext {
   // Creates a new Link instance. The Link instance can be shared with
-  // a newly created Module by passing it to StartModule(). In order
-  // to also retain a reference to the same Link instance, a duplicate
-  // must be created using the Dup() method of Link.
+  // a newly created Module instance by passing it to StartModule().
+  // In order to also retain a reference to the same Link instance, a
+  // duplicate must be created using the Dup() method of Link.
   //
   // The link instance has a name so that it can be recognized when
-  // the story is restored. Right now it's up to the module to
-  // ensure the name is unique within the scope of the story.
-  //
-  // TODO(mesch): We can scope it to the module, or the Link instance
-  // the module was initialized with, or both, but two things are
-  // tricky when done naively:
-  //
-  //   1. the initial Link might not be unique to this module
-  //      instance,
-  //
-  //   2. obtaining the name of a parent link would be asynchronous.
-  //
-  // For now, the name is scoped to the story.
+  // the story is resumed. The name is unique in the scope of the
+  // Module instance. If the method is called again by the same Module
+  // instance, a new connection to the same Link instance is obtained.
+  // It's up to the Module instance to ensure the name is unique
+  // within the scope of itself.
   CreateLink(string name, Link& link);
 
-  // Starts a new module. The module is identified by the URL of the application
-  // executable, and the instance is given a |name|.  (In the future, such a URL
-  // might be obtained, for example, from a specification of a data schema the
-  // module can provide or consume through a resolver service provided to the
-  // module separately. The parameter provided may eventually also identify a
-  // component within an application rather than just an application.) The name
-  // is used to identify existing component message queues and Links on
-  // subsequent inflations of the Story. If |name| is null, the module will be
-  // named using the |module_url| instead.  The calling module and the new
-  // module may also interact by exchanging ServiceProviders.  The calling
-  // module may provide its |outgoing_services|, and the new module may
-  // implement |incoming_services|, if an interface
+  // Starts a new Module instance. The Module to execute is identified
+  // by the URL of the application executable, and the Module instance
+  // is given a |name| in the scope of the starting Module instance.
+  // The |name|, together with the names of all ancestor modules, is
+  // used to identify existing component message queues and links when
+  // the Story is resumed.
+  //
+  // TODO(mesch): If the method is called again with the same name by
+  // the same Module instance, the existing Module instance should be
+  // restarted with the changed URL if applicable (or stopped), but
+  // right now it isn't, and a duplicate Module instance with the same
+  // name is created.
+  //
+  // The calling Module instance and the new Module instance may also
+  // interact by exchanging ServiceProviders. The calling Module
+  // instance may provide its |outgoing_services|, and the new Module
+  // instance may implement |incoming_services|, if an interface
   // request is supplied.
-  // NOTE: "root" is a reserved name, given to the module that the story was
-  // started with.
   StartModule(string name, string module_url, Link link,
               app.ServiceProvider? outgoing_services,
               app.ServiceProvider&? incoming_services,
@@ -64,29 +59,32 @@ interface ModuleContext {
                      ModuleController& module_controller,
                      string view_type);
 
-  // Gets the ComponentContext associated with this module. This
-  // component context is unique to this particular module instance.
+  // Gets the ComponentContext instance associated with this Module
+  // instance. This ComponentContext instance is unique to this
+  // particular Module instance.
   GetComponentContext(ComponentContext& context_request);
 
-  // Gets the IntelligenceServices service vendor associated with this module.
+  // Gets the IntelligenceServices service vendor associated with this
+  // module.
   GetIntelligenceServices(maxwell.IntelligenceServices& request);
 
-  // Get story id for this story which may be used to create a
-  // suggestion proposal to reinflate this story.
+  // Gets the id for this story which may be used to create a
+  // suggestion proposal to resume this story.
   GetStoryId() => (string story_id);
 
-  // The module holding this handle to the ModuleContext declares it's
-  // ready to run. The module context implementation notifies all
-  // ModuleWatchers registered on the ModuleController by calling
-  // OnStateChange(). See ModuleState for all states and transitions.
+  // The Module instance holding this handle to the ModuleContext
+  // declares it's ready to run. The module context implementation
+  // notifies all ModuleWatchers registered on the ModuleController by
+  // calling OnStateChange(). See ModuleState for all states and
+  // transitions.
   Ready();
 
-  // The module holding this handle to the ModuleContext declares it's
-  // done and wants to be torn down. The module context implementation
-  // notifies all ModuleWatchers registered on the ModuleController by
-  // calling OnStateChange(). The receiver is free to decide whether
-  // it's appropriate to Stop() the module. (It might be appropriate
-  // for the receiver to call Done() on its own instead.) See
-  // ModuleState for all states and transitions.
+  // The Module instance holding this handle to the ModuleContext
+  // declares it's done and wants to be torn down. The module context
+  // implementation notifies all ModuleWatchers registered on the
+  // ModuleController by calling OnStateChange(). The receiver is free
+  // to decide whether it's appropriate to Stop() the module. (It
+  // might be appropriate for the receiver to call Done() on its own
+  // instead.) See ModuleState for all states and transitions.
   Done();
 };

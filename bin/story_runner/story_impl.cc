@@ -28,11 +28,7 @@
 
 namespace modular {
 
-namespace {
-
 constexpr char kStoryScopeLabelPrefix[] = "story-";
-
-}  // namespace
 
 StoryImpl::StoryImpl(StoryDataPtr story_data,
                      StoryProviderImpl* const story_provider_impl)
@@ -364,6 +360,12 @@ uint64_t StoryImpl::StartModule(
   // flutter only allows one ViewOwner per flutter application,
   // and we need one ViewOwner instance per Module instance.
 
+  // TODO(mesch): If a module instance under this path already exists,
+  // update it (or at least discard it) rather than to create a
+  // duplicate one.
+  auto child_path = parent_path.Clone();
+  child_path.push_back(module_name);
+
   // TODO(vardhan): Add this module to the StoryData.
   auto launch_info = app::ApplicationLaunchInfo::New();
 
@@ -394,7 +396,7 @@ uint64_t StoryImpl::StartModule(
   Connection connection;
 
   connection.module_controller_impl.reset(new ModuleControllerImpl(
-      this, module_url, std::move(application_controller), std::move(module),
+      this, std::move(application_controller), std::move(module),
       std::move(module_controller_request)));
 
   ModuleContextInfo module_context_info = {
@@ -402,12 +404,12 @@ uint64_t StoryImpl::StartModule(
       story_provider_impl_->user_intelligence_provider()};
 
   const auto id = next_module_instance_id_++;
-  auto child_path = parent_path.Clone();
-  child_path.push_back(module_name);
   connection.module_context_impl.reset(new ModuleContextImpl(
       std::move(child_path), module_context_info, id, module_url,
       connection.module_controller_impl.get(), std::move(self_request)));
+
   connections_.emplace_back(std::move(connection));
+
   return id;
 }
 
@@ -558,6 +560,15 @@ void StoryImpl::StopFinish() {
       mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(done);
     }
   });
+}
+
+StoryImpl::StoryMarkerImpl::StoryMarkerImpl() = default;
+
+StoryImpl::StoryMarkerImpl::~StoryMarkerImpl() = default;
+
+void StoryImpl::StoryMarkerImpl::AddBinding(
+    fidl::InterfaceRequest<StoryMarker> request) {
+  bindings_.AddBinding(this, std::move(request));
 }
 
 }  // namespace modular

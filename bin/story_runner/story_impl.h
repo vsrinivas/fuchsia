@@ -57,8 +57,9 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   void CreateLink(const fidl::Array<fidl::String>& module_path,
                   const fidl::String& name,
                   fidl::InterfaceRequest<Link> request);
-  // Called by ModuleContextImpl and StartModuleInShell().
-  // Returns the module instance id so StartModuleInShell() can pass it to the
+
+  // Called by ModuleContextImpl and StartModuleInShell(). Returns the
+  // module instance id so StartModuleInShell() can pass it to the
   // StoryShell.
   uint64_t StartModule(
       const fidl::Array<fidl::String>& parent_path,
@@ -69,6 +70,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
+
   // Called by ModuleContextImpl.
   void StartModuleInShell(
       const fidl::Array<fidl::String>& parent_path,
@@ -80,6 +82,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceRequest<ModuleController> module_controller,
       const uint64_t parent_id,
       const fidl::String& view_type);
+
   // Called by ModuleContextImpl.
   const std::string& GetStoryId();
 
@@ -148,10 +151,12 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   fidl::BindingSet<StoryController> bindings_;
   fidl::InterfacePtrSet<StoryWatcher> watchers_;
 
-  // Everything for the story shell.
+  // Everything for the story shell. Relationships between modules are
+  // conveyed to the story shell using their instance IDs.
   app::ApplicationControllerPtr story_shell_controller_;
   StoryShellPtr story_shell_;
   fidl::Binding<StoryContext> story_context_binding_;
+  uint64_t next_module_instance_id_{1};
 
   // Needed to hold on to a running story. They get reset on Stop().
   LinkPtr root_;
@@ -163,15 +168,16 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   fidl::InterfaceRequest<mozart::ViewOwner> start_request_;
   std::vector<std::function<void()>> teardown_;
 
-  // The ingredient parts of a story: Modules and Links. For each
-  // Module, there is one Connection to it.
+  // The first ingredient of a story: Modules. For each Module in the
+  // Story, there is one Connection to it.
   struct Connection {
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };
   std::vector<Connection> connections_;
+
+  // The second ingredient of a story: Links. They connect Modules.
   std::vector<std::unique_ptr<LinkImpl>> links_;
-  uint64_t next_module_instance_id_{1};
 
   // A dummy service that allows applications that can run both as
   // modules in a story and standalone from the shell to determine
@@ -179,12 +185,10 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // details.
   class StoryMarkerImpl : private StoryMarker {
    public:
-    StoryMarkerImpl() = default;
-    ~StoryMarkerImpl() override = default;
+    StoryMarkerImpl();
+    ~StoryMarkerImpl() override;
 
-    void AddBinding(fidl::InterfaceRequest<StoryMarker> request) {
-      bindings_.AddBinding(this, std::move(request));
-    }
+    void AddBinding(fidl::InterfaceRequest<StoryMarker> request);
 
    private:
     fidl::BindingSet<StoryMarker> bindings_;

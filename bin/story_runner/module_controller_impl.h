@@ -22,14 +22,13 @@ namespace modular {
 class StoryImpl;
 
 // Implements the ModuleController interface, which is given to the
-// client that called Story.StartModule(). Exactly one
+// client that called ModuleContext.StartModule(). Exactly one
 // ModuleControllerImpl instance is associated with each
 // ModuleContextImpl instance.
 class ModuleControllerImpl : ModuleController {
  public:
   ModuleControllerImpl(
       StoryImpl* const story_impl,
-      const std::string& url,
       app::ApplicationControllerPtr module_application,
       ModulePtr module,
       fidl::InterfaceRequest<ModuleController> module_controller);
@@ -51,16 +50,26 @@ class ModuleControllerImpl : ModuleController {
   void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
   void Stop(const StopCallback& done) override;
 
-  // Used as connection error callback on the ModuleController
-  // binding.
+  // Used as connection error handler on the Module connection.
   void OnConnectionError();
 
+  // The story this Module instance runs in.
   StoryImpl* const story_impl_;
-  const std::string url_;
+
+  // The application which implements the Module instance.
   app::ApplicationControllerPtr module_application_;
+
+  // The Module instance.
   ModulePtr module_;
+
+  // The service provided here.
   fidl::Binding<ModuleController> binding_;
+
+  // Watchers of this Module instance.
   fidl::InterfacePtrSet<ModuleWatcher> watchers_;
+
+  // The state of this Module instance, stored here to initialize
+  // watchers registered in the future to the current state.
   ModuleState state_{ModuleState::STARTING};
 
   // Callbacks of TearDown() invocations. If there is one Stop()

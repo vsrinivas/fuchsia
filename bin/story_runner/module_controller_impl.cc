@@ -19,12 +19,10 @@ constexpr ftl::TimeDelta kStoryTearDownTimeout = ftl::TimeDelta::FromSeconds(1);
 
 ModuleControllerImpl::ModuleControllerImpl(
     StoryImpl* const story_impl,
-    const std::string& url,
     app::ApplicationControllerPtr module_application,
     ModulePtr module,
     fidl::InterfaceRequest<ModuleController> module_controller)
     : story_impl_(story_impl),
-      url_(url),
       module_application_(std::move(module_application)),
       module_(std::move(module)),
       binding_(this, std::move(module_controller)) {
@@ -77,16 +75,17 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
     SetState(ModuleState::STOPPED);
 
     // ReleaseModule() must be called before the callbacks, because
-    // StoryImpl::Stop() relies on being called back *after* the module
-    // controller was disposed.
+    // StoryImpl::Stop() relies on being called back *after* the
+    // module controller was disposed.
     story_impl_->ReleaseModule(this);
 
     for (auto& done : teardown_) {
       done();
     }
 
-    // |this| must be deleted after the callbacks, because otherwise the
-    // callback for ModuleController::Stop() cannot be sent anymore.
+    // |this| must be deleted after the callbacks, because otherwise
+    // the callback for ModuleController::Stop() cannot be invoked
+    // anymore.
     delete this;
   };
 
