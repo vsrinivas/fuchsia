@@ -630,7 +630,12 @@ status_t UserThread::ExceptionHandlerExchange(
         exception_status_ = ExceptionStatus::UNPROCESSED;
     }
 
-    auto status = event_wait_deadline(&exception_event_, INFINITE_TIME, true);
+    // Continue to wait for the exception response if we get suspended.
+
+    status_t status;
+    do {
+        status = event_wait_deadline(&exception_event_, INFINITE_TIME, true);
+    } while (status == ERR_INTERRUPTED_RETRY);
 
     AutoLock lock(&exception_wait_lock_);
 
