@@ -222,6 +222,24 @@ func TestGUID(t *testing.T) {
 	if got := g.String(); got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
+
+	s := "2967380E-134C-4CBB-B6DA-17E7CE1CA45D"
+	b := []byte{
+		0x0e, 0x38, 0x67, 0x29,
+		0x4c, 0x13,
+		0xbb, 0x4c,
+		0xb6, 0xda, 0x17, 0xe7, 0xce, 0x1c, 0xa4, 0x5d}
+
+	g = NewGUID(s)
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.LittleEndian, &g)
+	if !bytes.Equal(b, buf.Bytes()) {
+		t.Errorf("got %x, want %x", buf.Bytes(), b)
+	}
+
+	if g.String() != s {
+		t.Errorf("got %x, want %x", g.String(), s)
+	}
 }
 
 func TestGetPhysicalBlockSize(t *testing.T) {

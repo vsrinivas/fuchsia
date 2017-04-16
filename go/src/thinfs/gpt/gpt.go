@@ -288,6 +288,7 @@ var (
 
 	GUIDFuchsiaSystem = NewGUID("606B000B-B7C7-4653-A7D5-B737332C899D")
 	GUIDFuchsiaData   = NewGUID("08185F0C-892D-428A-A789-DBEEC8F55E6A")
+	GUIDFuchsiaBlob   = NewGUID("2967380E-134C-4CBB-B6DA-17E7CE1CA45D")
 )
 
 // ReadHeader reads a single GPT header from r.
