@@ -55,9 +55,6 @@ def main():
   # relative to args.root_build_dir.
   dot_packages_file = os.path.join(args.root_build_dir, args.out)
   create_base_directory(dot_packages_file)
-  package_locator_file = os.path.join(args.root_gen_dir, "dart.sources",
-      args.package_name)
-  create_base_directory(package_locator_file)
 
   dependent_files = []
 
@@ -97,9 +94,6 @@ def main():
 
   with open(args.depfile, "w") as depfile:
     depfile.write("%s: %s\n" % (args.out, " ".join(dependent_files)))
-
-  with open(package_locator_file, "w") as package_locator:
-    package_locator.write(args.source_dir)
 
   return 0
 
