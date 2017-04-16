@@ -566,6 +566,7 @@ status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
 }
 
 status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+    LTRACE_ENTRY_OBJ;
     bool debugger = false;
     switch (eport->type()) {
     case ExceptionPort::Type::DEBUGGER:
@@ -599,6 +600,7 @@ status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) 
 }
 
 bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
+    LTRACE_ENTRY_OBJ;
     mxtl::RefPtr<ExceptionPort> eport;
 
     // Remove the exception handler first. As we resume threads we don't

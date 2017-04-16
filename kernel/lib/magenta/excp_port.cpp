@@ -116,6 +116,7 @@ void ExceptionPort::OnPortZeroHandles() {
         // Already unbound. This can happen when
         // PortDispatcher::on_zero_handles and a manual unbind (via
         // mx_task_bind_exception_port) race with each other.
+        LTRACEF("already unbound\n");
         DEBUG_ASSERT(!IsBoundLocked());
         return;
     }
@@ -164,6 +165,8 @@ void ExceptionPort::OnPortZeroHandles() {
         DEBUG_ASSERT(!IsBoundLocked());
     }
 #endif  // if (LK_DEBUGLEVEL > 1)
+
+    LTRACE_EXIT_OBJ;
 }
 
 void ExceptionPort::OnTargetUnbind() {
@@ -197,6 +200,8 @@ void ExceptionPort::OnTargetUnbind() {
     // No-op if this method was ultimately called from
     // PortDispatcher:on_zero_handles (via ::OnPortZeroHandles).
     port->UnlinkExceptionPort(this);
+
+    LTRACE_EXIT_OBJ;
 }
 
 mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
