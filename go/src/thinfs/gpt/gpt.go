@@ -114,6 +114,17 @@ func (g GUID) IsZero() bool {
 	return true
 }
 
+// Name looks up the guid in the GUIDS map, and returns the name if found,
+// otherwise it returns the standard string representation.
+func (g GUID) Name() string {
+	for name, ng := range GUIDS {
+		if ng == g {
+			return name
+		}
+	}
+	return g.String()
+}
+
 // Signature is the representation of a GPT signature, normally `EFI PART`
 type Signature [8]byte
 
@@ -248,7 +259,7 @@ func (p *PartitionEntry) IsZero() bool {
 func (p PartitionEntry) String() string {
 	var b bytes.Buffer
 
-	fmt.Fprintf(&b, "PartitionTypeGUID: %s\n", p.PartitionTypeGUID)
+	fmt.Fprintf(&b, "PartitionTypeGUID: %s\n", p.PartitionTypeGUID.Name())
 	fmt.Fprintf(&b, "UniquePartitionGUID: %s\n", p.UniquePartitionGUID)
 	fmt.Fprintf(&b, "StartingLBA: %d\n", p.StartingLBA)
 	fmt.Fprintf(&b, "EndingLBA: %d\n", p.EndingLBA)
@@ -290,6 +301,28 @@ var (
 	GUIDFuchsiaData   = NewGUID("08185F0C-892D-428A-A789-DBEEC8F55E6A")
 	GUIDFuchsiaBlob   = NewGUID("2967380E-134C-4CBB-B6DA-17E7CE1CA45D")
 )
+
+// GUIDS contains a map of known GUIDS to their names.
+var GUIDS = map[string]GUID{
+	// TODO(raggi): make / find / use a generator to manage this list and the
+	// above
+	"unused":             GUIDUnused,
+	"mbr":                GUIDMBR,
+	"efi":                GUIDEFI,
+	"bios":               GUIDBIOS,
+	"intel-fast-flash":   GUIDIntelFastFlash,
+	"sony-boot":          GUIDSonyBoot,
+	"lenovo-boot":        GUIDLenovoBoot,
+	"apple-hfs-plus":     GUIDAppleHFSPlus,
+	"apple-ufs":          GUIDAppleUFS,
+	"apple-boot":         GUIDAppleBoot,
+	"apple-raid":         GUIDAppleRaid,
+	"apple-offline-raid": GUIDAppleOfflineRAID,
+	"apple-label":        GUIDAppleLabel,
+	"fuchsia-system":     GUIDFuchsiaSystem,
+	"fuchsia-data":       GUIDFuchsiaData,
+	"fuchsia-blob":       GUIDFuchsiaBlob,
+}
 
 // ReadHeader reads a single GPT header from r.
 func ReadHeader(r io.Reader) (Header, error) {
@@ -482,7 +515,7 @@ func ReadGPT(r io.ReadSeeker, blockSize uint64, diskSize uint64) (GPT, error) {
 
 // nullReader is a convenience for cross-platform io.copy of 0 bytes to a target
 // writer.
-type nullReader struct {}
+type nullReader struct{}
 
 func (nr nullReader) Read(b []byte) (int, error) {
 	for i := range b {

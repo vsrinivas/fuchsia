@@ -240,6 +240,22 @@ func TestGUID(t *testing.T) {
 	if g.String() != s {
 		t.Errorf("got %x, want %x", g.String(), s)
 	}
+
+	if GUIDBIOS != GUIDS["bios"] {
+		t.Errorf("got %x, want %x", GUIDS["bios"], GUIDBIOS)
+	}
+
+	if want := "bios"; GUIDBIOS.Name() != want {
+		t.Errorf("got %q, want %q", GUIDBIOS.Name(), want)
+	}
+
+	// this guid is a non-named guid, assert that it is returned by name() as a
+	// fallback.
+	s = "99999999-9999-9999-9999-999999999999"
+	g = NewGUID(s)
+	if g.Name() != s {
+		t.Errorf("got %x, want %x", g.Name(), s)
+	}
 }
 
 func TestGetPhysicalBlockSize(t *testing.T) {
