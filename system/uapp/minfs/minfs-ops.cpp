@@ -1020,13 +1020,10 @@ mx_status_t VnodeMinfs::Setattr(vnattr_t* a) {
     return NO_ERROR;
 }
 
-#define DIRCOOKIE_FLAG_USED 1
-#define DIRCOOKIE_FLAG_ERROR 2
-
 typedef struct dircookie {
-    size_t off;      // Offset into directory
-    uint32_t flags;  // Identifies the state of the dircookie
-    uint32_t seqno;  // inode seq no
+    size_t off;        // Offset into directory
+    uint32_t reserved; // Unused
+    uint32_t seqno;    // inode seq no
 } dircookie_t;
 
 static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
@@ -1041,24 +1038,30 @@ mx_status_t VnodeMinfs::Readdir(void* cookie, void* dirents, size_t len) {
         return ERR_NOT_SUPPORTED;
     }
 
-    size_t off;
+    size_t off = dc->off;
+    size_t r;
     char data[kMinfsMaxDirentSize];
     minfs_dirent_t* de = (minfs_dirent_t*) data;
-    if (dc->flags & DIRCOOKIE_FLAG_ERROR) {
-        return ERR_IO;
-    } else if (dc->flags & DIRCOOKIE_FLAG_USED) {
-        if (dc->seqno != inode_.seq_num) {
-            // directory has been modified
-            // stop returning entries
-            trace(MINFS, "minfs_readdir() Directory modified since readdir started\n");
-            goto fail;
+
+    if (off != 0 && dc->seqno != inode_.seq_num) {
+        // The offset *might* be invalid, if we called Readdir after a directory
+        // has been modified. In this case, we need to re-read the directory
+        // until we get to the direntry at or after the previously identified offset.
+
+        size_t off_recovered = 0;
+        while (off_recovered < off) {
+            if (off_recovered + MINFS_DIRENT_SIZE >= kMinfsMaxDirectorySize) {
+                goto fail;
+            }
+            mx_status_t status = ReadInternal(de, kMinfsMaxDirentSize, off_recovered, &r);
+            if ((status != NO_ERROR) || (validate_dirent(de, r, off_recovered) != NO_ERROR)) {
+                goto fail;
+            }
+            off_recovered += MinfsReclen(de, off_recovered);
         }
-        off = dc->off;
-    } else {
-        off = 0;
+        off = off_recovered;
     }
 
-    size_t r;
     while (off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
         mx_status_t status = ReadInternal(de, kMinfsMaxDirentSize, off, &r);
         if (status != NO_ERROR) {
@@ -1083,7 +1086,6 @@ mx_status_t VnodeMinfs::Readdir(void* cookie, void* dirents, size_t len) {
 
 done:
     // save our place in the dircookie
-    dc->flags |= DIRCOOKIE_FLAG_USED;
     dc->off = off;
     dc->seqno = inode_.seq_num;
     r = static_cast<size_t>(((uintptr_t) out - (uintptr_t)dirents));
@@ -1091,9 +1093,7 @@ done:
     return static_cast<mx_status_t>(r);
 
 fail:
-    // mark dircookie so further reads also fail
     dc->off = 0;
-    dc->flags |= DIRCOOKIE_FLAG_ERROR;
     return ERR_IO;
 }
 

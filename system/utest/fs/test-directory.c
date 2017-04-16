@@ -252,6 +252,73 @@ bool test_directory_readdir(void) {
     END_TEST;
 }
 
+// Create a directory named "::dir" with entries "00000", "00001" ... up to
+// num_entries.
+bool large_dir_setup(size_t num_entries) {
+    ASSERT_EQ(mkdir("::dir", 0755), 0, "");
+
+    // Create a large directory (ideally, large enough that our libc
+    // implementation can't cache the entire contents of the directory
+    // with one 'getdirents' call).
+    for (size_t i = 0; i < num_entries; i++) {
+        char dirname[100];
+        snprintf(dirname, 100, "::dir/%05lu", i);
+        ASSERT_EQ(mkdir(dirname, 0755), 0, "");
+    }
+
+    DIR* dir = opendir("::dir");
+    ASSERT_NONNULL(dir, "");
+
+    // As a sanity check, it should contain all then entries we made
+    struct dirent* de;
+    size_t num_seen = 0;
+    size_t i = 0;
+    while ((de = readdir(dir)) != NULL) {
+        if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
+            // Ignore these entries
+            continue;
+        }
+        char dirname[100];
+        snprintf(dirname, 100, "%05lu", i++);
+        ASSERT_EQ(strcmp(de->d_name, dirname), 0, "Unexpected dirent");
+        num_seen++;
+    }
+    ASSERT_EQ(closedir(dir), 0, "");
+
+    return true;
+}
+
+bool test_directory_readdir_rm_all(void) {
+    BEGIN_TEST;
+
+    size_t num_entries = 1000;
+    ASSERT_TRUE(large_dir_setup(num_entries), "");
+
+    DIR* dir = opendir("::dir");
+    ASSERT_NONNULL(dir, "");
+
+    // Unlink all the entries as we read them.
+    struct dirent* de;
+    size_t num_seen = 0;
+    size_t i = 0;
+    while ((de = readdir(dir)) != NULL) {
+        if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
+            // Ignore these entries
+            continue;
+        }
+        char dirname[100];
+        snprintf(dirname, 100, "%05lu", i++);
+        ASSERT_EQ(strcmp(de->d_name, dirname), 0, "Unexpected dirent");
+        ASSERT_EQ(unlinkat(dirfd(dir), dirname, AT_REMOVEDIR), 0, "");
+        num_seen++;
+    }
+
+    ASSERT_EQ(num_seen, num_entries, "Did not see all expected entries");
+    ASSERT_EQ(closedir(dir), 0, "");
+    ASSERT_EQ(rmdir("::dir"), 0, "Could not unlink containing directory");
+    END_TEST;
+}
+
 bool test_directory_rewind(void) {
     BEGIN_TEST;
 
@@ -344,6 +411,7 @@ RUN_FOR_ALL_FILESYSTEMS(directory_tests,
     RUN_TEST_LARGE(test_directory_large)
     RUN_TEST_MEDIUM(test_directory_trailing_slash)
     RUN_TEST_MEDIUM(test_directory_readdir)
+    RUN_TEST_MEDIUM(test_directory_readdir_rm_all)
     RUN_TEST_MEDIUM(test_directory_rewind)
     RUN_TEST_MEDIUM(test_directory_after_rmdir)
 )

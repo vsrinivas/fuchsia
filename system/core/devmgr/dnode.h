@@ -104,6 +104,8 @@ private:
     NodeState type_device_state_;
     VnodeMemfs* vnode_;
     mxtl::RefPtr<Dnode> parent_;
+    // Used to impose an absolute order on dnodes within a directory.
+    size_t ordering_token_;
     ChildList children_;
     uint32_t flags_;
     mxtl::unique_ptr<char[]> name_;

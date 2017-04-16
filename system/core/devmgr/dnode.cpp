@@ -81,6 +81,12 @@ void Dnode::AddChild(mxtl::RefPtr<Dnode> parent, mxtl::RefPtr<Dnode> child) {
         // Child has '..' pointing back at parent.
         parent->vnode_->link_count_++;
     }
+    // Ensure that the ordering of tokens in the children list is absolute.
+    if (parent->children_.is_empty()) {
+        child->ordering_token_ = 2; // '0' for '.', '1' for '..'
+    } else {
+        child->ordering_token_ = parent->children_.back().ordering_token_ + 1;
+    }
     parent->children_.push_back(mxtl::move(child));
 }
 
@@ -133,9 +139,7 @@ mx_status_t Dnode::CanUnlink() const {
 }
 
 struct dircookie_t {
-    size_t count;    // Identifies the number of entries we've already returned
-    uint32_t seqno;  // Inode seq no
-    uint32_t flags;  // Unused
+    size_t order; // Minimum 'order' of the next dnode dirent to be read.
 };
 
 static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
@@ -149,23 +153,23 @@ mx_status_t Dnode::ReaddirStart(void* cookie, void* data, size_t len) {
     char* ptr = static_cast<char*>(data);
     mx_status_t r;
 
-    if (c->count == 0) {
+    if (c->order == 0) {
         r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, ".", 1,
                                 VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
             return static_cast<mx_status_t>(pos);
         }
         pos += r;
-        c->count++;
+        c->order++;
     }
-    if (c->count == 1) {
+    if (c->order == 1) {
         r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, "..", 2,
                                 VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
             return static_cast<mx_status_t>(pos);
         }
         pos += r;
-        c->count++;
+        c->order++;
     }
     return static_cast<mx_status_t>(pos);
 }
@@ -175,16 +179,7 @@ mx_status_t Dnode::Readdir(void* cookie, void* _data, size_t len) const {
     char* data = static_cast<char*>(_data);
     mx_status_t r = 0;
 
-    if (vnode_->seqcount_ != c->seqno && c->count > 0) {
-        // We called readdir with this cookie before, but the directory has
-        // been modified since then.
-        return ERR_IO;
-    } else {
-        // This is the first call to readdir; set the cookie.
-        c->seqno = vnode_->seqcount_;
-    }
-
-    if (c->count <= 1) {
+    if (c->order <= 1) {
         r = Dnode::ReaddirStart(cookie, data, len);
         if (r < 0) {
             return r;
@@ -194,9 +189,8 @@ mx_status_t Dnode::Readdir(void* cookie, void* _data, size_t len) const {
     size_t pos = r;
     char* ptr = static_cast<char*>(data);
 
-    size_t childno = 2;
     for (const auto& dn : children_) {
-        if (childno++ < c->count) {
+        if (dn.ordering_token_ < c->order) {
             continue;
         }
         uint32_t vtype = dn.IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
@@ -206,8 +200,8 @@ mx_status_t Dnode::Readdir(void* cookie, void* _data, size_t len) const {
         if (r < 0) {
             break;
         }
+        c->order = dn.ordering_token_ + 1;
         pos += r;
-        c->count++;
     }
 
     return static_cast<mx_status_t>(pos);
@@ -239,7 +233,7 @@ void Dnode::PutName(mxtl::unique_ptr<char[]> name, size_t len) {
 bool Dnode::IsDirectory() const { return vnode_->IsDirectory(); }
 
 Dnode::Dnode(VnodeMemfs* vn, mxtl::unique_ptr<char[]> name, uint32_t flags) :
-    vnode_(vn), parent_(nullptr), flags_(flags), name_(mxtl::move(name)) {
+    vnode_(vn), parent_(nullptr), ordering_token_(0), flags_(flags), name_(mxtl::move(name)) {
     vnode_->RefAcquire();
 };
 
