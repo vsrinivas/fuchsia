@@ -29,5 +29,7 @@ group("tests") {
 
   deps = [
     "src/view_manager/tests",
+    "services/composition/cpp:apptests",
+    "services/geometry/cpp:apptests",
   ]
 }
