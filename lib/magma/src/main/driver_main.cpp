@@ -27,9 +27,7 @@
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_buffer.h"
 
-#define MAGMA_START 1
-
-#if MAGMA_INDRIVER_TEST
+#if MAGMA_TEST_DRIVER
 void magma_indriver_test(mx_device_t* device);
 #endif
 
@@ -274,7 +272,7 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
             break;
         }
 
-#if MAGMA_INDRIVER_TEST
+#if MAGMA_TEST_DRIVER
         case IOCTL_MAGMA_TEST_RESTART: {
             DLOG("IOCTL_MAGMA_TEST_RESTART");
             std::unique_lock<std::mutex> lock(device->magma_mutex);
@@ -301,8 +299,7 @@ static mx_status_t intel_i915_release(mx_device_t* dev)
 
     intel_i915_enable_backlight(device, false);
 
-    if (MAGMA_START)
-        magma_stop(device);
+    magma_stop(device);
 
     return NO_ERROR;
 }
@@ -316,23 +313,22 @@ static mx_protocol_device_t intel_i915_device_proto = {
 
 // implement driver object:
 
-static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
+static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_device, void** cookie)
 {
-    DLOG("intel_i915_bind start mx_device %p", dev);
+    DLOG("intel_i915_bind start mx_device %p", mx_device);
 
     pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
-        return ERR_NOT_SUPPORTED;
+    if (device_get_protocol(mx_device, MX_PROTOCOL_PCI, (void**)&pci))
+        return DRET_MSG(ERR_NOT_SUPPORTED, "device_get_protocol failed");
 
-    mx_status_t status = pci->claim_device(dev);
+    mx_status_t status = pci->claim_device(mx_device);
     if (status < 0)
-        return status;
+        return DRET_MSG(status, "claim_device failed");
 
     // map resources and initialize the device
-    auto device = new intel_i915_device_t();
+    auto device = std::make_unique<intel_i915_device_t>();
 
-    // create and add the display (char) device
-    device_init(&device->device, drv, "intel_i915_disp", &intel_i915_device_proto);
+    device_init(&device->device, mx_driver, "intel_i915_disp", &intel_i915_device_proto);
 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride, pitch;
@@ -388,34 +384,40 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
         magma::log(magma::LOG_WARNING, "Failed to pass framebuffer to magenta: %d", status);
 
     // TODO remove when the gfxconsole moves to user space
-    intel_i915_enable_backlight(device, true);
+    intel_i915_enable_backlight(device.get(), true);
+
+    magma::PlatformTrace::Initialize();
+
+    device->magma_driver = std::unique_ptr<MagmaDriver>(MagmaDriver::Create());
+    if (!device->magma_driver)
+        return DRET_MSG(ERR_INTERNAL, "MagmaDriver::Create failed");
+
+#if MAGMA_TEST_DRIVER
+    DLOG("running magma indriver test");
+    magma_indriver_test(mx_device);
+#endif
 
     device->device.protocol_id = MX_PROTOCOL_DISPLAY;
     device->device.protocol_ops = &intel_i915_display_proto;
-    device->parent_device = dev;
-    device_add(&device->device, dev);
+    device->parent_device = mx_device;
+
+    status = magma_start(device.get());
+    if (status != NO_ERROR)
+        return DRET_MSG(status, "magma_start failed");
+
+    device_add(&device->device, mx_device);
 
     DLOG("initialized magma intel display driver, fb=0x%p fbsize=0x%lx", device->framebuffer_addr,
          device->framebuffer_size);
 
-    if (MAGMA_START) {
-        device->magma_driver = std::unique_ptr<MagmaDriver>(MagmaDriver::Create());
-        if (!device->magma_driver)
-            return ERR_INTERNAL;
+    device.release();
 
-#if MAGMA_INDRIVER_TEST
-        DLOG("running magma indriver test");
-        magma_indriver_test(device->parent_device);
-        constexpr uint32_t kArgc = 2;
-        const char* argv[kArgc]{"/boot/bin/sh", "/system/autorun"};
-        magma::MagentaPlatformLauncher::Launch(mx_job_default(), "autorun", kArgc, argv, nullptr,
-                                               nullptr, nullptr, 0);
+#if MAGMA_TEST_DRIVER
+    constexpr uint32_t kArgc = 2;
+    const char* argv[kArgc]{"/boot/bin/sh", "/system/autorun"};
+    magma::MagentaPlatformLauncher::Launch(mx_job_default(), "autorun", kArgc, argv, nullptr,
+                                           nullptr, nullptr, 0);
 #endif
-
-        magma_start(device);
-    }
-
-    magma::PlatformTrace::Initialize();
 
     return NO_ERROR;
 }

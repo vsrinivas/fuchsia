@@ -43,7 +43,7 @@ source_set("test_driver") {
 
   defines = []
 
-  defines += [ "MAGMA_INDRIVER_TEST=1" ]
+  defines += [ "MAGMA_TEST_DRIVER=1" ]
   sources += [ "driver_test_gtest.cc" ]
   deps += [
     "$magma_build_root/tests/unit_tests:magma_platform_tests",
