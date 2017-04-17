@@ -346,8 +346,6 @@ void vc_device_invalidate_all_for_testing(vc_device_t* dev) {
 
     vc_device_clear_gfx(dev);
     vc_device_invalidate(dev, 0, 0, dev->columns, dev->rows);
-    // Restore the cursor.
-    vc_tc_movecursor(dev, dev->cursor_x, dev->cursor_y);
 }
 
 int vc_device_get_scrollback_lines(vc_device_t* dev) {
