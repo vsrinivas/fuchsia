@@ -12,6 +12,8 @@
 #include <ddk/driver.h>
 #include "devcoordinator.h"
 
+static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals);
+
 static mx_handle_t devhost_job;
 static port_t dc_port;
 static list_node_t driver_list = LIST_INITIAL_VALUE(driver_list);
@@ -84,11 +86,64 @@ static mx_status_t dc_new_devhost(const char* name, devhost_ctx_t** out) {
     return NO_ERROR;
 }
 
+// Add a new device to a parent device (same devhost)
+// New device is published in devfs.
+static mx_status_t dc_add_device(device_ctx_t* parent, mx_handle_t hdevice,
+                                 dc_msg_t* msg, const char* name,
+                                 const char* args, const void* data) {
+    if (msg->namelen >= MX_DEVICE_NAME_MAX) {
+        return ERR_INVALID_ARGS;
+    }
+    device_ctx_t* dev;
+    if ((dev = calloc(1, sizeof(*dev) + msg->argslen + 1)) == NULL) {
+        return ERR_NO_MEMORY;
+    }
+    dev->hdevice = hdevice;
+    dev->host = parent->host;
+    dev->args = (const char*) (dev + 1);
+    memcpy((char*) (dev + 1), args, msg->argslen + 1);
+    memcpy(dev->name, name, msg->namelen + 1);
+    dev->protocol_id = msg->protocol_id;
+
+    mx_status_t r;
+    if ((r = do_publish(parent, dev)) < 0) {
+        free(dev);
+        return r;
+    }
+
+    dev->ph.handle = hdevice;
+    dev->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+    dev->ph.func = dc_handle_device;
+    if ((r = port_watch(&dc_port, &dev->ph)) < 0) {
+        do_unpublish(dev);
+        free(dev);
+        return r;
+    }
+
+    return NO_ERROR;
+}
+
+// Remove device from parent
+static mx_status_t dc_remove_device(device_ctx_t* dev) {
+    if (dev->flags & DEV_CTX_IMMORTAL) {
+        printf("devcoord: cannot remove dev %p (immortal)\n", dev);
+    } else {
+        do_unpublish(dev);
+        dev->flags |= DEV_CTX_DEAD;
+    }
+    return NO_ERROR;
+}
+
 static mx_status_t dc_handle_device_read(device_ctx_t* dev) {
     dc_msg_t msg;
     mx_handle_t hin[2];
     uint32_t msize = sizeof(msg);
     uint32_t hcount = 2;
+
+    if (dev->flags & DEV_CTX_DEAD) {
+        printf("devcoord: dev %p already dead\n", dev);
+        return ERR_INTERNAL;
+    }
 
     mx_status_t r;
     if ((r = mx_channel_read(dev->hdevice, 0, &msg, msize, &msize,
@@ -100,51 +155,88 @@ static mx_status_t dc_handle_device_read(device_ctx_t* dev) {
     const char* name;
     const char* args;
     if ((r = dc_msg_unpack(&msg, msize, &data, &name, &args)) < 0) {
-        goto fail;
+        return ERR_INTERNAL;
     }
 
     switch (msg.op) {
     case DC_OP_ADD_DEVICE:
+        if (hcount != 1) {
+            r = ERR_INVALID_ARGS;
+            goto fail;
+        }
         printf("devcoord: add device '%s'\n", name);
-        return NO_ERROR;
+        if ((r = dc_add_device(dev, hin[0], &msg, name, args, data)) == NO_ERROR) {
+            goto done;
+        }
+        break;
 
     case DC_OP_REMOVE_DEVICE:
+        if (hcount != 0) {
+            r = ERR_INVALID_ARGS;
+            goto fail;
+        }
         printf("devcoord: remove device '%s'\n", name);
-        return NO_ERROR;
+        if ((r = dc_remove_device(dev)) == NO_ERROR) {
+            goto done;
+        }
+        break;
 
     default:
         printf("devcoord: invalid rpc op %08x\n", msg.op);
         r = ERR_NOT_SUPPORTED;
+        break;
     }
 
 fail:
     while (hcount > 0) {
         mx_handle_close(hin[--hcount]);
     }
-    return r;
+done:
+    ;
+    dc_status_t dcs = {
+        .txid = msg.txid,
+        .status = r,
+    };
+    if ((r = mx_channel_write(dev->hdevice, 0, &dcs, sizeof(dcs), NULL, 0)) < 0) {
+        return r;
+    }
+    return NO_ERROR;
+}
+
+void dc_destroy_device(device_ctx_t* dev) {
+    if (dev->flags & DEV_CTX_IMMORTAL) {
+        printf("devcoord: cannot destroy dev %p (immortal)\n", dev);
+        return;
+    }
+    if (!(dev->flags & DEV_CTX_DEAD)) {
+        dc_remove_device(dev);
+    }
+    free(dev);
 }
 
 #define dev_from_ph(ph) containerof(ph, device_ctx_t, ph)
 
-mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals) {
+// handle inbound RPCs from devhost to devices
+static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals) {
     device_ctx_t* dev = dev_from_ph(ph);
 
     if (signals & MX_CHANNEL_READABLE) {
         mx_status_t r = dc_handle_device_read(dev);
         if (r != NO_ERROR) {
-            free(ph);
+            dc_destroy_device(dev);
         }
         return r;
     }
     if (signals & MX_CHANNEL_PEER_CLOSED) {
         printf("devcoord: device disconnected!\n");
+        dc_destroy_device(dev);
         return ERR_PEER_CLOSED;
     }
     printf("devcoord: no work? %08x\n", signals);
     return NO_ERROR;
 }
 
-
+// send message to devhost, requesting the creation of a device
 static mx_status_t dh_create_device(device_ctx_t* dev, devhost_ctx_t* dh) {
     dc_msg_t msg;
     uint32_t mlen;
@@ -171,10 +263,18 @@ static mx_status_t dh_create_device(device_ctx_t* dev, devhost_ctx_t* dh) {
     }
 
     dev->hdevice = h0;
-    //TODO: port_watch
+    dev->ph.handle = h0;
+    dev->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+    dev->ph.func = dc_handle_device;
+    if ((r = port_watch(&dc_port, &dev->ph)) < 0) {
+        mx_handle_close(h0);
+        return r;
+    }
+
     return NO_ERROR;
 }
 
+// send message to devhost, requesting the binding of a driver to a device
 static mx_status_t dh_bind_driver(device_ctx_t* dev, const char* libname) {
     dc_msg_t msg;
     uint32_t mlen;

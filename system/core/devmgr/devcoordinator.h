@@ -45,29 +45,31 @@ typedef struct device_ctx {
     port_handler_t ph;
     devhost_ctx_t* host;
     list_node_t node;
+    const char* args;
 #endif
     uint32_t flags;
     uint32_t protocol_id;
     uint32_t prop_count;
     VnodeDir* vnode;
-    char name[MX_DEVICE_NAME_MAX];
+    char name[MX_DEVICE_NAME_MAX + 1];
     mx_device_prop_t props[];
 } device_ctx_t;
 
 // This device is never destroyed
-#define DEV_CTX_IMMORTAL   1
+#define DEV_CTX_IMMORTAL   0x01
 
 // This device is a bus device
 // (a devhost will be created to contain its children)
-#define DEV_CTX_BUSDEV     2
+#define DEV_CTX_BUSDEV     0x02
 
 // This device may be bound multiple times
-#define DEV_CTX_MULTI_BIND 4
+#define DEV_CTX_MULTI_BIND 0x04
 
 // This device is bound and not eligible for binding
 // again until unbound.  Not allowed on MULTI_BIND ctx.
-#define DEV_CTX_BOUND      8
+#define DEV_CTX_BOUND      0x08
 
+#define DEV_CTX_DEAD       0x10
 typedef struct {
     mx_driver_t drv;
     struct list_node node;

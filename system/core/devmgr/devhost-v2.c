@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <driver/driver-api.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 
@@ -50,11 +51,37 @@ typedef struct {
 static list_node_t dh_drivers = LIST_INITIAL_VALUE(dh_drivers);
 
 
+static const char* mkdevpath(mx_device_t* dev, char* path, size_t max) {
+    if (dev == NULL) {
+        return "";
+    }
+    if (max < 1) {
+        return "<invalid>";
+    }
+    char* end = path + max;
+    char sep = 0;
+
+    while (dev) {
+        *(--end) = sep;
+
+        size_t len = strlen(dev->name);
+        if (len > (size_t)(end - path)) {
+            break;
+        }
+        end -= len;
+        memcpy(end, dev->name, len);
+        sep = '/';
+        dev = dev->parent;
+    }
+    return end;
+}
+
 static mx_status_t dh_find_driver(const char* libname, driver_rec_t** out) {
     // check for already-loaded driver first
     driver_rec_t* rec;
     list_for_every_entry(&dh_drivers, rec, driver_rec_t, node) {
         if (!strcmp(libname, rec->libname)) {
+            *out = rec;
             return rec->status;
         }
     }
@@ -83,7 +110,6 @@ static mx_status_t dh_find_driver(const char* libname, driver_rec_t** out) {
         goto done;
     }
 
-    printf("devhost: loaded '%s'\n", libname);
     memcpy(&rec->drv.ops, &di->driver->ops, sizeof(mx_driver_ops_t));
     rec->drv.flags = di->driver->flags;
 
@@ -103,7 +129,6 @@ done:
 
 static mx_status_t dh_handle_open(mxrio_msg_t* msg, size_t len,
                                   mx_handle_t h, device_ctx_t* ctx) {
-    printf("devhost: remoteio open\n");
     return ERR_NOT_SUPPORTED;
 }
 
@@ -119,12 +144,16 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, device_ctx_t* ctx) {
         return r;
     }
 
+    char buffer[512];
+    const char* path = mkdevpath(ctx->dev, buffer, sizeof(buffer));
+
     // handle remoteio open messages only
     if ((msize >= MXRIO_HDR_SZ) && (msg.op == MXRIO_OPEN)) {
         if (hcount != 1) {
             r = ERR_INVALID_ARGS;
             goto fail;
         }
+        printf("devhost[%s] remoteio OPEN\n", path);
         return dh_handle_open((void*) &msg, msize, hin[0], ctx);
     }
 
@@ -137,7 +166,15 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, device_ctx_t* ctx) {
 
     switch (msg.op) {
     case DC_OP_CREATE_DEVICE:
-        printf("devhost: create device '%s'\n", name);
+        // This does not operate under the devhost api lock,
+        // since the newly created device is not visible to
+        // any API surface until a driver is bound to it.
+        // (which can only happen via another message on this thread)
+        printf("devhost[%s] create device '%s'\n", path, name);
+        if (msg.namelen > MX_DEVICE_NAME_MAX) {
+            r = ERR_INVALID_ARGS;
+            break;
+        }
         if (hcount != 1) {
             r = ERR_INVALID_ARGS;
             break;
@@ -147,6 +184,19 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, device_ctx_t* ctx) {
             r = ERR_NO_MEMORY;
             break;
         }
+        if ((newctx->dev = calloc(1, sizeof(mx_device_t))) == NULL) {
+            free(newctx);
+            r = ERR_NO_MEMORY;
+            break;
+        }
+        mx_device_t* dev = newctx->dev;
+        memcpy(dev->name, name, msg.namelen + 1);
+        dev->protocol_id = msg.protocol_id;
+        dev->rpc = hin[0];
+        dev->refcount = 1;
+        list_initialize(&dev->children);
+        //TODO: dev->ops and other lifecycle bits
+
         newctx->ph.handle = hin[0];
         newctx->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
         newctx->ph.func = dh_handle_rpc;
@@ -154,19 +204,31 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, device_ctx_t* ctx) {
             free(newctx);
             break;
         }
-        printf("devhost: (%p) device '%s' ctx=%p\n", ctx, name, newctx);
+        printf("devhost[%s] created '%s' ctx=%p\n", path, name, newctx);
         return NO_ERROR;
 
     case DC_OP_BIND_DRIVER:
-        printf("devhost: (%p) bind driver '%s'\n", ctx, name);
+        //TODO: api lock integration
+        printf("devhost[%s] bind driver '%s'\n", path, name);
         driver_rec_t* rec;
         if ((r = dh_find_driver(name, &rec)) < 0) {
-            printf("devhost: (%p) driver load failed: %d\n", ctx, r);
+            printf("devhost[%s] driver load failed: %d\n", path, r);
+            //TODO: inform devcoord
+        } else {
+            if (rec->drv.ops.bind) {
+                r = rec->drv.ops.bind(&rec->drv, ctx->dev, &ctx->dev->owner_cookie);
+            } else {
+                r = ERR_NOT_SUPPORTED;
+            }
+            if (r < 0) {
+                printf("devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
+            }
+            //TODO: inform devcoord
         }
         return NO_ERROR;
 
     default:
-        printf("devhost: (%p) invalid rpc op %08x\n", ctx, msg.op);
+        printf("devhost[%s] invalid rpc op %08x\n", path, msg.op);
         r = ERR_NOT_SUPPORTED;
     }
 
@@ -211,13 +273,122 @@ static void devhost_io_init(void) {
     dup2(1, 2);
 }
 
-
+// Send message to devcoordinator asking to add child device to
+// parent device.  Called under devhost api lock.
 mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child) {
-    return ERR_NOT_SUPPORTED;
+    char buffer[512];
+    const char* path = mkdevpath(parent, buffer, sizeof(buffer));
+    printf("devhost[%s] add '%s'\n", path, child->name);
+    device_ctx_t* ctx = calloc(1, sizeof(*ctx));
+    if (ctx == NULL) {
+        return ERR_NO_MEMORY;
+    }
+
+    mx_handle_t h0, h1;
+    mx_status_t r;
+    if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
+        free(ctx);
+        return r;
+    }
+
+    dc_msg_t msg;
+    dc_status_t rsp;
+    mx_channel_call_args_t args = {
+        .wr_bytes = &msg,
+        .wr_handles = &h0,
+        .rd_bytes = &rsp,
+        .rd_handles = NULL,
+        .wr_num_handles = 1,
+        .rd_num_bytes = sizeof(rsp),
+        .rd_num_handles = 0,
+    };
+    if ((r = dc_msg_pack(&msg, &args.wr_num_bytes,
+                         NULL, 0, child->name, NULL)) < 0) {
+fail_write:
+        mx_handle_close(h0);
+        mx_handle_close(h1);
+        free(ctx);
+        return r;
+    }
+    msg.txid = 1;
+    msg.op = DC_OP_ADD_DEVICE;
+    msg.protocol_id = child->protocol_id;
+    mx_status_t rdstatus;
+    if ((r = mx_channel_call(parent->rpc, 0, MX_TIME_INFINITE,
+                             &args, &args.rd_num_bytes, &args.rd_num_handles,
+                             &rdstatus)) < 0) {
+        printf("devhost: rpc:device_add write failed: %d\n", r);
+        goto fail_write;
+    }
+    if (rdstatus < 0) {
+        printf("devhost: rpc:device_add read failed: %d\n", rdstatus);
+        r = rdstatus;
+    } else if (args.rd_num_bytes != sizeof(rsp)) {
+        printf("devhost: rpc:device_add bad response\n");
+        r = ERR_INTERNAL;
+    } else if ((r = rsp.status) < 0) {
+        printf("devhost: rpc:device_add remote error: %d\n", r);
+    } else {
+        ctx->dev = child;
+        ctx->ph.handle = h1;
+        ctx->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+        ctx->ph.func = dh_handle_rpc;
+        if ((r = port_watch(&dh_port, &ctx->ph)) == NO_ERROR) {
+            child->rpc = h1;
+            return NO_ERROR;
+        }
+    }
+
+    mx_handle_close(h1);
+    free(ctx);
+    return r;
 }
 
+// Send message to devcoordinator informing it that this device
+// is being removed.  Called under devhost api lock.
 mx_status_t devhost_remove(mx_device_t* dev) {
-    return ERR_NOT_SUPPORTED;
+    char buffer[512];
+    const char* path = mkdevpath(dev, buffer, sizeof(buffer));
+    printf("devhost[%s] remove\n", path);
+    dc_msg_t msg;
+    dc_status_t rsp;
+    mx_channel_call_args_t args = {
+        .wr_bytes = &msg,
+        .wr_handles = NULL,
+        .rd_bytes = &rsp,
+        .rd_handles = NULL,
+        .wr_num_handles = 0,
+        .rd_num_bytes = sizeof(rsp),
+        .rd_num_handles = 0,
+    };
+    mx_status_t r;
+    if ((r = dc_msg_pack(&msg, &args.wr_num_bytes,
+                         NULL, 0, NULL, NULL)) < 0) {
+        return r;
+    }
+    msg.txid = 1;
+    msg.op = DC_OP_REMOVE_DEVICE;
+    msg.protocol_id = 0;
+    mx_status_t rdstatus;
+    if ((r = mx_channel_call(dev->rpc, 0, MX_TIME_INFINITE,
+                             &args, &args.rd_num_bytes, &args.rd_num_handles,
+                             &rdstatus)) < 0) {
+        printf("devhost: rpc:device_remove write failed: %d\n", r);
+        return r;
+    }
+    if (rdstatus < 0) {
+        printf("devhost: rpc:device_remove read failed: %d\n", rdstatus);
+        return rdstatus;
+    }
+    if (args.rd_num_bytes != sizeof(rsp)) {
+        printf("devhost: rpc:device_remove bad response\n");
+        return ERR_INTERNAL;
+    }
+    if (rsp.status < 0) {
+        printf("devhost: rpc:device_remove remote error: %d\n", r);
+        return rsp.status;
+    }
+    return NO_ERROR;
 }
 
 mx_status_t devhost_device_rebind(mx_device_t* dev) {
