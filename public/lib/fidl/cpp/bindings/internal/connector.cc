@@ -8,6 +8,8 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 
+#include <mx/time.h>
+
 namespace fidl {
 namespace internal {
 
@@ -52,7 +54,7 @@ bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
   mx_status_t rv = channel_.wait_one(MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                      timeout == ftl::TimeDelta::Max()
                                          ? MX_TIME_INFINITE
-                                         : timeout.ToNanoseconds(),
+                                         : mx::deadline_after(timeout.ToNanoseconds()),
                                      &pending);
   if (rv == ERR_SHOULD_WAIT || rv == ERR_TIMED_OUT)
     return false;
