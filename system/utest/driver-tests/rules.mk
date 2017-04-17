@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_NAME := driver-tests
 
-MODULE_LIBS := system/ulib/mxio system/ulib/c
+MODULE_LIBS := system/ulib/mxio system/ulib/c system/ulib/magenta
 
 include make/module.mk

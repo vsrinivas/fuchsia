@@ -108,7 +108,26 @@ RUN_TEST(test_physmap_unaligned_offset)
 RUN_TEST(test_physmap_unaligned_offset2)
 END_TEST_CASE(iotxn_tests)
 
+static void iotxn_test_output_func(const char* line, int len, void* arg) {
+    mx_handle_t h = *(mx_handle_t*)arg;
+    // len is not actually the number of bytes to output
+    mx_socket_write(h, 0u, line, strlen(line), NULL);
+}
+
 static mx_status_t iotxn_test_func(void* cookie, test_report_t* report, const void* arg, size_t arglen) {
+    mx_device_t* dev = (mx_device_t*)cookie;
+
+    test_protocol_t* protocol;
+    mx_status_t status = device_get_protocol(dev, MX_PROTOCOL_TEST, (void**)&protocol);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    mx_handle_t output = protocol->get_output_socket(dev);
+    if (output != MX_HANDLE_INVALID) {
+        unittest_set_output_function(iotxn_test_output_func, &output);
+    }
+
     struct test_result result;
     bool all_success = unittest_run_all_tests_etc(TEST_ALL, &result);
     report->n_tests = result.n_tests;
@@ -124,7 +143,7 @@ static mx_status_t iotxn_test_bind(mx_driver_t* drv, mx_device_t* dev, void** co
         return status;
     }
 
-    protocol->set_test_func(dev, iotxn_test_func, NULL);
+    protocol->set_test_func(dev, iotxn_test_func, dev);
     return NO_ERROR;
 }
 

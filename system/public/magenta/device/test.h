@@ -26,6 +26,18 @@
 #define IOCTL_TEST_RUN_TESTS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_TEST, 2)
 
+// Set an output socket
+//   in: mx_handle_t*
+//   out: none
+#define IOCTL_TEST_SET_OUTPUT_SOCKET \
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_TEST, 3)
+
+// Set a control channel
+//   in: mx_handle_t*
+//   out: none
+#define IOCTL_TEST_SET_CONTROL_CHANNEL \
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_TEST, 4)
+
 typedef struct test_ioctl_test_report {
     unsigned int n_tests;
     unsigned int n_success;
@@ -40,3 +52,9 @@ IOCTL_WRAPPER(ioctl_test_destroy_device, IOCTL_TEST_DESTROY_DEVICE);
 
 // ssize_t ioctl_test_run_tests(int fd, void* in, size_t in_len, test_ioctl_test_report_t* out);
 IOCTL_WRAPPER_VARIN_OUT(ioctl_test_run_tests, IOCTL_TEST_RUN_TESTS, void*, test_ioctl_test_report_t);
+
+// ssize_t ioctl_test_set_output_socket(int fd, mx_handle_t in)
+IOCTL_WRAPPER_IN(ioctl_test_set_output_socket, IOCTL_TEST_SET_OUTPUT_SOCKET, mx_handle_t)
+
+// ssize_t ioctl_test_set_control_channel(int fd, mx_handle_t in)
+IOCTL_WRAPPER_IN(ioctl_test_set_control_channel, IOCTL_TEST_SET_CONTROL_CHANNEL, mx_handle_t)

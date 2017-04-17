@@ -13,10 +13,10 @@ typedef mx_status_t (*test_func_t)(void* cookie, test_report_t* report, const vo
 
 typedef struct test_protocol {
     // sets test output channel
-    void (*set_output_channel)(mx_device_t* dev, mx_handle_t handle);
+    void (*set_output_socket)(mx_device_t* dev, mx_handle_t handle);
 
     // gets test output channel
-    mx_handle_t (*get_output_channel)(mx_device_t* dev);
+    mx_handle_t (*get_output_socket)(mx_device_t* dev);
 
     // sets control channel
     void (*set_control_channel)(mx_device_t* dev, mx_handle_t handle);

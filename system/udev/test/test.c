@@ -22,18 +22,24 @@ typedef struct test_device {
 
 #define get_test_device(dev) containerof(dev, test_device_t, device)
 
-static void test_device_set_output_channel(mx_device_t* dev, mx_handle_t handle) {
+static void test_device_set_output_socket(mx_device_t* dev, mx_handle_t handle) {
     test_device_t* device = get_test_device(dev);
+    if (device->output != MX_HANDLE_INVALID) {
+        mx_handle_close(device->output);
+    }
     device->output = handle;
 }
 
-static mx_handle_t test_device_get_output_channel(mx_device_t* dev) {
+static mx_handle_t test_device_get_output_socket(mx_device_t* dev) {
     test_device_t* device = get_test_device(dev);
     return device->output;
 }
 
 static void test_device_set_control_channel(mx_device_t* dev, mx_handle_t handle) {
     test_device_t* device = get_test_device(dev);
+    if (device->control != MX_HANDLE_INVALID) {
+        mx_handle_close(device->control);
+    }
     device->control = handle;
 }
 
@@ -62,8 +68,8 @@ static void test_device_destroy(mx_device_t* dev) {
 }
 
 static test_protocol_t test_test_proto = {
-    .set_output_channel = test_device_set_output_channel,
-    .get_output_channel = test_device_get_output_channel,
+    .set_output_socket = test_device_set_output_socket,
+    .get_output_socket = test_device_get_output_socket,
     .set_control_channel = test_device_set_control_channel,
     .get_control_channel = test_device_get_control_channel,
     .set_test_func = test_device_set_test_func,
@@ -73,24 +79,44 @@ static test_protocol_t test_test_proto = {
 
 static ssize_t test_device_ioctl(mx_device_t* dev, uint32_t op, const void* in, size_t inlen, void* out, size_t outlen) {
     switch (op) {
-        case IOCTL_TEST_RUN_TESTS:
-            if (outlen != sizeof(test_report_t)) {
-                return ERR_BUFFER_TOO_SMALL;
-            }
-            test_device_run_tests(dev, (test_report_t*)out, in, inlen);
-            return sizeof(test_report_t);
+    case IOCTL_TEST_SET_OUTPUT_SOCKET:
+        if (inlen != sizeof(mx_handle_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        test_device_set_output_socket(dev, *(mx_handle_t*)in);
+        return NO_ERROR;
 
-        case IOCTL_TEST_DESTROY_DEVICE:
-            device_remove(dev);
-            return 0;
+    case IOCTL_TEST_SET_CONTROL_CHANNEL:
+        if (inlen != sizeof(mx_handle_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        test_device_set_control_channel(dev, *(mx_handle_t*)in);
+        return NO_ERROR;
 
-        default:
-            return ERR_NOT_SUPPORTED;
+    case IOCTL_TEST_RUN_TESTS:
+        if (outlen != sizeof(test_report_t)) {
+            return ERR_BUFFER_TOO_SMALL;
+        }
+        test_device_run_tests(dev, (test_report_t*)out, in, inlen);
+        return sizeof(test_report_t);
+
+    case IOCTL_TEST_DESTROY_DEVICE:
+        device_remove(dev);
+        return 0;
+
+    default:
+        return ERR_NOT_SUPPORTED;
     }
 }
 
 static mx_status_t test_device_release(mx_device_t* dev) {
     test_device_t* device = get_test_device(dev);
+    if (device->output != MX_HANDLE_INVALID) {
+        mx_handle_close(device->output);
+    }
+    if (device->control != MX_HANDLE_INVALID) {
+        mx_handle_close(device->control);
+    }
     free(device);
     return NO_ERROR;
 }
