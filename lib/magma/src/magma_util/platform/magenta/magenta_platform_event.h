@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include "magma_util/macros.h"
-#include "mx/event.h"
+#include <mx/event.h>
+#include <mx/time.h>
 #include "platform_event.h"
 
 namespace magma {
@@ -23,7 +24,8 @@ public:
         mx_signals_t pending = 0;
 
         mx_status_t status = mx_event_.wait_one(
-            mx_signal(), timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : MX_MSEC(timeout_ms),
+            mx_signal(),
+            timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : mx::deadline_after(MX_MSEC(timeout_ms)),
             &pending);
         DASSERT(status == NO_ERROR || status == ERR_TIMED_OUT);
 

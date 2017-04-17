@@ -7,6 +7,8 @@
 #include "magma_util/macros.h"
 #include "platform_object.h"
 
+#include <mx/time.h>
+
 namespace magma {
 
 bool MagentaPlatformSemaphore::duplicate_handle(uint32_t* handle_out)
@@ -23,7 +25,7 @@ bool MagentaPlatformSemaphore::Wait(uint64_t timeout_ms)
 {
     mx_signals_t pending = 0;
     mx_status_t status = event_.wait_one(
-        mx_signal(), timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : MX_MSEC(timeout_ms), &pending);
+        mx_signal(), timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : mx::deadline_after(MX_MSEC(timeout_ms)), &pending);
     if (status == ERR_TIMED_OUT)
         return false;
 
