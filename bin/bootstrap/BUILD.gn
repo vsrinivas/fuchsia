@@ -18,7 +18,6 @@ executable("bootstrap") {
   deps = [
     "//application/lib/app",
     "//apps/modular/lib/rapidjson",
-    "//apps/mozart/services/views",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
