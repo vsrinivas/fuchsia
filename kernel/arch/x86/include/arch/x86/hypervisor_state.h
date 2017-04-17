@@ -18,7 +18,7 @@
 #define HS_R15     (HS_R14 + 8)
 #define HS_RFLAGS  (HS_R15 + 8)
 
-#define GS_RAX     (HS_RFLAGS + 8)
+#define GS_RAX     (HS_RFLAGS + 16)
 #define GS_RBX     (GS_RAX + 8)
 #define GS_RCX     (GS_RBX + 8)
 #define GS_RDX     (GS_RCX + 8)
@@ -53,6 +53,9 @@ struct HostState {
 
     // Processor flags.
     uint64_t rflags;
+
+    // Extended control registers.
+    uint64_t xcr0;
 };
 
 struct GuestState {
@@ -73,8 +76,11 @@ struct GuestState {
     uint64_t r14;
     uint64_t r15;
 
-    // CRs.
+    // Control registers.
     uint64_t cr2;
+
+    // Extended control registers.
+    uint64_t xcr0;
 };
 
 struct VmxState {

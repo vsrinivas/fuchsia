@@ -125,7 +125,6 @@ enum class VmcsFieldXX : uint64_t {
 #define PROCBASED_CTLS2_EPT                 (1u << 1)
 #define PROCBASED_CTLS2_RDTSCP              (1u << 3)
 #define PROCBASED_CTLS2_VPID                (1u << 5)
-#define PROCBASED_CTLS2_XSAVES_XRSTORS      (1u << 20)
 
 /* PROCBASED_CTLS flags */
 #define PROCBASED_CTLS_CR3_LOAD_EXITING     (1u << 15)
@@ -166,6 +165,7 @@ enum class ExitReason : uint32_t {
     WRMSR                       = 32u,
     ENTRY_FAILURE_GUEST_STATE   = 33u,
     ENTRY_FAILURE_MSR_LOADING   = 34u,
+    XSETBV                      = 55u,
 };
 
 /* GUEST_XX_ACCESS_RIGHTS flags */

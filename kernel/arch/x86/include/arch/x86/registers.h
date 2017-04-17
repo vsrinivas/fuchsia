@@ -118,6 +118,9 @@ void x86_extended_register_context_switch(
 
 void x86_set_extended_register_pt_state(bool threads);
 
+uint64_t x86_xgetbv(uint32_t reg);
+void x86_xsetbv(uint32_t reg, uint64_t val);
+
 __END_CDECLS
 
 #endif

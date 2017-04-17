@@ -50,9 +50,6 @@ static void xsave(void *register_state, uint64_t feature_mask);
 static void xsaveopt(void *register_state, uint64_t feature_mask);
 static void xsaves(void *register_state, uint64_t feature_mask);
 
-static uint64_t xgetbv(uint32_t reg);
-static void xsetbv(uint32_t reg, uint64_t val);
-
 static void read_xsave_state_info(void);
 static void recompute_state_size(void);
 
@@ -114,7 +111,7 @@ static void x86_extended_register_cpu_init(void)
         /* Enable XSAVE feature set */
         x86_set_cr4(cr4 | X86_CR4_OSXSAVE);
         /* Put xcr0 into a known state (X87 must be enabled in this register) */
-        xsetbv(0, X86_XSAVE_STATE_X87);
+        x86_xsetbv(0, X86_XSAVE_STATE_X87);
     }
 
     /* Enable the FPU */
@@ -207,7 +204,7 @@ bool x86_extended_register_enable_feature(
             __asm__ __volatile__ ("finit" : : : "memory");
 
             if (likely(xsave_supported)) {
-                xsetbv(0, xgetbv(0) | X86_XSAVE_STATE_X87);
+                x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_X87);
             }
             break;
         }
@@ -232,7 +229,7 @@ bool x86_extended_register_enable_feature(
             __asm__ __volatile__("ldmxcsr %0" : : "m" (mxcsr));
 
             if (likely(xsave_supported)) {
-                xsetbv(0, xgetbv(0) | X86_XSAVE_STATE_SSE);
+                x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_SSE);
             }
             break;
         }
@@ -247,7 +244,7 @@ bool x86_extended_register_enable_feature(
             cr4 |= X86_CR4_OSXMMEXPT;
             x86_set_cr4(cr4);
 
-            xsetbv(0, xgetbv(0) | X86_XSAVE_STATE_AVX);
+            x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_AVX);
             break;
         }
         case X86_EXTENDED_REGISTER_MPX: {
@@ -264,7 +261,7 @@ bool x86_extended_register_enable_feature(
                 (xcr0_component_bitmap & xsave_avx512) != xsave_avx512) {
                 return false;
             }
-            xsetbv(0, xgetbv(0) | xsave_avx512);
+            x86_xsetbv(0, x86_xgetbv(0) | xsave_avx512);
             break;
         }
         case X86_EXTENDED_REGISTER_PT: {
@@ -419,7 +416,7 @@ static void recompute_state_size(void) {
      * for this is defined in Intel Vol 1 section 13.4.3 */
     if (xsaves_supported) {
         new_size = XSAVE_EXTENDED_AREA_OFFSET;
-        uint64_t enabled_features = xgetbv(0) | read_msr(IA32_XSS_MSR);
+        uint64_t enabled_features = x86_xgetbv(0) | read_msr(IA32_XSS_MSR);
         for (uint i = 0; i < XSAVE_MAX_EXT_COMPONENTS; ++i) {
             uint idx = i + 2;
             if (!(enabled_features & (1ULL << idx))) {
@@ -513,7 +510,7 @@ static void xsaves(void *register_state, uint64_t feature_mask)
                      : "memory");
 }
 
-static uint64_t xgetbv(uint32_t reg)
+uint64_t x86_xgetbv(uint32_t reg)
 {
     uint32_t hi, lo;
     __asm__ volatile("xgetbv"
@@ -523,7 +520,7 @@ static uint64_t xgetbv(uint32_t reg)
     return ((uint64_t)hi << 32) + lo;
 }
 
-static void xsetbv(uint32_t reg, uint64_t val)
+void x86_xsetbv(uint32_t reg, uint64_t val)
 {
     __asm__ volatile("xsetbv"
                      :

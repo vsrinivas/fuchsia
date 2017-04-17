@@ -247,7 +247,7 @@ status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
     if (vmx_info.region_size > PAGE_SIZE)
         return ERR_NOT_SUPPORTED;
 
-    // Check use write-back memory for VMX regions is supported.
+    // Check use of write-back memory for VMX regions is supported.
     if (!vmx_info.write_back)
         return ERR_NOT_SUPPORTED;
 
@@ -555,9 +555,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               PROCBASED_CTLS2_RDTSCP |
                               // Associate cached translations of linear
                               // addresses with a virtual processor ID.
-                              PROCBASED_CTLS2_VPID |
-                              // Enable use of XSAVES and XRSTORS instructions.
-                              PROCBASED_CTLS2_XSAVES_XRSTORS,
+                              PROCBASED_CTLS2_VPID,
                               0);
     if (status != NO_ERROR)
         return status;
@@ -778,22 +776,12 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     // failures (see Section 26.3.1.5).
     vmcs_write(VmcsField64::LINK_POINTER, LINK_POINTER_INVALIDATE);
 
+    if (x86_feature_test(X86_FEATURE_XSAVE)) {
+        // Enable x87 state in guest XCR0.
+        vmx_state_.guest_state.xcr0 = X86_XSAVE_STATE_X87;
+    }
+
     return NO_ERROR;
-}
-
-void vmx_exit(VmxState* vmx_state) {
-    DEBUG_ASSERT(arch_ints_disabled());
-    uint cpu_num = arch_curr_cpu_num();
-
-    // Reload the task segment in order to restore its limit. VMX always
-    // restores it with a limit of 0x67, which excludes the IO bitmap.
-    seg_sel_t selector = TSS_SELECTOR(cpu_num);
-    x86_clear_tss_busy(selector);
-    x86_ltr(selector);
-
-    // Reload the interrupt descriptor table in order to restore its limit. VMX
-    // always restores it with a limit of 0xffff, which is too large.
-    idt_load(idt_get_readonly());
 }
 
 static void next_rip(const ExitInfo& exit_info) {
@@ -801,7 +789,9 @@ static void next_rip(const ExitInfo& exit_info) {
 }
 
 static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state) {
-    switch (guest_state->rax) {
+    const uint64_t leaf = guest_state->rax;
+    const uint64_t subleaf = guest_state->rcx;
+    switch (leaf) {
     case X86_CPUID_BASE:
     case X86_CPUID_EXT_BASE:
         next_rip(exit_info);
@@ -815,10 +805,46 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
         cpuid_c((uint32_t)guest_state->rax, (uint32_t)guest_state->rcx,
                 (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
                 (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
+        if (leaf == X86_CPUID_MODEL_FEATURES) {
+            // Enable the hypervisor bit.
+            guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
+        }
+        if (leaf == X86_CPUID_XSAVE && subleaf == 1) {
+            // Disable the XSAVES bit.
+            guest_state->rax &= ~(1u << 3);
+        }
         return NO_ERROR;
     default:
         return ERR_NOT_SUPPORTED;
     }
+}
+
+static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state) {
+    uint64_t guest_cr4 = vmcs_read(VmcsFieldXX::GUEST_CR4);
+    if (!(guest_cr4 & X86_CR4_OSXSAVE))
+        return ERR_INVALID_ARGS;
+
+    // We only support XCR0.
+    if (guest_state->rcx != 0)
+        return ERR_INVALID_ARGS;
+
+    cpuid_leaf leaf;
+    if (!x86_get_cpuid_subleaf(X86_CPUID_XSAVE, 0, &leaf))
+        return ERR_INTERNAL;
+
+    // Check that XCR0 is valid.
+    uint64_t xcr0_bitmap = ((uint64_t)leaf.d << 32) | leaf.a;
+    uint64_t xcr0 = (guest_state->rdx << 32) | (guest_state->rax & 0xffffffff);
+    if (~xcr0_bitmap & xcr0 ||
+        // x87 state must be enabled.
+        (xcr0 & X86_XSAVE_STATE_X87) != X86_XSAVE_STATE_X87 ||
+        // If AVX state is enabled, SSE state must be enabled.
+        (xcr0 & (X86_XSAVE_STATE_AVX | X86_XSAVE_STATE_SSE)) == X86_XSAVE_STATE_AVX)
+        return ERR_INVALID_ARGS;
+
+    guest_state->xcr0 = xcr0;
+    next_rip(exit_info);
+    return NO_ERROR;
 }
 
 static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_state, FifoDispatcher* serial_fifo) {
@@ -856,9 +882,33 @@ static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_stat
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         dprintf(SPEW, "handling VM entry failure\n\n");
         return ERR_BAD_STATE;
+    case ExitReason::XSETBV:
+        dprintf(SPEW, "handling XSETBV instruction\n\n");
+        return handle_xsetbv(exit_info, guest_state);
     default:
         dprintf(SPEW, "unhandled VM exit %u\n\n", static_cast<uint32_t>(exit_info.exit_reason));
         return ERR_NOT_SUPPORTED;
+    }
+}
+
+void vmx_exit(VmxState* vmx_state) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    uint cpu_num = arch_curr_cpu_num();
+
+    // Reload the task segment in order to restore its limit. VMX always
+    // restores it with a limit of 0x67, which excludes the IO bitmap.
+    seg_sel_t selector = TSS_SELECTOR(cpu_num);
+    x86_clear_tss_busy(selector);
+    x86_ltr(selector);
+
+    // Reload the interrupt descriptor table in order to restore its limit. VMX
+    // always restores it with a limit of 0xffff, which is too large.
+    idt_load(idt_get_readonly());
+
+    if (x86_feature_test(X86_FEATURE_XSAVE)) {
+        // Save the guest XCR0, and load the host XCR0.
+        vmx_state->guest_state.xcr0 = x86_xgetbv(0);
+        x86_xsetbv(0, vmx_state->host_state.xcr0);
     }
 }
 
@@ -871,6 +921,12 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fi
     // Kernel GS stores the user-space GS (within the kernel) — as the calling
     // user-space thread may change, save this every time.
     edit_msr_list(&host_msr_page_, 3, X86_MSR_IA32_KERNEL_GS_BASE, read_msr(X86_MSR_IA32_KERNEL_GS_BASE));
+
+    if (x86_feature_test(X86_FEATURE_XSAVE)) {
+        // Save the host XCR0, and load the guest XCR0.
+        vmx_state_.host_state.xcr0 = x86_xgetbv(0);
+        x86_xsetbv(0, vmx_state_.guest_state.xcr0);
+    }
 
     if (do_resume_) {
         dprintf(SPEW, "re-entering guest\n");
