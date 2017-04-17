@@ -25,7 +25,7 @@ source_set("json_xdr") {
     "json_xdr.h",
   ]
 
-  # MUST be public lest clients don't pick up the defines from
+  # MUST be public so clients pick up the defines from
   # //third_party/rapidjson:rapidjson_config
   public_deps = [
     "//apps/modular/lib/rapidjson",
