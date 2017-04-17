@@ -63,6 +63,8 @@ bool SequentialCommandRunner::HasQueuedCommands() const {
 }
 
 void SequentialCommandRunner::RunNextQueuedCommand() {
+  FTL_DCHECK(result_callback_);
+
   if (command_queue_.empty()) {
     NotifyResultAndReset(true);
     return;

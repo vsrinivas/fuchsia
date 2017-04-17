@@ -31,7 +31,9 @@ class FakeController : public FakeControllerBase {
     ~Settings() = default;
 
     void ApplyDefaults();
-    void ApplyLEOnlyConfig();
+    void ApplyLEOnlyDefaults();
+    void ApplyLegacyLEConfig();
+    void ApplyLEConfig();
 
     // HCI settings.
     // Default: HCIVersion::k5_0.
@@ -42,7 +44,7 @@ class FakeController : public FakeControllerBase {
     uint64_t le_event_mask;
 
     // BD_ADDR (BR/EDR) or Public Device Address (LE)
-    common::DeviceAddressBytes bd_addr;
+    common::DeviceAddress bd_addr;
 
     // Local supported features and commands.
     uint64_t lmp_features_page0;
@@ -59,7 +61,9 @@ class FakeController : public FakeControllerBase {
     uint8_t le_total_num_acl_data_packets;
   };
 
-  FakeController(const Settings& settings, mx::channel cmd_channel, mx::channel acl_data_channel);
+  // Constructor initializes the controller with the minimal default settings (equivalent to calling
+  // Settings::ApplyDefaults()).
+  FakeController(mx::channel cmd_channel, mx::channel acl_data_channel);
   ~FakeController() override;
 
   // Resets the controller settings.

@@ -180,6 +180,15 @@ enum class LMPFeature : uint64_t {
   // Reserved
   // Reserved
   kExtendedFeatures                   = (1ull << 63),
+
+  // Extended features (Page 1)
+  kSecureSimplePairingHostSupport = (1ull << 0),
+  kLESupportedHost                = (1ull << 1),
+  kSimultaneousLEAndBREDR         = (1ull << 2),
+  kSecureConnectionsHost          = (1ull << 3),
+
+  // Extended features (Page 2)
+  // TODO(armansito): Add definitions
 };
 
 // Bitmask values for the 64-octet Supported Commands bit-field. See Core Spec

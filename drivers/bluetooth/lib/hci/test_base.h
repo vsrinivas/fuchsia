@@ -70,6 +70,9 @@ class TestBase : public ::testing::Test {
     message_loop_.Run();
   }
 
+  // Deletes |test_device_| and resets the pointer.
+  void DeleteTestDevice() { test_device_ = nullptr; }
+
   // Getters for internal fields frequently used by tests.
   FakeControllerType* test_device() const { return test_device_.get(); }
   mtl::MessageLoop* message_loop() { return &message_loop_; }

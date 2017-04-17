@@ -33,7 +33,7 @@ void FakeController::Settings::ApplyDefaults() {
   num_hci_command_packets = 1;
 }
 
-void FakeController::Settings::ApplyLEOnlyConfig() {
+void FakeController::Settings::ApplyLEOnlyDefaults() {
   ApplyDefaults();
 
   le_acl_data_packet_length = 512;
@@ -42,8 +42,6 @@ void FakeController::Settings::ApplyLEOnlyConfig() {
   SetBit(&lmp_features_page0, LMPFeature::kBREDRNotSupported);
   SetBit(&lmp_features_page0, LMPFeature::kLESupported);
   SetBit(&lmp_features_page0, LMPFeature::kExtendedFeatures);
-
-  // TODO(armansito): Set more feature bits as we support them.
 
   SetBit(supported_commands, SupportedCommand::kDisconnect);
   SetBit(supported_commands + 5, SupportedCommand::kSetEventMask);
@@ -55,14 +53,25 @@ void FakeController::Settings::ApplyLEOnlyConfig() {
   SetBit(supported_commands + 25, SupportedCommand::kLESetEventMask);
   SetBit(supported_commands + 25, SupportedCommand::kLEReadBufferSize);
   SetBit(supported_commands + 25, SupportedCommand::kLEReadLocalSupportedFeatures);
-
-  // TODO(armansito): Set more command bits as we support them.
 }
 
-FakeController::FakeController(const Settings& settings, mx::channel cmd_channel,
-                               mx::channel acl_data_channel)
-    : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)),
-      settings_(settings) {}
+void FakeController::Settings::ApplyLegacyLEConfig() {
+  ApplyLEOnlyDefaults();
+
+  hci_version = HCIVersion::k4_2;
+
+  SetBit(supported_commands + 26, SupportedCommand::kLESetScanParameters);
+  SetBit(supported_commands + 26, SupportedCommand::kLESetScanEnable);
+}
+
+void FakeController::Settings::ApplyLEConfig() {
+  ApplyLEOnlyDefaults();
+
+  SetBit(&le_features, LESupportedFeature::kLEExtendedAdvertising);
+}
+
+FakeController::FakeController(mx::channel cmd_channel, mx::channel acl_data_channel)
+    : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)) {}
 
 FakeController::~FakeController() {
   if (IsStarted()) Stop();
@@ -136,7 +145,7 @@ void FakeController::OnCommandPacketReceived(const CommandPacket& command_packet
     case kReadBDADDR: {
       ReadBDADDRReturnParams params;
       params.status = Status::kSuccess;
-      params.bd_addr = settings_.bd_addr;
+      params.bd_addr = settings_.bd_addr.value();
       RespondWithCommandComplete(kReadBDADDR, &params, sizeof(params));
       break;
     }

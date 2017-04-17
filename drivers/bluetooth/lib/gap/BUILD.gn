@@ -4,9 +4,15 @@
 
 static_library("gap") {
   sources = [
+    "adapter.cc",
+    "adapter.h",
+    "adapter_state.cc",
+    "adapter_state.h",
     "advertising_data.cc",
     "advertising_data.h",
     "gap.h",
+    "low_energy_state.cc",
+    "low_energy_state.h",
   ]
 
   public_deps = [
@@ -20,11 +26,13 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "adapter_unittest.cc",
     "advertising_data_unittest.cc",
   ]
 
   deps = [
     ":gap",
+    "//apps/bluetooth/lib/hci:test_support",
     "//third_party/gtest",
   ]
 }
