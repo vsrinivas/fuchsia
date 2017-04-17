@@ -258,12 +258,6 @@ mx_status_t lan9514_read_mac_address(lan9514_t* eth) {
     return NO_ERROR;
 }
 
-static void requeue_read_request_locked(lan9514_t* eth, iotxn_t* req) {
-    if (eth->online) {
-        iotxn_queue(eth->usb_device, req);
-    }
-}
-
 static void queue_interrupt_requests_locked(lan9514_t* eth) {
     list_node_t* node;
     while ((node = list_remove_head(&eth->free_intr_reqs)) != NULL) {
@@ -317,7 +311,12 @@ static void lan9514_read_complete(iotxn_t* request, void* cookie) {
     if ((request->status == NO_ERROR) && eth->ifc) {
         lan9514_recv(eth, request);
     }
-    requeue_read_request_locked(eth, request);
+
+    if (eth->online) {
+        iotxn_queue(eth->usb_device, request);
+    } else {
+        list_add_head(&eth->free_read_reqs, &request->node);
+    }
     mtx_unlock(&eth->mutex);
 }
 
@@ -696,7 +695,7 @@ static int lan9514_start_thread(void* arg) {
                 iotxn_t* prev;
                 list_for_every_entry_safe (&eth->free_read_reqs, req, prev, iotxn_t, node) {
                     list_delete(&req->node);
-                    requeue_read_request_locked(eth, req);
+                    iotxn_queue(eth->usb_device, req);
                 }
                 mtx_unlock(&eth->mutex);
 

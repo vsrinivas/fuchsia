@@ -119,12 +119,6 @@ static mx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
     return ERR_TIMED_OUT;
 }
 
-static void requeue_read_request_locked(ax88772b_t* eth, iotxn_t* req) {
-    if (eth->online) {
-        iotxn_queue(eth->usb_device, req);
-    }
-}
-
 static void queue_interrupt_requests_locked(ax88772b_t* eth) {
     list_node_t* node;
     while ((node = list_remove_head(&eth->free_intr_reqs)) != NULL) {
@@ -180,7 +174,12 @@ static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
     if ((request->status == NO_ERROR) && eth->ifc) {
         ax88772b_recv(eth, request);
     }
-    requeue_read_request_locked(eth, request);
+
+    if (eth->online) {
+        iotxn_queue(eth->usb_device, request);
+    } else {
+        list_add_head(&eth->free_read_reqs, &request->node);
+    }
     mtx_unlock(&eth->mutex);
 }
 
@@ -227,7 +226,7 @@ static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
                 iotxn_t* prev;
                 list_for_every_entry_safe (&eth->free_read_reqs, req, prev, iotxn_t, node) {
                     list_delete(&req->node);
-                    requeue_read_request_locked(eth, req);
+                    iotxn_queue(eth->usb_device, req);
                 }
             }
         }

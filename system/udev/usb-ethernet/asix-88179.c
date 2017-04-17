@@ -202,12 +202,6 @@ static mx_status_t ax88179_configure_medium_mode(ax88179_t* eth) {
     return status;
 }
 
-static void requeue_read_request_locked(ax88179_t* eth, iotxn_t* req) {
-    if (eth->online) {
-        iotxn_queue(eth->usb_device, req);
-    }
-}
-
 static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
     xprintf("request len %" PRIu64"\n", request->actual);
 
@@ -283,7 +277,12 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     if ((request->status == NO_ERROR) && eth->ifc) {
         ax88179_recv(eth, request);
     }
-    requeue_read_request_locked(eth, request);
+
+    if (eth->online) {
+        iotxn_queue(eth->usb_device, request);
+    } else {
+        list_add_head(&eth->free_read_reqs, &request->node);
+    }
     mtx_unlock(&eth->mutex);
 }
 
@@ -334,7 +333,7 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
                 iotxn_t* prev;
                 list_for_every_entry_safe (&eth->free_read_reqs, req, prev, iotxn_t, node) {
                     list_delete(&req->node);
-                    requeue_read_request_locked(eth, req);
+                    iotxn_queue(eth->usb_device, req);
                 }
                 xprintf("ax88179 now online\n");
             } else if (!online && was_online) {
