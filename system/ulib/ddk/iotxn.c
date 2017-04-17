@@ -410,7 +410,6 @@ void iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     dev->ops->iotxn_queue(dev, txn);
 }
 
-
 void iotxn_init(iotxn_t* txn, mx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length) {
     memset(txn, 0, sizeof(*txn));
     txn->vmo_handle = vmo_handle;
@@ -418,4 +417,19 @@ void iotxn_init(iotxn_t* txn, mx_handle_t vmo_handle, uint64_t vmo_offset, uint6
     txn->vmo_length = length;
     txn->length = length;
     txn->release_cb = iotxn_release_static;
+}
+
+mx_status_t iotxn_alloc_vmo(iotxn_t** out, uint32_t alloc_flags, mx_handle_t vmo_handle,
+                            uint64_t vmo_offset, uint64_t length) {
+    iotxn_t* txn;
+    mx_status_t status = iotxn_alloc(&txn, alloc_flags, 0);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    txn->vmo_handle = vmo_handle;
+    txn->vmo_offset = vmo_offset;
+    txn->vmo_length = length;
+    txn->length = length;
+    *out = txn;
+    return NO_ERROR;
 }

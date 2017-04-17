@@ -133,6 +133,10 @@ struct iotxn {
 // create a new iotxn with payload space of data_size
 mx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size);
 
+// create a new iotxn based on provided VMO.
+mx_status_t iotxn_alloc_vmo(iotxn_t** out, uint32_t alloc_flags, mx_handle_t vmo_handle,
+                            uint64_t vmo_offset, uint64_t length);
+
 // initializes a statically allocated iotxn based on provided VMO.
 // calling iotxn_release() on this iotxn will free any resources allocated by the iotxn
 // but not free the iotxn itself.
