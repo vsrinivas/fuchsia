@@ -8,6 +8,6 @@ use magenta::ClockId;
 
 pub fn main() {
     println!("before sleep, time = {}", magenta::time_get(ClockId::Monotonic));
-    magenta::nanosleep(1_000_000_000);
+    magenta::nanosleep(magenta::deadline_after(1_000_000_000));
     println!("after sleep, time = {}", magenta::time_get(ClockId::Monotonic));
 }

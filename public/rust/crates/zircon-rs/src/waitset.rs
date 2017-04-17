@@ -128,11 +128,12 @@ impl Default for WaitSetOpts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {Event, EventOpts, MX_SIGNAL_NONE, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1, Time};
+    use {Duration, Event, EventOpts, MX_SIGNAL_NONE, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1};
+    use deadline_after;
 
     #[test]
     fn waitset() {
-        let ten_ms: Time = 10_000_000;
+        let ten_ms: Duration = 10_000_000;
         let cookie1 = 1;
         let cookie2 = 2;
         let e1 = Event::create(EventOpts::Default).unwrap();
@@ -146,12 +147,12 @@ mod tests {
 
         // Waiting on the waitset now should time out.
         let mut results = Vec::with_capacity(2);
-        assert_eq!(waitset.wait(ten_ms, &mut results), Err(Status::ErrTimedOut));
+        assert_eq!(waitset.wait(deadline_after(ten_ms), &mut results), Err(Status::ErrTimedOut));
         assert_eq!(results.len(), 0);
 
         // Signal one object and it should return success.
         assert!(e1.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert!(waitset.wait(ten_ms, &mut results).is_ok());
+        assert!(waitset.wait(deadline_after(ten_ms), &mut results).is_ok());
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].cookie(), cookie1);
         assert_eq!(results[0].status(), Status::NoError);
@@ -159,7 +160,7 @@ mod tests {
 
         // Signal the other and it should return both.
         assert!(e2.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_1).is_ok());
-        assert!(waitset.wait(ten_ms, &mut results).is_ok());
+        assert!(waitset.wait(deadline_after(ten_ms), &mut results).is_ok());
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].cookie(), cookie1);
         assert_eq!(results[0].status(), Status::NoError);
@@ -171,7 +172,7 @@ mod tests {
         // Remove one and clear signals on the other; now it should time out again.
         assert!(waitset.remove(cookie1).is_ok());
         assert!(e2.signal(MX_USER_SIGNAL_1, MX_SIGNAL_NONE).is_ok());
-        assert_eq!(waitset.wait(ten_ms, &mut results), Err(Status::ErrTimedOut));
+        assert_eq!(waitset.wait(deadline_after(ten_ms), &mut results), Err(Status::ErrTimedOut));
         assert_eq!(results.len(), 0);
     }
 }
