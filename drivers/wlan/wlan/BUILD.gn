@@ -8,6 +8,7 @@ shared_library("wlan") {
     "device.cpp",
     "device.h",
     "driver.cpp",
+    "logging.h",
   ]
 
   defines = [
