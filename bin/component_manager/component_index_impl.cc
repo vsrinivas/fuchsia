@@ -27,8 +27,12 @@ constexpr char kComponentFacet[] = "fuchsia:component";
 constexpr char kResourcesFacet[] = "fuchsia:resources";
 constexpr char kApplicationFacet[] = "fuchsia:program";
 
+// TODO(rosswang): maybe load indexes from config file
 // This path must be in sync with //packages/gn/component_manager.
 constexpr char kLocalIndexPath[] = "/system/components/index.json";
+// TODO(rosswang): change this to the github raw link after first push
+constexpr char kCloudIndexPath[] =
+    "https://storage.googleapis.com/maxwell-agents/index.json";
 
 namespace {
 
@@ -214,17 +218,41 @@ ComponentIndexImpl::ComponentIndexImpl(
     : resource_loader_(
           std::make_shared<ResourceLoader>(std::move(network_service))) {
   // Initialize the local index.
-  std::string contents;
-  FTL_CHECK(files::ReadFileToString(kLocalIndexPath, &contents));
+  {
+    std::string contents;
+    FTL_CHECK(files::ReadFileToString(kLocalIndexPath, &contents));
+    LoadComponentIndex(contents, kLocalIndexPath);
+  }
 
+  // Merge in cloud index.
+  {
+    resource_loader_->LoadResource(
+        kCloudIndexPath, [this](mx::vmo vmo, network::NetworkErrorPtr error) {
+          if (error) {
+            FTL_LOG(WARNING) << "Failed to load cloud component index";
+            return;
+          }
+
+          std::string contents;
+          if (!mtl::StringFromVmo(vmo, &contents)) {
+            FTL_LOG(WARNING) << "Failed to make string from cloud index vmo";
+            return;
+          }
+
+          LoadComponentIndex(contents, kCloudIndexPath);
+        });
+  }
+}
+
+void ComponentIndexImpl::LoadComponentIndex(const std::string& contents,
+                                            const std::string& path) {
   rapidjson::Document doc;
   if (doc.Parse(contents.c_str()).HasParseError()) {
-    FTL_LOG(FATAL) << "Failed to parse JSON component index at: "
-                   << kLocalIndexPath;
+    FTL_LOG(FATAL) << "Failed to parse JSON component index at: " << path;
   }
 
   if (!doc.IsArray()) {
-    FTL_LOG(FATAL) << "Malformed component index at: " << kLocalIndexPath;
+    FTL_LOG(FATAL) << "Malformed component index at: " << path;
   }
 
   for (const rapidjson::Value& uri : doc.GetArray()) {
@@ -237,8 +265,7 @@ void ComponentIndexImpl::GetComponent(const ::fidl::String& component_id_,
   std::string component_id(component_id_);
   GetComponentCallback callback(callback_);
 
-  FTL_LOG(INFO) << "ComponentIndexImpl::GetComponent(\"" << component_id
-                << "\")";
+  FTL_VLOG(1) << "ComponentIndexImpl::GetComponent(\"" << component_id << "\")";
 
   resource_loader_->LoadResource(
       component_id, [this, component_id, callback](

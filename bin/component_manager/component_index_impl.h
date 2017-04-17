@@ -26,6 +26,8 @@ class ComponentIndexImpl : public ComponentIndex {
       const FindComponentManifestsCallback& callback) override;
 
  private:
+  void LoadComponentIndex(const std::string& contents, const std::string& path);
+
   std::shared_ptr<ResourceLoader> resource_loader_;
 
   // A list of component URIs that are installed locally.
