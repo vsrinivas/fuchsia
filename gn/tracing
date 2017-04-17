@@ -1,5 +1,8 @@
 {
-    "labels": [ "//apps/tracing" ],
+    "labels": [
+        "//apps/tracing",
+        "//apps/tracing:tests"
+    ],
     "binaries": [
         {
             "binary": "ktrace_provider",

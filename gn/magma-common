@@ -8,7 +8,8 @@
         "//magma:libmagma",
         "//magma:magma_service_driver",
         "//magma:magma_service_driver_test",
-        "//magma:tests"
+        "//magma:tests",
+        "//magma:tools"
     ],
     "binaries": [
         {
