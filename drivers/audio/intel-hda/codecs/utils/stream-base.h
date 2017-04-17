@@ -76,7 +76,7 @@ protected:
     const mxtl::Mutex& obj_lock() const __TA_RETURN_CAPABILITY(obj_lock_) { return obj_lock_; }
 
     // DispatcherChannel::Owner implementation
-    mx_status_t ProcessChannel(DispatcherChannel& channel, const mx_io_packet_t& io_packet) final;
+    mx_status_t ProcessChannel(DispatcherChannel* channel) final;
     void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
 
 private:

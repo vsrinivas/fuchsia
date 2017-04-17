@@ -146,9 +146,8 @@ public:
         // there is a message pending on the channel.  Returning any error at
         // this point in time will cause the channel to be deactivated and
         // be released.
-        virtual mx_status_t ProcessChannel(
-                DispatcherChannel& channel,
-                const mx_io_packet_t& io_packet) __TA_EXCLUDES(channels_lock_) = 0;
+        virtual mx_status_t ProcessChannel(DispatcherChannel* channel)
+            __TA_EXCLUDES(channels_lock_) = 0;
 
         // NotifyChannelDeactivated.
         //
@@ -166,6 +165,20 @@ public:
             __TA_EXCLUDES(channels_lock_);
         void RemoveChannel(DispatcherChannel* channel)
             __TA_EXCLUDES(channels_lock_);
+
+        // Allow the deactivated flag to be checked without obtaining the
+        // channels_lock_.
+        //
+        // The deactivated_ flag may never be cleared once set.  It needs to be
+        // checked and held static during operations like adding and removing
+        // channels, as well as deactivating the owner.  While processing and
+        // dispatching messages, however (DispatcherChannel::Process), a
+        // channel's owner might become deactivated, and it should be OK to
+        // perform a simple spot check (without obtaining the lock) and
+        // fast-abort if the owner was disabled.
+        bool deactivated() const __TA_NO_THREAD_SAFETY_ANALYSIS {
+            return static_cast<volatile bool>(deactivated_);
+        }
 
         mxtl::Mutex channels_lock_;
         bool deactivated_ __TA_GUARDED(channels_lock_) = false;
@@ -185,6 +198,11 @@ public:
     bool      InOwnersList()       const { return dll_node_state_.InContainer(); }
     bool      InActiveChannelSet() const { return wavl_node_state_.InContainer(); }
 
+    mx_status_t WaitOnPort(const mx::port& port) __TA_EXCLUDES(obj_lock_, active_channels_lock_) {
+        mxtl::AutoLock obj_lock(&obj_lock_);
+        return WaitOnPortLocked(port);
+    }
+
     mx_status_t Activate(mxtl::RefPtr<Owner>&& owner, mx::channel* client_channel_out)
         __TA_EXCLUDES(obj_lock_, active_channels_lock_);
 
@@ -195,7 +213,7 @@ public:
     }
 
     void Deactivate(bool do_notify) __TA_EXCLUDES(obj_lock_, active_channels_lock_);
-    mx_status_t Process(const mx_io_packet_t& io_packet)
+    mx_status_t Process(const mx_port_packet_t& port_packet)
         __TA_EXCLUDES(obj_lock_, active_channels_lock_);
     mx_status_t Read(void* buf,
                      uint32_t buf_len,
@@ -221,6 +239,9 @@ private:
 
     DispatcherChannel(uintptr_t owner_ctx = 0);
     ~DispatcherChannel();
+
+    mx_status_t WaitOnPortLocked(const mx::port& port)
+        __TA_REQUIRES(obj_lock_);
 
     mx_status_t ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::channel&& channel)
         __TA_REQUIRES(obj_lock_);

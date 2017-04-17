@@ -392,8 +392,8 @@ case _ioctl:                                        \
         return ERR_INVALID_ARGS;                    \
     }                                               \
     return _handler(req._payload);
-mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel& channel,
-                                               const mx_io_packet_t& io_packet) {
+mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
+    MX_DEBUG_ASSERT(channel != nullptr);
     mxtl::AutoLock obj_lock(&obj_lock_);
 
     // If our stream channel has already been closed, just get out early.  There
@@ -408,7 +408,7 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel& channel,
     if (shutting_down_ || (codec_channel_ == nullptr))
         return ERR_BAD_STATE;
 
-    MX_DEBUG_ASSERT(&channel == stream_channel_.get());
+    MX_DEBUG_ASSERT(channel == stream_channel_.get());
 
     union {
         audio2_proto::CmdHdr          hdr;
@@ -420,18 +420,19 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel& channel,
                   "Request buffer is getting to be too large to hold on the stack!");
 
     uint32_t req_size;
-    mx_status_t res = channel.Read(&req, sizeof(req), &req_size);
+    mx_status_t res = channel->Read(&req, sizeof(req), &req_size);
     if (res != NO_ERROR)
         return res;
 
-    if ((req_size < sizeof(req.hdr) || (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)))
+    if ((req_size < sizeof(req.hdr) ||
+        (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)))
         return ERR_INVALID_ARGS;
 
     switch (req.hdr.cmd) {
-    HANDLE_REQ(AUDIO2_STREAM_CMD_SET_FORMAT, set_format, DoSetStreamFormatLocked);
-    default:
-        DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
-        return ERR_NOT_SUPPORTED;
+        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_FORMAT, set_format, DoSetStreamFormatLocked);
+        default:
+            DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
+            return ERR_NOT_SUPPORTED;
     }
 }
 #undef HANDLE_REQ
