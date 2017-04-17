@@ -6,6 +6,7 @@
 
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
+#include <mxio/io.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -47,52 +48,46 @@ static const char* libpaths[] = {
     "/boot/lib",
 };
 
-static mx_handle_t default_load_object(void* ignored,
-                                       uint32_t load_op,
-                                       const char* fn) {
+// try to convert a fd to a read only vmo clone
+static mx_status_t get_vmo_clone(int fd, mx_handle_t *vmo_out) {
+    mx_status_t err;
+
+    // see if we can get a read only vmo backing for this file
+    size_t vmofile_off, vmofile_len;
+    mx_handle_t vmo;
+    err = mxio_get_vmo(fd, &vmo, &vmofile_off, &vmofile_len);
+    if (err != NO_ERROR)
+        return err;
+
+    // clone a private copy of it at the offset/length returned with the handle
+    // TODO: create a plain read only clone when the feature is implemented in the VM
+    mx_handle_t clone_vmo;
+    err = mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, vmofile_off, vmofile_len, &clone_vmo);
+    mx_handle_close(vmo);
+    if (err != NO_ERROR)
+        return err;
+
+    *vmo_out = clone_vmo;
+
+    return NO_ERROR;
+}
+
+// read the file into a new vmo
+static mx_status_t read_file_into_vmo(int fd, mx_handle_t* vmo_out, const char* resolved_fn) {
     char buffer[8192];  // 8K is the max io size of the mxio layer right now
-    char path[PATH_MAX];
-    mx_handle_t vmo = 0;
-    mx_status_t err = ERR_IO;
-    const char *resolved_fn;
-
     struct stat s;
-    int fd;
+    mx_status_t err;
 
-    switch (load_op) {
-    case LOADER_SVC_OP_LOAD_OBJECT:
-        // When loading a library object, search in the hard-coded locations.
-        for (unsigned n = 0; n < countof(libpaths); n++) {
-            snprintf(path, PATH_MAX, "%s/%s", libpaths[n], fn);
-
-            if ((fd = open(path, O_RDONLY)) >= 0) {
-                resolved_fn = path;
-                goto found;
-            }
-        }
-        break;
-    case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
-        // When loading a script interpreter, we expect an absolute path.
-        if (fn && fn[0] == '/' && ((fd = open(fn, O_RDONLY)) >= 0)) {
-            resolved_fn = fn;
-            goto found;
-        }
-        break;
-    }
-    fprintf(stderr, "dlsvc: could not open '%s'\n", fn);
-    return ERR_NOT_FOUND;
-
-found:
     if (fstat(fd, &s) < 0) {
         fprintf(stderr, "dlsvc: could not stat '%s': %d\n", resolved_fn, errno);
-        err = ERR_IO;
-        goto fail;
+        return ERR_IO;
     }
 
+    mx_handle_t vmo;
     if ((err = mx_vmo_create(s.st_size, 0, &vmo)) < 0) {
         fprintf(stderr, "dlsvc: could not create %lld-byte vmo for '%s': %d\n",
                 (long long int)s.st_size, resolved_fn, err);
-        goto fail;
+        return err;
     }
 
     size_t off = 0;
@@ -129,13 +124,74 @@ found:
         off += nwrite;
         size -= nwrite;
     }
-    close(fd);
-    return vmo;
+
+    *vmo_out = vmo;
+
+    return NO_ERROR;
 
 fail:
-    close(fd);
     mx_handle_close(vmo);
     return err;
+}
+
+static mx_handle_t default_load_object(void* ignored,
+                                       uint32_t load_op,
+                                       const char* fn) {
+    char path[PATH_MAX];
+    mx_handle_t vmo = MX_HANDLE_INVALID;
+    mx_status_t err = ERR_IO;
+    const char *resolved_fn;
+
+    int fd;
+
+    switch (load_op) {
+    case LOADER_SVC_OP_LOAD_OBJECT:
+        // When loading a library object, search in the hard-coded locations.
+        for (unsigned n = 0; n < countof(libpaths); n++) {
+            snprintf(path, PATH_MAX, "%s/%s", libpaths[n], fn);
+
+            if ((fd = open(path, O_RDONLY)) >= 0) {
+                resolved_fn = path;
+                goto found;
+            }
+        }
+        break;
+    case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
+        // When loading a script interpreter, we expect an absolute path.
+        if (fn && fn[0] == '/' && ((fd = open(fn, O_RDONLY)) >= 0)) {
+            resolved_fn = fn;
+            goto found;
+        }
+        break;
+    }
+
+    fprintf(stderr, "dlsvc: could not open '%s'\n", fn);
+    return ERR_NOT_FOUND;
+
+found:
+    // try to get a vmo clone from the fd
+    err = get_vmo_clone(fd, &vmo);
+    if (err != NO_ERROR) {
+        // if that isn't possible, make a copy of the file into a vmo
+        err = read_file_into_vmo(fd, &vmo, resolved_fn);
+        if (err != NO_ERROR) {
+            close(fd);
+            return err;
+        }
+    }
+    close(fd);
+
+    // drop the rights on this vmo to R_X, allow mapping, transfer, and duplicate
+    mx_handle_t vmo2;
+    err = mx_handle_replace(vmo,
+            MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE,
+            &vmo2);
+    if (err != NO_ERROR) {
+        mx_handle_close(vmo);
+        return err;
+    }
+
+    return vmo2;
 }
 
 struct startup {
