@@ -1,0 +1,53 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "util.h"
+
+#include "apps/bluetooth/lib/hci/command_packet.h"
+#include "lib/ftl/logging.h"
+
+namespace bluetooth {
+namespace hci {
+
+common::DynamicByteBuffer BuildHCICommand(hci::OpCode opcode, void* params, size_t params_size) {
+  common::DynamicByteBuffer buffer(hci::CommandPacket::GetMinBufferSize(params_size));
+  hci::CommandPacket cmd_packet(opcode, &buffer, params_size);
+  if (params_size) {
+    FTL_DCHECK(params);
+    std::memcpy(cmd_packet.GetMutablePayloadData(), params, params_size);
+  }
+  cmd_packet.EncodeHeader();
+  return buffer;
+}
+
+std::string HCIVersionToString(hci::HCIVersion version) {
+  switch (version) {
+    case hci::HCIVersion::k1_0b:
+      return "1.0b";
+    case hci::HCIVersion::k1_1:
+      return "1.1";
+    case hci::HCIVersion::k1_2:
+      return "1.2";
+    case hci::HCIVersion::k2_0_EDR:
+      return "2.0 + EDR";
+    case hci::HCIVersion::k2_1_EDR:
+      return "2.1 + EDR";
+    case hci::HCIVersion::k3_0_HS:
+      return "3.0 + HS";
+    case hci::HCIVersion::k4_0:
+      return "4.0";
+    case hci::HCIVersion::k4_1:
+      return "4.1";
+    case hci::HCIVersion::k4_2:
+      return "4.2";
+    case hci::HCIVersion::k5_0:
+      return "5.0";
+    default:
+      break;
+  }
+  return "(unknown)";
+}
+
+}  // namespace hci
+}  // namespace adapter

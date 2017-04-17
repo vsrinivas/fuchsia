@@ -15,6 +15,7 @@
 #include "apps/bluetooth/lib/hci/command_channel.h"
 #include "apps/bluetooth/lib/hci/command_packet.h"
 #include "apps/bluetooth/lib/hci/event_packet.h"
+#include "apps/bluetooth/lib/hci/util.h"
 #include "lib/ftl/strings/join_strings.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -107,36 +108,6 @@ std::vector<std::string> AdvFlagsToStrings(uint8_t flags) {
   return flags_list;
 }
 
-// TODO(armansito): Move this to a library header as it will be useful
-// elsewhere.
-std::string HCIVersionToString(hci::HCIVersion version) {
-  switch (version) {
-    case hci::HCIVersion::k1_0b:
-      return "1.0b";
-    case hci::HCIVersion::k1_1:
-      return "1.1";
-    case hci::HCIVersion::k1_2:
-      return "1.2";
-    case hci::HCIVersion::k2_0_EDR:
-      return "2.0 + EDR";
-    case hci::HCIVersion::k2_1_EDR:
-      return "2.1 + EDR";
-    case hci::HCIVersion::k3_0_HS:
-      return "3.0 + HS";
-    case hci::HCIVersion::k4_0:
-      return "4.0";
-    case hci::HCIVersion::k4_1:
-      return "4.1";
-    case hci::HCIVersion::k4_2:
-      return "4.2";
-    case hci::HCIVersion::k5_0:
-      return "5.0";
-    default:
-      break;
-  }
-  return "(unknown)";
-}
-
 void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t rssi,
                               const std::string& name_filter, const std::string& addr_type_filter) {
   gap::AdvertisingDataReader reader(common::BufferView(data.data, data.length_data));
@@ -222,7 +193,7 @@ bool HandleVersionInfo(const CommandDispatcher& owner, const ftl::CommandLine& c
     }
 
     std::cout << "  Version Info:" << std::endl;
-    std::cout << "    HCI Version: Core Spec " << HCIVersionToString(params->hci_version)
+    std::cout << "    HCI Version: Core Spec " << hci::HCIVersionToString(params->hci_version)
               << std::endl;
     std::cout << "    Manufacturer Name: "
               << common::GetManufacturerName(le16toh(params->manufacturer_name)) << std::endl;

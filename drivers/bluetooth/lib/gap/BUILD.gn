@@ -11,6 +11,7 @@ static_library("gap") {
 
   public_deps = [
     "//apps/bluetooth/lib/common",
+    "//apps/bluetooth/lib/hci",
     "//lib/ftl",
   ]
 }

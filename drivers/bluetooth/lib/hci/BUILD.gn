@@ -27,6 +27,8 @@ static_library("hci") {
     "sequential_command_runner.h",
     "transport.cc",
     "transport.h",
+    "util.cc",
+    "util.h",
   ]
 
   public_deps = [
@@ -70,6 +72,7 @@ source_set("tests") {
     "command_channel_unittest.cc",
     "packet_unittest.cc",
     "sequential_command_runner_unittest.cc",
+    "util_unittest.cc",
   ]
 
   deps = [
