@@ -26,6 +26,7 @@ Device::Device(mx_driver_t* driver, mx_device_t* device, wlanmac_protocol_t* wla
 
 Device::~Device() {
     debugfn();
+    MX_DEBUG_ASSERT(!work_thread_.joinable());
 }
 
 mx_status_t Device::Bind() {
@@ -70,6 +71,13 @@ mx_status_t Device::Bind() {
     status = device_add(&device_, wlanmac_device_);
     if (status != NO_ERROR) {
         errorf("could not add device err=%d\n", status);
+        auto shutdown_status = SendShutdown();
+        if (shutdown_status != NO_ERROR) {
+            MX_PANIC("wlan: could not send shutdown loop message: %d\n", shutdown_status);
+        }
+        if (work_thread_.joinable()) {
+            work_thread_.join();
+        }
     } else {
         debugf("device added\n");
     }
