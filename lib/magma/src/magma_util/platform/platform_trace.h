@@ -8,8 +8,8 @@
 #if MAGMA_ENABLE_TRACING
 #include "apps/tracing/lib/trace/event.h" // nogncheck
 #define TRACE_NONCE_DECLARE(x) uint64_t x = TRACE_NONCE()
-#error here
 #else
+#define TRACE_NONCE() 0
 #define TRACE_NONCE_DECLARE(x)
 #define TRACE_ASYNC_BEGIN(category, name, id, args...)
 #define TRACE_ASYNC_END(category, name, id, args...)
