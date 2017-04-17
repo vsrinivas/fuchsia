@@ -16,8 +16,8 @@ inline mx_time_t get(uint32_t clock_id) {
 
 } // namespace time
 
-inline mx_status_t nanosleep(uint64_t nanoseconds) {
-    return mx_nanosleep(nanoseconds);
+inline mx_status_t nanosleep(mx_time_t deadline) {
+    return mx_nanosleep(deadline);
 }
 
 inline mx_time_t deadline_after(mx_duration_t nanoseconds) {

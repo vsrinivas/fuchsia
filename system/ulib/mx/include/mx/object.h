@@ -61,9 +61,9 @@ public:
         return status;
     }
 
-    mx_status_t wait_one(mx_signals_t signals, mx_time_t timeout,
+    mx_status_t wait_one(mx_signals_t signals, mx_time_t deadline,
                          mx_signals_t* pending) const {
-        return mx_object_wait_one(value_, signals, timeout, pending);
+        return mx_object_wait_one(value_, signals, deadline, pending);
     }
 
     mx_status_t wait_async(const object<port>& port, uint64_t key,
@@ -71,8 +71,8 @@ public:
         return mx_object_wait_async(value_, port.get(), key, signals, options);
     }
 
-    static mx_status_t wait_many(mx_wait_item_t* wait_items, uint32_t count, mx_time_t timeout) {
-        return mx_object_wait_many(wait_items, count, timeout);
+    static mx_status_t wait_many(mx_wait_item_t* wait_items, uint32_t count, mx_time_t deadline) {
+        return mx_object_wait_many(wait_items, count, deadline);
     }
 
     // TODO(abarth): Not all of these methods apply to every type of object. We
