@@ -109,7 +109,7 @@ String getStringForStatus(int status) {
       return 'ERR_NOT_DIR';
     case ERR_NOT_FILE:
       return 'ERR_NOT_FILE';
-    case ERR_FILE_BIG = -53:
+    case ERR_FILE_BIG:
       return 'ERR_FILE_BIG';
     case ERR_NO_SPACE:
       return 'ERR_NO_SPACE';
