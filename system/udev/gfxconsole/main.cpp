@@ -60,8 +60,7 @@ static vc_battery_info_t g_battery_info TA_GUARDED(g_vc_lock);
 
 static mx_status_t vc_set_active_console(unsigned console) TA_REQ(g_vc_lock);
 
-static void vc_device_toggle_framebuffer(void)
-{
+static void vc_device_toggle_framebuffer() {
     if (g_fb_display_protocol->acquire_or_release_display)
         g_fb_display_protocol->acquire_or_release_display(g_fb_device);
 }
@@ -547,8 +546,7 @@ static int vc_battery_dir_poll_thread(void* arg) {
 
 static mx_protocol_device_t vc_root_proto;
 
-static void display_flush(uint starty, uint endy)
-{
+static void display_flush(uint starty, uint endy) {
     g_fb_display_protocol->flush(g_fb_device);
 }
 
@@ -633,7 +631,7 @@ fail:
 
 mx_driver_t _driver_vc_root;
 
-__attribute__((constructor)) static void initialize(void) {
+__attribute__((constructor)) static void initialize() {
     vc_device_proto.release = vc_device_release;
     vc_device_proto.read = vc_device_read;
     vc_device_proto.write = vc_device_write;
