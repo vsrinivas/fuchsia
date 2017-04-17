@@ -55,5 +55,12 @@ class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
   }
 };
 
+// An EventPacket that allows its contents to be modified.
+class MutableEventPacket : public ::bluetooth::common::MutablePacket<EventHeader> {
+ public:
+  // Constructor immediately encodes the event header.
+  explicit MutableEventPacket(EventCode event_code, common::MutableByteBuffer* buffer);
+};
+
 }  // namespace hci
 }  // namespace bluetooth

@@ -14,5 +14,13 @@ EventPacket::EventPacket(common::ByteBuffer* buffer) : common::Packet<EventHeade
   FTL_DCHECK(GetPayloadSize() <= kMaxEventPacketPayloadSize);
 }
 
+MutableEventPacket::MutableEventPacket(EventCode event_code, common::MutableByteBuffer* buffer)
+    : common::MutablePacket<EventHeader>(buffer, buffer->GetSize() - sizeof(EventHeader)) {
+  FTL_DCHECK(buffer->GetSize() >= sizeof(EventHeader));
+  FTL_DCHECK(GetPayloadSize() <= kMaxEventPacketPayloadSize);
+  GetMutableHeader()->event_code = event_code;
+  GetMutableHeader()->parameter_total_size = static_cast<uint8_t>(GetPayloadSize());
+}
+
 }  // namespace hci
 }  // namespace bluetooth
