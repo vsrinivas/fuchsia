@@ -11,12 +11,32 @@
             "bootfs_path": "bin/git"
         },
         {
+            "binary": "git-daemon",
+            "bootfs_path": "bin/git-daemon"
+        },
+        {
+            "binary": "git-http-backend",
+            "bootfs_path": "bin/git-http-backend"
+        },
+        {
             "binary": "git-http-fetch",
             "bootfs_path": "bin/git-http-fetch"
         },
         {
             "binary": "git-http-push",
             "bootfs_path": "bin/git-http-push"
+        },
+        {
+            "binary": "git-remote-http",
+            "bootfs_path": "bin/git-remote-http"
+        },
+        {
+            "binary": "git-remote-http",
+            "bootfs_path": "bin/git-remote-https"
+        },
+        {
+            "binary": "git-upload-pack",
+            "bootfs_path": "bin/git-upload-pack"
         }
     ]
 }
