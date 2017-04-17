@@ -165,7 +165,6 @@ static ssize_t blkdev_fifo_close(blkdev_t* bdev) {
     } else {
         // No background thread running.
         mtx_unlock(&bdev->lock);
-        return ERR_BAD_STATE;
     }
 
     return NO_ERROR;
