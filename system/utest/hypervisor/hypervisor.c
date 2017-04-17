@@ -152,14 +152,10 @@ static bool guest_start_test(void) {
                                &guest_entry, sizeof(guest_entry), NULL, 0),
               NO_ERROR, "");
 
-    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
-              NO_ERROR, "");
-    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
-              NO_ERROR, "");
-    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
-              NO_ERROR, "");
-    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
-              NO_ERROR, "");
+    for (int i = 0; i < 4; i++) {
+        ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
+                  NO_ERROR, "");
+    }
 
     uint8_t buffer[PAGE_SIZE];
     uint32_t num_entries_read;

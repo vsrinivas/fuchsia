@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -118,7 +119,12 @@ int main(int argc, char** argv) {
 
     do {
         status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0);
-        // TODO(abdulla): Print serial FIFO.
+
+        uint8_t buffer[PAGE_SIZE];
+        uint32_t bytes_read;
+        mx_status_t fifo_status = mx_fifo_read(guest_serial_fifo, buffer, PAGE_SIZE, &bytes_read);
+        if (fifo_status == NO_ERROR && bytes_read > 0)
+            printf("%.*s", bytes_read, buffer);
     } while(status == NO_ERROR);
     fprintf(stderr, "Failed to enter guest %d\n", status);
     return status;
