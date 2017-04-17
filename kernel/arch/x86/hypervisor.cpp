@@ -665,6 +665,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmcs_write(VmcsField64::EPT_POINTER, ept_pointer(pml4_address));
 
     // Setup MSR handling.
+    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_PAT);
     ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_EFER);
     ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
     ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
@@ -674,7 +675,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
     vmcs_write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_page_.PhysicalAddress());
 
-    // NOTE: Host X86_MSR_IA32_KERNEL_GS_BASE, is set in a separate function.
+    // NOTE: Host X86_MSR_IA32_KERNEL_GS_BASE, is set in VmcsPerCpu::Enter.
     edit_msr_list(&host_msr_page_, 1, X86_MSR_IA32_STAR, read_msr(X86_MSR_IA32_STAR));
     edit_msr_list(&host_msr_page_, 2, X86_MSR_IA32_LSTAR, read_msr(X86_MSR_IA32_LSTAR));
     edit_msr_list(&host_msr_page_, 3, X86_MSR_IA32_FMASK, read_msr(X86_MSR_IA32_FMASK));
@@ -829,6 +830,42 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
     }
 }
 
+
+static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state) {
+    switch (guest_state->rcx) {
+    // From Volume 3, Section 28.2.6.2: The MTRRs have no effect on the memory
+    // type used for an access to a guest-physical address.
+    case X86_MSR_IA32_MTRRCAP:
+    case X86_MSR_IA32_MTRR_DEF_TYPE:
+    case X86_MSR_IA32_MTRR_FIX64K_00000:
+    case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
+    case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
+    case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
+        next_rip(exit_info);
+        guest_state->rax = 0;
+        guest_state->rdx = 0;
+        return NO_ERROR;
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
+static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state) {
+    switch (guest_state->rcx) {
+    // See note in handle_rdmsr.
+    case X86_MSR_IA32_MTRRCAP:
+    case X86_MSR_IA32_MTRR_DEF_TYPE:
+    case X86_MSR_IA32_MTRR_FIX64K_00000:
+    case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
+    case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
+    case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
+        next_rip(exit_info);
+        return NO_ERROR;
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
 static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state) {
     uint64_t guest_cr4 = vmcs_read(VmcsFieldXX::GUEST_CR4);
     if (!(guest_cr4 & X86_CR4_OSXSAVE))
@@ -885,9 +922,11 @@ static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_stat
 #endif // WITH_LIB_MAGENTA
     }
     case ExitReason::RDMSR:
+        dprintf(SPEW, "handling RDMSR instruction\n\n");
+        return handle_rdmsr(exit_info, guest_state);
     case ExitReason::WRMSR:
-        dprintf(SPEW, "handling RDMSR/WRMSR instruction\n\n");
-        return ERR_NOT_SUPPORTED;
+        dprintf(SPEW, "handling WRMSR instruction\n\n");
+        return handle_wrmsr(exit_info, guest_state);
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         dprintf(SPEW, "handling VM entry failure\n\n");

@@ -30,6 +30,16 @@
 #define X86_EFER_LMA                    0x00000400 /* long mode active */
 #define X86_EFER_NXE                    0x00000800 /* to enable execute disable bit */
 #define X86_MSR_IA32_TSC_ADJUST         0x0000003b /* TSC adjust model-specific register */
+#define X86_MSR_IA32_MTRRCAP            0x000000fe /* MTRR capability model-specific register */
+#define X86_MSR_IA32_MTRR_PHYSBASE0     0x00000200 /* MTRR PhysBase0 model-specific register */
+#define X86_MSR_IA32_MTRR_PHYSMASK0     0x00000201 /* MTRR PhysMask0 model-specific register */
+#define X86_MSR_IA32_MTRR_PHYSMASK9     0x00000213 /* MTRR PhysMask9 model-specific register */
+#define X86_MSR_IA32_MTRR_DEF_TYPE      0x000002ff /* MTRR default type model-specific register */
+#define X86_MSR_IA32_MTRR_FIX64K_00000  0x00000250 /* MTRR FIX64K_00000 model-specific register */
+#define X86_MSR_IA32_MTRR_FIX16K_80000  0x00000258 /* MTRR FIX16K_80000 model-specific register */
+#define X86_MSR_IA32_MTRR_FIX16K_A0000  0x00000259 /* MTRR FIX16K_A0000 model-specific register */
+#define X86_MSR_IA32_MTRR_FIX4K_C0000   0x00000268 /* MTRR FIX4K_C0000 model-specific register */
+#define X86_MSR_IA32_MTRR_FIX4K_F8000   0x0000026f /* MTRR FIX4K_F8000 model-specific register */
 #define X86_MSR_IA32_PAT                0x00000277 /* PAT model-specific register */
 #define X86_MSR_IA32_EFER               0xc0000080 /* EFER model-specific register */
 #define X86_MSR_IA32_STAR               0xc0000081 /* system call address */

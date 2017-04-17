@@ -19,15 +19,12 @@
 extern uint8_t g_paddr_width;
 
 /* MTRR MSRs */
-#define IA32_MTRRCAP 0xfe
-#define IA32_MTRR_DEF_TYPE 0x2ff
-#define IA32_MTRR_FIX64K_00000 0x250
 #define IA32_MTRR_NUM_FIX16K 2
-#define IA32_MTRR_FIX16K_80000(x) (0x258 + (x))
+#define IA32_MTRR_FIX16K_80000(x) (X86_MSR_IA32_MTRR_FIX16K_80000 + (x))
 #define IA32_MTRR_NUM_FIX4K 8
-#define IA32_MTRR_FIX4K_C0000(x) (0x268 + (x))
-#define IA32_MTRR_PHYSBASE(x) (0x200 + 2 * (x))
-#define IA32_MTRR_PHYSMASK(x) (0x201 + 2 * (x))
+#define IA32_MTRR_FIX4K_C0000(x) (X86_MSR_IA32_MTRR_FIX4K_C0000 + (x))
+#define IA32_MTRR_PHYSBASE(x) (X86_MSR_IA32_MTRR_PHYSBASE0 + 2 * (x))
+#define IA32_MTRR_PHYSMASK(x) (X86_MSR_IA32_MTRR_PHYSMASK0 + 2 * (x))
 
 /* IA32_MTRRCAP read functions */
 #define MTRRCAP_VCNT(x) ((x) & 0xff)
@@ -89,13 +86,13 @@ struct pat_sync_task_context {
 extern void* boot_alloc_mem(size_t len);
 void x86_mmu_mem_type_init(void)
 {
-    uint64_t caps = read_msr(IA32_MTRRCAP);
+    uint64_t caps = read_msr(X86_MSR_IA32_MTRRCAP);
     num_variable = MTRRCAP_VCNT(caps);
     supports_fixed_range = MTRRCAP_FIX(caps);
     supports_wc = MTRRCAP_WC(caps);
 
-    target_mtrrs->mtrr_def = read_msr(IA32_MTRR_DEF_TYPE);
-    target_mtrrs->mtrr_fix64k = read_msr(IA32_MTRR_FIX64K_00000);
+    target_mtrrs->mtrr_def = read_msr(X86_MSR_IA32_MTRR_DEF_TYPE);
+    target_mtrrs->mtrr_fix64k = read_msr(X86_MSR_IA32_MTRR_FIX64K_00000);
     for (uint i = 0; i < IA32_MTRR_NUM_FIX16K; ++i) {
         target_mtrrs->mtrr_fix16k[i] = read_msr(IA32_MTRR_FIX16K_80000(i));
     }
@@ -171,10 +168,10 @@ static void x86_pat_sync_task(void *raw_context)
     }
 
     /* Step 8: Disable MTRRs */
-    write_msr(IA32_MTRR_DEF_TYPE, 0);
+    write_msr(X86_MSR_IA32_MTRR_DEF_TYPE, 0);
 
     /* Step 9: Sync up the MTRR entries */
-    write_msr(IA32_MTRR_FIX64K_00000, target_mtrrs->mtrr_fix64k);
+    write_msr(X86_MSR_IA32_MTRR_FIX64K_00000, target_mtrrs->mtrr_fix64k);
     for (uint i = 0; i < IA32_MTRR_NUM_FIX16K; ++i) {
         write_msr(IA32_MTRR_FIX16K_80000(i), target_mtrrs->mtrr_fix16k[i]);
     }
@@ -208,7 +205,7 @@ static void x86_pat_sync_task(void *raw_context)
     write_msr(X86_MSR_IA32_PAT, pat_val);
 
     /* Step 10: Re-enable MTRRs (and set the default type) */
-    write_msr(IA32_MTRR_DEF_TYPE, target_mtrrs->mtrr_def);
+    write_msr(X86_MSR_IA32_MTRR_DEF_TYPE, target_mtrrs->mtrr_def);
 
     /* Step 11: Flush all cache and the TLB again */
     __asm volatile ("wbinvd" ::: "memory");
@@ -276,13 +273,13 @@ usage:
                 return ERR_INTERNAL;
             }
         }
-        uint64_t default_type = read_msr(IA32_MTRR_DEF_TYPE);
+        uint64_t default_type = read_msr(X86_MSR_IA32_MTRR_DEF_TYPE);
         printf("MTRR state: master %s, fixed %s\n",
                MTRR_DEF_TYPE_ENABLE(default_type) ? "enable" : "disable",
                MTRR_DEF_TYPE_FIXED_ENABLE(default_type) ? "enable" : "disable");
         printf("  default: %#02x\n", MTRR_DEF_TYPE_TYPE(default_type));
         if (supports_fixed_range && print_fixed) {
-            print_fixed_range_mtrr(IA32_MTRR_FIX64K_00000, 0x00000, (1 << 16));
+            print_fixed_range_mtrr(X86_MSR_IA32_MTRR_FIX64K_00000, 0x00000, (1 << 16));
             for (int i = 0; i < IA32_MTRR_NUM_FIX16K; ++i) {
                 print_fixed_range_mtrr(IA32_MTRR_FIX16K_80000(i), 0x80000 + i * (1<<17), (1 << 14));
             }
