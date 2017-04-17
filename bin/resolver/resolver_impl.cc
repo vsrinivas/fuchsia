@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <string>
+#include <unordered_map>
 
 #include "apps/maxwell/src/resolver/resolver_impl.h"
 
@@ -14,29 +15,64 @@
 
 namespace resolver {
 
-namespace internal {
+namespace {
 
 constexpr char kModuleFacetName[] = "fuchsia:module";
+
+using ConditionTest = bool (*)(const rapidjson::Value& test_args,
+                               const rapidjson::Value& member);
+
+bool MatchDataPrecondition(const rapidjson::Value& condition,
+                           const rapidjson::Value& member);
+
+// See docs/module_manifest.md for details about these test functions.
 
 // Accepts the data_preconditions object of a module facet and a document
 // and returns whether or not the document matches the stated preconditions.
 // Precodnitions map property names to property values in the document.
-bool MatchDataPreconditions(const rapidjson::Value& preconditions,
-                            const rapidjson::Value& data) {
-  FTL_CHECK(preconditions.IsObject());
-  FTL_CHECK(data.IsObject());
+bool MatchProperties(const rapidjson::Value& test_args,
+                     const rapidjson::Value& data) {
+  FTL_CHECK(test_args.IsObject());
+  if (!data.IsObject()) {
+    return false;
+  }
 
-  for (auto it = preconditions.MemberBegin(); preconditions.MemberEnd() != it;
-       ++it) {
+  for (auto it = test_args.MemberBegin(); test_args.MemberEnd() != it; ++it) {
     if (!data.HasMember(it->name.GetString()) ||
-        it->value != data[it->name.GetString()]) {
+        !MatchDataPrecondition(it->value, data[it->name.GetString()])) {
       return false;
     }
   }
   return true;
 }
 
-}  // namespace internal
+bool MatchAny(const rapidjson::Value& test_args,
+              const rapidjson::Value& member) {
+  FTL_CHECK(test_args.IsArray());
+
+  for (auto it = test_args.Begin(); it != test_args.End(); ++it) {
+    if (MatchDataPrecondition(*it, member)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool MatchDataPrecondition(const rapidjson::Value& condition,
+                           const rapidjson::Value& member) {
+  // TODO(rosswang): if we end up supporting more condition types, switch to
+  // something more expressive
+
+  if (condition.IsObject()) {
+    return MatchProperties(condition, member);
+  } else if (condition.IsArray()) {
+    return MatchAny(condition, member);
+  } else {
+    return condition == member;
+  }
+}
+
+}  // namespace
 
 void ResolverImpl::ResolveModules(const fidl::String& contract,
                                   const fidl::String& json_data,
@@ -55,12 +91,12 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
   document.Accept(writer);
 
   fidl::Map<fidl::String, fidl::String> filter;
-  filter[internal::kModuleFacetName] = buffer.GetString();
+  filter[kModuleFacetName] = buffer.GetString();
 
   component_index_->FindComponentManifests(
       std::move(filter),
-      [callback, json_data](
-        fidl::Array<component::ComponentManifestPtr> components) {
+      [callback,
+       json_data](fidl::Array<component::ComponentManifestPtr> components) {
         rapidjson::Document data;
         if (!!json_data) {
           if (data.Parse(json_data.get().c_str()).HasParseError()) {
@@ -80,11 +116,10 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
             continue;
           }
 
-          if (data.IsNull() || !manifest[internal::kModuleFacetName].HasMember(
-                  "data_preconditions") ||
-              internal::MatchDataPreconditions(
-                  manifest[internal::kModuleFacetName]["data_preconditions"],
-                  data)) {
+          if (data.IsNull() ||
+              !manifest[kModuleFacetName].HasMember("data_preconditions") ||
+              MatchProperties(manifest[kModuleFacetName]["data_preconditions"],
+                              data)) {
             ModuleInfoPtr module(ModuleInfo::New());
             module->component_id = (*it)->component->url;
             results.push_back(std::move(module));
