@@ -14,14 +14,14 @@
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
-#include "launch.h"
-
 #include <atomic>
+#include <magenta/process.h>
 #include <magenta/types.h>
 #include <thread>
 
 #include "magma_util/dlog.h"
 #include "magma_util/platform/magenta/magenta_platform_ioctl.h"
+#include "magma_util/platform/magenta/magenta_platform_launcher.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_buffer.h"
 
@@ -394,7 +394,8 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
         magma_indriver_test(device->parent_device);
         constexpr uint32_t kArgc = 2;
         const char* argv[kArgc]{"/boot/bin/sh", "/system/autorun"};
-        launch(kArgc, argv);
+        magma::MagentaPlatformLauncher::Launch(mx_job_default(), "autorun", kArgc, argv, nullptr,
+                                               nullptr, nullptr, 0);
 #endif
 
         magma_start(device);

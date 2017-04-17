@@ -142,3 +142,18 @@ source_set("port") {
     "$magma_build_root/src/magma_util",
   ]
 }
+
+source_set("launcher") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "magenta_platform_launcher.cc",
+  ]
+
+  deps = [
+    "$magenta_build_root/system/ulib/mx",
+    "$magma_build_root/src/magma_util",
+  ]
+
+  libs = [ "launchpad" ]
+}
