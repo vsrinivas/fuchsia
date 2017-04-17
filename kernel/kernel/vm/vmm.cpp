@@ -150,11 +150,7 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x\n", current_thread->name, addr, flags);
 #endif
 
-#if _LP64
     ktrace(TAG_PAGE_FAULT, (uint32_t)(addr >> 32), (uint32_t)addr, flags, arch_curr_cpu_num());
-#else
-    ktrace(TAG_PAGE_FAULT, 0, (uint32_t)addr, flags, arch_curr_cpu_num());
-#endif
 
     // get the address space object this pointer is in
     VmAspace* aspace = vmm_aspace_to_obj(vaddr_to_aspace((void*)addr));

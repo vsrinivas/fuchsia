@@ -246,12 +246,8 @@ private:
     // set our offset within our parent
     status_t SetParentOffsetLocked(uint64_t o);
 
-// constants
-#if _LP64
-    static const uint64_t MAX_SIZE = ROUNDDOWN(SIZE_MAX, PAGE_SIZE);
-#else
-    static const uint64_t MAX_SIZE = SIZE_MAX * PAGE_SIZE;
-#endif
+    // maximum size of a VMO is one page less than the full 64bit range
+    static const uint64_t MAX_SIZE = ROUNDDOWN(UINT64_MAX, PAGE_SIZE);
 
     // members
     uint64_t size_ = 0;
