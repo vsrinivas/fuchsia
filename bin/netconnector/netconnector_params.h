@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include "application/services/application_launcher.fidl.h"
+#include "apps/netconnector/src/ip_address.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 
@@ -28,11 +29,11 @@ class NetConnectorParams {
     return std::move(launch_infos_by_service_name_);
   }
 
-  const std::unordered_map<std::string, std::string>& devices() {
+  const std::unordered_map<std::string, IpAddress>& devices() {
     return device_addresses_by_name_;
   }
 
-  void RegisterDevice(const std::string& name, const std::string& address);
+  void RegisterDevice(const std::string& name, const IpAddress& address);
 
  private:
   void Usage();
@@ -49,7 +50,7 @@ class NetConnectorParams {
   std::string host_name_;
   std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>
       launch_infos_by_service_name_;
-  std::unordered_map<std::string, std::string> device_addresses_by_name_;
+  std::unordered_map<std::string, IpAddress> device_addresses_by_name_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorParams);
 };

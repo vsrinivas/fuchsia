@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "apps/netconnector/src/message_transceiver.h"
+#include "apps/netconnector/src/socket_address.h"
 #include "lib/ftl/files/unique_fd.h"
 
 namespace netconnector {
@@ -17,8 +18,7 @@ class NetConnectorImpl;
 
 class RequestorAgent : public MessageTransciever {
  public:
-  static std::unique_ptr<RequestorAgent> Create(const std::string& address,
-                                                uint16_t port,
+  static std::unique_ptr<RequestorAgent> Create(const SocketAddress& address,
                                                 const std::string& service_name,
                                                 mx::channel local_channel,
                                                 NetConnectorImpl* owner);
@@ -34,8 +34,6 @@ class RequestorAgent : public MessageTransciever {
   void OnConnectionClosed() override;
 
  private:
-  static void SetPort(struct sockaddr* addr, uint16_t port);
-
   RequestorAgent(ftl::UniqueFD socket_fd,
                  const std::string& service_name,
                  mx::channel local_channel,

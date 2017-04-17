@@ -8,6 +8,7 @@
 #include <string>
 
 #include "application/services/service_provider.fidl.h"
+#include "apps/netconnector/src/socket_address.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 
@@ -20,8 +21,7 @@ class DeviceServiceProvider : public app::ServiceProvider {
  public:
   static std::unique_ptr<DeviceServiceProvider> Create(
       const std::string& device_name,
-      const std::string& device_address,
-      uint16_t port,
+      const SocketAddress& address,
       fidl::InterfaceRequest<app::ServiceProvider> request,
       NetConnectorImpl* owner);
 
@@ -31,16 +31,13 @@ class DeviceServiceProvider : public app::ServiceProvider {
                         mx::channel channel) override;
 
  private:
-  DeviceServiceProvider(
-      const std::string& device_name,
-      const std::string& device_address,
-      uint16_t port,
-      fidl::InterfaceRequest<app::ServiceProvider> request,
-      NetConnectorImpl* owner);
+  DeviceServiceProvider(const std::string& device_name,
+                        const SocketAddress& address,
+                        fidl::InterfaceRequest<app::ServiceProvider> request,
+                        NetConnectorImpl* owner);
 
   std::string device_name_;
-  std::string device_address_;
-  uint16_t port_;
+  SocketAddress address_;
   fidl::Binding<app::ServiceProvider> binding_;
   NetConnectorImpl* owner_;
 

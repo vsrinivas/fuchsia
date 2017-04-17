@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 
+#include "apps/netconnector/src/ip_port.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
@@ -23,7 +24,7 @@ Listener::~Listener() {
 }
 
 void Listener::Start(
-    uint32_t port,
+    IpPort port,
     std::function<void(ftl::UniqueFD)> new_connection_callback) {
   FTL_DCHECK(!socket_fd_.is_valid()) << "Started when already listening";
 
@@ -37,7 +38,7 @@ void Listener::Start(
   struct sockaddr_in listener_address;
   listener_address.sin_family = AF_INET;
   listener_address.sin_addr.s_addr = INADDR_ANY;
-  listener_address.sin_port = htons(port);
+  listener_address.sin_port = port.as_in_port_t();
 
   if (bind(socket_fd_.get(), (struct sockaddr*)&listener_address,
            sizeof(listener_address)) < 0) {

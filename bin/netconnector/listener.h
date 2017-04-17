@@ -7,6 +7,7 @@
 #include <memory>
 #include <thread>
 
+#include "apps/netconnector/src/ip_port.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -25,7 +26,7 @@ class Listener {
 
   // Starts listening on |port|. |new_connection_callback| is called when a new
   // connection is requested.
-  void Start(uint32_t port,
+  void Start(IpPort port,
              std::function<void(ftl::UniqueFD)> new_connection_callback);
 
   // Stops the listener.

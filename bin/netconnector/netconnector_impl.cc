@@ -11,10 +11,12 @@
 
 namespace netconnector {
 
+// static
+const IpPort NetConnectorImpl::kPort = IpPort::From_uint16_t(7777);
+
 NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     : params_(params),
-      application_context_(
-          app::ApplicationContext::CreateFromStartupInfo()),
+      application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       // TODO(dalesat): Create a new RespondingServiceHost per user.
       // Requestors should provide user credentials allowing a ServiceAgent to
       // obtain a user environment. A RespondingServiceHost should be created
@@ -38,7 +40,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     }
 
     for (auto& pair : params_->devices()) {
-      net_connector_admin->RegisterDevice(pair.first, pair.second);
+      net_connector_admin->RegisterDevice(pair.first, pair.second.ToString());
     }
 
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
@@ -99,7 +101,8 @@ void NetConnectorImpl::GetDeviceServiceProvider(
   }
 
   AddDeviceServiceProvider(DeviceServiceProvider::Create(
-      device_name, iter->second, kPort, std::move(request), this));
+      device_name, SocketAddress(iter->second, kPort), std::move(request),
+      this));
 }
 
 void NetConnectorImpl::SetHostName(const fidl::String& host_name) {
@@ -117,8 +120,15 @@ void NetConnectorImpl::RegisterService(
 
 void NetConnectorImpl::RegisterDevice(const fidl::String& name,
                                       const fidl::String& address) {
-  FTL_LOG(INFO) << "Device '" << name << "' registered at address " << address;
-  params_->RegisterDevice(name, address);
+  IpAddress ip_address = IpAddress::FromString(address);
+  if (!ip_address.is_valid()) {
+    FTL_LOG(ERROR) << "RegisterDevice called with invalid address " << address;
+    return;
+  }
+
+  FTL_LOG(INFO) << "Device '" << name << "' registered at address "
+                << ip_address;
+  params_->RegisterDevice(name, ip_address);
 }
 
 void NetConnectorImpl::RegisterServiceProvider(

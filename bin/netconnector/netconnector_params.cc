@@ -7,6 +7,7 @@
 #include <rapidjson/document.h>
 
 #include "application/services/application_launcher.fidl.h"
+#include "apps/netconnector/src/ip_address.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
@@ -75,7 +76,13 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
         return;
       }
 
-      RegisterDevice(split[0].ToString(), split[1].ToString());
+      IpAddress address = IpAddress::FromString(split[1].ToString());
+      if (!address.is_valid()) {
+        FTL_LOG(ERROR) << "Invalid IP address " << split[1].ToString();
+        return;
+      }
+
+      RegisterDevice(split[0].ToString(), address);
     }
   }
 
@@ -110,7 +117,7 @@ void NetConnectorParams::RegisterService(
 }
 
 void NetConnectorParams::RegisterDevice(const std::string& name,
-                                        const std::string& address) {
+                                        const IpAddress& address) {
   auto result = device_addresses_by_name_.emplace(name, address);
 
   if (!result.second) {
@@ -191,7 +198,14 @@ bool NetConnectorParams::ParseConfig(const std::string& string) {
         return false;
       }
 
-      RegisterDevice(pair.name.GetString(), pair.value.GetString());
+      IpAddress address = IpAddress::FromString(pair.value.GetString());
+      if (!address.is_valid()) {
+        FTL_LOG(ERROR) << "Config file contains invalid IP address "
+                       << pair.value.GetString();
+        return false;
+      }
+
+      RegisterDevice(pair.name.GetString(), address);
     }
   }
 

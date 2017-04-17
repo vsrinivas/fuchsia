@@ -12,6 +12,10 @@ executable("netconnector") {
   sources = [
     "device_service_provider.cc",
     "device_service_provider.h",
+    "ip_address.cc",
+    "ip_address.h",
+    "ip_port.cc",
+    "ip_port.h",
     "listener.cc",
     "listener.h",
     "main.cc",
@@ -27,6 +31,8 @@ executable("netconnector") {
     "responding_service_host.h",
     "service_agent.cc",
     "service_agent.h",
+    "socket_address.cc",
+    "socket_address.h",
   ]
 
   deps = [

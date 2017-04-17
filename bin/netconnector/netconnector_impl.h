@@ -15,6 +15,7 @@
 #include "apps/netconnector/services/netconnector.fidl.h"
 #include "apps/netconnector/services/netconnector_admin.fidl.h"
 #include "apps/netconnector/src/device_service_provider.h"
+#include "apps/netconnector/src/ip_port.h"
 #include "apps/netconnector/src/listener.h"
 #include "apps/netconnector/src/netconnector_params.h"
 #include "apps/netconnector/src/requestor_agent.h"
@@ -45,9 +46,9 @@ class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
   void ReleaseServiceAgent(ServiceAgent* service_agent);
 
   // NetConnector implementation.
-  void GetDeviceServiceProvider(const fidl::String& device_name,
-                                fidl::InterfaceRequest<app::ServiceProvider>
-                                    service_provider) override;
+  void GetDeviceServiceProvider(
+      const fidl::String& device_name,
+      fidl::InterfaceRequest<app::ServiceProvider> service_provider) override;
 
   // NetConnectorAdmin implementation.
   void SetHostName(const fidl::String& host_name) override;
@@ -58,12 +59,12 @@ class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
   void RegisterDevice(const fidl::String& name,
                       const fidl::String& address) override;
 
-  void RegisterServiceProvider(const fidl::String& name,
-                               fidl::InterfaceHandle<app::ServiceProvider>
-                                   service_provider) override;
+  void RegisterServiceProvider(
+      const fidl::String& name,
+      fidl::InterfaceHandle<app::ServiceProvider> service_provider) override;
 
  private:
-  static constexpr uint16_t kPort = 7777;
+  static const IpPort kPort;
 
   void AddDeviceServiceProvider(
       std::unique_ptr<DeviceServiceProvider> device_service_provider);
