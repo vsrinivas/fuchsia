@@ -20,10 +20,6 @@
 
 namespace modular {
 
-// Prefix of the keys under which links are stored in the story page.
-// After the prefix follows the link name.
-constexpr char kLinkKeyPrefix[] = "Link/";
-
 // A wrapper around a ledger page to store links in a story that runs
 // asynchronous operations pertaining to one Story instance in a
 // dedicated OperationQueue instance.

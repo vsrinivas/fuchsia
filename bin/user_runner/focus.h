@@ -51,7 +51,7 @@ class FocusHandler : FocusProvider, FocusController, ledger::PageWatcher {
   PageClient page_client_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
-  const std::string device_name_;
+  const fidl::String device_name_;
 
   fidl::BindingSet<FocusProvider> provider_bindings_;
   fidl::BindingSet<FocusController> controller_bindings_;

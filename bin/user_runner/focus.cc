@@ -6,16 +6,13 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/time/time_point.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
-
-// Prefix of the keys under which focus entries are stored in the user
-// root page. After the prefix follows the device ID.
-constexpr char kFocusKeyPrefix[] = "Focus/";
 
 namespace {
 
@@ -157,9 +154,8 @@ void FocusHandler::Set(const fidl::String& story_id) {
   XdrWrite(&json, &focus_info, XdrFocusInfo);
 
   // Focus watchers are notified from the page watcher notification.
-  std::string key{kFocusKeyPrefix + device_name_};
   page_->PutWithPriority(
-      to_array(key), to_array(json), ledger::Priority::EAGER,
+      to_array(MakeFocusKey(device_name_)), to_array(json), ledger::Priority::EAGER,
       [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Ledger operation returned status: " << status;

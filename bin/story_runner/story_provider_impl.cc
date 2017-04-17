@@ -13,6 +13,7 @@
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -23,10 +24,6 @@
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
-
-// Prefix of the keys under which story entries are stored in the user
-// root page. After the prefix follows the story ID.
-constexpr char kStoryKeyPrefix[] = "Story/";
 
 namespace {
 
@@ -139,9 +136,8 @@ class StoryProviderImpl::GetStoryDataCall : Operation<StoryDataPtr> {
 
  private:
   void Run() override {
-    std::string key{kStoryKeyPrefix + story_id_.get()};
     (*root_snapshot_)
-        ->Get(to_array(key), [this](ledger::Status status, mx::vmo value) {
+      ->Get(to_array(MakeStoryKey(story_id_)), [this](ledger::Status status, mx::vmo value) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
                            << " PageSnapshot.Get() " << status;
@@ -191,9 +187,9 @@ class StoryProviderImpl::WriteStoryDataCall : Operation<void> {
     std::string json;
     XdrWrite(&json, &story_data_, XdrStoryData);
 
-    std::string key{kStoryKeyPrefix + story_data_->story_info->id.get()};
     root_page_->PutWithPriority(
-        to_array(key), to_array(json), ledger::Priority::EAGER,
+        to_array(MakeStoryKey(story_data_->story_info->id)),
+        to_array(json), ledger::Priority::EAGER,
         [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             const fidl::String& story_id = story_data_->story_info->id;
@@ -434,8 +430,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
     FTL_DCHECK(pending_deletion_->second == nullptr);
     *pending_deletion_ = std::make_pair(story_id_, this);
 
-    std::string key{kStoryKeyPrefix + story_id_.get()};
-    root_page_->Delete(to_array(key), [this](ledger::Status status) {
+    root_page_->Delete(to_array(MakeStoryKey(story_id_)), [this](ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_ << " Page.Delete() "
                        << status;

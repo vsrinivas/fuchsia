@@ -6,16 +6,13 @@
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/time/time_point.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
-
-// Prefix of the keys under which device entries are stored in the
-// user root page. After the prefix follows the device ID.
-constexpr char kDeviceKeyPrefix[] = "Device/";
 
 namespace {
 
@@ -32,9 +29,8 @@ bool IsDeviceKey(const fidl::Array<uint8_t>& key) {
 void WriteDeviceName(std::string device_name, ledger::Page* const page) {
   std::string json;
   XdrWrite(&json, &device_name, XdrFilter<std::string>);
-
-  std::string key{kDeviceKeyPrefix + device_name};
-  page->Put(to_array(key), to_array(json), [](ledger::Status) {});
+  page->Put(to_array(MakeDeviceKey(device_name)), to_array(json),
+            [](ledger::Status) {});
 }
 
 }  // namespace

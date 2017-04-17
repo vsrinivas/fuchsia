@@ -17,10 +17,6 @@
 
 namespace modular {
 
-// Prefix of the keys under which module entries are stored in the
-// story page. After the prefix follows the module path.
-constexpr char kModuleKeyPrefix[] = "Module/";
-
 namespace {
 
 // TODO(mesch): Duplicated from story_provider_impl.cc.
@@ -229,9 +225,8 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<void> {
     std::string json;
     XdrWrite(&json, &module_data, XdrModuleData);
 
-    std::string key{kModuleKeyPrefix + module_name_.get()};
     page_->PutWithPriority(
-        to_array(key), to_array(json), ledger::Priority::EAGER,
+        to_array(MakeModuleKey(module_name_)), to_array(json), ledger::Priority::EAGER,
         [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "WriteModuleDataCall() " << module_url_

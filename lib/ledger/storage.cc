@@ -11,30 +11,24 @@
 
 namespace modular {
 
-// All message queue information is stored in one page.
-// * 'MessageQueue/<queue_token>' => |MessageQueueInfo| describing the message
-//   queue.
-// * 'MessageQueueToken/<component_namespace>/<component_instance_id>/
-//    <queue_name>' => queue token.
-//
-// All agent trigger information is stored in one page.
-// * 'Trigger/agent_url/task_id' => |AgentRunner::TriggerInfo|
-//
-// Links are stored in the story page.
-// * Link/<module path>/<link name> => link data
-//   (<module path> is separated by ':')
+std::string MakeStoryKey(const fidl::String& story_id) {
+  // Not escaped, because only one component after the prefix.
+  return kStoryKeyPrefix + story_id.get();
+}
 
-constexpr char kEscaper = '\\';
-constexpr char kCharsToEscape[] = ":/";
-constexpr char kMessageQueueKeyPrefix[] = "MessageQueue/";
-constexpr char kMessageQueueTokenKeyPrefix[] = "MessageQueueToken/";
-constexpr char kLinkKeyPrefix[] = "Link/";
-constexpr char kTriggerKeyPrefix[] = "Trigger/";
+std::string MakeDeviceKey(const fidl::String& device_name) {
+  // Not escaped, because only one component after the prefix.
+  return kDeviceKeyPrefix + device_name.get();
+}
+
+std::string MakeFocusKey(const fidl::String& device_name) {
+  // Not escaped, because only one component after the prefix.
+  return kFocusKeyPrefix + device_name.get();
+}
 
 std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
                                      const std::string& component_instance_id,
                                      const std::string& queue_name) {
-  constexpr char kSeparator[] = "/";
   std::string key{kMessageQueueTokenKeyPrefix};
   key.append(
       StringEscape(component_namespace, kSeparator, kEscaper));
@@ -47,8 +41,7 @@ std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
 }
 
 std::string MakeMessageQueueKey(const std::string& queue_token) {
-  // Don't need to escape |queue_token| because it is the only input to this
-  // ledger key.
+  // Not escaped, because only one component after the prefix.
   return kMessageQueueKeyPrefix + queue_token;
 }
 
@@ -60,29 +53,39 @@ std::string EncodeModulePath(const fidl::Array<fidl::String>& path) {
     escaped_path.push_back(StringEscape(item.get(), kCharsToEscape,
                                         kEscaper));
   }
-  return ftl::JoinStrings(escaped_path, ":");
+  return ftl::JoinStrings(escaped_path, kSubSeparator);
 }
 
 std::string EncodeModuleComponentNamespace(const std::string& story_id) {
+  // TODO(mesch): Needs escaping, and must not be escaped when used as component
+  // of a full key. Messy.
   return "story:" + story_id;
-}
-
-std::string MakeLinkKey(const fidl::Array<fidl::String>& path,
-                            const fidl::String& link_id) {
-  std::string key{kLinkKeyPrefix};
-  key.append(EncodeModulePath(path));
-  key.append("/");
-  key.append(StringEscape(link_id.get(), kCharsToEscape, kEscaper));
-
-  return key;
 }
 
 std::string MakeTriggerKey(const std::string& agent_url,
                            const std::string& task_id) {
   std::string key{kTriggerKeyPrefix};
   key.append(StringEscape(agent_url, kCharsToEscape, kEscaper));
-  key.append("/");
+  key.append(kSeparator);
   key.append(StringEscape(task_id, kCharsToEscape, kEscaper));
+  return key;
+}
+
+std::string MakeLinkKey(const fidl::Array<fidl::String>& module_path,
+                        const fidl::String& link_name) {
+  std::string key{kLinkKeyPrefix};
+  key.append(EncodeModulePath(module_path));
+  key.append(kSeparator);
+  key.append(StringEscape(link_name.get(), kCharsToEscape, kEscaper));
+
+  return key;
+}
+
+// TODO(mesch): In the future, this is keyed by module path rather than just
+// module name.
+std::string MakeModuleKey(const fidl::String& module_name) {
+  std::string key{kModuleKeyPrefix};
+  key.append(StringEscape(module_name.get(), kCharsToEscape, kEscaper));
   return key;
 }
 

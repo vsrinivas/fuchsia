@@ -14,6 +14,7 @@
 #include "apps/modular/lib/auth/token_provider_impl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/services/agent/agent_provider.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
@@ -43,8 +44,6 @@ constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
-constexpr char kMessageQueuePageId[] = "MessageQueuePage";  // 16 chars
-constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";   // 16 chars
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
