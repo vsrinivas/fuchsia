@@ -18,9 +18,11 @@ executable("story_info") {
     "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user",
+    "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/services/user",
     "//apps/modular/services/agent",
     "//lib/mtl",
+    "//third_party/rapidjson",
   ]
 }
 

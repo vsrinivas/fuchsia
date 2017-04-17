@@ -15,18 +15,19 @@
 namespace maxwell {
 
 // This class pulls info about Stories from Framework and stores it in
-// the Context service as follows:
+// the Context service as follows (note all values are JSON-encoded):
 //
-// /story/focused_id = ID of currently focused story, or null
+// /story/focused_id = ID string of currently focused story, or null
 // /story/visible_count = number of visible stories
-// /story/visible_ids = JSON array of story IDs that are visible
+// /story/visible_ids = array of story IDs that are visible
 //
-// /story/id/<id>/visible = 1 or 0
 // /story/id/<id>/url = URL of root Module
 // /story/id/<id>/state = modular.StoryState enum as string
+// /story/id/<id>/deleted = true or false
 class StoryInfoAcquirer : public modular::Agent,
                           public modular::VisibleStoriesWatcher,
                           public modular::StoryProviderWatcher,
+                          public modular::FocusWatcher,
                           public StoryInfoInitializer {
  public:
   StoryInfoAcquirer();
@@ -53,6 +54,9 @@ class StoryInfoAcquirer : public modular::Agent,
 
   // |Agent|
   void Stop(const StopCallback& callback) override;
+
+  // |FocusWatcher|
+  void OnFocusChange(modular::FocusInfoPtr info) override;
 
   // |VisibleStoriesWatcher|
   void OnVisibleStoriesChange(fidl::Array<fidl::String> ids) override;

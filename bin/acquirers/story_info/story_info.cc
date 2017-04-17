@@ -6,15 +6,52 @@
 
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/story_info.h"
+#include "apps/modular/lib/fidl/json_xdr.h"
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 namespace maxwell {
 
 namespace {
 
+const std::string kStoryPrefix = "/story";
+
+std::string CreateKey(const std::string suffix) {
+  std::stringstream s;
+  s << kStoryPrefix << "/" << suffix;
+  return s.str();
+}
+
 std::string CreateKey(const std::string& story_id, const std::string suffix) {
   std::stringstream s;
-  s << "/story/id/" << story_id << "/" << suffix;
+  s << kStoryPrefix << "/id/" << story_id << "/" << suffix;
   return s.str();
+}
+
+std::string StoryStateToString(modular::StoryState state) {
+  // INITIAL
+  // STARTING
+  // RUNNING
+  // DONE
+  // STOPPED
+  // ERROR
+  switch (state) {
+    case modular::StoryState::INITIAL:
+      return "INITIAL";
+    case modular::StoryState::STARTING:
+      return "STARTING";
+    case modular::StoryState::RUNNING:
+      return "RUNNING";
+    case modular::StoryState::DONE:
+      return "DONE";
+    case modular::StoryState::STOPPED:
+      return "STOPPED";
+    case modular::StoryState::ERROR:
+      return "ERROR";
+    default:
+      FTL_LOG(FATAL) << "Unknown modular::StoryState value: " << state;
+  }
 }
 
 }  // namespace
@@ -80,18 +117,35 @@ void StoryInfoAcquirer::Initialize(
   story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
 }
 
+void StoryInfoAcquirer::OnFocusChange(modular::FocusInfoPtr info) {
+  std::string value;
+  modular::XdrWrite(&value, &info->focused_story_id, modular::XdrFilter<fidl::String>);
+  context_publisher_->Publish(CreateKey("focused_id"), value);
+}
+
 void StoryInfoAcquirer::OnVisibleStoriesChange(fidl::Array<fidl::String> ids) {
-  for (std::string id : ids) {
-    context_publisher_->Publish(CreateKey(id, "visible"), "1");
-  }
+  std::string array_value;
+  modular::XdrWrite(&array_value, &ids, modular::XdrFilter<fidl::String>);
+  context_publisher_->Publish(CreateKey("visible_ids"), array_value);
+  context_publisher_->Publish(CreateKey("visible_count"), std::to_string(ids.size()));
 }
 
 void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info) {
-  FTL_LOG(INFO) << "Got new info for " << info->id;
+  const std::string id = info->id.get();
+
+  std::string url_json;
+  modular::XdrWrite(&url_json, &info->url, modular::XdrFilter<fidl::String>);
+  context_publisher_->Publish(CreateKey(id, "url"), url_json);
+  std::string state = StoryStateToString(info->state);
+  std::string state_json;
+  modular::XdrWrite(&state_json, &state, modular::XdrFilter<std::string>);
+  context_publisher_->Publish(CreateKey(id, "state"), state_json);
+  context_publisher_->Publish(CreateKey(id, "deleted"), "false");
 }
 
 void StoryInfoAcquirer::OnDelete(const fidl::String& story_id) {
-  FTL_LOG(INFO) << "Story deleted: " << story_id;
+  const std::string id = story_id.get();
+  context_publisher_->Publish(CreateKey(id, "deleted"), "true");
 }
 
 }  // namespace maxwell
