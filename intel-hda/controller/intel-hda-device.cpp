@@ -51,21 +51,22 @@ void IntelHDADevice<DeviceType>::Shutdown() {
 }
 
 template <typename DeviceType>
-mx_status_t IntelHDADevice<DeviceType>::ProcessChannel(DispatcherChannel& channel,
-                                                       const mx_io_packet_t& io_packet) {
+mx_status_t IntelHDADevice<DeviceType>::ProcessChannel(DispatcherChannel* channel) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     using RequestBufferType = typename DeviceType::RequestBufferType;
 
     // TODO(johngro) : How large is too large?
     static_assert(sizeof(RequestBufferType) <= 256,
                   "Request buffer is getting to be too large to hold on the stack!");
 
-    // Read the request from the channel; note that the thread pool *should* be
-    // serializing access to the ports on a per-channel basis, so there should
-    // be no possibility of message re-ordering on a given channel.
+    // Read the request from the channel; note that the thread pool *should*
+    // be serializing access to the ports on a per-channel basis, so there
+    // should be no possibility of message re-ordering on a given channel.
     RequestBufferType request_buffer;
     uint32_t    bytes;
     mx::handle  handle;
-    mx_status_t res = channel.Read(&request_buffer, sizeof(request_buffer), &bytes, &handle);
+    mx_status_t res = channel->Read(&request_buffer, sizeof(request_buffer), &bytes, &handle);
 
     if (res != NO_ERROR) {
         MX_DEBUG_ASSERT(handle == MX_HANDLE_INVALID);
@@ -82,7 +83,7 @@ mx_status_t IntelHDADevice<DeviceType>::ProcessChannel(DispatcherChannel& channe
             static_assert(mxtl::is_base_of<IntelHDADevice<DeviceType>, DeviceType>::value,
                           "DeviceType must derive from IntelHDADevice<DeviceType>");
 
-            res = static_cast<DeviceType*>(this)->ProcessClientRequest(channel,
+            res = static_cast<DeviceType*>(this)->ProcessClientRequest(*channel,
                                                                        request_buffer,
                                                                        bytes,
                                                                        mxtl::move(handle));

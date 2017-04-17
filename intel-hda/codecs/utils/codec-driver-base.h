@@ -50,8 +50,7 @@ protected:
     virtual mx_status_t ProcessSolicitedResponse  (const CodecResponse& resp) { return NO_ERROR; }
 
     // DispatcherChannel::Owner implementation
-    mx_status_t ProcessChannel(DispatcherChannel& channel,
-                               const mx_io_packet_t& io_packet) final;
+    mx_status_t ProcessChannel(DispatcherChannel* channel) final;
     void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
 
     mxtl::RefPtr<IntelHDAStreamBase> GetActiveStream(uint32_t stream_id)

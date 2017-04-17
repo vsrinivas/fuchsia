@@ -4,6 +4,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+#include <mxtl/auto_call.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
@@ -69,6 +70,13 @@ mx_status_t DispatcherChannel::Activate(mxtl::RefPtr<Owner>&& owner,
    return res;
 }
 
+mx_status_t DispatcherChannel::WaitOnPortLocked(const mx::port& port) {
+    return channel_.wait_async(DispatcherThread::port(),
+                               bind_id(),
+                               MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                               MX_WAIT_ASYNC_ONCE);
+}
+
 mx_status_t DispatcherChannel::ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::channel&& channel) {
     if (!channel.is_valid())
         return ERR_INVALID_ARGS;
@@ -78,32 +86,57 @@ mx_status_t DispatcherChannel::ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::c
         (owner_   != nullptr))
         return ERR_BAD_STATE;
 
-    // Bind our half of the channel to port which was provided.
-    mx_status_t res = DispatcherThread::port().bind(bind_id(),
-                                                channel.get(),
-                                                MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
-
-    if (res != NO_ERROR)
-        return res;
-
     // Add ourselves to the set of active channels so that users can fetch
     // references to us.
     {
         mxtl::AutoLock channels_lock(&active_channels_lock_);
-        active_channels_.insert(mxtl::WrapRefPtr(this));
+        if (!active_channels_.insert_or_find(mxtl::WrapRefPtr(this)))
+            return ERR_BAD_STATE;
+
     }
 
-    // Finally, add ourselves to our Owner's list of channels.
-    res = owner->AddChannel(mxtl::WrapRefPtr(this));
-    if (res != NO_ERROR) {
-        mxtl::AutoLock channels_lock(&active_channels_lock_);
-        active_channels_.erase(*this);
-        return res;
-    }
-
-    // Success, take ownership of our channel and owner reference.
+    // Take ownership of the channel reference given to us.
     channel_ = mxtl::move(channel);
+
+    // Make sure we remove ourselves from the active channel set and release our
+    // channel reference if anything goes wrong.
+    //
+    // NOTE: This auto-call lambda needs to be flagged as not-subject to thread
+    // analysis.  Currently, clang it not quite smart enough to know that since
+    // the obj_lock_ is being held for the duration of ActivateLocked, and the
+    // AutoCall lambda will execute during the unwind of ActicateLocked, that
+    // the lock will be held during execution of the lambda.
+    //
+    // You can mark the lambda as __TA_REQUIRES(obj_lock_), but clang still
+    // cannot seem to figure out that the lock is properly held during the
+    // destruction of AutoCall object (probably because of the indirection
+    // introduced by AutoCall::~AutoCall() --> Lambda().)
+    //
+    // For now, just disable thread analysis for this lambda.
+    auto cleanup = mxtl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+        channel_.reset();
+        mxtl::AutoLock channels_lock(&active_channels_lock_);
+        MX_DEBUG_ASSERT(InActiveChannelSet());
+        active_channels_.erase(*this);
+    });
+
+    // Setup our initial async wait operation on our thread pool's port.
+    mx_status_t res = WaitOnPortLocked(DispatcherThread::port());
+    if (res != NO_ERROR)
+        return res;
+
+    // Finally, add ourselves to our Owner's list of channels. Note; if this
+    // operation fails, leaving the active channels set will be handle by the
+    // cleanup AutoCall and canceling the async wait operation should occur as a
+    // side effect of channel being auto closed as it goes out of scope.
+    res = owner->AddChannel(mxtl::WrapRefPtr(this));
+    if (res != NO_ERROR)
+        return res;
+
+    // Success, take ownership of our owner reference and cancel our
+    // cleanup routine.
     owner_   = mxtl::move(owner);
+    cleanup.cancel();
     return res;
 }
 
@@ -119,10 +152,10 @@ void DispatcherChannel::Deactivate(bool do_notify) {
                 active_channels_.erase(*this);
             } else {
                 // Right now, the only way to leave the active channel set (once
-                // added to it) is to Deactivate.  Because of this, if we are
-                // not in the channel set when this is triggered, we should be
-                // able to ASSERT that we have no owner, and that our channel_
-                // handle has been closed.
+                // successfully Activated) is to Deactivate.  Because of this,
+                // if we are not in the channel set when this is triggered, we
+                // should be able to ASSERT that we have no owner, and that our
+                // channel_ handle has been closed.
                 //
                 // If this assumption ever changes (eg, if there is ever a way
                 // to leave the active channel set without being removed from
@@ -146,24 +179,42 @@ void DispatcherChannel::Deactivate(bool do_notify) {
         old_owner->NotifyChannelDeactivated(*this);
 }
 
-mx_status_t DispatcherChannel::Process(const mx_io_packet_t& io_packet) {
-    mxtl::RefPtr<Owner> owner;
+mx_status_t DispatcherChannel::Process(const mx_port_packet_t& port_packet) {
+    mx_status_t res = NO_ERROR;
 
+    // No one should be calling us if we have no messages to read.
+    MX_DEBUG_ASSERT(port_packet.signal.observed & MX_CHANNEL_READABLE);
+    MX_DEBUG_ASSERT(port_packet.signal.count);
+
+    // If our owner still exists, take a reference to them and call their
+    // ProcessChannel handler.
+    //
+    // If the owner has gone away, then we should already be in the process
+    // of shutting down.  Don't bother to report an error, we are already
+    // being cleaned up.
+    mxtl::RefPtr<Owner> owner;
     {
-        // If our owner still exists, take a reference to them and call their
-        // ProcessChannel handler.
-        //
-        // If the owner has gone away, then we should already be in the process
-        // of shutting down.  Don't bother to report an error, we are already
-        // being cleaned up.
         mxtl::AutoLock obj_lock(&obj_lock_);
         if (owner_ == nullptr)
             return NO_ERROR;
-
         owner = owner_;
     }
 
-    return owner->ProcessChannel(*this, io_packet);
+    // Process all of the pending messages in the channel before re-joining the
+    // thread pool.  If our owner becomes deactivated during processing, just
+    // get out early.  Don't bother to signal an error; if our owner was
+    // deativated then we are in the process of shutting down already.
+    //
+    // TODO(johngro) : Start to establish some sort of fair scheduler-like
+    // behavior.  We do not want to dominate the thread pool processing a single
+    // channel for a single client.
+    for (uint64_t i = 0; (i < port_packet.signal.count) && (res == NO_ERROR); ++i) {
+        if (!owner->deactivated()) {
+            res = owner->ProcessChannel(this);
+        }
+    }
+
+    return res;
 }
 
 mx_status_t DispatcherChannel::Read(void*       buf,

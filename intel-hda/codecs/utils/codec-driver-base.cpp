@@ -124,14 +124,14 @@ void IntelHDACodecDriverBase::Shutdown() {
         CHECK_RESP_ALLOW_HANDLE(_ioctl, _payload);  \
     } while (0)
 
-mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel& channel,
-                                                    const mx_io_packet_t& io_packet) {
-    mx_status_t res;
+mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     uint32_t resp_size;
     CodecChannelResponses resp;
     mx::handle rxed_handle;
 
-    res = channel.Read(&resp, sizeof(resp), &resp_size, &rxed_handle);
+    mx_status_t res = channel->Read(&resp, sizeof(resp), &resp_size, &rxed_handle);
     if (res != NO_ERROR) {
         DEBUG_LOG("Error reading from device channel (res %d)!\n", res);
         return res;
@@ -167,12 +167,11 @@ mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel& channel,
         }
 
         default:
-            DEBUG_LOG("Received unexpected response type (%u) for codec device!\n", resp.hdr.cmd);
+            DEBUG_LOG("Received unexpected response type (%u) for codec device!\n",
+                      resp.hdr.cmd);
             return ERR_INVALID_ARGS;
         }
     }
-
-    return res;
 }
 
 mx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
