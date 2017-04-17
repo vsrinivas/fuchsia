@@ -665,22 +665,32 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmcs_write(VmcsField64::EPT_POINTER, ept_pointer(pml4_address));
 
     // Setup MSR handling.
+    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_EFER);
     ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
     ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
+    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_STAR);
+    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_LSTAR);
+    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_FMASK);
+    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
     vmcs_write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_page_.PhysicalAddress());
 
-    edit_msr_list(&host_msr_page_, 0, X86_MSR_IA32_STAR, read_msr(X86_MSR_IA32_STAR));
-    edit_msr_list(&host_msr_page_, 1, X86_MSR_IA32_LSTAR, read_msr(X86_MSR_IA32_LSTAR));
-    edit_msr_list(&host_msr_page_, 2, X86_MSR_IA32_FMASK, read_msr(X86_MSR_IA32_FMASK));
     // NOTE: Host X86_MSR_IA32_KERNEL_GS_BASE, is set in a separate function.
+    edit_msr_list(&host_msr_page_, 1, X86_MSR_IA32_STAR, read_msr(X86_MSR_IA32_STAR));
+    edit_msr_list(&host_msr_page_, 2, X86_MSR_IA32_LSTAR, read_msr(X86_MSR_IA32_LSTAR));
+    edit_msr_list(&host_msr_page_, 3, X86_MSR_IA32_FMASK, read_msr(X86_MSR_IA32_FMASK));
+    edit_msr_list(&host_msr_page_, 4, X86_MSR_IA32_TSC_ADJUST, read_msr(X86_MSR_IA32_TSC_ADJUST));
     vmcs_write(VmcsField64::EXIT_MSR_LOAD_ADDRESS, host_msr_page_.PhysicalAddress());
-    vmcs_write(VmcsField32::EXIT_MSR_LOAD_COUNT, 4);
+    vmcs_write(VmcsField32::EXIT_MSR_LOAD_COUNT, 5);
 
     edit_msr_list(&guest_msr_page_, 0, X86_MSR_IA32_KERNEL_GS_BASE, 0);
+    edit_msr_list(&guest_msr_page_, 1, X86_MSR_IA32_STAR, 0);
+    edit_msr_list(&guest_msr_page_, 2, X86_MSR_IA32_LSTAR, 0);
+    edit_msr_list(&guest_msr_page_, 3, X86_MSR_IA32_FMASK, 0);
+    edit_msr_list(&guest_msr_page_, 4, X86_MSR_IA32_TSC_ADJUST, 0);
     vmcs_write(VmcsField64::EXIT_MSR_STORE_ADDRESS, guest_msr_page_.PhysicalAddress());
-    vmcs_write(VmcsField32::EXIT_MSR_STORE_COUNT, 1);
+    vmcs_write(VmcsField32::EXIT_MSR_STORE_COUNT, 5);
     vmcs_write(VmcsField64::ENTRY_MSR_LOAD_ADDRESS, guest_msr_page_.PhysicalAddress());
-    vmcs_write(VmcsField32::ENTRY_MSR_LOAD_COUNT, 1);
+    vmcs_write(VmcsField32::ENTRY_MSR_LOAD_COUNT, 5);
 
     // Setup VMCS host state.
     //
@@ -920,7 +930,7 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fi
     vmcs_write(VmcsFieldXX::HOST_CR3, x86_get_cr3());
     // Kernel GS stores the user-space GS (within the kernel) — as the calling
     // user-space thread may change, save this every time.
-    edit_msr_list(&host_msr_page_, 3, X86_MSR_IA32_KERNEL_GS_BASE, read_msr(X86_MSR_IA32_KERNEL_GS_BASE));
+    edit_msr_list(&host_msr_page_, 0, X86_MSR_IA32_KERNEL_GS_BASE, read_msr(X86_MSR_IA32_KERNEL_GS_BASE));
 
     if (x86_feature_test(X86_FEATURE_XSAVE)) {
         // Save the host XCR0, and load the guest XCR0.

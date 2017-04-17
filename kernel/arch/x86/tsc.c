@@ -9,7 +9,6 @@
 #include <arch/x86/feature.h>
 
 #define X86_MSR_IA32_TIME_STAMP_COUNTER 0x10
-#define X86_MSR_IA32_TSC_ADJUST 0x3B
 
 uint64_t tsc_adj = 0;
 
