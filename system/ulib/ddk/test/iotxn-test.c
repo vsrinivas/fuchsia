@@ -99,6 +99,109 @@ static bool test_physmap_unaligned_offset2(void) {
     END_TEST;
 }
 
+static bool test_phys_iter(void) {
+    BEGIN_TEST;
+    iotxn_phys_iter_t iter;
+    iotxn_t* txn;
+    mx_paddr_t paddr;
+    size_t length;
+    size_t max_length;
+
+    // create 4 page contiguous iotxn
+    ASSERT_EQ(iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, PAGE_SIZE * 4), NO_ERROR, "");
+    txn->length = PAGE_SIZE * 4;
+    ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
+    ASSERT_EQ(txn->phys_count, 1u, "");
+
+    // simple contiguous case
+    max_length = txn->length + PAGE_SIZE;
+    iotxn_phys_iter_init(&iter, txn, max_length);
+    length = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(paddr, txn->phys[0], "iotxn_iter_next returned wrong paddr");
+    ASSERT_EQ(length, txn->length, "iotxn_iter_next returned wrong length");
+    ASSERT_EQ(iotxn_phys_iter_next(&iter, &paddr), 0u, "");
+
+    // contiguous case with max_length < txn->length
+    max_length = PAGE_SIZE;
+    iotxn_phys_iter_init(&iter, txn, max_length);
+    for (int i = 0; i < 4; i++) {
+        length = iotxn_phys_iter_next(&iter, &paddr);
+        ASSERT_EQ(paddr, txn->phys[0] + (i * max_length), "iotxn_iter_next returned wrong paddr");
+        ASSERT_EQ(length, max_length, "iotxn_iter_next returned wrong length");
+    }
+    ASSERT_EQ(iotxn_phys_iter_next(&iter, &paddr), 0u, "");
+
+    // contiguous case with unaligned vmo_offset and txn->length
+    txn->vmo_offset = 100;
+    max_length = txn->length + PAGE_SIZE;
+    txn->length -= 1000;
+    iotxn_phys_iter_init(&iter, txn, max_length);
+    length = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(paddr, txn->phys[0] + txn->vmo_offset, "");
+    ASSERT_EQ(length, txn->length, "");
+    ASSERT_EQ(iotxn_phys_iter_next(&iter, &paddr), 0u, "");
+
+    iotxn_release(txn);
+
+    // create discontiguous iotxn
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 4), NO_ERROR, "");
+    txn->length = PAGE_SIZE * 4;
+    ASSERT_EQ(iotxn_physmap(txn), NO_ERROR, "");
+    ASSERT_EQ(txn->phys_count, 4u, "");
+    // pretend that first two pages are contiguous and second two are not
+    txn->phys[1] = txn->phys[0] + PAGE_SIZE;
+    txn->phys[2] = txn->phys[0] + (PAGE_SIZE * 10);
+    txn->phys[3] = txn->phys[0] + (PAGE_SIZE * 20);
+
+    // simple discontiguous case
+    max_length = txn->length + PAGE_SIZE;
+    iotxn_phys_iter_init(&iter, txn, max_length);
+    length = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(paddr, txn->phys[0], "iotxn_iter_next returned wrong paddr");
+    ASSERT_EQ(length, (size_t)(PAGE_SIZE * 2), "iotxn_iter_next returned wrong length");
+    length = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(paddr, txn->phys[2], "iotxn_iter_next returned wrong paddr");
+    ASSERT_EQ(length, (size_t)PAGE_SIZE, "iotxn_iter_next returned wrong length");
+    length = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(paddr, txn->phys[3], "iotxn_iter_next returned wrong paddr");
+    ASSERT_EQ(length, (size_t)PAGE_SIZE, "iotxn_iter_next returned wrong length");
+    ASSERT_EQ(iotxn_phys_iter_next(&iter, &paddr), 0u, "");
+
+    // discontiguous case with max_length < txn->length
+    max_length = PAGE_SIZE;
+    iotxn_phys_iter_init(&iter, txn, max_length);
+    for (int i = 0; i < 4; i++) {
+        length = iotxn_phys_iter_next(&iter, &paddr);
+        ASSERT_EQ(paddr, txn->phys[i], "iotxn_iter_next returned wrong paddr");
+        ASSERT_EQ(length, max_length, "iotxn_iter_next returned wrong length");
+    }
+    ASSERT_EQ(iotxn_phys_iter_next(&iter, &paddr), 0u, "");
+
+    // discontiguous case with unaligned vmo_offset and txn->length
+    txn->vmo_offset = 100;
+    max_length = txn->length + PAGE_SIZE;
+    txn->length -= 1000;
+    iotxn_phys_iter_init(&iter, txn, max_length);
+    size_t total_length = 0;
+    length = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(paddr, txn->phys[0] + txn->vmo_offset, "");
+    ASSERT_EQ(length, (size_t)(PAGE_SIZE * 2) - txn->vmo_offset, "iotxn_iter_next returned wrong length");
+    total_length += length;
+    length = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(paddr, txn->phys[2], "");
+    ASSERT_EQ(length, (size_t)PAGE_SIZE, "");
+    total_length += length;
+    length = iotxn_phys_iter_next(&iter, &paddr);
+    ASSERT_EQ(paddr, txn->phys[3], "");
+    total_length += length;
+    ASSERT_EQ(total_length, txn->length, "");
+    ASSERT_EQ(iotxn_phys_iter_next(&iter, &paddr), 0u, "");
+
+    iotxn_release(txn);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(iotxn_tests)
 RUN_TEST(test_physmap_simple)
 RUN_TEST(test_physmap_contiguous)
@@ -106,6 +209,7 @@ RUN_TEST(test_physmap_clone)
 RUN_TEST(test_physmap_aligned_offset)
 RUN_TEST(test_physmap_unaligned_offset)
 RUN_TEST(test_physmap_unaligned_offset2)
+RUN_TEST(test_phys_iter)
 END_TEST_CASE(iotxn_tests)
 
 static void iotxn_test_output_func(const char* line, int len, void* arg) {

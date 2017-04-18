@@ -433,3 +433,91 @@ mx_status_t iotxn_alloc_vmo(iotxn_t** out, uint32_t alloc_flags, mx_handle_t vmo
     *out = txn;
     return NO_ERROR;
 }
+
+void iotxn_phys_iter_init(iotxn_phys_iter_t* iter, iotxn_t* txn, size_t max_length) {
+    iter->txn = txn;
+    iter->offset = 0;
+    MX_DEBUG_ASSERT(max_length % PAGE_SIZE == 0);
+    if (max_length == 0) {
+        max_length = UINT64_MAX;
+    }
+    iter->max_length = max_length;
+    // iter->page is index of page containing txn->vmo_offset,
+    // and iter->last_page is index of page containing txn->vmo_offset + txn->length
+    iter->page = 0;
+    if (txn->length > 0) {
+        size_t align_adjust = txn->vmo_offset & (PAGE_SIZE - 1);
+        iter->last_page = (txn->length + align_adjust - 1) / PAGE_SIZE;
+    } else {
+        iter->last_page = 0;
+    }
+}
+
+size_t iotxn_phys_iter_next(iotxn_phys_iter_t* iter, mx_paddr_t* out_paddr) {
+    iotxn_t* txn = iter->txn;
+    mx_off_t offset = iter->offset;
+    size_t max_length = iter->max_length;
+    size_t length = txn->length;
+    if (offset >= length) {
+        return 0;
+    }
+    size_t remaining = length - offset;
+    mx_paddr_t* phys_addrs = txn->phys;
+    size_t align_adjust = txn->vmo_offset & (PAGE_SIZE - 1);
+    mx_paddr_t phys = phys_addrs[iter->page];
+    size_t return_length = 0;
+
+    if (txn->phys_count == 1) {
+        // simple contiguous case
+        *out_paddr = phys_addrs[0] + offset + align_adjust;
+        return_length = remaining;
+        if (return_length > max_length) {
+            // end on a page boundary
+            return_length = max_length - align_adjust;
+        }
+        iter->offset += return_length;
+        return return_length;
+    }
+
+    if (offset == 0 && align_adjust > 0) {
+        // if vmo_offset is unaligned we need to adjust out_paddr, accumulate partial page length
+        // in return_length and skip to next page.
+        // we will make sure the range ends on a page boundary so we don't need to worry about
+        // alignment for subsequent iterations.
+        *out_paddr = phys + align_adjust;
+        return_length = PAGE_SIZE - align_adjust;
+        iter->page = 1;
+    } else {
+        *out_paddr = phys;
+    }
+
+    // below is more complicated case where we need to watch for discontinuities
+    // in the physical address space.
+
+    bool discontiguous = false;
+
+    // loop through physical addresses looking for discontinuities
+    while (remaining > 0 && return_length < max_length && iter->page++ < iter->last_page) {
+        size_t increment = (PAGE_SIZE > remaining ? remaining : PAGE_SIZE);
+        return_length += increment;
+        remaining -= increment;
+
+        mx_paddr_t next = phys_addrs[iter->page];
+        if (phys + PAGE_SIZE != next) {
+            discontiguous = true;
+            break;
+        }
+        phys = next;
+    }
+
+    if (!discontiguous && remaining > 0) {
+        // if we did not hit a discontinuity, we can add any remaining length from last page
+        return_length += remaining;
+    }
+
+    if (return_length > max_length) {
+        return_length = max_length;
+    }
+    iter->offset += return_length;
+    return return_length;
+}
