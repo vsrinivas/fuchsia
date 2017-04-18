@@ -17,6 +17,10 @@ import("//build/dart/dart_package.gni")
 #   deps (optional)
 #     Dependencies of this application
 #
+#   non_dart_deps (optional)
+#     List of labels this package depends on that are not Dart packages. It
+#     typically doesn't need to be set.
+#
 #   output_name (optional)
 #     Name of the output file to generate. Defaults to $target_name.
 template("dart_tool") {
@@ -108,5 +112,8 @@ template("dart_tool") {
       ":$snapshot_target_name",
       dart_binary_label,
     ]
+    if (defined(invoker.non_dart_deps)) {
+      deps += invoker.non_dart_deps
+    }
   }
 }
