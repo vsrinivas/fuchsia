@@ -7,6 +7,8 @@
 #include "magma_util/macros.h"
 #include "magenta/syscalls/port.h"
 
+#include <mx/time.h>
+
 namespace magma {
 
 Status MagentaPlatformPort::Wait(uint64_t* key_out, uint64_t timeout_ms)
@@ -14,7 +16,7 @@ Status MagentaPlatformPort::Wait(uint64_t* key_out, uint64_t timeout_ms)
     mx_port_packet_t packet;
 
     mx_status_t status =
-        port_.wait(timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : MX_MSEC(timeout_ms), &packet, 0);
+        port_.wait(timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : mx::deadline_after(MX_MSEC(timeout_ms)), &packet, 0);
     if (status == ERR_TIMED_OUT)
         return MAGMA_STATUS_TIMED_OUT;
 
