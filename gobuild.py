@@ -22,6 +22,8 @@ def main():
     parser.add_argument('--current-cpu', help='Target arch, x64 or arm64.',
                         required=True)
     parser.add_argument('--go-tool', help='The go tool to use for builds')
+    parser.add_argument('--is-test', help='True if the target is a go test',
+                        default=False)
     parser.add_argument('--binname', help='Output file')
     parser.add_argument('package', help='The package name')
     args = parser.parse_args()
@@ -78,8 +80,14 @@ def main():
         del os.environ['GOROOT']
     godepfile = os.path.join(args.fuchsia_root, 'buildtools/godepfile')
 
-    retcode = subprocess.call([args.go_tool, 'install', args.package],
-                              env=os.environ)
+    if args.is_test:
+        retcode = subprocess.call([args.go_tool, 'test', '-c', '-o', args.binname,
+                                  args.package], env=os.environ)
+        return retcode
+    else:
+        retcode = subprocess.call([args.go_tool, 'install', args.package],
+                                  env=os.environ)
+
     if retcode == 0:
         binname = os.path.basename(args.package)
         src = os.path.join(gopath, "bin", "fuchsia_"+goarch, binname)
