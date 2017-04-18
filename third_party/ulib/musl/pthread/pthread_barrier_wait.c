@@ -42,8 +42,11 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
         return PTHREAD_BARRIER_SERIAL_THREAD;
     }
 
-    /* Last thread to enter the barrier wakes all non-instance-owners */
-    if (atomic_fetch_add(&inst->count, 1) == limit) {
+    /* Last thread to enter the barrier wakes all
+     * non-instance-owners. One is added to the count since we fetch
+     * before adding, and another one to account for the fact that the
+     * first thread (the "instance owner" above) never gets here. */
+    if (atomic_fetch_add(&inst->count, 1) + 2 == limit) {
         b->_b_inst = 0;
         atomic_store(&b->_b_lock, 0);
         if (atomic_load(&b->_b_waiters))
