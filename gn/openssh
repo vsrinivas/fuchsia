@@ -1,6 +1,7 @@
 {
     "imports": [
-        "listen"
+        "listen",
+        "zlib"
     ],
     "labels": [
         "//third_party/openssh-portable"

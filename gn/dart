@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "zlib"
+    ],
     "labels": [
         "//dart/pkg/analyzer_cli(//build/toolchain:host_x64)",
         "//dart/runtime/bin:dart",

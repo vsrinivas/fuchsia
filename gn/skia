@@ -1,6 +1,7 @@
 {
     "imports": [
-        "magma"
+        "magma",
+        "zlib"
     ],
     "labels": [
         "//third_party/skia"

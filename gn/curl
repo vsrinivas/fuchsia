@@ -1,6 +1,7 @@
 {
     "imports": [
-        "boringssl_libssl"
+        "boringssl_libssl",
+        "zlib"
     ],
     "labels": [
         "//third_party/curl"
@@ -9,6 +10,10 @@
         {
             "binary": "curl",
             "bootfs_path": "bin/curl"
+        },
+        {
+            "binary": "libcurl.so",
+            "bootfs_path": "lib/libcurl.so"
         }
     ]
 }
