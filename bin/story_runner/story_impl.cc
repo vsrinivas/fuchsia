@@ -14,6 +14,7 @@
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/module_context_impl.h"
 #include "apps/modular/src/story_runner/module_controller_impl.h"
@@ -31,6 +32,20 @@ namespace modular {
 
 constexpr char kStoryScopeLabelPrefix[] = "story-";
 
+class StoryImpl::StoryMarkerImpl : StoryMarker {
+ public:
+  StoryMarkerImpl() = default;
+  ~StoryMarkerImpl() override = default;
+
+  void Connect(fidl::InterfaceRequest<StoryMarker> request) {
+    bindings_.AddBinding(this, std::move(request));
+  }
+
+ private:
+  fidl::BindingSet<StoryMarker> bindings_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
+};
+
 StoryImpl::StoryImpl(const fidl::String& story_id,
                      ledger::PagePtr story_page,
                      StoryProviderImpl* const story_provider_impl)
@@ -40,13 +55,14 @@ StoryImpl::StoryImpl(const fidl::String& story_id,
       story_storage_impl_(new StoryStorageImpl(story_page_.get())),
       story_scope_(story_provider_impl_->user_scope(),
                    kStoryScopeLabelPrefix + story_id_.get()),
-      story_context_binding_(this) {
+      story_context_binding_(this),
+      story_marker_impl_(new StoryMarkerImpl) {
   bindings_.set_on_empty_set_handler(
       [this] { story_provider_impl_->PurgeController(story_id_); });
 
   story_scope_.AddService<StoryMarker>(
       [this](fidl::InterfaceRequest<StoryMarker> request) {
-        story_marker_impl_.Connect(std::move(request));
+        story_marker_impl_->Connect(std::move(request));
       });
 }
 
@@ -548,15 +564,6 @@ void StoryImpl::StopFinish() {
   for (auto& done : teardown_) {
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(done);
   }
-}
-
-StoryImpl::StoryMarkerImpl::StoryMarkerImpl() = default;
-
-StoryImpl::StoryMarkerImpl::~StoryMarkerImpl() = default;
-
-void StoryImpl::StoryMarkerImpl::Connect(
-    fidl::InterfaceRequest<StoryMarker> request) {
-  bindings_.AddBinding(this, std::move(request));
 }
 
 }  // namespace modular

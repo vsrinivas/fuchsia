@@ -22,7 +22,6 @@
 #include "apps/modular/services/module/module_controller.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
-#include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/modular/services/story/story_shell.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -185,18 +184,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // modules in a story and standalone from the shell to determine
   // whether they are in a story. See story_marker.fidl for more
   // details.
-  class StoryMarkerImpl : private StoryMarker {
-   public:
-    StoryMarkerImpl();
-    ~StoryMarkerImpl() override;
-
-    void Connect(fidl::InterfaceRequest<StoryMarker> request);
-
-   private:
-    fidl::BindingSet<StoryMarker> bindings_;
-    FTL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
-  };
-  StoryMarkerImpl story_marker_impl_;
+  class StoryMarkerImpl;
+  std::unique_ptr<StoryMarkerImpl> story_marker_impl_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
 };
