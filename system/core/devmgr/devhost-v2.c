@@ -22,19 +22,17 @@
 #include <mxio/remoteio.h>
 
 #include "devcoordinator.h"
+#include "devhost.h"
 
-typedef struct {
-    port_handler_t ph;
-    mx_device_t* dev;
-} device_ctx_t;
-
-#define ctx_from_ph(ph) containerof(ph, device_ctx_t, ph)
+#define ios_from_ph(ph) containerof(ph, devhost_iostate_t, ph)
 
 static mx_status_t dh_handle_rpc(port_handler_t* ph, mx_signals_t signals);
 
 static port_t dh_port;
 
-static device_ctx_t devhost_root_ctx = {
+typedef struct devhost_iostate iostate_t;
+
+static iostate_t root_ios = {
     .ph = {
         .waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
         .func = dh_handle_rpc,
@@ -128,11 +126,11 @@ done:
 }
 
 static mx_status_t dh_handle_open(mxrio_msg_t* msg, size_t len,
-                                  mx_handle_t h, device_ctx_t* ctx) {
+                                  mx_handle_t h, iostate_t* ios) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t dh_handle_rpc_read(mx_handle_t h, device_ctx_t* ctx) {
+static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
     dc_msg_t msg;
     mx_handle_t hin[2];
     uint32_t msize = sizeof(msg);
@@ -145,16 +143,16 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, device_ctx_t* ctx) {
     }
 
     char buffer[512];
-    const char* path = mkdevpath(ctx->dev, buffer, sizeof(buffer));
+    const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
 
     // handle remoteio open messages only
-    if ((msize >= MXRIO_HDR_SZ) && (msg.op == MXRIO_OPEN)) {
+    if ((msize >= MXRIO_HDR_SZ) && (MXRIO_OP(msg.op) == MXRIO_OPEN)) {
         if (hcount != 1) {
             r = ERR_INVALID_ARGS;
             goto fail;
         }
         printf("devhost[%s] remoteio OPEN\n", path);
-        return dh_handle_open((void*) &msg, msize, hin[0], ctx);
+        return dh_handle_open((void*) &msg, msize, hin[0], ios);
     }
 
     const void* data;
@@ -179,17 +177,17 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, device_ctx_t* ctx) {
             r = ERR_INVALID_ARGS;
             break;
         }
-        device_ctx_t* newctx = calloc(1, sizeof(device_ctx_t));
-        if (newctx == NULL) {
+        iostate_t* newios = calloc(1, sizeof(iostate_t));
+        if (newios == NULL) {
             r = ERR_NO_MEMORY;
             break;
         }
-        if ((newctx->dev = calloc(1, sizeof(mx_device_t))) == NULL) {
-            free(newctx);
+        if ((newios->dev = calloc(1, sizeof(mx_device_t))) == NULL) {
+            free(newios);
             r = ERR_NO_MEMORY;
             break;
         }
-        mx_device_t* dev = newctx->dev;
+        mx_device_t* dev = newios->dev;
         memcpy(dev->name, name, msg.namelen + 1);
         dev->protocol_id = msg.protocol_id;
         dev->rpc = hin[0];
@@ -197,14 +195,14 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, device_ctx_t* ctx) {
         list_initialize(&dev->children);
         //TODO: dev->ops and other lifecycle bits
 
-        newctx->ph.handle = hin[0];
-        newctx->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-        newctx->ph.func = dh_handle_rpc;
-        if ((r = port_watch(&dh_port, &newctx->ph)) < 0) {
-            free(newctx);
+        newios->ph.handle = hin[0];
+        newios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+        newios->ph.func = dh_handle_rpc;
+        if ((r = port_watch(&dh_port, &newios->ph)) < 0) {
+            free(newios);
             break;
         }
-        printf("devhost[%s] created '%s' ctx=%p\n", path, name, newctx);
+        printf("devhost[%s] created '%s' ios=%p\n", path, name, newios);
         return NO_ERROR;
 
     case DC_OP_BIND_DRIVER:
@@ -216,7 +214,7 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, device_ctx_t* ctx) {
             //TODO: inform devcoord
         } else {
             if (rec->drv.ops.bind) {
-                r = rec->drv.ops.bind(&rec->drv, ctx->dev, &ctx->dev->owner_cookie);
+                r = rec->drv.ops.bind(&rec->drv, ios->dev, &ios->dev->owner_cookie);
             } else {
                 r = ERR_NOT_SUPPORTED;
             }
@@ -240,10 +238,10 @@ fail:
 }
 
 static mx_status_t dh_handle_rpc(port_handler_t* ph, mx_signals_t signals) {
-    device_ctx_t* ctx = ctx_from_ph(ph);
+    iostate_t* ios = ios_from_ph(ph);
 
     if (signals & MX_CHANNEL_READABLE) {
-        mx_status_t r = dh_handle_rpc_read(ph->handle, ctx);
+        mx_status_t r = dh_handle_rpc_read(ph->handle, ios);
         if (r != NO_ERROR) {
             printf("devhost: devmgr rpc unhandleable %p\n", ph);
             exit(0);
@@ -279,15 +277,15 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child) {
     char buffer[512];
     const char* path = mkdevpath(parent, buffer, sizeof(buffer));
     printf("devhost[%s] add '%s'\n", path, child->name);
-    device_ctx_t* ctx = calloc(1, sizeof(*ctx));
-    if (ctx == NULL) {
+    iostate_t* ios = calloc(1, sizeof(*ios));
+    if (ios == NULL) {
         return ERR_NO_MEMORY;
     }
 
     mx_handle_t h0, h1;
     mx_status_t r;
     if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
-        free(ctx);
+        free(ios);
         return r;
     }
 
@@ -307,7 +305,7 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child) {
 fail_write:
         mx_handle_close(h0);
         mx_handle_close(h1);
-        free(ctx);
+        free(ios);
         return r;
     }
     msg.txid = 1;
@@ -329,18 +327,18 @@ fail_write:
     } else if ((r = rsp.status) < 0) {
         printf("devhost: rpc:device_add remote error: %d\n", r);
     } else {
-        ctx->dev = child;
-        ctx->ph.handle = h1;
-        ctx->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-        ctx->ph.func = dh_handle_rpc;
-        if ((r = port_watch(&dh_port, &ctx->ph)) == NO_ERROR) {
+        ios->dev = child;
+        ios->ph.handle = h1;
+        ios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+        ios->ph.func = dh_handle_rpc;
+        if ((r = port_watch(&dh_port, &ios->ph)) == NO_ERROR) {
             child->rpc = h1;
             return NO_ERROR;
         }
     }
 
     mx_handle_close(h1);
-    free(ctx);
+    free(ios);
     return r;
 }
 
@@ -408,8 +406,8 @@ int main(int argc, char** argv) {
 
     driver_api_init(&devhost_api);
 
-    devhost_root_ctx.ph.handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
-    if (devhost_root_ctx.ph.handle == MX_HANDLE_INVALID) {
+    root_ios.ph.handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    if (root_ios.ph.handle == MX_HANDLE_INVALID) {
         printf("devhost: rpc handle invalid\n");
         return -1;
     }
@@ -424,7 +422,7 @@ int main(int argc, char** argv) {
         printf("devhost: could not create port: %d\n", r);
         return -1;
     }
-    if ((r = port_watch(&dh_port, &devhost_root_ctx.ph)) < 0) {
+    if ((r = port_watch(&dh_port, &root_ios.ph)) < 0) {
         printf("devhost: could not watch rpc channel: %d\n", r);
         return -1;
     }

@@ -6,6 +6,10 @@
 
 #include "device-internal.h"
 
+#if DEVHOST_V2
+#include "devcoordinator.h"
+#endif
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -67,6 +71,9 @@ typedef struct devhost_iostate {
     size_t io_off;
     uint32_t flags;
     mtx_t lock;
+#if DEVHOST_V2
+    port_handler_t ph;
+#endif
 } devhost_iostate_t;
 
 devhost_iostate_t* create_devhost_iostate(mx_device_t* dev);
