@@ -37,6 +37,10 @@ config("compiler") {
         "-Wl,-Bstatic",
         "-lc++abi",
         "-Wl,-Bdynamic",
+
+        # Set rpath to find dynamically linked libraries placed next to executables in the host
+        # build directory.
+        "-Wl,-rpath=\$ORIGIN/",
       ]
     }
   }
@@ -74,15 +78,12 @@ config("default_include_dirs") {
   ]
   if (!is_fuchsia) {
     if (current_cpu == "x64") {
-      include_dirs += [
-        "//out/magenta-host-x86_64/include"
-      ]
+      include_dirs += [ "//out/magenta-host-x86_64/include" ]
     } else if (current_cpu == "arm64") {
-      include_dirs += [
-        "//out/magenta-host-aarch64/include"
-      ]
+      include_dirs += [ "//out/magenta-host-aarch64/include" ]
     } else {
-      assert(false, "unable to determine path to host copies of magenta includes")
+      assert(false,
+             "unable to determine path to host copies of magenta includes")
     }
   }
 }
@@ -98,6 +99,7 @@ config("default_warnings") {
       # TODO(TO-99): Remove once all the cases of unused 'this' lamda capture
       # have been removed from our codebase.
       "-Wno-unused-lambda-capture",
+
       # TODO(TO-100): Remove once comparator types provide const call operator.
       "-Wno-user-defined-warnings",
     ]
@@ -124,8 +126,8 @@ config("executable_config") {
 
   if (current_os == "fuchsia") {
     configs += [
-        "//build/config/fuchsia:executable_config",
-        "//build/config/fuchsia:mxio_config",
+      "//build/config/fuchsia:executable_config",
+      "//build/config/fuchsia:mxio_config",
     ]
   }
 }
