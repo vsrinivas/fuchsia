@@ -90,7 +90,7 @@ typedef struct mx_protocol_device {
 
     mx_status_t (*open)(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags);
     // The optional dev_out parameter allows a device to create a per-instance
-    // child drevice on open and return that (resulting in the opener opening
+    // child device on open and return that (resulting in the opener opening
     // that child device instead).  If dev_out is not modified the device itself
     // is opened.
     //
