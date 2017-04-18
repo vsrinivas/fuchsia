@@ -45,6 +45,12 @@ devhost_iostate_t* create_devhost_iostate(mx_device_t* dev) {
     return ios;
 }
 
+#if !DEVHOST_V2
+mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h) {
+    return mxio_dispatcher_add(devhost_rio_dispatcher, h, devhost_rio_handler, ios);
+}
+#endif
+
 mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
 static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
@@ -84,7 +90,15 @@ static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
         r = 1;
     }
 
-    mxio_dispatcher_add(devhost_rio_dispatcher, h1, devhost_rio_handler, newios);
+    if (devhost_start_iostate(newios, h1) < 0) {
+        printf("devhost_get_handles: failed to start iostate\n");
+        while (r > 0) {
+            mx_handle_close(handles[--r]);
+        }
+        free(newios);
+        device_close(dev, flags);
+        return ERR_INTERNAL;
+    }
     return r;
 
 fail2:

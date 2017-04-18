@@ -79,6 +79,8 @@ typedef struct devhost_iostate {
 devhost_iostate_t* create_devhost_iostate(mx_device_t* dev);
 mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
+mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h);
+
 // routines devhost uses to talk to dev coordinator
 mx_status_t devhost_add(mx_device_t* dev, mx_device_t* child);
 mx_status_t devhost_remove(mx_device_t* dev);

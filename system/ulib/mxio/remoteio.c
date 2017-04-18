@@ -106,20 +106,9 @@ static void discard_handles(mx_handle_t* handles, unsigned count) {
     }
 }
 
-mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
-    mxrio_cb_t cb = _cb;
+mx_status_t mxrio_handle_rpc(mx_handle_t h, mxrio_cb_t cb, void* cookie) {
     mxrio_msg_t msg;
     mx_status_t r;
-
-    if (h == 0) {
-        // remote side was closed;
-        msg.op = MXRIO_CLOSE;
-        msg.arg = 0;
-        msg.datalen = 0;
-        msg.hcount = 0;
-        cb(&msg, 0, cookie);
-        return NO_ERROR;
-    }
 
     msg.hcount = MXIO_MAX_HANDLES;
     uint32_t dsz = sizeof(msg);
@@ -167,6 +156,28 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
         return 1;
     } else {
         return r;
+    }
+}
+
+mx_status_t mxrio_handle_close(mxrio_cb_t cb, void* cookie) {
+    mxrio_msg_t msg;
+
+    // remote side was closed;
+    msg.op = MXRIO_CLOSE;
+    msg.arg = 0;
+    msg.datalen = 0;
+    msg.hcount = 0;
+    cb(&msg, 0, cookie);
+    return NO_ERROR;
+}
+
+mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
+    mxrio_cb_t cb = _cb;
+
+    if (h == MX_HANDLE_INVALID) {
+        return mxrio_handle_close(cb, cookie);
+    } else {
+        return mxrio_handle_rpc(h, cb, cookie);
     }
 }
 
