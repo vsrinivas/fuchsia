@@ -770,6 +770,18 @@ go() {
 	fi
 }
 
+function fssh() {
+  ssh -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
+}
+
+function fscp() {
+  scp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
+}
+
+function fsftp() {
+  sftp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
+}
+
 if [[ -n "${ZSH_VERSION}" ]]; then
   ### Zsh Completion
   fpath=(${FUCHSIA_SCRIPTS_DIR}/zsh-completion $fpath[@])
