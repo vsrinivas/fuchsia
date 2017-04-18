@@ -202,7 +202,7 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(
                         std::bind(&HTTPClient<ssl_socket_t>::OnConnect, this,
                                   std::placeholders::_1));
   } else {
-    FTL_LOG(ERROR) << "Resolve(SSL): " << err.message();
+    FTL_VLOG(1) << "Resolve(SSL): " << err.message();
     SendError(network::NETWORK_ERR_NAME_NOT_RESOLVED);
   }
 }
