@@ -159,7 +159,7 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
         for (size_t ix = 0; ix != num_handles; ++ix) {
             auto handle = up->GetHandleLocked(handles[ix]);
             if (!handle)
-                return up->BadHandle(handles[ix], ERR_BAD_HANDLE);
+                return ERR_BAD_HANDLE;
 
             if (handle->dispatcher().get() == channel) {
                 // You may not write a channel endpoint handle
@@ -168,7 +168,7 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
             }
 
             if (!magenta_rights_check(handle, MX_RIGHT_TRANSFER))
-                return up->BadHandle(handles[ix], ERR_ACCESS_DENIED);
+                return ERR_ACCESS_DENIED;
 
             msg->mutable_handles()[ix] = handle;
         }

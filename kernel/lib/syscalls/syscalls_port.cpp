@@ -191,7 +191,7 @@ mx_status_t sys_port_cancel(mx_handle_t handle, mx_handle_t source, uint64_t key
         AutoLock lock(up->handle_table_lock());
         Handle* handle = up->GetHandleLocked(source);
         if (!handle)
-            return up->BadHandle(source, ERR_BAD_HANDLE);
+            return ERR_BAD_HANDLE;
         if (!magenta_rights_check(handle, MX_RIGHT_WRITE))
             return ERR_ACCESS_DENIED;
 

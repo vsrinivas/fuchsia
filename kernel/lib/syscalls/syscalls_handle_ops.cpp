@@ -23,7 +23,7 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
     auto up = ProcessDispatcher::GetCurrent();
     HandleOwner handle(up->RemoveHandle(handle_value));
     if (!handle)
-        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
+        return ERR_BAD_HANDLE;
     return NO_ERROR;
 }
 
@@ -36,10 +36,10 @@ mx_status_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights, u
         AutoLock lock(up->handle_table_lock());
         Handle* source = up->GetHandleLocked(handle_value);
         if (!source)
-            return up->BadHandle(handle_value, ERR_BAD_HANDLE);
+            return ERR_BAD_HANDLE;
 
         if (!magenta_rights_check(source, MX_RIGHT_DUPLICATE))
-            return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
+            return ERR_ACCESS_DENIED;
 
         HandleOwner dest;
         if (rights == MX_RIGHT_SAME_RIGHTS) {
@@ -70,7 +70,7 @@ mx_status_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights, use
         AutoLock lock(up->handle_table_lock());
         source = up->RemoveHandleLocked(handle_value);
         if (!source)
-            return up->BadHandle(handle_value, ERR_BAD_HANDLE);
+            return ERR_BAD_HANDLE;
 
         HandleOwner dest;
         // Used only if |dest| doesn't (successfully) get set below.

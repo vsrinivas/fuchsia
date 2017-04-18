@@ -117,10 +117,10 @@ public:
         mxtl::RefPtr<Dispatcher> generic_dispatcher;
         auto status = GetDispatcherInternal(handle_value, &generic_dispatcher, out_rights);
         if (status != NO_ERROR)
-            return BadHandle(handle_value, status);
+            return status;
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
-            return BadHandle(handle_value, ERR_WRONG_TYPE);
+            return ERR_WRONG_TYPE;
         return NO_ERROR;
     }
 
@@ -141,7 +141,7 @@ public:
             return status;
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
-            return BadHandle(handle_value, ERR_WRONG_TYPE);
+            return ERR_WRONG_TYPE;
         return NO_ERROR;
     }
 
@@ -157,10 +157,6 @@ public:
     mx_koid_t GetKoidForHandle(mx_handle_t handle_value);
 
     bool IsHandleValid(mx_handle_t handle_value);
-
-    // Called when this process attempts to use an invalid handle,
-    // a handle of the wrong type, or a handle with insufficient rights.
-    mx_status_t BadHandle(mx_handle_t handle_value, mx_status_t error);
 
     // accessors
     Mutex* handle_table_lock() TA_RET_CAP(handle_table_lock_) { return &handle_table_lock_; }
@@ -208,9 +204,6 @@ public:
     // Look up a thread in this process given its koid.
     // Returns nullptr if not found.
     mxtl::RefPtr<UserThread> LookupThreadById(mx_koid_t koid);
-
-    uint32_t get_bad_handle_policy() const { return bad_handle_policy_; }
-    mx_status_t set_bad_handle_policy(uint32_t new_policy);
 
     uintptr_t get_debug_addr() const;
     mx_status_t set_debug_addr(uintptr_t addr);
@@ -282,8 +275,6 @@ private:
     mxtl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
     mxtl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(exception_lock_);
     Mutex exception_lock_;
-
-    uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;
 
     // This is the value of _dl_debug_addr from ld.so.
     // See third_party/ulib/musl/ldso/dynlink.c.

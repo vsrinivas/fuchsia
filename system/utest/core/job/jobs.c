@@ -9,6 +9,8 @@
 
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/policy.h>
+
 #include <mini-process/mini-process.h>
 #include <unittest/unittest.h>
 
@@ -63,6 +65,29 @@ static bool create_test(void) {
     ASSERT_EQ(mx_handle_close(vmar1), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(vmar2), NO_ERROR, "");
 
+    END_TEST;
+}
+
+static bool policy_basic_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t job_parent = mx_job_default();
+    ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
+
+    mx_handle_t job_child;
+    ASSERT_EQ(mx_job_create(job_parent, 0u, &job_child), NO_ERROR, "");
+
+    mx_policy_basic_t policy[] = {
+        { MX_BAD_HANDLE_POLICY, MX_POL_TERMINATE },
+        { MX_CREATION_POLICY, MX_POL_CHANNEL_ALLOW | MX_POL_GENERATE_ALARM },
+        { MX_CREATION_POLICY, MX_POL_FIFO_DENY },
+    };
+
+    // TODO(cpu): make this real.
+    ASSERT_EQ(mx_job_set_policy(job_child, MX_JOB_POL_RELATIVE,
+        MX_JOB_POL_BASIC, policy, countof(policy)), ERR_NOT_SUPPORTED, "");
+
+    ASSERT_EQ(mx_handle_close(job_child), NO_ERROR, "");
     END_TEST;
 }
 
@@ -142,6 +167,7 @@ static bool info_task_stats_fails(void) {
 
 BEGIN_TEST_CASE(job_tests)
 RUN_TEST(basic_test)
+RUN_TEST(policy_basic_test)
 RUN_TEST(create_test)
 RUN_TEST(kill_test)
 RUN_TEST(wait_test)

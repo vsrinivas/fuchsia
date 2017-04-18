@@ -175,8 +175,6 @@ typedef struct mx_info_maps {
 
 // Object properties.
 
-// Argument is MX_POLICY_BAD_HANDLE_... (below, uint32_t).
-#define MX_PROP_BAD_HANDLE_POLICY           1u
 // Argument is a uint32_t.
 #define MX_PROP_NUM_STATE_KINDS             2u
 // Argument is a char[MX_MAX_NAME_LEN].
@@ -189,10 +187,5 @@ typedef struct mx_info_maps {
 
 // Argument is the value of ld.so's _dl_debug_addr, a uintptr_t.
 #define MX_PROP_PROCESS_DEBUG_ADDR          5u
-
-// Policies for MX_PROP_BAD_HANDLE_POLICY:
-#define MX_POLICY_BAD_HANDLE_IGNORE         0u
-#define MX_POLICY_BAD_HANDLE_LOG            1u
-#define MX_POLICY_BAD_HANDLE_EXIT           2u
 
 __END_CDECLS

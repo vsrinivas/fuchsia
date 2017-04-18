@@ -401,17 +401,6 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
         return status;
 
     switch (property) {
-        case MX_PROP_BAD_HANDLE_POLICY: {
-            if (size < sizeof(uint32_t))
-                return ERR_BUFFER_TOO_SMALL;
-            auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
-            if (!process)
-                return ERR_WRONG_TYPE;
-            uint32_t value = process->get_bad_handle_policy();
-            if (_value.reinterpret<uint32_t>().copy_to_user(value) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            return NO_ERROR;
-        }
         case MX_PROP_NUM_STATE_KINDS: {
             if (size != sizeof(uint32_t))
                 return ERR_BUFFER_TOO_SMALL;
@@ -472,17 +461,6 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
         return status;
 
     switch (property) {
-        case MX_PROP_BAD_HANDLE_POLICY: {
-            if (size < sizeof(uint32_t))
-                return ERR_BUFFER_TOO_SMALL;
-            auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
-            if (!process)
-                return up->BadHandle(handle_value, ERR_WRONG_TYPE);
-            uint32_t value = 0;
-            if (_value.reinterpret<const uint32_t>().copy_from_user(&value) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            return process->set_bad_handle_policy(value);
-        }
         case MX_PROP_NAME: {
             if (size >= MX_MAX_NAME_LEN)
                 size = MX_MAX_NAME_LEN - 1;
@@ -512,7 +490,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_BUFFER_TOO_SMALL;
             auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
             if (!process)
-                return up->BadHandle(handle_value, ERR_WRONG_TYPE);
+                return ERR_WRONG_TYPE;
             uintptr_t value = 0;
             if (_value.reinterpret<const uintptr_t>().copy_from_user(&value) != NO_ERROR)
                 return ERR_INVALID_ARGS;

@@ -198,6 +198,8 @@ typedef uint32_t mx_rights_t;
 #define MX_RIGHT_SET_PROPERTY     ((mx_rights_t)1u << 7)
 #define MX_RIGHT_ENUMERATE        ((mx_rights_t)1u << 8)
 #define MX_RIGHT_DESTROY          ((mx_rights_t)1u << 9)
+#define MX_RIGHT_SET_POLICY       ((mx_rights_t)1u << 10)
+#define MX_RIGHT_GET_POLICY       ((mx_rights_t)1u << 11)
 
 #define MX_RIGHT_SAME_RIGHTS      ((mx_rights_t)1u << 31)
 

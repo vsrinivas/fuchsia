@@ -24,6 +24,7 @@
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/debug.h>
+#include <magenta/syscalls/policy.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_thread.h>
@@ -488,4 +489,23 @@ mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t options, user_ptr<mx
 
     up->AddHandle(mxtl::move(job_handle));
     return NO_ERROR;
+}
+
+mx_status_t sys_job_set_policy(mx_handle_t job_handle, uint32_t options,
+    uint32_t topic, user_ptr<const void> _policy, uint32_t count) {
+
+    if ((options != MX_JOB_POL_RELATIVE) && (options != MX_JOB_POL_ABSOLUTE))
+        return ERR_INVALID_ARGS;
+    if (topic != MX_JOB_POL_BASIC)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<JobDispatcher> job;
+    auto status = up->GetDispatcherWithRights(job_handle, MX_RIGHT_SET_POLICY, &job);
+    if (status != NO_ERROR)
+        return status;
+
+    // TODO(cpu): implement setting policy.
+    return ERR_NOT_SUPPORTED;
 }

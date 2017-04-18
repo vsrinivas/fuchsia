@@ -158,7 +158,7 @@ mx_status_t sys_resource_connect(mx_handle_t handle, mx_handle_t channel_hv) {
     HandleOwner channel = up->RemoveHandle(channel_hv);
 
     if (!channel) {
-        return up->BadHandle(channel_hv, ERR_BAD_HANDLE);
+        return ERR_BAD_HANDLE;
     } else if (channel->dispatcher()->get_type() != MX_OBJ_TYPE_CHANNEL) {
         result = ERR_WRONG_TYPE;
     } else if (!magenta_rights_check(channel.get(), MX_RIGHT_TRANSFER)) {
