@@ -40,7 +40,25 @@ template("fuchsia_toolchain") {
   }
 }
 
-fuchsia_toolchain(target_cpu) {}
+# The fuchsia toolchains require an assembled sysroot in order to do anything,
+# so we need to create a dependency edge between all targets using the fuchsia
+# toolchain and the sysroot assembly step. The cleanest way to do this in GN is
+# by creating a toolchain dependency from the fuchsia toolchains to the
+# assembly step. Since all targets in GN exist within a toolchain, and all
+# targets inside the fuchsia toolchain need to depend on the sysroot assembly
+# step, we need to create another toolchain to contain the sysroot assembly
+# target.
+fuchsia_toolchain("${target_cpu}-sysroot") {
+}
+
+fuchsia_toolchain(target_cpu) {
+  deps = [
+    "//build/sysroot(//build/toolchain/fuchsia:${target_cpu}-sysroot)",
+  ]
+}
 fuchsia_toolchain("${target_cpu}-shared") {
   is_pic_default = true
+  deps = [
+    "//build/sysroot(//build/toolchain/fuchsia:${target_cpu}-sysroot)",
+  ]
 }

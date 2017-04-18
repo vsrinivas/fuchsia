@@ -29,6 +29,9 @@ import("//build/toolchain/goma.gni")
 #   use_goma
 #     Override the global use_goma setting, useful to opt-out of goma in a
 #     particular toolchain by setting use_gome = false in it.
+#
+#   deps
+#     Dependencies of this toolchain.
 template("clang_toolchain") {
   toolchain(target_name) {
     assert(defined(invoker.cc), "clang_toolchain() must specify a \"cc\" value")
@@ -57,6 +60,7 @@ template("clang_toolchain") {
     forward_variables_from(invoker,
                            [
                              "ar",
+                             "deps",
                              "ld",
                            ])
 

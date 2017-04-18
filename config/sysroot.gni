@@ -10,16 +10,7 @@ declare_args() {
 if (current_os == target_os && target_sysroot != "") {
   sysroot = target_sysroot
 } else if (is_fuchsia) {
-  import("//build/config/fuchsia/config.gni")
-  if (current_cpu == "arm64") {
-    sysroot = "//out/sysroot/aarch64-fuchsia"
-  } else if (current_cpu == "x64") {
-    sysroot = "//out/sysroot/x86_64-fuchsia"
-  } else {
-    sysroot = ""
-  }
-  sysroot_stamp = rebase_path("$sysroot/.stamp")
-  sysroot_version = read_file(sysroot_stamp, "trim string")
+  sysroot = rebase_path("$root_build_dir/sysroot")
 } else if (is_mac) {
   import("//build/config/mac/config.gni")
   sysroot = mac_sdk_path

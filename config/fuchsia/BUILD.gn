@@ -91,11 +91,13 @@ config("toolchain_version_stamp") {
 }
 
 config("compiler_sysroot") {
-  # The sole purpose of SYSROOT_VERSION is to change the command line on every
-  # sysroot update so as to force rebuilds.
-  defines = [ "SYSROOT_VERSION=$sysroot_version" ]
-  cflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
-  ldflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+  # The sysroot for fuchsia lives in a directory called 'sysroot' at the root of
+  # the build directory, which is also the current working directory for the
+  # build. This specifies the sysroot flag as a relative path, which is important
+  # so it matches the output names for the sysroot assembly build edges in ninja,
+  # which doesn't canonicalize paths.
+  cflags = [ "--sysroot=sysroot" ]
+  ldflags = [ "--sysroot=sysroot" ]
   asmflags = cflags
 }
 
