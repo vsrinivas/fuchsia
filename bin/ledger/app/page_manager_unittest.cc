@@ -94,7 +94,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   PageSnapshotPtr snapshot;
   page_manager.BindPageSnapshot(
       std::make_unique<const storage::test::CommitEmptyImpl>(),
-      snapshot.NewRequest());
+      snapshot.NewRequest(), "");
   snapshot.reset();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
@@ -145,7 +145,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   PageWatcherPtr watcher;
   fidl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), std::move(watcher),
+  page1->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher),
                      [this](Status status) {
                        EXPECT_EQ(Status::OK, status);
                        message_loop_.PostQuitTask();

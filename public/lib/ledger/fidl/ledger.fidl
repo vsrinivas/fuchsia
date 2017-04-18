@@ -70,10 +70,13 @@ interface Page {
   GetId() => (array<uint8, 16> id);
 
   // Creates a snapshot of the page. Read operations can only be performed on a
-  // snapshot. Optionally, clients can provide a PageWatcher to receive change
-  // notifications for any change posterior to the returned snapshot.
-  GetSnapshot(PageSnapshot& snapshot_request, PageWatcher? watcher)
-      => (Status status);
+  // snapshot. Optionally, clients can provide a key prefix to scope the
+  // contents of the snapshot. Clients can also provide a PageWatcher to
+  // receive change notifications for any change posterior to the returned
+  // snapshot. If both a key prefix and a PageWatcher request are present, the
+  // key prefix will scope both the snapshot and the PageWatcher.
+  GetSnapshot(PageSnapshot& snapshot_request, array<uint8>? key_prefix,
+      PageWatcher? watcher) => (Status status);
 
   // Mutation operations.
   // Mutations are bundled together into atomic commits. If a transaction is in
@@ -164,33 +167,35 @@ struct Entry {
 };
 
 // The content of a page at a given time. Closing the connection to a |Page|
-// interface closes all |PageSnapshot| interfaces it created.
+// interface closes all |PageSnapshot| interfaces it created. The contents
+// provided by this interface are limited to the prefix provided to the
+// Page.GetSnapshot() call.
 interface PageSnapshot {
-  // Returns the entries in the page with keys matching the given prefix. If
-  // |key_prefix| is NULL, all entries are returned. If the result fits in a
+  // Returns the entries in the page with keys starting from the provided key.
+  // If |key_start| is NULL, all entries are returned. If the result fits in a
   // single fidl message, |status| will be |OK| and |next_token| equal to NULL.
   // Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will have a
   // non-NULL value. To retrieve the remaining results, another call to
   // |GetEntries| should be made, initializing the optional |token| argument
-  // with the value of |next_token| returned in the previous call. |status| will
-  // be |PARTIAL_RESULT| as long as there are more results for the given prefix
-  // and |OK| once finished.
+  // with the value of |next_token| returned in the previous call. |status|
+  // will be |PARTIAL_RESULT| as long as there are more results and |OK| once
+  // finished.
   // Only |EAGER| values are guaranteed to be returned inside |entries|.
   // Missing |LAZY| values can be retrieved over the network using Fetch().
   // The returned |entries| are sorted by |key|.
-  GetEntries(array<uint8>? key_prefix, array<uint8>? token)
+  GetEntries(array<uint8>? key_start, array<uint8>? token)
       => (Status status, array<Entry>? entries, array<uint8>? next_token);
 
-  // Returns the keys of all entries in the page that match the given prefix. If
-  // |key_prefix| is NULL, all entries are returned. If the result fits in a
-  // single FIDL message, |status| will be |OK| and |next_token| equal to NULL.
-  // Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will have a
-  // non-NULL value. To retrieve the remaining results, another call to
-  // |GetKeys| should be made, initializing the optional |token| argument
-  // with the value of |next_token| returned in the previous call.
+  // Returns the keys of all entries in the page starting from the provided
+  // key. If |key_start| is NULL, all entries are returned. If the result fits
+  // in a single FIDL message, |status| will be |OK| and |next_token| equal to
+  // NULL. Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will
+  // have a non-NULL value. To retrieve the remaining results, another call to
+  // |GetKeys| should be made, initializing the optional |token| argument with
+  // the value of |next_token| returned in the previous call.
   // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
-  // as there are more results for the given prefix and |OK| once finished.
-  GetKeys(array<uint8>? key_prefix, array<uint8>? token)
+  // as there are more results and |OK| once finished.
+  GetKeys(array<uint8>? key_start, array<uint8>? token)
       => (Status status, array<array<uint8>>? keys, array<uint8>? next_token);
 
   // Returns the value of a given key.

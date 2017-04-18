@@ -59,13 +59,15 @@ void ConflictResolverClient::Start() {
 
   PageSnapshotPtr page_snapshot_ancestor;
   manager_->BindPageSnapshot(ancestor_->Clone(),
-                             page_snapshot_ancestor.NewRequest());
+                             page_snapshot_ancestor.NewRequest(), "");
 
   PageSnapshotPtr page_snapshot_left;
-  manager_->BindPageSnapshot(left_->Clone(), page_snapshot_left.NewRequest());
+  manager_->BindPageSnapshot(left_->Clone(), page_snapshot_left.NewRequest(),
+                             "");
 
   PageSnapshotPtr page_snapshot_right;
-  manager_->BindPageSnapshot(right_->Clone(), page_snapshot_right.NewRequest());
+  manager_->BindPageSnapshot(right_->Clone(), page_snapshot_right.NewRequest(),
+                             "");
 
   in_client_request_ = true;
   conflict_resolver_->Resolve(std::move(page_snapshot_left),
@@ -164,7 +166,7 @@ void ConflictResolverClient::GetDiff(
     const std::function<void(Status, PageChangePtr, fidl::Array<uint8_t>)>&
         callback) {
   diff_utils::ComputePageChange(
-      storage_, *ancestor_, commit, convert::ToString(token),
+      storage_, *ancestor_, commit, "", convert::ToString(token),
       fidl_serialization::kMaxInlineDataSize,
       [
         weak_this = weak_factory_.GetWeakPtr(), callback = std::move(callback)

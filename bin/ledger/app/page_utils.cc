@@ -104,4 +104,10 @@ void PageUtils::GetPartialReferenceAsBuffer(
       });
 }
 
+bool PageUtils::MatchesPrefix(const std::string& key,
+                              const std::string& prefix) {
+  return convert::ExtendedStringView(key).substr(0, prefix.size()) ==
+         convert::ExtendedStringView(prefix);
+}
+
 }  // namespace ledger

@@ -29,18 +29,19 @@ fidl::Array<uint8_t> RandomArray(int size);
 
 fidl::Array<uint8_t> PageGetId(PagePtr* page);
 
-PageSnapshotPtr PageGetSnapshot(PagePtr* page);
+PageSnapshotPtr PageGetSnapshot(PagePtr* page,
+                                fidl::Array<uint8_t> prefix = nullptr);
 
 fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
-                                                  fidl::Array<uint8_t> prefix);
+                                                  fidl::Array<uint8_t> start);
 fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
-                                                  fidl::Array<uint8_t> prefix,
+                                                  fidl::Array<uint8_t> start,
                                                   int* num_queries);
 
 fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
-                                         fidl::Array<uint8_t> prefix);
+                                         fidl::Array<uint8_t> start);
 fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
-                                         fidl::Array<uint8_t> prefix,
+                                         fidl::Array<uint8_t> start,
                                          int* num_queries);
 
 std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot,

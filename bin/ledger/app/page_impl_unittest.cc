@@ -116,13 +116,13 @@ class PageImplTest : public test::TestWithMessageLoop {
     EXPECT_FALSE(RunLoopWithTimeout());
   }
 
-  PageSnapshotPtr GetSnapshot() {
+  PageSnapshotPtr GetSnapshot(fidl::Array<uint8_t> prefix = nullptr) {
     auto callback_getsnapshot = [this](Status status) {
       EXPECT_EQ(Status::OK, status);
       message_loop_.PostQuitTask();
     };
     PageSnapshotPtr snapshot;
-    page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr,
+    page_ptr_->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr,
                            callback_getsnapshot);
     EXPECT_FALSE(RunLoopWithTimeout());
     return snapshot;
@@ -596,6 +596,93 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
   EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
 }
 
+TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
+  std::string eager_key("001-a_key");
+  std::string eager_value("an eager value");
+  std::string lazy_key("002-another_key");
+  std::string lazy_value("a lazy value");
+
+  auto callback_statusok = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  };
+
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
+                 callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY,
+                             callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  PageSnapshotPtr snapshot = GetSnapshot(convert::ToArray("001"));
+  fidl::Array<EntryPtr> actual_entries;
+  auto callback_getentries = [this, &actual_entries](
+                                 Status status, fidl::Array<EntryPtr> entries,
+                                 fidl::Array<uint8_t> next_token) {
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(next_token.is_null());
+    actual_entries = std::move(entries);
+    message_loop_.PostQuitTask();
+  };
+  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  ASSERT_EQ(1u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
+
+  snapshot = GetSnapshot(convert::ToArray("00"));
+  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
+}
+
+TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
+  std::string eager_key("001-a_key");
+  std::string eager_value("an eager value");
+  std::string lazy_key("002-another_key");
+  std::string lazy_value("a lazy value");
+
+  auto callback_statusok = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  };
+
+  page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
+                 callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
+                             convert::ToArray(lazy_value), Priority::LAZY,
+                             callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  PageSnapshotPtr snapshot = GetSnapshot();
+  fidl::Array<EntryPtr> actual_entries;
+  auto callback_getentries = [this, &actual_entries](
+                                 Status status, fidl::Array<EntryPtr> entries,
+                                 fidl::Array<uint8_t> next_token) {
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(next_token.is_null());
+    actual_entries = std::move(entries);
+    message_loop_.PostQuitTask();
+  };
+  snapshot->GetEntries(convert::ToArray("002"), nullptr, callback_getentries);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  ASSERT_EQ(1u, actual_entries.size());
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[0]->key));
+
+  snapshot->GetEntries(convert::ToArray("001"), nullptr, callback_getentries);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  ASSERT_EQ(2u, actual_entries.size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
+}
+
 TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   std::string key1("some_key");
   std::string value1("a small value");
@@ -684,6 +771,102 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
     ASSERT_EQ(ftl::StringPrintf("key %04d", static_cast<int>(i)),
               convert::ToString(actual_keys[i]));
   }
+}
+
+TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
+  std::string key1("001-some_key");
+  std::string value1("a small value");
+  std::string key2("002-some_key2");
+  std::string value2("another value");
+
+  auto callback_statusok = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  };
+  page_ptr_->StartTransaction(callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1),
+                 callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2),
+                 callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->Commit(callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  PageSnapshotPtr snapshot = GetSnapshot(convert::ToArray("001"));
+
+  fidl::Array<fidl::Array<uint8_t>> actual_keys;
+  auto callback_getkeys = [this, &actual_keys](
+                              Status status,
+                              fidl::Array<fidl::Array<uint8_t>> keys,
+                              fidl::Array<uint8_t> next_token) {
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(next_token.is_null());
+    actual_keys = std::move(keys);
+    message_loop_.PostQuitTask();
+  };
+  snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(1u, actual_keys.size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys[0]));
+
+  snapshot = GetSnapshot(convert::ToArray("00"));
+  snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(2u, actual_keys.size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys[0]));
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[1]));
+}
+
+TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
+  std::string key1("001-some_key");
+  std::string value1("a small value");
+  std::string key2("002-some_key2");
+  std::string value2("another value");
+
+  auto callback_statusok = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  };
+  page_ptr_->StartTransaction(callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1),
+                 callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2),
+                 callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  page_ptr_->Commit(callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  PageSnapshotPtr snapshot = GetSnapshot();
+
+  fidl::Array<fidl::Array<uint8_t>> actual_keys;
+  auto callback_getkeys = [this, &actual_keys](
+                              Status status,
+                              fidl::Array<fidl::Array<uint8_t>> keys,
+                              fidl::Array<uint8_t> next_token) {
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(next_token.is_null());
+    actual_keys = std::move(keys);
+    message_loop_.PostQuitTask();
+  };
+  snapshot->GetKeys(convert::ToArray("002"), nullptr, callback_getkeys);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(1u, actual_keys.size());
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[0]));
+
+  snapshot = GetSnapshot();
+  snapshot->GetKeys(convert::ToArray("001"), nullptr, callback_getkeys);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(2u, actual_keys.size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys[0]));
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[1]));
 }
 
 TEST_F(PageImplTest, SnapshotGetSmall) {
@@ -830,9 +1013,11 @@ TEST_F(PageImplTest, ParallelPut) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(snapshot1.NewRequest(), nullptr, callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot1.NewRequest(), nullptr, nullptr,
+                         callback_getsnapshot);
   EXPECT_FALSE(RunLoopWithTimeout());
-  page_ptr2->GetSnapshot(snapshot2.NewRequest(), nullptr, callback_getsnapshot);
+  page_ptr2->GetSnapshot(snapshot2.NewRequest(), nullptr, nullptr,
+                         callback_getsnapshot);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   std::string actual_value1;

@@ -64,7 +64,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
@@ -92,7 +92,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
@@ -117,7 +117,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChange) {
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
@@ -171,7 +171,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
@@ -197,7 +197,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
@@ -239,7 +239,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   Watcher watcher1(watcher1_ptr.NewRequest(),
                    [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), std::move(watcher1_ptr),
+  page1->GetSnapshot(snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
@@ -247,7 +247,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   Watcher watcher2(watcher2_ptr.NewRequest(),
                    [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
   PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), std::move(watcher2_ptr),
+  page2->GetSnapshot(snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
@@ -307,7 +307,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
@@ -337,7 +337,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   Watcher watcher1(watcher1_ptr.NewRequest(),
                    [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), std::move(watcher1_ptr),
+  page1->GetSnapshot(snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
@@ -345,7 +345,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   Watcher watcher2(watcher2_ptr.NewRequest(),
                    [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
   PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), std::move(watcher2_ptr),
+  page2->GetSnapshot(snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
@@ -411,7 +411,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   });
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
@@ -461,6 +461,68 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(start_transaction_callback_called);
   EXPECT_EQ(Status::OK, start_transaction_status);
+}
+
+TEST_F(PageWatcherIntegrationTest, PageWatcherPrefix) {
+  PagePtr page = GetTestPage();
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(watcher_ptr.NewRequest(),
+                  [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+
+  auto callback_statusok = [](Status status) { EXPECT_EQ(Status::OK, status); };
+  PageSnapshotPtr snapshot;
+  page->GetSnapshot(snapshot.NewRequest(), convert::ToArray("01"),
+                    std::move(watcher_ptr), callback_statusok);
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->StartTransaction(callback_statusok);
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  page->Put(convert::ToArray("00-key"), convert::ToArray("value-00"),
+            callback_statusok);
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  page->Put(convert::ToArray("01-key"), convert::ToArray("value-01"),
+            callback_statusok);
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  page->Put(convert::ToArray("02-key"), convert::ToArray("value-02"),
+            callback_statusok);
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  page->Commit(callback_statusok);
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(1u, watcher.changes_seen);
+  EXPECT_EQ(ResultState::COMPLETED, watcher.last_result_state_);
+  PageChangePtr change = std::move(watcher.last_page_change_);
+  ASSERT_EQ(1u, change->changes.size());
+  EXPECT_EQ("01-key", convert::ToString(change->changes[0]->key));
+}
+
+TEST_F(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
+  PagePtr page = GetTestPage();
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(watcher_ptr.NewRequest(),
+                  [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+
+  auto callback_statusok = [](Status status) { EXPECT_EQ(Status::OK, status); };
+  PageSnapshotPtr snapshot;
+  page->GetSnapshot(snapshot.NewRequest(), convert::ToArray("01"),
+                    std::move(watcher_ptr), callback_statusok);
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->Put(convert::ToArray("00-key"), convert::ToArray("value-00"),
+            callback_statusok);
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->StartTransaction([](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  });
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Starting a transaction drains all watcher notifications, so if we were to
+  // be called, we would know at this point.
+  EXPECT_EQ(0u, watcher.changes_seen);
 }
 
 }  // namespace

@@ -22,6 +22,7 @@ class PageImpl : public Page {
   void GetId(const GetIdCallback& callback) override;
 
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+                   fidl::Array<uint8_t> key_prefix,
                    fidl::InterfaceHandle<PageWatcher> watcher,
                    const GetSnapshotCallback& callback) override;
 

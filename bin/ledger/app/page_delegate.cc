@@ -44,6 +44,7 @@ void PageDelegate::GetId(const Page::GetIdCallback& callback) {
 // GetSnapshot(PageSnapshot& snapshot, PageWatcher& watcher) => (Status status);
 void PageDelegate::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+    fidl::Array<uint8_t> key_prefix,
     fidl::InterfaceHandle<PageWatcher> watcher,
     const Page::GetSnapshotCallback& callback) {
   auto tracked_callback = TrackCallback(std::move(callback));
@@ -51,21 +52,23 @@ void PageDelegate::GetSnapshot(
       GetCurrentCommitId(),
       ftl::MakeCopyable([
         this, snapshot_request = std::move(snapshot_request),
-        watcher = std::move(watcher), callback = std::move(tracked_callback)
+        key_prefix = std::move(key_prefix), watcher = std::move(watcher),
+        callback = std::move(tracked_callback)
       ](storage::Status status,
         std::unique_ptr<const storage::Commit> commit) mutable {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status));
           return;
         }
-        manager_->BindPageSnapshot(commit->Clone(),
-                                   std::move(snapshot_request));
+        std::string prefix = convert::ToString(key_prefix);
         if (watcher) {
           PageWatcherPtr watcher_ptr =
               PageWatcherPtr::Create(std::move(watcher));
           branch_tracker_.RegisterPageWatcher(std::move(watcher_ptr),
-                                              std::move(commit));
+                                              commit->Clone(), prefix);
         }
+        manager_->BindPageSnapshot(
+            std::move(commit), std::move(snapshot_request), std::move(prefix));
         callback(Status::OK);
       }));
 }

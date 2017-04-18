@@ -50,7 +50,8 @@ class PageManager {
   // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
   // the request.
   void BindPageSnapshot(std::unique_ptr<const storage::Commit> commit,
-                        fidl::InterfaceRequest<PageSnapshot> snapshot_request);
+                        fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+                        std::string key_prefix);
 
   void set_on_empty(const ftl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;

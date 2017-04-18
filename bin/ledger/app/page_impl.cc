@@ -25,12 +25,13 @@ void PageImpl::GetId(const GetIdCallback& callback) {
 // GetSnapshot(PageSnapshot& snapshot, PageWatcher& watcher) => (Status status);
 void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+    fidl::Array<uint8_t> key_prefix,
     fidl::InterfaceHandle<PageWatcher> watcher,
     const GetSnapshotCallback& callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_get_snapshot");
-  delegate_->GetSnapshot(std::move(snapshot_request), std::move(watcher),
-                         std::move(timed_callback));
+  delegate_->GetSnapshot(std::move(snapshot_request), std::move(key_prefix),
+                         std::move(watcher), std::move(timed_callback));
 }
 
 // Put(array<uint8> key, array<uint8> value) => (Status status);

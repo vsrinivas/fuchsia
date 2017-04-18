@@ -58,21 +58,21 @@ fidl::Array<uint8_t> PageGetId(PagePtr* page) {
   return page_id;
 }
 
-PageSnapshotPtr PageGetSnapshot(PagePtr* page) {
+PageSnapshotPtr PageGetSnapshot(PagePtr* page, fidl::Array<uint8_t> prefix) {
   PageSnapshotPtr snapshot;
-  (*page)->GetSnapshot(snapshot.NewRequest(), nullptr,
+  (*page)->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr,
                        [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page->WaitForIncomingResponse());
   return snapshot;
 }
 
 fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
-                                                  fidl::Array<uint8_t> prefix) {
-  return SnapshotGetKeys(snapshot, std::move(prefix), nullptr);
+                                                  fidl::Array<uint8_t> start) {
+  return SnapshotGetKeys(snapshot, std::move(start), nullptr);
 }
 
 fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
-                                                  fidl::Array<uint8_t> prefix,
+                                                  fidl::Array<uint8_t> start,
                                                   int* num_queries) {
   fidl::Array<fidl::Array<uint8_t>> result;
   fidl::Array<uint8_t> next_token = nullptr;
@@ -81,7 +81,7 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
   }
   do {
     (*snapshot)->GetKeys(
-        std::move(prefix), std::move(next_token),
+        std::move(start), std::move(next_token),
         [&result, &next_token, &num_queries](
             Status status, fidl::Array<fidl::Array<uint8_t>> keys,
             fidl::Array<uint8_t> new_next_token) {
@@ -100,12 +100,12 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
 }
 
 fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
-                                         fidl::Array<uint8_t> prefix) {
-  return SnapshotGetEntries(snapshot, std::move(prefix), nullptr);
+                                         fidl::Array<uint8_t> start) {
+  return SnapshotGetEntries(snapshot, std::move(start), nullptr);
 }
 
 fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
-                                         fidl::Array<uint8_t> prefix,
+                                         fidl::Array<uint8_t> start,
                                          int* num_queries) {
   fidl::Array<EntryPtr> result;
   fidl::Array<uint8_t> next_token = nullptr;
@@ -114,7 +114,7 @@ fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
   }
   do {
     (*snapshot)->GetEntries(
-        std::move(prefix), std::move(next_token),
+        std::move(start), std::move(next_token),
         [&result, &next_token, &num_queries](
             Status status, fidl::Array<EntryPtr> entries,
             fidl::Array<uint8_t> new_next_token) {

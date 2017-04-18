@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <functional>
 #include <limits>
 #include <queue>
@@ -32,21 +33,19 @@ EntryPtr CreateEntry(const storage::Entry& entry) {
   return entry_ptr;
 }
 
-bool MatchesPrefix(const std::string& key, const std::string& prefix) {
-  return convert::ExtendedStringView(key).substr(0, prefix.size()) ==
-         convert::ExtendedStringView(prefix);
-}
-
 }  // namespace
 
 PageSnapshotImpl::PageSnapshotImpl(
     storage::PageStorage* page_storage,
-    std::unique_ptr<const storage::Commit> commit)
-    : page_storage_(page_storage), commit_(std::move(commit)) {}
+    std::unique_ptr<const storage::Commit> commit,
+    std::string key_prefix)
+    : page_storage_(page_storage),
+      commit_(std::move(commit)),
+      key_prefix_(std::move(key_prefix)) {}
 
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
-void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
+void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
                                   fidl::Array<uint8_t> token,
                                   const GetEntriesCallback& callback) {
   // |token| represents the first key to be returned in the list of entries.
@@ -73,34 +72,36 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
           storage::Status::OK);
 
   auto context = std::make_unique<Context>();
-  std::string prefix = convert::ToString(key_prefix);
-  auto on_next = ftl::MakeCopyable(
-      [ this, prefix, context = context.get(), waiter ](storage::Entry entry) {
-        if (!MatchesPrefix(entry.key, prefix)) {
-          return false;
-        }
-        context->size += fidl_serialization::GetEntrySize(entry.key.size());
-        if (context->size > fidl_serialization::kMaxInlineDataSize &&
-            context->entries.size()) {
-          context->next_token = std::move(entry.key);
-          return false;
-        }
-        context->entries.push_back(CreateEntry(entry));
-        page_storage_->GetObject(
-            entry.object_id, storage::PageStorage::Location::LOCAL,
-            [
-              priority = entry.priority, waiter_callback = waiter->NewCallback()
-            ](storage::Status status,
-              std::unique_ptr<const storage::Object> object) {
-              if (status == storage::Status::NOT_FOUND &&
-                  priority == storage::KeyPriority::LAZY) {
-                waiter_callback(storage::Status::OK, nullptr);
-              } else {
-                waiter_callback(status, std::move(object));
-              }
-            });
-        return true;
-      });
+  // Use |token| for the first key if present.
+  std::string start = token
+                          ? convert::ToString(token)
+                          : std::max(key_prefix_, convert::ToString(key_start));
+  auto on_next = ftl::MakeCopyable([ this, context = context.get(),
+                                     waiter ](storage::Entry entry) {
+    if (!PageUtils::MatchesPrefix(entry.key, key_prefix_)) {
+      return false;
+    }
+    context->size += fidl_serialization::GetEntrySize(entry.key.size());
+    if (context->size > fidl_serialization::kMaxInlineDataSize &&
+        context->entries.size()) {
+      context->next_token = std::move(entry.key);
+      return false;
+    }
+    context->entries.push_back(CreateEntry(entry));
+    page_storage_->GetObject(
+        entry.object_id, storage::PageStorage::Location::LOCAL,
+        [ priority = entry.priority, waiter_callback = waiter->NewCallback() ](
+            storage::Status status,
+            std::unique_ptr<const storage::Object> object) {
+          if (status == storage::Status::NOT_FOUND &&
+              priority == storage::KeyPriority::LAZY) {
+            waiter_callback(storage::Status::OK, nullptr);
+          } else {
+            waiter_callback(status, std::move(object));
+          }
+        });
+    return true;
+  });
 
   auto on_done = ftl::MakeCopyable([
     waiter, context = std::move(context), callback = std::move(timed_callback)
@@ -153,15 +154,11 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
         });
     waiter->Finalize(result_callback);
   });
-  // Use |prefix| for the stopping condition, but use |token| for the first key.
-  if (token) {
-    prefix = convert::ToString(token);
-  }
-  page_storage_->GetCommitContents(*commit_, std::move(prefix),
+  page_storage_->GetCommitContents(*commit_, std::move(start),
                                    std::move(on_next), std::move(on_done));
 }
 
-void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
+void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_start,
                                fidl::Array<uint8_t> token,
                                const GetKeysCallback& callback) {
   // Represents the information that needs to be shared between on_next and
@@ -181,20 +178,19 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_keys");
 
   auto context = std::make_unique<Context>();
-  auto on_next = ftl::MakeCopyable([
-    key_prefix = convert::ToString(key_prefix), context = context.get()
-  ](storage::Entry entry) {
-    if (!MatchesPrefix(entry.key, key_prefix)) {
-      return false;
-    }
-    context->size += fidl_serialization::GetByteArraySize(entry.key.size());
-    if (context->size > fidl_serialization::kMaxInlineDataSize) {
-      context->next_token = entry.key;
-      return false;
-    }
-    context->keys.push_back(convert::ToArray(entry.key));
-    return true;
-  });
+  auto on_next = ftl::MakeCopyable(
+      [ this, context = context.get() ](storage::Entry entry) {
+        if (!PageUtils::MatchesPrefix(entry.key, key_prefix_)) {
+          return false;
+        }
+        context->size += fidl_serialization::GetByteArraySize(entry.key.size());
+        if (context->size > fidl_serialization::kMaxInlineDataSize) {
+          context->next_token = entry.key;
+          return false;
+        }
+        context->keys.push_back(convert::ToArray(entry.key));
+        return true;
+      });
   auto on_done = ftl::MakeCopyable([
     context = std::move(context), callback = std::move(timed_callback)
   ](storage::Status s) {
@@ -206,8 +202,9 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
     }
   });
   if (token.is_null()) {
-    page_storage_->GetCommitContents(*commit_, convert::ToString(key_prefix),
-                                     std::move(on_next), std::move(on_done));
+    page_storage_->GetCommitContents(
+        *commit_, std::max(convert::ToString(key_start), key_prefix_),
+        std::move(on_next), std::move(on_done));
 
   } else {
     page_storage_->GetCommitContents(*commit_, convert::ToString(token),

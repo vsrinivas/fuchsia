@@ -46,6 +46,7 @@ class PageDelegate {
   void GetId(const Page::GetIdCallback& callback);
 
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+                   fidl::Array<uint8_t> key_prefix,
                    fidl::InterfaceHandle<PageWatcher> watcher,
                    const Page::GetSnapshotCallback& callback);
 

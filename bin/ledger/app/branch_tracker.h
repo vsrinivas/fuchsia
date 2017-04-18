@@ -36,7 +36,8 @@ class BranchTracker : public storage::CommitWatcher {
 
   // Registers a new PageWatcher interface.
   void RegisterPageWatcher(PageWatcherPtr page_watcher_ptr,
-                           std::unique_ptr<const storage::Commit> base_commit);
+                           std::unique_ptr<const storage::Commit> base_commit,
+                           std::string key_prefix);
 
   // Informs the BranchTracker that a transaction is in progress. It first
   // drains all pending Watcher updates, then stop sending them until

@@ -76,7 +76,7 @@ void SyncBenchmark::Run() {
   beta->GetRootPage(beta_page_.NewRequest(),
                     benchmark::QuitOnErrorCallback("GetRootPage"));
   ledger::PageSnapshotPtr snapshot;
-  beta_page_->GetSnapshot(snapshot.NewRequest(),
+  beta_page_->GetSnapshot(snapshot.NewRequest(), nullptr,
                           page_watcher_binding_.NewBinding(),
                           [this](ledger::Status status) {
                             if (benchmark::QuitOnError(status, "GetSnapshot")) {

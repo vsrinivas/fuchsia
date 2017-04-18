@@ -20,10 +20,12 @@ class BranchTracker::PageWatcherContainer {
                        PageWatcherPtr watcher,
                        PageManager* page_manager,
                        storage::PageStorage* storage,
-                       std::unique_ptr<const storage::Commit> base_commit)
+                       std::unique_ptr<const storage::Commit> base_commit,
+                       std::string key_prefix)
       : change_in_flight_(false),
         last_commit_(std::move(base_commit)),
         coroutine_service_(coroutine_service),
+        key_prefix_(std::move(key_prefix)),
         manager_(page_manager),
         storage_(storage),
         interface_(std::move(watcher)) {
@@ -132,8 +134,8 @@ class BranchTracker::PageWatcherContainer {
           on_done = std::move(on_done)
         ](fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
           if (snapshot_request) {
-            manager_->BindPageSnapshot(new_commit->Clone(),
-                                       std::move(snapshot_request));
+            manager_->BindPageSnapshot(
+                new_commit->Clone(), std::move(snapshot_request), key_prefix_);
           }
           if (state != ResultState::COMPLETED &&
               state != ResultState::PARTIAL_COMPLETED) {
@@ -167,7 +169,7 @@ class BranchTracker::PageWatcherContainer {
 
     // TODO(etiennej): See LE-74: clean object ownership
     diff_utils::ComputePageChange(
-        storage_, *last_commit_, *current_commit_, "",
+        storage_, *last_commit_, *current_commit_, key_prefix_, key_prefix_,
         std::numeric_limits<size_t>::max(),
         ftl::MakeCopyable([ this, new_commit = std::move(current_commit_) ](
             Status status,
@@ -233,6 +235,7 @@ class BranchTracker::PageWatcherContainer {
   std::unique_ptr<const storage::Commit> current_commit_;
   coroutine::CoroutineService* coroutine_service_;
   coroutine::CoroutineHandler* handler_ = nullptr;
+  const std::string key_prefix_;
   PageManager* manager_;
   storage::PageStorage* storage_;
   PageWatcherPtr interface_;
@@ -341,9 +344,10 @@ void BranchTracker::StopTransaction(
 
 void BranchTracker::RegisterPageWatcher(
     PageWatcherPtr page_watcher_ptr,
-    std::unique_ptr<const storage::Commit> base_commit) {
+    std::unique_ptr<const storage::Commit> base_commit,
+    std::string key_prefix) {
   watchers_.emplace(coroutine_service_, std::move(page_watcher_ptr), manager_,
-                    storage_, std::move(base_commit));
+                    storage_, std::move(base_commit), std::move(key_prefix));
 }
 
 bool BranchTracker::IsEmpty() {

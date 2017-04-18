@@ -22,6 +22,7 @@ void ComputePageChange(
     storage::PageStorage* storage,
     const storage::Commit& base,
     const storage::Commit& other,
+    std::string prefix_key,
     std::string min_key,
     size_t max_fidl_size,
     std::function<void(Status, std::pair<PageChangePtr, std::string>)>
@@ -43,9 +44,18 @@ void ComputePageChange(
   context->page_change->deleted_keys =
       fidl::Array<fidl::Array<uint8_t>>::New(0);
 
+  if (min_key < prefix_key) {
+    min_key = prefix_key;
+  }
+
   // |on_next| is called for each change on the diff
-  auto on_next = [ storage, waiter, context = context.get(),
-                   max_fidl_size ](storage::EntryChange change) {
+  auto on_next = [
+    storage, waiter, prefix_key = std::move(prefix_key),
+    context = context.get(), max_fidl_size
+  ](storage::EntryChange change) {
+    if (!PageUtils::MatchesPrefix(change.entry.key, prefix_key)) {
+      return false;
+    }
     size_t entry_size =
         change.deleted
             ? fidl_serialization::GetByteArraySize(change.entry.key.size())

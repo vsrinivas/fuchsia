@@ -36,6 +36,9 @@ class PageUtils {
       Status not_found_status,
       std::function<void(Status, mx::vmo)> callback);
 
+  // Returns true if a key matches the provided prefix, false otherwise.
+  static bool MatchesPrefix(const std::string& key, const std::string& prefix);
+
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageUtils);
 };

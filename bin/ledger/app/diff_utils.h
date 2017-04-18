@@ -25,6 +25,7 @@ void ComputePageChange(
     storage::PageStorage* storage,
     const storage::Commit& base,
     const storage::Commit& other,
+    std::string prefix_key,
     std::string min_key,
     size_t max_fidl_size,
     std::function<void(Status, std::pair<PageChangePtr, std::string>)>

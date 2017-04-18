@@ -121,31 +121,42 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   }
 
   // Get keys matching the prefix "0".
-  result = SnapshotGetKeys(&snapshot,
-                           fidl::Array<uint8_t>::From(std::vector<uint8_t>{0}));
+  snapshot = PageGetSnapshot(
+      &page, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0}));
+  result = SnapshotGetKeys(&snapshot, fidl::Array<uint8_t>());
   EXPECT_EQ(N, result.size());
   for (size_t i = 0; i < N; ++i) {
     EXPECT_TRUE(keys[i].Equals(result[i]));
   }
 
   // Get keys matching the prefix "00".
-  result = SnapshotGetKeys(
-      &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
+  snapshot = PageGetSnapshot(
+      &page, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
+  result = SnapshotGetKeys(&snapshot, fidl::Array<uint8_t>());
   ASSERT_EQ(2u, result.size());
   for (size_t i = 0; i < 2u; ++i) {
     EXPECT_TRUE(keys[i].Equals(result[i]));
   }
 
   // Get keys matching the prefix "010".
-  result = SnapshotGetKeys(
-      &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
+  snapshot = PageGetSnapshot(
+      &page, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
+  result = SnapshotGetKeys(&snapshot, fidl::Array<uint8_t>());
   ASSERT_EQ(1u, result.size());
   EXPECT_TRUE(keys[2].Equals(result[0]));
 
   // Get keys matching the prefix "5".
-  result = SnapshotGetKeys(&snapshot,
-                           fidl::Array<uint8_t>::From(std::vector<uint8_t>{5}));
+  snapshot = PageGetSnapshot(
+      &page, fidl::Array<uint8_t>::From(std::vector<uint8_t>{5}));
+  result = SnapshotGetKeys(&snapshot, fidl::Array<uint8_t>());
   EXPECT_EQ(0u, result.size());
+
+  // Get keys matching the prefix "0" and starting with the key "010".
+  snapshot = PageGetSnapshot(
+      &page, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0}));
+  result = SnapshotGetKeys(
+      &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
+  EXPECT_EQ(2u, result.size());
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
@@ -221,8 +232,9 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   }
 
   // Get entries matching the prefix "0".
-  entries = SnapshotGetEntries(
-      &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0}));
+  snapshot = PageGetSnapshot(
+      &page, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0}));
+  entries = SnapshotGetEntries(&snapshot, fidl::Array<uint8_t>());
   EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
@@ -230,8 +242,9 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   }
 
   // Get entries matching the prefix "00".
-  entries = SnapshotGetEntries(
-      &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
+  snapshot = PageGetSnapshot(
+      &page, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
+  entries = SnapshotGetEntries(&snapshot, fidl::Array<uint8_t>());
   ASSERT_EQ(2u, entries.size());
   for (size_t i = 0; i < 2; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
@@ -239,15 +252,18 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   }
 
   // Get keys matching the prefix "010".
-  entries = SnapshotGetEntries(
-      &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
+  snapshot = PageGetSnapshot(
+      &page, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
+  entries = SnapshotGetEntries(&snapshot, fidl::Array<uint8_t>());
   ASSERT_EQ(1u, entries.size());
   EXPECT_TRUE(keys[2].Equals(entries[0]->key));
   EXPECT_TRUE(values[2].Equals(ToArray(entries[0]->value)));
 
   // Get keys matching the prefix "5".
-  snapshot->GetEntries(fidl::Array<uint8_t>::From(std::vector<uint8_t>{5}),
-                       nullptr,
+  snapshot = PageGetSnapshot(
+      &page, fidl::Array<uint8_t>::From(std::vector<uint8_t>{5}));
+
+  snapshot->GetEntries(fidl::Array<uint8_t>(), nullptr,
                        [&entries](Status status, fidl::Array<EntryPtr> e,
                                   fidl::Array<uint8_t> next_token) {
                          EXPECT_EQ(Status::OK, status);

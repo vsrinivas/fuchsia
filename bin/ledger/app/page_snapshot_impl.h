@@ -17,15 +17,16 @@ namespace ledger {
 class PageSnapshotImpl : public PageSnapshot {
  public:
   PageSnapshotImpl(storage::PageStorage* page_storage,
-                   std::unique_ptr<const storage::Commit> commit);
+                   std::unique_ptr<const storage::Commit> commit,
+                   std::string key_prefix);
   ~PageSnapshotImpl();
 
  private:
   // PageSnapshot:
-  void GetEntries(fidl::Array<uint8_t> key_prefix,
+  void GetEntries(fidl::Array<uint8_t> key_start,
                   fidl::Array<uint8_t> token,
                   const GetEntriesCallback& callback) override;
-  void GetKeys(fidl::Array<uint8_t> key_prefix,
+  void GetKeys(fidl::Array<uint8_t> key_start,
                fidl::Array<uint8_t> token,
                const GetKeysCallback& callback) override;
   void Get(fidl::Array<uint8_t> key, const GetCallback& callback) override;
@@ -37,6 +38,7 @@ class PageSnapshotImpl : public PageSnapshot {
 
   storage::PageStorage* page_storage_;
   std::unique_ptr<const storage::Commit> commit_;
+  const std::string key_prefix_;
 };
 
 }  // namespace ledger
