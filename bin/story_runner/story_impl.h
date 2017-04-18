@@ -190,7 +190,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
     StoryMarkerImpl();
     ~StoryMarkerImpl() override;
 
-    void AddBinding(fidl::InterfaceRequest<StoryMarker> request);
+    void Connect(fidl::InterfaceRequest<StoryMarker> request);
 
    private:
     fidl::BindingSet<StoryMarker> bindings_;

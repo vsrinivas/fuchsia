@@ -689,7 +689,7 @@ StoryProviderImpl::StoryProviderImpl(
 
 StoryProviderImpl::~StoryProviderImpl() = default;
 
-void StoryProviderImpl::AddBinding(
+void StoryProviderImpl::Connect(
     fidl::InterfaceRequest<StoryProvider> request) {
   if (ready_) {
     bindings_.AddBinding(this, std::move(request));
@@ -712,7 +712,7 @@ void StoryProviderImpl::Watch(
 // |StoryProvider|
 void StoryProviderImpl::Duplicate(
     fidl::InterfaceRequest<StoryProvider> request) {
-  AddBinding(std::move(request));
+  Connect(std::move(request));
 }
 
 void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,

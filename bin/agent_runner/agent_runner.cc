@@ -171,7 +171,7 @@ AgentRunner::AgentRunner(
 
 AgentRunner::~AgentRunner() = default;
 
-void AgentRunner::AddBinding(fidl::InterfaceRequest<AgentProvider> request) {
+void AgentRunner::Connect(fidl::InterfaceRequest<AgentProvider> request) {
   agent_provider_bindings_.AddBinding(this, std::move(request));
 }
 

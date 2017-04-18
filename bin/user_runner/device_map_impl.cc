@@ -117,7 +117,7 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
 
 DeviceMapImpl::~DeviceMapImpl() = default;
 
-void DeviceMapImpl::AddBinding(fidl::InterfaceRequest<DeviceMap> request) {
+void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

@@ -131,7 +131,7 @@ UserRunnerImpl::UserRunnerImpl(
   device_map_impl_.reset(new DeviceMapImpl(device_name_, root_page_.get()));
   user_scope_.AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
-        device_map_impl_->AddBinding(std::move(request));
+        device_map_impl_->Connect(std::move(request));
       });
 
   // Setup MessageQueueManager.
@@ -225,7 +225,7 @@ UserRunnerImpl::UserRunnerImpl(
   story_provider_impl_.reset(new StoryProviderImpl(
       &user_scope_, ledger_.get(), root_page_.get(), std::move(story_shell),
       component_context_info, user_intelligence_provider_.get()));
-  story_provider_impl_->AddBinding(std::move(story_provider_request));
+  story_provider_impl_->Connect(std::move(story_provider_request));
 
   focus_handler_.reset(new FocusHandler(device_name, root_page_.get()));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request));
@@ -259,12 +259,12 @@ void UserRunnerImpl::GetDeviceName(const GetDeviceNameCallback& callback) {
 
 void UserRunnerImpl::GetAgentProvider(
     fidl::InterfaceRequest<AgentProvider> request) {
-  agent_runner_->AddBinding(std::move(request));
+  agent_runner_->Connect(std::move(request));
 }
 
 void UserRunnerImpl::GetStoryProvider(
     fidl::InterfaceRequest<StoryProvider> request) {
-  story_provider_impl_->AddBinding(std::move(request));
+  story_provider_impl_->Connect(std::move(request));
 }
 
 void UserRunnerImpl::GetSuggestionProvider(

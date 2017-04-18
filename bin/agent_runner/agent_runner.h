@@ -45,7 +45,7 @@ class AgentRunner : AgentProvider, ledger::PageWatcher {
               maxwell::UserIntelligenceProvider* user_intelligence_provider);
   ~AgentRunner();
 
-  void AddBinding(fidl::InterfaceRequest<AgentProvider> request);
+  void Connect(fidl::InterfaceRequest<AgentProvider> request);
 
   // |callback| is called after - (1) all agents have been shutdown and (2)
   // no new tasks are scheduled to run.

@@ -46,7 +46,7 @@ StoryImpl::StoryImpl(const fidl::String& story_id,
 
   story_scope_.AddService<StoryMarker>(
       [this](fidl::InterfaceRequest<StoryMarker> request) {
-        story_marker_impl_.AddBinding(std::move(request));
+        story_marker_impl_.Connect(std::move(request));
       });
 }
 
@@ -554,7 +554,7 @@ StoryImpl::StoryMarkerImpl::StoryMarkerImpl() = default;
 
 StoryImpl::StoryMarkerImpl::~StoryMarkerImpl() = default;
 
-void StoryImpl::StoryMarkerImpl::AddBinding(
+void StoryImpl::StoryMarkerImpl::Connect(
     fidl::InterfaceRequest<StoryMarker> request) {
   bindings_.AddBinding(this, std::move(request));
 }

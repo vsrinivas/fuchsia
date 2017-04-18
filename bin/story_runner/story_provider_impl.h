@@ -48,7 +48,7 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
 
   ~StoryProviderImpl() override;
 
-  void AddBinding(fidl::InterfaceRequest<StoryProvider> request);
+  void Connect(fidl::InterfaceRequest<StoryProvider> request);
 
   // Called by empty binding set handler of StoryImpl to remove the
   // corresponding entry.

@@ -23,7 +23,7 @@ class DeviceMapImpl : DeviceMap, ledger::PageWatcher {
   DeviceMapImpl(const std::string& device_name, ledger::Page* page);
   ~DeviceMapImpl() override;
 
-  void AddBinding(fidl::InterfaceRequest<DeviceMap> request);
+  void Connect(fidl::InterfaceRequest<DeviceMap> request);
 
  private:
   // |DeviceMap|
