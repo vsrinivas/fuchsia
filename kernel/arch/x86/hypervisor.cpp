@@ -639,7 +639,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     // From Volume 3, Section 25.2: If software desires VM exits on all page
     // faults, it can set bit 14 in the exception bitmap to 1 and set the
     // page-fault error-code mask and match fields each to 00000000H.
-    vmcs_write(VmcsField32::EXCEPTION_BITMAP, EXCEPTION_BITMAP_ALL_EXCEPTIONS);
+    vmcs_write(VmcsField32::EXCEPTION_BITMAP, 0);
     vmcs_write(VmcsField32::PAGEFAULT_ERRORCODE_MASK, 0);
     vmcs_write(VmcsField32::PAGEFAULT_ERRORCODE_MATCH, 0);
 
@@ -935,7 +935,6 @@ static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_stat
         dprintf(SPEW, "handling CPUID instruction\n\n");
         return handle_cpuid(exit_info, guest_state);
     case ExitReason::IO_INSTRUCTION: {
-        // dprintf(SPEW, "handling IO instruction\n\n");
         return handle_io(exit_info, guest_state, serial_fifo);
     }
     case ExitReason::RDMSR:

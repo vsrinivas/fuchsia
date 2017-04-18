@@ -150,9 +150,6 @@ enum class VmcsFieldXX : uint64_t {
 #define ENTRY_CTLS_LOAD_IA32_PAT            (1u << 14)
 #define ENTRY_CTLS_LOAD_IA32_EFER           (1u << 15)
 
-/* EXCEPTION_BITMAP values */
-#define EXCEPTION_BITMAP_ALL_EXCEPTIONS     0xffffffff
-
 /* LINK_POINTER values */
 #define LINK_POINTER_INVALIDATE             0xffffffffffffffff
 
