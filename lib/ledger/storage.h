@@ -25,11 +25,10 @@ constexpr char kMessageQueuePageId[] = "MessageQueuePage";  // 16 chars
 
 // 3. The trigger page contains the trigger conditions for all agents.
 //
-constexpr char kAgentRunnerPageId[]  = "AgentRunnerPage_";  // 16 chars
+constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";  // 16 chars
 
 // 4. Story pages (one per story) contain the story state expressed as link and
 //    module data.
-
 
 // Keys in these pages are constructed as follows:
 //
@@ -39,54 +38,46 @@ constexpr char kAgentRunnerPageId[]  = "AgentRunnerPage_";  // 16 chars
 //    notifications.
 //
 //    Root page:
-constexpr char kStoryKeyPrefix[]             = "Story/";
-constexpr char kDeviceKeyPrefix[]            = "Device/";
-constexpr char kFocusKeyPrefix[]             = "Focus/";
+constexpr char kStoryKeyPrefix[] = "Story/";
+constexpr char kDeviceKeyPrefix[] = "Device/";
+constexpr char kFocusKeyPrefix[] = "Focus/";
 //    Message Queue page:
-constexpr char kMessageQueueKeyPrefix[]      = "MessageQueue/";
+constexpr char kMessageQueueKeyPrefix[] = "MessageQueue/";
 constexpr char kMessageQueueTokenKeyPrefix[] = "MessageQueueToken/";
 //    Agent Trigger page:
-constexpr char kTriggerKeyPrefix[]           = "Trigger/";
+constexpr char kTriggerKeyPrefix[] = "Trigger/";
 //    Story page:
-constexpr char kLinkKeyPrefix[]              = "Link/";
-constexpr char kModuleKeyPrefix[]            = "Module/";
+constexpr char kLinkKeyPrefix[] = "Link/";
+constexpr char kModuleKeyPrefix[] = "Module/";
 
 // 2. ID values, separated by slashes, to identify the data item under this
 //    key. The set of ID values under each key is defined by the arguments of
 //    factory functions for the keys:
 //
-std::string MakeStoryKey(
-    const fidl::String& story_id);
-std::string MakeDeviceKey(
-    const fidl::String& device_name);
-std::string MakeFocusKey(
-    const fidl::String& device_name);
-std::string MakeMessageQueueTokenKey(
-    const std::string& component_namespace,
-    const std::string& component_instance_id,
-    const std::string& queue_name);
-std::string MakeMessageQueueKey(
-    const std::string& queue_token);
-std::string MakeTriggerKey(
-    const std::string& agent_url,
-    const std::string& task_id);
-std::string MakeLinkKey(
-    const fidl::Array<fidl::String>& module_path,
-    const fidl::String& link_name);
-std::string MakeModuleKey(
-    const fidl::String& module_name);
+std::string MakeStoryKey(const fidl::String& story_id);
+std::string MakeDeviceKey(const fidl::String& device_name);
+std::string MakeFocusKey(const fidl::String& device_name);
+std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
+                                     const std::string& component_instance_id,
+                                     const std::string& queue_name);
+std::string MakeMessageQueueKey(const std::string& queue_token);
+std::string MakeTriggerKey(const std::string& agent_url,
+                           const std::string& task_id);
+std::string MakeLinkKey(const fidl::Array<fidl::String>& module_path,
+                        const fidl::String& link_name);
+std::string MakeModuleKey(const fidl::String& module_name);
 
 // 3. The slash separator is escaped by a backslash inside the ID
 //    values. Backslashes inside the ID values are escaped by backslash too.
 //
-constexpr char kSeparator[]     = "/";
-constexpr char kEscaper         = '\\';
+constexpr char kSeparator[] = "/";
+constexpr char kEscaper = '\\';
 constexpr char kCharsToEscape[] = ":/";
 
 // 4. The ID values may have internal structure on their own too, expressed by a
 //    second sub separator character.
 //
-constexpr char kSubSeparator[]  = ":";
+constexpr char kSubSeparator[] = ":";
 std::string EncodeModulePath(const fidl::Array<fidl::String>& path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 

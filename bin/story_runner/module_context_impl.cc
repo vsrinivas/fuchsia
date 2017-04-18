@@ -6,17 +6,19 @@
 
 #include <string>
 
-#include "lib/ftl/strings/join_strings.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/src/story_runner/module_controller_impl.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/ftl/strings/join_strings.h"
 
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
-    fidl::Array<fidl::String> module_path, const ModuleContextInfo& info,
-    const uint64_t id, const std::string& module_url,
+    fidl::Array<fidl::String> module_path,
+    const ModuleContextInfo& info,
+    const uint64_t id,
+    const std::string& module_url,
     ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<ModuleContext> module_context)
     : module_path_(std::move(module_path)),

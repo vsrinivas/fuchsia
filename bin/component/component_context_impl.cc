@@ -43,7 +43,8 @@ void ComponentContextImpl::ConnectToAgent(
 }
 
 void ComponentContextImpl::ObtainMessageQueue(
-    const fidl::String& name, fidl::InterfaceRequest<MessageQueue> request) {
+    const fidl::String& name,
+    fidl::InterfaceRequest<MessageQueue> request) {
   message_queue_manager_->ObtainMessageQueue(
       component_namespace_, component_instance_id_, name, std::move(request));
 }

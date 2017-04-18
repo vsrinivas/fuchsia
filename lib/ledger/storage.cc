@@ -30,11 +30,9 @@ std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
                                      const std::string& component_instance_id,
                                      const std::string& queue_name) {
   std::string key{kMessageQueueTokenKeyPrefix};
-  key.append(
-      StringEscape(component_namespace, kSeparator, kEscaper));
+  key.append(StringEscape(component_namespace, kSeparator, kEscaper));
   key.append(kSeparator);
-  key.append(
-      StringEscape(component_instance_id, kSeparator, kEscaper));
+  key.append(StringEscape(component_instance_id, kSeparator, kEscaper));
   key.append(kSeparator);
   key.append(StringEscape(queue_name, kSeparator, kEscaper));
   return key;
@@ -50,8 +48,7 @@ std::string EncodeModulePath(const fidl::Array<fidl::String>& path) {
   escaped_path.reserve(path.size());
 
   for (const auto& item : path) {
-    escaped_path.push_back(StringEscape(item.get(), kCharsToEscape,
-                                        kEscaper));
+    escaped_path.push_back(StringEscape(item.get(), kCharsToEscape, kEscaper));
   }
   return ftl::JoinStrings(escaped_path, kSubSeparator);
 }

@@ -65,7 +65,8 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
   void GetAuthenticationContext(
       const fidl::String& username,
       fidl::InterfaceRequest<modular::AuthenticationContext> request) override {
-    FTL_LOG(INFO) << "DeviceShell::GetAuthenticationContext() is unimplemented.";
+    FTL_LOG(INFO)
+        << "DeviceShell::GetAuthenticationContext() is unimplemented.";
   }
 
   // |UserWatcher|

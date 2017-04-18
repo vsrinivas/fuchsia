@@ -98,10 +98,8 @@ void StoryImpl::AddModuleAndSync(const fidl::String& module_name,
                                  const fidl::String& module_url,
                                  const fidl::String& link_name,
                                  const std::function<void()>& done) {
-  story_storage_impl_->WriteModuleData(
-      module_name,
-      module_url,
-      link_name, done);
+  story_storage_impl_->WriteModuleData(module_name, module_url, link_name,
+                                       done);
 }
 
 // |StoryController|
@@ -113,13 +111,12 @@ void StoryImpl::AddModule(const fidl::String& module_name,
     return;
   }
 
-  AddModuleAndSync(
-      module_name, module_url, link_name,
-      [this, module_name, module_url, link_name] {
-        if (running_) {
-          StartRootModule(module_name, module_url, link_name);
-        }
-      });
+  AddModuleAndSync(module_name, module_url, link_name,
+                   [this, module_name, module_url, link_name] {
+                     if (running_) {
+                       StartRootModule(module_name, module_url, link_name);
+                     }
+                   });
 }
 
 // |StoryController|
@@ -184,7 +181,8 @@ void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
             start_request_ = nullptr;
 
             if (deleted_) {
-              FTL_LOG(INFO) << "StoryImpl::Start() callback during delete: ignored.";
+              FTL_LOG(INFO)
+                  << "StoryImpl::Start() callback during delete: ignored.";
             }
           });
     }

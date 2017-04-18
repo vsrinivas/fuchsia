@@ -26,8 +26,7 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
 
  private:
   // |DeviceRunnerMonitor|
-  void GetConnectionCount(
-      const GetConnectionCountCallback& callback) override {
+  void GetConnectionCount(const GetConnectionCountCallback& callback) override {
     callback(bindings_.size());
   }
 

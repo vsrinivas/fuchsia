@@ -155,8 +155,8 @@ void FocusHandler::Set(const fidl::String& story_id) {
 
   // Focus watchers are notified from the page watcher notification.
   page_->PutWithPriority(
-      to_array(MakeFocusKey(device_name_)), to_array(json), ledger::Priority::EAGER,
-      [this](ledger::Status status) {
+      to_array(MakeFocusKey(device_name_)), to_array(json),
+      ledger::Priority::EAGER, [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
           return;

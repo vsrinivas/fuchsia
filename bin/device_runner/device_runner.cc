@@ -195,21 +195,21 @@ class DeviceRunnerApp : DeviceShellContext, UserProvider {
     } else {
       app_context_->ConnectToEnvironmentService(monitor_.NewRequest());
 
-      monitor_.set_connection_error_handler([]{
-          FTL_LOG(ERROR) << "No device runner monitor found. "
-                         << " Please use @boot.";
-          exit(1);
-        });
+      monitor_.set_connection_error_handler([] {
+        FTL_LOG(ERROR) << "No device runner monitor found. "
+                       << " Please use @boot.";
+        exit(1);
+      });
 
       monitor_->GetConnectionCount([this](uint32_t count) {
-          if (count != 1) {
-            FTL_LOG(ERROR) << "Another device runner is running."
-                           << " Please use that one, or shut it down first.";
-            exit(1);
-          }
+        if (count != 1) {
+          FTL_LOG(ERROR) << "Another device runner is running."
+                         << " Please use that one, or shut it down first.";
+          exit(1);
+        }
 
-          Start();
-        });
+        Start();
+      });
     }
   }
 
@@ -232,8 +232,7 @@ class DeviceRunnerApp : DeviceShellContext, UserProvider {
     ConnectToService(device_shell_services.get(),
                      device_shell_view_provider.NewRequest());
 
-    ConnectToService(device_shell_services.get(),
-                     device_shell_.NewRequest());
+    ConnectToService(device_shell_services.get(), device_shell_.NewRequest());
 
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
