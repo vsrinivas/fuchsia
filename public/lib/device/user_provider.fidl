@@ -6,25 +6,34 @@ module modular;
 
 import "apps/mozart/services/views/view_token.fidl";
 
-// Given to the device shell UI so it can provide user information to
-// the device runner.
-//
-// The name is analog to StoryProvider, which is given to UserShell so
-// it can act on stories. Conceptually, it provides the device shell
-// with information about the users that can login here (even though
-// it doesn't do this right now) in the same way as StoryProvider
-// provides the user shell with stories to start here.
+// Given by the |DeviceRunner| to the |DeviceShell| at Initialize() so the
+// |DeviceShell| can get information about the users of this device from the
+// |DeviceRunner|, and act on the provided information (including extending the
+// user database).
 interface UserProvider {
-  // Adds authentication information of a Ledger user to this device.
+  // Adds authentication information of a user to this device, which is enough
+  // to authorize this device to access the user's Ledger once the user is
+  // authenticated by Login().
+  //
   // |password| is nullable for ease of development.
+  //
   // |devicename| is the user provided name for this device.
-  // |servername| is the remote server used to sync a user's Ledger.
+  //
+  // |servername| is the cloud location used to sync the user's Ledger.
   AddUser(string username, string? password, string devicename,
           string servername);
 
-  // Passes in the user authentication information from the lockscreen or shell.
-  // |view_owner| is the view given to the UserShell.
+  // Authenticates a user and authorizes this device to access the user's
+  // Ledger. The authentication information is usually obtained from a login
+  // dialog presented by the |DeviceShell|, or, in development, from command
+  // line arguments passed to a development specific implementation of
+  // |DeviceShell|.
+  //
+  // |view_owner| is the view given to the |UserShell| started for the newly
+  // authenticated user.
+  //
   // If authentication fails, |user_controller| is closed.
+  //
   // NOTE: |auth_token| is a temporary way to provide authentication tokens to
   // email agent.
   Login(string username, string? password, string? auth_token,
@@ -34,28 +43,46 @@ interface UserProvider {
   PreviousUsers() => (array<string> users);
 };
 
-// Provided by DeviceRunner, provided to DeviceShell. This interface provides
-// control to a logged-in user's life cycle, and the life of this interface is
-// bound to a user being logged in.
-// Similar to this interface is UserContext, which is provided to the UserShell
-// and also contains a mechanism to invoke a logout. (For now, this distinction
-// exists because we want a way for the UserShell to also logout, but not
-// provide the entire UserController).
+// Provided by the |DeviceRunner| to the |DeviceShell| when it authenticates a
+// new user. This interface provides control to a logged-in user's life cycle,
+// and the life of this interface is bound to a user being logged in.
+//
+// An interface similar to this one, |UserContext|, is provided to the user
+// shell. It also contains a method to request logout. The difference is of
+// level of ownership and control:
+//
+// - A controller interface to one component instance is given to a component
+//   instance which has control over the life cycle of the first component
+//   instance. As such, the controller interface can be used by the controlling
+//   component to change the life cycle of the controlled component.
+//
+// - A context interface to one component instance is given to a component
+//   instance whose life cycle is controlled by the first component instance. As
+//   such, the context interface can be used by the controlled component to
+//   request a change to its life cycle (among other functions).
+//
+// In general, the separation of a service |Foo| implemented by a component, and
+// the service |FooController| given to the client of that component (rather
+// than |Foo| directly) is a hallmark of inversion of control that pervades the
+// design of our services.
 interface UserController {
-  // Logs out a user by triggering a tear-down. Returns once the UserRunner has
-  // torn down. This will trigger OnLogout for |UserWatcher|s.
+  // Logs out a user by tearing down its user runner. Returns once the
+  // UserRunner has been torn down. This also triggers OnLogout() for
+  // |UserWatcher|s.
   Logout() => ();
 
   // Registers a watcher for the user's life cycle events.
   Watch(UserWatcher watcher);
 };
 
-// Implemented by whoever wants to watch the user's life-cycle (mostly just
-// DeviceShell). The DeviceRunner invokes |UserWatcher|s on events.
+// Implemented by a |DeviceShell| implementation in order to receive
+// notification about life cycle changes of a logged in user.
 interface UserWatcher {
-  // Called when a user has logged out. By the time this event is processed by
-  // a watcher, the UserRunner may already be torn down.
-  // TODO(vardhan): Make a guarantee that once OnLogout() is emitted, it is
+  // Called when a user has logged out, either by UserController.Logout() or by
+  // UserContext.Logout(). By the time this event is processed by a watcher, the
+  // UserRunner may already be torn down.
+  //
+  // TODO(vardhan): Make a guarantee that once OnLogout() is invoked, it is
   // possible to UserProvider.Login() the same user.
   OnLogout();
 };

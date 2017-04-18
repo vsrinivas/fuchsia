@@ -6,7 +6,7 @@ module modular;
 
 import "apps/modular/services/device/user_provider.fidl";
 
-// This interface is meant to be implemented by a Device Shell.
+// This interface is implemented by a device shell application.
 [ServiceName="modular.DeviceShell"]
 interface DeviceShell {
   Initialize(DeviceShellContext device_shell_context);
@@ -20,7 +20,8 @@ interface DeviceShell {
   // AuthenticationContext associated with |username|. |request| will then be
   // used to request the device shell to show login screen during a
   // UserProvider.AddUser() or if a token needs to be refreshed.
-  // Note that a |request| is tied to a |username| since the TQ Framework allows
+  //
+  // A |request| is tied to a |username| because the device runner allows
   // multiple users to be logged in at the same time.
   GetAuthenticationContext(string username,
                            AuthenticationContext& request);
