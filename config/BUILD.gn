@@ -49,6 +49,12 @@ config("compiler") {
   asmflags += cflags_c
 }
 
+config("debug_prefix_map") {
+  # Make the debugging information independent of the absolute file path.
+  absolute_path = rebase_path("//.")
+  cflags = [ "-fdebug-prefix-map=$absolute_path=." ]
+}
+
 config("debug") {
   cflags = [
     "-g",
